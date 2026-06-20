@@ -200,7 +200,7 @@ end
 
 # List Typeclass 实例
 impl Functor(List) where
-  map: a -> b -> List a -> List(b)
+  map: a -> b -> List a -> List b
   map f list = match list
     Nil -> Nil
     Cons(h, t) -> Cons f(h), map(f, t)
@@ -220,13 +220,13 @@ impl Monad[List] where
   end
 end
 
-instance Monoid[List[a]] where
-  mempty: () -> List[a]
-  mempty = func(): List[a]
+instance Monoid[List a] where
+  mempty: () -> List a
+  mempty = func(): List a
     Nil
   end
   
-  append: List[a] -> List[a] -> List[a]
+  append: List a -> List a -> List a
   append x y = match x
     Nil -> y
     Cons(h, t) -> Cons(h, append(t, y))
@@ -234,16 +234,16 @@ instance Monoid[List[a]] where
 end
 
 # Show 实例
-instance Show[Option[a]] where
-  show: Option[a] -> String
+instance Show[Option a] where
+  show: Option a -> String
   show opt = match opt
     None -> "None"
     Some(x) -> "Some(" + show(x) + ")"
   end
 end
 
-instance Show[List[a]] where
-  show: List[a] -> String
+instance Show[List a] where
+  show: List a -> String
   show list = match list
     Nil -> "Nil"
     Cons(h, t) -> "Cons(" + show(h) + ", " + show(t) + ")"
@@ -254,60 +254,69 @@ end
 # 5. 辅助函数
 # ============================================================================
 
-# Option 辅助函数
-func option_some[a](x: a): Option[a]
+option_some: a -> Option a
+option_some x =
   Some(x)
 end
 
-func option_none[a](): Option[a]
+option_none: () -> Option a
+option_none _ =
   None
 end
 
-func option_map[a, b](f: a -> b, opt: Option[a]): Option[b]
+option_map: (a -> b) -> Option a -> Option b
+option_map f opt =
   opt |> map(f)
 end
 
-func option_bind[a, b](opt: Option[a], f: a -> Option[b]): Option[b]
+option_bind: Option a -> (a -> Option b) -> Option b
+option_bind opt f =
   opt |> bind(f)
 end
 
-func option_or[a](opt1: Option[a], opt2: Option[a]): Option[a]
+option_or: Option a -> Option a -> Option a
+option_or opt1 opt2 =
   match opt1
     None -> opt2
     Some(_) -> opt1
   end
 end
 
-# Result 辅助函数
-func result_ok[a, b](val: a): Result[b][a]
+result_ok: a -> Result a b
+result_ok val =
   Ok(val)
 end
 
-func result_err[a, b](err: b): Result[a][b]
+result_err: b -> Result a b
+result_err err =
   Err(err)
 end
 
-func result_map[a, b](res: Result[a][b], f: a -> b): Result[a][b]
+result_map: Result a b -> (a -> b) -> Result a b
+result_map res f =
   match res
     Ok(val) -> Ok(f(val))
     Err(e) -> Err(e)
   end
 end
 
-# List 辅助函数
-func list_nil[a](): List[a]
+list_nil: () -> List a
+list_nil _ =
   Nil
 end
 
-func list_cons[a](h: a, t: List[a]): List[a]
+list_cons: a -> List a -> List a
+list_cons h t =
   Cons(h, t)
 end
 
-func list_from_array[a](arr: List[a]): List[a]
+list_from_array: List a -> List a
+list_from_array arr =
   arr
 end
 
-func list_length[a](list: List[a]): Int
+list_length: List a -> Int
+list_length list =
   list |> fold(func(acc, _): Int acc + 1, 0)
 end
 
@@ -315,15 +324,18 @@ end
 # 6. IO Monad
 # ============================================================================
 
-func io_liftGo[a](a: a): IO[a]
+io_liftGo: a -> IO(a)
+io_liftGo a =
   liftGo(a)
 end
 
-func io_run[a](io: IO[a]): a
+io_run: IO(a) -> a
+io_run io =
   run(io)
 end
 
-func io_bind[a, b](io: IO[a], f: a -> IO[b]): IO[b]
+io_bind: IO(a) -> (a -> IO b) -> IO[b]
+io_bind io f =
   io |> bind(f)
 end
 
@@ -332,68 +344,74 @@ end
 # ============================================================================
 
 # 列表操作
-func list_map[a, b](f: a -> b, list: List[a]): List[b]
+list_map: (a -> b) -> List a -> List b
+list_map f list =
   list |> map(f)
 end
 
-func list_filter[a](pred: a -> Bool, list: List[a]): List[a]
-  list |> fold(func(acc, x): List[a]
+list_filter: (a -> Bool) -> List a -> List a
+list_filter pred list =
+  list |> fold(func(acc, x): List a
     if pred(x) then Cons(x, acc) else acc
   end, Nil) |> reverse
 end
 
-func list_fold[a, b](f: b -> a -> b, acc: b, list: List[a]): b
+list_fold: (b -> a -> b) -> b -> List a -> b
+list_fold f acc list =
   list |> fold(f, acc)
 end
 
-func list_reverse[a](list: List[a]): List[a]
-  list |> fold(func(acc, x): List[a]
+list_reverse: List a -> List a
+list_reverse list =
+  list |> fold(func(acc, x): List a
     Cons(x, acc)
   end, Nil)
 end
 
-func list_append[a](list1: List[a], list2: List[a]): List[a]
-  append(list1, list2)
-end
-
-func list_concat[a](list: List[List[a]]): List[a]
+list_concat: List[List a] -> List a
+list_concat list =
   list |> fold(append, Nil)
 end
 
-func list_take[a](n: Int, list: List[a]): List[a]
+list_take: Int -> List a -> List a
+list_take n list =
   n >= 0 && n > 0 && match list
     Nil -> Nil
     Cons(h, t) -> if n <= 1 then Cons(h, Nil) else Cons(h, take(n - 1, t))
   end
 end
 
-func list_drop[a](n: Int, list: List[a]): List[a]
+list_drop: Int -> List a -> List a
+list_drop n list =
   n <= 0 || match list
     Nil -> Nil
     Cons(h, t) -> if n <= 1 then t else drop(n - 1, t)
   end
 end
 
-func list_init[a](list: List[a]): Option[a]
+list_init: List a -> Option a
+list_init list =
   match list
     Nil -> None
     Cons(h, t) -> Some(h)
   end
 end
 
-func list_tail[a](list: List[a]): Option[List[a]]
+list_tail: List a -> Option[List a]
+list_tail list =
   match list
     Nil -> None
     Cons(_, t) -> Some(t)
   end
 end
 
-# 数学函数
-func math_abs[n: Int]: Int
+math_abs: Int -> Int
+math_abs n =
   if n < 0 then -n else n
 end
 
-func math_max[n: Int]: Int
+math_max: List[Int] -> Int
+math_max list =
   func(max_val: Int): Int -> Int
     match list
       Nil -> max_val
@@ -401,7 +419,8 @@ func math_max[n: Int]: Int
   end, 0)
 end
 
-func math_min[n: Int]: Int
+math_min: List[Int] -> Int
+math_min list =
   func(min_val: Int): Int -> Int
     match list
       Nil -> min_val
@@ -409,28 +428,28 @@ func math_min[n: Int]: Int
   end, 0)
 end
 
-func math_sum[n: Int]: Int
+math_sum: List[Int] -> Int
+math_sum list =
   list |> fold(func(acc, x): Int acc + x, 0)
 end
 
-# 字符串操作
-func str_toUpper(s: String): String
+str_toUpper: String -> String
+str_toUpper s =
   strings.ToUpper(s)
 end
 
-func str_toLower(s: String): String
+str_toLower: String -> String
+str_toLower s =
   strings.ToLower(s)
 end
 
-func str_trim(s: String): String
+str_trim: String -> String
+str_trim s =
   strings.TrimSpace(s)
 end
 
-func str_split(s: String, sep: String): List[String]
-  split(s, sep)
-end
-
-func str_join(sep: String, list: List[String]): String
+str_join: String -> List String -> String
+str_join sep list =
   join(list, sep)
 end
 
@@ -461,117 +480,139 @@ end
 # ============================================================================
 
 module Math where
-  func add(a: Int, b: Int): Int
+  add: Int -> Int -> Int
+  add a b =
     a + b
   end
   
-  func sub(a: Int, b: Int): Int
+  sub: Int -> Int -> Int
+  sub a b =
     a - b
   end
   
-  func mul(a: Int, b: Int): Int
+  mul: Int -> Int -> Int
+  mul a b =
     a * b
   end
   
-  func div(a: Int, b: Int): Int
+  div: Int -> Int -> Int
+  div a b =
     a / b
   end
   
-  func pow(base: Int, exp: Int): Int
+  pow: Int -> Int -> Int
+  pow base exp =
     if exp <= 0 then 1 else base * pow(base, exp - 1)
   end
   
-  func factorial(n: Int): Int
+  factorial: Int -> Int
+  factorial n =
     if n <= 1 then 1 else n * factorial(n - 1)
   end
 end
 
 module String where
-  func toUpper(s: String): String
+  toUpper: String -> String
+  toUpper s =
     strings.ToUpper(s)
   end
   
-  func toLower(s: String): String
+  toLower: String -> String
+  toLower s =
     strings.ToLower(s)
   end
   
-  func trim(s: String): String
+  trim: String -> String
+  trim s =
     strings.TrimSpace(s)
   end
   
-  func concat(s1: String, s2: String): String
+  concat: String -> String -> String
+  concat s1 s2 =
     s1 + s2
   end
   
-  func contains(sub: String, s: String): Bool
+  contains: String -> String -> Bool
+  contains sub s =
     strings.Contains(s, sub)
   end
   
-  func startsWith(prefix: String, s: String): Bool
+  startsWith: String -> String -> Bool
+  startsWith prefix s =
     strings.HasPrefix(s, prefix)
   end
   
-  func endsWith(suffix: String, s: String): Bool
+  endsWith: String -> String -> Bool
+  endsWith suffix s =
     strings.HasSuffix(s, suffix)
   end
 end
 
 module IO where
-  func print(msg: String): IO[Unit]
+  println: String -> IO Unit
+  println msg =
     liftGo(fmt.Println(msg))
   end
   
-  func println(msg: String): IO[Unit]
+  printLine: String -> IO Unit
+  printLine msg =
     liftGo(fmt.Println(msg))
   end
   
-  func printLine(msg: String): IO[Unit]
-    liftGo(fmt.Println(msg))
-  end
-  
-  func readLine(): IO[String]
+  readLine: () -> IO String
+  readLine _ =
     liftGo(fmt.Scanln())
   end
   
-  func readFile(path: String): IO[String]
+  readFile: String -> IO String
+  readFile path =
     liftGo(os.ReadFile(path))
   end
   
-  func writeFile(path: String, content: String): IO[Unit]
+  writeFile: String -> String -> IO Unit
+  writeFile path content =
     liftGo(os.WriteFile(path, content, 0644))
   end
 end
 
 module List where
-  func map[a, b](f: a -> b, list: List[a]): List[b]
+  map: (a -> b) -> List a -> List b
+  map f list =
     list |> map(f)
   end
   
-  func filter[a](pred: a -> Bool, list: List[a]): List[a]
+  filter: (a -> Bool) -> List a -> List a
+  filter pred list =
     list |> filter(pred)
   end
   
-  func foldLeft[a, b](f: b -> a -> b, acc: b, list: List[a]): b
+  foldLeft: (b -> a -> b) -> b -> List a -> b
+  foldLeft f acc list =
     list |> fold(f, acc)
   end
   
-  func foldRight[a, b](f: a -> b -> b, acc: b, list: List[a]): b
+  foldRight: (a -> b -> b) -> b -> List a -> b
+  foldRight f acc list =
     list |> fold(f, acc)
   end
   
-  func reverse[a](list: List[a]): List[a]
+  reverse: List a -> List a
+  reverse list =
     list |> reverse
   end
   
-  func length[a](list: List[a]): Int
+  length: List a -> Int
+  length list =
     list |> length
   end
   
-  func append[a](list1: List[a], list2: List[a]): List[a]
+  append: List a -> List a -> List a
+  append list1 list2 =
     append(list1, list2)
   end
   
-  func concat[a](list: List[List[a]]): List[a]
+  concat: List[List a] -> List a
+  concat list =
     list |> concat
   end
 end
@@ -590,44 +631,45 @@ type Price = Float
 # 10. 示例程序
 # ============================================================================
 
-# 示例 1: 使用 Option 和模式匹配
-func find_user(id: Int, users: List[User]): Option[User]
+find_user: Int -> List[User] -> Option User
+find_user id users =
   users |> filter(func(u): Bool u.age == id) |> init
 end
 
-# 示例 2: 使用 Result 处理错误
-func parse_number(s: String): Result[String, Int]
+parse_number: String -> Result String Int
+parse_number s =
   match strconv.Atoi(s)
     0 -> Ok(s |> toInt)
     err -> Err("Parse error: " + err)
   end
 end
 
-# 示例 3: 使用 Monad 链式操作
-func process_file(path: String): IO[String]
+process_file: String -> IO String
+process_file path =
   run <| func()
     read_file(path) |> bind func(content)
       process_data(content) |> bind func(result)
         write_file(path + ".out", result)
-      end
-    end
+       end
+     end
   end
 end
 
-# 示例 4: 使用 Typeclass
-func show_all[a](items: List[a]) where Show[a]: List[String]
+show_all: List a -> List String
+show_all items =
   items |> map(show)
 end
 
-func compare_all[a](items: List[a]) where Eq[a]: Bool
+compare_all: List a -> Bool
+compare_all items =
   first = init(items)
   first |> bind func(x)
     items |> filter(func(y): Bool eq(x, y)) |> length
   end |> (func(len): Bool len > 0)
 end
 
-# 示例 5: 使用模块
-func main(): IO[Unit]
+main: () -> IO Unit
+main _ =
   run <| func()
     result = Math.add(1, 2)
     doubled = result * 2
@@ -645,8 +687,8 @@ import "fmt"
 import "strconv"
 import "strings"
 
-# 定义纯函数：处理数据（不可变，无副作用）
-func process_data(content: String): String
+process_data: String -> String
+process_data content =
   upper = content |> str_toUpper
   if upper == "OK" then
     "Success"
@@ -655,31 +697,27 @@ func process_data(content: String): String
   end
 end
 
-# 定义 IO Monad 辅助函数
-func log(msg: String): IO[Unit]
+log: String -> IO Unit
+log msg =
   liftGo(fmt.Println(msg))
 end
 
-func read_file(path: String): IO[String]
+read_file: String -> IO String
+read_file path =
   liftGo(os.ReadFile(path))
 end
 
-func write_file(path: String, content: String): IO[Unit]
+write_file: String -> String -> IO Unit
+write_file path content =
   liftGo(os.WriteFile(path, content, 0644))
 end
 
-# 主程序入口
-func main(): IO[Unit]
+main: () -> IO Unit
+main _ =
   run <| func()
-    # 1. 读取文件 (IO[String])
     data = read_file("input.txt") |> bind func(content)
-      
-      # 2. 纯函数处理 (String -> String)
       processed = process_data(content)
-      
-      # 3. 写入日志 (IO[Unit])
       log("Processing: " + processed) |> bind func()
-        # 4. 写入结果 (IO[Unit])
         write_file("output.txt", processed)
       end
     end
@@ -690,50 +728,51 @@ end
 # 12. 完整示例：列表处理
 # ============================================================================
 
-# 定义列表操作函数
-func list_sum(list: List[Int]): Int
+list_sum: List[Int] -> Int
+list_sum list =
   list |> fold(func(acc, x): Int acc + x, 0)
 end
 
-func list_product(list: List[Int]): Int
+list_product: List[Int] -> Int
+list_product list =
   list |> fold(func(acc, x): Int acc * x, 1)
 end
 
-func list_max(list: List[Int]): Option[Int]
+list_max: List[Int] -> Option Int
+list_max list =
   list |> init
 end
 
-func list_min(list: List[Int]): Option[Int]
+list_min: List[Int] -> Option Int
+list_min list =
   list |> reverse |> init
 end
 
-# 定义过滤函数
-func list_filter_positive(list: List[Int]): List[Int]
+list_filter_positive: List[Int] -> List[Int]
+list_filter_positive list =
   list |> filter(func(x): Bool x > 0)
 end
 
-# 定义映射函数
-func list_double(list: List[Int]): List[Int]
+list_double: List[Int] -> List[Int]
+list_double list =
   list |> map(func(x): Int x * 2)
 end
 
-# 定义归约函数
-func list_fold_left(list: List[Int], f: Int -> Int -> Int, acc: Int): Int
+list_fold_left: List[Int] -> (Int -> Int -> Int) -> Int -> Int
+list_fold_left list f acc =
   list |> fold(f, acc)
 end
 
-# 主程序
-func main_list(): IO[Unit]
+main_list: () -> IO Unit
+main_list _ =
   run <| func()
     nums = Cons(1, Cons(2, Cons(3, Cons(4, Cons(5, Nil)))))
-    
     sum = list_sum(nums)
     product = list_product(nums)
     max = list_max(nums)
     min = list_min(nums)
     positive = list_filter_positive(nums)
     doubled = list_double(nums)
-    
     log("Sum: " + strconv.Itoa(sum))
     log("Product: " + strconv.Itoa(product))
     log("Max: " + show(max))
@@ -747,8 +786,8 @@ end
 # 13. 完整示例：Option 和 Result
 # ============================================================================
 
-# 定义安全的除法
-func safe_div(a: Int, b: Int): Result[String, Int]
+safe_div: Int -> Int -> Result String Int
+safe_div a b =
   if b == 0 then
     Err("Division by zero")
   else
@@ -756,8 +795,8 @@ func safe_div(a: Int, b: Int): Result[String, Int]
   end
 end
 
-# 定义安全的 sqrt
-func safe_sqrt(n: Int): Option[Int]
+safe_sqrt: Int -> Option Int
+safe_sqrt n =
   if n >= 0 then
     Some(int(sqrt(float(n))))
   else
@@ -765,15 +804,13 @@ func safe_sqrt(n: Int): Option[Int]
   end
 end
 
-# 主程序
-func main_option_result(): IO[Unit]
+main_option_result: () -> IO Unit
+main_option_result _ =
   run <| func()
     result1 = safe_div(10, 2)
     result2 = safe_div(10, 0)
-    
     sqrt1 = safe_sqrt(4)
     sqrt2 = safe_sqrt(-1)
-    
     log("Safe div 10/2: " + show(result1))
     log("Safe div 10/0: " + show(result2))
     log("Sqrt 4: " + show(sqrt1))
@@ -785,33 +822,27 @@ end
 # 14. 完整示例：Monad 组合
 # ============================================================================
 
-# 定义组合函数
-func compose[a, b, c](f: a -> b, g: b -> c): a -> c
-  func(x): c
-    g(f(x))
-  end
+compose: (a -> b) -> (b -> c) -> a -> c
+compose f g x =
+  g(f(x))
 end
 
-# 定义函数组合
-func compose_io[a, b, c](f: a -> IO[b], g: b -> IO[c]): a -> IO[c]
-  func(x): IO[c]
-    run <| func()
-      f(x) |> bind func(b)
-        g(b)
-      end
+compose_io: (a -> IO[b]) -> (b -> IO[c]) -> a -> IO[c]
+compose_io f g x =
+  run <| func()
+    f(x) |> bind func(b)
+      g(b)
     end
   end
 end
 
-# 主程序
-func main_monad(): IO[Unit]
+main_monad: () -> IO Unit
+main_monad _ =
   run <| func()
     f = func(x): Int x + 1
     g = func(x): String "Value: " + strconv.Itoa(x)
-    
     h = compose(f, g)
     result = h(5)
-    
     log("Composed: " + result)
   end
 end
@@ -820,25 +851,26 @@ end
 # 15. 完整示例：类型约束
 # ============================================================================
 
-# 定义泛型函数
-func show_list[a](list: List[a]) where Show[a]: String
+show_list: List a -> String
+show_list list =
   list |> show
 end
 
-func eq_list[a](list1: List[a], list2: List[a]) where Eq[a]: Bool
+eq_list: List a -> List a -> Bool
+eq_list list1 list2 =
   list1 == list2
 end
 
-func ord_list[a](list: List[a]) where Ord[a]: Bool
+ord_list: List a -> Bool
+ord_list list =
   list |> fold(func(acc, x): Bool acc && (x >= 0), true)
 end
 
-# 主程序
-func main_typeclass(): IO[Unit]
+main_typeclass: () -> IO Unit
+main_typeclass _ =
   run <| func()
     nums = Cons(1, Cons(2, Cons(3, Nil)))
     strs = Cons("a", Cons("b", Nil))
-    
     log("Number list: " + show_list(nums))
     log("String list: " + show_list(strs))
   end
