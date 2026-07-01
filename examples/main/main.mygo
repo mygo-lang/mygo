@@ -1,0 +1,39 @@
+module Main
+  import fmt "go:fmt"
+
+  enum Option[A]
+    Some(A)
+    None
+  end
+
+  struct Box[A]
+    value: A
+  end
+
+  func add(x: Int, y: Int): Int
+    x + y
+  end
+
+  func identity[A](value: A): A
+    value
+  end
+
+  func box_value[A](box: Box[A]): A
+    box.value
+  end
+
+  func unwrap_or[A](opt: Option[A], fallback: A): A
+    switch opt
+      case None -> fallback
+      case Some(value) -> value
+    end
+  end
+
+  func announce(): Unit
+    fmt.Println("MyGO example is running", add(40, 2))
+  end
+
+  func main(): Unit
+    announce()
+  end
+end

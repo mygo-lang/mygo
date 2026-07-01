@@ -2,10 +2,10 @@
 
 ## Project Shape
 
-- `example.mygo` is the canonical design sample for the language surface.
+- `examples/main/main.mygo` is the canonical design sample for the language surface.
 - `internal/mygo/parser.go` owns syntax.
 - `internal/mygo/compiler.go` owns lowering to generated Go.
-- `zz_mygo.gen.go` is generated output and should be treated as disposable.
+- Generated Go lives next to the source example, e.g. `examples/main/zz_mygo.gen.go`, and should be treated as disposable.
 
 ## Type Model
 
@@ -13,7 +13,8 @@
 - The current design follows Lisette-style nominal concrete types and structural interfaces.
 - Generic enums, structs, interfaces, and functions should remain generic in emitted Go rather than collapsing to `any`.
 - Prefer top-level generic functions over generic methods whenever the same behavior can be expressed that way. Use receiver methods only when Go requires them for type identity or interface conformance.
-- Named primitive spellings like `Int`, `String`, `Bool`, and `Unit` map to Go primitives in generation.
+- Named primitive spellings like `Int`, `String`, and `Bool` map to Go primitives in generation.
+- `Unit` is a return-only marker in MyGO and should lower to a Go function with no return values, not to `struct{}`.
 
 ## Go FFI
 
@@ -26,4 +27,5 @@
 ## Workflow Notes
 
 - Prefer small, focused changes that keep the example file in sync with compiler behavior.
+- Keep `examples/main/main.mygo` runnable after compiler changes; its `main` function should actually do work, not only return a value.
 - When checking the build, use a writable Go cache if the default cache path is unavailable in this environment.

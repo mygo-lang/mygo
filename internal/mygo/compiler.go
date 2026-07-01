@@ -422,7 +422,7 @@ func (g *generator) genInterface(d *InterfaceDecl) string {
 			b.WriteString(g.goType(p.Type, typeParamSet(d.TypeParams)))
 		}
 		b.WriteString(") ")
-		b.WriteString(g.goType(m.Ret, typeParamSet(d.TypeParams)))
+		b.WriteString(g.goReturnType(m.Ret, typeParamSet(d.TypeParams)))
 		b.WriteString("\n")
 	}
 	b.WriteString("}\n\n")
@@ -463,7 +463,7 @@ func (g *generator) genImpl(d *ImplDecl) (string, error) {
 			sourceTypes:     map[string]string{},
 			typeParams:      map[string]struct{}{},
 			constraintFuncs: map[string]string{},
-			retType:         typeString(ret, subst),
+			retType:         typeStringReturn(ret, subst),
 			currentImpl:     d.Name,
 		}
 		b.WriteString("func ")
@@ -480,20 +480,28 @@ func (g *generator) genImpl(d *ImplDecl) (string, error) {
 			ctx.locals[p.Name] = goType
 			ctx.sourceTypes[p.Name] = typeString(p.Type, subst)
 		}
-		retType := typeString(ret, subst)
+		retType := typeStringReturn(ret, subst)
 		b.WriteString(") ")
 		b.WriteString(retType)
 		b.WriteString(" {\n")
 		if bodyExpr == nil {
-			b.WriteString("\tpanic(\"unimplemented\")\n")
+			if retType == "" {
+				b.WriteString("\treturn\n")
+			} else {
+				b.WriteString("\tpanic(\"unimplemented\")\n")
+			}
 		} else {
-			expr, _, err := g.translateExpr(bodyExpr, ctx, retType)
+			expr, exprType, err := g.translateExpr(bodyExpr, ctx, retType)
 			if err != nil {
 				return "", err
 			}
-			b.WriteString("\treturn ")
-			b.WriteString(expr)
-			b.WriteString("\n")
+			if retType == "" {
+				g.writeUnitBody(&b, expr, exprType)
+			} else {
+				b.WriteString("\treturn ")
+				b.WriteString(expr)
+				b.WriteString("\n")
+			}
 		}
 		b.WriteString("}\n")
 	}
@@ -513,7 +521,7 @@ func (g *generator) genFunc(d *FuncDecl) (string, error) {
 		sourceTypes:     map[string]string{},
 		typeParams:      typeParamSet(d.TypeParams),
 		constraintFuncs: map[string]string{},
-		retType:         g.goType(d.Ret, typeParamSet(d.TypeParams)),
+		retType:         g.goReturnType(d.Ret, typeParamSet(d.TypeParams)),
 	}
 	for i, p := range d.Params {
 		if i > 0 {
@@ -555,20 +563,19 @@ func (g *generator) genFunc(d *FuncDecl) (string, error) {
 				b.WriteString(typeString(p.Type, subst))
 			}
 			b.WriteString(") ")
-			b.WriteString(typeString(m.Ret, subst))
+			b.WriteString(typeStringReturn(m.Ret, subst))
 		}
 	}
+	retType := g.goReturnType(d.Ret, typeParamSet(d.TypeParams))
 	b.WriteString(") ")
-	b.WriteString(g.goType(d.Ret, typeParamSet(d.TypeParams)))
+	b.WriteString(retType)
 	b.WriteString(" {\n")
-	expr, _, err := g.translateExpr(d.Body, ctx, g.goType(d.Ret, typeParamSet(d.TypeParams)))
+	expr, exprType, err := g.translateExpr(d.Body, ctx, retType)
 	if err != nil {
 		return "", err
 	}
-	if _, ok := d.Body.(*SwitchExpr); ok {
-		b.WriteString("\treturn ")
-		b.WriteString(expr)
-		b.WriteString("\n")
+	if retType == "" {
+		g.writeUnitBody(&b, expr, exprType)
 	} else {
 		b.WriteString("\treturn ")
 		b.WriteString(expr)
@@ -689,7 +696,7 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 }
 
 func (g *generator) translateFuncLit(n *FuncLitExpr, outer *exprCtx) (string, string, error) {
-	retType := g.goType(n.Ret, outer.typeParams)
+	retType := g.goReturnType(n.Ret, outer.typeParams)
 	var b strings.Builder
 	b.WriteString("func(")
 	child := outer.child()
@@ -704,16 +711,24 @@ func (g *generator) translateFuncLit(n *FuncLitExpr, outer *exprCtx) (string, st
 		b.WriteString(" ")
 		b.WriteString(tp)
 	}
-	b.WriteString(") ")
-	b.WriteString(retType)
+	b.WriteString(")")
+	if retType != "" {
+		b.WriteString(" ")
+		b.WriteString(retType)
+	}
 	b.WriteString(" {\n")
-	body, _, err := g.translateExpr(n.Body, child, retType)
+	body, bodyType, err := g.translateExpr(n.Body, child, retType)
 	if err != nil {
 		return "", "", err
 	}
-	b.WriteString("\treturn ")
-	b.WriteString(body)
-	b.WriteString("\n}")
+	if retType == "" {
+		g.writeUnitBody(&b, body, bodyType)
+	} else {
+		b.WriteString("\treturn ")
+		b.WriteString(body)
+		b.WriteString("\n")
+	}
+	b.WriteString("}")
 	return b.String(), retType, nil
 }
 
@@ -742,10 +757,9 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 		}
 	}
 	var b strings.Builder
-	b.WriteString("func() ")
-	if expected == "" {
-		b.WriteString("any")
-	} else {
+	b.WriteString("func()")
+	if expected != "" {
+		b.WriteString(" ")
 		b.WriteString(expected)
 	}
 	b.WriteString(" {\n")
@@ -771,15 +785,30 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 			child.locals[name] = info.Type
 			child.bindings[name] = info.Expr
 		}
-		body, _, err := g.translateExpr(c.Body, child, expected)
+		body, bodyType, err := g.translateExpr(c.Body, child, expected)
 		if err != nil {
 			return "", "", err
 		}
-		b.WriteString("\t\treturn ")
-		b.WriteString(body)
-		b.WriteString("\n")
+		if expected == "" {
+			b.WriteString("\t\t")
+			if bodyType == "" {
+				b.WriteString(body)
+			} else {
+				b.WriteString("_ = ")
+				b.WriteString(body)
+			}
+			b.WriteString("\n")
+		} else {
+			b.WriteString("\t\treturn ")
+			b.WriteString(body)
+			b.WriteString("\n")
+		}
 	}
-	b.WriteString("\t}\n\tpanic(\"unreachable\")\n}()")
+	if expected == "" {
+		b.WriteString("\t}\n}()")
+	} else {
+		b.WriteString("\t}\n\tpanic(\"unreachable\")\n}()")
+	}
 	return b.String(), expected, nil
 }
 
@@ -867,9 +896,9 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 				}
 				callee += "[" + strings.Join(typeArgs, ", ") + "]"
 			}
-			retType := g.goType(fn.Ret, ctx.typeParams)
+			retType := g.goReturnType(fn.Ret, ctx.typeParams)
 			if len(subst) > 0 {
-				retType = typeString(fn.Ret, subst)
+				retType = typeStringReturn(fn.Ret, subst)
 			}
 			return fmt.Sprintf("%s(%s)", callee, strings.Join(args, ", ")), retType, nil
 		}
@@ -1143,10 +1172,21 @@ func (g *generator) goType(t TypeExpr, typeParams map[string]struct{}) string {
 		for _, p := range tt.Params {
 			params = append(params, g.goType(p, typeParams))
 		}
-		return "func(" + strings.Join(params, ", ") + ") " + g.goType(tt.Ret, typeParams)
+		ret := g.goReturnType(tt.Ret, typeParams)
+		if ret == "" {
+			return "func(" + strings.Join(params, ", ") + ")"
+		}
+		return "func(" + strings.Join(params, ", ") + ") " + ret
 	default:
 		return "any"
 	}
+}
+
+func (g *generator) goReturnType(t TypeExpr, typeParams map[string]struct{}) string {
+	if isUnitType(t) {
+		return ""
+	}
+	return g.goType(t, typeParams)
 }
 
 func (g *generator) constraintTypeArgs(args []TypeExpr, typeParams map[string]struct{}) string {
@@ -1426,7 +1466,7 @@ func splitTopLevel(s string, sep rune) []string {
 func methodReturnType(iface *InterfaceDecl, method string) string {
 	for _, m := range iface.Methods {
 		if m.Name == method {
-			return typeString(m.Ret, nil)
+			return typeStringReturn(m.Ret, nil)
 		}
 	}
 	return "any"
@@ -1529,10 +1569,38 @@ func typeString(t TypeExpr, subst map[string]string) string {
 		for _, p := range tt.Params {
 			params = append(params, typeString(p, subst))
 		}
-		return "func(" + strings.Join(params, ", ") + ") " + typeString(tt.Ret, subst)
+		ret := typeStringReturn(tt.Ret, subst)
+		if ret == "" {
+			return "func(" + strings.Join(params, ", ") + ")"
+		}
+		return "func(" + strings.Join(params, ", ") + ") " + ret
 	default:
 		return "any"
 	}
+}
+
+func typeStringReturn(t TypeExpr, subst map[string]string) string {
+	if isUnitType(t) {
+		return ""
+	}
+	return typeString(t, subst)
+}
+
+func isUnitType(t TypeExpr) bool {
+	tt, ok := t.(*NamedType)
+	return ok && tt.Name == "Unit" && len(tt.Args) == 0
+}
+
+func (g *generator) writeUnitBody(b *strings.Builder, expr, exprType string) {
+	b.WriteString("\t")
+	if exprType == "" {
+		b.WriteString(expr)
+		b.WriteString("\n")
+		return
+	}
+	b.WriteString("_ = ")
+	b.WriteString(expr)
+	b.WriteString("\n")
 }
 
 func importAliasForPath(path string) string {
