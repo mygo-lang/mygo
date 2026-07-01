@@ -1,122 +1,27 @@
-# MyGO 语言规范
+# AGENTS.md
 
-## 概述
-MyGO 是一个函数式编程语言，具有代数数据类型、Typeclass 系统、模式匹配等特性。
+## Project Shape
 
-## 核心特性
+- `example.mygo` is the canonical design sample for the language surface.
+- `internal/mygo/parser.go` owns syntax.
+- `internal/mygo/compiler.go` owns lowering to generated Go.
+- `zz_mygo.gen.go` is generated output and should be treated as disposable.
 
-### 1. 代数数据类型 (ADT)
-```mygo
-# 枚举类型
-enum Option a where
-  Some a
-  None
-end
+## Type Model
 
-# 记录类型
-struct User where
-  name: String
-  age: Int
-  email: String
-end
-```
+- Keep type parameters explicit in the AST and preserve them in generated Go.
+- The current design follows Lisette-style nominal concrete types and structural interfaces.
+- Generic enums, structs, interfaces, and functions should remain generic in emitted Go rather than collapsing to `any`.
+- Named primitive spellings like `Int`, `String`, `Bool`, and `Unit` map to Go primitives in generation.
 
-### 2. Typeclass 系统
-多态接口定义：
-```mygo
-interface Eq a where
-  (==): a -> a -> Bool
-  (!=): a -> a -> Bool
-end
+## Go FFI
 
-interface Ord a where
-  (<): a -> a -> Bool
-  (<=): a -> a -> Bool
-  (>): a -> a -> Bool
-  (>=): a -> a -> Bool
-end
+- Use `import "go:pkg/name"` for Go packages.
+- Allow an optional alias form like `import fmt "go:fmt"` when the Go package name should be explicit.
+- Package-qualified selectors such as `fmt.Sprint(...)` should lower as Go selectors, not as struct field access.
+- Generated Go must continue to include helper imports required by the compiler, such as `reflect`.
 
-interface Monad m where
-  return: a -> m a
-  bind: m a -> (a -> m b) -> m b
-end
-```
+## Workflow Notes
 
-### 3. 模式匹配
-```mygo
-match expr
-  Pattern -> Expr
-  _ -> Default
-end
-```
-
-### 4. 管道操作符
-```mygo
-# a |> f 等价于 f(a)
-# a |> f |> g 等价于 g(f(a))
-```
-
-### 5. 类型约束
-```mygo
-func process(items: List[a]) where Eq[a]: ...
-```
-
-## 标准库
-
-### Option 类型
-```mygo
-func option_some[a](x: a): Option[a]
-func option_none[a](): Option[a]
-func option_map[a, b](f: a -> b, opt: Option[a]): Option[b]
-```
-
-### List 类型
-```mygo
-func list_cons[a](h: a, t: List[a]): List[a]
-func list_nil[a](): List[a]
-func list_map[a, b](f: a -> b, list: List[a]): List[b]
-func list_filter[a](pred: a -> Bool, list: List[a]): List[a]
-```
-
-### 辅助函数
-```mygo
-# 数学
-func math_abs[n: Int]: Int
-func math_max[n: Int](list: List[Int]): Int
-func math_sum[n: Int](list: List[Int]): Int
-
-# 字符串
-func str_toUpper(s: String): String
-func str_trim(s: String): String
-func str_split(s: String, sep: String): List[String]
-```
-
-## 模块系统
-```mygo
-module Math where
-  func add(a: Int, b: Int): Int
-    a + b
-end
-```
-
-## IO Monad
-```mygo
-func io_liftGo[a](a: a): IO[a]
-func io_run[a](io: IO[a]): a
-func io_bind[a, b](io: IO[a], f: a -> IO[b]): IO[b]
-```
-
-## 示例程序
-```mygo
-func main(): IO[Unit]
-  run <| func()
-    result = Math.add(1, 2)
-    msg = "Result: " + strconv.Itoa(result * 2)
-    IO.print(msg)
-  end
-end
-```
-
-## 实现
-- **prelude**: Go 泛型实现核心库（Option, Result, List, Monad）
-- **ave-musica**: Go 解析器 + 转译器（MyGO → Go）
+- Prefer small, focused changes that keep the example file in sync with compiler behavior.
+- When checking the build, use a writable Go cache if the default cache path is unavailable in this environment.

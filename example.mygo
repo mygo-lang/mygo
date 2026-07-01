@@ -1,0 +1,132 @@
+# MyGO v1 语法示例
+
+module Example
+  import fmt "go:fmt"
+  import strings "go:strings"
+
+  enum Option[A]
+    Some(A)
+    None
+  end
+
+  enum Result[E, A]
+    Ok(A)
+    Err(E)
+  end
+
+  enum List[A]
+    Nil
+    Cons(A, List[A])
+  end
+
+  struct User
+    name: String
+    age: Int
+    email: String
+  end
+
+  interface Eq[A]
+    func eq(x: A, y: A): Bool
+
+    func neq(x: A, y: A): Bool
+      not(eq(x, y))
+    end
+  end
+
+  interface ToString[A]
+    func toString(value: A): String
+  end
+
+  impl Eq[Int]
+    func eq(x: Int, y: Int): Bool
+      x == y
+    end
+  end
+
+  impl ToString[Int]
+    func toString(value: Int): String
+      "Int"
+    end
+  end
+
+  impl ToString[String]
+    func toString(value: String): String
+      value
+    end
+  end
+
+  func add(x: Int, y: Int): Int
+    x + y
+  end
+
+  func map_option[A, B](f: func(A): B, opt: Option[A]): Option[B]
+    switch opt
+      case None -> None
+      case Some(x) -> Some(f(x))
+    end
+  end
+
+  func unwrap_or[A](opt: Option[A], fallback: A): A
+    switch opt
+      case None -> fallback
+      case Some(value) -> value
+    end
+  end
+
+  func map_result[E, A, B](f: func(A): B, res: Result[E, A]): Result[E, B]
+    switch res
+      case Err(error) -> Err(error)
+      case Ok(value) -> Ok(f(value))
+    end
+  end
+
+  func show_all[A](items: List[A]): List[String] where ToString[A]
+    map_list(func(x: A): String
+      toString(x)
+    end, items)
+  end
+
+  func compare_all[A](x: A, y: A): Bool where Eq[A]
+    eq(x, y)
+  end
+
+  func map_list[A, B](f: func(A): B, xs: List[A]): List[B]
+    switch xs
+      case Nil -> Nil
+      case Cons(head, tail) -> Cons(f(head), map_list(f, tail))
+    end
+  end
+
+  func double(n: Int): Int
+    n * 2
+  end
+
+  func pipeline_demo(nums: List[Int]): List[Int]
+    nums |> map_list(func(x: Int): Int
+      x * 2
+    end)
+  end
+
+  func apply_twice[A](f: func(A): A, x: A): A
+    f(f(x))
+  end
+
+  func combine[A](left: Option[A], right: Option[A]): Option[A]
+    switch left
+      case None -> right
+      case Some(value) -> Some(value)
+    end
+  end
+
+  func render_user(user: User): String
+    fmt.Sprint("User(", toString(user.name), ")")
+  end
+
+  func shout_user(user: User): String
+    strings.ToUpper(render_user(user))
+  end
+
+  func main(): Int
+    0
+  end
+end

@@ -1,4 +1,0 @@
-struct DeviceStatus
-  isDiskPrepared: Bool
-  bridges: List Bridge
-end
