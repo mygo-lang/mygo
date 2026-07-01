@@ -19,10 +19,31 @@ module Example
     Cons(A, List[A])
   end
 
+  enum Tree[A]
+    Empty
+    Leaf(A)
+    Branch(Tree[A], Tree[A])
+  end
+
+  enum Validation[E, A]
+    Valid(A)
+    Invalid(List[E])
+  end
+
+  struct Box[A]
+    value: A
+  end
+
   struct User
     name: String
     age: Int
     email: String
+  end
+
+  struct Profile
+    user: User
+    tags: List[String]
+    active: Bool
   end
 
   interface Eq[A]
@@ -43,6 +64,18 @@ module Example
     end
   end
 
+  impl Eq[String]
+    func eq(x: String, y: String): Bool
+      x == y
+    end
+  end
+
+  impl Eq[Bool]
+    func eq(x: Bool, y: Bool): Bool
+      x == y
+    end
+  end
+
   impl ToString[Int]
     func toString(value: Int): String
       "Int"
@@ -55,8 +88,30 @@ module Example
     end
   end
 
+  impl ToString[Bool]
+    func toString(value: Bool): String
+      fmt.Sprint(value)
+    end
+  end
+
   func add(x: Int, y: Int): Int
     x + y
+  end
+
+  func multiply(x: Int, y: Int): Int
+    x * y
+  end
+
+  func identity[A](value: A): A
+    value
+  end
+
+  func const_first[A, B](left: A, right: B): A
+    left
+  end
+
+  func box_value[A](box: Box[A]): A
+    box.value
   end
 
   func map_option[A, B](f: func(A): B, opt: Option[A]): Option[B]
@@ -64,6 +119,31 @@ module Example
       case None -> None
       case Some(x) -> Some(f(x))
     end
+  end
+
+  func flat_map_option[A, B](f: func(A): Option[B], opt: Option[A]): Option[B]
+    switch opt
+      case None -> None
+      case Some(value) -> f(value)
+    end
+  end
+
+  func flatten_option[A](opt: Option[Option[A]]): Option[A]
+    switch opt
+      case None -> None
+      case Some(inner) -> inner
+    end
+  end
+
+  func is_some[A](opt: Option[A]): Bool
+    switch opt
+      case None -> false
+      case Some(value) -> true
+    end
+  end
+
+  func is_none[A](opt: Option[A]): Bool
+    not(is_some(opt))
   end
 
   func unwrap_or[A](opt: Option[A], fallback: A): A
@@ -80,6 +160,34 @@ module Example
     end
   end
 
+  func result_to_option[E, A](res: Result[E, A]): Option[A]
+    switch res
+      case Err(error) -> None
+      case Ok(value) -> Some(value)
+    end
+  end
+
+  func option_to_result[E, A](opt: Option[A], error: E): Result[E, A]
+    switch opt
+      case None -> Err(error)
+      case Some(value) -> Ok(value)
+    end
+  end
+
+  func recover_result[E, A](res: Result[E, A], fallback: A): A
+    switch res
+      case Err(error) -> fallback
+      case Ok(value) -> value
+    end
+  end
+
+  func validation_to_result[E, A](validation: Validation[E, A], fallback: E): Result[E, A]
+    switch validation
+      case Invalid(errors) -> Err(fallback)
+      case Valid(value) -> Ok(value)
+    end
+  end
+
   func show_all[A](items: List[A]): List[String] where ToString[A]
     map_list(func(x: A): String
       toString(x)
@@ -90,10 +198,43 @@ module Example
     eq(x, y)
   end
 
+  func compare_not[A](x: A, y: A): Bool where Eq[A]
+    neq(x, y)
+  end
+
+  func describe_pair[A](x: A, y: A): String where Eq[A], ToString[A]
+    fmt.Sprint(toString(x), " == ", toString(y), ": ", eq(x, y))
+  end
+
   func map_list[A, B](f: func(A): B, xs: List[A]): List[B]
     switch xs
       case Nil -> Nil
       case Cons(head, tail) -> Cons(f(head), map_list(f, tail))
+    end
+  end
+
+  func append_list[A](left: List[A], right: List[A]): List[A]
+    switch left
+      case Nil -> right
+      case Cons(head, tail) -> Cons(head, append_list(tail, right))
+    end
+  end
+
+  func concat_map[A, B](f: func(A): List[B], xs: List[A]): List[B]
+    switch xs
+      case Nil -> Nil
+      case Cons(head, tail) -> append_list(f(head), concat_map(f, tail))
+    end
+  end
+
+  func list_singleton[A](value: A): List[A]
+    Cons(value, Nil)
+  end
+
+  func list_length[A](xs: List[A]): Int
+    switch xs
+      case Nil -> 0
+      case Cons(head, tail) -> 1 + list_length(tail)
     end
   end
 
@@ -111,6 +252,12 @@ module Example
     f(f(x))
   end
 
+  func triple_twice(n: Int): Int
+    apply_twice(func(x: Int): Int
+      x * 3
+    end, n)
+  end
+
   func combine[A](left: Option[A], right: Option[A]): Option[A]
     switch left
       case None -> right
@@ -118,12 +265,59 @@ module Example
     end
   end
 
+  func choose_result[E, A](left: Result[E, A], right: Result[E, A]): Result[E, A]
+    switch left
+      case Err(error) -> right
+      case Ok(value) -> Ok(value)
+    end
+  end
+
+  func map_tree[A, B](f: func(A): B, tree: Tree[A]): Tree[B]
+    switch tree
+      case Empty -> Empty
+      case Leaf(value) -> Leaf(f(value))
+      case Branch(left, right) -> Branch(map_tree(f, left), map_tree(f, right))
+    end
+  end
+
+  func tree_size[A](tree: Tree[A]): Int
+    switch tree
+      case Empty -> 0
+      case Leaf(value) -> 1
+      case Branch(left, right) -> tree_size(left) + tree_size(right)
+    end
+  end
+
+  func tree_values[A](tree: Tree[A]): List[A]
+    switch tree
+      case Empty -> Nil
+      case Leaf(value) -> Cons(value, Nil)
+      case Branch(left, right) -> append_list(tree_values(left), tree_values(right))
+    end
+  end
+
   func render_user(user: User): String
     fmt.Sprint("User(", toString(user.name), ")")
   end
 
+  func user_contact(user: User): String
+    fmt.Sprint(user.name, " <", user.email, ">")
+  end
+
+  func birthday(user: User): String
+    fmt.Sprint(user.name, " turns ", user.age + 1)
+  end
+
   func shout_user(user: User): String
     strings.ToUpper(render_user(user))
+  end
+
+  func render_profile(profile: Profile): String
+    fmt.Sprint(render_user(profile.user), " active=", toString(profile.active))
+  end
+
+  func profile_tags(profile: Profile): List[String]
+    profile.tags
   end
 
   func main(): Int

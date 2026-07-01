@@ -705,6 +705,20 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 	if enumDecl == nil {
 		return "", "", fmt.Errorf("switch target %q is not an enum", targetType)
 	}
+	needsSwitchVar := false
+	for _, c := range n.Cases {
+		if pat, ok := c.Pattern.(*VariantPattern); ok {
+			for _, arg := range pat.Args {
+				if exprUsesIdent(c.Body, arg) {
+					needsSwitchVar = true
+					break
+				}
+			}
+			if needsSwitchVar {
+				break
+			}
+		}
+	}
 	var b strings.Builder
 	b.WriteString("func() ")
 	if expected == "" {
@@ -713,11 +727,17 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 		b.WriteString(expected)
 	}
 	b.WriteString(" {\n")
-	b.WriteString("\tswitch v := ")
-	b.WriteString(targetCode)
-	b.WriteString(".(type) {\n")
+	if needsSwitchVar {
+		b.WriteString("\tswitch v := ")
+		b.WriteString(targetCode)
+		b.WriteString(".(type) {\n")
+	} else {
+		b.WriteString("\tswitch ")
+		b.WriteString(targetCode)
+		b.WriteString(".(type) {\n")
+	}
 	for _, c := range n.Cases {
-		pat, bindings, err := g.translatePattern(c.Pattern, enumDecl, enumArgs)
+		pat, bindings, err := g.translatePattern(c.Pattern, enumDecl, enumArgs, "v", c.Body)
 		if err != nil {
 			return "", "", err
 		}
@@ -741,7 +761,7 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 	return b.String(), expected, nil
 }
 
-func (g *generator) translatePattern(p Pattern, enum *EnumDecl, enumArgs []string) (string, map[string]bindingInfo, error) {
+func (g *generator) translatePattern(p Pattern, enum *EnumDecl, enumArgs []string, switchVar string, body Expr) (string, map[string]bindingInfo, error) {
 	switch pat := p.(type) {
 	case *WildcardPattern:
 		return "interface{}", nil, nil
@@ -759,8 +779,11 @@ func (g *generator) translatePattern(p Pattern, enum *EnumDecl, enumArgs []strin
 			if i >= len(variant.Fields) {
 				return "", nil, fmt.Errorf("pattern %s arity mismatch", pat.Name)
 			}
+			if !exprUsesIdent(body, arg) {
+				continue
+			}
 			bindings[arg] = bindingInfo{
-				Expr: fmt.Sprintf("v.F%d", i),
+				Expr: fmt.Sprintf("%s.F%d", switchVar, i),
 				Type: g.goType(variant.Fields[i].Type, nil),
 			}
 		}
@@ -792,15 +815,35 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 			}()), "any", nil
 		}
 		if g.pkg.Funcs[id.Name] != nil {
+			fn := g.pkg.Funcs[id.Name]
 			var args []string
+			var argTypes []string
 			for _, a := range n.Args {
 				code, _, err := g.translateExpr(a, ctx, "")
 				if err != nil {
 					return "", "", err
 				}
 				args = append(args, code)
+				_, typ, err := g.translateExpr(a, ctx, "")
+				if err != nil {
+					return "", "", err
+				}
+				argTypes = append(argTypes, typ)
 			}
-			return fmt.Sprintf("%s(%s)", id.Name, strings.Join(args, ", ")), g.goType(g.pkg.Funcs[id.Name].Ret, ctx.typeParams), nil
+			subst := inferFuncTypeArgs(fn, argTypes, expected, ctx.typeParams)
+			callee := id.Name
+			if len(fn.TypeParams) > 0 && len(subst) == len(fn.TypeParams) {
+				var typeArgs []string
+				for _, tp := range fn.TypeParams {
+					typeArgs = append(typeArgs, subst[tp])
+				}
+				callee += "[" + strings.Join(typeArgs, ", ") + "]"
+			}
+			retType := g.goType(fn.Ret, ctx.typeParams)
+			if len(subst) > 0 {
+				retType = typeString(fn.Ret, subst)
+			}
+			return fmt.Sprintf("%s(%s)", callee, strings.Join(args, ", ")), retType, nil
 		}
 		if enumName, ok := g.variantByName[id.Name]; ok {
 			return g.translateEnumConstructor(enumName, id.Name, n.Args, ctx, expected)
@@ -822,7 +865,7 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 			}()), "any", nil
 		}
 	}
-	callee, _, err := g.translateExpr(n.Callee, ctx, "")
+	callee, calleeType, err := g.translateExpr(n.Callee, ctx, "")
 	if err != nil {
 		return "", "", err
 	}
@@ -834,7 +877,11 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 		}
 		args = append(args, code)
 	}
-	return fmt.Sprintf("%s(%s)", callee, strings.Join(args, ", ")), expected, nil
+	retType := expected
+	if parsedRet := funcReturnType(calleeType); parsedRet != "" {
+		retType = parsedRet
+	}
+	return fmt.Sprintf("%s(%s)", callee, strings.Join(args, ", ")), retType, nil
 }
 
 func (g *generator) translateEnumConstructor(enumName, name string, args []Expr, ctx *exprCtx, expected string) (string, string, error) {
@@ -854,9 +901,25 @@ func (g *generator) translateEnumConstructor(enumName, name string, args []Expr,
 			_, typeArgs = splitTypeArgs(expected)
 		}
 	}
+	var variant *EnumVariant
+	if enumDecl := g.pkg.Enums[enumName]; enumDecl != nil {
+		variant = g.findVariant(enumDecl, name)
+	}
+	subst := map[string]string{}
+	if enumDecl := g.pkg.Enums[enumName]; enumDecl != nil {
+		for i, tp := range enumDecl.TypeParams {
+			if i < len(typeArgs) {
+				subst[tp] = typeArgs[i]
+			}
+		}
+	}
 	var argCodes []string
-	for _, a := range args {
-		code, _, err := g.translateExpr(a, ctx, "")
+	for i, a := range args {
+		argExpected := ""
+		if variant != nil && i < len(variant.Fields) {
+			argExpected = typeString(variant.Fields[i].Type, subst)
+		}
+		code, _, err := g.translateExpr(a, ctx, argExpected)
 		if err != nil {
 			return "", "", err
 		}
@@ -966,6 +1029,9 @@ func (g *generator) translateIdent(name string, ctx *exprCtx, expected string) (
 		}
 		return "Nil[any]()", expected, nil
 	}
+	if enumName, ok := g.variantByName[name]; ok {
+		return g.translateEnumConstructor(enumName, name, nil, ctx, expected)
+	}
 	if typeclassHelper, typ, ok := g.translateTypeclassIdent(name, ctx, expected); ok {
 		return typeclassHelper, typ, nil
 	}
@@ -1063,6 +1129,45 @@ func containsTypeParam(t TypeExpr, typeParams map[string]struct{}) bool {
 			}
 		}
 		return containsTypeParam(tt.Ret, typeParams)
+	}
+	return false
+}
+
+func exprUsesIdent(e Expr, name string) bool {
+	switch n := e.(type) {
+	case *IdentExpr:
+		return n.Name == name
+	case *CallExpr:
+		if exprUsesIdent(n.Callee, name) {
+			return true
+		}
+		for _, arg := range n.Args {
+			if exprUsesIdent(arg, name) {
+				return true
+			}
+		}
+	case *BinaryExpr:
+		return exprUsesIdent(n.Left, name) || exprUsesIdent(n.Right, name)
+	case *PrefixExpr:
+		return exprUsesIdent(n.Expr, name)
+	case *FieldExpr:
+		return exprUsesIdent(n.Expr, name)
+	case *FuncLitExpr:
+		for _, p := range n.Params {
+			if p.Name == name {
+				return false
+			}
+		}
+		return exprUsesIdent(n.Body, name)
+	case *SwitchExpr:
+		if exprUsesIdent(n.Target, name) {
+			return true
+		}
+		for _, c := range n.Cases {
+			if exprUsesIdent(c.Body, name) {
+				return true
+			}
+		}
 	}
 	return false
 }
@@ -1210,11 +1315,61 @@ func splitTypeArgs(typ string) (string, []string) {
 	if inner == "" {
 		return name, nil
 	}
-	parts := strings.Split(inner, ",")
-	for i := range parts {
-		parts[i] = strings.TrimSpace(parts[i])
+	return name, splitTopLevel(inner, ',')
+}
+
+func splitFuncType(typ string) ([]string, string) {
+	typ = strings.TrimSpace(typ)
+	if !strings.HasPrefix(typ, "func(") {
+		return nil, ""
 	}
-	return name, parts
+	start := strings.Index(typ, "(")
+	depth := 0
+	for i := start; i < len(typ); i++ {
+		switch typ[i] {
+		case '(', '[':
+			depth++
+		case ')', ']':
+			depth--
+			if depth == 0 && typ[i] == ')' {
+				params := strings.TrimSpace(typ[start+1 : i])
+				ret := strings.TrimSpace(typ[i+1:])
+				if params == "" {
+					return nil, ret
+				}
+				return splitTopLevel(params, ','), ret
+			}
+		}
+	}
+	return nil, ""
+}
+
+func funcReturnType(typ string) string {
+	_, ret := splitFuncType(typ)
+	return ret
+}
+
+func splitTopLevel(s string, sep rune) []string {
+	var parts []string
+	depth := 0
+	start := 0
+	for i, r := range s {
+		switch r {
+		case '[', '(':
+			depth++
+		case ']', ')':
+			if depth > 0 {
+				depth--
+			}
+		default:
+			if r == sep && depth == 0 {
+				parts = append(parts, strings.TrimSpace(s[start:i]))
+				start = i + len(string(r))
+			}
+		}
+	}
+	parts = append(parts, strings.TrimSpace(s[start:]))
+	return parts
 }
 
 func methodReturnType(iface *InterfaceDecl, method string) string {
@@ -1224,6 +1379,72 @@ func methodReturnType(iface *InterfaceDecl, method string) string {
 		}
 	}
 	return "any"
+}
+
+func inferFuncTypeArgs(fn *FuncDecl, argTypes []string, expectedRet string, inScope map[string]struct{}) map[string]string {
+	subst := map[string]string{}
+	params := map[string]struct{}{}
+	for _, tp := range fn.TypeParams {
+		params[tp] = struct{}{}
+	}
+	for i, p := range fn.Params {
+		if i >= len(argTypes) {
+			break
+		}
+		unifyType(p.Type, argTypes[i], params, subst)
+	}
+	if expectedRet != "" {
+		unifyType(fn.Ret, expectedRet, params, subst)
+	}
+	return subst
+}
+
+func unifyType(pattern TypeExpr, actual string, params map[string]struct{}, subst map[string]string) {
+	if actual == "" || actual == "any" {
+		return
+	}
+	switch p := pattern.(type) {
+	case *NamedType:
+		if _, ok := params[p.Name]; ok && len(p.Args) == 0 {
+			subst[p.Name] = actual
+			return
+		}
+		patternName := primitiveGoName(p.Name)
+		if patternName == "" {
+			patternName = p.Name
+		}
+		actualName, actualArgs := splitTypeArgs(actual)
+		if patternName != actualName || len(p.Args) != len(actualArgs) {
+			return
+		}
+		for i, arg := range p.Args {
+			unifyType(arg, actualArgs[i], params, subst)
+		}
+	case *FuncType:
+		actualParams, actualRet := splitFuncType(actual)
+		if len(actualParams) != len(p.Params) {
+			return
+		}
+		for i, param := range p.Params {
+			unifyType(param, actualParams[i], params, subst)
+		}
+		unifyType(p.Ret, actualRet, params, subst)
+	}
+}
+
+func primitiveGoName(name string) string {
+	switch name {
+	case "Int":
+		return "int"
+	case "String":
+		return "string"
+	case "Bool":
+		return "bool"
+	case "Unit":
+		return "struct{}"
+	default:
+		return ""
+	}
 }
 
 func typeString(t TypeExpr, subst map[string]string) string {
