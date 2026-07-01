@@ -2,7 +2,6 @@
 package example
 
 import (
-	"reflect"
 	"fmt"
 	"strings"
 )
@@ -477,18 +476,5 @@ func profile_tags(profile Profile) List[string] {
 
 func main() int {
 	return 0
-}
-
-
-func callAny(fn any, args ...any) any {
-	values := make([]reflect.Value, len(args))
-	for i, arg := range args {
-		values[i] = reflect.ValueOf(arg)
-	}
-	out := reflect.ValueOf(fn).Call(values)
-	if len(out) == 0 {
-		return nil
-	}
-	return out[0].Interface()
 }
 
