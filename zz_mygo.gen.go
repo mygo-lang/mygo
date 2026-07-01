@@ -69,38 +69,20 @@ type ToString[A any] interface {
 	toString(value A) string
 }
 
-type Eq_intDict struct{}
-func (Eq_intDict) eq(x int, y int) bool {
+func eq_int(x int, y int) bool {
 	return (x == y)
 }
-func eq_int(x int, y int) bool {
-	return Eq_intDict{}.eq(x, y)
-}
-func (Eq_intDict) neq(x int, y int) bool {
+func neq_int(x int, y int) bool {
 	return (!eq_int(x, y))
 }
-func neq_int(x int, y int) bool {
-	return Eq_intDict{}.neq(x, y)
-}
-var Eq_intInstance Eq[int] = Eq_intDict{}
 
-type ToString_intDict struct{}
-func (ToString_intDict) toString(value int) string {
+func toString_int(value int) string {
 	return "Int"
 }
-func toString_int(value int) string {
-	return ToString_intDict{}.toString(value)
-}
-var ToString_intInstance ToString[int] = ToString_intDict{}
 
-type ToString_stringDict struct{}
-func (ToString_stringDict) toString(value string) string {
+func toString_string(value string) string {
 	return value
 }
-func toString_string(value string) string {
-	return ToString_stringDict{}.toString(value)
-}
-var ToString_stringInstance ToString[string] = ToString_stringDict{}
 
 func add(x int, y int) int {
 	return (x + y)
@@ -142,14 +124,14 @@ func map_result[E any, A any, B any](f func(A) B, res Result[E, A]) Result[E, B]
 }()
 }
 
-func show_all[A any](items List[A], toStringDict ToString[A]) List[string] {
+func show_all[A any](items List[A], toStringFn func(A) string) List[string] {
 	return map_list(func(x A) string {
-	return toStringDict.toString(x)
+	return toStringFn(x)
 }, items)
 }
 
-func compare_all[A any](x A, y A, eqDict Eq[A]) bool {
-	return eqDict.eq(x, y)
+func compare_all[A any](x A, y A, eqFn func(A, A) bool, neqFn func(A, A) bool) bool {
+	return eqFn(x, y)
 }
 
 func map_list[A any, B any](f func(A) B, xs List[A]) List[B] {

@@ -281,13 +281,13 @@ type generator struct {
 }
 
 type exprCtx struct {
-	locals         map[string]string
-	bindings       map[string]string
-	sourceTypes    map[string]string
-	typeParams     map[string]struct{}
-	constraintDict map[string]string
-	retType        string
-	currentImpl    string
+	locals          map[string]string
+	bindings        map[string]string
+	sourceTypes     map[string]string
+	typeParams      map[string]struct{}
+	constraintFuncs map[string]string
+	retType         string
+	currentImpl     string
 }
 
 type bindingInfo struct {
@@ -420,19 +420,7 @@ func (g *generator) genImpl(d *ImplDecl) (string, error) {
 		subst[tp] = g.goType(d.TypeArgs[i], nil)
 	}
 	typeKey := g.implTypeKey(d.TypeArgs)
-	instanceType := d.Name
-	if len(d.TypeArgs) > 0 {
-		args := make([]string, 0, len(d.TypeArgs))
-		for _, a := range d.TypeArgs {
-			args = append(args, typeString(a, nil))
-		}
-		instanceType += "[" + strings.Join(args, ", ") + "]"
-	}
-	dictType := d.Name + typeKey + "Dict"
 	var b strings.Builder
-	b.WriteString("type ")
-	b.WriteString(dictType)
-	b.WriteString(" struct{}\n")
 	methodBodies := map[string]*FuncDecl{}
 	for _, m := range d.Methods {
 		methodBodies[m.Name] = m
@@ -447,20 +435,18 @@ func (g *generator) genImpl(d *ImplDecl) (string, error) {
 			params = method.Params
 			ret = method.Ret
 		}
-		b.WriteString("func (")
-		b.WriteString(dictType)
-		b.WriteString(") ")
-		b.WriteString(sig.Name)
-		b.WriteString("(")
 		ctx := &exprCtx{
-			locals:         map[string]string{},
-			bindings:       map[string]string{},
-			sourceTypes:    map[string]string{},
-			typeParams:     map[string]struct{}{},
-			constraintDict: map[string]string{},
-			retType:        typeString(ret, subst),
-			currentImpl:    d.Name,
+			locals:          map[string]string{},
+			bindings:        map[string]string{},
+			sourceTypes:     map[string]string{},
+			typeParams:      map[string]struct{}{},
+			constraintFuncs: map[string]string{},
+			retType:         typeString(ret, subst),
+			currentImpl:     d.Name,
 		}
+		b.WriteString("func ")
+		b.WriteString(helperFuncName(sig.Name, typeKey))
+		b.WriteString("(")
 		for i, p := range params {
 			if i > 0 {
 				b.WriteString(", ")
@@ -488,42 +474,8 @@ func (g *generator) genImpl(d *ImplDecl) (string, error) {
 			b.WriteString("\n")
 		}
 		b.WriteString("}\n")
-		helperName := helperFuncName(sig.Name, typeKey)
-		b.WriteString("func ")
-		b.WriteString(helperName)
-		b.WriteString("(")
-		for i, p := range params {
-			if i > 0 {
-				b.WriteString(", ")
-			}
-			b.WriteString(p.Name)
-			b.WriteString(" ")
-			b.WriteString(typeString(p.Type, subst))
-		}
-		b.WriteString(") ")
-		b.WriteString(retType)
-		b.WriteString(" {\n")
-		b.WriteString("\treturn ")
-		b.WriteString(dictType)
-		b.WriteString("{}.")
-		b.WriteString(sig.Name)
-		b.WriteString("(")
-		for i, p := range params {
-			if i > 0 {
-				b.WriteString(", ")
-			}
-			b.WriteString(p.Name)
-		}
-		b.WriteString(")\n}\n")
 	}
-	b.WriteString("var ")
-	b.WriteString(d.Name)
-	b.WriteString(typeKey)
-	b.WriteString("Instance ")
-	b.WriteString(instanceType)
-	b.WriteString(" = ")
-	b.WriteString(dictType)
-	b.WriteString("{}\n\n")
+	b.WriteString("\n")
 	return b.String(), nil
 }
 
@@ -534,12 +486,12 @@ func (g *generator) genFunc(d *FuncDecl) (string, error) {
 	b.WriteString(genTypeParams(d.TypeParams))
 	b.WriteString("(")
 	ctx := &exprCtx{
-		locals:         map[string]string{},
-		bindings:       map[string]string{},
-		sourceTypes:    map[string]string{},
-		typeParams:     typeParamSet(d.TypeParams),
-		constraintDict: map[string]string{},
-		retType:        g.goType(d.Ret, typeParamSet(d.TypeParams)),
+		locals:          map[string]string{},
+		bindings:        map[string]string{},
+		sourceTypes:     map[string]string{},
+		typeParams:      typeParamSet(d.TypeParams),
+		constraintFuncs: map[string]string{},
+		retType:         g.goType(d.Ret, typeParamSet(d.TypeParams)),
 	}
 	for i, p := range d.Params {
 		if i > 0 {
@@ -554,12 +506,35 @@ func (g *generator) genFunc(d *FuncDecl) (string, error) {
 	}
 	for _, c := range d.Where {
 		b.WriteString(", ")
-		dictName := dictVarName(c.Name)
-		ctx.constraintDict[c.Name] = dictName
-		b.WriteString(dictName)
-		b.WriteString(" ")
-		b.WriteString(c.Name)
-		b.WriteString(g.constraintTypeArgs(c.Args, typeParamSet(d.TypeParams)))
+		iface := g.pkg.Interfaces[c.Name]
+		if iface == nil {
+			return "", fmt.Errorf("function %s: missing interface %s", d.Name, c.Name)
+		}
+		if len(iface.TypeParams) != len(c.Args) {
+			return "", fmt.Errorf("function %s: type arity mismatch for %s", d.Name, c.Name)
+		}
+		subst := map[string]string{}
+		for i, tp := range iface.TypeParams {
+			subst[tp] = g.goType(c.Args[i], typeParamSet(d.TypeParams))
+		}
+		for i, m := range iface.Methods {
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			paramName := m.Name + "Fn"
+			ctx.constraintFuncs[m.Name] = paramName
+			b.WriteString(paramName)
+			b.WriteString(" ")
+			b.WriteString("func(")
+			for i, p := range m.Params {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString(typeString(p.Type, subst))
+			}
+			b.WriteString(") ")
+			b.WriteString(typeString(m.Ret, subst))
+		}
 	}
 	b.WriteString(") ")
 	b.WriteString(g.goType(d.Ret, typeParamSet(d.TypeParams)))
@@ -909,7 +884,7 @@ func (g *generator) translateTypeclassCall(name string, args []Expr, ctx *exprCt
 		if methodIface == nil {
 			return "", "", false
 		}
-		if dictVar, ok := ctx.constraintDict[ifaceName]; ok {
+		if funcName, ok := ctx.constraintFuncs[name]; ok {
 			var argCodes []string
 			for _, a := range args {
 				code, _, err := g.translateExpr(a, ctx, "")
@@ -918,7 +893,7 @@ func (g *generator) translateTypeclassCall(name string, args []Expr, ctx *exprCt
 				}
 				argCodes = append(argCodes, code)
 			}
-			return fmt.Sprintf("%s.%s(%s)", dictVar, name, strings.Join(argCodes, ", ")), methodReturnType(methodIface, name), true
+			return fmt.Sprintf("%s(%s)", funcName, strings.Join(argCodes, ", ")), methodReturnType(methodIface, name), true
 		}
 		if len(args) == 0 {
 			return "", "", false
@@ -998,9 +973,9 @@ func (g *generator) translateIdent(name string, ctx *exprCtx, expected string) (
 }
 
 func (g *generator) translateTypeclassIdent(name string, ctx *exprCtx, expected string) (string, string, bool) {
-	if ifaceName, ok := g.interfaceByMethod[name]; ok {
-		if dictVar, ok := ctx.constraintDict[ifaceName]; ok {
-			return dictVar + "." + name, expected, true
+	if _, ok := g.interfaceByMethod[name]; ok {
+		if funcName, ok := ctx.constraintFuncs[name]; ok {
+			return funcName, expected, true
 		}
 	}
 	return "", "", false
@@ -1105,13 +1080,13 @@ func (g *generator) implTypeKey(args []TypeExpr) string {
 
 func (ctx *exprCtx) child() *exprCtx {
 	dup := &exprCtx{
-		locals:         map[string]string{},
-		bindings:       map[string]string{},
-		sourceTypes:    map[string]string{},
-		typeParams:     map[string]struct{}{},
-		constraintDict: map[string]string{},
-		retType:        ctx.retType,
-		currentImpl:    ctx.currentImpl,
+		locals:          map[string]string{},
+		bindings:        map[string]string{},
+		sourceTypes:     map[string]string{},
+		typeParams:      map[string]struct{}{},
+		constraintFuncs: map[string]string{},
+		retType:         ctx.retType,
+		currentImpl:     ctx.currentImpl,
 	}
 	for k, v := range ctx.locals {
 		dup.locals[k] = v
@@ -1125,8 +1100,8 @@ func (ctx *exprCtx) child() *exprCtx {
 	for k := range ctx.typeParams {
 		dup.typeParams[k] = struct{}{}
 	}
-	for k, v := range ctx.constraintDict {
-		dup.constraintDict[k] = v
+	for k, v := range ctx.constraintFuncs {
+		dup.constraintFuncs[k] = v
 	}
 	return dup
 }
