@@ -29,11 +29,20 @@ module Main
     end
   end
 
-  func announce(): Unit
-    fmt.Println("MyGO example is running", add(40, 2))
+  func announce(): ()
+    let _ = fmt.Println("MyGO example is running", add(40, 2))
   end
 
-  func main(): Unit
+  func demo(): Int
+    let msg = "abc"
+    let _ = fmt.Println(msg)
+    var n: Int = add(40, 2)
+    n = n + 1
+    n
+  end
+
+  func main(): ()
     announce()
+    let _ = demo()
   end
 end

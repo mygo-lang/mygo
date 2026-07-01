@@ -11,6 +11,7 @@ type tokenKind int
 
 const (
 	tokEOF tokenKind = iota
+	tokNewline
 	tokIdent
 	tokNumber
 	tokString
@@ -31,7 +32,24 @@ type lexer struct {
 func newLexer(src string) *lexer { return &lexer{src: []rune(src)} }
 
 func (l *lexer) nextToken() token {
-	l.skipSpaceAndComments()
+	for l.pos < len(l.src) {
+		ch := l.src[l.pos]
+		if ch == '\n' {
+			l.pos++
+			return token{kind: tokNewline, lit: "\n"}
+		}
+		if unicode.IsSpace(ch) {
+			l.pos++
+			continue
+		}
+		if ch == '#' {
+			for l.pos < len(l.src) && l.src[l.pos] != '\n' {
+				l.pos++
+			}
+			continue
+		}
+		break
+	}
 	if l.pos >= len(l.src) {
 		return token{kind: tokEOF}
 	}
@@ -86,7 +104,7 @@ func (l *lexer) nextToken() token {
 		}
 		return token{kind: tokString, lit: b.String()}
 	default:
-		if l.match("->") || l.match("|>") || l.match("==") || l.match("!=") {
+		if l.match("->") || l.match("<|") || l.match("|>") || l.match("==") || l.match("!=") {
 			return token{kind: tokSym, lit: string(l.src[l.pos-2 : l.pos])}
 		}
 		l.pos++
@@ -95,33 +113,17 @@ func (l *lexer) nextToken() token {
 }
 
 func (l *lexer) match(s string) bool {
-	if l.pos+len([]rune(s)) > len(l.src) {
+	runes := []rune(s)
+	if l.pos+len(runes) > len(l.src) {
 		return false
 	}
-	for i, r := range s {
+	for i, r := range runes {
 		if l.src[l.pos+i] != r {
 			return false
 		}
 	}
-	l.pos += len([]rune(s))
+	l.pos += len(runes)
 	return true
-}
-
-func (l *lexer) skipSpaceAndComments() {
-	for l.pos < len(l.src) {
-		ch := l.src[l.pos]
-		if unicode.IsSpace(ch) {
-			l.pos++
-			continue
-		}
-		if ch == '#' {
-			for l.pos < len(l.src) && l.src[l.pos] != '\n' {
-				l.pos++
-			}
-			continue
-		}
-		break
-	}
 }
 
 func isIdentStart(r rune) bool {
@@ -134,7 +136,7 @@ func isIdentPart(r rune) bool {
 
 func isKeyword(s string) bool {
 	switch s {
-	case "module", "import", "enum", "struct", "interface", "impl", "func", "switch", "case", "end", "where", "not":
+	case "module", "import", "enum", "struct", "interface", "impl", "func", "switch", "case", "end", "where", "not", "let", "var":
 		return true
 	default:
 		return false
@@ -142,8 +144,9 @@ func isKeyword(s string) bool {
 }
 
 type parser struct {
-	toks []token
-	pos  int
+	toks   []token
+	pos    int
+	skipNL bool
 }
 
 func ParseFile(src string) (*File, error) {
@@ -173,7 +176,7 @@ func newParser(src string) *parser {
 			break
 		}
 	}
-	return &parser{toks: toks}
+	return &parser{toks: toks, skipNL: true}
 }
 
 func (p *parser) parseFile() (*File, error) {
@@ -295,6 +298,7 @@ func (p *parser) parseEnum() (Decl, error) {
 		}
 		enum.Variants = append(enum.Variants, variant)
 	}
+	p.skipNewlines()
 	if err := p.expectKeyword("end"); err != nil {
 		return nil, err
 	}
@@ -575,6 +579,19 @@ func (p *parser) parseType() (TypeExpr, error) {
 		}
 		return &FuncType{Params: params, Ret: ret}, nil
 	}
+	if p.matchSym("(") {
+		if p.matchSym(")") {
+			return &NamedType{Name: "Unit"}, nil
+		}
+		inner, err := p.parseType()
+		if err != nil {
+			return nil, err
+		}
+		if err := p.expectSym(")"); err != nil {
+			return nil, err
+		}
+		return inner, nil
+	}
 	name, err := p.expectIdent()
 	if err != nil {
 		return nil, err
@@ -608,27 +625,7 @@ func (p *parser) parseType() (TypeExpr, error) {
 }
 
 func (p *parser) parseExprUntilEnd() (Expr, error) {
-	if p.peekKeyword("switch") {
-		expr, err := p.parseSwitchExpr()
-		if err != nil {
-			return nil, err
-		}
-		if err := p.expectKeyword("end"); err != nil {
-			return nil, err
-		}
-		return expr, nil
-	}
-	if p.peekKeyword("func") {
-		expr, err := p.parseFuncLit()
-		if err != nil {
-			return nil, err
-		}
-		if err := p.expectKeyword("end"); err != nil {
-			return nil, err
-		}
-		return expr, nil
-	}
-	expr, err := p.parseExpr(0)
+	expr, err := p.parseExprListUntil("end")
 	if err != nil {
 		return nil, err
 	}
@@ -675,7 +672,15 @@ func (p *parser) parseSwitchExpr() (Expr, error) {
 		return nil, err
 	}
 	var cases []SwitchCase
-	for !p.peekKeyword("end") && !p.peekEOF() {
+	for {
+		p.skipNewlines()
+		tok := p.peekRaw()
+		if tok.kind == tokEOF {
+			break
+		}
+		if tok.kind == tokKeyword && tok.lit == "end" {
+			break
+		}
 		if err := p.expectKeyword("case"); err != nil {
 			return nil, err
 		}
@@ -699,13 +704,7 @@ func (p *parser) parseSwitchExpr() (Expr, error) {
 }
 
 func (p *parser) parseCaseBody() (Expr, error) {
-	if p.peekKeyword("switch") {
-		return p.parseSwitchExpr()
-	}
-	if p.peekKeyword("func") {
-		return p.parseFuncLit()
-	}
-	return p.parseExpr(0)
+	return p.parseExprListUntil("case", "end")
 }
 
 func (p *parser) parsePattern() (Pattern, error) {
@@ -863,6 +862,8 @@ func opPrecedence(tok token) (int, bool) {
 		return 0, false
 	}
 	switch tok.lit {
+	case "<|":
+		return precPipe, true
 	case "|>":
 		return precPipe, true
 	case "==", "!=":
@@ -877,6 +878,13 @@ func opPrecedence(tok token) (int, bool) {
 }
 
 func (p *parser) peek() token {
+	if p.skipNL {
+		p.skipNewlines()
+	}
+	return p.peekRaw()
+}
+
+func (p *parser) peekRaw() token {
 	if p.pos >= len(p.toks) {
 		return token{kind: tokEOF}
 	}
@@ -884,11 +892,24 @@ func (p *parser) peek() token {
 }
 
 func (p *parser) next() token {
-	tok := p.peek()
+	if p.skipNL {
+		p.skipNewlines()
+	}
+	return p.nextRaw()
+}
+
+func (p *parser) nextRaw() token {
+	tok := p.peekRaw()
 	if p.pos < len(p.toks) {
 		p.pos++
 	}
 	return tok
+}
+
+func (p *parser) skipNewlines() {
+	for p.peekRaw().kind == tokNewline {
+		p.pos++
+	}
 }
 
 func (p *parser) peekEOF() bool { return p.peek().kind == tokEOF }
@@ -933,6 +954,124 @@ func (p *parser) expectIdent() (string, error) {
 		return "", fmt.Errorf("expected identifier, got %q", tok.lit)
 	}
 	return tok.lit, nil
+}
+
+func (p *parser) parseExprListUntil(terms ...string) (Expr, error) {
+	prev := p.skipNL
+	p.skipNL = false
+	defer func() { p.skipNL = prev }()
+	var stmts []Stmt
+	for {
+		p.skipNewlines()
+		if p.peekRaw().kind == tokEOF || p.peekAnyKeywordRaw(terms...) {
+			break
+		}
+		stmt, err := p.parseStmt()
+		if err != nil {
+			return nil, err
+		}
+		stmts = append(stmts, stmt)
+		if p.peekRaw().kind == tokEOF || p.peekAnyKeywordRaw(terms...) {
+			break
+		}
+		if p.peekRaw().kind != tokNewline {
+			return nil, fmt.Errorf("expected newline before %q", p.peekRaw().lit)
+		}
+	}
+	if len(stmts) == 0 {
+		return nil, fmt.Errorf("expected expression")
+	}
+	if len(stmts) == 1 {
+		if exprStmt, ok := stmts[0].(*ExprStmt); ok {
+			return exprStmt.Expr, nil
+		}
+	}
+	return &BlockExpr{Stmts: stmts}, nil
+}
+
+func (p *parser) peekAnyKeyword(terms ...string) bool {
+	for _, term := range terms {
+		if p.peekKeyword(term) {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *parser) peekAnyKeywordRaw(terms ...string) bool {
+	for _, term := range terms {
+		tok := p.peekRaw()
+		if tok.kind == tokKeyword && tok.lit == term {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *parser) parseStmt() (Stmt, error) {
+	switch {
+	case p.peekRaw().kind == tokKeyword && p.peekRaw().lit == "let":
+		return p.parseBindingStmt(false)
+	case p.peekRaw().kind == tokKeyword && p.peekRaw().lit == "var":
+		return p.parseBindingStmt(true)
+	case p.peekRaw().kind == tokIdent && p.peekRawN(1).kind == tokSym && p.peekRawN(1).lit == "=":
+		name, err := p.expectIdent()
+		if err != nil {
+			return nil, err
+		}
+		if err := p.expectSym("="); err != nil {
+			return nil, err
+		}
+		value, err := p.parseExpr(0)
+		if err != nil {
+			return nil, err
+		}
+		return &AssignStmt{Name: name, Value: value}, nil
+	default:
+		expr, err := p.parseExpr(0)
+		if err != nil {
+			return nil, err
+		}
+		return &ExprStmt{Expr: expr}, nil
+	}
+}
+
+func (p *parser) parseBindingStmt(mutable bool) (Stmt, error) {
+	if mutable {
+		if err := p.expectKeyword("var"); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := p.expectKeyword("let"); err != nil {
+			return nil, err
+		}
+	}
+	name, err := p.expectIdent()
+	if err != nil {
+		return nil, err
+	}
+	var typ TypeExpr
+	if p.matchSym(":") {
+		typ, err = p.parseType()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if err := p.expectSym("="); err != nil {
+		return nil, err
+	}
+	value, err := p.parseExpr(0)
+	if err != nil {
+		return nil, err
+	}
+	return &LetStmt{Mutable: mutable, Name: name, Type: typ, Value: value}, nil
+}
+
+func (p *parser) peekRawN(n int) token {
+	if p.pos+n >= len(p.toks) {
+		return token{kind: tokEOF}
+	}
+	return p.toks[p.pos+n]
 }
 
 func MustParseInt(s string) int {

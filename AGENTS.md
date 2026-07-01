@@ -29,3 +29,12 @@
 - Prefer small, focused changes that keep the example file in sync with compiler behavior.
 - Keep `examples/main/main.mygo` runnable after compiler changes; its `main` function should actually do work, not only return a value.
 - When checking the build, use a writable Go cache if the default cache path is unavailable in this environment.
+
+## Current Semantics
+
+- Function bodies and other block forms are newline-separated statement lists; the last plain expression in a block is the return value.
+- `let` introduces an immutable binding. Rebinding the same source name must use a later `let` and is treated as shadowing, not assignment.
+- `var` introduces a mutable binding and may be assigned again later in the same scope.
+- `let` may omit its type annotation when the initializer provides enough information for inference.
+- `let _ = ...` is the supported discard form for return values that should not be bound.
+- Pipe operators `<|` and `|>` are both supported in expression lowering.

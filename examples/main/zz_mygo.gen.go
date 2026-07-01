@@ -9,12 +9,9 @@ type Option[A any] interface{ isOption() }
 type OptionSome[A any] struct {
 	F0 A
 }
-
 func (OptionSome[A]) isOption() {}
-
 type OptionNone[A any] struct {
 }
-
 func (OptionNone[A]) isOption() {}
 func Some[A any](a0 A) Option[A] {
 	return OptionSome[A]{F0: a0}
@@ -41,20 +38,36 @@ func box_value[A any](box Box[A]) A {
 
 func unwrap_or[A any](opt Option[A], fallback A) A {
 	return func() A {
-		switch v := opt.(type) {
-		case OptionNone[A]:
-			return fallback
-		case OptionSome[A]:
-			return v.F0
-		}
-		panic("unreachable")
-	}()
+	switch v := opt.(type) {
+	case OptionNone[A]:
+		return fallback
+	case OptionSome[A]:
+		return v.F0
+	}
+	panic("unreachable")
+}()
 }
 
 func announce() {
+	func() {
 	fmt.Println("MyGO example is running", add(40, 2))
+}()
+}
+
+func demo() int {
+	return func() int {
+	msg_1 := "abc"
+	fmt.Println(msg_1)
+	var n_2 int = add(40, 2)
+	n_2 = (n_2 + 1)
+	return n_2
+}()
 }
 
 func main() {
+	func() {
 	announce()
+	demo()
+}()
 }
+

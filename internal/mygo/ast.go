@@ -101,6 +101,8 @@ func (*FuncType) typeNode() {}
 
 type Expr interface{ exprNode() }
 
+type Stmt interface{ stmtNode() }
+
 type IdentExpr struct{ Name string }
 
 func (*IdentExpr) exprNode() {}
@@ -155,6 +157,34 @@ type SwitchExpr struct {
 }
 
 func (*SwitchExpr) exprNode() {}
+
+type BlockExpr struct {
+	Stmts []Stmt
+}
+
+func (*BlockExpr) exprNode() {}
+
+type ExprStmt struct {
+	Expr Expr
+}
+
+func (*ExprStmt) stmtNode() {}
+
+type LetStmt struct {
+	Mutable bool
+	Name    string
+	Type    TypeExpr
+	Value   Expr
+}
+
+func (*LetStmt) stmtNode() {}
+
+type AssignStmt struct {
+	Name  string
+	Value Expr
+}
+
+func (*AssignStmt) stmtNode() {}
 
 type SwitchCase struct {
 	Pattern Pattern

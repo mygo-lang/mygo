@@ -291,12 +291,14 @@ type generator struct {
 	interfaceByMethod map[string]string
 	variantByName     map[string]string
 	needsCallAny      bool
+	localSeq          int
 }
 
 type exprCtx struct {
 	locals          map[string]string
 	bindings        map[string]string
 	sourceTypes     map[string]string
+	mutable         map[string]bool
 	typeParams      map[string]struct{}
 	constraintFuncs map[string]string
 	retType         string
@@ -461,6 +463,7 @@ func (g *generator) genImpl(d *ImplDecl) (string, error) {
 			locals:          map[string]string{},
 			bindings:        map[string]string{},
 			sourceTypes:     map[string]string{},
+			mutable:         map[string]bool{},
 			typeParams:      map[string]struct{}{},
 			constraintFuncs: map[string]string{},
 			retType:         typeStringReturn(ret, subst),
@@ -479,6 +482,8 @@ func (g *generator) genImpl(d *ImplDecl) (string, error) {
 			b.WriteString(goType)
 			ctx.locals[p.Name] = goType
 			ctx.sourceTypes[p.Name] = typeString(p.Type, subst)
+			ctx.bindings[p.Name] = p.Name
+			ctx.mutable[p.Name] = false
 		}
 		retType := typeStringReturn(ret, subst)
 		b.WriteString(") ")
@@ -519,6 +524,7 @@ func (g *generator) genFunc(d *FuncDecl) (string, error) {
 		locals:          map[string]string{},
 		bindings:        map[string]string{},
 		sourceTypes:     map[string]string{},
+		mutable:         map[string]bool{},
 		typeParams:      typeParamSet(d.TypeParams),
 		constraintFuncs: map[string]string{},
 		retType:         g.goReturnType(d.Ret, typeParamSet(d.TypeParams)),
@@ -533,6 +539,8 @@ func (g *generator) genFunc(d *FuncDecl) (string, error) {
 		b.WriteString(goType)
 		ctx.locals[p.Name] = goType
 		ctx.sourceTypes[p.Name] = goType
+		ctx.bindings[p.Name] = p.Name
+		ctx.mutable[p.Name] = false
 	}
 	for _, c := range d.Where {
 		b.WriteString(", ")
@@ -567,8 +575,11 @@ func (g *generator) genFunc(d *FuncDecl) (string, error) {
 		}
 	}
 	retType := g.goReturnType(d.Ret, typeParamSet(d.TypeParams))
-	b.WriteString(") ")
-	b.WriteString(retType)
+	b.WriteString(")")
+	if retType != "" {
+		b.WriteString(" ")
+		b.WriteString(retType)
+	}
 	b.WriteString(" {\n")
 	expr, exprType, err := g.translateExpr(d.Body, ctx, retType)
 	if err != nil {
@@ -647,6 +658,39 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 				return fmt.Sprintf("%s(%s)", rhs, left), rt, nil
 			}
 		}
+		if n.Op == "<|" {
+			right, _, err := g.translateExpr(n.Right, ctx, "")
+			if err != nil {
+				return "", "", err
+			}
+			switch left := n.Left.(type) {
+			case *CallExpr:
+				callee, _, err := g.translateExpr(left.Callee, ctx, "")
+				if err != nil {
+					return "", "", err
+				}
+				args := make([]string, 0, len(left.Args)+1)
+				for _, a := range left.Args {
+					code, _, err := g.translateExpr(a, ctx, "")
+					if err != nil {
+						return "", "", err
+					}
+					args = append(args, code)
+				}
+				args = append(args, right)
+				_, lt, err := g.translateExpr(left, ctx, "")
+				if err != nil {
+					return "", "", err
+				}
+				return fmt.Sprintf("%s(%s)", callee, strings.Join(args, ", ")), lt, nil
+			default:
+				lhs, lt, err := g.translateExpr(n.Left, ctx, "")
+				if err != nil {
+					return "", "", err
+				}
+				return fmt.Sprintf("%s(%s)", lhs, right), lt, nil
+			}
+		}
 		left, lt, err := g.translateExpr(n.Left, ctx, "")
 		if err != nil {
 			return "", "", err
@@ -691,8 +735,144 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 		return g.translateFuncLit(n, ctx)
 	case *SwitchExpr:
 		return g.translateSwitch(n, ctx, expected)
+	case *BlockExpr:
+		return g.translateBlock(n, ctx, expected)
 	}
 	return "", "", fmt.Errorf("unsupported expression %#v", e)
+}
+
+func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) (string, string, error) {
+	var b strings.Builder
+	b.WriteString("func()")
+	if expected != "" {
+		b.WriteString(" ")
+		b.WriteString(expected)
+	}
+	b.WriteString(" {\n")
+	child := ctx.child()
+	var lastWasExprStmt bool
+	for i, stmt := range n.Stmts {
+		isLast := i == len(n.Stmts)-1
+		switch s := stmt.(type) {
+		case *ExprStmt:
+			lastWasExprStmt = isLast
+			stmtExpected := ""
+			if isLast {
+				stmtExpected = expected
+			}
+			code, typ, err := g.translateExpr(s.Expr, child, stmtExpected)
+			if err != nil {
+				return "", "", err
+			}
+			if isLast && expected != "" {
+				if typ == "" {
+					return "", "", fmt.Errorf("block must end with an expression returning %s", expected)
+				}
+				b.WriteString("\treturn ")
+				b.WriteString(code)
+				b.WriteString("\n")
+				continue
+			}
+			b.WriteString("\t")
+			if stmtIsStatementSafe(s.Expr) {
+				b.WriteString(code)
+			} else {
+				b.WriteString("_ = ")
+				b.WriteString(code)
+			}
+			b.WriteString("\n")
+		case *LetStmt:
+			lastWasExprStmt = false
+			code, typ, err := g.translateExpr(s.Value, child, g.goType(s.Type, child.typeParams))
+			if err != nil {
+				return "", "", err
+			}
+			b.WriteString("\t")
+			if s.Name == "_" {
+				if stmtIsStatementSafe(s.Value) {
+					b.WriteString(code)
+				} else {
+					b.WriteString("_ = ")
+					b.WriteString(code)
+				}
+			} else {
+				actualName := g.bindLocal(child, s.Name, typ, s.Mutable)
+				bindType := typ
+				if s.Type != nil {
+					bindType = g.goType(s.Type, child.typeParams)
+					b.WriteString("var ")
+					b.WriteString(actualName)
+					b.WriteString(" ")
+					b.WriteString(bindType)
+					b.WriteString(" = ")
+					b.WriteString(code)
+				} else {
+					b.WriteString(actualName)
+					b.WriteString(" := ")
+					b.WriteString(code)
+				}
+				child.locals[s.Name] = bindType
+				child.sourceTypes[s.Name] = bindType
+				child.bindings[s.Name] = actualName
+			}
+			b.WriteString("\n")
+		case *AssignStmt:
+			lastWasExprStmt = false
+			actualName, ok := child.bindings[s.Name]
+			if !ok {
+				return "", "", fmt.Errorf("unknown binding %q", s.Name)
+			}
+			if !child.mutable[actualName] {
+				return "", "", fmt.Errorf("cannot assign to immutable binding %q", s.Name)
+			}
+			targetType := child.locals[s.Name]
+			code, _, err := g.translateExpr(s.Value, child, targetType)
+			if err != nil {
+				return "", "", err
+			}
+			b.WriteString("\t")
+			b.WriteString(actualName)
+			b.WriteString(" = ")
+			b.WriteString(code)
+			b.WriteString("\n")
+		default:
+			lastWasExprStmt = false
+			return "", "", fmt.Errorf("unsupported statement %#v", stmt)
+		}
+	}
+	if expected != "" && !lastWasExprStmt {
+		return "", "", fmt.Errorf("block must end with an expression returning %s", expected)
+	}
+	b.WriteString("}()")
+	if expected != "" {
+		return b.String(), expected, nil
+	}
+	return b.String(), "", nil
+}
+
+func stmtIsStatementSafe(expr Expr) bool {
+	switch n := expr.(type) {
+	case *CallExpr, *FuncLitExpr, *SwitchExpr, *BlockExpr:
+		return true
+	case *BinaryExpr:
+		return n.Op == "|>" || n.Op == "<|"
+	default:
+		return false
+	}
+}
+
+func (g *generator) bindLocal(ctx *exprCtx, source, typ string, mutable bool) string {
+	actual := sanitizeIdent(source)
+	if actual == "" || actual == "_" {
+		actual = "tmp"
+	}
+	g.localSeq++
+	actual = fmt.Sprintf("%s_%d", actual, g.localSeq)
+	ctx.bindings[source] = actual
+	ctx.locals[source] = typ
+	ctx.sourceTypes[source] = typ
+	ctx.mutable[actual] = mutable
+	return actual
 }
 
 func (g *generator) translateFuncLit(n *FuncLitExpr, outer *exprCtx) (string, string, error) {
@@ -1259,6 +1439,23 @@ func exprUsesIdent(e Expr, name string) bool {
 				return true
 			}
 		}
+	case *BlockExpr:
+		for _, stmt := range n.Stmts {
+			switch s := stmt.(type) {
+			case *ExprStmt:
+				if exprUsesIdent(s.Expr, name) {
+					return true
+				}
+			case *LetStmt:
+				if exprUsesIdent(s.Value, name) {
+					return true
+				}
+			case *AssignStmt:
+				if exprUsesIdent(s.Value, name) {
+					return true
+				}
+			}
+		}
 	}
 	return false
 }
@@ -1279,6 +1476,7 @@ func (ctx *exprCtx) child() *exprCtx {
 		locals:          map[string]string{},
 		bindings:        map[string]string{},
 		sourceTypes:     map[string]string{},
+		mutable:         map[string]bool{},
 		typeParams:      map[string]struct{}{},
 		constraintFuncs: map[string]string{},
 		retType:         ctx.retType,
@@ -1292,6 +1490,9 @@ func (ctx *exprCtx) child() *exprCtx {
 	}
 	for k, v := range ctx.sourceTypes {
 		dup.sourceTypes[k] = v
+	}
+	for k, v := range ctx.mutable {
+		dup.mutable[k] = v
 	}
 	for k := range ctx.typeParams {
 		dup.typeParams[k] = struct{}{}
