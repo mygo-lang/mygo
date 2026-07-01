@@ -731,6 +731,8 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 		return fmt.Sprintf("%s.%s", base, exportName(n.Field)), fieldType, nil
 	case *CallExpr:
 		return g.translateCall(n, ctx, expected)
+	case *StructLitExpr:
+		return g.translateStructLit(n, ctx, expected)
 	case *FuncLitExpr:
 		return g.translateFuncLit(n, ctx)
 	case *SwitchExpr:
@@ -1076,6 +1078,32 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 				}
 				callee += "[" + strings.Join(typeArgs, ", ") + "]"
 			}
+			for _, c := range fn.Where {
+				iface := g.pkg.Interfaces[c.Name]
+				if iface == nil {
+					return "", "", fmt.Errorf("call %s: missing interface %s", fn.Name, c.Name)
+				}
+				if len(iface.TypeParams) != len(c.Args) {
+					return "", "", fmt.Errorf("call %s: type arity mismatch for %s", fn.Name, c.Name)
+				}
+				cTypeArgs := make([]string, 0, len(c.Args))
+				for _, arg := range c.Args {
+					cTypeArgs = append(cTypeArgs, typeString(arg, subst))
+				}
+				for _, m := range iface.Methods {
+					resolvedType := ""
+					if len(cTypeArgs) > 0 {
+						resolvedType = cTypeArgs[0]
+					}
+					if _, ok := ctx.typeParams[resolvedType]; ok {
+						if helper, ok := ctx.constraintFuncs[m.Name]; ok {
+							args = append(args, helper)
+							continue
+						}
+					}
+					args = append(args, helperFuncName(m.Name, typeKeyFromType(resolvedType)))
+				}
+			}
 			retType := g.goReturnType(fn.Ret, ctx.typeParams)
 			if len(subst) > 0 {
 				retType = typeStringReturn(fn.Ret, subst)
@@ -1201,6 +1229,92 @@ func (g *generator) translateEnumConstructor(enumName, name string, args []Expr,
 	}
 }
 
+func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected string) (string, string, error) {
+	st := g.pkg.Structs[n.TypeName]
+	if st == nil {
+		return "", "", fmt.Errorf("unknown struct type %s", n.TypeName)
+	}
+	subst := map[string]string{}
+	if len(n.TypeArgs) > 0 {
+		if len(st.TypeParams) != len(n.TypeArgs) {
+			return "", "", fmt.Errorf("struct %s: type arity mismatch", n.TypeName)
+		}
+		for i, tp := range st.TypeParams {
+			subst[tp] = g.goType(n.TypeArgs[i], ctx.typeParams)
+		}
+	} else if len(st.TypeParams) > 0 {
+		if base, args := splitTypeArgs(expected); base == n.TypeName && len(args) == len(st.TypeParams) {
+			for i, tp := range st.TypeParams {
+				subst[tp] = args[i]
+			}
+		}
+	}
+	for _, f := range n.Fields {
+		var fieldDecl *Field
+		for i := range st.Fields {
+			if st.Fields[i].Name == f.Name {
+				fieldDecl = &st.Fields[i]
+				break
+			}
+		}
+		if fieldDecl == nil {
+			return "", "", fmt.Errorf("unknown field %s on struct %s", f.Name, n.TypeName)
+		}
+		fieldExpected := typeString(fieldDecl.Type, subst)
+		code, typ, err := g.translateExpr(f.Value, ctx, fieldExpected)
+		if err != nil {
+			return "", "", err
+		}
+		_ = code
+		unifyType(fieldDecl.Type, typ, typeParamSet(st.TypeParams), subst)
+	}
+	if len(st.TypeParams) > 0 {
+		for _, tp := range st.TypeParams {
+			if subst[tp] == "" {
+				return "", "", fmt.Errorf("struct %s: could not infer type parameters", n.TypeName)
+			}
+		}
+	}
+	fieldTypes := map[string]string{}
+	for _, f := range st.Fields {
+		fieldTypes[f.Name] = typeString(f.Type, subst)
+	}
+	parts := make([]string, 0, len(n.Fields))
+	for _, f := range n.Fields {
+		fieldType := fieldTypes[f.Name]
+		if fieldType == "" {
+			return "", "", fmt.Errorf("unknown field %s on struct %s", f.Name, n.TypeName)
+		}
+		code, _, err := g.translateExpr(f.Value, ctx, fieldType)
+		if err != nil {
+			return "", "", err
+		}
+		parts = append(parts, fmt.Sprintf("%s: %s", exportName(f.Name), code))
+	}
+	typeArgStr := ""
+	if len(n.TypeArgs) > 0 {
+		var args []string
+		for _, arg := range n.TypeArgs {
+			args = append(args, g.goType(arg, ctx.typeParams))
+		}
+		typeArgStr = "[" + strings.Join(args, ", ") + "]"
+	} else if len(st.TypeParams) > 0 {
+		var args []string
+		for _, tp := range st.TypeParams {
+			args = append(args, subst[tp])
+		}
+		typeArgStr = "[" + strings.Join(args, ", ") + "]"
+	}
+	typeArgs := n.TypeArgs
+	if len(typeArgs) == 0 && len(st.TypeParams) > 0 {
+		typeArgs = make([]TypeExpr, 0, len(st.TypeParams))
+		for _, tp := range st.TypeParams {
+			typeArgs = append(typeArgs, &NamedType{Name: subst[tp]})
+		}
+	}
+	return fmt.Sprintf("%s%s{%s}", n.TypeName, typeArgStr, strings.Join(parts, ", ")), typeString(&NamedType{Name: n.TypeName, Args: typeArgs}, nil), nil
+}
+
 func (g *generator) translateTypeclassCall(name string, args []Expr, ctx *exprCtx, expected string) (string, string, bool) {
 	if ifaceName, ok := g.interfaceByMethod[name]; ok {
 		methodIface := g.pkg.Interfaces[ifaceName]
@@ -1308,14 +1422,20 @@ func (g *generator) translateTypeclassIdent(name string, ctx *exprCtx, expected 
 }
 
 func (g *generator) lookupFieldType(baseType, field string) string {
-	base, _ := splitTypeArgs(baseType)
+	base, args := splitTypeArgs(baseType)
 	st := g.pkg.Structs[base]
 	if st == nil {
 		return ""
 	}
+	subst := map[string]string{}
+	for i, tp := range st.TypeParams {
+		if i < len(args) {
+			subst[tp] = args[i]
+		}
+	}
 	for _, f := range st.Fields {
 		if f.Name == field {
-			return g.goType(f.Type, nil)
+			return typeString(f.Type, subst)
 		}
 	}
 	return ""
@@ -1332,6 +1452,8 @@ func (g *generator) goType(t TypeExpr, typeParams map[string]struct{}) string {
 		switch tt.Name {
 		case "Int":
 			return "int"
+		case "Int64":
+			return "int64"
 		case "String":
 			return "string"
 		case "Bool":
@@ -1414,6 +1536,12 @@ func exprUsesIdent(e Expr, name string) bool {
 		}
 		for _, arg := range n.Args {
 			if exprUsesIdent(arg, name) {
+				return true
+			}
+		}
+	case *StructLitExpr:
+		for _, field := range n.Fields {
+			if exprUsesIdent(field.Value, name) {
 				return true
 			}
 		}
@@ -1728,6 +1856,8 @@ func primitiveGoName(name string) string {
 	switch name {
 	case "Int":
 		return "int"
+	case "Int64":
+		return "int64"
 	case "String":
 		return "string"
 	case "Bool":
@@ -1750,6 +1880,8 @@ func typeString(t TypeExpr, subst map[string]string) string {
 		switch tt.Name {
 		case "Int":
 			return "int"
+		case "Int64":
+			return "int64"
 		case "String":
 			return "string"
 		case "Bool":

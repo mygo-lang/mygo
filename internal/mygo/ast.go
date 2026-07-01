@@ -121,6 +121,19 @@ type CallExpr struct {
 
 func (*CallExpr) exprNode() {}
 
+type StructLitExpr struct {
+	TypeName string
+	TypeArgs []TypeExpr
+	Fields   []StructLitField
+}
+
+func (*StructLitExpr) exprNode() {}
+
+type StructLitField struct {
+	Name  string
+	Value Expr
+}
+
 type BinaryExpr struct {
 	Op    string
 	Left  Expr

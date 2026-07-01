@@ -6,43 +6,81 @@ module Main
     None
   end
 
+  struct ABC
+    aaa: Int64
+  end
+
   struct Box[A]
     value: A
   end
 
-  func add(x: Int, y: Int): Int
-    x + y
+  interface Show[A]
+    func show(value: A): String
   end
 
-  func identity[A](value: A): A
-    value
+  interface Eq[A]
+    func equals(left: A, right: A): Bool
   end
 
-  func box_value[A](box: Box[A]): A
-    box.value
-  end
-
-  func unwrap_or[A](opt: Option[A], fallback: A): A
-    switch opt
-      case None -> fallback
-      case Some(value) -> value
+  impl Show[Int64]
+    func show(value: Int64): String
+      fmt.Sprint(value)
     end
   end
 
-  func announce(): ()
-    let _ = fmt.Println("MyGO example is running", add(40, 2))
+  impl Show[String]
+    func show(value: String): String
+      value
+    end
   end
 
-  func demo(): Int
-    let msg = "abc"
-    let _ = fmt.Println(msg)
-    var n: Int = add(40, 2)
-    n = n + 1
-    n
+  impl Show[Bool]
+    func show(value: Bool): String
+      fmt.Sprint(value)
+    end
+  end
+
+  impl Eq[Int64]
+    func equals(left: Int64, right: Int64): Bool
+      left == right
+    end
+  end
+
+  impl Eq[String]
+    func equals(left: String, right: String): Bool
+      left == right
+    end
+  end
+
+  func describe_option[A](opt: Option[A]): String where Show[A]
+    switch opt
+      case None -> "none"
+      case Some(value) -> "some(" + show(value) + ")"
+    end
+  end
+
+  func same[A](left: A, right: A): Bool where Eq[A]
+    equals(left, right)
+  end
+
+  func describe_abc(item: ABC): String
+    "ABC{aaa=" + show(item.aaa) + "}"
+  end
+
+  func demo(): String
+    let abc = ABC {
+      aaa: 123
+    }
+    let boxed = Box {
+      value: abc.aaa
+    }
+    let maybe: Option[Int64] = Some(abc.aaa)
+    let summary = describe_abc(abc) + ", boxed=" + show(boxed.value) + ", " + describe_option(maybe) + ", same=" + show(same(abc.aaa, abc.aaa))
+    let _ = fmt.Println(summary)
+    summary
   end
 
   func main(): ()
-    announce()
-    let _ = demo()
+    let _ = fmt.Println(demo())
   end
 end

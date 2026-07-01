@@ -20,54 +20,76 @@ func None[A any]() Option[A] {
 	return OptionNone[A]{}
 }
 
+type ABC struct {
+	Aaa int64
+}
+
 type Box[A any] struct {
 	Value A
 }
 
-func add(x int, y int) int {
-	return (x + y)
+type Show[A any] interface {
+	show(value A) string
 }
 
-func identity[A any](value A) A {
+type Eq[A any] interface {
+	equals(left A, right A) bool
+}
+
+func show_int64(value int64) string {
+	return fmt.Sprint(value)
+}
+
+func show_string(value string) string {
 	return value
 }
 
-func box_value[A any](box Box[A]) A {
-	return box.Value
+func show_bool(value bool) string {
+	return fmt.Sprint(value)
 }
 
-func unwrap_or[A any](opt Option[A], fallback A) A {
-	return func() A {
+func equals_int64(left int64, right int64) bool {
+	return (left == right)
+}
+
+func equals_string(left string, right string) bool {
+	return (left == right)
+}
+
+func describe_option[A any](opt Option[A], showFn func(A) string) string {
+	return func() string {
 	switch v := opt.(type) {
 	case OptionNone[A]:
-		return fallback
+		return "none"
 	case OptionSome[A]:
-		return v.F0
+		return (("some(" + showFn(v.F0)) + ")")
 	}
 	panic("unreachable")
 }()
 }
 
-func announce() {
-	func() {
-	fmt.Println("MyGO example is running", add(40, 2))
-}()
+func same[A any](left A, right A, equalsFn func(A, A) bool) bool {
+	return equalsFn(left, right)
 }
 
-func demo() int {
-	return func() int {
-	msg_1 := "abc"
-	fmt.Println(msg_1)
-	var n_2 int = add(40, 2)
-	n_2 = (n_2 + 1)
-	return n_2
+func describe_abc(item ABC) string {
+	return (("ABC{aaa=" + show_int64(item.Aaa)) + "}")
+}
+
+func demo() string {
+	return func() string {
+	abc_1 := ABC{Aaa: 123}
+	boxed_2 := Box[int64]{Value: abc_1.Aaa}
+	var maybe_3 Option[int64] = Some[int64](abc_1.Aaa)
+	summary_4 := ((((((describe_abc(abc_1) + ", boxed=") + show_int64(boxed_2.Value)) + ", ") + describe_option[int64](maybe_3, show_int64)) + ", same=") + show_bool(same[int64](abc_1.Aaa, abc_1.Aaa, equals_int64)))
+	fmt.Println(summary_4)
+	return summary_4
 }()
 }
 
 func main() {
 	func() {
-	announce()
-	demo()
+	fmt.Println(demo())
 }()
 }
 

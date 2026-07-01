@@ -797,8 +797,19 @@ func (p *parser) parsePostfix() (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
+	structName := ""
+	var structTypeArgs []TypeExpr
+	if id, ok := left.(*IdentExpr); ok {
+		structName = id.Name
+	}
 	for {
 		switch {
+		case structName != "" && p.peekSym("["):
+			typeArgs, err := p.parseTypeArgs()
+			if err != nil {
+				return nil, err
+			}
+			structTypeArgs = typeArgs
 		case p.matchSym("("):
 			var args []Expr
 			if !p.matchSym(")") {
@@ -817,14 +828,85 @@ func (p *parser) parsePostfix() (Expr, error) {
 				}
 			}
 			left = &CallExpr{Callee: left, Args: args}
+			structName = ""
+			structTypeArgs = nil
+		case p.matchSym("{"):
+			if structName == "" {
+				return nil, fmt.Errorf("struct literal must start with a type name")
+			}
+			fields, err := p.parseStructLitFields()
+			if err != nil {
+				return nil, err
+			}
+			left = &StructLitExpr{TypeName: structName, TypeArgs: structTypeArgs, Fields: fields}
+			structName = ""
+			structTypeArgs = nil
 		case p.matchSym("."):
 			field, err := p.expectIdent()
 			if err != nil {
 				return nil, err
 			}
 			left = &FieldExpr{Expr: left, Field: field}
+			structName = ""
+			structTypeArgs = nil
 		default:
 			return left, nil
+		}
+	}
+}
+
+func (p *parser) parseTypeArgs() ([]TypeExpr, error) {
+	if err := p.expectSym("["); err != nil {
+		return nil, err
+	}
+	var args []TypeExpr
+	if p.matchSym("]") {
+		return args, nil
+	}
+	for {
+		tp, err := p.parseType()
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, tp)
+		if p.matchSym("]") {
+			break
+		}
+		if err := p.expectSym(","); err != nil {
+			return nil, err
+		}
+	}
+	return args, nil
+}
+
+func (p *parser) parseStructLitFields() ([]StructLitField, error) {
+	prev := p.skipNL
+	p.skipNL = true
+	defer func() { p.skipNL = prev }()
+
+	var fields []StructLitField
+	if p.matchSym("}") {
+		return fields, nil
+	}
+	for {
+		name, err := p.expectIdent()
+		if err != nil {
+			return nil, err
+		}
+		if err := p.expectSym(":"); err != nil {
+			return nil, err
+		}
+		value, err := p.parseExpr(0)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, StructLitField{Name: name, Value: value})
+		if p.matchSym("}") {
+			return fields, nil
+		}
+		_ = p.matchSym(",")
+		if p.matchSym("}") {
+			return fields, nil
 		}
 	}
 }

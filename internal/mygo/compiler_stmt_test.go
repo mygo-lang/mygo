@@ -98,6 +98,47 @@ end
 	}
 }
 
+func TestCompileDirSupportsStructLiterals(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `module Main
+  struct ABC
+    aaa: Int64
+  end
+
+  struct Box[A]
+    value: A
+  end
+
+  func demo(): Int64
+    let item = ABC {
+      aaa: 123
+    }
+    let boxed = Box {
+      value: item.aaa
+    }
+    boxed.value
+  end
+end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"type ABC struct {",
+		"Aaa int64",
+		"type Box[A any] struct {",
+		"Box[int64]{Value: item_1.Aaa}",
+		"return boxed_2.Value",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
 func writeMygoFile(t *testing.T, dir, name, src string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(src), 0o644); err != nil {

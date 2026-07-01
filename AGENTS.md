@@ -38,3 +38,6 @@
 - `let` may omit its type annotation when the initializer provides enough information for inference.
 - `let _ = ...` is the supported discard form for return values that should not be bound.
 - Pipe operators `<|` and `|>` are both supported in expression lowering.
+- Struct literals support a constructor-like form such as `ABC { aaa: 123 }`.
+- Generic struct literals can also carry explicit type arguments, such as `Box[Int64] { value: 123 }`.
+- When a generic struct literal omits its type arguments, the compiler should infer them from the expected type or field values when possible.
