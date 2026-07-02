@@ -59,6 +59,7 @@
 
 ## Recent Work
 
+- Split the compiler implementation into `internal/mygo/compiler/` with dedicated API, type, and implementation files, while keeping the root package as a compatibility wrapper.
 - Split the monolithic AST, parser, and compiler implementation into dedicated subpackages while keeping root-package wrappers for compatibility.
 - Moved the parser lexer/token machinery into `internal/mygo/parser/` and kept the root `internal/mygo/parser.go` as a forwarder.
 - Added shared AST aliases and moved the canonical AST definitions into `internal/mygo/ast/`.

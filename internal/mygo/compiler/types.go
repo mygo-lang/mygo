@@ -1,6 +1,10 @@
-package mygo
+package compiler
 
-import "go/types"
+import (
+	"go/types"
+
+	. "github.com/mygo-lang/mygo/internal/mygo/ast"
+)
 
 type Package struct {
 	Name          string

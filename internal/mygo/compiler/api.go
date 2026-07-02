@@ -1,12 +1,12 @@
-package mygo
+package compiler
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 	parserpkg "github.com/mygo-lang/mygo/internal/mygo/parser"
 )
 
@@ -119,13 +119,13 @@ func loadPackage(dir string) (*Package, error) {
 		}
 		file, err := parserpkg.ParseFile(string(src))
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", name, err)
+			return nil, err
 		}
 		if file.PackageName != "" {
 			if pkgName == "" {
 				pkgName = file.PackageName
 			} else if pkgName != file.PackageName {
-				return nil, fmt.Errorf("%s: %w", name, errorAtLine(file.PackageLine, "package %q conflicts with %q", file.PackageName, pkgName))
+				return nil, errorAtLine(file.PackageLine, "package %q conflicts with %q", file.PackageName, pkgName)
 			}
 		}
 		pkg.Decls = append(pkg.Decls, file.Decls...)
