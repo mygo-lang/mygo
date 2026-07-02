@@ -1,3 +1,3 @@
 module github.com/mygo-lang/mygo
 
-go 1.26
+go 1.25
