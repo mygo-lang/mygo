@@ -53,6 +53,38 @@ func TestCompileDirSupportsLetVarAndDiscard(t *testing.T) {
 	}
 }
 
+func TestCompileDirSupportsWhileLoops(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+  import fmt "go:fmt"
+
+  func demo() -> Int
+    var n: Int = 0
+    while n < 3
+      let _ = fmt.Println(n)
+      n = n + 1
+    end
+    n
+  end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"for (n_1 < 3) {",
+		"fmt.Println(n_1)",
+		"n_1 = (n_1 + 1)",
+		"return n_1",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
 func TestCompileDirAllowsLetShadowingAndInference(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
@@ -435,6 +467,45 @@ func TestCompileDirSupportsMultiParamTypeclassDispatch(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
 		}
+	}
+}
+
+func TestCompileDirSupportsArithmeticAndLogicOperators(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+  func demo(a: Int64, b: Int64, ok: Bool) -> Bool
+    ok && (a + b > 10) || (a - b <= 2)
+  end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"((ok && ((a + b) > 10)) || ((a - b) <= 2))",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
+func TestCompileDirRejectsRelationWithoutEq(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+  struct Node
+    value: Int64
+  end
+
+  func demo(a: Node, b: Node) -> Bool
+    a == b
+  end
+`)
+
+	if _, err := CompileDir(dir); err == nil {
+		t.Fatalf("CompileDir() error = nil, want relation operator to require Eq")
 	}
 }
 

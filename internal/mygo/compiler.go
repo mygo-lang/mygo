@@ -466,9 +466,9 @@ type generator struct {
 }
 
 type goPackageSigs struct {
-	funcs    map[string]*goFuncSig
-	methods  map[string]map[string]*goFuncSig
-	pkg      *types.Package
+	funcs   map[string]*goFuncSig
+	methods map[string]map[string]*goFuncSig
+	pkg     *types.Package
 }
 
 type goFuncSig struct {
@@ -1047,6 +1047,10 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 	case *LiteralExpr:
 		switch n.Kind {
 		case "number":
+			switch expected {
+			case "int", "int64", "float64":
+				return n.Value, expected, nil
+			}
 			if strings.Contains(n.Value, ".") {
 				return n.Value, "float64", nil
 			}
@@ -1125,20 +1129,37 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 		if err != nil {
 			return "", "", err
 		}
-		right, rt, err := g.translateExpr(n.Right, ctx, "")
+		rightExpected := ""
+		if lt != "" && lt != "any" {
+			rightExpected = lt
+		}
+		right, rt, err := g.translateExpr(n.Right, ctx, rightExpected)
 		if err != nil {
 			return "", "", err
 		}
 		switch n.Op {
-		case "+", "*", "==", "!=", "<", ">", "<=", ">=":
-			resType := "bool"
-			if n.Op == "+" || n.Op == "*" {
-				resType = lt
-				if resType == "" || resType == "any" {
-					resType = rt
-				}
+		case "+", "-", "*", "/":
+			resType := lt
+			if resType == "" || resType == "any" {
+				resType = rt
 			}
 			return fmt.Sprintf("(%s %s %s)", left, n.Op, right), resType, nil
+		case "&&", "||":
+			if lt != "" && lt != "bool" {
+				return "", "", errorAtLine(nodeLine(n.Left), "logical operator %q requires Bool operands, got %s", n.Op, lt)
+			}
+			if rt != "" && rt != "bool" {
+				return "", "", errorAtLine(nodeLine(n.Right), "logical operator %q requires Bool operands, got %s", n.Op, rt)
+			}
+			return fmt.Sprintf("(%s %s %s)", left, n.Op, right), "bool", nil
+		case "==", "!=", "<", ">", "<=", ">=":
+			if err := g.ensureRelationAllowed(n, lt, rt, ctx); err != nil {
+				return "", "", err
+			}
+			if eqExpr, ok := g.translateEqRelation(n.Op, left, right, lt, rt, ctx, expected); ok {
+				return eqExpr, "bool", nil
+			}
+			return "", "", errorAtLine(n.Line, "relation operator %q requires Eq-constrained operands", n.Op)
 		}
 	case *PrefixExpr:
 		expr, typ, err := g.translateExpr(n.Expr, ctx, "")
@@ -1181,10 +1202,102 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 		return g.translateIf(n, ctx, expected)
 	case *SwitchExpr:
 		return g.translateSwitch(n, ctx, expected)
+	case *WhileExpr:
+		return g.translateWhile(n, ctx)
 	case *BlockExpr:
 		return g.translateBlock(n, ctx, expected)
 	}
 	return "", "", errorAtLine(nodeLine(e), "unsupported expression %#v", e)
+}
+
+func (g *generator) ensureRelationAllowed(n *BinaryExpr, leftType, rightType string, ctx *exprCtx) error {
+	if leftType != "" && rightType != "" && leftType != rightType {
+		return errorAtLine(n.Line, "relation operator %q requires matching operand types, got %s and %s", n.Op, leftType, rightType)
+	}
+	typ := leftType
+	if typ == "" {
+		typ = rightType
+	}
+	if typ == "" {
+		return errorAtLine(n.Line, "relation operator %q requires typed operands", n.Op)
+	}
+	if typ == "any" {
+		if _, ok := ctx.constraintFuncs["equals"]; ok {
+			return nil
+		}
+		return errorAtLine(n.Line, "relation operator %q requires Eq-constrained operands", n.Op)
+	}
+	if g.hasEqSupport(typ, ctx) {
+		return nil
+	}
+	return errorAtLine(n.Line, "relation operator %q requires Eq[%s]", n.Op, typ)
+}
+
+func (g *generator) translateEqRelation(op, left, right, leftType, rightType string, ctx *exprCtx, expected string) (string, bool) {
+	_ = expected
+	typ := leftType
+	if typ == "" {
+		typ = rightType
+	}
+	if typ == "any" || g.isTypeParamName(typ, ctx) {
+		if fn := ctx.constraintFuncs["equals"]; fn != "" {
+			return fmt.Sprintf("%s(%s, %s)", fn, left, right), true
+		}
+		return "", false
+	}
+	switch op {
+	case "==":
+		return fmt.Sprintf("(%s == %s)", left, right), true
+	case "!=":
+		return fmt.Sprintf("(%s != %s)", left, right), true
+	case "<":
+		return fmt.Sprintf("(%s < %s)", left, right), true
+	case ">":
+		return fmt.Sprintf("(%s > %s)", left, right), true
+	case "<=":
+		return fmt.Sprintf("(%s <= %s)", left, right), true
+	case ">=":
+		return fmt.Sprintf("(%s >= %s)", left, right), true
+	default:
+		return "", false
+	}
+}
+
+func (g *generator) hasEqSupport(typ string, ctx *exprCtx) bool {
+	if typ == "" {
+		return false
+	}
+	if g.isTypeParamName(typ, ctx) {
+		return ctx != nil && ctx.constraintFuncs["equals"] != ""
+	}
+	base := typ
+	if idx := strings.Index(base, "["); idx >= 0 {
+		base = base[:idx]
+	}
+	switch base {
+	case "Int", "Int64", "Float64", "String", "Bool", "int", "int64", "float64", "string", "bool":
+		return true
+	}
+	for _, impl := range g.pkg.Impls {
+		if impl.Name != "Eq" {
+			continue
+		}
+		if len(impl.TypeArgs) != 1 {
+			continue
+		}
+		if g.goType(impl.TypeArgs[0], nil) == typ {
+			return true
+		}
+	}
+	return false
+}
+
+func (g *generator) isTypeParamName(name string, ctx *exprCtx) bool {
+	if ctx == nil {
+		return false
+	}
+	_, ok := ctx.typeParams[name]
+	return ok
 }
 
 func (g *generator) translateGoPackageSelector(alias, name string) (string, string, bool, error) {
@@ -1518,6 +1631,104 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 		b.WriteString("\t}\n\tpanic(\"unreachable\")\n}()")
 	}
 	return b.String(), expected, nil
+}
+
+func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (string, string, error) {
+	cond, _, err := g.translateExpr(n.Cond, ctx, "bool")
+	if err != nil {
+		return "", "", err
+	}
+	var b strings.Builder
+	b.WriteString("func() {\n")
+	b.WriteString("\tfor ")
+	b.WriteString(cond)
+	b.WriteString(" {\n")
+	child := ctx.child()
+	switch body := n.Body.(type) {
+	case *BlockExpr:
+		for _, stmt := range body.Stmts {
+			switch s := stmt.(type) {
+			case *ExprStmt:
+				code, typ, err := g.translateExpr(s.Expr, child, "")
+				if err != nil {
+					return "", "", err
+				}
+				b.WriteString("\t\t")
+				if stmtIsStatementSafe(s.Expr) || typ == "" {
+					b.WriteString(code)
+				} else {
+					b.WriteString("_ = ")
+					b.WriteString(code)
+				}
+				b.WriteString("\n")
+			case *LetStmt:
+				code, typ, err := g.translateExpr(s.Value, child, g.goType(s.Type, child.typeParams))
+				if err != nil {
+					return "", "", err
+				}
+				b.WriteString("\t\t")
+				if s.Name == "_" {
+					if stmtIsStatementSafe(s.Value) {
+						b.WriteString(code)
+					} else {
+						b.WriteString("_ = ")
+						b.WriteString(code)
+					}
+				} else {
+					actualName := g.bindLocal(child, s.Name, typ, s.Mutable)
+					if s.Type != nil {
+						b.WriteString("var ")
+						b.WriteString(actualName)
+						b.WriteString(" ")
+						b.WriteString(g.goType(s.Type, child.typeParams))
+						b.WriteString(" = ")
+						b.WriteString(code)
+					} else {
+						b.WriteString(actualName)
+						b.WriteString(" := ")
+						b.WriteString(code)
+					}
+				}
+				b.WriteString("\n")
+			case *AssignStmt:
+				actualName, ok := child.bindings[s.Name]
+				if !ok {
+					return "", "", errorAtLine(s.Line, "unknown binding %q", s.Name)
+				}
+				if !child.mutable[actualName] {
+					return "", "", errorAtLine(s.Line, "cannot assign to immutable binding %q", s.Name)
+				}
+				targetType := child.locals[s.Name]
+				code, _, err := g.translateExpr(s.Value, child, targetType)
+				if err != nil {
+					return "", "", err
+				}
+				b.WriteString("\t\t")
+				b.WriteString(actualName)
+				b.WriteString(" = ")
+				b.WriteString(code)
+				b.WriteString("\n")
+			default:
+				return "", "", errorAtLine(nodeLine(stmt), "unsupported statement %#v", stmt)
+			}
+		}
+	default:
+		code, typ, err := g.translateExpr(body, child, "")
+		if err != nil {
+			return "", "", err
+		}
+		b.WriteString("\t\t")
+		if stmtIsStatementSafe(body) || typ == "" {
+			b.WriteString(code)
+		} else {
+			b.WriteString("_ = ")
+			b.WriteString(code)
+		}
+		b.WriteString("\n")
+	}
+	b.WriteString("\t}\n")
+	b.WriteString("}()")
+	return b.String(), "", nil
 }
 
 func (g *generator) translatePattern(p Pattern, enum *EnumDecl, enumArgs []string, switchVar string, body Expr) (string, map[string]bindingInfo, error) {

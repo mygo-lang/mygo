@@ -199,6 +199,14 @@ type SwitchExpr struct {
 
 func (*SwitchExpr) exprNode() {}
 
+type WhileExpr struct {
+	Line int
+	Cond Expr
+	Body Expr
+}
+
+func (*WhileExpr) exprNode() {}
+
 type BlockExpr struct {
 	Line  int
 	Stmts []Stmt

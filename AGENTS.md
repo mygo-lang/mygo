@@ -55,3 +55,10 @@
 - Keep `examples/main/main.mygo` aligned with the compiler's current boundary behavior, especially for `Ref`, `Option`, and `Result`.
 - Typeclass lookup should respect lexical scope first: local bindings and function-value bindings shadow typeclass names, `where`-bound methods are visible inside nested blocks, and package-level dispatch is the fallback.
 - When multiple typeclass candidates are visible, prefer the more specific binding by comparing concrete type coverage first, then type-parameter usage, then `any` usage; report ambiguity when candidates remain tied.
+
+## Recent Work
+
+- Added `while` as an expression form with newline-delimited body parsing and Go `for`-loop lowering.
+- Extended expression parsing and lowering to recognize `&&`, `||`, `-`, and `/`, while keeping comparison operators type-checked against `Eq` support.
+- Improved numeric literal inference so expected integer and float types are preserved instead of defaulting too early.
+- Added compiler coverage for `while` loops, arithmetic/logic operator precedence, and relation-operator rejection when `Eq` support is missing.

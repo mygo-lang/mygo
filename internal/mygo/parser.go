@@ -114,7 +114,7 @@ func (l *lexer) nextToken() token {
 		}
 		return token{kind: tokString, lit: b.String(), line: l.line}
 	default:
-		if l.match("=>") || l.match("->") || l.match("<=") || l.match(">=") || l.match("<|") || l.match("|>") || l.match("==") || l.match("!=") {
+		if l.match("=>") || l.match("->") || l.match("<=") || l.match(">=") || l.match("<|") || l.match("|>") || l.match("==") || l.match("!=") || l.match("&&") || l.match("||") {
 			return token{kind: tokSym, lit: string(l.src[l.pos-2 : l.pos]), line: l.line}
 		}
 		l.pos++
@@ -146,7 +146,7 @@ func isIdentPart(r rune) bool {
 
 func isKeyword(s string) bool {
 	switch s {
-	case "package", "import", "enum", "struct", "interface", "impl", "func", "if", "then", "else", "switch", "case", "end", "where", "not", "let", "var", "embed":
+	case "package", "import", "enum", "struct", "interface", "impl", "func", "if", "then", "else", "switch", "case", "end", "where", "not", "let", "var", "embed", "while":
 		return true
 	default:
 		return false
@@ -754,6 +754,25 @@ func (p *parser) parseSwitchExpr() (Expr, error) {
 	return &SwitchExpr{Line: start.line, Target: target, Cases: cases}, nil
 }
 
+func (p *parser) parseWhileExpr() (Expr, error) {
+	start := p.peek()
+	if err := p.expectKeyword("while"); err != nil {
+		return nil, err
+	}
+	cond, err := p.parseExpr(0)
+	if err != nil {
+		return nil, err
+	}
+	if p.peekRaw().kind != tokNewline {
+		return nil, errorAtLine(p.peekRaw().line, "expected newline after while condition")
+	}
+	body, err := p.parseExprUntilEnd()
+	if err != nil {
+		return nil, err
+	}
+	return &WhileExpr{Line: start.line, Cond: cond, Body: body}, nil
+}
+
 func (p *parser) parseIfExpr() (Expr, error) {
 	start := p.peek()
 	if err := p.expectKeyword("if"); err != nil {
@@ -816,7 +835,9 @@ func (p *parser) parsePattern() (Pattern, error) {
 }
 
 const (
-	precPipe = iota + 1
+	precOr = iota + 1
+	precAnd
+	precPipe
 	precEq
 	precAdd
 	precMul
@@ -866,6 +887,9 @@ func (p *parser) parsePrefix() (Expr, error) {
 	}
 	if p.peekKeyword("switch") {
 		return p.parseSwitchExpr()
+	}
+	if p.peekKeyword("while") {
+		return p.parseWhileExpr()
 	}
 	if p.peekKeyword("func") {
 		return p.parseFuncLit()
@@ -1042,6 +1066,10 @@ func opPrecedence(tok token) (int, bool) {
 		return 0, false
 	}
 	switch tok.lit {
+	case "||":
+		return precOr, true
+	case "&&":
+		return precAnd, true
 	case "<|":
 		return precPipe, true
 	case "|>":
@@ -1052,7 +1080,11 @@ func opPrecedence(tok token) (int, bool) {
 		return precEq, true
 	case "+":
 		return precAdd, true
+	case "-":
+		return precAdd, true
 	case "*":
+		return precMul, true
+	case "/":
 		return precMul, true
 	default:
 		return 0, false
