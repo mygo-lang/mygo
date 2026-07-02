@@ -60,6 +60,7 @@
 
 ## Recent Work
 
+- Further split `internal/mygo/compiler/` into focused files: `helpers.go`, `type_inference.go`, `typeclass.go`, `translate_struct.go`, and `go_package.go`, while keeping `generate.go`, `translate_expr.go`, `translate_call.go`, `translate_control.go`, `api.go`, and `types.go` as separate compiler concerns.
 - Unified all position/error helpers onto `common.NodePos` and `common.ErrorAtPos`, removing the wrapper `pos.go` files from root, parser, and compiler packages.
 - Unified shared line/error helpers into `internal/mygo/common/pos.go`.
 - Split the compiler implementation into `internal/mygo/compiler/` with dedicated API, type, and implementation files.

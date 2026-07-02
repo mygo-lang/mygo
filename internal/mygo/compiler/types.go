@@ -64,3 +64,49 @@ type importSpec struct {
 	Alias string
 	Path  string
 }
+
+type generator struct {
+	pkg               *Package
+	importAliases     map[string]string
+	interfaceByMethod map[string]string
+	variantByName     map[string]string
+	goSigCache        map[string]*goPackageSigs
+	needsCallAny      bool
+	localSeq          int
+}
+
+func (ctx *exprCtx) child() *exprCtx {
+	dup := &exprCtx{
+		locals:           map[string]string{},
+		bindings:         map[string]string{},
+		sourceTypes:      map[string]string{},
+		mutable:          map[string]bool{},
+		typeParams:       map[string]struct{}{},
+		constraintFuncs:  map[string]string{},
+		typeclassMethods: map[string][]typeclassBinding{},
+		retType:          ctx.retType,
+		currentImpl:      ctx.currentImpl,
+	}
+	for k, v := range ctx.locals {
+		dup.locals[k] = v
+	}
+	for k, v := range ctx.bindings {
+		dup.bindings[k] = v
+	}
+	for k, v := range ctx.sourceTypes {
+		dup.sourceTypes[k] = v
+	}
+	for k, v := range ctx.mutable {
+		dup.mutable[k] = v
+	}
+	for k := range ctx.typeParams {
+		dup.typeParams[k] = struct{}{}
+	}
+	for k, v := range ctx.constraintFuncs {
+		dup.constraintFuncs[k] = v
+	}
+	for k, v := range ctx.typeclassMethods {
+		dup.typeclassMethods[k] = append([]typeclassBinding(nil), v...)
+	}
+	return dup
+}
