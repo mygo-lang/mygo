@@ -133,7 +133,7 @@ func loadPackage(dir string) (*Package, error) {
 			if moduleName == "" {
 				moduleName = file.Module
 			} else if moduleName != file.Module {
-				return nil, fmt.Errorf("%s: module %q conflicts with %q", name, file.Module, moduleName)
+				return nil, fmt.Errorf("%s: %w", name, errorAtLine(file.ModuleLine, "module %q conflicts with %q", file.Module, moduleName))
 			}
 		}
 		pkg.Decls = append(pkg.Decls, file.Decls...)
@@ -152,7 +152,7 @@ func loadPackage(dir string) (*Package, error) {
 				alias = importAliasForPath(d.Path)
 			}
 			if prev, ok := pkg.ImportAliases[alias]; ok && prev != d.Path {
-				return nil, fmt.Errorf("import alias %q conflicts between %q and %q", alias, prev, d.Path)
+				return nil, errorAtLine(d.Line, "import alias %q conflicts between %q and %q", alias, prev, d.Path)
 			}
 			pkg.ImportAliases[alias] = d.Path
 		case *EnumDecl:
@@ -198,6 +198,11 @@ func (p *Package) Generate() (string, error) {
 			body.WriteString(g.genInterface(d))
 		}
 	}
+	globals, err := g.genGlobals()
+	if err != nil {
+		return "", err
+	}
+	body.WriteString(globals)
 	for _, decl := range p.Decls {
 		if impl, ok := decl.(*ImplDecl); ok {
 			s, err := g.genImpl(impl)
@@ -249,6 +254,58 @@ func (p *Package) Generate() (string, error) {
 	}
 	out.WriteString(body.String())
 	return out.String(), nil
+}
+
+func (g *generator) genGlobals() (string, error) {
+	var b strings.Builder
+	ctx := &exprCtx{
+		locals:          map[string]string{},
+		bindings:        map[string]string{},
+		sourceTypes:     map[string]string{},
+		mutable:         map[string]bool{},
+		typeParams:      map[string]struct{}{},
+		constraintFuncs: map[string]string{},
+	}
+	for _, decl := range g.pkg.Decls {
+		s, ok := decl.(*LetStmt)
+		if !ok {
+			continue
+		}
+		code, typ, err := g.translateExpr(s.Value, ctx, g.goType(s.Type, nil))
+		if err != nil {
+			return "", errorAtLine(s.Line, "global binding %q: %v", s.Name, err)
+		}
+		actual := sanitizeIdent(s.Name)
+		if actual == "" || actual == "_" {
+			actual = "tmp"
+		}
+		if s.Name == "_" {
+			b.WriteString("var _ = ")
+			b.WriteString(code)
+			b.WriteString("\n")
+			continue
+		}
+		b.WriteString("var ")
+		b.WriteString(actual)
+		if s.Type != nil {
+			b.WriteString(" ")
+			b.WriteString(g.goType(s.Type, nil))
+		}
+		b.WriteString(" = ")
+		b.WriteString(code)
+		b.WriteString("\n")
+		ctx.bindings[s.Name] = actual
+		if typ == "" && s.Type != nil {
+			typ = g.goType(s.Type, nil)
+		}
+		ctx.locals[s.Name] = typ
+		ctx.sourceTypes[s.Name] = typ
+		ctx.mutable[actual] = s.Mutable
+	}
+	if b.Len() > 0 {
+		b.WriteString("\n")
+	}
+	return b.String(), nil
 }
 
 func (p *Package) sortedImports() []importSpec {
@@ -396,6 +453,11 @@ func (g *generator) genStruct(d *StructDecl) string {
 	b.WriteString(" struct {\n")
 	for _, f := range d.Fields {
 		b.WriteString("\t")
+		if f.Name == "embed" {
+			b.WriteString(g.goType(f.Type, typeParamSet(d.TypeParams)))
+			b.WriteString("\n")
+			continue
+		}
 		b.WriteString(exportName(f.Name))
 		b.WriteString(" ")
 		b.WriteString(g.goType(f.Type, typeParamSet(d.TypeParams)))
@@ -434,10 +496,10 @@ func (g *generator) genInterface(d *InterfaceDecl) string {
 func (g *generator) genImpl(d *ImplDecl) (string, error) {
 	iface := g.pkg.Interfaces[d.Name]
 	if iface == nil {
-		return "", fmt.Errorf("impl %s: missing interface declaration", d.Name)
+		return "", errorAtLine(d.Line, "impl %s: missing interface declaration", d.Name)
 	}
 	if len(iface.TypeParams) != len(d.TypeArgs) {
-		return "", fmt.Errorf("impl %s: type arity mismatch", d.Name)
+		return "", errorAtLine(d.Line, "impl %s: type arity mismatch", d.Name)
 	}
 	subst := map[string]string{}
 	for i, tp := range iface.TypeParams {
@@ -546,10 +608,10 @@ func (g *generator) genFunc(d *FuncDecl) (string, error) {
 		b.WriteString(", ")
 		iface := g.pkg.Interfaces[c.Name]
 		if iface == nil {
-			return "", fmt.Errorf("function %s: missing interface %s", d.Name, c.Name)
+			return "", errorAtLine(c.Line, "function %s: missing interface %s", d.Name, c.Name)
 		}
 		if len(iface.TypeParams) != len(c.Args) {
-			return "", fmt.Errorf("function %s: type arity mismatch for %s", d.Name, c.Name)
+			return "", errorAtLine(c.Line, "function %s: type arity mismatch for %s", d.Name, c.Name)
 		}
 		subst := map[string]string{}
 		for i, tp := range iface.TypeParams {
@@ -620,6 +682,9 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 	case *LiteralExpr:
 		switch n.Kind {
 		case "number":
+			if strings.Contains(n.Value, ".") {
+				return n.Value, "float64", nil
+			}
 			return n.Value, "int", nil
 		case "string":
 			return strconv.Quote(n.Value), "string", nil
@@ -700,7 +765,7 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 			return "", "", err
 		}
 		switch n.Op {
-		case "+", "*", "==", "!=":
+		case "+", "*", "==", "!=", "<", ">", "<=", ">=":
 			resType := "bool"
 			if n.Op == "+" || n.Op == "*" {
 				resType = lt
@@ -720,6 +785,13 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 		}
 		return expr, typ, nil
 	case *FieldExpr:
+		if baseIdent, ok := n.Expr.(*IdentExpr); ok {
+			if enumDecl := g.pkg.Enums[baseIdent.Name]; enumDecl != nil {
+				if variant := g.findVariant(enumDecl, n.Field); variant != nil {
+					return g.translateEnumConstructor(baseIdent.Name, n.Field, nil, ctx, expected)
+				}
+			}
+		}
 		base, baseType, err := g.translateExpr(n.Expr, ctx, "")
 		if err != nil {
 			return "", "", err
@@ -735,12 +807,14 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 		return g.translateStructLit(n, ctx, expected)
 	case *FuncLitExpr:
 		return g.translateFuncLit(n, ctx)
+	case *IfExpr:
+		return g.translateIf(n, ctx, expected)
 	case *SwitchExpr:
 		return g.translateSwitch(n, ctx, expected)
 	case *BlockExpr:
 		return g.translateBlock(n, ctx, expected)
 	}
-	return "", "", fmt.Errorf("unsupported expression %#v", e)
+	return "", "", errorAtLine(nodeLine(e), "unsupported expression %#v", e)
 }
 
 func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) (string, string, error) {
@@ -768,7 +842,7 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 			}
 			if isLast && expected != "" {
 				if typ == "" {
-					return "", "", fmt.Errorf("block must end with an expression returning %s", expected)
+					return "", "", errorAtLine(nodeLine(s), "block must end with an expression returning %s", expected)
 				}
 				b.WriteString("\treturn ")
 				b.WriteString(code)
@@ -822,10 +896,10 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 			lastWasExprStmt = false
 			actualName, ok := child.bindings[s.Name]
 			if !ok {
-				return "", "", fmt.Errorf("unknown binding %q", s.Name)
+				return "", "", errorAtLine(s.Line, "unknown binding %q", s.Name)
 			}
 			if !child.mutable[actualName] {
-				return "", "", fmt.Errorf("cannot assign to immutable binding %q", s.Name)
+				return "", "", errorAtLine(s.Line, "cannot assign to immutable binding %q", s.Name)
 			}
 			targetType := child.locals[s.Name]
 			code, _, err := g.translateExpr(s.Value, child, targetType)
@@ -839,11 +913,11 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 			b.WriteString("\n")
 		default:
 			lastWasExprStmt = false
-			return "", "", fmt.Errorf("unsupported statement %#v", stmt)
+			return "", "", errorAtLine(nodeLine(stmt), "unsupported statement %#v", stmt)
 		}
 	}
 	if expected != "" && !lastWasExprStmt {
-		return "", "", fmt.Errorf("block must end with an expression returning %s", expected)
+		return "", "", errorAtLine(nodeLine(n), "block must end with an expression returning %s", expected)
 	}
 	b.WriteString("}()")
 	if expected != "" {
@@ -854,7 +928,7 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 
 func stmtIsStatementSafe(expr Expr) bool {
 	switch n := expr.(type) {
-	case *CallExpr, *FuncLitExpr, *SwitchExpr, *BlockExpr:
+	case *CallExpr, *FuncLitExpr, *IfExpr, *SwitchExpr, *BlockExpr:
 		return true
 	case *BinaryExpr:
 		return n.Op == "|>" || n.Op == "<|"
@@ -914,6 +988,62 @@ func (g *generator) translateFuncLit(n *FuncLitExpr, outer *exprCtx) (string, st
 	return b.String(), retType, nil
 }
 
+func (g *generator) translateIf(n *IfExpr, ctx *exprCtx, expected string) (string, string, error) {
+	cond, _, err := g.translateExpr(n.Cond, ctx, "")
+	if err != nil {
+		return "", "", err
+	}
+	thenCtx := ctx.child()
+	elseCtx := ctx.child()
+	thenCode, thenType, err := g.translateExpr(n.Then, thenCtx, expected)
+	if err != nil {
+		return "", "", err
+	}
+	elseCode, elseType, err := g.translateExpr(n.Else, elseCtx, expected)
+	if err != nil {
+		return "", "", err
+	}
+	resultType := expected
+	if resultType == "" {
+		switch {
+		case thenType != "" && thenType == elseType:
+			resultType = thenType
+		case thenType != "":
+			resultType = thenType
+		default:
+			resultType = elseType
+		}
+	}
+	var b strings.Builder
+	b.WriteString("func()")
+	if resultType != "" {
+		b.WriteString(" ")
+		b.WriteString(resultType)
+	}
+	b.WriteString(" {\n")
+	b.WriteString("\tif ")
+	b.WriteString(cond)
+	b.WriteString(" {\n")
+	if resultType == "" {
+		g.writeUnitBody(&b, thenCode, thenType)
+	} else {
+		b.WriteString("\t\treturn ")
+		b.WriteString(thenCode)
+		b.WriteString("\n")
+	}
+	b.WriteString("\t} else {\n")
+	if resultType == "" {
+		g.writeUnitBody(&b, elseCode, elseType)
+	} else {
+		b.WriteString("\t\treturn ")
+		b.WriteString(elseCode)
+		b.WriteString("\n")
+	}
+	b.WriteString("\t}\n")
+	b.WriteString("}()")
+	return b.String(), resultType, nil
+}
+
 func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string) (string, string, error) {
 	targetCode, targetType, err := g.translateExpr(n.Target, ctx, "")
 	if err != nil {
@@ -922,7 +1052,7 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 	enumName, enumArgs := splitTypeArgs(targetType)
 	enumDecl := g.pkg.Enums[enumName]
 	if enumDecl == nil {
-		return "", "", fmt.Errorf("switch target %q is not an enum", targetType)
+		return "", "", errorAtLine(n.Line, "switch target %q is not an enum", targetType)
 	}
 	needsSwitchVar := false
 	for _, c := range n.Cases {
@@ -1001,7 +1131,7 @@ func (g *generator) translatePattern(p Pattern, enum *EnumDecl, enumArgs []strin
 	case *VariantPattern:
 		variant := g.findVariant(enum, pat.Name)
 		if variant == nil {
-			return "", nil, fmt.Errorf("unknown variant %s of %s", pat.Name, enum.Name)
+			return "", nil, errorAtLine(pat.Line, "unknown variant %s of %s", pat.Name, enum.Name)
 		}
 		tname := variantGoTypeName(enum.Name, variant.Name)
 		if len(enumArgs) > 0 {
@@ -1010,7 +1140,7 @@ func (g *generator) translatePattern(p Pattern, enum *EnumDecl, enumArgs []strin
 		bindings := map[string]bindingInfo{}
 		for i, arg := range pat.Args {
 			if i >= len(variant.Fields) {
-				return "", nil, fmt.Errorf("pattern %s arity mismatch", pat.Name)
+				return "", nil, errorAtLine(pat.Line, "pattern %s arity mismatch", pat.Name)
 			}
 			if !exprUsesIdent(body, arg) {
 				continue
@@ -1022,12 +1152,36 @@ func (g *generator) translatePattern(p Pattern, enum *EnumDecl, enumArgs []strin
 		}
 		return tname, bindings, nil
 	default:
-		return "", nil, fmt.Errorf("unsupported pattern %#v", p)
+		return "", nil, errorAtLine(nodeLine(p), "unsupported pattern %#v", p)
 	}
 }
 
 func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (string, string, error) {
+	if field, ok := n.Callee.(*FieldExpr); ok {
+		if baseIdent, ok := field.Expr.(*IdentExpr); ok {
+			if enumDecl := g.pkg.Enums[baseIdent.Name]; enumDecl != nil {
+				if variant := g.findVariant(enumDecl, field.Field); variant != nil {
+					return g.translateEnumConstructor(baseIdent.Name, field.Field, n.Args, ctx, expected)
+				}
+			}
+		}
+	}
 	if id, ok := n.Callee.(*IdentExpr); ok {
+		if st := g.pkg.Structs[id.Name]; st != nil && len(n.Args) == len(st.Fields) && len(st.Fields) > 0 && strings.HasPrefix(st.Fields[0].Name, "F") {
+			var args []string
+			for i, a := range n.Args {
+				code, _, err := g.translateExpr(a, ctx, g.goType(st.Fields[i].Type, nil))
+				if err != nil {
+					return "", "", err
+				}
+				args = append(args, code)
+			}
+			parts := make([]string, 0, len(args))
+			for i, arg := range args {
+				parts = append(parts, fmt.Sprintf("F%d: %s", i, arg))
+			}
+			return fmt.Sprintf("%s{%s}", id.Name, strings.Join(parts, ", ")), id.Name, nil
+		}
 		if helper, typ, ok := g.translateTypeclassCall(id.Name, n.Args, ctx, expected); ok {
 			return helper, typ, nil
 		}
@@ -1081,10 +1235,10 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 			for _, c := range fn.Where {
 				iface := g.pkg.Interfaces[c.Name]
 				if iface == nil {
-					return "", "", fmt.Errorf("call %s: missing interface %s", fn.Name, c.Name)
+					return "", "", errorAtLine(c.Line, "call %s: missing interface %s", fn.Name, c.Name)
 				}
 				if len(iface.TypeParams) != len(c.Args) {
-					return "", "", fmt.Errorf("call %s: type arity mismatch for %s", fn.Name, c.Name)
+					return "", "", errorAtLine(c.Line, "call %s: type arity mismatch for %s", fn.Name, c.Name)
 				}
 				cTypeArgs := make([]string, 0, len(c.Args))
 				for _, arg := range c.Args {
@@ -1232,12 +1386,12 @@ func (g *generator) translateEnumConstructor(enumName, name string, args []Expr,
 func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected string) (string, string, error) {
 	st := g.pkg.Structs[n.TypeName]
 	if st == nil {
-		return "", "", fmt.Errorf("unknown struct type %s", n.TypeName)
+		return "", "", errorAtLine(n.Line, "unknown struct type %s", n.TypeName)
 	}
 	subst := map[string]string{}
 	if len(n.TypeArgs) > 0 {
 		if len(st.TypeParams) != len(n.TypeArgs) {
-			return "", "", fmt.Errorf("struct %s: type arity mismatch", n.TypeName)
+			return "", "", errorAtLine(n.Line, "struct %s: type arity mismatch", n.TypeName)
 		}
 		for i, tp := range st.TypeParams {
 			subst[tp] = g.goType(n.TypeArgs[i], ctx.typeParams)
@@ -1257,8 +1411,16 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 				break
 			}
 		}
+		if fieldDecl == nil && f.Name == "embed" {
+			for i := range st.Fields {
+				if st.Fields[i].Name == "embed" {
+					fieldDecl = &st.Fields[i]
+					break
+				}
+			}
+		}
 		if fieldDecl == nil {
-			return "", "", fmt.Errorf("unknown field %s on struct %s", f.Name, n.TypeName)
+			return "", "", errorAtLine(f.Line, "unknown field %s on struct %s", f.Name, n.TypeName)
 		}
 		fieldExpected := typeString(fieldDecl.Type, subst)
 		code, typ, err := g.translateExpr(f.Value, ctx, fieldExpected)
@@ -1271,7 +1433,7 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 	if len(st.TypeParams) > 0 {
 		for _, tp := range st.TypeParams {
 			if subst[tp] == "" {
-				return "", "", fmt.Errorf("struct %s: could not infer type parameters", n.TypeName)
+				return "", "", errorAtLine(n.Line, "struct %s: could not infer type parameters", n.TypeName)
 			}
 		}
 	}
@@ -1282,14 +1444,26 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 	parts := make([]string, 0, len(n.Fields))
 	for _, f := range n.Fields {
 		fieldType := fieldTypes[f.Name]
+		if fieldType == "" && f.Name == "embed" {
+			for _, stField := range st.Fields {
+				if stField.Name == "embed" {
+					fieldType = typeString(stField.Type, subst)
+					break
+				}
+			}
+		}
 		if fieldType == "" {
-			return "", "", fmt.Errorf("unknown field %s on struct %s", f.Name, n.TypeName)
+			return "", "", errorAtLine(f.Line, "unknown field %s on struct %s", f.Name, n.TypeName)
 		}
 		code, _, err := g.translateExpr(f.Value, ctx, fieldType)
 		if err != nil {
 			return "", "", err
 		}
-		parts = append(parts, fmt.Sprintf("%s: %s", exportName(f.Name), code))
+		key := exportName(f.Name)
+		if f.Name == "embed" {
+			key = fieldType
+		}
+		parts = append(parts, fmt.Sprintf("%s: %s", key, code))
 	}
 	typeArgStr := ""
 	if len(n.TypeArgs) > 0 {
@@ -1438,6 +1612,15 @@ func (g *generator) lookupFieldType(baseType, field string) string {
 			return typeString(f.Type, subst)
 		}
 	}
+	for _, f := range st.Fields {
+		if f.Name != "embed" {
+			continue
+		}
+		embeddedType := typeString(f.Type, subst)
+		if t := g.lookupFieldType(embeddedType, field); t != "" {
+			return t
+		}
+	}
 	return ""
 }
 
@@ -1454,6 +1637,8 @@ func (g *generator) goType(t TypeExpr, typeParams map[string]struct{}) string {
 			return "int"
 		case "Int64":
 			return "int64"
+		case "Float64":
+			return "float64"
 		case "String":
 			return "string"
 		case "Bool":
@@ -1567,6 +1752,8 @@ func exprUsesIdent(e Expr, name string) bool {
 				return true
 			}
 		}
+	case *IfExpr:
+		return exprUsesIdent(n.Cond, name) || exprUsesIdent(n.Then, name) || exprUsesIdent(n.Else, name)
 	case *BlockExpr:
 		for _, stmt := range n.Stmts {
 			switch s := stmt.(type) {

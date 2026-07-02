@@ -33,6 +33,7 @@
 ## Current Semantics
 
 - Function bodies and other block forms are newline-separated statement lists; the last plain expression in a block is the return value.
+- `if` now supports a single-line expression form like `if cond then a else b`, and that form does not require `end`.
 - `let` introduces an immutable binding. Rebinding the same source name must use a later `let` and is treated as shadowing, not assignment.
 - `var` introduces a mutable binding and may be assigned again later in the same scope.
 - `let` may omit its type annotation when the initializer provides enough information for inference.

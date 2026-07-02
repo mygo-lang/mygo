@@ -1,13 +1,15 @@
 package mygo
 
 type File struct {
-	Module string
-	Decls  []Decl
+	Module     string
+	ModuleLine int
+	Decls      []Decl
 }
 
 type Decl interface{ declNode() }
 
 type ImportDecl struct {
+	Line  int
 	Alias string
 	Path  string
 }
@@ -15,12 +17,14 @@ type ImportDecl struct {
 func (*ImportDecl) declNode() {}
 
 type ModuleDecl struct {
+	Line int
 	Name string
 }
 
 func (*ModuleDecl) declNode() {}
 
 type EnumDecl struct {
+	Line       int
 	Name       string
 	TypeParams []string
 	Variants   []EnumVariant
@@ -29,11 +33,13 @@ type EnumDecl struct {
 func (*EnumDecl) declNode() {}
 
 type EnumVariant struct {
+	Line   int
 	Name   string
 	Fields []Field
 }
 
 type StructDecl struct {
+	Line       int
 	Name       string
 	TypeParams []string
 	Fields     []Field
@@ -42,6 +48,7 @@ type StructDecl struct {
 func (*StructDecl) declNode() {}
 
 type InterfaceDecl struct {
+	Line       int
 	Name       string
 	TypeParams []string
 	Methods    []*FuncDecl
@@ -50,6 +57,7 @@ type InterfaceDecl struct {
 func (*InterfaceDecl) declNode() {}
 
 type ImplDecl struct {
+	Line     int
 	Name     string
 	TypeArgs []TypeExpr
 	Methods  []*FuncDecl
@@ -58,6 +66,7 @@ type ImplDecl struct {
 func (*ImplDecl) declNode() {}
 
 type FuncDecl struct {
+	Line       int
 	Name       string
 	TypeParams []string
 	Params     []Param
@@ -69,16 +78,19 @@ type FuncDecl struct {
 func (*FuncDecl) declNode() {}
 
 type Constraint struct {
+	Line int
 	Name string
 	Args []TypeExpr
 }
 
 type Param struct {
+	Line int
 	Name string
 	Type TypeExpr
 }
 
 type Field struct {
+	Line int
 	Name string
 	Type TypeExpr
 }
@@ -86,6 +98,7 @@ type Field struct {
 type TypeExpr interface{ typeNode() }
 
 type NamedType struct {
+	Line int
 	Name string
 	Args []TypeExpr
 }
@@ -93,6 +106,7 @@ type NamedType struct {
 func (*NamedType) typeNode() {}
 
 type FuncType struct {
+	Line   int
 	Params []TypeExpr
 	Ret    TypeExpr
 }
@@ -103,11 +117,15 @@ type Expr interface{ exprNode() }
 
 type Stmt interface{ stmtNode() }
 
-type IdentExpr struct{ Name string }
+type IdentExpr struct {
+	Line int
+	Name string
+}
 
 func (*IdentExpr) exprNode() {}
 
 type LiteralExpr struct {
+	Line  int
 	Kind  string
 	Value string
 }
@@ -115,6 +133,7 @@ type LiteralExpr struct {
 func (*LiteralExpr) exprNode() {}
 
 type CallExpr struct {
+	Line   int
 	Callee Expr
 	Args   []Expr
 }
@@ -122,6 +141,7 @@ type CallExpr struct {
 func (*CallExpr) exprNode() {}
 
 type StructLitExpr struct {
+	Line     int
 	TypeName string
 	TypeArgs []TypeExpr
 	Fields   []StructLitField
@@ -130,11 +150,13 @@ type StructLitExpr struct {
 func (*StructLitExpr) exprNode() {}
 
 type StructLitField struct {
+	Line  int
 	Name  string
 	Value Expr
 }
 
 type BinaryExpr struct {
+	Line  int
 	Op    string
 	Left  Expr
 	Right Expr
@@ -143,6 +165,7 @@ type BinaryExpr struct {
 func (*BinaryExpr) exprNode() {}
 
 type PrefixExpr struct {
+	Line int
 	Op   string
 	Expr Expr
 }
@@ -150,6 +173,7 @@ type PrefixExpr struct {
 func (*PrefixExpr) exprNode() {}
 
 type FieldExpr struct {
+	Line  int
 	Expr  Expr
 	Field string
 }
@@ -157,6 +181,7 @@ type FieldExpr struct {
 func (*FieldExpr) exprNode() {}
 
 type FuncLitExpr struct {
+	Line   int
 	Params []Param
 	Ret    TypeExpr
 	Body   Expr
@@ -164,7 +189,17 @@ type FuncLitExpr struct {
 
 func (*FuncLitExpr) exprNode() {}
 
+type IfExpr struct {
+	Line int
+	Cond Expr
+	Then Expr
+	Else Expr
+}
+
+func (*IfExpr) exprNode() {}
+
 type SwitchExpr struct {
+	Line   int
 	Target Expr
 	Cases  []SwitchCase
 }
@@ -172,18 +207,21 @@ type SwitchExpr struct {
 func (*SwitchExpr) exprNode() {}
 
 type BlockExpr struct {
+	Line  int
 	Stmts []Stmt
 }
 
 func (*BlockExpr) exprNode() {}
 
 type ExprStmt struct {
+	Line int
 	Expr Expr
 }
 
 func (*ExprStmt) stmtNode() {}
 
 type LetStmt struct {
+	Line    int
 	Mutable bool
 	Name    string
 	Type    TypeExpr
@@ -191,8 +229,10 @@ type LetStmt struct {
 }
 
 func (*LetStmt) stmtNode() {}
+func (*LetStmt) declNode() {}
 
 type AssignStmt struct {
+	Line  int
 	Name  string
 	Value Expr
 }
@@ -200,6 +240,7 @@ type AssignStmt struct {
 func (*AssignStmt) stmtNode() {}
 
 type SwitchCase struct {
+	Line    int
 	Pattern Pattern
 	Body    Expr
 }
@@ -207,12 +248,13 @@ type SwitchCase struct {
 type Pattern interface{ patternNode() }
 
 type VariantPattern struct {
+	Line int
 	Name string
 	Args []string
 }
 
 func (*VariantPattern) patternNode() {}
 
-type WildcardPattern struct{}
+type WildcardPattern struct{ Line int }
 
 func (*WildcardPattern) patternNode() {}

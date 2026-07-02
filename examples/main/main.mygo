@@ -15,59 +15,59 @@ module Main
   end
 
   interface Show[A]
-    func show(value: A): String
+    func show(value: A) -> String
   end
 
   interface Eq[A]
-    func equals(left: A, right: A): Bool
+    func equals(left: A, right: A) -> Bool
   end
 
   impl Show[Int64]
-    func show(value: Int64): String
+    func show(value: Int64) -> String
       fmt.Sprint(value)
     end
   end
 
   impl Show[String]
-    func show(value: String): String
+    func show(value: String) -> String
       value
     end
   end
 
   impl Show[Bool]
-    func show(value: Bool): String
+    func show(value: Bool) -> String
       fmt.Sprint(value)
     end
   end
 
   impl Eq[Int64]
-    func equals(left: Int64, right: Int64): Bool
+    func equals(left: Int64, right: Int64) -> Bool
       left == right
     end
   end
 
   impl Eq[String]
-    func equals(left: String, right: String): Bool
+    func equals(left: String, right: String) -> Bool
       left == right
     end
   end
 
-  func describe_option[A](opt: Option[A]): String where Show[A]
+  func describe_option[A](opt: Option[A]) -> String where Show[A]
     switch opt
-      case None -> "none"
-      case Some(value) -> "some(" + show(value) + ")"
+      case None => "none"
+      case Some(value) => "some(" + show(value) + ")"
     end
   end
 
-  func same[A](left: A, right: A): Bool where Eq[A]
+  func same[A](left: A, right: A) -> Bool where Eq[A]
     equals(left, right)
   end
 
-  func describe_abc(item: ABC): String
+  func describe_abc(item: ABC) -> String
     "ABC{aaa=" + show(item.aaa) + "}"
   end
 
-  func demo(): String
+  func demo() -> String
     let abc = ABC {
       aaa: 123
     }
@@ -80,7 +80,7 @@ module Main
     summary
   end
 
-  func main(): ()
+  func main() -> ()
     let _ = fmt.Println(demo())
   end
 end

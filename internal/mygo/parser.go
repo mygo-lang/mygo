@@ -22,21 +22,25 @@ const (
 type token struct {
 	kind tokenKind
 	lit  string
+	line int
 }
 
 type lexer struct {
-	src []rune
-	pos int
+	src  []rune
+	pos  int
+	line int
 }
 
-func newLexer(src string) *lexer { return &lexer{src: []rune(src)} }
+func newLexer(src string) *lexer { return &lexer{src: []rune(src), line: 1} }
 
 func (l *lexer) nextToken() token {
 	for l.pos < len(l.src) {
 		ch := l.src[l.pos]
 		if ch == '\n' {
 			l.pos++
-			return token{kind: tokNewline, lit: "\n"}
+			tok := token{kind: tokNewline, lit: "\n", line: l.line}
+			l.line++
+			return tok
 		}
 		if unicode.IsSpace(ch) {
 			l.pos++
@@ -51,7 +55,7 @@ func (l *lexer) nextToken() token {
 		break
 	}
 	if l.pos >= len(l.src) {
-		return token{kind: tokEOF}
+		return token{kind: tokEOF, line: l.line}
 	}
 
 	ch := l.src[l.pos]
@@ -64,16 +68,22 @@ func (l *lexer) nextToken() token {
 		}
 		lit := string(l.src[start:l.pos])
 		if isKeyword(lit) {
-			return token{kind: tokKeyword, lit: lit}
+			return token{kind: tokKeyword, lit: lit, line: l.line}
 		}
-		return token{kind: tokIdent, lit: lit}
+		return token{kind: tokIdent, lit: lit, line: l.line}
 	case unicode.IsDigit(ch):
 		start := l.pos
 		l.pos++
 		for l.pos < len(l.src) && unicode.IsDigit(l.src[l.pos]) {
 			l.pos++
 		}
-		return token{kind: tokNumber, lit: string(l.src[start:l.pos])}
+		if l.pos+1 < len(l.src) && l.src[l.pos] == '.' && unicode.IsDigit(l.src[l.pos+1]) {
+			l.pos++
+			for l.pos < len(l.src) && unicode.IsDigit(l.src[l.pos]) {
+				l.pos++
+			}
+		}
+		return token{kind: tokNumber, lit: string(l.src[start:l.pos]), line: l.line}
 	case ch == '"':
 		l.pos++
 		var b strings.Builder
@@ -102,13 +112,13 @@ func (l *lexer) nextToken() token {
 			}
 			b.WriteRune(c)
 		}
-		return token{kind: tokString, lit: b.String()}
+		return token{kind: tokString, lit: b.String(), line: l.line}
 	default:
-		if l.match("->") || l.match("<|") || l.match("|>") || l.match("==") || l.match("!=") {
-			return token{kind: tokSym, lit: string(l.src[l.pos-2 : l.pos])}
+		if l.match("=>") || l.match("->") || l.match("<=") || l.match(">=") || l.match("<|") || l.match("|>") || l.match("==") || l.match("!=") {
+			return token{kind: tokSym, lit: string(l.src[l.pos-2 : l.pos]), line: l.line}
 		}
 		l.pos++
-		return token{kind: tokSym, lit: string(ch)}
+		return token{kind: tokSym, lit: string(ch), line: l.line}
 	}
 }
 
@@ -136,7 +146,7 @@ func isIdentPart(r rune) bool {
 
 func isKeyword(s string) bool {
 	switch s {
-	case "module", "import", "enum", "struct", "interface", "impl", "func", "switch", "case", "end", "where", "not", "let", "var":
+	case "module", "import", "enum", "struct", "interface", "impl", "func", "if", "then", "else", "switch", "case", "end", "where", "not", "let", "var", "embed":
 		return true
 	default:
 		return false
@@ -182,9 +192,11 @@ func newParser(src string) *parser {
 func (p *parser) parseFile() (*File, error) {
 	file := &File{}
 	if p.peekKeyword("module") {
-		if err := p.expectKeyword("module"); err != nil {
-			return nil, err
+		tok := p.next()
+		if tok.kind != tokKeyword || tok.lit != "module" {
+			return nil, errorAtLine(tok.line, "expected keyword %q, got %q", "module", tok.lit)
 		}
+		file.ModuleLine = tok.line
 		name, err := p.expectIdent()
 		if err != nil {
 			return nil, err
@@ -230,8 +242,12 @@ func (p *parser) parseDecl() (Decl, error) {
 		return p.parseImpl()
 	case p.peekKeyword("func"):
 		return p.parseFuncDecl(false)
+	case p.peekKeyword("let"):
+		return p.parseBindingStmt(false)
+	case p.peekKeyword("var"):
+		return p.parseBindingStmt(true)
 	default:
-		return nil, fmt.Errorf("unexpected token %q", p.peek().lit)
+		return nil, errorAtLine(p.peek().line, "unexpected token %q", p.peek().lit)
 	}
 }
 
@@ -249,12 +265,13 @@ func (p *parser) parseImport() (Decl, error) {
 	}
 	tok := p.next()
 	if tok.kind != tokString {
-		return nil, fmt.Errorf("expected import string, got %q", tok.lit)
+		return nil, errorAtLine(tok.line, "expected import string, got %q", tok.lit)
 	}
-	return &ImportDecl{Alias: alias, Path: tok.lit}, nil
+	return &ImportDecl{Line: tok.line, Alias: alias, Path: tok.lit}, nil
 }
 
 func (p *parser) parseEnum() (Decl, error) {
+	start := p.peek()
 	if err := p.expectKeyword("enum"); err != nil {
 		return nil, err
 	}
@@ -262,21 +279,32 @@ func (p *parser) parseEnum() (Decl, error) {
 	if err != nil {
 		return nil, err
 	}
-	enum := &EnumDecl{Name: name, TypeParams: typeParams}
+	enum := &EnumDecl{Line: start.line, Name: name, TypeParams: typeParams}
 	for !p.peekKeyword("end") && !p.peekEOF() {
+		p.skipNewlines()
+		tok := p.peekRaw()
+		if tok.kind == tokSym && tok.lit == "," {
+			p.pos++
+			p.skipNewlines()
+			continue
+		}
 		variantName, err := p.expectIdent()
 		if err != nil {
 			return nil, err
 		}
-		variant := EnumVariant{Name: variantName}
+		variant := EnumVariant{Line: start.line, Name: variantName}
 		if p.matchSym("(") {
 			if !p.matchSym(")") {
 				for {
-					fieldName := ""
+					var fieldName string
 					if p.peek().kind == tokIdent && p.pos+1 < len(p.toks) {
 						next := p.toks[p.pos+1]
 						if next.kind == tokSym && next.lit == ":" {
-							fieldName, _ = p.expectIdent()
+							f, err := p.expectIdent()
+							if err != nil {
+								return nil, err
+							}
+							fieldName = f
 							if err := p.expectSym(":"); err != nil {
 								return nil, err
 							}
@@ -306,6 +334,7 @@ func (p *parser) parseEnum() (Decl, error) {
 }
 
 func (p *parser) parseStruct() (Decl, error) {
+	start := p.peek()
 	if err := p.expectKeyword("struct"); err != nil {
 		return nil, err
 	}
@@ -313,20 +342,45 @@ func (p *parser) parseStruct() (Decl, error) {
 	if err != nil {
 		return nil, err
 	}
-	st := &StructDecl{Name: name, TypeParams: typeParams}
-	for !p.peekKeyword("end") && !p.peekEOF() {
-		fieldName, err := p.expectIdent()
-		if err != nil {
-			return nil, err
+	st := &StructDecl{Line: start.line, Name: name, TypeParams: typeParams}
+	if p.matchSym("(") {
+		if !p.matchSym(")") {
+			for i := 0; ; i++ {
+				fieldType, err := p.parseType()
+				if err != nil {
+					return nil, err
+				}
+				st.Fields = append(st.Fields, Field{Name: fmt.Sprintf("F%d", i), Type: fieldType})
+				if p.matchSym(")") {
+					break
+				}
+				if err := p.expectSym(","); err != nil {
+					return nil, err
+				}
+			}
 		}
-		if err := p.expectSym(":"); err != nil {
-			return nil, err
+	} else {
+		for !p.peekKeyword("end") && !p.peekEOF() {
+			fieldName := ""
+			if p.peekKeyword("embed") {
+				_ = p.next()
+				fieldName = "embed"
+			} else {
+				var err error
+				fieldName, err = p.expectIdent()
+				if err != nil {
+					return nil, err
+				}
+				if err := p.expectSym(":"); err != nil {
+					return nil, err
+				}
+			}
+			fieldType, err := p.parseType()
+			if err != nil {
+				return nil, err
+			}
+			st.Fields = append(st.Fields, Field{Name: fieldName, Type: fieldType})
 		}
-		fieldType, err := p.parseType()
-		if err != nil {
-			return nil, err
-		}
-		st.Fields = append(st.Fields, Field{Name: fieldName, Type: fieldType})
 	}
 	if err := p.expectKeyword("end"); err != nil {
 		return nil, err
@@ -335,6 +389,7 @@ func (p *parser) parseStruct() (Decl, error) {
 }
 
 func (p *parser) parseInterface() (Decl, error) {
+	start := p.peek()
 	if err := p.expectKeyword("interface"); err != nil {
 		return nil, err
 	}
@@ -342,7 +397,7 @@ func (p *parser) parseInterface() (Decl, error) {
 	if err != nil {
 		return nil, err
 	}
-	it := &InterfaceDecl{Name: name, TypeParams: typeParams}
+	it := &InterfaceDecl{Line: start.line, Name: name, TypeParams: typeParams}
 	for !p.peekKeyword("end") && !p.peekEOF() {
 		fd, err := p.parseFuncDecl(true)
 		if err != nil {
@@ -357,6 +412,7 @@ func (p *parser) parseInterface() (Decl, error) {
 }
 
 func (p *parser) parseImpl() (Decl, error) {
+	start := p.peek()
 	if err := p.expectKeyword("impl"); err != nil {
 		return nil, err
 	}
@@ -364,7 +420,7 @@ func (p *parser) parseImpl() (Decl, error) {
 	if err != nil {
 		return nil, err
 	}
-	impl := &ImplDecl{Name: name, TypeArgs: typeArgs}
+	impl := &ImplDecl{Line: start.line, Name: name, TypeArgs: typeArgs}
 	for !p.peekKeyword("end") && !p.peekEOF() {
 		fd, err := p.parseFuncDecl(false)
 		if err != nil {
@@ -379,6 +435,7 @@ func (p *parser) parseImpl() (Decl, error) {
 }
 
 func (p *parser) parseFuncDecl(allowEmpty bool) (*FuncDecl, error) {
+	start := p.peek()
 	if err := p.expectKeyword("func"); err != nil {
 		return nil, err
 	}
@@ -414,7 +471,7 @@ func (p *parser) parseFuncDecl(allowEmpty bool) (*FuncDecl, error) {
 	if err := p.expectSym(")"); err != nil {
 		return nil, err
 	}
-	if err := p.expectSym(":"); err != nil {
+	if err := p.expectSym("->"); err != nil {
 		return nil, err
 	}
 	ret, err := p.parseType()
@@ -436,13 +493,13 @@ func (p *parser) parseFuncDecl(allowEmpty bool) (*FuncDecl, error) {
 		}
 	}
 	if allowEmpty && (p.peekKeyword("end") || p.peekKeyword("func") || p.peekKeyword("enum") || p.peekKeyword("struct") || p.peekKeyword("interface") || p.peekKeyword("impl") || p.peekKeyword("module") || p.peekKeyword("import")) {
-		return &FuncDecl{Name: funcName, Params: params, Ret: ret, Where: where}, nil
+		return &FuncDecl{Line: start.line, Name: funcName, Params: params, Ret: ret, Where: where}, nil
 	}
 	body, err := p.parseExprUntilEnd()
 	if err != nil {
 		return nil, err
 	}
-	return &FuncDecl{Name: funcName, TypeParams: typeParams, Params: params, Ret: ret, Where: where, Body: body}, nil
+	return &FuncDecl{Line: start.line, Name: funcName, TypeParams: typeParams, Params: params, Ret: ret, Where: where, Body: body}, nil
 }
 
 func (p *parser) parseConstraint() (string, []TypeExpr, error) {
@@ -549,6 +606,7 @@ func (p *parser) parseNameAndTypeArgs() (string, []TypeExpr, error) {
 }
 
 func (p *parser) parseType() (TypeExpr, error) {
+	start := p.peek()
 	if p.peekKeyword("func") {
 		_ = p.next()
 		if err := p.expectSym("("); err != nil {
@@ -570,18 +628,24 @@ func (p *parser) parseType() (TypeExpr, error) {
 		if err := p.expectSym(")"); err != nil {
 			return nil, err
 		}
-		if err := p.expectSym(":"); err != nil {
-			return nil, err
+		var ret TypeExpr
+		var err error
+		if p.matchSym("->") {
+			ret, err = p.parseType()
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			ret, err = p.parseType()
+			if err != nil {
+				return nil, err
+			}
 		}
-		ret, err := p.parseType()
-		if err != nil {
-			return nil, err
-		}
-		return &FuncType{Params: params, Ret: ret}, nil
+		return &FuncType{Line: start.line, Params: params, Ret: ret}, nil
 	}
 	if p.matchSym("(") {
 		if p.matchSym(")") {
-			return &NamedType{Name: "Unit"}, nil
+			return &NamedType{Line: start.line, Name: "Unit"}, nil
 		}
 		inner, err := p.parseType()
 		if err != nil {
@@ -621,7 +685,7 @@ func (p *parser) parseType() (TypeExpr, error) {
 			}
 		}
 	}
-	return &NamedType{Name: name, Args: args}, nil
+	return &NamedType{Line: start.line, Name: name, Args: args}, nil
 }
 
 func (p *parser) parseExprUntilEnd() (Expr, error) {
@@ -636,6 +700,7 @@ func (p *parser) parseExprUntilEnd() (Expr, error) {
 }
 
 func (p *parser) parseFuncLit() (Expr, error) {
+	start := p.peek()
 	if err := p.expectKeyword("func"); err != nil {
 		return nil, err
 	}
@@ -649,7 +714,7 @@ func (p *parser) parseFuncLit() (Expr, error) {
 	if err := p.expectSym(")"); err != nil {
 		return nil, err
 	}
-	if err := p.expectSym(":"); err != nil {
+	if err := p.expectSym("->"); err != nil {
 		return nil, err
 	}
 	ret, err := p.parseType()
@@ -660,10 +725,11 @@ func (p *parser) parseFuncLit() (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &FuncLitExpr{Params: params, Ret: ret, Body: body}, nil
+	return &FuncLitExpr{Line: start.line, Params: params, Ret: ret, Body: body}, nil
 }
 
 func (p *parser) parseSwitchExpr() (Expr, error) {
+	start := p.peek()
 	if err := p.expectKeyword("switch"); err != nil {
 		return nil, err
 	}
@@ -688,19 +754,45 @@ func (p *parser) parseSwitchExpr() (Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := p.expectSym("->"); err != nil {
+		if err := p.expectSym("=>"); err != nil {
 			return nil, err
 		}
 		body, err := p.parseCaseBody()
 		if err != nil {
 			return nil, err
 		}
-		cases = append(cases, SwitchCase{Pattern: pat, Body: body})
+		cases = append(cases, SwitchCase{Line: nodeLine(pat), Pattern: pat, Body: body})
 	}
 	if err := p.expectKeyword("end"); err != nil {
 		return nil, err
 	}
-	return &SwitchExpr{Target: target, Cases: cases}, nil
+	return &SwitchExpr{Line: start.line, Target: target, Cases: cases}, nil
+}
+
+func (p *parser) parseIfExpr() (Expr, error) {
+	start := p.peek()
+	if err := p.expectKeyword("if"); err != nil {
+		return nil, err
+	}
+	cond, err := p.parseExprListUntil("then")
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectKeyword("then"); err != nil {
+		return nil, err
+	}
+	thenExpr, err := p.parseExprListUntil("else")
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectKeyword("else"); err != nil {
+		return nil, err
+	}
+	elseExpr, err := p.parseExprListUntil("end")
+	if err != nil {
+		return nil, err
+	}
+	return &IfExpr{Line: start.line, Cond: cond, Then: thenExpr, Else: elseExpr}, nil
 }
 
 func (p *parser) parseCaseBody() (Expr, error) {
@@ -708,15 +800,16 @@ func (p *parser) parseCaseBody() (Expr, error) {
 }
 
 func (p *parser) parsePattern() (Pattern, error) {
+	start := p.peek()
 	name, err := p.expectIdent()
 	if err != nil {
 		return nil, err
 	}
 	if !p.matchSym("(") {
 		if name == "_" {
-			return &WildcardPattern{}, nil
+			return &WildcardPattern{Line: start.line}, nil
 		}
-		return &VariantPattern{Name: name}, nil
+		return &VariantPattern{Line: start.line, Name: name}, nil
 	}
 	var args []string
 	if !p.matchSym(")") {
@@ -734,7 +827,7 @@ func (p *parser) parsePattern() (Pattern, error) {
 			}
 		}
 	}
-	return &VariantPattern{Name: name, Args: args}, nil
+	return &VariantPattern{Line: start.line, Name: name, Args: args}, nil
 }
 
 const (
@@ -762,26 +855,29 @@ func (p *parser) parseExpr(minPrec int) (Expr, error) {
 			if err != nil {
 				return nil, err
 			}
-			left = &BinaryExpr{Op: "|>", Left: left, Right: right}
+			left = &BinaryExpr{Line: op.line, Op: "|>", Left: left, Right: right}
 			continue
 		}
 		right, err := p.parseExpr(prec + 1)
 		if err != nil {
 			return nil, err
 		}
-		left = &BinaryExpr{Op: op.lit, Left: left, Right: right}
+		left = &BinaryExpr{Line: op.line, Op: op.lit, Left: left, Right: right}
 	}
 	return left, nil
 }
 
 func (p *parser) parsePrefix() (Expr, error) {
 	if p.peekKeyword("not") {
-		_ = p.next()
+		tok := p.next()
 		expr, err := p.parseExpr(precPostfix)
 		if err != nil {
 			return nil, err
 		}
-		return &PrefixExpr{Op: "not", Expr: expr}, nil
+		return &PrefixExpr{Line: tok.line, Op: "not", Expr: expr}, nil
+	}
+	if p.peekKeyword("if") {
+		return p.parseIfExpr()
 	}
 	if p.peekKeyword("switch") {
 		return p.parseSwitchExpr()
@@ -796,6 +892,10 @@ func (p *parser) parsePostfix() (Expr, error) {
 	left, err := p.parsePrimary()
 	if err != nil {
 		return nil, err
+	}
+	line := nodeLine(left)
+	if line == 0 {
+		line = p.peekRaw().line
 	}
 	structName := ""
 	var structTypeArgs []TypeExpr
@@ -827,18 +927,18 @@ func (p *parser) parsePostfix() (Expr, error) {
 					}
 				}
 			}
-			left = &CallExpr{Callee: left, Args: args}
+			left = &CallExpr{Line: line, Callee: left, Args: args}
 			structName = ""
 			structTypeArgs = nil
 		case p.matchSym("{"):
 			if structName == "" {
-				return nil, fmt.Errorf("struct literal must start with a type name")
+				return nil, errorAtLine(line, "struct literal must start with a type name")
 			}
 			fields, err := p.parseStructLitFields()
 			if err != nil {
 				return nil, err
 			}
-			left = &StructLitExpr{TypeName: structName, TypeArgs: structTypeArgs, Fields: fields}
+			left = &StructLitExpr{Line: line, TypeName: structName, TypeArgs: structTypeArgs, Fields: fields}
 			structName = ""
 			structTypeArgs = nil
 		case p.matchSym("."):
@@ -846,7 +946,7 @@ func (p *parser) parsePostfix() (Expr, error) {
 			if err != nil {
 				return nil, err
 			}
-			left = &FieldExpr{Expr: left, Field: field}
+			left = &FieldExpr{Line: line, Expr: left, Field: field}
 			structName = ""
 			structTypeArgs = nil
 		default:
@@ -880,18 +980,37 @@ func (p *parser) parseTypeArgs() ([]TypeExpr, error) {
 }
 
 func (p *parser) parseStructLitFields() ([]StructLitField, error) {
-	prev := p.skipNL
-	p.skipNL = true
-	defer func() { p.skipNL = prev }()
-
 	var fields []StructLitField
-	if p.matchSym("}") {
-		return fields, nil
-	}
 	for {
-		name, err := p.expectIdent()
-		if err != nil {
-			return nil, err
+		p.skipNewlines()
+		tok := p.peekRaw()
+		if tok.kind == tokEOF {
+			break
+		}
+		if tok.kind == tokSym && tok.lit == "}" {
+			p.pos++
+			break
+		}
+		if len(fields) > 0 && tok.kind == tokSym && tok.lit == "," {
+			p.pos++
+			p.skipNewlines()
+			tok = p.peekRaw()
+			if tok.kind == tokSym && tok.lit == "}" {
+				p.pos++
+				break
+			}
+		}
+		nameTok := p.peekRaw()
+		name := ""
+		var err error
+		if p.peekKeyword("embed") {
+			_ = p.next()
+			name = "embed"
+		} else {
+			name, err = p.expectIdent()
+			if err != nil {
+				return nil, err
+			}
 		}
 		if err := p.expectSym(":"); err != nil {
 			return nil, err
@@ -900,15 +1019,9 @@ func (p *parser) parseStructLitFields() ([]StructLitField, error) {
 		if err != nil {
 			return nil, err
 		}
-		fields = append(fields, StructLitField{Name: name, Value: value})
-		if p.matchSym("}") {
-			return fields, nil
-		}
-		_ = p.matchSym(",")
-		if p.matchSym("}") {
-			return fields, nil
-		}
+		fields = append(fields, StructLitField{Line: nameTok.line, Name: name, Value: value})
 	}
+	return fields, nil
 }
 
 func (p *parser) parsePrimary() (Expr, error) {
@@ -916,13 +1029,13 @@ func (p *parser) parsePrimary() (Expr, error) {
 	switch tok.kind {
 	case tokIdent:
 		_ = p.next()
-		return &IdentExpr{Name: tok.lit}, nil
+		return &IdentExpr{Line: tok.line, Name: tok.lit}, nil
 	case tokNumber:
 		_ = p.next()
-		return &LiteralExpr{Kind: "number", Value: tok.lit}, nil
+		return &LiteralExpr{Line: tok.line, Kind: "number", Value: tok.lit}, nil
 	case tokString:
 		_ = p.next()
-		return &LiteralExpr{Kind: "string", Value: tok.lit}, nil
+		return &LiteralExpr{Line: tok.line, Kind: "string", Value: tok.lit}, nil
 	case tokSym:
 		if tok.lit == "(" {
 			_ = p.next()
@@ -936,7 +1049,7 @@ func (p *parser) parsePrimary() (Expr, error) {
 			return expr, nil
 		}
 	}
-	return nil, fmt.Errorf("unexpected token %q", tok.lit)
+	return nil, errorAtLine(tok.line, "unexpected token %q", tok.lit)
 }
 
 func opPrecedence(tok token) (int, bool) {
@@ -949,6 +1062,8 @@ func opPrecedence(tok token) (int, bool) {
 	case "|>":
 		return precPipe, true
 	case "==", "!=":
+		return precEq, true
+	case "<", ">", "<=", ">=":
 		return precEq, true
 	case "+":
 		return precAdd, true
@@ -968,9 +1083,16 @@ func (p *parser) peek() token {
 
 func (p *parser) peekRaw() token {
 	if p.pos >= len(p.toks) {
-		return token{kind: tokEOF}
+		return token{kind: tokEOF, line: p.lineAtEOF()}
 	}
 	return p.toks[p.pos]
+}
+
+func (p *parser) lineAtEOF() int {
+	if len(p.toks) == 0 {
+		return 1
+	}
+	return p.toks[len(p.toks)-1].line
 }
 
 func (p *parser) next() token {
@@ -1017,7 +1139,7 @@ func (p *parser) matchSym(s string) bool {
 func (p *parser) expectKeyword(s string) error {
 	tok := p.next()
 	if tok.kind != tokKeyword || tok.lit != s {
-		return fmt.Errorf("expected keyword %q, got %q", s, tok.lit)
+		return errorAtLine(tok.line, "expected keyword %q, got %q", s, tok.lit)
 	}
 	return nil
 }
@@ -1025,7 +1147,7 @@ func (p *parser) expectKeyword(s string) error {
 func (p *parser) expectSym(s string) error {
 	tok := p.next()
 	if tok.kind != tokSym || tok.lit != s {
-		return fmt.Errorf("expected %q, got %q", s, tok.lit)
+		return errorAtLine(tok.line, "expected %q, got %q", s, tok.lit)
 	}
 	return nil
 }
@@ -1033,7 +1155,7 @@ func (p *parser) expectSym(s string) error {
 func (p *parser) expectIdent() (string, error) {
 	tok := p.next()
 	if tok.kind != tokIdent {
-		return "", fmt.Errorf("expected identifier, got %q", tok.lit)
+		return "", errorAtLine(tok.line, "expected identifier, got %q", tok.lit)
 	}
 	return tok.lit, nil
 }
@@ -1057,18 +1179,18 @@ func (p *parser) parseExprListUntil(terms ...string) (Expr, error) {
 			break
 		}
 		if p.peekRaw().kind != tokNewline {
-			return nil, fmt.Errorf("expected newline before %q", p.peekRaw().lit)
+			return nil, errorAtLine(p.peekRaw().line, "expected newline before %q", p.peekRaw().lit)
 		}
 	}
 	if len(stmts) == 0 {
-		return nil, fmt.Errorf("expected expression")
+		return nil, errorAtLine(p.peekRaw().line, "expected expression")
 	}
 	if len(stmts) == 1 {
 		if exprStmt, ok := stmts[0].(*ExprStmt); ok {
 			return exprStmt.Expr, nil
 		}
 	}
-	return &BlockExpr{Stmts: stmts}, nil
+	return &BlockExpr{Line: p.peekRaw().line, Stmts: stmts}, nil
 }
 
 func (p *parser) peekAnyKeyword(terms ...string) bool {
@@ -1108,17 +1230,17 @@ func (p *parser) parseStmt() (Stmt, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &AssignStmt{Name: name, Value: value}, nil
+		return &AssignStmt{Line: p.peekRaw().line, Name: name, Value: value}, nil
 	default:
 		expr, err := p.parseExpr(0)
 		if err != nil {
 			return nil, err
 		}
-		return &ExprStmt{Expr: expr}, nil
+		return &ExprStmt{Line: p.peekRaw().line, Expr: expr}, nil
 	}
 }
 
-func (p *parser) parseBindingStmt(mutable bool) (Stmt, error) {
+func (p *parser) parseBindingStmt(mutable bool) (*LetStmt, error) {
 	if mutable {
 		if err := p.expectKeyword("var"); err != nil {
 			return nil, err
@@ -1146,7 +1268,7 @@ func (p *parser) parseBindingStmt(mutable bool) (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &LetStmt{Mutable: mutable, Name: name, Type: typ, Value: value}, nil
+	return &LetStmt{Line: p.peekRaw().line, Mutable: mutable, Name: name, Type: typ, Value: value}, nil
 }
 
 func (p *parser) peekRawN(n int) token {

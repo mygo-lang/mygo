@@ -12,11 +12,11 @@ func TestCompileDirSupportsLetVarAndDiscard(t *testing.T) {
 	writeMygoFile(t, dir, "main.mygo", `module Main
   import fmt "go:fmt"
 
-  func add(x: Int, y: Int): Int
+  func add(x: Int, y: Int) -> Int
     x + y
   end
 
-  func demo(): Int
+  func demo() -> Int
     let msg: String = "abc"
     let _ = fmt.Println(msg)
     var n: Int = add(40, 2)
@@ -24,7 +24,7 @@ func TestCompileDirSupportsLetVarAndDiscard(t *testing.T) {
     n
   end
 
-  func main(): ()
+  func main() -> ()
     demo()
   end
 end
@@ -57,7 +57,7 @@ end
 func TestCompileDirAllowsLetShadowingAndInference(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `module Main
-  func demo(): Int
+  func demo() -> Int
     let x = 1
     let x = 2
     x
@@ -81,7 +81,7 @@ end
 func TestCompileDirRejectsAssignmentToLet(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `module Main
-  func bad(): Int
+  func bad() -> Int
     let x: Int = 1
     x = 2
     x
@@ -109,7 +109,7 @@ func TestCompileDirSupportsStructLiterals(t *testing.T) {
     value: A
   end
 
-  func demo(): Int64
+  func demo() -> Int64
     let item = ABC {
       aaa: 123
     }
