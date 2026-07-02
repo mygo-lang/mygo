@@ -3,15 +3,19 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 )
 
 type Option[A any] interface{ isOption() }
 type OptionSome[A any] struct {
 	F0 A
 }
+
 func (OptionSome[A]) isOption() {}
+
 type OptionNone[A any] struct {
 }
+
 func (OptionNone[A]) isOption() {}
 func Some[A any](a0 A) Option[A] {
 	return OptionSome[A]{F0: a0}
@@ -24,10 +28,13 @@ type Result[A any, E any] interface{ isResult() }
 type ResultOk[A any, E any] struct {
 	F0 A
 }
+
 func (ResultOk[A, E]) isResult() {}
+
 type ResultErr[A any, E any] struct {
 	F0 E
 }
+
 func (ResultErr[A, E]) isResult() {}
 func Ok[A any, E any](a0 A) Result[A, E] {
 	return ResultOk[A, E]{F0: a0}
@@ -72,28 +79,58 @@ func equals_string(left string, right string) bool {
 	return (left == right)
 }
 
+var showDispatchRegistry = map[string]func(any) string{}
+
+func show(value any) string {
+	if fn, ok := showDispatchRegistry[reflect.TypeOf(value).String()]; ok {
+		return fn(value)
+	}
+	panic("missing typeclass implementation")
+}
+
+func init() {
+	showDispatchRegistry["int64"] = func(value any) string {
+		valueTyped := value.(int64)
+		return show_int64(valueTyped)
+	}
+}
+
+func init() {
+	showDispatchRegistry["string"] = func(value any) string {
+		valueTyped := value.(string)
+		return show_string(valueTyped)
+	}
+}
+
+func init() {
+	showDispatchRegistry["bool"] = func(value any) string {
+		valueTyped := value.(bool)
+		return show_bool(valueTyped)
+	}
+}
+
 func describe_option[A any](opt Option[A], showFn func(A) string) string {
 	return func() string {
-	switch v := opt.(type) {
-	case OptionNone[A]:
-		return "none"
-	case OptionSome[A]:
-		return (("some(" + showFn(v.F0)) + ")")
-	}
-	panic("unreachable")
-}()
+		switch v := opt.(type) {
+		case OptionNone[A]:
+			return "none"
+		case OptionSome[A]:
+			return (("some(" + showFn(v.F0)) + ")")
+		}
+		panic("unreachable")
+	}()
 }
 
 func describe_result[A any](res Result[A, string], showFn func(A) string) string {
 	return func() string {
-	switch v := res.(type) {
-	case ResultOk[A, string]:
-		return (("ok(" + showFn(v.F0)) + ")")
-	case ResultErr[A, string]:
-		return (("err(" + v.F0) + ")")
-	}
-	panic("unreachable")
-}()
+		switch v := res.(type) {
+		case ResultOk[A, string]:
+			return (("ok(" + showFn(v.F0)) + ")")
+		case ResultErr[A, string]:
+			return (("err(" + v.F0) + ")")
+		}
+		panic("unreachable")
+	}()
 }
 
 func same[A any](left A, right A, equalsFn func(A, A) bool) bool {
@@ -101,24 +138,23 @@ func same[A any](left A, right A, equalsFn func(A, A) bool) bool {
 }
 
 func describe_abc(item ABC) string {
-	return (("ABC{aaa=" + show_int64(item.Aaa)) + "}")
+	return (("ABC{aaa=" + show(item.Aaa)) + "}")
 }
 
 func demo() string {
 	return func() string {
-	abc_1 := ABC{Aaa: 123}
-	boxed_2 := Box[int64]{Value: abc_1.Aaa}
-	var maybe_3 Option[int64] = Some[int64](abc_1.Aaa)
-	var ok_4 Result[string, string] = Ok[string, string]("done")
-	summary_5 := ((((((((describe_abc(abc_1) + ", boxed=") + show_int64(boxed_2.Value)) + ", ") + describe_option[int64](maybe_3, show_int64)) + ", same=") + show_bool(same[int64](abc_1.Aaa, abc_1.Aaa, equals_int64))) + ", ") + describe_result[string](ok_4, show_string))
-	fmt.Println(summary_5)
-	return summary_5
-}()
+		abc_1 := ABC{Aaa: 123}
+		boxed_2 := Box[int64]{Value: abc_1.Aaa}
+		var maybe_3 Option[int64] = Some[int64](abc_1.Aaa)
+		var ok_4 Result[string, string] = Ok[string, string]("done")
+		summary_5 := ((((((((describe_abc(abc_1) + ", boxed=") + show(boxed_2.Value)) + ", ") + describe_option[int64](maybe_3, show_int64)) + ", same=") + show(same[int64](abc_1.Aaa, abc_1.Aaa, equals_int64))) + ", ") + describe_result[string](ok_4, show_string))
+		fmt.Println(summary_5)
+		return summary_5
+	}()
 }
 
 func main() {
 	func() {
-	fmt.Println(demo())
-}()
+		fmt.Println(demo())
+	}()
 }
-

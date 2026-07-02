@@ -184,6 +184,190 @@ end
 	}
 }
 
+func TestCompileDirSupportsDynamicTypeclassDispatch(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `module Main
+  import fmt "go:fmt"
+
+  interface Show[A]
+    func show(value: A) -> String
+  end
+
+  impl Show[Int64]
+    func show(value: Int64) -> String
+      fmt.Sprint(value)
+    end
+  end
+
+  func demo() -> String
+    show(42)
+  end
+end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"var Show_showDispatchRegistry = map[string]func(any) string{}",
+		"func Show_show(value any) string {",
+		"Show_showDispatchRegistry[\"int64\"] = func(value any) string {",
+		"return show_int64(valueTyped)",
+		"return Show_show(42)",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
+func TestCompileDirSupportsMultiParamTypeclassDispatch(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `module Main
+  interface Eq[A]
+    func equals(left: A, right: A) -> Bool
+  end
+
+  impl Eq[Int64]
+    func equals(left: Int64, right: Int64) -> Bool
+      left == right
+    end
+  end
+
+  func demo() -> Bool
+    equals(1, 2)
+  end
+end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"var Eq_equalsDispatchRegistry = map[string]func(any, any) bool{}",
+		"Eq_equalsDispatchRegistry[\"int64|int64\"] = func(left any, right any) bool {",
+		"key := typeKeyFromType(reflect.TypeOf(left).String()) + \"|\" + typeKeyFromType(reflect.TypeOf(right).String())",
+		"return Eq_equals(1, 2)",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
+func TestCompileDirSeparatesSameNamedMethodsByInterface(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `module Main
+  interface Show[A]
+    func show(value: A) -> String
+  end
+
+  interface Render[A]
+    func show(value: A) -> String
+  end
+
+  impl Show[Int64]
+    func show(value: Int64) -> String
+      "show"
+    end
+  end
+
+  impl Render[Int64]
+    func show(value: Int64) -> String
+      "render"
+    end
+  end
+end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"var Render_showDispatchRegistry = map[string]func(any) string{}",
+		"var Show_showDispatchRegistry = map[string]func(any) string{}",
+		"func Render_show(value any) string {",
+		"func Show_show(value any) string {",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
+func TestCompileDirLetsLocalBindingShadowTypeclassName(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `module Main
+  import fmt "go:fmt"
+
+  interface Show[A]
+    func show(value: A) -> String
+  end
+
+  impl Show[Int64]
+    func show(value: Int64) -> String
+      "typeclass"
+    end
+  end
+
+  func demo() -> String
+    let show = fmt.Sprint
+    show(42)
+  end
+end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"show_1 := fmt.Sprint",
+		"return callAny(show_1, 42)",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "Show_show(42)") {
+		t.Fatalf("generated Go unexpectedly used typeclass dispatcher\n--- got ---\n%s", got)
+	}
+}
+
+func TestCompileDirDeduplicatesTypeclassMethodParams(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `module Main
+  interface Show[A]
+    func show(value: A) -> String
+  end
+
+  interface FancyShow[A]
+    func show(value: A) -> String
+  end
+
+  func demo[A](value: A) -> String where Show[A], FancyShow[Int64]
+    show(value)
+  end
+end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	if strings.Count(got, "showFn ") != 1 {
+		t.Fatalf("expected one typeclass function param, got generated Go:\n%s", got)
+	}
+}
+
 func writeMygoFile(t *testing.T, dir, name, src string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(src), 0o644); err != nil {
