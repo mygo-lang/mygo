@@ -1,7 +1,7 @@
 package datastructure
 import fmt "go:fmt"
 
-# ===== 枚举 (Enums) =====
+# ===== Enum (Enums) =====
 
 enum Color
   Red, Green, Blue
@@ -19,7 +19,7 @@ enum Operation
   Multiply(Int, Int)
 end
 
-# ===== 结构体 (Structs) =====
+# ===== Struct (Structs) =====
 
 struct Person
   name: String
@@ -49,7 +49,7 @@ struct Contact
   embed Address
 end
 
-# ===== 函数 =====
+# ===== 函数 (Functions) =====
 
 func area(rect: Rectangle) -> Float64
   rect.width * rect.height
@@ -78,7 +78,40 @@ func describeOption[A](value: Option[A]) -> String where Show[A]
   end
 end
 
-# ===== 使用示例 =====
+# ===== Collection Type Examples =====
+
+# List[A] uses Option[Ref[List[A]]] for tail:
+#   None  → end of list
+#   Some(ref) → more elements follow
+#
+# Build:  [1, 2, 3]
+#   lastNode  = List { head: 3, tail: None }
+#   middleNode = List { head: 2, tail: Some(lastNode) }
+#   firstNode  = List { head: 1, tail: Some(middleNode) }
+
+func buildList() -> List[Int]
+  let lastNode = List { head: 3, tail: None }
+  let middleNode = List { head: 2, tail: Some(lastNode) }
+  List { head: 1, tail: Some(middleNode) }
+end
+
+# Traverse a list using tail unwrapping.
+# tail is Option[Ref[List[A]]], so we switch to extract the next node.
+func sumList(lst: Ref[List[Int]]) -> Int64
+  var total: Int64 = 0
+  var current: Ref[List[Int]] = lst
+  while current != Nil
+    let headVal = current.head
+    total = total + headVal
+    switch current.tail
+      case None => break
+      case Some(nextNode) => current = nextNode
+    end
+  end
+  total
+end
+
+# ===== Use Examples =====
 
 func demo() -> String
   let red = Color.Red
@@ -100,7 +133,11 @@ func demo() -> String
   let bigger = maxInt(3, 5)
   let colorText = describeColor(Color.Green)
 
-  let summary: String = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v", red, point, op, describeOption(empty), describeOption(someVal), person, rect, pair, color, addr, contact, areaValue, swapped, bigger, colorText)
+  # Collection examples
+  let lst = buildList()
+  let sum = sumList(lst)
+
+  let summary: String = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v sum=%v", red, point, op, describeOption(empty), describeOption(someVal), person, rect, pair, color, addr, contact, areaValue, swapped, bigger, colorText, sum)
   let _ = fmt.Println(summary)
   summary
 end

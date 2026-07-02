@@ -33,6 +33,9 @@
 - `Option[Ref[T]]` is the preferred shape for possibly-nil pointer returns and should be preserved rather than collapsed to a bare pointer.
 - `Option` continues to represent absence for nilable Go values and comma-ok style results.
 - `Result` is the dedicated shape for Go `error`-bearing flows and should be used instead of encoding failures as `Option`.
+- `List[A]` is a singly-linked list with `head: A` and `tail: Option[Ref[List[A]]]`; `None` terminates the list.
+- `Map[K, V]` is a thin type-safe wrapper around Go's `map[K]V` with `entries: String` and `size: Int` fields.
+- `Set[A]` is a thin type-safe wrapper around Go's `map[A]struct{}` with `entries: String` and `size: Int` fields.
 
 ## Workflow Notes
 
@@ -57,6 +60,12 @@
 - Keep `examples/main/main.mygo` aligned with the compiler's current boundary behavior, especially for `Ref`, `Option`, and `Result`.
 - Typeclass lookup should respect lexical scope first: local bindings and function-value bindings shadow typeclass names, `where`-bound methods are visible inside nested blocks, and package-level dispatch is the fallback.
 - When multiple typeclass candidates are visible, prefer the more specific binding by comparing concrete type coverage first, then type-parameter usage, then `any` usage; report ambiguity when candidates remain tied.
+
+## Collection Types
+
+- `List[A]`: singly-linked list using `Option[Ref[List[A]]]` for the tail field — `None` is the terminator, `Some(ref)` points to the next node. This avoids a separate `Nil` helper and keeps the nil-termination semantics explicit through `Option`.
+- `Map[K, V]`: struct wrapper with `entries: String` and `size: Int` — a placeholder for future Go `map[K]V` FFI integration.
+- `Set[A]`: struct wrapper with `entries: String` and `size: Int` — analogous to `Map` but wrapping `map[A]struct{}`.
 
 ## Recent Work
 

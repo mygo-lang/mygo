@@ -53,3 +53,23 @@ impl Show[Bool]
     fmt.Sprint(value)
   end
 end
+
+# ===== Collection Types =====
+
+# A linked list node. Tail uses Option[Ref[List[A]]] so None terminates the list.
+struct List[A]
+  head: A
+  tail: Option[Ref[List[A]]]
+end
+
+# A map wrapper around Go's map for type safety.
+struct Map[K, V]
+  entries: String
+  size: Int
+end
+
+# A set wrapper around Go's map for type safety.
+struct Set[A]
+  entries: String
+  size: Int
+end
