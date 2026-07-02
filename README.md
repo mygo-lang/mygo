@@ -18,21 +18,21 @@ package main
 import "go:fmt"
 
 enum Shape {
-    Circle(r: float64),
-    Rectangle { width: float64, height: float64 },
+  Circle(r: float64),
+  Rectangle { width: float64, height: float64 },
 }
 
-fn area(shape: Shape) -> float64 {
-    match shape {
-        Shape.Circle(r) => 3.14 * r * r,
-        Shape.Rectangle { width, height } => width * height,
-    }
-}
+func area(shape: Shape) -> float64
+  switch shape
+    case Shape.Circle(r) => 3.14 * r * r,
+    case Shape.Rectangle { width, height } => width * height,
+  end
+end
 
-fn main() {
-    let circle = Shape.Circle(5.0)
-    fmt.Println("Area:", area(circle))
-}
+func main() -> ()
+  let circle = Shape.Circle(5.0)
+  fmt.Println("Area:", area(circle))
+end
 ```
 
 Compile:

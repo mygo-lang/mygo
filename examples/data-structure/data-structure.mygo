@@ -1,115 +1,115 @@
 package datastructure
-  import fmt "go:fmt"
+import fmt "go:fmt"
 
-  # ===== 枚举 (Enums) =====
+# ===== 枚举 (Enums) =====
 
-  enum Color
-    Red, Green, Blue
+enum Color
+  Red, Green, Blue
+end
+
+enum Point2D
+  Empty
+  WithX(Int)
+  WithY(Int)
+end
+
+enum Operation
+  Add(Int, Int)
+  Subtract(Int, Int)
+  Multiply(Int, Int)
+end
+
+enum Container[A]
+  None
+  Some(A)
+end
+
+# ===== 结构体 (Structs) =====
+
+struct Person
+  name: String
+  age: Int64
+end
+
+struct Rectangle
+  width: Float64
+  height: Float64
+end
+
+struct Pair[T]
+  first: T
+  second: T
+end
+
+struct ColorTuple(Int, Int, Int)
+end
+
+struct Address
+  street: String
+  city: String
+end
+
+struct Contact
+  name: String
+  embed Address
+end
+
+# ===== 函数 =====
+
+func area(rect: Rectangle) -> Float64
+  rect.width * rect.height
+end
+
+func swapPair[T](p: Pair[T]) -> Pair[T]
+  Pair[T] { first: p.second, second: p.first }
+end
+
+func describeColor(color: Color) -> String
+  switch color
+    case Red => "red"
+    case Green => "green"
+    case Blue => "blue"
   end
+end
 
-  enum Point2D
-    Empty
-    WithX(Int)
-    WithY(Int)
+func maxInt(a: Int, b: Int) -> Int
+  if a > b then a else b
+end
+
+func describeContainer[A](value: Container[A]) -> String where Show[A]
+  switch value
+    case None => "None"
+    case Some(inner) => "Some(" + show(inner) + ")"
   end
+end
 
-  enum Operation
-    Add(Int, Int)
-    Subtract(Int, Int)
-    Multiply(Int, Int)
-  end
+# ===== 使用示例 =====
 
-  enum Container[A]
-    None
-    Some(A)
-  end
+func demo() -> String
+  let red = Color.Red
+  let point = Point2D.WithY(20)
+  let op = Operation.Multiply(4, 5)
 
-  # ===== 结构体 (Structs) =====
+  let empty: Container[Float64] = None[Float64]()
+  let someVal: Container[Int64] = Some[Int64](42)
 
-  struct Person
-    name: String
-    age: Int64
-  end
+  let person = Person { name: "Charlie", age: 25 }
+  let rect = Rectangle { width: 10.0, height: 5.0 }
+  let pair: Pair[Int] = Pair[Int] { first: 1, second: 2 }
+  let color = ColorTuple(255, 0, 0)
+  let addr = Address { street: "Main St", city: "NYC" }
+  let contact = Contact { name: "Bob", embed: addr }
 
-  struct Rectangle
-    width: Float64
-    height: Float64
-  end
+  let areaValue = area(rect)
+  let swapped = swapPair[Int](pair)
+  let bigger = maxInt(3, 5)
+  let colorText = describeColor(Color.Green)
 
-  struct Pair[T]
-    first: T
-    second: T
-  end
+  let summary: String = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v", red, point, op, describeContainer(empty), describeContainer(someVal), person, rect, pair, color, addr, contact, areaValue, swapped, bigger, colorText)
+  let _ = fmt.Println(summary)
+  summary
+end
 
-  struct ColorTuple(Int, Int, Int)
-  end
-
-  struct Address
-    street: String
-    city: String
-  end
-
-  struct Contact
-    name: String
-    embed Address
-  end
-
-  # ===== 函数 =====
-
-  func area(rect: Rectangle) -> Float64
-    rect.width * rect.height
-  end
-
-  func swapPair[T](p: Pair[T]) -> Pair[T]
-    Pair[T] { first: p.second, second: p.first }
-  end
-
-  func describeColor(color: Color) -> String
-    switch color
-      case Red => "red"
-      case Green => "green"
-      case Blue => "blue"
-    end
-  end
-
-  func maxInt(a: Int, b: Int) -> Int
-    if a > b then a else b
-  end
-
-  func describeContainer[A](value: Container[A]) -> String where Show[A]
-    switch value
-      case None => "None"
-      case Some(inner) => "Some(" + show(inner) + ")"
-    end
-  end
-
-  # ===== 使用示例 =====
-
-  func demo() -> String
-    let red = Color.Red
-    let point = Point2D.WithY(20)
-    let op = Operation.Multiply(4, 5)
-
-    let empty: Container[Float64] = None[Float64]()
-    let someVal: Container[Int64] = Some[Int64](42)
-
-    let person = Person { name: "Charlie", age: 25 }
-    let rect = Rectangle { width: 10.0, height: 5.0 }
-    let pair: Pair[Int] = Pair[Int] { first: 1, second: 2 }
-    let color = ColorTuple(255, 0, 0)
-    let addr = Address { street: "Main St", city: "NYC" }
-    let contact = Contact { name: "Bob", embed: addr }
-
-    let areaValue = area(rect)
-    let swapped = swapPair[Int](pair)
-    let bigger = maxInt(3, 5)
-    let colorText = describeColor(Color.Green)
-
-    let summary: String = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v", red, point, op, describeContainer(empty), describeContainer(someVal), person, rect, pair, color, addr, contact, areaValue, swapped, bigger, colorText)
-    let _ = fmt.Println(summary)
-    summary
-  end
-
-  func main() -> ()
-    let _ = fmt.Println(demo())
-  end
+func main() -> ()
+  let _ = fmt.Println(demo())
+end
