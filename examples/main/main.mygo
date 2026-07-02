@@ -10,13 +10,13 @@ struct Box[A]
   value: A
 end
 
-  struct Node
-    value: Int
-  end
+struct Node
+  value: Int
+end
 
-  impl Eq[Int64]
-    func equals(left: Int64, right: Int64) -> Bool
-      left == right
+impl Eq[Int64]
+  func equals(left: Int64, right: Int64) -> Bool
+    left == right
   end
 end
 

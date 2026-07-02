@@ -18,11 +18,11 @@ package main
 import "go:fmt"
 
 enum Shape {
-  Circle(r: float64),
-  Rectangle { width: float64, height: float64 },
+  Circle(r: Float64),
+  Rectangle { width: Float64, height: Float64 },
 }
 
-func area(shape: Shape) -> float64
+func area(shape: Shape) -> Float64
   switch shape
     case Shape.Circle(r) => 3.14 * r * r,
     case Shape.Rectangle { width, height } => width * height,
