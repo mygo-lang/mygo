@@ -123,6 +123,11 @@ func loadPackage(dir string) (*Package, error) {
 		Interfaces:    map[string]*InterfaceDecl{},
 		Funcs:         map[string]*FuncDecl{},
 	}
+	preludeDecls, err := loadPreludeDecls()
+	if err != nil {
+		return nil, err
+	}
+	pkg.Decls = append(pkg.Decls, preludeDecls...)
 	pkgName := ""
 	for _, entry := range entries {
 		name := entry.Name()
@@ -176,6 +181,18 @@ func loadPackage(dir string) (*Package, error) {
 		}
 	}
 	return pkg, nil
+}
+
+func loadPreludeDecls() ([]Decl, error) {
+	src, err := os.ReadFile(filepath.Join("internal", "mygo", "prelude.mysrc"))
+	if err != nil {
+		return nil, err
+	}
+	file, err := ParseFile(string(src))
+	if err != nil {
+		return nil, fmt.Errorf("prelude.mysrc: %w", err)
+	}
+	return file.Decls, nil
 }
 
 func (p *Package) Generate() (string, error) {
@@ -1950,6 +1967,9 @@ func nodeLineFromExprSlice(exprs []Expr) int {
 }
 
 func (g *generator) goTypeCompatible(expected, actual string) bool {
+	if strings.TrimSpace(expected) == "any" {
+		return true
+	}
 	expectedType, ok := goTypeFromString(expected)
 	if !ok {
 		if strings.HasPrefix(strings.TrimSpace(actual), "Ref[") && strings.HasSuffix(strings.TrimSpace(actual), "]") {

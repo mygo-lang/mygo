@@ -6,6 +6,14 @@ import (
 	"fmt"
 )
 
+type Show[A any] interface {
+	show(value A) string
+}
+
+type Eq[A any] interface {
+	equals(left A, right A) bool
+}
+
 type Option[A any] interface{ isOption() }
 type OptionSome[A any] struct {
 	F0 A
@@ -49,14 +57,6 @@ type Node struct {
 	Value int
 }
 
-type Show[A any] interface {
-	show(value A) string
-}
-
-type Eq[A any] interface {
-	equals(left A, right A) bool
-}
-
 var Eq_equalsDispatchRegistry = map[string]func(any, any) bool{}
 func Eq_equals(left any, right any) bool {
 	key := typeKeyFromType(reflect.TypeOf(left).String()) + "|" + typeKeyFromType(reflect.TypeOf(right).String())
@@ -75,6 +75,16 @@ func Show_show(value any) string {
 	panic("missing typeclass implementation")
 }
 
+func show_int(value int) string {
+	return fmt.Sprint(value)
+}
+func init() {
+	Show_showDispatchRegistry["int"] = func(value any) string {
+		valueTyped := value.(int)
+		return show_int(valueTyped)
+	}
+}
+
 func show_int64(value int64) string {
 	return fmt.Sprint(value)
 }
@@ -82,6 +92,16 @@ func init() {
 	Show_showDispatchRegistry["int64"] = func(value any) string {
 		valueTyped := value.(int64)
 		return show_int64(valueTyped)
+	}
+}
+
+func show_float64(value Float64) string {
+	return fmt.Sprint(value)
+}
+func init() {
+	Show_showDispatchRegistry["float64"] = func(value any) string {
+		valueTyped := value.(float64)
+		return show_float64(valueTyped)
 	}
 }
 

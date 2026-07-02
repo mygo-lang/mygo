@@ -2,23 +2,23 @@
 package datastructure
 
 import (
+	"reflect"
 	"fmt"
 )
+
+type Show[A any] interface {
+	show(value A) string
+}
 
 type Color interface{ isColor() }
 type ColorRed struct {
 }
-
 func (ColorRed) isColor() {}
-
 type ColorGreen struct {
 }
-
 func (ColorGreen) isColor() {}
-
 type ColorBlue struct {
 }
-
 func (ColorBlue) isColor() {}
 func Red() Color {
 	return ColorRed{}
@@ -33,19 +33,14 @@ func Blue() Color {
 type Point2D interface{ isPoint2D() }
 type Point2DEmpty struct {
 }
-
 func (Point2DEmpty) isPoint2D() {}
-
 type Point2DWithX struct {
 	F0 int
 }
-
 func (Point2DWithX) isPoint2D() {}
-
 type Point2DWithY struct {
 	F0 int
 }
-
 func (Point2DWithY) isPoint2D() {}
 func Empty() Point2D {
 	return Point2DEmpty{}
@@ -62,21 +57,16 @@ type OperationAdd struct {
 	F0 int
 	F1 int
 }
-
 func (OperationAdd) isOperation() {}
-
 type OperationSubtract struct {
 	F0 int
 	F1 int
 }
-
 func (OperationSubtract) isOperation() {}
-
 type OperationMultiply struct {
 	F0 int
 	F1 int
 }
-
 func (OperationMultiply) isOperation() {}
 func Add(a0 int, a1 int) Operation {
 	return OperationAdd{F0: a0, F1: a1}
@@ -91,13 +81,10 @@ func Multiply(a0 int, a1 int) Operation {
 type Container[A any] interface{ isContainer() }
 type ContainerNone[A any] struct {
 }
-
 func (ContainerNone[A]) isContainer() {}
-
 type ContainerSome[A any] struct {
 	F0 A
 }
-
 func (ContainerSome[A]) isContainer() {}
 func None[A any]() Container[A] {
 	return ContainerNone[A]{}
@@ -108,16 +95,16 @@ func Some[A any](a0 A) Container[A] {
 
 type Person struct {
 	Name string
-	Age  int64
+	Age int64
 }
 
 type Rectangle struct {
-	Width  float64
+	Width float64
 	Height float64
 }
 
 type Pair[T any] struct {
-	First  T
+	First T
 	Second T
 }
 
@@ -129,12 +116,71 @@ type ColorTuple struct {
 
 type Address struct {
 	Street string
-	City   string
+	City string
 }
 
 type Contact struct {
 	Name string
 	Address
+}
+
+var Show_showDispatchRegistry = map[string]func(any) string{}
+func Show_show(value any) string {
+	key := typeKeyFromType(reflect.TypeOf(value).String())
+	if fn, ok := Show_showDispatchRegistry[key]; ok {
+		return fn(value)
+	}
+	panic("missing typeclass implementation")
+}
+
+func show_int(value int) string {
+	return fmt.Sprint(value)
+}
+func init() {
+	Show_showDispatchRegistry["int"] = func(value any) string {
+		valueTyped := value.(int)
+		return show_int(valueTyped)
+	}
+}
+
+func show_int64(value int64) string {
+	return fmt.Sprint(value)
+}
+func init() {
+	Show_showDispatchRegistry["int64"] = func(value any) string {
+		valueTyped := value.(int64)
+		return show_int64(valueTyped)
+	}
+}
+
+func show_float64(value Float64) string {
+	return fmt.Sprint(value)
+}
+func init() {
+	Show_showDispatchRegistry["float64"] = func(value any) string {
+		valueTyped := value.(float64)
+		return show_float64(valueTyped)
+	}
+}
+
+func show_string(value string) string {
+	return value
+}
+func init() {
+	Show_showDispatchRegistry["string"] = func(value any) string {
+		valueTyped := value.(string)
+		return show_string(valueTyped)
+	}
+}
+
+func show_bool(value bool) string {
+	return fmt.Sprint(value)
+}
+func init() {
+	Show_showDispatchRegistry["bool"] = func(value any) string {
+		valueTyped := value.(bool)
+		return show_bool(valueTyped)
+	}
 }
 
 func area(rect Rectangle) float64 {
@@ -147,53 +193,66 @@ func swapPair[T any](p Pair[T]) Pair[T] {
 
 func describeColor(color Color) string {
 	return func() string {
-		switch color.(type) {
-		case ColorRed:
-			return "red"
-		case ColorGreen:
-			return "green"
-		case ColorBlue:
-			return "blue"
-		}
-		panic("unreachable")
-	}()
+	switch color.(type) {
+	case ColorRed:
+		return "red"
+	case ColorGreen:
+		return "green"
+	case ColorBlue:
+		return "blue"
+	}
+	panic("unreachable")
+}()
 }
 
 func maxInt(a int, b int) int {
 	return func() int {
-		if a > b {
-			return a
-		} else {
-			return b
-		}
-	}()
+	if (a > b) {
+		return a
+	} else {
+		return b
+	}
+}()
+}
+
+func describeContainer[A any](value Container[A], showFn func(A) string) string {
+	return func() string {
+	switch v := value.(type) {
+	case ContainerNone[A]:
+		return "None"
+	case ContainerSome[A]:
+		return (("Some(" + showFn(v.F0)) + ")")
+	}
+	panic("unreachable")
+}()
 }
 
 func demo() string {
 	return func() string {
-		red_1 := Red()
-		point_2 := WithY(20)
-		op_3 := Multiply(4, 5)
-		var empty_4 Container[float64] = None[float64]()
-		var someVal_5 Container[int64] = Some[int64](42)
-		person_6 := Person{Name: "Charlie", Age: 25}
-		rect_7 := Rectangle{Width: 10.0, Height: 5.0}
-		var pair_8 Pair[int] = Pair[int]{First: 1, Second: 2}
-		color_9 := ColorTuple{F0: 255, F1: 0, F2: 0}
-		addr_10 := Address{Street: "Main St", City: "NYC"}
-		contact_11 := Contact{Name: "Bob", Address: addr_10}
-		areaValue_12 := area(rect_7)
-		swapped_13 := swapPair[int](pair_8)
-		bigger_14 := maxInt(3, 5)
-		colorText_15 := describeColor(Green())
-		summary_16 := fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v", red_1, point_2, op_3, empty_4, someVal_5, person_6, rect_7, pair_8, color_9, addr_10, contact_11, areaValue_12, swapped_13, bigger_14, colorText_15)
-		fmt.Println(summary_16)
-		return summary_16
-	}()
+	red_1 := Red()
+	point_2 := WithY(20)
+	op_3 := Multiply(4, 5)
+	var empty_4 Container[float64] = None[float64]()
+	var someVal_5 Container[int64] = Some[int64](42)
+	person_6 := Person{Name: "Charlie", Age: 25}
+	rect_7 := Rectangle{Width: 10.0, Height: 5.0}
+	var pair_8 Pair[int] = Pair[int]{First: 1, Second: 2}
+	color_9 := ColorTuple{F0: 255, F1: 0, F2: 0}
+	addr_10 := Address{Street: "Main St", City: "NYC"}
+	contact_11 := Contact{Name: "Bob", Address: addr_10}
+	areaValue_12 := area(rect_7)
+	swapped_13 := swapPair[int](pair_8)
+	bigger_14 := maxInt(3, 5)
+	colorText_15 := describeColor(Green())
+	var summary_16 string = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v", red_1, point_2, op_3, describeContainer[float64](empty_4, show_float64), describeContainer[int64](someVal_5, show_int64), person_6, rect_7, pair_8, color_9, addr_10, contact_11, areaValue_12, swapped_13, bigger_14, colorText_15)
+	fmt.Println(summary_16)
+	return summary_16
+}()
 }
 
 func main() {
 	func() {
-		fmt.Println(demo())
-	}()
+	fmt.Println(demo())
+}()
 }
+

@@ -1,110 +1,85 @@
 package main
-  import fmt "go:fmt"
 
-  enum Option[A]
-    Some(A)
-    None
-  end
+import fmt "go:fmt"
 
-  enum Result[A, E]
-    Ok(A)
-    Err(E)
-  end
+enum Option[A]
+  Some(A)
+  None
+end
 
-  struct ABC
-    aaa: Int64
-  end
+enum Result[A, E]
+  Ok(A)
+  Err(E)
+end
 
-  struct Box[A]
-    value: A
-  end
+struct ABC
+  aaa: Int64
+end
+
+struct Box[A]
+  value: A
+end
 
   struct Node
     value: Int
   end
 
-  interface Show[A]
-    func show(value: A) -> String
-  end
-
-  interface Eq[A]
-    func equals(left: A, right: A) -> Bool
-  end
-
-  impl Show[Int64]
-    func show(value: Int64) -> String
-      fmt.Sprint(value)
-    end
-  end
-
-  impl Show[String]
-    func show(value: String) -> String
-      value
-    end
-  end
-
-  impl Show[Bool]
-    func show(value: Bool) -> String
-      fmt.Sprint(value)
-    end
-  end
-
   impl Eq[Int64]
     func equals(left: Int64, right: Int64) -> Bool
       left == right
-    end
   end
+end
 
-  impl Eq[String]
-    func equals(left: String, right: String) -> Bool
-      left == right
-    end
+impl Eq[String]
+  func equals(left: String, right: String) -> Bool
+    left == right
   end
+end
 
-  func describe_option[A](opt: Option[A]) -> String where Show[A]
-    switch opt
-      case None => "none"
-      case Some(value) => "some(" + show(value) + ")"
-    end
+func describe_option[A](opt: Option[A]) -> String where Show[A]
+  switch opt
+    case None => "none"
+    case Some(value) => "some(" + show(value) + ")"
   end
+end
 
-  func describe_result[A](res: Result[A, String]) -> String where Show[A]
-    switch res
-      case Ok(value) => "ok(" + show(value) + ")"
-      case Err(err) => "err(" + err + ")"
-    end
+func describe_result[A](res: Result[A, String]) -> String where Show[A]
+  switch res
+    case Ok(value) => "ok(" + show(value) + ")"
+    case Err(err) => "err(" + err + ")"
   end
+end
 
-  func same[A](left: A, right: A) -> Bool where Eq[A]
-    equals(left, right)
-  end
+func same[A](left: A, right: A) -> Bool where Eq[A]
+  equals(left, right)
+end
 
-  func describe_abc(item: ABC) -> String
-    "ABC{aaa=" + show(item.aaa) + "}"
-  end
+func describe_abc(item: ABC) -> String
+  "ABC{aaa=" + show(item.aaa) + "}"
+end
 
-  func typeKeyFromType(value: String) -> String
-    value
-  end
+func typeKeyFromType(value: String) -> String
+  value
+end
 
-  func lookup_node(ok: Bool, node: Ref[Node]) -> Result[Ref[Node], String]
-    if ok then Ok(node) else Err("missing")
-  end
+func lookup_node(ok: Bool, node: Ref[Node]) -> Result[Ref[Node], String]
+  if ok then Ok(node) else Err("missing")
+end
 
-  func demo() -> String
-    let abc = ABC {
-      aaa: 123
-    }
-    let boxed = Box {
-      value: abc.aaa
-    }
-    let maybe: Option[Int64] = Some(abc.aaa)
-    let ok: Result[String, String] = Ok("done")
-    let summary = describe_abc(abc) + ", boxed=" + show(boxed.value) + ", " + describe_option(maybe) + ", same=" + show(same(abc.aaa, abc.aaa)) + ", " + describe_result(ok)
-    let _ = fmt.Println(summary)
-    summary
-  end
+func demo() -> String
+  let abc = ABC {
+    aaa: 123
+  }
+  let boxed = Box {
+    value: abc.aaa
+  }
+  let maybe: Option[Int64] = Some(abc.aaa)
+  let ok: Result[String, String] = Ok("done")
+  let summary = describe_abc(abc) + ", boxed=" + show(boxed.value) + ", " + describe_option(maybe) + ", same=" + show(same(abc.aaa, abc.aaa)) + ", " + describe_result(ok)
+  let _ = fmt.Println(summary)
+  summary
+end
 
-  func main() -> ()
-    let _ = fmt.Println(demo())
-  end
+func main() -> ()
+  let _ = fmt.Println(demo())
+end

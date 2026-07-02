@@ -1,0 +1,41 @@
+package prelude
+
+import fmt "go:fmt"
+
+interface Show[A]
+  func show(value: A) -> String
+end
+
+interface Eq[A]
+  func equals(left: A, right: A) -> Bool
+end
+
+impl Show[Int]
+  func show(value: Int) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl Show[Int64]
+  func show(value: Int64) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl Show[Float64]
+  func show(value: Float64) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl Show[String]
+  func show(value: String) -> String
+    value
+  end
+end
+
+impl Show[Bool]
+  func show(value: Bool) -> String
+    fmt.Sprint(value)
+  end
+end

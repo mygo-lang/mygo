@@ -43,6 +43,8 @@ mygo examples/main/main.mygo
 
 MyGO files now declare the generated Go package with a leading `package <name>` header. The old file-level `module` wrapper is no longer used, and declarations follow directly after the package line.
 
+Every package now receives a built-in prelude during compilation. The prelude is written in MyGO when possible and currently provides shared protocols such as `Show[A]` and `Eq[A]`, so generic formatting and comparison code can rely on those interfaces instead of falling back to ad hoc `any` usage.
+
 Run with `go run`:
 
 ```bash
@@ -84,6 +86,7 @@ go build -o zz_mygo.gen.exe examples/main/zz_mygo.gen.go
 
 - **Go package imports**: Use `import "go:pkg/name"` for Go packages
 - **Package-qualified selectors**: Selectors such as `fmt.Sprint(...)` lower as Go selectors
+- **Prelude protocols**: Prefer `Show[A]` for textual conversion and formatting of generic values; the built-in prelude provides the common instances
 - **Ref[T]**: The non-nil reference form at the Go boundary lowers to `*T` in generated Go
 - **Option[Ref[T]]**: The preferred shape for possibly-nil pointer returns, preserved rather than collapsed to a bare pointer
 
@@ -91,6 +94,7 @@ go build -o zz_mygo.gen.exe examples/main/zz_mygo.gen.go
 
 - Keep `examples/main/main.mygo` runnable after compiler changes; its `main` function should actually do work
 - When checking the build, use a writable Go cache if the default cache path is unavailable in this environment
+- Prefer expressing prelude functionality in MyGO first; only fall back to Go for pieces that cannot yet be represented safely in the language itself
 
 ## License
 

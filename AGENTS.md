@@ -5,6 +5,7 @@
 - `examples/main/main.mygo` is the canonical design sample for the language surface.
 - `internal/mygo/parser.go` owns syntax.
 - `internal/mygo/compiler.go` owns lowering to generated Go.
+- `internal/mygo/prelude.mysrc` is the built-in prelude source that is merged into every package before lowering.
 - Generated Go lives next to the source example, e.g. `examples/main/zz_mygo.gen.go`, and should be treated as disposable.
 
 ## Type Model
@@ -21,6 +22,7 @@
 - Use `import "go:pkg/name"` for Go packages.
 - Allow an optional alias form like `import fmt "go:fmt"` when the Go package name should be explicit.
 - Package-qualified selectors such as `fmt.Sprint(...)` should lower as Go selectors, not as struct field access.
+- The built-in prelude provides common typeclasses such as `Show[A]` and `Eq[A]`; prefer using those protocols rather than ad hoc `any` formatting or conversion.
 - Generated Go should only include helper imports when they are actually needed; `reflect` is now a fallback for truly dynamic `any` function calls, not a blanket import.
 - Typeclass-style `impl` blocks should lower to standalone helper functions plus explicit function parameters at call sites, not to method dictionaries.
 - `Ref[T]` is the non-nil reference form at the Go boundary and should lower to `*T` in generated Go.
@@ -33,6 +35,7 @@
 - Prefer small, focused changes that keep the example file in sync with compiler behavior.
 - Keep `examples/main/main.mygo` runnable after compiler changes; its `main` function should actually do work, not only return a value.
 - When checking the build, use a writable Go cache if the default cache path is unavailable in this environment.
+- The prelude should be authored in MyGO when possible; if a prelude fragment cannot yet be expressed in MyGO, it may be implemented in Go as the lowest-level fallback.
 
 ## Current Semantics
 
