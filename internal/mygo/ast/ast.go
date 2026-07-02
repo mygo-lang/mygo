@@ -1,4 +1,4 @@
-package mygo
+package ast
 
 type File struct {
 	PackageName string

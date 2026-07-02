@@ -17,172 +17,9 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	parserpkg "github.com/mygo-lang/mygo/internal/mygo/parser"
 )
-
-type Package struct {
-	Name          string
-	Imports       map[string]struct{}
-	ImportDecls   []*ImportDecl
-	ImportAliases map[string]string
-	Decls         []Decl
-	Enums         map[string]*EnumDecl
-	Structs       map[string]*StructDecl
-	Interfaces    map[string]*InterfaceDecl
-	Funcs         map[string]*FuncDecl
-	Impls         []*ImplDecl
-}
-
-func CompileDir(dir string) (string, error) {
-	pkg, err := loadPackage(dir)
-	if err != nil {
-		return "", err
-	}
-	out := filepath.Join(dir, "zz_mygo.gen.go")
-	src, err := pkg.Generate()
-	if err != nil {
-		return "", err
-	}
-	if err := os.WriteFile(out, []byte(src), 0o644); err != nil {
-		return "", err
-	}
-	return out, nil
-}
-
-func Sync(root string) ([]string, error) {
-	var written []string
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			base := filepath.Base(path)
-			if strings.HasPrefix(base, "bak") || base == ".git" || base == "node_modules" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	dirs, err := mygoDirs(root)
-	if err != nil {
-		return nil, err
-	}
-	for _, dir := range dirs {
-		out, err := CompileDir(dir)
-		if err != nil {
-			return nil, err
-		}
-		written = append(written, out)
-	}
-	sort.Strings(written)
-	return written, nil
-}
-
-func mygoDirs(root string) ([]string, error) {
-	seen := map[string]struct{}{}
-	var dirs []string
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			base := filepath.Base(path)
-			if path != root && (strings.HasPrefix(base, "bak") || base == ".git" || base == "node_modules") {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if strings.HasSuffix(d.Name(), ".mygo") {
-			dir := filepath.Dir(path)
-			if _, ok := seen[dir]; !ok {
-				seen[dir] = struct{}{}
-				dirs = append(dirs, dir)
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	sort.Strings(dirs)
-	return dirs, nil
-}
-
-func loadPackage(dir string) (*Package, error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-	pkg := &Package{
-		Imports:       map[string]struct{}{},
-		ImportAliases: map[string]string{},
-		Enums:         map[string]*EnumDecl{},
-		Structs:       map[string]*StructDecl{},
-		Interfaces:    map[string]*InterfaceDecl{},
-		Funcs:         map[string]*FuncDecl{},
-	}
-	preludeDecls, err := loadPreludeDecls()
-	if err != nil {
-		return nil, err
-	}
-	pkg.Decls = append(pkg.Decls, preludeDecls...)
-	pkgName := ""
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() || !strings.HasSuffix(name, ".mygo") || strings.HasSuffix(name, ".gen.go") {
-			continue
-		}
-		src, err := os.ReadFile(filepath.Join(dir, name))
-		if err != nil {
-			return nil, err
-		}
-		file, err := ParseFile(string(src))
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", name, err)
-		}
-		if file.PackageName != "" {
-			if pkgName == "" {
-				pkgName = file.PackageName
-			} else if pkgName != file.PackageName {
-				return nil, fmt.Errorf("%s: %w", name, errorAtLine(file.PackageLine, "package %q conflicts with %q", file.PackageName, pkgName))
-			}
-		}
-		pkg.Decls = append(pkg.Decls, file.Decls...)
-	}
-	if pkgName == "" {
-		pkgName = filepath.Base(dir)
-	}
-	pkg.Name = toPackageName(pkgName)
-	for _, decl := range pkg.Decls {
-		switch d := decl.(type) {
-		case *ImportDecl:
-			pkg.Imports[d.Path] = struct{}{}
-			pkg.ImportDecls = append(pkg.ImportDecls, d)
-			alias := d.Alias
-			if alias == "" {
-				alias = importAliasForPath(d.Path)
-			}
-			if prev, ok := pkg.ImportAliases[alias]; ok && prev != d.Path {
-				return nil, errorAtLine(d.Line, "import alias %q conflicts between %q and %q", alias, prev, d.Path)
-			}
-			pkg.ImportAliases[alias] = d.Path
-		case *EnumDecl:
-			pkg.Enums[d.Name] = d
-		case *StructDecl:
-			pkg.Structs[d.Name] = d
-		case *InterfaceDecl:
-			pkg.Interfaces[d.Name] = d
-		case *FuncDecl:
-			pkg.Funcs[d.Name] = d
-		case *ImplDecl:
-			pkg.Impls = append(pkg.Impls, d)
-		}
-	}
-	return pkg, nil
-}
 
 func loadPreludeDecls() ([]Decl, error) {
 	_, filePath, _, ok := runtime.Caller(0)
@@ -193,7 +30,7 @@ func loadPreludeDecls() ([]Decl, error) {
 	if err != nil {
 		return nil, err
 	}
-	file, err := ParseFile(string(src))
+	file, err := parserpkg.ParseFile(string(src))
 	if err != nil {
 		return nil, fmt.Errorf("prelude.mysrc: %w", err)
 	}
@@ -463,52 +300,6 @@ type generator struct {
 	goSigCache        map[string]*goPackageSigs
 	needsCallAny      bool
 	localSeq          int
-}
-
-type goPackageSigs struct {
-	funcs   map[string]*goFuncSig
-	methods map[string]map[string]*goFuncSig
-	pkg     *types.Package
-}
-
-type goFuncSig struct {
-	params []string
-	ret    []string
-}
-
-type exprCtx struct {
-	locals           map[string]string
-	bindings         map[string]string
-	sourceTypes      map[string]string
-	mutable          map[string]bool
-	typeParams       map[string]struct{}
-	constraintFuncs  map[string]string
-	typeclassMethods map[string][]typeclassBinding
-	retType          string
-	currentImpl      string
-}
-
-type typeclassBinding struct {
-	Interface  string
-	Score      matchScore
-	ParamTypes []string
-	RetType    string
-}
-
-type matchScore struct {
-	ConcreteTypes int
-	TypeParams    int
-	AnyTypes      int
-}
-
-type bindingInfo struct {
-	Expr string
-	Type string
-}
-
-type importSpec struct {
-	Alias string
-	Path  string
 }
 
 func hasImportPath(imports []importSpec, path string) bool {

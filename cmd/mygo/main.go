@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/mygo-lang/mygo/internal/mygo"
+	"github.com/mygo-lang/mygo/internal/mygo/compiler"
 )
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 		if len(os.Args) > 2 {
 			root = os.Args[2]
 		}
-		written, err := mygo.Sync(root)
+		written, err := compiler.Sync(root)
 		must(err)
 		for _, path := range written {
 			fmt.Println(path)
@@ -28,7 +28,7 @@ func main() {
 	case "build":
 		root := "."
 		args := os.Args[2:]
-		written, err := mygo.Sync(root)
+		written, err := compiler.Sync(root)
 		must(err)
 		_ = written
 		cmd := exec.Command("go", append([]string{"build"}, args...)...)
