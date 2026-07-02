@@ -322,6 +322,106 @@ func (p *parser) parseTypeArgs() ([]TypeExpr, error) {
 	return args, nil
 }
 
+func (p *parser) parseSliceLit() (Expr, error) {
+	start := p.peek()
+	_ = p.next() // consume '['
+
+	var elems []Expr
+	if !p.matchSym("]") {
+		for {
+			elem, err := p.parseExpr(0)
+			if err != nil {
+				return nil, err
+			}
+			elems = append(elems, elem)
+			if p.matchSym("]") {
+				break
+			}
+			if err := p.expectSym(","); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return &SliceLitExpr{Line: start.line, Column: start.col, Elem: nil, Elems: elems}, nil
+}
+
+// parseCollectionLit handles both Map and Set literals starting with '{'.
+// Heuristic: if every entry is "key : value" we produce a MapLitExpr,
+// otherwise a SetLitExpr. Mixed entries are an error.
+func (p *parser) parseCollectionLit() (Expr, error) {
+	start := p.peek()
+	_ = p.next() // consume '{'
+
+	var pairs []MapLitPair
+	var setElems []Expr
+	isMap := false
+
+	if !p.matchSym("}") {
+		for {
+			p.skipNewlines()
+			keyStart := p.peek()
+
+			var keyTok token
+			switch keyTok.kind = peekTokenKindForLit(p); keyTok.kind {
+			case tokNumber, tokString, tokIdent, tokSym:
+				keyTok = p.next()
+			default:
+				return nil, common.ErrorAtPos(keyStart.line, keyStart.col, "expected element or key-value pair")
+			}
+
+			// Check for "key : value" pattern
+			if p.peekRaw().kind == tokSym && p.peekRaw().lit == ":" {
+				isMap = true
+				_ = p.next() // consume ':'
+				value, err := p.parseExpr(0)
+				if err != nil {
+					return nil, err
+				}
+				line, col := common.NodePos(keyTok)
+				pairs = append(pairs, MapLitPair{
+					Line:  line,
+					Col:   col,
+					Key:   p.tokenToExpr(keyTok),
+					Value: value,
+				})
+			} else {
+				elem := p.tokenToExpr(keyTok)
+				setElems = append(setElems, elem)
+			}
+
+			if p.matchSym("}") {
+				break
+			}
+			if err := p.expectSym(","); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if isMap {
+		return &MapLitExpr{Line: start.line, Column: start.col, Pairs: pairs}, nil
+	}
+	return &SetLitExpr{Line: start.line, Col: start.col, Elems: setElems}, nil
+}
+
+func peekTokenKindForLit(p *parser) tokenKind {
+	t := p.peekRaw()
+	return t.kind
+}
+
+func (p *parser) tokenToExpr(t token) Expr {
+	switch t.kind {
+	case tokNumber:
+		return &LiteralExpr{Line: t.line, Column: t.col, Kind: "number", Value: t.lit}
+	case tokString:
+		return &LiteralExpr{Line: t.line, Column: t.col, Kind: "string", Value: t.lit}
+	case tokIdent:
+		return &IdentExpr{Line: t.line, Column: t.col, Name: t.lit}
+	default:
+		return nil
+	}
+}
+
 func (p *parser) parseStructLitFields() ([]StructLitField, error) {
 	var fields []StructLitField
 	for {
@@ -390,6 +490,12 @@ func (p *parser) parsePrimary() (Expr, error) {
 				return nil, err
 			}
 			return expr, nil
+		}
+		if tok.lit == "[" {
+			return p.parseSliceLit()
+		}
+		if tok.lit == "{" {
+			return p.parseCollectionLit()
 		}
 	}
 	return nil, common.ErrorAtPos(tok.line, tok.col, "unexpected token %q", tok.lit)

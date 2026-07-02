@@ -67,7 +67,7 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 				continue
 			}
 			b.WriteString("\t")
-			if stmtIsStatementSafe(s.Expr) {
+			if stmtIsStatementSafe(s.Expr) || typ == "" {
 				b.WriteString(code)
 			} else {
 				b.WriteString("_ = ")

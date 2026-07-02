@@ -30,6 +30,7 @@
 - Typeclass-style `impl` blocks should lower to standalone helper functions plus explicit function parameters at call sites, not to method dictionaries.
 - `Ref[T]` is the non-nil reference form at the Go boundary and should lower to `*T` in generated Go.
 - `Ref[T]` remains a compiler-recognized boundary type, not a prelude-declared enum or struct.
+- `Ref.new(expr)` is the canonical MyGO expression for producing a `Ref[T]`; it lowers to Go address-taking (`&expr`) and should be preferred over exposing raw `&` syntax in MyGO source.
 - `Option[Ref[T]]` is the preferred shape for possibly-nil pointer returns and should be preserved rather than collapsed to a bare pointer.
 - `Option` continues to represent absence for nilable Go values and comma-ok style results.
 - `Result` is the dedicated shape for Go `error`-bearing flows and should be used instead of encoding failures as `Option`.
@@ -45,6 +46,11 @@
 - When checking the build, use a writable Go cache if the default cache path is unavailable in this environment.
 - The prelude should be authored in MyGO when possible; if a prelude fragment cannot yet be expressed in MyGO, it may be implemented in Go as the lowest-level fallback.
 
+## Known Issues
+
+- **`Nil` is not a real prelude value**: `translateIdent` in `typeclass.go` still has hardcoded support for `Nil` that emits `Nil[T]()`, but there is no actual `Nil` type or constructor in the prelude. New code should model absence with `Option`, as in `Option[Ref[List[T]]]`, instead of comparing refs to `Nil`.
+- **`sumList` type ergonomics**: `examples/data-structure/data-structure.mygo` currently accepts `List[Int]`, creates a traversal ref with `Ref.new(lst)`, and walks `tail: Option[Ref[List[Int]]]`. This is runnable and keeps construction explicit, but it still takes the address of a local parameter copy; a future design may prefer accepting `Option[Ref[List[Int]]]` or `Ref[List[Int]]` directly.
+
 ## Current Semantics
 
 - Files start with `package <package_name>` to set the generated Go package name. The old file-level `module` wrapper is removed, and declarations follow directly after the package header.
@@ -58,6 +64,7 @@
 - Struct literals support a constructor-like form such as `ABC { aaa: 123 }`.
 - Generic struct literals can also carry explicit type arguments, such as `Box[Int64] { value: 123 }`.
 - When a generic struct literal omits its type arguments, the compiler should infer them from the expected type or field values when possible.
+- `Ref.new(expr)` constructs a reference value and is lowered as `&expr`; if the argument is already a ref/pointer, lowering leaves it unchanged rather than producing a pointer-to-pointer.
 - `A[]` is syntactic sugar for `Slice[A]` and lowers directly to Go `[]A`. The parser rewrites `Int[]` into `Slice[NamedType{Name:"Int"}]` at parse time.
 - Keep `examples/main/main.mygo` aligned with the compiler's current boundary behavior, especially for `Ref`, `Option`, and `Result`.
 - Typeclass lookup should respect lexical scope first: local bindings and function-value bindings shadow typeclass names, `where`-bound methods are visible inside nested blocks, and package-level dispatch is the fallback.
@@ -84,8 +91,32 @@
 - **Why not `Slice` / `Map` / `Set` as prelude struct types?**
   Previously, these were declared as structs in `prelude.mysrc` with placeholder fields (`entries: String`, `size: Int`). They were removed because: (1) they served no runtime purpose — the prelude struct declarations had no usable fields; (2) `genStruct` would emit them as Go structs, conflicting with the `goType` lowering to native Go types; (3) keeping them only in the compiler's type lowering is cleaner and zero-cost. `List[A]` remains as a prelude struct because it needs actual runtime data structure semantics.
 
+## Collection Literals
+
+- Slice: `[1, 2, 3]: Int[]` → Go `[]int{1, 2, 3}`
+- Map: `{"a": "1", "b": "2"}: Map[String, String]` → Go `map[string]string{"a": "1", "b": "2"}`
+- Set: `{"x", "y"}: Set[String]` → Go `map[string]struct{}{"x": {}, "y": {}}`
+- No list literal syntax (as designed).
+- Type inference strategy: infer from element expressions first; fall back to type annotation if inference fails; error if neither can determine the type. Mismatched element types produce an error.
+- Empty `{}` is treated as an empty map by default; if the expected type is `map[A]struct{}`, it becomes an empty set.
+- Parser uses a heuristic in `{...}`: if every entry uses `:` separator → `MapLitExpr`, otherwise → `SetLitExpr`.
+
+### AST Nodes (`internal/mygo/ast/ast.go`)
+
+- `SliceLitExpr` — `{Line, Column, Elem TypeExpr, Elems []Expr}`
+- `MapLitExpr` — `{Line, Column, Key TypeExpr, Val TypeExpr, Pairs []MapLitPair}`
+- `MapLitPair` — `{Line, Col, Key Expr, Value Expr}`
+- `SetLitExpr` — `{Line, Col, Elem TypeExpr, Elems []Expr}`
+
+### Key Files
+
+- **Parser**: `internal/mygo/parser/parser_expr.go` — `parseSliceLit()`, `parseCollectionLit()`, routed from `parsePrimary()`.
+- **Compiler**: `internal/mygo/compiler/translate_expr.go` — `translateSliceLit()`, `translateMapLit()`, `translateSetLit()`, `translateEmptyMapLit()`.
+- **Type parsing fix** (`internal/mygo/parser/parser_core.go`): `parseType()` checks `[]` suffix BEFORE type-args `[` to correctly handle `Int[]` → `Slice[Int]`.
+
 ## Recent Work
 
+- Added `Ref.new(expr)` lowering for explicit `Ref[T]` construction, updated `examples/data-structure` to use it for `Option[Ref[List[A]]]` tails, and taught field lookup to resolve through generated Go pointer types like `*List[int]`.
 - Introduced `Slice`, `Map`, and `Set` as compiler-handled collection types with no prelude struct declarations — lowered directly to Go natives (`[]A`, `map[K]V`, `map[A]struct{}`). Added `A[]` syntactic sugar parsed as `Slice[A]`.
 - Further split `internal/mygo/compiler/` into focused files: `helpers.go`, `type_inference.go`, `typeclass.go`, `translate_struct.go`, and `go_package.go`, while keeping `generate.go`, `translate_expr.go`, `translate_call.go`, `translate_control.go`, `api.go`, and `types.go` as separate compiler concerns.
 - Unified all position/error helpers onto `common.NodePos` and `common.ErrorAtPos`, removing the wrapper `pos.go` files from root, parser, and compiler packages.

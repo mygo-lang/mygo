@@ -43,6 +43,10 @@ type SwitchCase = ast.SwitchCase
 type Pattern = ast.Pattern
 type VariantPattern = ast.VariantPattern
 type WildcardPattern = ast.WildcardPattern
+type SliceLitExpr = ast.SliceLitExpr
+type MapLitExpr = ast.MapLitExpr
+type MapLitPair = ast.MapLitPair
+type SetLitExpr = ast.SetLitExpr
 
 func ParseFile(src string) (*File, error)                { return parseFile(src) }
 func ParseFiles(srcs map[string]string) ([]*File, error) { return parseFiles(srcs) }

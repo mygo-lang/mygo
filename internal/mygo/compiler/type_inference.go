@@ -202,6 +202,10 @@ func isGoErrorType(t string) bool {
 }
 
 func (g *generator) lookupFieldType(baseType, field string) string {
+	baseType = strings.TrimSpace(baseType)
+	if strings.HasPrefix(baseType, "*") {
+		return g.lookupFieldType(strings.TrimPrefix(baseType, "*"), field)
+	}
 	base, args := splitTypeArgs(baseType)
 	st := g.pkg.Structs[base]
 	if st == nil {
@@ -243,8 +247,26 @@ func (g *generator) goType(t TypeExpr, typeParams map[string]struct{}) string {
 			return "int"
 		case "Int64":
 			return "int64"
+		case "Int32":
+			return "int32"
+		case "Int16":
+			return "int16"
+		case "Int8":
+			return "int8"
+		case "UInt":
+			return "uint"
+		case "UInt64":
+			return "uint64"
+		case "UInt32":
+			return "uint32"
+		case "UInt16":
+			return "uint16"
+		case "UInt8":
+			return "uint8"
 		case "Float64":
 			return "float64"
+		case "Float32":
+			return "float32"
 		case "String":
 			return "string"
 		case "Bool":

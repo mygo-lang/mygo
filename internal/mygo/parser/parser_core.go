@@ -509,27 +509,27 @@ func (p *parser) parseType() (TypeExpr, error) {
 		name += "." + part
 	}
 	var args []TypeExpr
+	// Check for [] suffix (slice shorthand: Int[] → Slice[Int]) BEFORE type args
 	if p.matchSym("[") {
-		if !p.matchSym("]") {
-			for {
-				tp, err := p.parseType()
-				if err != nil {
-					return nil, err
-				}
-				args = append(args, tp)
-				if p.matchSym("]") {
-					break
-				}
-				if err := p.expectSym(","); err != nil {
-					return nil, err
-				}
+		if p.matchSym("]") {
+			// This was Int[] (not type args)
+			base := &NamedType{Line: start.line, Column: start.col, Name: name, Args: args}
+			return &NamedType{Line: start.line, Column: start.col, Name: "Slice", Args: []TypeExpr{base}}, nil
+		}
+		// Otherwise it's type args like Map[K, V]
+		for {
+			tp, err := p.parseType()
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, tp)
+			if p.matchSym("]") {
+				break
+			}
+			if err := p.expectSym(","); err != nil {
+				return nil, err
 			}
 		}
-	}
-	// Check for [] suffix (slice shorthand: Int[] → Slice[Int])
-	if p.matchSym("[]") {
-		base := &NamedType{Line: start.line, Column: start.col, Name: name, Args: args}
-		return &NamedType{Line: start.line, Column: start.col, Name: "Slice", Args: []TypeExpr{base}}, nil
 	}
 	return &NamedType{Line: start.line, Column: start.col, Name: name, Args: args}, nil
 }

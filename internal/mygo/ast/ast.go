@@ -232,6 +232,41 @@ type WhileExpr struct {
 
 func (*WhileExpr) exprNode() {}
 
+type SliceLitExpr struct {
+	Line   int
+	Column int
+	Elem   TypeExpr
+	Elems  []Expr
+}
+
+func (*SliceLitExpr) exprNode() {}
+
+type MapLitExpr struct {
+	Line   int
+	Column int
+	Key    TypeExpr
+	Val    TypeExpr
+	Pairs  []MapLitPair
+}
+
+func (*MapLitExpr) exprNode() {}
+
+type MapLitPair struct {
+	Line  int
+	Col   int
+	Key   Expr
+	Value Expr
+}
+
+type SetLitExpr struct {
+	Line  int
+	Col   int
+	Elem  TypeExpr
+	Elems []Expr
+}
+
+func (*SetLitExpr) exprNode() {}
+
 type BlockExpr struct {
 	Line   int
 	Column int

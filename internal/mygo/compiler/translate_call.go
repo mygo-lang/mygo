@@ -11,6 +11,9 @@ import (
 func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (string, string, error) {
 	if field, ok := n.Callee.(*FieldExpr); ok {
 		if baseIdent, ok := field.Expr.(*IdentExpr); ok {
+			if baseIdent.Name == "Ref" && field.Field == "new" {
+				return g.translateRefNewCall(n.Args, ctx, expected)
+			}
 			if enumDecl := g.pkg.Enums[baseIdent.Name]; enumDecl != nil {
 				if variant := g.findVariant(enumDecl, field.Field); variant != nil {
 					return g.translateEnumConstructor(baseIdent.Name, field.Field, n.Args, ctx, expected)
@@ -188,6 +191,39 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 		retType = parsedRet
 	}
 	return fmt.Sprintf("%s(%s)", callee, strings.Join(args, ", ")), retType, nil
+}
+
+func (g *generator) translateRefNewCall(args []Expr, ctx *exprCtx, expected string) (string, string, error) {
+	if len(args) != 1 {
+		return "", "", common.ErrorAtPos(nodeLineFromExprSlice(args), nodeColFromExprSlice(args), "Ref.new expects exactly 1 arg, got %d", len(args))
+	}
+
+	innerExpected := ""
+	if strings.HasPrefix(strings.TrimSpace(expected), "Ref[") && strings.HasSuffix(strings.TrimSpace(expected), "]") {
+		innerExpected = strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(expected), "Ref["), "]")
+	} else if strings.HasPrefix(strings.TrimSpace(expected), "*") {
+		innerExpected = strings.TrimPrefix(strings.TrimSpace(expected), "*")
+	}
+
+	code, typ, err := g.translateExpr(args[0], ctx, innerExpected)
+	if err != nil {
+		return "", "", err
+	}
+
+	if typ != "" {
+		if strings.HasPrefix(strings.TrimSpace(typ), "*") {
+			return code, typ, nil
+		}
+		if strings.HasPrefix(strings.TrimSpace(typ), "Ref[") && strings.HasSuffix(strings.TrimSpace(typ), "]") {
+			return code, typ, nil
+		}
+		return "&" + code, "*" + typ, nil
+	}
+
+	if innerExpected != "" {
+		return "&" + code, "*" + innerExpected, nil
+	}
+	return "&" + code, "", nil
 }
 
 func (g *generator) translateGoSelectorCall(alias, name string, args []Expr, ctx *exprCtx, expected string) (string, string, bool, error) {

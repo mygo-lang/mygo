@@ -61,6 +61,14 @@ func demo() -> String
   }
   let maybe: Option[Int64] = Some(abc.aaa)
   let ok: Result[String, String] = Ok("done")
+
+  // Collection literals
+  let numbers: Int[] = [123, 456, 789, 101112]
+  let strings_map: Map[String, String] = {"abc": "123", "def": "456"}
+  let words: Set[String] = {"who", "am", "i"}
+  let empty_slice: Int[] = []
+  let empty_map: Map[String, Int] = {}
+
   let summary = describe_abc(abc) + ", boxed=" + show(boxed.value) + ", " + describe_option(maybe) + ", same=" + show(same(abc.aaa, abc.aaa)) + ", " + describe_result(ok)
   let _ = fmt.Println(summary)
   summary

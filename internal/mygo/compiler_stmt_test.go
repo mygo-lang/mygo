@@ -7,6 +7,39 @@ import (
 	"testing"
 )
 
+func TestCompileDirSupportsCollectionLiterals(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+  func demo() -> Int
+    let numbers: Int[] = [1, 2, 3]
+    let m: Map[String, String] = {"a": "1", "b": "2"}
+    let s: Set[String] = {"x", "y"}
+    let empty_s: Int[] = []
+  42
+  end
+
+  func main() -> ()
+    demo()
+  end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"[]int{1, 2, 3}",
+		`map[string]string{"a": "1", "b": "2"}`,
+		`map[string]struct{}{"x":{}, "y":{}}`,
+		"[]int{}",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
 func TestCompileDirSupportsLetVarAndDiscard(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
@@ -242,6 +275,39 @@ func TestCompileDirSupportsOptionOfRefTypes(t *testing.T) {
 		"Item Option[*Node]",
 		"func maybe_node(ok bool, node *Node) Option[*Node] {",
 		"return Some[*Node](node)",
+		"return None[*Node]()",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
+func TestCompileDirSupportsRefNew(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+  enum Option[A]
+    Some(A)
+    None()
+  end
+
+  struct Node
+    value: Int
+  end
+
+  func maybe_node(ok: Bool, node: Node) -> Option[Ref[Node]]
+    if ok then Some(Ref.new(node)) else None()
+  end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"func maybe_node(ok bool, node Node) Option[*Node] {",
+		"return Some[*Node](&node)",
 		"return None[*Node]()",
 	} {
 		if !strings.Contains(got, want) {
