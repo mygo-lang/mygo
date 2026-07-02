@@ -23,6 +23,10 @@
 - Package-qualified selectors such as `fmt.Sprint(...)` should lower as Go selectors, not as struct field access.
 - Generated Go should only include helper imports when they are actually needed; `reflect` is now a fallback for truly dynamic `any` function calls, not a blanket import.
 - Typeclass-style `impl` blocks should lower to standalone helper functions plus explicit function parameters at call sites, not to method dictionaries.
+- `Ref[T]` is the non-nil reference form at the Go boundary and should lower to `*T` in generated Go.
+- `Option[Ref[T]]` is the preferred shape for possibly-nil pointer returns and should be preserved rather than collapsed to a bare pointer.
+- `Option` continues to represent absence for nilable Go values and comma-ok style results.
+- `Result` is the dedicated shape for Go `error`-bearing flows and should be used instead of encoding failures as `Option`.
 
 ## Workflow Notes
 
@@ -42,3 +46,4 @@
 - Struct literals support a constructor-like form such as `ABC { aaa: 123 }`.
 - Generic struct literals can also carry explicit type arguments, such as `Box[Int64] { value: 123 }`.
 - When a generic struct literal omits its type arguments, the compiler should infer them from the expected type or field values when possible.
+- Keep `examples/main/main.mygo` aligned with the compiler's current boundary behavior, especially for `Ref`, `Option`, and `Result`.

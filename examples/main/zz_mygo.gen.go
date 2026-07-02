@@ -20,6 +20,22 @@ func None[A any]() Option[A] {
 	return OptionNone[A]{}
 }
 
+type Result[A any, E any] interface{ isResult() }
+type ResultOk[A any, E any] struct {
+	F0 A
+}
+func (ResultOk[A, E]) isResult() {}
+type ResultErr[A any, E any] struct {
+	F0 E
+}
+func (ResultErr[A, E]) isResult() {}
+func Ok[A any, E any](a0 A) Result[A, E] {
+	return ResultOk[A, E]{F0: a0}
+}
+func Err[A any, E any](a0 E) Result[A, E] {
+	return ResultErr[A, E]{F0: a0}
+}
+
 type ABC struct {
 	Aaa int64
 }
@@ -68,6 +84,18 @@ func describe_option[A any](opt Option[A], showFn func(A) string) string {
 }()
 }
 
+func describe_result[A any](res Result[A, string], showFn func(A) string) string {
+	return func() string {
+	switch v := res.(type) {
+	case ResultOk[A, string]:
+		return (("ok(" + showFn(v.F0)) + ")")
+	case ResultErr[A, string]:
+		return (("err(" + v.F0) + ")")
+	}
+	panic("unreachable")
+}()
+}
+
 func same[A any](left A, right A, equalsFn func(A, A) bool) bool {
 	return equalsFn(left, right)
 }
@@ -81,9 +109,10 @@ func demo() string {
 	abc_1 := ABC{Aaa: 123}
 	boxed_2 := Box[int64]{Value: abc_1.Aaa}
 	var maybe_3 Option[int64] = Some[int64](abc_1.Aaa)
-	summary_4 := ((((((describe_abc(abc_1) + ", boxed=") + show_int64(boxed_2.Value)) + ", ") + describe_option[int64](maybe_3, show_int64)) + ", same=") + show_bool(same[int64](abc_1.Aaa, abc_1.Aaa, equals_int64)))
-	fmt.Println(summary_4)
-	return summary_4
+	var ok_4 Result[string, string] = Ok[string, string]("done")
+	summary_5 := ((((((((describe_abc(abc_1) + ", boxed=") + show_int64(boxed_2.Value)) + ", ") + describe_option[int64](maybe_3, show_int64)) + ", same=") + show_bool(same[int64](abc_1.Aaa, abc_1.Aaa, equals_int64))) + ", ") + describe_result[string](ok_4, show_string))
+	fmt.Println(summary_5)
+	return summary_5
 }()
 }
 

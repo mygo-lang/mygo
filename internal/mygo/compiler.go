@@ -1645,6 +1645,10 @@ func (g *generator) goType(t TypeExpr, typeParams map[string]struct{}) string {
 			return "bool"
 		case "Unit":
 			return "struct{}"
+		case "Ref":
+			if len(tt.Args) == 1 {
+				return "*" + g.goType(tt.Args[0], typeParams)
+			}
 		}
 		if len(tt.Args) == 0 {
 			return tt.Name
@@ -2075,6 +2079,10 @@ func typeString(t TypeExpr, subst map[string]string) string {
 			return "bool"
 		case "Unit":
 			return "struct{}"
+		case "Ref":
+			if len(tt.Args) == 1 {
+				return "*" + typeString(tt.Args[0], subst)
+			}
 		}
 		if len(tt.Args) == 0 {
 			return tt.Name
