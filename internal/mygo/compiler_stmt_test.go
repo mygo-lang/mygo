@@ -184,6 +184,46 @@ end
 	}
 }
 
+func TestCompileDirSupportsOptionOfRefTypes(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `module Main
+  enum Option[A]
+    Some(A)
+    None()
+  end
+
+  struct Node
+    value: Int
+  end
+
+  struct Holder
+    item: Option[Ref[Node]]
+  end
+
+  func maybe_node(ok: Bool, node: Ref[Node]) -> Option[Ref[Node]]
+    if ok then Some(node) else None()
+  end
+end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"type Holder struct {",
+		"Item Option[*Node]",
+		"func maybe_node(ok bool, node *Node) Option[*Node] {",
+		"return Some[*Node](node)",
+		"return None[*Node]()",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
 func TestCompileDirSupportsDynamicTypeclassDispatch(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `module Main
@@ -216,6 +256,158 @@ end
 		"Show_showDispatchRegistry[\"int64\"] = func(value any) string {",
 		"return show_int64(valueTyped)",
 		"return Show_show(42)",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
+func TestCompileDirWrapsGoErrorReturnsIntoResult(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `module Main
+  import os "go:os"
+
+  enum Result[A, E]
+    Ok(A)
+    Err(E)
+  end
+
+  func demo() -> Result[any, String]
+    os.Open("/tmp/does-not-matter")
+  end
+end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"func demo() Result[any, string] {",
+		"value, err := os.Open(\"/tmp/does-not-matter\")",
+		"return Err[any, string](err.Error())",
+		"return Ok[any, string](value)",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
+func TestCompileDirRejectsGoSelectorArgMismatch(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `module Main
+  import os "go:os"
+
+  func demo() -> Bool
+    os.Open()
+  end
+end
+`)
+
+	_, err := CompileDir(dir)
+	if err == nil {
+		t.Fatal("CompileDir() error = nil, want argument mismatch")
+	}
+	if !strings.Contains(err.Error(), "expected 1 args") {
+		t.Fatalf("CompileDir() error = %v, want argument mismatch", err)
+	}
+}
+
+func TestCompileDirSupportsGoValueAndPointerMethods(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `module Main
+  import bytes "go:bytes"
+  import time "go:time"
+
+  func demo() -> Int
+    let buf = bytes.NewBufferString("hi")
+    let year = time.Date(2024, 1, 2, 3, 4, 5, 6, time.UTC).Year()
+    buf.String()
+    year
+  end
+end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"buf_1 := bytes.NewBufferString(\"hi\")",
+		"year_2 := time.Date(2024, 1, 2, 3, 4, 5, 6, time.UTC).Year()",
+		"buf_1.String()",
+		"return year_2",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
+func TestCompileDirPreservesRefInGoBoundaryResults(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `module Main
+  import os "go:os"
+
+  enum Result[A, E]
+    Ok(A)
+    Err(E)
+  end
+
+  func open_file() -> Result[Ref[Any], String]
+    os.Open("/tmp/does-not-matter")
+  end
+end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"func open_file() Result[*any, string] {",
+		"value, err := os.Open(\"/tmp/does-not-matter\")",
+		"return Err[*any, string](err.Error())",
+		"return Ok[*any, string](value)",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
+func TestCompileDirSupportsResultOfRefTypes(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `module Main
+  enum Result[A, E]
+    Ok(A)
+    Err(E)
+  end
+
+  struct Node
+    value: Int
+  end
+
+  func lookup(ok: Bool, node: Ref[Node]) -> Result[Ref[Node], String]
+    if ok then Ok(node) else Err("missing")
+  end
+end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"func lookup(ok bool, node *Node) Result[*Node, string] {",
+		"return Ok[*Node, string](node)",
+		"return Err[*Node, string](\"missing\")",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)

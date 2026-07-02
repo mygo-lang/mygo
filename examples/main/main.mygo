@@ -19,6 +19,10 @@ module Main
     value: A
   end
 
+  struct Node
+    value: Int
+  end
+
   interface Show[A]
     func show(value: A) -> String
   end
@@ -77,6 +81,14 @@ module Main
 
   func describe_abc(item: ABC) -> String
     "ABC{aaa=" + show(item.aaa) + "}"
+  end
+
+  func typeKeyFromType(value: String) -> String
+    value
+  end
+
+  func lookup_node(ok: Bool, node: Ref[Node]) -> Result[Ref[Node], String]
+    if ok then Ok(node) else Err("missing")
   end
 
   func demo() -> String

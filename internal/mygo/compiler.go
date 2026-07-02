@@ -1,8 +1,16 @@
 package mygo
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"go/ast"
+	"go/importer"
+	goparser "go/parser"
+	gotoken "go/token"
+	"go/types"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -176,6 +184,7 @@ func (p *Package) Generate() (string, error) {
 		importAliases:     p.ImportAliases,
 		interfaceByMethod: map[string]string{},
 		variantByName:     map[string]string{},
+		goSigCache:        map[string]*goPackageSigs{},
 	}
 	for name, iface := range p.Interfaces {
 		for _, m := range iface.Methods {
@@ -429,8 +438,20 @@ type generator struct {
 	importAliases     map[string]string
 	interfaceByMethod map[string]string
 	variantByName     map[string]string
+	goSigCache        map[string]*goPackageSigs
 	needsCallAny      bool
 	localSeq          int
+}
+
+type goPackageSigs struct {
+	funcs    map[string]*goFuncSig
+	methods  map[string]map[string]*goFuncSig
+	pkg      *types.Package
+}
+
+type goFuncSig struct {
+	params []string
+	ret    []string
 }
 
 type exprCtx struct {
@@ -844,6 +865,159 @@ func callAny(fn any, args ...any) any {
 `
 }
 
+func (g *generator) goPackageSigsFor(path string) (*goPackageSigs, error) {
+	if sigs, ok := g.goSigCache[path]; ok {
+		return sigs, nil
+	}
+	sigs, err := loadGoPackageSigs(path)
+	if err != nil {
+		return nil, err
+	}
+	g.goSigCache[path] = sigs
+	return sigs, nil
+}
+
+func loadGoPackageSigs(path string) (*goPackageSigs, error) {
+	cmd := exec.Command("go", "list", "-json", path)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("go list %q: %w: %s", path, err, strings.TrimSpace(stderr.String()))
+	}
+	var meta struct {
+		Dir     string
+		Name    string
+		GoFiles []string
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &meta); err != nil {
+		return nil, err
+	}
+	if meta.Dir == "" {
+		return nil, fmt.Errorf("go list %q: missing package dir", path)
+	}
+	pkg, funcs, err := loadGoPackageTypeSigs(meta.Dir, meta.GoFiles)
+	if err != nil {
+		return nil, err
+	}
+	methods, err := loadGoPackageTypeMethods(meta.Dir, meta.GoFiles)
+	if err != nil {
+		return nil, err
+	}
+	return &goPackageSigs{funcs: funcs, methods: methods, pkg: pkg}, nil
+}
+
+func loadGoPackageTypeSigs(dir string, files []string) (*types.Package, map[string]*goFuncSig, error) {
+	fset := gotoken.NewFileSet()
+	if len(files) == 0 {
+		return nil, nil, fmt.Errorf("go package %q: no Go files", dir)
+	}
+	parsed := make([]*ast.File, 0, len(files))
+	for _, name := range files {
+		path := filepath.Join(dir, name)
+		f, err := goparser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			return nil, nil, err
+		}
+		parsed = append(parsed, f)
+	}
+	conf := types.Config{Importer: importer.Default()}
+	checked, err := conf.Check(dir, fset, parsed, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	funcs := map[string]*goFuncSig{}
+	scope := checked.Scope()
+	for _, name := range scope.Names() {
+		obj := scope.Lookup(name)
+		fn, ok := obj.(*types.Func)
+		if !ok {
+			continue
+		}
+		sig, ok := fn.Type().(*types.Signature)
+		if !ok {
+			continue
+		}
+		funcs[name] = &goFuncSig{
+			params: goSignatureParams(sig),
+			ret:    goSignatureResults(sig),
+		}
+	}
+	return checked, funcs, nil
+}
+
+func loadGoPackageTypeMethods(dir string, files []string) (map[string]map[string]*goFuncSig, error) {
+	fset := gotoken.NewFileSet()
+	if len(files) == 0 {
+		return nil, fmt.Errorf("go package %q: no Go files", dir)
+	}
+	parsed := make([]*ast.File, 0, len(files))
+	for _, name := range files {
+		path := filepath.Join(dir, name)
+		f, err := goparser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			return nil, err
+		}
+		parsed = append(parsed, f)
+	}
+	conf := types.Config{Importer: importer.Default()}
+	checked, err := conf.Check(dir, fset, parsed, nil)
+	if err != nil {
+		return nil, err
+	}
+	methods := map[string]map[string]*goFuncSig{}
+	scope := checked.Scope()
+	for _, name := range scope.Names() {
+		obj := scope.Lookup(name)
+		fn, ok := obj.(*types.Func)
+		if !ok {
+			continue
+		}
+		sig, ok := fn.Type().(*types.Signature)
+		if !ok || sig.Recv() == nil {
+			continue
+		}
+		recv := sig.Recv().Type().String()
+		if methods[recv] == nil {
+			methods[recv] = map[string]*goFuncSig{}
+		}
+		methods[recv][name] = &goFuncSig{
+			params: goSignatureParams(sig),
+			ret:    goSignatureResults(sig),
+		}
+	}
+	return methods, nil
+}
+
+func goSignatureParams(sig *types.Signature) []string {
+	if sig == nil {
+		return nil
+	}
+	params := sig.Params()
+	var out []string
+	for i := 0; i < params.Len(); i++ {
+		typ := params.At(i).Type().String()
+		if sig.Variadic() && i == params.Len()-1 {
+			typ = "..." + strings.TrimPrefix(typ, "[]")
+		}
+		out = append(out, typ)
+	}
+	return out
+}
+
+func goSignatureResults(sig *types.Signature) []string {
+	if sig == nil || sig.Results() == nil {
+		return nil
+	}
+	results := sig.Results()
+	out := make([]string, 0, results.Len())
+	for i := 0; i < results.Len(); i++ {
+		out = append(out, results.At(i).Type().String())
+	}
+	return out
+}
+
 func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string, string, error) {
 	switch n := e.(type) {
 	case *IdentExpr:
@@ -960,6 +1134,11 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 					return g.translateEnumConstructor(baseIdent.Name, n.Field, nil, ctx, expected)
 				}
 			}
+			if code, typ, ok, err := g.translateGoPackageSelector(baseIdent.Name, n.Field); err != nil {
+				return "", "", err
+			} else if ok {
+				return code, typ, nil
+			}
 		}
 		base, baseType, err := g.translateExpr(n.Expr, ctx, "")
 		if err != nil {
@@ -984,6 +1163,32 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 		return g.translateBlock(n, ctx, expected)
 	}
 	return "", "", errorAtLine(nodeLine(e), "unsupported expression %#v", e)
+}
+
+func (g *generator) translateGoPackageSelector(alias, name string) (string, string, bool, error) {
+	path, ok := g.pkg.ImportAliases[alias]
+	if !ok || !strings.HasPrefix(importPathForGo(path), "") {
+		return "", "", false, nil
+	}
+	sigs, err := g.goPackageSigsFor(importPathForGo(path))
+	if err != nil {
+		return "", "", false, err
+	}
+	if sigs.pkg == nil {
+		return "", "", false, nil
+	}
+	obj := sigs.pkg.Scope().Lookup(name)
+	if obj == nil {
+		return "", "", false, nil
+	}
+	switch o := obj.(type) {
+	case *types.Var, *types.Const:
+		return fmt.Sprintf("%s.%s", alias, name), goMyGoTypeString(o.Type()), true, nil
+	case *types.TypeName:
+		return fmt.Sprintf("%s.%s", alias, name), goMyGoTypeString(o.Type()), true, nil
+	default:
+		return "", "", false, nil
+	}
 }
 
 func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) (string, string, error) {
@@ -1333,6 +1538,16 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 					return g.translateEnumConstructor(baseIdent.Name, field.Field, n.Args, ctx, expected)
 				}
 			}
+			if code, typ, ok, err := g.translateGoSelectorCall(baseIdent.Name, field.Field, n.Args, ctx, expected); err != nil {
+				return "", "", err
+			} else if ok {
+				return code, typ, nil
+			}
+		}
+		if code, typ, ok, err := g.translateGoMethodCall(field.Expr, field.Field, n.Args, ctx, expected); err != nil {
+			return "", "", err
+		} else if ok {
+			return code, typ, nil
 		}
 	}
 	if id, ok := n.Callee.(*IdentExpr); ok {
@@ -1495,6 +1710,413 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 		retType = parsedRet
 	}
 	return fmt.Sprintf("%s(%s)", callee, strings.Join(args, ", ")), retType, nil
+}
+
+func (g *generator) translateGoSelectorCall(alias, name string, args []Expr, ctx *exprCtx, expected string) (string, string, bool, error) {
+	path, ok := g.pkg.ImportAliases[alias]
+	if !ok {
+		return "", "", false, nil
+	}
+	sigs, err := g.goPackageSigsFor(importPathForGo(path))
+	if err != nil {
+		return "", "", false, err
+	}
+	sig, ok := sigs.funcs[name]
+	if !ok {
+		return "", "", false, nil
+	}
+	argCodes := make([]string, 0, len(args))
+	argTypes := make([]string, 0, len(args))
+	for _, a := range args {
+		code, typ, err := g.translateExpr(a, ctx, "")
+		if err != nil {
+			return "", "", false, err
+		}
+		argCodes = append(argCodes, code)
+		argTypes = append(argTypes, typ)
+	}
+	variadic := len(sig.params) > 0 && strings.HasPrefix(sig.params[len(sig.params)-1], "...")
+	fixed := len(sig.params)
+	if variadic {
+		fixed--
+	}
+	if (!variadic && len(sig.params) != len(argTypes)) || (variadic && len(argTypes) < fixed) {
+		want := len(sig.params)
+		if variadic {
+			want = fixed
+		}
+		return "", "", false, errorAtLine(nodeLineFromExprSlice(args), "call %s.%s: expected %d args, got %d", alias, name, want, len(argTypes))
+	}
+	for i := 0; i < fixed; i++ {
+		if !g.goTypeCompatible(sig.params[i], argTypes[i]) {
+			return "", "", false, errorAtLine(nodeLineFromExprSlice(args), "call %s.%s: arg %d has type %s, want %s", alias, name, i+1, argTypes[i], sig.params[i])
+		}
+	}
+	if variadic {
+		want := strings.TrimPrefix(sig.params[len(sig.params)-1], "...")
+		for i := fixed; i < len(argTypes); i++ {
+			if !g.goTypeCompatible(want, argTypes[i]) {
+				return "", "", false, errorAtLine(nodeLineFromExprSlice(args), "call %s.%s: arg %d has type %s, want %s", alias, name, i+1, argTypes[i], want)
+			}
+		}
+	}
+	call := fmt.Sprintf("%s.%s(%s)", alias, name, strings.Join(argCodes, ", "))
+	if len(sig.ret) == 2 && isGoErrorType(sig.ret[1]) {
+		base, args := splitTypeArgs(expected)
+		if base != "Result" || len(args) != 2 {
+			return call, "", true, nil
+		}
+		valueType := args[0]
+		okType := args[1]
+		retType := fmt.Sprintf("Result[%s, %s]", valueType, okType)
+		var b strings.Builder
+		b.WriteString("func() ")
+		b.WriteString(retType)
+		b.WriteString(" {\n")
+		b.WriteString("\tvalue, err := ")
+		b.WriteString(call)
+		b.WriteString("\n")
+		b.WriteString("\tif err != nil {\n")
+		b.WriteString("\t\treturn Err[")
+		b.WriteString(valueType)
+		b.WriteString(", ")
+		b.WriteString(okType)
+		b.WriteString("](err.Error())\n")
+		b.WriteString("\t}\n")
+		b.WriteString("\treturn Ok[")
+		b.WriteString(valueType)
+		b.WriteString(", ")
+		b.WriteString(okType)
+		b.WriteString("](value)\n")
+		b.WriteString("}()")
+		return b.String(), retType, true, nil
+	}
+	return call, "", true, nil
+}
+
+func (g *generator) translateGoMethodCall(base Expr, name string, args []Expr, ctx *exprCtx, expected string) (string, string, bool, error) {
+	baseCode, baseType, err := g.translateExpr(base, ctx, "")
+	if err != nil {
+		return "", "", false, err
+	}
+	methodSig, ok := g.findGoMethodSig(baseType, name)
+	if !ok {
+		return "", "", false, nil
+	}
+	argCodes := make([]string, 0, len(args))
+	argTypes := make([]string, 0, len(args))
+	for _, a := range args {
+		code, typ, err := g.translateExpr(a, ctx, "")
+		if err != nil {
+			return "", "", false, err
+		}
+		argCodes = append(argCodes, code)
+		argTypes = append(argTypes, typ)
+	}
+	variadic := len(methodSig.params) > 0 && strings.HasPrefix(methodSig.params[len(methodSig.params)-1], "...")
+	fixed := len(methodSig.params)
+	if variadic {
+		fixed--
+	}
+	if (!variadic && len(methodSig.params) != len(argTypes)) || (variadic && len(argTypes) < fixed) {
+		want := len(methodSig.params)
+		if variadic {
+			want = fixed
+		}
+		return "", "", false, errorAtLine(nodeLineFromExprSlice(args), "call %s.%s: expected %d args, got %d", baseType, name, want, len(argTypes))
+	}
+	for i := 0; i < fixed; i++ {
+		if !g.goTypeCompatible(methodSig.params[i], argTypes[i]) {
+			return "", "", false, errorAtLine(nodeLineFromExprSlice(args), "call %s.%s: arg %d has type %s, want %s", baseType, name, i+1, argTypes[i], methodSig.params[i])
+		}
+	}
+	if variadic {
+		want := strings.TrimPrefix(methodSig.params[len(methodSig.params)-1], "...")
+		for i := fixed; i < len(argTypes); i++ {
+			if !g.goTypeCompatible(want, argTypes[i]) {
+				return "", "", false, errorAtLine(nodeLineFromExprSlice(args), "call %s.%s: arg %d has type %s, want %s", baseType, name, i+1, argTypes[i], want)
+			}
+		}
+	}
+	call := fmt.Sprintf("%s.%s(%s)", baseCode, name, strings.Join(argCodes, ", "))
+	if len(methodSig.ret) == 2 && isGoErrorType(methodSig.ret[1]) {
+		base, args := splitTypeArgs(expected)
+		if base != "Result" || len(args) != 2 {
+			return call, "", true, nil
+		}
+		valueType := args[0]
+		okType := args[1]
+		retType := fmt.Sprintf("Result[%s, %s]", valueType, okType)
+		var b strings.Builder
+		b.WriteString("func() ")
+		b.WriteString(retType)
+		b.WriteString(" {\n")
+		b.WriteString("\tvalue, err := ")
+		b.WriteString(call)
+		b.WriteString("\n")
+		b.WriteString("\tif err != nil {\n")
+		b.WriteString("\t\treturn Err[")
+		b.WriteString(valueType)
+		b.WriteString(", ")
+		b.WriteString(okType)
+		b.WriteString("](err.Error())\n")
+		b.WriteString("\t}\n")
+		b.WriteString("\treturn Ok[")
+		b.WriteString(valueType)
+		b.WriteString(", ")
+		b.WriteString(okType)
+		b.WriteString("](value)\n")
+		b.WriteString("}()")
+		return b.String(), retType, true, nil
+	}
+	return call, goMethodReturnType(methodSig.ret), true, nil
+}
+
+func goMethodReturnType(ret []string) string {
+	if len(ret) == 0 {
+		return ""
+	}
+	if len(ret) == 1 {
+		return ret[0]
+	}
+	return "(" + strings.Join(ret, ", ") + ")"
+}
+
+func goMyGoTypeString(t types.Type) string {
+	if t == nil {
+		return "any"
+	}
+	switch tt := t.(type) {
+	case *types.Pointer:
+		return "Ref[" + goMyGoTypeString(tt.Elem()) + "]"
+	case *types.Basic:
+		switch tt.Kind() {
+		case types.Int:
+			return "Int"
+		case types.Int64:
+			return "Int64"
+		case types.Float64:
+			return "Float64"
+		case types.String:
+			return "String"
+		case types.Bool:
+			return "Bool"
+		}
+	case *types.Named:
+		if obj := tt.Obj(); obj != nil && obj.Pkg() != nil {
+			return obj.Pkg().Name() + "." + obj.Name()
+		}
+		return tt.Obj().Name()
+	}
+	return t.String()
+}
+
+func (g *generator) findGoMethodSig(baseType, name string) (*goFuncSig, bool) {
+	baseType = strings.TrimSpace(baseType)
+	if strings.HasPrefix(baseType, "Ref[") && strings.HasSuffix(baseType, "]") {
+		baseType = "*" + strings.TrimSuffix(strings.TrimPrefix(baseType, "Ref["), "]")
+	}
+	for _, imp := range g.pkg.ImportDecls {
+		if !strings.HasPrefix(imp.Path, "go:") {
+			continue
+		}
+		sigs, err := g.goPackageSigsFor(importPathForGo(imp.Path))
+		if err != nil || sigs == nil {
+			continue
+		}
+		if sig, ok := sigs.methods[baseType][name]; ok {
+			return sig, true
+		}
+		if strings.HasPrefix(baseType, "*") {
+			if sig, ok := sigs.methods[strings.TrimPrefix(baseType, "*")][name]; ok {
+				return sig, true
+			}
+		} else {
+			if sig, ok := sigs.methods["*"+baseType][name]; ok {
+				return sig, true
+			}
+		}
+	}
+	return nil, false
+}
+
+func nodeLineFromExprSlice(exprs []Expr) int {
+	for _, e := range exprs {
+		if l := nodeLine(e); l != 0 {
+			return l
+		}
+	}
+	return 0
+}
+
+func (g *generator) goTypeCompatible(expected, actual string) bool {
+	expectedType, ok := goTypeFromString(expected)
+	if !ok {
+		if strings.HasPrefix(strings.TrimSpace(actual), "Ref[") && strings.HasSuffix(strings.TrimSpace(actual), "]") {
+			inner := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(actual), "Ref["), "]")
+			expectedNorm := normalizeGoTypeName(expected)
+			if expectedNorm == inner {
+				return true
+			}
+			if strings.HasPrefix(strings.TrimSpace(expected), "*") {
+				if normalizeGoTypeName(expected[1:]) == inner {
+					return true
+				}
+				if resolved, ok := g.resolveGoNamedType(strings.TrimSpace(expected[1:])); ok {
+					if namedResolved, ok := g.resolveGoNamedType(inner); ok {
+						ptrResolved := types.NewPointer(resolved)
+						return types.Identical(namedResolved, resolved) || types.Identical(namedResolved.Underlying(), resolved.Underlying()) || types.AssignableTo(namedResolved, ptrResolved)
+					}
+				}
+			}
+			if resolved, ok := g.resolveGoNamedType(expected); ok {
+				if namedResolved, ok := g.resolveGoNamedType(inner); ok {
+					return types.AssignableTo(namedResolved, resolved) || types.Identical(namedResolved, resolved) || types.Identical(namedResolved.Underlying(), resolved.Underlying())
+				}
+			}
+		}
+		if strings.HasPrefix(strings.TrimSpace(expected), "*") {
+			if resolved, ok := g.resolveGoNamedType(strings.TrimSpace(expected[1:])); ok {
+				if actualType, ok := goTypeFromString(actual); ok {
+					ptrResolved := types.NewPointer(resolved)
+					return types.AssignableTo(actualType, ptrResolved) || types.Identical(actualType, ptrResolved) || types.Identical(actualType.Underlying(), ptrResolved.Underlying())
+				}
+			}
+		}
+		if resolved, ok := g.resolveGoNamedType(expected); ok {
+			if actualType, ok := goTypeFromString(actual); ok {
+				return types.AssignableTo(actualType, resolved) || types.Identical(actualType, resolved) || types.Identical(actualType.Underlying(), resolved.Underlying())
+			}
+		}
+		if actualType, ok := goTypeFromString(actual); ok {
+			if basicExpected, ok := goNamedUnderlyingBasic(expected); ok {
+				return types.Identical(actualType.Underlying(), basicExpected)
+			}
+		}
+		return strings.TrimSpace(expected) == strings.TrimSpace(actual)
+	}
+	actualType, ok := goTypeFromString(actual)
+	if !ok {
+		return false
+	}
+	if types.Identical(expectedType, actualType) || types.AssignableTo(actualType, expectedType) || types.Identical(actualType.Underlying(), expectedType.Underlying()) {
+		return true
+	}
+	if isAnyType(expectedType) {
+		return true
+	}
+	return false
+}
+
+func (g *generator) resolveGoNamedType(name string) (types.Type, bool) {
+	name = normalizeGoTypeName(name)
+	if name == "" || strings.Contains(name, "[") || strings.Contains(name, "(") {
+		return nil, false
+	}
+	parts := strings.Split(name, ".")
+	if len(parts) != 2 {
+		return nil, false
+	}
+	pkgName, typeName := parts[0], parts[1]
+	for _, imp := range g.pkg.ImportDecls {
+		if !strings.HasPrefix(imp.Path, "go:") {
+			continue
+		}
+		sigs, err := g.goPackageSigsFor(importPathForGo(imp.Path))
+		if err != nil || sigs == nil || sigs.pkg == nil || sigs.pkg.Name() != pkgName {
+			continue
+		}
+		if obj := sigs.pkg.Scope().Lookup(typeName); obj != nil {
+			return obj.Type(), true
+		}
+	}
+	return nil, false
+}
+
+func goTypeFromString(s string) (types.Type, bool) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil, false
+	}
+	switch s {
+	case "any":
+		return types.NewInterfaceType(nil, nil), true
+	case "int":
+		return types.Typ[types.Int], true
+	case "int64":
+		return types.Typ[types.Int64], true
+	case "float64":
+		return types.Typ[types.Float64], true
+	case "string":
+		return types.Typ[types.String], true
+	case "bool":
+		return types.Typ[types.Bool], true
+	case "error":
+		return types.Universe.Lookup("error").Type(), true
+	}
+	if strings.HasPrefix(s, "*") {
+		if elem, ok := goTypeFromString(s[1:]); ok {
+			return types.NewPointer(elem), true
+		}
+		return nil, false
+	}
+	if strings.HasPrefix(s, "[]") {
+		if elem, ok := goTypeFromString(s[2:]); ok {
+			return types.NewSlice(elem), true
+		}
+		return nil, false
+	}
+	return nil, false
+}
+
+func isAnyType(t types.Type) bool {
+	if t == nil {
+		return false
+	}
+	if iface, ok := t.Underlying().(*types.Interface); ok {
+		return iface.NumMethods() == 0 && iface.NumEmbeddeds() == 0
+	}
+	return false
+}
+
+func goNamedUnderlyingBasic(name string) (types.Type, bool) {
+	parts := strings.Split(strings.TrimSpace(name), ".")
+	if len(parts) != 2 {
+		return nil, false
+	}
+	switch parts[1] {
+	case "Month", "Weekday", "Mode", "Flag", "Status", "Side":
+		return types.Typ[types.Int], true
+	case "Duration":
+		return types.Typ[types.Int64], true
+	case "Byte":
+		return types.Typ[types.Uint8], true
+	case "Rune":
+		return types.Typ[types.Int32], true
+	}
+	return nil, false
+}
+
+func normalizeGoTypeName(name string) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return name
+	}
+	if strings.HasPrefix(name, "*") {
+		return "*" + normalizeGoTypeName(name[1:])
+	}
+	if strings.HasPrefix(name, "Ref[") && strings.HasSuffix(name, "]") {
+		return "Ref[" + normalizeGoTypeName(strings.TrimSuffix(strings.TrimPrefix(name, "Ref["), "]")) + "]"
+	}
+	if idx := strings.LastIndex(name, "/"); idx >= 0 {
+		name = name[idx+1:]
+	}
+	return name
+}
+
+func isGoErrorType(t string) bool {
+	t = strings.TrimSpace(t)
+	return t == "error" || strings.HasSuffix(t, ".Error")
 }
 
 func (g *generator) translateAnyFuncCall(name string, args []Expr, ctx *exprCtx) (string, string, bool, error) {
@@ -1917,6 +2539,8 @@ func (g *generator) goType(t TypeExpr, typeParams map[string]struct{}) string {
 			return "string"
 		case "Bool":
 			return "bool"
+		case "Any":
+			return "any"
 		case "Unit":
 			return "struct{}"
 		case "Ref":
@@ -2410,6 +3034,8 @@ func typeString(t TypeExpr, subst map[string]string) string {
 			return "string"
 		case "Bool":
 			return "bool"
+		case "Any":
+			return "any"
 		case "Unit":
 			return "struct{}"
 		case "Ref":
