@@ -1,9 +1,9 @@
 package mygo
 
 type File struct {
-	Module     string
-	ModuleLine int
-	Decls      []Decl
+	PackageName string
+	PackageLine int
+	Decls       []Decl
 }
 
 type Decl interface{ declNode() }
@@ -15,13 +15,6 @@ type ImportDecl struct {
 }
 
 func (*ImportDecl) declNode() {}
-
-type ModuleDecl struct {
-	Line int
-	Name string
-}
-
-func (*ModuleDecl) declNode() {}
 
 type EnumDecl struct {
 	Line       int

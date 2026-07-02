@@ -1,4 +1,4 @@
-module DataStructure
+package datastructure
   import fmt "go:fmt"
 
   # ===== 枚举 (Enums) =====
@@ -106,4 +106,3 @@ module DataStructure
   func main() -> ()
     let _ = fmt.Println(demo())
   end
-end

@@ -146,7 +146,7 @@ func isIdentPart(r rune) bool {
 
 func isKeyword(s string) bool {
 	switch s {
-	case "module", "import", "enum", "struct", "interface", "impl", "func", "if", "then", "else", "switch", "case", "end", "where", "not", "let", "var", "embed":
+	case "package", "import", "enum", "struct", "interface", "impl", "func", "if", "then", "else", "switch", "case", "end", "where", "not", "let", "var", "embed":
 		return true
 	default:
 		return false
@@ -191,32 +191,17 @@ func newParser(src string) *parser {
 
 func (p *parser) parseFile() (*File, error) {
 	file := &File{}
-	if p.peekKeyword("module") {
+	if p.peekKeyword("package") {
 		tok := p.next()
-		if tok.kind != tokKeyword || tok.lit != "module" {
-			return nil, errorAtLine(tok.line, "expected keyword %q, got %q", "module", tok.lit)
+		if tok.kind != tokKeyword || tok.lit != "package" {
+			return nil, errorAtLine(tok.line, "expected keyword %q, got %q", "package", tok.lit)
 		}
-		file.ModuleLine = tok.line
+		file.PackageLine = tok.line
 		name, err := p.expectIdent()
 		if err != nil {
 			return nil, err
 		}
-		file.Module = name
-		if p.peekKeyword("end") {
-			_ = p.next()
-			return file, nil
-		}
-		for !p.peekKeyword("end") && !p.peekEOF() {
-			decl, err := p.parseDecl()
-			if err != nil {
-				return nil, err
-			}
-			file.Decls = append(file.Decls, decl)
-		}
-		if err := p.expectKeyword("end"); err != nil {
-			return nil, err
-		}
-		return file, nil
+		file.PackageName = name
 	}
 	for !p.peekEOF() {
 		decl, err := p.parseDecl()
@@ -492,7 +477,7 @@ func (p *parser) parseFuncDecl(allowEmpty bool) (*FuncDecl, error) {
 			}
 		}
 	}
-	if allowEmpty && (p.peekKeyword("end") || p.peekKeyword("func") || p.peekKeyword("enum") || p.peekKeyword("struct") || p.peekKeyword("interface") || p.peekKeyword("impl") || p.peekKeyword("module") || p.peekKeyword("import")) {
+	if allowEmpty && (p.peekKeyword("end") || p.peekKeyword("func") || p.peekKeyword("enum") || p.peekKeyword("struct") || p.peekKeyword("interface") || p.peekKeyword("impl") || p.peekKeyword("package") || p.peekKeyword("import")) {
 		return &FuncDecl{Line: start.line, Name: funcName, Params: params, Ret: ret, Where: where}, nil
 	}
 	body, err := p.parseExprUntilEnd()

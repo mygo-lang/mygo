@@ -9,7 +9,7 @@ import (
 
 func TestCompileDirSupportsLetVarAndDiscard(t *testing.T) {
 	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `module Main
+	writeMygoFile(t, dir, "main.mygo", `package main
   import fmt "go:fmt"
 
   func add(x: Int, y: Int) -> Int
@@ -27,7 +27,6 @@ func TestCompileDirSupportsLetVarAndDiscard(t *testing.T) {
   func main() -> ()
     demo()
   end
-end
 `)
 
 	out, err := CompileDir(dir)
@@ -56,13 +55,12 @@ end
 
 func TestCompileDirAllowsLetShadowingAndInference(t *testing.T) {
 	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `module Main
+	writeMygoFile(t, dir, "main.mygo", `package main
   func demo() -> Int
     let x = 1
     let x = 2
     x
   end
-end
 `)
 
 	out, err := CompileDir(dir)
@@ -80,13 +78,12 @@ end
 
 func TestCompileDirRejectsAssignmentToLet(t *testing.T) {
 	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `module Main
+	writeMygoFile(t, dir, "main.mygo", `package main
   func bad() -> Int
     let x: Int = 1
     x = 2
     x
   end
-end
 `)
 
 	_, err := CompileDir(dir)
@@ -100,7 +97,7 @@ end
 
 func TestCompileDirSupportsStructLiterals(t *testing.T) {
 	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `module Main
+	writeMygoFile(t, dir, "main.mygo", `package main
   struct ABC
     aaa: Int64
   end
@@ -118,7 +115,6 @@ func TestCompileDirSupportsStructLiterals(t *testing.T) {
     }
     boxed.value
   end
-end
 `)
 
 	out, err := CompileDir(dir)
@@ -141,7 +137,7 @@ end
 
 func TestCompileDirSupportsRefAndResultTypes(t *testing.T) {
 	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `module Main
+	writeMygoFile(t, dir, "main.mygo", `package main
   enum Result[A, E]
     Ok(A)
     Err(E)
@@ -162,7 +158,6 @@ func TestCompileDirSupportsRefAndResultTypes(t *testing.T) {
   func describe(ok: Bool) -> Result[String, String]
     if ok then Ok("yes") else Err("no")
   end
-end
 `)
 
 	out, err := CompileDir(dir)
@@ -186,7 +181,7 @@ end
 
 func TestCompileDirSupportsOptionOfRefTypes(t *testing.T) {
 	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `module Main
+	writeMygoFile(t, dir, "main.mygo", `package main
   enum Option[A]
     Some(A)
     None()
@@ -203,7 +198,6 @@ func TestCompileDirSupportsOptionOfRefTypes(t *testing.T) {
   func maybe_node(ok: Bool, node: Ref[Node]) -> Option[Ref[Node]]
     if ok then Some(node) else None()
   end
-end
 `)
 
 	out, err := CompileDir(dir)
@@ -226,7 +220,7 @@ end
 
 func TestCompileDirSupportsDynamicTypeclassDispatch(t *testing.T) {
 	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `module Main
+	writeMygoFile(t, dir, "main.mygo", `package main
   import fmt "go:fmt"
 
   interface Show[A]
@@ -242,7 +236,6 @@ func TestCompileDirSupportsDynamicTypeclassDispatch(t *testing.T) {
   func demo() -> String
     show(42)
   end
-end
 `)
 
 	out, err := CompileDir(dir)
@@ -265,7 +258,7 @@ end
 
 func TestCompileDirWrapsGoErrorReturnsIntoResult(t *testing.T) {
 	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `module Main
+	writeMygoFile(t, dir, "main.mygo", `package main
   import os "go:os"
 
   enum Result[A, E]
@@ -276,7 +269,6 @@ func TestCompileDirWrapsGoErrorReturnsIntoResult(t *testing.T) {
   func demo() -> Result[any, String]
     os.Open("/tmp/does-not-matter")
   end
-end
 `)
 
 	out, err := CompileDir(dir)
@@ -298,13 +290,12 @@ end
 
 func TestCompileDirRejectsGoSelectorArgMismatch(t *testing.T) {
 	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `module Main
+	writeMygoFile(t, dir, "main.mygo", `package main
   import os "go:os"
 
   func demo() -> Bool
     os.Open()
   end
-end
 `)
 
 	_, err := CompileDir(dir)
@@ -318,7 +309,7 @@ end
 
 func TestCompileDirSupportsGoValueAndPointerMethods(t *testing.T) {
 	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `module Main
+	writeMygoFile(t, dir, "main.mygo", `package main
   import bytes "go:bytes"
   import time "go:time"
 
@@ -328,7 +319,6 @@ func TestCompileDirSupportsGoValueAndPointerMethods(t *testing.T) {
     buf.String()
     year
   end
-end
 `)
 
 	out, err := CompileDir(dir)
@@ -350,7 +340,7 @@ end
 
 func TestCompileDirPreservesRefInGoBoundaryResults(t *testing.T) {
 	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `module Main
+	writeMygoFile(t, dir, "main.mygo", `package main
   import os "go:os"
 
   enum Result[A, E]
@@ -361,7 +351,6 @@ func TestCompileDirPreservesRefInGoBoundaryResults(t *testing.T) {
   func open_file() -> Result[Ref[Any], String]
     os.Open("/tmp/does-not-matter")
   end
-end
 `)
 
 	out, err := CompileDir(dir)
@@ -383,7 +372,7 @@ end
 
 func TestCompileDirSupportsResultOfRefTypes(t *testing.T) {
 	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `module Main
+	writeMygoFile(t, dir, "main.mygo", `package main
   enum Result[A, E]
     Ok(A)
     Err(E)
@@ -396,7 +385,6 @@ func TestCompileDirSupportsResultOfRefTypes(t *testing.T) {
   func lookup(ok: Bool, node: Ref[Node]) -> Result[Ref[Node], String]
     if ok then Ok(node) else Err("missing")
   end
-end
 `)
 
 	out, err := CompileDir(dir)
@@ -417,7 +405,7 @@ end
 
 func TestCompileDirSupportsMultiParamTypeclassDispatch(t *testing.T) {
 	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `module Main
+	writeMygoFile(t, dir, "main.mygo", `package main
   interface Eq[A]
     func equals(left: A, right: A) -> Bool
   end
@@ -431,7 +419,6 @@ func TestCompileDirSupportsMultiParamTypeclassDispatch(t *testing.T) {
   func demo() -> Bool
     equals(1, 2)
   end
-end
 `)
 
 	out, err := CompileDir(dir)
@@ -453,7 +440,7 @@ end
 
 func TestCompileDirSeparatesSameNamedMethodsByInterface(t *testing.T) {
 	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `module Main
+	writeMygoFile(t, dir, "main.mygo", `package main
   interface Show[A]
     func show(value: A) -> String
   end
@@ -473,7 +460,6 @@ func TestCompileDirSeparatesSameNamedMethodsByInterface(t *testing.T) {
       "render"
     end
   end
-end
 `)
 
 	out, err := CompileDir(dir)
@@ -495,7 +481,7 @@ end
 
 func TestCompileDirLetsLocalBindingShadowTypeclassName(t *testing.T) {
 	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `module Main
+	writeMygoFile(t, dir, "main.mygo", `package main
   import fmt "go:fmt"
 
   interface Show[A]
@@ -512,7 +498,6 @@ func TestCompileDirLetsLocalBindingShadowTypeclassName(t *testing.T) {
     let show = fmt.Sprint
     show(42)
   end
-end
 `)
 
 	out, err := CompileDir(dir)
@@ -535,7 +520,7 @@ end
 
 func TestCompileDirDeduplicatesTypeclassMethodParams(t *testing.T) {
 	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `module Main
+	writeMygoFile(t, dir, "main.mygo", `package main
   interface Show[A]
     func show(value: A) -> String
   end
@@ -547,7 +532,6 @@ func TestCompileDirDeduplicatesTypeclassMethodParams(t *testing.T) {
   func demo[A](value: A) -> String where Show[A], FancyShow[Int64]
     show(value)
   end
-end
 `)
 
 	out, err := CompileDir(dir)

@@ -13,6 +13,8 @@ go install github.com/mygo-lang/mygo/cmd/mygo@latest
 ### Examples
 
 ```mygo
+package main
+
 import "go:fmt"
 
 enum Shape {
@@ -38,6 +40,8 @@ Compile:
 ```bash
 mygo examples/main/main.mygo
 ```
+
+MyGO files now declare the generated Go package with a leading `package <name>` header. The old file-level `module` wrapper is no longer used, and declarations follow directly after the package line.
 
 Run with `go run`:
 

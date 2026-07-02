@@ -123,7 +123,7 @@ func loadPackage(dir string) (*Package, error) {
 		Interfaces:    map[string]*InterfaceDecl{},
 		Funcs:         map[string]*FuncDecl{},
 	}
-	moduleName := ""
+	pkgName := ""
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() || !strings.HasSuffix(name, ".mygo") || strings.HasSuffix(name, ".gen.go") {
@@ -137,19 +137,19 @@ func loadPackage(dir string) (*Package, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", name, err)
 		}
-		if file.Module != "" {
-			if moduleName == "" {
-				moduleName = file.Module
-			} else if moduleName != file.Module {
-				return nil, fmt.Errorf("%s: %w", name, errorAtLine(file.ModuleLine, "module %q conflicts with %q", file.Module, moduleName))
+		if file.PackageName != "" {
+			if pkgName == "" {
+				pkgName = file.PackageName
+			} else if pkgName != file.PackageName {
+				return nil, fmt.Errorf("%s: %w", name, errorAtLine(file.PackageLine, "package %q conflicts with %q", file.PackageName, pkgName))
 			}
 		}
 		pkg.Decls = append(pkg.Decls, file.Decls...)
 	}
-	if moduleName == "" {
-		moduleName = filepath.Base(dir)
+	if pkgName == "" {
+		pkgName = filepath.Base(dir)
 	}
-	pkg.Name = toPackageName(moduleName)
+	pkg.Name = toPackageName(pkgName)
 	for _, decl := range pkg.Decls {
 		switch d := decl.(type) {
 		case *ImportDecl:

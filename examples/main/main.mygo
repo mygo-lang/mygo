@@ -1,4 +1,4 @@
-module Main
+package main
   import fmt "go:fmt"
 
   enum Option[A]
@@ -108,4 +108,3 @@ module Main
   func main() -> ()
     let _ = fmt.Println(demo())
   end
-end
