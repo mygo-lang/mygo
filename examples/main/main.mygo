@@ -2,16 +2,6 @@ package main
 
 import fmt "go:fmt"
 
-enum Option[A]
-  Some(A)
-  None
-end
-
-enum Result[A, E]
-  Ok(A)
-  Err(E)
-end
-
 struct ABC
   aaa: Int64
 end
@@ -56,10 +46,6 @@ end
 
 func describe_abc(item: ABC) -> String
   "ABC{aaa=" + show(item.aaa) + "}"
-end
-
-func typeKeyFromType(value: String) -> String
-  value
 end
 
 func lookup_node(ok: Bool, node: Ref[Node]) -> Result[Ref[Node], String]

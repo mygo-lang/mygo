@@ -6,8 +6,43 @@ import (
 	"fmt"
 )
 
+type Option[A any] interface{ isOption() }
+type OptionSome[A any] struct {
+	F0 A
+}
+func (OptionSome[A]) isOption() {}
+type OptionNone[A any] struct {
+}
+func (OptionNone[A]) isOption() {}
+func Some[A any](a0 A) Option[A] {
+	return OptionSome[A]{F0: a0}
+}
+func None[A any]() Option[A] {
+	return OptionNone[A]{}
+}
+
+type Result[A any, E any] interface{ isResult() }
+type ResultOk[A any, E any] struct {
+	F0 A
+}
+func (ResultOk[A, E]) isResult() {}
+type ResultErr[A any, E any] struct {
+	F0 E
+}
+func (ResultErr[A, E]) isResult() {}
+func Ok[A any, E any](a0 A) Result[A, E] {
+	return ResultOk[A, E]{F0: a0}
+}
+func Err[A any, E any](a0 E) Result[A, E] {
+	return ResultErr[A, E]{F0: a0}
+}
+
 type Show[A any] interface {
 	show(value A) string
+}
+
+type Eq[A any] interface {
+	equals(left A, right A) bool
 }
 
 type Color interface{ isColor() }
@@ -78,21 +113,6 @@ func Multiply(a0 int, a1 int) Operation {
 	return OperationMultiply{F0: a0, F1: a1}
 }
 
-type Container[A any] interface{ isContainer() }
-type ContainerNone[A any] struct {
-}
-func (ContainerNone[A]) isContainer() {}
-type ContainerSome[A any] struct {
-	F0 A
-}
-func (ContainerSome[A]) isContainer() {}
-func None[A any]() Container[A] {
-	return ContainerNone[A]{}
-}
-func Some[A any](a0 A) Container[A] {
-	return ContainerSome[A]{F0: a0}
-}
-
 type Person struct {
 	Name string
 	Age int64
@@ -124,6 +144,15 @@ type Contact struct {
 	Address
 }
 
+var Eq_equalsDispatchRegistry = map[string]func(any, any) bool{}
+func Eq_equals(left any, right any) bool {
+	key := typeKeyFromType(reflect.TypeOf(left).String()) + "|" + typeKeyFromType(reflect.TypeOf(right).String())
+	if fn, ok := Eq_equalsDispatchRegistry[key]; ok {
+		return fn(left, right)
+	}
+	panic("missing typeclass implementation")
+}
+
 var Show_showDispatchRegistry = map[string]func(any) string{}
 func Show_show(value any) string {
 	key := typeKeyFromType(reflect.TypeOf(value).String())
@@ -153,7 +182,7 @@ func init() {
 	}
 }
 
-func show_float64(value Float64) string {
+func show_float64(value float64) string {
 	return fmt.Sprint(value)
 }
 func init() {
@@ -181,6 +210,10 @@ func init() {
 		valueTyped := value.(bool)
 		return show_bool(valueTyped)
 	}
+}
+
+func typeKeyFromType(value string) string {
+	return value
 }
 
 func area(rect Rectangle) float64 {
@@ -215,12 +248,12 @@ func maxInt(a int, b int) int {
 }()
 }
 
-func describeContainer[A any](value Container[A], showFn func(A) string) string {
+func describeOption[A any](value Option[A], showFn func(A) string) string {
 	return func() string {
 	switch v := value.(type) {
-	case ContainerNone[A]:
+	case OptionNone[A]:
 		return "None"
-	case ContainerSome[A]:
+	case OptionSome[A]:
 		return (("Some(" + showFn(v.F0)) + ")")
 	}
 	panic("unreachable")
@@ -232,8 +265,8 @@ func demo() string {
 	red_1 := Red()
 	point_2 := WithY(20)
 	op_3 := Multiply(4, 5)
-	var empty_4 Container[float64] = None[float64]()
-	var someVal_5 Container[int64] = Some[int64](42)
+	var empty_4 Option[float64] = None[float64]()
+	var someVal_5 Option[int64] = Some[int64](42)
 	person_6 := Person{Name: "Charlie", Age: 25}
 	rect_7 := Rectangle{Width: 10.0, Height: 5.0}
 	var pair_8 Pair[int] = Pair[int]{First: 1, Second: 2}
@@ -244,7 +277,7 @@ func demo() string {
 	swapped_13 := swapPair[int](pair_8)
 	bigger_14 := maxInt(3, 5)
 	colorText_15 := describeColor(Green())
-	var summary_16 string = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v", red_1, point_2, op_3, describeContainer[float64](empty_4, show_float64), describeContainer[int64](someVal_5, show_int64), person_6, rect_7, pair_8, color_9, addr_10, contact_11, areaValue_12, swapped_13, bigger_14, colorText_15)
+	var summary_16 string = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v", red_1, point_2, op_3, describeOption[float64](empty_4, show_float64), describeOption[int64](someVal_5, show_int64), person_6, rect_7, pair_8, color_9, addr_10, contact_11, areaValue_12, swapped_13, bigger_14, colorText_15)
 	fmt.Println(summary_16)
 	return summary_16
 }()

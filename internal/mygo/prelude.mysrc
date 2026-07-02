@@ -2,6 +2,20 @@ package prelude
 
 import fmt "go:fmt"
 
+func typeKeyFromType(value: String) -> String
+  value
+end
+
+enum Option[A]
+  Some(A)
+  None
+end
+
+enum Result[A, E]
+  Ok(A)
+  Err(E)
+end
+
 interface Show[A]
   func show(value: A) -> String
 end

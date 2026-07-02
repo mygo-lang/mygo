@@ -6,14 +6,6 @@ import (
 	"fmt"
 )
 
-type Show[A any] interface {
-	show(value A) string
-}
-
-type Eq[A any] interface {
-	equals(left A, right A) bool
-}
-
 type Option[A any] interface{ isOption() }
 type OptionSome[A any] struct {
 	F0 A
@@ -43,6 +35,14 @@ func Ok[A any, E any](a0 A) Result[A, E] {
 }
 func Err[A any, E any](a0 E) Result[A, E] {
 	return ResultErr[A, E]{F0: a0}
+}
+
+type Show[A any] interface {
+	show(value A) string
+}
+
+type Eq[A any] interface {
+	equals(left A, right A) bool
 }
 
 type ABC struct {
@@ -95,7 +95,7 @@ func init() {
 	}
 }
 
-func show_float64(value Float64) string {
+func show_float64(value float64) string {
 	return fmt.Sprint(value)
 }
 func init() {
@@ -147,6 +147,10 @@ func init() {
 	}
 }
 
+func typeKeyFromType(value string) string {
+	return value
+}
+
 func describe_option[A any](opt Option[A], showFn func(A) string) string {
 	return func() string {
 	switch v := opt.(type) {
@@ -177,10 +181,6 @@ func same[A any](left A, right A, equalsFn func(A, A) bool) bool {
 
 func describe_abc(item ABC) string {
 	return (("ABC{aaa=" + Show_show(item.Aaa)) + "}")
-}
-
-func typeKeyFromType(value string) string {
-	return value
 }
 
 func lookup_node(ok bool, node *Node) Result[*Node, string] {

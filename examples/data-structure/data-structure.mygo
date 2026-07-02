@@ -19,11 +19,6 @@ enum Operation
   Multiply(Int, Int)
 end
 
-enum Container[A]
-  None
-  Some(A)
-end
-
 # ===== 结构体 (Structs) =====
 
 struct Person
@@ -76,7 +71,7 @@ func maxInt(a: Int, b: Int) -> Int
   if a > b then a else b
 end
 
-func describeContainer[A](value: Container[A]) -> String where Show[A]
+func describeOption[A](value: Option[A]) -> String where Show[A]
   switch value
     case None => "None"
     case Some(inner) => "Some(" + show(inner) + ")"
@@ -90,8 +85,8 @@ func demo() -> String
   let point = Point2D.WithY(20)
   let op = Operation.Multiply(4, 5)
 
-  let empty: Container[Float64] = None[Float64]()
-  let someVal: Container[Int64] = Some[Int64](42)
+  let empty: Option[Float64] = None[Float64]()
+  let someVal: Option[Int64] = Some[Int64](42)
 
   let person = Person { name: "Charlie", age: 25 }
   let rect = Rectangle { width: 10.0, height: 5.0 }
@@ -105,7 +100,7 @@ func demo() -> String
   let bigger = maxInt(3, 5)
   let colorText = describeColor(Color.Green)
 
-  let summary: String = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v", red, point, op, describeContainer(empty), describeContainer(someVal), person, rect, pair, color, addr, contact, areaValue, swapped, bigger, colorText)
+  let summary: String = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v", red, point, op, describeOption(empty), describeOption(someVal), person, rect, pair, color, addr, contact, areaValue, swapped, bigger, colorText)
   let _ = fmt.Println(summary)
   summary
 end

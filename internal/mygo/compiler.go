@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -184,7 +185,11 @@ func loadPackage(dir string) (*Package, error) {
 }
 
 func loadPreludeDecls() ([]Decl, error) {
-	src, err := os.ReadFile(filepath.Join("internal", "mygo", "prelude.mysrc"))
+	_, filePath, _, ok := runtime.Caller(0)
+	if !ok {
+		return nil, fmt.Errorf("prelude.mysrc: unable to locate compiler source")
+	}
+	src, err := os.ReadFile(filepath.Join(filepath.Dir(filePath), "prelude.mysrc"))
 	if err != nil {
 		return nil, err
 	}
@@ -3026,6 +3031,8 @@ func primitiveGoName(name string) string {
 		return "int"
 	case "Int64":
 		return "int64"
+	case "Float64":
+		return "float64"
 	case "String":
 		return "string"
 	case "Bool":
@@ -3050,6 +3057,8 @@ func typeString(t TypeExpr, subst map[string]string) string {
 			return "int"
 		case "Int64":
 			return "int64"
+		case "Float64":
+			return "float64"
 		case "String":
 			return "string"
 		case "Bool":
