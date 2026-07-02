@@ -19,6 +19,7 @@ import (
 	"unicode"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
+	"github.com/mygo-lang/mygo/internal/mygo/common"
 	parserpkg "github.com/mygo-lang/mygo/internal/mygo/parser"
 )
 
@@ -151,7 +152,7 @@ func (g *generator) genGlobals() (string, error) {
 		}
 		code, typ, err := g.translateExpr(s.Value, ctx, g.goType(s.Type, nil))
 		if err != nil {
-			return "", errorAtLine(s.Line, "global binding %q: %v", s.Name, err)
+			return "", common.ErrorAtPos(s.Line, s.Column, "global binding %q: %v", s.Name, err)
 		}
 		actual := sanitizeIdent(s.Name)
 		if actual == "" || actual == "_" {
@@ -427,10 +428,10 @@ func (g *generator) genInterface(d *InterfaceDecl) string {
 func (g *generator) genImpl(d *ImplDecl) (string, error) {
 	iface := g.pkg.Interfaces[d.Name]
 	if iface == nil {
-		return "", errorAtLine(d.Line, "impl %s: missing interface declaration", d.Name)
+		return "", common.ErrorAtPos(d.Line, d.Column, "impl %s: missing interface declaration", d.Name)
 	}
 	if len(iface.TypeParams) != len(d.TypeArgs) {
-		return "", errorAtLine(d.Line, "impl %s: type arity mismatch", d.Name)
+		return "", common.ErrorAtPos(d.Line, d.Column, "impl %s: type arity mismatch", d.Name)
 	}
 	subst := map[string]string{}
 	for i, tp := range iface.TypeParams {
@@ -594,10 +595,10 @@ func (g *generator) genFunc(d *FuncDecl) (string, error) {
 	for _, c := range d.Where {
 		iface := g.pkg.Interfaces[c.Name]
 		if iface == nil {
-			return "", errorAtLine(c.Line, "function %s: missing interface %s", d.Name, c.Name)
+			return "", common.ErrorAtPos(c.Line, c.Column, "function %s: missing interface %s", d.Name, c.Name)
 		}
 		if len(iface.TypeParams) != len(c.Args) {
-			return "", errorAtLine(c.Line, "function %s: type arity mismatch for %s", d.Name, c.Name)
+			return "", common.ErrorAtPos(c.Line, c.Column, "function %s: type arity mismatch for %s", d.Name, c.Name)
 		}
 		subst := map[string]string{}
 		for i, tp := range iface.TypeParams {
@@ -938,10 +939,12 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 			return fmt.Sprintf("(%s %s %s)", left, n.Op, right), resType, nil
 		case "&&", "||":
 			if lt != "" && lt != "bool" {
-				return "", "", errorAtLine(nodeLine(n.Left), "logical operator %q requires Bool operands, got %s", n.Op, lt)
+				line, col := common.NodePos(n.Left)
+				return "", "", common.ErrorAtPos(line, col, "logical operator %q requires Bool operands, got %s", n.Op, lt)
 			}
 			if rt != "" && rt != "bool" {
-				return "", "", errorAtLine(nodeLine(n.Right), "logical operator %q requires Bool operands, got %s", n.Op, rt)
+				line, col := common.NodePos(n.Right)
+				return "", "", common.ErrorAtPos(line, col, "logical operator %q requires Bool operands, got %s", n.Op, rt)
 			}
 			return fmt.Sprintf("(%s %s %s)", left, n.Op, right), "bool", nil
 		case "==", "!=", "<", ">", "<=", ">=":
@@ -951,7 +954,7 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 			if eqExpr, ok := g.translateEqRelation(n.Op, left, right, lt, rt, ctx, expected); ok {
 				return eqExpr, "bool", nil
 			}
-			return "", "", errorAtLine(n.Line, "relation operator %q requires Eq-constrained operands", n.Op)
+			return "", "", common.ErrorAtPos(n.Line, n.Column, "relation operator %q requires Eq-constrained operands", n.Op)
 		}
 	case *PrefixExpr:
 		expr, typ, err := g.translateExpr(n.Expr, ctx, "")
@@ -999,30 +1002,31 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 	case *BlockExpr:
 		return g.translateBlock(n, ctx, expected)
 	}
-	return "", "", errorAtLine(nodeLine(e), "unsupported expression %#v", e)
+	line, col := common.NodePos(e)
+	return "", "", common.ErrorAtPos(line, col, "unsupported expression %#v", e)
 }
 
 func (g *generator) ensureRelationAllowed(n *BinaryExpr, leftType, rightType string, ctx *exprCtx) error {
 	if leftType != "" && rightType != "" && leftType != rightType {
-		return errorAtLine(n.Line, "relation operator %q requires matching operand types, got %s and %s", n.Op, leftType, rightType)
+		return common.ErrorAtPos(n.Line, n.Column, "relation operator %q requires matching operand types, got %s and %s", n.Op, leftType, rightType)
 	}
 	typ := leftType
 	if typ == "" {
 		typ = rightType
 	}
 	if typ == "" {
-		return errorAtLine(n.Line, "relation operator %q requires typed operands", n.Op)
+		return common.ErrorAtPos(n.Line, n.Column, "relation operator %q requires typed operands", n.Op)
 	}
 	if typ == "any" {
 		if _, ok := ctx.constraintFuncs["equals"]; ok {
 			return nil
 		}
-		return errorAtLine(n.Line, "relation operator %q requires Eq-constrained operands", n.Op)
+		return common.ErrorAtPos(n.Line, n.Column, "relation operator %q requires Eq-constrained operands", n.Op)
 	}
 	if g.hasEqSupport(typ, ctx) {
 		return nil
 	}
-	return errorAtLine(n.Line, "relation operator %q requires Eq[%s]", n.Op, typ)
+	return common.ErrorAtPos(n.Line, n.Column, "relation operator %q requires Eq[%s]", n.Op, typ)
 }
 
 func (g *generator) translateEqRelation(op, left, right, leftType, rightType string, ctx *exprCtx, expected string) (string, bool) {
@@ -1143,7 +1147,8 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 			}
 			if isLast && expected != "" {
 				if typ == "" {
-					return "", "", errorAtLine(nodeLine(s), "block must end with an expression returning %s", expected)
+					line, col := common.NodePos(s)
+					return "", "", common.ErrorAtPos(line, col, "block must end with an expression returning %s", expected)
 				}
 				b.WriteString("\treturn ")
 				b.WriteString(code)
@@ -1197,10 +1202,10 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 			lastWasExprStmt = false
 			actualName, ok := child.bindings[s.Name]
 			if !ok {
-				return "", "", errorAtLine(s.Line, "unknown binding %q", s.Name)
+				return "", "", common.ErrorAtPos(s.Line, s.Column, "unknown binding %q", s.Name)
 			}
 			if !child.mutable[actualName] {
-				return "", "", errorAtLine(s.Line, "cannot assign to immutable binding %q", s.Name)
+				return "", "", common.ErrorAtPos(s.Line, s.Column, "cannot assign to immutable binding %q", s.Name)
 			}
 			targetType := child.locals[s.Name]
 			code, _, err := g.translateExpr(s.Value, child, targetType)
@@ -1214,11 +1219,13 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 			b.WriteString("\n")
 		default:
 			lastWasExprStmt = false
-			return "", "", errorAtLine(nodeLine(stmt), "unsupported statement %#v", stmt)
+			line, col := common.NodePos(stmt)
+			return "", "", common.ErrorAtPos(line, col, "unsupported statement %#v", stmt)
 		}
 	}
 	if expected != "" && !lastWasExprStmt {
-		return "", "", errorAtLine(nodeLine(n), "block must end with an expression returning %s", expected)
+		line, col := common.NodePos(n)
+		return "", "", common.ErrorAtPos(line, col, "block must end with an expression returning %s", expected)
 	}
 	b.WriteString("}()")
 	if expected != "" {
@@ -1353,7 +1360,7 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 	enumName, enumArgs := splitTypeArgs(targetType)
 	enumDecl := g.pkg.Enums[enumName]
 	if enumDecl == nil {
-		return "", "", errorAtLine(n.Line, "switch target %q is not an enum", targetType)
+		return "", "", common.ErrorAtPos(n.Line, n.Column, "switch target %q is not an enum", targetType)
 	}
 	needsSwitchVar := false
 	for _, c := range n.Cases {
@@ -1485,10 +1492,10 @@ func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (string, string, 
 			case *AssignStmt:
 				actualName, ok := child.bindings[s.Name]
 				if !ok {
-					return "", "", errorAtLine(s.Line, "unknown binding %q", s.Name)
+					return "", "", common.ErrorAtPos(s.Line, s.Column, "unknown binding %q", s.Name)
 				}
 				if !child.mutable[actualName] {
-					return "", "", errorAtLine(s.Line, "cannot assign to immutable binding %q", s.Name)
+					return "", "", common.ErrorAtPos(s.Line, s.Column, "cannot assign to immutable binding %q", s.Name)
 				}
 				targetType := child.locals[s.Name]
 				code, _, err := g.translateExpr(s.Value, child, targetType)
@@ -1501,7 +1508,8 @@ func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (string, string, 
 				b.WriteString(code)
 				b.WriteString("\n")
 			default:
-				return "", "", errorAtLine(nodeLine(stmt), "unsupported statement %#v", stmt)
+				line, col := common.NodePos(stmt)
+				return "", "", common.ErrorAtPos(line, col, "unsupported statement %#v", stmt)
 			}
 		}
 	default:
@@ -1530,7 +1538,7 @@ func (g *generator) translatePattern(p Pattern, enum *EnumDecl, enumArgs []strin
 	case *VariantPattern:
 		variant := g.findVariant(enum, pat.Name)
 		if variant == nil {
-			return "", nil, errorAtLine(pat.Line, "unknown variant %s of %s", pat.Name, enum.Name)
+			return "", nil, common.ErrorAtPos(pat.Line, pat.Column, "unknown variant %s of %s", pat.Name, enum.Name)
 		}
 		tname := variantGoTypeName(enum.Name, variant.Name)
 		if len(enumArgs) > 0 {
@@ -1539,7 +1547,7 @@ func (g *generator) translatePattern(p Pattern, enum *EnumDecl, enumArgs []strin
 		bindings := map[string]bindingInfo{}
 		for i, arg := range pat.Args {
 			if i >= len(variant.Fields) {
-				return "", nil, errorAtLine(pat.Line, "pattern %s arity mismatch", pat.Name)
+				return "", nil, common.ErrorAtPos(pat.Line, pat.Column, "pattern %s arity mismatch", pat.Name)
 			}
 			if !exprUsesIdent(body, arg) {
 				continue
@@ -1551,7 +1559,8 @@ func (g *generator) translatePattern(p Pattern, enum *EnumDecl, enumArgs []strin
 		}
 		return tname, bindings, nil
 	default:
-		return "", nil, errorAtLine(nodeLine(p), "unsupported pattern %#v", p)
+		line, col := common.NodePos(p)
+		return "", nil, common.ErrorAtPos(line, col, "unsupported pattern %#v", p)
 	}
 }
 
@@ -1656,10 +1665,10 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 			for _, c := range fn.Where {
 				iface := g.pkg.Interfaces[c.Name]
 				if iface == nil {
-					return "", "", errorAtLine(c.Line, "call %s: missing interface %s", fn.Name, c.Name)
+					return "", "", common.ErrorAtPos(c.Line, c.Column, "call %s: missing interface %s", fn.Name, c.Name)
 				}
 				if len(iface.TypeParams) != len(c.Args) {
-					return "", "", errorAtLine(c.Line, "call %s: type arity mismatch for %s", fn.Name, c.Name)
+					return "", "", common.ErrorAtPos(c.Line, c.Column, "call %s: type arity mismatch for %s", fn.Name, c.Name)
 				}
 				cTypeArgs := make([]string, 0, len(c.Args))
 				for _, arg := range c.Args {
@@ -1770,18 +1779,18 @@ func (g *generator) translateGoSelectorCall(alias, name string, args []Expr, ctx
 		if variadic {
 			want = fixed
 		}
-		return "", "", false, errorAtLine(nodeLineFromExprSlice(args), "call %s.%s: expected %d args, got %d", alias, name, want, len(argTypes))
+		return "", "", false, common.ErrorAtPos(nodeLineFromExprSlice(args), nodeColFromExprSlice(args), "call %s.%s: expected %d args, got %d", alias, name, want, len(argTypes))
 	}
 	for i := 0; i < fixed; i++ {
 		if !g.goTypeCompatible(sig.params[i], argTypes[i]) {
-			return "", "", false, errorAtLine(nodeLineFromExprSlice(args), "call %s.%s: arg %d has type %s, want %s", alias, name, i+1, argTypes[i], sig.params[i])
+			return "", "", false, common.ErrorAtPos(nodeLineFromExprSlice(args), nodeColFromExprSlice(args), "call %s.%s: arg %d has type %s, want %s", alias, name, i+1, argTypes[i], sig.params[i])
 		}
 	}
 	if variadic {
 		want := strings.TrimPrefix(sig.params[len(sig.params)-1], "...")
 		for i := fixed; i < len(argTypes); i++ {
 			if !g.goTypeCompatible(want, argTypes[i]) {
-				return "", "", false, errorAtLine(nodeLineFromExprSlice(args), "call %s.%s: arg %d has type %s, want %s", alias, name, i+1, argTypes[i], want)
+				return "", "", false, common.ErrorAtPos(nodeLineFromExprSlice(args), nodeColFromExprSlice(args), "call %s.%s: arg %d has type %s, want %s", alias, name, i+1, argTypes[i], want)
 			}
 		}
 	}
@@ -1848,18 +1857,18 @@ func (g *generator) translateGoMethodCall(base Expr, name string, args []Expr, c
 		if variadic {
 			want = fixed
 		}
-		return "", "", false, errorAtLine(nodeLineFromExprSlice(args), "call %s.%s: expected %d args, got %d", baseType, name, want, len(argTypes))
+		return "", "", false, common.ErrorAtPos(nodeLineFromExprSlice(args), nodeColFromExprSlice(args), "call %s.%s: expected %d args, got %d", baseType, name, want, len(argTypes))
 	}
 	for i := 0; i < fixed; i++ {
 		if !g.goTypeCompatible(methodSig.params[i], argTypes[i]) {
-			return "", "", false, errorAtLine(nodeLineFromExprSlice(args), "call %s.%s: arg %d has type %s, want %s", baseType, name, i+1, argTypes[i], methodSig.params[i])
+			return "", "", false, common.ErrorAtPos(nodeLineFromExprSlice(args), nodeColFromExprSlice(args), "call %s.%s: arg %d has type %s, want %s", baseType, name, i+1, argTypes[i], methodSig.params[i])
 		}
 	}
 	if variadic {
 		want := strings.TrimPrefix(methodSig.params[len(methodSig.params)-1], "...")
 		for i := fixed; i < len(argTypes); i++ {
 			if !g.goTypeCompatible(want, argTypes[i]) {
-				return "", "", false, errorAtLine(nodeLineFromExprSlice(args), "call %s.%s: arg %d has type %s, want %s", baseType, name, i+1, argTypes[i], want)
+				return "", "", false, common.ErrorAtPos(nodeLineFromExprSlice(args), nodeColFromExprSlice(args), "call %s.%s: arg %d has type %s, want %s", baseType, name, i+1, argTypes[i], want)
 			}
 		}
 	}
@@ -1967,8 +1976,18 @@ func (g *generator) findGoMethodSig(baseType, name string) (*goFuncSig, bool) {
 
 func nodeLineFromExprSlice(exprs []Expr) int {
 	for _, e := range exprs {
-		if l := nodeLine(e); l != 0 {
+		if l, _ := common.NodePos(e); l != 0 {
 			return l
+		}
+	}
+	return 0
+}
+
+func nodeColFromExprSlice(exprs []Expr) int {
+	for _, e := range exprs {
+		_, c := common.NodePos(e)
+		if c != 0 {
+			return c
 		}
 	}
 	return 0
@@ -2228,12 +2247,12 @@ func (g *generator) translateEnumConstructor(enumName, name string, args []Expr,
 func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected string) (string, string, error) {
 	st := g.pkg.Structs[n.TypeName]
 	if st == nil {
-		return "", "", errorAtLine(n.Line, "unknown struct type %s", n.TypeName)
+		return "", "", common.ErrorAtPos(n.Line, n.Column, "unknown struct type %s", n.TypeName)
 	}
 	subst := map[string]string{}
 	if len(n.TypeArgs) > 0 {
 		if len(st.TypeParams) != len(n.TypeArgs) {
-			return "", "", errorAtLine(n.Line, "struct %s: type arity mismatch", n.TypeName)
+			return "", "", common.ErrorAtPos(n.Line, n.Column, "struct %s: type arity mismatch", n.TypeName)
 		}
 		for i, tp := range st.TypeParams {
 			subst[tp] = g.goType(n.TypeArgs[i], ctx.typeParams)
@@ -2262,7 +2281,7 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 			}
 		}
 		if fieldDecl == nil {
-			return "", "", errorAtLine(f.Line, "unknown field %s on struct %s", f.Name, n.TypeName)
+			return "", "", common.ErrorAtPos(f.Line, f.Column, "unknown field %s on struct %s", f.Name, n.TypeName)
 		}
 		fieldExpected := typeString(fieldDecl.Type, subst)
 		code, typ, err := g.translateExpr(f.Value, ctx, fieldExpected)
@@ -2275,7 +2294,7 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 	if len(st.TypeParams) > 0 {
 		for _, tp := range st.TypeParams {
 			if subst[tp] == "" {
-				return "", "", errorAtLine(n.Line, "struct %s: could not infer type parameters", n.TypeName)
+				return "", "", common.ErrorAtPos(n.Line, n.Column, "struct %s: could not infer type parameters", n.TypeName)
 			}
 		}
 	}
@@ -2295,7 +2314,7 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 			}
 		}
 		if fieldType == "" {
-			return "", "", errorAtLine(f.Line, "unknown field %s on struct %s", f.Name, n.TypeName)
+			return "", "", common.ErrorAtPos(f.Line, f.Column, "unknown field %s on struct %s", f.Name, n.TypeName)
 		}
 		code, _, err := g.translateExpr(f.Value, ctx, fieldType)
 		if err != nil {

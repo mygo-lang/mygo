@@ -3,9 +3,10 @@
 ## Project Shape
 
 - `examples/main/main.mygo` is the canonical design sample for the language surface.
-- `internal/mygo/parser/` owns syntax parsing; `internal/mygo/parser.go` is now a thin compatibility wrapper.
-- `internal/mygo/compiler/` owns lowering to generated Go entry points; `internal/mygo/compiler.go` is now a thin compatibility wrapper.
+- `internal/mygo/parser/` owns syntax parsing.
+- `internal/mygo/compiler/` owns lowering to generated Go entry points.
 - `internal/mygo/ast/` owns the shared AST types.
+- `internal/mygo/common/pos.go` owns shared position and error helpers.
 - `internal/mygo/prelude.mysrc` is the built-in prelude source that is merged into every package before lowering.
 - Generated Go lives next to the source example, e.g. `examples/main/zz_mygo.gen.go`, and should be treated as disposable.
 
@@ -59,9 +60,11 @@
 
 ## Recent Work
 
-- Split the compiler implementation into `internal/mygo/compiler/` with dedicated API, type, and implementation files, while keeping the root package as a compatibility wrapper.
-- Split the monolithic AST, parser, and compiler implementation into dedicated subpackages while keeping root-package wrappers for compatibility.
-- Moved the parser lexer/token machinery into `internal/mygo/parser/` and kept the root `internal/mygo/parser.go` as a forwarder.
+- Unified all position/error helpers onto `common.NodePos` and `common.ErrorAtPos`, removing the wrapper `pos.go` files from root, parser, and compiler packages.
+- Unified shared line/error helpers into `internal/mygo/common/pos.go`.
+- Split the compiler implementation into `internal/mygo/compiler/` with dedicated API, type, and implementation files.
+- Split the monolithic AST, parser, and compiler implementation into dedicated subpackages.
+- Moved the parser lexer/token machinery into `internal/mygo/parser/`.
 - Added shared AST aliases and moved the canonical AST definitions into `internal/mygo/ast/`.
 - Added `while` as an expression form with newline-delimited body parsing and Go `for`-loop lowering.
 - Extended expression parsing and lowering to recognize `&&`, `||`, `-`, and `/`, while keeping comparison operators type-checked against `Eq` support.

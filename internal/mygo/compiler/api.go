@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
+	"github.com/mygo-lang/mygo/internal/mygo/common"
 	parserpkg "github.com/mygo-lang/mygo/internal/mygo/parser"
 )
 
@@ -125,7 +126,7 @@ func loadPackage(dir string) (*Package, error) {
 			if pkgName == "" {
 				pkgName = file.PackageName
 			} else if pkgName != file.PackageName {
-				return nil, errorAtLine(file.PackageLine, "package %q conflicts with %q", file.PackageName, pkgName)
+				return nil, common.ErrorAtPos(file.PackageLine, 0, "package %q conflicts with %q", file.PackageName, pkgName)
 			}
 		}
 		pkg.Decls = append(pkg.Decls, file.Decls...)
@@ -144,7 +145,7 @@ func loadPackage(dir string) (*Package, error) {
 				alias = importAliasForPath(d.Path)
 			}
 			if prev, ok := pkg.ImportAliases[alias]; ok && prev != d.Path {
-				return nil, errorAtLine(d.Line, "import alias %q conflicts between %q and %q", alias, prev, d.Path)
+				return nil, common.ErrorAtPos(d.Line, d.Column, "import alias %q conflicts between %q and %q", alias, prev, d.Path)
 			}
 			pkg.ImportAliases[alias] = d.Path
 		case *EnumDecl:
