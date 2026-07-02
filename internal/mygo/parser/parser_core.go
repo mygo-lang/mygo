@@ -526,5 +526,10 @@ func (p *parser) parseType() (TypeExpr, error) {
 			}
 		}
 	}
+	// Check for [] suffix (slice shorthand: Int[] → Slice[Int])
+	if p.matchSym("[]") {
+		base := &NamedType{Line: start.line, Column: start.col, Name: name, Args: args}
+		return &NamedType{Line: start.line, Column: start.col, Name: "Slice", Args: []TypeExpr{base}}, nil
+	}
 	return &NamedType{Line: start.line, Column: start.col, Name: name, Args: args}, nil
 }

@@ -34,8 +34,9 @@
 - `Option` continues to represent absence for nilable Go values and comma-ok style results.
 - `Result` is the dedicated shape for Go `error`-bearing flows and should be used instead of encoding failures as `Option`.
 - `List[A]` is a singly-linked list with `head: A` and `tail: Option[Ref[List[A]]]`; `None` terminates the list.
-- `Map[K, V]` is a thin type-safe wrapper around Go's `map[K]V` with `entries: String` and `size: Int` fields.
-- `Set[A]` is a thin type-safe wrapper around Go's `map[A]struct{}` with `entries: String` and `size: Int` fields.
+- `A[]` (shorthand for `Slice[A]`) is Go's native slice `[]A`.
+- `Map[K, V]` is Go's native map `map[K]V`.
+- `Set[A]` is Go's native set `map[A]struct{}`.
 
 ## Workflow Notes
 
@@ -57,6 +58,7 @@
 - Struct literals support a constructor-like form such as `ABC { aaa: 123 }`.
 - Generic struct literals can also carry explicit type arguments, such as `Box[Int64] { value: 123 }`.
 - When a generic struct literal omits its type arguments, the compiler should infer them from the expected type or field values when possible.
+- `A[]` is syntactic sugar for `Slice[A]` and lowers directly to Go `[]A`. The parser rewrites `Int[]` into `Slice[NamedType{Name:"Int"}]` at parse time.
 - Keep `examples/main/main.mygo` aligned with the compiler's current boundary behavior, especially for `Ref`, `Option`, and `Result`.
 - Typeclass lookup should respect lexical scope first: local bindings and function-value bindings shadow typeclass names, `where`-bound methods are visible inside nested blocks, and package-level dispatch is the fallback.
 - When multiple typeclass candidates are visible, prefer the more specific binding by comparing concrete type coverage first, then type-parameter usage, then `any` usage; report ambiguity when candidates remain tied.
@@ -64,11 +66,27 @@
 ## Collection Types
 
 - `List[A]`: singly-linked list using `Option[Ref[List[A]]]` for the tail field — `None` is the terminator, `Some(ref)` points to the next node. This avoids a separate `Nil` helper and keeps the nil-termination semantics explicit through `Option`.
-- `Map[K, V]`: struct wrapper with `entries: String` and `size: Int` — a placeholder for future Go `map[K]V` FFI integration.
-- `Set[A]`: struct wrapper with `entries: String` and `size: Int` — analogous to `Map` but wrapping `map[A]struct{}`.
+- `A[]` (`Slice[A]`): MyGO syntax `Int[]` → Go `[]int`. Lowered directly to Go's native slice type via `goType` / `typeString`.
+- `Map[K, V]`: lowered directly to Go's native `map[K]V` via `goType` / `typeString`.
+- `Set[A]`: lowered directly to Go's native `map[A]struct{}` via `goType` / `typeString`.
+
+### Design Rationale
+
+- **Why `Option[Ref[List[T]]]` instead of just `Ref[List[T]]`?**
+  `Option` provides an explicit `None` terminator for list ends, avoiding nil-pointer dereferences. `Ref` ensures the tail is a non-nil pointer (Go `*List[T]`), so when the tail is `Some`, we always have a valid pointer to dereference. This separates "no next node" (`None`) from "points to next node" (`Some(ref)`), which is both safer and more idiomatic in the type system.
+
+- **Why `Slice[A]` / `Map[K,V]` instead of MyGO struct declarations?**
+  These types wrap Go's native slices, maps, and sets directly. Declaring them as MyGO structs would add unnecessary runtime overhead (extra fields, allocation, indirection) and wouldn't provide additional type safety beyond the Go type system. Instead, the compiler recognizes the type names `Slice`, `Map`, `Set` and lowers them directly to Go builtins.
+
+- **Why not `[]A` prefix syntax?**
+  The parser only supports `A[]` suffix syntax for slice types. This keeps the parser simpler — `[]A` would require lookahead to distinguish from array literal syntax or other constructs. The suffix form `Int[]` reads naturally as "slice of Int" and is consistent with how Go itself writes `[]int`. Nested slices like `Int[][]` parse left-to-right as `Slice[Slice[Int]]`.
+
+- **Why not `Slice` / `Map` / `Set` as prelude struct types?**
+  Previously, these were declared as structs in `prelude.mysrc` with placeholder fields (`entries: String`, `size: Int`). They were removed because: (1) they served no runtime purpose — the prelude struct declarations had no usable fields; (2) `genStruct` would emit them as Go structs, conflicting with the `goType` lowering to native Go types; (3) keeping them only in the compiler's type lowering is cleaner and zero-cost. `List[A]` remains as a prelude struct because it needs actual runtime data structure semantics.
 
 ## Recent Work
 
+- Introduced `Slice`, `Map`, and `Set` as compiler-handled collection types with no prelude struct declarations — lowered directly to Go natives (`[]A`, `map[K]V`, `map[A]struct{}`). Added `A[]` syntactic sugar parsed as `Slice[A]`.
 - Further split `internal/mygo/compiler/` into focused files: `helpers.go`, `type_inference.go`, `typeclass.go`, `translate_struct.go`, and `go_package.go`, while keeping `generate.go`, `translate_expr.go`, `translate_call.go`, `translate_control.go`, `api.go`, and `types.go` as separate compiler concerns.
 - Unified all position/error helpers onto `common.NodePos` and `common.ErrorAtPos`, removing the wrapper `pos.go` files from root, parser, and compiler packages.
 - Unified shared line/error helpers into `internal/mygo/common/pos.go`.

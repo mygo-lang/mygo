@@ -257,6 +257,18 @@ func (g *generator) goType(t TypeExpr, typeParams map[string]struct{}) string {
 			if len(tt.Args) == 1 {
 				return "*" + g.goType(tt.Args[0], typeParams)
 			}
+		case "Slice":
+			if len(tt.Args) == 1 {
+				return "[]" + g.goType(tt.Args[0], typeParams)
+			}
+		case "Map":
+			if len(tt.Args) == 2 {
+				return "map[" + g.goType(tt.Args[0], typeParams) + "]" + g.goType(tt.Args[1], typeParams)
+			}
+		case "Set":
+			if len(tt.Args) == 1 {
+				return "map[" + g.goType(tt.Args[0], typeParams) + "]struct{}"
+			}
 		}
 		if len(tt.Args) == 0 {
 			return tt.Name
@@ -653,6 +665,23 @@ func unifyType(pattern TypeExpr, actual string, params map[string]struct{}, subs
 		}
 		patternName := primitiveGoName(p.Name)
 		if patternName == "" {
+			// Slice, Map, Set are lowered to Go builtin container types.
+			switch p.Name {
+			case "Slice":
+				if len(p.Args) == 1 {
+					patternName = "[]" + primitiveGoNameOr(p.Args[0])
+				}
+			case "Map":
+				if len(p.Args) == 2 {
+					patternName = "map[" + primitiveGoNameOr(p.Args[0]) + "]" + primitiveGoNameOr(p.Args[1])
+				}
+			case "Set":
+				if len(p.Args) == 1 {
+					patternName = "map[" + primitiveGoNameOr(p.Args[0]) + "]struct{}"
+				}
+			}
+		}
+		if patternName == "" {
 			patternName = p.Name
 		}
 		actualName, actualArgs := splitTypeArgs(actual)
@@ -693,6 +722,14 @@ func primitiveGoName(name string) string {
 	}
 }
 
+// primitiveGoNameOr returns the Go primitive name for a NamedType.
+func primitiveGoNameOr(t TypeExpr) string {
+	if nt, ok := t.(*NamedType); ok {
+		return primitiveGoName(nt.Name)
+	}
+	return ""
+}
+
 func typeString(t TypeExpr, subst map[string]string) string {
 	switch tt := t.(type) {
 	case *NamedType:
@@ -719,6 +756,18 @@ func typeString(t TypeExpr, subst map[string]string) string {
 		case "Ref":
 			if len(tt.Args) == 1 {
 				return "*" + typeString(tt.Args[0], subst)
+			}
+		case "Slice":
+			if len(tt.Args) == 1 {
+				return "[]" + typeString(tt.Args[0], subst)
+			}
+		case "Map":
+			if len(tt.Args) == 2 {
+				return "map[" + typeString(tt.Args[0], subst) + "]" + typeString(tt.Args[1], subst)
+			}
+		case "Set":
+			if len(tt.Args) == 1 {
+				return "map[" + typeString(tt.Args[0], subst) + "]struct{}"
 			}
 		}
 		if len(tt.Args) == 0 {

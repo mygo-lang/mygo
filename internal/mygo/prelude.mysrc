@@ -62,14 +62,8 @@ struct List[A]
   tail: Option[Ref[List[A]]]
 end
 
-# A map wrapper around Go's map for type safety.
-struct Map[K, V]
-  entries: String
-  size: Int
-end
+# A[] is Go's native slice ([]A).
 
-# A set wrapper around Go's map for type safety.
-struct Set[A]
-  entries: String
-  size: Int
-end
+# Map[K, V] is Go's native map[K]V.
+
+# Set[A] is Go's native map[A]struct{}
