@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
 )
 
@@ -151,6 +152,17 @@ func (p *parser) parseStmt() (Stmt, error) {
 		return p.parseBindingStmt(false)
 	case p.peekRaw().kind == tokKeyword && p.peekRaw().lit == "var":
 		return p.parseBindingStmt(true)
+	case p.peekRaw().kind == tokKeyword && p.peekRaw().lit == "return":
+		tok := p.nextRaw()
+		next := p.peekRaw()
+		if next.kind == tokNewline || next.kind == tokEOF || (next.kind == tokKeyword && next.lit == "end") {
+			return &ast.ReturnStmt{Line: tok.line, Column: tok.col}, nil
+		}
+		value, err := p.parseExpr(0)
+		if err != nil {
+			return nil, err
+		}
+		return &ast.ReturnStmt{Line: tok.line, Column: tok.col, Value: value}, nil
 	case p.peekRaw().kind == tokIdent && p.peekRawN(1).kind == tokSym && p.peekRawN(1).lit == "=":
 		name, err := p.expectIdent()
 		if err != nil {

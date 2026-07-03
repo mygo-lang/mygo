@@ -7,7 +7,7 @@
 - `internal/mygo/compiler/` owns lowering to generated Go entry points.
 - `internal/mygo/ast/` owns the shared AST types.
 - `internal/mygo/common/pos.go` owns shared position and error helpers.
-- `internal/mygo/prelude.mysrc` is the built-in prelude source that is merged into every package before lowering.
+- `prelude/prelude.mygo` is the built-in prelude source that is merged into every package before lowering.
 - Generated Go lives next to the source example, e.g. `examples/main/zz_mygo.gen.go`, and should be treated as disposable.
 
 ## Type Model
@@ -48,8 +48,11 @@
 
 ## Known Issues
 
+- **prelude typeclasses fully generated**: The prelude's `enum`, `struct`, `interface`, and `impl` blocks are now compiled via the standard generator (no `skipTypeclasses`), so Show, Eq, and Enumerable impls are all registered at init time. The hand-written `prelude_go.go` still provides low-level Slice/Map/Set Enumerable helpers.
+- **`prelude_go.go` does not compile**: `prelude/prelude_go.go:52` references `Eq[T]` which is undefined in the prelude package, causing `go vet` to fail. The prelude's `Eq` interface is generated via the standard generator during compilation, so the hand-written Go helpers cannot directly reference it.
 - **`Nil` is not a real prelude value**: `translateIdent` in `typeclass.go` still has hardcoded support for `Nil` that emits `Nil[T]()`, but there is no actual `Nil` type or constructor in the prelude. New code should model absence with `Option`, as in `Option[Ref[List[T]]]`, instead of comparing refs to `Nil`.
 - **`sumList` type ergonomics**: `examples/data-structure/data-structure.mygo` currently accepts `List[Int]`, creates a traversal ref with `Ref.new(lst)`, and walks `tail: Option[Ref[List[Int]]]`. This is runnable and keeps construction explicit, but it still takes the address of a local parameter copy; a future design may prefer accepting `Option[Ref[List[Int]]]` or `Ref[List[Int]]` directly.
+- **AST `Col` vs `Column` inconsistency**: `MapLitPair` and `SetLitExpr` in `ast.go` use `Col int` instead of `Column int`. This causes `common.NodePos()` to silently return `(0, 0)` for these types via reflection, losing source position data for all map/set literal error messages.
 
 ## Current Semantics
 
@@ -66,6 +69,10 @@
 - When a generic struct literal omits its type arguments, the compiler should infer them from the expected type or field values when possible.
 - `Ref.new(expr)` constructs a reference value and is lowered as `&expr`; if the argument is already a ref/pointer, lowering leaves it unchanged rather than producing a pointer-to-pointer.
 - `A[]` is syntactic sugar for `Slice[A]` and lowers directly to Go `[]A`. The parser rewrites `Int[]` into `Slice[NamedType{Name:"Int"}]` at parse time.
+- The parser test suite now covers package/function declarations, collection literals, chain postfix, `if`/`while`/`switch`, pipe precedence, struct/interface/impl declarations, `let`/`var`/assignment, func literals, `where` clauses, enum declarations, switch patterns, and nested/empty collection literals.
+- `Int[][]` style nested slice type syntax is accepted by the parser, and empty `[]` is treated as an empty slice literal in expression position.
+- `where` clauses support multiple constraints and constraint type arguments in both function and interface method signatures.
+- `switch` pattern parsing currently accepts wildcard patterns and variant patterns with optional identifier arguments, such as `Some(x)`.
 - Keep `examples/main/main.mygo` aligned with the compiler's current boundary behavior, especially for `Ref`, `Option`, and `Result`.
 - Typeclass lookup should respect lexical scope first: local bindings and function-value bindings shadow typeclass names, `where`-bound methods are visible inside nested blocks, and package-level dispatch is the fallback.
 - When multiple typeclass candidates are visible, prefer the more specific binding by comparing concrete type coverage first, then type-parameter usage, then `any` usage; report ambiguity when candidates remain tied.
@@ -116,6 +123,7 @@
 
 ## Recent Work
 
+- **Complete Jennifer refactoring**: Refactored `internal/mygo/compiler/` to use Jennifer for all code generation, eliminating string-based code generation. Deleted `section.go` and `unit_body_writer.go`. Converted `genGlobals()`, `genTypeclassDispatchers()`, `genImpl()`, `genFunc()`, `translateSwitch()`, and `translateWhile()` to use Jennifer's type-safe API. This improves type safety, maintainability, and eliminates string concatenation for generating Go code.
 - Added `Ref.new(expr)` lowering for explicit `Ref[T]` construction, updated `examples/data-structure` to use it for `Option[Ref[List[A]]]` tails, and taught field lookup to resolve through generated Go pointer types like `*List[int]`.
 - Introduced `Slice`, `Map`, and `Set` as compiler-handled collection types with no prelude struct declarations — lowered directly to Go natives (`[]A`, `map[K]V`, `map[A]struct{}`). Added `A[]` syntactic sugar parsed as `Slice[A]`.
 - Further split `internal/mygo/compiler/` into focused files: `helpers.go`, `type_inference.go`, `typeclass.go`, `translate_struct.go`, and `go_package.go`, while keeping `generate.go`, `translate_expr.go`, `translate_call.go`, `translate_control.go`, `api.go`, and `types.go` as separate compiler concerns.

@@ -56,11 +56,15 @@ type InterfaceDecl struct {
 func (*InterfaceDecl) declNode() {}
 
 type ImplDecl struct {
-	Line     int
-	Column   int
-	Name     string
-	TypeArgs []TypeExpr
-	Methods  []*FuncDecl
+	Line          int
+	Column        int
+	Name          string     // interface name (e.g. "Enumerable", for old-style "impl Show[Int]")
+	TypeArgs      []TypeExpr // interface type args (e.g. [Int], for old-style)
+	InterfaceName string     // interface name (e.g. "Enumerable", for new-style "impl List[T]: Enumerable[T]")
+	InterfaceArgs []TypeExpr // interface type args (e.g. [T], for new-style)
+	Type          TypeExpr   // the type being implemented on (e.g. List[T], for new-style)
+	TypeParams    []string   // impl-level type params (e.g. [T], for new-style)
+	Methods       []*FuncDecl
 }
 
 func (*ImplDecl) declNode() {}
@@ -293,6 +297,14 @@ type LetStmt struct {
 }
 
 func (*LetStmt) stmtNode() {}
+
+type ReturnStmt struct {
+	Line   int
+	Column int
+	Value  Expr
+}
+
+func (*ReturnStmt) stmtNode() {}
 func (*LetStmt) declNode() {}
 
 type AssignStmt struct {

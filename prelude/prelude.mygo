@@ -1,0 +1,361 @@
+package prelude
+
+import fmt "go:fmt"
+
+func typeKeyFromType(value: String) -> String
+  value
+end
+
+enum Option[A]
+  Some(A)
+  None
+end
+
+enum Result[A, E]
+  Ok(A)
+  Err(E)
+end
+
+interface Show[A]
+  func show(value: A) -> String
+end
+
+interface Eq[A]
+  func equals(left: A, right: A) -> Bool
+end
+
+interface Enumerable[C[A], A]
+  func each(c: C[A], fn: func(item: A) -> ()) -> ()
+  func map[B](c: C[A], fn: func(item: A) -> B) -> C[B]
+  func filter(c: C[A], fn: func(item: A) -> Bool) -> C[A]
+  func fold[B](c: C[A], initial: B, fn: func(acc: B, item: A) -> B) -> B
+  func find(c: C[A], fn: func(item: A) -> Bool) -> Option[Ref[A]]
+  func contains(c: C[A], item: A, eq: Eq[A]) -> Bool
+end
+
+# ===== Show impls =====
+
+impl Int: Show[Int]
+  func show(value: Int) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl Int64: Show[Int64]
+  func show(value: Int64) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl Float64: Show[Float64]
+  func show(value: Float64) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl String: Show[String]
+  func show(value: String) -> String
+    value
+  end
+end
+
+impl Bool: Show[Bool]
+  func show(value: Bool) -> String
+    fmt.Sprint(value)
+  end
+end
+
+# ===== Eq impls =====
+
+impl Int: Eq[Int]
+  func equals(left: Int, right: Int) -> Bool
+    left == right
+  end
+end
+
+impl Int64: Eq[Int64]
+  func equals(left: Int64, right: Int64) -> Bool
+    left == right
+  end
+end
+
+impl Float64: Eq[Float64]
+  func equals(left: Float64, right: Float64) -> Bool
+    left == right
+  end
+end
+
+impl String: Eq[String]
+  func equals(left: String, right: String) -> Bool
+    left == right
+  end
+end
+
+impl Bool: Eq[Bool]
+  func equals(left: Bool, right: Bool) -> Bool
+    left == right
+  end
+end
+
+# ===== Collection Types =====
+
+# A linked list node. Tail uses Option[Ref[List[A]]] so None terminates the list.
+struct List[A]
+  head: A
+  tail: Option[Ref[List[A]]]
+end
+
+# A[] is Go's native slice ([]A).
+
+# Map[K, V] is Go's native map[K]V.
+
+# Set[A] is Go's native map[A]struct{}
+
+# ===== Enumerable impls =====
+
+# Generic impl for List[T]: impl[T] List[T]: Enumerable[List[T], T]
+impl[T] List[T]: Enumerable[List[T], T]
+  func each(c: List[T], fn: func(item: T) -> ()) -> ()
+    var current: Ref[List[T]] = Ref.new(c)
+    var done: Bool = false
+    while not done
+      fn(current.head)
+      switch current.tail
+        case None => done = true
+        case Some(node) => current = node
+      end
+    end
+    return
+  end
+
+  func map[B](c: List[T], fn: func(item: T) -> B) -> List[B]
+    var done: Bool = false
+    var headVal: B = fn(c.head)
+    var result: List[B] = List[B] { head: headVal, tail: None }
+    var current: Ref[List[T]] = Ref.new(c)
+    while not done
+      switch current.tail
+        case None => done = true
+        case Some(node) =>
+          current = node
+          result = List[B] { head: fn(current.head), tail: Some(Ref.new(result)) }
+      end
+    end
+    return result
+  end
+
+  func filter(c: List[T], fn: func(item: T) -> Bool) -> List[T]
+    var done: Bool = false
+    var result: List[T] = None
+    var current: Ref[List[T]] = Ref.new(c)
+    while not done
+      if fn(current.head) then
+        let newNode = List[T] { head: current.head, tail: Some(Ref.new(result)) }
+        result = newNode
+      else
+        result = result
+      end
+      switch current.tail
+        case None => done = true
+        case Some(node) => current = node
+      end
+    end
+    return result
+  end
+
+  func fold[B](c: List[T], initial: B, fn: func(acc: B, item: T) -> B) -> B
+    var acc: B = initial
+    var done: Bool = false
+    var current: Ref[List[T]] = Ref.new(c)
+    while not done
+      acc = fn(acc, current.head)
+      switch current.tail
+        case None => done = true
+        case Some(node) => current = node
+      end
+    end
+    return acc
+  end
+
+  func find(c: List[T], fn: func(item: T) -> Bool) -> Option[Ref[T]]
+    var done: Bool = false
+    var current: Ref[List[T]] = Ref.new(c)
+    while not done
+      if fn(current.head) then
+        return Some(Ref.new(current.head))
+      else
+        switch current.tail
+          case None => done = true
+          case Some(node) => current = node
+        end
+      end
+    end
+    return None[Ref[T]]()
+  end
+
+  func contains(c: List[T], item: T, eq: Eq[T]) -> Bool
+    var done: Bool = false
+    var result: Bool = false
+    var current: Ref[List[T]] = Ref.new(c)
+    while not done
+      if equals(current.head, item, eq) then
+        result = true
+        done = true
+      else
+        switch current.tail
+          case None => done = true
+          case Some(node) => current = node
+        end
+      end
+    end
+    return result
+  end
+end
+
+# Generic impl for Slice[T]: Enumerable[Slice[T], T]
+impl[T] Slice[T]: Enumerable[Slice[T], T]
+  func each(c: Slice[T], fn: func(item: T) -> ()) -> ()
+    eachSlice(c, fn)
+  end
+  func map[B](c: Slice[T], fn: func(item: T) -> B) -> Slice[B]
+    mapSlice(c, fn)
+  end
+  func filter(c: Slice[T], fn: func(item: T) -> Bool) -> Slice[T]
+    filterSlice(c, fn)
+  end
+  func fold[B](c: Slice[T], initial: B, fn: func(acc: B, item: T) -> B) -> B
+    foldSlice(c, initial, fn)
+  end
+  func find(c: Slice[T], fn: func(item: T) -> Bool) -> Option[Ref[T]]
+    return findSlice(c, fn)
+  end
+  func contains(c: Slice[T], item: T, eq: Eq[T]) -> Bool
+    return containsSlice(c, item, eq)
+  end
+end
+
+# Generic impl for Map[K, V]: impl[K, V] Map[K, V]: Enumerable[Map[K, V], V]
+impl[K, V] Map[K, V]: Enumerable[Map[K, V], V]
+  func each(c: Map[K, V], fn: func(item: V) -> ()) -> ()
+    eachMap(c, fn)
+  end
+  func map[B](c: Map[K, V], fn: func(item: V) -> B) -> Map[K, B]
+    mapMap(c, fn)
+  end
+  func filter(c: Map[K, V], fn: func(item: V) -> Bool) -> Map[K, V]
+    filterMap(c, fn)
+  end
+  func fold[B](c: Map[K, V], initial: B, fn: func(acc: B, item: V) -> B) -> B
+    foldMap(c, initial, fn)
+  end
+  func find(c: Map[K, V], fn: func(item: V) -> Bool) -> Option[Ref[V]]
+    return findMap(c, fn)
+  end
+end
+
+# Generic impl for Set[A]: impl[A] Set[A]: Enumerable[Set[A], A]
+impl[A] Set[A]: Enumerable[Set[A], A]
+  func each(c: Set[A], fn: func(item: A) -> ()) -> ()
+    eachSet(c, fn)
+  end
+  func map[B](c: Set[A], fn: func(item: A) -> B) -> Set[B]
+    mapSet(c, fn)
+  end
+  func filter(c: Set[A], fn: func(item: A) -> Bool) -> Set[A]
+    filterSet(c, fn)
+  end
+  func fold[B](c: Set[A], initial: B, fn: func(acc: B, item: A) -> B) -> B
+    foldSet(c, initial, fn)
+  end
+  func find(c: Set[A], fn: func(item: A) -> Bool) -> Option[Ref[A]]
+    return findSet(c, fn)
+  end
+end
+
+# ===== Option helpers =====
+
+func optionIsSome[A](opt: Option[A]) -> Bool
+  switch opt
+    case Some(_) => true
+    case None => false
+  end
+end
+
+func optionIsNone[A](opt: Option[A]) -> Bool
+  switch opt
+    case Some(_) => false
+    case None => true
+  end
+end
+
+func optionUnwrap[A](opt: Option[A], defaultVal: A) -> A
+  switch opt
+    case Some(v) => v
+    case None => defaultVal
+  end
+end
+
+func optionMap[A, B](opt: Option[A], fn: func(item: A) -> B) -> Option[B]
+  switch opt
+    case Some(v) => Some[B](fn(v))
+    case None => None[B]()
+  end
+end
+
+func optionFlatMap[A, B](opt: Option[A], fn: func(item: A) -> Option[B]) -> Option[B]
+  switch opt
+    case Some(v) => fn(v)
+    case None => None[B]()
+  end
+end
+
+# ===== Result helpers =====
+
+func resultIsOk[A, E](res: Result[A, E]) -> Bool
+  switch res
+    case Ok(_) => true
+    case Err(_) => false
+  end
+end
+
+func resultIsErr[A, E](res: Result[A, E]) -> Bool
+  switch res
+    case Ok(_) => false
+    case Err(_) => true
+  end
+end
+
+func resultUnwrap[A, E](res: Result[A, E], defaultVal: A) -> A
+  switch res
+    case Ok(v) => v
+    case Err(_) => defaultVal
+  end
+end
+
+func resultMap[A, B, E](res: Result[A, E], fn: func(item: A) -> B) -> Result[B, E]
+  switch res
+    case Ok(v) => Ok[B, E](fn(v))
+    case Err(e) => Err[B, E](e)
+  end
+end
+
+func resultMapErr[A, B, E](res: Result[A, E], fn: func(err: E) -> B) -> Result[A, B]
+  switch res
+    case Ok(v) => Ok[A, B](v)
+    case Err(e) => Err[A, B](fn(e))
+  end
+end
+
+func resultAndThen[A, B, E](res: Result[A, E], fn: func(item: A) -> Result[B, E]) -> Result[B, E]
+  switch res
+    case Ok(v) => fn(v)
+    case Err(e) => Err[B, E](e)
+  end
+end
+
+func resultOrElse[A, E](res: Result[A, E], defaultVal: A) -> A
+  switch res
+    case Ok(v) => v
+    case Err(_) => defaultVal
+  end
+end

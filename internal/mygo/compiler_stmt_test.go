@@ -325,7 +325,7 @@ func TestCompileDirSupportsDynamicTypeclassDispatch(t *testing.T) {
     func show(value: A) -> String
   end
 
-  impl Show[Int64]
+  impl Int64: Show[Int64]
     func show(value: Int64) -> String
       fmt.Sprint(value)
     end
@@ -501,6 +501,41 @@ func TestCompileDirSupportsResultOfRefTypes(t *testing.T) {
 	}
 }
 
+func TestCompileDirSupportsIfExpressionForms(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+  func compact(ok: Bool) -> Int
+    if ok then 1 else 2
+  end
+
+  func block(ok: Bool) -> Int
+    if ok
+      1
+    else
+      2
+    end
+  end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"func compact(ok bool) int {",
+		"if ok {",
+		"return 1",
+		"} else {",
+		"return 2",
+		"func block(ok bool) int {",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
 func TestCompileDirSupportsMultiParamTypeclassDispatch(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
@@ -508,7 +543,7 @@ func TestCompileDirSupportsMultiParamTypeclassDispatch(t *testing.T) {
     func equals(left: A, right: A) -> Bool
   end
 
-  impl Eq[Int64]
+  impl Int64: Eq[Int64]
     func equals(left: Int64, right: Int64) -> Bool
       left == right
     end
@@ -586,13 +621,13 @@ func TestCompileDirSeparatesSameNamedMethodsByInterface(t *testing.T) {
     func show(value: A) -> String
   end
 
-  impl Show[Int64]
+  impl Int64: Show[Int64]
     func show(value: Int64) -> String
       "show"
     end
   end
 
-  impl Render[Int64]
+  impl Int64: Render[Int64]
     func show(value: Int64) -> String
       "render"
     end
@@ -625,7 +660,7 @@ func TestCompileDirLetsLocalBindingShadowTypeclassName(t *testing.T) {
     func show(value: A) -> String
   end
 
-  impl Show[Int64]
+  impl Int64: Show[Int64]
     func show(value: Int64) -> String
       "typeclass"
     end

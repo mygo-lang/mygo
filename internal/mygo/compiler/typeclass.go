@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
+	"github.com/mygo-lang/mygo/internal/mygo/common"
 )
 
 func typeclassMatchScore(args []TypeExpr, scopeTypes map[string]struct{}) matchScore {
@@ -106,7 +107,7 @@ func (g *generator) translateAnyFuncCall(name string, args []Expr, ctx *exprCtx)
 		if err != nil {
 			return "", "", false, err
 		}
-		argCodes = append(argCodes, code)
+		argCodes = append(argCodes, codeString(code))
 	}
 	actualName := name
 	if bound, ok := ctx.bindings[name]; ok {
@@ -154,13 +155,13 @@ func (g *generator) translateEnumConstructor(enumName, name string, args []Expr,
 		if err != nil {
 			return "", "", err
 		}
-		argCodes = append(argCodes, code)
+		argCodes = append(argCodes, codeString(code))
 	}
 	typeArgStr := ""
 	if len(typeArgs) > 0 {
 		typeArgStr = "[" + strings.Join(typeArgs, ", ") + "]"
 	}
-	return fmt.Sprintf("%s%s(%s)", name, typeArgStr, strings.Join(argCodes, ", ")), expected, nil
+	return fmt.Sprintf("%s%s(%s)", sanitizeIdent(name), typeArgStr, strings.Join(argCodes, ", ")), expected, nil
 }
 
 func (g *generator) translateTypeclassCall(name string, args []Expr, ctx *exprCtx, expected string) (string, string, bool) {
@@ -176,7 +177,7 @@ func (g *generator) translateTypeclassCall(name string, args []Expr, ctx *exprCt
 				if err != nil {
 					return "", "", false
 				}
-				argCodes = append(argCodes, code)
+				argCodes = append(argCodes, codeString(code))
 			}
 			return fmt.Sprintf("%s(%s)", funcName, strings.Join(argCodes, ", ")), methodReturnType(methodIface, name), true
 		}
@@ -189,14 +190,14 @@ func (g *generator) translateTypeclassCall(name string, args []Expr, ctx *exprCt
 			if err != nil {
 				return "", "", false
 			}
-			argCodes = append(argCodes, code)
+				argCodes = append(argCodes, codeString(code))
 		}
 		return fmt.Sprintf("%s(%s)", dispatchFuncName(ifaceName, name), strings.Join(argCodes, ", ")), methodReturnType(methodIface, name), true
 	}
 	return "", "", false
 }
 
-func (g *generator) translateIdent(name string, ctx *exprCtx, expected string) (string, string, error) {
+func (g *generator) translateIdent(name string, line, col int, ctx *exprCtx, expected string) (string, string, error) {
 	if expr, ok := ctx.bindings[name]; ok {
 		return expr, ctx.locals[name], nil
 	}
@@ -213,22 +214,12 @@ func (g *generator) translateIdent(name string, ctx *exprCtx, expected string) (
 		return name, "bool", nil
 	case "None":
 		base, args := splitTypeArgs(expected)
-		if base != "" {
-			if len(args) > 0 {
-				return fmt.Sprintf("None[%s]()", strings.Join(args, ", ")), expected, nil
-			}
-			return "None[any]()", expected, nil
+		if base != "" && len(args) > 0 {
+			return fmt.Sprintf("None[%s]()", strings.Join(args, ", ")), expected, nil
 		}
-		return "None[any]()", expected, nil
+		return "", "", common.ErrorAtPos(line, col, "None requires type inference from context")
 	case "Nil":
-		base, args := splitTypeArgs(expected)
-		if base != "" {
-			if len(args) > 0 {
-				return fmt.Sprintf("Nil[%s]()", strings.Join(args, ", ")), expected, nil
-			}
-			return "Nil[any]()", expected, nil
-		}
-		return "Nil[any]()", expected, nil
+		return "", "", common.ErrorAtPos(line, col, "Nil is not a valid value; use Option[Ref[T]] for nullable references")
 	}
 	if enumName, ok := g.variantByName[name]; ok {
 		return g.translateEnumConstructor(enumName, name, nil, ctx, expected)

@@ -13,6 +13,7 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 	if st == nil {
 		return "", "", common.ErrorAtPos(n.Line, n.Column, "unknown struct type %s", n.TypeName)
 	}
+	typeName := sanitizeIdent(n.TypeName)
 	subst := map[string]string{}
 	if len(n.TypeArgs) > 0 {
 		if len(st.TypeParams) != len(n.TypeArgs) {
@@ -22,7 +23,7 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 			subst[tp] = g.goType(n.TypeArgs[i], ctx.typeParams)
 		}
 	} else if len(st.TypeParams) > 0 {
-		if base, args := splitTypeArgs(expected); base == n.TypeName && len(args) == len(st.TypeParams) {
+		if base, args := splitTypeArgs(expected); base == typeName && len(args) == len(st.TypeParams) {
 			for i, tp := range st.TypeParams {
 				subst[tp] = args[i]
 			}
@@ -88,7 +89,7 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 		if f.Name == "embed" {
 			key = fieldType
 		}
-		parts = append(parts, fmt.Sprintf("%s: %s", key, code))
+		parts = append(parts, fmt.Sprintf("%s: %s", key, codeString(code)))
 	}
 	typeArgStr := ""
 	if len(n.TypeArgs) > 0 {
@@ -111,5 +112,5 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 			typeArgs = append(typeArgs, &NamedType{Name: subst[tp]})
 		}
 	}
-	return fmt.Sprintf("%s%s{%s}", n.TypeName, typeArgStr, strings.Join(parts, ", ")), typeString(&NamedType{Name: n.TypeName, Args: typeArgs}, nil), nil
+	return fmt.Sprintf("%s%s{%s}", typeName, typeArgStr, strings.Join(parts, ", ")), typeString(&NamedType{Name: n.TypeName, Args: typeArgs}, nil), nil
 }

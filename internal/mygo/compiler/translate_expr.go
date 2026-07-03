@@ -2,101 +2,105 @@ package compiler
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
+	jen "github.com/dave/jennifer/jen"
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
 )
 
-func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string, string, error) {
+func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (jen.Code, string, error) {
 	switch n := e.(type) {
 	case *IdentExpr:
-		return g.translateIdent(n.Name, ctx, expected)
+		code, typ, err := g.translateIdent(n.Name, n.Line, n.Column, ctx, expected)
+		if err != nil {
+			return nil, "", err
+		}
+		return jen.Op(code), typ, nil
 	case *LiteralExpr:
 		switch n.Kind {
 		case "number":
 			switch expected {
 			case "int", "int64", "float64":
-				return n.Value, expected, nil
+				return jen.Op(n.Value), expected, nil
 			}
 			if strings.Contains(n.Value, ".") {
-				return n.Value, "float64", nil
+				return jen.Op(n.Value), "float64", nil
 			}
-			return n.Value, "int", nil
+			return jen.Op(n.Value), "int", nil
 		case "string":
-			return strconv.Quote(n.Value), "string", nil
+			return jen.Lit(n.Value), "string", nil
 		}
 	case *BinaryExpr:
 		if n.Op == "|>" {
 			left, _, err := g.translateExpr(n.Left, ctx, "")
 			if err != nil {
-				return "", "", err
+				return nil, "", err
 			}
 			switch right := n.Right.(type) {
 			case *CallExpr:
 				callee, _, err := g.translateExpr(right.Callee, ctx, "")
 				if err != nil {
-					return "", "", err
+					return nil, "", err
 				}
-				args := make([]string, 0, len(right.Args)+1)
+				args := make([]jen.Code, 0, len(right.Args)+1)
 				for _, a := range right.Args {
 					code, _, err := g.translateExpr(a, ctx, "")
 					if err != nil {
-						return "", "", err
+						return nil, "", err
 					}
 					args = append(args, code)
 				}
 				args = append(args, left)
 				_, rt, err := g.translateExpr(right, ctx, "")
 				if err != nil {
-					return "", "", err
+					return nil, "", err
 				}
-				return fmt.Sprintf("%s(%s)", callee, strings.Join(args, ", ")), rt, nil
+				return jen.Op(codeString(callee)).Call(args...), rt, nil
 			default:
 				rhs, rt, err := g.translateExpr(n.Right, ctx, "")
 				if err != nil {
-					return "", "", err
+					return nil, "", err
 				}
-				return fmt.Sprintf("%s(%s)", rhs, left), rt, nil
+				return jen.Op(codeString(rhs)).Call(left), rt, nil
 			}
 		}
 		if n.Op == "<|" {
 			right, _, err := g.translateExpr(n.Right, ctx, "")
 			if err != nil {
-				return "", "", err
+				return nil, "", err
 			}
 			switch left := n.Left.(type) {
 			case *CallExpr:
 				callee, _, err := g.translateExpr(left.Callee, ctx, "")
 				if err != nil {
-					return "", "", err
+					return nil, "", err
 				}
-				args := make([]string, 0, len(left.Args)+1)
+				args := make([]jen.Code, 0, len(left.Args)+1)
 				for _, a := range left.Args {
 					code, _, err := g.translateExpr(a, ctx, "")
 					if err != nil {
-						return "", "", err
+						return nil, "", err
 					}
 					args = append(args, code)
 				}
 				args = append(args, right)
 				_, lt, err := g.translateExpr(left, ctx, "")
 				if err != nil {
-					return "", "", err
+					return nil, "", err
 				}
-				return fmt.Sprintf("%s(%s)", callee, strings.Join(args, ", ")), lt, nil
+				return jen.Op(codeString(callee)).Call(args...), lt, nil
 			default:
 				lhs, lt, err := g.translateExpr(n.Left, ctx, "")
 				if err != nil {
-					return "", "", err
+					return nil, "", err
 				}
-				return fmt.Sprintf("%s(%s)", lhs, right), lt, nil
+				return jen.Op(codeString(lhs)).Call(right), lt, nil
 			}
 		}
 		left, lt, err := g.translateExpr(n.Left, ctx, "")
 		if err != nil {
-			return "", "", err
+			return nil, "", err
 		}
 		rightExpected := ""
 		if lt != "" && lt != "any" {
@@ -104,7 +108,7 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 		}
 		right, rt, err := g.translateExpr(n.Right, ctx, rightExpected)
 		if err != nil {
-			return "", "", err
+			return nil, "", err
 		}
 		switch n.Op {
 		case "+", "-", "*", "/":
@@ -112,80 +116,124 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (string
 			if resType == "" || resType == "any" {
 				resType = rt
 			}
-			return fmt.Sprintf("(%s %s %s)", left, n.Op, right), resType, nil
+			return jen.Op(codeString(left) + " " + n.Op + " " + codeString(right)), resType, nil
 		case "&&", "||":
 			if lt != "" && lt != "bool" {
 				line, col := common.NodePos(n.Left)
-				return "", "", common.ErrorAtPos(line, col, "logical operator %q requires Bool operands, got %s", n.Op, lt)
+				return nil, "", common.ErrorAtPos(line, col, "logical operator %q requires Bool operands, got %s", n.Op, lt)
 			}
 			if rt != "" && rt != "bool" {
 				line, col := common.NodePos(n.Right)
-				return "", "", common.ErrorAtPos(line, col, "logical operator %q requires Bool operands, got %s", n.Op, rt)
+				return nil, "", common.ErrorAtPos(line, col, "logical operator %q requires Bool operands, got %s", n.Op, rt)
 			}
-			return fmt.Sprintf("(%s %s %s)", left, n.Op, right), "bool", nil
+			return jen.Op(codeString(left) + " " + n.Op + " " + codeString(right)), "bool", nil
 		case "==", "!=", "<", ">", "<=", ">=":
 			if err := g.ensureRelationAllowed(n, lt, rt, ctx); err != nil {
-				return "", "", err
+				return nil, "", err
 			}
-			if eqExpr, ok := g.translateEqRelation(n.Op, left, right, lt, rt, ctx, expected); ok {
-				return eqExpr, "bool", nil
+				if eqExpr, ok := g.translateEqRelation(n.Op, codeString(left), codeString(right), lt, rt, ctx, expected); ok {
+				return jen.Op(eqExpr), "bool", nil
 			}
-			return "", "", common.ErrorAtPos(n.Line, n.Column, "relation operator %q requires Eq-constrained operands", n.Op)
+			return nil, "", common.ErrorAtPos(n.Line, n.Column, "relation operator %q requires Eq-constrained operands", n.Op)
 		}
 	case *PrefixExpr:
 		expr, typ, err := g.translateExpr(n.Expr, ctx, "")
 		if err != nil {
-			return "", "", err
+			return nil, "", err
 		}
 		if n.Op == "not" {
-			return fmt.Sprintf("(!%s)", expr), "bool", nil
+			return jen.Op("!(" + codeString(expr) + ")"), "bool", nil
 		}
 		return expr, typ, nil
 	case *FieldExpr:
 		if baseIdent, ok := n.Expr.(*IdentExpr); ok {
 			if enumDecl := g.pkg.Enums[baseIdent.Name]; enumDecl != nil {
 				if variant := g.findVariant(enumDecl, n.Field); variant != nil {
-					return g.translateEnumConstructor(baseIdent.Name, n.Field, nil, ctx, expected)
+				code, typ, err := g.translateEnumConstructor(baseIdent.Name, n.Field, nil, ctx, expected)
+				if err != nil {
+					return nil, "", err
+				}
+				return jen.Op(code), typ, nil
 				}
 			}
 			if code, typ, ok, err := g.translateGoPackageSelector(baseIdent.Name, n.Field); err != nil {
-				return "", "", err
+				return nil, "", err
 			} else if ok {
-				return code, typ, nil
+				return jen.Op(code), typ, nil
 			}
 		}
 		base, baseType, err := g.translateExpr(n.Expr, ctx, "")
 		if err != nil {
-			return "", "", err
+			return nil, "", err
 		}
 		if id, ok := n.Expr.(*IdentExpr); ok && g.isImportAlias(id.Name) {
-			return fmt.Sprintf("%s.%s", base, n.Field), "any", nil
+			return jen.Op(codeString(base)).Dot(n.Field), "any", nil
 		}
 		fieldType := g.lookupFieldType(baseType, n.Field)
-		return fmt.Sprintf("%s.%s", base, exportName(n.Field)), fieldType, nil
+		return jen.Op(codeString(base)).Dot(exportName(n.Field)), fieldType, nil
 	case *CallExpr:
-		return g.translateCall(n, ctx, expected)
-	case *StructLitExpr:
-		return g.translateStructLit(n, ctx, expected)
-	case *FuncLitExpr:
-		return g.translateFuncLit(n, ctx)
-	case *IfExpr:
-		return g.translateIf(n, ctx, expected)
-	case *SwitchExpr:
-		return g.translateSwitch(n, ctx, expected)
-	case *WhileExpr:
-		return g.translateWhile(n, ctx)
-	case *BlockExpr:
-		return g.translateBlock(n, ctx, expected)
-	case *SliceLitExpr:
-		return g.translateSliceLit(n, ctx, expected)
-	case *MapLitExpr:
-		return g.translateMapLit(n, ctx, expected)
-	case *SetLitExpr:
-		return g.translateSetLit(n, ctx, expected)
+			code, typ, err := g.translateCall(n, ctx, expected)
+			if err != nil {
+				return nil, "", err
+			}
+			return jen.Op(code), typ, nil
+		case *StructLitExpr:
+			code, typ, err := g.translateStructLit(n, ctx, expected)
+			if err != nil {
+				return nil, "", err
+			}
+			return jen.Op(code), typ, nil
+		case *FuncLitExpr:
+			code, typ, err := g.translateFuncLit(n, ctx)
+			if err != nil {
+				return nil, "", err
+			}
+			return jen.Op(code), typ, nil
+		case *IfExpr:
+			code, typ, err := g.translateIf(n, ctx, expected)
+			if err != nil {
+				return nil, "", err
+			}
+			return jen.Op(code), typ, nil
+		case *SwitchExpr:
+			code, typ, err := g.translateSwitch(n, ctx, expected)
+			if err != nil {
+				return nil, "", err
+			}
+			return jen.Op(code), typ, nil
+		case *WhileExpr:
+			code, typ, err := g.translateWhile(n, ctx)
+			if err != nil {
+				return nil, "", err
+			}
+			return jen.Op(code), typ, nil
+		case *BlockExpr:
+			code, typ, err := g.translateBlock(n, ctx, expected)
+			if err != nil {
+				return nil, "", err
+			}
+			return jen.Op(code), typ, nil
+		case *SliceLitExpr:
+			code, typ, err := g.translateSliceLit(n, ctx, expected)
+			if err != nil {
+				return nil, "", err
+			}
+			return jen.Op(code), typ, nil
+		case *MapLitExpr:
+			code, typ, err := g.translateMapLit(n, ctx, expected)
+			if err != nil {
+				return nil, "", err
+			}
+			return jen.Op(code), typ, nil
+		case *SetLitExpr:
+			code, typ, err := g.translateSetLit(n, ctx, expected)
+			if err != nil {
+				return nil, "", err
+			}
+			return jen.Op(code), typ, nil
 	}
 	line, col := common.NodePos(e)
-	return "", "", common.ErrorAtPos(line, col, "unsupported expression %#v", e)
+	return nil, "", common.ErrorAtPos(line, col, "unsupported expression %#v", e)
 }
 
 func (g *generator) ensureRelationAllowed(n *BinaryExpr, leftType, rightType string, ctx *exprCtx) error {
@@ -337,7 +385,7 @@ func (g *generator) translateSliceLit(n *SliceLitExpr, ctx *exprCtx, expected st
 		if err != nil {
 			return "", "", err
 		}
-		parts = append(parts, code)
+			parts = append(parts, codeString(code))
 	}
 
 	goElemType := g.goType(&NamedType{Name: elemType}, nil)
@@ -427,7 +475,7 @@ func (g *generator) translateMapLit(n *MapLitExpr, ctx *exprCtx, expected string
 		if err != nil {
 			return "", "", err
 		}
-		parts = append(parts, keyCode+": "+valCode)
+			parts = append(parts, codeString(keyCode)+": "+codeString(valCode))
 	}
 
 	keyGoType := g.goType(&NamedType{Name: keyType}, nil)
@@ -499,7 +547,7 @@ func (g *generator) translateSetLit(n *SetLitExpr, ctx *exprCtx, expected string
 		if err != nil {
 			return "", "", err
 		}
-		parts = append(parts, code)
+			parts = append(parts, codeString(code))
 	}
 
 	elemGoType := g.goType(&NamedType{Name: elemType}, nil)

@@ -103,12 +103,8 @@ func loadPackage(dir string) (*Package, error) {
 		Interfaces:    map[string]*InterfaceDecl{},
 		Funcs:         map[string]*FuncDecl{},
 	}
-	preludeDecls, err := loadPreludeDecls()
-	if err != nil {
-		return nil, err
-	}
-	pkg.Decls = append(pkg.Decls, preludeDecls...)
 	pkgName := ""
+	var fileDecls []Decl
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() || !strings.HasSuffix(name, ".mygo") || strings.HasSuffix(name, ".gen.go") {
@@ -129,12 +125,20 @@ func loadPackage(dir string) (*Package, error) {
 				return nil, common.ErrorAtPos(file.PackageLine, 0, "package %q conflicts with %q", file.PackageName, pkgName)
 			}
 		}
-		pkg.Decls = append(pkg.Decls, file.Decls...)
+		fileDecls = append(fileDecls, file.Decls...)
 	}
 	if pkgName == "" {
 		pkgName = filepath.Base(dir)
 	}
 	pkg.Name = toPackageName(pkgName)
+	if pkg.Name != "prelude" {
+		preludeDecls, err := loadPreludeDecls()
+		if err != nil {
+			return nil, err
+		}
+		pkg.Decls = append(pkg.Decls, preludeDecls...)
+	}
+	pkg.Decls = append(pkg.Decls, fileDecls...)
 	for _, decl := range pkg.Decls {
 		switch d := decl.(type) {
 		case *ImportDecl:

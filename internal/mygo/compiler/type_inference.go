@@ -322,6 +322,127 @@ func (g *generator) goReturnType(t TypeExpr, typeParams map[string]struct{}) str
 	return g.goType(t, typeParams)
 }
 
+func (g *generator) goHKTType(t TypeExpr, hktSet, typeParams map[string]struct{}) string {
+	switch tt := t.(type) {
+	case *NamedType:
+		if hktSet != nil {
+			if _, ok := hktSet[tt.Name]; ok && len(tt.Args) > 0 {
+				args := make([]string, 0, len(tt.Args))
+				for _, a := range tt.Args {
+					args = append(args, g.hktArgType(a, hktSet, typeParams))
+				}
+				return "HKT[" + tt.Name + ", " + strings.Join(args, ", ") + "]"
+			}
+		}
+		return g.goType(tt, typeParams)
+	default:
+		return g.goType(t, typeParams)
+	}
+}
+
+func (g *generator) hktArgType(t TypeExpr, hktSet, typeParams map[string]struct{}) string {
+	switch tt := t.(type) {
+	case *NamedType:
+		if typeParams != nil {
+			if _, ok := typeParams[tt.Name]; ok && len(tt.Args) == 0 {
+				return tt.Name
+			}
+		}
+		if hktSet != nil {
+			if _, ok := hktSet[tt.Name]; ok && len(tt.Args) > 0 {
+				args := make([]string, 0, len(tt.Args))
+				for _, a := range tt.Args {
+					args = append(args, g.hktArgType(a, hktSet, typeParams))
+				}
+				return "HKT[" + tt.Name + ", " + strings.Join(args, ", ") + "]"
+			}
+		}
+		switch tt.Name {
+		case "Int":
+			return "int"
+		case "Int64":
+			return "int64"
+		case "Int32":
+			return "int32"
+		case "Int16":
+			return "int16"
+		case "Int8":
+			return "int8"
+		case "UInt":
+			return "uint"
+		case "UInt64":
+			return "uint64"
+		case "UInt32":
+			return "uint32"
+		case "UInt16":
+			return "uint16"
+		case "UInt8":
+			return "uint8"
+		case "Float64":
+			return "float64"
+		case "Float32":
+			return "float32"
+		case "String":
+			return "string"
+		case "Bool":
+			return "bool"
+		case "Any":
+			return "any"
+		case "Ref":
+			if len(tt.Args) == 1 {
+				return "*" + g.hktArgType(tt.Args[0], hktSet, typeParams)
+			}
+		case "Slice":
+			if len(tt.Args) == 1 {
+				return "[]" + g.hktArgType(tt.Args[0], hktSet, typeParams)
+			}
+		case "Map":
+			if len(tt.Args) == 2 {
+				return "map[" + g.hktArgType(tt.Args[0], hktSet, typeParams) + "]" + g.hktArgType(tt.Args[1], hktSet, typeParams)
+			}
+		case "Set":
+			if len(tt.Args) == 1 {
+				return "map[" + g.hktArgType(tt.Args[0], hktSet, typeParams) + "]struct{}"
+			}
+		case "Option":
+			if len(tt.Args) == 1 {
+				return "Option[" + g.hktArgType(tt.Args[0], hktSet, typeParams) + "]"
+			}
+		case "Result":
+			if len(tt.Args) == 2 {
+				return "Result[" + g.hktArgType(tt.Args[0], hktSet, typeParams) + ", " + g.hktArgType(tt.Args[1], hktSet, typeParams) + "]"
+			}
+		}
+		if len(tt.Args) == 0 {
+			return tt.Name
+		}
+		args := make([]string, 0, len(tt.Args))
+		for _, a := range tt.Args {
+			args = append(args, g.hktArgType(a, hktSet, typeParams))
+		}
+		return tt.Name + "[" + strings.Join(args, ", ") + "]"
+	case *FuncType:
+		params := make([]string, 0, len(tt.Params))
+		for _, p := range tt.Params {
+			params = append(params, g.hktArgType(p, hktSet, typeParams))
+		}
+		ret := g.hktArgType(tt.Ret, hktSet, typeParams)
+		if ret == "" {
+			return "func(" + strings.Join(params, ", ") + ")"
+		}
+		return "func(" + strings.Join(params, ", ") + ") " + ret
+	default:
+		return "any"
+	}
+}
+
+func (g *generator) goHKTReturnType(t TypeExpr, hktSet, typeParams map[string]struct{}) string {
+	if isUnitType(t) {
+		return ""
+	}
+	return g.goHKTType(t, hktSet, typeParams)
+}
+
 func (g *generator) constraintTypeArgs(args []TypeExpr, typeParams map[string]struct{}) string {
 	if len(args) == 0 {
 		return ""
@@ -825,16 +946,4 @@ func typeStringReturn(t TypeExpr, subst map[string]string) string {
 func isUnitType(t TypeExpr) bool {
 	tt, ok := t.(*NamedType)
 	return ok && tt.Name == "Unit" && len(tt.Args) == 0
-}
-
-func (g *generator) writeUnitBody(b *strings.Builder, expr, exprType string) {
-	b.WriteString("\t")
-	if exprType == "" {
-		b.WriteString(expr)
-		b.WriteString("\n")
-		return
-	}
-	b.WriteString("_ = ")
-	b.WriteString(expr)
-	b.WriteString("\n")
 }

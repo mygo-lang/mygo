@@ -111,25 +111,78 @@ func (p *parser) parseIfExpr() (Expr, error) {
 	if err := p.expectKeyword("if"); err != nil {
 		return nil, err
 	}
-	cond, err := p.parseExprListUntil("then")
+	prevSkipNL := p.skipNL
+	p.skipNL = false
+	cond, err := p.parseExpr(0)
+	p.skipNL = prevSkipNL
 	if err != nil {
 		return nil, err
 	}
-	if err := p.expectKeyword("then"); err != nil {
-		return nil, err
+	switch tok := p.peekRaw(); {
+	case tok.kind == tokKeyword && tok.lit == "then":
+		if err := p.expectKeyword("then"); err != nil {
+			return nil, err
+		}
+		// Support both:
+		//   if cond then a else b
+		// and:
+		//   if cond then
+		//     a
+		//   else
+		//     b
+		//   end
+		if p.peekRaw().kind == tokNewline {
+			thenExpr, err := p.parseExprListUntil("else")
+			if err != nil {
+				return nil, err
+			}
+			if err := p.expectKeyword("else"); err != nil {
+				return nil, err
+			}
+			elseExpr, err := p.parseExprListUntil("end")
+			if err != nil {
+				return nil, err
+			}
+			if err := p.expectKeyword("end"); err != nil {
+				return nil, err
+			}
+			return &IfExpr{Line: start.line, Column: start.col, Cond: cond, Then: thenExpr, Else: elseExpr}, nil
+		}
+
+		thenExpr, err := p.parseExpr(0)
+		if err != nil {
+			return nil, err
+		}
+		if err := p.expectKeyword("else"); err != nil {
+			return nil, err
+		}
+		elseExpr, err := p.parseExpr(0)
+		if err != nil {
+			return nil, err
+		}
+		return &IfExpr{Line: start.line, Column: start.col, Cond: cond, Then: thenExpr, Else: elseExpr}, nil
+	case tok.kind == tokNewline:
+		if p.peekRaw().kind == tokNewline {
+			p.nextRaw()
+		}
+		thenExpr, err := p.parseExprListUntil("else")
+		if err != nil {
+			return nil, err
+		}
+		if err := p.expectKeyword("else"); err != nil {
+			return nil, err
+		}
+		elseExpr, err := p.parseExprListUntil("end")
+		if err != nil {
+			return nil, err
+		}
+		if err := p.expectKeyword("end"); err != nil {
+			return nil, err
+		}
+		return &IfExpr{Line: start.line, Column: start.col, Cond: cond, Then: thenExpr, Else: elseExpr}, nil
+	default:
+		return nil, common.ErrorAtPos(tok.line, tok.col, "expected newline or keyword %q after if condition", "then")
 	}
-	thenExpr, err := p.parseExprListUntil("else")
-	if err != nil {
-		return nil, err
-	}
-	if err := p.expectKeyword("else"); err != nil {
-		return nil, err
-	}
-	elseExpr, err := p.parseExprListUntil("end")
-	if err != nil {
-		return nil, err
-	}
-	return &IfExpr{Line: start.line, Column: start.col, Cond: cond, Then: thenExpr, Else: elseExpr}, nil
 }
 
 func (p *parser) parseCaseBody() (Expr, error) {
@@ -490,6 +543,10 @@ func (p *parser) parsePrimary() (Expr, error) {
 				return nil, err
 			}
 			return expr, nil
+		}
+		if tok.lit == "[]" {
+			_ = p.next()
+			return &SliceLitExpr{Line: tok.line, Column: tok.col, Elem: nil, Elems: nil}, nil
 		}
 		if tok.lit == "[" {
 			return p.parseSliceLit()

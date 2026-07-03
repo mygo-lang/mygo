@@ -1,0 +1,164 @@
+MyGO EBNF
+
+Lexical structure
+
+  identifier  = letter , { letter | digit | "_" } ;
+  number      = digit , { digit } , [ "." , digit , { digit } ] ;
+  string      = '"' , { character | escape } , '"' ;
+  newline     = line break token ;
+  comment     = "#" , { character - newline } ;
+
+  escape      = "\n" | "\t" | "\"" | "\\" ;
+  letter      = ? any Unicode letter or "_" ? ;
+  digit       = ? any Unicode digit ? ;
+
+Keywords
+
+  "package" | "import" | "enum" | "struct" | "interface" | "impl"
+  | "func" | "if" | "then" | "else" | "switch" | "case" | "end"
+  | "where" | "not" | "let" | "var" | "embed" | "while" | "return"
+
+Program
+
+  File        = [ PackageDecl ] , { Decl } , EOF ;
+  PackageDecl = "package" , identifier ;
+
+Declarations
+
+  Decl        = ImportDecl
+              | EnumDecl
+              | StructDecl
+              | InterfaceDecl
+              | ImplDecl
+              | FuncDecl
+              | LetDecl
+              | VarDecl ;
+
+  ImportDecl  = "import" , [ identifier ] , string ;
+
+  EnumDecl    = "enum" , TypeName , EnumBody , "end" ;
+  EnumBody    = { EnumVariant , [ "," ] } ;
+  EnumVariant = identifier , [ "(" , [ EnumField , { "," , EnumField } ] , ")" ] ;
+  EnumField   = [ identifier , ":" ] , Type ;
+
+  StructDecl  = "struct" , TypeName , StructBody , "end" ;
+  StructBody  = "(" , [ Type , { "," , Type } ] , ")"
+              | { StructField } ;
+  StructField = "embed" , Type
+              | identifier , ":" , Type ;
+
+  InterfaceDecl = "interface" , TypeName , { FuncSig } , "end" ;
+
+  ImplDecl    = "impl" , [ "[" , identifier , { "," , identifier } , "]" ] ,
+                Type , ":" , TypeName , [ "[" , [ Type , { "," , Type } ] , "]" ] ,
+                { FuncDecl } , "end" ;
+
+  FuncDecl    = "func" , identifier , [ TypeParams ] ,
+                "(" , [ Param , { "," , Param } ] , ")" ,
+                "->" , Type , [ WhereClause ] , FuncBody ;
+
+  FuncSig     = "func" , identifier , [ TypeParams ] ,
+                "(" , [ Param , { "," , Param } ] , ")" ,
+                "->" , Type ;
+
+  FuncBody    = Block ;
+
+  WhereClause = "where" , Constraint , { "," , Constraint } ;
+  Constraint  = identifier , [ "[" , [ Type , { "," , Type } ] , "]" ] ;
+
+  TypeParams  = "[" , [ identifier , { "," , identifier } ] , "]" ;
+  TypeName    = identifier , { "." , identifier } , [ TypeArgs ] ;
+  Param       = identifier , ":" , Type ;
+
+Statements
+
+  LetDecl     = "let" , identifier , [ ":" , Type ] , "=" , Expr ;
+  VarDecl     = "var" , identifier , [ ":" , Type ] , "=" , Expr ;
+  AssignStmt  = identifier , "=" , Expr ;
+  ReturnStmt  = "return" , [ Expr ] ;
+  ExprStmt    = Expr ;
+
+  Block       = Statement , { newline , Statement } , "end" ;
+  Statement   = LetDecl | VarDecl | AssignStmt | ReturnStmt | ExprStmt ;
+
+Expressions
+
+  Expr        = OrExpr ;
+
+  OrExpr      = AndExpr , { "||" , AndExpr } ;
+  AndExpr     = PipeExpr , { "&&" , PipeExpr } ;
+  PipeExpr    = CompareExpr , { ( "<|" | "|>" ) , CompareExpr } ;
+  CompareExpr = AddExpr , { ( "==" | "!=" | "<" | ">" | "<=" | ">=" ) , AddExpr } ;
+  AddExpr     = MulExpr , { ( "+" | "-" ) , MulExpr } ;
+  MulExpr     = PrefixExpr , { ( "*" | "/" ) , PrefixExpr } ;
+
+  PrefixExpr  = [ "not" ] , PostfixExpr ;
+
+  PostfixExpr = Primary , { PostfixOp } ;
+  PostfixOp   = TypeArgs
+              | CallSuffix
+              | StructLitSuffix
+              | FieldSuffix ;
+
+  TypeArgs    = "[" , [ Type , { "," , Type } ] , "]" ;
+  CallSuffix  = "(" , [ Expr , { "," , Expr } ] , ")" ;
+  StructLitSuffix = "{" , [ StructLitField , { [ "," ] , StructLitField } , [ "," ] ] , "}" ;
+  FieldSuffix = "." , identifier ;
+  StructLitField = [ "embed" ] , identifier , ":" , Expr ;
+
+  Primary     = identifier
+              | number
+              | string
+              | "(" , Expr , ")"
+              | SliceLit
+              | CollectionLit
+              | IfExpr
+              | SwitchExpr
+              | WhileExpr
+              | FuncLit ;
+
+  SliceLit    = "[" , [ Expr , { "," , Expr } ] , "]" ;
+  CollectionLit = "{" , [ CollectionEntry , { "," , CollectionEntry } ] , "}" ;
+  CollectionEntry = Expr , ":" , Expr | Expr ;
+
+Control forms
+
+  IfExpr      = "if" , Expr ,
+                ( "then" , Expr , "else" , Expr
+                | "then" , newline , BlockUntilElse , "else" , BlockUntilEnd
+                | newline , BlockUntilElse , "else" , BlockUntilEnd ) ;
+
+  BlockUntilElse = Statement , { newline , Statement } ;
+  BlockUntilEnd  = Statement , { newline , Statement } , "end" ;
+
+  WhileExpr   = "while" , Expr , newline , BlockUntilEnd ;
+
+  SwitchExpr  = "switch" , Expr , { SwitchCase } , "end" ;
+  SwitchCase  = "case" , Pattern , "=>" , CaseBody ;
+  CaseBody    = Statement , { newline , Statement } ;
+
+  FuncLit     = "func" , "(" , [ Param , { "," , Param } ] , ")" , "->" , Type , BlockUntilEnd ;
+
+Patterns
+
+  Pattern     = "_" | identifier , [ "(" , [ identifier , { "," , identifier } ] , ")" ] ;
+
+Types
+
+  Type        = FuncType | GroupedType | NamedType ;
+  FuncType    = "func" , "(" , [ FuncParamType , { "," , FuncParamType } ] , ")" , "->" , Type ;
+  FuncParamType = [ identifier , ":" ] , Type ;
+  GroupedType = "(" , Type , ")" ;
+  NamedType   = QualifiedName , [ TypeArgs ] , [ SliceSuffix ] ;
+  SliceSuffix = "[" , "]" ;
+  QualifiedName = identifier , { "." , identifier } ;
+
+Notes
+
+  - `A[]` in type position denotes `Slice[A]`.
+  - `func(A) -> B` is the only function type syntax.
+  - `if` has exactly three accepted shapes: one-line, `then`-block, and bare block.
+  - `switch` terminates on `end`.
+  - `{...}` is a map literal only when every entry has the form `expr : expr`; otherwise it is a set literal.
+  - `return` may appear with or without a value.
+  - Top-level `let` and `var` declarations are permitted.

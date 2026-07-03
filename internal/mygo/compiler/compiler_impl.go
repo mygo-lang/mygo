@@ -1,17 +1,17 @@
 package compiler
 
 import (
-	"fmt"
+	"bytes"
 	"sort"
 	"strconv"
-	"strings"
 
+	jen "github.com/dave/jennifer/jen"
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
 )
 
 func (g *generator) genGlobals() (string, error) {
-	var b strings.Builder
+	file := jen.NewFile("")
 	ctx := &exprCtx{
 		locals:          map[string]string{},
 		bindings:        map[string]string{},
@@ -34,20 +34,14 @@ func (g *generator) genGlobals() (string, error) {
 			actual = "tmp"
 		}
 		if s.Name == "_" {
-			b.WriteString("var _ = ")
-			b.WriteString(code)
-			b.WriteString("\n")
+			file.Var().Id("_").Op("=").Add(code)
 			continue
 		}
-		b.WriteString("var ")
-		b.WriteString(actual)
+		stmt := file.Var().Id(actual)
 		if s.Type != nil {
-			b.WriteString(" ")
-			b.WriteString(g.goType(s.Type, nil))
+			stmt.Add(jenTypeExpr(s.Type))
 		}
-		b.WriteString(" = ")
-		b.WriteString(code)
-		b.WriteString("\n")
+		stmt.Op("=").Add(code)
 		ctx.bindings[s.Name] = actual
 		if typ == "" && s.Type != nil {
 			typ = g.goType(s.Type, nil)
@@ -56,83 +50,106 @@ func (g *generator) genGlobals() (string, error) {
 		ctx.sourceTypes[s.Name] = typ
 		ctx.mutable[actual] = s.Mutable
 	}
-	if b.Len() > 0 {
-		b.WriteString("\n")
+	var out bytes.Buffer
+	if err := file.Render(&out); err != nil {
+		return "", err
 	}
-	b.WriteString(g.genTypeclassDispatchers())
-	return b.String(), nil
+	if out.Len() > 0 {
+		out.WriteString("\n")
+	}
+	out.WriteString(g.genHKTType())
+	out.WriteString(g.genTypeclassDispatchers())
+	return out.String(), nil
 }
 
 func (g *generator) genTypeclassDispatchers() string {
-	var b strings.Builder
+	file := jen.NewFile("")
 	for _, ifaceName := range g.sortedTypeclassNames() {
 		iface := g.pkg.Interfaces[ifaceName]
+		hktSet := g.hktParams(iface)
+		hasHKT := len(hktSet) > 0
 		for _, m := range iface.Methods {
 			retType := typeStringReturn(m.Ret, nil)
-			b.WriteString("var ")
-			b.WriteString(dispatchRegistryName(ifaceName, m.Name))
-			b.WriteString(" = map[string]func(")
-			for i := range m.Params {
-				if i > 0 {
-					b.WriteString(", ")
-				}
-				b.WriteString("any")
+			// Generate dispatch registry variable
+			registryName := dispatchRegistryName(ifaceName, m.Name)
+			paramAnyTypes := make([]jen.Code, 0, len(m.Params))
+			for range m.Params {
+				paramAnyTypes = append(paramAnyTypes, jen.Id("any"))
 			}
-			b.WriteString(")")
+			mapType := jen.Index(jen.String()).Func().Params(paramAnyTypes...)
 			if retType != "" {
-				b.WriteString(" ")
-				b.WriteString(retType)
+				mapType = mapType.Add(jen.Id(retType))
 			}
-			b.WriteString("{}\n")
-			b.WriteString("func ")
-			b.WriteString(dispatchFuncName(ifaceName, m.Name))
-			b.WriteString("(")
-			for i, p := range m.Params {
-				if i > 0 {
-					b.WriteString(", ")
-				}
-				b.WriteString(p.Name)
-				b.WriteString(" any")
-			}
-			b.WriteString(")")
-			if retType != "" {
-				b.WriteString(" ")
-				b.WriteString(retType)
-			}
-			b.WriteString(" {\n")
-			b.WriteString("\tkey := ")
-			b.WriteString(dispatchKeyExpr(m.Params, nil))
-			b.WriteString("\n")
-			b.WriteString("\tif fn, ok := ")
-			b.WriteString(dispatchRegistryName(ifaceName, m.Name))
-			b.WriteString("[key]; ok {\n")
-			if retType != "" {
-				b.WriteString("\t\treturn fn(")
-				for i, p := range m.Params {
-					if i > 0 {
-						b.WriteString(", ")
+			file.Var().Id(registryName).Op("=").Make(mapType)
+
+			// Generate dispatch function
+			fn := jen.Func().Id(dispatchFuncName(ifaceName, m.Name))
+			if hasHKT {
+				fn = fn.IndexFunc(func(gg *jen.Group) {
+					for i, tp := range iface.TypeParams {
+						if i > 0 {
+							gg.Add(jen.Op(","))
+						}
+						gg.Add(jen.Id(tp), jen.Id("any"))
 					}
-					b.WriteString(p.Name)
+				})
+			}
+			params := make([]jen.Code, 0, len(m.Params))
+			for _, p := range m.Params {
+				if len(params) > 0 {
+					params = append(params, jen.Op(","))
 				}
-				b.WriteString(")\n\t}\n")
-			} else {
-				b.WriteString("\t\tfn(")
-				for i, p := range m.Params {
-					if i > 0 {
-						b.WriteString(", ")
+				params = append(params, jen.Id(p.Name), jen.Id("any"))
+			}
+			fn = fn.Params(params...)
+			if retType != "" {
+				fn = fn.Add(jen.Id(retType))
+			}
+
+			// Build function body
+			bodyBlock := jen.BlockFunc(func(b *jen.Group) {
+				// key := dispatchKeyExpr
+				keyExpr := dispatchKeyExpr(m.Params, nil)
+				b.Add(jen.Id("key").Op(":=").Id(keyExpr))
+
+				// if fn, ok := registry[key]; ok { ... }
+				ifBlock := jen.If(
+					jen.Id("fn").Op(":=").Id(registryName).Index(jen.Id("key")),
+					jen.Id("ok"),
+				).BlockFunc(func(ib *jen.Group) {
+					callArgs := make([]jen.Code, 0, len(m.Params))
+					for i, p := range m.Params {
+						if i > 0 {
+							callArgs = append(callArgs, jen.Op(","))
+						}
+						callArgs = append(callArgs, jen.Id(p.Name))
 					}
-					b.WriteString(p.Name)
+					if retType != "" {
+						ib.Add(jen.Return(jen.Id("fn").Call(callArgs...)))
+					} else {
+						ib.Add(jen.Id("fn").Call(callArgs...))
+						ib.Add(jen.Return())
+					}
+				})
+				b.Add(ifBlock)
+
+				// panic("missing typeclass implementation")
+				b.Add(jen.Id("panic").Call(jen.Lit("missing typeclass implementation")))
+
+				if retType == "" {
+					b.Add(jen.Return())
 				}
-				b.WriteString(")\n\t\treturn\n\t}\n")
-			}
-			b.WriteString("\tpanic(\"missing typeclass implementation\")\n")
-			if retType == "" {
-				b.WriteString("\treturn\n")
-			}
-			b.WriteString("}\n\n")
+			})
+			fn.Block(bodyBlock)
+			file.Add(fn)
+			file.Line()
 		}
 	}
-	return b.String()
+	var out bytes.Buffer
+	if err := file.Render(&out); err != nil {
+		return ""
+	}
+	return out.String()
 }
 
 func (p *Package) sortedImports() []importSpec {
@@ -169,136 +186,129 @@ func (p *Package) sortedImports() []importSpec {
 	return imports
 }
 
-func (g *generator) genEnum(d *EnumDecl) string {
-	var b strings.Builder
-	typeParams := genTypeParams(d.TypeParams)
-	typeArgs := typeArgList(d.TypeParams)
-	b.WriteString("type ")
-	b.WriteString(d.Name)
-	b.WriteString(typeParams)
-	b.WriteString(" interface{ is")
-	b.WriteString(d.Name)
-	b.WriteString("() }\n")
-	for _, v := range d.Variants {
-		tname := variantGoTypeName(d.Name, v.Name)
-		b.WriteString("type ")
-		b.WriteString(tname)
-		b.WriteString(typeParams)
-		b.WriteString(" struct {\n")
-		for i := range v.Fields {
-			b.WriteString("\tF")
-			b.WriteString(strconv.Itoa(i))
-			b.WriteString(" ")
-			b.WriteString(g.goType(v.Fields[i].Type, typeParamSet(d.TypeParams)))
-			b.WriteString("\n")
+func (g *generator) genHKTType() string {
+	needsHKT := false
+	for _, iface := range g.pkg.Interfaces {
+		hktSet := g.hktParams(iface)
+		if len(hktSet) > 0 {
+			needsHKT = true
+			break
 		}
-		b.WriteString("}\n")
-		b.WriteString("func (")
-		b.WriteString(tname)
-		b.WriteString(typeArgList(d.TypeParams))
-		b.WriteString(") is")
-		b.WriteString(d.Name)
-		b.WriteString("() {}\n")
 	}
-	for _, v := range d.Variants {
-		tname := variantGoTypeName(d.Name, v.Name)
-		b.WriteString("func ")
-		b.WriteString(v.Name)
-		b.WriteString(typeParams)
-		b.WriteString("(")
-		if len(v.Fields) > 0 {
-			args := make([]string, 0, len(v.Fields))
-			for i, f := range v.Fields {
-				args = append(args, fmt.Sprintf("a%d %s", i, g.goType(f.Type, typeParamSet(d.TypeParams))))
-			}
-			b.WriteString(strings.Join(args, ", "))
-		}
-		b.WriteString(") ")
-		b.WriteString(d.Name)
-		b.WriteString(typeArgs)
-		b.WriteString(" {\n")
-		b.WriteString("\treturn ")
-		b.WriteString(tname)
-		b.WriteString(typeArgs)
-		b.WriteString("{")
-		for i := range v.Fields {
-			if i > 0 {
-				b.WriteString(", ")
-			}
-			b.WriteString(fmt.Sprintf("F%d: a%d", i, i))
-		}
-		b.WriteString("}\n}\n")
+	if !needsHKT {
+		return ""
 	}
-	b.WriteString("\n")
-	return b.String()
+	file := jen.NewFile("")
+	file.Type().Id("HKTType").Id("any")
+	file.Type().Id("HKT1").Index(jen.Id("F").Id("any")).Interface(jen.Id("HKT1Impl").Params(jen.Id("F")))
+	file.Type().Id("HKT2").Index(jen.Id("A").Id("any")).Interface(jen.Id("HKT2Impl").Params(jen.Id("A")))
+	file.Type().Id("HKT").Index(jen.Id("F").Id("any"), jen.Id("A").Id("any")).Interface(
+		jen.Id("HKT1").Index(jen.Id("F")),
+		jen.Id("HKT2").Index(jen.Id("A")),
+	)
+	return file.GoString() + "\n"
 }
 
-func (g *generator) genStruct(d *StructDecl) string {
-	var b strings.Builder
-	b.WriteString("type ")
-	b.WriteString(d.Name)
-	b.WriteString(genTypeParams(d.TypeParams))
-	b.WriteString(" struct {\n")
+func (g *generator) hktParams(iface *InterfaceDecl) map[string]struct{} {
+	set := make(map[string]struct{})
+	validParams := typeParamSet(iface.TypeParams)
+	for _, m := range iface.Methods {
+		for _, p := range m.Params {
+			g.collectHKTTypeNames(p.Type, set, validParams)
+		}
+		g.collectHKTTypeNames(m.Ret, set, validParams)
+	}
+	return set
+}
+
+func (g *generator) collectHKTTypeNames(t TypeExpr, set map[string]struct{}, validParams map[string]struct{}) {
+	switch tt := t.(type) {
+	case *NamedType:
+		if validParams != nil && len(tt.Args) > 0 {
+			if _, ok := validParams[tt.Name]; ok {
+				set[tt.Name] = struct{}{}
+			}
+		}
+		for _, a := range tt.Args {
+			g.collectHKTTypeNames(a, set, validParams)
+		}
+	case *FuncType:
+		for _, p := range tt.Params {
+			g.collectHKTTypeNames(p, set, validParams)
+		}
+		g.collectHKTTypeNames(tt.Ret, set, validParams)
+	}
+}
+
+func (g *generator) genEnum(d *EnumDecl) []jen.Code {
+	out := []jen.Code{
+		jen.Type().Id(d.Name).Interface(jen.Id("is" + d.Name).Params()),
+	}
+	for _, v := range d.Variants {
+		tname := variantGoTypeName(d.Name, v.Name)
+		fields := make([]jen.Code, 0, len(v.Fields))
+		for i, f := range v.Fields {
+			fields = append(fields, jen.Id("F"+strconv.Itoa(i)).Add(jenTypeExpr(f.Type)))
+		}
+		out = append(out,
+			jen.Type().Id(tname).Struct(fields...),
+			jen.Func().Params(jen.Id("_").Id(tname).Params()).Id("is"+d.Name).Params(),
+		)
+	}
+	return out
+}
+
+func (g *generator) genStruct(d *StructDecl) []jen.Code {
+	fields := make([]jen.Code, 0, len(d.Fields))
 	for _, f := range d.Fields {
-		b.WriteString("\t")
 		if f.Name == "embed" {
-			b.WriteString(g.goType(f.Type, typeParamSet(d.TypeParams)))
-			b.WriteString("\n")
+			fields = append(fields, jenTypeExpr(f.Type))
 			continue
 		}
-		b.WriteString(exportName(f.Name))
-		b.WriteString(" ")
-		b.WriteString(g.goType(f.Type, typeParamSet(d.TypeParams)))
-		b.WriteString("\n")
+		fields = append(fields, jen.Id(exportName(f.Name)).Add(jenTypeExpr(f.Type)))
 	}
-	b.WriteString("}\n\n")
-	return b.String()
+	return []jen.Code{jen.Type().Id(d.Name).Struct(fields...)}
 }
 
-func (g *generator) genInterface(d *InterfaceDecl) string {
-	var b strings.Builder
-	b.WriteString("type ")
-	b.WriteString(d.Name)
-	b.WriteString(genTypeParams(d.TypeParams))
-	b.WriteString(" interface {\n")
+func (g *generator) genInterface(d *InterfaceDecl) []jen.Code {
+	methods := make([]jen.Code, 0, len(d.Methods))
 	for _, m := range d.Methods {
-		b.WriteString("\t")
-		b.WriteString(m.Name)
-		b.WriteString("(")
-		for i, p := range m.Params {
-			if i > 0 {
-				b.WriteString(", ")
-			}
-			b.WriteString(p.Name)
-			b.WriteString(" ")
-			b.WriteString(g.goType(p.Type, typeParamSet(d.TypeParams)))
+		params := make([]jen.Code, 0, len(m.Params))
+		for _, p := range m.Params {
+			params = append(params, jen.Id(p.Name).Add(jenTypeExpr(p.Type)))
 		}
-		b.WriteString(") ")
-		b.WriteString(g.goReturnType(m.Ret, typeParamSet(d.TypeParams)))
-		b.WriteString("\n")
+		methods = append(methods, jen.Id(m.Name).Params(params...).Add(jenTypeExpr(m.Ret)))
 	}
-	b.WriteString("}\n\n")
-	return b.String()
+	return []jen.Code{jen.Type().Id(d.Name).Interface(methods...)}
 }
 
 func (g *generator) genImpl(d *ImplDecl) (string, error) {
-	iface := g.pkg.Interfaces[d.Name]
-	if iface == nil {
-		return "", common.ErrorAtPos(d.Line, d.Column, "impl %s: missing interface declaration", d.Name)
+	ifaceName := d.InterfaceName
+	if ifaceName == "" {
+		ifaceName = d.Name
 	}
-	if len(iface.TypeParams) != len(d.TypeArgs) {
-		return "", common.ErrorAtPos(d.Line, d.Column, "impl %s: type arity mismatch", d.Name)
+	iface := g.pkg.Interfaces[ifaceName]
+	if iface == nil {
+		return "", common.ErrorAtPos(d.Line, d.Column, "impl %s: missing interface declaration", ifaceName)
+	}
+	typeArgs := d.InterfaceArgs
+	if len(typeArgs) == 0 {
+		typeArgs = d.TypeArgs
+	}
+	if len(iface.TypeParams) != len(typeArgs) {
+		return "", common.ErrorAtPos(d.Line, d.Column, "impl %s: type arity mismatch", ifaceName)
 	}
 	subst := map[string]string{}
 	for i, tp := range iface.TypeParams {
-		subst[tp] = g.goType(d.TypeArgs[i], nil)
+		subst[tp] = g.goType(typeArgs[i], nil)
 	}
-	typeKey := g.implTypeKey(d.TypeArgs)
-	var b strings.Builder
+	typeKey := g.implTypeKey(typeArgs)
 	methodBodies := map[string]*FuncDecl{}
 	for _, m := range d.Methods {
 		methodBodies[m.Name] = m
 	}
+
+	var allCode []jen.Code
 	for _, sig := range iface.Methods {
 		method := methodBodies[sig.Name]
 		bodyExpr := sig.Body
@@ -317,108 +327,121 @@ func (g *generator) genImpl(d *ImplDecl) (string, error) {
 			typeParams:      map[string]struct{}{},
 			constraintFuncs: map[string]string{},
 			retType:         typeStringReturn(ret, subst),
-			currentImpl:     d.Name,
+			currentImpl:     ifaceName,
 		}
-		b.WriteString("func ")
-		b.WriteString(helperFuncName(sig.Name, typeKey))
-		b.WriteString("(")
-		for i, p := range params {
-			if i > 0 {
-				b.WriteString(", ")
+
+		// Build helper function signature
+		fn := jen.Func().Id(helperFuncName(sig.Name, typeKey))
+		paramList := make([]jen.Code, 0, len(params))
+		for _, p := range params {
+			if len(paramList) > 0 {
+				paramList = append(paramList, jen.Op(","))
 			}
 			goType := typeString(p.Type, subst)
-			b.WriteString(p.Name)
-			b.WriteString(" ")
-			b.WriteString(goType)
+			paramList = append(paramList, jen.Id(p.Name), jen.Id(goType))
 			ctx.locals[p.Name] = goType
 			ctx.sourceTypes[p.Name] = typeString(p.Type, subst)
 			ctx.bindings[p.Name] = p.Name
 			ctx.mutable[p.Name] = false
 		}
+		fn = fn.Params(paramList...)
+
 		retType := typeStringReturn(ret, subst)
-		b.WriteString(") ")
-		b.WriteString(retType)
-		b.WriteString(" {\n")
-		if bodyExpr == nil {
-			if retType == "" {
-				b.WriteString("\treturn\n")
-			} else {
-				b.WriteString("\tpanic(\"unimplemented\")\n")
-			}
-		} else {
-			expr, exprType, err := g.translateExpr(bodyExpr, ctx, retType)
-			if err != nil {
-				return "", err
-			}
-			if retType == "" {
-				g.writeUnitBody(&b, expr, exprType)
-			} else {
-				b.WriteString("\treturn ")
-				b.WriteString(expr)
-				b.WriteString("\n")
-			}
-		}
-		b.WriteString("}\n")
-		b.WriteString("func init() {\n")
-		b.WriteString("\t")
-		b.WriteString(dispatchRegistryName(d.Name, sig.Name))
-		b.WriteString("[")
-		b.WriteString(strconv.Quote(g.implDispatchKey(sig.Params, subst)))
-		b.WriteString("] = func(")
-		for i, p := range sig.Params {
-			if i > 0 {
-				b.WriteString(", ")
-			}
-			b.WriteString(p.Name)
-			b.WriteString(" any")
-		}
-		b.WriteString(")")
 		if retType != "" {
-			b.WriteString(" ")
-			b.WriteString(retType)
+			fn = fn.Add(jen.Id(retType))
 		}
-		b.WriteString(" {\n")
-		for i, p := range sig.Params {
-			b.WriteString("\t\t")
-			b.WriteString(p.Name)
-			b.WriteString("Typed := ")
-			b.WriteString(p.Name)
-			b.WriteString(".(")
-			b.WriteString(typeString(p.Type, subst))
-			b.WriteString(")\n")
-			_ = i
-		}
-		if retType != "" {
-			b.WriteString("\t\treturn ")
-		} else {
-			b.WriteString("\t\t")
-		}
-		b.WriteString(helperFuncName(sig.Name, typeKey))
-		b.WriteString("(")
-		for i, p := range sig.Params {
-			if i > 0 {
-				b.WriteString(", ")
+
+		// Build function body
+		bodyBlock := jen.BlockFunc(func(b *jen.Group) {
+			if bodyExpr == nil {
+				if retType == "" {
+					b.Add(jen.Return())
+				} else {
+					b.Add(jen.Id("panic").Call(jen.Lit("unimplemented")))
+				}
+			} else {
+				expr, _, err := g.translateExpr(bodyExpr, ctx, retType)
+				if err != nil {
+					return
+				}
+				unitCode := codeString(expr)
+				if retType == "" {
+					// Unit body: write expression without return
+					if unitCode != "" {
+						b.Add(jen.Id(unitCode))
+					}
+					b.Add(jen.Return())
+				} else {
+					b.Add(jen.Return(jen.Id(unitCode)))
+				}
 			}
-			b.WriteString(p.Name)
-			b.WriteString("Typed")
-		}
-		b.WriteString(")\n")
-		if retType == "" {
-			b.WriteString("\t\treturn\n")
-		}
-		b.WriteString("\t}\n")
-		b.WriteString("}\n")
+		})
+		fn = fn.Block(bodyBlock)
+		allCode = append(allCode, fn)
+
+		// Generate init function for dispatch registration
+		initBlock := jen.BlockFunc(func(ib *jen.Group) {
+			// Type the parameters
+			for _, p := range sig.Params {
+				goType := typeString(p.Type, subst)
+				ib.Add(
+					jen.Id(p.Name + "Typed").
+						Op(":=").
+						Id(p.Name).
+						Assert(jen.Id(goType)),
+				)
+			}
+			// Build call arguments
+			callArgs := make([]jen.Code, 0, len(sig.Params))
+			for _, p := range sig.Params {
+				callArgs = append(callArgs, jen.Id(p.Name+"Typed"))
+			}
+			// Registry assignment
+			registryAssign := jen.Id(dispatchRegistryName(ifaceName, sig.Name)).
+				Index(jen.Lit(g.implDispatchKey(sig.Params, subst)))
+
+			if retType != "" {
+				ib.Add(registryAssign.Op("=").Func().ParamsFunc(func(gr *jen.Group) {
+					for i, p := range sig.Params {
+						if i > 0 {
+							gr.Add(jen.Op(","))
+						}
+						gr.Add(jen.Id(p.Name), jen.Id("any"))
+					}
+				}).BlockFunc(func(gr *jen.Group) {
+					gr.Add(jen.Return(jen.Id(helperFuncName(sig.Name, typeKey)).Call(callArgs...)))
+				}))
+			} else {
+				ib.Add(registryAssign.Op("=").Func().ParamsFunc(func(gr *jen.Group) {
+					for i, p := range sig.Params {
+						if i > 0 {
+							gr.Add(jen.Op(","))
+						}
+						gr.Add(jen.Id(p.Name), jen.Id("any"))
+					}
+				}).BlockFunc(func(gr *jen.Group) {
+					gr.Add(jen.Id(helperFuncName(sig.Name, typeKey)).Call(callArgs...))
+					gr.Add(jen.Return())
+				}))
+			}
+		})
+		allCode = append(allCode, jen.Func().Id("init").Block(initBlock))
 	}
-	b.WriteString("\n")
-	return b.String(), nil
+
+	// Render all code into a single file
+	file := jen.NewFile("")
+	for _, c := range allCode {
+		file.Add(c)
+		file.Line()
+	}
+	var out bytes.Buffer
+	if err := file.Render(&out); err != nil {
+		return "", err
+	}
+	return out.String(), nil
 }
 
 func (g *generator) genFunc(d *FuncDecl) (string, error) {
-	var b strings.Builder
-	b.WriteString("func ")
-	b.WriteString(d.Name)
-	b.WriteString(genTypeParams(d.TypeParams))
-	b.WriteString("(")
 	ctx := &exprCtx{
 		locals:           map[string]string{},
 		bindings:         map[string]string{},
@@ -429,14 +452,8 @@ func (g *generator) genFunc(d *FuncDecl) (string, error) {
 		typeclassMethods: map[string][]typeclassBinding{},
 		retType:          g.goReturnType(d.Ret, typeParamSet(d.TypeParams)),
 	}
-	for i, p := range d.Params {
-		if i > 0 {
-			b.WriteString(", ")
-		}
+	for _, p := range d.Params {
 		goType := g.goType(p.Type, typeParamSet(d.TypeParams))
-		b.WriteString(p.Name)
-		b.WriteString(" ")
-		b.WriteString(goType)
 		ctx.locals[p.Name] = goType
 		ctx.sourceTypes[p.Name] = goType
 		ctx.bindings[p.Name] = p.Name
@@ -490,48 +507,85 @@ func (g *generator) genFunc(d *FuncDecl) (string, error) {
 			}
 		}
 	}
-	for _, methodName := range constraintOrder {
-		cp := constraintParams[methodName]
-		b.WriteString(", ")
-		b.WriteString(cp.name)
-		b.WriteString(" ")
-		b.WriteString(cp.typ)
-	}
 	retType := g.goReturnType(d.Ret, typeParamSet(d.TypeParams))
-	b.WriteString(")")
-	if retType != "" {
-		b.WriteString(" ")
-		b.WriteString(retType)
+	fn := jen.Func().Id(d.Name)
+	if len(d.TypeParams) > 0 {
+		fn = fn.IndexFunc(func(gg *jen.Group) {
+			for i, tp := range d.TypeParams {
+				if i > 0 {
+					gg.Add(jen.Op(","))
+				}
+				gg.Add(jen.Id(tp), jen.Id("any"))
+			}
+		})
 	}
-	b.WriteString(" {\n")
-	expr, exprType, err := g.translateExpr(d.Body, ctx, retType)
+	fn = fn.ParamsFunc(func(gr *jen.Group) {
+		first := true
+		for _, p := range d.Params {
+			if !first {
+				gr.Add(jen.Op(","))
+			}
+			first = false
+			gr.Add(jen.Id(p.Name), jen.Id(g.goType(p.Type, typeParamSet(d.TypeParams))))
+		}
+		for _, methodName := range constraintOrder {
+			cp := constraintParams[methodName]
+			if !first {
+				gr.Add(jen.Op(","))
+			}
+			first = false
+			gr.Add(jen.Id(cp.name), jen.Id(cp.typ))
+		}
+	})
+	if retType != "" {
+		fn = fn.Add(jen.Id(retType))
+	}
+
+	expr, _, err := g.translateExpr(d.Body, ctx, retType)
 	if err != nil {
 		return "", err
 	}
-	if retType == "" {
-		g.writeUnitBody(&b, expr, exprType)
-	} else {
-		b.WriteString("\treturn ")
-		b.WriteString(expr)
-		b.WriteString("\n")
+
+	// Build function body
+	bodyBlock := jen.BlockFunc(func(b *jen.Group) {
+		if retType == "" {
+			// Unit body: write expression without return
+			unitCode := codeString(expr)
+			if unitCode != "" {
+				b.Add(jen.Id(unitCode))
+			}
+			b.Add(jen.Return())
+		} else {
+			b.Add(jen.Return(jen.Id(codeString(expr))))
+		}
+	})
+	fn = fn.Block(bodyBlock)
+
+	var out bytes.Buffer
+	if err := fn.Render(&out); err != nil {
+		return "", err
 	}
-	b.WriteString("}\n\n")
-	return b.String(), nil
+	return out.String() + "\n", nil
 }
 
 func (g *generator) genHelpers() string {
-	return `
-func callAny(fn any, args ...any) any {
-	values := make([]reflect.Value, len(args))
-	for i, arg := range args {
-		values[i] = reflect.ValueOf(arg)
-	}
-	out := reflect.ValueOf(fn).Call(values)
-	if len(out) == 0 {
-		return nil
-	}
-	return out[0].Interface()
-}
-
-`
+	file := jen.NewFile("")
+	file.Func().Id("callAny").
+		Params(
+			jen.Id("fn").Id("any"),
+			jen.Id("args").Op("...").Id("any"),
+		).
+		Id("any").
+		Block(
+			jen.Id("values").Op(":=").Make(jen.Index().Qual("reflect", "Value"), jen.Len(jen.Id("args"))),
+			jen.For(jen.List(jen.Id("i"), jen.Id("arg")).Op(":=").Range().Id("args")).Block(
+				jen.Id("values").Index(jen.Id("i")).Op("=").Qual("reflect", "ValueOf").Call(jen.Id("arg")),
+			),
+			jen.Id("out").Op(":=").Qual("reflect", "ValueOf").Call(jen.Id("fn")).Dot("Call").Call(jen.Id("values")),
+			jen.If(jen.Len(jen.Id("out")).Op("==").Lit(0)).Block(
+				jen.Return(jen.Nil()),
+			),
+			jen.Return(jen.Id("out").Index(jen.Lit(0)).Dot("Interface").Call()),
+		)
+	return file.GoString() + "\n"
 }

@@ -2,28 +2,32 @@ package compiler
 
 import (
 	"fmt"
-	. "github.com/mygo-lang/mygo/internal/mygo/ast"
-	"github.com/mygo-lang/mygo/internal/mygo/common"
-	parserpkg "github.com/mygo-lang/mygo/internal/mygo/parser"
 	"go/types"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	. "github.com/mygo-lang/mygo/internal/mygo/ast"
+	"github.com/mygo-lang/mygo/internal/mygo/common"
+	parserpkg "github.com/mygo-lang/mygo/internal/mygo/parser"
 )
 
 func loadPreludeDecls() ([]Decl, error) {
 	_, filePath, _, ok := runtime.Caller(0)
 	if !ok {
-		return nil, fmt.Errorf("prelude.mysrc: unable to locate compiler source")
+		return nil, fmt.Errorf("prelude: unable to locate compiler source")
 	}
-	src, err := os.ReadFile(filepath.Join(filepath.Dir(filePath), "..", "prelude.mysrc"))
+	// helpers.go lives at internal/mygo/compiler/helpers.go
+	// project root is at:  ../..  from compiler/
+	candidate := filepath.Join(filepath.Dir(filePath), "..", "..", "..", "prelude", "prelude.mygo")
+	src, err := os.ReadFile(candidate)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("prelude: %w", err)
 	}
 	file, err := parserpkg.ParseFile(string(src))
 	if err != nil {
-		return nil, fmt.Errorf("prelude.mysrc: %w", err)
+		return nil, fmt.Errorf("prelude: %w", err)
 	}
 	return file.Decls, nil
 }

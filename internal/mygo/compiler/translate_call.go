@@ -33,19 +33,20 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 	}
 	if id, ok := n.Callee.(*IdentExpr); ok {
 		if st := g.pkg.Structs[id.Name]; st != nil && len(n.Args) == len(st.Fields) && len(st.Fields) > 0 && strings.HasPrefix(st.Fields[0].Name, "F") {
+			typeName := sanitizeIdent(id.Name)
 			var args []string
 			for i, a := range n.Args {
 				code, _, err := g.translateExpr(a, ctx, g.goType(st.Fields[i].Type, nil))
 				if err != nil {
 					return "", "", err
 				}
-				args = append(args, code)
+				args = append(args, codeString(code))
 			}
 			parts := make([]string, 0, len(args))
 			for i, arg := range args {
 				parts = append(parts, fmt.Sprintf("F%d: %s", i, arg))
 			}
-			return fmt.Sprintf("%s{%s}", id.Name, strings.Join(parts, ", ")), id.Name, nil
+			return fmt.Sprintf("%s{%s}", typeName, strings.Join(parts, ", ")), typeName, nil
 		}
 		if typ, ok := ctx.locals[id.Name]; ok && typ == "any" {
 			if code, ret, ok, err := g.translateAnyFuncCall(id.Name, n.Args, ctx); err != nil {
@@ -60,7 +61,7 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 				if err != nil {
 					return "", "", err
 				}
-				args = append(args, code)
+				args = append(args, codeString(code))
 			}
 			actualName := id.Name
 			if bound, ok := ctx.bindings[id.Name]; ok {
@@ -80,9 +81,9 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 				if err != nil {
 					return "", "", err
 				}
-				args = append(args, code)
+				args = append(args, codeString(code))
 			}
-			return fmt.Sprintf("%s(%s)", id.Name, strings.Join(args, ", ")), funcReturnType(typ), nil
+			return fmt.Sprintf("%s(%s)", sanitizeIdent(id.Name), strings.Join(args, ", ")), funcReturnType(typ), nil
 		}
 		if g.pkg.Funcs[id.Name] != nil {
 			fn := g.pkg.Funcs[id.Name]
@@ -93,7 +94,7 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 				if err != nil {
 					return "", "", err
 				}
-				args = append(args, code)
+					args = append(args, codeString(code))
 				_, typ, err := g.translateExpr(a, ctx, "")
 				if err != nil {
 					return "", "", err
@@ -101,7 +102,7 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 				argTypes = append(argTypes, typ)
 			}
 			subst := inferFuncTypeArgs(fn, argTypes, expected, ctx.typeParams)
-			callee := id.Name
+			callee := sanitizeIdent(id.Name)
 			if len(fn.TypeParams) > 0 && len(subst) == len(fn.TypeParams) {
 				var typeArgs []string
 				for _, tp := range fn.TypeParams {
@@ -160,7 +161,7 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 				if err != nil {
 					return "", "", err
 				}
-				args = append(args, code)
+				args = append(args, codeString(code))
 			}
 			actualName := id.Name
 			if bound, ok := ctx.bindings[id.Name]; ok {
@@ -184,7 +185,7 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (s
 		if err != nil {
 			return "", "", err
 		}
-		args = append(args, code)
+			args = append(args, codeString(code))
 	}
 	retType := expected
 	if parsedRet := funcReturnType(calleeType); parsedRet != "" {
@@ -210,21 +211,21 @@ func (g *generator) translateRefNewCall(args []Expr, ctx *exprCtx, expected stri
 		return "", "", err
 	}
 
-	if typ != "" {
-		if strings.HasPrefix(strings.TrimSpace(typ), "*") {
-			return code, typ, nil
+		if typ != "" {
+			if strings.HasPrefix(strings.TrimSpace(typ), "*") {
+				return codeString(code), typ, nil
+			}
+			if strings.HasPrefix(strings.TrimSpace(typ), "Ref[") && strings.HasSuffix(strings.TrimSpace(typ), "]") {
+				return codeString(code), typ, nil
+			}
+			return "&" + codeString(code), "*" + typ, nil
 		}
-		if strings.HasPrefix(strings.TrimSpace(typ), "Ref[") && strings.HasSuffix(strings.TrimSpace(typ), "]") {
-			return code, typ, nil
-		}
-		return "&" + code, "*" + typ, nil
-	}
 
-	if innerExpected != "" {
-		return "&" + code, "*" + innerExpected, nil
+		if innerExpected != "" {
+			return "&" + codeString(code), "*" + innerExpected, nil
+		}
+		return "&" + codeString(code), "", nil
 	}
-	return "&" + code, "", nil
-}
 
 func (g *generator) translateGoSelectorCall(alias, name string, args []Expr, ctx *exprCtx, expected string) (string, string, bool, error) {
 	path, ok := g.pkg.ImportAliases[alias]
@@ -246,7 +247,7 @@ func (g *generator) translateGoSelectorCall(alias, name string, args []Expr, ctx
 		if err != nil {
 			return "", "", false, err
 		}
-		argCodes = append(argCodes, code)
+			argCodes = append(argCodes, codeString(code))
 		argTypes = append(argTypes, typ)
 	}
 	variadic := len(sig.params) > 0 && strings.HasPrefix(sig.params[len(sig.params)-1], "...")
@@ -283,27 +284,7 @@ func (g *generator) translateGoSelectorCall(alias, name string, args []Expr, ctx
 		valueType := args[0]
 		okType := args[1]
 		retType := fmt.Sprintf("Result[%s, %s]", valueType, okType)
-		var b strings.Builder
-		b.WriteString("func() ")
-		b.WriteString(retType)
-		b.WriteString(" {\n")
-		b.WriteString("\tvalue, err := ")
-		b.WriteString(call)
-		b.WriteString("\n")
-		b.WriteString("\tif err != nil {\n")
-		b.WriteString("\t\treturn Err[")
-		b.WriteString(valueType)
-		b.WriteString(", ")
-		b.WriteString(okType)
-		b.WriteString("](err.Error())\n")
-		b.WriteString("\t}\n")
-		b.WriteString("\treturn Ok[")
-		b.WriteString(valueType)
-		b.WriteString(", ")
-		b.WriteString(okType)
-		b.WriteString("](value)\n")
-		b.WriteString("}()")
-		return b.String(), retType, true, nil
+		return fmt.Sprintf("func() %s {\n\tvalue, err := %s\n\tif err != nil {\n\t\treturn Err[%s, %s](err.Error())\n\t}\n\treturn Ok[%s, %s](value)\n}()", retType, call, valueType, okType, valueType, okType), retType, true, nil
 	}
 	return call, "", true, nil
 }
@@ -324,7 +305,7 @@ func (g *generator) translateGoMethodCall(base Expr, name string, args []Expr, c
 		if err != nil {
 			return "", "", false, err
 		}
-		argCodes = append(argCodes, code)
+			argCodes = append(argCodes, codeString(code))
 		argTypes = append(argTypes, typ)
 	}
 	variadic := len(methodSig.params) > 0 && strings.HasPrefix(methodSig.params[len(methodSig.params)-1], "...")
@@ -361,27 +342,7 @@ func (g *generator) translateGoMethodCall(base Expr, name string, args []Expr, c
 		valueType := args[0]
 		okType := args[1]
 		retType := fmt.Sprintf("Result[%s, %s]", valueType, okType)
-		var b strings.Builder
-		b.WriteString("func() ")
-		b.WriteString(retType)
-		b.WriteString(" {\n")
-		b.WriteString("\tvalue, err := ")
-		b.WriteString(call)
-		b.WriteString("\n")
-		b.WriteString("\tif err != nil {\n")
-		b.WriteString("\t\treturn Err[")
-		b.WriteString(valueType)
-		b.WriteString(", ")
-		b.WriteString(okType)
-		b.WriteString("](err.Error())\n")
-		b.WriteString("\t}\n")
-		b.WriteString("\treturn Ok[")
-		b.WriteString(valueType)
-		b.WriteString(", ")
-		b.WriteString(okType)
-		b.WriteString("](value)\n")
-		b.WriteString("}()")
-		return b.String(), retType, true, nil
+		return fmt.Sprintf("func() %s {\n\tvalue, err := %s\n\tif err != nil {\n\t\treturn Err[%s, %s](err.Error())\n\t}\n\treturn Ok[%s, %s](value)\n}()", retType, call, valueType, okType, valueType, okType), retType, true, nil
 	}
 	return call, goMethodReturnType(methodSig.ret), true, nil
 }

@@ -1,9 +1,11 @@
 package compiler
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
+	jen "github.com/dave/jennifer/jen"
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
 )
@@ -34,15 +36,17 @@ func (g *generator) bindLocal(ctx *exprCtx, source, typ string, mutable bool) st
 }
 
 func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) (string, string, error) {
-	var b strings.Builder
-	b.WriteString("func()")
-	if expected != "" {
-		b.WriteString(" ")
-		b.WriteString(expected)
+	returnExpected := expected
+	if returnExpected == "" {
+		returnExpected = ctx.retType
 	}
-	b.WriteString(" {\n")
+	b := jen.Func().Params()
+	if expected != "" {
+		b.Add(jenTypeExpr(&NamedType{Name: expected}))
+	}
 	child := ctx.child()
 	var lastWasExprStmt bool
+	var sawReturn bool
 	for i, stmt := range n.Stmts {
 		isLast := i == len(n.Stmts)-1
 		switch s := stmt.(type) {
@@ -61,54 +65,59 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 					line, col := common.NodePos(s)
 					return "", "", common.ErrorAtPos(line, col, "block must end with an expression returning %s", expected)
 				}
-				b.WriteString("\treturn ")
-				b.WriteString(code)
-				b.WriteString("\n")
+				b = b.Block(jen.Return(code))
 				continue
 			}
-			b.WriteString("\t")
 			if stmtIsStatementSafe(s.Expr) || typ == "" {
-				b.WriteString(code)
+				b = b.Block(code)
 			} else {
-				b.WriteString("_ = ")
-				b.WriteString(code)
+				b = b.Block(jen.Id("_"), jen.Op("=").Add(code))
 			}
-			b.WriteString("\n")
+		case *ReturnStmt:
+			sawReturn = true
+			if s.Value != nil {
+				code, typ, err := g.translateExpr(s.Value, child, returnExpected)
+				if err != nil {
+					return "", "", err
+				}
+				if returnExpected == "" {
+					line, col := common.NodePos(s)
+					return "", "", common.ErrorAtPos(line, col, "return with a value requires a non-unit function")
+				}
+				if typ == "" {
+					line, col := common.NodePos(s)
+					return "", "", common.ErrorAtPos(line, col, "return value must have type %s", returnExpected)
+				}
+				b = b.Block(jen.Return(code))
+			} else if returnExpected != "" {
+				line, col := common.NodePos(s)
+				return "", "", common.ErrorAtPos(line, col, "return requires a value of type %s", returnExpected)
+			}
 		case *LetStmt:
 			lastWasExprStmt = false
 			code, typ, err := g.translateExpr(s.Value, child, g.goType(s.Type, child.typeParams))
 			if err != nil {
 				return "", "", err
 			}
-			b.WriteString("\t")
 			if s.Name == "_" {
 				if stmtIsStatementSafe(s.Value) {
-					b.WriteString(code)
+					b = b.Block(code)
 				} else {
-					b.WriteString("_ = ")
-					b.WriteString(code)
+					b = b.Block(jen.Id("_"), jen.Op("=").Add(code))
 				}
 			} else {
 				actualName := g.bindLocal(child, s.Name, typ, s.Mutable)
 				bindType := typ
 				if s.Type != nil {
 					bindType = g.goType(s.Type, child.typeParams)
-					b.WriteString("var ")
-					b.WriteString(actualName)
-					b.WriteString(" ")
-					b.WriteString(bindType)
-					b.WriteString(" = ")
-					b.WriteString(code)
+					b = b.Block(jen.Var().Id(actualName).Add(jenTypeExpr(&NamedType{Name: bindType})).Op("=").Add(code))
 				} else {
-					b.WriteString(actualName)
-					b.WriteString(" := ")
-					b.WriteString(code)
+					b = b.Block(jen.Id(actualName), jen.Op(":=").Add(code))
 				}
 				child.locals[s.Name] = bindType
 				child.sourceTypes[s.Name] = bindType
 				child.bindings[s.Name] = actualName
 			}
-			b.WriteString("\n")
 		case *AssignStmt:
 			lastWasExprStmt = false
 			actualName, ok := child.bindings[s.Name]
@@ -123,63 +132,46 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 			if err != nil {
 				return "", "", err
 			}
-			b.WriteString("\t")
-			b.WriteString(actualName)
-			b.WriteString(" = ")
-			b.WriteString(code)
-			b.WriteString("\n")
+			b = b.Block(jen.Id(actualName), jen.Op("=").Add(code))
 		default:
 			lastWasExprStmt = false
 			line, col := common.NodePos(stmt)
 			return "", "", common.ErrorAtPos(line, col, "unsupported statement %#v", stmt)
 		}
 	}
-	if expected != "" && !lastWasExprStmt {
+	if expected != "" && !lastWasExprStmt && !sawReturn {
 		line, col := common.NodePos(n)
 		return "", "", common.ErrorAtPos(line, col, "block must end with an expression returning %s", expected)
 	}
-	b.WriteString("}()")
-	if expected != "" {
-		return b.String(), expected, nil
-	}
-	return b.String(), "", nil
+	return b.GoString(), expected, nil
 }
 
 func (g *generator) translateFuncLit(n *FuncLitExpr, outer *exprCtx) (string, string, error) {
 	retType := g.goReturnType(n.Ret, outer.typeParams)
-	var b strings.Builder
-	b.WriteString("func(")
+	b := jen.Func().Params()
 	child := outer.child()
 	child.retType = retType
 	for i, p := range n.Params {
 		if i > 0 {
-			b.WriteString(", ")
 		}
 		tp := g.goType(p.Type, outer.typeParams)
 		child.locals[p.Name] = tp
-		b.WriteString(p.Name)
-		b.WriteString(" ")
-		b.WriteString(tp)
+		b = b.Params(jen.Id(sanitizeIdent(p.Name)).Add(jenTypeExpr(&NamedType{Name: tp})))
 	}
-	b.WriteString(")")
 	if retType != "" {
-		b.WriteString(" ")
-		b.WriteString(retType)
+		b.Add(jenTypeExpr(&NamedType{Name: retType}))
 	}
-	b.WriteString(" {\n")
 	body, bodyType, err := g.translateExpr(n.Body, child, retType)
 	if err != nil {
 		return "", "", err
 	}
 	if retType == "" {
-		g.writeUnitBody(&b, body, bodyType)
+		b = b.Block(body)
 	} else {
-		b.WriteString("\treturn ")
-		b.WriteString(body)
-		b.WriteString("\n")
+		b = b.Block(jen.Return(body))
 	}
-	b.WriteString("}")
-	return b.String(), retType, nil
+	_ = bodyType
+	return b.GoString(), retType, nil
 }
 
 func (g *generator) translateIf(n *IfExpr, ctx *exprCtx, expected string) (string, string, error) {
@@ -208,34 +200,22 @@ func (g *generator) translateIf(n *IfExpr, ctx *exprCtx, expected string) (strin
 			resultType = elseType
 		}
 	}
-	var b strings.Builder
-	b.WriteString("func()")
+	b := jen.Func().Params()
 	if resultType != "" {
-		b.WriteString(" ")
-		b.WriteString(resultType)
+		b.Add(jenTypeExpr(&NamedType{Name: resultType}))
 	}
-	b.WriteString(" {\n")
-	b.WriteString("\tif ")
-	b.WriteString(cond)
-	b.WriteString(" {\n")
 	if resultType == "" {
-		g.writeUnitBody(&b, thenCode, thenType)
+		b = b.Block(jen.If(cond).Block(thenCode))
 	} else {
-		b.WriteString("\t\treturn ")
-		b.WriteString(thenCode)
-		b.WriteString("\n")
+		b = b.Block(jen.If(cond).Block(jen.Return(thenCode)))
 	}
-	b.WriteString("\t} else {\n")
 	if resultType == "" {
-		g.writeUnitBody(&b, elseCode, elseType)
+		b = b.Block(jen.If(cond).Block(elseCode))
 	} else {
-		b.WriteString("\t\treturn ")
-		b.WriteString(elseCode)
-		b.WriteString("\n")
+		b = b.Block(jen.If(cond).Block(jen.Return(elseCode)))
 	}
-	b.WriteString("\t}\n")
-	b.WriteString("}()")
-	return b.String(), resultType, nil
+	_, _, _ = thenType, elseType, cond
+	return b.GoString(), resultType, nil
 }
 
 func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string) (string, string, error) {
@@ -262,60 +242,66 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 			}
 		}
 	}
-	var b strings.Builder
-	b.WriteString("func()")
-	if expected != "" {
-		b.WriteString(" ")
-		b.WriteString(expected)
-	}
-	b.WriteString(" {\n")
-	if needsSwitchVar {
-		b.WriteString("\tswitch v := ")
-		b.WriteString(targetCode)
-		b.WriteString(".(type) {\n")
-	} else {
-		b.WriteString("\tswitch ")
-		b.WriteString(targetCode)
-		b.WriteString(".(type) {\n")
-	}
-	for _, c := range n.Cases {
-		pat, bindings, err := g.translatePattern(c.Pattern, enumDecl, enumArgs, "v", c.Body)
-		if err != nil {
-			return "", "", err
-		}
-		b.WriteString("\tcase ")
-		b.WriteString(pat)
-		b.WriteString(":\n")
-		child := ctx.child()
-		for name, info := range bindings {
-			child.locals[name] = info.Type
-			child.bindings[name] = info.Expr
-		}
-		body, bodyType, err := g.translateExpr(c.Body, child, expected)
-		if err != nil {
-			return "", "", err
-		}
-		if expected == "" {
-			b.WriteString("\t\t")
-			if bodyType == "" {
-				b.WriteString(body)
-			} else {
-				b.WriteString("_ = ")
-				b.WriteString(body)
-			}
-			b.WriteString("\n")
+
+	// Build switch statement body using Jennifer
+	switchBlock := jen.BlockFunc(func(b *jen.Group) {
+		if needsSwitchVar {
+			b.Add(jen.Id("v").Op(":=").Add(targetCode).Op(".").Id("type"))
 		} else {
-			b.WriteString("\t\treturn ")
-			b.WriteString(body)
-			b.WriteString("\n")
+			b.Add(jen.Switch().Add(targetCode).Op(".").Id("type"))
 		}
-	}
-	if expected == "" {
-		b.WriteString("\t}\n}()")
+		for _, c := range n.Cases {
+			pat, bindings, err := g.translatePattern(c.Pattern, enumDecl, enumArgs, "v", c.Body)
+			if err != nil {
+				return
+			}
+			child := ctx.child()
+			for name, info := range bindings {
+				child.locals[name] = info.Type
+				child.bindings[name] = info.Expr
+			}
+			body, bodyType, err := g.translateExpr(c.Body, child, expected)
+			if err != nil {
+				return
+			}
+			caseBlock := jen.BlockFunc(func(cb *jen.Group) {
+				if expected == "" {
+					if bodyType == "" {
+						cb.Add(body)
+					} else {
+						cb.Add(jen.Id("_").Op("=").Add(body))
+					}
+				} else {
+					cb.Add(jen.Return(body))
+				}
+			})
+			b.Add(jen.Case(jen.Id(pat)).Add(caseBlock))
+		}
+		if expected != "" {
+			b.Add(jen.Id("panic").Call(jen.Lit("unreachable")))
+		}
+	})
+
+	// Build the full switch expression
+	var switchExpr jen.Code
+	if needsSwitchVar {
+		switchExpr = jen.Func().Params().Block(
+			jen.Switch().Id("v").Block(switchBlock),
+		)
 	} else {
-		b.WriteString("\t}\n\tpanic(\"unreachable\")\n}()")
+		switchExpr = jen.Func().Params().Block(
+			jen.Switch().Add(targetCode).Block(switchBlock),
+		)
 	}
-	return b.String(), expected, nil
+
+	// Wrap in a file to render
+	file := jen.NewFile("")
+	file.Add(switchExpr)
+	var out bytes.Buffer
+	if err := file.Render(&out); err != nil {
+		return "", "", err
+	}
+	return out.String(), expected, nil
 }
 
 func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (string, string, error) {
@@ -323,98 +309,87 @@ func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (string, string, 
 	if err != nil {
 		return "", "", err
 	}
-	var b strings.Builder
-	b.WriteString("func() {\n")
-	b.WriteString("\tfor ")
-	b.WriteString(cond)
-	b.WriteString(" {\n")
-	child := ctx.child()
-	switch body := n.Body.(type) {
-	case *BlockExpr:
-		for _, stmt := range body.Stmts {
-			switch s := stmt.(type) {
-			case *ExprStmt:
-				code, typ, err := g.translateExpr(s.Expr, child, "")
-				if err != nil {
-					return "", "", err
-				}
-				b.WriteString("\t\t")
-				if stmtIsStatementSafe(s.Expr) || typ == "" {
-					b.WriteString(code)
-				} else {
-					b.WriteString("_ = ")
-					b.WriteString(code)
-				}
-				b.WriteString("\n")
-			case *LetStmt:
-				code, typ, err := g.translateExpr(s.Value, child, g.goType(s.Type, child.typeParams))
-				if err != nil {
-					return "", "", err
-				}
-				b.WriteString("\t\t")
-				if s.Name == "_" {
-					if stmtIsStatementSafe(s.Value) {
-						b.WriteString(code)
-					} else {
-						b.WriteString("_ = ")
-						b.WriteString(code)
+
+	// Build for loop body using Jennifer
+	forBlock := jen.BlockFunc(func(b *jen.Group) {
+		child := ctx.child()
+		switch body := n.Body.(type) {
+		case *BlockExpr:
+			for _, stmt := range body.Stmts {
+				switch s := stmt.(type) {
+				case *ExprStmt:
+					code, typ, err := g.translateExpr(s.Expr, child, "")
+					if err != nil {
+						return
 					}
-				} else {
-					actualName := g.bindLocal(child, s.Name, typ, s.Mutable)
-					if s.Type != nil {
-						b.WriteString("var ")
-						b.WriteString(actualName)
-						b.WriteString(" ")
-						b.WriteString(g.goType(s.Type, child.typeParams))
-						b.WriteString(" = ")
-						b.WriteString(code)
+					if stmtIsStatementSafe(s.Expr) || typ == "" {
+						b.Add(code)
 					} else {
-						b.WriteString(actualName)
-						b.WriteString(" := ")
-						b.WriteString(code)
+						b.Add(jen.Id("_").Op("=").Add(code))
 					}
+				case *LetStmt:
+					code, typ, err := g.translateExpr(s.Value, child, g.goType(s.Type, child.typeParams))
+					if err != nil {
+						return
+					}
+					if s.Name == "_" {
+						if stmtIsStatementSafe(s.Value) {
+							b.Add(code)
+						} else {
+							b.Add(jen.Id("_").Op("=").Add(code))
+						}
+					} else {
+						actualName := g.bindLocal(child, s.Name, typ, s.Mutable)
+						if s.Type != nil {
+							b.Add(jen.Var().Id(actualName).Add(jenTypeExpr(s.Type)).Op("=").Add(code))
+						} else {
+							b.Add(jen.Id(actualName).Op(":=").Add(code))
+						}
+					}
+				case *AssignStmt:
+					actualName, ok := child.bindings[s.Name]
+					if !ok {
+						return
+					}
+					if !child.mutable[actualName] {
+						return
+					}
+					targetType := child.locals[s.Name]
+					code, _, err := g.translateExpr(s.Value, child, targetType)
+					if err != nil {
+						return
+					}
+					b.Add(jen.Id(actualName).Op("=").Add(code))
+				default:
+					// Return error - this will be handled by the caller
+					b.Add(jen.Id("panic").Call(jen.Lit("unsupported statement")))
 				}
-				b.WriteString("\n")
-			case *AssignStmt:
-				actualName, ok := child.bindings[s.Name]
-				if !ok {
-					return "", "", common.ErrorAtPos(s.Line, s.Column, "unknown binding %q", s.Name)
-				}
-				if !child.mutable[actualName] {
-					return "", "", common.ErrorAtPos(s.Line, s.Column, "cannot assign to immutable binding %q", s.Name)
-				}
-				targetType := child.locals[s.Name]
-				code, _, err := g.translateExpr(s.Value, child, targetType)
-				if err != nil {
-					return "", "", err
-				}
-				b.WriteString("\t\t")
-				b.WriteString(actualName)
-				b.WriteString(" = ")
-				b.WriteString(code)
-				b.WriteString("\n")
-			default:
-				line, col := common.NodePos(stmt)
-				return "", "", common.ErrorAtPos(line, col, "unsupported statement %#v", stmt)
+			}
+		default:
+			code, typ, err := g.translateExpr(body, child, "")
+			if err != nil {
+				return
+			}
+			if stmtIsStatementSafe(body) || typ == "" {
+				b.Add(code)
+			} else {
+				b.Add(jen.Id("_").Op("=").Add(code))
 			}
 		}
-	default:
-		code, typ, err := g.translateExpr(body, child, "")
-		if err != nil {
-			return "", "", err
-		}
-		b.WriteString("\t\t")
-		if stmtIsStatementSafe(body) || typ == "" {
-			b.WriteString(code)
-		} else {
-			b.WriteString("_ = ")
-			b.WriteString(code)
-		}
-		b.WriteString("\n")
+	})
+
+	// Build the for loop
+	forLoop := jen.Func().Params().Block(
+		jen.For(jen.Id("_").Op(":=").Add(cond)).Block(forBlock),
+	)
+
+	var out bytes.Buffer
+	file := jen.NewFile("")
+	file.Add(forLoop)
+	if err := file.Render(&out); err != nil {
+		return "", "", err
 	}
-	b.WriteString("\t}\n")
-	b.WriteString("}()")
-	return b.String(), "", nil
+	return out.String(), "", nil
 }
 
 func (g *generator) translatePattern(p Pattern, enum *EnumDecl, enumArgs []string, switchVar string, body Expr) (string, map[string]bindingInfo, error) {

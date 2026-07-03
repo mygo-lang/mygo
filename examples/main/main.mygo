@@ -14,13 +14,13 @@ struct Node
   value: Int
 end
 
-impl Eq[Int64]
+impl Int64: Eq[Int64]
   func equals(left: Int64, right: Int64) -> Bool
     left == right
   end
 end
 
-impl Eq[String]
+impl String: Eq[String]
   func equals(left: String, right: String) -> Bool
     left == right
   end

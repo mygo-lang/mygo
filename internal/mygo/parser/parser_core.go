@@ -11,11 +11,50 @@ type parser struct {
 	toks   []token
 	pos    int
 	skipNL bool
-}
-
-func parseFile(src string) (*ast.File, error) {
-	p := newParser(src)
-	return p.parseFile()
+	err    error
+	result *ast.File
+	packageName   string
+	packageLine   int
+	packageColumn int
+	decls         []Decl
+	currentName   string
+	currentNameLine int
+	currentNameCol  int
+	currentType   TypeExpr
+	currentTypeLine int
+	currentTypeCol  int
+	currentTypeParams []string
+	currentParams []ast.Param
+	currentWhere []ast.Constraint
+	currentBlock []ast.Stmt
+	currentStmt ast.Stmt
+	currentExpr ast.Expr
+	currentLeftExpr ast.Expr
+	currentArgs []ast.Expr
+	currentMapKey ast.Expr
+	currentMapValue ast.Expr
+	currentMapEntries []ast.MapLitPair
+	currentSetElems []ast.Expr
+	currentCollectionHasPair bool
+	currentIfCond ast.Expr
+	currentIfThen ast.Expr
+	currentIfElse ast.Expr
+	currentWhileCond ast.Expr
+	currentWhileBody ast.Expr
+	currentSwitchTarget ast.Expr
+	currentSwitchCases []ast.SwitchCase
+	currentPattern ast.Pattern
+	currentStructFields []ast.StructLitField
+	currentStructTypeArgs []ast.TypeExpr
+	currentSliceElems []ast.Expr
+	expectTypeSuffix bool
+	expectStructTypeArgs bool
+	expectConstraintSuffix bool
+	currentEnum   *ast.EnumDecl
+	currentStruct *ast.StructDecl
+	currentInterface *ast.InterfaceDecl
+	currentFunc   *ast.FuncDecl
+	needFallback  bool
 }
 
 func parseFiles(srcs map[string]string) ([]*ast.File, error) {
@@ -43,7 +82,7 @@ func newParser(src string) *parser {
 	return &parser{toks: toks, skipNL: true}
 }
 
-func (p *parser) parseFile() (*ast.File, error) {
+func (p *parser) parseFileRD() (*ast.File, error) {
 	file := &ast.File{}
 	if p.peekKeyword("package") {
 		tok := p.next()
@@ -257,11 +296,49 @@ func (p *parser) parseImpl() (Decl, error) {
 	if err := p.expectKeyword("impl"); err != nil {
 		return nil, err
 	}
-	name, typeArgs, err := p.parseNameAndTypeArgs()
+	// Check for impl-level type params: impl[T] or impl[T, U]
+	var implTypeParams []string
+	if p.peekSym("[") {
+		_ = p.next() // consume "["
+		if !p.peekSym("]") {
+			for {
+				tp, err := p.expectIdent()
+				if err != nil {
+					return nil, err
+				}
+				implTypeParams = append(implTypeParams, tp)
+				if p.matchSym("]") {
+					break
+				}
+				if err := p.expectSym(","); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	// Now we expect: Type : Interface
+	// Parse the type being implemented on
+	typeExpr, err := p.parseType()
+	if err != nil {
+		return nil, common.ErrorAtPos(start.line, start.col, "expected type after impl")
+	}
+	// Expect ":"
+	if err := p.expectSym(":"); err != nil {
+		return nil, err
+	}
+	// Parse the interface name and its args
+	ifaceName, ifaceArgs, err := p.parseNameAndTypeArgs()
 	if err != nil {
 		return nil, err
 	}
-	impl := &ImplDecl{Line: start.line, Column: start.col, Name: name, TypeArgs: typeArgs}
+	impl := &ImplDecl{
+		Line:          start.line,
+		Column:        start.col,
+		InterfaceName: ifaceName,
+		InterfaceArgs: ifaceArgs,
+		Type:          typeExpr,
+		TypeParams:    implTypeParams,
+	}
 	for !p.peekKeyword("end") && !p.peekEOF() {
 		fd, err := p.parseFuncDecl(false)
 		if err != nil {
@@ -334,7 +411,7 @@ func (p *parser) parseFuncDecl(allowEmpty bool) (*FuncDecl, error) {
 		}
 	}
 	if allowEmpty && (p.peekKeyword("end") || p.peekKeyword("func") || p.peekKeyword("enum") || p.peekKeyword("struct") || p.peekKeyword("interface") || p.peekKeyword("impl") || p.peekKeyword("package") || p.peekKeyword("import")) {
-		return &FuncDecl{Line: start.line, Column: start.col, Name: funcName, Params: params, Ret: ret, Where: where}, nil
+		return &FuncDecl{Line: start.line, Column: start.col, Name: funcName, TypeParams: typeParams, Params: params, Ret: ret, Where: where}, nil
 	}
 	body, err := p.parseExprUntilEnd()
 	if err != nil {
@@ -367,6 +444,15 @@ func (p *parser) parseConstraint() (string, []TypeExpr, error) {
 		}
 	}
 	return name, args, nil
+}
+
+// tryIdent peeks if the current token is an identifier and consumes it;
+// returns (name, true) on match, ("", false) otherwise.
+func (p *parser) tryIdent() (string, bool) {
+	if p.peek().kind == tokIdent {
+		return p.next().lit, true
+	}
+	return "", false
 }
 
 func (p *parser) parseParams() ([]Param, error) {
@@ -403,11 +489,20 @@ func (p *parser) parseNameAndTypeParams() (string, []string, error) {
 	if p.matchSym("[") {
 		if !p.matchSym("]") {
 			for {
-				param, err := p.expectIdent()
+				// Interface type params can be simple names (A) or
+				// higher-kinded types (C[A]).  Parse a full type expression
+				// and use its root name as the parameter name.
+				typ, err := p.parseType()
 				if err != nil {
 					return "", nil, err
 				}
-				params = append(params, param)
+				var paramName string
+				if nt, ok := typ.(*NamedType); ok {
+					paramName = nt.Name
+				} else {
+					return "", nil, common.ErrorAtPos(p.peek().line, p.peek().col, "expected type parameter name")
+				}
+				params = append(params, paramName)
 				if p.matchSym("]") {
 					break
 				}
@@ -456,6 +551,14 @@ func (p *parser) parseType() (TypeExpr, error) {
 		var params []TypeExpr
 		if !p.peekSym(")") {
 			for {
+				// Function params in type annotations may have names like "item: A"
+				// or be bare types like "A".  Try to consume an optional ident + ":".
+				if ident, ok := p.tryIdent(); ok {
+					if p.matchSym(":") {
+						// Named param: skip the name, parse the actual type
+						_ = ident
+					}
+				}
 				tp, err := p.parseType()
 				if err != nil {
 					return nil, err
@@ -509,27 +612,41 @@ func (p *parser) parseType() (TypeExpr, error) {
 		name += "." + part
 	}
 	var args []TypeExpr
-	// Check for [] suffix (slice shorthand: Int[] → Slice[Int]) BEFORE type args
-	if p.matchSym("[") {
-		if p.matchSym("]") {
-			// This was Int[] (not type args)
+	for {
+		// Check for [] suffix (slice shorthand: Int[] → Slice[Int]) BEFORE type args
+		if p.matchSym("[]") {
 			base := &NamedType{Line: start.line, Column: start.col, Name: name, Args: args}
-			return &NamedType{Line: start.line, Column: start.col, Name: "Slice", Args: []TypeExpr{base}}, nil
+			name = "Slice"
+			args = []TypeExpr{base}
+			continue
 		}
-		// Otherwise it's type args like Map[K, V]
-		for {
-			tp, err := p.parseType()
-			if err != nil {
-				return nil, err
-			}
-			args = append(args, tp)
+		if p.matchSym("[") {
 			if p.matchSym("]") {
-				break
+				// This was Int[] (not type args)
+				base := &NamedType{Line: start.line, Column: start.col, Name: name, Args: args}
+				name = "Slice"
+				args = []TypeExpr{base}
+				continue
 			}
-			if err := p.expectSym(","); err != nil {
-				return nil, err
+			// Otherwise it's type args like Map[K, V]
+			var nextArgs []TypeExpr
+			for {
+				tp, err := p.parseType()
+				if err != nil {
+					return nil, err
+				}
+				nextArgs = append(nextArgs, tp)
+				if p.matchSym("]") {
+					break
+				}
+				if err := p.expectSym(","); err != nil {
+					return nil, err
+				}
 			}
+			args = nextArgs
+			continue
 		}
+		break
 	}
 	return &NamedType{Line: start.line, Column: start.col, Name: name, Args: args}, nil
 }
