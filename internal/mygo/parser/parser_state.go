@@ -57,7 +57,10 @@ type parser struct {
 	currentSwitchTarget       ast.Expr
 	currentSwitchCases        []ast.SwitchCase
 	currentPattern            ast.Pattern
-	currentPatternArgs        []string
+	currentPatternArgs         []string
+	currentBindPatternElemsStack [][]ast.BindPattern
+	currentBindPatternElems     []ast.BindPattern
+	currentBindPattern          ast.BindPattern
 	currentStructFields       []ast.StructLitField
 	currentStructTypeArgs     []ast.TypeExpr
 	currentTypeArgStack       [][]ast.TypeExpr

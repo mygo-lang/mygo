@@ -150,6 +150,39 @@ func TestCompileDirSupportsTupleReturnValues(t *testing.T) {
 	}
 }
 
+func TestCompileDirSupportsTupleParameters(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+
+  func swap(pair: (Int, String)) -> String
+    pair.F1
+  end
+
+  func demo() -> String
+    let p = (1, "a")
+    swap(p)
+  end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"func swap(pair struct {",
+		"F0 int",
+		"F1 string",
+		"func demo() string {",
+		"p_",
+		"swap(p_",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
 func TestCompileDirSupportsTupleDestructuringLet(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
@@ -178,6 +211,78 @@ func TestCompileDirSupportsTupleDestructuringLet(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
 		}
+	}
+}
+
+func TestCompileDirSupportsNestedTupleDestructuringLet(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+
+  func nested() -> (Int, (String, Bool))
+    (1, ("a", true))
+  end
+
+  func demo() -> String
+    let (a, (b, c)) = nested()
+    b
+  end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"func nested() (int, struct {",
+		"F0 string",
+		"F1 bool",
+		"__tuple_",
+		"b_",
+		"c_",
+		"return b_",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
+func TestCompileDirSupportsIgnoredTupleBindings(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+
+  func pair() -> (Int, String)
+    (1, "a")
+  end
+
+  func nested() -> (Int, (String, Bool))
+    (1, ("a", true))
+  end
+
+  func demo() -> String
+    let (_, b) = pair()
+    let (x, (_, y)) = nested()
+    b
+  end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"b_",
+		"y_",
+		"return b_",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "let _") {
+		t.Fatalf("generated Go should not preserve source syntax\n--- got ---\n%s", got)
 	}
 }
 

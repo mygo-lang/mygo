@@ -329,19 +329,16 @@ func inferLetDecl(d *LetStmt, env TypeEnv, state *InferState, info *TypedInfo) (
 
 	info.ExprTypes[d.Value] = valType
 
-	if len(d.Names) > 0 {
+	if d.Bind != nil {
 		tuple, ok := valType.(TCon)
 		if !ok || tuple.Name != "Tuple" {
 			return nil, fmt.Errorf("binding %q: tuple destructuring requires a tuple value", d.Name)
 		}
-		if len(tuple.Args) != len(d.Names) {
-			return nil, fmt.Errorf("binding %q: tuple destructuring arity mismatch", d.Name)
+		newEnv, err := inferBindPattern(d.Bind, tuple.Args, s, env, info)
+		if err != nil {
+			return nil, fmt.Errorf("binding %q: %w", d.Name, err)
 		}
-		for i, name := range d.Names {
-			elemType := s.ApplyMT(tuple.Args[i])
-			env = env.Extend(name, &Scheme{Body: QualifiedType{Body: elemType}})
-			info.BindingSchemes[name] = env[name]
-		}
+		env = newEnv
 		return env, nil
 	}
 
@@ -357,6 +354,40 @@ func inferLetDecl(d *LetStmt, env TypeEnv, state *InferState, info *TypedInfo) (
 	}
 
 	return env, nil
+}
+
+func inferBindPattern(p BindPattern, args []MonoType, s Subst, env TypeEnv, info *TypedInfo) (TypeEnv, error) {
+	switch pat := p.(type) {
+	case *BindNamePattern:
+		if len(args) != 1 {
+			return nil, fmt.Errorf("pattern %q arity mismatch", pat.Name)
+		}
+		if pat.Name == "_" {
+			return env, nil
+		}
+		elemType := s.ApplyMT(args[0])
+		env = env.Extend(pat.Name, &Scheme{Body: QualifiedType{Body: elemType}})
+		info.BindingSchemes[pat.Name] = env[pat.Name]
+		return env, nil
+	case *BindTuplePattern:
+		if len(args) != len(pat.Elems) {
+			return nil, fmt.Errorf("tuple destructuring arity mismatch")
+		}
+		for i, elem := range pat.Elems {
+			nextArgs := []MonoType{args[i]}
+			if nested, ok := s.ApplyMT(args[i]).(TCon); ok && nested.Name == "Tuple" {
+				nextArgs = nested.Args
+			}
+			newEnv, err := inferBindPattern(elem, nextArgs, s, env, info)
+			if err != nil {
+				return nil, err
+			}
+			env = newEnv
+		}
+		return env, nil
+	default:
+		return nil, fmt.Errorf("unsupported binding pattern %T", p)
+	}
 }
 
 // ---------------------------------------------------------------------------

@@ -663,6 +663,8 @@ type
 	}
 	| LPAREN type {
 		p := yylex.(*parser)
+		p.currentTupleTypeElemsStack = append(p.currentTupleTypeElemsStack, p.currentTupleTypeElems)
+		p.currentTupleTypeElems = nil
 		p.currentTupleTypeElems = append(p.currentTupleTypeElems, p.currentType)
 	}
 	tuple_type_tail
@@ -726,8 +728,14 @@ tuple_type_tail
 	tuple_type_items RPAREN {
 		p := yylex.(*parser)
 		elems := append([]ast.TypeExpr(nil), p.currentTupleTypeElems...)
+		if len(p.currentTupleTypeElemsStack) > 0 {
+			idx := len(p.currentTupleTypeElemsStack) - 1
+			p.currentTupleTypeElems = p.currentTupleTypeElemsStack[idx]
+			p.currentTupleTypeElemsStack = p.currentTupleTypeElemsStack[:idx]
+		} else {
+			p.currentTupleTypeElems = nil
+		}
 		p.currentType = &ast.TupleType{Line: $1.line, Column: $1.col, Elems: elems}
-		p.currentTupleTypeElems = nil
 		yyVAL.node = p.currentType
 	}
 	;
@@ -1033,6 +1041,8 @@ primary
 	}
 	| LPAREN expr {
 		p := yylex.(*parser)
+		p.currentTupleElemsStack = append(p.currentTupleElemsStack, p.currentTupleElems)
+		p.currentTupleElems = nil
 		p.currentTupleElems = append(p.currentTupleElems, p.currentExpr)
 	}
 	paren_expr_tail
@@ -1054,8 +1064,14 @@ paren_expr_tail
 	tuple_expr_elems RPAREN {
 		p := yylex.(*parser)
 		elems := append([]ast.Expr(nil), p.currentTupleElems...)
+		if len(p.currentTupleElemsStack) > 0 {
+			idx := len(p.currentTupleElemsStack) - 1
+			p.currentTupleElems = p.currentTupleElemsStack[idx]
+			p.currentTupleElemsStack = p.currentTupleElemsStack[:idx]
+		} else {
+			p.currentTupleElems = nil
+		}
 		p.currentExpr = &ast.TupleLitExpr{Line: $1.line, Column: $1.col, Elems: elems}
-		p.currentTupleElems = nil
 	}
 	;
 
@@ -1459,10 +1475,10 @@ binding_stmt
 		p := yylex.(*parser)
 		p.currentStmt = &ast.LetStmt{Name: $2.lit, Mutable: false, Value: p.currentExpr}
 	}
-	| LET LPAREN tuple_bind_names RPAREN opt_type_annot '=' expr {
+	| LET bind_pattern opt_type_annot '=' expr {
 		p := yylex.(*parser)
-		p.currentStmt = &ast.LetStmt{Names: append([]string(nil), p.currentPatternArgs...), Mutable: false, Value: p.currentExpr}
-		p.currentPatternArgs = nil
+		p.currentStmt = &ast.LetStmt{Bind: p.currentBindPattern, Mutable: false, Value: p.currentExpr}
+		p.currentBindPattern = nil
 	}
 	| VAR IDENT opt_type_annot '=' expr {
 		p := yylex.(*parser)
@@ -1470,14 +1486,38 @@ binding_stmt
 	}
 	;
 
-tuple_bind_names
+bind_pattern
 	: IDENT {
 		p := yylex.(*parser)
-		p.currentPatternArgs = append(p.currentPatternArgs, $1.lit)
+		p.currentBindPattern = &ast.BindNamePattern{Line: $1.line, Column: $1.col, Name: $1.lit}
 	}
-	| tuple_bind_names COMMA IDENT {
+	| LPAREN {
 		p := yylex.(*parser)
-		p.currentPatternArgs = append(p.currentPatternArgs, $3.lit)
+		p.currentBindPatternElemsStack = append(p.currentBindPatternElemsStack, p.currentBindPatternElems)
+		p.currentBindPatternElems = nil
+	}
+	bind_pattern_list RPAREN {
+		p := yylex.(*parser)
+		elems := append([]ast.BindPattern(nil), p.currentBindPatternElems...)
+		if len(p.currentBindPatternElemsStack) > 0 {
+			idx := len(p.currentBindPatternElemsStack) - 1
+			p.currentBindPatternElems = p.currentBindPatternElemsStack[idx]
+			p.currentBindPatternElemsStack = p.currentBindPatternElemsStack[:idx]
+		} else {
+			p.currentBindPatternElems = nil
+		}
+		p.currentBindPattern = &ast.BindTuplePattern{Line: $1.line, Column: $1.col, Elems: elems}
+	}
+	;
+
+bind_pattern_list
+	: bind_pattern {
+		p := yylex.(*parser)
+		p.currentBindPatternElems = append(p.currentBindPatternElems, p.currentBindPattern)
+	}
+	| bind_pattern_list COMMA bind_pattern {
+		p := yylex.(*parser)
+		p.currentBindPatternElems = append(p.currentBindPatternElems, p.currentBindPattern)
 	}
 	;
 

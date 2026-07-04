@@ -75,6 +75,7 @@
 - `let` may omit its type annotation when the initializer provides enough information for inference.
 - `let _ = ...` is the supported discard form for return values that should not be bound.
 - Tuple values use anonymous structs in lowering, while `let (a, b) = expr` destructures a tuple return directly and `let c = expr` keeps the tuple as a single anonymous struct value.
+- Tuple destructuring supports nested patterns and `_` ignore slots, so `let (_, b) = expr` and `let (a, (_, c)) = expr` bind only the named leaves.
 - Pipe operators `<|` and `|>` are both supported in expression lowering.
 - Inline Go expressions use `go[T] { code: "..."; in x = expr }`, lower directly to generated Go, and may appear anywhere an expression is accepted. `go[Unit]` is valid only as a statement-position snippet or discarded binding.
 - Struct literals support a constructor-like form such as `ABC { aaa: 123 }`.

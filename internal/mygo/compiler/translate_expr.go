@@ -14,7 +14,7 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (jen.Co
 		expected = g.hmExprType(e)
 	}
 	if n, ok := e.(*TupleLitExpr); ok {
-		fields := make(jen.Dict, len(n.Elems))
+		fields := make([]jen.Code, 0, len(n.Elems))
 		fieldTypes := make([]string, 0, len(n.Elems))
 		for i, elem := range n.Elems {
 			code, typ, err := g.translateExpr(elem, ctx, "")
@@ -22,23 +22,18 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (jen.Co
 				return nil, "", err
 			}
 			fieldTypes = append(fieldTypes, typ)
-			fields[jen.Id("F"+strconv.Itoa(i))] = code
+			fields = append(fields, jen.Id("F"+strconv.Itoa(i)).Op(":").Add(code))
 		}
-		structFields := make(jen.Dict, len(n.Elems))
-		for i, typ := range fieldTypes {
-			if typ == "" {
-				typ = "any"
-			}
-			structFields[jen.Id("F"+strconv.Itoa(i))] = jen.Id(typ)
-		}
+		structFields := make([]jen.Code, 0, len(n.Elems))
 		parts := make([]string, 0, len(fieldTypes))
 		for i, typ := range fieldTypes {
 			if typ == "" {
 				typ = "any"
 			}
+			structFields = append(structFields, jen.List(jen.Id("F"+strconv.Itoa(i))).Add(jen.Id(typ)))
 			parts = append(parts, "F"+strconv.Itoa(i)+" "+typ)
 		}
-		return jen.Struct(structFields).Values(fields), "struct { " + strings.Join(parts, "; ") + " }", nil
+		return jen.Struct(structFields...).Values(fields...), "struct { " + strings.Join(parts, "; ") + " }", nil
 	}
 	code, typ, err := g.translateExprRaw(e, ctx, expected)
 	if err != nil {

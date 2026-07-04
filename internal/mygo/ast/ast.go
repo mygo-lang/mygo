@@ -342,6 +342,7 @@ type LetStmt struct {
 	Mutable bool
 	Name    string
 	Names   []string
+	Bind    BindPattern
 	Type    TypeExpr
 	Value   Expr
 }
@@ -374,6 +375,24 @@ type SwitchCase struct {
 }
 
 type Pattern interface{ patternNode() }
+
+type BindPattern interface{ bindPatternNode() }
+
+type BindNamePattern struct {
+	Line   int
+	Column int
+	Name   string
+}
+
+func (*BindNamePattern) bindPatternNode() {}
+
+type BindTuplePattern struct {
+	Line   int
+	Column int
+	Elems  []BindPattern
+}
+
+func (*BindTuplePattern) bindPatternNode() {}
 
 type VariantPattern struct {
 	Line   int

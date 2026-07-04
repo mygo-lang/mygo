@@ -118,7 +118,7 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 			}
 		case *LetStmt:
 			lastWasExprStmt = false
-			if len(s.Names) > 0 {
+			if s.Bind != nil {
 				code, typ, err := g.translateExpr(s.Value, child, "")
 				if err != nil {
 					return nil, "", err
@@ -131,9 +131,8 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 				}
 				tupleTmp := g.bindLocal(child, "__tuple", typ, s.Mutable)
 				stmtCodes = append(stmtCodes, jen.Id(tupleTmp).Op(":=").Add(code))
-				for i, name := range s.Names {
-					actualName := g.bindLocal(child, name, "", s.Mutable)
-					stmtCodes = append(stmtCodes, jen.Id(actualName).Op(":=").Id(tupleTmp).Dot("F"+strconv.Itoa(i)))
+				if err := g.emitBindPattern(&stmtCodes, child, tupleTmp, s.Bind, s.Mutable); err != nil {
+					return nil, "", common.ErrorAtPos(s.Line, s.Column, "tuple destructuring: %v", err)
 				}
 				continue
 			}
@@ -195,6 +194,42 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 	// Wrap all collected statements in a single Block and immediately call it.
 	b = b.Block(stmtCodes...).Call()
 	return b, expected, nil
+}
+
+func (g *generator) emitBindPattern(stmtCodes *[]jen.Code, ctx *exprCtx, source string, pat BindPattern, mutable bool) error {
+	switch p := pat.(type) {
+	case *BindNamePattern:
+		if p.Name == "_" {
+			return nil
+		}
+		actual := g.bindLocal(ctx, p.Name, "", mutable)
+		*stmtCodes = append(*stmtCodes, jen.Id(actual).Op(":=").Id(source))
+		_ = actual
+		return nil
+	case *BindTuplePattern:
+		for i, elem := range p.Elems {
+			next := jen.Id(source).Dot("F" + strconv.Itoa(i))
+			switch e := elem.(type) {
+			case *BindNamePattern:
+				if e.Name == "_" {
+					continue
+				}
+				actual := g.bindLocal(ctx, e.Name, "", mutable)
+				*stmtCodes = append(*stmtCodes, jen.Id(actual).Op(":=").Add(next))
+			case *BindTuplePattern:
+				tmp := g.bindLocal(ctx, "__tuple", "", mutable)
+				*stmtCodes = append(*stmtCodes, jen.Id(tmp).Op(":=").Add(next))
+				if err := g.emitBindPattern(stmtCodes, ctx, tmp, e, mutable); err != nil {
+					return err
+				}
+			default:
+				return fmt.Errorf("unsupported binding pattern %T", elem)
+			}
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported binding pattern %T", pat)
+	}
 }
 
 func (g *generator) translateFuncLit(n *FuncLitExpr, outer *exprCtx) (jen.Code, string, error) {
