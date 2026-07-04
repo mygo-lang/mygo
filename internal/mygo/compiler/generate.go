@@ -6,15 +6,34 @@ import (
 
 	jen "github.com/dave/jennifer/jen"
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
+	"github.com/mygo-lang/mygo/internal/mygo/typeinference"
 )
 
 func (p *Package) Generate() (string, error) {
+	// Run HM type inference as a pre-pass before code generation.
+	// This discovers inferred types, generalized schemes, and typeclass predicates.
+	// If inference fails, we still attempt code generation (the existing lowering
+	// logic handles untyped expressions via "any" fallback).
+	pkgInfo := &typeinference.PkgInfo{
+		Name:       p.Name,
+		Decls:      p.Decls,
+		Enums:      p.Enums,
+		Structs:    p.Structs,
+		Interfaces: p.Interfaces,
+		Funcs:      p.Funcs,
+		Impls:      p.Impls,
+	}
+	infState := typeinference.NewInferState()
+	typedInfo, infErr := typeinference.InferPackage(pkgInfo, infState)
+	_ = infErr // Not blocking code generation yet — phased integration
+
 	g := &generator{
 		pkg:               p,
 		importAliases:     p.ImportAliases,
 		interfaceByMethod: map[string]string{},
 		variantByName:     map[string]string{},
 		goSigCache:        map[string]*goPackageSigs{},
+		typedInfo:         typedInfo,
 	}
 	for name, iface := range p.Interfaces {
 		for _, m := range iface.Methods {

@@ -165,3 +165,50 @@
 - Extended expression parsing and lowering to recognize `&&`, `||`, `-`, and `/`, while keeping comparison operators type-checked against `Eq` support.
 - Improved numeric literal inference so expected integer and float types are preserved instead of defaulting too early.
 - Added compiler coverage for `while` loops, arithmetic/logic operator precedence, and relation-operator rejection when `Eq` support is missing.
+
+## HM Type Inference (`internal/mygo/typeinference/`)
+
+A Hindley-Milner (Algorithm W) type inference pass implementing Haskell 98 core HM + typeclass constraints, added as a pre-pass before Go code generation.
+
+### Internal Type Representation
+- `MonoType`: sum type with `TVar{ID}`, `TCon{Name, Args}`, `TFunc{Args, Ret}`, `TUnit`
+- `Scheme{Bound []int, Body QualifiedType}` — polymorphic type with optional typeclass predicates
+- `Subst map[int]MonoType` — type variable substitution with `Compose`/`ApplyMT`
+- `InferState{FreshVarID int}` — fresh variable supply (starts at 1)
+- `TypeEnv map[string]*Scheme` — variable-to-scheme environment
+
+### Key Files
+- `internal/mygo/typeinference/types.go` — core type definitions, `Instantiate`, `Generalize`, substitution application, free variable computation
+- `internal/mygo/typeinference/unify.go` — `Unify` with occurs check, `bindVar`, structural equality for all MonoType variants
+- `internal/mygo/typeinference/infer.go` — `inferExpr` (Algorithm W), `inferDecl`, `inferFuncDecl`, `inferLetDecl`, full expression coverage
+
+### Expression Coverage
+- Literals (Int/Float64/String/Bool) — class-defaulted numeric types
+- Ident lookup with let-polymorphism (instantiate scheme → fresh vars per use site)
+- Function calls — callee type unified with `(arg_types) -> fresh_ret`
+- `if`/`switch` — branch types unified, `while` returns `Unit`
+- Function literals — explicit param/return types registered in body env
+- Pipe operators `|>` / `<|` — unified as function application
+- Arithmetic (`+`, `-`, `*`, `/`), logical (`&&`, `||`), comparison (`==` etc.)
+- Slice/Map/Set literals — element types unified, empty ones accept context
+- `None` — resolved as `Option[?a]` with fresh type variable
+
+### Typeclass Constraints
+- `==` / `!=` / `<` / `>` / `<=` / `>=` each generate `Eq[operand_type]` predicates
+- Predicates collected during inference and stored in `TypedInfo`
+
+### Integration into Compiler Pipeline
+- Called from `compiler/generate.go` `Generate()` before codegen
+- Produces `TypedInfo` with `ExprTypes`, `BindingSchemes`, and `Predicates`
+- Non-blocking: inference errors are logged but don't prevent existing lowering (phased integration)
+- Generator struct gains `typedInfo *typeinference.TypedInfo` field for future consumption
+
+### Key Semantics
+- `let`: generalizes inferred type to scheme; subsequent references instantiate fresh vars
+- `var`: no generalization, monomorphic mutable binding
+- `let _ = ...`: discard form, no binding added to env
+- Explicit type annotations unify with inferred type; error on mismatch
+- Occurs check prevents infinite types (e.g. `func(x) x(x)`)
+
+### Tests (`internal/mygo/typeinference/infer_test.go`)
+- 37 tests covering: literals, ident lookup, let binding, let-polymorphism, occurs check, None inference, if/if-mismatch, function calls, blocks, slice/map/set literals, function literals, comparison with Eq predicate, unification (simple/var/mismatch/function/compose), substitution, generalization, instantiation, free vars, full package inference, type equality

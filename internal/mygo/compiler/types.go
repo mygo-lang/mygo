@@ -4,6 +4,7 @@ import (
 	"go/types"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
+	"github.com/mygo-lang/mygo/internal/mygo/typeinference"
 )
 
 type Package struct {
@@ -82,6 +83,7 @@ type generator struct {
 	goSigCache        map[string]*goPackageSigs
 	needsCallAny      bool
 	localSeq          int
+	typedInfo         *typeinference.TypedInfo
 }
 
 func (ctx *exprCtx) child() *exprCtx {
