@@ -211,63 +211,167 @@ func contains_list_t_t[T any](c List[T], item T, eq Eq[T]) bool {
 	}()
 }
 func each__t_t[T any](c []T, fn func(T)) {
-	eachSlice(c, fn)
+	for _, v := range c {
+		fn(v)
+	}
+
 	return
 }
 func map__t_t[T any, B any](c []T, fn func(T) B) []B {
-	return mapSlice(c, fn)
+	return func() []B {
+		out := make([]B, len(c))
+		for i, v := range c {
+			out[i] = fn(v)
+		}
+		return out
+	}()
+
 }
 func filter__t_t[T any](c []T, fn func(T) bool) []T {
-	return filterSlice(c, fn)
+	return func() []T {
+		out := make([]T, 0, len(c))
+		for _, v := range c {
+			if fn(v) {
+				out = append(out, v)
+			}
+		}
+		return out
+	}()
+
 }
 func fold__t_t[T any, B any](c []T, initial B, fn func(B, T) B) B {
-	return foldSlice(c, initial, fn)
+	return func() B {
+		acc := initial
+		for _, v := range c {
+			acc = fn(acc, v)
+		}
+		return acc
+	}()
+
 }
 func find__t_t[T any](c []T, fn func(T) bool) Option[*T] {
 	return func() Option[*T] {
-		return findSlice(c, fn)
+		for i := range c {
+			if fn(c[i]) {
+				return Some[*T](&c[i])
+			}
+		}
+		return None[*T]()
 	}()
+
 }
 func contains__t_t[T any](c []T, item T, eq Eq[T]) bool {
 	return func() bool {
-		return containsSlice(c, item, eq)
+		for _, v := range c {
+			if eq.equals(v, item) {
+				return true
+			}
+		}
+		return false
 	}()
+
 }
 func each_map_kv_v[K comparable, V any](c map[K]V, fn func(V)) {
-	eachMap(c, fn)
+	for _, v := range c {
+		fn(v)
+	}
+
 	return
 }
 func map_map_kv_v[K comparable, V any, B any](c map[K]V, fn func(V) B) map[K]B {
-	return mapMap(c, fn)
+	return func() map[K]B {
+		out := make(map[K]B, len(c))
+		for k, v := range c {
+			out[k] = fn(v)
+		}
+		return out
+	}()
+
 }
 func filter_map_kv_v[K comparable, V any](c map[K]V, fn func(V) bool) map[K]V {
-	return filterMap(c, fn)
+	return func() map[K]V {
+		out := make(map[K]V, len(c))
+		for k, v := range c {
+			if fn(v) {
+				out[k] = v
+			}
+		}
+		return out
+	}()
+
 }
 func fold_map_kv_v[K comparable, V any, B any](c map[K]V, initial B, fn func(B, V) B) B {
-	return foldMap(c, initial, fn)
+	return func() B {
+		acc := initial
+		for _, v := range c {
+			acc = fn(acc, v)
+		}
+		return acc
+	}()
+
 }
 func find_map_kv_v[K comparable, V any](c map[K]V, fn func(V) bool) Option[*V] {
 	return func() Option[*V] {
-		return findMap(c, fn)
+		for _, v := range c {
+			if fn(v) {
+				val := v
+				return Some[*V](&val)
+			}
+		}
+		return None[*V]()
 	}()
+
 }
 func each_map_astruct___a[A comparable](c map[A]struct{}, fn func(A)) {
-	eachSet(c, fn)
+	for v := range c {
+		fn(v)
+	}
+
 	return
 }
 func map_map_astruct___a[A comparable, B comparable](c map[A]struct{}, fn func(A) B) map[B]struct{} {
-	return mapSet(c, fn)
+	return func() map[B]struct{} {
+		out := make(map[B]struct{}, len(c))
+		for v := range c {
+			out[fn(v)] = struct{}{}
+		}
+		return out
+	}()
+
 }
 func filter_map_astruct___a[A comparable](c map[A]struct{}, fn func(A) bool) map[A]struct{} {
-	return filterSet(c, fn)
+	return func() map[A]struct{} {
+		out := make(map[A]struct{}, len(c))
+		for v := range c {
+			if fn(v) {
+				out[v] = struct{}{}
+			}
+		}
+		return out
+	}()
+
 }
 func fold_map_astruct___a[A comparable, B comparable](c map[A]struct{}, initial B, fn func(B, A) B) B {
-	return foldSet(c, initial, fn)
+	return func() B {
+		acc := initial
+		for v := range c {
+			acc = fn(acc, v)
+		}
+		return acc
+	}()
+
 }
 func find_map_astruct___a[A comparable](c map[A]struct{}, fn func(A) bool) Option[*A] {
 	return func() Option[*A] {
-		return findSet(c, fn)
+		for v := range c {
+			if fn(v) {
+				val := v
+				return Some[*A](&val)
+			}
+		}
+		return None[*A]()
 	}()
+
 }
 func typeKeyFromType(value string) string {
 	return value

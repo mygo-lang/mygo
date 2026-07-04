@@ -57,16 +57,17 @@ func (l *lexer) nextToken() token {
 	case NUMBER:
 		return token{kind: tokNumber, lit: string(l.TokenBytes(nil)), line: pos.Line, col: pos.Column}
 	case STRING:
+		if l.multilineContent != "" {
+			lit := l.multilineContent
+			l.multilineContent = ""
+			return token{kind: tokString, lit: lit, line: pos.Line, col: pos.Column}
+		}
 		raw := string(l.TokenBytes(nil))
 		var lit string
-		if strings.HasPrefix(raw, "\"\"\"") {
-			lit = raw[3 : len(raw)-3]
-		} else {
-			var err error
-			lit, err = strconv.Unquote(raw)
-			if err != nil {
-				lit = raw
-			}
+		var err error
+		lit, err = strconv.Unquote(raw)
+		if err != nil {
+			lit = raw
 		}
 		return token{kind: tokString, lit: lit, line: pos.Line, col: pos.Column}
 	case PACKAGE, IMPORT, ENUM, STRUCT, INTERFACE, IMPL, FUNC, IF, THEN, ELSE, SWITCH, CASE, END, USING, NOT, LET, VAR, EMBED, WHILE, RETURN, GO, IN, TYPE:
@@ -80,6 +81,7 @@ func (l *lexer) nextToken() token {
 }
 
 func (l *golexer) scanMultilineString() lex.Char {
+	var buf strings.Builder
 	for {
 		r := l.Next()
 		if r == lex.RuneEOF {
@@ -95,9 +97,18 @@ func (l *golexer) scanMultilineString() lex.Char {
 				break
 			}
 			if r2 == '"' && r3 == '"' {
+				// Consume the third " from lookahead so it is not left
+				// for the next token.
+				_ = l.Next()
 				break
 			}
+			buf.WriteRune(rune('"'))
+			buf.WriteRune(rune(r2))
+			buf.WriteRune(rune(r3))
+			continue
 		}
+		buf.WriteRune(rune(r))
 	}
+	l.multilineContent = buf.String()
 	return l.char(STRING)
 }

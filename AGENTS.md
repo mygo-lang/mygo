@@ -375,3 +375,16 @@ Per MIGRATE.md "新语句块方案", the yacc parser supports:
   - `parser_lex.l`: added `\"\"\"` lex rule that delegates to `scanMultilineString()` helper.
   - `parser_lexer.go`: added `scanMultilineString()` method that reads until closing `"""` (or EOF); `nextToken()` tokenizer marks triple-quoted input as `tokString` and strips the `"""` delimiters.
   - Standard single-line strings (using `strconv.Unquote`) are unchanged.
+
+### Multi-line String Lexer Bugfix & Prelude Inline Go Migration (2026-07-04)
+
+#### Multi-line String Tokenizer Fix
+- **`\"\"\"` rule ordering bug**: The triple-quote lex rule was placed **after** the single-quote `"([^\"\\]|\\.)*"` rule, so golex's DFA always matched single-quote first, never reaching the `\"\"\"` rule. Fixed by moving the `\"\"\"` rule above the single-quote rule in `parser_lex.l`.
+- **Lookahead leak**: `scanMultilineString()` left the third `"` of the closing `"""` un-consumed in `l.lookahead`, causing it to be returned as a stray `"` symbol token. Fixed by adding an extra `_ = l.Next()` after detecting `""""`.
+- **Content accumulation**: Rewrote `scanMultilineString()` to accumulate characters into a `strings.Builder` and store the result in a new `golexer.multilineContent` field. `nextToken()` uses this pre-built content directly instead of trying to strip `"""` from `TokenBytes` (which only captures the DFA-matched portion, not the custom-scanned content).
+- **Regenerated** `lex.yy.go` via `golex` for the rule reorder.
+
+#### Prelude: Inline Go Migration (Slice/Map/Set Enumerable)
+- Replaced all calls from `prelude.mygo` to `prelude_go.go` helper functions (`eachSlice`, `mapSlice`, `filterSlice`, `foldSlice`, `findSlice`, `containsSlice`, `eachMap`, `mapMap`, `filterMap`, `foldMap`, `findMap`, `eachSet`, `mapSet`, `filterSet`, `foldSet`, `findSet`) with inline Go code using the `go[T] { code: """...""" }` multi-line string syntax.
+- Each Enumerable method body now contains its complete Go implementation (IIFE with `for` loops, `make`, `append`, map/set construction) directly in MyGO source, eliminating the dependency on hand-written Go helpers for collection type iteration.
+- Generated Go (`zz_mygo.gen.go`) verified: `go vet` and `go build` both pass cleanly.

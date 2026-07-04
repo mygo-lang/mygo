@@ -18,6 +18,7 @@ const (
 
 type golexer struct {
 	*lex.Lexer
+	multilineContent string
 }
 
 func rune2Class(r rune) int {
@@ -65,6 +66,7 @@ unicodeLetter \x80
 [ \t\r]+
 \n                return l.char(NEWLINE)
 \#([^\n])*
+\"\"\" { return l.scanMultilineString() }
 \"([^\"\\]|\\.)*\"  return l.char(STRING)
 package            return l.char(PACKAGE)
 import             return l.char(IMPORT)
@@ -110,8 +112,6 @@ type               return l.char(TYPE)
 [\]]               return l.char(RBRACK)
 [{}]               return l.char(0)
 [-+*/!<>_=]        return l.char(int(c))
-
-\"\"\" { return l.scanMultilineString() }
 
 %%
 	if c, ok := l.Abort(); ok {

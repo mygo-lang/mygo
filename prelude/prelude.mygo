@@ -214,60 +214,258 @@ end
 # Generic impl for Slice[T]: Enumerable[Slice[T], T]
 impl[T] Slice[T]: Enumerable[Slice[T], T]
   func each(c: Slice[T], fn: func(T) -> Unit) -> Unit
-  eachSlice(c, fn)
+    go[Unit] {
+      code: """
+        for _, v := range {c} {
+            {fn}(v)
+        }
+      """
+      in c = c
+      in fn = fn
+    }
   end
   func map[B](c: Slice[T], fn: func(T) -> B) -> Slice[B]
-    mapSlice(c, fn)
+    go[Slice[B]] {
+      code: """
+        func() []{B} {
+            out := make([]{B}, len({c}))
+            for i, v := range {c} {
+                out[i] = {fn}(v)
+            }
+            return out
+        }()
+      """
+      in c = c
+      in fn = fn
+      type B = B
+    }
   end
   func filter(c: Slice[T], fn: func(T) -> Bool) -> Slice[T]
-    filterSlice(c, fn)
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+            out := make([]{T}, 0, len({c}))
+            for _, v := range {c} {
+                if {fn}(v) {
+                    out = append(out, v)
+                }
+            }
+            return out
+        }()
+      """
+      in c = c
+      in fn = fn
+      type T = T
+    }
   end
   func fold[B](c: Slice[T], initial: B, fn: func(B, T) -> B) -> B
-    foldSlice(c, initial, fn)
+    go[B] {
+      code: """
+        func() B {
+            acc := {initial}
+            for _, v := range {c} {
+                acc = {fn}(acc, v)
+            }
+            return acc
+        }()
+      """
+      in c = c
+      in initial = initial
+      in fn = fn
+    }
   end
   func find(c: Slice[T], fn: func(T) -> Bool) -> Option[Ref[T]]
-    return findSlice(c, fn)
+    go[Option[Ref[T]]] {
+      code: """
+        func() Option[*T] {
+            for i := range {c} {
+                if {fn}({c}[i]) {
+                    return Some[*T](&{c}[i])
+                }
+            }
+            return None[*T]()
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
   end
   func contains(c: Slice[T], item: T, eq: Eq[T]) -> Bool
-    return containsSlice(c, item, eq)
+    go[Bool] {
+      code: """
+        func() bool {
+            for _, v := range {c} {
+                if {eq}.equals(v, {item}) {
+                    return true
+                }
+            }
+            return false
+        }()
+      """
+      in c = c
+      in item = item
+      in eq = eq
+    }
   end
 end
 
 # Generic impl for Map[K, V]: impl[K, V] Map[K, V]: Enumerable[Map[K, V], V]
 impl[K, V] Map[K, V]: Enumerable[Map[K, V], V]
   func each(c: Map[K, V], fn: func(V) -> Unit) -> Unit
-    eachMap(c, fn)
+    go[Unit] {
+      code: """
+        for _, v := range {c} {
+            {fn}(v)
+        }
+      """
+      in c = c
+      in fn = fn
+    }
   end
   func map[B](c: Map[K, V], fn: func(V) -> B) -> Map[K, B]
-    mapMap(c, fn)
+    go[Map[K, B]] {
+      code: """
+        func() map[K]B {
+            out := make(map[K]B, len({c}))
+            for k, v := range {c} {
+                out[k] = {fn}(v)
+            }
+            return out
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
   end
   func filter(c: Map[K, V], fn: func(V) -> Bool) -> Map[K, V]
-    filterMap(c, fn)
+    go[Map[K, V]] {
+      code: """
+        func() map[K]V {
+            out := make(map[K]V, len({c}))
+            for k, v := range {c} {
+                if {fn}(v) {
+                    out[k] = v
+                }
+            }
+            return out
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
   end
   func fold[B](c: Map[K, V], initial: B, fn: func(B, V) -> B) -> B
-    foldMap(c, initial, fn)
+    go[B] {
+      code: """
+        func() B {
+            acc := {initial}
+            for _, v := range {c} {
+                acc = {fn}(acc, v)
+            }
+            return acc
+        }()
+      """
+      in c = c
+      in initial = initial
+      in fn = fn
+    }
   end
   func find(c: Map[K, V], fn: func(V) -> Bool) -> Option[Ref[V]]
-    return findMap(c, fn)
+    go[Option[Ref[V]]] {
+      code: """
+        func() Option[*V] {
+            for _, v := range {c} {
+                if {fn}(v) {
+                    val := v
+                    return Some[*V](&val)
+                }
+            }
+            return None[*V]()
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
   end
 end
 
 # Generic impl for Set[A]: impl[A] Set[A]: Enumerable[Set[A], A]
 impl[A] Set[A]: Enumerable[Set[A], A]
   func each(c: Set[A], fn: func(A) -> Unit) -> Unit
-    eachSet(c, fn)
+    go[Unit] {
+      code: """
+        for v := range {c} {
+            {fn}(v)
+        }
+      """
+      in c = c
+      in fn = fn
+    }
   end
   func map[B](c: Set[A], fn: func(A) -> B) -> Set[B]
-    mapSet(c, fn)
+    go[Set[B]] {
+      code: """
+        func() map[B]struct{} {
+            out := make(map[B]struct{}, len({c}))
+            for v := range {c} {
+                out[{fn}(v)] = struct{}{}
+            }
+            return out
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
   end
   func filter(c: Set[A], fn: func(A) -> Bool) -> Set[A]
-    filterSet(c, fn)
+    go[Set[A]] {
+      code: """
+        func() map[A]struct{} {
+            out := make(map[A]struct{}, len({c}))
+            for v := range {c} {
+                if {fn}(v) {
+                    out[v] = struct{}{}
+                }
+            }
+            return out
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
   end
   func fold[B](c: Set[A], initial: B, fn: func(B, A) -> B) -> B
-    foldSet(c, initial, fn)
+    go[B] {
+      code: """
+        func() B {
+            acc := {initial}
+            for v := range {c} {
+                acc = {fn}(acc, v)
+            }
+            return acc
+        }()
+      """
+      in c = c
+      in initial = initial
+      in fn = fn
+    }
   end
   func find(c: Set[A], fn: func(A) -> Bool) -> Option[Ref[A]]
-    return findSet(c, fn)
+    go[Option[Ref[A]]] {
+      code: """
+        func() Option[*A] {
+            for v := range {c} {
+                if {fn}(v) {
+                    val := v
+                    return Some[*A](&val)
+                }
+            }
+            return None[*A]()
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
   end
 end
 
