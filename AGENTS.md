@@ -35,7 +35,7 @@
 - `Option` continues to represent absence for nilable Go values and comma-ok style results.
 - `Result` is the dedicated shape for Go `error`-bearing flows and should be used instead of encoding failures as `Option`.
 - `List[A]` is a singly-linked list with `head: A` and `tail: Option[Ref[List[A]]]`; `None` terminates the list.
-- `A[]` (shorthand for `Slice[A]`) is Go's native slice `[]A`.
+- `Slice[A]` is MyGO's canonical slice type spelling and lowers directly to Go's native slice `[]A`.
 - `Map[K, V]` is Go's native map `map[K]V`.
 - `Set[A]` is Go's native set `map[A]struct{}`.
 
@@ -68,9 +68,9 @@
 - Generic struct literals can also carry explicit type arguments, such as `Box[Int64] { value: 123 }`.
 - When a generic struct literal omits its type arguments, the compiler should infer them from the expected type or field values when possible.
 - `Ref.new(expr)` constructs a reference value and is lowered as `&expr`; if the argument is already a ref/pointer, lowering leaves it unchanged rather than producing a pointer-to-pointer.
-- `A[]` is syntactic sugar for `Slice[A]` and lowers directly to Go `[]A`. The parser rewrites `Int[]` into `Slice[NamedType{Name:"Int"}]` at parse time.
+- `Slice[A]` is the only slice type spelling. The parser no longer accepts `A[]` or `Int[]` shorthand, which keeps type syntax aligned with ordinary generic instantiation.
 - The parser test suite now covers package/function declarations, collection literals, chain postfix, `if`/`while`/`switch`, pipe precedence, struct/interface/impl declarations, `let`/`var`/assignment, func literals, `where` clauses, enum declarations, switch patterns, and nested/empty collection literals.
-- `Int[][]` style nested slice type syntax is accepted by the parser, and empty `[]` is treated as an empty slice literal in expression position.
+- Nested slice types are written explicitly as `Slice[Slice[Int]]`, and empty `[]` is treated as an empty slice literal in expression position.
 - `where` clauses support multiple constraints and constraint type arguments in both function and interface method signatures.
 - `switch` pattern parsing currently accepts wildcard patterns and variant patterns with optional identifier arguments, such as `Some(x)`.
 - Keep `examples/main/main.mygo` aligned with the compiler's current boundary behavior, especially for `Ref`, `Option`, and `Result`.
@@ -80,7 +80,7 @@
 ## Collection Types
 
 - `List[A]`: singly-linked list using `Option[Ref[List[A]]]` for the tail field — `None` is the terminator, `Some(ref)` points to the next node. This avoids a separate `Nil` helper and keeps the nil-termination semantics explicit through `Option`.
-- `A[]` (`Slice[A]`): MyGO syntax `Int[]` → Go `[]int`. Lowered directly to Go's native slice type via `goType` / `typeString`.
+- `Slice[A]`: MyGO syntax `Slice[Int]` → Go `[]int`. Lowered directly to Go's native slice type via `goType` / `typeString`.
 - `Map[K, V]`: lowered directly to Go's native `map[K]V` via `goType` / `typeString`.
 - `Set[A]`: lowered directly to Go's native `map[A]struct{}` via `goType` / `typeString`.
 
@@ -93,14 +93,14 @@
   These types wrap Go's native slices, maps, and sets directly. Declaring them as MyGO structs would add unnecessary runtime overhead (extra fields, allocation, indirection) and wouldn't provide additional type safety beyond the Go type system. Instead, the compiler recognizes the type names `Slice`, `Map`, `Set` and lowers them directly to Go builtins.
 
 - **Why not `[]A` prefix syntax?**
-  The parser only supports `A[]` suffix syntax for slice types. This keeps the parser simpler — `[]A` would require lookahead to distinguish from array literal syntax or other constructs. The suffix form `Int[]` reads naturally as "slice of Int" and is consistent with how Go itself writes `[]int`. Nested slices like `Int[][]` parse left-to-right as `Slice[Slice[Int]]`.
+  The parser uses ordinary generic syntax for slices, so `Slice[Int]` is the single canonical form. This keeps slice types visually consistent with `Map[K, V]`, `Set[A]`, and other generic nominal types.
 
 - **Why not `Slice` / `Map` / `Set` as prelude struct types?**
   Previously, these were declared as structs in `prelude.mysrc` with placeholder fields (`entries: String`, `size: Int`). They were removed because: (1) they served no runtime purpose — the prelude struct declarations had no usable fields; (2) `genStruct` would emit them as Go structs, conflicting with the `goType` lowering to native Go types; (3) keeping them only in the compiler's type lowering is cleaner and zero-cost. `List[A]` remains as a prelude struct because it needs actual runtime data structure semantics.
 
 ## Collection Literals
 
-- Slice: `[1, 2, 3]: Int[]` → Go `[]int{1, 2, 3}`
+- Slice: `[1, 2, 3]: Slice[Int]` → Go `[]int{1, 2, 3}`
 - Map: `{"a": "1", "b": "2"}: Map[String, String]` → Go `map[string]string{"a": "1", "b": "2"}`
 - Set: `{"x", "y"}: Set[String]` → Go `map[string]struct{}{"x": {}, "y": {}}`
 - No list literal syntax (as designed).
@@ -119,13 +119,19 @@
 
 - **Parser**: `internal/mygo/parser/parser_expr.go` — `parseSliceLit()`, `parseCollectionLit()`, routed from `parsePrimary()`.
 - **Compiler**: `internal/mygo/compiler/translate_expr.go` — `translateSliceLit()`, `translateMapLit()`, `translateSetLit()`, `translateEmptyMapLit()`.
-- **Type parsing fix** (`internal/mygo/parser/parser_core.go`): `parseType()` checks `[]` suffix BEFORE type-args `[` to correctly handle `Int[]` → `Slice[Int]`.
+- **Type parsing update** (`internal/mygo/parser/parser_core.go`): `parseType()` now treats `Slice[Int]` as the canonical slice type spelling and no longer recognizes `Int[]` shorthand.
 
 ## Recent Work
 
-- **Complete Jennifer refactoring**: Refactored `internal/mygo/compiler/` to use Jennifer for all code generation, eliminating string-based code generation. Deleted `section.go` and `unit_body_writer.go`. Converted `genGlobals()`, `genTypeclassDispatchers()`, `genImpl()`, `genFunc()`, `translateSwitch()`, and `translateWhile()` to use Jennifer's type-safe API. This improves type safety, maintainability, and eliminates string concatenation for generating Go code.
+- **Complete Jennifer refactoring (Phase 2)**: Fixed all remaining jennifer API usages across the compiler. Changed all expression translation functions to return `jen.Code` instead of `string`. Key changes:
+  - **translate_expr.go**: Fixed `translateSliceLit`, `translateMapLit`, `translateSetLit`, `translateEmptyMapLit` to return `jen.Code`. Used `jen.Dict` and `jen.DictFunc` for map/set/slice literal construction. Fixed error returns to use `nil` instead of `""` for jen.Code.
+  - **translate_struct.go**: Changed `parts` from `[]jen.Code` to `jen.Dict`. Used `jen.DictFunc` for field initialization. Fixed type argument handling with proper `jen.Id()` calls.
+  - **typeclass.go**: Fixed `callee.Call()` by using type assertion `(*jen.Statement).Call()`. Fixed `None` type parameter handling with proper iteration. Fixed `typeclassHelper` return to use `jen.Code` directly instead of wrapping in `jen.Id()`.
+  - All function signatures now return `(jen.Code, string, error)` where first is generated code, second is type string, third is error.
+  - Jennifer API patterns: `jen.Dict` is `map[Code]Code` (not a function), `jen.Lit()` takes `interface{}` for literals, `*jen.Statement` has `.Call()`, `.Dot()`, `.Op()`, `.Index()` methods requiring type assertion from `jen.Code` interface.
+- **Complete Jennifer refactoring (Phase 1)**: Refactored `internal/mygo/compiler/` to use Jennifer for all code generation, eliminating string-based code generation. Deleted `section.go` and `unit_body_writer.go`. Converted `genGlobals()`, `genTypeclassDispatchers()`, `genImpl()`, `genFunc()`, `translateSwitch()`, and `translateWhile()` to use Jennifer's type-safe API. This improves type safety, maintainability, and eliminates string concatenation for generating Go code.
 - Added `Ref.new(expr)` lowering for explicit `Ref[T]` construction, updated `examples/data-structure` to use it for `Option[Ref[List[A]]]` tails, and taught field lookup to resolve through generated Go pointer types like `*List[int]`.
-- Introduced `Slice`, `Map`, and `Set` as compiler-handled collection types with no prelude struct declarations — lowered directly to Go natives (`[]A`, `map[K]V`, `map[A]struct{}`). Added `A[]` syntactic sugar parsed as `Slice[A]`.
+- Introduced `Slice`, `Map`, and `Set` as compiler-handled collection types with no prelude struct declarations — lowered directly to Go natives (`[]A`, `map[K]V`, `map[A]struct{}`). `Slice[A]` is now the only slice type syntax.
 - Further split `internal/mygo/compiler/` into focused files: `helpers.go`, `type_inference.go`, `typeclass.go`, `translate_struct.go`, and `go_package.go`, while keeping `generate.go`, `translate_expr.go`, `translate_call.go`, `translate_control.go`, `api.go`, and `types.go` as separate compiler concerns.
 - Unified all position/error helpers onto `common.NodePos` and `common.ErrorAtPos`, removing the wrapper `pos.go` files from root, parser, and compiler packages.
 - Unified shared line/error helpers into `internal/mygo/common/pos.go`.

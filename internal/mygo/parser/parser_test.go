@@ -30,11 +30,11 @@ end
 func TestParseFileSupportsCollectionLiterals(t *testing.T) {
 	src := `package main
 func demo() -> Int
-  let numbers: Int[] = [1, 2, 3]
+  let numbers: Slice[Int] = [1, 2, 3]
   let m: Map[String, String] = {"a": "1", "b": "2"}
   let s: Set[String] = {"x", "y"}
-  let nested: Map[String, Int[]] = {"nums": [4, 5]}
-  let empty_slice: Int[] = []
+  let nested: Map[String, Slice[Int]] = {"nums": [4, 5]}
+  let empty_slice: Slice[Int] = []
   let empty_map: Map[String, Int] = {}
   let empty_set: Set[String] = {}
   42
@@ -63,8 +63,8 @@ end
 func TestParseFileSupportsNestedCollectionLiterals(t *testing.T) {
 	src := `package main
 func demo() -> Int
-  let matrix: Int[][] = [[1, 2], [3, 4]]
-  let buckets: Map[String, Int[]] = {"a": [1], "b": [2, 3]}
+  let matrix: Slice[Slice[Int]] = [[1, 2], [3, 4]]
+  let buckets: Map[String, Slice[Int]] = {"a": [1], "b": [2, 3]}
   0
 end
 `

@@ -105,7 +105,7 @@ struct List[A]
   tail: Option[Ref[List[A]]]
 end
 
-# A[] is Go's native slice ([]A).
+# Slice[A] is Go's native slice ([]A).
 
 # Map[K, V] is Go's native map[K]V.
 

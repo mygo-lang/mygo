@@ -2,9 +2,10 @@ package parser
 
 func parseFile(src string) (*File, error) {
 	p := newParser(src)
-	p.pos = 0
-	p.skipNL = true
-	return p.parseFileRD()
+	if err := p.parseWithYacc(); err != nil {
+		return nil, err
+	}
+	return p.result, nil
 }
 
 func (p *parser) parseWithYacc() error {
@@ -25,6 +26,7 @@ func (p *parser) parseWithYacc() error {
 	p.currentTypeParams = nil
 	p.currentParams = nil
 	p.currentWhere = nil
+	p.currentConstraintArgs = nil
 	p.currentBlock = nil
 	p.currentStmt = nil
 	p.currentExpr = nil
@@ -34,6 +36,7 @@ func (p *parser) parseWithYacc() error {
 	p.currentMapValue = nil
 	p.currentMapEntries = nil
 	p.currentSetElems = nil
+	p.currentEnumFields = nil
 	p.currentCollectionHasPair = false
 	p.currentIfCond = nil
 	p.currentIfThen = nil
@@ -45,28 +48,24 @@ func (p *parser) parseWithYacc() error {
 	p.currentPattern = nil
 	p.currentStructFields = nil
 	p.currentStructTypeArgs = nil
+	p.currentImplTypeParams = nil
+	p.currentImplType = nil
+	p.currentImplInterfaceArgs = nil
 	p.currentSliceElems = nil
 	p.expectTypeSuffix = false
 	p.expectStructTypeArgs = false
 	p.expectConstraintSuffix = false
+	p.parsingImplTypeParams = false
 	p.currentEnum = nil
 	p.currentStruct = nil
 	p.currentInterface = nil
+	p.currentImpl = nil
 	p.currentFunc = nil
-	p.needFallback = false
 	if yyParse(p) != 0 {
 		if p.err != nil {
 			return p.err
 		}
 		return p.err
-	}
-	if p.needFallback || p.result == nil {
-		p.pos = 0
-		p.skipNL = true
-		p.result, p.err = p.parseFileRD()
-		if p.err != nil {
-			return p.err
-		}
 	}
 	return nil
 }

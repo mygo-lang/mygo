@@ -11,10 +11,10 @@ func TestCompileDirSupportsCollectionLiterals(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
   func demo() -> Int
-    let numbers: Int[] = [1, 2, 3]
+    let numbers: Slice[Int] = [1, 2, 3]
     let m: Map[String, String] = {"a": "1", "b": "2"}
     let s: Set[String] = {"x", "y"}
-    let empty_s: Int[] = []
+    let empty_s: Slice[Int] = []
   42
   end
 

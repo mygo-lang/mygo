@@ -66,13 +66,11 @@ func makeLitExpr(t token) *ast.LiteralExpr {
 file
 	: program {
 		p := yylex.(*parser)
-		if !p.needFallback {
-			p.result = &ast.File{
-				PackageName:   p.packageName,
-				PackageLine:   p.packageLine,
-				PackageColumn: p.packageColumn,
-				Decls:         append([]Decl(nil), p.decls...),
-			}
+		p.result = &ast.File{
+			PackageName:   p.packageName,
+			PackageLine:   p.packageLine,
+			PackageColumn: p.packageColumn,
+			Decls:         append([]Decl(nil), p.decls...),
 		}
 	}
 	;
@@ -133,26 +131,28 @@ import_decl
 	;
 
 enum_decl
-	: ENUM qualified_name {
+	: ENUM qualified_name opt_type_params {
 		p := yylex.(*parser)
 		p.currentEnum = &ast.EnumDecl{
 			Line: $1.line,
 			Column: $1.col,
 			Name: p.currentName,
+			TypeParams: append([]string(nil), p.currentTypeParams...),
 		}
 	}
-	enum_body END {
+	enum_body opt_newlines END {
 		p := yylex.(*parser)
-		if !p.needFallback && p.currentEnum != nil {
+		if p.currentEnum != nil {
 			p.decls = append(p.decls, p.currentEnum)
 		}
 		p.currentEnum = nil
+		p.currentTypeParams = nil
 	}
 	;
 
 enum_body
 	: /* empty */
-	| enum_body enum_variant
+	| enum_body opt_newlines enum_variant
 	;
 
 enum_variant
@@ -167,41 +167,90 @@ enum_variant
 		}
 	}
 	| IDENT LPAREN enum_variant_fields RPAREN {
-		yylex.(*parser).needFallback = true
+		p := yylex.(*parser)
+		if p.currentEnum != nil {
+			p.currentEnum.Variants = append(p.currentEnum.Variants, ast.EnumVariant{
+				Line: $1.line,
+				Column: $1.col,
+				Name: $1.lit,
+				Fields: append([]ast.Field(nil), p.currentEnumFields...),
+			})
+		}
+		p.currentEnumFields = nil
 	}
 	;
 
 enum_variant_fields
 	: /* empty */
-	| enum_variant_fields IDENT
+	| enum_variant_fields IDENT {
+		p := yylex.(*parser)
+		if p.currentEnum != nil {
+			p.currentEnumFields = append(p.currentEnumFields, ast.Field{
+				Line: $2.line,
+				Column: $2.col,
+				Type: &ast.NamedType{Line: $2.line, Column: $2.col, Name: $2.lit},
+			})
+		}
+	}
+	| enum_variant_fields type {
+		p := yylex.(*parser)
+		if p.currentEnum != nil {
+			p.currentEnumFields = append(p.currentEnumFields, ast.Field{
+				Line: p.currentTypeLine,
+				Column: p.currentTypeCol,
+				Type: p.currentType,
+			})
+		}
+	}
 	;
 
 struct_decl
-	: STRUCT qualified_name {
+	: STRUCT qualified_name opt_type_params {
 		p := yylex.(*parser)
 		p.currentStruct = &ast.StructDecl{
 			Line: $1.line,
 			Column: $1.col,
 			Name: p.currentName,
+			TypeParams: append([]string(nil), p.currentTypeParams...),
 		}
 	}
-	struct_body END {
+	struct_body opt_newlines END {
 		p := yylex.(*parser)
 		if p.currentStruct != nil {
 			p.decls = append(p.decls, p.currentStruct)
 		}
 		p.currentStruct = nil
+		p.currentTypeParams = nil
 	}
 	;
 
 struct_body
-	: LPAREN maybe_type_list RPAREN
+	: LPAREN {
+		p := yylex.(*parser)
+		p.expectStructTypeArgs = true
+		p.currentStructTypeArgs = nil
+	}
+	maybe_type_list RPAREN {
+		p := yylex.(*parser)
+		if p.currentStruct != nil {
+			for i, t := range p.currentStructTypeArgs {
+				p.currentStruct.Fields = append(p.currentStruct.Fields, ast.Field{
+					Line: $1.line,
+					Column: $1.col,
+					Name: __yyfmt__.Sprintf("F%d", i),
+					Type: t,
+				})
+			}
+		}
+		p.currentStructTypeArgs = nil
+		p.expectStructTypeArgs = false
+	}
 	| struct_fields
 	;
 
 struct_fields
 	: /* empty */
-	| struct_fields field
+	| struct_fields opt_newlines field
 	;
 
 field
@@ -230,30 +279,32 @@ field
 	;
 
 interface_decl
-	: INTERFACE qualified_name {
+	: INTERFACE qualified_name opt_type_params {
 		p := yylex.(*parser)
 		p.currentInterface = &ast.InterfaceDecl{
 			Line: $1.line,
 			Column: $1.col,
 			Name: p.currentName,
+			TypeParams: append([]string(nil), p.currentTypeParams...),
 		}
 	}
-	func_sig_list END {
+	func_sig_list opt_newlines END {
 		p := yylex.(*parser)
 		if p.currentInterface != nil {
 			p.decls = append(p.decls, p.currentInterface)
 		}
 		p.currentInterface = nil
+		p.currentTypeParams = nil
 	}
 	;
 
 func_sig_list
 	: /* empty */
-	| func_sig_list func_sig
+	| func_sig_list opt_newlines func_sig
 	;
 
 func_sig
-	: FUNC IDENT opt_type_params LPAREN maybe_param_list RPAREN ARROW type {
+	: FUNC IDENT opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_where_clause {
 		p := yylex.(*parser)
 		if p.currentInterface != nil {
 			p.currentInterface.Methods = append(p.currentInterface.Methods, &ast.FuncDecl{
@@ -273,23 +324,69 @@ func_sig
 	;
 
 impl_decl
-	: IMPL opt_impl_type_params type COLON qualified_name impl_body END { yylex.(*parser).needFallback = true }
-	| IMPL opt_impl_type_params type COLON qualified_name LBRACK maybe_type_list RBRACK impl_body END { yylex.(*parser).needFallback = true }
+	: IMPL opt_impl_type_params type {
+		p := yylex.(*parser)
+		p.currentImplType = p.currentType
+	}
+	COLON type {
+		p := yylex.(*parser)
+		if iface, ok := p.currentType.(*ast.NamedType); ok {
+			p.currentName = iface.Name
+			p.currentImplInterfaceArgs = append([]ast.TypeExpr(nil), iface.Args...)
+		} else {
+			p.currentName = ""
+			p.currentImplInterfaceArgs = nil
+		}
+		p.currentImpl = &ast.ImplDecl{
+			Line: $1.line,
+			Column: $1.col,
+			Name: p.currentName,
+			InterfaceName: p.currentName,
+			Type: p.currentImplType,
+			TypeParams: append([]string(nil), p.currentImplTypeParams...),
+		}
+	}
+	impl_body opt_newlines END {
+		p := yylex.(*parser)
+		if p.currentImpl != nil {
+			p.currentImpl.InterfaceArgs = append([]ast.TypeExpr(nil), p.currentImplInterfaceArgs...)
+			p.decls = append(p.decls, p.currentImpl)
+		}
+		p.currentImpl = nil
+		p.currentImplTypeParams = nil
+		p.parsingImplTypeParams = false
+		p.currentImplType = nil
+		p.currentImplInterfaceArgs = nil
+	}
 	;
 
 opt_impl_type_params
 	: /* empty */
-	| LBRACK maybe_name_list RBRACK
+	| LBRACK {
+		p := yylex.(*parser)
+		p.parsingImplTypeParams = true
+		p.currentImplTypeParams = nil
+	}
+	maybe_name_list RBRACK {
+		p := yylex.(*parser)
+		p.parsingImplTypeParams = false
+	}
 	;
 
 impl_body
 	: /* empty */
-	| impl_body func_decl
+	| impl_body opt_newlines func_decl
 	;
 
 func_decl
-	: FUNC IDENT opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_where_clause opt_newlines block_expr END {
+	: FUNC IDENT opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_where_clause opt_newlines block_expr opt_newlines END {
 		p := yylex.(*parser)
+		var body ast.Expr = &ast.BlockExpr{Stmts: append([]ast.Stmt(nil), p.currentBlock...)}
+		if len(p.currentBlock) == 1 {
+			if stmt, ok := p.currentBlock[0].(*ast.ExprStmt); ok {
+				body = stmt.Expr
+			}
+		}
 		p.currentFunc = &ast.FuncDecl{
 			Line: $1.line,
 			Column: $1.col,
@@ -298,9 +395,13 @@ func_decl
 			Params: append([]ast.Param(nil), p.currentParams...),
 			Ret: p.currentType,
 			Where: append([]ast.Constraint(nil), p.currentWhere...),
-			Body: &ast.BlockExpr{Stmts: append([]ast.Stmt(nil), p.currentBlock...)},
+			Body: body,
 		}
-		p.decls = append(p.decls, p.currentFunc)
+		if p.currentImpl != nil {
+			p.currentImpl.Methods = append(p.currentImpl.Methods, p.currentFunc)
+		} else {
+			p.decls = append(p.decls, p.currentFunc)
+		}
 		p.currentFunc = nil
 		p.currentParams = nil
 		p.currentTypeParams = nil
@@ -310,11 +411,30 @@ func_decl
 	;
 
 let_decl
-	: LET IDENT opt_type_annot '=' expr { yylex.(*parser).needFallback = true }
+	: LET IDENT opt_type_annot '=' expr {
+		p := yylex.(*parser)
+		p.decls = append(p.decls, &ast.LetStmt{
+			Line: $1.line,
+			Column: $1.col,
+			Name: $2.lit,
+			Type: p.currentType,
+			Value: p.currentExpr,
+		})
+	}
 	;
 
 var_decl
-	: VAR IDENT opt_type_annot '=' expr { yylex.(*parser).needFallback = true }
+	: VAR IDENT opt_type_annot '=' expr {
+		p := yylex.(*parser)
+		p.decls = append(p.decls, &ast.LetStmt{
+			Line: $1.line,
+			Column: $1.col,
+			Mutable: true,
+			Name: $2.lit,
+			Type: p.currentType,
+			Value: p.currentExpr,
+		})
+	}
 	;
 
 opt_type_annot
@@ -336,12 +456,18 @@ constraint
 	: IDENT {
 		p := yylex.(*parser)
 		p.expectConstraintSuffix = true
+		p.currentConstraintArgs = nil
 	}
 	constraint_suffix {
 		p := yylex.(*parser)
 		p.currentWhere = append(p.currentWhere, ast.Constraint{
+			Line: $1.line,
+			Column: $1.col,
 			Name: $1.lit,
+			Args: append([]ast.TypeExpr(nil), p.currentConstraintArgs...),
 		})
+		p.expectConstraintSuffix = false
+		p.currentConstraintArgs = nil
 	}
 	;
 
@@ -352,10 +478,11 @@ constraint_suffix
 
 opt_type_params
 	: /* empty */
-	| LBRACK maybe_name_list RBRACK {
+	| LBRACK {
 		p := yylex.(*parser)
-		p.currentTypeParams = append([]string(nil), p.currentTypeParams...)
+		p.currentTypeParams = nil
 	}
+	maybe_name_list RBRACK
 	;
 
 maybe_name_list
@@ -364,8 +491,22 @@ maybe_name_list
 	;
 
 name_list
-	: IDENT
-	| name_list COMMA IDENT
+	: IDENT {
+		p := yylex.(*parser)
+		if p.parsingImplTypeParams {
+			p.currentImplTypeParams = append(p.currentImplTypeParams, $1.lit)
+		} else {
+			p.currentTypeParams = append(p.currentTypeParams, $1.lit)
+		}
+	}
+	| name_list COMMA IDENT {
+		p := yylex.(*parser)
+		if p.parsingImplTypeParams {
+			p.currentImplTypeParams = append(p.currentImplTypeParams, $3.lit)
+		} else {
+			p.currentTypeParams = append(p.currentTypeParams, $3.lit)
+		}
+	}
 	;
 
 maybe_param_list
@@ -401,11 +542,17 @@ type_list
 		if p.expectStructTypeArgs {
 			p.currentStructTypeArgs = append(p.currentStructTypeArgs, p.currentType)
 		}
+		if p.expectConstraintSuffix {
+			p.currentConstraintArgs = append(p.currentConstraintArgs, p.currentType)
+		}
 	}
 	| type_list COMMA type {
 		p := yylex.(*parser)
 		if p.expectStructTypeArgs {
 			p.currentStructTypeArgs = append(p.currentStructTypeArgs, p.currentType)
+		}
+		if p.expectConstraintSuffix {
+			p.currentConstraintArgs = append(p.currentConstraintArgs, p.currentType)
 		}
 	}
 	;
@@ -460,28 +607,12 @@ named_type_suffix
 			Name: p.currentName,
 		}
 	}
-	| SLICE {
-		p := yylex.(*parser)
-		p.currentType = &ast.NamedType{
-			Line: p.currentNameLine,
-			Column: p.currentNameCol,
-			Name: p.currentName + "[]",
-		}
-	}
 	| TYPELBRACK maybe_type_list RBRACK {
 		p := yylex.(*parser)
 		p.currentType = &ast.NamedType{
 			Line: p.currentNameLine,
 			Column: p.currentNameCol,
 			Name: p.currentName,
-		}
-	}
-	| TYPELBRACK maybe_type_list RBRACK SLICE {
-		p := yylex.(*parser)
-		p.currentType = &ast.NamedType{
-			Line: p.currentNameLine,
-			Column: p.currentNameCol,
-			Name: p.currentName + "[]",
 		}
 	}
 	;
@@ -664,7 +795,12 @@ primary
 	;
 
 slice_lit
-	: LBRACK maybe_expr_list RBRACK {
+	: SLICE {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.SliceLitExpr{Line: $1.line, Column: $1.col, Elems: nil}
+		p.currentSliceElems = nil
+	}
+	| LBRACK maybe_expr_list RBRACK {
 		p := yylex.(*parser)
 		p.currentExpr = &ast.SliceLitExpr{Line: $1.line, Column: $1.col, Elems: append([]ast.Expr(nil), p.currentSliceElems...)}
 		p.currentSliceElems = nil
@@ -791,7 +927,7 @@ if_expr
 		p := yylex.(*parser)
 		p.currentIfThen = p.currentExpr
 	}
-	ELSE block_expr END {
+	ELSE block_expr opt_newlines END {
 		p := yylex.(*parser)
 		p.currentIfElse = p.currentExpr
 		p.currentExpr = &ast.IfExpr{Line: $1.line, Column: $1.col, Cond: p.currentIfCond, Then: p.currentIfThen, Else: p.currentIfElse}
@@ -806,7 +942,7 @@ while_expr
 		p := yylex.(*parser)
 		p.currentWhileCond = p.currentExpr
 	}
-	block_expr END {
+	block_expr opt_newlines END {
 		p := yylex.(*parser)
 		p.currentWhileBody = p.currentExpr
 		p.currentExpr = &ast.WhileExpr{Line: $1.line, Column: $1.col, Cond: p.currentWhileCond, Body: p.currentWhileBody}
@@ -820,7 +956,7 @@ switch_expr
 		p := yylex.(*parser)
 		p.currentSwitchTarget = p.currentExpr
 	}
-	switch_case_list END {
+	switch_case_list opt_newlines END {
 		p := yylex.(*parser)
 		p.currentExpr = &ast.SwitchExpr{Line: $1.line, Column: $1.col, Target: p.currentSwitchTarget, Cases: append([]ast.SwitchCase(nil), p.currentSwitchCases...)}
 		p.currentSwitchTarget = nil
@@ -830,7 +966,7 @@ switch_expr
 
 switch_case_list
 	: /* empty */
-	| switch_case_list switch_case
+	| switch_case_list opt_newlines switch_case
 	;
 
 switch_case
@@ -860,9 +996,15 @@ pattern
 	;
 
 func_lit
-	: FUNC LPAREN maybe_param_list RPAREN ARROW type opt_newlines block_expr END {
+	: FUNC LPAREN maybe_param_list RPAREN ARROW type opt_newlines block_expr opt_newlines END {
 		p := yylex.(*parser)
-		p.currentExpr = &ast.FuncLitExpr{Line: $1.line, Column: $1.col, Params: append([]ast.Param(nil), p.currentParams...), Ret: p.currentType, Body: &ast.BlockExpr{Stmts: append([]ast.Stmt(nil), p.currentBlock...)}}
+		var body ast.Expr = &ast.BlockExpr{Stmts: append([]ast.Stmt(nil), p.currentBlock...)}
+		if len(p.currentBlock) == 1 {
+			if stmt, ok := p.currentBlock[0].(*ast.ExprStmt); ok {
+				body = stmt.Expr
+			}
+		}
+		p.currentExpr = &ast.FuncLitExpr{Line: $1.line, Column: $1.col, Params: append([]ast.Param(nil), p.currentParams...), Ret: p.currentType, Body: body}
 		p.currentParams = nil
 		p.currentBlock = nil
 	}
@@ -877,6 +1019,11 @@ block_expr
 	| block_expr NEWLINE stmt {
 		p := yylex.(*parser)
 		p.currentBlock = append(p.currentBlock, p.currentStmt)
+		p.currentExpr = &ast.BlockExpr{Stmts: append([]ast.Stmt(nil), p.currentBlock...)}
+	}
+	| block_expr NEWLINE
+	{
+		p := yylex.(*parser)
 		p.currentExpr = &ast.BlockExpr{Stmts: append([]ast.Stmt(nil), p.currentBlock...)}
 	}
 	;
@@ -930,6 +1077,7 @@ func (p *parser) Lex(lval *yySymType) int {
 	tok := p.nextRaw()
 	lval.setTok(tok)
 	if tok.lit != "[" {
+		p.expectTypeSuffix = false
 		p.expectStructTypeArgs = false
 	}
 	switch tok.kind {
@@ -990,6 +1138,8 @@ func (p *parser) Lex(lval *yySymType) int {
 		}
 	default:
 		switch tok.lit {
+		case "[]":
+			return int(SLICE)
 		case "->":
 			return int(ARROW)
 		case "==":

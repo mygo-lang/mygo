@@ -8,53 +8,59 @@ import (
 )
 
 type parser struct {
-	toks   []token
-	pos    int
-	skipNL bool
-	err    error
-	result *ast.File
-	packageName   string
-	packageLine   int
-	packageColumn int
-	decls         []Decl
-	currentName   string
-	currentNameLine int
-	currentNameCol  int
-	currentType   TypeExpr
-	currentTypeLine int
-	currentTypeCol  int
-	currentTypeParams []string
-	currentParams []ast.Param
-	currentWhere []ast.Constraint
-	currentBlock []ast.Stmt
-	currentStmt ast.Stmt
-	currentExpr ast.Expr
-	currentLeftExpr ast.Expr
-	currentArgs []ast.Expr
-	currentMapKey ast.Expr
-	currentMapValue ast.Expr
-	currentMapEntries []ast.MapLitPair
-	currentSetElems []ast.Expr
+	toks                     []token
+	pos                      int
+	skipNL                   bool
+	err                      error
+	result                   *ast.File
+	packageName              string
+	packageLine              int
+	packageColumn            int
+	decls                    []Decl
+	currentName              string
+	currentNameLine          int
+	currentNameCol           int
+	currentType              TypeExpr
+	currentTypeLine          int
+	currentTypeCol           int
+	currentTypeParams        []string
+	currentParams            []ast.Param
+	currentWhere             []ast.Constraint
+	currentConstraintArgs    []TypeExpr
+	currentBlock             []ast.Stmt
+	currentStmt              ast.Stmt
+	currentExpr              ast.Expr
+	currentLeftExpr          ast.Expr
+	currentArgs              []ast.Expr
+	currentMapKey            ast.Expr
+	currentMapValue          ast.Expr
+	currentMapEntries        []ast.MapLitPair
+	currentSetElems          []ast.Expr
+	currentEnumFields        []ast.Field
 	currentCollectionHasPair bool
-	currentIfCond ast.Expr
-	currentIfThen ast.Expr
-	currentIfElse ast.Expr
-	currentWhileCond ast.Expr
-	currentWhileBody ast.Expr
-	currentSwitchTarget ast.Expr
-	currentSwitchCases []ast.SwitchCase
-	currentPattern ast.Pattern
-	currentStructFields []ast.StructLitField
-	currentStructTypeArgs []ast.TypeExpr
-	currentSliceElems []ast.Expr
-	expectTypeSuffix bool
-	expectStructTypeArgs bool
-	expectConstraintSuffix bool
-	currentEnum   *ast.EnumDecl
-	currentStruct *ast.StructDecl
-	currentInterface *ast.InterfaceDecl
-	currentFunc   *ast.FuncDecl
-	needFallback  bool
+	currentIfCond            ast.Expr
+	currentIfThen            ast.Expr
+	currentIfElse            ast.Expr
+	currentWhileCond         ast.Expr
+	currentWhileBody         ast.Expr
+	currentSwitchTarget      ast.Expr
+	currentSwitchCases       []ast.SwitchCase
+	currentPattern           ast.Pattern
+	currentStructFields      []ast.StructLitField
+	currentStructTypeArgs    []ast.TypeExpr
+	currentImplTypeParams    []string
+	currentImplType          TypeExpr
+	currentImplInterfaceArgs []ast.TypeExpr
+	currentSliceElems        []ast.Expr
+	expectTypeSuffix         bool
+	expectStructTypeArgs     bool
+	expectConstraintSuffix   bool
+	parsingImplTypeParams    bool
+	currentEnum              *ast.EnumDecl
+	currentStruct            *ast.StructDecl
+	currentInterface         *ast.InterfaceDecl
+	currentImpl              *ast.ImplDecl
+	currentFunc              *ast.FuncDecl
 }
 
 func parseFiles(srcs map[string]string) ([]*ast.File, error) {
@@ -80,31 +86,6 @@ func newParser(src string) *parser {
 		}
 	}
 	return &parser{toks: toks, skipNL: true}
-}
-
-func (p *parser) parseFileRD() (*ast.File, error) {
-	file := &ast.File{}
-	if p.peekKeyword("package") {
-		tok := p.next()
-		if tok.kind != tokKeyword || tok.lit != "package" {
-			return nil, common.ErrorAtPos(tok.line, tok.col, "expected keyword %q, got %q", "package", tok.lit)
-		}
-		file.PackageLine = tok.line
-		file.PackageColumn = tok.col
-		name, err := p.expectIdent()
-		if err != nil {
-			return nil, err
-		}
-		file.PackageName = name
-	}
-	for !p.peekEOF() {
-		decl, err := p.parseDecl()
-		if err != nil {
-			return nil, err
-		}
-		file.Decls = append(file.Decls, decl)
-	}
-	return file, nil
 }
 
 func (p *parser) parseDecl() (Decl, error) {
@@ -613,22 +594,7 @@ func (p *parser) parseType() (TypeExpr, error) {
 	}
 	var args []TypeExpr
 	for {
-		// Check for [] suffix (slice shorthand: Int[] → Slice[Int]) BEFORE type args
-		if p.matchSym("[]") {
-			base := &NamedType{Line: start.line, Column: start.col, Name: name, Args: args}
-			name = "Slice"
-			args = []TypeExpr{base}
-			continue
-		}
 		if p.matchSym("[") {
-			if p.matchSym("]") {
-				// This was Int[] (not type args)
-				base := &NamedType{Line: start.line, Column: start.col, Name: name, Args: args}
-				name = "Slice"
-				args = []TypeExpr{base}
-				continue
-			}
-			// Otherwise it's type args like Map[K, V]
 			var nextArgs []TypeExpr
 			for {
 				tp, err := p.parseType()

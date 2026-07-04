@@ -28,6 +28,7 @@ type token struct {
 
 type lexer struct {
 	*golexer
+	pending *token
 }
 
 func newLexer(src string) *lexer {
@@ -39,6 +40,11 @@ func newLexer(src string) *lexer {
 }
 
 func (l *lexer) nextToken() token {
+	if l.pending != nil {
+		tok := *l.pending
+		l.pending = nil
+		return tok
+	}
 	c := l.scan()
 	pos := l.File.Position(c.Pos())
 	switch c.Rune {
@@ -59,7 +65,8 @@ func (l *lexer) nextToken() token {
 	case PACKAGE, IMPORT, ENUM, STRUCT, INTERFACE, IMPL, FUNC, IF, THEN, ELSE, SWITCH, CASE, END, WHERE, NOT, LET, VAR, EMBED, WHILE, RETURN:
 		return token{kind: tokKeyword, lit: string(l.TokenBytes(nil)), line: pos.Line, col: pos.Column}
 	case SLICE:
-		return token{kind: tokSym, lit: "[]", line: pos.Line, col: pos.Column}
+		l.pending = &token{kind: tokSym, lit: "]", line: pos.Line, col: pos.Column}
+		return token{kind: tokSym, lit: "[", line: pos.Line, col: pos.Column}
 	default:
 		return token{kind: tokSym, lit: string(l.TokenBytes(nil)), line: pos.Line, col: pos.Column}
 	}
