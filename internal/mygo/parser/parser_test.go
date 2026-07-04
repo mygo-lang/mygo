@@ -555,3 +555,63 @@ end
 		t.Fatalf("len(SwitchExpr.Cases) = %d, want %d", got, 3)
 	}
 }
+
+func TestParseFileSupportsInlineGoExpr(t *testing.T) {
+	src := `package main
+func demo(n: Int) -> Int
+  go[Int] {
+    code: "{x} + 1"
+    in x = n
+  }
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn := file.Decls[0].(*FuncDecl)
+	goExpr, ok := fn.Body.(*GoExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *GoExpr", fn.Body)
+	}
+	if goExpr.Code != "{x} + 1" {
+		t.Fatalf("GoExpr.Code = %q, want %q", goExpr.Code, "{x} + 1")
+	}
+	if got := len(goExpr.Operands); got != 1 {
+		t.Fatalf("len(GoExpr.Operands) = %d, want 1", got)
+	}
+	if goExpr.Operands[0].Name != "x" {
+		t.Fatalf("GoExpr.Operands[0].Name = %q, want x", goExpr.Operands[0].Name)
+	}
+	if _, ok := goExpr.Result.(*NamedType); !ok {
+		t.Fatalf("GoExpr.Result type = %T, want *NamedType", goExpr.Result)
+	}
+}
+
+func TestParseFileRejectsInlineGoMissingResultType(t *testing.T) {
+	src := `package main
+func demo(n: Int) -> Int
+  go {
+    code: "{x}"
+    in x = n
+  }
+end
+`
+	if _, err := ParseFile(src); err == nil {
+		t.Fatal("ParseFile() error = nil, want error")
+	}
+}
+
+func TestParseFileRejectsMalformedInlineGoOperand(t *testing.T) {
+	src := `package main
+func demo(n: Int) -> Int
+  go[Int] {
+    code: "{x}"
+    in = n
+  }
+end
+`
+	if _, err := ParseFile(src); err == nil {
+		t.Fatal("ParseFile() error = nil, want error")
+	}
+}

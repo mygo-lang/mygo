@@ -62,7 +62,7 @@ func (l *lexer) nextToken() token {
 			lit = string(l.TokenBytes(nil))
 		}
 		return token{kind: tokString, lit: lit, line: pos.Line, col: pos.Column}
-	case PACKAGE, IMPORT, ENUM, STRUCT, INTERFACE, IMPL, FUNC, IF, THEN, ELSE, SWITCH, CASE, END, USING, NOT, LET, VAR, EMBED, WHILE, RETURN:
+	case PACKAGE, IMPORT, ENUM, STRUCT, INTERFACE, IMPL, FUNC, IF, THEN, ELSE, SWITCH, CASE, END, USING, NOT, LET, VAR, EMBED, WHILE, RETURN, GO, IN:
 		return token{kind: tokKeyword, lit: string(l.TokenBytes(nil)), line: pos.Line, col: pos.Column}
 	case SLICE:
 		l.pending = &token{kind: tokSym, lit: "]", line: pos.Line, col: pos.Column}

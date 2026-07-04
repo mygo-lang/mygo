@@ -70,6 +70,66 @@ func TestInferLiteralString(t *testing.T) {
 	}
 }
 
+func TestInferGoExprResultType(t *testing.T) {
+	state := NewInferState()
+	state.TypedInfo = &TypedInfo{
+		ExprTypes:      map[Expr]MonoType{},
+		BindingSchemes: map[string]*Scheme{},
+		Predicates:     map[Expr][]Predicate{},
+	}
+	env := TypeEnv{
+		"n": &Scheme{Body: QualifiedType{Body: intType()}},
+	}
+	expr := &GoExpr{
+		Result: &NamedType{Name: "Int"},
+		Code:   "{x} + 1",
+		Operands: []GoOperand{{
+			Name:  "x",
+			Value: &IdentExpr{Name: "n"},
+		}},
+	}
+	typ, err := inferExprType(env, expr, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !eqType(typ, intType()) {
+		t.Fatalf("expected Int, got %s", typ)
+	}
+	if _, ok := state.TypedInfo.ExprTypes[expr.Operands[0].Value]; !ok {
+		t.Fatalf("operand expression type was not recorded")
+	}
+}
+
+func TestInferGoExprChecksOperands(t *testing.T) {
+	state := NewInferState()
+	expr := &GoExpr{
+		Result: &NamedType{Name: "Int"},
+		Code:   "{x}",
+		Operands: []GoOperand{{
+			Name:  "x",
+			Value: &IdentExpr{Name: "missing"},
+		}},
+	}
+	if _, err := inferExprType(TypeEnv{}, expr, state); err == nil {
+		t.Fatal("inferExprType() error = nil, want error")
+	}
+}
+
+func TestInferGoExprUnit(t *testing.T) {
+	state := NewInferState()
+	expr := &GoExpr{
+		Result: &NamedType{Name: "Unit"},
+		Code:   "fmt.Println(1)",
+	}
+	typ, err := inferExprType(TypeEnv{}, expr, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !eqType(typ, TCon{Name: "Unit"}) {
+		t.Fatalf("expected Unit, got %s", typ)
+	}
+}
+
 func TestInferIdentBool(t *testing.T) {
 	state := NewInferState()
 	env := make(TypeEnv)

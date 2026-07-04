@@ -396,6 +396,8 @@ func inferExprRaw(env TypeEnv, e Expr, state *InferState) (MonoType, Subst, []Pr
 		return inferMapLit(env, n, state)
 	case *SetLitExpr:
 		return inferSetLit(env, n, state)
+	case *GoExpr:
+		return inferGoExpr(env, n, state)
 	}
 	return nil, nil, nil, fmt.Errorf("unsupported expression %T", e)
 }
@@ -1244,6 +1246,20 @@ func inferSetLit(env TypeEnv, n *SetLitExpr, state *InferState) (MonoType, Subst
 	}
 
 	return TCon{Name: "Set", Args: []MonoType{elemType}}, s, allPreds, nil
+}
+
+func inferGoExpr(env TypeEnv, n *GoExpr, state *InferState) (MonoType, Subst, []Predicate, error) {
+	s := make(Subst)
+	var allPreds []Predicate
+	for _, op := range n.Operands {
+		_, os, preds, err := inferExpr(env, op.Value, state)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("go operand %q: %w", op.Name, err)
+		}
+		s = Compose(s, os)
+		allPreds = append(allPreds, preds...)
+	}
+	return typeFromAST(n.Result), s, allPreds, nil
 }
 
 // ---------------------------------------------------------------------------

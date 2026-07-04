@@ -621,6 +621,12 @@ func exprUsesIdent(e Expr, name string) bool {
 		}
 	case *IfExpr:
 		return exprUsesIdent(n.Cond, name) || exprUsesIdent(n.Then, name) || exprUsesIdent(n.Else, name)
+	case *GoExpr:
+		for _, op := range n.Operands {
+			if exprUsesIdent(op.Value, name) {
+				return true
+			}
+		}
 	case *BlockExpr:
 		for _, stmt := range n.Stmts {
 			switch s := stmt.(type) {

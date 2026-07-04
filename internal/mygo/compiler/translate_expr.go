@@ -254,6 +254,12 @@ func (g *generator) translateExprRaw(e Expr, ctx *exprCtx, expected string) (jen
 			return nil, "", err
 		}
 		return code, typ, nil
+	case *GoExpr:
+		code, typ, err := g.translateGoExpr(n, ctx, expected)
+		if err != nil {
+			return nil, "", err
+		}
+		return code, typ, nil
 	}
 	line, col := common.NodePos(e)
 	return nil, "", common.ErrorAtPos(line, col, "unsupported expression %#v", e)

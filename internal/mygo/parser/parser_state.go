@@ -67,6 +67,9 @@ type parser struct {
 	currentImplLine           int
 	currentImplCol            int
 	currentSliceElems         []ast.Expr
+	currentGoResult           ast.TypeExpr
+	currentGoCode             string
+	currentGoOperands         []ast.GoOperand
 	currentConstraintBindName string
 	savedRetType              ast.TypeExpr
 	savedDeclName             string

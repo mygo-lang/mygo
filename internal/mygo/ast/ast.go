@@ -272,6 +272,23 @@ type SetLitExpr struct {
 
 func (*SetLitExpr) exprNode() {}
 
+type GoExpr struct {
+	Line     int
+	Column   int
+	Result   TypeExpr
+	Code     string
+	Operands []GoOperand
+}
+
+func (*GoExpr) exprNode() {}
+
+type GoOperand struct {
+	Line   int
+	Column int
+	Name   string
+	Value  Expr
+}
+
 type BlockExpr struct {
 	Line   int
 	Column int

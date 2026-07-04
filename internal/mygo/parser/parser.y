@@ -61,7 +61,7 @@ func bodyExprFromBlock(e ast.Expr) ast.Expr {
 }
 
 %token <token> IDENT NUMBER STRING
-%token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSE SWITCH CASE END USING NOT LET VAR EMBED WHILE RETURN
+%token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSE SWITCH CASE END USING NOT LET VAR EMBED WHILE RETURN GO IN
 %token <token> NEWLINE
 %token <token> ARROW EQEQ NEQ LTE GTE PIPEFWD PIPEBACK ANDAND OROR
 %token <token> COLON COMMA DOT LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE UNDER SLICE
@@ -996,6 +996,56 @@ primary
 	| switch_expr
 	| while_expr
 	| func_lit
+	| go_expr
+	;
+
+go_expr
+	: GO LBRACK type RBRACK {
+		p := yylex.(*parser)
+		p.currentGoResult = p.currentType
+		p.currentGoCode = ""
+		p.currentGoOperands = nil
+	}
+	LBRACE opt_newlines go_code go_operand_list opt_newlines RBRACE {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.GoExpr{
+			Line: $1.line,
+			Column: $1.col,
+			Result: p.currentGoResult,
+			Code: p.currentGoCode,
+			Operands: append([]ast.GoOperand(nil), p.currentGoOperands...),
+		}
+		p.currentGoResult = nil
+		p.currentGoCode = ""
+		p.currentGoOperands = nil
+	}
+	;
+
+go_code
+	: IDENT COLON STRING opt_newlines {
+		p := yylex.(*parser)
+		if $1.lit != "code" {
+			p.err = common.ErrorAtPos($1.line, $1.col, "expected go block field \"code\", got %q", $1.lit)
+		}
+		p.currentGoCode = $3.lit
+	}
+	;
+
+go_operand_list
+	: /* empty */
+	| go_operand_list go_operand opt_newlines
+	;
+
+go_operand
+	: IN IDENT '=' expr {
+		p := yylex.(*parser)
+		p.currentGoOperands = append(p.currentGoOperands, ast.GoOperand{
+			Line: $2.line,
+			Column: $2.col,
+			Name: $2.lit,
+			Value: p.currentExpr,
+		})
+	}
 	;
 
 slice_lit
@@ -1417,6 +1467,10 @@ func (p *parser) Lex(lval *yySymType) int {
 			return int(WHILE)
 		case "return":
 			return int(RETURN)
+		case "go":
+			return int(GO)
+		case "in":
+			return int(IN)
 		default:
 			return int(IDENT)
 		}

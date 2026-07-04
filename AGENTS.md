@@ -38,6 +38,10 @@
 - `Slice[A]` is MyGO's canonical slice type spelling and lowers directly to Go's native slice `[]A`.
 - `Map[K, V]` is Go's native map `map[K]V`.
 - `Set[A]` is Go's native set `map[A]struct{}`.
+- Inline Go embedding uses expression-first `go[T] { code: "..."; in name = expr }` syntax. The `T` result type is mandatory; use `go[Unit]` for statement-only snippets.
+- Inline Go code is trusted raw Go carried in a string literal. MyGO operands are passed explicitly with named `in` bindings and referenced from Go code as `{name}` placeholders.
+- Inline Go operands are type-inferred and lowered as ordinary MyGO expressions before placeholder substitution. The compiler does not infer or inspect the raw Go snippet itself.
+- Unknown inline Go placeholders are compiler errors; extra operands are currently allowed.
 
 ## Workflow Notes
 
@@ -68,6 +72,7 @@
 - `let` may omit its type annotation when the initializer provides enough information for inference.
 - `let _ = ...` is the supported discard form for return values that should not be bound.
 - Pipe operators `<|` and `|>` are both supported in expression lowering.
+- Inline Go expressions use `go[T] { code: "..."; in x = expr }`, lower directly to generated Go, and may appear anywhere an expression is accepted. `go[Unit]` is valid only as a statement-position snippet or discarded binding.
 - Struct literals support a constructor-like form such as `ABC { aaa: 123 }`.
 - Generic struct literals can also carry explicit type arguments, such as `Box[Int64] { value: 123 }`.
 - When a generic struct literal omits its type arguments, the compiler should infer them from the expected type or field values when possible.
@@ -82,6 +87,21 @@
 - Keep `examples/main/main.mygo` aligned with the compiler's current boundary behavior, especially for `Ref`, `Option`, and `Result`.
 - Typeclass lookup should respect lexical scope first: local bindings and function-value bindings shadow typeclass names, `using`-bound methods are visible inside nested blocks, and package-level dispatch is the fallback.
 - When multiple typeclass candidates are visible, prefer the more specific binding by comparing concrete type coverage first, then type-parameter usage, then `any` usage; report ambiguity when candidates remain tied.
+
+## Inline Go Embedding
+
+- Syntax:
+  ```mygo
+  let y: Int = go[Int] {
+    code: "{x} + 1"
+    in x = n
+  }
+  ```
+- The AST node is `GoExpr{Result TypeExpr, Code string, Operands []GoOperand}` in `internal/mygo/ast/ast.go`.
+- Parser ownership lives in `internal/mygo/parser/parser.y`; `go` and `in` are lexer keywords.
+- HM inference (`internal/mygo/typeinference/infer.go`) infers every operand expression normally, then assigns the explicit result type from `go[T]`.
+- Compiler lowering lives in `internal/mygo/compiler/translate_go.go`. It renders each operand to Go, substitutes `{name}` placeholders in the raw snippet, and returns an empty type for `go[Unit]` so statement lowering treats it as a statement.
+- Keep inline Go examples small and boundary-focused. Prefer ordinary MyGO, Go FFI imports, `Ref.new`, `Option`, and `Result` when those can express the behavior without raw Go.
 
 ## Collection Types
 
@@ -129,6 +149,7 @@
 
 ## Recent Work
 
+- **Inline Go embedding syntax**: Added Rust-`asm!`-style, expression-first raw Go embedding via `go[T] { code: "..."; in name = expr }`. The parser now has `GO`/`IN` tokens and a `GoExpr` AST node; HM infers operands and uses the explicit result type; compiler lowering substitutes named `{operand}` placeholders and supports `go[Unit]` in statement position. Parser/typeinference/compiler tests cover parsing, operand checking, placeholder errors, and generated Go validity. `examples/main/main.mygo` includes a small `raw_total` sample.
 - **Prelude compilation fix with `--no-prelude` flag**: Added a `NoPrelude` flag to `Package` and `--no-prelude` CLI switch (`cmd/mygo/main.go`) to disable prelude auto-import during compilation. This breaks the circular dependency when compiling the prelude itself. Key changes:
   - `internal/mygo/compiler/types.go`: Added `NoPrelude bool` field to `Package` struct.
   - `internal/mygo/compiler/api.go`: Added public `CompileDirNoPrelude()` and `SyncNoPrelude()` functions; refactored `loadPackage()` to accept `noPrelude bool` and use `pkg.NoPrelude` instead of `pkg.Name != "prelude"` to gate prelude merging.

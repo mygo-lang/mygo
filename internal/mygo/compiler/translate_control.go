@@ -13,6 +13,8 @@ func stmtIsStatementSafe(expr Expr) bool {
 	switch n := expr.(type) {
 	case *CallExpr, *FuncLitExpr, *IfExpr, *SwitchExpr, *BlockExpr:
 		return true
+	case *GoExpr:
+		return isUnitType(n.Result)
 	case *BinaryExpr:
 		return n.Op == "|>" || n.Op == "<|"
 	default:
