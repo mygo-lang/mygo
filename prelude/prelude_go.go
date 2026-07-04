@@ -51,7 +51,7 @@ func findSlice[T any](s []T, fn func(T) bool) Option[*T] {
 // containsSlice checks if any element in s satisfies eq.equals against item.
 func containsSlice[T any](s []T, item T, eq Eq[T]) bool {
 	for _, v := range s {
-		if Eq_equals(v, item) {
+		if eq.equals(v, item) {
 			return true
 		}
 	}
@@ -107,6 +107,16 @@ func findMap[K comparable, V any](m map[K]V, fn func(V) bool) Option[*V] {
 	return None[*V]()
 }
 
+// containsMap checks if any value in m satisfies eq.equals against item.
+func containsMap[K comparable, V any](m map[K]V, item V, eq Eq[V]) bool {
+	for _, v := range m {
+		if eq.equals(v, item) {
+			return true
+		}
+	}
+	return false
+}
+
 // === Set[A] Enumerable Go helpers ===
 
 // eachSet calls fn for each element in the set.
@@ -154,4 +164,14 @@ func findSet[T comparable](s map[T]struct{}, fn func(T) bool) Option[*T] {
 		}
 	}
 	return None[*T]()
+}
+
+// containsSet checks if item satisfies eq.equals against any element in s.
+func containsSet[T comparable](s map[T]struct{}, item T, eq Eq[T]) bool {
+	for v := range s {
+		if eq.equals(v, item) {
+			return true
+		}
+	}
+	return false
 }

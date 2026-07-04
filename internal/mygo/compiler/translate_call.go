@@ -106,7 +106,7 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 				for _, tp := range fn.TypeParams {
 					typeArgCodes = append(typeArgCodes, jen.Id(subst[tp]))
 				}
-				callee = callee.Index(typeArgCodes...)
+				callee = bracketArgs(callee, typeArgCodes)
 			}
 			// Auto-resolve using constraints at call site.
 			// Resolution order: lexical scope → package-level impls.

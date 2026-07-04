@@ -1,7 +1,6 @@
 package compiler
 
 import (
-	"fmt"
 	"strings"
 
 	jen "github.com/dave/jennifer/jen"
@@ -158,19 +157,16 @@ func (g *generator) translateEnumConstructor(enumName, name string, args []Expr,
 		}
 		argCodes = append(argCodes, code)
 	}
-	var callee jen.Code
+	callee := jen.Id(sanitizeIdent(name))
 	if len(typeArgs) > 0 {
-		typeArgCodes := make([]jen.Code, 0, len(typeArgs))
+		typeOpts := jen.Options{Open: "[", Close: "]", Separator: ", "}
+		typeItems := make([]jen.Code, 0, len(typeArgs))
 		for _, ta := range typeArgs {
-			typeArgCodes = append(typeArgCodes, jen.Id(ta))
+			typeItems = append(typeItems, jen.Id(ta))
 		}
-		callee = jen.Id(sanitizeIdent(name)).Index(typeArgCodes...)
-	} else {
-		callee = jen.Id(sanitizeIdent(name))
+		callee = callee.Custom(typeOpts, typeItems...)
 	}
-	// jen.Code is an interface, need to use Statement's Call method
-	stmt := callee.(*jen.Statement)
-	return stmt.Call(argCodes...), expected, nil
+	return callee.Call(argCodes...), expected, nil
 }
 
 func (g *generator) translateTypeclassCall(name string, args []Expr, ctx *exprCtx, expected string) (jen.Code, string, bool) {
@@ -221,16 +217,24 @@ func (g *generator) translateIdent(name string, line, col int, ctx *exprCtx, exp
 	case "true", "false":
 		return jen.Lit(name == "true"), "bool", nil
 	case "None":
-		base, args := splitTypeArgs(expected)
-		if base != "" && len(args) > 0 {
-			var typeArgs []jen.Code
-			for _, a := range args {
-				cleanArg := strings.TrimPrefix(strings.TrimSpace(a), "*")
-				typeArgs = append(typeArgs, jen.Id(cleanArg))
-			}
-			return jen.Id("None").Index(typeArgs...).Call(), expected, nil
+		// Try expected type first, then ctx.retType as a fallback.
+		candidate := expected
+		if candidate == "" {
+			candidate = ctx.retType
 		}
-		fmt.Printf("DEBUG None: expected=%q base=%q args=%v line=%d\n", expected, base, args, line)
+		base, args := splitTypeArgs(candidate)
+		if base != "" && len(args) > 0 {
+			cleanArgs := make([]string, 0, len(args))
+			for _, a := range args {
+				cleanArgs = append(cleanArgs, strings.TrimPrefix(strings.TrimSpace(a), "*"))
+			}
+			typeOpts := jen.Options{Open: "[", Close: "]", Separator: ", "}
+			typeItems := make([]jen.Code, 0, len(cleanArgs))
+			for _, ca := range cleanArgs {
+				typeItems = append(typeItems, jen.Id(ca))
+			}
+			return jen.Id("None").Custom(typeOpts, typeItems...).Call(), candidate, nil
+		}
 		return nil, "", common.ErrorAtPos(line, col, "None requires type inference from context")
 	case "Nil":
 		return nil, "", common.ErrorAtPos(line, col, "Nil is not a valid value; use Option[Ref[T]] for nullable references")

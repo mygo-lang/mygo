@@ -105,7 +105,7 @@ func (g *generator) genHKTType() []jen.Code {
 		jen.Type().Id("HKTType").Interface(),
 		jen.Type().Id("HKT1").Index(jen.Id("F").Id("any")).Interface(),
 		jen.Type().Id("HKT2").Index(jen.Id("A").Id("any")).Interface(),
-		jen.Type().Id("HKT").Index(jen.Id("F").Id("any"), jen.Id("A").Id("any")).Interface(),
+		addTypeParams(jen.Type().Id("HKT"), []string{"F", "A"}).Interface(),
 	}
 }
 
@@ -142,7 +142,7 @@ func (g *generator) collectHKTTypeNames(t TypeExpr, set map[string]struct{}, val
 
 func (g *generator) genEnum(d *EnumDecl) []jen.Code {
 	out := []jen.Code{
-		jen.Type().Id(d.Name).Interface(jen.Id("is" + d.Name).Params()),
+		addTypeParams(jen.Type().Id(d.Name), d.TypeParams).Interface(jen.Id("is" + d.Name).Params()),
 	}
 	for _, v := range d.Variants {
 		tname := variantGoTypeName(d.Name, v.Name)
@@ -150,9 +150,35 @@ func (g *generator) genEnum(d *EnumDecl) []jen.Code {
 		for i, f := range v.Fields {
 			fields = append(fields, jen.Id("F"+strconv.Itoa(i)).Add(jenTypeExpr(f.Type)))
 		}
+		// Build receiver as: _ VariantName[TypeParams...]
+		recvStmt := jen.Id("_").Id(tname)
+		if len(d.TypeParams) > 0 {
+			recvStmt = bracketArgs(recvStmt, genJenIds(d.TypeParams))
+		}
+		// Build constructor function: func VariantName[TypeParams...](a0 T0, ...) EnumType[TypeParams...]
+		ctorParams := make([]jen.Code, 0, len(v.Fields))
+		for i, f := range v.Fields {
+			ctorParams = append(ctorParams, jen.Id("a"+strconv.Itoa(i)).Add(jenTypeExpr(f.Type)))
+		}
+		// Return type: EnumName[TypeParams...]
+		ctorRet := jen.Id(d.Name)
+		if len(d.TypeParams) > 0 {
+			ctorRet = bracketArgs(ctorRet, genJenIds(d.TypeParams))
+		}
+		// Build body: return VariantName[TypeParams]{F0: a0, F1: a1, ...}
+		litDict := jen.Dict{}
+		for i := range v.Fields {
+			litDict[jen.Id("F"+strconv.Itoa(i))] = jen.Id("a" + strconv.Itoa(i))
+		}
+		structLit := jen.Id(tname)
+		if len(d.TypeParams) > 0 {
+			structLit = bracketArgs(structLit, genJenIds(d.TypeParams))
+		}
+		ctorBody := jen.Return(structLit.Values(litDict))
 		out = append(out,
-			jen.Type().Id(tname).Struct(fields...),
-			jen.Func().Params(jen.Id("_").Id(tname).Params()).Id("is"+d.Name).Params(),
+			addTypeParams(jen.Type().Id(tname), d.TypeParams).Struct(fields...),
+			jen.Func().Params(recvStmt).Id("is"+d.Name).Params(),
+			addTypeParams(jen.Func().Id(v.Name), d.TypeParams).Params(ctorParams...).Add(ctorRet).Block(ctorBody),
 		)
 	}
 	return out
@@ -167,10 +193,11 @@ func (g *generator) genStruct(d *StructDecl) []jen.Code {
 		}
 		fields = append(fields, jen.Id(exportName(f.Name)).Add(jenTypeExpr(f.Type)))
 	}
-	return []jen.Code{jen.Type().Id(d.Name).Struct(fields...)}
+	return []jen.Code{addTypeParams(jen.Type().Id(d.Name), d.TypeParams).Struct(fields...)}
 }
 
 func (g *generator) genInterface(d *InterfaceDecl) []jen.Code {
+	hktSet := g.hktParams(d)
 	methods := make([]jen.Code, 0, len(d.Methods))
 	for _, m := range d.Methods {
 		if len(m.TypeParams) > 0 {
@@ -178,11 +205,11 @@ func (g *generator) genInterface(d *InterfaceDecl) []jen.Code {
 		}
 		params := make([]jen.Code, 0, len(m.Params))
 		for _, p := range m.Params {
-			params = append(params, jen.Id(p.Name).Add(jenTypeExpr(p.Type)))
+			params = append(params, jen.Id(p.Name).Add(jenHKTTypeExpr(p.Type, hktSet)))
 		}
-		methods = append(methods, jen.Id(m.Name).Params(params...).Add(jenTypeExpr(m.Ret)))
+		methods = append(methods, jen.Id(m.Name).Params(params...).Add(jenHKTTypeExpr(m.Ret, hktSet)))
 	}
-	return []jen.Code{jen.Type().Id(d.Name).Interface(methods...)}
+	return []jen.Code{addTypeParams(jen.Type().Id(d.Name), d.TypeParams).Interface(methods...)}
 }
 
 func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
@@ -239,22 +266,20 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 			currentImpl:     ifaceName,
 		}
 
-		fn := jen.Func().Id(helperFuncName(sig.Name, typeKey))
+		fnName := helperFuncName(sig.Name, typeKey)
+		var fn *jen.Statement
 		if len(sig.TypeParams) > 0 {
-			fn = fn.IndexFunc(func(gg *jen.Group) {
-				for i, tp := range sig.TypeParams {
-					if i > 0 {
-						gg.Add(jen.Op(","))
-					}
-					gg.Add(jen.Id(tp), jen.Id("any"))
-				}
-			})
+			typeOpts := jen.Options{Open: fnName + "[", Close: "]", Separator: ", "}
+			typeItems := make([]jen.Code, 0, len(sig.TypeParams))
+			for _, tp := range sig.TypeParams {
+				typeItems = append(typeItems, jen.Id(tp).Id("any"))
+			}
+			fn = jen.Func().Custom(typeOpts, typeItems...)
+		} else {
+			fn = jen.Func().Id(fnName)
 		}
 		paramList := make([]jen.Code, 0, len(params))
 		for _, p := range params {
-			if len(paramList) > 0 {
-				paramList = append(paramList, jen.Op(","))
-			}
 			goType := g.goHKTType(p.Type, hktSet, combinedTypeParams)
 			paramList = append(paramList, jen.Id(p.Name), jen.Id(goType))
 			ctx.locals[p.Name] = goType
@@ -364,32 +389,23 @@ func (g *generator) genFunc(d *FuncDecl) (jen.Code, error) {
 		}
 	}
 	retType := g.goReturnType(d.Ret, typeParamSet(d.TypeParams))
-	fn := jen.Func().Id(d.Name)
+	var fn *jen.Statement
 	if len(d.TypeParams) > 0 {
-		fn = fn.IndexFunc(func(gg *jen.Group) {
-			for i, tp := range d.TypeParams {
-				if i > 0 {
-					gg.Add(jen.Op(","))
-				}
-				gg.Add(jen.Id(tp), jen.Id("any"))
-			}
-		})
+		typeOpts := jen.Options{Open: d.Name + "[", Close: "]", Separator: ", "}
+		typeItems := make([]jen.Code, 0, len(d.TypeParams))
+		for _, tp := range d.TypeParams {
+			typeItems = append(typeItems, jen.Id(tp).Id("any"))
+		}
+		fn = jen.Func().Custom(typeOpts, typeItems...)
+	} else {
+		fn = jen.Func().Id(d.Name)
 	}
 	fn = fn.ParamsFunc(func(gr *jen.Group) {
-		first := true
 		for _, p := range d.Params {
-			if !first {
-				gr.Add(jen.Op(","))
-			}
-			first = false
 			gr.Add(jen.Id(p.Name), jen.Id(g.goType(p.Type, typeParamSet(d.TypeParams))))
 		}
 		for _, methodName := range constraintOrder {
 			cp := constraintParams[methodName]
-			if !first {
-				gr.Add(jen.Op(","))
-			}
-			first = false
 			gr.Add(jen.Id(cp.name), jen.Id(cp.typ))
 		}
 	})
@@ -397,18 +413,18 @@ func (g *generator) genFunc(d *FuncDecl) (jen.Code, error) {
 		fn = fn.Add(jen.Id(retType))
 	}
 
-	expr, _, err := g.translateExpr(d.Body, ctx, retType)
+	bodyExpr, _, err := g.translateExpr(d.Body, ctx, retType)
 	if err != nil {
-		return nil, err
+		return nil, common.ErrorAtPos(d.Line, d.Column, "function %s: %v", d.Name, err)
 	}
 
 	// Build function body
 	bodyBlock := jen.BlockFunc(func(b *jen.Group) {
 		if retType == "" {
-			b.Add(expr)
+			b.Add(bodyExpr)
 			b.Add(jen.Return())
 		} else {
-			b.Add(jen.Return().Add(expr))
+			b.Add(jen.Return().Add(bodyExpr))
 		}
 	})
 	fn = fn.Block(bodyBlock)

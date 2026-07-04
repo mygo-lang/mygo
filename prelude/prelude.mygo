@@ -332,7 +332,7 @@ func resultUnwrap[A, E](res: Result[A, E], defaultVal: A) -> A
   end
 end
 
-  func resultMap[A, B, E](res: Result[A, E], fn: func(A) -> B) -> Result[B, E]
+func resultMap[A, B, E](res: Result[A, E], fn: func(A) -> B) -> Result[B, E]
   switch res
     case Ok(v) => Ok(fn(v))
     case Err(e) => Err(e)

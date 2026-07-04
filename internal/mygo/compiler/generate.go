@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"bytes"
+	"os"
 	"sort"
 
 	jen "github.com/dave/jennifer/jen"
@@ -50,7 +51,9 @@ func (p *Package) Generate() (string, error) {
 	for _, decl := range p.Decls {
 		switch d := decl.(type) {
 		case *EnumDecl:
-			file.Add(g.genEnum(d)...)
+			for _, item := range g.genEnum(d) {
+				file.Add(item)
+			}
 		case *StructDecl:
 			file.Add(g.genStruct(d)...)
 		case *InterfaceDecl:
@@ -61,7 +64,9 @@ func (p *Package) Generate() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	file.Add(globals...)
+	for _, item := range globals {
+		file.Add(item)
+	}
 	imports := p.sortedImports()
 	if g.needsCallAny && !hasImportPath(imports, "reflect") {
 		imports = append(imports, importSpec{Path: "reflect"})
@@ -90,7 +95,9 @@ func (p *Package) Generate() (string, error) {
 			if err != nil {
 				return "", err
 			}
-			file.Add(implCode...)
+			for _, item := range implCode {
+				file.Add(item)
+			}
 		}
 	}
 	for _, decl := range p.Decls {
@@ -103,10 +110,17 @@ func (p *Package) Generate() (string, error) {
 		}
 	}
 	if g.needsCallAny {
-		file.Add(g.genHelpers()...)
+		for _, item := range g.genHelpers() {
+			file.Add(item)
+		}
 	}
 	out := &bytes.Buffer{}
 	if err := file.Render(out); err != nil {
+		os.WriteFile("/tmp/mygo_raw_output.txt", out.Bytes(), 0644)
+		// Also try getting pre-formatting source via goformat
+		var rawBuf bytes.Buffer
+		_ = file.Render(&rawBuf)
+		os.WriteFile("/tmp/mygo_raw_output2.txt", out.Bytes(), 0644)
 		return "", err
 	}
 	return out.String(), nil

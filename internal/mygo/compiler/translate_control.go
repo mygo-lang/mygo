@@ -39,11 +39,14 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 	if returnExpected == "" {
 		returnExpected = ctx.retType
 	}
+	// Build a function literal: func() returnType { stmts }
+	// We collect all statements into a single Block.
 	b := jen.Func().Params()
 	if expected != "" {
 		b.Add(jenTypeExpr(&NamedType{Name: expected}))
 	}
 	child := ctx.child()
+	var stmtCodes []jen.Code
 	var lastWasExprStmt bool
 	var sawReturn bool
 	for i, stmt := range n.Stmts {
@@ -62,15 +65,15 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 			if isLast && expected != "" {
 				if typ == "" {
 					line, col := common.NodePos(s)
-					return nil, "", common.ErrorAtPos(line, col, "block must end with an expression returning %s", expected)
+					return nil, "", common.ErrorAtPos(line, col, "block must end with an expression returning %s, but got empty type (expression was %T)", expected, s.Expr)
 				}
-				b = b.Block(jen.Return(code))
+				stmtCodes = append(stmtCodes, jen.Return(code))
 				continue
 			}
 			if stmtIsStatementSafe(s.Expr) || typ == "" {
-				b = b.Block(code)
+				stmtCodes = append(stmtCodes, code)
 			} else {
-				b = b.Block(jen.Id("_"), jen.Op("=").Add(code))
+				stmtCodes = append(stmtCodes, jen.Id("_").Op("=").Add(code))
 			}
 		case *ReturnStmt:
 			sawReturn = true
@@ -87,7 +90,7 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 					line, col := common.NodePos(s)
 					return nil, "", common.ErrorAtPos(line, col, "return value must have type %s", returnExpected)
 				}
-				b = b.Block(jen.Return(code))
+				stmtCodes = append(stmtCodes, jen.Return(code))
 			} else if returnExpected != "" {
 				line, col := common.NodePos(s)
 				return nil, "", common.ErrorAtPos(line, col, "return requires a value of type %s", returnExpected)
@@ -100,18 +103,18 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 			}
 			if s.Name == "_" {
 				if stmtIsStatementSafe(s.Value) {
-					b = b.Block(code)
+					stmtCodes = append(stmtCodes, code)
 				} else {
-					b = b.Block(jen.Id("_"), jen.Op("=").Add(code))
+					stmtCodes = append(stmtCodes, jen.Id("_").Op("=").Add(code))
 				}
 			} else {
 				actualName := g.bindLocal(child, s.Name, typ, s.Mutable)
 				bindType := typ
 				if s.Type != nil {
 					bindType = g.goType(s.Type, child.typeParams)
-					b = b.Block(jen.Var().Id(actualName).Add(jenTypeExpr(&NamedType{Name: bindType})).Op("=").Add(code))
+					stmtCodes = append(stmtCodes, jen.Var().Id(actualName).Add(jenTypeExpr(&NamedType{Name: bindType})).Op("=").Add(code))
 				} else {
-					b = b.Block(jen.Id(actualName), jen.Op(":=").Add(code))
+					stmtCodes = append(stmtCodes, jen.Id(actualName).Op(":=").Add(code))
 				}
 				child.locals[s.Name] = bindType
 				child.sourceTypes[s.Name] = bindType
@@ -131,17 +134,23 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 			if err != nil {
 				return nil, "", err
 			}
-			b = b.Block(jen.Id(actualName), jen.Op("=").Add(code))
+			stmtCodes = append(stmtCodes, jen.Id(actualName).Op("=").Add(code))
 		default:
 			lastWasExprStmt = false
 			line, col := common.NodePos(stmt)
 			return nil, "", common.ErrorAtPos(line, col, "unsupported statement %#v", stmt)
 		}
 	}
+	// If the block does not end with a value-producing statement (ExprStmt or
+	// ReturnStmt), treat it as a side-effect block. Don't wrap in a value-returning
+	// function literal — just return the raw statements.
 	if expected != "" && !lastWasExprStmt && !sawReturn {
-		line, col := common.NodePos(n)
-		return nil, "", common.ErrorAtPos(line, col, "block must end with an expression returning %s", expected)
+		// This is a statement-only block; return the statements with no return type.
+		rawBlock := jen.Block(stmtCodes...)
+		return rawBlock, "", nil
 	}
+	// Wrap all collected statements in a single Block.
+	b = b.Block(stmtCodes...)
 	return b, expected, nil
 }
 
@@ -199,26 +208,21 @@ func (g *generator) translateIf(n *IfExpr, ctx *exprCtx, expected string) (jen.C
 			resultType = elseType
 		}
 	}
-	b := jen.Func().Params()
+	// Build function literal wrapping the if/else
+	fn := jen.Func().Params()
 	if resultType != "" {
-		b.Add(jenTypeExpr(&NamedType{Name: resultType}))
+		fn.Add(jenTypeExpr(&NamedType{Name: resultType}))
 	}
+	// Construct single block with if-else chain
 	if resultType == "" {
-		b = b.Block(jen.If(cond).Block(thenCode))
+		fn = fn.Block(jen.If(cond).Block(thenCode).Else().Block(elseCode))
 	} else {
-		b = b.Block(jen.If(cond).Block(jen.Return(thenCode)))
+		fn = fn.Block(jen.If(cond).Block(jen.Return(thenCode)).Else().Block(jen.Return(elseCode)))
 	}
-	if resultType == "" {
-		b = b.Block(jen.If(cond).Block(elseCode))
-	} else {
-		b = b.Block(jen.If(cond).Block(jen.Return(elseCode)))
-	}
-	_, _, _ = thenType, elseType, cond
-	return b, resultType, nil
+	return fn, resultType, nil
 }
 
 func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string) (jen.Code, string, error) {
-	fmt.Printf("DEBUG translateSwitch: expected=%q\n", expected)
 	targetCode, targetType, err := g.translateExpr(n.Target, ctx, "")
 	if err != nil {
 		return nil, "", err
@@ -243,58 +247,71 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 		}
 	}
 
-	// Build switch statement body using Jennifer
-	switchBlock := jen.BlockFunc(func(b *jen.Group) {
-		if needsSwitchVar {
-			b.Add(jen.Id("v").Op(":=").Add(targetCode).Op(".").Id("type"))
+	// Build case blocks
+	type caseEntry struct {
+		pat  string
+		code jen.Code
+	}
+	var cases []caseEntry
+	for _, c := range n.Cases {
+		pat, bindings, err := g.translatePattern(c.Pattern, enumDecl, enumArgs, "v", c.Body)
+		if err != nil {
+			return nil, "", common.ErrorAtPos(n.Line, n.Column, "pattern: %v", err)
+		}
+		child := ctx.child()
+		for name, info := range bindings {
+			child.locals[name] = info.Type
+			child.bindings[name] = info.Expr
+		}
+		body, bodyType, err := g.translateExpr(c.Body, child, expected)
+		if err != nil {
+			return nil, "", err
+		}
+		var bodyBlock jen.Code
+		if expected == "" {
+			if bodyType == "" {
+				bodyBlock = body
+			} else {
+				bodyBlock = jen.Id("_").Op("=").Add(body)
+			}
 		} else {
-			b.Add(jen.Switch().Add(targetCode).Op(".").Id("type"))
+			bodyBlock = jen.Return(body)
 		}
-		for _, c := range n.Cases {
-			pat, bindings, err := g.translatePattern(c.Pattern, enumDecl, enumArgs, "v", c.Body)
-			if err != nil {
-				return
-			}
-			child := ctx.child()
-			for name, info := range bindings {
-				child.locals[name] = info.Type
-				child.bindings[name] = info.Expr
-			}
-			body, bodyType, err := g.translateExpr(c.Body, child, expected)
-			if err != nil {
-				return
-			}
-			caseBlock := jen.BlockFunc(func(cb *jen.Group) {
-				if expected == "" {
-					if bodyType == "" {
-						cb.Add(body)
-					} else {
-						cb.Add(jen.Id("_").Op("=").Add(body))
-					}
-				} else {
-					cb.Add(jen.Return(body))
-				}
-			})
-			b.Add(jen.Case(jen.Id(pat)).Add(caseBlock))
-		}
-		if expected != "" {
-			b.Add(jen.Id("panic").Call(jen.Lit("unreachable")))
-		}
-	})
-
-	// Build the full switch expression
-	var switchExpr jen.Code
-	if needsSwitchVar {
-		switchExpr = jen.Func().Params().Block(
-			jen.Switch().Id("v").Block(switchBlock),
-		)
-	} else {
-		switchExpr = jen.Func().Params().Block(
-			jen.Switch().Add(targetCode).Block(switchBlock),
-		)
+		cases = append(cases, caseEntry{pat: pat, code: bodyBlock})
 	}
 
-	return switchExpr, expected, nil
+	// Build the type-switch statement
+	// Use: switch v := opt.(type) { case Pat: body ... default: panic(...) }
+	var switchFn func(func(*jen.Group)) *jen.Statement
+	if needsSwitchVar {
+		// switch v := opt.(type) { cases }
+		switchFn = func(f func(*jen.Group)) *jen.Statement {
+			return jen.Switch().Id("v").Op(":=").Add(targetCode).Op(".").Parens(jen.Id("type")).CustomFunc(jen.Options{Open: "{", Close: "}", Multi: true}, f)
+		}
+	} else {
+		switchFn = func(f func(*jen.Group)) *jen.Statement {
+			return jen.Switch().Add(targetCode).Op(".").Parens(jen.Id("type")).CustomFunc(jen.Options{Open: "{", Close: "}", Multi: true}, f)
+		}
+	}
+
+	// Wrap the switch in an immediately-invoked function literal
+	// so it can be used as an expression.
+	expr := jen.Func().Params()
+	if expected != "" {
+		expr.Add(jen.Id(expected))
+	}
+	expr = expr.Block(
+		switchFn(func(g *jen.Group) {
+			for _, ce := range cases {
+				g.Add(jen.Case(jen.Id(ce.pat)).Block(ce.code))
+			}
+			if expected != "" {
+				g.Add(jen.Default().Block(jen.Panic(jen.Lit("unreachable"))))
+			}
+		}),
+	).Call()
+
+	return expr, expected, nil
 }
 
 func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (jen.Code, string, error) {
