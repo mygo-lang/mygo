@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	jen "github.com/dave/jennifer/jen"
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 )
 
@@ -21,7 +22,7 @@ func TestGenStructEmitsTags(t *testing.T) {
 	if len(out) != 1 {
 		t.Fatalf("len(genStruct output) = %d, want %d", len(out), 1)
 	}
-	got := strings.TrimSpace(out[0].GoString())
+	got := strings.TrimSpace(jen.NewFile("main").Add(out[0]).GoString())
 	if !strings.Contains(got, "`json:\"id\"`") {
 		t.Fatalf("generated struct missing id tag:\n%s", got)
 	}
