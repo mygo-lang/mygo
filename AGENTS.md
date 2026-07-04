@@ -128,6 +128,8 @@
 
 ## Recent Work
 
+- **Scala3-style named `using` bindings**: Added `BindName` field to `ast.Constraint` for named bindings like `using intShow: Show[Int]`. Both yacc (`parser.y`) and recursive-descent (`parser_core.go`) parsers support this syntax — the constraint grammar was updated with a new `constr_suffix` rule that handles `COLON IDENT constraint_suffix` (named) versus bare `constraint_suffix` (simple). The compiler's `genFunc` uses `BindName` as the Go parameter name when available. The call-site auto-injection of `using` parameters was improved with a three-tier resolution strategy: lexical scope → caller's typeclass bindings → package-level helper functions. The example `main.mygo` demonstrates the new syntax with `using myEq: Eq[A]`.
+
 - **Typeclass refactoring (MIGRATE.md)**: Unified typeclass semantics onto a single `interface`/`impl`/`using` route, removing the old `where` syntax and runtime dispatch registry. Key changes:
   - **`examples/main/main.mygo`**: Migrated `where` → `using` constraints; replaced `Int[]` → `Slice[Int]` for collection type annotations.
   - **Parser anonymous impl support**: Both `parser.y` (yacc) and `parser_core.go` (recursive-descent) now accept `impl Interface[Args]` (anonymous) alongside the existing `impl Type : Interface[Args]` (named) form.

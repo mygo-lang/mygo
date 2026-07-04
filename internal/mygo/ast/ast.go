@@ -83,10 +83,11 @@ type FuncDecl struct {
 func (*FuncDecl) declNode() {}
 
 type Constraint struct {
-	Line   int
-	Column int
-	Name   string
-	Args   []TypeExpr
+	Line     int
+	Column   int
+	Name     string
+	Args     []TypeExpr
+	BindName string // optional named binding, e.g. "intShow" in "using intShow: Show[Int]"
 }
 
 type Param struct {
@@ -305,7 +306,7 @@ type ReturnStmt struct {
 }
 
 func (*ReturnStmt) stmtNode() {}
-func (*LetStmt) declNode() {}
+func (*LetStmt) declNode()    {}
 
 type AssignStmt struct {
 	Line   int

@@ -331,7 +331,10 @@ func (g *generator) genFunc(d *FuncDecl) (jen.Code, error) {
 			subst[tp] = g.goType(c.Args[i], typeParamSet(d.TypeParams))
 		}
 		for _, m := range iface.Methods {
-			paramName := m.Name + "Fn"
+			paramName := c.BindName
+			if paramName == "" {
+				paramName = m.Name + "Fn"
+			}
 			binding := typeclassBinding{
 				Interface: c.Name,
 				Score:     typeclassMatchScore(c.Args, typeParamSet(d.TypeParams)),

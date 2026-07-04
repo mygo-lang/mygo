@@ -58,6 +58,7 @@ func (p *parser) parseWithYacc() error {
 	p.currentImplLine = 0
 	p.currentImplCol = 0
 	p.currentSliceElems = nil
+	p.currentConstraintBindName = ""
 	p.savedTypeNameStack = nil
 	p.savedStructTypeArgs = nil
 	p.savedDeclName = ""

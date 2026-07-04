@@ -108,6 +108,8 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 				}
 				callee = callee.Index(typeArgCodes...)
 			}
+			// Auto-resolve using constraints at call site.
+			// Resolution order: lexical scope → package-level impls.
 			for _, c := range fn.Using {
 				iface := g.pkg.Interfaces[c.Name]
 				if iface == nil {
@@ -125,13 +127,23 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 					if len(cTypeArgs) > 0 {
 						resolvedType = cTypeArgs[0]
 					}
-					if _, ok := ctx.typeParams[resolvedType]; ok {
-						if helper, ok := ctx.constraintFuncs[m.Name]; ok {
-							args = append([]jen.Code{jen.Id(helper)}, args...)
-							continue
-						}
+					// 1. Lexical scope: check if caller has a matching constraint function.
+					if helper, ok := ctx.constraintFuncs[m.Name]; ok {
+						args = append(args, jen.Id(helper))
+						continue
 					}
-					args = append([]jen.Code{jen.Id(helperFuncName(m.Name, typeKeyFromType(resolvedType)))}, args...)
+					// 2. Lexical scope: check if caller's typeclassMethods provide a binding.
+					if bindings, ok := ctx.typeclassMethods[m.Name]; ok && len(bindings) > 0 {
+						best := typeclassBindingBest(bindings)
+						if best.DictExpr != "" {
+							args = append(args, jen.Id(best.DictExpr))
+						} else {
+							args = append(args, jen.Id(helperFuncName(m.Name, typeKeyFromType(resolvedType))))
+						}
+						continue
+					}
+					// 3. Package-level: use the helper function for this type.
+					args = append(args, jen.Id(helperFuncName(m.Name, typeKeyFromType(resolvedType))))
 				}
 			}
 			retType := g.goReturnType(fn.Ret, ctx.typeParams)

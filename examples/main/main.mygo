@@ -40,7 +40,7 @@ func describe_result[A](res: Result[A, String]) -> String using Show[A]
   end
 end
 
-func same[A](left: A, right: A) -> Bool using Eq[A]
+func same[A](left: A, right: A) -> Bool using myEq: Eq[A]
   equals(left, right)
 end
 

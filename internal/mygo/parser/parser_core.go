@@ -8,66 +8,67 @@ import (
 )
 
 type parser struct {
-	toks                     []token
-	pos                      int
-	skipNL                   bool
-	err                      error
-	result                   *ast.File
-	packageName              string
-	packageLine              int
-	packageColumn            int
-	decls                    []Decl
-	currentName              string
-	currentNameLine          int
-	currentNameCol           int
-	currentType              TypeExpr
-	currentTypeLine          int
-	currentTypeCol           int
-	currentTypeParams        []string
-	currentParams            []ast.Param
-	currentWhere             []ast.Constraint
-	currentConstraintArgs    []TypeExpr
-	currentBlock             []ast.Stmt
-	currentStmt              ast.Stmt
-	currentExpr              ast.Expr
-	currentLeftExpr          ast.Expr
-	currentPipeLeftExpr      ast.Expr
-	currentArgs              []ast.Expr
-	currentMapKey            ast.Expr
-	currentMapValue          ast.Expr
-	currentMapEntries        []ast.MapLitPair
-	currentSetElems          []ast.Expr
-	currentEnumFields        []ast.Field
-	currentCollectionHasPair bool
-	currentIfCond            ast.Expr
-	currentIfThen            ast.Expr
-	currentIfElse            ast.Expr
-	currentWhileCond         ast.Expr
-	currentWhileBody         ast.Expr
-	currentSwitchTarget      ast.Expr
-	currentSwitchCases       []ast.SwitchCase
-	currentPattern           ast.Pattern
-	currentPatternArgs       []string
-	currentStructFields      []ast.StructLitField
-	currentStructTypeArgs    []ast.TypeExpr
-	currentImplTypeParams    []string
-	currentImplType          TypeExpr
-	currentImplInterfaceArgs []ast.TypeExpr
-	currentImplLine          int
-	currentImplCol           int
-	currentSliceElems        []ast.Expr
-	savedDeclName            string
-	savedTypeNameStack       []typeNameEntry
-	savedStructTypeArgs      []ast.TypeExpr
-	expectTypeSuffix         bool
-	expectStructTypeArgs     bool
-	expectConstraintSuffix   bool
-	parsingImplTypeParams    bool
-	currentEnum              *ast.EnumDecl
-	currentStruct            *ast.StructDecl
-	currentInterface         *ast.InterfaceDecl
-	currentImpl              *ast.ImplDecl
-	currentFunc              *ast.FuncDecl
+	toks                      []token
+	pos                       int
+	skipNL                    bool
+	err                       error
+	result                    *ast.File
+	packageName               string
+	packageLine               int
+	packageColumn             int
+	decls                     []Decl
+	currentName               string
+	currentNameLine           int
+	currentNameCol            int
+	currentType               TypeExpr
+	currentTypeLine           int
+	currentTypeCol            int
+	currentTypeParams         []string
+	currentParams             []ast.Param
+	currentWhere              []ast.Constraint
+	currentConstraintArgs     []TypeExpr
+	currentBlock              []ast.Stmt
+	currentStmt               ast.Stmt
+	currentExpr               ast.Expr
+	currentLeftExpr           ast.Expr
+	currentPipeLeftExpr       ast.Expr
+	currentArgs               []ast.Expr
+	currentMapKey             ast.Expr
+	currentMapValue           ast.Expr
+	currentMapEntries         []ast.MapLitPair
+	currentSetElems           []ast.Expr
+	currentEnumFields         []ast.Field
+	currentCollectionHasPair  bool
+	currentIfCond             ast.Expr
+	currentIfThen             ast.Expr
+	currentIfElse             ast.Expr
+	currentWhileCond          ast.Expr
+	currentWhileBody          ast.Expr
+	currentSwitchTarget       ast.Expr
+	currentSwitchCases        []ast.SwitchCase
+	currentPattern            ast.Pattern
+	currentPatternArgs        []string
+	currentStructFields       []ast.StructLitField
+	currentStructTypeArgs     []ast.TypeExpr
+	currentImplTypeParams     []string
+	currentImplType           TypeExpr
+	currentImplInterfaceArgs  []ast.TypeExpr
+	currentImplLine           int
+	currentImplCol            int
+	currentSliceElems         []ast.Expr
+	currentConstraintBindName string
+	savedDeclName             string
+	savedTypeNameStack        []typeNameEntry
+	savedStructTypeArgs       []ast.TypeExpr
+	expectTypeSuffix          bool
+	expectStructTypeArgs      bool
+	expectConstraintSuffix    bool
+	parsingImplTypeParams     bool
+	currentEnum               *ast.EnumDecl
+	currentStruct             *ast.StructDecl
+	currentInterface          *ast.InterfaceDecl
+	currentImpl               *ast.ImplDecl
+	currentFunc               *ast.FuncDecl
 }
 
 type typeNameEntry struct {
@@ -425,11 +426,11 @@ func (p *parser) parseFuncDecl(allowEmpty bool) (*FuncDecl, error) {
 	if p.peekKeyword("using") {
 		_ = p.next()
 		for {
-			constraintName, args, err := p.parseConstraint()
+			c, err := p.parseConstraint()
 			if err != nil {
 				return nil, err
 			}
-			where = append(where, Constraint{Line: p.peekRaw().line, Column: p.peekRaw().col, Name: constraintName, Args: args})
+			where = append(where, c)
 			if !p.matchSym(",") {
 				break
 			}
@@ -445,10 +446,56 @@ func (p *parser) parseFuncDecl(allowEmpty bool) (*FuncDecl, error) {
 	return &FuncDecl{Line: start.line, Column: start.col, Name: funcName, TypeParams: typeParams, Params: params, Ret: ret, Using: where, Body: body}, nil
 }
 
-func (p *parser) parseConstraint() (string, []TypeExpr, error) {
-	name, err := p.expectIdent()
+// parseConstraint parses a `using` constraint entry.
+// Supports two forms:
+//  1. Named:  `intShow: Show[Int]`     — BindName = "intShow", Name = "Show", Args = [Int]
+//  2. Simple: `Show[Int]`              — BindName = "",       Name = "Show", Args = [Int]
+func (p *parser) parseConstraint() (Constraint, error) {
+	// Peek: is the next token an ident followed by ":" and another ident?
+	// If so, treat it as a named binding: `name: Interface[..]`
+	line := p.peek().line
+	col := p.peek().col
+	if p.peek().kind == tokIdent && p.pos+2 < len(p.toks) {
+		next1 := p.toks[p.pos+1]
+		next2 := p.toks[p.pos+2]
+		if next1.kind == tokSym && next1.lit == ":" && next2.kind == tokIdent {
+			// Named form: bindName : InterfaceName[Args]
+			bindName, err := p.expectIdent()
+			if err != nil {
+				return Constraint{}, err
+			}
+			if err := p.expectSym(":"); err != nil {
+				return Constraint{}, err
+			}
+			ifaceName, err := p.expectIdent()
+			if err != nil {
+				return Constraint{}, err
+			}
+			var args []TypeExpr
+			if p.matchSym("[") {
+				if !p.matchSym("]") {
+					for {
+						tp, err := p.parseType()
+						if err != nil {
+							return Constraint{}, err
+						}
+						args = append(args, tp)
+						if p.matchSym("]") {
+							break
+						}
+						if err := p.expectSym(","); err != nil {
+							return Constraint{}, err
+						}
+					}
+				}
+			}
+			return Constraint{Line: line, Column: col, Name: ifaceName, Args: args, BindName: bindName}, nil
+		}
+	}
+	// Simple form: InterfaceName[Args]
+	ifaceName, err := p.expectIdent()
 	if err != nil {
-		return "", nil, err
+		return Constraint{}, err
 	}
 	var args []TypeExpr
 	if p.matchSym("[") {
@@ -456,19 +503,19 @@ func (p *parser) parseConstraint() (string, []TypeExpr, error) {
 			for {
 				tp, err := p.parseType()
 				if err != nil {
-					return "", nil, err
+					return Constraint{}, err
 				}
 				args = append(args, tp)
 				if p.matchSym("]") {
 					break
 				}
 				if err := p.expectSym(","); err != nil {
-					return "", nil, err
+					return Constraint{}, err
 				}
 			}
 		}
 	}
-	return name, args, nil
+	return Constraint{Line: line, Column: col, Name: ifaceName, Args: args}, nil
 }
 
 // tryIdent peeks if the current token is an identifier and consumes it;
