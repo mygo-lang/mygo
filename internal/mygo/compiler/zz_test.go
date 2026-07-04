@@ -7,7 +7,7 @@ import (
 )
 
 func TestCompilePrelude(t *testing.T) {
-	pkg, err := loadPackage("../../../prelude")
+	pkg, err := loadPackage("../../../prelude", true)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -9,6 +9,7 @@ import (
 
 type Package struct {
 	Name          string
+	NoPrelude     bool // if true, skip auto-importing prelude declarations
 	Imports       map[string]struct{}
 	ImportDecls   []*ImportDecl
 	ImportAliases map[string]string

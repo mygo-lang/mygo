@@ -129,6 +129,12 @@
 
 ## Recent Work
 
+- **Prelude compilation fix with `--no-prelude` flag**: Added a `NoPrelude` flag to `Package` and `--no-prelude` CLI switch (`cmd/mygo/main.go`) to disable prelude auto-import during compilation. This breaks the circular dependency when compiling the prelude itself. Key changes:
+  - `internal/mygo/compiler/types.go`: Added `NoPrelude bool` field to `Package` struct.
+  - `internal/mygo/compiler/api.go`: Added public `CompileDirNoPrelude()` and `SyncNoPrelude()` functions; refactored `loadPackage()` to accept `noPrelude bool` and use `pkg.NoPrelude` instead of `pkg.Name != "prelude"` to gate prelude merging.
+  - `cmd/mygo/main.go`: Parses `--no-prelude` before the subcommand; dispatches to `SyncNoPrelude`/`CompileDirNoPrelude` when set. Usage: `mygo --no-prelude sync prelude/`.
+  - `internal/mygo/compiler/zz_test.go`: `TestCompilePrelude` passes `noPrelude=true` to `loadPackage`.
+
 - **HM inference is now the default codegen type path**: `compiler.Generate()` runs `typeinference.InferPackage()` as a required pre-pass and returns inference errors instead of silently continuing. `translateExpr` consults `TypedInfo.ExprTypes` for expected/result types before falling back to local lowering, so generated calls and bindings prefer HM-derived types.
 - **Go import type queries participate in HM**: `typeinference` now loads `go:` imports through Go's importer, registers aliases as `TGoPackage`, and resolves selectors such as `fmt.Sprint` to HM function types. Variadic Go functions are represented with `TFunc.Variadic`, and `any` unifies at the Go boundary. Local bindings like `let show = fmt.Sprint` infer as function values and lower to direct calls instead of `callAny`.
 - **Yacc parser state isolation fixes**: The yacc parser keeps explicit stacks for nested call callees/arguments, block bodies, and function-type parameters, fixing cases like `Some(fn(v))`, switch case body leakage, and `func(A) -> B` parameter loss. Yacc wildcard pattern parsing also treats `_` as `WildcardPattern` when it comes through the IDENT path.

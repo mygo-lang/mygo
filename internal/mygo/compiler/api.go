@@ -12,7 +12,17 @@ import (
 )
 
 func CompileDir(dir string) (string, error) {
-	pkg, err := loadPackage(dir)
+	return compileDir(dir, false)
+}
+
+// CompileDirNoPrelude compiles a directory without auto-importing prelude declarations.
+// This is useful when compiling the prelude itself to avoid circular dependency.
+func CompileDirNoPrelude(dir string) (string, error) {
+	return compileDir(dir, true)
+}
+
+func compileDir(dir string, noPrelude bool) (string, error) {
+	pkg, err := loadPackage(dir, noPrelude)
 	if err != nil {
 		return "", err
 	}
@@ -28,6 +38,17 @@ func CompileDir(dir string) (string, error) {
 }
 
 func Sync(root string) ([]string, error) {
+	return syncDir(root, false)
+}
+
+// SyncNoPrelude walks root and compiles all found .mygo packages,
+// skipping the prelude auto-import for each package. This is useful
+// when the prelude itself is being compiled in a multi-package tree.
+func SyncNoPrelude(root string) ([]string, error) {
+	return syncDir(root, true)
+}
+
+func syncDir(root string, noPrelude bool) ([]string, error) {
 	var written []string
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -50,7 +71,13 @@ func Sync(root string) ([]string, error) {
 		return nil, err
 	}
 	for _, dir := range dirs {
-		out, err := CompileDir(dir)
+		var out string
+		var err error
+		if noPrelude {
+			out, err = CompileDirNoPrelude(dir)
+		} else {
+			out, err = CompileDir(dir)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -90,12 +117,13 @@ func mygoDirs(root string) ([]string, error) {
 	return dirs, nil
 }
 
-func loadPackage(dir string) (*Package, error) {
+func loadPackage(dir string, noPrelude bool) (*Package, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
 	pkg := &Package{
+		NoPrelude:     noPrelude,
 		Imports:       map[string]struct{}{},
 		ImportAliases: map[string]string{},
 		Enums:         map[string]*EnumDecl{},
@@ -131,7 +159,7 @@ func loadPackage(dir string) (*Package, error) {
 		pkgName = filepath.Base(dir)
 	}
 	pkg.Name = toPackageName(pkgName)
-	if pkg.Name != "prelude" {
+	if !pkg.NoPrelude {
 		preludeDecls, err := loadPreludeDecls()
 		if err != nil {
 			return nil, err
