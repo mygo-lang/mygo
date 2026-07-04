@@ -412,6 +412,9 @@ func typeFromAST(t TypeExpr) MonoType {
 		ret := typeFromAST(t.Ret)
 		return TFunc{Args: params, Ret: ret}
 	case *TupleType:
+		if len(t.Elems) == 0 {
+			return TUnit{}
+		}
 		args := make([]MonoType, len(t.Elems))
 		for i, e := range t.Elems {
 			args[i] = typeFromAST(e)

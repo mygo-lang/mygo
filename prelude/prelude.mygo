@@ -25,7 +25,7 @@ interface Eq[A]
 end
 
 interface Enumerable[C[A], A]
-  func each(c: C[A], fn: func(A) -> Unit) -> Unit
+  func each(c: C[A], fn: func(A) -> ()) -> ()
   func map[B](c: C[A], fn: func(A) -> B) -> C[B]
   func filter(c: C[A], fn: func(A) -> Bool) -> C[A]
   func fold[B](c: C[A], initial: B, fn: func(B, A) -> B) -> B
@@ -199,7 +199,7 @@ end
 
 # Generic impl for List[T]: impl[T] List[T]: Enumerable[List[T], T]
 impl[T] List[T]: Enumerable[List[T], T]
-  func each(c: List[T], fn: func(T) -> Unit) -> Unit
+  func each(c: List[T], fn: func(T) -> ()) -> ()
     var current: Ref[List[T]] = Ref.new(c)
     var done: Bool = false
     while !done
@@ -297,8 +297,8 @@ end
 
 # Generic impl for Slice[T]: Enumerable[Slice[T], T]
 impl[T] Slice[T]: Enumerable[Slice[T], T]
-  func each(c: Slice[T], fn: func(T) -> Unit) -> Unit
-    go[Unit] {
+  func each(c: Slice[T], fn: func(T) -> ()) -> ()
+    go[()] {
       code: """
         for _, v := range {c} {
             {fn}(v)
@@ -395,8 +395,8 @@ end
 
 # Generic impl for Map[K, V]: impl[K, V] Map[K, V]: Enumerable[Map[K, V], V]
 impl[K, V] Map[K, V]: Enumerable[Map[K, V], V]
-  func each(c: Map[K, V], fn: func(V) -> Unit) -> Unit
-    go[Unit] {
+  func each(c: Map[K, V], fn: func(V) -> ()) -> ()
+    go[()] {
       code: """
         for _, v := range {c} {
             {fn}(v)
@@ -475,8 +475,8 @@ end
 
 # Generic impl for Set[A]: impl[A] Set[A]: Enumerable[Set[A], A]
 impl[A] Set[A]: Enumerable[Set[A], A]
-  func each(c: Set[A], fn: func(A) -> Unit) -> Unit
-    go[Unit] {
+  func each(c: Set[A], fn: func(A) -> ()) -> ()
+    go[()] {
       code: """
         for v := range {c} {
             {fn}(v)
@@ -555,7 +555,7 @@ end
 
 # Generic impl for Option[A]: impl[A] Option[A]: Enumerable[Option[A], A]
 impl[A] Option[A]: Enumerable[Option[A], A]
-  func each(c: Option[A], fn: func(A) -> Unit) -> Unit
+  func each(c: Option[A], fn: func(A) -> ()) -> ()
     switch c
       case Some(v) then
         let _ = fn(v)

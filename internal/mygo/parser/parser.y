@@ -680,6 +680,10 @@ type
 		p := yylex.(*parser)
 		yyVAL.node = p.currentType
 	}
+	| LPAREN RPAREN {
+		p := yylex.(*parser)
+		p.currentType = &ast.TupleType{Line: $1.line, Column: $1.col}
+	}
 	| LPAREN type {
 		p := yylex.(*parser)
 		p.currentTupleTypeElemsStack = append(p.currentTupleTypeElemsStack, p.currentTupleTypeElems)

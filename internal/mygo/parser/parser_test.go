@@ -778,7 +778,7 @@ end
 func TestParseFileSupportsUnitLiteral(t *testing.T) {
 	file, err := ParseFile(`package main
 
-func demo() -> Unit
+func demo() -> ()
   ()
 end
 `)

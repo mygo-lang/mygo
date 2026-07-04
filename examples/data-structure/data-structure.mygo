@@ -143,6 +143,6 @@ func demo() -> String
   summary
 end
 
-func main() -> Unit
+func main() -> ()
   let _ = fmt.Println(demo())
 end

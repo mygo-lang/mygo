@@ -54,7 +54,7 @@ func TestInlineGoUnitGeneratesStatement(t *testing.T) {
 	src := `package main
 import fmt "go:fmt"
 func printMessage(message: String) -> Int
-  let _ = go[Unit] {
+  let _ = go[()] {
     code: "fmt.Println({msg})"
     in msg = message
   }

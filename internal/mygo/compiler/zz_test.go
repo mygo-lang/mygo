@@ -3,6 +3,7 @@ package compiler
 import (
 	"testing"
 
+	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/typeinference"
 )
 
@@ -24,7 +25,6 @@ func TestCompilePrelude(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Test optionMap only
 	g := &generator{
 		pkg:               pkg,
 		importAliases:     pkg.ImportAliases,
@@ -44,17 +44,29 @@ func TestCompilePrelude(t *testing.T) {
 		}
 	}
 
-	// Test optionMap
-	fnDecl := pkg.Funcs["optionMap"]
-	code, err := g.genFunc(fnDecl)
-	if err != nil {
-		t.Fatalf("genFunc(optionMap): %v", err)
+	// Find the Option Enumerable impl and test genImpl
+	var optionEnumImpl *ImplDecl
+	for _, impl := range pkg.Impls {
+		if impl.InterfaceName == "Enumerable" && impl.Type != nil {
+			if namedType, ok := impl.Type.(*NamedType); ok && namedType.Name == "Option" {
+				optionEnumImpl = impl
+				break
+			}
+		}
 	}
-	t.Logf("optionMap generated: %T", code)
+	if optionEnumImpl == nil {
+		t.Fatal("Option Enumerable impl not found in prelude")
+	}
 
-	// Also test optionFlatMap (same pattern)
-	fn2 := pkg.Funcs["optionFlatMap"]
-	code2, err := g.genFunc(fn2)
+	code, err := g.genImpl(optionEnumImpl)
+	if err != nil {
+		t.Fatalf("genImpl(Option Enumerable): %v", err)
+	}
+	t.Logf("Option Enumerable impl generated: %d items", len(code))
+
+	// Also test optionFlatMap (standalone function)
+	fnDecl := pkg.Funcs["optionFlatMap"]
+	code2, err := g.genFunc(fnDecl)
 	if err != nil {
 		t.Fatalf("genFunc(optionFlatMap): %v", err)
 	}

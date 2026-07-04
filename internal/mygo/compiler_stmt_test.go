@@ -18,7 +18,7 @@ func TestCompileDirSupportsCollectionLiterals(t *testing.T) {
   42
   end
 
-  func main() -> Unit
+  func main() -> ()
     demo()
   end
 `)
@@ -57,7 +57,7 @@ func TestCompileDirSupportsLetVarAndDiscard(t *testing.T) {
     n
   end
 
-  func main() -> Unit
+  func main() -> ()
     demo()
   end
 `)

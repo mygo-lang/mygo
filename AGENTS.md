@@ -19,7 +19,7 @@
 - Supported numeric types: `Int`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt`, `UInt8`, `UInt16`, `UInt32`, `UInt64`, `Float32`, `Float64`. All map directly to Go primitives via `primitiveGoName`, `goType`, `hmTypeString`, and `typeString`.
 - Integer literals support hex (`0xff`), octal (`0o777`), and binary (`0b1010`) prefixes via lexer rules in `parser_lex.l`, all producing `NUMBER` tokens with the raw literal string as value.
 - Named primitive spellings like `Int`, `String`, and `Bool` map to Go primitives in generation.
-- `Unit` is a return-only marker in MyGO and should lower to a Go function with no return values, not to `struct{}`.
+- `()` (empty tuple) is the unit type in MyGO source and should lower to a Go function with no return values, not to `struct{}`. The old `Unit` spelling is no longer recognized.
 
 ## Go FFI
 
@@ -40,7 +40,7 @@
 - `Slice[A]` is MyGO's canonical slice type spelling and lowers directly to Go's native slice `[]A`.
 - `Map[K, V]` is Go's native map `map[K]V`.
 - `Set[A]` is Go's native set `map[A]struct{}`.
-- Inline Go embedding uses expression-first `go[T] { code: "..."; in name = expr; type T = SomeType }` syntax. The `T` result type is mandatory; use `go[Unit]` for statement-only snippets.
+- Inline Go embedding uses expression-first `go[T] { code: "..."; in name = expr; type T = SomeType }` syntax. The `T` result type is mandatory; use `go[()]` for statement-only snippets.
 - Inline Go code is trusted raw Go carried in a string literal. MyGO operands are passed explicitly with named `in` bindings (value operands) or `type BindName = SomeType` bindings (type operands), and referenced from Go code as `{name}` placeholders.
 - Inline Go value operands are type-inferred and lowered as ordinary MyGO expressions before placeholder substitution. The compiler does not infer or inspect the raw Go snippet itself.
 - Inline Go type operands automatically translate MyGO types (like `Int`, `String`, `Slice[Int]`, `Map[String, Bool]`) to their corresponding Go type representations (like `int`, `string`, `[]int`, `map[string]bool`).
@@ -77,7 +77,7 @@
 - Tuple values use anonymous structs in lowering, while `let (a, b) = expr` destructures a tuple return directly and `let c = expr` keeps the tuple as a single anonymous struct value.
 - Tuple destructuring supports nested patterns and `_` ignore slots, so `let (_, b) = expr` and `let (a, (_, c)) = expr` bind only the named leaves.
 - Pipe operators `<|` and `|>` are both supported in expression lowering.
-- Inline Go expressions use `go[T] { code: "..."; in x = expr }`, lower directly to generated Go, and may appear anywhere an expression is accepted. `go[Unit]` is valid only as a statement-position snippet or discarded binding.
+- Inline Go expressions use `go[T] { code: "..."; in x = expr }`, lower directly to generated Go, and may appear anywhere an expression is accepted. `go[()]` is valid only as a statement-position snippet or discarded binding.
 - Struct literals support a constructor-like form such as `ABC { aaa: 123 }`.
 - Generic struct literals can also carry explicit type arguments, such as `Box[Int64] { value: 123 }`.
 - When a generic struct literal omits its type arguments, the compiler should infer them from the expected type or field values when possible.
@@ -128,7 +128,7 @@
 - Parser ownership lives in `internal/mygo/parser/parser.y`; `go`, `in`, and `type` (within go blocks) are lexer keywords.
 - The `Lex` function in `parser.y` maps `"type"` to the `TYPE` token so it's recognized as a keyword inside go blocks.
 - HM inference (`internal/mygo/typeinference/infer.go`) infers every operand expression normally, then assigns the explicit result type from `go[T]`.
-- Compiler lowering lives in `internal/mygo/compiler/translate_go.go`. It renders each operand to Go (value operands as expressions, type operands via `goType`), substitutes `{name}` placeholders in the raw snippet, and returns an empty type for `go[Unit]` so statement lowering treats it as a statement.
+- Compiler lowering lives in `internal/mygo/compiler/translate_go.go`. It renders each operand to Go (value operands as expressions, type operands via `goType`), substitutes `{name}` placeholders in the raw snippet, and returns an empty type for `go[()]` so statement lowering treats it as a statement.
 - Inline Go type operands automatically translate MyGO types (like `Int`, `String`, `Slice[Int]`, `Map[String, Bool]`) to their corresponding Go type representations (like `int`, `string`, `[]int`, `map[string]bool`).
 - Keep inline Go examples small and boundary-focused. Prefer ordinary MyGO, Go FFI imports, `Ref.new`, `Option`, and `Result` when those can express the behavior without raw Go.
 
@@ -186,6 +186,14 @@
 - **Type parsing update** (`internal/mygo/parser/parser.y`): `Slice[Int]` is the canonical slice type spelling and `Int[]` shorthand is no longer recognized.
 
 ## Recent Work
+
+- **`-> Unit` → `-> ()` migration**: All source files migrated from `-> Unit` / `go[Unit]` to `-> ()` / `go[()]`. The old `Unit` name is no longer recognized as a return-type keyword. Key changes:
+  - **Parser** (`parser.y`): Added `| LPAREN RPAREN` alternative to the `type` rule so `()` is recognized as a type expression (empty tuple → unit type). Regenerated `parser.go` via `goyacc`. Conflicts: 39/5 (was 29/4).
+  - **HM type inference** (`typeinference/types.go`): `typeFromAST` returns `TUnit{}` for empty `TupleType` (i.e. `()`).
+  - **HM return handling** (`typeinference/infer.go`): When declared return type is `TUnit{}` or corresponds to `()`, skip unification — the body value is discarded in void context. Forces function return type to `TUnit{}`.
+  - **Codegen** (`compiler/type_inference.go`): `isUnitType()` now checks for `*TupleType` with 0 elements alongside `*NamedType{Name:"Unit"}`.
+  - **All source files**: `prelude.mygo`, `examples/*`, tests — every `-> Unit` → `-> ()` and `go[Unit]` → `go[()]`.
+  - **Test fix** (`compiler/zz_test.go`): `TestCompilePrelude` no longer looks for the removed `optionMap` function; tests the Option Enumerable impl and `optionFlatMap` instead.
 
 - **New numeric types and hex/octal/binary integer literals**: Added full support for `Int8`, `UInt8`, `Int16`, `UInt16`, `Int32`, `UInt32`, `Float32` as first-class numeric types alongside existing `Int`, `Int64`, `UInt`, `UInt64`, `Float64`. Also added lexer support for hex (`0xff` / `0XFF`), octal (`0o777` / `0O777`), and binary (`0b1010` / `0B1010`) integer literal prefixes. Key changes:
   - **Lexer** (`parser_lex.l`): Added `hexnumber`, `octnumber`, `binnumber` lex rules with prefix patterns, placed before the general `number` rule so they match first. Regenerated `lex.yy.go` via `golex`.
@@ -280,7 +288,7 @@ A Hindley-Milner (Algorithm W) type inference pass implementing Haskell 98 core 
 - Literals (Int/Float64/String/Bool) — class-defaulted numeric types; all supported types (`Int`, `Int8`, `UInt8`, `Int16`, `UInt16`, `Int32`, `UInt32`, `Int64`, `UInt`, `UInt64`, `Float32`, `Float64`) resolve as `TCon` in HM
 - Ident lookup with let-polymorphism (instantiate scheme → fresh vars per use site)
 - Function calls — callee type unified with `(arg_types) -> fresh_ret`
-- `if`/`switch` — branch types unified, `while` returns `Unit`
+- `if`/`switch` — branch types unified, `while` returns `()`
 - Function literals — explicit param/return types registered in body env
 - Pipe operators `|>` / `<|` — unified as function application
 - Arithmetic (`+`, `-`, `*`, `/`), logical (`&&`, `||`), comparison (`==` etc.)

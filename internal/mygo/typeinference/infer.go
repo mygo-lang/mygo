@@ -290,14 +290,26 @@ func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo,
 		// Apply inferred substitution to the return type
 		inferredRetType := s.ApplyMT(bodyType)
 
-		// Unify with declared return type (if any)
+		// If the declared return type is Unit, skip unification — the last
+		// expression's value is discarded (void context).  Otherwise unify.
 		if d.Ret != nil {
-			declaredRetType := s.ApplyMT(retType)
-			s, err = Unify(inferredRetType, declaredRetType, s)
-			if err != nil {
-				return nil, fmt.Errorf("function %q return type mismatch: %w", d.Name, err)
+			_, isUnit := retType.(TUnit)
+			if !isUnit {
+				if tc, ok := retType.(TCon); ok && tc.Name == "Unit" {
+					isUnit = true
+				}
 			}
-			inferredRetType = s.ApplyMT(inferredRetType)
+			if isUnit {
+				// Force function return type to TUnit{} (void).
+				funcType = TFunc{Args: paramTypes, Ret: TUnit{}}
+			} else {
+				declaredRetType := s.ApplyMT(retType)
+				s, err = Unify(inferredRetType, declaredRetType, s)
+				if err != nil {
+					return nil, fmt.Errorf("function %q return type mismatch: %w", d.Name, err)
+				}
+				inferredRetType = s.ApplyMT(inferredRetType)
+			}
 		}
 
 		// Apply substitution to function type

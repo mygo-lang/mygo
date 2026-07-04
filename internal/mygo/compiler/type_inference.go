@@ -1097,6 +1097,11 @@ func typeStringReturn(t TypeExpr, subst map[string]string) string {
 }
 
 func isUnitType(t TypeExpr) bool {
-	tt, ok := t.(*NamedType)
-	return ok && tt.Name == "Unit" && len(tt.Args) == 0
+	if tt, ok := t.(*NamedType); ok && tt.Name == "Unit" && len(tt.Args) == 0 {
+		return true
+	}
+	if tt, ok := t.(*TupleType); ok && len(tt.Elems) == 0 {
+		return true
+	}
+	return false
 }
