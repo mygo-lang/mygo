@@ -277,7 +277,7 @@ struct_fields
 	;
 
 field
-	: IDENT COLON type {
+	: IDENT COLON type opt_struct_tag {
 		p := yylex.(*parser)
 		if p.currentStruct != nil {
 			p.currentStruct.Fields = append(p.currentStruct.Fields, ast.Field{
@@ -285,10 +285,12 @@ field
 				Column: $1.col,
 				Name: $1.lit,
 				Type: p.currentType,
+				Tag: p.currentStructTag,
 			})
 		}
+		p.currentStructTag = ""
 	}
-	| EMBED type {
+	| EMBED type opt_struct_tag {
 		p := yylex.(*parser)
 		if p.currentStruct != nil {
 			p.currentStruct.Fields = append(p.currentStruct.Fields, ast.Field{
@@ -296,8 +298,21 @@ field
 				Column: $1.col,
 				Name: $1.lit,
 				Type: p.currentType,
+				Tag: p.currentStructTag,
 			})
 		}
+		p.currentStructTag = ""
+	}
+	;
+
+opt_struct_tag
+	: /* empty */ {
+		p := yylex.(*parser)
+		p.currentStructTag = ""
+	}
+	| STRING {
+		p := yylex.(*parser)
+		p.currentStructTag = $1.lit
 	}
 	;
 

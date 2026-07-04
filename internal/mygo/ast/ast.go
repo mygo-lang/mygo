@@ -102,6 +102,7 @@ type Field struct {
 	Column int
 	Name   string
 	Type   TypeExpr
+	Tag    string
 }
 
 type TypeExpr interface{ typeNode() }

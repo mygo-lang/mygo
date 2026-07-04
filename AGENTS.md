@@ -81,6 +81,7 @@
 - Struct literals support a constructor-like form such as `ABC { aaa: 123 }`.
 - Generic struct literals can also carry explicit type arguments, such as `Box[Int64] { value: 123 }`.
 - When a generic struct literal omits its type arguments, the compiler should infer them from the expected type or field values when possible.
+- Struct field declarations may carry an optional Go struct tag as a trailing string literal, using either normal double quotes or triple-double-quoted multiline strings. The parser stores the literal text on `Field.Tag`, and `genStruct` should emit it as a Go struct tag.
 - `Ref.new(expr)` constructs a reference value and is lowered as `&expr`; if the argument is already a ref/pointer, lowering leaves it unchanged rather than producing a pointer-to-pointer.
 - `Slice[A]` is the only slice type spelling. The parser no longer accepts `A[]` or `Int[]` shorthand, which keeps type syntax aligned with ordinary generic instantiation.
 - The parser test suite now covers package/function declarations, collection literals, chain postfix, `if`/`while`/`switch`, pipe precedence, struct/interface/impl declarations, `let`/`var`/assignment, func literals, `using` clauses, enum declarations, switch patterns, and nested/empty collection literals.

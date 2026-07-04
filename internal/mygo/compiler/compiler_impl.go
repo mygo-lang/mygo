@@ -3,6 +3,7 @@ package compiler
 import (
 	"sort"
 	"strconv"
+	"strings"
 
 	jen "github.com/dave/jennifer/jen"
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
@@ -187,13 +188,47 @@ func (g *generator) genEnum(d *EnumDecl) []jen.Code {
 func (g *generator) genStruct(d *StructDecl) []jen.Code {
 	fields := make([]jen.Code, 0, len(d.Fields))
 	for _, f := range d.Fields {
+		tagMap := parseStructTag(f.Tag)
+		var field *jen.Statement
 		if f.Name == "embed" {
-			fields = append(fields, jenTypeExpr(f.Type))
-			continue
+			field = jenTypeExpr(f.Type).(*jen.Statement)
+		} else {
+			field = jen.Id(exportName(f.Name)).Add(jenTypeExpr(f.Type))
 		}
-		fields = append(fields, jen.Id(exportName(f.Name)).Add(jenTypeExpr(f.Type)))
+		if len(tagMap) > 0 {
+			field = field.Tag(tagMap)
+		}
+		fields = append(fields, field)
 	}
 	return []jen.Code{addTypeParams(jen.Type().Id(d.Name), d.TypeParams).Struct(fields...)}
+}
+
+func parseStructTag(tag string) map[string]string {
+	tag = strings.TrimSpace(tag)
+	if tag == "" {
+		return nil
+	}
+	fields := strings.Fields(tag)
+	out := make(map[string]string, len(fields))
+	for _, field := range fields {
+		parts := strings.SplitN(field, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		raw := strings.TrimSpace(parts[1])
+		val, err := strconv.Unquote(raw)
+		if err != nil {
+			val = raw
+		}
+		if key != "" {
+			out[key] = val
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 func (g *generator) genInterface(d *InterfaceDecl) []jen.Code {

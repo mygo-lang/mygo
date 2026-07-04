@@ -64,6 +64,7 @@ type parser struct {
 	currentBindPatternElems      []ast.BindPattern
 	currentBindPattern           ast.BindPattern
 	currentStructFields          []ast.StructLitField
+	currentStructTag             string
 	currentStructTypeArgs        []ast.TypeExpr
 	currentTypeArgStack          [][]ast.TypeExpr
 	currentFuncTypeParamStack    [][]ast.TypeExpr

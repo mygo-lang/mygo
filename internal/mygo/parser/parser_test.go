@@ -239,6 +239,32 @@ end
 	}
 }
 
+func TestParseFileSupportsStructFieldTags(t *testing.T) {
+	src := `package main
+struct User
+  id: Int "json:\"id\""
+  name: String "json:\"name,omitempty\" yaml:\"name\""
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	st, ok := file.Decls[0].(*StructDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *StructDecl", file.Decls[0])
+	}
+	if got := len(st.Fields); got != 2 {
+		t.Fatalf("len(Fields) = %d, want %d", got, 2)
+	}
+	if st.Fields[0].Tag != "json:\"id\"" {
+		t.Fatalf("Fields[0].Tag = %q, want %q", st.Fields[0].Tag, "json:\"id\"")
+	}
+	if st.Fields[1].Tag != "json:\"name,omitempty\" yaml:\"name\"" {
+		t.Fatalf("Fields[1].Tag = %q, want %q", st.Fields[1].Tag, "json:\"name,omitempty\" yaml:\"name\"")
+	}
+}
+
 func TestParseFileSupportsLetVarAndAssign(t *testing.T) {
 	src := `package main
 func demo() -> Int
