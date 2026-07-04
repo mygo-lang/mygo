@@ -268,6 +268,8 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 			constraintFuncs: map[string]string{},
 			retType:         retType,
 			currentImpl:     ifaceName,
+			implTypeKey:     typeKey,
+			implTypeParams:  d.TypeParams,
 		}
 
 		fnName := helperFuncName(sig.Name, typeKey)

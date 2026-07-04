@@ -43,6 +43,8 @@ type exprCtx struct {
 	dictBindings     []dictBinding
 	retType          string
 	currentImpl      string
+	implTypeKey      string
+	implTypeParams   []string
 }
 
 type typeclassBinding struct {
@@ -99,6 +101,8 @@ func (ctx *exprCtx) child() *exprCtx {
 		dictBindings:     nil,
 		retType:          ctx.retType,
 		currentImpl:      ctx.currentImpl,
+		implTypeKey:      ctx.implTypeKey,
+		implTypeParams:   ctx.implTypeParams,
 	}
 	for k, v := range ctx.locals {
 		dup.locals[k] = v

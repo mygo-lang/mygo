@@ -60,6 +60,11 @@ type List[A any] struct {
 	Head A
 	Tail Option[*List[A]]
 }
+type IOption[A any] interface {
+	isSome(self IOption[A]) bool
+	isNone(self IOption[A]) bool
+	unwrapOr(self IOption[A], defaultVal A) A
+}
 type HKTType interface{}
 type HKT1[F any] interface{}
 type HKT2[A any] interface{}
@@ -373,17 +378,97 @@ func find_map_astruct___a[A comparable](c map[A]struct{}, fn func(A) bool) Optio
 	}()
 
 }
-func typeKeyFromType(value string) string {
-	return value
+func each_option_a_a[A any](c Option[A], fn func(A)) {
+	panic("translate error")
 }
-func optionIsSome[A any](opt Option[A]) bool {
-	return func() bool {
-		if _, ok := opt.(OptionSome[A]); ok {
-			return func() bool {
-				return true
+func map_option_a_a[A any, B any](c Option[A], fn func(A) B) Option[B] {
+	return func() Option[B] {
+		if v, ok := c.(OptionSome[A]); ok {
+			return func() Option[B] {
+				return Some[B](fn(v.F0))
 			}()
 		} else {
-			if _, ok := opt.(OptionNone[A]); ok {
+			if _, ok := c.(OptionNone[A]); ok {
+				return func() Option[B] {
+					return None[B]()
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
+	}()
+}
+func filter_option_a_a[A any](c Option[A], fn func(A) bool) Option[A] {
+	return func() Option[A] {
+		if v, ok := c.(OptionSome[A]); ok {
+			return func() Option[A] {
+				return func() Option[A] {
+					if fn(v.F0) {
+						return Some[A](v.F0)
+					} else {
+						return None[A]()
+					}
+				}()
+			}()
+		} else {
+			if _, ok := c.(OptionNone[A]); ok {
+				return func() Option[A] {
+					return None[A]()
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
+	}()
+}
+func fold_option_a_a[A any, B any](c Option[A], initial B, fn func(B, A) B) B {
+	return func() B {
+		if v, ok := c.(OptionSome[A]); ok {
+			return func() B {
+				return fn(initial, v.F0)
+			}()
+		} else {
+			if _, ok := c.(OptionNone[A]); ok {
+				return func() B {
+					return initial
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
+	}()
+}
+func find_option_a_a[A any](c Option[A], fn func(A) bool) Option[*A] {
+	return func() Option[*A] {
+		if v, ok := c.(OptionSome[A]); ok {
+			return func() Option[*A] {
+				return func() Option[*A] {
+					if fn(v.F0) {
+						return Some[*A](&v.F0)
+					} else {
+						return None[A]()
+					}
+				}()
+			}()
+		} else {
+			if _, ok := c.(OptionNone[A]); ok {
+				return func() Option[*A] {
+					return None[A]()
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
+	}()
+}
+func contains_option_a_a[A any](c Option[A], item A, eq Eq[A]) bool {
+	return func() bool {
+		if v, ok := c.(OptionSome[A]); ok {
+			return func() bool {
+				return eq.equals(v.F0, item)
+			}()
+		} else {
+			if _, ok := c.(OptionNone[A]); ok {
 				return func() bool {
 					return false
 				}()
@@ -393,16 +478,16 @@ func optionIsSome[A any](opt Option[A]) bool {
 		}
 	}()
 }
-func optionIsNone[A any](opt Option[A]) bool {
+func isSome_a[A any](self Option[A]) bool {
 	return func() bool {
-		if _, ok := opt.(OptionSome[A]); ok {
+		if _, ok := self.(OptionSome[A]); ok {
 			return func() bool {
-				return false
+				return true
 			}()
 		} else {
-			if _, ok := opt.(OptionNone[A]); ok {
+			if _, ok := self.(OptionNone[A]); ok {
 				return func() bool {
-					return true
+					return false
 				}()
 			} else {
 				panic("unreachable")
@@ -410,7 +495,10 @@ func optionIsNone[A any](opt Option[A]) bool {
 		}
 	}()
 }
-func optionUnwrap[A any](opt Option[A], defaultVal A) A {
+func isNone_a[A any](self Option[A]) bool {
+	return !isSome_a[A](self)
+}
+func unwrapOr_a[A any](opt Option[A], defaultVal A) A {
 	return func() A {
 		if v, ok := opt.(OptionSome[A]); ok {
 			return func() A {
@@ -427,22 +515,8 @@ func optionUnwrap[A any](opt Option[A], defaultVal A) A {
 		}
 	}()
 }
-func optionMap[A any, B any](opt Option[A], fn func(A) B) Option[B] {
-	return func() Option[B] {
-		if v, ok := opt.(OptionSome[A]); ok {
-			return func() Option[B] {
-				return Some[B](fn(v.F0))
-			}()
-		} else {
-			if _, ok := opt.(OptionNone[A]); ok {
-				return func() Option[B] {
-					return None[B]()
-				}()
-			} else {
-				panic("unreachable")
-			}
-		}
-	}()
+func typeKeyFromType(value string) string {
+	return value
 }
 func optionFlatMap[A any, B any](opt Option[A], fn func(A) Option[B]) Option[B] {
 	return func() Option[B] {

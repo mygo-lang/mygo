@@ -32,6 +32,38 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 		} else if ok {
 			return code, typ, nil
 		}
+		// Handle method calls on impl types (e.g., self.isSome() inside an impl block).
+		if ctx.currentImpl != "" && ctx.implTypeKey != "" {
+			if iface := g.pkg.Interfaces[ctx.currentImpl]; iface != nil {
+				for _, m := range iface.Methods {
+					if m.Name == field.Field {
+						baseCode, _, err := g.translateExpr(field.Expr, ctx, "")
+						if err != nil {
+							return nil, "", err
+						}
+						argCodes := []jen.Code{baseCode}
+						for _, a := range n.Args {
+							code, _, err := g.translateExpr(a, ctx, "")
+							if err != nil {
+								return nil, "", err
+							}
+							argCodes = append(argCodes, code)
+						}
+						retType := g.goReturnType(m.Ret, ctx.typeParams)
+						fnName := helperFuncName(m.Name, ctx.implTypeKey)
+						callee := jen.Id(fnName)
+						if len(ctx.implTypeParams) > 0 {
+							typeArgCodes := make([]jen.Code, 0, len(ctx.implTypeParams))
+							for _, tp := range ctx.implTypeParams {
+								typeArgCodes = append(typeArgCodes, jen.Id(tp))
+							}
+							callee = bracketArgs(callee, typeArgCodes)
+						}
+						return callee.Call(argCodes...), retType, nil
+					}
+				}
+			}
+		}
 	}
 	if id, ok := n.Callee.(*IdentExpr); ok {
 		if st := g.pkg.Structs[id.Name]; st != nil && len(n.Args) == len(st.Fields) && len(st.Fields) > 0 && strings.HasPrefix(st.Fields[0].Name, "F") {

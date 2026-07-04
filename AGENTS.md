@@ -178,6 +178,11 @@
 
 ## Recent Work
 
+- **Impl method call self-resolution fix**: The compiler can now resolve `FieldExpr` method calls on the same impl type (e.g., `self.isSome()` inside `IOption.isNone`). Three key changes:
+  - `types.go`: Added `implTypeKey` and `implTypeParams` to `exprCtx` for carrying impl context.
+  - `compiler_impl.go` (`genImpl`): Sets `implTypeKey`/`implTypeParams` on the exprCtx when generating impl method helpers.
+  - `translate_call.go` (`translateCall`): New case in `FieldExpr` branch detects method calls matching the current impl's interface methods, translating them to helper function calls (e.g., `isSome_a[A](self)`) with explicit type arguments. This fixes `!self.isSome()` producing `!unknown()` in generated Go.
+
 - **Inline Go embedding syntax**: Added Rust-`asm!`-style, expression-first raw Go embedding via `go[T] { code: "..."; in name = expr }`. The parser now has `GO`/`IN` tokens and a `GoExpr` AST node; HM infers operands and uses the explicit result type; compiler lowering substitutes named `{operand}` placeholders and supports `go[Unit]` in statement position. Parser/typeinference/compiler tests cover parsing, operand checking, placeholder errors, and generated Go validity. `examples/main/main.mygo` includes a small `raw_total` sample.
 - **Prelude compilation fix with `--no-prelude` flag**: Added a `NoPrelude` flag to `Package` and `--no-prelude` CLI switch (`cmd/mygo/main.go`) to disable prelude auto-import during compilation. This breaks the circular dependency when compiling the prelude itself. Key changes:
   - `internal/mygo/compiler/types.go`: Added `NoPrelude bool` field to `Package` struct.
