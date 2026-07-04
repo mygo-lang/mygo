@@ -177,7 +177,7 @@ func (g *generator) genEnum(d *EnumDecl) []jen.Code {
 		ctorBody := jen.Return(structLit.Values(litDict))
 		out = append(out,
 			addTypeParams(jen.Type().Id(tname), d.TypeParams).Struct(fields...),
-			jen.Func().Params(recvStmt).Id("is"+d.Name).Params(),
+			jen.Func().Params(recvStmt).Id("is"+d.Name).Params().Block(),
 			addTypeParams(jen.Func().Id(v.Name), d.TypeParams).Params(ctorParams...).Add(ctorRet).Block(ctorBody),
 		)
 	}
@@ -290,8 +290,13 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 		if len(mergedTypeParams) > 0 {
 			typeOpts := jen.Options{Open: fnName + "[", Close: "]", Separator: ", "}
 			typeItems := make([]jen.Code, 0, len(mergedTypeParams))
+			constraints := implTypeParamConstraints(typeArgs)
 			for _, tp := range mergedTypeParams {
-				typeItems = append(typeItems, jen.Id(tp).Id("any"))
+				constraint := "any"
+				if constraints[tp] || (implUsesSet(typeArgs) && containsString(sig.TypeParams, tp)) {
+					constraint = "comparable"
+				}
+				typeItems = append(typeItems, jen.Id(tp).Id(constraint))
 			}
 			fn = jen.Func().Custom(typeOpts, typeItems...)
 		} else {
@@ -334,6 +339,72 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 		allCode = append(allCode, fn)
 	}
 	return allCode, nil
+}
+
+func containsString(items []string, want string) bool {
+	for _, item := range items {
+		if item == want {
+			return true
+		}
+	}
+	return false
+}
+
+func implUsesSet(typeArgs []TypeExpr) bool {
+	for _, arg := range typeArgs {
+		if typeExprContainsName(arg, "Set") {
+			return true
+		}
+	}
+	return false
+}
+
+func typeExprContainsName(t TypeExpr, name string) bool {
+	nt, ok := t.(*NamedType)
+	if !ok {
+		return false
+	}
+	if nt.Name == name {
+		return true
+	}
+	for _, arg := range nt.Args {
+		if typeExprContainsName(arg, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func implTypeParamConstraints(typeArgs []TypeExpr) map[string]bool {
+	constraints := map[string]bool{}
+	for _, arg := range typeArgs {
+		markComparableTypeParams(arg, constraints)
+	}
+	return constraints
+}
+
+func markComparableTypeParams(t TypeExpr, constraints map[string]bool) {
+	nt, ok := t.(*NamedType)
+	if !ok {
+		return
+	}
+	switch nt.Name {
+	case "Map":
+		if len(nt.Args) > 0 {
+			if key, ok := nt.Args[0].(*NamedType); ok && len(key.Args) == 0 {
+				constraints[key.Name] = true
+			}
+		}
+	case "Set":
+		if len(nt.Args) > 0 {
+			if elem, ok := nt.Args[0].(*NamedType); ok && len(elem.Args) == 0 {
+				constraints[elem.Name] = true
+			}
+		}
+	}
+	for _, arg := range nt.Args {
+		markComparableTypeParams(arg, constraints)
+	}
 }
 
 func (g *generator) genFunc(d *FuncDecl) (jen.Code, error) {

@@ -141,6 +141,9 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 			return nil, "", common.ErrorAtPos(line, col, "unsupported statement %#v", stmt)
 		}
 	}
+	if expected == "" {
+		return jen.Block(stmtCodes...), "", nil
+	}
 	// If the block does not end with a value-producing statement (ExprStmt or
 	// ReturnStmt), treat it as a side-effect block. Don't wrap in a value-returning
 	// function literal — just return the raw statements.
@@ -208,18 +211,14 @@ func (g *generator) translateIf(n *IfExpr, ctx *exprCtx, expected string) (jen.C
 			resultType = elseType
 		}
 	}
-	// Build function literal wrapping the if/else
-	fn := jen.Func().Params()
-	if resultType != "" {
-		fn.Add(jenTypeExpr(&NamedType{Name: resultType}))
-	}
-	// Construct single block with if-else chain
 	if resultType == "" {
-		fn = fn.Block(jen.If(cond).Block(thenCode).Else().Block(elseCode))
-	} else {
-		fn = fn.Block(jen.If(cond).Block(jen.Return(thenCode)).Else().Block(jen.Return(elseCode)))
+		return jen.If(cond).Block(thenCode).Else().Block(elseCode), "", nil
 	}
-	return fn, resultType, nil
+	// Value-producing if expressions are wrapped so they can appear inside
+	// larger expressions.
+	fn := jen.Func().Params().Add(jenTypeExpr(&NamedType{Name: resultType}))
+	fn = fn.Block(jen.If(cond).Block(jen.Return(thenCode)).Else().Block(jen.Return(elseCode)))
+	return fn.Call(), resultType, nil
 }
 
 func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string) (jen.Code, string, error) {
@@ -365,11 +364,13 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 		}
 	}
 
+	if expected == "" {
+		return tail, "", nil
+	}
+
 	// Wrap in an immediately-invoked function literal for expression form
 	expr := jen.Func().Params()
-	if expected != "" {
-		expr.Add(jen.Id(expected))
-	}
+	expr.Add(jen.Id(expected))
 	expr = expr.Block(tail).Call()
 
 	return expr, expected, nil
@@ -449,12 +450,7 @@ func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (jen.Code, string
 		}
 	})
 
-	// Build the for loop and immediately call it
-	forLoop := jen.Func().Params().Block(
-		jen.For(cond).Block(forBlock),
-	).Call()
-
-	return forLoop, "", nil
+	return jen.For(cond).Block(forBlock), "", nil
 }
 
 func (g *generator) translatePattern(p Pattern, enum *EnumDecl, enumArgs []string, switchVar string, body Expr) (string, map[string]bindingInfo, error) {

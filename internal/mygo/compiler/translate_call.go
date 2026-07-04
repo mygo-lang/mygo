@@ -158,6 +158,17 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 		if helper, typ, ok := g.translateTypeclassCall(id.Name, n.Args, ctx, expected); ok {
 			return helper, typ, nil
 		}
+		if id.Name != "" {
+			var args []jen.Code
+			for _, a := range n.Args {
+				code, _, err := g.translateExpr(a, ctx, "")
+				if err != nil {
+					return nil, "", err
+				}
+				args = append(args, code)
+			}
+			return jen.Id(sanitizeIdent(id.Name)).Call(args...), expected, nil
+		}
 		if typ, ok := ctx.locals[id.Name]; ok && typ == "any" {
 			if code, ret, ok, err := g.translateAnyFuncCall(id.Name, n.Args, ctx); err != nil {
 				return nil, "", err
