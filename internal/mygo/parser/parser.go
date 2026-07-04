@@ -187,7 +187,7 @@ const yyEofCode = 1
 const yyErrCode = 2
 const yyInitialStackSize = 16
 
-//line internal/mygo/parser/parser.y:1424
+//line internal/mygo/parser/parser.y:1428
 
 func (p *parser) Lex(lval *yySymType) int {
 	tok := p.nextRaw()
@@ -237,8 +237,6 @@ func (p *parser) Lex(lval *yySymType) int {
 			return int(END)
 		case "using":
 			return int(USING)
-		case "not":
-			return int(NOT)
 		case "let":
 			return int(LET)
 		case "var":
@@ -311,6 +309,8 @@ func (p *parser) Lex(lval *yySymType) int {
 			return int(RBRACE)
 		case "_":
 			return int(UNDER)
+		case "!":
+			return int(NOT)
 		case "=":
 			return int('=')
 		case "<":
@@ -336,13 +336,13 @@ var yyExca = [...]int16{
 	-1, 1,
 	1, -1,
 	-2, 0,
-	-1, 159,
-	40, 185,
-	-2, 187,
-	-1, 160,
-	31, 191,
+	-1, 161,
+	40, 186,
 	-2, 188,
-	-1, 314,
+	-1, 162,
+	31, 192,
+	-2, 189,
+	-1, 316,
 	42, 91,
 	51, 91,
 	-2, 27,
@@ -350,118 +350,118 @@ var yyExca = [...]int16{
 
 const yyPrivate = 57344
 
-const yyLast = 465
+const yyLast = 468
 
 var yyAct = [...]int16{
-	155, 121, 291, 362, 321, 127, 46, 197, 5, 301,
-	49, 281, 199, 119, 16, 158, 9, 89, 87, 90,
-	86, 129, 153, 91, 78, 413, 412, 369, 368, 88,
-	335, 67, 65, 143, 144, 141, 142, 94, 95, 96,
-	363, 361, 50, 48, 55, 85, 111, 108, 51, 66,
-	109, 53, 54, 363, 92, 410, 64, 43, 110, 381,
-	112, 39, 75, 44, 80, 80, 83, 312, 113, 343,
-	77, 80, 146, 150, 349, 148, 97, 149, 106, 116,
-	107, 147, 323, 105, 135, 136, 137, 138, 81, 8,
-	249, 204, 294, 272, 115, 395, 273, 367, 152, 261,
-	411, 339, 247, 228, 382, 139, 140, 401, 159, 160,
-	161, 162, 308, 95, 96, 202, 151, 166, 126, 348,
-	171, 111, 108, 165, 124, 109, 170, 175, 164, 92,
-	306, 307, 314, 110, 309, 112, 400, 174, 30, 399,
-	373, 59, 286, 260, 246, 201, 176, 59, 172, 8,
-	122, 97, 262, 106, 163, 107, 82, 74, 105, 39,
-	372, 195, 168, 341, 250, 205, 213, 203, 193, 212,
-	177, 60, 313, 173, 125, 227, 217, 60, 47, 266,
-	231, 254, 251, 178, 118, 133, 134, 131, 132, 366,
-	392, 330, 328, 283, 270, 256, 356, 229, 415, 230,
-	8, 235, 234, 8, 252, 365, 159, 242, 243, 8,
-	248, 244, 245, 236, 237, 238, 239, 240, 241, 258,
-	259, 253, 8, 267, 24, 232, 233, 224, 265, 332,
-	317, 271, 264, 222, 216, 408, 389, 390, 94, 95,
-	96, 8, 393, 385, 8, 209, 8, 111, 108, 214,
-	220, 109, 275, 8, 8, 276, 277, 278, 331, 110,
-	8, 112, 263, 274, 292, 346, 279, 326, 287, 8,
-	221, 325, 290, 8, 255, 4, 391, 97, 289, 106,
-	293, 107, 37, 310, 105, 311, 27, 315, 28, 298,
-	299, 297, 19, 20, 21, 22, 23, 24, 405, 316,
-	404, 61, 324, 375, 318, 322, 25, 26, 130, 334,
-	336, 333, 200, 268, 8, 194, 52, 36, 35, 34,
-	337, 338, 29, 31, 32, 30, 344, 345, 340, 6,
-	305, 304, 303, 310, 302, 300, 353, 282, 380, 347,
-	351, 352, 350, 329, 280, 357, 359, 210, 211, 354,
-	327, 257, 358, 296, 208, 364, 295, 207, 206, 157,
-	198, 156, 154, 370, 388, 387, 371, 374, 355, 383,
-	384, 284, 104, 103, 378, 379, 377, 376, 102, 394,
-	386, 101, 100, 99, 98, 196, 396, 93, 192, 191,
-	397, 398, 190, 189, 407, 188, 402, 403, 187, 186,
-	406, 185, 184, 183, 182, 181, 180, 409, 179, 84,
-	414, 123, 76, 416, 226, 417, 73, 58, 57, 56,
-	120, 128, 79, 69, 360, 342, 320, 319, 45, 63,
-	62, 269, 225, 72, 42, 33, 288, 223, 117, 71,
-	41, 219, 169, 218, 167, 70, 40, 285, 215, 114,
-	68, 38, 18, 17, 15, 14, 13, 12, 11, 10,
-	7, 3, 2, 1, 145,
+	157, 122, 293, 364, 323, 128, 46, 199, 5, 303,
+	49, 283, 201, 120, 16, 160, 9, 89, 87, 90,
+	86, 130, 155, 91, 78, 415, 414, 371, 370, 88,
+	337, 67, 65, 144, 145, 142, 143, 95, 96, 97,
+	365, 363, 50, 48, 55, 85, 112, 109, 51, 66,
+	110, 53, 54, 365, 92, 412, 64, 43, 111, 383,
+	113, 39, 75, 44, 80, 80, 83, 314, 114, 345,
+	77, 80, 147, 151, 351, 149, 98, 150, 107, 117,
+	108, 148, 325, 106, 136, 137, 138, 139, 81, 93,
+	8, 251, 206, 296, 116, 274, 397, 369, 166, 154,
+	413, 341, 275, 263, 384, 140, 141, 249, 403, 161,
+	162, 163, 164, 310, 96, 97, 152, 153, 230, 350,
+	204, 173, 112, 109, 167, 168, 110, 172, 177, 127,
+	92, 308, 309, 125, 111, 311, 113, 30, 176, 375,
+	95, 96, 97, 288, 402, 262, 59, 401, 316, 112,
+	109, 248, 98, 110, 107, 203, 108, 59, 178, 106,
+	174, 111, 197, 113, 123, 93, 264, 8, 215, 195,
+	165, 214, 82, 74, 39, 343, 60, 229, 219, 98,
+	170, 107, 233, 108, 252, 374, 106, 60, 315, 207,
+	205, 179, 175, 126, 47, 268, 256, 253, 180, 119,
+	134, 232, 135, 237, 236, 394, 254, 285, 161, 244,
+	245, 218, 250, 246, 247, 238, 239, 240, 241, 242,
+	243, 260, 261, 255, 272, 269, 216, 234, 235, 368,
+	267, 132, 133, 273, 266, 332, 330, 8, 19, 20,
+	21, 22, 23, 24, 24, 367, 258, 8, 8, 226,
+	319, 417, 25, 26, 277, 224, 410, 278, 279, 280,
+	8, 8, 8, 334, 395, 276, 8, 8, 281, 358,
+	289, 231, 387, 333, 292, 8, 211, 265, 391, 392,
+	291, 294, 295, 8, 8, 312, 61, 313, 8, 317,
+	222, 300, 301, 299, 348, 8, 328, 327, 257, 4,
+	27, 318, 28, 393, 326, 37, 320, 29, 31, 32,
+	223, 407, 338, 406, 377, 324, 131, 336, 335, 202,
+	270, 196, 339, 340, 52, 36, 35, 34, 346, 347,
+	342, 30, 6, 307, 306, 312, 305, 304, 355, 302,
+	284, 382, 353, 354, 352, 349, 331, 359, 361, 282,
+	212, 356, 213, 329, 360, 259, 298, 366, 210, 297,
+	209, 208, 159, 200, 158, 372, 156, 390, 389, 376,
+	373, 385, 386, 357, 286, 105, 380, 381, 379, 378,
+	104, 396, 388, 103, 102, 101, 100, 99, 398, 198,
+	94, 194, 399, 400, 193, 192, 409, 191, 404, 405,
+	190, 189, 408, 188, 187, 186, 185, 184, 183, 411,
+	182, 181, 416, 84, 124, 418, 76, 419, 228, 73,
+	58, 57, 56, 121, 129, 79, 69, 362, 344, 322,
+	321, 45, 63, 62, 271, 227, 72, 42, 33, 290,
+	225, 118, 71, 41, 221, 171, 220, 169, 70, 40,
+	287, 217, 115, 68, 38, 18, 17, 15, 14, 13,
+	12, 11, 10, 7, 3, 2, 1, 146,
 }
 
 var yyPact = [...]int16{
-	268, -1000, -1000, -1000, 325, 170, -1000, -1000, -1000, 284,
-	-1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, 282,
-	321, 321, 321, -1000, 315, 314, 313, 276, -1000, 117,
-	-1000, 117, 117, 12, -1000, 138, 138, -1000, -3, 312,
-	-3, -3, 134, -1000, -1000, -3, -28, 134, -29, -1000,
-	-1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, 114,
-	134, 19, 134, 134, 113, 33, -1000, 33, -1000, 134,
-	-1000, -1000, 144, 134, -1000, 106, -1000, -1000, 78, 133,
-	-1000, 72, 304, -1000, 151, 146, 148, 52, -20, -24,
-	-1000, 30, 234, -1000, -1000, -1000, -1000, 33, -1000, -1000,
-	-1000, -1000, -1000, -1000, -1000, -1000, 33, 33, 33, 33,
-	33, 111, 83, -1000, -1000, 71, 119, -1000, 134, 104,
-	132, -1000, -1000, 134, -1000, 134, -1000, 102, 129, -1000,
-	143, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
-	-1000, -1000, -1000, -1000, -1000, 33, 311, 134, -1000, 308,
-	-1000, 30, 101, 69, 126, -1000, 43, 124, -1000, -1000,
-	215, -1000, -1000, 304, 134, 230, -1000, -1000, -1000, 246,
-	214, -1000, -1000, 134, 57, -1000, 166, 304, 134, 33,
-	33, 33, 33, 33, 33, 33, 33, 33, 33, 33,
-	33, 33, 33, 100, -1000, 56, 134, 42, 123, -1000,
-	142, -1000, -1000, 33, -1000, 33, 141, 259, 164, -1000,
-	-1000, -1000, 99, 53, -1000, -1000, 109, 243, 134, -1000,
-	139, 134, -1000, -1000, 309, -1000, 163, -1000, -1000, 134,
-	-1000, -1000, 146, 146, 148, 52, -20, -20, -20, -20,
-	-20, -20, -24, -24, -1000, -1000, -1000, 46, 50, -1000,
-	308, 33, -1000, -1000, 33, 33, 33, -1000, 170, 170,
-	162, -1000, -1000, -1000, 98, 170, 134, -1000, -1000, -1000,
-	134, 244, 308, 45, -1000, -1000, -1000, -1000, -1000, 170,
-	-1000, -1000, 108, 134, 20, 128, -1000, -1000, -3, 211,
-	-1000, -1000, 301, 34, 308, 255, 251, -1000, 173, 239,
-	199, -1000, -1000, -1000, -1000, -1000, 307, 305, -30, 33,
-	-1000, -1000, -1000, -1000, -1000, -1000, 58, -1000, -1000, -1000,
-	122, -1000, -1000, -1000, 21, 33, 33, 249, -1000, -1000,
-	70, -1000, 108, 138, 138, 33, -1000, 170, 192, 304,
-	170, 301, 1, -1000, -1000, -1000, -1000, 174, -1000, 54,
-	-1000, -32, -33, -1000, -1000, -1000, 120, 96, -1000, -1000,
-	-1000, 299, -1000, 134, 170, -1000, -1000, 55, 33, 33,
-	224, 208, 270, 159, 223, -12, 49, -1000, 170, 170,
-	95, -1000, -1000, -1000, -1000, -1000, 59, -1000, -1000, 296,
-	294, -1000, 134, -1000, -1000, -1000, 216, -1000, -1000, -1000,
-	51, -1000, 170, 170, -34, -35, 170, 244, -1000, 179,
-	-1000, -1000, 33, 134, -1000, -1000, -1000, -1000,
+	292, -1000, -1000, -1000, 328, 218, -1000, -1000, -1000, 230,
+	-1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, 296,
+	327, 327, 327, -1000, 323, 322, 321, 299, -1000, 132,
+	-1000, 132, 132, 12, -1000, 154, 154, -1000, -3, 320,
+	-3, -3, 133, -1000, -1000, -3, -28, 133, -29, -1000,
+	-1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, 130,
+	133, 19, 133, 133, 129, 33, -1000, 33, -1000, 133,
+	-1000, -1000, 159, 133, -1000, 120, -1000, -1000, 87, 152,
+	-1000, 83, 312, -1000, 195, 161, 164, 52, -20, -24,
+	-1000, 30, 136, 136, -1000, -1000, -1000, -1000, 33, -1000,
+	-1000, -1000, -1000, -1000, -1000, -1000, -1000, 33, 33, 33,
+	33, 33, 127, 53, -1000, -1000, 79, 137, -1000, 133,
+	116, 151, -1000, -1000, 133, -1000, 133, -1000, 114, 150,
+	-1000, 158, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
+	-1000, -1000, -1000, -1000, -1000, -1000, 33, 317, 133, -1000,
+	315, -1000, 30, 30, 111, 74, 149, -1000, 44, 148,
+	-1000, -1000, 246, -1000, -1000, 312, 133, 207, -1000, -1000,
+	-1000, 286, 236, -1000, -1000, 133, 72, -1000, 240, 312,
+	133, 33, 33, 33, 33, 33, 33, 33, 33, 33,
+	33, 33, 33, 33, 33, 107, -1000, 61, 133, 43,
+	143, -1000, 157, -1000, -1000, 33, -1000, 33, 156, 283,
+	215, -1000, -1000, -1000, 101, 57, -1000, -1000, 123, 258,
+	133, -1000, 155, 133, -1000, -1000, 316, -1000, 193, -1000,
+	-1000, 133, -1000, -1000, 161, 161, 164, 52, -20, -20,
+	-20, -20, -20, -20, -24, -24, -1000, -1000, -1000, 48,
+	56, -1000, 315, 33, -1000, -1000, 33, 33, 33, -1000,
+	218, 218, 176, -1000, -1000, -1000, 99, 218, 133, -1000,
+	-1000, -1000, 133, 261, 315, 46, -1000, -1000, -1000, -1000,
+	-1000, 218, -1000, -1000, 109, 133, 20, 144, -1000, -1000,
+	-3, 231, -1000, -1000, 311, 34, 315, 281, 280, -1000,
+	217, 254, 233, -1000, -1000, -1000, -1000, -1000, 314, 313,
+	-30, 33, -1000, -1000, -1000, -1000, -1000, -1000, 58, -1000,
+	-1000, -1000, 134, -1000, -1000, -1000, 21, 33, 33, 278,
+	-1000, -1000, 70, -1000, 109, 154, 154, 33, -1000, 218,
+	265, 312, 218, 311, 1, -1000, -1000, -1000, -1000, 214,
+	-1000, 54, -1000, -32, -33, -1000, -1000, -1000, 145, 95,
+	-1000, -1000, -1000, 310, -1000, 133, 218, -1000, -1000, 55,
+	33, 33, 253, 250, 297, 174, 245, -12, 50, -1000,
+	218, 218, 103, -1000, -1000, -1000, -1000, -1000, 60, -1000,
+	-1000, 309, 307, -1000, 133, -1000, -1000, -1000, 237, -1000,
+	-1000, -1000, 51, -1000, 218, 218, -34, -35, 218, 261,
+	-1000, 232, -1000, -1000, 33, 133, -1000, -1000, -1000, -1000,
 }
 
 var yyPgo = [...]int16{
-	0, 464, 463, 462, 461, 8, 460, 459, 458, 457,
-	456, 455, 454, 14, 453, 452, 301, 451, 10, 450,
-	449, 448, 447, 1, 446, 445, 444, 443, 13, 442,
-	441, 440, 439, 438, 437, 436, 5, 2, 435, 434,
-	433, 432, 431, 430, 24, 429, 428, 427, 11, 6,
-	0, 426, 4, 425, 424, 3, 423, 422, 421, 21,
-	420, 419, 418, 417, 416, 414, 412, 411, 409, 45,
-	408, 406, 20, 405, 18, 404, 29, 403, 402, 401,
-	399, 398, 395, 17, 393, 392, 19, 389, 388, 23,
-	387, 22, 7, 385, 384, 383, 382, 381, 378, 373,
-	372, 371, 368, 366, 365, 364, 362, 361, 360, 12,
-	359, 15, 358, 357, 356, 354, 353, 351, 350, 348,
-	347, 344, 343, 339, 338, 337, 335, 9, 334, 332,
-	331, 330,
+	0, 467, 466, 465, 464, 8, 463, 462, 461, 460,
+	459, 458, 457, 14, 456, 455, 286, 454, 10, 453,
+	452, 451, 450, 1, 449, 448, 447, 446, 13, 445,
+	444, 443, 442, 441, 440, 439, 5, 2, 438, 437,
+	436, 435, 434, 433, 24, 432, 431, 430, 11, 6,
+	0, 429, 4, 428, 427, 3, 426, 425, 424, 21,
+	423, 422, 421, 420, 419, 418, 416, 414, 413, 45,
+	411, 410, 20, 408, 18, 407, 29, 406, 405, 404,
+	403, 401, 400, 17, 397, 395, 19, 394, 391, 23,
+	390, 22, 7, 389, 387, 386, 385, 384, 383, 380,
+	375, 374, 373, 370, 368, 367, 366, 364, 363, 12,
+	362, 15, 361, 360, 359, 358, 356, 355, 353, 352,
+	350, 349, 346, 345, 341, 340, 339, 9, 337, 336,
+	334, 333,
 }
 
 var yyR1 = [...]uint8{
@@ -479,15 +479,15 @@ var yyR1 = [...]uint8{
 	69, 73, 69, 72, 75, 72, 74, 77, 74, 78,
 	74, 79, 74, 80, 74, 81, 74, 82, 74, 76,
 	84, 76, 85, 76, 83, 87, 83, 88, 83, 86,
-	86, 89, 89, 89, 89, 93, 89, 89, 90, 90,
-	90, 90, 90, 90, 90, 90, 90, 90, 90, 101,
-	100, 102, 103, 103, 103, 104, 105, 94, 94, 1,
-	91, 91, 106, 106, 95, 92, 92, 108, 108, 109,
-	109, 107, 107, 110, 110, 112, 111, 111, 113, 114,
-	96, 115, 116, 96, 117, 118, 96, 119, 98, 120,
-	97, 121, 121, 122, 122, 123, 123, 123, 124, 124,
-	124, 124, 124, 99, 48, 125, 126, 126, 126, 127,
-	127, 127, 127, 128, 128, 129, 130, 130, 131,
+	86, 86, 89, 89, 89, 89, 93, 89, 89, 90,
+	90, 90, 90, 90, 90, 90, 90, 90, 90, 90,
+	101, 100, 102, 103, 103, 103, 104, 105, 94, 94,
+	1, 91, 91, 106, 106, 95, 92, 92, 108, 108,
+	109, 109, 107, 107, 110, 110, 112, 111, 111, 113,
+	114, 96, 115, 116, 96, 117, 118, 96, 119, 98,
+	120, 97, 121, 121, 122, 122, 123, 123, 123, 124,
+	124, 124, 124, 124, 99, 48, 125, 126, 126, 126,
+	127, 127, 127, 127, 128, 128, 129, 130, 130, 131,
 }
 
 var yyR2 = [...]int8{
@@ -505,15 +505,15 @@ var yyR2 = [...]int8{
 	1, 0, 4, 1, 0, 4, 1, 0, 4, 0,
 	4, 0, 4, 0, 4, 0, 4, 0, 4, 1,
 	0, 4, 0, 4, 1, 0, 4, 0, 4, 1,
-	2, 1, 4, 3, 7, 0, 8, 4, 1, 1,
-	1, 3, 1, 1, 1, 1, 1, 1, 1, 0,
-	11, 4, 0, 3, 3, 4, 4, 1, 3, 1,
-	0, 1, 1, 3, 3, 0, 1, 1, 3, 3,
-	1, 0, 1, 1, 3, 0, 4, 1, 0, 0,
-	8, 0, 0, 8, 0, 0, 12, 0, 7, 0,
-	7, 0, 3, 5, 7, 1, 1, 4, 0, 3,
-	3, 1, 1, 10, 2, 0, 1, 3, 2, 1,
-	1, 1, 1, 5, 5, 3, 1, 2, 1,
+	2, 2, 1, 4, 3, 7, 0, 8, 4, 1,
+	1, 1, 3, 1, 1, 1, 1, 1, 1, 1,
+	0, 11, 4, 0, 3, 3, 4, 4, 1, 3,
+	1, 0, 1, 1, 3, 3, 0, 1, 1, 3,
+	3, 1, 0, 1, 1, 3, 0, 4, 1, 0,
+	0, 8, 0, 0, 8, 0, 0, 12, 0, 7,
+	0, 7, 0, 3, 5, 7, 1, 1, 4, 0,
+	3, 3, 1, 1, 10, 2, 0, 1, 3, 2,
+	1, 1, 1, 1, 5, 5, 3, 1, 2, 1,
 }
 
 var yyChk = [...]int16{
@@ -526,39 +526,39 @@ var yyChk = [...]int16{
 	43, -16, -43, -45, -18, 60, -23, 60, -19, -56,
 	-25, -32, -40, -64, 43, -23, -66, 51, -44, -57,
 	-23, -44, 43, -50, -68, -69, -72, -74, -76, -83,
-	-86, -89, 21, -90, 4, 5, 6, 43, -94, -95,
-	-96, -97, -98, -99, -100, 50, 45, 47, 14, 17,
-	25, 13, 27, -50, -20, -44, -5, -33, 40, -28,
-	-60, -23, 44, -67, 46, 41, 46, -36, -58, -59,
-	4, 36, 37, 39, 38, 32, 33, 34, 35, 53,
-	54, 55, 56, 57, 58, -1, 42, 51, 45, 47,
-	43, -89, -50, -91, -106, -50, -107, -110, -111, -50,
-	-50, -50, -50, 43, 45, -5, 46, -26, 43, -29,
-	-5, -23, 44, 41, -28, -23, 44, 41, 40, -70,
-	-71, -73, -75, -77, -78, -79, -80, -81, -82, -84,
-	-85, -87, -88, -91, 4, -28, -93, -92, -108, -109,
-	4, 44, 46, 41, 48, 41, -112, -113, -115, 30,
-	-120, -119, -36, -23, 19, -21, 4, -5, -27, -30,
-	4, 24, 19, -34, 13, -41, -65, -23, 46, 31,
-	-59, -23, -69, -69, -72, -74, -76, -76, -76, -76,
-	-76, -76, -83, -83, -86, -86, 44, 46, -28, 48,
-	41, 40, -50, -111, 40, 15, 31, -117, -5, -5,
-	44, 46, 43, 19, -28, -5, 40, -23, 4, -42,
-	31, -23, 47, 46, -109, -50, -50, -50, -50, -5,
-	-121, -48, -125, 31, -101, -22, 44, -23, -35, -5,
-	-23, -37, 20, -92, 47, -114, -116, -48, -5, -5,
-	-126, -127, -128, -129, -130, -131, 22, 23, 4, 26,
-	-50, -23, 47, 44, 4, -23, -18, 19, -13, -47,
-	-51, -52, 4, 48, -92, 16, 16, -118, 19, -122,
-	18, 19, 30, 4, 4, 60, -50, -5, -5, 43,
-	-5, 41, -53, 48, -50, -50, 16, -123, 49, 4,
-	-127, -49, -49, -50, -48, -102, 4, -36, -48, -52,
-	-54, 40, -55, 52, -5, 31, 15, 43, 60, 60,
-	-5, -103, 40, 44, -5, 4, -28, -48, -5, -5,
-	-124, 4, 49, -50, -50, 19, -5, -104, -105, 28,
-	29, 6, 31, 19, -55, 46, -5, -48, -48, 44,
-	41, 48, -5, -5, 4, 4, -5, -23, 19, -5,
-	4, 49, 60, 60, -37, 19, -50, -23,
+	-86, -89, 21, 56, -90, 4, 5, 6, 43, -94,
+	-95, -96, -97, -98, -99, -100, 50, 45, 47, 14,
+	17, 25, 13, 27, -50, -20, -44, -5, -33, 40,
+	-28, -60, -23, 44, -67, 46, 41, 46, -36, -58,
+	-59, 4, 36, 37, 39, 38, 32, 33, 34, 35,
+	53, 54, 55, 56, 57, 58, -1, 42, 51, 45,
+	47, 43, -89, -89, -50, -91, -106, -50, -107, -110,
+	-111, -50, -50, -50, -50, 43, 45, -5, 46, -26,
+	43, -29, -5, -23, 44, 41, -28, -23, 44, 41,
+	40, -70, -71, -73, -75, -77, -78, -79, -80, -81,
+	-82, -84, -85, -87, -88, -91, 4, -28, -93, -92,
+	-108, -109, 4, 44, 46, 41, 48, 41, -112, -113,
+	-115, 30, -120, -119, -36, -23, 19, -21, 4, -5,
+	-27, -30, 4, 24, 19, -34, 13, -41, -65, -23,
+	46, 31, -59, -23, -69, -69, -72, -74, -76, -76,
+	-76, -76, -76, -76, -83, -83, -86, -86, 44, 46,
+	-28, 48, 41, 40, -50, -111, 40, 15, 31, -117,
+	-5, -5, 44, 46, 43, 19, -28, -5, 40, -23,
+	4, -42, 31, -23, 47, 46, -109, -50, -50, -50,
+	-50, -5, -121, -48, -125, 31, -101, -22, 44, -23,
+	-35, -5, -23, -37, 20, -92, 47, -114, -116, -48,
+	-5, -5, -126, -127, -128, -129, -130, -131, 22, 23,
+	4, 26, -50, -23, 47, 44, 4, -23, -18, 19,
+	-13, -47, -51, -52, 4, 48, -92, 16, 16, -118,
+	19, -122, 18, 19, 30, 4, 4, 60, -50, -5,
+	-5, 43, -5, 41, -53, 48, -50, -50, 16, -123,
+	49, 4, -127, -49, -49, -50, -48, -102, 4, -36,
+	-48, -52, -54, 40, -55, 52, -5, 31, 15, 43,
+	60, 60, -5, -103, 40, 44, -5, 4, -28, -48,
+	-5, -5, -124, 4, 49, -50, -50, 19, -5, -104,
+	-105, 28, 29, 6, 31, 19, -55, 46, -5, -48,
+	-48, 44, 41, 48, -5, -5, 4, 4, -5, -23,
+	19, -5, 4, 49, 60, 60, -37, 19, -50, -23,
 }
 
 var yyDef = [...]int16{
@@ -571,39 +571,39 @@ var yyDef = [...]int16{
 	0, 101, 78, 78, 0, 0, 63, 0, 22, 78,
 	5, 42, 0, 87, 98, 0, 100, 102, 0, 79,
 	80, 0, 82, 60, 104, 105, 110, 113, 116, 129,
-	134, 139, 0, 141, 148, 149, 150, 0, 152, 153,
-	154, 155, 156, 157, 158, 167, 170, 181, 0, 0,
-	0, 0, 0, 61, 5, 0, 35, 5, 0, 0,
-	88, 89, 99, 87, 52, 0, 54, 0, 83, 84,
-	0, 106, 108, 111, 114, 117, 119, 121, 123, 125,
-	127, 130, 132, 135, 137, 170, 0, 87, 145, 175,
-	169, 140, 0, 0, 171, 172, 0, 182, 183, -2,
-	-2, 199, 197, 82, 0, 0, 77, 5, 32, 34,
-	0, 48, 96, 0, 0, 81, 0, 0, 0, 0,
+	134, 139, 0, 0, 142, 149, 150, 151, 0, 153,
+	154, 155, 156, 157, 158, 159, 168, 171, 182, 0,
+	0, 0, 0, 0, 61, 5, 0, 35, 5, 0,
+	0, 88, 89, 99, 87, 52, 0, 54, 0, 83,
+	84, 0, 106, 108, 111, 114, 117, 119, 121, 123,
+	125, 127, 130, 132, 135, 137, 171, 0, 87, 146,
+	176, 170, 140, 141, 0, 0, 172, 173, 0, 183,
+	184, -2, -2, 200, 198, 82, 0, 0, 77, 5,
+	32, 34, 0, 48, 96, 0, 0, 81, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 143, 0, 87, 0, 176, 177,
-	180, 151, 168, 0, 174, 0, 0, 0, 0, 194,
-	5, 5, 0, 0, 21, 23, 24, 0, 87, 5,
-	0, 0, 41, 43, 0, 55, 0, 90, 103, 0,
-	85, 86, 107, 109, 112, 115, 118, 120, 122, 124,
-	126, 128, 131, 133, 136, 138, 142, 0, 0, 147,
-	0, 0, 173, 184, 0, 0, 0, 5, 201, 215,
-	0, 159, 26, 31, 0, 36, 0, 38, 44, 5,
-	0, 64, 175, 0, 178, 179, 186, 189, 192, 215,
-	5, 5, 0, 0, 0, 0, 33, 37, 74, 0,
-	97, 58, 0, 0, 175, 0, 0, 195, 0, 0,
-	214, 216, 219, 220, 221, 222, 0, 0, 148, 226,
-	228, 5, 5, 25, -2, 28, 0, 49, 56, 5,
-	65, 66, 68, 144, 0, 0, 0, 0, 200, 202,
-	0, 198, 218, 62, 62, 0, 227, 215, 0, 82,
-	215, 0, 72, 146, 190, 193, 5, 0, 205, 206,
-	217, 0, 0, 225, 5, 162, 0, 0, 5, 67,
-	69, 0, 71, 87, 215, 5, 5, 208, 0, 0,
-	0, 5, 0, 0, 0, 72, 0, 5, 215, 215,
-	0, 211, 212, 223, 224, 213, 0, 5, 5, 0,
-	0, 5, 0, 59, 70, 73, 0, 203, 5, 207,
-	0, 160, 163, 164, 0, 0, 161, 64, 196, 0,
-	209, 210, 0, 0, 45, 204, 165, 166,
+	0, 0, 0, 0, 0, 0, 144, 0, 87, 0,
+	177, 178, 181, 152, 169, 0, 175, 0, 0, 0,
+	0, 195, 5, 5, 0, 0, 21, 23, 24, 0,
+	87, 5, 0, 0, 41, 43, 0, 55, 0, 90,
+	103, 0, 85, 86, 107, 109, 112, 115, 118, 120,
+	122, 124, 126, 128, 131, 133, 136, 138, 143, 0,
+	0, 148, 0, 0, 174, 185, 0, 0, 0, 5,
+	202, 216, 0, 160, 26, 31, 0, 36, 0, 38,
+	44, 5, 0, 64, 176, 0, 179, 180, 187, 190,
+	193, 216, 5, 5, 0, 0, 0, 0, 33, 37,
+	74, 0, 97, 58, 0, 0, 176, 0, 0, 196,
+	0, 0, 215, 217, 220, 221, 222, 223, 0, 0,
+	149, 227, 229, 5, 5, 25, -2, 28, 0, 49,
+	56, 5, 65, 66, 68, 145, 0, 0, 0, 0,
+	201, 203, 0, 199, 219, 62, 62, 0, 228, 216,
+	0, 82, 216, 0, 72, 147, 191, 194, 5, 0,
+	206, 207, 218, 0, 0, 226, 5, 163, 0, 0,
+	5, 67, 69, 0, 71, 87, 216, 5, 5, 209,
+	0, 0, 0, 5, 0, 0, 0, 72, 0, 5,
+	216, 216, 0, 212, 213, 224, 225, 214, 0, 5,
+	5, 0, 0, 5, 0, 59, 70, 73, 0, 204,
+	5, 208, 0, 161, 164, 165, 0, 0, 162, 64,
+	197, 0, 210, 211, 0, 0, 45, 205, 166, 167,
 }
 
 var yyTok1 = [...]int8{
@@ -1887,11 +1887,18 @@ yydefault:
 //line internal/mygo/parser/parser.y:915
 		{
 			p := yylex.(*parser)
-			p.currentExpr = &ast.PrefixExpr{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Op: "not", Expr: p.currentExpr}
+			p.currentExpr = &ast.PrefixExpr{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Op: "!", Expr: p.currentExpr}
 		}
-	case 142:
+	case 141:
+		yyDollar = yyS[yypt-2 : yypt+1]
+//line internal/mygo/parser/parser.y:919
+		{
+			p := yylex.(*parser)
+			p.currentExpr = &ast.PrefixExpr{Op: "-", Expr: p.currentExpr}
+		}
+	case 143:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:923
+//line internal/mygo/parser/parser.y:927
 		{
 			p := yylex.(*parser)
 			if len(p.currentCallCalleeStack) == 0 {
@@ -1911,16 +1918,16 @@ yydefault:
 				p.currentExpr = &ast.CallExpr{Line: yyDollar[2].token.line, Column: yyDollar[2].token.col, Callee: callee, Args: args}
 			}
 		}
-	case 143:
+	case 144:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:942
+//line internal/mygo/parser/parser.y:946
 		{
 			p := yylex.(*parser)
 			p.currentExpr = &ast.FieldExpr{Line: yyDollar[2].token.line, Column: yyDollar[2].token.col, Expr: p.currentExpr, Field: yyDollar[3].token.lit}
 		}
-	case 144:
+	case 145:
 		yyDollar = yyS[yypt-7 : yypt+1]
-//line internal/mygo/parser/parser.y:946
+//line internal/mygo/parser/parser.y:950
 		{
 			p := yylex.(*parser)
 			if id, ok := p.currentExpr.(*ast.IdentExpr); ok {
@@ -1930,17 +1937,17 @@ yydefault:
 			p.currentStructFields = nil
 			p.expectStructTypeArgs = false
 		}
-	case 145:
+	case 146:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:955
+//line internal/mygo/parser/parser.y:959
 		{
 			p := yylex.(*parser)
 			p.expectStructTypeArgs = true
 			p.currentStructTypeArgs = nil
 		}
-	case 146:
+	case 147:
 		yyDollar = yyS[yypt-8 : yypt+1]
-//line internal/mygo/parser/parser.y:960
+//line internal/mygo/parser/parser.y:964
 		{
 			p := yylex.(*parser)
 			if id, ok := p.currentExpr.(*ast.IdentExpr); ok {
@@ -1950,9 +1957,9 @@ yydefault:
 			p.currentStructFields = nil
 			p.expectStructTypeArgs = false
 		}
-	case 147:
+	case 148:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:969
+//line internal/mygo/parser/parser.y:973
 		{
 			p := yylex.(*parser)
 			if id, ok := p.currentExpr.(*ast.IdentExpr); ok {
@@ -1961,19 +1968,12 @@ yydefault:
 			p.currentStructFields = nil
 			p.expectStructTypeArgs = false
 		}
-	case 148:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:980
-		{
-			p := yylex.(*parser)
-			p.currentExpr = makeIdentExpr(yyDollar[1].token)
-		}
 	case 149:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line internal/mygo/parser/parser.y:984
 		{
 			p := yylex.(*parser)
-			p.currentExpr = makeLitExpr(yyDollar[1].token)
+			p.currentExpr = makeIdentExpr(yyDollar[1].token)
 		}
 	case 150:
 		yyDollar = yyS[yypt-1 : yypt+1]
@@ -1982,9 +1982,16 @@ yydefault:
 			p := yylex.(*parser)
 			p.currentExpr = makeLitExpr(yyDollar[1].token)
 		}
-	case 159:
+	case 151:
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line internal/mygo/parser/parser.y:992
+		{
+			p := yylex.(*parser)
+			p.currentExpr = makeLitExpr(yyDollar[1].token)
+		}
+	case 160:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:1003
+//line internal/mygo/parser/parser.y:1007
 		{
 			p := yylex.(*parser)
 			p.currentGoResult = p.currentType
@@ -1992,9 +1999,9 @@ yydefault:
 			p.currentGoOperands = nil
 			p.currentGoTypeOperands = nil
 		}
-	case 160:
+	case 161:
 		yyDollar = yyS[yypt-11 : yypt+1]
-//line internal/mygo/parser/parser.y:1010
+//line internal/mygo/parser/parser.y:1014
 		{
 			p := yylex.(*parser)
 			p.currentExpr = &ast.GoExpr{
@@ -2010,9 +2017,9 @@ yydefault:
 			p.currentGoOperands = nil
 			p.currentGoTypeOperands = nil
 		}
-	case 161:
+	case 162:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:1028
+//line internal/mygo/parser/parser.y:1032
 		{
 			p := yylex.(*parser)
 			if yyDollar[1].token.lit != "code" {
@@ -2020,9 +2027,9 @@ yydefault:
 			}
 			p.currentGoCode = yyDollar[3].token.lit
 		}
-	case 165:
+	case 166:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:1044
+//line internal/mygo/parser/parser.y:1048
 		{
 			p := yylex.(*parser)
 			p.currentGoOperands = append(p.currentGoOperands, ast.GoOperand{
@@ -2032,9 +2039,9 @@ yydefault:
 				Value:  p.currentExpr,
 			})
 		}
-	case 166:
+	case 167:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:1056
+//line internal/mygo/parser/parser.y:1060
 		{
 			p := yylex.(*parser)
 			p.currentGoTypeOperands = append(p.currentGoTypeOperands, ast.GoTypeOperand{
@@ -2044,25 +2051,25 @@ yydefault:
 				Type:   p.currentType,
 			})
 		}
-	case 167:
+	case 168:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1068
+//line internal/mygo/parser/parser.y:1072
 		{
 			p := yylex.(*parser)
 			p.currentExpr = &ast.SliceLitExpr{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Elems: nil}
 			p.currentSliceElems = nil
 		}
-	case 168:
+	case 169:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1073
+//line internal/mygo/parser/parser.y:1077
 		{
 			p := yylex.(*parser)
 			p.currentExpr = &ast.SliceLitExpr{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Elems: append([]ast.Expr(nil), p.currentSliceElems...)}
 			p.currentSliceElems = nil
 		}
-	case 169:
+	case 170:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1081
+//line internal/mygo/parser/parser.y:1085
 		{
 			p := yylex.(*parser)
 			yyVAL.token = yyDollar[1].token
@@ -2072,17 +2079,9 @@ yydefault:
 			p.currentArgs = nil
 			p.currentSliceElems = nil
 		}
-	case 172:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1098
-		{
-			p := yylex.(*parser)
-			p.currentArgs = append(p.currentArgs, p.currentExpr)
-			p.currentSliceElems = append(p.currentSliceElems, p.currentExpr)
-		}
 	case 173:
-		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1103
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line internal/mygo/parser/parser.y:1102
 		{
 			p := yylex.(*parser)
 			p.currentArgs = append(p.currentArgs, p.currentExpr)
@@ -2090,7 +2089,15 @@ yydefault:
 		}
 	case 174:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1111
+//line internal/mygo/parser/parser.y:1107
+		{
+			p := yylex.(*parser)
+			p.currentArgs = append(p.currentArgs, p.currentExpr)
+			p.currentSliceElems = append(p.currentSliceElems, p.currentExpr)
+		}
+	case 175:
+		yyDollar = yyS[yypt-3 : yypt+1]
+//line internal/mygo/parser/parser.y:1115
 		{
 			p := yylex.(*parser)
 			if p.currentCollectionHasPair {
@@ -2102,9 +2109,9 @@ yydefault:
 			p.currentSetElems = nil
 			p.currentCollectionHasPair = false
 		}
-	case 179:
+	case 180:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1135
+//line internal/mygo/parser/parser.y:1139
 		{
 			p := yylex.(*parser)
 			p.currentStructFields = append(p.currentStructFields, ast.StructLitField{
@@ -2114,9 +2121,9 @@ yydefault:
 				Value:  p.currentExpr,
 			})
 		}
-	case 180:
+	case 181:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1144
+//line internal/mygo/parser/parser.y:1148
 		{
 			p := yylex.(*parser)
 			p.currentStructFields = append(p.currentStructFields, ast.StructLitField{
@@ -2125,17 +2132,17 @@ yydefault:
 				Name:   yyDollar[1].token.lit,
 			})
 		}
-	case 185:
+	case 186:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1165
+//line internal/mygo/parser/parser.y:1169
 		{
 			p := yylex.(*parser)
 			p.currentMapKey = p.currentExpr
 			p.currentSetElems = append(p.currentSetElems, p.currentExpr)
 		}
-	case 186:
+	case 187:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:1170
+//line internal/mygo/parser/parser.y:1174
 		{
 			p := yylex.(*parser)
 			p.currentCollectionHasPair = true
@@ -2147,55 +2154,55 @@ yydefault:
 			p.currentMapKey = nil
 			p.currentMapValue = nil
 		}
-	case 187:
+	case 188:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1181
+//line internal/mygo/parser/parser.y:1185
 		{
 			p := yylex.(*parser)
 			p.currentSetElems = append(p.currentSetElems, p.currentExpr)
 		}
-	case 188:
-		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1188
-		{
-			p := yylex.(*parser)
-			p.currentIfCond = p.currentExpr
-		}
 	case 189:
-		yyDollar = yyS[yypt-5 : yypt+1]
+		yyDollar = yyS[yypt-2 : yypt+1]
 //line internal/mygo/parser/parser.y:1192
 		{
 			p := yylex.(*parser)
-			p.currentIfThen = p.currentExpr
+			p.currentIfCond = p.currentExpr
 		}
 	case 190:
-		yyDollar = yyS[yypt-8 : yypt+1]
+		yyDollar = yyS[yypt-5 : yypt+1]
 //line internal/mygo/parser/parser.y:1196
 		{
 			p := yylex.(*parser)
+			p.currentIfThen = p.currentExpr
+		}
+	case 191:
+		yyDollar = yyS[yypt-8 : yypt+1]
+//line internal/mygo/parser/parser.y:1200
+		{
+			p := yylex.(*parser)
 			p.currentIfElse = p.currentExpr
 			p.currentExpr = &ast.IfExpr{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Cond: p.currentIfCond, Then: p.currentIfThen, Else: p.currentIfElse}
 			p.currentIfCond = nil
 			p.currentIfThen = nil
 			p.currentIfElse = nil
 		}
-	case 191:
-		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1204
-		{
-			p := yylex.(*parser)
-			p.currentIfCond = p.currentExpr
-		}
 	case 192:
-		yyDollar = yyS[yypt-5 : yypt+1]
+		yyDollar = yyS[yypt-2 : yypt+1]
 //line internal/mygo/parser/parser.y:1208
 		{
 			p := yylex.(*parser)
-			p.currentIfThen = p.currentExpr
+			p.currentIfCond = p.currentExpr
 		}
 	case 193:
-		yyDollar = yyS[yypt-8 : yypt+1]
+		yyDollar = yyS[yypt-5 : yypt+1]
 //line internal/mygo/parser/parser.y:1212
+		{
+			p := yylex.(*parser)
+			p.currentIfThen = p.currentExpr
+		}
+	case 194:
+		yyDollar = yyS[yypt-8 : yypt+1]
+//line internal/mygo/parser/parser.y:1216
 		{
 			p := yylex.(*parser)
 			p.currentIfElse = p.currentExpr
@@ -2204,23 +2211,23 @@ yydefault:
 			p.currentIfThen = nil
 			p.currentIfElse = nil
 		}
-	case 194:
+	case 195:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1220
+//line internal/mygo/parser/parser.y:1224
 		{
 			p := yylex.(*parser)
 			p.currentIfCond = p.currentExpr
 		}
-	case 195:
+	case 196:
 		yyDollar = yyS[yypt-6 : yypt+1]
-//line internal/mygo/parser/parser.y:1225
+//line internal/mygo/parser/parser.y:1229
 		{
 			p := yylex.(*parser)
 			p.currentIfThen = p.currentExpr
 		}
-	case 196:
+	case 197:
 		yyDollar = yyS[yypt-12 : yypt+1]
-//line internal/mygo/parser/parser.y:1229
+//line internal/mygo/parser/parser.y:1233
 		{
 			p := yylex.(*parser)
 			p.currentIfElse = p.currentExpr
@@ -2229,16 +2236,16 @@ yydefault:
 			p.currentIfThen = nil
 			p.currentIfElse = nil
 		}
-	case 197:
+	case 198:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1240
+//line internal/mygo/parser/parser.y:1244
 		{
 			p := yylex.(*parser)
 			p.currentWhileCond = p.currentExpr
 		}
-	case 198:
+	case 199:
 		yyDollar = yyS[yypt-7 : yypt+1]
-//line internal/mygo/parser/parser.y:1245
+//line internal/mygo/parser/parser.y:1249
 		{
 			p := yylex.(*parser)
 			p.currentWhileBody = p.currentExpr
@@ -2246,36 +2253,25 @@ yydefault:
 			p.currentWhileCond = nil
 			p.currentWhileBody = nil
 		}
-	case 199:
+	case 200:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1255
+//line internal/mygo/parser/parser.y:1259
 		{
 			p := yylex.(*parser)
 			p.currentSwitchTarget = p.currentExpr
 		}
-	case 200:
+	case 201:
 		yyDollar = yyS[yypt-7 : yypt+1]
-//line internal/mygo/parser/parser.y:1260
+//line internal/mygo/parser/parser.y:1264
 		{
 			p := yylex.(*parser)
 			p.currentExpr = &ast.SwitchExpr{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Target: p.currentSwitchTarget, Cases: append([]ast.SwitchCase(nil), p.currentSwitchCases...)}
 			p.currentSwitchTarget = nil
 			p.currentSwitchCases = nil
 		}
-	case 203:
-		yyDollar = yyS[yypt-5 : yypt+1]
-//line internal/mygo/parser/parser.y:1274
-		{
-			p := yylex.(*parser)
-			p.currentSwitchCases = append(p.currentSwitchCases, ast.SwitchCase{
-				Pattern: p.currentPattern,
-				Body:    p.currentExpr,
-			})
-			p.currentPattern = nil
-		}
 	case 204:
-		yyDollar = yyS[yypt-7 : yypt+1]
-//line internal/mygo/parser/parser.y:1282
+		yyDollar = yyS[yypt-5 : yypt+1]
+//line internal/mygo/parser/parser.y:1278
 		{
 			p := yylex.(*parser)
 			p.currentSwitchCases = append(p.currentSwitchCases, ast.SwitchCase{
@@ -2285,15 +2281,26 @@ yydefault:
 			p.currentPattern = nil
 		}
 	case 205:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1293
+		yyDollar = yyS[yypt-7 : yypt+1]
+//line internal/mygo/parser/parser.y:1286
 		{
 			p := yylex.(*parser)
-			p.currentPattern = &ast.WildcardPattern{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col}
+			p.currentSwitchCases = append(p.currentSwitchCases, ast.SwitchCase{
+				Pattern: p.currentPattern,
+				Body:    p.currentExpr,
+			})
+			p.currentPattern = nil
 		}
 	case 206:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line internal/mygo/parser/parser.y:1297
+		{
+			p := yylex.(*parser)
+			p.currentPattern = &ast.WildcardPattern{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col}
+		}
+	case 207:
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line internal/mygo/parser/parser.y:1301
 		{
 			p := yylex.(*parser)
 			if yyDollar[1].token.lit == "_" {
@@ -2302,55 +2309,55 @@ yydefault:
 				p.currentPattern = &ast.VariantPattern{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Name: yyDollar[1].token.lit}
 			}
 		}
-	case 207:
+	case 208:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:1305
+//line internal/mygo/parser/parser.y:1309
 		{
 			p := yylex.(*parser)
 			args := append([]string(nil), p.currentPatternArgs...)
 			p.currentPattern = &ast.VariantPattern{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Name: yyDollar[1].token.lit, Args: args}
 			p.currentPatternArgs = nil
 		}
-	case 209:
-		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1315
-		{
-			p := yylex.(*parser)
-			p.currentPatternArgs = append(p.currentPatternArgs, yyDollar[3].token.lit)
-		}
 	case 210:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line internal/mygo/parser/parser.y:1319
 		{
 			p := yylex.(*parser)
-			p.currentPatternArgs = append(p.currentPatternArgs, "_")
+			p.currentPatternArgs = append(p.currentPatternArgs, yyDollar[3].token.lit)
 		}
 	case 211:
-		yyDollar = yyS[yypt-1 : yypt+1]
+		yyDollar = yyS[yypt-3 : yypt+1]
 //line internal/mygo/parser/parser.y:1323
 		{
 			p := yylex.(*parser)
-			p.currentPatternArgs = append(p.currentPatternArgs, yyDollar[1].token.lit)
+			p.currentPatternArgs = append(p.currentPatternArgs, "_")
 		}
 	case 212:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line internal/mygo/parser/parser.y:1327
 		{
 			p := yylex.(*parser)
-			p.currentPatternArgs = append(p.currentPatternArgs, "_")
+			p.currentPatternArgs = append(p.currentPatternArgs, yyDollar[1].token.lit)
 		}
 	case 213:
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line internal/mygo/parser/parser.y:1331
+		{
+			p := yylex.(*parser)
+			p.currentPatternArgs = append(p.currentPatternArgs, "_")
+		}
+	case 214:
 		yyDollar = yyS[yypt-10 : yypt+1]
-//line internal/mygo/parser/parser.y:1334
+//line internal/mygo/parser/parser.y:1338
 		{
 			p := yylex.(*parser)
 			body := bodyExprFromBlock(p.currentExpr)
 			p.currentExpr = &ast.FuncLitExpr{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Params: append([]ast.Param(nil), p.currentParams...), Ret: p.currentType, Body: body}
 			p.currentParams = nil
 		}
-	case 214:
+	case 215:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1343
+//line internal/mygo/parser/parser.y:1347
 		{
 			p := yylex.(*parser)
 			body := p.currentExpr
@@ -2361,75 +2368,75 @@ yydefault:
 			}
 			p.currentExpr = body
 		}
-	case 215:
+	case 216:
 		yyDollar = yyS[yypt-0 : yypt+1]
-//line internal/mygo/parser/parser.y:1356
+//line internal/mygo/parser/parser.y:1360
 		{
 			p := yylex.(*parser)
 			p.currentBlockStack = append(p.currentBlockStack, p.currentBlock)
 			p.currentBlock = nil
 		}
-	case 216:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1364
-		{
-			p := yylex.(*parser)
-			p.currentBlock = append(p.currentBlock, p.currentStmt)
-			p.currentExpr = &ast.BlockExpr{Stmts: append([]ast.Stmt(nil), p.currentBlock...)}
-		}
 	case 217:
-		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1369
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line internal/mygo/parser/parser.y:1368
 		{
 			p := yylex.(*parser)
 			p.currentBlock = append(p.currentBlock, p.currentStmt)
 			p.currentExpr = &ast.BlockExpr{Stmts: append([]ast.Stmt(nil), p.currentBlock...)}
 		}
 	case 218:
+		yyDollar = yyS[yypt-3 : yypt+1]
+//line internal/mygo/parser/parser.y:1373
+		{
+			p := yylex.(*parser)
+			p.currentBlock = append(p.currentBlock, p.currentStmt)
+			p.currentExpr = &ast.BlockExpr{Stmts: append([]ast.Stmt(nil), p.currentBlock...)}
+		}
+	case 219:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1375
+//line internal/mygo/parser/parser.y:1379
 		{
 			p := yylex.(*parser)
 			p.currentExpr = &ast.BlockExpr{Stmts: append([]ast.Stmt(nil), p.currentBlock...)}
-		}
-	case 223:
-		yyDollar = yyS[yypt-5 : yypt+1]
-//line internal/mygo/parser/parser.y:1389
-		{
-			p := yylex.(*parser)
-			p.currentStmt = &ast.LetStmt{Name: yyDollar[2].token.lit, Mutable: false, Value: p.currentExpr}
 		}
 	case 224:
 		yyDollar = yyS[yypt-5 : yypt+1]
 //line internal/mygo/parser/parser.y:1393
 		{
 			p := yylex.(*parser)
-			p.currentStmt = &ast.LetStmt{Name: yyDollar[2].token.lit, Mutable: true, Value: p.currentExpr}
+			p.currentStmt = &ast.LetStmt{Name: yyDollar[2].token.lit, Mutable: false, Value: p.currentExpr}
 		}
 	case 225:
+		yyDollar = yyS[yypt-5 : yypt+1]
+//line internal/mygo/parser/parser.y:1397
+		{
+			p := yylex.(*parser)
+			p.currentStmt = &ast.LetStmt{Name: yyDollar[2].token.lit, Mutable: true, Value: p.currentExpr}
+		}
+	case 226:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1400
+//line internal/mygo/parser/parser.y:1404
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.AssignStmt{Name: yyDollar[1].token.lit, Value: p.currentExpr}
 		}
-	case 226:
+	case 227:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1407
+//line internal/mygo/parser/parser.y:1411
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.ReturnStmt{}
 		}
-	case 227:
+	case 228:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1411
+//line internal/mygo/parser/parser.y:1415
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.ReturnStmt{Value: p.currentExpr}
 		}
-	case 228:
+	case 229:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1418
+//line internal/mygo/parser/parser.y:1422
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.ExprStmt{Expr: p.currentExpr}

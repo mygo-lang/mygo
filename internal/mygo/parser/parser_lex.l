@@ -80,7 +80,6 @@ switch             return l.char(SWITCH)
 case               return l.char(CASE)
 end                return l.char(END)
 using              return l.char(USING)
-not                return l.char(NOT)
 let                return l.char(LET)
 var                return l.char(VAR)
 embed              return l.char(EMBED)
@@ -110,7 +109,9 @@ type               return l.char(TYPE)
 [\[]               return l.char(LBRACK)
 [\]]               return l.char(RBRACK)
 [{}]               return l.char(0)
-[-+*/<>_=]         return l.char(int(c))
+[-+*/!<>_=]        return l.char(int(c))
+
+\"\"\" { return l.scanMultilineString() }
 
 %%
 	if c, ok := l.Abort(); ok {

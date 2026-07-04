@@ -118,7 +118,7 @@ impl[T] List[T]: Enumerable[List[T], T]
   func each(c: List[T], fn: func(T) -> Unit) -> Unit
     var current: Ref[List[T]] = Ref.new(c)
     var done: Bool = false
-    while not done
+    while !done
       fn(current.head)
       switch current.tail
         case None => done = true
@@ -133,7 +133,7 @@ impl[T] List[T]: Enumerable[List[T], T]
     var headVal: B = fn(c.head)
     var result: List[B] = List[B] { head: headVal, tail: None }
     var current: Ref[List[T]] = Ref.new(c)
-    while not done
+    while !done
       switch current.tail
         case None => done = true
         case Some(node) =>
@@ -148,7 +148,7 @@ impl[T] List[T]: Enumerable[List[T], T]
     var done: Bool = false
     var current: Ref[List[T]] = Ref.new(c)
     var result: List[T] = List[T] { head: current.head, tail: None }
-    while not done
+    while !done
       if fn(current.head)
         result = List[T] { head: current.head, tail: Some(Ref.new(result)) }
       else
@@ -166,7 +166,7 @@ impl[T] List[T]: Enumerable[List[T], T]
     var acc: B = initial
     var done: Bool = false
     var current: Ref[List[T]] = Ref.new(c)
-    while not done
+    while !done
       acc = fn(acc, current.head)
       switch current.tail
         case None => done = true
@@ -179,7 +179,7 @@ impl[T] List[T]: Enumerable[List[T], T]
   func find(c: List[T], fn: func(T) -> Bool) -> Option[Ref[T]]
     var done: Bool = false
     var current: Ref[List[T]] = Ref.new(c)
-    while not done
+    while !done
       if fn(current.head)
         return Some(Ref.new(current.head))
       else
@@ -196,7 +196,7 @@ impl[T] List[T]: Enumerable[List[T], T]
     var done: Bool = false
     var result: Bool = false
     var current: Ref[List[T]] = Ref.new(c)
-    while not done
+    while !done
       if equals(current.head, item, eq)
         result = true
         done = true

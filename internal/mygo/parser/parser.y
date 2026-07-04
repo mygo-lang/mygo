@@ -914,7 +914,11 @@ prefix_expr
 	: postfix_expr %prec POSTFIX
 	| NOT postfix_expr {
 		p := yylex.(*parser)
-		p.currentExpr = &ast.PrefixExpr{Line: $1.line, Column: $1.col, Op: "not", Expr: p.currentExpr}
+		p.currentExpr = &ast.PrefixExpr{Line: $1.line, Column: $1.col, Op: "!", Expr: p.currentExpr}
+	}
+	| '-' postfix_expr %prec NOT {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.PrefixExpr{Op: "-", Expr: p.currentExpr}
 	}
 	;
 
@@ -1471,8 +1475,6 @@ func (p *parser) Lex(lval *yySymType) int {
 			return int(END)
 		case "using":
 			return int(USING)
-		case "not":
-			return int(NOT)
 		case "let":
 			return int(LET)
 		case "var":
@@ -1545,6 +1547,8 @@ func (p *parser) Lex(lval *yySymType) int {
 			return int(RBRACE)
 		case "_":
 			return int(UNDER)
+		case "!":
+			return int(NOT)
 		case "=":
 			return int('=')
 		case "<":

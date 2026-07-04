@@ -156,10 +156,14 @@ func (g *generator) translateExprRaw(e Expr, ctx *exprCtx, expected string) (jen
 		if err != nil {
 			return nil, "", err
 		}
-		if n.Op == "not" {
+		switch n.Op {
+		case "!":
 			return jen.Id("!").Add(expr), "bool", nil
+		case "-":
+			return jen.Op("-").Add(expr), typ, nil
+		default:
+			return expr, typ, nil
 		}
-		return expr, typ, nil
 	case *FieldExpr:
 		if baseIdent, ok := n.Expr.(*IdentExpr); ok {
 			if g.isImportAlias(baseIdent.Name) {

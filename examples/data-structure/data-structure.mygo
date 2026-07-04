@@ -101,7 +101,7 @@ func sumList(lst: List[Int]) -> Int
   var total: Int = 0
   var current: Ref[List[Int]] = Ref.new(lst)
   var done: Bool = false
-  while not done
+  while !done
     let headVal = current.head
     total = total + headVal
     switch current.tail

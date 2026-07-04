@@ -555,19 +555,20 @@ state 64
 state 65
 	let_decl:  LET IDENT opt_type_annot '='.expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
 	expr  goto 83
@@ -579,14 +580,14 @@ state 65
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 66
 	opt_type_annot:  COLON type.    (63)
@@ -597,22 +598,23 @@ state 66
 state 67
 	var_decl:  VAR IDENT opt_type_annot '='.expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
-	expr  goto 113
+	expr  goto 114
 	pipe_expr  goto 84
 	or_expr  goto 85
 	and_expr  goto 86
@@ -621,14 +623,14 @@ state 67
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 68
 	enum_decl:  ENUM qualified_name $$19 opt_type_params $$20.enum_body opt_newlines END 
@@ -636,7 +638,7 @@ state 68
 
 	.  reduce 22 (src line 172)
 
-	enum_body  goto 114
+	enum_body  goto 115
 
 state 69
 	opt_type_params:  TYPELBRACK $$76.maybe_name_list RBRACK 
@@ -649,7 +651,7 @@ state 69
 
 	qualified_name  goto 61
 	type  goto 80
-	maybe_name_list  goto 115
+	maybe_name_list  goto 116
 	name_list  goto 79
 	func_type  goto 56
 	grouped_type  goto 57
@@ -661,7 +663,7 @@ state 70
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 116
+	opt_newlines  goto 117
 
 state 71
 	interface_decl:  INTERFACE qualified_name $$39 opt_type_params $$40.func_sig_list opt_newlines END 
@@ -669,12 +671,12 @@ state 71
 
 	.  reduce 42 (src line 329)
 
-	func_sig_list  goto 117
+	func_sig_list  goto 118
 
 state 72
 	impl_decl:  IMPL $$46 opt_impl_type_params type $$47.COLON type $$48 impl_body opt_newlines END 
 
-	COLON  shift 118
+	COLON  shift 119
 	.  error
 
 
@@ -688,9 +690,9 @@ state 73
 	.  reduce 87 (src line 622)
 
 	qualified_name  goto 61
-	type  goto 121
-	maybe_type_list  goto 119
-	type_list  goto 120
+	type  goto 122
+	maybe_type_list  goto 120
+	type_list  goto 121
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
@@ -704,7 +706,7 @@ state 74
 state 75
 	grouped_type:  LPAREN type.RPAREN 
 
-	RPAREN  shift 122
+	RPAREN  shift 123
 	.  error
 
 
@@ -720,12 +722,12 @@ state 77
 
 	.  reduce 102 (src line 736)
 
-	$$102  goto 123
+	$$102  goto 124
 
 state 78
 	opt_impl_type_params:  LBRACK $$51 maybe_name_list.RBRACK 
 
-	RBRACK  shift 124
+	RBRACK  shift 125
 	.  error
 
 
@@ -733,7 +735,7 @@ state 79
 	maybe_name_list:  name_list.    (79)
 	name_list:  name_list.COMMA type 
 
-	COMMA  shift 125
+	COMMA  shift 126
 	.  reduce 79 (src line 566)
 
 
@@ -746,7 +748,7 @@ state 80
 state 81
 	opt_impl_type_params:  TYPELBRACK $$53 maybe_name_list.RBRACK 
 
-	RBRACK  shift 126
+	RBRACK  shift 127
 	.  error
 
 
@@ -754,12 +756,12 @@ state 82
 	func_decl:  FUNC IDENT $$57 opt_type_params LPAREN.maybe_param_list RPAREN ARROW type opt_using_clause $$58 opt_newlines block_expr opt_newlines END 
 	maybe_param_list: .    (82)
 
-	IDENT  shift 130
+	IDENT  shift 131
 	.  reduce 82 (src line 600)
 
-	maybe_param_list  goto 127
-	param_list  goto 128
-	param  goto 129
+	maybe_param_list  goto 128
+	param_list  goto 129
+	param  goto 130
 
 state 83
 	let_decl:  LET IDENT opt_type_annot '=' expr.    (60)
@@ -767,42 +769,42 @@ state 83
 	.  reduce 60 (src line 469)
 
 
-84: shift/reduce conflict (shift 131(1), red'n 104(0)) on PIPEFWD
-84: shift/reduce conflict (shift 132(1), red'n 104(0)) on PIPEBACK
+84: shift/reduce conflict (shift 132(1), red'n 104(0)) on PIPEFWD
+84: shift/reduce conflict (shift 133(1), red'n 104(0)) on PIPEBACK
 state 84
 	expr:  pipe_expr.    (104)
 	pipe_expr:  pipe_expr.PIPEFWD $$106 or_expr 
 	pipe_expr:  pipe_expr.PIPEBACK $$108 or_expr 
 
-	PIPEFWD  shift 131
-	PIPEBACK  shift 132
+	PIPEFWD  shift 132
+	PIPEBACK  shift 133
 	.  reduce 104 (src line 766)
 
 
-85: shift/reduce conflict (shift 133(2), red'n 105(0)) on OROR
+85: shift/reduce conflict (shift 134(2), red'n 105(0)) on OROR
 state 85
 	pipe_expr:  or_expr.    (105)
 	or_expr:  or_expr.OROR $$111 and_expr 
 
-	OROR  shift 133
+	OROR  shift 134
 	.  reduce 105 (src line 770)
 
 
-86: shift/reduce conflict (shift 134(3), red'n 110(0)) on ANDAND
+86: shift/reduce conflict (shift 135(3), red'n 110(0)) on ANDAND
 state 86
 	or_expr:  and_expr.    (110)
 	and_expr:  and_expr.ANDAND $$114 compare_expr 
 
-	ANDAND  shift 134
+	ANDAND  shift 135
 	.  reduce 110 (src line 794)
 
 
-87: shift/reduce conflict (shift 135(4), red'n 113(0)) on EQEQ
-87: shift/reduce conflict (shift 136(4), red'n 113(0)) on NEQ
-87: shift/reduce conflict (shift 137(4), red'n 113(0)) on LTE
-87: shift/reduce conflict (shift 138(4), red'n 113(0)) on GTE
-87: shift/reduce conflict (shift 139(4), red'n 113(0)) on '<'
-87: shift/reduce conflict (shift 140(4), red'n 113(0)) on '>'
+87: shift/reduce conflict (shift 136(4), red'n 113(0)) on EQEQ
+87: shift/reduce conflict (shift 137(4), red'n 113(0)) on NEQ
+87: shift/reduce conflict (shift 138(4), red'n 113(0)) on LTE
+87: shift/reduce conflict (shift 139(4), red'n 113(0)) on GTE
+87: shift/reduce conflict (shift 140(4), red'n 113(0)) on '<'
+87: shift/reduce conflict (shift 141(4), red'n 113(0)) on '>'
 state 87
 	and_expr:  compare_expr.    (113)
 	compare_expr:  compare_expr.EQEQ $$117 add_expr 
@@ -812,36 +814,36 @@ state 87
 	compare_expr:  compare_expr.'<' $$125 add_expr 
 	compare_expr:  compare_expr.'>' $$127 add_expr 
 
-	EQEQ  shift 135
-	NEQ  shift 136
-	LTE  shift 137
-	GTE  shift 138
-	'<'  shift 139
-	'>'  shift 140
+	EQEQ  shift 136
+	NEQ  shift 137
+	LTE  shift 138
+	GTE  shift 139
+	'<'  shift 140
+	'>'  shift 141
 	.  reduce 113 (src line 808)
 
 
-88: shift/reduce conflict (shift 141(5), red'n 116(0)) on '+'
-88: shift/reduce conflict (shift 142(5), red'n 116(0)) on '-'
+88: shift/reduce conflict (shift 142(5), red'n 116(0)) on '+'
+88: shift/reduce conflict (shift 143(5), red'n 116(0)) on '-'
 state 88
 	compare_expr:  add_expr.    (116)
 	add_expr:  add_expr.'+' $$130 mul_expr 
 	add_expr:  add_expr.'-' $$132 mul_expr 
 
-	'+'  shift 141
-	'-'  shift 142
+	'+'  shift 142
+	'-'  shift 143
 	.  reduce 116 (src line 822)
 
 
-89: shift/reduce conflict (shift 143(6), red'n 129(0)) on '*'
-89: shift/reduce conflict (shift 144(6), red'n 129(0)) on '/'
+89: shift/reduce conflict (shift 144(6), red'n 129(0)) on '*'
+89: shift/reduce conflict (shift 145(6), red'n 129(0)) on '/'
 state 89
 	add_expr:  mul_expr.    (129)
 	mul_expr:  mul_expr.'*' $$135 prefix_expr 
 	mul_expr:  mul_expr.'/' $$137 prefix_expr 
 
-	'*'  shift 143
-	'/'  shift 144
+	'*'  shift 144
+	'/'  shift 145
 	.  reduce 129 (src line 871)
 
 
@@ -851,98 +853,126 @@ state 90
 	.  reduce 134 (src line 892)
 
 
-91: shift/reduce conflict (shift 146(0), red'n 139(8)) on DOT
-91: shift/reduce conflict (shift 150(0), red'n 139(8)) on LPAREN
-91: shift/reduce conflict (shift 148(0), red'n 139(8)) on LBRACK
-91: shift/reduce conflict (shift 149(0), red'n 139(8)) on LBRACE
-91: shift/reduce conflict (shift 147(0), red'n 139(8)) on TYPELBRACK
+91: shift/reduce conflict (shift 147(0), red'n 139(8)) on DOT
+91: shift/reduce conflict (shift 151(0), red'n 139(8)) on LPAREN
+91: shift/reduce conflict (shift 149(0), red'n 139(8)) on LBRACK
+91: shift/reduce conflict (shift 150(0), red'n 139(8)) on LBRACE
+91: shift/reduce conflict (shift 148(0), red'n 139(8)) on TYPELBRACK
 state 91
 	prefix_expr:  postfix_expr.    (139)
 	postfix_expr:  postfix_expr.call_start maybe_expr_list RPAREN 
 	postfix_expr:  postfix_expr.DOT IDENT 
 	postfix_expr:  postfix_expr.TYPELBRACK maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE 
-	postfix_expr:  postfix_expr.LBRACK $$145 maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE 
+	postfix_expr:  postfix_expr.LBRACK $$146 maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE 
 	postfix_expr:  postfix_expr.LBRACE maybe_struct_fields RBRACE 
 
-	DOT  shift 146
-	LPAREN  shift 150
-	LBRACK  shift 148
-	LBRACE  shift 149
-	TYPELBRACK  shift 147
+	DOT  shift 147
+	LPAREN  shift 151
+	LBRACK  shift 149
+	LBRACE  shift 150
+	TYPELBRACK  shift 148
 	.  reduce 139 (src line 913)
 
-	call_start  goto 145
+	call_start  goto 146
 
 state 92
 	prefix_expr:  NOT.postfix_expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
 	.  error
 
-	postfix_expr  goto 151
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	postfix_expr  goto 152
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 93
-	postfix_expr:  primary.    (141)
+	prefix_expr:  '-'.postfix_expr 
 
-	.  reduce 141 (src line 921)
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	.  error
 
+	postfix_expr  goto 153
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 94
-	primary:  IDENT.    (148)
+	postfix_expr:  primary.    (142)
 
-	.  reduce 148 (src line 979)
+	.  reduce 142 (src line 925)
 
 
 state 95
-	primary:  NUMBER.    (149)
+	primary:  IDENT.    (149)
 
-	.  reduce 149 (src line 984)
+	.  reduce 149 (src line 983)
 
 
 state 96
-	primary:  STRING.    (150)
+	primary:  NUMBER.    (150)
 
 	.  reduce 150 (src line 988)
 
 
 state 97
+	primary:  STRING.    (151)
+
+	.  reduce 151 (src line 992)
+
+
+state 98
 	primary:  LPAREN.expr RPAREN 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
-	expr  goto 152
+	expr  goto 154
 	pipe_expr  goto 84
 	or_expr  goto 85
 	and_expr  goto 86
@@ -951,122 +981,84 @@ state 97
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
-
-state 98
-	primary:  slice_lit.    (152)
-
-	.  reduce 152 (src line 993)
-
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 99
-	primary:  collection_lit.    (153)
+	primary:  slice_lit.    (153)
 
-	.  reduce 153 (src line 994)
+	.  reduce 153 (src line 997)
 
 
 state 100
-	primary:  if_expr.    (154)
+	primary:  collection_lit.    (154)
 
-	.  reduce 154 (src line 995)
+	.  reduce 154 (src line 998)
 
 
 state 101
-	primary:  switch_expr.    (155)
+	primary:  if_expr.    (155)
 
-	.  reduce 155 (src line 996)
+	.  reduce 155 (src line 999)
 
 
 state 102
-	primary:  while_expr.    (156)
+	primary:  switch_expr.    (156)
 
-	.  reduce 156 (src line 997)
+	.  reduce 156 (src line 1000)
 
 
 state 103
-	primary:  func_lit.    (157)
+	primary:  while_expr.    (157)
 
-	.  reduce 157 (src line 998)
+	.  reduce 157 (src line 1001)
 
 
 state 104
-	primary:  go_expr.    (158)
+	primary:  func_lit.    (158)
 
-	.  reduce 158 (src line 999)
+	.  reduce 158 (src line 1002)
 
 
 state 105
-	slice_lit:  SLICE.    (167)
+	primary:  go_expr.    (159)
 
-	.  reduce 167 (src line 1067)
+	.  reduce 159 (src line 1003)
 
 
 state 106
-	slice_lit:  LBRACK.maybe_expr_list RBRACK 
-	maybe_expr_list: .    (170)
+	slice_lit:  SLICE.    (168)
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
-	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
-	.  reduce 170 (src line 1092)
+	.  reduce 168 (src line 1071)
 
-	expr  goto 155
-	pipe_expr  goto 84
-	or_expr  goto 85
-	and_expr  goto 86
-	compare_expr  goto 87
-	add_expr  goto 88
-	mul_expr  goto 89
-	prefix_expr  goto 90
-	postfix_expr  goto 91
-	primary  goto 93
-	maybe_expr_list  goto 153
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
-	expr_list  goto 154
 
 state 107
-	collection_lit:  LBRACE.maybe_collection_entries RBRACE 
-	maybe_collection_entries: .    (181)
+	slice_lit:  LBRACK.maybe_expr_list RBRACK 
+	maybe_expr_list: .    (171)
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
-	.  reduce 181 (src line 1154)
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
+	.  reduce 171 (src line 1096)
 
-	expr  goto 159
+	expr  goto 157
 	pipe_expr  goto 84
 	or_expr  goto 85
 	and_expr  goto 86
@@ -1075,73 +1067,36 @@ state 107
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
-	maybe_collection_entries  goto 156
-	collection_entries  goto 157
-	collection_entry  goto 158
+	primary  goto 94
+	maybe_expr_list  goto 155
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
+	expr_list  goto 156
 
 state 108
-	if_expr:  IF.expr $$188 THEN expr $$189 ELSE expr 
-	if_expr:  IF.expr $$191 ARROW expr $$192 ELSE expr 
-	if_expr:  IF.expr NEWLINE $$194 opt_newlines block_expr $$195 ELSE opt_newlines block_expr opt_newlines END 
+	collection_lit:  LBRACE.maybe_collection_entries RBRACE 
+	maybe_collection_entries: .    (182)
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
-	.  error
-
-	expr  goto 160
-	pipe_expr  goto 84
-	or_expr  goto 85
-	and_expr  goto 86
-	compare_expr  goto 87
-	add_expr  goto 88
-	mul_expr  goto 89
-	prefix_expr  goto 90
-	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
-
-state 109
-	switch_expr:  SWITCH.expr $$199 opt_newlines switch_case_list opt_newlines END 
-
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
-	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
-	.  error
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
+	.  reduce 182 (src line 1158)
 
 	expr  goto 161
 	pipe_expr  goto 84
@@ -1152,31 +1107,37 @@ state 109
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
+	maybe_collection_entries  goto 158
+	collection_entries  goto 159
+	collection_entry  goto 160
 
-state 110
-	while_expr:  WHILE.expr $$197 opt_newlines block_expr opt_newlines END 
+state 109
+	if_expr:  IF.expr $$189 THEN expr $$190 ELSE expr 
+	if_expr:  IF.expr $$192 ARROW expr $$193 ELSE expr 
+	if_expr:  IF.expr NEWLINE $$195 opt_newlines block_expr $$196 ELSE opt_newlines block_expr opt_newlines END 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
 	expr  goto 162
@@ -1188,74 +1149,148 @@ state 110
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
-state 111
-	func_lit:  FUNC.LPAREN maybe_param_list RPAREN ARROW type opt_newlines block_expr opt_newlines END 
+state 110
+	switch_expr:  SWITCH.expr $$200 opt_newlines switch_case_list opt_newlines END 
 
-	LPAREN  shift 163
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
+	NOT  shift 92
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
+	expr  goto 163
+	pipe_expr  goto 84
+	or_expr  goto 85
+	and_expr  goto 86
+	compare_expr  goto 87
+	add_expr  goto 88
+	mul_expr  goto 89
+	prefix_expr  goto 90
+	postfix_expr  goto 91
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
+
+state 111
+	while_expr:  WHILE.expr $$198 opt_newlines block_expr opt_newlines END 
+
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
+	NOT  shift 92
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
+	.  error
+
+	expr  goto 164
+	pipe_expr  goto 84
+	or_expr  goto 85
+	and_expr  goto 86
+	compare_expr  goto 87
+	add_expr  goto 88
+	mul_expr  goto 89
+	prefix_expr  goto 90
+	postfix_expr  goto 91
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 112
-	go_expr:  GO.LBRACK type RBRACK $$159 LBRACE opt_newlines go_code go_field_list opt_newlines RBRACE 
+	func_lit:  FUNC.LPAREN maybe_param_list RPAREN ARROW type opt_newlines block_expr opt_newlines END 
 
-	LBRACK  shift 164
+	LPAREN  shift 165
 	.  error
 
 
 state 113
+	go_expr:  GO.LBRACK type RBRACK $$160 LBRACE opt_newlines go_code go_field_list opt_newlines RBRACE 
+
+	LBRACK  shift 166
+	.  error
+
+
+state 114
 	var_decl:  VAR IDENT opt_type_annot '=' expr.    (61)
 
 	.  reduce 61 (src line 482)
 
 
-state 114
+state 115
 	enum_decl:  ENUM qualified_name $$19 opt_type_params $$20 enum_body.opt_newlines END 
 	enum_body:  enum_body.opt_newlines enum_variant 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 165
+	opt_newlines  goto 167
 
-state 115
+state 116
 	opt_type_params:  TYPELBRACK $$76 maybe_name_list.RBRACK 
 
-	RBRACK  shift 166
+	RBRACK  shift 168
 	.  error
 
 
-116: shift/reduce conflict (shift 8(0), red'n 35(0)) on NEWLINE
-state 116
+117: shift/reduce conflict (shift 8(0), red'n 35(0)) on NEWLINE
+state 117
 	opt_newlines:  opt_newlines.NEWLINE 
 	struct_decl:  STRUCT qualified_name $$29 opt_type_params $$30 opt_newlines.struct_body opt_newlines END 
 	struct_fields: .    (35)
 
 	NEWLINE  shift 8
-	LPAREN  shift 168
+	LPAREN  shift 170
 	.  reduce 35 (src line 274)
 
-	struct_body  goto 167
-	struct_fields  goto 169
+	struct_body  goto 169
+	struct_fields  goto 171
 
-state 117
+state 118
 	interface_decl:  INTERFACE qualified_name $$39 opt_type_params $$40 func_sig_list.opt_newlines END 
 	func_sig_list:  func_sig_list.opt_newlines func_sig 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 170
+	opt_newlines  goto 172
 
-state 118
+state 119
 	impl_decl:  IMPL $$46 opt_impl_type_params type $$47 COLON.type $$48 impl_body opt_newlines END 
 
 	IDENT  shift 30
@@ -1264,39 +1299,39 @@ state 118
 	.  error
 
 	qualified_name  goto 61
-	type  goto 171
+	type  goto 173
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
-state 119
+state 120
 	func_type:  FUNC func_type_params_start maybe_type_list.RPAREN $$96 ARROW type 
 
-	RPAREN  shift 172
+	RPAREN  shift 174
 	.  error
 
 
-state 120
+state 121
 	maybe_type_list:  type_list.    (88)
 	type_list:  type_list.COMMA type 
 
-	COMMA  shift 173
+	COMMA  shift 175
 	.  reduce 88 (src line 624)
 
 
-state 121
+state 122
 	type_list:  type.    (89)
 
 	.  reduce 89 (src line 627)
 
 
-state 122
+state 123
 	grouped_type:  LPAREN type RPAREN.    (99)
 
 	.  reduce 99 (src line 719)
 
 
-state 123
+state 124
 	named_type_suffix:  TYPELBRACK $$102.maybe_type_list RBRACK 
 	maybe_type_list: .    (87)
 
@@ -1306,20 +1341,20 @@ state 123
 	.  reduce 87 (src line 622)
 
 	qualified_name  goto 61
-	type  goto 121
-	maybe_type_list  goto 174
-	type_list  goto 120
+	type  goto 122
+	maybe_type_list  goto 176
+	type_list  goto 121
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
-state 124
+state 125
 	opt_impl_type_params:  LBRACK $$51 maybe_name_list RBRACK.    (52)
 
 	.  reduce 52 (src line 411)
 
 
-state 125
+state 126
 	name_list:  name_list COMMA.type 
 
 	IDENT  shift 30
@@ -1328,177 +1363,178 @@ state 125
 	.  error
 
 	qualified_name  goto 61
-	type  goto 175
+	type  goto 177
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
-state 126
+state 127
 	opt_impl_type_params:  TYPELBRACK $$53 maybe_name_list RBRACK.    (54)
 
 	.  reduce 54 (src line 420)
 
 
-state 127
+state 128
 	func_decl:  FUNC IDENT $$57 opt_type_params LPAREN maybe_param_list.RPAREN ARROW type opt_using_clause $$58 opt_newlines block_expr opt_newlines END 
 
-	RPAREN  shift 176
+	RPAREN  shift 178
 	.  error
 
 
-state 128
+state 129
 	maybe_param_list:  param_list.    (83)
 	param_list:  param_list.COMMA param 
 
-	COMMA  shift 177
+	COMMA  shift 179
 	.  reduce 83 (src line 602)
 
 
-state 129
+state 130
 	param_list:  param.    (84)
 
 	.  reduce 84 (src line 605)
 
 
-state 130
+state 131
 	param:  IDENT.COLON type 
 
-	COLON  shift 178
+	COLON  shift 180
 	.  error
 
 
-state 131
+state 132
 	pipe_expr:  pipe_expr PIPEFWD.$$106 or_expr 
 	$$106: .    (106)
 
 	.  reduce 106 (src line 776)
 
-	$$106  goto 179
+	$$106  goto 181
 
-state 132
+state 133
 	pipe_expr:  pipe_expr PIPEBACK.$$108 or_expr 
 	$$108: .    (108)
 
 	.  reduce 108 (src line 784)
 
-	$$108  goto 180
+	$$108  goto 182
 
-state 133
+state 134
 	or_expr:  or_expr OROR.$$111 and_expr 
 	$$111: .    (111)
 
 	.  reduce 111 (src line 799)
 
-	$$111  goto 181
+	$$111  goto 183
 
-state 134
+state 135
 	and_expr:  and_expr ANDAND.$$114 compare_expr 
 	$$114: .    (114)
 
 	.  reduce 114 (src line 813)
 
-	$$114  goto 182
+	$$114  goto 184
 
-state 135
+state 136
 	compare_expr:  compare_expr EQEQ.$$117 add_expr 
 	$$117: .    (117)
 
 	.  reduce 117 (src line 827)
 
-	$$117  goto 183
+	$$117  goto 185
 
-state 136
+state 137
 	compare_expr:  compare_expr NEQ.$$119 add_expr 
 	$$119: .    (119)
 
 	.  reduce 119 (src line 834)
 
-	$$119  goto 184
+	$$119  goto 186
 
-state 137
+state 138
 	compare_expr:  compare_expr LTE.$$121 add_expr 
 	$$121: .    (121)
 
 	.  reduce 121 (src line 841)
 
-	$$121  goto 185
+	$$121  goto 187
 
-state 138
+state 139
 	compare_expr:  compare_expr GTE.$$123 add_expr 
 	$$123: .    (123)
 
 	.  reduce 123 (src line 848)
 
-	$$123  goto 186
+	$$123  goto 188
 
-state 139
+state 140
 	compare_expr:  compare_expr '<'.$$125 add_expr 
 	$$125: .    (125)
 
 	.  reduce 125 (src line 855)
 
-	$$125  goto 187
+	$$125  goto 189
 
-state 140
+state 141
 	compare_expr:  compare_expr '>'.$$127 add_expr 
 	$$127: .    (127)
 
 	.  reduce 127 (src line 862)
 
-	$$127  goto 188
+	$$127  goto 190
 
-state 141
+state 142
 	add_expr:  add_expr '+'.$$130 mul_expr 
 	$$130: .    (130)
 
 	.  reduce 130 (src line 876)
 
-	$$130  goto 189
+	$$130  goto 191
 
-state 142
+state 143
 	add_expr:  add_expr '-'.$$132 mul_expr 
 	$$132: .    (132)
 
 	.  reduce 132 (src line 883)
 
-	$$132  goto 190
+	$$132  goto 192
 
-state 143
+state 144
 	mul_expr:  mul_expr '*'.$$135 prefix_expr 
 	$$135: .    (135)
 
 	.  reduce 135 (src line 897)
 
-	$$135  goto 191
+	$$135  goto 193
 
-state 144
+state 145
 	mul_expr:  mul_expr '/'.$$137 prefix_expr 
 	$$137: .    (137)
 
 	.  reduce 137 (src line 904)
 
-	$$137  goto 192
+	$$137  goto 194
 
-state 145
+state 146
 	postfix_expr:  postfix_expr call_start.maybe_expr_list RPAREN 
-	maybe_expr_list: .    (170)
+	maybe_expr_list: .    (171)
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
-	.  reduce 170 (src line 1092)
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
+	.  reduce 171 (src line 1096)
 
-	expr  goto 155
+	expr  goto 157
 	pipe_expr  goto 84
 	or_expr  goto 85
 	and_expr  goto 86
@@ -1507,25 +1543,25 @@ state 145
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	maybe_expr_list  goto 193
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
-	expr_list  goto 154
+	primary  goto 94
+	maybe_expr_list  goto 195
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
+	expr_list  goto 156
 
-state 146
+state 147
 	postfix_expr:  postfix_expr DOT.IDENT 
 
-	IDENT  shift 194
+	IDENT  shift 196
 	.  error
 
 
-state 147
+state 148
 	postfix_expr:  postfix_expr TYPELBRACK.maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE 
 	maybe_type_list: .    (87)
 
@@ -1535,162 +1571,184 @@ state 147
 	.  reduce 87 (src line 622)
 
 	qualified_name  goto 61
-	type  goto 121
-	maybe_type_list  goto 195
-	type_list  goto 120
+	type  goto 122
+	maybe_type_list  goto 197
+	type_list  goto 121
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
-state 148
-	postfix_expr:  postfix_expr LBRACK.$$145 maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE 
-	$$145: .    (145)
-
-	.  reduce 145 (src line 955)
-
-	$$145  goto 196
-
 state 149
-	postfix_expr:  postfix_expr LBRACE.maybe_struct_fields RBRACE 
-	maybe_struct_fields: .    (175)
+	postfix_expr:  postfix_expr LBRACK.$$146 maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE 
+	$$146: .    (146)
 
-	IDENT  shift 200
-	.  reduce 175 (src line 1124)
+	.  reduce 146 (src line 959)
 
-	maybe_struct_fields  goto 197
-	struct_field_list  goto 198
-	struct_field  goto 199
+	$$146  goto 198
 
 state 150
-	call_start:  LPAREN.    (169)
+	postfix_expr:  postfix_expr LBRACE.maybe_struct_fields RBRACE 
+	maybe_struct_fields: .    (176)
 
-	.  reduce 169 (src line 1080)
+	IDENT  shift 202
+	.  reduce 176 (src line 1128)
 
+	maybe_struct_fields  goto 199
+	struct_field_list  goto 200
+	struct_field  goto 201
 
-151: shift/reduce conflict (shift 146(0), red'n 140(7)) on DOT
-151: shift/reduce conflict (shift 150(0), red'n 140(7)) on LPAREN
-151: shift/reduce conflict (shift 148(0), red'n 140(7)) on LBRACK
-151: shift/reduce conflict (shift 149(0), red'n 140(7)) on LBRACE
-151: shift/reduce conflict (shift 147(0), red'n 140(7)) on TYPELBRACK
 state 151
+	call_start:  LPAREN.    (170)
+
+	.  reduce 170 (src line 1084)
+
+
+152: shift/reduce conflict (shift 147(0), red'n 140(7)) on DOT
+152: shift/reduce conflict (shift 151(0), red'n 140(7)) on LPAREN
+152: shift/reduce conflict (shift 149(0), red'n 140(7)) on LBRACK
+152: shift/reduce conflict (shift 150(0), red'n 140(7)) on LBRACE
+152: shift/reduce conflict (shift 148(0), red'n 140(7)) on TYPELBRACK
+state 152
 	prefix_expr:  NOT postfix_expr.    (140)
 	postfix_expr:  postfix_expr.call_start maybe_expr_list RPAREN 
 	postfix_expr:  postfix_expr.DOT IDENT 
 	postfix_expr:  postfix_expr.TYPELBRACK maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE 
-	postfix_expr:  postfix_expr.LBRACK $$145 maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE 
+	postfix_expr:  postfix_expr.LBRACK $$146 maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE 
 	postfix_expr:  postfix_expr.LBRACE maybe_struct_fields RBRACE 
 
-	DOT  shift 146
-	LPAREN  shift 150
-	LBRACK  shift 148
-	LBRACE  shift 149
-	TYPELBRACK  shift 147
+	DOT  shift 147
+	LPAREN  shift 151
+	LBRACK  shift 149
+	LBRACE  shift 150
+	TYPELBRACK  shift 148
 	.  reduce 140 (src line 915)
 
-	call_start  goto 145
+	call_start  goto 146
 
-state 152
-	primary:  LPAREN expr.RPAREN 
-
-	RPAREN  shift 201
-	.  error
-
-
+153: shift/reduce conflict (shift 147(0), red'n 141(7)) on DOT
+153: shift/reduce conflict (shift 151(0), red'n 141(7)) on LPAREN
+153: shift/reduce conflict (shift 149(0), red'n 141(7)) on LBRACK
+153: shift/reduce conflict (shift 150(0), red'n 141(7)) on LBRACE
+153: shift/reduce conflict (shift 148(0), red'n 141(7)) on TYPELBRACK
 state 153
-	slice_lit:  LBRACK maybe_expr_list.RBRACK 
+	prefix_expr:  '-' postfix_expr.    (141)
+	postfix_expr:  postfix_expr.call_start maybe_expr_list RPAREN 
+	postfix_expr:  postfix_expr.DOT IDENT 
+	postfix_expr:  postfix_expr.TYPELBRACK maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE 
+	postfix_expr:  postfix_expr.LBRACK $$146 maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE 
+	postfix_expr:  postfix_expr.LBRACE maybe_struct_fields RBRACE 
 
-	RBRACK  shift 202
-	.  error
+	DOT  shift 147
+	LPAREN  shift 151
+	LBRACK  shift 149
+	LBRACE  shift 150
+	TYPELBRACK  shift 148
+	.  reduce 141 (src line 919)
 
+	call_start  goto 146
 
 state 154
-	maybe_expr_list:  expr_list.    (171)
-	expr_list:  expr_list.COMMA expr 
+	primary:  LPAREN expr.RPAREN 
 
-	COMMA  shift 203
-	.  reduce 171 (src line 1094)
+	RPAREN  shift 203
+	.  error
 
 
 state 155
-	expr_list:  expr.    (172)
+	slice_lit:  LBRACK maybe_expr_list.RBRACK 
 
-	.  reduce 172 (src line 1097)
-
-
-state 156
-	collection_lit:  LBRACE maybe_collection_entries.RBRACE 
-
-	RBRACE  shift 204
+	RBRACK  shift 204
 	.  error
 
 
-state 157
-	maybe_collection_entries:  collection_entries.    (182)
-	collection_entries:  collection_entries.COMMA collection_entry 
+state 156
+	maybe_expr_list:  expr_list.    (172)
+	expr_list:  expr_list.COMMA expr 
 
 	COMMA  shift 205
-	.  reduce 182 (src line 1156)
+	.  reduce 172 (src line 1098)
+
+
+state 157
+	expr_list:  expr.    (173)
+
+	.  reduce 173 (src line 1101)
 
 
 state 158
-	collection_entries:  collection_entry.    (183)
+	collection_lit:  LBRACE maybe_collection_entries.RBRACE 
 
-	.  reduce 183 (src line 1159)
+	RBRACE  shift 206
+	.  error
 
 
 state 159
-	collection_entry:  expr.$$185 COLON expr 
-	collection_entry:  expr.    (187)
-	$$185: .    (185)
+	maybe_collection_entries:  collection_entries.    (183)
+	collection_entries:  collection_entries.COMMA collection_entry 
 
-	COLON  reduce 185 (src line 1164)
-	.  reduce 187 (src line 1181)
+	COMMA  shift 207
+	.  reduce 183 (src line 1160)
 
-	$$185  goto 206
 
 state 160
-	if_expr:  IF expr.$$188 THEN expr $$189 ELSE expr 
-	if_expr:  IF expr.$$191 ARROW expr $$192 ELSE expr 
-	if_expr:  IF expr.NEWLINE $$194 opt_newlines block_expr $$195 ELSE opt_newlines block_expr opt_newlines END 
-	$$188: .    (188)
-	$$191: .    (191)
+	collection_entries:  collection_entry.    (184)
 
-	NEWLINE  shift 209
-	ARROW  reduce 191 (src line 1204)
-	.  reduce 188 (src line 1187)
+	.  reduce 184 (src line 1163)
 
-	$$188  goto 207
-	$$191  goto 208
 
 state 161
-	switch_expr:  SWITCH expr.$$199 opt_newlines switch_case_list opt_newlines END 
-	$$199: .    (199)
+	collection_entry:  expr.$$186 COLON expr 
+	collection_entry:  expr.    (188)
+	$$186: .    (186)
 
-	.  reduce 199 (src line 1254)
+	COLON  reduce 186 (src line 1168)
+	.  reduce 188 (src line 1185)
 
-	$$199  goto 210
+	$$186  goto 208
 
 state 162
-	while_expr:  WHILE expr.$$197 opt_newlines block_expr opt_newlines END 
-	$$197: .    (197)
+	if_expr:  IF expr.$$189 THEN expr $$190 ELSE expr 
+	if_expr:  IF expr.$$192 ARROW expr $$193 ELSE expr 
+	if_expr:  IF expr.NEWLINE $$195 opt_newlines block_expr $$196 ELSE opt_newlines block_expr opt_newlines END 
+	$$189: .    (189)
+	$$192: .    (192)
 
-	.  reduce 197 (src line 1239)
+	NEWLINE  shift 211
+	ARROW  reduce 192 (src line 1208)
+	.  reduce 189 (src line 1191)
 
-	$$197  goto 211
+	$$189  goto 209
+	$$192  goto 210
 
 state 163
+	switch_expr:  SWITCH expr.$$200 opt_newlines switch_case_list opt_newlines END 
+	$$200: .    (200)
+
+	.  reduce 200 (src line 1258)
+
+	$$200  goto 212
+
+state 164
+	while_expr:  WHILE expr.$$198 opt_newlines block_expr opt_newlines END 
+	$$198: .    (198)
+
+	.  reduce 198 (src line 1243)
+
+	$$198  goto 213
+
+state 165
 	func_lit:  FUNC LPAREN.maybe_param_list RPAREN ARROW type opt_newlines block_expr opt_newlines END 
 	maybe_param_list: .    (82)
 
-	IDENT  shift 130
+	IDENT  shift 131
 	.  reduce 82 (src line 600)
 
-	maybe_param_list  goto 212
-	param_list  goto 128
-	param  goto 129
+	maybe_param_list  goto 214
+	param_list  goto 129
+	param  goto 130
 
-state 164
-	go_expr:  GO LBRACK.type RBRACK $$159 LBRACE opt_newlines go_code go_field_list opt_newlines RBRACE 
+state 166
+	go_expr:  GO LBRACK.type RBRACK $$160 LBRACE opt_newlines go_code go_field_list opt_newlines RBRACE 
 
 	IDENT  shift 30
 	FUNC  shift 59
@@ -1698,84 +1756,84 @@ state 164
 	.  error
 
 	qualified_name  goto 61
-	type  goto 213
+	type  goto 215
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
-state 165
+state 167
 	opt_newlines:  opt_newlines.NEWLINE 
 	enum_decl:  ENUM qualified_name $$19 opt_type_params $$20 enum_body opt_newlines.END 
 	enum_body:  enum_body opt_newlines.enum_variant 
 
-	IDENT  shift 216
-	END  shift 214
+	IDENT  shift 218
+	END  shift 216
 	NEWLINE  shift 8
 	.  error
 
-	enum_variant  goto 215
+	enum_variant  goto 217
 
-state 166
+state 168
 	opt_type_params:  TYPELBRACK $$76 maybe_name_list RBRACK.    (77)
 
 	.  reduce 77 (src line 561)
 
 
-state 167
+state 169
 	struct_decl:  STRUCT qualified_name $$29 opt_type_params $$30 opt_newlines struct_body.opt_newlines END 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 217
+	opt_newlines  goto 219
 
-state 168
+state 170
 	struct_body:  LPAREN.$$32 maybe_type_list RPAREN 
 	$$32: .    (32)
 
 	.  reduce 32 (src line 250)
 
-	$$32  goto 218
+	$$32  goto 220
 
-state 169
+state 171
 	struct_body:  struct_fields.    (34)
 	struct_fields:  struct_fields.field opt_newlines 
 
-	IDENT  shift 220
-	EMBED  shift 221
+	IDENT  shift 222
+	EMBED  shift 223
 	.  reduce 34 (src line 271)
 
-	field  goto 219
+	field  goto 221
 
-state 170
+state 172
 	opt_newlines:  opt_newlines.NEWLINE 
 	interface_decl:  INTERFACE qualified_name $$39 opt_type_params $$40 func_sig_list opt_newlines.END 
 	func_sig_list:  func_sig_list opt_newlines.func_sig 
 
-	FUNC  shift 224
-	END  shift 222
+	FUNC  shift 226
+	END  shift 224
 	NEWLINE  shift 8
 	.  error
 
-	func_sig  goto 223
+	func_sig  goto 225
 
-state 171
+state 173
 	impl_decl:  IMPL $$46 opt_impl_type_params type $$47 COLON type.$$48 impl_body opt_newlines END 
 	$$48: .    (48)
 
 	.  reduce 48 (src line 370)
 
-	$$48  goto 225
+	$$48  goto 227
 
-state 172
+state 174
 	func_type:  FUNC func_type_params_start maybe_type_list RPAREN.$$96 ARROW type 
 	$$96: .    (96)
 
 	.  reduce 96 (src line 674)
 
-	$$96  goto 226
+	$$96  goto 228
 
-state 173
+state 175
 	type_list:  type_list COMMA.type 
 
 	IDENT  shift 30
@@ -1784,40 +1842,40 @@ state 173
 	.  error
 
 	qualified_name  goto 61
-	type  goto 227
+	type  goto 229
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
-state 174
+state 176
 	named_type_suffix:  TYPELBRACK $$102 maybe_type_list.RBRACK 
 
-	RBRACK  shift 228
+	RBRACK  shift 230
 	.  error
 
 
-state 175
+state 177
 	name_list:  name_list COMMA type.    (81)
 
 	.  reduce 81 (src line 584)
 
 
-state 176
+state 178
 	func_decl:  FUNC IDENT $$57 opt_type_params LPAREN maybe_param_list RPAREN.ARROW type opt_using_clause $$58 opt_newlines block_expr opt_newlines END 
 
-	ARROW  shift 229
+	ARROW  shift 231
 	.  error
 
 
-state 177
+state 179
 	param_list:  param_list COMMA.param 
 
-	IDENT  shift 130
+	IDENT  shift 131
 	.  error
 
-	param  goto 230
+	param  goto 232
 
-state 178
+state 180
 	param:  IDENT COLON.type 
 
 	IDENT  shift 30
@@ -1826,470 +1884,484 @@ state 178
 	.  error
 
 	qualified_name  goto 61
-	type  goto 231
+	type  goto 233
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
-state 179
+state 181
 	pipe_expr:  pipe_expr PIPEFWD $$106.or_expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
-	or_expr  goto 232
+	or_expr  goto 234
 	and_expr  goto 86
 	compare_expr  goto 87
 	add_expr  goto 88
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
-
-state 180
-	pipe_expr:  pipe_expr PIPEBACK $$108.or_expr 
-
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
-	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
-	.  error
-
-	or_expr  goto 233
-	and_expr  goto 86
-	compare_expr  goto 87
-	add_expr  goto 88
-	mul_expr  goto 89
-	prefix_expr  goto 90
-	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
-
-state 181
-	or_expr:  or_expr OROR $$111.and_expr 
-
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
-	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
-	.  error
-
-	and_expr  goto 234
-	compare_expr  goto 87
-	add_expr  goto 88
-	mul_expr  goto 89
-	prefix_expr  goto 90
-	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 182
-	and_expr:  and_expr ANDAND $$114.compare_expr 
+	pipe_expr:  pipe_expr PIPEBACK $$108.or_expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
-	compare_expr  goto 235
+	or_expr  goto 235
+	and_expr  goto 86
+	compare_expr  goto 87
 	add_expr  goto 88
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 183
-	compare_expr:  compare_expr EQEQ $$117.add_expr 
+	or_expr:  or_expr OROR $$111.and_expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
-	add_expr  goto 236
+	and_expr  goto 236
+	compare_expr  goto 87
+	add_expr  goto 88
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 184
-	compare_expr:  compare_expr NEQ $$119.add_expr 
+	and_expr:  and_expr ANDAND $$114.compare_expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
-	add_expr  goto 237
+	compare_expr  goto 237
+	add_expr  goto 88
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 185
-	compare_expr:  compare_expr LTE $$121.add_expr 
+	compare_expr:  compare_expr EQEQ $$117.add_expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
 	add_expr  goto 238
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 186
-	compare_expr:  compare_expr GTE $$123.add_expr 
+	compare_expr:  compare_expr NEQ $$119.add_expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
 	add_expr  goto 239
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 187
-	compare_expr:  compare_expr '<' $$125.add_expr 
+	compare_expr:  compare_expr LTE $$121.add_expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
 	add_expr  goto 240
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 188
-	compare_expr:  compare_expr '>' $$127.add_expr 
+	compare_expr:  compare_expr GTE $$123.add_expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
 	add_expr  goto 241
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 189
-	add_expr:  add_expr '+' $$130.mul_expr 
+	compare_expr:  compare_expr '<' $$125.add_expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
-	mul_expr  goto 242
+	add_expr  goto 242
+	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 190
-	add_expr:  add_expr '-' $$132.mul_expr 
+	compare_expr:  compare_expr '>' $$127.add_expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
-	mul_expr  goto 243
+	add_expr  goto 243
+	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 191
-	mul_expr:  mul_expr '*' $$135.prefix_expr 
+	add_expr:  add_expr '+' $$130.mul_expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
-	prefix_expr  goto 244
+	mul_expr  goto 244
+	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 192
-	mul_expr:  mul_expr '/' $$137.prefix_expr 
+	add_expr:  add_expr '-' $$132.mul_expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
-	prefix_expr  goto 245
+	mul_expr  goto 245
+	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 193
-	postfix_expr:  postfix_expr call_start maybe_expr_list.RPAREN 
+	mul_expr:  mul_expr '*' $$135.prefix_expr 
 
-	RPAREN  shift 246
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
+	NOT  shift 92
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
+	prefix_expr  goto 246
+	postfix_expr  goto 91
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 194
-	postfix_expr:  postfix_expr DOT IDENT.    (143)
+	mul_expr:  mul_expr '/' $$137.prefix_expr 
 
-	.  reduce 143 (src line 942)
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
+	NOT  shift 92
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
+	.  error
 
+	prefix_expr  goto 247
+	postfix_expr  goto 91
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 195
-	postfix_expr:  postfix_expr TYPELBRACK maybe_type_list.RBRACK LBRACE maybe_struct_fields RBRACE 
+	postfix_expr:  postfix_expr call_start maybe_expr_list.RPAREN 
 
-	RBRACK  shift 247
+	RPAREN  shift 248
 	.  error
 
 
 state 196
-	postfix_expr:  postfix_expr LBRACK $$145.maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE 
+	postfix_expr:  postfix_expr DOT IDENT.    (144)
+
+	.  reduce 144 (src line 946)
+
+
+state 197
+	postfix_expr:  postfix_expr TYPELBRACK maybe_type_list.RBRACK LBRACE maybe_struct_fields RBRACE 
+
+	RBRACK  shift 249
+	.  error
+
+
+state 198
+	postfix_expr:  postfix_expr LBRACK $$146.maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE 
 	maybe_type_list: .    (87)
 
 	IDENT  shift 30
@@ -2298,115 +2370,74 @@ state 196
 	.  reduce 87 (src line 622)
 
 	qualified_name  goto 61
-	type  goto 121
-	maybe_type_list  goto 248
-	type_list  goto 120
+	type  goto 122
+	maybe_type_list  goto 250
+	type_list  goto 121
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
-state 197
+state 199
 	postfix_expr:  postfix_expr LBRACE maybe_struct_fields.RBRACE 
 
-	RBRACE  shift 249
+	RBRACE  shift 251
 	.  error
-
-
-state 198
-	maybe_struct_fields:  struct_field_list.    (176)
-	struct_field_list:  struct_field_list.COMMA struct_field 
-
-	COMMA  shift 250
-	.  reduce 176 (src line 1126)
-
-
-state 199
-	struct_field_list:  struct_field.    (177)
-
-	.  reduce 177 (src line 1129)
 
 
 state 200
-	struct_field:  IDENT.COLON expr 
-	struct_field:  IDENT.    (180)
+	maybe_struct_fields:  struct_field_list.    (177)
+	struct_field_list:  struct_field_list.COMMA struct_field 
 
-	COLON  shift 251
-	.  reduce 180 (src line 1144)
+	COMMA  shift 252
+	.  reduce 177 (src line 1130)
 
 
 state 201
-	primary:  LPAREN expr RPAREN.    (151)
+	struct_field_list:  struct_field.    (178)
 
-	.  reduce 151 (src line 992)
+	.  reduce 178 (src line 1133)
 
 
 state 202
-	slice_lit:  LBRACK maybe_expr_list RBRACK.    (168)
+	struct_field:  IDENT.COLON expr 
+	struct_field:  IDENT.    (181)
 
-	.  reduce 168 (src line 1073)
+	COLON  shift 253
+	.  reduce 181 (src line 1148)
 
 
 state 203
-	expr_list:  expr_list COMMA.expr 
+	primary:  LPAREN expr RPAREN.    (152)
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
-	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
-	.  error
+	.  reduce 152 (src line 996)
 
-	expr  goto 252
-	pipe_expr  goto 84
-	or_expr  goto 85
-	and_expr  goto 86
-	compare_expr  goto 87
-	add_expr  goto 88
-	mul_expr  goto 89
-	prefix_expr  goto 90
-	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
 
 state 204
-	collection_lit:  LBRACE maybe_collection_entries RBRACE.    (174)
+	slice_lit:  LBRACK maybe_expr_list RBRACK.    (169)
 
-	.  reduce 174 (src line 1110)
+	.  reduce 169 (src line 1077)
 
 
 state 205
-	collection_entries:  collection_entries COMMA.collection_entry 
+	expr_list:  expr_list COMMA.expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
-	expr  goto 159
+	expr  goto 254
 	pipe_expr  goto 84
 	or_expr  goto 85
 	and_expr  goto 86
@@ -2415,105 +2446,148 @@ state 205
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
-	collection_entry  goto 253
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 206
-	collection_entry:  expr $$185.COLON expr 
+	collection_lit:  LBRACE maybe_collection_entries RBRACE.    (175)
 
-	COLON  shift 254
-	.  error
+	.  reduce 175 (src line 1114)
 
 
 state 207
-	if_expr:  IF expr $$188.THEN expr $$189 ELSE expr 
+	collection_entries:  collection_entries COMMA.collection_entry 
 
-	THEN  shift 255
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
+	NOT  shift 92
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
+	expr  goto 161
+	pipe_expr  goto 84
+	or_expr  goto 85
+	and_expr  goto 86
+	compare_expr  goto 87
+	add_expr  goto 88
+	mul_expr  goto 89
+	prefix_expr  goto 90
+	postfix_expr  goto 91
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
+	collection_entry  goto 255
 
 state 208
-	if_expr:  IF expr $$191.ARROW expr $$192 ELSE expr 
+	collection_entry:  expr $$186.COLON expr 
 
-	ARROW  shift 256
+	COLON  shift 256
 	.  error
 
 
 state 209
-	if_expr:  IF expr NEWLINE.$$194 opt_newlines block_expr $$195 ELSE opt_newlines block_expr opt_newlines END 
-	$$194: .    (194)
+	if_expr:  IF expr $$189.THEN expr $$190 ELSE expr 
 
-	.  reduce 194 (src line 1220)
+	THEN  shift 257
+	.  error
 
-	$$194  goto 257
 
 state 210
-	switch_expr:  SWITCH expr $$199.opt_newlines switch_case_list opt_newlines END 
-	opt_newlines: .    (5)
+	if_expr:  IF expr $$192.ARROW expr $$193 ELSE expr 
 
-	.  reduce 5 (src line 107)
+	ARROW  shift 258
+	.  error
 
-	opt_newlines  goto 258
 
 state 211
-	while_expr:  WHILE expr $$197.opt_newlines block_expr opt_newlines END 
+	if_expr:  IF expr NEWLINE.$$195 opt_newlines block_expr $$196 ELSE opt_newlines block_expr opt_newlines END 
+	$$195: .    (195)
+
+	.  reduce 195 (src line 1224)
+
+	$$195  goto 259
+
+state 212
+	switch_expr:  SWITCH expr $$200.opt_newlines switch_case_list opt_newlines END 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 259
-
-state 212
-	func_lit:  FUNC LPAREN maybe_param_list.RPAREN ARROW type opt_newlines block_expr opt_newlines END 
-
-	RPAREN  shift 260
-	.  error
-
+	opt_newlines  goto 260
 
 state 213
-	go_expr:  GO LBRACK type.RBRACK $$159 LBRACE opt_newlines go_code go_field_list opt_newlines RBRACE 
+	while_expr:  WHILE expr $$198.opt_newlines block_expr opt_newlines END 
+	opt_newlines: .    (5)
 
-	RBRACK  shift 261
+	.  reduce 5 (src line 107)
+
+	opt_newlines  goto 261
+
+state 214
+	func_lit:  FUNC LPAREN maybe_param_list.RPAREN ARROW type opt_newlines block_expr opt_newlines END 
+
+	RPAREN  shift 262
 	.  error
 
 
-state 214
+state 215
+	go_expr:  GO LBRACK type.RBRACK $$160 LBRACE opt_newlines go_code go_field_list opt_newlines RBRACE 
+
+	RBRACK  shift 263
+	.  error
+
+
+state 216
 	enum_decl:  ENUM qualified_name $$19 opt_type_params $$20 enum_body opt_newlines END.    (21)
 
 	.  reduce 21 (src line 162)
 
 
-state 215
+state 217
 	enum_body:  enum_body opt_newlines enum_variant.    (23)
 
 	.  reduce 23 (src line 174)
 
 
-state 216
+state 218
 	enum_variant:  IDENT.    (24)
 	enum_variant:  IDENT.LPAREN enum_variant_fields RPAREN 
 
-	LPAREN  shift 262
+	LPAREN  shift 264
 	.  reduce 24 (src line 177)
 
 
-state 217
+state 219
 	opt_newlines:  opt_newlines.NEWLINE 
 	struct_decl:  STRUCT qualified_name $$29 opt_type_params $$30 opt_newlines struct_body opt_newlines.END 
 
-	END  shift 263
+	END  shift 265
 	NEWLINE  shift 8
 	.  error
 
 
-state 218
+state 220
 	struct_body:  LPAREN $$32.maybe_type_list RPAREN 
 	maybe_type_list: .    (87)
 
@@ -2523,29 +2597,29 @@ state 218
 	.  reduce 87 (src line 622)
 
 	qualified_name  goto 61
-	type  goto 121
-	maybe_type_list  goto 264
-	type_list  goto 120
+	type  goto 122
+	maybe_type_list  goto 266
+	type_list  goto 121
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
-state 219
+state 221
 	struct_fields:  struct_fields field.opt_newlines 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 265
+	opt_newlines  goto 267
 
-state 220
+state 222
 	field:  IDENT.COLON type 
 
-	COLON  shift 266
+	COLON  shift 268
 	.  error
 
 
-state 221
+state 223
 	field:  EMBED.type 
 
 	IDENT  shift 30
@@ -2554,58 +2628,58 @@ state 221
 	.  error
 
 	qualified_name  goto 61
-	type  goto 267
+	type  goto 269
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
-state 222
+state 224
 	interface_decl:  INTERFACE qualified_name $$39 opt_type_params $$40 func_sig_list opt_newlines END.    (41)
 
 	.  reduce 41 (src line 319)
 
 
-state 223
+state 225
 	func_sig_list:  func_sig_list opt_newlines func_sig.    (43)
 
 	.  reduce 43 (src line 331)
 
 
-state 224
+state 226
 	func_sig:  FUNC.IDENT $$44 opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause 
 
-	IDENT  shift 268
+	IDENT  shift 270
 	.  error
 
 
-state 225
+state 227
 	impl_decl:  IMPL $$46 opt_impl_type_params type $$47 COLON type $$48.impl_body opt_newlines END 
 	impl_body: .    (55)
 
 	.  reduce 55 (src line 426)
 
-	impl_body  goto 269
+	impl_body  goto 271
 
-state 226
+state 228
 	func_type:  FUNC func_type_params_start maybe_type_list RPAREN $$96.ARROW type 
 
-	ARROW  shift 270
+	ARROW  shift 272
 	.  error
 
 
-state 227
+state 229
 	type_list:  type_list COMMA type.    (90)
 
 	.  reduce 90 (src line 635)
 
 
-state 228
+state 230
 	named_type_suffix:  TYPELBRACK $$102 maybe_type_list RBRACK.    (103)
 
 	.  reduce 103 (src line 748)
 
 
-state 229
+state 231
 	func_decl:  FUNC IDENT $$57 opt_type_params LPAREN maybe_param_list RPAREN ARROW.type opt_using_clause $$58 opt_newlines block_expr opt_newlines END 
 
 	IDENT  shift 30
@@ -2614,48 +2688,48 @@ state 229
 	.  error
 
 	qualified_name  goto 61
-	type  goto 271
+	type  goto 273
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
-state 230
+state 232
 	param_list:  param_list COMMA param.    (85)
 
 	.  reduce 85 (src line 607)
 
 
-state 231
+state 233
 	param:  IDENT COLON type.    (86)
 
 	.  reduce 86 (src line 610)
 
 
-state 232
+state 234
 	pipe_expr:  pipe_expr PIPEFWD $$106 or_expr.    (107)
 	or_expr:  or_expr.OROR $$111 and_expr 
 
-	OROR  shift 133
+	OROR  shift 134
 	.  reduce 107 (src line 779)
 
 
-state 233
+state 235
 	pipe_expr:  pipe_expr PIPEBACK $$108 or_expr.    (109)
 	or_expr:  or_expr.OROR $$111 and_expr 
 
-	OROR  shift 133
+	OROR  shift 134
 	.  reduce 109 (src line 787)
 
 
-state 234
+state 236
 	or_expr:  or_expr OROR $$111 and_expr.    (112)
 	and_expr:  and_expr.ANDAND $$114 compare_expr 
 
-	ANDAND  shift 134
+	ANDAND  shift 135
 	.  reduce 112 (src line 802)
 
 
-state 235
+state 237
 	and_expr:  and_expr ANDAND $$114 compare_expr.    (115)
 	compare_expr:  compare_expr.EQEQ $$117 add_expr 
 	compare_expr:  compare_expr.NEQ $$119 add_expr 
@@ -2664,241 +2738,158 @@ state 235
 	compare_expr:  compare_expr.'<' $$125 add_expr 
 	compare_expr:  compare_expr.'>' $$127 add_expr 
 
-	EQEQ  shift 135
-	NEQ  shift 136
-	LTE  shift 137
-	GTE  shift 138
-	'<'  shift 139
-	'>'  shift 140
+	EQEQ  shift 136
+	NEQ  shift 137
+	LTE  shift 138
+	GTE  shift 139
+	'<'  shift 140
+	'>'  shift 141
 	.  reduce 115 (src line 816)
 
 
-state 236
+state 238
 	compare_expr:  compare_expr EQEQ $$117 add_expr.    (118)
 	add_expr:  add_expr.'+' $$130 mul_expr 
 	add_expr:  add_expr.'-' $$132 mul_expr 
 
-	'+'  shift 141
-	'-'  shift 142
+	'+'  shift 142
+	'-'  shift 143
 	.  reduce 118 (src line 830)
 
 
-state 237
+state 239
 	compare_expr:  compare_expr NEQ $$119 add_expr.    (120)
 	add_expr:  add_expr.'+' $$130 mul_expr 
 	add_expr:  add_expr.'-' $$132 mul_expr 
 
-	'+'  shift 141
-	'-'  shift 142
+	'+'  shift 142
+	'-'  shift 143
 	.  reduce 120 (src line 837)
 
 
-state 238
+state 240
 	compare_expr:  compare_expr LTE $$121 add_expr.    (122)
 	add_expr:  add_expr.'+' $$130 mul_expr 
 	add_expr:  add_expr.'-' $$132 mul_expr 
 
-	'+'  shift 141
-	'-'  shift 142
+	'+'  shift 142
+	'-'  shift 143
 	.  reduce 122 (src line 844)
 
 
-state 239
+state 241
 	compare_expr:  compare_expr GTE $$123 add_expr.    (124)
 	add_expr:  add_expr.'+' $$130 mul_expr 
 	add_expr:  add_expr.'-' $$132 mul_expr 
 
-	'+'  shift 141
-	'-'  shift 142
+	'+'  shift 142
+	'-'  shift 143
 	.  reduce 124 (src line 851)
 
 
-state 240
+state 242
 	compare_expr:  compare_expr '<' $$125 add_expr.    (126)
 	add_expr:  add_expr.'+' $$130 mul_expr 
 	add_expr:  add_expr.'-' $$132 mul_expr 
 
-	'+'  shift 141
-	'-'  shift 142
+	'+'  shift 142
+	'-'  shift 143
 	.  reduce 126 (src line 858)
 
 
-state 241
+state 243
 	compare_expr:  compare_expr '>' $$127 add_expr.    (128)
 	add_expr:  add_expr.'+' $$130 mul_expr 
 	add_expr:  add_expr.'-' $$132 mul_expr 
 
-	'+'  shift 141
-	'-'  shift 142
+	'+'  shift 142
+	'-'  shift 143
 	.  reduce 128 (src line 865)
 
 
-state 242
+state 244
 	add_expr:  add_expr '+' $$130 mul_expr.    (131)
 	mul_expr:  mul_expr.'*' $$135 prefix_expr 
 	mul_expr:  mul_expr.'/' $$137 prefix_expr 
 
-	'*'  shift 143
-	'/'  shift 144
+	'*'  shift 144
+	'/'  shift 145
 	.  reduce 131 (src line 879)
 
 
-state 243
+state 245
 	add_expr:  add_expr '-' $$132 mul_expr.    (133)
 	mul_expr:  mul_expr.'*' $$135 prefix_expr 
 	mul_expr:  mul_expr.'/' $$137 prefix_expr 
 
-	'*'  shift 143
-	'/'  shift 144
+	'*'  shift 144
+	'/'  shift 145
 	.  reduce 133 (src line 886)
 
 
-state 244
+state 246
 	mul_expr:  mul_expr '*' $$135 prefix_expr.    (136)
 
 	.  reduce 136 (src line 900)
 
 
-state 245
+state 247
 	mul_expr:  mul_expr '/' $$137 prefix_expr.    (138)
 
 	.  reduce 138 (src line 907)
 
 
-state 246
-	postfix_expr:  postfix_expr call_start maybe_expr_list RPAREN.    (142)
-
-	.  reduce 142 (src line 923)
-
-
-state 247
-	postfix_expr:  postfix_expr TYPELBRACK maybe_type_list RBRACK.LBRACE maybe_struct_fields RBRACE 
-
-	LBRACE  shift 272
-	.  error
-
-
 state 248
-	postfix_expr:  postfix_expr LBRACK $$145 maybe_type_list.RBRACK LBRACE maybe_struct_fields RBRACE 
+	postfix_expr:  postfix_expr call_start maybe_expr_list RPAREN.    (143)
 
-	RBRACK  shift 273
-	.  error
+	.  reduce 143 (src line 927)
 
 
 state 249
-	postfix_expr:  postfix_expr LBRACE maybe_struct_fields RBRACE.    (147)
+	postfix_expr:  postfix_expr TYPELBRACK maybe_type_list RBRACK.LBRACE maybe_struct_fields RBRACE 
 
-	.  reduce 147 (src line 969)
+	LBRACE  shift 274
+	.  error
 
 
 state 250
-	struct_field_list:  struct_field_list COMMA.struct_field 
+	postfix_expr:  postfix_expr LBRACK $$146 maybe_type_list.RBRACK LBRACE maybe_struct_fields RBRACE 
 
-	IDENT  shift 200
+	RBRACK  shift 275
 	.  error
 
-	struct_field  goto 274
 
 state 251
-	struct_field:  IDENT COLON.expr 
+	postfix_expr:  postfix_expr LBRACE maybe_struct_fields RBRACE.    (148)
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
-	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
-	.  error
+	.  reduce 148 (src line 973)
 
-	expr  goto 275
-	pipe_expr  goto 84
-	or_expr  goto 85
-	and_expr  goto 86
-	compare_expr  goto 87
-	add_expr  goto 88
-	mul_expr  goto 89
-	prefix_expr  goto 90
-	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
 
 state 252
-	expr_list:  expr_list COMMA expr.    (173)
+	struct_field_list:  struct_field_list COMMA.struct_field 
 
-	.  reduce 173 (src line 1103)
-
-
-state 253
-	collection_entries:  collection_entries COMMA collection_entry.    (184)
-
-	.  reduce 184 (src line 1161)
-
-
-state 254
-	collection_entry:  expr $$185 COLON.expr 
-
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
-	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	IDENT  shift 202
 	.  error
 
-	expr  goto 276
-	pipe_expr  goto 84
-	or_expr  goto 85
-	and_expr  goto 86
-	compare_expr  goto 87
-	add_expr  goto 88
-	mul_expr  goto 89
-	prefix_expr  goto 90
-	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	struct_field  goto 276
 
-state 255
-	if_expr:  IF expr $$188 THEN.expr $$189 ELSE expr 
+state 253
+	struct_field:  IDENT COLON.expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
 	expr  goto 277
@@ -2910,31 +2901,44 @@ state 255
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
+
+state 254
+	expr_list:  expr_list COMMA expr.    (174)
+
+	.  reduce 174 (src line 1107)
+
+
+state 255
+	collection_entries:  collection_entries COMMA collection_entry.    (185)
+
+	.  reduce 185 (src line 1165)
+
 
 state 256
-	if_expr:  IF expr $$191 ARROW.expr $$192 ELSE expr 
+	collection_entry:  expr $$186 COLON.expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
 	expr  goto 278
@@ -2946,83 +2950,157 @@ state 256
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 257
-	if_expr:  IF expr NEWLINE $$194.opt_newlines block_expr $$195 ELSE opt_newlines block_expr opt_newlines END 
+	if_expr:  IF expr $$189 THEN.expr $$190 ELSE expr 
+
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
+	NOT  shift 92
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
+	.  error
+
+	expr  goto 279
+	pipe_expr  goto 84
+	or_expr  goto 85
+	and_expr  goto 86
+	compare_expr  goto 87
+	add_expr  goto 88
+	mul_expr  goto 89
+	prefix_expr  goto 90
+	postfix_expr  goto 91
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
+
+state 258
+	if_expr:  IF expr $$192 ARROW.expr $$193 ELSE expr 
+
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
+	NOT  shift 92
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
+	.  error
+
+	expr  goto 280
+	pipe_expr  goto 84
+	or_expr  goto 85
+	and_expr  goto 86
+	compare_expr  goto 87
+	add_expr  goto 88
+	mul_expr  goto 89
+	prefix_expr  goto 90
+	postfix_expr  goto 91
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
+
+state 259
+	if_expr:  IF expr NEWLINE $$195.opt_newlines block_expr $$196 ELSE opt_newlines block_expr opt_newlines END 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 279
+	opt_newlines  goto 281
 
-258: shift/reduce conflict (shift 8(0), red'n 201(0)) on NEWLINE
-state 258
-	opt_newlines:  opt_newlines.NEWLINE 
-	switch_expr:  SWITCH expr $$199 opt_newlines.switch_case_list opt_newlines END 
-	switch_case_list: .    (201)
-
-	NEWLINE  shift 8
-	.  reduce 201 (src line 1268)
-
-	switch_case_list  goto 280
-
-state 259
-	opt_newlines:  opt_newlines.NEWLINE 
-	while_expr:  WHILE expr $$197 opt_newlines.block_expr opt_newlines END 
-	block_start: .    (215)
-
-	NEWLINE  shift 8
-	.  reduce 215 (src line 1355)
-
-	block_expr  goto 281
-	block_start  goto 282
-
+260: shift/reduce conflict (shift 8(0), red'n 202(0)) on NEWLINE
 state 260
+	opt_newlines:  opt_newlines.NEWLINE 
+	switch_expr:  SWITCH expr $$200 opt_newlines.switch_case_list opt_newlines END 
+	switch_case_list: .    (202)
+
+	NEWLINE  shift 8
+	.  reduce 202 (src line 1272)
+
+	switch_case_list  goto 282
+
+state 261
+	opt_newlines:  opt_newlines.NEWLINE 
+	while_expr:  WHILE expr $$198 opt_newlines.block_expr opt_newlines END 
+	block_start: .    (216)
+
+	NEWLINE  shift 8
+	.  reduce 216 (src line 1359)
+
+	block_expr  goto 283
+	block_start  goto 284
+
+state 262
 	func_lit:  FUNC LPAREN maybe_param_list RPAREN.ARROW type opt_newlines block_expr opt_newlines END 
 
-	ARROW  shift 283
+	ARROW  shift 285
 	.  error
 
 
-state 261
-	go_expr:  GO LBRACK type RBRACK.$$159 LBRACE opt_newlines go_code go_field_list opt_newlines RBRACE 
-	$$159: .    (159)
+state 263
+	go_expr:  GO LBRACK type RBRACK.$$160 LBRACE opt_newlines go_code go_field_list opt_newlines RBRACE 
+	$$160: .    (160)
 
-	.  reduce 159 (src line 1002)
+	.  reduce 160 (src line 1006)
 
-	$$159  goto 284
+	$$160  goto 286
 
-state 262
+state 264
 	enum_variant:  IDENT LPAREN.enum_variant_fields RPAREN 
 	enum_variant_fields: .    (26)
 
 	.  reduce 26 (src line 202)
 
-	enum_variant_fields  goto 285
+	enum_variant_fields  goto 287
 
-state 263
+state 265
 	struct_decl:  STRUCT qualified_name $$29 opt_type_params $$30 opt_newlines struct_body opt_newlines END.    (31)
 
 	.  reduce 31 (src line 240)
 
 
-state 264
+state 266
 	struct_body:  LPAREN $$32 maybe_type_list.RPAREN 
 
-	RPAREN  shift 286
+	RPAREN  shift 288
 	.  error
 
 
-265: shift/reduce conflict (shift 8(0), red'n 36(0)) on NEWLINE
-state 265
+267: shift/reduce conflict (shift 8(0), red'n 36(0)) on NEWLINE
+state 267
 	opt_newlines:  opt_newlines.NEWLINE 
 	struct_fields:  struct_fields field opt_newlines.    (36)
 
@@ -3030,7 +3108,7 @@ state 265
 	.  reduce 36 (src line 276)
 
 
-state 266
+state 268
 	field:  IDENT COLON.type 
 
 	IDENT  shift 30
@@ -3039,35 +3117,35 @@ state 266
 	.  error
 
 	qualified_name  goto 61
-	type  goto 287
+	type  goto 289
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
-state 267
+state 269
 	field:  EMBED type.    (38)
 
 	.  reduce 38 (src line 291)
 
 
-state 268
+state 270
 	func_sig:  FUNC IDENT.$$44 opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause 
 	$$44: .    (44)
 
 	.  reduce 44 (src line 334)
 
-	$$44  goto 288
+	$$44  goto 290
 
-state 269
+state 271
 	impl_decl:  IMPL $$46 opt_impl_type_params type $$47 COLON type $$48 impl_body.opt_newlines END 
 	impl_body:  impl_body.opt_newlines func_decl 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 289
+	opt_newlines  goto 291
 
-state 270
+state 272
 	func_type:  FUNC func_type_params_start maybe_type_list RPAREN $$96 ARROW.type 
 
 	IDENT  shift 30
@@ -3076,122 +3154,123 @@ state 270
 	.  error
 
 	qualified_name  goto 61
-	type  goto 290
+	type  goto 292
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
-state 271
+state 273
 	func_decl:  FUNC IDENT $$57 opt_type_params LPAREN maybe_param_list RPAREN ARROW type.opt_using_clause $$58 opt_newlines block_expr opt_newlines END 
 	opt_using_clause: .    (64)
 
-	USING  shift 292
+	USING  shift 294
 	.  reduce 64 (src line 501)
 
-	opt_using_clause  goto 291
+	opt_using_clause  goto 293
 
-state 272
+state 274
 	postfix_expr:  postfix_expr TYPELBRACK maybe_type_list RBRACK LBRACE.maybe_struct_fields RBRACE 
-	maybe_struct_fields: .    (175)
+	maybe_struct_fields: .    (176)
 
-	IDENT  shift 200
-	.  reduce 175 (src line 1124)
+	IDENT  shift 202
+	.  reduce 176 (src line 1128)
 
-	maybe_struct_fields  goto 293
-	struct_field_list  goto 198
-	struct_field  goto 199
+	maybe_struct_fields  goto 295
+	struct_field_list  goto 200
+	struct_field  goto 201
 
-state 273
-	postfix_expr:  postfix_expr LBRACK $$145 maybe_type_list RBRACK.LBRACE maybe_struct_fields RBRACE 
+state 275
+	postfix_expr:  postfix_expr LBRACK $$146 maybe_type_list RBRACK.LBRACE maybe_struct_fields RBRACE 
 
-	LBRACE  shift 294
+	LBRACE  shift 296
 	.  error
 
 
-state 274
-	struct_field_list:  struct_field_list COMMA struct_field.    (178)
-
-	.  reduce 178 (src line 1131)
-
-
-state 275
-	struct_field:  IDENT COLON expr.    (179)
-
-	.  reduce 179 (src line 1134)
-
-
 state 276
-	collection_entry:  expr $$185 COLON expr.    (186)
+	struct_field_list:  struct_field_list COMMA struct_field.    (179)
 
-	.  reduce 186 (src line 1170)
+	.  reduce 179 (src line 1135)
 
 
 state 277
-	if_expr:  IF expr $$188 THEN expr.$$189 ELSE expr 
-	$$189: .    (189)
+	struct_field:  IDENT COLON expr.    (180)
 
-	.  reduce 189 (src line 1192)
+	.  reduce 180 (src line 1138)
 
-	$$189  goto 295
 
 state 278
-	if_expr:  IF expr $$191 ARROW expr.$$192 ELSE expr 
-	$$192: .    (192)
+	collection_entry:  expr $$186 COLON expr.    (187)
 
-	.  reduce 192 (src line 1208)
+	.  reduce 187 (src line 1174)
 
-	$$192  goto 296
 
 state 279
-	opt_newlines:  opt_newlines.NEWLINE 
-	if_expr:  IF expr NEWLINE $$194 opt_newlines.block_expr $$195 ELSE opt_newlines block_expr opt_newlines END 
-	block_start: .    (215)
+	if_expr:  IF expr $$189 THEN expr.$$190 ELSE expr 
+	$$190: .    (190)
 
-	NEWLINE  shift 8
-	.  reduce 215 (src line 1355)
+	.  reduce 190 (src line 1196)
 
-	block_expr  goto 297
-	block_start  goto 282
+	$$190  goto 297
 
 state 280
-	switch_expr:  SWITCH expr $$199 opt_newlines switch_case_list.opt_newlines END 
+	if_expr:  IF expr $$192 ARROW expr.$$193 ELSE expr 
+	$$193: .    (193)
+
+	.  reduce 193 (src line 1212)
+
+	$$193  goto 298
+
+state 281
+	opt_newlines:  opt_newlines.NEWLINE 
+	if_expr:  IF expr NEWLINE $$195 opt_newlines.block_expr $$196 ELSE opt_newlines block_expr opt_newlines END 
+	block_start: .    (216)
+
+	NEWLINE  shift 8
+	.  reduce 216 (src line 1359)
+
+	block_expr  goto 299
+	block_start  goto 284
+
+state 282
+	switch_expr:  SWITCH expr $$200 opt_newlines switch_case_list.opt_newlines END 
 	switch_case_list:  switch_case_list.opt_newlines switch_case 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 298
+	opt_newlines  goto 300
 
-state 281
-	while_expr:  WHILE expr $$197 opt_newlines block_expr.opt_newlines END 
+state 283
+	while_expr:  WHILE expr $$198 opt_newlines block_expr.opt_newlines END 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 299
+	opt_newlines  goto 301
 
-state 282
+state 284
 	block_expr:  block_start.block_expr_items 
 
-	IDENT  shift 308
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 310
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	LET  shift 306
-	VAR  shift 307
-	WHILE  shift 110
-	RETURN  shift 309
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	LET  shift 308
+	VAR  shift 309
+	WHILE  shift 111
+	RETURN  shift 311
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
-	expr  goto 310
+	expr  goto 312
 	pipe_expr  goto 84
 	or_expr  goto 85
 	and_expr  goto 86
@@ -3200,22 +3279,22 @@ state 282
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
-	block_expr_items  goto 300
-	stmt  goto 301
-	binding_stmt  goto 302
-	assign_stmt  goto 303
-	return_stmt  goto 304
-	expr_stmt  goto 305
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
+	block_expr_items  goto 302
+	stmt  goto 303
+	binding_stmt  goto 304
+	assign_stmt  goto 305
+	return_stmt  goto 306
+	expr_stmt  goto 307
 
-state 283
+state 285
 	func_lit:  FUNC LPAREN maybe_param_list RPAREN ARROW.type opt_newlines block_expr opt_newlines END 
 
 	IDENT  shift 30
@@ -3224,48 +3303,48 @@ state 283
 	.  error
 
 	qualified_name  goto 61
-	type  goto 311
-	func_type  goto 56
-	grouped_type  goto 57
-	named_type  goto 58
-
-state 284
-	go_expr:  GO LBRACK type RBRACK $$159.LBRACE opt_newlines go_code go_field_list opt_newlines RBRACE 
-
-	LBRACE  shift 312
-	.  error
-
-
-state 285
-	enum_variant:  IDENT LPAREN enum_variant_fields.RPAREN 
-	enum_variant_fields:  enum_variant_fields.IDENT 
-	enum_variant_fields:  enum_variant_fields.type 
-
-	IDENT  shift 314
-	FUNC  shift 59
-	LPAREN  shift 60
-	RPAREN  shift 313
-	.  error
-
-	qualified_name  goto 61
-	type  goto 315
+	type  goto 313
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
 state 286
+	go_expr:  GO LBRACK type RBRACK $$160.LBRACE opt_newlines go_code go_field_list opt_newlines RBRACE 
+
+	LBRACE  shift 314
+	.  error
+
+
+state 287
+	enum_variant:  IDENT LPAREN enum_variant_fields.RPAREN 
+	enum_variant_fields:  enum_variant_fields.IDENT 
+	enum_variant_fields:  enum_variant_fields.type 
+
+	IDENT  shift 316
+	FUNC  shift 59
+	LPAREN  shift 60
+	RPAREN  shift 315
+	.  error
+
+	qualified_name  goto 61
+	type  goto 317
+	func_type  goto 56
+	grouped_type  goto 57
+	named_type  goto 58
+
+state 288
 	struct_body:  LPAREN $$32 maybe_type_list RPAREN.    (33)
 
 	.  reduce 33 (src line 256)
 
 
-state 287
+state 289
 	field:  IDENT COLON type.    (37)
 
 	.  reduce 37 (src line 279)
 
 
-state 288
+state 290
 	func_sig:  FUNC IDENT $$44.opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause 
 	opt_type_params: .    (74)
 
@@ -3273,186 +3352,187 @@ state 288
 	TYPELBRACK  shift 51
 	.  reduce 74 (src line 551)
 
-	opt_type_params  goto 316
+	opt_type_params  goto 318
 
-state 289
+state 291
 	opt_newlines:  opt_newlines.NEWLINE 
 	impl_decl:  IMPL $$46 opt_impl_type_params type $$47 COLON type $$48 impl_body opt_newlines.END 
 	impl_body:  impl_body opt_newlines.func_decl 
 
 	FUNC  shift 24
-	END  shift 317
+	END  shift 319
 	NEWLINE  shift 8
 	.  error
 
-	func_decl  goto 318
+	func_decl  goto 320
 
-state 290
+state 292
 	func_type:  FUNC func_type_params_start maybe_type_list RPAREN $$96 ARROW type.    (97)
 
 	.  reduce 97 (src line 690)
 
 
-state 291
+state 293
 	func_decl:  FUNC IDENT $$57 opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause.$$58 opt_newlines block_expr opt_newlines END 
 	$$58: .    (58)
 
 	.  reduce 58 (src line 437)
 
-	$$58  goto 319
-
-state 292
-	opt_using_clause:  USING.constraint_list 
-
-	IDENT  shift 322
-	.  error
-
-	constraint_list  goto 320
-	constraint  goto 321
-
-state 293
-	postfix_expr:  postfix_expr TYPELBRACK maybe_type_list RBRACK LBRACE maybe_struct_fields.RBRACE 
-
-	RBRACE  shift 323
-	.  error
-
+	$$58  goto 321
 
 state 294
-	postfix_expr:  postfix_expr LBRACK $$145 maybe_type_list RBRACK LBRACE.maybe_struct_fields RBRACE 
-	maybe_struct_fields: .    (175)
+	opt_using_clause:  USING.constraint_list 
 
-	IDENT  shift 200
-	.  reduce 175 (src line 1124)
+	IDENT  shift 324
+	.  error
 
-	maybe_struct_fields  goto 324
-	struct_field_list  goto 198
-	struct_field  goto 199
+	constraint_list  goto 322
+	constraint  goto 323
 
 state 295
-	if_expr:  IF expr $$188 THEN expr $$189.ELSE expr 
+	postfix_expr:  postfix_expr TYPELBRACK maybe_type_list RBRACK LBRACE maybe_struct_fields.RBRACE 
 
-	ELSE  shift 325
+	RBRACE  shift 325
 	.  error
 
 
 state 296
-	if_expr:  IF expr $$191 ARROW expr $$192.ELSE expr 
+	postfix_expr:  postfix_expr LBRACK $$146 maybe_type_list RBRACK LBRACE.maybe_struct_fields RBRACE 
+	maybe_struct_fields: .    (176)
 
-	ELSE  shift 326
-	.  error
+	IDENT  shift 202
+	.  reduce 176 (src line 1128)
 
+	maybe_struct_fields  goto 326
+	struct_field_list  goto 200
+	struct_field  goto 201
 
 state 297
-	if_expr:  IF expr NEWLINE $$194 opt_newlines block_expr.$$195 ELSE opt_newlines block_expr opt_newlines END 
-	$$195: .    (195)
+	if_expr:  IF expr $$189 THEN expr $$190.ELSE expr 
 
-	.  reduce 195 (src line 1224)
+	ELSE  shift 327
+	.  error
 
-	$$195  goto 327
 
 state 298
-	opt_newlines:  opt_newlines.NEWLINE 
-	switch_expr:  SWITCH expr $$199 opt_newlines switch_case_list opt_newlines.END 
-	switch_case_list:  switch_case_list opt_newlines.switch_case 
+	if_expr:  IF expr $$192 ARROW expr $$193.ELSE expr 
 
-	CASE  shift 330
-	END  shift 328
-	NEWLINE  shift 8
+	ELSE  shift 328
 	.  error
 
-	switch_case  goto 329
 
 state 299
-	opt_newlines:  opt_newlines.NEWLINE 
-	while_expr:  WHILE expr $$197 opt_newlines block_expr opt_newlines.END 
+	if_expr:  IF expr NEWLINE $$195 opt_newlines block_expr.$$196 ELSE opt_newlines block_expr opt_newlines END 
+	$$196: .    (196)
 
-	END  shift 331
+	.  reduce 196 (src line 1228)
+
+	$$196  goto 329
+
+state 300
+	opt_newlines:  opt_newlines.NEWLINE 
+	switch_expr:  SWITCH expr $$200 opt_newlines switch_case_list opt_newlines.END 
+	switch_case_list:  switch_case_list opt_newlines.switch_case 
+
+	CASE  shift 332
+	END  shift 330
+	NEWLINE  shift 8
+	.  error
+
+	switch_case  goto 331
+
+state 301
+	opt_newlines:  opt_newlines.NEWLINE 
+	while_expr:  WHILE expr $$198 opt_newlines block_expr opt_newlines.END 
+
+	END  shift 333
 	NEWLINE  shift 8
 	.  error
 
 
-300: shift/reduce conflict (shift 332(0), red'n 214(0)) on NEWLINE
-state 300
-	block_expr:  block_start block_expr_items.    (214)
+302: shift/reduce conflict (shift 334(0), red'n 215(0)) on NEWLINE
+state 302
+	block_expr:  block_start block_expr_items.    (215)
 	block_expr_items:  block_expr_items.NEWLINE stmt 
 	block_expr_items:  block_expr_items.NEWLINE 
 
-	NEWLINE  shift 332
-	.  reduce 214 (src line 1342)
-
-
-state 301
-	block_expr_items:  stmt.    (216)
-
-	.  reduce 216 (src line 1363)
-
-
-state 302
-	stmt:  binding_stmt.    (219)
-
-	.  reduce 219 (src line 1381)
+	NEWLINE  shift 334
+	.  reduce 215 (src line 1346)
 
 
 state 303
-	stmt:  assign_stmt.    (220)
+	block_expr_items:  stmt.    (217)
 
-	.  reduce 220 (src line 1383)
+	.  reduce 217 (src line 1367)
 
 
 state 304
-	stmt:  return_stmt.    (221)
+	stmt:  binding_stmt.    (220)
 
-	.  reduce 221 (src line 1384)
+	.  reduce 220 (src line 1385)
 
 
 state 305
-	stmt:  expr_stmt.    (222)
+	stmt:  assign_stmt.    (221)
 
-	.  reduce 222 (src line 1385)
+	.  reduce 221 (src line 1387)
 
 
 state 306
-	binding_stmt:  LET.IDENT opt_type_annot '=' expr 
+	stmt:  return_stmt.    (222)
 
-	IDENT  shift 333
-	.  error
+	.  reduce 222 (src line 1388)
 
 
 state 307
-	binding_stmt:  VAR.IDENT opt_type_annot '=' expr 
+	stmt:  expr_stmt.    (223)
 
-	IDENT  shift 334
-	.  error
+	.  reduce 223 (src line 1389)
 
 
 state 308
-	primary:  IDENT.    (148)
-	assign_stmt:  IDENT.'=' expr 
+	binding_stmt:  LET.IDENT opt_type_annot '=' expr 
 
-	'='  shift 335
-	.  reduce 148 (src line 979)
+	IDENT  shift 335
+	.  error
 
 
 state 309
-	return_stmt:  RETURN.    (226)
+	binding_stmt:  VAR.IDENT opt_type_annot '=' expr 
+
+	IDENT  shift 336
+	.  error
+
+
+state 310
+	primary:  IDENT.    (149)
+	assign_stmt:  IDENT.'=' expr 
+
+	'='  shift 337
+	.  reduce 149 (src line 983)
+
+
+state 311
+	return_stmt:  RETURN.    (227)
 	return_stmt:  RETURN.expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
-	.  reduce 226 (src line 1406)
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
+	.  reduce 227 (src line 1410)
 
-	expr  goto 336
+	expr  goto 338
 	pipe_expr  goto 84
 	or_expr  goto 85
 	and_expr  goto 86
@@ -3461,48 +3541,48 @@ state 309
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
-state 310
-	expr_stmt:  expr.    (228)
+state 312
+	expr_stmt:  expr.    (229)
 
-	.  reduce 228 (src line 1417)
+	.  reduce 229 (src line 1421)
 
 
-state 311
+state 313
 	func_lit:  FUNC LPAREN maybe_param_list RPAREN ARROW type.opt_newlines block_expr opt_newlines END 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 337
+	opt_newlines  goto 339
 
-state 312
-	go_expr:  GO LBRACK type RBRACK $$159 LBRACE.opt_newlines go_code go_field_list opt_newlines RBRACE 
+state 314
+	go_expr:  GO LBRACK type RBRACK $$160 LBRACE.opt_newlines go_code go_field_list opt_newlines RBRACE 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 338
+	opt_newlines  goto 340
 
-state 313
+state 315
 	enum_variant:  IDENT LPAREN enum_variant_fields RPAREN.    (25)
 
 	.  reduce 25 (src line 188)
 
 
- 314: reduce/reduce conflict  (red'ns 27 and 91) on IDENT
- 314: reduce/reduce conflict  (red'ns 27 and 91) on FUNC
- 314: reduce/reduce conflict  (red'ns 27 and 91) on LPAREN
- 314: reduce/reduce conflict  (red'ns 27 and 91) on RPAREN
-state 314
+ 316: reduce/reduce conflict  (red'ns 27 and 91) on IDENT
+ 316: reduce/reduce conflict  (red'ns 27 and 91) on FUNC
+ 316: reduce/reduce conflict  (red'ns 27 and 91) on LPAREN
+ 316: reduce/reduce conflict  (red'ns 27 and 91) on RPAREN
+state 316
 	enum_variant_fields:  enum_variant_fields IDENT.    (27)
 	qualified_name:  IDENT.    (91)
 
@@ -3511,129 +3591,94 @@ state 314
 	.  reduce 27 (src line 204)
 
 
-state 315
+state 317
 	enum_variant_fields:  enum_variant_fields type.    (28)
 
 	.  reduce 28 (src line 214)
 
 
-state 316
+state 318
 	func_sig:  FUNC IDENT $$44 opt_type_params.LPAREN maybe_param_list RPAREN ARROW type opt_using_clause 
 
-	LPAREN  shift 339
+	LPAREN  shift 341
 	.  error
 
 
-state 317
+state 319
 	impl_decl:  IMPL $$46 opt_impl_type_params type $$47 COLON type $$48 impl_body opt_newlines END.    (49)
 
 	.  reduce 49 (src line 390)
 
 
-state 318
+state 320
 	impl_body:  impl_body opt_newlines func_decl.    (56)
 
 	.  reduce 56 (src line 428)
 
 
-state 319
+state 321
 	func_decl:  FUNC IDENT $$57 opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause $$58.opt_newlines block_expr opt_newlines END 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 340
+	opt_newlines  goto 342
 
-state 320
+state 322
 	opt_using_clause:  USING constraint_list.    (65)
 	constraint_list:  constraint_list.COMMA constraint 
 
-	COMMA  shift 341
+	COMMA  shift 343
 	.  reduce 65 (src line 503)
 
 
-state 321
+state 323
 	constraint_list:  constraint.    (66)
 
 	.  reduce 66 (src line 506)
 
 
-state 322
+state 324
 	constraint:  IDENT.$$68 constr_suffix 
 	$$68: .    (68)
 
 	.  reduce 68 (src line 511)
 
-	$$68  goto 342
-
-state 323
-	postfix_expr:  postfix_expr TYPELBRACK maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE.    (144)
-
-	.  reduce 144 (src line 946)
-
-
-state 324
-	postfix_expr:  postfix_expr LBRACK $$145 maybe_type_list RBRACK LBRACE maybe_struct_fields.RBRACE 
-
-	RBRACE  shift 343
-	.  error
-
+	$$68  goto 344
 
 state 325
-	if_expr:  IF expr $$188 THEN expr $$189 ELSE.expr 
+	postfix_expr:  postfix_expr TYPELBRACK maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE.    (145)
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
-	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
-	.  error
+	.  reduce 145 (src line 950)
 
-	expr  goto 344
-	pipe_expr  goto 84
-	or_expr  goto 85
-	and_expr  goto 86
-	compare_expr  goto 87
-	add_expr  goto 88
-	mul_expr  goto 89
-	prefix_expr  goto 90
-	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
 
 state 326
-	if_expr:  IF expr $$191 ARROW expr $$192 ELSE.expr 
+	postfix_expr:  postfix_expr LBRACK $$146 maybe_type_list RBRACK LBRACE maybe_struct_fields.RBRACE 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
-	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	RBRACE  shift 345
 	.  error
 
-	expr  goto 345
+
+state 327
+	if_expr:  IF expr $$189 THEN expr $$190 ELSE.expr 
+
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
+	NOT  shift 92
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
+	.  error
+
+	expr  goto 346
 	pipe_expr  goto 84
 	or_expr  goto 85
 	and_expr  goto 86
@@ -3642,73 +3687,111 @@ state 326
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
-
-state 327
-	if_expr:  IF expr NEWLINE $$194 opt_newlines block_expr $$195.ELSE opt_newlines block_expr opt_newlines END 
-
-	ELSE  shift 346
-	.  error
-
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 328
-	switch_expr:  SWITCH expr $$199 opt_newlines switch_case_list opt_newlines END.    (200)
+	if_expr:  IF expr $$192 ARROW expr $$193 ELSE.expr 
 
-	.  reduce 200 (src line 1259)
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
+	NOT  shift 92
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
+	.  error
 
+	expr  goto 347
+	pipe_expr  goto 84
+	or_expr  goto 85
+	and_expr  goto 86
+	compare_expr  goto 87
+	add_expr  goto 88
+	mul_expr  goto 89
+	prefix_expr  goto 90
+	postfix_expr  goto 91
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 329
-	switch_case_list:  switch_case_list opt_newlines switch_case.    (202)
+	if_expr:  IF expr NEWLINE $$195 opt_newlines block_expr $$196.ELSE opt_newlines block_expr opt_newlines END 
 
-	.  reduce 202 (src line 1270)
+	ELSE  shift 348
+	.  error
 
 
 state 330
-	switch_case:  CASE.pattern ARROW opt_newlines block_expr 
-	switch_case:  CASE.pattern THEN opt_newlines block_expr opt_newlines END 
+	switch_expr:  SWITCH expr $$200 opt_newlines switch_case_list opt_newlines END.    (201)
 
-	IDENT  shift 349
-	UNDER  shift 348
-	.  error
+	.  reduce 201 (src line 1263)
 
-	pattern  goto 347
 
 state 331
-	while_expr:  WHILE expr $$197 opt_newlines block_expr opt_newlines END.    (198)
+	switch_case_list:  switch_case_list opt_newlines switch_case.    (203)
 
-	.  reduce 198 (src line 1244)
+	.  reduce 203 (src line 1274)
 
 
 state 332
+	switch_case:  CASE.pattern ARROW opt_newlines block_expr 
+	switch_case:  CASE.pattern THEN opt_newlines block_expr opt_newlines END 
+
+	IDENT  shift 351
+	UNDER  shift 350
+	.  error
+
+	pattern  goto 349
+
+state 333
+	while_expr:  WHILE expr $$198 opt_newlines block_expr opt_newlines END.    (199)
+
+	.  reduce 199 (src line 1248)
+
+
+state 334
 	block_expr_items:  block_expr_items NEWLINE.stmt 
-	block_expr_items:  block_expr_items NEWLINE.    (218)
+	block_expr_items:  block_expr_items NEWLINE.    (219)
 
-	IDENT  shift 308
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 310
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	LET  shift 306
-	VAR  shift 307
-	WHILE  shift 110
-	RETURN  shift 309
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
-	.  reduce 218 (src line 1374)
+	LET  shift 308
+	VAR  shift 309
+	WHILE  shift 111
+	RETURN  shift 311
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
+	.  reduce 219 (src line 1378)
 
-	expr  goto 310
+	expr  goto 312
 	pipe_expr  goto 84
 	or_expr  goto 85
 	and_expr  goto 86
@@ -3717,57 +3800,58 @@ state 332
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
-	stmt  goto 350
-	binding_stmt  goto 302
-	assign_stmt  goto 303
-	return_stmt  goto 304
-	expr_stmt  goto 305
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
+	stmt  goto 352
+	binding_stmt  goto 304
+	assign_stmt  goto 305
+	return_stmt  goto 306
+	expr_stmt  goto 307
 
-state 333
+state 335
 	binding_stmt:  LET IDENT.opt_type_annot '=' expr 
 	opt_type_annot: .    (62)
 
 	COLON  shift 47
 	.  reduce 62 (src line 496)
 
-	opt_type_annot  goto 351
+	opt_type_annot  goto 353
 
-state 334
+state 336
 	binding_stmt:  VAR IDENT.opt_type_annot '=' expr 
 	opt_type_annot: .    (62)
 
 	COLON  shift 47
 	.  reduce 62 (src line 496)
 
-	opt_type_annot  goto 352
+	opt_type_annot  goto 354
 
-state 335
+state 337
 	assign_stmt:  IDENT '='.expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
-	expr  goto 353
+	expr  goto 355
 	pipe_expr  goto 84
 	or_expr  goto 85
 	and_expr  goto 86
@@ -3776,222 +3860,222 @@ state 335
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
-
-state 336
-	return_stmt:  RETURN expr.    (227)
-
-	.  reduce 227 (src line 1411)
-
-
-state 337
-	opt_newlines:  opt_newlines.NEWLINE 
-	func_lit:  FUNC LPAREN maybe_param_list RPAREN ARROW type opt_newlines.block_expr opt_newlines END 
-	block_start: .    (215)
-
-	NEWLINE  shift 8
-	.  reduce 215 (src line 1355)
-
-	block_expr  goto 354
-	block_start  goto 282
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
 state 338
-	opt_newlines:  opt_newlines.NEWLINE 
-	go_expr:  GO LBRACK type RBRACK $$159 LBRACE opt_newlines.go_code go_field_list opt_newlines RBRACE 
+	return_stmt:  RETURN expr.    (228)
 
-	IDENT  shift 356
-	NEWLINE  shift 8
-	.  error
+	.  reduce 228 (src line 1415)
 
-	go_code  goto 355
 
 state 339
-	func_sig:  FUNC IDENT $$44 opt_type_params LPAREN.maybe_param_list RPAREN ARROW type opt_using_clause 
-	maybe_param_list: .    (82)
+	opt_newlines:  opt_newlines.NEWLINE 
+	func_lit:  FUNC LPAREN maybe_param_list RPAREN ARROW type opt_newlines.block_expr opt_newlines END 
+	block_start: .    (216)
 
-	IDENT  shift 130
-	.  reduce 82 (src line 600)
+	NEWLINE  shift 8
+	.  reduce 216 (src line 1359)
 
-	maybe_param_list  goto 357
-	param_list  goto 128
-	param  goto 129
+	block_expr  goto 356
+	block_start  goto 284
 
 state 340
 	opt_newlines:  opt_newlines.NEWLINE 
-	func_decl:  FUNC IDENT $$57 opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause $$58 opt_newlines.block_expr opt_newlines END 
-	block_start: .    (215)
+	go_expr:  GO LBRACK type RBRACK $$160 LBRACE opt_newlines.go_code go_field_list opt_newlines RBRACE 
 
+	IDENT  shift 358
 	NEWLINE  shift 8
-	.  reduce 215 (src line 1355)
-
-	block_expr  goto 358
-	block_start  goto 282
-
-state 341
-	constraint_list:  constraint_list COMMA.constraint 
-
-	IDENT  shift 322
 	.  error
 
-	constraint  goto 359
+	go_code  goto 357
+
+state 341
+	func_sig:  FUNC IDENT $$44 opt_type_params LPAREN.maybe_param_list RPAREN ARROW type opt_using_clause 
+	maybe_param_list: .    (82)
+
+	IDENT  shift 131
+	.  reduce 82 (src line 600)
+
+	maybe_param_list  goto 359
+	param_list  goto 129
+	param  goto 130
 
 state 342
+	opt_newlines:  opt_newlines.NEWLINE 
+	func_decl:  FUNC IDENT $$57 opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause $$58 opt_newlines.block_expr opt_newlines END 
+	block_start: .    (216)
+
+	NEWLINE  shift 8
+	.  reduce 216 (src line 1359)
+
+	block_expr  goto 360
+	block_start  goto 284
+
+state 343
+	constraint_list:  constraint_list COMMA.constraint 
+
+	IDENT  shift 324
+	.  error
+
+	constraint  goto 361
+
+state 344
 	constraint:  IDENT $$68.constr_suffix 
 	constraint_suffix: .    (72)
 
-	COLON  shift 361
-	CONSTRLBRACK  shift 363
+	COLON  shift 363
+	CONSTRLBRACK  shift 365
 	.  reduce 72 (src line 546)
 
-	constr_suffix  goto 360
-	constraint_suffix  goto 362
-
-state 343
-	postfix_expr:  postfix_expr LBRACK $$145 maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE.    (146)
-
-	.  reduce 146 (src line 960)
-
-
-state 344
-	if_expr:  IF expr $$188 THEN expr $$189 ELSE expr.    (190)
-
-	.  reduce 190 (src line 1196)
-
+	constr_suffix  goto 362
+	constraint_suffix  goto 364
 
 state 345
-	if_expr:  IF expr $$191 ARROW expr $$192 ELSE expr.    (193)
+	postfix_expr:  postfix_expr LBRACK $$146 maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE.    (147)
 
-	.  reduce 193 (src line 1212)
+	.  reduce 147 (src line 964)
 
 
 state 346
-	if_expr:  IF expr NEWLINE $$194 opt_newlines block_expr $$195 ELSE.opt_newlines block_expr opt_newlines END 
+	if_expr:  IF expr $$189 THEN expr $$190 ELSE expr.    (191)
+
+	.  reduce 191 (src line 1200)
+
+
+state 347
+	if_expr:  IF expr $$192 ARROW expr $$193 ELSE expr.    (194)
+
+	.  reduce 194 (src line 1216)
+
+
+state 348
+	if_expr:  IF expr NEWLINE $$195 opt_newlines block_expr $$196 ELSE.opt_newlines block_expr opt_newlines END 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 364
+	opt_newlines  goto 366
 
-state 347
+state 349
 	switch_case:  CASE pattern.ARROW opt_newlines block_expr 
 	switch_case:  CASE pattern.THEN opt_newlines block_expr opt_newlines END 
 
-	THEN  shift 366
-	ARROW  shift 365
+	THEN  shift 368
+	ARROW  shift 367
 	.  error
-
-
-state 348
-	pattern:  UNDER.    (205)
-
-	.  reduce 205 (src line 1292)
-
-
-state 349
-	pattern:  IDENT.    (206)
-	pattern:  IDENT.LPAREN pattern_name_list RPAREN 
-
-	LPAREN  shift 367
-	.  reduce 206 (src line 1297)
 
 
 state 350
-	block_expr_items:  block_expr_items NEWLINE stmt.    (217)
+	pattern:  UNDER.    (206)
 
-	.  reduce 217 (src line 1369)
+	.  reduce 206 (src line 1296)
 
 
 state 351
-	binding_stmt:  LET IDENT opt_type_annot.'=' expr 
+	pattern:  IDENT.    (207)
+	pattern:  IDENT.LPAREN pattern_name_list RPAREN 
 
-	'='  shift 368
-	.  error
+	LPAREN  shift 369
+	.  reduce 207 (src line 1301)
 
 
 state 352
-	binding_stmt:  VAR IDENT opt_type_annot.'=' expr 
+	block_expr_items:  block_expr_items NEWLINE stmt.    (218)
 
-	'='  shift 369
-	.  error
+	.  reduce 218 (src line 1373)
 
 
 state 353
-	assign_stmt:  IDENT '=' expr.    (225)
+	binding_stmt:  LET IDENT opt_type_annot.'=' expr 
 
-	.  reduce 225 (src line 1399)
+	'='  shift 370
+	.  error
 
 
 state 354
+	binding_stmt:  VAR IDENT opt_type_annot.'=' expr 
+
+	'='  shift 371
+	.  error
+
+
+state 355
+	assign_stmt:  IDENT '=' expr.    (226)
+
+	.  reduce 226 (src line 1403)
+
+
+state 356
 	func_lit:  FUNC LPAREN maybe_param_list RPAREN ARROW type opt_newlines block_expr.opt_newlines END 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 370
-
-state 355
-	go_expr:  GO LBRACK type RBRACK $$159 LBRACE opt_newlines go_code.go_field_list opt_newlines RBRACE 
-	go_field_list: .    (162)
-
-	.  reduce 162 (src line 1037)
-
-	go_field_list  goto 371
-
-state 356
-	go_code:  IDENT.COLON STRING opt_newlines 
-
-	COLON  shift 372
-	.  error
-
+	opt_newlines  goto 372
 
 state 357
-	func_sig:  FUNC IDENT $$44 opt_type_params LPAREN maybe_param_list.RPAREN ARROW type opt_using_clause 
+	go_expr:  GO LBRACK type RBRACK $$160 LBRACE opt_newlines go_code.go_field_list opt_newlines RBRACE 
+	go_field_list: .    (163)
 
-	RPAREN  shift 373
+	.  reduce 163 (src line 1041)
+
+	go_field_list  goto 373
+
+state 358
+	go_code:  IDENT.COLON STRING opt_newlines 
+
+	COLON  shift 374
 	.  error
 
 
-state 358
+state 359
+	func_sig:  FUNC IDENT $$44 opt_type_params LPAREN maybe_param_list.RPAREN ARROW type opt_using_clause 
+
+	RPAREN  shift 375
+	.  error
+
+
+state 360
 	func_decl:  FUNC IDENT $$57 opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause $$58 opt_newlines block_expr.opt_newlines END 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 374
+	opt_newlines  goto 376
 
-state 359
+state 361
 	constraint_list:  constraint_list COMMA constraint.    (67)
 
 	.  reduce 67 (src line 508)
 
 
-state 360
+state 362
 	constraint:  IDENT $$68 constr_suffix.    (69)
 
 	.  reduce 69 (src line 518)
 
 
-state 361
+state 363
 	constr_suffix:  COLON.IDENT constraint_suffix 
 
-	IDENT  shift 375
+	IDENT  shift 377
 	.  error
 
 
-state 362
+state 364
 	constr_suffix:  constraint_suffix.    (71)
 
 	.  reduce 71 (src line 543)
 
 
-state 363
+state 365
 	constraint_suffix:  CONSTRLBRACK.maybe_type_list RBRACK 
 	maybe_type_list: .    (87)
 
@@ -4001,105 +4085,70 @@ state 363
 	.  reduce 87 (src line 622)
 
 	qualified_name  goto 61
-	type  goto 121
-	maybe_type_list  goto 376
-	type_list  goto 120
+	type  goto 122
+	maybe_type_list  goto 378
+	type_list  goto 121
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
-state 364
+state 366
 	opt_newlines:  opt_newlines.NEWLINE 
-	if_expr:  IF expr NEWLINE $$194 opt_newlines block_expr $$195 ELSE opt_newlines.block_expr opt_newlines END 
-	block_start: .    (215)
+	if_expr:  IF expr NEWLINE $$195 opt_newlines block_expr $$196 ELSE opt_newlines.block_expr opt_newlines END 
+	block_start: .    (216)
 
 	NEWLINE  shift 8
-	.  reduce 215 (src line 1355)
+	.  reduce 216 (src line 1359)
 
-	block_expr  goto 377
-	block_start  goto 282
+	block_expr  goto 379
+	block_start  goto 284
 
-state 365
+state 367
 	switch_case:  CASE pattern ARROW.opt_newlines block_expr 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 378
+	opt_newlines  goto 380
 
-state 366
+state 368
 	switch_case:  CASE pattern THEN.opt_newlines block_expr opt_newlines END 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 379
-
-state 367
-	pattern:  IDENT LPAREN.pattern_name_list RPAREN 
-	pattern_name_list: .    (208)
-
-	IDENT  shift 381
-	UNDER  shift 382
-	.  reduce 208 (src line 1313)
-
-	pattern_name_list  goto 380
-
-state 368
-	binding_stmt:  LET IDENT opt_type_annot '='.expr 
-
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
-	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
-	.  error
-
-	expr  goto 383
-	pipe_expr  goto 84
-	or_expr  goto 85
-	and_expr  goto 86
-	compare_expr  goto 87
-	add_expr  goto 88
-	mul_expr  goto 89
-	prefix_expr  goto 90
-	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	opt_newlines  goto 381
 
 state 369
-	binding_stmt:  VAR IDENT opt_type_annot '='.expr 
+	pattern:  IDENT LPAREN.pattern_name_list RPAREN 
+	pattern_name_list: .    (209)
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 383
+	UNDER  shift 384
+	.  reduce 209 (src line 1317)
+
+	pattern_name_list  goto 382
+
+state 370
+	binding_stmt:  LET IDENT opt_type_annot '='.expr 
+
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
-	expr  goto 384
+	expr  goto 385
 	pipe_expr  goto 84
 	or_expr  goto 85
 	and_expr  goto 86
@@ -4108,195 +4157,232 @@ state 369
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
-state 370
+state 371
+	binding_stmt:  VAR IDENT opt_type_annot '='.expr 
+
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
+	NOT  shift 92
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
+	.  error
+
+	expr  goto 386
+	pipe_expr  goto 84
+	or_expr  goto 85
+	and_expr  goto 86
+	compare_expr  goto 87
+	add_expr  goto 88
+	mul_expr  goto 89
+	prefix_expr  goto 90
+	postfix_expr  goto 91
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
+
+state 372
 	opt_newlines:  opt_newlines.NEWLINE 
 	func_lit:  FUNC LPAREN maybe_param_list RPAREN ARROW type opt_newlines block_expr opt_newlines.END 
 
-	END  shift 385
+	END  shift 387
 	NEWLINE  shift 8
-	.  error
-
-
-state 371
-	go_expr:  GO LBRACK type RBRACK $$159 LBRACE opt_newlines go_code go_field_list.opt_newlines RBRACE 
-	go_field_list:  go_field_list.go_operand opt_newlines 
-	go_field_list:  go_field_list.go_type_operand opt_newlines 
-	opt_newlines: .    (5)
-
-	IN  shift 389
-	TYPE  shift 390
-	.  reduce 5 (src line 107)
-
-	opt_newlines  goto 386
-	go_operand  goto 387
-	go_type_operand  goto 388
-
-state 372
-	go_code:  IDENT COLON.STRING opt_newlines 
-
-	STRING  shift 391
 	.  error
 
 
 state 373
-	func_sig:  FUNC IDENT $$44 opt_type_params LPAREN maybe_param_list RPAREN.ARROW type opt_using_clause 
+	go_expr:  GO LBRACK type RBRACK $$160 LBRACE opt_newlines go_code go_field_list.opt_newlines RBRACE 
+	go_field_list:  go_field_list.go_operand opt_newlines 
+	go_field_list:  go_field_list.go_type_operand opt_newlines 
+	opt_newlines: .    (5)
 
-	ARROW  shift 392
-	.  error
+	IN  shift 391
+	TYPE  shift 392
+	.  reduce 5 (src line 107)
 
+	opt_newlines  goto 388
+	go_operand  goto 389
+	go_type_operand  goto 390
 
 state 374
-	opt_newlines:  opt_newlines.NEWLINE 
-	func_decl:  FUNC IDENT $$57 opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause $$58 opt_newlines block_expr opt_newlines.END 
+	go_code:  IDENT COLON.STRING opt_newlines 
 
-	END  shift 393
-	NEWLINE  shift 8
+	STRING  shift 393
 	.  error
 
 
 state 375
-	constr_suffix:  COLON IDENT.constraint_suffix 
-	constraint_suffix: .    (72)
+	func_sig:  FUNC IDENT $$44 opt_type_params LPAREN maybe_param_list RPAREN.ARROW type opt_using_clause 
 
-	CONSTRLBRACK  shift 363
-	.  reduce 72 (src line 546)
+	ARROW  shift 394
+	.  error
 
-	constraint_suffix  goto 394
 
 state 376
-	constraint_suffix:  CONSTRLBRACK maybe_type_list.RBRACK 
+	opt_newlines:  opt_newlines.NEWLINE 
+	func_decl:  FUNC IDENT $$57 opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause $$58 opt_newlines block_expr opt_newlines.END 
 
-	RBRACK  shift 395
+	END  shift 395
+	NEWLINE  shift 8
 	.  error
 
 
 state 377
-	if_expr:  IF expr NEWLINE $$194 opt_newlines block_expr $$195 ELSE opt_newlines block_expr.opt_newlines END 
+	constr_suffix:  COLON IDENT.constraint_suffix 
+	constraint_suffix: .    (72)
+
+	CONSTRLBRACK  shift 365
+	.  reduce 72 (src line 546)
+
+	constraint_suffix  goto 396
+
+state 378
+	constraint_suffix:  CONSTRLBRACK maybe_type_list.RBRACK 
+
+	RBRACK  shift 397
+	.  error
+
+
+state 379
+	if_expr:  IF expr NEWLINE $$195 opt_newlines block_expr $$196 ELSE opt_newlines block_expr.opt_newlines END 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 396
-
-state 378
-	opt_newlines:  opt_newlines.NEWLINE 
-	switch_case:  CASE pattern ARROW opt_newlines.block_expr 
-	block_start: .    (215)
-
-	NEWLINE  shift 8
-	.  reduce 215 (src line 1355)
-
-	block_expr  goto 397
-	block_start  goto 282
-
-state 379
-	opt_newlines:  opt_newlines.NEWLINE 
-	switch_case:  CASE pattern THEN opt_newlines.block_expr opt_newlines END 
-	block_start: .    (215)
-
-	NEWLINE  shift 8
-	.  reduce 215 (src line 1355)
-
-	block_expr  goto 398
-	block_start  goto 282
+	opt_newlines  goto 398
 
 state 380
+	opt_newlines:  opt_newlines.NEWLINE 
+	switch_case:  CASE pattern ARROW opt_newlines.block_expr 
+	block_start: .    (216)
+
+	NEWLINE  shift 8
+	.  reduce 216 (src line 1359)
+
+	block_expr  goto 399
+	block_start  goto 284
+
+state 381
+	opt_newlines:  opt_newlines.NEWLINE 
+	switch_case:  CASE pattern THEN opt_newlines.block_expr opt_newlines END 
+	block_start: .    (216)
+
+	NEWLINE  shift 8
+	.  reduce 216 (src line 1359)
+
+	block_expr  goto 400
+	block_start  goto 284
+
+state 382
 	pattern:  IDENT LPAREN pattern_name_list.RPAREN 
 	pattern_name_list:  pattern_name_list.COMMA IDENT 
 	pattern_name_list:  pattern_name_list.COMMA UNDER 
 
-	COMMA  shift 400
-	RPAREN  shift 399
+	COMMA  shift 402
+	RPAREN  shift 401
 	.  error
 
 
-state 381
-	pattern_name_list:  IDENT.    (211)
-
-	.  reduce 211 (src line 1323)
-
-
-state 382
-	pattern_name_list:  UNDER.    (212)
+state 383
+	pattern_name_list:  IDENT.    (212)
 
 	.  reduce 212 (src line 1327)
 
 
-state 383
-	binding_stmt:  LET IDENT opt_type_annot '=' expr.    (223)
-
-	.  reduce 223 (src line 1388)
-
-
 state 384
-	binding_stmt:  VAR IDENT opt_type_annot '=' expr.    (224)
+	pattern_name_list:  UNDER.    (213)
 
-	.  reduce 224 (src line 1393)
+	.  reduce 213 (src line 1331)
 
 
 state 385
-	func_lit:  FUNC LPAREN maybe_param_list RPAREN ARROW type opt_newlines block_expr opt_newlines END.    (213)
+	binding_stmt:  LET IDENT opt_type_annot '=' expr.    (224)
 
-	.  reduce 213 (src line 1333)
+	.  reduce 224 (src line 1392)
 
 
 state 386
-	opt_newlines:  opt_newlines.NEWLINE 
-	go_expr:  GO LBRACK type RBRACK $$159 LBRACE opt_newlines go_code go_field_list opt_newlines.RBRACE 
+	binding_stmt:  VAR IDENT opt_type_annot '=' expr.    (225)
 
-	NEWLINE  shift 8
-	RBRACE  shift 401
-	.  error
+	.  reduce 225 (src line 1397)
 
 
 state 387
+	func_lit:  FUNC LPAREN maybe_param_list RPAREN ARROW type opt_newlines block_expr opt_newlines END.    (214)
+
+	.  reduce 214 (src line 1337)
+
+
+state 388
+	opt_newlines:  opt_newlines.NEWLINE 
+	go_expr:  GO LBRACK type RBRACK $$160 LBRACE opt_newlines go_code go_field_list opt_newlines.RBRACE 
+
+	NEWLINE  shift 8
+	RBRACE  shift 403
+	.  error
+
+
+state 389
 	go_field_list:  go_field_list go_operand.opt_newlines 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 402
+	opt_newlines  goto 404
 
-state 388
+state 390
 	go_field_list:  go_field_list go_type_operand.opt_newlines 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 403
-
-state 389
-	go_operand:  IN.IDENT '=' expr 
-
-	IDENT  shift 404
-	.  error
-
-
-state 390
-	go_type_operand:  TYPE.IDENT '=' type 
-
-	IDENT  shift 405
-	.  error
-
+	opt_newlines  goto 405
 
 state 391
+	go_operand:  IN.IDENT '=' expr 
+
+	IDENT  shift 406
+	.  error
+
+
+state 392
+	go_type_operand:  TYPE.IDENT '=' type 
+
+	IDENT  shift 407
+	.  error
+
+
+state 393
 	go_code:  IDENT COLON STRING.opt_newlines 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 406
+	opt_newlines  goto 408
 
-state 392
+state 394
 	func_sig:  FUNC IDENT $$44 opt_type_params LPAREN maybe_param_list RPAREN ARROW.type opt_using_clause 
 
 	IDENT  shift 30
@@ -4305,169 +4391,170 @@ state 392
 	.  error
 
 	qualified_name  goto 61
-	type  goto 407
+	type  goto 409
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
-state 393
+state 395
 	func_decl:  FUNC IDENT $$57 opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause $$58 opt_newlines block_expr opt_newlines END.    (59)
 
 	.  reduce 59 (src line 441)
 
 
-state 394
+state 396
 	constr_suffix:  COLON IDENT constraint_suffix.    (70)
 
 	.  reduce 70 (src line 537)
 
 
-state 395
+state 397
 	constraint_suffix:  CONSTRLBRACK maybe_type_list RBRACK.    (73)
 
 	.  reduce 73 (src line 548)
 
 
-state 396
+state 398
 	opt_newlines:  opt_newlines.NEWLINE 
-	if_expr:  IF expr NEWLINE $$194 opt_newlines block_expr $$195 ELSE opt_newlines block_expr opt_newlines.END 
+	if_expr:  IF expr NEWLINE $$195 opt_newlines block_expr $$196 ELSE opt_newlines block_expr opt_newlines.END 
 
-	END  shift 408
+	END  shift 410
 	NEWLINE  shift 8
 	.  error
 
 
-state 397
-	switch_case:  CASE pattern ARROW opt_newlines block_expr.    (203)
+state 399
+	switch_case:  CASE pattern ARROW opt_newlines block_expr.    (204)
 
-	.  reduce 203 (src line 1273)
+	.  reduce 204 (src line 1277)
 
 
-state 398
+state 400
 	switch_case:  CASE pattern THEN opt_newlines block_expr.opt_newlines END 
 	opt_newlines: .    (5)
 
 	.  reduce 5 (src line 107)
 
-	opt_newlines  goto 409
+	opt_newlines  goto 411
 
-state 399
-	pattern:  IDENT LPAREN pattern_name_list RPAREN.    (207)
+state 401
+	pattern:  IDENT LPAREN pattern_name_list RPAREN.    (208)
 
-	.  reduce 207 (src line 1305)
+	.  reduce 208 (src line 1309)
 
 
-state 400
+state 402
 	pattern_name_list:  pattern_name_list COMMA.IDENT 
 	pattern_name_list:  pattern_name_list COMMA.UNDER 
 
-	IDENT  shift 410
-	UNDER  shift 411
+	IDENT  shift 412
+	UNDER  shift 413
 	.  error
 
 
-state 401
-	go_expr:  GO LBRACK type RBRACK $$159 LBRACE opt_newlines go_code go_field_list opt_newlines RBRACE.    (160)
-
-	.  reduce 160 (src line 1010)
-
-
-402: shift/reduce conflict (shift 8(0), red'n 163(0)) on NEWLINE
-state 402
-	opt_newlines:  opt_newlines.NEWLINE 
-	go_field_list:  go_field_list go_operand opt_newlines.    (163)
-
-	NEWLINE  shift 8
-	.  reduce 163 (src line 1039)
-
-
-403: shift/reduce conflict (shift 8(0), red'n 164(0)) on NEWLINE
 state 403
+	go_expr:  GO LBRACK type RBRACK $$160 LBRACE opt_newlines go_code go_field_list opt_newlines RBRACE.    (161)
+
+	.  reduce 161 (src line 1014)
+
+
+404: shift/reduce conflict (shift 8(0), red'n 164(0)) on NEWLINE
+state 404
 	opt_newlines:  opt_newlines.NEWLINE 
-	go_field_list:  go_field_list go_type_operand opt_newlines.    (164)
+	go_field_list:  go_field_list go_operand opt_newlines.    (164)
 
 	NEWLINE  shift 8
-	.  reduce 164 (src line 1040)
+	.  reduce 164 (src line 1043)
 
 
-state 404
+405: shift/reduce conflict (shift 8(0), red'n 165(0)) on NEWLINE
+state 405
+	opt_newlines:  opt_newlines.NEWLINE 
+	go_field_list:  go_field_list go_type_operand opt_newlines.    (165)
+
+	NEWLINE  shift 8
+	.  reduce 165 (src line 1044)
+
+
+state 406
 	go_operand:  IN IDENT.'=' expr 
 
-	'='  shift 412
+	'='  shift 414
 	.  error
-
-
-state 405
-	go_type_operand:  TYPE IDENT.'=' type 
-
-	'='  shift 413
-	.  error
-
-
-406: shift/reduce conflict (shift 8(0), red'n 161(0)) on NEWLINE
-state 406
-	opt_newlines:  opt_newlines.NEWLINE 
-	go_code:  IDENT COLON STRING opt_newlines.    (161)
-
-	NEWLINE  shift 8
-	.  reduce 161 (src line 1027)
 
 
 state 407
-	func_sig:  FUNC IDENT $$44 opt_type_params LPAREN maybe_param_list RPAREN ARROW type.opt_using_clause 
-	opt_using_clause: .    (64)
+	go_type_operand:  TYPE IDENT.'=' type 
 
-	USING  shift 292
-	.  reduce 64 (src line 501)
+	'='  shift 415
+	.  error
 
-	opt_using_clause  goto 414
 
+408: shift/reduce conflict (shift 8(0), red'n 162(0)) on NEWLINE
 state 408
-	if_expr:  IF expr NEWLINE $$194 opt_newlines block_expr $$195 ELSE opt_newlines block_expr opt_newlines END.    (196)
+	opt_newlines:  opt_newlines.NEWLINE 
+	go_code:  IDENT COLON STRING opt_newlines.    (162)
 
-	.  reduce 196 (src line 1229)
+	NEWLINE  shift 8
+	.  reduce 162 (src line 1031)
 
 
 state 409
+	func_sig:  FUNC IDENT $$44 opt_type_params LPAREN maybe_param_list RPAREN ARROW type.opt_using_clause 
+	opt_using_clause: .    (64)
+
+	USING  shift 294
+	.  reduce 64 (src line 501)
+
+	opt_using_clause  goto 416
+
+state 410
+	if_expr:  IF expr NEWLINE $$195 opt_newlines block_expr $$196 ELSE opt_newlines block_expr opt_newlines END.    (197)
+
+	.  reduce 197 (src line 1233)
+
+
+state 411
 	opt_newlines:  opt_newlines.NEWLINE 
 	switch_case:  CASE pattern THEN opt_newlines block_expr opt_newlines.END 
 
-	END  shift 415
+	END  shift 417
 	NEWLINE  shift 8
 	.  error
 
 
-state 410
-	pattern_name_list:  pattern_name_list COMMA IDENT.    (209)
-
-	.  reduce 209 (src line 1315)
-
-
-state 411
-	pattern_name_list:  pattern_name_list COMMA UNDER.    (210)
+state 412
+	pattern_name_list:  pattern_name_list COMMA IDENT.    (210)
 
 	.  reduce 210 (src line 1319)
 
 
-state 412
+state 413
+	pattern_name_list:  pattern_name_list COMMA UNDER.    (211)
+
+	.  reduce 211 (src line 1323)
+
+
+state 414
 	go_operand:  IN IDENT '='.expr 
 
-	IDENT  shift 94
-	NUMBER  shift 95
-	STRING  shift 96
-	FUNC  shift 111
-	IF  shift 108
-	SWITCH  shift 109
+	IDENT  shift 95
+	NUMBER  shift 96
+	STRING  shift 97
+	FUNC  shift 112
+	IF  shift 109
+	SWITCH  shift 110
 	NOT  shift 92
-	WHILE  shift 110
-	GO  shift 112
-	LPAREN  shift 97
-	LBRACK  shift 106
-	LBRACE  shift 107
-	SLICE  shift 105
+	WHILE  shift 111
+	GO  shift 113
+	LPAREN  shift 98
+	LBRACK  shift 107
+	LBRACE  shift 108
+	SLICE  shift 106
+	'-'  shift 93
 	.  error
 
-	expr  goto 416
+	expr  goto 418
 	pipe_expr  goto 84
 	or_expr  goto 85
 	and_expr  goto 86
@@ -4476,16 +4563,16 @@ state 412
 	mul_expr  goto 89
 	prefix_expr  goto 90
 	postfix_expr  goto 91
-	primary  goto 93
-	slice_lit  goto 98
-	collection_lit  goto 99
-	if_expr  goto 100
-	switch_expr  goto 101
-	while_expr  goto 102
-	func_lit  goto 103
-	go_expr  goto 104
+	primary  goto 94
+	slice_lit  goto 99
+	collection_lit  goto 100
+	if_expr  goto 101
+	switch_expr  goto 102
+	while_expr  goto 103
+	func_lit  goto 104
+	go_expr  goto 105
 
-state 413
+state 415
 	go_type_operand:  TYPE IDENT '='.type 
 
 	IDENT  shift 30
@@ -4494,44 +4581,44 @@ state 413
 	.  error
 
 	qualified_name  goto 61
-	type  goto 417
+	type  goto 419
 	func_type  goto 56
 	grouped_type  goto 57
 	named_type  goto 58
 
-state 414
+state 416
 	func_sig:  FUNC IDENT $$44 opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause.    (45)
 
 	.  reduce 45 (src line 340)
 
 
-state 415
-	switch_case:  CASE pattern THEN opt_newlines block_expr opt_newlines END.    (204)
-
-	.  reduce 204 (src line 1282)
-
-
-state 416
-	go_operand:  IN IDENT '=' expr.    (165)
-
-	.  reduce 165 (src line 1043)
-
-
 state 417
-	go_type_operand:  TYPE IDENT '=' type.    (166)
+	switch_case:  CASE pattern THEN opt_newlines block_expr opt_newlines END.    (205)
 
-	.  reduce 166 (src line 1055)
+	.  reduce 205 (src line 1286)
+
+
+state 418
+	go_operand:  IN IDENT '=' expr.    (166)
+
+	.  reduce 166 (src line 1047)
+
+
+state 419
+	go_type_operand:  TYPE IDENT '=' type.    (167)
+
+	.  reduce 167 (src line 1059)
 
 
 60 terminals, 132 nonterminals
-229 grammar rules, 418/16000 states
-32 shift/reduce, 4 reduce/reduce conflicts reported
+230 grammar rules, 420/16000 states
+37 shift/reduce, 4 reduce/reduce conflicts reported
 181 working sets used
-memory: parser 1371/240000
-237 extra closures
-821 shift entries, 5 exceptions
-249 goto entries
-662 entries saved by goto default
-Optimizer space used: output 465/240000
-465 table entries, 0 zero
-maximum spread: 60, maximum offset: 413
+memory: parser 1381/240000
+239 extra closures
+876 shift entries, 5 exceptions
+250 goto entries
+671 entries saved by goto default
+Optimizer space used: output 468/240000
+468 table entries, 0 zero
+maximum spread: 60, maximum offset: 415

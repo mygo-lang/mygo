@@ -705,11 +705,11 @@ func inferPrefix(env TypeEnv, n *PrefixExpr, state *InferState) (MonoType, Subst
 	}
 
 	switch n.Op {
-	case "not":
+	case "!":
 		boolType := TCon{Name: "Bool"}
 		s, err = Unify(exprType, boolType, s)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("not requires Bool operand: %w", err)
+			return nil, nil, nil, fmt.Errorf("! requires Bool operand: %w", err)
 		}
 		return boolType, s, preds, nil
 	case "-":
