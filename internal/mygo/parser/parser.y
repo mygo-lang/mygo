@@ -1103,6 +1103,22 @@ if_expr
 		p.currentIfThen = nil
 		p.currentIfElse = nil
 	}
+	| IF expr {
+		p := yylex.(*parser)
+		p.currentIfCond = p.currentExpr
+	}
+	ARROW expr {
+		p := yylex.(*parser)
+		p.currentIfThen = p.currentExpr
+	}
+	ELSE expr {
+		p := yylex.(*parser)
+		p.currentIfElse = p.currentExpr
+		p.currentExpr = &ast.IfExpr{Line: $1.line, Column: $1.col, Cond: p.currentIfCond, Then: p.currentIfThen, Else: p.currentIfElse}
+		p.currentIfCond = nil
+		p.currentIfThen = nil
+		p.currentIfElse = nil
+	}
 	| IF expr NEWLINE {
 		p := yylex.(*parser)
 		p.currentIfCond = p.currentExpr
@@ -1158,6 +1174,14 @@ switch_case_list
 
 switch_case
 	: CASE pattern ARROW opt_newlines block_expr {
+		p := yylex.(*parser)
+		p.currentSwitchCases = append(p.currentSwitchCases, ast.SwitchCase{
+			Pattern: p.currentPattern,
+			Body: p.currentExpr,
+		})
+		p.currentPattern = nil
+	}
+	| CASE pattern THEN opt_newlines block_expr opt_newlines END {
 		p := yylex.(*parser)
 		p.currentSwitchCases = append(p.currentSwitchCases, ast.SwitchCase{
 			Pattern: p.currentPattern,

@@ -439,3 +439,119 @@ end
 		t.Fatalf("Cases[2].Pattern type = %T, want *WildcardPattern", sw.Cases[2].Pattern)
 	}
 }
+
+func TestParseFileSupportsIfArrowForm(t *testing.T) {
+	src := `package main
+func demo(n: Int) -> Int
+  if n > 0 => n else 0
+  if true => 1 else 2
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	block, ok := fn.Body.(*BlockExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *BlockExpr", fn.Body)
+	}
+	if got := len(block.Stmts); got != 2 {
+		t.Fatalf("len(BlockExpr.Stmts) = %d, want %d", got, 2)
+	}
+	// First if: if n > 0 => n else 0
+	ifExpr, ok := block.Stmts[0].(*ExprStmt)
+	if !ok {
+		t.Fatalf("Stmt[0] type = %T, want *ExprStmt", block.Stmts[0])
+	}
+	if _, ok := ifExpr.Expr.(*IfExpr); !ok {
+		t.Fatalf("Stmt[0].Expr type = %T, want *IfExpr", ifExpr.Expr)
+	}
+	// Second if: if true => 1 else 2
+	ifExpr2, ok := block.Stmts[1].(*ExprStmt)
+	if !ok {
+		t.Fatalf("Stmt[1] type = %T, want *ExprStmt", block.Stmts[1])
+	}
+	if _, ok := ifExpr2.Expr.(*IfExpr); !ok {
+		t.Fatalf("Stmt[1].Expr type = %T, want *IfExpr", ifExpr2.Expr)
+	}
+}
+
+func TestParseFileSupportsSwitchCaseThenEndBlock(t *testing.T) {
+	src := `package main
+func demo(v: Option) -> Int
+  switch v
+  case Some(x) then
+    x
+  end
+  case None then
+    0
+  end
+  case _ then
+    2
+  end
+  end
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	sw, ok := fn.Body.(*SwitchExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *SwitchExpr", fn.Body)
+	}
+	if got := len(sw.Cases); got != 3 {
+		t.Fatalf("len(SwitchExpr.Cases) = %d, want %d", got, 3)
+	}
+	if pat, ok := sw.Cases[0].Pattern.(*VariantPattern); !ok {
+		t.Fatalf("Cases[0].Pattern type = %T, want *VariantPattern", sw.Cases[0].Pattern)
+	} else if pat.Name != "Some" || len(pat.Args) != 1 || pat.Args[0] != "x" {
+		t.Fatalf("Cases[0].Pattern = %#v, want Some(x)", pat)
+	}
+	if pat, ok := sw.Cases[1].Pattern.(*VariantPattern); !ok {
+		t.Fatalf("Cases[1].Pattern type = %T, want *VariantPattern", sw.Cases[1].Pattern)
+	} else if pat.Name != "None" || len(pat.Args) != 0 {
+		t.Fatalf("Cases[1].Pattern = %#v, want None", pat)
+	}
+	if _, ok := sw.Cases[2].Pattern.(*WildcardPattern); !ok {
+		t.Fatalf("Cases[2].Pattern type = %T, want *WildcardPattern", sw.Cases[2].Pattern)
+	}
+}
+
+func TestParseFileSupportsMixedSwitchCaseForms(t *testing.T) {
+	src := `package main
+func demo(v: Option) -> Int
+  switch v
+  case Some(x) => x
+  case None then
+    fmt.Println("none")
+    0
+  end
+  case _ => 2
+  end
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	sw, ok := fn.Body.(*SwitchExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *SwitchExpr", fn.Body)
+	}
+	if got := len(sw.Cases); got != 3 {
+		t.Fatalf("len(SwitchExpr.Cases) = %d, want %d", got, 3)
+	}
+}

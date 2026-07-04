@@ -70,15 +70,28 @@ func (p *parser) parseSwitchExpr() (Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := p.expectSym("=>"); err != nil {
-			return nil, err
-		}
-		body, err := p.parseCaseBody()
-		if err != nil {
-			return nil, err
-		}
 		line, col := common.NodePos(pat)
-		cases = append(cases, SwitchCase{Line: line, Column: col, Pattern: pat, Body: body})
+		if p.peekKeyword("then") {
+			// Block form: case pattern then ... end
+			p.nextRaw() // consume then
+			body, err := p.parseExprListUntil("end")
+			if err != nil {
+				return nil, err
+			}
+			if err := p.expectKeyword("end"); err != nil {
+				return nil, err
+			}
+			cases = append(cases, SwitchCase{Line: line, Column: col, Pattern: pat, Body: body})
+		} else {
+			if err := p.expectSym("=>"); err != nil {
+				return nil, err
+			}
+			body, err := p.parseCaseBody()
+			if err != nil {
+				return nil, err
+			}
+			cases = append(cases, SwitchCase{Line: line, Column: col, Pattern: pat, Body: body})
+		}
 		// Optional comma between cases (Rust/Scala style)
 		p.skipNewlines()
 		if p.peekSym(",") {
@@ -155,6 +168,20 @@ func (p *parser) parseIfExpr() (Expr, error) {
 			return &IfExpr{Line: start.line, Column: start.col, Cond: cond, Then: thenExpr, Else: elseExpr}, nil
 		}
 
+		thenExpr, err := p.parseExpr(0)
+		if err != nil {
+			return nil, err
+		}
+		if err := p.expectKeyword("else"); err != nil {
+			return nil, err
+		}
+		elseExpr, err := p.parseExpr(0)
+		if err != nil {
+			return nil, err
+		}
+		return &IfExpr{Line: start.line, Column: start.col, Cond: cond, Then: thenExpr, Else: elseExpr}, nil
+	case tok.kind == tokSym && tok.lit == "=>":
+		p.nextRaw() // consume =>
 		thenExpr, err := p.parseExpr(0)
 		if err != nil {
 			return nil, err

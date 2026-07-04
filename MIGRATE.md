@@ -26,13 +26,15 @@
 
 ## 示例语法
 ```mygo
+import strconv "go:strconv"
+
 interface Show[A]
   func show(value: A) -> String
 end
 
 impl intShow: Show[Int]
   func show(value: Int) -> String
-    "..."
+    strconv.Itoa(value)
   end
 end
 
@@ -43,11 +45,11 @@ impl Show[String]
 end
 
 func demo(x: Int) -> String using intShow: Show[Int]
-  show(x)
+  x.show()
 end
 
 func demo2[A](x: A) -> String using showA: Show[A]
-  show(x)
+  x.show()
 end
 ```
 

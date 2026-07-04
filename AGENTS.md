@@ -267,3 +267,17 @@ Commas between cases are optional (Rust/Scala style).
 ### Tests
 - `TestTranslateSwitchUsesIfElse` (3 subtests): expression form with variant patterns, wildcard pattern, statement form (no expected type).
 - `TestE2ESwitchGeneratedCodeIsValidGo`: full compiler pipeline produces valid Go syntax verified by `go/parser`.
+
+## New Block Syntax (`if =>` / `case then...end`)
+
+Per MIGRATE.md "新语句块方案", both the yacc and recursive-descent parsers now support:
+
+- **`if cond => a else b`** — inline if with `=>` instead of `then`. Added as `IF expr ARROW expr ELSE expr` in yacc, and a `tokSym + "=>"` branch in RD `parseIfExpr()`.
+- **`case pattern then ... end`** — switch case block form. The yacc `switch_case` rule has a `CASE pattern THEN block_expr ... END` alternative; the RD parser checks `p.peekKeyword("then")` and routes to `parseExprListUntil("end")` when matched.
+- Both forms coexist with the existing `if cond then a else b` and `case pattern => expr` syntax.
+
+### Parser changes
+- `parser.y`: two new grammar alternatives (one in `if_expr`, one in `switch_case`) — conflicts reduced from 33 to 29 shift/reduce.
+- `parser_expr.go`: `parseIfExpr()` gains an `=>` branch; `parseSwitchExpr()` gains a `then` branch.
+- `parser.go`: regenerated via `goyacc`.
+- `parser_test.go`: three new tests (`TestParseFileSupportsIfArrowForm`, `TestParseFileSupportsSwitchCaseThenEndBlock`, `TestParseFileSupportsMixedSwitchCaseForms`).
