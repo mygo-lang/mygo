@@ -123,21 +123,21 @@
 
 ### Key Files
 
-- **Parser**: `internal/mygo/parser/parser_expr.go` — `parseSliceLit()`, `parseCollectionLit()`, routed from `parsePrimary()`.
+- **Parser**: `internal/mygo/parser/parser.y` — collection literal grammar lowers to `SliceLitExpr`, `MapLitExpr`, and `SetLitExpr`.
 - **Compiler**: `internal/mygo/compiler/translate_expr.go` — `translateSliceLit()`, `translateMapLit()`, `translateSetLit()`, `translateEmptyMapLit()`.
-- **Type parsing update** (`internal/mygo/parser/parser_core.go`): `parseType()` now treats `Slice[Int]` as the canonical slice type spelling and no longer recognizes `Int[]` shorthand.
+- **Type parsing update** (`internal/mygo/parser/parser.y`): `Slice[Int]` is the canonical slice type spelling and `Int[]` shorthand is no longer recognized.
 
 ## Recent Work
 
 - **HM inference is now the default codegen type path**: `compiler.Generate()` runs `typeinference.InferPackage()` as a required pre-pass and returns inference errors instead of silently continuing. `translateExpr` consults `TypedInfo.ExprTypes` for expected/result types before falling back to local lowering, so generated calls and bindings prefer HM-derived types.
 - **Go import type queries participate in HM**: `typeinference` now loads `go:` imports through Go's importer, registers aliases as `TGoPackage`, and resolves selectors such as `fmt.Sprint` to HM function types. Variadic Go functions are represented with `TFunc.Variadic`, and `any` unifies at the Go boundary. Local bindings like `let show = fmt.Sprint` infer as function values and lower to direct calls instead of `callAny`.
-- **Yacc parser state isolation fixes**: The yacc parser keeps explicit stacks for nested call callees/arguments, block bodies, and function-type parameters, fixing cases like `Some(fn(v))`, switch case body leakage, and `func(A) -> B` parameter loss without switching to the recursive-descent parser. Yacc wildcard pattern parsing also treats `_` as `WildcardPattern` when it comes through the IDENT path.
+- **Yacc parser state isolation fixes**: The yacc parser keeps explicit stacks for nested call callees/arguments, block bodies, and function-type parameters, fixing cases like `Some(fn(v))`, switch case body leakage, and `func(A) -> B` parameter loss. Yacc wildcard pattern parsing also treats `_` as `WildcardPattern` when it comes through the IDENT path.
 - **Generic enum constructor inference fixed**: Enum variant field types now substitute enum type parameters with the constructor scheme's type variables, so constructors like `Some` can instantiate independently per call site, e.g. `Some(fn(v))` in `optionMap[A, B]` infers `Option[B]`.
-- **Scala3-style named `using` bindings**: Added `BindName` field to `ast.Constraint` for named bindings like `using intShow: Show[Int]`. Both yacc (`parser.y`) and recursive-descent (`parser_core.go`) parsers support this syntax — the constraint grammar was updated with a new `constr_suffix` rule that handles `COLON IDENT constraint_suffix` (named) versus bare `constraint_suffix` (simple). The compiler's `genFunc` uses `BindName` as the Go parameter name when available. The call-site auto-injection of `using` parameters was improved with a three-tier resolution strategy: lexical scope → caller's typeclass bindings → package-level helper functions. The example `main.mygo` demonstrates the new syntax with `using myEq: Eq[A]`.
+- **Scala3-style named `using` bindings**: Added `BindName` field to `ast.Constraint` for named bindings like `using intShow: Show[Int]`. The yacc constraint grammar handles `COLON IDENT constraint_suffix` (named) versus bare `constraint_suffix` (simple). The compiler's `genFunc` uses `BindName` as the Go parameter name when available. The call-site auto-injection of `using` parameters was improved with a three-tier resolution strategy: lexical scope → caller's typeclass bindings → package-level helper functions. The example `main.mygo` demonstrates the new syntax with `using myEq: Eq[A]`.
 
 - **Typeclass refactoring (MIGRATE.md)**: Unified typeclass semantics onto a single `interface`/`impl`/`using` route, removing the old `where` syntax and runtime dispatch registry. Key changes:
   - **`examples/main/main.mygo`**: Migrated `where` → `using` constraints; replaced `Int[]` → `Slice[Int]` for collection type annotations.
-  - **Parser anonymous impl support**: Both `parser.y` (yacc) and `parser_core.go` (recursive-descent) now accept `impl Interface[Args]` (anonymous) alongside the existing `impl Type : Interface[Args]` (named) form.
+  - **Parser anonymous impl support**: `parser.y` now accepts `impl Interface[Args]` (anonymous) alongside the existing `impl Type : Interface[Args]` (named) form.
   - **`where` rejection**: The parser explicitly rejects `where` keywords with a migration hint pointing to `using`.
   - **`opt_impl_type_params` grammar fix**: Restored `maybe_name_list RBRACK` suffix on the `LBRACK` alternative so `impl[T] List[T]: ...` parses correctly.
   - **Added `currentImplLine`/`currentImplCol`**: Proper position tracking for impl declarations in the parser.
@@ -240,8 +240,8 @@ end
 ```
 Commas between cases are optional (Rust/Scala style).
 
-### Parser (`parser_expr.go`)
-- `parseSwitchExpr()` consumes an optional comma after each case body before the next `case` or `end`.
+### Parser (`parser.y`)
+- `switch_case_separator` consumes an optional comma after each case body before the next `case` or `end`.
 
 ### Go Backend (`compiler/translate_control.go`)
 - `translateSwitch()` emits if-else chains with type assertions instead of Go `switch x.(type)`:
@@ -270,14 +270,13 @@ Commas between cases are optional (Rust/Scala style).
 
 ## New Block Syntax (`if =>` / `case then...end`)
 
-Per MIGRATE.md "新语句块方案", both the yacc and recursive-descent parsers now support:
+Per MIGRATE.md "新语句块方案", the yacc parser supports:
 
-- **`if cond => a else b`** — inline if with `=>` instead of `then`. Added as `IF expr ARROW expr ELSE expr` in yacc, and a `tokSym + "=>"` branch in RD `parseIfExpr()`.
-- **`case pattern then ... end`** — switch case block form. The yacc `switch_case` rule has a `CASE pattern THEN block_expr ... END` alternative; the RD parser checks `p.peekKeyword("then")` and routes to `parseExprListUntil("end")` when matched.
+- **`if cond => a else b`** — inline if with `=>` instead of `then`, added as `IF expr ARROW expr ELSE expr`.
+- **`case pattern then ... end`** — switch case block form, added as `CASE pattern THEN block_expr ... END`.
 - Both forms coexist with the existing `if cond then a else b` and `case pattern => expr` syntax.
 
 ### Parser changes
 - `parser.y`: two new grammar alternatives (one in `if_expr`, one in `switch_case`) — conflicts reduced from 33 to 29 shift/reduce.
-- `parser_expr.go`: `parseIfExpr()` gains an `=>` branch; `parseSwitchExpr()` gains a `then` branch.
 - `parser.go`: regenerated via `goyacc`.
 - `parser_test.go`: three new tests (`TestParseFileSupportsIfArrowForm`, `TestParseFileSupportsSwitchCaseThenEndBlock`, `TestParseFileSupportsMixedSwitchCaseForms`).
