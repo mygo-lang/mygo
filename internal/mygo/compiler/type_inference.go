@@ -2,7 +2,6 @@ package compiler
 
 import (
 	"go/types"
-	"sort"
 	"strings"
 	"unicode"
 
@@ -617,63 +616,12 @@ func variantGoTypeName(enumName, variant string) string {
 	return enumName + variant
 }
 
-func dictVarName(iface string) string {
-	return strings.ToLower(iface[:1]) + iface[1:] + "Dict"
-}
-
-func dispatchRegistryName(iface, method string) string {
-	return iface + "_" + method + "DispatchRegistry"
-}
-
-func dispatchFuncName(iface, method string) string {
-	return iface + "_" + method
-}
-
-func (g *generator) sortedTypeclassNames() []string {
-	names := make([]string, 0, len(g.pkg.Interfaces))
-	for name := range g.pkg.Interfaces {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
-}
-
-func (g *generator) implDispatchKey(params []Param, subst map[string]string) string {
-	return dispatchKeyForTypes(g.paramTypes(params, subst))
-}
-
 func (g *generator) paramTypes(params []Param, subst map[string]string) []string {
 	out := make([]string, 0, len(params))
 	for _, p := range params {
 		out = append(out, typeString(p.Type, subst))
 	}
 	return out
-}
-
-func dispatchKeyForTypes(types []string) string {
-	if len(types) == 0 {
-		return "unit"
-	}
-	parts := make([]string, 0, len(types))
-	for _, typ := range types {
-		parts = append(parts, typeKeyFromType(typ))
-	}
-	return strings.Join(parts, "|")
-}
-
-func dispatchKeyExpr(params []Param, subst map[string]string) string {
-	if len(params) == 0 {
-		return "\"unit\""
-	}
-	var parts []string
-	for _, p := range params {
-		typ := "reflect.TypeOf(" + p.Name + ").String()"
-		if subst != nil {
-			_ = subst
-		}
-		parts = append(parts, "typeKeyFromType("+typ+")")
-	}
-	return strings.Join(parts, ` + "|" + `)
 }
 
 func helperFuncName(method, typeKey string) string {

@@ -472,7 +472,7 @@ func (g *generator) translateMapLit(
 		return nil, "", common.ErrorAtPos(n.Line, n.Column, "could not infer map key/value types")
 	}
 
-	var dict jen.Dict
+	dict := jen.Dict{}
 	for _, pair := range n.Pairs {
 		keyCode, _, err := g.translateExpr(pair.Key, ctx, keyType)
 		if err != nil {
@@ -548,7 +548,7 @@ func (g *generator) translateSetLit(n *SetLitExpr, ctx *exprCtx, expected string
 		return nil, "", common.ErrorAtPos(n.Line, n.Col, "could not infer set element type")
 	}
 
-	var dict jen.Dict
+	dict := jen.Dict{}
 	for _, elem := range n.Elems {
 		code, _, err := g.translateExpr(elem, ctx, elemType)
 		if err != nil {

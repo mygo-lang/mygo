@@ -52,6 +52,8 @@ type parser struct {
 	currentImplTypeParams    []string
 	currentImplType          TypeExpr
 	currentImplInterfaceArgs []ast.TypeExpr
+	currentImplLine          int
+	currentImplCol           int
 	currentSliceElems        []ast.Expr
 	expectTypeSuffix         bool
 	expectStructTypeArgs     bool
@@ -298,27 +300,52 @@ func (p *parser) parseImpl() (Decl, error) {
 			}
 		}
 	}
-	// Now we expect: Type : Interface
-	// Parse the type being implemented on
+	// Parse the first expression: could be Type : Interface (named/generic impl)
+	// or just Interface[Args] (anonymous impl like "impl Show[String]").
 	typeExpr, err := p.parseType()
 	if err != nil {
 		return nil, common.ErrorAtPos(start.line, start.col, "expected type after impl")
 	}
-	// Expect ":"
-	if err := p.expectSym(":"); err != nil {
-		return nil, err
+	// Peek ahead for ":" to distinguish between named and anonymous forms.
+	if p.peekSym(":") {
+		// Named/generic form: "impl Type : Interface[Args]"
+		_ = p.next() // consume ":"
+		ifaceName, ifaceArgs, err := p.parseNameAndTypeArgs()
+		if err != nil {
+			return nil, err
+		}
+		impl := &ImplDecl{
+			Line:          start.line,
+			Column:        start.col,
+			InterfaceName: ifaceName,
+			InterfaceArgs: ifaceArgs,
+			Type:          typeExpr,
+			TypeParams:    implTypeParams,
+		}
+		for !p.peekKeyword("end") && !p.peekEOF() {
+			fd, err := p.parseFuncDecl(false)
+			if err != nil {
+				return nil, err
+			}
+			impl.Methods = append(impl.Methods, fd)
+		}
+		if err := p.expectKeyword("end"); err != nil {
+			return nil, err
+		}
+		return impl, nil
 	}
-	// Parse the interface name and its args
-	ifaceName, ifaceArgs, err := p.parseNameAndTypeArgs()
-	if err != nil {
-		return nil, err
+	// Anonymous form: "impl Interface[Args]" — the parsed type is the interface reference.
+	// Extract interface name and args from the NamedType.
+	iface, ok := typeExpr.(*NamedType)
+	if !ok {
+		return nil, common.ErrorAtPos(start.line, start.col, "expected interface name after impl; use 'impl Interface[Args]' or 'impl Type: Interface[Args]'")
 	}
 	impl := &ImplDecl{
 		Line:          start.line,
 		Column:        start.col,
-		InterfaceName: ifaceName,
-		InterfaceArgs: ifaceArgs,
-		Type:          typeExpr,
+		InterfaceName: iface.Name,
+		InterfaceArgs: iface.Args,
+		Type:          nil,
 		TypeParams:    implTypeParams,
 	}
 	for !p.peekKeyword("end") && !p.peekEOF() {
@@ -377,6 +404,11 @@ func (p *parser) parseFuncDecl(allowEmpty bool) (*FuncDecl, error) {
 	ret, err := p.parseType()
 	if err != nil {
 		return nil, err
+	}
+	// Reject legacy "where" keyword (tokenized as ident) with a migration hint.
+	if p.peek().kind == tokIdent && p.peek().lit == "where" {
+		_ = p.next()
+		return nil, common.ErrorAtPos(start.line, start.col, "'where' is removed; use 'using ConstraintName' instead")
 	}
 	var where []Constraint
 	if p.peekKeyword("using") {

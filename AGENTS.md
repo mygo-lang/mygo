@@ -49,10 +49,11 @@
 ## Known Issues
 
 - **prelude typeclasses fully generated**: The prelude's `enum`, `struct`, `interface`, and `impl` blocks are now compiled via the standard generator (no `skipTypeclasses`), so Show, Eq, and Enumerable impls are all registered at init time. The hand-written `prelude_go.go` still provides low-level Slice/Map/Set Enumerable helpers.
-- **`where` removed from lexer/parser**: The source grammar and lexer now recognize `using` only for typeclass constraints. `where` is no longer a reserved keyword or parser entry point.
+- **`where` removed from parser**: `where` is no longer a recognized keyword — the parser rejects it with a migration hint pointing to `using`. The lexer tokens `USING` is the only typeclass constraint keyword.
+- **Prelude dispatch registry removed**: All runtime dispatch registry code (`show_showDispatchRegistry`, `Eq_equalsDispatchRegistry`, etc.) has been removed from the compiler in favor of explicit `using`-based dictionary passing. Hand-written `prelude_go.go` still provides low-level Slice/Map/Set helpers.
 - **`prelude_go.go` does not compile**: `prelude/prelude_go.go:52` references `Eq[T]` which is undefined in the prelude package, causing `go vet` to fail. The prelude's `Eq` interface is generated via the standard generator during compilation, so the hand-written Go helpers cannot directly reference it.
-- **`Nil` is not a real prelude value**: `translateIdent` in `typeclass.go` still has hardcoded support for `Nil` that emits `Nil[T]()`, but there is no actual `Nil` type or constructor in the prelude. New code should model absence with `Option`, as in `Option[Ref[List[T]]]`, instead of comparing refs to `Nil`.
-- **Generic `impl` parsing still needs final alignment**: `prelude/prelude.mygo` now exercises `interface`, `using`, HKT-like type parameters, and generic `impl` headers, but `impl[T] ...` parsing is still being aligned with the current grammar.
+- **`Nil` fully removed**: `translateIdent` no longer has hardcoded `Nil` support. New code should model absence with `Option`, as in `Option[Ref[List[T]]]`.
+- **Generic `impl` parsing aligned**: `impl[T] List[T]: Enumerable[List[T], T]` now parses correctly (the `opt_impl_type_params` grammar bug is fixed). The prelude's Enumerable impls exercise this path.
 - **`sumList` type ergonomics**: `examples/data-structure/data-structure.mygo` currently accepts `List[Int]`, creates a traversal ref with `Ref.new(lst)`, and walks `tail: Option[Ref[List[Int]]]`. This is runnable and keeps construction explicit, but it still takes the address of a local parameter copy; a future design may prefer accepting `Option[Ref[List[Int]]]` or `Ref[List[Int]]` directly.
 - **AST `Col` vs `Column` inconsistency**: `MapLitPair` and `SetLitExpr` in `ast.go` use `Col int` instead of `Column int`. This causes `common.NodePos()` to silently return `(0, 0)` for these types via reflection, losing source position data for all map/set literal error messages.
 
@@ -74,7 +75,8 @@
 - The parser test suite now covers package/function declarations, collection literals, chain postfix, `if`/`while`/`switch`, pipe precedence, struct/interface/impl declarations, `let`/`var`/assignment, func literals, `using` clauses, enum declarations, switch patterns, and nested/empty collection literals.
 - Nested slice types are written explicitly as `Slice[Slice[Int]]`, and empty `[]` is treated as an empty slice literal in expression position.
 - `using` clauses support multiple constraints and constraint type arguments in both function and interface method signatures.
-- `where` has been removed from the main syntax; typeclass requirements now use `using` only.
+- `where` has been removed from the main syntax; typeclass requirements now use `using` only. The parser rejects `where` with an explicit migration error.
+- `impl` supports two forms: `impl Type : Interface[Args]` (named/generic) and `impl Interface[Args]` (anonymous default instance).
 - `switch` pattern parsing currently accepts wildcard patterns and variant patterns with optional identifier arguments, such as `Some(x)`.
 - Keep `examples/main/main.mygo` aligned with the compiler's current boundary behavior, especially for `Ref`, `Option`, and `Result`.
 - Typeclass lookup should respect lexical scope first: local bindings and function-value bindings shadow typeclass names, `using`-bound methods are visible inside nested blocks, and package-level dispatch is the fallback.
@@ -126,6 +128,15 @@
 
 ## Recent Work
 
+- **Typeclass refactoring (MIGRATE.md)**: Unified typeclass semantics onto a single `interface`/`impl`/`using` route, removing the old `where` syntax and runtime dispatch registry. Key changes:
+  - **`examples/main/main.mygo`**: Migrated `where` → `using` constraints; replaced `Int[]` → `Slice[Int]` for collection type annotations.
+  - **Parser anonymous impl support**: Both `parser.y` (yacc) and `parser_core.go` (recursive-descent) now accept `impl Interface[Args]` (anonymous) alongside the existing `impl Type : Interface[Args]` (named) form.
+  - **`where` rejection**: The parser explicitly rejects `where` keywords with a migration hint pointing to `using`.
+  - **`opt_impl_type_params` grammar fix**: Restored `maybe_name_list RBRACK` suffix on the `LBRACK` alternative so `impl[T] List[T]: ...` parses correctly.
+  - **Added `currentImplLine`/`currentImplCol`**: Proper position tracking for impl declarations in the parser.
+  - **Improved error reporting**: `error.go` `Error()` now includes line/column and the offending token.
+  - **Compiler cleanup**: Removed dead dispatch registry code — `genTypeclassDispatchers`, `dispatchRegistryName`, `dispatchFuncName`, `sortedTypeclassNames`, `implDispatchKey`, `dispatchKeyForTypes`, `dispatchKeyExpr`, `dictVarName` all deleted.
+  - The `using` constraint now directly generates explicit dictionary/function parameters at call sites (no more `reflect`-based fallback).
 - **Complete Jennifer refactoring (Phase 2)**: Fixed all remaining jennifer API usages across the compiler. Changed all expression translation functions to return `jen.Code` instead of `string`. Key changes:
   - **translate_expr.go**: Fixed `translateSliceLit`, `translateMapLit`, `translateSetLit`, `translateEmptyMapLit` to return `jen.Code`. Used `jen.Dict` and `jen.DictFunc` for map/set/slice literal construction. Fixed error returns to use `nil` instead of `""` for jen.Code.
   - **translate_struct.go**: Changed `parts` from `[]jen.Code` to `jen.Dict`. Used `jen.DictFunc` for field initialization. Fixed type argument handling with proper `jen.Id()` calls.

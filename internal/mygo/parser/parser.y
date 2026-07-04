@@ -330,29 +330,12 @@ func_sig
 	;
 
 impl_decl
-	: IMPL opt_impl_type_params type {
+	: IMPL {
 		p := yylex.(*parser)
-		p.currentImplType = p.currentType
+		p.currentImplLine = $1.line
+		p.currentImplCol = $1.col
 	}
-	COLON type {
-		p := yylex.(*parser)
-		if iface, ok := p.currentType.(*ast.NamedType); ok {
-			p.currentName = iface.Name
-			p.currentImplInterfaceArgs = append([]ast.TypeExpr(nil), iface.Args...)
-		} else {
-			p.currentName = ""
-			p.currentImplInterfaceArgs = nil
-		}
-		p.currentImpl = &ast.ImplDecl{
-			Line: $1.line,
-			Column: $1.col,
-			Name: p.currentName,
-			InterfaceName: p.currentName,
-			Type: p.currentImplType,
-			TypeParams: append([]string(nil), p.currentImplTypeParams...),
-		}
-	}
-	impl_body opt_newlines END {
+	opt_impl_type_params type impl_rest impl_body opt_newlines END {
 		p := yylex.(*parser)
 		if p.currentImpl != nil {
 			p.currentImpl.InterfaceArgs = append([]ast.TypeExpr(nil), p.currentImplInterfaceArgs...)
@@ -366,12 +349,57 @@ impl_decl
 	}
 	;
 
+impl_rest
+	: COLON type {
+		p := yylex.(*parser)
+		// Named/generic form: "impl Type : Interface[Args]"
+		if iface, ok := p.currentType.(*ast.NamedType); ok {
+			p.currentName = iface.Name
+			p.currentImplInterfaceArgs = append([]ast.TypeExpr(nil), iface.Args...)
+		} else {
+			p.currentName = ""
+			p.currentImplInterfaceArgs = nil
+		}
+		p.currentImpl = &ast.ImplDecl{
+			Line: p.currentImplLine,
+			Column: p.currentImplCol,
+			Name: p.currentName,
+			InterfaceName: p.currentName,
+			Type: p.currentImplType,
+			TypeParams: append([]string(nil), p.currentImplTypeParams...),
+		}
+	}
+	| /* empty */ {
+		p := yylex.(*parser)
+		// Anonymous form: "impl Interface[Args]" — the first type is the interface reference.
+		if iface, ok := p.currentType.(*ast.NamedType); ok {
+			p.currentName = iface.Name
+			p.currentImplInterfaceArgs = append([]ast.TypeExpr(nil), iface.Args...)
+		} else {
+			p.currentName = ""
+			p.currentImplInterfaceArgs = nil
+		}
+		p.currentImpl = &ast.ImplDecl{
+			Line: p.currentImplLine,
+			Column: p.currentImplCol,
+			Name: p.currentName,
+			InterfaceName: p.currentName,
+			Type: nil,
+			TypeParams: append([]string(nil), p.currentImplTypeParams...),
+		}
+	}
+	;
+
 opt_impl_type_params
 	: /* empty */
 	| LBRACK {
 		p := yylex.(*parser)
 		p.parsingImplTypeParams = true
 		p.currentImplTypeParams = nil
+	}
+	maybe_name_list RBRACK {
+		p := yylex.(*parser)
+		p.parsingImplTypeParams = false
 	}
 	| TYPELBRACK {
 		p := yylex.(*parser)

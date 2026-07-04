@@ -26,21 +26,21 @@ impl String: Eq[String]
   end
 end
 
-func describe_option[A](opt: Option[A]) -> String where Show[A]
+func describe_option[A](opt: Option[A]) -> String using Show[A]
   switch opt
     case None => "none"
     case Some(value) => "some(" + show(value) + ")"
   end
 end
 
-func describe_result[A](res: Result[A, String]) -> String where Show[A]
+func describe_result[A](res: Result[A, String]) -> String using Show[A]
   switch res
     case Ok(value) => "ok(" + show(value) + ")"
     case Err(err) => "err(" + err + ")"
   end
 end
 
-func same[A](left: A, right: A) -> Bool where Eq[A]
+func same[A](left: A, right: A) -> Bool using Eq[A]
   equals(left, right)
 end
 
@@ -63,10 +63,10 @@ func demo() -> String
   let ok: Result[String, String] = Ok("done")
 
   // Collection literals
-  let numbers: Int[] = [123, 456, 789, 101112]
+  let numbers: Slice[Int] = [123, 456, 789, 101112]
   let strings_map: Map[String, String] = {"abc": "123", "def": "456"}
   let words: Set[String] = {"who", "am", "i"}
-  let empty_slice: Int[] = []
+  let empty_slice: Slice[Int] = []
   let empty_map: Map[String, Int] = {}
 
   let summary = describe_abc(abc) + ", boxed=" + show(boxed.value) + ", " + describe_option(maybe) + ", same=" + show(same(abc.aaa, abc.aaa)) + ", " + describe_result(ok)

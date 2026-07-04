@@ -54,6 +54,8 @@ func (p *parser) parseWithYacc() error {
 	p.currentImplTypeParams = nil
 	p.currentImplType = nil
 	p.currentImplInterfaceArgs = nil
+	p.currentImplLine = 0
+	p.currentImplCol = 0
 	p.currentSliceElems = nil
 	p.expectTypeSuffix = false
 	p.expectStructTypeArgs = false

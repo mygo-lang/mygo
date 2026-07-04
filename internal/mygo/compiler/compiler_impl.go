@@ -61,10 +61,6 @@ func (g *generator) genGlobals() (string, error) {
 	return out.String(), nil
 }
 
-func (g *generator) genTypeclassDispatchers() string {
-	return ""
-}
-
 func (p *Package) sortedImports() []importSpec {
 	imports := make([]importSpec, 0, len(p.ImportDecls))
 	seen := map[string]struct{}{}
@@ -239,14 +235,14 @@ func (g *generator) genImpl(d *ImplDecl) (string, error) {
 		hktSet := g.hktParams(iface)
 		retType := g.goHKTReturnType(ret, hktSet, combinedTypeParams)
 		ctx := &exprCtx{
-			locals:      map[string]string{},
-			bindings:    map[string]string{},
-			sourceTypes: map[string]string{},
-			mutable:     map[string]bool{},
-			typeParams:  combinedTypeParams,
+			locals:          map[string]string{},
+			bindings:        map[string]string{},
+			sourceTypes:     map[string]string{},
+			mutable:         map[string]bool{},
+			typeParams:      combinedTypeParams,
 			constraintFuncs: map[string]string{},
-			retType:     retType,
-			currentImpl: ifaceName,
+			retType:         retType,
+			currentImpl:     ifaceName,
 		}
 
 		fn := jen.Func().Id(helperFuncName(sig.Name, typeKey))
