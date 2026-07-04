@@ -615,3 +615,64 @@ end
 		t.Fatal("ParseFile() error = nil, want error")
 	}
 }
+
+func TestParseFileSupportsInlineGoTypeOperand(t *testing.T) {
+	src := `package main
+func demo(n: Int) -> Int
+  go[Int] {
+    code: "var x {T} = {v}"
+    in v = n
+    type T = Int
+  }
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn := file.Decls[0].(*FuncDecl)
+	goExpr, ok := fn.Body.(*GoExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *GoExpr", fn.Body)
+	}
+	if goExpr.Code != "var x {T} = {v}" {
+		t.Fatalf("GoExpr.Code = %q, want %q", goExpr.Code, "var x {T} = {v}")
+	}
+	if got := len(goExpr.Operands); got != 1 {
+		t.Fatalf("len(GoExpr.Operands) = %d, want 1", got)
+	}
+	if got := len(goExpr.TypeOperands); got != 1 {
+		t.Fatalf("len(GoExpr.TypeOperands) = %d, want 1", got)
+	}
+	if goExpr.TypeOperands[0].Name != "T" {
+		t.Fatalf("GoExpr.TypeOperands[0].Name = %q, want T", goExpr.TypeOperands[0].Name)
+	}
+	if _, ok := goExpr.TypeOperands[0].Type.(*NamedType); !ok {
+		t.Fatalf("GoExpr.TypeOperands[0].Type type = %T, want *NamedType", goExpr.TypeOperands[0].Type)
+	}
+}
+
+func TestParseFileSupportsInlineGoMixedOperands(t *testing.T) {
+	src := `package main
+func demo(n: Int, s: String) -> Bool
+  go[Bool] {
+    code: "{T}({v})"
+    in v = n
+    type T = String
+  }
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn := file.Decls[0].(*FuncDecl)
+	goExpr, ok := fn.Body.(*GoExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *GoExpr", fn.Body)
+	}
+	if len(goExpr.Operands) != 1 || len(goExpr.TypeOperands) != 1 {
+		t.Fatalf("expected 1 value operand and 1 type operand, got %d/%d",
+			len(goExpr.Operands), len(goExpr.TypeOperands))
+	}
+}

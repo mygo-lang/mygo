@@ -84,6 +84,44 @@ func compileInlineGoTestPackage(t *testing.T, src string) string {
 	return goSrc
 }
 
+func TestInlineGoTypeOperandProducesValidGo(t *testing.T) {
+	src := `package main
+func demo(n: Int) -> String
+  go[String] {
+    code: "{T}({v})"
+    in v = n
+    type T = String
+  }
+end
+`
+	goSrc := compileInlineGoTestPackage(t, src)
+	if !strings.Contains(goSrc, "string(n)") {
+		t.Fatalf("generated source missing type-substituted expression:\n%s", goSrc)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "inline.go", goSrc, 0); err != nil {
+		t.Fatalf("generated source is not valid Go: %v\n%s", err, goSrc)
+	}
+}
+
+func TestInlineGoMixedOperands(t *testing.T) {
+	src := `package main
+func cast(n: Int) -> String
+  go[String] {
+    code: "{T}({v})"
+    in v = n
+    type T = String
+  }
+end
+`
+	goSrc := compileInlineGoTestPackage(t, src)
+	if !strings.Contains(goSrc, "string(n)") {
+		t.Fatalf("generated source missing mixed operand substitution:\n%s", goSrc)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "inline.go", goSrc, 0); err != nil {
+		t.Fatalf("generated source is not valid Go: %v\n%s", err, goSrc)
+	}
+}
+
 func writeInlineGoTestPackage(t *testing.T, src string) string {
 	t.Helper()
 	dir := t.TempDir()

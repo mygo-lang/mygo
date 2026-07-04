@@ -61,7 +61,7 @@ func bodyExprFromBlock(e ast.Expr) ast.Expr {
 }
 
 %token <token> IDENT NUMBER STRING
-%token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSE SWITCH CASE END USING NOT LET VAR EMBED WHILE RETURN GO IN
+%token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSE SWITCH CASE END USING NOT LET VAR EMBED WHILE RETURN GO IN TYPE
 %token <token> NEWLINE
 %token <token> ARROW EQEQ NEQ LTE GTE PIPEFWD PIPEBACK ANDAND OROR
 %token <token> COLON COMMA DOT LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE UNDER SLICE
@@ -1005,8 +1005,9 @@ go_expr
 		p.currentGoResult = p.currentType
 		p.currentGoCode = ""
 		p.currentGoOperands = nil
+		p.currentGoTypeOperands = nil
 	}
-	LBRACE opt_newlines go_code go_operand_list opt_newlines RBRACE {
+	LBRACE opt_newlines go_code go_field_list opt_newlines RBRACE {
 		p := yylex.(*parser)
 		p.currentExpr = &ast.GoExpr{
 			Line: $1.line,
@@ -1014,10 +1015,12 @@ go_expr
 			Result: p.currentGoResult,
 			Code: p.currentGoCode,
 			Operands: append([]ast.GoOperand(nil), p.currentGoOperands...),
+			TypeOperands: append([]ast.GoTypeOperand(nil), p.currentGoTypeOperands...),
 		}
 		p.currentGoResult = nil
 		p.currentGoCode = ""
 		p.currentGoOperands = nil
+		p.currentGoTypeOperands = nil
 	}
 	;
 
@@ -1031,9 +1034,10 @@ go_code
 	}
 	;
 
-go_operand_list
+go_field_list
 	: /* empty */
-	| go_operand_list go_operand opt_newlines
+	| go_field_list go_operand opt_newlines
+	| go_field_list go_type_operand opt_newlines
 	;
 
 go_operand
@@ -1044,6 +1048,18 @@ go_operand
 			Column: $2.col,
 			Name: $2.lit,
 			Value: p.currentExpr,
+		})
+	}
+	;
+
+go_type_operand
+	: TYPE IDENT '=' type {
+		p := yylex.(*parser)
+		p.currentGoTypeOperands = append(p.currentGoTypeOperands, ast.GoTypeOperand{
+			Line: $2.line,
+			Column: $2.col,
+			Name: $2.lit,
+			Type: p.currentType,
 		})
 	}
 	;
@@ -1471,6 +1487,8 @@ func (p *parser) Lex(lval *yySymType) int {
 			return int(GO)
 		case "in":
 			return int(IN)
+		case "type":
+			return int(TYPE)
 		default:
 			return int(IDENT)
 		}

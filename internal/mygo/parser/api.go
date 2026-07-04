@@ -49,6 +49,7 @@ type MapLitPair = ast.MapLitPair
 type SetLitExpr = ast.SetLitExpr
 type GoExpr = ast.GoExpr
 type GoOperand = ast.GoOperand
+type GoTypeOperand = ast.GoTypeOperand
 
 func ParseFile(src string) (*File, error)                { return parseFile(src) }
 func ParseFiles(srcs map[string]string) ([]*File, error) { return parseFiles(srcs) }

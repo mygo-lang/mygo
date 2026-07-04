@@ -16,6 +16,8 @@ var goPlaceholderRE = regexp.MustCompile(`\{([A-Za-z_][A-Za-z0-9_]*)\}`)
 func (g *generator) translateGoExpr(n *GoExpr, ctx *exprCtx, expected string) (jen.Code, string, error) {
 	_ = expected
 	operands := map[string]string{}
+
+	// Resolve value operands (in name = expr)
 	for _, op := range n.Operands {
 		if _, exists := operands[op.Name]; exists {
 			return nil, "", common.ErrorAtPos(op.Line, op.Column, "duplicate go operand %q", op.Name)
@@ -29,6 +31,14 @@ func (g *generator) translateGoExpr(n *GoExpr, ctx *exprCtx, expected string) (j
 			return nil, "", common.ErrorAtPos(op.Line, op.Column, "go operand %q: render failed: %w", op.Name, err)
 		}
 		operands[op.Name] = rendered
+	}
+
+	// Resolve type operands (type T = SomeType)
+	for _, tp := range n.TypeOperands {
+		if _, exists := operands[tp.Name]; exists {
+			return nil, "", common.ErrorAtPos(tp.Line, tp.Column, "duplicate go operand %q", tp.Name)
+		}
+		operands[tp.Name] = g.goType(tp.Type, ctx.typeParams)
 	}
 
 	missing := ""

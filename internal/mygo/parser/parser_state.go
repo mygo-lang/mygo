@@ -70,6 +70,7 @@ type parser struct {
 	currentGoResult           ast.TypeExpr
 	currentGoCode             string
 	currentGoOperands         []ast.GoOperand
+	currentGoTypeOperands     []ast.GoTypeOperand
 	currentConstraintBindName string
 	savedRetType              ast.TypeExpr
 	savedDeclName             string
