@@ -469,33 +469,78 @@ impl[A] Set[A]: Enumerable[Set[A], A]
   end
 end
 
+# Generic impl for Option[A]: impl[A] Option[A]: Enumerable[Option[A], A]
+impl[A] Option[A]: Enumerable[Option[A], A]
+  func each(c: Option[A], fn: func(A) -> Unit) -> Unit
+    switch c
+      case Some(v) then
+        let _ = fn(v)
+      end
+      case None => None
+    end
+  end
+
+  func map[B](c: Option[A], fn: func(A) -> B) -> Option[B]
+    switch c
+      case Some(v) => Some(fn(v))
+      case None => None
+    end
+  end
+
+  func filter(c: Option[A], fn: func(A) -> Bool) -> Option[A]
+    switch c
+      case Some(v) => if fn(v) then Some(v) else None
+      case None => None
+    end
+  end
+
+  func fold[B](c: Option[A], initial: B, fn: func(B, A) -> B) -> B
+    switch c
+      case Some(v) => fn(initial, v)
+      case None => initial
+    end
+  end
+
+  func find(c: Option[A], fn: func(A) -> Bool) -> Option[Ref[A]]
+    switch c
+      case Some(v) => if fn(v) then Some(Ref.new(v)) else None
+      case None => None
+    end
+  end
+
+  func contains(c: Option[A], item: A, eq: Eq[A]) -> Bool
+    switch c
+      case Some(v) => equals(v, item, eq)
+      case None => false
+    end
+  end
+end
+
 # ===== Option helpers =====
 
-func optionIsSome[A](opt: Option[A]) -> Bool
-  switch opt
-    case Some(_) => true
-    case None => false
-  end
+interface IOption[A]
+  func isSome(self: IOption[A]) -> Bool
+  func isNone(self: IOption[A]) -> Bool
+  func unwrapOr(self: IOption[A], defaultVal: A) -> A
 end
 
-func optionIsNone[A](opt: Option[A]) -> Bool
-  switch opt
-    case Some(_) => false
-    case None => true
+impl[A] Option[A]: IOption[A]
+  func isSome(self: Option[A]) -> Bool
+    switch self
+      case Some(_) => true
+      case None => false
+    end
   end
-end
 
-func optionUnwrap[A](opt: Option[A], defaultVal: A) -> A
-  switch opt
-    case Some(v) => v
-    case None => defaultVal
+  func isNone(self: Option[A]) -> Bool
+    !self.isSome()
   end
-end
 
-func optionMap[A, B](opt: Option[A], fn: func(A) -> B) -> Option[B]
-  switch opt
-    case Some(v) => Some(fn(v))
-    case None => None
+  func unwrapOr(opt: Option[A], defaultVal: A) -> A
+    switch opt
+      case Some(v) => v
+      case None => defaultVal
+    end
   end
 end
 
