@@ -1,5 +1,7 @@
 package parser
 
+import "os"
+
 func parseFile(src string) (*File, error) {
 	p := newParser(src)
 	if err := p.parseWithYacc(); err != nil {
@@ -31,6 +33,7 @@ func (p *parser) parseWithYacc() error {
 	p.currentStmt = nil
 	p.currentExpr = nil
 	p.currentLeftExpr = nil
+	p.currentPipeLeftExpr = nil
 	p.currentArgs = nil
 	p.currentMapKey = nil
 	p.currentMapValue = nil
@@ -61,6 +64,10 @@ func (p *parser) parseWithYacc() error {
 	p.currentInterface = nil
 	p.currentImpl = nil
 	p.currentFunc = nil
+	if os.Getenv("MYGO_PARSER_DEBUG") != "" {
+		yyDebug = 4
+		yyErrorVerbose = true
+	}
 	if yyParse(p) != 0 {
 		if p.err != nil {
 			return p.err

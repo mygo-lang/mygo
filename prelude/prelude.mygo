@@ -25,11 +25,11 @@ interface Eq[A]
 end
 
 interface Enumerable[C[A], A]
-  func each(c: C[A], fn: func(item: A) -> ()) -> ()
-  func map[B](c: C[A], fn: func(item: A) -> B) -> C[B]
-  func filter(c: C[A], fn: func(item: A) -> Bool) -> C[A]
-  func fold[B](c: C[A], initial: B, fn: func(acc: B, item: A) -> B) -> B
-  func find(c: C[A], fn: func(item: A) -> Bool) -> Option[Ref[A]]
+  func each(c: C[A], fn: func(A) -> Unit) -> Unit
+  func map[B](c: C[A], fn: func(A) -> B) -> C[B]
+  func filter(c: C[A], fn: func(A) -> Bool) -> C[A]
+  func fold[B](c: C[A], initial: B, fn: func(B, A) -> B) -> B
+  func find(c: C[A], fn: func(A) -> Bool) -> Option[Ref[A]]
   func contains(c: C[A], item: A, eq: Eq[A]) -> Bool
 end
 
@@ -115,7 +115,7 @@ end
 
 # Generic impl for List[T]: impl[T] List[T]: Enumerable[List[T], T]
 impl[T] List[T]: Enumerable[List[T], T]
-  func each(c: List[T], fn: func(item: T) -> ()) -> ()
+  func each(c: List[T], fn: func(T) -> Unit) -> Unit
     var current: Ref[List[T]] = Ref.new(c)
     var done: Bool = false
     while not done
@@ -128,7 +128,7 @@ impl[T] List[T]: Enumerable[List[T], T]
     return
   end
 
-  func map[B](c: List[T], fn: func(item: T) -> B) -> List[B]
+  func map[B](c: List[T], fn: func(T) -> B) -> List[B]
     var done: Bool = false
     var headVal: B = fn(c.head)
     var result: List[B] = List[B] { head: headVal, tail: None }
@@ -144,7 +144,7 @@ impl[T] List[T]: Enumerable[List[T], T]
     return result
   end
 
-  func filter(c: List[T], fn: func(item: T) -> Bool) -> List[T]
+  func filter(c: List[T], fn: func(T) -> Bool) -> List[T]
     var done: Bool = false
     var result: List[T] = None
     var current: Ref[List[T]] = Ref.new(c)
@@ -163,7 +163,7 @@ impl[T] List[T]: Enumerable[List[T], T]
     return result
   end
 
-  func fold[B](c: List[T], initial: B, fn: func(acc: B, item: T) -> B) -> B
+  func fold[B](c: List[T], initial: B, fn: func(B, T) -> B) -> B
     var acc: B = initial
     var done: Bool = false
     var current: Ref[List[T]] = Ref.new(c)
@@ -177,7 +177,7 @@ impl[T] List[T]: Enumerable[List[T], T]
     return acc
   end
 
-  func find(c: List[T], fn: func(item: T) -> Bool) -> Option[Ref[T]]
+  func find(c: List[T], fn: func(T) -> Bool) -> Option[Ref[T]]
     var done: Bool = false
     var current: Ref[List[T]] = Ref.new(c)
     while not done
@@ -214,19 +214,19 @@ end
 
 # Generic impl for Slice[T]: Enumerable[Slice[T], T]
 impl[T] Slice[T]: Enumerable[Slice[T], T]
-  func each(c: Slice[T], fn: func(item: T) -> ()) -> ()
-    eachSlice(c, fn)
+  func each(c: Slice[T], fn: func(T) -> Unit) -> Unit
+  eachSlice(c, fn)
   end
-  func map[B](c: Slice[T], fn: func(item: T) -> B) -> Slice[B]
+  func map[B](c: Slice[T], fn: func(T) -> B) -> Slice[B]
     mapSlice(c, fn)
   end
-  func filter(c: Slice[T], fn: func(item: T) -> Bool) -> Slice[T]
+  func filter(c: Slice[T], fn: func(T) -> Bool) -> Slice[T]
     filterSlice(c, fn)
   end
-  func fold[B](c: Slice[T], initial: B, fn: func(acc: B, item: T) -> B) -> B
+  func fold[B](c: Slice[T], initial: B, fn: func(B, T) -> B) -> B
     foldSlice(c, initial, fn)
   end
-  func find(c: Slice[T], fn: func(item: T) -> Bool) -> Option[Ref[T]]
+  func find(c: Slice[T], fn: func(T) -> Bool) -> Option[Ref[T]]
     return findSlice(c, fn)
   end
   func contains(c: Slice[T], item: T, eq: Eq[T]) -> Bool
@@ -236,38 +236,38 @@ end
 
 # Generic impl for Map[K, V]: impl[K, V] Map[K, V]: Enumerable[Map[K, V], V]
 impl[K, V] Map[K, V]: Enumerable[Map[K, V], V]
-  func each(c: Map[K, V], fn: func(item: V) -> ()) -> ()
+  func each(c: Map[K, V], fn: func(V) -> Unit) -> Unit
     eachMap(c, fn)
   end
-  func map[B](c: Map[K, V], fn: func(item: V) -> B) -> Map[K, B]
+  func map[B](c: Map[K, V], fn: func(V) -> B) -> Map[K, B]
     mapMap(c, fn)
   end
-  func filter(c: Map[K, V], fn: func(item: V) -> Bool) -> Map[K, V]
+  func filter(c: Map[K, V], fn: func(V) -> Bool) -> Map[K, V]
     filterMap(c, fn)
   end
-  func fold[B](c: Map[K, V], initial: B, fn: func(acc: B, item: V) -> B) -> B
+  func fold[B](c: Map[K, V], initial: B, fn: func(B, V) -> B) -> B
     foldMap(c, initial, fn)
   end
-  func find(c: Map[K, V], fn: func(item: V) -> Bool) -> Option[Ref[V]]
+  func find(c: Map[K, V], fn: func(V) -> Bool) -> Option[Ref[V]]
     return findMap(c, fn)
   end
 end
 
 # Generic impl for Set[A]: impl[A] Set[A]: Enumerable[Set[A], A]
 impl[A] Set[A]: Enumerable[Set[A], A]
-  func each(c: Set[A], fn: func(item: A) -> ()) -> ()
+  func each(c: Set[A], fn: func(A) -> Unit) -> Unit
     eachSet(c, fn)
   end
-  func map[B](c: Set[A], fn: func(item: A) -> B) -> Set[B]
+  func map[B](c: Set[A], fn: func(A) -> B) -> Set[B]
     mapSet(c, fn)
   end
-  func filter(c: Set[A], fn: func(item: A) -> Bool) -> Set[A]
+  func filter(c: Set[A], fn: func(A) -> Bool) -> Set[A]
     filterSet(c, fn)
   end
-  func fold[B](c: Set[A], initial: B, fn: func(acc: B, item: A) -> B) -> B
+  func fold[B](c: Set[A], initial: B, fn: func(B, A) -> B) -> B
     foldSet(c, initial, fn)
   end
-  func find(c: Set[A], fn: func(item: A) -> Bool) -> Option[Ref[A]]
+  func find(c: Set[A], fn: func(A) -> Bool) -> Option[Ref[A]]
     return findSet(c, fn)
   end
 end

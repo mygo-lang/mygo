@@ -1,9 +1,9 @@
 package compiler
 
 import (
-	"fmt"
 	"strings"
 
+	jen "github.com/dave/jennifer/jen"
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
 )
@@ -95,28 +95,28 @@ func (g *generator) findVariant(enum *EnumDecl, name string) *EnumVariant {
 	return nil
 }
 
-func (g *generator) translateAnyFuncCall(name string, args []Expr, ctx *exprCtx) (string, string, bool, error) {
+func (g *generator) translateAnyFuncCall(name string, args []Expr, ctx *exprCtx) (jen.Code, string, bool, error) {
 	sourceType, ok := ctx.sourceTypes[name]
 	if !ok || !strings.HasPrefix(strings.TrimSpace(sourceType), "func(") {
-		return "", "", false, nil
+		return nil, "", false, nil
 	}
 	_, ret := splitFuncType(sourceType)
-	var argCodes []string
+	var argCodes []jen.Code
 	for _, a := range args {
 		code, _, err := g.translateExpr(a, ctx, "")
 		if err != nil {
-			return "", "", false, err
+			return nil, "", false, err
 		}
-		argCodes = append(argCodes, codeString(code))
+		argCodes = append(argCodes, code)
 	}
 	actualName := name
 	if bound, ok := ctx.bindings[name]; ok {
 		actualName = bound
 	}
-	return fmt.Sprintf("%s.(%s)(%s)", actualName, sourceType, strings.Join(argCodes, ", ")), ret, true, nil
+	return jen.Id(actualName).Assert(jen.Id(sourceType)).Call(argCodes...), ret, true, nil
 }
 
-func (g *generator) translateEnumConstructor(enumName, name string, args []Expr, ctx *exprCtx, expected string) (string, string, error) {
+func (g *generator) translateEnumConstructor(enumName, name string, args []Expr, ctx *exprCtx, expected string) (jen.Code, string, error) {
 	expectedEnum, enumArgs := splitTypeArgs(expected)
 	if enumName == "" {
 		enumName = expectedEnum
@@ -145,7 +145,7 @@ func (g *generator) translateEnumConstructor(enumName, name string, args []Expr,
 			}
 		}
 	}
-	var argCodes []string
+	var argCodes []jen.Code
 	for i, a := range args {
 		argExpected := ""
 		if variant != nil && i < len(variant.Fields) {
@@ -153,73 +153,84 @@ func (g *generator) translateEnumConstructor(enumName, name string, args []Expr,
 		}
 		code, _, err := g.translateExpr(a, ctx, argExpected)
 		if err != nil {
-			return "", "", err
+			return nil, "", err
 		}
-		argCodes = append(argCodes, codeString(code))
+		argCodes = append(argCodes, code)
 	}
-	typeArgStr := ""
+	var callee jen.Code
 	if len(typeArgs) > 0 {
-		typeArgStr = "[" + strings.Join(typeArgs, ", ") + "]"
+		typeArgCodes := make([]jen.Code, 0, len(typeArgs))
+		for _, ta := range typeArgs {
+			typeArgCodes = append(typeArgCodes, jen.Id(ta))
+		}
+		callee = jen.Id(sanitizeIdent(name)).Index(typeArgCodes...)
+	} else {
+		callee = jen.Id(sanitizeIdent(name))
 	}
-	return fmt.Sprintf("%s%s(%s)", sanitizeIdent(name), typeArgStr, strings.Join(argCodes, ", ")), expected, nil
+	// jen.Code is an interface, need to use Statement's Call method
+	stmt := callee.(*jen.Statement)
+	return stmt.Call(argCodes...), expected, nil
 }
 
-func (g *generator) translateTypeclassCall(name string, args []Expr, ctx *exprCtx, expected string) (string, string, bool) {
+func (g *generator) translateTypeclassCall(name string, args []Expr, ctx *exprCtx, expected string) (jen.Code, string, bool) {
 	if ifaceName, ok := g.resolveTypeclassInterface(name, ctx); ok {
 		methodIface := g.pkg.Interfaces[ifaceName]
 		if methodIface == nil {
-			return "", "", false
+			return nil, "", false
+		}
+		var argCodes []jen.Code
+		var argTypes []string
+		for _, a := range args {
+			code, typ, err := g.translateExpr(a, ctx, "")
+			if err != nil {
+				return nil, "", false
+			}
+			argCodes = append(argCodes, code)
+			argTypes = append(argTypes, typ)
 		}
 		if funcName, ok := ctx.constraintFuncs[name]; ok {
-			var argCodes []string
-			for _, a := range args {
-				code, _, err := g.translateExpr(a, ctx, "")
-				if err != nil {
-					return "", "", false
-				}
-				argCodes = append(argCodes, codeString(code))
+			return jen.Id(funcName).Call(argCodes...), methodReturnType(methodIface, name), true
+		}
+		if len(argCodes) > 0 {
+			lastType := argTypes[len(argTypes)-1]
+			if lastType != "" && strings.HasPrefix(lastType, ifaceName) {
+				return argCodes[len(argCodes)-1].(*jen.Statement).Dot(name).Call(argCodes[:len(argCodes)-1]...), methodReturnType(methodIface, name), true
 			}
-			return fmt.Sprintf("%s(%s)", funcName, strings.Join(argCodes, ", ")), methodReturnType(methodIface, name), true
 		}
-		if len(args) == 0 {
-			return "", "", false
+		if helper, ok := g.matchTypeclassHelper(ifaceName, name, args, ctx); ok {
+			return helper, methodReturnType(methodIface, name), true
 		}
-		var argCodes []string
-		for _, a := range args {
-			code, _, err := g.translateExpr(a, ctx, "")
-			if err != nil {
-				return "", "", false
-			}
-				argCodes = append(argCodes, codeString(code))
-		}
-		return fmt.Sprintf("%s(%s)", dispatchFuncName(ifaceName, name), strings.Join(argCodes, ", ")), methodReturnType(methodIface, name), true
 	}
-	return "", "", false
+	return nil, "", false
 }
 
-func (g *generator) translateIdent(name string, line, col int, ctx *exprCtx, expected string) (string, string, error) {
+func (g *generator) translateIdent(name string, line, col int, ctx *exprCtx, expected string) (jen.Code, string, error) {
 	if expr, ok := ctx.bindings[name]; ok {
-		return expr, ctx.locals[name], nil
+		return jen.Id(expr), ctx.locals[name], nil
 	}
 	if typ, ok := ctx.locals[name]; ok {
 		if typ == "any" {
 			if sourceType, ok := ctx.sourceTypes[name]; ok && sourceType != "" && sourceType != "any" {
-				return fmt.Sprintf("%s.(%s)", name, sourceType), sourceType, nil
+				return jen.Id(name).Assert(jen.Id(sourceType)), sourceType, nil
 			}
 		}
-		return name, typ, nil
+		return jen.Id(name), typ, nil
 	}
 	switch name {
 	case "true", "false":
-		return name, "bool", nil
+		return jen.Lit(name == "true"), "bool", nil
 	case "None":
 		base, args := splitTypeArgs(expected)
 		if base != "" && len(args) > 0 {
-			return fmt.Sprintf("None[%s]()", strings.Join(args, ", ")), expected, nil
+			var typeArgs []jen.Code
+			for _, a := range args {
+				typeArgs = append(typeArgs, jen.Id(a))
+			}
+			return jen.Id("None").Index(typeArgs...).Call(), expected, nil
 		}
-		return "", "", common.ErrorAtPos(line, col, "None requires type inference from context")
+		return nil, "", common.ErrorAtPos(line, col, "None requires type inference from context")
 	case "Nil":
-		return "", "", common.ErrorAtPos(line, col, "Nil is not a valid value; use Option[Ref[T]] for nullable references")
+		return nil, "", common.ErrorAtPos(line, col, "Nil is not a valid value; use Option[Ref[T]] for nullable references")
 	}
 	if enumName, ok := g.variantByName[name]; ok {
 		return g.translateEnumConstructor(enumName, name, nil, ctx, expected)
@@ -227,17 +238,19 @@ func (g *generator) translateIdent(name string, line, col int, ctx *exprCtx, exp
 	if typeclassHelper, typ, ok := g.translateTypeclassIdent(name, ctx, expected); ok {
 		return typeclassHelper, typ, nil
 	}
-	return name, ctx.locals[name], nil
+	return jen.Id(name), ctx.locals[name], nil
 }
 
-func (g *generator) translateTypeclassIdent(name string, ctx *exprCtx, expected string) (string, string, bool) {
+func (g *generator) translateTypeclassIdent(name string, ctx *exprCtx, expected string) (jen.Code, string, bool) {
 	if ifaceName, ok := g.resolveTypeclassInterface(name, ctx); ok {
 		if funcName, ok := ctx.constraintFuncs[name]; ok {
-			return funcName, expected, true
+			return jen.Id(funcName), expected, true
 		}
-		return dispatchFuncName(ifaceName, name), expected, true
+		if helper, ok := g.matchTypeclassHelper(ifaceName, name, nil, ctx); ok {
+			return helper, expected, true
+		}
 	}
-	return "", "", false
+	return nil, "", false
 }
 
 func (g *generator) resolveTypeclassInterface(name string, ctx *exprCtx) (string, bool) {
@@ -248,6 +261,86 @@ func (g *generator) resolveTypeclassInterface(name string, ctx *exprCtx) (string
 		return ifaceName, true
 	}
 	return "", false
+}
+
+func (g *generator) matchTypeclassHelper(ifaceName, method string, args []Expr, ctx *exprCtx) (jen.Code, bool) {
+	var argCodes []jen.Code
+	var argTypes []string
+	for _, a := range args {
+		code, typ, err := g.translateExpr(a, ctx, "")
+		if err != nil {
+			return nil, false
+		}
+		argCodes = append(argCodes, code)
+		argTypes = append(argTypes, typ)
+	}
+	bestTypeKey := ""
+	bestScore := matchScore{}
+	found := false
+	for _, impl := range g.pkg.Impls {
+		if impl.InterfaceName != ifaceName && impl.Name != ifaceName {
+			continue
+		}
+		implIfaceName := impl.InterfaceName
+		if implIfaceName == "" {
+			implIfaceName = impl.Name
+		}
+		if implIfaceName != ifaceName {
+			continue
+		}
+		iface := g.pkg.Interfaces[ifaceName]
+		if iface == nil {
+			continue
+		}
+		methodDecl := (*FuncDecl)(nil)
+		for _, m := range iface.Methods {
+			if m.Name == method {
+				methodDecl = m
+				break
+			}
+		}
+		if methodDecl == nil {
+			continue
+		}
+		typeArgs := impl.InterfaceArgs
+		if len(typeArgs) == 0 {
+			typeArgs = impl.TypeArgs
+		}
+		if len(iface.TypeParams) != len(typeArgs) {
+			continue
+		}
+		subst := map[string]string{}
+		for i, tp := range iface.TypeParams {
+			subst[tp] = g.goType(typeArgs[i], ctx.typeParams)
+		}
+		if len(methodDecl.Params) != len(argTypes) {
+			continue
+		}
+		ok := true
+		for i, p := range methodDecl.Params {
+			want := typeString(p.Type, subst)
+			if argTypes[i] != "" && want != argTypes[i] {
+				ok = false
+				break
+			}
+		}
+		if !ok {
+			continue
+		}
+		score := typeclassMatchScore(typeArgs, ctx.typeParams)
+		if !found || betterMatch(score, bestScore) {
+			bestScore = score
+			bestTypeKey = g.implTypeKey(typeArgs)
+			found = true
+		} else if sameMatch(score, bestScore) {
+			return nil, false
+		}
+	}
+	if !found {
+		return nil, false
+	}
+	_ = argCodes
+	return jen.Id(helperFuncName(method, bestTypeKey)).Call(argCodes...), true
 }
 
 func (g *generator) hasHelper(method, typ string) bool {

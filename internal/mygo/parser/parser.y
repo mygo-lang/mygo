@@ -3,6 +3,7 @@ package parser
 
 import (
 	"github.com/mygo-lang/mygo/internal/mygo/ast"
+	"github.com/mygo-lang/mygo/internal/mygo/common"
 )
 
 func tokLine(v any) int {
@@ -47,7 +48,7 @@ func makeLitExpr(t token) *ast.LiteralExpr {
 }
 
 %token <token> IDENT NUMBER STRING
-%token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSE SWITCH CASE END WHERE NOT LET VAR EMBED WHILE RETURN
+%token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSE SWITCH CASE END USING NOT LET VAR EMBED WHILE RETURN
 %token <token> NEWLINE
 %token <token> ARROW EQEQ NEQ LTE GTE PIPEFWD PIPEBACK ANDAND OROR
 %token <token> COLON COMMA DOT LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE UNDER SLICE
@@ -214,7 +215,7 @@ struct_decl
 			TypeParams: append([]string(nil), p.currentTypeParams...),
 		}
 	}
-	struct_body opt_newlines END {
+	opt_newlines struct_body opt_newlines END {
 		p := yylex.(*parser)
 		if p.currentStruct != nil {
 			p.decls = append(p.decls, p.currentStruct)
@@ -250,7 +251,7 @@ struct_body
 
 struct_fields
 	: /* empty */
-	| struct_fields opt_newlines field
+	| struct_fields field opt_newlines
 	;
 
 field
@@ -304,7 +305,11 @@ func_sig_list
 	;
 
 func_sig
-	: FUNC IDENT opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_where_clause {
+	: FUNC IDENT {
+		p := yylex.(*parser)
+		p.expectTypeSuffix = true
+	}
+	opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause {
 		p := yylex.(*parser)
 		if p.currentInterface != nil {
 			p.currentInterface.Methods = append(p.currentInterface.Methods, &ast.FuncDecl{
@@ -314,12 +319,13 @@ func_sig
 				TypeParams: append([]string(nil), p.currentTypeParams...),
 				Params: append([]ast.Param(nil), p.currentParams...),
 				Ret: p.currentType,
-				Where: append([]ast.Constraint(nil), p.currentWhere...),
+				Using: append([]ast.Constraint(nil), p.currentWhere...),
 			})
 		}
 		p.currentParams = nil
 		p.currentTypeParams = nil
 		p.currentWhere = nil
+		p.expectTypeSuffix = false
 	}
 	;
 
@@ -367,6 +373,11 @@ opt_impl_type_params
 		p.parsingImplTypeParams = true
 		p.currentImplTypeParams = nil
 	}
+	| TYPELBRACK {
+		p := yylex.(*parser)
+		p.parsingImplTypeParams = true
+		p.currentImplTypeParams = nil
+	}
 	maybe_name_list RBRACK {
 		p := yylex.(*parser)
 		p.parsingImplTypeParams = false
@@ -379,7 +390,11 @@ impl_body
 	;
 
 func_decl
-	: FUNC IDENT opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_where_clause opt_newlines block_expr opt_newlines END {
+	: FUNC IDENT {
+		p := yylex.(*parser)
+		p.expectTypeSuffix = true
+	}
+	opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause opt_newlines block_expr opt_newlines END {
 		p := yylex.(*parser)
 		var body ast.Expr = &ast.BlockExpr{Stmts: append([]ast.Stmt(nil), p.currentBlock...)}
 		if len(p.currentBlock) == 1 {
@@ -394,7 +409,7 @@ func_decl
 			TypeParams: append([]string(nil), p.currentTypeParams...),
 			Params: append([]ast.Param(nil), p.currentParams...),
 			Ret: p.currentType,
-			Where: append([]ast.Constraint(nil), p.currentWhere...),
+			Using: append([]ast.Constraint(nil), p.currentWhere...),
 			Body: body,
 		}
 		if p.currentImpl != nil {
@@ -407,6 +422,7 @@ func_decl
 		p.currentTypeParams = nil
 		p.currentWhere = nil
 		p.currentBlock = nil
+		p.expectTypeSuffix = false
 	}
 	;
 
@@ -442,9 +458,9 @@ opt_type_annot
 	| COLON type
 	;
 
-opt_where_clause
+opt_using_clause
 	: /* empty */
-	| WHERE constraint_list
+	| USING constraint_list
 	;
 
 constraint_list
@@ -482,6 +498,10 @@ opt_type_params
 		p := yylex.(*parser)
 		p.currentTypeParams = nil
 	}
+	| TYPELBRACK {
+		p := yylex.(*parser)
+		p.currentTypeParams = nil
+	}
 	maybe_name_list RBRACK
 	;
 
@@ -491,20 +511,32 @@ maybe_name_list
 	;
 
 name_list
-	: IDENT {
+	: type {
 		p := yylex.(*parser)
-		if p.parsingImplTypeParams {
-			p.currentImplTypeParams = append(p.currentImplTypeParams, $1.lit)
+		name := ""
+		if nt, ok := p.currentType.(*ast.NamedType); ok {
+			name = nt.Name
 		} else {
-			p.currentTypeParams = append(p.currentTypeParams, $1.lit)
+			p.err = common.ErrorAtPos(p.currentTypeLine, p.currentTypeCol, "expected type parameter name")
+		}
+		if p.parsingImplTypeParams {
+			p.currentImplTypeParams = append(p.currentImplTypeParams, name)
+		} else {
+			p.currentTypeParams = append(p.currentTypeParams, name)
 		}
 	}
-	| name_list COMMA IDENT {
+	| name_list COMMA type {
 		p := yylex.(*parser)
-		if p.parsingImplTypeParams {
-			p.currentImplTypeParams = append(p.currentImplTypeParams, $3.lit)
+		name := ""
+		if nt, ok := p.currentType.(*ast.NamedType); ok {
+			name = nt.Name
 		} else {
-			p.currentTypeParams = append(p.currentTypeParams, $3.lit)
+			p.err = common.ErrorAtPos(p.currentTypeLine, p.currentTypeCol, "expected type parameter name")
+		}
+		if p.parsingImplTypeParams {
+			p.currentImplTypeParams = append(p.currentImplTypeParams, name)
+		} else {
+			p.currentTypeParams = append(p.currentTypeParams, name)
 		}
 	}
 	;
@@ -627,14 +659,20 @@ pipe_expr
 		p.currentExpr = p.currentExpr
 		p.currentLeftExpr = p.currentExpr
 	}
-	| pipe_expr PIPEFWD or_expr {
+	| pipe_expr PIPEFWD {
 		p := yylex.(*parser)
-		p.currentLeftExpr = &ast.BinaryExpr{Op: "|>", Left: p.currentLeftExpr, Right: p.currentExpr}
+		p.currentPipeLeftExpr = p.currentLeftExpr
+	} or_expr {
+		p := yylex.(*parser)
+		p.currentLeftExpr = &ast.BinaryExpr{Op: "|>", Left: p.currentPipeLeftExpr, Right: p.currentExpr}
 		p.currentExpr = p.currentLeftExpr
 	}
-	| pipe_expr PIPEBACK or_expr {
+	| pipe_expr PIPEBACK {
 		p := yylex.(*parser)
-		p.currentLeftExpr = &ast.BinaryExpr{Op: "<|", Left: p.currentLeftExpr, Right: p.currentExpr}
+		p.currentPipeLeftExpr = p.currentLeftExpr
+	} or_expr {
+		p := yylex.(*parser)
+		p.currentLeftExpr = &ast.BinaryExpr{Op: "<|", Left: p.currentPipeLeftExpr, Right: p.currentExpr}
 		p.currentExpr = p.currentLeftExpr
 	}
 	;
@@ -942,6 +980,7 @@ while_expr
 		p := yylex.(*parser)
 		p.currentWhileCond = p.currentExpr
 	}
+	opt_newlines
 	block_expr opt_newlines END {
 		p := yylex.(*parser)
 		p.currentWhileBody = p.currentExpr
@@ -956,6 +995,7 @@ switch_expr
 		p := yylex.(*parser)
 		p.currentSwitchTarget = p.currentExpr
 	}
+	opt_newlines
 	switch_case_list opt_newlines END {
 		p := yylex.(*parser)
 		p.currentExpr = &ast.SwitchExpr{Line: $1.line, Column: $1.col, Target: p.currentSwitchTarget, Cases: append([]ast.SwitchCase(nil), p.currentSwitchCases...)}
@@ -1119,8 +1159,8 @@ func (p *parser) Lex(lval *yySymType) int {
 			return int(CASE)
 		case "end":
 			return int(END)
-		case "where":
-			return int(WHERE)
+		case "using":
+			return int(USING)
 		case "not":
 			return int(NOT)
 		case "let":
@@ -1140,6 +1180,8 @@ func (p *parser) Lex(lval *yySymType) int {
 		switch tok.lit {
 		case "[]":
 			return int(SLICE)
+		case "=>":
+			return int(ARROW)
 		case "->":
 			return int(ARROW)
 		case "==":
@@ -1170,15 +1212,12 @@ func (p *parser) Lex(lval *yySymType) int {
 			return int(RPAREN)
 		case "[":
 			if p.expectStructTypeArgs {
-				p.expectStructTypeArgs = false
 				return int(TYPELBRACK)
 			}
 			if p.expectConstraintSuffix {
-				p.expectConstraintSuffix = false
 				return int(CONSTRLBRACK)
 			}
 			if p.expectTypeSuffix {
-				p.expectTypeSuffix = false
 				return int(TYPELBRACK)
 			}
 			return int(LBRACK)

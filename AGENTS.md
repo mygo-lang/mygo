@@ -49,8 +49,10 @@
 ## Known Issues
 
 - **prelude typeclasses fully generated**: The prelude's `enum`, `struct`, `interface`, and `impl` blocks are now compiled via the standard generator (no `skipTypeclasses`), so Show, Eq, and Enumerable impls are all registered at init time. The hand-written `prelude_go.go` still provides low-level Slice/Map/Set Enumerable helpers.
+- **`where` removed from lexer/parser**: The source grammar and lexer now recognize `using` only for typeclass constraints. `where` is no longer a reserved keyword or parser entry point.
 - **`prelude_go.go` does not compile**: `prelude/prelude_go.go:52` references `Eq[T]` which is undefined in the prelude package, causing `go vet` to fail. The prelude's `Eq` interface is generated via the standard generator during compilation, so the hand-written Go helpers cannot directly reference it.
 - **`Nil` is not a real prelude value**: `translateIdent` in `typeclass.go` still has hardcoded support for `Nil` that emits `Nil[T]()`, but there is no actual `Nil` type or constructor in the prelude. New code should model absence with `Option`, as in `Option[Ref[List[T]]]`, instead of comparing refs to `Nil`.
+- **Generic `impl` parsing still needs final alignment**: `prelude/prelude.mygo` now exercises `interface`, `using`, HKT-like type parameters, and generic `impl` headers, but `impl[T] ...` parsing is still being aligned with the current grammar.
 - **`sumList` type ergonomics**: `examples/data-structure/data-structure.mygo` currently accepts `List[Int]`, creates a traversal ref with `Ref.new(lst)`, and walks `tail: Option[Ref[List[Int]]]`. This is runnable and keeps construction explicit, but it still takes the address of a local parameter copy; a future design may prefer accepting `Option[Ref[List[Int]]]` or `Ref[List[Int]]` directly.
 - **AST `Col` vs `Column` inconsistency**: `MapLitPair` and `SetLitExpr` in `ast.go` use `Col int` instead of `Column int`. This causes `common.NodePos()` to silently return `(0, 0)` for these types via reflection, losing source position data for all map/set literal error messages.
 
@@ -69,12 +71,13 @@
 - When a generic struct literal omits its type arguments, the compiler should infer them from the expected type or field values when possible.
 - `Ref.new(expr)` constructs a reference value and is lowered as `&expr`; if the argument is already a ref/pointer, lowering leaves it unchanged rather than producing a pointer-to-pointer.
 - `Slice[A]` is the only slice type spelling. The parser no longer accepts `A[]` or `Int[]` shorthand, which keeps type syntax aligned with ordinary generic instantiation.
-- The parser test suite now covers package/function declarations, collection literals, chain postfix, `if`/`while`/`switch`, pipe precedence, struct/interface/impl declarations, `let`/`var`/assignment, func literals, `where` clauses, enum declarations, switch patterns, and nested/empty collection literals.
+- The parser test suite now covers package/function declarations, collection literals, chain postfix, `if`/`while`/`switch`, pipe precedence, struct/interface/impl declarations, `let`/`var`/assignment, func literals, `using` clauses, enum declarations, switch patterns, and nested/empty collection literals.
 - Nested slice types are written explicitly as `Slice[Slice[Int]]`, and empty `[]` is treated as an empty slice literal in expression position.
-- `where` clauses support multiple constraints and constraint type arguments in both function and interface method signatures.
+- `using` clauses support multiple constraints and constraint type arguments in both function and interface method signatures.
+- `where` has been removed from the main syntax; typeclass requirements now use `using` only.
 - `switch` pattern parsing currently accepts wildcard patterns and variant patterns with optional identifier arguments, such as `Some(x)`.
 - Keep `examples/main/main.mygo` aligned with the compiler's current boundary behavior, especially for `Ref`, `Option`, and `Result`.
-- Typeclass lookup should respect lexical scope first: local bindings and function-value bindings shadow typeclass names, `where`-bound methods are visible inside nested blocks, and package-level dispatch is the fallback.
+- Typeclass lookup should respect lexical scope first: local bindings and function-value bindings shadow typeclass names, `using`-bound methods are visible inside nested blocks, and package-level dispatch is the fallback.
 - When multiple typeclass candidates are visible, prefer the more specific binding by comparing concrete type coverage first, then type-parameter usage, then `any` usage; report ambiguity when candidates remain tied.
 
 ## Collection Types
@@ -129,6 +132,7 @@
   - **typeclass.go**: Fixed `callee.Call()` by using type assertion `(*jen.Statement).Call()`. Fixed `None` type parameter handling with proper iteration. Fixed `typeclassHelper` return to use `jen.Code` directly instead of wrapping in `jen.Id()`.
   - All function signatures now return `(jen.Code, string, error)` where first is generated code, second is type string, third is error.
   - Jennifer API patterns: `jen.Dict` is `map[Code]Code` (not a function), `jen.Lit()` takes `interface{}` for literals, `*jen.Statement` has `.Call()`, `.Dot()`, `.Op()`, `.Index()` methods requiring type assertion from `jen.Code` interface.
+- Removed `where` from the parser/lexer path and switched the typeclass surface fully to `using`, with parser generation now going through `~/go/bin/golex` plus `goyacc`.
 - **Complete Jennifer refactoring (Phase 1)**: Refactored `internal/mygo/compiler/` to use Jennifer for all code generation, eliminating string-based code generation. Deleted `section.go` and `unit_body_writer.go`. Converted `genGlobals()`, `genTypeclassDispatchers()`, `genImpl()`, `genFunc()`, `translateSwitch()`, and `translateWhile()` to use Jennifer's type-safe API. This improves type safety, maintainability, and eliminates string concatenation for generating Go code.
 - Added `Ref.new(expr)` lowering for explicit `Ref[T]` construction, updated `examples/data-structure` to use it for `Option[Ref[List[A]]]` tails, and taught field lookup to resolve through generated Go pointer types like `*List[int]`.
 - Introduced `Slice`, `Map`, and `Set` as compiler-handled collection types with no prelude struct declarations — lowered directly to Go natives (`[]A`, `map[K]V`, `map[A]struct{}`). `Slice[A]` is now the only slice type syntax.

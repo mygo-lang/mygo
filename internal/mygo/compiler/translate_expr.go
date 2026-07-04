@@ -1,7 +1,6 @@
 package compiler
 
 import (
-	"fmt"
 	"strings"
 
 	jen "github.com/dave/jennifer/jen"
@@ -16,18 +15,18 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (jen.Co
 		if err != nil {
 			return nil, "", err
 		}
-		return jen.Op(code), typ, nil
+		return code, typ, nil
 	case *LiteralExpr:
 		switch n.Kind {
 		case "number":
 			switch expected {
 			case "int", "int64", "float64":
-				return jen.Op(n.Value), expected, nil
+				return jen.Lit(n.Value), expected, nil
 			}
 			if strings.Contains(n.Value, ".") {
-				return jen.Op(n.Value), "float64", nil
+				return jen.Lit(n.Value), "float64", nil
 			}
-			return jen.Op(n.Value), "int", nil
+			return jen.Lit(n.Value), "int", nil
 		case "string":
 			return jen.Lit(n.Value), "string", nil
 		}
@@ -39,7 +38,7 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (jen.Co
 			}
 			switch right := n.Right.(type) {
 			case *CallExpr:
-				callee, _, err := g.translateExpr(right.Callee, ctx, "")
+				_, _, err := g.translateExpr(right.Callee, ctx, "")
 				if err != nil {
 					return nil, "", err
 				}
@@ -56,13 +55,13 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (jen.Co
 				if err != nil {
 					return nil, "", err
 				}
-				return jen.Op(codeString(callee)).Call(args...), rt, nil
+				return jen.Id(rt).Call(args...), rt, nil
 			default:
-				rhs, rt, err := g.translateExpr(n.Right, ctx, "")
+				_, rt, err := g.translateExpr(n.Right, ctx, "")
 				if err != nil {
 					return nil, "", err
 				}
-				return jen.Op(codeString(rhs)).Call(left), rt, nil
+				return jen.Id(rt).Call(left), rt, nil
 			}
 		}
 		if n.Op == "<|" {
@@ -72,7 +71,7 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (jen.Co
 			}
 			switch left := n.Left.(type) {
 			case *CallExpr:
-				callee, _, err := g.translateExpr(left.Callee, ctx, "")
+				_, _, err := g.translateExpr(left.Callee, ctx, "")
 				if err != nil {
 					return nil, "", err
 				}
@@ -89,13 +88,13 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (jen.Co
 				if err != nil {
 					return nil, "", err
 				}
-				return jen.Op(codeString(callee)).Call(args...), lt, nil
+				return jen.Id(lt).Call(args...), lt, nil
 			default:
-				lhs, lt, err := g.translateExpr(n.Left, ctx, "")
+				_, lt, err := g.translateExpr(n.Left, ctx, "")
 				if err != nil {
 					return nil, "", err
 				}
-				return jen.Op(codeString(lhs)).Call(right), lt, nil
+				return jen.Id(lt).Call(right), lt, nil
 			}
 		}
 		left, lt, err := g.translateExpr(n.Left, ctx, "")
@@ -116,7 +115,7 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (jen.Co
 			if resType == "" || resType == "any" {
 				resType = rt
 			}
-			return jen.Op(codeString(left) + " " + n.Op + " " + codeString(right)), resType, nil
+			return left.(*jen.Statement).Op(n.Op).Add(right), resType, nil
 		case "&&", "||":
 			if lt != "" && lt != "bool" {
 				line, col := common.NodePos(n.Left)
@@ -126,13 +125,13 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (jen.Co
 				line, col := common.NodePos(n.Right)
 				return nil, "", common.ErrorAtPos(line, col, "logical operator %q requires Bool operands, got %s", n.Op, rt)
 			}
-			return jen.Op(codeString(left) + " " + n.Op + " " + codeString(right)), "bool", nil
+			return left.(*jen.Statement).Op(n.Op).Add(right), "bool", nil
 		case "==", "!=", "<", ">", "<=", ">=":
 			if err := g.ensureRelationAllowed(n, lt, rt, ctx); err != nil {
 				return nil, "", err
 			}
-				if eqExpr, ok := g.translateEqRelation(n.Op, codeString(left), codeString(right), lt, rt, ctx, expected); ok {
-				return jen.Op(eqExpr), "bool", nil
+			if eqExpr, ok := g.translateEqRelation(n.Op, left.(*jen.Statement), right.(*jen.Statement), lt, rt, ctx, expected); ok {
+				return eqExpr, "bool", nil
 			}
 			return nil, "", common.ErrorAtPos(n.Line, n.Column, "relation operator %q requires Eq-constrained operands", n.Op)
 		}
@@ -142,24 +141,24 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (jen.Co
 			return nil, "", err
 		}
 		if n.Op == "not" {
-			return jen.Op("!(" + codeString(expr) + ")"), "bool", nil
+			return jen.Id("!").Add(expr), "bool", nil
 		}
 		return expr, typ, nil
 	case *FieldExpr:
 		if baseIdent, ok := n.Expr.(*IdentExpr); ok {
 			if enumDecl := g.pkg.Enums[baseIdent.Name]; enumDecl != nil {
 				if variant := g.findVariant(enumDecl, n.Field); variant != nil {
-				code, typ, err := g.translateEnumConstructor(baseIdent.Name, n.Field, nil, ctx, expected)
-				if err != nil {
-					return nil, "", err
-				}
-				return jen.Op(code), typ, nil
+					code, typ, err := g.translateEnumConstructor(baseIdent.Name, n.Field, nil, ctx, expected)
+					if err != nil {
+						return nil, "", err
+					}
+					return code, typ, nil
 				}
 			}
 			if code, typ, ok, err := g.translateGoPackageSelector(baseIdent.Name, n.Field); err != nil {
 				return nil, "", err
 			} else if ok {
-				return jen.Op(code), typ, nil
+				return code, typ, nil
 			}
 		}
 		base, baseType, err := g.translateExpr(n.Expr, ctx, "")
@@ -167,70 +166,70 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (jen.Co
 			return nil, "", err
 		}
 		if id, ok := n.Expr.(*IdentExpr); ok && g.isImportAlias(id.Name) {
-			return jen.Op(codeString(base)).Dot(n.Field), "any", nil
+			return base.(*jen.Statement).Dot(n.Field), "any", nil
 		}
 		fieldType := g.lookupFieldType(baseType, n.Field)
-		return jen.Op(codeString(base)).Dot(exportName(n.Field)), fieldType, nil
+		return base.(*jen.Statement).Dot(exportName(n.Field)), fieldType, nil
 	case *CallExpr:
-			code, typ, err := g.translateCall(n, ctx, expected)
-			if err != nil {
-				return nil, "", err
-			}
-			return jen.Op(code), typ, nil
-		case *StructLitExpr:
-			code, typ, err := g.translateStructLit(n, ctx, expected)
-			if err != nil {
-				return nil, "", err
-			}
-			return jen.Op(code), typ, nil
-		case *FuncLitExpr:
-			code, typ, err := g.translateFuncLit(n, ctx)
-			if err != nil {
-				return nil, "", err
-			}
-			return jen.Op(code), typ, nil
-		case *IfExpr:
-			code, typ, err := g.translateIf(n, ctx, expected)
-			if err != nil {
-				return nil, "", err
-			}
-			return jen.Op(code), typ, nil
-		case *SwitchExpr:
-			code, typ, err := g.translateSwitch(n, ctx, expected)
-			if err != nil {
-				return nil, "", err
-			}
-			return jen.Op(code), typ, nil
-		case *WhileExpr:
-			code, typ, err := g.translateWhile(n, ctx)
-			if err != nil {
-				return nil, "", err
-			}
-			return jen.Op(code), typ, nil
-		case *BlockExpr:
-			code, typ, err := g.translateBlock(n, ctx, expected)
-			if err != nil {
-				return nil, "", err
-			}
-			return jen.Op(code), typ, nil
-		case *SliceLitExpr:
-			code, typ, err := g.translateSliceLit(n, ctx, expected)
-			if err != nil {
-				return nil, "", err
-			}
-			return jen.Op(code), typ, nil
-		case *MapLitExpr:
-			code, typ, err := g.translateMapLit(n, ctx, expected)
-			if err != nil {
-				return nil, "", err
-			}
-			return jen.Op(code), typ, nil
-		case *SetLitExpr:
-			code, typ, err := g.translateSetLit(n, ctx, expected)
-			if err != nil {
-				return nil, "", err
-			}
-			return jen.Op(code), typ, nil
+		code, typ, err := g.translateCall(n, ctx, expected)
+		if err != nil {
+			return nil, "", err
+		}
+		return code, typ, nil
+	case *StructLitExpr:
+		code, typ, err := g.translateStructLit(n, ctx, expected)
+		if err != nil {
+			return nil, "", err
+		}
+		return code, typ, nil
+	case *FuncLitExpr:
+		code, typ, err := g.translateFuncLit(n, ctx)
+		if err != nil {
+			return nil, "", err
+		}
+		return code, typ, nil
+	case *IfExpr:
+		code, typ, err := g.translateIf(n, ctx, expected)
+		if err != nil {
+			return nil, "", err
+		}
+		return code, typ, nil
+	case *SwitchExpr:
+		code, typ, err := g.translateSwitch(n, ctx, expected)
+		if err != nil {
+			return nil, "", err
+		}
+		return code, typ, nil
+	case *WhileExpr:
+		code, typ, err := g.translateWhile(n, ctx)
+		if err != nil {
+			return nil, "", err
+		}
+		return code, typ, nil
+	case *BlockExpr:
+		code, typ, err := g.translateBlock(n, ctx, expected)
+		if err != nil {
+			return nil, "", err
+		}
+		return code, typ, nil
+	case *SliceLitExpr:
+		code, typ, err := g.translateSliceLit(n, ctx, expected)
+		if err != nil {
+			return nil, "", err
+		}
+		return code, typ, nil
+	case *MapLitExpr:
+		code, typ, err := g.translateMapLit(n, ctx, expected)
+		if err != nil {
+			return nil, "", err
+		}
+		return code, typ, nil
+	case *SetLitExpr:
+		code, typ, err := g.translateSetLit(n, ctx, expected)
+		if err != nil {
+			return nil, "", err
+		}
+		return code, typ, nil
 	}
 	line, col := common.NodePos(e)
 	return nil, "", common.ErrorAtPos(line, col, "unsupported expression %#v", e)
@@ -259,7 +258,7 @@ func (g *generator) ensureRelationAllowed(n *BinaryExpr, leftType, rightType str
 	return common.ErrorAtPos(n.Line, n.Column, "relation operator %q requires Eq[%s]", n.Op, typ)
 }
 
-func (g *generator) translateEqRelation(op, left, right, leftType, rightType string, ctx *exprCtx, expected string) (string, bool) {
+func (g *generator) translateEqRelation(op string, left, right *jen.Statement, leftType, rightType string, ctx *exprCtx, expected string) (*jen.Statement, bool) {
 	_ = expected
 	typ := leftType
 	if typ == "" {
@@ -267,25 +266,25 @@ func (g *generator) translateEqRelation(op, left, right, leftType, rightType str
 	}
 	if typ == "any" || g.isTypeParamName(typ, ctx) {
 		if fn := ctx.constraintFuncs["equals"]; fn != "" {
-			return fmt.Sprintf("%s(%s, %s)", fn, left, right), true
+			return jen.Id(fn).Call(left, right), true
 		}
-		return "", false
+		return nil, false
 	}
 	switch op {
 	case "==":
-		return fmt.Sprintf("(%s == %s)", left, right), true
+		return left.Op("==").Add(right), true
 	case "!=":
-		return fmt.Sprintf("(%s != %s)", left, right), true
+		return left.Op("!=").Add(right), true
 	case "<":
-		return fmt.Sprintf("(%s < %s)", left, right), true
+		return left.Op("<").Add(right), true
 	case ">":
-		return fmt.Sprintf("(%s > %s)", left, right), true
+		return left.Op(">").Add(right), true
 	case "<=":
-		return fmt.Sprintf("(%s <= %s)", left, right), true
+		return left.Op("<=").Add(right), true
 	case ">=":
-		return fmt.Sprintf("(%s >= %s)", left, right), true
+		return left.Op(">=").Add(right), true
 	default:
-		return "", false
+		return nil, false
 	}
 }
 
@@ -318,7 +317,7 @@ func (g *generator) hasEqSupport(typ string, ctx *exprCtx) bool {
 	return false
 }
 
-func (g *generator) translateSliceLit(n *SliceLitExpr, ctx *exprCtx, expected string) (string, string, error) {
+func (g *generator) translateSliceLit(n *SliceLitExpr, ctx *exprCtx, expected string) (jen.Code, string, error) {
 	// 1. If `expected` is a Go slice type (starts with "[]"), try to infer element type from it.
 	// 2. Infer element type from actual elements.
 	// 3. If both exist, unify them and error on mismatch.
@@ -334,7 +333,7 @@ func (g *generator) translateSliceLit(n *SliceLitExpr, ctx *exprCtx, expected st
 	for _, elem := range n.Elems {
 		_, typ, err := g.translateExpr(elem, ctx, "")
 		if err != nil {
-			return "", "", err
+			return nil, "", err
 		}
 		if typ != "" && typ != "any" {
 			inferredTypes = append(inferredTypes, typ)
@@ -348,7 +347,7 @@ func (g *generator) translateSliceLit(n *SliceLitExpr, ctx *exprCtx, expected st
 		for _, t := range inferredTypes[1:] {
 			if t != elemType {
 				line, col := common.NodePos(n)
-				return "", "", common.ErrorAtPos(line, col, "slice element types inconsistent: %s and %s", elemType, t)
+				return nil, "", common.ErrorAtPos(line, col, "slice element types inconsistent: %s and %s", elemType, t)
 			}
 		}
 	}
@@ -375,25 +374,33 @@ func (g *generator) translateSliceLit(n *SliceLitExpr, ctx *exprCtx, expected st
 	}
 
 	if elemType == "" {
-		return "", "", common.ErrorAtPos(n.Line, n.Column, "could not infer slice element type")
+		return nil, "", common.ErrorAtPos(n.Line, n.Column, "could not infer slice element type")
 	}
 
 	// Translate all elements with the resolved element type
-	var parts []string
+	var parts []jen.Code
 	for _, elem := range n.Elems {
 		code, _, err := g.translateExpr(elem, ctx, elemType)
 		if err != nil {
-			return "", "", err
+			return nil, "", err
 		}
-			parts = append(parts, codeString(code))
+		parts = append(parts, code)
 	}
 
 	goElemType := g.goType(&NamedType{Name: elemType}, nil)
 	sliceType := "[]" + goElemType
-	return sliceType + "{" + strings.Join(parts, ", ") + "}", sliceType, nil
+	return jen.Lit(jen.DictFunc(func(d jen.Dict) {
+		for _, p := range parts {
+			d[jen.Lit(p)] = p
+		}
+	})).IndexFunc(func(g *jen.Group) { g.Lit(goElemType) }), sliceType, nil
 }
 
-func (g *generator) translateMapLit(n *MapLitExpr, ctx *exprCtx, expected string) (string, string, error) {
+func (g *generator) translateMapLit(
+	n *MapLitExpr,
+	ctx *exprCtx,
+	expected string,
+) (jen.Code, string, error) {
 	// Strategy:
 	// 1. Parse `expected` (Go type like "map[string]int") for key/value types.
 	// 2. Infer key/value types from each pair's expressions.
@@ -409,11 +416,11 @@ func (g *generator) translateMapLit(n *MapLitExpr, ctx *exprCtx, expected string
 	for _, pair := range n.Pairs {
 		_, kt, err := g.translateExpr(pair.Key, ctx, "")
 		if err != nil {
-			return "", "", err
+			return nil, "", err
 		}
 		_, vt, err := g.translateExpr(pair.Value, ctx, "")
 		if err != nil {
-			return "", "", err
+			return nil, "", err
 		}
 		if kt != "" && kt != "any" {
 			keyTypes = append(keyTypes, kt)
@@ -429,7 +436,7 @@ func (g *generator) translateMapLit(n *MapLitExpr, ctx *exprCtx, expected string
 		for _, t := range keyTypes[1:] {
 			if t != keyType {
 				line, col := common.NodePos(n)
-				return "", "", common.ErrorAtPos(line, col, "map key types inconsistent: %s and %s", keyType, t)
+				return nil, "", common.ErrorAtPos(line, col, "map key types inconsistent: %s and %s", keyType, t)
 			}
 		}
 	}
@@ -440,7 +447,7 @@ func (g *generator) translateMapLit(n *MapLitExpr, ctx *exprCtx, expected string
 		for _, t := range valTypes[1:] {
 			if t != valType {
 				line, col := common.NodePos(n)
-				return "", "", common.ErrorAtPos(line, col, "map value types inconsistent: %s and %s", valType, t)
+				return nil, "", common.ErrorAtPos(line, col, "map value types inconsistent: %s and %s", valType, t)
 			}
 		}
 	}
@@ -462,29 +469,29 @@ func (g *generator) translateMapLit(n *MapLitExpr, ctx *exprCtx, expected string
 	}
 
 	if keyType == "" || valType == "" {
-		return "", "", common.ErrorAtPos(n.Line, n.Column, "could not infer map key/value types")
+		return nil, "", common.ErrorAtPos(n.Line, n.Column, "could not infer map key/value types")
 	}
 
-	var parts []string
+	var dict jen.Dict
 	for _, pair := range n.Pairs {
 		keyCode, _, err := g.translateExpr(pair.Key, ctx, keyType)
 		if err != nil {
-			return "", "", err
+			return nil, "", err
 		}
 		valCode, _, err := g.translateExpr(pair.Value, ctx, valType)
 		if err != nil {
-			return "", "", err
+			return nil, "", err
 		}
-			parts = append(parts, codeString(keyCode)+": "+codeString(valCode))
+		dict[keyCode] = valCode
 	}
 
 	keyGoType := g.goType(&NamedType{Name: keyType}, nil)
 	valGoType := g.goType(&NamedType{Name: valType}, nil)
 	mapType := "map[" + keyGoType + "]" + valGoType
-	return mapType + "{" + strings.Join(parts, ", ") + "}", mapType, nil
+	return jen.Lit(dict).Index(jen.Id(keyGoType), jen.Id(valGoType)), mapType, nil
 }
 
-func (g *generator) translateSetLit(n *SetLitExpr, ctx *exprCtx, expected string) (string, string, error) {
+func (g *generator) translateSetLit(n *SetLitExpr, ctx *exprCtx, expected string) (jen.Code, string, error) {
 	// Strategy:
 	// 1. If empty and expected is not map[A]struct{}, treat as empty map.
 	// 2. Infer element type from elements.
@@ -503,7 +510,7 @@ func (g *generator) translateSetLit(n *SetLitExpr, ctx *exprCtx, expected string
 	for _, elem := range n.Elems {
 		_, typ, err := g.translateExpr(elem, ctx, "")
 		if err != nil {
-			return "", "", err
+			return nil, "", err
 		}
 		if typ != "" && typ != "any" {
 			inferredTypes = append(inferredTypes, typ)
@@ -516,7 +523,7 @@ func (g *generator) translateSetLit(n *SetLitExpr, ctx *exprCtx, expected string
 		for _, t := range inferredTypes[1:] {
 			if t != elemType {
 				line, col := common.NodePos(n)
-				return "", "", common.ErrorAtPos(line, col, "set element types inconsistent: %s and %s", elemType, t)
+				return nil, "", common.ErrorAtPos(line, col, "set element types inconsistent: %s and %s", elemType, t)
 			}
 		}
 	}
@@ -538,28 +545,24 @@ func (g *generator) translateSetLit(n *SetLitExpr, ctx *exprCtx, expected string
 	}
 
 	if elemType == "" {
-		return "", "", common.ErrorAtPos(n.Line, n.Col, "could not infer set element type")
+		return nil, "", common.ErrorAtPos(n.Line, n.Col, "could not infer set element type")
 	}
 
-	var parts []string
+	var dict jen.Dict
 	for _, elem := range n.Elems {
 		code, _, err := g.translateExpr(elem, ctx, elemType)
 		if err != nil {
-			return "", "", err
+			return nil, "", err
 		}
-			parts = append(parts, codeString(code))
+		dict[code] = jen.Dict{}
 	}
 
 	elemGoType := g.goType(&NamedType{Name: elemType}, nil)
 	setType := "map[" + elemGoType + "]struct{}"
-	partsWithBlank := make([]string, len(parts))
-	for i, p := range parts {
-		partsWithBlank[i] = p + ":{}"
-	}
-	return setType + "{" + strings.Join(partsWithBlank, ", ") + "}", setType, nil
+	return jen.Lit(dict).Index(jen.Id(elemGoType), jen.Id("struct{}")), setType, nil
 }
 
-func (g *generator) translateEmptyMapLit(ctx *exprCtx, expected string, line, col int) (string, string, error) {
+func (g *generator) translateEmptyMapLit(ctx *exprCtx, expected string, line, col int) (jen.Code, string, error) {
 	// expected is like "map[string]int"
 	keyType, valType, ok := splitMapExpected(expected)
 	if !ok {
@@ -567,12 +570,12 @@ func (g *generator) translateEmptyMapLit(ctx *exprCtx, expected string, line, co
 		valType = ""
 	}
 	if keyType == "" || valType == "" {
-		return "", "", common.ErrorAtPos(line, col, "empty map literal requires a known map type")
+		return nil, "", common.ErrorAtPos(line, col, "empty map literal requires a known map type")
 	}
 	keyGoType := g.goType(&NamedType{Name: keyType}, nil)
 	valGoType := g.goType(&NamedType{Name: valType}, nil)
 	mapType := "map[" + keyGoType + "]" + valGoType
-	return mapType + "{}", mapType, nil
+	return jen.Lit(jen.Dict{}).Index(jen.Id(keyGoType), jen.Id(valGoType)), mapType, nil
 }
 
 // splitTopLevelSingle splits a top-level comma-separated string into exactly two parts.

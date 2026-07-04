@@ -71,7 +71,7 @@ func maxInt(a: Int, b: Int) -> Int
   if a > b then a else b
 end
 
-func describeOption[A](value: Option[A]) -> String where Show[A]
+func describeOption[A](value: Option[A]) -> String using Show[A]
   switch value
     case None => "None"
     case Some(inner) => "Some(" + show(inner) + ")"
@@ -143,6 +143,6 @@ func demo() -> String
   summary
 end
 
-func main() -> ()
+func main() -> Unit
   let _ = fmt.Println(demo())
 end

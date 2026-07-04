@@ -38,6 +38,7 @@ type exprCtx struct {
 	typeParams       map[string]struct{}
 	constraintFuncs  map[string]string
 	typeclassMethods map[string][]typeclassBinding
+	dictBindings     []dictBinding
 	retType          string
 	currentImpl      string
 }
@@ -47,6 +48,14 @@ type typeclassBinding struct {
 	Score      matchScore
 	ParamTypes []string
 	RetType    string
+	DictExpr   string
+	DictType   string
+}
+
+type dictBinding struct {
+	Interface string
+	Args      []string
+	Expr      string
 }
 
 type matchScore struct {
@@ -84,6 +93,7 @@ func (ctx *exprCtx) child() *exprCtx {
 		typeParams:       map[string]struct{}{},
 		constraintFuncs:  map[string]string{},
 		typeclassMethods: map[string][]typeclassBinding{},
+		dictBindings:     nil,
 		retType:          ctx.retType,
 		currentImpl:      ctx.currentImpl,
 	}
@@ -108,5 +118,6 @@ func (ctx *exprCtx) child() *exprCtx {
 	for k, v := range ctx.typeclassMethods {
 		dup.typeclassMethods[k] = append([]typeclassBinding(nil), v...)
 	}
+	dup.dictBindings = append([]dictBinding(nil), ctx.dictBindings...)
 	return dup
 }

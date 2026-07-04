@@ -52,15 +52,6 @@ func (p *Package) Generate() (string, error) {
 			return imports[i].Alias < imports[j].Alias
 		})
 	}
-	if len(p.Interfaces) > 0 && !hasImportPath(imports, "reflect") {
-		imports = append(imports, importSpec{Path: "reflect"})
-		sort.Slice(imports, func(i, j int) bool {
-			if imports[i].Alias == imports[j].Alias {
-				return imports[i].Path < imports[j].Path
-			}
-			return imports[i].Alias < imports[j].Alias
-		})
-	}
 	for _, imp := range imports {
 		path := importPathForGo(imp.Path)
 		alias := imp.Alias

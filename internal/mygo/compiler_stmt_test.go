@@ -18,7 +18,7 @@ func TestCompileDirSupportsCollectionLiterals(t *testing.T) {
   42
   end
 
-  func main() -> ()
+  func main() -> Unit
     demo()
   end
 `)
@@ -57,7 +57,7 @@ func TestCompileDirSupportsLetVarAndDiscard(t *testing.T) {
     n
   end
 
-  func main() -> ()
+  func main() -> Unit
     demo()
   end
 `)
@@ -701,7 +701,7 @@ func TestCompileDirDeduplicatesTypeclassMethodParams(t *testing.T) {
     func show(value: A) -> String
   end
 
-  func demo[A](value: A) -> String where Show[A], FancyShow[Int64]
+  func demo[A](value: A) -> String using Show[A], FancyShow[Int64]
     show(value)
   end
 `)

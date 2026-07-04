@@ -76,7 +76,7 @@ type FuncDecl struct {
 	TypeParams []string
 	Params     []Param
 	Ret        TypeExpr
-	Where      []Constraint
+	Using      []Constraint
 	Body       Expr
 }
 

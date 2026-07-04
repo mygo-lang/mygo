@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	jen "github.com/dave/jennifer/jen"
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
 	parserpkg "github.com/mygo-lang/mygo/internal/mygo/parser"
@@ -133,28 +134,28 @@ func (g *generator) isImportAlias(name string) bool {
 	return ok
 }
 
-func (g *generator) translateGoPackageSelector(alias, name string) (string, string, bool, error) {
+func (g *generator) translateGoPackageSelector(alias, name string) (jen.Code, string, bool, error) {
 	path, ok := g.pkg.ImportAliases[alias]
 	if !ok || !strings.HasPrefix(importPathForGo(path), "") {
-		return "", "", false, nil
+		return nil, "", false, nil
 	}
 	sigs, err := g.goPackageSigsFor(importPathForGo(path))
 	if err != nil {
-		return "", "", false, err
+		return nil, "", false, err
 	}
 	if sigs.pkg == nil {
-		return "", "", false, nil
+		return nil, "", false, nil
 	}
 	obj := sigs.pkg.Scope().Lookup(name)
 	if obj == nil {
-		return "", "", false, nil
+		return nil, "", false, nil
 	}
 	switch o := obj.(type) {
 	case *types.Var, *types.Const:
-		return fmt.Sprintf("%s.%s", alias, name), goMyGoTypeString(o.Type()), true, nil
+		return jen.Id(alias).Dot(name), goMyGoTypeString(o.Type()), true, nil
 	case *types.TypeName:
-		return fmt.Sprintf("%s.%s", alias, name), goMyGoTypeString(o.Type()), true, nil
+		return jen.Id(alias).Dot(name), goMyGoTypeString(o.Type()), true, nil
 	default:
-		return "", "", false, nil
+		return nil, "", false, nil
 	}
 }

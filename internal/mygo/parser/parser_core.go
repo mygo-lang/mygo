@@ -31,6 +31,7 @@ type parser struct {
 	currentStmt              ast.Stmt
 	currentExpr              ast.Expr
 	currentLeftExpr          ast.Expr
+	currentPipeLeftExpr      ast.Expr
 	currentArgs              []ast.Expr
 	currentMapKey            ast.Expr
 	currentMapValue          ast.Expr
@@ -378,7 +379,7 @@ func (p *parser) parseFuncDecl(allowEmpty bool) (*FuncDecl, error) {
 		return nil, err
 	}
 	var where []Constraint
-	if p.peekKeyword("where") {
+	if p.peekKeyword("using") {
 		_ = p.next()
 		for {
 			constraintName, args, err := p.parseConstraint()
@@ -392,13 +393,13 @@ func (p *parser) parseFuncDecl(allowEmpty bool) (*FuncDecl, error) {
 		}
 	}
 	if allowEmpty && (p.peekKeyword("end") || p.peekKeyword("func") || p.peekKeyword("enum") || p.peekKeyword("struct") || p.peekKeyword("interface") || p.peekKeyword("impl") || p.peekKeyword("package") || p.peekKeyword("import")) {
-		return &FuncDecl{Line: start.line, Column: start.col, Name: funcName, TypeParams: typeParams, Params: params, Ret: ret, Where: where}, nil
+		return &FuncDecl{Line: start.line, Column: start.col, Name: funcName, TypeParams: typeParams, Params: params, Ret: ret, Using: where}, nil
 	}
 	body, err := p.parseExprUntilEnd()
 	if err != nil {
 		return nil, err
 	}
-	return &FuncDecl{Line: start.line, Column: start.col, Name: funcName, TypeParams: typeParams, Params: params, Ret: ret, Where: where, Body: body}, nil
+	return &FuncDecl{Line: start.line, Column: start.col, Name: funcName, TypeParams: typeParams, Params: params, Ret: ret, Using: where, Body: body}, nil
 }
 
 func (p *parser) parseConstraint() (string, []TypeExpr, error) {

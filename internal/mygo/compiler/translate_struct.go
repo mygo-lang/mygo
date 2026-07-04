@@ -1,23 +1,22 @@
 package compiler
 
 import (
-	"fmt"
-	"strings"
+	jen "github.com/dave/jennifer/jen"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
 )
 
-func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected string) (string, string, error) {
+func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected string) (jen.Code, string, error) {
 	st := g.pkg.Structs[n.TypeName]
 	if st == nil {
-		return "", "", common.ErrorAtPos(n.Line, n.Column, "unknown struct type %s", n.TypeName)
+		return nil, "", common.ErrorAtPos(n.Line, n.Column, "unknown struct type %s", n.TypeName)
 	}
 	typeName := sanitizeIdent(n.TypeName)
 	subst := map[string]string{}
 	if len(n.TypeArgs) > 0 {
 		if len(st.TypeParams) != len(n.TypeArgs) {
-			return "", "", common.ErrorAtPos(n.Line, n.Column, "struct %s: type arity mismatch", n.TypeName)
+			return nil, "", common.ErrorAtPos(n.Line, n.Column, "struct %s: type arity mismatch", n.TypeName)
 		}
 		for i, tp := range st.TypeParams {
 			subst[tp] = g.goType(n.TypeArgs[i], ctx.typeParams)
@@ -46,12 +45,12 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 			}
 		}
 		if fieldDecl == nil {
-			return "", "", common.ErrorAtPos(f.Line, f.Column, "unknown field %s on struct %s", f.Name, n.TypeName)
+			return nil, "", common.ErrorAtPos(f.Line, f.Column, "unknown field %s on struct %s", f.Name, n.TypeName)
 		}
 		fieldExpected := typeString(fieldDecl.Type, subst)
 		code, typ, err := g.translateExpr(f.Value, ctx, fieldExpected)
 		if err != nil {
-			return "", "", err
+			return nil, "", err
 		}
 		_ = code
 		unifyType(fieldDecl.Type, typ, typeParamSet(st.TypeParams), subst)
@@ -59,7 +58,7 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 	if len(st.TypeParams) > 0 {
 		for _, tp := range st.TypeParams {
 			if subst[tp] == "" {
-				return "", "", common.ErrorAtPos(n.Line, n.Column, "struct %s: could not infer type parameters", n.TypeName)
+				return nil, "", common.ErrorAtPos(n.Line, n.Column, "struct %s: could not infer type parameters", n.TypeName)
 			}
 		}
 	}
@@ -67,7 +66,7 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 	for _, f := range st.Fields {
 		fieldTypes[f.Name] = typeString(f.Type, subst)
 	}
-	parts := make([]string, 0, len(n.Fields))
+	parts := make(jen.Dict, len(n.Fields))
 	for _, f := range n.Fields {
 		fieldType := fieldTypes[f.Name]
 		if fieldType == "" && f.Name == "embed" {
@@ -79,38 +78,43 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 			}
 		}
 		if fieldType == "" {
-			return "", "", common.ErrorAtPos(f.Line, f.Column, "unknown field %s on struct %s", f.Name, n.TypeName)
+			return nil, "", common.ErrorAtPos(f.Line, f.Column, "unknown field %s on struct %s", f.Name, n.TypeName)
 		}
 		code, _, err := g.translateExpr(f.Value, ctx, fieldType)
 		if err != nil {
-			return "", "", err
+			return nil, "", err
 		}
 		key := exportName(f.Name)
 		if f.Name == "embed" {
 			key = fieldType
 		}
-		parts = append(parts, fmt.Sprintf("%s: %s", key, codeString(code)))
+		fieldKey := jen.Id(key)
+		parts[fieldKey] = code
 	}
-	typeArgStr := ""
 	if len(n.TypeArgs) > 0 {
-		var args []string
+		var args []jen.Code
 		for _, arg := range n.TypeArgs {
-			args = append(args, g.goType(arg, ctx.typeParams))
+			args = append(args, jen.Id(g.goType(arg, ctx.typeParams)))
 		}
-		typeArgStr = "[" + strings.Join(args, ", ") + "]"
+		return jen.Lit(jen.DictFunc(func(d jen.Dict) {
+			for k, v := range parts {
+				d[k] = v
+			}
+		})).Index(args...), typeString(&NamedType{Name: n.TypeName, Args: n.TypeArgs}, nil), nil
 	} else if len(st.TypeParams) > 0 {
-		var args []string
+		var args []jen.Code
 		for _, tp := range st.TypeParams {
-			args = append(args, subst[tp])
+			args = append(args, jen.Id(subst[tp]))
 		}
-		typeArgStr = "[" + strings.Join(args, ", ") + "]"
+		return jen.Lit(jen.DictFunc(func(d jen.Dict) {
+			for k, v := range parts {
+				d[k] = v
+			}
+		})).Index(args...), typeString(&NamedType{Name: n.TypeName, Args: n.TypeArgs}, nil), nil
 	}
-	typeArgs := n.TypeArgs
-	if len(typeArgs) == 0 && len(st.TypeParams) > 0 {
-		typeArgs = make([]TypeExpr, 0, len(st.TypeParams))
-		for _, tp := range st.TypeParams {
-			typeArgs = append(typeArgs, &NamedType{Name: subst[tp]})
+	return jen.Lit(jen.DictFunc(func(d jen.Dict) {
+		for k, v := range parts {
+			d[k] = v
 		}
-	}
-	return fmt.Sprintf("%s%s{%s}", typeName, typeArgStr, strings.Join(parts, ", ")), typeString(&NamedType{Name: n.TypeName, Args: typeArgs}, nil), nil
+	})).Index(jen.Id(typeName)), typeString(&NamedType{Name: n.TypeName, Args: n.TypeArgs}, nil), nil
 }

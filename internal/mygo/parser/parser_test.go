@@ -1,6 +1,10 @@
 package parser
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/mygo-lang/mygo/internal/mygo/ast"
+)
 
 func TestParseFileSupportsPackageAndFuncDecl(t *testing.T) {
 	src := `package main
@@ -167,7 +171,7 @@ end
 func TestParseFilePreservesPipePrecedence(t *testing.T) {
 	src := `package main
 func demo() -> Int
-  1 |> add(2) || 3 <| wrap(4)
+  1 + 2 |> add(3)
 end
 `
 	file, err := ParseFile(src)
@@ -182,14 +186,18 @@ end
 	if !ok {
 		t.Fatalf("FuncDecl.Body type = %T, want *BinaryExpr", fn.Body)
 	}
-	if bin.Op != "||" {
-		t.Fatalf("BinaryExpr.Op = %q, want %q", bin.Op, "||")
+	if bin.Op != "|>" {
+		t.Fatalf("BinaryExpr.Op = %q, want %q", bin.Op, "|>")
 	}
-	if _, ok := bin.Left.(*BinaryExpr); !ok {
+	left, ok := bin.Left.(*BinaryExpr)
+	if !ok {
 		t.Fatalf("BinaryExpr.Left type = %T, want *BinaryExpr", bin.Left)
 	}
-	if _, ok := bin.Right.(*BinaryExpr); !ok {
-		t.Fatalf("BinaryExpr.Right type = %T, want *BinaryExpr", bin.Right)
+	if left.Op != "+" {
+		t.Fatalf("BinaryExpr.Left.Op = %q, want %q", left.Op, "+")
+	}
+	if _, ok := bin.Right.(*ast.CallExpr); !ok {
+		t.Fatalf("BinaryExpr.Right type = %T, want *CallExpr", bin.Right)
 	}
 }
 
@@ -300,9 +308,9 @@ end
 	}
 }
 
-func TestParseFileSupportsWhereClauses(t *testing.T) {
+func TestParseFileSupportsUsingClauses(t *testing.T) {
 	src := `package main
-func eq[A](left: A, right: A) -> Bool where Eq[A], Show[A]
+func eq[A](left: A, right: A) -> Bool using Eq[A], Show[A]
   true
 end
 `
@@ -317,27 +325,27 @@ end
 	if got := len(fn.TypeParams); got != 1 || fn.TypeParams[0] != "A" {
 		t.Fatalf("FuncDecl.TypeParams = %#v, want [A]", fn.TypeParams)
 	}
-	if got := len(fn.Where); got != 2 {
-		t.Fatalf("len(FuncDecl.Where) = %d, want %d", got, 2)
+	if got := len(fn.Using); got != 2 {
+		t.Fatalf("len(FuncDecl.Using) = %d, want %d", got, 2)
 	}
-	if fn.Where[0].Name != "Eq" {
-		t.Fatalf("FuncDecl.Where[0].Name = %q, want %q", fn.Where[0].Name, "Eq")
+	if fn.Using[0].Name != "Eq" {
+		t.Fatalf("FuncDecl.Using[0].Name = %q, want %q", fn.Using[0].Name, "Eq")
 	}
-	if got := len(fn.Where[0].Args); got != 1 {
-		t.Fatalf("len(FuncDecl.Where[0].Args) = %d, want %d", got, 1)
+	if got := len(fn.Using[0].Args); got != 1 {
+		t.Fatalf("len(FuncDecl.Using[0].Args) = %d, want %d", got, 1)
 	}
-	if fn.Where[1].Name != "Show" {
-		t.Fatalf("FuncDecl.Where[1].Name = %q, want %q", fn.Where[1].Name, "Show")
+	if fn.Using[1].Name != "Show" {
+		t.Fatalf("FuncDecl.Using[1].Name = %q, want %q", fn.Using[1].Name, "Show")
 	}
-	if got := len(fn.Where[1].Args); got != 1 {
-		t.Fatalf("len(FuncDecl.Where[1].Args) = %d, want %d", got, 1)
+	if got := len(fn.Using[1].Args); got != 1 {
+		t.Fatalf("len(FuncDecl.Using[1].Args) = %d, want %d", got, 1)
 	}
 }
 
-func TestParseFileSupportsInterfaceWhereClauses(t *testing.T) {
+func TestParseFileSupportsInterfaceUsingClauses(t *testing.T) {
 	src := `package main
 interface Show[A]
-  func show(value: A) -> String where Eq[A]
+  func show(value: A) -> String using Eq[A]
 end
 `
 	file, err := ParseFile(src)
@@ -352,11 +360,11 @@ end
 		t.Fatalf("len(InterfaceDecl.Methods) = %d, want %d", got, 1)
 	}
 	method := iface.Methods[0]
-	if got := len(method.Where); got != 1 {
-		t.Fatalf("len(FuncDecl.Where) = %d, want %d", got, 1)
+	if got := len(method.Using); got != 1 {
+		t.Fatalf("len(FuncDecl.Using) = %d, want %d", got, 1)
 	}
-	if method.Where[0].Name != "Eq" {
-		t.Fatalf("FuncDecl.Where[0].Name = %q, want %q", method.Where[0].Name, "Eq")
+	if method.Using[0].Name != "Eq" {
+		t.Fatalf("FuncDecl.Using[0].Name = %q, want %q", method.Using[0].Name, "Eq")
 	}
 }
 

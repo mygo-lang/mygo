@@ -1,7 +1,6 @@
 package compiler
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
@@ -35,7 +34,7 @@ func (g *generator) bindLocal(ctx *exprCtx, source, typ string, mutable bool) st
 	return actual
 }
 
-func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) (string, string, error) {
+func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) (jen.Code, string, error) {
 	returnExpected := expected
 	if returnExpected == "" {
 		returnExpected = ctx.retType
@@ -58,12 +57,12 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 			}
 			code, typ, err := g.translateExpr(s.Expr, child, stmtExpected)
 			if err != nil {
-				return "", "", err
+				return nil, "", err
 			}
 			if isLast && expected != "" {
 				if typ == "" {
 					line, col := common.NodePos(s)
-					return "", "", common.ErrorAtPos(line, col, "block must end with an expression returning %s", expected)
+					return nil, "", common.ErrorAtPos(line, col, "block must end with an expression returning %s", expected)
 				}
 				b = b.Block(jen.Return(code))
 				continue
@@ -78,26 +77,26 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 			if s.Value != nil {
 				code, typ, err := g.translateExpr(s.Value, child, returnExpected)
 				if err != nil {
-					return "", "", err
+					return nil, "", err
 				}
 				if returnExpected == "" {
 					line, col := common.NodePos(s)
-					return "", "", common.ErrorAtPos(line, col, "return with a value requires a non-unit function")
+					return nil, "", common.ErrorAtPos(line, col, "return with a value requires a non-unit function")
 				}
 				if typ == "" {
 					line, col := common.NodePos(s)
-					return "", "", common.ErrorAtPos(line, col, "return value must have type %s", returnExpected)
+					return nil, "", common.ErrorAtPos(line, col, "return value must have type %s", returnExpected)
 				}
 				b = b.Block(jen.Return(code))
 			} else if returnExpected != "" {
 				line, col := common.NodePos(s)
-				return "", "", common.ErrorAtPos(line, col, "return requires a value of type %s", returnExpected)
+				return nil, "", common.ErrorAtPos(line, col, "return requires a value of type %s", returnExpected)
 			}
 		case *LetStmt:
 			lastWasExprStmt = false
 			code, typ, err := g.translateExpr(s.Value, child, g.goType(s.Type, child.typeParams))
 			if err != nil {
-				return "", "", err
+				return nil, "", err
 			}
 			if s.Name == "_" {
 				if stmtIsStatementSafe(s.Value) {
@@ -122,31 +121,31 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 			lastWasExprStmt = false
 			actualName, ok := child.bindings[s.Name]
 			if !ok {
-				return "", "", common.ErrorAtPos(s.Line, s.Column, "unknown binding %q", s.Name)
+				return nil, "", common.ErrorAtPos(s.Line, s.Column, "unknown binding %q", s.Name)
 			}
 			if !child.mutable[actualName] {
-				return "", "", common.ErrorAtPos(s.Line, s.Column, "cannot assign to immutable binding %q", s.Name)
+				return nil, "", common.ErrorAtPos(s.Line, s.Column, "cannot assign to immutable binding %q", s.Name)
 			}
 			targetType := child.locals[s.Name]
 			code, _, err := g.translateExpr(s.Value, child, targetType)
 			if err != nil {
-				return "", "", err
+				return nil, "", err
 			}
 			b = b.Block(jen.Id(actualName), jen.Op("=").Add(code))
 		default:
 			lastWasExprStmt = false
 			line, col := common.NodePos(stmt)
-			return "", "", common.ErrorAtPos(line, col, "unsupported statement %#v", stmt)
+			return nil, "", common.ErrorAtPos(line, col, "unsupported statement %#v", stmt)
 		}
 	}
 	if expected != "" && !lastWasExprStmt && !sawReturn {
 		line, col := common.NodePos(n)
-		return "", "", common.ErrorAtPos(line, col, "block must end with an expression returning %s", expected)
+		return nil, "", common.ErrorAtPos(line, col, "block must end with an expression returning %s", expected)
 	}
-	return b.GoString(), expected, nil
+	return b, expected, nil
 }
 
-func (g *generator) translateFuncLit(n *FuncLitExpr, outer *exprCtx) (string, string, error) {
+func (g *generator) translateFuncLit(n *FuncLitExpr, outer *exprCtx) (jen.Code, string, error) {
 	retType := g.goReturnType(n.Ret, outer.typeParams)
 	b := jen.Func().Params()
 	child := outer.child()
@@ -163,7 +162,7 @@ func (g *generator) translateFuncLit(n *FuncLitExpr, outer *exprCtx) (string, st
 	}
 	body, bodyType, err := g.translateExpr(n.Body, child, retType)
 	if err != nil {
-		return "", "", err
+		return nil, "", err
 	}
 	if retType == "" {
 		b = b.Block(body)
@@ -171,23 +170,23 @@ func (g *generator) translateFuncLit(n *FuncLitExpr, outer *exprCtx) (string, st
 		b = b.Block(jen.Return(body))
 	}
 	_ = bodyType
-	return b.GoString(), retType, nil
+	return b, retType, nil
 }
 
-func (g *generator) translateIf(n *IfExpr, ctx *exprCtx, expected string) (string, string, error) {
+func (g *generator) translateIf(n *IfExpr, ctx *exprCtx, expected string) (jen.Code, string, error) {
 	cond, _, err := g.translateExpr(n.Cond, ctx, "")
 	if err != nil {
-		return "", "", err
+		return nil, "", err
 	}
 	thenCtx := ctx.child()
 	elseCtx := ctx.child()
 	thenCode, thenType, err := g.translateExpr(n.Then, thenCtx, expected)
 	if err != nil {
-		return "", "", err
+		return nil, "", err
 	}
 	elseCode, elseType, err := g.translateExpr(n.Else, elseCtx, expected)
 	if err != nil {
-		return "", "", err
+		return nil, "", err
 	}
 	resultType := expected
 	if resultType == "" {
@@ -215,18 +214,18 @@ func (g *generator) translateIf(n *IfExpr, ctx *exprCtx, expected string) (strin
 		b = b.Block(jen.If(cond).Block(jen.Return(elseCode)))
 	}
 	_, _, _ = thenType, elseType, cond
-	return b.GoString(), resultType, nil
+	return b, resultType, nil
 }
 
-func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string) (string, string, error) {
+func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string) (jen.Code, string, error) {
 	targetCode, targetType, err := g.translateExpr(n.Target, ctx, "")
 	if err != nil {
-		return "", "", err
+		return nil, "", err
 	}
 	enumName, enumArgs := splitTypeArgs(targetType)
 	enumDecl := g.pkg.Enums[enumName]
 	if enumDecl == nil {
-		return "", "", common.ErrorAtPos(n.Line, n.Column, "switch target %q is not an enum", targetType)
+		return nil, "", common.ErrorAtPos(n.Line, n.Column, "switch target %q is not an enum", targetType)
 	}
 	needsSwitchVar := false
 	for _, c := range n.Cases {
@@ -294,20 +293,13 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 		)
 	}
 
-	// Wrap in a file to render
-	file := jen.NewFile("")
-	file.Add(switchExpr)
-	var out bytes.Buffer
-	if err := file.Render(&out); err != nil {
-		return "", "", err
-	}
-	return out.String(), expected, nil
+	return switchExpr, expected, nil
 }
 
-func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (string, string, error) {
+func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (jen.Code, string, error) {
 	cond, _, err := g.translateExpr(n.Cond, ctx, "bool")
 	if err != nil {
-		return "", "", err
+		return nil, "", err
 	}
 
 	// Build for loop body using Jennifer
@@ -383,13 +375,7 @@ func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (string, string, 
 		jen.For(jen.Id("_").Op(":=").Add(cond)).Block(forBlock),
 	)
 
-	var out bytes.Buffer
-	file := jen.NewFile("")
-	file.Add(forLoop)
-	if err := file.Render(&out); err != nil {
-		return "", "", err
-	}
-	return out.String(), "", nil
+	return forLoop, "", nil
 }
 
 func (g *generator) translatePattern(p Pattern, enum *EnumDecl, enumArgs []string, switchVar string, body Expr) (string, map[string]bindingInfo, error) {

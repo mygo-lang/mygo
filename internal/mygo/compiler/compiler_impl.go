@@ -58,98 +58,11 @@ func (g *generator) genGlobals() (string, error) {
 		out.WriteString("\n")
 	}
 	out.WriteString(g.genHKTType())
-	out.WriteString(g.genTypeclassDispatchers())
 	return out.String(), nil
 }
 
 func (g *generator) genTypeclassDispatchers() string {
-	file := jen.NewFile("")
-	for _, ifaceName := range g.sortedTypeclassNames() {
-		iface := g.pkg.Interfaces[ifaceName]
-		hktSet := g.hktParams(iface)
-		hasHKT := len(hktSet) > 0
-		for _, m := range iface.Methods {
-			retType := typeStringReturn(m.Ret, nil)
-			// Generate dispatch registry variable
-			registryName := dispatchRegistryName(ifaceName, m.Name)
-			paramAnyTypes := make([]jen.Code, 0, len(m.Params))
-			for range m.Params {
-				paramAnyTypes = append(paramAnyTypes, jen.Id("any"))
-			}
-			mapType := jen.Index(jen.String()).Func().Params(paramAnyTypes...)
-			if retType != "" {
-				mapType = mapType.Add(jen.Id(retType))
-			}
-			file.Var().Id(registryName).Op("=").Make(mapType)
-
-			// Generate dispatch function
-			fn := jen.Func().Id(dispatchFuncName(ifaceName, m.Name))
-			if hasHKT {
-				fn = fn.IndexFunc(func(gg *jen.Group) {
-					for i, tp := range iface.TypeParams {
-						if i > 0 {
-							gg.Add(jen.Op(","))
-						}
-						gg.Add(jen.Id(tp), jen.Id("any"))
-					}
-				})
-			}
-			params := make([]jen.Code, 0, len(m.Params))
-			for _, p := range m.Params {
-				if len(params) > 0 {
-					params = append(params, jen.Op(","))
-				}
-				params = append(params, jen.Id(p.Name), jen.Id("any"))
-			}
-			fn = fn.Params(params...)
-			if retType != "" {
-				fn = fn.Add(jen.Id(retType))
-			}
-
-			// Build function body
-			bodyBlock := jen.BlockFunc(func(b *jen.Group) {
-				// key := dispatchKeyExpr
-				keyExpr := dispatchKeyExpr(m.Params, nil)
-				b.Add(jen.Id("key").Op(":=").Id(keyExpr))
-
-				// if fn, ok := registry[key]; ok { ... }
-				ifBlock := jen.If(
-					jen.Id("fn").Op(":=").Id(registryName).Index(jen.Id("key")),
-					jen.Id("ok"),
-				).BlockFunc(func(ib *jen.Group) {
-					callArgs := make([]jen.Code, 0, len(m.Params))
-					for i, p := range m.Params {
-						if i > 0 {
-							callArgs = append(callArgs, jen.Op(","))
-						}
-						callArgs = append(callArgs, jen.Id(p.Name))
-					}
-					if retType != "" {
-						ib.Add(jen.Return(jen.Id("fn").Call(callArgs...)))
-					} else {
-						ib.Add(jen.Id("fn").Call(callArgs...))
-						ib.Add(jen.Return())
-					}
-				})
-				b.Add(ifBlock)
-
-				// panic("missing typeclass implementation")
-				b.Add(jen.Id("panic").Call(jen.Lit("missing typeclass implementation")))
-
-				if retType == "" {
-					b.Add(jen.Return())
-				}
-			})
-			fn.Block(bodyBlock)
-			file.Add(fn)
-			file.Line()
-		}
-	}
-	var out bytes.Buffer
-	if err := file.Render(&out); err != nil {
-		return ""
-	}
-	return out.String()
+	return ""
 }
 
 func (p *Package) sortedImports() []importSpec {
@@ -199,13 +112,10 @@ func (g *generator) genHKTType() string {
 		return ""
 	}
 	file := jen.NewFile("")
-	file.Type().Id("HKTType").Id("any")
-	file.Type().Id("HKT1").Index(jen.Id("F").Id("any")).Interface(jen.Id("HKT1Impl").Params(jen.Id("F")))
-	file.Type().Id("HKT2").Index(jen.Id("A").Id("any")).Interface(jen.Id("HKT2Impl").Params(jen.Id("A")))
-	file.Type().Id("HKT").Index(jen.Id("F").Id("any"), jen.Id("A").Id("any")).Interface(
-		jen.Id("HKT1").Index(jen.Id("F")),
-		jen.Id("HKT2").Index(jen.Id("A")),
-	)
+	file.Type().Id("HKTType").Interface()
+	file.Type().Id("HKT1").Index(jen.Id("F").Id("any")).Interface()
+	file.Type().Id("HKT2").Index(jen.Id("A").Id("any")).Interface()
+	file.Type().Id("HKT").Index(jen.Id("F").Id("any"), jen.Id("A").Id("any")).Interface()
 	return file.GoString() + "\n"
 }
 
@@ -273,6 +183,9 @@ func (g *generator) genStruct(d *StructDecl) []jen.Code {
 func (g *generator) genInterface(d *InterfaceDecl) []jen.Code {
 	methods := make([]jen.Code, 0, len(d.Methods))
 	for _, m := range d.Methods {
+		if len(m.TypeParams) > 0 {
+			continue
+		}
 		params := make([]jen.Code, 0, len(m.Params))
 		for _, p := range m.Params {
 			params = append(params, jen.Id(p.Name).Add(jenTypeExpr(p.Type)))
@@ -319,25 +232,40 @@ func (g *generator) genImpl(d *ImplDecl) (string, error) {
 			params = method.Params
 			ret = method.Ret
 		}
+		combinedTypeParams := typeParamSet(d.TypeParams)
+		for tp := range typeParamSet(sig.TypeParams) {
+			combinedTypeParams[tp] = struct{}{}
+		}
+		hktSet := g.hktParams(iface)
+		retType := g.goHKTReturnType(ret, hktSet, combinedTypeParams)
 		ctx := &exprCtx{
-			locals:          map[string]string{},
-			bindings:        map[string]string{},
-			sourceTypes:     map[string]string{},
-			mutable:         map[string]bool{},
-			typeParams:      map[string]struct{}{},
+			locals:      map[string]string{},
+			bindings:    map[string]string{},
+			sourceTypes: map[string]string{},
+			mutable:     map[string]bool{},
+			typeParams:  combinedTypeParams,
 			constraintFuncs: map[string]string{},
-			retType:         typeStringReturn(ret, subst),
-			currentImpl:     ifaceName,
+			retType:     retType,
+			currentImpl: ifaceName,
 		}
 
-		// Build helper function signature
 		fn := jen.Func().Id(helperFuncName(sig.Name, typeKey))
+		if len(sig.TypeParams) > 0 {
+			fn = fn.IndexFunc(func(gg *jen.Group) {
+				for i, tp := range sig.TypeParams {
+					if i > 0 {
+						gg.Add(jen.Op(","))
+					}
+					gg.Add(jen.Id(tp), jen.Id("any"))
+				}
+			})
+		}
 		paramList := make([]jen.Code, 0, len(params))
 		for _, p := range params {
 			if len(paramList) > 0 {
 				paramList = append(paramList, jen.Op(","))
 			}
-			goType := typeString(p.Type, subst)
+			goType := g.goHKTType(p.Type, hktSet, combinedTypeParams)
 			paramList = append(paramList, jen.Id(p.Name), jen.Id(goType))
 			ctx.locals[p.Name] = goType
 			ctx.sourceTypes[p.Name] = typeString(p.Type, subst)
@@ -346,12 +274,10 @@ func (g *generator) genImpl(d *ImplDecl) (string, error) {
 		}
 		fn = fn.Params(paramList...)
 
-		retType := typeStringReturn(ret, subst)
 		if retType != "" {
 			fn = fn.Add(jen.Id(retType))
 		}
 
-		// Build function body
 		bodyBlock := jen.BlockFunc(func(b *jen.Group) {
 			if bodyExpr == nil {
 				if retType == "" {
@@ -359,73 +285,24 @@ func (g *generator) genImpl(d *ImplDecl) (string, error) {
 				} else {
 					b.Add(jen.Id("panic").Call(jen.Lit("unimplemented")))
 				}
+				return
+			}
+			expr, _, err := g.translateExpr(bodyExpr, ctx, retType)
+			if err != nil {
+				return
+			}
+			unitCode := codeString(expr)
+			if retType == "" {
+				if unitCode != "" {
+					b.Add(jen.Id(unitCode))
+				}
+				b.Add(jen.Return())
 			} else {
-				expr, _, err := g.translateExpr(bodyExpr, ctx, retType)
-				if err != nil {
-					return
-				}
-				unitCode := codeString(expr)
-				if retType == "" {
-					// Unit body: write expression without return
-					if unitCode != "" {
-						b.Add(jen.Id(unitCode))
-					}
-					b.Add(jen.Return())
-				} else {
-					b.Add(jen.Return(jen.Id(unitCode)))
-				}
+				b.Add(jen.Return(jen.Id(unitCode)))
 			}
 		})
 		fn = fn.Block(bodyBlock)
 		allCode = append(allCode, fn)
-
-		// Generate init function for dispatch registration
-		initBlock := jen.BlockFunc(func(ib *jen.Group) {
-			// Type the parameters
-			for _, p := range sig.Params {
-				goType := typeString(p.Type, subst)
-				ib.Add(
-					jen.Id(p.Name + "Typed").
-						Op(":=").
-						Id(p.Name).
-						Assert(jen.Id(goType)),
-				)
-			}
-			// Build call arguments
-			callArgs := make([]jen.Code, 0, len(sig.Params))
-			for _, p := range sig.Params {
-				callArgs = append(callArgs, jen.Id(p.Name+"Typed"))
-			}
-			// Registry assignment
-			registryAssign := jen.Id(dispatchRegistryName(ifaceName, sig.Name)).
-				Index(jen.Lit(g.implDispatchKey(sig.Params, subst)))
-
-			if retType != "" {
-				ib.Add(registryAssign.Op("=").Func().ParamsFunc(func(gr *jen.Group) {
-					for i, p := range sig.Params {
-						if i > 0 {
-							gr.Add(jen.Op(","))
-						}
-						gr.Add(jen.Id(p.Name), jen.Id("any"))
-					}
-				}).BlockFunc(func(gr *jen.Group) {
-					gr.Add(jen.Return(jen.Id(helperFuncName(sig.Name, typeKey)).Call(callArgs...)))
-				}))
-			} else {
-				ib.Add(registryAssign.Op("=").Func().ParamsFunc(func(gr *jen.Group) {
-					for i, p := range sig.Params {
-						if i > 0 {
-							gr.Add(jen.Op(","))
-						}
-						gr.Add(jen.Id(p.Name), jen.Id("any"))
-					}
-				}).BlockFunc(func(gr *jen.Group) {
-					gr.Add(jen.Id(helperFuncName(sig.Name, typeKey)).Call(callArgs...))
-					gr.Add(jen.Return())
-				}))
-			}
-		})
-		allCode = append(allCode, jen.Func().Id("init").Block(initBlock))
 	}
 
 	// Render all code into a single file
@@ -465,7 +342,7 @@ func (g *generator) genFunc(d *FuncDecl) (string, error) {
 	}
 	constraintParams := map[string]constraintParam{}
 	var constraintOrder []string
-	for _, c := range d.Where {
+	for _, c := range d.Using {
 		iface := g.pkg.Interfaces[c.Name]
 		if iface == nil {
 			return "", common.ErrorAtPos(c.Line, c.Column, "function %s: missing interface %s", d.Name, c.Name)
