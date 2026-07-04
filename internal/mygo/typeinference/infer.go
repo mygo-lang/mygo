@@ -255,16 +255,23 @@ func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo,
 		if !ok {
 			continue
 		}
+		// Convert constraint type args to MonoTypes for substitution.
+		constraintArgTypes := make([]MonoType, len(c.Args))
+		for i, arg := range c.Args {
+			constraintArgTypes[i] = typeFromAST(arg)
+		}
 		for _, m := range iface.Methods {
-			// For each constraint method, create a function type from the interface
+			// For each constraint method, create a function type from the interface,
+			// substituting interface type params with concrete constraint arg types.
 			mParamTypes := make([]MonoType, len(m.Params))
 			for i, mp := range m.Params {
-				// Apply constraint type args to the method parameter types
-				mParamTypes[i] = typeFromAST(mp.Type)
+				mt := typeFromAST(mp.Type)
+				mParamTypes[i] = substituteTypeParams(mt, iface.TypeParams, constraintArgTypes)
 			}
 			var mRetType MonoType
 			if m.Ret != nil {
 				mRetType = typeFromAST(m.Ret)
+				mRetType = substituteTypeParams(mRetType, iface.TypeParams, constraintArgTypes)
 			} else {
 				mRetType = TUnit{}
 			}
@@ -515,6 +522,51 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 	if field, ok := n.Callee.(*FieldExpr); ok {
 		if id, ok := field.Expr.(*IdentExpr); ok && id.Name == "Ref" && field.Field == "new" {
 			return inferRefNew(env, n, state)
+		}
+		if id, ok := field.Expr.(*IdentExpr); !ok || state.GoPackages[id.Name] == nil {
+			receiverType, s1, preds1, err := inferExpr(env, field.Expr, state)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			argTypes := make([]MonoType, len(n.Args))
+			argSubst := s1
+			var allPreds []Predicate
+			allPreds = append(allPreds, preds1...)
+
+			for i, arg := range n.Args {
+				argType, s, preds, err := inferExpr(env, arg, state)
+				if err != nil {
+					return nil, nil, nil, fmt.Errorf("argument %d of call: %w", i, err)
+				}
+				argTypes[i] = argSubst.ApplyMT(argType)
+				argSubst = Compose(argSubst, s)
+				allPreds = append(allPreds, preds...)
+			}
+
+			receiverType = argSubst.ApplyMT(receiverType)
+			if fn, ok := receiverType.(TFunc); ok && fn.Variadic {
+				return inferVariadicCall(fn, argTypes, argSubst, allPreds)
+			}
+
+			retVar := TVar{ID: state.Fresh()}
+			funcType := TFunc{Args: append([]MonoType{receiverType}, argTypes...), Ret: retVar}
+			argSubst, err = Unify(receiverType, receiverType, argSubst)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			calleeType, s2, preds2, err := inferExpr(env, n.Callee, state)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			argSubst = Compose(argSubst, s2)
+			allPreds = append(allPreds, preds2...)
+			calleeType = argSubst.ApplyMT(calleeType)
+			argSubst, err = Unify(calleeType, funcType, argSubst)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("call type mismatch: %w", err)
+			}
+			return argSubst.ApplyMT(retVar), argSubst, allPreds, nil
 		}
 	}
 

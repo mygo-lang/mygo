@@ -352,7 +352,11 @@ func_sig
 		p.expectTypeSuffix = true
 		p.currentTypeParams = nil
 	}
-	opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause {
+	opt_type_params LPAREN maybe_param_list RPAREN ARROW type {
+		p := yylex.(*parser)
+		p.savedRetType = p.currentType
+	}
+	opt_using_clause {
 		p := yylex.(*parser)
 		if p.currentInterface != nil {
 			p.currentInterface.Methods = append(p.currentInterface.Methods, &ast.FuncDecl{
@@ -361,7 +365,7 @@ func_sig
 				Name: $2.lit,
 				TypeParams: append([]string(nil), p.currentTypeParams...),
 				Params: append([]ast.Param(nil), p.currentParams...),
-				Ret: p.currentType,
+				Ret: p.savedRetType,
 				Using: append([]ast.Constraint(nil), p.currentWhere...),
 			})
 		}
@@ -449,11 +453,11 @@ func_decl
 		p.expectTypeSuffix = true
 		p.currentTypeParams = nil
 	}
-	opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause {
+	opt_type_params LPAREN maybe_param_list RPAREN ARROW type {
 		p := yylex.(*parser)
 		p.savedRetType = p.currentType
 	}
-	opt_newlines block_expr opt_newlines END {
+	opt_using_clause opt_newlines block_expr opt_newlines END {
 		p := yylex.(*parser)
 		body := bodyExprFromBlock(p.currentExpr)
 		p.currentFunc = &ast.FuncDecl{

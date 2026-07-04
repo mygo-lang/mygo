@@ -64,6 +64,37 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 				}
 			}
 		}
+		// Handle method calls through typeclass constraints (e.g., value.show()
+		// inside a function with using FancyShow[Int64]).
+		if bindings, ok := ctx.typeclassMethods[field.Field]; ok && len(bindings) > 0 {
+			receiverCode, _, err := g.translateExpr(field.Expr, ctx, "")
+			if err != nil {
+				return nil, "", err
+			}
+			argCodes := []jen.Code{receiverCode}
+			for _, a := range n.Args {
+				code, _, err := g.translateExpr(a, ctx, "")
+				if err != nil {
+					return nil, "", err
+				}
+				argCodes = append(argCodes, code)
+			}
+			best := typeclassBindingBest(bindings)
+			funcName, ok := ctx.constraintFuncs[field.Field]
+			if !ok {
+				_, ok = g.interfaceByMethod[field.Field]
+				if ok {
+					funcName = helperFuncName(field.Field, typeKeyFromType(""))
+				} else {
+					funcName = helperFuncName(field.Field, typeKeyFromType(best.RetType))
+				}
+			}
+			retType := best.RetType
+			if retType == "" {
+				retType = ctx.retType
+			}
+			return jen.Id(funcName).Call(argCodes...), retType, nil
+		}
 	}
 	if id, ok := n.Callee.(*IdentExpr); ok {
 		if st := g.pkg.Structs[id.Name]; st != nil && len(n.Args) == len(st.Fields) && len(st.Fields) > 0 && strings.HasPrefix(st.Fields[0].Name, "F") {
