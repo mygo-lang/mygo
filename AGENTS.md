@@ -91,6 +91,7 @@
 - `where` has been removed from the main syntax; typeclass requirements now use `using` only. The parser rejects `where` with an explicit migration error.
 - `impl` supports two forms: `impl Type : Interface[Args]` (named/generic) and `impl Interface[Args]` (anonymous default instance).
 - `switch` pattern parsing currently accepts wildcard patterns and variant patterns with optional identifier arguments, such as `Some(x)`.
+- `switch` pattern parsing also accepts tuple patterns such as `(Some(_), None)` and recursively nests them, with `_` treated as an ignore slot instead of a binding.
 - Tuple return lowering now supports multi-return Go signatures when the declared function return type is a tuple, and tuple destructuring in `let` only activates when the binding uses parenthesized names.
 - Keep `examples/main/main.mygo` aligned with the compiler's current boundary behavior, especially for `Ref`, `Option`, and `Result`.
 - Typeclass lookup should respect lexical scope first: local bindings and function-value bindings shadow typeclass names, `using`-bound methods are visible inside nested blocks, and package-level dispatch is the fallback.

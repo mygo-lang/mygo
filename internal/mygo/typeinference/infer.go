@@ -969,44 +969,9 @@ func inferSwitch(env TypeEnv, n *SwitchExpr, state *InferState) (MonoType, Subst
 
 	for _, cas := range n.Cases {
 		caseEnv := env.Clone()
-
-		// Extend environment with pattern bindings
-		switch pat := cas.Pattern.(type) {
-		case *VariantPattern:
-			activeEnum := enumDecl
-			variant, ok := findEnumVariant(activeEnum, pat.Name)
-			if !ok {
-				activeEnum, variant, ok = lookupVariant(state.PkgInfo, pat.Name)
-			}
-			if ok {
-				// For each pattern arg, look up the variant field type and
-				// substitute enum type parameters with the target type arguments.
-				// e.g. target Option[Int] + variant Some(A) → binding a: Int
-				for i, arg := range pat.Args {
-					if arg == "_" {
-						continue
-					}
-					bound := false
-					if i < len(variant.Fields) {
-						fieldType := typeFromAST(variant.Fields[i].Type)
-						if activeEnum != nil && len(activeEnum.TypeParams) > 0 && len(enumTypeArgs) > 0 {
-							fieldType = substituteTypeParams(fieldType, activeEnum.TypeParams, enumTypeArgs)
-						}
-						caseEnv[arg] = &Scheme{Body: QualifiedType{Body: fieldType}}
-						bound = true
-					}
-					if !bound {
-						caseEnv[arg] = &Scheme{Body: QualifiedType{Body: TVar{ID: state.Fresh()}}}
-					}
-				}
-			} else {
-				for _, arg := range pat.Args {
-					if arg == "_" {
-						continue
-					}
-					caseEnv[arg] = &Scheme{Body: QualifiedType{Body: TVar{ID: state.Fresh()}}}
-				}
-			}
+		caseEnv, err := inferPatternBindings(caseEnv, cas.Pattern, targetType, s, state, enumDecl, enumTypeArgs)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("switch pattern: %w", err)
 		}
 
 		caseBody := switchCaseBodyForInference(cas.Body, seenCaseStmts)
@@ -1031,6 +996,64 @@ func inferSwitch(env TypeEnv, n *SwitchExpr, state *InferState) (MonoType, Subst
 		resultType = s.ApplyMT(resultType)
 	}
 	return resultType, s, allPreds, nil
+}
+
+func inferPatternBindings(env TypeEnv, pat Pattern, targetType MonoType, s Subst, state *InferState, enumDecl *EnumDecl, enumTypeArgs []MonoType) (TypeEnv, error) {
+	switch p := pat.(type) {
+	case *WildcardPattern:
+		return env, nil
+	case *TuplePattern:
+		tupleType, ok := s.ApplyMT(targetType).(TCon)
+		if !ok || tupleType.Name != "Tuple" {
+			return nil, fmt.Errorf("tuple pattern requires a tuple value")
+		}
+		if len(tupleType.Args) != len(p.Elems) {
+			return nil, fmt.Errorf("tuple pattern arity mismatch")
+		}
+		for i, elem := range p.Elems {
+			newEnv, err := inferPatternBindings(env, elem, tupleType.Args[i], s, state, enumDecl, enumTypeArgs)
+			if err != nil {
+				return nil, err
+			}
+			env = newEnv
+		}
+		return env, nil
+	case *VariantPattern:
+		activeEnum := enumDecl
+		variant, ok := findEnumVariant(activeEnum, p.Name)
+		if !ok {
+			activeEnum, variant, ok = lookupVariant(state.PkgInfo, p.Name)
+		}
+		if ok {
+			for i, arg := range p.Args {
+				if arg == "_" {
+					continue
+				}
+				bound := false
+				if i < len(variant.Fields) {
+					fieldType := typeFromAST(variant.Fields[i].Type)
+					if activeEnum != nil && len(activeEnum.TypeParams) > 0 && len(enumTypeArgs) > 0 {
+						fieldType = substituteTypeParams(fieldType, activeEnum.TypeParams, enumTypeArgs)
+					}
+					env[arg] = &Scheme{Body: QualifiedType{Body: fieldType}}
+					bound = true
+				}
+				if !bound {
+					env[arg] = &Scheme{Body: QualifiedType{Body: TVar{ID: state.Fresh()}}}
+				}
+			}
+			return env, nil
+		}
+		for _, arg := range p.Args {
+			if arg == "_" {
+				continue
+			}
+			env[arg] = &Scheme{Body: QualifiedType{Body: TVar{ID: state.Fresh()}}}
+		}
+		return env, nil
+	default:
+		return nil, fmt.Errorf("unsupported pattern %T", pat)
+	}
 }
 
 func switchCaseBodyForInference(body Expr, seen map[Stmt]struct{}) Expr {

@@ -410,6 +410,34 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 				ifStmt:    jen.If(cond, jen.Id("ok")).Block(bodyBlock),
 			})
 
+		case *TuplePattern:
+			cond, err := g.translateTuplePatternCondition(pat, fmt.Sprint(targetCode), targetType, enumDecl, enumArgs)
+			if err != nil {
+				return nil, "", err
+			}
+			child := ctx.child()
+			if err := g.collectTuplePatternBindings(child, pat, fmt.Sprint(targetCode), enumDecl, enumArgs); err != nil {
+				return nil, "", err
+			}
+			body, bodyType, err := g.translateExpr(c.Body, child, expected)
+			if err != nil {
+				return nil, "", err
+			}
+			var bodyBlock jen.Code
+			if expected == "" {
+				if bodyType == "" {
+					bodyBlock = body
+				} else {
+					bodyBlock = jen.Id("_").Op("=").Add(body)
+				}
+			} else {
+				bodyBlock = jen.Return(body)
+			}
+			trans = append(trans, caseTranslation{
+				isVariant: true,
+				ifStmt:    jen.If(cond).Block(bodyBlock),
+			})
+
 		default:
 			line, col := common.NodePos(c.Pattern)
 			return nil, "", common.ErrorAtPos(line, col, "unsupported pattern %#v", c.Pattern)
@@ -555,8 +583,93 @@ func (g *generator) translatePattern(p Pattern, enum *EnumDecl, enumArgs []strin
 			}
 		}
 		return tname, bindings, nil
+	case *TuplePattern:
+		return "", nil, fmt.Errorf("tuple patterns are not supported in enum translation")
 	default:
 		line, col := common.NodePos(p)
 		return "", nil, common.ErrorAtPos(line, col, "unsupported pattern %#v", p)
 	}
+}
+
+func (g *generator) translateTuplePatternCondition(p *TuplePattern, targetExpr string, targetType string, enum *EnumDecl, enumArgs []string) (jen.Code, error) {
+	if !strings.HasPrefix(strings.TrimSpace(targetType), "struct {") {
+		return nil, fmt.Errorf("tuple pattern requires a tuple value")
+	}
+	fn := jen.Func().Params().Id("bool").BlockFunc(func(gb *jen.Group) {
+		_ = g.appendTuplePatternChecks(gb, p, targetExpr, enum, enumArgs)
+		gb.Return(jen.True())
+	})
+	return fn.Call(), nil
+}
+
+func (g *generator) collectTuplePatternBindings(ctx *exprCtx, p *TuplePattern, targetExpr string, enum *EnumDecl, enumArgs []string) error {
+	for i, elem := range p.Elems {
+		fieldExpr := fmt.Sprintf("%s.F%d", targetExpr, i)
+		switch e := elem.(type) {
+		case *WildcardPattern:
+			continue
+		case *VariantPattern:
+			for _, arg := range e.Args {
+				if arg != "_" {
+					return fmt.Errorf("tuple switch variant bindings are not supported yet")
+				}
+			}
+			variant := g.findVariant(enum, e.Name)
+			if variant == nil {
+				return fmt.Errorf("unknown variant %s of %s", e.Name, enum.Name)
+			}
+			tname := variantGoTypeName(enum.Name, variant.Name)
+			assertType := tname
+			if len(enumArgs) > 0 {
+				assertType += "[" + strings.Join(enumArgs, ", ") + "]"
+			}
+			for _, arg := range e.Args {
+				if arg != "_" {
+					ctx.bindings[arg] = fmt.Sprintf("%s.(%s).F0", fieldExpr, assertType)
+				}
+			}
+		case *TuplePattern:
+			if err := g.collectTuplePatternBindings(ctx, e, fieldExpr, enum, enumArgs); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unsupported tuple pattern %T", elem)
+		}
+	}
+	return nil
+}
+
+func (g *generator) appendTuplePatternChecks(gb *jen.Group, p *TuplePattern, targetExpr string, enum *EnumDecl, enumArgs []string) error {
+	for i, elem := range p.Elems {
+		field := fmt.Sprintf("%s.F%d", targetExpr, i)
+		switch e := elem.(type) {
+		case *WildcardPattern:
+			continue
+		case *VariantPattern:
+			for _, arg := range e.Args {
+				if arg != "_" {
+					return fmt.Errorf("tuple switch variant bindings are not supported yet")
+				}
+			}
+			variant := g.findVariant(enum, e.Name)
+			if variant == nil {
+				return fmt.Errorf("unknown variant %s of %s", e.Name, enum.Name)
+			}
+			tname := variantGoTypeName(enum.Name, variant.Name)
+			assertType := jen.Id(tname)
+			if len(enumArgs) > 0 {
+				assertType = bracketArgs(assertType, genJenIds(enumArgs))
+			}
+			gb.If(jen.List(jen.Id("_"), jen.Id("ok")).Op(":=").Id(field).Op(".").Parens(assertType), jen.Op("!").Id("ok")).Block(jen.Return(jen.False()))
+		case *TuplePattern:
+			nested := jen.Func().Params().Id("bool").BlockFunc(func(inner *jen.Group) {
+				_ = g.appendTuplePatternChecks(inner, e, field, enum, enumArgs)
+				inner.Return(jen.True())
+			}).Call()
+			gb.If(jen.Op("!").Parens(nested)).Block(jen.Return(jen.False()))
+		default:
+			return fmt.Errorf("unsupported tuple pattern %T", elem)
+		}
+	}
+	return nil
 }

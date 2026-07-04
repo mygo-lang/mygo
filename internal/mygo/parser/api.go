@@ -46,6 +46,7 @@ type AssignStmt = ast.AssignStmt
 type SwitchCase = ast.SwitchCase
 type Pattern = ast.Pattern
 type VariantPattern = ast.VariantPattern
+type TuplePattern = ast.TuplePattern
 type WildcardPattern = ast.WildcardPattern
 type SliceLitExpr = ast.SliceLitExpr
 type MapLitExpr = ast.MapLitExpr

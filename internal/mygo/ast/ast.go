@@ -403,6 +403,14 @@ type VariantPattern struct {
 
 func (*VariantPattern) patternNode() {}
 
+type TuplePattern struct {
+	Line   int
+	Column int
+	Elems  []Pattern
+}
+
+func (*TuplePattern) patternNode() {}
+
 type WildcardPattern struct {
 	Line   int
 	Column int

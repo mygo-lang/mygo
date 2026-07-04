@@ -1387,6 +1387,23 @@ pattern
 			p.currentPattern = &ast.VariantPattern{Line: $1.line, Column: $1.col, Name: $1.lit}
 		}
 	}
+	| LPAREN {
+		p := yylex.(*parser)
+		p.currentPatternElemsStack = append(p.currentPatternElemsStack, p.currentPatternElems)
+		p.currentPatternElems = nil
+	}
+	pattern_list RPAREN {
+		p := yylex.(*parser)
+		elems := append([]ast.Pattern(nil), p.currentPatternElems...)
+		if len(p.currentPatternElemsStack) > 0 {
+			idx := len(p.currentPatternElemsStack) - 1
+			p.currentPatternElems = p.currentPatternElemsStack[idx]
+			p.currentPatternElemsStack = p.currentPatternElemsStack[:idx]
+		} else {
+			p.currentPatternElems = nil
+		}
+		p.currentPattern = &ast.TuplePattern{Line: $1.line, Column: $1.col, Elems: elems}
+	}
 	| IDENT LPAREN pattern_name_list RPAREN {
 		p := yylex.(*parser)
 		args := append([]string(nil), p.currentPatternArgs...)
@@ -1412,6 +1429,17 @@ pattern_name_list
 	| UNDER {
 		p := yylex.(*parser)
 		p.currentPatternArgs = append(p.currentPatternArgs, "_")
+	}
+	;
+
+pattern_list
+	: pattern {
+		p := yylex.(*parser)
+		p.currentPatternElems = append(p.currentPatternElems, p.currentPattern)
+	}
+	| pattern_list COMMA pattern {
+		p := yylex.(*parser)
+		p.currentPatternElems = append(p.currentPatternElems, p.currentPattern)
 	}
 	;
 
