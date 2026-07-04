@@ -329,6 +329,22 @@ func inferLetDecl(d *LetStmt, env TypeEnv, state *InferState, info *TypedInfo) (
 
 	info.ExprTypes[d.Value] = valType
 
+	if len(d.Names) > 0 {
+		tuple, ok := valType.(TCon)
+		if !ok || tuple.Name != "Tuple" {
+			return nil, fmt.Errorf("binding %q: tuple destructuring requires a tuple value", d.Name)
+		}
+		if len(tuple.Args) != len(d.Names) {
+			return nil, fmt.Errorf("binding %q: tuple destructuring arity mismatch", d.Name)
+		}
+		for i, name := range d.Names {
+			elemType := s.ApplyMT(tuple.Args[i])
+			env = env.Extend(name, &Scheme{Body: QualifiedType{Body: elemType}})
+			info.BindingSchemes[name] = env[name]
+		}
+		return env, nil
+	}
+
 	if d.Mutable {
 		// var: don't generalize
 		env = env.Extend(d.Name, &Scheme{Body: QualifiedType{Body: valType, Predicates: preds}})
@@ -396,6 +412,20 @@ func inferExprRaw(env TypeEnv, e Expr, state *InferState) (MonoType, Subst, []Pr
 		return inferMapLit(env, n, state)
 	case *SetLitExpr:
 		return inferSetLit(env, n, state)
+	case *TupleLitExpr:
+		elems := make([]MonoType, 0, len(n.Elems))
+		var subst Subst = make(Subst)
+		var preds []Predicate
+		for _, e := range n.Elems {
+			t, s, ps, err := inferExpr(env, e, state)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			elems = append(elems, s.ApplyMT(t))
+			subst = Compose(subst, s)
+			preds = append(preds, ps...)
+		}
+		return TCon{Name: "Tuple", Args: elems}, subst, preds, nil
 	case *GoExpr:
 		return inferGoExpr(env, n, state)
 	}

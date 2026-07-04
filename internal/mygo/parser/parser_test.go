@@ -717,6 +717,57 @@ end
 	}
 }
 
+func TestParseFileSupportsTupleLiteralAndType(t *testing.T) {
+	file, err := ParseFile(`package main
+
+func pair() -> (Int, String)
+  (1, "a")
+end
+`)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	if _, ok := fn.Ret.(*TupleType); !ok {
+		t.Fatalf("FuncDecl.Ret type = %T, want *TupleType", fn.Ret)
+	}
+	block, ok := fn.Body.(*TupleLitExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *TupleLitExpr", fn.Body)
+	}
+	if got := len(block.Elems); got != 2 {
+		t.Fatalf("len(tuple elems) = %d, want 2", got)
+	}
+	if lit, ok := block.Elems[0].(*LiteralExpr); !ok || lit.Value != "1" {
+		t.Fatalf("tuple elem[0] = %#v, want 1", block.Elems[0])
+	}
+	if lit, ok := block.Elems[1].(*LiteralExpr); !ok || lit.Value != "a" {
+		t.Fatalf("tuple elem[1] = %#v, want \"a\"", block.Elems[1])
+	}
+}
+
+func TestParseFileSupportsUnitLiteral(t *testing.T) {
+	file, err := ParseFile(`package main
+
+func demo() -> Unit
+  ()
+end
+`)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	if _, ok := fn.Body.(*UnitLitExpr); !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *UnitLitExpr", fn.Body)
+	}
+}
+
 func TestParseFileSupportsHexOctalBinaryLiterals(t *testing.T) {
 	src := `package main
 func demo() -> Int

@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	jen "github.com/dave/jennifer/jen"
@@ -11,7 +12,7 @@ import (
 
 func stmtIsStatementSafe(expr Expr) bool {
 	switch n := expr.(type) {
-	case *CallExpr, *FuncLitExpr, *IfExpr, *SwitchExpr, *BlockExpr:
+	case *CallExpr, *FuncLitExpr, *IfExpr, *SwitchExpr, *BlockExpr, *UnitLitExpr:
 		return true
 	case *GoExpr:
 		return isUnitType(n.Result)
@@ -60,6 +61,20 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 			if isLast {
 				stmtExpected = expected
 			}
+			if isLast && len(child.retTypes) > 1 {
+				if tuple, ok := s.Expr.(*TupleLitExpr); ok {
+					values := make([]jen.Code, 0, len(tuple.Elems))
+					for i, elem := range tuple.Elems {
+						code, _, err := g.translateExpr(elem, child, child.retTypes[i])
+						if err != nil {
+							return nil, "", err
+						}
+						values = append(values, code)
+					}
+					stmtCodes = append(stmtCodes, jen.Return(values...))
+					continue
+				}
+			}
 			code, typ, err := g.translateExpr(s.Expr, child, stmtExpected)
 			if err != nil {
 				return nil, "", err
@@ -84,7 +99,7 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 				if err != nil {
 					return nil, "", err
 				}
-				if returnExpected == "" {
+				if len(child.retTypes) == 0 && returnExpected == "" {
 					line, col := common.NodePos(s)
 					return nil, "", common.ErrorAtPos(line, col, "return with a value requires a non-unit function")
 				}
@@ -92,13 +107,36 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 					line, col := common.NodePos(s)
 					return nil, "", common.ErrorAtPos(line, col, "return value must have type %s", returnExpected)
 				}
-				stmtCodes = append(stmtCodes, jen.Return(code))
+				if len(child.retTypes) > 1 {
+					stmtCodes = append(stmtCodes, jen.Return(tupleReturnValues(code, child.retTypes)...))
+				} else {
+					stmtCodes = append(stmtCodes, jen.Return(code))
+				}
 			} else if returnExpected != "" {
 				line, col := common.NodePos(s)
 				return nil, "", common.ErrorAtPos(line, col, "return requires a value of type %s", returnExpected)
 			}
 		case *LetStmt:
 			lastWasExprStmt = false
+			if len(s.Names) > 0 {
+				code, typ, err := g.translateExpr(s.Value, child, "")
+				if err != nil {
+					return nil, "", err
+				}
+				if typ == "" {
+					return nil, "", common.ErrorAtPos(s.Line, s.Column, "tuple destructuring requires a tuple value")
+				}
+				if !strings.HasPrefix(strings.TrimSpace(typ), "struct {") {
+					return nil, "", common.ErrorAtPos(s.Line, s.Column, "tuple destructuring requires a tuple value")
+				}
+				tupleTmp := g.bindLocal(child, "__tuple", typ, s.Mutable)
+				stmtCodes = append(stmtCodes, jen.Id(tupleTmp).Op(":=").Add(code))
+				for i, name := range s.Names {
+					actualName := g.bindLocal(child, name, "", s.Mutable)
+					stmtCodes = append(stmtCodes, jen.Id(actualName).Op(":=").Id(tupleTmp).Dot("F"+strconv.Itoa(i)))
+				}
+				continue
+			}
 			code, typ, err := g.translateExpr(s.Value, child, g.goType(s.Type, child.typeParams))
 			if err != nil {
 				return nil, "", err

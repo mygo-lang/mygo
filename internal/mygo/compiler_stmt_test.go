@@ -118,6 +118,98 @@ func TestCompileDirSupportsWhileLoops(t *testing.T) {
 	}
 }
 
+func TestCompileDirSupportsTupleReturnValues(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+
+  func pair() -> (Int, String)
+    (1, "a")
+  end
+
+  func demo() -> String
+    let p = pair()
+    p.F1
+  end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"func pair() (int, string) {",
+		"return 1, \"a\"",
+		"func demo() string {",
+		":= pair()",
+		".F1",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
+func TestCompileDirSupportsTupleDestructuringLet(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+
+  func pair() -> (Int, String)
+    (1, "a")
+  end
+
+  func demo() -> String
+    let (a, b) = pair()
+    b
+  end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"__tuple_",
+		"a_",
+		"b_",
+		"return b_",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
+func TestCompileDirKeepsTupleValueOnSingleLetBinding(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+
+  func pair() -> (Int, String)
+    (1, "a")
+  end
+
+  func demo() -> Int
+    let c = pair()
+    c.F0
+  end
+`)
+
+	out, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	for _, want := range []string{
+		"pair()",
+		".F0",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
 func TestCompileDirAllowsLetShadowingAndInference(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
@@ -693,16 +785,18 @@ func TestCompileDirLetsLocalBindingShadowTypeclassName(t *testing.T) {
 func TestCompileDirDeduplicatesTypeclassMethodParams(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
-  interface Show[A]
-    func show(value: A) -> String
-  end
-
   interface FancyShow[A]
     func show(value: A) -> String
   end
 
-  func demo[A](value: A) -> String using Show[A], FancyShow[Int64]
-    show(value)
+  impl Int64FancyShow: FancyShow[Int64]
+    func show(value: Int64) -> String
+	  "fancy"
+	end
+  end
+
+  func demo(value: Int64) -> String using Show[Int64], FancyShow[Int64]
+    value.show()
   end
 `)
 

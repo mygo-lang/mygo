@@ -124,6 +124,14 @@ type FuncType struct {
 
 func (*FuncType) typeNode() {}
 
+type TupleType struct {
+	Line   int
+	Column int
+	Elems  []TypeExpr
+}
+
+func (*TupleType) typeNode() {}
+
 type Expr interface{ exprNode() }
 
 type Stmt interface{ stmtNode() }
@@ -272,6 +280,21 @@ type SetLitExpr struct {
 
 func (*SetLitExpr) exprNode() {}
 
+type TupleLitExpr struct {
+	Line   int
+	Column int
+	Elems  []Expr
+}
+
+func (*TupleLitExpr) exprNode() {}
+
+type UnitLitExpr struct {
+	Line   int
+	Column int
+}
+
+func (*UnitLitExpr) exprNode() {}
+
 type GoExpr struct {
 	Line         int
 	Column       int
@@ -318,6 +341,7 @@ type LetStmt struct {
 	Column  int
 	Mutable bool
 	Name    string
+	Names   []string
 	Type    TypeExpr
 	Value   Expr
 }

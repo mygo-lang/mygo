@@ -41,6 +41,8 @@ type parser struct {
 	currentCallCalleeStack    []ast.Expr
 	currentArgsStack          [][]ast.Expr
 	currentSliceElemsStack    [][]ast.Expr
+	currentTupleElemsStack    [][]ast.Expr
+	currentTupleTypeElemsStack [][]ast.TypeExpr
 	currentMapKey             ast.Expr
 	currentMapValue           ast.Expr
 	currentMapEntries         []ast.MapLitPair
@@ -67,6 +69,8 @@ type parser struct {
 	currentImplLine           int
 	currentImplCol            int
 	currentSliceElems         []ast.Expr
+	currentTupleElems         []ast.Expr
+	currentTupleTypeElems     []ast.TypeExpr
 	currentGoResult           ast.TypeExpr
 	currentGoCode             string
 	currentGoOperands         []ast.GoOperand

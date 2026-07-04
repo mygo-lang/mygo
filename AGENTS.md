@@ -74,6 +74,7 @@
 - `var` introduces a mutable binding and may be assigned again later in the same scope.
 - `let` may omit its type annotation when the initializer provides enough information for inference.
 - `let _ = ...` is the supported discard form for return values that should not be bound.
+- Tuple values use anonymous structs in lowering, while `let (a, b) = expr` destructures a tuple return directly and `let c = expr` keeps the tuple as a single anonymous struct value.
 - Pipe operators `<|` and `|>` are both supported in expression lowering.
 - Inline Go expressions use `go[T] { code: "..."; in x = expr }`, lower directly to generated Go, and may appear anywhere an expression is accepted. `go[Unit]` is valid only as a statement-position snippet or discarded binding.
 - Struct literals support a constructor-like form such as `ABC { aaa: 123 }`.
@@ -89,6 +90,7 @@
 - `where` has been removed from the main syntax; typeclass requirements now use `using` only. The parser rejects `where` with an explicit migration error.
 - `impl` supports two forms: `impl Type : Interface[Args]` (named/generic) and `impl Interface[Args]` (anonymous default instance).
 - `switch` pattern parsing currently accepts wildcard patterns and variant patterns with optional identifier arguments, such as `Some(x)`.
+- Tuple return lowering now supports multi-return Go signatures when the declared function return type is a tuple, and tuple destructuring in `let` only activates when the binding uses parenthesized names.
 - Keep `examples/main/main.mygo` aligned with the compiler's current boundary behavior, especially for `Ref`, `Option`, and `Result`.
 - Typeclass lookup should respect lexical scope first: local bindings and function-value bindings shadow typeclass names, `using`-bound methods are visible inside nested blocks, and package-level dispatch is the fallback.
 - When multiple typeclass candidates are visible, prefer the more specific binding by comparing concrete type coverage first, then type-parameter usage, then `any` usage; report ambiguity when candidates remain tied.

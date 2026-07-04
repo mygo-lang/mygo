@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"strconv"
 	"strings"
 
 	jen "github.com/dave/jennifer/jen"
@@ -83,6 +84,12 @@ func jenTypeExpr(t TypeExpr) jen.Code {
 			return jen.Func().Params(params...)
 		}
 		return jen.Func().Params(params...).Add(ret)
+	case *TupleType:
+		fields := make(jen.Dict)
+		for i, e := range tt.Elems {
+			fields[jen.Id("F"+strconv.Itoa(i))] = jenTypeExpr(e)
+		}
+		return jen.Struct(fields)
 	default:
 		return jen.Id("any")
 	}
@@ -163,6 +170,12 @@ func jenHKTTypeExpr(t TypeExpr, hktSet map[string]struct{}) jen.Code {
 			return jen.Func().Params(params...)
 		}
 		return jen.Func().Params(params...).Add(ret)
+	case *TupleType:
+		fields := make(jen.Dict)
+		for i, e := range tt.Elems {
+			fields[jen.Id("F"+strconv.Itoa(i))] = jenHKTTypeExpr(e, hktSet)
+		}
+		return jen.Struct(fields)
 	default:
 		return jen.Id("any")
 	}

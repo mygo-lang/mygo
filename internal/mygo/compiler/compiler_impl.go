@@ -419,6 +419,7 @@ func (g *generator) genFunc(d *FuncDecl) (jen.Code, error) {
 		constraintFuncs:  map[string]string{},
 		typeclassMethods: map[string][]typeclassBinding{},
 		retType:          g.goReturnType(d.Ret, typeParamSet(d.TypeParams)),
+		retTypes:         g.goReturnTypes(d.Ret, typeParamSet(d.TypeParams)),
 	}
 	for _, p := range d.Params {
 		goType := g.goType(p.Type, typeParamSet(d.TypeParams))
@@ -478,7 +479,11 @@ func (g *generator) genFunc(d *FuncDecl) (jen.Code, error) {
 			}
 		}
 	}
-	retType := g.goReturnType(d.Ret, typeParamSet(d.TypeParams))
+	retType := ""
+	retTypes := g.goReturnTypes(d.Ret, typeParamSet(d.TypeParams))
+	if len(retTypes) == 1 {
+		retType = retTypes[0]
+	}
 	var fn *jen.Statement
 	if len(d.TypeParams) > 0 {
 		typeOpts := jen.Options{Open: d.Name + "[", Close: "]", Separator: ", "}
@@ -499,22 +504,49 @@ func (g *generator) genFunc(d *FuncDecl) (jen.Code, error) {
 			gr.Add(jen.Id(cp.name).Add(jen.Id(cp.typ)))
 		}
 	})
-	if retType != "" {
-		fn = fn.Add(jen.Id(retType))
-	}
-
-	bodyExpr, _, err := g.translateExpr(d.Body, ctx, retType)
-	if err != nil {
-		return nil, common.ErrorAtPos(d.Line, d.Column, "function %s: %v", d.Name, err)
+	if len(retTypes) == 1 {
+		fn = fn.Add(jen.Id(retTypes[0]))
+	} else if len(retTypes) > 1 {
+		items := make([]jen.Code, 0, len(retTypes))
+		for _, rt := range retTypes {
+			items = append(items, jen.Id(rt))
+		}
+		fn = fn.Add(jen.Parens(jen.List(items...)))
 	}
 
 	// Build function body
 	var bodyStmts []jen.Code
-	if retType == "" {
+	if len(retTypes) == 0 {
+		bodyExpr, _, err := g.translateExpr(d.Body, ctx, retType)
+		if err != nil {
+			return nil, common.ErrorAtPos(d.Line, d.Column, "function %s: %v", d.Name, err)
+		}
 		bodyStmts = append(bodyStmts, bodyExpr)
 		bodyStmts = append(bodyStmts, jen.Return())
-	} else {
+	} else if len(retTypes) == 1 {
+		bodyExpr, _, err := g.translateExpr(d.Body, ctx, retType)
+		if err != nil {
+			return nil, common.ErrorAtPos(d.Line, d.Column, "function %s: %v", d.Name, err)
+		}
 		bodyStmts = append(bodyStmts, jen.Return().Add(bodyExpr))
+	} else {
+		if tuple, ok := d.Body.(*TupleLitExpr); ok {
+			values := make([]jen.Code, 0, len(tuple.Elems))
+			for i, elem := range tuple.Elems {
+				code, _, err := g.translateExpr(elem, ctx, retTypes[i])
+				if err != nil {
+					return nil, common.ErrorAtPos(d.Line, d.Column, "function %s: %v", d.Name, err)
+				}
+				values = append(values, code)
+			}
+			bodyStmts = append(bodyStmts, jen.Return(values...))
+		} else {
+			bodyExpr, _, err := g.translateExpr(d.Body, ctx, retType)
+			if err != nil {
+				return nil, common.ErrorAtPos(d.Line, d.Column, "function %s: %v", d.Name, err)
+			}
+			bodyStmts = append(bodyStmts, jen.Return(tupleReturnValues(bodyExpr, retTypes)...))
+		}
 	}
 	fn = fn.Block(bodyStmts...)
 	return fn, nil
@@ -540,4 +572,22 @@ func (g *generator) genHelpers() []jen.Code {
 				jen.Return(jen.Id("out").Index(jen.Lit(0)).Dot("Interface").Call()),
 			),
 	}
+}
+
+func tupleReturnValues(bodyExpr jen.Code, retTypes []string) []jen.Code {
+	if len(retTypes) == 0 {
+		return nil
+	}
+	if len(retTypes) == 1 {
+		return []jen.Code{bodyExpr}
+	}
+	out := make([]jen.Code, 0, len(retTypes))
+	stmt, ok := bodyExpr.(*jen.Statement)
+	if !ok {
+		return []jen.Code{bodyExpr}
+	}
+	for i := range retTypes {
+		out = append(out, stmt.Dot("F"+strconv.Itoa(i)))
+	}
+	return out
 }

@@ -42,6 +42,7 @@ type exprCtx struct {
 	typeclassMethods map[string][]typeclassBinding
 	dictBindings     []dictBinding
 	retType          string
+	retTypes         []string
 	currentImpl      string
 	implTypeKey      string
 	implTypeParams   []string
@@ -100,6 +101,7 @@ func (ctx *exprCtx) child() *exprCtx {
 		typeclassMethods: map[string][]typeclassBinding{},
 		dictBindings:     nil,
 		retType:          ctx.retType,
+		retTypes:         append([]string(nil), ctx.retTypes...),
 		currentImpl:      ctx.currentImpl,
 		implTypeKey:      ctx.implTypeKey,
 		implTypeParams:   ctx.implTypeParams,

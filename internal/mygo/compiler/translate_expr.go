@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"strconv"
 	"strings"
 
 	jen "github.com/dave/jennifer/jen"
@@ -11,6 +12,33 @@ import (
 func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (jen.Code, string, error) {
 	if expected == "" {
 		expected = g.hmExprType(e)
+	}
+	if n, ok := e.(*TupleLitExpr); ok {
+		fields := make(jen.Dict, len(n.Elems))
+		fieldTypes := make([]string, 0, len(n.Elems))
+		for i, elem := range n.Elems {
+			code, typ, err := g.translateExpr(elem, ctx, "")
+			if err != nil {
+				return nil, "", err
+			}
+			fieldTypes = append(fieldTypes, typ)
+			fields[jen.Id("F"+strconv.Itoa(i))] = code
+		}
+		structFields := make(jen.Dict, len(n.Elems))
+		for i, typ := range fieldTypes {
+			if typ == "" {
+				typ = "any"
+			}
+			structFields[jen.Id("F"+strconv.Itoa(i))] = jen.Id(typ)
+		}
+		parts := make([]string, 0, len(fieldTypes))
+		for i, typ := range fieldTypes {
+			if typ == "" {
+				typ = "any"
+			}
+			parts = append(parts, "F"+strconv.Itoa(i)+" "+typ)
+		}
+		return jen.Struct(structFields).Values(fields), "struct { " + strings.Join(parts, "; ") + " }", nil
 	}
 	code, typ, err := g.translateExprRaw(e, ctx, expected)
 	if err != nil {
@@ -37,12 +65,12 @@ func (g *generator) translateExprRaw(e Expr, ctx *exprCtx, expected string) (jen
 		case "number":
 			switch expected {
 			case "int", "int64", "float64", "int8", "uint8", "int16", "uint16", "int32", "uint32", "float32":
-				return jen.Lit(n.Value), expected, nil
+				return jen.Id(n.Value), expected, nil
 			}
 			if strings.Contains(n.Value, ".") {
-				return jen.Lit(n.Value), "float64", nil
+				return jen.Id(n.Value), "float64", nil
 			}
-			return jen.Lit(n.Value), "int", nil
+			return jen.Id(n.Value), "int", nil
 		case "string":
 			return jen.Lit(n.Value), "string", nil
 		}
@@ -258,6 +286,34 @@ func (g *generator) translateExprRaw(e Expr, ctx *exprCtx, expected string) (jen
 			return nil, "", err
 		}
 		return code, typ, nil
+	case *TupleLitExpr:
+		fields := make(jen.Dict, len(n.Elems))
+		fieldTypes := make([]string, 0, len(n.Elems))
+		for i, e := range n.Elems {
+			code, typ, err := g.translateExpr(e, ctx, "")
+			if err != nil {
+				return nil, "", err
+			}
+			fieldTypes = append(fieldTypes, typ)
+			fields[jen.Id("F"+strconv.Itoa(i))] = code
+		}
+		structFields := make(jen.Dict, len(n.Elems))
+		for i, typ := range fieldTypes {
+			if typ == "" {
+				typ = "any"
+			}
+			structFields[jen.Id("F"+strconv.Itoa(i))] = jen.Id(typ)
+		}
+		parts := make([]string, 0, len(fieldTypes))
+		for i, typ := range fieldTypes {
+			if typ == "" {
+				typ = "any"
+			}
+			parts = append(parts, "F"+strconv.Itoa(i)+" "+typ)
+		}
+		return jen.Struct(structFields).Values(fields), "struct { " + strings.Join(parts, "; ") + " }", nil
+	case *UnitLitExpr:
+		return jen.Empty(), "", nil
 	case *GoExpr:
 		code, typ, err := g.translateGoExpr(n, ctx, expected)
 		if err != nil {

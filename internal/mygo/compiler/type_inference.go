@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"go/types"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -236,6 +237,12 @@ func hmTypeString(t typeinference.MonoType) string {
 		return "any"
 	case typeinference.TCon:
 		switch t.Name {
+		case "Tuple":
+			parts := make([]string, 0, len(t.Args))
+			for i, a := range t.Args {
+				parts = append(parts, "F"+strconv.Itoa(i)+" "+hmTypeString(a))
+			}
+			return "struct { " + strings.Join(parts, "; ") + " }"
 		case "Int":
 			return "int"
 		case "Int64":
@@ -360,6 +367,13 @@ func (g *generator) goType(t TypeExpr, typeParams map[string]struct{}) string {
 				return tt.Name
 			}
 		}
+		if tt.Name == "Tuple" {
+			parts := make([]string, 0, len(tt.Args))
+			for i, a := range tt.Args {
+				parts = append(parts, "F"+strconv.Itoa(i)+" "+g.goType(a, typeParams))
+			}
+			return "struct { " + strings.Join(parts, "; ") + " }"
+		}
 		switch tt.Name {
 		case "Int":
 			return "int"
@@ -428,6 +442,15 @@ func (g *generator) goType(t TypeExpr, typeParams map[string]struct{}) string {
 			return "func(" + strings.Join(params, ", ") + ")"
 		}
 		return "func(" + strings.Join(params, ", ") + ") " + ret
+	case *TupleType:
+		if len(tt.Elems) == 0 {
+			return "struct{}"
+		}
+		parts := make([]string, 0, len(tt.Elems))
+		for i, e := range tt.Elems {
+			parts = append(parts, "F"+strconv.Itoa(i)+" "+g.goType(e, typeParams))
+		}
+		return "struct { " + strings.Join(parts, "; ") + " }"
 	default:
 		return "any"
 	}
@@ -438,6 +461,20 @@ func (g *generator) goReturnType(t TypeExpr, typeParams map[string]struct{}) str
 		return ""
 	}
 	return g.goType(t, typeParams)
+}
+
+func (g *generator) goReturnTypes(t TypeExpr, typeParams map[string]struct{}) []string {
+	if tt, ok := t.(*TupleType); ok {
+		out := make([]string, 0, len(tt.Elems))
+		for _, e := range tt.Elems {
+			out = append(out, g.goType(e, typeParams))
+		}
+		return out
+	}
+	if rt := g.goReturnType(t, typeParams); rt != "" {
+		return []string{rt}
+	}
+	return nil
 }
 
 func (g *generator) goHKTType(t TypeExpr, hktSet, typeParams map[string]struct{}) string {
@@ -465,6 +502,13 @@ func (g *generator) hktArgType(t TypeExpr, hktSet, typeParams map[string]struct{
 			if _, ok := typeParams[tt.Name]; ok && len(tt.Args) == 0 {
 				return tt.Name
 			}
+		}
+		if tt.Name == "Tuple" {
+			parts := make([]string, 0, len(tt.Args))
+			for i, a := range tt.Args {
+				parts = append(parts, "F"+strconv.Itoa(i)+" "+g.hktArgType(a, hktSet, typeParams))
+			}
+			return "struct { " + strings.Join(parts, "; ") + " }"
 		}
 		if hktSet != nil {
 			if _, ok := hktSet[tt.Name]; ok && len(tt.Args) > 0 {

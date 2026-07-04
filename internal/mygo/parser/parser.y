@@ -661,6 +661,11 @@ type
 		p := yylex.(*parser)
 		yyVAL.node = p.currentType
 	}
+	| LPAREN type {
+		p := yylex.(*parser)
+		p.currentTupleTypeElems = append(p.currentTupleTypeElems, p.currentType)
+	}
+	tuple_type_tail
 	| grouped_type {
 		p := yylex.(*parser)
 		yyVAL.node = p.currentType
@@ -705,6 +710,35 @@ func_type
 			Ret:    ret,
 		}
 	}
+	;
+
+tuple_type_tail
+	: RPAREN {
+		p := yylex.(*parser)
+		p.currentType = &ast.TupleType{Line: $1.line, Column: $1.col, Elems: append([]ast.TypeExpr(nil), p.currentTupleTypeElems...)}
+		p.currentTupleTypeElems = nil
+		yyVAL.node = p.currentType
+	}
+	| COMMA type {
+		p := yylex.(*parser)
+		p.currentTupleTypeElems = append(p.currentTupleTypeElems, p.currentType)
+	}
+	tuple_type_items RPAREN {
+		p := yylex.(*parser)
+		elems := append([]ast.TypeExpr(nil), p.currentTupleTypeElems...)
+		p.currentType = &ast.TupleType{Line: $1.line, Column: $1.col, Elems: elems}
+		p.currentTupleTypeElems = nil
+		yyVAL.node = p.currentType
+	}
+	;
+
+tuple_type_items
+	: /* empty */
+	| COMMA type {
+		p := yylex.(*parser)
+		p.currentTupleTypeElems = append(p.currentTupleTypeElems, p.currentType)
+	}
+	tuple_type_items
 	;
 
 func_type_params_start
@@ -993,7 +1027,15 @@ primary
 		p := yylex.(*parser)
 		p.currentExpr = makeLitExpr($1)
 	}
-	| LPAREN expr RPAREN
+	| LPAREN RPAREN {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.UnitLitExpr{Line: $1.line, Column: $1.col}
+	}
+	| LPAREN expr {
+		p := yylex.(*parser)
+		p.currentTupleElems = append(p.currentTupleElems, p.currentExpr)
+	}
+	paren_expr_tail
 	| slice_lit
 	| collection_lit
 	| if_expr
@@ -1001,6 +1043,29 @@ primary
 	| while_expr
 	| func_lit
 	| go_expr
+	;
+
+paren_expr_tail
+	: RPAREN
+	| COMMA expr {
+		p := yylex.(*parser)
+		p.currentTupleElems = append(p.currentTupleElems, p.currentExpr)
+	}
+	tuple_expr_elems RPAREN {
+		p := yylex.(*parser)
+		elems := append([]ast.Expr(nil), p.currentTupleElems...)
+		p.currentExpr = &ast.TupleLitExpr{Line: $1.line, Column: $1.col, Elems: elems}
+		p.currentTupleElems = nil
+	}
+	;
+
+tuple_expr_elems
+	: /* empty */
+	| COMMA expr {
+		p := yylex.(*parser)
+		p.currentTupleElems = append(p.currentTupleElems, p.currentExpr)
+	}
+	tuple_expr_elems
 	;
 
 go_expr
@@ -1394,9 +1459,25 @@ binding_stmt
 		p := yylex.(*parser)
 		p.currentStmt = &ast.LetStmt{Name: $2.lit, Mutable: false, Value: p.currentExpr}
 	}
+	| LET LPAREN tuple_bind_names RPAREN opt_type_annot '=' expr {
+		p := yylex.(*parser)
+		p.currentStmt = &ast.LetStmt{Names: append([]string(nil), p.currentPatternArgs...), Mutable: false, Value: p.currentExpr}
+		p.currentPatternArgs = nil
+	}
 	| VAR IDENT opt_type_annot '=' expr {
 		p := yylex.(*parser)
 		p.currentStmt = &ast.LetStmt{Name: $2.lit, Mutable: true, Value: p.currentExpr}
+	}
+	;
+
+tuple_bind_names
+	: IDENT {
+		p := yylex.(*parser)
+		p.currentPatternArgs = append(p.currentPatternArgs, $1.lit)
+	}
+	| tuple_bind_names COMMA IDENT {
+		p := yylex.(*parser)
+		p.currentPatternArgs = append(p.currentPatternArgs, $3.lit)
 	}
 	;
 
