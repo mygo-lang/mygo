@@ -679,7 +679,7 @@ func TestCompileDirLetsLocalBindingShadowTypeclassName(t *testing.T) {
 	got := readFile(t, out)
 	for _, want := range []string{
 		"show_1 := fmt.Sprint",
-		"return callAny(show_1, 42)",
+		"return show_1(42)",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)

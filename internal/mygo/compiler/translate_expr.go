@@ -9,6 +9,22 @@ import (
 )
 
 func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (jen.Code, string, error) {
+	if expected == "" {
+		expected = g.hmExprType(e)
+	}
+	code, typ, err := g.translateExprRaw(e, ctx, expected)
+	if err != nil {
+		return nil, "", err
+	}
+	if typ == "" || typ == "any" {
+		if hmTyp := g.hmExprType(e); hmTyp != "" {
+			typ = hmTyp
+		}
+	}
+	return code, typ, nil
+}
+
+func (g *generator) translateExprRaw(e Expr, ctx *exprCtx, expected string) (jen.Code, string, error) {
 	switch n := e.(type) {
 	case *IdentExpr:
 		code, typ, err := g.translateIdent(n.Name, n.Line, n.Column, ctx, expected)
@@ -146,6 +162,11 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (jen.Co
 		return expr, typ, nil
 	case *FieldExpr:
 		if baseIdent, ok := n.Expr.(*IdentExpr); ok {
+			if g.isImportAlias(baseIdent.Name) {
+				if typ := g.hmExprType(n); typ != "" {
+					return jen.Id(baseIdent.Name).Dot(n.Field), typ, nil
+				}
+			}
 			if enumDecl := g.pkg.Enums[baseIdent.Name]; enumDecl != nil {
 				if variant := g.findVariant(enumDecl, n.Field); variant != nil {
 					code, typ, err := g.translateEnumConstructor(baseIdent.Name, n.Field, nil, ctx, expected)
@@ -174,6 +195,9 @@ func (g *generator) translateExpr(e Expr, ctx *exprCtx, expected string) (jen.Co
 		code, typ, err := g.translateCall(n, ctx, expected)
 		if err != nil {
 			return nil, "", err
+		}
+		if typ == "" {
+			typ = g.hmExprType(n)
 		}
 		return code, typ, nil
 	case *StructLitExpr:

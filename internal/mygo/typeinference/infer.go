@@ -2,6 +2,7 @@ package typeinference
 
 import (
 	"fmt"
+	"strings"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 )
@@ -44,6 +45,7 @@ func InferPackage(pkg *PkgInfo, state *InferState) (*TypedInfo, error) {
 
 	// Store package info in state for enum variant lookups in pattern matching
 	state.PkgInfo = pkg
+	state.TypedInfo = info
 
 	// Build initial type environment with built-in types and prelude
 	env := initialTypeEnv(pkg)
@@ -104,9 +106,21 @@ func initialTypeEnv(pkg *PkgInfo) TypeEnv {
 func inferDecl(decl Decl, env TypeEnv, state *InferState, info *TypedInfo, pkg *PkgInfo) (TypeEnv, error) {
 	switch d := decl.(type) {
 	case *ImportDecl:
-		// Imports don't contribute to type inference (they are handled by the
-		// Go package system at the lowering level). If the import alias maps to
-		// a known Go package, we may want to register its exported symbols here.
+		if !strings.HasPrefix(d.Path, "go:") {
+			return env, nil
+		}
+		path := strings.TrimPrefix(d.Path, "go:")
+		alias := importAlias(path, d.Alias)
+		info, err := loadGoPackageInfo(alias, path)
+		if err != nil {
+			return nil, fmt.Errorf("import %q: %w", d.Path, err)
+		}
+		if state.GoPackages == nil {
+			state.GoPackages = map[string]*GoPackageInfo{}
+		}
+		state.GoPackages[alias] = info
+		env = env.Clone()
+		env[alias] = &Scheme{Body: QualifiedType{Body: TGoPackage{Alias: alias}}}
 		return env, nil
 
 	case *EnumDecl:
@@ -160,7 +174,7 @@ func inferEnumDecl(d *EnumDecl, env TypeEnv, state *InferState, pkg *PkgInfo) (T
 		// Build the type of each variant constructor
 		fieldTypes := make([]MonoType, len(v.Fields))
 		for i, f := range v.Fields {
-			fieldTypes[i] = typeFromAST(f.Type)
+			fieldTypes[i] = substituteTypeParams(typeFromAST(f.Type), d.TypeParams, typeArgs)
 		}
 
 		var variantType MonoType
@@ -334,8 +348,23 @@ func inferLetDecl(d *LetStmt, env TypeEnv, state *InferState, info *TypedInfo) (
 // ---------------------------------------------------------------------------
 
 // inferExpr returns the inferred type, substitution, and predicates for an
-// expression, using Algorithm W.
+// expression, using Algorithm W. It records every successfully inferred
+// expression in the package TypedInfo when one is attached to the state.
 func inferExpr(env TypeEnv, e Expr, state *InferState) (MonoType, Subst, []Predicate, error) {
+	t, s, preds, err := inferExprRaw(env, e, state)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if state != nil && state.TypedInfo != nil && e != nil && t != nil {
+		state.TypedInfo.ExprTypes[e] = s.ApplyMT(t)
+		if len(preds) > 0 {
+			state.TypedInfo.Predicates[e] = preds
+		}
+	}
+	return t, s, preds, nil
+}
+
+func inferExprRaw(env TypeEnv, e Expr, state *InferState) (MonoType, Subst, []Predicate, error) {
 	switch n := e.(type) {
 	case *IdentExpr:
 		return inferIdent(env, n, state)
@@ -451,6 +480,10 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 	// Apply accumulated substitution to callee
 	calleeType = argSubst.ApplyMT(calleeType)
 
+	if fn, ok := calleeType.(TFunc); ok && fn.Variadic {
+		return inferVariadicCall(fn, argTypes, argSubst, allPreds)
+	}
+
 	// Create a fresh return type variable
 	retVar := TVar{ID: state.Fresh()}
 
@@ -466,6 +499,34 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 	// Apply substitution to get actual return type
 	returnType := argSubst.ApplyMT(retVar)
 	return returnType, argSubst, allPreds, nil
+}
+
+func inferVariadicCall(fn TFunc, argTypes []MonoType, s Subst, preds []Predicate) (MonoType, Subst, []Predicate, error) {
+	if len(fn.Args) == 0 {
+		if len(argTypes) != 0 {
+			return nil, nil, nil, fmt.Errorf("variadic call type mismatch: expected 0 args, got %d", len(argTypes))
+		}
+		return s.ApplyMT(fn.Ret), s, preds, nil
+	}
+	fixed := len(fn.Args) - 1
+	if len(argTypes) < fixed {
+		return nil, nil, nil, fmt.Errorf("variadic call type mismatch: expected at least %d args, got %d", fixed, len(argTypes))
+	}
+	var err error
+	for i := 0; i < fixed; i++ {
+		s, err = Unify(fn.Args[i], s.ApplyMT(argTypes[i]), s)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("argument %d: %w", i, err)
+		}
+	}
+	restType := fn.Args[len(fn.Args)-1]
+	for i := fixed; i < len(argTypes); i++ {
+		s, err = Unify(restType, s.ApplyMT(argTypes[i]), s)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("argument %d: %w", i, err)
+		}
+	}
+	return s.ApplyMT(fn.Ret), s, preds, nil
 }
 
 func inferRefNew(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []Predicate, error) {
@@ -659,6 +720,13 @@ func inferPrefix(env TypeEnv, n *PrefixExpr, state *InferState) (MonoType, Subst
 func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, []Predicate, error) {
 	// If base is an identifier, check for enum constructors
 	if id, ok := n.Expr.(*IdentExpr); ok {
+		if pkg := state.GoPackages[id.Name]; pkg != nil {
+			if fn, ok := pkg.Funcs[n.Field]; ok {
+				return fn, make(Subst), nil, nil
+			}
+			return nil, nil, nil, fmt.Errorf("Go package %q has no function %q", id.Name, n.Field)
+		}
+
 		// Check if it's an enum name followed by a variant
 		if sch, ok := env[id.Name]; ok {
 			instType := Instantiate(sch, state)
@@ -834,6 +902,7 @@ func inferSwitch(env TypeEnv, n *SwitchExpr, state *InferState) (MonoType, Subst
 	var caseTypes []MonoType
 	var allPreds []Predicate
 	allPreds = append(allPreds, preds...)
+	seenCaseStmts := map[Stmt]struct{}{}
 
 	for _, cas := range n.Cases {
 		caseEnv := env.Clone()
@@ -841,31 +910,48 @@ func inferSwitch(env TypeEnv, n *SwitchExpr, state *InferState) (MonoType, Subst
 		// Extend environment with pattern bindings
 		switch pat := cas.Pattern.(type) {
 		case *VariantPattern:
-			if enumDecl != nil {
-				if variant, ok := findEnumVariant(enumDecl, pat.Name); ok {
-					// For each pattern arg, look up the variant field type and
-					// substitute enum type parameters with the target type arguments.
-					// e.g. target Option[Int] + variant Some(A) → binding a: Int
-					for i, arg := range pat.Args {
-						if arg == "_" {
-							continue
-						}
-						if i < len(variant.Fields) {
-							fieldType := typeFromAST(variant.Fields[i].Type)
-							if len(enumDecl.TypeParams) > 0 && len(enumTypeArgs) > 0 {
-								fieldType = substituteTypeParams(fieldType, enumDecl.TypeParams, enumTypeArgs)
-							}
-							caseEnv[arg] = &Scheme{Body: QualifiedType{Body: fieldType}}
-						}
+			activeEnum := enumDecl
+			variant, ok := findEnumVariant(activeEnum, pat.Name)
+			if !ok {
+				activeEnum, variant, ok = lookupVariant(state.PkgInfo, pat.Name)
+			}
+			if ok {
+				// For each pattern arg, look up the variant field type and
+				// substitute enum type parameters with the target type arguments.
+				// e.g. target Option[Int] + variant Some(A) → binding a: Int
+				for i, arg := range pat.Args {
+					if arg == "_" {
+						continue
 					}
+					bound := false
+					if i < len(variant.Fields) {
+						fieldType := typeFromAST(variant.Fields[i].Type)
+						if activeEnum != nil && len(activeEnum.TypeParams) > 0 && len(enumTypeArgs) > 0 {
+							fieldType = substituteTypeParams(fieldType, activeEnum.TypeParams, enumTypeArgs)
+						}
+						caseEnv[arg] = &Scheme{Body: QualifiedType{Body: fieldType}}
+						bound = true
+					}
+					if !bound {
+						caseEnv[arg] = &Scheme{Body: QualifiedType{Body: TVar{ID: state.Fresh()}}}
+					}
+				}
+			} else {
+				for _, arg := range pat.Args {
+					if arg == "_" {
+						continue
+					}
+					caseEnv[arg] = &Scheme{Body: QualifiedType{Body: TVar{ID: state.Fresh()}}}
 				}
 			}
 		}
 
-		caseType, cs, cp, err := inferExpr(caseEnv, cas.Body, state)
+		caseBody := switchCaseBodyForInference(cas.Body, seenCaseStmts)
+		caseType, cs, cp, err := inferExpr(caseEnv, caseBody, state)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("switch case: %w", err)
 		}
+		rememberSwitchCaseStmts(cas.Body, seenCaseStmts)
 		caseType = cs.ApplyMT(caseType)
 		caseTypes = append(caseTypes, caseType)
 		s = Compose(s, cs)
@@ -884,6 +970,34 @@ func inferSwitch(env TypeEnv, n *SwitchExpr, state *InferState) (MonoType, Subst
 	return resultType, s, allPreds, nil
 }
 
+func switchCaseBodyForInference(body Expr, seen map[Stmt]struct{}) Expr {
+	b, ok := body.(*BlockExpr)
+	if !ok || len(b.Stmts) == 0 || len(seen) == 0 {
+		return body
+	}
+	var stmts []Stmt
+	for _, st := range b.Stmts {
+		if _, ok := seen[st]; ok {
+			continue
+		}
+		stmts = append(stmts, st)
+	}
+	if len(stmts) == len(b.Stmts) {
+		return body
+	}
+	return &BlockExpr{Line: b.Line, Column: b.Column, Stmts: stmts}
+}
+
+func rememberSwitchCaseStmts(body Expr, seen map[Stmt]struct{}) {
+	b, ok := body.(*BlockExpr)
+	if !ok {
+		return
+	}
+	for _, st := range b.Stmts {
+		seen[st] = struct{}{}
+	}
+}
+
 func inferWhile(env TypeEnv, n *WhileExpr) (MonoType, Subst, []Predicate, error) {
 	// While loops return Unit — the condition must be Bool, but we skip
 	// inference of the body for type checking since while is a control flow:
@@ -895,9 +1009,10 @@ func inferBlock(env TypeEnv, n *BlockExpr, state *InferState) (MonoType, Subst, 
 	currentEnv := env
 	s := make(Subst)
 	var allPreds []Predicate
+	stmts := effectiveBlockStmts(n)
 
-	for i, stmt := range n.Stmts {
-		isLast := i == len(n.Stmts)-1
+	for i, stmt := range stmts {
+		isLast := i == len(stmts)-1
 		switch st := stmt.(type) {
 		case *ExprStmt:
 			stmtType, ss, preds, err := inferExpr(currentEnv, st.Expr, state)
@@ -956,6 +1071,43 @@ func inferBlock(env TypeEnv, n *BlockExpr, state *InferState) (MonoType, Subst, 
 	}
 
 	return TUnit{}, s, allPreds, nil
+}
+
+func effectiveBlockStmts(n *BlockExpr) []Stmt {
+	if n == nil || len(n.Stmts) < 2 {
+		if n == nil {
+			return nil
+		}
+		return n.Stmts
+	}
+	lastExpr, ok := n.Stmts[len(n.Stmts)-1].(*ExprStmt)
+	if !ok {
+		return n.Stmts
+	}
+	sw, ok := lastExpr.Expr.(*SwitchExpr)
+	if !ok {
+		return n.Stmts
+	}
+	hoisted := map[Stmt]struct{}{}
+	for _, c := range sw.Cases {
+		if b, ok := c.Body.(*BlockExpr); ok {
+			for _, st := range b.Stmts {
+				hoisted[st] = struct{}{}
+			}
+		}
+	}
+	if len(hoisted) == 0 {
+		return n.Stmts
+	}
+	out := make([]Stmt, 0, len(n.Stmts))
+	for _, st := range n.Stmts[:len(n.Stmts)-1] {
+		if _, ok := hoisted[st]; ok {
+			continue
+		}
+		out = append(out, st)
+	}
+	out = append(out, lastExpr)
+	return out
 }
 
 func inferSliceLit(env TypeEnv, n *SliceLitExpr, state *InferState) (MonoType, Subst, []Predicate, error) {
@@ -1129,6 +1281,18 @@ func findEnumVariant(enum *EnumDecl, name string) (*EnumVariant, bool) {
 	return nil, false
 }
 
+func lookupVariant(pkg *PkgInfo, name string) (*EnumDecl, *EnumVariant, bool) {
+	if pkg == nil {
+		return nil, nil, false
+	}
+	for _, enum := range pkg.Enums {
+		if variant, ok := findEnumVariant(enum, name); ok {
+			return enum, variant, true
+		}
+	}
+	return nil, nil, false
+}
+
 // substituteTypeParams substitutes type parameter names in a MonoType with the
 // corresponding concrete types from typeArgs, using the enum's TypeParams list
 // as the mapping key.
@@ -1159,7 +1323,9 @@ func substituteTypeParams(t MonoType, typeParams []string, typeArgs []MonoType) 
 		for i, a := range t.Args {
 			args[i] = substituteTypeParams(a, typeParams, typeArgs)
 		}
-		return TFunc{Args: args, Ret: substituteTypeParams(t.Ret, typeParams, typeArgs)}
+		return TFunc{Args: args, Ret: substituteTypeParams(t.Ret, typeParams, typeArgs), Variadic: t.Variadic}
+	case TGoPackage:
+		return t
 	case TUnit:
 		return t
 	}

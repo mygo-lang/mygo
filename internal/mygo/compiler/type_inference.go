@@ -6,6 +6,7 @@ import (
 	"unicode"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
+	"github.com/mygo-lang/mygo/internal/mygo/typeinference"
 )
 
 func (g *generator) findGoMethodSig(baseType, name string) (*goFuncSig, bool) {
@@ -198,6 +199,106 @@ func normalizeGoTypeName(name string) string {
 func isGoErrorType(t string) bool {
 	t = strings.TrimSpace(t)
 	return t == "error" || strings.HasSuffix(t, ".Error")
+}
+
+func (g *generator) hmExprType(e Expr) string {
+	if g == nil || g.typedInfo == nil || e == nil {
+		return ""
+	}
+	t, ok := g.typedInfo.ExprTypes[e]
+	if !ok {
+		return ""
+	}
+	return hmTypeString(t)
+}
+
+func hmTypeString(t typeinference.MonoType) string {
+	switch t := t.(type) {
+	case typeinference.TVar:
+		return "any"
+	case typeinference.TCon:
+		switch t.Name {
+		case "Int":
+			return "int"
+		case "Int64":
+			return "int64"
+		case "Int32":
+			return "int32"
+		case "Int16":
+			return "int16"
+		case "Int8":
+			return "int8"
+		case "UInt":
+			return "uint"
+		case "UInt64":
+			return "uint64"
+		case "UInt32":
+			return "uint32"
+		case "UInt16":
+			return "uint16"
+		case "UInt8":
+			return "uint8"
+		case "Float64":
+			return "float64"
+		case "Float32":
+			return "float32"
+		case "String":
+			return "string"
+		case "Bool":
+			return "bool"
+		case "Any", "any", "interface{}":
+			return "any"
+		case "Unit":
+			return ""
+		case "Ref":
+			if len(t.Args) == 1 {
+				return "*" + hmTypeString(t.Args[0])
+			}
+		case "Slice":
+			if len(t.Args) == 1 {
+				return "[]" + hmTypeString(t.Args[0])
+			}
+		case "Map":
+			if len(t.Args) == 2 {
+				return "map[" + hmTypeString(t.Args[0]) + "]" + hmTypeString(t.Args[1])
+			}
+		case "Set":
+			if len(t.Args) == 1 {
+				return "map[" + hmTypeString(t.Args[0]) + "]struct{}"
+			}
+		}
+		if len(t.Args) == 0 {
+			return t.Name
+		}
+		args := make([]string, 0, len(t.Args))
+		for _, a := range t.Args {
+			args = append(args, hmTypeString(a))
+		}
+		return t.Name + "[" + strings.Join(args, ", ") + "]"
+	case typeinference.TFunc:
+		args := make([]string, 0, len(t.Args))
+		for i, a := range t.Args {
+			arg := hmTypeString(a)
+			if arg == "" {
+				arg = "struct{}"
+			}
+			if t.Variadic && i == len(t.Args)-1 {
+				arg = "..." + arg
+			}
+			args = append(args, arg)
+		}
+		ret := hmTypeString(t.Ret)
+		if ret == "" {
+			return "func(" + strings.Join(args, ", ") + ")"
+		}
+		return "func(" + strings.Join(args, ", ") + ") " + ret
+	case typeinference.TUnit:
+		return ""
+	case typeinference.TGoPackage:
+		return ""
+	default:
+		return ""
+	}
 }
 
 func (g *generator) lookupFieldType(baseType, field string) string {

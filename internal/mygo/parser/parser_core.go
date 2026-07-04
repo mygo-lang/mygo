@@ -28,11 +28,15 @@ type parser struct {
 	currentWhere              []ast.Constraint
 	currentConstraintArgs     []TypeExpr
 	currentBlock              []ast.Stmt
+	currentBlockStack         [][]ast.Stmt
 	currentStmt               ast.Stmt
 	currentExpr               ast.Expr
 	currentLeftExpr           ast.Expr
 	currentPipeLeftExpr       ast.Expr
 	currentArgs               []ast.Expr
+	currentCallCalleeStack    []ast.Expr
+	currentArgsStack          [][]ast.Expr
+	currentSliceElemsStack    [][]ast.Expr
 	currentMapKey             ast.Expr
 	currentMapValue           ast.Expr
 	currentMapEntries         []ast.MapLitPair
@@ -50,6 +54,9 @@ type parser struct {
 	currentPatternArgs        []string
 	currentStructFields       []ast.StructLitField
 	currentStructTypeArgs     []ast.TypeExpr
+	currentTypeArgStack       [][]ast.TypeExpr
+	currentFuncTypeParamStack [][]ast.TypeExpr
+	funcTypeParamDepth        int
 	currentImplTypeParams     []string
 	currentImplType           TypeExpr
 	currentImplInterfaceArgs  []ast.TypeExpr

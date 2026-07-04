@@ -31,17 +31,21 @@ type (
 	}
 	// TFunc is a function type from argument types to a return type.
 	TFunc struct {
-		Args []MonoType
-		Ret  MonoType
+		Args     []MonoType
+		Ret      MonoType
+		Variadic bool
 	}
+	// TGoPackage is an imported Go package alias visible to selector inference.
+	TGoPackage struct{ Alias string }
 	// TUnit is the unit type (empty tuple), used for void-returning functions.
 	TUnit struct{}
 )
 
-func (TVar) monoType()  {}
-func (TCon) monoType()  {}
-func (TFunc) monoType() {}
-func (TUnit) monoType() {}
+func (TVar) monoType()       {}
+func (TCon) monoType()       {}
+func (TFunc) monoType()      {}
+func (TGoPackage) monoType() {}
+func (TUnit) monoType()      {}
 
 func (t TVar) String() string { return fmt.Sprintf("t%d", t.ID) }
 func (t TCon) String() string {
@@ -57,6 +61,10 @@ func (t TCon) String() string {
 func (t TFunc) String() string {
 	args := make([]string, len(t.Args))
 	for i, a := range t.Args {
+		if t.Variadic && i == len(t.Args)-1 {
+			args[i] = "..." + a.String()
+			continue
+		}
 		args[i] = a.String()
 	}
 	ret := t.Ret.String()
@@ -65,7 +73,8 @@ func (t TFunc) String() string {
 	}
 	return "(" + strings.Join(args, ", ") + ") -> " + ret
 }
-func (TUnit) String() string { return "Unit" }
+func (t TGoPackage) String() string { return "go package " + t.Alias }
+func (TUnit) String() string        { return "Unit" }
 
 // Predicate represents a typeclass constraint, e.g. Show[Int].
 type Predicate struct {
@@ -141,10 +150,15 @@ func (env TypeEnv) Clone() TypeEnv {
 type InferState struct {
 	FreshVarID int
 	PkgInfo    *PkgInfo // package info for enum/struct variant lookups
+	GoPackages map[string]*GoPackageInfo
+	TypedInfo  *TypedInfo
 }
 
 func NewInferState() *InferState {
-	return &InferState{FreshVarID: 1}
+	return &InferState{
+		FreshVarID: 1,
+		GoPackages: map[string]*GoPackageInfo{},
+	}
 }
 
 func (s *InferState) Fresh() int {
@@ -175,6 +189,7 @@ func freeVarsMT(t MonoType) []int {
 				walk(a)
 			}
 			walk(t.Ret)
+		case TGoPackage:
 		case TUnit:
 		}
 	}
@@ -246,7 +261,9 @@ func (s Subst) ApplyMT(t MonoType) MonoType {
 		for i, a := range t.Args {
 			args[i] = s.ApplyMT(a)
 		}
-		return TFunc{Args: args, Ret: s.ApplyMT(t.Ret)}
+		return TFunc{Args: args, Ret: s.ApplyMT(t.Ret), Variadic: t.Variadic}
+	case TGoPackage:
+		return t
 	case TUnit:
 		return t
 	}

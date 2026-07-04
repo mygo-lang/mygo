@@ -2,6 +2,8 @@ package compiler
 
 import (
 	"testing"
+
+	"github.com/mygo-lang/mygo/internal/mygo/typeinference"
 )
 
 func TestCompilePrelude(t *testing.T) {
@@ -9,7 +11,19 @@ func TestCompilePrelude(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	
+	typedInfo, err := typeinference.InferPackage(&typeinference.PkgInfo{
+		Name:       pkg.Name,
+		Decls:      pkg.Decls,
+		Enums:      pkg.Enums,
+		Structs:    pkg.Structs,
+		Interfaces: pkg.Interfaces,
+		Funcs:      pkg.Funcs,
+		Impls:      pkg.Impls,
+	}, typeinference.NewInferState())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Test optionMap only
 	g := &generator{
 		pkg:               pkg,
@@ -17,6 +31,7 @@ func TestCompilePrelude(t *testing.T) {
 		interfaceByMethod: map[string]string{},
 		variantByName:     map[string]string{},
 		goSigCache:        map[string]*goPackageSigs{},
+		typedInfo:         typedInfo,
 	}
 	for name, iface := range pkg.Interfaces {
 		for _, m := range iface.Methods {
@@ -28,7 +43,7 @@ func TestCompilePrelude(t *testing.T) {
 			g.variantByName[variant.Name] = enumName
 		}
 	}
-	
+
 	// Test optionMap
 	fnDecl := pkg.Funcs["optionMap"]
 	code, err := g.genFunc(fnDecl)
@@ -36,7 +51,7 @@ func TestCompilePrelude(t *testing.T) {
 		t.Fatalf("genFunc(optionMap): %v", err)
 	}
 	t.Logf("optionMap generated: %T", code)
-	
+
 	// Also test optionFlatMap (same pattern)
 	fn2 := pkg.Funcs["optionFlatMap"]
 	code2, err := g.genFunc(fn2)

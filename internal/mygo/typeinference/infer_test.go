@@ -737,6 +737,82 @@ func TestInferPackageSimple(t *testing.T) {
 	t.Logf("add scheme: %s", sch)
 }
 
+func TestInferGoFmtSprintSelector(t *testing.T) {
+	call := &CallExpr{
+		Callee: &FieldExpr{
+			Expr:  &IdentExpr{Name: "fmt"},
+			Field: "Sprint",
+		},
+		Args: []Expr{&LiteralExpr{Kind: "number", Value: "42"}},
+	}
+	pkg := &PkgInfo{
+		Name: "main",
+		Decls: []Decl{
+			&ImportDecl{Alias: "fmt", Path: "go:fmt"},
+			&FuncDecl{
+				Name: "demo",
+				Ret:  &NamedType{Name: "String"},
+				Body: call,
+			},
+		},
+		Enums:      map[string]*EnumDecl{},
+		Structs:    map[string]*StructDecl{},
+		Interfaces: map[string]*InterfaceDecl{},
+		Funcs:      map[string]*FuncDecl{},
+		Impls:      []*ImplDecl{},
+	}
+
+	info, err := InferPackage(pkg, NewInferState())
+	if err != nil {
+		t.Fatalf("InferPackage() error = %v", err)
+	}
+	if !eqType(info.ExprTypes[call], stringType()) {
+		t.Fatalf("expected fmt.Sprint call to infer String, got %s", info.ExprTypes[call])
+	}
+}
+
+func TestInferGoFmtSprintBoundFunction(t *testing.T) {
+	body := &BlockExpr{
+		Stmts: []Stmt{
+			&LetStmt{
+				Name: "show",
+				Value: &FieldExpr{
+					Expr:  &IdentExpr{Name: "fmt"},
+					Field: "Sprint",
+				},
+			},
+			&ExprStmt{Expr: &CallExpr{
+				Callee: &IdentExpr{Name: "show"},
+				Args:   []Expr{&LiteralExpr{Kind: "number", Value: "42"}},
+			}},
+		},
+	}
+	pkg := &PkgInfo{
+		Name: "main",
+		Decls: []Decl{
+			&ImportDecl{Alias: "fmt", Path: "go:fmt"},
+			&FuncDecl{
+				Name: "demo",
+				Ret:  &NamedType{Name: "String"},
+				Body: body,
+			},
+		},
+		Enums:      map[string]*EnumDecl{},
+		Structs:    map[string]*StructDecl{},
+		Interfaces: map[string]*InterfaceDecl{},
+		Funcs:      map[string]*FuncDecl{},
+		Impls:      []*ImplDecl{},
+	}
+
+	info, err := InferPackage(pkg, NewInferState())
+	if err != nil {
+		t.Fatalf("InferPackage() error = %v", err)
+	}
+	if !eqType(info.ExprTypes[body], stringType()) {
+		t.Fatalf("expected bound fmt.Sprint call to infer String, got %s", info.ExprTypes[body])
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Type equality tests
 // ---------------------------------------------------------------------------

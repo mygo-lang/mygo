@@ -30,11 +30,15 @@ func (p *parser) parseWithYacc() error {
 	p.currentWhere = nil
 	p.currentConstraintArgs = nil
 	p.currentBlock = nil
+	p.currentBlockStack = nil
 	p.currentStmt = nil
 	p.currentExpr = nil
 	p.currentLeftExpr = nil
 	p.currentPipeLeftExpr = nil
 	p.currentArgs = nil
+	p.currentCallCalleeStack = nil
+	p.currentArgsStack = nil
+	p.currentSliceElemsStack = nil
 	p.currentMapKey = nil
 	p.currentMapValue = nil
 	p.currentMapEntries = nil
@@ -52,6 +56,9 @@ func (p *parser) parseWithYacc() error {
 	p.currentPatternArgs = nil
 	p.currentStructFields = nil
 	p.currentStructTypeArgs = nil
+	p.currentTypeArgStack = nil
+	p.currentFuncTypeParamStack = nil
+	p.funcTypeParamDepth = 0
 	p.currentImplTypeParams = nil
 	p.currentImplType = nil
 	p.currentImplInterfaceArgs = nil

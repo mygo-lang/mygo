@@ -26,7 +26,9 @@ func (p *Package) Generate() (string, error) {
 	}
 	infState := typeinference.NewInferState()
 	typedInfo, infErr := typeinference.InferPackage(pkgInfo, infState)
-	_ = infErr // Not blocking code generation yet — phased integration
+	if infErr != nil {
+		return "", infErr
+	}
 
 	g := &generator{
 		pkg:               p,
