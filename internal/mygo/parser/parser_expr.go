@@ -79,6 +79,12 @@ func (p *parser) parseSwitchExpr() (Expr, error) {
 		}
 		line, col := common.NodePos(pat)
 		cases = append(cases, SwitchCase{Line: line, Column: col, Pattern: pat, Body: body})
+		// Optional comma between cases (Rust/Scala style)
+		p.skipNewlines()
+		if p.peekSym(",") {
+			p.nextRaw()
+			p.skipNewlines()
+		}
 	}
 	if err := p.expectKeyword("end"); err != nil {
 		return nil, err

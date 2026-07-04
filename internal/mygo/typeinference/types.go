@@ -140,6 +140,7 @@ func (env TypeEnv) Clone() TypeEnv {
 // InferState holds inference state: fresh variable counter and accumulated constraints.
 type InferState struct {
 	FreshVarID int
+	PkgInfo    *PkgInfo // package info for enum/struct variant lookups
 }
 
 func NewInferState() *InferState {

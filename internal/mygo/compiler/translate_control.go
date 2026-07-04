@@ -232,84 +232,146 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 	if enumDecl == nil {
 		return nil, "", common.ErrorAtPos(n.Line, n.Column, "switch target %q is not an enum", targetType)
 	}
-	needsSwitchVar := false
+
+	// Classify: does the last case have a wildcard?
+	lastIsWildcard := false
+	if len(n.Cases) > 0 {
+		if _, ok := n.Cases[len(n.Cases)-1].Pattern.(*WildcardPattern); ok {
+			lastIsWildcard = true
+		}
+	}
+
+	// Build each case into a translation function.
+	// We'll chain them from last to first to produce nested if-else.
+	type caseTranslation struct {
+		isVariant bool
+		ifStmt    *jen.Statement // non-nil for variant: if cond { body }
+		elseBody  jen.Code       // non-nil for wildcard: plain body
+	}
+
+	var trans []caseTranslation
+
 	for _, c := range n.Cases {
-		if pat, ok := c.Pattern.(*VariantPattern); ok {
+		switch pat := c.Pattern.(type) {
+		case *WildcardPattern:
+			child := ctx.child()
+			body, bodyType, err := g.translateExpr(c.Body, child, expected)
+			if err != nil {
+				return nil, "", err
+			}
+			var bodyBlock jen.Code
+			if expected == "" {
+				if bodyType == "" {
+					bodyBlock = body
+				} else {
+					bodyBlock = jen.Id("_").Op("=").Add(body)
+				}
+			} else {
+				bodyBlock = jen.Return(body)
+			}
+			trans = append(trans, caseTranslation{isVariant: false, elseBody: bodyBlock})
+
+		case *VariantPattern:
+			variant := g.findVariant(enumDecl, pat.Name)
+			if variant == nil {
+				return nil, "", common.ErrorAtPos(pat.Line, pat.Column, "unknown variant %s of %s", pat.Name, enumDecl.Name)
+			}
+			tname := variantGoTypeName(enumDecl.Name, variant.Name)
+
+			// Build the type assertion type: OptionSome or OptionSome[Int]
+			// Use Index() rather than bracketArgs to avoid space before '['.
+			assertType := jen.Id(tname)
+			for _, a := range enumArgs {
+				assertType = assertType.Index(jen.Id(a))
+			}
+
+			// Determine if any pattern args are used in the body
+			hasBindings := false
 			for _, arg := range pat.Args {
 				if exprUsesIdent(c.Body, arg) {
-					needsSwitchVar = true
+					hasBindings = true
 					break
 				}
 			}
-			if needsSwitchVar {
-				break
+
+			// Build condition: v, ok := target.(VariantType)  or just  _, ok
+			// Use Op(".").Parens() instead of Assert() to avoid extra spaces.
+			typeAssert := jen.Op(".").Parens(assertType)
+			var cond *jen.Statement
+			if hasBindings {
+				cond = jen.List(jen.Id("v"), jen.Id("ok")).Op(":=").Add(targetCode).Add(typeAssert)
+			} else {
+				cond = jen.List(jen.Id("_"), jen.Id("ok")).Op(":=").Add(targetCode).Add(typeAssert)
 			}
+
+			// Build bindings for the case body
+			child := ctx.child()
+			for i, arg := range pat.Args {
+				if i >= len(variant.Fields) {
+					return nil, "", common.ErrorAtPos(pat.Line, pat.Column, "pattern %s arity mismatch", pat.Name)
+				}
+				if !exprUsesIdent(c.Body, arg) {
+					continue
+				}
+				child.bindings[arg] = fmt.Sprintf("v.F%d", i)
+				child.locals[arg] = g.goType(variant.Fields[i].Type, nil)
+			}
+
+			body, bodyType, err := g.translateExpr(c.Body, child, expected)
+			if err != nil {
+				return nil, "", err
+			}
+			var bodyBlock jen.Code
+			if expected == "" {
+				if bodyType == "" {
+					bodyBlock = body
+				} else {
+					bodyBlock = jen.Id("_").Op("=").Add(body)
+				}
+			} else {
+				bodyBlock = jen.Return(body)
+			}
+
+			trans = append(trans, caseTranslation{
+				isVariant: true,
+				ifStmt:    jen.If(cond, jen.Id("ok")).Block(bodyBlock),
+			})
+
+		default:
+			line, col := common.NodePos(c.Pattern)
+			return nil, "", common.ErrorAtPos(line, col, "unsupported pattern %#v", c.Pattern)
 		}
 	}
 
-	// Build case blocks
-	type caseEntry struct {
-		pat  string
-		code jen.Code
-	}
-	var cases []caseEntry
-	for _, c := range n.Cases {
-		pat, bindings, err := g.translatePattern(c.Pattern, enumDecl, enumArgs, "v", c.Body)
-		if err != nil {
-			return nil, "", common.ErrorAtPos(n.Line, n.Column, "pattern: %v", err)
-		}
-		child := ctx.child()
-		for name, info := range bindings {
-			child.locals[name] = info.Type
-			child.bindings[name] = info.Expr
-		}
-		body, bodyType, err := g.translateExpr(c.Body, child, expected)
-		if err != nil {
-			return nil, "", err
-		}
-		var bodyBlock jen.Code
-		if expected == "" {
-			if bodyType == "" {
-				bodyBlock = body
+	// Chain from last to first to build nested if-else.
+	//   if cond1 { body1 } else { if cond2 { body2 } else { wildcardBody } }
+	var tail jen.Code
+	for i := len(trans) - 1; i >= 0; i-- {
+		t := trans[i]
+		if t.isVariant {
+			if tail == nil {
+				// This variant case is the final branch in the chain.
+				// If expression form and no wildcard follows, add panic default.
+				if expected != "" && !lastIsWildcard {
+					tail = t.ifStmt.Else().Block(jen.Panic(jen.Lit("unreachable")))
+				} else {
+					tail = t.ifStmt
+				}
 			} else {
-				bodyBlock = jen.Id("_").Op("=").Add(body)
+				tail = t.ifStmt.Else().Block(tail)
 			}
 		} else {
-			bodyBlock = jen.Return(body)
-		}
-		cases = append(cases, caseEntry{pat: pat, code: bodyBlock})
-	}
-
-	// Build the type-switch statement
-	// Use: switch v := opt.(type) { case Pat: body ... default: panic(...) }
-	var switchFn func(func(*jen.Group)) *jen.Statement
-	if needsSwitchVar {
-		// switch v := opt.(type) { cases }
-		switchFn = func(f func(*jen.Group)) *jen.Statement {
-			return jen.Switch().Id("v").Op(":=").Add(targetCode).Op(".").Parens(jen.Id("type")).CustomFunc(jen.Options{Open: "{", Close: "}", Multi: true}, f)
-		}
-	} else {
-		switchFn = func(f func(*jen.Group)) *jen.Statement {
-			return jen.Switch().Add(targetCode).Op(".").Parens(jen.Id("type")).CustomFunc(jen.Options{Open: "{", Close: "}", Multi: true}, f)
+			// Wildcard: the else body itself (innermost branch ends here)
+			tail = t.elseBody
 		}
 	}
 
-	// Wrap the switch in an immediately-invoked function literal
-	// so it can be used as an expression.
+	// Wrap in an immediately-invoked function literal for expression form
 	expr := jen.Func().Params()
 	if expected != "" {
 		expr.Add(jen.Id(expected))
 	}
-	expr = expr.Block(
-		switchFn(func(g *jen.Group) {
-			for _, ce := range cases {
-				g.Add(jen.Case(jen.Id(ce.pat)).Block(ce.code))
-			}
-			if expected != "" {
-				g.Add(jen.Default().Block(jen.Panic(jen.Lit("unreachable"))))
-			}
-		}),
-	).Call()
+	expr = expr.Block(tail).Call()
 
 	return expr, expected, nil
 }

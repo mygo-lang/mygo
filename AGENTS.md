@@ -222,3 +222,43 @@ A Hindley-Milner (Algorithm W) type inference pass implementing Haskell 98 core 
 
 ### Tests (`internal/mygo/typeinference/infer_test.go`)
 - 37 tests covering: literals, ident lookup, let binding, let-polymorphism, occurs check, None inference, if/if-mismatch, function calls, blocks, slice/map/set literals, function literals, comparison with Eq predicate, unification (simple/var/mismatch/function/compose), substitution, generalization, instantiation, free vars, full package inference, type equality
+
+## Pattern Matching (`switch`/`case`)
+
+### Syntax
+```mygo
+switch target_expr
+  case Variant1(arg1, arg2) => body1,
+  case Variant2 => body2,
+  case _ => defaultBody
+end
+```
+Commas between cases are optional (Rust/Scala style).
+
+### Parser (`parser_expr.go`)
+- `parseSwitchExpr()` consumes an optional comma after each case body before the next `case` or `end`.
+
+### Go Backend (`compiler/translate_control.go`)
+- `translateSwitch()` emits if-else chains with type assertions instead of Go `switch x.(type)`:
+  ```go
+  if v, ok := target.(OptionSome[A]); ok {
+      return body_with_v_F0
+  } else if _, ok := target.(OptionNone); ok {
+      return body
+  } else {
+      panic("unreachable")
+  }
+  ```
+- Pattern bindings use `v.F0`, `v.F1`, etc., scoped per if-branch.
+- Wildcard `_` patterns become plain `else` branches.
+- Expression form is wrapped in an immediately-invoked function literal `func() T { ... }()`.
+
+### HM Type Inference (`internal/mygo/typeinference/`)
+- `InferState` gains `PkgInfo` field for enum variant lookup during pattern inference.
+- `inferSwitch()` extends each case body's environment with pattern bindings from the matched variant's fields.
+- Field types are resolved by substituting the target enum's type parameters with the concrete type arguments.
+- Helper functions: `resolveEnumType()`, `lookupEnum()`, `findEnumVariant()`, `substituteTypeParams()`.
+
+### Tests
+- `TestTranslateSwitchUsesIfElse` (3 subtests): expression form with variant patterns, wildcard pattern, statement form (no expected type).
+- `TestE2ESwitchGeneratedCodeIsValidGo`: full compiler pipeline produces valid Go syntax verified by `go/parser`.

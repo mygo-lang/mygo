@@ -42,6 +42,9 @@ func InferPackage(pkg *PkgInfo, state *InferState) (*TypedInfo, error) {
 		Predicates:     make(map[Expr][]Predicate),
 	}
 
+	// Store package info in state for enum variant lookups in pattern matching
+	state.PkgInfo = pkg
+
 	// Build initial type environment with built-in types and prelude
 	env := initialTypeEnv(pkg)
 
@@ -823,13 +826,43 @@ func inferSwitch(env TypeEnv, n *SwitchExpr, state *InferState) (MonoType, Subst
 		return TUnit{}, s, preds, nil
 	}
 
+	// Resolve target type to enum name and type args for pattern binding
+	enumName, enumTypeArgs := resolveEnumType(targetType)
+	enumDecl := lookupEnum(state.PkgInfo, enumName)
+
 	// Infer each case body type and unify them
 	var caseTypes []MonoType
 	var allPreds []Predicate
 	allPreds = append(allPreds, preds...)
 
 	for _, cas := range n.Cases {
-		caseType, cs, cp, err := inferExpr(env, cas.Body, state)
+		caseEnv := env.Clone()
+
+		// Extend environment with pattern bindings
+		switch pat := cas.Pattern.(type) {
+		case *VariantPattern:
+			if enumDecl != nil {
+				if variant, ok := findEnumVariant(enumDecl, pat.Name); ok {
+					// For each pattern arg, look up the variant field type and
+					// substitute enum type parameters with the target type arguments.
+					// e.g. target Option[Int] + variant Some(A) → binding a: Int
+					for i, arg := range pat.Args {
+						if arg == "_" {
+							continue
+						}
+						if i < len(variant.Fields) {
+							fieldType := typeFromAST(variant.Fields[i].Type)
+							if len(enumDecl.TypeParams) > 0 && len(enumTypeArgs) > 0 {
+								fieldType = substituteTypeParams(fieldType, enumDecl.TypeParams, enumTypeArgs)
+							}
+							caseEnv[arg] = &Scheme{Body: QualifiedType{Body: fieldType}}
+						}
+					}
+				}
+			}
+		}
+
+		caseType, cs, cp, err := inferExpr(caseEnv, cas.Body, state)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("switch case: %w", err)
 		}
@@ -848,8 +881,6 @@ func inferSwitch(env TypeEnv, n *SwitchExpr, state *InferState) (MonoType, Subst
 		}
 		resultType = s.ApplyMT(resultType)
 	}
-
-	_ = targetType
 	return resultType, s, allPreds, nil
 }
 
@@ -1061,4 +1092,76 @@ func inferSetLit(env TypeEnv, n *SetLitExpr, state *InferState) (MonoType, Subst
 	}
 
 	return TCon{Name: "Set", Args: []MonoType{elemType}}, s, allPreds, nil
+}
+
+// ---------------------------------------------------------------------------
+// Pattern-matching helpers
+// ---------------------------------------------------------------------------
+
+// resolveEnumType extracts the enum type constructor name and its type arguments
+// from a MonoType. For example, from Option[Int] it returns ("Option", [Int]).
+func resolveEnumType(t MonoType) (string, []MonoType) {
+	switch t := t.(type) {
+	case TCon:
+		return t.Name, t.Args
+	}
+	return "", nil
+}
+
+// lookupEnum looks up an enum declaration by name from the package info.
+func lookupEnum(pkg *PkgInfo, name string) *EnumDecl {
+	if pkg == nil {
+		return nil
+	}
+	return pkg.Enums[name]
+}
+
+// findEnumVariant finds a variant by name within an enum declaration.
+func findEnumVariant(enum *EnumDecl, name string) (*EnumVariant, bool) {
+	if enum == nil {
+		return nil, false
+	}
+	for i := range enum.Variants {
+		if enum.Variants[i].Name == name {
+			return &enum.Variants[i], true
+		}
+	}
+	return nil, false
+}
+
+// substituteTypeParams substitutes type parameter names in a MonoType with the
+// corresponding concrete types from typeArgs, using the enum's TypeParams list
+// as the mapping key.
+func substituteTypeParams(t MonoType, typeParams []string, typeArgs []MonoType) MonoType {
+	if len(typeParams) == 0 || len(typeArgs) == 0 {
+		return t
+	}
+	switch t := t.(type) {
+	case TVar:
+		return t
+	case TCon:
+		// Check if this TCon is a type parameter
+		for i, tp := range typeParams {
+			if t.Name == tp && len(t.Args) == 0 {
+				if i < len(typeArgs) {
+					return typeArgs[i]
+				}
+			}
+		}
+		// Recursively substitute in args
+		args := make([]MonoType, len(t.Args))
+		for i, a := range t.Args {
+			args[i] = substituteTypeParams(a, typeParams, typeArgs)
+		}
+		return TCon{Name: t.Name, Args: args}
+	case TFunc:
+		args := make([]MonoType, len(t.Args))
+		for i, a := range t.Args {
+			args[i] = substituteTypeParams(a, typeParams, typeArgs)
+		}
+		return TFunc{Args: args, Ret: substituteTypeParams(t.Ret, typeParams, typeArgs)}
+	case TUnit:
+		return t
+	}
+	return t
 }
