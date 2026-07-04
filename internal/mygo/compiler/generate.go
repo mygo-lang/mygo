@@ -42,6 +42,7 @@ func (p *Package) Generate() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	file.Add(globals...)
 	imports := p.sortedImports()
 	if g.needsCallAny && !hasImportPath(imports, "reflect") {
 		imports = append(imports, importSpec{Path: "reflect"})
@@ -64,32 +65,30 @@ func (p *Package) Generate() (string, error) {
 		}
 		file.ImportName(path, alias)
 	}
-	out := &bytes.Buffer{}
-	if err := file.Render(out); err != nil {
-		return "", err
-	}
-	out.WriteString("\n")
-	out.WriteString(globals)
 	for _, decl := range p.Decls {
 		if impl, ok := decl.(*ImplDecl); ok {
-			s, err := g.genImpl(impl)
+			implCode, err := g.genImpl(impl)
 			if err != nil {
 				return "", err
 			}
-			out.WriteString(s)
+			file.Add(implCode...)
 		}
 	}
 	for _, decl := range p.Decls {
 		if fn, ok := decl.(*FuncDecl); ok {
-			s, err := g.genFunc(fn)
+			fnCode, err := g.genFunc(fn)
 			if err != nil {
 				return "", err
 			}
-			out.WriteString(s)
+			file.Add(fnCode)
 		}
 	}
 	if g.needsCallAny {
-		out.WriteString(g.genHelpers())
+		file.Add(g.genHelpers()...)
+	}
+	out := &bytes.Buffer{}
+	if err := file.Render(out); err != nil {
+		return "", err
 	}
 	return out.String(), nil
 }

@@ -47,6 +47,7 @@ type parser struct {
 	currentSwitchTarget      ast.Expr
 	currentSwitchCases       []ast.SwitchCase
 	currentPattern           ast.Pattern
+	currentPatternArgs       []string
 	currentStructFields      []ast.StructLitField
 	currentStructTypeArgs    []ast.TypeExpr
 	currentImplTypeParams    []string
@@ -55,6 +56,9 @@ type parser struct {
 	currentImplLine          int
 	currentImplCol           int
 	currentSliceElems        []ast.Expr
+	savedDeclName            string
+	savedTypeNameStack       []typeNameEntry
+	savedStructTypeArgs      []ast.TypeExpr
 	expectTypeSuffix         bool
 	expectStructTypeArgs     bool
 	expectConstraintSuffix   bool
@@ -64,6 +68,13 @@ type parser struct {
 	currentInterface         *ast.InterfaceDecl
 	currentImpl              *ast.ImplDecl
 	currentFunc              *ast.FuncDecl
+}
+
+type typeNameEntry struct {
+	name string
+	line int
+	col  int
+	args []TypeExpr
 }
 
 func parseFiles(srcs map[string]string) ([]*ast.File, error) {

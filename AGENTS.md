@@ -145,6 +145,13 @@
   - Jennifer API patterns: `jen.Dict` is `map[Code]Code` (not a function), `jen.Lit()` takes `interface{}` for literals, `*jen.Statement` has `.Call()`, `.Dot()`, `.Op()`, `.Index()` methods requiring type assertion from `jen.Code` interface.
 - Removed `where` from the parser/lexer path and switched the typeclass surface fully to `using`, with parser generation now going through `~/go/bin/golex` plus `goyacc`.
 - **Complete Jennifer refactoring (Phase 1)**: Refactored `internal/mygo/compiler/` to use Jennifer for all code generation, eliminating string-based code generation. Deleted `section.go` and `unit_body_writer.go`. Converted `genGlobals()`, `genTypeclassDispatchers()`, `genImpl()`, `genFunc()`, `translateSwitch()`, and `translateWhile()` to use Jennifer's type-safe API. This improves type safety, maintainability, and eliminates string concatenation for generating Go code.
+- **Parser refactor**: Simplified declaration parsing by extracting names before type parameters for `ENUM`, `STRUCT`, `INTERFACE`, and `impl`. Fixed generic impl parsing by using `p.currentType` to hold the interface reference. Refactored `type` production to use explicit `case` statements for better code generation. Added nested type argument tracking via `savedTypeNameStack` to correctly handle `Map[Map[String, Int], Int]` and similar nested generics.
+- **Prelude migration**: Migrated `prelude/prelude.mygo` to new typeclass syntax:
+  - Generic impls with type parameters: `impl[T] List[T]: Enumerable[List[T], T]`
+  - Named impls: `impl Int: Show[Int]`
+  - Anonymous impls: `impl Show[String]`
+  - All collection types (`List`, `Slice`, `Map`, `Set`) now have `Enumerable` implementations using `using` constraints.
+- **Code generation cleanup**: Removed dead code from `compiler/code.go` and `compiler/compiler_impl.go`. Improved `compiler/generate.go` and control flow translation.
 - Added `Ref.new(expr)` lowering for explicit `Ref[T]` construction, updated `examples/data-structure` to use it for `Option[Ref[List[A]]]` tails, and taught field lookup to resolve through generated Go pointer types like `*List[int]`.
 - Introduced `Slice`, `Map`, and `Set` as compiler-handled collection types with no prelude struct declarations — lowered directly to Go natives (`[]A`, `map[K]V`, `map[A]struct{}`). `Slice[A]` is now the only slice type syntax.
 - Further split `internal/mygo/compiler/` into focused files: `helpers.go`, `type_inference.go`, `typeclass.go`, `translate_struct.go`, and `go_package.go`, while keeping `generate.go`, `translate_expr.go`, `translate_call.go`, `translate_control.go`, `api.go`, and `types.go` as separate compiler concerns.

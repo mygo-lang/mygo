@@ -132,12 +132,16 @@ import_decl
 	;
 
 enum_decl
-	: ENUM qualified_name opt_type_params {
+	: ENUM qualified_name {
+		p := yylex.(*parser)
+		p.savedDeclName = p.currentName
+	}
+	opt_type_params {
 		p := yylex.(*parser)
 		p.currentEnum = &ast.EnumDecl{
 			Line: $1.line,
 			Column: $1.col,
-			Name: p.currentName,
+			Name: p.savedDeclName,
 			TypeParams: append([]string(nil), p.currentTypeParams...),
 		}
 	}
@@ -206,12 +210,16 @@ enum_variant_fields
 	;
 
 struct_decl
-	: STRUCT qualified_name opt_type_params {
+	: STRUCT qualified_name {
+		p := yylex.(*parser)
+		p.savedDeclName = p.currentName
+	}
+	opt_type_params {
 		p := yylex.(*parser)
 		p.currentStruct = &ast.StructDecl{
 			Line: $1.line,
 			Column: $1.col,
-			Name: p.currentName,
+			Name: p.savedDeclName,
 			TypeParams: append([]string(nil), p.currentTypeParams...),
 		}
 	}
@@ -280,12 +288,16 @@ field
 	;
 
 interface_decl
-	: INTERFACE qualified_name opt_type_params {
+	: INTERFACE qualified_name {
+		p := yylex.(*parser)
+		p.savedDeclName = p.currentName
+	}
+	opt_type_params {
 		p := yylex.(*parser)
 		p.currentInterface = &ast.InterfaceDecl{
 			Line: $1.line,
 			Column: $1.col,
-			Name: p.currentName,
+			Name: p.savedDeclName,
 			TypeParams: append([]string(nil), p.currentTypeParams...),
 		}
 	}
@@ -335,24 +347,14 @@ impl_decl
 		p.currentImplLine = $1.line
 		p.currentImplCol = $1.col
 	}
-	opt_impl_type_params type impl_rest impl_body opt_newlines END {
+	opt_impl_type_params type {
 		p := yylex.(*parser)
-		if p.currentImpl != nil {
-			p.currentImpl.InterfaceArgs = append([]ast.TypeExpr(nil), p.currentImplInterfaceArgs...)
-			p.decls = append(p.decls, p.currentImpl)
-		}
-		p.currentImpl = nil
-		p.currentImplTypeParams = nil
-		p.parsingImplTypeParams = false
-		p.currentImplType = nil
-		p.currentImplInterfaceArgs = nil
+		p.currentImplType = p.currentType
 	}
-	;
-
-impl_rest
-	: COLON type {
+	COLON type {
 		p := yylex.(*parser)
 		// Named/generic form: "impl Type : Interface[Args]"
+		// p.currentType holds the interface reference (e.g. "Show[Int]")
 		if iface, ok := p.currentType.(*ast.NamedType); ok {
 			p.currentName = iface.Name
 			p.currentImplInterfaceArgs = append([]ast.TypeExpr(nil), iface.Args...)
@@ -369,24 +371,17 @@ impl_rest
 			TypeParams: append([]string(nil), p.currentImplTypeParams...),
 		}
 	}
-	| /* empty */ {
+	impl_body opt_newlines END {
 		p := yylex.(*parser)
-		// Anonymous form: "impl Interface[Args]" — the first type is the interface reference.
-		if iface, ok := p.currentType.(*ast.NamedType); ok {
-			p.currentName = iface.Name
-			p.currentImplInterfaceArgs = append([]ast.TypeExpr(nil), iface.Args...)
-		} else {
-			p.currentName = ""
-			p.currentImplInterfaceArgs = nil
+		if p.currentImpl != nil {
+			p.currentImpl.InterfaceArgs = append([]ast.TypeExpr(nil), p.currentImplInterfaceArgs...)
+			p.decls = append(p.decls, p.currentImpl)
 		}
-		p.currentImpl = &ast.ImplDecl{
-			Line: p.currentImplLine,
-			Column: p.currentImplCol,
-			Name: p.currentName,
-			InterfaceName: p.currentName,
-			Type: nil,
-			TypeParams: append([]string(nil), p.currentImplTypeParams...),
-		}
+		p.currentImpl = nil
+		p.currentImplTypeParams = nil
+		p.parsingImplTypeParams = false
+		p.currentImplType = nil
+		p.currentImplInterfaceArgs = nil
 	}
 	;
 
@@ -599,18 +594,14 @@ maybe_type_list
 type_list
 	: type {
 		p := yylex.(*parser)
-		if p.expectStructTypeArgs {
-			p.currentStructTypeArgs = append(p.currentStructTypeArgs, p.currentType)
-		}
+		p.currentStructTypeArgs = append(p.currentStructTypeArgs, p.currentType)
 		if p.expectConstraintSuffix {
 			p.currentConstraintArgs = append(p.currentConstraintArgs, p.currentType)
 		}
 	}
 	| type_list COMMA type {
 		p := yylex.(*parser)
-		if p.expectStructTypeArgs {
-			p.currentStructTypeArgs = append(p.currentStructTypeArgs, p.currentType)
-		}
+		p.currentStructTypeArgs = append(p.currentStructTypeArgs, p.currentType)
 		if p.expectConstraintSuffix {
 			p.currentConstraintArgs = append(p.currentConstraintArgs, p.currentType)
 		}
@@ -633,9 +624,18 @@ qualified_name
 	;
 
 type
-	: func_type
-	| grouped_type
-	| named_type
+	: func_type {
+		p := yylex.(*parser)
+		yyVAL.node = p.currentType
+	}
+	| grouped_type {
+		p := yylex.(*parser)
+		yyVAL.node = p.currentType
+	}
+	| named_type {
+		p := yylex.(*parser)
+		yyVAL.node = p.currentType
+	}
 	;
 
 func_type
@@ -667,13 +667,33 @@ named_type_suffix
 			Name: p.currentName,
 		}
 	}
-	| TYPELBRACK maybe_type_list RBRACK {
+	| TYPELBRACK {
 		p := yylex.(*parser)
+		p.expectStructTypeArgs = true
+		// Push current name onto the stack before parsing inner types.
+		p.savedTypeNameStack = append(p.savedTypeNameStack, typeNameEntry{
+			name: p.currentName,
+			line: p.currentNameLine,
+			col:  p.currentNameCol,
+			args: p.currentStructTypeArgs,
+		})
+		p.currentStructTypeArgs = nil
+	}
+	maybe_type_list RBRACK {
+		p := yylex.(*parser)
+		// Pop the saved name for this level.
+		top := p.savedTypeNameStack[len(p.savedTypeNameStack)-1]
+		p.savedTypeNameStack = p.savedTypeNameStack[:len(p.savedTypeNameStack)-1]
+		args := append([]ast.TypeExpr(nil), p.currentStructTypeArgs...)
 		p.currentType = &ast.NamedType{
-			Line: p.currentNameLine,
-			Column: p.currentNameCol,
-			Name: p.currentName,
+			Line: top.line,
+			Column: top.col,
+			Name: top.name,
+			Args: args,
 		}
+		// Restore outer struct type args context.
+		p.currentStructTypeArgs = top.args
+		p.expectStructTypeArgs = false
 	}
 	;
 
@@ -820,6 +840,20 @@ postfix_expr
 		p.currentExpr = &ast.FieldExpr{Line: $2.line, Column: $2.col, Expr: p.currentExpr, Field: $3.lit}
 	}
 	| postfix_expr TYPELBRACK maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE {
+		p := yylex.(*parser)
+		if id, ok := p.currentExpr.(*ast.IdentExpr); ok {
+			p.currentExpr = &ast.StructLitExpr{Line: $2.line, Column: $2.col, TypeName: id.Name, TypeArgs: append([]ast.TypeExpr(nil), p.currentStructTypeArgs...), Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
+		}
+		p.currentStructTypeArgs = nil
+		p.currentStructFields = nil
+		p.expectStructTypeArgs = false
+	}
+	| postfix_expr LBRACK {
+		p := yylex.(*parser)
+		p.expectStructTypeArgs = true
+		p.currentStructTypeArgs = nil
+	}
+	maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE {
 		p := yylex.(*parser)
 		if id, ok := p.currentExpr.(*ast.IdentExpr); ok {
 			p.currentExpr = &ast.StructLitExpr{Line: $2.line, Column: $2.col, TypeName: id.Name, TypeArgs: append([]ast.TypeExpr(nil), p.currentStructTypeArgs...), Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
@@ -989,11 +1023,12 @@ if_expr
 		p := yylex.(*parser)
 		p.currentIfCond = p.currentExpr
 	}
+	opt_newlines
 	block_expr {
 		p := yylex.(*parser)
 		p.currentIfThen = p.currentExpr
 	}
-	ELSE block_expr opt_newlines END {
+	ELSE opt_newlines block_expr opt_newlines END {
 		p := yylex.(*parser)
 		p.currentIfElse = p.currentExpr
 		p.currentExpr = &ast.IfExpr{Line: $1.line, Column: $1.col, Cond: p.currentIfCond, Then: p.currentIfThen, Else: p.currentIfElse}
@@ -1038,7 +1073,7 @@ switch_case_list
 	;
 
 switch_case
-	: CASE pattern ARROW expr {
+	: CASE pattern ARROW opt_newlines block_expr {
 		p := yylex.(*parser)
 		p.currentSwitchCases = append(p.currentSwitchCases, ast.SwitchCase{
 			Pattern: p.currentPattern,
@@ -1057,9 +1092,31 @@ pattern
 		p := yylex.(*parser)
 		p.currentPattern = &ast.VariantPattern{Line: $1.line, Column: $1.col, Name: $1.lit}
 	}
-	| IDENT LPAREN maybe_name_list RPAREN {
+	| IDENT LPAREN pattern_name_list RPAREN {
 		p := yylex.(*parser)
-		p.currentPattern = &ast.VariantPattern{Line: $1.line, Column: $1.col, Name: $1.lit}
+		args := append([]string(nil), p.currentPatternArgs...)
+		p.currentPattern = &ast.VariantPattern{Line: $1.line, Column: $1.col, Name: $1.lit, Args: args}
+		p.currentPatternArgs = nil
+	}
+	;
+
+pattern_name_list
+	: /* empty */
+	| pattern_name_list COMMA IDENT {
+		p := yylex.(*parser)
+		p.currentPatternArgs = append(p.currentPatternArgs, $3.lit)
+	}
+	| pattern_name_list COMMA UNDER {
+		p := yylex.(*parser)
+		p.currentPatternArgs = append(p.currentPatternArgs, "_")
+	}
+	| IDENT {
+		p := yylex.(*parser)
+		p.currentPatternArgs = append(p.currentPatternArgs, $1.lit)
+	}
+	| UNDER {
+		p := yylex.(*parser)
+		p.currentPatternArgs = append(p.currentPatternArgs, "_")
 	}
 	;
 

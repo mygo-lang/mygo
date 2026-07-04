@@ -149,7 +149,7 @@ impl[T] List[T]: Enumerable[List[T], T]
     var result: List[T] = None
     var current: Ref[List[T]] = Ref.new(c)
     while not done
-      if fn(current.head) then
+      if fn(current.head)
         let newNode = List[T] { head: current.head, tail: Some(Ref.new(result)) }
         result = newNode
       else
@@ -181,7 +181,7 @@ impl[T] List[T]: Enumerable[List[T], T]
     var done: Bool = false
     var current: Ref[List[T]] = Ref.new(c)
     while not done
-      if fn(current.head) then
+      if fn(current.head)
         return Some(Ref.new(current.head))
       else
         switch current.tail
@@ -190,7 +190,7 @@ impl[T] List[T]: Enumerable[List[T], T]
         end
       end
     end
-    return None[Ref[T]]()
+    return None
   end
 
   func contains(c: List[T], item: T, eq: Eq[T]) -> Bool
@@ -198,7 +198,7 @@ impl[T] List[T]: Enumerable[List[T], T]
     var result: Bool = false
     var current: Ref[List[T]] = Ref.new(c)
     while not done
-      if equals(current.head, item, eq) then
+      if equals(current.head, item, eq)
         result = true
         done = true
       else
@@ -295,17 +295,17 @@ func optionUnwrap[A](opt: Option[A], defaultVal: A) -> A
   end
 end
 
-func optionMap[A, B](opt: Option[A], fn: func(item: A) -> B) -> Option[B]
+func optionMap[A, B](opt: Option[A], fn: func(A) -> B) -> Option[B]
   switch opt
-    case Some(v) => Some[B](fn(v))
-    case None => None[B]()
+    case Some(v) => Some(fn(v))
+    case None => None
   end
 end
 
-func optionFlatMap[A, B](opt: Option[A], fn: func(item: A) -> Option[B]) -> Option[B]
+func optionFlatMap[A, B](opt: Option[A], fn: func(A) -> Option[B]) -> Option[B]
   switch opt
     case Some(v) => fn(v)
-    case None => None[B]()
+    case None => None
   end
 end
 
@@ -332,24 +332,24 @@ func resultUnwrap[A, E](res: Result[A, E], defaultVal: A) -> A
   end
 end
 
-func resultMap[A, B, E](res: Result[A, E], fn: func(item: A) -> B) -> Result[B, E]
+  func resultMap[A, B, E](res: Result[A, E], fn: func(A) -> B) -> Result[B, E]
   switch res
-    case Ok(v) => Ok[B, E](fn(v))
-    case Err(e) => Err[B, E](e)
+    case Ok(v) => Ok(fn(v))
+    case Err(e) => Err(e)
   end
 end
 
-func resultMapErr[A, B, E](res: Result[A, E], fn: func(err: E) -> B) -> Result[A, B]
+func resultMapErr[A, B, E](res: Result[A, E], fn: func(E) -> B) -> Result[A, B]
   switch res
-    case Ok(v) => Ok[A, B](v)
-    case Err(e) => Err[A, B](fn(e))
+    case Ok(v) => Ok(v)
+    case Err(e) => Err(fn(e))
   end
 end
 
-func resultAndThen[A, B, E](res: Result[A, E], fn: func(item: A) -> Result[B, E]) -> Result[B, E]
+func resultAndThen[A, B, E](res: Result[A, E], fn: func(A) -> Result[B, E]) -> Result[B, E]
   switch res
     case Ok(v) => fn(v)
-    case Err(e) => Err[B, E](e)
+    case Err(e) => Err(e)
   end
 end
 

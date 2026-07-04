@@ -218,6 +218,7 @@ func (g *generator) translateIf(n *IfExpr, ctx *exprCtx, expected string) (jen.C
 }
 
 func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string) (jen.Code, string, error) {
+	fmt.Printf("DEBUG translateSwitch: expected=%q\n", expected)
 	targetCode, targetType, err := g.translateExpr(n.Target, ctx, "")
 	if err != nil {
 		return nil, "", err

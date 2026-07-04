@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"fmt"
 	"strings"
 
 	jen "github.com/dave/jennifer/jen"
@@ -224,10 +225,12 @@ func (g *generator) translateIdent(name string, line, col int, ctx *exprCtx, exp
 		if base != "" && len(args) > 0 {
 			var typeArgs []jen.Code
 			for _, a := range args {
-				typeArgs = append(typeArgs, jen.Id(a))
+				cleanArg := strings.TrimPrefix(strings.TrimSpace(a), "*")
+				typeArgs = append(typeArgs, jen.Id(cleanArg))
 			}
 			return jen.Id("None").Index(typeArgs...).Call(), expected, nil
 		}
+		fmt.Printf("DEBUG None: expected=%q base=%q args=%v line=%d\n", expected, base, args, line)
 		return nil, "", common.ErrorAtPos(line, col, "None requires type inference from context")
 	case "Nil":
 		return nil, "", common.ErrorAtPos(line, col, "Nil is not a valid value; use Option[Ref[T]] for nullable references")

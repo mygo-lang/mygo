@@ -49,6 +49,7 @@ func (p *parser) parseWithYacc() error {
 	p.currentSwitchTarget = nil
 	p.currentSwitchCases = nil
 	p.currentPattern = nil
+	p.currentPatternArgs = nil
 	p.currentStructFields = nil
 	p.currentStructTypeArgs = nil
 	p.currentImplTypeParams = nil
@@ -57,6 +58,9 @@ func (p *parser) parseWithYacc() error {
 	p.currentImplLine = 0
 	p.currentImplCol = 0
 	p.currentSliceElems = nil
+	p.savedTypeNameStack = nil
+	p.savedStructTypeArgs = nil
+	p.savedDeclName = ""
 	p.expectTypeSuffix = false
 	p.expectStructTypeArgs = false
 	p.expectConstraintSuffix = false

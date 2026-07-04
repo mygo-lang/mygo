@@ -1,7 +1,6 @@
 package compiler
 
 import (
-	"bytes"
 	"sort"
 	"strconv"
 
@@ -10,8 +9,7 @@ import (
 	"github.com/mygo-lang/mygo/internal/mygo/common"
 )
 
-func (g *generator) genGlobals() (string, error) {
-	file := jen.NewFile("")
+func (g *generator) genGlobals() ([]jen.Code, error) {
 	ctx := &exprCtx{
 		locals:          map[string]string{},
 		bindings:        map[string]string{},
@@ -20,6 +18,7 @@ func (g *generator) genGlobals() (string, error) {
 		typeParams:      map[string]struct{}{},
 		constraintFuncs: map[string]string{},
 	}
+	var stmts []jen.Code
 	for _, decl := range g.pkg.Decls {
 		s, ok := decl.(*LetStmt)
 		if !ok {
@@ -27,21 +26,23 @@ func (g *generator) genGlobals() (string, error) {
 		}
 		code, typ, err := g.translateExpr(s.Value, ctx, g.goType(s.Type, nil))
 		if err != nil {
-			return "", common.ErrorAtPos(s.Line, s.Column, "global binding %q: %v", s.Name, err)
+			return nil, common.ErrorAtPos(s.Line, s.Column, "global binding %q: %v", s.Name, err)
 		}
 		actual := sanitizeIdent(s.Name)
 		if actual == "" || actual == "_" {
 			actual = "tmp"
 		}
 		if s.Name == "_" {
-			file.Var().Id("_").Op("=").Add(code)
+			stmt := jen.Var().Id("_").Op("=").Add(code)
+			stmts = append(stmts, stmt)
 			continue
 		}
-		stmt := file.Var().Id(actual)
+		stmt := jen.Var().Id(actual)
 		if s.Type != nil {
 			stmt.Add(jenTypeExpr(s.Type))
 		}
 		stmt.Op("=").Add(code)
+		stmts = append(stmts, stmt)
 		ctx.bindings[s.Name] = actual
 		if typ == "" && s.Type != nil {
 			typ = g.goType(s.Type, nil)
@@ -50,15 +51,8 @@ func (g *generator) genGlobals() (string, error) {
 		ctx.sourceTypes[s.Name] = typ
 		ctx.mutable[actual] = s.Mutable
 	}
-	var out bytes.Buffer
-	if err := file.Render(&out); err != nil {
-		return "", err
-	}
-	if out.Len() > 0 {
-		out.WriteString("\n")
-	}
-	out.WriteString(g.genHKTType())
-	return out.String(), nil
+	stmts = append(stmts, g.genHKTType()...)
+	return stmts, nil
 }
 
 func (p *Package) sortedImports() []importSpec {
@@ -95,7 +89,7 @@ func (p *Package) sortedImports() []importSpec {
 	return imports
 }
 
-func (g *generator) genHKTType() string {
+func (g *generator) genHKTType() []jen.Code {
 	needsHKT := false
 	for _, iface := range g.pkg.Interfaces {
 		hktSet := g.hktParams(iface)
@@ -105,14 +99,14 @@ func (g *generator) genHKTType() string {
 		}
 	}
 	if !needsHKT {
-		return ""
+		return nil
 	}
-	file := jen.NewFile("")
-	file.Type().Id("HKTType").Interface()
-	file.Type().Id("HKT1").Index(jen.Id("F").Id("any")).Interface()
-	file.Type().Id("HKT2").Index(jen.Id("A").Id("any")).Interface()
-	file.Type().Id("HKT").Index(jen.Id("F").Id("any"), jen.Id("A").Id("any")).Interface()
-	return file.GoString() + "\n"
+	return []jen.Code{
+		jen.Type().Id("HKTType").Interface(),
+		jen.Type().Id("HKT1").Index(jen.Id("F").Id("any")).Interface(),
+		jen.Type().Id("HKT2").Index(jen.Id("A").Id("any")).Interface(),
+		jen.Type().Id("HKT").Index(jen.Id("F").Id("any"), jen.Id("A").Id("any")).Interface(),
+	}
 }
 
 func (g *generator) hktParams(iface *InterfaceDecl) map[string]struct{} {
@@ -191,21 +185,21 @@ func (g *generator) genInterface(d *InterfaceDecl) []jen.Code {
 	return []jen.Code{jen.Type().Id(d.Name).Interface(methods...)}
 }
 
-func (g *generator) genImpl(d *ImplDecl) (string, error) {
+func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 	ifaceName := d.InterfaceName
 	if ifaceName == "" {
 		ifaceName = d.Name
 	}
 	iface := g.pkg.Interfaces[ifaceName]
 	if iface == nil {
-		return "", common.ErrorAtPos(d.Line, d.Column, "impl %s: missing interface declaration", ifaceName)
+		return nil, common.ErrorAtPos(d.Line, d.Column, "impl %s: missing interface declaration", ifaceName)
 	}
 	typeArgs := d.InterfaceArgs
 	if len(typeArgs) == 0 {
 		typeArgs = d.TypeArgs
 	}
 	if len(iface.TypeParams) != len(typeArgs) {
-		return "", common.ErrorAtPos(d.Line, d.Column, "impl %s: type arity mismatch", ifaceName)
+		return nil, common.ErrorAtPos(d.Line, d.Column, "impl %s: type arity mismatch", ifaceName)
 	}
 	subst := map[string]string{}
 	for i, tp := range iface.TypeParams {
@@ -287,34 +281,20 @@ func (g *generator) genImpl(d *ImplDecl) (string, error) {
 			if err != nil {
 				return
 			}
-			unitCode := codeString(expr)
 			if retType == "" {
-				if unitCode != "" {
-					b.Add(jen.Id(unitCode))
-				}
+				b.Add(expr)
 				b.Add(jen.Return())
 			} else {
-				b.Add(jen.Return(jen.Id(unitCode)))
+				b.Add(jen.Return().Add(expr))
 			}
 		})
 		fn = fn.Block(bodyBlock)
 		allCode = append(allCode, fn)
 	}
-
-	// Render all code into a single file
-	file := jen.NewFile("")
-	for _, c := range allCode {
-		file.Add(c)
-		file.Line()
-	}
-	var out bytes.Buffer
-	if err := file.Render(&out); err != nil {
-		return "", err
-	}
-	return out.String(), nil
+	return allCode, nil
 }
 
-func (g *generator) genFunc(d *FuncDecl) (string, error) {
+func (g *generator) genFunc(d *FuncDecl) (jen.Code, error) {
 	ctx := &exprCtx{
 		locals:           map[string]string{},
 		bindings:         map[string]string{},
@@ -341,10 +321,10 @@ func (g *generator) genFunc(d *FuncDecl) (string, error) {
 	for _, c := range d.Using {
 		iface := g.pkg.Interfaces[c.Name]
 		if iface == nil {
-			return "", common.ErrorAtPos(c.Line, c.Column, "function %s: missing interface %s", d.Name, c.Name)
+			return nil, common.ErrorAtPos(c.Line, c.Column, "function %s: missing interface %s", d.Name, c.Name)
 		}
 		if len(iface.TypeParams) != len(c.Args) {
-			return "", common.ErrorAtPos(c.Line, c.Column, "function %s: type arity mismatch for %s", d.Name, c.Name)
+			return nil, common.ErrorAtPos(c.Line, c.Column, "function %s: type arity mismatch for %s", d.Name, c.Name)
 		}
 		subst := map[string]string{}
 		for i, tp := range iface.TypeParams {
@@ -416,49 +396,40 @@ func (g *generator) genFunc(d *FuncDecl) (string, error) {
 
 	expr, _, err := g.translateExpr(d.Body, ctx, retType)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Build function body
 	bodyBlock := jen.BlockFunc(func(b *jen.Group) {
 		if retType == "" {
-			// Unit body: write expression without return
-			unitCode := codeString(expr)
-			if unitCode != "" {
-				b.Add(jen.Id(unitCode))
-			}
+			b.Add(expr)
 			b.Add(jen.Return())
 		} else {
-			b.Add(jen.Return(jen.Id(codeString(expr))))
+			b.Add(jen.Return().Add(expr))
 		}
 	})
 	fn = fn.Block(bodyBlock)
-
-	var out bytes.Buffer
-	if err := fn.Render(&out); err != nil {
-		return "", err
-	}
-	return out.String() + "\n", nil
+	return fn, nil
 }
 
-func (g *generator) genHelpers() string {
-	file := jen.NewFile("")
-	file.Func().Id("callAny").
-		Params(
-			jen.Id("fn").Id("any"),
-			jen.Id("args").Op("...").Id("any"),
-		).
-		Id("any").
-		Block(
-			jen.Id("values").Op(":=").Make(jen.Index().Qual("reflect", "Value"), jen.Len(jen.Id("args"))),
-			jen.For(jen.List(jen.Id("i"), jen.Id("arg")).Op(":=").Range().Id("args")).Block(
-				jen.Id("values").Index(jen.Id("i")).Op("=").Qual("reflect", "ValueOf").Call(jen.Id("arg")),
+func (g *generator) genHelpers() []jen.Code {
+	return []jen.Code{
+		jen.Func().Id("callAny").
+			Params(
+				jen.Id("fn").Id("any"),
+				jen.Id("args").Op("...").Id("any"),
+			).
+			Id("any").
+			Block(
+				jen.Id("values").Op(":=").Make(jen.Index().Qual("reflect", "Value"), jen.Len(jen.Id("args"))),
+				jen.For(jen.List(jen.Id("i"), jen.Id("arg")).Op(":=").Range().Id("args")).Block(
+					jen.Id("values").Index(jen.Id("i")).Op("=").Qual("reflect", "ValueOf").Call(jen.Id("arg")),
+				),
+				jen.Id("out").Op(":=").Qual("reflect", "ValueOf").Call(jen.Id("fn")).Dot("Call").Call(jen.Id("values")),
+				jen.If(jen.Len(jen.Id("out")).Op("==").Lit(0)).Block(
+					jen.Return(jen.Nil()),
+				),
+				jen.Return(jen.Id("out").Index(jen.Lit(0)).Dot("Interface").Call()),
 			),
-			jen.Id("out").Op(":=").Qual("reflect", "ValueOf").Call(jen.Id("fn")).Dot("Call").Call(jen.Id("values")),
-			jen.If(jen.Len(jen.Id("out")).Op("==").Lit(0)).Block(
-				jen.Return(jen.Nil()),
-			),
-			jen.Return(jen.Id("out").Index(jen.Lit(0)).Dot("Interface").Call()),
-		)
-	return file.GoString() + "\n"
+	}
 }
