@@ -36,7 +36,7 @@ func (g *generator) translateExprRaw(e Expr, ctx *exprCtx, expected string) (jen
 		switch n.Kind {
 		case "number":
 			switch expected {
-			case "int", "int64", "float64":
+			case "int", "int64", "float64", "int8", "uint8", "int16", "uint16", "int32", "uint32", "float32":
 				return jen.Lit(n.Value), expected, nil
 			}
 			if strings.Contains(n.Value, ".") {
@@ -334,7 +334,8 @@ func (g *generator) hasEqSupport(typ string, ctx *exprCtx) bool {
 		base = base[:idx]
 	}
 	switch base {
-	case "Int", "Int64", "Float64", "String", "Bool", "int", "int64", "float64", "string", "bool":
+	case "Int", "Int8", "Int16", "Int32", "Int64", "UInt", "UInt8", "UInt16", "UInt32", "UInt64", "Float32", "Float64", "String", "Bool",
+		"int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64", "float32", "float64", "string", "bool":
 		return true
 	}
 	for _, impl := range g.pkg.Impls {

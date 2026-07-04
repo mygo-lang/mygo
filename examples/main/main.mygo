@@ -74,7 +74,21 @@ func demo() -> String
     in second = 456
   }
 
-  let summary = describe_abc(abc) + ", boxed=" + show(boxed.value) + ", raw_total=" + show(raw_total) + ", " + describe_option(maybe) + ", same=" + show(same(abc.aaa, abc.aaa)) + ", " + describe_result(ok)
+  // New numeric types
+  let a: Int8 = 42
+  let b: UInt8 = 200
+  let c: Int16 = -1000
+  let d: UInt16 = 60000
+  let e: Int32 = -100000
+  let f: UInt32 = 3000000000
+  let g: Float32 = 3.14
+
+  // Hex, octal, binary literals
+  let h: Int = 0xff
+  let i: Int = 0o777
+  let j: Int = 0b1010
+
+  let summary = describe_abc(abc) + ", boxed=" + show(boxed.value) + ", raw_total=" + show(raw_total) + ", " + describe_option(maybe) + ", same=" + show(same(abc.aaa, abc.aaa)) + ", " + describe_result(ok) + ", int8=" + show(a) + ", uint8=" + show(b) + ", int16=" + show(c) + ", uint16=" + show(d) + ", int32=" + show(e) + ", uint32=" + show(f) + ", float32=" + show(g) + ", hex=" + show(h) + ", oct=" + show(i) + ", bin=" + show(j)
   let _ = fmt.Println(summary)
   summary
 end

@@ -32,14 +32,32 @@ func jenTypeExpr(t TypeExpr) jen.Code {
 		switch tt.Name {
 		case "Int":
 			return jen.Int()
+		case "Int8":
+			return jen.Int8()
+		case "Int16":
+			return jen.Int16()
+		case "Int32":
+			return jen.Int32()
+		case "Int64":
+			return jen.Int64()
+		case "UInt":
+			return jen.Uint()
+		case "UInt8":
+			return jen.Uint8()
+		case "UInt16":
+			return jen.Uint16()
+		case "UInt32":
+			return jen.Uint32()
+		case "UInt64":
+			return jen.Uint64()
+		case "Float32":
+			return jen.Float32()
+		case "Float64":
+			return jen.Float64()
 		case "String":
 			return jen.String()
 		case "Bool":
 			return jen.Bool()
-		case "Float64":
-			return jen.Float64()
-		case "Int64":
-			return jen.Int64()
 		case "Unit":
 			return jen.Struct()
 		case "Ref":
@@ -94,14 +112,32 @@ func jenHKTTypeExpr(t TypeExpr, hktSet map[string]struct{}) jen.Code {
 		switch tt.Name {
 		case "Int":
 			return jen.Int()
+		case "Int8":
+			return jen.Int8()
+		case "Int16":
+			return jen.Int16()
+		case "Int32":
+			return jen.Int32()
+		case "Int64":
+			return jen.Int64()
+		case "UInt":
+			return jen.Uint()
+		case "UInt8":
+			return jen.Uint8()
+		case "UInt16":
+			return jen.Uint16()
+		case "UInt32":
+			return jen.Uint32()
+		case "UInt64":
+			return jen.Uint64()
+		case "Float32":
+			return jen.Float32()
+		case "Float64":
+			return jen.Float64()
 		case "String":
 			return jen.String()
 		case "Bool":
 			return jen.Bool()
-		case "Float64":
-			return jen.Float64()
-		case "Int64":
-			return jen.Int64()
 		case "Unit":
 			return jen.Struct()
 		case "Ref":

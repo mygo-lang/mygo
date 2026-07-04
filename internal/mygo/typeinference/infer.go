@@ -67,7 +67,7 @@ func initialTypeEnv(pkg *PkgInfo) TypeEnv {
 	env := make(TypeEnv)
 
 	// Built-in named types (primitive type constructors)
-	builtins := []string{"Int", "Int64", "Float64", "String", "Bool", "Unit"}
+	builtins := []string{"Int", "Int8", "UInt8", "Int16", "UInt16", "Int32", "UInt32", "Int64", "UInt", "UInt64", "Float32", "Float64", "String", "Bool", "Unit"}
 	for _, name := range builtins {
 		t := TCon{Name: name}
 		env[name] = &Scheme{Body: QualifiedType{Body: t}}

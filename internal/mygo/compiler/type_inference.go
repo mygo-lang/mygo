@@ -137,8 +137,26 @@ func goTypeFromString(s string) (types.Type, bool) {
 		return types.Typ[types.Int], true
 	case "int64":
 		return types.Typ[types.Int64], true
+	case "int32":
+		return types.Typ[types.Int32], true
+	case "int16":
+		return types.Typ[types.Int16], true
+	case "int8":
+		return types.Typ[types.Int8], true
+	case "uint":
+		return types.Typ[types.Uint], true
+	case "uint64":
+		return types.Typ[types.Uint64], true
+	case "uint32":
+		return types.Typ[types.Uint32], true
+	case "uint16":
+		return types.Typ[types.Uint16], true
+	case "uint8":
+		return types.Typ[types.Uint8], true
 	case "float64":
 		return types.Typ[types.Float64], true
+	case "float32":
+		return types.Typ[types.Float32], true
 	case "string":
 		return types.Typ[types.String], true
 	case "bool":
@@ -905,8 +923,26 @@ func primitiveGoName(name string) string {
 	switch name {
 	case "Int":
 		return "int"
+	case "Int8":
+		return "int8"
+	case "Int16":
+		return "int16"
+	case "Int32":
+		return "int32"
 	case "Int64":
 		return "int64"
+	case "UInt":
+		return "uint"
+	case "UInt8":
+		return "uint8"
+	case "UInt16":
+		return "uint16"
+	case "UInt32":
+		return "uint32"
+	case "UInt64":
+		return "uint64"
+	case "Float32":
+		return "float32"
 	case "Float64":
 		return "float64"
 	case "String":
@@ -941,8 +977,26 @@ func typeString(t TypeExpr, subst map[string]string) string {
 			return "int"
 		case "Int64":
 			return "int64"
+		case "Int32":
+			return "int32"
+		case "Int16":
+			return "int16"
+		case "Int8":
+			return "int8"
+		case "UInt":
+			return "uint"
+		case "UInt64":
+			return "uint64"
+		case "UInt32":
+			return "uint32"
+		case "UInt16":
+			return "uint16"
+		case "UInt8":
+			return "uint8"
 		case "Float64":
 			return "float64"
+		case "Float32":
+			return "float32"
 		case "String":
 			return "string"
 		case "Bool":

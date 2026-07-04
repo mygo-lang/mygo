@@ -41,8 +41,50 @@ impl Int: Show[Int]
   end
 end
 
+impl Int8: Show[Int8]
+  func show(value: Int8) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl UInt8: Show[UInt8]
+  func show(value: UInt8) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl Int16: Show[Int16]
+  func show(value: Int16) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl UInt16: Show[UInt16]
+  func show(value: UInt16) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl Int32: Show[Int32]
+  func show(value: Int32) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl UInt32: Show[UInt32]
+  func show(value: UInt32) -> String
+    fmt.Sprint(value)
+  end
+end
+
 impl Int64: Show[Int64]
   func show(value: Int64) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl Float32: Show[Float32]
+  func show(value: Float32) -> String
     fmt.Sprint(value)
   end
 end
@@ -73,8 +115,50 @@ impl Int: Eq[Int]
   end
 end
 
+impl Int8: Eq[Int8]
+  func equals(left: Int8, right: Int8) -> Bool
+    left == right
+  end
+end
+
+impl UInt8: Eq[UInt8]
+  func equals(left: UInt8, right: UInt8) -> Bool
+    left == right
+  end
+end
+
+impl Int16: Eq[Int16]
+  func equals(left: Int16, right: Int16) -> Bool
+    left == right
+  end
+end
+
+impl UInt16: Eq[UInt16]
+  func equals(left: UInt16, right: UInt16) -> Bool
+    left == right
+  end
+end
+
+impl Int32: Eq[Int32]
+  func equals(left: Int32, right: Int32) -> Bool
+    left == right
+  end
+end
+
+impl UInt32: Eq[UInt32]
+  func equals(left: UInt32, right: UInt32) -> Bool
+    left == right
+  end
+end
+
 impl Int64: Eq[Int64]
   func equals(left: Int64, right: Int64) -> Bool
+    left == right
+  end
+end
+
+impl Float32: Eq[Float32]
+  func equals(left: Float32, right: Float32) -> Bool
     left == right
   end
 end

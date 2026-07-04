@@ -56,6 +56,10 @@ func (l *golexer) scan() lex.Char {
 ident      ({letter}|{unicodeLetter})({letter}|{digit}|{unicodeLetter}|{unicodeDigit}|_)*
 digit      [0-9]|{unicodeDigit}
 number     {digit}+(\.{digit}+)?
+hexdigit   [0-9a-fA-F]
+hexnumber  0[xX]{hexdigit}+
+octnumber  0[oO][0-7]+
+binnumber  0[bB][01]+
 letter     [_a-zA-Z]|{unicodeLetter}
 unicodeDigit  \x81
 unicodeLetter \x80
@@ -91,6 +95,9 @@ go                 return l.char(GO)
 in                 return l.char(IN)
 type               return l.char(TYPE)
 {ident}            return l.char(IDENT)
+{hexnumber}        return l.char(NUMBER)
+{octnumber}        return l.char(NUMBER)
+{binnumber}        return l.char(NUMBER)
 {number}           return l.char(NUMBER)
 \[\]               return l.char(SLICE)
 =>                 return l.char(ARROW)

@@ -676,3 +676,85 @@ end
 			len(goExpr.Operands), len(goExpr.TypeOperands))
 	}
 }
+
+func TestParseFileSupportsNewNumericTypes(t *testing.T) {
+	src := `package main
+func demo() -> Int8
+  let a: Int8 = 42
+  let b: UInt8 = 200
+  let c: Int16 = 1000
+  let d: UInt16 = 60000
+  let e: Int32 = 100000
+  let f: UInt32 = 3000000000
+  let g: Float32 = 3.14
+  127
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	block, ok := fn.Body.(*BlockExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *BlockExpr", fn.Body)
+	}
+	if len(block.Stmts) < 7 {
+		t.Fatalf("expected at least 7 stmts in block, got %d", len(block.Stmts))
+	}
+	// Check type annotations
+	for i, name := range []string{"a", "b", "c", "d", "e", "f", "g"} {
+		letStmt, ok := block.Stmts[i].(*LetStmt)
+		if !ok {
+			t.Fatalf("Stmts[%d] type = %T, want *LetStmt", i, block.Stmts[i])
+		}
+		if letStmt.Name != name {
+			t.Fatalf("LetStmt[%d].Name = %q, want %q", i, letStmt.Name, name)
+		}
+	}
+}
+
+func TestParseFileSupportsHexOctalBinaryLiterals(t *testing.T) {
+	src := `package main
+func demo() -> Int
+  let h: Int = 0xff
+  let o: Int = 0o777
+  let b: Int = 0b1010
+  0
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	block, ok := fn.Body.(*BlockExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *BlockExpr", fn.Body)
+	}
+	if len(block.Stmts) < 3 {
+		t.Fatalf("expected at least 3 stmts in block, got %d", len(block.Stmts))
+	}
+	for i, expected := range []string{"0xff", "0o777", "0b1010"} {
+		letStmt, ok := block.Stmts[i].(*LetStmt)
+		if !ok {
+			t.Fatalf("Stmts[%d] type = %T, want *LetStmt", i, block.Stmts[i])
+		}
+		lit, ok := letStmt.Value.(*LiteralExpr)
+		if !ok {
+			t.Fatalf("LetStmt[%d].Value type = %T, want *LiteralExpr", i, letStmt.Value)
+		}
+		if lit.Kind != "number" {
+			t.Fatalf("LiteralExpr[%d].Kind = %q, want %q", i, lit.Kind, "number")
+		}
+		if lit.Value != expected {
+			t.Fatalf("LiteralExpr[%d].Value = %q, want %q", i, lit.Value, expected)
+		}
+	}
+}

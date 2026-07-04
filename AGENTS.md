@@ -16,6 +16,8 @@
 - The current design follows Lisette-style nominal concrete types and structural interfaces.
 - Generic enums, structs, interfaces, and functions should remain generic in emitted Go rather than collapsing to `any`.
 - Prefer top-level generic functions over generic methods whenever the same behavior can be expressed that way. Use receiver methods only when Go requires them for type identity or interface conformance.
+- Supported numeric types: `Int`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt`, `UInt8`, `UInt16`, `UInt32`, `UInt64`, `Float32`, `Float64`. All map directly to Go primitives via `primitiveGoName`, `goType`, `hmTypeString`, and `typeString`.
+- Integer literals support hex (`0xff`), octal (`0o777`), and binary (`0b1010`) prefixes via lexer rules in `parser_lex.l`, all producing `NUMBER` tokens with the raw literal string as value.
 - Named primitive spellings like `Int`, `String`, and `Bool` map to Go primitives in generation.
 - `Unit` is a return-only marker in MyGO and should lower to a Go function with no return values, not to `struct{}`.
 
@@ -80,6 +82,8 @@
 - `Ref.new(expr)` constructs a reference value and is lowered as `&expr`; if the argument is already a ref/pointer, lowering leaves it unchanged rather than producing a pointer-to-pointer.
 - `Slice[A]` is the only slice type spelling. The parser no longer accepts `A[]` or `Int[]` shorthand, which keeps type syntax aligned with ordinary generic instantiation.
 - The parser test suite now covers package/function declarations, collection literals, chain postfix, `if`/`while`/`switch`, pipe precedence, struct/interface/impl declarations, `let`/`var`/assignment, func literals, `using` clauses, enum declarations, switch patterns, and nested/empty collection literals.
+- Integer literals support hex (`0xff` / `0XFF`), octal (`0o777` / `0O777`), and binary (`0b1010` / `0B1010`) prefix syntax. These are parsed as `NUMBER` tokens in the lexer — the raw literal string (e.g. `"0xff"`) is stored as `LiteralExpr.Value` with `Kind: "number"`.
+- Supported numeric types: `Int`, `Int8`, `UInt8`, `Int16`, `UInt16`, `Int32`, `UInt32`, `Int64`, `UInt`, `UInt64`, `Float32`, `Float64`. All are represented as `*NamedType` in the AST and lowered to corresponding Go primitives via `goType`, `hmTypeString`, `jenTypeExpr`, and `typeString`. The prelude provides `Show` and `Eq` impls for all of them.
 - Nested slice types are written explicitly as `Slice[Slice[Int]]`, and empty `[]` is treated as an empty slice literal in expression position.
 - `using` clauses support multiple constraints and constraint type arguments in both function and interface method signatures.
 - `where` has been removed from the main syntax; typeclass requirements now use `using` only. The parser rejects `where` with an explicit migration error.
@@ -178,6 +182,16 @@
 
 ## Recent Work
 
+- **New numeric types and hex/octal/binary integer literals**: Added full support for `Int8`, `UInt8`, `Int16`, `UInt16`, `Int32`, `UInt32`, `Float32` as first-class numeric types alongside existing `Int`, `Int64`, `UInt`, `UInt64`, `Float64`. Also added lexer support for hex (`0xff` / `0XFF`), octal (`0o777` / `0O777`), and binary (`0b1010` / `0B1010`) integer literal prefixes. Key changes:
+  - **Lexer** (`parser_lex.l`): Added `hexnumber`, `octnumber`, `binnumber` lex rules with prefix patterns, placed before the general `number` rule so they match first. Regenerated `lex.yy.go` via `golex`.
+  - **Type inference** (`typeinference/infer.go`): Added all new types to `initialTypeEnv` builtins list so they participate in HM inference.
+  - **Compiler type lowering** (`type_inference.go`): Extended `primitiveGoName()` with all new types (`Int8`, `Int16`, `Int32`, `UInt`, `UInt8`, `UInt16`, `UInt32`, `UInt64`, `Float32`). `goType()`, `hmTypeString()`, and `typeString()` already had full coverage.
+  - **Jennifer code gen** (`jennifer_gen.go`): Added `jen.Int8()`, `jen.Int16()`, `jen.Int32()`, `jen.Uint()`, `jen.Uint8()`, `jen.Uint16()`, `jen.Uint32()`, `jen.Uint64()`, `jen.Float32()` cases in both `jenTypeExpr` and `jenHKTTypeExpr`.
+  - **Expression translation** (`translate_expr.go`): Extended accepted `expected` types list in literal lowering and `hasEqSupport()` to cover all new Go native type names.
+  - **Go FFI helpers** (`helpers.go`): Added all new `types.Kind` entries to `goMyGoTypeString()`.
+  - **Prelude** (`prelude.mygo`): Added `Show` and `Eq` interface impls for `Int8`, `UInt8`, `Int16`, `UInt16`, `Int32`, `UInt32`, `Float32`.
+  - **Tests** (`parser_test.go`): Added `TestParseFileSupportsNewNumericTypes` (verifies let bindings with new type annotations) and `TestParseFileSupportsHexOctalBinaryLiterals` (verifies `0xff`, `0o777`, `0b1010` parse as NUMBER literals with correct value strings).
+
 - **Impl method call self-resolution fix**: The compiler can now resolve `FieldExpr` method calls on the same impl type (e.g., `self.isSome()` inside `IOption.isNone`). Three key changes:
   - `types.go`: Added `implTypeKey` and `implTypeParams` to `exprCtx` for carrying impl context.
   - `compiler_impl.go` (`genImpl`): Sets `implTypeKey`/`implTypeParams` on the exprCtx when generating impl method helpers.
@@ -258,7 +272,7 @@ A Hindley-Milner (Algorithm W) type inference pass implementing Haskell 98 core 
 - `internal/mygo/typeinference/infer.go` — `inferExpr` (Algorithm W), `inferDecl`, `inferFuncDecl`, `inferLetDecl`, full expression coverage
 
 ### Expression Coverage
-- Literals (Int/Float64/String/Bool) — class-defaulted numeric types
+- Literals (Int/Float64/String/Bool) — class-defaulted numeric types; all supported types (`Int`, `Int8`, `UInt8`, `Int16`, `UInt16`, `Int32`, `UInt32`, `Int64`, `UInt`, `UInt64`, `Float32`, `Float64`) resolve as `TCon` in HM
 - Ident lookup with let-polymorphism (instantiate scheme → fresh vars per use site)
 - Function calls — callee type unified with `(arg_types) -> fresh_ret`
 - `if`/`switch` — branch types unified, `while` returns `Unit`
