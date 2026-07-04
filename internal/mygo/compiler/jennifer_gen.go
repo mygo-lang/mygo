@@ -42,6 +42,10 @@ func jenTypeExpr(t TypeExpr) jen.Code {
 			return jen.Int64()
 		case "Unit":
 			return jen.Struct()
+		case "Ref":
+			if len(tt.Args) == 1 {
+				return jen.Op("*").Add(jenTypeExpr(tt.Args[0]))
+			}
 		}
 		if len(tt.Args) == 0 {
 			return jen.Id(tt.Name)
@@ -100,6 +104,10 @@ func jenHKTTypeExpr(t TypeExpr, hktSet map[string]struct{}) jen.Code {
 			return jen.Int64()
 		case "Unit":
 			return jen.Struct()
+		case "Ref":
+			if len(tt.Args) == 1 {
+				return jen.Op("*").Add(jenHKTTypeExpr(tt.Args[0], hktSet))
+			}
 		}
 		if len(tt.Args) == 0 {
 			return jen.Id(tt.Name)

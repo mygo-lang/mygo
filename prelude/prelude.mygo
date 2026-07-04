@@ -146,14 +146,13 @@ impl[T] List[T]: Enumerable[List[T], T]
 
   func filter(c: List[T], fn: func(T) -> Bool) -> List[T]
     var done: Bool = false
-    var result: List[T] = None
     var current: Ref[List[T]] = Ref.new(c)
+    var result: List[T] = List[T] { head: current.head, tail: None }
     while not done
       if fn(current.head)
-        let newNode = List[T] { head: current.head, tail: Some(Ref.new(result)) }
-        result = newNode
+        result = List[T] { head: current.head, tail: Some(Ref.new(result)) }
       else
-        result = result
+        let _ = 0
       end
       switch current.tail
         case None => done = true

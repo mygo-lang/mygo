@@ -266,7 +266,7 @@ func (g *generator) translateGoSelectorCall(alias, name string, args []Expr, ctx
 			}
 		}
 	}
-	call := jen.Id(alias).Dot(name).Call(argCodes...)
+	call := jen.Qual(importPathForGo(path), name).Call(argCodes...)
 	if len(sig.ret) == 2 && isGoErrorType(sig.ret[1]) {
 		base, args := splitTypeArgs(expected)
 		if base != "Result" || len(args) != 2 {

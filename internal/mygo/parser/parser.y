@@ -314,6 +314,7 @@ interface_decl
 			Name: p.savedDeclName,
 			TypeParams: append([]string(nil), p.currentTypeParams...),
 		}
+		p.currentTypeParams = nil
 	}
 	func_sig_list opt_newlines END {
 		p := yylex.(*parser)
@@ -334,6 +335,7 @@ func_sig
 	: FUNC IDENT {
 		p := yylex.(*parser)
 		p.expectTypeSuffix = true
+		p.currentTypeParams = nil
 	}
 	opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause {
 		p := yylex.(*parser)
@@ -430,8 +432,13 @@ func_decl
 	: FUNC IDENT {
 		p := yylex.(*parser)
 		p.expectTypeSuffix = true
+		p.currentTypeParams = nil
 	}
-	opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause opt_newlines block_expr opt_newlines END {
+	opt_type_params LPAREN maybe_param_list RPAREN ARROW type opt_using_clause {
+		p := yylex.(*parser)
+		p.savedRetType = p.currentType
+	}
+	opt_newlines block_expr opt_newlines END {
 		p := yylex.(*parser)
 		body := bodyExprFromBlock(p.currentExpr)
 		p.currentFunc = &ast.FuncDecl{
@@ -440,7 +447,7 @@ func_decl
 			Name: $2.lit,
 			TypeParams: append([]string(nil), p.currentTypeParams...),
 			Params: append([]ast.Param(nil), p.currentParams...),
-			Ret: p.currentType,
+			Ret: p.savedRetType,
 			Using: append([]ast.Constraint(nil), p.currentWhere...),
 			Body: body,
 		}
@@ -454,6 +461,7 @@ func_decl
 		p.currentTypeParams = nil
 		p.currentWhere = nil
 		p.currentBlock = nil
+		p.savedRetType = nil
 		p.expectTypeSuffix = false
 	}
 	;
@@ -788,10 +796,12 @@ or_expr
 		p := yylex.(*parser)
 		p.currentLeftExpr = p.currentExpr
 	}
-	| or_expr OROR and_expr {
+	| or_expr OROR {
 		p := yylex.(*parser)
-		p.currentLeftExpr = &ast.BinaryExpr{Op: "||", Left: p.currentLeftExpr, Right: p.currentExpr}
-		p.currentExpr = p.currentLeftExpr
+		p.currentOrSave = p.currentExpr
+	} and_expr {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.BinaryExpr{Op: "||", Left: p.currentOrSave, Right: p.currentExpr}
 	}
 	;
 
@@ -800,10 +810,12 @@ and_expr
 		p := yylex.(*parser)
 		p.currentLeftExpr = p.currentExpr
 	}
-	| and_expr ANDAND compare_expr {
+	| and_expr ANDAND {
 		p := yylex.(*parser)
-		p.currentLeftExpr = &ast.BinaryExpr{Op: "&&", Left: p.currentLeftExpr, Right: p.currentExpr}
-		p.currentExpr = p.currentLeftExpr
+		p.currentAndSave = p.currentExpr
+	} compare_expr {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.BinaryExpr{Op: "&&", Left: p.currentAndSave, Right: p.currentExpr}
 	}
 	;
 
@@ -812,35 +824,47 @@ compare_expr
 		p := yylex.(*parser)
 		p.currentLeftExpr = p.currentExpr
 	}
-	| compare_expr EQEQ add_expr {
+	| compare_expr EQEQ {
 		p := yylex.(*parser)
-		p.currentLeftExpr = &ast.BinaryExpr{Op: "==", Left: p.currentLeftExpr, Right: p.currentExpr}
-		p.currentExpr = p.currentLeftExpr
+		p.currentCompSave = p.currentExpr
+	} add_expr {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.BinaryExpr{Op: "==", Left: p.currentCompSave, Right: p.currentExpr}
 	}
-	| compare_expr NEQ add_expr {
+	| compare_expr NEQ {
 		p := yylex.(*parser)
-		p.currentLeftExpr = &ast.BinaryExpr{Op: "!=", Left: p.currentLeftExpr, Right: p.currentExpr}
-		p.currentExpr = p.currentLeftExpr
+		p.currentCompSave = p.currentExpr
+	} add_expr {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.BinaryExpr{Op: "!=", Left: p.currentCompSave, Right: p.currentExpr}
 	}
-	| compare_expr LTE add_expr {
+	| compare_expr LTE {
 		p := yylex.(*parser)
-		p.currentLeftExpr = &ast.BinaryExpr{Op: "<=", Left: p.currentLeftExpr, Right: p.currentExpr}
-		p.currentExpr = p.currentLeftExpr
+		p.currentCompSave = p.currentExpr
+	} add_expr {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.BinaryExpr{Op: "<=", Left: p.currentCompSave, Right: p.currentExpr}
 	}
-	| compare_expr GTE add_expr {
+	| compare_expr GTE {
 		p := yylex.(*parser)
-		p.currentLeftExpr = &ast.BinaryExpr{Op: ">=", Left: p.currentLeftExpr, Right: p.currentExpr}
-		p.currentExpr = p.currentLeftExpr
+		p.currentCompSave = p.currentExpr
+	} add_expr {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.BinaryExpr{Op: ">=", Left: p.currentCompSave, Right: p.currentExpr}
 	}
-	| compare_expr '<' add_expr {
+	| compare_expr '<' {
 		p := yylex.(*parser)
-		p.currentLeftExpr = &ast.BinaryExpr{Op: "<", Left: p.currentLeftExpr, Right: p.currentExpr}
-		p.currentExpr = p.currentLeftExpr
+		p.currentCompSave = p.currentExpr
+	} add_expr {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.BinaryExpr{Op: "<", Left: p.currentCompSave, Right: p.currentExpr}
 	}
-	| compare_expr '>' add_expr {
+	| compare_expr '>' {
 		p := yylex.(*parser)
-		p.currentLeftExpr = &ast.BinaryExpr{Op: ">", Left: p.currentLeftExpr, Right: p.currentExpr}
-		p.currentExpr = p.currentLeftExpr
+		p.currentCompSave = p.currentExpr
+	} add_expr {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.BinaryExpr{Op: ">", Left: p.currentCompSave, Right: p.currentExpr}
 	}
 	;
 
@@ -849,15 +873,19 @@ add_expr
 		p := yylex.(*parser)
 		p.currentLeftExpr = p.currentExpr
 	}
-	| add_expr '+' mul_expr {
+	| add_expr '+' {
 		p := yylex.(*parser)
-		p.currentLeftExpr = &ast.BinaryExpr{Op: "+", Left: p.currentLeftExpr, Right: p.currentExpr}
-		p.currentExpr = p.currentLeftExpr
+		p.currentAddSave = p.currentExpr
+	} mul_expr {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.BinaryExpr{Op: "+", Left: p.currentAddSave, Right: p.currentExpr}
 	}
-	| add_expr '-' mul_expr {
+	| add_expr '-' {
 		p := yylex.(*parser)
-		p.currentLeftExpr = &ast.BinaryExpr{Op: "-", Left: p.currentLeftExpr, Right: p.currentExpr}
-		p.currentExpr = p.currentLeftExpr
+		p.currentAddSave = p.currentExpr
+	} mul_expr {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.BinaryExpr{Op: "-", Left: p.currentAddSave, Right: p.currentExpr}
 	}
 	;
 
@@ -866,15 +894,19 @@ mul_expr
 		p := yylex.(*parser)
 		p.currentLeftExpr = p.currentExpr
 	}
-	| mul_expr '*' prefix_expr {
+	| mul_expr '*' {
 		p := yylex.(*parser)
-		p.currentLeftExpr = &ast.BinaryExpr{Op: "*", Left: p.currentLeftExpr, Right: p.currentExpr}
-		p.currentExpr = p.currentLeftExpr
+		p.currentMulSave = p.currentExpr
+	} prefix_expr {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.BinaryExpr{Op: "*", Left: p.currentMulSave, Right: p.currentExpr}
 	}
-	| mul_expr '/' prefix_expr {
+	| mul_expr '/' {
 		p := yylex.(*parser)
-		p.currentLeftExpr = &ast.BinaryExpr{Op: "/", Left: p.currentLeftExpr, Right: p.currentExpr}
-		p.currentExpr = p.currentLeftExpr
+		p.currentMulSave = p.currentExpr
+	} prefix_expr {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.BinaryExpr{Op: "/", Left: p.currentMulSave, Right: p.currentExpr}
 	}
 	;
 

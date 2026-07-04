@@ -32,6 +32,11 @@ type parser struct {
 	currentExpr               ast.Expr
 	currentLeftExpr           ast.Expr
 	currentPipeLeftExpr       ast.Expr
+	currentOrSave             ast.Expr
+	currentAndSave            ast.Expr
+	currentCompSave           ast.Expr
+	currentAddSave            ast.Expr
+	currentMulSave            ast.Expr
 	currentArgs               []ast.Expr
 	currentCallCalleeStack    []ast.Expr
 	currentArgsStack          [][]ast.Expr
@@ -63,9 +68,11 @@ type parser struct {
 	currentImplCol            int
 	currentSliceElems         []ast.Expr
 	currentConstraintBindName string
+	savedRetType              ast.TypeExpr
 	savedDeclName             string
 	savedTypeNameStack        []typeNameEntry
 	savedStructTypeArgs       []ast.TypeExpr
+	savedReturnType           ast.TypeExpr
 	expectTypeSuffix          bool
 	expectStructTypeArgs      bool
 	expectConstraintSuffix    bool

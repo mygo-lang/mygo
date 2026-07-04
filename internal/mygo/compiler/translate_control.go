@@ -149,8 +149,8 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 		rawBlock := jen.Block(stmtCodes...)
 		return rawBlock, "", nil
 	}
-	// Wrap all collected statements in a single Block.
-	b = b.Block(stmtCodes...)
+	// Wrap all collected statements in a single Block and immediately call it.
+	b = b.Block(stmtCodes...).Call()
 	return b, expected, nil
 }
 
@@ -279,10 +279,9 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 			tname := variantGoTypeName(enumDecl.Name, variant.Name)
 
 			// Build the type assertion type: OptionSome or OptionSome[Int]
-			// Use Index() rather than bracketArgs to avoid space before '['.
 			assertType := jen.Id(tname)
-			for _, a := range enumArgs {
-				assertType = assertType.Index(jen.Id(a))
+			if len(enumArgs) > 0 {
+				assertType = bracketArgs(assertType, genJenIds(enumArgs))
 			}
 
 			// Determine if any pattern args are used in the body
@@ -450,10 +449,10 @@ func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (jen.Code, string
 		}
 	})
 
-	// Build the for loop
+	// Build the for loop and immediately call it
 	forLoop := jen.Func().Params().Block(
-		jen.For(jen.Id("_").Op(":=").Add(cond)).Block(forBlock),
-	)
+		jen.For(cond).Block(forBlock),
+	).Call()
 
 	return forLoop, "", nil
 }

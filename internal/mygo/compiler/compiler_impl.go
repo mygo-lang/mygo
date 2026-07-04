@@ -253,6 +253,10 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 		for tp := range typeParamSet(sig.TypeParams) {
 			combinedTypeParams[tp] = struct{}{}
 		}
+		// Skip interface methods that have no impl body.
+		if method == nil {
+			continue
+		}
 		hktSet := g.hktParams(iface)
 		retType := g.goHKTReturnType(ret, hktSet, combinedTypeParams)
 		ctx := &exprCtx{
@@ -267,11 +271,26 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 		}
 
 		fnName := helperFuncName(sig.Name, typeKey)
+		// Combined type params: impl-level (d.TypeParams) + method-level (sig.TypeParams)
+		mergedTypeParams := make([]string, 0, len(d.TypeParams)+len(sig.TypeParams))
+		seen := map[string]bool{}
+		for _, tp := range d.TypeParams {
+			if !seen[tp] {
+				mergedTypeParams = append(mergedTypeParams, tp)
+				seen[tp] = true
+			}
+		}
+		for _, tp := range sig.TypeParams {
+			if !seen[tp] {
+				mergedTypeParams = append(mergedTypeParams, tp)
+				seen[tp] = true
+			}
+		}
 		var fn *jen.Statement
-		if len(sig.TypeParams) > 0 {
+		if len(mergedTypeParams) > 0 {
 			typeOpts := jen.Options{Open: fnName + "[", Close: "]", Separator: ", "}
-			typeItems := make([]jen.Code, 0, len(sig.TypeParams))
-			for _, tp := range sig.TypeParams {
+			typeItems := make([]jen.Code, 0, len(mergedTypeParams))
+			for _, tp := range mergedTypeParams {
 				typeItems = append(typeItems, jen.Id(tp).Id("any"))
 			}
 			fn = jen.Func().Custom(typeOpts, typeItems...)
@@ -281,7 +300,7 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 		paramList := make([]jen.Code, 0, len(params))
 		for _, p := range params {
 			goType := g.goHKTType(p.Type, hktSet, combinedTypeParams)
-			paramList = append(paramList, jen.Id(p.Name), jen.Id(goType))
+			paramList = append(paramList, jen.Id(p.Name).Add(jen.Id(goType)))
 			ctx.locals[p.Name] = goType
 			ctx.sourceTypes[p.Name] = typeString(p.Type, subst)
 			ctx.bindings[p.Name] = p.Name
@@ -293,27 +312,25 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 			fn = fn.Add(jen.Id(retType))
 		}
 
-		bodyBlock := jen.BlockFunc(func(b *jen.Group) {
-			if bodyExpr == nil {
-				if retType == "" {
-					b.Add(jen.Return())
-				} else {
-					b.Add(jen.Id("panic").Call(jen.Lit("unimplemented")))
-				}
-				return
+		var bodyStmts []jen.Code
+		if bodyExpr == nil {
+			if retType == "" {
+				bodyStmts = append(bodyStmts, jen.Return())
+			} else {
+				bodyStmts = append(bodyStmts, jen.Id("panic").Call(jen.Lit("unimplemented")))
 			}
+		} else {
 			expr, _, err := g.translateExpr(bodyExpr, ctx, retType)
 			if err != nil {
-				return
-			}
-			if retType == "" {
-				b.Add(expr)
-				b.Add(jen.Return())
+				bodyStmts = append(bodyStmts, jen.Id("panic").Call(jen.Lit("translate error")))
+			} else if retType == "" {
+				bodyStmts = append(bodyStmts, expr)
+				bodyStmts = append(bodyStmts, jen.Return())
 			} else {
-				b.Add(jen.Return().Add(expr))
+				bodyStmts = append(bodyStmts, jen.Return().Add(expr))
 			}
-		})
-		fn = fn.Block(bodyBlock)
+		}
+		fn = fn.Block(bodyStmts...)
 		allCode = append(allCode, fn)
 	}
 	return allCode, nil
@@ -402,11 +419,11 @@ func (g *generator) genFunc(d *FuncDecl) (jen.Code, error) {
 	}
 	fn = fn.ParamsFunc(func(gr *jen.Group) {
 		for _, p := range d.Params {
-			gr.Add(jen.Id(p.Name), jen.Id(g.goType(p.Type, typeParamSet(d.TypeParams))))
+			gr.Add(jen.Id(p.Name).Add(jen.Id(g.goType(p.Type, typeParamSet(d.TypeParams)))))
 		}
 		for _, methodName := range constraintOrder {
 			cp := constraintParams[methodName]
-			gr.Add(jen.Id(cp.name), jen.Id(cp.typ))
+			gr.Add(jen.Id(cp.name).Add(jen.Id(cp.typ)))
 		}
 	})
 	if retType != "" {
@@ -419,15 +436,14 @@ func (g *generator) genFunc(d *FuncDecl) (jen.Code, error) {
 	}
 
 	// Build function body
-	bodyBlock := jen.BlockFunc(func(b *jen.Group) {
-		if retType == "" {
-			b.Add(bodyExpr)
-			b.Add(jen.Return())
-		} else {
-			b.Add(jen.Return().Add(bodyExpr))
-		}
-	})
-	fn = fn.Block(bodyBlock)
+	var bodyStmts []jen.Code
+	if retType == "" {
+		bodyStmts = append(bodyStmts, bodyExpr)
+		bodyStmts = append(bodyStmts, jen.Return())
+	} else {
+		bodyStmts = append(bodyStmts, jen.Return().Add(bodyExpr))
+	}
+	fn = fn.Block(bodyStmts...)
 	return fn, nil
 }
 

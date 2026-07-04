@@ -139,7 +139,8 @@ func (g *generator) translateGoPackageSelector(alias, name string) (jen.Code, st
 	if !ok || !strings.HasPrefix(importPathForGo(path), "") {
 		return nil, "", false, nil
 	}
-	sigs, err := g.goPackageSigsFor(importPathForGo(path))
+	goPath := importPathForGo(path)
+	sigs, err := g.goPackageSigsFor(goPath)
 	if err != nil {
 		return nil, "", false, err
 	}
@@ -152,9 +153,9 @@ func (g *generator) translateGoPackageSelector(alias, name string) (jen.Code, st
 	}
 	switch o := obj.(type) {
 	case *types.Var, *types.Const:
-		return jen.Id(alias).Dot(name), goMyGoTypeString(o.Type()), true, nil
+		return jen.Qual(goPath, name), goMyGoTypeString(o.Type()), true, nil
 	case *types.TypeName:
-		return jen.Id(alias).Dot(name), goMyGoTypeString(o.Type()), true, nil
+		return jen.Qual(goPath, name), goMyGoTypeString(o.Type()), true, nil
 	default:
 		return nil, "", false, nil
 	}

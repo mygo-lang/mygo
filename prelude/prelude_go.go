@@ -1,37 +1,5 @@
 package prelude
 
-// Type definitions matching the compiler-generated output from prelude.mygo.
-// These are duplicated here so prelude_go.go can compile independently
-// (before zz_mygo.gen.go is generated).
-
-// Option[A] is a generic optional value enum.
-type Option[A any] interface {
-	isOption()
-}
-
-// OptionSome[A] is the Some variant of Option.
-type OptionSome[A any] struct {
-	F0 A
-}
-
-func (OptionSome[A]) isOption() {}
-
-// Some constructs an Option with a value.
-func Some[A any](a0 A) Option[A] { return OptionSome[A]{F0: a0} }
-
-// OptionNone[A] is the None variant of Option.
-type OptionNone[A any] struct{}
-
-func (OptionNone[A]) isOption() {}
-
-// None constructs an Option with no value.
-func None[A any]() Option[A] { return OptionNone[A]{} }
-
-// Eq[A] is the equality typeclass interface.
-type Eq[A any] interface {
-	equals(left, right A) bool
-}
-
 // === Slice ([]) Enumerable Go helpers ===
 
 // eachSlice calls fn for each element of s.
