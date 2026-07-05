@@ -27,4 +27,4 @@ go.work.sum
 temp/
 lisette/
 
-main
+main*.output
