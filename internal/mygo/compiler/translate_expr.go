@@ -473,13 +473,8 @@ func (g *generator) translateSliceLit(n *SliceLitExpr, ctx *exprCtx, expected st
 		parts = append(parts, code)
 	}
 
-	goElemType := g.goType(&NamedType{Name: elemType}, nil)
-	sliceType := "[]" + goElemType
-	return jen.Lit(jen.DictFunc(func(d jen.Dict) {
-		for _, p := range parts {
-			d[jen.Lit(p)] = p
-		}
-	})).IndexFunc(func(g *jen.Group) { g.Lit(goElemType) }), sliceType, nil
+	// Build slice type expression []T and values
+	return jen.Index().Add(jenTypeExpr(&NamedType{Name: elemType})).Values(parts...), "[]" + g.goType(&NamedType{Name: elemType}, nil), nil
 }
 
 func (g *generator) translateMapLit(
@@ -574,7 +569,7 @@ func (g *generator) translateMapLit(
 	keyGoType := g.goType(&NamedType{Name: keyType}, nil)
 	valGoType := g.goType(&NamedType{Name: valType}, nil)
 	mapType := "map[" + keyGoType + "]" + valGoType
-	return jen.Lit(dict).Index(jen.Id(keyGoType), jen.Id(valGoType)), mapType, nil
+	return jen.Map(jen.Id(keyGoType)).Add(jen.Id(valGoType)).Values(dict), mapType, nil
 }
 
 func (g *generator) translateSetLit(n *SetLitExpr, ctx *exprCtx, expected string) (jen.Code, string, error) {
@@ -640,12 +635,12 @@ func (g *generator) translateSetLit(n *SetLitExpr, ctx *exprCtx, expected string
 		if err != nil {
 			return nil, "", err
 		}
-		dict[code] = jen.Dict{}
+		dict[code] = jen.Struct().Values()
 	}
 
 	elemGoType := g.goType(&NamedType{Name: elemType}, nil)
 	setType := "map[" + elemGoType + "]struct{}"
-	return jen.Lit(dict).Index(jen.Id(elemGoType), jen.Id("struct{}")), setType, nil
+	return jen.Map(jen.Id(elemGoType)).Struct().Values(dict), setType, nil
 }
 
 func (g *generator) translateEmptyMapLit(ctx *exprCtx, expected string, line, col int) (jen.Code, string, error) {
@@ -661,7 +656,7 @@ func (g *generator) translateEmptyMapLit(ctx *exprCtx, expected string, line, co
 	keyGoType := g.goType(&NamedType{Name: keyType}, nil)
 	valGoType := g.goType(&NamedType{Name: valType}, nil)
 	mapType := "map[" + keyGoType + "]" + valGoType
-	return jen.Lit(jen.Dict{}).Index(jen.Id(keyGoType), jen.Id(valGoType)), mapType, nil
+	return jen.Map(jen.Id(keyGoType)).Add(jen.Id(valGoType)).Values(), mapType, nil
 }
 
 // splitTopLevelSingle splits a top-level comma-separated string into exactly two parts.

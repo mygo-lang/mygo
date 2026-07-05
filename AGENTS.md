@@ -187,7 +187,7 @@
 
 ## Recent Work
 
-- **`-> Unit` → `-> ()` migration**: All source files migrated from `-> Unit` / `go[Unit]` to `-> ()` / `go[()]`. The old `Unit` name is no longer recognized as a return-type keyword. Key changes:
+- **`-> Unit` → `-> ()` migration**: All source files migrated from `-> Unit` / `go[Unit]` to `-> ()` / `go[()]`. The old `Unit` name is no longer recognized as a return-type keyword.
   - **Parser** (`parser.y`): Added `| LPAREN RPAREN` alternative to the `type` rule so `()` is recognized as a type expression (empty tuple → unit type). Regenerated `parser.go` via `goyacc`. Conflicts: 39/5 (was 29/4).
   - **HM type inference** (`typeinference/types.go`): `typeFromAST` returns `TUnit{}` for empty `TupleType` (i.e. `()`).
   - **HM return handling** (`typeinference/infer.go`): When declared return type is `TUnit{}` or corresponds to `()`, skip unification — the body value is discarded in void context. Forces function return type to `TUnit{}`.
@@ -420,3 +420,27 @@ Per MIGRATE.md "新语句块方案", the yacc parser supports:
 - Replaced all calls from `prelude.mygo` to `prelude_go.go` helper functions (`eachSlice`, `mapSlice`, `filterSlice`, `foldSlice`, `findSlice`, `containsSlice`, `eachMap`, `mapMap`, `filterMap`, `foldMap`, `findMap`, `eachSet`, `mapSet`, `filterSet`, `foldSet`, `findSet`) with inline Go code using the `go[T] { code: """...""" }` multi-line string syntax.
 - Each Enumerable method body now contains its complete Go implementation (IIFE with `for` loops, `make`, `append`, map/set construction) directly in MyGO source, eliminating the dependency on hand-written Go helpers for collection type iteration.
 - Generated Go (`zz_mygo.gen.go`) verified: `go vet` and `go build` both pass cleanly.
+
+## Empty Collection Literal Type Inference Fix (2026-07-05)
+
+### Parser Bug: `binding_stmt` omits `Type` field
+- All three `binding_stmt` alternatives (`LET ident`, `LET bind_pattern`, `VAR ident`) in `parser.y` omitted `Type: p.currentType` from `LetStmt` struct initialization. The top-level `let_decl`/`var_decl` had it correctly.
+- This caused `let x: Slice[Int] = []` inside function bodies to lose the type annotation entirely -> `s.Type == nil` in codegen -> empty slice literal got no expected type context -> `translateSliceLit` emitted "could not infer slice element type".
+- **Fix**: Added `Type: p.currentType` to all three `binding_stmt` alternatives.
+
+### Stale `currentType` Fix
+- `opt_type_annot` empty alternative (`/* empty */`) did not clear `p.currentType`, causing type annotations from enclosing contexts (e.g., function return type `-> String`) to leak into untyped `let` bindings inside the body.
+- **Fix**: Added `p.currentType = nil` action to the empty `opt_type_annot` alternative.
+
+### Collection Literal Codegen Fix (Jennifer API)
+- `translateMapLit`, `translateSetLit`, `translateEmptyMapLit` used `jen.Lit(jen.Dict{...})` which is invalid — `jen.Dict` implements `Code` via its `render()` method and must be passed to `Values()`, not `Lit()`.
+- `translateSliceLit` used `jen.Lit(jen.DictFunc(...)).IndexFunc(...)` for the same reason.
+- **Fix**:
+  - **Map literals**: `jen.Map(jen.Id(keyType)).Add(jen.Id(valType)).Values(dict)`
+  - **Set literals**: `jen.Map(jen.Id(elemType)).Struct().Values(dict)` with `jen.Struct().Values()` for `struct{}{}` values
+  - **Empty map**: `jen.Map(jen.Id(keyType)).Add(jen.Id(valType)).Values()`
+  - **Slice literals**: `jen.Index().Add(jenTypeExpr(...)).Values(parts...)`
+
+### Key Files Changed
+- `internal/mygo/parser/parser.y` — `binding_stmt` + `opt_type_annot` rules; regenerated `parser.go`
+- `internal/mygo/compiler/translate_expr.go` — `translateSliceLit`, `translateMapLit`, `translateSetLit`, `translateEmptyMapLit`

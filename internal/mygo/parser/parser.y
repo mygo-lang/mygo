@@ -513,7 +513,10 @@ var_decl
 	;
 
 opt_type_annot
-	: /* empty */
+	: /* empty */ {
+		p := yylex.(*parser)
+		p.currentType = nil
+	}
 	| COLON type
 	;
 
@@ -1524,16 +1527,16 @@ stmt
 binding_stmt
 	: LET IDENT opt_type_annot '=' expr {
 		p := yylex.(*parser)
-		p.currentStmt = &ast.LetStmt{Name: $2.lit, Mutable: false, Value: p.currentExpr}
+		p.currentStmt = &ast.LetStmt{Name: $2.lit, Mutable: false, Type: p.currentType, Value: p.currentExpr}
 	}
 	| LET bind_pattern opt_type_annot '=' expr {
 		p := yylex.(*parser)
-		p.currentStmt = &ast.LetStmt{Bind: p.currentBindPattern, Mutable: false, Value: p.currentExpr}
+		p.currentStmt = &ast.LetStmt{Bind: p.currentBindPattern, Mutable: false, Type: p.currentType, Value: p.currentExpr}
 		p.currentBindPattern = nil
 	}
 	| VAR IDENT opt_type_annot '=' expr {
 		p := yylex.(*parser)
-		p.currentStmt = &ast.LetStmt{Name: $2.lit, Mutable: true, Value: p.currentExpr}
+		p.currentStmt = &ast.LetStmt{Name: $2.lit, Mutable: true, Type: p.currentType, Value: p.currentExpr}
 	}
 	;
 
