@@ -226,7 +226,7 @@ func (g *generator) translateIdent(name string, line, col int, ctx *exprCtx, exp
 		if base != "" && len(args) > 0 {
 			cleanArgs := make([]string, 0, len(args))
 			for _, a := range args {
-				cleanArgs = append(cleanArgs, strings.TrimPrefix(strings.TrimSpace(a), "*"))
+				cleanArgs = append(cleanArgs, strings.TrimSpace(a))
 			}
 			typeOpts := jen.Options{Open: "[", Close: "]", Separator: ", "}
 			typeItems := make([]jen.Code, 0, len(cleanArgs))

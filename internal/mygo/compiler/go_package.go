@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"unicode"
 )
 
 func (g *generator) goPackageSigsFor(path string) (*goPackageSigs, error) {
@@ -79,6 +80,9 @@ func loadGoPackageTypeSigs(dir string, files []string) (*types.Package, map[stri
 	funcs := map[string]*goFuncSig{}
 	scope := checked.Scope()
 	for _, name := range scope.Names() {
+		if !isExportedGoIdent(name) {
+			continue
+		}
 		obj := scope.Lookup(name)
 		fn, ok := obj.(*types.Func)
 		if !ok {
@@ -118,6 +122,9 @@ func loadGoPackageTypeMethods(dir string, files []string) (map[string]map[string
 	methods := map[string]map[string]*goFuncSig{}
 	scope := checked.Scope()
 	for _, name := range scope.Names() {
+		if !isExportedGoIdent(name) {
+			continue
+		}
 		obj := scope.Lookup(name)
 		fn, ok := obj.(*types.Func)
 		if !ok {
@@ -165,4 +172,14 @@ func goSignatureResults(sig *types.Signature) []string {
 		out = append(out, results.At(i).Type().String())
 	}
 	return out
+}
+
+func isExportedGoIdent(name string) bool {
+	if name == "" {
+		return false
+	}
+	for _, r := range name {
+		return unicode.IsUpper(r)
+	}
+	return false
 }

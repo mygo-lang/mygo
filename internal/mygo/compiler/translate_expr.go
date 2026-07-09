@@ -208,6 +208,11 @@ func (g *generator) translateExprRaw(e Expr, ctx *exprCtx, expected string) (jen
 			} else if ok {
 				return code, typ, nil
 			}
+			if code, typ, ok, err := g.translateMyGoPackageSelector(baseIdent.Name, n.Field); err != nil {
+				return nil, "", err
+			} else if ok {
+				return code, typ, nil
+			}
 		}
 		base, baseType, err := g.translateExpr(n.Expr, ctx, "")
 		if err != nil {

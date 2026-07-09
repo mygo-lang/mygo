@@ -157,6 +157,9 @@ func (g *generator) translateGoPackageSelector(alias, name string) (jen.Code, st
 	if !ok || !strings.HasPrefix(importPathForGo(path), "") {
 		return nil, "", false, nil
 	}
+	if !isExportedIdent(name) {
+		return nil, "", false, nil
+	}
 	goPath := importPathForGo(path)
 	sigs, err := g.goPackageSigsFor(goPath)
 	if err != nil {
@@ -177,4 +180,55 @@ func (g *generator) translateGoPackageSelector(alias, name string) (jen.Code, st
 	default:
 		return nil, "", false, nil
 	}
+}
+
+func (g *generator) translateMyGoPackageSelector(alias, name string) (jen.Code, string, bool, error) {
+	path, ok := g.pkg.ImportAliases[alias]
+	if !ok || strings.HasPrefix(path, "go:") {
+		return nil, "", false, nil
+	}
+	if !isExportedIdent(name) {
+		return nil, "", false, nil
+	}
+	pkg, err := loadImportedMyGoPackage(g.pkg.WorkspaceRoot, g.pkg.Dir, path, g.pkg.NoPrelude)
+	if err != nil {
+		return nil, "", false, err
+	}
+	if fn, ok := pkg.Funcs[name]; ok {
+		return jen.Id(alias).Dot(exportName(name)), g.goType(fn.Ret, nil), true, nil
+	}
+	if pkg.Structs[name] != nil {
+		return jen.Id(alias).Dot(exportName(name)), exportName(name), true, nil
+	}
+	if pkg.Enums[name] != nil {
+		return jen.Id(alias).Dot(exportName(name)), exportName(name), true, nil
+	}
+	return nil, "", false, nil
+}
+
+func (g *generator) translateMyGoSelectorCall(alias, name string, args []Expr, ctx *exprCtx, expected string) (jen.Code, string, bool, error) {
+	path, ok := g.pkg.ImportAliases[alias]
+	if !ok || strings.HasPrefix(path, "go:") {
+		return nil, "", false, nil
+	}
+	if !isExportedIdent(name) {
+		return nil, "", false, nil
+	}
+	pkg, err := loadImportedMyGoPackage(g.pkg.WorkspaceRoot, g.pkg.Dir, path, g.pkg.NoPrelude)
+	if err != nil {
+		return nil, "", false, err
+	}
+	sig, ok := pkg.Funcs[name]
+	if !ok {
+		return nil, "", false, nil
+	}
+	var argCodes []jen.Code
+	for _, a := range args {
+		code, _, err := g.translateExpr(a, ctx, "")
+		if err != nil {
+			return nil, "", false, err
+		}
+		argCodes = append(argCodes, code)
+	}
+	return jen.Id(alias).Dot(exportName(name)).Call(argCodes...), g.goType(sig.Ret, nil), true, nil
 }

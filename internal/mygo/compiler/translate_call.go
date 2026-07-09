@@ -21,7 +21,19 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 					return g.translateEnumConstructor(baseIdent.Name, field.Field, n.Args, ctx, expected)
 				}
 			}
+			if path, ok := g.pkg.ImportAliases[baseIdent.Name]; ok && !strings.HasPrefix(path, "go:") {
+				if code, typ, ok, err := g.translateMyGoSelectorCall(baseIdent.Name, field.Field, n.Args, ctx, expected); err != nil {
+					return nil, "", err
+				} else if ok {
+					return code, typ, nil
+				}
+			}
 			if code, typ, ok, err := g.translateGoSelectorCall(baseIdent.Name, field.Field, n.Args, ctx, expected); err != nil {
+				return nil, "", err
+			} else if ok {
+				return code, typ, nil
+			}
+			if code, typ, ok, err := g.translateMyGoSelectorCall(baseIdent.Name, field.Field, n.Args, ctx, expected); err != nil {
 				return nil, "", err
 			} else if ok {
 				return code, typ, nil

@@ -16,13 +16,15 @@ func (p *Package) Generate() (string, error) {
 	// If inference fails, we still attempt code generation (the existing lowering
 	// logic handles untyped expressions via "any" fallback).
 	pkgInfo := &typeinference.PkgInfo{
-		Name:       p.Name,
-		Decls:      p.Decls,
-		Enums:      p.Enums,
-		Structs:    p.Structs,
-		Interfaces: p.Interfaces,
-		Funcs:      p.Funcs,
-		Impls:      p.Impls,
+		Dir:           p.Dir,
+		WorkspaceRoot: p.WorkspaceRoot,
+		Name:          p.Name,
+		Decls:         p.Decls,
+		Enums:         p.Enums,
+		Structs:       p.Structs,
+		Interfaces:    p.Interfaces,
+		Funcs:         p.Funcs,
+		Impls:         p.Impls,
 	}
 	infState := typeinference.NewInferState()
 	typedInfo, infErr := typeinference.InferPackage(pkgInfo, infState)

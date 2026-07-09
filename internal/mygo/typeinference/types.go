@@ -148,16 +148,28 @@ func (env TypeEnv) Clone() TypeEnv {
 
 // InferState holds inference state: fresh variable counter and accumulated constraints.
 type InferState struct {
-	FreshVarID int
-	PkgInfo    *PkgInfo // package info for enum/struct variant lookups
-	GoPackages map[string]*GoPackageInfo
-	TypedInfo  *TypedInfo
+	FreshVarID       int
+	PkgInfo          *PkgInfo // package info for enum/struct variant lookups
+	GoPackages       map[string]*GoPackageInfo
+	MyGoPackages     map[string]*MyGoPackageInfo
+	MyGoPackageCache map[string]*MyGoPackageInfo
+	TypedInfo        *TypedInfo
+}
+
+type MyGoPackageInfo struct {
+	Alias string
+	Path  string
+	Name  string
+	Funcs map[string]TFunc
+	Types map[string]struct{}
 }
 
 func NewInferState() *InferState {
 	return &InferState{
-		FreshVarID: 1,
-		GoPackages: map[string]*GoPackageInfo{},
+		FreshVarID:       1,
+		GoPackages:       map[string]*GoPackageInfo{},
+		MyGoPackages:     map[string]*MyGoPackageInfo{},
+		MyGoPackageCache: map[string]*MyGoPackageInfo{},
 	}
 }
 

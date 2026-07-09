@@ -9,6 +9,8 @@ import (
 
 type Package struct {
 	Name          string
+	Dir           string
+	WorkspaceRoot string
 	NoPrelude     bool // if true, skip auto-importing prelude declarations
 	Imports       map[string]struct{}
 	ImportDecls   []*ImportDecl

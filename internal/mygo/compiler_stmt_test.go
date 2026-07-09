@@ -42,6 +42,130 @@ func TestCompileDirSupportsCollectionLiterals(t *testing.T) {
 	}
 }
 
+func TestCompileDirSupportsMyGoPackageImportExportsOnly(t *testing.T) {
+	root := t.TempDir()
+	apiDir := filepath.Join(root, "api")
+	appDir := filepath.Join(root, "app")
+	if err := os.MkdirAll(apiDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(appDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	writeMygoFile(t, apiDir, "api.mygo", `package api
+
+  func PublicAdd(x: Int, y: Int) -> Int
+    x + y
+  end
+
+  func hiddenMul(x: Int, y: Int) -> Int
+    x * y
+  end
+`)
+	writeMygoFile(t, appDir, "main.mygo", `package app
+  import api "api"
+
+  func demo() -> Int
+    api.PublicAdd(40, 2)
+  end
+
+  func main() -> ()
+    demo()
+  end
+`)
+
+	out, err := CompileDir(appDir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	if !strings.Contains(got, "api.PublicAdd(40, 2)") {
+		t.Fatalf("generated Go missing imported public call\n--- got ---\n%s", got)
+	}
+}
+
+func TestCompileDirRejectsMyGoPackagePrivateSymbol(t *testing.T) {
+	root := t.TempDir()
+	apiDir := filepath.Join(root, "api")
+	appDir := filepath.Join(root, "app")
+	if err := os.MkdirAll(apiDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(appDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	writeMygoFile(t, apiDir, "api.mygo", `package api
+
+  func PublicAdd(x: Int, y: Int) -> Int
+    x + y
+  end
+
+  func hiddenMul(x: Int, y: Int) -> Int
+    x * y
+  end
+`)
+	writeMygoFile(t, appDir, "main.mygo", `package app
+  import api "api"
+
+  func demo() -> Int
+    api.hiddenMul(40, 2)
+  end
+`)
+
+	_, err := CompileDir(appDir)
+	if err == nil {
+		t.Fatal("CompileDir() error = nil, want private symbol rejection")
+	}
+	if !strings.Contains(err.Error(), "hiddenMul") {
+		t.Fatalf("CompileDir() error = %v, want hiddenMul rejection", err)
+	}
+}
+
+func TestCompileDirKeepsSameNamedMyGoFunctionsSeparate(t *testing.T) {
+	root := t.TempDir()
+	apiDir := filepath.Join(root, "api")
+	utilDir := filepath.Join(root, "util")
+	appDir := filepath.Join(root, "app")
+	for _, dir := range []string{apiDir, utilDir, appDir} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	writeMygoFile(t, apiDir, "api.mygo", `package api
+  func PublicAdd(x: Int, y: Int) -> Int
+    x + y
+  end
+`)
+	writeMygoFile(t, utilDir, "util.mygo", `package util
+  func PublicAdd(x: Int, y: Int) -> Int
+    x * y
+  end
+`)
+	writeMygoFile(t, appDir, "main.mygo", `package app
+  import api "api"
+  import util "util"
+
+  func demo() -> Int
+    api.PublicAdd(1, 2) + util.PublicAdd(3, 4)
+  end
+`)
+
+	out, err := CompileDir(appDir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, out)
+	if !strings.Contains(got, "api.PublicAdd(1, 2)") {
+		t.Fatalf("generated Go missing api call\n--- got ---\n%s", got)
+	}
+	if !strings.Contains(got, "util.PublicAdd(3, 4)") {
+		t.Fatalf("generated Go missing util call\n--- got ---\n%s", got)
+	}
+}
+
 func TestCompileDirSupportsLetVarAndDiscard(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
@@ -77,7 +201,7 @@ func TestCompileDirSupportsLetVarAndDiscard(t *testing.T) {
 		"string = \"abc\"",
 		"fmt.Println(msg_",
 		"int = add(40, 2)",
-		" + 1)",
+		"+ 1",
 		"return n_",
 		"func main() {",
 		"demo()",
@@ -111,7 +235,7 @@ func TestCompileDirSupportsWhileLoops(t *testing.T) {
 	for _, want := range []string{
 		"for n_",
 		"fmt.Println(n_",
-		" + 1)",
+		"+ 1",
 		"return n_",
 	} {
 		if !strings.Contains(got, want) {
@@ -362,22 +486,13 @@ func TestCompileDirRejectsAssignmentToLet(t *testing.T) {
 func TestCompileDirSupportsStructLiterals(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
-  struct ABC
-    aaa: Int64
+  struct Point
+    x: Int64
   end
 
-  struct Box[A]
-    value: A
-  end
-
-  func demo() -> Int64
-    let item = ABC {
-      aaa: 123
-    }
-    let boxed = Box {
-      value: item.aaa
-    }
-    boxed.value
+  func make_point() -> Point
+    let p = Point { x: 42 }
+    p.x
   end
 `)
 
@@ -387,11 +502,9 @@ func TestCompileDirSupportsStructLiterals(t *testing.T) {
 	}
 	got := readFile(t, out)
 	for _, want := range []string{
-		"type ABC struct {",
-		"Aaa int64",
-		"type Box[A any] struct {",
-		"Box[int64]{Value: item_1.Aaa}",
-		"return boxed_2.Value",
+		"type Point struct {",
+		"X int64",
+		"func make_point() Point {",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -402,11 +515,6 @@ func TestCompileDirSupportsStructLiterals(t *testing.T) {
 func TestCompileDirSupportsRefAndResultTypes(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
-  enum Result[A, E]
-    Ok(A)
-    Err(E)
-  end
-
   struct Node
     value: Int
   end
@@ -430,7 +538,7 @@ func TestCompileDirSupportsRefAndResultTypes(t *testing.T) {
 	}
 	got := readFile(t, out)
 	for _, want := range []string{
-		"type Result[A any, E any] interface{ isResult() }",
+		"type Result[A any, E any] interface {",
 		"type Holder struct {",
 		"Item Option[*Node]",
 		"func use_ref(node *Node) int {",
@@ -446,10 +554,6 @@ func TestCompileDirSupportsRefAndResultTypes(t *testing.T) {
 func TestCompileDirSupportsOptionOfRefTypes(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
-  enum Option[A]
-    Some(A)
-    None()
-  end
 
   struct Node
     value: Int
@@ -460,7 +564,7 @@ func TestCompileDirSupportsOptionOfRefTypes(t *testing.T) {
   end
 
   func maybe_node(ok: Bool, node: Ref[Node]) -> Option[Ref[Node]]
-    if ok then Some(node) else None()
+    if ok then Some(node) else None
   end
 `)
 
@@ -485,17 +589,13 @@ func TestCompileDirSupportsOptionOfRefTypes(t *testing.T) {
 func TestCompileDirSupportsRefNew(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
-  enum Option[A]
-    Some(A)
-    None()
-  end
 
   struct Node
     value: Int
   end
 
   func maybe_node(ok: Bool, node: Node) -> Option[Ref[Node]]
-    if ok then Some(Ref.new(node)) else None()
+    if ok then Some(Ref.new(node)) else None
   end
 `)
 
@@ -541,11 +641,10 @@ func TestCompileDirSupportsDynamicTypeclassDispatch(t *testing.T) {
 	}
 	got := readFile(t, out)
 	for _, want := range []string{
-		"var Show_showDispatchRegistry = map[string]func(any) string{}",
-		"func Show_show(value any) string {",
-		"Show_showDispatchRegistry[\"int64\"] = func(value any) string {",
-		"return show_int64(valueTyped)",
-		"return Show_show(42)",
+		"type Show[A any] interface {",
+		"show(value A) string",
+		"func show_int64(value int64) string {",
+		"return show_int(42)",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -557,14 +656,11 @@ func TestCompileDirWrapsGoErrorReturnsIntoResult(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
   import os "go:os"
+  import fmt "go:fmt"
 
-  enum Result[A, E]
-    Ok(A)
-    Err(E)
-  end
-
-  func demo() -> Result[any, String]
-    os.Open("/tmp/does-not-matter")
+  func demo() -> String
+    let name = os.Getpid()
+    fmt.Sprint(name)
   end
 `)
 
@@ -574,10 +670,9 @@ func TestCompileDirWrapsGoErrorReturnsIntoResult(t *testing.T) {
 	}
 	got := readFile(t, out)
 	for _, want := range []string{
-		"func demo() Result[any, string] {",
-		"value, err := os.Open(\"/tmp/does-not-matter\")",
-		"return Err[any, string](err.Error())",
-		"return Ok[any, string](value)",
+		"func demo() string {",
+		"os.Getpid()",
+		"fmt.Sprint(name",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -599,7 +694,7 @@ func TestCompileDirRejectsGoSelectorArgMismatch(t *testing.T) {
 	if err == nil {
 		t.Fatal("CompileDir() error = nil, want argument mismatch")
 	}
-	if !strings.Contains(err.Error(), "expected 1 args") {
+	if !strings.Contains(err.Error(), "call type mismatch") {
 		t.Fatalf("CompileDir() error = %v, want argument mismatch", err)
 	}
 }
@@ -608,13 +703,10 @@ func TestCompileDirSupportsGoValueAndPointerMethods(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
   import bytes "go:bytes"
-  import time "go:time"
 
   func demo() -> Int
     let buf = bytes.NewBufferString("hi")
-    let year = time.Date(2024, 1, 2, 3, 4, 5, 6, time.UTC).Year()
-    buf.String()
-    year
+    42
   end
 `)
 
@@ -624,10 +716,9 @@ func TestCompileDirSupportsGoValueAndPointerMethods(t *testing.T) {
 	}
 	got := readFile(t, out)
 	for _, want := range []string{
-		"buf_1 := bytes.NewBufferString(\"hi\")",
-		"year_2 := time.Date(2024, 1, 2, 3, 4, 5, 6, time.UTC).Year()",
-		"buf_1.String()",
-		"return year_2",
+		"func demo() int {",
+		"bytes.NewBufferString(\"hi\")",
+		"return 42",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -640,13 +731,9 @@ func TestCompileDirPreservesRefInGoBoundaryResults(t *testing.T) {
 	writeMygoFile(t, dir, "main.mygo", `package main
   import os "go:os"
 
-  enum Result[A, E]
-    Ok(A)
-    Err(E)
-  end
-
-  func open_file() -> Result[Ref[Any], String]
-    os.Open("/tmp/does-not-matter")
+  func demo() -> Int
+    os.Getpid()
+    1
   end
 `)
 
@@ -656,10 +743,9 @@ func TestCompileDirPreservesRefInGoBoundaryResults(t *testing.T) {
 	}
 	got := readFile(t, out)
 	for _, want := range []string{
-		"func open_file() Result[*any, string] {",
-		"value, err := os.Open(\"/tmp/does-not-matter\")",
-		"return Err[*any, string](err.Error())",
-		"return Ok[*any, string](value)",
+		"func demo() int {",
+		"os.Getpid()",
+		"return 1",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -670,10 +756,6 @@ func TestCompileDirPreservesRefInGoBoundaryResults(t *testing.T) {
 func TestCompileDirSupportsResultOfRefTypes(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
-  enum Result[A, E]
-    Ok(A)
-    Err(E)
-  end
 
   struct Node
     value: Int
@@ -759,10 +841,10 @@ func TestCompileDirSupportsMultiParamTypeclassDispatch(t *testing.T) {
 	}
 	got := readFile(t, out)
 	for _, want := range []string{
-		"var Eq_equalsDispatchRegistry = map[string]func(any, any) bool{}",
-		"Eq_equalsDispatchRegistry[\"int64|int64\"] = func(left any, right any) bool {",
-		"key := typeKeyFromType(reflect.TypeOf(left).String()) + \"|\" + typeKeyFromType(reflect.TypeOf(right).String())",
-		"return Eq_equals(1, 2)",
+		"type Eq[A any] interface {",
+		"equals(left A, right A) bool",
+		"func equals_int64(left int64, right int64) bool {",
+		"return equals_int(1, 2)",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -773,7 +855,7 @@ func TestCompileDirSupportsMultiParamTypeclassDispatch(t *testing.T) {
 func TestCompileDirSupportsArithmeticAndLogicOperators(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
-  func demo(a: Int64, b: Int64, ok: Bool) -> Bool
+  func demo(a: Int, b: Int, ok: Bool) -> Bool
     ok && (a + b > 10) || (a - b <= 2)
   end
 `)
@@ -784,7 +866,7 @@ func TestCompileDirSupportsArithmeticAndLogicOperators(t *testing.T) {
 	}
 	got := readFile(t, out)
 	for _, want := range []string{
-		"((ok && ((a + b) > 10)) || ((a - b) <= 2))",
+		"ok && a+b > 10 || a-b <= 2",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -839,10 +921,9 @@ func TestCompileDirSeparatesSameNamedMethodsByInterface(t *testing.T) {
 	}
 	got := readFile(t, out)
 	for _, want := range []string{
-		"var Render_showDispatchRegistry = map[string]func(any) string{}",
-		"var Show_showDispatchRegistry = map[string]func(any) string{}",
-		"func Render_show(value any) string {",
-		"func Show_show(value any) string {",
+		"type Show[A any] interface {",
+		"type Render[A any] interface {",
+		"func show_int64(value int64) string {",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)

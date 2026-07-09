@@ -12,20 +12,21 @@ import (
 )
 
 func CompileDir(dir string) (string, error) {
-	return compileDir(dir, false)
+	return compileDir(dir, filepath.Dir(dir), false)
 }
 
 // CompileDirNoPrelude compiles a directory without auto-importing prelude declarations.
 // This is useful when compiling the prelude itself to avoid circular dependency.
 func CompileDirNoPrelude(dir string) (string, error) {
-	return compileDir(dir, true)
+	return compileDir(dir, filepath.Dir(dir), true)
 }
 
-func compileDir(dir string, noPrelude bool) (string, error) {
+func compileDir(dir, workspaceRoot string, noPrelude bool) (string, error) {
 	pkg, err := loadPackage(dir, noPrelude)
 	if err != nil {
 		return "", err
 	}
+	pkg.WorkspaceRoot = workspaceRoot
 	out := filepath.Join(dir, "zz_mygo.gen.go")
 	src, err := pkg.Generate()
 	if err != nil {
@@ -49,6 +50,9 @@ func SyncNoPrelude(root string) ([]string, error) {
 }
 
 func syncDir(root string, noPrelude bool) ([]string, error) {
+	if _, err := buildPackageIndex(root, noPrelude); err != nil {
+		return nil, err
+	}
 	var written []string
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -74,9 +78,9 @@ func syncDir(root string, noPrelude bool) ([]string, error) {
 		var out string
 		var err error
 		if noPrelude {
-			out, err = CompileDirNoPrelude(dir)
+			out, err = compileDir(dir, root, true)
 		} else {
-			out, err = CompileDir(dir)
+			out, err = compileDir(dir, root, false)
 		}
 		if err != nil {
 			return nil, err
@@ -123,6 +127,8 @@ func loadPackage(dir string, noPrelude bool) (*Package, error) {
 		return nil, err
 	}
 	pkg := &Package{
+		Dir:           dir,
+		WorkspaceRoot: filepath.Dir(dir),
 		NoPrelude:     noPrelude,
 		Imports:       map[string]struct{}{},
 		ImportAliases: map[string]string{},

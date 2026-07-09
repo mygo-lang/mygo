@@ -14,13 +14,15 @@ import (
 // PkgInfo bundles the AST declaration maps needed for type inference.
 // It mirrors the compiler's Package type without creating a circular import.
 type PkgInfo struct {
-	Name       string
-	Decls      []Decl
-	Enums      map[string]*EnumDecl
-	Structs    map[string]*StructDecl
-	Interfaces map[string]*InterfaceDecl
-	Funcs      map[string]*FuncDecl
-	Impls      []*ImplDecl
+	Dir           string
+	WorkspaceRoot string
+	Name          string
+	Decls         []Decl
+	Enums         map[string]*EnumDecl
+	Structs       map[string]*StructDecl
+	Interfaces    map[string]*InterfaceDecl
+	Funcs         map[string]*FuncDecl
+	Impls         []*ImplDecl
 }
 
 // TypedInfo holds the results of type inference for an entire package.
@@ -106,21 +108,41 @@ func initialTypeEnv(pkg *PkgInfo) TypeEnv {
 func inferDecl(decl Decl, env TypeEnv, state *InferState, info *TypedInfo, pkg *PkgInfo) (TypeEnv, error) {
 	switch d := decl.(type) {
 	case *ImportDecl:
-		if !strings.HasPrefix(d.Path, "go:") {
+		alias := d.Alias
+		if alias == "" {
+			alias = importAlias(strings.TrimPrefix(d.Path, "go:"), d.Alias)
+		}
+		if strings.HasPrefix(d.Path, "go:") {
+			path := strings.TrimPrefix(d.Path, "go:")
+			info, err := loadGoPackageInfo(alias, path)
+			if err != nil {
+				return nil, fmt.Errorf("import %q: %w", d.Path, err)
+			}
+			if state.GoPackages == nil {
+				state.GoPackages = map[string]*GoPackageInfo{}
+			}
+			state.GoPackages[alias] = info
+			env = env.Clone()
+			env[alias] = &Scheme{Body: QualifiedType{Body: TGoPackage{Alias: alias}}}
 			return env, nil
 		}
-		path := strings.TrimPrefix(d.Path, "go:")
-		alias := importAlias(path, d.Alias)
-		info, err := loadGoPackageInfo(alias, path)
+		if state.PkgInfo == nil || state.PkgInfo.Dir == "" {
+			return env, nil
+		}
+		workspaceRoot := ""
+		if pkg != nil {
+			workspaceRoot = pkg.WorkspaceRoot
+		}
+		info, err := loadMyGoPackageInfo(workspaceRoot, state.PkgInfo.Dir, d.Path, alias, state.MyGoPackageCache)
 		if err != nil {
 			return nil, fmt.Errorf("import %q: %w", d.Path, err)
 		}
-		if state.GoPackages == nil {
-			state.GoPackages = map[string]*GoPackageInfo{}
+		if state.MyGoPackages == nil {
+			state.MyGoPackages = map[string]*MyGoPackageInfo{}
 		}
-		state.GoPackages[alias] = info
+		state.MyGoPackages[alias] = info
 		env = env.Clone()
-		env[alias] = &Scheme{Body: QualifiedType{Body: TGoPackage{Alias: alias}}}
+		env[alias] = &Scheme{Body: QualifiedType{Body: TCon{Name: alias}}}
 		return env, nil
 
 	case *EnumDecl:
@@ -177,14 +199,10 @@ func inferEnumDecl(d *EnumDecl, env TypeEnv, state *InferState, pkg *PkgInfo) (T
 			fieldTypes[i] = substituteTypeParams(typeFromAST(f.Type), d.TypeParams, typeArgs)
 		}
 
-		var variantType MonoType
-		if len(fieldTypes) == 0 {
-			// Nullary constructor: just returns the enum type
-			variantType = enumType
-		} else {
-			// N-ary constructor: field types -> enum type
-			variantType = TFunc{Args: fieldTypes, Ret: enumType}
-		}
+		// All enum variant constructors are functions: args -> enum type.
+		// Nullary constructors have zero args but still return the enum type,
+		// so that calling them (e.g., `None()`) works as a function call.
+		variantType := TFunc{Args: fieldTypes, Ret: enumType}
 
 		// Register the variant constructor with the environment
 		// For nullary constructors, we still treat them as functions of zero args
@@ -277,6 +295,25 @@ func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo,
 			}
 			mFuncType := TFunc{Args: mParamTypes, Ret: mRetType}
 			bodyEnv[m.Name] = &Scheme{Body: QualifiedType{Body: mFuncType}}
+		}
+	}
+
+	// Register impl methods as global typeclass methods (for implicit dispatch without explicit `using` constraints)
+	for _, impl := range pkg.Impls {
+		for _, method := range impl.Methods {
+			mParamTypes := make([]MonoType, len(method.Params))
+			for i, p := range method.Params {
+				mParamTypes[i] = typeFromAST(p.Type)
+			}
+			var mRetType MonoType
+			if method.Ret != nil {
+				mRetType = typeFromAST(method.Ret)
+			} else {
+				mRetType = TUnit{}
+			}
+			if _, exists := bodyEnv[method.Name]; !exists {
+				bodyEnv[method.Name] = &Scheme{Body: QualifiedType{Body: TFunc{Args: mParamTypes, Ret: mRetType}}}
+			}
 		}
 	}
 
@@ -535,7 +572,7 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 		if id, ok := field.Expr.(*IdentExpr); ok && id.Name == "Ref" && field.Field == "new" {
 			return inferRefNew(env, n, state)
 		}
-		if id, ok := field.Expr.(*IdentExpr); !ok || state.GoPackages[id.Name] == nil {
+		if id, ok := field.Expr.(*IdentExpr); !ok || (state.GoPackages[id.Name] == nil && state.MyGoPackages[id.Name] == nil) {
 			receiverType, s1, preds1, err := inferExpr(env, field.Expr, state)
 			if err != nil {
 				return nil, nil, nil, err
@@ -852,6 +889,15 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 				return fn, make(Subst), nil, nil
 			}
 			return nil, nil, nil, fmt.Errorf("Go package %q has no function %q", id.Name, n.Field)
+		}
+		if pkg := state.MyGoPackages[id.Name]; pkg != nil {
+			if fn, ok := pkg.Funcs[n.Field]; ok {
+				return fn, make(Subst), nil, nil
+			}
+			if _, ok := pkg.Types[n.Field]; ok {
+				return TCon{Name: n.Field}, make(Subst), nil, nil
+			}
+			return nil, nil, nil, fmt.Errorf("MyGO package %q has no exported symbol %q", id.Name, n.Field)
 		}
 
 		// Check if it's an enum name followed by a variant
