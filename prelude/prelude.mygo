@@ -600,6 +600,77 @@ impl[A] Option[A]: Enumerable[Option[A], A]
   end
 end
 
+
+# ===== IAssignable interface =====
+
+# Generic indexed access interface for Slice and Map.
+# Slice[V]: IAssignable[Slice[V], Int, V], K = Int
+# Map[K, V]: IAssignable[Map[K, V], K, V], K = K
+interface IAssignable[C[A], K, A]
+  func get(c: C[A], index: K) -> Option[Ref[A]]
+  func set(c: C[A], index: K, value: A) -> ()
+end
+
+# Slice[T] impl for IAssignable[Slice[T], Int, T]
+impl[T] Slice[T]: IAssignable[Slice[T], Int, T]
+  func get(s: Slice[T], index: Int) -> Option[Ref[T]]
+    go[Option[Ref[T]]] {
+      code: """
+        func() Option[*T] {
+            if {index} >= 0 && {index} < len({s}) {
+                val := {s}[{index}]
+                return Some[*T](&val)
+            }
+            return None[*T]()
+        }()
+      """
+      in s = s
+      in index = index
+    }
+  end
+
+  func set(s: Slice[T], index: Int, value: T) -> ()
+    go[()] {
+      code: """
+        {s}[{index}] = {value}
+      """
+      in s = s
+      in index = index
+      in value = value
+    }
+  end
+end
+
+# Map[K, V] impl for IAssignable[Map[K, V], K, V]
+impl[K, V] Map[K, V]: IAssignable[Map[K, V], K, V]
+  func get(m: Map[K, V], index: K) -> Option[Ref[V]]
+    go[Option[Ref[V]]] {
+      code: """
+        func() Option[*V] {
+            if v, ok := {m}[{index}]; ok {
+                val := v
+                return Some[*V](&val)
+            }
+            return None[*V]()
+        }()
+      """
+      in m = m
+      in index = index
+    }
+  end
+
+  func set(m: Map[K, V], index: K, value: V) -> ()
+    go[()] {
+      code: """
+        {m}[{index}] = {value}
+      """
+      in m = m
+      in index = index
+      in value = value
+    }
+  end
+end
+
 # ===== Option helpers =====
 
 interface IOption[A]

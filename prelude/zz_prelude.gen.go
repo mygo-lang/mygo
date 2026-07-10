@@ -67,6 +67,10 @@ type List[A any] struct {
 	Head A
 	Tail Option[*List[A]]
 }
+type IAssignable[C any, K any, A any] interface {
+	get(c HKT[C, A], index K) Option[*A]
+	set(c HKT[C, A], index K, value A) struct{}
+}
 type IOption[A any] interface {
 	isSome(self IOption[A]) bool
 	isNone(self IOption[A]) bool
@@ -522,6 +526,36 @@ func contains_option_a_a[A any](c Option[A], item A, eq Eq[A]) bool {
 			}
 		}
 	}()
+}
+func get__t_int_t[T any](s []T, index int) Option[*T] {
+	return func() Option[*T] {
+		if index >= 0 && index < len(s) {
+			val := s[index]
+			return Some[*T](&val)
+		}
+		return None[*T]()
+	}()
+
+}
+func set__t_int_t[T any](s []T, index int, value T) {
+	s[index] = value
+
+	return
+}
+func get_map_kv_k_v[K comparable, V any](m map[K]V, index K) Option[*V] {
+	return func() Option[*V] {
+		if v, ok := m[index]; ok {
+			val := v
+			return Some[*V](&val)
+		}
+		return None[*V]()
+	}()
+
+}
+func set_map_kv_k_v[K comparable, V any](m map[K]V, index K, value V) {
+	m[index] = value
+
+	return
 }
 func isSome_a[A any](self Option[A]) bool {
 	return func() bool {

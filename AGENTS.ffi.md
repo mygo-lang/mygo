@@ -28,3 +28,15 @@
 - `Slice[A]` is MyGO's canonical slice type spelling and lowers directly to Go's native slice `[]A`.
 - `Map[K, V]` is Go's native map `map[K]V`.
 - `Set[A]` is Go's native set `map[A]struct{}`.
+
+## IAssignable interface — indexed access for Slice and Map
+
+- `IAssignable[C[A], K, A]` is a generic interface that provides indexed access (read + write) for both `Slice` and `Map`.
+- Three type parameters: `C[A]` (the container type, one of `Slice[V]` or `Map[K, V]`), `K` (the index/key type), `A` (the value type).
+- Two methods:
+  - `func get(c: C[A], index: K) -> Option[Ref[A]]` — safely read a value by index/key; returns `None` if the index is out of range (Slice) or the key does not exist (Map), `Some(ref)` otherwise.
+  - `func set(c: C[A], index: K, value: A) -> ()` — write a value at the given index/key.
+- Concrete instantiations:
+  - `Slice[T]: IAssignable[Slice[T], Int, T]` — `K = Int`
+  - `Map[K, V]: IAssignable[Map[K, V], K, V]` — `K` is the map's key type
+
