@@ -52,7 +52,6 @@ func (g *generator) genGlobals() ([]jen.Code, error) {
 		ctx.sourceTypes[s.Name] = typ
 		ctx.mutable[actual] = s.Mutable
 	}
-	stmts = append(stmts, g.genHKTType()...)
 	return stmts, nil
 }
 
@@ -90,7 +89,7 @@ func (p *Package) sortedImports() []importSpec {
 	return imports
 }
 
-func (g *generator) genHKTType() []jen.Code {
+func (g *generator) genHKTType(file *jen.File) {
 	needsHKT := false
 	for _, iface := range g.pkg.Interfaces {
 		hktSet := g.hktParams(iface)
@@ -100,14 +99,15 @@ func (g *generator) genHKTType() []jen.Code {
 		}
 	}
 	if !needsHKT {
-		return nil
+		return
 	}
-	return []jen.Code{
-		jen.Type().Id("HKTType").Interface(),
-		jen.Type().Id("HKT1").Index(jen.Id("F").Id("any")).Interface(),
-		jen.Type().Id("HKT2").Index(jen.Id("A").Id("any")).Interface(),
-		addTypeParams(jen.Type().Id("HKT"), []string{"F", "A"}).Interface(),
-	}
+	file.Add(jen.Type().Id("HKTType").Interface())
+	file.Line()
+	file.Add(jen.Type().Id("HKT1").Index(jen.Id("F").Id("any")).Interface())
+	file.Line()
+	file.Add(jen.Type().Id("HKT2").Index(jen.Id("A").Id("any")).Interface())
+	file.Line()
+	file.Add(addTypeParams(jen.Type().Id("HKT"), []string{"F", "A"}).Interface())
 }
 
 func (g *generator) hktParams(iface *InterfaceDecl) map[string]struct{} {

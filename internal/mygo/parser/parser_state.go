@@ -164,3 +164,18 @@ func (p *parser) skipNewlines() {
 		p.pos++
 	}
 }
+
+var braceStack []int
+
+func pushBrace(depth int) {
+	braceStack = append(braceStack, depth)
+}
+
+func popBrace() int {
+	if len(braceStack) > 0 {
+		d := braceStack[len(braceStack)-1]
+		braceStack = braceStack[:len(braceStack)-1]
+		return d
+	}
+	return 0
+}

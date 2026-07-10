@@ -4,6 +4,13 @@ package prelude
 
 import "fmt"
 
+type HKTType interface{}
+
+type HKT1[F any] interface{}
+
+type HKT2[A any] interface{}
+
+type HKT[F any, A any] interface{}
 type Option[A any] interface {
 	isOption()
 }
@@ -65,15 +72,32 @@ type IOption[A any] interface {
 	isNone(self IOption[A]) bool
 	unwrapOr(self IOption[A], defaultVal A) A
 }
-type HKTType interface{}
-type HKT1[F any] interface{}
-type HKT2[A any] interface{}
-type HKT[F any, A any] interface{}
 
 func show_int(value int) string {
 	return fmt.Sprint(value)
 }
+func show_int8(value int8) string {
+	return fmt.Sprint(value)
+}
+func show_uint8(value uint8) string {
+	return fmt.Sprint(value)
+}
+func show_int16(value int16) string {
+	return fmt.Sprint(value)
+}
+func show_uint16(value uint16) string {
+	return fmt.Sprint(value)
+}
+func show_int32(value int32) string {
+	return fmt.Sprint(value)
+}
+func show_uint32(value uint32) string {
+	return fmt.Sprint(value)
+}
 func show_int64(value int64) string {
+	return fmt.Sprint(value)
+}
+func show_float32(value float32) string {
 	return fmt.Sprint(value)
 }
 func show_float64(value float64) string {
@@ -88,7 +112,28 @@ func show_bool(value bool) string {
 func equals_int(left int, right int) bool {
 	return left == right
 }
+func equals_int8(left int8, right int8) bool {
+	return left == right
+}
+func equals_uint8(left uint8, right uint8) bool {
+	return left == right
+}
+func equals_int16(left int16, right int16) bool {
+	return left == right
+}
+func equals_uint16(left uint16, right uint16) bool {
+	return left == right
+}
+func equals_int32(left int32, right int32) bool {
+	return left == right
+}
+func equals_uint32(left uint32, right uint32) bool {
+	return left == right
+}
 func equals_int64(left int64, right int64) bool {
+	return left == right
+}
+func equals_float32(left float32, right float32) bool {
 	return left == right
 }
 func equals_float64(left float64, right float64) bool {
@@ -102,8 +147,8 @@ func equals_bool(left bool, right bool) bool {
 }
 func each_list_t_t[T any](c List[T], fn func(T)) {
 	{
-		current_1 := &c
-		done_2 := false
+		var current_1 *List[T] = &c
+		var done_2 bool = false
 		for !done_2 {
 			{
 				fn(current_1.Head)
@@ -131,9 +176,9 @@ func filter_list_t_t[T any](c List[T], fn func(T) bool) List[T] {
 }
 func fold_list_t_t[T any, B any](c List[T], initial B, fn func(B, T) B) B {
 	return func() B {
-		acc_7 := initial
-		done_8 := false
-		current_9 := &c
+		var acc_7 B = initial
+		var done_8 bool = false
+		var current_9 *List[T] = &c
 		for !done_8 {
 			{
 				acc_7 = fn(acc_7, current_9.Head)
@@ -155,8 +200,8 @@ func fold_list_t_t[T any, B any](c List[T], initial B, fn func(B, T) B) B {
 }
 func find_list_t_t[T any](c List[T], fn func(T) bool) Option[*T] {
 	return func() Option[*T] {
-		done_10 := false
-		current_11 := &c
+		var done_10 bool = false
+		var current_11 *List[T] = &c
 		for !done_10 {
 			{
 				if fn(current_11.Head) {
@@ -180,14 +225,14 @@ func find_list_t_t[T any](c List[T], fn func(T) bool) Option[*T] {
 				}
 			}
 		}
-		return None[T]()
+		return None[*T]()
 	}()
 }
 func contains_list_t_t[T any](c List[T], item T, eq Eq[T]) bool {
 	return func() bool {
-		done_12 := false
-		result_13 := false
-		current_14 := &c
+		var done_12 bool = false
+		var result_13 bool = false
+		var current_14 *List[T] = &c
 		for !done_12 {
 			{
 				if eq.equals(current_14.Head, item) {
@@ -446,14 +491,14 @@ func find_option_a_a[A any](c Option[A], fn func(A) bool) Option[*A] {
 					if fn(v.F0) {
 						return Some[*A](&v.F0)
 					} else {
-						return None[A]()
+						return None[*A]()
 					}
 				}()
 			}()
 		} else {
 			if _, ok := c.(OptionNone[A]); ok {
 				return func() Option[*A] {
-					return None[A]()
+					return None[*A]()
 				}()
 			} else {
 				panic("unreachable")

@@ -21,6 +21,7 @@ type Package struct {
 	Interfaces    map[string]*InterfaceDecl
 	Funcs         map[string]*FuncDecl
 	Impls         []*ImplDecl
+	Files       map[string][]Decl  // source file name -> declarations
 }
 
 type goPackageSigs struct {

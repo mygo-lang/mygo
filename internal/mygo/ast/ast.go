@@ -10,10 +10,11 @@ type File struct {
 type Decl interface{ declNode() }
 
 type ImportDecl struct {
-	Line   int
-	Column int
-	Alias  string
-	Path   string
+	Line       int
+	Column     int
+	SourceFile string
+	Alias      string
+	Path       string
 }
 
 func (*ImportDecl) declNode() {}
@@ -21,6 +22,7 @@ func (*ImportDecl) declNode() {}
 type EnumDecl struct {
 	Line       int
 	Column     int
+	SourceFile string
 	Name       string
 	TypeParams []string
 	Variants   []EnumVariant
@@ -38,6 +40,7 @@ type EnumVariant struct {
 type StructDecl struct {
 	Line       int
 	Column     int
+	SourceFile string
 	Name       string
 	TypeParams []string
 	Fields     []Field
@@ -48,6 +51,7 @@ func (*StructDecl) declNode() {}
 type InterfaceDecl struct {
 	Line       int
 	Column     int
+	SourceFile string
 	Name       string
 	TypeParams []string
 	Methods    []*FuncDecl
@@ -58,6 +62,7 @@ func (*InterfaceDecl) declNode() {}
 type ImplDecl struct {
 	Line          int
 	Column        int
+	SourceFile    string
 	Name          string     // interface name (e.g. "Enumerable", for old-style "impl Show[Int]")
 	TypeArgs      []TypeExpr // interface type args (e.g. [Int], for old-style)
 	InterfaceName string     // interface name (e.g. "Enumerable", for new-style "impl List[T]: Enumerable[T]")
@@ -72,6 +77,7 @@ func (*ImplDecl) declNode() {}
 type FuncDecl struct {
 	Line       int
 	Column     int
+	SourceFile string
 	Name       string
 	TypeParams []string
 	Params     []Param
@@ -338,14 +344,15 @@ type ExprStmt struct {
 func (*ExprStmt) stmtNode() {}
 
 type LetStmt struct {
-	Line    int
-	Column  int
-	Mutable bool
-	Name    string
-	Names   []string
-	Bind    BindPattern
-	Type    TypeExpr
-	Value   Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Mutable    bool
+	Name       string
+	Names      []string
+	Bind       BindPattern
+	Type       TypeExpr
+	Value      Expr
 }
 
 func (*LetStmt) stmtNode() {}

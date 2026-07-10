@@ -23,11 +23,11 @@ func TestCompileDirSupportsCollectionLiterals(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"[]int{1, 2, 3}",
 		`"a": "1"`,
@@ -75,11 +75,11 @@ func TestCompileDirSupportsMyGoPackageImportExportsOnly(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(appDir)
+	outFiles, err := CompileDir(appDir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	if !strings.Contains(got, "api.PublicAdd(40, 2)") {
 		t.Fatalf("generated Go missing imported public call\n--- got ---\n%s", got)
 	}
@@ -153,11 +153,11 @@ func TestCompileDirKeepsSameNamedMyGoFunctionsSeparate(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(appDir)
+	outFiles, err := CompileDir(appDir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	if !strings.Contains(got, "api.PublicAdd(1, 2)") {
 		t.Fatalf("generated Go missing api call\n--- got ---\n%s", got)
 	}
@@ -188,14 +188,14 @@ func TestCompileDirSupportsLetVarAndDiscard(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	if out != filepath.Join(dir, "zz_mygo.gen.go") {
-		t.Fatalf("CompileDir() output path = %q, want %q", out, filepath.Join(dir, "zz_mygo.gen.go"))
+	if len(outFiles) < 1 {
+		t.Fatalf("CompileDir() returned %d files, expected at least 1", len(outFiles))
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"func demo() int {",
 		"string = \"abc\"",
@@ -227,11 +227,11 @@ func TestCompileDirSupportsWhileLoops(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"for n_",
 		"fmt.Println(n_",
@@ -258,11 +258,11 @@ func TestCompileDirSupportsTupleReturnValues(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"func pair() (int, string) {",
 		"return 1, \"a\"",
@@ -290,11 +290,11 @@ func TestCompileDirSupportsTupleParameters(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"func swap(pair struct {",
 		"F0 int",
@@ -323,11 +323,11 @@ func TestCompileDirSupportsTupleDestructuringLet(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"__tuple_",
 		"a_",
@@ -354,11 +354,11 @@ func TestCompileDirSupportsNestedTupleDestructuringLet(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"func nested() (int, struct {",
 		"F0 string",
@@ -393,11 +393,11 @@ func TestCompileDirSupportsIgnoredTupleBindings(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"b_",
 		"y_",
@@ -426,11 +426,11 @@ func TestCompileDirKeepsTupleValueOnSingleLetBinding(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"pair()",
 		".F0",
@@ -451,11 +451,11 @@ func TestCompileDirAllowsLetShadowingAndInference(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	if !strings.Contains(got, "return x_") {
 		t.Fatalf("generated Go missing shadowed return\n--- got ---\n%s", got)
 	}
@@ -496,11 +496,11 @@ func TestCompileDirSupportsStructLiterals(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"type Point struct {",
 		"X int64",
@@ -532,11 +532,15 @@ func TestCompileDirSupportsRefAndResultTypes(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	gotContent := ""
+	for _, f := range outFiles {
+		gotContent += readFile(t, f)
+	}
+	got := gotContent
 	for _, want := range []string{
 		"type Result[A any, E any] interface {",
 		"type Holder struct {",
@@ -568,11 +572,11 @@ func TestCompileDirSupportsOptionOfRefTypes(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"type Holder struct {",
 		"Item Option[*Node]",
@@ -599,11 +603,11 @@ func TestCompileDirSupportsRefNew(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"func maybe_node(ok bool, node Node) Option[*Node] {",
 		"return Some[*Node](&node)",
@@ -635,11 +639,11 @@ func TestCompileDirSupportsDynamicTypeclassDispatch(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"type Show[A any] interface {",
 		"show(value A) string",
@@ -664,11 +668,11 @@ func TestCompileDirWrapsGoErrorReturnsIntoResult(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"func demo() string {",
 		"os.Getpid()",
@@ -710,11 +714,11 @@ func TestCompileDirSupportsGoValueAndPointerMethods(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"func demo() int {",
 		"bytes.NewBufferString(\"hi\")",
@@ -737,11 +741,11 @@ func TestCompileDirPreservesRefInGoBoundaryResults(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"func demo() int {",
 		"os.Getpid()",
@@ -766,11 +770,11 @@ func TestCompileDirSupportsResultOfRefTypes(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"func lookup(ok bool, node *Node) Result[*Node, string] {",
 		"return Ok[*Node, string](node)",
@@ -798,11 +802,11 @@ func TestCompileDirSupportsIfExpressionForms(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"func compact(ok bool) int {",
 		"if ok {",
@@ -835,11 +839,11 @@ func TestCompileDirSupportsMultiParamTypeclassDispatch(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"type Eq[A any] interface {",
 		"equals(left A, right A) bool",
@@ -860,11 +864,11 @@ func TestCompileDirSupportsArithmeticAndLogicOperators(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"ok && a+b > 10 || a-b <= 2",
 	} {
@@ -915,11 +919,11 @@ func TestCompileDirSeparatesSameNamedMethodsByInterface(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"type Show[A any] interface {",
 		"type Render[A any] interface {",
@@ -952,11 +956,11 @@ func TestCompileDirLetsLocalBindingShadowTypeclassName(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"fmt.Sprint",
 		"show(42)",
@@ -988,11 +992,11 @@ func TestCompileDirDeduplicatesTypeclassMethodParams(t *testing.T) {
   end
 `)
 
-	out, err := CompileDir(dir)
+	outFiles, err := CompileDir(dir)
 	if err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
-	got := readFile(t, out)
+	got := readFile(t, outFiles[0])
 	if strings.Count(got, "showFn ") != 1 {
 		t.Fatalf("expected one typeclass function param, got generated Go:\n%s", got)
 	}
@@ -1013,3 +1017,4 @@ func readFile(t *testing.T, path string) string {
 	}
 	return string(data)
 }
+

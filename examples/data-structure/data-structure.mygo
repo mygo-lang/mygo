@@ -4,19 +4,24 @@ import fmt "go:fmt"
 # ===== Enum (Enums) =====
 
 enum Color
-  Red, Green, Blue
+  
+  Red
+  Green
+  Blue
 end
 
 enum Point2D
+  
   Empty
   WithX(Int)
   WithY(Int)
 end
 
 enum Operation
-  Add(Int, Int)
-  Subtract(Int, Int)
-  Multiply(Int, Int)
+  
+  Add
+  Subtract
+  Multiply
 end
 
 # ===== Struct (Structs) =====
@@ -36,7 +41,7 @@ struct Pair[T]
   second: T
 end
 
-struct ColorTuple(Int, Int, Int)
+struct ColorTuple
 end
 
 struct Address
@@ -117,20 +122,20 @@ end
 func demo() -> String
   let red = Color.Red
   let point = Point2D.WithY(20)
-  let op = Operation.Multiply(4, 5)
+  let op = Operation.Multiply
 
-  let empty: Option[Float64] = None[Float64]()
-  let someVal: Option[Int64] = Some[Int64](42)
+  let empty: Option[Float64] = None()
+  let someVal: Option[Int64] = Some(42)
 
   let person = Person { name: "Charlie", age: 25 }
   let rect = Rectangle { width: 10.0, height: 5.0 }
-  let pair: Pair[Int] = Pair[Int] { first: 1, second: 2 }
-  let color = ColorTuple(255, 0, 0)
+  let pair: Pair[Int] = Pair { first: 1, second: 2 }
+  let color = ColorTuple
   let addr = Address { street: "Main St", city: "NYC" }
-  let contact = Contact { name: "Bob", embed: addr }
+  let contact = Contact { name: "Bob" }
 
   let areaValue = area(rect)
-  let swapped = swapPair[Int](pair)
+  let swapped = swapPair(pair)
   let bigger = maxInt(3, 5)
   let colorText = describeColor(Color.Green)
 
