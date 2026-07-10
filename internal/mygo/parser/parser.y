@@ -68,6 +68,7 @@ func bodyExprFromBlock(e ast.Expr) ast.Expr {
 %token <token> COLON COMMA DOT LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE UNDER SLICE
 %token <token> TYPELBRACK CONSTRLBRACK
 %type <token> call_start
+%type <token> opt_newlines
 %left PIPEFWD PIPEBACK
 %left OROR
 %left ANDAND
@@ -106,8 +107,12 @@ opt_package
 	;
 
 opt_newlines
-	: /* empty */
-	| opt_newlines NEWLINE
+	: /* empty */ {
+		$$ = token{}
+	}
+	| opt_newlines NEWLINE {
+		$$ = $2
+	}
 	;
 
 decl_list
@@ -353,7 +358,7 @@ func_sig
 		p.expectTypeSuffix = true
 		p.currentTypeParams = nil
 	}
-	opt_type_params LPAREN maybe_param_list RPAREN ARROW type {
+	opt_type_params opt_newlines LPAREN opt_newlines maybe_param_list RPAREN opt_newlines ARROW type opt_newlines {
 		p := yylex.(*parser)
 		p.savedRetType = p.currentType
 	}
@@ -454,11 +459,11 @@ func_decl
 		p.expectTypeSuffix = true
 		p.currentTypeParams = nil
 	}
-	opt_type_params LPAREN maybe_param_list RPAREN ARROW type {
+	opt_type_params opt_newlines LPAREN opt_newlines maybe_param_list RPAREN opt_newlines ARROW type opt_newlines {
 		p := yylex.(*parser)
 		p.savedRetType = p.currentType
 	}
-	opt_using_clause opt_newlines block_expr opt_newlines END {
+	opt_newlines opt_using_clause opt_newlines block_expr opt_newlines END {
 		p := yylex.(*parser)
 		body := bodyExprFromBlock(p.currentExpr)
 		p.currentFunc = &ast.FuncDecl{
@@ -622,12 +627,13 @@ name_list
 
 maybe_param_list
 	: /* empty */
-	| param_list
+	| opt_newlines param_list opt_newlines
 	;
 
 param_list
 	: param
-	| param_list COMMA param
+	| param_list opt_newlines COMMA
+	| param_list opt_newlines COMMA opt_newlines param
 	;
 
 param
@@ -1471,7 +1477,7 @@ pattern_list
 	;
 
 func_lit
-	: FUNC LPAREN maybe_param_list RPAREN ARROW type opt_newlines block_expr opt_newlines END {
+	: FUNC LPAREN opt_newlines maybe_param_list RPAREN opt_newlines ARROW type opt_newlines block_expr opt_newlines END {
 		p := yylex.(*parser)
 		body := bodyExprFromBlock(p.currentExpr)
 		p.currentExpr = &ast.FuncLitExpr{Line: $1.line, Column: $1.col, Params: append([]ast.Param(nil), p.currentParams...), Ret: p.currentType, Body: body}

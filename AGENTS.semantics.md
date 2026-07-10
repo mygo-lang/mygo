@@ -85,3 +85,57 @@ Per MIGRATE.md "新语句块方案", the yacc parser supports:
 - `parser.y`: two new grammar alternatives (one in `if_expr`, one in `switch_case`) — conflicts reduced from 33 to 29 shift/reduce.
 - `parser.go`: regenerated via `goyacc`.
 - `parser_test.go`: three new tests (`TestParseFileSupportsIfArrowForm`, `TestParseFileSupportsSwitchCaseThenEndBlock`, `TestParseFileSupportsMixedSwitchCaseForms`).
+
+## Function Declaration Multiline Support
+
+Per AGENTS.genfiles.md, the compiler supports per-`.mygo` file generation to `.gen.go`. Function declarations now support spanning across multiple lines at key positions.
+
+### Syntax
+
+Function signatures can break across lines at the following positions:
+
+```mygo
+// Parameters spanning multiple lines
+func add(
+  x: Int,
+  y: Int
+) -> Int
+  x + y
+end
+
+// Return type on a new line
+func add(x: Int, y: Int)
+  -> Int
+  x + y
+end
+
+// `using` clause on a new line (must come after `-> type`)
+func foo(x: Int) -> String
+  using Show
+  show(x)
+end
+
+// Trailing comma supported
+func handleCompletion(
+  store: Ref[DocumentStore],
+  uri: String,
+  line: Int,
+  char: Int,
+) -> CompletionList
+  ...
+end
+```
+
+The same multiline support applies to interface method signatures (`func_sig`) and function literals (`func_lit`).
+
+### Parser changes (`parser.y`)
+
+- **`%type <token> opt_newlines`** — added type declaration so `opt_newlines` can appear between action blocks.
+- **`opt_newlines`** — added `$$` assignments for both alternatives (`/* empty */` and `opt_newlines NEWLINE`).
+- **`func_decl` / `func_sig`** — added `opt_newlines` between `opt_type_params`/`LPAREN`, `LPAREN`/`maybe_param_list`, `RPAREN`/`ARROW`, and `type`/`opt_using_clause`.
+- **`func_decl` body** — added `opt_newlines` before `opt_using_clause`.
+- **`maybe_param_list`** — changed `param_list` branch to `opt_newlines param_list opt_newlines`, allowing leading/trailing blank lines around the parameter list.
+- **`param_list`** — added `opt_newlines` around `COMMA`, and added a `param_list opt_newlines COMMA` branch to support trailing commas.
+- **`func_lit`** — added `opt_newlines` between `LPAREN`/`maybe_param_list`, `maybe_param_list`/`RPAREN`, `RPAREN`/`ARROW`, and `type`/`block_expr`.
+- Regenerated `parser.go` via `goyacc`.
+- New test: `TestParseFileMultilineFuncDecl` covering all multiline scenarios.
