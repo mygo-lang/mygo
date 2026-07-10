@@ -12,9 +12,9 @@ import (
 )
 
 var goPlaceholderRE = regexp.MustCompile(`\{([A-Za-z_][A-Za-z0-9_]*)\}`)
+var goTupleErrorRE = regexp.MustCompile(`func\(\)\s*\([^)]+,\s*error\s*\)`)
 
 func (g *generator) translateGoExpr(n *GoExpr, ctx *exprCtx, expected string) (jen.Code, string, error) {
-	_ = expected
 	operands := map[string]string{}
 
 	// Resolve value operands (in name = expr)
@@ -55,10 +55,87 @@ func (g *generator) translateGoExpr(n *GoExpr, ctx *exprCtx, expected string) (j
 		return nil, "", common.ErrorAtPos(n.Line, n.Column, "go code references unknown operand %q", missing)
 	}
 
+	code := jen.Id(substituted)
 	if isUnitType(n.Result) {
-		return jen.Id(substituted), "", nil
+		return code, "", nil
 	}
-	return jen.Id(substituted), g.goType(n.Result, ctx.typeParams), nil
+	resultType := g.goType(n.Result, ctx.typeParams)
+	if wrapped, wrappedType, ok := wrapGoFFIExpr(code, resultType, expected, substituted); ok {
+		return wrapped, wrappedType, nil
+	}
+	return code, resultType, nil
+}
+
+func wrapGoFFIExpr(code jen.Code, typ, expected, rawCode string) (jen.Code, string, bool) {
+	typ = strings.TrimSpace(typ)
+	expected = strings.TrimSpace(expected)
+	if typ == expected && strings.Contains(rawCode, expected) {
+		return nil, "", false
+	}
+	if inner, ok := refToExpectedOptionRefInner(typ, expected); ok {
+		tmp := "__mygo_go_ref"
+		return jen.Func().Params().Id(expected).Block(
+			jen.Id(tmp).Op(":=").Add(code),
+			jen.If(jen.Id(tmp).Op("==").Nil()).Block(
+				jen.Return(jen.Id("None["+inner+"]").Call()),
+			),
+			jen.Return(jen.Id("Some["+inner+"]").Call(jen.Id(tmp))),
+		).Call(), expected, true
+	}
+	optPrefix := "Option["
+	if strings.HasPrefix(expected, optPrefix) && strings.HasSuffix(expected, "]") {
+		inner := strings.TrimSuffix(strings.TrimPrefix(expected, optPrefix), "]")
+		tmp := "__mygo_value"
+		return jen.Func().Params().Id(expected).Block(
+			jen.Id(tmp).Op(":=").Add(code),
+			jen.Return(jen.Id("Some["+inner+"]").Call(jen.Id(tmp))),
+		).Call(), expected, true
+	}
+	resPrefix := "Result["
+	if strings.HasPrefix(expected, resPrefix) && strings.HasSuffix(expected, "]") {
+		inner := strings.TrimSuffix(strings.TrimPrefix(expected, resPrefix), "]")
+		parts := strings.SplitN(inner, ",", 2)
+		if len(parts) == 2 {
+			okType := strings.TrimSpace(parts[0])
+			errType := strings.TrimSpace(parts[1])
+			tmp := "__mygo_result"
+			// Detect Go (T, error) tuple return pattern — destructure for Ok/Err wrapping
+			if goTupleErrorRE.MatchString(rawCode) {
+				valTmp := tmp + "_val"
+				errTmp := tmp + "_err"
+				return jen.Func().Params().Id(expected).Block(
+					jen.List(jen.Id(valTmp), jen.Id(errTmp)).Op(":=").Add(code),
+					jen.If(jen.Id(errTmp).Op("!=").Nil()).Block(
+						jen.Return(jen.Id("Err["+okType+", "+errType+"]").Call(jen.Id(errTmp))),
+					),
+					jen.Return(jen.Id("Ok["+okType+", "+errType+"]").Call(jen.Id(valTmp))),
+				).Call(), expected, true
+			}
+			return jen.Func().Params().Id(expected).Block(
+				jen.Id(tmp).Op(":=").Add(code),
+				jen.Return(jen.Id("Ok["+okType+", "+errType+"]").Call(jen.Id(tmp))),
+			).Call(), expected, true
+		}
+	}
+	_ = typ
+	return nil, "", false
+}
+
+func refToExpectedOptionRefInner(typ, expected string) (string, bool) {
+	typ = strings.TrimSpace(typ)
+	expected = strings.TrimSpace(expected)
+	if !strings.HasPrefix(typ, "*") {
+		return "", false
+	}
+	const optPrefix = "Option["
+	if !strings.HasPrefix(expected, optPrefix) || !strings.HasSuffix(expected, "]") {
+		return "", false
+	}
+	inner := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(expected, optPrefix), "]"))
+	if strings.TrimSpace(inner) != typ {
+		return "", false
+	}
+	return inner, true
 }
 
 func renderGoOperand(code jen.Code) (string, error) {

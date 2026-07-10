@@ -42,6 +42,116 @@ func TestCompileDirSupportsCollectionLiterals(t *testing.T) {
 	}
 }
 
+func TestCompileDirSupportsStringSwitchOnStructField(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+
+  struct Message
+    method: String
+  end
+
+  func demo(msg: Message) -> Int
+    switch msg.method
+      case "initialize" => 1
+      case "initialized" => 2
+      case _ => 3
+    end
+  end
+`)
+
+	outFiles, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, outFiles[0])
+	for _, want := range []string{
+		"if msg.Method == \"initialize\"",
+		"else",
+		"msg.Method == \"initialized\"",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
+func TestCompileDirSupportsSwitchOnLetBoundStructField(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+
+  struct Message
+    method: String
+  end
+
+  func demo(msg: Message) -> Int
+    let method = msg.method
+    switch method
+      case "initialize" => 1
+      case _ => 2
+    end
+  end
+`)
+
+	outFiles, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, outFiles[0])
+	for _, want := range []string{
+		`method_1 := msg.Method`,
+		`if method_1 == "initialize"`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
+func TestCompileDirSupportsNestedStringAndOptionSwitches(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+
+  struct Message
+    method: String
+    params: Option[Any]
+  end
+
+  func demo(msg: Message) -> Int
+    let method = msg.method
+    switch method
+      case "initialize" then
+        switch msg.params
+          case Some(p) then 1
+        end
+      end
+      end
+      case "initialized" then
+        3
+      end
+      case _ then
+        4
+      end
+    end
+  end
+`)
+
+	outFiles, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, outFiles[0])
+	for _, want := range []string{
+		`method_1 := msg.Method`,
+		`if method_1 == "initialize"`,
+		`if method_1 == "initialized"`,
+		`if _, ok := msg.Params.(prelude.OptionSome[Any]); ok {`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
 func TestCompileDirSupportsMyGoPackageImportExportsOnly(t *testing.T) {
 	root := t.TempDir()
 	apiDir := filepath.Join(root, "api")
@@ -590,6 +700,30 @@ func TestCompileDirSupportsOptionOfRefTypes(t *testing.T) {
 	}
 }
 
+func TestCompileDirSupportsRefValueMethod(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+
+  func copy_value(value: Ref[Int]) -> Int
+    value.value()
+  end
+`)
+
+	outFiles, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, outFiles[0])
+	for _, want := range []string{
+		"func copy_value(value *int) int {",
+		"return *value",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
 func TestCompileDirSupportsRefNew(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
@@ -635,7 +769,7 @@ func TestCompileDirSupportsDynamicTypeclassDispatch(t *testing.T) {
   end
 
   func demo() -> String
-    show(42)
+    42.show()
   end
 `)
 
@@ -644,12 +778,12 @@ func TestCompileDirSupportsDynamicTypeclassDispatch(t *testing.T) {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
 	got := readFile(t, outFiles[0])
-	for _, want := range []string{
-		"type Show[A any] interface {",
-		"show(value A) string",
-		"func show_int64(value int64) string {",
-		"return show_int(42)",
-	} {
+  for _, want := range []string{
+    "type Show[A any] interface {",
+    "show(value A) string",
+    "func show_int64(value int64) string {",
+    "return 42.show()",
+  } {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
 		}
@@ -835,7 +969,7 @@ func TestCompileDirSupportsMultiParamTypeclassDispatch(t *testing.T) {
   end
 
   func demo() -> Bool
-    equals(1, 2)
+    1.equals(2)
   end
 `)
 
@@ -844,12 +978,12 @@ func TestCompileDirSupportsMultiParamTypeclassDispatch(t *testing.T) {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
 	got := readFile(t, outFiles[0])
-	for _, want := range []string{
-		"type Eq[A any] interface {",
-		"equals(left A, right A) bool",
-		"func equals_int64(left int64, right int64) bool {",
-		"return equals_int(1, 2)",
-	} {
+  for _, want := range []string{
+    "type Eq[A any] interface {",
+    "equals(left A, right A) bool",
+    "func equals_int64(left int64, right int64) bool {",
+    "return 1.equals(2)",
+  } {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
 		}
@@ -1017,4 +1151,3 @@ func readFile(t *testing.T, path string) string {
 	}
 	return string(data)
 }
-

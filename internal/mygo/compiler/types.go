@@ -21,7 +21,7 @@ type Package struct {
 	Interfaces    map[string]*InterfaceDecl
 	Funcs         map[string]*FuncDecl
 	Impls         []*ImplDecl
-	Files       map[string][]Decl  // source file name -> declarations
+	Files         map[string][]Decl // source file name -> declarations
 }
 
 type goPackageSigs struct {
@@ -54,6 +54,7 @@ type exprCtx struct {
 type typeclassBinding struct {
 	Interface  string
 	Score      matchScore
+	TargetType string
 	ParamTypes []string
 	RetType    string
 	DictExpr   string
@@ -90,6 +91,7 @@ type generator struct {
 	goSigCache        map[string]*goPackageSigs
 	needsCallAny      bool
 	localSeq          int
+	switchVarSeq      int
 	typedInfo         *typeinference.TypedInfo
 }
 

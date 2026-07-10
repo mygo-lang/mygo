@@ -52,6 +52,23 @@ func InferPackage(pkg *PkgInfo, state *InferState) (*TypedInfo, error) {
 	// Build initial type environment with built-in types and prelude
 	env := initialTypeEnv(pkg)
 
+	// Pre-register top-level function signatures so forward references work.
+	for _, decl := range pkg.Decls {
+		fn, ok := decl.(*FuncDecl)
+		if !ok {
+			continue
+		}
+		paramTypes := make([]MonoType, len(fn.Params))
+		for i, p := range fn.Params {
+			paramTypes[i] = typeFromAST(p.Type)
+		}
+		var retType MonoType = TUnit{}
+		if fn.Ret != nil {
+			retType = typeFromAST(fn.Ret)
+		}
+		env[fn.Name] = Generalize(env, TFunc{Args: paramTypes, Ret: retType}, nil)
+	}
+
 	// Process declarations in order
 	for _, decl := range pkg.Decls {
 		var err error
@@ -75,8 +92,8 @@ func initialTypeEnv(pkg *PkgInfo) TypeEnv {
 		env[name] = &Scheme{Body: QualifiedType{Body: t}}
 	}
 
-	// Container type constructors (recognized as compiler intrinsics)
-	containerTypes := []string{"Ref", "Option", "Result", "Slice", "Map", "Set", "List"}
+	// Container and prelude type constructors (recognized as compiler intrinsics)
+	containerTypes := []string{"Ref", "Option", "Result", "Slice", "Map", "Set", "List", "Show", "Eq", "IEnumerable", "IOption"}
 	for _, name := range containerTypes {
 		t := TCon{Name: name}
 		env[name] = &Scheme{Body: QualifiedType{Body: t}}
@@ -86,17 +103,16 @@ func initialTypeEnv(pkg *PkgInfo) TypeEnv {
 	env["true"] = &Scheme{Body: QualifiedType{Body: TCon{Name: "Bool"}}}
 	env["false"] = &Scheme{Body: QualifiedType{Body: TCon{Name: "Bool"}}}
 
-	// Load prelude typeclass instances from the package's interfaces
-	for name, iface := range pkg.Interfaces {
-		_ = iface
-		// Register interface names as type constructors in the environment
+	// Prelude enum constructors and helper functions.
+	for _, name := range []string{"None", "Some", "Ok", "Err", "OptionFlatMap", "ResultIsOk", "ResultIsErr", "ResultUnwrap", "ResultMap", "ResultMapErr", "ResultAndThen", "ResultOrElse", "TypeKeyFromType"} {
 		env[name] = &Scheme{Body: QualifiedType{Body: TCon{Name: name}}}
 	}
 
-	// Prelude enum constructors: None, Some, Ok, Err
-	// These will be handled explicitly during inference
-	env["None"] = &Scheme{Body: QualifiedType{Body: TCon{Name: "None"}}}
-	env["Some"] = &Scheme{Body: QualifiedType{Body: TCon{Name: "Some"}}}
+	// Package-local interfaces remain available as types.
+	for name, iface := range pkg.Interfaces {
+		_ = iface
+		env[name] = &Scheme{Body: QualifiedType{Body: TCon{Name: name}}}
+	}
 
 	return env
 }
@@ -298,25 +314,6 @@ func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo,
 		}
 	}
 
-	// Register impl methods as global typeclass methods (for implicit dispatch without explicit `using` constraints)
-	for _, impl := range pkg.Impls {
-		for _, method := range impl.Methods {
-			mParamTypes := make([]MonoType, len(method.Params))
-			for i, p := range method.Params {
-				mParamTypes[i] = typeFromAST(p.Type)
-			}
-			var mRetType MonoType
-			if method.Ret != nil {
-				mRetType = typeFromAST(method.Ret)
-			} else {
-				mRetType = TUnit{}
-			}
-			if _, exists := bodyEnv[method.Name]; !exists {
-				bodyEnv[method.Name] = &Scheme{Body: QualifiedType{Body: TFunc{Args: mParamTypes, Ret: mRetType}}}
-			}
-		}
-	}
-
 	// Infer body expression type
 	if d.Body != nil {
 		bodyType, s, preds, err := inferExpr(bodyEnv, d.Body, state)
@@ -341,11 +338,15 @@ func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo,
 				funcType = TFunc{Args: paramTypes, Ret: TUnit{}}
 			} else {
 				declaredRetType := s.ApplyMT(retType)
-				s, err = Unify(inferredRetType, declaredRetType, s)
-				if err != nil {
-					return nil, fmt.Errorf("function %q return type mismatch: %w", d.Name, err)
+				if goFFIRefAutoWrapsToOption(d.Body, inferredRetType, declaredRetType) {
+					inferredRetType = declaredRetType
+				} else {
+					s, err = Unify(inferredRetType, declaredRetType, s)
+					if err != nil {
+						return nil, fmt.Errorf("function %q return type mismatch: %w", d.Name, err)
+					}
+					inferredRetType = s.ApplyMT(inferredRetType)
 				}
-				inferredRetType = s.ApplyMT(inferredRetType)
 			}
 		}
 
@@ -513,6 +514,8 @@ func inferExprRaw(env TypeEnv, e Expr, state *InferState) (MonoType, Subst, []Pr
 			preds = append(preds, ps...)
 		}
 		return TCon{Name: "Tuple", Args: elems}, subst, preds, nil
+	case *UnitLitExpr:
+		return TUnit{}, make(Subst), nil, nil
 	case *GoExpr:
 		return inferGoExpr(env, n, state)
 	}
@@ -528,6 +531,17 @@ func inferIdent(env TypeEnv, n *IdentExpr, state *InferState) (MonoType, Subst, 
 		// None: Option[A] with a fresh type variable
 		a := TVar{ID: state.Fresh()}
 		return TCon{Name: "Option", Args: []MonoType{a}}, make(Subst), nil, nil
+	case "Some":
+		a := TVar{ID: state.Fresh()}
+		return TFunc{Args: []MonoType{a}, Ret: TCon{Name: "Option", Args: []MonoType{a}}}, make(Subst), nil, nil
+	case "Ok":
+		a := TVar{ID: state.Fresh()}
+		e := TVar{ID: state.Fresh()}
+		return TFunc{Args: []MonoType{a}, Ret: TCon{Name: "Result", Args: []MonoType{a, e}}}, make(Subst), nil, nil
+	case "Err":
+		a := TVar{ID: state.Fresh()}
+		e := TVar{ID: state.Fresh()}
+		return TFunc{Args: []MonoType{e}, Ret: TCon{Name: "Result", Args: []MonoType{a, e}}}, make(Subst), nil, nil
 	case "Nil":
 		return nil, nil, nil, fmt.Errorf("Nil is not a valid value; use Option[Ref[T]] for nullable references")
 	}
@@ -535,6 +549,28 @@ func inferIdent(env TypeEnv, n *IdentExpr, state *InferState) (MonoType, Subst, 
 	// Look up in type environment
 	sch, ok := env[n.Name]
 	if !ok {
+		if state != nil && state.PkgInfo != nil {
+			for _, iface := range state.PkgInfo.Interfaces {
+				for _, m := range iface.Methods {
+					if m.Name != n.Name {
+						continue
+					}
+					typeArgs := make([]MonoType, len(iface.TypeParams))
+					for i := range iface.TypeParams {
+						typeArgs[i] = TVar{ID: state.Fresh()}
+					}
+					args := make([]MonoType, len(m.Params))
+					for i, p := range m.Params {
+						args[i] = substituteTypeParams(typeFromAST(p.Type), iface.TypeParams, typeArgs)
+					}
+					ret := MonoType(TUnit{})
+					if m.Ret != nil {
+						ret = substituteTypeParams(typeFromAST(m.Ret), iface.TypeParams, typeArgs)
+					}
+					return TFunc{Args: args, Ret: ret}, make(Subst), nil, nil
+				}
+			}
+		}
 		return nil, nil, nil, fmt.Errorf("unbound variable %q", n.Name)
 	}
 	t := Instantiate(sch, state)
@@ -571,6 +607,16 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 	if field, ok := n.Callee.(*FieldExpr); ok {
 		if id, ok := field.Expr.(*IdentExpr); ok && id.Name == "Ref" && field.Field == "new" {
 			return inferRefNew(env, n, state)
+		}
+		if field.Field == "value" && len(n.Args) == 0 {
+			baseType, s, preds, err := inferExpr(env, field.Expr, state)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			baseType = s.ApplyMT(baseType)
+			if con, ok := baseType.(TCon); ok && con.Name == "Ref" && len(con.Args) == 1 {
+				return s.ApplyMT(con.Args[0]), s, preds, nil
+			}
 		}
 		if id, ok := field.Expr.(*IdentExpr); !ok || (state.GoPackages[id.Name] == nil && state.MyGoPackages[id.Name] == nil) {
 			receiverType, s1, preds1, err := inferExpr(env, field.Expr, state)
@@ -882,6 +928,15 @@ func inferPrefix(env TypeEnv, n *PrefixExpr, state *InferState) (MonoType, Subst
 }
 
 func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, []Predicate, error) {
+	// Ref[T].value() is the canonical "get the owned value" spelling.
+	if n.Field == "value" {
+		if baseType, s, preds, err := inferExpr(env, n.Expr, state); err == nil {
+			if con, ok := baseType.(TCon); ok && con.Name == "Ref" && len(con.Args) == 1 {
+				return s.ApplyMT(con.Args[0]), s, preds, nil
+			}
+		}
+	}
+
 	// If base is an identifier, check for enum constructors
 	if id, ok := n.Expr.(*IdentExpr); ok {
 		if pkg := state.GoPackages[id.Name]; pkg != nil {
@@ -927,9 +982,41 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 	}
 	baseType = s.ApplyMT(baseType)
 
-	// Look up field in struct types (we need to search all known structs)
-	// For now, return a fresh type variable (field access type inference
-	// requires structural type info which we'll refine later)
+	// If the base is a concrete struct, resolve the field type from package metadata.
+	if con, ok := baseType.(TCon); ok && state != nil && state.PkgInfo != nil {
+		if st := state.PkgInfo.Structs[con.Name]; st != nil {
+			for _, f := range st.Fields {
+				if f.Name != n.Field {
+					continue
+				}
+				fieldType := typeFromAST(f.Type)
+				if len(con.Args) == len(st.TypeParams) {
+					fieldType = substituteTypeParams(fieldType, st.TypeParams, con.Args)
+				}
+				return fieldType, s, preds, nil
+			}
+			return nil, nil, nil, fmt.Errorf("struct %q has no field %q", con.Name, n.Field)
+		}
+		for _, iface := range state.PkgInfo.Interfaces {
+			for _, m := range iface.Methods {
+				if m.Name != n.Field {
+					continue
+				}
+				paramTypes := make([]MonoType, 0, len(m.Params)+1)
+				paramTypes = append(paramTypes, baseType)
+				for _, p := range m.Params {
+					paramTypes = append(paramTypes, typeFromAST(p.Type))
+				}
+				ret := MonoType(TUnit{})
+				if m.Ret != nil {
+					ret = typeFromAST(m.Ret)
+				}
+				return TFunc{Args: paramTypes, Ret: ret}, s, preds, nil
+			}
+		}
+	}
+
+	// Fall back to a fresh variable when the base type is not concrete yet.
 	fresh := TVar{ID: state.Fresh()}
 	return fresh, s, preds, nil
 }
@@ -968,13 +1055,39 @@ func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType,
 
 	// Infer field values
 	for _, f := range n.Fields {
+		var fieldDecl *Field
+		if state != nil && state.PkgInfo != nil {
+			if st := state.PkgInfo.Structs[n.TypeName]; st != nil {
+				for i := range st.Fields {
+					if st.Fields[i].Name == f.Name {
+						fieldDecl = &st.Fields[i]
+						break
+					}
+				}
+			}
+		}
+		if fieldDecl != nil {
+			if mapLit, ok := f.Value.(*MapLitExpr); ok && len(mapLit.Pairs) == 0 && mapLit.Key == nil && mapLit.Val == nil {
+				if named, ok := fieldDecl.Type.(*NamedType); ok && len(named.Args) == 2 && named.Name == "Map" {
+					mapLit.Key = named.Args[0]
+					mapLit.Val = named.Args[1]
+				}
+			}
+		}
 		fieldType, fs, preds, err := inferExpr(env, f.Value, state)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("struct %q field %q: %w", n.TypeName, f.Name, err)
 		}
 		s = Compose(s, fs)
 		allPreds = append(allPreds, preds...)
-		_ = fieldType
+		if fieldDecl != nil {
+			expectedFieldType := typeFromAST(fieldDecl.Type)
+			var unifyErr error
+			s, unifyErr = Unify(s.ApplyMT(fieldType), expectedFieldType, s)
+			if unifyErr != nil {
+				return nil, nil, nil, fmt.Errorf("struct %q field %q type mismatch: %w", n.TypeName, f.Name, unifyErr)
+			}
+		}
 	}
 
 	return structType, s, allPreds, nil
@@ -1129,10 +1242,63 @@ func inferPatternBindings(env TypeEnv, pat Pattern, targetType MonoType, s Subst
 		}
 		return env, nil
 	case *VariantPattern:
+		if enumName, enumArgs := resolveEnumType(targetType); enumName == "Option" {
+			if p.Name == "Some" {
+				if len(p.Args) > 0 && p.Args[0] != "_" && len(enumArgs) > 0 {
+					env[p.Args[0]] = &Scheme{Body: QualifiedType{Body: enumArgs[0]}}
+				}
+				return env, nil
+			}
+			if p.Name == "None" {
+				return env, nil
+			}
+		}
+		if enumName, enumArgs := resolveEnumType(targetType); enumName == "Result" {
+			if p.Name == "Ok" {
+				if len(p.Args) > 0 && p.Args[0] != "_" && len(enumArgs) > 0 {
+					env[p.Args[0]] = &Scheme{Body: QualifiedType{Body: enumArgs[0]}}
+				}
+				return env, nil
+			}
+			if p.Name == "Err" {
+				if len(p.Args) > 0 && p.Args[0] != "_" && len(enumArgs) > 1 {
+					env[p.Args[0]] = &Scheme{Body: QualifiedType{Body: enumArgs[1]}}
+				}
+				return env, nil
+			}
+		}
 		activeEnum := enumDecl
 		variant, ok := findEnumVariant(activeEnum, p.Name)
 		if !ok {
 			activeEnum, variant, ok = lookupVariant(state.PkgInfo, p.Name)
+		}
+		if !ok {
+			switch enumNameFromType(targetType) {
+			case "Option":
+				if p.Name == "Some" {
+					if len(p.Args) > 0 && p.Args[0] != "_" && len(enumTypeArgs) > 0 {
+						env[p.Args[0]] = &Scheme{Body: QualifiedType{Body: enumTypeArgs[0]}}
+					}
+					return env, nil
+				}
+				if p.Name == "None" {
+					return env, nil
+				}
+			case "Result":
+				if p.Name == "Ok" && len(enumTypeArgs) > 0 {
+					if len(p.Args) > 0 && p.Args[0] != "_" {
+						env[p.Args[0]] = &Scheme{Body: QualifiedType{Body: enumTypeArgs[0]}}
+					}
+					return env, nil
+				}
+				if p.Name == "Err" && len(enumTypeArgs) > 1 {
+					if len(p.Args) > 0 && p.Args[0] != "_" {
+						env[p.Args[0]] = &Scheme{Body: QualifiedType{Body: enumTypeArgs[1]}}
+					}
+					return env, nil
+				}
+			}
+			return nil, fmt.Errorf("variant pattern %q requires an enum target", p.Name)
 		}
 		if ok {
 			for i, arg := range p.Args {
@@ -1161,9 +1327,37 @@ func inferPatternBindings(env TypeEnv, pat Pattern, targetType MonoType, s Subst
 			env[arg] = &Scheme{Body: QualifiedType{Body: TVar{ID: state.Fresh()}}}
 		}
 		return env, nil
+	case *LiteralPattern:
+		switch p.Kind {
+		case "string":
+			if err := unifyPatternLiteral(targetType, TCon{Name: "String"}, s); err != nil {
+				return nil, fmt.Errorf("string literal pattern: %w", err)
+			}
+		case "number":
+			lt, _, _, err := inferLiteral(&LiteralExpr{Kind: "number", Value: p.Value})
+			if err != nil {
+				return nil, fmt.Errorf("number literal pattern: %w", err)
+			}
+			if err := unifyPatternLiteral(targetType, lt, s); err != nil {
+				return nil, fmt.Errorf("number literal pattern: %w", err)
+			}
+		}
+		return env, nil
 	default:
 		return nil, fmt.Errorf("unsupported pattern %T", pat)
 	}
+}
+
+func unifyPatternLiteral(target MonoType, concrete MonoType, s Subst) error {
+	t := s.ApplyMT(target)
+	next, err := Unify(t, concrete, s)
+	if err != nil {
+		return err
+	}
+	for k, v := range next {
+		s[k] = v
+	}
+	return nil
 }
 
 func switchCaseBodyForInference(body Expr, seen map[Stmt]struct{}) Expr {
@@ -1453,7 +1647,69 @@ func inferGoExpr(env TypeEnv, n *GoExpr, state *InferState) (MonoType, Subst, []
 		s = Compose(s, os)
 		allPreds = append(allPreds, preds...)
 	}
-	return typeFromAST(n.Result), s, allPreds, nil
+	resultType := typeFromAST(n.Result)
+	// Go FFI auto-conversion: (A, B) tuple → Result[A, B]
+	// This enables go[((), error)] to be inferred as Result[Unit, error].
+	if tup, ok := resultType.(TCon); ok && tup.Name == "Tuple" && len(tup.Args) == 2 {
+		resultType = TCon{Name: "Result", Args: tup.Args}
+	}
+	return resultType, s, allPreds, nil
+}
+
+func goFFIRefAutoWrapsToOption(body Expr, actual, expected MonoType) bool {
+	if _, ok := body.(*GoExpr); !ok {
+		return false
+	}
+	actualRef, ok := actual.(TCon)
+	if !ok || actualRef.Name != "Ref" || len(actualRef.Args) != 1 {
+		return false
+	}
+	expectedOption, ok := expected.(TCon)
+	if !ok || expectedOption.Name != "Option" || len(expectedOption.Args) != 1 {
+		return false
+	}
+	expectedRef, ok := expectedOption.Args[0].(TCon)
+	if !ok || expectedRef.Name != "Ref" || len(expectedRef.Args) != 1 {
+		return false
+	}
+	return monoTypesEqual(actualRef.Args[0], expectedRef.Args[0])
+}
+
+func monoTypesEqual(a, b MonoType) bool {
+	switch a := a.(type) {
+	case TVar:
+		b, ok := b.(TVar)
+		return ok && a.ID == b.ID
+	case TCon:
+		b, ok := b.(TCon)
+		if !ok || a.Name != b.Name || len(a.Args) != len(b.Args) {
+			return false
+		}
+		for i := range a.Args {
+			if !monoTypesEqual(a.Args[i], b.Args[i]) {
+				return false
+			}
+		}
+		return true
+	case TFunc:
+		b, ok := b.(TFunc)
+		if !ok || a.Variadic != b.Variadic || len(a.Args) != len(b.Args) {
+			return false
+		}
+		for i := range a.Args {
+			if !monoTypesEqual(a.Args[i], b.Args[i]) {
+				return false
+			}
+		}
+		return monoTypesEqual(a.Ret, b.Ret)
+	case TGoPackage:
+		b, ok := b.(TGoPackage)
+		return ok && a.Alias == b.Alias
+	case TUnit:
+		_, ok := b.(TUnit)
+		return ok
+	}
+	return false
 }
 
 // ---------------------------------------------------------------------------
@@ -1468,6 +1724,11 @@ func resolveEnumType(t MonoType) (string, []MonoType) {
 		return t.Name, t.Args
 	}
 	return "", nil
+}
+
+func enumNameFromType(t MonoType) string {
+	name, _ := resolveEnumType(t)
+	return name
 }
 
 // lookupEnum looks up an enum declaration by name from the package info.

@@ -28,6 +28,7 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 			}
 		}
 	}
+	translated := make(map[string]jen.Code, len(n.Fields))
 	for _, f := range n.Fields {
 		var fieldDecl *Field
 		for i := range st.Fields {
@@ -47,13 +48,13 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 		if fieldDecl == nil {
 			return nil, "", common.ErrorAtPos(f.Line, f.Column, "unknown field %s on struct %s", f.Name, n.TypeName)
 		}
-		fieldExpected := typeString(fieldDecl.Type, subst)
+		fieldExpected := myGoTypeString(substituteTypeExpr(fieldDecl.Type, subst), nil)
 		code, typ, err := g.translateExpr(f.Value, ctx, fieldExpected)
 		if err != nil {
 			return nil, "", err
 		}
-		_ = code
 		unifyType(fieldDecl.Type, typ, typeParamSet(st.TypeParams), subst)
+		translated[f.Name] = code
 	}
 	if len(st.TypeParams) > 0 {
 		for _, tp := range st.TypeParams {
@@ -62,59 +63,62 @@ func (g *generator) translateStructLit(n *StructLitExpr, ctx *exprCtx, expected 
 			}
 		}
 	}
-	fieldTypes := map[string]string{}
-	for _, f := range st.Fields {
-		fieldTypes[f.Name] = typeString(f.Type, subst)
-	}
 	parts := make(jen.Dict, len(n.Fields))
 	for _, f := range n.Fields {
-		fieldType := fieldTypes[f.Name]
-		if fieldType == "" && f.Name == "embed" {
+		key := f.Name
+		if f.Name == "embed" {
 			for _, stField := range st.Fields {
 				if stField.Name == "embed" {
-					fieldType = typeString(stField.Type, subst)
+					key = myGoTypeString(stField.Type, subst)
 					break
 				}
 			}
 		}
-		if fieldType == "" {
-			return nil, "", common.ErrorAtPos(f.Line, f.Column, "unknown field %s on struct %s", f.Name, n.TypeName)
-		}
-		code, _, err := g.translateExpr(f.Value, ctx, fieldType)
-		if err != nil {
-			return nil, "", err
-		}
-		key := exportName(f.Name)
-		if f.Name == "embed" {
-			key = fieldType
-		}
 		fieldKey := jen.Id(key)
-		parts[fieldKey] = code
+		parts[fieldKey] = translated[f.Name]
 	}
 	if len(n.TypeArgs) > 0 {
 		var args []jen.Code
 		for _, arg := range n.TypeArgs {
 			args = append(args, jen.Id(g.goType(arg, ctx.typeParams)))
 		}
-		return jen.Lit(jen.DictFunc(func(d jen.Dict) {
-			for k, v := range parts {
-				d[k] = v
-			}
-		})).Index(args...), typeString(&NamedType{Name: n.TypeName, Args: n.TypeArgs}, nil), nil
+		return jen.Id(typeName).Index(args...).Values(parts), typeString(&NamedType{Name: n.TypeName, Args: n.TypeArgs}, nil), nil
 	} else if len(st.TypeParams) > 0 {
 		var args []jen.Code
 		for _, tp := range st.TypeParams {
 			args = append(args, jen.Id(subst[tp]))
 		}
-		return jen.Lit(jen.DictFunc(func(d jen.Dict) {
-			for k, v := range parts {
-				d[k] = v
-			}
-		})).Index(args...), typeString(&NamedType{Name: n.TypeName, Args: n.TypeArgs}, nil), nil
+		return jen.Id(typeName).Index(args...).Values(parts), typeString(&NamedType{Name: n.TypeName, Args: n.TypeArgs}, nil), nil
 	}
-	return jen.Lit(jen.DictFunc(func(d jen.Dict) {
-		for k, v := range parts {
-			d[k] = v
+	return jen.Id(typeName).Values(parts), typeString(&NamedType{Name: n.TypeName, Args: n.TypeArgs}, nil), nil
+}
+
+func substituteTypeExpr(t TypeExpr, subst map[string]string) TypeExpr {
+	switch tt := t.(type) {
+	case *NamedType:
+		if subst != nil {
+			if repl, ok := subst[tt.Name]; ok && len(tt.Args) == 0 {
+				return &NamedType{Name: repl}
+			}
 		}
-	})).Index(jen.Id(typeName)), typeString(&NamedType{Name: n.TypeName, Args: n.TypeArgs}, nil), nil
+		args := make([]TypeExpr, 0, len(tt.Args))
+		for _, a := range tt.Args {
+			args = append(args, substituteTypeExpr(a, subst))
+		}
+		return &NamedType{Name: tt.Name, Args: args}
+	case *FuncType:
+		params := make([]TypeExpr, 0, len(tt.Params))
+		for _, p := range tt.Params {
+			params = append(params, substituteTypeExpr(p, subst))
+		}
+		return &FuncType{Params: params, Ret: substituteTypeExpr(tt.Ret, subst)}
+	case *TupleType:
+		elems := make([]TypeExpr, 0, len(tt.Elems))
+		for _, e := range tt.Elems {
+			elems = append(elems, substituteTypeExpr(e, subst))
+		}
+		return &TupleType{Elems: elems}
+	default:
+		return t
+	}
 }

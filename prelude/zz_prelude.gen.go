@@ -11,6 +11,9 @@ type HKT1[F any] interface{}
 type HKT2[A any] interface{}
 
 type HKT[F any, A any] interface{}
+
+var _ = fmt.Append
+
 type Option[A any] interface {
 	isOption()
 }
@@ -52,118 +55,120 @@ func Err[A any, E any](a0 E) Result[A, E] {
 }
 
 type Show[A any] interface {
-	show(value A) string
+	Show(value A) string
 }
 type Eq[A any] interface {
-	equals(left A, right A) bool
+	Equals(left A, right A) bool
 }
-type Enumerable[C any, A any] interface {
-	each(c HKT[C, A], fn func(A)) struct{}
-	filter(c HKT[C, A], fn func(A) bool) HKT[C, A]
-	find(c HKT[C, A], fn func(A) bool) Option[*A]
-	contains(c HKT[C, A], item A, eq Eq[A]) bool
+type IEnumerable[C any, A any] interface {
+	Each(c HKT[C, A], fn func(A)) struct{}
+	Len(c HKT[C, A]) int
+	Filter(c HKT[C, A], fn func(A) bool) HKT[C, A]
+	Find(c HKT[C, A], fn func(A) bool) Option[*A]
+	Contains(c HKT[C, A], item A, eq Eq[A]) bool
 }
 type List[A any] struct {
-	Head A
-	Tail Option[*List[A]]
+	head A
+	tail Option[*List[A]]
 }
 type IAssignable[C any, K any, A any] interface {
-	get(c HKT[C, A], index K) Option[*A]
-	set(c HKT[C, A], index K, value A) struct{}
+	Get(c HKT[C, A], index K) Option[*A]
+	Set(c HKT[C, A], index K, value A) struct{}
+	Delete(c HKT[C, A], index K) struct{}
 }
 type IOption[A any] interface {
-	isSome(self IOption[A]) bool
-	isNone(self IOption[A]) bool
-	unwrapOr(self IOption[A], defaultVal A) A
+	IsSome(self IOption[A]) bool
+	IsNone(self IOption[A]) bool
+	UnwrapOr(self IOption[A], defaultVal A) A
 }
 
-func show_int(value int) string {
+func Show_int(value int) string {
 	return fmt.Sprint(value)
 }
-func show_int8(value int8) string {
+func Show_int8(value int8) string {
 	return fmt.Sprint(value)
 }
-func show_uint8(value uint8) string {
+func Show_uint8(value uint8) string {
 	return fmt.Sprint(value)
 }
-func show_int16(value int16) string {
+func Show_int16(value int16) string {
 	return fmt.Sprint(value)
 }
-func show_uint16(value uint16) string {
+func Show_uint16(value uint16) string {
 	return fmt.Sprint(value)
 }
-func show_int32(value int32) string {
+func Show_int32(value int32) string {
 	return fmt.Sprint(value)
 }
-func show_uint32(value uint32) string {
+func Show_uint32(value uint32) string {
 	return fmt.Sprint(value)
 }
-func show_int64(value int64) string {
+func Show_int64(value int64) string {
 	return fmt.Sprint(value)
 }
-func show_float32(value float32) string {
+func Show_float32(value float32) string {
 	return fmt.Sprint(value)
 }
-func show_float64(value float64) string {
+func Show_float64(value float64) string {
 	return fmt.Sprint(value)
 }
-func show_string(value string) string {
+func Show_string(value string) string {
 	return value
 }
-func show_bool(value bool) string {
+func Show_bool(value bool) string {
 	return fmt.Sprint(value)
 }
-func equals_int(left int, right int) bool {
+func Equals_int(left int, right int) bool {
 	return left == right
 }
-func equals_int8(left int8, right int8) bool {
+func Equals_int8(left int8, right int8) bool {
 	return left == right
 }
-func equals_uint8(left uint8, right uint8) bool {
+func Equals_uint8(left uint8, right uint8) bool {
 	return left == right
 }
-func equals_int16(left int16, right int16) bool {
+func Equals_int16(left int16, right int16) bool {
 	return left == right
 }
-func equals_uint16(left uint16, right uint16) bool {
+func Equals_uint16(left uint16, right uint16) bool {
 	return left == right
 }
-func equals_int32(left int32, right int32) bool {
+func Equals_int32(left int32, right int32) bool {
 	return left == right
 }
-func equals_uint32(left uint32, right uint32) bool {
+func Equals_uint32(left uint32, right uint32) bool {
 	return left == right
 }
-func equals_int64(left int64, right int64) bool {
+func Equals_int64(left int64, right int64) bool {
 	return left == right
 }
-func equals_float32(left float32, right float32) bool {
+func Equals_float32(left float32, right float32) bool {
 	return left == right
 }
-func equals_float64(left float64, right float64) bool {
+func Equals_float64(left float64, right float64) bool {
 	return left == right
 }
-func equals_string(left string, right string) bool {
+func Equals_string(left string, right string) bool {
 	return left == right
 }
-func equals_bool(left bool, right bool) bool {
+func Equals_bool(left bool, right bool) bool {
 	return left == right
 }
-func each_list_t_t[T any](c List[T], fn func(T)) {
+func Each_list_t_t[T any](c List[T], fn func(T)) {
 	{
 		var current_1 *List[T] = &c
 		var done_2 bool = false
 		for !done_2 {
 			{
-				fn(current_1.Head)
-				if _, ok := current_1.Tail.(OptionNone[*List[T]]); ok {
+				fn(current_1.head)
+				if _, ok := current_1.tail.(OptionNone[*List[T]]); ok {
 					{
 						done_2 = true
 					}
 				} else {
-					if v, ok := current_1.Tail.(OptionSome[*List[T]]); ok {
+					if v_2, ok := current_1.tail.(OptionSome[*List[T]]); ok {
 						{
-							current_1 = v.F0
+							current_1 = v_2.F0
 						}
 					}
 				}
@@ -172,56 +177,143 @@ func each_list_t_t[T any](c List[T], fn func(T)) {
 	}
 	return
 }
-func map_list_t_t[T any, B any](c List[T], fn func(T) B) List[B] {
-	panic("translate error")
-}
-func filter_list_t_t[T any](c List[T], fn func(T) bool) List[T] {
-	panic("translate error")
-}
-func fold_list_t_t[T any, B any](c List[T], initial B, fn func(B, T) B) B {
-	return func() B {
-		var acc_7 B = initial
-		var done_8 bool = false
-		var current_9 *List[T] = &c
-		for !done_8 {
+func Len_list_t_t[T any](c List[T]) int {
+	return func() int {
+		var count_3 int = 0
+		var current_4 *List[T] = &c
+		var done_5 bool = false
+		for !done_5 {
 			{
-				acc_7 = fn(acc_7, current_9.Head)
-				if _, ok := current_9.Tail.(OptionNone[*List[T]]); ok {
+				count_3 = count_3 + 1
+				if _, ok := current_4.tail.(OptionNone[*List[T]]); ok {
 					{
-						done_8 = true
+						done_5 = true
 					}
 				} else {
-					if v, ok := current_9.Tail.(OptionSome[*List[T]]); ok {
+					if v_4, ok := current_4.tail.(OptionSome[*List[T]]); ok {
 						{
-							current_9 = v.F0
+							current_4 = v_4.F0
 						}
 					}
 				}
 			}
 		}
-		return acc_7
+		return count_3
 	}()
 }
-func find_list_t_t[T any](c List[T], fn func(T) bool) Option[*T] {
-	return func() Option[*T] {
+func Map_list_t_t[T any, B any](c List[T], fn func(T) B) List[B] {
+	return func() List[B] {
+		var done_6 bool = false
+		var headVal_7 B = fn(c.head)
+		var result_8 List[B] = List[B]{
+			head: headVal_7,
+			tail: None[*List[B]](),
+		}
+		var current_9 *List[T] = &c
+		for !done_6 {
+			{
+				if _, ok := current_9.tail.(OptionNone[*List[T]]); ok {
+					{
+						done_6 = true
+					}
+				} else {
+					if v_6, ok := current_9.tail.(OptionSome[*List[T]]); ok {
+						{
+							current_9 = v_6.F0
+							result_8 = List[B]{
+								head: fn(current_9.head),
+								tail: Some[*List[B]](&result_8),
+							}
+						}
+					}
+				}
+			}
+		}
+		return result_8
+	}()
+}
+func Filter_list_t_t[T any](c List[T], fn func(T) bool) List[T] {
+	return func() List[T] {
 		var done_10 bool = false
 		var current_11 *List[T] = &c
+		var result_12 List[T] = List[T]{
+			head: current_11.head,
+			tail: None[*List[T]](),
+		}
 		for !done_10 {
 			{
-				if fn(current_11.Head) {
+				if fn(current_11.head) {
 					{
-						return Some[*T](&current_11.Head)
+						result_12 = List[T]{
+							head: current_11.head,
+							tail: Some[*List[T]](&result_12),
+						}
 					}
 				} else {
 					{
-						if _, ok := current_11.Tail.(OptionNone[*List[T]]); ok {
+						_ = 0
+					}
+				}
+				if _, ok := current_11.tail.(OptionNone[*List[T]]); ok {
+					{
+						done_10 = true
+					}
+				} else {
+					if v_8, ok := current_11.tail.(OptionSome[*List[T]]); ok {
+						{
+							current_11 = v_8.F0
+						}
+					}
+				}
+			}
+		}
+		return result_12
+	}()
+}
+func Fold_list_t_t[T any, B any](c List[T], initial B, fn func(B, T) B) B {
+	return func() B {
+		var acc_13 B = initial
+		var done_14 bool = false
+		var current_15 *List[T] = &c
+		for !done_14 {
+			{
+				acc_13 = fn(acc_13, current_15.head)
+				if _, ok := current_15.tail.(OptionNone[*List[T]]); ok {
+					{
+						done_14 = true
+					}
+				} else {
+					if v_10, ok := current_15.tail.(OptionSome[*List[T]]); ok {
+						{
+							current_15 = v_10.F0
+						}
+					}
+				}
+			}
+		}
+		return acc_13
+	}()
+}
+func Find_list_t_t[T any](c List[T], fn func(T) bool) Option[*T] {
+	return func() Option[*T] {
+		var done_16 bool = false
+		var current_17 *List[T] = &c
+		for !done_16 {
+			{
+				if fn(current_17.head) {
+					{
+						return Some[*T](&current_17.head)
+					}
+				} else {
+					{
+						if _, ok := current_17.tail.(OptionNone[*List[T]]); ok {
 							{
-								done_10 = true
+								done_16 = true
 							}
 						} else {
-							if v, ok := current_11.Tail.(OptionSome[*List[T]]); ok {
+							if v_12, ok := current_17.tail.(OptionSome[*List[T]]); ok {
 								{
-									current_11 = v.F0
+									current_17 = v_12.F0
 								}
 							}
 						}
@@ -232,28 +324,28 @@ func find_list_t_t[T any](c List[T], fn func(T) bool) Option[*T] {
 		return None[*T]()
 	}()
 }
-func contains_list_t_t[T any](c List[T], item T, eq Eq[T]) bool {
+func Contains_list_t_t[T any](c List[T], item T, eq Eq[T]) bool {
 	return func() bool {
-		var done_12 bool = false
-		var result_13 bool = false
-		var current_14 *List[T] = &c
-		for !done_12 {
+		var done_18 bool = false
+		var result_19 bool = false
+		var current_20 *List[T] = &c
+		for !done_18 {
 			{
-				if eq.equals(current_14.Head, item) {
+				if eq.Equals(current_20.head, item) {
 					{
-						result_13 = true
-						done_12 = true
+						result_19 = true
+						done_18 = true
 					}
 				} else {
 					{
-						if _, ok := current_14.Tail.(OptionNone[*List[T]]); ok {
+						if _, ok := current_20.tail.(OptionNone[*List[T]]); ok {
 							{
-								done_12 = true
+								done_18 = true
 							}
 						} else {
-							if v, ok := current_14.Tail.(OptionSome[*List[T]]); ok {
+							if v_14, ok := current_20.tail.(OptionSome[*List[T]]); ok {
 								{
-									current_14 = v.F0
+									current_20 = v_14.F0
 								}
 							}
 						}
@@ -261,17 +353,20 @@ func contains_list_t_t[T any](c List[T], item T, eq Eq[T]) bool {
 				}
 			}
 		}
-		return result_13
+		return result_19
 	}()
 }
-func each__t_t[T any](c []T, fn func(T)) {
+func Each__t_t[T any](c[]T, fn func(T)) {
 	for _, v := range c {
 		fn(v)
 	}
 
 	return
 }
-func map__t_t[T any, B any](c []T, fn func(T) B) []B {
+func Len__t_t[T any](c[]T) int {
+	return len(c)
+}
+func Map__t_t[T any, B any](c[]T, fn func(T) B) []B {
 	return func() []B {
 		out := make([]B, len(c))
 		for i, v := range c {
@@ -281,7 +376,7 @@ func map__t_t[T any, B any](c []T, fn func(T) B) []B {
 	}()
 
 }
-func filter__t_t[T any](c []T, fn func(T) bool) []T {
+func Filter__t_t[T any](c[]T, fn func(T) bool) []T {
 	return func() []T {
 		out := make([]T, 0, len(c))
 		for _, v := range c {
@@ -293,7 +388,7 @@ func filter__t_t[T any](c []T, fn func(T) bool) []T {
 	}()
 
 }
-func fold__t_t[T any, B any](c []T, initial B, fn func(B, T) B) B {
+func Fold__t_t[T any, B any](c[]T, initial B, fn func(B, T) B) B {
 	return func() B {
 		acc := initial
 		for _, v := range c {
@@ -303,7 +398,7 @@ func fold__t_t[T any, B any](c []T, initial B, fn func(B, T) B) B {
 	}()
 
 }
-func find__t_t[T any](c []T, fn func(T) bool) Option[*T] {
+func Find__t_t[T any](c[]T, fn func(T) bool) Option[*T] {
 	return func() Option[*T] {
 		for i := range c {
 			if fn(c[i]) {
@@ -314,10 +409,10 @@ func find__t_t[T any](c []T, fn func(T) bool) Option[*T] {
 	}()
 
 }
-func contains__t_t[T any](c []T, item T, eq Eq[T]) bool {
+func Contains__t_t[T any](c[]T, item T, eq Eq[T]) bool {
 	return func() bool {
 		for _, v := range c {
-			if eq.equals(v, item) {
+			if eq.Equals(v, item) {
 				return true
 			}
 		}
@@ -325,14 +420,17 @@ func contains__t_t[T any](c []T, item T, eq Eq[T]) bool {
 	}()
 
 }
-func each_map_kv_v[K comparable, V any](c map[K]V, fn func(V)) {
+func Each_map_kv_v[K comparable, V any](c map[K]V, fn func(V)) {
 	for _, v := range c {
 		fn(v)
 	}
 
 	return
 }
-func map_map_kv_v[K comparable, V any, B any](c map[K]V, fn func(V) B) map[K]B {
+func Len_map_kv_v[K comparable, V any](c map[K]V) int {
+	return len(c)
+}
+func Map_map_kv_v[K comparable, V any, B any](c map[K]V, fn func(V) B) map[K]B {
 	return func() map[K]B {
 		out := make(map[K]B, len(c))
 		for k, v := range c {
@@ -342,7 +440,7 @@ func map_map_kv_v[K comparable, V any, B any](c map[K]V, fn func(V) B) map[K]B {
 	}()
 
 }
-func filter_map_kv_v[K comparable, V any](c map[K]V, fn func(V) bool) map[K]V {
+func Filter_map_kv_v[K comparable, V any](c map[K]V, fn func(V) bool) map[K]V {
 	return func() map[K]V {
 		out := make(map[K]V, len(c))
 		for k, v := range c {
@@ -354,7 +452,7 @@ func filter_map_kv_v[K comparable, V any](c map[K]V, fn func(V) bool) map[K]V {
 	}()
 
 }
-func fold_map_kv_v[K comparable, V any, B any](c map[K]V, initial B, fn func(B, V) B) B {
+func Fold_map_kv_v[K comparable, V any, B any](c map[K]V, initial B, fn func(B, V) B) B {
 	return func() B {
 		acc := initial
 		for _, v := range c {
@@ -364,7 +462,7 @@ func fold_map_kv_v[K comparable, V any, B any](c map[K]V, initial B, fn func(B, 
 	}()
 
 }
-func find_map_kv_v[K comparable, V any](c map[K]V, fn func(V) bool) Option[*V] {
+func Find_map_kv_v[K comparable, V any](c map[K]V, fn func(V) bool) Option[*V] {
 	return func() Option[*V] {
 		for _, v := range c {
 			if fn(v) {
@@ -376,14 +474,17 @@ func find_map_kv_v[K comparable, V any](c map[K]V, fn func(V) bool) Option[*V] {
 	}()
 
 }
-func each_map_astruct___a[A comparable](c map[A]struct{}, fn func(A)) {
+func Each_map_astruct___a[A comparable](c map[A]struct{}, fn func(A)) {
 	for v := range c {
 		fn(v)
 	}
 
 	return
 }
-func map_map_astruct___a[A comparable, B comparable](c map[A]struct{}, fn func(A) B) map[B]struct{} {
+func Len_map_astruct___a[A comparable](c map[A]struct{}) int {
+	return len(c)
+}
+func Map_map_astruct___a[A comparable, B comparable](c map[A]struct{}, fn func(A) B) map[B]struct{} {
 	return func() map[B]struct{} {
 		out := make(map[B]struct{}, len(c))
 		for v := range c {
@@ -393,7 +494,7 @@ func map_map_astruct___a[A comparable, B comparable](c map[A]struct{}, fn func(A
 	}()
 
 }
-func filter_map_astruct___a[A comparable](c map[A]struct{}, fn func(A) bool) map[A]struct{} {
+func Filter_map_astruct___a[A comparable](c map[A]struct{}, fn func(A) bool) map[A]struct{} {
 	return func() map[A]struct{} {
 		out := make(map[A]struct{}, len(c))
 		for v := range c {
@@ -405,7 +506,7 @@ func filter_map_astruct___a[A comparable](c map[A]struct{}, fn func(A) bool) map
 	}()
 
 }
-func fold_map_astruct___a[A comparable, B comparable](c map[A]struct{}, initial B, fn func(B, A) B) B {
+func Fold_map_astruct___a[A comparable, B comparable](c map[A]struct{}, initial B, fn func(B, A) B) B {
 	return func() B {
 		acc := initial
 		for v := range c {
@@ -415,7 +516,7 @@ func fold_map_astruct___a[A comparable, B comparable](c map[A]struct{}, initial 
 	}()
 
 }
-func find_map_astruct___a[A comparable](c map[A]struct{}, fn func(A) bool) Option[*A] {
+func Find_map_astruct___a[A comparable](c map[A]struct{}, fn func(A) bool) Option[*A] {
 	return func() Option[*A] {
 		for v := range c {
 			if fn(v) {
@@ -427,14 +528,42 @@ func find_map_astruct___a[A comparable](c map[A]struct{}, fn func(A) bool) Optio
 	}()
 
 }
-func each_option_a_a[A any](c Option[A], fn func(A)) {
-	panic("translate error")
+func Each_option_a_a[A any](c Option[A], fn func(A)) {
+	if v_15, ok := c.(OptionSome[A]); ok {
+		{
+			fn(v_15.F0)
+		}
+	} else {
+		if _, ok := c.(OptionNone[A]); ok {
+			{
+
+			}
+		}
+	}
+	return
 }
-func map_option_a_a[A any, B any](c Option[A], fn func(A) B) Option[B] {
+func Len_option_a_a[A any](c Option[A]) int {
+	return func() int {
+		if _, ok := c.(OptionSome[A]); ok {
+			return func() int {
+				return 1
+			}()
+		} else {
+			if _, ok := c.(OptionNone[A]); ok {
+				return func() int {
+					return 0
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
+	}()
+}
+func Map_option_a_a[A any, B any](c Option[A], fn func(A) B) Option[B] {
 	return func() Option[B] {
-		if v, ok := c.(OptionSome[A]); ok {
+		if v_19, ok := c.(OptionSome[A]); ok {
 			return func() Option[B] {
-				return Some[B](fn(v.F0))
+				return Some[B](fn(v_19.F0))
 			}()
 		} else {
 			if _, ok := c.(OptionNone[A]); ok {
@@ -447,13 +576,13 @@ func map_option_a_a[A any, B any](c Option[A], fn func(A) B) Option[B] {
 		}
 	}()
 }
-func filter_option_a_a[A any](c Option[A], fn func(A) bool) Option[A] {
+func Filter_option_a_a[A any](c Option[A], fn func(A) bool) Option[A] {
 	return func() Option[A] {
-		if v, ok := c.(OptionSome[A]); ok {
+		if v_21, ok := c.(OptionSome[A]); ok {
 			return func() Option[A] {
 				return func() Option[A] {
-					if fn(v.F0) {
-						return Some[A](v.F0)
+					if fn(v_21.F0) {
+						return Some[A](v_21.F0)
 					} else {
 						return None[A]()
 					}
@@ -470,11 +599,11 @@ func filter_option_a_a[A any](c Option[A], fn func(A) bool) Option[A] {
 		}
 	}()
 }
-func fold_option_a_a[A any, B any](c Option[A], initial B, fn func(B, A) B) B {
+func Fold_option_a_a[A any, B any](c Option[A], initial B, fn func(B, A) B) B {
 	return func() B {
-		if v, ok := c.(OptionSome[A]); ok {
+		if v_23, ok := c.(OptionSome[A]); ok {
 			return func() B {
-				return fn(initial, v.F0)
+				return fn(initial, v_23.F0)
 			}()
 		} else {
 			if _, ok := c.(OptionNone[A]); ok {
@@ -487,13 +616,13 @@ func fold_option_a_a[A any, B any](c Option[A], initial B, fn func(B, A) B) B {
 		}
 	}()
 }
-func find_option_a_a[A any](c Option[A], fn func(A) bool) Option[*A] {
+func Find_option_a_a[A any](c Option[A], fn func(A) bool) Option[*A] {
 	return func() Option[*A] {
-		if v, ok := c.(OptionSome[A]); ok {
+		if v_25, ok := c.(OptionSome[A]); ok {
 			return func() Option[*A] {
 				return func() Option[*A] {
-					if fn(v.F0) {
-						return Some[*A](&v.F0)
+					if fn(v_25.F0) {
+						return Some[*A](&v_25.F0)
 					} else {
 						return None[*A]()
 					}
@@ -510,11 +639,11 @@ func find_option_a_a[A any](c Option[A], fn func(A) bool) Option[*A] {
 		}
 	}()
 }
-func contains_option_a_a[A any](c Option[A], item A, eq Eq[A]) bool {
+func Contains_option_a_a[A any](c Option[A], item A, eq Eq[A]) bool {
 	return func() bool {
-		if v, ok := c.(OptionSome[A]); ok {
+		if v_27, ok := c.(OptionSome[A]); ok {
 			return func() bool {
-				return eq.equals(v.F0, item)
+				return eq.Equals(v_27.F0, item)
 			}()
 		} else {
 			if _, ok := c.(OptionNone[A]); ok {
@@ -527,7 +656,7 @@ func contains_option_a_a[A any](c Option[A], item A, eq Eq[A]) bool {
 		}
 	}()
 }
-func get__t_int_t[T any](s []T, index int) Option[*T] {
+func Get__t_int_t[T any](s[]T, index int) Option[*T] {
 	return func() Option[*T] {
 		if index >= 0 && index < len(s) {
 			val := s[index]
@@ -537,12 +666,17 @@ func get__t_int_t[T any](s []T, index int) Option[*T] {
 	}()
 
 }
-func set__t_int_t[T any](s []T, index int, value T) {
+func Set__t_int_t[T any](s[]T, index int, value T) {
 	s[index] = value
 
 	return
 }
-func get_map_kv_k_v[K comparable, V any](m map[K]V, index K) Option[*V] {
+func Delete__t_int_t[T any](s[]T, index int) {
+	s = append(s[:index], s[index+1:]...)
+
+	return
+}
+func Get_map_kv_k_v[K comparable, V any](m map[K]V, index K) Option[*V] {
 	return func() Option[*V] {
 		if v, ok := m[index]; ok {
 			val := v
@@ -552,12 +686,17 @@ func get_map_kv_k_v[K comparable, V any](m map[K]V, index K) Option[*V] {
 	}()
 
 }
-func set_map_kv_k_v[K comparable, V any](m map[K]V, index K, value V) {
+func Set_map_kv_k_v[K comparable, V any](m map[K]V, index K, value V) {
 	m[index] = value
 
 	return
 }
-func isSome_a[A any](self Option[A]) bool {
+func Delete_map_kv_k_v[K comparable, V any](m map[K]V, index K) {
+	delete(m, index)
+
+	return
+}
+func IsSome_a[A any](self Option[A]) bool {
 	return func() bool {
 		if _, ok := self.(OptionSome[A]); ok {
 			return func() bool {
@@ -574,14 +713,14 @@ func isSome_a[A any](self Option[A]) bool {
 		}
 	}()
 }
-func isNone_a[A any](self Option[A]) bool {
-	return !isSome_a[A](self)
+func IsNone_a[A any](self Option[A]) bool {
+	return !IsSome_a[A](self)
 }
-func unwrapOr_a[A any](opt Option[A], defaultVal A) A {
+func UnwrapOr_a[A any](opt Option[A], defaultVal A) A {
 	return func() A {
-		if v, ok := opt.(OptionSome[A]); ok {
+		if v_31, ok := opt.(OptionSome[A]); ok {
 			return func() A {
-				return v.F0
+				return v_31.F0
 			}()
 		} else {
 			if _, ok := opt.(OptionNone[A]); ok {
@@ -594,14 +733,11 @@ func unwrapOr_a[A any](opt Option[A], defaultVal A) A {
 		}
 	}()
 }
-func typeKeyFromType(value string) string {
-	return value
-}
-func optionFlatMap[A any, B any](opt Option[A], fn func(A) Option[B]) Option[B] {
+func OptionFlatMap[A any, B any](opt Option[A], fn func(A) Option[B]) Option[B] {
 	return func() Option[B] {
-		if v, ok := opt.(OptionSome[A]); ok {
+		if v_33, ok := opt.(OptionSome[A]); ok {
 			return func() Option[B] {
-				return fn(v.F0)
+				return fn(v_33.F0)
 			}()
 		} else {
 			if _, ok := opt.(OptionNone[A]); ok {
@@ -614,7 +750,7 @@ func optionFlatMap[A any, B any](opt Option[A], fn func(A) Option[B]) Option[B] 
 		}
 	}()
 }
-func resultIsOk[A any, E any](res Result[A, E]) bool {
+func ResultIsOk[A any, E any](res Result[A, E]) bool {
 	return func() bool {
 		if _, ok := res.(ResultOk[A, E]); ok {
 			return func() bool {
@@ -631,7 +767,7 @@ func resultIsOk[A any, E any](res Result[A, E]) bool {
 		}
 	}()
 }
-func resultIsErr[A any, E any](res Result[A, E]) bool {
+func ResultIsErr[A any, E any](res Result[A, E]) bool {
 	return func() bool {
 		if _, ok := res.(ResultOk[A, E]); ok {
 			return func() bool {
@@ -648,11 +784,11 @@ func resultIsErr[A any, E any](res Result[A, E]) bool {
 		}
 	}()
 }
-func resultUnwrap[A any, E any](res Result[A, E], defaultVal A) A {
+func ResultUnwrap[A any, E any](res Result[A, E], defaultVal A) A {
 	return func() A {
-		if v, ok := res.(ResultOk[A, E]); ok {
+		if v_39, ok := res.(ResultOk[A, E]); ok {
 			return func() A {
-				return v.F0
+				return v_39.F0
 			}()
 		} else {
 			if _, ok := res.(ResultErr[A, E]); ok {
@@ -665,16 +801,16 @@ func resultUnwrap[A any, E any](res Result[A, E], defaultVal A) A {
 		}
 	}()
 }
-func resultMap[A any, B any, E any](res Result[A, E], fn func(A) B) Result[B, E] {
+func ResultMap[A any, B any, E any](res Result[A, E], fn func(A) B) Result[B, E] {
 	return func() Result[B, E] {
-		if v, ok := res.(ResultOk[A, E]); ok {
+		if v_41, ok := res.(ResultOk[A, E]); ok {
 			return func() Result[B, E] {
-				return Ok[B, E](fn(v.F0))
+				return Ok[B, E](fn(v_41.F0))
 			}()
 		} else {
-			if v, ok := res.(ResultErr[A, E]); ok {
+			if v_42, ok := res.(ResultErr[A, E]); ok {
 				return func() Result[B, E] {
-					return Err[B, E](v.F0)
+					return Err[B, E](v_42.F0)
 				}()
 			} else {
 				panic("unreachable")
@@ -682,16 +818,16 @@ func resultMap[A any, B any, E any](res Result[A, E], fn func(A) B) Result[B, E]
 		}
 	}()
 }
-func resultMapErr[A any, B any, E any](res Result[A, E], fn func(E) B) Result[A, B] {
+func ResultMapErr[A any, B any, E any](res Result[A, E], fn func(E) B) Result[A, B] {
 	return func() Result[A, B] {
-		if v, ok := res.(ResultOk[A, E]); ok {
+		if v_43, ok := res.(ResultOk[A, E]); ok {
 			return func() Result[A, B] {
-				return Ok[A, B](v.F0)
+				return Ok[A, B](v_43.F0)
 			}()
 		} else {
-			if v, ok := res.(ResultErr[A, E]); ok {
+			if v_44, ok := res.(ResultErr[A, E]); ok {
 				return func() Result[A, B] {
-					return Err[A, B](fn(v.F0))
+					return Err[A, B](fn(v_44.F0))
 				}()
 			} else {
 				panic("unreachable")
@@ -699,16 +835,16 @@ func resultMapErr[A any, B any, E any](res Result[A, E], fn func(E) B) Result[A,
 		}
 	}()
 }
-func resultAndThen[A any, B any, E any](res Result[A, E], fn func(A) Result[B, E]) Result[B, E] {
+func ResultAndThen[A any, B any, E any](res Result[A, E], fn func(A) Result[B, E]) Result[B, E] {
 	return func() Result[B, E] {
-		if v, ok := res.(ResultOk[A, E]); ok {
+		if v_45, ok := res.(ResultOk[A, E]); ok {
 			return func() Result[B, E] {
-				return fn(v.F0)
+				return fn(v_45.F0)
 			}()
 		} else {
-			if v, ok := res.(ResultErr[A, E]); ok {
+			if v_46, ok := res.(ResultErr[A, E]); ok {
 				return func() Result[B, E] {
-					return Err[B, E](v.F0)
+					return Err[B, E](v_46.F0)
 				}()
 			} else {
 				panic("unreachable")
@@ -716,11 +852,11 @@ func resultAndThen[A any, B any, E any](res Result[A, E], fn func(A) Result[B, E
 		}
 	}()
 }
-func resultOrElse[A any, E any](res Result[A, E], defaultVal A) A {
+func ResultOrElse[A any, E any](res Result[A, E], defaultVal A) A {
 	return func() A {
-		if v, ok := res.(ResultOk[A, E]); ok {
+		if v_47, ok := res.(ResultOk[A, E]); ok {
 			return func() A {
-				return v.F0
+				return v_47.F0
 			}()
 		} else {
 			if _, ok := res.(ResultErr[A, E]); ok {

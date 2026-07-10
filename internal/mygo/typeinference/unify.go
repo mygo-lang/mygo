@@ -2,6 +2,7 @@ package typeinference
 
 import (
 	"fmt"
+	"strings"
 )
 
 // Unify performs unification of two monotypes under the given substitution,
@@ -27,6 +28,9 @@ func Unify(t1, t2 MonoType, s Subst) (Subst, error) {
 			return bindVar(t2.ID, t1, s)
 		case TCon:
 			if t2.Name == "Any" || t2.Name == "any" {
+				return s, nil
+			}
+			if isNumericConName(t1.Name) && isNumericConName(t2.Name) {
 				return s, nil
 			}
 			if t1.Name != t2.Name || len(t1.Args) != len(t2.Args) {
@@ -95,6 +99,16 @@ func Unify(t1, t2 MonoType, s Subst) (Subst, error) {
 	}
 
 	return nil, fmt.Errorf("unexpected unification: %s vs %s", t1, t2)
+}
+
+func isNumericConName(name string) bool {
+	switch strings.TrimSpace(name) {
+	case "Int", "Int8", "Int16", "Int32", "Int64", "UInt", "UInt8", "UInt16", "UInt32", "UInt64", "Float32", "Float64",
+		"int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64", "float32", "float64":
+		return true
+	default:
+		return false
+	}
 }
 
 // bindVar binds a type variable to a type, performing an occurs check first.

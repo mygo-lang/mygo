@@ -20,6 +20,7 @@ type parser struct {
 	currentNameLine              int
 	currentNameCol               int
 	currentType                  TypeExpr
+	currentAnnotType             TypeExpr
 	currentTypeLine              int
 	currentTypeCol               int
 	currentTypeParams            []string
@@ -41,6 +42,8 @@ type parser struct {
 	currentCallCalleeStack       []ast.Expr
 	currentArgsStack             [][]ast.Expr
 	currentSliceElemsStack       [][]ast.Expr
+	currentStructBaseStack       []ast.Expr
+	currentStructFieldsStack     [][]ast.StructLitField
 	currentTupleElemsStack       [][]ast.Expr
 	currentTupleTypeElemsStack   [][]ast.TypeExpr
 	currentMapKey                ast.Expr
@@ -52,11 +55,17 @@ type parser struct {
 	currentIfCond                ast.Expr
 	currentIfThen                ast.Expr
 	currentIfElse                ast.Expr
+	currentIfCondStack           []ast.Expr
+	currentIfThenStack           []ast.Expr
+	currentIfElseStack           []ast.Expr
 	currentWhileCond             ast.Expr
 	currentWhileBody             ast.Expr
 	currentSwitchTarget          ast.Expr
+	currentSwitchTargetStack      []ast.Expr
 	currentSwitchCases           []ast.SwitchCase
+	currentSwitchCasesStack      [][]ast.SwitchCase
 	currentPattern               ast.Pattern
+	currentPatternStack          []ast.Pattern
 	currentPatternArgs           []string
 	currentPatternElemsStack     [][]ast.Pattern
 	currentPatternElems          []ast.Pattern

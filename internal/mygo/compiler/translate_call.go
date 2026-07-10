@@ -39,10 +39,26 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 				return code, typ, nil
 			}
 		}
+		if field.Field == "value" && len(n.Args) == 0 {
+			baseCode, baseType, err := g.translateExpr(field.Expr, ctx, "")
+			if err != nil {
+				return nil, "", err
+			}
+			trimmed := strings.TrimSpace(baseType)
+			if strings.HasPrefix(trimmed, "Ref[") && strings.HasSuffix(trimmed, "]") {
+				return jen.Op("*").Add(baseCode), strings.TrimSuffix(strings.TrimPrefix(trimmed, "Ref["), "]"), nil
+			}
+			if strings.HasPrefix(trimmed, "*") {
+				return jen.Op("*").Add(baseCode), strings.TrimPrefix(trimmed, "*"), nil
+			}
+		}
 		if code, typ, ok, err := g.translateGoMethodCall(field.Expr, field.Field, n.Args, ctx, expected); err != nil {
 			return nil, "", err
 		} else if ok {
 			return code, typ, nil
+		}
+		if helper, typ, ok := g.translateTypeclassCall(field.Field, append([]Expr{field.Expr}, n.Args...), ctx, expected); ok {
+			return helper, typ, nil
 		}
 		// Handle method calls on impl types (e.g., self.isSome() inside an impl block).
 		if ctx.currentImpl != "" && ctx.implTypeKey != "" {
@@ -91,7 +107,11 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 				}
 				argCodes = append(argCodes, code)
 			}
-			best := typeclassBindingBest(bindings)
+			receiverType := g.hmExprType(field.Expr)
+			best, ok := typeclassBindingForReceiver(bindings, receiverType)
+			if !ok {
+				best = typeclassBindingBest(bindings)
+			}
 			funcName, ok := ctx.constraintFuncs[field.Field]
 			if !ok {
 				_, ok = g.interfaceByMethod[field.Field]
@@ -109,6 +129,9 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 		}
 	}
 	if id, ok := n.Callee.(*IdentExpr); ok {
+		if code, typ, ok := g.translatePreludeCall(id.Name, n.Args, ctx, expected); ok {
+			return code, typ, nil
+		}
 		if st := g.pkg.Structs[id.Name]; st != nil && len(n.Args) == len(st.Fields) && len(st.Fields) > 0 && strings.HasPrefix(st.Fields[0].Name, "F") {
 			typeName := sanitizeIdent(id.Name)
 			var args []jen.Code
@@ -124,6 +147,70 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 				dict[jen.Id(fmt.Sprintf("F%d", i))] = arg
 			}
 			return jen.Id(typeName).Lit(dict), typeName, nil
+		}
+		if g.pkg.Funcs[id.Name] != nil {
+			fn := g.pkg.Funcs[id.Name]
+			var args []jen.Code
+			var argTypes []string
+			for _, a := range n.Args {
+				code, _, err := g.translateExpr(a, ctx, "")
+				if err != nil {
+					return nil, "", err
+				}
+				args = append(args, code)
+				_, typ, err := g.translateExpr(a, ctx, "")
+				if err != nil {
+					return nil, "", err
+				}
+				argTypes = append(argTypes, typ)
+			}
+			subst := inferFuncTypeArgs(fn, argTypes, expected, ctx.typeParams)
+			callee := jen.Id(sanitizeIdent(id.Name))
+			if len(fn.TypeParams) > 0 && len(subst) == len(fn.TypeParams) {
+				typeArgCodes := make([]jen.Code, 0, len(fn.TypeParams))
+				for _, tp := range fn.TypeParams {
+					typeArgCodes = append(typeArgCodes, jen.Id(subst[tp]))
+				}
+				callee = bracketArgs(callee, typeArgCodes)
+			}
+			for _, c := range fn.Using {
+				iface := g.pkg.Interfaces[c.Name]
+				if iface == nil {
+					return nil, "", common.ErrorAtPos(c.Line, c.Column, "call %s: missing interface %s", fn.Name, c.Name)
+				}
+				if len(iface.TypeParams) != len(c.Args) {
+					return nil, "", common.ErrorAtPos(c.Line, c.Column, "call %s: type arity mismatch for %s", fn.Name, c.Name)
+				}
+				cTypeArgs := make([]string, 0, len(c.Args))
+				for _, arg := range c.Args {
+					cTypeArgs = append(cTypeArgs, typeString(arg, subst))
+				}
+				for _, m := range iface.Methods {
+					resolvedType := ""
+					if len(cTypeArgs) > 0 {
+						resolvedType = cTypeArgs[0]
+					}
+					if helper, ok := ctx.constraintFuncs[m.Name]; ok {
+						args = append(args, jen.Id(helper))
+						continue
+					}
+					if bindings, ok := ctx.typeclassMethods[m.Name]; ok && len(bindings) > 0 {
+						best := typeclassBindingBest(bindings)
+						if best.DictExpr != "" {
+							args = append(args, jen.Id(best.DictExpr))
+						} else {
+							args = append(args, jen.Id(helperFuncName(m.Name, typeKeyFromType(resolvedType))))
+						}
+						continue
+					}
+					args = append(args, jen.Id(helperFuncName(m.Name, typeKeyFromType(resolvedType))))
+				}
+			}
+			retType := myGoTypeString(fn.Ret, nil)
+			if len(subst) > 0 {
+				retType = typeStringReturn(fn.Ret, subst)
+			}
+			return callee.Call(args...), retType, nil
 		}
 		if typ, ok := ctx.locals[id.Name]; ok && typ == "any" {
 			if code, ret, ok, err := g.translateAnyFuncCall(id.Name, n.Args, ctx); err != nil {
@@ -157,75 +244,6 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 				args = append(args, code)
 			}
 			return jen.Id(sanitizeIdent(id.Name)).Call(args...), funcReturnType(typ), nil
-		}
-		if g.pkg.Funcs[id.Name] != nil {
-			fn := g.pkg.Funcs[id.Name]
-			var args []jen.Code
-			var argTypes []string
-			for _, a := range n.Args {
-				code, _, err := g.translateExpr(a, ctx, "")
-				if err != nil {
-					return nil, "", err
-				}
-				args = append(args, code)
-				_, typ, err := g.translateExpr(a, ctx, "")
-				if err != nil {
-					return nil, "", err
-				}
-				argTypes = append(argTypes, typ)
-			}
-			subst := inferFuncTypeArgs(fn, argTypes, expected, ctx.typeParams)
-			callee := jen.Id(sanitizeIdent(id.Name))
-			if len(fn.TypeParams) > 0 && len(subst) == len(fn.TypeParams) {
-				typeArgCodes := make([]jen.Code, 0, len(fn.TypeParams))
-				for _, tp := range fn.TypeParams {
-					typeArgCodes = append(typeArgCodes, jen.Id(subst[tp]))
-				}
-				callee = bracketArgs(callee, typeArgCodes)
-			}
-			// Auto-resolve using constraints at call site.
-			// Resolution order: lexical scope → package-level impls.
-			for _, c := range fn.Using {
-				iface := g.pkg.Interfaces[c.Name]
-				if iface == nil {
-					return nil, "", common.ErrorAtPos(c.Line, c.Column, "call %s: missing interface %s", fn.Name, c.Name)
-				}
-				if len(iface.TypeParams) != len(c.Args) {
-					return nil, "", common.ErrorAtPos(c.Line, c.Column, "call %s: type arity mismatch for %s", fn.Name, c.Name)
-				}
-				cTypeArgs := make([]string, 0, len(c.Args))
-				for _, arg := range c.Args {
-					cTypeArgs = append(cTypeArgs, typeString(arg, subst))
-				}
-				for _, m := range iface.Methods {
-					resolvedType := ""
-					if len(cTypeArgs) > 0 {
-						resolvedType = cTypeArgs[0]
-					}
-					// 1. Lexical scope: check if caller has a matching constraint function.
-					if helper, ok := ctx.constraintFuncs[m.Name]; ok {
-						args = append(args, jen.Id(helper))
-						continue
-					}
-					// 2. Lexical scope: check if caller's typeclassMethods provide a binding.
-					if bindings, ok := ctx.typeclassMethods[m.Name]; ok && len(bindings) > 0 {
-						best := typeclassBindingBest(bindings)
-						if best.DictExpr != "" {
-							args = append(args, jen.Id(best.DictExpr))
-						} else {
-							args = append(args, jen.Id(helperFuncName(m.Name, typeKeyFromType(resolvedType))))
-						}
-						continue
-					}
-					// 3. Package-level: use the helper function for this type.
-					args = append(args, jen.Id(helperFuncName(m.Name, typeKeyFromType(resolvedType))))
-				}
-			}
-			retType := g.goReturnType(fn.Ret, ctx.typeParams)
-			if len(subst) > 0 {
-				retType = typeStringReturn(fn.Ret, subst)
-			}
-			return callee.Call(args...), retType, nil
 		}
 		if enumName, ok := g.variantByName[id.Name]; ok {
 			return g.translateEnumConstructor(enumName, id.Name, n.Args, ctx, expected)
@@ -267,8 +285,10 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 			return jen.Id("callAny").Call(callArgs...), "any", nil
 		}
 	}
-	// Fallback: treat callee as an identifier
-	return jen.Id("unknown").Call(), "", nil
+	// Fallback: do not generate a bogus call. Surface a hard error instead so
+	// we can fix the missing translation path at the source.
+	line, col := common.NodePos(n)
+	return nil, "", common.ErrorAtPos(line, col, "unsupported call expression %#v", n.Callee)
 }
 
 func (g *generator) translateRefNewCall(args []Expr, ctx *exprCtx, expected string) (jen.Code, string, error) {
@@ -286,6 +306,15 @@ func (g *generator) translateRefNewCall(args []Expr, ctx *exprCtx, expected stri
 	code, typ, err := g.translateExpr(args[0], ctx, innerExpected)
 	if err != nil {
 		return nil, "", err
+	}
+
+	// If the expression is a non-addressable function call, use a temp variable
+	if _, ok := args[0].(*CallExpr); ok {
+		tmp := g.bindLocal(ctx, "__ref_tmp", typ, false)
+		return jen.Func().Params().Id("*"+typ).Block(
+			jen.Id(tmp).Op(":=").Add(code),
+			jen.Return(jen.Op("&").Id(tmp)),
+		).Call(), "*" + typ, nil
 	}
 
 	if typ != "" {
@@ -363,6 +392,12 @@ func (g *generator) translateGoSelectorCall(alias, name string, args []Expr, ctx
 		retType := fmt.Sprintf("Result[%s, %s]", valueType, okType)
 		return call, retType, true, nil
 	}
+	if len(sig.ret) == 1 {
+		return call, sig.ret[0], true, nil
+	}
+	if len(sig.ret) > 1 {
+		return call, "(" + strings.Join(sig.ret, ", ") + ")", true, nil
+	}
 	return call, "", true, nil
 }
 
@@ -371,8 +406,26 @@ func (g *generator) translateGoMethodCall(base Expr, name string, args []Expr, c
 	if err != nil {
 		return nil, "", false, err
 	}
+	if name == "len" && len(args) == 0 {
+		trimmed := strings.TrimSpace(baseType)
+		if strings.HasPrefix(trimmed, "Slice[") || strings.HasPrefix(trimmed, "Map[") || strings.HasPrefix(trimmed, "Set[") || strings.HasPrefix(trimmed, "[]") {
+			return jen.Len(baseCode), "Int", true, nil
+		}
+	}
+
+	// Built-in container type methods (Map, Slice)
+	if code, typ, ok, err := g.translateContainerMethod(baseCode, baseType, name, args, ctx, expected); err != nil {
+		return nil, "", false, err
+	} else if ok {
+		return code, typ, true, nil
+	}
+
 	methodSig, ok := g.findGoMethodSig(baseType, name)
 	if !ok {
+		baseTypeName := strings.TrimSpace(baseType)
+		if idx := strings.Index(baseTypeName, "["); idx >= 0 {
+			baseTypeName = baseTypeName[:idx]
+		}
 		return nil, "", false, nil
 	}
 	argCodes := make([]jen.Code, 0, len(args))
@@ -422,4 +475,168 @@ func (g *generator) translateGoMethodCall(base Expr, name string, args []Expr, c
 		return call, retType, true, nil
 	}
 	return call, goMethodReturnType(methodSig.ret), true, nil
+}
+
+// translateContainerMethod handles built-in method calls on container types
+// (Map, Slice) that are lowered to Go native types. These are not real Go methods
+// but are syntactic sugar in MyGO.
+func (g *generator) translateContainerMethod(baseCode jen.Code, baseType, name string, args []Expr, ctx *exprCtx, expected string) (jen.Code, string, bool, error) {
+	trimmed := strings.TrimSpace(baseType)
+
+	// --- Map[K, V] or map[K]V ---
+	var mapValType string
+	isMap := false
+	if strings.HasPrefix(trimmed, "Map[") && strings.HasSuffix(trimmed, "]") {
+		inner := strings.TrimSuffix(strings.TrimPrefix(trimmed, "Map["), "]")
+		parts := splitTopLevelArgs(inner)
+		if len(parts) == 2 {
+			mapValType = parts[1]
+			isMap = true
+		}
+	} else if strings.HasPrefix(trimmed, "map[") {
+		endBracket := strings.Index(trimmed, "]")
+		if endBracket > 4 {
+			mapValType = strings.TrimSpace(trimmed[endBracket+1:])
+			isMap = true
+		}
+	}
+	if isMap {
+		switch name {
+		case "Set":
+			if len(args) != 2 {
+				return nil, "", false, common.ErrorAtPos(nodeLineFromExprSlice(args), nodeColFromExprSlice(args), "Map.Set expects 2 args, got %d", len(args))
+			}
+			keyCode, _, err := g.translateExpr(args[0], ctx, "")
+			if err != nil {
+				return nil, "", false, err
+			}
+			valCode, _, err := g.translateExpr(args[1], ctx, "")
+			if err != nil {
+				return nil, "", false, err
+			}
+			return baseCode.(*jen.Statement).Index(keyCode).Op("=").Add(valCode), "", true, nil
+
+		case "Get":
+			if len(args) != 1 {
+				return nil, "", false, common.ErrorAtPos(nodeLineFromExprSlice(args), nodeColFromExprSlice(args), "Map.Get expects 1 arg, got %d", len(args))
+			}
+			keyCode, _, err := g.translateExpr(args[0], ctx, "")
+			if err != nil {
+				return nil, "", false, err
+			}
+			valGoType := lowerMyGoTypeString(mapValType)
+			// IIFE: func() Option[V] { if v, ok := m[k]; ok { return Some(v) }; return None[V]() }()
+			fn := jen.Func().Params().Add(jen.Id("Option").Types(jen.Id(valGoType)))
+			fn = fn.Block(
+				jen.If(
+					jen.List(jen.Id("v"), jen.Id("ok")).Op(":=").Add(baseCode.(*jen.Statement).Index(keyCode)),
+					jen.Id("ok"),
+				).Block(
+					jen.Return(jen.Id("Some").Types(jen.Id(valGoType)).Call(jen.Id("v"))),
+				),
+				jen.Return(jen.Id("None").Types(jen.Id(valGoType)).Call()),
+			)
+			return fn.Call(), "Option[" + mapValType + "]", true, nil
+
+		case "Delete":
+			if len(args) != 1 {
+				return nil, "", false, common.ErrorAtPos(nodeLineFromExprSlice(args), nodeColFromExprSlice(args), "Map.Delete expects 1 arg, got %d", len(args))
+			}
+			keyCode, _, err := g.translateExpr(args[0], ctx, "")
+			if err != nil {
+				return nil, "", false, err
+			}
+			return jen.Id("delete").Call(baseCode, keyCode), "", true, nil
+		}
+	}
+
+	// --- Slice[A] or []A ---
+	var sliceElemType string
+	isSlice := false
+	if strings.HasPrefix(trimmed, "Slice[") && strings.HasSuffix(trimmed, "]") {
+		sliceElemType = strings.TrimSuffix(strings.TrimPrefix(trimmed, "Slice["), "]")
+		isSlice = true
+	} else if strings.HasPrefix(trimmed, "[]") {
+		sliceElemType = strings.TrimSpace(trimmed[2:])
+		isSlice = true
+	}
+	if isSlice {
+		switch name {
+		case "Len":
+			return jen.Len(baseCode), "Int", true, nil
+		case "Get":
+			if len(args) != 1 {
+				return nil, "", false, common.ErrorAtPos(nodeLineFromExprSlice(args), nodeColFromExprSlice(args), "Slice.Get expects 1 arg, got %d", len(args))
+			}
+			idxCode, _, err := g.translateExpr(args[0], ctx, "")
+			if err != nil {
+				return nil, "", false, err
+			}
+			return baseCode.(*jen.Statement).Index(idxCode), sliceElemType, true, nil
+		case "Set":
+			if len(args) != 2 {
+				return nil, "", false, common.ErrorAtPos(nodeLineFromExprSlice(args), nodeColFromExprSlice(args), "Slice.Set expects 2 args, got %d", len(args))
+			}
+			idxCode, _, err := g.translateExpr(args[0], ctx, "")
+			if err != nil {
+				return nil, "", false, err
+			}
+			valCode, _, err := g.translateExpr(args[1], ctx, "")
+			if err != nil {
+				return nil, "", false, err
+			}
+			return baseCode.(*jen.Statement).Index(idxCode).Op("=").Add(valCode), "", true, nil
+		}
+	}
+
+	return nil, "", false, nil
+}
+
+func (g *generator) translatePreludeCall(name string, args []Expr, ctx *exprCtx, expected string) (jen.Code, string, bool) {
+	if g == nil || g.pkg == nil {
+		return nil, "", false
+	}
+	switch name {
+	case "Some", "None", "Ok", "Err":
+		var argCodes []jen.Code
+		for _, a := range args {
+			code, _, err := g.translateExpr(a, ctx, "")
+			if err != nil {
+				return nil, "", false
+			}
+			argCodes = append(argCodes, code)
+		}
+		candidate := strings.TrimSpace(expected)
+		if candidate == "" {
+			candidate = strings.TrimSpace(ctx.retType)
+		}
+		var target *jen.Statement
+		switch name {
+		case "Some", "None":
+			if base, args := splitTypeArgs(candidate); base == "Option" && len(args) == 1 {
+				target = jen.Id(name + "[" + lowerMyGoTypeString(args[0]) + "]")
+			}
+		case "Ok", "Err":
+			if base, args := splitTypeArgs(candidate); base == "Result" && len(args) == 2 {
+				target = jen.Id(name + "[" + lowerMyGoTypeString(args[0]) + ", " + lowerMyGoTypeString(args[1]) + "]")
+			}
+		}
+		if target == nil {
+			target = jen.Id(name)
+		}
+		if g.pkg.Name != "prelude" {
+			switch name {
+			case "Some", "None":
+				if base, args := splitTypeArgs(candidate); base == "Option" && len(args) == 1 {
+					target = jen.Id(name + "[" + lowerMyGoTypeString(args[0]) + "]")
+				}
+			case "Ok", "Err":
+				if base, args := splitTypeArgs(candidate); base == "Result" && len(args) == 2 {
+					target = jen.Id(name + "[" + lowerMyGoTypeString(args[0]) + ", " + lowerMyGoTypeString(args[1]) + "]")
+				}
+			}
+		}
+		return target.Call(argCodes...), expected, true
+	}
+	return nil, "", false
 }

@@ -40,7 +40,12 @@ func (g *generator) findGoMethodSig(baseType, name string) (*goFuncSig, bool) {
 }
 
 func (g *generator) goTypeCompatible(expected, actual string) bool {
-	if strings.TrimSpace(expected) == "any" {
+	expected = strings.TrimSpace(expected)
+	actual = strings.TrimSpace(actual)
+	if normalizeMyGoPrimitiveType(expected) == "Any" || strings.TrimSpace(expected) == "any" {
+		return true
+	}
+	if myGoPrimitiveCompatible(expected, actual) {
 		return true
 	}
 	expectedType, ok := goTypeFromString(expected)
@@ -99,6 +104,79 @@ func (g *generator) goTypeCompatible(expected, actual string) bool {
 		return true
 	}
 	return false
+}
+
+func myGoPrimitiveCompatible(expected, actual string) bool {
+	alias := func(s string) string {
+		switch strings.TrimSpace(s) {
+		case "String":
+			return "string"
+		case "Bool":
+			return "bool"
+		case "Int":
+			return "int"
+		case "Int8":
+			return "int8"
+		case "Int16":
+			return "int16"
+		case "Int32":
+			return "int32"
+		case "Int64":
+			return "int64"
+		case "UInt":
+			return "uint"
+		case "UInt8":
+			return "uint8"
+		case "UInt16":
+			return "uint16"
+		case "UInt32":
+			return "uint32"
+		case "UInt64":
+			return "uint64"
+		case "Float32":
+			return "float32"
+		case "Float64":
+			return "float64"
+		default:
+			return strings.TrimSpace(s)
+		}
+	}
+	return alias(expected) == alias(actual)
+}
+
+func normalizeMyGoPrimitiveType(name string) string {
+	switch strings.TrimSpace(name) {
+	case "String", "string":
+		return "String"
+	case "Bool", "bool":
+		return "Bool"
+	case "Int", "int":
+		return "Int"
+	case "Int8", "int8":
+		return "Int8"
+	case "Int16", "int16":
+		return "Int16"
+	case "Int32", "int32":
+		return "Int32"
+	case "Int64", "int64":
+		return "Int64"
+	case "UInt", "uint":
+		return "UInt"
+	case "UInt8", "uint8":
+		return "UInt8"
+	case "UInt16", "uint16":
+		return "UInt16"
+	case "UInt32", "uint32":
+		return "UInt32"
+	case "UInt64", "uint64":
+		return "UInt64"
+	case "Float32", "float32":
+		return "Float32"
+	case "Float64", "float64":
+		return "Float64"
+	default:
+		return strings.TrimSpace(name)
+	}
 }
 
 func (g *generator) resolveGoNamedType(name string) (types.Type, bool) {
@@ -344,14 +422,14 @@ func (g *generator) lookupFieldType(baseType, field string) string {
 	}
 	for _, f := range st.Fields {
 		if f.Name == field {
-			return typeString(f.Type, subst)
+			return myGoTypeString(f.Type, subst)
 		}
 	}
 	for _, f := range st.Fields {
 		if f.Name != "embed" {
 			continue
 		}
-		embeddedType := typeString(f.Type, subst)
+		embeddedType := myGoTypeString(f.Type, subst)
 		if t := g.lookupFieldType(embeddedType, field); t != "" {
 			return t
 		}
@@ -423,6 +501,24 @@ func (g *generator) goType(t TypeExpr, typeParams map[string]struct{}) string {
 			if len(tt.Args) == 1 {
 				return "map[" + g.goType(tt.Args[0], typeParams) + "]struct{}"
 			}
+		case "Option":
+			if len(tt.Args) == 1 {
+				return g.preludeTypeName("Option") + "[" + g.goType(tt.Args[0], typeParams) + "]"
+			}
+		case "Result":
+			if len(tt.Args) == 2 {
+				return g.preludeTypeName("Result") + "[" + g.goType(tt.Args[0], typeParams) + ", " + g.goType(tt.Args[1], typeParams) + "]"
+			}
+		}
+		if name := g.preludeTypeName(tt.Name); name != tt.Name {
+			if len(tt.Args) == 0 {
+				return name
+			}
+			args := make([]string, 0, len(tt.Args))
+			for _, a := range tt.Args {
+				args = append(args, g.goType(a, typeParams))
+			}
+			return name + "[" + strings.Join(args, ", ") + "]"
 		}
 		if len(tt.Args) == 0 {
 			return tt.Name
@@ -568,12 +664,22 @@ func (g *generator) hktArgType(t TypeExpr, hktSet, typeParams map[string]struct{
 			}
 		case "Option":
 			if len(tt.Args) == 1 {
-				return "Option[" + g.hktArgType(tt.Args[0], hktSet, typeParams) + "]"
+				return g.preludeTypeName("Option") + "[" + g.hktArgType(tt.Args[0], hktSet, typeParams) + "]"
 			}
 		case "Result":
 			if len(tt.Args) == 2 {
-				return "Result[" + g.hktArgType(tt.Args[0], hktSet, typeParams) + ", " + g.hktArgType(tt.Args[1], hktSet, typeParams) + "]"
+				return g.preludeTypeName("Result") + "[" + g.hktArgType(tt.Args[0], hktSet, typeParams) + ", " + g.hktArgType(tt.Args[1], hktSet, typeParams) + "]"
 			}
+		}
+		if name := g.preludeTypeName(tt.Name); name != tt.Name {
+			if len(tt.Args) == 0 {
+				return name
+			}
+			args := make([]string, 0, len(tt.Args))
+			for _, a := range tt.Args {
+				args = append(args, g.hktArgType(a, hktSet, typeParams))
+			}
+			return name + "[" + strings.Join(args, ", ") + "]"
 		}
 		if len(tt.Args) == 0 {
 			return tt.Name
@@ -603,6 +709,101 @@ func (g *generator) goHKTReturnType(t TypeExpr, hktSet, typeParams map[string]st
 		return ""
 	}
 	return g.goHKTType(t, hktSet, typeParams)
+}
+
+func (g *generator) preludeTypeName(name string) string {
+	return name
+}
+
+func lowerMyGoTypeString(typ string) string {
+	typ = strings.TrimSpace(typ)
+	if typ == "" {
+		return typ
+	}
+	if strings.HasPrefix(typ, "Ref[") && strings.HasSuffix(typ, "]") {
+		return "*" + lowerMyGoTypeString(strings.TrimSuffix(strings.TrimPrefix(typ, "Ref["), "]"))
+	}
+	if strings.HasPrefix(typ, "Slice[") && strings.HasSuffix(typ, "]") {
+		return "[]" + lowerMyGoTypeString(strings.TrimSuffix(strings.TrimPrefix(typ, "Slice["), "]"))
+	}
+	if strings.HasPrefix(typ, "Map[") && strings.HasSuffix(typ, "]") {
+		inner := strings.TrimSuffix(strings.TrimPrefix(typ, "Map["), "]")
+		parts := splitTopLevelArgs(inner)
+		if len(parts) == 2 {
+			return "map[" + lowerMyGoTypeString(parts[0]) + "]" + lowerMyGoTypeString(parts[1])
+		}
+	}
+	if strings.HasPrefix(typ, "Set[") && strings.HasSuffix(typ, "]") {
+		inner := strings.TrimSuffix(strings.TrimPrefix(typ, "Set["), "]")
+		return "map[" + lowerMyGoTypeString(inner) + "]struct{}"
+	}
+	if idx := strings.Index(typ, "["); idx >= 0 && strings.HasSuffix(typ, "]") {
+		head := typ[:idx]
+		inner := typ[idx+1 : len(typ)-1]
+		parts := splitTopLevelArgs(inner)
+		for i, p := range parts {
+			parts[i] = lowerMyGoTypeString(p)
+		}
+		return head + "[" + strings.Join(parts, ", ") + "]"
+	}
+	switch typ {
+	case "Unit":
+		return "struct{}"
+	case "Any":
+		return "any"
+	case "String":
+		return "string"
+	case "Bool":
+		return "bool"
+	case "Int":
+		return "int"
+	case "Int8":
+		return "int8"
+	case "UInt8":
+		return "uint8"
+	case "Int16":
+		return "int16"
+	case "UInt16":
+		return "uint16"
+	case "Int32":
+		return "int32"
+	case "UInt32":
+		return "uint32"
+	case "Int64":
+		return "int64"
+	case "UInt":
+		return "uint"
+	case "UInt64":
+		return "uint64"
+	case "Float32":
+		return "float32"
+	case "Float64":
+		return "float64"
+	}
+	return typ
+}
+
+func splitTopLevelArgs(s string) []string {
+	var parts []string
+	depth := 0
+	start := 0
+	for i, r := range s {
+		switch r {
+		case '[', '(':
+			depth++
+		case ']', ')':
+			depth--
+		case ',':
+			if depth == 0 {
+				parts = append(parts, strings.TrimSpace(s[start:i]))
+				start = i + 1
+			}
+		}
+	}
+	if start <= len(s) {
+		parts = append(parts, strings.TrimSpace(s[start:]))
+	}
+	return parts
 }
 
 func (g *generator) constraintTypeArgs(args []TypeExpr, typeParams map[string]struct{}) string {
@@ -778,7 +979,23 @@ func sanitizeIdent(s string) string {
 	if b.Len() == 0 {
 		return "_"
 	}
-	return b.String()
+	result := b.String()
+	if isGoKeyword(result) {
+		result += "_"
+	}
+	return result
+}
+
+// isGoKeyword reports whether the given identifier is a Go keyword.
+func isGoKeyword(s string) bool {
+	switch s {
+	case "break", "case", "chan", "const", "continue", "default", "defer",
+		"else", "fallthrough", "for", "func", "go", "goto", "if", "import",
+		"interface", "map", "package", "range", "return", "select", "struct",
+		"switch", "type", "var":
+		return true
+	}
+	return false
 }
 
 func variantGoTypeName(enumName, variant string) string {
@@ -889,7 +1106,7 @@ func splitTopLevel(s string, sep rune) []string {
 func methodReturnType(iface *InterfaceDecl, method string) string {
 	for _, m := range iface.Methods {
 		if m.Name == method {
-			return typeStringReturn(m.Ret, nil)
+			return myGoTypeString(m.Ret, nil)
 		}
 	}
 	return "any"
@@ -1086,6 +1303,43 @@ func typeString(t TypeExpr, subst map[string]string) string {
 		return "func(" + strings.Join(params, ", ") + ") " + ret
 	default:
 		return "any"
+	}
+}
+
+func myGoTypeString(t TypeExpr, subst map[string]string) string {
+	switch tt := t.(type) {
+	case *NamedType:
+		if subst != nil {
+			if repl, ok := subst[tt.Name]; ok && len(tt.Args) == 0 {
+				return repl
+			}
+		}
+		if len(tt.Args) == 0 {
+			return tt.Name
+		}
+		args := make([]string, 0, len(tt.Args))
+		for _, a := range tt.Args {
+			args = append(args, myGoTypeString(a, subst))
+		}
+		return tt.Name + "[" + strings.Join(args, ", ") + "]"
+	case *FuncType:
+		params := make([]string, 0, len(tt.Params))
+		for _, p := range tt.Params {
+			params = append(params, myGoTypeString(p, subst))
+		}
+		ret := myGoTypeString(tt.Ret, subst)
+		if ret == "" {
+			return "func(" + strings.Join(params, ", ") + ")"
+		}
+		return "func(" + strings.Join(params, ", ") + ") -> " + ret
+	case *TupleType:
+		parts := make([]string, 0, len(tt.Elems))
+		for _, e := range tt.Elems {
+			parts = append(parts, myGoTypeString(e, subst))
+		}
+		return "(" + strings.Join(parts, ", ") + ")"
+	default:
+		return typeString(t, subst)
 	}
 }
 

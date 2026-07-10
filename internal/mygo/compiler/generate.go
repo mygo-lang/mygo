@@ -2,8 +2,10 @@ package compiler
 
 import (
 	"bytes"
+	"go/types"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -13,16 +15,21 @@ import (
 	"github.com/mygo-lang/mygo/internal/mygo/typeinference"
 )
 
+var returnFuncLineBreakRE = regexp.MustCompile(`(?m)^([ \t]*)return[ \t]*\n([ \t]*)func\(`)
+var genericSpaceBeforeBracketRE = regexp.MustCompile(`([A-Za-z_][A-Za-z0-9_\.]*) \[`)
+var genericSpaceBeforeParenRE = regexp.MustCompile(`\] \(`)
+
 func renderFile(file *jen.File) (string, error) {
 	out := &bytes.Buffer{}
 	if err := file.Render(out); err != nil {
-		os.WriteFile("/tmp/mygo_raw_output.txt", out.Bytes(), 0o644)
-		var rawBuf bytes.Buffer
-		_ = file.Render(&rawBuf)
-		os.WriteFile("/tmp/mygo_raw_output2.txt", out.Bytes(), 0o644)
+		os.WriteFile("/tmp/mygo_raw.txt", out.Bytes(), 0o644)
 		return "", err
 	}
-	return out.String(), nil
+	src := out.String()
+	src = returnFuncLineBreakRE.ReplaceAllString(src, "${1}return func(")
+	src = genericSpaceBeforeBracketRE.ReplaceAllString(src, `${1}[`)
+	src = genericSpaceBeforeParenRE.ReplaceAllString(src, "](")
+	return src, nil
 }
 
 func skipSourceFile(name string) bool {
@@ -37,6 +44,9 @@ func sourceToGenName(sourceFile string) string {
 
 func genImportCode(file *jen.File, needsCallAny bool, p *Package) {
 	imports := p.sortedImports()
+	if p.Name != "prelude" && !p.NoPrelude {
+		imports = append(imports, importSpec{Path: "github.com/mygo-lang/mygo/prelude", Alias: "."})
+	}
 	if needsCallAny && !hasImportPath(imports, "reflect") {
 		imports = append(imports, importSpec{Path: "reflect"})
 		sort.Slice(imports, func(i, j int) bool {
@@ -56,8 +66,51 @@ func genImportCode(file *jen.File, needsCallAny bool, p *Package) {
 			file.ImportName(path, "")
 			continue
 		}
+		if alias == "." {
+			// Skip: Jennifer can't render import . "path" correctly.
+			// We inject these manually in renderFile.
+			continue
+		}
 		file.ImportName(path, alias)
 	}
+	if p.Name != "prelude" && !p.NoPrelude {
+		file.Var().Id("_").Op("=").Id("None").Types(jen.Any())
+	}
+	for _, imp := range imports {
+		path := importPathForGo(imp.Path)
+		if path == "" || path == "github.com/mygo-lang/mygo/prelude" {
+			continue
+		}
+		alias := imp.Alias
+		if alias == "" {
+			alias = importAliasForPath(path)
+		}
+		if alias == "" {
+			continue
+		}
+		if keep := goImportKeepAlive(alias, path); keep != nil {
+			file.Var().Id("_").Op("=").Add(keep)
+		}
+	}
+}
+
+func goImportKeepAlive(alias, path string) jen.Code {
+	sigs, err := loadGoPackageSigs(path)
+	if err != nil || sigs == nil || sigs.pkg == nil {
+		return nil
+	}
+	scope := sigs.pkg.Scope()
+	for _, name := range scope.Names() {
+		if !isExportedGoIdent(name) {
+			continue
+		}
+		obj := scope.Lookup(name)
+		switch obj.(type) {
+		case *types.Func, *types.Const, *types.Var:
+			return jen.Qual(path, name)
+		}
+	}
+	return nil
 }
 
 func sourceFileOf(decl Decl) string {
@@ -96,9 +149,9 @@ func (p *Package) GenerateFiles() (map[string]string, error) {
 	g := &generator{
 		pkg: p, importAliases: p.ImportAliases,
 		interfaceByMethod: map[string]string{},
-		variantByName: map[string]string{},
-		goSigCache: map[string]*goPackageSigs{},
-		typedInfo: typedInfo,
+		variantByName:     map[string]string{},
+		goSigCache:        map[string]*goPackageSigs{},
+		typedInfo:         typedInfo,
 	}
 	for name, iface := range p.Interfaces {
 		for _, m := range iface.Methods {
@@ -297,6 +350,21 @@ func (p *Package) GenerateFiles() (map[string]string, error) {
 		out, err := renderFile(file)
 		if err != nil {
 			return nil, err
+		}
+		// Inject the dot import for prelude if needed.
+		if p.Name != "prelude" && !p.NoPrelude {
+			// Find the import block and insert . "prelude_path".
+			// The import block looks like:
+			//   import (
+			//   "bufio"
+			//   ...
+			//   )
+			preludeImport := "\t. \"github.com/mygo-lang/mygo/prelude\"\n"
+			// Insert after the first "import (\n" line.
+			importMarker := "import (\n"
+			if idx := strings.Index(out, importMarker); idx >= 0 {
+				out = out[:idx+len(importMarker)] + preludeImport + out[idx+len(importMarker):]
+			}
 		}
 		result[sourceToGenName(sourceFile)] = out
 	}

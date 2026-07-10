@@ -222,7 +222,7 @@ func (g *generator) translateExprRaw(e Expr, ctx *exprCtx, expected string) (jen
 			return base.(*jen.Statement).Dot(n.Field), "any", nil
 		}
 		fieldType := g.lookupFieldType(baseType, n.Field)
-		return base.(*jen.Statement).Dot(exportName(n.Field)), fieldType, nil
+		return base.(*jen.Statement).Dot(n.Field), fieldType, nil
 	case *CallExpr:
 		code, typ, err := g.translateCall(n, ctx, expected)
 		if err != nil {
@@ -313,7 +313,7 @@ func (g *generator) translateExprRaw(e Expr, ctx *exprCtx, expected string) (jen
 		}
 		return jen.Struct(structFields).Values(fields), "struct { " + strings.Join(parts, "; ") + " }", nil
 	case *UnitLitExpr:
-		return jen.Empty(), "", nil
+		return jen.Empty(), "Unit", nil
 	case *GoExpr:
 		code, typ, err := g.translateGoExpr(n, ctx, expected)
 		if err != nil {
@@ -326,6 +326,22 @@ func (g *generator) translateExprRaw(e Expr, ctx *exprCtx, expected string) (jen
 }
 
 func (g *generator) ensureRelationAllowed(n *BinaryExpr, leftType, rightType string, ctx *exprCtx) error {
+	if leftType == "any" {
+		if id, ok := n.Left.(*IdentExpr); ok {
+			if sourceType, ok := ctx.sourceTypes[id.Name]; ok && sourceType != "" && sourceType != "any" {
+				leftType = sourceType
+			}
+		}
+	}
+	if rightType == "any" {
+		if id, ok := n.Right.(*IdentExpr); ok {
+			if sourceType, ok := ctx.sourceTypes[id.Name]; ok && sourceType != "" && sourceType != "any" {
+				rightType = sourceType
+			}
+		}
+	}
+	leftType = normalizeMyGoPrimitiveType(leftType)
+	rightType = normalizeMyGoPrimitiveType(rightType)
 	if leftType != "" && rightType != "" && leftType != rightType {
 		return common.ErrorAtPos(n.Line, n.Column, "relation operator %q requires matching operand types, got %s and %s", n.Op, leftType, rightType)
 	}
@@ -350,9 +366,9 @@ func (g *generator) ensureRelationAllowed(n *BinaryExpr, leftType, rightType str
 
 func (g *generator) translateEqRelation(op string, left, right *jen.Statement, leftType, rightType string, ctx *exprCtx, expected string) (*jen.Statement, bool) {
 	_ = expected
-	typ := leftType
+	typ := normalizeMyGoPrimitiveType(leftType)
 	if typ == "" {
-		typ = rightType
+		typ = normalizeMyGoPrimitiveType(rightType)
 	}
 	if typ == "any" || g.isTypeParamName(typ, ctx) {
 		if fn := ctx.constraintFuncs["equals"]; fn != "" {
@@ -382,6 +398,7 @@ func (g *generator) hasEqSupport(typ string, ctx *exprCtx) bool {
 	if typ == "" {
 		return false
 	}
+	typ = normalizeMyGoPrimitiveType(typ)
 	if g.isTypeParamName(typ, ctx) {
 		return ctx != nil && ctx.constraintFuncs["equals"] != ""
 	}
@@ -409,7 +426,7 @@ func (g *generator) hasEqSupport(typ string, ctx *exprCtx) bool {
 }
 
 func (g *generator) translateSliceLit(n *SliceLitExpr, ctx *exprCtx, expected string) (jen.Code, string, error) {
-	// 1. If `expected` is a Go slice type (starts with "[]"), try to infer element type from it.
+	// 1. If `expected` is a MyGO or Go slice type, try to infer element type from it.
 	// 2. Infer element type from actual elements.
 	// 3. If both exist, unify them and error on mismatch.
 	// 4. If neither, error.
@@ -417,6 +434,8 @@ func (g *generator) translateSliceLit(n *SliceLitExpr, ctx *exprCtx, expected st
 	var fromExpected string
 	if strings.HasPrefix(expected, "[]") {
 		fromExpected = expected[2:]
+	} else if elem, ok := splitMyGoSliceExpected(expected); ok {
+		fromExpected = elem
 	}
 
 	// Infer element type from each element expression
@@ -482,11 +501,34 @@ func (g *generator) translateSliceLit(n *SliceLitExpr, ctx *exprCtx, expected st
 	return jen.Index().Add(jenTypeExpr(&NamedType{Name: elemType})).Values(parts...), "[]" + g.goType(&NamedType{Name: elemType}, nil), nil
 }
 
+func splitMyGoSliceExpected(expected string) (string, bool) {
+	expected = strings.TrimSpace(expected)
+	if !strings.HasPrefix(expected, "Slice[") || !strings.HasSuffix(expected, "]") {
+		return "", false
+	}
+	inner := strings.TrimSpace(expected[len("Slice[") : len(expected)-1])
+	if inner == "" {
+		return "", false
+	}
+	return inner, true
+}
+
 func (g *generator) translateMapLit(
 	n *MapLitExpr,
 	ctx *exprCtx,
 	expected string,
 ) (jen.Code, string, error) {
+	if len(n.Pairs) == 0 {
+		keyType, valType, ok := splitMyGoMapExpected(expected)
+		if !ok || keyType == "" || valType == "" {
+			return nil, "", common.ErrorAtPos(n.Line, n.Column, "empty map literal requires a known map type")
+		}
+		keyGoType := g.goType(parseTypeName(keyType), nil)
+		valGoType := g.goType(parseTypeName(valType), nil)
+		mapType := "map[" + keyGoType + "]" + valGoType
+		return jen.Map(jen.Id(keyGoType)).Add(jen.Id(valGoType)).Values(), mapType, nil
+	}
+
 	// Strategy:
 	// 1. Parse `expected` (Go type like "map[string]int") for key/value types.
 	// 2. Infer key/value types from each pair's expressions.
@@ -649,8 +691,8 @@ func (g *generator) translateSetLit(n *SetLitExpr, ctx *exprCtx, expected string
 }
 
 func (g *generator) translateEmptyMapLit(ctx *exprCtx, expected string, line, col int) (jen.Code, string, error) {
-	// expected is like "map[string]int"
-	keyType, valType, ok := splitMapExpected(expected)
+	// expected is like "Map[String, Int]" or "Map[String, Ref[Document]]"
+	keyType, valType, ok := splitMyGoMapExpected(expected)
 	if !ok {
 		keyType = ""
 		valType = ""
@@ -658,10 +700,78 @@ func (g *generator) translateEmptyMapLit(ctx *exprCtx, expected string, line, co
 	if keyType == "" || valType == "" {
 		return nil, "", common.ErrorAtPos(line, col, "empty map literal requires a known map type")
 	}
-	keyGoType := g.goType(&NamedType{Name: keyType}, nil)
-	valGoType := g.goType(&NamedType{Name: valType}, nil)
+	keyGoType := g.goType(parseTypeName(keyType), nil)
+	valGoType := g.goType(parseTypeName(valType), nil)
 	mapType := "map[" + keyGoType + "]" + valGoType
 	return jen.Map(jen.Id(keyGoType)).Add(jen.Id(valGoType)).Values(), mapType, nil
+}
+
+// parseTypeName parses a type string like "Ref[Document]" or "Map[String, Ref[Document]]"
+// into a proper TypeExpr tree so that goType can lower type aliases (Ref, Slice, Map, etc.).
+func parseTypeName(name string) TypeExpr {
+	name = strings.TrimSpace(name)
+	depth := 0
+	start := 0
+	var args []string
+	baseName := name
+	for i := 0; i < len(name); i++ {
+		switch name[i] {
+		case '[':
+			if depth == 0 {
+				baseName = name[:i]
+				start = i + 1
+			}
+			depth++
+		case ']':
+			depth--
+			if depth == 0 {
+				args = append(args, name[start:i])
+			}
+		case ',':
+			if depth == 1 {
+				args = append(args, name[start:i])
+				start = i + 1
+			}
+		}
+	}
+	if len(args) == 0 {
+		return &NamedType{Name: baseName}
+	}
+	parsedArgs := make([]TypeExpr, len(args))
+	for i, a := range args {
+		parsedArgs[i] = parseTypeName(a)
+	}
+	return &NamedType{Name: baseName, Args: parsedArgs}
+}
+
+func splitMyGoMapExpected(expected string) (string, string, bool) {
+	expected = strings.TrimSpace(expected)
+	if !strings.HasPrefix(expected, "Map[") || !strings.HasSuffix(expected, "]") {
+		return "", "", false
+	}
+	inner := expected[4 : len(expected)-1]
+	depth := 0
+	for i := 0; i < len(inner); i++ {
+		switch inner[i] {
+		case '[', '(', '<':
+			depth++
+		case ']', ')', '>':
+			if depth == 0 {
+				return "", "", false
+			}
+			depth--
+		case ',':
+			if depth == 0 {
+				key := strings.TrimSpace(inner[:i])
+				val := strings.TrimSpace(inner[i+1:])
+				if key == "" || val == "" {
+					return "", "", false
+				}
+				return key, val, true
+			}
+		}
+	}
+	return "", "", false
 }
 
 // splitTopLevelSingle splits a top-level comma-separated string into exactly two parts.

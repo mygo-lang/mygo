@@ -498,7 +498,7 @@ let_decl
 			Line: $1.line,
 			Column: $1.col,
 			Name: $2.lit,
-			Type: p.currentType,
+			Type: p.currentAnnotType,
 			Value: p.currentExpr,
 		})
 	}
@@ -512,7 +512,7 @@ var_decl
 			Column: $1.col,
 			Mutable: true,
 			Name: $2.lit,
-			Type: p.currentType,
+			Type: p.currentAnnotType,
 			Value: p.currentExpr,
 		})
 	}
@@ -521,9 +521,12 @@ var_decl
 opt_type_annot
 	: /* empty */ {
 		p := yylex.(*parser)
-		p.currentType = nil
+		p.currentAnnotType = nil
 	}
-	| COLON type
+	| COLON type {
+		p := yylex.(*parser)
+		p.currentAnnotType = p.currentType
+	}
 	;
 
 opt_using_clause
@@ -1022,35 +1025,83 @@ postfix_expr
 		p := yylex.(*parser)
 		p.currentExpr = &ast.FieldExpr{Line: $2.line, Column: $2.col, Expr: p.currentExpr, Field: $3.lit}
 	}
-	| postfix_expr TYPELBRACK maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE {
+	| postfix_expr TYPELBRACK maybe_type_list RBRACK {
 		p := yylex.(*parser)
-		if id, ok := p.currentExpr.(*ast.IdentExpr); ok {
+		p.currentStructBaseStack = append(p.currentStructBaseStack, p.currentExpr)
+		p.currentStructFieldsStack = append(p.currentStructFieldsStack, p.currentStructFields)
+		p.currentStructFields = nil
+	}
+	LBRACE maybe_struct_fields RBRACE {
+		p := yylex.(*parser)
+		if len(p.currentStructBaseStack) > 0 {
+			idx := len(p.currentStructBaseStack) - 1
+			base := p.currentStructBaseStack[idx]
+			p.currentStructBaseStack = p.currentStructBaseStack[:idx]
+			if id, ok := base.(*ast.IdentExpr); ok {
 			p.currentExpr = &ast.StructLitExpr{Line: $2.line, Column: $2.col, TypeName: id.Name, TypeArgs: append([]ast.TypeExpr(nil), p.currentStructTypeArgs...), Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
+			}
+		}
+		if len(p.currentStructFieldsStack) > 0 {
+			idx := len(p.currentStructFieldsStack) - 1
+			p.currentStructFields = p.currentStructFieldsStack[idx]
+			p.currentStructFieldsStack = p.currentStructFieldsStack[:idx]
+		} else {
+			p.currentStructFields = nil
 		}
 		p.currentStructTypeArgs = nil
-		p.currentStructFields = nil
 		p.expectStructTypeArgs = false
 	}
 	| postfix_expr LBRACK {
 		p := yylex.(*parser)
 		p.expectStructTypeArgs = true
+		p.currentStructBaseStack = append(p.currentStructBaseStack, p.currentExpr)
 		p.currentStructTypeArgs = nil
+		p.currentStructFieldsStack = append(p.currentStructFieldsStack, p.currentStructFields)
+		p.currentStructFields = nil
 	}
 	maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE {
 		p := yylex.(*parser)
-		if id, ok := p.currentExpr.(*ast.IdentExpr); ok {
+		if len(p.currentStructBaseStack) > 0 {
+			idx := len(p.currentStructBaseStack) - 1
+			base := p.currentStructBaseStack[idx]
+			p.currentStructBaseStack = p.currentStructBaseStack[:idx]
+			if id, ok := base.(*ast.IdentExpr); ok {
 			p.currentExpr = &ast.StructLitExpr{Line: $2.line, Column: $2.col, TypeName: id.Name, TypeArgs: append([]ast.TypeExpr(nil), p.currentStructTypeArgs...), Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
+			}
+		}
+		if len(p.currentStructFieldsStack) > 0 {
+			idx := len(p.currentStructFieldsStack) - 1
+			p.currentStructFields = p.currentStructFieldsStack[idx]
+			p.currentStructFieldsStack = p.currentStructFieldsStack[:idx]
+		} else {
+			p.currentStructFields = nil
 		}
 		p.currentStructTypeArgs = nil
-		p.currentStructFields = nil
 		p.expectStructTypeArgs = false
 	}
-	| postfix_expr LBRACE maybe_struct_fields RBRACE {
+	| postfix_expr LBRACE {
 		p := yylex.(*parser)
-		if id, ok := p.currentExpr.(*ast.IdentExpr); ok {
-			p.currentExpr = &ast.StructLitExpr{Line: $2.line, Column: $2.col, TypeName: id.Name, Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
-		}
+		p.currentStructBaseStack = append(p.currentStructBaseStack, p.currentExpr)
+		p.currentStructFieldsStack = append(p.currentStructFieldsStack, p.currentStructFields)
 		p.currentStructFields = nil
+	}
+	maybe_struct_fields RBRACE {
+		p := yylex.(*parser)
+		if len(p.currentStructBaseStack) > 0 {
+			idx := len(p.currentStructBaseStack) - 1
+			base := p.currentStructBaseStack[idx]
+			p.currentStructBaseStack = p.currentStructBaseStack[:idx]
+			if id, ok := base.(*ast.IdentExpr); ok {
+			p.currentExpr = &ast.StructLitExpr{Line: $2.line, Column: $2.col, TypeName: id.Name, Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
+			}
+		}
+		if len(p.currentStructFieldsStack) > 0 {
+			idx := len(p.currentStructFieldsStack) - 1
+			p.currentStructFields = p.currentStructFieldsStack[idx]
+			p.currentStructFieldsStack = p.currentStructFieldsStack[:idx]
+		} else {
+			p.currentStructFields = nil
+		}
 		p.expectStructTypeArgs = false
 	}
 	;
@@ -1230,6 +1281,8 @@ collection_lit
 		p := yylex.(*parser)
 		if p.currentCollectionHasPair {
 			p.currentExpr = &ast.MapLitExpr{Line: $1.line, Column: $1.col, Pairs: append([]ast.MapLitPair(nil), p.currentMapEntries...)}
+		} else if len(p.currentSetElems) == 0 {
+			p.currentExpr = &ast.MapLitExpr{Line: $1.line, Column: $1.col}
 		} else {
 			p.currentExpr = &ast.SetLitExpr{Line: $1.line, Col: $1.col, Elems: append([]ast.Expr(nil), p.currentSetElems...)}
 		}
@@ -1305,6 +1358,7 @@ collection_entry
 if_expr
 	: IF expr {
 		p := yylex.(*parser)
+		p.currentIfCondStack = append(p.currentIfCondStack, p.currentIfCond)
 		p.currentIfCond = p.currentExpr
 	}
 	THEN expr {
@@ -1315,12 +1369,19 @@ if_expr
 		p := yylex.(*parser)
 		p.currentIfElse = p.currentExpr
 		p.currentExpr = &ast.IfExpr{Line: $1.line, Column: $1.col, Cond: p.currentIfCond, Then: p.currentIfThen, Else: p.currentIfElse}
-		p.currentIfCond = nil
+		if len(p.currentIfCondStack) > 0 {
+			idx := len(p.currentIfCondStack) - 1
+			p.currentIfCond = p.currentIfCondStack[idx]
+			p.currentIfCondStack = p.currentIfCondStack[:idx]
+		} else {
+			p.currentIfCond = nil
+		}
 		p.currentIfThen = nil
 		p.currentIfElse = nil
 	}
 	| IF expr {
 		p := yylex.(*parser)
+		p.currentIfCondStack = append(p.currentIfCondStack, p.currentIfCond)
 		p.currentIfCond = p.currentExpr
 	}
 	ARROW expr {
@@ -1331,12 +1392,19 @@ if_expr
 		p := yylex.(*parser)
 		p.currentIfElse = p.currentExpr
 		p.currentExpr = &ast.IfExpr{Line: $1.line, Column: $1.col, Cond: p.currentIfCond, Then: p.currentIfThen, Else: p.currentIfElse}
-		p.currentIfCond = nil
+		if len(p.currentIfCondStack) > 0 {
+			idx := len(p.currentIfCondStack) - 1
+			p.currentIfCond = p.currentIfCondStack[idx]
+			p.currentIfCondStack = p.currentIfCondStack[:idx]
+		} else {
+			p.currentIfCond = nil
+		}
 		p.currentIfThen = nil
 		p.currentIfElse = nil
 	}
 	| IF expr NEWLINE {
 		p := yylex.(*parser)
+		p.currentIfCondStack = append(p.currentIfCondStack, p.currentIfCond)
 		p.currentIfCond = p.currentExpr
 	}
 	opt_newlines
@@ -1348,7 +1416,13 @@ if_expr
 		p := yylex.(*parser)
 		p.currentIfElse = p.currentExpr
 		p.currentExpr = &ast.IfExpr{Line: $1.line, Column: $1.col, Cond: p.currentIfCond, Then: p.currentIfThen, Else: p.currentIfElse}
-		p.currentIfCond = nil
+		if len(p.currentIfCondStack) > 0 {
+			idx := len(p.currentIfCondStack) - 1
+			p.currentIfCond = p.currentIfCondStack[idx]
+			p.currentIfCondStack = p.currentIfCondStack[:idx]
+		} else {
+			p.currentIfCond = nil
+		}
 		p.currentIfThen = nil
 		p.currentIfElse = nil
 	}
@@ -1372,14 +1446,38 @@ while_expr
 switch_expr
 	: SWITCH expr {
 		p := yylex.(*parser)
+		p.currentPatternStack = append(p.currentPatternStack, p.currentPattern)
+		p.currentSwitchTargetStack = append(p.currentSwitchTargetStack, p.currentSwitchTarget)
+		p.currentSwitchCasesStack = append(p.currentSwitchCasesStack, p.currentSwitchCases)
 		p.currentSwitchTarget = p.currentExpr
+		p.currentSwitchCases = nil
 	}
 	opt_newlines
 	switch_case_list opt_newlines END {
 		p := yylex.(*parser)
-		p.currentExpr = &ast.SwitchExpr{Line: $1.line, Column: $1.col, Target: p.currentSwitchTarget, Cases: append([]ast.SwitchCase(nil), p.currentSwitchCases...)}
-		p.currentSwitchTarget = nil
-		p.currentSwitchCases = nil
+		cases := append([]ast.SwitchCase(nil), p.currentSwitchCases...)
+		p.currentExpr = &ast.SwitchExpr{Line: $1.line, Column: $1.col, Target: p.currentSwitchTarget, Cases: cases}
+		if len(p.currentSwitchTargetStack) > 0 {
+			idx := len(p.currentSwitchTargetStack) - 1
+			p.currentSwitchTarget = p.currentSwitchTargetStack[idx]
+			p.currentSwitchTargetStack = p.currentSwitchTargetStack[:idx]
+		} else {
+			p.currentSwitchTarget = nil
+		}
+		if len(p.currentSwitchCasesStack) > 0 {
+			idx := len(p.currentSwitchCasesStack) - 1
+			p.currentSwitchCases = p.currentSwitchCasesStack[idx]
+			p.currentSwitchCasesStack = p.currentSwitchCasesStack[:idx]
+		} else {
+			p.currentSwitchCases = nil
+		}
+		if len(p.currentPatternStack) > 0 {
+			idx := len(p.currentPatternStack) - 1
+			p.currentPattern = p.currentPatternStack[idx]
+			p.currentPatternStack = p.currentPatternStack[:idx]
+		} else {
+			p.currentPattern = nil
+		}
 	}
 	;
 
@@ -1419,6 +1517,14 @@ pattern
 		} else {
 			p.currentPattern = &ast.VariantPattern{Line: $1.line, Column: $1.col, Name: $1.lit}
 		}
+	}
+	| STRING {
+		p := yylex.(*parser)
+		p.currentPattern = &ast.LiteralPattern{Line: $1.line, Column: $1.col, Kind: "string", Value: $1.lit}
+	}
+	| NUMBER {
+		p := yylex.(*parser)
+		p.currentPattern = &ast.LiteralPattern{Line: $1.line, Column: $1.col, Kind: "number", Value: $1.lit}
 	}
 	| LPAREN {
 		p := yylex.(*parser)
@@ -1534,16 +1640,19 @@ stmt
 binding_stmt
 	: LET IDENT opt_type_annot '=' expr {
 		p := yylex.(*parser)
-		p.currentStmt = &ast.LetStmt{Name: $2.lit, Mutable: false, Type: p.currentType, Value: p.currentExpr}
+		p.currentStmt = &ast.LetStmt{Name: $2.lit, Mutable: false, Type: p.currentAnnotType, Value: p.currentExpr}
+		p.currentExpr = &ast.UnitLitExpr{Line: $2.line, Column: $2.col}
 	}
 	| LET bind_pattern opt_type_annot '=' expr {
 		p := yylex.(*parser)
-		p.currentStmt = &ast.LetStmt{Bind: p.currentBindPattern, Mutable: false, Type: p.currentType, Value: p.currentExpr}
+		p.currentStmt = &ast.LetStmt{Bind: p.currentBindPattern, Mutable: false, Type: p.currentAnnotType, Value: p.currentExpr}
 		p.currentBindPattern = nil
+		p.currentExpr = &ast.UnitLitExpr{Line: $1.line, Column: $1.col}
 	}
 	| VAR IDENT opt_type_annot '=' expr {
 		p := yylex.(*parser)
-		p.currentStmt = &ast.LetStmt{Name: $2.lit, Mutable: true, Type: p.currentType, Value: p.currentExpr}
+		p.currentStmt = &ast.LetStmt{Name: $2.lit, Mutable: true, Type: p.currentAnnotType, Value: p.currentExpr}
+		p.currentExpr = &ast.UnitLitExpr{Line: $2.line, Column: $2.col}
 	}
 	;
 
@@ -1586,6 +1695,7 @@ assign_stmt
 	: IDENT '=' expr {
 		p := yylex.(*parser)
 		p.currentStmt = &ast.AssignStmt{Name: $1.lit, Value: p.currentExpr}
+		p.currentExpr = &ast.UnitLitExpr{Line: $1.line, Column: $1.col}
 	}
 	;
 
@@ -1593,10 +1703,12 @@ return_stmt
 	: RETURN {
 		p := yylex.(*parser)
 		p.currentStmt = &ast.ReturnStmt{}
+		p.currentExpr = &ast.UnitLitExpr{Line: $1.line, Column: $1.col}
 	}
 	| RETURN expr {
 		p := yylex.(*parser)
 		p.currentStmt = &ast.ReturnStmt{Value: p.currentExpr}
+		p.currentExpr = &ast.UnitLitExpr{Line: $1.line, Column: $1.col}
 	}
 	;
 

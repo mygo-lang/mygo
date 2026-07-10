@@ -8,23 +8,48 @@ import (
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 )
 
-// genJenIds converts string param names to jen.Id(items) for use with bracketArgs.
+// genJenIds converts string param names to properly-typed jen.Code items
+// for use with Types(). Handles pointer types (e.g., "*Document" → Op("*").Id("Document")).
 func genJenIds(params []string) []jen.Code {
 	items := make([]jen.Code, len(params))
 	for i, p := range params {
-		items[i] = jen.Id(p)
+		trimmed := strings.TrimSpace(p)
+		if strings.HasPrefix(trimmed, "*") {
+			inner := strings.TrimPrefix(trimmed, "*")
+			items[i] = jen.Op("*").Add(jen.Id(inner))
+		} else {
+			items[i] = jen.Id(trimmed)
+		}
 	}
 	return items
 }
 
-// bracketArgs appends [item1, item2, ...] to stmt using Custom to avoid
-// space-separated bracket tokens in the Statement.
+// bracketArgs appends generic type arguments using Jennifer's native Types()
+// rendering so we get valid Go syntax like `Foo[A, B]`.
 func bracketArgs(stmt *jen.Statement, args []jen.Code) *jen.Statement {
 	if len(args) == 0 {
 		return stmt
 	}
-	opts := jen.Options{Open: "[", Close: "]", Separator: ", "}
-	return stmt.Custom(opts, args...)
+	return stmt.Types(args...)
+}
+
+func preludeJenTypeName(name string) *jen.Statement {
+	if name == "" {
+		return jen.Id(name)
+	}
+	switch name {
+	case "Option", "Result", "IEnumerable", "Show", "Eq", "IOption", "List", "HKTType", "HKT1", "HKT2", "HKT":
+		return jen.Id(name)
+	default:
+		return jen.Id(name)
+	}
+}
+
+func typeWithArgs(base *jen.Statement, args ...jen.Code) *jen.Statement {
+	if len(args) == 0 {
+		return base
+	}
+	return base.Types(args...)
 }
 
 func jenTypeExpr(t TypeExpr) jen.Code {
@@ -65,15 +90,29 @@ func jenTypeExpr(t TypeExpr) jen.Code {
 			if len(tt.Args) == 1 {
 				return jen.Op("*").Add(jenTypeExpr(tt.Args[0]))
 			}
+		case "Slice":
+			if len(tt.Args) == 1 {
+				return jen.Index().Add(jenTypeExpr(tt.Args[0]))
+			}
+		case "Map":
+			if len(tt.Args) == 2 {
+				return jen.Map(jenTypeExpr(tt.Args[0])).Add(jenTypeExpr(tt.Args[1]))
+			}
+		case "Set":
+			if len(tt.Args) == 1 {
+				return jen.Map(jenTypeExpr(tt.Args[0])).Struct()
+			}
+		case "Any":
+			return jen.Id("any")
 		}
 		if len(tt.Args) == 0 {
-			return jen.Id(tt.Name)
+			return preludeJenTypeName(tt.Name)
 		}
 		args := make([]jen.Code, 0, len(tt.Args))
 		for _, a := range tt.Args {
 			args = append(args, jenTypeExpr(a))
 		}
-		return bracketArgs(jen.Id(tt.Name), args)
+		return bracketArgs(preludeJenTypeName(tt.Name), args)
 	case *FuncType:
 		params := make([]jen.Code, 0, len(tt.Params))
 		for _, p := range tt.Params {
@@ -151,15 +190,29 @@ func jenHKTTypeExpr(t TypeExpr, hktSet map[string]struct{}) jen.Code {
 			if len(tt.Args) == 1 {
 				return jen.Op("*").Add(jenHKTTypeExpr(tt.Args[0], hktSet))
 			}
+		case "Slice":
+			if len(tt.Args) == 1 {
+				return jen.Index().Add(jenHKTTypeExpr(tt.Args[0], hktSet))
+			}
+		case "Map":
+			if len(tt.Args) == 2 {
+				return jen.Map(jenHKTTypeExpr(tt.Args[0], hktSet)).Add(jenHKTTypeExpr(tt.Args[1], hktSet))
+			}
+		case "Set":
+			if len(tt.Args) == 1 {
+				return jen.Map(jenHKTTypeExpr(tt.Args[0], hktSet)).Struct()
+			}
+		case "Any":
+			return jen.Id("any")
 		}
 		if len(tt.Args) == 0 {
-			return jen.Id(tt.Name)
+			return preludeJenTypeName(tt.Name)
 		}
 		args := make([]jen.Code, 0, len(tt.Args))
 		for _, a := range tt.Args {
 			args = append(args, jenHKTTypeExpr(a, hktSet))
 		}
-		return bracketArgs(jen.Id(tt.Name), args)
+		return bracketArgs(preludeJenTypeName(tt.Name), args)
 	case *FuncType:
 		params := make([]jen.Code, 0, len(tt.Params))
 		for _, p := range tt.Params {
@@ -187,12 +240,11 @@ func addTypeParams(stmt *jen.Statement, params []string) *jen.Statement {
 	if len(params) == 0 {
 		return stmt
 	}
-	opts := jen.Options{Open: "[", Close: "]", Separator: ", "}
 	items := make([]jen.Code, 0, len(params))
 	for _, p := range params {
 		items = append(items, jen.Id(p).Id("any"))
 	}
-	return stmt.Custom(opts, items...)
+	return stmt.Types(items...)
 }
 
 // typeParamJenItems returns a *jen.Statement for type parameter constraints.
@@ -202,12 +254,12 @@ func typeParamJenItems(params []string) *jen.Statement {
 	if len(params) == 0 {
 		return nil
 	}
-	opts := jen.Options{Open: "[", Close: "]", Separator: ", "}
 	items := make([]jen.Code, 0, len(params))
 	for _, p := range params {
 		items = append(items, jen.Id(p).Id("any"))
 	}
-	return jen.Custom(opts, items...)
+	stmt := &jen.Statement{}
+	return stmt.Types(items...)
 }
 
 func jenTypeParams(params []string) *jen.Statement {
@@ -218,19 +270,19 @@ func jenTypeArgList(params []string) *jen.Statement {
 	if len(params) == 0 {
 		return nil
 	}
-	opts := jen.Options{Open: "[", Close: "]", Separator: ", "}
 	items := make([]jen.Code, 0, len(params))
 	for _, p := range params {
 		items = append(items, jen.Id(p))
 	}
-	return jen.Custom(opts, items...)
+	stmt := &jen.Statement{}
+	return stmt.Types(items...)
 }
 
 func jenFieldName(name string) string {
 	if name == "embed" {
 		return ""
 	}
-	return exportName(name)
+	return sanitizeIdent(name)
 }
 
 func jenJoinParts(parts ...jen.Code) []jen.Code {

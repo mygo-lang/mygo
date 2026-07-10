@@ -194,13 +194,6 @@ func loadPackage(dir string, noPrelude bool) (*Package, error) {
 		pkgName = filepath.Base(dir)
 	}
 	pkg.Name = toPackageName(pkgName)
-	if !pkg.NoPrelude {
-		preludeDecls, err := loadPreludeDecls()
-		if err != nil {
-			return nil, err
-		}
-		pkg.Decls = append(pkg.Decls, preludeDecls...)
-	}
 	pkg.Decls = append(pkg.Decls, fileDecls...)
 	for _, decl := range pkg.Decls {
 		switch d := decl.(type) {

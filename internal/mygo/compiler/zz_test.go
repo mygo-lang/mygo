@@ -44,10 +44,10 @@ func TestCompilePrelude(t *testing.T) {
 		}
 	}
 
-	// Find the Option Enumerable impl and test genImpl
+	// Find the Option IEnumerable impl and test genImpl
 	var optionEnumImpl *ImplDecl
 	for _, impl := range pkg.Impls {
-		if impl.InterfaceName == "Enumerable" && impl.Type != nil {
+		if impl.InterfaceName == "IEnumerable" && impl.Type != nil {
 			if namedType, ok := impl.Type.(*NamedType); ok && namedType.Name == "Option" {
 				optionEnumImpl = impl
 				break
@@ -55,20 +55,40 @@ func TestCompilePrelude(t *testing.T) {
 		}
 	}
 	if optionEnumImpl == nil {
-		t.Fatal("Option Enumerable impl not found in prelude")
+		t.Fatal("Option IEnumerable impl not found in prelude")
 	}
 
 	code, err := g.genImpl(optionEnumImpl)
 	if err != nil {
-		t.Fatalf("genImpl(Option Enumerable): %v", err)
+		t.Fatalf("genImpl(Option IEnumerable): %v", err)
 	}
-	t.Logf("Option Enumerable impl generated: %d items", len(code))
+	t.Logf("Option IEnumerable impl generated: %d items", len(code))
 
-	// Also test optionFlatMap (standalone function)
-	fnDecl := pkg.Funcs["optionFlatMap"]
+	// Also test OptionFlatMap (standalone function)
+	fnDecl := pkg.Funcs["OptionFlatMap"]
 	code2, err := g.genFunc(fnDecl)
 	if err != nil {
-		t.Fatalf("genFunc(optionFlatMap): %v", err)
+		t.Fatalf("genFunc(OptionFlatMap): %v", err)
 	}
-	t.Logf("optionFlatMap generated: %T", code2)
+	t.Logf("OptionFlatMap generated: %T", code2)
+}
+
+func TestLoadPreludeDoesNotDuplicatePreludeDecls(t *testing.T) {
+	withPrelude, err := loadPackage("../../../prelude", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	withoutPrelude, err := loadPackage("../../../prelude", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(withPrelude.Decls) != len(withoutPrelude.Decls) {
+		t.Fatalf("loadPackage(prelude, false) added extra decls: got %d, want %d", len(withPrelude.Decls), len(withoutPrelude.Decls))
+	}
+	if len(withPrelude.Funcs) != len(withoutPrelude.Funcs) {
+		t.Fatalf("loadPackage(prelude, false) added extra funcs: got %d, want %d", len(withPrelude.Funcs), len(withoutPrelude.Funcs))
+	}
+	if len(withPrelude.Impls) != len(withoutPrelude.Impls) {
+		t.Fatalf("loadPackage(prelude, false) added extra impls: got %d, want %d", len(withPrelude.Impls), len(withoutPrelude.Impls))
+	}
 }

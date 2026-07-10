@@ -122,6 +122,67 @@ end
 	}
 }
 
+func TestInlineGoOptionAutoWraps(t *testing.T) {
+	src := `package main
+func maybe(n: Int) -> Option[Ref[Int]]
+  go[Option[Ref[Int]]] {
+    code: "func() *int { return &{x} }()"
+    in x = n
+  }
+end
+`
+	goSrc := compileInlineGoTestPackage(t, src)
+	if !strings.Contains(goSrc, "Some[*int]") {
+		t.Fatalf("generated source missing Option wrapping:\n%s", goSrc)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "inline.go", goSrc, 0); err != nil {
+		t.Fatalf("generated source is not valid Go: %v\n%s", err, goSrc)
+	}
+}
+
+func TestInlineGoRefAutoWrapsAsOption(t *testing.T) {
+	src := `package main
+func maybe(ok: Bool, n: Int) -> Option[Ref[Int]]
+  go[Ref[Int]] {
+    code: "func() *int { if !{ok} { return nil }; return &{x} }()"
+    in ok = ok
+    in x = n
+  }
+end
+`
+	goSrc := compileInlineGoTestPackage(t, src)
+	for _, want := range []string{
+		"__mygo_go_ref := func() *int",
+		"if __mygo_go_ref == nil",
+		"return None[*int]()",
+		"return Some[*int](__mygo_go_ref)",
+	} {
+		if !strings.Contains(goSrc, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, goSrc)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "inline.go", goSrc, 0); err != nil {
+		t.Fatalf("generated source is not valid Go: %v\n%s", err, goSrc)
+	}
+}
+
+func TestInlineGoResultAutoWraps(t *testing.T) {
+	src := `package main
+func writeMessage() -> Result[(), String]
+  go[Result[(), String]] {
+    code: "func() error { return nil }()"
+  }
+end
+`
+	goSrc := compileInlineGoTestPackage(t, src)
+	if !strings.Contains(goSrc, "Ok[struct{}, string]") {
+		t.Fatalf("generated source missing Result wrapping:\n%s", goSrc)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "inline.go", goSrc, 0); err != nil {
+		t.Fatalf("generated source is not valid Go: %v\n%s", err, goSrc)
+	}
+}
+
 func writeInlineGoTestPackage(t *testing.T, src string) string {
 	t.Helper()
 	dir := t.TempDir()

@@ -126,7 +126,7 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 				if typ == "" {
 					return nil, "", common.ErrorAtPos(s.Line, s.Column, "tuple destructuring requires a tuple value")
 				}
-				if !strings.HasPrefix(strings.TrimSpace(typ), "struct {") {
+				if !isTupleLikeTypeString(typ) {
 					return nil, "", common.ErrorAtPos(s.Line, s.Column, "tuple destructuring requires a tuple value")
 				}
 				tupleTmp := g.bindLocal(child, "__tuple", typ, s.Mutable)
@@ -136,7 +136,7 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 				}
 				continue
 			}
-			code, typ, err := g.translateExpr(s.Value, child, g.goType(s.Type, child.typeParams))
+			code, typ, err := g.translateExpr(s.Value, child, myGoTypeString(s.Type, nil))
 			if err != nil {
 				return nil, "", err
 			}
@@ -194,6 +194,11 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 	// Wrap all collected statements in a single Block and immediately call it.
 	b = b.Block(stmtCodes...).Call()
 	return b, expected, nil
+}
+
+func isTupleLikeTypeString(typ string) bool {
+	typ = strings.TrimSpace(typ)
+	return strings.HasPrefix(typ, "struct {") || (strings.HasPrefix(typ, "(") && strings.HasSuffix(typ, ")"))
 }
 
 func (g *generator) emitBindPattern(stmtCodes *[]jen.Code, ctx *exprCtx, source string, pat BindPattern, mutable bool) error {
@@ -254,7 +259,7 @@ func (g *generator) translateFuncLit(n *FuncLitExpr, outer *exprCtx) (jen.Code, 
 	if retType == "" {
 		b = b.Block(body)
 	} else {
-		b = b.Block(jen.Return(body))
+		b = b.Block(jen.Return().Add(body))
 	}
 	_ = bodyType
 	return b, retType, nil
@@ -286,14 +291,31 @@ func (g *generator) translateIf(n *IfExpr, ctx *exprCtx, expected string) (jen.C
 			resultType = elseType
 		}
 	}
-	if resultType == "" {
-		return jen.If(cond).Block(thenCode).Else().Block(elseCode), "", nil
+	if resultType == "" || thenType == "" || elseType == "" {
+		// One or both branches are statement-like (e.g., break) or have
+		// incompatible types. Emit an if-else statement and ensure any
+		// value-producing branch is bound to _ instead of dangling.
+		thenStmt := thenCode
+		if thenType != "" {
+			thenStmt = jen.Id("_").Op("=").Add(thenCode)
+		}
+		elseStmt := elseCode
+		if elseType != "" {
+			elseStmt = jen.Id("_").Op("=").Add(elseCode)
+		}
+		return jen.If(cond).Block(thenStmt).Else().Block(elseStmt), "", nil
 	}
 	// Value-producing if expressions are wrapped so they can appear inside
 	// larger expressions.
 	fn := jen.Func().Params().Add(jenTypeExpr(&NamedType{Name: resultType}))
-	fn = fn.Block(jen.If(cond).Block(jen.Return(thenCode)).Else().Block(jen.Return(elseCode)))
+	fn = fn.Block(jen.If(cond).Block(jen.Return().Add(thenCode)).Else().Block(jen.Return().Add(elseCode)))
 	return fn.Call(), resultType, nil
+}
+
+type caseTranslation struct {
+	isVariant bool
+	ifStmt    *jen.Statement
+	elseBody  jen.Code
 }
 
 func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string) (jen.Code, string, error) {
@@ -302,10 +324,12 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 		return nil, "", err
 	}
 	enumName, enumArgs := splitTypeArgs(targetType)
-	enumDecl := g.pkg.Enums[enumName]
-	if enumDecl == nil {
-		return nil, "", common.ErrorAtPos(n.Line, n.Column, "switch target %q is not an enum", targetType)
+	enumName = strings.TrimPrefix(enumName, "prelude.")
+	for i := range enumArgs {
+		enumArgs[i] = lowerMyGoTypeString(enumArgs[i])
 	}
+	enumDecl := g.pkg.Enums[enumName]
+	isEnumSwitch := enumDecl != nil
 
 	// Classify: does the last case have a wildcard?
 	lastIsWildcard := false
@@ -313,14 +337,6 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 		if _, ok := n.Cases[len(n.Cases)-1].Pattern.(*WildcardPattern); ok {
 			lastIsWildcard = true
 		}
-	}
-
-	// Build each case into a translation function.
-	// We'll chain them from last to first to produce nested if-else.
-	type caseTranslation struct {
-		isVariant bool
-		ifStmt    *jen.Statement // non-nil for variant: if cond { body }
-		elseBody  jen.Code       // non-nil for wildcard: plain body
 	}
 
 	var trans []caseTranslation
@@ -341,11 +357,44 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 					bodyBlock = jen.Id("_").Op("=").Add(body)
 				}
 			} else {
-				bodyBlock = jen.Return(body)
+				bodyBlock = jen.Return().Add(body)
 			}
 			trans = append(trans, caseTranslation{isVariant: false, elseBody: bodyBlock})
 
+		case *LiteralPattern:
+			child := ctx.child()
+			litCode, _, err := g.translateExpr(&LiteralExpr{Kind: pat.Kind, Value: pat.Value}, child, "")
+			if err != nil {
+				return nil, "", err
+			}
+			body, bodyType, err := g.translateExpr(c.Body, child, expected)
+			if err != nil {
+				return nil, "", err
+			}
+			var bodyBlock jen.Code
+			if expected == "" {
+				if bodyType == "" {
+					bodyBlock = body
+				} else {
+					bodyBlock = jen.Id("_").Op("=").Add(body)
+				}
+			} else {
+				bodyBlock = jen.Return().Add(body)
+			}
+			trans = append(trans, caseTranslation{
+				isVariant: true,
+				ifStmt:    jen.If(jen.Empty().Add(targetCode).Op("==").Add(litCode)).Block(bodyBlock),
+			})
+
 		case *VariantPattern:
+			if !isEnumSwitch {
+				if transCase, ok := g.translatePreludeVariantCase(targetCode, targetType, enumName, enumArgs, pat, c.Body, ctx, expected); ok {
+					trans = append(trans, transCase)
+					continue
+				}
+				line, col := common.NodePos(pat)
+				return nil, "", common.ErrorAtPos(line, col, "variant pattern %q requires an enum switch target", pat.Name)
+			}
 			variant := g.findVariant(enumDecl, pat.Name)
 			if variant == nil {
 				return nil, "", common.ErrorAtPos(pat.Line, pat.Column, "unknown variant %s of %s", pat.Name, enumDecl.Name)
@@ -355,7 +404,10 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 			// Build the type assertion type: OptionSome or OptionSome[Int]
 			assertType := jen.Id(tname)
 			if len(enumArgs) > 0 {
-				assertType = bracketArgs(assertType, genJenIds(enumArgs))
+				// Build type args as a comma-separated string to avoid
+				// Jennifer spacing issues with * inside Types() + Parens().
+				typeArgStr := strings.Join(enumArgs, ", ")
+				assertType = bracketArgs(assertType, []jen.Code{jen.Id(typeArgStr)})
 			}
 
 			// Determine if any pattern args are used in the body
@@ -367,14 +419,20 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 				}
 			}
 
-			// Build condition: v, ok := target.(VariantType)  or just  _, ok
-			// Use Op(".").Parens() instead of Assert() to avoid extra spaces.
-			typeAssert := jen.Op(".").Parens(assertType)
+			// Build condition: v_N, ok := target.(VariantType)  or just  _, ok
 			var cond *jen.Statement
-			if hasBindings {
-				cond = jen.List(jen.Id("v"), jen.Id("ok")).Op(":=").Add(targetCode).Add(typeAssert)
+			var condParts string
+			if len(enumArgs) > 0 {
+				condParts = tname + "[" + strings.Join(enumArgs, ", ") + "]"
 			} else {
-				cond = jen.List(jen.Id("_"), jen.Id("ok")).Op(":=").Add(targetCode).Add(typeAssert)
+				condParts = tname
+			}
+			g.switchVarSeq++
+			varName := fmt.Sprintf("v_%d", g.switchVarSeq)
+			if hasBindings {
+				cond = jen.List(jen.Id(varName), jen.Id("ok")).Op(":=").Add(targetCode).Assert(jen.Id(condParts))
+			} else {
+				cond = jen.List(jen.Id("_"), jen.Id("ok")).Op(":=").Add(targetCode).Assert(jen.Id(condParts))
 			}
 
 			// Build bindings for the case body
@@ -386,7 +444,7 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 				if !exprUsesIdent(c.Body, arg) {
 					continue
 				}
-				child.bindings[arg] = fmt.Sprintf("v.F%d", i)
+				child.bindings[arg] = fmt.Sprintf("%s.F%d", varName, i)
 				child.locals[arg] = g.goType(variant.Fields[i].Type, nil)
 			}
 
@@ -402,7 +460,7 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 					bodyBlock = jen.Id("_").Op("=").Add(body)
 				}
 			} else {
-				bodyBlock = jen.Return(body)
+				bodyBlock = jen.Return().Add(body)
 			}
 
 			trans = append(trans, caseTranslation{
@@ -416,7 +474,7 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 				return nil, "", err
 			}
 			child := ctx.child()
-			if err := g.collectTuplePatternBindings(child, pat, fmt.Sprint(targetCode), enumDecl, enumArgs); err != nil {
+			if err := g.collectTuplePatternBindings(child, pat, fmt.Sprint(targetCode), targetType, enumDecl, enumArgs); err != nil {
 				return nil, "", err
 			}
 			body, bodyType, err := g.translateExpr(c.Body, child, expected)
@@ -431,7 +489,7 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 					bodyBlock = jen.Id("_").Op("=").Add(body)
 				}
 			} else {
-				bodyBlock = jen.Return(body)
+				bodyBlock = jen.Return().Add(body)
 			}
 			trans = append(trans, caseTranslation{
 				isVariant: true,
@@ -479,6 +537,64 @@ func (g *generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 	return expr, expected, nil
 }
 
+func (g *generator) translatePreludeVariantCase(targetCode jen.Code, targetType, enumName string, enumArgs []string, pat *VariantPattern, body Expr, ctx *exprCtx, expected string) (caseTranslation, bool) {
+	if enumName != "Option" && enumName != "Result" {
+		return caseTranslation{}, false
+	}
+	valid := false
+	switch enumName {
+	case "Option":
+		valid = pat.Name == "Some" || pat.Name == "None"
+	case "Result":
+		valid = pat.Name == "Ok" || pat.Name == "Err"
+	}
+	if !valid {
+		return caseTranslation{}, false
+	}
+	assertType := jen.Id(enumName + pat.Name)
+	if len(enumArgs) > 0 {
+		typeArgStr := strings.Join(enumArgs, ", ")
+		assertType = bracketArgs(assertType, []jen.Code{jen.Id(typeArgStr)})
+	}
+	hasBindings := false
+	for _, arg := range pat.Args {
+		if exprUsesIdent(body, arg) {
+			hasBindings = true
+			break
+		}
+	}
+	g.switchVarSeq++
+	varName := fmt.Sprintf("v_%d", g.switchVarSeq)
+	var cond *jen.Statement
+	if hasBindings {
+		cond = jen.List(jen.Id(varName), jen.Id("ok")).Op(":=").Add(targetCode).Assert(assertType)
+	} else {
+		cond = jen.List(jen.Id("_"), jen.Id("ok")).Op(":=").Add(targetCode).Assert(assertType)
+	}
+	child := ctx.child()
+	if len(pat.Args) > 0 && pat.Args[0] != "_" && hasBindings {
+		child.bindings[pat.Args[0]] = fmt.Sprintf("%s.F0", varName)
+		if len(enumArgs) > 0 {
+			child.locals[pat.Args[0]] = enumArgs[0]
+		}
+	}
+	bodyCode, bodyType, err := g.translateExpr(body, child, expected)
+	if err != nil {
+		return caseTranslation{}, true
+	}
+	var bodyBlock jen.Code
+	if expected == "" {
+		if bodyType == "" {
+			bodyBlock = bodyCode
+		} else {
+			bodyBlock = jen.Id("_").Op("=").Add(bodyCode)
+		}
+	} else {
+		bodyBlock = jen.Return().Add(bodyCode)
+	}
+	return caseTranslation{isVariant: true, ifStmt: jen.If(cond, jen.Id("ok")).Block(bodyBlock)}, true
+}
+
 func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (jen.Code, string, error) {
 	cond, _, err := g.translateExpr(n.Cond, ctx, "bool")
 	if err != nil {
@@ -486,6 +602,7 @@ func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (jen.Code, string
 	}
 
 	// Build for loop body using Jennifer
+	var buildErr error
 	forBlock := jen.BlockFunc(func(b *jen.Group) {
 		child := ctx.child()
 		switch body := n.Body.(type) {
@@ -495,6 +612,7 @@ func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (jen.Code, string
 				case *ExprStmt:
 					code, typ, err := g.translateExpr(s.Expr, child, "")
 					if err != nil {
+						buildErr = err
 						return
 					}
 					if stmtIsStatementSafe(s.Expr) || typ == "" {
@@ -505,6 +623,7 @@ func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (jen.Code, string
 				case *LetStmt:
 					code, typ, err := g.translateExpr(s.Value, child, g.goType(s.Type, child.typeParams))
 					if err != nil {
+						buildErr = err
 						return
 					}
 					if s.Name == "_" {
@@ -524,25 +643,30 @@ func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (jen.Code, string
 				case *AssignStmt:
 					actualName, ok := child.bindings[s.Name]
 					if !ok {
+						buildErr = common.ErrorAtPos(s.Line, s.Column, "unknown binding %q", s.Name)
 						return
 					}
 					if !child.mutable[actualName] {
+						buildErr = common.ErrorAtPos(s.Line, s.Column, "cannot assign to immutable binding %q", s.Name)
 						return
 					}
 					targetType := child.locals[s.Name]
 					code, _, err := g.translateExpr(s.Value, child, targetType)
 					if err != nil {
+						buildErr = err
 						return
 					}
 					b.Add(jen.Id(actualName).Op("=").Add(code))
 				default:
 					// Return error - this will be handled by the caller
-					b.Add(jen.Id("panic").Call(jen.Lit("unsupported statement")))
+					buildErr = common.ErrorAtPos(0, 0, "unsupported statement %#v", stmt)
+					return
 				}
 			}
 		default:
 			code, typ, err := g.translateExpr(body, child, "")
 			if err != nil {
+				buildErr = err
 				return
 			}
 			if stmtIsStatementSafe(body) || typ == "" {
@@ -552,6 +676,9 @@ func (g *generator) translateWhile(n *WhileExpr, ctx *exprCtx) (jen.Code, string
 			}
 		}
 	})
+	if buildErr != nil {
+		return nil, "", buildErr
+	}
 
 	return jen.For(cond).Block(forBlock), "", nil
 }
@@ -585,6 +712,11 @@ func (g *generator) translatePattern(p Pattern, enum *EnumDecl, enumArgs []strin
 		return tname, bindings, nil
 	case *TuplePattern:
 		return "", nil, fmt.Errorf("tuple patterns are not supported in enum translation")
+	case *LiteralPattern:
+		if pat.Kind == "string" {
+			return "string", nil, nil
+		}
+		return "int", nil, nil
 	default:
 		line, col := common.NodePos(p)
 		return "", nil, common.ErrorAtPos(line, col, "unsupported pattern %#v", p)
@@ -596,19 +728,22 @@ func (g *generator) translateTuplePatternCondition(p *TuplePattern, targetExpr s
 		return nil, fmt.Errorf("tuple pattern requires a tuple value")
 	}
 	fn := jen.Func().Params().Id("bool").BlockFunc(func(gb *jen.Group) {
-		_ = g.appendTuplePatternChecks(gb, p, targetExpr, enum, enumArgs)
+		_ = g.appendTuplePatternChecks(gb, p, targetExpr, targetType, enum, enumArgs)
 		gb.Return(jen.True())
 	})
 	return fn.Call(), nil
 }
 
-func (g *generator) collectTuplePatternBindings(ctx *exprCtx, p *TuplePattern, targetExpr string, enum *EnumDecl, enumArgs []string) error {
+func (g *generator) collectTuplePatternBindings(ctx *exprCtx, p *TuplePattern, targetExpr string, targetType string, enum *EnumDecl, enumArgs []string) error {
 	for i, elem := range p.Elems {
 		fieldExpr := fmt.Sprintf("%s.F%d", targetExpr, i)
 		switch e := elem.(type) {
 		case *WildcardPattern:
 			continue
 		case *VariantPattern:
+			if enum == nil {
+				return fmt.Errorf("variant pattern requires an enum tuple target")
+			}
 			for _, arg := range e.Args {
 				if arg != "_" {
 					return fmt.Errorf("tuple switch variant bindings are not supported yet")
@@ -629,8 +764,15 @@ func (g *generator) collectTuplePatternBindings(ctx *exprCtx, p *TuplePattern, t
 				}
 			}
 		case *TuplePattern:
-			if err := g.collectTuplePatternBindings(ctx, e, fieldExpr, enum, enumArgs); err != nil {
+			if err := g.collectTuplePatternBindings(ctx, e, fieldExpr, targetType, enum, enumArgs); err != nil {
 				return err
+			}
+		case *LiteralPattern:
+			_ = fieldExpr
+			_ = targetType
+			_ = enumArgs
+			if e.Kind == "number" || e.Kind == "string" {
+				continue
 			}
 		default:
 			return fmt.Errorf("unsupported tuple pattern %T", elem)
@@ -639,13 +781,16 @@ func (g *generator) collectTuplePatternBindings(ctx *exprCtx, p *TuplePattern, t
 	return nil
 }
 
-func (g *generator) appendTuplePatternChecks(gb *jen.Group, p *TuplePattern, targetExpr string, enum *EnumDecl, enumArgs []string) error {
+func (g *generator) appendTuplePatternChecks(gb *jen.Group, p *TuplePattern, targetExpr string, targetType string, enum *EnumDecl, enumArgs []string) error {
 	for i, elem := range p.Elems {
 		field := fmt.Sprintf("%s.F%d", targetExpr, i)
 		switch e := elem.(type) {
 		case *WildcardPattern:
 			continue
 		case *VariantPattern:
+			if enum == nil {
+				return fmt.Errorf("variant pattern requires an enum tuple target")
+			}
 			for _, arg := range e.Args {
 				if arg != "_" {
 					return fmt.Errorf("tuple switch variant bindings are not supported yet")
@@ -660,13 +805,19 @@ func (g *generator) appendTuplePatternChecks(gb *jen.Group, p *TuplePattern, tar
 			if len(enumArgs) > 0 {
 				assertType = bracketArgs(assertType, genJenIds(enumArgs))
 			}
-			gb.If(jen.List(jen.Id("_"), jen.Id("ok")).Op(":=").Id(field).Op(".").Parens(assertType), jen.Op("!").Id("ok")).Block(jen.Return(jen.False()))
+			gb.If(jen.List(jen.Id("_"), jen.Id("ok")).Op(":=").Id(field).Op(".").Parens(assertType), jen.Op("!").Id("ok")).Block(jen.Return().Add(jen.False()))
 		case *TuplePattern:
 			nested := jen.Func().Params().Id("bool").BlockFunc(func(inner *jen.Group) {
-				_ = g.appendTuplePatternChecks(inner, e, field, enum, enumArgs)
-				inner.Return(jen.True())
+				_ = g.appendTuplePatternChecks(inner, e, field, targetType, enum, enumArgs)
+				inner.Return().Add(jen.True())
 			}).Call()
-			gb.If(jen.Op("!").Parens(nested)).Block(jen.Return(jen.False()))
+			gb.If(jen.Op("!").Parens(nested)).Block(jen.Return().Add(jen.False()))
+		case *LiteralPattern:
+			litCode, _, err := g.translateExpr(&LiteralExpr{Kind: e.Kind, Value: e.Value}, nil, "")
+			if err != nil {
+				return err
+			}
+			gb.If(jen.Id(field).Op("!=").Add(litCode)).Block(jen.Return().Add(jen.False()))
 		default:
 			return fmt.Errorf("unsupported tuple pattern %T", elem)
 		}

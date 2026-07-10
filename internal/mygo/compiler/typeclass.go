@@ -72,6 +72,19 @@ func typeclassBindingBest(bindings []typeclassBinding) typeclassBinding {
 	return best
 }
 
+func typeclassBindingForReceiver(bindings []typeclassBinding, receiverType string) (typeclassBinding, bool) {
+	var filtered []typeclassBinding
+	for _, b := range bindings {
+		if b.TargetType == "" || receiverType == "" || receiverType == "any" || receiverType == b.TargetType || strings.HasPrefix(receiverType, b.TargetType+"[") || strings.HasPrefix(b.TargetType, receiverType+"[") || strings.HasPrefix(strings.TrimSpace(receiverType), strings.TrimSpace(b.TargetType)) {
+			filtered = append(filtered, b)
+		}
+	}
+	if len(filtered) == 0 {
+		return typeclassBinding{}, false
+	}
+	return typeclassBindingBest(filtered), true
+}
+
 func typeclassFuncType(paramTypes []string, retType string) string {
 	if len(paramTypes) == 0 {
 		if retType == "" {
@@ -162,7 +175,7 @@ func (g *generator) translateEnumConstructor(enumName, name string, args []Expr,
 		typeOpts := jen.Options{Open: "[", Close: "]", Separator: ", "}
 		typeItems := make([]jen.Code, 0, len(typeArgs))
 		for _, ta := range typeArgs {
-			typeItems = append(typeItems, jen.Id(ta))
+			typeItems = append(typeItems, jen.Id(lowerMyGoTypeString(ta)))
 		}
 		callee = callee.Custom(typeOpts, typeItems...)
 	}
@@ -189,9 +202,9 @@ func (g *generator) translateTypeclassCall(name string, args []Expr, ctx *exprCt
 			return jen.Id(funcName).Call(argCodes...), methodReturnType(methodIface, name), true
 		}
 		if len(argCodes) > 0 {
-			lastType := argTypes[len(argTypes)-1]
-			if lastType != "" && strings.HasPrefix(lastType, ifaceName) {
-				return argCodes[len(argCodes)-1].(*jen.Statement).Dot(name).Call(argCodes[:len(argCodes)-1]...), methodReturnType(methodIface, name), true
+			receiverType := argTypes[0]
+			if receiverType != "" && (receiverType == ifaceName || strings.HasPrefix(receiverType, ifaceName+"[") || strings.HasPrefix(receiverType, "prelude."+ifaceName)) {
+				return argCodes[0].(*jen.Statement).Dot(name).Call(argCodes[1:]...), methodReturnType(methodIface, name), true
 			}
 		}
 		if helper, ok := g.matchTypeclassHelper(ifaceName, name, args, ctx); ok {
@@ -213,29 +226,35 @@ func (g *generator) translateIdent(name string, line, col int, ctx *exprCtx, exp
 		}
 		return jen.Id(name), typ, nil
 	}
+	// Import aliases can be used as identifiers (e.g., in go[T] operand bindings).
+	if g.isImportAlias(name) {
+		return jen.Id(name), "any", nil
+	}
 	switch name {
 	case "true", "false":
 		return jen.Lit(name == "true"), "bool", nil
+	case "break":
+		return jen.Break(), "", nil
 	case "None":
 		// Try expected type first, then ctx.retType as a fallback.
 		candidate := expected
 		if candidate == "" {
 			candidate = ctx.retType
 		}
+		candidate = strings.ReplaceAll(strings.TrimSpace(candidate), "prelude.", "")
 		base, args := splitTypeArgs(candidate)
 		if base != "" && len(args) > 0 {
 			cleanArgs := make([]string, 0, len(args))
 			for _, a := range args {
 				cleanArgs = append(cleanArgs, strings.TrimSpace(a))
 			}
-			typeOpts := jen.Options{Open: "[", Close: "]", Separator: ", "}
-			typeItems := make([]jen.Code, 0, len(cleanArgs))
+			typeItems := make([]string, 0, len(cleanArgs))
 			for _, ca := range cleanArgs {
-				typeItems = append(typeItems, jen.Id(ca))
+				typeItems = append(typeItems, lowerMyGoTypeString(ca))
 			}
-			return jen.Id("None").Custom(typeOpts, typeItems...).Call(), candidate, nil
+			return jen.Id("None[" + strings.Join(typeItems, ", ") + "]").Call(), candidate, nil
 		}
-		return nil, "", common.ErrorAtPos(line, col, "None requires type inference from context")
+		return nil, "", common.ErrorAtPos(line, col, "None requires type inference from context (expected=%q, retType=%q)", expected, ctx.retType)
 	case "Nil":
 		return nil, "", common.ErrorAtPos(line, col, "Nil is not a valid value; use Option[Ref[T]] for nullable references")
 	}
@@ -245,7 +264,11 @@ func (g *generator) translateIdent(name string, line, col int, ctx *exprCtx, exp
 	if typeclassHelper, typ, ok := g.translateTypeclassIdent(name, ctx, expected); ok {
 		return typeclassHelper, typ, nil
 	}
-	return jen.Id(name), ctx.locals[name], nil
+	if typ, ok := ctx.locals[name]; ok {
+		return jen.Id(name), typ, nil
+	}
+	idLine, idCol := common.NodePos(&IdentExpr{Name: name})
+	return nil, "", common.ErrorAtPos(idLine, idCol, "unknown identifier %q", name)
 }
 
 func (g *generator) translateTypeclassIdent(name string, ctx *exprCtx, expected string) (jen.Code, string, bool) {
@@ -284,6 +307,10 @@ func (g *generator) matchTypeclassHelper(ifaceName, method string, args []Expr, 
 	bestTypeKey := ""
 	bestScore := matchScore{}
 	found := false
+	receiverType := ""
+	if len(argTypes) > 0 {
+		receiverType = argTypes[0]
+	}
 	for _, impl := range g.pkg.Impls {
 		if impl.InterfaceName != ifaceName && impl.Name != ifaceName {
 			continue
@@ -312,6 +339,26 @@ func (g *generator) matchTypeclassHelper(ifaceName, method string, args []Expr, 
 		typeArgs := impl.InterfaceArgs
 		if len(typeArgs) == 0 {
 			typeArgs = impl.TypeArgs
+		}
+		implTargetType := typeString(impl.Type, nil)
+		if receiverType != "" && implTargetType != "" {
+			rBase, _ := splitTypeArgs(receiverType)
+			iBase, _ := splitTypeArgs(implTargetType)
+			if rBase != "" && iBase != "" && rBase != iBase && !g.goTypeCompatible(implTargetType, receiverType) {
+				// If the impl target itself is generic, allow the base type match
+				// and let the later parameter checks decide.
+				if !(strings.Contains(implTargetType, "[") && strings.Contains(implTargetType, "]")) {
+					continue
+				}
+			}
+			if rBase != "" && iBase != "" && rBase != iBase && strings.Contains(implTargetType, "[") && strings.Contains(implTargetType, "]") {
+				continue
+			}
+			if rBase != "" && iBase != "" && rBase == iBase {
+				// For generic impls, a matching base name is sufficient here.
+			} else if rBase != "" && iBase != "" && rBase != iBase && !g.goTypeCompatible(implTargetType, receiverType) {
+				continue
+			}
 		}
 		if len(iface.TypeParams) != len(typeArgs) {
 			continue

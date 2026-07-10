@@ -4,7 +4,6 @@ import fmt "go:fmt"
 # ===== Enum (Enums) =====
 
 enum Color
-  
   Red
   Green
   Blue

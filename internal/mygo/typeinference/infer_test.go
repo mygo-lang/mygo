@@ -70,6 +70,167 @@ func TestInferLiteralString(t *testing.T) {
 	}
 }
 
+func TestInferSwitchLiteralPattern(t *testing.T) {
+	state := NewInferState()
+	env := TypeEnv{
+		"n": &Scheme{Body: QualifiedType{Body: intType()}},
+	}
+	expr := &SwitchExpr{
+		Target: &IdentExpr{Name: "n"},
+		Cases: []SwitchCase{
+			{
+				Pattern: &LiteralPattern{Kind: "number", Value: "0"},
+				Body:    &LiteralExpr{Kind: "number", Value: "1"},
+			},
+			{
+				Pattern: &WildcardPattern{},
+				Body:    &LiteralExpr{Kind: "number", Value: "2"},
+			},
+		},
+	}
+	typ, err := inferExprType(env, expr, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !eqType(typ, intType()) {
+		t.Fatalf("expected Int, got %s", typ)
+	}
+}
+
+func TestInferSwitchStringLiteralPatternOnStructField(t *testing.T) {
+	state := NewInferState()
+	pkg := &PkgInfo{
+		Name: "main",
+		Structs: map[string]*StructDecl{
+			"LSPMessage": {
+				Name: "LSPMessage",
+				Fields: []Field{
+					{Name: "method", Type: &NamedType{Name: "String"}},
+				},
+			},
+		},
+	}
+	state.PkgInfo = pkg
+	env := TypeEnv{
+		"LSPMessage": &Scheme{Body: QualifiedType{Body: TCon{Name: "LSPMessage"}}},
+		"msg":        &Scheme{Body: QualifiedType{Body: TCon{Name: "LSPMessage"}}},
+	}
+	expr := &SwitchExpr{
+		Target: &FieldExpr{
+			Expr:  &IdentExpr{Name: "msg"},
+			Field: "method",
+		},
+		Cases: []SwitchCase{
+			{
+				Pattern: &LiteralPattern{Kind: "string", Value: "initialize"},
+				Body:    &LiteralExpr{Kind: "number", Value: "1"},
+			},
+			{
+				Pattern: &WildcardPattern{},
+				Body:    &LiteralExpr{Kind: "number", Value: "2"},
+			},
+		},
+	}
+	typ, err := inferExprType(env, expr, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !eqType(typ, intType()) {
+		t.Fatalf("expected Int, got %s", typ)
+	}
+}
+
+func TestInferSwitchLiteralPatternKeepsTargetConstraintAcrossNestedSwitch(t *testing.T) {
+	state := NewInferState()
+	env := TypeEnv{
+		"method": &Scheme{Body: QualifiedType{Body: TVar{ID: state.Fresh()}}},
+		"params": &Scheme{Body: QualifiedType{Body: TCon{
+			Name: "Option",
+			Args: []MonoType{TCon{Name: "Any"}},
+		}}},
+	}
+	expr := &SwitchExpr{
+		Target: &IdentExpr{Name: "method"},
+		Cases: []SwitchCase{
+			{
+				Pattern: &LiteralPattern{Kind: "string", Value: "initialize"},
+				Body: &SwitchExpr{
+					Target: &IdentExpr{Name: "params"},
+					Cases: []SwitchCase{
+						{
+							Pattern: &VariantPattern{Name: "Some", Args: []string{"p"}},
+							Body:    &LiteralExpr{Kind: "number", Value: "1"},
+						},
+						{
+							Pattern: &WildcardPattern{},
+							Body:    &LiteralExpr{Kind: "number", Value: "2"},
+						},
+					},
+				},
+			},
+			{
+				Pattern: &LiteralPattern{Kind: "string", Value: "initialized"},
+				Body:    &LiteralExpr{Kind: "number", Value: "3"},
+			},
+		},
+	}
+	typ, err := inferExprType(env, expr, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !eqType(typ, intType()) {
+		t.Fatalf("expected Int, got %s", typ)
+	}
+}
+
+func TestInferStructLitWithEmptyMapField(t *testing.T) {
+	state := NewInferState()
+	pkg := &PkgInfo{
+		Name: "main",
+		Structs: map[string]*StructDecl{
+			"Document": {
+				Name: "Document",
+				Fields: []Field{
+					{Name: "uri", Type: &NamedType{Name: "String"}},
+				},
+			},
+			"DocumentStore": {
+				Name: "DocumentStore",
+				Fields: []Field{
+					{Name: "docs", Type: &NamedType{Name: "Map", Args: []TypeExpr{
+						&NamedType{Name: "String"},
+						&NamedType{Name: "Ref", Args: []TypeExpr{&NamedType{Name: "Document"}}},
+					}}},
+				},
+			},
+		},
+	}
+	state.PkgInfo = pkg
+	env := TypeEnv{
+		"Document":      &Scheme{Body: QualifiedType{Body: TCon{Name: "Document"}}},
+		"DocumentStore": &Scheme{Body: QualifiedType{Body: TCon{Name: "DocumentStore"}}},
+		"String":        &Scheme{Body: QualifiedType{Body: stringType()}},
+		"Ref":            &Scheme{Body: QualifiedType{Body: TCon{Name: "Ref"}}},
+		"Map":            &Scheme{Body: QualifiedType{Body: TCon{Name: "Map"}}},
+	}
+	expr := &StructLitExpr{
+		TypeName: "DocumentStore",
+		Fields: []StructLitField{
+			{
+				Name:  "docs",
+				Value: &MapLitExpr{},
+			},
+		},
+	}
+	typ, err := inferExprType(env, expr, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !eqType(typ, TCon{Name: "DocumentStore"}) {
+		t.Fatalf("expected DocumentStore, got %s", typ)
+	}
+}
+
 func TestInferGoExprResultType(t *testing.T) {
 	state := NewInferState()
 	state.TypedInfo = &TypedInfo{

@@ -153,13 +153,24 @@ func goSignatureParams(sig *types.Signature) []string {
 	params := sig.Params()
 	var out []string
 	for i := 0; i < params.Len(); i++ {
-		typ := params.At(i).Type().String()
+		typ := goTypeToMyGoType(params.At(i).Type().String())
 		if sig.Variadic() && i == params.Len()-1 {
-			typ = "..." + strings.TrimPrefix(typ, "[]")
+			typ = "..." + variadicElemMyGoType(typ)
 		}
 		out = append(out, typ)
 	}
 	return out
+}
+
+func variadicElemMyGoType(typ string) string {
+	typ = strings.TrimSpace(typ)
+	if strings.HasPrefix(typ, "Slice[") && strings.HasSuffix(typ, "]") {
+		return strings.TrimSuffix(strings.TrimPrefix(typ, "Slice["), "]")
+	}
+	if strings.HasPrefix(typ, "[]") {
+		return goTypeToMyGoType(typ[2:])
+	}
+	return strings.TrimPrefix(typ, "...")
 }
 
 func goSignatureResults(sig *types.Signature) []string {
@@ -169,9 +180,60 @@ func goSignatureResults(sig *types.Signature) []string {
 	results := sig.Results()
 	out := make([]string, 0, results.Len())
 	for i := 0; i < results.Len(); i++ {
-		out = append(out, results.At(i).Type().String())
+		out = append(out, goTypeToMyGoType(results.At(i).Type().String()))
 	}
 	return out
+}
+
+func goTypeToMyGoType(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+	if strings.HasPrefix(s, "[]") {
+		return "Slice[" + goTypeToMyGoType(s[2:]) + "]"
+	}
+	if strings.HasPrefix(s, "*") {
+		return "Ref[" + goTypeToMyGoType(s[1:]) + "]"
+	}
+	return goTypeToMyGoTypeName(s)
+}
+
+func goTypeToMyGoTypeName(s string) string {
+	s = strings.TrimSpace(s)
+	switch s {
+	case "string":
+		return "String"
+	case "bool":
+		return "Bool"
+	case "int":
+		return "Int"
+	case "int8":
+		return "Int8"
+	case "int16":
+		return "Int16"
+	case "int32":
+		return "Int32"
+	case "int64":
+		return "Int64"
+	case "uint":
+		return "UInt"
+	case "uint8":
+		return "UInt8"
+	case "uint16":
+		return "UInt16"
+	case "uint32":
+		return "UInt32"
+	case "uint64":
+		return "UInt64"
+	case "float32":
+		return "Float32"
+	case "float64":
+		return "Float64"
+	case "any":
+		return "Any"
+	}
+	return s
 }
 
 func isExportedGoIdent(name string) bool {

@@ -411,6 +411,15 @@ type VariantPattern struct {
 
 func (*VariantPattern) patternNode() {}
 
+type LiteralPattern struct {
+	Line  int
+	Column int
+	Kind  string
+	Value string
+}
+
+func (*LiteralPattern) patternNode() {}
+
 type TuplePattern struct {
 	Line   int
 	Column int

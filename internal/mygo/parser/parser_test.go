@@ -40,7 +40,7 @@ func demo() -> Int
   let nested: Map[String, Slice[Int]] = {"nums": [4, 5]}
   let empty_slice: Slice[Int] = []
   let empty_map: Map[String, Int] = {}
-  let empty_set: Set[String] = {}
+  let nonempty_set: Set[String] = {"x"}
   42
 end
 `
@@ -61,6 +61,16 @@ end
 	}
 	if got := len(block.Stmts); got != 8 {
 		t.Fatalf("len(BlockExpr.Stmts) = %d, want %d", got, 8)
+	}
+	if decl, ok := block.Stmts[5].(*LetStmt); !ok {
+		t.Fatalf("Stmt[5] type = %T, want *LetStmt", block.Stmts[5])
+	} else if _, ok := decl.Value.(*MapLitExpr); !ok {
+		t.Fatalf("empty_map value type = %T, want *MapLitExpr", decl.Value)
+	}
+	if decl, ok := block.Stmts[6].(*LetStmt); !ok {
+		t.Fatalf("Stmt[6] type = %T, want *LetStmt", block.Stmts[6])
+	} else if _, ok := decl.Value.(*SetLitExpr); !ok {
+		t.Fatalf("nonempty_set value type = %T, want *SetLitExpr", decl.Value)
 	}
 }
 
@@ -579,6 +589,124 @@ end
 	}
 	if got := len(sw.Cases); got != 3 {
 		t.Fatalf("len(SwitchExpr.Cases) = %d, want %d", got, 3)
+	}
+}
+
+func TestParseFileSupportsLiteralSwitchPatterns(t *testing.T) {
+	src := `package main
+func demo(n: Int) -> Int
+  switch n
+  case 0 => 1
+  case 1 then
+    2
+  end
+  case _ => 3
+  end
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	sw, ok := fn.Body.(*SwitchExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *SwitchExpr", fn.Body)
+	}
+	lit, ok := sw.Cases[0].Pattern.(*ast.LiteralPattern)
+	if !ok {
+		t.Fatalf("Cases[0].Pattern type = %T, want *LiteralPattern", sw.Cases[0].Pattern)
+	}
+	if lit.Kind != "number" || lit.Value != "0" {
+		t.Fatalf("Cases[0].Pattern = %#v, want number 0", lit)
+	}
+	lit, ok = sw.Cases[1].Pattern.(*ast.LiteralPattern)
+	if !ok {
+		t.Fatalf("Cases[1].Pattern type = %T, want *LiteralPattern", sw.Cases[1].Pattern)
+	}
+	if lit.Kind != "number" || lit.Value != "1" {
+		t.Fatalf("Cases[1].Pattern = %#v, want number 1", lit)
+	}
+}
+
+func TestParseFileKeepsNestedSwitchCasesSeparate(t *testing.T) {
+	src := `package main
+func demo(method: String, params: Option[Any]) -> Int
+  switch method
+  case "initialize" then
+    switch params
+    case Some(p) => 1
+    case _ => 2
+    end
+  end
+  case "initialized" => 3
+  end
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	outer, ok := fn.Body.(*SwitchExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *SwitchExpr", fn.Body)
+	}
+	if got := len(outer.Cases); got != 2 {
+		t.Fatalf("len(outer.Cases) = %d, want 2", got)
+	}
+	first, ok := outer.Cases[0].Pattern.(*ast.LiteralPattern)
+	if !ok || first.Kind != "string" || first.Value != "initialize" {
+		t.Fatalf("outer.Cases[0].Pattern = %#v, want string initialize", outer.Cases[0].Pattern)
+	}
+	body, ok := outer.Cases[0].Body.(*BlockExpr)
+	if !ok || len(body.Stmts) != 1 {
+		t.Fatalf("outer.Cases[0].Body = %T with %d stmts, want one-stmt block", outer.Cases[0].Body, len(body.Stmts))
+	}
+	stmt, ok := body.Stmts[0].(*ExprStmt)
+	if !ok {
+		t.Fatalf("nested stmt type = %T, want *ExprStmt", body.Stmts[0])
+	}
+	inner, ok := stmt.Expr.(*SwitchExpr)
+	if !ok {
+		t.Fatalf("nested expr type = %T, want *SwitchExpr", stmt.Expr)
+	}
+	if got := len(inner.Cases); got != 2 {
+		t.Fatalf("len(inner.Cases) = %d, want 2", got)
+	}
+	if _, ok := inner.Cases[0].Pattern.(*VariantPattern); !ok {
+		t.Fatalf("inner.Cases[0].Pattern type = %T, want *VariantPattern", inner.Cases[0].Pattern)
+	}
+}
+
+func TestParseFileDocumentStoreBodyShape(t *testing.T) {
+	src := `package main
+struct Document
+  uri: String
+end
+struct DocumentStore
+  docs: Map[String, Ref[Document]]
+end
+func newDocumentStore() -> DocumentStore
+  DocumentStore{docs: {}}
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[2].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[2] type = %T, want *FuncDecl", file.Decls[2])
+	}
+	if _, ok := fn.Body.(*StructLitExpr); !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *StructLitExpr", fn.Body)
 	}
 }
 

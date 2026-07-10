@@ -2,10 +2,6 @@ package prelude
 
 import fmt "go:fmt"
 
-func typeKeyFromType(value: String) -> String
-  value
-end
-
 enum Option[A]
   Some(A)
   None
@@ -17,92 +13,93 @@ enum Result[A, E]
 end
 
 interface Show[A]
-  func show(value: A) -> String
+  func Show(value: A) -> String
 end
 
 interface Eq[A]
-  func equals(left: A, right: A) -> Bool
+  func Equals(left: A, right: A) -> Bool
 end
 
-interface Enumerable[C[A], A]
-  func each(c: C[A], fn: func(A) -> ()) -> ()
-  func map[B](c: C[A], fn: func(A) -> B) -> C[B]
-  func filter(c: C[A], fn: func(A) -> Bool) -> C[A]
-  func fold[B](c: C[A], initial: B, fn: func(B, A) -> B) -> B
-  func find(c: C[A], fn: func(A) -> Bool) -> Option[Ref[A]]
-  func contains(c: C[A], item: A, eq: Eq[A]) -> Bool
+interface IEnumerable[C[A], A]
+  func Each(c: C[A], fn: func(A) -> ()) -> ()
+  func Len(c: C[A]) -> Int
+  func Map[B](c: C[A], fn: func(A) -> B) -> C[B]
+  func Filter(c: C[A], fn: func(A) -> Bool) -> C[A]
+  func Fold[B](c: C[A], initial: B, fn: func(B, A) -> B) -> B
+  func Find(c: C[A], fn: func(A) -> Bool) -> Option[Ref[A]]
+  func Contains(c: C[A], item: A, eq: Eq[A]) -> Bool
 end
 
 # ===== Show impls =====
 
 impl Int: Show[Int]
-  func show(value: Int) -> String
+  func Show(value: Int) -> String
     fmt.Sprint(value)
   end
 end
 
 impl Int8: Show[Int8]
-  func show(value: Int8) -> String
+  func Show(value: Int8) -> String
     fmt.Sprint(value)
   end
 end
 
 impl UInt8: Show[UInt8]
-  func show(value: UInt8) -> String
+  func Show(value: UInt8) -> String
     fmt.Sprint(value)
   end
 end
 
 impl Int16: Show[Int16]
-  func show(value: Int16) -> String
+  func Show(value: Int16) -> String
     fmt.Sprint(value)
   end
 end
 
 impl UInt16: Show[UInt16]
-  func show(value: UInt16) -> String
+  func Show(value: UInt16) -> String
     fmt.Sprint(value)
   end
 end
 
 impl Int32: Show[Int32]
-  func show(value: Int32) -> String
+  func Show(value: Int32) -> String
     fmt.Sprint(value)
   end
 end
 
 impl UInt32: Show[UInt32]
-  func show(value: UInt32) -> String
+  func Show(value: UInt32) -> String
     fmt.Sprint(value)
   end
 end
 
 impl Int64: Show[Int64]
-  func show(value: Int64) -> String
+  func Show(value: Int64) -> String
     fmt.Sprint(value)
   end
 end
 
 impl Float32: Show[Float32]
-  func show(value: Float32) -> String
+  func Show(value: Float32) -> String
     fmt.Sprint(value)
   end
 end
 
 impl Float64: Show[Float64]
-  func show(value: Float64) -> String
+  func Show(value: Float64) -> String
     fmt.Sprint(value)
   end
 end
 
 impl String: Show[String]
-  func show(value: String) -> String
+  func Show(value: String) -> String
     value
   end
 end
 
 impl Bool: Show[Bool]
-  func show(value: Bool) -> String
+  func Show(value: Bool) -> String
     fmt.Sprint(value)
   end
 end
@@ -110,73 +107,73 @@ end
 # ===== Eq impls =====
 
 impl Int: Eq[Int]
-  func equals(left: Int, right: Int) -> Bool
+  func Equals(left: Int, right: Int) -> Bool
     left == right
   end
 end
 
 impl Int8: Eq[Int8]
-  func equals(left: Int8, right: Int8) -> Bool
+  func Equals(left: Int8, right: Int8) -> Bool
     left == right
   end
 end
 
 impl UInt8: Eq[UInt8]
-  func equals(left: UInt8, right: UInt8) -> Bool
+  func Equals(left: UInt8, right: UInt8) -> Bool
     left == right
   end
 end
 
 impl Int16: Eq[Int16]
-  func equals(left: Int16, right: Int16) -> Bool
+  func Equals(left: Int16, right: Int16) -> Bool
     left == right
   end
 end
 
 impl UInt16: Eq[UInt16]
-  func equals(left: UInt16, right: UInt16) -> Bool
+  func Equals(left: UInt16, right: UInt16) -> Bool
     left == right
   end
 end
 
 impl Int32: Eq[Int32]
-  func equals(left: Int32, right: Int32) -> Bool
+  func Equals(left: Int32, right: Int32) -> Bool
     left == right
   end
 end
 
 impl UInt32: Eq[UInt32]
-  func equals(left: UInt32, right: UInt32) -> Bool
+  func Equals(left: UInt32, right: UInt32) -> Bool
     left == right
   end
 end
 
 impl Int64: Eq[Int64]
-  func equals(left: Int64, right: Int64) -> Bool
+  func Equals(left: Int64, right: Int64) -> Bool
     left == right
   end
 end
 
 impl Float32: Eq[Float32]
-  func equals(left: Float32, right: Float32) -> Bool
+  func Equals(left: Float32, right: Float32) -> Bool
     left == right
   end
 end
 
 impl Float64: Eq[Float64]
-  func equals(left: Float64, right: Float64) -> Bool
+  func Equals(left: Float64, right: Float64) -> Bool
     left == right
   end
 end
 
 impl String: Eq[String]
-  func equals(left: String, right: String) -> Bool
+  func Equals(left: String, right: String) -> Bool
     left == right
   end
 end
 
 impl Bool: Eq[Bool]
-  func equals(left: Bool, right: Bool) -> Bool
+  func Equals(left: Bool, right: Bool) -> Bool
     left == right
   end
 end
@@ -195,11 +192,11 @@ end
 
 # Set[A] is Go's native map[A]struct{}
 
-# ===== Enumerable impls =====
+# ===== IEnumerable impls =====
 
-# Generic impl for List[T]: impl[T] List[T]: Enumerable[List[T], T]
-impl[T] List[T]: Enumerable[List[T], T]
-  func each(c: List[T], fn: func(T) -> ()) -> ()
+# Generic impl for List[T]: impl[T] List[T]: IEnumerable[List[T], T]
+impl[T] List[T]: IEnumerable[List[T], T]
+  func Each(c: List[T], fn: func(T) -> ()) -> ()
     var current: Ref[List[T]] = Ref.new(c)
     var done: Bool = false
     while !done
@@ -212,23 +209,38 @@ impl[T] List[T]: Enumerable[List[T], T]
     return
   end
 
-  func map[B](c: List[T], fn: func(T) -> B) -> List[B]
+  func Len(c: List[T]) -> Int
+    var count: Int = 0
+    var current: Ref[List[T]] = Ref.new(c)
     var done: Bool = false
-    var headVal: B = fn(c.head)
+    while !done
+      count = count + 1
+      switch current.tail
+        case None => done = true
+        case Some(node) => current = node
+      end
+    end
+    return count
+  end
+
+  func Map[B](c: List[T], fn: func(T) -> B) -> List[B]
+    var done: Bool = false
+    let headVal: B = fn(c.head)
     var result: List[B] = List[B] { head: headVal, tail: None }
     var current: Ref[List[T]] = Ref.new(c)
     while !done
       switch current.tail
         case None => done = true
-        case Some(node) =>
+        case Some(node) then
           current = node
           result = List[B] { head: fn(current.head), tail: Some(Ref.new(result)) }
+        end
       end
     end
     return result
   end
 
-  func filter(c: List[T], fn: func(T) -> Bool) -> List[T]
+  func Filter(c: List[T], fn: func(T) -> Bool) -> List[T]
     var done: Bool = false
     var current: Ref[List[T]] = Ref.new(c)
     var result: List[T] = List[T] { head: current.head, tail: None }
@@ -246,7 +258,7 @@ impl[T] List[T]: Enumerable[List[T], T]
     return result
   end
 
-  func fold[B](c: List[T], initial: B, fn: func(B, T) -> B) -> B
+  func Fold[B](c: List[T], initial: B, fn: func(B, T) -> B) -> B
     var acc: B = initial
     var done: Bool = false
     var current: Ref[List[T]] = Ref.new(c)
@@ -260,7 +272,7 @@ impl[T] List[T]: Enumerable[List[T], T]
     return acc
   end
 
-  func find(c: List[T], fn: func(T) -> Bool) -> Option[Ref[T]]
+  func Find(c: List[T], fn: func(T) -> Bool) -> Option[Ref[T]]
     var done: Bool = false
     var current: Ref[List[T]] = Ref.new(c)
     while !done
@@ -276,12 +288,12 @@ impl[T] List[T]: Enumerable[List[T], T]
     return None
   end
 
-  func contains(c: List[T], item: T, eq: Eq[T]) -> Bool
+  func Contains(c: List[T], item: T, eq: Eq[T]) -> Bool
     var done: Bool = false
     var result: Bool = false
     var current: Ref[List[T]] = Ref.new(c)
     while !done
-      if equals(current.head, item, eq)
+      if eq.Equals(current.head, item)
         result = true
         done = true
       else
@@ -295,9 +307,9 @@ impl[T] List[T]: Enumerable[List[T], T]
   end
 end
 
-# Generic impl for Slice[T]: Enumerable[Slice[T], T]
-impl[T] Slice[T]: Enumerable[Slice[T], T]
-  func each(c: Slice[T], fn: func(T) -> ()) -> ()
+# Generic impl for Slice[T]: IEnumerable[Slice[T], T]
+impl[T] Slice[T]: IEnumerable[Slice[T], T]
+  func Each(c: Slice[T], fn: func(T) -> ()) -> ()
     go[()] {
       code: """
         for _, v := range {c} {
@@ -308,7 +320,15 @@ impl[T] Slice[T]: Enumerable[Slice[T], T]
       in fn = fn
     }
   end
-  func map[B](c: Slice[T], fn: func(T) -> B) -> Slice[B]
+
+  func Len(c: Slice[T]) -> Int
+    go[Int] {
+      code: `len(c)`
+      in c = c
+    }
+  end
+
+  func Map[B](c: Slice[T], fn: func(T) -> B) -> Slice[B]
     go[Slice[B]] {
       code: """
         func() []{B} {
@@ -324,7 +344,7 @@ impl[T] Slice[T]: Enumerable[Slice[T], T]
       type B = B
     }
   end
-  func filter(c: Slice[T], fn: func(T) -> Bool) -> Slice[T]
+  func Filter(c: Slice[T], fn: func(T) -> Bool) -> Slice[T]
     go[Slice[T]] {
       code: """
         func() []{T} {
@@ -342,7 +362,7 @@ impl[T] Slice[T]: Enumerable[Slice[T], T]
       type T = T
     }
   end
-  func fold[B](c: Slice[T], initial: B, fn: func(B, T) -> B) -> B
+  func Fold[B](c: Slice[T], initial: B, fn: func(B, T) -> B) -> B
     go[B] {
       code: """
         func() B {
@@ -358,7 +378,7 @@ impl[T] Slice[T]: Enumerable[Slice[T], T]
       in fn = fn
     }
   end
-  func find(c: Slice[T], fn: func(T) -> Bool) -> Option[Ref[T]]
+  func Find(c: Slice[T], fn: func(T) -> Bool) -> Option[Ref[T]]
     go[Option[Ref[T]]] {
       code: """
         func() Option[*T] {
@@ -374,12 +394,12 @@ impl[T] Slice[T]: Enumerable[Slice[T], T]
       in fn = fn
     }
   end
-  func contains(c: Slice[T], item: T, eq: Eq[T]) -> Bool
+  func Contains(c: Slice[T], item: T, eq: Eq[T]) -> Bool
     go[Bool] {
       code: """
         func() bool {
             for _, v := range {c} {
-                if {eq}.equals(v, {item}) {
+                if {eq}.Equals(v, {item}) {
                     return true
                 }
             }
@@ -393,9 +413,9 @@ impl[T] Slice[T]: Enumerable[Slice[T], T]
   end
 end
 
-# Generic impl for Map[K, V]: impl[K, V] Map[K, V]: Enumerable[Map[K, V], V]
-impl[K, V] Map[K, V]: Enumerable[Map[K, V], V]
-  func each(c: Map[K, V], fn: func(V) -> ()) -> ()
+# Generic impl for Map[K, V]: impl[K, V] Map[K, V]: IEnumerable[Map[K, V], V]
+impl[K, V] Map[K, V]: IEnumerable[Map[K, V], V]
+  func Each(c: Map[K, V], fn: func(V) -> ()) -> ()
     go[()] {
       code: """
         for _, v := range {c} {
@@ -406,7 +426,15 @@ impl[K, V] Map[K, V]: Enumerable[Map[K, V], V]
       in fn = fn
     }
   end
-  func map[B](c: Map[K, V], fn: func(V) -> B) -> Map[K, B]
+
+  func Len(c: Map[K, V]) -> Int
+    go[Int] {
+      code: `len(c)`
+      in c = c
+    }
+  end
+
+  func Map[B](c: Map[K, V], fn: func(V) -> B) -> Map[K, B]
     go[Map[K, B]] {
       code: """
         func() map[K]B {
@@ -421,7 +449,7 @@ impl[K, V] Map[K, V]: Enumerable[Map[K, V], V]
       in fn = fn
     }
   end
-  func filter(c: Map[K, V], fn: func(V) -> Bool) -> Map[K, V]
+  func Filter(c: Map[K, V], fn: func(V) -> Bool) -> Map[K, V]
     go[Map[K, V]] {
       code: """
         func() map[K]V {
@@ -438,7 +466,7 @@ impl[K, V] Map[K, V]: Enumerable[Map[K, V], V]
       in fn = fn
     }
   end
-  func fold[B](c: Map[K, V], initial: B, fn: func(B, V) -> B) -> B
+  func Fold[B](c: Map[K, V], initial: B, fn: func(B, V) -> B) -> B
     go[B] {
       code: """
         func() B {
@@ -454,7 +482,7 @@ impl[K, V] Map[K, V]: Enumerable[Map[K, V], V]
       in fn = fn
     }
   end
-  func find(c: Map[K, V], fn: func(V) -> Bool) -> Option[Ref[V]]
+  func Find(c: Map[K, V], fn: func(V) -> Bool) -> Option[Ref[V]]
     go[Option[Ref[V]]] {
       code: """
         func() Option[*V] {
@@ -473,9 +501,26 @@ impl[K, V] Map[K, V]: Enumerable[Map[K, V], V]
   end
 end
 
-# Generic impl for Set[A]: impl[A] Set[A]: Enumerable[Set[A], A]
-impl[A] Set[A]: Enumerable[Set[A], A]
-  func each(c: Set[A], fn: func(A) -> ()) -> ()
+# Generic impl for Set[A]: impl[A] Set[A]: IEnumerable[Set[A], A]
+impl[A] Set[A]: IEnumerable[Set[A], A]
+  func new() -> Set[A]
+    go[Set[A]] {
+      code: """
+        func() map[A]struct{} {
+            return make(map[A]struct{})
+        }()
+      """
+    }
+  end
+
+  func Len(c: Set[A]) -> Int
+    go[Int] {
+      code: `len(c)`
+      in c = c
+    }
+  end
+
+  func Each(c: Set[A], fn: func(A) -> ()) -> ()
     go[()] {
       code: """
         for v := range {c} {
@@ -486,7 +531,7 @@ impl[A] Set[A]: Enumerable[Set[A], A]
       in fn = fn
     }
   end
-  func map[B](c: Set[A], fn: func(A) -> B) -> Set[B]
+  func Map[B](c: Set[A], fn: func(A) -> B) -> Set[B]
     go[Set[B]] {
       code: """
         func() map[B]struct{} {
@@ -501,7 +546,7 @@ impl[A] Set[A]: Enumerable[Set[A], A]
       in fn = fn
     }
   end
-  func filter(c: Set[A], fn: func(A) -> Bool) -> Set[A]
+  func Filter(c: Set[A], fn: func(A) -> Bool) -> Set[A]
     go[Set[A]] {
       code: """
         func() map[A]struct{} {
@@ -518,7 +563,7 @@ impl[A] Set[A]: Enumerable[Set[A], A]
       in fn = fn
     }
   end
-  func fold[B](c: Set[A], initial: B, fn: func(B, A) -> B) -> B
+  func Fold[B](c: Set[A], initial: B, fn: func(B, A) -> B) -> B
     go[B] {
       code: """
         func() B {
@@ -534,7 +579,7 @@ impl[A] Set[A]: Enumerable[Set[A], A]
       in fn = fn
     }
   end
-  func find(c: Set[A], fn: func(A) -> Bool) -> Option[Ref[A]]
+  func Find(c: Set[A], fn: func(A) -> Bool) -> Option[Ref[A]]
     go[Option[Ref[A]]] {
       code: """
         func() Option[*A] {
@@ -553,49 +598,56 @@ impl[A] Set[A]: Enumerable[Set[A], A]
   end
 end
 
-# Generic impl for Option[A]: impl[A] Option[A]: Enumerable[Option[A], A]
-impl[A] Option[A]: Enumerable[Option[A], A]
-  func each(c: Option[A], fn: func(A) -> ()) -> ()
+# Generic impl for Option[A]: impl[A] Option[A]: IEnumerable[Option[A], A]
+impl[A] Option[A]: IEnumerable[Option[A], A]
+  func Each(c: Option[A], fn: func(A) -> ()) -> ()
     switch c
       case Some(v) then
         let _ = fn(v)
       end
-      case None => None
+      case None => ()
     end
   end
 
-  func map[B](c: Option[A], fn: func(A) -> B) -> Option[B]
+  func Map[B](c: Option[A], fn: func(A) -> B) -> Option[B]
     switch c
       case Some(v) => Some(fn(v))
       case None => None
     end
   end
 
-  func filter(c: Option[A], fn: func(A) -> Bool) -> Option[A]
+  func Filter(c: Option[A], fn: func(A) -> Bool) -> Option[A]
     switch c
       case Some(v) => if fn(v) then Some(v) else None
       case None => None
     end
   end
 
-  func fold[B](c: Option[A], initial: B, fn: func(B, A) -> B) -> B
+  func Fold[B](c: Option[A], initial: B, fn: func(B, A) -> B) -> B
     switch c
       case Some(v) => fn(initial, v)
       case None => initial
     end
   end
 
-  func find(c: Option[A], fn: func(A) -> Bool) -> Option[Ref[A]]
+  func Find(c: Option[A], fn: func(A) -> Bool) -> Option[Ref[A]]
     switch c
       case Some(v) => if fn(v) then Some(Ref.new(v)) else None
       case None => None
     end
   end
 
-  func contains(c: Option[A], item: A, eq: Eq[A]) -> Bool
+  func Contains(c: Option[A], item: A, eq: Eq[A]) -> Bool
     switch c
-      case Some(v) => equals(v, item, eq)
+      case Some(v) => eq.Equals(v, item)
       case None => false
+    end
+  end
+
+  func Len(c: Option[A]) -> Int
+    switch c
+      case Some(_) => 1
+      case None => 0
     end
   end
 end
@@ -607,13 +659,14 @@ end
 # Slice[V]: IAssignable[Slice[V], Int, V], K = Int
 # Map[K, V]: IAssignable[Map[K, V], K, V], K = K
 interface IAssignable[C[A], K, A]
-  func get(c: C[A], index: K) -> Option[Ref[A]]
-  func set(c: C[A], index: K, value: A) -> ()
+  func Get(c: C[A], index: K) -> Option[Ref[A]]
+  func Set(c: C[A], index: K, value: A) -> ()
+  func Delete(c: C[A], index: K) -> ()
 end
 
 # Slice[T] impl for IAssignable[Slice[T], Int, T]
 impl[T] Slice[T]: IAssignable[Slice[T], Int, T]
-  func get(s: Slice[T], index: Int) -> Option[Ref[T]]
+  func Get(s: Slice[T], index: Int) -> Option[Ref[T]]
     go[Option[Ref[T]]] {
       code: """
         func() Option[*T] {
@@ -629,7 +682,7 @@ impl[T] Slice[T]: IAssignable[Slice[T], Int, T]
     }
   end
 
-  func set(s: Slice[T], index: Int, value: T) -> ()
+  func Set(s: Slice[T], index: Int, value: T) -> ()
     go[()] {
       code: """
         {s}[{index}] = {value}
@@ -639,11 +692,21 @@ impl[T] Slice[T]: IAssignable[Slice[T], Int, T]
       in value = value
     }
   end
+
+  func Delete(s: Slice[T], index: Int) -> ()
+    go[()] {
+      code: """
+        {s} = append({s}[:{index}], {s}[{index}+1:]...)
+      """
+      in s = s
+      in index = index
+    }
+  end
 end
 
 # Map[K, V] impl for IAssignable[Map[K, V], K, V]
 impl[K, V] Map[K, V]: IAssignable[Map[K, V], K, V]
-  func get(m: Map[K, V], index: K) -> Option[Ref[V]]
+  func Get(m: Map[K, V], index: K) -> Option[Ref[V]]
     go[Option[Ref[V]]] {
       code: """
         func() Option[*V] {
@@ -659,7 +722,7 @@ impl[K, V] Map[K, V]: IAssignable[Map[K, V], K, V]
     }
   end
 
-  func set(m: Map[K, V], index: K, value: V) -> ()
+  func Set(m: Map[K, V], index: K, value: V) -> ()
     go[()] {
       code: """
         {m}[{index}] = {value}
@@ -669,29 +732,39 @@ impl[K, V] Map[K, V]: IAssignable[Map[K, V], K, V]
       in value = value
     }
   end
+
+  func Delete(m: Map[K, V], index: K) -> ()
+    go[()] {
+      code: """
+        delete({m}, {index})
+      """
+      in m = m
+      in index = index
+    }
+  end
 end
 
 # ===== Option helpers =====
 
 interface IOption[A]
-  func isSome(self: IOption[A]) -> Bool
-  func isNone(self: IOption[A]) -> Bool
-  func unwrapOr(self: IOption[A], defaultVal: A) -> A
+  func IsSome(self: IOption[A]) -> Bool
+  func IsNone(self: IOption[A]) -> Bool
+  func UnwrapOr(self: IOption[A], defaultVal: A) -> A
 end
 
 impl[A] Option[A]: IOption[A]
-  func isSome(self: Option[A]) -> Bool
+  func IsSome(self: Option[A]) -> Bool
     switch self
       case Some(_) => true
       case None => false
     end
   end
 
-  func isNone(self: Option[A]) -> Bool
-    !self.isSome()
+  func IsNone(self: Option[A]) -> Bool
+    !self.IsSome()
   end
 
-  func unwrapOr(opt: Option[A], defaultVal: A) -> A
+  func UnwrapOr(opt: Option[A], defaultVal: A) -> A
     switch opt
       case Some(v) => v
       case None => defaultVal
@@ -699,7 +772,7 @@ impl[A] Option[A]: IOption[A]
   end
 end
 
-func optionFlatMap[A, B](opt: Option[A], fn: func(A) -> Option[B]) -> Option[B]
+func OptionFlatMap[A, B](opt: Option[A], fn: func(A) -> Option[B]) -> Option[B]
   switch opt
     case Some(v) => fn(v)
     case None => None
@@ -708,49 +781,49 @@ end
 
 # ===== Result helpers =====
 
-func resultIsOk[A, E](res: Result[A, E]) -> Bool
+func ResultIsOk[A, E](res: Result[A, E]) -> Bool
   switch res
     case Ok(_) => true
     case Err(_) => false
   end
 end
 
-func resultIsErr[A, E](res: Result[A, E]) -> Bool
+func ResultIsErr[A, E](res: Result[A, E]) -> Bool
   switch res
     case Ok(_) => false
     case Err(_) => true
   end
 end
 
-func resultUnwrap[A, E](res: Result[A, E], defaultVal: A) -> A
+func ResultUnwrap[A, E](res: Result[A, E], defaultVal: A) -> A
   switch res
     case Ok(v) => v
     case Err(_) => defaultVal
   end
 end
 
-func resultMap[A, B, E](res: Result[A, E], fn: func(A) -> B) -> Result[B, E]
+func ResultMap[A, B, E](res: Result[A, E], fn: func(A) -> B) -> Result[B, E]
   switch res
     case Ok(v) => Ok(fn(v))
     case Err(e) => Err(e)
   end
 end
 
-func resultMapErr[A, B, E](res: Result[A, E], fn: func(E) -> B) -> Result[A, B]
+func ResultMapErr[A, B, E](res: Result[A, E], fn: func(E) -> B) -> Result[A, B]
   switch res
     case Ok(v) => Ok(v)
     case Err(e) => Err(fn(e))
   end
 end
 
-func resultAndThen[A, B, E](res: Result[A, E], fn: func(A) -> Result[B, E]) -> Result[B, E]
+func ResultAndThen[A, B, E](res: Result[A, E], fn: func(A) -> Result[B, E]) -> Result[B, E]
   switch res
     case Ok(v) => fn(v)
     case Err(e) => Err(e)
   end
 end
 
-func resultOrElse[A, E](res: Result[A, E], defaultVal: A) -> A
+func ResultOrElse[A, E](res: Result[A, E], defaultVal: A) -> A
   switch res
     case Ok(v) => v
     case Err(_) => defaultVal

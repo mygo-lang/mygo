@@ -193,7 +193,7 @@ func (g *generator) genStruct(d *StructDecl) []jen.Code {
 		if f.Name == "embed" {
 			field = jenTypeExpr(f.Type).(*jen.Statement)
 		} else {
-			field = jen.Id(exportName(f.Name)).Add(jenTypeExpr(f.Type))
+			field = jen.Id(f.Name).Add(jenTypeExpr(f.Type))
 		}
 		if len(tagMap) > 0 {
 			field = field.Tag(tagMap)
@@ -325,7 +325,6 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 		}
 		var fn *jen.Statement
 		if len(mergedTypeParams) > 0 {
-			typeOpts := jen.Options{Open: fnName + "[", Close: "]", Separator: ", "}
 			typeItems := make([]jen.Code, 0, len(mergedTypeParams))
 			constraints := implTypeParamConstraints(typeArgs)
 			for _, tp := range mergedTypeParams {
@@ -335,7 +334,7 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 				}
 				typeItems = append(typeItems, jen.Id(tp).Id(constraint))
 			}
-			fn = jen.Func().Custom(typeOpts, typeItems...)
+			fn = jen.Func().Id(fnName).Types(typeItems...)
 		} else {
 			fn = jen.Func().Id(fnName)
 		}
@@ -364,7 +363,7 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 		} else {
 			expr, _, err := g.translateExpr(bodyExpr, ctx, retType)
 			if err != nil {
-				bodyStmts = append(bodyStmts, jen.Id("panic").Call(jen.Lit("translate error")))
+				return nil, common.ErrorAtPos(d.Line, d.Column, "function %s: %v", d.Name, err)
 			} else if retType == "" {
 				bodyStmts = append(bodyStmts, expr)
 				bodyStmts = append(bodyStmts, jen.Return())
@@ -486,9 +485,14 @@ func (g *generator) genFunc(d *FuncDecl) (jen.Code, error) {
 			if paramName == "" {
 				paramName = m.Name + "Fn"
 			}
+			targetType := ""
+			if len(c.Args) > 0 {
+				targetType = typeString(c.Args[0], subst)
+			}
 			binding := typeclassBinding{
-				Interface: c.Name,
-				Score:     typeclassMatchScore(c.Args, typeParamSet(d.TypeParams)),
+				Interface:  c.Name,
+				Score:      typeclassMatchScore(c.Args, typeParamSet(d.TypeParams)),
+				TargetType: targetType,
 				ParamTypes: func() []string {
 					out := make([]string, 0, len(m.Params))
 					for _, p := range m.Params {
@@ -549,9 +553,16 @@ func (g *generator) genFunc(d *FuncDecl) (jen.Code, error) {
 		fn = fn.Add(jen.Parens(jen.List(items...)))
 	}
 
-	// Build function body
+	// Build function body. For block expressions, emit the translated statements
+	// directly so we avoid an unnecessary IIFE inside the function body.
 	var bodyStmts []jen.Code
-	if len(retTypes) == 0 {
+	if block, ok := d.Body.(*BlockExpr); ok {
+		blockStmts, err := g.translateFunctionBlock(block, ctx, retType, retTypes)
+		if err != nil {
+			return nil, common.ErrorAtPos(d.Line, d.Column, "function %s: %v", d.Name, err)
+		}
+		bodyStmts = append(bodyStmts, blockStmts...)
+	} else if len(retTypes) == 0 {
 		bodyExpr, _, err := g.translateExpr(d.Body, ctx, retType)
 		if err != nil {
 			return nil, common.ErrorAtPos(d.Line, d.Column, "function %s: %v", d.Name, err)
@@ -587,6 +598,121 @@ func (g *generator) genFunc(d *FuncDecl) (jen.Code, error) {
 	return fn, nil
 }
 
+func (g *generator) translateFunctionBlock(n *BlockExpr, ctx *exprCtx, returnExpected string, retTypes []string) ([]jen.Code, error) {
+	child := ctx.child()
+	var stmtCodes []jen.Code
+	var lastWasExprStmt bool
+	for i, stmt := range n.Stmts {
+		isLast := i == len(n.Stmts)-1
+		switch s := stmt.(type) {
+		case *ExprStmt:
+			lastWasExprStmt = isLast
+			stmtExpected := ""
+			if isLast {
+				stmtExpected = returnExpected
+			}
+			if isLast && len(retTypes) > 1 {
+				if tuple, ok := s.Expr.(*TupleLitExpr); ok {
+					values := make([]jen.Code, 0, len(tuple.Elems))
+					for i, elem := range tuple.Elems {
+						code, _, err := g.translateExpr(elem, child, retTypes[i])
+						if err != nil {
+							return nil, err
+						}
+						values = append(values, code)
+					}
+					stmtCodes = append(stmtCodes, jen.Return(values...))
+					continue
+				}
+			}
+			code, typ, err := g.translateExpr(s.Expr, child, stmtExpected)
+			if err != nil {
+				return nil, err
+			}
+			if isLast && returnExpected != "" {
+				stmtCodes = append(stmtCodes, jen.Return(code))
+				continue
+			}
+			if stmtIsStatementSafe(s.Expr) || typ == "" {
+				stmtCodes = append(stmtCodes, code)
+			} else {
+				stmtCodes = append(stmtCodes, jen.Id("_").Op("=").Add(code))
+			}
+		case *ReturnStmt:
+			if s.Value != nil {
+				code, _, err := g.translateExpr(s.Value, child, returnExpected)
+				if err != nil {
+					return nil, err
+				}
+				if len(retTypes) > 1 {
+					stmtCodes = append(stmtCodes, jen.Return().Add(jen.List(tupleReturnValues(code, retTypes)...)))
+				} else {
+					stmtCodes = append(stmtCodes, jen.Return().Add(code))
+				}
+			} else {
+				stmtCodes = append(stmtCodes, jen.Return())
+			}
+		case *LetStmt:
+			lastWasExprStmt = false
+			if s.Bind != nil {
+				code, typ, err := g.translateExpr(s.Value, child, "")
+				if err != nil {
+					return nil, err
+				}
+				if typ == "" || !isTupleLikeTypeString(typ) {
+					return nil, common.ErrorAtPos(s.Line, s.Column, "tuple destructuring requires a tuple value")
+				}
+				tupleTmp := g.bindLocal(child, "__tuple", typ, s.Mutable)
+				stmtCodes = append(stmtCodes, jen.Id(tupleTmp).Op(":=").Add(code))
+				if err := g.emitBindPattern(&stmtCodes, child, tupleTmp, s.Bind, s.Mutable); err != nil {
+					return nil, common.ErrorAtPos(s.Line, s.Column, "tuple destructuring: %v", err)
+				}
+				continue
+			}
+			code, typ, err := g.translateExpr(s.Value, child, myGoTypeString(s.Type, nil))
+			if err != nil {
+				return nil, err
+			}
+			if s.Name == "_" {
+				if stmtIsStatementSafe(s.Value) {
+					stmtCodes = append(stmtCodes, code)
+				} else {
+					stmtCodes = append(stmtCodes, jen.Id("_").Op("=").Add(code))
+				}
+			} else {
+				actualName := g.bindLocal(child, s.Name, typ, s.Mutable)
+				if s.Type != nil {
+					bindType := g.goType(s.Type, child.typeParams)
+					stmtCodes = append(stmtCodes, jen.Var().Id(actualName).Add(jenTypeExpr(&NamedType{Name: bindType})).Op("=").Add(code))
+				} else {
+					stmtCodes = append(stmtCodes, jen.Id(actualName).Op(":=").Add(code))
+				}
+			}
+		case *AssignStmt:
+			actualName, ok := child.bindings[s.Name]
+			if !ok {
+				return nil, common.ErrorAtPos(s.Line, s.Column, "unknown binding %q", s.Name)
+			}
+			if !child.mutable[actualName] {
+				return nil, common.ErrorAtPos(s.Line, s.Column, "cannot assign to immutable binding %q", s.Name)
+			}
+			targetType := child.locals[s.Name]
+			code, _, err := g.translateExpr(s.Value, child, targetType)
+			if err != nil {
+				return nil, err
+			}
+			stmtCodes = append(stmtCodes, jen.Id(actualName).Op("=").Add(code))
+		default:
+			line, col := common.NodePos(stmt)
+			return nil, common.ErrorAtPos(line, col, "unsupported statement %#v", stmt)
+		}
+	}
+	if returnExpected == "" && !lastWasExprStmt {
+		return stmtCodes, nil
+	}
+	return stmtCodes, nil
+}
+
 func (g *generator) genHelpers() []jen.Code {
 	return []jen.Code{
 		jen.Func().Id("callAny").
@@ -602,9 +728,9 @@ func (g *generator) genHelpers() []jen.Code {
 				),
 				jen.Id("out").Op(":=").Qual("reflect", "ValueOf").Call(jen.Id("fn")).Dot("Call").Call(jen.Id("values")),
 				jen.If(jen.Len(jen.Id("out")).Op("==").Lit(0)).Block(
-					jen.Return(jen.Nil()),
+					jen.Return().Add(jen.Nil()),
 				),
-				jen.Return(jen.Id("out").Index(jen.Lit(0)).Dot("Interface").Call()),
+				jen.Return().Add(jen.Id("out").Index(jen.Lit(0)).Dot("Interface").Call()),
 			),
 	}
 }
