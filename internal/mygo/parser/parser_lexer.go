@@ -68,9 +68,12 @@ func (l *lexer) nextToken() token {
 			return token{kind: tokString, lit: lit, line: pos.Line, col: pos.Column}
 		}
 		raw := string(l.TokenBytes(nil))
-		var lit string
-		var err error
-		lit, err = strconv.Unquote(raw)
+		// Backtick string (raw string literal): no escape processing
+		if len(raw) >= 2 && raw[0] == '`' && raw[len(raw)-1] == '`' {
+			return token{kind: tokString, lit: raw[1 : len(raw)-1], line: pos.Line, col: pos.Column}
+		}
+		// Normal string with escape processing
+		lit, err := strconv.Unquote(raw)
 		if err != nil {
 			lit = raw
 		}

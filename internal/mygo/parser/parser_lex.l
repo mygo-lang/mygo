@@ -71,6 +71,7 @@ unicodeLetter \x80
 \n                return l.char(NEWLINE)
 \#([^\n])*
 \"\"\" { return l.scanMultilineString() }
+`[^\`]*`  return l.char(STRING)
 \"([^\"\\]|\\.)*\"  return l.char(STRING)
 package            return l.char(PACKAGE)
 import             return l.char(IMPORT)
