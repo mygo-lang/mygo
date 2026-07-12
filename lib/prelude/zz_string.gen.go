@@ -4,10 +4,12 @@ package prelude
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
 var _ = fmt.Append
+var _ = strconv.AppendBool
 var _ = strings.Clone
 
 func Each_string_rune(c string, fn func(rune)) {

@@ -4,6 +4,7 @@ package prelude
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -16,6 +17,7 @@ type HKT2[A any] interface{}
 type HKT[F any, A any] interface{}
 
 var _ = fmt.Append
+var _ = strconv.AppendBool
 var _ = strings.Clone
 
 type Option[A any] interface {
@@ -81,6 +83,14 @@ type IOption[A any] interface {
 	IsNone(IOption[A]) bool
 	UnwrapOr(IOption[A], A) A
 }
+type Ord[A any] interface {
+	Compare(A, A) int
+	Less(A, A) bool
+	Greater(A, A) bool
+}
+type Default[A any] func() A
+type From[A any, B any] func(A) B
+type Into[A any, B any] func(A) B
 
 func Show_int(value int) string {
 	return fmt.Sprint(value)
@@ -733,6 +743,360 @@ func UnwrapOr_a[A any](opt Option[A], defaultVal A) A {
 		}
 	}()
 }
+func Compare_int(left int, right int) int {
+	return func() int {
+		if left < right {
+			return -1
+		}
+		if left > right {
+			return 1
+		}
+		return 0
+	}()
+
+}
+func Less_int(left int, right int) bool {
+	return left < right
+}
+func Greater_int(left int, right int) bool {
+	return left > right
+}
+func Compare_int8(left int8, right int8) int {
+	return func() int {
+		if left < right {
+			return -1
+		}
+		if left > right {
+			return 1
+		}
+		return 0
+	}()
+
+}
+func Less_int8(left int8, right int8) bool {
+	return left < right
+}
+func Greater_int8(left int8, right int8) bool {
+	return left > right
+}
+func Compare_uint8(left uint8, right uint8) int {
+	return func() int {
+		if left < right {
+			return -1
+		}
+		if left > right {
+			return 1
+		}
+		return 0
+	}()
+
+}
+func Less_uint8(left uint8, right uint8) bool {
+	return left < right
+}
+func Greater_uint8(left uint8, right uint8) bool {
+	return left > right
+}
+func Compare_int16(left int16, right int16) int {
+	return func() int {
+		if left < right {
+			return -1
+		}
+		if left > right {
+			return 1
+		}
+		return 0
+	}()
+
+}
+func Less_int16(left int16, right int16) bool {
+	return left < right
+}
+func Greater_int16(left int16, right int16) bool {
+	return left > right
+}
+func Compare_uint16(left uint16, right uint16) int {
+	return func() int {
+		if left < right {
+			return -1
+		}
+		if left > right {
+			return 1
+		}
+		return 0
+	}()
+
+}
+func Less_uint16(left uint16, right uint16) bool {
+	return left < right
+}
+func Greater_uint16(left uint16, right uint16) bool {
+	return left > right
+}
+func Compare_int32(left int32, right int32) int {
+	return func() int {
+		if left < right {
+			return -1
+		}
+		if left > right {
+			return 1
+		}
+		return 0
+	}()
+
+}
+func Less_int32(left int32, right int32) bool {
+	return left < right
+}
+func Greater_int32(left int32, right int32) bool {
+	return left > right
+}
+func Compare_uint32(left uint32, right uint32) int {
+	return func() int {
+		if left < right {
+			return -1
+		}
+		if left > right {
+			return 1
+		}
+		return 0
+	}()
+
+}
+func Less_uint32(left uint32, right uint32) bool {
+	return left < right
+}
+func Greater_uint32(left uint32, right uint32) bool {
+	return left > right
+}
+func Compare_int64(left int64, right int64) int {
+	return func() int {
+		if left < right {
+			return -1
+		}
+		if left > right {
+			return 1
+		}
+		return 0
+	}()
+
+}
+func Less_int64(left int64, right int64) bool {
+	return left < right
+}
+func Greater_int64(left int64, right int64) bool {
+	return left > right
+}
+func Compare_uint(left uint, right uint) int {
+	return func() int {
+		if left < right {
+			return -1
+		}
+		if left > right {
+			return 1
+		}
+		return 0
+	}()
+
+}
+func Less_uint(left uint, right uint) bool {
+	return left < right
+}
+func Greater_uint(left uint, right uint) bool {
+	return left > right
+}
+func Compare_uint64(left uint64, right uint64) int {
+	return func() int {
+		if left < right {
+			return -1
+		}
+		if left > right {
+			return 1
+		}
+		return 0
+	}()
+
+}
+func Less_uint64(left uint64, right uint64) bool {
+	return left < right
+}
+func Greater_uint64(left uint64, right uint64) bool {
+	return left > right
+}
+func Compare_float32(left float32, right float32) int {
+	return func() int {
+		if left < right {
+			return -1
+		}
+		if left > right {
+			return 1
+		}
+		return 0
+	}()
+
+}
+func Less_float32(left float32, right float32) bool {
+	return left < right
+}
+func Greater_float32(left float32, right float32) bool {
+	return left > right
+}
+func Compare_float64(left float64, right float64) int {
+	return func() int {
+		if left < right {
+			return -1
+		}
+		if left > right {
+			return 1
+		}
+		return 0
+	}()
+
+}
+func Less_float64(left float64, right float64) bool {
+	return left < right
+}
+func Greater_float64(left float64, right float64) bool {
+	return left > right
+}
+func Compare_string(left string, right string) int {
+	return func() int {
+		if left < right {
+			return -1
+		}
+		if left > right {
+			return 1
+		}
+		return 0
+	}()
+
+}
+func Less_string(left string, right string) bool {
+	return left < right
+}
+func Greater_string(left string, right string) bool {
+	return left > right
+}
+func Compare_bool(left bool, right bool) int {
+	return func() int {
+		if left == right {
+			return 0
+		}
+		if !left && right {
+			return -1
+		}
+		return 1
+	}()
+
+}
+func Less_bool(left bool, right bool) bool {
+	return !left && right
+}
+func Greater_bool(left bool, right bool) bool {
+	return left && !right
+}
+func Default_int() int {
+	return 0
+}
+func Default_int8() int8 {
+	return 0
+}
+func Default_uint8() uint8 {
+	return 0
+}
+func Default_int16() int16 {
+	return 0
+}
+func Default_uint16() uint16 {
+	return 0
+}
+func Default_int32() int32 {
+	return 0
+}
+func Default_uint32() uint32 {
+	return 0
+}
+func Default_int64() int64 {
+	return 0
+}
+func Default_uint() uint {
+	return 0
+}
+func Default_uint64() uint64 {
+	return 0
+}
+func Default_float32() float32 {
+	return 0.0
+}
+func Default_float64() float64 {
+	return 0.0
+}
+func Default_bool() bool {
+	return false
+}
+func Default_string() string {
+	return ""
+}
+func Default_option_a[A any]() Option[A] {
+	return None[A]()
+}
+func From_int_int64(value int) int64 {
+	return int64(value)
+}
+func From_int64_int(value int64) int {
+	return int(value)
+}
+func From_int64_float64(value int64) float64 {
+	return float64(value)
+}
+func From_float64_int64(value float64) int64 {
+	return int64(value)
+}
+func From_float32_float64(value float32) float64 {
+	return float64(value)
+}
+func From_float64_float32(value float64) float32 {
+	return float32(value)
+}
+func From_int_float64(value int) float64 {
+	return float64(value)
+}
+func From_float64_int(value float64) int {
+	return int(value)
+}
+func From_int_string(value int) string {
+	return fmt.Sprint(value)
+}
+func From_string_result_int_string(value string) Result[int, string] {
+	return func() Result[int, string] {
+		v, err := strconv.Atoi(value)
+		if err != nil {
+			return Err[int, string](err.Error())
+		}
+		return Ok[int, string](v)
+	}()
+
+}
+func From_string_result_int64_string(value string) Result[int64, string] {
+	return func() Result[int64, string] {
+		v, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return Err[int64, string](err.Error())
+		}
+		return Ok[int64, string](v)
+	}()
+
+}
+func From_string_result_float64_string(value string) Result[float64, string] {
+	return func() Result[float64, string] {
+		v, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return Err[float64, string](err.Error())
+		}
+		return Ok[float64, string](v)
+	}()
+
+}
 func OptionFlatMap[A any, B any](opt Option[A], fn func(A) Option[B]) Option[B] {
 	return func() Option[B] {
 		if v_33, ok := opt.(OptionSome[A]); ok {
@@ -868,4 +1232,89 @@ func ResultOrElse[A any, E any](res Result[A, E], defaultVal A) A {
 			}
 		}
 	}()
+}
+func OptionToResult[A any, E any](opt Option[A], errVal E) Result[A, E] {
+	return func() Result[A, E] {
+		if v_49, ok := opt.(OptionSome[A]); ok {
+			return func() Result[A, E] {
+				return Ok[A, E](v_49.F0)
+			}()
+		} else {
+			if _, ok := opt.(OptionNone[A]); ok {
+				return func() Result[A, E] {
+					return Err[A, E](errVal)
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
+	}()
+}
+func ResultToOption[A any, E any](res Result[A, E]) Option[A] {
+	return func() Option[A] {
+		if v_51, ok := res.(ResultOk[A, E]); ok {
+			return func() Option[A] {
+				return Some[A](v_51.F0)
+			}()
+		} else {
+			if _, ok := res.(ResultErr[A, E]); ok {
+				return func() Option[A] {
+					return None[A]()
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
+	}()
+}
+func ResultFlatten[A any, E any](res Result[Result[A, E], E]) Result[A, E] {
+	return func() Result[A, E] {
+		if v_53, ok := res.(ResultOk[Result[A, E], E]); ok {
+			return func() Result[A, E] {
+				return v_53.F0
+			}()
+		} else {
+			if v_54, ok := res.(ResultErr[Result[A, E], E]); ok {
+				return func() Result[A, E] {
+					return Err[A, E](v_54.F0)
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
+	}()
+}
+func OptionFilter[A any](opt Option[A], fn func(A) bool) Option[A] {
+	return func() Option[A] {
+		if v_55, ok := opt.(OptionSome[A]); ok {
+			return func() Option[A] {
+				return func() Option[A] {
+					if fn(v_55.F0) {
+						return opt
+					} else {
+						return None[A]()
+					}
+				}()
+			}()
+		} else {
+			if _, ok := opt.(OptionNone[A]); ok {
+				return func() Option[A] {
+					return None[A]()
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
+	}()
+}
+func Panic(msg string) {
+	panic(msg)
+	return
+}
+func Assert(cond bool, msg string) {
+	if !cond {
+		panic(msg)
+	}
+
+	return
 }
