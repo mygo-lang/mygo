@@ -39,9 +39,86 @@ func (g *generator) findGoMethodSig(baseType, name string) (*goFuncSig, bool) {
 	return nil, false
 }
 
+func normalizeMygoTypeToGo(s string) string {
+	s = strings.TrimSpace(s)
+	// Ref[T] -> *T
+	if strings.HasPrefix(s, "Ref[") && strings.HasSuffix(s, "]") {
+		return "*" + normalizeMygoTypeToGo(s[4:len(s)-1])
+	}
+	// Slice[T] -> []T
+	if strings.HasPrefix(s, "Slice[") && strings.HasSuffix(s, "]") {
+		return "[]" + normalizeMygoTypeToGo(s[6:len(s)-1])
+	}
+	// Set[T] -> map[T]struct{}
+	if strings.HasPrefix(s, "Set[") && strings.HasSuffix(s, "]") {
+		return "map[" + normalizeMygoTypeToGo(s[4:len(s)-1]) + "]struct{}"
+	}
+	// Map[K, V] -> map[K]V
+	if strings.HasPrefix(s, "Map[") && strings.HasSuffix(s, "]") {
+		inner := s[4 : len(s)-1]
+		depth := 0
+		commaIdx := -1
+		for i, ch := range inner {
+			switch ch {
+			case '[':
+				depth++
+			case ']':
+				depth--
+			case ',':
+				if depth == 0 {
+					commaIdx = i
+					break
+				}
+			}
+		}
+		if commaIdx >= 0 {
+			k := normalizeMygoTypeToGo(inner[:commaIdx])
+			v := normalizeMygoTypeToGo(inner[commaIdx+1:])
+			return "map[" + k + "]" + v
+		}
+		return s
+	}
+	// Mygo primitives -> Go primitives
+	switch s {
+	case "String":
+		return "string"
+	case "Bool":
+		return "bool"
+	case "Int":
+		return "int"
+	case "Int8":
+		return "int8"
+	case "Int16":
+		return "int16"
+	case "Int32":
+		return "int32"
+	case "Int64":
+		return "int64"
+	case "UInt":
+		return "uint"
+	case "UInt8":
+		return "uint8"
+	case "UInt16":
+		return "uint16"
+	case "UInt32":
+		return "uint32"
+	case "UInt64":
+		return "uint64"
+	case "Float32":
+		return "float32"
+	case "Float64":
+		return "float64"
+	case "Any":
+		return "any"
+	}
+	return s
+}
+
 func (g *generator) goTypeCompatible(expected, actual string) bool {
 	expected = strings.TrimSpace(expected)
 	actual = strings.TrimSpace(actual)
+	expected = normalizeMygoTypeToGo(expected)
+	actual = normalizeMygoTypeToGo(actual)
 	if normalizeMyGoPrimitiveType(expected) == "Any" || strings.TrimSpace(expected) == "any" {
 		return true
 	}

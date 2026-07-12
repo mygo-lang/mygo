@@ -1,5 +1,10 @@
 ## Recent Work
 
+- **Phase 2: String utility functions**: Added 17 string manipulation functions to `lib/prelude/string.mygo` — `HasPrefix`, `HasSuffix`, `Trim`, `TrimSpace`, `TrimPrefix`, `TrimSuffix`, `Split`, `SplitN`, `Join`, `Replace`, `ReplaceAll`, `ToUpper`, `ToLower`, `Repeat`, `Index`, `LastIndex`, `Fields`. All wrap Go's `strings` package via `go[T]{}` inline embeddings. Generated Go code in `lib/prelude/zz_string.gen.go`.
+- **Phase 3: Sorting and Searching (`lib/sort/`)**: New library package with generic `Sort`, `IsSorted`, `BinarySearch`, `Min`, `Max` functions. All implemented via inline Go embeddings (quicksort algorithm, no Go `sort` dependency). `BinarySearch` returns `Option[Int]`.
+- **Compiler: MyGo-to-Go type normalization** (`compiler/type_inference.go`): Added `normalizeMygoTypeToGo()` that converts MyGo collection types (`Ref[T]` → `*T`, `Slice[T]` → `[]T`, `Set[T]` → `map[T]struct{}`, `Map[K,V]` → `map[K]V`) and primitives (`String` → `string`, etc.) to their Go equivalents for improved type compatibility checking in `goTypeCompatible()`.
+- **Docs**: Added `docs/compiler/stdlib-phase2.md` (string utilities), `docs/compiler/stdlib-phase3.md` (sort package), and updated `docs/compiler/genfiles.md` (type normalization).
+
 - **`-> Unit` → `-> ()` migration**: All source files migrated from `-> Unit` / `go[Unit]` to `-> ()` / `go[()]`. The old `Unit` name is no longer recognized as a return-type keyword.
   - **Parser** (`parser.y`): Added `| LPAREN RPAREN` alternative to the `type` rule so `()` is recognized as a type expression (empty tuple → unit type). Regenerated `parser.go` via `goyacc`. Conflicts: 39/5 (was 29/4).
   - **HM type inference** (`typeinference/types.go`): `typeFromAST` returns `TUnit{}` for empty `TupleType` (i.e. `()`).

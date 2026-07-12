@@ -39,3 +39,27 @@ Added `braceDepth` counter in lexer (`parser_lexer.go`):
 - Only affects NEWLINEs inside LBRACE...RBRACE blocks; other NEWLINEs (statements, let/var) work normally.
 - Trailing commas (e.g. `{ "a": 1, \n }`) are still not supported due to original yacc grammar.
 - Added `//go:build ignore` to `parser.y` to prevent go 1.26 from attempting to compile `.y` files as Go source.
+
+## MyGo-to-Go Type Normalization (`compiler/type_inference.go`)
+
+### `normalizeMygoTypeToGo(s string) string`
+
+Normalizes MyGo type names to their Go equivalents for type compatibility checking in `goTypeCompatible()`. This is necessary because collection types and primitives have different names in MyGo vs Go.
+
+| MyGo Type | Go Type | Rule |
+|-----------|---------|------|
+| `Ref[T]` | `*T` | Pointer dereference |
+| `Slice[T]` | `[]T` | Slice |
+| `Set[T]` | `map[T]struct{}` | Set as map |
+| `Map[K, V]` | `map[K]V` | Map |
+| `String` | `string` | Primitive |
+| `Bool` | `bool` | Primitive |
+| `Int`/`Int8`/.../`UInt64` | `int`/`int8`/.../`uint64` | Numeric |
+| `Float32`/`Float64` | `float32`/`float64` | Float |
+| `Any` | `any` | Any type |
+
+The function handles nesting (e.g., `Slice[Ref[String]]` → `[]*string`) and Map's comma-separated type parameters with bracket-depth tracking.
+
+### Integration
+
+`normalizeMygoTypeToGo` is called at the start of `goTypeCompatible()` before the existing `normalizeMyGoPrimitiveType` normalization, ensuring that collection type parameters and return types are compared in Go-native form during code generation type checks.

@@ -51,3 +51,54 @@ func Find_string_rune(c string, fn func(rune) bool) Option[*rune] {
 func Contains_string_rune(c string, item rune, eq Eq[rune]) bool {
 	return strings.ContainsRune(c, item)
 }
+func String_HasPrefix(s string, prefix string) bool {
+	return strings.HasPrefix(s, prefix)
+}
+func String_HasSuffix(s string, suffix string) bool {
+	return strings.HasSuffix(s, suffix)
+}
+func String_Trim(s string, cutset string) string {
+	return strings.Trim(s, cutset)
+}
+func String_TrimSpace(s string) string {
+	return strings.TrimSpace(s)
+}
+func String_TrimPrefix(s string, prefix string) string {
+	return strings.TrimPrefix(s, prefix)
+}
+func String_TrimSuffix(s string, suffix string) string {
+	return strings.TrimSuffix(s, suffix)
+}
+func String_Split(s string, sep string) []string {
+	return strings.Split(s, sep)
+}
+func String_SplitN(s string, sep string, n int) []string {
+	return strings.SplitN(s, sep, n)
+}
+func String_Join(sep string, elems[]string) string {
+	return strings.Join(elems, sep)
+}
+func String_Replace(s string, old string, new string, n int) string {
+	return strings.Replace(s, old, new, n)
+}
+func String_ReplaceAll(s string, old string, new string) string {
+	return strings.ReplaceAll(s, old, new)
+}
+func String_ToUpper(s string) string {
+	return strings.ToUpper(s)
+}
+func String_ToLower(s string) string {
+	return strings.ToLower(s)
+}
+func String_Repeat(s string, count int) string {
+	return strings.Repeat(s, count)
+}
+func String_Index(s string, substr string) int {
+	return strings.Index(s, substr)
+}
+func String_LastIndex(s string, substr string) int {
+	return strings.LastIndex(s, substr)
+}
+func String_Fields(s string) []string {
+	return strings.Fields(s)
+}

@@ -1,0 +1,101 @@
+package sort
+
+# ===== Phase 3: Sorting and Searching =====
+# Uses comparison function parameters (since prelude Ord[A] constraint
+# resolution is not available across packages at the mygo compiler level).
+# Sorting is implemented via inline Go quicksort.
+
+func Sort[A](slc: Slice[A], less: func(A, A) -> Bool) -> ()
+  go[()] {
+    code: """
+      var sortFn func([]A, int, int)
+      sortFn = func(arr []A, lo, hi int) {
+        if lo >= hi { return }
+        pivot := arr[hi]
+        i := lo
+        for j := lo; j < hi; j++ {
+          if less(arr[j], pivot) {
+            arr[i], arr[j] = arr[j], arr[i]
+            i++
+          }
+        }
+        arr[i], arr[hi] = arr[hi], arr[i]
+        sortFn(arr, lo, i-1)
+        sortFn(arr, i+1, hi)
+      }
+      sortFn(slc, 0, len(slc)-1)
+    """
+    in slc = slc
+    in less = less
+  }
+end
+
+func IsSorted[A](slc: Slice[A], less: func(A, A) -> Bool) -> Bool
+  go[Bool] {
+    code: """
+      func() bool {
+        for i := 0; i < len(slc)-1; i++ {
+          if less(slc[i+1], slc[i]) {
+            return false
+          }
+        }
+        return true
+      }()
+    """
+    in slc = slc
+    in less = less
+  }
+end
+
+func BinarySearch[A](slc: Slice[A], target: A, compare: func(A, A) -> Int) -> Option[Int]
+  go[Option[Int]] {
+    code: """
+      func() Option[int] {
+        lo, hi := 0, len(slc)-1
+        for lo <= hi {
+          mid := lo + (hi-lo)/2
+          cmp := compare(slc[mid], target)
+          if cmp == 0 {
+            return Some[int](mid)
+          } else if cmp < 0 {
+            lo = mid + 1
+          } else {
+            hi = mid - 1
+          }
+        }
+        return None[int]()
+      }()
+    """
+    in slc = slc
+    in target = target
+    in compare = compare
+  }
+end
+
+func Min[A](a: A, b: A, less: func(A, A) -> Bool) -> A
+  go[A] {
+    code: """
+      func() A {
+        if less(a, b) { return a }
+        return b
+      }()
+    """
+    in a = a
+    in b = b
+    in less = less
+  }
+end
+
+func Max[A](a: A, b: A, greater: func(A, A) -> Bool) -> A
+  go[A] {
+    code: """
+      func() A {
+        if greater(a, b) { return a }
+        return b
+      }()
+    """
+    in a = a
+    in b = b
+    in greater = greater
+  }
+end
