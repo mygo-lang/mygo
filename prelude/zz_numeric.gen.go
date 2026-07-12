@@ -2,17 +2,7 @@
 
 package prelude
 
-import (
-	"fmt"
-	"strconv"
-	"strings"
-	"unicode/utf8"
-)
-
-var _ = fmt.Append
-var _ = strconv.AppendBool
-var _ = strings.Clone
-var _ = utf8.AppendRune
+import "fmt"
 
 func Show_int(value int) string {
 	return fmt.Sprint(value)

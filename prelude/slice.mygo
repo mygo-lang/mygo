@@ -138,3 +138,42 @@ impl[T] Slice[T]
     }
   end
 end
+
+impl[T] Slice[T]: IAssignable[Slice[T], Int, T]
+  func Get(s: Slice[T], index: Int) -> Option[T]
+    go[Option[T]] {
+      code: """
+        func() Option[T] {
+          if index >= 0 && index < len(s) {
+            return Some[T](s[index])
+          }
+          return None[T]()
+        }()
+      """
+      in s = s
+      in index = index
+      type T = T
+    }
+  end
+
+  func Set(s: Slice[T], index: Int, value: T) -> ()
+    go[()] {
+      code: """
+        s[index] = value
+      """
+      in s = s
+      in index = index
+      in value = value
+    }
+  end
+
+  func Delete(s: Slice[T], index: Int) -> ()
+    go[()] {
+      code: """
+        s = append(s[:index], s[index+1:]...)
+      """
+      in s = s
+      in index = index
+    }
+  end
+end

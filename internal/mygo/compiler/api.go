@@ -31,6 +31,27 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 	}
 	p.WorkspaceRoot = workspaceRoot
 
+	// Merge declarations from all imported MyGO packages (non-go: imports)
+	// so their interfaces, impls, enums, and structs are available for
+	// method resolution during code generation (typeclass matching, etc.).
+	if !noPrelude && p.Name != "prelude" {
+		for _, path := range p.ImportAliases {
+			if strings.HasPrefix(path, "go:") {
+				continue
+			}
+			imported, err := loadImportedMyGoPackage(workspaceRoot, dir, path, true)
+			if err != nil {
+				continue
+			}
+			mergeImportedDecls(p, imported)
+		}
+		// Also merge prelude (auto-imported at Go level, not in ImportAliases).
+		// Try to find prelude directory: look relative to workspaceRoot, then walk up.
+		if preludePkg := loadPreludePackage(dir, workspaceRoot); preludePkg != nil {
+			mergeImportedDecls(p, preludePkg)
+		}
+	}
+
 	files, err := codegen.GenerateFiles(p)
 	if err != nil {
 		return nil, err
@@ -97,6 +118,61 @@ func syncDir(root string, noPrelude bool) ([]string, error) {
 	}
 	sort.Strings(written)
 	return written, nil
+}
+
+// loadPreludePackage finds and loads the prelude package by trying various paths.
+func loadPreludePackage(dir, workspaceRoot string) *pkg.Package {
+	candidates := []string{
+		filepath.Join(workspaceRoot, "prelude"),
+		filepath.Join(dir, "prelude"),
+		filepath.Join(dir, "..", "prelude"),
+		filepath.Join(dir, "..", "..", "prelude"),
+		"prelude",
+	}
+	seen := map[string]bool{}
+	for _, c := range candidates {
+		abs, err := filepath.Abs(c)
+		if err != nil {
+			continue
+		}
+		if seen[abs] {
+			continue
+		}
+		seen[abs] = true
+		if st, err := os.Stat(abs); err == nil && st.IsDir() {
+			if pkg, err := loadPackage(abs, true); err == nil {
+				return pkg
+			}
+		}
+	}
+	return nil
+}
+
+// mergeImportedDecls merges declarations from an imported MyGO package into
+// the user package for method resolution during code generation.
+func mergeImportedDecls(userPkg, importedPkg *pkg.Package) {
+	for name, iface := range importedPkg.Interfaces {
+		if _, exists := userPkg.Interfaces[name]; !exists {
+			userPkg.Interfaces[name] = iface
+		}
+	}
+	for name, enum := range importedPkg.Enums {
+		if _, exists := userPkg.Enums[name]; !exists {
+			userPkg.Enums[name] = enum
+		}
+	}
+	for _, impl := range importedPkg.Impls {
+		dup := false
+		for _, existing := range userPkg.Impls {
+			if existing == impl {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			userPkg.Impls = append(userPkg.Impls, impl)
+		}
+	}
 }
 
 func mygoDirs(root string) ([]string, error) {

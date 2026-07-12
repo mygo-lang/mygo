@@ -16,7 +16,7 @@ func typeArgExprsFromExpected(expected string) []ast.Expr {
 	}
 	out := make([]ast.Expr, len(args))
 	for i, a := range args {
-		out[i] = ast.NewIdent(a)
+		out[i] = goTypeExprFromString(a)
 	}
 	return out
 }
@@ -32,7 +32,11 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 				ac, _, _ := g.translateExpr(a, ctx, "")
 				args[i] = ac
 			}
-			typeArgExprs := typeArgExprsFromExpected(expected)
+			useExpected := expected
+			if useExpected == "" {
+				useExpected = ctx.retType
+			}
+			typeArgExprs := typeArgExprsFromExpected(useExpected)
 			var fun ast.Expr = ast.NewIdent(id.Name)
 			if len(typeArgExprs) > 0 {
 				if len(typeArgExprs) == 1 {
@@ -41,7 +45,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 					fun = &ast.IndexListExpr{X: fun, Indices: typeArgExprs}
 				}
 			}
-			return &ast.CallExpr{Fun: fun, Args: args}, expected, nil
+			return &ast.CallExpr{Fun: fun, Args: args}, useExpected, nil
 		}
 		// Auto-inject constraint function args for functions with using clauses.
 		// E.g., same(1, 2) → same(1, 2, Equals_fasteq_int) when same has using.
@@ -99,9 +103,6 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 					if len(implTypeArgs) == 0 {
 						implTypeArgs = append([]TypeExpr(nil), namedImpl.TypeArgs...)
 					}
-					for i, arg := range implTypeArgs {
-						implTypeArgs[i] = substituteTypeExpr(arg, implSubst)
-					}
 					namedImplTypeKey = g.implHelperKey(namedImpl, implTypeArgs)
 				}
 				for _, m := range ifc.Methods {
@@ -147,7 +148,10 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			ac, _, _ := g.translateExpr(a, ctx, "")
 			args[i] = ac
 		}
-		retType := ctx.retType
+		retType := ""
+		if fnDecl, ok := g.pkg.Funcs[id.Name]; ok {
+			retType = g.goReturnType(fnDecl.Ret, ctx.typeParams)
+		}
 		if expected != "" {
 			retType = expected
 		}
@@ -161,7 +165,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			if base, tas := splitTypeArgs(useExpected); base == "Option" && len(tas) > 0 {
 				ta := make([]ast.Expr, len(tas))
 				for i, a := range tas {
-					ta[i] = ast.NewIdent(a)
+					ta[i] = goTypeExprFromString(a)
 				}
 				if len(ta) == 1 {
 					callee = &ast.IndexExpr{X: ast.NewIdent(id.Name), Index: ta[0]}
@@ -171,7 +175,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			if base, tas := splitTypeArgs(useExpected); base == "Result" && len(tas) == 2 {
 				ta := make([]ast.Expr, len(tas))
 				for i, a := range tas {
-					ta[i] = ast.NewIdent(a)
+					ta[i] = goTypeExprFromString(a)
 				}
 				callee = &ast.IndexListExpr{X: ast.NewIdent(id.Name), Indices: ta}
 			}
@@ -197,6 +201,26 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			if len(n.Args) == 1 {
 				arg, argType, _ := g.translateExpr(n.Args[0], ctx, "")
 				ptrType := "*" + argType
+				// If arg is a function call, wrap in IIFE: func() *T { v := expr; return &v }()
+				if _, ok := n.Args[0].(*CallExpr); ok {
+					fn := &ast.FuncLit{
+						Type: &ast.FuncType{
+							Params:  &ast.FieldList{},
+							Results: &ast.FieldList{List: []*ast.Field{{Type: ast.NewIdent(ptrType)}}},
+						},
+						Body: &ast.BlockStmt{
+							List: []ast.Stmt{
+								&ast.AssignStmt{
+									Lhs: []ast.Expr{ast.NewIdent("__ref_tmp")},
+									Rhs: []ast.Expr{arg},
+									Tok: token.DEFINE,
+								},
+								&ast.ReturnStmt{Results: []ast.Expr{&ast.UnaryExpr{Op: token.AND, X: ast.NewIdent("__ref_tmp")}}},
+							},
+						},
+					}
+					return &ast.CallExpr{Fun: fn}, ptrType, nil
+				}
 				return &ast.UnaryExpr{Op: token.AND, X: arg}, ptrType, nil
 			}
 		}
@@ -245,6 +269,17 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 							if len(n.Args) < minArgs || (!variadic && len(n.Args) != len(sig.params)) {
 								return nil, "", common.ErrorAtPos(field.Line, field.Column, "call type mismatch for %s.%s: expected %d args, got %d", id.Name, field.Field, len(sig.params), len(n.Args))
 							}
+							callee := ast.NewIdent(id.Name + "." + field.Field)
+							args := make([]ast.Expr, len(n.Args))
+							for i, a := range n.Args {
+								ac, _, _ := g.translateExpr(a, ctx, "")
+								args[i] = ac
+							}
+							retType := goSigReturnType(sig.ret)
+							if expected != "" {
+								retType = expected
+							}
+							return &ast.CallExpr{Fun: callee, Args: args}, retType, nil
 						}
 					}
 				}
@@ -276,19 +311,28 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 				}
 			}
 		}
+		if helper, retType, ok := preludeCollectionMethod(field.Field, bt, args); ok {
+			allArgs := append([]ast.Expr{base}, args...)
+			return &ast.CallExpr{Fun: helper, Args: allArgs}, retType, nil
+		}
 		// Check for typeclass method call: value.show() → show_type() or showFn()
 		if ifaceName, ok := g.interfaceByMethod[field.Field]; ok {
 			if iface := g.pkg.Interfaces[ifaceName]; iface != nil {
 				// First check if there's a constraint function in scope (from `using`)
 				if fnName, ok := ctx.constraintFuncForMethod(field.Field); ok {
 					allArgs := append([]ast.Expr{base}, args...)
-					return &ast.CallExpr{Fun: ast.NewIdent(fnName), Args: allArgs}, "string", nil
+					retType := g.typeclassMethodReturnType(iface, field.Field, bt)
+					return &ast.CallExpr{Fun: ast.NewIdent(fnName), Args: allArgs}, retType, nil
 				}
-				// Otherwise use the impl helper function
-				typeKey := typeKeyFromType(bt)
-				helperName := helperFuncName(field.Field, typeKey)
+				// Otherwise use the best matching impl helper function.
+				helperName, retType, ok := g.matchTypeclassHelper(ifaceName, field.Field, bt)
+				if !ok {
+					typeKey := typeKeyFromType(bt)
+					helperName = helperFuncName(field.Field, typeKey)
+					retType = g.typeclassMethodReturnType(iface, field.Field, bt)
+				}
 				allArgs := append([]ast.Expr{base}, args...)
-				return &ast.CallExpr{Fun: ast.NewIdent(helperName), Args: allArgs}, "string", nil
+				return &ast.CallExpr{Fun: ast.NewIdent(helperName), Args: allArgs}, retType, nil
 			}
 		}
 		return &ast.CallExpr{
@@ -321,6 +365,71 @@ func (g *gen) ensureRelationAllowed(n *BinaryExpr, leftType, rightType string) e
 		return nil
 	}
 	return common.ErrorAtPos(n.Line, n.Column, "relation operator %q requires Eq[%s]", n.Op, typ)
+}
+
+func goSigReturnType(results []string) string {
+	if len(results) != 1 {
+		return ""
+	}
+	return mygoSigTypeToGo(results[0])
+}
+
+func mygoSigTypeToGo(typ string) string {
+	typ = strings.TrimSpace(typ)
+	switch typ {
+	case "":
+		return ""
+	case "String":
+		return "string"
+	case "Bool":
+		return "bool"
+	case "Int":
+		return "int"
+	case "Int8":
+		return "int8"
+	case "Int16":
+		return "int16"
+	case "Int32":
+		return "int32"
+	case "Int64":
+		return "int64"
+	case "UInt":
+		return "uint"
+	case "UInt8":
+		return "uint8"
+	case "UInt16":
+		return "uint16"
+	case "UInt32":
+		return "uint32"
+	case "UInt64":
+		return "uint64"
+	case "Float32":
+		return "float32"
+	case "Float64":
+		return "float64"
+	case "Any":
+		return "any"
+	}
+	base, args := splitTypeArgs(typ)
+	switch base {
+	case "Slice":
+		if len(args) == 1 {
+			return "[]" + mygoSigTypeToGo(args[0])
+		}
+	case "Ref":
+		if len(args) == 1 {
+			return "*" + mygoSigTypeToGo(args[0])
+		}
+	case "Map":
+		if len(args) == 2 {
+			return "map[" + mygoSigTypeToGo(args[0]) + "]" + mygoSigTypeToGo(args[1])
+		}
+	case "Set":
+		if len(args) == 1 {
+			return "map[" + mygoSigTypeToGo(args[0]) + "]struct{}"
+		}
+	}
+	return typ
 }
 
 func normalizeMyGoTypeName(name string) string {
@@ -404,4 +513,213 @@ func baseNamedType(typeName string) string {
 		return ""
 	}
 	return typeName
+}
+
+func preludeCollectionMethod(method, recvType string, args []ast.Expr) (ast.Expr, string, bool) {
+	recvType = strings.TrimSpace(recvType)
+	// Len on native Go slices — handled via IEnumerable typeclass with merged prelude.
+	if strings.HasPrefix(recvType, "[]") {
+		elem := strings.TrimSpace(recvType[2:])
+		elemExpr := ast.NewIdent(elem)
+		if method == "Len" {
+			return &ast.IndexExpr{X: ast.NewIdent("Len__t_t"), Index: elemExpr}, "int", true
+		}
+	}
+	// Len on native Go maps — handled via IEnumerable typeclass with merged prelude.
+	// Len on string — compiler-intrinsic, String -> string cannot be expressed in MyGO type system.
+	if recvType == "string" && method == "Len" {
+		return ast.NewIdent("Len_string_rune"), "int", true
+	}
+	return nil, "", false
+}
+
+func (g *gen) typeclassMethodReturnType(iface *InterfaceDecl, methodName, recvType string) string {
+	if iface == nil {
+		return ""
+	}
+	for _, m := range iface.Methods {
+		if m.Name != methodName {
+			continue
+		}
+		if subst := g.typeclassSubstForRecv(iface, recvType); len(subst) > 0 {
+			return g.goType(substituteTypeExpr(m.Ret, subst), nil)
+		}
+		return g.goType(m.Ret, nil)
+	}
+	return ""
+}
+
+func (g *gen) matchTypeclassHelper(ifaceName, methodName, recvType string) (string, string, bool) {
+	iface := g.pkg.Interfaces[ifaceName]
+	if iface == nil {
+		return "", "", false
+	}
+	for _, impl := range g.pkg.Impls {
+		iname := impl.InterfaceName
+		if iname == "" {
+			iname = impl.Name
+		}
+		if iname != ifaceName {
+			continue
+		}
+		typeArgs := impl.InterfaceArgs
+		if len(typeArgs) == 0 {
+			typeArgs = impl.TypeArgs
+		}
+		subst := g.typeclassSubstForImpl(iface, impl, recvType, typeArgs)
+		if subst == nil {
+			continue
+		}
+		helperKey := g.implHelperKey(impl, typeArgs)
+		retType := ""
+		for _, m := range iface.Methods {
+			if m.Name != methodName {
+				continue
+			}
+			retType = g.goType(substituteTypeExpr(m.Ret, subst), nil)
+			break
+		}
+		return helperFuncName(methodName, helperKey), retType, true
+	}
+	return "", "", false
+}
+
+func (g *gen) typeclassSubstForRecv(iface *InterfaceDecl, recvType string) map[string]string {
+	if iface == nil || len(iface.TypeParams) == 0 {
+		return nil
+	}
+	for _, impl := range g.pkg.Impls {
+		iname := impl.InterfaceName
+		if iname == "" {
+			iname = impl.Name
+		}
+		if iname != iface.Name {
+			continue
+		}
+		typeArgs := impl.InterfaceArgs
+		if len(typeArgs) == 0 {
+			typeArgs = impl.TypeArgs
+		}
+		if subst := g.typeclassSubstForImpl(iface, impl, recvType, typeArgs); subst != nil {
+			return subst
+		}
+	}
+	return nil
+}
+
+func (g *gen) typeclassSubstForImpl(iface *InterfaceDecl, impl *ImplDecl, recvType string, typeArgs []TypeExpr) map[string]string {
+	if iface == nil || impl == nil || len(typeArgs) == 0 {
+		return nil
+	}
+	subst := map[string]string{}
+	typeParamSet := map[string]struct{}{}
+	for _, tp := range impl.TypeParams {
+		typeParamSet[tp] = struct{}{}
+	}
+	for _, tp := range iface.TypeParams {
+		typeParamSet[tp] = struct{}{}
+	}
+	pattern := typeArgs[0]
+	if !inferTypeSubst(pattern, recvType, typeParamSet, subst) {
+		return nil
+	}
+	return subst
+}
+
+func substitutedTypeArgs(args []TypeExpr, subst map[string]string) []TypeExpr {
+	out := make([]TypeExpr, len(args))
+	for i, a := range args {
+		out[i] = substituteTypeExpr(a, subst)
+	}
+	return out
+}
+
+func inferTypeSubst(pattern TypeExpr, concrete string, typeParams map[string]struct{}, subst map[string]string) bool {
+	concrete = strings.TrimSpace(concrete)
+	switch pt := pattern.(type) {
+	case *NamedType:
+		if len(pt.Args) == 0 {
+			if _, ok := typeParams[pt.Name]; ok {
+				if existing, ok := subst[pt.Name]; ok {
+					return existing == concrete
+				}
+				subst[pt.Name] = concrete
+				return true
+			}
+			return typeString(pt, nil) == concrete
+		}
+		switch pt.Name {
+		case "Ref":
+			if !strings.HasPrefix(concrete, "*") {
+				return false
+			}
+			return inferTypeSubst(pt.Args[0], concrete[1:], typeParams, subst)
+		case "Slice":
+			if !strings.HasPrefix(concrete, "[]") {
+				return false
+			}
+			return inferTypeSubst(pt.Args[0], concrete[2:], typeParams, subst)
+		case "Set":
+			if !strings.HasPrefix(concrete, "map[") || !strings.HasSuffix(concrete, "struct{}") {
+				return false
+			}
+			inner := strings.TrimSuffix(strings.TrimPrefix(concrete, "map["), "]struct{}")
+			key, ok := splitMapConcrete(inner)
+			if !ok {
+				return false
+			}
+			return inferTypeSubst(pt.Args[0], key, typeParams, subst)
+		case "Map":
+			if !strings.HasPrefix(concrete, "map[") {
+				return false
+			}
+			inner := strings.TrimPrefix(concrete, "map[")
+			key, val, ok := splitMapKeyValue(inner)
+			if !ok {
+				return false
+			}
+			return inferTypeSubst(pt.Args[0], key, typeParams, subst) && inferTypeSubst(pt.Args[1], val, typeParams, subst)
+		default:
+			base, args := splitTypeArgs(concrete)
+			if base != pt.Name || len(args) != len(pt.Args) {
+				return false
+			}
+			for i := range pt.Args {
+				if !inferTypeSubst(pt.Args[i], args[i], typeParams, subst) {
+					return false
+				}
+			}
+			return true
+		}
+	default:
+		return typeString(pattern, nil) == concrete
+	}
+}
+
+func splitMapConcrete(s string) (string, bool) {
+	key, _, ok := splitMapKeyValue(s)
+	return key, ok
+}
+
+func splitMapKeyValue(s string) (string, string, bool) {
+	depth := 0
+	for i, r := range s {
+		switch r {
+		case '[', '(', '{':
+			depth++
+		case ']', ')', '}':
+			if depth > 0 {
+				depth--
+			}
+		}
+		if r == ']' && depth == 0 {
+			key := strings.TrimSpace(s[:i])
+			val := strings.TrimSpace(s[i+1:])
+			if key == "" || val == "" {
+				return "", "", false
+			}
+			return key, val, true
+		}
+	}
+	return "", "", false
 }

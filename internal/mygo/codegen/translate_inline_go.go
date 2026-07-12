@@ -59,6 +59,18 @@ func (g *gen) translateGoExpr(n *GoExpr, ctx *egCtx, expected string) (ast.Expr,
 	// Auto-wrapping: handle Result/Option type mismatches between
 	// the Go expression's native return type and the declared result type.
 
+	// Handle go[((), error)] → Result[T, error] when expected is Result[T, error].
+	// The go expression returns a Go tuple (T, error) but the enclosing function
+	// expects Result[T, error].
+	if goTupleErrorRE.MatchString(substituted) && strings.HasPrefix(expected, "Result[") && strings.HasSuffix(expected, "]") {
+		innerParts := splitGenericArgs(expected[7 : len(expected)-1])
+		if len(innerParts) == 2 {
+			okType := strings.TrimSpace(innerParts[0])
+			errType := strings.TrimSpace(innerParts[1])
+			return g.goTupleResultToResult(substituted, okType, errType), expected, nil
+		}
+	}
+
 	// Always wrap Result types — the Go expression may return error or a plain value.
 	if strings.HasPrefix(resultType, "Result[") && strings.HasSuffix(resultType, "]") {
 		innerParts := splitGenericArgs(resultType[7 : len(resultType)-1])
@@ -84,6 +96,9 @@ func (g *gen) translateGoExpr(n *GoExpr, ctx *egCtx, expected string) (ast.Expr,
 
 	// Direct Option wrapping: go[Option[T]] — the declared result IS Option.
 	if strings.HasPrefix(resultType, "Option[") && strings.HasSuffix(resultType, "]") {
+		if strings.Contains(substituted, "Some") || strings.Contains(substituted, "None") {
+			return expr, resultType, nil
+		}
 		innerType := resultType[7 : len(resultType)-1]
 		if strings.HasPrefix(innerType, "*") {
 			return g.goRefToOption(expr, innerType), resultType, nil
@@ -92,6 +107,55 @@ func (g *gen) translateGoExpr(n *GoExpr, ctx *egCtx, expected string) (ast.Expr,
 	}
 
 	return expr, resultType, nil
+}
+
+func (g *gen) translateGoUnitStmts(n *GoExpr, ctx *egCtx) ([]ast.Stmt, error) {
+	substituted, err := g.substituteGoCode(n, ctx)
+	if err != nil {
+		return nil, err
+	}
+	return parseInlineGoUnitStmts(substituted)
+}
+
+func (g *gen) substituteGoCode(n *GoExpr, ctx *egCtx) (string, error) {
+	operands := map[string]string{}
+	for _, op := range n.Operands {
+		code, _, _ := g.translateExpr(op.Value, ctx, "")
+		operands[op.Name] = exprToGoString(code)
+	}
+	for _, tp := range n.TypeOperands {
+		operands[tp.Name] = g.goType(tp.Type, ctx.typeParams)
+	}
+	substituted := n.Code
+	missing := ""
+	substituted = goPlaceholderRE.ReplaceAllStringFunc(substituted, func(match string) string {
+		name := match[1 : len(match)-1]
+		code, ok := operands[name]
+		if !ok {
+			missing = name
+			return match
+		}
+		return code
+	})
+	if missing != "" {
+		return "", common.ErrorAtPos(n.Line, n.Column, "go code references unknown operand %q", missing)
+	}
+	return substituted, nil
+}
+
+func parseInlineGoUnitStmts(code string) ([]ast.Stmt, error) {
+	file, err := goparser.ParseFile(token.NewFileSet(), "inline.go", "package inline\nfunc _(){\n"+code+"\n}", 0)
+	if err != nil {
+		return nil, err
+	}
+	if len(file.Decls) != 1 {
+		return nil, fmt.Errorf("invalid go statement")
+	}
+	fn, ok := file.Decls[0].(*ast.FuncDecl)
+	if !ok || fn.Body == nil || len(fn.Body.List) == 0 {
+		return nil, fmt.Errorf("invalid go statement")
+	}
+	return fn.Body.List, nil
 }
 
 // goRefToOption wraps a *T expression into Option[T] with nil checking.
@@ -156,7 +220,7 @@ func (g *gen) goTupleResultToResult(substituted, okType, errType string) ast.Exp
 				List: []ast.Stmt{
 					&ast.AssignStmt{
 						Lhs: []ast.Expr{ast.NewIdent("__mygo_result_val"), ast.NewIdent("__mygo_result_err")},
-						Rhs: []ast.Expr{ast.NewIdent("(" + substituted + ")")},
+						Rhs: []ast.Expr{&ast.ParenExpr{X: g.parseGoExprOrIdent(substituted)}},
 						Tok: token.DEFINE,
 					},
 					&ast.IfStmt{
@@ -237,6 +301,15 @@ func strToZero(s string) ast.Expr {
 	default:
 		return ast.NewIdent("nil")
 	}
+}
+
+// parseGoExprOrIdent tries to parse a string as a Go expression. Falls back to ast.NewIdent.
+func (g *gen) parseGoExprOrIdent(s string) ast.Expr {
+	expr, err := goparser.ParseExpr(s)
+	if err != nil {
+		return ast.NewIdent(s)
+	}
+	return expr
 }
 
 // exprToGoString converts an AST expression back to a Go string.

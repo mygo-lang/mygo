@@ -8,7 +8,7 @@ import (
 )
 
 func TestCompilePrelude(t *testing.T) {
-	pkg := simpleLoadPackage("../../../lib/prelude", true)
+	pkg := simpleLoadPackage("../../../prelude", true)
 	if pkg == nil {
 		t.Fatal("failed to load prelude package")
 	}
@@ -86,11 +86,11 @@ func TestCompilePrelude(t *testing.T) {
 }
 
 func TestLoadPreludeDoesNotDuplicatePreludeDecls(t *testing.T) {
-	withPrelude := simpleLoadPackage("../../../lib/prelude", false)
+	withPrelude := simpleLoadPackage("../../../prelude", false)
 	if withPrelude == nil {
 		t.Fatal("failed to load prelude with prelude")
 	}
-	withoutPrelude := simpleLoadPackage("../../../lib/prelude", true)
+	withoutPrelude := simpleLoadPackage("../../../prelude", true)
 	if withoutPrelude == nil {
 		t.Fatal("failed to load prelude without prelude")
 	}

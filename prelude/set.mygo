@@ -1,0 +1,114 @@
+package prelude
+
+impl[A] SetIEnumerable[A]: IEnumerable[Set[A], A]
+  func new() -> Set[A]
+    go[Set[A]] {
+      code: """
+        func() map[A]struct{} {
+          return make(map[A]struct{})
+        }()
+      """
+    }
+  end
+
+  func Len(c: Set[A]) -> Int
+    go[Int] { code: `len(c)` }
+  end
+
+  func Each(c: Set[A], fn: func(A) -> ()) -> ()
+    go[()] {
+      code: """
+        func() {
+          for v := range c {
+            fn(v)
+          }
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
+  end
+
+  func Map[B](c: Set[A], fn: func(A) -> B) -> Set[B]
+    go[Set[B]] {
+      code: """
+        func() map[B]struct{} {
+          out := make(map[B]struct{}, len(c))
+          for v := range c {
+            out[fn(v)] = struct{}{}
+          }
+          return out
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
+  end
+
+  func Filter(c: Set[A], fn: func(A) -> Bool) -> Set[A]
+    go[Set[A]] {
+      code: """
+        func() map[A]struct{} {
+          out := make(map[A]struct{}, len(c))
+          for v := range c {
+            if fn(v) {
+              out[v] = struct{}{}
+            }
+          }
+          return out
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
+  end
+
+  func Fold[B](c: Set[A], initial: B, fn: func(B, A) -> B) -> B
+    go[B] {
+      code: """
+        func() B {
+          acc := initial
+          for v := range c {
+            acc = fn(acc, v)
+          }
+          return acc
+        }()
+      """
+      in c = c
+      in initial = initial
+      in fn = fn
+    }
+  end
+
+  func Find(c: Set[A], fn: func(A) -> Bool) -> Option[Ref[A]]
+    go[Option[Ref[A]]] {
+      code: """
+        func() Option[*A] {
+          for v := range c {
+            if fn(v) {
+              val := v
+              return Some[*A](&val)
+            }
+          }
+          return None[*A]()
+        }()
+      """
+      in c = c
+      in fn = fn
+      type A = A
+    }
+  end
+
+  func Contains(c: Set[A], item: A) -> Bool using Eq[A]
+    go[Bool] {
+      code: """
+        func() bool {
+          _, ok := c[item]
+          return ok
+        }()
+      """
+      in c = c
+      in item = item
+    }
+  end
+end

@@ -128,6 +128,26 @@ end
 	}
 }
 
+func TestInlineGoUnitAcceptsGoStatement(t *testing.T) {
+	src := `package main
+func spawn(fn: func() -> ()) -> ()
+  go[()] {
+    code: "go fn()"
+  }
+end
+`
+	goSrc := compileInlineGoTestPackage(t, src)
+	if !strings.Contains(goSrc, "go fn()") {
+		t.Fatalf("generated source missing go statement:\n%s", goSrc)
+	}
+	if strings.Contains(goSrc, "func() {\n\t\tgo fn()\n\t}()") {
+		t.Fatalf("generated source wrapped go statement in IIFE:\n%s", goSrc)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "inline.go", goSrc, 0); err != nil {
+		t.Fatalf("generated source is not valid Go: %v\n%s", err, goSrc)
+	}
+}
+
 func compileInlineGoTestPackage(t *testing.T, src string) string {
 	t.Helper()
 	dir := writeInlineGoTestPackage(t, src)

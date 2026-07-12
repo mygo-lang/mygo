@@ -36,6 +36,9 @@ func splitGenericArgs(s string) []string {
 // fieldType looks up the Go type string for a field of the given base type.
 func (g *gen) fieldType(baseType, field string) string {
 	baseType = strings.TrimSpace(baseType)
+	for strings.HasPrefix(baseType, "*") {
+		baseType = strings.TrimSpace(strings.TrimPrefix(baseType, "*"))
+	}
 	baseName, typeArgs := splitTypeArgs(baseType)
 	st := g.pkg.Structs[baseName]
 	if st == nil {

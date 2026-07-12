@@ -2,11 +2,7 @@
 
 package concurrency
 
-import (
-	. "github.com/mygo-lang/mygo/lib/prelude"
-)
-
-var _ = None[any]
+import . "github.com/mygo-lang/mygo/prelude"
 
 type IChannel[C any, A any] interface {
 	Len(HKT[C, A]) int
@@ -55,7 +51,6 @@ func Receive_chant_t[T any](ch chan T) Option[T] {
 		}
 		return Some[T](value)
 	}()
-
 }
 func TryReceive_chant_t[T any](ch chan T) Option[T] {
 	return func() Option[T] {
@@ -69,7 +64,6 @@ func TryReceive_chant_t[T any](ch chan T) Option[T] {
 			return None[T]()
 		}
 	}()
-
 }
 func Receive___chant_t[T any](ch <-chan T) Option[T] {
 	return func() Option[T] {
@@ -79,7 +73,6 @@ func Receive___chant_t[T any](ch <-chan T) Option[T] {
 		}
 		return Some[T](value)
 	}()
-
 }
 func TryReceive___chant_t[T any](ch <-chan T) Option[T] {
 	return func() Option[T] {
@@ -93,7 +86,6 @@ func TryReceive___chant_t[T any](ch <-chan T) Option[T] {
 			return None[T]()
 		}
 	}()
-
 }
 func Send_chant_t[T any](ch chan T, value T) {
 	ch <- value

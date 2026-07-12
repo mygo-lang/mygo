@@ -52,49 +52,55 @@ func (g *gen) genFuncDecl(d *FuncDecl) (ast.Decl, error) {
 		if !ok || ifc == nil {
 			continue
 		}
-		typeArgs := append([]TypeExpr(nil), c.Args...)
-		// For named impls found via BindName, use the impl's InterfaceArgs.
-		implSubst := map[string]string{}
-		if namedImpl != nil && c.BindName != "" {
-			typeArgs = append([]TypeExpr(nil), namedImpl.InterfaceArgs...)
-			if len(typeArgs) == 0 {
-				typeArgs = append([]TypeExpr(nil), namedImpl.TypeArgs...)
+		if namedImpl != nil && c.BindName == "" && c.Name == ifc.Name {
+			namedImpl = nil
+		}
+		// `helperTypeArgs` controls the generated helper name, while
+		// `renderTypeArgs` controls the concrete types emitted into the
+		// function signature. These intentionally differ for HKT-style
+		// constraints like String-as-rune-container.
+		renderTypeArgs := append([]TypeExpr(nil), c.Args...)
+		helperTypeArgs := append([]TypeExpr(nil), c.Args...)
+		if namedImpl != nil {
+			helperTypeArgs = append([]TypeExpr(nil), namedImpl.InterfaceArgs...)
+			if len(helperTypeArgs) == 0 {
+				helperTypeArgs = append([]TypeExpr(nil), namedImpl.TypeArgs...)
 			}
-			if len(namedImpl.TypeParams) > 0 {
-				for i, tp := range namedImpl.TypeParams {
-					if i < len(c.Args) {
-						implSubst[tp] = g.goType(c.Args[i], typeParamSet(d.TypeParams))
-					}
-				}
+			if len(namedImpl.InterfaceArgs) > 0 {
+				renderTypeArgs = append([]TypeExpr(nil), namedImpl.InterfaceArgs...)
+			} else if len(namedImpl.TypeArgs) > 0 {
+				renderTypeArgs = append([]TypeExpr(nil), namedImpl.TypeArgs...)
 			}
-			for i, arg := range typeArgs {
-				typeArgs[i] = substituteTypeExpr(arg, implSubst)
-			}
+		}
+		if len(renderTypeArgs) == 0 {
+			renderTypeArgs = append([]TypeExpr(nil), c.Args...)
+		}
+		if len(helperTypeArgs) == 0 {
+			helperTypeArgs = append([]TypeExpr(nil), c.Args...)
 		}
 		subst := map[string]string{}
 		for i, tp := range ifc.TypeParams {
-			if i < len(typeArgs) {
-				subst[tp] = g.goType(typeArgs[i], typeParamSet(d.TypeParams))
+			if i < len(renderTypeArgs) {
+				subst[tp] = g.goType(renderTypeArgs[i], typeParamSet(d.TypeParams))
+			}
+		}
+		concreteArgs := make(map[string]TypeExpr, len(ifc.TypeParams))
+		for i, tp := range ifc.TypeParams {
+			if i < len(renderTypeArgs) {
+				concreteArgs[tp] = renderTypeArgs[i]
 			}
 		}
 		namedImplTypeKey := ""
 		if namedImpl != nil {
-			implTypeArgs := append([]TypeExpr(nil), namedImpl.InterfaceArgs...)
-			if len(implTypeArgs) == 0 {
-				implTypeArgs = append([]TypeExpr(nil), namedImpl.TypeArgs...)
-			}
-			for i, arg := range implTypeArgs {
-				implTypeArgs[i] = substituteTypeExpr(arg, implSubst)
-			}
-			namedImplTypeKey = g.implHelperKey(namedImpl, implTypeArgs)
+			namedImplTypeKey = g.implHelperKey(namedImpl, helperTypeArgs)
 		}
 		for _, m := range ifc.Methods {
 			paramName := m.Name + "Fn"
 			var paramTypes []string
 			for _, p := range m.Params {
-				paramTypes = append(paramTypes, typeString(p.Type, subst))
+				paramTypes = append(paramTypes, g.goTypeStringForTypeclass(p.Type, concreteArgs, subst))
 			}
-			retTypeStr := typeStringReturn(m.Ret, subst)
+			retTypeStr := g.goTypeStringForTypeclass(m.Ret, concreteArgs, subst)
 
 			if namedImplTypeKey != "" {
 				// Named impl: use the helper function name directly.
@@ -108,7 +114,7 @@ func (g *gen) genFuncDecl(d *FuncDecl) (ast.Decl, error) {
 				ctx.constraintFuncs[m.Name] = paramName
 				ctx.typeclassMethods[m.Name] = append(ctx.typeclassMethods[m.Name], egTcBinding{
 					Interface:  c.Name,
-					TargetType: firstTypeArgString(typeArgs, subst),
+					TargetType: firstTypeArgString(renderTypeArgs, subst),
 					ParamTypes: paramTypes,
 					RetType:    retTypeStr,
 					DictExpr:   fnName,
@@ -124,7 +130,7 @@ func (g *gen) genFuncDecl(d *FuncDecl) (ast.Decl, error) {
 				}
 				ctx.typeclassMethods[m.Name] = append(ctx.typeclassMethods[m.Name], egTcBinding{
 					Interface:  c.Name,
-					TargetType: firstTypeArgString(typeArgs, subst),
+					TargetType: firstTypeArgString(renderTypeArgs, subst),
 					ParamTypes: paramTypes,
 					RetType:    retTypeStr,
 					DictExpr:   paramName,
@@ -172,6 +178,15 @@ func (g *gen) genFuncDecl(d *FuncDecl) (ast.Decl, error) {
 			return nil, err
 		}
 	} else if len(retTypes) == 0 {
+		if goExpr, ok := d.Body.(*GoExpr); ok && g.isUnitGoExpr(goExpr, ctx) {
+			goStmts, err := g.translateGoUnitStmts(goExpr, ctx)
+			if err != nil {
+				return nil, err
+			}
+			bodyStmts = append(bodyStmts, goStmts...)
+			bodyStmts = append(bodyStmts, &ast.ReturnStmt{})
+			return astFuncDecl(d.Name, nil, tp, params, results, &ast.BlockStmt{List: bodyStmts}), nil
+		}
 		code, _, err := g.translateExpr(d.Body, ctx, ctx.retType)
 		if err != nil {
 			return nil, err
@@ -205,6 +220,34 @@ func (g *gen) genFuncDecl(d *FuncDecl) (ast.Decl, error) {
 	}
 
 	return astFuncDecl(d.Name, nil, tp, params, results, &ast.BlockStmt{List: bodyStmts}), nil
+}
+
+func (g *gen) goTypeStringForTypeclass(t TypeExpr, concreteArgs map[string]TypeExpr, subst map[string]string) string {
+	switch tt := t.(type) {
+	case *NamedType:
+		if concreteArgs != nil {
+			if concrete, ok := concreteArgs[tt.Name]; ok {
+				return g.goTypeStringSubst(concrete, subst)
+			}
+		}
+	case *FuncType:
+		params := make([]string, len(tt.Params))
+		for i, p := range tt.Params {
+			params[i] = g.goTypeStringForTypeclass(p, concreteArgs, subst)
+		}
+		ret := g.goTypeStringForTypeclass(tt.Ret, concreteArgs, subst)
+		if ret == "" {
+			return "func(" + strings.Join(params, ", ") + ")"
+		}
+		return "func(" + strings.Join(params, ", ") + ") " + ret
+	case *TupleType:
+		fields := make([]string, len(tt.Elems))
+		for i, e := range tt.Elems {
+			fields[i] = g.goTypeStringForTypeclass(e, concreteArgs, subst)
+		}
+		return strings.Join(fields, ", ")
+	}
+	return g.goTypeStringSubst(t, subst)
 }
 
 // exprToStmt wraps an ast.Expr as an ast.Stmt for use in statement lists.

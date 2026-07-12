@@ -1,6 +1,6 @@
 # Standard Library — Phase 1: Basic Type Class Extensions
 
-> Implements the first phase of `docs/plan/standard-library.md`. All additions are in `lib/prelude/prelude.mygo`.
+> Implements the first phase of `docs/plan/standard-library.md`. All additions are in `prelude/prelude.mygo`.
 
 ---
 
@@ -149,7 +149,7 @@ end
 mygo sync lib/
 
 # Verify library packages compile
-go build ./lib/prelude/
+go build ./prelude/
 go build ./lib/concurrency/
 
 # Verify the compiler itself still builds

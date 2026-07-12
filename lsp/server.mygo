@@ -266,7 +266,7 @@ end
 # ===== LSP Feature Helpers =====
 
 func parseDocumentURI(uri: String) -> String
-  if strings.HasPrefix(uri, "file://")
+  if strings.HasPrefix(uri, "file://") then
     strings.TrimPrefix(uri, "file://")
   else
     uri
@@ -334,13 +334,13 @@ func handleCompletion(
       switch wordAtPosition(content, line, char)
         case Some(r) then
             let lines = strings.Split(d.Content, "\n")
-          if line < lines.Len()
-            let text = lines.Get(line)
+          if line < lines.Len() then
+            let text = lines.Get(line).UnwrapOr("")
             let length = go[Int] {
               code: `len({text})`
               in text = text
             }
-            if char <= length
+            if char <= length then
               word = go[String] {
                 code: `{text}[{char} - ({char} - {r}.StartPos.Character):{char}]`
                 in text = text
@@ -441,8 +441,8 @@ func handleHover(
       switch wordAtPosition(d.Content, line, char)
         case Some(r) then
           let lines = strings.Split(d.Content, "\n")
-          if line < lines.Len()
-            let text = lines.Get(line)
+          if line < lines.Len() then
+            let text = lines.Get(line).UnwrapOr("")
             let word = go[String] {
               code: `{text}[{r}.StartPos.Character:{r}.EndPos.Character]`
               in text = text
@@ -677,15 +677,15 @@ func handleDefinition(
       switch wordAtPosition(d.Content, line, char)
         case Some(r) then
           let lines = strings.Split(d.Content, "\n")
-          if line < lines.Len()
-            let text = lines.Get(line)
+          if line < lines.Len() then
+            let text = lines.Get(line).UnwrapOr("")
             let word = go[String] {
               code: `{text}[{r}.StartPos.Character:{r}.EndPos.Character]`
               in text = text
               in r = r
             }
             let locs = searchDefinitionInDoc(d.Content, word, d.URI)
-            if locs.Len() > 0
+            if locs.Len() > 0 then
               Some(locs)
             else
               None
@@ -754,15 +754,15 @@ func handleReferences(
       switch wordAtPosition(d.Content, line, char)
         case Some(r) then
           let lines = strings.Split(d.Content, "\n")
-          if line < lines.Len()
-            let text = lines.Get(line)
+          if line < lines.Len() then
+            let text = lines.Get(line).UnwrapOr("")
             let word = go[String] {
               code: `{text}[{r}.StartPos.Character:{r}.EndPos.Character]`
               in text = text
               in r = r
             }
             let locs = searchReferencesInDoc(d.Content, word, d.URI)
-            if locs.Len() > 0
+            if locs.Len() > 0 then
               Some(locs)
             else
               None
@@ -1176,7 +1176,7 @@ func Main() -> ()
 
   while true
     let raw = readOneMessage()
-    if raw == ""
+    if raw == "" then
       break
     else
       ()

@@ -3,16 +3,9 @@
 package prelude
 
 import (
-	"fmt"
-	"strconv"
 	"strings"
 	"unicode/utf8"
 )
-
-var _ = fmt.Append
-var _ = strconv.AppendBool
-var _ = strings.Clone
-var _ = utf8.AppendRune
 
 func Each_string_rune(c string, fn func(rune)) {
 	func() {
@@ -27,26 +20,26 @@ func Len_string_rune(c string) int {
 }
 func Map_string_rune[B any](c string, fn func(rune) B) []B {
 	return func() []B {
-		slc_1 := []rune(c)
-		return Map__t_t(slc_1, fn)
+		slc_22 := []rune(c)
+		return Map__t_t(slc_22, fn)
 	}()
 }
 func Filter_string_rune(c string, fn func(rune) bool) []rune {
 	return func() []rune {
-		slc_2 := []rune(c)
-		return Filter__t_t(slc_2, fn)
+		slc_23 := []rune(c)
+		return Filter__t_t(slc_23, fn)
 	}()
 }
 func Fold_string_rune[B any](c string, initial B, fn func(B, rune) B) B {
 	return func() B {
-		slc_3 := []rune(c)
-		return Fold__t_t(slc_3, initial, fn)
+		slc_24 := []rune(c)
+		return Fold__t_t(slc_24, initial, fn)
 	}()
 }
 func Find_string_rune(c string, fn func(rune) bool) Option[*rune] {
 	return func() Option[*rune] {
-		slc_4 := []rune(c)
-		return Find__t_t(slc_4, fn)
+		slc_25 := []rune(c)
+		return Find__t_t(slc_25, fn)
 	}()
 }
 func Contains_string_rune(c string, item rune, eq Eq[rune]) bool {
@@ -57,31 +50,31 @@ func String_FromRunes(rs []rune) string {
 }
 func String_PeekRune(s string) Option[*rune] {
 	return func() Option[*rune] {
-		if len(s) == 0 {
+		if Len_string_rune(s) == 0 {
 			return None[*rune]()
 		} else {
 			return func() Option[*rune] {
-				r_5, _ := utf8.DecodeRuneInString(s)
-				return Some[*rune](&r_5)
+				r_26, _ := utf8.DecodeRuneInString(s)
+				return Some[*rune](&r_26)
 			}()
 		}
 	}()
 }
 func String_AdvanceRune(s string) string {
 	return func() string {
-		if len(s) == 0 {
+		if Len_string_rune(s) == 0 {
 			return s
 		} else {
 			return func() string {
-				_, size_6 := utf8.DecodeRuneInString(s)
-				return s[size_6:]
+				_, size_27 := utf8.DecodeRuneInString(s)
+				return s[size_27:]
 			}()
 		}
 	}()
 }
 func String_MatchString(s string, prefix string) bool {
 	return func() bool {
-		if len(s) >= len(prefix) {
+		if Len_string_rune(s) >= Len_string_rune(prefix) {
 			return s[:len(prefix)] == prefix
 		} else {
 			return false

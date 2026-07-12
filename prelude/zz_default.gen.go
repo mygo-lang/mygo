@@ -2,18 +2,6 @@
 
 package prelude
 
-import (
-	"fmt"
-	"strconv"
-	"strings"
-	"unicode/utf8"
-)
-
-var _ = fmt.Append
-var _ = strconv.AppendBool
-var _ = strings.Clone
-var _ = utf8.AppendRune
-
 func Default_int() int {
 	return 0
 }

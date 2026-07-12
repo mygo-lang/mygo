@@ -184,7 +184,7 @@ func GenerateFiles(p *Package) (map[string]string, error) {
 func addGoastImport(sf *goast.SourceFile, p *Package) {
 	imports := sortedImports(p)
 	if p.Name != "prelude" && !p.NoPrelude {
-		imports = append(imports, ImportSpec{Path: "github.com/mygo-lang/mygo/lib/prelude", Alias: "."})
+		imports = append(imports, ImportSpec{Path: "github.com/mygo-lang/mygo/prelude", Alias: "."})
 	}
 	if hasImportPath(imports, "reflect") {
 		imports = append(imports, ImportSpec{Path: "reflect"})
@@ -634,25 +634,71 @@ func (g *gen) genTypedImpl(d *ImplDecl, ifaceName string) []ast.Decl {
 				Type:  goastTypeExpr(p.Type),
 			})
 		}
+		usingConstraintFuncs := map[string]string{}
+		usingTypeclassMethods := map[string][]egTcBinding{}
 		for _, cu := range m.Using {
-			_, ifc, ok := resolveConstraint(cu, g.pkg)
+			namedImpl, ifc, ok := resolveConstraint(cu, g.pkg)
 			if !ok {
 				continue
 			}
+			if namedImpl != nil && cu.BindName == "" && cu.Name == ifc.Name {
+				namedImpl = nil
+			}
+			typeArgs := append([]TypeExpr(nil), cu.Args...)
+			if namedImpl != nil {
+				typeArgs = append([]TypeExpr(nil), namedImpl.InterfaceArgs...)
+				if len(typeArgs) == 0 {
+					typeArgs = append([]TypeExpr(nil), namedImpl.TypeArgs...)
+				}
+			}
+			localSubst := map[string]string{}
+			for i, tp := range ifc.TypeParams {
+				if i < len(typeArgs) {
+					localSubst[tp] = g.goType(typeArgs[i], combinedTP)
+				}
+			}
+			concreteArgs := make(map[string]TypeExpr, len(ifc.TypeParams))
+			for i, tp := range ifc.TypeParams {
+				if i < len(typeArgs) {
+					concreteArgs[tp] = typeArgs[i]
+				}
+			}
+			namedImplTypeKey := ""
+			if namedImpl != nil {
+				namedImplTypeKey = g.implHelperKey(namedImpl, typeArgs)
+			}
 			for _, mm := range ifc.Methods {
-				pt := typeclassFuncType(
-					func() []string {
-						out := make([]string, 0, len(mm.Params))
-						for _, p := range mm.Params {
-							out = append(out, typeString(p.Type, subst))
-						}
-						return out
-					}(),
-					typeStringReturn(mm.Ret, subst),
-				)
+				paramTypes := make([]string, 0, len(mm.Params))
+				for _, p := range mm.Params {
+					paramTypes = append(paramTypes, g.goTypeStringForTypeclass(p.Type, concreteArgs, localSubst))
+				}
+				retTypeStr := g.goTypeStringForTypeclass(mm.Ret, concreteArgs, localSubst)
+				if namedImplTypeKey != "" {
+					fnName := helperFuncName(mm.Name, namedImplTypeKey)
+					usingConstraintFuncs[mm.Name] = fnName
+					usingTypeclassMethods[mm.Name] = append(usingTypeclassMethods[mm.Name], egTcBinding{
+						Interface:  cu.Name,
+						TargetType: firstTypeArgString(typeArgs, localSubst),
+						ParamTypes: paramTypes,
+						RetType:    retTypeStr,
+						DictExpr:   fnName,
+					})
+					continue
+				}
+				pt := typeclassFuncType(paramTypes, retTypeStr)
 				params = append(params, &ast.Field{
 					Names: []*ast.Ident{ast.NewIdent(mm.Name + "Fn")},
 					Type:  ast.NewIdent(pt),
+				})
+				if _, ok := usingConstraintFuncs[mm.Name]; !ok {
+					usingConstraintFuncs[mm.Name] = mm.Name + "Fn"
+				}
+				usingTypeclassMethods[mm.Name] = append(usingTypeclassMethods[mm.Name], egTcBinding{
+					Interface:  cu.Name,
+					TargetType: firstTypeArgString(typeArgs, localSubst),
+					ParamTypes: paramTypes,
+					RetType:    retTypeStr,
+					DictExpr:   mm.Name + "Fn",
 				})
 			}
 		}
@@ -673,28 +719,43 @@ func (g *gen) genTypedImpl(d *ImplDecl, ifaceName string) []ast.Decl {
 			}
 		} else {
 			ctx := &egCtx{
-				locals:      map[string]string{},
-				bindings:    map[string]string{},
-				sourceTypes: map[string]string{},
-				mutable:     map[string]bool{},
-				typeParams:  combinedTP,
-				retType:     retType,
-				currentImpl: ifaceName,
-				implTypeKey: typeKey,
+				locals:           map[string]string{},
+				bindings:         map[string]string{},
+				sourceTypes:      map[string]string{},
+				mutable:          map[string]bool{},
+				typeParams:       combinedTP,
+				constraintFuncs:  usingConstraintFuncs,
+				typeclassMethods: usingTypeclassMethods,
+				retType:          retType,
+				currentImpl:      ifaceName,
+				implTypeKey:      typeKey,
 			}
 			for _, p := range m.Params {
 				ctx.locals[p.Name] = g.goType(p.Type, combinedTP)
 				ctx.bindings[p.Name] = p.Name
 			}
-			code, _, _ := g.translateExpr(m.Body, ctx, retType)
 			if retType == "" {
+				if goExpr, ok := m.Body.(*GoExpr); ok && g.isUnitGoExpr(goExpr, ctx) {
+					if goStmts, err := g.translateGoUnitStmts(goExpr, ctx); err == nil {
+						bodyStmts = append(bodyStmts, goStmts...)
+						bodyStmts = append(bodyStmts, &ast.ReturnStmt{})
+						constraints := mapKeyTypeParamConstraintsForImplMethod(d, m)
+						decl := astFuncDecl(fnName, nil, typeParamFieldsWithConstraints(mergedTypeParams(d.TypeParams, sig.TypeParams), constraints),
+							params, results, &ast.BlockStmt{List: bodyStmts})
+						decls = append(decls, decl)
+						continue
+					}
+				}
+				code, _, _ := g.translateExpr(m.Body, ctx, retType)
 				bodyStmts = append(bodyStmts, &ast.ExprStmt{X: code})
 				bodyStmts = append(bodyStmts, &ast.ReturnStmt{})
 			} else {
+				code, _, _ := g.translateExpr(m.Body, ctx, retType)
 				bodyStmts = append(bodyStmts, &ast.ReturnStmt{Results: []ast.Expr{code}})
 			}
 		}
-		decl := astFuncDecl(fnName, nil, typeParamFields(mergedTypeParams(d.TypeParams, sig.TypeParams)),
+		constraints := mapKeyTypeParamConstraintsForImplMethod(d, m)
+		decl := astFuncDecl(fnName, nil, typeParamFieldsWithConstraints(mergedTypeParams(d.TypeParams, sig.TypeParams), constraints),
 			params, results, &ast.BlockStmt{List: bodyStmts})
 		decls = append(decls, decl)
 	}
@@ -717,6 +778,21 @@ func mergedTypeParams(a, b []string) []string {
 		}
 	}
 	return out
+}
+
+func mapKeyTypeParamConstraintsForImplMethod(d *ImplDecl, m *FuncDecl) map[string]string {
+	constraints := mergeMapKeyTypeParamConstraints(nil, d.Type)
+	for _, arg := range d.TypeArgs {
+		constraints = mergeMapKeyTypeParamConstraints(constraints, arg)
+	}
+	for _, arg := range d.InterfaceArgs {
+		constraints = mergeMapKeyTypeParamConstraints(constraints, arg)
+	}
+	for _, p := range m.Params {
+		constraints = mergeMapKeyTypeParamConstraints(constraints, p.Type)
+	}
+	constraints = mergeMapKeyTypeParamConstraints(constraints, m.Ret)
+	return constraints
 }
 
 func (g *gen) genInherentDecls(d *ImplDecl) []ast.Decl {
@@ -743,10 +819,8 @@ func (g *gen) genInherentDecls(d *ImplDecl) []ast.Decl {
 			retType:     retType,
 			retTypes:    retTypes,
 		}
-		startIdx := 0
 		for i, p := range m.Params {
 			if i == 0 && hasRecv {
-				startIdx = 1
 				ctx.locals[p.Name] = g.goType(p.Type, tpSet)
 				ctx.bindings[p.Name] = p.Name
 				continue
@@ -790,6 +864,15 @@ func (g *gen) genInherentDecls(d *ImplDecl) []ast.Decl {
 			blockStmts, _ := g.translateBlockStmts(block, ctx, retType, retTypes)
 			bodyStmts = append(bodyStmts, blockStmts...)
 		} else if len(retTypes) == 0 {
+			if goExpr, ok := m.Body.(*GoExpr); ok && g.isUnitGoExpr(goExpr, ctx) {
+				if goStmts, err := g.translateGoUnitStmts(goExpr, ctx); err == nil {
+					bodyStmts = append(bodyStmts, goStmts...)
+					bodyStmts = append(bodyStmts, &ast.ReturnStmt{})
+					decls = append(decls, astFuncDecl(fnName, nil, typeParamFields(mtp),
+						params, results, &ast.BlockStmt{List: bodyStmts}))
+					continue
+				}
+			}
 			code, _, _ := g.translateExpr(m.Body, ctx, retType)
 			bodyStmts = append(bodyStmts, &ast.ExprStmt{X: code})
 			bodyStmts = append(bodyStmts, &ast.ReturnStmt{})
@@ -799,7 +882,7 @@ func (g *gen) genInherentDecls(d *ImplDecl) []ast.Decl {
 		}
 
 		decls = append(decls, astFuncDecl(fnName, nil, typeParamFields(mtp),
-			params[startIdx:], results, &ast.BlockStmt{List: bodyStmts}))
+			params, results, &ast.BlockStmt{List: bodyStmts}))
 	}
 	return decls
 }

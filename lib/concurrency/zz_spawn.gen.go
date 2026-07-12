@@ -2,12 +2,6 @@
 
 package concurrency
 
-import (
-	. "github.com/mygo-lang/mygo/lib/prelude"
-)
-
-var _ = None[any]
-
 func Spawn(fn func()) {
 	go fn()
 	return

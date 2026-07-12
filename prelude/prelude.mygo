@@ -46,10 +46,10 @@ interface IEnumerable[C[A], A]
   func Contains(c: C[A], item: A) -> Bool using Eq[A]
 end
 
-# A linked list node. Tail uses Option[Ref[List[A]]] so None terminates the list.
-struct List[A]
-  head: A
-  tail: Option[Ref[List[A]]]
+interface IAssignable[C[A], K, A]
+  func Get(c: C[A], index: K) -> Option[A]
+  func Set(c: C[A], index: K, value: A) -> ()
+  func Delete(c: C[A], index: K) -> ()
 end
 
 # Slice[A] is Go's native slice ([]A).

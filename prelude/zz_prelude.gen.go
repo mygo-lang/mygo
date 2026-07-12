@@ -2,26 +2,10 @@
 
 package prelude
 
-import (
-	"fmt"
-	"strconv"
-	"strings"
-	"unicode/utf8"
-)
-
 type HKTType interface{}
-
 type HKT1[F any] interface{}
-
 type HKT2[A any] interface{}
-
 type HKT[F any, A any] interface{}
-
-var _ = fmt.Append
-var _ = strconv.AppendBool
-var _ = strings.Clone
-var _ = utf8.AppendRune
-
 type Option[A any] interface {
 	isOption()
 }
@@ -29,14 +13,17 @@ type OptionSome[A any] struct {
 	F0 A
 }
 
-func (_ OptionSome[A]) isOption() {}
+func (_ OptionSome[A]) isOption() {
+}
 func Some[A any](a0 A) Option[A] {
 	return OptionSome[A]{F0: a0}
 }
 
-type OptionNone[A any] struct{}
+type OptionNone[A any] struct {
+}
 
-func (_ OptionNone[A]) isOption() {}
+func (_ OptionNone[A]) isOption() {
+}
 func None[A any]() Option[A] {
 	return OptionNone[A]{}
 }
@@ -48,7 +35,8 @@ type ResultOk[A any, E any] struct {
 	F0 A
 }
 
-func (_ ResultOk[A, E]) isResult() {}
+func (_ ResultOk[A, E]) isResult() {
+}
 func Ok[A any, E any](a0 A) Result[A, E] {
 	return ResultOk[A, E]{F0: a0}
 }
@@ -57,7 +45,8 @@ type ResultErr[A any, E any] struct {
 	F0 E
 }
 
-func (_ ResultErr[A, E]) isResult() {}
+func (_ ResultErr[A, E]) isResult() {
+}
 func Err[A any, E any](a0 E) Result[A, E] {
 	return ResultErr[A, E]{F0: a0}
 }
@@ -79,16 +68,17 @@ type IEnumerable[C any, A any] interface {
 	Find(HKT[C, A], func(A) bool) Option[*A]
 	Contains(HKT[C, A], A) bool
 }
-type List[A any] struct {
-	head A
-	tail Option[*List[A]]
+type IAssignable[C any, K any, A any] interface {
+	Get(HKT[C, A], K) Option[A]
+	Set(HKT[C, A], K, A)
+	Delete(HKT[C, A], K)
 }
 
 func OptionToResult[A any, E any](opt Option[A], errVal E) Result[A, E] {
 	return func() Result[A, E] {
-		if v_1, ok := opt.(OptionSome[A]); ok {
+		if v_32, ok := opt.(OptionSome[A]); ok {
 			return func() Result[A, E] {
-				return Ok[A, E](v_1.F0)
+				return Ok[A, E](v_32.F0)
 			}()
 		} else {
 			if _, ok := opt.(OptionNone[A]); ok {
@@ -103,9 +93,9 @@ func OptionToResult[A any, E any](opt Option[A], errVal E) Result[A, E] {
 }
 func ResultToOption[A any, E any](res Result[A, E]) Option[A] {
 	return func() Option[A] {
-		if v_3, ok := res.(ResultOk[A, E]); ok {
+		if v_34, ok := res.(ResultOk[A, E]); ok {
 			return func() Option[A] {
-				return Some[A](v_3.F0)
+				return Some[A](v_34.F0)
 			}()
 		} else {
 			if _, ok := res.(ResultErr[A, E]); ok {
@@ -120,14 +110,14 @@ func ResultToOption[A any, E any](res Result[A, E]) Option[A] {
 }
 func ResultFlatten[A any, E any](res Result[Result[A, E], E]) Result[A, E] {
 	return func() Result[A, E] {
-		if v_5, ok := res.(ResultOk[Result[A, E], E]); ok {
+		if v_36, ok := res.(ResultOk[Result[A, E], E]); ok {
 			return func() Result[A, E] {
-				return v_5.F0
+				return v_36.F0
 			}()
 		} else {
-			if v_6, ok := res.(ResultErr[Result[A, E], E]); ok {
+			if v_35, ok := res.(ResultErr[Result[A, E], E]); ok {
 				return func() Result[A, E] {
-					return Err[A, E](v_6.F0)
+					return Err[A, E](v_35.F0)
 				}()
 			} else {
 				panic("unreachable")
@@ -137,10 +127,10 @@ func ResultFlatten[A any, E any](res Result[Result[A, E], E]) Result[A, E] {
 }
 func OptionFilter[A any](opt Option[A], fn func(A) bool) Option[A] {
 	return func() Option[A] {
-		if v_7, ok := opt.(OptionSome[A]); ok {
+		if v_38, ok := opt.(OptionSome[A]); ok {
 			return func() Option[A] {
 				return func() Option[A] {
-					if fn(v_7.F0) {
+					if fn(v_38.F0) {
 						return opt
 					} else {
 						return None[A]()

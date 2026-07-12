@@ -2,18 +2,6 @@
 
 package prelude
 
-import (
-	"fmt"
-	"strconv"
-	"strings"
-	"unicode/utf8"
-)
-
-var _ = fmt.Append
-var _ = strconv.AppendBool
-var _ = strings.Clone
-var _ = utf8.AppendRune
-
 func Each__t_t[T any](c []T, fn func(T)) {
 	func() {
 		for _, v := range c {
@@ -86,4 +74,20 @@ func Slice_Prepend[T any](items []T, item T) []T {
 		out = append(out, items...)
 		return out
 	}()
+}
+func Get__t_int_t[T any](s []T, index int) Option[T] {
+	return func() Option[T] {
+		if index >= 0 && index < len(s) {
+			return Some[T](s[index])
+		}
+		return None[T]()
+	}()
+}
+func Set__t_int_t[T any](s []T, index int, value T) {
+	s[index] = value
+	return
+}
+func Delete__t_int_t[T any](s []T, index int) {
+	s = append(s[:index], s[index+1:]...)
+	return
 }

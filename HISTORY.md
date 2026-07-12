@@ -1,5 +1,8 @@
 ## Recent Work
 
+- **Prelude moved to project root**: Moved `lib/prelude/` to project root `prelude/`. Updated all Go import paths from `github.com/mygo-lang/mygo/lib/prelude` to `github.com/mygo-lang/mygo/prelude`, and updated all test relative paths and documentation references accordingly.
+- **Option.UnwrapOr**: Added standalone `UnwrapOr[A](opt: Option[A], defaultVal: A) -> A` function in `prelude/option.mygo`.
+
 - **If expression `elsif` syntax**: Added `elsif` keyword for block `if cond then ... elsif cond then ... else ... end`. Removed old inline `if cond then a else b` (use `if cond => a else b`) and bare block `if cond NEWLINE ... end` (no `then`) forms. Parser: `if_block_tail` grammar rule, `ifParts` struct, `currentIfPartsStack`. `elsif` is a separate yacc token (not IDENT) in both `parser.y` and `parser_lex.l`. EBNF, examples, README, and all tests updated to use `=>` form.
 
 - **Prelude refactoring**: Split `lib/prelude/prelude.mygo` into separate files by concern: `conversion.mygo` (`From`/`Into` impls), `default.mygo` (`Default` impls), `numeric.mygo` (`Ord`/`Show`/`Eq` numeric impls), `slice.mygo` (Slice helpers). Removed `import fmt "go:fmt"` and `import strconv "go:strconv"` from `prelude.mygo`. Moved `IEnumerable` interface and `Option`/`List`/`Slice`/`Map`/`Set` implementations out.

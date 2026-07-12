@@ -18,12 +18,34 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 		isLast := i == len(n.Stmts)-1
 		switch s := stmt.(type) {
 		case *ExprStmt:
-			code, typ, err := g.translateExpr(s.Expr, child, "")
+			if branch := branchStmtForExpr(s.Expr); branch != nil {
+				stmts = append(stmts, branch)
+				continue
+			}
+			if goExpr, ok := s.Expr.(*GoExpr); ok && g.isUnitGoExpr(goExpr, child) {
+				goStmts, err := g.translateGoUnitStmts(goExpr, child)
+				if err == nil {
+					if isLast && returnExpected != "" {
+						stmts = append(stmts, goStmts...)
+						stmts = append(stmts, &ast.ReturnStmt{})
+					} else {
+						stmts = append(stmts, goStmts...)
+					}
+					continue
+				}
+			}
+			expectedType := ""
+			if isLast && returnExpected != "" {
+				expectedType = returnExpected
+			}
+			code, typ, err := g.translateExpr(s.Expr, child, expectedType)
 			if err != nil {
 				return stmts, err
 			}
 			if isLast && returnExpected != "" {
 				stmts = append(stmts, &ast.ReturnStmt{Results: []ast.Expr{code}})
+			} else if branch := branchStmtForExpr(s.Expr); branch != nil {
+				stmts = append(stmts, branch)
 			} else if typ == "" {
 				stmts = append(stmts, &ast.ExprStmt{X: code})
 			} else {
@@ -59,7 +81,8 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 				return stmts, err
 			}
 			if s.Name == "_" {
-				stmts = append(stmts, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Rhs: []ast.Expr{code}, Tok: token.ASSIGN})
+				// Use ExprStmt to discard the result — handles multi-return Go calls safely.
+				stmts = append(stmts, &ast.ExprStmt{X: code})
 			} else {
 				g.localSeq++
 				base := sanitizeIdent(s.Name)
@@ -110,6 +133,35 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 	return stmts, nil
 }
 
+func (g *gen) isUnitGoExpr(n *GoExpr, ctx *egCtx) bool {
+	resultType := g.goType(n.Result, ctx.typeParams)
+	return resultType == "" || resultType == "struct{}"
+}
+
+func branchStmtForExpr(e Expr) *ast.BranchStmt {
+	id, ok := e.(*IdentExpr)
+	if !ok {
+		return nil
+	}
+	switch id.Name {
+	case "break":
+		return &ast.BranchStmt{Tok: token.BREAK}
+	case "continue":
+		return &ast.BranchStmt{Tok: token.CONTINUE}
+	}
+	return nil
+}
+
+func stmtForExpr(src Expr, code ast.Expr, typ string) ast.Stmt {
+	if branch := branchStmtForExpr(src); branch != nil {
+		return branch
+	}
+	if typ != "" {
+		return &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Rhs: []ast.Expr{code}, Tok: token.ASSIGN}
+	}
+	return &ast.ExprStmt{X: code}
+}
+
 // translateExpr is the main expression translator.
 func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, string, error) {
 	switch n := e.(type) {
@@ -125,7 +177,7 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 				useExpected = ctx.retType
 			}
 			if base, tas := splitTypeArgs(useExpected); base == "Option" && len(tas) > 0 {
-				callee := &ast.IndexExpr{X: ast.NewIdent("None"), Index: ast.NewIdent(tas[0])}
+				callee := &ast.IndexExpr{X: ast.NewIdent("None"), Index: goTypeExprFromString(tas[0])}
 				return &ast.CallExpr{Fun: callee}, useExpected, nil
 			}
 		}

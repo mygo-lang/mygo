@@ -25,14 +25,14 @@ func (g *gen) translateIf(n *IfExpr, ctx *egCtx, expected string) (ast.Expr, str
 			resultType = elseType
 		}
 	}
-	if resultType == "" || resultType == "any" {
+	if resultType == "" || resultType == "any" || resultType == "Unit" || resultType == "struct{}" {
 		// Statement form: wrap in IIFE so both branches are expressions
 		ifStmt := &ast.IfStmt{
 			Cond: cond,
-			Body: &ast.BlockStmt{List: []ast.Stmt{&ast.ExprStmt{X: thenCode}}},
+			Body: &ast.BlockStmt{List: []ast.Stmt{stmtForExpr(n.Then, thenCode, thenType)}},
 		}
 		if elseCode != nil {
-			ifStmt.Else = &ast.BlockStmt{List: []ast.Stmt{&ast.ExprStmt{X: elseCode}}}
+			ifStmt.Else = &ast.BlockStmt{List: []ast.Stmt{stmtForExpr(n.Else, elseCode, elseType)}}
 		}
 		fn := astFuncLit(nil, nil, &ast.BlockStmt{List: []ast.Stmt{ifStmt}})
 		return &ast.CallExpr{Fun: fn}, "", nil
@@ -74,7 +74,7 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (ast.E
 		if _, ok := c.Pattern.(*WildcardPattern); ok {
 			code, _, _ := g.translateExpr(c.Body, ctx.child(), expected)
 			if expected == "" {
-				tail = &ast.ExprStmt{X: code}
+				tail = stmtForExpr(c.Body, code, "")
 			} else {
 				tail = &ast.ReturnStmt{Results: []ast.Expr{code}}
 			}
@@ -86,7 +86,7 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (ast.E
 			code, _, _ := g.translateExpr(c.Body, child, expected)
 			var bodyBlock *ast.BlockStmt
 			if expected == "" {
-				bodyBlock = &ast.BlockStmt{List: []ast.Stmt{&ast.ExprStmt{X: code}}}
+				bodyBlock = &ast.BlockStmt{List: []ast.Stmt{stmtForExpr(c.Body, code, "")}}
 			} else {
 				bodyBlock = &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{Results: []ast.Expr{code}}}}
 			}
@@ -119,7 +119,7 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (ast.E
 				if _, typeArgs := splitTypeArgs(ttype); len(typeArgs) > 0 {
 					taExprs := make([]ast.Expr, len(typeArgs))
 					for i, ta := range typeArgs {
-						taExprs[i] = ast.NewIdent(ta)
+						taExprs[i] = goTypeExprFromString(ta)
 					}
 					assertType = genericIdent(assertTypeName, taExprs...)
 				}
@@ -139,14 +139,36 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (ast.E
 				for i, arg := range vp.Args {
 					if arg != "_" {
 						child.bindings[arg] = fmt.Sprintf("%s.F%d", varName, i)
-						child.locals[arg] = ""
+						// Compute the Go-level type for each pattern arg from the enum definition.
+						if enumName != "" && found {
+							if enum, ok := g.pkg.Enums[enumName]; ok {
+								for _, variant := range enum.Variants {
+									if variant.Name == vp.Name && i < len(variant.Fields) {
+										_, typeArgs := splitTypeArgs(ttype)
+										subst := map[string]string{}
+										for j, tp := range enum.TypeParams {
+											if j < len(typeArgs) {
+												subst[tp] = typeArgs[j]
+											}
+										}
+										fieldType := substituteTypeExpr(variant.Fields[i].Type, subst)
+										tpSet := map[string]struct{}{}
+										for _, tp := range enum.TypeParams {
+											tpSet[tp] = struct{}{}
+										}
+										child.locals[arg] = g.goType(fieldType, tpSet)
+										break
+									}
+								}
+							}
+						}
 					}
 				}
 			}
 			code, _, _ := g.translateExpr(c.Body, child, expected)
 			var bodyBlock *ast.BlockStmt
 			if expected == "" {
-				bodyBlock = &ast.BlockStmt{List: []ast.Stmt{&ast.ExprStmt{X: code}}}
+				bodyBlock = &ast.BlockStmt{List: []ast.Stmt{stmtForExpr(c.Body, code, "")}}
 			} else {
 				bodyBlock = &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{Results: []ast.Expr{code}}}}
 			}
@@ -218,16 +240,45 @@ func (g *gen) translateWhile(n *WhileExpr, ctx *egCtx) (ast.Expr, string, error)
 	return &ast.CallExpr{Fun: fn}, "", nil
 }
 
+func isBreakOrContinue(e Expr) bool {
+	if id, ok := e.(*IdentExpr); ok {
+		return id.Name == "break" || id.Name == "continue"
+	}
+	return false
+}
+
 func (g *gen) translateWhileStmt(stmt Stmt, ctx *egCtx, body *ast.BlockStmt) {
 	switch s := stmt.(type) {
 	case *ExprStmt:
+		// If this is an if-expression with break/continue branches, handle directly
+		// to avoid wrapping break in an IIFE (which is invalid Go).
+		if ifExpr, ok := s.Expr.(*IfExpr); ok {
+			if isBreakOrContinue(ifExpr.Then) || isBreakOrContinue(ifExpr.Else) {
+				cond, _, _ := g.translateExpr(ifExpr.Cond, ctx, "bool")
+				// Translate branches directly (no IIFE) so break/continue work.
+				thenCode, thenType, _ := g.translateExpr(ifExpr.Then, ctx, "")
+				thenStmt := stmtForExpr(ifExpr.Then, thenCode, thenType)
+				elseCode, elseType, _ := g.translateExpr(ifExpr.Else, ctx, "")
+				elseStmt := stmtForExpr(ifExpr.Else, elseCode, elseType)
+				ifStmt := &ast.IfStmt{Cond: cond, Body: &ast.BlockStmt{List: []ast.Stmt{thenStmt}}}
+				if elseStmt != nil {
+					ifStmt.Else = &ast.BlockStmt{List: []ast.Stmt{elseStmt}}
+				}
+				body.List = append(body.List, ifStmt)
+				return
+			}
+		}
 		code, _, _ := g.translateExpr(s.Expr, ctx, "")
 		body.List = append(body.List, &ast.ExprStmt{X: code})
 	case *LetStmt:
 		code, _, _ := g.translateExpr(s.Value, ctx, "")
-		actual := sanitizeIdent(s.Name)
-		ctx.bindings[s.Name] = actual
-		body.List = append(body.List, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(actual)}, Rhs: []ast.Expr{code}, Tok: token.DEFINE})
+		if s.Name == "_" {
+			body.List = append(body.List, &ast.ExprStmt{X: code})
+		} else {
+			actual := sanitizeIdent(s.Name)
+			ctx.bindings[s.Name] = actual
+			body.List = append(body.List, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(actual)}, Rhs: []ast.Expr{code}, Tok: token.DEFINE})
+		}
 	case *AssignStmt:
 		code, _, _ := g.translateExpr(s.Value, ctx, "")
 		actual := ctx.bindings[s.Name]

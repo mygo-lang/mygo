@@ -73,6 +73,7 @@ type bindingInfo struct {
 }
 
 type Generator struct {
+	inner             *gen
 	pkg               *pkg.Package
 	importAliases     map[string]string
 	interfaceByMethod map[string]string
@@ -134,24 +135,16 @@ func (ctx *exprCtx) child() *exprCtx {
 
 // NewGenerator creates a new Generator with all internal maps initialized.
 func NewGenerator(p *Package, typedInfo *typeinference.TypedInfo) *Generator {
+	ng := newGen(p, typedInfo)
 	g := &Generator{
+		inner:             ng,
 		pkg:               p,
-		importAliases:     p.ImportAliases,
-		interfaceByMethod: map[string]string{},
+		importAliases:     ng.importAliases,
+		interfaceByMethod: ng.interfaceByMethod,
 		inherentMethods:   map[string]map[string]*InherentMethod{},
-		variantByName:     map[string]string{},
+		variantByName:     ng.variantByName,
 		goSigCache:        map[string]*GoPackageSigs{},
 		typedInfo:         typedInfo,
-	}
-	for name, iface := range p.Interfaces {
-		for _, m := range iface.Methods {
-			g.interfaceByMethod[m.Name] = name
-		}
-	}
-	for enumName, enum := range p.Enums {
-		for _, variant := range enum.Variants {
-			g.variantByName[variant.Name] = enumName
-		}
 	}
 	for _, impl := range p.Impls {
 		if impl.InterfaceName != "" || impl.Name != "" {
@@ -254,14 +247,20 @@ func toPackageName(name string) string {
 
 // toGen creates a *gen from this Generator for method delegation.
 func (g *Generator) toGen() *gen {
-	ng := newGen(g.pkg, g.typedInfo)
-	// Copy over fields set by tests that construct Generator directly
+	if g.inner == nil {
+		g.inner = newGen(g.pkg, g.typedInfo)
+	}
+	ng := g.inner
+	// Keep compatibility with tests that still set legacy fields directly.
 	if len(g.interfaceByMethod) > 0 {
 		ng.interfaceByMethod = g.interfaceByMethod
 	}
 	if len(g.variantByName) > 0 {
 		ng.variantByName = g.variantByName
 	}
+	ng.needsCallAny = g.needsCallAny
+	ng.localSeq = g.localSeq
+	ng.switchVarSeq = g.switchVarSeq
 	return ng
 }
 

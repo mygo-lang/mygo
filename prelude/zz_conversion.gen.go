@@ -5,14 +5,7 @@ package prelude
 import (
 	"fmt"
 	"strconv"
-	"strings"
-	"unicode/utf8"
 )
-
-var _ = fmt.Append
-var _ = strconv.AppendBool
-var _ = strings.Clone
-var _ = utf8.AppendRune
 
 func From_int_int64(value int) int64 {
 	return int64(value)
@@ -43,28 +36,37 @@ func From_int_string(value int) string {
 }
 func From_string_result_int_string(value string) Result[int, string] {
 	return func() Result[int, string] {
-		v, err := strconv.Atoi(value)
-		if err != nil {
-			return Err[int, string](err.Error())
-		}
-		return Ok[int, string](v)
+		_ = func() Result[int, string] {
+			v, err := strconv.Atoi(value)
+			if err != nil {
+				return Err[int, string](err.Error())
+			}
+			return Ok[int, string](v)
+		}()
+		return Ok[int, string](0)
 	}()
 }
 func From_string_result_int64_string(value string) Result[int64, string] {
 	return func() Result[int64, string] {
-		v, err := strconv.ParseInt(value, 10, 64)
-		if err != nil {
-			return Err[int64, string](err.Error())
-		}
-		return Ok[int64, string](v)
+		_ = func() Result[int64, string] {
+			v, err := strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				return Err[int64, string](err.Error())
+			}
+			return Ok[int64, string](v)
+		}()
+		return Ok[int64, string](0)
 	}()
 }
 func From_string_result_float64_string(value string) Result[float64, string] {
 	return func() Result[float64, string] {
-		v, err := strconv.ParseFloat(value, 64)
-		if err != nil {
-			return Err[float64, string](err.Error())
-		}
-		return Ok[float64, string](v)
+		_ = func() Result[float64, string] {
+			v, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return Err[float64, string](err.Error())
+			}
+			return Ok[float64, string](v)
+		}()
+		return Ok[float64, string](0)
 	}()
 }

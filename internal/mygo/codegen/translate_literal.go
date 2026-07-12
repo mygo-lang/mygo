@@ -26,7 +26,14 @@ func (g *gen) translateStructLit(n *StructLitExpr, ctx *egCtx, expected string) 
 	}
 	elts := make([]ast.Expr, len(n.Fields))
 	for i, f := range n.Fields {
-		code, _, _ := g.translateExpr(f.Value, ctx, "")
+		fieldExpected := ""
+		for _, sf := range st.Fields {
+			if sf.Name == f.Name {
+				fieldExpected = g.goTypeStringSubst(sf.Type, subst)
+				break
+			}
+		}
+		code, _, _ := g.translateExpr(f.Value, ctx, fieldExpected)
 		fieldName := goastFieldName(f.Name)
 		if fieldName == "" {
 			elts[i] = code

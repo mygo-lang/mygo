@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"go/ast"
+	goparser "go/parser"
 	"go/token"
 	"strconv"
 	"strings"
@@ -162,15 +163,87 @@ func genericIdent(name string, args ...ast.Expr) ast.Expr {
 	return &ast.IndexListExpr{X: ast.NewIdent(name), Indices: args}
 }
 
+func goTypeExprFromString(typ string) ast.Expr {
+	typ = strings.TrimSpace(typ)
+	if typ == "" {
+		return ast.NewIdent("any")
+	}
+	if expr, err := goparser.ParseExpr(typ); err == nil {
+		return expr
+	}
+	return ast.NewIdent(typ)
+}
+
 func typeParamFields(params []string) *ast.FieldList {
+	return typeParamFieldsWithConstraints(params, nil)
+}
+
+func typeParamFieldsWithConstraints(params []string, constraints map[string]string) *ast.FieldList {
 	if len(params) == 0 {
 		return nil
 	}
 	fields := make([]*ast.Field, len(params))
 	for i, p := range params {
-		fields[i] = &ast.Field{Names: []*ast.Ident{ast.NewIdent(p)}, Type: ast.NewIdent("any")}
+		constraint := "any"
+		if constraints != nil && constraints[p] != "" {
+			constraint = constraints[p]
+		}
+		fields[i] = &ast.Field{Names: []*ast.Ident{ast.NewIdent(p)}, Type: ast.NewIdent(constraint)}
 	}
 	return &ast.FieldList{List: fields}
+}
+
+func mapKeyTypeParamConstraints(t TypeExpr) map[string]string {
+	out := map[string]string{}
+	collectMapKeyTypeParamConstraints(t, out)
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func mergeMapKeyTypeParamConstraints(out map[string]string, types ...TypeExpr) map[string]string {
+	for _, t := range types {
+		if t == nil {
+			continue
+		}
+		if out == nil {
+			out = map[string]string{}
+		}
+		collectMapKeyTypeParamConstraints(t, out)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func collectMapKeyTypeParamConstraints(t TypeExpr, out map[string]string) {
+	switch tt := t.(type) {
+	case *NamedType:
+		if tt.Name == "Map" && len(tt.Args) == 2 {
+			if key, ok := tt.Args[0].(*NamedType); ok && len(key.Args) == 0 {
+				out[key.Name] = "comparable"
+			}
+		}
+		if tt.Name == "Set" && len(tt.Args) == 1 {
+			if key, ok := tt.Args[0].(*NamedType); ok && len(key.Args) == 0 {
+				out[key.Name] = "comparable"
+			}
+		}
+		for _, arg := range tt.Args {
+			collectMapKeyTypeParamConstraints(arg, out)
+		}
+	case *FuncType:
+		for _, p := range tt.Params {
+			collectMapKeyTypeParamConstraints(p, out)
+		}
+		collectMapKeyTypeParamConstraints(tt.Ret, out)
+	case *TupleType:
+		for _, elem := range tt.Elems {
+			collectMapKeyTypeParamConstraints(elem, out)
+		}
+	}
 }
 
 func typeArgIdents(params []string) []ast.Expr {
