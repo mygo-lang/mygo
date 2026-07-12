@@ -1,4 +1,4 @@
-# AGENTS.genfiles.md — Code generations
+# genfiles.md — Code generations
 
 ## Per-Source-File Code Generation
 

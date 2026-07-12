@@ -1,4 +1,4 @@
-# AGENTS.collections.md — Collections and Literals
+# collections.md — Collections and Literals
 
 ## Collection Types
 

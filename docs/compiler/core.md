@@ -1,4 +1,4 @@
-# AGENTS.core.md — Project Core Rules
+# core.md — Project Core Rules
 
 ## Project Shape
 

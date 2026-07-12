@@ -1,4 +1,4 @@
-# AGENTS.concurrency.md
+# concurrency.md
 
 > Notes for the concurrency library and the compiler support added around it.
 

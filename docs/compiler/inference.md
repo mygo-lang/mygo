@@ -1,4 +1,4 @@
-# AGENTS.inference.md — HM type inference, unary ops, empty set inference
+# inference.md — HM type inference, unary ops, empty set inference
 
 ## HM Type Inference (`internal/mygo/typeinference/`)
 

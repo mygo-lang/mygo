@@ -1,4 +1,4 @@
-# AGENTS.semantics.md — Current Syntax Rules
+# semantics.md — Current Syntax Rules
 
 ## Current Semantics
 

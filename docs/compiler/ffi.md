@@ -1,6 +1,6 @@
-# AGENTS.ffi.md — Go FFI and import "go:…"
+# ffi.md — Go FFI and import "go:…"
 
-## Go FFI 基础
+## Go FFI foundations
 
 - Use `import "go:pkg/name"` for Go packages.
 - Allow an optional alias form like `import fmt "go:fmt"` when the Go package name should be explicit.
@@ -10,7 +10,7 @@
 - Generated Go should only include helper imports when they are actually needed; `reflect` is now a fallback for truly dynamic `any` function calls, not a blanket import.
 - Typeclass-style `impl` blocks should lower to standalone helper functions plus explicit function parameters at call sites, not to method dictionaries.
 
-## Ref 类型
+## Ref types
 
 - `Ref[T]` is the non-nil reference form at the Go boundary and should lower to `*T` in generated Go.
 - `Ref[T]` remains a compiler-recognized boundary type, not a prelude-declared enum or struct.
@@ -22,7 +22,7 @@
 - `Option` continues to represent absence for nilable Go values and comma-ok style results.
 - `Result` is the dedicated shape for Go `error`-bearing flows and should be used instead of encoding failures as `Option`.
 
-## 集合类型
+## Collection types
 
 - `List[A]` is a singly-linked list with `head: A` and `tail: Option[Ref[List[A]]]`; `None` terminates the list.
 - `Slice[A]` is MyGO's canonical slice type spelling and lowers directly to Go's native slice `[]A`.

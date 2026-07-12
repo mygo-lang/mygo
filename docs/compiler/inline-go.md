@@ -1,4 +1,4 @@
-# AGENTS.inline-go.md — Inline Go Embedding
+# inline-go.md — Inline Go Embedding
 
 ## Inline Go Embedding
 
