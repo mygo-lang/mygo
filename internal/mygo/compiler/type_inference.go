@@ -255,6 +255,24 @@ func goTypeFromString(s string) (types.Type, bool) {
 		}
 		return nil, false
 	}
+	if strings.HasPrefix(s, "chan<- ") {
+		if elem, ok := goTypeFromString(strings.TrimSpace(s[len("chan<- "):])); ok {
+			return types.NewChan(types.SendOnly, elem), true
+		}
+		return nil, false
+	}
+	if strings.HasPrefix(s, "chan ") {
+		if elem, ok := goTypeFromString(strings.TrimSpace(s[len("chan "):])); ok {
+			return types.NewChan(types.SendRecv, elem), true
+		}
+		return nil, false
+	}
+	if strings.HasPrefix(s, "<-chan ") {
+		if elem, ok := goTypeFromString(strings.TrimSpace(s[len("<-chan "):])); ok {
+			return types.NewChan(types.RecvOnly, elem), true
+		}
+		return nil, false
+	}
 	return nil, false
 }
 
@@ -368,6 +386,18 @@ func hmTypeString(t typeinference.MonoType) string {
 		case "Set":
 			if len(t.Args) == 1 {
 				return "map[" + hmTypeString(t.Args[0]) + "]struct{}"
+			}
+		case "Chan":
+			if len(t.Args) == 1 {
+				return "chan " + hmTypeString(t.Args[0])
+			}
+		case "SendChan":
+			if len(t.Args) == 1 {
+				return "chan<- " + hmTypeString(t.Args[0])
+			}
+		case "RecvChan":
+			if len(t.Args) == 1 {
+				return "<-chan " + hmTypeString(t.Args[0])
 			}
 		}
 		if len(t.Args) == 0 {
@@ -500,6 +530,18 @@ func (g *generator) goType(t TypeExpr, typeParams map[string]struct{}) string {
 		case "Set":
 			if len(tt.Args) == 1 {
 				return "map[" + g.goType(tt.Args[0], typeParams) + "]struct{}"
+			}
+		case "Chan":
+			if len(tt.Args) == 1 {
+				return "chan " + g.goType(tt.Args[0], typeParams)
+			}
+		case "SendChan":
+			if len(tt.Args) == 1 {
+				return "chan<- " + g.goType(tt.Args[0], typeParams)
+			}
+		case "RecvChan":
+			if len(tt.Args) == 1 {
+				return "<-chan " + g.goType(tt.Args[0], typeParams)
 			}
 		case "Option":
 			if len(tt.Args) == 1 {
@@ -1327,6 +1369,18 @@ func typeString(t TypeExpr, subst map[string]string) string {
 		case "Set":
 			if len(tt.Args) == 1 {
 				return "map[" + typeString(tt.Args[0], subst) + "]struct{}"
+			}
+		case "Chan":
+			if len(tt.Args) == 1 {
+				return "chan " + typeString(tt.Args[0], subst)
+			}
+		case "SendChan":
+			if len(tt.Args) == 1 {
+				return "chan<- " + typeString(tt.Args[0], subst)
+			}
+		case "RecvChan":
+			if len(tt.Args) == 1 {
+				return "<-chan " + typeString(tt.Args[0], subst)
 			}
 		}
 		if len(tt.Args) == 0 {

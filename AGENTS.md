@@ -32,6 +32,8 @@
 - **Inline Go embedding**: [AGENTS.inline-go.md](AGENTS.inline-go.md)
   - `go[T] { code: "..."; in x = expr; type T = ... }` syntax
   - Key Files (AST, Lexer, Parser, Compiler)
+- **Concurrency primitives**: [AGENTS.concurrency.md](AGENTS.concurrency.md)
+  - Channel wrappers, directional channel types, and `Spawn`
 
 ## Type Inference
 

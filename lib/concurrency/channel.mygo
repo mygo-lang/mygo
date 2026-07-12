@@ -1,0 +1,206 @@
+package concurrency
+
+interface IChannel[C[A], A]
+  func Len(ch: C[A]) -> Int
+  func Cap(ch: C[A]) -> Int
+end
+
+interface IReadableChan[C[A], A]
+  func Receive(ch: C[A]) -> Option[A]
+  func TryReceive(ch: C[A]) -> Option[A]
+end
+
+interface IWritableChan[C[A], A]
+  func Send(ch: C[A], value: A) -> ()
+  func Close(ch: C[A]) -> ()
+end
+
+func MakeChan[T](buffer: Int) -> Chan[T]
+  go[Chan[T]] {
+    code: "make(chan {T}, {buffer})"
+    in buffer = buffer
+    type T = T
+  }
+end
+
+func MakeChanUnbuffered[T]() -> Chan[T]
+  go[Chan[T]] {
+    code: "make(chan {T})"
+    type T = T
+  }
+end
+
+
+func AsSend[T](ch: Chan[T]) -> SendChan[T]
+  go[SendChan[T]] {
+    code: "(chan<- {T})({ch})"
+    in ch = ch
+    type T = T
+  }
+end
+
+func AsRecv[T](ch: Chan[T]) -> RecvChan[T]
+  go[RecvChan[T]] {
+    code: "(<-chan {T})({ch})"
+    in ch = ch
+    type T = T
+  }
+end
+
+impl[T] Chan[T]: IChannel[Chan[T], T]
+  func Len(ch: Chan[T]) -> Int
+    go[Int] {
+      code: "len({ch})"
+      in ch = ch
+    }
+  end
+
+  func Cap(ch: Chan[T]) -> Int
+    go[Int] {
+      code: "cap({ch})"
+      in ch = ch
+    }
+  end
+end
+
+impl[T] SendChan[T]: IChannel[SendChan[T], T]
+  func Len(ch: SendChan[T]) -> Int
+    go[Int] {
+      code: "len({ch})"
+      in ch = ch
+    }
+  end
+
+  func Cap(ch: SendChan[T]) -> Int
+    go[Int] {
+      code: "cap({ch})"
+      in ch = ch
+    }
+  end
+end
+
+impl[T] RecvChan[T]: IChannel[RecvChan[T], T]
+  func Len(ch: RecvChan[T]) -> Int
+    go[Int] {
+      code: "len({ch})"
+      in ch = ch
+    }
+  end
+
+  func Cap(ch: RecvChan[T]) -> Int
+    go[Int] {
+      code: "cap({ch})"
+      in ch = ch
+    }
+  end
+end
+
+impl[T] SendChan[T]: IWritableChan[SendChan[T], T]
+  func Send(ch: SendChan[T], value: T) -> ()
+    go[()] {
+      code: "{ch} <- {value}"
+      in ch = ch
+      in value = value
+    }
+  end
+
+  func Close(ch: SendChan[T]) -> ()
+    go[()] {
+      code: "close({ch})"
+      in ch = ch
+    }
+  end
+end
+
+impl[T] Chan[T]: IReadableChan[Chan[T], T]
+  func Receive(ch: Chan[T]) -> Option[T]
+    go[Option[T]] {
+      code: """
+        func() Option[{T}] {
+          value, ok := <-{ch}
+          if !ok {
+            return None[{T}]()
+          }
+          return Some[{T}](value)
+        }()
+      """
+      in ch = ch
+      type T = T
+    }
+  end
+
+  func TryReceive(ch: Chan[T]) -> Option[T]
+    go[Option[T]] {
+      code: """
+        func() Option[{T}] {
+          select {
+          case value, ok := <-{ch}:
+            if !ok {
+              return None[{T}]()
+            }
+            return Some[{T}](value)
+          default:
+            return None[{T}]()
+          }
+        }()
+      """
+      in ch = ch
+      type T = T
+    }
+  end
+end
+
+impl[T] RecvChan[T]: IReadableChan[RecvChan[T], T]
+  func Receive(ch: RecvChan[T]) -> Option[T]
+    go[Option[T]] {
+      code: """
+        func() Option[{T}] {
+          value, ok := <-{ch}
+          if !ok {
+            return None[{T}]()
+          }
+          return Some[{T}](value)
+        }()
+      """
+      in ch = ch
+      type T = T
+    }
+  end
+
+  func TryReceive(ch: RecvChan[T]) -> Option[T]
+    go[Option[T]] {
+      code: """
+        func() Option[{T}] {
+          select {
+          case value, ok := <-{ch}:
+            if !ok {
+              return None[{T}]()
+            }
+            return Some[{T}](value)
+          default:
+            return None[{T}]()
+          }
+        }()
+      """
+      in ch = ch
+      type T = T
+    }
+  end
+end
+
+impl[T] Chan[T]: IWritableChan[Chan[T], T]
+  func Send(ch: Chan[T], value: T) -> ()
+    go[()] {
+      code: "{ch} <- {value}"
+      in ch = ch
+      in value = value
+    }
+  end
+
+  func Close(ch: Chan[T]) -> ()
+    go[()] {
+      code: "close({ch})"
+      in ch = ch
+    }
+  end
+end

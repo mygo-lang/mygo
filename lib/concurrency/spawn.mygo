@@ -1,0 +1,7 @@
+package concurrency
+
+func Spawn(fn: func() -> ()) -> ()
+  go[()] {
+    code: `go fn()`
+  }
+end

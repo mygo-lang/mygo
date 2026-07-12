@@ -183,6 +183,49 @@ end
 	}
 }
 
+func TestInlineGoChanTypeOperandProducesValidGo(t *testing.T) {
+	src := `package main
+func demo() -> Chan[Int]
+  go[Chan[Int]] {
+    code: "make(chan {T})"
+    type T = Int
+  }
+end
+`
+	goSrc := compileInlineGoTestPackage(t, src)
+	if !strings.Contains(goSrc, "chan int") {
+		t.Fatalf("generated source missing chan type:\n%s", goSrc)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "inline.go", goSrc, 0); err != nil {
+		t.Fatalf("generated source is not valid Go: %v\n%s", err, goSrc)
+	}
+}
+
+func TestInlineGoDirectionalChanTypesProduceValidGo(t *testing.T) {
+	src := `package main
+func demo(ch: Chan[Int]) -> Int
+  let sender: SendChan[Int] = go[SendChan[Int]] {
+    code: "chan<- int({ch})"
+    in ch = ch
+  }
+  let receiver: RecvChan[Int] = go[RecvChan[Int]] {
+    code: "<-chan int({ch})"
+    in ch = ch
+  }
+  0
+end
+`
+	goSrc := compileInlineGoTestPackage(t, src)
+	for _, want := range []string{"chan<- int", "<-chan int"} {
+		if !strings.Contains(goSrc, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, goSrc)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "inline.go", goSrc, 0); err != nil {
+		t.Fatalf("generated source is not valid Go: %v\n%s", err, goSrc)
+	}
+}
+
 func writeInlineGoTestPackage(t *testing.T, src string) string {
 	t.Helper()
 	dir := t.TempDir()
