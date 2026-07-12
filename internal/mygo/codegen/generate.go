@@ -624,12 +624,15 @@ func (g *gen) genTypedImpl(d *ImplDecl, ifaceName string) []ast.Decl {
 		fnName := helperFuncName(sig.Name, typeKey)
 
 		// Params
-		params := make([]*ast.Field, len(m.Params)+len(m.Using))
-		for i, p := range m.Params {
-			params[i] = &ast.Field{
+		// Build the parameter list with capacity only; using constraints may be skipped
+		// when they cannot be resolved, and a pre-sized slice would leave nil fields
+		// behind for go/printer to trip over.
+		params := make([]*ast.Field, 0, len(m.Params)+len(m.Using))
+		for _, p := range m.Params {
+			params = append(params, &ast.Field{
 				Names: []*ast.Ident{ast.NewIdent(sanitizeIdent(p.Name))},
 				Type:  goastTypeExpr(p.Type),
-			}
+			})
 		}
 		for _, cu := range m.Using {
 			_, ifc, ok := resolveConstraint(cu, g.pkg)
