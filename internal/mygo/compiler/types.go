@@ -87,12 +87,18 @@ type generator struct {
 	pkg               *Package
 	importAliases     map[string]string
 	interfaceByMethod map[string]string
+	inherentMethods   map[string]map[string]*inherentMethod
 	variantByName     map[string]string
 	goSigCache        map[string]*goPackageSigs
 	needsCallAny      bool
 	localSeq          int
 	switchVarSeq      int
 	typedInfo         *typeinference.TypedInfo
+}
+
+type inherentMethod struct {
+	Impl *ImplDecl
+	Func *FuncDecl
 }
 
 func (ctx *exprCtx) child() *exprCtx {

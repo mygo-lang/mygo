@@ -249,6 +249,38 @@ end
 	}
 }
 
+func TestParseFileSupportsInherentImplDecl(t *testing.T) {
+	src := `package main
+struct Rectangle
+  width: Float64
+  height: Float64
+end
+
+impl Rectangle
+  func area(self: Rectangle) -> Float64
+    self.width * self.height
+  end
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	if got := len(file.Decls); got != 2 {
+		t.Fatalf("len(Decls) = %d, want %d", got, 2)
+	}
+	impl, ok := file.Decls[1].(*ImplDecl)
+	if !ok {
+		t.Fatalf("Decls[1] type = %T, want *ImplDecl", file.Decls[1])
+	}
+	if impl.InterfaceName != "" || impl.Name != "" {
+		t.Fatalf("inherent impl interface fields = Name:%q InterfaceName:%q, want empty", impl.Name, impl.InterfaceName)
+	}
+	if got := len(impl.Methods); got != 1 {
+		t.Fatalf("len(ImplDecl.Methods) = %d, want 1", got)
+	}
+}
+
 func TestParseFileSupportsStructFieldTags(t *testing.T) {
 	src := `package main
 struct User

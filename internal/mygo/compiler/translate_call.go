@@ -57,6 +57,11 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 		} else if ok {
 			return code, typ, nil
 		}
+		if code, typ, ok, err := g.translateInherentMethodCall(n, field, ctx); err != nil {
+			return nil, "", err
+		} else if ok {
+			return code, typ, nil
+		}
 		if helper, typ, ok := g.translateTypeclassCall(field.Field, append([]Expr{field.Expr}, n.Args...), ctx, expected); ok {
 			return helper, typ, nil
 		}
@@ -147,6 +152,21 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 				dict[jen.Id(fmt.Sprintf("F%d", i))] = arg
 			}
 			return jen.Id(typeName).Lit(dict), typeName, nil
+		}
+		if method, ok := g.inherentMethodByMangledName(id.Name); ok {
+			var args []jen.Code
+			for _, a := range n.Args {
+				code, _, err := g.translateExpr(a, ctx, "")
+				if err != nil {
+					return nil, "", err
+				}
+				args = append(args, code)
+			}
+			retType := g.hmExprType(n)
+			if retType == "" {
+				retType = g.goReturnType(method.Func.Ret, ctx.typeParams)
+			}
+			return jen.Id(sanitizeIdent(id.Name)).Call(args...), retType, nil
 		}
 		if g.pkg.Funcs[id.Name] != nil {
 			fn := g.pkg.Funcs[id.Name]
@@ -614,6 +634,74 @@ func (g *generator) translateContainerMethod(baseCode jen.Code, baseType, name s
 	}
 
 	return nil, "", false, nil
+}
+
+func (g *generator) translateInherentMethodCall(n *CallExpr, field *FieldExpr, ctx *exprCtx) (jen.Code, string, bool, error) {
+	receiverType := g.hmExprType(field.Expr)
+	if receiverType == "" {
+		_, typ, err := g.translateExpr(field.Expr, ctx, "")
+		if err != nil {
+			return nil, "", false, err
+		}
+		receiverType = typ
+	}
+	receiverName := baseNamedType(receiverType)
+	if receiverName == "" {
+		return nil, "", false, nil
+	}
+	methods := g.inherentMethods[receiverName]
+	if len(methods) == 0 {
+		return nil, "", false, nil
+	}
+	method := methods[field.Field]
+	if method == nil {
+		return nil, "", false, nil
+	}
+	receiverCode, _, err := g.translateExpr(field.Expr, ctx, "")
+	if err != nil {
+		return nil, "", false, err
+	}
+	argCodes := []jen.Code{receiverCode}
+	for _, a := range n.Args {
+		code, _, err := g.translateExpr(a, ctx, "")
+		if err != nil {
+			return nil, "", false, err
+		}
+		argCodes = append(argCodes, code)
+	}
+	retType := g.hmExprType(n)
+	if retType == "" {
+		retType = g.goReturnType(method.Func.Ret, ctx.typeParams)
+	}
+	return jen.Id(inherentMethodName(receiverName, method.Func.Name)).Call(argCodes...), retType, true, nil
+}
+
+func (g *generator) inherentMethodByMangledName(name string) (*inherentMethod, bool) {
+	for receiverName, methods := range g.inherentMethods {
+		for methodName, method := range methods {
+			if inherentMethodName(receiverName, methodName) == name {
+				return method, true
+			}
+		}
+	}
+	return nil, false
+}
+
+func baseNamedType(typeName string) string {
+	typeName = strings.TrimSpace(typeName)
+	if strings.HasPrefix(typeName, "*") {
+		typeName = strings.TrimSpace(strings.TrimPrefix(typeName, "*"))
+	}
+	if strings.HasPrefix(typeName, "Ref[") && strings.HasSuffix(typeName, "]") {
+		typeName = strings.TrimSuffix(strings.TrimPrefix(typeName, "Ref["), "]")
+	}
+	if idx := strings.Index(typeName, "["); idx >= 0 {
+		typeName = typeName[:idx]
+	}
+	if strings.Contains(typeName, "{") {
+		return ""
+	}
+	return strings.TrimSpace(typeName)
 }
 
 func (g *generator) translatePreludeCall(name string, args []Expr, ctx *exprCtx, expected string) (jen.Code, string, bool) {

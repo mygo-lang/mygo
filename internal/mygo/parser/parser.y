@@ -392,17 +392,8 @@ impl_decl
 		p := yylex.(*parser)
 		p.currentImplType = p.currentType
 	}
-	COLON type {
+	opt_impl_interface {
 		p := yylex.(*parser)
-		// Named/generic form: "impl Type : Interface[Args]"
-		// p.currentType holds the interface reference (e.g. "Show[Int]")
-		if iface, ok := p.currentType.(*ast.NamedType); ok {
-			p.currentName = iface.Name
-			p.currentImplInterfaceArgs = append([]ast.TypeExpr(nil), iface.Args...)
-		} else {
-			p.currentName = ""
-			p.currentImplInterfaceArgs = nil
-		}
 		p.currentImpl = &ast.ImplDecl{
 			Line: p.currentImplLine,
 			Column: p.currentImplCol,
@@ -423,6 +414,27 @@ impl_decl
 		p.parsingImplTypeParams = false
 		p.currentImplType = nil
 		p.currentImplInterfaceArgs = nil
+		p.currentName = ""
+	}
+	;
+
+opt_impl_interface
+	: /* empty */ {
+		p := yylex.(*parser)
+		p.currentName = ""
+		p.currentImplInterfaceArgs = nil
+	}
+	| COLON type {
+		p := yylex.(*parser)
+		// Named/generic form: "impl Type : Interface[Args]"
+		// p.currentType holds the interface reference (e.g. "Show[Int]")
+		if iface, ok := p.currentType.(*ast.NamedType); ok {
+			p.currentName = iface.Name
+			p.currentImplInterfaceArgs = append([]ast.TypeExpr(nil), iface.Args...)
+		} else {
+			p.currentName = ""
+			p.currentImplInterfaceArgs = nil
+		}
 	}
 	;
 

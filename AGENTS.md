@@ -21,9 +21,9 @@
 
 ## Language Semantics
 
-- **Current semantics (let/var/tuples/pipes/structs)**: [docs/compiler/semantics.md](docs/compiler/semantics.md)
+- **Current semantics (let/var/tuples/pipes/structs/inherent impls)**: [docs/compiler/semantics.md](docs/compiler/semantics.md)
   - Package declarations, function bodies, let/var/assignment, tuple destructuring, pipe operator
-  - Struct literals, Go struct tags, Typeclass lookup rules
+  - Struct literals, Go struct tags, inherent impl method mangling, Typeclass lookup rules
 - **Pattern matching (switch/case)**: [docs/compiler/semantics.md#pattern-matching](docs/compiler/semantics.md#pattern-matching-switchcase)
 - **New block syntax (if => / case then...end)**: [docs/compiler/semantics.md#new-block-syntax](docs/compiler/semantics.md#new-block-syntax-if--case-thenend)
 

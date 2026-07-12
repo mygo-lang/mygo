@@ -267,6 +267,9 @@ func (g *generator) genInterface(d *InterfaceDecl) []jen.Code {
 }
 
 func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
+	if d.InterfaceName == "" && d.Name == "" {
+		return g.genInherentImpl(d)
+	}
 	ifaceName := d.InterfaceName
 	if ifaceName == "" {
 		ifaceName = d.Name
@@ -395,6 +398,128 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 			} else {
 				bodyStmts = append(bodyStmts, jen.Return().Add(expr))
 			}
+		}
+		fn = fn.Block(bodyStmts...)
+		allCode = append(allCode, fn)
+	}
+	return allCode, nil
+}
+
+func (g *generator) genInherentImpl(d *ImplDecl) ([]jen.Code, error) {
+	receiverName := inherentReceiverName(d.Type)
+	if receiverName == "" {
+		return nil, common.ErrorAtPos(d.Line, d.Column, "impl: inherent impl receiver must be a named type")
+	}
+	seen := map[string]bool{}
+	for _, impl := range g.pkg.Impls {
+		if impl.InterfaceName != "" || impl.Name != "" || inherentReceiverName(impl.Type) != receiverName {
+			continue
+		}
+		for _, m := range impl.Methods {
+			key := m.Name
+			if seen[key] {
+				return nil, common.ErrorAtPos(m.Line, m.Column, "impl %s: duplicate inherent method %s", receiverName, m.Name)
+			}
+			seen[key] = true
+		}
+	}
+
+	var allCode []jen.Code
+	for _, m := range d.Methods {
+		if len(m.Params) == 0 {
+			return nil, common.ErrorAtPos(m.Line, m.Column, "impl %s: method %s must declare an explicit receiver parameter", receiverName, m.Name)
+		}
+		mergedTypeParams := make([]string, 0, len(d.TypeParams)+len(m.TypeParams))
+		seenTypeParam := map[string]bool{}
+		for _, tp := range d.TypeParams {
+			if !seenTypeParam[tp] {
+				mergedTypeParams = append(mergedTypeParams, tp)
+				seenTypeParam[tp] = true
+			}
+		}
+		for _, tp := range m.TypeParams {
+			if !seenTypeParam[tp] {
+				mergedTypeParams = append(mergedTypeParams, tp)
+				seenTypeParam[tp] = true
+			}
+		}
+		typeParams := typeParamSet(mergedTypeParams)
+		retTypes := g.goReturnTypes(m.Ret, typeParams)
+		retType := ""
+		if len(retTypes) == 1 {
+			retType = retTypes[0]
+		}
+		ctx := &exprCtx{
+			locals:           map[string]string{},
+			bindings:         map[string]string{},
+			sourceTypes:      map[string]string{},
+			mutable:          map[string]bool{},
+			typeParams:       typeParams,
+			constraintFuncs:  map[string]string{},
+			typeclassMethods: map[string][]typeclassBinding{},
+			retType:          retType,
+			retTypes:         retTypes,
+		}
+		for _, p := range m.Params {
+			goType := g.goType(p.Type, typeParams)
+			ctx.locals[p.Name] = goType
+			ctx.sourceTypes[p.Name] = typeString(p.Type, nil)
+			ctx.bindings[p.Name] = p.Name
+			ctx.mutable[p.Name] = false
+		}
+
+		fnName := inherentMethodName(receiverName, m.Name)
+		var fn *jen.Statement
+		if len(mergedTypeParams) > 0 {
+			typeItems := make([]jen.Code, 0, len(mergedTypeParams))
+			for _, tp := range mergedTypeParams {
+				typeItems = append(typeItems, jen.Id(tp).Id("any"))
+			}
+			fn = jen.Func().Id(fnName).Types(typeItems...)
+		} else {
+			fn = jen.Func().Id(fnName)
+		}
+
+		paramList := make([]jen.Code, 0, len(m.Params))
+		for _, p := range m.Params {
+			paramList = append(paramList, jen.Id(p.Name).Add(jen.Id(g.goType(p.Type, typeParams))))
+		}
+		constraintParams, err := g.collectUsingConstraintParams(m.Using, ctx, typeParams, fnName)
+		if err != nil {
+			return nil, err
+		}
+		paramList = append(paramList, constraintParams...)
+		fn = fn.Params(paramList...)
+		if len(retTypes) == 1 {
+			fn = fn.Add(jen.Id(retTypes[0]))
+		} else if len(retTypes) > 1 {
+			items := make([]jen.Code, 0, len(retTypes))
+			for _, rt := range retTypes {
+				items = append(items, jen.Id(rt))
+			}
+			fn = fn.Add(jen.Parens(jen.List(items...)))
+		}
+
+		var bodyStmts []jen.Code
+		if block, ok := m.Body.(*BlockExpr); ok {
+			blockStmts, err := g.translateFunctionBlock(block, ctx, retType, retTypes)
+			if err != nil {
+				return nil, common.ErrorAtPos(m.Line, m.Column, "function %s: %v", fnName, err)
+			}
+			bodyStmts = append(bodyStmts, blockStmts...)
+		} else if len(retTypes) == 0 {
+			bodyExpr, _, err := g.translateExpr(m.Body, ctx, retType)
+			if err != nil {
+				return nil, common.ErrorAtPos(m.Line, m.Column, "function %s: %v", fnName, err)
+			}
+			bodyStmts = append(bodyStmts, bodyExpr)
+			bodyStmts = append(bodyStmts, jen.Return())
+		} else {
+			bodyExpr, _, err := g.translateExpr(m.Body, ctx, retType)
+			if err != nil {
+				return nil, common.ErrorAtPos(m.Line, m.Column, "function %s: %v", fnName, err)
+			}
+			bodyStmts = append(bodyStmts, jen.Return().Add(bodyExpr))
 		}
 		fn = fn.Block(bodyStmts...)
 		allCode = append(allCode, fn)

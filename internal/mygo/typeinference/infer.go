@@ -36,6 +36,17 @@ type TypedInfo struct {
 	Predicates map[Expr][]Predicate
 }
 
+func inherentReceiverName(t TypeExpr) string {
+	if nt, ok := t.(*NamedType); ok {
+		return nt.Name
+	}
+	return ""
+}
+
+func inherentMethodName(receiverName, methodName string) string {
+	return receiverName + "_" + methodName
+}
+
 // InferPackage runs HM type inference on an entire package AST.
 // It processes declarations in order and returns a TypedInfo with inferred types.
 func InferPackage(pkg *PkgInfo, state *InferState) (*TypedInfo, error) {
@@ -67,6 +78,26 @@ func InferPackage(pkg *PkgInfo, state *InferState) (*TypedInfo, error) {
 			retType = typeFromAST(fn.Ret)
 		}
 		env[fn.Name] = Generalize(env, TFunc{Args: paramTypes, Ret: retType}, nil)
+	}
+	for _, impl := range pkg.Impls {
+		if impl.InterfaceName != "" || impl.Name != "" {
+			continue
+		}
+		receiverName := inherentReceiverName(impl.Type)
+		if receiverName == "" {
+			continue
+		}
+		for _, fn := range impl.Methods {
+			paramTypes := make([]MonoType, len(fn.Params))
+			for i, p := range fn.Params {
+				paramTypes[i] = typeFromAST(p.Type)
+			}
+			var retType MonoType = TUnit{}
+			if fn.Ret != nil {
+				retType = typeFromAST(fn.Ret)
+			}
+			env[inherentMethodName(receiverName, fn.Name)] = Generalize(env, TFunc{Args: paramTypes, Ret: retType}, nil)
+		}
 	}
 
 	// Process declarations in order
@@ -995,7 +1026,33 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 				}
 				return fieldType, s, preds, nil
 			}
-			return nil, nil, nil, fmt.Errorf("struct %q has no field %q", con.Name, n.Field)
+			for _, impl := range state.PkgInfo.Impls {
+				if impl.InterfaceName != "" || impl.Name != "" || inherentReceiverName(impl.Type) != con.Name {
+					continue
+				}
+				for _, m := range impl.Methods {
+					if m.Name != n.Field {
+						continue
+					}
+					paramTypes := make([]MonoType, 0, len(m.Params))
+					for _, p := range m.Params {
+						paramType := typeFromAST(p.Type)
+						if receiver, ok := impl.Type.(*NamedType); ok && len(con.Args) == len(receiver.Args) {
+							paramType = substituteTypeParams(paramType, impl.TypeParams, con.Args)
+						}
+						paramTypes = append(paramTypes, paramType)
+					}
+					ret := MonoType(TUnit{})
+					if m.Ret != nil {
+						ret = typeFromAST(m.Ret)
+						if receiver, ok := impl.Type.(*NamedType); ok && len(con.Args) == len(receiver.Args) {
+							ret = substituteTypeParams(ret, impl.TypeParams, con.Args)
+						}
+					}
+					return TFunc{Args: paramTypes, Ret: ret}, s, preds, nil
+				}
+			}
+			return nil, nil, nil, fmt.Errorf("struct %q has no field or method %q", con.Name, n.Field)
 		}
 		for _, iface := range state.PkgInfo.Interfaces {
 			for _, m := range iface.Methods {

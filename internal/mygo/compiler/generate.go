@@ -158,6 +158,7 @@ func (p *Package) GenerateFiles() (map[string]string, error) {
 	g := &generator{
 		pkg: p, importAliases: p.ImportAliases,
 		interfaceByMethod: map[string]string{},
+		inherentMethods:   map[string]map[string]*inherentMethod{},
 		variantByName:     map[string]string{},
 		goSigCache:        map[string]*goPackageSigs{},
 		typedInfo:         typedInfo,
@@ -170,6 +171,21 @@ func (p *Package) GenerateFiles() (map[string]string, error) {
 	for enumName, enum := range p.Enums {
 		for _, variant := range enum.Variants {
 			g.variantByName[variant.Name] = enumName
+		}
+	}
+	for _, impl := range p.Impls {
+		if impl.InterfaceName != "" || impl.Name != "" {
+			continue
+		}
+		receiverName := inherentReceiverName(impl.Type)
+		if receiverName == "" {
+			continue
+		}
+		if g.inherentMethods[receiverName] == nil {
+			g.inherentMethods[receiverName] = map[string]*inherentMethod{}
+		}
+		for _, m := range impl.Methods {
+			g.inherentMethods[receiverName][m.Name] = &inherentMethod{Impl: impl, Func: m}
 		}
 	}
 

@@ -25,13 +25,112 @@
 - Nested slice types are written explicitly as `Slice[Slice[Int]]`, and empty `[]` is treated as an empty slice literal in expression position.
 - `using` clauses support multiple constraints and constraint type arguments in both function and interface method signatures.
 - `where` has been removed from the main syntax; typeclass requirements now use `using` only. The parser rejects `where` with an explicit migration error.
-- `impl` supports two forms: `impl Type : Interface[Args]` (named/generic) and `impl Interface[Args]` (anonymous default instance).
+- `impl` supports three forms: `impl Type` (inherent methods), `impl Type : Interface[Args]` (named/generic typeclass implementation), and `impl Interface[Args]` (anonymous default instance).
 - `switch` pattern parsing currently accepts wildcard patterns and variant patterns with optional identifier arguments, such as `Some(x)`.
 - `switch` pattern parsing also accepts tuple patterns such as `(Some(_), None)` and recursively nests them, with `_` treated as an ignore slot instead of a binding.
 - Tuple return lowering now supports multi-return Go signatures when the declared function return type is a tuple, and tuple destructuring in `let` only activates when the binding uses parenthesized names.
 - Keep `examples/main/main.mygo` aligned with the compiler's current boundary behavior, especially for `Ref`, `Option`, and `Result`.
 - Typeclass lookup should respect lexical scope first: local bindings and function-value bindings shadow typeclass names, `using`-bound methods are visible inside nested blocks, and package-level dispatch is the fallback.
 - When multiple typeclass candidates are visible, prefer the more specific binding by comparing concrete type coverage first, then type-parameter usage, then `any` usage; report ambiguity when candidates remain tied.
+
+## Inherent Struct Impl
+
+Structs may define methods in a standalone `impl Type` block without declaring or satisfying an interface.
+
+```mygo
+struct Rectangle
+  width: Float64
+  height: Float64
+end
+
+impl Rectangle
+  func area(self: Rectangle) -> Float64
+    self.width * self.height
+  end
+
+  func scale(self: Rectangle, factor: Float64) -> Rectangle
+    Rectangle {
+      width: self.width * factor,
+      height: self.height * factor,
+    }
+  end
+end
+```
+
+Generic receiver types use the same impl type-parameter syntax as typeclass impls:
+
+```mygo
+struct Box[A]
+  value: A
+end
+
+impl[A] Box[A]
+  func get(self: Box[A]) -> A
+    self.value
+  end
+
+  func map[B](self: Box[A], f: func(A) -> B) -> Box[B]
+    Box[B] { value: f(self.value) }
+  end
+end
+```
+
+Methods in an inherent impl must declare the receiver explicitly as the first parameter. The conventional receiver name is `self`, but it is not syntactically special.
+
+```mygo
+func area(self: Rectangle) -> Float64
+```
+
+Method call syntax is sugar over a receiver-first function call:
+
+```mygo
+let r = Rectangle { width: 10.0, height: 5.0 }
+let a = r.area()
+let bigger = r.scale(2.0)
+```
+
+The calls above resolve as if written:
+
+```mygo
+let a = Rectangle_area(r)
+let bigger = Rectangle_scale(r, 2.0)
+```
+
+### Name Mangling
+
+Inherent methods are emitted as top-level Go functions with a stable receiver-name prefix. This keeps MyGO source free to reuse method names across receiver types while avoiding Go symbol collisions.
+
+- `impl Rectangle` method `area` lowers to `Rectangle_area`.
+- `impl[A] Box[A]` method `get` lowers to `Box_get`.
+- `impl[K, V] MapEntry[K, V]` method `key` lowers to `MapEntry_key`.
+- The receiver's base named type participates in the mangled name; type arguments and impl type parameters remain in the generated Go signature, not in the symbol name.
+- If two inherent impl methods have the same receiver base type and method name in the same package, report a duplicate method error.
+- Different receiver base types may use the same method name because their mangled Go symbols differ.
+
+For example:
+
+```mygo
+impl Rectangle
+  func area(self: Rectangle) -> Float64
+    self.width * self.height
+  end
+end
+
+impl Circle
+  func area(self: Circle) -> Float64
+    self.radius * self.radius * 3.14159
+  end
+end
+```
+
+lowers to distinct Go functions:
+
+```go
+func Rectangle_area(self Rectangle) float64
+func Circle_area(self Circle) float64
+```
+
+Selectors without a call keep their existing field-access meaning. Method lookup only applies to call expressions such as `value.method(args...)`, and field access takes precedence when resolving non-call selectors.
 
 ## Pattern Matching (`switch`/`case`)
 

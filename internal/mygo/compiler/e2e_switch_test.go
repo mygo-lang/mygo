@@ -124,3 +124,75 @@ func TestE2ESwitchGeneratedCodeIsValidGo(t *testing.T) {
 		t.Error("generated code should contain 'else' for case chaining")
 	}
 }
+
+func TestGenerateInherentImplUsesMangledMethodName(t *testing.T) {
+	rect := &StructDecl{
+		Name: "Rectangle",
+		Fields: []Field{
+			{Name: "width", Type: &NamedType{Name: "Float64"}},
+			{Name: "height", Type: &NamedType{Name: "Float64"}},
+		},
+	}
+	areaMethod := &FuncDecl{
+		Name: "area",
+		Params: []Param{
+			{Name: "self", Type: &NamedType{Name: "Rectangle"}},
+		},
+		Ret: &NamedType{Name: "Float64"},
+		Body: &BinaryExpr{
+			Op:    "*",
+			Left:  &FieldExpr{Expr: &IdentExpr{Name: "self"}, Field: "width"},
+			Right: &FieldExpr{Expr: &IdentExpr{Name: "self"}, Field: "height"},
+		},
+	}
+	impl := &ImplDecl{
+		Type:    &NamedType{Name: "Rectangle"},
+		Methods: []*FuncDecl{areaMethod},
+	}
+	demo := &FuncDecl{
+		Name: "demo",
+		Ret:  &NamedType{Name: "Float64"},
+		Body: &BlockExpr{Stmts: []Stmt{
+			&LetStmt{
+				Name: "r",
+				Value: &StructLitExpr{
+					TypeName: "Rectangle",
+					Fields: []StructLitField{
+						{Name: "width", Value: &LiteralExpr{Kind: "number", Value: "10.0"}},
+						{Name: "height", Value: &LiteralExpr{Kind: "number", Value: "5.0"}},
+					},
+				},
+			},
+			&ExprStmt{Expr: &CallExpr{
+				Callee: &FieldExpr{Expr: &IdentExpr{Name: "r"}, Field: "area"},
+			}},
+		}},
+	}
+	pkg := &Package{
+		Name:          "main",
+		Decls:         []Decl{rect, impl, demo},
+		Structs:       map[string]*StructDecl{"Rectangle": rect},
+		Enums:         map[string]*EnumDecl{},
+		Interfaces:    map[string]*InterfaceDecl{},
+		Funcs:         map[string]*FuncDecl{"demo": demo},
+		Impls:         []*ImplDecl{impl},
+		ImportAliases: map[string]string{},
+		Imports:       map[string]struct{}{},
+		NoPrelude:     true,
+	}
+
+	generated, err := pkg.Generate()
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+	if !strings.Contains(generated, "func Rectangle_area") {
+		t.Fatalf("generated code missing mangled method:\n%s", generated)
+	}
+	if !strings.Contains(generated, "return Rectangle_area(r") {
+		t.Fatalf("generated code missing mangled call:\n%s", generated)
+	}
+	fset := token.NewFileSet()
+	if _, err := parser.ParseFile(fset, "", generated, parser.AllErrors); err != nil {
+		t.Fatalf("Generated Go code is not valid: %v\nGenerated code:\n%s", err, generated)
+	}
+}

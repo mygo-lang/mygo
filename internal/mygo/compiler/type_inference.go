@@ -981,6 +981,19 @@ func (g *generator) implHelperKey(impl *ImplDecl, args []TypeExpr) string {
 	return "_" + typeKeyFromType(name) + typeKey
 }
 
+func inherentReceiverName(t TypeExpr) string {
+	switch tt := t.(type) {
+	case *NamedType:
+		return tt.Name
+	default:
+		return ""
+	}
+}
+
+func inherentMethodName(receiverName, methodName string) string {
+	return sanitizeIdent(receiverName) + "_" + sanitizeIdent(methodName)
+}
+
 func (g *generator) hasDuplicateImplForTypeKey(target *ImplDecl, args []TypeExpr) bool {
 	if target == nil {
 		return false
