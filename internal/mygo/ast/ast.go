@@ -205,6 +205,15 @@ type PrefixExpr struct {
 
 func (*PrefixExpr) exprNode() {}
 
+type CastExpr struct {
+	Line   int
+	Column int
+	Expr   Expr
+	Type   TypeExpr
+}
+
+func (*CastExpr) exprNode() {}
+
 type FieldExpr struct {
 	Line   int
 	Column int

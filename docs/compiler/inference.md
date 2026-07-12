@@ -85,5 +85,6 @@ A Hindley-Milner (Algorithm W) type inference pass implementing Haskell 98 core 
   - **Slice literals**: `jen.Index().Add(jenTypeExpr(...)).Values(parts...)`
 
 ### Key Files Changed
-- `internal/mygo/parser/parser.y` — `binding_stmt` + `opt_type_annot` rules; regenerated `parser.go`
+- `internal/mygo/parser/parser.y` — `binding_stmt` + `opt_type_annot` rules; regenerated `parser.go` via `goyacc`.
+- `internal/mygo/parser/parser_lex.l` / `lex.yy.go`: unchanged (fix is grammar-only).
 - `internal/mygo/compiler/translate_expr.go` — `translateSliceLit`, `translateMapLit`, `translateSetLit`, `translateEmptyMapLit`

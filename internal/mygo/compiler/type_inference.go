@@ -45,9 +45,6 @@ func (g *generator) goTypeCompatible(expected, actual string) bool {
 	if normalizeMyGoPrimitiveType(expected) == "Any" || strings.TrimSpace(expected) == "any" {
 		return true
 	}
-	if myGoPrimitiveCompatible(expected, actual) {
-		return true
-	}
 	expectedType, ok := goTypeFromString(expected)
 	if !ok {
 		if strings.HasPrefix(strings.TrimSpace(actual), "Ref[") && strings.HasSuffix(strings.TrimSpace(actual), "]") {
@@ -91,6 +88,9 @@ func (g *generator) goTypeCompatible(expected, actual string) bool {
 				return types.Identical(actualType.Underlying(), basicExpected)
 			}
 		}
+		if normalizeMyGoPrimitiveType(expected) == normalizeMyGoPrimitiveType(actual) {
+			return true
+		}
 		return strings.TrimSpace(expected) == strings.TrimSpace(actual)
 	}
 	actualType, ok := goTypeFromString(actual)
@@ -104,44 +104,6 @@ func (g *generator) goTypeCompatible(expected, actual string) bool {
 		return true
 	}
 	return false
-}
-
-func myGoPrimitiveCompatible(expected, actual string) bool {
-	alias := func(s string) string {
-		switch strings.TrimSpace(s) {
-		case "String":
-			return "string"
-		case "Bool":
-			return "bool"
-		case "Int":
-			return "int"
-		case "Int8":
-			return "int8"
-		case "Int16":
-			return "int16"
-		case "Int32":
-			return "int32"
-		case "Int64":
-			return "int64"
-		case "UInt":
-			return "uint"
-		case "UInt8":
-			return "uint8"
-		case "UInt16":
-			return "uint16"
-		case "UInt32":
-			return "uint32"
-		case "UInt64":
-			return "uint64"
-		case "Float32":
-			return "float32"
-		case "Float64":
-			return "float64"
-		default:
-			return strings.TrimSpace(s)
-		}
-	}
-	return alias(expected) == alias(actual)
 }
 
 func normalizeMyGoPrimitiveType(name string) string {
@@ -905,6 +867,8 @@ func exprUsesIdent(e Expr, name string) bool {
 	case *BinaryExpr:
 		return exprUsesIdent(n.Left, name) || exprUsesIdent(n.Right, name)
 	case *PrefixExpr:
+		return exprUsesIdent(n.Expr, name)
+	case *CastExpr:
 		return exprUsesIdent(n.Expr, name)
 	case *FieldExpr:
 		return exprUsesIdent(n.Expr, name)

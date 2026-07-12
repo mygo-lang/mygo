@@ -304,6 +304,20 @@ func (g *generator) translateTypeclassCall(name string, args []Expr, ctx *exprCt
 			argCodes = append(argCodes, code)
 			argTypes = append(argTypes, typ)
 		}
+		if helper, ok := g.matchTypeclassHelper(ifaceName, name, args, ctx); ok {
+			return helper, methodReturnType(methodIface, name), true
+		}
+		if bindings, ok := ctx.typeclassMethods[name]; ok && len(bindings) > 0 {
+			best := typeclassBindingBest(bindings)
+			if len(argTypes) > 0 {
+				if chosen, ok := typeclassBindingForReceiver(bindings, argTypes[0]); ok {
+					best = chosen
+				}
+			}
+			if best.DictExpr != "" {
+				return jen.Id(best.DictExpr).Call(argCodes...), methodReturnType(methodIface, name), true
+			}
+		}
 		if funcName, ok := ctx.constraintFuncForMethod(name); ok {
 			return jen.Id(funcName).Call(argCodes...), methodReturnType(methodIface, name), true
 		}
@@ -312,9 +326,6 @@ func (g *generator) translateTypeclassCall(name string, args []Expr, ctx *exprCt
 			if receiverType != "" && (receiverType == ifaceName || strings.HasPrefix(receiverType, ifaceName+"[") || strings.HasPrefix(receiverType, "prelude."+ifaceName)) {
 				return argCodes[0].(*jen.Statement).Dot(name).Call(argCodes[1:]...), methodReturnType(methodIface, name), true
 			}
-		}
-		if helper, ok := g.matchTypeclassHelper(ifaceName, name, args, ctx); ok {
-			return helper, methodReturnType(methodIface, name), true
 		}
 	}
 	return nil, "", false
@@ -379,11 +390,17 @@ func (g *generator) translateIdent(name string, line, col int, ctx *exprCtx, exp
 
 func (g *generator) translateTypeclassIdent(name string, ctx *exprCtx, expected string) (jen.Code, string, bool) {
 	if ifaceName, ok := g.resolveTypeclassInterface(name, ctx); ok {
+		if bindings, ok := ctx.typeclassMethods[name]; ok && len(bindings) > 0 {
+			best := typeclassBindingBest(bindings)
+			if best.DictExpr != "" {
+				return jen.Id(best.DictExpr), expected, true
+			}
+			if helper, ok := g.matchTypeclassHelper(ifaceName, name, nil, ctx); ok {
+				return helper, expected, true
+			}
+		}
 		if funcName, ok := ctx.constraintFuncForMethod(name); ok {
 			return jen.Id(funcName), expected, true
-		}
-		if helper, ok := g.matchTypeclassHelper(ifaceName, name, nil, ctx); ok {
-			return helper, expected, true
 		}
 	}
 	return nil, "", false
@@ -479,7 +496,7 @@ func (g *generator) matchTypeclassHelper(ifaceName, method string, args []Expr, 
 		ok := true
 		for i, p := range methodDecl.Params {
 			want := typeString(p.Type, subst)
-			if argTypes[i] != "" && want != argTypes[i] {
+			if argTypes[i] != "" && !g.goTypeCompatible(want, argTypes[i]) {
 				ok = false
 				break
 			}

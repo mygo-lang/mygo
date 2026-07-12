@@ -62,11 +62,11 @@ func bodyExprFromBlock(e ast.Expr) ast.Expr {
 }
 
 %token <token> IDENT NUMBER STRING
-%token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSE SWITCH CASE END USING NOT LET VAR EMBED WHILE RETURN GO IN TYPE
+%token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSE SWITCH CASE END USING NOT LET VAR EMBED WHILE RETURN GO IN TYPE AS
 %token <token> NEWLINE
 %token <token> ARROW EQEQ NEQ LTE GTE PIPEFWD PIPEBACK ANDAND OROR
 %token <token> COLON COMMA DOT LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE UNDER SLICE
-%token <token> TYPELBRACK CONSTRLBRACK
+%token <token> TYPELBRACK CONSTRLBRACK CASTIDENT
 %type <token> call_start
 %type <token> opt_newlines
 %left PIPEFWD PIPEBACK
@@ -75,6 +75,7 @@ func bodyExprFromBlock(e ast.Expr) ast.Expr {
 %left EQEQ NEQ LTE GTE '<' '>'
 %left '+' '-'
 %left '*' '/'
+%right AS
 %right NOT
 %nonassoc POSTFIX
 
@@ -709,6 +710,7 @@ type
 	| LPAREN RPAREN {
 		p := yylex.(*parser)
 		p.currentType = &ast.TupleType{Line: $1.line, Column: $1.col}
+		yyVAL.node = p.currentType
 	}
 	| LPAREN type {
 		p := yylex.(*parser)
@@ -717,6 +719,10 @@ type
 		p.currentTupleTypeElems = append(p.currentTupleTypeElems, p.currentType)
 	}
 	tuple_type_tail
+	{
+		p := yylex.(*parser)
+		yyVAL.node = p.currentType
+	}
 	| grouped_type {
 		p := yylex.(*parser)
 		yyVAL.node = p.currentType
@@ -855,7 +861,16 @@ named_type_suffix
 	;
 
 expr
-	: pipe_expr
+	: cast_expr
+	;
+
+cast_expr
+	: pipe_expr {
+	}
+	| cast_expr AS CASTIDENT %prec AS {
+		p := yylex.(*parser)
+		p.currentExpr = &ast.CastExpr{Line: $2.line, Column: $2.col, Expr: p.currentExpr, Type: &ast.NamedType{Line: $3.line, Column: $3.col, Name: $3.lit}}
+	}
 	;
 
 pipe_expr
@@ -1747,6 +1762,10 @@ func (p *parser) Lex(lval *yySymType) int {
 	case tokNewline:
 		return int(NEWLINE)
 	case tokIdent:
+		if p.expectCastType {
+			p.expectCastType = false
+			return int(CASTIDENT)
+		}
 		return int(IDENT)
 	case tokNumber:
 		return int(NUMBER)
@@ -1798,6 +1817,9 @@ func (p *parser) Lex(lval *yySymType) int {
 			return int(IN)
 		case "type":
 			return int(TYPE)
+		case "as":
+			p.expectCastType = true
+			return int(AS)
 		default:
 			return int(IDENT)
 		}

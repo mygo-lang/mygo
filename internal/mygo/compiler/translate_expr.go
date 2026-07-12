@@ -187,6 +187,13 @@ func (g *generator) translateExprRaw(e Expr, ctx *exprCtx, expected string) (jen
 		default:
 			return expr, typ, nil
 		}
+	case *CastExpr:
+		code, _, err := g.translateExpr(n.Expr, ctx, g.goType(n.Type, ctx.typeParams))
+		if err != nil {
+			return nil, "", err
+		}
+		target := g.goType(n.Type, ctx.typeParams)
+		return jen.Id(target).Call(code), target, nil
 	case *FieldExpr:
 		if baseIdent, ok := n.Expr.(*IdentExpr); ok {
 			if g.isImportAlias(baseIdent.Name) {

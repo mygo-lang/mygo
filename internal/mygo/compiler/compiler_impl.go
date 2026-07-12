@@ -256,14 +256,14 @@ func (g *generator) genInterface(d *InterfaceDecl) []jen.Code {
 		for _, p := range m.Params {
 			params = append(params, jenHKTTypeExpr(p.Type, hktSet))
 		}
-		fieldType := jen.Func().Params(params...)
+		method := jen.Id(m.Name).Params(params...)
 		ret := jenHKTTypeExpr(m.Ret, hktSet)
 		if !isUnitType(m.Ret) {
-			fieldType = fieldType.Add(ret)
+			method = method.Add(ret)
 		}
-		fields = append(fields, jen.Id(m.Name).Add(fieldType))
+		fields = append(fields, method)
 	}
-	return []jen.Code{addTypeParams(jen.Type().Id(d.Name), d.TypeParams).Struct(fields...)}
+	return []jen.Code{addTypeParams(jen.Type().Id(d.Name), d.TypeParams).Interface(fields...)}
 }
 
 func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
@@ -529,7 +529,7 @@ func (g *generator) genInherentImpl(d *ImplDecl) ([]jen.Code, error) {
 
 func (g *generator) collectUsingConstraintParams(using []Constraint, ctx *exprCtx, typeParams map[string]struct{}, owner string) ([]jen.Code, error) {
 	var params []jen.Code
-	seen := map[string]bool{}
+	seen := map[string]int{}
 	for _, c := range using {
 		impl, iface, ok := g.resolveUsingConstraint(c)
 		if !ok {
@@ -570,7 +570,11 @@ func (g *generator) collectUsingConstraintParams(using []Constraint, ctx *exprCt
 			namedImplTypeKey = g.implHelperKey(impl, implTypeArgs)
 		}
 		for _, m := range iface.Methods {
+			seen[m.Name]++
 			paramName := m.Name + "Fn"
+			if seen[m.Name] > 1 {
+				paramName = m.Name + "Fn" + strconv.Itoa(seen[m.Name])
+			}
 			binding := typeclassBinding{
 				Interface:  c.Name,
 				Score:      typeclassMatchScore(typeArgs, typeParams),
@@ -583,17 +587,17 @@ func (g *generator) collectUsingConstraintParams(using []Constraint, ctx *exprCt
 					return out
 				}(),
 				RetType: typeStringReturn(m.Ret, subst),
+				DictExpr: paramName,
 			}
 			ctx.typeclassMethods[m.Name] = append(ctx.typeclassMethods[m.Name], binding)
 			if namedImplTypeKey != "" {
-				ctx.constraintFuncs[m.Name] = helperFuncName(m.Name, namedImplTypeKey)
+				binding.DictExpr = helperFuncName(m.Name, namedImplTypeKey)
+				ctx.constraintFuncs[m.Name] = binding.DictExpr
 				continue
 			}
-			ctx.constraintFuncs[m.Name] = paramName
-			if seen[paramName] {
-				continue
+			if _, ok := ctx.constraintFuncs[m.Name]; !ok {
+				ctx.constraintFuncs[m.Name] = paramName
 			}
-			seen[paramName] = true
 			params = append(params, jen.Id(paramName).Add(jen.Id(typeclassFuncType(binding.ParamTypes, binding.RetType))))
 		}
 	}

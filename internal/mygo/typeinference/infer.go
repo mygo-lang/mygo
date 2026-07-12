@@ -511,6 +511,8 @@ func inferExprRaw(env TypeEnv, e Expr, state *InferState) (MonoType, Subst, []Pr
 		return inferBinary(env, n, state)
 	case *PrefixExpr:
 		return inferPrefix(env, n, state)
+	case *CastExpr:
+		return inferCast(env, n, state)
 	case *FieldExpr:
 		return inferField(env, n, state)
 	case *StructLitExpr:
@@ -958,16 +960,15 @@ func inferPrefix(env TypeEnv, n *PrefixExpr, state *InferState) (MonoType, Subst
 	}
 }
 
-func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, []Predicate, error) {
-	// Ref[T].value() is the canonical "get the owned value" spelling.
-	if n.Field == "value" {
-		if baseType, s, preds, err := inferExpr(env, n.Expr, state); err == nil {
-			if con, ok := baseType.(TCon); ok && con.Name == "Ref" && len(con.Args) == 1 {
-				return s.ApplyMT(con.Args[0]), s, preds, nil
-			}
-		}
+func inferCast(env TypeEnv, n *CastExpr, state *InferState) (MonoType, Subst, []Predicate, error) {
+	_, s, preds, err := inferExpr(env, n.Expr, state)
+	if err != nil {
+		return nil, nil, nil, err
 	}
+	return typeFromAST(n.Type), s, preds, nil
+}
 
+func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, []Predicate, error) {
 	// If base is an identifier, check for enum constructors
 	if id, ok := n.Expr.(*IdentExpr); ok {
 		if pkg := state.GoPackages[id.Name]; pkg != nil {
@@ -1059,14 +1060,17 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 				if m.Name != n.Field {
 					continue
 				}
-				paramTypes := make([]MonoType, 0, len(m.Params)+1)
-				paramTypes = append(paramTypes, baseType)
+				typeArgs := make([]MonoType, len(iface.TypeParams))
+				for i := range iface.TypeParams {
+					typeArgs[i] = TVar{ID: state.Fresh()}
+				}
+				paramTypes := make([]MonoType, 0, len(m.Params))
 				for _, p := range m.Params {
-					paramTypes = append(paramTypes, typeFromAST(p.Type))
+					paramTypes = append(paramTypes, substituteTypeParams(typeFromAST(p.Type), iface.TypeParams, typeArgs))
 				}
 				ret := MonoType(TUnit{})
 				if m.Ret != nil {
-					ret = typeFromAST(m.Ret)
+					ret = substituteTypeParams(typeFromAST(m.Ret), iface.TypeParams, typeArgs)
 				}
 				return TFunc{Args: paramTypes, Ret: ret}, s, preds, nil
 			}

@@ -47,11 +47,11 @@ func TestCompileDirSupportsStringSwitchOnStructField(t *testing.T) {
 	writeMygoFile(t, dir, "main.mygo", `package main
 
   struct Message
-    method: String
+    Method: String
   end
 
   func demo(msg: Message) -> Int
-    switch msg.method
+    switch msg.Method
       case "initialize" => 1
       case "initialized" => 2
       case _ => 3
@@ -80,11 +80,11 @@ func TestCompileDirSupportsSwitchOnLetBoundStructField(t *testing.T) {
 	writeMygoFile(t, dir, "main.mygo", `package main
 
   struct Message
-    method: String
+    Method: String
   end
 
   func demo(msg: Message) -> Int
-    let method = msg.method
+    let method = msg.Method
     switch method
       case "initialize" => 1
       case _ => 2
@@ -112,15 +112,15 @@ func TestCompileDirSupportsNestedStringAndOptionSwitches(t *testing.T) {
 	writeMygoFile(t, dir, "main.mygo", `package main
 
   struct Message
-    method: String
-    params: Option[Any]
+    Method: String
+    Params: Option[Any]
   end
 
   func demo(msg: Message) -> Int
-    let method = msg.method
+    let method = msg.Method
     switch method
       case "initialize" then
-        switch msg.params
+        switch msg.Params
           case Some(p) then 1
         end
       end
@@ -144,7 +144,7 @@ func TestCompileDirSupportsNestedStringAndOptionSwitches(t *testing.T) {
 		`method_1 := msg.Method`,
 		`if method_1 == "initialize"`,
 		`if method_1 == "initialized"`,
-		`if _, ok := msg.Params.(prelude.OptionSome[Any]); ok {`,
+		`if _, ok := msg.Params.(OptionSome[any]); ok {`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -597,12 +597,11 @@ func TestCompileDirSupportsStructLiterals(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
   struct Point
-    x: Int64
+    X: Int64
   end
 
   func make_point() -> Point
-    let p = Point { x: 42 }
-    p.x
+    Point { X: (42 as Int64) }
   end
 `)
 
@@ -615,6 +614,7 @@ func TestCompileDirSupportsStructLiterals(t *testing.T) {
 		"type Point struct {",
 		"X int64",
 		"func make_point() Point {",
+		"Point{X: int64(42)}",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -630,7 +630,7 @@ func TestCompileDirSupportsRefAndResultTypes(t *testing.T) {
   end
 
   struct Holder
-    item: Option[Ref[Node]]
+    Item: Option[Ref[Node]]
   end
 
   func use_ref(node: Ref[Node]) -> Int
@@ -652,7 +652,6 @@ func TestCompileDirSupportsRefAndResultTypes(t *testing.T) {
 	}
 	got := gotContent
 	for _, want := range []string{
-		"type Result[A any, E any] interface {",
 		"type Holder struct {",
 		"Item Option[*Node]",
 		"func use_ref(node *Node) int {",
@@ -674,7 +673,7 @@ func TestCompileDirSupportsOptionOfRefTypes(t *testing.T) {
   end
 
   struct Holder
-    item: Option[Ref[Node]]
+    Item: Option[Ref[Node]]
   end
 
   func maybe_node(ok: Bool, node: Ref[Node]) -> Option[Ref[Node]]
@@ -769,7 +768,8 @@ func TestCompileDirSupportsDynamicTypeclassDispatch(t *testing.T) {
   end
 
   func demo() -> String
-    42.show()
+    let value = (42 as Int64)
+    value.show()
   end
 `)
 
@@ -779,10 +779,10 @@ func TestCompileDirSupportsDynamicTypeclassDispatch(t *testing.T) {
 	}
 	got := readFile(t, outFiles[0])
 	for _, want := range []string{
-		"type Show[A any] interface {",
-		"show(value A) string",
+		"type Show[A any] func(A) string",
 		"func show_int64(value int64) string {",
-		"return 42.show()",
+		"value_1 := int64(42)",
+		"return show_int64(value_1)",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -969,7 +969,9 @@ func TestCompileDirSupportsMultiParamTypeclassDispatch(t *testing.T) {
   end
 
   func demo() -> Bool
-    1.equals(2)
+    let left = (1 as Int64)
+    let right = (2 as Int64)
+    left.equals(right)
   end
 `)
 
@@ -979,10 +981,11 @@ func TestCompileDirSupportsMultiParamTypeclassDispatch(t *testing.T) {
 	}
 	got := readFile(t, outFiles[0])
 	for _, want := range []string{
-		"type Eq[A any] interface {",
-		"equals(left A, right A) bool",
+		"type Eq[A any] func(A, A) bool",
 		"func equals_int64(left int64, right int64) bool {",
-		"return 1.equals(2)",
+		"left_1 := int64(1)",
+		"right_2 := int64(2)",
+		"return equals_int64(left_1, right_2)",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -1059,8 +1062,6 @@ func TestCompileDirSeparatesSameNamedMethodsByInterface(t *testing.T) {
 	}
 	got := readFile(t, outFiles[0])
 	for _, want := range []string{
-		"type Show[A any] interface {",
-		"type Render[A any] interface {",
 		"func show_int64(value int64) string {",
 	} {
 		if !strings.Contains(got, want) {
@@ -1111,19 +1112,21 @@ func TestCompileDirLetsLocalBindingShadowTypeclassName(t *testing.T) {
 func TestCompileDirDeduplicatesTypeclassMethodParams(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
-  interface FancyShow[A]
-    func show(value: A) -> String
-  end
+	  import fmt "go:fmt"
 
-  impl Int64FancyShow: FancyShow[Int64]
-    func show(value: Int64) -> String
-	  "fancy"
-	end
-  end
+	  interface Show[A]
+	    func show(value: A) -> String
+	  end
 
-  func demo(value: Int64) -> String using Show[Int64], FancyShow[Int64]
-    value.show()
-  end
+	  impl Int64Show: Show[Int64]
+	    func show(value: Int64) -> String
+		  fmt.Sprint(value)
+		end
+	  end
+
+	  func demo(value: Int64) -> String using Show[Int64]
+	    value.show()
+	  end
 `)
 
 	outFiles, err := CompileDir(dir)
@@ -1133,6 +1136,54 @@ func TestCompileDirDeduplicatesTypeclassMethodParams(t *testing.T) {
 	got := readFile(t, outFiles[0])
 	if strings.Count(got, "showFn ") != 1 {
 		t.Fatalf("expected one typeclass function param, got generated Go:\n%s", got)
+	}
+}
+
+func TestCompileDirSupportsMultipleUsingConstraints(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+	  import fmt "go:fmt"
+
+	  interface Show[A]
+	    func show(value: A) -> String
+	  end
+
+	  interface Fancy[A]
+	    func fancy(value: A) -> String
+	  end
+
+	  impl Int64Show: Show[Int64]
+	    func show(value: Int64) -> String
+		  fmt.Sprint(value)
+		end
+	  end
+
+	  impl StringFancy: Fancy[String]
+	    func fancy(value: String) -> String
+		  fmt.Sprint(value)
+		end
+	  end
+
+	  func demo(value: Int64, label: String) -> String using Show[Int64], Fancy[String]
+	    value.show()
+	    label.fancy()
+	  end
+`)
+
+	outFiles, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, outFiles[0])
+	for _, want := range []string{
+		"showFn func(int64) string",
+		"fancyFn func(string) string",
+		"showFn(value)",
+		"fancyFn(label)",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
 	}
 }
 

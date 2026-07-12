@@ -234,17 +234,22 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 						args = append(args, jen.Id(helperFuncName(m.Name, namedImplTypeKey)))
 						continue
 					}
-					if helper, ok := ctx.constraintFuncForMethod(m.Name); ok {
-						args = append(args, jen.Id(helper))
-						continue
-					}
 					if bindings, ok := ctx.typeclassMethods[m.Name]; ok && len(bindings) > 0 {
 						best := typeclassBindingBest(bindings)
+						if receiverType := g.hmExprType(n.Callee); receiverType != "" {
+							if chosen, ok := typeclassBindingForReceiver(bindings, receiverType); ok {
+								best = chosen
+							}
+						}
 						if best.DictExpr != "" {
 							args = append(args, jen.Id(best.DictExpr))
 						} else {
 							args = append(args, jen.Id(helperFuncName(m.Name, typeKeyFromType(resolvedType))))
 						}
+						continue
+					}
+					if helper, ok := ctx.constraintFuncForMethod(m.Name); ok {
+						args = append(args, jen.Id(helper))
 						continue
 					}
 					args = append(args, jen.Id(helperFuncName(m.Name, typeKeyFromType(resolvedType))))

@@ -182,7 +182,8 @@ Per MIGRATE.md "新语句块方案", the yacc parser supports:
 
 ### Parser changes
 - `parser.y`: two new grammar alternatives (one in `if_expr`, one in `switch_case`) — conflicts reduced from 33 to 29 shift/reduce.
-- `parser.go`: regenerated via `goyacc`.
+- `parser.go`: regenerated via `goyacc` from `parser.y`.
+- `lex.yy.go` / `parser_lex.l`: unchanged (no lexer rule changes needed for this feature).
 - `parser_test.go`: three new tests (`TestParseFileSupportsIfArrowForm`, `TestParseFileSupportsSwitchCaseThenEndBlock`, `TestParseFileSupportsMixedSwitchCaseForms`).
 
 ## Function Declaration Multiline Support
@@ -236,5 +237,6 @@ The same multiline support applies to interface method signatures (`func_sig`) a
 - **`maybe_param_list`** — changed `param_list` branch to `opt_newlines param_list opt_newlines`, allowing leading/trailing blank lines around the parameter list.
 - **`param_list`** — added `opt_newlines` around `COMMA`, and added a `param_list opt_newlines COMMA` branch to support trailing commas.
 - **`func_lit`** — added `opt_newlines` between `LPAREN`/`maybe_param_list`, `maybe_param_list`/`RPAREN`, `RPAREN`/`ARROW`, and `type`/`block_expr`.
-- Regenerated `parser.go` via `goyacc`.
+- Regenerated `parser.go` via `goyacc` from `parser.y`.
+- `lex.yy.go` / `parser_lex.l`: unchanged (multiline support is a grammar-only change).
 - New test: `TestParseFileMultilineFuncDecl` covering all multiline scenarios.
