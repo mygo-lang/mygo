@@ -8,17 +8,17 @@ import (
 
 var _ = None[any]
 
-type IChannel[C any, A any] struct {
-	Len func(HKT[C, A]) int
-	Cap func(HKT[C, A]) int
+type IChannel[C any, A any] interface {
+	Len(HKT[C, A]) int
+	Cap(HKT[C, A]) int
 }
-type IReadableChan[C any, A any] struct {
-	Receive    func(HKT[C, A]) Option[A]
-	TryReceive func(HKT[C, A]) Option[A]
+type IReadableChan[C any, A any] interface {
+	Receive(HKT[C, A]) Option[A]
+	TryReceive(HKT[C, A]) Option[A]
 }
-type IWritableChan[C any, A any] struct {
-	Send  func(HKT[C, A], A)
-	Close func(HKT[C, A])
+type IWritableChan[C any, A any] interface {
+	Send(HKT[C, A], A)
+	Close(HKT[C, A])
 }
 
 func Len_chant_t[T any](ch chan T) int {

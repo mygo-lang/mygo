@@ -60,26 +60,26 @@ func Err[A any, E any](a0 E) Result[A, E] {
 
 type Show[A any] func(A) string
 type Eq[A any] func(A, A) bool
-type IEnumerable[C any, A any] struct {
-	Each     func(HKT[C, A], func(A))
-	Len      func(HKT[C, A]) int
-	Filter   func(HKT[C, A], func(A) bool) IEnumerable[[]A, A]
-	Find     func(HKT[C, A], func(A) bool) Option[*A]
-	Contains func(HKT[C, A], A) bool
+type IEnumerable[C any, A any] interface {
+	Each(HKT[C, A], func(A))
+	Len(HKT[C, A]) int
+	Filter(HKT[C, A], func(A) bool) IEnumerable[[]A, A]
+	Find(HKT[C, A], func(A) bool) Option[*A]
+	Contains(HKT[C, A], A) bool
 }
 type List[A any] struct {
 	head A
 	tail Option[*List[A]]
 }
-type IAssignable[C any, K any, A any] struct {
-	Get    func(HKT[C, A], K) Option[*A]
-	Set    func(HKT[C, A], K, A)
-	Delete func(HKT[C, A], K)
+type IAssignable[C any, K any, A any] interface {
+	Get(HKT[C, A], K) Option[*A]
+	Set(HKT[C, A], K, A)
+	Delete(HKT[C, A], K)
 }
-type IOption[A any] struct {
-	IsSome   func(IOption[A]) bool
-	IsNone   func(IOption[A]) bool
-	UnwrapOr func(IOption[A], A) A
+type IOption[A any] interface {
+	IsSome(IOption[A]) bool
+	IsNone(IOption[A]) bool
+	UnwrapOr(IOption[A], A) A
 }
 
 func Show_int(value int) string {
