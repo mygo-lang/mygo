@@ -23,11 +23,11 @@ end
 interface IEnumerable[C[A], A]
   func Each(c: C[A], fn: func(A) -> ()) -> ()
   func Len(c: C[A]) -> Int
-  func Map[B](c: C[A], fn: func(A) -> B) -> C[B]
-  func Filter(c: C[A], fn: func(A) -> Bool) -> C[A]
+  func Map[B](c: C[A], fn: func(A) -> B) -> IEnumerable[Slice[B], B]
+  func Filter(c: C[A], fn: func(A) -> Bool) -> IEnumerable[Slice[A], A]
   func Fold[B](c: C[A], initial: B, fn: func(B, A) -> B) -> B
   func Find(c: C[A], fn: func(A) -> Bool) -> Option[Ref[A]]
-  func Contains(c: C[A], item: A, eq: Eq[A]) -> Bool
+  func Contains(c: C[A], item: A) -> Bool using Eq[A]
 end
 
 # ===== Show impls =====
@@ -195,7 +195,7 @@ end
 # ===== IEnumerable impls =====
 
 # Generic impl for List[T]: impl[T] List[T]: IEnumerable[List[T], T]
-impl[T] List[T]: IEnumerable[List[T], T]
+impl[T] ListIEnumerable[T]: IEnumerable[List[T], T]
   func Each(c: List[T], fn: func(T) -> ()) -> ()
     var current: Ref[List[T]] = Ref.new(c)
     var done: Bool = false
@@ -288,12 +288,12 @@ impl[T] List[T]: IEnumerable[List[T], T]
     return None
   end
 
-  func Contains(c: List[T], item: T, eq: Eq[T]) -> Bool
+  func Contains(c: List[T], item: T) -> Bool using Eq[T]
     var done: Bool = false
     var result: Bool = false
     var current: Ref[List[T]] = Ref.new(c)
     while !done
-      if eq.Equals(current.head, item)
+      if current.head.Equals(item)
         result = true
         done = true
       else
@@ -308,7 +308,7 @@ impl[T] List[T]: IEnumerable[List[T], T]
 end
 
 # Generic impl for Slice[T]: IEnumerable[Slice[T], T]
-impl[T] Slice[T]: IEnumerable[Slice[T], T]
+impl[T] SliceIEnumerable[T]: IEnumerable[Slice[T], T]
   func Each(c: Slice[T], fn: func(T) -> ()) -> ()
     go[()] {
       code: """
@@ -394,12 +394,12 @@ impl[T] Slice[T]: IEnumerable[Slice[T], T]
       in fn = fn
     }
   end
-  func Contains(c: Slice[T], item: T, eq: Eq[T]) -> Bool
+  func Contains(c: Slice[T], item: T) -> Bool using Eq[T]
     go[Bool] {
       code: """
         func() bool {
             for _, v := range {c} {
-                if {eq}.Equals(v, {item}) {
+                if EqualsFn(v, {item}) {
                     return true
                 }
             }
@@ -408,13 +408,12 @@ impl[T] Slice[T]: IEnumerable[Slice[T], T]
       """
       in c = c
       in item = item
-      in eq = eq
     }
   end
 end
 
 # Generic impl for Map[K, V]: impl[K, V] Map[K, V]: IEnumerable[Map[K, V], V]
-impl[K, V] Map[K, V]: IEnumerable[Map[K, V], V]
+impl[K, V] MapIEnumerable[K, V]: IEnumerable[Map[K, V], V]
   func Each(c: Map[K, V], fn: func(V) -> ()) -> ()
     go[()] {
       code: """
@@ -502,7 +501,7 @@ impl[K, V] Map[K, V]: IEnumerable[Map[K, V], V]
 end
 
 # Generic impl for Set[A]: impl[A] Set[A]: IEnumerable[Set[A], A]
-impl[A] Set[A]: IEnumerable[Set[A], A]
+impl[A] SetIEnumerable[A]: IEnumerable[Set[A], A]
   func new() -> Set[A]
     go[Set[A]] {
       code: """
@@ -599,7 +598,7 @@ impl[A] Set[A]: IEnumerable[Set[A], A]
 end
 
 # Generic impl for Option[A]: impl[A] Option[A]: IEnumerable[Option[A], A]
-impl[A] Option[A]: IEnumerable[Option[A], A]
+impl[A] OptionIEnumerable[A]: IEnumerable[Option[A], A]
   func Each(c: Option[A], fn: func(A) -> ()) -> ()
     switch c
       case Some(v) then
@@ -637,9 +636,9 @@ impl[A] Option[A]: IEnumerable[Option[A], A]
     end
   end
 
-  func Contains(c: Option[A], item: A, eq: Eq[A]) -> Bool
+  func Contains(c: Option[A], item: A) -> Bool using Eq[A]
     switch c
-      case Some(v) => eq.Equals(v, item)
+      case Some(v) => v.Equals(item)
       case None => false
     end
   end

@@ -2,7 +2,10 @@
 
 package prelude
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type HKTType interface{}
 
@@ -13,6 +16,7 @@ type HKT2[A any] interface{}
 type HKT[F any, A any] interface{}
 
 var _ = fmt.Append
+var _ = strings.Clone
 
 type Option[A any] interface {
 	isOption()
@@ -54,32 +58,28 @@ func Err[A any, E any](a0 E) Result[A, E] {
 	return ResultErr[A, E]{F0: a0}
 }
 
-type Show[A any] interface {
-	Show(value A) string
-}
-type Eq[A any] interface {
-	Equals(left A, right A) bool
-}
-type IEnumerable[C any, A any] interface {
-	Each(c HKT[C, A], fn func(A)) struct{}
-	Len(c HKT[C, A]) int
-	Filter(c HKT[C, A], fn func(A) bool) HKT[C, A]
-	Find(c HKT[C, A], fn func(A) bool) Option[*A]
-	Contains(c HKT[C, A], item A, eq Eq[A]) bool
+type Show[A any] func(A) string
+type Eq[A any] func(A, A) bool
+type IEnumerable[C any, A any] struct {
+	Each     func(HKT[C, A], func(A))
+	Len      func(HKT[C, A]) int
+	Filter   func(HKT[C, A], func(A) bool) IEnumerable[[]A, A]
+	Find     func(HKT[C, A], func(A) bool) Option[*A]
+	Contains func(HKT[C, A], A) bool
 }
 type List[A any] struct {
 	head A
 	tail Option[*List[A]]
 }
-type IAssignable[C any, K any, A any] interface {
-	Get(c HKT[C, A], index K) Option[*A]
-	Set(c HKT[C, A], index K, value A) struct{}
-	Delete(c HKT[C, A], index K) struct{}
+type IAssignable[C any, K any, A any] struct {
+	Get    func(HKT[C, A], K) Option[*A]
+	Set    func(HKT[C, A], K, A)
+	Delete func(HKT[C, A], K)
 }
-type IOption[A any] interface {
-	IsSome(self IOption[A]) bool
-	IsNone(self IOption[A]) bool
-	UnwrapOr(self IOption[A], defaultVal A) A
+type IOption[A any] struct {
+	IsSome   func(IOption[A]) bool
+	IsNone   func(IOption[A]) bool
+	UnwrapOr func(IOption[A], A) A
 }
 
 func Show_int(value int) string {
@@ -324,14 +324,14 @@ func Find_list_t_t[T any](c List[T], fn func(T) bool) Option[*T] {
 		return None[*T]()
 	}()
 }
-func Contains_list_t_t[T any](c List[T], item T, eq Eq[T]) bool {
+func Contains_list_t_t[T any](c List[T], item T, EqualsFn func(T, T) bool) bool {
 	return func() bool {
 		var done_18 bool = false
 		var result_19 bool = false
 		var current_20 *List[T] = &c
 		for !done_18 {
 			{
-				if eq.Equals(current_20.head, item) {
+				if EqualsFn(current_20.head, item) {
 					{
 						result_19 = true
 						done_18 = true
@@ -409,10 +409,10 @@ func Find__t_t[T any](c[]T, fn func(T) bool) Option[*T] {
 	}()
 
 }
-func Contains__t_t[T any](c[]T, item T, eq Eq[T]) bool {
+func Contains__t_t[T any](c[]T, item T, EqualsFn func(T, T) bool) bool {
 	return func() bool {
 		for _, v := range c {
-			if eq.Equals(v, item) {
+			if EqualsFn(v, item) {
 				return true
 			}
 		}
@@ -639,11 +639,11 @@ func Find_option_a_a[A any](c Option[A], fn func(A) bool) Option[*A] {
 		}
 	}()
 }
-func Contains_option_a_a[A any](c Option[A], item A, eq Eq[A]) bool {
+func Contains_option_a_a[A any](c Option[A], item A, EqualsFn func(A, A) bool) bool {
 	return func() bool {
 		if v_27, ok := c.(OptionSome[A]); ok {
 			return func() bool {
-				return eq.Equals(v_27.F0, item)
+				return EqualsFn(v_27.F0, item)
 			}()
 		} else {
 			if _, ok := c.(OptionNone[A]); ok {

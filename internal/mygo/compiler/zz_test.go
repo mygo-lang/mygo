@@ -8,7 +8,7 @@ import (
 )
 
 func TestCompilePrelude(t *testing.T) {
-	pkg, err := loadPackage("../../../prelude", true)
+	pkg, err := loadPackage("../../../lib/prelude", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,11 +47,19 @@ func TestCompilePrelude(t *testing.T) {
 	// Find the Option IEnumerable impl and test genImpl
 	var optionEnumImpl *ImplDecl
 	for _, impl := range pkg.Impls {
-		if impl.InterfaceName == "IEnumerable" && impl.Type != nil {
-			if namedType, ok := impl.Type.(*NamedType); ok && namedType.Name == "Option" {
-				optionEnumImpl = impl
-				break
-			}
+		if impl.InterfaceName != "IEnumerable" {
+			continue
+		}
+		typeArgs := impl.InterfaceArgs
+		if len(typeArgs) == 0 {
+			typeArgs = impl.TypeArgs
+		}
+		if len(typeArgs) == 0 {
+			continue
+		}
+		if namedType, ok := typeArgs[0].(*NamedType); ok && namedType.Name == "Option" {
+			optionEnumImpl = impl
+			break
 		}
 	}
 	if optionEnumImpl == nil {
@@ -74,11 +82,11 @@ func TestCompilePrelude(t *testing.T) {
 }
 
 func TestLoadPreludeDoesNotDuplicatePreludeDecls(t *testing.T) {
-	withPrelude, err := loadPackage("../../../prelude", false)
+	withPrelude, err := loadPackage("../../../lib/prelude", false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	withoutPrelude, err := loadPackage("../../../prelude", true)
+	withoutPrelude, err := loadPackage("../../../lib/prelude", true)
 	if err != nil {
 		t.Fatal(err)
 	}

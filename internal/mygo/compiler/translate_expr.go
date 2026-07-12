@@ -353,7 +353,7 @@ func (g *generator) ensureRelationAllowed(n *BinaryExpr, leftType, rightType str
 		return common.ErrorAtPos(n.Line, n.Column, "relation operator %q requires typed operands", n.Op)
 	}
 	if typ == "any" {
-		if _, ok := ctx.constraintFuncs["equals"]; ok {
+		if _, ok := ctx.constraintFuncForMethod("Equals"); ok {
 			return nil
 		}
 		return common.ErrorAtPos(n.Line, n.Column, "relation operator %q requires Eq-constrained operands", n.Op)
@@ -371,7 +371,7 @@ func (g *generator) translateEqRelation(op string, left, right *jen.Statement, l
 		typ = normalizeMyGoPrimitiveType(rightType)
 	}
 	if typ == "any" || g.isTypeParamName(typ, ctx) {
-		if fn := ctx.constraintFuncs["equals"]; fn != "" {
+		if fn, ok := ctx.constraintFuncForMethod("Equals"); ok {
 			return jen.Id(fn).Call(left, right), true
 		}
 		return nil, false
@@ -400,7 +400,8 @@ func (g *generator) hasEqSupport(typ string, ctx *exprCtx) bool {
 	}
 	typ = normalizeMyGoPrimitiveType(typ)
 	if g.isTypeParamName(typ, ctx) {
-		return ctx != nil && ctx.constraintFuncs["equals"] != ""
+		_, ok := ctx.constraintFuncForMethod("Equals")
+		return ok
 	}
 	base := typ
 	if idx := strings.Index(base, "["); idx >= 0 {

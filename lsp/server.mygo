@@ -14,128 +14,128 @@ import regexp "go:regexp"
 # ===== LSP Protocol Types =====
 
 struct Position
-  line: Int `json:"line"`
-  character: Int `json:"character"`
+  Line: Int `json:"line"`
+  Character: Int `json:"character"`
 end
 
 struct Range
-  startPos: Position `json:"start"`
-  endPos: Position `json:"end"`
+  StartPos: Position `json:"start"`
+  EndPos: Position `json:"end"`
 end
 
 struct TextDocumentIdentifier
-  uri: String `json:"uri"`
+  URI: String `json:"uri"`
 end
 
 struct TextDocumentItem
-  uri: String `json:"uri"`
-  languageId: String `json:"languageId"`
-  version: Int `json:"version"`
-  content: String `json:"content"`
+  URI: String `json:"uri"`
+  LanguageId: String `json:"languageId"`
+  Version: Int `json:"version"`
+  Content: String `json:"content"`
 end
 
 struct TextDocumentPositionParams
-  textDocument: TextDocumentIdentifier `json:"textDocument"`
-  position: Position `json:"position"`
+  TextDocument: TextDocumentIdentifier `json:"textDocument"`
+  Position: Position `json:"position"`
 end
 
 struct MarkupContent
-  kind: String `json:"kind"`
-  value: String `json:"value"`
+  Kind: String `json:"kind"`
+  Value: String `json:"value"`
 end
 
 struct Hover
-  contents: any `json:"contents"`
-  textRange: Option[Range] `json:"range,omitempty"`
+  Contents: any `json:"contents"`
+  TextRange: Option[Range] `json:"range,omitempty"`
 end
 
 struct CompletionItem
-  label: String `json:"label"`
-  kind: Int `json:"kind,omitempty"`
-  detail: String `json:"detail,omitempty"`
-  documentation: Option[Any] `json:"documentation,omitempty"`
-  additionalTextEdits: Slice[TextEdit] `json:"additionalTextEdits,omitempty"`
+  Label: String `json:"label"`
+  Kind: Int `json:"kind,omitempty"`
+  Detail: String `json:"detail,omitempty"`
+  Documentation: Option[Any] `json:"documentation,omitempty"`
+  AdditionalTextEdits: Slice[TextEdit] `json:"additionalTextEdits,omitempty"`
 end
 
 struct CompletionList
-  isIncomplete: Bool `json:"isIncomplete"`
-  items: Slice[CompletionItem] `json:"items"`
+  IsIncomplete: Bool `json:"isIncomplete"`
+  Items: Slice[CompletionItem] `json:"items"`
 end
 
 struct TextEdit
-  textRange: Range `json:"range"`
-  newText: String `json:"newText"`
+  TextRange: Range `json:"range"`
+  NewText: String `json:"newText"`
 end
 
 struct Diagnostic
-  textRange: Range `json:"range"`
-  severity: Int `json:"severity,omitempty"`
-  source: String `json:"source,omitempty"`
-  message: String `json:"message"`
-  code: String `json:"code,omitempty"`
+  TextRange: Range `json:"range"`
+  Severity: Int `json:"severity,omitempty"`
+  Source: String `json:"source,omitempty"`
+  Message: String `json:"message"`
+  Code: String `json:"code,omitempty"`
 end
 
 struct Location
-  uri: String `json:"uri"`
-  textRange: Range `json:"range"`
+  URI: String `json:"uri"`
+  TextRange: Range `json:"range"`
 end
 
 struct DocumentSymbol
-  name: String `json:"name"`
-  detail: String `json:"detail,omitempty"`
-  kind: Int `json:"kind,omitempty"`
-  textRange: Range `json:"range"`
-  selectiontextRange: Range `json:"selectionRange"`
-  children: Slice[DocumentSymbol] `json:"children,omitempty"`
+  Name: String `json:"name"`
+  Detail: String `json:"detail,omitempty"`
+  Kind: Int `json:"kind,omitempty"`
+  TextRange: Range `json:"range"`
+  SelectionTextRange: Range `json:"selectionRange"`
+  Children: Slice[DocumentSymbol] `json:"children,omitempty"`
 end
 
 struct LSPMessage
-  jsonrpc: String `json:"jsonrpc"`
-  id: Option[Int] `json:"id,omitempty"`
-  method: String `json:"method,omitempty"`
-  params: Option[Map[String, Any]] `json:"params,omitempty"`
-  result: Option[Any] `json:"result,omitempty"`
-  error: Option[LSPError] `json:"error,omitempty"`
+  Jsonrpc: String `json:"jsonrpc"`
+  Id: Option[Int] `json:"id,omitempty"`
+  Method: String `json:"method,omitempty"`
+  Params: Option[Map[String, Any]] `json:"params,omitempty"`
+  Result: Option[Any] `json:"result,omitempty"`
+  Error: Option[LSPError] `json:"error,omitempty"`
 end
 
 struct LSPError
-  code: Int `json:"code"`
-  message: String `json:"message"`
+  Code: Int `json:"code"`
+  Message: String `json:"message"`
 end
 
 struct InitializeResult
-  capabilities: ServerCapabilities `json:"capabilities"`
+  Capabilities: ServerCapabilities `json:"capabilities"`
 end
 
 struct ServerCapabilities
-  textDocumentSync: Int `json:"textDocumentSync"`
-  completionProvider: CompletionOptions `json:"completionProvider,omitempty"`
-  hoverProvider: Bool `json:"hoverProvider,omitempty"`
-  definitionProvider: Bool `json:"definitionProvider,omitempty"`
-  referencesProvider: Bool `json:"referencesProvider,omitempty"`
-  documentSymbolProvider: Bool `json:"documentSymbolProvider,omitempty"`
-  workspaceSymbolProvider: Bool `json:"workspaceSymbolProvider,omitempty"`
+  TextDocumentSync: Int `json:"textDocumentSync"`
+  CompletionProvider: CompletionOptions `json:"completionProvider,omitempty"`
+  HoverProvider: Bool `json:"hoverProvider,omitempty"`
+  DefinitionProvider: Bool `json:"definitionProvider,omitempty"`
+  ReferencesProvider: Bool `json:"referencesProvider,omitempty"`
+  DocumentSymbolProvider: Bool `json:"documentSymbolProvider,omitempty"`
+  WorkspaceSymbolProvider: Bool `json:"workspaceSymbolProvider,omitempty"`
 end
 
 struct CompletionOptions
-  triggerCharacters: Slice[String] `json:"triggerCharacters"`
+  TriggerCharacters: Slice[String] `json:"triggerCharacters"`
 end
 
 struct InitializeParams
-  capabilities: ClientCapabilities `json:"capabilities"`
+  Capabilities: ClientCapabilities `json:"capabilities"`
 end
 
 struct ClientCapabilities
-  textDocument: TextDocumentClientCapabilities `json:"textDocument"`
+  TextDocument: TextDocumentClientCapabilities `json:"textDocument"`
 end
 
 struct TextDocumentClientCapabilities
-  completion: CompletionCapabilities `json:"completion"`
-  hover: HoverCapabilities `json:"hover"`
-  definition: DefinitionCapabilities `json:"definition"`
-  references: ReferenceCapabilities `json:"references"`
-  documentSymbol: DocumentSymbolCapabilities `json:"documentSymbol"`
-  workspaceSymbol: WorkspaceSymbolCapabilities `json:"workspaceSymbol"`
+  Completion: CompletionCapabilities `json:"completion"`
+  Hover: HoverCapabilities `json:"hover"`
+  Definition: DefinitionCapabilities `json:"definition"`
+  References: ReferenceCapabilities `json:"references"`
+  DocumentSymbol: DocumentSymbolCapabilities `json:"documentSymbol"`
+  WorkspaceSymbol: WorkspaceSymbolCapabilities `json:"workspaceSymbol"`
 end
 
 struct CompletionCapabilities
@@ -157,42 +157,42 @@ struct WorkspaceSymbolCapabilities
 end
 
 struct DidOpenParams
-  document: TextDocumentItem `json:"document"`
+  Document: TextDocumentItem `json:"document"`
 end
 
 struct ChangeParams
-  textDocument: TextDocumentIdentifier `json:"textDocument"`
-  contentChanges: Slice[any] `json:"contentChanges"`
+  TextDocument: TextDocumentIdentifier `json:"textDocument"`
+  ContentChanges: Slice[any] `json:"contentChanges"`
 end
 
 struct CloseParams
-  document: TextDocumentIdentifier `json:"document"`
+  Document: TextDocumentIdentifier `json:"document"`
 end
 
 struct ReferenceParams
-  textDocument: TextDocumentIdentifier `json:"textDocument"`
-  position: Position `json:"position"`
-  context: ReferenceContext `json:"context"`
+  TextDocument: TextDocumentIdentifier `json:"textDocument"`
+  Position: Position `json:"position"`
+  Context: ReferenceContext `json:"context"`
 end
 
 struct ReferenceContext
-  includeDeclaration: Bool `json:"includeDeclaration"`
+  IncludeDeclaration: Bool `json:"includeDeclaration"`
 end
 
 struct DocumentSymbolParams
-  textDocument: TextDocumentIdentifier `json:"textDocument"`
+  TextDocument: TextDocumentIdentifier `json:"textDocument"`
 end
 
 struct WorkspaceSymbolParams
-  query: String `json:"query"`
+  Query: String `json:"query"`
 end
 
 # ===== Document Store =====
 
 struct Document
-  uri: String `json:"-"`
-  version: Int
-  content: String
+  URI: String `json:"-"`
+  Version: Int
+  Content: String
 end
 
 struct DocumentStore
@@ -205,7 +205,7 @@ func newDocumentStore() -> DocumentStore
 end
 
 func storePut(store: Ref[DocumentStore], uri: String, version: Int, content: String) -> ()
-  store.docs.Set(uri, Ref.new(Document{uri: uri, version: version, content: content}))
+  store.docs.Set(uri, Ref.new(Document{URI: uri, Version: version, Content: content}))
 end
 
 func storeGet(store: Ref[DocumentStore], uri: String) -> Option[Ref[Document]]
@@ -302,8 +302,8 @@ func wordAtPosition(content: String, line: Int, char: Int) -> Option[Ref[Range]]
           return nil
         }
         r := &Range{
-          startPos: Position{line: line, character: start},
-          endPos:   Position{line: line, character: end},
+          StartPos: Position{Line: line, Character: start},
+          EndPos:   Position{Line: line, Character: end},
         }
         return r
       }()
@@ -327,13 +327,13 @@ func handleCompletion(
   switch storeGet(store, uri)
     case Some(d) then
       let content = go[String] {
-        code: `{d}.content`
+        code: `{d}.Content`
         in d = d
       }
       var word = ""
       switch wordAtPosition(content, line, char)
         case Some(r) then
-            let lines = strings.Split(d.content, "\n")
+            let lines = strings.Split(d.Content, "\n")
           if line < lines.Len()
             let text = lines.Get(line)
             let length = go[Int] {
@@ -342,7 +342,7 @@ func handleCompletion(
             }
             if char <= length
               word = go[String] {
-                code: `{text}[{char} - ({char} - {r}.startPos.character):{char}]`
+                code: `{text}[{char} - ({char} - {r}.StartPos.Character):{char}]`
                 in text = text
                 in char = char
                 in r = r
@@ -360,9 +360,9 @@ func handleCompletion(
       end
       let keywords = buildKeywordCompletions()
       let items = appendCompletions(keywords, word)
-      CompletionList{isIncomplete: false, items: items}
+      CompletionList{IsIncomplete: false, Items: items}
     end
-    case _ => CompletionList{isIncomplete: false, items: []}
+    case _ => CompletionList{IsIncomplete: false, Items: []}
   end
 end
 
@@ -371,34 +371,34 @@ func buildKeywordCompletions() -> Slice[CompletionItem]
     code: `
       func() []CompletionItem {
         return []CompletionItem{
-          {label: "func", kind: 14, detail: "function declaration"},
-          {label: "struct", kind: 14, detail: "struct declaration"},
-          {label: "enum", kind: 14, detail: "enum declaration"},
-          {label: "interface", kind: 14, detail: "interface declaration"},
-          {label: "impl", kind: 14, detail: "impl block"},
-          {label: "let", kind: 14, detail: "immutable binding"},
-          {label: "var", kind: 14, detail: "mutable binding"},
-          {label: "if", kind: 14, detail: "conditional expression"},
-          {label: "else", kind: 14, detail: "else clause"},
-          {label: "switch", kind: 14, detail: "switch expression"},
-          {label: "case", kind: 14, detail: "case clause"},
-          {label: "while", kind: 14, detail: "while loop"},
-          {label: "return", kind: 14, detail: "return statement"},
-          {label: "end", kind: 14, detail: "block end"},
-          {label: "using", kind: 14, detail: "typeclass constraint"},
-          {label: "import", kind: 14, detail: "import statement"},
-          {label: "package", kind: 14, detail: "package declaration"},
-          {label: "Option", kind: 7, detail: "Option[A] - nullable type"},
-          {label: "Result", kind: 7, detail: "Result[A, E] - error type"},
-          {label: "Some", kind: 14, detail: "Some[A] - option variant"},
-          {label: "None", kind: 14, detail: "None[A] - none variant"},
-          {label: "Ok", kind: 14, detail: "Ok[A, E] - result variant"},
-          {label: "Err", kind: 14, detail: "Err[A, E] - error variant"},
-          {label: "List", kind: 7, detail: "List[A] - linked list"},
-          {label: "Slice", kind: 7, detail: "Slice[A] - Go slice"},
-          {label: "Map", kind: 7, detail: "Map[K, V] - Go map"},
-          {label: "Set", kind: 7, detail: "Set[A] - Go set"},
-          {label: "Ref", kind: 7, detail: "Ref[T] - non-nil reference"},
+          {Label: "func", Kind: 14, Detail: "function declaration"},
+          {Label: "struct", Kind: 14, Detail: "struct declaration"},
+          {Label: "enum", Kind: 14, Detail: "enum declaration"},
+          {Label: "interface", Kind: 14, Detail: "interface declaration"},
+          {Label: "impl", Kind: 14, Detail: "impl block"},
+          {Label: "let", Kind: 14, Detail: "immutable binding"},
+          {Label: "var", Kind: 14, Detail: "mutable binding"},
+          {Label: "if", Kind: 14, Detail: "conditional expression"},
+          {Label: "else", Kind: 14, Detail: "else clause"},
+          {Label: "switch", Kind: 14, Detail: "switch expression"},
+          {Label: "case", Kind: 14, Detail: "case clause"},
+          {Label: "while", Kind: 14, Detail: "while loop"},
+          {Label: "return", Kind: 14, Detail: "return statement"},
+          {Label: "end", Kind: 14, Detail: "block end"},
+          {Label: "using", Kind: 14, Detail: "typeclass constraint"},
+          {Label: "import", Kind: 14, Detail: "import statement"},
+          {Label: "package", Kind: 14, Detail: "package declaration"},
+          {Label: "Option", Kind: 7, Detail: "Option[A] - nullable type"},
+          {Label: "Result", Kind: 7, Detail: "Result[A, E] - error type"},
+          {Label: "Some", Kind: 14, Detail: "Some[A] - option variant"},
+          {Label: "None", Kind: 14, Detail: "None[A] - none variant"},
+          {Label: "Ok", Kind: 14, Detail: "Ok[A, E] - result variant"},
+          {Label: "Err", Kind: 14, Detail: "Err[A, E] - error variant"},
+          {Label: "List", Kind: 7, Detail: "List[A] - linked list"},
+          {Label: "Slice", Kind: 7, Detail: "Slice[A] - Go slice"},
+          {Label: "Map", Kind: 7, Detail: "Map[K, V] - Go map"},
+          {Label: "Set", Kind: 7, Detail: "Set[A] - Go set"},
+          {Label: "Ref", Kind: 7, Detail: "Ref[T] - non-nil reference"},
         }
       }()
     `
@@ -415,7 +415,7 @@ func appendCompletions(items: Slice[CompletionItem], word: String) -> Slice[Comp
         }
         var filtered []CompletionItem
         for _, item := range items {
-          if strings.HasPrefix(strings.ToLower(item.label), strings.ToLower(word)) {
+          if strings.HasPrefix(strings.ToLower(item.Label), strings.ToLower(word)) {
             filtered = append(filtered, item)
           }
         }
@@ -438,21 +438,21 @@ func handleHover(
 ) -> Option[Hover]
   switch storeGet(store, uri)
     case Some(d) then
-      switch wordAtPosition(d.content, line, char)
+      switch wordAtPosition(d.Content, line, char)
         case Some(r) then
-          let lines = strings.Split(d.content, "\n")
+          let lines = strings.Split(d.Content, "\n")
           if line < lines.Len()
             let text = lines.Get(line)
             let word = go[String] {
-              code: `{text}[{r}.startPos.character:{r}.endPos.character]`
+              code: `{text}[{r}.StartPos.Character:{r}.EndPos.Character]`
               in text = text
               in r = r
             }
             let docStr = buildHoverDoc(word)
             let hoverRange: Option[Range] = Some(r.value())
             let hover = Hover {
-              contents: MarkupContent{kind: "plaintext", value: docStr},
-              textRange: hoverRange
+              Contents: MarkupContent{Kind: "plaintext", Value: docStr},
+              TextRange: hoverRange
             }
             Some(hover)
           else
@@ -516,7 +516,7 @@ end
 func handleDiagnostics(store: Ref[DocumentStore], uri: String) -> Slice[Diagnostic]
   switch storeGet(store, uri)
     case Some(d) then
-      runMyGoDiagnostics(d.content)
+      runMyGoDiagnostics(d.Content)
     end
     case _ => []
   end
@@ -533,27 +533,27 @@ func runMyGoDiagnostics(content: String) -> Slice[Diagnostic]
           if strings.Contains(trimmed, "where ") && !strings.HasPrefix(trimmed, "#") {
             startChar := strings.Index(trimmed, "where")
             diags = append(diags, Diagnostic{
-              textRange: Range{
-                startPos: Position{line: i, character: startChar},
-                endPos:   Position{line: i, character: startChar + 5},
+              TextRange: Range{
+                StartPos: Position{Line: i, Character: startChar},
+                EndPos:   Position{Line: i, Character: startChar + 5},
               },
-              severity: 2,
-              source:   "mygo",
-              message:  "'where' is deprecated, use 'using' instead",
-              code:     "DEPRECATED",
+              Severity: 2,
+              Source:   "mygo",
+              Message:  "'where' is deprecated, use 'using' instead",
+              Code:     "DEPRECATED",
             })
           }
           if strings.Contains(trimmed, "-> Unit") {
             startChar := strings.Index(trimmed, "-> Unit")
             diags = append(diags, Diagnostic{
-              textRange: Range{
-                startPos: Position{line: i, character: startChar},
-                endPos:   Position{line: i, character: startChar + 7},
+              TextRange: Range{
+                StartPos: Position{Line: i, Character: startChar},
+                EndPos:   Position{Line: i, Character: startChar + 7},
               },
-              severity: 2,
-              source:   "mygo",
-              message:  "'-> Unit' is deprecated, use '-> ()' instead",
-              code:     "DEPRECATED",
+              Severity: 2,
+              Source:   "mygo",
+              Message:  "'-> Unit' is deprecated, use '-> ()' instead",
+              Code:     "DEPRECATED",
             })
           }
         }
@@ -570,7 +570,7 @@ end
 func handleDocumentSymbols(store: Ref[DocumentStore], uri: String) -> Slice[DocumentSymbol]
   switch storeGet(store, uri)
     case Some(d) then
-      parseAndBuildSymbols(d.content)
+      parseAndBuildSymbols(d.Content)
     end
     case _ => []
   end
@@ -597,10 +597,10 @@ func parseAndBuildSymbols(content: String) -> Slice[DocumentSymbol]
                 name = name[:idx]
               }
               sym := DocumentSymbol{
-                name: name, kind: 23,
-                textRange:            Range{startPos: Position{line: i}, endPos: Position{line: i}},
-                selectiontextRange: Range{startPos: Position{line: i, character: len(trimmed) - len(name)}, endPos: Position{line: i, character: len(trimmed)}},
-                detail: "struct",
+                Name: name, Kind: 23,
+                TextRange:            Range{StartPos: Position{Line: i}, EndPos: Position{Line: i}},
+                SelectionTextRange: Range{StartPos: Position{Line: i, Character: len(trimmed) - len(name)}, EndPos: Position{Line: i, Character: len(trimmed)}},
+                Detail: "struct",
               }
               symbols = append(symbols, sym)
             }
@@ -614,10 +614,10 @@ func parseAndBuildSymbols(content: String) -> Slice[DocumentSymbol]
                 name = name[:idx]
               }
               sym := DocumentSymbol{
-                name: name, kind: 10,
-                textRange:            Range{startPos: Position{line: i}, endPos: Position{line: i}},
-                selectiontextRange: Range{startPos: Position{line: i, character: len(trimmed) - len(name)}, endPos: Position{line: i, character: len(trimmed)}},
-                detail: "enum",
+                Name: name, Kind: 10,
+                TextRange:            Range{StartPos: Position{Line: i}, EndPos: Position{Line: i}},
+                SelectionTextRange: Range{StartPos: Position{Line: i, Character: len(trimmed) - len(name)}, EndPos: Position{Line: i, Character: len(trimmed)}},
+                Detail: "enum",
               }
               symbols = append(symbols, sym)
             }
@@ -634,10 +634,10 @@ func parseAndBuildSymbols(content: String) -> Slice[DocumentSymbol]
             }
             selStart := len(trimmed) - len(name)
               sym := DocumentSymbol{
-                name: name, kind: 12,
-                textRange:            Range{startPos: Position{line: i}, endPos: Position{line: i}},
-                selectiontextRange: Range{startPos: Position{line: i, character: selStart}, endPos: Position{line: i, character: len(trimmed)}},
-                detail: "func(" + name + ")",
+                Name: name, Kind: 12,
+                TextRange:            Range{StartPos: Position{Line: i}, EndPos: Position{Line: i}},
+                SelectionTextRange: Range{StartPos: Position{Line: i, Character: selStart}, EndPos: Position{Line: i, Character: len(trimmed)}},
+                Detail: "func(" + name + ")",
             }
             symbols = append(symbols, sym)
           }
@@ -647,10 +647,10 @@ func parseAndBuildSymbols(content: String) -> Slice[DocumentSymbol]
             if len(parts) >= 2 {
               name := parts[1]
               sym := DocumentSymbol{
-                name: "impl " + name, kind: 5,
-                textRange:            Range{startPos: Position{line: i}, endPos: Position{line: i}},
-                selectiontextRange: Range{startPos: Position{line: i, character: 4}, endPos: Position{line: i, character: len(trimmed)}},
-                detail: "impl",
+                Name: "impl " + name, Kind: 5,
+                TextRange:            Range{StartPos: Position{Line: i}, EndPos: Position{Line: i}},
+                SelectionTextRange: Range{StartPos: Position{Line: i, Character: 4}, EndPos: Position{Line: i, Character: len(trimmed)}},
+                Detail: "impl",
               }
               symbols = append(symbols, sym)
             }
@@ -674,17 +674,17 @@ func handleDefinition(
 ) -> Option[Slice[Location]]
   switch storeGet(store, uri)
     case Some(d) then
-      switch wordAtPosition(d.content, line, char)
+      switch wordAtPosition(d.Content, line, char)
         case Some(r) then
-          let lines = strings.Split(d.content, "\n")
+          let lines = strings.Split(d.Content, "\n")
           if line < lines.Len()
             let text = lines.Get(line)
             let word = go[String] {
-              code: `{text}[{r}.startPos.character:{r}.endPos.character]`
+              code: `{text}[{r}.StartPos.Character:{r}.EndPos.Character]`
               in text = text
               in r = r
             }
-            let locs = searchDefinitionInDoc(d.content, word, d.uri)
+            let locs = searchDefinitionInDoc(d.Content, word, d.URI)
             if locs.Len() > 0
               Some(locs)
             else
@@ -714,19 +714,19 @@ func searchDefinitionInDoc(content: String, word: String, uri: String) -> Slice[
           }
           if strings.HasPrefix(trimmed, "func "+word) {
             locations = append(locations, Location{
-              uri: "file://" + uri,
-              textRange: Range{
-                startPos: Position{line: i, character: 0},
-                endPos:   Position{line: i, character: len(trimmed)},
+              URI: "file://" + uri,
+              TextRange: Range{
+                StartPos: Position{Line: i, Character: 0},
+                EndPos:   Position{Line: i, Character: len(trimmed)},
               },
             })
           }
           if strings.HasPrefix(trimmed, "struct "+word) || strings.HasPrefix(trimmed, "enum "+word) {
             locations = append(locations, Location{
-              uri: "file://" + uri,
-              textRange: Range{
-                startPos: Position{line: i, character: 0},
-                endPos:   Position{line: i, character: len(trimmed)},
+              URI: "file://" + uri,
+              TextRange: Range{
+                StartPos: Position{Line: i, Character: 0},
+                EndPos:   Position{Line: i, Character: len(trimmed)},
               },
             })
           }
@@ -751,17 +751,17 @@ func handleReferences(
 ) -> Option[Slice[Location]]
   switch storeGet(store, uri)
     case Some(d) then
-      switch wordAtPosition(d.content, line, char)
+      switch wordAtPosition(d.Content, line, char)
         case Some(r) then
-          let lines = strings.Split(d.content, "\n")
+          let lines = strings.Split(d.Content, "\n")
           if line < lines.Len()
             let text = lines.Get(line)
             let word = go[String] {
-              code: `{text}[{r}.startPos.character:{r}.endPos.character]`
+              code: `{text}[{r}.StartPos.Character:{r}.EndPos.Character]`
               in text = text
               in r = r
             }
-            let locs = searchReferencesInDoc(d.content, word, d.uri)
+            let locs = searchReferencesInDoc(d.Content, word, d.URI)
             if locs.Len() > 0
               Some(locs)
             else
@@ -793,10 +793,10 @@ func searchReferencesInDoc(content: String, word: String, uri: String) -> Slice[
             startChar := strings.Index(trimmed, word)
             if startChar >= 0 {
               locations = append(locations, Location{
-                uri: "file://" + uri,
-                textRange: Range{
-                  startPos: Position{line: i, character: startChar},
-                  endPos:   Position{line: i, character: startChar + len(word)},
+                URI: "file://" + uri,
+                TextRange: Range{
+                  StartPos: Position{Line: i, Character: startChar},
+                  EndPos:   Position{Line: i, Character: startChar + len(word)},
                 },
               })
             }
@@ -830,16 +830,16 @@ end
 
 func buildInitializeResponse() -> InitializeResult
   InitializeResult{
-    capabilities: ServerCapabilities{
-      textDocumentSync: 1,
-      completionProvider: CompletionOptions{
-        triggerCharacters: [".", "(", " ", `"`, `:`]
+    Capabilities: ServerCapabilities{
+      TextDocumentSync: 1,
+      CompletionProvider: CompletionOptions{
+        TriggerCharacters: [".", "(", " ", `"`, `:`]
       },
-      hoverProvider: true,
-      definitionProvider: true,
-      referencesProvider: true,
-      documentSymbolProvider: true,
-      workspaceSymbolProvider: true
+      HoverProvider: true,
+      DefinitionProvider: true,
+      ReferencesProvider: true,
+      DocumentSymbolProvider: true,
+      WorkspaceSymbolProvider: true
     }
   }
 end
@@ -859,18 +859,18 @@ func handleMessage(
     in raw = raw
     in json = json
   }
-  let id = msg.id
+  let id = msg.Id
 
-  switch msg.method
+  switch msg.Method
     case "initialize" then
       let result = buildInitializeResponse()
-      LSPMessage{jsonrpc: "2.0", id: id, result: Some(result)}
+      LSPMessage{Jsonrpc: "2.0", Id: id, Result: Some(result)}
     end
     case "initialized" then
-      LSPMessage{jsonrpc: "2.0", id: id}
+      LSPMessage{Jsonrpc: "2.0", Id: id}
     end
     case "textDocument/didOpen" then
-      switch msg.params
+      switch msg.Params
         case Some(p) then
           let docItem = go[TextDocumentItem] {
             code: `
@@ -884,15 +884,15 @@ func handleMessage(
             in p = p
             in json = json
           }
-          storePut(store, docItem.uri, docItem.version, docItem.content)
-          let diags = handleDiagnostics(store, docItem.uri)
-          LSPMessage{jsonrpc: "2.0", id: id, result: Some(diags)}
+          storePut(store, docItem.URI, docItem.Version, docItem.Content)
+          let diags = handleDiagnostics(store, docItem.URI)
+          LSPMessage{Jsonrpc: "2.0", Id: id, Result: Some(diags)}
         end
-        case _ => LSPMessage{jsonrpc: "2.0", id: id}
+        case _ => LSPMessage{Jsonrpc: "2.0", Id: id}
       end
     end
     case "textDocument/didChange" then
-      switch msg.params
+      switch msg.Params
         case Some(p) then
           let version = go[Int] {
             code: `
@@ -935,12 +935,12 @@ func handleMessage(
             in p = p
           }
           storePut(store, uri, version, content)
-          LSPMessage{jsonrpc: "2.0", id: id}
+          LSPMessage{Jsonrpc: "2.0", Id: id}
         end
       end
     end
     case "textDocument/didClose" then
-      switch msg.params
+      switch msg.Params
         case Some(p) then
           let uri = go[String] {
             code: `
@@ -955,13 +955,13 @@ func handleMessage(
             in p = p
           }
           storeDelete(store, uri)
-          LSPMessage{jsonrpc: "2.0", id: id}
+          LSPMessage{Jsonrpc: "2.0", Id: id}
         end
-        case _ => LSPMessage{jsonrpc: "2.0", id: id}
+        case _ => LSPMessage{Jsonrpc: "2.0", Id: id}
       end
     end
     case "textDocument/completion" then
-      switch msg.params
+      switch msg.Params
         case Some(p) then
           let uri = go[String] {
             code: `
@@ -994,13 +994,13 @@ func handleMessage(
             in p = p
           }
           let items = handleCompletion(store, uri, line, char)
-          LSPMessage{jsonrpc: "2.0", id: id, result: Some(items)}
+          LSPMessage{Jsonrpc: "2.0", Id: id, Result: Some(items)}
         end
-        case _ => LSPMessage{jsonrpc: "2.0", id: id}
+        case _ => LSPMessage{Jsonrpc: "2.0", Id: id}
       end
     end
     case "textDocument/hover" then
-      switch msg.params
+      switch msg.Params
         case Some(p) then
           let uri = go[String] {
             code: `
@@ -1033,13 +1033,13 @@ func handleMessage(
             in p = p
           }
           let hover = handleHover(store, uri, line, char)
-          LSPMessage{jsonrpc: "2.0", id: id, result: hover}
+          LSPMessage{Jsonrpc: "2.0", Id: id, Result: hover}
         end
-        case _ => LSPMessage{jsonrpc: "2.0", id: id}
+        case _ => LSPMessage{Jsonrpc: "2.0", Id: id}
       end
     end
     case "textDocument/definition" then
-      switch msg.params
+      switch msg.Params
         case Some(p) then
           let uri = go[String] {
             code: `
@@ -1072,13 +1072,13 @@ func handleMessage(
             in p = p
           }
           let locs = handleDefinition(store, uri, line, char)
-          LSPMessage{jsonrpc: "2.0", id: id, result: locs}
+          LSPMessage{Jsonrpc: "2.0", Id: id, Result: locs}
         end
-        case _ => LSPMessage{jsonrpc: "2.0", id: id}
+        case _ => LSPMessage{Jsonrpc: "2.0", Id: id}
       end
     end
     case "textDocument/references" then
-      switch msg.params
+      switch msg.Params
         case Some(p) then
           let uri = go[String] {
             code: `
@@ -1111,13 +1111,13 @@ func handleMessage(
             in p = p
           }
           let locs = handleReferences(store, uri, line, char)
-          LSPMessage{jsonrpc: "2.0", id: id, result: locs}
+          LSPMessage{Jsonrpc: "2.0", Id: id, Result: locs}
         end
-        case _ => LSPMessage{jsonrpc: "2.0", id: id}
+        case _ => LSPMessage{Jsonrpc: "2.0", Id: id}
       end
     end
     case "textDocument/documentSymbol" then
-      switch msg.params
+      switch msg.Params
         case Some(p) then
           let uri = go[String] {
             code: `
@@ -1130,13 +1130,13 @@ func handleMessage(
             in p = p
           }
           let syms = handleDocumentSymbols(store, uri)
-          LSPMessage{jsonrpc: "2.0", id: id, result: Some(syms)}
+          LSPMessage{Jsonrpc: "2.0", Id: id, Result: Some(syms)}
         end
-        case _ => LSPMessage{jsonrpc: "2.0", id: id}
+        case _ => LSPMessage{Jsonrpc: "2.0", Id: id}
       end
     end
     case "workspace/symbol" then
-      switch msg.params
+      switch msg.Params
         case Some(p) then
           let query = go[String] {
             code: `
@@ -1148,18 +1148,18 @@ func handleMessage(
             in p = p
           }
           let syms = handleWorkspaceSymbols(store, query)
-          LSPMessage{jsonrpc: "2.0", id: id, result: Some(syms)}
+          LSPMessage{Jsonrpc: "2.0", Id: id, Result: Some(syms)}
         end
-        case _ => LSPMessage{jsonrpc: "2.0", id: id}
+        case _ => LSPMessage{Jsonrpc: "2.0", Id: id}
       end
     end
     case _ then
       LSPMessage{
-        jsonrpc: "2.0",
-        id: id,
-        error: Some(LSPError{
-          code: -32601,
-          message: "method not found: " + msg.method
+        Jsonrpc: "2.0",
+        Id: id,
+        Error: Some(LSPError{
+          Code: -32601,
+          Message: "method not found: " + msg.Method
         })
       }
     end

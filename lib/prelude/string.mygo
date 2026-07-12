@@ -1,0 +1,56 @@
+package prelude
+
+import strings "go:strings"
+
+impl StringIEnumerable: IEnumerable[String, rune]
+  func Each(c: String, fn: func(rune) -> ()) -> ()
+    go[()] {
+        code: """
+          func() {
+            for _, ru := range c {
+                fn(ru)
+            }
+          }()
+        """
+    }
+  end
+
+  func Len(c: String) -> Int
+    go[Int] {
+        code: `len(c)`
+    }
+  end
+
+  func Map[B](c: String, fn: func(rune) -> B) -> Slice[B] using SliceIEnumerable[rune]
+    let slc = go[Slice[rune]] {
+        code: `[]rune(c)`
+    }
+    slc.Map(fn)
+  end
+
+  func Filter(c: String, fn: func(rune) -> Bool) -> Slice[rune] using SliceIEnumerable[rune]
+    let slc = go[Slice[rune]] {
+        code: `[]rune(c)`
+    }
+    slc.Filter(fn)
+  end
+
+  func Fold[B](c: String, initial: B, fn: func(B, rune) -> B) -> B using SliceIEnumerable[rune]
+    let slc = go[Slice[rune]] {
+        code: `[]rune(c)`
+    }
+    slc.Fold(initial, fn)
+  end
+
+  func Find(c: String, fn: func(rune) -> Bool) -> Option[Ref[rune]] using SliceIEnumerable[rune]
+    let slc = go[Slice[rune]] {
+        code: `[]rune(c)`
+    }
+    slc.Find(fn)
+  end
+
+  func Contains(c: String, item: rune, eq: Eq[rune]) -> Bool
+    strings.ContainsRune(c, item)
+  end
+
+end

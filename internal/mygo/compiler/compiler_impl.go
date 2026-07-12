@@ -233,18 +233,37 @@ func parseStructTag(tag string) map[string]string {
 
 func (g *generator) genInterface(d *InterfaceDecl) []jen.Code {
 	hktSet := g.hktParams(d)
-	methods := make([]jen.Code, 0, len(d.Methods))
+	if len(d.Methods) == 1 {
+		m := d.Methods[0]
+		if len(m.TypeParams) == 0 {
+			params := make([]jen.Code, 0, len(m.Params))
+			for _, p := range m.Params {
+				params = append(params, jenHKTTypeExpr(p.Type, hktSet))
+			}
+			ret := jenHKTTypeExpr(m.Ret, hktSet)
+			if isUnitType(m.Ret) {
+				return []jen.Code{addTypeParams(jen.Type().Id(d.Name), d.TypeParams).Func().Params(params...)}
+			}
+			return []jen.Code{addTypeParams(jen.Type().Id(d.Name), d.TypeParams).Func().Params(params...).Add(ret)}
+		}
+	}
+	fields := make([]jen.Code, 0, len(d.Methods))
 	for _, m := range d.Methods {
 		if len(m.TypeParams) > 0 {
 			continue
 		}
 		params := make([]jen.Code, 0, len(m.Params))
 		for _, p := range m.Params {
-			params = append(params, jen.Id(p.Name).Add(jenHKTTypeExpr(p.Type, hktSet)))
+			params = append(params, jenHKTTypeExpr(p.Type, hktSet))
 		}
-		methods = append(methods, jen.Id(m.Name).Params(params...).Add(jenHKTTypeExpr(m.Ret, hktSet)))
+		fieldType := jen.Func().Params(params...)
+		ret := jenHKTTypeExpr(m.Ret, hktSet)
+		if !isUnitType(m.Ret) {
+			fieldType = fieldType.Add(ret)
+		}
+		fields = append(fields, jen.Id(m.Name).Add(fieldType))
 	}
-	return []jen.Code{addTypeParams(jen.Type().Id(d.Name), d.TypeParams).Interface(methods...)}
+	return []jen.Code{addTypeParams(jen.Type().Id(d.Name), d.TypeParams).Struct(fields...)}
 }
 
 func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
@@ -267,7 +286,7 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 	for i, tp := range iface.TypeParams {
 		subst[tp] = g.goType(typeArgs[i], nil)
 	}
-	typeKey := g.implTypeKey(typeArgs)
+	typeKey := g.implHelperKey(d, typeArgs)
 	methodBodies := map[string]*FuncDecl{}
 	for _, m := range d.Methods {
 		methodBodies[m.Name] = m
@@ -295,16 +314,17 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 		hktSet := g.hktParams(iface)
 		retType := g.goHKTReturnType(ret, hktSet, combinedTypeParams)
 		ctx := &exprCtx{
-			locals:          map[string]string{},
-			bindings:        map[string]string{},
-			sourceTypes:     map[string]string{},
-			mutable:         map[string]bool{},
-			typeParams:      combinedTypeParams,
-			constraintFuncs: map[string]string{},
-			retType:         retType,
-			currentImpl:     ifaceName,
-			implTypeKey:     typeKey,
-			implTypeParams:  d.TypeParams,
+			locals:           map[string]string{},
+			bindings:         map[string]string{},
+			sourceTypes:      map[string]string{},
+			mutable:          map[string]bool{},
+			typeParams:       combinedTypeParams,
+			constraintFuncs:  map[string]string{},
+			typeclassMethods: map[string][]typeclassBinding{},
+			retType:          retType,
+			currentImpl:      ifaceName,
+			implTypeKey:      typeKey,
+			implTypeParams:   d.TypeParams,
 		}
 
 		fnName := helperFuncName(sig.Name, typeKey)
@@ -347,6 +367,11 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 			ctx.bindings[p.Name] = p.Name
 			ctx.mutable[p.Name] = false
 		}
+		implConstraintParams, err := g.collectUsingConstraintParams(method.Using, ctx, combinedTypeParams, fnName)
+		if err != nil {
+			return nil, err
+		}
+		paramList = append(paramList, implConstraintParams...)
 		fn = fn.Params(paramList...)
 
 		if retType != "" {
@@ -375,6 +400,86 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 		allCode = append(allCode, fn)
 	}
 	return allCode, nil
+}
+
+func (g *generator) collectUsingConstraintParams(using []Constraint, ctx *exprCtx, typeParams map[string]struct{}, owner string) ([]jen.Code, error) {
+	var params []jen.Code
+	seen := map[string]bool{}
+	for _, c := range using {
+		impl, iface, ok := g.resolveUsingConstraint(c)
+		if !ok {
+			return nil, common.ErrorAtPos(c.Line, c.Column, "%s: missing implementation or interface %s", owner, c.Name)
+		}
+		implSubst := map[string]string{}
+		if impl != nil && len(impl.TypeParams) > 0 {
+			if len(impl.TypeParams) != len(c.Args) {
+				return nil, common.ErrorAtPos(c.Line, c.Column, "%s: type arity mismatch for %s", owner, c.Name)
+			}
+			for i, tp := range impl.TypeParams {
+				implSubst[tp] = g.goType(c.Args[i], typeParams)
+			}
+		}
+		typeArgs := append([]TypeExpr(nil), c.Args...)
+		if impl != nil {
+			typeArgs = append([]TypeExpr(nil), impl.InterfaceArgs...)
+			if len(typeArgs) == 0 {
+				typeArgs = append([]TypeExpr(nil), impl.TypeArgs...)
+			}
+			for i, arg := range typeArgs {
+				typeArgs[i] = substituteTypeExpr(arg, implSubst)
+			}
+		}
+		if len(iface.TypeParams) != len(typeArgs) {
+			return nil, common.ErrorAtPos(c.Line, c.Column, "%s: type arity mismatch for %s", owner, c.Name)
+		}
+		subst := map[string]string{}
+		for i, tp := range iface.TypeParams {
+			subst[tp] = g.goType(typeArgs[i], typeParams)
+		}
+		namedImplTypeKey := ""
+		if impl != nil {
+			implTypeArgs := append([]TypeExpr(nil), impl.InterfaceArgs...)
+			if len(implTypeArgs) == 0 {
+				implTypeArgs = append([]TypeExpr(nil), impl.TypeArgs...)
+			}
+			namedImplTypeKey = g.implHelperKey(impl, implTypeArgs)
+		}
+		for _, m := range iface.Methods {
+			paramName := m.Name + "Fn"
+			binding := typeclassBinding{
+				Interface:  c.Name,
+				Score:      typeclassMatchScore(typeArgs, typeParams),
+				TargetType: firstTypeArgString(typeArgs, subst),
+				ParamTypes: func() []string {
+					out := make([]string, 0, len(m.Params))
+					for _, p := range m.Params {
+						out = append(out, typeString(p.Type, subst))
+					}
+					return out
+				}(),
+				RetType: typeStringReturn(m.Ret, subst),
+			}
+			ctx.typeclassMethods[m.Name] = append(ctx.typeclassMethods[m.Name], binding)
+			if namedImplTypeKey != "" {
+				ctx.constraintFuncs[m.Name] = helperFuncName(m.Name, namedImplTypeKey)
+				continue
+			}
+			ctx.constraintFuncs[m.Name] = paramName
+			if seen[paramName] {
+				continue
+			}
+			seen[paramName] = true
+			params = append(params, jen.Id(paramName).Add(jen.Id(typeclassFuncType(binding.ParamTypes, binding.RetType))))
+		}
+	}
+	return params, nil
+}
+
+func firstTypeArgString(args []TypeExpr, subst map[string]string) string {
+	if len(args) == 0 {
+		return ""
+	}
+	return typeString(args[0], subst)
 }
 
 func containsString(items []string, want string) bool {
@@ -469,22 +574,40 @@ func (g *generator) genFunc(d *FuncDecl) (jen.Code, error) {
 	constraintParams := map[string]constraintParam{}
 	var constraintOrder []string
 	for _, c := range d.Using {
-		iface := g.pkg.Interfaces[c.Name]
-		if iface == nil {
-			return nil, common.ErrorAtPos(c.Line, c.Column, "function %s: missing interface %s", d.Name, c.Name)
+		impl, iface, ok := g.resolveUsingConstraint(c)
+		if !ok {
+			return nil, common.ErrorAtPos(c.Line, c.Column, "function %s: missing implementation or interface %s", d.Name, c.Name)
 		}
-		if len(iface.TypeParams) != len(c.Args) {
+		implSubst := map[string]string{}
+		if impl != nil && len(impl.TypeParams) > 0 {
+			if len(impl.TypeParams) != len(c.Args) {
+				return nil, common.ErrorAtPos(c.Line, c.Column, "function %s: type arity mismatch for %s", d.Name, c.Name)
+			}
+			for i, tp := range impl.TypeParams {
+				implSubst[tp] = g.goType(c.Args[i], typeParamSet(d.TypeParams))
+			}
+		}
+		typeArgs := append([]TypeExpr(nil), c.Args...)
+		if impl != nil {
+			typeArgs = append([]TypeExpr(nil), impl.InterfaceArgs...)
+			if len(typeArgs) == 0 {
+				typeArgs = append([]TypeExpr(nil), impl.TypeArgs...)
+			}
+			for i, arg := range typeArgs {
+				typeArgs[i] = substituteTypeExpr(arg, implSubst)
+			}
+		}
+		if len(iface.TypeParams) != len(typeArgs) {
 			return nil, common.ErrorAtPos(c.Line, c.Column, "function %s: type arity mismatch for %s", d.Name, c.Name)
 		}
 		subst := map[string]string{}
 		for i, tp := range iface.TypeParams {
-			subst[tp] = g.goType(c.Args[i], typeParamSet(d.TypeParams))
+			if i < len(typeArgs) {
+				subst[tp] = g.goType(typeArgs[i], typeParamSet(d.TypeParams))
+			}
 		}
 		for _, m := range iface.Methods {
-			paramName := c.BindName
-			if paramName == "" {
-				paramName = m.Name + "Fn"
-			}
+			paramName := m.Name + "Fn"
 			targetType := ""
 			if len(c.Args) > 0 {
 				targetType = typeString(c.Args[0], subst)

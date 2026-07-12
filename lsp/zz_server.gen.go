@@ -3,7 +3,7 @@
 package lsp
 
 import (
-	. "github.com/mygo-lang/mygo/prelude"
+	. "github.com/mygo-lang/mygo/lib/prelude"
 	"bufio"
 	"encoding/json"
 	"fmt"
@@ -23,108 +23,108 @@ var _ = strings.Clone
 var _ = unicode.ASCII_Hex_Digit
 
 type Position struct {
-	line      int `json:"line"`
-	character int `json:"character"`
+	Line      int `json:"line"`
+	Character int `json:"character"`
 }
 type Range struct {
-	startPos Position `json:"start"`
-	endPos   Position `json:"end"`
+	StartPos Position `json:"start"`
+	EndPos   Position `json:"end"`
 }
 type TextDocumentIdentifier struct {
-	uri string `json:"uri"`
+	URI string `json:"uri"`
 }
 type TextDocumentItem struct {
-	uri        string `json:"uri"`
-	languageId string `json:"languageId"`
-	version    int    `json:"version"`
-	content    string `json:"content"`
+	URI        string `json:"uri"`
+	LanguageId string `json:"languageId"`
+	Version    int    `json:"version"`
+	Content    string `json:"content"`
 }
 type TextDocumentPositionParams struct {
-	textDocument TextDocumentIdentifier `json:"textDocument"`
-	position     Position               `json:"position"`
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Position     Position               `json:"position"`
 }
 type MarkupContent struct {
-	kind  string `json:"kind"`
-	value string `json:"value"`
+	Kind  string `json:"kind"`
+	Value string `json:"value"`
 }
 type Hover struct {
-	contents  any           `json:"contents"`
-	textRange Option[Range] `json:"range,omitempty"`
+	Contents  any           `json:"contents"`
+	TextRange Option[Range] `json:"range,omitempty"`
 }
 type CompletionItem struct {
-	label               string      `json:"label"`
-	kind                int         `json:"kind,omitempty"`
-	detail              string      `json:"detail,omitempty"`
-	documentation       Option[any] `json:"documentation,omitempty"`
-	additionalTextEdits[]TextEdit  `json:"additionalTextEdits,omitempty"`
+	Label               string      `json:"label"`
+	Kind                int         `json:"kind,omitempty"`
+	Detail              string      `json:"detail,omitempty"`
+	Documentation       Option[any] `json:"documentation,omitempty"`
+	AdditionalTextEdits[]TextEdit  `json:"additionalTextEdits,omitempty"`
 }
 type CompletionList struct {
-	isIncomplete bool             `json:"isIncomplete"`
-	items        []CompletionItem `json:"items"`
+	IsIncomplete bool             `json:"isIncomplete"`
+	Items        []CompletionItem `json:"items"`
 }
 type TextEdit struct {
-	textRange Range  `json:"range"`
-	newText   string `json:"newText"`
+	TextRange Range  `json:"range"`
+	NewText   string `json:"newText"`
 }
 type Diagnostic struct {
-	textRange Range  `json:"range"`
-	severity  int    `json:"severity,omitempty"`
-	source    string `json:"source,omitempty"`
-	message   string `json:"message"`
-	code      string `json:"code,omitempty"`
+	TextRange Range  `json:"range"`
+	Severity  int    `json:"severity,omitempty"`
+	Source    string `json:"source,omitempty"`
+	Message   string `json:"message"`
+	Code      string `json:"code,omitempty"`
 }
 type Location struct {
-	uri       string `json:"uri"`
-	textRange Range  `json:"range"`
+	URI       string `json:"uri"`
+	TextRange Range  `json:"range"`
 }
 type DocumentSymbol struct {
-	name               string           `json:"name"`
-	detail             string           `json:"detail,omitempty"`
-	kind               int              `json:"kind,omitempty"`
-	textRange          Range            `json:"range"`
-	selectiontextRange Range            `json:"selectionRange"`
-	children           []DocumentSymbol `json:"children,omitempty"`
+	Name               string           `json:"name"`
+	Detail             string           `json:"detail,omitempty"`
+	Kind               int              `json:"kind,omitempty"`
+	TextRange          Range            `json:"range"`
+	SelectionTextRange Range            `json:"selectionRange"`
+	Children           []DocumentSymbol `json:"children,omitempty"`
 }
 type LSPMessage struct {
-	jsonrpc string                 `json:"jsonrpc"`
-	id      Option[int]            `json:"id,omitempty"`
-	method  string                 `json:"method,omitempty"`
-	params  Option[map[string]any] `json:"params,omitempty"`
-	result  Option[any]            `json:"result,omitempty"`
-	error   Option[LSPError]       `json:"error,omitempty"`
+	Jsonrpc string                 `json:"jsonrpc"`
+	Id      Option[int]            `json:"id,omitempty"`
+	Method  string                 `json:"method,omitempty"`
+	Params  Option[map[string]any] `json:"params,omitempty"`
+	Result  Option[any]            `json:"result,omitempty"`
+	Error   Option[LSPError]       `json:"error,omitempty"`
 }
 type LSPError struct {
-	code    int    `json:"code"`
-	message string `json:"message"`
+	Code    int    `json:"code"`
+	Message string `json:"message"`
 }
 type InitializeResult struct {
-	capabilities ServerCapabilities `json:"capabilities"`
+	Capabilities ServerCapabilities `json:"capabilities"`
 }
 type ServerCapabilities struct {
-	textDocumentSync        int               `json:"textDocumentSync"`
-	completionProvider      CompletionOptions `json:"completionProvider,omitempty"`
-	hoverProvider           bool              `json:"hoverProvider,omitempty"`
-	definitionProvider      bool              `json:"definitionProvider,omitempty"`
-	referencesProvider      bool              `json:"referencesProvider,omitempty"`
-	documentSymbolProvider  bool              `json:"documentSymbolProvider,omitempty"`
-	workspaceSymbolProvider bool              `json:"workspaceSymbolProvider,omitempty"`
+	TextDocumentSync        int               `json:"textDocumentSync"`
+	CompletionProvider      CompletionOptions `json:"completionProvider,omitempty"`
+	HoverProvider           bool              `json:"hoverProvider,omitempty"`
+	DefinitionProvider      bool              `json:"definitionProvider,omitempty"`
+	ReferencesProvider      bool              `json:"referencesProvider,omitempty"`
+	DocumentSymbolProvider  bool              `json:"documentSymbolProvider,omitempty"`
+	WorkspaceSymbolProvider bool              `json:"workspaceSymbolProvider,omitempty"`
 }
 type CompletionOptions struct {
-	triggerCharacters[]string `json:"triggerCharacters"`
+	TriggerCharacters[]string `json:"triggerCharacters"`
 }
 type InitializeParams struct {
-	capabilities ClientCapabilities `json:"capabilities"`
+	Capabilities ClientCapabilities `json:"capabilities"`
 }
 type ClientCapabilities struct {
-	textDocument TextDocumentClientCapabilities `json:"textDocument"`
+	TextDocument TextDocumentClientCapabilities `json:"textDocument"`
 }
 type TextDocumentClientCapabilities struct {
-	completion      CompletionCapabilities      `json:"completion"`
-	hover           HoverCapabilities           `json:"hover"`
-	definition      DefinitionCapabilities      `json:"definition"`
-	references      ReferenceCapabilities       `json:"references"`
-	documentSymbol  DocumentSymbolCapabilities  `json:"documentSymbol"`
-	workspaceSymbol WorkspaceSymbolCapabilities `json:"workspaceSymbol"`
+	Completion      CompletionCapabilities      `json:"completion"`
+	Hover           HoverCapabilities           `json:"hover"`
+	Definition      DefinitionCapabilities      `json:"definition"`
+	References      ReferenceCapabilities       `json:"references"`
+	DocumentSymbol  DocumentSymbolCapabilities  `json:"documentSymbol"`
+	WorkspaceSymbol WorkspaceSymbolCapabilities `json:"workspaceSymbol"`
 }
 type CompletionCapabilities struct{}
 type HoverCapabilities struct{}
@@ -133,33 +133,33 @@ type ReferenceCapabilities struct{}
 type DocumentSymbolCapabilities struct{}
 type WorkspaceSymbolCapabilities struct{}
 type DidOpenParams struct {
-	document TextDocumentItem `json:"document"`
+	Document TextDocumentItem `json:"document"`
 }
 type ChangeParams struct {
-	textDocument   TextDocumentIdentifier `json:"textDocument"`
-	contentChanges[]any                  `json:"contentChanges"`
+	TextDocument   TextDocumentIdentifier `json:"textDocument"`
+	ContentChanges[]any                  `json:"contentChanges"`
 }
 type CloseParams struct {
-	document TextDocumentIdentifier `json:"document"`
+	Document TextDocumentIdentifier `json:"document"`
 }
 type ReferenceParams struct {
-	textDocument TextDocumentIdentifier `json:"textDocument"`
-	position     Position               `json:"position"`
-	context      ReferenceContext       `json:"context"`
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Position     Position               `json:"position"`
+	Context      ReferenceContext       `json:"context"`
 }
 type ReferenceContext struct {
-	includeDeclaration bool `json:"includeDeclaration"`
+	IncludeDeclaration bool `json:"includeDeclaration"`
 }
 type DocumentSymbolParams struct {
-	textDocument TextDocumentIdentifier `json:"textDocument"`
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
 }
 type WorkspaceSymbolParams struct {
-	query string `json:"query"`
+	Query string `json:"query"`
 }
 type Document struct {
-	uri     string `json:"-"`
-	version int
-	content string
+	URI     string `json:"-"`
+	Version int
+	Content string
 }
 type DocumentStore struct {
 	docs map[string]*Document
@@ -171,9 +171,9 @@ func newDocumentStore() DocumentStore {
 }
 func storePut(store *DocumentStore, uri string, version int, content string) {
 	store.docs[uri] = &Document{
-		content: content,
-		uri:     uri,
-		version: version,
+		Content: content,
+		URI:     uri,
+		Version: version,
 	}
 	return
 }
@@ -274,8 +274,8 @@ func wordAtPosition(content string, line int, char int) Option[*Range] {
 					return nil
 				}
 				r := &Range{
-					startPos: Position{line: line, character: start},
-					endPos:   Position{line: line, character: end},
+					StartPos: Position{Line: line, Character: start},
+					EndPos:   Position{Line: line, Character: end},
 				}
 				return r
 			}()
@@ -290,18 +290,18 @@ func handleCompletion(store *DocumentStore, uri string, line int, char int) Comp
 	return func() CompletionList {
 		if v_1, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
 			return func() CompletionList {
-				content_2 := v_1.F0.content
+				content_2 := v_1.F0.Content
 				word_3 := ""
 				if v_2, ok := wordAtPosition(content_2, line, char).(OptionSome[*Range]); ok {
 					{
-						lines_4 := strings.Split(v_1.F0.content, "\n")
+						lines_4 := strings.Split(v_1.F0.Content, "\n")
 						if line < len(lines_4) {
 							{
 								text_5 := lines_4[line]
 								length_6 := len(text_5)
 								if char <= length_6 {
 									{
-										word_3 = text_5[char-(char-v_2.F0.startPos.character) : char]
+										word_3 = text_5[char-(char-v_2.F0.StartPos.Character) : char]
 									}
 								} else {
 									{
@@ -323,15 +323,15 @@ func handleCompletion(store *DocumentStore, uri string, line int, char int) Comp
 				keywords_7 := buildKeywordCompletions()
 				items_8 := appendCompletions(keywords_7, word_3)
 				return CompletionList{
-					isIncomplete: false,
-					items:        items_8,
+					IsIncomplete: false,
+					Items:        items_8,
 				}
 			}()
 		} else {
 			return func() CompletionList {
 				return CompletionList{
-					isIncomplete: false,
-					items:        []CompletionItem{},
+					IsIncomplete: false,
+					Items:        []CompletionItem{},
 				}
 			}()
 		}
@@ -340,34 +340,34 @@ func handleCompletion(store *DocumentStore, uri string, line int, char int) Comp
 func buildKeywordCompletions() []CompletionItem {
 	return func() []CompletionItem {
 		return[]CompletionItem{
-			{label: "func", kind: 14, detail: "function declaration"},
-			{label: "struct", kind: 14, detail: "struct declaration"},
-			{label: "enum", kind: 14, detail: "enum declaration"},
-			{label: "interface", kind: 14, detail: "interface declaration"},
-			{label: "impl", kind: 14, detail: "impl block"},
-			{label: "let", kind: 14, detail: "immutable binding"},
-			{label: "var", kind: 14, detail: "mutable binding"},
-			{label: "if", kind: 14, detail: "conditional expression"},
-			{label: "else", kind: 14, detail: "else clause"},
-			{label: "switch", kind: 14, detail: "switch expression"},
-			{label: "case", kind: 14, detail: "case clause"},
-			{label: "while", kind: 14, detail: "while loop"},
-			{label: "return", kind: 14, detail: "return statement"},
-			{label: "end", kind: 14, detail: "block end"},
-			{label: "using", kind: 14, detail: "typeclass constraint"},
-			{label: "import", kind: 14, detail: "import statement"},
-			{label: "package", kind: 14, detail: "package declaration"},
-			{label: "Option", kind: 7, detail: "Option[A] - nullable type"},
-			{label: "Result", kind: 7, detail: "Result[A, E] - error type"},
-			{label: "Some", kind: 14, detail: "Some[A] - option variant"},
-			{label: "None", kind: 14, detail: "None[A] - none variant"},
-			{label: "Ok", kind: 14, detail: "Ok[A, E] - result variant"},
-			{label: "Err", kind: 14, detail: "Err[A, E] - error variant"},
-			{label: "List", kind: 7, detail: "List[A] - linked list"},
-			{label: "Slice", kind: 7, detail: "Slice[A] - Go slice"},
-			{label: "Map", kind: 7, detail: "Map[K, V] - Go map"},
-			{label: "Set", kind: 7, detail: "Set[A] - Go set"},
-			{label: "Ref", kind: 7, detail: "Ref[T] - non-nil reference"},
+			{Label: "func", Kind: 14, Detail: "function declaration"},
+			{Label: "struct", Kind: 14, Detail: "struct declaration"},
+			{Label: "enum", Kind: 14, Detail: "enum declaration"},
+			{Label: "interface", Kind: 14, Detail: "interface declaration"},
+			{Label: "impl", Kind: 14, Detail: "impl block"},
+			{Label: "let", Kind: 14, Detail: "immutable binding"},
+			{Label: "var", Kind: 14, Detail: "mutable binding"},
+			{Label: "if", Kind: 14, Detail: "conditional expression"},
+			{Label: "else", Kind: 14, Detail: "else clause"},
+			{Label: "switch", Kind: 14, Detail: "switch expression"},
+			{Label: "case", Kind: 14, Detail: "case clause"},
+			{Label: "while", Kind: 14, Detail: "while loop"},
+			{Label: "return", Kind: 14, Detail: "return statement"},
+			{Label: "end", Kind: 14, Detail: "block end"},
+			{Label: "using", Kind: 14, Detail: "typeclass constraint"},
+			{Label: "import", Kind: 14, Detail: "import statement"},
+			{Label: "package", Kind: 14, Detail: "package declaration"},
+			{Label: "Option", Kind: 7, Detail: "Option[A] - nullable type"},
+			{Label: "Result", Kind: 7, Detail: "Result[A, E] - error type"},
+			{Label: "Some", Kind: 14, Detail: "Some[A] - option variant"},
+			{Label: "None", Kind: 14, Detail: "None[A] - none variant"},
+			{Label: "Ok", Kind: 14, Detail: "Ok[A, E] - result variant"},
+			{Label: "Err", Kind: 14, Detail: "Err[A, E] - error variant"},
+			{Label: "List", Kind: 7, Detail: "List[A] - linked list"},
+			{Label: "Slice", Kind: 7, Detail: "Slice[A] - Go slice"},
+			{Label: "Map", Kind: 7, Detail: "Map[K, V] - Go map"},
+			{Label: "Set", Kind: 7, Detail: "Set[A] - Go set"},
+			{Label: "Ref", Kind: 7, Detail: "Ref[T] - non-nil reference"},
 		}
 	}()
 
@@ -379,7 +379,7 @@ func appendCompletions(items[]CompletionItem, word string) []CompletionItem {
 		}
 		var filtered[]CompletionItem
 		for _, item := range items {
-			if strings.HasPrefix(strings.ToLower(item.label), strings.ToLower(word)) {
+			if strings.HasPrefix(strings.ToLower(item.Label), strings.ToLower(word)) {
 				filtered = append(filtered, item)
 			}
 		}
@@ -392,22 +392,22 @@ func handleHover(store *DocumentStore, uri string, line int, char int) Option[Ho
 		if v_3, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
 			return func() Option[Hover] {
 				return func() Option[Hover] {
-					if v_4, ok := wordAtPosition(v_3.F0.content, line, char).(OptionSome[*Range]); ok {
+					if v_4, ok := wordAtPosition(v_3.F0.Content, line, char).(OptionSome[*Range]); ok {
 						return func() Option[Hover] {
-							lines_9 := strings.Split(v_3.F0.content, "\n")
+							lines_9 := strings.Split(v_3.F0.Content, "\n")
 							return func() Option[Hover] {
 								if line < len(lines_9) {
 									return func() Option[Hover] {
 										text_10 := lines_9[line]
-										word_11 := text_10[v_4.F0.startPos.character:v_4.F0.endPos.character]
+										word_11 := text_10[v_4.F0.StartPos.Character:v_4.F0.EndPos.Character]
 										docStr_12 := buildHoverDoc(word_11)
 										var hoverRange_13 Option[Range] = Some[Range](*v_4.F0)
 										hover_14 := Hover{
-											contents: MarkupContent{
-												kind:  "plaintext",
-												value: docStr_12,
+											Contents: MarkupContent{
+												Kind:  "plaintext",
+												Value: docStr_12,
 											},
-											textRange: hoverRange_13,
+											TextRange: hoverRange_13,
 										}
 										return Some[Hover](hover_14)
 									}()
@@ -475,7 +475,7 @@ func handleDiagnostics(store *DocumentStore, uri string) []Diagnostic {
 	return func() []Diagnostic {
 		if v_5, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
 			return func() []Diagnostic {
-				return runMyGoDiagnostics(v_5.F0.content)
+				return runMyGoDiagnostics(v_5.F0.Content)
 			}()
 		} else {
 			return func() []Diagnostic {
@@ -493,27 +493,27 @@ func runMyGoDiagnostics(content string) []Diagnostic {
 			if strings.Contains(trimmed, "where ") && !strings.HasPrefix(trimmed, "#") {
 				startChar := strings.Index(trimmed, "where")
 				diags = append(diags, Diagnostic{
-					textRange: Range{
-						startPos: Position{line: i, character: startChar},
-						endPos:   Position{line: i, character: startChar + 5},
+					TextRange: Range{
+						StartPos: Position{Line: i, Character: startChar},
+						EndPos:   Position{Line: i, Character: startChar + 5},
 					},
-					severity: 2,
-					source:   "mygo",
-					message:  "'where' is deprecated, use 'using' instead",
-					code:     "DEPRECATED",
+					Severity: 2,
+					Source:   "mygo",
+					Message:  "'where' is deprecated, use 'using' instead",
+					Code:     "DEPRECATED",
 				})
 			}
 			if strings.Contains(trimmed, "-> Unit") {
 				startChar := strings.Index(trimmed, "-> Unit")
 				diags = append(diags, Diagnostic{
-					textRange: Range{
-						startPos: Position{line: i, character: startChar},
-						endPos:   Position{line: i, character: startChar + 7},
+					TextRange: Range{
+						StartPos: Position{Line: i, Character: startChar},
+						EndPos:   Position{Line: i, Character: startChar + 7},
 					},
-					severity: 2,
-					source:   "mygo",
-					message:  "'-> Unit' is deprecated, use '-> ()' instead",
-					code:     "DEPRECATED",
+					Severity: 2,
+					Source:   "mygo",
+					Message:  "'-> Unit' is deprecated, use '-> ()' instead",
+					Code:     "DEPRECATED",
 				})
 			}
 		}
@@ -525,7 +525,7 @@ func handleDocumentSymbols(store *DocumentStore, uri string) []DocumentSymbol {
 	return func() []DocumentSymbol {
 		if v_6, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
 			return func() []DocumentSymbol {
-				return parseAndBuildSymbols(v_6.F0.content)
+				return parseAndBuildSymbols(v_6.F0.Content)
 			}()
 		} else {
 			return func() []DocumentSymbol {
@@ -553,10 +553,10 @@ func parseAndBuildSymbols(content string) []DocumentSymbol {
 						name = name[:idx]
 					}
 					sym := DocumentSymbol{
-						name: name, kind: 23,
-						textRange:          Range{startPos: Position{line: i}, endPos: Position{line: i}},
-						selectiontextRange: Range{startPos: Position{line: i, character: len(trimmed) - len(name)}, endPos: Position{line: i, character: len(trimmed)}},
-						detail:             "struct",
+						Name: name, Kind: 23,
+						TextRange:          Range{StartPos: Position{Line: i}, EndPos: Position{Line: i}},
+						SelectionTextRange: Range{StartPos: Position{Line: i, Character: len(trimmed) - len(name)}, EndPos: Position{Line: i, Character: len(trimmed)}},
+						Detail:             "struct",
 					}
 					symbols = append(symbols, sym)
 				}
@@ -570,10 +570,10 @@ func parseAndBuildSymbols(content string) []DocumentSymbol {
 						name = name[:idx]
 					}
 					sym := DocumentSymbol{
-						name: name, kind: 10,
-						textRange:          Range{startPos: Position{line: i}, endPos: Position{line: i}},
-						selectiontextRange: Range{startPos: Position{line: i, character: len(trimmed) - len(name)}, endPos: Position{line: i, character: len(trimmed)}},
-						detail:             "enum",
+						Name: name, Kind: 10,
+						TextRange:          Range{StartPos: Position{Line: i}, EndPos: Position{Line: i}},
+						SelectionTextRange: Range{StartPos: Position{Line: i, Character: len(trimmed) - len(name)}, EndPos: Position{Line: i, Character: len(trimmed)}},
+						Detail:             "enum",
 					}
 					symbols = append(symbols, sym)
 				}
@@ -590,10 +590,10 @@ func parseAndBuildSymbols(content string) []DocumentSymbol {
 				}
 				selStart := len(trimmed) - len(name)
 				sym := DocumentSymbol{
-					name: name, kind: 12,
-					textRange:          Range{startPos: Position{line: i}, endPos: Position{line: i}},
-					selectiontextRange: Range{startPos: Position{line: i, character: selStart}, endPos: Position{line: i, character: len(trimmed)}},
-					detail:             "func(" + name + ")",
+					Name: name, Kind: 12,
+					TextRange:          Range{StartPos: Position{Line: i}, EndPos: Position{Line: i}},
+					SelectionTextRange: Range{StartPos: Position{Line: i, Character: selStart}, EndPos: Position{Line: i, Character: len(trimmed)}},
+					Detail:             "func(" + name + ")",
 				}
 				symbols = append(symbols, sym)
 			}
@@ -603,10 +603,10 @@ func parseAndBuildSymbols(content string) []DocumentSymbol {
 				if len(parts) >= 2 {
 					name := parts[1]
 					sym := DocumentSymbol{
-						name: "impl " + name, kind: 5,
-						textRange:          Range{startPos: Position{line: i}, endPos: Position{line: i}},
-						selectiontextRange: Range{startPos: Position{line: i, character: 4}, endPos: Position{line: i, character: len(trimmed)}},
-						detail:             "impl",
+						Name: "impl " + name, Kind: 5,
+						TextRange:          Range{StartPos: Position{Line: i}, EndPos: Position{Line: i}},
+						SelectionTextRange: Range{StartPos: Position{Line: i, Character: 4}, EndPos: Position{Line: i, Character: len(trimmed)}},
+						Detail:             "impl",
 					}
 					symbols = append(symbols, sym)
 				}
@@ -621,15 +621,15 @@ func handleDefinition(store *DocumentStore, uri string, line int, char int) Opti
 		if v_7, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
 			return func() Option[[]Location] {
 				return func() Option[[]Location] {
-					if v_8, ok := wordAtPosition(v_7.F0.content, line, char).(OptionSome[*Range]); ok {
+					if v_8, ok := wordAtPosition(v_7.F0.Content, line, char).(OptionSome[*Range]); ok {
 						return func() Option[[]Location] {
-							lines_15 := strings.Split(v_7.F0.content, "\n")
+							lines_15 := strings.Split(v_7.F0.Content, "\n")
 							return func() Option[[]Location] {
 								if line < len(lines_15) {
 									return func() Option[[]Location] {
 										text_16 := lines_15[line]
-										word_17 := text_16[v_8.F0.startPos.character:v_8.F0.endPos.character]
-										locs_18 := searchDefinitionInDoc(v_7.F0.content, word_17, v_7.F0.uri)
+										word_17 := text_16[v_8.F0.StartPos.Character:v_8.F0.EndPos.Character]
+										locs_18 := searchDefinitionInDoc(v_7.F0.Content, word_17, v_7.F0.URI)
 										return func() Option[[]Location] {
 											if len(locs_18) > 0 {
 												return func() Option[[]Location] {
@@ -674,19 +674,19 @@ func searchDefinitionInDoc(content string, word string, uri string) []Location {
 			}
 			if strings.HasPrefix(trimmed, "func "+word) {
 				locations = append(locations, Location{
-					uri: "file://" + uri,
-					textRange: Range{
-						startPos: Position{line: i, character: 0},
-						endPos:   Position{line: i, character: len(trimmed)},
+					URI: "file://" + uri,
+					TextRange: Range{
+						StartPos: Position{Line: i, Character: 0},
+						EndPos:   Position{Line: i, Character: len(trimmed)},
 					},
 				})
 			}
 			if strings.HasPrefix(trimmed, "struct "+word) || strings.HasPrefix(trimmed, "enum "+word) {
 				locations = append(locations, Location{
-					uri: "file://" + uri,
-					textRange: Range{
-						startPos: Position{line: i, character: 0},
-						endPos:   Position{line: i, character: len(trimmed)},
+					URI: "file://" + uri,
+					TextRange: Range{
+						StartPos: Position{Line: i, Character: 0},
+						EndPos:   Position{Line: i, Character: len(trimmed)},
 					},
 				})
 			}
@@ -700,15 +700,15 @@ func handleReferences(store *DocumentStore, uri string, line int, char int) Opti
 		if v_9, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
 			return func() Option[[]Location] {
 				return func() Option[[]Location] {
-					if v_10, ok := wordAtPosition(v_9.F0.content, line, char).(OptionSome[*Range]); ok {
+					if v_10, ok := wordAtPosition(v_9.F0.Content, line, char).(OptionSome[*Range]); ok {
 						return func() Option[[]Location] {
-							lines_19 := strings.Split(v_9.F0.content, "\n")
+							lines_19 := strings.Split(v_9.F0.Content, "\n")
 							return func() Option[[]Location] {
 								if line < len(lines_19) {
 									return func() Option[[]Location] {
 										text_20 := lines_19[line]
-										word_21 := text_20[v_10.F0.startPos.character:v_10.F0.endPos.character]
-										locs_22 := searchReferencesInDoc(v_9.F0.content, word_21, v_9.F0.uri)
+										word_21 := text_20[v_10.F0.StartPos.Character:v_10.F0.EndPos.Character]
+										locs_22 := searchReferencesInDoc(v_9.F0.Content, word_21, v_9.F0.URI)
 										return func() Option[[]Location] {
 											if len(locs_22) > 0 {
 												return func() Option[[]Location] {
@@ -755,10 +755,10 @@ func searchReferencesInDoc(content string, word string, uri string) []Location {
 				startChar := strings.Index(trimmed, word)
 				if startChar >= 0 {
 					locations = append(locations, Location{
-						uri: "file://" + uri,
-						textRange: Range{
-							startPos: Position{line: i, character: startChar},
-							endPos:   Position{line: i, character: startChar + len(word)},
+						URI: "file://" + uri,
+						TextRange: Range{
+							StartPos: Position{Line: i, Character: startChar},
+							EndPos:   Position{Line: i, Character: startChar + len(word)},
 						},
 					})
 				}
@@ -775,14 +775,14 @@ func handleWorkspaceSymbols(store *DocumentStore, query string) []any {
 
 }
 func buildInitializeResponse() InitializeResult {
-	return InitializeResult{capabilities: ServerCapabilities{
-		completionProvider:      CompletionOptions{triggerCharacters: []string{".", "(", " ", "\"", ":"}},
-		definitionProvider:      true,
-		documentSymbolProvider:  true,
-		hoverProvider:           true,
-		referencesProvider:      true,
-		textDocumentSync:        1,
-		workspaceSymbolProvider: true,
+	return InitializeResult{Capabilities: ServerCapabilities{
+		CompletionProvider:      CompletionOptions{TriggerCharacters: []string{".", "(", " ", "\"", ":"}},
+		DefinitionProvider:      true,
+		DocumentSymbolProvider:  true,
+		HoverProvider:           true,
+		ReferencesProvider:      true,
+		TextDocumentSync:        1,
+		WorkspaceSymbolProvider: true,
 	}}
 }
 func handleMessage(store *DocumentStore, raw string) LSPMessage {
@@ -793,30 +793,30 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 			return m
 		}()
 
-	id_24 := msg_23.id
+	id_24 := msg_23.Id
 	return func() LSPMessage {
-		if msg_23.method == "initialize" {
+		if msg_23.Method == "initialize" {
 			return func() LSPMessage {
 				result_25 := buildInitializeResponse()
 				return LSPMessage{
-					id:      id_24,
-					jsonrpc: "2.0",
-					result:  Some[any](result_25),
+					Id:      id_24,
+					Jsonrpc: "2.0",
+					Result:  Some[any](result_25),
 				}
 			}()
 		} else {
-			if msg_23.method == "initialized" {
+			if msg_23.Method == "initialized" {
 				return func() LSPMessage {
 					return LSPMessage{
-						id:      id_24,
-						jsonrpc: "2.0",
+						Id:      id_24,
+						Jsonrpc: "2.0",
 					}
 				}()
 			} else {
-				if msg_23.method == "textDocument/didOpen" {
+				if msg_23.Method == "textDocument/didOpen" {
 					return func() LSPMessage {
 						return func() LSPMessage {
-							if v_11, ok := msg_23.params.(OptionSome[map[string]any]); ok {
+							if v_11, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
 								return func() LSPMessage {
 									docItem_26 :=
 										func() TextDocumentItem {
@@ -826,29 +826,29 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 											return item
 										}()
 
-									storePut(store, docItem_26.uri, docItem_26.version, docItem_26.content)
-									diags_27 := handleDiagnostics(store, docItem_26.uri)
+									storePut(store, docItem_26.URI, docItem_26.Version, docItem_26.Content)
+									diags_27 := handleDiagnostics(store, docItem_26.URI)
 									return LSPMessage{
-										id:      id_24,
-										jsonrpc: "2.0",
-										result:  Some[any](diags_27),
+										Id:      id_24,
+										Jsonrpc: "2.0",
+										Result:  Some[any](diags_27),
 									}
 								}()
 							} else {
 								return func() LSPMessage {
 									return LSPMessage{
-										id:      id_24,
-										jsonrpc: "2.0",
+										Id:      id_24,
+										Jsonrpc: "2.0",
 									}
 								}()
 							}
 						}()
 					}()
 				} else {
-					if msg_23.method == "textDocument/didChange" {
+					if msg_23.Method == "textDocument/didChange" {
 						return func() LSPMessage {
 							return func() LSPMessage {
-								if v_12, ok := msg_23.params.(OptionSome[map[string]any]); ok {
+								if v_12, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
 									return func() LSPMessage {
 										version_28 :=
 											func() int {
@@ -883,8 +883,8 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 
 										storePut(store, uri_30, version_28, content_29)
 										return LSPMessage{
-											id:      id_24,
-											jsonrpc: "2.0",
+											Id:      id_24,
+											Jsonrpc: "2.0",
 										}
 									}()
 								} else {
@@ -893,10 +893,10 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 							}()
 						}()
 					} else {
-						if msg_23.method == "textDocument/didClose" {
+						if msg_23.Method == "textDocument/didClose" {
 							return func() LSPMessage {
 								return func() LSPMessage {
-									if v_13, ok := msg_23.params.(OptionSome[map[string]any]); ok {
+									if v_13, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
 										return func() LSPMessage {
 											uri_31 :=
 												func() string {
@@ -909,25 +909,25 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 
 											storeDelete(store, uri_31)
 											return LSPMessage{
-												id:      id_24,
-												jsonrpc: "2.0",
+												Id:      id_24,
+												Jsonrpc: "2.0",
 											}
 										}()
 									} else {
 										return func() LSPMessage {
 											return LSPMessage{
-												id:      id_24,
-												jsonrpc: "2.0",
+												Id:      id_24,
+												Jsonrpc: "2.0",
 											}
 										}()
 									}
 								}()
 							}()
 						} else {
-							if msg_23.method == "textDocument/completion" {
+							if msg_23.Method == "textDocument/completion" {
 								return func() LSPMessage {
 									return func() LSPMessage {
-										if v_14, ok := msg_23.params.(OptionSome[map[string]any]); ok {
+										if v_14, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
 											return func() LSPMessage {
 												uri_32 :=
 													func() string {
@@ -958,26 +958,26 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 
 												items_35 := handleCompletion(store, uri_32, line_33, char_34)
 												return LSPMessage{
-													id:      id_24,
-													jsonrpc: "2.0",
-													result:  Some[any](items_35),
+													Id:      id_24,
+													Jsonrpc: "2.0",
+													Result:  Some[any](items_35),
 												}
 											}()
 										} else {
 											return func() LSPMessage {
 												return LSPMessage{
-													id:      id_24,
-													jsonrpc: "2.0",
+													Id:      id_24,
+													Jsonrpc: "2.0",
 												}
 											}()
 										}
 									}()
 								}()
 							} else {
-								if msg_23.method == "textDocument/hover" {
+								if msg_23.Method == "textDocument/hover" {
 									return func() LSPMessage {
 										return func() LSPMessage {
-											if v_15, ok := msg_23.params.(OptionSome[map[string]any]); ok {
+											if v_15, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
 												return func() LSPMessage {
 													uri_36 :=
 														func() string {
@@ -1008,26 +1008,26 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 
 													hover_39 := handleHover(store, uri_36, line_37, char_38)
 													return LSPMessage{
-														id:      id_24,
-														jsonrpc: "2.0",
-														result:  hover_39,
+														Id:      id_24,
+														Jsonrpc: "2.0",
+														Result:  hover_39,
 													}
 												}()
 											} else {
 												return func() LSPMessage {
 													return LSPMessage{
-														id:      id_24,
-														jsonrpc: "2.0",
+														Id:      id_24,
+														Jsonrpc: "2.0",
 													}
 												}()
 											}
 										}()
 									}()
 								} else {
-									if msg_23.method == "textDocument/definition" {
+									if msg_23.Method == "textDocument/definition" {
 										return func() LSPMessage {
 											return func() LSPMessage {
-												if v_16, ok := msg_23.params.(OptionSome[map[string]any]); ok {
+												if v_16, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
 													return func() LSPMessage {
 														uri_40 :=
 															func() string {
@@ -1058,26 +1058,26 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 
 														locs_43 := handleDefinition(store, uri_40, line_41, char_42)
 														return LSPMessage{
-															id:      id_24,
-															jsonrpc: "2.0",
-															result:  locs_43,
+															Id:      id_24,
+															Jsonrpc: "2.0",
+															Result:  locs_43,
 														}
 													}()
 												} else {
 													return func() LSPMessage {
 														return LSPMessage{
-															id:      id_24,
-															jsonrpc: "2.0",
+															Id:      id_24,
+															Jsonrpc: "2.0",
 														}
 													}()
 												}
 											}()
 										}()
 									} else {
-										if msg_23.method == "textDocument/references" {
+										if msg_23.Method == "textDocument/references" {
 											return func() LSPMessage {
 												return func() LSPMessage {
-													if v_17, ok := msg_23.params.(OptionSome[map[string]any]); ok {
+													if v_17, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
 														return func() LSPMessage {
 															uri_44 :=
 																func() string {
@@ -1108,26 +1108,26 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 
 															locs_47 := handleReferences(store, uri_44, line_45, char_46)
 															return LSPMessage{
-																id:      id_24,
-																jsonrpc: "2.0",
-																result:  locs_47,
+																Id:      id_24,
+																Jsonrpc: "2.0",
+																Result:  locs_47,
 															}
 														}()
 													} else {
 														return func() LSPMessage {
 															return LSPMessage{
-																id:      id_24,
-																jsonrpc: "2.0",
+																Id:      id_24,
+																Jsonrpc: "2.0",
 															}
 														}()
 													}
 												}()
 											}()
 										} else {
-											if msg_23.method == "textDocument/documentSymbol" {
+											if msg_23.Method == "textDocument/documentSymbol" {
 												return func() LSPMessage {
 													return func() LSPMessage {
-														if v_18, ok := msg_23.params.(OptionSome[map[string]any]); ok {
+														if v_18, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
 															return func() LSPMessage {
 																uri_48 :=
 																	func() string {
@@ -1140,26 +1140,26 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 
 																syms_49 := handleDocumentSymbols(store, uri_48)
 																return LSPMessage{
-																	id:      id_24,
-																	jsonrpc: "2.0",
-																	result:  Some[any](syms_49),
+																	Id:      id_24,
+																	Jsonrpc: "2.0",
+																	Result:  Some[any](syms_49),
 																}
 															}()
 														} else {
 															return func() LSPMessage {
 																return LSPMessage{
-																	id:      id_24,
-																	jsonrpc: "2.0",
+																	Id:      id_24,
+																	Jsonrpc: "2.0",
 																}
 															}()
 														}
 													}()
 												}()
 											} else {
-												if msg_23.method == "workspace/symbol" {
+												if msg_23.Method == "workspace/symbol" {
 													return func() LSPMessage {
 														return func() LSPMessage {
-															if v_19, ok := msg_23.params.(OptionSome[map[string]any]); ok {
+															if v_19, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
 																return func() LSPMessage {
 																	query_50 :=
 																		func() string {
@@ -1171,16 +1171,16 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 
 																	syms_51 := handleWorkspaceSymbols(store, query_50)
 																	return LSPMessage{
-																		id:      id_24,
-																		jsonrpc: "2.0",
-																		result:  Some[any](syms_51),
+																		Id:      id_24,
+																		Jsonrpc: "2.0",
+																		Result:  Some[any](syms_51),
 																	}
 																}()
 															} else {
 																return func() LSPMessage {
 																	return LSPMessage{
-																		id:      id_24,
-																		jsonrpc: "2.0",
+																		Id:      id_24,
+																		Jsonrpc: "2.0",
 																	}
 																}()
 															}
@@ -1189,12 +1189,12 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 												} else {
 													return func() LSPMessage {
 														return LSPMessage{
-															error: Some[LSPError](LSPError{
-																code:    -32601,
-																message: "method not found: " + msg_23.method,
+															Error: Some[LSPError](LSPError{
+																Code:    -32601,
+																Message: "method not found: " + msg_23.Method,
 															}),
-															id:      id_24,
-															jsonrpc: "2.0",
+															Id:      id_24,
+															Jsonrpc: "2.0",
 														}
 													}()
 												}

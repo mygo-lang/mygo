@@ -778,12 +778,12 @@ func TestCompileDirSupportsDynamicTypeclassDispatch(t *testing.T) {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
 	got := readFile(t, outFiles[0])
-  for _, want := range []string{
-    "type Show[A any] interface {",
-    "show(value A) string",
-    "func show_int64(value int64) string {",
-    "return 42.show()",
-  } {
+	for _, want := range []string{
+		"type Show[A any] interface {",
+		"show(value A) string",
+		"func show_int64(value int64) string {",
+		"return 42.show()",
+	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
 		}
@@ -978,12 +978,12 @@ func TestCompileDirSupportsMultiParamTypeclassDispatch(t *testing.T) {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
 	got := readFile(t, outFiles[0])
-  for _, want := range []string{
-    "type Eq[A any] interface {",
-    "equals(left A, right A) bool",
-    "func equals_int64(left int64, right int64) bool {",
-    "return 1.equals(2)",
-  } {
+	for _, want := range []string{
+		"type Eq[A any] interface {",
+		"equals(left A, right A) bool",
+		"func equals_int64(left int64, right int64) bool {",
+		"return 1.equals(2)",
+	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
 		}
@@ -1133,6 +1133,108 @@ func TestCompileDirDeduplicatesTypeclassMethodParams(t *testing.T) {
 	got := readFile(t, outFiles[0])
 	if strings.Count(got, "showFn ") != 1 {
 		t.Fatalf("expected one typeclass function param, got generated Go:\n%s", got)
+	}
+}
+
+func TestCompileDirUsesNamedTypeclassImplementation(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+  interface Eq[A]
+    func Equals(left: A, right: A) -> Bool
+  end
+
+  impl Int: Eq[Int]
+    func Equals(left: Int, right: Int) -> Bool
+      false
+    end
+  end
+
+  impl FastEq: Eq[Int]
+    func Equals(left: Int, right: Int) -> Bool
+      true
+    end
+  end
+
+  func same(left: Int, right: Int) -> Bool using FastEq: Eq[Int]
+    left.Equals(right)
+  end
+
+  func demo() -> Bool
+    same(1, 2)
+  end
+`)
+
+	outFiles, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, outFiles[0])
+	if !strings.Contains(got, "func Equals_fasteq_int") {
+		t.Fatalf("expected named impl helper, got:\n%s", got)
+	}
+	if !strings.Contains(got, "same(1, 2, Equals_fasteq_int)") {
+		t.Fatalf("expected call to pass named impl helper, got:\n%s", got)
+	}
+}
+
+func TestCompileDirAllowsUsingImplementationName(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+
+  interface IEnumerable[C[A], A]
+    func Len(c: C[A]) -> Int
+  end
+
+  impl[T] SliceIEnumerable[T]: IEnumerable[Slice[T], T]
+    func Len(c: Slice[T]) -> Int
+      len(c)
+    end
+  end
+
+  func count(values: Slice[Int]) -> Int using SliceIEnumerable[Int]
+    values.len()
+  end
+`)
+
+	outFiles, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, outFiles[0])
+	if !strings.Contains(got, "Len_slice_t_t") && !strings.Contains(got, "lenFn") && !strings.Contains(got, "LenFn") {
+		t.Fatalf("expected generated Go to include a typeclass helper, got:\n%s", got)
+	}
+}
+
+func TestCompileDirEmitsHKTTypesOncePerPackage(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "prelude.mygo", `package prelude
+
+  interface IEnumerable[C[A], A]
+    func Each(c: C[A], fn: func(A) -> ()) -> ()
+  end
+`)
+	writeMygoFile(t, dir, "string.mygo", `package prelude
+
+  interface IStringOps[A]
+    func Wrap(value: A) -> IEnumerable[Slice, A]
+  end
+`)
+
+	outFiles, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	var combined strings.Builder
+	for _, path := range outFiles {
+		combined.WriteString(readFile(t, path))
+	}
+	got := combined.String()
+	if strings.Count(got, "type HKTType interface{}") != 1 {
+		t.Fatalf("expected one HKTType declaration, got generated Go:\n%s", got)
+	}
+	if strings.Count(got, "type HKT1[F any] interface{}") != 1 {
+		t.Fatalf("expected one HKT1 declaration, got generated Go:\n%s", got)
 	}
 }
 

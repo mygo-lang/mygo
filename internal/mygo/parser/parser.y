@@ -549,15 +549,17 @@ constraint
 	constr_suffix {
 		p := yylex.(*parser)
 		name := $1.lit
+		bindName := ""
 		if p.currentConstraintBindName != "" {
 			name = p.currentConstraintBindName
+			bindName = $1.lit
 		}
 		p.currentWhere = append(p.currentWhere, ast.Constraint{
 			Line: $1.line,
 			Column: $1.col,
 			Name: name,
 			Args: append([]ast.TypeExpr(nil), p.currentConstraintArgs...),
-			BindName: p.currentConstraintBindName,
+			BindName: bindName,
 		})
 		p.expectConstraintSuffix = false
 		p.currentConstraintBindName = ""
@@ -569,7 +571,6 @@ constr_suffix
 	: COLON IDENT constraint_suffix {
 		p := yylex.(*parser)
 		p.currentConstraintBindName = $2.lit
-		p.currentConstraintArgs = nil
 	}
 	| constraint_suffix
 	;

@@ -61,7 +61,7 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 			return helper, typ, nil
 		}
 		// Handle method calls on impl types (e.g., self.isSome() inside an impl block).
-		if ctx.currentImpl != "" && ctx.implTypeKey != "" {
+		if _, hasConstraintHelper := ctx.constraintFuncForMethod(field.Field); ctx.currentImpl != "" && ctx.implTypeKey != "" && !hasConstraintHelper {
 			if iface := g.pkg.Interfaces[ctx.currentImpl]; iface != nil {
 				for _, m := range iface.Methods {
 					if m.Name == field.Field {
@@ -112,7 +112,7 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 			if !ok {
 				best = typeclassBindingBest(bindings)
 			}
-			funcName, ok := ctx.constraintFuncs[field.Field]
+			funcName, ok := ctx.constraintFuncForMethod(field.Field)
 			if !ok {
 				_, ok = g.interfaceByMethod[field.Field]
 				if ok {
@@ -174,9 +174,9 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 				callee = bracketArgs(callee, typeArgCodes)
 			}
 			for _, c := range fn.Using {
-				iface := g.pkg.Interfaces[c.Name]
-				if iface == nil {
-					return nil, "", common.ErrorAtPos(c.Line, c.Column, "call %s: missing interface %s", fn.Name, c.Name)
+				namedImpl, iface, ok := g.resolveUsingConstraint(c)
+				if !ok {
+					return nil, "", common.ErrorAtPos(c.Line, c.Column, "call %s: missing implementation or interface %s", fn.Name, c.Name)
 				}
 				if len(iface.TypeParams) != len(c.Args) {
 					return nil, "", common.ErrorAtPos(c.Line, c.Column, "call %s: type arity mismatch for %s", fn.Name, c.Name)
@@ -185,12 +185,36 @@ func (g *generator) translateCall(n *CallExpr, ctx *exprCtx, expected string) (j
 				for _, arg := range c.Args {
 					cTypeArgs = append(cTypeArgs, typeString(arg, subst))
 				}
+				namedImplTypeKey := ""
+				if namedImpl != nil && c.BindName != "" {
+					implTypeArgs := append([]TypeExpr(nil), namedImpl.InterfaceArgs...)
+					if len(implTypeArgs) == 0 {
+						implTypeArgs = append([]TypeExpr(nil), namedImpl.TypeArgs...)
+					}
+					implSubst := map[string]string{}
+					if len(namedImpl.TypeParams) > 0 {
+						if len(namedImpl.TypeParams) != len(c.Args) {
+							return nil, "", common.ErrorAtPos(c.Line, c.Column, "call %s: type arity mismatch for %s", fn.Name, c.BindName)
+						}
+						for i, tp := range namedImpl.TypeParams {
+							implSubst[tp] = typeString(c.Args[i], subst)
+						}
+					}
+					for i, arg := range implTypeArgs {
+						implTypeArgs[i] = substituteTypeExpr(arg, implSubst)
+					}
+					namedImplTypeKey = g.implHelperKey(namedImpl, implTypeArgs)
+				}
 				for _, m := range iface.Methods {
 					resolvedType := ""
 					if len(cTypeArgs) > 0 {
 						resolvedType = cTypeArgs[0]
 					}
-					if helper, ok := ctx.constraintFuncs[m.Name]; ok {
+					if namedImplTypeKey != "" {
+						args = append(args, jen.Id(helperFuncName(m.Name, namedImplTypeKey)))
+						continue
+					}
+					if helper, ok := ctx.constraintFuncForMethod(m.Name); ok {
 						args = append(args, jen.Id(helper))
 						continue
 					}

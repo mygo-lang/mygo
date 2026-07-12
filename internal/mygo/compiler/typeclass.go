@@ -99,6 +99,112 @@ func typeclassFuncType(paramTypes []string, retType string) string {
 	return fn
 }
 
+func (ctx *exprCtx) constraintFuncForMethod(method string) (string, bool) {
+	if ctx == nil {
+		return "", false
+	}
+	if method == "" {
+		return "", false
+	}
+	if fn, ok := ctx.constraintFuncs[method]; ok && fn != "" {
+		return fn, true
+	}
+	lower := strings.ToLower(method[:1]) + method[1:]
+	if fn, ok := ctx.constraintFuncs[lower]; ok && fn != "" {
+		return fn, true
+	}
+	upper := strings.ToUpper(method[:1]) + method[1:]
+	if fn, ok := ctx.constraintFuncs[upper]; ok && fn != "" {
+		return fn, true
+	}
+	return "", false
+}
+
+func (g *generator) resolveUsingInterface(name string) (*ImplDecl, *InterfaceDecl, bool) {
+	baseName, _ := splitTypeArgs(name)
+	if baseName == "" {
+		baseName = name
+	}
+	for _, impl := range g.pkg.Impls {
+		implName := implDisplayTypeName(impl.Type)
+		if implName == "" {
+			implName = impl.Name
+		}
+		if implName == "" {
+			implName = impl.InterfaceName
+		}
+		if implName != baseName && g.implDisplayName(impl) != baseName {
+			continue
+		}
+		ifaceName := impl.InterfaceName
+		if ifaceName == "" {
+			ifaceName = impl.Name
+		}
+		iface := g.pkg.Interfaces[ifaceName]
+		if iface == nil {
+			continue
+		}
+		return impl, iface, true
+	}
+	if iface := g.pkg.Interfaces[name]; iface != nil {
+		return nil, iface, true
+	}
+	return nil, nil, false
+}
+
+func (g *generator) resolveUsingConstraint(c Constraint) (*ImplDecl, *InterfaceDecl, bool) {
+	if c.BindName == "" {
+		return g.resolveUsingInterface(c.Name)
+	}
+	for _, impl := range g.pkg.Impls {
+		if impl.Name != c.BindName && implDisplayTypeName(impl.Type) != c.BindName && g.implDisplayName(impl) != c.BindName {
+			continue
+		}
+		ifaceName := impl.InterfaceName
+		if ifaceName == "" {
+			ifaceName = impl.Name
+		}
+		if ifaceName != c.Name {
+			continue
+		}
+		iface := g.pkg.Interfaces[ifaceName]
+		if iface == nil {
+			continue
+		}
+		return impl, iface, true
+	}
+	return nil, nil, false
+}
+
+func (g *generator) implDisplayName(impl *ImplDecl) string {
+	if impl == nil {
+		return ""
+	}
+	if impl.Name != "" && impl.Name != impl.InterfaceName {
+		return impl.Name
+	}
+	base := ""
+	if impl.Type != nil {
+		if nt, ok := impl.Type.(*NamedType); ok {
+			base = nt.Name
+		}
+	}
+	if base == "" {
+		return impl.Name
+	}
+	if impl.InterfaceName != "" {
+		return base + impl.InterfaceName
+	}
+	return base
+}
+
+func implDisplayTypeName(t TypeExpr) string {
+	if nt, ok := t.(*NamedType); ok {
+		return nt.Name
+	}
+	return ""
+}
+
 func (g *generator) findVariant(enum *EnumDecl, name string) *EnumVariant {
 	for i := range enum.Variants {
 		if enum.Variants[i].Name == name {
@@ -198,7 +304,7 @@ func (g *generator) translateTypeclassCall(name string, args []Expr, ctx *exprCt
 			argCodes = append(argCodes, code)
 			argTypes = append(argTypes, typ)
 		}
-		if funcName, ok := ctx.constraintFuncs[name]; ok {
+		if funcName, ok := ctx.constraintFuncForMethod(name); ok {
 			return jen.Id(funcName).Call(argCodes...), methodReturnType(methodIface, name), true
 		}
 		if len(argCodes) > 0 {
@@ -273,7 +379,7 @@ func (g *generator) translateIdent(name string, line, col int, ctx *exprCtx, exp
 
 func (g *generator) translateTypeclassIdent(name string, ctx *exprCtx, expected string) (jen.Code, string, bool) {
 	if ifaceName, ok := g.resolveTypeclassInterface(name, ctx); ok {
-		if funcName, ok := ctx.constraintFuncs[name]; ok {
+		if funcName, ok := ctx.constraintFuncForMethod(name); ok {
 			return jen.Id(funcName), expected, true
 		}
 		if helper, ok := g.matchTypeclassHelper(ifaceName, name, nil, ctx); ok {
@@ -384,7 +490,7 @@ func (g *generator) matchTypeclassHelper(ifaceName, method string, args []Expr, 
 		score := typeclassMatchScore(typeArgs, ctx.typeParams)
 		if !found || betterMatch(score, bestScore) {
 			bestScore = score
-			bestTypeKey = g.implTypeKey(typeArgs)
+			bestTypeKey = g.implHelperKey(impl, typeArgs)
 			found = true
 		} else if sameMatch(score, bestScore) {
 			return nil, false

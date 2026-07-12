@@ -7,7 +7,7 @@ import (
 )
 
 func TestParsePrelude(t *testing.T) {
-	src, err := os.ReadFile("../../../prelude/prelude.mygo")
+	src, err := os.ReadFile("../../../lib/prelude/prelude.mygo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +36,7 @@ func TestParseGenericImpl(t *testing.T) {
 }
 
 func TestParseFullPrelude(t *testing.T) {
-	src, err := os.ReadFile("../../../prelude/prelude.mygo")
+	src, err := os.ReadFile("../../../lib/prelude/prelude.mygo")
 	if err != nil {
 		t.Fatal(err)
 	}

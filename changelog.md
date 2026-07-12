@@ -81,7 +81,7 @@
 - **`callAny` helper**: Fixes `return` syntax.
 
 ### `generate.go`
-- **Prelude dot-import**: Auto-injects `import . "github.com/mygo-lang/mygo/prelude"` and `var _ = None[any]()` for non-prelude packages.
+- **Prelude dot-import**: Auto-injects `import . "github.com/mygo-lang/mygo/lib/prelude"` and `var _ = None[any]()` for non-prelude packages.
 - **Go import keep-alive**: `goImportKeepAlive` ensures unused Go imports aren't stripped by the compiler.
 - **Render fixes**: Regex post-processing for `return func(` spacing, generic type bracket spacing.
 

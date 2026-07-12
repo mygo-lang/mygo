@@ -378,6 +378,34 @@ end
 	}
 }
 
+func TestParseFileSupportsNamedUsingImplementation(t *testing.T) {
+	src := `package main
+func eq(left: Int, right: Int) -> Bool using FastEq: Eq[Int]
+  true
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	if got := len(fn.Using); got != 1 {
+		t.Fatalf("len(FuncDecl.Using) = %d, want 1", got)
+	}
+	if fn.Using[0].Name != "Eq" {
+		t.Fatalf("FuncDecl.Using[0].Name = %q, want Eq", fn.Using[0].Name)
+	}
+	if fn.Using[0].BindName != "FastEq" {
+		t.Fatalf("FuncDecl.Using[0].BindName = %q, want FastEq", fn.Using[0].BindName)
+	}
+	if got := len(fn.Using[0].Args); got != 1 {
+		t.Fatalf("len(FuncDecl.Using[0].Args) = %d, want 1", got)
+	}
+}
+
 func TestParseFileSupportsInterfaceUsingClauses(t *testing.T) {
 	src := `package main
 interface Show[A]

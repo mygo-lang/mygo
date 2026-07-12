@@ -922,6 +922,52 @@ func (g *generator) implTypeKey(args []TypeExpr) string {
 	return "_" + strings.Join(out, "_")
 }
 
+func (g *generator) implHelperKey(impl *ImplDecl, args []TypeExpr) string {
+	typeKey := g.implTypeKey(args)
+	if impl == nil || impl.Type == nil || !g.hasDuplicateImplForTypeKey(impl, args) {
+		return typeKey
+	}
+	name := implDisplayTypeName(impl.Type)
+	if name == "" {
+		return typeKey
+	}
+	if len(args) > 0 {
+		if nt, ok := args[0].(*NamedType); ok && nt.Name == name {
+			return typeKey
+		}
+	}
+	return "_" + typeKeyFromType(name) + typeKey
+}
+
+func (g *generator) hasDuplicateImplForTypeKey(target *ImplDecl, args []TypeExpr) bool {
+	if target == nil {
+		return false
+	}
+	ifaceName := target.InterfaceName
+	if ifaceName == "" {
+		ifaceName = target.Name
+	}
+	typeKey := g.implTypeKey(args)
+	count := 0
+	for _, impl := range g.pkg.Impls {
+		otherIface := impl.InterfaceName
+		if otherIface == "" {
+			otherIface = impl.Name
+		}
+		if otherIface != ifaceName {
+			continue
+		}
+		otherArgs := impl.InterfaceArgs
+		if len(otherArgs) == 0 {
+			otherArgs = impl.TypeArgs
+		}
+		if g.implTypeKey(otherArgs) == typeKey {
+			count++
+		}
+	}
+	return count > 1
+}
+
 func genTypeParams(params []string) string {
 	if len(params) == 0 {
 		return ""
