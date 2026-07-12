@@ -8,12 +8,13 @@ import (
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
+	"github.com/mygo-lang/mygo/internal/mygo/pkg"
 )
 
 type packageIndex struct {
 	root     string
-	packages map[string]*Package
-	byDir    map[string]*Package
+	packages map[string]*pkg.Package
+	byDir    map[string]*pkg.Package
 }
 
 type packageExports struct {
@@ -32,38 +33,38 @@ func buildPackageIndex(root string, noPrelude bool) (*packageIndex, error) {
 	}
 	idx := &packageIndex{
 		root:     root,
-		packages: map[string]*Package{},
-		byDir:    map[string]*Package{},
+		packages: map[string]*pkg.Package{},
+		byDir:    map[string]*pkg.Package{},
 	}
 	for _, dir := range dirs {
-		pkg, err := loadPackage(dir, noPrelude)
+		pi, err := loadPackage(dir, noPrelude)
 		if err != nil {
 			return nil, err
 		}
-		pkg.WorkspaceRoot = root
-		if prev, ok := idx.packages[pkg.Name]; ok {
-			return nil, common.ErrorAtPos(0, 0, "package name %q conflicts between %q and %q", pkg.Name, prev.Dir, dir)
+		pi.WorkspaceRoot = root
+		if prev, ok := idx.packages[pi.Name]; ok {
+			return nil, common.ErrorAtPos(0, 0, "package name %q conflicts between %q and %q", pi.Name, prev.Dir, dir)
 		}
-		idx.packages[pkg.Name] = pkg
-		idx.byDir[dir] = pkg
+		idx.packages[pi.Name] = pi
+		idx.byDir[dir] = pi
 	}
 	return idx, nil
 }
 
-func (idx *packageIndex) packageForDir(dir string) (*Package, bool) {
-	pkg, ok := idx.byDir[dir]
-	return pkg, ok
+func (idx *packageIndex) packageForDir(dir string) (*pkg.Package, bool) {
+	pi, ok := idx.byDir[dir]
+	return pi, ok
 }
 
 func (idx *packageIndex) exportsFor(name string) (*packageExports, bool) {
-	pkg, ok := idx.packages[name]
+	pi, ok := idx.packages[name]
 	if !ok {
 		return nil, false
 	}
-	return pkg.exportView(), true
+	return exportView(pi), true
 }
 
-func (p *Package) exportView() *packageExports {
+func exportView(p *pkg.Package) *packageExports {
 	exports := &packageExports{
 		Name:          p.Name,
 		Funcs:         map[string]*FuncDecl{},
@@ -136,7 +137,7 @@ func resolveMyGoImport(workspaceRoot, fromDir, importPath string) (string, error
 	return "", common.ErrorAtPos(0, 0, "cannot resolve MyGO import %q from %q", importPath, fromDir)
 }
 
-func loadImportedMyGoPackage(workspaceRoot, fromDir, importPath string, noPrelude bool) (*Package, error) {
+func loadImportedMyGoPackage(workspaceRoot, fromDir, importPath string, noPrelude bool) (*pkg.Package, error) {
 	dir, err := resolveMyGoImport(workspaceRoot, fromDir, importPath)
 	if err != nil {
 		return nil, err

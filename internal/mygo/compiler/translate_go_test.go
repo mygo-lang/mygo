@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/mygo-lang/mygo/internal/mygo/codegen"
 )
 
 func TestInlineGoGeneratesValidGoExpr(t *testing.T) {
@@ -97,7 +99,7 @@ end
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = pkg.Generate()
+	_, err = codegen.Generate(pkg)
 	if err == nil {
 		t.Fatal("Generate() error = nil, want unknown operand error")
 	}
@@ -133,7 +135,7 @@ func compileInlineGoTestPackage(t *testing.T, src string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	goSrc, err := pkg.Generate()
+	goSrc, err := codegen.Generate(pkg)
 	if err != nil {
 		t.Fatal(err)
 	}

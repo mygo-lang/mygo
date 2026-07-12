@@ -4,25 +4,12 @@ import (
 	"go/types"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
+	"github.com/mygo-lang/mygo/internal/mygo/pkg"
 	"github.com/mygo-lang/mygo/internal/mygo/typeinference"
 )
 
-type Package struct {
-	Name          string
-	Dir           string
-	WorkspaceRoot string
-	NoPrelude     bool // if true, skip auto-importing prelude declarations
-	Imports       map[string]struct{}
-	ImportDecls   []*ImportDecl
-	ImportAliases map[string]string
-	Decls         []Decl
-	Enums         map[string]*EnumDecl
-	Structs       map[string]*StructDecl
-	Interfaces    map[string]*InterfaceDecl
-	Funcs         map[string]*FuncDecl
-	Impls         []*ImplDecl
-	Files         map[string][]Decl // source file name -> declarations
-}
+// Package is a type alias for the shared Package type.
+type Package = pkg.Package
 
 type goPackageSigs struct {
 	funcs   map[string]*goFuncSig
@@ -78,13 +65,8 @@ type bindingInfo struct {
 	Type string
 }
 
-type importSpec struct {
-	Alias string
-	Path  string
-}
-
 type generator struct {
-	pkg               *Package
+	pkg               *pkg.Package
 	importAliases     map[string]string
 	interfaceByMethod map[string]string
 	inherentMethods   map[string]map[string]*inherentMethod

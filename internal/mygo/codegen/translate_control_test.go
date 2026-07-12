@@ -1,4 +1,4 @@
-package compiler
+package codegen
 
 import (
 	"testing"
@@ -16,7 +16,7 @@ func TestTranslateSwitchUsesIfElse(t *testing.T) {
 		},
 	}
 
-	g := &generator{
+	g := &Generator{
 		pkg: &Package{
 			Name: "main",
 			Enums: map[string]*EnumDecl{
@@ -27,7 +27,7 @@ func TestTranslateSwitchUsesIfElse(t *testing.T) {
 		importAliases:     map[string]string{},
 		interfaceByMethod: map[string]string{},
 		variantByName:     map[string]string{"Some": "Option", "None": "Option"},
-		goSigCache:        map[string]*goPackageSigs{},
+		goSigCache:        map[string]*GoPackageSigs{},
 	}
 
 	t.Run("expression form with variant patterns", func(t *testing.T) {

@@ -7,8 +7,10 @@ import (
 	"strings"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
+	"github.com/mygo-lang/mygo/internal/mygo/codegen"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
 	parserpkg "github.com/mygo-lang/mygo/internal/mygo/parser"
+	"github.com/mygo-lang/mygo/internal/mygo/pkg"
 )
 
 // CompileDir compiles all .mygo files in a directory, generating one .gen.go file per source.
@@ -23,13 +25,13 @@ func CompileDirNoPrelude(dir string) ([]string, error) {
 }
 
 func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
-	pkg, err := loadPackage(dir, noPrelude)
+	p, err := loadPackage(dir, noPrelude)
 	if err != nil {
 		return nil, err
 	}
-	pkg.WorkspaceRoot = workspaceRoot
+	p.WorkspaceRoot = workspaceRoot
 
-	files, err := pkg.GenerateFiles()
+	files, err := codegen.GenerateFiles(p)
 	if err != nil {
 		return nil, err
 	}
@@ -149,12 +151,12 @@ func setSourceFile(file *parserpkg.File, sourceFile string) {
 	}
 }
 
-func loadPackage(dir string, noPrelude bool) (*Package, error) {
+func loadPackage(dir string, noPrelude bool) (*pkg.Package, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
-	pkg := &Package{
+	p := &pkg.Package{
 		Dir:           dir,
 		WorkspaceRoot: filepath.Dir(dir),
 		NoPrelude:     noPrelude,
@@ -193,32 +195,32 @@ func loadPackage(dir string, noPrelude bool) (*Package, error) {
 	if pkgName == "" {
 		pkgName = filepath.Base(dir)
 	}
-	pkg.Name = toPackageName(pkgName)
-	pkg.Decls = append(pkg.Decls, fileDecls...)
-	for _, decl := range pkg.Decls {
+	p.Name = toPackageName(pkgName)
+	p.Decls = append(p.Decls, fileDecls...)
+	for _, decl := range p.Decls {
 		switch d := decl.(type) {
 		case *ImportDecl:
-			pkg.Imports[d.Path] = struct{}{}
-			pkg.ImportDecls = append(pkg.ImportDecls, d)
+			p.Imports[d.Path] = struct{}{}
+			p.ImportDecls = append(p.ImportDecls, d)
 			alias := d.Alias
 			if alias == "" {
 				alias = importAliasForPath(d.Path)
 			}
-			if prev, ok := pkg.ImportAliases[alias]; ok && prev != d.Path {
+			if prev, ok := p.ImportAliases[alias]; ok && prev != d.Path {
 				return nil, common.ErrorAtPos(d.Line, d.Column, "import alias %q conflicts between %q and %q", alias, prev, d.Path)
 			}
-			pkg.ImportAliases[alias] = d.Path
+			p.ImportAliases[alias] = d.Path
 		case *EnumDecl:
-			pkg.Enums[d.Name] = d
+			p.Enums[d.Name] = d
 		case *StructDecl:
-			pkg.Structs[d.Name] = d
+			p.Structs[d.Name] = d
 		case *InterfaceDecl:
-			pkg.Interfaces[d.Name] = d
+			p.Interfaces[d.Name] = d
 		case *FuncDecl:
-			pkg.Funcs[d.Name] = d
+			p.Funcs[d.Name] = d
 		case *ImplDecl:
-			pkg.Impls = append(pkg.Impls, d)
+			p.Impls = append(p.Impls, d)
 		}
 	}
-	return pkg, nil
+	return p, nil
 }

@@ -1,4 +1,4 @@
-package compiler
+package codegen
 
 import (
 	"testing"
@@ -8,9 +8,9 @@ import (
 )
 
 func TestCompilePrelude(t *testing.T) {
-	pkg, err := loadPackage("../../../lib/prelude", true)
-	if err != nil {
-		t.Fatal(err)
+	pkg := simpleLoadPackage("../../../lib/prelude", true)
+	if pkg == nil {
+		t.Fatal("failed to load prelude package")
 	}
 	typedInfo, err := typeinference.InferPackage(&typeinference.PkgInfo{
 		Name:       pkg.Name,
@@ -25,24 +25,7 @@ func TestCompilePrelude(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := &generator{
-		pkg:               pkg,
-		importAliases:     pkg.ImportAliases,
-		interfaceByMethod: map[string]string{},
-		variantByName:     map[string]string{},
-		goSigCache:        map[string]*goPackageSigs{},
-		typedInfo:         typedInfo,
-	}
-	for name, iface := range pkg.Interfaces {
-		for _, m := range iface.Methods {
-			g.interfaceByMethod[m.Name] = name
-		}
-	}
-	for enumName, enum := range pkg.Enums {
-		for _, variant := range enum.Variants {
-			g.variantByName[variant.Name] = enumName
-		}
-	}
+	g := NewGenerator(pkg, typedInfo)
 
 	// Find the String IEnumerable impl and test genImpl.
 	var stringEnumImpl *ImplDecl
@@ -103,13 +86,13 @@ func TestCompilePrelude(t *testing.T) {
 }
 
 func TestLoadPreludeDoesNotDuplicatePreludeDecls(t *testing.T) {
-	withPrelude, err := loadPackage("../../../lib/prelude", false)
-	if err != nil {
-		t.Fatal(err)
+	withPrelude := simpleLoadPackage("../../../lib/prelude", false)
+	if withPrelude == nil {
+		t.Fatal("failed to load prelude with prelude")
 	}
-	withoutPrelude, err := loadPackage("../../../lib/prelude", true)
-	if err != nil {
-		t.Fatal(err)
+	withoutPrelude := simpleLoadPackage("../../../lib/prelude", true)
+	if withoutPrelude == nil {
+		t.Fatal("failed to load prelude without prelude")
 	}
 	if len(withPrelude.Decls) != len(withoutPrelude.Decls) {
 		t.Fatalf("loadPackage(prelude, false) added extra decls: got %d, want %d", len(withPrelude.Decls), len(withoutPrelude.Decls))
