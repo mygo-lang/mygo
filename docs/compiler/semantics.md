@@ -188,7 +188,7 @@ Per MIGRATE.md "新语句块方案", the yacc parser supports:
 
 ## Function Declaration Multiline Support
 
-Per AGENTS.genfiles.md, the compiler supports per-`.mygo` file generation to `.gen.go`. Function declarations now support spanning across multiple lines at key positions.
+Per genfiles.md, the compiler supports per-`.mygo` file generation to `.gen.go`. Function declarations now support spanning across multiple lines at key positions.
 
 ### Syntax
 

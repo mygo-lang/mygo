@@ -65,7 +65,7 @@ end
   - 泛型实例保持泛型，不压扁成 `any`
   - 歧义实例能正确报错
 - Regression
-  - `prelude/prelude.mygo` 能迁移到新语法
+  - `lib/prelude/prelude.mygo` 能迁移到新语法
   - `examples/main/main.mygo` 和 `examples/data-structure/data-structure.mygo` 保持可运行
   - 生成 Go 中不再出现 registry / reflect fallback 作为 typeclass 主路径
 
