@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"bytes"
+	"fmt"
 	"go/types"
 	"os"
 	"path/filepath"
@@ -421,7 +422,7 @@ func (p *Package) Generate() (string, error) {
 	}
 	var buf bytes.Buffer
 	for name, src := range files {
-		buf.WriteString("// === " + name + " ===\n\n")
+		fmt.Fprintf(&buf, "// === %s ===\n\n", name)
 		buf.WriteString(src)
 		buf.WriteString("\n\n")
 	}
