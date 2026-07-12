@@ -1,63 +1,89 @@
 package prelude
 
 import strings "go:strings"
+import utf8 "go:unicode/utf8"
 
 impl StringIEnumerable: IEnumerable[String, rune]
   func Each(c: String, fn: func(rune) -> ()) -> ()
     go[()] {
-        code: """
-          func() {
-            for _, ru := range c {
-                fn(ru)
-            }
-          }()
-        """
+      code: """
+        func() {
+          for _, ru := range c {
+            fn(ru)
+          }
+        }()
+      """
     }
   end
 
   func Len(c: String) -> Int
-    go[Int] {
-        code: `len(c)`
-    }
+    go[Int] { code: `len(c)` }
   end
 
   func Map[B](c: String, fn: func(rune) -> B) -> Slice[B] using SliceIEnumerable[rune]
-    let slc = go[Slice[rune]] {
-        code: `[]rune(c)`
-    }
+    let slc = go[Slice[rune]] { code: `[]rune(c)` }
     slc.Map(fn)
   end
 
   func Filter(c: String, fn: func(rune) -> Bool) -> Slice[rune] using SliceIEnumerable[rune]
-    let slc = go[Slice[rune]] {
-        code: `[]rune(c)`
-    }
+    let slc = go[Slice[rune]] { code: `[]rune(c)` }
     slc.Filter(fn)
   end
 
   func Fold[B](c: String, initial: B, fn: func(B, rune) -> B) -> B using SliceIEnumerable[rune]
-    let slc = go[Slice[rune]] {
-        code: `[]rune(c)`
-    }
+    let slc = go[Slice[rune]] { code: `[]rune(c)` }
     slc.Fold(initial, fn)
   end
 
   func Find(c: String, fn: func(rune) -> Bool) -> Option[Ref[rune]] using SliceIEnumerable[rune]
-    let slc = go[Slice[rune]] {
-        code: `[]rune(c)`
-    }
+    let slc = go[Slice[rune]] { code: `[]rune(c)` }
     slc.Find(fn)
   end
 
   func Contains(c: String, item: rune, eq: Eq[rune]) -> Bool
     strings.ContainsRune(c, item)
   end
-
 end
 
-# ===== Phase 2: String Utility Functions =====
-
 impl String
+  func FromRunes(rs: Slice[rune]) -> String
+    rs as String
+  end
+
+  func PeekRune(s: String) -> Option[Ref[rune]]
+    if s.Len() == 0 then
+      None
+    else
+      let (r, _) = utf8.DecodeRuneInString(s)
+      Some(Ref.new(r))
+    end
+  end
+
+  func AdvanceRune(s: String) -> String
+    if s.Len() == 0 then
+      s
+    else
+      let (_, size) = utf8.DecodeRuneInString(s)
+      go[String] {
+        code: `{s}[{size}:]`
+        in s = s
+        in size = size
+      }
+    end
+  end
+
+  func MatchString(s: String, prefix: String) -> Bool
+    if s.Len() >= prefix.Len() then
+      go[Bool] {
+        code: `{s}[:len({prefix})] == {prefix}`
+        in s = s
+        in prefix = prefix
+      }
+    else
+      false
+    end
+  end
+
   func HasPrefix(s: String, prefix: String) -> Bool
     strings.HasPrefix(s, prefix)
   end

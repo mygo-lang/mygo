@@ -1,0 +1,91 @@
+package prelude
+
+impl Int: Default[Int]
+  func Default() -> Int
+    0
+  end
+end
+
+impl Int8: Default[Int8]
+  func Default() -> Int8
+    0
+  end
+end
+
+impl UInt8: Default[UInt8]
+  func Default() -> UInt8
+    0
+  end
+end
+
+impl Int16: Default[Int16]
+  func Default() -> Int16
+    0
+  end
+end
+
+impl UInt16: Default[UInt16]
+  func Default() -> UInt16
+    0
+  end
+end
+
+impl Int32: Default[Int32]
+  func Default() -> Int32
+    0
+  end
+end
+
+impl UInt32: Default[UInt32]
+  func Default() -> UInt32
+    0
+  end
+end
+
+impl Int64: Default[Int64]
+  func Default() -> Int64
+    0
+  end
+end
+
+impl UInt: Default[UInt]
+  func Default() -> UInt
+    0
+  end
+end
+
+impl UInt64: Default[UInt64]
+  func Default() -> UInt64
+    0
+  end
+end
+
+impl Float32: Default[Float32]
+  func Default() -> Float32
+    0.0
+  end
+end
+
+impl Float64: Default[Float64]
+  func Default() -> Float64
+    0.0
+  end
+end
+
+impl Bool: Default[Bool]
+  func Default() -> Bool
+    false
+  end
+end
+
+impl String: Default[String]
+  func Default() -> String
+    ""
+  end
+end
+
+impl[A] OptionADefault[A]: Default[Option[A]]
+  func Default() -> Option[A]
+    None
+  end
+end

@@ -1,0 +1,106 @@
+package prelude
+
+import fmt "go:fmt"
+import strconv "go:strconv"
+
+impl Int: From[Int, Int64]
+  func From(value: Int) -> Int64
+    go[Int64] { code: "int64(value)" }
+  end
+end
+
+impl Int64: From[Int64, Int]
+  func From(value: Int64) -> Int
+    go[Int] { code: "int(value)" }
+  end
+end
+
+impl Int64: From[Int64, Float64]
+  func From(value: Int64) -> Float64
+    go[Float64] { code: "float64(value)" }
+  end
+end
+
+impl Float64: From[Float64, Int64]
+  func From(value: Float64) -> Int64
+    go[Int64] { code: "int64(value)" }
+  end
+end
+
+impl Float32: From[Float32, Float64]
+  func From(value: Float32) -> Float64
+    go[Float64] { code: "float64(value)" }
+  end
+end
+
+impl Float64: From[Float64, Float32]
+  func From(value: Float64) -> Float32
+    go[Float32] { code: "float32(value)" }
+  end
+end
+
+impl Int: From[Int, Float64]
+  func From(value: Int) -> Float64
+    go[Float64] { code: "float64(value)" }
+  end
+end
+
+impl Float64: From[Float64, Int]
+  func From(value: Float64) -> Int
+    go[Int] { code: "int(value)" }
+  end
+end
+
+impl Int: From[Int, String]
+  func From(value: Int) -> String
+    go[String] { code: "fmt.Sprint(value)" }
+  end
+end
+
+impl String: From[String, Result[Int, String]]
+  func From(value: String) -> Result[Int, String]
+    go[Result[Int, String]] {
+      code: """
+        func() Result[int, string] {
+          v, err := strconv.Atoi(value)
+          if err != nil {
+            return Err[int, string](err.Error())
+          }
+          return Ok[int, string](v)
+        }()
+      """
+    }
+  end
+end
+
+impl String: From[String, Result[Int64, String]]
+  func From(value: String) -> Result[Int64, String]
+    go[Result[Int64, String]] {
+      code: """
+        func() Result[int64, string] {
+          v, err := strconv.ParseInt(value, 10, 64)
+          if err != nil {
+            return Err[int64, string](err.Error())
+          }
+          return Ok[int64, string](v)
+        }()
+      """
+    }
+  end
+end
+
+impl String: From[String, Result[Float64, String]]
+  func From(value: String) -> Result[Float64, String]
+    go[Result[Float64, String]] {
+      code: """
+        func() Result[float64, string] {
+          v, err := strconv.ParseFloat(value, 64)
+          if err != nil {
+            return Err[float64, string](err.Error())
+          }
+          return Ok[float64, string](v)
+        }()
+      """
+    }
+  end
+end

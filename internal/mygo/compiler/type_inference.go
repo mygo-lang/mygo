@@ -119,6 +119,12 @@ func (g *generator) goTypeCompatible(expected, actual string) bool {
 	actual = strings.TrimSpace(actual)
 	expected = normalizeMygoTypeToGo(expected)
 	actual = normalizeMygoTypeToGo(actual)
+	if isStringRuneSequenceType(expected, actual) || isStringRuneSequenceType(actual, expected) {
+		return true
+	}
+	if isRuneGoAliasPair(expected, actual) {
+		return true
+	}
 	if normalizeMyGoPrimitiveType(expected) == "Any" || strings.TrimSpace(expected) == "any" {
 		return true
 	}
@@ -181,6 +187,22 @@ func (g *generator) goTypeCompatible(expected, actual string) bool {
 		return true
 	}
 	return false
+}
+
+func isStringRuneSequenceType(pattern, actual string) bool {
+	base, args := splitTypeArgs(strings.TrimSpace(pattern))
+	if base != "C" || len(args) != 1 {
+		return false
+	}
+	elem := normalizeMygoTypeToGo(args[0])
+	actual = normalizeMygoTypeToGo(actual)
+	return (elem == "rune" || elem == "int32") && actual == "string"
+}
+
+func isRuneGoAliasPair(left, right string) bool {
+	left = normalizeMygoTypeToGo(left)
+	right = normalizeMygoTypeToGo(right)
+	return (left == "rune" && right == "int32") || (left == "int32" && right == "rune")
 }
 
 func normalizeMyGoPrimitiveType(name string) string {
@@ -1033,6 +1055,16 @@ func inherentReceiverName(t TypeExpr) string {
 
 func inherentMethodName(receiverName, methodName string) string {
 	return sanitizeIdent(receiverName) + "_" + sanitizeIdent(methodName)
+}
+
+func isInherentReceiverParam(paramType TypeExpr, implType TypeExpr, receiverName string) bool {
+	if paramType == nil || implType == nil {
+		return false
+	}
+	if baseNamedType(typeString(paramType, nil)) != receiverName {
+		return false
+	}
+	return typeString(paramType, nil) == typeString(implType, nil)
 }
 
 func (g *generator) hasDuplicateImplForTypeKey(target *ImplDecl, args []TypeExpr) bool {

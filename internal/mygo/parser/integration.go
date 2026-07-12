@@ -27,6 +27,7 @@ func (p *parser) parseWithYacc() error {
 	p.currentTypeCol = 0
 	p.currentTypeParams = nil
 	p.currentParams = nil
+	p.currentParamsStack = nil
 	p.currentWhere = nil
 	p.currentConstraintArgs = nil
 	p.currentBlock = nil

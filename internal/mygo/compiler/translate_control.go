@@ -129,6 +129,12 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 				if !isTupleLikeTypeString(typ) {
 					return nil, "", common.ErrorAtPos(s.Line, s.Column, "tuple destructuring requires a tuple value")
 				}
+				if isGoMultiReturnTypeString(typ) {
+					if err := g.emitMultiReturnBindPattern(&stmtCodes, child, code, s.Bind, s.Mutable); err != nil {
+						return nil, "", common.ErrorAtPos(s.Line, s.Column, "tuple destructuring: %v", err)
+					}
+					continue
+				}
 				tupleTmp := g.bindLocal(child, "__tuple", typ, s.Mutable)
 				stmtCodes = append(stmtCodes, jen.Id(tupleTmp).Op(":=").Add(code))
 				if err := g.emitBindPattern(&stmtCodes, child, tupleTmp, s.Bind, s.Mutable); err != nil {
@@ -199,6 +205,50 @@ func (g *generator) translateBlock(n *BlockExpr, ctx *exprCtx, expected string) 
 func isTupleLikeTypeString(typ string) bool {
 	typ = strings.TrimSpace(typ)
 	return strings.HasPrefix(typ, "struct {") || (strings.HasPrefix(typ, "(") && strings.HasSuffix(typ, ")"))
+}
+
+func isGoMultiReturnTypeString(typ string) bool {
+	typ = strings.TrimSpace(typ)
+	return strings.HasPrefix(typ, "(") && strings.HasSuffix(typ, ")")
+}
+
+func (g *generator) emitMultiReturnBindPattern(stmtCodes *[]jen.Code, ctx *exprCtx, code jen.Code, pat BindPattern, mutable bool) error {
+	p, ok := pat.(*BindTuplePattern)
+	if !ok {
+		return fmt.Errorf("multi-return destructuring requires a tuple pattern")
+	}
+	targets := make([]jen.Code, 0, len(p.Elems))
+	var nested []struct {
+		name string
+		pat  *BindTuplePattern
+	}
+	for _, elem := range p.Elems {
+		switch name := elem.(type) {
+		case *BindNamePattern:
+			if name.Name == "_" {
+				targets = append(targets, jen.Id("_"))
+				continue
+			}
+			actual := g.bindLocal(ctx, name.Name, "", mutable)
+			targets = append(targets, jen.Id(actual))
+		case *BindTuplePattern:
+			tmp := g.bindLocal(ctx, "__tuple", "", mutable)
+			targets = append(targets, jen.Id(tmp))
+			nested = append(nested, struct {
+				name string
+				pat  *BindTuplePattern
+			}{name: tmp, pat: name})
+		default:
+			return fmt.Errorf("unsupported binding pattern %T", elem)
+		}
+	}
+	*stmtCodes = append(*stmtCodes, jen.List(targets...).Op(":=").Add(code))
+	for _, item := range nested {
+		if err := g.emitBindPattern(stmtCodes, ctx, item.name, item.pat, mutable); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (g *generator) emitBindPattern(stmtCodes *[]jen.Code, ctx *exprCtx, source string, pat BindPattern, mutable bool) error {

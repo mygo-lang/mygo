@@ -128,7 +128,7 @@ end
 func TestParseFileSupportsIfWhileAndSwitch(t *testing.T) {
 	src := `package main
 func demo(n: Int) -> Int
-  if n < 1 then 10 else 20
+  if n < 1 => 10 else 20
   while n < 3
     n = n + 1
   end
@@ -281,6 +281,33 @@ end
 	}
 }
 
+func TestParseFileSupportsStaticMethodsInInherentImpl(t *testing.T) {
+	src := `package main
+impl String
+  func FromRunes(rs: Slice[rune]) -> String
+    rs.get(0).String()
+  end
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	impl, ok := file.Decls[0].(*ImplDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *ImplDecl", file.Decls[0])
+	}
+	if got := len(impl.Methods); got != 1 {
+		t.Fatalf("len(ImplDecl.Methods) = %d, want 1", got)
+	}
+	if got := len(impl.Methods[0].Params); got != 1 {
+		t.Fatalf("len(ImplDecl.Methods[0].Params) = %d, want 1", got)
+	}
+	if impl.Methods[0].Params[0].Name != "rs" {
+		t.Fatalf("first param name = %q, want %q", impl.Methods[0].Params[0].Name, "rs")
+	}
+}
+
 func TestParseFileSupportsStructFieldTags(t *testing.T) {
 	src := `package main
 struct User
@@ -346,10 +373,10 @@ end
 	}
 }
 
-func TestParseFileSupportsSingleLineIfAndFuncLit(t *testing.T) {
+func TestParseFileSupportsArrowIfAndFuncLit(t *testing.T) {
 	src := `package main
 func demo() -> Int
-  if true then 1 else 2
+  if true => 1 else 2
   func(x: Int) -> Int x + 1 end
 end
 `
@@ -540,7 +567,7 @@ func TestParseFileSupportsIfArrowForm(t *testing.T) {
 	src := `package main
 func demo(n: Int) -> Int
   if n > 0 => n else 0
-  if true => 1 else 2
+  if n > 10 => 1 else if n > 5 => 2 else 3
 end
 `
 	file, err := ParseFile(src)
@@ -566,13 +593,74 @@ end
 	if _, ok := ifExpr.Expr.(*IfExpr); !ok {
 		t.Fatalf("Stmt[0].Expr type = %T, want *IfExpr", ifExpr.Expr)
 	}
-	// Second if: if true => 1 else 2
+	// Second if: if n > 10 => 1 else if n > 5 => 2 else 3
 	ifExpr2, ok := block.Stmts[1].(*ExprStmt)
 	if !ok {
 		t.Fatalf("Stmt[1] type = %T, want *ExprStmt", block.Stmts[1])
 	}
-	if _, ok := ifExpr2.Expr.(*IfExpr); !ok {
+	second, ok := ifExpr2.Expr.(*IfExpr)
+	if !ok {
 		t.Fatalf("Stmt[1].Expr type = %T, want *IfExpr", ifExpr2.Expr)
+	}
+	if _, ok := second.Else.(*IfExpr); !ok {
+		t.Fatalf("Stmt[1].Expr.Else type = %T, want *IfExpr", second.Else)
+	}
+}
+
+func TestParseFileSupportsBlockIfElsifForm(t *testing.T) {
+	src := `package main
+func demo(n: Int) -> Int
+  if n < 0 then
+    -1
+  elsif n == 0 then
+    0
+  else
+    1
+  end
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	ifExpr, ok := fn.Body.(*IfExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *IfExpr", fn.Body)
+	}
+	if _, ok := ifExpr.Else.(*IfExpr); !ok {
+		t.Fatalf("IfExpr.Else type = %T, want *IfExpr", ifExpr.Else)
+	}
+}
+
+func TestParseFileFuncLitInsideBlockIfPreservesOuterParams(t *testing.T) {
+	src := `package main
+func demo(s: String) -> Option
+  if s.Len() == 0 then
+    None
+  else
+    s.Find(func(r: rune) -> Bool
+      true
+    end)
+  end
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	if got := len(fn.Params); got != 1 {
+		t.Fatalf("len(FuncDecl.Params) = %d, want 1", got)
+	}
+	if fn.Params[0].Name != "s" {
+		t.Fatalf("FuncDecl.Params[0].Name = %q, want s", fn.Params[0].Name)
 	}
 }
 

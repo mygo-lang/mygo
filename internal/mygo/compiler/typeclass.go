@@ -304,8 +304,8 @@ func (g *generator) translateTypeclassCall(name string, args []Expr, ctx *exprCt
 			argCodes = append(argCodes, code)
 			argTypes = append(argTypes, typ)
 		}
-		if helper, ok := g.matchTypeclassHelper(ifaceName, name, args, ctx); ok {
-			return helper, methodReturnType(methodIface, name), true
+		if funcName, ok := ctx.constraintFuncForMethod(name); ok {
+			return jen.Id(funcName).Call(argCodes...), methodReturnType(methodIface, name), true
 		}
 		if bindings, ok := ctx.typeclassMethods[name]; ok && len(bindings) > 0 {
 			best := typeclassBindingBest(bindings)
@@ -318,8 +318,8 @@ func (g *generator) translateTypeclassCall(name string, args []Expr, ctx *exprCt
 				return jen.Id(best.DictExpr).Call(argCodes...), methodReturnType(methodIface, name), true
 			}
 		}
-		if funcName, ok := ctx.constraintFuncForMethod(name); ok {
-			return jen.Id(funcName).Call(argCodes...), methodReturnType(methodIface, name), true
+		if helper, ok := g.matchTypeclassHelper(ifaceName, name, args, ctx); ok {
+			return helper, methodReturnType(methodIface, name), true
 		}
 		if len(argCodes) > 0 {
 			receiverType := argTypes[0]
@@ -464,6 +464,9 @@ func (g *generator) matchTypeclassHelper(ifaceName, method string, args []Expr, 
 			typeArgs = impl.TypeArgs
 		}
 		implTargetType := typeString(impl.Type, nil)
+		if len(typeArgs) > 0 {
+			implTargetType = typeString(typeArgs[0], nil)
+		}
 		if receiverType != "" && implTargetType != "" {
 			rBase, _ := splitTypeArgs(receiverType)
 			iBase, _ := splitTypeArgs(implTargetType)

@@ -97,8 +97,9 @@ type generator struct {
 }
 
 type inherentMethod struct {
-	Impl *ImplDecl
-	Func *FuncDecl
+	Impl        *ImplDecl
+	Func        *FuncDecl
+	HasReceiver bool
 }
 
 func (ctx *exprCtx) child() *exprCtx {

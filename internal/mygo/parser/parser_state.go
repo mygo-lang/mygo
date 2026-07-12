@@ -25,6 +25,7 @@ type parser struct {
 	currentTypeCol               int
 	currentTypeParams            []string
 	currentParams                []ast.Param
+	currentParamsStack           [][]ast.Param
 	currentWhere                 []ast.Constraint
 	currentConstraintArgs        []TypeExpr
 	currentBlock                 []ast.Stmt
@@ -58,10 +59,11 @@ type parser struct {
 	currentIfCondStack           []ast.Expr
 	currentIfThenStack           []ast.Expr
 	currentIfElseStack           []ast.Expr
+	currentIfPartsStack          []ifParts
 	currentWhileCond             ast.Expr
 	currentWhileBody             ast.Expr
 	currentSwitchTarget          ast.Expr
-	currentSwitchTargetStack      []ast.Expr
+	currentSwitchTargetStack     []ast.Expr
 	currentSwitchCases           []ast.SwitchCase
 	currentSwitchCasesStack      [][]ast.SwitchCase
 	currentPattern               ast.Pattern

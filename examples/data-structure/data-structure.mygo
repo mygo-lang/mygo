@@ -72,7 +72,7 @@ func describeColor(color: Color) -> String
 end
 
 func maxInt(a: Int, b: Int) -> Int
-  if a > b then a else b
+  if a > b => a else b
 end
 
 func describeOption[A](value: Option[A]) -> String using Show[A]

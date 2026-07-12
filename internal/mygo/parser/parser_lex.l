@@ -5,6 +5,7 @@ import (
 	"bufio"
 	gotoken "go/token"
 	"io"
+	"strings"
 	"unicode"
 
 	"modernc.org/golex/lex"
@@ -45,6 +46,41 @@ func newGolexer(src io.Reader, fName string) (*golexer, error) {
 
 func (l *golexer) char(r int) lex.Char { return lex.NewChar(l.First.Pos(), rune(r)) }
 
+func (l *golexer) scanMultilineStringFromLookahead() lex.Char {
+	var buf strings.Builder
+	read := func() int {
+		ch := l.Lookahead()
+		l.Next()
+		return int(ch.Rune)
+	}
+	for {
+		r := read()
+		if r == lex.RuneEOF {
+			break
+		}
+		if r == '"' {
+			r2 := read()
+			if r2 == lex.RuneEOF {
+				break
+			}
+			r3 := read()
+			if r3 == lex.RuneEOF {
+				break
+			}
+			if r2 == '"' && r3 == '"' {
+				break
+			}
+			buf.WriteRune(rune('"'))
+			buf.WriteRune(rune(r2))
+			buf.WriteRune(rune(r3))
+			continue
+		}
+		buf.WriteRune(rune(r))
+	}
+	l.multilineContent = buf.String()
+	return l.char(STRING)
+}
+
 func (l *golexer) scan() lex.Char {
 	c := l.Enter()
 %}
@@ -70,7 +106,7 @@ unicodeLetter \x80
 [ \t\r]+
 \n                return l.char(NEWLINE)
 \#([^\n])*
-\"\"\" { return l.scanMultilineString() }
+\"\"\" { return l.scanMultilineStringFromLookahead() }
 `[^\`]*`  return l.char(STRING)
 \"([^\"\\]|\\.)*\"  return l.char(STRING)
 package            return l.char(PACKAGE)
@@ -82,6 +118,7 @@ impl               return l.char(IMPL)
 func               return l.char(FUNC)
 if                 return l.char(IF)
 then               return l.char(THEN)
+elsif              return l.char(ELSIF)
 else               return l.char(ELSE)
 switch             return l.char(SWITCH)
 case               return l.char(CASE)

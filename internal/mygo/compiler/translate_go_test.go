@@ -27,6 +27,62 @@ end
 	}
 }
 
+func TestInlineGoGeneratesPrimitiveConversion(t *testing.T) {
+	src := `package main
+func fromRunes(rs: Slice[rune]) -> String
+  go[String] {
+    code: """string({rs})"""
+    in rs = rs
+  }
+end
+`
+	goSrc := compileInlineGoTestPackage(t, src)
+	if !strings.Contains(goSrc, "return string(rs)") {
+		t.Fatalf("generated source missing primitive conversion:\n%s", goSrc)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "inline.go", goSrc, 0); err != nil {
+		t.Fatalf("generated source is not valid Go: %v\n%s", err, goSrc)
+	}
+}
+
+func TestInherentStaticMethodCallOnType(t *testing.T) {
+	src := `package main
+import utf8 "go:unicode/utf8"
+
+impl String
+  func FromRunes(rs: Slice[rune]) -> String
+    go[String] {
+      code: ` + "`string(rs)`" + `
+      in rs = rs
+    }
+  end
+
+  func PeekRune(s: String) -> Option[Ref[rune]]
+    if s.Len() == 0 then
+      None
+    else
+      let (r, _) = utf8.DecodeRuneInString(s)
+      Some(Ref.new(r))
+    end
+  end
+end
+
+func demo(rs: Slice[rune]) -> String
+  String.FromRunes(rs)
+end
+`
+	goSrc := compileInlineGoTestPackage(t, src)
+	if !strings.Contains(goSrc, "func String_FromRunes(rs []rune) string") {
+		t.Fatalf("generated source missing static inherent helper:\n%s", goSrc)
+	}
+	if !strings.Contains(goSrc, "return String_FromRunes(rs)") {
+		t.Fatalf("generated source missing static inherent call:\n%s", goSrc)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "static_inherent.go", goSrc, 0); err != nil {
+		t.Fatalf("generated source is not valid Go: %v\n%s", err, goSrc)
+	}
+}
+
 func TestInlineGoUnknownPlaceholderErrors(t *testing.T) {
 	src := `package main
 func bad(n: Int) -> Int

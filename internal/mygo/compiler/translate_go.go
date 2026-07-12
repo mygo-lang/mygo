@@ -13,6 +13,9 @@ import (
 
 var goPlaceholderRE = regexp.MustCompile(`\{([A-Za-z_][A-Za-z0-9_]*)\}`)
 var goTupleErrorRE = regexp.MustCompile(`func\(\)\s*\([^)]+,\s*error\s*\)`)
+var goSimpleCallRE = regexp.MustCompile(`^([A-Za-z_][A-Za-z0-9_]*)\(([A-Za-z_][A-Za-z0-9_]*)\)$`)
+var goSliceFromRE = regexp.MustCompile(`^([A-Za-z_][A-Za-z0-9_]*)\[([A-Za-z_][A-Za-z0-9_]*):\]$`)
+var goSliceToLenEqRE = regexp.MustCompile(`^([A-Za-z_][A-Za-z0-9_]*)\[:len\(([A-Za-z_][A-Za-z0-9_]*)\)\]\s*==\s*([A-Za-z_][A-Za-z0-9_]*)$`)
 
 func (g *generator) translateGoExpr(n *GoExpr, ctx *exprCtx, expected string) (jen.Code, string, error) {
 	operands := map[string]string{}
@@ -55,7 +58,7 @@ func (g *generator) translateGoExpr(n *GoExpr, ctx *exprCtx, expected string) (j
 		return nil, "", common.ErrorAtPos(n.Line, n.Column, "go code references unknown operand %q", missing)
 	}
 
-	code := jen.Id(substituted)
+	code := goExprCode(substituted)
 	if isUnitType(n.Result) {
 		return code, "", nil
 	}
@@ -64,6 +67,33 @@ func (g *generator) translateGoExpr(n *GoExpr, ctx *exprCtx, expected string) (j
 		return wrapped, wrappedType, nil
 	}
 	return code, resultType, nil
+}
+
+func goExprCode(src string) jen.Code {
+	src = strings.TrimSpace(src)
+	if m := goSimpleCallRE.FindStringSubmatch(src); m != nil {
+		return goCalleeCode(m[1]).Call(jen.Id(m[2]))
+	}
+	if m := goSliceFromRE.FindStringSubmatch(src); m != nil {
+		return jen.Id(m[1]).Index(jen.Id(m[2]).Op(":"))
+	}
+	if m := goSliceToLenEqRE.FindStringSubmatch(src); m != nil {
+		return jen.Id(m[1]).Index(jen.Op(":").Add(jen.Len(jen.Id(m[2])))).Op("==").Id(m[3])
+	}
+	return jen.Id(src)
+}
+
+func goCalleeCode(name string) *jen.Statement {
+	switch name {
+	case "string":
+		return jen.String()
+	case "int":
+		return jen.Int()
+	case "bool":
+		return jen.Bool()
+	default:
+		return jen.Id(name)
+	}
 }
 
 func wrapGoFFIExpr(code jen.Code, typ, expected, rawCode string) (jen.Code, string, bool) {

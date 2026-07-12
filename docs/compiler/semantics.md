@@ -1,10 +1,14 @@
-# semantics.md — Current Syntax Rules
+# semantics.md — Language Semantics and Syntax Rules
+
+> Updated: 2026-07-12
+
+## Current Syntax Rules
 
 ## Current Semantics
 
 - Files start with `package <package_name>` to set the generated Go package name. The old file-level `module` wrapper is removed, and declarations follow directly after the package header.
 - Function bodies and other block forms are newline-separated statement lists; the last plain expression in a block is the return value.
-- `if` now supports a single-line expression form like `if cond then a else b`, and that form does not require `end`.
+- `if` supports inline arrow expressions like `if cond => a else b`, including `else if cond => ...` chains, and block form `if cond then ... elsif ... else ... end`.
 - `let` introduces an immutable binding. Rebinding the same source name must use a later `let` and is treated as shadowing, not assignment.
 - `var` introduces a mutable binding and may be assigned again later in the same scope.
 - `let` may omit its type annotation when the initializer provides enough information for inference.
@@ -32,6 +36,9 @@
 - Keep `examples/main/main.mygo` aligned with the compiler's current boundary behavior, especially for `Ref`, `Option`, and `Result`.
 - Typeclass lookup should respect lexical scope first: local bindings and function-value bindings shadow typeclass names, `using`-bound methods are visible inside nested blocks, and package-level dispatch is the fallback.
 - When multiple typeclass candidates are visible, prefer the more specific binding by comparing concrete type coverage first, then type-parameter usage, then `any` usage; report ambiguity when candidates remain tied.
+- Go's `len()` / `Len()` method on Slice/Map/Set/String types is supported via `translateGoMethodCall` — returns `Int`, no need for an explicit `go[T]{}` block.
+- `matchTypeclassHelper` handles generic impls where the impl target type has type parameters: uses the first type arg's type string for receiver matching.
+- `translateTypeclassCall` resolution order: `constraintFuncForMethod` (using-param) → `typeclassMethods` (lexical bindings) → `matchTypeclassHelper` (package-level dispatch) → receiver-type matching.
 
 ## Inherent Struct Impl
 
@@ -132,6 +139,57 @@ func Circle_area(self Circle) float64
 
 Selectors without a call keep their existing field-access meaning. Method lookup only applies to call expressions such as `value.method(args...)`, and field access takes precedence when resolving non-call selectors.
 
+### Static Methods (No Receiver)
+
+An inherent impl may also define **static methods** — methods whose first parameter is NOT the receiver type. These are called via `TypeName.methodName(args...)` syntax:
+
+```mygo
+impl String
+  func FromRunes(rs: Slice[rune]) -> String
+    go[String] {
+      code: "string({rs})"
+      in rs = rs
+    }
+  end
+end
+```
+
+Usage:
+
+```mygo
+let s = String.FromRunes(['h', 'e', 'l', 'l', 'o'])
+```
+
+Key points:
+- The compiler detects static methods via `isInherentReceiverParam()`: if the first parameter's type doesn't match the impl's type, the method has no receiver.
+- Static methods are called as `TypeName.method(args)` (no receiver instance needed).
+- They lower to top-level Go functions with the same `TypeName_methodName` mangling convention.
+- Both static and instance methods can coexist in the same `impl Type` block.
+
+## Go Multi-Return Value Tuple Destructuring
+
+When a function calls a Go function that returns multiple values (e.g., `(result, error)`), the tuple destructuring in `let` can directly bind the Go multi-return values without an intermediate struct wrapper:
+
+```mygo
+let (result, err) = goFuncReturningTwoValues()
+# instead of let __tuple = ...; let result = __tuple.F0; let err = __tuple.F1
+```
+
+### Implementation
+
+- `isGoMultiReturnTypeString()` detects Go-style multi-return type strings (parenthesized, e.g., `(int, error)`).
+- `emitMultiReturnBindPattern()` generates `result, err := goFunc()` directly using `jen.List()` for the left-hand side.
+- Nested tuple patterns (e.g., `(a, (b, c))`) first bind the outer multi-return, then destructure inner tuples via `emitBindPattern`.
+- `_` slots are supported: `let (result, _) = goFunc()`.
+- Applies in both `translateBlock` (statement position) and `translateFunctionBlock` (return expression position).
+
+### Parser changes (`parser.y`)
+
+- Added `currentParamsStack` (`[][]ast.Param`) to the parser struct for nested func lit parameter isolation.
+- `func_lit` rule now pushes/pops `currentParamsStack` on entry/exit, preventing parameter leakage between nested function literals.
+- `param` rule added `p.expectTypeSuffix = true` before the type to correctly trigger type-suffix parsing.
+- `qualified_name` now also accepts `NUMBER` (for qualified numeric type names).
+
 ## Pattern Matching (`switch`/`case`)
 
 ### Syntax
@@ -172,19 +230,20 @@ Commas between cases are optional (Rust/Scala style).
 - `TestTranslateSwitchUsesIfElse` (3 subtests): expression form with variant patterns, wildcard pattern, statement form (no expected type).
 - `TestE2ESwitchGeneratedCodeIsValidGo`: full compiler pipeline produces valid Go syntax verified by `go/parser`.
 
-## New Block Syntax (`if =>` / `case then...end`)
+## New Block Syntax (`if =>` / `if then...elsif...end` / `case then...end`)
 
 Per MIGRATE.md "新语句块方案", the yacc parser supports:
 
-- **`if cond => a else b`** — inline if with `=>` instead of `then`, added as `IF expr ARROW expr ELSE expr`.
+- **`if cond => a else b`** — inline if with `=>`; chains are written as `if cond1 => a else if cond2 => b else c`.
+- **`if cond then ... elsif cond then ... else ... end`** — block if form with zero or more `elsif` branches.
 - **`case pattern then ... end`** — switch case block form, added as `CASE pattern THEN block_expr ... END`.
-- Both forms coexist with the existing `if cond then a else b` and `case pattern => expr` syntax.
+- Inline `if cond then a else b` and bare block `if cond ... else ... end` are no longer accepted.
 
 ### Parser changes
-- `parser.y`: two new grammar alternatives (one in `if_expr`, one in `switch_case`) — conflicts reduced from 33 to 29 shift/reduce.
+- `parser.y`: `if_expr` now accepts arrow inline form and `then` block form with `elsif`; `switch_case` accepts both arrow and `then...end` case bodies.
 - `parser.go`: regenerated via `goyacc` from `parser.y`.
-- `lex.yy.go` / `parser_lex.l`: unchanged (no lexer rule changes needed for this feature).
-- `parser_test.go`: three new tests (`TestParseFileSupportsIfArrowForm`, `TestParseFileSupportsSwitchCaseThenEndBlock`, `TestParseFileSupportsMixedSwitchCaseForms`).
+- `lex.yy.go` / `parser_lex.l`: regenerated/updated for the `elsif` keyword.
+- `parser_test.go`: covers arrow `else if` chains, block `elsif`, and switch case block forms.
 
 ## Function Declaration Multiline Support
 

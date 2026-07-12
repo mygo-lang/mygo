@@ -44,8 +44,8 @@ func TestCompilePrelude(t *testing.T) {
 		}
 	}
 
-	// Find the Option IEnumerable impl and test genImpl
-	var optionEnumImpl *ImplDecl
+	// Find the String IEnumerable impl and test genImpl.
+	var stringEnumImpl *ImplDecl
 	for _, impl := range pkg.Impls {
 		if impl.InterfaceName != "IEnumerable" {
 			continue
@@ -57,28 +57,49 @@ func TestCompilePrelude(t *testing.T) {
 		if len(typeArgs) == 0 {
 			continue
 		}
-		if namedType, ok := typeArgs[0].(*NamedType); ok && namedType.Name == "Option" {
-			optionEnumImpl = impl
+		if namedType, ok := typeArgs[0].(*NamedType); ok && namedType.Name == "String" {
+			stringEnumImpl = impl
 			break
 		}
 	}
-	if optionEnumImpl == nil {
-		t.Fatal("Option IEnumerable impl not found in prelude")
+	if stringEnumImpl == nil {
+		t.Fatal("String IEnumerable impl not found in prelude")
 	}
 
-	code, err := g.genImpl(optionEnumImpl)
+	code, err := g.genImpl(stringEnumImpl)
 	if err != nil {
-		t.Fatalf("genImpl(Option IEnumerable): %v", err)
+		t.Fatalf("genImpl(String IEnumerable): %v", err)
 	}
-	t.Logf("Option IEnumerable impl generated: %d items", len(code))
+	t.Logf("String IEnumerable impl generated: %d items", len(code))
 
-	// Also test OptionFlatMap (standalone function)
-	fnDecl := pkg.Funcs["OptionFlatMap"]
-	code2, err := g.genFunc(fnDecl)
-	if err != nil {
-		t.Fatalf("genFunc(OptionFlatMap): %v", err)
+	// Also test String.PeekRune, which relies on String unifying as C[rune].
+	var peekRuneImpl *ImplDecl
+	for _, impl := range pkg.Impls {
+		if impl.InterfaceName != "" || impl.Name != "" {
+			continue
+		}
+		namedType, ok := impl.Type.(*NamedType)
+		if !ok || namedType.Name != "String" {
+			continue
+		}
+		for _, m := range impl.Methods {
+			if m.Name == "PeekRune" {
+				peekRuneImpl = impl
+				break
+			}
+		}
+		if peekRuneImpl != nil {
+			break
+		}
 	}
-	t.Logf("OptionFlatMap generated: %T", code2)
+	if peekRuneImpl == nil {
+		t.Fatal("PeekRune method not found in String impl")
+	}
+	code2, err := g.genImpl(peekRuneImpl)
+	if err != nil {
+		t.Fatalf("genImpl(String.PeekRune): %v", err)
+	}
+	t.Logf("PeekRune generated: %d items", len(code2))
 }
 
 func TestLoadPreludeDoesNotDuplicatePreludeDecls(t *testing.T) {

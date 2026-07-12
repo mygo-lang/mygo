@@ -361,21 +361,23 @@ func (g *generator) genImpl(d *ImplDecl) ([]jen.Code, error) {
 		} else {
 			fn = jen.Func().Id(fnName)
 		}
-		paramList := make([]jen.Code, 0, len(params))
-		for _, p := range params {
-			goType := g.goHKTType(p.Type, hktSet, combinedTypeParams)
-			paramList = append(paramList, jen.Id(p.Name).Add(jen.Id(goType)))
-			ctx.locals[p.Name] = goType
-			ctx.sourceTypes[p.Name] = typeString(p.Type, subst)
-			ctx.bindings[p.Name] = p.Name
-			ctx.mutable[p.Name] = false
-		}
 		implConstraintParams, err := g.collectUsingConstraintParams(method.Using, ctx, combinedTypeParams, fnName)
 		if err != nil {
 			return nil, err
 		}
-		paramList = append(paramList, implConstraintParams...)
-		fn = fn.Params(paramList...)
+		fn = fn.ParamsFunc(func(gr *jen.Group) {
+			for _, p := range params {
+				goType := g.goHKTType(p.Type, hktSet, combinedTypeParams)
+				gr.Add(paramJen(p.Name, goType))
+				ctx.locals[p.Name] = goType
+				ctx.sourceTypes[p.Name] = typeString(p.Type, subst)
+				ctx.bindings[p.Name] = p.Name
+				ctx.mutable[p.Name] = false
+			}
+			for _, cp := range implConstraintParams {
+				gr.Add(cp)
+			}
+		})
 
 		if retType != "" {
 			fn = fn.Add(jen.Id(retType))
@@ -410,6 +412,9 @@ func (g *generator) genInherentImpl(d *ImplDecl) ([]jen.Code, error) {
 	if receiverName == "" {
 		return nil, common.ErrorAtPos(d.Line, d.Column, "impl: inherent impl receiver must be a named type")
 	}
+	if g.inherentMethods == nil {
+		g.inherentMethods = map[string]map[string]*inherentMethod{}
+	}
 	seen := map[string]bool{}
 	for _, impl := range g.pkg.Impls {
 		if impl.InterfaceName != "" || impl.Name != "" || inherentReceiverName(impl.Type) != receiverName {
@@ -426,9 +431,7 @@ func (g *generator) genInherentImpl(d *ImplDecl) ([]jen.Code, error) {
 
 	var allCode []jen.Code
 	for _, m := range d.Methods {
-		if len(m.Params) == 0 {
-			return nil, common.ErrorAtPos(m.Line, m.Column, "impl %s: method %s must declare an explicit receiver parameter", receiverName, m.Name)
-		}
+		hasReceiver := len(m.Params) > 0 && isInherentReceiverParam(m.Params[0].Type, d.Type, receiverName)
 		mergedTypeParams := make([]string, 0, len(d.TypeParams)+len(m.TypeParams))
 		seenTypeParam := map[string]bool{}
 		for _, tp := range d.TypeParams {
@@ -460,7 +463,14 @@ func (g *generator) genInherentImpl(d *ImplDecl) ([]jen.Code, error) {
 			retType:          retType,
 			retTypes:         retTypes,
 		}
-		for _, p := range m.Params {
+		for i, p := range m.Params {
+			if i == 0 && hasReceiver {
+				ctx.locals[p.Name] = g.goType(p.Type, typeParams)
+				ctx.sourceTypes[p.Name] = typeString(p.Type, nil)
+				ctx.bindings[p.Name] = p.Name
+				ctx.mutable[p.Name] = false
+				continue
+			}
 			goType := g.goType(p.Type, typeParams)
 			ctx.locals[p.Name] = goType
 			ctx.sourceTypes[p.Name] = typeString(p.Type, nil)
@@ -480,16 +490,22 @@ func (g *generator) genInherentImpl(d *ImplDecl) ([]jen.Code, error) {
 			fn = jen.Func().Id(fnName)
 		}
 
-		paramList := make([]jen.Code, 0, len(m.Params))
-		for _, p := range m.Params {
-			paramList = append(paramList, jen.Id(p.Name).Add(jen.Id(g.goType(p.Type, typeParams))))
-		}
 		constraintParams, err := g.collectUsingConstraintParams(m.Using, ctx, typeParams, fnName)
 		if err != nil {
 			return nil, err
 		}
-		paramList = append(paramList, constraintParams...)
-		fn = fn.Params(paramList...)
+		fn = fn.ParamsFunc(func(gr *jen.Group) {
+			for i, p := range m.Params {
+				if i == 0 && hasReceiver {
+					gr.Add(paramJen(p.Name, g.goType(p.Type, typeParams)))
+					continue
+				}
+				gr.Add(paramJen(p.Name, g.goType(p.Type, typeParams)))
+			}
+			for _, cp := range constraintParams {
+				gr.Add(cp)
+			}
+		})
 		if len(retTypes) == 1 {
 			fn = fn.Add(jen.Id(retTypes[0]))
 		} else if len(retTypes) > 1 {
@@ -523,6 +539,10 @@ func (g *generator) genInherentImpl(d *ImplDecl) ([]jen.Code, error) {
 		}
 		fn = fn.Block(bodyStmts...)
 		allCode = append(allCode, fn)
+		if g.inherentMethods[receiverName] == nil {
+			g.inherentMethods[receiverName] = map[string]*inherentMethod{}
+		}
+		g.inherentMethods[receiverName][m.Name] = &inherentMethod{Impl: d, Func: m, HasReceiver: hasReceiver}
 	}
 	return allCode, nil
 }
@@ -586,7 +606,7 @@ func (g *generator) collectUsingConstraintParams(using []Constraint, ctx *exprCt
 					}
 					return out
 				}(),
-				RetType: typeStringReturn(m.Ret, subst),
+				RetType:  typeStringReturn(m.Ret, subst),
 				DictExpr: paramName,
 			}
 			ctx.typeclassMethods[m.Name] = append(ctx.typeclassMethods[m.Name], binding)
@@ -788,11 +808,11 @@ func (g *generator) genFunc(d *FuncDecl) (jen.Code, error) {
 	}
 	fn = fn.ParamsFunc(func(gr *jen.Group) {
 		for _, p := range d.Params {
-			gr.Add(jen.Id(p.Name).Add(jen.Id(g.goType(p.Type, typeParamSet(d.TypeParams)))))
+			gr.Add(paramJen(p.Name, g.goType(p.Type, typeParamSet(d.TypeParams))))
 		}
 		for _, methodName := range constraintOrder {
 			cp := constraintParams[methodName]
-			gr.Add(jen.Id(cp.name).Add(jen.Id(cp.typ)))
+			gr.Add(jen.Id(cp.name)).Add(jen.Id(cp.typ))
 		}
 	})
 	if len(retTypes) == 1 {
@@ -914,6 +934,12 @@ func (g *generator) translateFunctionBlock(n *BlockExpr, ctx *exprCtx, returnExp
 				if typ == "" || !isTupleLikeTypeString(typ) {
 					return nil, common.ErrorAtPos(s.Line, s.Column, "tuple destructuring requires a tuple value")
 				}
+				if isGoMultiReturnTypeString(typ) {
+					if err := g.emitMultiReturnBindPattern(&stmtCodes, child, code, s.Bind, s.Mutable); err != nil {
+						return nil, common.ErrorAtPos(s.Line, s.Column, "tuple destructuring: %v", err)
+					}
+					continue
+				}
 				tupleTmp := g.bindLocal(child, "__tuple", typ, s.Mutable)
 				stmtCodes = append(stmtCodes, jen.Id(tupleTmp).Op(":=").Add(code))
 				if err := g.emitBindPattern(&stmtCodes, child, tupleTmp, s.Bind, s.Mutable); err != nil {
@@ -1003,4 +1029,16 @@ func tupleReturnValues(bodyExpr jen.Code, retTypes []string) []jen.Code {
 		out = append(out, stmt.Dot("F"+strconv.Itoa(i)))
 	}
 	return out
+}
+
+func paramJen(name, typ string) jen.Code {
+	return jen.Id(name).Add(goTypeJen(typ))
+}
+
+func goTypeJen(typ string) jen.Code {
+	typ = strings.TrimSpace(typ)
+	if strings.HasPrefix(typ, "[]") {
+		return jen.Index().Add(goTypeJen(typ[2:]))
+	}
+	return jen.Id(typ)
 }

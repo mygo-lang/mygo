@@ -54,6 +54,11 @@ func bodyExprFromBlock(e ast.Expr) ast.Expr {
 	}
 	return &ast.BlockExpr{Line: block.Line, Column: block.Column, Stmts: append([]ast.Stmt(nil), block.Stmts...)}
 }
+
+type ifParts struct {
+	cond ast.Expr
+	then ast.Expr
+}
 %}
 
 %union {
@@ -62,13 +67,14 @@ func bodyExprFromBlock(e ast.Expr) ast.Expr {
 }
 
 %token <token> IDENT NUMBER STRING
-%token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSE SWITCH CASE END USING NOT LET VAR EMBED WHILE RETURN GO IN TYPE AS
+%token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSIF ELSE SWITCH CASE END USING NOT LET VAR EMBED WHILE RETURN GO IN TYPE AS
 %token <token> NEWLINE
 %token <token> ARROW EQEQ NEQ LTE GTE PIPEFWD PIPEBACK ANDAND OROR
 %token <token> COLON COMMA DOT LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE UNDER SLICE
 %token <token> TYPELBRACK CONSTRLBRACK CASTIDENT
 %type <token> call_start
 %type <token> opt_newlines
+%type <node> if_block_tail
 %left PIPEFWD PIPEBACK
 %left OROR
 %left ANDAND
@@ -654,7 +660,11 @@ param_list
 	;
 
 param
-	: IDENT COLON type {
+	: IDENT COLON {
+		p := yylex.(*parser)
+		p.expectTypeSuffix = true
+	}
+	type {
 		p := yylex.(*parser)
 		p.currentParams = append(p.currentParams, ast.Param{
 			Line: $1.line,
@@ -689,6 +699,13 @@ type_list
 
 qualified_name
 	: IDENT {
+		p := yylex.(*parser)
+		p.currentName = $1.lit
+		p.currentNameLine = $1.line
+		p.currentNameCol = $1.col
+		p.expectTypeSuffix = true
+	}
+	| NUMBER {
 		p := yylex.(*parser)
 		p.currentName = $1.lit
 		p.currentNameLine = $1.line
@@ -1389,29 +1406,6 @@ if_expr
 		p.currentIfCondStack = append(p.currentIfCondStack, p.currentIfCond)
 		p.currentIfCond = p.currentExpr
 	}
-	THEN expr {
-		p := yylex.(*parser)
-		p.currentIfThen = p.currentExpr
-	}
-	ELSE expr {
-		p := yylex.(*parser)
-		p.currentIfElse = p.currentExpr
-		p.currentExpr = &ast.IfExpr{Line: $1.line, Column: $1.col, Cond: p.currentIfCond, Then: p.currentIfThen, Else: p.currentIfElse}
-		if len(p.currentIfCondStack) > 0 {
-			idx := len(p.currentIfCondStack) - 1
-			p.currentIfCond = p.currentIfCondStack[idx]
-			p.currentIfCondStack = p.currentIfCondStack[:idx]
-		} else {
-			p.currentIfCond = nil
-		}
-		p.currentIfThen = nil
-		p.currentIfElse = nil
-	}
-	| IF expr {
-		p := yylex.(*parser)
-		p.currentIfCondStack = append(p.currentIfCondStack, p.currentIfCond)
-		p.currentIfCond = p.currentExpr
-	}
 	ARROW expr {
 		p := yylex.(*parser)
 		p.currentIfThen = p.currentExpr
@@ -1430,7 +1424,7 @@ if_expr
 		p.currentIfThen = nil
 		p.currentIfElse = nil
 	}
-	| IF expr NEWLINE {
+	| IF expr THEN {
 		p := yylex.(*parser)
 		p.currentIfCondStack = append(p.currentIfCondStack, p.currentIfCond)
 		p.currentIfCond = p.currentExpr
@@ -1438,11 +1432,11 @@ if_expr
 	opt_newlines
 	block_expr {
 		p := yylex.(*parser)
-		p.currentIfThen = p.currentExpr
+		p.currentIfThen = bodyExprFromBlock(p.currentExpr)
 	}
-	ELSE opt_newlines block_expr opt_newlines END {
+	if_block_tail END {
 		p := yylex.(*parser)
-		p.currentIfElse = p.currentExpr
+		p.currentIfElse, _ = $8.(ast.Expr)
 		p.currentExpr = &ast.IfExpr{Line: $1.line, Column: $1.col, Cond: p.currentIfCond, Then: p.currentIfThen, Else: p.currentIfElse}
 		if len(p.currentIfCondStack) > 0 {
 			idx := len(p.currentIfCondStack) - 1
@@ -1453,6 +1447,30 @@ if_expr
 		}
 		p.currentIfThen = nil
 		p.currentIfElse = nil
+	}
+	;
+
+if_block_tail
+	: ELSE opt_newlines block_expr opt_newlines {
+		p := yylex.(*parser)
+		$$ = bodyExprFromBlock(p.currentExpr)
+	}
+	| ELSIF expr THEN {
+		p := yylex.(*parser)
+		p.currentIfPartsStack = append(p.currentIfPartsStack, ifParts{cond: p.currentExpr})
+	}
+	opt_newlines block_expr {
+		p := yylex.(*parser)
+		idx := len(p.currentIfPartsStack) - 1
+		p.currentIfPartsStack[idx].then = bodyExprFromBlock(p.currentExpr)
+	}
+	if_block_tail {
+		p := yylex.(*parser)
+		idx := len(p.currentIfPartsStack) - 1
+		parts := p.currentIfPartsStack[idx]
+		p.currentIfPartsStack = p.currentIfPartsStack[:idx]
+		elseExpr, _ := $8.(ast.Expr)
+		$$ = &ast.IfExpr{Line: $1.line, Column: $1.col, Cond: parts.cond, Then: parts.then, Else: elseExpr}
 	}
 	;
 
@@ -1611,11 +1629,23 @@ pattern_list
 	;
 
 func_lit
-	: FUNC LPAREN opt_newlines maybe_param_list RPAREN opt_newlines ARROW type opt_newlines block_expr opt_newlines END {
+	: FUNC LPAREN {
+		p := yylex.(*parser)
+		p.currentParamsStack = append(p.currentParamsStack, p.currentParams)
+		p.currentParams = nil
+	}
+	opt_newlines maybe_param_list RPAREN opt_newlines ARROW type opt_newlines block_expr opt_newlines END {
 		p := yylex.(*parser)
 		body := bodyExprFromBlock(p.currentExpr)
-		p.currentExpr = &ast.FuncLitExpr{Line: $1.line, Column: $1.col, Params: append([]ast.Param(nil), p.currentParams...), Ret: p.currentType, Body: body}
-		p.currentParams = nil
+		params := append([]ast.Param(nil), p.currentParams...)
+		if len(p.currentParamsStack) > 0 {
+			idx := len(p.currentParamsStack) - 1
+			p.currentParams = p.currentParamsStack[idx]
+			p.currentParamsStack = p.currentParamsStack[:idx]
+		} else {
+			p.currentParams = nil
+		}
+		p.currentExpr = &ast.FuncLitExpr{Line: $1.line, Column: $1.col, Params: params, Ret: p.currentType, Body: body}
 	}
 	;
 
@@ -1791,6 +1821,8 @@ func (p *parser) Lex(lval *yySymType) int {
 			return int(IF)
 		case "then":
 			return int(THEN)
+		case "elsif":
+			return int(ELSIF)
 		case "else":
 			return int(ELSE)
 		case "switch":

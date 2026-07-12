@@ -1,0 +1,140 @@
+package prelude
+
+impl[T] SliceIEnumerable[T]: IEnumerable[Slice[T], T]
+  func Each(c: Slice[T], fn: func(T) -> ()) -> ()
+    go[()] {
+      code: """
+        func() {
+          for _, v := range c {
+            fn(v)
+          }
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
+  end
+
+  func Len(c: Slice[T]) -> Int
+    go[Int] { code: `len(c)` }
+  end
+
+  func Map[B](c: Slice[T], fn: func(T) -> B) -> Slice[B]
+    go[Slice[B]] {
+      code: """
+        func() []{B} {
+          out := make([]{B}, len(c))
+          for i, v := range c {
+            out[i] = fn(v)
+          }
+          return out
+        }()
+      """
+      in c = c
+      in fn = fn
+      type B = B
+    }
+  end
+
+  func Filter(c: Slice[T], fn: func(T) -> Bool) -> Slice[T]
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+          out := make([]{T}, 0, len(c))
+          for _, v := range c {
+            if fn(v) {
+              out = append(out, v)
+            }
+          }
+          return out
+        }()
+      """
+      in c = c
+      in fn = fn
+      type T = T
+    }
+  end
+
+  func Fold[B](c: Slice[T], initial: B, fn: func(B, T) -> B) -> B
+    go[B] {
+      code: """
+        func() B {
+          acc := initial
+          for _, v := range c {
+            acc = fn(acc, v)
+          }
+          return acc
+        }()
+      """
+      in c = c
+      in initial = initial
+      in fn = fn
+    }
+  end
+
+  func Find(c: Slice[T], fn: func(T) -> Bool) -> Option[Ref[T]]
+    go[Option[Ref[T]]] {
+      code: """
+        func() Option[*T] {
+          for i := range c {
+            if fn(c[i]) {
+              return Some[*T](&c[i])
+            }
+          }
+          return None[*T]()
+        }()
+      """
+      in c = c
+      in fn = fn
+      type T = T
+    }
+  end
+
+  func Contains(c: Slice[T], item: T) -> Bool using Eq[T]
+    go[Bool] {
+      code: """
+        func() bool {
+          for _, v := range c {
+            if EqualsFn(v, item) {
+              return true
+            }
+          }
+          return false
+        }()
+      """
+      in c = c
+      in item = item
+    }
+  end
+end
+
+impl[T] Slice[T]
+  func Append(items: Slice[T], item: T) -> Slice[T]
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+          return append(items, item)
+        }()
+      """
+      in items = items
+      in item = item
+      type T = T
+    }
+  end
+
+  func Prepend(items: Slice[T], item: T) -> Slice[T]
+    go[Slice[T]] {
+      code: """
+        func() []{T} {
+          out := make([]{T}, 0, len(items)+1)
+          out = append(out, item)
+          out = append(out, items...)
+          return out
+        }()
+      """
+      in item = item
+      in items = items
+      type T = T
+    }
+  end
+end

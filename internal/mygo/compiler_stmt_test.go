@@ -439,9 +439,9 @@ func TestCompileDirSupportsTupleDestructuringLet(t *testing.T) {
 	}
 	got := readFile(t, outFiles[0])
 	for _, want := range []string{
-		"__tuple_",
 		"a_",
 		"b_",
+		":= pair()",
 		"return b_",
 	} {
 		if !strings.Contains(got, want) {
@@ -638,7 +638,7 @@ func TestCompileDirSupportsRefAndResultTypes(t *testing.T) {
   end
 
   func describe(ok: Bool) -> Result[String, String]
-    if ok then Ok("yes") else Err("no")
+    if ok => Ok("yes") else Err("no")
   end
 `)
 
@@ -677,7 +677,7 @@ func TestCompileDirSupportsOptionOfRefTypes(t *testing.T) {
   end
 
   func maybe_node(ok: Bool, node: Ref[Node]) -> Option[Ref[Node]]
-    if ok then Some(node) else None
+    if ok => Some(node) else None
   end
 `)
 
@@ -732,7 +732,7 @@ func TestCompileDirSupportsRefNew(t *testing.T) {
   end
 
   func maybe_node(ok: Bool, node: Node) -> Option[Ref[Node]]
-    if ok then Some(Ref.new(node)) else None
+    if ok => Some(Ref.new(node)) else None
   end
 `)
 
@@ -900,7 +900,7 @@ func TestCompileDirSupportsResultOfRefTypes(t *testing.T) {
   end
 
   func lookup(ok: Bool, node: Ref[Node]) -> Result[Ref[Node], String]
-    if ok then Ok(node) else Err("missing")
+    if ok => Ok(node) else Err("missing")
   end
 `)
 
@@ -924,11 +924,11 @@ func TestCompileDirSupportsIfExpressionForms(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
   func compact(ok: Bool) -> Int
-    if ok then 1 else 2
+    if ok => 1 else 2
   end
 
   func block(ok: Bool) -> Int
-    if ok
+    if ok then
       1
     else
       2

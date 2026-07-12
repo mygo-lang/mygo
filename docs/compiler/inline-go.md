@@ -34,6 +34,21 @@
 - Inline Go type operands automatically translate MyGO types (like `Int`, `String`, `Slice[Int]`, `Map[String, Bool]`) to their corresponding Go type representations (like `int`, `string`, `[]int`, `map[string]bool`).
 - Keep inline Go examples small and boundary-focused. Prefer ordinary MyGO, Go FFI imports, `Ref.new`, `Option`, and `Result` when those can express the behavior without raw Go.
 
+### `goExprCode` — Auto jen.Code Generation
+
+`goExprCode()` in `translate_go.go` parses simple Go expressions from the `code:` string into proper `jen.Code` structures, improving code generation quality:
+
+| Pattern | Regex | Generated jen.Code |
+|---------|-------|-------------------|
+| Simple call | `fn(arg)` | `jen.Id("fn").Call(jen.Id("arg"))` |
+| Slice from | `arr[:]` | `jen.Id("arr").Index(jen.Id("x").Op(":"))` |
+| Len comparison | `arr[:len(arr)] == x` | `jen.Id("arr").Index(jen.Op(":").Add(jen.Len(jen.Id("arr")))).Op("==").Id("x")` |
+
+- Uses three regex patterns: `goSimpleCallRE`, `goSliceFromRE`, `goSliceToLenEqRE`.
+- `goCalleeCode()` handles Go built-in callable types (`string`, `int`, `bool`) as `jen.String()`, `jen.Int()`, `jen.Bool()` instead of `jen.Id("string")`.
+- Non-matching expressions fall back to `jen.Id(src)` as a raw identifier.
+- This replaces the old behavior where all inline Go code strings were emitted as raw `jen.Id(substituted)`, which broke function calls and slice operations.
+
 ### Key Files
 
 - **AST**: `internal/mygo/ast/ast.go` — `GoExpr`, `GoOperand`, `GoTypeOperand`.

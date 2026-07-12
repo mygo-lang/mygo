@@ -71,7 +71,7 @@ go build -o zz_mygo.gen.exe examples/main/zz_mygo.gen.go
 ### Expressions
 
 - **Function bodies and other block forms**: Newline-separated statement lists; the last plain expression in a block is the return value
-- **If expression**: Supports a single-line expression form like `if cond then a else b`
+- **If expression**: Supports `if cond => a else b` and block form `if cond then ... elsif ... else ... end`
 - **Let binding**: Introduces an immutable binding. Rebinding the same source name must use a later `let` and is treated as shadowing, not assignment
 - **Var binding**: Introduces a mutable binding and may be assigned again later in the same scope
 - **Let type inference**: May omit its type annotation when the initializer provides enough information for inference

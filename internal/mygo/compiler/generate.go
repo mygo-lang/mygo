@@ -17,7 +17,7 @@ import (
 )
 
 var returnFuncLineBreakRE = regexp.MustCompile(`(?m)^([ \t]*)return[ \t]*\n([ \t]*)func\(`)
-var genericSpaceBeforeBracketRE = regexp.MustCompile(`([A-Za-z_][A-Za-z0-9_\.]*) \[`)
+var genericSpaceBeforeBracketRE = regexp.MustCompile(`([A-Za-z_][A-Za-z0-9_\.]*) \[([A-Za-z_])`)
 var genericSpaceBeforeParenRE = regexp.MustCompile(`\] \(`)
 
 func renderFile(file *jen.File) (string, error) {
@@ -28,7 +28,7 @@ func renderFile(file *jen.File) (string, error) {
 	}
 	src := out.String()
 	src = returnFuncLineBreakRE.ReplaceAllString(src, "${1}return func(")
-	src = genericSpaceBeforeBracketRE.ReplaceAllString(src, `${1}[`)
+	src = genericSpaceBeforeBracketRE.ReplaceAllString(src, `${1}[${2}`)
 	src = genericSpaceBeforeParenRE.ReplaceAllString(src, "](")
 	return src, nil
 }
@@ -186,7 +186,8 @@ func (p *Package) GenerateFiles() (map[string]string, error) {
 			g.inherentMethods[receiverName] = map[string]*inherentMethod{}
 		}
 		for _, m := range impl.Methods {
-			g.inherentMethods[receiverName][m.Name] = &inherentMethod{Impl: impl, Func: m}
+			hasReceiver := len(m.Params) > 0 && isInherentReceiverParam(m.Params[0].Type, impl.Type, receiverName)
+			g.inherentMethods[receiverName][m.Name] = &inherentMethod{Impl: impl, Func: m, HasReceiver: hasReceiver}
 		}
 	}
 
