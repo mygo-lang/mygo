@@ -295,6 +295,7 @@ The same multiline support applies to interface method signatures (`func_sig`) a
 - **`func_decl` body** — added `opt_newlines` before `opt_using_clause`.
 - **`maybe_param_list`** — changed `param_list` branch to `opt_newlines param_list opt_newlines`, allowing leading/trailing blank lines around the parameter list.
 - **`param_list`** — added `opt_newlines` around `COMMA`, and added a `param_list opt_newlines COMMA` branch to support trailing commas.
+- **Trailing commas** — added trailing-comma support to ``type_list``, ``expr_list``, ``struct_fields``, ``struct_field_list``, ``collection_entries``, and ``tuple_expr_elems``. This allows a trailing comma after the last element in type arguments, function calls, struct declarations, struct literals, slice/map/set literals, and tuple literals.
 - **`func_lit`** — added `opt_newlines` between `LPAREN`/`maybe_param_list`, `maybe_param_list`/`RPAREN`, `RPAREN`/`ARROW`, and `type`/`block_expr`.
 - Regenerated `parser.go` via `goyacc` from `parser.y`.
 - `lex.yy.go` / `parser_lex.l`: unchanged (multiline support is a grammar-only change).

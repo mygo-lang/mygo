@@ -287,6 +287,7 @@ struct_body
 struct_fields
 	: /* empty */
 	| struct_fields field opt_newlines
+	| struct_fields field opt_newlines COMMA opt_newlines
 	;
 
 field
@@ -695,6 +696,7 @@ type_list
 			p.currentConstraintArgs = append(p.currentConstraintArgs, p.currentType)
 		}
 	}
+	| type_list COMMA
 	;
 
 qualified_name
@@ -1211,6 +1213,7 @@ tuple_expr_elems
 		p.currentTupleElems = append(p.currentTupleElems, p.currentExpr)
 	}
 	tuple_expr_elems
+	| COMMA
 	;
 
 go_expr
@@ -1319,6 +1322,7 @@ expr_list
 		p.currentArgs = append(p.currentArgs, p.currentExpr)
 		p.currentSliceElems = append(p.currentSliceElems, p.currentExpr)
 	}
+	| expr_list COMMA
 	;
 
 collection_lit
@@ -1345,6 +1349,7 @@ maybe_struct_fields
 struct_field_list
 	: struct_field
 	| struct_field_list COMMA struct_field
+	| struct_field_list COMMA
 	;
 
 struct_field
@@ -1375,6 +1380,7 @@ maybe_collection_entries
 collection_entries
 	: collection_entry
 	| collection_entries COMMA collection_entry
+	| collection_entries COMMA
 	;
 
 collection_entry

@@ -1111,3 +1111,127 @@ end
 		}
 	}
 }
+
+func TestParseFileSupportsTrailingCommas(t *testing.T) {
+	src := `package main
+func demo(a: Int, b: Int,) -> Int
+  let s: Slice[Int] = [1, 2, 3,]
+  let m: Map[String, String] = {"a": "1", "b": "2",}
+  let s2: Set[Int] = {1, 2, 3,}
+  let x: MyStruct = MyStruct {
+    field1: 1,
+    field2: "hello",
+  }
+  let t = (1, 2, 3,)
+  let r = foo(a, b, c,)
+  42
+end
+struct MyStruct
+  field1: Int,
+  field2: String,
+end
+func foo(x: Int, y: Int, z: Int,) -> Int
+  0
+end
+`
+	file, err := ParseFile(src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	if got := len(file.Decls); got != 3 {
+		t.Fatalf("len(Decls) = %d, want 3", got)
+	}
+
+	// Check function with trailing comma in params
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	if got := len(fn.Params); got != 2 {
+		t.Fatalf("func demo params = %d, want 2", got)
+	}
+
+	// Check body
+	block, ok := fn.Body.(*BlockExpr)
+	if !ok {
+		t.Fatalf("Body type = %T, want *BlockExpr", fn.Body)
+	}
+
+	// Check slice literal with trailing comma
+	sliceStmt := block.Stmts[0].(*LetStmt)
+	sliceLit, ok := sliceStmt.Value.(*SliceLitExpr)
+	if !ok {
+		t.Fatalf("Stmt[0] value type = %T, want *SliceLitExpr", sliceStmt.Value)
+	}
+	if got := len(sliceLit.Elems); got != 3 {
+		t.Fatalf("slice elems = %d, want 3", got)
+	}
+
+	// Check map literal with trailing comma
+	mapStmt := block.Stmts[1].(*LetStmt)
+	mapLit, ok := mapStmt.Value.(*MapLitExpr)
+	if !ok {
+		t.Fatalf("Stmt[1] value type = %T, want *MapLitExpr", mapStmt.Value)
+	}
+	if got := len(mapLit.Pairs); got != 2 {
+		t.Fatalf("map pairs = %d, want 2", got)
+	}
+
+	// Check set literal with trailing comma
+	setStmt := block.Stmts[2].(*LetStmt)
+	setLit, ok := setStmt.Value.(*SetLitExpr)
+	if !ok {
+		t.Fatalf("Stmt[2] value type = %T, want *SetLitExpr", setStmt.Value)
+	}
+	if got := len(setLit.Elems); got != 3 {
+		t.Fatalf("set elems = %d, want 3", got)
+	}
+
+	// Check struct literal with trailing comma
+	structStmt := block.Stmts[3].(*LetStmt)
+	structLit, ok := structStmt.Value.(*StructLitExpr)
+	if !ok {
+		t.Fatalf("Stmt[3] value type = %T, want *StructLitExpr", structStmt.Value)
+	}
+	if got := len(structLit.Fields); got != 2 {
+		t.Fatalf("struct fields = %d, want 2", got)
+	}
+
+	// Check tuple literal with trailing comma
+	tupleStmt := block.Stmts[4].(*LetStmt)
+	tupleLit, ok := tupleStmt.Value.(*TupleLitExpr)
+	if !ok {
+		t.Fatalf("Stmt[4] value type = %T, want *TupleLitExpr", tupleStmt.Value)
+	}
+	if got := len(tupleLit.Elems); got != 3 {
+		t.Fatalf("tuple elems = %d, want 3", got)
+	}
+
+	// Check call expr with trailing comma
+	callStmt := block.Stmts[5].(*LetStmt)
+	callExpr, ok := callStmt.Value.(*CallExpr)
+	if !ok {
+		t.Fatalf("Stmt[5] value type = %T, want *CallExpr", callStmt.Value)
+	}
+	if got := len(callExpr.Args); got != 3 {
+		t.Fatalf("call args = %d, want 3", got)
+	}
+
+	// Check struct decl with trailing commas in fields
+	structDecl, ok := file.Decls[1].(*StructDecl)
+	if !ok {
+		t.Fatalf("Decls[1] type = %T, want *StructDecl", file.Decls[1])
+	}
+	if got := len(structDecl.Fields); got != 2 {
+		t.Fatalf("struct decl fields = %d, want 2", got)
+	}
+
+	// Check second function with trailing comma in params
+	implFn, ok := file.Decls[2].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[2] type = %T, want *FuncDecl", file.Decls[2])
+	}
+	if got := len(implFn.Params); got != 3 {
+		t.Fatalf("foo params = %d, want 3", got)
+	}
+}
