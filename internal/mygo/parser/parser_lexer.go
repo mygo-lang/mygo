@@ -52,10 +52,6 @@ func (l *lexer) nextToken() token {
 	case lex.RuneEOF:
 		return token{kind: tokEOF, line: pos.Line, col: pos.Column}
 	case NEWLINE:
-		if l.braceDepth > 0 {
-			// Skip NEWLINE inside braces
-			return l.nextToken()
-		}
 		return token{kind: tokNewline, lit: "\n", line: pos.Line, col: pos.Column}
 	case IDENT:
 		lit := string(l.TokenBytes(nil))

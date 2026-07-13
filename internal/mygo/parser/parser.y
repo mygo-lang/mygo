@@ -1078,7 +1078,7 @@ postfix_expr
 		p.currentStructFieldsStack = append(p.currentStructFieldsStack, p.currentStructFields)
 		p.currentStructFields = nil
 	}
-	LBRACE maybe_struct_fields RBRACE {
+	LBRACE opt_newlines maybe_struct_fields opt_newlines RBRACE {
 		p := yylex.(*parser)
 		if len(p.currentStructBaseStack) > 0 {
 			idx := len(p.currentStructBaseStack) - 1
@@ -1106,7 +1106,7 @@ postfix_expr
 		p.currentStructFieldsStack = append(p.currentStructFieldsStack, p.currentStructFields)
 		p.currentStructFields = nil
 	}
-	maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE {
+	maybe_type_list RBRACK LBRACE opt_newlines maybe_struct_fields opt_newlines RBRACE {
 		p := yylex.(*parser)
 		if len(p.currentStructBaseStack) > 0 {
 			idx := len(p.currentStructBaseStack) - 1
@@ -1132,7 +1132,7 @@ postfix_expr
 		p.currentStructFieldsStack = append(p.currentStructFieldsStack, p.currentStructFields)
 		p.currentStructFields = nil
 	}
-	maybe_struct_fields RBRACE {
+	opt_newlines maybe_struct_fields opt_newlines RBRACE {
 		p := yylex.(*parser)
 		if len(p.currentStructBaseStack) > 0 {
 			idx := len(p.currentStructBaseStack) - 1
@@ -1326,7 +1326,7 @@ expr_list
 	;
 
 collection_lit
-	: LBRACE maybe_collection_entries RBRACE {
+	: LBRACE opt_newlines maybe_collection_entries opt_newlines RBRACE {
 		p := yylex.(*parser)
 		if p.currentCollectionHasPair {
 			p.currentExpr = &ast.MapLitExpr{Line: $1.line, Column: $1.col, Pairs: append([]ast.MapLitPair(nil), p.currentMapEntries...)}
@@ -1348,8 +1348,8 @@ maybe_struct_fields
 
 struct_field_list
 	: struct_field
-	| struct_field_list COMMA struct_field
-	| struct_field_list COMMA
+	| struct_field_list COMMA opt_newlines struct_field
+	| struct_field_list COMMA opt_newlines
 	;
 
 struct_field
@@ -1379,8 +1379,8 @@ maybe_collection_entries
 
 collection_entries
 	: collection_entry
-	| collection_entries COMMA collection_entry
-	| collection_entries COMMA
+	| collection_entries COMMA opt_newlines collection_entry
+	| collection_entries COMMA opt_newlines
 	;
 
 collection_entry

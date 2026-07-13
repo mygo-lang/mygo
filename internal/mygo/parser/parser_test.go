@@ -664,6 +664,61 @@ end
 	}
 }
 
+func TestParseFileStructLiteralFuncFieldAllowsBangIfCondition(t *testing.T) {
+	src := `package main
+func demo() -> Parser
+  Parser {
+    run: func(state: State) -> Reply
+      let r = state.run()
+      if !r.ok then
+        r
+      else
+        r
+      end
+    end
+  }
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	lit, ok := fn.Body.(*StructLitExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *StructLitExpr", fn.Body)
+	}
+	if got := len(lit.Fields); got != 1 {
+		t.Fatalf("len(StructLitExpr.Fields) = %d, want 1", got)
+	}
+	funcLit, ok := lit.Fields[0].Value.(*FuncLitExpr)
+	if !ok {
+		t.Fatalf("Struct field value type = %T, want *FuncLitExpr", lit.Fields[0].Value)
+	}
+	block, ok := funcLit.Body.(*BlockExpr)
+	if !ok {
+		t.Fatalf("FuncLitExpr.Body type = %T, want *BlockExpr", funcLit.Body)
+	}
+	stmt, ok := block.Stmts[1].(*ExprStmt)
+	if !ok {
+		t.Fatalf("BlockExpr.Stmts[1] type = %T, want *ExprStmt", block.Stmts[1])
+	}
+	ifExpr, ok := stmt.Expr.(*IfExpr)
+	if !ok {
+		t.Fatalf("ExprStmt.Expr type = %T, want *IfExpr", stmt.Expr)
+	}
+	prefix, ok := ifExpr.Cond.(*PrefixExpr)
+	if !ok {
+		t.Fatalf("IfExpr.Cond type = %T, want *PrefixExpr", ifExpr.Cond)
+	}
+	if prefix.Op != "!" {
+		t.Fatalf("PrefixExpr.Op = %q, want !", prefix.Op)
+	}
+}
+
 func TestParseFileSupportsSwitchCaseThenEndBlock(t *testing.T) {
 	src := `package main
 func demo(v: Option) -> Int
@@ -1134,7 +1189,7 @@ func foo(x: Int, y: Int, z: Int,) -> Int
   0
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
