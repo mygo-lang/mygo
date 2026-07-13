@@ -407,9 +407,18 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 				}
 			}
 		}
-		if helper, retType, ok := preludeCollectionMethod(field.Field, bt, args); ok {
-			allArgs := append([]ast.Expr{base}, args...)
-			return &ast.CallExpr{Fun: helper, Args: allArgs}, retType, nil
+		// Also try resolving Go types to MyGO type names (e.g. []string → Slice, map[K]V → Map, map[A]struct{} → Set)
+		// This handles cases where baseNamedType returns empty (e.g. "[]" from "[]string")
+		if mygoName := goTypeToMyGoTypeName(bt); mygoName != "" {
+			if methods, ok := g.inherentMethods[mygoName]; ok {
+				if method, ok := methods[field.Field]; ok && method.HasReceiver {
+					fnName := inherentMethodName(mygoName, method.Func.Name)
+					allArgs := append([]ast.Expr{base}, args...)
+					callee := ast.NewIdent(fnName)
+					retType := g.goReturnType(method.Func.Ret, ctx.typeParams)
+					return &ast.CallExpr{Fun: callee, Args: allArgs}, retType, nil
+				}
+			}
 		}
 		// Check for typeclass method call: value.show() → show_type() or showFn()
 		if ifaceName, ok := g.interfaceByMethod[field.Field]; ok {
@@ -625,22 +634,99 @@ func baseNamedType(typeName string) string {
 	return typeName
 }
 
-func preludeCollectionMethod(method, recvType string, args []ast.Expr) (ast.Expr, string, bool) {
-	recvType = strings.TrimSpace(recvType)
-	// Len on native Go slices — handled via IEnumerable typeclass with merged prelude.
-	if strings.HasPrefix(recvType, "[]") {
-		elem := strings.TrimSpace(recvType[2:])
-		elemExpr := ast.NewIdent(elem)
-		if method == "Len" {
-			return &ast.IndexExpr{X: ast.NewIdent("Len__t_t"), Index: elemExpr}, "int", true
+func goTypeToMyGoTypeName(goType string) string {
+	goType = strings.TrimSpace(goType)
+	// []T → Slice
+	if strings.HasPrefix(goType, "[]") {
+		return "Slice"
+	}
+	// map[K]V → Map, map[A]struct{} → Set
+	if strings.HasPrefix(goType, "map[") {
+		// Find the matching ']' for the opening '['
+		depth := 0
+		closeIdx := -1
+		for i, r := range goType {
+			switch r {
+			case '[':
+				depth++
+			case ']':
+				depth--
+				if depth == 0 {
+					closeIdx = i
+					break
+				}
+			}
 		}
+		if closeIdx > 0 {
+			inner := goType[4:closeIdx] // content between "map[" and "]"
+			// Split inner into key and value at the top level
+			depth = 0
+			splitIdx := -1
+			for i, r := range inner {
+				switch r {
+				case '[', '(', '{':
+					depth++
+				case ']', ')', '}':
+					depth--
+				case ',':
+					if depth == 0 {
+						splitIdx = i
+						break
+					}
+				}
+				if splitIdx >= 0 {
+					break
+				}
+			}
+			if splitIdx >= 0 {
+				val := strings.TrimSpace(inner[splitIdx+1:])
+				if val == "struct{}" {
+					return "Set"
+				}
+			}
+		}
+		return "Map"
 	}
-	// Len on native Go maps — handled via IEnumerable typeclass with merged prelude.
-	// Len on string — compiler-intrinsic, String -> string cannot be expressed in MyGO type system.
-	if recvType == "string" && method == "Len" {
-		return ast.NewIdent("Len_string_rune"), "int", true
+	// *T → Ref
+	if strings.HasPrefix(goType, "*") {
+		return "Ref"
 	}
-	return nil, "", false
+	// string → String (for inherent impls like String.FromRunes, String.PeekRune, etc.)
+	if goType == "string" {
+		return "String"
+	}
+	// int, bool, etc. → Int, Bool, etc.
+	switch goType {
+	case "int":
+		return "Int"
+	case "int8":
+		return "Int8"
+	case "int16":
+		return "Int16"
+	case "int32":
+		return "Int32"
+	case "int64":
+		return "Int64"
+	case "uint":
+		return "UInt"
+	case "uint8", "byte":
+		return "UInt8"
+	case "uint16":
+		return "UInt16"
+	case "uint32":
+		return "UInt32"
+	case "uint64":
+		return "UInt64"
+	case "float32":
+		return "Float32"
+	case "float64":
+		return "Float64"
+	case "rune":
+		return "Int32"
+	case "bool":
+		return "Bool"
+	}
+	return ""
 }
 
 func (g *gen) typeclassMethodReturnType(iface *InterfaceDecl, methodName, recvType string) string {
