@@ -2,15 +2,11 @@
 
 package sort
 
-import (
-	. "github.com/mygo-lang/mygo/lib/prelude"
-)
+import . "github.com/mygo-lang/mygo/prelude"
 
-var _ = None[any]
-
-func Sort[A any](slc[]A, less func(A, A) bool) {
+func Sort[A any](slc []A, less func(A, A) bool) {
 	var sortFn func([]A, int, int)
-	sortFn = func(arr[]A, lo, hi int) {
+	sortFn = func(arr []A, lo, hi int) {
 		if lo >= hi {
 			return
 		}
@@ -27,10 +23,9 @@ func Sort[A any](slc[]A, less func(A, A) bool) {
 		sortFn(arr, i+1, hi)
 	}
 	sortFn(slc, 0, len(slc)-1)
-
 	return
 }
-func IsSorted[A any](slc[]A, less func(A, A) bool) bool {
+func IsSorted[A any](slc []A, less func(A, A) bool) bool {
 	return func() bool {
 		for i := 0; i < len(slc)-1; i++ {
 			if less(slc[i+1], slc[i]) {
@@ -39,9 +34,8 @@ func IsSorted[A any](slc[]A, less func(A, A) bool) bool {
 		}
 		return true
 	}()
-
 }
-func BinarySearch[A any](slc[]A, target A, compare func(A, A) int) Option[int] {
+func BinarySearch[A any](slc []A, target A, compare func(A, A) int) Option[int] {
 	return func() Option[int] {
 		lo, hi := 0, len(slc)-1
 		for lo <= hi {
@@ -57,7 +51,6 @@ func BinarySearch[A any](slc[]A, target A, compare func(A, A) int) Option[int] {
 		}
 		return None[int]()
 	}()
-
 }
 func Min[A any](a A, b A, less func(A, A) bool) A {
 	return func() A {
@@ -66,7 +59,6 @@ func Min[A any](a A, b A, less func(A, A) bool) A {
 		}
 		return b
 	}()
-
 }
 func Max[A any](a A, b A, greater func(A, A) bool) A {
 	return func() A {
@@ -75,5 +67,4 @@ func Max[A any](a A, b A, greater func(A, A) bool) A {
 		}
 		return b
 	}()
-
 }

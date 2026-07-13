@@ -2,8 +2,8 @@ package parser
 
 import "os"
 
-func parseFile(src string) (*File, error) {
-	p := newParser(src)
+func parseFile(filename, src string) (*File, error) {
+	p := newParser(filename, src)
 	if err := p.parseWithYacc(); err != nil {
 		return nil, err
 	}
@@ -27,6 +27,7 @@ func (p *parser) parseWithYacc() error {
 	p.currentTypeCol = 0
 	p.currentTypeParams = nil
 	p.currentParams = nil
+	p.currentParamsStack = nil
 	p.currentWhere = nil
 	p.currentConstraintArgs = nil
 	p.currentBlock = nil

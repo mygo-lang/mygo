@@ -94,7 +94,7 @@ func loadMyGoPackageInfo(workspaceRoot, baseDir, importPath, alias string, cache
 		if err != nil {
 			return nil, err
 		}
-		file, err := parserpkg.ParseFile(string(src))
+		file, err := parserpkg.ParseFile("<go-import>", string(src))
 		if err != nil {
 			return nil, err
 		}

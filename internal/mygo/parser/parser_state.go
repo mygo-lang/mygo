@@ -11,6 +11,7 @@ type parser struct {
 	pos                          int
 	skipNL                       bool
 	err                          error
+	filename                     string
 	result                       *ast.File
 	packageName                  string
 	packageLine                  int
@@ -25,6 +26,8 @@ type parser struct {
 	currentTypeCol               int
 	currentTypeParams            []string
 	currentParams                []ast.Param
+	currentParamsStack           [][]ast.Param
+	currentFuncLitRetStack       []ast.TypeExpr
 	currentWhere                 []ast.Constraint
 	currentConstraintArgs        []TypeExpr
 	currentBlock                 []ast.Stmt
@@ -42,6 +45,8 @@ type parser struct {
 	currentCallCalleeStack       []ast.Expr
 	currentArgsStack             [][]ast.Expr
 	currentSliceElemsStack       [][]ast.Expr
+	currentCallTypeArgs          []ast.TypeExpr
+	currentCallTypeArgsStack     [][]ast.TypeExpr
 	currentStructBaseStack       []ast.Expr
 	currentStructFieldsStack     [][]ast.StructLitField
 	currentTupleElemsStack       [][]ast.Expr
@@ -58,10 +63,11 @@ type parser struct {
 	currentIfCondStack           []ast.Expr
 	currentIfThenStack           []ast.Expr
 	currentIfElseStack           []ast.Expr
+	currentIfPartsStack          []ifParts
 	currentWhileCond             ast.Expr
 	currentWhileBody             ast.Expr
 	currentSwitchTarget          ast.Expr
-	currentSwitchTargetStack      []ast.Expr
+	currentSwitchTargetStack     []ast.Expr
 	currentSwitchCases           []ast.SwitchCase
 	currentSwitchCasesStack      [][]ast.SwitchCase
 	currentPattern               ast.Pattern
@@ -118,7 +124,7 @@ type typeNameEntry struct {
 func parseFiles(srcs map[string]string) ([]*ast.File, error) {
 	files := make([]*ast.File, 0, len(srcs))
 	for path, src := range srcs {
-		f, err := parseFile(src)
+		f, err := parseFile(path, src)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)
 		}
@@ -127,7 +133,7 @@ func parseFiles(srcs map[string]string) ([]*ast.File, error) {
 	return files, nil
 }
 
-func newParser(src string) *parser {
+func newParser(filename, src string) *parser {
 	l := newLexer(src)
 	var toks []token
 	for {
@@ -137,7 +143,7 @@ func newParser(src string) *parser {
 			break
 		}
 	}
-	return &parser{toks: toks, skipNL: true}
+	return &parser{toks: toks, skipNL: true, filename: filename}
 }
 
 func (p *parser) peek() token {

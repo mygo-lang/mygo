@@ -1,0 +1,122 @@
+package prelude
+
+# A linked list node. Tail uses Option[Ref[List[A]]] so None terminates the list.
+struct List[A]
+  head: A
+  tail: Option[Ref[List[A]]]
+end
+
+
+impl[T] ListIEnumerable[T]: IEnumerable[List[T], T]
+  func Each(c: List[T], fn: func(T) -> ()) -> ()
+    var current: Ref[List[T]] = Ref.new(c)
+    var done: Bool = false
+    while !done
+      fn(current.head)
+      switch current.tail
+        case None => done = true
+        case Some(node) => current = node
+      end
+    end
+    return
+  end
+
+  func Len(c: List[T]) -> Int
+    var count: Int = 0
+    var current: Ref[List[T]] = Ref.new(c)
+    var done: Bool = false
+    while !done
+      count = count + 1
+      switch current.tail
+        case None => done = true
+        case Some(node) => current = node
+      end
+    end
+    return count
+  end
+
+  func Map[B](c: List[T], fn: func(T) -> B) -> List[B]
+    var done: Bool = false
+    let headVal: B = fn(c.head)
+    var result: List[B] = List[B] { head: headVal, tail: None }
+    var current: Ref[List[T]] = Ref.new(c)
+    while !done
+      switch current.tail
+        case None => done = true
+        case Some(node) then
+          current = node
+          result = List[B] { head: fn(current.head), tail: Some(Ref.new(result)) }
+        end
+      end
+    end
+    return result
+  end
+
+  func Filter(c: List[T], fn: func(T) -> Bool) -> List[T]
+    var done: Bool = false
+    var current: Ref[List[T]] = Ref.new(c)
+    var result: List[T] = List[T] { head: current.head, tail: None }
+    while !done
+      if fn(current.head) then
+        result = List[T] { head: current.head, tail: Some(Ref.new(result)) }
+      else
+        ()
+      end
+      switch current.tail
+        case None => done = true
+        case Some(node) => current = node
+      end
+    end
+    return result
+  end
+
+  func Fold[B](c: List[T], initial: B, fn: func(B, T) -> B) -> B
+    var acc: B = initial
+    var done: Bool = false
+    var current: Ref[List[T]] = Ref.new(c)
+    while !done
+      acc = fn(acc, current.head)
+      switch current.tail
+        case None => done = true
+        case Some(node) => current = node
+      end
+    end
+    return acc
+  end
+
+  func Find(c: List[T], fn: func(T) -> Bool) -> Option[Ref[T]]
+    var done: Bool = false
+    var result: Option[Ref[T]] = None
+    var current: Ref[List[T]] = Ref.new(c)
+    while !done
+      if fn(current.head) then
+        result = Some(Ref.new(current.head))
+        done = true
+      else
+        switch current.tail
+          case None => done = true
+          case Some(node) => current = node
+        end
+      end
+    end
+    return result
+  end
+
+  func Contains(c: List[T], item: T) -> Bool using Eq[T]
+    var done: Bool = false
+    var result: Bool = false
+    var current: Ref[List[T]] = Ref.new(c)
+    while !done
+      if current.head.Equals(item) then
+        result = true
+        done = true
+      else
+        switch current.tail
+          case None => done = true
+          case Some(node) => current = node
+        end
+      end
+    end
+    return result
+  end
+end

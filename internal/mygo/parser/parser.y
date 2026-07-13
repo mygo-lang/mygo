@@ -37,6 +37,8 @@ func makeLitExpr(t token) *ast.LiteralExpr {
 		return &ast.LiteralExpr{Line: t.line, Column: t.col, Kind: "number", Value: t.lit}
 	case tokString:
 		return &ast.LiteralExpr{Line: t.line, Column: t.col, Kind: "string", Value: t.lit}
+	case tokRune:
+		return &ast.LiteralExpr{Line: t.line, Column: t.col, Kind: "rune", Value: t.lit}
 	default:
 		return nil
 	}
@@ -54,6 +56,11 @@ func bodyExprFromBlock(e ast.Expr) ast.Expr {
 	}
 	return &ast.BlockExpr{Line: block.Line, Column: block.Column, Stmts: append([]ast.Stmt(nil), block.Stmts...)}
 }
+
+type ifParts struct {
+	cond ast.Expr
+	then ast.Expr
+}
 %}
 
 %union {
@@ -61,14 +68,15 @@ func bodyExprFromBlock(e ast.Expr) ast.Expr {
 	node  any
 }
 
-%token <token> IDENT NUMBER STRING
-%token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSE SWITCH CASE END USING NOT LET VAR EMBED WHILE RETURN GO IN TYPE AS
+%token <token> IDENT NUMBER STRING RUNE
+%token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSIF ELSE SWITCH CASE END USING NOT LET VAR EMBED WHILE RETURN GO IN TYPE AS
 %token <token> NEWLINE
 %token <token> ARROW EQEQ NEQ LTE GTE PIPEFWD PIPEBACK ANDAND OROR
 %token <token> COLON COMMA DOT LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE UNDER SLICE
 %token <token> TYPELBRACK CONSTRLBRACK CASTIDENT
-%type <token> call_start
+%type <token> call_start generic_type_prefix
 %type <token> opt_newlines
+%type <node> if_block_tail
 %left PIPEFWD PIPEBACK
 %left OROR
 %left ANDAND
@@ -281,6 +289,7 @@ struct_body
 struct_fields
 	: /* empty */
 	| struct_fields field opt_newlines
+	| struct_fields field opt_newlines COMMA opt_newlines
 	;
 
 field
@@ -591,6 +600,8 @@ constr_suffix
 constraint_suffix
 	: /* empty */
 	| CONSTRLBRACK maybe_type_list RBRACK
+	| TYPELBRACK maybe_type_list RBRACK
+	| LBRACK maybe_type_list RBRACK
 	;
 
 opt_type_params
@@ -654,7 +665,11 @@ param_list
 	;
 
 param
-	: IDENT COLON type {
+	: IDENT COLON {
+		p := yylex.(*parser)
+		p.expectTypeSuffix = true
+	}
+	type {
 		p := yylex.(*parser)
 		p.currentParams = append(p.currentParams, ast.Param{
 			Line: $1.line,
@@ -685,10 +700,18 @@ type_list
 			p.currentConstraintArgs = append(p.currentConstraintArgs, p.currentType)
 		}
 	}
+	| type_list COMMA
 	;
 
 qualified_name
 	: IDENT {
+		p := yylex.(*parser)
+		p.currentName = $1.lit
+		p.currentNameLine = $1.line
+		p.currentNameCol = $1.col
+		p.expectTypeSuffix = true
+	}
+	| NUMBER {
 		p := yylex.(*parser)
 		p.currentName = $1.lit
 		p.currentNameLine = $1.line
@@ -1030,44 +1053,70 @@ prefix_expr
 
 postfix_expr
 	: primary
-	| postfix_expr call_start maybe_expr_list RPAREN {
+	| postfix_expr call_start opt_type_args maybe_expr_list RPAREN {
 		p := yylex.(*parser)
+		call := &ast.CallExpr{
+			Line:     $2.line,
+			Column:   $2.col,
+			Callee:   p.currentExpr,
+			TypeArgs: append([]ast.TypeExpr(nil), p.currentCallTypeArgs...),
+			Args:     append([]ast.Expr(nil), p.currentArgs...),
+		}
+		p.currentCallTypeArgs = nil
+		p.currentArgs = nil
 		if len(p.currentCallCalleeStack) == 0 {
-			p.currentExpr = &ast.CallExpr{Line: $2.line, Column: $2.col, Callee: p.currentExpr, Args: append([]ast.Expr(nil), p.currentArgs...)}
-			p.currentArgs = nil
+			p.currentExpr = call
 		} else {
 			idx := len(p.currentCallCalleeStack) - 1
 			callee := p.currentCallCalleeStack[idx]
 			prevArgs := p.currentArgsStack[idx]
 			prevSliceElems := p.currentSliceElemsStack[idx]
-			args := append([]ast.Expr(nil), p.currentArgs...)
+			prevTypeArgs := p.currentCallTypeArgsStack[idx]
 			p.currentCallCalleeStack = p.currentCallCalleeStack[:idx]
 			p.currentArgsStack = p.currentArgsStack[:idx]
 			p.currentSliceElemsStack = p.currentSliceElemsStack[:idx]
+			p.currentCallTypeArgsStack = p.currentCallTypeArgsStack[:idx]
 			p.currentArgs = prevArgs
 			p.currentSliceElems = prevSliceElems
-			p.currentExpr = &ast.CallExpr{Line: $2.line, Column: $2.col, Callee: callee, Args: args}
+			p.currentCallTypeArgs = prevTypeArgs
+			p.currentExpr = &ast.CallExpr{
+				Line:     $2.line,
+				Column:   $2.col,
+				Callee:   callee,
+				TypeArgs: append([]ast.TypeExpr(nil), p.currentCallTypeArgs...),
+				Args:     append([]ast.Expr(nil), call.Args...),
+			}
 		}
 	}
 	| postfix_expr DOT IDENT {
 		p := yylex.(*parser)
 		p.currentExpr = &ast.FieldExpr{Line: $2.line, Column: $2.col, Expr: p.currentExpr, Field: $3.lit}
 	}
-	| postfix_expr TYPELBRACK maybe_type_list RBRACK {
+	| generic_type_prefix call_start maybe_expr_list RPAREN {
 		p := yylex.(*parser)
-		p.currentStructBaseStack = append(p.currentStructBaseStack, p.currentExpr)
-		p.currentStructFieldsStack = append(p.currentStructFieldsStack, p.currentStructFields)
-		p.currentStructFields = nil
-	}
-	LBRACE maybe_struct_fields RBRACE {
-		p := yylex.(*parser)
+		typeArgs := append([]ast.TypeExpr(nil), p.currentStructTypeArgs...)
+		args := append([]ast.Expr(nil), p.currentArgs...)
+		p.currentStructTypeArgs = nil
+		p.expectStructTypeArgs = false
+		p.currentArgs = nil
+		callee := p.currentExpr
 		if len(p.currentStructBaseStack) > 0 {
 			idx := len(p.currentStructBaseStack) - 1
-			base := p.currentStructBaseStack[idx]
+			callee = p.currentStructBaseStack[idx]
 			p.currentStructBaseStack = p.currentStructBaseStack[:idx]
-			if id, ok := base.(*ast.IdentExpr); ok {
-			p.currentExpr = &ast.StructLitExpr{Line: $2.line, Column: $2.col, TypeName: id.Name, TypeArgs: append([]ast.TypeExpr(nil), p.currentStructTypeArgs...), Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
-			}
+		}
+		if len(p.currentCallCalleeStack) > 0 {
+			idx := len(p.currentCallCalleeStack) - 1
+			prevArgs := p.currentArgsStack[idx]
+			prevSliceElems := p.currentSliceElemsStack[idx]
+			prevTypeArgs := p.currentCallTypeArgsStack[idx]
+			p.currentCallCalleeStack = p.currentCallCalleeStack[:idx]
+			p.currentArgsStack = p.currentArgsStack[:idx]
+			p.currentSliceElemsStack = p.currentSliceElemsStack[:idx]
+			p.currentCallTypeArgsStack = p.currentCallTypeArgsStack[:idx]
+			p.currentArgs = prevArgs
+			p.currentSliceElems = prevSliceElems
+			p.currentCallTypeArgs = prevTypeArgs
 		}
 		if len(p.currentStructFieldsStack) > 0 {
 			idx := len(p.currentStructFieldsStack) - 1
@@ -1076,25 +1125,22 @@ postfix_expr
 		} else {
 			p.currentStructFields = nil
 		}
-		p.currentStructTypeArgs = nil
-		p.expectStructTypeArgs = false
+		p.currentExpr = &ast.CallExpr{
+			Line:     $2.line,
+			Column:   $2.col,
+			Callee:   callee,
+			TypeArgs: typeArgs,
+			Args:     args,
+		}
 	}
-	| postfix_expr LBRACK {
-		p := yylex.(*parser)
-		p.expectStructTypeArgs = true
-		p.currentStructBaseStack = append(p.currentStructBaseStack, p.currentExpr)
-		p.currentStructTypeArgs = nil
-		p.currentStructFieldsStack = append(p.currentStructFieldsStack, p.currentStructFields)
-		p.currentStructFields = nil
-	}
-	maybe_type_list RBRACK LBRACE maybe_struct_fields RBRACE {
+	| generic_type_prefix LBRACE opt_newlines maybe_struct_fields opt_newlines RBRACE {
 		p := yylex.(*parser)
 		if len(p.currentStructBaseStack) > 0 {
 			idx := len(p.currentStructBaseStack) - 1
 			base := p.currentStructBaseStack[idx]
 			p.currentStructBaseStack = p.currentStructBaseStack[:idx]
 			if id, ok := base.(*ast.IdentExpr); ok {
-			p.currentExpr = &ast.StructLitExpr{Line: $2.line, Column: $2.col, TypeName: id.Name, TypeArgs: append([]ast.TypeExpr(nil), p.currentStructTypeArgs...), Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
+			p.currentExpr = &ast.StructLitExpr{Line: $1.line, Column: $1.col, TypeName: id.Name, TypeArgs: append([]ast.TypeExpr(nil), p.currentStructTypeArgs...), Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
 			}
 		}
 		if len(p.currentStructFieldsStack) > 0 {
@@ -1113,7 +1159,7 @@ postfix_expr
 		p.currentStructFieldsStack = append(p.currentStructFieldsStack, p.currentStructFields)
 		p.currentStructFields = nil
 	}
-	maybe_struct_fields RBRACE {
+	opt_newlines maybe_struct_fields opt_newlines RBRACE {
 		p := yylex.(*parser)
 		if len(p.currentStructBaseStack) > 0 {
 			idx := len(p.currentStructBaseStack) - 1
@@ -1138,12 +1184,17 @@ primary
 	: IDENT {
 		p := yylex.(*parser)
 		p.currentExpr = makeIdentExpr($1)
+		p.expectTypeSuffix = true
 	}
 	| NUMBER {
 		p := yylex.(*parser)
 		p.currentExpr = makeLitExpr($1)
 	}
 	| STRING {
+		p := yylex.(*parser)
+		p.currentExpr = makeLitExpr($1)
+	}
+	| RUNE {
 		p := yylex.(*parser)
 		p.currentExpr = makeLitExpr($1)
 	}
@@ -1194,6 +1245,7 @@ tuple_expr_elems
 		p.currentTupleElems = append(p.currentTupleElems, p.currentExpr)
 	}
 	tuple_expr_elems
+	| COMMA
 	;
 
 go_expr
@@ -1274,6 +1326,29 @@ slice_lit
 	}
 	;
 
+generic_type_prefix
+	: postfix_expr LBRACK {
+		p := yylex.(*parser)
+		p.expectStructTypeArgs = true
+		p.currentStructBaseStack = append(p.currentStructBaseStack, p.currentExpr)
+		p.currentStructTypeArgs = nil
+		p.currentStructFieldsStack = append(p.currentStructFieldsStack, p.currentStructFields)
+		p.currentStructFields = nil
+	} maybe_type_list RBRACK {
+		$$ = $2
+	}
+	| postfix_expr TYPELBRACK {
+		p := yylex.(*parser)
+		p.expectStructTypeArgs = true
+		p.currentStructBaseStack = append(p.currentStructBaseStack, p.currentExpr)
+		p.currentStructTypeArgs = nil
+		p.currentStructFieldsStack = append(p.currentStructFieldsStack, p.currentStructFields)
+		p.currentStructFields = nil
+	} maybe_type_list RBRACK {
+		$$ = $2
+	}
+	;
+
 call_start
 	: LPAREN {
 		p := yylex.(*parser)
@@ -1281,8 +1356,21 @@ call_start
 		p.currentCallCalleeStack = append(p.currentCallCalleeStack, p.currentExpr)
 		p.currentArgsStack = append(p.currentArgsStack, p.currentArgs)
 		p.currentSliceElemsStack = append(p.currentSliceElemsStack, p.currentSliceElems)
+		p.currentCallTypeArgsStack = append(p.currentCallTypeArgsStack, p.currentCallTypeArgs)
 		p.currentArgs = nil
 		p.currentSliceElems = nil
+		p.currentCallTypeArgs = nil
+	}
+	;
+
+opt_type_args
+	: /* empty */ {
+		p := yylex.(*parser)
+		p.currentCallTypeArgs = nil
+	}
+	| TYPELBRACK maybe_type_list RBRACK {
+		p := yylex.(*parser)
+		p.currentCallTypeArgs = append([]ast.TypeExpr(nil), p.currentStructTypeArgs...)
 	}
 	;
 
@@ -1302,10 +1390,11 @@ expr_list
 		p.currentArgs = append(p.currentArgs, p.currentExpr)
 		p.currentSliceElems = append(p.currentSliceElems, p.currentExpr)
 	}
+	| expr_list COMMA
 	;
 
 collection_lit
-	: LBRACE maybe_collection_entries RBRACE {
+	: LBRACE opt_newlines maybe_collection_entries opt_newlines RBRACE {
 		p := yylex.(*parser)
 		if p.currentCollectionHasPair {
 			p.currentExpr = &ast.MapLitExpr{Line: $1.line, Column: $1.col, Pairs: append([]ast.MapLitPair(nil), p.currentMapEntries...)}
@@ -1327,7 +1416,8 @@ maybe_struct_fields
 
 struct_field_list
 	: struct_field
-	| struct_field_list COMMA struct_field
+	| struct_field_list COMMA opt_newlines struct_field
+	| struct_field_list COMMA opt_newlines
 	;
 
 struct_field
@@ -1357,7 +1447,8 @@ maybe_collection_entries
 
 collection_entries
 	: collection_entry
-	| collection_entries COMMA collection_entry
+	| collection_entries COMMA opt_newlines collection_entry
+	| collection_entries COMMA opt_newlines
 	;
 
 collection_entry
@@ -1387,30 +1478,11 @@ if_expr
 	: IF expr {
 		p := yylex.(*parser)
 		p.currentIfCondStack = append(p.currentIfCondStack, p.currentIfCond)
+		p.currentIfThenStack = append(p.currentIfThenStack, p.currentIfThen)
+		p.currentIfElseStack = append(p.currentIfElseStack, p.currentIfElse)
 		p.currentIfCond = p.currentExpr
-	}
-	THEN expr {
-		p := yylex.(*parser)
-		p.currentIfThen = p.currentExpr
-	}
-	ELSE expr {
-		p := yylex.(*parser)
-		p.currentIfElse = p.currentExpr
-		p.currentExpr = &ast.IfExpr{Line: $1.line, Column: $1.col, Cond: p.currentIfCond, Then: p.currentIfThen, Else: p.currentIfElse}
-		if len(p.currentIfCondStack) > 0 {
-			idx := len(p.currentIfCondStack) - 1
-			p.currentIfCond = p.currentIfCondStack[idx]
-			p.currentIfCondStack = p.currentIfCondStack[:idx]
-		} else {
-			p.currentIfCond = nil
-		}
 		p.currentIfThen = nil
 		p.currentIfElse = nil
-	}
-	| IF expr {
-		p := yylex.(*parser)
-		p.currentIfCondStack = append(p.currentIfCondStack, p.currentIfCond)
-		p.currentIfCond = p.currentExpr
 	}
 	ARROW expr {
 		p := yylex.(*parser)
@@ -1427,22 +1499,38 @@ if_expr
 		} else {
 			p.currentIfCond = nil
 		}
-		p.currentIfThen = nil
-		p.currentIfElse = nil
+		if len(p.currentIfThenStack) > 0 {
+			idx := len(p.currentIfThenStack) - 1
+			p.currentIfThen = p.currentIfThenStack[idx]
+			p.currentIfThenStack = p.currentIfThenStack[:idx]
+		} else {
+			p.currentIfThen = nil
+		}
+		if len(p.currentIfElseStack) > 0 {
+			idx := len(p.currentIfElseStack) - 1
+			p.currentIfElse = p.currentIfElseStack[idx]
+			p.currentIfElseStack = p.currentIfElseStack[:idx]
+		} else {
+			p.currentIfElse = nil
+		}
 	}
-	| IF expr NEWLINE {
+	| IF expr THEN {
 		p := yylex.(*parser)
 		p.currentIfCondStack = append(p.currentIfCondStack, p.currentIfCond)
+		p.currentIfThenStack = append(p.currentIfThenStack, p.currentIfThen)
+		p.currentIfElseStack = append(p.currentIfElseStack, p.currentIfElse)
 		p.currentIfCond = p.currentExpr
+		p.currentIfThen = nil
+		p.currentIfElse = nil
 	}
 	opt_newlines
 	block_expr {
 		p := yylex.(*parser)
-		p.currentIfThen = p.currentExpr
+		p.currentIfThen = bodyExprFromBlock(p.currentExpr)
 	}
-	ELSE opt_newlines block_expr opt_newlines END {
+	if_block_tail END {
 		p := yylex.(*parser)
-		p.currentIfElse = p.currentExpr
+		p.currentIfElse, _ = $8.(ast.Expr)
 		p.currentExpr = &ast.IfExpr{Line: $1.line, Column: $1.col, Cond: p.currentIfCond, Then: p.currentIfThen, Else: p.currentIfElse}
 		if len(p.currentIfCondStack) > 0 {
 			idx := len(p.currentIfCondStack) - 1
@@ -1451,8 +1539,44 @@ if_expr
 		} else {
 			p.currentIfCond = nil
 		}
-		p.currentIfThen = nil
-		p.currentIfElse = nil
+		if len(p.currentIfThenStack) > 0 {
+			idx := len(p.currentIfThenStack) - 1
+			p.currentIfThen = p.currentIfThenStack[idx]
+			p.currentIfThenStack = p.currentIfThenStack[:idx]
+		} else {
+			p.currentIfThen = nil
+		}
+		if len(p.currentIfElseStack) > 0 {
+			idx := len(p.currentIfElseStack) - 1
+			p.currentIfElse = p.currentIfElseStack[idx]
+			p.currentIfElseStack = p.currentIfElseStack[:idx]
+		} else {
+			p.currentIfElse = nil
+		}
+	}
+	;
+
+if_block_tail
+	: ELSE opt_newlines block_expr opt_newlines {
+		p := yylex.(*parser)
+		$$ = bodyExprFromBlock(p.currentExpr)
+	}
+	| ELSIF expr THEN {
+		p := yylex.(*parser)
+		p.currentIfPartsStack = append(p.currentIfPartsStack, ifParts{cond: p.currentExpr})
+	}
+	opt_newlines block_expr {
+		p := yylex.(*parser)
+		idx := len(p.currentIfPartsStack) - 1
+		p.currentIfPartsStack[idx].then = bodyExprFromBlock(p.currentExpr)
+	}
+	if_block_tail {
+		p := yylex.(*parser)
+		idx := len(p.currentIfPartsStack) - 1
+		parts := p.currentIfPartsStack[idx]
+		p.currentIfPartsStack = p.currentIfPartsStack[:idx]
+		elseExpr, _ := $8.(ast.Expr)
+		$$ = &ast.IfExpr{Line: $1.line, Column: $1.col, Cond: parts.cond, Then: parts.then, Else: elseExpr}
 	}
 	;
 
@@ -1550,6 +1674,10 @@ pattern
 		p := yylex.(*parser)
 		p.currentPattern = &ast.LiteralPattern{Line: $1.line, Column: $1.col, Kind: "string", Value: $1.lit}
 	}
+	| RUNE {
+		p := yylex.(*parser)
+		p.currentPattern = &ast.LiteralPattern{Line: $1.line, Column: $1.col, Kind: "rune", Value: $1.lit}
+	}
 	| NUMBER {
 		p := yylex.(*parser)
 		p.currentPattern = &ast.LiteralPattern{Line: $1.line, Column: $1.col, Kind: "number", Value: $1.lit}
@@ -1611,11 +1739,33 @@ pattern_list
 	;
 
 func_lit
-	: FUNC LPAREN opt_newlines maybe_param_list RPAREN opt_newlines ARROW type opt_newlines block_expr opt_newlines END {
+	: FUNC LPAREN {
+		p := yylex.(*parser)
+		p.currentParamsStack = append(p.currentParamsStack, p.currentParams)
+		p.currentParams = nil
+	}
+	opt_newlines maybe_param_list RPAREN opt_newlines ARROW type {
+		p := yylex.(*parser)
+		p.currentFuncLitRetStack = append(p.currentFuncLitRetStack, p.currentType)
+	}
+	opt_newlines block_expr opt_newlines END {
 		p := yylex.(*parser)
 		body := bodyExprFromBlock(p.currentExpr)
-		p.currentExpr = &ast.FuncLitExpr{Line: $1.line, Column: $1.col, Params: append([]ast.Param(nil), p.currentParams...), Ret: p.currentType, Body: body}
-		p.currentParams = nil
+		params := append([]ast.Param(nil), p.currentParams...)
+		ret := p.currentType
+		if len(p.currentFuncLitRetStack) > 0 {
+			idx := len(p.currentFuncLitRetStack) - 1
+			ret = p.currentFuncLitRetStack[idx]
+			p.currentFuncLitRetStack = p.currentFuncLitRetStack[:idx]
+		}
+		if len(p.currentParamsStack) > 0 {
+			idx := len(p.currentParamsStack) - 1
+			p.currentParams = p.currentParamsStack[idx]
+			p.currentParamsStack = p.currentParamsStack[:idx]
+		} else {
+			p.currentParams = nil
+		}
+		p.currentExpr = &ast.FuncLitExpr{Line: $1.line, Column: $1.col, Params: params, Ret: ret, Body: body}
 	}
 	;
 
@@ -1752,6 +1902,7 @@ expr_stmt
 func (p *parser) Lex(lval *yySymType) int {
 	tok := p.nextRaw()
 	lval.setTok(tok)
+	savedExpectTypeSuffix := p.expectTypeSuffix
 	if tok.lit != "[" {
 		p.expectTypeSuffix = false
 		p.expectStructTypeArgs = false
@@ -1771,6 +1922,8 @@ func (p *parser) Lex(lval *yySymType) int {
 		return int(NUMBER)
 	case tokString:
 		return int(STRING)
+	case tokRune:
+		return int(RUNE)
 	case tokKeyword:
 		switch tok.lit {
 		case "package":
@@ -1791,6 +1944,8 @@ func (p *parser) Lex(lval *yySymType) int {
 			return int(IF)
 		case "then":
 			return int(THEN)
+		case "elsif":
+			return int(ELSIF)
 		case "else":
 			return int(ELSE)
 		case "switch":
@@ -1858,13 +2013,7 @@ func (p *parser) Lex(lval *yySymType) int {
 		case ")":
 			return int(RPAREN)
 		case "[":
-			if p.expectStructTypeArgs {
-				return int(TYPELBRACK)
-			}
-			if p.expectConstraintSuffix {
-				return int(CONSTRLBRACK)
-			}
-			if p.expectTypeSuffix {
+			if p.expectStructTypeArgs || savedExpectTypeSuffix || p.expectConstraintSuffix {
 				return int(TYPELBRACK)
 			}
 			return int(LBRACK)

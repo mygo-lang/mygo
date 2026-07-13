@@ -1,0 +1,147 @@
+package prelude
+
+impl[K, V] MapIEnumerable[K, V]: IEnumerable[Map[K, V], V]
+  func Each(c: Map[K, V], fn: func(V) -> ()) -> ()
+    go[()] {
+      code: """
+        func() {
+          for _, v := range c {
+            fn(v)
+          }
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
+  end
+
+  func Len(c: Map[K, V]) -> Int
+    go[Int] { code: `len(c)` }
+  end
+
+  func Map[B](c: Map[K, V], fn: func(V) -> B) -> Map[K, B]
+    go[Map[K, B]] {
+      code: """
+        func() map[K]B {
+          out := make(map[K]B, len(c))
+          for k, v := range c {
+            out[k] = fn(v)
+          }
+          return out
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
+  end
+
+  func Filter(c: Map[K, V], fn: func(V) -> Bool) -> Map[K, V]
+    go[Map[K, V]] {
+      code: """
+        func() map[K]V {
+          out := make(map[K]V, len(c))
+          for k, v := range c {
+            if fn(v) {
+              out[k] = v
+            }
+          }
+          return out
+        }()
+      """
+      in c = c
+      in fn = fn
+    }
+  end
+
+  func Fold[B](c: Map[K, V], initial: B, fn: func(B, V) -> B) -> B
+    go[B] {
+      code: """
+        func() B {
+          acc := initial
+          for _, v := range c {
+            acc = fn(acc, v)
+          }
+          return acc
+        }()
+      """
+      in c = c
+      in initial = initial
+      in fn = fn
+    }
+  end
+
+  func Find(c: Map[K, V], fn: func(V) -> Bool) -> Option[Ref[V]]
+    go[Option[Ref[V]]] {
+      code: """
+        func() Option[*V] {
+          for _, v := range c {
+            if fn(v) {
+              val := v
+              return Some[*V](&val)
+            }
+          }
+          return None[*V]()
+        }()
+      """
+      in c = c
+      in fn = fn
+      type V = V
+    }
+  end
+
+  func Contains(c: Map[K, V], item: V) -> Bool using Eq[V]
+    go[Bool] {
+      code: """
+        func() bool {
+          for _, v := range c {
+            if EqualsFn(v, item) {
+              return true
+            }
+          }
+          return false
+        }()
+      """
+      in c = c
+      in item = item
+    }
+  end
+end
+
+impl[K, V] Map[K, V]: IAssignable[Map[K, V], K, V]
+  func Get(m: Map[K, V], index: K) -> Option[V]
+    go[Option[V]] {
+      code: """
+        func() Option[V] {
+          if v, ok := m[index]; ok {
+            return Some[V](v)
+          }
+          return None[V]()
+        }()
+      """
+      in m = m
+      in index = index
+      type V = V
+    }
+  end
+
+  func Set(m: Map[K, V], index: K, value: V) -> ()
+    go[()] {
+      code: """
+        m[index] = value
+      """
+      in m = m
+      in index = index
+      in value = value
+    }
+  end
+
+  func Delete(m: Map[K, V], index: K) -> ()
+    go[()] {
+      code: """
+        delete(m, index)
+      """
+      in m = m
+      in index = index
+    }
+  end
+end

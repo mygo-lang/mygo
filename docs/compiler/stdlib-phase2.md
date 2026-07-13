@@ -1,12 +1,12 @@
 # Standard Library — Phase 2: String Utility Functions
 
-> Implements the second phase of `docs/plan/standard-library.md`. All additions are in `lib/prelude/string.mygo`.
+> Implements the second phase of `docs/plan/standard-library.md`. All additions are in `prelude/string.mygo`.
 
 ---
 
 ## Added Functions
 
-All functions are added to the existing `impl String` block in `lib/prelude/string.mygo`, wrapping Go's `strings` package via inline Go (`go[T]{}`).
+All functions are added to the existing `impl String` block in `prelude/string.mygo`, wrapping Go's `strings` package via inline Go (`go[T]{}`).
 
 | Function | Signature | Go Bridge |
 |----------|-----------|-----------|
@@ -36,11 +36,11 @@ All functions are added to the existing `impl String` block in `lib/prelude/stri
 
 ## Generated Code
 
-The generated Go functions live in `lib/prelude/zz_string.gen.go` with the standard `String_<FuncName>` mangling convention (e.g., `String_HasPrefix`, `String_Split`).
+The generated Go functions live in `prelude/zz_string.gen.go` with the standard `String_<FuncName>` mangling convention (e.g., `String_HasPrefix`, `String_Split`).
 
 ## Build Verification
 
 ```bash
 go build ./cmd/mygo/
-go build ./lib/prelude/
+go build ./prelude/
 ```

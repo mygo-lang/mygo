@@ -7,8 +7,10 @@ import (
 	"strings"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
+	"github.com/mygo-lang/mygo/internal/mygo/codegen"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
 	parserpkg "github.com/mygo-lang/mygo/internal/mygo/parser"
+	"github.com/mygo-lang/mygo/internal/mygo/pkg"
 )
 
 // CompileDir compiles all .mygo files in a directory, generating one .gen.go file per source.
@@ -23,13 +25,34 @@ func CompileDirNoPrelude(dir string) ([]string, error) {
 }
 
 func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
-	pkg, err := loadPackage(dir, noPrelude)
+	p, err := loadPackage(dir, noPrelude)
 	if err != nil {
 		return nil, err
 	}
-	pkg.WorkspaceRoot = workspaceRoot
+	p.WorkspaceRoot = workspaceRoot
 
-	files, err := pkg.GenerateFiles()
+	// Merge declarations from all imported MyGO packages (non-go: imports)
+	// so their interfaces, impls, enums, and structs are available for
+	// method resolution during code generation (typeclass matching, etc.).
+	if !noPrelude && p.Name != "prelude" {
+		for _, path := range p.ImportAliases {
+			if strings.HasPrefix(path, "go:") {
+				continue
+			}
+			imported, err := loadImportedMyGoPackage(workspaceRoot, dir, path, true)
+			if err != nil {
+				continue
+			}
+			mergeImportedDecls(p, imported)
+		}
+		// Also merge prelude (auto-imported at Go level, not in ImportAliases).
+		// Try to find prelude directory: look relative to workspaceRoot, then walk up.
+		if preludePkg := loadPreludePackage(dir, workspaceRoot); preludePkg != nil {
+			mergeImportedDecls(p, preludePkg)
+		}
+	}
+
+	files, err := codegen.GenerateFiles(p)
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +120,90 @@ func syncDir(root string, noPrelude bool) ([]string, error) {
 	return written, nil
 }
 
+// loadPreludePackage finds and loads the prelude package by trying various paths.
+func loadPreludePackage(dir, workspaceRoot string) *pkg.Package {
+	var candidates []string
+	if root := findMyGoModuleRoot(dir); root != "" {
+		candidates = append(candidates, filepath.Join(root, "prelude"))
+	}
+	if root := findMyGoModuleRoot(workspaceRoot); root != "" {
+		candidates = append(candidates, filepath.Join(root, "prelude"))
+	}
+	candidates = append(candidates, filepath.Join(workspaceRoot, "prelude"))
+	candidates = append(candidates, "prelude")
+	seen := map[string]bool{}
+	for _, c := range candidates {
+		abs, err := filepath.Abs(c)
+		if err != nil {
+			continue
+		}
+		if seen[abs] {
+			continue
+		}
+		seen[abs] = true
+		if st, err := os.Stat(abs); err == nil && st.IsDir() {
+			if pkg, err := loadPackage(abs, true); err == nil {
+				return pkg
+			}
+		}
+	}
+	return nil
+}
+
+func findMyGoModuleRoot(start string) string {
+	absStart, err := filepath.Abs(start)
+	if err != nil {
+		return ""
+	}
+	for cur := absStart; ; cur = filepath.Dir(cur) {
+		data, err := os.ReadFile(filepath.Join(cur, "go.mod"))
+		if err == nil && modulePath(data) == "github.com/mygo-lang/mygo" {
+			return cur
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			return ""
+		}
+	}
+}
+
+func modulePath(goMod []byte) string {
+	for _, line := range strings.Split(string(goMod), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "module ") {
+			return strings.TrimSpace(strings.TrimPrefix(line, "module "))
+		}
+	}
+	return ""
+}
+
+// mergeImportedDecls merges declarations from an imported MyGO package into
+// the user package for method resolution during code generation.
+func mergeImportedDecls(userPkg, importedPkg *pkg.Package) {
+	for name, iface := range importedPkg.Interfaces {
+		if _, exists := userPkg.Interfaces[name]; !exists {
+			userPkg.Interfaces[name] = iface
+		}
+	}
+	for name, enum := range importedPkg.Enums {
+		if _, exists := userPkg.Enums[name]; !exists {
+			userPkg.Enums[name] = enum
+		}
+	}
+	for _, impl := range importedPkg.Impls {
+		dup := false
+		for _, existing := range userPkg.Impls {
+			if existing == impl {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			userPkg.Impls = append(userPkg.Impls, impl)
+		}
+	}
+}
+
 func mygoDirs(root string) ([]string, error) {
 	seen := map[string]struct{}{}
 	var dirs []string
@@ -149,12 +256,12 @@ func setSourceFile(file *parserpkg.File, sourceFile string) {
 	}
 }
 
-func loadPackage(dir string, noPrelude bool) (*Package, error) {
+func loadPackage(dir string, noPrelude bool) (*pkg.Package, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
-	pkg := &Package{
+	p := &pkg.Package{
 		Dir:           dir,
 		WorkspaceRoot: filepath.Dir(dir),
 		NoPrelude:     noPrelude,
@@ -176,7 +283,7 @@ func loadPackage(dir string, noPrelude bool) (*Package, error) {
 		if err != nil {
 			return nil, err
 		}
-		parsed, err := parserpkg.ParseFile(string(src))
+		parsed, err := parserpkg.ParseFile(filepath.Join(dir, name), string(src))
 		if err != nil {
 			return nil, err
 		}
@@ -193,32 +300,32 @@ func loadPackage(dir string, noPrelude bool) (*Package, error) {
 	if pkgName == "" {
 		pkgName = filepath.Base(dir)
 	}
-	pkg.Name = toPackageName(pkgName)
-	pkg.Decls = append(pkg.Decls, fileDecls...)
-	for _, decl := range pkg.Decls {
+	p.Name = toPackageName(pkgName)
+	p.Decls = append(p.Decls, fileDecls...)
+	for _, decl := range p.Decls {
 		switch d := decl.(type) {
 		case *ImportDecl:
-			pkg.Imports[d.Path] = struct{}{}
-			pkg.ImportDecls = append(pkg.ImportDecls, d)
+			p.Imports[d.Path] = struct{}{}
+			p.ImportDecls = append(p.ImportDecls, d)
 			alias := d.Alias
 			if alias == "" {
 				alias = importAliasForPath(d.Path)
 			}
-			if prev, ok := pkg.ImportAliases[alias]; ok && prev != d.Path {
+			if prev, ok := p.ImportAliases[alias]; ok && prev != d.Path {
 				return nil, common.ErrorAtPos(d.Line, d.Column, "import alias %q conflicts between %q and %q", alias, prev, d.Path)
 			}
-			pkg.ImportAliases[alias] = d.Path
+			p.ImportAliases[alias] = d.Path
 		case *EnumDecl:
-			pkg.Enums[d.Name] = d
+			p.Enums[d.Name] = d
 		case *StructDecl:
-			pkg.Structs[d.Name] = d
+			p.Structs[d.Name] = d
 		case *InterfaceDecl:
-			pkg.Interfaces[d.Name] = d
+			p.Interfaces[d.Name] = d
 		case *FuncDecl:
-			pkg.Funcs[d.Name] = d
+			p.Funcs[d.Name] = d
 		case *ImplDecl:
-			pkg.Impls = append(pkg.Impls, d)
+			p.Impls = append(p.Impls, d)
 		}
 	}
-	return pkg, nil
+	return p, nil
 }

@@ -124,12 +124,13 @@ Expressions
 Control forms
 
   IfExpr      = "if" , Expr ,
-                ( "then" , Expr , "else" , Expr
-                | "then" , newline , BlockUntilElse , "else" , BlockUntilEnd
-                | newline , BlockUntilElse , "else" , BlockUntilEnd ) ;
+                ( "=>" , Expr , "else" , Expr
+                | "then" , newline , BlockUntilIfTail , IfTail , "end" ) ;
 
-  BlockUntilElse = Statement , { newline , Statement } ;
-  BlockUntilEnd  = Statement , { newline , Statement } , "end" ;
+  IfTail      = "elsif" , Expr , "then" , newline , BlockUntilIfTail , IfTail
+              | "else" , newline , BlockUntilIfTail ;
+
+  BlockUntilIfTail = Statement , { newline , Statement } ;
 
   WhileExpr   = "while" , Expr , newline , BlockUntilEnd ;
 

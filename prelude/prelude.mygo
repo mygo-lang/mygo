@@ -1,0 +1,106 @@
+package prelude
+
+enum Option[A]
+  Some(A)
+  None
+end
+
+enum Result[A, E]
+  Ok(A)
+  Err(E)
+end
+
+interface Show[A]
+  func Show(value: A) -> String
+end
+
+interface Eq[A]
+  func Equals(left: A, right: A) -> Bool
+end
+
+interface Ord[A]
+  func Compare(left: A, right: A) -> Int
+  func Less(left: A, right: A) -> Bool
+  func Greater(left: A, right: A) -> Bool
+end
+
+interface Default[A]
+  func Default() -> A
+end
+
+interface From[A, B]
+  func From(value: A) -> B
+end
+
+interface Into[A, B]
+  func Into(value: A) -> B
+end
+
+interface IEnumerable[C[A], A]
+  func Each(c: C[A], fn: func(A) -> ()) -> ()
+  func Len(c: C[A]) -> Int
+  func Map[B](c: C[A], fn: func(A) -> B) -> IEnumerable[Slice[B], B]
+  func Filter(c: C[A], fn: func(A) -> Bool) -> IEnumerable[Slice[A], A]
+  func Fold[B](c: C[A], initial: B, fn: func(B, A) -> B) -> B
+  func Find(c: C[A], fn: func(A) -> Bool) -> Option[Ref[A]]
+  func Contains(c: C[A], item: A) -> Bool using Eq[A]
+end
+
+interface IAssignable[C[A], K, A]
+  func Get(c: C[A], index: K) -> Option[A]
+  func Set(c: C[A], index: K, value: A) -> ()
+  func Delete(c: C[A], index: K) -> ()
+end
+
+# Slice[A] is Go's native slice ([]A).
+
+# Map[K, V] is Go's native map[K]V.
+
+# Set[A] is Go's native map[A]struct{}
+
+func OptionToResult[A, E](opt: Option[A], errVal: E) -> Result[A, E]
+  switch opt
+    case Some(v) => Ok(v)
+    case None => Err(errVal)
+  end
+end
+
+func ResultToOption[A, E](res: Result[A, E]) -> Option[A]
+  switch res
+    case Ok(v) => Some(v)
+    case Err(_) => None
+  end
+end
+
+func ResultFlatten[A, E](res: Result[Result[A, E], E]) -> Result[A, E]
+  switch res
+    case Ok(inner) => inner
+    case Err(e) => Err(e)
+  end
+end
+
+func OptionFilter[A](opt: Option[A], fn: func(A) -> Bool) -> Option[A]
+  switch opt
+    case Some(v) then
+      if fn(v) => opt else None
+    end
+    case None => None
+  end
+end
+
+func Panic(msg: String) -> ()
+  go[()] { code: "panic(msg)" }
+end
+
+
+func Zero[A]() -> A
+  go[A] {
+    code: """
+      func() {A} {
+        var zero {A}
+        return zero
+      }()
+    """
+    type A = A
+  }
+end

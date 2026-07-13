@@ -1,0 +1,154 @@
+package prelude
+
+import strings "go:strings"
+import utf8 "go:unicode/utf8"
+
+impl StringIEnumerable: IEnumerable[String, Rune]
+  func Each(c: String, fn: func(Rune) -> ()) -> ()
+    go[()] {
+      code: """
+        func() {
+          for _, ru := range c {
+            fn(ru)
+          }
+        }()
+      """
+    }
+  end
+
+  func Len(c: String) -> Int
+    go[Int] { code: `len(c)` }
+  end
+
+  func Map[B](c: String, fn: func(Rune) -> B) -> Slice[B] using SliceIEnumerable[Rune]
+    let slc = go[Slice[Rune]] { code: `[]rune(c)` }
+    slc.Map(fn)
+  end
+
+  func Filter(c: String, fn: func(Rune) -> Bool) -> Slice[Rune] using SliceIEnumerable[Rune]
+    let slc = go[Slice[Rune]] { code: `[]rune(c)` }
+    slc.Filter(fn)
+  end
+
+  func Fold[B](c: String, initial: B, fn: func(B, Rune) -> B) -> B using SliceIEnumerable[Rune]
+    let slc = go[Slice[Rune]] { code: `[]rune(c)` }
+    slc.Fold(initial, fn)
+  end
+
+  func Find(c: String, fn: func(Rune) -> Bool) -> Option[Ref[Rune]] using SliceIEnumerable[Rune]
+    let slc = go[Slice[Rune]] { code: `[]rune(c)` }
+    slc.Find(fn)
+  end
+
+  func Contains(c: String, item: Rune, eq: Eq[Rune]) -> Bool
+    strings.ContainsRune(c, item)
+  end
+end
+
+impl String
+  func FromRunes(rs: Slice[Rune]) -> String
+    rs as String
+  end
+
+  func PeekRune(s: String) -> Option[Ref[Rune]]
+    if s.Len() == 0 then
+      None
+    else
+      let (r, _) = utf8.DecodeRuneInString(s)
+      Some(Ref.new(r))
+    end
+  end
+
+  func AdvanceRune(s: String) -> String
+    if s.Len() == 0 then
+      s
+    else
+      let (_, size) = utf8.DecodeRuneInString(s)
+      go[String] {
+        code: `{s}[{size}:]`
+        in s = s
+        in size = size
+      }
+    end
+  end
+
+  func MatchString(s: String, prefix: String) -> Bool
+    if s.Len() >= prefix.Len() then
+      go[Bool] {
+        code: `{s}[:len({prefix})] == {prefix}`
+        in s = s
+        in prefix = prefix
+      }
+    else
+      false
+    end
+  end
+
+  func HasPrefix(s: String, prefix: String) -> Bool
+    strings.HasPrefix(s, prefix)
+  end
+
+  func HasSuffix(s: String, suffix: String) -> Bool
+    strings.HasSuffix(s, suffix)
+  end
+
+  func Trim(s: String, cutset: String) -> String
+    strings.Trim(s, cutset)
+  end
+
+  func TrimSpace(s: String) -> String
+    strings.TrimSpace(s)
+  end
+
+  func TrimPrefix(s: String, prefix: String) -> String
+    strings.TrimPrefix(s, prefix)
+  end
+
+  func TrimSuffix(s: String, suffix: String) -> String
+    strings.TrimSuffix(s, suffix)
+  end
+
+  func Split(s: String, sep: String) -> Slice[String]
+    strings.Split(s, sep)
+  end
+
+  func SplitN(s: String, sep: String, n: Int) -> Slice[String]
+    strings.SplitN(s, sep, n)
+  end
+
+  func Join(sep: String, elems: Slice[String]) -> String
+    strings.Join(elems, sep)
+  end
+
+  func Replace(s: String, old: String, new: String, n: Int) -> String
+    strings.Replace(s, old, new, n)
+  end
+
+  func ReplaceAll(s: String, old: String, new: String) -> String
+    strings.ReplaceAll(s, old, new)
+  end
+
+  func ToUpper(s: String) -> String
+    strings.ToUpper(s)
+  end
+
+  func ToLower(s: String) -> String
+    strings.ToLower(s)
+  end
+
+  func Repeat(s: String, count: Int) -> String
+    strings.Repeat(s, count)
+  end
+
+  func Index(s: String, substr: String) -> Int
+    strings.Index(s, substr)
+  end
+
+  func LastIndex(s: String, substr: String) -> Int
+    strings.LastIndex(s, substr)
+  end
+
+  func Fields(s: String) -> Slice[String]
+    strings.Fields(s)
+  end
+end

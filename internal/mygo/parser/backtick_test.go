@@ -15,7 +15,7 @@ func TestBacktickString(t *testing.T) {
 		"let c = " + bt + "new\nline" + bt + "\n" +
 		`let d = ` + bt + `he said "hi"` + bt
 
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("Parse error: %v", err)
 	}

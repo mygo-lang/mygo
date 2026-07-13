@@ -34,7 +34,7 @@
 - `IAssignable[C[A], K, A]` is a generic interface that provides indexed access (read + write) for both `Slice` and `Map`.
 - Three type parameters: `C[A]` (the container type, one of `Slice[V]` or `Map[K, V]`), `K` (the index/key type), `A` (the value type).
 - Two methods:
-  - `func get(c: C[A], index: K) -> Option[Ref[A]]` — safely read a value by index/key; returns `None` if the index is out of range (Slice) or the key does not exist (Map), `Some(ref)` otherwise.
+  - `func get(c: C[A], index: K) -> Option[A]` — safely read a value by index/key; returns `None` if the index is out of range (Slice) or the key does not exist (Map), `Some(value)` otherwise.
   - `func set(c: C[A], index: K, value: A) -> ()` — write a value at the given index/key.
 - Concrete instantiations:
   - `Slice[T]: IAssignable[Slice[T], Int, T]` — `K = Int`

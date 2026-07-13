@@ -1,6 +1,6 @@
 # Standard Library — Phase 1: Basic Type Class Extensions
 
-> Implements the first phase of `docs/plan/standard-library.md`. All additions are in `lib/prelude/prelude.mygo`.
+> Implements the first phase of `docs/plan/standard-library.md`. All additions are in `prelude/prelude.mygo`.
 
 ---
 
@@ -82,7 +82,7 @@ end
 
 ## Existing Code Migrated
 
-Two pre-existing `if ... then ... else` single-line expressions in `OptionIEnumerable` (Filter and Find) were migrated to the `=>` arrow form per current syntax convention:
+Two pre-existing inline `then` if expressions in `OptionIEnumerable` (Filter and Find) were migrated to the `=>` arrow form per current syntax convention:
 
 ```
 # Before
@@ -105,22 +105,23 @@ MyGO has no statement-if — only expression-if. **Both branches are mandatory.*
 | Form | Syntax | Example |
 |------|--------|---------|
 | **Inline arrow** | `if cond => a else b` | `if x > 0 => x else 0` |
-| **Inline `then`** | `if cond then a else b` | `if x > 0 then x else 0` |
-| **Multi-line block** | `if cond NEWLINE ... else ... end` | See below |
+| **Block `then`** | `if cond then ... elsif ... else ... end` | See below |
 
 ```mygo
-# Multi-line block form — condition followed by NEWLINE (no then keyword)
-if !cond
-  Panic(msg)
+# Multi-line block form
+if x > 0 then
+  x
+elsif x == 0 then
+  0
 else
-  ()
+  -x
 end
 ```
 
 Key points:
-- The block form uses a **newline** after the condition, NOT `then`
-- The `then` keyword is only used in `switch case ... then ... end` block forms
-- Single-line `=>` is the recommended/preferred inline form in this codebase
+- Inline if uses `=>`, not inline `then`
+- Block if uses `then` after the condition and may include `elsif`
+- Bare block `if cond ... else ... end` is no longer accepted
 
 ### `switch case` Block Form
 
@@ -148,7 +149,7 @@ end
 mygo sync lib/
 
 # Verify library packages compile
-go build ./lib/prelude/
+go build ./prelude/
 go build ./lib/concurrency/
 
 # Verify the compiler itself still builds

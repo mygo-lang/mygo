@@ -1,5 +1,28 @@
 ## Recent Work
 
+- **Prelude moved to project root**: Moved `lib/prelude/` to project root `prelude/`. Updated all Go import paths from `github.com/mygo-lang/mygo/lib/prelude` to `github.com/mygo-lang/mygo/prelude`, and updated all test relative paths and documentation references accordingly.
+- **Option.UnwrapOr**: Added standalone `UnwrapOr[A](opt: Option[A], defaultVal: A) -> A` function in `prelude/option.mygo`.
+
+- **If expression `elsif` syntax**: Added `elsif` keyword for block `if cond then ... elsif cond then ... else ... end`. Removed old inline `if cond then a else b` (use `if cond => a else b`) and bare block `if cond NEWLINE ... end` (no `then`) forms. Parser: `if_block_tail` grammar rule, `ifParts` struct, `currentIfPartsStack`. `elsif` is a separate yacc token (not IDENT) in both `parser.y` and `parser_lex.l`. EBNF, examples, README, and all tests updated to use `=>` form.
+
+- **Prelude refactoring**: Split `lib/prelude/prelude.mygo` into separate files by concern: `conversion.mygo` (`From`/`Into` impls), `default.mygo` (`Default` impls), `numeric.mygo` (`Ord`/`Show`/`Eq` numeric impls), `slice.mygo` (Slice helpers). Removed `import fmt "go:fmt"` and `import strconv "go:strconv"` from `prelude.mygo`. Moved `IEnumerable` interface and `Option`/`List`/`Slice`/`Map`/`Set` implementations out.
+
+- **Inline Go `goExprCode` improvements** (`translate_go.go`): Added `goExprCode()` that parses simple Go expressions into proper `jen.Code` — function calls (`fn(arg)` → `jen.Id("fn").Call(jen.Id("arg"))`), slice operations (`arr[x:]` → `jen.Id("arr").Index(...)`), len comparisons (`arr[:len(arr)] == x`). Added `goCalleeCode()` for Go built-in types (`string`, `int`, `bool`). Uses three regex patterns: `goSimpleCallRE`, `goSliceFromRE`, `goSliceToLenEqRE`.
+
+- **Go multi-return tuple destructuring**: `emitMultiReturnBindPattern()` generates `result, err := goFunc()` directly (no intermediate struct). `isGoMultiReturnTypeString()` detects Go-style multi-return signatures. Supports nested patterns, `_` slots. Applied in both `translateBlock` and `translateFunctionBlock`.
+
+- **Inherent impl static methods**: Added `HasReceiver` field to `inherentMethod` struct. `isInherentReceiverParam()` checks if first param matches impl type. `translateInherentTypeCall()` handles `TypeName.method(args)` for receiverless methods. `paramJen()`/`goTypeJen()` helpers for generating typed Go params.
+
+- **FuncLit param isolation**: Added `currentParamsStack` (`[][]ast.Param`) to parser for nested func lit parameter isolation. The `func_lit` rule pushes/pops the stack, preventing parameter leakage between nested function literals.
+
+- **Lexer multiline string fix** (`parser_lex.l`): Replaced `scanMultilineString()` (which relied on unreliable regex-based `scan()` detection) with `scanMultilineStringFromLookahead()` using `Lookahead()`/`Next()` API for reliable `"""..."""` delimiter detection.
+
+- **Type compatibility improvements**: `goTypeCompatible()` now handles `C[rune]`/`C[int32]` unifying with `String` (`isStringRuneSequenceType()`), and `rune`/`int32` alias pair (`isRuneGoAliasPair()`). `matchTypeclassHelper` fix: uses first type arg's type string for receiver matching when impl has type args.
+
+- **`translateTypeclassCall` resolution order fixed**: `constraintFuncForMethod` (using-param) → `typeclassMethods` (lexical bindings) → `matchTypeclassHelper` (package-level dispatch) → receiver-type matching.
+
+- **Docs**: Updated `docs/compiler/semantics.md` (elsif, static methods, multi-return, func lit isolation), `docs/compiler/inline-go.md` (goExprCode), `docs/compiler/genfiles.md` (type compatibility extensions), `docs/compiler/core.md` (elsif keyword, multiline string scanner).
+
 - **Phase 2: String utility functions**: Added 17 string manipulation functions to `lib/prelude/string.mygo` — `HasPrefix`, `HasSuffix`, `Trim`, `TrimSpace`, `TrimPrefix`, `TrimSuffix`, `Split`, `SplitN`, `Join`, `Replace`, `ReplaceAll`, `ToUpper`, `ToLower`, `Repeat`, `Index`, `LastIndex`, `Fields`. All wrap Go's `strings` package via `go[T]{}` inline embeddings. Generated Go code in `lib/prelude/zz_string.gen.go`.
 - **Phase 3: Sorting and Searching (`lib/sort/`)**: New library package with generic `Sort`, `IsSorted`, `BinarySearch`, `Min`, `Max` functions. All implemented via inline Go embeddings (quicksort algorithm, no Go `sort` dependency). `BinarySearch` returns `Option[Int]`.
 - **Compiler: MyGo-to-Go type normalization** (`compiler/type_inference.go`): Added `normalizeMygoTypeToGo()` that converts MyGo collection types (`Ref[T]` → `*T`, `Slice[T]` → `[]T`, `Set[T]` → `map[T]struct{}`, `Map[K,V]` → `map[K]V`) and primitives (`String` → `string`, etc.) to their Go equivalents for improved type compatibility checking in `goTypeCompatible()`.

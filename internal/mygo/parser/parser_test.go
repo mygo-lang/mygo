@@ -12,7 +12,7 @@ func demo() -> Int
   42
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -44,7 +44,7 @@ func demo() -> Int
   42
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -82,7 +82,7 @@ func demo() -> Int
   0
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -105,7 +105,7 @@ func demo() -> Int
   box.make(1).value
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -128,7 +128,7 @@ end
 func TestParseFileSupportsIfWhileAndSwitch(t *testing.T) {
 	src := `package main
 func demo(n: Int) -> Int
-  if n < 1 then 10 else 20
+  if n < 1 => 10 else 20
   while n < 3
     n = n + 1
   end
@@ -138,7 +138,7 @@ func demo(n: Int) -> Int
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -184,7 +184,7 @@ func demo() -> Int
   1 + 2 |> add(3)
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -227,7 +227,7 @@ impl Box[T]: Show[T]
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -262,7 +262,7 @@ impl Rectangle
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -281,6 +281,33 @@ end
 	}
 }
 
+func TestParseFileSupportsStaticMethodsInInherentImpl(t *testing.T) {
+	src := `package main
+impl String
+  func FromRunes(rs: Slice[rune]) -> String
+    rs.get(0).String()
+  end
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	impl, ok := file.Decls[0].(*ImplDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *ImplDecl", file.Decls[0])
+	}
+	if got := len(impl.Methods); got != 1 {
+		t.Fatalf("len(ImplDecl.Methods) = %d, want 1", got)
+	}
+	if got := len(impl.Methods[0].Params); got != 1 {
+		t.Fatalf("len(ImplDecl.Methods[0].Params) = %d, want 1", got)
+	}
+	if impl.Methods[0].Params[0].Name != "rs" {
+		t.Fatalf("first param name = %q, want %q", impl.Methods[0].Params[0].Name, "rs")
+	}
+}
+
 func TestParseFileSupportsStructFieldTags(t *testing.T) {
 	src := `package main
 struct User
@@ -288,7 +315,7 @@ struct User
   name: String "json:\"name,omitempty\" yaml:\"name\""
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -316,7 +343,7 @@ func demo() -> Int
   x + y
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -346,14 +373,14 @@ end
 	}
 }
 
-func TestParseFileSupportsSingleLineIfAndFuncLit(t *testing.T) {
+func TestParseFileSupportsArrowIfAndFuncLit(t *testing.T) {
 	src := `package main
 func demo() -> Int
-  if true then 1 else 2
+  if true => 1 else 2
   func(x: Int) -> Int x + 1 end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -382,7 +409,7 @@ func eq[A](left: A, right: A) -> Bool using Eq[A], Show[A]
   true
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -416,7 +443,7 @@ func eq(left: Int, right: Int) -> Bool using FastEq: Eq[Int]
   true
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -444,7 +471,7 @@ interface Show[A]
   func show(value: A) -> String using Eq[A]
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -471,7 +498,7 @@ enum Option[T]
   None
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -506,7 +533,7 @@ func demo(v: Option) -> Int
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -540,10 +567,10 @@ func TestParseFileSupportsIfArrowForm(t *testing.T) {
 	src := `package main
 func demo(n: Int) -> Int
   if n > 0 => n else 0
-  if true => 1 else 2
+  if n > 10 => 1 else if n > 5 => 2 else 3
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -566,13 +593,201 @@ end
 	if _, ok := ifExpr.Expr.(*IfExpr); !ok {
 		t.Fatalf("Stmt[0].Expr type = %T, want *IfExpr", ifExpr.Expr)
 	}
-	// Second if: if true => 1 else 2
+	// Second if: if n > 10 => 1 else if n > 5 => 2 else 3
 	ifExpr2, ok := block.Stmts[1].(*ExprStmt)
 	if !ok {
 		t.Fatalf("Stmt[1] type = %T, want *ExprStmt", block.Stmts[1])
 	}
-	if _, ok := ifExpr2.Expr.(*IfExpr); !ok {
+	second, ok := ifExpr2.Expr.(*IfExpr)
+	if !ok {
 		t.Fatalf("Stmt[1].Expr type = %T, want *IfExpr", ifExpr2.Expr)
+	}
+	if _, ok := second.Else.(*IfExpr); !ok {
+		t.Fatalf("Stmt[1].Expr.Else type = %T, want *IfExpr", second.Else)
+	}
+}
+
+func TestParseFileSupportsBlockIfElsifForm(t *testing.T) {
+	src := `package main
+func demo(n: Int) -> Int
+  if n < 0 then
+    -1
+  elsif n == 0 then
+    0
+  else
+    1
+  end
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	ifExpr, ok := fn.Body.(*IfExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *IfExpr", fn.Body)
+	}
+	if _, ok := ifExpr.Else.(*IfExpr); !ok {
+		t.Fatalf("IfExpr.Else type = %T, want *IfExpr", ifExpr.Else)
+	}
+}
+
+func TestParseFileFuncLitInsideBlockIfPreservesOuterParams(t *testing.T) {
+	src := `package main
+func demo(s: String) -> Option
+  if s.Len() == 0 then
+    None
+  else
+    s.Find(func(r: rune) -> Bool
+      true
+    end)
+  end
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	if got := len(fn.Params); got != 1 {
+		t.Fatalf("len(FuncDecl.Params) = %d, want 1", got)
+	}
+	if fn.Params[0].Name != "s" {
+		t.Fatalf("FuncDecl.Params[0].Name = %q, want s", fn.Params[0].Name)
+	}
+}
+
+func TestParseFileStructLiteralFuncFieldAllowsBangIfCondition(t *testing.T) {
+	src := `package main
+func demo() -> Parser
+  Parser {
+    run: func(state: State) -> Reply
+      let r = state.run()
+      if !r.ok then
+        r
+      else
+        r
+      end
+    end
+  }
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	lit, ok := fn.Body.(*StructLitExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *StructLitExpr", fn.Body)
+	}
+	if got := len(lit.Fields); got != 1 {
+		t.Fatalf("len(StructLitExpr.Fields) = %d, want 1", got)
+	}
+	funcLit, ok := lit.Fields[0].Value.(*FuncLitExpr)
+	if !ok {
+		t.Fatalf("Struct field value type = %T, want *FuncLitExpr", lit.Fields[0].Value)
+	}
+	block, ok := funcLit.Body.(*BlockExpr)
+	if !ok {
+		t.Fatalf("FuncLitExpr.Body type = %T, want *BlockExpr", funcLit.Body)
+	}
+	stmt, ok := block.Stmts[1].(*ExprStmt)
+	if !ok {
+		t.Fatalf("BlockExpr.Stmts[1] type = %T, want *ExprStmt", block.Stmts[1])
+	}
+	ifExpr, ok := stmt.Expr.(*IfExpr)
+	if !ok {
+		t.Fatalf("ExprStmt.Expr type = %T, want *IfExpr", stmt.Expr)
+	}
+	prefix, ok := ifExpr.Cond.(*PrefixExpr)
+	if !ok {
+		t.Fatalf("IfExpr.Cond type = %T, want *PrefixExpr", ifExpr.Cond)
+	}
+	if prefix.Op != "!" {
+		t.Fatalf("PrefixExpr.Op = %q, want !", prefix.Op)
+	}
+}
+
+func TestParseFileStructLiteralFuncFieldPreservesNestedBlockIfBody(t *testing.T) {
+	src := `package main
+func demo[A](p: Parser[A]) -> Parser[Slice[A]]
+  Parser[Slice[A]] {
+    run: func(state: State) -> Reply[Slice[A]]
+      let r = state.run()
+      if !r.ok then
+        if r.consumed then
+          Reply[Slice[A]] {
+            ok: false,
+            value: [],
+          }
+        else
+          Reply[Slice[A]] {
+            ok: true,
+            value: [],
+          }
+        end
+      else
+        r
+      end
+    end
+  }
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn := file.Decls[0].(*FuncDecl)
+	lit := fn.Body.(*StructLitExpr)
+	funcLit, ok := lit.Fields[0].Value.(*FuncLitExpr)
+	if !ok {
+		t.Fatalf("Struct field value type = %T, want *FuncLitExpr", lit.Fields[0].Value)
+	}
+	block, ok := funcLit.Body.(*BlockExpr)
+	if !ok {
+		t.Fatalf("FuncLitExpr.Body type = %T, want *BlockExpr", funcLit.Body)
+	}
+	if got := len(block.Stmts); got != 2 {
+		t.Fatalf("len(FuncLitExpr.Body.Stmts) = %d, want 2", got)
+	}
+	stmt, ok := block.Stmts[1].(*ExprStmt)
+	if !ok {
+		t.Fatalf("BlockExpr.Stmts[1] type = %T, want *ExprStmt", block.Stmts[1])
+	}
+	ifExpr, ok := stmt.Expr.(*IfExpr)
+	if !ok {
+		t.Fatalf("ExprStmt.Expr type = %T, want *IfExpr", stmt.Expr)
+	}
+	if ifExpr.Then == nil {
+		t.Fatal("IfExpr.Then is nil")
+	}
+	if ifExpr.Else == nil {
+		t.Fatal("IfExpr.Else is nil")
+	}
+	ret, ok := funcLit.Ret.(*NamedType)
+	if !ok {
+		t.Fatalf("FuncLitExpr.Ret type = %T, want *NamedType", funcLit.Ret)
+	}
+	if ret.Name != "Reply" {
+		t.Fatalf("FuncLitExpr.Ret.Name = %q, want Reply", ret.Name)
+	}
+	if got := len(ret.Args); got != 1 {
+		t.Fatalf("len(FuncLitExpr.Ret.Args) = %d, want 1", got)
+	}
+	slice, ok := ret.Args[0].(*NamedType)
+	if !ok || slice.Name != "Slice" {
+		t.Fatalf("FuncLitExpr.Ret.Args[0] = %#v, want Slice[A]", ret.Args[0])
 	}
 }
 
@@ -592,7 +807,7 @@ func demo(v: Option) -> Int
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -635,7 +850,7 @@ func demo(v: Option) -> Int
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -664,7 +879,7 @@ func demo(n: Int) -> Int
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -706,7 +921,7 @@ func demo(method: String, params: Option[Any]) -> Int
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -757,7 +972,7 @@ func newDocumentStore() -> DocumentStore
   DocumentStore{docs: {}}
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -779,7 +994,7 @@ func demo(n: Int) -> Int
   }
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -811,7 +1026,7 @@ func demo(n: Int) -> Int
   }
 end
 `
-	if _, err := ParseFile(src); err == nil {
+	if _, err := ParseFile("test.mygo", src); err == nil {
 		t.Fatal("ParseFile() error = nil, want error")
 	}
 }
@@ -825,7 +1040,7 @@ func demo(n: Int) -> Int
   }
 end
 `
-	if _, err := ParseFile(src); err == nil {
+	if _, err := ParseFile("test.mygo", src); err == nil {
 		t.Fatal("ParseFile() error = nil, want error")
 	}
 }
@@ -840,7 +1055,7 @@ func demo(n: Int) -> Int
   }
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -876,7 +1091,7 @@ func demo(n: Int, s: String) -> Bool
   }
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -904,7 +1119,7 @@ func demo() -> Int8
   127
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -932,7 +1147,7 @@ end
 }
 
 func TestParseFileSupportsTupleLiteralAndType(t *testing.T) {
-	file, err := ParseFile(`package main
+	file, err := ParseFile("test.mygo", `package main
 
 func pair() -> (Int, String)
   (1, "a")
@@ -964,7 +1179,7 @@ end
 }
 
 func TestParseFileSupportsUnitLiteral(t *testing.T) {
-	file, err := ParseFile(`package main
+	file, err := ParseFile("test.mygo", `package main
 
 func demo() -> ()
   ()
@@ -991,7 +1206,7 @@ func demo() -> Int
   0
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -1021,5 +1236,236 @@ end
 		if lit.Value != expected {
 			t.Fatalf("LiteralExpr[%d].Value = %q, want %q", i, lit.Value, expected)
 		}
+	}
+}
+
+func TestParseFileSupportsRuneLiteralsAndTypes(t *testing.T) {
+	src := `package main
+func demo() -> Rune
+  let r: Rune = 'x'
+  let nl: Rune = '\n'
+  let b: Byte = 97
+  r
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	if ret, ok := fn.Ret.(*NamedType); !ok || ret.Name != "Rune" {
+		t.Fatalf("FuncDecl.Ret = %#v, want Rune", fn.Ret)
+	}
+	block, ok := fn.Body.(*BlockExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *BlockExpr", fn.Body)
+	}
+	for i, expected := range []struct {
+		name  string
+		value string
+	}{
+		{"r", "x"},
+		{"nl", "\n"},
+	} {
+		letStmt, ok := block.Stmts[i].(*LetStmt)
+		if !ok {
+			t.Fatalf("Stmts[%d] type = %T, want *LetStmt", i, block.Stmts[i])
+		}
+		if letStmt.Name != expected.name {
+			t.Fatalf("LetStmt[%d].Name = %q, want %q", i, letStmt.Name, expected.name)
+		}
+		lit, ok := letStmt.Value.(*LiteralExpr)
+		if !ok {
+			t.Fatalf("LetStmt[%d].Value type = %T, want *LiteralExpr", i, letStmt.Value)
+		}
+		if lit.Kind != "rune" {
+			t.Fatalf("LiteralExpr[%d].Kind = %q, want rune", i, lit.Kind)
+		}
+		if lit.Value != expected.value {
+			t.Fatalf("LiteralExpr[%d].Value = %q, want %q", i, lit.Value, expected.value)
+		}
+	}
+}
+
+func TestParseFileSupportsTrailingCommas(t *testing.T) {
+	src := `package main
+func demo(a: Int, b: Int,) -> Int
+  let s: Slice[Int] = [1, 2, 3,]
+  let m: Map[String, String] = {"a": "1", "b": "2",}
+  let s2: Set[Int] = {1, 2, 3,}
+  let x: MyStruct = MyStruct {
+    field1: 1,
+    field2: "hello",
+  }
+  let t = (1, 2, 3,)
+  let r = foo(a, b, c,)
+  42
+end
+struct MyStruct
+  field1: Int,
+  field2: String,
+end
+func foo(x: Int, y: Int, z: Int,) -> Int
+  0
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	if got := len(file.Decls); got != 3 {
+		t.Fatalf("len(Decls) = %d, want 3", got)
+	}
+
+	// Check function with trailing comma in params
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	if got := len(fn.Params); got != 2 {
+		t.Fatalf("func demo params = %d, want 2", got)
+	}
+
+	// Check body
+	block, ok := fn.Body.(*BlockExpr)
+	if !ok {
+		t.Fatalf("Body type = %T, want *BlockExpr", fn.Body)
+	}
+
+	// Check slice literal with trailing comma
+	sliceStmt := block.Stmts[0].(*LetStmt)
+	sliceLit, ok := sliceStmt.Value.(*SliceLitExpr)
+	if !ok {
+		t.Fatalf("Stmt[0] value type = %T, want *SliceLitExpr", sliceStmt.Value)
+	}
+	if got := len(sliceLit.Elems); got != 3 {
+		t.Fatalf("slice elems = %d, want 3", got)
+	}
+
+	// Check map literal with trailing comma
+	mapStmt := block.Stmts[1].(*LetStmt)
+	mapLit, ok := mapStmt.Value.(*MapLitExpr)
+	if !ok {
+		t.Fatalf("Stmt[1] value type = %T, want *MapLitExpr", mapStmt.Value)
+	}
+	if got := len(mapLit.Pairs); got != 2 {
+		t.Fatalf("map pairs = %d, want 2", got)
+	}
+
+	// Check set literal with trailing comma
+	setStmt := block.Stmts[2].(*LetStmt)
+	setLit, ok := setStmt.Value.(*SetLitExpr)
+	if !ok {
+		t.Fatalf("Stmt[2] value type = %T, want *SetLitExpr", setStmt.Value)
+	}
+	if got := len(setLit.Elems); got != 3 {
+		t.Fatalf("set elems = %d, want 3", got)
+	}
+
+	// Check struct literal with trailing comma
+	structStmt := block.Stmts[3].(*LetStmt)
+	structLit, ok := structStmt.Value.(*StructLitExpr)
+	if !ok {
+		t.Fatalf("Stmt[3] value type = %T, want *StructLitExpr", structStmt.Value)
+	}
+	if got := len(structLit.Fields); got != 2 {
+		t.Fatalf("struct fields = %d, want 2", got)
+	}
+
+	// Check tuple literal with trailing comma
+	tupleStmt := block.Stmts[4].(*LetStmt)
+	tupleLit, ok := tupleStmt.Value.(*TupleLitExpr)
+	if !ok {
+		t.Fatalf("Stmt[4] value type = %T, want *TupleLitExpr", tupleStmt.Value)
+	}
+	if got := len(tupleLit.Elems); got != 3 {
+		t.Fatalf("tuple elems = %d, want 3", got)
+	}
+
+	// Check call expr with trailing comma
+	callStmt := block.Stmts[5].(*LetStmt)
+	callExpr, ok := callStmt.Value.(*CallExpr)
+	if !ok {
+		t.Fatalf("Stmt[5] value type = %T, want *CallExpr", callStmt.Value)
+	}
+	if got := len(callExpr.Args); got != 3 {
+		t.Fatalf("call args = %d, want 3", got)
+	}
+
+	// Check struct decl with trailing commas in fields
+	structDecl, ok := file.Decls[1].(*StructDecl)
+	if !ok {
+		t.Fatalf("Decls[1] type = %T, want *StructDecl", file.Decls[1])
+	}
+	if got := len(structDecl.Fields); got != 2 {
+		t.Fatalf("struct decl fields = %d, want 2", got)
+	}
+
+	// Check second function with trailing comma in params
+	implFn, ok := file.Decls[2].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[2] type = %T, want *FuncDecl", file.Decls[2])
+	}
+	if got := len(implFn.Params); got != 3 {
+		t.Fatalf("foo params = %d, want 3", got)
+	}
+}
+
+func TestParseFilePreservesGenericCallTypeArgs(t *testing.T) {
+	file, err := ParseFile("test.mygo", `package main
+
+func demo[A]() -> Parser[A]
+  PFail[A]("no parser matched")
+end
+`)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	call, ok := fn.Body.(*CallExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *CallExpr", fn.Body)
+	}
+	if got := len(call.TypeArgs); got != 1 {
+		t.Fatalf("call TypeArgs len = %d, want 1", got)
+	}
+	arg, ok := call.TypeArgs[0].(*NamedType)
+	if !ok || arg.Name != "A" {
+		t.Fatalf("call TypeArgs[0] = %#v, want NamedType A", call.TypeArgs[0])
+	}
+}
+
+func TestParseFilePreservesNestedGenericCallTypeArgs(t *testing.T) {
+	file, err := ParseFile("test.mygo", `package main
+
+func demo[A](parsers: Slice[Parser[A]]) -> Parser[A]
+  parsers.Fold(PFail[A]("no parser matched"), func(acc: Parser[A], p: Parser[A]) -> Parser[A]
+    POrElse(acc, p)
+  end)
+end
+`)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn := file.Decls[0].(*FuncDecl)
+	call, ok := fn.Body.(*CallExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *CallExpr", fn.Body)
+	}
+	if got := len(call.Args); got != 2 {
+		t.Fatalf("outer call args len = %d, want 2", got)
+	}
+	inner, ok := call.Args[0].(*CallExpr)
+	if !ok {
+		t.Fatalf("outer call arg[0] type = %T, want *CallExpr", call.Args[0])
+	}
+	if got := len(inner.TypeArgs); got != 1 {
+		t.Fatalf("inner call TypeArgs len = %d, want 1", got)
 	}
 }

@@ -13,14 +13,14 @@
 - Prioritize `Option[A]` and `Result[A, E]` over native Go errors to ensure MyGo type safety.
 - Use `using` constraints for all generic operations.
 - All new `.mygo` files reside under `lib/` and do not intrude upon the `prelude` (unless they involve fundamental type classes or operations on basic types).
-- String utility functions are placed directly in `lib/prelude/string.mygo` (since `String` is a primitive type).
+- String utility functions are placed directly in `prelude/string.mygo` (since `String` is a primitive type).
 - Compilation verification is required after each phase: `go build ./cmd/mygo/` + test generation.
 
 ---
 
 ## Phase 1: Basic Type Class Extensions (Prelude Enhancement)
 
-**Goal**: Add core type classes to `lib/prelude/prelude.mygo` to provide a foundation of constraints for all subsequent generic libraries. ### 1.1 `Ord[A]` (Ordering/Comparison)
+**Goal**: Add core type classes to `prelude/prelude.mygo` to provide a foundation of constraints for all subsequent generic libraries. ### 1.1 `Ord[A]` (Ordering/Comparison)
 
 ```mygo
 interface Ord[A]
@@ -79,12 +79,12 @@ end
 
 Files involved:
 
-* lib/prelude/prelude.mygo — Adding new interfaces, implementations for `Ord`/`Default`/`Into`/`From`, and helper functions
-* lib/prelude/string.mygo — String-specific `From` implementations (if applicable)
+* prelude/prelude.mygo — Adding new interfaces, implementations for `Ord`/`Default`/`Into`/`From`, and helper functions
+* prelude/string.mygo — String-specific `From` implementations (if applicable)
 
 ## Phase 2: String Utility Functions (Enhancements to Prelude)
 
-Goal: Add comprehensive string manipulation functions to `lib/prelude/string.mygo` that wrap the Go `strings` package. | Function Name | Signature |
+Goal: Add comprehensive string manipulation functions to `prelude/string.mygo` that wrap the Go `strings` package. | Function Name | Signature |
 |------|-----|
 | HasPrefix | (s: String, prefix: String) -> Bool |
 | HasSuffix | (s: String, suffix: String) -> Bool |
@@ -108,7 +108,7 @@ Note: The first parameter of `strings.Join` is `Slice[String]`; it is necessary 
 
 Files involved:
 
-lib/prelude/string.mygo — Append all new functions (the `strings` import is already present)
+prelude/string.mygo — Append all new functions (the `strings` import is already present)
 
 ## Phase 3: lib/sort/ — Sorting and Searching
 Goal: Provide generic sorting and binary search. Depends on Phase 1.1 `Ord[A]`.

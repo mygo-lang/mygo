@@ -63,3 +63,17 @@ The function handles nesting (e.g., `Slice[Ref[String]]` → `[]*string`) and Ma
 ### Integration
 
 `normalizeMygoTypeToGo` is called at the start of `goTypeCompatible()` before the existing `normalizeMyGoPrimitiveType` normalization, ensuring that collection type parameters and return types are compared in Go-native form during code generation type checks.
+
+### Type Compatibility Extensions
+
+Two additional type compatibility helpers in `goTypeCompatible()`:
+
+- **`isStringRuneSequenceType()`**: Allows MyGo `C[rune]` / `C[int32]` to unify with Go `string`, enabling HM inference of `String` as a sequence of runes. This is used by `PeekRune` and similar String operations.
+- **`isRuneGoAliasPair()`**: Recognizes `rune` and `int32` as the same type (Go's `rune` is an alias for `int32`), preventing spurious type mismatches.
+
+### `goSimpleCallRE` / `goSliceFromRE` / `goSliceToLenEqRE`
+
+In `translate_go.go`, three regex patterns parse simple Go expressions for better `jen.Code` generation:
+- `goSimpleCallRE`: `^([A-Za-z_])\(([A-Za-z_])\)$` — matches `fn(arg)` calls
+- `goSliceFromRE`: `^([A-Za-z_])\[([A-Za-z_]):\]$` — matches `arr[x:]` slice operations
+- `goSliceToLenEqRE`: `^([A-Za-z_])\[:len\(([A-Za-z_])\)\]\s*==\s*([A-Za-z_])$` — matches `arr[:len(arr)] == x` patterns

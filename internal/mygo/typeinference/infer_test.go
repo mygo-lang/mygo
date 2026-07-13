@@ -27,6 +27,26 @@ func inferExprType(env TypeEnv, e Expr, state *InferState) (MonoType, error) {
 	return s.ApplyMT(t), nil
 }
 
+func TestUnifyStringAsRuneSequence(t *testing.T) {
+	elem := TVar{ID: 1}
+	s, err := Unify(TCon{Name: "C", Args: []MonoType{elem}}, TCon{Name: "String"}, make(Subst))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := s.ApplyMT(elem); !eqType(got, TCon{Name: "Rune"}) {
+		t.Fatalf("expected String element type Rune, got %s", got)
+	}
+}
+
+func TestUnifyRuneWithInt32Alias(t *testing.T) {
+	if _, err := Unify(TCon{Name: "rune"}, TCon{Name: "Int32"}, make(Subst)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Unify(TCon{Name: "Rune"}, TCon{Name: "Int32"}, make(Subst)); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Basic tests
 // ---------------------------------------------------------------------------
@@ -210,8 +230,8 @@ func TestInferStructLitWithEmptyMapField(t *testing.T) {
 		"Document":      &Scheme{Body: QualifiedType{Body: TCon{Name: "Document"}}},
 		"DocumentStore": &Scheme{Body: QualifiedType{Body: TCon{Name: "DocumentStore"}}},
 		"String":        &Scheme{Body: QualifiedType{Body: stringType()}},
-		"Ref":            &Scheme{Body: QualifiedType{Body: TCon{Name: "Ref"}}},
-		"Map":            &Scheme{Body: QualifiedType{Body: TCon{Name: "Map"}}},
+		"Ref":           &Scheme{Body: QualifiedType{Body: TCon{Name: "Ref"}}},
+		"Map":           &Scheme{Body: QualifiedType{Body: TCon{Name: "Map"}}},
 	}
 	expr := &StructLitExpr{
 		TypeName: "DocumentStore",
@@ -486,7 +506,7 @@ func TestInferIf(t *testing.T) {
 	state := NewInferState()
 	env := make(TypeEnv)
 
-	// if true then 1 else 2
+	// if true => 1 else 2
 	ifExpr := &IfExpr{
 		Cond: &IdentExpr{Name: "true"},
 		Then: &LiteralExpr{Kind: "number", Value: "1"},
@@ -505,7 +525,7 @@ func TestInferIfTypeMismatch(t *testing.T) {
 	state := NewInferState()
 	env := make(TypeEnv)
 
-	// if true then 1 else "hello"
+	// if true => 1 else "hello"
 	ifExpr := &IfExpr{
 		Cond: &IdentExpr{Name: "true"},
 		Then: &LiteralExpr{Kind: "number", Value: "1"},

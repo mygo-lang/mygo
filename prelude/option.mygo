@@ -1,0 +1,63 @@
+package prelude
+
+impl[A] OptionIEnumerable[A]: IEnumerable[Option[A], A]
+  func Each(c: Option[A], fn: func(A) -> ()) -> ()
+    switch c
+      case Some(v) then
+        fn(v)
+      end
+      case None => ()
+    end
+  end
+
+  func Map[B](c: Option[A], fn: func(A) -> B) -> Option[B]
+    switch c
+      case Some(v) => Some(fn(v))
+      case None => None
+    end
+  end
+
+  func Filter(c: Option[A], fn: func(A) -> Bool) -> Option[A]
+    switch c
+      case Some(v) => if fn(v) => Some(v) else None
+      case None => None
+    end
+  end
+
+  func Fold[B](c: Option[A], initial: B, fn: func(B, A) -> B) -> B
+    switch c
+      case Some(v) => fn(initial, v)
+      case None => initial
+    end
+  end
+
+  func Find(c: Option[A], fn: func(A) -> Bool) -> Option[Ref[A]]
+    switch c
+      case Some(v) => if fn(v) => Some(Ref.new(v)) else None
+      case None => None
+    end
+  end
+
+  func Contains(c: Option[A], item: A) -> Bool using Eq[A]
+    switch c
+      case Some(v) => v.Equals(item)
+      case None => false
+    end
+  end
+
+  func Len(c: Option[A]) -> Int
+    switch c
+      case Some(_) => 1
+      case None => 0
+    end
+  end
+end
+
+impl[A] Option[A]
+  func UnwrapOr(opt: Option[A], defaultVal: A) -> A
+    switch opt
+      case Some(v) => v
+      case None => defaultVal
+    end
+  end
+end

@@ -1,0 +1,313 @@
+package prelude
+
+import fmt "go:fmt"
+
+# ===== Show impls =====
+
+impl Int: Show[Int]
+  func Show(value: Int) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl Int8: Show[Int8]
+  func Show(value: Int8) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl UInt8: Show[UInt8]
+  func Show(value: UInt8) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl Int16: Show[Int16]
+  func Show(value: Int16) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl UInt16: Show[UInt16]
+  func Show(value: UInt16) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl Int32: Show[Int32]
+  func Show(value: Int32) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl UInt32: Show[UInt32]
+  func Show(value: UInt32) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl Int64: Show[Int64]
+  func Show(value: Int64) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl Float32: Show[Float32]
+  func Show(value: Float32) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl Float64: Show[Float64]
+  func Show(value: Float64) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl String: Show[String]
+  func Show(value: String) -> String
+    value
+  end
+end
+
+impl Bool: Show[Bool]
+  func Show(value: Bool) -> String
+    fmt.Sprint(value)
+  end
+end
+
+# ===== Eq impls =====
+
+impl Int: Eq[Int]
+  func Equals(left: Int, right: Int) -> Bool
+    left == right
+  end
+end
+
+impl Int8: Eq[Int8]
+  func Equals(left: Int8, right: Int8) -> Bool
+    left == right
+  end
+end
+
+impl UInt8: Eq[UInt8]
+  func Equals(left: UInt8, right: UInt8) -> Bool
+    left == right
+  end
+end
+
+impl Int16: Eq[Int16]
+  func Equals(left: Int16, right: Int16) -> Bool
+    left == right
+  end
+end
+
+impl UInt16: Eq[UInt16]
+  func Equals(left: UInt16, right: UInt16) -> Bool
+    left == right
+  end
+end
+
+impl Int32: Eq[Int32]
+  func Equals(left: Int32, right: Int32) -> Bool
+    left == right
+  end
+end
+
+impl UInt32: Eq[UInt32]
+  func Equals(left: UInt32, right: UInt32) -> Bool
+    left == right
+  end
+end
+
+impl Int64: Eq[Int64]
+  func Equals(left: Int64, right: Int64) -> Bool
+    left == right
+  end
+end
+
+impl Float32: Eq[Float32]
+  func Equals(left: Float32, right: Float32) -> Bool
+    left == right
+  end
+end
+
+impl Float64: Eq[Float64]
+  func Equals(left: Float64, right: Float64) -> Bool
+    left == right
+  end
+end
+
+impl String: Eq[String]
+  func Equals(left: String, right: String) -> Bool
+    left == right
+  end
+end
+
+impl Bool: Eq[Bool]
+  func Equals(left: Bool, right: Bool) -> Bool
+    left == right
+  end
+end
+
+# ===== Ord impls =====
+
+impl Int: Ord[Int]
+  func Compare(left: Int, right: Int) -> Int
+    go[Int] {
+      code: """
+        func() int {
+          if left < right { return -1 }
+          if left > right { return 1 }
+          return 0
+        }()
+      """
+    }
+  end
+  func Less(left: Int, right: Int) -> Bool
+    go[Bool] { code: "left < right" }
+  end
+  func Greater(left: Int, right: Int) -> Bool
+    go[Bool] { code: "left > right" }
+  end
+end
+
+impl Int8: Ord[Int8]
+  func Compare(left: Int8, right: Int8) -> Int
+    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+  end
+  func Less(left: Int8, right: Int8) -> Bool
+    go[Bool] { code: "left < right" }
+  end
+  func Greater(left: Int8, right: Int8) -> Bool
+    go[Bool] { code: "left > right" }
+  end
+end
+
+impl UInt8: Ord[UInt8]
+  func Compare(left: UInt8, right: UInt8) -> Int
+    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+  end
+  func Less(left: UInt8, right: UInt8) -> Bool
+    go[Bool] { code: "left < right" }
+  end
+  func Greater(left: UInt8, right: UInt8) -> Bool
+    go[Bool] { code: "left > right" }
+  end
+end
+
+impl Int16: Ord[Int16]
+  func Compare(left: Int16, right: Int16) -> Int
+    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+  end
+  func Less(left: Int16, right: Int16) -> Bool
+    go[Bool] { code: "left < right" }
+  end
+  func Greater(left: Int16, right: Int16) -> Bool
+    go[Bool] { code: "left > right" }
+  end
+end
+
+impl UInt16: Ord[UInt16]
+  func Compare(left: UInt16, right: UInt16) -> Int
+    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+  end
+  func Less(left: UInt16, right: UInt16) -> Bool
+    go[Bool] { code: "left < right" }
+  end
+  func Greater(left: UInt16, right: UInt16) -> Bool
+    go[Bool] { code: "left > right" }
+  end
+end
+
+impl Int32: Ord[Int32]
+  func Compare(left: Int32, right: Int32) -> Int
+    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+  end
+  func Less(left: Int32, right: Int32) -> Bool
+    go[Bool] { code: "left < right" }
+  end
+  func Greater(left: Int32, right: Int32) -> Bool
+    go[Bool] { code: "left > right" }
+  end
+end
+
+impl UInt32: Ord[UInt32]
+  func Compare(left: UInt32, right: UInt32) -> Int
+    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+  end
+  func Less(left: UInt32, right: UInt32) -> Bool
+    go[Bool] { code: "left < right" }
+  end
+  func Greater(left: UInt32, right: UInt32) -> Bool
+    go[Bool] { code: "left > right" }
+  end
+end
+
+impl Int64: Ord[Int64]
+  func Compare(left: Int64, right: Int64) -> Int
+    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+  end
+  func Less(left: Int64, right: Int64) -> Bool
+    go[Bool] { code: "left < right" }
+  end
+  func Greater(left: Int64, right: Int64) -> Bool
+    go[Bool] { code: "left > right" }
+  end
+end
+
+impl Float32: Ord[Float32]
+  func Compare(left: Float32, right: Float32) -> Int
+    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+  end
+  func Less(left: Float32, right: Float32) -> Bool
+    go[Bool] { code: "left < right" }
+  end
+  func Greater(left: Float32, right: Float32) -> Bool
+    go[Bool] { code: "left > right" }
+  end
+end
+
+impl Float64: Ord[Float64]
+  func Compare(left: Float64, right: Float64) -> Int
+    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+  end
+  func Less(left: Float64, right: Float64) -> Bool
+    go[Bool] { code: "left < right" }
+  end
+  func Greater(left: Float64, right: Float64) -> Bool
+    go[Bool] { code: "left > right" }
+  end
+end
+
+impl String: Ord[String]
+  func Compare(left: String, right: String) -> Int
+    go[Int] { code: "func() int { if left < right { return -1 }; if left > right { return 1 }; return 0 }()" }
+  end
+  func Less(left: String, right: String) -> Bool
+    go[Bool] { code: "left < right" }
+  end
+  func Greater(left: String, right: String) -> Bool
+    go[Bool] { code: "left > right" }
+  end
+end
+
+impl Bool: Ord[Bool]
+  func Compare(left: Bool, right: Bool) -> Int
+    go[Int] {
+      code: """
+        func() int {
+          if left == right { return 0 }
+          if !left && right { return -1 }
+          return 1
+        }()
+      """
+    }
+  end
+  func Less(left: Bool, right: Bool) -> Bool
+    go[Bool] { code: "!left && right" }
+  end
+  func Greater(left: Bool, right: Bool) -> Bool
+    go[Bool] { code: "left && !right" }
+  end
+end

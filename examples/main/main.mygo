@@ -49,7 +49,7 @@ func describe_abc(item: ABC) -> String
 end
 
 func lookup_node(ok: Bool, node: Ref[Node]) -> Result[Ref[Node], String]
-  if ok then Ok(node) else Err("missing")
+  if ok => Ok(node) else Err("missing")
 end
 
 func demo() -> String
