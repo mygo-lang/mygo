@@ -11,6 +11,7 @@ type parser struct {
 	pos                          int
 	skipNL                       bool
 	err                          error
+	filename                     string
 	result                       *ast.File
 	packageName                  string
 	packageLine                  int
@@ -120,7 +121,7 @@ type typeNameEntry struct {
 func parseFiles(srcs map[string]string) ([]*ast.File, error) {
 	files := make([]*ast.File, 0, len(srcs))
 	for path, src := range srcs {
-		f, err := parseFile(src)
+		f, err := parseFile(path, src)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)
 		}
@@ -129,7 +130,7 @@ func parseFiles(srcs map[string]string) ([]*ast.File, error) {
 	return files, nil
 }
 
-func newParser(src string) *parser {
+func newParser(filename, src string) *parser {
 	l := newLexer(src)
 	var toks []token
 	for {
@@ -139,7 +140,7 @@ func newParser(src string) *parser {
 			break
 		}
 	}
-	return &parser{toks: toks, skipNL: true}
+	return &parser{toks: toks, skipNL: true, filename: filename}
 }
 
 func (p *parser) peek() token {

@@ -193,7 +193,7 @@ func simpleLoadPackage(dir string, noPrelude bool) *Package {
 		if err != nil {
 			continue
 		}
-		parsed, err := myparser.ParseFile(string(src))
+		parsed, err := myparser.ParseFile(filepath.Join(dir, name), string(src))
 		if err != nil {
 			continue
 		}
