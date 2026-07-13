@@ -175,7 +175,10 @@ func GenerateFiles(p *Package) (map[string]string, error) {
 		if g.needsCallAny && i == len(sortedSourceFiles)-1 {
 			sf.AddDecls(g.genHelperDecls())
 		}
-		out, _ := sf.Render()
+		out, err := sf.Render()
+		if err != nil {
+			return nil, err
+		}
 		result[sourceToGenName(sourceFile)] = out
 	}
 	return result, nil

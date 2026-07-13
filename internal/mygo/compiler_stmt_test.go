@@ -1289,6 +1289,7 @@ func TestCompileDirEmitsHKTTypesOncePerPackage(t *testing.T) {
 	}
 }
 
+
 func writeMygoFile(t *testing.T, dir, name, src string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(src), 0o644); err != nil {

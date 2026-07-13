@@ -161,10 +161,11 @@ type LiteralExpr struct {
 func (*LiteralExpr) exprNode() {}
 
 type CallExpr struct {
-	Line   int
-	Column int
-	Callee Expr
-	Args   []Expr
+	Line     int
+	Column   int
+	Callee   Expr
+	TypeArgs []TypeExpr // 泛型类型参数，如 Func[T](args)
+	Args     []Expr
 }
 
 func (*CallExpr) exprNode() {}
@@ -421,10 +422,10 @@ type VariantPattern struct {
 func (*VariantPattern) patternNode() {}
 
 type LiteralPattern struct {
-	Line  int
+	Line   int
 	Column int
-	Kind  string
-	Value string
+	Kind   string
+	Value  string
 }
 
 func (*LiteralPattern) patternNode() {}

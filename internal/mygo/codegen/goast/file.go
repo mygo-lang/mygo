@@ -74,9 +74,17 @@ func (f *SourceFile) ImportSpecs() []*ast.ImportSpec {
 // Render produces the formatted Go source as a string.
 func (f *SourceFile) Render() (string, error) {
 	file := f.RenderAST()
+	if err := validateAST(file); err != nil {
+		return "", err
+	}
 
 	// Render with go/format.
 	var buf bytes.Buffer
+	defer func() {
+		if r := recover(); r != nil {
+			panic(fmt.Errorf("go/format panic: %v", r))
+		}
+	}()
 	if err := format.Node(&buf, token.NewFileSet(), file); err != nil {
 		return "", fmt.Errorf("go/format: %w", err)
 	}
@@ -84,6 +92,255 @@ func (f *SourceFile) Render() (string, error) {
 		return "// " + f.header + "\n\n" + buf.String(), nil
 	}
 	return buf.String(), nil
+}
+
+func validateAST(file *ast.File) error {
+	var walkExpr func(path string, e ast.Expr) error
+	var walkStmt func(path string, s ast.Stmt) error
+	var walkDecl func(path string, d ast.Decl) error
+
+	walkExpr = func(path string, e ast.Expr) error {
+		if e == nil {
+			return fmt.Errorf("nil ast.Expr at %s", path)
+		}
+		switch v := e.(type) {
+		case *ast.CallExpr:
+			if v.Fun == nil {
+				return fmt.Errorf("nil call fun at %s", path)
+			}
+			if err := walkExpr(path+".Fun", v.Fun); err != nil {
+				return err
+			}
+			for i, a := range v.Args {
+				if err := walkExpr(fmt.Sprintf("%s.Args[%d]", path, i), a); err != nil {
+					return err
+				}
+			}
+		case *ast.CompositeLit:
+			if v.Type == nil {
+				return fmt.Errorf("nil composite type at %s", path)
+			}
+			if err := walkExpr(path+".Type", v.Type); err != nil {
+				return err
+			}
+			for i, a := range v.Elts {
+				if err := walkExpr(fmt.Sprintf("%s.Elts[%d]", path, i), a); err != nil {
+					return err
+				}
+			}
+		case *ast.KeyValueExpr:
+			if err := walkExpr(path+".Key", v.Key); err != nil {
+				return err
+			}
+			if err := walkExpr(path+".Value", v.Value); err != nil {
+				return err
+			}
+		case *ast.FuncLit:
+			if v.Type == nil {
+				return fmt.Errorf("nil func type at %s", path)
+			}
+			if err := walkExpr(path+".Type", v.Type); err != nil {
+				return err
+			}
+			if v.Body != nil {
+				if err := walkStmt(path+".Body", v.Body); err != nil {
+					return err
+				}
+			}
+		case *ast.IndexExpr:
+			if err := walkExpr(path+".X", v.X); err != nil {
+				return err
+			}
+			if err := walkExpr(path+".Index", v.Index); err != nil {
+				return err
+			}
+		case *ast.IndexListExpr:
+			if err := walkExpr(path+".X", v.X); err != nil {
+				return err
+			}
+			for i, idx := range v.Indices {
+				if err := walkExpr(fmt.Sprintf("%s.Indices[%d]", path, i), idx); err != nil {
+					return err
+				}
+			}
+		case *ast.ParenExpr:
+			return walkExpr(path+".X", v.X)
+		case *ast.SelectorExpr:
+			return walkExpr(path+".X", v.X)
+		case *ast.StarExpr:
+			return walkExpr(path+".X", v.X)
+		case *ast.UnaryExpr:
+			return walkExpr(path+".X", v.X)
+		case *ast.BinaryExpr:
+			if err := walkExpr(path+".X", v.X); err != nil {
+				return err
+			}
+			return walkExpr(path+".Y", v.Y)
+		case *ast.ArrayType:
+			if v.Len != nil {
+				if err := walkExpr(path+".Len", v.Len); err != nil {
+					return err
+				}
+			}
+			return walkExpr(path+".Elt", v.Elt)
+		case *ast.MapType:
+			if err := walkExpr(path+".Key", v.Key); err != nil {
+				return err
+			}
+			return walkExpr(path+".Value", v.Value)
+		case *ast.StructType:
+			if v.Fields != nil {
+				for i, fld := range v.Fields.List {
+					for j, name := range fld.Names {
+						_ = j
+						if name == nil {
+							return fmt.Errorf("nil field name at %s.Fields[%d]", path, i)
+						}
+					}
+					if fld.Type == nil {
+						return fmt.Errorf("nil field type at %s.Fields[%d]", path, i)
+					}
+					if err := walkExpr(fmt.Sprintf("%s.Fields[%d].Type", path, i), fld.Type); err != nil {
+						return err
+					}
+				}
+			}
+		case *ast.FuncType:
+			if v.Params != nil {
+				for i, fld := range v.Params.List {
+					if fld.Type == nil {
+						return fmt.Errorf("nil func param type at %s.Params[%d]", path, i)
+					}
+					if err := walkExpr(fmt.Sprintf("%s.Params[%d].Type", path, i), fld.Type); err != nil {
+						return err
+					}
+				}
+			}
+			if v.Results != nil {
+				for i, fld := range v.Results.List {
+					if fld.Type == nil {
+						return fmt.Errorf("nil func result type at %s.Results[%d]", path, i)
+					}
+					if err := walkExpr(fmt.Sprintf("%s.Results[%d].Type", path, i), fld.Type); err != nil {
+						return err
+					}
+				}
+			}
+		}
+		return nil
+	}
+
+	walkStmt = func(path string, s ast.Stmt) error {
+		if s == nil {
+			return fmt.Errorf("nil ast.Stmt at %s", path)
+		}
+		switch v := s.(type) {
+		case *ast.BlockStmt:
+			for i, stmt := range v.List {
+				if err := walkStmt(fmt.Sprintf("%s.List[%d]", path, i), stmt); err != nil {
+					return err
+				}
+			}
+		case *ast.ExprStmt:
+			return walkExpr(path+".X", v.X)
+		case *ast.AssignStmt:
+			for i, e := range v.Lhs {
+				if err := walkExpr(fmt.Sprintf("%s.Lhs[%d]", path, i), e); err != nil {
+					return err
+				}
+			}
+			for i, e := range v.Rhs {
+				if err := walkExpr(fmt.Sprintf("%s.Rhs[%d]", path, i), e); err != nil {
+					return err
+				}
+			}
+		case *ast.ReturnStmt:
+			for i, e := range v.Results {
+				if err := walkExpr(fmt.Sprintf("%s.Results[%d]", path, i), e); err != nil {
+					return err
+				}
+			}
+		case *ast.DeclStmt:
+			return walkDecl(path+".Decl", v.Decl)
+		case *ast.IfStmt:
+			if err := walkExpr(path+".Cond", v.Cond); err != nil {
+				return err
+			}
+			if v.Body != nil {
+				if err := walkStmt(path+".Body", v.Body); err != nil {
+					return err
+				}
+			}
+			if v.Else != nil {
+				if err := walkStmt(path+".Else", v.Else); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+
+	walkDecl = func(path string, d ast.Decl) error {
+		if d == nil {
+			return fmt.Errorf("nil ast.Decl at %s", path)
+		}
+		switch v := d.(type) {
+		case *ast.FuncDecl:
+			if v.Type != nil && v.Type.Params != nil {
+				for i, fld := range v.Type.Params.List {
+					if fld.Type == nil {
+						return fmt.Errorf("nil func decl param type at %s.Type.Params[%d]", path, i)
+					}
+					if err := walkExpr(fmt.Sprintf("%s.Type.Params[%d].Type", path, i), fld.Type); err != nil {
+						return err
+					}
+				}
+			}
+			if v.Type != nil && v.Type.Results != nil {
+				for i, fld := range v.Type.Results.List {
+					if fld.Type == nil {
+						return fmt.Errorf("nil func decl result type at %s.Type.Results[%d]", path, i)
+					}
+					if err := walkExpr(fmt.Sprintf("%s.Type.Results[%d].Type", path, i), fld.Type); err != nil {
+						return err
+					}
+				}
+			}
+			if v.Body != nil {
+				return walkStmt(path+".Body", v.Body)
+			}
+		case *ast.GenDecl:
+			for i, spec := range v.Specs {
+				switch s := spec.(type) {
+				case *ast.TypeSpec:
+					if s.Type != nil {
+						if err := walkExpr(fmt.Sprintf("%s.Specs[%d].Type", path, i), s.Type); err != nil {
+							return err
+						}
+					}
+				case *ast.ValueSpec:
+					for j, e := range s.Values {
+						if err := walkExpr(fmt.Sprintf("%s.Specs[%d].Values[%d]", path, i, j), e); err != nil {
+							return err
+						}
+					}
+					if s.Type != nil {
+						if err := walkExpr(fmt.Sprintf("%s.Specs[%d].Type", path, i), s.Type); err != nil {
+							return err
+						}
+					}
+				}
+			}
+		}
+		return nil
+	}
+
+	for i, decl := range file.Decls {
+		if err := walkDecl(fmt.Sprintf("Decls[%d]", i), decl); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func pruneUnusedImports(file *ast.File) {

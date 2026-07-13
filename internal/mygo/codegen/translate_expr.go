@@ -200,8 +200,22 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 			return ast.NewIdent("false"), "bool", nil
 		}
 	case *BinaryExpr:
-		left, lt, _ := g.translateExpr(n.Left, ctx, "")
-		right, rt, _ := g.translateExpr(n.Right, ctx, lt)
+		left, lt, err := g.translateExpr(n.Left, ctx, "")
+		if err != nil {
+			return nil, "", err
+		}
+		if left == nil {
+			line, col := common.NodePos(n.Left)
+			return nil, "", common.ErrorAtPos(line, col, "binary left operand produced nil Go AST")
+		}
+		right, rt, err := g.translateExpr(n.Right, ctx, lt)
+		if err != nil {
+			return nil, "", err
+		}
+		if right == nil {
+			line, col := common.NodePos(n.Right)
+			return nil, "", common.ErrorAtPos(line, col, "binary right operand produced nil Go AST")
+		}
 		switch n.Op {
 		case "+":
 			return &ast.BinaryExpr{X: left, Op: token.ADD, Y: right}, chooseType(lt, rt), nil
@@ -261,7 +275,14 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 			return &ast.CallExpr{Fun: left, Args: []ast.Expr{right}}, lt, nil
 		}
 	case *PrefixExpr:
-		expr, typ, _ := g.translateExpr(n.Expr, ctx, "")
+		expr, typ, err := g.translateExpr(n.Expr, ctx, "")
+		if err != nil {
+			return nil, "", err
+		}
+		if expr == nil {
+			line, col := common.NodePos(n.Expr)
+			return nil, "", common.ErrorAtPos(line, col, "prefix operand produced nil Go AST")
+		}
 		switch n.Op {
 		case "!":
 			return &ast.UnaryExpr{Op: token.NOT, X: expr}, "bool", nil
@@ -269,11 +290,25 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 			return &ast.UnaryExpr{Op: token.SUB, X: expr}, typ, nil
 		}
 	case *CastExpr:
-		code, _, _ := g.translateExpr(n.Expr, ctx, g.goType(n.Type, ctx.typeParams))
+		code, _, err := g.translateExpr(n.Expr, ctx, g.goType(n.Type, ctx.typeParams))
+		if err != nil {
+			return nil, "", err
+		}
+		if code == nil {
+			line, col := common.NodePos(n.Expr)
+			return nil, "", common.ErrorAtPos(line, col, "cast operand produced nil Go AST")
+		}
 		target := g.goType(n.Type, ctx.typeParams)
 		return &ast.CallExpr{Fun: ast.NewIdent(target), Args: []ast.Expr{code}}, target, nil
 	case *FieldExpr:
-		base, bt, _ := g.translateExpr(n.Expr, ctx, "")
+		base, bt, err := g.translateExpr(n.Expr, ctx, "")
+		if err != nil {
+			return nil, "", err
+		}
+		if base == nil {
+			line, col := common.NodePos(n.Expr)
+			return nil, "", common.ErrorAtPos(line, col, "field receiver produced nil Go AST")
+		}
 		// Handle Ref.value — dereference pointer
 		if n.Field == "value" {
 			btNorm := strings.TrimSpace(bt)
@@ -303,7 +338,10 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 	case *WhileExpr:
 		return g.translateWhile(n, ctx)
 	case *BlockExpr:
-		stmts, _ := g.translateBlockStmts(n, ctx, expected, nil)
+		stmts, err := g.translateBlockStmts(n, ctx, expected, nil)
+		if err != nil {
+			return nil, "", err
+		}
 		if expected == "" && len(stmts) > 0 {
 			// Statement-only block
 			if last, ok := stmts[len(stmts)-1].(*ast.ReturnStmt); ok && len(last.Results) > 0 {

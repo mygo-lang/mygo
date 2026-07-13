@@ -21,22 +21,22 @@ impl StringIEnumerable: IEnumerable[String, Rune]
   end
 
   func Map[B](c: String, fn: func(Rune) -> B) -> Slice[B] using SliceIEnumerable[Rune]
-    let slc = go[Slice[Rune]] { code: `[]Rune(c)` }
+    let slc = go[Slice[Rune]] { code: `[]rune(c)` }
     slc.Map(fn)
   end
 
   func Filter(c: String, fn: func(Rune) -> Bool) -> Slice[Rune] using SliceIEnumerable[Rune]
-    let slc = go[Slice[Rune]] { code: `[]Rune(c)` }
+    let slc = go[Slice[Rune]] { code: `[]rune(c)` }
     slc.Filter(fn)
   end
 
   func Fold[B](c: String, initial: B, fn: func(B, Rune) -> B) -> B using SliceIEnumerable[Rune]
-    let slc = go[Slice[Rune]] { code: `[]Rune(c)` }
+    let slc = go[Slice[Rune]] { code: `[]rune(c)` }
     slc.Fold(initial, fn)
   end
 
   func Find(c: String, fn: func(Rune) -> Bool) -> Option[Ref[Rune]] using SliceIEnumerable[Rune]
-    let slc = go[Slice[Rune]] { code: `[]Rune(c)` }
+    let slc = go[Slice[Rune]] { code: `[]rune(c)` }
     slc.Find(fn)
   end
 

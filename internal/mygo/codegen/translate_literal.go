@@ -7,6 +7,7 @@ import (
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/codegen/goast"
+	"github.com/mygo-lang/mygo/internal/mygo/common"
 )
 
 // translateStructLit handles struct literal construction.
@@ -23,6 +24,12 @@ func (g *gen) translateStructLit(n *StructLitExpr, ctx *egCtx, expected string) 
 				subst[tp] = g.goType(n.TypeArgs[i], ctx.typeParams)
 			}
 		}
+	} else if base, args := splitTypeArgs(expected); base == n.TypeName && len(args) > 0 {
+		for i, tp := range st.TypeParams {
+			if i < len(args) {
+				subst[tp] = strings.TrimSpace(args[i])
+			}
+		}
 	}
 	elts := make([]ast.Expr, len(n.Fields))
 	for i, f := range n.Fields {
@@ -33,7 +40,14 @@ func (g *gen) translateStructLit(n *StructLitExpr, ctx *egCtx, expected string) 
 				break
 			}
 		}
-		code, _, _ := g.translateExpr(f.Value, ctx, fieldExpected)
+		code, _, err := g.translateExpr(f.Value, ctx, fieldExpected)
+		if err != nil {
+			line, col := common.NodePos(f.Value)
+			return nil, "", common.ErrorAtPos(line, col, "struct field %s: %s", f.Name, err.Error())
+		}
+		if code == nil {
+			return nil, "", common.ErrorAtPos(f.Line, f.Column, "struct field %s produced nil Go AST", f.Name)
+		}
 		fieldName := goastFieldName(f.Name)
 		if fieldName == "" {
 			elts[i] = code
@@ -49,8 +63,42 @@ func (g *gen) translateStructLit(n *StructLitExpr, ctx *egCtx, expected string) 
 			typeArgs[i] = ast.NewIdent(g.goType(a, ctx.typeParams))
 		}
 		typeExpr = genericIdent(typeName, typeArgs...)
+	} else if len(subst) > 0 && len(st.TypeParams) > 0 {
+		typeArgs := make([]ast.Expr, 0, len(st.TypeParams))
+		for _, tp := range st.TypeParams {
+			arg := subst[tp]
+			if arg == "" {
+				break
+			}
+			if expr, err := goast.TypeExprToGo(arg); err == nil {
+				typeArgs = append(typeArgs, expr)
+			} else {
+				typeArgs = append(typeArgs, ast.NewIdent(arg))
+			}
+		}
+		if len(typeArgs) == len(st.TypeParams) {
+			typeExpr = genericIdent(typeName, typeArgs...)
+		}
 	}
-	return &ast.CompositeLit{Type: typeExpr, Elts: elts}, typeName, nil
+	resultType := typeName
+	if expected != "" {
+		if base, _ := splitTypeArgs(expected); base == n.TypeName {
+			resultType = expected
+		}
+	} else if len(subst) > 0 && len(st.TypeParams) > 0 {
+		args := make([]string, 0, len(st.TypeParams))
+		for _, tp := range st.TypeParams {
+			arg := subst[tp]
+			if arg == "" {
+				break
+			}
+			args = append(args, arg)
+		}
+		if len(args) == len(st.TypeParams) {
+			resultType = typeName + "[" + strings.Join(args, ", ") + "]"
+		}
+	}
+	return &ast.CompositeLit{Type: typeExpr, Elts: elts}, resultType, nil
 }
 
 // translateSliceLit handles slice literals.
@@ -73,7 +121,15 @@ func (g *gen) translateSliceLit(n *SliceLitExpr, ctx *egCtx, expected string) (a
 	}
 	var elts []ast.Expr
 	for _, elem := range n.Elems {
-		ac, _, _ := g.translateExpr(elem, ctx, elemTypeStr)
+		ac, _, err := g.translateExpr(elem, ctx, elemTypeStr)
+		if err != nil {
+			line, col := common.NodePos(elem)
+			return nil, "", common.ErrorAtPos(line, col, "slice element: %s", err.Error())
+		}
+		if ac == nil {
+			line, col := common.NodePos(elem)
+			return nil, "", common.ErrorAtPos(line, col, "slice element produced nil Go AST")
+		}
 		elts = append(elts, ac)
 	}
 	arrType := &ast.ArrayType{Elt: elemType}
@@ -111,8 +167,19 @@ func (g *gen) translateMapLit(n *MapLitExpr, ctx *egCtx, expected string) (ast.E
 	}
 	var elts []ast.Expr
 	for _, pair := range n.Pairs {
-		k, _, _ := g.translateExpr(pair.Key, ctx, kt)
-		v, _, _ := g.translateExpr(pair.Value, ctx, vt)
+		k, _, err := g.translateExpr(pair.Key, ctx, kt)
+		if err != nil {
+			line, col := common.NodePos(pair.Key)
+			return nil, "", common.ErrorAtPos(line, col, "map key: %s", err.Error())
+		}
+		v, _, err := g.translateExpr(pair.Value, ctx, vt)
+		if err != nil {
+			line, col := common.NodePos(pair.Value)
+			return nil, "", common.ErrorAtPos(line, col, "map value: %s", err.Error())
+		}
+		if k == nil || v == nil {
+			return nil, "", common.ErrorAtPos(pair.Line, pair.Col, "map pair produced nil Go AST")
+		}
 		elts = append(elts, &ast.KeyValueExpr{Key: k, Value: v})
 	}
 	mapType := &ast.MapType{Key: ast.NewIdent(kt), Value: ast.NewIdent(vt)}
@@ -148,7 +215,15 @@ func (g *gen) translateSetLit(n *SetLitExpr, ctx *egCtx, expected string) (ast.E
 	}
 	var elts []ast.Expr
 	for _, elem := range n.Elems {
-		ac, _, _ := g.translateExpr(elem, ctx, et)
+		ac, _, err := g.translateExpr(elem, ctx, et)
+		if err != nil {
+			line, col := common.NodePos(elem)
+			return nil, "", common.ErrorAtPos(line, col, "set element: %s", err.Error())
+		}
+		if ac == nil {
+			line, col := common.NodePos(elem)
+			return nil, "", common.ErrorAtPos(line, col, "set element produced nil Go AST")
+		}
 		elts = append(elts, &ast.KeyValueExpr{
 			Key:   ac,
 			Value: &ast.CompositeLit{Type: ast.NewIdent("struct{}")},
@@ -167,7 +242,15 @@ func (g *gen) translateTupleLit(n *TupleLitExpr, ctx *egCtx, expected string) (a
 	elts := make([]ast.Expr, len(n.Elems))
 	fieldTypes := make([]string, len(n.Elems))
 	for i, elem := range n.Elems {
-		code, typ, _ := g.translateExpr(elem, ctx, "")
+		code, typ, err := g.translateExpr(elem, ctx, "")
+		if err != nil {
+			line, col := common.NodePos(elem)
+			return nil, "", common.ErrorAtPos(line, col, "tuple element %d: %s", i+1, err.Error())
+		}
+		if code == nil {
+			line, col := common.NodePos(elem)
+			return nil, "", common.ErrorAtPos(line, col, "tuple element %d produced nil Go AST", i+1)
+		}
 		elts[i] = &ast.KeyValueExpr{Key: ast.NewIdent("F" + strconv.Itoa(i)), Value: code}
 		fieldTypes[i] = typ
 		if typ == "" {

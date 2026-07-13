@@ -7,15 +7,37 @@ import (
 	"strconv"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
+	"github.com/mygo-lang/mygo/internal/mygo/common"
 )
 
 // translateIf handles if expressions.
 func (g *gen) translateIf(n *IfExpr, ctx *egCtx, expected string) (ast.Expr, string, error) {
-	cond, _, _ := g.translateExpr(n.Cond, ctx, "bool")
+	cond, _, err := g.translateExpr(n.Cond, ctx, "bool")
+	if err != nil {
+		return nil, "", err
+	}
+	if cond == nil {
+		line, col := common.NodePos(n.Cond)
+		return nil, "", common.ErrorAtPos(line, col, "if condition produced nil Go AST")
+	}
 	thenCtx := ctx.child()
 	elseCtx := ctx.child()
-	thenCode, thenType, _ := g.translateExpr(n.Then, thenCtx, expected)
-	elseCode, elseType, _ := g.translateExpr(n.Else, elseCtx, expected)
+	thenCode, thenType, err := g.translateExpr(n.Then, thenCtx, expected)
+	if err != nil {
+		return nil, "", err
+	}
+	if thenCode == nil {
+		line, col := common.NodePos(n.Then)
+		return nil, "", common.ErrorAtPos(line, col, "if then branch produced nil Go AST")
+	}
+	elseCode, elseType, err := g.translateExpr(n.Else, elseCtx, expected)
+	if err != nil {
+		return nil, "", err
+	}
+	if elseCode == nil {
+		line, col := common.NodePos(n.Else)
+		return nil, "", common.ErrorAtPos(line, col, "if else branch produced nil Go AST")
+	}
 
 	resultType := expected
 	if resultType == "" {
@@ -309,7 +331,10 @@ func (g *gen) translateFuncLit(n *FuncLitExpr, ctx *egCtx) (ast.Expr, string, er
 		child.bindings[p.Name] = p.Name
 	}
 	if block, ok := n.Body.(*BlockExpr); ok {
-		stmts, _ := g.translateBlockStmts(block, child, retType, nil)
+		stmts, err := g.translateBlockStmts(block, child, retType, nil)
+		if err != nil {
+			return nil, "", err
+		}
 		return &ast.FuncLit{
 			Type: &ast.FuncType{
 				Params:  &ast.FieldList{List: params},
@@ -318,7 +343,14 @@ func (g *gen) translateFuncLit(n *FuncLitExpr, ctx *egCtx) (ast.Expr, string, er
 			Body: &ast.BlockStmt{List: stmts},
 		}, retType, nil
 	}
-	bodyCode, _, _ := g.translateExpr(n.Body, child, retType)
+	bodyCode, _, err := g.translateExpr(n.Body, child, retType)
+	if err != nil {
+		return nil, "", err
+	}
+	if bodyCode == nil {
+		line, col := common.NodePos(n.Body)
+		return nil, "", common.ErrorAtPos(line, col, "function literal body produced nil Go AST")
+	}
 	return &ast.FuncLit{
 		Type: &ast.FuncType{
 			Params:  &ast.FieldList{List: params},

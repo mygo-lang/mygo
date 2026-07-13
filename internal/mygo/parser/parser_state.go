@@ -27,6 +27,7 @@ type parser struct {
 	currentTypeParams            []string
 	currentParams                []ast.Param
 	currentParamsStack           [][]ast.Param
+	currentFuncLitRetStack       []ast.TypeExpr
 	currentWhere                 []ast.Constraint
 	currentConstraintArgs        []TypeExpr
 	currentBlock                 []ast.Stmt
@@ -44,6 +45,8 @@ type parser struct {
 	currentCallCalleeStack       []ast.Expr
 	currentArgsStack             [][]ast.Expr
 	currentSliceElemsStack       [][]ast.Expr
+	currentCallTypeArgs          []ast.TypeExpr
+	currentCallTypeArgsStack     [][]ast.TypeExpr
 	currentStructBaseStack       []ast.Expr
 	currentStructFieldsStack     [][]ast.StructLitField
 	currentTupleElemsStack       [][]ast.Expr

@@ -1,11 +1,89 @@
 package codegen
 
 import (
+	"strings"
 	"testing"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
+	"github.com/mygo-lang/mygo/internal/mygo/codegen/goast"
+	myparser "github.com/mygo-lang/mygo/internal/mygo/parser"
 	"github.com/mygo-lang/mygo/internal/mygo/typeinference"
 )
+
+func TestGenerateResolvesGenericSliceFoldThroughTypeclass(t *testing.T) {
+	src := `package parsec
+
+interface IEnumerable[C[A], A]
+  func Fold[B](c: C[A], initial: B, fn: func(B, A) -> B) -> B
+end
+
+impl[T] SliceIEnumerable[T]: IEnumerable[Slice[T], T]
+  func Fold[B](c: Slice[T], initial: B, fn: func(B, T) -> B) -> B
+    initial
+  end
+end
+
+struct Parser[A]
+  value: A
+end
+
+func PFail[A](message: String) -> Parser[A]
+  Parser[A] { value: Zero() }
+end
+
+func POrElse[A](left: Parser[A], right: Parser[A]) -> Parser[A]
+  left
+end
+
+func PChoice[A](parsers: Slice[Parser[A]]) -> Parser[A]
+  parsers.Fold(PFail[A]("no parser matched"), func(acc: Parser[A], p: Parser[A]) -> Parser[A]
+    POrElse(acc, p)
+  end)
+end
+`
+	parsed, err := myparser.ParseFile("parsec.mygo", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg := &Package{
+		Name:          "parsec",
+		NoPrelude:     true,
+		Imports:       map[string]struct{}{},
+		ImportAliases: map[string]string{},
+		Enums:         map[string]*EnumDecl{},
+		Structs:       map[string]*StructDecl{},
+		Interfaces:    map[string]*InterfaceDecl{},
+		Funcs:         map[string]*FuncDecl{},
+		Decls:         parsed.Decls,
+	}
+	for _, decl := range parsed.Decls {
+		switch d := decl.(type) {
+		case *StructDecl:
+			pkg.Structs[d.Name] = d
+		case *InterfaceDecl:
+			pkg.Interfaces[d.Name] = d
+		case *FuncDecl:
+			pkg.Funcs[d.Name] = d
+		case *ImplDecl:
+			pkg.Impls = append(pkg.Impls, d)
+		}
+	}
+
+	files, err := GenerateFiles(pkg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var generated string
+	for _, src := range files {
+		generated += src
+	}
+	if strings.Contains(generated, "parsers.Fold") {
+		t.Fatalf("PChoice generated direct selector call, want typeclass helper:\n%s", generated)
+	}
+	if !strings.Contains(generated, "Fold__t_t") {
+		t.Fatalf("PChoice did not generate SliceIEnumerable Fold helper call:\n%s", generated)
+	}
+}
 
 func TestCompilePrelude(t *testing.T) {
 	pkg := simpleLoadPackage("../../../prelude", true)
@@ -112,5 +190,14 @@ func TestGoTypeTranslatesByteAndRune(t *testing.T) {
 	}
 	if got := g.goType(&NamedType{Name: "Rune"}, nil); got != "rune" {
 		t.Fatalf("goType(Rune) = %q, want rune", got)
+	}
+}
+
+func TestGoStringToMyGoPreservesRune(t *testing.T) {
+	cases := []string{"string", "bool", "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64", "byte", "rune", "float32", "float64", "any", "struct{}"}
+	for _, tc := range cases {
+		if got := goast.GoStringToMyGo(tc); got != tc {
+			t.Fatalf("GoStringToMyGo(%s) = %q, want %q", tc, got, tc)
+		}
 	}
 }

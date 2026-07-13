@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"strings"
@@ -8,6 +9,77 @@ import (
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
 )
+
+func (g *gen) translateCallArgs(args []Expr, ctx *egCtx) ([]ast.Expr, error) {
+	return g.translateCallArgsExpected(args, nil, ctx)
+}
+
+func (g *gen) translateCallArgsExpected(args []Expr, expected []string, ctx *egCtx) ([]ast.Expr, error) {
+	out := make([]ast.Expr, len(args))
+	for i, a := range args {
+		argExpected := ""
+		if i < len(expected) {
+			argExpected = expected[i]
+		}
+		ac, _, err := g.translateExpr(a, ctx, argExpected)
+		if err != nil {
+			line, col := common.NodePos(a)
+			return nil, common.ErrorAtPos(line, col, "call argument %d: %s", i+1, err.Error())
+		}
+		if ac == nil {
+			line, col := common.NodePos(a)
+			return nil, common.ErrorAtPos(line, col, "call argument %d produced nil Go AST", i+1)
+		}
+		out[i] = ac
+	}
+	return out, nil
+}
+
+func inferTypeSubstFromExpected(src TypeExpr, expected string) map[string]string {
+	subst := map[string]string{}
+	inferExpectedTypeSubst(src, expected, subst)
+	return subst
+}
+
+func inferExpectedTypeSubst(src TypeExpr, expected string, subst map[string]string) {
+	expected = strings.TrimSpace(expected)
+	if expected == "" || src == nil {
+		return
+	}
+	switch t := src.(type) {
+	case *NamedType:
+		if len(t.Args) == 0 {
+			if _, ok := subst[t.Name]; !ok {
+				subst[t.Name] = expected
+			}
+			return
+		}
+		base, args := splitTypeArgs(expected)
+		if base != t.Name || len(args) != len(t.Args) {
+			return
+		}
+		for i, arg := range t.Args {
+			inferExpectedTypeSubst(arg, args[i], subst)
+		}
+	case *FuncType:
+		base, _ := splitTypeArgs(expected)
+		if base != "func" {
+			return
+		}
+	}
+}
+
+func (g *gen) paramExpectedTypes(fn *FuncDecl, expected string, ctx *egCtx) []string {
+	if fn == nil {
+		return nil
+	}
+	subst := inferTypeSubstFromExpected(fn.Ret, expected)
+	out := make([]string, len(fn.Params))
+	for i, p := range fn.Params {
+		out[i] = g.goTypeStringSubst(p.Type, subst)
+	}
+	return out
+}
 
 func typeArgExprsFromExpected(expected string) []ast.Expr {
 	_, args := splitTypeArgs(expected)
@@ -23,20 +95,31 @@ func typeArgExprsFromExpected(expected string) []ast.Expr {
 
 // translateCall handles function/method calls.
 func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr, string, error) {
+	// Translate explicit type arguments if provided
+	var typeArgExprs []ast.Expr
+	if len(n.TypeArgs) > 0 {
+		typeArgExprs = make([]ast.Expr, len(n.TypeArgs))
+		for i, ta := range n.TypeArgs {
+			typeArgExprs[i] = goastTypeExpr(ta)
+		}
+	}
+
 	// Check for IdentExpr callee — handles Some, None, Ok, Err, func calls
 	if id, ok := n.Callee.(*IdentExpr); ok {
 		switch id.Name {
 		case "Some", "None", "Ok", "Err":
-			args := make([]ast.Expr, len(n.Args))
-			for i, a := range n.Args {
-				ac, _, _ := g.translateExpr(a, ctx, "")
-				args[i] = ac
+			args, err := g.translateCallArgs(n.Args, ctx)
+			if err != nil {
+				return nil, "", err
 			}
 			useExpected := expected
 			if useExpected == "" {
 				useExpected = ctx.retType
 			}
-			typeArgExprs := typeArgExprsFromExpected(useExpected)
+			// Use explicit type args if provided, otherwise infer from expected type
+			if len(typeArgExprs) == 0 {
+				typeArgExprs = typeArgExprsFromExpected(useExpected)
+			}
 			var fun ast.Expr = ast.NewIdent(id.Name)
 			if len(typeArgExprs) > 0 {
 				if len(typeArgExprs) == 1 {
@@ -50,10 +133,9 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		// Auto-inject constraint function args for functions with using clauses.
 		// E.g., same(1, 2) → same(1, 2, Equals_fasteq_int) when same has using.
 		if fnDecl, ok := g.pkg.Funcs[id.Name]; ok && len(fnDecl.Using) > 0 {
-			args := make([]ast.Expr, len(n.Args))
-			for i, a := range n.Args {
-				ac, _, _ := g.translateExpr(a, ctx, "")
-				args[i] = ac
+			args, err := g.translateCallArgs(n.Args, ctx)
+			if err != nil {
+				return nil, "", err
 			}
 			for _, c := range fnDecl.Using {
 				// If BindName is set, find the named impl directly.
@@ -129,12 +211,20 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		}
 		// Regular function call — check pkg.Funcs for return type
 		var callee ast.Expr = ast.NewIdent(sanitizeIdent(id.Name))
+		// If explicit type args are provided for a generic function, add them
+		if len(typeArgExprs) > 0 && len(n.TypeArgs) > 0 {
+			callee = &ast.IndexListExpr{X: ast.NewIdent(sanitizeIdent(id.Name)), Indices: typeArgExprs}
+		}
+		if id.Name == "Zero" && len(n.Args) == 0 && expected != "" {
+			return &ast.CallExpr{
+				Fun: &ast.IndexExpr{X: ast.NewIdent("Zero"), Index: goTypeExprFromString(expected)},
+			}, expected, nil
+		}
 		// Check for constraint function call (e.g., show(value) → showFn(value))
 		if fn, ok := ctx.constraintFuncs[id.Name]; ok && len(n.Args) > 0 {
-			args := make([]ast.Expr, len(n.Args))
-			for i, a := range n.Args {
-				ac, _, _ := g.translateExpr(a, ctx, "")
-				args[i] = ac
+			args, err := g.translateCallArgs(n.Args, ctx)
+			if err != nil {
+				return nil, "", err
 			}
 			retType := ctx.retType
 			if expected != "" {
@@ -143,17 +233,18 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			return &ast.CallExpr{Fun: ast.NewIdent(fn), Args: args}, retType, nil
 		}
 
-		args := make([]ast.Expr, len(n.Args))
-		for i, a := range n.Args {
-			ac, _, _ := g.translateExpr(a, ctx, "")
-			args[i] = ac
-		}
 		retType := ""
-		if fnDecl, ok := g.pkg.Funcs[id.Name]; ok {
+		var fnDecl *FuncDecl
+		if decl, ok := g.pkg.Funcs[id.Name]; ok {
+			fnDecl = decl
 			retType = g.goReturnType(fnDecl.Ret, ctx.typeParams)
 		}
 		if expected != "" {
 			retType = expected
+		}
+		args, err := g.translateCallArgsExpected(n.Args, g.paramExpectedTypes(fnDecl, retType, ctx), ctx)
+		if err != nil {
+			return nil, "", err
 		}
 		// For Some/None/Ok/Err, add type args from expected or retType
 		useExpected := expected
@@ -199,7 +290,10 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		// Check for Ref.new
 		if id, ok := field.Expr.(*IdentExpr); ok && id.Name == "Ref" && field.Field == "new" {
 			if len(n.Args) == 1 {
-				arg, argType, _ := g.translateExpr(n.Args[0], ctx, "")
+				arg, argType, err := g.translateExpr(n.Args[0], ctx, "")
+				if err != nil {
+					return nil, "", err
+				}
 				ptrType := "*" + argType
 				// If arg is a function call, wrap in IIFE: func() *T { v := expr; return &v }()
 				if _, ok := n.Args[0].(*CallExpr); ok {
@@ -228,10 +322,9 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			// Check for inherent static method call: Type.method(args)
 			if methods, ok := g.inherentMethods[id.Name]; ok {
 				if method, ok := methods[field.Field]; ok && !method.HasReceiver {
-					args := make([]ast.Expr, len(n.Args))
-					for i, a := range n.Args {
-						ac, _, _ := g.translateExpr(a, ctx, "")
-						args[i] = ac
+					args, err := g.translateCallArgs(n.Args, ctx)
+					if err != nil {
+						return nil, "", err
 					}
 					fnName := inherentMethodName(id.Name, method.Func.Name)
 					retType := g.goReturnType(method.Func.Ret, ctx.typeParams)
@@ -240,10 +333,9 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			}
 			// Check if it's an enum constructor call (Enum.Variant)
 			if g.variantByName[field.Field] != "" {
-				args := make([]ast.Expr, len(n.Args))
-				for i, a := range n.Args {
-					ac, _, _ := g.translateExpr(a, ctx, "")
-					args[i] = ac
+				args, err := g.translateCallArgs(n.Args, ctx)
+				if err != nil {
+					return nil, "", err
 				}
 				variantType := variantNameForEnum(id.Name, field.Field)
 				return &ast.CallExpr{Fun: ast.NewIdent(variantType), Args: args}, variantType, nil
@@ -270,10 +362,9 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 								return nil, "", common.ErrorAtPos(field.Line, field.Column, "call type mismatch for %s.%s: expected %d args, got %d", id.Name, field.Field, len(sig.params), len(n.Args))
 							}
 							callee := ast.NewIdent(id.Name + "." + field.Field)
-							args := make([]ast.Expr, len(n.Args))
-							for i, a := range n.Args {
-								ac, _, _ := g.translateExpr(a, ctx, "")
-								args[i] = ac
+							args, err := g.translateCallArgs(n.Args, ctx)
+							if err != nil {
+								return nil, "", err
 							}
 							retType := goSigReturnType(sig.ret)
 							if expected != "" {
@@ -284,19 +375,24 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 					}
 				}
 				callee := ast.NewIdent(id.Name + "." + field.Field)
-				args := make([]ast.Expr, len(n.Args))
-				for i, a := range n.Args {
-					ac, _, _ := g.translateExpr(a, ctx, "")
-					args[i] = ac
+				args, err := g.translateCallArgs(n.Args, ctx)
+				if err != nil {
+					return nil, "", err
 				}
 				return &ast.CallExpr{Fun: callee, Args: args}, expected, nil
 			}
 		}
-		base, bt, _ := g.translateExpr(field.Expr, ctx, "")
-		args := make([]ast.Expr, len(n.Args))
-		for i, a := range n.Args {
-			ac, _, _ := g.translateExpr(a, ctx, "")
-			args[i] = ac
+		base, bt, err := g.translateExpr(field.Expr, ctx, "")
+		if err != nil {
+			return nil, "", err
+		}
+		if base == nil {
+			line, col := common.NodePos(field.Expr)
+			return nil, "", common.ErrorAtPos(line, col, "method receiver produced nil Go AST")
+		}
+		args, err := g.translateCallArgs(n.Args, ctx)
+		if err != nil {
+			return nil, "", err
 		}
 		// Check for inherent method call: receiverType.method(args...) → receiverType_method(args..., receiver)
 		recvTypeName := baseNamedType(bt)
@@ -341,11 +437,17 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		}, bt, nil
 	}
 	// Fallback
-	callee, ct, _ := g.translateExpr(n.Callee, ctx, "")
-	args := make([]ast.Expr, len(n.Args))
-	for i, a := range n.Args {
-		ac, _, _ := g.translateExpr(a, ctx, "")
-		args[i] = ac
+	callee, ct, err := g.translateExpr(n.Callee, ctx, "")
+	if err != nil {
+		return nil, "", err
+	}
+	if callee == nil {
+		line, col := common.NodePos(n.Callee)
+		return nil, "", common.ErrorAtPos(line, col, "call callee produced nil Go AST: %s", fmt.Sprintf("%T", n.Callee))
+	}
+	args, err := g.translateCallArgs(n.Args, ctx)
+	if err != nil {
+		return nil, "", err
 	}
 	return &ast.CallExpr{Fun: callee, Args: args}, ct, nil
 }
@@ -484,7 +586,7 @@ func (g *gen) hasEqSupport(typ, baseName string) bool {
 	switch baseName {
 	case "int", "int8", "int16", "int32", "int64",
 		"uint", "uint8", "uint16", "uint32", "uint64",
-		"float32", "float64", "string", "bool", "any":
+		"float32", "float64", "string", "bool", "byte", "rune", "any":
 		return true
 	}
 	// Check for Eq[A] implementations in the package

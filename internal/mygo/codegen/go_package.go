@@ -208,7 +208,7 @@ func goTypeToMyGoName(s string) string {
 	case "error":
 		return "error"
 	case "rune":
-		return "Rune"
+		return "rune"
 	case "byte":
 		return "Byte"
 	}

@@ -285,41 +285,41 @@ func GoStringToMyGo(typ string) string {
 	}
 	switch typ {
 	case "string":
-		return "String"
+		return "string"
 	case "bool":
-		return "Bool"
+		return "bool"
 	case "int":
-		return "Int"
+		return "int"
 	case "int8":
-		return "Int8"
+		return "int8"
 	case "int16":
-		return "Int16"
+		return "int16"
 	case "int32":
-		return "Int32"
+		return "int32"
 	case "int64":
-		return "Int64"
+		return "int64"
 	case "uint":
-		return "UInt"
+		return "uint"
 	case "uint8":
-		return "UInt8"
+		return "uint8"
 	case "uint16":
-		return "UInt16"
+		return "uint16"
 	case "uint32":
-		return "UInt32"
+		return "uint32"
 	case "uint64":
-		return "UInt64"
+		return "uint64"
 	case "byte":
-		return "Byte"
+		return "byte"
 	case "rune":
-		return "Rune"
+		return "rune"
 	case "float32":
-		return "Float32"
+		return "float32"
 	case "float64":
-		return "Float64"
+		return "float64"
 	case "any":
-		return "Any"
+		return "any"
 	case "struct{}":
-		return "Unit"
+		return "struct{}"
 	}
 	return typ
 }

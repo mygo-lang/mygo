@@ -122,13 +122,15 @@ func syncDir(root string, noPrelude bool) ([]string, error) {
 
 // loadPreludePackage finds and loads the prelude package by trying various paths.
 func loadPreludePackage(dir, workspaceRoot string) *pkg.Package {
-	candidates := []string{
-		filepath.Join(workspaceRoot, "prelude"),
-		filepath.Join(dir, "prelude"),
-		filepath.Join(dir, "..", "prelude"),
-		filepath.Join(dir, "..", "..", "prelude"),
-		"prelude",
+	var candidates []string
+	if root := findMyGoModuleRoot(dir); root != "" {
+		candidates = append(candidates, filepath.Join(root, "prelude"))
 	}
+	if root := findMyGoModuleRoot(workspaceRoot); root != "" {
+		candidates = append(candidates, filepath.Join(root, "prelude"))
+	}
+	candidates = append(candidates, filepath.Join(workspaceRoot, "prelude"))
+	candidates = append(candidates, "prelude")
 	seen := map[string]bool{}
 	for _, c := range candidates {
 		abs, err := filepath.Abs(c)
@@ -146,6 +148,33 @@ func loadPreludePackage(dir, workspaceRoot string) *pkg.Package {
 		}
 	}
 	return nil
+}
+
+func findMyGoModuleRoot(start string) string {
+	absStart, err := filepath.Abs(start)
+	if err != nil {
+		return ""
+	}
+	for cur := absStart; ; cur = filepath.Dir(cur) {
+		data, err := os.ReadFile(filepath.Join(cur, "go.mod"))
+		if err == nil && modulePath(data) == "github.com/mygo-lang/mygo" {
+			return cur
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			return ""
+		}
+	}
+}
+
+func modulePath(goMod []byte) string {
+	for _, line := range strings.Split(string(goMod), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "module ") {
+			return strings.TrimSpace(strings.TrimPrefix(line, "module "))
+		}
+	}
+	return ""
 }
 
 // mergeImportedDecls merges declarations from an imported MyGO package into
