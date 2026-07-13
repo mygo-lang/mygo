@@ -1528,9 +1528,10 @@ if_expr
 		p := yylex.(*parser)
 		p.currentIfThen = bodyExprFromBlock(p.currentExpr)
 	}
+	opt_newlines
 	if_block_tail END {
 		p := yylex.(*parser)
-		p.currentIfElse, _ = $8.(ast.Expr)
+		p.currentIfElse, _ = $9.(ast.Expr)
 		p.currentExpr = &ast.IfExpr{Line: $1.line, Column: $1.col, Cond: p.currentIfCond, Then: p.currentIfThen, Else: p.currentIfElse}
 		if len(p.currentIfCondStack) > 0 {
 			idx := len(p.currentIfCondStack) - 1
@@ -1577,6 +1578,9 @@ if_block_tail
 		p.currentIfPartsStack = p.currentIfPartsStack[:idx]
 		elseExpr, _ := $8.(ast.Expr)
 		$$ = &ast.IfExpr{Line: $1.line, Column: $1.col, Cond: parts.cond, Then: parts.then, Else: elseExpr}
+	}
+	| {
+		$$ = &ast.UnitLitExpr{}
 	}
 	;
 

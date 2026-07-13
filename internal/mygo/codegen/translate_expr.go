@@ -156,6 +156,9 @@ func stmtForExpr(src Expr, code ast.Expr, typ string) ast.Stmt {
 	if branch := branchStmtForExpr(src); branch != nil {
 		return branch
 	}
+	if _, ok := src.(*UnitLitExpr); ok {
+		return &ast.EmptyStmt{}
+	}
 	if typ != "" {
 		return &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Rhs: []ast.Expr{code}, Tok: token.ASSIGN}
 	}

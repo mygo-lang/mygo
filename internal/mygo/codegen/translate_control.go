@@ -53,7 +53,7 @@ func (g *gen) translateIf(n *IfExpr, ctx *egCtx, expected string) (ast.Expr, str
 			Cond: cond,
 			Body: &ast.BlockStmt{List: []ast.Stmt{stmtForExpr(n.Then, thenCode, thenType)}},
 		}
-		if elseCode != nil {
+		if _, isUnitElse := n.Else.(*UnitLitExpr); elseCode != nil && !isUnitElse {
 			ifStmt.Else = &ast.BlockStmt{List: []ast.Stmt{stmtForExpr(n.Else, elseCode, elseType)}}
 		}
 		fn := astFuncLit(nil, nil, &ast.BlockStmt{List: []ast.Stmt{ifStmt}})

@@ -521,6 +521,24 @@ func TestInferIf(t *testing.T) {
 	}
 }
 
+func TestInferIfWithoutElseReturnsUnitWhenThenIsUnit(t *testing.T) {
+	state := NewInferState()
+	env := make(TypeEnv)
+
+	ifExpr := &IfExpr{
+		Cond: &IdentExpr{Name: "true"},
+		Then: &UnitLitExpr{},
+		Else: &UnitLitExpr{},
+	}
+	typ, err := inferExprType(env, ifExpr, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !eqType(typ, unitType()) {
+		t.Fatalf("expected Unit, got %s", typ)
+	}
+}
+
 func TestInferIfTypeMismatch(t *testing.T) {
 	state := NewInferState()
 	env := make(TypeEnv)

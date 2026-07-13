@@ -1,6 +1,8 @@
 package mygo
 
 import (
+	goparser "go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
@@ -72,6 +74,29 @@ func TestCompileDirSupportsStringSwitchOnStructField(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
 		}
+	}
+}
+
+func TestCompileDirSupportsBlockIfWithoutElse(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+  func demo(ok: Bool) -> ()
+    if ok then
+      ()
+    end
+  end
+`)
+
+	outFiles, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, outFiles[0])
+	if _, err := goparser.ParseFile(token.NewFileSet(), "", got, goparser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n--- got ---\n%s", err, got)
+	}
+	if !strings.Contains(got, "if ok") {
+		t.Fatalf("generated Go missing if statement\n--- got ---\n%s", got)
 	}
 }
 
@@ -1288,7 +1313,6 @@ func TestCompileDirEmitsHKTTypesOncePerPackage(t *testing.T) {
 		t.Fatalf("expected one HKT1 declaration, got generated Go:\n%s", got)
 	}
 }
-
 
 func writeMygoFile(t *testing.T, dir, name, src string) {
 	t.Helper()

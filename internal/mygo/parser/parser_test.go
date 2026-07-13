@@ -636,6 +636,34 @@ end
 	}
 }
 
+func TestParseFileSupportsBlockIfWithoutElse(t *testing.T) {
+	src := `package main
+func demo(ok: Bool) -> ()
+  if ok then
+    ()
+  end
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	ifExpr, ok := fn.Body.(*IfExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *IfExpr", fn.Body)
+	}
+	if _, ok := ifExpr.Then.(*UnitLitExpr); !ok {
+		t.Fatalf("IfExpr.Then type = %T, want *UnitLitExpr", ifExpr.Then)
+	}
+	if _, ok := ifExpr.Else.(*UnitLitExpr); !ok {
+		t.Fatalf("IfExpr.Else type = %T, want *UnitLitExpr", ifExpr.Else)
+	}
+}
+
 func TestParseFileFuncLitInsideBlockIfPreservesOuterParams(t *testing.T) {
 	src := `package main
 func demo(s: String) -> Option
