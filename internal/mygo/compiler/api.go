@@ -254,7 +254,7 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, error) {
 		if err != nil {
 			return nil, err
 		}
-		parsed, err := parserpkg.ParseFile(string(src))
+		parsed, err := parserpkg.ParseFile(filepath.Join(dir, name), string(src))
 		if err != nil {
 			return nil, err
 		}

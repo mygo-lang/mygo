@@ -11,7 +11,7 @@ func TestParsePrelude(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f, err := ParseFile(string(src))
+	f, err := ParseFile("test.mygo", string(src))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +20,7 @@ func TestParsePrelude(t *testing.T) {
 
 func TestParseGenericImpl(t *testing.T) {
 	src := "package p\n\nimpl[T] List[T]: IEnumerable[List[T], T]\n  func Map[B](c: List[T], fn: func(T) -> B) -> List[B]\n    var headVal: B = fn(c.head)\n  end\nend\n"
-	f, err := ParseFile(src)
+	f, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func TestParseFullPrelude(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f, err := ParseFile(string(src))
+	f, err := ParseFile("test.mygo", string(src))
 	if err != nil {
 		t.Fatal(err)
 	}

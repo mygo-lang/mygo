@@ -12,7 +12,7 @@ func demo() -> Int
   42
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -44,7 +44,7 @@ func demo() -> Int
   42
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -82,7 +82,7 @@ func demo() -> Int
   0
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -105,7 +105,7 @@ func demo() -> Int
   box.make(1).value
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -138,7 +138,7 @@ func demo(n: Int) -> Int
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -184,7 +184,7 @@ func demo() -> Int
   1 + 2 |> add(3)
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -227,7 +227,7 @@ impl Box[T]: Show[T]
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -262,7 +262,7 @@ impl Rectangle
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -289,7 +289,7 @@ impl String
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -315,7 +315,7 @@ struct User
   name: String "json:\"name,omitempty\" yaml:\"name\""
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -343,7 +343,7 @@ func demo() -> Int
   x + y
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -380,7 +380,7 @@ func demo() -> Int
   func(x: Int) -> Int x + 1 end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -409,7 +409,7 @@ func eq[A](left: A, right: A) -> Bool using Eq[A], Show[A]
   true
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -443,7 +443,7 @@ func eq(left: Int, right: Int) -> Bool using FastEq: Eq[Int]
   true
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -471,7 +471,7 @@ interface Show[A]
   func show(value: A) -> String using Eq[A]
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -498,7 +498,7 @@ enum Option[T]
   None
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -533,7 +533,7 @@ func demo(v: Option) -> Int
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -570,7 +570,7 @@ func demo(n: Int) -> Int
   if n > 10 => 1 else if n > 5 => 2 else 3
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -619,7 +619,7 @@ func demo(n: Int) -> Int
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -648,7 +648,7 @@ func demo(s: String) -> Option
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -680,7 +680,7 @@ func demo(v: Option) -> Int
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -723,7 +723,7 @@ func demo(v: Option) -> Int
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -752,7 +752,7 @@ func demo(n: Int) -> Int
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -794,7 +794,7 @@ func demo(method: String, params: Option[Any]) -> Int
   end
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -845,7 +845,7 @@ func newDocumentStore() -> DocumentStore
   DocumentStore{docs: {}}
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -867,7 +867,7 @@ func demo(n: Int) -> Int
   }
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -899,7 +899,7 @@ func demo(n: Int) -> Int
   }
 end
 `
-	if _, err := ParseFile(src); err == nil {
+	if _, err := ParseFile("test.mygo", src); err == nil {
 		t.Fatal("ParseFile() error = nil, want error")
 	}
 }
@@ -913,7 +913,7 @@ func demo(n: Int) -> Int
   }
 end
 `
-	if _, err := ParseFile(src); err == nil {
+	if _, err := ParseFile("test.mygo", src); err == nil {
 		t.Fatal("ParseFile() error = nil, want error")
 	}
 }
@@ -928,7 +928,7 @@ func demo(n: Int) -> Int
   }
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -964,7 +964,7 @@ func demo(n: Int, s: String) -> Bool
   }
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -992,7 +992,7 @@ func demo() -> Int8
   127
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -1020,7 +1020,7 @@ end
 }
 
 func TestParseFileSupportsTupleLiteralAndType(t *testing.T) {
-	file, err := ParseFile(`package main
+	file, err := ParseFile("test.mygo", `package main
 
 func pair() -> (Int, String)
   (1, "a")
@@ -1052,7 +1052,7 @@ end
 }
 
 func TestParseFileSupportsUnitLiteral(t *testing.T) {
-	file, err := ParseFile(`package main
+	file, err := ParseFile("test.mygo", `package main
 
 func demo() -> ()
   ()
@@ -1079,7 +1079,7 @@ func demo() -> Int
   0
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}

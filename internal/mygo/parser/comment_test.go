@@ -11,7 +11,7 @@ func demo() -> Int
   42
 end
 `
-	file, err := ParseFile(src)
+	file, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -31,7 +31,7 @@ func demo() -> Int
   x
 end
 `
-	_, err := ParseFile(src)
+	_, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -45,7 +45,7 @@ func demo() -> Int
   x
 end
 `
-	_, err := ParseFile(src)
+	_, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}
@@ -64,7 +64,7 @@ func demo() -> Int
   a + b
 end
 `
-	_, err := ParseFile(src)
+	_, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v", err)
 	}

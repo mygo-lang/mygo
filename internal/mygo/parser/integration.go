@@ -2,8 +2,8 @@ package parser
 
 import "os"
 
-func parseFile(src string) (*File, error) {
-	p := newParser(src)
+func parseFile(filename, src string) (*File, error) {
+	p := newParser(filename, src)
 	if err := p.parseWithYacc(); err != nil {
 		return nil, err
 	}
