@@ -16,22 +16,22 @@ the parts of F# FParsec that are most useful for handwritten grammars.
 
 ## Semantics
 
-- `OrElse` backtracks only when the left parser failed without consuming input
-- `Attempt` resets a failure to non-consuming, allowing `choice`-style recovery
-- `Many` and `Many1` preserve consuming failures and stop on a clean non-consuming
+- `POrElse` backtracks only when the left parser failed without consuming input
+- `PAttempt` resets a failure to non-consuming, allowing `choice`-style recovery
+- `PMany` and `PMany1` preserve consuming failures and stop on a clean non-consuming
   failure
-- `Label` replaces the expected text on a non-consuming failure
-- `LookAhead` parses without advancing the input state
+- `PLabel` replaces the expected text on a non-consuming failure
+- `PLookAhead` parses without advancing the input state
 
 ## Main combinators
 
-- `Pure`, `Fail`
-- `Map`, `Bind`, `Then`
-- `OrElse`, `Choice`, `Attempt`
-- `Many`, `Many1`, `Optional`
-- `Between`, `SepBy`, `SepBy1`
-- `Satisfy`, `Char`, `PString`, `Eof`
-- `Identifier`, `Digit`, `Letter`, `AlphaNum`
+- `PPure`, `PFail`
+- `PMap`, `PBind`, `PThen`
+- `POrElse`, `PChoice`, `PAttempt`
+- `PMany`, `PMany1`, `POptional`
+- `PBetween`, `PSepBy`, `PSepBy1`
+- `PSatisfy`, `PChar`, `PString`, `PEof`
+- `PIdentifier`, `PDigit`, `PLetter`, `PAlphaNum`
 
 ## Intended use
 

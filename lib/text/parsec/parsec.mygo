@@ -1,5 +1,7 @@
 package parsec
 
+import utf8 "go:unicode/utf8"
+
 # A small FParsec-style parser combinator core.
 #
 # Design goals:
@@ -39,7 +41,7 @@ struct Parser[A]
   run: func(State) -> Reply[A]
 end
 
-func Parse[A](p: Parser[A], input: String) -> Reply[A]
+func ParseInput[A](p: Parser[A], input: String) -> Reply[A]
   p.run(NewState(input))
 end
 
@@ -51,7 +53,7 @@ func NewState(input: String) -> State
   }
 end
 
-func Pure[A](value: A) -> Parser[A]
+func PPure[A](value: A) -> Parser[A]
   Parser[A] {
     run: func(state: State) -> Reply[A]
       Reply[A] {
@@ -65,13 +67,13 @@ func Pure[A](value: A) -> Parser[A]
   }
 end
 
-func Fail[A](message: String) -> Parser[A]
+func PFail[A](message: String) -> Parser[A]
   Parser[A] {
     run: func(state: State) -> Reply[A]
       Reply[A] {
         ok: false,
         consumed: false,
-        value: Zero[A](),
+        value: Zero(),
         state: state,
         error: ErrorAt(state.position, message, EmptyExpected()),
       }
@@ -79,7 +81,7 @@ func Fail[A](message: String) -> Parser[A]
   }
 end
 
-func Map[A, B](p: Parser[A], f: func(A) -> B) -> Parser[B]
+func PMap[A, B](p: Parser[A], f: func(A) -> B) -> Parser[B]
   Parser[B] {
     run: func(state: State) -> Reply[B]
       let r = p.run(state)
@@ -87,7 +89,7 @@ func Map[A, B](p: Parser[A], f: func(A) -> B) -> Parser[B]
         Reply[B] {
           ok: false,
           consumed: r.consumed,
-          value: Zero[B](),
+          value: Zero(),
           state: r.state,
           error: r.error,
         }
@@ -104,7 +106,7 @@ func Map[A, B](p: Parser[A], f: func(A) -> B) -> Parser[B]
   }
 end
 
-func Bind[A, B](p: Parser[A], f: func(A) -> Parser[B]) -> Parser[B]
+func PBind[A, B](p: Parser[A], f: func(A) -> Parser[B]) -> Parser[B]
   Parser[B] {
     run: func(state: State) -> Reply[B]
       let r = p.run(state)
@@ -112,7 +114,7 @@ func Bind[A, B](p: Parser[A], f: func(A) -> Parser[B]) -> Parser[B]
         Reply[B] {
           ok: false,
           consumed: r.consumed,
-          value: Zero[B](),
+          value: Zero(),
           state: r.state,
           error: r.error,
         }
@@ -131,19 +133,19 @@ func Bind[A, B](p: Parser[A], f: func(A) -> Parser[B]) -> Parser[B]
   }
 end
 
-func Then[A, B](pa: Parser[A], pb: Parser[B]) -> Parser[B]
-  Bind[A, B](pa, func(_: A) -> Parser[B]
+func PThen[A, B](pa: Parser[A], pb: Parser[B]) -> Parser[B]
+  PBind(pa, func(_: A) -> Parser[B]
     pb
   end)
 end
 
-func OrElse[A](left: Parser[A], right: Parser[A]) -> Parser[A]
+func POrElse[A](left: Parser[A], right: Parser[A]) -> Parser[A]
   Parser[A] {
     run: func(state: State) -> Reply[A]
       let r = left.run(state)
       if r.ok then
         r
-      else if r.consumed then
+      elsif r.consumed then
         r
       else
         right.run(state)
@@ -152,13 +154,13 @@ func OrElse[A](left: Parser[A], right: Parser[A]) -> Parser[A]
   }
 end
 
-func Choice[A](parsers: Slice[Parser[A]]) -> Parser[A]
-  parsers.Fold(Fail[A]("no parser matched"), func(acc: Parser[A], p: Parser[A]) -> Parser[A]
-    OrElse[A](acc, p)
+func PChoice[A](parsers: Slice[Parser[A]]) -> Parser[A]
+  parsers.Fold(PFail[A]("no parser matched"), func(acc: Parser[A], p: Parser[A]) -> Parser[A]
+    POrElse(acc, p)
   end)
 end
 
-func Attempt[A](p: Parser[A]) -> Parser[A]
+func PAttempt[A](p: Parser[A]) -> Parser[A]
   Parser[A] {
     run: func(state: State) -> Reply[A]
       let r = p.run(state)
@@ -177,7 +179,7 @@ func Attempt[A](p: Parser[A]) -> Parser[A]
   }
 end
 
-func LookAhead[A](p: Parser[A]) -> Parser[A]
+func PLookAhead[A](p: Parser[A]) -> Parser[A]
   Parser[A] {
     run: func(state: State) -> Reply[A]
       let r = p.run(state)
@@ -192,7 +194,7 @@ func LookAhead[A](p: Parser[A]) -> Parser[A]
   }
 end
 
-func NotFollowedBy[A](p: Parser[A], message: String) -> Parser[()] 
+func PNotFollowedBy[A](p: Parser[A], message: String) -> Parser[()] 
   Parser[()] {
     run: func(state: State) -> Reply[()]
       let r = p.run(state)
@@ -217,7 +219,7 @@ func NotFollowedBy[A](p: Parser[A], message: String) -> Parser[()]
   }
 end
 
-func Many[A](p: Parser[A]) -> Parser[Slice[A]]
+func PMany[A](p: Parser[A]) -> Parser[Slice[A]]
   Parser[Slice[A]] {
     run: func(state: State) -> Reply[Slice[A]]
       let r = p.run(state)
@@ -240,14 +242,14 @@ func Many[A](p: Parser[A]) -> Parser[Slice[A]]
           }
         end
       else
-        let tail = Many[A](p).run(r.state)
+        let tail = PMany(p).run(r.state)
         if !tail.ok then
           tail
         else
           Reply[Slice[A]] {
             ok: true,
             consumed: true,
-            value: Prepend[A](r.value, tail.value),
+            value: Prepend(r.value, tail.value),
             state: tail.state,
             error: tail.error,
           }
@@ -257,15 +259,15 @@ func Many[A](p: Parser[A]) -> Parser[Slice[A]]
   }
 end
 
-func Many1[A](p: Parser[A]) -> Parser[Slice[A]]
-  Bind[A, Slice[A]](p, func(first: A) -> Parser[Slice[A]]
-    Map[Slice[A], Slice[A]](Many[A](p), func(rest: Slice[A]) -> Slice[A]
-      Prepend[A](first, rest)
+func PMany1[A](p: Parser[A]) -> Parser[Slice[A]]
+  PBind(p, func(first: A) -> Parser[Slice[A]]
+    PMap(PMany(p), func(rest: Slice[A]) -> Slice[A]
+      Prepend(first, rest)
     end)
   end)
 end
 
-func Optional[A](p: Parser[A]) -> Parser[Option[A]]
+func POptional[A](p: Parser[A]) -> Parser[Option[A]]
   Parser[Option[A]] {
     run: func(state: State) -> Reply[Option[A]]
       let r = p.run(state)
@@ -273,15 +275,15 @@ func Optional[A](p: Parser[A]) -> Parser[Option[A]]
         Reply[Option[A]] {
           ok: true,
           consumed: r.consumed,
-          value: Some[A](r.value),
+          value: Some(r.value),
           state: r.state,
           error: EmptyError(r.state.position),
         }
-      else if r.consumed then
+      elsif r.consumed then
         Reply[Option[A]] {
           ok: false,
           consumed: true,
-          value: None[A](),
+          value: None,
           state: r.state,
           error: r.error,
         }
@@ -289,7 +291,7 @@ func Optional[A](p: Parser[A]) -> Parser[Option[A]]
         Reply[Option[A]] {
           ok: true,
           consumed: false,
-          value: None[A](),
+          value: None,
           state: state,
           error: EmptyError(state.position),
         }
@@ -298,33 +300,33 @@ func Optional[A](p: Parser[A]) -> Parser[Option[A]]
   }
 end
 
-func Between[A, L, R](open: Parser[L], body: Parser[A], close: Parser[R]) -> Parser[A]
-  Bind[L, A](open, func(_: L) -> Parser[A]
-    Bind[A, A](body, func(value: A) -> Parser[A]
-      Then[R, A](close, Pure[A](value))
+func PBetween[A, L, R](open: Parser[L], body: Parser[A], close: Parser[R]) -> Parser[A]
+  PBind(open, func(_: L) -> Parser[A]
+    PBind(body, func(value: A) -> Parser[A]
+      PThen(close, PPure(value))
     end)
   end)
 end
 
-func SepBy[A, S](item: Parser[A], sep: Parser[S]) -> Parser[Slice[A]]
-  OrElse[Slice[A]](SepBy1[A, S](item, sep), Pure[Slice[A]]([]))
+func PSepBy[A, S](item: Parser[A], sep: Parser[S]) -> Parser[Slice[A]]
+  POrElse(PSepBy1(item, sep), PPure([]))
 end
 
-func SepBy1[A, S](item: Parser[A], sep: Parser[S]) -> Parser[Slice[A]]
-  Bind[A, Slice[A]](item, func(first: A) -> Parser[Slice[A]]
-    Map[Slice[A], Slice[A]](Many[A](Then[S, A](sep, item)), func(rest: Slice[A]) -> Slice[A]
-      Prepend[A](first, rest)
+func PSepBy1[A, S](item: Parser[A], sep: Parser[S]) -> Parser[Slice[A]]
+  PBind(item, func(first: A) -> Parser[Slice[A]]
+    PMap(PMany(PThen(sep, item)), func(rest: Slice[A]) -> Slice[A]
+      Prepend(first, rest)
     end)
   end)
 end
 
-func Label[A](p: Parser[A], name: String) -> Parser[A]
+func PLabel[A](p: Parser[A], name: String) -> Parser[A]
   Parser[A] {
     run: func(state: State) -> Reply[A]
       let r = p.run(state)
       if r.ok then
         r
-      else if r.consumed then
+      elsif r.consumed then
         r
       else
         Reply[A] {
@@ -339,20 +341,20 @@ func Label[A](p: Parser[A], name: String) -> Parser[A]
   }
 end
 
-func Satisfy(pred: func(rune) -> Bool, expected: String) -> Parser[rune]
-  Parser[rune] {
-    run: func(state: State) -> Reply[rune]
+func PSatisfy(pred: func(Rune) -> Bool, expected: String) -> Parser[Rune]
+  Parser[Rune] {
+    run: func(state: State) -> Reply[Rune]
       let r = PeekRune(state)
       if !r.ok then
-        Reply[rune] {
+        Reply[Rune] {
           ok: false,
           consumed: false,
           value: 0,
           state: state,
           error: ErrorAt(state.position, expected, EmptyExpected()),
         }
-      else if pred(r.value) then
-        Reply[rune] {
+      elsif pred(r.value) then
+        Reply[Rune] {
           ok: true,
           consumed: true,
           value: r.value,
@@ -360,7 +362,7 @@ func Satisfy(pred: func(rune) -> Bool, expected: String) -> Parser[rune]
           error: EmptyError(state.position),
         }
       else
-        Reply[rune] {
+        Reply[Rune] {
           ok: false,
           consumed: false,
           value: r.value,
@@ -372,14 +374,14 @@ func Satisfy(pred: func(rune) -> Bool, expected: String) -> Parser[rune]
   }
 end
 
-func AnyRune() -> Parser[rune]
-  Satisfy(func(_: rune) -> Bool
+func PAnyRune() -> Parser[Rune]
+  PSatisfy(func(_: Rune) -> Bool
     true
-  end, "any rune")
+  end, "any Rune")
 end
 
-func Char(expectedRune: rune) -> Parser[rune]
-  Satisfy(func(r: rune) -> Bool
+func PChar(expectedRune: Rune) -> Parser[Rune]
+  PSatisfy(func(r: Rune) -> Bool
     r == expectedRune
   end, RuneString(expectedRune))
 end
@@ -403,10 +405,10 @@ func PString(expected: String) -> Parser[String]
   }
 end
 
-func Eof() -> Parser[()]
+func PEof() -> Parser[()]
   Parser[()] {
     run: func(state: State) -> Reply[()]
-      if state.index >= Len(state.input) then
+      if state.index >= state.input.Len() then
         Reply[()] {
           ok: true,
           consumed: false,
@@ -427,27 +429,27 @@ func Eof() -> Parser[()]
   }
 end
 
-func Digit() -> Parser[rune]
-  Satisfy(func(r: rune) -> Bool
+func PDigit() -> Parser[Rune]
+  PSatisfy(func(r: Rune) -> Bool
     r >= '0' && r <= '9'
   end, "digit")
 end
 
-func Letter() -> Parser[rune]
-  Satisfy(func(r: rune) -> Bool
+func PLetter() -> Parser[Rune]
+  PSatisfy(func(r: Rune) -> Bool
     (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
   end, "letter")
 end
 
-func AlphaNum() -> Parser[rune]
-  Satisfy(func(r: rune) -> Bool
+func PAlphaNum() -> Parser[Rune]
+  PSatisfy(func(r: Rune) -> Bool
     (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
   end, "alphanumeric")
 end
 
-func Identifier() -> Parser[String]
-  Bind[rune, String](Letter(), func(first: rune) -> Parser[String]
-    Map[Slice[rune], String](Many[rune](AlphaNum()), func(rest: Slice[rune]) -> String
+func PIdentifier() -> Parser[String]
+  PBind(PLetter(), func(first: Rune) -> Parser[String]
+    PMap(PMany(PAlphaNum()), func(rest: Slice[Rune]) -> String
       FromRunes(Prepend(first, rest))
     end)
   end)
@@ -455,8 +457,8 @@ end
 
 # ----- Position / UTF-8 helpers -----
 
-func PeekRune(state: State) -> Reply[rune]
-  go[Reply[rune]] {
+func PeekRune(state: State) -> Reply[Rune]
+  go[Reply[Rune]] {
     code: """
       func() Reply[rune] {
         if state.index >= len(state.input) {
@@ -516,7 +518,7 @@ func MatchString(state: State, expected: String) -> Reply[String]
   }
 end
 
-func RuneString(r: rune) -> String
+func RuneString(r: Rune) -> String
   go[String] {
     code: "string({r})"
     in r = r
@@ -540,18 +542,6 @@ func WithExpected(err: ParseError, name: String) -> ParseError
     position: err.position,
     expected: Append(err.expected, name),
     message: err.message,
-  }
-end
-
-func Zero[A]() -> A
-  go[A] {
-    code: """
-      func() {A} {
-        var zero {A}
-        return zero
-      }()
-    """
-    type A = A
   }
 end
 
@@ -584,7 +574,7 @@ func Prepend[A](item: A, items: Slice[A]) -> Slice[A]
   }
 end
 
-func FromRunes(rs: Slice[rune]) -> String
+func FromRunes(rs: Slice[Rune]) -> String
   go[String] {
     code: """
       func() string {
