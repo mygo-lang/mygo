@@ -411,7 +411,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		// This handles cases where baseNamedType returns empty (e.g. "[]" from "[]string")
 		if mygoName := goTypeToMyGoTypeName(bt); mygoName != "" {
 			if methods, ok := g.inherentMethods[mygoName]; ok {
-				if method, ok := methods[field.Field]; ok && method.HasReceiver {
+				if method, exists := methods[field.Field]; exists && method.HasReceiver {
 					fnName := inherentMethodName(mygoName, method.Func.Name)
 					allArgs := append([]ast.Expr{base}, args...)
 					callee := ast.NewIdent(fnName)
@@ -438,6 +438,18 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 				}
 				allArgs := append([]ast.Expr{base}, args...)
 				return &ast.CallExpr{Fun: ast.NewIdent(helperName), Args: allArgs}, retType, nil
+			}
+		}
+		// For field calls where the field is a function type (e.g., parser.run(state)),
+		// extract the return type from the field type
+		ft := g.fieldType(bt, field.Field)
+		if ft != "" && strings.HasPrefix(ft, "func(") {
+			// Extract return type from func signature
+			if ret := extractFuncReturnType(ft); ret != "" {
+				return &ast.CallExpr{
+					Fun:  &ast.SelectorExpr{X: base, Sel: ast.NewIdent(field.Field)},
+					Args: args,
+				}, ret, nil
 			}
 		}
 		return &ast.CallExpr{
@@ -476,6 +488,38 @@ func (g *gen) ensureRelationAllowed(n *BinaryExpr, leftType, rightType string) e
 		return nil
 	}
 	return common.ErrorAtPos(n.Line, n.Column, "relation operator %q requires Eq[%s]", n.Op, typ)
+}
+
+func extractFuncReturnType(sig string) string {
+	// Parse func(params) ret or func(params)
+	// Example: "func(State) Reply[[]A]" or "func(a int, b string) bool"
+	if !strings.HasPrefix(sig, "func(") {
+		return ""
+	}
+	// Find the closing paren of the parameter list
+	depth := 0
+	end := -1
+	for i := 0; i < len(sig); i++ {
+		switch sig[i] {
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth == 0 {
+				end = i
+				goto found
+			}
+		}
+	}
+found:
+	if end == -1 {
+		return ""
+	}
+	ret := strings.TrimSpace(sig[end+1:])
+	if ret == "" {
+		return ""
+	}
+	return ret
 }
 
 func goSigReturnType(results []string) string {

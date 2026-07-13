@@ -295,17 +295,21 @@ func (g *gen) translateWhileStmt(stmt Stmt, ctx *egCtx, body *ast.BlockStmt) {
 		code, _, _ := g.translateExpr(s.Expr, ctx, "")
 		body.List = append(body.List, &ast.ExprStmt{X: code})
 	case *LetStmt:
-		code, _, _ := g.translateExpr(s.Value, ctx, "")
+		code, vtype, _ := g.translateExpr(s.Value, ctx, "")
 		if s.Name == "_" {
 			body.List = append(body.List, &ast.ExprStmt{X: code})
 		} else {
 			actual := sanitizeIdent(s.Name)
 			ctx.bindings[s.Name] = actual
+			ctx.locals[s.Name] = vtype
 			body.List = append(body.List, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(actual)}, Rhs: []ast.Expr{code}, Tok: token.DEFINE})
 		}
 	case *AssignStmt:
-		code, _, _ := g.translateExpr(s.Value, ctx, "")
+		code, retType, _ := g.translateExpr(s.Value, ctx, "")
 		actual := ctx.bindings[s.Name]
+		if retType != "" {
+			ctx.locals[actual] = retType
+		}
 		body.List = append(body.List, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(actual)}, Rhs: []ast.Expr{code}, Tok: token.ASSIGN})
 	}
 }
