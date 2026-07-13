@@ -215,6 +215,8 @@ func litToExpr(l *LiteralPattern) ast.Expr {
 	switch l.Kind {
 	case "string":
 		return &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(l.Value)}
+	case "rune":
+		return &ast.BasicLit{Kind: token.CHAR, Value: strconv.QuoteRune([]rune(l.Value)[0])}
 	case "number":
 		return &ast.BasicLit{Kind: token.INT, Value: l.Value}
 	default:

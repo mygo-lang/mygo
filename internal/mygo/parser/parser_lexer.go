@@ -15,6 +15,7 @@ const (
 	tokIdent
 	tokNumber
 	tokString
+	tokRune
 	tokKeyword
 	tokSym
 )
@@ -78,6 +79,13 @@ func (l *lexer) nextToken() token {
 			lit = raw
 		}
 		return token{kind: tokString, lit: lit, line: pos.Line, col: pos.Column}
+	case RUNE:
+		raw := string(l.TokenBytes(nil))
+		lit, _, _, err := strconv.UnquoteChar(raw[1:len(raw)-1], '\'')
+		if err != nil {
+			return token{kind: tokRune, lit: raw, line: pos.Line, col: pos.Column}
+		}
+		return token{kind: tokRune, lit: string(lit), line: pos.Line, col: pos.Column}
 	case PACKAGE, IMPORT, ENUM, STRUCT, INTERFACE, IMPL, FUNC, IF, THEN, ELSIF, ELSE, SWITCH, CASE, END, USING, NOT, LET, VAR, EMBED, WHILE, RETURN, GO, IN, TYPE, AS:
 		return token{kind: tokKeyword, lit: string(l.TokenBytes(nil)), line: pos.Line, col: pos.Column}
 	case SLICE:

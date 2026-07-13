@@ -403,6 +403,10 @@ func mygoSigTypeToGo(typ string) string {
 		return "uint32"
 	case "UInt64":
 		return "uint64"
+	case "Byte":
+		return "byte"
+	case "Rune":
+		return "rune"
 	case "Float32":
 		return "float32"
 	case "Float64":
@@ -454,6 +458,10 @@ func normalizeMyGoTypeName(name string) string {
 		return "uint32"
 	case "UInt64":
 		return "uint64"
+	case "Byte":
+		return "byte"
+	case "Rune":
+		return "rune"
 	case "Float32":
 		return "float32"
 	case "Float64":

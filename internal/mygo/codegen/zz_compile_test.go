@@ -104,3 +104,13 @@ func TestLoadPreludeDoesNotDuplicatePreludeDecls(t *testing.T) {
 		t.Fatalf("loadPackage(prelude, false) added extra impls: got %d, want %d", len(withPrelude.Impls), len(withoutPrelude.Impls))
 	}
 }
+
+func TestGoTypeTranslatesByteAndRune(t *testing.T) {
+	g := NewGenerator(&Package{Name: "main"}, nil).toGen()
+	if got := g.goType(&NamedType{Name: "Byte"}, nil); got != "byte" {
+		t.Fatalf("goType(Byte) = %q, want byte", got)
+	}
+	if got := g.goType(&NamedType{Name: "Rune"}, nil); got != "rune" {
+		t.Fatalf("goType(Rune) = %q, want rune", got)
+	}
+}

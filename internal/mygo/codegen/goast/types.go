@@ -127,6 +127,10 @@ func TypeExprToGo(typ string) (ast.Expr, error) {
 		return PrimitiveType("uint32"), nil
 	case "UInt64", "uint64":
 		return PrimitiveType("uint64"), nil
+	case "Byte", "byte":
+		return PrimitiveType("byte"), nil
+	case "Rune", "rune":
+		return PrimitiveType("rune"), nil
 	case "Float32", "float32":
 		return PrimitiveType("float32"), nil
 	case "Float64", "float64":
@@ -227,6 +231,10 @@ func TypeStringToGo(typ string) string {
 		return "uint32"
 	case "UInt64":
 		return "uint64"
+	case "Byte":
+		return "byte"
+	case "Rune":
+		return "rune"
 	case "Float32":
 		return "float32"
 	case "Float64":
@@ -300,6 +308,10 @@ func GoStringToMyGo(typ string) string {
 		return "UInt32"
 	case "uint64":
 		return "UInt64"
+	case "byte":
+		return "Byte"
+	case "rune":
+		return "Rune"
 	case "float32":
 		return "Float32"
 	case "float64":

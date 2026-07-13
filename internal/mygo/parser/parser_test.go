@@ -1167,6 +1167,57 @@ end
 	}
 }
 
+func TestParseFileSupportsRuneLiteralsAndTypes(t *testing.T) {
+	src := `package main
+func demo() -> Rune
+  let r: Rune = 'x'
+  let nl: Rune = '\n'
+  let b: Byte = 97
+  r
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	if ret, ok := fn.Ret.(*NamedType); !ok || ret.Name != "Rune" {
+		t.Fatalf("FuncDecl.Ret = %#v, want Rune", fn.Ret)
+	}
+	block, ok := fn.Body.(*BlockExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *BlockExpr", fn.Body)
+	}
+	for i, expected := range []struct {
+		name  string
+		value string
+	}{
+		{"r", "x"},
+		{"nl", "\n"},
+	} {
+		letStmt, ok := block.Stmts[i].(*LetStmt)
+		if !ok {
+			t.Fatalf("Stmts[%d] type = %T, want *LetStmt", i, block.Stmts[i])
+		}
+		if letStmt.Name != expected.name {
+			t.Fatalf("LetStmt[%d].Name = %q, want %q", i, letStmt.Name, expected.name)
+		}
+		lit, ok := letStmt.Value.(*LiteralExpr)
+		if !ok {
+			t.Fatalf("LetStmt[%d].Value type = %T, want *LiteralExpr", i, letStmt.Value)
+		}
+		if lit.Kind != "rune" {
+			t.Fatalf("LiteralExpr[%d].Kind = %q, want rune", i, lit.Kind)
+		}
+		if lit.Value != expected.value {
+			t.Fatalf("LiteralExpr[%d].Value = %q, want %q", i, lit.Value, expected.value)
+		}
+	}
+}
+
 func TestParseFileSupportsTrailingCommas(t *testing.T) {
 	src := `package main
 func demo(a: Int, b: Int,) -> Int

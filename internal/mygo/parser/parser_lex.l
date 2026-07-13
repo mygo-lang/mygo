@@ -109,6 +109,7 @@ unicodeLetter \x80
 \"\"\" { return l.scanMultilineStringFromLookahead() }
 `[^\`]*`  return l.char(STRING)
 \"([^\"\\]|\\.)*\"  return l.char(STRING)
+'([^'\\]|\\.)'  return l.char(RUNE)
 package            return l.char(PACKAGE)
 import             return l.char(IMPORT)
 enum               return l.char(ENUM)

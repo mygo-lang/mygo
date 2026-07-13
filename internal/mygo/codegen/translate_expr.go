@@ -191,6 +191,8 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 			return ast.NewIdent(n.Value), "int", nil
 		case "string":
 			return &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(n.Value)}, "string", nil
+		case "rune":
+			return &ast.BasicLit{Kind: token.CHAR, Value: strconv.QuoteRune([]rune(n.Value)[0])}, "rune", nil
 		case "bool":
 			if n.Value == "true" {
 				return ast.NewIdent("true"), "bool", nil

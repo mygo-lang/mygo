@@ -33,13 +33,16 @@ func TestUnifyStringAsRuneSequence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := s.ApplyMT(elem); !eqType(got, TCon{Name: "rune"}) {
-		t.Fatalf("expected String element type rune, got %s", got)
+	if got := s.ApplyMT(elem); !eqType(got, TCon{Name: "Rune"}) {
+		t.Fatalf("expected String element type Rune, got %s", got)
 	}
 }
 
 func TestUnifyRuneWithInt32Alias(t *testing.T) {
 	if _, err := Unify(TCon{Name: "rune"}, TCon{Name: "Int32"}, make(Subst)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Unify(TCon{Name: "Rune"}, TCon{Name: "Int32"}, make(Subst)); err != nil {
 		t.Fatal(err)
 	}
 }

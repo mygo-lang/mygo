@@ -40,6 +40,10 @@ func goastTypeExpr(t TypeExpr) ast.Expr {
 			return ast.NewIdent("uint32")
 		case "UInt64":
 			return ast.NewIdent("uint64")
+		case "Byte":
+			return ast.NewIdent("byte")
+		case "Rune":
+			return ast.NewIdent("rune")
 		case "Float32":
 			return ast.NewIdent("float32")
 		case "Float64":

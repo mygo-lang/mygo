@@ -3,8 +3,8 @@ package prelude
 import strings "go:strings"
 import utf8 "go:unicode/utf8"
 
-impl StringIEnumerable: IEnumerable[String, rune]
-  func Each(c: String, fn: func(rune) -> ()) -> ()
+impl StringIEnumerable: IEnumerable[String, Rune]
+  func Each(c: String, fn: func(Rune) -> ()) -> ()
     go[()] {
       code: """
         func() {
@@ -20,37 +20,37 @@ impl StringIEnumerable: IEnumerable[String, rune]
     go[Int] { code: `len(c)` }
   end
 
-  func Map[B](c: String, fn: func(rune) -> B) -> Slice[B] using SliceIEnumerable[rune]
-    let slc = go[Slice[rune]] { code: `[]rune(c)` }
+  func Map[B](c: String, fn: func(Rune) -> B) -> Slice[B] using SliceIEnumerable[Rune]
+    let slc = go[Slice[Rune]] { code: `[]Rune(c)` }
     slc.Map(fn)
   end
 
-  func Filter(c: String, fn: func(rune) -> Bool) -> Slice[rune] using SliceIEnumerable[rune]
-    let slc = go[Slice[rune]] { code: `[]rune(c)` }
+  func Filter(c: String, fn: func(Rune) -> Bool) -> Slice[Rune] using SliceIEnumerable[Rune]
+    let slc = go[Slice[Rune]] { code: `[]Rune(c)` }
     slc.Filter(fn)
   end
 
-  func Fold[B](c: String, initial: B, fn: func(B, rune) -> B) -> B using SliceIEnumerable[rune]
-    let slc = go[Slice[rune]] { code: `[]rune(c)` }
+  func Fold[B](c: String, initial: B, fn: func(B, Rune) -> B) -> B using SliceIEnumerable[Rune]
+    let slc = go[Slice[Rune]] { code: `[]Rune(c)` }
     slc.Fold(initial, fn)
   end
 
-  func Find(c: String, fn: func(rune) -> Bool) -> Option[Ref[rune]] using SliceIEnumerable[rune]
-    let slc = go[Slice[rune]] { code: `[]rune(c)` }
+  func Find(c: String, fn: func(Rune) -> Bool) -> Option[Ref[Rune]] using SliceIEnumerable[Rune]
+    let slc = go[Slice[Rune]] { code: `[]Rune(c)` }
     slc.Find(fn)
   end
 
-  func Contains(c: String, item: rune, eq: Eq[rune]) -> Bool
+  func Contains(c: String, item: Rune, eq: Eq[Rune]) -> Bool
     strings.ContainsRune(c, item)
   end
 end
 
 impl String
-  func FromRunes(rs: Slice[rune]) -> String
+  func FromRunes(rs: Slice[Rune]) -> String
     rs as String
   end
 
-  func PeekRune(s: String) -> Option[Ref[rune]]
+  func PeekRune(s: String) -> Option[Ref[Rune]]
     if s.Len() == 0 then
       None
     else

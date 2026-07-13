@@ -107,7 +107,11 @@ func isRuneAliasPair(t1, t2 MonoType) bool {
 	if !ok1 || !ok2 || len(c1.Args) != 0 || len(c2.Args) != 0 {
 		return false
 	}
-	return (c1.Name == "rune" && c2.Name == "Int32") || (c1.Name == "Int32" && c2.Name == "rune")
+	return isRuneName(c1.Name) && isRuneName(c2.Name)
+}
+
+func isRuneName(name string) bool {
+	return name == "Rune" || name == "rune" || name == "Int32"
 }
 
 // unifyStringRuneSequence teaches higher-kinded collection constraints that
@@ -117,7 +121,7 @@ func isRuneAliasPair(t1, t2 MonoType) bool {
 // the abstract C[A] shape.
 func unifyStringRuneSequence(t1, t2 MonoType, s Subst) (Subst, bool, error) {
 	if elem, ok := stringSequenceElem(t1, t2); ok {
-		s2, err := Unify(elem, TCon{Name: "rune"}, s)
+		s2, err := Unify(elem, TCon{Name: "Rune"}, s)
 		return s2, true, err
 	}
 	if elem, ok := stringSequenceElem(t2, t1); ok {

@@ -117,7 +117,7 @@ func initialTypeEnv(pkg *PkgInfo) TypeEnv {
 	env := make(TypeEnv)
 
 	// Built-in named types (primitive type constructors)
-	builtins := []string{"Int", "Int8", "UInt8", "Int16", "UInt16", "Int32", "UInt32", "Int64", "UInt", "UInt64", "Float32", "Float64", "String", "Bool", "Unit"}
+	builtins := []string{"Int", "Int8", "UInt8", "Int16", "UInt16", "Int32", "UInt32", "Int64", "UInt", "UInt64", "Float32", "Float64", "Byte", "Rune", "String", "Bool", "Unit"}
 	for _, name := range builtins {
 		t := TCon{Name: name}
 		env[name] = &Scheme{Body: QualifiedType{Body: t}}
@@ -630,6 +630,8 @@ func inferLiteral(n *LiteralExpr) (MonoType, Subst, []Predicate, error) {
 		return TCon{Name: "Int"}, make(Subst), nil, nil
 	case "string":
 		return TCon{Name: "String"}, make(Subst), nil, nil
+	case "rune":
+		return TCon{Name: "Rune"}, make(Subst), nil, nil
 	default:
 		return nil, nil, nil, fmt.Errorf("unknown literal kind %q", n.Kind)
 	}

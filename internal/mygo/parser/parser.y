@@ -37,6 +37,8 @@ func makeLitExpr(t token) *ast.LiteralExpr {
 		return &ast.LiteralExpr{Line: t.line, Column: t.col, Kind: "number", Value: t.lit}
 	case tokString:
 		return &ast.LiteralExpr{Line: t.line, Column: t.col, Kind: "string", Value: t.lit}
+	case tokRune:
+		return &ast.LiteralExpr{Line: t.line, Column: t.col, Kind: "rune", Value: t.lit}
 	default:
 		return nil
 	}
@@ -66,7 +68,7 @@ type ifParts struct {
 	node  any
 }
 
-%token <token> IDENT NUMBER STRING
+%token <token> IDENT NUMBER STRING RUNE
 %token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSIF ELSE SWITCH CASE END USING NOT LET VAR EMBED WHILE RETURN GO IN TYPE AS
 %token <token> NEWLINE
 %token <token> ARROW EQEQ NEQ LTE GTE PIPEFWD PIPEBACK ANDAND OROR
@@ -1166,6 +1168,10 @@ primary
 		p := yylex.(*parser)
 		p.currentExpr = makeLitExpr($1)
 	}
+	| RUNE {
+		p := yylex.(*parser)
+		p.currentExpr = makeLitExpr($1)
+	}
 	| LPAREN RPAREN {
 		p := yylex.(*parser)
 		p.currentExpr = &ast.UnitLitExpr{Line: $1.line, Column: $1.col}
@@ -1574,6 +1580,10 @@ pattern
 		p := yylex.(*parser)
 		p.currentPattern = &ast.LiteralPattern{Line: $1.line, Column: $1.col, Kind: "string", Value: $1.lit}
 	}
+	| RUNE {
+		p := yylex.(*parser)
+		p.currentPattern = &ast.LiteralPattern{Line: $1.line, Column: $1.col, Kind: "rune", Value: $1.lit}
+	}
 	| NUMBER {
 		p := yylex.(*parser)
 		p.currentPattern = &ast.LiteralPattern{Line: $1.line, Column: $1.col, Kind: "number", Value: $1.lit}
@@ -1807,6 +1817,8 @@ func (p *parser) Lex(lval *yySymType) int {
 		return int(NUMBER)
 	case tokString:
 		return int(STRING)
+	case tokRune:
+		return int(RUNE)
 	case tokKeyword:
 		switch tok.lit {
 		case "package":
