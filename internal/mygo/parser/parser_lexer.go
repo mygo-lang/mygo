@@ -31,6 +31,7 @@ type lexer struct {
 	*golexer
 	pending    *token
 	braceDepth int
+	bracketDepth int
 }
 
 func newLexer(src string) *lexer {
@@ -45,6 +46,9 @@ func (l *lexer) nextToken() token {
 	if l.pending != nil {
 		tok := *l.pending
 		l.pending = nil
+		if tok.lit == "]" {
+			l.bracketDepth--
+		}
 		return tok
 	}
 	c := l.scan()
@@ -53,6 +57,9 @@ func (l *lexer) nextToken() token {
 	case lex.RuneEOF:
 		return token{kind: tokEOF, line: pos.Line, col: pos.Column}
 	case NEWLINE:
+		if l.braceDepth > 0 || l.bracketDepth > 0 {
+			return l.nextToken()
+		}
 		return token{kind: tokNewline, lit: "\n", line: pos.Line, col: pos.Column}
 	case IDENT:
 		lit := string(l.TokenBytes(nil))
@@ -90,6 +97,7 @@ func (l *lexer) nextToken() token {
 		return token{kind: tokKeyword, lit: string(l.TokenBytes(nil)), line: pos.Line, col: pos.Column}
 	case SLICE:
 		l.pending = &token{kind: tokSym, lit: "]", line: pos.Line, col: pos.Column}
+		l.bracketDepth++
 		return token{kind: tokSym, lit: "[", line: pos.Line, col: pos.Column}
 	default:
 		lit := string(l.TokenBytes(nil))
@@ -98,6 +106,10 @@ func (l *lexer) nextToken() token {
 			l.braceDepth++
 		case "}":
 			l.braceDepth--
+		case "[":
+			l.bracketDepth++
+		case "]":
+			l.bracketDepth--
 		}
 		return token{kind: tokSym, lit: lit, line: pos.Line, col: pos.Column}
 	}
