@@ -158,7 +158,7 @@ func PMany[A any](p Parser[A]) Parser[[]A] {
 						if !tail_10.ok {
 							return tail_10
 						} else {
-							return Reply[[]A]{ok: true, consumed: true, value: Prepend(r_9.value, tail_10.value), state: tail_10.state, error: tail_10.error}
+							return Reply[[]A]{ok: true, consumed: true, value: Slice_Prepend(tail_10.value, r_9.value), state: tail_10.state, error: tail_10.error}
 						}
 					}()
 				}()
@@ -169,7 +169,7 @@ func PMany[A any](p Parser[A]) Parser[[]A] {
 func PMany1[A any](p Parser[A]) Parser[[]A] {
 	return PBind(p, func(first A) Parser[[]A] {
 		return PMap(PMany(p), func(rest []A) []A {
-			return Prepend(first, rest)
+			return Slice_Prepend(rest, first)
 		})
 	})
 }
@@ -204,7 +204,7 @@ func PSepBy[A any, S any](item Parser[A], sep Parser[S]) Parser[[]A] {
 func PSepBy1[A any, S any](item Parser[A], sep Parser[S]) Parser[[]A] {
 	return PBind(item, func(first A) Parser[[]A] {
 		return PMap(PMany(PThen(sep, item)), func(rest []A) []A {
-			return Prepend(first, rest)
+			return Slice_Prepend(rest, first)
 		})
 	})
 }
@@ -299,7 +299,7 @@ func PAlphaNum() Parser[rune] {
 func PIdentifier() Parser[string] {
 	return PBind(PLetter(), func(first rune) Parser[string] {
 		return PMap(PMany(PAlphaNum()), func(rest []rune) string {
-			return FromRunes(Prepend(first, rest))
+			return FromRunes(Slice_Prepend(rest, first))
 		})
 	})
 }
@@ -358,23 +358,8 @@ func EmptyExpected() []string {
 	return []string{}
 }
 func WithExpected(err ParseError, name string) ParseError {
-	return ParseError{position: err.position, expected: Append(err.expected, name), message: err.message}
-}
-func Append[A any](items []A, item A) []A {
-	return func() []A {
-		return append(items, item)
-	}()
-}
-func Prepend[A any](item A, items []A) []A {
-	return func() []A {
-		out := make([]A, 0, len(items)+1)
-		out = append(out, item)
-		out = append(out, items...)
-		return out
-	}()
+	return ParseError{position: err.position, expected: Slice_Append(err.expected, name), message: err.message}
 }
 func FromRunes(rs []rune) string {
-	return func() string {
-		return string(rs)
-	}()
+	return String_FromRunes(rs)
 }

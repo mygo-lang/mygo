@@ -249,7 +249,7 @@ func PMany[A](p: Parser[A]) -> Parser[Slice[A]]
           Reply[Slice[A]] {
             ok: true,
             consumed: true,
-            value: Prepend(r.value, tail.value),
+            value: tail.value.Prepend(r.value),
             state: tail.state,
             error: tail.error,
           }
@@ -262,7 +262,7 @@ end
 func PMany1[A](p: Parser[A]) -> Parser[Slice[A]]
   PBind(p, func(first: A) -> Parser[Slice[A]]
     PMap(PMany(p), func(rest: Slice[A]) -> Slice[A]
-      Prepend(first, rest)
+      rest.Prepend(first)
     end)
   end)
 end
@@ -315,7 +315,7 @@ end
 func PSepBy1[A, S](item: Parser[A], sep: Parser[S]) -> Parser[Slice[A]]
   PBind(item, func(first: A) -> Parser[Slice[A]]
     PMap(PMany(PThen(sep, item)), func(rest: Slice[A]) -> Slice[A]
-      Prepend(first, rest)
+      rest.Prepend(first)
     end)
   end)
 end
@@ -450,7 +450,7 @@ end
 func PIdentifier() -> Parser[String]
   PBind(PLetter(), func(first: Rune) -> Parser[String]
     PMap(PMany(PAlphaNum()), func(rest: Slice[Rune]) -> String
-      FromRunes(Prepend(first, rest))
+      FromRunes(rest.Prepend(first))
     end)
   end)
 end
@@ -540,47 +540,11 @@ end
 func WithExpected(err: ParseError, name: String) -> ParseError
   ParseError {
     position: err.position,
-    expected: Append(err.expected, name),
+    expected: err.expected.Append(name),
     message: err.message,
   }
 end
 
-func Append[A](items: Slice[A], item: A) -> Slice[A]
-  go[Slice[A]] {
-    code: """
-      func() []{A} {
-        return append(items, item)
-      }()
-    """
-    in items = items
-    in item = item
-    type A = A
-  }
-end
-
-func Prepend[A](item: A, items: Slice[A]) -> Slice[A]
-  go[Slice[A]] {
-    code: """
-      func() []{A} {
-        out := make([]{A}, 0, len(items)+1)
-        out = append(out, item)
-        out = append(out, items...)
-        return out
-      }()
-    """
-    in item = item
-    in items = items
-    type A = A
-  }
-end
-
 func FromRunes(rs: Slice[Rune]) -> String
-  go[String] {
-    code: """
-      func() string {
-        return string(rs)
-      }()
-    """
-    in rs = rs
-  }
+  String.FromRunes(rs)
 end
