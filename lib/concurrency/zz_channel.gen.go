@@ -4,19 +4,6 @@ package concurrency
 
 import . "github.com/mygo-lang/mygo/prelude"
 
-type IChannel[C any, A any] interface {
-	Len(HKT[C, A]) int
-	Cap(HKT[C, A]) int
-}
-type IReadableChan[C any, A any] interface {
-	Receive(HKT[C, A]) Option[A]
-	TryReceive(HKT[C, A]) Option[A]
-}
-type IWritableChan[C any, A any] interface {
-	Send(HKT[C, A], A)
-	Close(HKT[C, A])
-}
-
 func Len_chant_t[T any](ch chan T) int {
 	return len(ch)
 }

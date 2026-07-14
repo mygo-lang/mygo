@@ -468,7 +468,21 @@ func collectHKTNames(t TypeExpr, set map[string]struct{}, valid map[string]struc
 	switch tt := t.(type) {
 	case *NamedType:
 		if valid != nil && len(tt.Args) > 0 {
+			// Check if tt.Name is an HKT type parameter constructor name.
+			// valid may contain plain names (old format) or HKT names like "C[A]" (new format).
+			isHKT := false
 			if _, ok := valid[tt.Name]; ok {
+				isHKT = true
+			} else {
+				// Check if any valid param starts with "tt.Name["
+				for vp := range valid {
+					if strings.HasPrefix(vp, tt.Name+"[") {
+						isHKT = true
+						break
+					}
+				}
+			}
+			if isHKT {
 				set[tt.Name] = struct{}{}
 			}
 		}
@@ -567,46 +581,8 @@ func (g *gen) genStructDecl(sf *goast.SourceFile, d *StructDecl) {
 }
 
 func (g *gen) genInterfaceDecl(sf *goast.SourceFile, d *InterfaceDecl) {
-	hktSet := g.hktParams(d)
-	if len(d.Methods) == 1 {
-		m := d.Methods[0]
-		if len(m.TypeParams) == 0 {
-			params := make([]*ast.Field, len(m.Params))
-			for i, p := range m.Params {
-				params[i] = &ast.Field{Type: goastHKTTypeExpr(p.Type, hktSet)}
-			}
-			if isUnitType(m.Ret) {
-				sf.AddDecl(astTypeDecl(d.Name, typeParamFields(d.TypeParams),
-					&ast.FuncType{Params: &ast.FieldList{List: params}}))
-				return
-			}
-			ret := goastHKTTypeExpr(m.Ret, hktSet)
-			sf.AddDecl(astTypeDecl(d.Name, typeParamFields(d.TypeParams),
-				&ast.FuncType{Params: &ast.FieldList{List: params}, Results: &ast.FieldList{List: []*ast.Field{{Type: ret}}}}))
-			return
-		}
-	}
-	methods := make([]*ast.Field, 0, len(d.Methods))
-	for _, m := range d.Methods {
-		if len(m.TypeParams) > 0 {
-			continue
-		}
-		params := make([]*ast.Field, len(m.Params))
-		for i, p := range m.Params {
-			params[i] = &ast.Field{Type: goastHKTTypeExpr(p.Type, hktSet)}
-		}
-		method := &ast.Field{
-			Names: []*ast.Ident{ast.NewIdent(m.Name)},
-			Type:  &ast.FuncType{Params: &ast.FieldList{List: params}},
-		}
-		if !isUnitType(m.Ret) {
-			ret := goastHKTTypeExpr(m.Ret, hktSet)
-			method.Type.(*ast.FuncType).Results = &ast.FieldList{List: []*ast.Field{{Type: ret}}}
-		}
-		methods = append(methods, method)
-	}
-	sf.AddDecl(astTypeDecl(d.Name, typeParamFields(d.TypeParams),
-		&ast.InterfaceType{Methods: &ast.FieldList{List: methods}}))
+	// No-op: do not generate Go interface types.
+	// Interfaces are only used for type inference and method dispatch at compile time.
 }
 
 // genImplDecls generates impl helper functions.

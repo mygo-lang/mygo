@@ -178,6 +178,25 @@ func goTypeExprFromString(typ string) ast.Expr {
 	return ast.NewIdent(typ)
 }
 
+// goTypeExprForAssertion converts a mygo type name to a Go expression suitable
+// for type assertions. It maps mygo built-in names (e.g. "Any") to their Go
+// equivalents (e.g. "any").
+func goTypeExprForAssertion(typ string) ast.Expr {
+	typ = strings.TrimSpace(typ)
+	if typ == "" {
+		return ast.NewIdent("any")
+	}
+	// Map mygo built-in type names to Go identifiers used in type assertions.
+	switch typ {
+	case "Any":
+		return ast.NewIdent("any")
+	}
+	if expr, err := goparser.ParseExpr(typ); err == nil {
+		return expr
+	}
+	return ast.NewIdent(typ)
+}
+
 func typeParamFields(params []string) *ast.FieldList {
 	return typeParamFieldsWithConstraints(params, nil)
 }

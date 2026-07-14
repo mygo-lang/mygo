@@ -22,8 +22,11 @@ type MonoType interface {
 }
 
 type (
-	// TVar is a type variable identified by a unique integer.
+	// TVar is a type variable identified by a unique integer (kind *).
 	TVar struct{ ID int }
+	// TKVar is a type constructor variable identified by a unique integer (kind * -> *).
+	// Used for higher-kinded type variables like C in IEnumerable[C[A], A].
+	TKVar struct{ ID int }
 	// TCon is a named type constructor applied to zero or more type arguments.
 	TCon struct {
 		Name string
@@ -42,12 +45,14 @@ type (
 )
 
 func (TVar) monoType()       {}
+func (TKVar) monoType()      {}
 func (TCon) monoType()       {}
 func (TFunc) monoType()      {}
 func (TGoPackage) monoType() {}
 func (TUnit) monoType()      {}
 
-func (t TVar) String() string { return fmt.Sprintf("t%d", t.ID) }
+func (t TVar) String() string  { return fmt.Sprintf("t%d", t.ID) }
+func (t TKVar) String() string { return fmt.Sprintf("K%d", t.ID) }
 func (t TCon) String() string {
 	if len(t.Args) == 0 {
 		return t.Name
@@ -192,6 +197,10 @@ func freeVarsMT(t MonoType) []int {
 			if _, ok := seen[t.ID]; !ok {
 				seen[t.ID] = struct{}{}
 			}
+		case TKVar:
+			if _, ok := seen[t.ID]; !ok {
+				seen[t.ID] = struct{}{}
+			}
 		case TCon:
 			for _, a := range t.Args {
 				walk(a)
@@ -259,6 +268,13 @@ func (s Subst) ApplyMT(t MonoType) MonoType {
 			if r2, ok2 := replacement.(TVar); ok2 && r2.ID == t.ID {
 				return t
 			}
+			return s.ApplyMT(replacement)
+		}
+		return t
+	case TKVar:
+		// TKVar substitution maps to a TCon (type constructor).
+		// When applied, the TCon's Args must be filled with the inner type arguments.
+		if replacement, ok := s[t.ID]; ok {
 			return s.ApplyMT(replacement)
 		}
 		return t

@@ -45,6 +45,40 @@ func inherentReceiverName(t TypeExpr) string {
 	return ""
 }
 
+// typeExprToString serializes a TypeExpr to a string representation.
+// For HKT types like C[A], it returns "C[A]" instead of just "C".
+func typeExprToString(t TypeExpr) string {
+	if nt, ok := t.(*NamedType); ok {
+		if len(nt.Args) > 0 {
+			args := make([]string, len(nt.Args))
+			for i, a := range nt.Args {
+				args[i] = typeExprToString(a)
+			}
+			return nt.Name + "[" + strings.Join(args, ", ") + "]"
+		}
+		return nt.Name
+	}
+	if ft, ok := t.(*FuncType); ok {
+		params := make([]string, len(ft.Params))
+		for i, p := range ft.Params {
+			params[i] = typeExprToString(p)
+		}
+		ret := typeExprToString(ft.Ret)
+		return "func(" + strings.Join(params, ", ") + ") -> " + ret
+	}
+	if tt, ok := t.(*TupleType); ok {
+		if len(tt.Elems) == 0 {
+			return "()"
+		}
+		elems := make([]string, len(tt.Elems))
+		for i, e := range tt.Elems {
+			elems[i] = typeExprToString(e)
+		}
+		return "(" + strings.Join(elems, ", ") + ")"
+	}
+	return "unknown"
+}
+
 func inherentMethodName(receiverName, methodName string) string {
 	return receiverName + "_" + methodName
 }
@@ -262,7 +296,11 @@ func inferEnumDecl(d *EnumDecl, env TypeEnv, state *InferState, pkg *PkgInfo) (T
 	}
 	enumType := TCon{Name: d.Name, Args: typeArgs}
 
-	// Register a polymorphic scheme for the enum type itself
+	// Register a polymorphic scheme for the enum type itself.
+	// Temporarily remove type parameters so Generalize properly quantifies them.
+	for _, tp := range d.TypeParams {
+		delete(env, tp)
+	}
 	env[d.Name] = Generalize(env, enumType, nil)
 
 	// Register each variant as a constructor function
@@ -278,8 +316,11 @@ func inferEnumDecl(d *EnumDecl, env TypeEnv, state *InferState, pkg *PkgInfo) (T
 		// so that calling them (e.g., `None()`) works as a function call.
 		variantType := TFunc{Args: fieldTypes, Ret: enumType}
 
-		// Register the variant constructor with the environment
-		// For nullary constructors, we still treat them as functions of zero args
+		// Register the variant constructor with the environment.
+		// Temporarily remove type parameters for proper generalization.
+		for _, tp := range d.TypeParams {
+			delete(env, tp)
+		}
 		env[v.Name] = Generalize(env, variantType, nil)
 	}
 
@@ -299,7 +340,11 @@ func inferStructDecl(d *StructDecl, env TypeEnv, state *InferState) (TypeEnv, er
 	}
 	structType := TCon{Name: d.Name, Args: typeArgs}
 
-	// Register the struct type constructor
+	// Register the struct type constructor.
+	// Temporarily remove type parameters so Generalize properly quantifies them.
+	for _, tp := range d.TypeParams {
+		delete(env, tp)
+	}
 	env[d.Name] = Generalize(env, structType, nil)
 	return env, nil
 }
@@ -316,21 +361,34 @@ func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo,
 		env[tp] = &Scheme{Body: QualifiedType{Body: tv}}
 	}
 
-	// Build the function's declared type
+	// Build the function's declared type, replacing type parameter names
+	// with their corresponding TVar so Generalize can quantify them.
+	tpMapping := make(map[string]MonoType)
+	for name, tv := range typeParamVars {
+		tpMapping[name] = tv
+	}
+
 	paramTypes := make([]MonoType, len(d.Params))
 	for i, p := range d.Params {
-		paramTypes[i] = typeFromAST(p.Type)
+		paramTypes[i] = typeFromASTWithParams(p.Type, tpMapping)
 	}
 	var retType MonoType
 	if d.Ret != nil {
-		retType = typeFromAST(d.Ret)
+		retType = typeFromASTWithParams(d.Ret, tpMapping)
 	} else {
 		retType = TUnit{}
 	}
 
 	funcType := TFunc{Args: paramTypes, Ret: retType}
 
-	// Register the function itself (for recursion)
+	// Register the function itself (for recursion).
+	// Temporarily remove type parameters from env so Generalize properly
+	// quantifies them — otherwise they appear "free in env" and are never
+	// bound, causing Instantiate to return the same shared TVar across
+	// calls and breaking monomorphisation / type-argument inference.
+	for _, tp := range d.TypeParams {
+		delete(env, tp)
+	}
 	env[d.Name] = Generalize(env, funcType, nil)
 
 	// Now infer the body
@@ -1858,40 +1916,98 @@ func lookupVariant(pkg *PkgInfo, name string) (*EnumDecl, *EnumVariant, bool) {
 }
 
 // substituteTypeParams substitutes type parameter names in a MonoType with the
-// corresponding concrete types from typeArgs, using the enum's TypeParams list
-// as the mapping key.
+// corresponding concrete types from typeArgs, using typeParams as the mapping key.
+//
+// Type parameters can be simple (e.g. "A", "K") or higher-kinded (e.g. "C[A]").
+//   - Simple param "A" matches TCon{Name: "A"} with zero type arguments.
+//   - HKT param "C[A]" matches TCon{Name: "C"} with one or more type arguments
+//     (the constructor name must match and the TCon must have args).
+//
+// HKT matches take priority: if "C[A]" is in typeParams, TCon{Name: "C", Args: _}
+// is replaced by the corresponding typeArg even though "C" could also be a simple
+// param name.
 func substituteTypeParams(t MonoType, typeParams []string, typeArgs []MonoType) MonoType {
-	if len(typeParams) == 0 || len(typeArgs) == 0 {
+	if len(typeParams) == 0 {
 		return t
 	}
-	switch t := t.(type) {
-	case TVar:
+
+	// Pre-compute lookup maps.
+	// hktMap: constructor name → index (last one wins if duplicates).
+	hktMap := make(map[string]int)
+	// simpleSet: set of simple param names (only those NOT also HKT).
+	simpleSet := make(map[string]struct{})
+
+	for i, tp := range typeParams {
+		if hktName, _ := parseHKTTypeParam(tp); hktName != "" {
+			hktMap[hktName] = i
+		} else {
+			simpleSet[tp] = struct{}{}
+		}
+	}
+
+	// Early exit when there's nothing to substitute and t has no nested params.
+	if len(hktMap) == 0 && len(simpleSet) == 0 {
 		return t
+	}
+
+	switch t := t.(type) {
 	case TCon:
-		// Check if this TCon is a type parameter
-		for i, tp := range typeParams {
-			if t.Name == tp && len(t.Args) == 0 {
-				if i < len(typeArgs) {
-					return typeArgs[i]
+		// 1) Check HKT match first (constructor name + has args).
+		if idx, ok := hktMap[t.Name]; ok && len(t.Args) > 0 {
+			if idx < len(typeArgs) {
+				return typeArgs[idx]
+			}
+		}
+		// 2) Check simple param match (name matches, no args).
+		if _, ok := simpleSet[t.Name]; ok && len(t.Args) == 0 {
+			for i, tp := range typeParams {
+				if _, inner := parseHKTTypeParam(tp); inner == "" && tp == t.Name {
+					if i < len(typeArgs) {
+						return typeArgs[i]
+					}
+					break
 				}
 			}
 		}
-		// Recursively substitute in args
-		args := make([]MonoType, len(t.Args))
-		for i, a := range t.Args {
-			args[i] = substituteTypeParams(a, typeParams, typeArgs)
+		// 3) Recursively substitute in type arguments.
+		if len(t.Args) > 0 {
+			args := make([]MonoType, len(t.Args))
+			for i, a := range t.Args {
+				args[i] = substituteTypeParams(a, typeParams, typeArgs)
+			}
+			return TCon{Name: t.Name, Args: args}
 		}
-		return TCon{Name: t.Name, Args: args}
+		return t
+
 	case TFunc:
 		args := make([]MonoType, len(t.Args))
 		for i, a := range t.Args {
 			args[i] = substituteTypeParams(a, typeParams, typeArgs)
 		}
 		return TFunc{Args: args, Ret: substituteTypeParams(t.Ret, typeParams, typeArgs), Variadic: t.Variadic}
+
 	case TGoPackage:
 		return t
 	case TUnit:
 		return t
+	case TVar, TKVar:
+		// Type variables produced by inference (fresh TVars) cannot be mapped
+		// back to type-parameter names here.  Callers that need TVar
+		// substitution should use typeFromASTWithParams instead.
+		return t
 	}
+
 	return t
+}
+
+// parseHKTTypeParam parses a higher-kinded type parameter like "C[A]" or "C[K, V]".
+// Returns the constructor name ("C") and a comma-separated list of inner params ("A" or "K, V").
+// Returns ("", "") if the string is not a HKT type parameter.
+func parseHKTTypeParam(tp string) (constructorName string, innerParams string) {
+	open := strings.Index(tp, "[")
+	close := strings.LastIndex(tp, "]")
+	if open <= 0 || close <= open+1 || close != len(tp)-1 {
+		return "", ""
+	}
+	return tp[:open], tp[open+1 : close]
 }

@@ -40,7 +40,7 @@ impl StringIEnumerable: IEnumerable[String, Rune]
     slc.Find(fn)
   end
 
-  func Contains(c: String, item: Rune, eq: Eq[Rune]) -> Bool
+  func Contains(c: String, item: Rune) -> Bool
     strings.ContainsRune(c, item)
   end
 end

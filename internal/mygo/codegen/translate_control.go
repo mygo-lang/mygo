@@ -141,7 +141,8 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (ast.E
 				if _, typeArgs := splitTypeArgs(ttype); len(typeArgs) > 0 {
 					taExprs := make([]ast.Expr, len(typeArgs))
 					for i, ta := range typeArgs {
-						taExprs[i] = goTypeExprFromString(ta)
+						// Type assertion types must use Go-level names (e.g. "any" not "Any").
+						taExprs[i] = goTypeExprForAssertion(ta)
 					}
 					assertType = genericIdent(assertTypeName, taExprs...)
 				}

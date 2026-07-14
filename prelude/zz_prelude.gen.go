@@ -50,30 +50,6 @@ func (_ ResultErr[A, E]) isResult() {
 func Err[A any, E any](a0 E) Result[A, E] {
 	return ResultErr[A, E]{F0: a0}
 }
-
-type Show[A any] func(A) string
-type Eq[A any] func(A, A) bool
-type Ord[A any] interface {
-	Compare(A, A) int
-	Less(A, A) bool
-	Greater(A, A) bool
-}
-type Default[A any] func() A
-type From[A any, B any] func(A) B
-type Into[A any, B any] func(A) B
-type IEnumerable[C any, A any] interface {
-	Each(HKT[C, A], func(A))
-	Len(HKT[C, A]) int
-	Filter(HKT[C, A], func(A) bool) IEnumerable[[]A, A]
-	Find(HKT[C, A], func(A) bool) Option[*A]
-	Contains(HKT[C, A], A) bool
-}
-type IAssignable[C any, K any, A any] interface {
-	Get(HKT[C, A], K) Option[A]
-	Set(HKT[C, A], K, A)
-	Delete(HKT[C, A], K)
-}
-
 func OptionToResult[A any, E any](opt Option[A], errVal E) Result[A, E] {
 	return func() Result[A, E] {
 		if v_32, ok := opt.(OptionSome[A]); ok {

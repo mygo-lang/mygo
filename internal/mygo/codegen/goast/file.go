@@ -117,8 +117,16 @@ func validateAST(file *ast.File) error {
 				}
 			}
 		case *ast.CompositeLit:
+			// Allow anonymous struct literals (Type == nil) when the element type
+			// can be inferred from context (e.g., []CompletionItem{...}).
 			if v.Type == nil {
-				return fmt.Errorf("nil composite type at %s", path)
+				// Skip validation for anonymous struct literals.
+				for i, a := range v.Elts {
+					if err := walkExpr(fmt.Sprintf("%s.Elts[%d]", path, i), a); err != nil {
+						return err
+					}
+				}
+				return nil
 			}
 			if err := walkExpr(path+".Type", v.Type); err != nil {
 				return err

@@ -3,9 +3,45 @@
 package parser
 
 import (
+	"strings"
+
 	"github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
 )
+
+// typeExprToString serializes a TypeExpr to a string representation.
+// For HKT types like C[A], it returns "C[A]" instead of just "C".
+func typeExprToString(t ast.TypeExpr) string {
+	if nt, ok := t.(*ast.NamedType); ok {
+		if len(nt.Args) > 0 {
+			args := make([]string, len(nt.Args))
+			for i, a := range nt.Args {
+				args[i] = typeExprToString(a)
+			}
+			return nt.Name + "[" + strings.Join(args, ", ") + "]"
+		}
+		return nt.Name
+	}
+	if ft, ok := t.(*ast.FuncType); ok {
+		params := make([]string, len(ft.Params))
+		for i, p := range ft.Params {
+			params[i] = typeExprToString(p)
+		}
+		ret := typeExprToString(ft.Ret)
+		return "func(" + strings.Join(params, ", ") + ") -> " + ret
+	}
+	if tt, ok := t.(*ast.TupleType); ok {
+		if len(tt.Elems) == 0 {
+			return "()"
+		}
+		elems := make([]string, len(tt.Elems))
+		for i, e := range tt.Elems {
+			elems[i] = typeExprToString(e)
+		}
+		return "(" + strings.Join(elems, ", ") + ")"
+	}
+	return "unknown"
+}
 
 func tokLine(v any) int {
 	if t, ok := v.(token); ok {
@@ -625,12 +661,8 @@ maybe_name_list
 name_list
 	: type {
 		p := yylex.(*parser)
-		name := ""
-		if nt, ok := p.currentType.(*ast.NamedType); ok {
-			name = nt.Name
-		} else {
-			p.err = common.ErrorAtPos(p.currentTypeLine, p.currentTypeCol, "expected type parameter name")
-		}
+		// Serialize the full type expression to preserve HKT syntax like "C[A]"
+		name := typeExprToString(p.currentType)
 		if p.parsingImplTypeParams {
 			p.currentImplTypeParams = append(p.currentImplTypeParams, name)
 		} else {
@@ -639,12 +671,8 @@ name_list
 	}
 	| name_list COMMA type {
 		p := yylex.(*parser)
-		name := ""
-		if nt, ok := p.currentType.(*ast.NamedType); ok {
-			name = nt.Name
-		} else {
-			p.err = common.ErrorAtPos(p.currentTypeLine, p.currentTypeCol, "expected type parameter name")
-		}
+		// Serialize the full type expression to preserve HKT syntax like "C[A]"
+		name := typeExprToString(p.currentType)
 		if p.parsingImplTypeParams {
 			p.currentImplTypeParams = append(p.currentImplTypeParams, name)
 		} else {
@@ -1277,7 +1305,7 @@ go_code
 	: IDENT COLON STRING opt_newlines {
 		p := yylex.(*parser)
 		if $1.lit != "code" {
-			p.err = common.ErrorAtPos($1.line, $1.col, "expected go block field \"code\", got %q", $1.lit)
+			p.err = common.ErrorAtPos(p.filename, $1.line, $1.col, "expected go block field \"code\", got %q", $1.lit)
 		}
 		p.currentGoCode = $3.lit
 	}

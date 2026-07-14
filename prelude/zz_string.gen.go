@@ -42,7 +42,7 @@ func Find_string_rune(c string, fn func(rune) bool) Option[*rune] {
 		return Find__t_t(slc_45, fn)
 	}()
 }
-func Contains_string_rune(c string, item rune, eq Eq[rune]) bool {
+func Contains_string_rune(c string, item rune) bool {
 	return strings.ContainsRune(c, item)
 }
 func String_FromRunes(rs []rune) string {
