@@ -3,8 +3,9 @@
 package parsec
 
 import (
-	. "github.com/mygo-lang/mygo/prelude"
 	"unicode/utf8"
+
+	. "github.com/mygo-lang/mygo/prelude"
 )
 
 type Position struct {
@@ -231,7 +232,7 @@ func PSatisfy(pred func(rune) bool, expected string) Parser[rune] {
 		r_13 := PeekRune(state)
 		return func() Reply[rune] {
 			if !r_13.ok {
-				return Reply[rune]{ok: false, consumed: false, value: 0, state: state, error: ErrorAt(state.position, expected, EmptyExpected())}
+				return Reply[rune]{ok: false, consumed: false, value: Zero[rune](), state: state, error: ErrorAt(state.position, expected, EmptyExpected())}
 			} else {
 				return func() Reply[rune] {
 					if pred(r_13.value) {

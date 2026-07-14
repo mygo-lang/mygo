@@ -431,6 +431,11 @@ func typeFromAST(t TypeExpr) MonoType {
 func typeFromASTWithParams(t TypeExpr, typeParams map[string]MonoType) MonoType {
 	switch t := t.(type) {
 	case *NamedType:
+		if len(t.Args) > 0 && typeParams != nil {
+			if mt, ok := typeParams[typeExprToStringLocal(t)]; ok {
+				return mt
+			}
+		}
 		if len(t.Args) == 0 && typeParams != nil {
 			if mt, ok := typeParams[t.Name]; ok {
 				return mt
@@ -459,6 +464,37 @@ func typeFromASTWithParams(t TypeExpr, typeParams map[string]MonoType) MonoType 
 		return TCon{Name: "Tuple", Args: args}
 	}
 	return TCon{Name: "unknown"}
+}
+
+func typeExprToStringLocal(t TypeExpr) string {
+	switch t := t.(type) {
+	case *NamedType:
+		if len(t.Args) == 0 {
+			return t.Name
+		}
+		args := make([]string, len(t.Args))
+		for i, arg := range t.Args {
+			args[i] = typeExprToStringLocal(arg)
+		}
+		return t.Name + "[" + strings.Join(args, ", ") + "]"
+	case *FuncType:
+		params := make([]string, len(t.Params))
+		for i, p := range t.Params {
+			params[i] = typeExprToStringLocal(p)
+		}
+		return "func(" + strings.Join(params, ", ") + ") -> " + typeExprToStringLocal(t.Ret)
+	case *TupleType:
+		if len(t.Elems) == 0 {
+			return "()"
+		}
+		elems := make([]string, len(t.Elems))
+		for i, elem := range t.Elems {
+			elems[i] = typeExprToStringLocal(elem)
+		}
+		return "(" + strings.Join(elems, ", ") + ")"
+	default:
+		return "unknown"
+	}
 }
 
 // returnType extracts the return type from a Monotype (for function types).

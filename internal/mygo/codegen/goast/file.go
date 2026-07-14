@@ -7,11 +7,17 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
-	"go/types"
 	"sort"
-	"strconv"
 	"strings"
+
+	"golang.org/x/tools/imports"
 )
+
+type DeclSource struct {
+	File   string
+	Line   int
+	Column int
+}
 
 // SourceFile represents a Go source file being built.
 // It provides a similar interface to jennifer's *jen.File.
@@ -21,6 +27,7 @@ type SourceFile struct {
 	imports     map[string]string // path -> alias (empty alias means default)
 	importOrder []string
 	decls       []ast.Decl
+	declSources []DeclSource
 }
 
 // NewSourceFile creates a new SourceFile with the given package name.
@@ -51,11 +58,29 @@ func (f *SourceFile) AddImport(path, alias string) {
 // AddDecl adds a top-level declaration to the file.
 func (f *SourceFile) AddDecl(decl ast.Decl) {
 	f.decls = append(f.decls, decl)
+	f.declSources = append(f.declSources, DeclSource{})
+}
+
+// AddDeclWithSource adds a top-level declaration and records its MyGO source
+// location for later diagnostics.
+func (f *SourceFile) AddDeclWithSource(decl ast.Decl, src DeclSource) {
+	f.decls = append(f.decls, decl)
+	f.declSources = append(f.declSources, src)
 }
 
 // AddDecls adds multiple top-level declarations.
 func (f *SourceFile) AddDecls(decls []ast.Decl) {
-	f.decls = append(f.decls, decls...)
+	for _, decl := range decls {
+		f.AddDecl(decl)
+	}
+}
+
+// AddDeclsWithSource adds multiple declarations sharing the same MyGO source
+// location.
+func (f *SourceFile) AddDeclsWithSource(decls []ast.Decl, src DeclSource) {
+	for _, decl := range decls {
+		f.AddDeclWithSource(decl, src)
+	}
 }
 
 // ImportSpecs returns the sorted import specs for the file.
@@ -74,7 +99,7 @@ func (f *SourceFile) ImportSpecs() []*ast.ImportSpec {
 // Render produces the formatted Go source as a string.
 func (f *SourceFile) Render() (string, error) {
 	file := f.RenderAST()
-	if err := validateAST(file); err != nil {
+	if err := validateAST(file, f.renderDeclSources()); err != nil {
 		return "", err
 	}
 
@@ -88,13 +113,34 @@ func (f *SourceFile) Render() (string, error) {
 	if err := format.Node(&buf, token.NewFileSet(), file); err != nil {
 		return "", fmt.Errorf("go/format: %w", err)
 	}
+	src := buf.String()
 	if f.header != "" {
-		return "// " + f.header + "\n\n" + buf.String(), nil
+		src = "// " + f.header + "\n\n" + src
 	}
-	return buf.String(), nil
+	if out, ok := runGoimports(src); ok {
+		return out, nil
+	}
+	return src, nil
 }
 
-func validateAST(file *ast.File) error {
+func (f *SourceFile) renderDeclSources() []DeclSource {
+	sources := make([]DeclSource, 0, len(f.declSources)+1)
+	if len(f.imports) > 0 {
+		sources = append(sources, DeclSource{})
+	}
+	sources = append(sources, f.declSources...)
+	return sources
+}
+
+func runGoimports(src string) (string, bool) {
+	out, err := imports.Process("generated.go", []byte(src), nil)
+	if err != nil {
+		return "", false
+	}
+	return string(out), true
+}
+
+func validateAST(file *ast.File, declSources []DeclSource) error {
 	var walkExpr func(path string, e ast.Expr) error
 	var walkStmt func(path string, s ast.Stmt) error
 	var walkDecl func(path string, d ast.Decl) error
@@ -345,111 +391,55 @@ func validateAST(file *ast.File) error {
 
 	for i, decl := range file.Decls {
 		if err := walkDecl(fmt.Sprintf("Decls[%d]", i), decl); err != nil {
+			if name := declName(decl); name != "" {
+				err = fmt.Errorf("%s: %w", name, err)
+			}
+			if i < len(declSources) {
+				if msg := formatDeclSourceError(declSources[i], err); msg != "" {
+					return fmt.Errorf("%s", msg)
+				}
+			}
 			return err
 		}
 	}
 	return nil
 }
 
-func pruneUnusedImports(file *ast.File) {
-	if file == nil {
-		return
-	}
-	unused := unusedImportPaths(file)
-	if len(unused) == 0 {
-		return
-	}
-
-	out := file.Decls[:0]
-	for _, decl := range file.Decls {
-		gen, ok := decl.(*ast.GenDecl)
-		if !ok || gen.Tok != token.IMPORT {
-			out = append(out, decl)
-			continue
+func declName(decl ast.Decl) string {
+	switch d := decl.(type) {
+	case *ast.FuncDecl:
+		if d.Name != nil {
+			return d.Name.Name
 		}
-		specs := gen.Specs[:0]
-		for _, spec := range gen.Specs {
-			imp, ok := spec.(*ast.ImportSpec)
-			if !ok {
-				specs = append(specs, spec)
-				continue
+	case *ast.GenDecl:
+		if len(d.Specs) == 0 {
+			return ""
+		}
+		switch s := d.Specs[0].(type) {
+		case *ast.TypeSpec:
+			if s.Name != nil {
+				return s.Name.Name
 			}
-			name := importSpecLocalName(imp)
-			if name == "_" {
-				specs = append(specs, spec)
-				continue
-			}
-			path := strings.Trim(imp.Path.Value, `"`)
-			if !unused[path] {
-				specs = append(specs, spec)
+		case *ast.ValueSpec:
+			if len(s.Names) > 0 && s.Names[0] != nil {
+				return s.Names[0].Name
 			}
 		}
-		if len(specs) == 0 {
-			continue
-		}
-		gen.Specs = specs
-		out = append(out, gen)
 	}
-	file.Decls = out
+	return ""
 }
 
-func unusedImportPaths(file *ast.File) (unused map[string]bool) {
-	unused = map[string]bool{}
-	defer func() {
-		if recover() != nil {
-			unused = map[string]bool{}
-		}
-	}()
-	var buf bytes.Buffer
-	if err := format.Node(&buf, token.NewFileSet(), file); err != nil {
-		return unused
+func formatDeclSourceError(src DeclSource, err error) string {
+	if err == nil || src.File == "" {
+		return ""
 	}
-	fset := token.NewFileSet()
-	parsed, err := parser.ParseFile(fset, "generated.go", buf.String(), 0)
-	if err != nil {
-		return unused
-	}
-	conf := types.Config{
-		Importer: generatedImporter{},
-		Error: func(err error) {
-			typeErr, ok := err.(types.Error)
-			if !ok {
-				return
-			}
-			msg := typeErr.Msg
-			if !strings.Contains(msg, "imported and not used") {
-				return
-			}
-			for _, imp := range parsed.Imports {
-				path := strings.Trim(imp.Path.Value, `"`)
-				if strings.Contains(msg, strconv.Quote(path)) {
-					unused[path] = true
-				}
-			}
-		},
-	}
-	_, _ = conf.Check("generated", fset, []*ast.File{parsed}, nil)
-	return unused
-}
-
-type generatedImporter struct{}
-
-func (generatedImporter) Import(path string) (*types.Package, error) {
-	pkg := types.NewPackage(path, importSpecPackageName(path))
-	if path == "github.com/mygo-lang/mygo/prelude" {
-		addPreludeExports(pkg)
-	}
-	pkg.MarkComplete()
-	return pkg, nil
-}
-
-func addPreludeExports(pkg *types.Package) {
-	for _, name := range []string{
-		"HKT", "HKT1", "HKT2", "HKTType",
-		"Option", "Result", "Some", "None", "Ok", "Err",
-		"Show", "Eq", "Default",
-	} {
-		pkg.Scope().Insert(types.NewTypeName(token.NoPos, pkg, name, types.Typ[types.Invalid]))
+	switch {
+	case src.Line > 0 && src.Column > 0:
+		return fmt.Sprintf("%s: line %d, col %d: %v", src.File, src.Line, src.Column, err)
+	case src.Line > 0:
+		return fmt.Sprintf("%s: line %d: %v", src.File, src.Line, err)
+	default:
+		return fmt.Sprintf("%s: %v", src.File, err)
 	}
 }
 
@@ -516,7 +506,6 @@ func (f *SourceFile) RenderAST() *ast.File {
 		Name:  ast.NewIdent(f.pkgName),
 		Decls: decls,
 	}
-	pruneUnusedImports(file)
 	return file
 }
 

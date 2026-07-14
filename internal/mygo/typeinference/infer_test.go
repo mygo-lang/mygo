@@ -472,6 +472,405 @@ func TestOccursCheck(t *testing.T) {
 	t.Logf("occurs check error (expected): %v", err)
 }
 
+func TestInferStructFunctionFieldCall(t *testing.T) {
+	state := NewInferState()
+	pkg := &PkgInfo{
+		Name:       "parsec",
+		Decls:      []Decl{},
+		Enums:      map[string]*EnumDecl{},
+		Structs:    map[string]*StructDecl{},
+		Interfaces: map[string]*InterfaceDecl{},
+		Funcs:      map[string]*FuncDecl{},
+		Impls:      []*ImplDecl{},
+	}
+	pkg.Structs["State"] = &StructDecl{Name: "State"}
+	pkg.Structs["Reply"] = &StructDecl{
+		Name:       "Reply",
+		TypeParams: []string{"A"},
+	}
+	pkg.Structs["Parser"] = &StructDecl{
+		Name:       "Parser",
+		TypeParams: []string{"A"},
+		Fields: []Field{
+			{
+				Name: "run",
+				Type: &FuncType{
+					Params: []TypeExpr{&NamedType{Name: "State"}},
+					Ret:    &NamedType{Name: "Reply", Args: []TypeExpr{&NamedType{Name: "A"}}},
+				},
+			},
+		},
+	}
+	state.PkgInfo = pkg
+	env := TypeEnv{
+		"p":     &Scheme{Body: QualifiedType{Body: TCon{Name: "Parser", Args: []MonoType{intType()}}}},
+		"state": &Scheme{Body: QualifiedType{Body: TCon{Name: "State"}}},
+	}
+
+	call := &CallExpr{
+		Callee: &FieldExpr{
+			Expr:  &IdentExpr{Name: "p"},
+			Field: "run",
+		},
+		Args: []Expr{&IdentExpr{Name: "state"}},
+	}
+	typ, err := inferExprType(env, call, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := TCon{Name: "Reply", Args: []MonoType{intType()}}
+	if !eqType(typ, want) {
+		t.Fatalf("expected %s, got %s", want, typ)
+	}
+}
+
+func TestInferGenericStructLiteralSubstitutesFunctionFieldType(t *testing.T) {
+	state := NewInferState()
+	pkg := &PkgInfo{
+		Name:       "parsec",
+		Decls:      []Decl{},
+		Enums:      map[string]*EnumDecl{},
+		Structs:    map[string]*StructDecl{},
+		Interfaces: map[string]*InterfaceDecl{},
+		Funcs:      map[string]*FuncDecl{},
+		Impls:      []*ImplDecl{},
+	}
+	pkg.Structs["State"] = &StructDecl{Name: "State"}
+	pkg.Structs["Reply"] = &StructDecl{Name: "Reply", TypeParams: []string{"A"}}
+	pkg.Structs["Parser"] = &StructDecl{
+		Name:       "Parser",
+		TypeParams: []string{"A"},
+		Fields: []Field{
+			{
+				Name: "run",
+				Type: &FuncType{
+					Params: []TypeExpr{&NamedType{Name: "State"}},
+					Ret:    &NamedType{Name: "Reply", Args: []TypeExpr{&NamedType{Name: "A"}}},
+				},
+			},
+		},
+	}
+	state.PkgInfo = pkg
+	env := TypeEnv{
+		"Parser": &Scheme{Body: QualifiedType{Body: TCon{Name: "Parser", Args: []MonoType{TVar{ID: state.Fresh()}}}}},
+		"State":  &Scheme{Body: QualifiedType{Body: TCon{Name: "State"}}},
+		"Reply":  &Scheme{Body: QualifiedType{Body: TCon{Name: "Reply", Args: []MonoType{TVar{ID: state.Fresh()}}}}},
+		"reply":  &Scheme{Body: QualifiedType{Body: TCon{Name: "Reply", Args: []MonoType{intType()}}}},
+	}
+
+	lit := &StructLitExpr{
+		TypeName: "Parser",
+		TypeArgs: []TypeExpr{
+			&NamedType{Name: "Int"},
+		},
+		Fields: []StructLitField{
+			{
+				Name: "run",
+				Value: &FuncLitExpr{
+					Params: []Param{{Name: "state", Type: &NamedType{Name: "State"}}},
+					Ret:    &NamedType{Name: "Reply", Args: []TypeExpr{&NamedType{Name: "Int"}}},
+					Body:   &IdentExpr{Name: "reply"},
+				},
+			},
+		},
+	}
+	typ, err := inferExprType(env, lit, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := TCon{Name: "Parser", Args: []MonoType{intType()}}
+	if !eqType(typ, want) {
+		t.Fatalf("expected %s, got %s", want, typ)
+	}
+}
+
+func TestInferStructLiteralTypeArgsUseOuterTypeParams(t *testing.T) {
+	state := NewInferState()
+	a := TVar{ID: state.Fresh()}
+	pkg := &PkgInfo{
+		Name:       "parsec",
+		Decls:      []Decl{},
+		Enums:      map[string]*EnumDecl{},
+		Structs:    map[string]*StructDecl{},
+		Interfaces: map[string]*InterfaceDecl{},
+		Funcs:      map[string]*FuncDecl{},
+		Impls:      []*ImplDecl{},
+	}
+	pkg.Structs["Box"] = &StructDecl{
+		Name:       "Box",
+		TypeParams: []string{"T"},
+		Fields: []Field{
+			{Name: "value", Type: &NamedType{Name: "T"}},
+		},
+	}
+	state.PkgInfo = pkg
+	env := TypeEnv{
+		"Box":   &Scheme{Body: QualifiedType{Body: TCon{Name: "Box", Args: []MonoType{TVar{ID: state.Fresh()}}}}},
+		"A":     &Scheme{Body: QualifiedType{Body: a}},
+		"value": &Scheme{Body: QualifiedType{Body: a}},
+	}
+	lit := &StructLitExpr{
+		TypeName: "Box",
+		TypeArgs: []TypeExpr{
+			&NamedType{Name: "A"},
+		},
+		Fields: []StructLitField{{Name: "value", Value: &IdentExpr{Name: "value"}}},
+	}
+
+	typ, err := inferExprType(env, lit, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := TCon{Name: "Box", Args: []MonoType{a}}
+	if !eqType(typ, want) {
+		t.Fatalf("expected %s, got %s", want, typ)
+	}
+}
+
+func TestInferFuncLitAnnotationsUseOuterTypeParams(t *testing.T) {
+	state := NewInferState()
+	a := TVar{ID: state.Fresh()}
+	env := TypeEnv{
+		"A": &Scheme{Body: QualifiedType{Body: a}},
+	}
+	fn := &FuncLitExpr{
+		Params: []Param{
+			{Name: "value", Type: &NamedType{Name: "Slice", Args: []TypeExpr{&NamedType{Name: "A"}}}},
+		},
+		Ret:  &NamedType{Name: "Slice", Args: []TypeExpr{&NamedType{Name: "A"}}},
+		Body: &IdentExpr{Name: "value"},
+	}
+
+	typ, err := inferExprType(env, fn, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := TFunc{
+		Args: []MonoType{TCon{Name: "Slice", Args: []MonoType{a}}},
+		Ret:  TCon{Name: "Slice", Args: []MonoType{a}},
+	}
+	if !eqType(typ, want) {
+		t.Fatalf("expected %s, got %s", want, typ)
+	}
+}
+
+func TestInferGenericFunctionCallWithOuterTypeParamFuncLit(t *testing.T) {
+	state := NewInferState()
+	a := TVar{ID: state.Fresh()}
+	pmanyElem := TVar{ID: state.Fresh()}
+	pmapIn := TVar{ID: state.Fresh()}
+	pmapOut := TVar{ID: state.Fresh()}
+	env := TypeEnv{
+		"A": &Scheme{Body: QualifiedType{Body: a}},
+		"p": &Scheme{Body: QualifiedType{Body: TCon{Name: "Parser", Args: []MonoType{a}}}},
+		"PMany": &Scheme{
+			Bound: []int{pmanyElem.ID},
+			Body: QualifiedType{Body: TFunc{
+				Args: []MonoType{TCon{Name: "Parser", Args: []MonoType{pmanyElem}}},
+				Ret:  TCon{Name: "Parser", Args: []MonoType{TCon{Name: "Slice", Args: []MonoType{pmanyElem}}}},
+			}},
+		},
+		"PMap": &Scheme{
+			Bound: []int{pmapIn.ID, pmapOut.ID},
+			Body: QualifiedType{Body: TFunc{
+				Args: []MonoType{
+					TCon{Name: "Parser", Args: []MonoType{pmapIn}},
+					TFunc{Args: []MonoType{pmapIn}, Ret: pmapOut},
+				},
+				Ret: TCon{Name: "Parser", Args: []MonoType{pmapOut}},
+			}},
+		},
+	}
+	call := &CallExpr{
+		Callee: &IdentExpr{Name: "PMap"},
+		Args: []Expr{
+			&CallExpr{
+				Callee: &IdentExpr{Name: "PMany"},
+				Args:   []Expr{&IdentExpr{Name: "p"}},
+			},
+			&FuncLitExpr{
+				Params: []Param{{
+					Name: "rest",
+					Type: &NamedType{Name: "Slice", Args: []TypeExpr{&NamedType{Name: "A"}}},
+				}},
+				Ret:  &NamedType{Name: "Slice", Args: []TypeExpr{&NamedType{Name: "A"}}},
+				Body: &IdentExpr{Name: "rest"},
+			},
+		},
+	}
+	typ, err := inferExprType(env, call, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := TCon{Name: "Parser", Args: []MonoType{TCon{Name: "Slice", Args: []MonoType{a}}}}
+	if !eqType(typ, want) {
+		t.Fatalf("expected %s, got %s", want, typ)
+	}
+}
+
+func TestInferFuncDeclBodySeesTypeParamsInFuncLitAnnotations(t *testing.T) {
+	state := NewInferState()
+	body := &FuncLitExpr{
+		Params: []Param{{
+			Name: "value",
+			Type: &NamedType{Name: "A"},
+		}},
+		Ret:  &NamedType{Name: "A"},
+		Body: &IdentExpr{Name: "value"},
+	}
+	pkg := &PkgInfo{
+		Name: "test",
+		Decls: []Decl{
+			&FuncDecl{
+				Name:       "identityFn",
+				TypeParams: []string{"A"},
+				Ret: &FuncType{
+					Params: []TypeExpr{&NamedType{Name: "A"}},
+					Ret:    &NamedType{Name: "A"},
+				},
+				Body: body,
+			},
+		},
+		Enums:      map[string]*EnumDecl{},
+		Structs:    map[string]*StructDecl{},
+		Interfaces: map[string]*InterfaceDecl{},
+		Funcs:      map[string]*FuncDecl{},
+		Impls:      []*ImplDecl{},
+	}
+	if _, err := InferPackage(pkg, state); err != nil {
+		t.Fatal(err)
+	}
+	got := state.TypedInfo.ExprTypes[body]
+	if got == nil {
+		t.Fatal("missing inferred body type")
+	}
+	fn, ok := got.(TFunc)
+	if !ok || len(fn.Args) != 1 || !eqType(fn.Args[0], fn.Ret) {
+		t.Fatalf("expected A -> A, got %s", got)
+	}
+}
+
+func TestInferInherentStaticMethodCall(t *testing.T) {
+	state := NewInferState()
+	pkg := &PkgInfo{
+		Name:       "prelude",
+		Decls:      []Decl{},
+		Enums:      map[string]*EnumDecl{},
+		Structs:    map[string]*StructDecl{},
+		Interfaces: map[string]*InterfaceDecl{},
+		Funcs:      map[string]*FuncDecl{},
+		Impls: []*ImplDecl{
+			{
+				Type: &NamedType{Name: "String"},
+				Methods: []*FuncDecl{
+					{
+						Name: "FromRunes",
+						Params: []Param{
+							{Name: "rs", Type: &NamedType{Name: "Slice", Args: []TypeExpr{&NamedType{Name: "Rune"}}}},
+						},
+						Ret: &NamedType{Name: "String"},
+					},
+				},
+			},
+		},
+	}
+	state.PkgInfo = pkg
+	env := TypeEnv{
+		"String": &Scheme{Body: QualifiedType{Body: TCon{Name: "String"}}},
+		"rs":     &Scheme{Body: QualifiedType{Body: TCon{Name: "Slice", Args: []MonoType{TCon{Name: "Rune"}}}}},
+	}
+	call := &CallExpr{
+		Callee: &FieldExpr{
+			Expr:  &IdentExpr{Name: "String"},
+			Field: "FromRunes",
+		},
+		Args: []Expr{&IdentExpr{Name: "rs"}},
+	}
+	typ, err := inferExprType(env, call, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !eqType(typ, stringType()) {
+		t.Fatalf("expected String, got %s", typ)
+	}
+}
+
+func TestInferCallArgsUseAccumulatedSubstitution(t *testing.T) {
+	state := NewInferState()
+	a := TVar{ID: state.Fresh()}
+	env := TypeEnv{
+		"pair": &Scheme{
+			Bound: []int{a.ID},
+			Body: QualifiedType{Body: TFunc{
+				Args: []MonoType{a, a},
+				Ret:  TCon{Name: "Slice", Args: []MonoType{a}},
+			}},
+		},
+		"left":  &Scheme{Body: QualifiedType{Body: TCon{Name: "Rune"}}},
+		"right": &Scheme{Body: QualifiedType{Body: TCon{Name: "Rune"}}},
+	}
+	call := &CallExpr{
+		Callee: &IdentExpr{Name: "pair"},
+		Args: []Expr{
+			&IdentExpr{Name: "left"},
+			&IdentExpr{Name: "right"},
+		},
+	}
+	typ, err := inferExprType(env, call, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := TCon{Name: "Slice", Args: []MonoType{TCon{Name: "Rune"}}}
+	if !eqType(typ, want) {
+		t.Fatalf("expected %s, got %s", want, typ)
+	}
+}
+
+func TestInferPackagePreregistersGenericFuncTypeParams(t *testing.T) {
+	state := NewInferState()
+	call := &CallExpr{
+		Callee: &IdentExpr{Name: "same"},
+		Args: []Expr{
+			&IdentExpr{Name: "left"},
+			&IdentExpr{Name: "right"},
+		},
+	}
+	pkg := &PkgInfo{
+		Name: "test",
+		Decls: []Decl{
+			&FuncDecl{
+				Name:       "same",
+				TypeParams: []string{"A"},
+				Params: []Param{
+					{Name: "left", Type: &NamedType{Name: "A"}},
+					{Name: "right", Type: &NamedType{Name: "A"}},
+				},
+				Ret: &NamedType{Name: "A"},
+			},
+			&FuncDecl{
+				Name: "demo",
+				Ret:  &NamedType{Name: "Rune"},
+				Params: []Param{
+					{Name: "left", Type: &NamedType{Name: "Rune"}},
+					{Name: "right", Type: &NamedType{Name: "Rune"}},
+				},
+				Body: call,
+			},
+		},
+		Enums:      map[string]*EnumDecl{},
+		Structs:    map[string]*StructDecl{},
+		Interfaces: map[string]*InterfaceDecl{},
+		Funcs:      map[string]*FuncDecl{},
+		Impls:      []*ImplDecl{},
+	}
+	if _, err := InferPackage(pkg, state); err != nil {
+		t.Fatal(err)
+	}
+	if got := state.TypedInfo.ExprTypes[call]; !eqType(got, TCon{Name: "Rune"}) {
+		t.Fatalf("expected Rune, got %s", got)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // None/Some inference tests
 // ---------------------------------------------------------------------------

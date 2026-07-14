@@ -2,6 +2,8 @@ package typeinference
 
 import (
 	"testing"
+
+	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 )
 
 func TestSubstituteTypeParamsHKT(t *testing.T) {
@@ -53,5 +55,52 @@ func TestSubstituteTypeParamsHKT(t *testing.T) {
 	expected4 := TCon{Name: "Int"}
 	if !eqType(result4, expected4) {
 		t.Errorf("IAssignable K substitution failed: got %s, want %s", result4, expected4)
+	}
+}
+
+func TestUnifyHigherKindedUnaryConstructor(t *testing.T) {
+	elem := TVar{ID: 1}
+	pattern := TCon{Name: "C", Args: []MonoType{elem}}
+	actual := TCon{Name: "Slice", Args: []MonoType{
+		TCon{Name: "Parser", Args: []MonoType{TCon{Name: "Int"}}},
+	}}
+
+	subst, err := Unify(pattern, actual, make(Subst))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := TCon{Name: "Parser", Args: []MonoType{TCon{Name: "Int"}}}
+	if got := subst.ApplyMT(elem); !eqType(got, want) {
+		t.Fatalf("expected element %s, got %s", want, got)
+	}
+}
+
+func TestTypeFromASTWithParamsSupportsMultiArgHKTParam(t *testing.T) {
+	container := TVar{ID: 1}
+	key := TVar{ID: 2}
+	value := TVar{ID: 3}
+	params := map[string]MonoType{
+		"C[K, A]": container,
+		"K":       key,
+		"A":       value,
+	}
+
+	got := typeFromASTWithParams(
+		&NamedType{
+			Name: "C",
+			Args: []TypeExpr{
+				&NamedType{Name: "K"},
+				&NamedType{Name: "A"},
+			},
+		},
+		params,
+	)
+	if !eqType(got, container) {
+		t.Fatalf("typeFromASTWithParams(C[K, A]) = %s, want %s", got, container)
+	}
+
+	got = typeFromASTWithParams(&NamedType{Name: "A"}, params)
+	if !eqType(got, value) {
+		t.Fatalf("typeFromASTWithParams(A) = %s, want %s", got, value)
 	}
 }

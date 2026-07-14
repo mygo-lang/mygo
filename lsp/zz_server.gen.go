@@ -6,10 +6,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	. "github.com/mygo-lang/mygo/prelude"
 	"os"
 	"strings"
 	"unicode"
+
+	. "github.com/mygo-lang/mygo/prelude"
 )
 
 type Position struct {

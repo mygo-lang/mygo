@@ -280,6 +280,31 @@ end
 	}
 }
 
+func TestParseFileSupportsMultiArgHKTInterfaceTypeParam(t *testing.T) {
+	src := `package main
+interface IAssignable[C[K, A], K, A]
+  func Set(c: C[K, A], index: K, value: A) -> ()
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	iface, ok := file.Decls[0].(*InterfaceDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *InterfaceDecl", file.Decls[0])
+	}
+	want := []string{"C[K, A]", "K", "A"}
+	if len(iface.TypeParams) != len(want) {
+		t.Fatalf("InterfaceDecl.TypeParams = %#v, want %#v", iface.TypeParams, want)
+	}
+	for i := range want {
+		if iface.TypeParams[i] != want[i] {
+			t.Fatalf("InterfaceDecl.TypeParams = %#v, want %#v", iface.TypeParams, want)
+		}
+	}
+}
+
 func TestParseFileSupportsInherentImplDecl(t *testing.T) {
 	src := `package main
 struct Rectangle
@@ -1399,5 +1424,38 @@ end
 	}
 	if got := len(inner.TypeArgs); got != 1 {
 		t.Fatalf("inner call TypeArgs len = %d, want 1", got)
+	}
+}
+
+func TestParseFileIsolatesSliceLiteralInsideCallArgs(t *testing.T) {
+	file, err := ParseFile("test.mygo", `package main
+
+func demo() -> ParseError
+  let pos = Position { offset: 0, line: 1, column: 1 }
+  ErrorAt(pos, "expected", ["digit"])
+end
+`)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn := file.Decls[0].(*FuncDecl)
+	block := fn.Body.(*BlockExpr)
+	call, ok := block.Stmts[1].(*ExprStmt).Expr.(*CallExpr)
+	if !ok {
+		t.Fatalf("Stmt[1] type = %T, want call expr", block.Stmts[1])
+	}
+	if got := len(call.Args); got != 3 {
+		t.Fatalf("call args len = %d, want 3", got)
+	}
+	slice, ok := call.Args[2].(*SliceLitExpr)
+	if !ok {
+		t.Fatalf("third arg type = %T, want *SliceLitExpr", call.Args[2])
+	}
+	if got := len(slice.Elems); got != 1 {
+		t.Fatalf("slice elems len = %d, want 1", got)
+	}
+	lit, ok := slice.Elems[0].(*LiteralExpr)
+	if !ok || lit.Kind != "string" || lit.Value != "digit" {
+		t.Fatalf("slice elem = %#v, want string literal digit", slice.Elems[0])
 	}
 }

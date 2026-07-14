@@ -3,6 +3,7 @@ package codegen
 import (
 	"go/ast"
 	"go/token"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -41,6 +42,10 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 			code, typ, err := g.translateExpr(s.Expr, child, expectedType)
 			if err != nil {
 				return stmts, err
+			}
+			if isNilASTExpr(code) {
+				line, col := common.NodePos(s.Expr)
+				return stmts, common.ErrorAtPos(g.currentFile, line, col, "expression statement produced nil Go AST")
 			}
 			if isLast && returnExpected != "" {
 				stmts = append(stmts, &ast.ReturnStmt{Results: []ast.Expr{code}})
@@ -165,6 +170,19 @@ func stmtForExpr(src Expr, code ast.Expr, typ string) ast.Stmt {
 
 func isUnitGoType(typ string) bool {
 	return typ == "Unit" || typ == "struct{}"
+}
+
+func isNilASTExpr(expr ast.Expr) bool {
+	if expr == nil {
+		return true
+	}
+	v := reflect.ValueOf(expr)
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+		return v.IsNil()
+	default:
+		return false
+	}
 }
 
 func exprCanBeStmt(src Expr) bool {

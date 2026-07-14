@@ -30,6 +30,9 @@ func TestCompileDirSupportsCollectionLiterals(t *testing.T) {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
 	got := readFile(t, outFiles[0])
+	if strings.Contains(got, `github.com/mygo-lang/mygo/prelude`) {
+		t.Fatalf("generated Go imported unused prelude\n--- got ---\n%s", got)
+	}
 	for _, want := range []string{
 		"[]int{1, 2, 3}",
 		`"a": "1"`,
@@ -41,6 +44,114 @@ func TestCompileDirSupportsCollectionLiterals(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
 		}
+	}
+}
+
+func TestCompileDirAutoImportsPrelude(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "app")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	repoRoot, err := filepath.Abs("../..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeMygoFile(t, root, "go.mod", "module example.com/app\n\ngo 1.26\n\nreplace github.com/mygo-lang/mygo => "+filepath.ToSlash(repoRoot)+"\n")
+	writeMygoFile(t, dir, "main.mygo", `package main
+  func demo() -> Int
+    let maybe: Option[Int] = Some(41)
+    maybe.UnwrapOr(0) + 1
+  end
+`)
+
+	outFiles, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, outFiles[0])
+	for _, want := range []string{
+		`. "github.com/mygo-lang/mygo/prelude"`,
+		"var maybe_1 Option[int] = Some[int](41)",
+		"Option_UnwrapOr(maybe_1, 0) + 1",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "", got, goparser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n--- got ---\n%s", err, got)
+	}
+}
+
+func TestCompileDirAutoImportsPreludeFromModuleCache(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "app")
+	cacheRoot := filepath.Join(root, "modcache")
+	mygoMod := filepath.Join(cacheRoot, "github.com", "mygo-lang", "mygo@v0.0.1")
+	if err := os.MkdirAll(filepath.Join(mygoMod, "prelude"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeMygoFile(t, mygoMod, "go.mod", "module github.com/mygo-lang/mygo\n\ngo 1.26\n")
+	writeMygoFile(t, filepath.Join(mygoMod, "prelude"), "prelude.mygo", `package prelude
+enum Option[A]
+  Some(A)
+  None()
+end
+
+impl[A] Option[A]
+  func UnwrapOr(opt: Option[A], defaultVal: A) -> A
+    defaultVal
+  end
+end
+`)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GOMODCACHE", cacheRoot)
+	t.Setenv("GOPATH", "")
+	writeMygoFile(t, root, "go.mod", "module example.com/app\n\ngo 1.26\n\nrequire github.com/mygo-lang/mygo v0.0.1\n")
+	writeMygoFile(t, dir, "main.mygo", `package main
+  func demo() -> Int
+    let maybe: Option[Int] = Some(41)
+    maybe.UnwrapOr(0) + 1
+  end
+`)
+
+	outFiles, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, outFiles[0])
+	for _, want := range []string{
+		`. "github.com/mygo-lang/mygo/prelude"`,
+		"Option_UnwrapOr(maybe_1, 0) + 1",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
+func TestCompileDirReportsMissingPrelude(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "app")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeMygoFile(t, root, "go.mod", "module example.com/app\n\ngo 1.26\n")
+	writeMygoFile(t, dir, "main.mygo", `package main
+  func demo() -> Int
+    42
+  end
+`)
+
+	_, err := CompileDir(dir)
+	if err == nil {
+		t.Fatal("CompileDir() error = nil, want missing prelude error")
+	}
+	if !strings.Contains(err.Error(), "cannot locate prelude") {
+		t.Fatalf("CompileDir() error = %v, want missing prelude error", err)
 	}
 }
 
@@ -255,6 +366,44 @@ func TestCompileDirRejectsMyGoPackagePrivateSymbol(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "hiddenMul") {
 		t.Fatalf("CompileDir() error = %v, want hiddenMul rejection", err)
+	}
+}
+
+func TestCompileDirChecksMyGoImportFunctionTypes(t *testing.T) {
+	root := t.TempDir()
+	apiDir := filepath.Join(root, "api")
+	appDir := filepath.Join(root, "app")
+	if err := os.MkdirAll(apiDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(appDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	repoRoot, err := filepath.Abs("../..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeMygoFile(t, root, "go.mod", "module example.com/app\n\ngo 1.26\n\nreplace github.com/mygo-lang/mygo => "+filepath.ToSlash(repoRoot)+"\n")
+
+	writeMygoFile(t, apiDir, "api.mygo", `package api
+  func PublicAdd(x: Int, y: Int) -> Int
+    x + y
+  end
+`)
+	writeMygoFile(t, appDir, "main.mygo", `package app
+  import api "api"
+
+  func demo() -> Int
+    api.PublicAdd("wrong", 2)
+  end
+`)
+
+	_, err = CompileDir(appDir)
+	if err == nil {
+		t.Fatal("CompileDir() error = nil, want imported MyGO function type mismatch")
+	}
+	if !strings.Contains(err.Error(), "PublicAdd") && !strings.Contains(err.Error(), "call type mismatch") {
+		t.Fatalf("CompileDir() error = %v, want imported MyGO function type mismatch", err)
 	}
 }
 

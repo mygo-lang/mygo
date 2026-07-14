@@ -46,10 +46,10 @@ interface IEnumerable[C[A], A]
   func Contains(c: C[A], item: A) -> Bool using Eq[A]
 end
 
-interface IAssignable[C[A], K, A]
-  func Get(c: C[A], index: K) -> Option[A]
-  func Set(c: C[A], index: K, value: A) -> ()
-  func Delete(c: C[A], index: K) -> ()
+interface IAssignable[C[K, A], K, A]
+  func Get(c: C[K, A], index: K) -> Option[A]
+  func Set(c: C[K, A], index: K, value: A) -> ()
+  func Delete(c: C[K, A], index: K) -> ()
 end
 
 # Slice[A] is Go's native slice ([]A).
@@ -85,6 +85,44 @@ func OptionFilter[A](opt: Option[A], fn: func(A) -> Bool) -> Option[A]
       if fn(v) => opt else None
     end
     case None => None
+  end
+end
+
+impl[A] OptionEq[A]: Eq[Option[A]]
+  func Equals(left: Option[A], right: Option[A]) -> Bool using Eq[A]
+    switch left
+      case Some(l) then
+        switch right
+          case Some(r) => l.Equals(r)
+          case None => false
+        end
+      end
+      case None then
+        switch right
+          case Some(_) => false
+          case None => true
+        end
+      end
+    end
+  end
+end
+
+impl[A, E] ResultEq[A, E]: Eq[Result[A, E]]
+  func Equals(left: Result[A, E], right: Result[A, E]) -> Bool using Eq[A], Eq[E]
+    switch left
+      case Ok(l) then
+        switch right
+          case Ok(r) => l.Equals(r)
+          case Err(_) => false
+        end
+      end
+      case Err(l) then
+        switch right
+          case Ok(_) => false
+          case Err(r) => l.Equals(r)
+        end
+      end
+    end
   end
 end
 

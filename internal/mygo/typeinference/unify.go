@@ -18,6 +18,9 @@ func Unify(t1, t2 MonoType, s Subst) (Subst, error) {
 	if s2, ok, err := unifyStringRuneSequence(t1, t2, s); ok || err != nil {
 		return s2, err
 	}
+	if s2, ok, err := unifyHigherKindedUnaryConstructor(t1, t2, s); ok || err != nil {
+		return s2, err
+	}
 
 	switch t1 := t1.(type) {
 	case TVar:
@@ -99,6 +102,30 @@ func Unify(t1, t2 MonoType, s Subst) (Subst, error) {
 	}
 
 	return nil, fmt.Errorf("unexpected unification: %s vs %s", t1, t2)
+}
+
+func unifyHigherKindedUnaryConstructor(t1, t2 MonoType, s Subst) (Subst, bool, error) {
+	if elem, actualElem, ok := unaryConstructorElem(t1, t2); ok {
+		s2, err := Unify(elem, actualElem, s)
+		return s2, true, err
+	}
+	if elem, actualElem, ok := unaryConstructorElem(t2, t1); ok {
+		s2, err := Unify(elem, actualElem, s)
+		return s2, true, err
+	}
+	return s, false, nil
+}
+
+func unaryConstructorElem(pattern, actual MonoType) (MonoType, MonoType, bool) {
+	p, ok := pattern.(TCon)
+	if !ok || p.Name != "C" || len(p.Args) != 1 {
+		return nil, nil, false
+	}
+	a, ok := actual.(TCon)
+	if !ok || len(a.Args) != 1 {
+		return nil, nil, false
+	}
+	return p.Args[0], a.Args[0], true
 }
 
 func isRuneAliasPair(t1, t2 MonoType) bool {

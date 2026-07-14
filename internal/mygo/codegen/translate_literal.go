@@ -105,6 +105,9 @@ func (g *gen) translateStructLit(n *StructLitExpr, ctx *egCtx, expected string) 
 func (g *gen) translateSliceLit(n *SliceLitExpr, ctx *egCtx, expected string) (ast.Expr, string, error) {
 	var elemType ast.Expr = ast.NewIdent("int")
 	elemTypeStr := "int"
+	if expected == "" {
+		expected = g.inferredType(n)
+	}
 	if n.Elem != nil {
 		elemType = goastTypeExpr(n.Elem)
 		elemTypeStr = g.goType(n.Elem, ctx.typeParams)

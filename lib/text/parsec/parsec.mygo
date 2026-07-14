@@ -349,7 +349,7 @@ func PSatisfy(pred: func(Rune) -> Bool, expected: String) -> Parser[Rune]
         Reply[Rune] {
           ok: false,
           consumed: false,
-          value: 0,
+          value: Zero(),
           state: state,
           error: ErrorAt(state.position, expected, EmptyExpected()),
         }

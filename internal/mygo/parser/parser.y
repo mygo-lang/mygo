@@ -110,7 +110,7 @@ type ifParts struct {
 %token <token> ARROW EQEQ NEQ LTE GTE PIPEFWD PIPEBACK ANDAND OROR
 %token <token> COLON COMMA DOT LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE UNDER SLICE
 %token <token> TYPELBRACK CONSTRLBRACK CASTIDENT
-%type <token> call_start generic_type_prefix
+%type <token> call_start generic_type_prefix slice_lit_start
 %type <token> opt_newlines
 %type <node> if_block_tail
 %left PIPEFWD PIPEBACK
@@ -1347,9 +1347,33 @@ slice_lit
 		p.currentExpr = &ast.SliceLitExpr{Line: $1.line, Column: $1.col, Elems: nil}
 		p.currentSliceElems = nil
 	}
-	| LBRACK maybe_expr_list RBRACK {
+	| slice_lit_start maybe_expr_list RBRACK {
 		p := yylex.(*parser)
 		p.currentExpr = &ast.SliceLitExpr{Line: $1.line, Column: $1.col, Elems: append([]ast.Expr(nil), p.currentSliceElems...)}
+		if len(p.currentSliceElemsStack) > 0 {
+			idx := len(p.currentSliceElemsStack) - 1
+			p.currentSliceElems = p.currentSliceElemsStack[idx]
+			p.currentSliceElemsStack = p.currentSliceElemsStack[:idx]
+		} else {
+			p.currentSliceElems = nil
+		}
+		if len(p.currentArgsStack) > 0 {
+			idx := len(p.currentArgsStack) - 1
+			p.currentArgs = p.currentArgsStack[idx]
+			p.currentArgsStack = p.currentArgsStack[:idx]
+		} else {
+			p.currentArgs = nil
+		}
+	}
+	;
+
+slice_lit_start
+	: LBRACK {
+		p := yylex.(*parser)
+		$$ = $1
+		p.currentArgsStack = append(p.currentArgsStack, p.currentArgs)
+		p.currentSliceElemsStack = append(p.currentSliceElemsStack, p.currentSliceElems)
+		p.currentArgs = nil
 		p.currentSliceElems = nil
 	}
 	;

@@ -49,6 +49,8 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 		// Try to find prelude directory: look relative to workspaceRoot, then walk up.
 		if preludePkg := loadPreludePackage(dir, workspaceRoot); preludePkg != nil {
 			mergeImportedDecls(p, preludePkg)
+		} else if findGoModuleRoot(dir) != "" || findGoModuleRoot(workspaceRoot) != "" {
+			return nil, common.ErrorAtPos("", 0, 0, "cannot locate prelude MyGO sources for auto-import; add github.com/mygo-lang/mygo to go.mod or compile with --no-prelude")
 		}
 	}
 
@@ -129,6 +131,12 @@ func loadPreludePackage(dir, workspaceRoot string) *pkg.Package {
 	if root := findMyGoModuleRoot(workspaceRoot); root != "" {
 		candidates = append(candidates, filepath.Join(root, "prelude"))
 	}
+	if root := findMyGoDependencyRoot(dir); root != "" {
+		candidates = append(candidates, filepath.Join(root, "prelude"))
+	}
+	if root := findMyGoDependencyRoot(workspaceRoot); root != "" {
+		candidates = append(candidates, filepath.Join(root, "prelude"))
+	}
 	candidates = append(candidates, filepath.Join(workspaceRoot, "prelude"))
 	candidates = append(candidates, "prelude")
 	seen := map[string]bool{}
@@ -167,6 +175,22 @@ func findMyGoModuleRoot(start string) string {
 	}
 }
 
+func findGoModuleRoot(start string) string {
+	absStart, err := filepath.Abs(start)
+	if err != nil {
+		return ""
+	}
+	for cur := absStart; ; cur = filepath.Dir(cur) {
+		if _, err := os.Stat(filepath.Join(cur, "go.mod")); err == nil {
+			return cur
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			return ""
+		}
+	}
+}
+
 func modulePath(goMod []byte) string {
 	for _, line := range strings.Split(string(goMod), "\n") {
 		line = strings.TrimSpace(line)
@@ -175,6 +199,153 @@ func modulePath(goMod []byte) string {
 		}
 	}
 	return ""
+}
+
+func findMyGoDependencyRoot(start string) string {
+	root := findGoModuleRoot(start)
+	if root == "" {
+		return ""
+	}
+	data, err := os.ReadFile(filepath.Join(root, "go.mod"))
+	if err != nil {
+		return ""
+	}
+	if modulePath(data) == "github.com/mygo-lang/mygo" {
+		return root
+	}
+	repl := goModReplacePath(data, "github.com/mygo-lang/mygo")
+	if repl != "" {
+		if !filepath.IsAbs(repl) {
+			repl = filepath.Join(root, repl)
+		}
+		repl = filepath.Clean(repl)
+		if st, err := os.Stat(filepath.Join(repl, "go.mod")); err == nil && !st.IsDir() {
+			return repl
+		}
+	}
+	version := goModRequireVersion(data, "github.com/mygo-lang/mygo")
+	if version == "" {
+		return ""
+	}
+	for _, cacheRoot := range goModCacheRoots() {
+		modRoot := filepath.Join(cacheRoot, moduleCachePath("github.com/mygo-lang/mygo", version))
+		if st, err := os.Stat(filepath.Join(modRoot, "go.mod")); err == nil && !st.IsDir() {
+			return modRoot
+		}
+	}
+	return ""
+}
+
+func goModReplacePath(goMod []byte, module string) string {
+	inReplaceBlock := false
+	for _, line := range strings.Split(string(goMod), "\n") {
+		line = strings.TrimSpace(line)
+		if i := strings.Index(line, "//"); i >= 0 {
+			line = strings.TrimSpace(line[:i])
+		}
+		if line == "" {
+			continue
+		}
+		if line == "replace (" {
+			inReplaceBlock = true
+			continue
+		}
+		if inReplaceBlock && line == ")" {
+			inReplaceBlock = false
+			continue
+		}
+		if strings.HasPrefix(line, "replace ") {
+			line = strings.TrimSpace(strings.TrimPrefix(line, "replace "))
+		} else if !inReplaceBlock {
+			continue
+		}
+		fields := strings.Fields(line)
+		for i, f := range fields {
+			if f == "=>" && i > 0 && fields[0] == module && i+1 < len(fields) {
+				return fields[i+1]
+			}
+		}
+	}
+	return ""
+}
+
+func goModRequireVersion(goMod []byte, module string) string {
+	inRequireBlock := false
+	for _, line := range strings.Split(string(goMod), "\n") {
+		line = strings.TrimSpace(line)
+		if i := strings.Index(line, "//"); i >= 0 {
+			line = strings.TrimSpace(line[:i])
+		}
+		if line == "" {
+			continue
+		}
+		if line == "require (" {
+			inRequireBlock = true
+			continue
+		}
+		if inRequireBlock && line == ")" {
+			inRequireBlock = false
+			continue
+		}
+		if strings.HasPrefix(line, "require ") {
+			line = strings.TrimSpace(strings.TrimPrefix(line, "require "))
+		} else if !inRequireBlock {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[0] == module {
+			return fields[1]
+		}
+	}
+	return ""
+}
+
+func goModCacheRoots() []string {
+	var roots []string
+	if gomodcache := os.Getenv("GOMODCACHE"); gomodcache != "" {
+		roots = append(roots, gomodcache)
+	}
+	if gopath := os.Getenv("GOPATH"); gopath != "" {
+		for _, p := range filepath.SplitList(gopath) {
+			if p != "" {
+				roots = append(roots, filepath.Join(p, "pkg", "mod"))
+			}
+		}
+	}
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		roots = append(roots, filepath.Join(home, "go", "pkg", "mod"))
+	}
+	seen := map[string]bool{}
+	out := roots[:0]
+	for _, root := range roots {
+		root = filepath.Clean(root)
+		if !seen[root] {
+			out = append(out, root)
+			seen[root] = true
+		}
+	}
+	return out
+}
+
+func moduleCachePath(module, version string) string {
+	parts := strings.Split(module, "/")
+	for i, p := range parts {
+		parts[i] = escapeModulePathElem(p)
+	}
+	return filepath.Join(strings.Join(parts, string(filepath.Separator)) + "@" + version)
+}
+
+func escapeModulePathElem(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if r >= 'A' && r <= 'Z' {
+			b.WriteByte('!')
+			b.WriteRune(r + ('a' - 'A'))
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
 }
 
 // mergeImportedDecls merges declarations from an imported MyGO package into

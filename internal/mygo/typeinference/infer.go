@@ -105,15 +105,7 @@ func InferPackage(pkg *PkgInfo, state *InferState) (*TypedInfo, error) {
 		if !ok {
 			continue
 		}
-		paramTypes := make([]MonoType, len(fn.Params))
-		for i, p := range fn.Params {
-			paramTypes[i] = typeFromAST(p.Type)
-		}
-		var retType MonoType = TUnit{}
-		if fn.Ret != nil {
-			retType = typeFromAST(fn.Ret)
-		}
-		env[fn.Name] = Generalize(env, TFunc{Args: paramTypes, Ret: retType}, nil)
+		env[fn.Name] = funcDeclSignatureScheme(fn, env, state)
 	}
 	for _, impl := range pkg.Impls {
 		if impl.InterfaceName != "" || impl.Name != "" {
@@ -124,15 +116,7 @@ func InferPackage(pkg *PkgInfo, state *InferState) (*TypedInfo, error) {
 			continue
 		}
 		for _, fn := range impl.Methods {
-			paramTypes := make([]MonoType, len(fn.Params))
-			for i, p := range fn.Params {
-				paramTypes[i] = typeFromAST(p.Type)
-			}
-			var retType MonoType = TUnit{}
-			if fn.Ret != nil {
-				retType = typeFromAST(fn.Ret)
-			}
-			env[inherentMethodName(receiverName, fn.Name)] = Generalize(env, TFunc{Args: paramTypes, Ret: retType}, nil)
+			env[inherentMethodName(receiverName, fn.Name)] = funcDeclSignatureScheme(fn, env, state)
 		}
 	}
 
@@ -145,6 +129,22 @@ func InferPackage(pkg *PkgInfo, state *InferState) (*TypedInfo, error) {
 		}
 	}
 	return info, nil
+}
+
+func funcDeclSignatureScheme(fn *FuncDecl, env TypeEnv, state *InferState) *Scheme {
+	typeParamVars := make(map[string]MonoType, len(fn.TypeParams))
+	for _, tp := range fn.TypeParams {
+		typeParamVars[tp] = TVar{ID: state.Fresh()}
+	}
+	paramTypes := make([]MonoType, len(fn.Params))
+	for i, p := range fn.Params {
+		paramTypes[i] = typeFromASTWithParams(p.Type, typeParamVars)
+	}
+	var retType MonoType = TUnit{}
+	if fn.Ret != nil {
+		retType = typeFromASTWithParams(fn.Ret, typeParamVars)
+	}
+	return Generalize(env, TFunc{Args: paramTypes, Ret: retType}, nil)
 }
 
 func sourceFileFor(pkg *PkgInfo, node any) string {
@@ -196,7 +196,7 @@ func initialTypeEnv(pkg *PkgInfo) TypeEnv {
 	env["false"] = &Scheme{Body: QualifiedType{Body: TCon{Name: "Bool"}}}
 
 	// Prelude enum constructors and helper functions.
-	for _, name := range []string{"None", "Some", "Ok", "Err", "OptionFlatMap", "ResultIsOk", "ResultIsErr", "ResultUnwrap", "ResultMap", "ResultMapErr", "ResultAndThen", "ResultOrElse", "TypeKeyFromType"} {
+	for _, name := range []string{"None", "Some", "Ok", "Err", "Zero", "OptionFlatMap", "ResultIsOk", "ResultIsErr", "ResultUnwrap", "ResultMap", "ResultMapErr", "ResultAndThen", "ResultOrElse", "TypeKeyFromType"} {
 		env[name] = &Scheme{Body: QualifiedType{Body: TCon{Name: name}}}
 	}
 
@@ -393,6 +393,9 @@ func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo,
 
 	// Now infer the body
 	bodyEnv := env.Clone()
+	for name, tv := range typeParamVars {
+		bodyEnv[name] = &Scheme{Body: QualifiedType{Body: tv}}
+	}
 
 	// Register parameters in the body environment
 	for i, p := range d.Params {
@@ -655,6 +658,9 @@ func inferIdent(env TypeEnv, n *IdentExpr, state *InferState) (MonoType, Subst, 
 	case "Some":
 		a := TVar{ID: state.Fresh()}
 		return TFunc{Args: []MonoType{a}, Ret: TCon{Name: "Option", Args: []MonoType{a}}}, make(Subst), nil, nil
+	case "Zero":
+		a := TVar{ID: state.Fresh()}
+		return TFunc{Ret: a}, make(Subst), nil, nil
 	case "Ok":
 		a := TVar{ID: state.Fresh()}
 		e := TVar{ID: state.Fresh()}
@@ -741,7 +747,7 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 				return s.ApplyMT(con.Args[0]), s, preds, nil
 			}
 		}
-		if id, ok := field.Expr.(*IdentExpr); !ok || (state.GoPackages[id.Name] == nil && state.MyGoPackages[id.Name] == nil) {
+		if id, ok := field.Expr.(*IdentExpr); !ok || (state.GoPackages[id.Name] == nil && state.MyGoPackages[id.Name] == nil && !isInherentStaticMethodSelector(id.Name, field.Field, state)) {
 			receiverType, s1, preds1, err := inferExpr(env, field.Expr, state)
 			if err != nil {
 				return nil, nil, nil, err
@@ -757,14 +763,26 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 				if err != nil {
 					return nil, nil, nil, wrapInferenceError("argument %d of call: %w", err, i)
 				}
-				argTypes[i] = argSubst.ApplyMT(argType)
 				argSubst = Compose(argSubst, s)
+				argTypes[i] = argSubst.ApplyMT(argType)
 				allPreds = append(allPreds, preds...)
 			}
 
 			receiverType = argSubst.ApplyMT(receiverType)
 			if fn, ok := receiverType.(TFunc); ok && fn.Variadic {
 				return inferVariadicCall(fn, argTypes, argSubst, allPreds)
+			}
+			if fieldFn, ok := structFunctionFieldType(receiverType, field.Field, state); ok {
+				if fieldFn.Variadic {
+					return inferVariadicCall(fieldFn, argTypes, argSubst, allPreds)
+				}
+				retVar := TVar{ID: state.Fresh()}
+				funcType := TFunc{Args: argTypes, Ret: retVar}
+				argSubst, err = Unify(fieldFn, funcType, argSubst)
+				if err != nil {
+					return nil, nil, nil, wrapInferenceError("field function call type mismatch: %w", err)
+				}
+				return argSubst.ApplyMT(retVar), argSubst, allPreds, nil
 			}
 
 			retVar := TVar{ID: state.Fresh()}
@@ -805,8 +823,8 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 		if err != nil {
 			return nil, nil, nil, wrapInferenceError("argument %d of call: %w", err, i)
 		}
-		argTypes[i] = s.ApplyMT(argType)
 		argSubst = Compose(argSubst, s)
+		argTypes[i] = argSubst.ApplyMT(argType)
 		allPreds = append(allPreds, preds...)
 	}
 
@@ -832,6 +850,37 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 	// Apply substitution to get actual return type
 	returnType := argSubst.ApplyMT(retVar)
 	return returnType, argSubst, allPreds, nil
+}
+
+func structFunctionFieldType(receiverType MonoType, fieldName string, state *InferState) (TFunc, bool) {
+	if ref, ok := receiverType.(TCon); ok && ref.Name == "Ref" && len(ref.Args) == 1 {
+		receiverType = ref.Args[0]
+	}
+	con, ok := receiverType.(TCon)
+	if !ok || state == nil || state.PkgInfo == nil {
+		return TFunc{}, false
+	}
+	st := state.PkgInfo.Structs[con.Name]
+	if st == nil {
+		return TFunc{}, false
+	}
+	for _, f := range st.Fields {
+		if f.Name != fieldName {
+			continue
+		}
+		fieldType := typeFromAST(f.Type)
+		if len(con.Args) == len(st.TypeParams) {
+			fieldType = substituteTypeParams(fieldType, st.TypeParams, con.Args)
+		}
+		fn, ok := fieldType.(TFunc)
+		return fn, ok
+	}
+	return TFunc{}, false
+}
+
+func isInherentStaticMethodSelector(receiverName, methodName string, state *InferState) bool {
+	_, ok := inherentStaticMethodType(receiverName, methodName, state)
+	return ok
 }
 
 func inferVariadicCall(fn TFunc, argTypes []MonoType, s Subst, preds []Predicate) (MonoType, Subst, []Predicate, error) {
@@ -1076,6 +1125,9 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 			}
 			return nil, nil, nil, fmt.Errorf("MyGO package %q has no exported symbol %q", id.Name, n.Field)
 		}
+		if fn, ok := inherentStaticMethodType(id.Name, n.Field, state); ok {
+			return fn, make(Subst), nil, nil
+		}
 
 		// Check if it's an enum name followed by a variant
 		if sch, ok := env[id.Name]; ok {
@@ -1114,11 +1166,14 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 				if f.Name != n.Field {
 					continue
 				}
-				fieldType := typeFromAST(f.Type)
 				if len(con.Args) == len(st.TypeParams) {
-					fieldType = substituteTypeParams(fieldType, st.TypeParams, con.Args)
+					fieldTypeParams := make(map[string]MonoType, len(st.TypeParams))
+					for i, name := range st.TypeParams {
+						fieldTypeParams[name] = con.Args[i]
+					}
+					return typeFromASTWithParams(f.Type, fieldTypeParams), s, preds, nil
 				}
-				return fieldType, s, preds, nil
+				return typeFromAST(f.Type), s, preds, nil
 			}
 			for _, impl := range state.PkgInfo.Impls {
 				if impl.InterfaceName != "" || impl.Name != "" || inherentReceiverName(impl.Type) != con.Name {
@@ -1128,20 +1183,22 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 					if m.Name != n.Field {
 						continue
 					}
+					methodTypeParams := make(map[string]MonoType, len(impl.TypeParams)+len(m.TypeParams))
+					if receiver, ok := impl.Type.(*NamedType); ok && len(con.Args) == len(receiver.Args) {
+						for i, name := range impl.TypeParams {
+							methodTypeParams[name] = con.Args[i]
+						}
+					}
+					for _, name := range m.TypeParams {
+						methodTypeParams[name] = TVar{ID: state.Fresh()}
+					}
 					paramTypes := make([]MonoType, 0, len(m.Params))
 					for _, p := range m.Params {
-						paramType := typeFromAST(p.Type)
-						if receiver, ok := impl.Type.(*NamedType); ok && len(con.Args) == len(receiver.Args) {
-							paramType = substituteTypeParams(paramType, impl.TypeParams, con.Args)
-						}
-						paramTypes = append(paramTypes, paramType)
+						paramTypes = append(paramTypes, typeFromASTWithParams(p.Type, methodTypeParams))
 					}
 					ret := MonoType(TUnit{})
 					if m.Ret != nil {
-						ret = typeFromAST(m.Ret)
-						if receiver, ok := impl.Type.(*NamedType); ok && len(con.Args) == len(receiver.Args) {
-							ret = substituteTypeParams(ret, impl.TypeParams, con.Args)
-						}
+						ret = typeFromASTWithParams(m.Ret, methodTypeParams)
 					}
 					return TFunc{Args: paramTypes, Ret: ret}, s, preds, nil
 				}
@@ -1157,13 +1214,20 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 				for i := range iface.TypeParams {
 					typeArgs[i] = TVar{ID: state.Fresh()}
 				}
+				methodTypeParams := make(map[string]MonoType, len(iface.TypeParams)+len(m.TypeParams))
+				for i, name := range iface.TypeParams {
+					methodTypeParams[name] = typeArgs[i]
+				}
+				for _, name := range m.TypeParams {
+					methodTypeParams[name] = TVar{ID: state.Fresh()}
+				}
 				paramTypes := make([]MonoType, 0, len(m.Params))
 				for _, p := range m.Params {
-					paramTypes = append(paramTypes, substituteTypeParams(typeFromAST(p.Type), iface.TypeParams, typeArgs))
+					paramTypes = append(paramTypes, typeFromASTWithParams(p.Type, methodTypeParams))
 				}
 				ret := MonoType(TUnit{})
 				if m.Ret != nil {
-					ret = substituteTypeParams(typeFromAST(m.Ret), iface.TypeParams, typeArgs)
+					ret = typeFromASTWithParams(m.Ret, methodTypeParams)
 				}
 				return TFunc{Args: paramTypes, Ret: ret}, s, preds, nil
 			}
@@ -1173,6 +1237,86 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 	// Fall back to a fresh variable when the base type is not concrete yet.
 	fresh := TVar{ID: state.Fresh()}
 	return fresh, s, preds, nil
+}
+
+func inherentStaticMethodType(receiverName, methodName string, state *InferState) (TFunc, bool) {
+	if state == nil || state.PkgInfo == nil {
+		return TFunc{}, false
+	}
+	for _, impl := range state.PkgInfo.Impls {
+		if impl.InterfaceName != "" || impl.Name != "" || inherentReceiverName(impl.Type) != receiverName {
+			continue
+		}
+		for _, m := range impl.Methods {
+			if m.Name != methodName || inherentMethodHasReceiver(impl, m) {
+				continue
+			}
+			methodTypeParams := make(map[string]MonoType, len(impl.TypeParams)+len(m.TypeParams))
+			for _, name := range impl.TypeParams {
+				methodTypeParams[name] = TVar{ID: state.Fresh()}
+			}
+			for _, name := range m.TypeParams {
+				methodTypeParams[name] = TVar{ID: state.Fresh()}
+			}
+			paramTypes := make([]MonoType, 0, len(m.Params))
+			for _, p := range m.Params {
+				paramTypes = append(paramTypes, typeFromASTWithParams(p.Type, methodTypeParams))
+			}
+			ret := MonoType(TUnit{})
+			if m.Ret != nil {
+				ret = typeFromASTWithParams(m.Ret, methodTypeParams)
+			}
+			return TFunc{Args: paramTypes, Ret: ret}, true
+		}
+	}
+	return TFunc{}, false
+}
+
+func inherentMethodHasReceiver(impl *ImplDecl, m *FuncDecl) bool {
+	if impl == nil || m == nil || len(m.Params) == 0 {
+		return false
+	}
+	return sameTypeExpr(m.Params[0].Type, impl.Type)
+}
+
+func sameTypeExpr(a, b TypeExpr) bool {
+	switch a := a.(type) {
+	case *NamedType:
+		b, ok := b.(*NamedType)
+		if !ok || a.Name != b.Name || len(a.Args) != len(b.Args) {
+			return false
+		}
+		for i := range a.Args {
+			if !sameTypeExpr(a.Args[i], b.Args[i]) {
+				return false
+			}
+		}
+		return true
+	case *FuncType:
+		b, ok := b.(*FuncType)
+		if !ok || len(a.Params) != len(b.Params) {
+			return false
+		}
+		for i := range a.Params {
+			if !sameTypeExpr(a.Params[i], b.Params[i]) {
+				return false
+			}
+		}
+		return sameTypeExpr(a.Ret, b.Ret)
+	case *TupleType:
+		b, ok := b.(*TupleType)
+		if !ok || len(a.Elems) != len(b.Elems) {
+			return false
+		}
+		for i := range a.Elems {
+			if !sameTypeExpr(a.Elems[i], b.Elems[i]) {
+				return false
+			}
+		}
+		return true
+	default:
+		return a == nil && b == nil
+	}
 }
 
 func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType, Subst, []Predicate, error) {
@@ -1197,7 +1341,7 @@ func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType,
 				n.TypeName, len(con.Args), len(n.TypeArgs))
 		}
 		for i, arg := range n.TypeArgs {
-			argType := typeFromAST(arg)
+			argType := typeFromASTInEnv(arg, env, state)
 			var err error
 			s, err = Unify(con.Args[i], argType, s)
 			if err != nil {
@@ -1236,6 +1380,17 @@ func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType,
 		allPreds = append(allPreds, preds...)
 		if fieldDecl != nil {
 			expectedFieldType := typeFromAST(fieldDecl.Type)
+			if state != nil && state.PkgInfo != nil {
+				if st := state.PkgInfo.Structs[n.TypeName]; st != nil {
+					if con, ok := s.ApplyMT(structType).(TCon); ok && len(con.Args) == len(st.TypeParams) {
+						fieldTypeParams := make(map[string]MonoType, len(st.TypeParams))
+						for i, name := range st.TypeParams {
+							fieldTypeParams[name] = con.Args[i]
+						}
+						expectedFieldType = typeFromASTWithParams(fieldDecl.Type, fieldTypeParams)
+					}
+				}
+			}
 			var unifyErr error
 			s, unifyErr = Unify(s.ApplyMT(fieldType), expectedFieldType, s)
 			if unifyErr != nil {
@@ -1254,7 +1409,7 @@ func inferFuncLit(env TypeEnv, n *FuncLitExpr, state *InferState) (MonoType, Sub
 	paramTypes := make([]MonoType, len(n.Params))
 	for i, p := range n.Params {
 		if p.Type != nil {
-			paramTypes[i] = typeFromAST(p.Type)
+			paramTypes[i] = typeFromASTInEnv(p.Type, env, state)
 		} else {
 			paramTypes[i] = TVar{ID: state.Fresh()}
 		}
@@ -1270,7 +1425,7 @@ func inferFuncLit(env TypeEnv, n *FuncLitExpr, state *InferState) (MonoType, Sub
 
 	// If there's a declared return type, unify with it
 	if n.Ret != nil {
-		retType := typeFromAST(n.Ret)
+		retType := typeFromASTInEnv(n.Ret, env, state)
 		var err error
 		s, err = Unify(bodyType, retType, s)
 		if err != nil {
@@ -1282,6 +1437,39 @@ func inferFuncLit(env TypeEnv, n *FuncLitExpr, state *InferState) (MonoType, Sub
 	// Build function type
 	funcType := TFunc{Args: paramTypes, Ret: bodyType}
 	return funcType, s, preds, nil
+}
+
+func typeFromASTInEnv(t TypeExpr, env TypeEnv, state *InferState) MonoType {
+	switch t := t.(type) {
+	case *NamedType:
+		if len(t.Args) == 0 {
+			if sch, ok := env[t.Name]; ok {
+				return Instantiate(sch, state)
+			}
+		}
+		args := make([]MonoType, len(t.Args))
+		for i, arg := range t.Args {
+			args[i] = typeFromASTInEnv(arg, env, state)
+		}
+		return TCon{Name: t.Name, Args: args}
+	case *FuncType:
+		params := make([]MonoType, len(t.Params))
+		for i, p := range t.Params {
+			params[i] = typeFromASTInEnv(p, env, state)
+		}
+		return TFunc{Args: params, Ret: typeFromASTInEnv(t.Ret, env, state)}
+	case *TupleType:
+		if len(t.Elems) == 0 {
+			return TUnit{}
+		}
+		args := make([]MonoType, len(t.Elems))
+		for i, elem := range t.Elems {
+			args[i] = typeFromASTInEnv(elem, env, state)
+		}
+		return TCon{Name: "Tuple", Args: args}
+	default:
+		return typeFromAST(t)
+	}
 }
 
 func inferIf(env TypeEnv, n *IfExpr, state *InferState) (MonoType, Subst, []Predicate, error) {

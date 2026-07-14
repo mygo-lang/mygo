@@ -82,14 +82,14 @@ func GenerateFiles(p *Package) (map[string]string, error) {
 			g.genHKTDecls(sf)
 			hktEmitted = true
 		}
-		addGoastImport(sf, p)
+		addGoastImport(sf, p, preludeDecls)
 		for _, decl := range preludeDecls {
 			g.genDecl(sf, decl)
 		}
 		for _, decl := range preludeDecls {
 			if impl, ok := decl.(*ImplDecl); ok {
 				ds := g.genImplDecls(impl)
-				sf.AddDecls(ds)
+				sf.AddDeclsWithSource(ds, declSource(impl))
 			}
 		}
 		for _, decl := range preludeDecls {
@@ -98,7 +98,7 @@ func GenerateFiles(p *Package) (map[string]string, error) {
 				if ferr != nil {
 					return nil, common.ErrorAtPos(g.currentFile, fn.Line, fn.Column, "function %s: %v", fn.Name, ferr)
 				}
-				sf.AddDecl(fd)
+				sf.AddDeclWithSource(fd, declSource(fn))
 			}
 		}
 		if g.needsCallAny {
@@ -144,14 +144,14 @@ func GenerateFiles(p *Package) (map[string]string, error) {
 			g.genHKTDecls(sf)
 			hktEmitted = true
 		}
-		addGoastImport(sf, p)
+		addGoastImport(sf, p, decls)
 		for _, decl := range decls {
 			g.genDecl(sf, decl)
 		}
 		for _, decl := range decls {
 			if impl, ok := decl.(*ImplDecl); ok {
 				ds := g.genImplDecls(impl)
-				sf.AddDecls(ds)
+				sf.AddDeclsWithSource(ds, declSource(impl))
 			}
 		}
 		for _, decl := range decls {
@@ -160,7 +160,7 @@ func GenerateFiles(p *Package) (map[string]string, error) {
 				if ferr != nil {
 					return nil, common.ErrorAtPos(g.currentFile, fn.Line, fn.Column, "function %s: %v", fn.Name, ferr)
 				}
-				sf.AddDecl(fd)
+				sf.AddDeclWithSource(fd, declSource(fn))
 			}
 		}
 		for _, decl := range decls {
@@ -186,7 +186,7 @@ func GenerateFiles(p *Package) (map[string]string, error) {
 						},
 					},
 				}
-				sf.AddDecl(decl)
+				sf.AddDeclWithSource(decl, declSource(s))
 			}
 		}
 		if g.needsCallAny && i == len(sortedSourceFiles)-1 {
@@ -201,9 +201,27 @@ func GenerateFiles(p *Package) (map[string]string, error) {
 	return result, nil
 }
 
-func addGoastImport(sf *goast.SourceFile, p *Package) {
+func declSource(node any) goast.DeclSource {
+	return goast.DeclSource{
+		File:   common.NodeSourceFile(node),
+		Line:   nodeLine(node),
+		Column: nodeColumn(node),
+	}
+}
+
+func nodeLine(node any) int {
+	line, _ := common.NodePos(node)
+	return line
+}
+
+func nodeColumn(node any) int {
+	_, col := common.NodePos(node)
+	return col
+}
+
+func addGoastImport(sf *goast.SourceFile, p *Package, decls []Decl) {
 	imports := sortedImports(p)
-	if p.Name != "prelude" && !p.NoPrelude {
+	if p.Name != "prelude" && !p.NoPrelude && declsNeedPreludeImport(p, decls) {
 		imports = append(imports, ImportSpec{Path: "github.com/mygo-lang/mygo/prelude", Alias: "."})
 	}
 	if hasImportPath(imports, "reflect") {
@@ -223,6 +241,284 @@ func addGoastImport(sf *goast.SourceFile, p *Package) {
 		}
 		sf.AddImport(path, alias)
 	}
+}
+
+func declsNeedPreludeImport(p *Package, decls []Decl) bool {
+	names := preludeImportNames(p)
+	if len(names) == 0 {
+		return false
+	}
+	for _, decl := range decls {
+		if declUsesPreludeName(decl, names) {
+			return true
+		}
+	}
+	return false
+}
+
+func preludeImportNames(p *Package) map[string]struct{} {
+	names := map[string]struct{}{}
+	for name, enum := range p.Enums {
+		names[name] = struct{}{}
+		if enum != nil {
+			for _, variant := range enum.Variants {
+				names[variant.Name] = struct{}{}
+			}
+		}
+	}
+	for name := range p.Interfaces {
+		names[name] = struct{}{}
+	}
+	delete(names, "")
+	return names
+}
+
+func declUsesPreludeName(decl Decl, names map[string]struct{}) bool {
+	switch d := decl.(type) {
+	case *EnumDecl:
+		for _, v := range d.Variants {
+			for _, f := range v.Fields {
+				if typeUsesPreludeName(f.Type, names) {
+					return true
+				}
+			}
+		}
+	case *StructDecl:
+		for _, f := range d.Fields {
+			if typeUsesPreludeName(f.Type, names) {
+				return true
+			}
+		}
+	case *InterfaceDecl:
+		for _, m := range d.Methods {
+			if declUsesPreludeName(m, names) {
+				return true
+			}
+		}
+	case *ImplDecl:
+		if typeUsesPreludeName(d.Type, names) {
+			return true
+		}
+		if nameInSet(d.Name, names) || nameInSet(d.InterfaceName, names) {
+			return true
+		}
+		for _, arg := range d.TypeArgs {
+			if typeUsesPreludeName(arg, names) {
+				return true
+			}
+		}
+		for _, arg := range d.InterfaceArgs {
+			if typeUsesPreludeName(arg, names) {
+				return true
+			}
+		}
+		for _, m := range d.Methods {
+			if declUsesPreludeName(m, names) {
+				return true
+			}
+		}
+	case *FuncDecl:
+		for _, p := range d.Params {
+			if typeUsesPreludeName(p.Type, names) {
+				return true
+			}
+		}
+		if typeUsesPreludeName(d.Ret, names) {
+			return true
+		}
+		for _, c := range d.Using {
+			if nameInSet(c.Name, names) {
+				return true
+			}
+			for _, arg := range c.Args {
+				if typeUsesPreludeName(arg, names) {
+					return true
+				}
+			}
+		}
+		return exprUsesPreludeName(d.Body, names)
+	case *LetStmt:
+		return typeUsesPreludeName(d.Type, names) || exprUsesPreludeName(d.Value, names)
+	}
+	return false
+}
+
+func typeUsesPreludeName(t TypeExpr, names map[string]struct{}) bool {
+	switch tt := t.(type) {
+	case *NamedType:
+		if nameInSet(tt.Name, names) {
+			return true
+		}
+		for _, arg := range tt.Args {
+			if typeUsesPreludeName(arg, names) {
+				return true
+			}
+		}
+	case *FuncType:
+		for _, p := range tt.Params {
+			if typeUsesPreludeName(p, names) {
+				return true
+			}
+		}
+		return typeUsesPreludeName(tt.Ret, names)
+	case *TupleType:
+		for _, e := range tt.Elems {
+			if typeUsesPreludeName(e, names) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func exprUsesPreludeName(e Expr, names map[string]struct{}) bool {
+	switch x := e.(type) {
+	case *IdentExpr:
+		return nameInSet(x.Name, names)
+	case *CallExpr:
+		if exprUsesPreludeName(x.Callee, names) {
+			return true
+		}
+		for _, t := range x.TypeArgs {
+			if typeUsesPreludeName(t, names) {
+				return true
+			}
+		}
+		for _, a := range x.Args {
+			if exprUsesPreludeName(a, names) {
+				return true
+			}
+		}
+	case *StructLitExpr:
+		if nameInSet(x.TypeName, names) {
+			return true
+		}
+		for _, t := range x.TypeArgs {
+			if typeUsesPreludeName(t, names) {
+				return true
+			}
+		}
+		for _, f := range x.Fields {
+			if exprUsesPreludeName(f.Value, names) {
+				return true
+			}
+		}
+	case *BinaryExpr:
+		return exprUsesPreludeName(x.Left, names) || exprUsesPreludeName(x.Right, names)
+	case *PrefixExpr:
+		return exprUsesPreludeName(x.Expr, names)
+	case *CastExpr:
+		return exprUsesPreludeName(x.Expr, names) || typeUsesPreludeName(x.Type, names)
+	case *FieldExpr:
+		return exprUsesPreludeName(x.Expr, names)
+	case *FuncLitExpr:
+		for _, p := range x.Params {
+			if typeUsesPreludeName(p.Type, names) {
+				return true
+			}
+		}
+		return typeUsesPreludeName(x.Ret, names) || exprUsesPreludeName(x.Body, names)
+	case *IfExpr:
+		return exprUsesPreludeName(x.Cond, names) || exprUsesPreludeName(x.Then, names) || exprUsesPreludeName(x.Else, names)
+	case *SwitchExpr:
+		if exprUsesPreludeName(x.Target, names) {
+			return true
+		}
+		for _, c := range x.Cases {
+			if patternUsesPreludeName(c.Pattern, names) || exprUsesPreludeName(c.Body, names) {
+				return true
+			}
+		}
+	case *WhileExpr:
+		return exprUsesPreludeName(x.Cond, names) || exprUsesPreludeName(x.Body, names)
+	case *SliceLitExpr:
+		if typeUsesPreludeName(x.Elem, names) {
+			return true
+		}
+		for _, e := range x.Elems {
+			if exprUsesPreludeName(e, names) {
+				return true
+			}
+		}
+	case *MapLitExpr:
+		if typeUsesPreludeName(x.Key, names) || typeUsesPreludeName(x.Val, names) {
+			return true
+		}
+		for _, p := range x.Pairs {
+			if exprUsesPreludeName(p.Key, names) || exprUsesPreludeName(p.Value, names) {
+				return true
+			}
+		}
+	case *SetLitExpr:
+		if typeUsesPreludeName(x.Elem, names) {
+			return true
+		}
+		for _, e := range x.Elems {
+			if exprUsesPreludeName(e, names) {
+				return true
+			}
+		}
+	case *TupleLitExpr:
+		for _, e := range x.Elems {
+			if exprUsesPreludeName(e, names) {
+				return true
+			}
+		}
+	case *GoExpr:
+		if typeUsesPreludeName(x.Result, names) {
+			return true
+		}
+		for _, op := range x.Operands {
+			if exprUsesPreludeName(op.Value, names) {
+				return true
+			}
+		}
+		for _, op := range x.TypeOperands {
+			if typeUsesPreludeName(op.Type, names) {
+				return true
+			}
+		}
+	case *BlockExpr:
+		for _, s := range x.Stmts {
+			if stmtUsesPreludeName(s, names) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func stmtUsesPreludeName(s Stmt, names map[string]struct{}) bool {
+	switch st := s.(type) {
+	case *ExprStmt:
+		return exprUsesPreludeName(st.Expr, names)
+	case *LetStmt:
+		return typeUsesPreludeName(st.Type, names) || exprUsesPreludeName(st.Value, names)
+	case *ReturnStmt:
+		return exprUsesPreludeName(st.Value, names)
+	case *AssignStmt:
+		return exprUsesPreludeName(st.Value, names)
+	}
+	return false
+}
+
+func patternUsesPreludeName(p Pattern, names map[string]struct{}) bool {
+	switch pt := p.(type) {
+	case *VariantPattern:
+		return nameInSet(pt.Name, names)
+	case *TuplePattern:
+		for _, e := range pt.Elems {
+			if patternUsesPreludeName(e, names) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func nameInSet(name string, names map[string]struct{}) bool {
+	_, ok := names[name]
+	return ok
 }
 
 func hasImportPath(imports []ImportSpec, path string) bool {
@@ -299,6 +595,30 @@ func (ctx *egCtx) constraintFuncForMethod(name string) (string, bool) {
 	}
 	fn, ok := ctx.constraintFuncs[name]
 	return fn, ok
+}
+
+func (ctx *egCtx) typeclassBindingForReceiver(name, receiverType string) (egTcBinding, bool) {
+	if ctx == nil {
+		return egTcBinding{}, false
+	}
+	bindings := ctx.typeclassMethods[name]
+	if len(bindings) == 0 {
+		return egTcBinding{}, false
+	}
+	for _, binding := range bindings {
+		if strings.TrimSpace(binding.TargetType) == strings.TrimSpace(receiverType) {
+			return binding, true
+		}
+	}
+	for _, binding := range bindings {
+		if _, ok := matchEqImplTarget(binding.TargetType, receiverType); ok {
+			return binding, true
+		}
+	}
+	if len(bindings) == 1 {
+		return bindings[0], true
+	}
+	return egTcBinding{}, false
 }
 
 func (ctx *egCtx) child() *egCtx {
@@ -644,6 +964,7 @@ func (g *gen) genTypedImpl(d *ImplDecl, ifaceName string) []ast.Decl {
 		}
 		usingConstraintFuncs := map[string]string{}
 		usingTypeclassMethods := map[string][]egTcBinding{}
+		usingMethodCounts := map[string]int{}
 		for _, cu := range m.Using {
 			namedImpl, ifc, ok := resolveConstraint(cu, g.pkg)
 			if !ok {
@@ -694,19 +1015,24 @@ func (g *gen) genTypedImpl(d *ImplDecl, ifaceName string) []ast.Decl {
 					continue
 				}
 				pt := typeclassFuncType(paramTypes, retTypeStr)
+				paramName := mm.Name + "Fn"
+				if count := usingMethodCounts[mm.Name]; count > 0 {
+					paramName = fmt.Sprintf("%sFn%d", mm.Name, count)
+				}
+				usingMethodCounts[mm.Name]++
 				params = append(params, &ast.Field{
-					Names: []*ast.Ident{ast.NewIdent(mm.Name + "Fn")},
+					Names: []*ast.Ident{ast.NewIdent(paramName)},
 					Type:  ast.NewIdent(pt),
 				})
 				if _, ok := usingConstraintFuncs[mm.Name]; !ok {
-					usingConstraintFuncs[mm.Name] = mm.Name + "Fn"
+					usingConstraintFuncs[mm.Name] = paramName
 				}
 				usingTypeclassMethods[mm.Name] = append(usingTypeclassMethods[mm.Name], egTcBinding{
 					Interface:  cu.Name,
 					TargetType: firstTypeArgString(typeArgs, localSubst),
 					ParamTypes: paramTypes,
 					RetType:    retTypeStr,
-					DictExpr:   mm.Name + "Fn",
+					DictExpr:   paramName,
 				})
 			}
 		}

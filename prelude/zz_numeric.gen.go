@@ -2,7 +2,9 @@
 
 package prelude
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func Show_int(value int) string {
 	return fmt.Sprint(value)

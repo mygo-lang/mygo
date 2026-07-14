@@ -26,7 +26,7 @@ func (g *gen) translateCallArgsExpected(args []Expr, expected []string, ctx *egC
 			line, col := common.NodePos(a)
 			return nil, common.ErrorAtPos(g.currentFile, line, col, "call argument %d: %s", i+1, err.Error())
 		}
-		if ac == nil {
+		if isNilASTExpr(ac) {
 			line, col := common.NodePos(a)
 			return nil, common.ErrorAtPos(g.currentFile, line, col, "call argument %d produced nil Go AST", i+1)
 		}
@@ -386,7 +386,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		if err != nil {
 			return nil, "", err
 		}
-		if base == nil {
+		if isNilASTExpr(base) {
 			line, col := common.NodePos(field.Expr)
 			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "method receiver produced nil Go AST")
 		}
@@ -426,6 +426,10 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			if iface := g.pkg.Interfaces[ifaceName]; iface != nil {
 				if fallbackIface == nil {
 					fallbackIface = iface
+				}
+				if binding, ok := ctx.typeclassBindingForReceiver(field.Field, bt); ok {
+					allArgs := append([]ast.Expr{base}, args...)
+					return &ast.CallExpr{Fun: ast.NewIdent(binding.DictExpr), Args: allArgs}, binding.RetType, nil
 				}
 				// First check if there's a constraint function in scope (from `using`)
 				if fnName, ok := ctx.constraintFuncForMethod(field.Field); ok {
@@ -471,7 +475,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 	if err != nil {
 		return nil, "", err
 	}
-	if callee == nil {
+	if isNilASTExpr(callee) {
 		line, col := common.NodePos(n.Callee)
 		return nil, "", common.ErrorAtPos(g.currentFile, line, col, "call callee produced nil Go AST: %s", fmt.Sprintf("%T", n.Callee))
 	}
@@ -484,7 +488,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 
 func (g *gen) ensureRelationAllowed(n *BinaryExpr, leftType, rightType string) error {
 	typ := leftType
-	if typ == "" || typ == "any" {
+	if typ == "" || typ == "any" || isGeneratedTypeVar(typ) {
 		typ = rightType
 	}
 	if typ == "" || typ == "any" {
@@ -497,6 +501,30 @@ func (g *gen) ensureRelationAllowed(n *BinaryExpr, leftType, rightType string) e
 		return nil
 	}
 	return common.ErrorAtPos(g.currentFile, n.Line, n.Column, "relation operator %q requires Eq[%s]", n.Op, typ)
+}
+
+func isGeneratedTypeVar(typ string) bool {
+	typ = strings.TrimSpace(typ)
+	if len(typ) < 2 || typ[0] != 't' {
+		return false
+	}
+	for _, r := range typ[1:] {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func containsGeneratedTypeVar(typ string) bool {
+	for _, part := range strings.FieldsFunc(typ, func(r rune) bool {
+		return r == '[' || r == ']' || r == ',' || r == ' ' || r == '(' || r == ')'
+	}) {
+		if isGeneratedTypeVar(part) {
+			return true
+		}
+	}
+	return false
 }
 
 func extractFuncReturnType(sig string) string {
@@ -641,9 +669,19 @@ func normalizeMyGoTypeName(name string) string {
 }
 
 func (g *gen) hasEqSupport(typ, baseName string) bool {
+	return g.hasEqSupportSeen(typ, baseName, map[string]bool{})
+}
+
+func (g *gen) hasEqSupportSeen(typ, baseName string, seen map[string]bool) bool {
 	if typ == "" {
 		return false
 	}
+	typ = strings.TrimSpace(typ)
+	if seen[typ] {
+		return false
+	}
+	seen[typ] = true
+
 	// Primitive types always support Eq
 	switch baseName {
 	case "int", "int8", "int16", "int32", "int64",
@@ -651,19 +689,106 @@ func (g *gen) hasEqSupport(typ, baseName string) bool {
 		"float32", "float64", "string", "bool", "byte", "rune", "any":
 		return true
 	}
+
 	// Check for Eq[A] implementations in the package
 	for _, impl := range g.pkg.Impls {
-		if impl.Name != "Eq" {
+		implIface := impl.InterfaceName
+		if implIface == "" {
+			implIface = impl.Name
+		}
+		if implIface != "Eq" {
 			continue
 		}
-		if len(impl.TypeArgs) != 1 {
+		args := impl.InterfaceArgs
+		if len(args) == 0 {
+			args = impl.TypeArgs
+		}
+		if len(args) != 1 {
 			continue
 		}
-		if g.goType(impl.TypeArgs[0], nil) == typ {
+		subst, ok := matchEqImplTarget(g.goType(args[0], nil), typ)
+		if !ok {
+			continue
+		}
+		method := implMethodByName(impl, "Equals")
+		if method == nil || len(method.Using) == 0 {
+			return true
+		}
+		if g.eqConstraintsSupported(method.Using, subst, seen) {
 			return true
 		}
 	}
 	return false
+}
+
+func matchEqImplTarget(pattern, actual string) (map[string]string, bool) {
+	subst := map[string]string{}
+	if matchEqTypePattern(pattern, actual, subst) {
+		return subst, true
+	}
+	return nil, false
+}
+
+func matchEqTypePattern(pattern, actual string, subst map[string]string) bool {
+	pattern = strings.TrimSpace(pattern)
+	actual = strings.TrimSpace(actual)
+	if pattern == "" || actual == "" {
+		return false
+	}
+	if isTypeParamName(pattern) {
+		if prev, ok := subst[pattern]; ok {
+			return prev == actual
+		}
+		subst[pattern] = actual
+		return true
+	}
+	pbase, pargs := splitTypeArgs(pattern)
+	abase, aargs := splitTypeArgs(actual)
+	if normalizeMyGoTypeName(pbase) != normalizeMyGoTypeName(abase) || len(pargs) != len(aargs) {
+		return false
+	}
+	for i := range pargs {
+		if !matchEqTypePattern(pargs[i], aargs[i], subst) {
+			return false
+		}
+	}
+	return true
+}
+
+func isTypeParamName(name string) bool {
+	if name == "" || strings.ContainsAny(name, "[]* ,.(){}") {
+		return false
+	}
+	r := rune(name[0])
+	return r >= 'A' && r <= 'Z' && len(name) <= 2
+}
+
+func implMethodByName(impl *ImplDecl, name string) *FuncDecl {
+	if impl == nil {
+		return nil
+	}
+	for _, method := range impl.Methods {
+		if method.Name == name {
+			return method
+		}
+	}
+	return nil
+}
+
+func (g *gen) eqConstraintsSupported(constraints []Constraint, subst map[string]string, seen map[string]bool) bool {
+	for _, c := range constraints {
+		if c.Name != "Eq" {
+			continue
+		}
+		if len(c.Args) != 1 {
+			return false
+		}
+		typ := g.goTypeStringSubst(c.Args[0], subst)
+		if !g.hasEqSupportSeen(typ, normalizeMyGoTypeName(typ), seen) {
+			return false
+		}
+	}
+	return true
 }
 
 func chooseType(a, b string) string {
