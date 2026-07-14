@@ -180,32 +180,32 @@ end
 # ===== PAttempt: force backtracking =====
 
 func TestPAttemptAllowsBacktracking(t: Ref[testing.T]) -> ()
-  # Inner parser consumes 'a' then fails; PAttempt resets consumption
+  # Inner parser consumes 'a' then fails; PAttempt resets state and consumption
   let p = POrElse(
     PAttempt(PBind(PChar('a'), func(_: Rune) -> Parser[Rune]
       PFail[Rune]("inner fail")
     end)),
-    PChar('b'),
+    PChar('a'),
   )
   let result = ParseInput(p, "ax")
   if !result.ok then
-    t.Fatal("PAttempt should allow backtracking so right alternative can match")
+    t.Fatal("PAttempt should allow backtracking so right alternative can retry at the original position")
   end
-  if result.value != 'b' then
-    t.Fatalf("PAttempt result = %d, want %d", result.value, 'b')
+  if result.value != 'a' then
+    t.Fatalf("PAttempt result = %d, want %d", result.value, 'a')
   end
 end
 
 # ===== PLookAhead: parse without consuming =====
 
 func TestPLookAheadDoesNotConsume(t: Ref[testing.T]) -> ()
-  let p = PThen(PLookAhead(PChar('x')), PChar('y'))
+  let p = PThen(PLookAhead(PChar('x')), PChar('x'))
   let result = ParseInput(p, "xy")
   if !result.ok then
     t.Fatal("PLookAhead should succeed")
   end
-  if result.value != 'y' then
-    t.Fatalf("PLookAhead result = %d, want %d", result.value, 'y')
+  if result.value != 'x' then
+    t.Fatalf("PLookAhead result = %d, want %d", result.value, 'x')
   end
   if result.state.index != 1 then
     t.Fatalf("PLookAhead should not consume the lookahead, index=%d, want 1", result.state.index)
@@ -580,13 +580,13 @@ func TestPIdentifierMatchesSimple(t: Ref[testing.T]) -> ()
   let p = PIdentifier()
   let result = ParseInput(p, "foo123 bar")
   if !result.ok then
-    t.Fatal("PIdentifier should match 'foo'")
+    t.Fatal("PIdentifier should match 'foo123'")
   end
-  if result.value != "foo" then
-    t.Fatalf("PIdentifier = %q, want %q", result.value, "foo")
+  if result.value != "foo123" then
+    t.Fatalf("PIdentifier = %q, want %q", result.value, "foo123")
   end
-  if result.state.index != 3 then
-    t.Fatalf("PIdentifier should consume 'foo', index=%d, want 3", result.state.index)
+  if result.state.index != 6 then
+    t.Fatalf("PIdentifier should consume 'foo123', index=%d, want 6", result.state.index)
   end
 end
 
@@ -657,13 +657,12 @@ func TestStateTracksNewline(t: Ref[testing.T]) -> ()
   let state = NewState("ab\ncd")
   let s1 = AdvanceRune(state)
   let s2 = AdvanceRune(s1)
-  let s3 = AdvanceRune(s2) # at '\n'
-  let s4 = AdvanceRune(s3) # after '\n', should be line 2, column 1
-  if s4.position.line != 2 then
-    t.Fatalf("After newline, line=%d, want 2", s4.position.line)
+  let s3 = AdvanceRune(s2) # consumes '\n'
+  if s3.position.line != 2 then
+    t.Fatalf("After newline, line=%d, want 2", s3.position.line)
   end
-  if s4.position.column != 1 then
-    t.Fatalf("After newline, column=%d, want 1", s4.position.column)
+  if s3.position.column != 1 then
+    t.Fatalf("After newline, column=%d, want 1", s3.position.column)
   end
 end
 
