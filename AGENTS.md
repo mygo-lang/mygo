@@ -29,7 +29,7 @@
 
 ## Language Features
 
-- **Inline Go embedding**: [AGENTS.inline-go.md](AGENTS.inline-go.md)
+- **Inline Go embedding**: [docs/compiler/inline-go.md](docs/compiler/inline-go.md)
   - `go[T] { code: "..."; in x = expr; type T = ... }` syntax
   - Key Files (AST, Lexer, Parser, Compiler)
 - **Concurrency primitives**: [docs/compiler/concurrency.md](docs/compiler/concurrency.md)
