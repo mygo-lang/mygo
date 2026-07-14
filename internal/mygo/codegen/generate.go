@@ -35,13 +35,28 @@ func Generate(p *Package) (string, error) {
 
 // GenerateFiles generates Go source for all .mygo files in a package.
 func GenerateFiles(p *Package) (map[string]string, error) {
+	// Build SourceFiles mapping for error messages.
+	sourceFiles := make(map[any]string)
+	for _, decl := range p.Decls {
+		sourceFiles[decl] = sourceFileOf(decl)
+	}
+
 	pkgInfo := &typeinference.PkgInfo{
-		Dir: p.Dir, WorkspaceRoot: p.WorkspaceRoot, Name: p.Name,
-		Decls: p.Decls, Enums: p.Enums, Structs: p.Structs,
-		Interfaces: p.Interfaces, Funcs: p.Funcs, Impls: p.Impls,
+		Dir:           p.Dir,
+		WorkspaceRoot: p.WorkspaceRoot,
+		Name:          p.Name,
+		Decls:         p.Decls,
+		Enums:         p.Enums,
+		Structs:       p.Structs,
+		Interfaces:    p.Interfaces,
+		Funcs:         p.Funcs,
+		Impls:         p.Impls,
 	}
 	infState := typeinference.NewInferState()
-	typedInfo, _ := typeinference.InferPackage(pkgInfo, infState)
+	typedInfo, err := typeinference.InferPackage(pkgInfo, infState)
+	if err != nil {
+		return nil, err
+	}
 
 	g := newGen(p, typedInfo)
 
@@ -61,6 +76,7 @@ func GenerateFiles(p *Package) (map[string]string, error) {
 
 	// Prelude declarations.
 	if preludeDecls, ok := files[""]; ok {
+		g.currentFile = "prelude"
 		sf := goast.NewSourceFile(p.Name)
 		if !hktEmitted && declsHaveInterface(preludeDecls) {
 			g.genHKTDecls(sf)
@@ -80,7 +96,7 @@ func GenerateFiles(p *Package) (map[string]string, error) {
 			if fn, ok := decl.(*FuncDecl); ok {
 				fd, ferr := g.genFuncDecl(fn)
 				if ferr != nil {
-					return nil, common.ErrorAtPos(fn.Line, fn.Column, "function %s: %v", fn.Name, ferr)
+					return nil, common.ErrorAtPos(g.currentFile, fn.Line, fn.Column, "function %s: %v", fn.Name, ferr)
 				}
 				sf.AddDecl(fd)
 			}
@@ -121,6 +137,7 @@ func GenerateFiles(p *Package) (map[string]string, error) {
 		if skipSourceFile(sourceFile) {
 			continue
 		}
+		g.currentFile = sourceFile
 		decls := files[sourceFile]
 		sf := goast.NewSourceFile(p.Name)
 		if !hktEmitted && declsHaveInterface(decls) && (p.NoPrelude || p.Name == "prelude") {
@@ -141,7 +158,7 @@ func GenerateFiles(p *Package) (map[string]string, error) {
 			if fn, ok := decl.(*FuncDecl); ok {
 				fd, ferr := g.genFuncDecl(fn)
 				if ferr != nil {
-					return nil, common.ErrorAtPos(fn.Line, fn.Column, "function %s: %v", fn.Name, ferr)
+					return nil, common.ErrorAtPos(g.currentFile, fn.Line, fn.Column, "function %s: %v", fn.Name, ferr)
 				}
 				sf.AddDecl(fd)
 			}
@@ -340,6 +357,8 @@ type gen struct {
 	needsCallAny  bool
 	localSeq      int
 	switchVarSeq  int
+	typedInfo     *typeinference.TypedInfo
+	currentFile   string
 }
 
 func newGen(p *Package, typedInfo *typeinference.TypedInfo) *gen {
@@ -353,6 +372,7 @@ func newGen(p *Package, typedInfo *typeinference.TypedInfo) *gen {
 			HasReceiver bool
 		}{},
 		variantByName: map[string]string{},
+		typedInfo:     typedInfo,
 	}
 	for name, iface := range p.Interfaces {
 		for _, m := range iface.Methods {
@@ -388,8 +408,17 @@ func newGen(p *Package, typedInfo *typeinference.TypedInfo) *gen {
 			}{Impl: impl, Func: m, HasReceiver: hasRecv}
 		}
 	}
-	_ = typedInfo
 	return g
+}
+
+func (g *gen) inferredType(e Expr) string {
+	if g == nil || g.typedInfo == nil || e == nil {
+		return ""
+	}
+	if mt, ok := g.typedInfo.ExprTypes[e]; ok && mt != nil {
+		return mt.String()
+	}
+	return ""
 }
 
 // genDecl adds declarations for enum/struct/interface to the source file.

@@ -31,10 +31,11 @@ type EnumDecl struct {
 func (*EnumDecl) declNode() {}
 
 type EnumVariant struct {
-	Line   int
-	Column int
-	Name   string
-	Fields []Field
+	Line       int
+	Column     int
+	SourceFile string
+	Name       string
+	Fields     []Field
 }
 
 type StructDecl struct {
@@ -89,26 +90,29 @@ type FuncDecl struct {
 func (*FuncDecl) declNode() {}
 
 type Constraint struct {
-	Line     int
-	Column   int
-	Name     string
-	Args     []TypeExpr
-	BindName string // optional named binding, e.g. "intShow" in "using intShow: Show[Int]"
+	Line       int
+	Column     int
+	SourceFile string
+	Name       string
+	Args       []TypeExpr
+	BindName   string // optional named binding, e.g. "intShow" in "using intShow: Show[Int]"
 }
 
 type Param struct {
-	Line   int
-	Column int
-	Name   string
-	Type   TypeExpr
+	Line       int
+	Column     int
+	SourceFile string
+	Name       string
+	Type       TypeExpr
 }
 
 type Field struct {
-	Line   int
-	Column int
-	Name   string
-	Type   TypeExpr
-	Tag    string
+	Line       int
+	Column     int
+	SourceFile string
+	Name       string
+	Type       TypeExpr
+	Tag        string
 }
 
 type TypeExpr interface{ typeNode() }
@@ -144,170 +148,189 @@ type Expr interface{ exprNode() }
 type Stmt interface{ stmtNode() }
 
 type IdentExpr struct {
-	Line   int
-	Column int
-	Name   string
+	Line       int
+	Column     int
+	SourceFile string
+	Name       string
 }
 
 func (*IdentExpr) exprNode() {}
 
 type LiteralExpr struct {
-	Line   int
-	Column int
-	Kind   string
-	Value  string
+	Line       int
+	Column     int
+	SourceFile string
+	Kind       string
+	Value      string
 }
 
 func (*LiteralExpr) exprNode() {}
 
 type CallExpr struct {
-	Line     int
-	Column   int
-	Callee   Expr
-	TypeArgs []TypeExpr // 泛型类型参数，如 Func[T](args)
-	Args     []Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Callee     Expr
+	TypeArgs   []TypeExpr // 泛型类型参数，如 Func[T](args)
+	Args       []Expr
 }
 
 func (*CallExpr) exprNode() {}
 
 type StructLitExpr struct {
-	Line     int
-	Column   int
-	TypeName string
-	TypeArgs []TypeExpr
-	Fields   []StructLitField
+	Line       int
+	Column     int
+	SourceFile string
+	TypeName   string
+	TypeArgs   []TypeExpr
+	Fields     []StructLitField
 }
 
 func (*StructLitExpr) exprNode() {}
 
 type StructLitField struct {
-	Line   int
-	Column int
-	Name   string
-	Value  Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Name       string
+	Value      Expr
 }
 
 type BinaryExpr struct {
-	Line   int
-	Column int
-	Op     string
-	Left   Expr
-	Right  Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Op         string
+	Left       Expr
+	Right      Expr
 }
 
 func (*BinaryExpr) exprNode() {}
 
 type PrefixExpr struct {
-	Line   int
-	Column int
-	Op     string
-	Expr   Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Op         string
+	Expr       Expr
 }
 
 func (*PrefixExpr) exprNode() {}
 
 type CastExpr struct {
-	Line   int
-	Column int
-	Expr   Expr
-	Type   TypeExpr
+	Line       int
+	Column     int
+	SourceFile string
+	Expr       Expr
+	Type       TypeExpr
 }
 
 func (*CastExpr) exprNode() {}
 
 type FieldExpr struct {
-	Line   int
-	Column int
-	Expr   Expr
-	Field  string
+	Line       int
+	Column     int
+	SourceFile string
+	Expr       Expr
+	Field      string
 }
 
 func (*FieldExpr) exprNode() {}
 
 type FuncLitExpr struct {
-	Line   int
-	Column int
-	Params []Param
-	Ret    TypeExpr
-	Body   Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Params     []Param
+	Ret        TypeExpr
+	Body       Expr
 }
 
 func (*FuncLitExpr) exprNode() {}
 
 type IfExpr struct {
-	Line   int
-	Column int
-	Cond   Expr
-	Then   Expr
-	Else   Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Cond       Expr
+	Then       Expr
+	Else       Expr
 }
 
 func (*IfExpr) exprNode() {}
 
 type SwitchExpr struct {
-	Line   int
-	Column int
-	Target Expr
-	Cases  []SwitchCase
+	Line       int
+	Column     int
+	SourceFile string
+	Target     Expr
+	Cases      []SwitchCase
 }
 
 func (*SwitchExpr) exprNode() {}
 
 type WhileExpr struct {
-	Line   int
-	Column int
-	Cond   Expr
-	Body   Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Cond       Expr
+	Body       Expr
 }
 
 func (*WhileExpr) exprNode() {}
 
 type SliceLitExpr struct {
-	Line   int
-	Column int
-	Elem   TypeExpr
-	Elems  []Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Elem       TypeExpr
+	Elems      []Expr
 }
 
 func (*SliceLitExpr) exprNode() {}
 
 type MapLitExpr struct {
-	Line   int
-	Column int
-	Key    TypeExpr
-	Val    TypeExpr
-	Pairs  []MapLitPair
+	Line       int
+	Column     int
+	SourceFile string
+	Key        TypeExpr
+	Val        TypeExpr
+	Pairs      []MapLitPair
 }
 
 func (*MapLitExpr) exprNode() {}
 
 type MapLitPair struct {
-	Line  int
-	Col   int
-	Key   Expr
-	Value Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Key        Expr
+	Value      Expr
 }
 
 type SetLitExpr struct {
-	Line  int
-	Col   int
-	Elem  TypeExpr
-	Elems []Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Elem       TypeExpr
+	Elems      []Expr
 }
 
 func (*SetLitExpr) exprNode() {}
 
 type TupleLitExpr struct {
-	Line   int
-	Column int
-	Elems  []Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Elems      []Expr
 }
 
 func (*TupleLitExpr) exprNode() {}
 
 type UnitLitExpr struct {
-	Line   int
-	Column int
+	Line       int
+	Column     int
+	SourceFile string
 }
 
 func (*UnitLitExpr) exprNode() {}
@@ -315,6 +338,7 @@ func (*UnitLitExpr) exprNode() {}
 type GoExpr struct {
 	Line         int
 	Column       int
+	SourceFile   string
 	Result       TypeExpr
 	Code         string
 	Operands     []GoOperand
@@ -324,31 +348,35 @@ type GoExpr struct {
 func (*GoExpr) exprNode() {}
 
 type GoOperand struct {
-	Line   int
-	Column int
-	Name   string
-	Value  Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Name       string
+	Value      Expr
 }
 
 type GoTypeOperand struct {
-	Line   int
-	Column int
-	Name   string
-	Type   TypeExpr
+	Line       int
+	Column     int
+	SourceFile string
+	Name       string
+	Type       TypeExpr
 }
 
 type BlockExpr struct {
-	Line   int
-	Column int
-	Stmts  []Stmt
+	Line       int
+	Column     int
+	SourceFile string
+	Stmts      []Stmt
 }
 
 func (*BlockExpr) exprNode() {}
 
 type ExprStmt struct {
-	Line   int
-	Column int
-	Expr   Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Expr       Expr
 }
 
 func (*ExprStmt) stmtNode() {}
@@ -368,28 +396,31 @@ type LetStmt struct {
 func (*LetStmt) stmtNode() {}
 
 type ReturnStmt struct {
-	Line   int
-	Column int
-	Value  Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Value      Expr
 }
 
 func (*ReturnStmt) stmtNode() {}
 func (*LetStmt) declNode()    {}
 
 type AssignStmt struct {
-	Line   int
-	Column int
-	Name   string
-	Value  Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Name       string
+	Value      Expr
 }
 
 func (*AssignStmt) stmtNode() {}
 
 type SwitchCase struct {
-	Line    int
-	Column  int
-	Pattern Pattern
-	Body    Expr
+	Line       int
+	Column     int
+	SourceFile string
+	Pattern    Pattern
+	Body       Expr
 }
 
 type Pattern interface{ patternNode() }
@@ -397,50 +428,56 @@ type Pattern interface{ patternNode() }
 type BindPattern interface{ bindPatternNode() }
 
 type BindNamePattern struct {
-	Line   int
-	Column int
-	Name   string
+	Line       int
+	Column     int
+	SourceFile string
+	Name       string
 }
 
 func (*BindNamePattern) bindPatternNode() {}
 
 type BindTuplePattern struct {
-	Line   int
-	Column int
-	Elems  []BindPattern
+	Line       int
+	Column     int
+	SourceFile string
+	Elems      []BindPattern
 }
 
 func (*BindTuplePattern) bindPatternNode() {}
 
 type VariantPattern struct {
-	Line   int
-	Column int
-	Name   string
-	Args   []string
+	Line       int
+	Column     int
+	SourceFile string
+	Name       string
+	Args       []string
 }
 
 func (*VariantPattern) patternNode() {}
 
 type LiteralPattern struct {
-	Line   int
-	Column int
-	Kind   string
-	Value  string
+	Line       int
+	Column     int
+	SourceFile string
+	Kind       string
+	Value      string
 }
 
 func (*LiteralPattern) patternNode() {}
 
 type TuplePattern struct {
-	Line   int
-	Column int
-	Elems  []Pattern
+	Line       int
+	Column     int
+	SourceFile string
+	Elems      []Pattern
 }
 
 func (*TuplePattern) patternNode() {}
 
 type WildcardPattern struct {
-	Line   int
-	Column int
+	Line       int
+	Column     int
+	SourceFile string
 }
 
 func (*WildcardPattern) patternNode() {}

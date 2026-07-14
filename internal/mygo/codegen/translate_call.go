@@ -24,11 +24,11 @@ func (g *gen) translateCallArgsExpected(args []Expr, expected []string, ctx *egC
 		ac, _, err := g.translateExpr(a, ctx, argExpected)
 		if err != nil {
 			line, col := common.NodePos(a)
-			return nil, common.ErrorAtPos(line, col, "call argument %d: %s", i+1, err.Error())
+			return nil, common.ErrorAtPos(g.currentFile, line, col, "call argument %d: %s", i+1, err.Error())
 		}
 		if ac == nil {
 			line, col := common.NodePos(a)
-			return nil, common.ErrorAtPos(line, col, "call argument %d produced nil Go AST", i+1)
+			return nil, common.ErrorAtPos(g.currentFile, line, col, "call argument %d produced nil Go AST", i+1)
 		}
 		out[i] = ac
 	}
@@ -345,7 +345,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 				path := g.importAliases[id.Name]
 				// For MyGo imports (not prefixed with "go:"), check exported status
 				if !strings.HasPrefix(path, "go:") && !isExportedIdent(field.Field) {
-					return nil, "", common.ErrorAtPos(field.Line, field.Column, "cannot refer to unexported symbol %s.%s", id.Name, field.Field)
+					return nil, "", common.ErrorAtPos(g.currentFile, field.Line, field.Column, "cannot refer to unexported symbol %s.%s", id.Name, field.Field)
 				}
 				// For Go imports, check function signature arity
 				if strings.HasPrefix(path, "go:") {
@@ -359,7 +359,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 								minArgs--
 							}
 							if len(n.Args) < minArgs || (!variadic && len(n.Args) != len(sig.params)) {
-								return nil, "", common.ErrorAtPos(field.Line, field.Column, "call type mismatch for %s.%s: expected %d args, got %d", id.Name, field.Field, len(sig.params), len(n.Args))
+								return nil, "", common.ErrorAtPos(g.currentFile, field.Line, field.Column, "call type mismatch for %s.%s: expected %d args, got %d", id.Name, field.Field, len(sig.params), len(n.Args))
 							}
 							callee := ast.NewIdent(id.Name + "." + field.Field)
 							args, err := g.translateCallArgs(n.Args, ctx)
@@ -388,7 +388,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		}
 		if base == nil {
 			line, col := common.NodePos(field.Expr)
-			return nil, "", common.ErrorAtPos(line, col, "method receiver produced nil Go AST")
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "method receiver produced nil Go AST")
 		}
 		args, err := g.translateCallArgs(n.Args, ctx)
 		if err != nil {
@@ -464,7 +464,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 	}
 	if callee == nil {
 		line, col := common.NodePos(n.Callee)
-		return nil, "", common.ErrorAtPos(line, col, "call callee produced nil Go AST: %s", fmt.Sprintf("%T", n.Callee))
+		return nil, "", common.ErrorAtPos(g.currentFile, line, col, "call callee produced nil Go AST: %s", fmt.Sprintf("%T", n.Callee))
 	}
 	args, err := g.translateCallArgs(n.Args, ctx)
 	if err != nil {
@@ -487,7 +487,7 @@ func (g *gen) ensureRelationAllowed(n *BinaryExpr, leftType, rightType string) e
 	if g.hasEqSupport(typ, baseName) {
 		return nil
 	}
-	return common.ErrorAtPos(n.Line, n.Column, "relation operator %q requires Eq[%s]", n.Op, typ)
+	return common.ErrorAtPos(g.currentFile, n.Line, n.Column, "relation operator %q requires Eq[%s]", n.Op, typ)
 }
 
 func extractFuncReturnType(sig string) string {

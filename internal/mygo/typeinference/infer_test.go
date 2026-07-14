@@ -996,6 +996,126 @@ func TestInferPackageSimple(t *testing.T) {
 	t.Logf("add scheme: %s", sch)
 }
 
+func TestInferGenericFunctionCallFromArgumentLiteral(t *testing.T) {
+	call := &CallExpr{
+		Callee: &IdentExpr{Name: "PPure"},
+		Args:   []Expr{&LiteralExpr{Kind: "number", Value: "42"}},
+	}
+	pkg := &PkgInfo{
+		Name: "parsec",
+		Decls: []Decl{
+			&FuncDecl{
+				Name:       "PPure",
+				TypeParams: []string{"A"},
+				Params: []Param{
+					{Name: "value", Type: &NamedType{Name: "A"}},
+				},
+				Ret: &NamedType{Name: "Parser", Args: []TypeExpr{&NamedType{Name: "A"}}},
+			},
+			&FuncDecl{
+				Name: "demo",
+				Ret:  &NamedType{Name: "Parser", Args: []TypeExpr{&NamedType{Name: "Int"}}},
+				Body: call,
+			},
+		},
+		Enums:      map[string]*EnumDecl{},
+		Structs:    map[string]*StructDecl{},
+		Interfaces: map[string]*InterfaceDecl{},
+		Funcs:      map[string]*FuncDecl{},
+		Impls:      []*ImplDecl{},
+	}
+
+	info, err := InferPackage(pkg, NewInferState())
+	if err != nil {
+		t.Fatalf("InferPackage() error = %v", err)
+	}
+	want := TCon{Name: "Parser", Args: []MonoType{intType()}}
+	if !eqType(info.ExprTypes[call], want) {
+		t.Fatalf("PPure(42) inferred %s, want %s", info.ExprTypes[call], want)
+	}
+}
+
+func TestInferGenericFunctionCallPropagatesThroughResultField(t *testing.T) {
+	valueField := &FieldExpr{Expr: &IdentExpr{Name: "result"}, Field: "value"}
+	compare := &BinaryExpr{
+		Op:    "!=",
+		Left:  valueField,
+		Right: &LiteralExpr{Kind: "number", Value: "42"},
+	}
+	body := &BlockExpr{
+		Stmts: []Stmt{
+			&LetStmt{
+				Name: "result",
+				Value: &CallExpr{
+					Callee: &IdentExpr{Name: "ParseInput"},
+					Args: []Expr{
+						&CallExpr{
+							Callee: &IdentExpr{Name: "PPure"},
+							Args:   []Expr{&LiteralExpr{Kind: "number", Value: "42"}},
+						},
+						&LiteralExpr{Kind: "string", Value: "hello"},
+					},
+				},
+			},
+			&ExprStmt{Expr: compare},
+		},
+	}
+	pkg := &PkgInfo{
+		Name: "parsec",
+		Decls: []Decl{
+			&StructDecl{
+				Name:       "Reply",
+				TypeParams: []string{"A"},
+				Fields: []Field{
+					{Name: "value", Type: &NamedType{Name: "A"}},
+				},
+			},
+			&StructDecl{
+				Name:       "Parser",
+				TypeParams: []string{"A"},
+			},
+			&FuncDecl{
+				Name:       "PPure",
+				TypeParams: []string{"A"},
+				Params: []Param{
+					{Name: "value", Type: &NamedType{Name: "A"}},
+				},
+				Ret: &NamedType{Name: "Parser", Args: []TypeExpr{&NamedType{Name: "A"}}},
+			},
+			&FuncDecl{
+				Name:       "ParseInput",
+				TypeParams: []string{"A"},
+				Params: []Param{
+					{Name: "p", Type: &NamedType{Name: "Parser", Args: []TypeExpr{&NamedType{Name: "A"}}}},
+					{Name: "input", Type: &NamedType{Name: "String"}},
+				},
+				Ret: &NamedType{Name: "Reply", Args: []TypeExpr{&NamedType{Name: "A"}}},
+			},
+			&FuncDecl{
+				Name: "demo",
+				Ret:  &NamedType{Name: "Bool"},
+				Body: body,
+			},
+		},
+		Enums: map[string]*EnumDecl{},
+		Structs: map[string]*StructDecl{
+			"Reply":  {Name: "Reply", TypeParams: []string{"A"}, Fields: []Field{{Name: "value", Type: &NamedType{Name: "A"}}}},
+			"Parser": {Name: "Parser", TypeParams: []string{"A"}},
+		},
+		Interfaces: map[string]*InterfaceDecl{},
+		Funcs:      map[string]*FuncDecl{},
+		Impls:      []*ImplDecl{},
+	}
+
+	info, err := InferPackage(pkg, NewInferState())
+	if err != nil {
+		t.Fatalf("InferPackage() error = %v", err)
+	}
+	if !eqType(info.ExprTypes[valueField], intType()) {
+		t.Fatalf("result.value inferred %s, want Int", info.ExprTypes[valueField])
+	}
+}
+
 func TestInferGoFmtSprintSelector(t *testing.T) {
 	call := &CallExpr{
 		Callee: &FieldExpr{

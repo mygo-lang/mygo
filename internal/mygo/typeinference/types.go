@@ -409,19 +409,28 @@ func Generalize(env TypeEnv, t MonoType, preds []Predicate) *Scheme {
 
 // typeFromAST converts an AST TypeExpr into a MonoType.
 func typeFromAST(t TypeExpr) MonoType {
+	return typeFromASTWithParams(t, nil)
+}
+
+func typeFromASTWithParams(t TypeExpr, typeParams map[string]MonoType) MonoType {
 	switch t := t.(type) {
 	case *NamedType:
+		if len(t.Args) == 0 && typeParams != nil {
+			if mt, ok := typeParams[t.Name]; ok {
+				return mt
+			}
+		}
 		args := make([]MonoType, len(t.Args))
 		for i, a := range t.Args {
-			args[i] = typeFromAST(a)
+			args[i] = typeFromASTWithParams(a, typeParams)
 		}
 		return TCon{Name: t.Name, Args: args}
 	case *FuncType:
 		params := make([]MonoType, len(t.Params))
 		for i, p := range t.Params {
-			params[i] = typeFromAST(p)
+			params[i] = typeFromASTWithParams(p, typeParams)
 		}
-		ret := typeFromAST(t.Ret)
+		ret := typeFromASTWithParams(t.Ret, typeParams)
 		return TFunc{Args: params, Ret: ret}
 	case *TupleType:
 		if len(t.Elems) == 0 {
@@ -429,7 +438,7 @@ func typeFromAST(t TypeExpr) MonoType {
 		}
 		args := make([]MonoType, len(t.Elems))
 		for i, e := range t.Elems {
-			args[i] = typeFromAST(e)
+			args[i] = typeFromASTWithParams(e, typeParams)
 		}
 		return TCon{Name: "Tuple", Args: args}
 	}

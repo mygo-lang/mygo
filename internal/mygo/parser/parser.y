@@ -1376,7 +1376,7 @@ opt_type_args
 
 maybe_expr_list
 	: /* empty */
-	| expr_list
+	| opt_newlines expr_list opt_newlines
 	;
 
 expr_list
@@ -1385,12 +1385,12 @@ expr_list
 		p.currentArgs = append(p.currentArgs, p.currentExpr)
 		p.currentSliceElems = append(p.currentSliceElems, p.currentExpr)
 	}
-	| expr_list COMMA expr {
+	| expr_list opt_newlines COMMA opt_newlines expr {
 		p := yylex.(*parser)
 		p.currentArgs = append(p.currentArgs, p.currentExpr)
 		p.currentSliceElems = append(p.currentSliceElems, p.currentExpr)
 	}
-	| expr_list COMMA
+	| expr_list opt_newlines COMMA opt_newlines
 	;
 
 collection_lit
@@ -1401,7 +1401,7 @@ collection_lit
 		} else if len(p.currentSetElems) == 0 {
 			p.currentExpr = &ast.MapLitExpr{Line: $1.line, Column: $1.col}
 		} else {
-			p.currentExpr = &ast.SetLitExpr{Line: $1.line, Col: $1.col, Elems: append([]ast.Expr(nil), p.currentSetElems...)}
+			p.currentExpr = &ast.SetLitExpr{Line: $1.line, Column: $1.col, Elems: append([]ast.Expr(nil), p.currentSetElems...)}
 		}
 		p.currentMapEntries = nil
 		p.currentSetElems = nil
@@ -1462,8 +1462,10 @@ collection_entry
 		p.currentCollectionHasPair = true
 		p.currentMapValue = p.currentExpr
 		p.currentMapEntries = append(p.currentMapEntries, ast.MapLitPair{
-			Key: p.currentMapKey,
-			Value: p.currentMapValue,
+			Line:   yyDollar[2].token.line,
+			Column: yyDollar[2].token.col,
+			Key:    p.currentMapKey,
+			Value:  p.currentMapValue,
 		})
 		p.currentMapKey = nil
 		p.currentMapValue = nil
@@ -1960,6 +1962,8 @@ func (p *parser) Lex(lval *yySymType) int {
 			return int(END)
 		case "using":
 			return int(USING)
+		case "!":
+			return int(NOT)
 		case "let":
 			return int(LET)
 		case "var":

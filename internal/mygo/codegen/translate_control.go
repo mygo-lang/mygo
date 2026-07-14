@@ -18,7 +18,7 @@ func (g *gen) translateIf(n *IfExpr, ctx *egCtx, expected string) (ast.Expr, str
 	}
 	if cond == nil {
 		line, col := common.NodePos(n.Cond)
-		return nil, "", common.ErrorAtPos(line, col, "if condition produced nil Go AST")
+		return nil, "", common.ErrorAtPos(g.currentFile, line, col, "if condition produced nil Go AST")
 	}
 	thenCtx := ctx.child()
 	elseCtx := ctx.child()
@@ -28,7 +28,7 @@ func (g *gen) translateIf(n *IfExpr, ctx *egCtx, expected string) (ast.Expr, str
 	}
 	if thenCode == nil {
 		line, col := common.NodePos(n.Then)
-		return nil, "", common.ErrorAtPos(line, col, "if then branch produced nil Go AST")
+		return nil, "", common.ErrorAtPos(g.currentFile, line, col, "if then branch produced nil Go AST")
 	}
 	elseCode, elseType, err := g.translateExpr(n.Else, elseCtx, expected)
 	if err != nil {
@@ -36,7 +36,7 @@ func (g *gen) translateIf(n *IfExpr, ctx *egCtx, expected string) (ast.Expr, str
 	}
 	if elseCode == nil {
 		line, col := common.NodePos(n.Else)
-		return nil, "", common.ErrorAtPos(line, col, "if else branch produced nil Go AST")
+		return nil, "", common.ErrorAtPos(g.currentFile, line, col, "if else branch produced nil Go AST")
 	}
 
 	resultType := expected
@@ -353,7 +353,7 @@ func (g *gen) translateFuncLit(n *FuncLitExpr, ctx *egCtx) (ast.Expr, string, er
 	}
 	if bodyCode == nil {
 		line, col := common.NodePos(n.Body)
-		return nil, "", common.ErrorAtPos(line, col, "function literal body produced nil Go AST")
+		return nil, "", common.ErrorAtPos(g.currentFile, line, col, "function literal body produced nil Go AST")
 	}
 	return &ast.FuncLit{
 		Type: &ast.FuncType{

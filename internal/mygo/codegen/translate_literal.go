@@ -43,10 +43,10 @@ func (g *gen) translateStructLit(n *StructLitExpr, ctx *egCtx, expected string) 
 		code, _, err := g.translateExpr(f.Value, ctx, fieldExpected)
 		if err != nil {
 			line, col := common.NodePos(f.Value)
-			return nil, "", common.ErrorAtPos(line, col, "struct field %s: %s", f.Name, err.Error())
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "struct field %s: %s", f.Name, err.Error())
 		}
 		if code == nil {
-			return nil, "", common.ErrorAtPos(f.Line, f.Column, "struct field %s produced nil Go AST", f.Name)
+			return nil, "", common.ErrorAtPos(g.currentFile, f.Line, f.Column, "struct field %s produced nil Go AST", f.Name)
 		}
 		fieldName := goastFieldName(f.Name)
 		if fieldName == "" {
@@ -124,11 +124,11 @@ func (g *gen) translateSliceLit(n *SliceLitExpr, ctx *egCtx, expected string) (a
 		ac, _, err := g.translateExpr(elem, ctx, elemTypeStr)
 		if err != nil {
 			line, col := common.NodePos(elem)
-			return nil, "", common.ErrorAtPos(line, col, "slice element: %s", err.Error())
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "slice element: %s", err.Error())
 		}
 		if ac == nil {
 			line, col := common.NodePos(elem)
-			return nil, "", common.ErrorAtPos(line, col, "slice element produced nil Go AST")
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "slice element produced nil Go AST")
 		}
 		elts = append(elts, ac)
 	}
@@ -170,15 +170,15 @@ func (g *gen) translateMapLit(n *MapLitExpr, ctx *egCtx, expected string) (ast.E
 		k, _, err := g.translateExpr(pair.Key, ctx, kt)
 		if err != nil {
 			line, col := common.NodePos(pair.Key)
-			return nil, "", common.ErrorAtPos(line, col, "map key: %s", err.Error())
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "map key: %s", err.Error())
 		}
 		v, _, err := g.translateExpr(pair.Value, ctx, vt)
 		if err != nil {
 			line, col := common.NodePos(pair.Value)
-			return nil, "", common.ErrorAtPos(line, col, "map value: %s", err.Error())
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "map value: %s", err.Error())
 		}
 		if k == nil || v == nil {
-			return nil, "", common.ErrorAtPos(pair.Line, pair.Col, "map pair produced nil Go AST")
+			return nil, "", common.ErrorAtPos(g.currentFile, pair.Line, pair.Column, "map pair produced nil Go AST")
 		}
 		elts = append(elts, &ast.KeyValueExpr{Key: k, Value: v})
 	}
@@ -218,11 +218,11 @@ func (g *gen) translateSetLit(n *SetLitExpr, ctx *egCtx, expected string) (ast.E
 		ac, _, err := g.translateExpr(elem, ctx, et)
 		if err != nil {
 			line, col := common.NodePos(elem)
-			return nil, "", common.ErrorAtPos(line, col, "set element: %s", err.Error())
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "set element: %s", err.Error())
 		}
 		if ac == nil {
 			line, col := common.NodePos(elem)
-			return nil, "", common.ErrorAtPos(line, col, "set element produced nil Go AST")
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "set element produced nil Go AST")
 		}
 		elts = append(elts, &ast.KeyValueExpr{
 			Key:   ac,
@@ -245,11 +245,11 @@ func (g *gen) translateTupleLit(n *TupleLitExpr, ctx *egCtx, expected string) (a
 		code, typ, err := g.translateExpr(elem, ctx, "")
 		if err != nil {
 			line, col := common.NodePos(elem)
-			return nil, "", common.ErrorAtPos(line, col, "tuple element %d: %s", i+1, err.Error())
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "tuple element %d: %s", i+1, err.Error())
 		}
 		if code == nil {
 			line, col := common.NodePos(elem)
-			return nil, "", common.ErrorAtPos(line, col, "tuple element %d produced nil Go AST", i+1)
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "tuple element %d produced nil Go AST", i+1)
 		}
 		elts[i] = &ast.KeyValueExpr{Key: ast.NewIdent("F" + strconv.Itoa(i)), Value: code}
 		fieldTypes[i] = typ

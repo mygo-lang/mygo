@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
+	"github.com/mygo-lang/mygo/internal/mygo/common"
 )
 
 // ---------------------------------------------------------------------------
@@ -23,6 +24,7 @@ type PkgInfo struct {
 	Interfaces    map[string]*InterfaceDecl
 	Funcs         map[string]*FuncDecl
 	Impls         []*ImplDecl
+	SourceFiles   map[any]string
 }
 
 // TypedInfo holds the results of type inference for an entire package.
@@ -105,10 +107,35 @@ func InferPackage(pkg *PkgInfo, state *InferState) (*TypedInfo, error) {
 		var err error
 		env, err = inferDecl(decl, env, state, info, pkg)
 		if err != nil {
-			return nil, err
+			return nil, errorAtNode(pkg, decl, err)
 		}
 	}
 	return info, nil
+}
+
+func sourceFileFor(pkg *PkgInfo, node any) string {
+	if file := common.NodeSourceFile(node); file != "" {
+		return file
+	}
+	if pkg != nil && pkg.SourceFiles != nil {
+		return pkg.SourceFiles[node]
+	}
+	return ""
+}
+
+func errorAtNode(pkg *PkgInfo, node any, err error) error {
+	if err == nil || common.IsPositionedError(err) {
+		return err
+	}
+	return common.ErrorAtNode(sourceFileFor(pkg, node), node, "%v", err)
+}
+
+func wrapInferenceError(format string, err error, args ...any) error {
+	if err == nil || common.IsPositionedError(err) {
+		return err
+	}
+	args = append(args, err)
+	return fmt.Errorf(format, args...)
 }
 
 // initialTypeEnv creates the initial type environment with built-in types and
@@ -163,7 +190,7 @@ func inferDecl(decl Decl, env TypeEnv, state *InferState, info *TypedInfo, pkg *
 			path := strings.TrimPrefix(d.Path, "go:")
 			info, err := loadGoPackageInfo(alias, path)
 			if err != nil {
-				return nil, fmt.Errorf("import %q: %w", d.Path, err)
+				return nil, wrapInferenceError("import %q: %w", err, d.Path)
 			}
 			if state.GoPackages == nil {
 				state.GoPackages = map[string]*GoPackageInfo{}
@@ -182,7 +209,7 @@ func inferDecl(decl Decl, env TypeEnv, state *InferState, info *TypedInfo, pkg *
 		}
 		info, err := loadMyGoPackageInfo(workspaceRoot, state.PkgInfo.Dir, d.Path, alias, state.MyGoPackageCache)
 		if err != nil {
-			return nil, fmt.Errorf("import %q: %w", d.Path, err)
+			return nil, wrapInferenceError("import %q: %w", err, d.Path)
 		}
 		if state.MyGoPackages == nil {
 			state.MyGoPackages = map[string]*MyGoPackageInfo{}
@@ -349,7 +376,7 @@ func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo,
 	if d.Body != nil {
 		bodyType, s, preds, err := inferExpr(bodyEnv, d.Body, state)
 		if err != nil {
-			return nil, fmt.Errorf("function %q: %w", d.Name, err)
+			return nil, wrapInferenceError("function %q: %w", err, d.Name)
 		}
 
 		// Apply inferred substitution to the return type
@@ -374,7 +401,7 @@ func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo,
 				} else {
 					s, err = Unify(inferredRetType, declaredRetType, s)
 					if err != nil {
-						return nil, fmt.Errorf("function %q return type mismatch: %w", d.Name, err)
+						return nil, wrapInferenceError("function %q return type mismatch: %w", err, d.Name)
 					}
 					inferredRetType = s.ApplyMT(inferredRetType)
 				}
@@ -399,7 +426,7 @@ func inferLetDecl(d *LetStmt, env TypeEnv, state *InferState, info *TypedInfo) (
 	// Infer the value
 	valType, s, preds, err := inferExpr(env, d.Value, state)
 	if err != nil {
-		return nil, fmt.Errorf("binding %q: %w", d.Name, err)
+		return nil, wrapInferenceError("binding %q: %w", err, d.Name)
 	}
 
 	valType = s.ApplyMT(valType)
@@ -410,7 +437,7 @@ func inferLetDecl(d *LetStmt, env TypeEnv, state *InferState, info *TypedInfo) (
 		var err error
 		s, err = Unify(valType, annotType, s)
 		if err != nil {
-			return nil, fmt.Errorf("binding %q: type annotation mismatch: %w", d.Name, err)
+			return nil, wrapInferenceError("binding %q: type annotation mismatch: %w", err, d.Name)
 		}
 		valType = s.ApplyMT(valType)
 	}
@@ -424,7 +451,7 @@ func inferLetDecl(d *LetStmt, env TypeEnv, state *InferState, info *TypedInfo) (
 		}
 		newEnv, err := inferBindPattern(d.Bind, tuple.Args, s, env, info)
 		if err != nil {
-			return nil, fmt.Errorf("binding %q: %w", d.Name, err)
+			return nil, wrapInferenceError("binding %q: %w", err, d.Name)
 		}
 		env = newEnv
 		return env, nil
@@ -488,6 +515,9 @@ func inferBindPattern(p BindPattern, args []MonoType, s Subst, env TypeEnv, info
 func inferExpr(env TypeEnv, e Expr, state *InferState) (MonoType, Subst, []Predicate, error) {
 	t, s, preds, err := inferExprRaw(env, e, state)
 	if err != nil {
+		if state != nil {
+			err = errorAtNode(state.PkgInfo, e, err)
+		}
 		return nil, nil, nil, err
 	}
 	if state != nil && state.TypedInfo != nil && e != nil && t != nil {
@@ -667,7 +697,7 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 			for i, arg := range n.Args {
 				argType, s, preds, err := inferExpr(env, arg, state)
 				if err != nil {
-					return nil, nil, nil, fmt.Errorf("argument %d of call: %w", i, err)
+					return nil, nil, nil, wrapInferenceError("argument %d of call: %w", err, i)
 				}
 				argTypes[i] = argSubst.ApplyMT(argType)
 				argSubst = Compose(argSubst, s)
@@ -694,7 +724,7 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 			calleeType = argSubst.ApplyMT(calleeType)
 			argSubst, err = Unify(calleeType, funcType, argSubst)
 			if err != nil {
-				return nil, nil, nil, fmt.Errorf("call type mismatch: %w", err)
+				return nil, nil, nil, wrapInferenceError("call type mismatch: %w", err)
 			}
 			return argSubst.ApplyMT(retVar), argSubst, allPreds, nil
 		}
@@ -715,7 +745,7 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 	for i, arg := range n.Args {
 		argType, s, preds, err := inferExpr(env, arg, state)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("argument %d of call: %w", i, err)
+			return nil, nil, nil, wrapInferenceError("argument %d of call: %w", err, i)
 		}
 		argTypes[i] = s.ApplyMT(argType)
 		argSubst = Compose(argSubst, s)
@@ -738,7 +768,7 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 	// Unify callee type with function type
 	argSubst, err = Unify(calleeType, funcType, argSubst)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("call type mismatch: %w", err)
+		return nil, nil, nil, wrapInferenceError("call type mismatch: %w", err)
 	}
 
 	// Apply substitution to get actual return type
@@ -761,14 +791,14 @@ func inferVariadicCall(fn TFunc, argTypes []MonoType, s Subst, preds []Predicate
 	for i := 0; i < fixed; i++ {
 		s, err = Unify(fn.Args[i], s.ApplyMT(argTypes[i]), s)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("argument %d: %w", i, err)
+			return nil, nil, nil, wrapInferenceError("argument %d: %w", err, i)
 		}
 	}
 	restType := fn.Args[len(fn.Args)-1]
 	for i := fixed; i < len(argTypes); i++ {
 		s, err = Unify(restType, s.ApplyMT(argTypes[i]), s)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("argument %d: %w", i, err)
+			return nil, nil, nil, wrapInferenceError("argument %d: %w", err, i)
 		}
 	}
 	return s.ApplyMT(fn.Ret), s, preds, nil
@@ -834,7 +864,7 @@ func inferPipe(env TypeEnv, n *BinaryExpr, state *InferState) (MonoType, Subst, 
 		expectedFunc := TFunc{Args: []MonoType{leftType}, Ret: retVar}
 		s, err = Unify(rightType, expectedFunc, s)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("pipe |> type mismatch: %w", err)
+			return nil, nil, nil, wrapInferenceError("pipe |> type mismatch: %w", err)
 		}
 		return s.ApplyMT(retVar), s, allPreds, nil
 	}
@@ -860,7 +890,7 @@ func inferPipe(env TypeEnv, n *BinaryExpr, state *InferState) (MonoType, Subst, 
 	var unifyErr error
 	s, unifyErr = Unify(leftType, expectedFunc, s)
 	if unifyErr != nil {
-		return nil, nil, nil, fmt.Errorf("pipe <| type mismatch: %w", unifyErr)
+		return nil, nil, nil, wrapInferenceError("pipe <| type mismatch: %w", unifyErr)
 	}
 	return s.ApplyMT(retVar), s, append(preds1, preds2...), nil
 }
@@ -883,7 +913,7 @@ func inferArithmetic(env TypeEnv, n *BinaryExpr, state *InferState) (MonoType, S
 	// Unify left and right types
 	s, err = Unify(leftType, rightType, s)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("arithmetic operator %q type mismatch: %w", n.Op, err)
+		return nil, nil, nil, wrapInferenceError("arithmetic operator %q type mismatch: %w", err, n.Op)
 	}
 
 	return s.ApplyMT(leftType), s, allPreds, nil
@@ -904,11 +934,11 @@ func inferLogical(env TypeEnv, n *BinaryExpr, state *InferState) (MonoType, Subs
 	boolType := TCon{Name: "Bool"}
 	s, err = Unify(leftType, boolType, s)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("logical operator %q requires Bool operands: %w", n.Op, err)
+		return nil, nil, nil, wrapInferenceError("logical operator %q requires Bool operands: %w", err, n.Op)
 	}
 	s, err = Unify(rightType, boolType, s)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("logical operator %q requires Bool operands: %w", n.Op, err)
+		return nil, nil, nil, wrapInferenceError("logical operator %q requires Bool operands: %w", err, n.Op)
 	}
 	return boolType, s, allPreds, nil
 }
@@ -930,7 +960,7 @@ func inferComparison(env TypeEnv, n *BinaryExpr, state *InferState) (MonoType, S
 
 	s, err = Unify(leftType, rightType, s)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("comparison operator %q type mismatch: %w", n.Op, err)
+		return nil, nil, nil, wrapInferenceError("comparison operator %q type mismatch: %w", err, n.Op)
 	}
 
 	// Generate Eq predicate
@@ -952,7 +982,7 @@ func inferPrefix(env TypeEnv, n *PrefixExpr, state *InferState) (MonoType, Subst
 		boolType := TCon{Name: "Bool"}
 		s, err = Unify(exprType, boolType, s)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("! requires Bool operand: %w", err)
+			return nil, nil, nil, wrapInferenceError("! requires Bool operand: %w", err)
 		}
 		return boolType, s, preds, nil
 	case "-":
@@ -1110,7 +1140,7 @@ func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType,
 			var err error
 			s, err = Unify(con.Args[i], argType, s)
 			if err != nil {
-				return nil, nil, nil, fmt.Errorf("struct %q type arg %d: %w", n.TypeName, i, err)
+				return nil, nil, nil, wrapInferenceError("struct %q type arg %d: %w", err, n.TypeName, i)
 			}
 		}
 		structType = s.ApplyMT(structType)
@@ -1139,7 +1169,7 @@ func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType,
 		}
 		fieldType, fs, preds, err := inferExpr(env, f.Value, state)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("struct %q field %q: %w", n.TypeName, f.Name, err)
+			return nil, nil, nil, wrapInferenceError("struct %q field %q: %w", err, n.TypeName, f.Name)
 		}
 		s = Compose(s, fs)
 		allPreds = append(allPreds, preds...)
@@ -1148,7 +1178,7 @@ func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType,
 			var unifyErr error
 			s, unifyErr = Unify(s.ApplyMT(fieldType), expectedFieldType, s)
 			if unifyErr != nil {
-				return nil, nil, nil, fmt.Errorf("struct %q field %q type mismatch: %w", n.TypeName, f.Name, unifyErr)
+				return nil, nil, nil, wrapInferenceError("struct %q field %q type mismatch: %w", unifyErr, n.TypeName, f.Name)
 			}
 		}
 	}
@@ -1183,7 +1213,7 @@ func inferFuncLit(env TypeEnv, n *FuncLitExpr, state *InferState) (MonoType, Sub
 		var err error
 		s, err = Unify(bodyType, retType, s)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("function literal return type mismatch: %w", err)
+			return nil, nil, nil, wrapInferenceError("function literal return type mismatch: %w", err)
 		}
 		bodyType = s.ApplyMT(bodyType)
 	}
@@ -1201,7 +1231,7 @@ func inferIf(env TypeEnv, n *IfExpr, state *InferState) (MonoType, Subst, []Pred
 	}
 	s, err := Unify(condType, TCon{Name: "Bool"}, s1)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("if condition must be Bool: %w", err)
+		return nil, nil, nil, wrapInferenceError("if condition must be Bool: %w", err)
 	}
 
 	// Infer then and else branches
@@ -1225,7 +1255,7 @@ func inferIf(env TypeEnv, n *IfExpr, state *InferState) (MonoType, Subst, []Pred
 	// Unify then and else branch types
 	s, err = Unify(thenType, elseType, s)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("if branch types mismatch: %w", err)
+		return nil, nil, nil, wrapInferenceError("if branch types mismatch: %w", err)
 	}
 
 	return s.ApplyMT(thenType), s, allPreds, nil
@@ -1257,13 +1287,13 @@ func inferSwitch(env TypeEnv, n *SwitchExpr, state *InferState) (MonoType, Subst
 		caseEnv := env.Clone()
 		caseEnv, err := inferPatternBindings(caseEnv, cas.Pattern, targetType, s, state, enumDecl, enumTypeArgs)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("switch pattern: %w", err)
+			return nil, nil, nil, wrapInferenceError("switch pattern: %w", err)
 		}
 
 		caseBody := switchCaseBodyForInference(cas.Body, seenCaseStmts)
 		caseType, cs, cp, err := inferExpr(caseEnv, caseBody, state)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("switch case: %w", err)
+			return nil, nil, nil, wrapInferenceError("switch case: %w", err)
 		}
 		rememberSwitchCaseStmts(cas.Body, seenCaseStmts)
 		caseType = cs.ApplyMT(caseType)
@@ -1277,7 +1307,7 @@ func inferSwitch(env TypeEnv, n *SwitchExpr, state *InferState) (MonoType, Subst
 	for i := 1; i < len(caseTypes); i++ {
 		s, err = Unify(resultType, caseTypes[i], s)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("switch case types mismatch: %w", err)
+			return nil, nil, nil, wrapInferenceError("switch case types mismatch: %w", err)
 		}
 		resultType = s.ApplyMT(resultType)
 	}
@@ -1394,15 +1424,15 @@ func inferPatternBindings(env TypeEnv, pat Pattern, targetType MonoType, s Subst
 		switch p.Kind {
 		case "string":
 			if err := unifyPatternLiteral(targetType, TCon{Name: "String"}, s); err != nil {
-				return nil, fmt.Errorf("string literal pattern: %w", err)
+				return nil, wrapInferenceError("string literal pattern: %w", err)
 			}
 		case "number":
 			lt, _, _, err := inferLiteral(&LiteralExpr{Kind: "number", Value: p.Value})
 			if err != nil {
-				return nil, fmt.Errorf("number literal pattern: %w", err)
+				return nil, wrapInferenceError("number literal pattern: %w", err)
 			}
 			if err := unifyPatternLiteral(targetType, lt, s); err != nil {
-				return nil, fmt.Errorf("number literal pattern: %w", err)
+				return nil, wrapInferenceError("number literal pattern: %w", err)
 			}
 		}
 		return env, nil
@@ -1505,7 +1535,7 @@ func inferBlock(env TypeEnv, n *BlockExpr, state *InferState) (MonoType, Subst, 
 			valType = s.ApplyMT(valType)
 			s, err = Unify(targetInst, valType, s)
 			if err != nil {
-				return nil, nil, nil, fmt.Errorf("assignment to %q: type mismatch: %w", st.Name, err)
+				return nil, nil, nil, wrapInferenceError("assignment to %q: type mismatch: %w", err, st.Name)
 			}
 		case *ReturnStmt:
 			if st.Value != nil {
@@ -1595,7 +1625,7 @@ func inferSliceLit(env TypeEnv, n *SliceLitExpr, state *InferState) (MonoType, S
 		var err error
 		s, err = Unify(elemType, elemTypes[i], s)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("slice element type mismatch: %w", err)
+			return nil, nil, nil, wrapInferenceError("slice element type mismatch: %w", err)
 		}
 		elemType = s.ApplyMT(elemType)
 	}
@@ -1645,7 +1675,7 @@ func inferMapLit(env TypeEnv, n *MapLitExpr, state *InferState) (MonoType, Subst
 		allPreds = append(allPreds, preds...)
 		s, err = Unify(keyType, s.ApplyMT(kt), s)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("map key types mismatch: %w", err)
+			return nil, nil, nil, wrapInferenceError("map key types mismatch: %w", err)
 		}
 
 		vt, vs, preds, err := inferExpr(env, n.Pairs[i].Value, state)
@@ -1656,7 +1686,7 @@ func inferMapLit(env TypeEnv, n *MapLitExpr, state *InferState) (MonoType, Subst
 		allPreds = append(allPreds, preds...)
 		s, err = Unify(valType, s.ApplyMT(vt), s)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("map value types mismatch: %w", err)
+			return nil, nil, nil, wrapInferenceError("map value types mismatch: %w", err)
 		}
 	}
 
@@ -1691,7 +1721,7 @@ func inferSetLit(env TypeEnv, n *SetLitExpr, state *InferState) (MonoType, Subst
 		var err error
 		s, err = Unify(elemType, elemTypes[i], s)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("set element type mismatch: %w", err)
+			return nil, nil, nil, wrapInferenceError("set element type mismatch: %w", err)
 		}
 		elemType = s.ApplyMT(elemType)
 	}
@@ -1705,7 +1735,7 @@ func inferGoExpr(env TypeEnv, n *GoExpr, state *InferState) (MonoType, Subst, []
 	for _, op := range n.Operands {
 		_, os, preds, err := inferExpr(env, op.Value, state)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("go operand %q: %w", op.Name, err)
+			return nil, nil, nil, wrapInferenceError("go operand %q: %w", err, op.Name)
 		}
 		s = Compose(s, os)
 		allPreds = append(allPreds, preds...)

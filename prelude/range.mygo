@@ -1,0 +1,198 @@
+package prelude
+
+struct Range
+  Start: Int
+  End: Int
+  Step: Int
+end
+
+impl Range
+  func New(start: Int, stop: Int) -> Range
+    Range {
+      Start: start,
+      End: stop,
+      Step: 1
+    }
+  end
+
+  func NewWithStep(start: Int, stop: Int, step: Int) -> Range
+    Range {
+      Start: start,
+      End: stop,
+      Step: step
+    }
+  end
+end
+
+impl RangeIEnumerable: IEnumerable[Range, Int]
+  func Each(c: Range, fn: func(Int) -> ()) -> ()
+    var i: Int = c.Start
+    if c.Step > 0 then
+      while i < c.End
+        fn(i)
+        i = i + c.Step
+      end
+    elsif c.Step < 0 then
+      while i > c.End
+        fn(i)
+        i = i + c.Step
+      end
+    end
+    return
+  end
+
+  func Len(c: Range) -> Int
+    var count: Int = 0
+    var i: Int = c.Start
+    if c.Step > 0 then
+      while i < c.End
+        count = count + 1
+        i = i + c.Step
+      end
+    elsif c.Step < 0 then
+      while i > c.End
+        count = count + 1
+        i = i + c.Step
+      end
+    end
+    return count
+  end
+
+  func Map[B](c: Range, fn: func(Int) -> B) -> Slice[B]
+    var count: Int = 0
+    var i: Int = c.Start
+    if c.Step > 0 then
+      while i < c.End
+        count = count + 1
+        i = i + c.Step
+      end
+    elsif c.Step < 0 then
+      while i > c.End
+        count = count + 1
+        i = i + c.Step
+      end
+    end
+    var result: Slice[B] = []
+    var j: Int = 0
+    i = c.Start
+    if c.Step > 0 then
+      while j < count
+        result = append(result, fn(i))
+        i = i + c.Step
+        j = j + 1
+      end
+    elsif c.Step < 0 then
+      while j < count
+        result = append(result, fn(i))
+        i = i + c.Step
+        j = j + 1
+      end
+    end
+    return result
+  end
+
+  func Filter(c: Range, fn: func(Int) -> Bool) -> Slice[Int]
+    var count: Int = 0
+    var i: Int = c.Start
+    if c.Step > 0 then
+      while i < c.End
+        if fn(i) then
+          count = count + 1
+        end
+        i = i + c.Step
+      end
+    elsif c.Step < 0 then
+      while i > c.End
+        if fn(i) then
+          count = count + 1
+        end
+        i = i + c.Step
+      end
+    end
+    var result: Slice[Int] = []
+    var j: Int = 0
+    i = c.Start
+    if c.Step > 0 then
+      while i < c.End
+        if fn(i) then
+          result = append(result, i)
+          j = j + 1
+        end
+        i = i + c.Step
+      end
+    elsif c.Step < 0 then
+      while i > c.End
+        if fn(i) then
+          result = append(result, i)
+          j = j + 1
+        end
+        i = i + c.Step
+      end
+    end
+    return result
+  end
+
+  func Fold[B](c: Range, initial: B, fn: func(B, Int) -> B) -> B
+    var acc: B = initial
+    var i: Int = c.Start
+    if c.Step > 0 then
+      while i < c.End
+        acc = fn(acc, i)
+        i = i + c.Step
+      end
+    elsif c.Step < 0 then
+      while i > c.End
+        acc = fn(acc, i)
+        i = i + c.Step
+      end
+    end
+    return acc
+  end
+
+  func Find(c: Range, fn: func(Int) -> Bool) -> Option[Ref[Int]]
+    var i: Int = c.Start
+    var found: Option[Ref[Int]] = None
+    var done: Bool = false
+    if c.Step > 0 then
+      while i < c.End && !done
+        if fn(i) then
+          var current: Int = i
+          found = Some(Ref.new(current))
+          done = true
+        end
+        i = i + c.Step
+      end
+    elsif c.Step < 0 then
+      while i > c.End && !done
+        if fn(i) then
+          var current: Int = i
+          found = Some(Ref.new(current))
+          done = true
+        end
+        i = i + c.Step
+      end
+    end
+    found
+  end
+
+  func Contains(c: Range, item: Int) -> Bool using Eq[Int]
+    var i: Int = c.Start
+    var found: Bool = false
+    if c.Step > 0 then
+      while i < c.End && !found
+        if item.Equals(i) then
+          found = true
+        end
+        i = i + c.Step
+      end
+    elsif c.Step < 0 then
+      while i > c.End && !found
+        if item.Equals(i) then
+          found = true
+        end
+        i = i + c.Step
+      end
+    end
+    found
+  end
+end

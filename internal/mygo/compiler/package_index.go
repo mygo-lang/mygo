@@ -43,7 +43,7 @@ func buildPackageIndex(root string, noPrelude bool) (*packageIndex, error) {
 		}
 		pi.WorkspaceRoot = root
 		if prev, ok := idx.packages[pi.Name]; ok {
-			return nil, common.ErrorAtPos(0, 0, "package name %q conflicts between %q and %q", pi.Name, prev.Dir, dir)
+			return nil, common.ErrorAtPos("", 0, 0, "package name %q conflicts between %q and %q", pi.Name, prev.Dir, dir)
 		}
 		idx.packages[pi.Name] = pi
 		idx.byDir[dir] = pi
@@ -134,7 +134,7 @@ func resolveMyGoImport(workspaceRoot, fromDir, importPath string) (string, error
 		}
 		cur = parent
 	}
-	return "", common.ErrorAtPos(0, 0, "cannot resolve MyGO import %q from %q", importPath, fromDir)
+	return "", common.ErrorAtPos("", 0, 0, "cannot resolve MyGO import %q from %q", importPath, fromDir)
 }
 
 func loadImportedMyGoPackage(workspaceRoot, fromDir, importPath string, noPrelude bool) (*pkg.Package, error) {

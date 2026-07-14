@@ -1,7 +1,6 @@
 package codegen
 
 import (
-	"fmt"
 	"go/ast"
 	goparser "go/parser"
 	"go/token"
@@ -40,7 +39,7 @@ func (g *gen) translateGoExpr(n *GoExpr, ctx *egCtx, expected string) (ast.Expr,
 		return code
 	})
 	if missing != "" {
-		return ast.NewIdent("_"), "", common.ErrorAtPos(n.Line, n.Column, "go code references unknown operand %q", missing)
+		return ast.NewIdent("_"), "", common.ErrorAtPos(g.currentFile, n.Line, n.Column, "go code references unknown operand %q", missing)
 	}
 
 	resultType := g.goType(n.Result, ctx.typeParams)
@@ -49,7 +48,7 @@ func (g *gen) translateGoExpr(n *GoExpr, ctx *egCtx, expected string) (ast.Expr,
 	// Parse the substituted Go expression
 	expr, err := goparser.ParseExpr(substituted)
 	if err != nil {
-		return ast.NewIdent(substituted), "", fmt.Errorf("invalid go expression: %v", err)
+		return ast.NewIdent(substituted), "", common.ErrorAtPos(g.currentFile, n.Line, n.Column, "invalid go expression: %v", err)
 	}
 
 	if resultType == "" || resultType == "struct{}" {
@@ -114,7 +113,7 @@ func (g *gen) translateGoUnitStmts(n *GoExpr, ctx *egCtx) ([]ast.Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseInlineGoUnitStmts(substituted)
+	return parseInlineGoUnitStmts(g.currentFile, substituted)
 }
 
 func (g *gen) substituteGoCode(n *GoExpr, ctx *egCtx) (string, error) {
@@ -138,22 +137,22 @@ func (g *gen) substituteGoCode(n *GoExpr, ctx *egCtx) (string, error) {
 		return code
 	})
 	if missing != "" {
-		return "", common.ErrorAtPos(n.Line, n.Column, "go code references unknown operand %q", missing)
+		return "", common.ErrorAtPos(g.currentFile, n.Line, n.Column, "go code references unknown operand %q", missing)
 	}
 	return substituted, nil
 }
 
-func parseInlineGoUnitStmts(code string) ([]ast.Stmt, error) {
-	file, err := goparser.ParseFile(token.NewFileSet(), "inline.go", "package inline\nfunc _(){\n"+code+"\n}", 0)
+func parseInlineGoUnitStmts(srcFile, code string) ([]ast.Stmt, error) {
+	pfile, err := goparser.ParseFile(token.NewFileSet(), "inline.go", "package inline\nfunc _(){\n"+code+"\n}", 0)
 	if err != nil {
-		return nil, err
+		return nil, common.ErrorAtPos(srcFile, 0, 0, "invalid go statement: %v", err)
 	}
-	if len(file.Decls) != 1 {
-		return nil, fmt.Errorf("invalid go statement")
+	if len(pfile.Decls) != 1 {
+		return nil, common.ErrorAtPos(srcFile, 0, 0, "invalid go statement")
 	}
-	fn, ok := file.Decls[0].(*ast.FuncDecl)
+	fn, ok := pfile.Decls[0].(*ast.FuncDecl)
 	if !ok || fn.Body == nil || len(fn.Body.List) == 0 {
-		return nil, fmt.Errorf("invalid go statement")
+		return nil, common.ErrorAtPos(srcFile, 0, 0, "invalid go statement")
 	}
 	return fn.Body.List, nil
 }

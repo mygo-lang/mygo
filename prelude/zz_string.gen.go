@@ -20,26 +20,26 @@ func Len_string_rune(c string) int {
 }
 func Map_string_rune[B any](c string, fn func(rune) B) []B {
 	return func() []B {
-		slc_22 := []rune(c)
-		return Map__t_t(slc_22, fn)
+		slc_42 := []rune(c)
+		return Map__t_t(slc_42, fn)
 	}()
 }
 func Filter_string_rune(c string, fn func(rune) bool) []rune {
 	return func() []rune {
-		slc_23 := []rune(c)
-		return Filter__t_t(slc_23, fn)
+		slc_43 := []rune(c)
+		return Filter__t_t(slc_43, fn)
 	}()
 }
 func Fold_string_rune[B any](c string, initial B, fn func(B, rune) B) B {
 	return func() B {
-		slc_24 := []rune(c)
-		return Fold__t_t(slc_24, initial, fn)
+		slc_44 := []rune(c)
+		return Fold__t_t(slc_44, initial, fn)
 	}()
 }
 func Find_string_rune(c string, fn func(rune) bool) Option[*rune] {
 	return func() Option[*rune] {
-		slc_25 := []rune(c)
-		return Find__t_t(slc_25, fn)
+		slc_45 := []rune(c)
+		return Find__t_t(slc_45, fn)
 	}()
 }
 func Contains_string_rune(c string, item rune, eq Eq[rune]) bool {
@@ -54,8 +54,8 @@ func String_PeekRune(s string) Option[*rune] {
 			return None[*rune]()
 		} else {
 			return func() Option[*rune] {
-				r_26, _ := utf8.DecodeRuneInString(s)
-				return Some[*rune](&r_26)
+				r_46, _ := utf8.DecodeRuneInString(s)
+				return Some[*rune](&r_46)
 			}()
 		}
 	}()
@@ -66,8 +66,8 @@ func String_AdvanceRune(s string) string {
 			return s
 		} else {
 			return func() string {
-				_, size_27 := utf8.DecodeRuneInString(s)
-				return s[size_27:]
+				_, size_47 := utf8.DecodeRuneInString(s)
+				return s[size_47:]
 			}()
 		}
 	}()

@@ -90,6 +90,16 @@ func TestCompilePrelude(t *testing.T) {
 	if pkg == nil {
 		t.Fatal("failed to load prelude package")
 	}
+
+	// Build SourceFiles mapping for error messages.
+	sourceFiles := make(map[any]string)
+	for _, decl := range pkg.Decls {
+		// All declarations in this package come from files in pkg.Dir.
+		// We'll use the directory path as a placeholder since simpleLoadPackage
+		// doesn't track individual file paths.
+		sourceFiles[decl] = pkg.Dir
+	}
+
 	typedInfo, err := typeinference.InferPackage(&typeinference.PkgInfo{
 		Name:       pkg.Name,
 		Decls:      pkg.Decls,

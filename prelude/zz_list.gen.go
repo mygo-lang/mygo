@@ -98,9 +98,6 @@ func Filter_list_t_t[T any](c List[T], fn func(T) bool) List[T] {
 						func() {
 							result_12 = List[T]{head: current_11.head, tail: Some[*List[T]](&result_12)}
 						}()
-					} else {
-						_ = struct {
-						}{}
 					}
 				}()
 				func() {

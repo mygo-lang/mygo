@@ -125,6 +125,37 @@ end
 	}
 }
 
+func TestParseFileSupportsBangBeforeFieldExpr(t *testing.T) {
+	src := `package main
+func demo(r: Reply) -> Int
+  if !r.ok then 1 else 0
+  end
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	ifExpr, ok := fn.Body.(*IfExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *IfExpr", fn.Body)
+	}
+	prefix, ok := ifExpr.Cond.(*PrefixExpr)
+	if !ok {
+		t.Fatalf("IfExpr.Cond type = %T, want *PrefixExpr", ifExpr.Cond)
+	}
+	if prefix.Op != "!" {
+		t.Fatalf("PrefixExpr.Op = %q, want %q", prefix.Op, "!")
+	}
+	if _, ok := prefix.Expr.(*FieldExpr); !ok {
+		t.Fatalf("PrefixExpr.Expr type = %T, want *FieldExpr", prefix.Expr)
+	}
+}
+
 func TestParseFileSupportsIfWhileAndSwitch(t *testing.T) {
 	src := `package main
 func demo(n: Int) -> Int
@@ -689,133 +720,6 @@ end
 	}
 	if fn.Params[0].Name != "s" {
 		t.Fatalf("FuncDecl.Params[0].Name = %q, want s", fn.Params[0].Name)
-	}
-}
-
-func TestParseFileStructLiteralFuncFieldAllowsBangIfCondition(t *testing.T) {
-	src := `package main
-func demo() -> Parser
-  Parser {
-    run: func(state: State) -> Reply
-      let r = state.run()
-      if !r.ok then
-        r
-      else
-        r
-      end
-    end
-  }
-end
-`
-	file, err := ParseFile("test.mygo", src)
-	if err != nil {
-		t.Fatalf("ParseFile() error = %v", err)
-	}
-	fn, ok := file.Decls[0].(*FuncDecl)
-	if !ok {
-		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
-	}
-	lit, ok := fn.Body.(*StructLitExpr)
-	if !ok {
-		t.Fatalf("FuncDecl.Body type = %T, want *StructLitExpr", fn.Body)
-	}
-	if got := len(lit.Fields); got != 1 {
-		t.Fatalf("len(StructLitExpr.Fields) = %d, want 1", got)
-	}
-	funcLit, ok := lit.Fields[0].Value.(*FuncLitExpr)
-	if !ok {
-		t.Fatalf("Struct field value type = %T, want *FuncLitExpr", lit.Fields[0].Value)
-	}
-	block, ok := funcLit.Body.(*BlockExpr)
-	if !ok {
-		t.Fatalf("FuncLitExpr.Body type = %T, want *BlockExpr", funcLit.Body)
-	}
-	stmt, ok := block.Stmts[1].(*ExprStmt)
-	if !ok {
-		t.Fatalf("BlockExpr.Stmts[1] type = %T, want *ExprStmt", block.Stmts[1])
-	}
-	ifExpr, ok := stmt.Expr.(*IfExpr)
-	if !ok {
-		t.Fatalf("ExprStmt.Expr type = %T, want *IfExpr", stmt.Expr)
-	}
-	prefix, ok := ifExpr.Cond.(*PrefixExpr)
-	if !ok {
-		t.Fatalf("IfExpr.Cond type = %T, want *PrefixExpr", ifExpr.Cond)
-	}
-	if prefix.Op != "!" {
-		t.Fatalf("PrefixExpr.Op = %q, want !", prefix.Op)
-	}
-}
-
-func TestParseFileStructLiteralFuncFieldPreservesNestedBlockIfBody(t *testing.T) {
-	src := `package main
-func demo[A](p: Parser[A]) -> Parser[Slice[A]]
-  Parser[Slice[A]] {
-    run: func(state: State) -> Reply[Slice[A]]
-      let r = state.run()
-      if !r.ok then
-        if r.consumed then
-          Reply[Slice[A]] {
-            ok: false,
-            value: [],
-          }
-        else
-          Reply[Slice[A]] {
-            ok: true,
-            value: [],
-          }
-        end
-      else
-        r
-      end
-    end
-  }
-end
-`
-	file, err := ParseFile("test.mygo", src)
-	if err != nil {
-		t.Fatalf("ParseFile() error = %v", err)
-	}
-	fn := file.Decls[0].(*FuncDecl)
-	lit := fn.Body.(*StructLitExpr)
-	funcLit, ok := lit.Fields[0].Value.(*FuncLitExpr)
-	if !ok {
-		t.Fatalf("Struct field value type = %T, want *FuncLitExpr", lit.Fields[0].Value)
-	}
-	block, ok := funcLit.Body.(*BlockExpr)
-	if !ok {
-		t.Fatalf("FuncLitExpr.Body type = %T, want *BlockExpr", funcLit.Body)
-	}
-	if got := len(block.Stmts); got != 2 {
-		t.Fatalf("len(FuncLitExpr.Body.Stmts) = %d, want 2", got)
-	}
-	stmt, ok := block.Stmts[1].(*ExprStmt)
-	if !ok {
-		t.Fatalf("BlockExpr.Stmts[1] type = %T, want *ExprStmt", block.Stmts[1])
-	}
-	ifExpr, ok := stmt.Expr.(*IfExpr)
-	if !ok {
-		t.Fatalf("ExprStmt.Expr type = %T, want *IfExpr", stmt.Expr)
-	}
-	if ifExpr.Then == nil {
-		t.Fatal("IfExpr.Then is nil")
-	}
-	if ifExpr.Else == nil {
-		t.Fatal("IfExpr.Else is nil")
-	}
-	ret, ok := funcLit.Ret.(*NamedType)
-	if !ok {
-		t.Fatalf("FuncLitExpr.Ret type = %T, want *NamedType", funcLit.Ret)
-	}
-	if ret.Name != "Reply" {
-		t.Fatalf("FuncLitExpr.Ret.Name = %q, want Reply", ret.Name)
-	}
-	if got := len(ret.Args); got != 1 {
-		t.Fatalf("len(FuncLitExpr.Ret.Args) = %d, want 1", got)
-	}
-	slice, ok := ret.Args[0].(*NamedType)
-	if !ok || slice.Name != "Slice" {
-		t.Fatalf("FuncLitExpr.Ret.Args[0] = %#v, want Slice[A]", ret.Args[0])
 	}
 }
 

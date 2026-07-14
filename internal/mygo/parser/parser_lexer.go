@@ -29,9 +29,11 @@ type token struct {
 
 type lexer struct {
 	*golexer
-	pending    *token
-	braceDepth int
-	bracketDepth int
+	pending              *token
+	braceDepth           int
+	bracketDepth         int
+	bracedFuncDepth      int
+	pendingBracedIfDepth int
 }
 
 func newLexer(src string) *lexer {
@@ -57,7 +59,7 @@ func (l *lexer) nextToken() token {
 	case lex.RuneEOF:
 		return token{kind: tokEOF, line: pos.Line, col: pos.Column}
 	case NEWLINE:
-		if l.braceDepth > 0 || l.bracketDepth > 0 {
+		if l.bracketDepth > 0 || (l.braceDepth > 0 && l.bracedFuncDepth == 0) {
 			return l.nextToken()
 		}
 		return token{kind: tokNewline, lit: "\n", line: pos.Line, col: pos.Column}
@@ -93,8 +95,10 @@ func (l *lexer) nextToken() token {
 			return token{kind: tokRune, lit: raw, line: pos.Line, col: pos.Column}
 		}
 		return token{kind: tokRune, lit: string(lit), line: pos.Line, col: pos.Column}
-	case PACKAGE, IMPORT, ENUM, STRUCT, INTERFACE, IMPL, FUNC, IF, THEN, ELSIF, ELSE, SWITCH, CASE, END, USING, NOT, LET, VAR, EMBED, WHILE, RETURN, GO, IN, TYPE, AS:
-		return token{kind: tokKeyword, lit: string(l.TokenBytes(nil)), line: pos.Line, col: pos.Column}
+	case PACKAGE, IMPORT, ENUM, STRUCT, INTERFACE, IMPL, FUNC, IF, THEN, ELSIF, ELSE, SWITCH, CASE, END, USING, LET, VAR, EMBED, WHILE, RETURN, GO, IN, TYPE, AS:
+		lit := string(l.TokenBytes(nil))
+		l.trackBracedFuncBlock(lit)
+		return token{kind: tokKeyword, lit: lit, line: pos.Line, col: pos.Column}
 	case SLICE:
 		l.pending = &token{kind: tokSym, lit: "]", line: pos.Line, col: pos.Column}
 		l.bracketDepth++
@@ -112,6 +116,33 @@ func (l *lexer) nextToken() token {
 			l.bracketDepth--
 		}
 		return token{kind: tokSym, lit: lit, line: pos.Line, col: pos.Column}
+	}
+}
+
+func (l *lexer) trackBracedFuncBlock(lit string) {
+	if l.braceDepth == 0 {
+		return
+	}
+	switch lit {
+	case "func":
+		l.bracedFuncDepth++
+	case "if":
+		if l.bracedFuncDepth > 0 {
+			l.pendingBracedIfDepth++
+		}
+	case "then":
+		if l.pendingBracedIfDepth > 0 {
+			l.pendingBracedIfDepth--
+			l.bracedFuncDepth++
+		}
+	case "while", "switch":
+		if l.bracedFuncDepth > 0 {
+			l.bracedFuncDepth++
+		}
+	case "end":
+		if l.bracedFuncDepth > 0 {
+			l.bracedFuncDepth--
+		}
 	}
 }
 

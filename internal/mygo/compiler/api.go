@@ -291,7 +291,7 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, error) {
 			if pkgName == "" {
 				pkgName = parsed.PackageName
 			} else if pkgName != parsed.PackageName {
-				return nil, common.ErrorAtPos(parsed.PackageLine, 0, "package %q conflicts with %q", parsed.PackageName, pkgName)
+				return nil, common.ErrorAtPos(name, parsed.PackageLine, 0, "package %q conflicts with %q", parsed.PackageName, pkgName)
 			}
 		}
 		setSourceFile(parsed, name)
@@ -312,7 +312,7 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, error) {
 				alias = importAliasForPath(d.Path)
 			}
 			if prev, ok := p.ImportAliases[alias]; ok && prev != d.Path {
-				return nil, common.ErrorAtPos(d.Line, d.Column, "import alias %q conflicts between %q and %q", alias, prev, d.Path)
+				return nil, common.ErrorAtPos(d.SourceFile, d.Line, d.Column, "import alias %q conflicts between %q and %q", alias, prev, d.Path)
 			}
 			p.ImportAliases[alias] = d.Path
 		case *EnumDecl:

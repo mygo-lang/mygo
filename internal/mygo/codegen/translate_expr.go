@@ -118,10 +118,10 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 		case *AssignStmt:
 			actual, ok := child.bindings[s.Name]
 			if !ok {
-				return nil, common.ErrorAtPos(s.Line, s.Column, "unknown binding %q", s.Name)
+				return nil, common.ErrorAtPos(g.currentFile, s.Line, s.Column, "unknown binding %q", s.Name)
 			}
 			if !child.mutable[actual] {
-				return nil, common.ErrorAtPos(s.Line, s.Column, "cannot assign to immutable binding %q", s.Name)
+				return nil, common.ErrorAtPos(g.currentFile, s.Line, s.Column, "cannot assign to immutable binding %q", s.Name)
 			}
 			code, _, err := g.translateExpr(s.Value, child, child.locals[s.Name])
 			if err != nil {
@@ -209,7 +209,7 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 		}
 		if left == nil {
 			line, col := common.NodePos(n.Left)
-			return nil, "", common.ErrorAtPos(line, col, "binary left operand produced nil Go AST")
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "binary left operand produced nil Go AST")
 		}
 		right, rt, err := g.translateExpr(n.Right, ctx, lt)
 		if err != nil {
@@ -217,7 +217,7 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 		}
 		if right == nil {
 			line, col := common.NodePos(n.Right)
-			return nil, "", common.ErrorAtPos(line, col, "binary right operand produced nil Go AST")
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "binary right operand produced nil Go AST")
 		}
 		switch n.Op {
 		case "+":
@@ -284,7 +284,7 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 		}
 		if expr == nil {
 			line, col := common.NodePos(n.Expr)
-			return nil, "", common.ErrorAtPos(line, col, "prefix operand produced nil Go AST")
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "prefix operand produced nil Go AST")
 		}
 		switch n.Op {
 		case "!":
@@ -299,7 +299,7 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 		}
 		if code == nil {
 			line, col := common.NodePos(n.Expr)
-			return nil, "", common.ErrorAtPos(line, col, "cast operand produced nil Go AST")
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "cast operand produced nil Go AST")
 		}
 		target := g.goType(n.Type, ctx.typeParams)
 		return &ast.CallExpr{Fun: ast.NewIdent(target), Args: []ast.Expr{code}}, target, nil
@@ -310,7 +310,7 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 		}
 		if base == nil {
 			line, col := common.NodePos(n.Expr)
-			return nil, "", common.ErrorAtPos(line, col, "field receiver produced nil Go AST")
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "field receiver produced nil Go AST")
 		}
 		// Handle Ref.value — dereference pointer
 		if n.Field == "value" {
@@ -329,11 +329,21 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 			ft = lookupMyGoFieldType(n.Expr, n.Field, g)
 		}
 		if ft != "" {
+			if inferred := g.inferredType(n); inferred != "" {
+				ft = inferred
+			}
 			return &ast.SelectorExpr{X: base, Sel: ast.NewIdent(n.Field)}, ft, nil
+		}
+		if inferred := g.inferredType(n); inferred != "" {
+			return &ast.SelectorExpr{X: base, Sel: ast.NewIdent(n.Field)}, inferred, nil
 		}
 		return &ast.SelectorExpr{X: base, Sel: ast.NewIdent(n.Field)}, bt, nil
 	case *CallExpr:
-		return g.translateCall(n, ctx, expected)
+		code, typ, err := g.translateCall(n, ctx, expected)
+		if inferred := g.inferredType(n); inferred != "" {
+			typ = inferred
+		}
+		return code, typ, err
 	case *IfExpr:
 		return g.translateIf(n, ctx, expected)
 	case *SwitchExpr:
@@ -380,7 +390,7 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 		return g.translateGoExpr(n, ctx, expected)
 	}
 	line, col := common.NodePos(e)
-	return nil, "", common.ErrorAtPos(line, col, "unsupported expression %T", e)
+	return nil, "", common.ErrorAtPos(g.currentFile, line, col, "unsupported expression %T", e)
 }
 
 func fieldListForReturn(expected string) *ast.FieldList {

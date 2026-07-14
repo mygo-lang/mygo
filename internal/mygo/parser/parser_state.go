@@ -146,6 +146,10 @@ func newParser(filename, src string) *parser {
 	return &parser{toks: toks, skipNL: true, filename: filename}
 }
 
+func (p *parser) sourceFile() string {
+	return p.filename
+}
+
 func (p *parser) peek() token {
 	if p.skipNL {
 		p.skipNewlines()

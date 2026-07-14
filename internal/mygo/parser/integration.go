@@ -7,6 +7,7 @@ func parseFile(filename, src string) (*File, error) {
 	if err := p.parseWithYacc(); err != nil {
 		return nil, err
 	}
+	setASTSourceFile(p.result, filename)
 	return p.result, nil
 }
 
