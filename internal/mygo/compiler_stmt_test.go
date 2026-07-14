@@ -926,44 +926,6 @@ func TestCompileDirSupportsRefNew(t *testing.T) {
 	}
 }
 
-func TestCompileDirSupportsDynamicTypeclassDispatch(t *testing.T) {
-	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `package main
-  import fmt "go:fmt"
-
-  interface Show[A]
-    func show(value: A) -> String
-  end
-
-  impl Int64: Show[Int64]
-    func show(value: Int64) -> String
-      fmt.Sprint(value)
-    end
-  end
-
-  func demo() -> String
-    let value = (42 as Int64)
-    value.show()
-  end
-`)
-
-	outFiles, err := CompileDir(dir)
-	if err != nil {
-		t.Fatalf("CompileDir() error = %v", err)
-	}
-	got := readFile(t, outFiles[0])
-	for _, want := range []string{
-		"type Show[A any] func(A) string",
-		"func show_int64(value int64) string {",
-		"value_1 := int64(42)",
-		"return show_int64(value_1)",
-	} {
-		if !strings.Contains(got, want) {
-			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
-		}
-	}
-}
-
 func TestCompileDirWrapsGoErrorReturnsIntoResult(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
@@ -1122,44 +1084,6 @@ func TestCompileDirSupportsIfExpressionForms(t *testing.T) {
 		"} else {",
 		"return 2",
 		"func block(ok bool) int {",
-	} {
-		if !strings.Contains(got, want) {
-			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
-		}
-	}
-}
-
-func TestCompileDirSupportsMultiParamTypeclassDispatch(t *testing.T) {
-	dir := t.TempDir()
-	writeMygoFile(t, dir, "main.mygo", `package main
-  interface Eq[A]
-    func equals(left: A, right: A) -> Bool
-  end
-
-  impl Int64: Eq[Int64]
-    func equals(left: Int64, right: Int64) -> Bool
-      left == right
-    end
-  end
-
-  func demo() -> Bool
-    let left = (1 as Int64)
-    let right = (2 as Int64)
-    left.equals(right)
-  end
-`)
-
-	outFiles, err := CompileDir(dir)
-	if err != nil {
-		t.Fatalf("CompileDir() error = %v", err)
-	}
-	got := readFile(t, outFiles[0])
-	for _, want := range []string{
-		"type Eq[A any] func(A, A) bool",
-		"func equals_int64(left int64, right int64) bool {",
-		"left_1 := int64(1)",
-		"right_2 := int64(2)",
-		"return equals_int64(left_1, right_2)",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)

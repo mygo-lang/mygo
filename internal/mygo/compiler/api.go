@@ -25,17 +25,17 @@ func CompileDirNoPrelude(dir string) ([]string, error) {
 }
 
 func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
-	p, err := loadPackage(dir, noPrelude)
+	mainPkg, testPkg, err := loadPackage(dir, noPrelude)
 	if err != nil {
 		return nil, err
 	}
-	p.WorkspaceRoot = workspaceRoot
+	mainPkg.WorkspaceRoot = workspaceRoot
 
 	// Merge declarations from all imported MyGO packages (non-go: imports)
 	// so their interfaces, impls, enums, and structs are available for
 	// method resolution during code generation (typeclass matching, etc.).
-	if !noPrelude && p.Name != "prelude" {
-		for _, path := range p.ImportAliases {
+	if !noPrelude && mainPkg.Name != "prelude" {
+		for _, path := range mainPkg.ImportAliases {
 			if strings.HasPrefix(path, "go:") {
 				continue
 			}
@@ -43,23 +43,24 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 			if err != nil {
 				continue
 			}
-			mergeImportedDecls(p, imported)
+			mergeImportedDecls(mainPkg, imported)
 		}
 		// Also merge prelude (auto-imported at Go level, not in ImportAliases).
 		// Try to find prelude directory: look relative to workspaceRoot, then walk up.
 		if preludePkg := loadPreludePackage(dir, workspaceRoot); preludePkg != nil {
-			mergeImportedDecls(p, preludePkg)
+			mergeImportedDecls(mainPkg, preludePkg)
 		} else if findGoModuleRoot(dir) != "" || findGoModuleRoot(workspaceRoot) != "" {
 			return nil, common.ErrorAtPos("", 0, 0, "cannot locate prelude MyGO sources for auto-import; add github.com/mygo-lang/mygo to go.mod or compile with --no-prelude")
 		}
 	}
 
-	files, err := codegen.GenerateFiles(p)
+	var written []string
+
+	// Compile main package.
+	files, err := codegen.GenerateFiles(mainPkg)
 	if err != nil {
 		return nil, err
 	}
-
-	var written []string
 	for genFilename, src := range files {
 		out := filepath.Join(dir, genFilename)
 		if err := os.WriteFile(out, []byte(src), 0o644); err != nil {
@@ -67,6 +68,54 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 		}
 		written = append(written, out)
 	}
+
+	// Compile test package if present.
+	if len(testPkg.Decls) > 0 {
+		testPkg.WorkspaceRoot = workspaceRoot
+		// Auto-import the main package into test package so exported symbols
+		// are accessible. The codegen will add a dot-import for direct access.
+		mainImportPath := goImportPathForDir(dir)
+		testPkg.ImportAliases[mainPkg.Name] = mainImportPath
+		testPkg.Imports[mainImportPath] = struct{}{}
+		testPkg.ImportDecls = append(testPkg.ImportDecls, &ImportDecl{
+			Path:       mainImportPath,
+			Alias:      mainPkg.Name,
+			SourceFile: "__auto_import__",
+		})
+		if !noPrelude && testPkg.Name != "prelude" {
+			for _, path := range testPkg.ImportAliases {
+				if strings.HasPrefix(path, "go:") {
+					continue
+				}
+				// Skip the auto-imported main package — it's handled separately
+				if path == mainImportPath {
+					continue
+				}
+				imported, err := loadImportedMyGoPackage(workspaceRoot, dir, path, true)
+				if err != nil {
+					continue
+				}
+				mergeImportedDecls(testPkg, imported)
+			}
+			if preludePkg := loadPreludePackage(dir, workspaceRoot); preludePkg != nil {
+				mergeImportedDecls(testPkg, preludePkg)
+			} else if findGoModuleRoot(dir) != "" || findGoModuleRoot(workspaceRoot) != "" {
+				return nil, common.ErrorAtPos("", 0, 0, "cannot locate prelude MyGO sources for auto-import; add github.com/mygo-lang/mygo to go.mod or compile with --no-prelude")
+			}
+		}
+		testFiles, err := codegen.GenerateFiles(testPkg)
+		if err != nil {
+			return nil, err
+		}
+		for genFilename, src := range testFiles {
+			out := filepath.Join(dir, genFilename)
+			if err := os.WriteFile(out, []byte(src), 0o644); err != nil {
+				return nil, err
+			}
+			written = append(written, out)
+		}
+	}
+
 	sort.Strings(written)
 	return written, nil
 }
@@ -150,8 +199,8 @@ func loadPreludePackage(dir, workspaceRoot string) *pkg.Package {
 		}
 		seen[abs] = true
 		if st, err := os.Stat(abs); err == nil && st.IsDir() {
-			if pkg, err := loadPackage(abs, true); err == nil {
-				return pkg
+			if mainPkg, _, err := loadPackage(abs, true); err == nil {
+				return mainPkg
 			}
 		}
 	}
@@ -199,6 +248,30 @@ func modulePath(goMod []byte) string {
 		}
 	}
 	return ""
+}
+
+func goImportPathForDir(dir string) string {
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		absDir = dir
+	}
+	root := findGoModuleRoot(absDir)
+	if root == "" {
+		return filepath.Base(dir)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "go.mod"))
+	if err != nil {
+		return filepath.Base(dir)
+	}
+	mod := modulePath(data)
+	if mod == "" {
+		return filepath.Base(dir)
+	}
+	rel, err := filepath.Rel(root, absDir)
+	if err != nil || rel == "." {
+		return mod
+	}
+	return mod + "/" + filepath.ToSlash(rel)
 }
 
 func findMyGoDependencyRoot(start string) string {
@@ -427,12 +500,13 @@ func setSourceFile(file *parserpkg.File, sourceFile string) {
 	}
 }
 
-func loadPackage(dir string, noPrelude bool) (*pkg.Package, error) {
+func loadPackage(dir string, noPrelude bool) (*pkg.Package, *pkg.Package, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	p := &pkg.Package{
+
+	mainPkg := &pkg.Package{
 		Dir:           dir,
 		WorkspaceRoot: filepath.Dir(dir),
 		NoPrelude:     noPrelude,
@@ -443,8 +517,22 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, error) {
 		Interfaces:    map[string]*InterfaceDecl{},
 		Funcs:         map[string]*FuncDecl{},
 	}
-	pkgName := ""
-	var fileDecls []Decl
+	testPkg := &pkg.Package{
+		Dir:           dir,
+		WorkspaceRoot: filepath.Dir(dir),
+		NoPrelude:     noPrelude,
+		Imports:       map[string]struct{}{},
+		ImportAliases: map[string]string{},
+		Enums:         map[string]*EnumDecl{},
+		Structs:       map[string]*StructDecl{},
+		Interfaces:    map[string]*InterfaceDecl{},
+		Funcs:         map[string]*FuncDecl{},
+	}
+
+	var mainDecls, testDecls []Decl
+	mainPkgName := ""
+	testPkgName := ""
+
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() || !strings.HasSuffix(name, ".mygo") || strings.HasSuffix(name, ".gen.go") {
@@ -452,51 +540,99 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, error) {
 		}
 		src, err := os.ReadFile(filepath.Join(dir, name))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		parsed, err := parserpkg.ParseFile(filepath.Join(dir, name), string(src))
 		if err != nil {
-			return nil, err
-		}
-		if parsed.PackageName != "" {
-			if pkgName == "" {
-				pkgName = parsed.PackageName
-			} else if pkgName != parsed.PackageName {
-				return nil, common.ErrorAtPos(name, parsed.PackageLine, 0, "package %q conflicts with %q", parsed.PackageName, pkgName)
-			}
+			return nil, nil, err
 		}
 		setSourceFile(parsed, name)
-		fileDecls = append(fileDecls, parsed.Decls...)
+
+		pkgName := parsed.PackageName
+		isSplitTestPackage := strings.HasSuffix(pkgName, "_test")
+		if isSplitTestPackage {
+			if testPkgName == "" {
+				testPkgName = pkgName
+			} else if testPkgName != pkgName {
+				return nil, nil, common.ErrorAtPos(name, parsed.PackageLine, 0, "package %q conflicts with %q", pkgName, testPkgName)
+			}
+			testDecls = append(testDecls, parsed.Decls...)
+		} else {
+			// Main file.
+			if pkgName != "" {
+				if mainPkgName == "" {
+					mainPkgName = pkgName
+				} else if mainPkgName != pkgName {
+					return nil, nil, common.ErrorAtPos(name, parsed.PackageLine, 0, "package %q conflicts with %q", pkgName, mainPkgName)
+				}
+			}
+			mainDecls = append(mainDecls, parsed.Decls...)
+		}
 	}
-	if pkgName == "" {
-		pkgName = filepath.Base(dir)
+
+	// Build main package.
+	if mainPkgName == "" {
+		mainPkgName = filepath.Base(dir)
 	}
-	p.Name = toPackageName(pkgName)
-	p.Decls = append(p.Decls, fileDecls...)
-	for _, decl := range p.Decls {
+	mainPkg.Name = toPackageName(mainPkgName)
+	mainPkg.Decls = append(mainPkg.Decls, mainDecls...)
+	for _, decl := range mainPkg.Decls {
 		switch d := decl.(type) {
 		case *ImportDecl:
-			p.Imports[d.Path] = struct{}{}
-			p.ImportDecls = append(p.ImportDecls, d)
+			mainPkg.Imports[d.Path] = struct{}{}
+			mainPkg.ImportDecls = append(mainPkg.ImportDecls, d)
 			alias := d.Alias
 			if alias == "" {
 				alias = importAliasForPath(d.Path)
 			}
-			if prev, ok := p.ImportAliases[alias]; ok && prev != d.Path {
-				return nil, common.ErrorAtPos(d.SourceFile, d.Line, d.Column, "import alias %q conflicts between %q and %q", alias, prev, d.Path)
+			if prev, ok := mainPkg.ImportAliases[alias]; ok && prev != d.Path {
+				return nil, nil, common.ErrorAtPos(d.SourceFile, d.Line, d.Column, "import alias %q conflicts between %q and %q", alias, prev, d.Path)
 			}
-			p.ImportAliases[alias] = d.Path
+			mainPkg.ImportAliases[alias] = d.Path
 		case *EnumDecl:
-			p.Enums[d.Name] = d
+			mainPkg.Enums[d.Name] = d
 		case *StructDecl:
-			p.Structs[d.Name] = d
+			mainPkg.Structs[d.Name] = d
 		case *InterfaceDecl:
-			p.Interfaces[d.Name] = d
+			mainPkg.Interfaces[d.Name] = d
 		case *FuncDecl:
-			p.Funcs[d.Name] = d
+			mainPkg.Funcs[d.Name] = d
 		case *ImplDecl:
-			p.Impls = append(p.Impls, d)
+			mainPkg.Impls = append(mainPkg.Impls, d)
 		}
 	}
-	return p, nil
+
+	// Build test package.
+	if testPkgName == "" {
+		testPkgName = filepath.Base(dir) + "_test"
+	}
+	testPkg.Name = toPackageName(testPkgName)
+	testPkg.Decls = append(testPkg.Decls, testDecls...)
+	for _, decl := range testPkg.Decls {
+		switch d := decl.(type) {
+		case *ImportDecl:
+			testPkg.Imports[d.Path] = struct{}{}
+			testPkg.ImportDecls = append(testPkg.ImportDecls, d)
+			alias := d.Alias
+			if alias == "" {
+				alias = importAliasForPath(d.Path)
+			}
+			if prev, ok := testPkg.ImportAliases[alias]; ok && prev != d.Path {
+				return nil, nil, common.ErrorAtPos(d.SourceFile, d.Line, d.Column, "import alias %q conflicts between %q and %q", alias, prev, d.Path)
+			}
+			testPkg.ImportAliases[alias] = d.Path
+		case *EnumDecl:
+			testPkg.Enums[d.Name] = d
+		case *StructDecl:
+			testPkg.Structs[d.Name] = d
+		case *InterfaceDecl:
+			testPkg.Interfaces[d.Name] = d
+		case *FuncDecl:
+			testPkg.Funcs[d.Name] = d
+		case *ImplDecl:
+			testPkg.Impls = append(testPkg.Impls, d)
+		}
+	}
+
+	return mainPkg, testPkg, nil
 }

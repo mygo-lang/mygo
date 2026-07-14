@@ -95,7 +95,7 @@ func bad(n: Int) -> Int
 end
 `
 	dir := writeInlineGoTestPackage(t, src)
-	pkg, err := loadPackage(dir, true)
+	pkg, _, err := loadPackage(dir, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +151,7 @@ end
 func compileInlineGoTestPackage(t *testing.T, src string) string {
 	t.Helper()
 	dir := writeInlineGoTestPackage(t, src)
-	pkg, err := loadPackage(dir, true)
+	pkg, _, err := loadPackage(dir, true)
 	if err != nil {
 		t.Fatal(err)
 	}

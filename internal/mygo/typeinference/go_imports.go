@@ -79,10 +79,11 @@ func loadMyGoPackageInfo(workspaceRoot, baseDir, importPath, alias string, cache
 		return nil, err
 	}
 	info := &MyGoPackageInfo{
-		Alias: alias,
-		Path:  importPath,
-		Funcs: map[string]TFunc{},
-		Types: map[string]struct{}{},
+		Alias:   alias,
+		Path:    importPath,
+		Funcs:   map[string]*Scheme{},
+		Types:   map[string]struct{}{},
+		Structs: map[string]*StructDecl{},
 	}
 	var decls []Decl
 	for _, entry := range entries {
@@ -106,32 +107,34 @@ func loadMyGoPackageInfo(workspaceRoot, baseDir, importPath, alias string, cache
 			if !isExportedGoName(d.Name) {
 				continue
 			}
-			args := make([]MonoType, 0, len(d.Params))
-			for _, p := range d.Params {
-				args = append(args, typeFromAST(p.Type))
-			}
-			var ret MonoType = TUnit{}
-			if d.Ret != nil {
-				ret = typeFromAST(d.Ret)
-			}
-			info.Funcs[d.Name] = TFunc{Args: args, Ret: ret}
+			info.Funcs[d.Name] = funcDeclSignatureScheme(d, TypeEnv{}, NewInferState())
 		case *StructDecl:
 			if isExportedGoName(d.Name) {
 				info.Types[d.Name] = struct{}{}
+				info.Structs[d.Name] = d
 			}
 		case *EnumDecl:
 			if isExportedGoName(d.Name) {
 				info.Types[d.Name] = struct{}{}
 				for _, v := range d.Variants {
 					if isExportedGoName(v.Name) {
+						typeParamVars := make(map[string]MonoType, len(d.TypeParams))
+						var typeArgs []MonoType
+						st := NewInferState()
+						for _, tp := range d.TypeParams {
+							tv := TVar{ID: st.Fresh()}
+							typeParamVars[tp] = tv
+							typeArgs = append(typeArgs, tv)
+						}
 						args := make([]MonoType, 0, len(v.Fields))
 						for _, f := range v.Fields {
-							args = append(args, typeFromAST(f.Type))
+							args = append(args, typeFromASTWithParams(f.Type, typeParamVars))
 						}
+						ret := MonoType(TCon{Name: d.Name, Args: typeArgs})
 						if len(args) == 0 {
-							info.Funcs[v.Name] = TFunc{Args: nil, Ret: TCon{Name: d.Name}}
+							info.Funcs[v.Name] = Generalize(TypeEnv{}, TFunc{Args: nil, Ret: ret}, nil)
 						} else {
-							info.Funcs[v.Name] = TFunc{Args: args, Ret: TCon{Name: d.Name}}
+							info.Funcs[v.Name] = Generalize(TypeEnv{}, TFunc{Args: args, Ret: ret}, nil)
 						}
 					}
 				}

@@ -313,12 +313,14 @@ func TestPOptionalSucceedsWhenPresent(t: Ref[testing.T]) -> ()
     t.Fatal("POptional should succeed")
   end
   switch result.value
-    case Some(v) =>
+    case Some(v) then
       if v != 'a' then
         t.Fatalf("POptional Some value = %d, want %d", v, 'a')
       end
-    case None =>
+    end
+    case None then
       t.Fatal("POptional should return Some when parser succeeds")
+    end
   end
 end
 

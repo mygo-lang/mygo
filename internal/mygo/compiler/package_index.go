@@ -37,7 +37,7 @@ func buildPackageIndex(root string, noPrelude bool) (*packageIndex, error) {
 		byDir:    map[string]*pkg.Package{},
 	}
 	for _, dir := range dirs {
-		pi, err := loadPackage(dir, noPrelude)
+		pi, _, err := loadPackage(dir, noPrelude)
 		if err != nil {
 			return nil, err
 		}
@@ -142,5 +142,9 @@ func loadImportedMyGoPackage(workspaceRoot, fromDir, importPath string, noPrelud
 	if err != nil {
 		return nil, err
 	}
-	return loadPackage(dir, noPrelude)
+	mainPkg, _, err := loadPackage(dir, noPrelude)
+	if err != nil {
+		return nil, err
+	}
+	return mainPkg, nil
 }

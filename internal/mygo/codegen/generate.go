@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -12,6 +14,8 @@ import (
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/codegen/goast"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
+	parserpkg "github.com/mygo-lang/mygo/internal/mygo/parser"
+	"github.com/mygo-lang/mygo/internal/mygo/pkg"
 	"github.com/mygo-lang/mygo/internal/mygo/typeinference"
 )
 
@@ -41,16 +45,33 @@ func GenerateFiles(p *Package) (map[string]string, error) {
 		sourceFiles[decl] = sourceFileOf(decl)
 	}
 
+	// Build DotImportEnums: merge prelude enums + main package enums (for test packages).
+	// This allows variant patterns (Some/None/Ok/Err) to resolve enums from dot-imported packages.
+	dotImportEnums := map[string]*EnumDecl{}
+	if preludePkg := loadPreludePackageForEnums(p.Dir, p.WorkspaceRoot); preludePkg != nil {
+		for name, enum := range preludePkg.Enums {
+			dotImportEnums[name] = enum
+		}
+	}
+	if strings.HasSuffix(p.Name, "_test") {
+		mainPkgName := strings.TrimSuffix(p.Name, "_test")
+		if mainPkg, err := loadPackageForEnums(p.Dir, mainPkgName); err == nil && mainPkg != nil {
+			for name, enum := range mainPkg.Enums {
+				dotImportEnums[name] = enum
+			}
+		}
+	}
 	pkgInfo := &typeinference.PkgInfo{
-		Dir:           p.Dir,
-		WorkspaceRoot: p.WorkspaceRoot,
-		Name:          p.Name,
-		Decls:         p.Decls,
-		Enums:         p.Enums,
-		Structs:       p.Structs,
-		Interfaces:    p.Interfaces,
-		Funcs:         p.Funcs,
-		Impls:         p.Impls,
+		Dir:            p.Dir,
+		WorkspaceRoot:  p.WorkspaceRoot,
+		Name:           p.Name,
+		Decls:          p.Decls,
+		Enums:          p.Enums,
+		Structs:        p.Structs,
+		Interfaces:     p.Interfaces,
+		Funcs:          p.Funcs,
+		Impls:          p.Impls,
+		DotImportEnums: dotImportEnums,
 	}
 	infState := typeinference.NewInferState()
 	typedInfo, err := typeinference.InferPackage(pkgInfo, infState)
@@ -62,7 +83,8 @@ func GenerateFiles(p *Package) (map[string]string, error) {
 
 	files := make(map[string][]Decl)
 	for _, decl := range p.Decls {
-		files[sourceFileOf(decl)] = append(files[sourceFileOf(decl)], decl)
+		sf := sourceFileOf(decl)
+		files[sf] = append(files[sf], decl)
 	}
 
 	result := make(map[string]string)
@@ -224,6 +246,15 @@ func addGoastImport(sf *goast.SourceFile, p *Package, decls []Decl) {
 	if p.Name != "prelude" && !p.NoPrelude && declsNeedPreludeImport(p, decls) {
 		imports = append(imports, ImportSpec{Path: "github.com/mygo-lang/mygo/prelude", Alias: "."})
 	}
+	// For test packages, add a dot-import of the main package so exported
+	// symbols are accessible without qualification.
+	if strings.HasSuffix(p.Name, "_test") {
+		mainPkgName := strings.TrimSuffix(p.Name, "_test")
+		// Check if main package import is already in the list
+		if !hasImportPath(imports, mainPkgName) && p.ImportAliases[mainPkgName] == "" {
+			imports = append(imports, ImportSpec{Path: mainPkgName, Alias: "."})
+		}
+	}
 	if hasImportPath(imports, "reflect") {
 		imports = append(imports, ImportSpec{Path: "reflect"})
 	}
@@ -234,8 +265,13 @@ func addGoastImport(sf *goast.SourceFile, p *Package, decls []Decl) {
 		return imports[i].Alias < imports[j].Alias
 	})
 	for _, imp := range imports {
+		// For MyGO imports (non go: paths), use dot-import so exported
+		// symbols are accessible without qualification.
 		path := importPathForGo(imp.Path)
 		alias := imp.Alias
+		if !strings.HasPrefix(imp.Path, "go:") && alias != "." {
+			alias = "."
+		}
 		if alias == importAliasForPath(path) {
 			alias = ""
 		}
@@ -1707,4 +1743,270 @@ func toUpper(r rune) rune {
 		return r - 32
 	}
 	return r
+}
+
+// loadPackageForEnums loads a package's enums for variant pattern resolution.
+// It parses .mygo files in the same directory as the current package.
+func loadPackageForEnums(dir, pkgName string) (*pkg.Package, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	p := &pkg.Package{
+		Name:       pkgName,
+		Dir:        dir,
+		Enums:      map[string]*EnumDecl{},
+		Structs:    map[string]*StructDecl{},
+		Funcs:      map[string]*FuncDecl{},
+		Interfaces: map[string]*InterfaceDecl{},
+		Impls:      []*ImplDecl{},
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".mygo") || strings.HasSuffix(name, "_test.mygo") || strings.HasSuffix(name, ".gen.go") {
+			continue
+		}
+		src, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			continue
+		}
+		file, err := parserpkg.ParseFile(filepath.Join(dir, name), string(src))
+		if err != nil {
+			continue
+		}
+		for _, decl := range file.Decls {
+			switch d := decl.(type) {
+			case *EnumDecl:
+				p.Enums[d.Name] = d
+			case *StructDecl:
+				p.Structs[d.Name] = d
+			case *FuncDecl:
+				p.Funcs[d.Name] = d
+			case *InterfaceDecl:
+				p.Interfaces[d.Name] = d
+			case *ImplDecl:
+				p.Impls = append(p.Impls, d)
+			}
+		}
+	}
+	return p, nil
+}
+
+// loadPreludePackageForEnums loads the prelude package's enums for variant pattern resolution.
+func loadPreludePackageForEnums(dir, workspaceRoot string) *pkg.Package {
+	candidates := []string{
+		filepath.Join(workspaceRoot, "prelude"),
+		"prelude",
+	}
+	// Also check if dir is inside a mygo-lang/mygo module.
+	if root := findModuleRoot(dir); root != "" {
+		candidates = append(candidates, filepath.Join(root, "prelude"))
+	}
+	seen := map[string]bool{}
+	for _, c := range candidates {
+		abs, err := filepath.Abs(c)
+		if err != nil {
+			continue
+		}
+		if seen[abs] {
+			continue
+		}
+		seen[abs] = true
+		if st, err := os.Stat(abs); err == nil && st.IsDir() {
+			if p, err := loadPackageForEnums(abs, "prelude"); err == nil && p != nil {
+				return p
+			}
+		}
+	}
+	return nil
+}
+
+func findModuleRoot(start string) string {
+	absStart, err := filepath.Abs(start)
+	if err != nil {
+		return ""
+	}
+	for cur := absStart; ; cur = filepath.Dir(cur) {
+		data, err := os.ReadFile(filepath.Join(cur, "go.mod"))
+		if err == nil && modulePath(data) == "github.com/mygo-lang/mygo" {
+			return cur
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			return ""
+		}
+	}
+}
+
+func findGoModuleRoot(start string) string {
+	absStart, err := filepath.Abs(start)
+	if err != nil {
+		return ""
+	}
+	for cur := absStart; ; cur = filepath.Dir(cur) {
+		if _, err := os.Stat(filepath.Join(cur, "go.mod")); err == nil {
+			return cur
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			return ""
+		}
+	}
+}
+
+func modulePath(goMod []byte) string {
+	for _, line := range strings.Split(string(goMod), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "module ") {
+			return strings.TrimSpace(strings.TrimPrefix(line, "module "))
+		}
+	}
+	return ""
+}
+
+func findMyGoDependencyRoot(start string) string {
+	root := findGoModuleRoot(start)
+	if root == "" {
+		return ""
+	}
+	data, err := os.ReadFile(filepath.Join(root, "go.mod"))
+	if err != nil {
+		return ""
+	}
+	if modulePath(data) == "github.com/mygo-lang/mygo" {
+		return root
+	}
+	repl := goModReplacePath(data, "github.com/mygo-lang/mygo")
+	if repl != "" {
+		if !filepath.IsAbs(repl) {
+			repl = filepath.Join(root, repl)
+		}
+		repl = filepath.Clean(repl)
+		if st, err := os.Stat(filepath.Join(repl, "go.mod")); err == nil && !st.IsDir() {
+			return repl
+		}
+	}
+	version := goModRequireVersion(data, "github.com/mygo-lang/mygo")
+	if version == "" {
+		return ""
+	}
+	for _, cacheRoot := range goModCacheRoots() {
+		modRoot := filepath.Join(cacheRoot, moduleCachePath("github.com/mygo-lang/mygo", version))
+		if st, err := os.Stat(filepath.Join(modRoot, "go.mod")); err == nil && !st.IsDir() {
+			return modRoot
+		}
+	}
+	return ""
+}
+
+func goModReplacePath(goMod []byte, module string) string {
+	inReplaceBlock := false
+	for _, line := range strings.Split(string(goMod), "\n") {
+		line = strings.TrimSpace(line)
+		if i := strings.Index(line, "//"); i >= 0 {
+			line = strings.TrimSpace(line[:i])
+		}
+		if line == "" {
+			continue
+		}
+		if line == "replace (" {
+			inReplaceBlock = true
+			continue
+		}
+		if inReplaceBlock && line == ")" {
+			inReplaceBlock = false
+			continue
+		}
+		if strings.HasPrefix(line, "replace ") {
+			line = strings.TrimSpace(strings.TrimPrefix(line, "replace "))
+		} else if !inReplaceBlock {
+			continue
+		}
+		fields := strings.Fields(line)
+		for i, f := range fields {
+			if f == "=>" && i > 0 && fields[0] == module && i+1 < len(fields) {
+				return fields[i+1]
+			}
+		}
+	}
+	return ""
+}
+
+func goModRequireVersion(goMod []byte, module string) string {
+	inRequireBlock := false
+	for _, line := range strings.Split(string(goMod), "\n") {
+		line = strings.TrimSpace(line)
+		if i := strings.Index(line, "//"); i >= 0 {
+			line = strings.TrimSpace(line[:i])
+		}
+		if line == "" {
+			continue
+		}
+		if line == "require (" {
+			inRequireBlock = true
+			continue
+		}
+		if inRequireBlock && line == ")" {
+			inRequireBlock = false
+			continue
+		}
+		if strings.HasPrefix(line, "require ") {
+			line = strings.TrimSpace(strings.TrimPrefix(line, "require "))
+		} else if !inRequireBlock {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[0] == module {
+			return fields[1]
+		}
+	}
+	return ""
+}
+
+func goModCacheRoots() []string {
+	var roots []string
+	if gomodcache := os.Getenv("GOMODCACHE"); gomodcache != "" {
+		roots = append(roots, gomodcache)
+	}
+	if gopath := os.Getenv("GOPATH"); gopath != "" {
+		for _, p := range filepath.SplitList(gopath) {
+			if p != "" {
+				roots = append(roots, filepath.Join(p, "pkg", "mod"))
+			}
+		}
+	}
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		roots = append(roots, filepath.Join(home, "go", "pkg", "mod"))
+	}
+	seen := map[string]bool{}
+	out := roots[:0]
+	for _, root := range roots {
+		root = filepath.Clean(root)
+		if !seen[root] {
+			out = append(out, root)
+			seen[root] = true
+		}
+	}
+	return out
+}
+
+func moduleCachePath(module, version string) string {
+	parts := strings.Split(module, "/")
+	for i, p := range parts {
+		parts[i] = escapeModulePathElem(p)
+	}
+	return filepath.Join(strings.Join(parts, string(filepath.Separator)) + "@" + version)
+}
+
+func escapeModulePathElem(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if r >= 'A' && r <= 'Z' {
+			b.WriteByte('!')
+			b.WriteRune(r + ('a' - 'A'))
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
 }

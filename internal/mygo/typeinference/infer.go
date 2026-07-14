@@ -15,16 +15,17 @@ import (
 // PkgInfo bundles the AST declaration maps needed for type inference.
 // It mirrors the compiler's Package type without creating a circular import.
 type PkgInfo struct {
-	Dir           string
-	WorkspaceRoot string
-	Name          string
-	Decls         []Decl
-	Enums         map[string]*EnumDecl
-	Structs       map[string]*StructDecl
-	Interfaces    map[string]*InterfaceDecl
-	Funcs         map[string]*FuncDecl
-	Impls         []*ImplDecl
-	SourceFiles   map[any]string
+	Dir            string
+	WorkspaceRoot  string
+	Name           string
+	Decls          []Decl
+	Enums          map[string]*EnumDecl
+	Structs        map[string]*StructDecl
+	Interfaces     map[string]*InterfaceDecl
+	Funcs          map[string]*FuncDecl
+	Impls          []*ImplDecl
+	SourceFiles    map[any]string
+	DotImportEnums map[string]*EnumDecl // enums from dot-imported packages
 }
 
 // TypedInfo holds the results of type inference for an entire package.
@@ -98,6 +99,35 @@ func InferPackage(pkg *PkgInfo, state *InferState) (*TypedInfo, error) {
 
 	// Build initial type environment with built-in types and prelude
 	env := initialTypeEnv(pkg)
+
+	// For test packages (name ends with "_test"), auto-import the main package
+	// symbols via dot-import effect. This allows test files to reference
+	// exported symbols without qualification. We register main package
+	// functions and types so they're available as unqualified names.
+	if strings.HasSuffix(pkg.Name, "_test") {
+		mainPkgName := strings.TrimSuffix(pkg.Name, "_test")
+		if mainPkgInfo, err := loadMyGoPackageInfo(pkg.WorkspaceRoot, pkg.Dir, pkg.Dir, mainPkgName, nil); err == nil {
+			// Register all exported functions from main package with their
+			// polymorphic signatures so test packages infer real result types.
+			for name, sch := range mainPkgInfo.Funcs {
+				env[name] = sch
+			}
+			// Register all exported types (structs, enums) from main package
+			for name := range mainPkgInfo.Types {
+				env[name] = &Scheme{Body: QualifiedType{Body: TCon{Name: name}}}
+			}
+			if state.PkgInfo != nil && mainPkgInfo.Structs != nil {
+				if state.PkgInfo.Structs == nil {
+					state.PkgInfo.Structs = map[string]*StructDecl{}
+				}
+				for name, st := range mainPkgInfo.Structs {
+					if _, exists := state.PkgInfo.Structs[name]; !exists {
+						state.PkgInfo.Structs[name] = st
+					}
+				}
+			}
+		}
+	}
 
 	// Pre-register top-level function signatures so forward references work.
 	for _, decl := range pkg.Decls {
@@ -222,16 +252,23 @@ func inferDecl(decl Decl, env TypeEnv, state *InferState, info *TypedInfo, pkg *
 		}
 		if strings.HasPrefix(d.Path, "go:") {
 			path := strings.TrimPrefix(d.Path, "go:")
-			info, err := loadGoPackageInfo(alias, path)
+			goInfo, err := loadGoPackageInfo(alias, path)
 			if err != nil {
 				return nil, wrapInferenceError("import %q: %w", err, d.Path)
 			}
 			if state.GoPackages == nil {
 				state.GoPackages = map[string]*GoPackageInfo{}
 			}
-			state.GoPackages[alias] = info
+			state.GoPackages[alias] = goInfo
 			env = env.Clone()
-			env[alias] = &Scheme{Body: QualifiedType{Body: TGoPackage{Alias: alias}}}
+			// Dot-import: register all exported Go symbols directly in env.
+			if alias == "." {
+				for name, fn := range goInfo.Funcs {
+					env[name] = &Scheme{Body: QualifiedType{Body: fn}}
+				}
+			} else {
+				env[alias] = &Scheme{Body: QualifiedType{Body: TGoPackage{Alias: alias}}}
+			}
 			return env, nil
 		}
 		if state.PkgInfo == nil || state.PkgInfo.Dir == "" {
@@ -241,16 +278,34 @@ func inferDecl(decl Decl, env TypeEnv, state *InferState, info *TypedInfo, pkg *
 		if pkg != nil {
 			workspaceRoot = pkg.WorkspaceRoot
 		}
-		info, err := loadMyGoPackageInfo(workspaceRoot, state.PkgInfo.Dir, d.Path, alias, state.MyGoPackageCache)
+		mygoInfo, err := loadMyGoPackageInfo(workspaceRoot, state.PkgInfo.Dir, d.Path, alias, state.MyGoPackageCache)
 		if err != nil {
 			return nil, wrapInferenceError("import %q: %w", err, d.Path)
 		}
 		if state.MyGoPackages == nil {
 			state.MyGoPackages = map[string]*MyGoPackageInfo{}
 		}
-		state.MyGoPackages[alias] = info
+		state.MyGoPackages[alias] = mygoInfo
 		env = env.Clone()
-		env[alias] = &Scheme{Body: QualifiedType{Body: TCon{Name: alias}}}
+		// Dot-import: register all exported MyGO symbols directly in env.
+		if alias == "." {
+			for name, sch := range mygoInfo.Funcs {
+				env[name] = sch
+			}
+			for name := range mygoInfo.Types {
+				env[name] = &Scheme{Body: QualifiedType{Body: TCon{Name: name}}}
+			}
+			// Merge struct info so field access works for imported structs.
+			if state.PkgInfo != nil && mygoInfo.Structs != nil {
+				for name, st := range mygoInfo.Structs {
+					if _, exists := state.PkgInfo.Structs[name]; !exists {
+						state.PkgInfo.Structs[name] = st
+					}
+				}
+			}
+		} else {
+			env[alias] = &Scheme{Body: QualifiedType{Body: TCon{Name: alias}}}
+		}
 		return env, nil
 
 	case *EnumDecl:
@@ -1117,8 +1172,8 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 			return nil, nil, nil, fmt.Errorf("Go package %q has no function %q", id.Name, n.Field)
 		}
 		if pkg := state.MyGoPackages[id.Name]; pkg != nil {
-			if fn, ok := pkg.Funcs[n.Field]; ok {
-				return fn, make(Subst), nil, nil
+			if sch, ok := pkg.Funcs[n.Field]; ok {
+				return Instantiate(sch, state), make(Subst), sch.Body.Predicates, nil
 			}
 			if _, ok := pkg.Types[n.Field]; ok {
 				return TCon{Name: n.Field}, make(Subst), nil, nil
@@ -1158,6 +1213,9 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 	if ref, ok := baseType.(TCon); ok && ref.Name == "Ref" && len(ref.Args) == 1 {
 		baseType = s.ApplyMT(ref.Args[0])
 	}
+
+	// No debug logging — field resolution is internal.
+	_ = baseType
 
 	// If the base is a concrete struct, resolve the field type from package metadata.
 	if con, ok := baseType.(TCon); ok && state != nil && state.PkgInfo != nil {
@@ -2098,9 +2156,18 @@ func lookupVariant(pkg *PkgInfo, name string) (*EnumDecl, *EnumVariant, bool) {
 	if pkg == nil {
 		return nil, nil, false
 	}
+	// First check local enums
 	for _, enum := range pkg.Enums {
 		if variant, ok := findEnumVariant(enum, name); ok {
 			return enum, variant, true
+		}
+	}
+	// Then check dot-import enums
+	if pkg.DotImportEnums != nil {
+		for _, enum := range pkg.DotImportEnums {
+			if variant, ok := findEnumVariant(enum, name); ok {
+				return enum, variant, true
+			}
 		}
 	}
 	return nil, nil, false

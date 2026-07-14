@@ -162,11 +162,12 @@ type InferState struct {
 }
 
 type MyGoPackageInfo struct {
-	Alias string
-	Path  string
-	Name  string
-	Funcs map[string]TFunc
-	Types map[string]struct{}
+	Alias   string
+	Path    string
+	Name    string
+	Funcs   map[string]*Scheme
+	Types   map[string]struct{}
+	Structs map[string]*StructDecl // struct name -> declaration
 }
 
 func NewInferState() *InferState {
