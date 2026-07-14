@@ -11,8 +11,6 @@ func Each_option_a_a[A any](c Option[A], fn func(A)) {
 		} else {
 			if _, ok := c.(OptionNone[A]); ok {
 				func() {
-					_ = struct {
-					}{}
 				}()
 			}
 		}

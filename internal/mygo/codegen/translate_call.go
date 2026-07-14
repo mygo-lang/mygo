@@ -421,8 +421,12 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			}
 		}
 		// Check for typeclass method call: value.show() → show_type() or showFn()
-		if ifaceName, ok := g.interfaceByMethod[field.Field]; ok {
+		var fallbackIface *InterfaceDecl
+		for _, ifaceName := range g.interfaceNamesForMethod(field.Field) {
 			if iface := g.pkg.Interfaces[ifaceName]; iface != nil {
+				if fallbackIface == nil {
+					fallbackIface = iface
+				}
 				// First check if there's a constraint function in scope (from `using`)
 				if fnName, ok := ctx.constraintFuncForMethod(field.Field); ok {
 					allArgs := append([]ast.Expr{base}, args...)
@@ -432,13 +436,18 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 				// Otherwise use the best matching impl helper function.
 				helperName, retType, ok := g.matchTypeclassHelper(ifaceName, field.Field, bt)
 				if !ok {
-					typeKey := typeKeyFromType(bt)
-					helperName = helperFuncName(field.Field, typeKey)
-					retType = g.typeclassMethodReturnType(iface, field.Field, bt)
+					continue
 				}
 				allArgs := append([]ast.Expr{base}, args...)
 				return &ast.CallExpr{Fun: ast.NewIdent(helperName), Args: allArgs}, retType, nil
 			}
+		}
+		if fallbackIface != nil {
+			typeKey := typeKeyFromType(bt)
+			helperName := helperFuncName(field.Field, typeKey)
+			retType := g.typeclassMethodReturnType(fallbackIface, field.Field, bt)
+			allArgs := append([]ast.Expr{base}, args...)
+			return &ast.CallExpr{Fun: ast.NewIdent(helperName), Args: allArgs}, retType, nil
 		}
 		// For field calls where the field is a function type (e.g., parser.run(state)),
 		// extract the return type from the field type
@@ -822,6 +831,30 @@ func (g *gen) matchTypeclassHelper(ifaceName, methodName, recvType string) (stri
 		return helperFuncName(methodName, helperKey), retType, true
 	}
 	return "", "", false
+}
+
+func (g *gen) interfaceNamesForMethod(methodName string) []string {
+	seen := map[string]struct{}{}
+	var names []string
+	if ifaceName, ok := g.interfaceByMethod[methodName]; ok {
+		if _, ok := seen[ifaceName]; !ok {
+			seen[ifaceName] = struct{}{}
+			names = append(names, ifaceName)
+		}
+	}
+	for name, iface := range g.pkg.Interfaces {
+		if _, ok := seen[name]; ok || iface == nil {
+			continue
+		}
+		for _, method := range iface.Methods {
+			if method.Name == methodName {
+				seen[name] = struct{}{}
+				names = append(names, name)
+				break
+			}
+		}
+	}
+	return names
 }
 
 func (g *gen) typeclassSubstForRecv(iface *InterfaceDecl, recvType string) map[string]string {

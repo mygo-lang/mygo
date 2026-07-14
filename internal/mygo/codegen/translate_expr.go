@@ -46,10 +46,8 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 				stmts = append(stmts, &ast.ReturnStmt{Results: []ast.Expr{code}})
 			} else if branch := branchStmtForExpr(s.Expr); branch != nil {
 				stmts = append(stmts, branch)
-			} else if typ == "" {
-				stmts = append(stmts, &ast.ExprStmt{X: code})
 			} else {
-				stmts = append(stmts, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Rhs: []ast.Expr{code}, Tok: token.ASSIGN})
+				stmts = append(stmts, stmtForExpr(s.Expr, code, typ))
 			}
 		case *ReturnStmt:
 			if s.Value != nil {
@@ -159,10 +157,23 @@ func stmtForExpr(src Expr, code ast.Expr, typ string) ast.Stmt {
 	if _, ok := src.(*UnitLitExpr); ok {
 		return &ast.EmptyStmt{}
 	}
-	if typ != "" {
+	if typ != "" && !isUnitGoType(typ) && !exprCanBeStmt(src) {
 		return &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent("_")}, Rhs: []ast.Expr{code}, Tok: token.ASSIGN}
 	}
 	return &ast.ExprStmt{X: code}
+}
+
+func isUnitGoType(typ string) bool {
+	return typ == "Unit" || typ == "struct{}"
+}
+
+func exprCanBeStmt(src Expr) bool {
+	switch src.(type) {
+	case *CallExpr, *GoExpr:
+		return true
+	default:
+		return false
+	}
 }
 
 // translateExpr is the main expression translator.

@@ -416,7 +416,7 @@ func (g *gen) inferredType(e Expr) string {
 		return ""
 	}
 	if mt, ok := g.typedInfo.ExprTypes[e]; ok && mt != nil {
-		return mt.String()
+		return mygoSigTypeToGo(mt.String())
 	}
 	return ""
 }

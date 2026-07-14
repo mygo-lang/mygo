@@ -186,6 +186,7 @@ func goTypeExprForAssertion(typ string) ast.Expr {
 	if typ == "" {
 		return ast.NewIdent("any")
 	}
+	typ = mygoSigTypeToGo(typ)
 	// Map mygo built-in type names to Go identifiers used in type assertions.
 	switch typ {
 	case "Any":

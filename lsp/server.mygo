@@ -18,7 +18,7 @@ struct Position
   Character: Int `json:"character"`
 end
 
-struct Range
+struct TextRange
   StartPos: Position `json:"start"`
   EndPos: Position `json:"end"`
 end
@@ -46,7 +46,7 @@ end
 
 struct Hover
   Contents: any `json:"contents"`
-  TextRange: Option[Range] `json:"range,omitempty"`
+  TextRange: Option[TextRange] `json:"range,omitempty"`
 end
 
 struct CompletionItem
@@ -63,12 +63,12 @@ struct CompletionList
 end
 
 struct TextEdit
-  TextRange: Range `json:"range"`
+  TextRange: TextRange `json:"range"`
   NewText: String `json:"newText"`
 end
 
 struct Diagnostic
-  TextRange: Range `json:"range"`
+  TextRange: TextRange `json:"range"`
   Severity: Int `json:"severity,omitempty"`
   Source: String `json:"source,omitempty"`
   Message: String `json:"message"`
@@ -77,15 +77,15 @@ end
 
 struct Location
   URI: String `json:"uri"`
-  TextRange: Range `json:"range"`
+  TextRange: TextRange `json:"range"`
 end
 
 struct DocumentSymbol
   Name: String `json:"name"`
   Detail: String `json:"detail,omitempty"`
   Kind: Int `json:"kind,omitempty"`
-  TextRange: Range `json:"range"`
-  SelectionTextRange: Range `json:"selectionRange"`
+  TextRange: TextRange `json:"range"`
+  SelectionTextRange: TextRange `json:"selectionRange"`
   Children: Slice[DocumentSymbol] `json:"children,omitempty"`
 end
 
@@ -273,10 +273,10 @@ func parseDocumentURI(uri: String) -> String
   end
 end
 
-func wordAtPosition(content: String, line: Int, char: Int) -> Option[Ref[Range]]
-  go[Ref[Range]] {
+func wordAtPosition(content: String, line: Int, char: Int) -> Option[Ref[TextRange]]
+  go[Ref[TextRange]] {
     code: `
-      func() *Range {
+      func() *TextRange {
         lines := strings.Split(content, "\n")
         if line >= len(lines) {
           return nil
@@ -301,7 +301,7 @@ func wordAtPosition(content: String, line: Int, char: Int) -> Option[Ref[Range]]
         if start == end {
           return nil
         }
-        r := &Range{
+        r := &TextRange{
           StartPos: Position{Line: line, Character: start},
           EndPos:   Position{Line: line, Character: end},
         }
@@ -333,7 +333,7 @@ func handleCompletion(
       var word = ""
       switch wordAtPosition(content, line, char)
         case Some(r) then
-            let lines = strings.Split(d.Content, "\n")
+          let lines = strings.Split(d.Content, "\n")
           if line < lines.Len() then
             let text = lines.Get(line).UnwrapOr("")
             let length = go[Int] {
@@ -449,7 +449,7 @@ func handleHover(
               in r = r
             }
             let docStr = buildHoverDoc(word)
-            let hoverRange: Option[Range] = Some(r.value())
+            let hoverRange: Option[TextRange] = Some(r.value())
             let hover = Hover {
               Contents: MarkupContent{Kind: "plaintext", Value: docStr},
               TextRange: hoverRange
@@ -533,7 +533,7 @@ func runMyGoDiagnostics(content: String) -> Slice[Diagnostic]
           if strings.Contains(trimmed, "where ") && !strings.HasPrefix(trimmed, "#") {
             startChar := strings.Index(trimmed, "where")
             diags = append(diags, Diagnostic{
-              TextRange: Range{
+              TextRange: TextRange{
                 StartPos: Position{Line: i, Character: startChar},
                 EndPos:   Position{Line: i, Character: startChar + 5},
               },
@@ -546,7 +546,7 @@ func runMyGoDiagnostics(content: String) -> Slice[Diagnostic]
           if strings.Contains(trimmed, "-> Unit") {
             startChar := strings.Index(trimmed, "-> Unit")
             diags = append(diags, Diagnostic{
-              TextRange: Range{
+              TextRange: TextRange{
                 StartPos: Position{Line: i, Character: startChar},
                 EndPos:   Position{Line: i, Character: startChar + 7},
               },
@@ -597,9 +597,16 @@ func parseAndBuildSymbols(content: String) -> Slice[DocumentSymbol]
                 name = name[:idx]
               }
               sym := DocumentSymbol{
-                Name: name, Kind: 23,
-                TextRange:            Range{StartPos: Position{Line: i}, EndPos: Position{Line: i}},
-                SelectionTextRange: Range{StartPos: Position{Line: i, Character: len(trimmed) - len(name)}, EndPos: Position{Line: i, Character: len(trimmed)}},
+                Name: name,
+                Kind: 23,
+                TextRange: TextRange{
+                  StartPos: Position{Line: i},
+                  EndPos: Position{Line: i},
+                },
+                SelectionTextRange: TextRange{
+                  StartPos: Position{Line: i, Character: len(trimmed) - len(name)},
+                  EndPos: Position{Line: i, Character: len(trimmed)},
+                },
                 Detail: "struct",
               }
               symbols = append(symbols, sym)
@@ -615,8 +622,8 @@ func parseAndBuildSymbols(content: String) -> Slice[DocumentSymbol]
               }
               sym := DocumentSymbol{
                 Name: name, Kind: 10,
-                TextRange:            Range{StartPos: Position{Line: i}, EndPos: Position{Line: i}},
-                SelectionTextRange: Range{StartPos: Position{Line: i, Character: len(trimmed) - len(name)}, EndPos: Position{Line: i, Character: len(trimmed)}},
+                TextRange: TextRange{StartPos: Position{Line: i}, EndPos: Position{Line: i}},
+                SelectionTextRange: TextRange{StartPos: Position{Line: i, Character: len(trimmed) - len(name)}, EndPos: Position{Line: i, Character: len(trimmed)}},
                 Detail: "enum",
               }
               symbols = append(symbols, sym)
@@ -635,8 +642,8 @@ func parseAndBuildSymbols(content: String) -> Slice[DocumentSymbol]
             selStart := len(trimmed) - len(name)
               sym := DocumentSymbol{
                 Name: name, Kind: 12,
-                TextRange:            Range{StartPos: Position{Line: i}, EndPos: Position{Line: i}},
-                SelectionTextRange: Range{StartPos: Position{Line: i, Character: selStart}, EndPos: Position{Line: i, Character: len(trimmed)}},
+                TextRange: TextRange{StartPos: Position{Line: i}, EndPos: Position{Line: i}},
+                SelectionTextRange: TextRange{StartPos: Position{Line: i, Character: selStart}, EndPos: Position{Line: i, Character: len(trimmed)}},
                 Detail: "func(" + name + ")",
             }
             symbols = append(symbols, sym)
@@ -648,8 +655,8 @@ func parseAndBuildSymbols(content: String) -> Slice[DocumentSymbol]
               name := parts[1]
               sym := DocumentSymbol{
                 Name: "impl " + name, Kind: 5,
-                TextRange:            Range{StartPos: Position{Line: i}, EndPos: Position{Line: i}},
-                SelectionTextRange: Range{StartPos: Position{Line: i, Character: 4}, EndPos: Position{Line: i, Character: len(trimmed)}},
+                TextRange: TextRange{StartPos: Position{Line: i}, EndPos: Position{Line: i}},
+                SelectionTextRange: TextRange{StartPos: Position{Line: i, Character: 4}, EndPos: Position{Line: i, Character: len(trimmed)}},
                 Detail: "impl",
               }
               symbols = append(symbols, sym)
@@ -715,7 +722,7 @@ func searchDefinitionInDoc(content: String, word: String, uri: String) -> Slice[
           if strings.HasPrefix(trimmed, "func "+word) {
             locations = append(locations, Location{
               URI: "file://" + uri,
-              TextRange: Range{
+              TextRange: TextRange{
                 StartPos: Position{Line: i, Character: 0},
                 EndPos:   Position{Line: i, Character: len(trimmed)},
               },
@@ -724,7 +731,7 @@ func searchDefinitionInDoc(content: String, word: String, uri: String) -> Slice[
           if strings.HasPrefix(trimmed, "struct "+word) || strings.HasPrefix(trimmed, "enum "+word) {
             locations = append(locations, Location{
               URI: "file://" + uri,
-              TextRange: Range{
+              TextRange: TextRange{
                 StartPos: Position{Line: i, Character: 0},
                 EndPos:   Position{Line: i, Character: len(trimmed)},
               },
@@ -794,7 +801,7 @@ func searchReferencesInDoc(content: String, word: String, uri: String) -> Slice[
             if startChar >= 0 {
               locations = append(locations, Location{
                 URI: "file://" + uri,
-                TextRange: Range{
+                TextRange: TextRange{
                   StartPos: Position{Line: i, Character: startChar},
                   EndPos:   Position{Line: i, Character: startChar + len(word)},
                 },

@@ -16,7 +16,7 @@ type Position struct {
 	Line      int `json:"line"`
 	Character int `json:"character"`
 }
-type Range struct {
+type TextRange struct {
 	StartPos Position `json:"start"`
 	EndPos   Position `json:"end"`
 }
@@ -38,8 +38,8 @@ type MarkupContent struct {
 	Value string `json:"value"`
 }
 type Hover struct {
-	Contents  any           `json:"contents"`
-	TextRange Option[Range] `json:"range,omitempty"`
+	Contents  any               `json:"contents"`
+	TextRange Option[TextRange] `json:"range,omitempty"`
 }
 type CompletionItem struct {
 	Label               string      `json:"label"`
@@ -53,26 +53,26 @@ type CompletionList struct {
 	Items        []CompletionItem `json:"items"`
 }
 type TextEdit struct {
-	TextRange Range  `json:"range"`
-	NewText   string `json:"newText"`
+	TextRange TextRange `json:"range"`
+	NewText   string    `json:"newText"`
 }
 type Diagnostic struct {
-	TextRange Range  `json:"range"`
-	Severity  int    `json:"severity,omitempty"`
-	Source    string `json:"source,omitempty"`
-	Message   string `json:"message"`
-	Code      string `json:"code,omitempty"`
+	TextRange TextRange `json:"range"`
+	Severity  int       `json:"severity,omitempty"`
+	Source    string    `json:"source,omitempty"`
+	Message   string    `json:"message"`
+	Code      string    `json:"code,omitempty"`
 }
 type Location struct {
-	URI       string `json:"uri"`
-	TextRange Range  `json:"range"`
+	URI       string    `json:"uri"`
+	TextRange TextRange `json:"range"`
 }
 type DocumentSymbol struct {
 	Name               string           `json:"name"`
 	Detail             string           `json:"detail,omitempty"`
 	Kind               int              `json:"kind,omitempty"`
-	TextRange          Range            `json:"range"`
-	SelectionTextRange Range            `json:"selectionRange"`
+	TextRange          TextRange        `json:"range"`
+	SelectionTextRange TextRange        `json:"selectionRange"`
 	Children           []DocumentSymbol `json:"children,omitempty"`
 }
 type LSPMessage struct {
@@ -226,9 +226,9 @@ func parseDocumentURI(uri string) string {
 		}
 	}()
 }
-func wordAtPosition(content string, line int, char int) Option[*Range] {
-	return func() Option[*Range] {
-		__mygo_go_ref := func() *Range {
+func wordAtPosition(content string, line int, char int) Option[*TextRange] {
+	return func() Option[*TextRange] {
+		__mygo_go_ref := func() *TextRange {
 			lines := strings.Split(content, "\n")
 			if line >= len(lines) {
 				return nil
@@ -253,13 +253,13 @@ func wordAtPosition(content string, line int, char int) Option[*Range] {
 			if start == end {
 				return nil
 			}
-			r := &Range{StartPos: Position{Line: line, Character: start}, EndPos: Position{Line: line, Character: end}}
+			r := &TextRange{StartPos: Position{Line: line, Character: start}, EndPos: Position{Line: line, Character: end}}
 			return r
 		}()
 		if __mygo_go_ref == nil {
-			return None[*Range]()
+			return None[*TextRange]()
 		}
-		return Some[*Range](__mygo_go_ref)
+		return Some[*TextRange](__mygo_go_ref)
 	}()
 }
 func handleCompletion(store *DocumentStore, uri string, line int, char int) CompletionList {
@@ -269,11 +269,11 @@ func handleCompletion(store *DocumentStore, uri string, line int, char int) Comp
 				content_2 := v_1.F0.Content
 				word_3 := ""
 				func() {
-					if v_2, ok := wordAtPosition(content_2, line, char).(OptionSome[*Range]); ok {
+					if v_2, ok := wordAtPosition(content_2, line, char).(OptionSome[*TextRange]); ok {
 						func() {
 							lines_4 := strings.Split(v_1.F0.Content, "\n")
 							func() {
-								if line < Len__t_t[string](lines_4) {
+								if line < Len__t_t(lines_4) {
 									func() {
 										text_5 := Option_UnwrapOr(Get__t_int_t(lines_4, line), "")
 										length_6 := len(text_5)
@@ -282,15 +282,9 @@ func handleCompletion(store *DocumentStore, uri string, line int, char int) Comp
 												func() {
 													word_3 = text_5[char-(char-v_2.F0.StartPos.Character) : char]
 												}()
-											} else {
-												_ = struct {
-												}{}
 											}
 										}()
 									}()
-								} else {
-									_ = struct {
-									}{}
 								}
 							}()
 						}()
@@ -335,16 +329,16 @@ func handleHover(store *DocumentStore, uri string, line int, char int) Option[Ho
 		if v_3, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
 			return func() Option[Hover] {
 				return func() Option[Hover] {
-					if v_4, ok := wordAtPosition(v_3.F0.Content, line, char).(OptionSome[*Range]); ok {
+					if v_4, ok := wordAtPosition(v_3.F0.Content, line, char).(OptionSome[*TextRange]); ok {
 						return func() Option[Hover] {
 							lines_9 := strings.Split(v_3.F0.Content, "\n")
 							return func() Option[Hover] {
-								if line < Len__t_t[string](lines_9) {
+								if line < Len__t_t(lines_9) {
 									return func() Option[Hover] {
 										text_10 := Option_UnwrapOr(Get__t_int_t(lines_9, line), "")
 										word_11 := text_10[v_4.F0.StartPos.Character:v_4.F0.EndPos.Character]
 										docStr_12 := buildHoverDoc(word_11)
-										var hoverRange_13 Option[Range] = Some[Range](*v_4.F0)
+										var hoverRange_13 Option[TextRange] = Some[TextRange](*v_4.F0)
 										hover_14 := Hover{Contents: MarkupContent{Kind: "plaintext", Value: docStr_12}, TextRange: hoverRange_13}
 										return Some[Hover](hover_14)
 									}()
@@ -426,11 +420,11 @@ func runMyGoDiagnostics(content string) []Diagnostic {
 			trimmed := strings.TrimSpace(line)
 			if strings.Contains(trimmed, "where ") && !strings.HasPrefix(trimmed, "#") {
 				startChar := strings.Index(trimmed, "where")
-				diags = append(diags, Diagnostic{TextRange: Range{StartPos: Position{Line: i, Character: startChar}, EndPos: Position{Line: i, Character: startChar + 5}}, Severity: 2, Source: "mygo", Message: "'where' is deprecated, use 'using' instead", Code: "DEPRECATED"})
+				diags = append(diags, Diagnostic{TextRange: TextRange{StartPos: Position{Line: i, Character: startChar}, EndPos: Position{Line: i, Character: startChar + 5}}, Severity: 2, Source: "mygo", Message: "'where' is deprecated, use 'using' instead", Code: "DEPRECATED"})
 			}
 			if strings.Contains(trimmed, "-> Unit") {
 				startChar := strings.Index(trimmed, "-> Unit")
-				diags = append(diags, Diagnostic{TextRange: Range{StartPos: Position{Line: i, Character: startChar}, EndPos: Position{Line: i, Character: startChar + 7}}, Severity: 2, Source: "mygo", Message: "'-> Unit' is deprecated, use '-> ()' instead", Code: "DEPRECATED"})
+				diags = append(diags, Diagnostic{TextRange: TextRange{StartPos: Position{Line: i, Character: startChar}, EndPos: Position{Line: i, Character: startChar + 7}}, Severity: 2, Source: "mygo", Message: "'-> Unit' is deprecated, use '-> ()' instead", Code: "DEPRECATED"})
 			}
 		}
 		return diags
@@ -465,7 +459,7 @@ func parseAndBuildSymbols(content string) []DocumentSymbol {
 					if idx := strings.Index(name, "["); idx != -1 {
 						name = name[:idx]
 					}
-					sym := DocumentSymbol{Name: name, Kind: 23, TextRange: Range{StartPos: Position{Line: i}, EndPos: Position{Line: i}}, SelectionTextRange: Range{StartPos: Position{Line: i, Character: len(trimmed) - len(name)}, EndPos: Position{Line: i, Character: len(trimmed)}}, Detail: "struct"}
+					sym := DocumentSymbol{Name: name, Kind: 23, TextRange: TextRange{StartPos: Position{Line: i}, EndPos: Position{Line: i}}, SelectionTextRange: TextRange{StartPos: Position{Line: i, Character: len(trimmed) - len(name)}, EndPos: Position{Line: i, Character: len(trimmed)}}, Detail: "struct"}
 					symbols = append(symbols, sym)
 				}
 			}
@@ -476,7 +470,7 @@ func parseAndBuildSymbols(content string) []DocumentSymbol {
 					if idx := strings.Index(name, "["); idx != -1 {
 						name = name[:idx]
 					}
-					sym := DocumentSymbol{Name: name, Kind: 10, TextRange: Range{StartPos: Position{Line: i}, EndPos: Position{Line: i}}, SelectionTextRange: Range{StartPos: Position{Line: i, Character: len(trimmed) - len(name)}, EndPos: Position{Line: i, Character: len(trimmed)}}, Detail: "enum"}
+					sym := DocumentSymbol{Name: name, Kind: 10, TextRange: TextRange{StartPos: Position{Line: i}, EndPos: Position{Line: i}}, SelectionTextRange: TextRange{StartPos: Position{Line: i, Character: len(trimmed) - len(name)}, EndPos: Position{Line: i, Character: len(trimmed)}}, Detail: "enum"}
 					symbols = append(symbols, sym)
 				}
 			}
@@ -490,14 +484,14 @@ func parseAndBuildSymbols(content string) []DocumentSymbol {
 					name = name[:idx]
 				}
 				selStart := len(trimmed) - len(name)
-				sym := DocumentSymbol{Name: name, Kind: 12, TextRange: Range{StartPos: Position{Line: i}, EndPos: Position{Line: i}}, SelectionTextRange: Range{StartPos: Position{Line: i, Character: selStart}, EndPos: Position{Line: i, Character: len(trimmed)}}, Detail: "func(" + name + ")"}
+				sym := DocumentSymbol{Name: name, Kind: 12, TextRange: TextRange{StartPos: Position{Line: i}, EndPos: Position{Line: i}}, SelectionTextRange: TextRange{StartPos: Position{Line: i, Character: selStart}, EndPos: Position{Line: i, Character: len(trimmed)}}, Detail: "func(" + name + ")"}
 				symbols = append(symbols, sym)
 			}
 			if strings.HasPrefix(trimmed, "impl ") {
 				parts := strings.Fields(trimmed)
 				if len(parts) >= 2 {
 					name := parts[1]
-					sym := DocumentSymbol{Name: "impl " + name, Kind: 5, TextRange: Range{StartPos: Position{Line: i}, EndPos: Position{Line: i}}, SelectionTextRange: Range{StartPos: Position{Line: i, Character: 4}, EndPos: Position{Line: i, Character: len(trimmed)}}, Detail: "impl"}
+					sym := DocumentSymbol{Name: "impl " + name, Kind: 5, TextRange: TextRange{StartPos: Position{Line: i}, EndPos: Position{Line: i}}, SelectionTextRange: TextRange{StartPos: Position{Line: i, Character: 4}, EndPos: Position{Line: i, Character: len(trimmed)}}, Detail: "impl"}
 					symbols = append(symbols, sym)
 				}
 			}
@@ -510,17 +504,17 @@ func handleDefinition(store *DocumentStore, uri string, line int, char int) Opti
 		if v_7, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
 			return func() Option[[]Location] {
 				return func() Option[[]Location] {
-					if v_8, ok := wordAtPosition(v_7.F0.Content, line, char).(OptionSome[*Range]); ok {
+					if v_8, ok := wordAtPosition(v_7.F0.Content, line, char).(OptionSome[*TextRange]); ok {
 						return func() Option[[]Location] {
 							lines_15 := strings.Split(v_7.F0.Content, "\n")
 							return func() Option[[]Location] {
-								if line < Len__t_t[string](lines_15) {
+								if line < Len__t_t(lines_15) {
 									return func() Option[[]Location] {
 										text_16 := Option_UnwrapOr(Get__t_int_t(lines_15, line), "")
 										word_17 := text_16[v_8.F0.StartPos.Character:v_8.F0.EndPos.Character]
 										locs_18 := searchDefinitionInDoc(v_7.F0.Content, word_17, v_7.F0.URI)
 										return func() Option[[]Location] {
-											if Len__t_t[Location](locs_18) > 0 {
+											if Len__t_t(locs_18) > 0 {
 												return Some[[]Location](locs_18)
 											} else {
 												return None[[]Location]()
@@ -556,10 +550,10 @@ func searchDefinitionInDoc(content string, word string, uri string) []Location {
 				continue
 			}
 			if strings.HasPrefix(trimmed, "func "+word) {
-				locations = append(locations, Location{URI: "file://" + uri, TextRange: Range{StartPos: Position{Line: i, Character: 0}, EndPos: Position{Line: i, Character: len(trimmed)}}})
+				locations = append(locations, Location{URI: "file://" + uri, TextRange: TextRange{StartPos: Position{Line: i, Character: 0}, EndPos: Position{Line: i, Character: len(trimmed)}}})
 			}
 			if strings.HasPrefix(trimmed, "struct "+word) || strings.HasPrefix(trimmed, "enum "+word) {
-				locations = append(locations, Location{URI: "file://" + uri, TextRange: Range{StartPos: Position{Line: i, Character: 0}, EndPos: Position{Line: i, Character: len(trimmed)}}})
+				locations = append(locations, Location{URI: "file://" + uri, TextRange: TextRange{StartPos: Position{Line: i, Character: 0}, EndPos: Position{Line: i, Character: len(trimmed)}}})
 			}
 		}
 		return locations
@@ -570,17 +564,17 @@ func handleReferences(store *DocumentStore, uri string, line int, char int) Opti
 		if v_9, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
 			return func() Option[[]Location] {
 				return func() Option[[]Location] {
-					if v_10, ok := wordAtPosition(v_9.F0.Content, line, char).(OptionSome[*Range]); ok {
+					if v_10, ok := wordAtPosition(v_9.F0.Content, line, char).(OptionSome[*TextRange]); ok {
 						return func() Option[[]Location] {
 							lines_19 := strings.Split(v_9.F0.Content, "\n")
 							return func() Option[[]Location] {
-								if line < Len__t_t[string](lines_19) {
+								if line < Len__t_t(lines_19) {
 									return func() Option[[]Location] {
 										text_20 := Option_UnwrapOr(Get__t_int_t(lines_19, line), "")
 										word_21 := text_20[v_10.F0.StartPos.Character:v_10.F0.EndPos.Character]
 										locs_22 := searchReferencesInDoc(v_9.F0.Content, word_21, v_9.F0.URI)
 										return func() Option[[]Location] {
-											if Len__t_t[Location](locs_22) > 0 {
+											if Len__t_t(locs_22) > 0 {
 												return Some[[]Location](locs_22)
 											} else {
 												return None[[]Location]()
@@ -618,7 +612,7 @@ func searchReferencesInDoc(content string, word string, uri string) []Location {
 			if strings.Contains(trimmed, word) {
 				startChar := strings.Index(trimmed, word)
 				if startChar >= 0 {
-					locations = append(locations, Location{URI: "file://" + uri, TextRange: Range{StartPos: Position{Line: i, Character: startChar}, EndPos: Position{Line: i, Character: startChar + len(word)}}})
+					locations = append(locations, Location{URI: "file://" + uri, TextRange: TextRange{StartPos: Position{Line: i, Character: startChar}, EndPos: Position{Line: i, Character: startChar + len(word)}}})
 				}
 			}
 		}
@@ -959,8 +953,6 @@ func Main() {
 			if raw == "" {
 				break
 			} else {
-				_ = struct {
-				}{}
 			}
 			response := handleMessage(store_52, raw)
 			writeOneMessage(response)

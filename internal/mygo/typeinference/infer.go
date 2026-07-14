@@ -1103,6 +1103,9 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 		return nil, nil, nil, err
 	}
 	baseType = s.ApplyMT(baseType)
+	if ref, ok := baseType.(TCon); ok && ref.Name == "Ref" && len(ref.Args) == 1 {
+		baseType = s.ApplyMT(ref.Args[0])
+	}
 
 	// If the base is a concrete struct, resolve the field type from package metadata.
 	if con, ok := baseType.(TCon); ok && state != nil && state.PkgInfo != nil {
