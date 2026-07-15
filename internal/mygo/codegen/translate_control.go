@@ -95,6 +95,9 @@ func (g *gen) translateIf(n *IfExpr, ctx *egCtx, expected string) (ast.Expr, str
 
 // translateSwitch handles switch expressions.
 func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (ast.Expr, string, error) {
+	if isUnitGoType(expected) {
+		expected = ""
+	}
 	target, ttype, err := g.translateExpr(n.Target, ctx, "")
 	if err != nil {
 		return nil, "", err
@@ -266,7 +269,7 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (ast.E
 	if tail == nil {
 		return ast.NewIdent("_"), "", nil
 	}
-	if expected == "" {
+	if expected == "" || isUnitGoType(expected) {
 		// Wrap in IIFE since Stmt can't be returned as Expr
 		fn := astFuncLit(nil, nil, &ast.BlockStmt{List: []ast.Stmt{tail}})
 		return &ast.CallExpr{Fun: fn}, "", nil

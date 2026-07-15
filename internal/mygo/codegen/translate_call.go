@@ -647,6 +647,54 @@ func containsGeneratedTypeVar(typ string) bool {
 	return false
 }
 
+func (g *gen) containsUnresolvedTypeName(typ string) bool {
+	for _, part := range strings.FieldsFunc(typ, func(r rune) bool {
+		return r == '[' || r == ']' || r == ',' || r == ' ' || r == '(' || r == ')' || r == '*' || r == '.'
+	}) {
+		if part == "" || !looksLikeTypeParamName(part) {
+			continue
+		}
+		if isKnownGoOrMyGoType(part) {
+			continue
+		}
+		if g != nil && g.pkg != nil {
+			if g.pkg.Structs[part] != nil || g.pkg.Enums[part] != nil || g.pkg.Interfaces[part] != nil {
+				continue
+			}
+		}
+		return true
+	}
+	return false
+}
+
+func looksLikeTypeParamName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for _, r := range name {
+		if r < 'A' || r > 'Z' {
+			return false
+		}
+	}
+	return true
+}
+
+func isKnownGoOrMyGoType(name string) bool {
+	switch name {
+	case "Int", "Int8", "Int16", "Int32", "Int64",
+		"UInt", "UInt8", "UInt16", "UInt32", "UInt64",
+		"Float32", "Float64", "Byte", "Rune", "String", "Bool",
+		"Any", "Unit", "Ref", "Slice", "Map", "Set", "List",
+		"Option", "Result",
+		"int", "int8", "int16", "int32", "int64",
+		"uint", "uint8", "uint16", "uint32", "uint64",
+		"float32", "float64", "byte", "rune", "string", "bool", "any":
+		return true
+	default:
+		return false
+	}
+}
+
 func extractFuncReturnType(sig string) string {
 	// Parse func(params) ret or func(params)
 	// Example: "func(State) Reply[[]A]" or "func(a int, b string) bool"

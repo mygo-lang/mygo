@@ -408,7 +408,7 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 		return &ast.SelectorExpr{X: base, Sel: ast.NewIdent(goastFieldName(n.Field))}, bt, nil
 	case *CallExpr:
 		code, typ, err := g.translateCall(n, ctx, expected)
-		if inferred := g.inferredType(n); inferred != "" && (typ == "" || typ == "any" || containsGeneratedTypeVar(typ)) {
+		if inferred := g.inferredType(n); inferred != "" && (typ == "" || typ == "any" || containsGeneratedTypeVar(typ) || g.containsUnresolvedTypeName(typ)) {
 			typ = inferred
 		}
 		return code, typ, err
