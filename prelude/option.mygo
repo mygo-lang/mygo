@@ -61,3 +61,22 @@ impl[A] Option[A]
     end
   end
 end
+
+impl[A] OptionEq[A]: Eq[Option[A]]
+  func Equals(left: Option[A], right: Option[A]) -> Bool using Eq[A]
+    switch left
+      case Some(l) then
+        switch right
+          case Some(r) => l.Equals(r)
+          case None => false
+        end
+      end
+      case None then
+        switch right
+          case Some(_) => false
+          case None => true
+        end
+      end
+    end
+  end
+end

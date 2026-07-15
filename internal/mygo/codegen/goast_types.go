@@ -173,6 +173,9 @@ func goTypeExprFromString(typ string) ast.Expr {
 		return ast.NewIdent("any")
 	}
 	typ = mygoSigTypeToGo(typ)
+	if expr := parseGoTypeString(typ); expr != nil {
+		return expr
+	}
 	if expr, err := goparser.ParseExpr(typ); err == nil {
 		return expr
 	}
@@ -193,10 +196,36 @@ func goTypeExprForAssertion(typ string) ast.Expr {
 	case "Any":
 		return ast.NewIdent("any")
 	}
+	if expr := parseGoTypeString(typ); expr != nil {
+		return expr
+	}
 	if expr, err := goparser.ParseExpr(typ); err == nil {
 		return expr
 	}
 	return ast.NewIdent(typ)
+}
+
+func parseGoTypeString(typ string) ast.Expr {
+	if strings.HasPrefix(typ, "map[") {
+		end := matchingTypeArgEnd(typ, len("map"))
+		if end > len("map") && end+1 < len(typ) {
+			key := strings.TrimSpace(typ[len("map")+1 : end])
+			value := strings.TrimSpace(typ[end+1:])
+			return &ast.MapType{
+				Key:   goTypeExprFromString(key),
+				Value: goTypeExprFromString(value),
+			}
+		}
+	}
+	expr, err := goparser.ParseExpr("struct{ X " + typ + " }")
+	if err != nil {
+		return nil
+	}
+	st, ok := expr.(*ast.StructType)
+	if !ok || st.Fields == nil || len(st.Fields.List) != 1 {
+		return nil
+	}
+	return st.Fields.List[0].Type
 }
 
 func typeParamFields(params []string) *ast.FieldList {

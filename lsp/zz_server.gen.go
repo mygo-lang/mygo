@@ -285,6 +285,7 @@ func handleCompletion(store *DocumentStore, uri string, line int, char int) Comp
 												}()
 											}
 										}()
+										return
 									}()
 								}
 							}()

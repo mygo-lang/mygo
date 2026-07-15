@@ -1498,7 +1498,7 @@ func splitTypeArgs(typ string) (string, []string) {
 	if idx < 0 {
 		return typ, nil
 	}
-	end := strings.LastIndex(typ, "]")
+	end := matchingTypeArgEnd(typ, idx)
 	if end < 0 || end < idx {
 		return typ, nil
 	}
@@ -1508,6 +1508,22 @@ func splitTypeArgs(typ string) (string, []string) {
 		return name, nil
 	}
 	return name, splitTopLevel(inner, ',')
+}
+
+func matchingTypeArgEnd(typ string, open int) int {
+	depth := 0
+	for i, r := range typ[open:] {
+		switch r {
+		case '[':
+			depth++
+		case ']':
+			depth--
+			if depth == 0 {
+				return open + i
+			}
+		}
+	}
+	return -1
 }
 
 func splitTopLevel(s string, sep rune) []string {

@@ -52,7 +52,7 @@ func (g *gen) translateIf(n *IfExpr, ctx *egCtx, expected string) (ast.Expr, str
 			resultType = elseType
 		}
 	}
-	if resultType == "" || resultType == "any" || resultType == "Unit" || resultType == "struct{}" {
+	if resultType == "" || resultType == "any" || isUnitGoType(resultType) {
 		// Statement form: wrap in IIFE so both branches are expressions
 		thenStmt := stmtForExpr(n.Then, thenCode, thenType)
 		if exprStmt, ok := thenStmt.(*ast.ExprStmt); ok && isNilASTExpr(exprStmt.X) {

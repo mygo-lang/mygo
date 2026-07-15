@@ -47,12 +47,15 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 				line, col := common.NodePos(s.Expr)
 				return stmts, common.ErrorAtPos(g.currentFile, line, col, "expression statement produced nil Go AST")
 			}
-			if isLast && returnExpected != "" {
+			if isLast && returnExpected != "" && !isUnitGoType(returnExpected) {
 				stmts = append(stmts, &ast.ReturnStmt{Results: []ast.Expr{code}})
 			} else if branch := branchStmtForExpr(s.Expr); branch != nil {
 				stmts = append(stmts, branch)
 			} else {
 				stmts = append(stmts, stmtForExpr(s.Expr, code, typ))
+				if isLast && isUnitGoType(returnExpected) {
+					stmts = append(stmts, &ast.ReturnStmt{})
+				}
 			}
 		case *ReturnStmt:
 			if s.Value != nil {
@@ -178,7 +181,8 @@ func stmtForExpr(src Expr, code ast.Expr, typ string) ast.Stmt {
 }
 
 func isUnitGoType(typ string) bool {
-	return typ == "Unit" || typ == "struct{}"
+	typ = strings.TrimSpace(typ)
+	return typ == "Unit" || typ == "struct{}" || typ == "()"
 }
 
 func isNilASTExpr(expr ast.Expr) bool {
@@ -468,10 +472,10 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 }
 
 func fieldListForReturn(expected string) *ast.FieldList {
-	if expected == "" {
+	if expected == "" || isUnitGoType(expected) {
 		return nil
 	}
-	return &ast.FieldList{List: []*ast.Field{{Type: ast.NewIdent(expected)}}}
+	return &ast.FieldList{List: []*ast.Field{{Type: goTypeExprFromString(expected)}}}
 }
 
 func fieldListIfNonEmptyGoast(fields []*ast.Field) *ast.FieldList {

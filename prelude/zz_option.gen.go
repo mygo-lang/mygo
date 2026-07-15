@@ -148,3 +148,48 @@ func Option_UnwrapOr[A any](opt Option[A], defaultVal A) A {
 		}
 	}()
 }
+func Equals_option_a[A any](left Option[A], right Option[A], EqualsFn func(A, A) bool) bool {
+	return func() bool {
+		if v_34, ok := left.(OptionSome[A]); ok {
+			return func() bool {
+				return func() bool {
+					if v_36, ok := right.(OptionSome[A]); ok {
+						return func() bool {
+							return EqualsFn(v_34.F0, v_36.F0)
+						}()
+					} else {
+						if _, ok := right.(OptionNone[A]); ok {
+							return func() bool {
+								return false
+							}()
+						} else {
+							panic("unreachable")
+						}
+					}
+				}()
+			}()
+		} else {
+			if _, ok := left.(OptionNone[A]); ok {
+				return func() bool {
+					return func() bool {
+						if _, ok := right.(OptionSome[A]); ok {
+							return func() bool {
+								return false
+							}()
+						} else {
+							if _, ok := right.(OptionNone[A]); ok {
+								return func() bool {
+									return true
+								}()
+							} else {
+								panic("unreachable")
+							}
+						}
+					}()
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
+	}()
+}

@@ -50,44 +50,33 @@ func (_ ResultErr[A, E]) isResult() {
 func Err[A any, E any](a0 E) Result[A, E] {
 	return ResultErr[A, E]{F0: a0}
 }
-func Equals_option_a[A any](left Option[A], right Option[A], EqualsFn func(A, A) bool) bool {
-	return func() bool {
-		if v_34, ok := left.(OptionSome[A]); ok {
-			return func() bool {
-				return func() bool {
-					if v_36, ok := right.(OptionSome[A]); ok {
-						return func() bool {
-							return EqualsFn(v_34.F0, v_36.F0)
-						}()
-					} else {
-						if _, ok := right.(OptionNone[A]); ok {
-							return func() bool {
-								return false
-							}()
-						} else {
-							panic("unreachable")
-						}
-					}
-				}()
+func Result_ToOption[A any, E any](res Result[A, E]) Option[A] {
+	return func() Option[A] {
+		if v_38, ok := res.(ResultOk[A, E]); ok {
+			return func() Option[A] {
+				return Some[A](v_38.F0)
 			}()
 		} else {
-			if _, ok := left.(OptionNone[A]); ok {
-				return func() bool {
-					return func() bool {
-						if _, ok := right.(OptionSome[A]); ok {
-							return func() bool {
-								return false
-							}()
-						} else {
-							if _, ok := right.(OptionNone[A]); ok {
-								return func() bool {
-									return true
-								}()
-							} else {
-								panic("unreachable")
-							}
-						}
-					}()
+			if _, ok := res.(ResultErr[A, E]); ok {
+				return func() Option[A] {
+					return None[A]()
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
+	}()
+}
+func Result_Flatten[A any, E any](res Result[Result[A, E], E]) Result[A, E] {
+	return func() Result[A, E] {
+		if v_40, ok := res.(ResultOk[Result[A, E], E]); ok {
+			return func() Result[A, E] {
+				return v_40.F0
+			}()
+		} else {
+			if v_39, ok := res.(ResultErr[Result[A, E], E]); ok {
+				return func() Result[A, E] {
+					return Err[A, E](v_39.F0)
 				}()
 			} else {
 				panic("unreachable")
@@ -97,12 +86,12 @@ func Equals_option_a[A any](left Option[A], right Option[A], EqualsFn func(A, A)
 }
 func Equals_result_a_e[A any, E any](left Result[A, E], right Result[A, E], EqualsFn func(A, A) bool, EqualsFn1 func(E, E) bool) bool {
 	return func() bool {
-		if v_40, ok := left.(ResultOk[A, E]); ok {
+		if v_44, ok := left.(ResultOk[A, E]); ok {
 			return func() bool {
 				return func() bool {
-					if v_42, ok := right.(ResultOk[A, E]); ok {
+					if v_46, ok := right.(ResultOk[A, E]); ok {
 						return func() bool {
-							return EqualsFn(v_40.F0, v_42.F0)
+							return EqualsFn(v_44.F0, v_46.F0)
 						}()
 					} else {
 						if _, ok := right.(ResultErr[A, E]); ok {
@@ -116,7 +105,7 @@ func Equals_result_a_e[A any, E any](left Result[A, E], right Result[A, E], Equa
 				}()
 			}()
 		} else {
-			if v_37, ok := left.(ResultErr[A, E]); ok {
+			if v_41, ok := left.(ResultErr[A, E]); ok {
 				return func() bool {
 					return func() bool {
 						if _, ok := right.(ResultOk[A, E]); ok {
@@ -124,9 +113,9 @@ func Equals_result_a_e[A any, E any](left Result[A, E], right Result[A, E], Equa
 								return false
 							}()
 						} else {
-							if v_38, ok := right.(ResultErr[A, E]); ok {
+							if v_42, ok := right.(ResultErr[A, E]); ok {
 								return func() bool {
-									return EqualsFn1(v_37.F0, v_38.F0)
+									return EqualsFn1(v_41.F0, v_42.F0)
 								}()
 							} else {
 								panic("unreachable")
@@ -142,48 +131,14 @@ func Equals_result_a_e[A any, E any](left Result[A, E], right Result[A, E], Equa
 }
 func OptionToResult[A any, E any](opt Option[A], errVal E) Result[A, E] {
 	return func() Result[A, E] {
-		if v_44, ok := opt.(OptionSome[A]); ok {
+		if v_48, ok := opt.(OptionSome[A]); ok {
 			return func() Result[A, E] {
-				return Ok[A, E](v_44.F0)
+				return Ok[A, E](v_48.F0)
 			}()
 		} else {
 			if _, ok := opt.(OptionNone[A]); ok {
 				return func() Result[A, E] {
 					return Err[A, E](errVal)
-				}()
-			} else {
-				panic("unreachable")
-			}
-		}
-	}()
-}
-func ResultToOption[A any, E any](res Result[A, E]) Option[A] {
-	return func() Option[A] {
-		if v_46, ok := res.(ResultOk[A, E]); ok {
-			return func() Option[A] {
-				return Some[A](v_46.F0)
-			}()
-		} else {
-			if _, ok := res.(ResultErr[A, E]); ok {
-				return func() Option[A] {
-					return None[A]()
-				}()
-			} else {
-				panic("unreachable")
-			}
-		}
-	}()
-}
-func ResultFlatten[A any, E any](res Result[Result[A, E], E]) Result[A, E] {
-	return func() Result[A, E] {
-		if v_48, ok := res.(ResultOk[Result[A, E], E]); ok {
-			return func() Result[A, E] {
-				return v_48.F0
-			}()
-		} else {
-			if v_47, ok := res.(ResultErr[Result[A, E], E]); ok {
-				return func() Result[A, E] {
-					return Err[A, E](v_47.F0)
 				}()
 			} else {
 				panic("unreachable")

@@ -1,10 +1,57 @@
 package codegen
 
 import (
+	"bytes"
+	"go/printer"
+	"go/token"
+	"reflect"
 	"testing"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 )
+
+func TestSplitTypeArgsHandlesGoMapTypes(t *testing.T) {
+	tests := []struct {
+		typ  string
+		base string
+		args []string
+	}{
+		{
+			typ:  "Option[map[string]any]",
+			base: "Option",
+			args: []string{"map[string]any"},
+		},
+		{
+			typ:  "Result[map[string]any, error]",
+			base: "Result",
+			args: []string{"map[string]any", "error"},
+		},
+		{
+			typ:  "Option[map[string][]int]",
+			base: "Option",
+			args: []string{"map[string][]int"},
+		},
+	}
+
+	for _, tt := range tests {
+		base, args := splitTypeArgs(tt.typ)
+		if base != tt.base || !reflect.DeepEqual(args, tt.args) {
+			t.Fatalf("splitTypeArgs(%q) = (%q, %#v), want (%q, %#v)", tt.typ, base, args, tt.base, tt.args)
+		}
+	}
+}
+
+func TestGoTypeExprForAssertionHandlesGoMapTypes(t *testing.T) {
+	expr := genericIdent("OptionSome", goTypeExprForAssertion("map[string]any"))
+
+	var buf bytes.Buffer
+	if err := printer.Fprint(&buf, token.NewFileSet(), expr); err != nil {
+		t.Fatalf("printer.Fprint() error = %v", err)
+	}
+	if got, want := buf.String(), "OptionSome[map[string]any]"; got != want {
+		t.Fatalf("printed assertion type = %q, want %q", got, want)
+	}
+}
 
 func TestTranslateSwitchUsesIfElse(t *testing.T) {
 	optEnum := &EnumDecl{

@@ -776,6 +776,8 @@ func mygoSigTypeToGo(typ string) string {
 	}
 	base, args := splitTypeArgs(typ)
 	switch base {
+	case "map":
+		return typ
 	case "Slice":
 		if len(args) == 1 {
 			return "[]" + mygoSigTypeToGo(args[0])

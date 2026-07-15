@@ -65,17 +65,20 @@ func OptionToResult[A, E](opt: Option[A], errVal: E) -> Result[A, E]
   end
 end
 
-func ResultToOption[A, E](res: Result[A, E]) -> Option[A]
-  switch res
-    case Ok(v) => Some(v)
-    case Err(_) => None
-  end
-end
 
-func ResultFlatten[A, E](res: Result[Result[A, E], E]) -> Result[A, E]
-  switch res
-    case Ok(inner) => inner
-    case Err(e) => Err(e)
+impl[A, E] Result[A, E]
+  func ToOption(res: Result[A, E]) -> Option[A]
+    switch res
+      case Ok(v) => Some(v)
+      case Err(_) => None
+    end
+  end
+
+  func Flatten(res: Result[Result[A, E], E]) -> Result[A, E]
+    switch res
+      case Ok(inner) => inner
+      case Err(e) => Err(e)
+    end
   end
 end
 
@@ -85,25 +88,6 @@ func OptionFilter[A](opt: Option[A], fn: func(A) -> Bool) -> Option[A]
       if fn(v) => opt else None
     end
     case None => None
-  end
-end
-
-impl[A] OptionEq[A]: Eq[Option[A]]
-  func Equals(left: Option[A], right: Option[A]) -> Bool using Eq[A]
-    switch left
-      case Some(l) then
-        switch right
-          case Some(r) => l.Equals(r)
-          case None => false
-        end
-      end
-      case None then
-        switch right
-          case Some(_) => false
-          case None => true
-        end
-      end
-    end
   end
 end
 
