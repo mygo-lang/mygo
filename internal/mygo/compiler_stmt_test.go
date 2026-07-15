@@ -1133,22 +1133,22 @@ func TestCompileDirRejectsRelationWithoutEq(t *testing.T) {
 func TestCompileDirSeparatesSameNamedMethodsByInterface(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
-  interface Show[A]
-    func show(value: A) -> String
+  interface ToString[A]
+    func ToString(value: A) -> String
   end
 
   interface Render[A]
-    func show(value: A) -> String
+    func ToString(value: A) -> String
   end
 
-  impl Int64: Show[Int64]
-    func show(value: Int64) -> String
+  impl Int64: ToString[Int64]
+    func ToString(value: Int64) -> String
       "show"
     end
   end
 
   impl Int64: Render[Int64]
-    func show(value: Int64) -> String
+    func ToString(value: Int64) -> String
       "render"
     end
   end
@@ -1160,7 +1160,7 @@ func TestCompileDirSeparatesSameNamedMethodsByInterface(t *testing.T) {
 	}
 	got := readFile(t, outFiles[0])
 	for _, want := range []string{
-		"func show_int64(value int64) string {",
+		"func ToString_int64(value int64) string {",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -1173,19 +1173,19 @@ func TestCompileDirLetsLocalBindingShadowTypeclassName(t *testing.T) {
 	writeMygoFile(t, dir, "main.mygo", `package main
   import fmt "go:fmt"
 
-  interface Show[A]
-    func show(value: A) -> String
+  interface ToString[A]
+    func ToString(value: A) -> String
   end
 
-  impl Int64: Show[Int64]
-    func show(value: Int64) -> String
+  impl Int64: ToString[Int64]
+    func ToString(value: Int64) -> String
       "typeclass"
     end
   end
 
   func demo() -> String
-    let show = fmt.Sprint
-    show(42)
+    let ToString = fmt.Sprint
+    ToString(42)
   end
 `)
 
@@ -1196,13 +1196,13 @@ func TestCompileDirLetsLocalBindingShadowTypeclassName(t *testing.T) {
 	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"fmt.Sprint",
-		"show(42)",
+		"ToString(42)",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
 		}
 	}
-	if strings.Contains(got, "Show_show(42)") {
+	if strings.Contains(got, "ToString_ToString(42)") {
 		t.Fatalf("generated Go unexpectedly used typeclass dispatcher\n--- got ---\n%s", got)
 	}
 }
@@ -1212,18 +1212,18 @@ func TestCompileDirDeduplicatesTypeclassMethodParams(t *testing.T) {
 	writeMygoFile(t, dir, "main.mygo", `package main
 	  import fmt "go:fmt"
 
-	  interface Show[A]
-	    func show(value: A) -> String
+	  interface ToString[A]
+	    func ToString(value: A) -> String
 	  end
 
-	  impl Int64Show: Show[Int64]
-	    func show(value: Int64) -> String
+	  impl Int64Show: ToString[Int64]
+	    func ToString(value: Int64) -> String
 		  fmt.Sprint(value)
 		end
 	  end
 
-	  func demo(value: Int64) -> String using Show[Int64]
-	    value.show()
+	  func demo(value: Int64) -> String using ToString[Int64]
+	    value.ToString()
 	  end
 `)
 
@@ -1232,7 +1232,7 @@ func TestCompileDirDeduplicatesTypeclassMethodParams(t *testing.T) {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
 	got := readFile(t, outFiles[0])
-	if strings.Count(got, "showFn ") != 1 {
+	if strings.Count(got, "ToStringFn ") != 1 {
 		t.Fatalf("expected one typeclass function param, got generated Go:\n%s", got)
 	}
 }
@@ -1242,16 +1242,16 @@ func TestCompileDirSupportsMultipleUsingConstraints(t *testing.T) {
 	writeMygoFile(t, dir, "main.mygo", `package main
 	  import fmt "go:fmt"
 
-	  interface Show[A]
-	    func show(value: A) -> String
+	  interface ToString[A]
+	    func ToString(value: A) -> String
 	  end
 
 	  interface Fancy[A]
 	    func fancy(value: A) -> String
 	  end
 
-	  impl Int64Show: Show[Int64]
-	    func show(value: Int64) -> String
+	  impl Int64Show: ToString[Int64]
+	    func ToString(value: Int64) -> String
 		  fmt.Sprint(value)
 		end
 	  end
@@ -1262,8 +1262,8 @@ func TestCompileDirSupportsMultipleUsingConstraints(t *testing.T) {
 		end
 	  end
 
-	  func demo(value: Int64, label: String) -> String using Show[Int64], Fancy[String]
-	    value.show()
+	  func demo(value: Int64, label: String) -> String using ToString[Int64], Fancy[String]
+	    value.ToString()
 	    label.fancy()
 	  end
 `)
@@ -1274,9 +1274,9 @@ func TestCompileDirSupportsMultipleUsingConstraints(t *testing.T) {
 	}
 	got := readFile(t, outFiles[0])
 	for _, want := range []string{
-		"showFn func(int64) string",
+		"ToStringFn func(int64) string",
 		"fancyFn func(string) string",
-		"showFn(value)",
+		"ToStringFn(value)",
 		"fancyFn(label)",
 	} {
 		if !strings.Contains(got, want) {

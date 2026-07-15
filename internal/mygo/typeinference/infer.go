@@ -215,7 +215,7 @@ func initialTypeEnv(pkg *PkgInfo) TypeEnv {
 	}
 
 	// Container and prelude type constructors (recognized as compiler intrinsics)
-	containerTypes := []string{"Ref", "Option", "Result", "Slice", "Map", "Set", "List", "Show", "Eq", "IEnumerable", "IOption"}
+	containerTypes := []string{"Ref", "Option", "Result", "Slice", "Map", "Set", "List", "ToString", "Eq", "IEnumerable", "IOption"}
 	for _, name := range containerTypes {
 		t := TCon{Name: name}
 		env[name] = &Scheme{Body: QualifiedType{Body: t}}

@@ -12,7 +12,7 @@ import (
 // Instance represents a typeclass implementation for a specific type.
 // Example: instance Eq[Int] { ... }
 type Instance struct {
-	ClassName  string      // e.g., "Eq", "Show"
+	ClassName  string      // e.g., "Eq", "ToString"
 	Type       MonoType    // e.g., TCon{Name: "Int"} or TCon{Name: "Option", Args: [TVar]}
 	Predicates []Predicate // super-class constraints
 }
@@ -134,7 +134,7 @@ func (s *Solver) ResolveAndGeneralize(env TypeEnv, t MonoType, preds []Predicate
 // ---------------------------------------------------------------------------
 
 // RegisterBuiltInInstances registers only Eq for primitive types and Ref.
-// All other typeclass instances (Show, IEnumerable, etc.) are registered
+// All other typeclass instances (ToString, IEnumerable, etc.) are registered
 // dynamically when their impl declarations are discovered during inference.
 func RegisterBuiltInInstances() map[string]*Instance {
 	instances := []*Instance{

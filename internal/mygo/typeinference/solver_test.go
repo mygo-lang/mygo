@@ -111,7 +111,7 @@ func TestSolveConstraints(t *testing.T) {
 
 	preds := []Predicate{
 		{ClassName: "Eq", Args: []MonoType{TCon{Name: "Int"}}},
-		{ClassName: "Show", Args: []MonoType{TCon{Name: "String"}}},
+		{ClassName: "ToString", Args: []MonoType{TCon{Name: "String"}}},
 	}
 
 	remaining, subst, err := SolveConstraints(preds, make(TypeEnv), solver)
@@ -178,7 +178,7 @@ func TestIsFullyResolved(t *testing.T) {
 func TestGetUniqueClassNames(t *testing.T) {
 	preds := []Predicate{
 		{ClassName: "Eq", Args: []MonoType{TCon{Name: "Int"}}},
-		{ClassName: "Show", Args: []MonoType{TCon{Name: "Int"}}},
+		{ClassName: "ToString", Args: []MonoType{TCon{Name: "Int"}}},
 		{ClassName: "Eq", Args: []MonoType{TCon{Name: "String"}}}, // duplicate
 	}
 
@@ -186,8 +186,8 @@ func TestGetUniqueClassNames(t *testing.T) {
 	if len(names) != 2 {
 		t.Fatalf("expected 2 unique class names, got %d", len(names))
 	}
-	if names[0] != "Eq" || names[1] != "Show" {
-		t.Fatalf("expected [Eq, Show], got %v", names)
+	if names[0] != "Eq" || names[1] != "ToString" {
+		t.Fatalf("expected [Eq, ToString], got %v", names)
 	}
 }
 
@@ -200,9 +200,9 @@ func TestRegisterBuiltInInstances(t *testing.T) {
 		t.Fatalf("expected Eq[Int] instance to be registered")
 	}
 
-	// Show and IEnumerable are NOT built-in — they should only be registered from impl declarations
-	showKey := "Show[String]"
-	if _, ok := instances[showKey]; ok {
-		t.Fatalf("expected Show[String] instance NOT to be registered as built-in")
+	// ToString and IEnumerable are NOT built-in — they should only be registered from impl declarations
+	toStringKey := "ToString[String]"
+	if _, ok := instances[toStringKey]; ok {
+		t.Fatalf("expected ToString[String] instance NOT to be registered as built-in")
 	}
 }

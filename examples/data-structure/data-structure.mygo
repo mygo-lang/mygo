@@ -75,10 +75,10 @@ func maxInt(a: Int, b: Int) -> Int
   if a > b => a else b
 end
 
-func describeOption[A](value: Option[A]) -> String using Show[A]
+func describeOption[A](value: Option[A]) -> String using ToString[A]
   switch value
     case None => "None"
-    case Some(inner) => "Some(" + show(inner) + ")"
+    case Some(inner) => "Some(" + inner.ToString() + ")"
   end
 end
 
@@ -89,9 +89,9 @@ end
 #   Some(ref) → more elements follow
 #
 # Build:  [1, 2, 3]
-#   lastNode  = List { head: 3, tail: None }
-#   middleNode = List { head: 2, tail: Some(Ref.new(lastNode)) }
-#   firstNode  = List { head: 1, tail: Some(Ref.new(middleNode)) }
+#   lastNode  = List[Int] { head: 3, tail: None }
+#   middleNode = List[Int] { head: 2, tail: Some(Ref.new(lastNode)) }
+#   firstNode  = List[Int] { head: 1, tail: Some(Ref.new(middleNode)) }
 
 func buildList() -> List[Int]
   let lastNode = List { head: 3, tail: None }

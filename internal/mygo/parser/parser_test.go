@@ -248,12 +248,12 @@ struct Box[T]
   value: T
 end
 
-interface Show[T]
-  func show(value: T) -> String
+interface ToString[T]
+  func ToString(value: T) -> String
 end
 
-impl Box[T]: Show[T]
-  func show(value: Box[T]) -> String
+impl Box[T]: ToString[T]
+  func ToString(value: Box[T]) -> String
     "ok"
   end
 end
@@ -461,7 +461,7 @@ end
 
 func TestParseFileSupportsUsingClauses(t *testing.T) {
 	src := `package main
-func eq[A](left: A, right: A) -> Bool using Eq[A], Show[A]
+func eq[A](left: A, right: A) -> Bool using Eq[A], ToString[A]
   true
 end
 `
@@ -485,8 +485,8 @@ end
 	if got := len(fn.Using[0].Args); got != 1 {
 		t.Fatalf("len(FuncDecl.Using[0].Args) = %d, want %d", got, 1)
 	}
-	if fn.Using[1].Name != "Show" {
-		t.Fatalf("FuncDecl.Using[1].Name = %q, want %q", fn.Using[1].Name, "Show")
+	if fn.Using[1].Name != "ToString" {
+		t.Fatalf("FuncDecl.Using[1].Name = %q, want %q", fn.Using[1].Name, "ToString")
 	}
 	if got := len(fn.Using[1].Args); got != 1 {
 		t.Fatalf("len(FuncDecl.Using[1].Args) = %d, want %d", got, 1)
@@ -523,8 +523,8 @@ end
 
 func TestParseFileSupportsInterfaceUsingClauses(t *testing.T) {
 	src := `package main
-interface Show[A]
-  func show(value: A) -> String using Eq[A]
+interface ToString[A]
+  func ToString(value: A) -> String using Eq[A]
 end
 `
 	file, err := ParseFile("test.mygo", src)

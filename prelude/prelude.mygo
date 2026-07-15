@@ -10,8 +10,8 @@ enum Result[A, E]
   Err(E)
 end
 
-interface Show[A]
-  func Show(value: A) -> String
+interface ToString[A]
+  func ToString(value: A) -> String
 end
 
 interface Eq[A]

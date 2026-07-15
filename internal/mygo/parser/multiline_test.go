@@ -35,8 +35,8 @@ end
 			name: "cross_line_using",
 			src: `package main
 func foo(x: Int) -> String
-  using Show
-  show(x)
+  using ToString
+  ToString(x)
 end
 `,
 		},

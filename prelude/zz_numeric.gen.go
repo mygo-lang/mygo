@@ -6,40 +6,40 @@ import (
 	"fmt"
 )
 
-func Show_int(value int) string {
+func ToString_int(value int) string {
 	return fmt.Sprint(value)
 }
-func Show_int8(value int8) string {
+func ToString_int8(value int8) string {
 	return fmt.Sprint(value)
 }
-func Show_uint8(value uint8) string {
+func ToString_uint8(value uint8) string {
 	return fmt.Sprint(value)
 }
-func Show_int16(value int16) string {
+func ToString_int16(value int16) string {
 	return fmt.Sprint(value)
 }
-func Show_uint16(value uint16) string {
+func ToString_uint16(value uint16) string {
 	return fmt.Sprint(value)
 }
-func Show_int32(value int32) string {
+func ToString_int32(value int32) string {
 	return fmt.Sprint(value)
 }
-func Show_uint32(value uint32) string {
+func ToString_uint32(value uint32) string {
 	return fmt.Sprint(value)
 }
-func Show_int64(value int64) string {
+func ToString_int64(value int64) string {
 	return fmt.Sprint(value)
 }
-func Show_float32(value float32) string {
+func ToString_float32(value float32) string {
 	return fmt.Sprint(value)
 }
-func Show_float64(value float64) string {
+func ToString_float64(value float64) string {
 	return fmt.Sprint(value)
 }
-func Show_string(value string) string {
+func ToString_string(value string) string {
 	return value
 }
-func Show_bool(value bool) string {
+func ToString_bool(value bool) string {
 	return fmt.Sprint(value)
 }
 func Equals_int(left int, right int) bool {

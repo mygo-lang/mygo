@@ -473,7 +473,7 @@ opt_impl_interface
 	| COLON type {
 		p := yylex.(*parser)
 		// Named/generic form: "impl Type : Interface[Args]"
-		// p.currentType holds the interface reference (e.g. "Show[Int]")
+		// p.currentType holds the interface reference (e.g. "ToString[Int]")
 		if iface, ok := p.currentType.(*ast.NamedType); ok {
 			p.currentName = iface.Name
 			p.currentImplInterfaceArgs = append([]ast.TypeExpr(nil), iface.Args...)

@@ -25,7 +25,7 @@
 - `Slice[A]` is the only slice type spelling. The parser no longer accepts `A[]` or `Int[]` shorthand, which keeps type syntax aligned with ordinary generic instantiation.
 - The parser test suite now covers package/function declarations, collection literals, chain postfix, `if`/`while`/`switch`, pipe precedence, struct/interface/impl declarations, `let`/`var`/assignment, func literals, `using` clauses, enum declarations, switch patterns, and nested/empty collection literals.
 - Integer literals support hex (`0xff` / `0XFF`), octal (`0o777` / `0O777`), and binary (`0b1010` / `0B1010`) prefix syntax. These are parsed as `NUMBER` tokens in the lexer — the raw literal string (e.g. `"0xff"`) is stored as `LiteralExpr.Value` with `Kind: "number"`.
-- Supported numeric types: `Int`, `Int8`, `UInt8`, `Int16`, `UInt16`, `Int32`, `UInt32`, `Int64`, `UInt`, `UInt64`, `Float32`, `Float64`. All are represented as `*NamedType` in the AST and lowered to corresponding Go primitives via `goType`, `hmTypeString`, `jenTypeExpr`, and `typeString`. The prelude provides `Show` and `Eq` impls for all of them.
+- Supported numeric types: `Int`, `Int8`, `UInt8`, `Int16`, `UInt16`, `Int32`, `UInt32`, `Int64`, `UInt`, `UInt64`, `Float32`, `Float64`. All are represented as `*NamedType` in the AST and lowered to corresponding Go primitives via `goType`, `hmTypeString`, `jenTypeExpr`, and `typeString`. The prelude provides `ToString` and `Eq` impls for all of them.
 - Nested slice types are written explicitly as `Slice[Slice[Int]]`, and empty `[]` is treated as an empty slice literal in expression position.
 - `using` clauses support multiple constraints and constraint type arguments in both function and interface method signatures.
 - `where` has been removed from the main syntax; typeclass requirements now use `using` only. The parser rejects `where` with an explicit migration error.
@@ -270,8 +270,8 @@ end
 
 // `using` clause on a new line (must come after `-> type`)
 func foo(x: Int) -> String
-  using Show
-  show(x)
+  using ToString
+  x.ToString()
 end
 
 // Trailing comma supported

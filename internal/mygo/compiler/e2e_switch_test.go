@@ -23,12 +23,12 @@ func TestE2ESwitchGeneratedCodeIsValidGo(t *testing.T) {
 		},
 	}
 
-	showInterface := &InterfaceDecl{
-		Name:       "Show",
+	toStringInterface := &InterfaceDecl{
+		Name:       "ToString",
 		TypeParams: []string{"A"},
 		Methods: []*FuncDecl{
 			{
-				Name: "show",
+				Name: "ToString",
 				Params: []Param{
 					{Name: "x", Type: &NamedType{Name: "A"}},
 				},
@@ -37,7 +37,7 @@ func TestE2ESwitchGeneratedCodeIsValidGo(t *testing.T) {
 		},
 	}
 
-	// describe[A](opt: Option[A]) -> String using Show[A]
+	// describe[A](opt: Option[A]) -> String using ToString[A]
 	describeFunc := &FuncDecl{
 		Name:       "describe",
 		TypeParams: []string{"A"},
@@ -46,7 +46,7 @@ func TestE2ESwitchGeneratedCodeIsValidGo(t *testing.T) {
 		},
 		Ret: &NamedType{Name: "String"},
 		Using: []Constraint{
-			{Name: "Show", Args: []TypeExpr{&NamedType{Name: "A"}}},
+			{Name: "ToString", Args: []TypeExpr{&NamedType{Name: "A"}}},
 		},
 		Body: &SwitchExpr{
 			Target: &IdentExpr{Name: "opt"},
@@ -58,7 +58,7 @@ func TestE2ESwitchGeneratedCodeIsValidGo(t *testing.T) {
 						Left: &BinaryExpr{
 							Op:    "+",
 							Left:  &LiteralExpr{Kind: "string", Value: "some("},
-							Right: &CallExpr{Callee: &IdentExpr{Name: "show"}, Args: []Expr{&IdentExpr{Name: "x"}}},
+							Right: &CallExpr{Callee: &IdentExpr{Name: "ToString"}, Args: []Expr{&IdentExpr{Name: "x"}}},
 						},
 						Right: &LiteralExpr{Kind: "string", Value: ")"},
 					},
@@ -76,7 +76,7 @@ func TestE2ESwitchGeneratedCodeIsValidGo(t *testing.T) {
 		Name: "main",
 		Decls: []Decl{
 			optEnum,
-			showInterface,
+			toStringInterface,
 			describeFunc,
 		},
 		Enums: map[string]*EnumDecl{
@@ -84,7 +84,7 @@ func TestE2ESwitchGeneratedCodeIsValidGo(t *testing.T) {
 		},
 		Structs: map[string]*StructDecl{},
 		Interfaces: map[string]*InterfaceDecl{
-			"Show": showInterface,
+			"ToString": toStringInterface,
 		},
 		Funcs: map[string]*FuncDecl{
 			"describe": describeFunc,

@@ -2,76 +2,76 @@ package prelude
 
 import fmt "go:fmt"
 
-# ===== Show impls =====
+# ===== ToString impls =====
 
-impl Int: Show[Int]
-  func Show(value: Int) -> String
+impl Int: ToString[Int]
+  func ToString(value: Int) -> String
     fmt.Sprint(value)
   end
 end
 
-impl Int8: Show[Int8]
-  func Show(value: Int8) -> String
+impl Int8: ToString[Int8]
+  func ToString(value: Int8) -> String
     fmt.Sprint(value)
   end
 end
 
-impl UInt8: Show[UInt8]
-  func Show(value: UInt8) -> String
+impl UInt8: ToString[UInt8]
+  func ToString(value: UInt8) -> String
     fmt.Sprint(value)
   end
 end
 
-impl Int16: Show[Int16]
-  func Show(value: Int16) -> String
+impl Int16: ToString[Int16]
+  func ToString(value: Int16) -> String
     fmt.Sprint(value)
   end
 end
 
-impl UInt16: Show[UInt16]
-  func Show(value: UInt16) -> String
+impl UInt16: ToString[UInt16]
+  func ToString(value: UInt16) -> String
     fmt.Sprint(value)
   end
 end
 
-impl Int32: Show[Int32]
-  func Show(value: Int32) -> String
+impl Int32: ToString[Int32]
+  func ToString(value: Int32) -> String
     fmt.Sprint(value)
   end
 end
 
-impl UInt32: Show[UInt32]
-  func Show(value: UInt32) -> String
+impl UInt32: ToString[UInt32]
+  func ToString(value: UInt32) -> String
     fmt.Sprint(value)
   end
 end
 
-impl Int64: Show[Int64]
-  func Show(value: Int64) -> String
+impl Int64: ToString[Int64]
+  func ToString(value: Int64) -> String
     fmt.Sprint(value)
   end
 end
 
-impl Float32: Show[Float32]
-  func Show(value: Float32) -> String
+impl Float32: ToString[Float32]
+  func ToString(value: Float32) -> String
     fmt.Sprint(value)
   end
 end
 
-impl Float64: Show[Float64]
-  func Show(value: Float64) -> String
+impl Float64: ToString[Float64]
+  func ToString(value: Float64) -> String
     fmt.Sprint(value)
   end
 end
 
-impl String: Show[String]
-  func Show(value: String) -> String
+impl String: ToString[String]
+  func ToString(value: String) -> String
     value
   end
 end
 
-impl Bool: Show[Bool]
-  func Show(value: Bool) -> String
+impl Bool: ToString[Bool]
+  func ToString(value: Bool) -> String
     fmt.Sprint(value)
   end
 end

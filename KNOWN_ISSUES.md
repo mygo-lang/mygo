@@ -8,9 +8,13 @@
 
 ## Current Issues
 
+### Typeclass Impl — Multi-Argument Variants
+
+- **Typeclass impl with multiple type parameters** (`prelude/prelude.mygo`): The `impl[A, E] ResultEq[A, E]: Eq[Result[A, E]]` pattern (and similar multi-parameter impls like `impl[K, V] MapIEnumerable[K, V]`) may not compile or generate correct Go code. The compiler's typeclass dispatch (`matchTypeclassHelper`) uses the first type argument's type string for receiver matching, which can cause ambiguity or missed matches when multiple type parameters are involved. Workaround: use single-parameter impls where possible, or implement via inline Go blocks.
+
 ### Type Ergonomics
 
-- **`sumList` parameter ergonomics** (`examples/data-structure/data-structure.mygo`): The function accepts `List[Int]` by value, creates a traversal ref with `Ref.new(lst)`, and walks `tail: Option[Ref[List[Int]]]`. While functional, this design takes the address of a local parameter copy. A future design may prefer accepting `Option[Ref[List[Int]]]` or `Ref[List[Int]]` directly to avoid the extra indirection.
+- **`sumList` parameter ergonomics** (`examples/data-structure/data-structure.mygo`): The function accepts `List[Int]` by value, creates a traversal ref with `Ref.new(lst)`, and walks `tail: Option[Ref[List[Int]]]`. While functional, this design takes the address of a local parameter copy. A future design may prefer accepting `Option[Ref[List[Int]]]` or `Ref[ListInt]]` directly to avoid the extra indirection.
 
 ## Potential Improvements
 

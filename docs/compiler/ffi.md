@@ -5,7 +5,7 @@
 - Use `import "go:pkg/name"` for Go packages.
 - Allow an optional alias form like `import fmt "go:fmt"` when the Go package name should be explicit.
 - Package-qualified selectors such as `fmt.Sprint(...)` should lower as Go selectors, not as struct field access.
-- The built-in prelude provides common typeclasses such as `Show[A]` and `Eq[A]`; prefer using those protocols rather than ad hoc `any` formatting or conversion.
+- The built-in prelude provides common typeclasses such as `ToString[A]` and `Eq[A]`; prefer using those protocols rather than ad hoc `any` formatting or conversion.
 - The built-in prelude also owns foundational algebraic data types like `Option[A]` and `Result[A, E]`; use those rather than redeclaring them in example packages.
 - Generated Go should only include helper imports when they are actually needed; `reflect` is now a fallback for truly dynamic `any` function calls, not a blanket import.
 - Typeclass-style `impl` blocks should lower to standalone helper functions plus explicit function parameters at call sites, not to method dictionaries.

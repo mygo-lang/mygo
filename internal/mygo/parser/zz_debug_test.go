@@ -6,7 +6,7 @@ import (
 )
 
 func TestParseInterface(t *testing.T) {
-	src := "package p\n\ninterface Show[A]\n  func show(value: A) -> String\nend\n"
+	src := "package p\n\ninterface ToString[A]\n  func ToString(value: A) -> String\nend\n"
 	f, err := ParseFile("test.mygo", src)
 	if err != nil {
 		t.Fatal(err)

@@ -81,7 +81,7 @@ func (t TFunc) String() string {
 func (t TGoPackage) String() string { return "go package " + t.Alias }
 func (TUnit) String() string        { return "Unit" }
 
-// Predicate represents a typeclass constraint, e.g. Show[Int].
+// Predicate represents a typeclass constraint, e.g. ToString[Int].
 type Predicate struct {
 	ClassName string
 	Args      []MonoType

@@ -3,16 +3,13 @@
 //line internal/mygo/parser/parser.y:3
 package parser
 
-import __yyfmt__ "fmt"
-
-//line internal/mygo/parser/parser.y:3
-
 import (
+	__yyfmt__ "fmt"
 	"strings"
 
 	"github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
-)
+) //line internal/mygo/parser/parser.y:3
 
 // typeExprToString serializes a TypeExpr to a string representation.
 // For HKT types like C[A], it returns "C[A]" instead of just "C".
@@ -1477,7 +1474,7 @@ yydefault:
 		{
 			p := yylex.(*parser)
 			// Named/generic form: "impl Type : Interface[Args]"
-			// p.currentType holds the interface reference (e.g. "Show[Int]")
+			// p.currentType holds the interface reference (e.g. "ToString[Int]")
 			if iface, ok := p.currentType.(*ast.NamedType); ok {
 				p.currentName = iface.Name
 				p.currentImplInterfaceArgs = append([]ast.TypeExpr(nil), iface.Args...)
