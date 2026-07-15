@@ -30,6 +30,12 @@ func ToString_uint32(value uint32) string {
 func ToString_int64(value int64) string {
 	return fmt.Sprint(value)
 }
+func ToString_uint(value uint) string {
+	return fmt.Sprint(value)
+}
+func ToString_uint64(value uint64) string {
+	return fmt.Sprint(value)
+}
 func ToString_float32(value float32) string {
 	return fmt.Sprint(value)
 }

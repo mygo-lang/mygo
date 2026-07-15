@@ -52,6 +52,18 @@ impl Int64: ToString[Int64]
   end
 end
 
+impl UInt: ToString[UInt]
+  func ToString(value: UInt) -> String
+    fmt.Sprint(value)
+  end
+end
+
+impl UInt64: ToString[UInt64]
+  func ToString(value: UInt64) -> String
+    fmt.Sprint(value)
+  end
+end
+
 impl Float32: ToString[Float32]
   func ToString(value: Float32) -> String
     fmt.Sprint(value)

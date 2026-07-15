@@ -9,15 +9,13 @@ enum Color
   Blue
 end
 
-enum Point2D
-  
+enum Point2D  
   Empty
   WithX(Int)
   WithY(Int)
 end
 
 enum Operation
-  
   Add
   Subtract
   Multiply
@@ -27,7 +25,7 @@ end
 
 struct Person
   name: String
-  age: Int64
+  age: Int
 end
 
 struct Rectangle
@@ -94,21 +92,21 @@ end
 #   firstNode  = List[Int] { head: 1, tail: Some(Ref.new(middleNode)) }
 
 func buildList() -> List[Int]
-  let lastNode = List { head: 3, tail: None }
-  let middleNode = List { head: 2, tail: Some(Ref.new(lastNode)) }
-  List { head: 1, tail: Some(Ref.new(middleNode)) }
+  let noneTail: Option[List[Int]] = None
+  let lastNode = List.Cons(3, noneTail)
+  let middleNode = List.Cons(2, Some(lastNode))
+  List.Cons(1, Some(middleNode))
 end
 
-# Traverse a list using tail unwrapping.
-# tail is Option[Ref[List[A]]], so we switch to extract the next node.
+# Traverse a list using public List methods.
 func sumList(lst: List[Int]) -> Int
   var total: Int = 0
-  var current: Ref[List[Int]] = Ref.new(lst)
+  var current: List[Int] = lst
   var done: Bool = false
   while !done
-    let headVal = current.head
+    let headVal = current.Head()
     total = total + headVal
-    switch current.tail
+    switch current.Tail()
       case None => done = true
       case Some(node) => current = node
     end
@@ -123,13 +121,13 @@ func demo() -> String
   let point = Point2D.WithY(20)
   let op = Operation.Multiply
 
-  let empty: Option[Float64] = None()
-  let someVal: Option[Int64] = Some(42)
+  let empty: Option[Float64] = None
+  let someVal: Option[Int] = Some(42)
 
   let person = Person { name: "Charlie", age: 25 }
   let rect = Rectangle { width: 10.0, height: 5.0 }
   let pair: Pair[Int] = Pair { first: 1, second: 2 }
-  let color = ColorTuple
+  let color = ColorTuple {}
   let addr = Address { street: "Main St", city: "NYC" }
   let contact = Contact { name: "Bob" }
 

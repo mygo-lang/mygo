@@ -41,6 +41,23 @@ func inferTypeSubstFromExpected(src TypeExpr, expected string) map[string]string
 	return subst
 }
 
+func (g *gen) qualifiedEnumVariant(field *FieldExpr) (string, int, bool) {
+	id, ok := field.Expr.(*IdentExpr)
+	if !ok || g == nil || g.pkg == nil {
+		return "", 0, false
+	}
+	enum := g.pkg.Enums[id.Name]
+	if enum == nil {
+		return "", 0, false
+	}
+	for _, variant := range enum.Variants {
+		if variant.Name == field.Field {
+			return enum.Name, len(variant.Fields), true
+		}
+	}
+	return "", 0, false
+}
+
 func inferExpectedTypeSubst(src TypeExpr, expected string, subst map[string]string) {
 	expected = strings.TrimSpace(expected)
 	if expected == "" || src == nil {
@@ -81,6 +98,58 @@ func (g *gen) paramExpectedTypes(fn *FuncDecl, expected string, ctx *egCtx) []st
 	return out
 }
 
+func (g *gen) methodReturnType(method *struct {
+	Impl        *ImplDecl
+	Func        *FuncDecl
+	HasReceiver bool
+}, recvType string, callArgs []Expr, fallback string, ctx *egCtx) string {
+	if method == nil {
+		return fallback
+	}
+	fn := method.Func
+	if fn == nil {
+		return fallback
+	}
+	if fn.Name == "Fold" && len(callArgs) > 0 {
+		if typ := g.goTypeFromExpr(callArgs[0], ctx); typ != "" && typ != "any" && !isUnresolvedGoTypeParam(typ) {
+			return typ
+		}
+	}
+	subst := map[string]string{}
+	if len(fn.Params) > 0 {
+		typeParams := append([]string{}, fn.TypeParams...)
+		if method.Impl != nil {
+			typeParams = append(typeParams, method.Impl.TypeParams...)
+		}
+		typeParamSet := typeParamSet(typeParams)
+		inferTypeSubst(fn.Params[0].Type, recvType, typeParamSet, subst)
+		for i, arg := range callArgs {
+			paramIdx := i + 1
+			if paramIdx >= len(fn.Params) {
+				break
+			}
+			argType := g.inferredType(arg)
+			if argType == "" || isUnresolvedGoTypeParam(argType) || containsGeneratedTypeVar(argType) {
+				argType = g.goTypeFromExpr(arg, ctx)
+			}
+			if argType != "" {
+				inferTypeSubst(fn.Params[paramIdx].Type, argType, typeParamSet, subst)
+			}
+		}
+	}
+	if fn.Ret == nil {
+		return ""
+	}
+	ret := g.goTypeStringSubst(fn.Ret, subst)
+	if ret == "" {
+		ret = g.goReturnType(fn.Ret, ctx.typeParams)
+	}
+	if ret == "" {
+		ret = fallback
+	}
+	return ret
+}
+
 func typeArgExprsFromExpected(expected string) []ast.Expr {
 	_, args := splitTypeArgs(expected)
 	if len(args) == 0 {
@@ -107,7 +176,9 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 	// Check for IdentExpr callee — handles Some, None, Ok, Err, func calls
 	if id, ok := n.Callee.(*IdentExpr); ok {
 		switch id.Name {
-		case "Some", "None", "Ok", "Err":
+		case "None":
+			return nil, "", common.ErrorAtPos(g.currentFile, id.Line, id.Column, "None is a value constructor; use None, not None()")
+		case "Some", "Ok", "Err":
 			args, err := g.translateCallArgs(n.Args, ctx)
 			if err != nil {
 				return nil, "", err
@@ -137,13 +208,29 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			if err != nil {
 				return nil, "", err
 			}
+			callSubst := map[string]string{}
+			typeParams := typeParamSet(fnDecl.TypeParams)
+			for i, arg := range n.Args {
+				if i >= len(fnDecl.Params) {
+					break
+				}
+				argType := g.inferredType(arg)
+				if argType == "" {
+					continue
+				}
+				inferTypeSubst(fnDecl.Params[i].Type, argType, typeParams, callSubst)
+			}
 			for _, c := range fnDecl.Using {
 				// If BindName is set, find the named impl directly.
 				var namedImpl *ImplDecl
 				var ifc *InterfaceDecl
 				var ok bool
-				if c.BindName != "" {
-					namedImpl = g.findNamedImpl(c.BindName, c.Name, c.Args)
+				resolvedConstraint := c
+				if len(callSubst) > 0 {
+					resolvedConstraint.Args = substitutedTypeArgs(c.Args, callSubst)
+				}
+				if resolvedConstraint.BindName != "" {
+					namedImpl = g.findNamedImpl(resolvedConstraint.BindName, resolvedConstraint.Name, resolvedConstraint.Args)
 					if namedImpl != nil {
 						ifaceName := namedImpl.InterfaceName
 						if ifaceName == "" {
@@ -152,9 +239,9 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 						ifc = g.pkg.Interfaces[ifaceName]
 					}
 				} else {
-					namedImpl, ifc, ok = resolveConstraint(c, g.pkg)
+					namedImpl, ifc, ok = resolveConstraint(resolvedConstraint, g.pkg)
 					if !ok {
-						ifc = g.pkg.Interfaces[c.Name]
+						ifc = g.pkg.Interfaces[resolvedConstraint.Name]
 					}
 				}
 				if ifc == nil {
@@ -162,16 +249,16 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 				}
 				// Compute type substitution for the constraint's type args.
 				implSubst := map[string]string{}
-				typeArgs := append([]TypeExpr(nil), c.Args...)
-				if namedImpl != nil && c.BindName != "" {
+				typeArgs := append([]TypeExpr(nil), resolvedConstraint.Args...)
+				if namedImpl != nil && resolvedConstraint.BindName != "" {
 					typeArgs = append([]TypeExpr(nil), namedImpl.InterfaceArgs...)
 					if len(typeArgs) == 0 {
 						typeArgs = append([]TypeExpr(nil), namedImpl.TypeArgs...)
 					}
 					if len(namedImpl.TypeParams) > 0 {
 						for i, tp := range namedImpl.TypeParams {
-							if i < len(c.Args) {
-								implSubst[tp] = typeString(c.Args[i], nil)
+							if i < len(resolvedConstraint.Args) {
+								implSubst[tp] = typeString(resolvedConstraint.Args[i], nil)
 							}
 						}
 					}
@@ -184,6 +271,9 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 					implTypeArgs := append([]TypeExpr(nil), namedImpl.InterfaceArgs...)
 					if len(implTypeArgs) == 0 {
 						implTypeArgs = append([]TypeExpr(nil), namedImpl.TypeArgs...)
+					}
+					if len(resolvedConstraint.Args) > 0 {
+						implTypeArgs = append([]TypeExpr(nil), resolvedConstraint.Args...)
 					}
 					namedImplTypeKey = g.implHelperKey(namedImpl, implTypeArgs)
 				}
@@ -237,7 +327,17 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		var fnDecl *FuncDecl
 		if decl, ok := g.pkg.Funcs[id.Name]; ok {
 			fnDecl = decl
-			retType = g.goReturnType(fnDecl.Ret, ctx.typeParams)
+			if len(n.TypeArgs) > 0 && len(fnDecl.TypeParams) > 0 {
+				subst := map[string]string{}
+				for i, tp := range fnDecl.TypeParams {
+					if i < len(n.TypeArgs) {
+						subst[tp] = g.goType(n.TypeArgs[i], ctx.typeParams)
+					}
+				}
+				retType = g.goTypeStringSubst(fnDecl.Ret, subst)
+			} else {
+				retType = g.goReturnType(fnDecl.Ret, ctx.typeParams)
+			}
 		}
 		if expected != "" {
 			retType = expected
@@ -246,13 +346,13 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		if err != nil {
 			return nil, "", err
 		}
-		// For Some/None/Ok/Err, add type args from expected or retType
+		// For Some/Ok/Err, add type args from expected or retType.
 		useExpected := expected
 		if useExpected == "" {
 			useExpected = ctx.retType
 		}
 		switch id.Name {
-		case "Some", "None":
+		case "Some":
 			if base, tas := splitTypeArgs(useExpected); base == "Option" && len(tas) > 0 {
 				ta := make([]ast.Expr, len(tas))
 				for i, a := range tas {
@@ -275,6 +375,17 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 	}
 	// Field access call: x.method(args) or Enum.Variant(args)
 	if field, ok := n.Callee.(*FieldExpr); ok {
+		if enumName, _, ok := g.qualifiedEnumVariant(field); ok {
+			args, err := g.translateCallArgs(n.Args, ctx)
+			if err != nil {
+				return nil, "", err
+			}
+			typ := g.inferredType(n)
+			if typ == "" {
+				typ = enumName
+			}
+			return &ast.CallExpr{Fun: ast.NewIdent(enumConstructorGoName(enumName, field.Field)), Args: args}, typ, nil
+		}
 		// Handle Ref.value() — dereference pointer in call context
 		if field.Field == "value" && len(n.Args) == 0 {
 			baseExpr, baseType, _ := g.translateExpr(field.Expr, ctx, "")
@@ -322,12 +433,15 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			// Check for inherent static method call: Type.method(args)
 			if methods, ok := g.inherentMethods[id.Name]; ok {
 				if method, ok := methods[field.Field]; ok && !method.HasReceiver {
-					args, err := g.translateCallArgs(n.Args, ctx)
+					retType := g.inferredType(n)
+					if retType == "" {
+						retType = g.goReturnType(method.Func.Ret, ctx.typeParams)
+					}
+					args, err := g.translateCallArgsExpected(n.Args, g.paramExpectedTypes(method.Func, retType, ctx), ctx)
 					if err != nil {
 						return nil, "", err
 					}
 					fnName := inherentMethodName(id.Name, method.Func.Name)
-					retType := g.goReturnType(method.Func.Ret, ctx.typeParams)
 					return &ast.CallExpr{Fun: ast.NewIdent(fnName), Args: args}, retType, nil
 				}
 			}
@@ -402,7 +516,10 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 					fnName := inherentMethodName(recvTypeName, method.Func.Name)
 					allArgs := append([]ast.Expr{base}, args...)
 					callee := ast.NewIdent(fnName)
-					retType := g.goReturnType(method.Func.Ret, ctx.typeParams)
+					retType := g.inferredType(n)
+					if retType == "" || isUnresolvedGoTypeParam(retType) || containsGeneratedTypeVar(retType) {
+						retType = g.methodReturnType(method, bt, n.Args, g.goReturnType(method.Func.Ret, ctx.typeParams), ctx)
+					}
 					return &ast.CallExpr{Fun: callee, Args: allArgs}, retType, nil
 				}
 			}
@@ -415,7 +532,10 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 					fnName := inherentMethodName(mygoName, method.Func.Name)
 					allArgs := append([]ast.Expr{base}, args...)
 					callee := ast.NewIdent(fnName)
-					retType := g.goReturnType(method.Func.Ret, ctx.typeParams)
+					retType := g.inferredType(n)
+					if retType == "" || isUnresolvedGoTypeParam(retType) || containsGeneratedTypeVar(retType) {
+						retType = g.methodReturnType(method, bt, n.Args, g.goReturnType(method.Func.Ret, ctx.typeParams), ctx)
+					}
 					return &ast.CallExpr{Fun: callee, Args: allArgs}, retType, nil
 				}
 			}
@@ -625,6 +745,13 @@ func mygoSigTypeToGo(typ string) string {
 			return "map[" + mygoSigTypeToGo(args[0]) + "]struct{}"
 		}
 	}
+	if len(args) > 0 {
+		goArgs := make([]string, len(args))
+		for i, arg := range args {
+			goArgs[i] = mygoSigTypeToGo(arg)
+		}
+		return base + "[" + strings.Join(goArgs, ", ") + "]"
+	}
 	return typ
 }
 
@@ -761,6 +888,23 @@ func isTypeParamName(name string) bool {
 	}
 	r := rune(name[0])
 	return r >= 'A' && r <= 'Z' && len(name) <= 2
+}
+
+func isUnresolvedGoTypeParam(name string) bool {
+	name = strings.TrimSpace(name)
+	if len(name) == 0 || len(name) > 2 || strings.ContainsAny(name, "[]* ,.(){}") {
+		return false
+	}
+	for _, r := range name {
+		if (r < 'A' || r > 'Z') && (r < 'a' || r > 'z') {
+			return false
+		}
+	}
+	switch name {
+	case "go", "if":
+		return false
+	}
+	return true
 }
 
 func implMethodByName(impl *ImplDecl, name string) *FuncDecl {
@@ -928,6 +1072,7 @@ func (g *gen) matchTypeclassHelper(ifaceName, methodName, recvType string) (stri
 	if iface == nil {
 		return "", "", false
 	}
+	recvType = concreteReceiverTypeForInterface(ifaceName, recvType)
 	for _, impl := range g.pkg.Impls {
 		iname := impl.InterfaceName
 		if iname == "" {
@@ -956,6 +1101,17 @@ func (g *gen) matchTypeclassHelper(ifaceName, methodName, recvType string) (stri
 		return helperFuncName(methodName, helperKey), retType, true
 	}
 	return "", "", false
+}
+
+func concreteReceiverTypeForInterface(ifaceName, recvType string) string {
+	base, args := splitTypeArgs(recvType)
+	if base == ifaceName && len(args) > 0 {
+		first := strings.TrimSpace(args[0])
+		if first != "" && first != recvType {
+			return first
+		}
+	}
+	return recvType
 }
 
 func (g *gen) interfaceNamesForMethod(methodName string) []string {

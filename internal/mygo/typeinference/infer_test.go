@@ -77,6 +77,31 @@ func TestInferLiteralFloat(t *testing.T) {
 	}
 }
 
+func TestInferSuffixedNumericLiterals(t *testing.T) {
+	tests := []struct {
+		value string
+		want  string
+	}{
+		{"42i8", "Int8"},
+		{"-1000i16", "Int16"},
+		{"18_446744073_709_551_615u64", "UInt64"},
+		{"3.14f32", "Float32"},
+		{"2.718281828459045f64", "Float64"},
+	}
+	for _, tt := range tests {
+		state := NewInferState()
+		env := make(TypeEnv)
+		lit := &LiteralExpr{Kind: "number", Value: tt.value}
+		typ, err := inferExprType(env, lit, state)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !eqType(typ, TCon{Name: tt.want}) {
+			t.Fatalf("%s inferred as %s, want %s", tt.value, typ, tt.want)
+		}
+	}
+}
+
 func TestInferLiteralString(t *testing.T) {
 	state := NewInferState()
 	env := make(TypeEnv)
@@ -894,6 +919,63 @@ func TestInferNoneFree(t *testing.T) {
 	_, isVar := con.Args[0].(TVar)
 	if !isVar {
 		t.Fatalf("expected type variable, got %T", con.Args[0])
+	}
+}
+
+func TestInferNoneCallRejected(t *testing.T) {
+	state := NewInferState()
+	call := &CallExpr{Callee: &IdentExpr{Name: "None"}}
+	if _, err := inferExprType(TypeEnv{}, call, state); err == nil {
+		t.Fatal("None() inferred successfully, want error")
+	}
+}
+
+func TestInferQualifiedEnumVariantCall(t *testing.T) {
+	state := NewInferState()
+	pkg := &PkgInfo{
+		Name: "main",
+		Enums: map[string]*EnumDecl{
+			"Point2D": {
+				Name: "Point2D",
+				Variants: []EnumVariant{
+					{Name: "Empty"},
+					{Name: "WithY", Fields: []Field{{Type: &NamedType{Name: "Int"}}}},
+				},
+			},
+		},
+		Structs:    map[string]*StructDecl{},
+		Interfaces: map[string]*InterfaceDecl{},
+		Funcs:      map[string]*FuncDecl{},
+		Impls:      []*ImplDecl{},
+	}
+	state.PkgInfo = pkg
+	env := TypeEnv{
+		"Point2D": &Scheme{Body: QualifiedType{Body: TCon{Name: "Point2D"}}},
+	}
+	call := &CallExpr{
+		Callee: &FieldExpr{Expr: &IdentExpr{Name: "Point2D"}, Field: "WithY"},
+		Args:   []Expr{&LiteralExpr{Kind: "number", Value: "20"}},
+	}
+	typ, err := inferExprType(env, call, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !eqType(typ, TCon{Name: "Point2D"}) {
+		t.Fatalf("expected Point2D, got %s", typ)
+	}
+
+	bare := &CallExpr{Callee: &IdentExpr{Name: "WithY"}, Args: call.Args}
+	if _, err := inferExprType(env, bare, state); err == nil {
+		t.Fatal("bare WithY(20) inferred successfully, want error")
+	}
+
+	nullary := &FieldExpr{Expr: &IdentExpr{Name: "Point2D"}, Field: "Empty"}
+	typ, err = inferExprType(env, nullary, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !eqType(typ, TCon{Name: "Point2D"}) {
+		t.Fatalf("expected Point2D for Point2D.Empty, got %s", typ)
 	}
 }
 

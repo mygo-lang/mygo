@@ -915,9 +915,17 @@ func (g *gen) genEnumDecl(sf *goast.SourceFile, d *EnumDecl) {
 				Results: []ast.Expr{&ast.CompositeLit{Type: structLit, Elts: elts}},
 			}},
 		}
-		sf.AddDecl(astFuncDecl(v.Name, nil, typeParamFields(d.TypeParams),
+		ctorName := enumConstructorGoName(d.Name, v.Name)
+		sf.AddDecl(astFuncDecl(ctorName, nil, typeParamFields(d.TypeParams),
 			ctorParams, []*ast.Field{{Type: ctorRet}}, body))
 	}
+}
+
+func enumConstructorGoName(enumName, variantName string) string {
+	if (enumName == "Option" || enumName == "Result") && (variantName == "Some" || variantName == "None" || variantName == "Ok" || variantName == "Err") {
+		return variantName
+	}
+	return variantNameForEnum(enumName, variantName) + "Ctor"
 }
 
 func (g *gen) genStructDecl(sf *goast.SourceFile, d *StructDecl) {

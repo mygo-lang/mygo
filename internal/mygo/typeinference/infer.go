@@ -225,8 +225,8 @@ func initialTypeEnv(pkg *PkgInfo) TypeEnv {
 	env["true"] = &Scheme{Body: QualifiedType{Body: TCon{Name: "Bool"}}}
 	env["false"] = &Scheme{Body: QualifiedType{Body: TCon{Name: "Bool"}}}
 
-	// Prelude enum constructors and helper functions.
-	for _, name := range []string{"None", "Some", "Ok", "Err", "Zero", "OptionFlatMap", "ResultIsOk", "ResultIsErr", "ResultUnwrap", "ResultMap", "ResultMapErr", "ResultAndThen", "ResultOrElse", "TypeKeyFromType"} {
+	// Prelude constructors and helper functions that remain globally visible.
+	for _, name := range []string{"Some", "Ok", "Err", "Zero", "OptionFlatMap", "ResultIsOk", "ResultIsErr", "ResultUnwrap", "ResultMap", "ResultMapErr", "ResultAndThen", "ResultOrElse", "TypeKeyFromType"} {
 		env[name] = &Scheme{Body: QualifiedType{Body: TCon{Name: name}}}
 	}
 
@@ -358,25 +358,19 @@ func inferEnumDecl(d *EnumDecl, env TypeEnv, state *InferState, pkg *PkgInfo) (T
 	}
 	env[d.Name] = Generalize(env, enumType, nil)
 
-	// Register each variant as a constructor function
-	for _, v := range d.Variants {
-		// Build the type of each variant constructor
-		fieldTypes := make([]MonoType, len(v.Fields))
-		for i, f := range v.Fields {
-			fieldTypes[i] = substituteTypeParams(typeFromAST(f.Type), d.TypeParams, typeArgs)
+	// Only prelude Option/Result payload constructors remain globally visible.
+	// Other enum variants must be called through Enum.Variant(...).
+	if d.Name == "Option" || d.Name == "Result" {
+		for _, v := range d.Variants {
+			if !isGlobalPreludeVariant(v.Name) {
+				continue
+			}
+			variantType := enumVariantConstructorType(d, &v, typeArgs)
+			for _, tp := range d.TypeParams {
+				delete(env, tp)
+			}
+			env[v.Name] = Generalize(env, variantType, nil)
 		}
-
-		// All enum variant constructors are functions: args -> enum type.
-		// Nullary constructors have zero args but still return the enum type,
-		// so that calling them (e.g., `None()`) works as a function call.
-		variantType := TFunc{Args: fieldTypes, Ret: enumType}
-
-		// Register the variant constructor with the environment.
-		// Temporarily remove type parameters for proper generalization.
-		for _, tp := range d.TypeParams {
-			delete(env, tp)
-		}
-		env[v.Name] = Generalize(env, variantType, nil)
 	}
 
 	_ = pkg
@@ -765,18 +759,8 @@ func inferLiteral(n *LiteralExpr) (MonoType, Subst, []Predicate, error) {
 		if n.Value == "" {
 			return nil, nil, nil, fmt.Errorf("empty number literal")
 		}
-		// Default to Int for integers, Float64 for floats
-		hasDot := false
-		for _, c := range n.Value {
-			if c == '.' {
-				hasDot = true
-				break
-			}
-		}
-		if hasDot {
-			return TCon{Name: "Float64"}, make(Subst), nil, nil
-		}
-		return TCon{Name: "Int"}, make(Subst), nil, nil
+		info := ParseNumericLiteral(n.Value)
+		return TCon{Name: info.Type}, make(Subst), nil, nil
 	case "string":
 		return TCon{Name: "String"}, make(Subst), nil, nil
 	case "rune":
@@ -787,8 +771,31 @@ func inferLiteral(n *LiteralExpr) (MonoType, Subst, []Predicate, error) {
 }
 
 func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []Predicate, error) {
+	if id, ok := n.Callee.(*IdentExpr); ok && id.Name == "None" {
+		return nil, nil, nil, fmt.Errorf("None is a value constructor; use None, not None()")
+	}
 	// Special case: Ref.new(expr)
 	if field, ok := n.Callee.(*FieldExpr); ok {
+		if enumName, fn, _, ok := qualifiedEnumVariantConstructor(field, state); ok {
+			argTypes := make([]MonoType, len(n.Args))
+			argSubst := make(Subst)
+			var allPreds []Predicate
+			for i, arg := range n.Args {
+				argType, s, preds, err := inferExpr(env, arg, state)
+				if err != nil {
+					return nil, nil, nil, wrapInferenceError("argument %d of %s.%s: %w", err, i, enumName, field.Field)
+				}
+				argSubst = Compose(argSubst, s)
+				argTypes[i] = argSubst.ApplyMT(argType)
+				allPreds = append(allPreds, preds...)
+			}
+			retVar := TVar{ID: state.Fresh()}
+			argSubst, err := Unify(fn, TFunc{Args: argTypes, Ret: retVar}, argSubst)
+			if err != nil {
+				return nil, nil, nil, wrapInferenceError("call type mismatch: %w", err)
+			}
+			return argSubst.ApplyMT(retVar), argSubst, allPreds, nil
+		}
 		if id, ok := field.Expr.(*IdentExpr); ok && id.Name == "Ref" && field.Field == "new" {
 			return inferRefNew(env, n, state)
 		}
@@ -1184,23 +1191,11 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 			return fn, make(Subst), nil, nil
 		}
 
-		// Check if it's an enum name followed by a variant
-		if sch, ok := env[id.Name]; ok {
-			instType := Instantiate(sch, state)
-			if con, ok := instType.(TCon); ok {
-				// Check if this is an enum — variant constructor
-				if _, ok := env[n.Field]; ok {
-					return inferIdent(env, &IdentExpr{Name: n.Field}, state)
-				}
-				_ = con
+		if _, fn, arity, ok := qualifiedEnumVariantConstructor(n, state); ok {
+			if arity == 0 {
+				return fn.Ret, make(Subst), nil, nil
 			}
-		}
-
-		// Check for Go-style Enum.Variant constructor
-		if sch, ok := env[n.Field]; ok {
-			// The field identifies an enum variant
-			instType := Instantiate(sch, state)
-			return instType, make(Subst), nil, nil
+			return fn, make(Subst), nil, nil
 		}
 	}
 
@@ -2150,6 +2145,46 @@ func findEnumVariant(enum *EnumDecl, name string) (*EnumVariant, bool) {
 		}
 	}
 	return nil, false
+}
+
+func isGlobalPreludeVariant(name string) bool {
+	switch name {
+	case "Some", "Ok", "Err":
+		return true
+	default:
+		return false
+	}
+}
+
+func enumVariantConstructorType(enum *EnumDecl, variant *EnumVariant, enumTypeArgs []MonoType) TFunc {
+	fieldTypes := make([]MonoType, len(variant.Fields))
+	for i, f := range variant.Fields {
+		fieldTypes[i] = substituteTypeParams(typeFromAST(f.Type), enum.TypeParams, enumTypeArgs)
+	}
+	return TFunc{Args: fieldTypes, Ret: TCon{Name: enum.Name, Args: enumTypeArgs}}
+}
+
+func qualifiedEnumVariantConstructor(field *FieldExpr, state *InferState) (string, TFunc, int, bool) {
+	if state == nil || state.PkgInfo == nil {
+		return "", TFunc{}, 0, false
+	}
+	id, ok := field.Expr.(*IdentExpr)
+	if !ok {
+		return "", TFunc{}, 0, false
+	}
+	enum := lookupEnum(state.PkgInfo, id.Name)
+	if enum == nil {
+		return "", TFunc{}, 0, false
+	}
+	variant, ok := findEnumVariant(enum, field.Field)
+	if !ok {
+		return "", TFunc{}, 0, false
+	}
+	typeArgs := make([]MonoType, len(enum.TypeParams))
+	for i := range enum.TypeParams {
+		typeArgs[i] = TVar{ID: state.Fresh()}
+	}
+	return enum.Name, enumVariantConstructorType(enum, variant, typeArgs), len(variant.Fields), true
 }
 
 func lookupVariant(pkg *PkgInfo, name string) (*EnumDecl, *EnumVariant, bool) {

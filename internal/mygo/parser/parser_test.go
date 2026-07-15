@@ -579,6 +579,30 @@ end
 	}
 }
 
+func TestParseFileSupportsEnumVariantsWithCommaSeparatedFields(t *testing.T) {
+	src := `package main
+enum Shape
+  Circle(Float64)
+  Rectangle(Float64, Float64)
+  Triangle(Float64, Float64)
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	enum, ok := file.Decls[0].(*EnumDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *EnumDecl", file.Decls[0])
+	}
+	if got := len(enum.Variants); got != 3 {
+		t.Fatalf("len(EnumDecl.Variants) = %d, want 3", got)
+	}
+	if got := len(enum.Variants[1].Fields); got != 2 {
+		t.Fatalf("len(Rectangle.Fields) = %d, want 2", got)
+	}
+}
+
 func TestParseFileSupportsSwitchVariantPatterns(t *testing.T) {
 	src := `package main
 func demo(v: Option) -> Int
@@ -1160,6 +1184,9 @@ func demo() -> Int
   let h: Int = 0xff
   let o: Int = 0o777
   let b: Int = 0b1010
+  let i: Int8 = 42i8
+  let u: UInt64 = 18_446744073_709_551_615u64
+  let f: Float32 = 3.14f32
   0
 end
 `
@@ -1175,10 +1202,10 @@ end
 	if !ok {
 		t.Fatalf("FuncDecl.Body type = %T, want *BlockExpr", fn.Body)
 	}
-	if len(block.Stmts) < 3 {
-		t.Fatalf("expected at least 3 stmts in block, got %d", len(block.Stmts))
+	if len(block.Stmts) < 6 {
+		t.Fatalf("expected at least 6 stmts in block, got %d", len(block.Stmts))
 	}
-	for i, expected := range []string{"0xff", "0o777", "0b1010"} {
+	for i, expected := range []string{"0xff", "0o777", "0b1010", "42i8", "18_446744073_709_551_615u64", "3.14f32"} {
 		letStmt, ok := block.Stmts[i].(*LetStmt)
 		if !ok {
 			t.Fatalf("Stmts[%d] type = %T, want *LetStmt", i, block.Stmts[i])

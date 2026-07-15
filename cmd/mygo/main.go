@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/mygo-lang/mygo/internal/mygo/compiler"
 )
@@ -48,6 +49,14 @@ func main() {
 	case "build":
 		root := "."
 		buildArgs := args[1:]
+		if len(buildArgs) > 0 {
+			if info, err := os.Stat(buildArgs[0]); err == nil && info.IsDir() {
+				root = buildArgs[0]
+				if !strings.HasPrefix(buildArgs[0], ".") && !strings.HasPrefix(buildArgs[0], "/") {
+					buildArgs[0] = "./" + buildArgs[0]
+				}
+			}
+		}
 		var written []string
 		var err error
 		if noPrelude {

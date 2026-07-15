@@ -93,6 +93,15 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 					base = "tmp"
 				}
 				lbType := valType
+				if isUnresolvedGoTypeParam(lbType) {
+					if call, ok := s.Value.(*CallExpr); ok {
+						if field, ok := call.Callee.(*FieldExpr); ok && field.Field == "Fold" && len(call.Args) > 0 {
+							if typ := g.goTypeFromExpr(call.Args[0], child); typ != "" && typ != "any" {
+								lbType = typ
+							}
+						}
+					}
+				}
 				if lbType == "" && s.Type != nil {
 					lbType = g.goType(s.Type, child.typeParams)
 				}
@@ -217,10 +226,33 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 	case *LiteralExpr:
 		switch n.Kind {
 		case "number":
-			if strings.Contains(n.Value, ".") {
-				return ast.NewIdent(n.Value), "float64", nil
+			info := ParseNumericLiteral(n.Value)
+			switch info.Type {
+			case "Float32":
+				return ast.NewIdent(info.Value), "float32", nil
+			case "Float64":
+				return ast.NewIdent(info.Value), "float64", nil
+			case "Int8":
+				return ast.NewIdent(info.Value), "int8", nil
+			case "Int16":
+				return ast.NewIdent(info.Value), "int16", nil
+			case "Int32":
+				return ast.NewIdent(info.Value), "int32", nil
+			case "Int64":
+				return ast.NewIdent(info.Value), "int64", nil
+			case "UInt":
+				return ast.NewIdent(info.Value), "uint", nil
+			case "UInt8":
+				return ast.NewIdent(info.Value), "uint8", nil
+			case "UInt16":
+				return ast.NewIdent(info.Value), "uint16", nil
+			case "UInt32":
+				return ast.NewIdent(info.Value), "uint32", nil
+			case "UInt64":
+				return ast.NewIdent(info.Value), "uint64", nil
+			default:
+				return ast.NewIdent(info.Value), "int", nil
 			}
-			return ast.NewIdent(n.Value), "int", nil
 		case "string":
 			return &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(n.Value)}, "string", nil
 		case "rune":
@@ -333,6 +365,13 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 		target := g.goType(n.Type, ctx.typeParams)
 		return &ast.CallExpr{Fun: ast.NewIdent(target), Args: []ast.Expr{code}}, target, nil
 	case *FieldExpr:
+		if enumName, arity, ok := g.qualifiedEnumVariant(n); ok && arity == 0 {
+			typ := g.inferredType(n)
+			if typ == "" {
+				typ = enumName
+			}
+			return &ast.CallExpr{Fun: ast.NewIdent(enumConstructorGoName(enumName, n.Field))}, typ, nil
+		}
 		base, bt, err := g.translateExpr(n.Expr, ctx, "")
 		if err != nil {
 			return nil, "", err
@@ -361,21 +400,27 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 			if inferred := g.inferredType(n); inferred != "" {
 				ft = inferred
 			}
-			return &ast.SelectorExpr{X: base, Sel: ast.NewIdent(n.Field)}, ft, nil
+			return &ast.SelectorExpr{X: base, Sel: ast.NewIdent(goastFieldName(n.Field))}, ft, nil
 		}
 		if inferred := g.inferredType(n); inferred != "" {
-			return &ast.SelectorExpr{X: base, Sel: ast.NewIdent(n.Field)}, inferred, nil
+			return &ast.SelectorExpr{X: base, Sel: ast.NewIdent(goastFieldName(n.Field))}, inferred, nil
 		}
-		return &ast.SelectorExpr{X: base, Sel: ast.NewIdent(n.Field)}, bt, nil
+		return &ast.SelectorExpr{X: base, Sel: ast.NewIdent(goastFieldName(n.Field))}, bt, nil
 	case *CallExpr:
 		code, typ, err := g.translateCall(n, ctx, expected)
-		if inferred := g.inferredType(n); inferred != "" {
+		if inferred := g.inferredType(n); inferred != "" && (typ == "" || typ == "any" || containsGeneratedTypeVar(typ)) {
 			typ = inferred
 		}
 		return code, typ, err
 	case *IfExpr:
+		if expected == "" {
+			expected = g.inferredType(n)
+		}
 		return g.translateIf(n, ctx, expected)
 	case *SwitchExpr:
+		if expected == "" {
+			expected = g.inferredType(n)
+		}
 		return g.translateSwitch(n, ctx, expected)
 	case *WhileExpr:
 		return g.translateWhile(n, ctx)

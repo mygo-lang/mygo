@@ -6,6 +6,26 @@ struct List[A]
   tail: Option[Ref[List[A]]]
 end
 
+impl[T] List[T]
+  func Cons(head: T, tail: Option[List[T]]) -> List[T]
+    List[T] {
+      head: head,
+      tail: tail.Map(func (a: List[T]) -> Ref[List[T]]
+        Ref.new(a)
+      end)
+    }
+  end
+
+  func Head(self: List[T]) -> T
+    self.head
+  end
+
+  func Tail(self: List[T]) -> Option[List[T]]
+    self.tail.Map(func (a: Ref[List[T]]) -> List[T]
+      a.value()
+    end)
+  end
+end
 
 impl[T] ListIEnumerable[T]: IEnumerable[List[T], T]
   func Each(c: List[T], fn: func(T) -> ()) -> ()

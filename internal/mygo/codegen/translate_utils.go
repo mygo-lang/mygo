@@ -82,7 +82,7 @@ func (g *gen) goTypeStringSubst(t TypeExpr, subst map[string]string) string {
 			for i, a := range tt.Args {
 				args[i] = g.goTypeStringSubst(a, subst)
 			}
-			baseName := tt.Name
+			baseName := g.goType(&NamedType{Name: tt.Name}, nil)
 			switch baseName {
 			case "Ref":
 				return "*" + args[0]
@@ -311,7 +311,32 @@ func (g *gen) goTypeFromExpr(e Expr, ctx *egCtx) string {
 		return ctx.locals[n.Name]
 	case *LiteralExpr:
 		if n.Kind == "number" {
-			return "int"
+			switch ParseNumericLiteral(n.Value).Type {
+			case "Float32":
+				return "float32"
+			case "Float64":
+				return "float64"
+			case "Int8":
+				return "int8"
+			case "Int16":
+				return "int16"
+			case "Int32":
+				return "int32"
+			case "Int64":
+				return "int64"
+			case "UInt":
+				return "uint"
+			case "UInt8":
+				return "uint8"
+			case "UInt16":
+				return "uint16"
+			case "UInt32":
+				return "uint32"
+			case "UInt64":
+				return "uint64"
+			default:
+				return "int"
+			}
 		}
 		return n.Kind
 	case *CallExpr:

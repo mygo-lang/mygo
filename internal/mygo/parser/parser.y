@@ -272,6 +272,26 @@ enum_variant_fields
 			})
 		}
 	}
+	| enum_variant_fields COMMA IDENT {
+		p := yylex.(*parser)
+		if p.currentEnum != nil {
+			p.currentEnumFields = append(p.currentEnumFields, ast.Field{
+				Line: $3.line,
+				Column: $3.col,
+				Type: &ast.NamedType{Line: $3.line, Column: $3.col, Name: $3.lit},
+			})
+		}
+	}
+	| enum_variant_fields COMMA type {
+		p := yylex.(*parser)
+		if p.currentEnum != nil {
+			p.currentEnumFields = append(p.currentEnumFields, ast.Field{
+				Line: p.currentTypeLine,
+				Column: p.currentTypeCol,
+				Type: p.currentType,
+			})
+		}
+	}
 	;
 
 struct_decl

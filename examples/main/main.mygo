@@ -6,17 +6,17 @@ import fmt "go:fmt"
 
 func demoBasicTypes() -> String
   # 整数类型
-  let i8: Int8 = 42
-  let ui8: UInt8 = 200
-  let i16: Int16 = -1000
-  let ui16: UInt16 = 60000
-  let i32: Int32 = -100000
-  let ui32: UInt32 = 3000000000
-  let i64: Int64 = 9223372036854775807
-  let ui: UInt = 18446744073709551615
-  let ui64: UInt64 = 18446744073709551615
-  let f32: Float32 = 3.14
-  let f64: Float64 = 2.718281828459045
+  let i8: Int8 = 42i8
+  let ui8: UInt8 = 200u8
+  let i16: Int16 = -1000i16
+  let ui16: UInt16 = 60000u16
+  let i32: Int32 = -100000i32
+  let ui32: UInt32 = 3000000000u32
+  let i64: Int64 = 9223372036854775807i64
+  let ui: UInt = 18_446744073_709_551_615u
+  let ui64: UInt64 = 18_446744073_709_551_615u64
+  let f32: Float32 = 3.14f32
+  let f64: Float64 = 2.718281828459045f64
   let i: Int = 100
 
   # 十六进制、八进制、二进制字面量
@@ -33,7 +33,7 @@ func demoBasicTypes() -> String
   """
   let raw: String = `raw string with \n no escapes`
 
-  "Int8=" + i8.ToString() + ", UInt8=" + ui8.ToString() + ", Int16=" + i16.ToString() + ", UInt16=" + ui16.ToString() + ", Int32=" + i32.ToString() + ", UInt32=" + ui32.ToString() + ", Int64=" + i64.ToString() + ", UInt=" + ui.ToString() + ", UInt64=" + ui64.ToString() + ", Float32=" + f32.ToString() + ", Float64=" + f64.ToString() + ", Int=" + i.ToString() + ", hex=" + hex.ToString() + ", oct=" + oct.ToString() + ", bin=" + bin.ToString() + ", flag=" + flag.ToString() + ", greeting=" + greeting
+  "Int8=" + i8.ToString() + ", UInt8=" + ui8.ToString() + ", Int16=" + i16.ToString() + ", UInt16=" + ui16.ToString() + ", Int32=" + i32.ToString() + ", UInt32=" + ui32.ToString() + ", Int64=" + i64.ToString() + ", UInt=" + ui.ToString() + ", UInt64=" + ui64.ToString() + ", Float32=" + f32.ToString() + ", Float64=" + f64.ToString() + ", Int=" + i.ToString() + ", hex=" + hex.ToString() + ", oct=" + oct.ToString() + ", bin=" + bin.ToString() + ", flag=" + flag.ToString() + ", greeting=" + greeting + ", multiline=" + multiline + ", raw=" + raw
 end
 
 # ===== 枚举演示 =====
@@ -73,12 +73,10 @@ end
 
 func demoEnums() -> String
   let c = Color.Green
-  let circle = Circle(5.0)
-  let rect = Rectangle(10.0, 20.0)
+  let circle = Shape.Circle(5.0)
+  let rect = Shape.Rectangle(10.0, 20.0)
 
-  "Color=" + describe_color(c) +
-  ", CircleArea=" + area(circle).ToString() +
-  ", RectArea=" + area(rect).ToString()
+  "Color=" + describeColor(c) + ", CircleArea=" + area(circle).ToString() + ", RectArea=" + area(rect).ToString()
 end
 
 # ===== Structs =====
@@ -99,11 +97,11 @@ struct Person
 end
 
 impl[A] Box[A]
-  func value(self: Box[A]) -> A
+  func Value(self: Box[A]) -> A
     self.value
   end
 
-  func map[B](self: Box[A], f: func(A) -> B) -> Box[B]
+  func Map[B](self: Box[A], f: func(A) -> B) -> Box[B]
     Box[B] { value: f(self.value) }
   end
 end
@@ -111,18 +109,16 @@ end
 func demoStructs() -> String
   let p = Point { x: 3.0, y: 4.0 }
   let box = Box[Int] { value: 42 }
+  let box_value: Int = box.value
   let person = Person { name: "Alice", age: 30, email: "alice@example.com" }
 
-  "Point=(" + p.x.ToString() + "," + p.y.ToString() + ")" +
-  ", Box=" + box.value().ToString() +
-  ", Person=" + person.name + ":" + person.age.ToString()
+  "Point=(" + p.x.ToString() + "," + p.y.ToString() + ")" + ", Box=" + box_value.ToString() + ", Person=" + person.name + ":" + person.age.ToString()
 end
 
 # ===== Option/Result =====
 
 func safeDivide(a: Float64, b: Float64) -> Result[Float64, String]
-  if b == 0.0 => Err("division by zero")
-  else => Ok(a / b)
+  if b == 0.0 => Err("division by zero") else Ok(a / b)
 end
 
 func demoOptionResult() -> String
@@ -132,10 +128,34 @@ func demoOptionResult() -> String
   let ok_res: Result[Int, String] = Ok(100)
   let err_res: Result[Int, String] = Err("something went wrong")
 
-  let result = safe_divide(10.0, 3.0)
-  let div_zero = safe_divide(10.0, 0.0)
+  let result = safeDivide(10.0, 3.0)
+  let div_zero = safeDivide(10.0, 0.0)
+  let some_text = switch some_val
+    case Some(v) => v.ToString()
+    case None => "none"
+  end
+  let none_text = switch none_val
+    case Some(v) => v.ToString()
+    case None => "none"
+  end
+  let ok_text = switch ok_res
+    case Ok(v) => v.ToString()
+    case Err(e) => e
+  end
+  let err_text = switch err_res
+    case Ok(v) => v.ToString()
+    case Err(e) => e
+  end
+  let result_text = switch result
+    case Ok(v) => v.ToString()
+    case Err(e) => e
+  end
+  let div_zero_text = switch div_zero
+    case Ok(v) => v.ToString()
+    case Err(e) => e
+  end
 
-  "Some=" + some_val.ToString() + ", None=" + none_val.ToString() + ", Ok=" + ok_res.ToString() + ", Err=" + err_res.ToString() + ", 10/3=" + result.ToString() + ", 10/0=" + div_zero.ToString()
+  "Some=" + some_text + ", None=" + none_text + ", Ok=" + ok_text + ", Err=" + err_text + ", 10/3=" + result_text + ", 10/0=" + div_zero_text
 end
 
 # ===== 集合演示 =====
@@ -143,11 +163,9 @@ end
 func demoCollections() -> String
   # 切片
   let nums: Slice[Int] = [1, 2, 3, 4, 5]
-  let empty: Slice[String] = []
 
   # 映射
   let scores: Map[String, Int] = {"Alice": 90, "Bob": 85, "Charlie": 95}
-  let empty_map: Map[Int, String] = {}
 
   # 集合
   let words: Set[String] = {"hello", "world", "hello"}
@@ -166,7 +184,7 @@ func demoFunctional() -> String
   end)
   # Filter
   let evens = nums.Filter(func(x: Int) -> Bool
-    x % 2 == 0
+    x / 2 * 2 == x
   end)
 
   # Fold
@@ -174,16 +192,13 @@ func demoFunctional() -> String
     acc + x
   end)
 
-  let result = nums
-    .Filter(func(x: Int) -> Bool
-      x > 3
-    end)
-    .Map(func(x: Int) -> Int
-      x * x
-    end)
-    .Fold(0, func(acc: Int, x: Int) -> Int
-      acc + x
-    end)
+  let result = nums.Filter(func(x: Int) -> Bool
+    x > 3
+  end).Map(func(x: Int) -> Int
+    x * x
+  end).Fold(0, func(acc: Int, x: Int) -> Int
+    acc + x
+  end)
 
   "Sum=" + sum.ToString() + ", Evens len=" + evens.Len().ToString() + ", Doubled len=" + doubled.Len().ToString() + ", Pipeline result=" + result.ToString()
 end
@@ -232,14 +247,18 @@ func demoMutable() -> String
   counter = counter + 1
 
   var items: Slice[String] = []
-  items = append(items, "first")
-  items = append(items, "second")
-  items = append(items, "third")
+  items = items.Append("first")
+  items = items.Append("second")
+  items = items.Append("third")
 
   "counter=" + counter.ToString() + ", items len=" + items.Len().ToString()
 end
 
 # ===== 泛型演示 =====
+
+func identity[A](value: A) -> A
+  value
+end
 
 func demoGenerics() -> String
   # Generic function
@@ -250,26 +269,13 @@ func demoGenerics() -> String
   let boxed_int = Box[Int] { value: 42 }
   let boxed_str = Box[String] { value: "hello" }
 
-  "Identity[Int]=" + int_val.ToString() +
-  ", Identity[String]=" + str_val +
-  ", BoxedInt=" + boxed_int.value().ToString() +
-  ", BoxedStr=" + boxed_str.value().ToString()
+  "Identity[Int]=" + int_val.ToString() + ", Identity[String]=" + str_val + ", BoxedInt=" + boxed_int.value.ToString() + ", BoxedStr=" + boxed_str.value.ToString()
 end
 
 # ===== 主演示函数 =====
 
 func demo() -> String
-  "=== MyGO Language Demo ===\n\n" +
-  "--- Basic Types ---\n" + demo_basic_types() + "\n\n" +
-  "--- Enums ---\n" + demo_enums() + "\n\n" +
-  "--- Structs ---\n" + demo_structs() + "\n\n" +
-  "--- Option/Result ---\n" + demo_option_result() + "\n\n" +
-  "--- Collections ---\n" + demo_collections() + "\n\n" +
-  "--- Functional Programming ---\n" + demo_functional() + "\n\n" +
-  "--- Control Flow ---\n" + demo_control_flow() + "\n\n" +
-  "--- Mutable Variables ---\n" + demo_mutable() + "\n\n" +
-  "--- Generics ---\n" + demo_generics() + "\n\n" +
-  "=== End of Demo ==="
+  "=== MyGO Language Demo ===\n\n" + "--- Basic Types ---\n" + demoBasicTypes() + "\n\n" + "--- Enums ---\n" + demoEnums() + "\n\n" + "--- Structs ---\n" + demoStructs() + "\n\n" + "--- Option/Result ---\n" + demoOptionResult() + "\n\n" + "--- Collections ---\n" + demoCollections() + "\n\n" + "--- Functional Programming ---\n" + demoFunctional() + "\n\n" + "--- Control Flow ---\n" + demoControlFlow() + "\n\n" + "--- Mutable Variables ---\n" + demoMutable() + "\n\n" + "--- Generics ---\n" + demoGenerics() + "\n\n" + "=== End of Demo ==="
 end
 
 func main() -> ()

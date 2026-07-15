@@ -172,6 +172,7 @@ func goTypeExprFromString(typ string) ast.Expr {
 	if typ == "" {
 		return ast.NewIdent("any")
 	}
+	typ = mygoSigTypeToGo(typ)
 	if expr, err := goparser.ParseExpr(typ); err == nil {
 		return expr
 	}

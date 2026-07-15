@@ -96,7 +96,7 @@ func TestCompileDirAutoImportsPreludeFromModuleCache(t *testing.T) {
 	writeMygoFile(t, filepath.Join(mygoMod, "prelude"), "prelude.mygo", `package prelude
 enum Option[A]
   Some(A)
-  None()
+  None
 end
 
 impl[A] Option[A]

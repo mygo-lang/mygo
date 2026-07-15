@@ -91,11 +91,17 @@ func (l *golexer) scan() lex.Char {
 
 ident      ({letter}|{unicodeLetter})({letter}|{digit}|{unicodeLetter}|{unicodeDigit}|_)*
 digit      [0-9]|{unicodeDigit}
-number     {digit}+(\.{digit}+)?
+digits     {digit}(_?{digit})*
+intsuffix  i8|i16|i32|i64|u|u8|u16|u32|u64
+floatsuffix f32|f64
+number     {digits}(\.{digits})?({intsuffix}|{floatsuffix})?
 hexdigit   [0-9a-fA-F]
-hexnumber  0[xX]{hexdigit}+
-octnumber  0[oO][0-7]+
-binnumber  0[bB][01]+
+hexdigits  {hexdigit}(_?{hexdigit})*
+octdigits  [0-7](_?[0-7])*
+bindigits  [01](_?[01])*
+hexnumber  0[xX]{hexdigits}({intsuffix})?
+octnumber  0[oO]{octdigits}({intsuffix})?
+binnumber  0[bB]{bindigits}({intsuffix})?
 letter     [_a-zA-Z]|{unicodeLetter}
 unicodeDigit  \x81
 unicodeLetter \x80

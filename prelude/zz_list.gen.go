@@ -7,6 +7,19 @@ type List[A any] struct {
 	tail Option[*List[A]]
 }
 
+func List_Cons[T any](head T, tail Option[List[T]]) List[T] {
+	return List[T]{head: head, tail: Map_option_a_a(tail, func(a List[T]) *List[T] {
+		return &a
+	})}
+}
+func List_Head[T any](self List[T]) T {
+	return self.head
+}
+func List_Tail[T any](self List[T]) Option[List[T]] {
+	return Map_option_a_a(self.tail, func(a *List[T]) List[T] {
+		return *a
+	})
+}
 func Each_list_t_t[T any](c List[T], fn func(T)) {
 	func() {
 		var current_1 *List[T] = &c

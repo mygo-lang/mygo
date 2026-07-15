@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"go/ast"
+	"go/token"
 	"strconv"
 	"strings"
 
@@ -150,6 +151,9 @@ func elemTypeFromExpected(expected string) string {
 	if strings.HasPrefix(expected, "Set[") && strings.HasSuffix(expected, "]") {
 		return expected[4 : len(expected)-1]
 	}
+	if strings.HasPrefix(expected, "map[") && strings.HasSuffix(expected, "]struct{}") {
+		return strings.TrimSuffix(strings.TrimPrefix(expected, "map["), "]struct{}")
+	}
 	return "any"
 }
 
@@ -209,6 +213,9 @@ func mapKeyValFromExpected(expected string) (string, string) {
 
 // translateSetLit handles set literals.
 func (g *gen) translateSetLit(n *SetLitExpr, ctx *egCtx, expected string) (ast.Expr, string, error) {
+	if expected == "" {
+		expected = g.inferredType(n)
+	}
 	et := elemTypeFromExpected(expected)
 	if et == "any" || et == "" {
 		et = "any"
@@ -216,7 +223,38 @@ func (g *gen) translateSetLit(n *SetLitExpr, ctx *egCtx, expected string) (ast.E
 	if n.Elem != nil {
 		et = g.goType(n.Elem, ctx.typeParams)
 	}
-	var elts []ast.Expr
+	mapType := &ast.MapType{
+		Key:   ast.NewIdent(et),
+		Value: ast.NewIdent("struct{}"),
+	}
+	if len(n.Elems) == 0 {
+		return &ast.CompositeLit{Type: mapType}, "map[" + et + "]struct{}", nil
+	}
+	if !setLitHasDuplicateLiteralKeys(n) {
+		elts := make([]ast.Expr, 0, len(n.Elems))
+		for _, elem := range n.Elems {
+			ac, _, err := g.translateExpr(elem, ctx, et)
+			if err != nil {
+				line, col := common.NodePos(elem)
+				return nil, "", common.ErrorAtPos(g.currentFile, line, col, "set element: %s", err.Error())
+			}
+			if ac == nil {
+				line, col := common.NodePos(elem)
+				return nil, "", common.ErrorAtPos(g.currentFile, line, col, "set element produced nil Go AST")
+			}
+			elts = append(elts, &ast.KeyValueExpr{
+				Key:   ac,
+				Value: &ast.CompositeLit{Type: ast.NewIdent("struct{}")},
+			})
+		}
+		return &ast.CompositeLit{Type: mapType, Elts: elts}, "map[" + et + "]struct{}", nil
+	}
+	var stmts []ast.Stmt
+	stmts = append(stmts, &ast.AssignStmt{
+		Lhs: []ast.Expr{ast.NewIdent("__set")},
+		Rhs: []ast.Expr{&ast.CompositeLit{Type: mapType}},
+		Tok: token.DEFINE,
+	})
 	for _, elem := range n.Elems {
 		ac, _, err := g.translateExpr(elem, ctx, et)
 		if err != nil {
@@ -227,16 +265,37 @@ func (g *gen) translateSetLit(n *SetLitExpr, ctx *egCtx, expected string) (ast.E
 			line, col := common.NodePos(elem)
 			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "set element produced nil Go AST")
 		}
-		elts = append(elts, &ast.KeyValueExpr{
-			Key:   ac,
-			Value: &ast.CompositeLit{Type: ast.NewIdent("struct{}")},
+		stmts = append(stmts, &ast.AssignStmt{
+			Lhs: []ast.Expr{&ast.IndexExpr{X: ast.NewIdent("__set"), Index: ac}},
+			Rhs: []ast.Expr{&ast.CompositeLit{Type: ast.NewIdent("struct{}")}},
+			Tok: token.ASSIGN,
 		})
 	}
-	mapType := &ast.MapType{
-		Key:   ast.NewIdent(et),
-		Value: ast.NewIdent("struct{}"),
+	stmts = append(stmts, &ast.ReturnStmt{Results: []ast.Expr{ast.NewIdent("__set")}})
+	fn := &ast.FuncLit{
+		Type: &ast.FuncType{
+			Params:  &ast.FieldList{},
+			Results: &ast.FieldList{List: []*ast.Field{{Type: mapType}}},
+		},
+		Body: &ast.BlockStmt{List: stmts},
 	}
-	return &ast.CompositeLit{Type: mapType, Elts: elts}, "map[" + et + "]struct{}", nil
+	return &ast.CallExpr{Fun: fn}, "map[" + et + "]struct{}", nil
+}
+
+func setLitHasDuplicateLiteralKeys(n *SetLitExpr) bool {
+	seen := map[string]struct{}{}
+	for _, elem := range n.Elems {
+		lit, ok := elem.(*LiteralExpr)
+		if !ok {
+			continue
+		}
+		key := lit.Kind + "\x00" + lit.Value
+		if _, ok := seen[key]; ok {
+			return true
+		}
+		seen[key] = struct{}{}
+	}
+	return false
 }
 
 // translateTupleLit handles tuple literals.
