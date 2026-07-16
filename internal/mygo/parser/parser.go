@@ -236,7 +236,7 @@ const yyEofCode = 1
 const yyErrCode = 2
 const yyInitialStackSize = 16
 
-//line internal/mygo/parser/parser.y:1958
+//line internal/mygo/parser/parser.y:1979
 
 func (p *parser) Lex(lval *yySymType) int {
 	tok := p.nextRaw()
@@ -2186,6 +2186,18 @@ yydefault:
 //line internal/mygo/parser/parser.y:1084
 		{
 			p := yylex.(*parser)
+			defer func() {
+				if r := recover(); r != nil {
+					println("PANIC in genCall at", p.filename, "line", yyDollar[2].token.line)
+					println("  currentExpr:", p.currentExpr)
+					println("  callCalleeStack:", len(p.currentCallCalleeStack), "argsStack:", len(p.currentArgsStack))
+					println("  typeArgsStack:", len(p.currentCallTypeArgsStack), "sliceElemsStack:", len(p.currentSliceElemsStack))
+					if id, ok := p.currentExpr.(*ast.IdentExpr); ok {
+						println("  callee name:", id.Name)
+					}
+					panic(r)
+				}
+			}()
 			call := &ast.CallExpr{
 				Line:     yyDollar[2].token.line,
 				Column:   yyDollar[2].token.col,
@@ -2200,16 +2212,19 @@ yydefault:
 			} else {
 				idx := len(p.currentCallCalleeStack) - 1
 				callee := p.currentCallCalleeStack[idx]
-				prevArgs := p.currentArgsStack[idx]
-				prevSliceElems := p.currentSliceElemsStack[idx]
-				prevTypeArgs := p.currentCallTypeArgsStack[idx]
 				p.currentCallCalleeStack = p.currentCallCalleeStack[:idx]
-				p.currentArgsStack = p.currentArgsStack[:idx]
-				p.currentSliceElemsStack = p.currentSliceElemsStack[:idx]
-				p.currentCallTypeArgsStack = p.currentCallTypeArgsStack[:idx]
-				p.currentArgs = prevArgs
-				p.currentSliceElems = prevSliceElems
-				p.currentCallTypeArgs = prevTypeArgs
+				if len(p.currentArgsStack) > idx {
+					p.currentArgs = p.currentArgsStack[idx]
+					p.currentArgsStack = p.currentArgsStack[:idx]
+				}
+				if len(p.currentSliceElemsStack) > idx {
+					p.currentSliceElems = p.currentSliceElemsStack[idx]
+					p.currentSliceElemsStack = p.currentSliceElemsStack[:idx]
+				}
+				if len(p.currentCallTypeArgsStack) > idx {
+					p.currentCallTypeArgs = p.currentCallTypeArgsStack[idx]
+					p.currentCallTypeArgsStack = p.currentCallTypeArgsStack[:idx]
+				}
 				p.currentExpr = &ast.CallExpr{
 					Line:     yyDollar[2].token.line,
 					Column:   yyDollar[2].token.col,
@@ -2221,14 +2236,14 @@ yydefault:
 		}
 	case 167:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1119
+//line internal/mygo/parser/parser.y:1134
 		{
 			p := yylex.(*parser)
 			p.currentExpr = &ast.FieldExpr{Line: yyDollar[2].token.line, Column: yyDollar[2].token.col, Expr: p.currentExpr, Field: yyDollar[3].token.lit}
 		}
 	case 168:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:1123
+//line internal/mygo/parser/parser.y:1138
 		{
 			p := yylex.(*parser)
 			typeArgs := append([]ast.TypeExpr(nil), p.currentStructTypeArgs...)
@@ -2244,16 +2259,19 @@ yydefault:
 			}
 			if len(p.currentCallCalleeStack) > 0 {
 				idx := len(p.currentCallCalleeStack) - 1
-				prevArgs := p.currentArgsStack[idx]
-				prevSliceElems := p.currentSliceElemsStack[idx]
-				prevTypeArgs := p.currentCallTypeArgsStack[idx]
 				p.currentCallCalleeStack = p.currentCallCalleeStack[:idx]
-				p.currentArgsStack = p.currentArgsStack[:idx]
-				p.currentSliceElemsStack = p.currentSliceElemsStack[:idx]
-				p.currentCallTypeArgsStack = p.currentCallTypeArgsStack[:idx]
-				p.currentArgs = prevArgs
-				p.currentSliceElems = prevSliceElems
-				p.currentCallTypeArgs = prevTypeArgs
+				if len(p.currentArgsStack) > idx {
+					p.currentArgs = p.currentArgsStack[idx]
+					p.currentArgsStack = p.currentArgsStack[:idx]
+				}
+				if len(p.currentSliceElemsStack) > idx {
+					p.currentSliceElems = p.currentSliceElemsStack[idx]
+					p.currentSliceElemsStack = p.currentSliceElemsStack[:idx]
+				}
+				if len(p.currentCallTypeArgsStack) > idx {
+					p.currentCallTypeArgs = p.currentCallTypeArgsStack[idx]
+					p.currentCallTypeArgsStack = p.currentCallTypeArgsStack[:idx]
+				}
 			}
 			if len(p.currentStructFieldsStack) > 0 {
 				idx := len(p.currentStructFieldsStack) - 1
@@ -2272,7 +2290,7 @@ yydefault:
 		}
 	case 169:
 		yyDollar = yyS[yypt-6 : yypt+1]
-//line internal/mygo/parser/parser.y:1164
+//line internal/mygo/parser/parser.y:1182
 		{
 			p := yylex.(*parser)
 			if len(p.currentStructBaseStack) > 0 {
@@ -2295,7 +2313,7 @@ yydefault:
 		}
 	case 170:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1184
+//line internal/mygo/parser/parser.y:1202
 		{
 			p := yylex.(*parser)
 			p.currentStructBaseStack = append(p.currentStructBaseStack, p.currentExpr)
@@ -2304,7 +2322,7 @@ yydefault:
 		}
 	case 171:
 		yyDollar = yyS[yypt-7 : yypt+1]
-//line internal/mygo/parser/parser.y:1190
+//line internal/mygo/parser/parser.y:1208
 		{
 			p := yylex.(*parser)
 			if len(p.currentStructBaseStack) > 0 {
@@ -2326,7 +2344,7 @@ yydefault:
 		}
 	case 172:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1212
+//line internal/mygo/parser/parser.y:1230
 		{
 			p := yylex.(*parser)
 			p.currentExpr = makeIdentExpr(yyDollar[1].token)
@@ -2334,35 +2352,35 @@ yydefault:
 		}
 	case 173:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1217
+//line internal/mygo/parser/parser.y:1235
 		{
 			p := yylex.(*parser)
 			p.currentExpr = makeLitExpr(yyDollar[1].token)
 		}
 	case 174:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1221
+//line internal/mygo/parser/parser.y:1239
 		{
 			p := yylex.(*parser)
 			p.currentExpr = makeLitExpr(yyDollar[1].token)
 		}
 	case 175:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1225
+//line internal/mygo/parser/parser.y:1243
 		{
 			p := yylex.(*parser)
 			p.currentExpr = makeLitExpr(yyDollar[1].token)
 		}
 	case 176:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1229
+//line internal/mygo/parser/parser.y:1247
 		{
 			p := yylex.(*parser)
 			p.currentExpr = &ast.UnitLitExpr{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col}
 		}
 	case 177:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1233
+//line internal/mygo/parser/parser.y:1251
 		{
 			p := yylex.(*parser)
 			p.currentTupleElemsStack = append(p.currentTupleElemsStack, p.currentTupleElems)
@@ -2371,14 +2389,14 @@ yydefault:
 		}
 	case 187:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1251
+//line internal/mygo/parser/parser.y:1269
 		{
 			p := yylex.(*parser)
 			p.currentTupleElems = append(p.currentTupleElems, p.currentExpr)
 		}
 	case 188:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line internal/mygo/parser/parser.y:1255
+//line internal/mygo/parser/parser.y:1273
 		{
 			p := yylex.(*parser)
 			elems := append([]ast.Expr(nil), p.currentTupleElems...)
@@ -2393,14 +2411,14 @@ yydefault:
 		}
 	case 190:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1271
+//line internal/mygo/parser/parser.y:1289
 		{
 			p := yylex.(*parser)
 			p.currentTupleElems = append(p.currentTupleElems, p.currentExpr)
 		}
 	case 193:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:1280
+//line internal/mygo/parser/parser.y:1298
 		{
 			p := yylex.(*parser)
 			p.currentGoResult = p.currentType
@@ -2410,7 +2428,7 @@ yydefault:
 		}
 	case 194:
 		yyDollar = yyS[yypt-11 : yypt+1]
-//line internal/mygo/parser/parser.y:1287
+//line internal/mygo/parser/parser.y:1305
 		{
 			p := yylex.(*parser)
 			p.currentExpr = &ast.GoExpr{
@@ -2428,7 +2446,7 @@ yydefault:
 		}
 	case 195:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:1305
+//line internal/mygo/parser/parser.y:1323
 		{
 			p := yylex.(*parser)
 			if yyDollar[1].token.lit != "code" {
@@ -2438,7 +2456,7 @@ yydefault:
 		}
 	case 199:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:1321
+//line internal/mygo/parser/parser.y:1339
 		{
 			p := yylex.(*parser)
 			p.currentGoOperands = append(p.currentGoOperands, ast.GoOperand{
@@ -2450,7 +2468,7 @@ yydefault:
 		}
 	case 200:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:1333
+//line internal/mygo/parser/parser.y:1351
 		{
 			p := yylex.(*parser)
 			p.currentGoTypeOperands = append(p.currentGoTypeOperands, ast.GoTypeOperand{
@@ -2462,7 +2480,7 @@ yydefault:
 		}
 	case 201:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1345
+//line internal/mygo/parser/parser.y:1363
 		{
 			p := yylex.(*parser)
 			p.currentExpr = &ast.SliceLitExpr{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Elems: nil}
@@ -2470,7 +2488,7 @@ yydefault:
 		}
 	case 202:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1350
+//line internal/mygo/parser/parser.y:1368
 		{
 			p := yylex.(*parser)
 			p.currentExpr = &ast.SliceLitExpr{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Elems: append([]ast.Expr(nil), p.currentSliceElems...)}
@@ -2491,18 +2509,21 @@ yydefault:
 		}
 	case 203:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1371
+//line internal/mygo/parser/parser.y:1389
 		{
 			p := yylex.(*parser)
 			yyVAL.token = yyDollar[1].token
+			p.currentCallCalleeStack = append(p.currentCallCalleeStack, p.currentExpr)
 			p.currentArgsStack = append(p.currentArgsStack, p.currentArgs)
 			p.currentSliceElemsStack = append(p.currentSliceElemsStack, p.currentSliceElems)
+			p.currentCallTypeArgsStack = append(p.currentCallTypeArgsStack, p.currentCallTypeArgs)
 			p.currentArgs = nil
 			p.currentSliceElems = nil
+			p.currentCallTypeArgs = nil
 		}
 	case 204:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1382
+//line internal/mygo/parser/parser.y:1403
 		{
 			p := yylex.(*parser)
 			p.expectStructTypeArgs = true
@@ -2513,13 +2534,13 @@ yydefault:
 		}
 	case 205:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line internal/mygo/parser/parser.y:1389
+//line internal/mygo/parser/parser.y:1410
 		{
 			yyVAL.token = yyDollar[2].token
 		}
 	case 206:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1392
+//line internal/mygo/parser/parser.y:1413
 		{
 			p := yylex.(*parser)
 			p.expectStructTypeArgs = true
@@ -2530,13 +2551,13 @@ yydefault:
 		}
 	case 207:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line internal/mygo/parser/parser.y:1399
+//line internal/mygo/parser/parser.y:1420
 		{
 			yyVAL.token = yyDollar[2].token
 		}
 	case 208:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1405
+//line internal/mygo/parser/parser.y:1426
 		{
 			p := yylex.(*parser)
 			yyVAL.token = yyDollar[1].token
@@ -2550,21 +2571,21 @@ yydefault:
 		}
 	case 209:
 		yyDollar = yyS[yypt-0 : yypt+1]
-//line internal/mygo/parser/parser.y:1419
+//line internal/mygo/parser/parser.y:1440
 		{
 			p := yylex.(*parser)
 			p.currentCallTypeArgs = nil
 		}
 	case 210:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1423
+//line internal/mygo/parser/parser.y:1444
 		{
 			p := yylex.(*parser)
 			p.currentCallTypeArgs = append([]ast.TypeExpr(nil), p.currentStructTypeArgs...)
 		}
 	case 213:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1435
+//line internal/mygo/parser/parser.y:1456
 		{
 			p := yylex.(*parser)
 			p.currentArgs = append(p.currentArgs, p.currentExpr)
@@ -2572,7 +2593,7 @@ yydefault:
 		}
 	case 214:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line internal/mygo/parser/parser.y:1440
+//line internal/mygo/parser/parser.y:1461
 		{
 			p := yylex.(*parser)
 			p.currentArgs = append(p.currentArgs, p.currentExpr)
@@ -2580,7 +2601,7 @@ yydefault:
 		}
 	case 216:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line internal/mygo/parser/parser.y:1449
+//line internal/mygo/parser/parser.y:1470
 		{
 			p := yylex.(*parser)
 			if p.currentCollectionHasPair {
@@ -2596,7 +2617,7 @@ yydefault:
 		}
 	case 222:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1476
+//line internal/mygo/parser/parser.y:1497
 		{
 			p := yylex.(*parser)
 			p.currentStructFields = append(p.currentStructFields, ast.StructLitField{
@@ -2608,7 +2629,7 @@ yydefault:
 		}
 	case 223:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1485
+//line internal/mygo/parser/parser.y:1506
 		{
 			p := yylex.(*parser)
 			p.currentStructFields = append(p.currentStructFields, ast.StructLitField{
@@ -2619,7 +2640,7 @@ yydefault:
 		}
 	case 229:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1507
+//line internal/mygo/parser/parser.y:1528
 		{
 			p := yylex.(*parser)
 			p.currentMapKey = p.currentExpr
@@ -2627,7 +2648,7 @@ yydefault:
 		}
 	case 230:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:1512
+//line internal/mygo/parser/parser.y:1533
 		{
 			p := yylex.(*parser)
 			p.currentCollectionHasPair = true
@@ -2643,14 +2664,14 @@ yydefault:
 		}
 	case 231:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1525
+//line internal/mygo/parser/parser.y:1546
 		{
 			p := yylex.(*parser)
 			p.currentSetElems = append(p.currentSetElems, p.currentExpr)
 		}
 	case 232:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1532
+//line internal/mygo/parser/parser.y:1553
 		{
 			p := yylex.(*parser)
 			p.currentIfCondStack = append(p.currentIfCondStack, p.currentIfCond)
@@ -2662,14 +2683,14 @@ yydefault:
 		}
 	case 233:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line internal/mygo/parser/parser.y:1541
+//line internal/mygo/parser/parser.y:1562
 		{
 			p := yylex.(*parser)
 			p.currentIfThen = p.currentExpr
 		}
 	case 234:
 		yyDollar = yyS[yypt-8 : yypt+1]
-//line internal/mygo/parser/parser.y:1545
+//line internal/mygo/parser/parser.y:1566
 		{
 			p := yylex.(*parser)
 			p.currentIfElse = p.currentExpr
@@ -2698,7 +2719,7 @@ yydefault:
 		}
 	case 235:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1571
+//line internal/mygo/parser/parser.y:1592
 		{
 			p := yylex.(*parser)
 			p.currentIfCondStack = append(p.currentIfCondStack, p.currentIfCond)
@@ -2710,14 +2731,14 @@ yydefault:
 		}
 	case 236:
 		yyDollar = yyS[yypt-6 : yypt+1]
-//line internal/mygo/parser/parser.y:1581
+//line internal/mygo/parser/parser.y:1602
 		{
 			p := yylex.(*parser)
 			p.currentIfThen = bodyExprFromBlock(p.currentExpr)
 		}
 	case 237:
 		yyDollar = yyS[yypt-10 : yypt+1]
-//line internal/mygo/parser/parser.y:1586
+//line internal/mygo/parser/parser.y:1607
 		{
 			p := yylex.(*parser)
 			p.currentIfElse, _ = yyDollar[9].node.(ast.Expr)
@@ -2746,21 +2767,21 @@ yydefault:
 		}
 	case 238:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:1615
+//line internal/mygo/parser/parser.y:1636
 		{
 			p := yylex.(*parser)
 			yyVAL.node = bodyExprFromBlock(p.currentExpr)
 		}
 	case 239:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1619
+//line internal/mygo/parser/parser.y:1640
 		{
 			p := yylex.(*parser)
 			p.currentIfPartsStack = append(p.currentIfPartsStack, ifParts{cond: p.currentExpr})
 		}
 	case 240:
 		yyDollar = yyS[yypt-6 : yypt+1]
-//line internal/mygo/parser/parser.y:1623
+//line internal/mygo/parser/parser.y:1644
 		{
 			p := yylex.(*parser)
 			idx := len(p.currentIfPartsStack) - 1
@@ -2768,7 +2789,7 @@ yydefault:
 		}
 	case 241:
 		yyDollar = yyS[yypt-8 : yypt+1]
-//line internal/mygo/parser/parser.y:1628
+//line internal/mygo/parser/parser.y:1649
 		{
 			p := yylex.(*parser)
 			idx := len(p.currentIfPartsStack) - 1
@@ -2779,20 +2800,20 @@ yydefault:
 		}
 	case 242:
 		yyDollar = yyS[yypt-0 : yypt+1]
-//line internal/mygo/parser/parser.y:1636
+//line internal/mygo/parser/parser.y:1657
 		{
 			yyVAL.node = &ast.UnitLitExpr{}
 		}
 	case 243:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1642
+//line internal/mygo/parser/parser.y:1663
 		{
 			p := yylex.(*parser)
 			p.currentWhileCond = p.currentExpr
 		}
 	case 244:
 		yyDollar = yyS[yypt-7 : yypt+1]
-//line internal/mygo/parser/parser.y:1647
+//line internal/mygo/parser/parser.y:1668
 		{
 			p := yylex.(*parser)
 			p.currentWhileBody = p.currentExpr
@@ -2802,7 +2823,7 @@ yydefault:
 		}
 	case 245:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1657
+//line internal/mygo/parser/parser.y:1678
 		{
 			p := yylex.(*parser)
 			p.currentPatternStack = append(p.currentPatternStack, p.currentPattern)
@@ -2813,7 +2834,7 @@ yydefault:
 		}
 	case 246:
 		yyDollar = yyS[yypt-7 : yypt+1]
-//line internal/mygo/parser/parser.y:1666
+//line internal/mygo/parser/parser.y:1687
 		{
 			p := yylex.(*parser)
 			cases := append([]ast.SwitchCase(nil), p.currentSwitchCases...)
@@ -2842,7 +2863,7 @@ yydefault:
 		}
 	case 249:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line internal/mygo/parser/parser.y:1700
+//line internal/mygo/parser/parser.y:1721
 		{
 			p := yylex.(*parser)
 			p.currentSwitchCases = append(p.currentSwitchCases, ast.SwitchCase{
@@ -2853,7 +2874,7 @@ yydefault:
 		}
 	case 250:
 		yyDollar = yyS[yypt-7 : yypt+1]
-//line internal/mygo/parser/parser.y:1708
+//line internal/mygo/parser/parser.y:1729
 		{
 			p := yylex.(*parser)
 			p.currentSwitchCases = append(p.currentSwitchCases, ast.SwitchCase{
@@ -2864,14 +2885,14 @@ yydefault:
 		}
 	case 251:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1719
+//line internal/mygo/parser/parser.y:1740
 		{
 			p := yylex.(*parser)
 			p.currentPattern = &ast.WildcardPattern{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col}
 		}
 	case 252:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1723
+//line internal/mygo/parser/parser.y:1744
 		{
 			p := yylex.(*parser)
 			if yyDollar[1].token.lit == "_" {
@@ -2882,28 +2903,28 @@ yydefault:
 		}
 	case 253:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1731
+//line internal/mygo/parser/parser.y:1752
 		{
 			p := yylex.(*parser)
 			p.currentPattern = &ast.LiteralPattern{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Kind: "string", Value: yyDollar[1].token.lit}
 		}
 	case 254:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1735
+//line internal/mygo/parser/parser.y:1756
 		{
 			p := yylex.(*parser)
 			p.currentPattern = &ast.LiteralPattern{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Kind: "rune", Value: yyDollar[1].token.lit}
 		}
 	case 255:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1739
+//line internal/mygo/parser/parser.y:1760
 		{
 			p := yylex.(*parser)
 			p.currentPattern = &ast.LiteralPattern{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Kind: "number", Value: yyDollar[1].token.lit}
 		}
 	case 256:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1743
+//line internal/mygo/parser/parser.y:1764
 		{
 			p := yylex.(*parser)
 			p.currentPatternElemsStack = append(p.currentPatternElemsStack, p.currentPatternElems)
@@ -2911,7 +2932,7 @@ yydefault:
 		}
 	case 257:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:1748
+//line internal/mygo/parser/parser.y:1769
 		{
 			p := yylex.(*parser)
 			elems := append([]ast.Pattern(nil), p.currentPatternElems...)
@@ -2926,7 +2947,7 @@ yydefault:
 		}
 	case 258:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:1760
+//line internal/mygo/parser/parser.y:1781
 		{
 			p := yylex.(*parser)
 			args := append([]string(nil), p.currentPatternArgs...)
@@ -2935,49 +2956,49 @@ yydefault:
 		}
 	case 260:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1770
+//line internal/mygo/parser/parser.y:1791
 		{
 			p := yylex.(*parser)
 			p.currentPatternArgs = append(p.currentPatternArgs, yyDollar[3].token.lit)
 		}
 	case 261:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1774
+//line internal/mygo/parser/parser.y:1795
 		{
 			p := yylex.(*parser)
 			p.currentPatternArgs = append(p.currentPatternArgs, "_")
 		}
 	case 262:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1778
+//line internal/mygo/parser/parser.y:1799
 		{
 			p := yylex.(*parser)
 			p.currentPatternArgs = append(p.currentPatternArgs, yyDollar[1].token.lit)
 		}
 	case 263:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1782
+//line internal/mygo/parser/parser.y:1803
 		{
 			p := yylex.(*parser)
 			p.currentPatternArgs = append(p.currentPatternArgs, "_")
 		}
 	case 264:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1789
+//line internal/mygo/parser/parser.y:1810
 		{
 			p := yylex.(*parser)
 			p.currentPatternElems = append(p.currentPatternElems, p.currentPattern)
 		}
 	case 265:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1793
+//line internal/mygo/parser/parser.y:1814
 		{
 			p := yylex.(*parser)
 			p.currentPatternElems = append(p.currentPatternElems, p.currentPattern)
 		}
 	case 266:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1800
+//line internal/mygo/parser/parser.y:1821
 		{
 			p := yylex.(*parser)
 			p.currentParamsStack = append(p.currentParamsStack, p.currentParams)
@@ -2985,14 +3006,14 @@ yydefault:
 		}
 	case 267:
 		yyDollar = yyS[yypt-9 : yypt+1]
-//line internal/mygo/parser/parser.y:1805
+//line internal/mygo/parser/parser.y:1826
 		{
 			p := yylex.(*parser)
 			p.currentFuncLitRetStack = append(p.currentFuncLitRetStack, p.currentType)
 		}
 	case 268:
 		yyDollar = yyS[yypt-14 : yypt+1]
-//line internal/mygo/parser/parser.y:1809
+//line internal/mygo/parser/parser.y:1830
 		{
 			p := yylex.(*parser)
 			body := bodyExprFromBlock(p.currentExpr)
@@ -3014,7 +3035,7 @@ yydefault:
 		}
 	case 269:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1831
+//line internal/mygo/parser/parser.y:1852
 		{
 			p := yylex.(*parser)
 			body := p.currentExpr
@@ -3027,7 +3048,7 @@ yydefault:
 		}
 	case 270:
 		yyDollar = yyS[yypt-0 : yypt+1]
-//line internal/mygo/parser/parser.y:1844
+//line internal/mygo/parser/parser.y:1865
 		{
 			p := yylex.(*parser)
 			p.currentBlockStack = append(p.currentBlockStack, p.currentBlock)
@@ -3035,7 +3056,7 @@ yydefault:
 		}
 	case 271:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1852
+//line internal/mygo/parser/parser.y:1873
 		{
 			p := yylex.(*parser)
 			p.currentBlock = append(p.currentBlock, p.currentStmt)
@@ -3043,7 +3064,7 @@ yydefault:
 		}
 	case 272:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1857
+//line internal/mygo/parser/parser.y:1878
 		{
 			p := yylex.(*parser)
 			p.currentBlock = append(p.currentBlock, p.currentStmt)
@@ -3051,14 +3072,14 @@ yydefault:
 		}
 	case 273:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1863
+//line internal/mygo/parser/parser.y:1884
 		{
 			p := yylex.(*parser)
 			p.currentExpr = &ast.BlockExpr{Stmts: append([]ast.Stmt(nil), p.currentBlock...)}
 		}
 	case 278:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line internal/mygo/parser/parser.y:1877
+//line internal/mygo/parser/parser.y:1898
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.LetStmt{Name: yyDollar[2].token.lit, Mutable: false, Type: p.currentAnnotType, Value: p.currentExpr}
@@ -3066,7 +3087,7 @@ yydefault:
 		}
 	case 279:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line internal/mygo/parser/parser.y:1882
+//line internal/mygo/parser/parser.y:1903
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.LetStmt{Bind: p.currentBindPattern, Mutable: false, Type: p.currentAnnotType, Value: p.currentExpr}
@@ -3075,7 +3096,7 @@ yydefault:
 		}
 	case 280:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line internal/mygo/parser/parser.y:1888
+//line internal/mygo/parser/parser.y:1909
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.LetStmt{Name: yyDollar[2].token.lit, Mutable: true, Type: p.currentAnnotType, Value: p.currentExpr}
@@ -3083,14 +3104,14 @@ yydefault:
 		}
 	case 281:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1896
+//line internal/mygo/parser/parser.y:1917
 		{
 			p := yylex.(*parser)
 			p.currentBindPattern = &ast.BindNamePattern{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Name: yyDollar[1].token.lit}
 		}
 	case 282:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1900
+//line internal/mygo/parser/parser.y:1921
 		{
 			p := yylex.(*parser)
 			p.currentBindPatternElemsStack = append(p.currentBindPatternElemsStack, p.currentBindPatternElems)
@@ -3098,7 +3119,7 @@ yydefault:
 		}
 	case 283:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line internal/mygo/parser/parser.y:1905
+//line internal/mygo/parser/parser.y:1926
 		{
 			p := yylex.(*parser)
 			elems := append([]ast.BindPattern(nil), p.currentBindPatternElems...)
@@ -3113,21 +3134,21 @@ yydefault:
 		}
 	case 284:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1920
+//line internal/mygo/parser/parser.y:1941
 		{
 			p := yylex.(*parser)
 			p.currentBindPatternElems = append(p.currentBindPatternElems, p.currentBindPattern)
 		}
 	case 285:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1924
+//line internal/mygo/parser/parser.y:1945
 		{
 			p := yylex.(*parser)
 			p.currentBindPatternElems = append(p.currentBindPatternElems, p.currentBindPattern)
 		}
 	case 286:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line internal/mygo/parser/parser.y:1931
+//line internal/mygo/parser/parser.y:1952
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.AssignStmt{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Name: yyDollar[1].token.lit, Value: p.currentExpr}
@@ -3135,7 +3156,7 @@ yydefault:
 		}
 	case 287:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1939
+//line internal/mygo/parser/parser.y:1960
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.ReturnStmt{}
@@ -3143,7 +3164,7 @@ yydefault:
 		}
 	case 288:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line internal/mygo/parser/parser.y:1944
+//line internal/mygo/parser/parser.y:1965
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.ReturnStmt{Value: p.currentExpr}
@@ -3151,7 +3172,7 @@ yydefault:
 		}
 	case 289:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line internal/mygo/parser/parser.y:1952
+//line internal/mygo/parser/parser.y:1973
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.ExprStmt{Expr: p.currentExpr}

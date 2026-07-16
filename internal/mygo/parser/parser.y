@@ -1083,6 +1083,18 @@ postfix_expr
 	: primary
 	| postfix_expr call_start opt_type_args maybe_expr_list RPAREN {
 		p := yylex.(*parser)
+		defer func() {
+    		if r := recover(); r != nil {
+        		println("PANIC in genCall at", p.filename, "line", $2.line)
+        		println("  currentExpr:", p.currentExpr)
+        		println("  callCalleeStack:", len(p.currentCallCalleeStack), "argsStack:", len(p.currentArgsStack))
+        		println("  typeArgsStack:", len(p.currentCallTypeArgsStack), "sliceElemsStack:", len(p.currentSliceElemsStack))
+        		if id, ok := p.currentExpr.(*ast.IdentExpr); ok {
+            		println("  callee name:", id.Name)
+        		}
+        		panic(r)
+    		}
+		}()
 		call := &ast.CallExpr{
 			Line:     $2.line,
 			Column:   $2.col,
@@ -1097,16 +1109,19 @@ postfix_expr
 		} else {
 			idx := len(p.currentCallCalleeStack) - 1
 			callee := p.currentCallCalleeStack[idx]
-			prevArgs := p.currentArgsStack[idx]
-			prevSliceElems := p.currentSliceElemsStack[idx]
-			prevTypeArgs := p.currentCallTypeArgsStack[idx]
 			p.currentCallCalleeStack = p.currentCallCalleeStack[:idx]
-			p.currentArgsStack = p.currentArgsStack[:idx]
-			p.currentSliceElemsStack = p.currentSliceElemsStack[:idx]
-			p.currentCallTypeArgsStack = p.currentCallTypeArgsStack[:idx]
-			p.currentArgs = prevArgs
-			p.currentSliceElems = prevSliceElems
-			p.currentCallTypeArgs = prevTypeArgs
+			if len(p.currentArgsStack) > idx {
+				p.currentArgs = p.currentArgsStack[idx]
+				p.currentArgsStack = p.currentArgsStack[:idx]
+			}
+			if len(p.currentSliceElemsStack) > idx {
+				p.currentSliceElems = p.currentSliceElemsStack[idx]
+				p.currentSliceElemsStack = p.currentSliceElemsStack[:idx]
+			}
+			if len(p.currentCallTypeArgsStack) > idx {
+				p.currentCallTypeArgs = p.currentCallTypeArgsStack[idx]
+				p.currentCallTypeArgsStack = p.currentCallTypeArgsStack[:idx]
+			}
 			p.currentExpr = &ast.CallExpr{
 				Line:     $2.line,
 				Column:   $2.col,
@@ -1135,16 +1150,19 @@ postfix_expr
 		}
 		if len(p.currentCallCalleeStack) > 0 {
 			idx := len(p.currentCallCalleeStack) - 1
-			prevArgs := p.currentArgsStack[idx]
-			prevSliceElems := p.currentSliceElemsStack[idx]
-			prevTypeArgs := p.currentCallTypeArgsStack[idx]
 			p.currentCallCalleeStack = p.currentCallCalleeStack[:idx]
-			p.currentArgsStack = p.currentArgsStack[:idx]
-			p.currentSliceElemsStack = p.currentSliceElemsStack[:idx]
-			p.currentCallTypeArgsStack = p.currentCallTypeArgsStack[:idx]
-			p.currentArgs = prevArgs
-			p.currentSliceElems = prevSliceElems
-			p.currentCallTypeArgs = prevTypeArgs
+			if len(p.currentArgsStack) > idx {
+				p.currentArgs = p.currentArgsStack[idx]
+				p.currentArgsStack = p.currentArgsStack[:idx]
+			}
+			if len(p.currentSliceElemsStack) > idx {
+				p.currentSliceElems = p.currentSliceElemsStack[idx]
+				p.currentSliceElemsStack = p.currentSliceElemsStack[:idx]
+			}
+			if len(p.currentCallTypeArgsStack) > idx {
+				p.currentCallTypeArgs = p.currentCallTypeArgsStack[idx]
+				p.currentCallTypeArgsStack = p.currentCallTypeArgsStack[:idx]
+			}
 		}
 		if len(p.currentStructFieldsStack) > 0 {
 			idx := len(p.currentStructFieldsStack) - 1
@@ -1371,10 +1389,13 @@ slice_lit_start
 	: LBRACK {
 		p := yylex.(*parser)
 		$$ = $1
+		p.currentCallCalleeStack = append(p.currentCallCalleeStack, p.currentExpr)
 		p.currentArgsStack = append(p.currentArgsStack, p.currentArgs)
 		p.currentSliceElemsStack = append(p.currentSliceElemsStack, p.currentSliceElems)
+		p.currentCallTypeArgsStack = append(p.currentCallTypeArgsStack, p.currentCallTypeArgs)
 		p.currentArgs = nil
 		p.currentSliceElems = nil
+		p.currentCallTypeArgs = nil
 	}
 	;
 
