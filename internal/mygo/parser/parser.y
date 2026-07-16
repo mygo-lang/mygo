@@ -252,16 +252,6 @@ enum_variant
 
 enum_variant_fields
 	: /* empty */
-	| enum_variant_fields IDENT {
-		p := yylex.(*parser)
-		if p.currentEnum != nil {
-			p.currentEnumFields = append(p.currentEnumFields, ast.Field{
-				Line: $2.line,
-				Column: $2.col,
-				Type: &ast.NamedType{Line: $2.line, Column: $2.col, Name: $2.lit},
-			})
-		}
-	}
 	| enum_variant_fields type {
 		p := yylex.(*parser)
 		if p.currentEnum != nil {
@@ -269,16 +259,6 @@ enum_variant_fields
 				Line: p.currentTypeLine,
 				Column: p.currentTypeCol,
 				Type: p.currentType,
-			})
-		}
-	}
-	| enum_variant_fields COMMA IDENT {
-		p := yylex.(*parser)
-		if p.currentEnum != nil {
-			p.currentEnumFields = append(p.currentEnumFields, ast.Field{
-				Line: $3.line,
-				Column: $3.col,
-				Type: &ast.NamedType{Line: $3.line, Column: $3.col, Name: $3.lit},
 			})
 		}
 	}
