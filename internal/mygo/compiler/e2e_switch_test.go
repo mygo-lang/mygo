@@ -96,7 +96,7 @@ func TestE2ESwitchGeneratedCodeIsValidGo(t *testing.T) {
 	pkg.Imports = map[string]struct{}{}
 
 	// Generate Go code (Generate() creates its own generator internally)
-	generated, err := codegen.Generate(pkg)
+	generated, err := codegen.Generate(pkg, nil)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
@@ -182,7 +182,7 @@ func TestGenerateInherentImplUsesMangledMethodName(t *testing.T) {
 		NoPrelude:     true,
 	}
 
-	generated, err := codegen.Generate(pkg)
+	generated, err := codegen.Generate(pkg, nil)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}

@@ -99,7 +99,13 @@ end
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = codegen.Generate(pkg)
+
+	typedInfo, err := InferTyped(pkg)
+	if err != nil {
+		t.Fatalf("InferTyped() error = %v", err)
+	}
+
+	_, err = codegen.Generate(pkg, typedInfo)
 	if err == nil {
 		t.Fatal("Generate() error = nil, want unknown operand error")
 	}
@@ -155,7 +161,13 @@ func compileInlineGoTestPackage(t *testing.T, src string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	goSrc, err := codegen.Generate(pkg)
+
+	typedInfo, err := InferTyped(pkg)
+	if err != nil {
+		t.Fatalf("InferTyped() error = %v", err)
+	}
+
+	goSrc, err := codegen.Generate(pkg, typedInfo)
 	if err != nil {
 		t.Fatal(err)
 	}

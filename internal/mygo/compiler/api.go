@@ -11,6 +11,7 @@ import (
 	"github.com/mygo-lang/mygo/internal/mygo/common"
 	parserpkg "github.com/mygo-lang/mygo/internal/mygo/parser"
 	"github.com/mygo-lang/mygo/internal/mygo/pkg"
+	"github.com/mygo-lang/mygo/internal/mygo/typeinference"
 )
 
 // CompileDir compiles all .mygo files in a directory, generating one .gen.go file per source.
@@ -23,6 +24,8 @@ func CompileDir(dir string) ([]string, error) {
 func CompileDirNoPrelude(dir string) ([]string, error) {
 	return compileDir(dir, filepath.Dir(dir), true)
 }
+
+
 
 func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 	mainPkg, testPkg, err := loadPackage(dir, noPrelude)
@@ -56,8 +59,35 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 
 	var written []string
 
-	// Compile main package.
-	files, err := codegen.GenerateFiles(mainPkg)
+	// --- Main package: type inference -> validate -> codegen ---
+	mainDotImportEnums := map[string]*EnumDecl{}
+	if preludePkg := codegen.LoadPreludePackageForEnums(mainPkg.Dir, mainPkg.WorkspaceRoot); preludePkg != nil {
+		for name, enum := range preludePkg.Enums {
+			mainDotImportEnums[name] = enum
+		}
+	}
+	mainPkgInfo := &typeinference.PkgInfo{
+		Dir:            mainPkg.Dir,
+		WorkspaceRoot:  mainPkg.WorkspaceRoot,
+		Name:           mainPkg.Name,
+		Decls:          mainPkg.Decls,
+		Enums:          mainPkg.Enums,
+		Structs:        mainPkg.Structs,
+		Interfaces:     mainPkg.Interfaces,
+		Funcs:          mainPkg.Funcs,
+		Impls:          mainPkg.Impls,
+		DotImportEnums: mainDotImportEnums,
+	}
+	infState := typeinference.NewInferState()
+	mainTypedInfo, err := typeinference.InferPackage(mainPkgInfo, infState)
+	if err != nil {
+		return nil, err
+	}
+	if err := Validate(mainPkg, mainTypedInfo); err != nil {
+		return nil, err
+	}
+
+	files, err := codegen.GenerateFiles(mainPkg, mainTypedInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -69,9 +99,10 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 		written = append(written, out)
 	}
 
-	// Compile test package if present.
+	// --- Test package: type inference -> validate -> codegen ---
 	if len(testPkg.Decls) > 0 {
 		testPkg.WorkspaceRoot = workspaceRoot
+
 		// Auto-import the main package into test package so exported symbols
 		// are accessible. The codegen will add a dot-import for direct access.
 		mainImportPath := goImportPathForDir(dir)
@@ -103,7 +134,35 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 				return nil, common.ErrorAtPos("", 0, 0, "cannot locate prelude MyGO sources for auto-import; add github.com/mygo-lang/mygo to go.mod or compile with --no-prelude")
 			}
 		}
-		testFiles, err := codegen.GenerateFiles(testPkg)
+
+		testDotImportEnums := map[string]*EnumDecl{}
+		if preludePkg := codegen.LoadPreludePackageForEnums(testPkg.Dir, testPkg.WorkspaceRoot); preludePkg != nil {
+			for name, enum := range preludePkg.Enums {
+				testDotImportEnums[name] = enum
+			}
+		}
+		testPkgInfo := &typeinference.PkgInfo{
+			Dir:            testPkg.Dir,
+			WorkspaceRoot:  testPkg.WorkspaceRoot,
+			Name:           testPkg.Name,
+			Decls:          testPkg.Decls,
+			Enums:          testPkg.Enums,
+			Structs:        testPkg.Structs,
+			Interfaces:     testPkg.Interfaces,
+			Funcs:          testPkg.Funcs,
+			Impls:          testPkg.Impls,
+			DotImportEnums: testDotImportEnums,
+		}
+		testInfState := typeinference.NewInferState()
+		testTypedInfo, err := typeinference.InferPackage(testPkgInfo, testInfState)
+		if err != nil {
+			return nil, err
+		}
+		if err := Validate(testPkg, testTypedInfo); err != nil {
+			return nil, err
+		}
+
+		testFiles, err := codegen.GenerateFiles(testPkg, testTypedInfo)
 		if err != nil {
 			return nil, err
 		}

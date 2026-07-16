@@ -20,8 +20,8 @@ import (
 )
 
 // Generate generates all Go source for the package as a single string.
-func Generate(p *Package) (string, error) {
-	files, err := GenerateFiles(p)
+func Generate(p *Package, typedInfo *typeinference.TypedInfo) (string, error) {
+	files, err := GenerateFiles(p, typedInfo)
 	if err != nil {
 		return "", err
 	}
@@ -38,7 +38,7 @@ func Generate(p *Package) (string, error) {
 }
 
 // GenerateFiles generates Go source for all .mygo files in a package.
-func GenerateFiles(p *Package) (map[string]string, error) {
+func GenerateFiles(p *Package, typedInfo *typeinference.TypedInfo) (map[string]string, error) {
 	// Build SourceFiles mapping for error messages.
 	sourceFiles := make(map[any]string)
 	for _, decl := range p.Decls {
@@ -61,24 +61,6 @@ func GenerateFiles(p *Package) (map[string]string, error) {
 			}
 		}
 	}
-	pkgInfo := &typeinference.PkgInfo{
-		Dir:            p.Dir,
-		WorkspaceRoot:  p.WorkspaceRoot,
-		Name:           p.Name,
-		Decls:          p.Decls,
-		Enums:          p.Enums,
-		Structs:        p.Structs,
-		Interfaces:     p.Interfaces,
-		Funcs:          p.Funcs,
-		Impls:          p.Impls,
-		DotImportEnums: dotImportEnums,
-	}
-	infState := typeinference.NewInferState()
-	typedInfo, err := typeinference.InferPackage(pkgInfo, infState)
-	if err != nil {
-		return nil, err
-	}
-
 	g := newGen(p, typedInfo)
 
 	files := make(map[string][]Decl)
@@ -601,6 +583,13 @@ func sortedImports(p *Package) []ImportSpec {
 }
 
 // genCtx is the expression/statement translation context.
+
+// LoadPreludePackageForEnums loads the prelude package's enums for variant pattern resolution.
+// It is called from the compiler package to build DotImportEnums for type inference.
+func LoadPreludePackageForEnums(dir, workspaceRoot string) *Package {
+	return loadPreludePackageForEnums(dir, workspaceRoot)
+}
+
 type egCtx struct {
 	locals      map[string]string
 	bindings    map[string]string

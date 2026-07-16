@@ -69,7 +69,7 @@ end
 		}
 	}
 
-	files, err := GenerateFiles(pkg)
+	files, err := GenerateFiles(pkg, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
