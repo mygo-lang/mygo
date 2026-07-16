@@ -1,0 +1,6 @@
+package prelude
+
+interface IIndexable[C[K, A], K, A]
+  func Get(c: C[K, A], index: K) -> Option[A]
+  func Slice(c: C[K, A], startPos: K, endPos: K) -> Option[C[K, A]]
+end

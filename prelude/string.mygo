@@ -1,7 +1,6 @@
 package prelude
 
 import strings "go:strings"
-import utf8 "go:unicode/utf8"
 
 impl StringIEnumerable: IEnumerable[String, Rune]
   func Each(c: String, fn: func(Rune) -> ()) -> ()
@@ -48,28 +47,6 @@ end
 impl String
   func FromRunes(rs: Slice[Rune]) -> String
     rs as String
-  end
-
-  func PeekRune(s: String) -> Option[Ref[Rune]]
-    if s.Len() == 0 then
-      None
-    else
-      let (r, _) = utf8.DecodeRuneInString(s)
-      Some(Ref.new(r))
-    end
-  end
-
-  func AdvanceRune(s: String) -> String
-    if s.Len() == 0 then
-      s
-    else
-      let (_, size) = utf8.DecodeRuneInString(s)
-      go[String] {
-        code: `{s}[{size}:]`
-        in s = s
-        in size = size
-      }
-    end
   end
 
   func MatchString(s: String, prefix: String) -> Bool

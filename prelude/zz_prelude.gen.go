@@ -2,10 +2,6 @@
 
 package prelude
 
-type HKTType interface{}
-type HKT1[F any] interface{}
-type HKT2[A any] interface{}
-type HKT[F any, A any] interface{}
 type Option[A any] interface {
 	isOption()
 }

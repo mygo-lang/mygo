@@ -1,0 +1,28 @@
+package prelude
+
+impl StringByteIndex: IIndexable[String, Int, Byte]
+  func Get(s: String, index: Int) -> Option[Byte]
+    if index < 0 || index >= s.Len() then
+      None
+    else
+      Some(go[Byte] {
+        code: `{s}[{index}]`
+        in s = s
+        in index = index
+      })
+    end
+  end
+
+  func Slice(s: String, startPos: Int, endPos: Int) -> Option[String]
+    if startPos < 0 || endPos < startPos || startPos >= s.Len() || endPos > s.Len() then
+      None
+    else
+      Some(go[String] {
+        code: `{s}[{startPos}:{endPos}]`
+        in s = s
+        in startPos = startPos
+        in endPos = endPos
+      })
+    end
+  end
+end

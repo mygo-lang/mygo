@@ -4,7 +4,6 @@ package prelude
 
 import (
 	"strings"
-	"unicode/utf8"
 )
 
 func Each_string_rune(c string, fn func(rune)) {
@@ -47,30 +46,6 @@ func Contains_string_rune(c string, item rune) bool {
 }
 func String_FromRunes(rs []rune) string {
 	return string(rs)
-}
-func String_PeekRune(s string) Option[*rune] {
-	return func() Option[*rune] {
-		if Len_string_rune(s) == 0 {
-			return None[*rune]()
-		} else {
-			return func() Option[*rune] {
-				r_46, _ := utf8.DecodeRuneInString(s)
-				return Some[*rune](&r_46)
-			}()
-		}
-	}()
-}
-func String_AdvanceRune(s string) string {
-	return func() string {
-		if Len_string_rune(s) == 0 {
-			return s
-		} else {
-			return func() string {
-				_, size_47 := utf8.DecodeRuneInString(s)
-				return s[size_47:]
-			}()
-		}
-	}()
 }
 func String_MatchString(s string, prefix string) bool {
 	return func() bool {

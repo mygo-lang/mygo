@@ -1,0 +1,30 @@
+package prelude
+
+impl StringRuneIndex: IIndexable[String, Int, Rune]
+  func Get(s: String, index: Int) -> Option[Rune]
+    let rs = s as Slice[Rune]
+    if index < 0 || index >= rs.Len() then
+      None
+    else
+      Some(go[Rune] {
+        code: `{rs}[{index}]`
+        in rs = rs
+        in index = index
+      })
+    end
+  end
+
+  func Slice(s: String, startPos: Int, endPos: Int) -> Option[String]
+    let rs = s as Slice[Rune]
+    if startPos < 0 || endPos < startPos || startPos >= rs.Len() || endPos > rs.Len() then
+      None
+    else
+      Some(go[Slice[Rune]] {
+        code: `{rs}[{startPos}:{endPos}]`
+        in rs = rs
+        in startPos = startPos
+        in endPos = endPos
+      } as String)
+    end
+  end
+end

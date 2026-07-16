@@ -109,7 +109,7 @@ type ifParts struct {
 %token <token> NEWLINE
 %token <token> ARROW EQEQ NEQ LTE GTE PIPEFWD PIPEBACK ANDAND OROR
 %token <token> COLON COMMA DOT LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE UNDER SLICE
-%token <token> TYPELBRACK CONSTRLBRACK
+%token <token> TYPELBRACK CONSTRLBRACK CASTIDENT
 %type <token> call_start generic_type_prefix slice_lit_start
 %type <token> opt_newlines
 %type <node> if_block_tail
@@ -924,6 +924,8 @@ cast_expr
 		p := yylex.(*parser)
 		p.currentExpr = &ast.CastExpr{Line: $2.line, Column: $2.col, Expr: p.currentExpr, Type: p.currentType}
 	}
+	;
+
 pipe_expr
 	: or_expr {
 		p := yylex.(*parser)
@@ -1971,6 +1973,10 @@ func (p *parser) Lex(lval *yySymType) int {
 	case tokNewline:
 		return int(NEWLINE)
 	case tokIdent:
+		if p.expectCastType {
+			p.expectCastType = false
+			return int(CASTIDENT)
+		}
 		return int(IDENT)
 	case tokNumber:
 		return int(NUMBER)
@@ -2029,7 +2035,7 @@ func (p *parser) Lex(lval *yySymType) int {
 		case "type":
 			return int(TYPE)
 		case "as":
-			
+			p.expectCastType = true
 			return int(AS)
 		default:
 			return int(IDENT)

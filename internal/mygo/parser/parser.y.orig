@@ -109,7 +109,7 @@ type ifParts struct {
 %token <token> NEWLINE
 %token <token> ARROW EQEQ NEQ LTE GTE PIPEFWD PIPEBACK ANDAND OROR
 %token <token> COLON COMMA DOT LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE UNDER SLICE
-%token <token> TYPELBRACK CONSTRLBRACK
+%token <token> TYPELBRACK CONSTRLBRACK CASTIDENT
 %type <token> call_start generic_type_prefix slice_lit_start
 %type <token> opt_newlines
 %type <node> if_block_tail
@@ -875,7 +875,6 @@ named_type
 named_type_suffix
 	: /* empty */ {
 		p := yylex.(*parser)
-		p.expectTypeSuffix = false
 		p.currentType = &ast.NamedType{
 			Line: p.currentNameLine,
 			Column: p.currentNameCol,
@@ -900,7 +899,6 @@ named_type_suffix
 		top := p.savedTypeNameStack[len(p.savedTypeNameStack)-1]
 		p.savedTypeNameStack = p.savedTypeNameStack[:len(p.savedTypeNameStack)-1]
 		args := append([]ast.TypeExpr(nil), p.currentStructTypeArgs...)
-		p.expectTypeSuffix = false
 		p.currentType = &ast.NamedType{
 			Line: top.line,
 			Column: top.col,
@@ -920,10 +918,12 @@ expr
 cast_expr
 	: pipe_expr {
 	}
-	| cast_expr AS type %prec AS {
+	| cast_expr AS CASTIDENT %prec AS {
 		p := yylex.(*parser)
-		p.currentExpr = &ast.CastExpr{Line: $2.line, Column: $2.col, Expr: p.currentExpr, Type: p.currentType}
+		p.currentExpr = &ast.CastExpr{Line: $2.line, Column: $2.col, Expr: p.currentExpr, Type: &ast.NamedType{Line: $3.line, Column: $3.col, Name: $3.lit}}
 	}
+	;
+
 pipe_expr
 	: or_expr {
 		p := yylex.(*parser)
@@ -1971,6 +1971,10 @@ func (p *parser) Lex(lval *yySymType) int {
 	case tokNewline:
 		return int(NEWLINE)
 	case tokIdent:
+		if p.expectCastType {
+			p.expectCastType = false
+			return int(CASTIDENT)
+		}
 		return int(IDENT)
 	case tokNumber:
 		return int(NUMBER)
@@ -2029,7 +2033,7 @@ func (p *parser) Lex(lval *yySymType) int {
 		case "type":
 			return int(TYPE)
 		case "as":
-			
+			p.expectCastType = true
 			return int(AS)
 		default:
 			return int(IDENT)

@@ -105,7 +105,6 @@ type parser struct {
 	expectTypeSuffix             bool
 	expectStructTypeArgs         bool
 	expectConstraintSuffix       bool
-	expectCastType               bool
 	parsingImplTypeParams        bool
 	currentEnum                  *ast.EnumDecl
 	currentStruct                *ast.StructDecl
