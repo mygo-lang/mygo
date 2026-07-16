@@ -3134,7 +3134,7 @@ yydefault:
 //line internal/mygo/parser/parser.y:1931
 		{
 			p := yylex.(*parser)
-			p.currentStmt = &ast.AssignStmt{Name: yyDollar[1].token.lit, Value: p.currentExpr}
+			p.currentStmt = &ast.AssignStmt{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Name: yyDollar[1].token.lit, Value: p.currentExpr}
 			p.currentExpr = &ast.UnitLitExpr{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col}
 		}
 	case 287:

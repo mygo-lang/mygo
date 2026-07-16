@@ -190,8 +190,10 @@ func (v *validator) validateFunc(d *FuncDecl) error {
 	// Push function scope
 	prevLocals := v.locals
 	prevBindings := v.bindings
+	prevLetBindings := v.letBindings
 	v.locals = make(map[string]struct{})
 	v.bindings = make(map[string]struct{})
+	v.letBindings = make(map[string]struct{})
 
 	for _, p := range d.Params {
 		if err := v.validateParam(p); err != nil {
@@ -219,6 +221,7 @@ func (v *validator) validateFunc(d *FuncDecl) error {
 
 	// Restore scope
 	v.locals = prevLocals
+	v.letBindings = prevLetBindings
 	v.bindings = prevBindings
 	return nil
 }

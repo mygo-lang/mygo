@@ -483,6 +483,11 @@ func escapeModulePathElem(s string) string {
 // mergeImportedDecls merges declarations from an imported MyGO package into
 // the user package for method resolution during code generation.
 func mergeImportedDecls(userPkg, importedPkg *pkg.Package) {
+	for name, st := range importedPkg.Structs {
+		if _, exists := userPkg.Structs[name]; !exists {
+			userPkg.Structs[name] = st
+		}
+	}
 	for name, iface := range importedPkg.Interfaces {
 		if _, exists := userPkg.Interfaces[name]; !exists {
 			userPkg.Interfaces[name] = iface

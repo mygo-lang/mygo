@@ -16,7 +16,7 @@ type ColorRed struct {
 
 func (_ ColorRed) isColor() {
 }
-func Red() Color {
+func ColorRedCtor() Color {
 	return ColorRed{}
 }
 
@@ -25,7 +25,7 @@ type ColorGreen struct {
 
 func (_ ColorGreen) isColor() {
 }
-func Green() Color {
+func ColorGreenCtor() Color {
 	return ColorGreen{}
 }
 
@@ -34,7 +34,7 @@ type ColorBlue struct {
 
 func (_ ColorBlue) isColor() {
 }
-func Blue() Color {
+func ColorBlueCtor() Color {
 	return ColorBlue{}
 }
 
@@ -46,7 +46,7 @@ type Point2DEmpty struct {
 
 func (_ Point2DEmpty) isPoint2D() {
 }
-func Empty() Point2D {
+func Point2DEmptyCtor() Point2D {
 	return Point2DEmpty{}
 }
 
@@ -56,7 +56,7 @@ type Point2DWithX struct {
 
 func (_ Point2DWithX) isPoint2D() {
 }
-func WithX(a0 int) Point2D {
+func Point2DWithXCtor(a0 int) Point2D {
 	return Point2DWithX{F0: a0}
 }
 
@@ -66,7 +66,7 @@ type Point2DWithY struct {
 
 func (_ Point2DWithY) isPoint2D() {
 }
-func WithY(a0 int) Point2D {
+func Point2DWithYCtor(a0 int) Point2D {
 	return Point2DWithY{F0: a0}
 }
 
@@ -78,7 +78,7 @@ type OperationAdd struct {
 
 func (_ OperationAdd) isOperation() {
 }
-func Add() Operation {
+func OperationAddCtor() Operation {
 	return OperationAdd{}
 }
 
@@ -87,7 +87,7 @@ type OperationSubtract struct {
 
 func (_ OperationSubtract) isOperation() {
 }
-func Subtract() Operation {
+func OperationSubtractCtor() Operation {
 	return OperationSubtract{}
 }
 
@@ -96,7 +96,7 @@ type OperationMultiply struct {
 
 func (_ OperationMultiply) isOperation() {
 }
-func Multiply() Operation {
+func OperationMultiplyCtor() Operation {
 	return OperationMultiply{}
 }
 
@@ -210,9 +210,9 @@ func sumList(lst List[int]) int {
 	return total_4
 }
 func demo() string {
-	red_7 := Red()
-	point_8 := WithY(20)
-	op_9 := Multiply()
+	red_7 := ColorRedCtor()
+	point_8 := Point2DWithYCtor(20)
+	op_9 := OperationMultiplyCtor()
 	var empty_10 Option[float64] = None[float64]()
 	var someVal_11 Option[int] = Some[int](42)
 	person_12 := Person{name: "Charlie", age: 25}
@@ -224,7 +224,7 @@ func demo() string {
 	areaValue_18 := area(rect_13)
 	swapped_19 := swapPair(pair_14)
 	bigger_20 := maxInt(3, 5)
-	colorText_21 := describeColor(Green())
+	colorText_21 := describeColor(ColorGreenCtor())
 	lst_22 := buildList()
 	sum_23 := sumList(lst_22)
 	var summary_24 string = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v sum=%v", red_7, point_8, op_9, describeOption(empty_10, ToString_float64), describeOption(someVal_11, ToString_int), person_12, rect_13, pair_14, color_15, addr_16, contact_17, areaValue_18, swapped_19, bigger_20, colorText_21, sum_23)

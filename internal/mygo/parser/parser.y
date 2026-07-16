@@ -1930,7 +1930,7 @@ bind_pattern_list
 assign_stmt
 	: IDENT '=' expr {
 		p := yylex.(*parser)
-		p.currentStmt = &ast.AssignStmt{Name: $1.lit, Value: p.currentExpr}
+		p.currentStmt = &ast.AssignStmt{Line: $1.line, Column: $1.col, Name: $1.lit, Value: p.currentExpr}
 		p.currentExpr = &ast.UnitLitExpr{Line: $1.line, Column: $1.col}
 	}
 	;
