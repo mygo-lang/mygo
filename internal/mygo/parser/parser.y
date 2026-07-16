@@ -5,8 +5,6 @@ package parser
 import (
 	"strings"
 
-	"fmt"
-	"os"
 	"github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
 )
@@ -1115,7 +1113,6 @@ postfix_expr
 		} else {
 			idx := len(p.currentCallCalleeStack) - 1
 			callee := p.currentCallCalleeStack[idx]
-			if callee != nil { if id, ok := callee.(*ast.IdentExpr); ok { fmt.Fprintf(os.Stderr, "CALLEE_POP: name=%s line=%d col=%d\n", id.Name, id.Line, id.Column) } }
 			p.currentCallCalleeStack = p.currentCallCalleeStack[:idx]
 			if len(p.currentArgsStack) > idx {
 				p.currentArgs = p.currentArgsStack[idx]
@@ -1395,7 +1392,6 @@ slice_lit_start
 	: LBRACK {
 		p := yylex.(*parser)
 		$$ = $1
-		if p.currentExpr != nil { if id, ok := p.currentExpr.(*ast.IdentExpr); ok && (id.Name == "myOrElse" || id.Name == "myPure") { fmt.Fprintf(os.Stderr, "CALLEE_PUSH: name=%s line=%d col=%d depth=%d\n", id.Name, id.Line, id.Column, len(p.currentCallCalleeStack)) } }
 		p.currentCallCalleeStack = append(p.currentCallCalleeStack, p.currentExpr)
 		p.currentArgsStack = append(p.currentArgsStack, p.currentArgs)
 		p.currentSliceElemsStack = append(p.currentSliceElemsStack, p.currentSliceElems)
@@ -1995,7 +1991,6 @@ expr_stmt
 func (p *parser) Lex(lval *yySymType) int {
 	tok := p.nextRaw()
 	lval.setTok(tok)
-	if tok.line >= 15 && tok.line <= 25 { fmt.Fprintf(os.Stderr, "LEX: lit=%s line=%d col=%d kind=%v", tok.lit, tok.line, tok.col, tok.kind); fmt.Fprintf(os.Stderr, " expectTypeSuffix=%v expectStructTypeArgs=%v\n", p.expectTypeSuffix, p.expectStructTypeArgs) }
 	savedExpectTypeSuffix := p.expectTypeSuffix
 	if tok.lit != "[" {
 		p.expectTypeSuffix = false
@@ -2104,10 +2099,8 @@ func (p *parser) Lex(lval *yySymType) int {
 			return int(RPAREN)
 		case "[":
 			if p.expectStructTypeArgs || savedExpectTypeSuffix || p.expectConstraintSuffix {
-				fmt.Fprintf(os.Stderr, "BRACKET: [ -> TYPELBRACK (expectStructTypeArgs=%v savedExpectTypeSuffix=%v expectConstraintSuffix=%v)\n", p.expectStructTypeArgs, savedExpectTypeSuffix, p.expectConstraintSuffix)
 				return int(TYPELBRACK)
 			}
-			fmt.Fprintf(os.Stderr, "BRACKET: [ -> LBRACK (expectStructTypeArgs=%v savedExpectTypeSuffix=%v expectConstraintSuffix=%v)\n", p.expectStructTypeArgs, savedExpectTypeSuffix, p.expectConstraintSuffix)
 			return int(LBRACK)
 		case "]":
 			return int(RBRACK)

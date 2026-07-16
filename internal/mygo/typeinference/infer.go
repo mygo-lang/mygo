@@ -1,8 +1,8 @@
 package typeinference
 
 import (
-	"os"
 	"fmt"
+	"os"
 	"strings"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
@@ -528,7 +528,7 @@ func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo,
 		}
 
 		// Apply substitution to function type
-// inferred func type preserved as original funcType
+		// inferred func type preserved as original funcType
 		info.ExprTypes[d.Body] = s.ApplyMT(bodyType)
 
 		// Generalize with predicates
@@ -1190,10 +1190,12 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 		}
 		if pkg := state.MyGoPackages[id.Name]; pkg != nil {
 			if sch, ok := pkg.Funcs[n.Field]; ok {
-				return Instantiate(sch, state), make(Subst), sch.Body.Predicates, nil
+				inst := Instantiate(sch, state)
+				qualified := qualifyMyGoType(id.Name, pkg.Types, inst)
+				return qualified, make(Subst), sch.Body.Predicates, nil
 			}
 			if _, ok := pkg.Types[n.Field]; ok {
-				return TCon{Name: n.Field}, make(Subst), nil, nil
+				return TCon{Name: id.Name + "." + n.Field}, make(Subst), nil, nil
 			}
 			return nil, nil, nil, fmt.Errorf("MyGO package %q has no exported symbol %q", id.Name, n.Field)
 		}
@@ -2313,4 +2315,57 @@ func parseHKTTypeParam(tp string) (constructorName string, innerParams string) {
 		return "", ""
 	}
 	return tp[:open], tp[open+1 : close]
+}
+
+// qualifyMyGoType rewrites bare type names in the given MonoType to include a
+// package prefix when the type is defined in the imported MyGo package.
+// This is needed because function signatures loaded from MyGo packages use
+// unqualified type names (e.g. "Parser"), but the caller refers to them with
+// a package prefix (e.g. "ps.Parser"). Without this rewrite, Unify would fail
+// to see them as the same type.
+func qualifyMyGoType(alias string, pkgTypes map[string]struct{}, t MonoType) MonoType {
+	switch t := t.(type) {
+	case TVar:
+		return t
+	case TKVar:
+		return t
+	case TCon:
+		// Recursively qualify inner type arguments first.
+		args := make([]MonoType, len(t.Args))
+		for i, a := range t.Args {
+			args[i] = qualifyMyGoType(alias, pkgTypes, a)
+		}
+		// Qualify the type constructor name if it's a bare name defined in this package.
+		name := t.Name
+		if name != "" && !containsDot(name) {
+			if _, ok := pkgTypes[name]; ok {
+				name = alias + "." + name
+			}
+		}
+		return TCon{Name: name, Args: args}
+	case TFunc:
+		args := make([]MonoType, len(t.Args))
+		for i, a := range t.Args {
+			args[i] = qualifyMyGoType(alias, pkgTypes, a)
+		}
+		return TFunc{
+			Args:     args,
+			Ret:      qualifyMyGoType(alias, pkgTypes, t.Ret),
+			Variadic: t.Variadic,
+		}
+	case TGoPackage:
+		return t
+	case TUnit:
+		return t
+	}
+	return t
+}
+
+func containsDot(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] == '.' {
+			return true
+		}
+	}
+	return false
 }
