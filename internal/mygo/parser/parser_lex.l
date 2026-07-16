@@ -145,7 +145,7 @@ as                 return l.char(AS)
 {octnumber}        return l.char(NUMBER)
 {binnumber}        return l.char(NUMBER)
 {number}           return l.char(NUMBER)
-\[\]               return l.char(SLICE)
+
 =>                 return l.char(ARROW)
 ->                 return l.char(ARROW)
 \<\=               return l.char(LTE)

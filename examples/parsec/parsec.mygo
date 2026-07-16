@@ -1,0 +1,411 @@
+package main
+
+import fmt "go:fmt"
+import strconv "go:strconv"
+import strings "go:strings"
+import utf8 "go:unicode/utf8"
+import ps "lib/text/parsec"
+
+# JsonValue — the parsed representation of any JSON value.
+
+enum JsonValue
+  JNull
+  JBool(Bool)
+  JNumber(Float64)
+  JString(String)
+  JArray(Slice[JsonValue])
+  JObject(Slice[(String, JsonValue)])
+end
+
+impl JsonValue
+  func ToString(value: JsonValue) -> String
+    switch value
+      case JNull => "null"
+      case JBool(b) => if b => "true" else "false"
+      case JNumber(n) => String.FromF64(n)
+      case JString(s) => "\"" + jsonEscape(s) + "\""
+      case JArray(items) =>
+        let parts = items.Map(func(v: JsonValue) -> String
+          JsonValue.ToString(v)
+        end)
+        "[" + strings.Join(parts, ",") + "]"
+      case JObject(pairs) =>
+        let parts = pairs.Map(func(p: (String, JsonValue)) -> String
+          let (k, v) = p
+          "\"" + jsonEscape(k) + "\":" + JsonValue.ToString(v)
+        end)
+        "{" + strings.Join(parts, ",") + "}"
+    end
+  end
+end
+
+func jsonEscape(s: String) -> String
+  let parts: Slice[String] = s.Fold([] as Slice[String], func(acc: Slice[String], r: Rune) -> Slice[String]
+    let escaped = switch r
+      case '"' => "\\\""
+      case '\\' => "\\\\\\\\"
+      case '\b' => "\\b"
+      case '\f' => "\\f"
+      case '\n' => "\\n"
+      case '\r' => "\\r"
+      case '\t' => "\\t"
+      case _ then
+        if r < ' ' then
+          let v = r as Int
+          let hexChars: Slice[Rune] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f']
+          let d0 = v / 4096
+          let d1 = (v - d0 * 4096) / 256
+          let d2 = (v - d0 * 4096 - d1 * 256) / 16
+          let d3 = v - d0 * 4096 - d1 * 256 - d2 * 16
+          let escapedRunes = [
+            hexChars.Get(d0).UnwrapOr('\0'),
+            hexChars.Get(d1).UnwrapOr('\0'),
+            hexChars.Get(d2).UnwrapOr('\0'),
+            hexChars.Get(d3).UnwrapOr('\0'),
+          ]
+          "\\\\u" + String.FromRunes(escapedRunes)
+        else
+          String.FromRunes([r])
+        end
+      end
+    end
+    acc.Append(escaped)
+  end)
+  strings.Join(parts, "")
+end
+
+
+# ----- whitespace -----
+
+func ws[A](p: ps.Parser[A]) -> ps.Parser[A]
+  let sp = ps.PMany(ps.PSatisfy(func(r: Rune) -> Bool
+    r == ' ' || r == '\t' || r == '\n' || r == '\r'
+  end, "whitespace"))
+  ps.PBetween(sp, p, sp)
+end
+
+# ----- null / true / false -----
+
+func pNull() -> ps.Parser[JsonValue]
+  ps.PMap(ps.PString("null"), func(_: String) -> JsonValue
+    JsonValue.JNull
+  end)
+end
+
+func pBool() -> ps.Parser[JsonValue]
+  ps.POrElse(
+    ps.PMap(ps.PString("true"), func(_: String) -> JsonValue
+      JsonValue.JBool(true)
+    end),
+    ps.PMap(ps.PString("false"), func(_: String) -> JsonValue
+      JsonValue.JBool(false)
+    end),
+  )
+end
+
+# ----- number -----
+
+func pNumber() -> ps.Parser[JsonValue]
+  ps.Parser[JsonValue] {
+    run: func(state: ps.State) -> ps.Reply[JsonValue]
+      # Check if we can read at least one char
+      let r1 = ps.PeekRune(state)
+      if !r1.ok then
+        return ps.Reply[JsonValue] {
+          ok: false, consumed: false, value: Zero(),
+          state: state, error: ps.ErrorAt(state.position, "number", ps.EmptyExpected())
+        }
+      end
+
+      # Save initial position for substring extraction
+      let startIdx = state.index
+      var curState = state
+      var runes: Slice[Rune] = []
+
+      # Optional '-'
+      let rSign = ps.PeekRune(curState)
+      if rSign.ok && rSign.value == '-' then
+        runes = runes.Append('-')
+        curState = ps.AdvanceRune(curState)
+      end
+
+      # At least one digit
+      let rFirst = ps.PeekRune(curState)
+      if !rFirst.ok || rFirst.value < '0' || rFirst.value > '9' then
+        return ps.Reply[JsonValue] {
+          ok: false, consumed: false, value: Zero(),
+          state: state, error: ps.ErrorAt(state.position, "number", ps.EmptyExpected())
+        }
+      end
+
+      # Read integer part
+      while true
+        let rn = ps.PeekRune(curState)
+        if !rn.ok then break end
+        if rn.value < '0' || rn.value > '9' then break end
+        runes = runes.Append(rn.value)
+        curState = ps.AdvanceRune(curState)
+      end
+
+      # Optional fractional part
+      let rDot = ps.PeekRune(curState)
+      if rDot.ok && rDot.value == '.' then
+        runes = runes.Append('.')
+        curState = ps.AdvanceRune(curState)
+        # At least one digit after '.'
+        let rFrac = ps.PeekRune(curState)
+        if !rFrac.ok || rFrac.value < '0' || rFrac.value > '9' then
+          return ps.Reply[JsonValue] {
+            ok: false, consumed: false, value: Zero(),
+            state: state, error: ps.ErrorAt(state.position, "number", ps.EmptyExpected())
+          }
+        end
+        while true
+          let rn = ps.PeekRune(curState)
+          if !rn.ok then break end
+          if rn.value < '0' || rn.value > '9' then break end
+          runes = runes.Append(rn.value)
+          curState = ps.AdvanceRune(curState)
+        end
+      end
+
+      # Optional exponent part
+      let rExp = ps.PeekRune(curState)
+      if rExp.ok && (rExp.value == 'e' || rExp.value == 'E') then
+        runes = runes.Append(rExp.value)
+        curState = ps.AdvanceRune(curState)
+        # Optional sign after e/E
+        let rSign2 = ps.PeekRune(curState)
+        if rSign2.ok && (rSign2.value == '+' || rSign2.value == '-') then
+          runes = runes.Append(rSign2.value)
+          curState = ps.AdvanceRune(curState)
+        end
+        # At least one digit after e/E
+        let rExpDig = ps.PeekRune(curState)
+        if !rExpDig.ok || rExpDig.value < '0' || rExpDig.value > '9' then
+          return ps.Reply[JsonValue] {
+            ok: false, consumed: false, value: Zero(),
+            state: state, error: ps.ErrorAt(state.position, "number", ps.EmptyExpected())
+          }
+        end
+        while true
+          let rn = ps.PeekRune(curState)
+          if !rn.ok then break end
+          if rn.value < '0' || rn.value > '9' then break end
+          runes = runes.Append(rn.value)
+          curState = ps.AdvanceRune(curState)
+        end
+      end
+
+      # Convert collected runes to float
+      let numStr = String.FromRunes(runes)
+      switch strconv.ParseFloat(numStr, 64)
+        case Ok(f) then
+          ps.Reply[JsonValue] {
+            ok: true, consumed: true, value: JsonValue.JNumber(f),
+            state: curState, error: ps.EmptyError(curState.position)
+          }
+        end
+        case Err(err) then
+          ps.Reply[JsonValue] {
+            ok: false, consumed: true, value: Zero(),
+            state: curState, error:  ps.ErrorAt(state.position, err.Error(), ps.EmptyExpected())
+          }
+        end
+      end
+
+    end
+  }
+end
+
+
+# ----- string -----
+
+func pString() -> ps.Parser[JsonValue]
+  ps.Parser[JsonValue] {
+    run: func(state: ps.State) -> ps.Reply[JsonValue]
+      # Must start with "
+      let rOpen = ps.PeekRune(state)
+      if !rOpen.ok || rOpen.value != '"' then
+        return ps.Reply[JsonValue] {
+          ok: false, consumed: false, value: Zero(),
+          state: state, error: ps.ErrorAt(state.position, "string", ps.EmptyExpected())
+        }
+      end
+      
+      var curState = ps.AdvanceRune(state)
+      var runes: Slice[Rune] = []
+
+      while true
+        let rCur = ps.PeekRune(curState)
+        if !rCur.ok then
+          # Unterminated string
+          return ps.Reply[JsonValue] {
+            ok: false, consumed: true, value: Zero(),
+            state: state, error: ps.ErrorAt(state.position, "unterminated string", ps.EmptyExpected())
+          }
+        end
+
+        # Closing "
+        if rCur.value == '"' then
+          let finalState = ps.AdvanceRune(curState)
+          let result = String.FromRunes(runes)
+          return ps.Reply[JsonValue] {
+            ok: true, consumed: true, value: JsonValue.JString(result),
+            state: finalState, error: ps.EmptyError(finalState.position)
+          }
+        end
+
+        # Escape sequence
+        if rCur.value == '\\' then
+          curState = ps.AdvanceRune(curState)
+          let rEsc = ps.PeekRune(curState)
+          if !rEsc.ok then
+            return ps.Reply[JsonValue] {
+              ok: false, consumed: true, value: Zero(),
+              state: state, error: ps.ErrorAt(state.position, "unterminated string", ps.EmptyExpected())
+            }
+          end
+          let (escRune, advanced) = switch rEsc.value
+            case '"' => ('"', true)
+            case '\\' => ('\\', true)
+            case '/' => ('/', true)
+            case 'b' => ('\b', true)
+            case 'f' => ('\f', true)
+            case 'n' => ('\n', true)
+            case 'r' => ('\r', true)
+            case 't' => ('\t', true)
+            case 'u' =>
+              # \uXXXX - consume 4 hex chars
+              # We need to peek at the next 4 runes
+              let s0 = ps.AdvanceRune(curState)
+              let s1 = ps.AdvanceRune(s0)
+              let s2 = ps.AdvanceRune(s1)
+              let s3 = ps.AdvanceRune(s2)
+              # Read hex digits from state.input using Get
+              let b0 = s0.input.Get(s0.index).UnwrapOr(0)
+              let b1 = s1.input.Get(s1.index).UnwrapOr(0)
+              let b2 = s2.input.Get(s2.index).UnwrapOr(0)
+              let b3 = s3.input.Get(s3.index).UnwrapOr(0)
+              let hexStr = (b0 as String) + (b1 as String) + (b2 as String) + (b3 as String)
+              let (hexVal, err) = strconv.ParseUint(hexStr, 16, 32)
+              switch hexVal
+                case Ok(v) =>
+                  # Advance past the 4 hex chars
+                  let advState = ps.AdvanceRune(s3)
+                  (v as Rune, advState)
+                case Err(_) =>
+                  # Invalid hex - return 0 and original state
+                  (0, curState)
+              end
+            case _ => (rEsc.value, true)
+          end
+          if advanced then
+            runes = runes.Append(escRune)
+            curState = ps.AdvanceRune(curState)
+          end
+        else
+          # Normal character
+          runes = runes.Append(rCur.value)
+          curState = ps.AdvanceRune(curState)
+        end
+      end
+    end
+  }
+end
+
+
+# ----- JSON value parser (full recursive grammar) -----
+func parseJson(input: String) -> Result[JsonValue, String]
+  let nullP = pNull()
+  let boolP = pBool()
+  let numP = pNumber()
+  let strP = pString()
+
+  let valueP = ps.Parser[JsonValue] {
+    run: func(state: ps.State) -> Parser[JsonValue]
+      ws(ps.PChoice([nullP, boolP, numP, strP, arrP, objP]))
+    end
+  }
+
+
+  # ---- array: "[" ws value (ws "," ws value)* ws "]" ----
+  let arrBody = ps.PSepBy(ws(valueP), ps.PChar(','))
+  let arrP = ps.PMap(
+    ps.PBetween(ps.PChar('['), arrBody, ps.PChar(']')),
+    func(items: Slice[JsonValue]) -> JsonValue
+      JsonValue.JArray(items)
+    end,
+  )
+
+
+  # ---- object: "{" pair ("," pair)* "}" ----
+  # pair: string ":" value
+  let pairP = func(s: ps.State) -> ps.Reply[(String, JsonValue)]
+    # Parse key (string)
+    let kr = pString().run(s)
+    if !kr.ok then
+      return ps.Reply[(String, JsonValue)] {
+        ok: kr.ok,
+        consumed: kr.consumed,
+        state: kr.state,
+        error: kr.error,
+        value: ("", JsonValue.JNull)
+      }
+    end
+
+    # Extract string value from JString
+    let keyStr = switch kr.value
+      case JString(kv) => kv as String
+      case _ => ""
+    end
+    
+    # Parse ":"
+    let cr = ps.PChar(':').run(kr.state)
+    if !cr.ok then
+      return ps.Reply[(String, JsonValue)] {
+        ok: cr.ok,
+        consumed: cr.consumed,
+        state: cr.state,
+        error: cr.error,
+        value: ("", JsonValue.JNull)
+      }
+    end
+    
+    # Parse value
+    let vr = valueP.run(cr.state)
+    if !vr.ok then
+      return ps.Reply[(String, JsonValue)] {
+        ok: vr.ok,
+        consumed: vr.consumed,
+        state: vr.state,
+        error: vr.error,
+        value: ("", JsonValue.JNull)
+      }
+    end
+    
+    ps.Reply[(String, JsonValue)] {
+      ok: true,
+      consumed: true,
+      value: (keyStr, vr.value),
+      state: vr.state
+    }
+  end
+
+  let objBody = ps.PSepBy(pairP, ps.PChar(','))
+  let objP = ps.PMap(
+    ps.PBetween(ps.PChar('{'), objBody, ps.PChar('}')),
+    func(pairs: Slice[(String, JsonValue)]) -> JsonValue
+      JsonValue.JObject(pairs)
+    end,
+  )
+
+  # ---- parse ----
+  let r = ps.ParseInput(valueP, input)
+  if !r.ok then
+    let errMsg = fmt.Sprintf("parse error at line %d, column %d: %s", r.error.position.line, r.error.position.column, r.error.message)
+    Err(errMsg)
+  else
+    Ok(r.value)
+  end
+end

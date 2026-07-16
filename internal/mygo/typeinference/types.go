@@ -6,6 +6,7 @@ package typeinference
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
@@ -145,9 +146,7 @@ type TypeEnv map[string]*Scheme
 
 func (env TypeEnv) Clone() TypeEnv {
 	dup := make(TypeEnv, len(env))
-	for k, v := range env {
-		dup[k] = v
-	}
+	maps.Copy(dup, env)
 	return dup
 }
 
@@ -162,12 +161,14 @@ type InferState struct {
 }
 
 type MyGoPackageInfo struct {
-	Alias   string
-	Path    string
-	Name    string
-	Funcs   map[string]*Scheme
-	Types   map[string]struct{}
-	Structs map[string]*StructDecl // struct name -> declaration
+	Alias      string
+	Path       string
+	Name       string
+	Funcs      map[string]*Scheme
+	Types      map[string]struct{}
+	Structs    map[string]*StructDecl // struct name -> declaration
+	Interfaces map[string]*InterfaceDecl
+	Impls      []*ImplDecl
 }
 
 func NewInferState() *InferState {

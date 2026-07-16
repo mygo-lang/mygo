@@ -79,11 +79,13 @@ func loadMyGoPackageInfo(workspaceRoot, baseDir, importPath, alias string, cache
 		return nil, err
 	}
 	info := &MyGoPackageInfo{
-		Alias:   alias,
-		Path:    importPath,
-		Funcs:   map[string]*Scheme{},
-		Types:   map[string]struct{}{},
-		Structs: map[string]*StructDecl{},
+		Alias:      alias,
+		Path:       importPath,
+		Funcs:      map[string]*Scheme{},
+		Types:      map[string]struct{}{},
+		Structs:    map[string]*StructDecl{},
+		Interfaces: map[string]*InterfaceDecl{},
+		Impls:      []*ImplDecl{},
 	}
 	var decls []Decl
 	for _, entry := range entries {
@@ -139,6 +141,13 @@ func loadMyGoPackageInfo(workspaceRoot, baseDir, importPath, alias string, cache
 					}
 				}
 			}
+		case *InterfaceDecl:
+			if isExportedGoName(d.Name) {
+				info.Types[d.Name] = struct{}{}
+				info.Interfaces[d.Name] = d
+			}
+		case *ImplDecl:
+			info.Impls = append(info.Impls, d)
 		}
 	}
 	if cache != nil {

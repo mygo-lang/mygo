@@ -99,10 +99,6 @@ func (l *lexer) nextToken() token {
 		lit := string(l.TokenBytes(nil))
 		l.trackBracedFuncBlock(lit)
 		return token{kind: tokKeyword, lit: lit, line: pos.Line, col: pos.Column}
-	case SLICE:
-		l.pending = &token{kind: tokSym, lit: "]", line: pos.Line, col: pos.Column}
-		l.bracketDepth++
-		return token{kind: tokSym, lit: "[", line: pos.Line, col: pos.Column}
 	default:
 		lit := string(l.TokenBytes(nil))
 		switch lit {

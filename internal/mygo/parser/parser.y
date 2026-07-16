@@ -5,6 +5,8 @@ package parser
 import (
 	"strings"
 
+	"fmt"
+	"os"
 	"github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
 )
@@ -108,7 +110,7 @@ type ifParts struct {
 %token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSIF ELSE SWITCH CASE END USING NOT LET VAR EMBED WHILE RETURN GO IN TYPE AS
 %token <token> NEWLINE
 %token <token> ARROW EQEQ NEQ LTE GTE PIPEFWD PIPEBACK ANDAND OROR
-%token <token> COLON COMMA DOT LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE UNDER SLICE
+%token <token> COLON COMMA DOT LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE UNDER
 %token <token> TYPELBRACK CONSTRLBRACK
 %type <token> call_start generic_type_prefix slice_lit_start
 %type <token> opt_newlines
@@ -422,6 +424,8 @@ func_sig
 			})
 		}
 		p.currentParams = nil
+		p.currentFuncLitArgsStack = append(p.currentFuncLitArgsStack, p.currentArgs)
+		p.currentArgs = nil
 		p.currentTypeParams = nil
 		p.currentWhere = nil
 		p.expectTypeSuffix = false
@@ -541,6 +545,8 @@ func_decl
 		}
 		p.currentFunc = nil
 		p.currentParams = nil
+		p.currentFuncLitArgsStack = append(p.currentFuncLitArgsStack, p.currentArgs)
+		p.currentArgs = nil
 		p.currentTypeParams = nil
 		p.currentWhere = nil
 		p.currentBlock = nil
@@ -1109,6 +1115,7 @@ postfix_expr
 		} else {
 			idx := len(p.currentCallCalleeStack) - 1
 			callee := p.currentCallCalleeStack[idx]
+			if callee != nil { if id, ok := callee.(*ast.IdentExpr); ok { fmt.Fprintf(os.Stderr, "CALLEE_POP: name=%s line=%d col=%d\n", id.Name, id.Line, id.Column) } }
 			p.currentCallCalleeStack = p.currentCallCalleeStack[:idx]
 			if len(p.currentArgsStack) > idx {
 				p.currentArgs = p.currentArgsStack[idx]
@@ -1360,14 +1367,13 @@ go_type_operand
 	;
 
 slice_lit
-	: SLICE {
-		p := yylex.(*parser)
-		p.currentExpr = &ast.SliceLitExpr{Line: $1.line, Column: $1.col, Elems: nil}
-		p.currentSliceElems = nil
-	}
-	| slice_lit_start maybe_expr_list RBRACK {
+	: slice_lit_start maybe_expr_list RBRACK {
 		p := yylex.(*parser)
 		p.currentExpr = &ast.SliceLitExpr{Line: $1.line, Column: $1.col, Elems: append([]ast.Expr(nil), p.currentSliceElems...)}
+		if len(p.currentCallCalleeStack) > 0 {
+			idx := len(p.currentCallCalleeStack) - 1
+			p.currentCallCalleeStack = p.currentCallCalleeStack[:idx]
+		}
 		if len(p.currentSliceElemsStack) > 0 {
 			idx := len(p.currentSliceElemsStack) - 1
 			p.currentSliceElems = p.currentSliceElemsStack[idx]
@@ -1389,6 +1395,7 @@ slice_lit_start
 	: LBRACK {
 		p := yylex.(*parser)
 		$$ = $1
+		if p.currentExpr != nil { if id, ok := p.currentExpr.(*ast.IdentExpr); ok && (id.Name == "myOrElse" || id.Name == "myPure") { fmt.Fprintf(os.Stderr, "CALLEE_PUSH: name=%s line=%d col=%d depth=%d\n", id.Name, id.Line, id.Column, len(p.currentCallCalleeStack)) } }
 		p.currentCallCalleeStack = append(p.currentCallCalleeStack, p.currentExpr)
 		p.currentArgsStack = append(p.currentArgsStack, p.currentArgs)
 		p.currentSliceElemsStack = append(p.currentSliceElemsStack, p.currentSliceElems)
@@ -1822,6 +1829,8 @@ func_lit
 		p := yylex.(*parser)
 		p.currentParamsStack = append(p.currentParamsStack, p.currentParams)
 		p.currentParams = nil
+		p.currentFuncLitArgsStack = append(p.currentFuncLitArgsStack, p.currentArgs)
+		p.currentArgs = nil
 	}
 	opt_newlines maybe_param_list RPAREN opt_newlines ARROW type {
 		p := yylex.(*parser)
@@ -1843,6 +1852,11 @@ func_lit
 			p.currentParamsStack = p.currentParamsStack[:idx]
 		} else {
 			p.currentParams = nil
+		}
+		if len(p.currentFuncLitArgsStack) > 0 {
+			idx := len(p.currentFuncLitArgsStack) - 1
+			p.currentArgs = p.currentFuncLitArgsStack[idx]
+			p.currentFuncLitArgsStack = p.currentFuncLitArgsStack[:idx]
 		}
 		p.currentExpr = &ast.FuncLitExpr{Line: $1.line, Column: $1.col, Params: params, Ret: ret, Body: body}
 	}
@@ -1981,6 +1995,7 @@ expr_stmt
 func (p *parser) Lex(lval *yySymType) int {
 	tok := p.nextRaw()
 	lval.setTok(tok)
+	if tok.line >= 15 && tok.line <= 25 { fmt.Fprintf(os.Stderr, "LEX: lit=%s line=%d col=%d kind=%v", tok.lit, tok.line, tok.col, tok.kind); fmt.Fprintf(os.Stderr, " expectTypeSuffix=%v expectStructTypeArgs=%v\n", p.expectTypeSuffix, p.expectStructTypeArgs) }
 	savedExpectTypeSuffix := p.expectTypeSuffix
 	if tok.lit != "[" {
 		p.expectTypeSuffix = false
@@ -2057,8 +2072,6 @@ func (p *parser) Lex(lval *yySymType) int {
 		}
 	default:
 		switch tok.lit {
-		case "[]":
-			return int(SLICE)
 		case "=>":
 			return int(ARROW)
 		case "->":
@@ -2091,8 +2104,10 @@ func (p *parser) Lex(lval *yySymType) int {
 			return int(RPAREN)
 		case "[":
 			if p.expectStructTypeArgs || savedExpectTypeSuffix || p.expectConstraintSuffix {
+				fmt.Fprintf(os.Stderr, "BRACKET: [ -> TYPELBRACK (expectStructTypeArgs=%v savedExpectTypeSuffix=%v expectConstraintSuffix=%v)\n", p.expectStructTypeArgs, savedExpectTypeSuffix, p.expectConstraintSuffix)
 				return int(TYPELBRACK)
 			}
+			fmt.Fprintf(os.Stderr, "BRACKET: [ -> LBRACK (expectStructTypeArgs=%v savedExpectTypeSuffix=%v expectConstraintSuffix=%v)\n", p.expectStructTypeArgs, savedExpectTypeSuffix, p.expectConstraintSuffix)
 			return int(LBRACK)
 		case "]":
 			return int(RBRACK)

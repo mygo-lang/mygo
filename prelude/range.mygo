@@ -77,13 +77,23 @@ impl RangeIEnumerable: IEnumerable[Range, Int]
     i = c.Start
     if c.Step > 0 then
       while j < count
-        result = append(result, fn(i))
+        result = go[Slice[B]] {
+          code: `append({result}, {fn}({i}))`
+          in result = result
+          in fn = fn
+          in i = i
+        }
         i = i + c.Step
         j = j + 1
       end
     elsif c.Step < 0 then
       while j < count
-        result = append(result, fn(i))
+        result = go[Slice[B]] {
+          code: `append({result}, {fn}({i}))`
+          in result = result
+          in fn = fn
+          in i = i
+        }
         i = i + c.Step
         j = j + 1
       end

@@ -1,6 +1,7 @@
 package typeinference
 
 import (
+	"os"
 	"fmt"
 	"strings"
 
@@ -506,6 +507,14 @@ func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo,
 				funcType = TFunc{Args: paramTypes, Ret: TUnit{}}
 			} else {
 				declaredRetType := s.ApplyMT(retType)
+				fmt.Fprintf(os.Stderr, "DEBUG inferFuncDecl %q: bodyType=%s inferredRetType=%s retType=%s declaredRetType=%s\n",
+					d.Name, s.ApplyMT(bodyType), inferredRetType, retType, declaredRetType)
+				if dc, ok := declaredRetType.(TCon); ok {
+					fmt.Fprintf(os.Stderr, "DEBUG declaredRetType TCon Name=%s Args=%v\n", dc.Name, dc.Args)
+				}
+				if ic, ok := inferredRetType.(TCon); ok {
+					fmt.Fprintf(os.Stderr, "DEBUG inferredRetType TCon Name=%s Args=%v\n", ic.Name, ic.Args)
+				}
 				if goFFIRefAutoWrapsToOption(d.Body, inferredRetType, declaredRetType) {
 					inferredRetType = declaredRetType
 				} else {
@@ -519,11 +528,11 @@ func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo,
 		}
 
 		// Apply substitution to function type
-		inferredFuncType := s.ApplyMT(funcType)
+// inferred func type preserved as original funcType
 		info.ExprTypes[d.Body] = s.ApplyMT(bodyType)
 
 		// Generalize with predicates
-		sch := Generalize(env, inferredFuncType, preds)
+		sch := Generalize(env, funcType, preds)
 		env[d.Name] = sch
 		info.BindingSchemes[d.Name] = sch
 		info.Predicates[d.Body] = preds
@@ -903,6 +912,7 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 	// Build function type from arguments to return type
 	funcType := TFunc{Args: argTypes, Ret: retVar}
 
+	fmt.Fprintf(os.Stderr, "DEBUG inferCall: calleeType=%s funcType=%s argCount=%d\n", calleeType.String(), funcType.String(), len(argTypes))
 	// Unify callee type with function type
 	argSubst, err = Unify(calleeType, funcType, argSubst)
 	if err != nil {

@@ -28,6 +28,7 @@ type parser struct {
 	currentParams                []ast.Param
 	currentParamsStack           [][]ast.Param
 	currentFuncLitRetStack       []ast.TypeExpr
+	currentFuncLitArgsStack    [][]ast.Expr
 	currentWhere                 []ast.Constraint
 	currentConstraintArgs        []TypeExpr
 	currentBlock                 []ast.Stmt
