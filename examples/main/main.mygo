@@ -51,8 +51,8 @@ enum Shape
 end
 
 enum OptionLike[A]
-  Some(A)
-  None
+  S(A)
+  N
 end
 
 func describeColor(c: Color) -> String

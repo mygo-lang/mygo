@@ -76,23 +76,23 @@ func ShapeTriangleCtor(a0 float64, a1 float64) Shape {
 type OptionLike[A any] interface {
 	isOptionLike()
 }
-type OptionLikeSome[A any] struct {
+type OptionLikeS[A any] struct {
 	F0 A
 }
 
-func (_ OptionLikeSome[A]) isOptionLike() {
+func (_ OptionLikeS[A]) isOptionLike() {
 }
-func OptionLikeSomeCtor[A any](a0 A) OptionLike[A] {
-	return OptionLikeSome[A]{F0: a0}
-}
-
-type OptionLikeNone[A any] struct {
+func OptionLikeSCtor[A any](a0 A) OptionLike[A] {
+	return OptionLikeS[A]{F0: a0}
 }
 
-func (_ OptionLikeNone[A]) isOptionLike() {
+type OptionLikeN[A any] struct {
 }
-func OptionLikeNoneCtor[A any]() OptionLike[A] {
-	return OptionLikeNone[A]{}
+
+func (_ OptionLikeN[A]) isOptionLike() {
+}
+func OptionLikeNCtor[A any]() OptionLike[A] {
+	return OptionLikeN[A]{}
 }
 
 type Point struct {

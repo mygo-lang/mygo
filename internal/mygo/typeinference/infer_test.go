@@ -27,14 +27,10 @@ func inferExprType(env TypeEnv, e Expr, state *InferState) (MonoType, error) {
 	return s.ApplyMT(t), nil
 }
 
-func TestUnifyStringAsRuneSequence(t *testing.T) {
+func TestUnifyDoesNotTreatStringAsConstructorNamedC(t *testing.T) {
 	elem := TVar{ID: 1}
-	s, err := Unify(TCon{Name: "C", Args: []MonoType{elem}}, TCon{Name: "String"}, make(Subst))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := s.ApplyMT(elem); !eqType(got, TCon{Name: "Rune"}) {
-		t.Fatalf("expected String element type Rune, got %s", got)
+	if _, err := Unify(TCon{Name: "C", Args: []MonoType{elem}}, TCon{Name: "String"}, make(Subst)); err == nil {
+		t.Fatal("expected C[A] and String to fail ordinary structural unification")
 	}
 }
 

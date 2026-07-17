@@ -58,20 +58,30 @@ func TestSubstituteTypeParamsHKT(t *testing.T) {
 	}
 }
 
-func TestUnifyHigherKindedUnaryConstructor(t *testing.T) {
+func TestSubstituteTypeParamsHKTUsesDeclaredGenericVariableShape(t *testing.T) {
+	typeParams := []string{"T[Int]", "Int"}
+	typeArgs := []MonoType{
+		TCon{Name: "Vec", Args: []MonoType{TCon{Name: "Int"}}},
+		TCon{Name: "Int"},
+	}
+
+	tpe := TCon{Name: "T", Args: []MonoType{TCon{Name: "Int"}}}
+	got := substituteTypeParams(tpe, typeParams, typeArgs)
+	want := TCon{Name: "Vec", Args: []MonoType{TCon{Name: "Int"}}}
+	if !eqType(got, want) {
+		t.Fatalf("HKT substitution should follow declared T[Int] shape: got %s, want %s", got, want)
+	}
+}
+
+func TestUnifyDoesNotSpecialCaseConstructorNamedC(t *testing.T) {
 	elem := TVar{ID: 1}
 	pattern := TCon{Name: "C", Args: []MonoType{elem}}
 	actual := TCon{Name: "Slice", Args: []MonoType{
 		TCon{Name: "Parser", Args: []MonoType{TCon{Name: "Int"}}},
 	}}
 
-	subst, err := Unify(pattern, actual, make(Subst))
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := TCon{Name: "Parser", Args: []MonoType{TCon{Name: "Int"}}}
-	if got := subst.ApplyMT(elem); !eqType(got, want) {
-		t.Fatalf("expected element %s, got %s", want, got)
+	if _, err := Unify(pattern, actual, make(Subst)); err == nil {
+		t.Fatal("expected C[A] and Slice[Parser[Int]] to fail ordinary structural unification")
 	}
 }
 

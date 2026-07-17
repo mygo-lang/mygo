@@ -15,12 +15,6 @@ func Unify(t1, t2 MonoType, s Subst) (Subst, error) {
 	if isRuneAliasPair(t1, t2) {
 		return s, nil
 	}
-	if s2, ok, err := unifyStringRuneSequence(t1, t2, s); ok || err != nil {
-		return s2, err
-	}
-	if s2, ok, err := unifyHigherKindedUnaryConstructor(t1, t2, s); ok || err != nil {
-		return s2, err
-	}
 
 	switch t1 := t1.(type) {
 	case TVar:
@@ -104,30 +98,6 @@ func Unify(t1, t2 MonoType, s Subst) (Subst, error) {
 	return nil, fmt.Errorf("unexpected unification: %s vs %s", t1, t2)
 }
 
-func unifyHigherKindedUnaryConstructor(t1, t2 MonoType, s Subst) (Subst, bool, error) {
-	if elem, actualElem, ok := unaryConstructorElem(t1, t2); ok {
-		s2, err := Unify(elem, actualElem, s)
-		return s2, true, err
-	}
-	if elem, actualElem, ok := unaryConstructorElem(t2, t1); ok {
-		s2, err := Unify(elem, actualElem, s)
-		return s2, true, err
-	}
-	return s, false, nil
-}
-
-func unaryConstructorElem(pattern, actual MonoType) (MonoType, MonoType, bool) {
-	p, ok := pattern.(TCon)
-	if !ok || p.Name != "C" || len(p.Args) != 1 {
-		return nil, nil, false
-	}
-	a, ok := actual.(TCon)
-	if !ok || len(a.Args) != 1 {
-		return nil, nil, false
-	}
-	return p.Args[0], a.Args[0], true
-}
-
 func isRuneAliasPair(t1, t2 MonoType) bool {
 	c1, ok1 := t1.(TCon)
 	c2, ok2 := t2.(TCon)
@@ -139,35 +109,6 @@ func isRuneAliasPair(t1, t2 MonoType) bool {
 
 func isRuneName(name string) bool {
 	return name == "Rune" || name == "rune" || name == "Int32"
-}
-
-// unifyStringRuneSequence teaches higher-kinded collection constraints that
-// String is a sequence of rune values. Interface methods such as
-// IEnumerable[C[A], A].Len accept C[A]; a receiver of type String should
-// therefore solve A as rune instead of failing structural unification against
-// the abstract C[A] shape.
-func unifyStringRuneSequence(t1, t2 MonoType, s Subst) (Subst, bool, error) {
-	if elem, ok := stringSequenceElem(t1, t2); ok {
-		s2, err := Unify(elem, TCon{Name: "Rune"}, s)
-		return s2, true, err
-	}
-	if elem, ok := stringSequenceElem(t2, t1); ok {
-		s2, err := Unify(elem, TCon{Name: "rune"}, s)
-		return s2, true, err
-	}
-	return s, false, nil
-}
-
-func stringSequenceElem(pattern, actual MonoType) (MonoType, bool) {
-	p, ok := pattern.(TCon)
-	if !ok || p.Name != "C" || len(p.Args) != 1 {
-		return nil, false
-	}
-	a, ok := actual.(TCon)
-	if !ok || a.Name != "String" || len(a.Args) != 0 {
-		return nil, false
-	}
-	return p.Args[0], true
 }
 
 // bindVar binds a type variable to a type, performing an occurs check first.
