@@ -2228,11 +2228,28 @@ func qualifiedEnumVariantConstructor(field *FieldExpr, state *InferState) (strin
 	if state == nil || state.PkgInfo == nil {
 		return "", TFunc{}, 0, false
 	}
-	id, ok := field.Expr.(*IdentExpr)
-	if !ok {
+	qualName := exprQualifiedName(field.Expr)
+	if qualName == "" {
 		return "", TFunc{}, 0, false
 	}
-	enum := lookupEnum(state.PkgInfo, id.Name)
+	if alias, typeName, ok := splitQualifiedName(qualName); ok && state.MyGoPackages != nil {
+		if pkg := state.MyGoPackages[alias]; pkg != nil {
+			if enum := pkg.Enums[typeName]; enum != nil {
+				if variant, ok := findEnumVariant(enum, field.Field); ok {
+					typeArgs := make([]MonoType, len(enum.TypeParams))
+					for i := range enum.TypeParams {
+						typeArgs[i] = TVar{ID: state.Fresh()}
+					}
+					fn := enumVariantConstructorType(enum, variant, typeArgs)
+					if qualified, ok := qualifyMyGoType(alias, pkg.Types, fn).(TFunc); ok {
+						fn = qualified
+					}
+					return qualName, fn, len(variant.Fields), true
+				}
+			}
+		}
+	}
+	enum := lookupEnum(state.PkgInfo, qualName)
 	if enum == nil {
 		return "", TFunc{}, 0, false
 	}
@@ -2245,6 +2262,29 @@ func qualifiedEnumVariantConstructor(field *FieldExpr, state *InferState) (strin
 		typeArgs[i] = TVar{ID: state.Fresh()}
 	}
 	return enum.Name, enumVariantConstructorType(enum, variant, typeArgs), len(variant.Fields), true
+}
+
+func splitQualifiedName(name string) (string, string, bool) {
+	dotIdx := strings.LastIndexByte(name, '.')
+	if dotIdx <= 0 || dotIdx == len(name)-1 {
+		return "", "", false
+	}
+	return name[:dotIdx], name[dotIdx+1:], true
+}
+
+func exprQualifiedName(expr Expr) string {
+	switch e := expr.(type) {
+	case *IdentExpr:
+		return e.Name
+	case *FieldExpr:
+		base := exprQualifiedName(e.Expr)
+		if base == "" {
+			return ""
+		}
+		return base + "." + e.Field
+	default:
+		return ""
+	}
 }
 
 func lookupVariant(pkg *PkgInfo, name string) (*EnumDecl, *EnumVariant, bool) {

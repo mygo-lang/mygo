@@ -429,6 +429,20 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 				return &ast.UnaryExpr{Op: token.AND, X: arg}, ptrType, nil
 			}
 		}
+		if enumName := exprQualifiedName(field.Expr); enumName != "" && g.variantByName[field.Field] != "" {
+			args, err := g.translateCallArgs(n.Args, ctx)
+			if err != nil {
+				return nil, "", err
+			}
+			if dotIdx := strings.LastIndexByte(enumName, '.'); dotIdx > 0 {
+				alias := enumName[:dotIdx]
+				enumName = enumName[dotIdx+1:]
+				variantType := variantNameForEnum(enumName, field.Field)
+				return &ast.CallExpr{Fun: ast.NewIdent(alias + "." + variantType), Args: args}, alias + "." + variantType, nil
+			}
+			variantType := variantNameForEnum(enumName, field.Field)
+			return &ast.CallExpr{Fun: ast.NewIdent(variantType), Args: args}, variantType, nil
+		}
 		if id, ok := field.Expr.(*IdentExpr); ok {
 			// Check for inherent static method call: Type.method(args)
 			if methods, ok := g.inherentMethods[id.Name]; ok {
@@ -444,15 +458,6 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 					fnName := inherentMethodName(id.Name, method.Func.Name)
 					return &ast.CallExpr{Fun: ast.NewIdent(fnName), Args: args}, retType, nil
 				}
-			}
-			// Check if it's an enum constructor call (Enum.Variant)
-			if g.variantByName[field.Field] != "" {
-				args, err := g.translateCallArgs(n.Args, ctx)
-				if err != nil {
-					return nil, "", err
-				}
-				variantType := variantNameForEnum(id.Name, field.Field)
-				return &ast.CallExpr{Fun: ast.NewIdent(variantType), Args: args}, variantType, nil
 			}
 			// Imported method call: pkg.Func()
 			if g.importAliases[id.Name] != "" {
@@ -1326,4 +1331,19 @@ func splitMapKeyValue(s string) (string, string, bool) {
 		}
 	}
 	return "", "", false
+}
+
+func exprQualifiedName(expr Expr) string {
+	switch e := expr.(type) {
+	case *IdentExpr:
+		return e.Name
+	case *FieldExpr:
+		base := exprQualifiedName(e.Expr)
+		if base == "" {
+			return ""
+		}
+		return base + "." + e.Field
+	default:
+		return ""
+	}
 }

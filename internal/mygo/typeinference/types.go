@@ -167,6 +167,7 @@ type MyGoPackageInfo struct {
 	Funcs      map[string]*Scheme
 	Types      map[string]struct{}
 	Structs    map[string]*StructDecl // struct name -> declaration
+	Enums      map[string]*EnumDecl
 	Interfaces map[string]*InterfaceDecl
 	Impls      []*ImplDecl
 }

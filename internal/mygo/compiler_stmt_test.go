@@ -450,6 +450,63 @@ func TestCompileDirKeepsSameNamedMyGoFunctionsSeparate(t *testing.T) {
 	}
 }
 
+func TestCompileDirResolvesImportedMyGoStructAndEnumSymbols(t *testing.T) {
+	root := t.TempDir()
+	apiDir := filepath.Join(root, "api")
+	appDir := filepath.Join(root, "app")
+	for _, dir := range []string{apiDir, appDir} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	writeMygoFile(t, apiDir, "api.mygo", `package api
+  struct Box
+    Value: Int
+  end
+
+  enum Result
+    Ok(Int)
+  end
+
+  func ReadBox(b: Box) -> Int
+    b.Value
+  end
+
+  func ReadResult(r: Result) -> Int
+    switch r
+      case Ok(v) then
+        v
+      end
+    end
+  end
+`)
+	writeMygoFile(t, appDir, "main.mygo", `package app
+  import api "api"
+
+  func demo() -> Int
+    let b = api.Box{Value: 40}
+    let r = api.Result.Ok(2)
+    api.ReadBox(b) + api.ReadResult(r)
+  end
+`)
+
+	outFiles, err := CompileDir(appDir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, outFiles[0])
+	for _, want := range []string{
+		`api.Box{Value: 40}`,
+		`api.ResultOk(2)`,
+		`api.ReadBox(b_1) + api.ReadResult(r_2)`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
 func TestCompileDirSupportsLetVarAndDiscard(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main

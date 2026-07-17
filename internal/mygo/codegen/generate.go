@@ -247,13 +247,8 @@ func addGoastImport(sf *goast.SourceFile, p *Package, decls []Decl) {
 		return imports[i].Alias < imports[j].Alias
 	})
 	for _, imp := range imports {
-		// For MyGO imports (non go: paths), use dot-import so exported
-		// symbols are accessible without qualification.
 		path := importPathForGo(imp.Path)
 		alias := imp.Alias
-		if !strings.HasPrefix(imp.Path, "go:") && alias != "." {
-			alias = "."
-		}
 		if alias == importAliasForPath(path) {
 			alias = ""
 		}

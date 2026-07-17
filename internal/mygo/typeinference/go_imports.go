@@ -84,6 +84,7 @@ func loadMyGoPackageInfo(workspaceRoot, baseDir, importPath, alias string, cache
 		Funcs:      map[string]*Scheme{},
 		Types:      map[string]struct{}{},
 		Structs:    map[string]*StructDecl{},
+		Enums:      map[string]*EnumDecl{},
 		Interfaces: map[string]*InterfaceDecl{},
 		Impls:      []*ImplDecl{},
 	}
@@ -100,6 +101,9 @@ func loadMyGoPackageInfo(workspaceRoot, baseDir, importPath, alias string, cache
 		file, err := parserpkg.ParseFile("<go-import>", string(src))
 		if err != nil {
 			return nil, err
+		}
+		if info.Name == "" && file.PackageName != "" {
+			info.Name = file.PackageName
 		}
 		decls = append(decls, file.Decls...)
 	}
@@ -118,6 +122,7 @@ func loadMyGoPackageInfo(workspaceRoot, baseDir, importPath, alias string, cache
 		case *EnumDecl:
 			if isExportedGoName(d.Name) {
 				info.Types[d.Name] = struct{}{}
+				info.Enums[d.Name] = d
 				for _, v := range d.Variants {
 					if isExportedGoName(v.Name) {
 						typeParamVars := make(map[string]MonoType, len(d.TypeParams))

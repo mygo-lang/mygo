@@ -14,7 +14,17 @@ import (
 // translateStructLit handles struct literal construction.
 func (g *gen) translateStructLit(n *StructLitExpr, ctx *egCtx, expected string) (ast.Expr, string, error) {
 	typeName := sanitizeIdent(n.TypeName)
+	structName := n.TypeName
+	importAlias := ""
+	if dotIdx := strings.LastIndexByte(n.TypeName, '.'); dotIdx > 0 && dotIdx < len(n.TypeName)-1 {
+		importAlias = n.TypeName[:dotIdx]
+		structName = n.TypeName[dotIdx+1:]
+		typeName = structName
+	}
 	st := g.pkg.Structs[n.TypeName]
+	if st == nil && importAlias != "" {
+		st = g.pkg.Structs[structName]
+	}
 	if st == nil {
 		return ast.NewIdent(typeName), typeName, nil
 	}
@@ -58,12 +68,15 @@ func (g *gen) translateStructLit(n *StructLitExpr, ctx *egCtx, expected string) 
 		_ = i
 	}
 	var typeExpr ast.Expr = ast.NewIdent(typeName)
+	if importAlias != "" {
+		typeExpr = &ast.SelectorExpr{X: ast.NewIdent(importAlias), Sel: ast.NewIdent(typeName)}
+	}
 	if len(n.TypeArgs) > 0 {
 		typeArgs := make([]ast.Expr, len(n.TypeArgs))
 		for i, a := range n.TypeArgs {
 			typeArgs[i] = ast.NewIdent(g.goType(a, ctx.typeParams))
 		}
-		typeExpr = genericIdent(typeName, typeArgs...)
+		typeExpr = indexTypeExpr(typeExpr, typeArgs...)
 	} else if len(subst) > 0 && len(st.TypeParams) > 0 {
 		typeArgs := make([]ast.Expr, 0, len(st.TypeParams))
 		for _, tp := range st.TypeParams {
@@ -78,10 +91,13 @@ func (g *gen) translateStructLit(n *StructLitExpr, ctx *egCtx, expected string) 
 			}
 		}
 		if len(typeArgs) == len(st.TypeParams) {
-			typeExpr = genericIdent(typeName, typeArgs...)
+			typeExpr = indexTypeExpr(typeExpr, typeArgs...)
 		}
 	}
 	resultType := typeName
+	if importAlias != "" {
+		resultType = importAlias + "." + typeName
+	}
 	if expected != "" {
 		if base, _ := splitTypeArgs(expected); base == n.TypeName {
 			resultType = expected
@@ -100,6 +116,16 @@ func (g *gen) translateStructLit(n *StructLitExpr, ctx *egCtx, expected string) 
 		}
 	}
 	return &ast.CompositeLit{Type: typeExpr, Elts: elts}, resultType, nil
+}
+
+func indexTypeExpr(x ast.Expr, args ...ast.Expr) ast.Expr {
+	if len(args) == 0 {
+		return x
+	}
+	if len(args) == 1 {
+		return &ast.IndexExpr{X: x, Index: args[0]}
+	}
+	return &ast.IndexListExpr{X: x, Indices: args}
 }
 
 // translateSliceLit handles slice literals.
