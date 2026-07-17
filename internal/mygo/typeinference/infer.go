@@ -1387,6 +1387,12 @@ func sameTypeExpr(a, b TypeExpr) bool {
 func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType, Subst, []Predicate, error) {
 	// Look up the struct type
 	sch, ok := env[n.TypeName]
+	fmt.Fprintf(os.Stderr, "DEBUG inferStructLit: TypeName=%q TypeArgs=%v ok=%v\n", n.TypeName, n.TypeArgs, ok)
+	if state != nil && state.PkgInfo != nil {
+		for name := range state.PkgInfo.Structs {
+			fmt.Fprintf(os.Stderr, "DEBUG inferStructLit: PkgInfo.Structs has key=%q\n", name)
+		}
+	}
 	if !ok {
 		return nil, nil, nil, fmt.Errorf("unknown struct type %q", n.TypeName)
 	}

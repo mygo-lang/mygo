@@ -1189,8 +1189,8 @@ postfix_expr
 			idx := len(p.currentStructBaseStack) - 1
 			base := p.currentStructBaseStack[idx]
 			p.currentStructBaseStack = p.currentStructBaseStack[:idx]
-			if id, ok := base.(*ast.IdentExpr); ok {
-			p.currentExpr = &ast.StructLitExpr{Line: $1.line, Column: $1.col, TypeName: id.Name, TypeArgs: append([]ast.TypeExpr(nil), p.currentStructTypeArgs...), Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
+			if name := structLitTypeName(base); name != "" {
+				p.currentExpr = &ast.StructLitExpr{Line: $1.line, Column: $1.col, TypeName: name, TypeArgs: append([]ast.TypeExpr(nil), p.currentStructTypeArgs...), Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
 			}
 		}
 		if len(p.currentStructFieldsStack) > 0 {
@@ -1215,8 +1215,8 @@ postfix_expr
 			idx := len(p.currentStructBaseStack) - 1
 			base := p.currentStructBaseStack[idx]
 			p.currentStructBaseStack = p.currentStructBaseStack[:idx]
-			if id, ok := base.(*ast.IdentExpr); ok {
-			p.currentExpr = &ast.StructLitExpr{Line: $2.line, Column: $2.col, TypeName: id.Name, Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
+			if name := structLitTypeName(base); name != "" {
+				p.currentExpr = &ast.StructLitExpr{Line: $2.line, Column: $2.col, TypeName: name, Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
 			}
 		}
 		if len(p.currentStructFieldsStack) > 0 {
@@ -2129,5 +2129,19 @@ func (p *parser) Lex(lval *yySymType) int {
 		default:
 			return int(tok.lit[0])
 		}
+	}
+}
+
+func structLitTypeName(base ast.Expr) string {
+	switch e := base.(type) {
+	case *ast.IdentExpr:
+		return e.Name
+	case *ast.FieldExpr:
+		if id, ok := e.Expr.(*ast.IdentExpr); ok {
+			return id.Name + "." + e.Field
+		}
+		return ""
+	default:
+		return ""
 	}
 }

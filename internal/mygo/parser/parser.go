@@ -380,6 +380,20 @@ func (p *parser) Lex(lval *yySymType) int {
 	}
 }
 
+func structLitTypeName(base ast.Expr) string {
+	switch e := base.(type) {
+	case *ast.IdentExpr:
+		return e.Name
+	case *ast.FieldExpr:
+		if id, ok := e.Expr.(*ast.IdentExpr); ok {
+			return id.Name + "." + e.Field
+		}
+		return ""
+	default:
+		return ""
+	}
+}
+
 //line yacctab:1
 var yyExca = [...]int16{
 	-1, 1,
@@ -2297,8 +2311,8 @@ yydefault:
 				idx := len(p.currentStructBaseStack) - 1
 				base := p.currentStructBaseStack[idx]
 				p.currentStructBaseStack = p.currentStructBaseStack[:idx]
-				if id, ok := base.(*ast.IdentExpr); ok {
-					p.currentExpr = &ast.StructLitExpr{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, TypeName: id.Name, TypeArgs: append([]ast.TypeExpr(nil), p.currentStructTypeArgs...), Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
+				if name := structLitTypeName(base); name != "" {
+					p.currentExpr = &ast.StructLitExpr{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, TypeName: name, TypeArgs: append([]ast.TypeExpr(nil), p.currentStructTypeArgs...), Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
 				}
 			}
 			if len(p.currentStructFieldsStack) > 0 {
@@ -2329,8 +2343,8 @@ yydefault:
 				idx := len(p.currentStructBaseStack) - 1
 				base := p.currentStructBaseStack[idx]
 				p.currentStructBaseStack = p.currentStructBaseStack[:idx]
-				if id, ok := base.(*ast.IdentExpr); ok {
-					p.currentExpr = &ast.StructLitExpr{Line: yyDollar[2].token.line, Column: yyDollar[2].token.col, TypeName: id.Name, Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
+				if name := structLitTypeName(base); name != "" {
+					p.currentExpr = &ast.StructLitExpr{Line: yyDollar[2].token.line, Column: yyDollar[2].token.col, TypeName: name, Fields: append([]ast.StructLitField(nil), p.currentStructFields...)}
 				}
 			}
 			if len(p.currentStructFieldsStack) > 0 {
