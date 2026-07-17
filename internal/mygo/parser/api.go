@@ -39,6 +39,8 @@ type WhileExpr = ast.WhileExpr
 type BlockExpr = ast.BlockExpr
 type ExprStmt = ast.ExprStmt
 type LetStmt = ast.LetStmt
+type LetRecStmt = ast.LetRecStmt
+type LetRecBinding = ast.LetRecBinding
 type BindPattern = ast.BindPattern
 type BindNamePattern = ast.BindNamePattern
 type BindTuplePattern = ast.BindTuplePattern
@@ -58,6 +60,6 @@ type GoExpr = ast.GoExpr
 type GoOperand = ast.GoOperand
 type GoTypeOperand = ast.GoTypeOperand
 
-func ParseFile(filename, src string) (*File, error)                { return parseFile(filename, src) }
+func ParseFile(filename, src string) (*File, error)      { return parseFile(filename, src) }
 func ParseFiles(srcs map[string]string) ([]*File, error) { return parseFiles(srcs) }
 func MustParseInt(s string) int                          { n, _ := strconv.Atoi(s); return n }

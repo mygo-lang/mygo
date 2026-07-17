@@ -32,6 +32,8 @@ type lexer struct {
 	pending              *token
 	braceDepth           int
 	bracketDepth         int
+	blockDepth           int
+	pendingThenDepth     int
 	bracedFuncDepth      int
 	pendingBracedIfDepth int
 }
@@ -59,7 +61,7 @@ func (l *lexer) nextToken() token {
 	case lex.RuneEOF:
 		return token{kind: tokEOF, line: pos.Line, col: pos.Column}
 	case NEWLINE:
-		if l.bracketDepth > 0 || (l.braceDepth > 0 && l.bracedFuncDepth == 0) {
+		if (l.bracketDepth > 0 && l.blockDepth == 0) || (l.braceDepth > 0 && l.bracedFuncDepth == 0) {
 			return l.nextToken()
 		}
 		return token{kind: tokNewline, lit: "\n", line: pos.Line, col: pos.Column}
@@ -90,13 +92,14 @@ func (l *lexer) nextToken() token {
 		return token{kind: tokString, lit: lit, line: pos.Line, col: pos.Column}
 	case RUNE:
 		raw := string(l.TokenBytes(nil))
-		lit, _, _, err := strconv.UnquoteChar(raw[1:len(raw)-1], '\'')
+		lit, err := unquoteRuneLiteral(raw)
 		if err != nil {
 			return token{kind: tokRune, lit: raw, line: pos.Line, col: pos.Column}
 		}
 		return token{kind: tokRune, lit: string(lit), line: pos.Line, col: pos.Column}
-	case PACKAGE, IMPORT, ENUM, STRUCT, INTERFACE, IMPL, FUNC, IF, THEN, ELSIF, ELSE, SWITCH, CASE, END, USING, LET, VAR, EMBED, WHILE, RETURN, GO, IN, TYPE, AS:
+	case PACKAGE, IMPORT, ENUM, STRUCT, INTERFACE, IMPL, FUNC, IF, THEN, ELSIF, ELSE, SWITCH, CASE, END, USING, LET, LETREC, VAR, EMBED, WHILE, RETURN, GO, IN, TYPE, AS:
 		lit := string(l.TokenBytes(nil))
+		l.trackBlock(lit)
 		l.trackBracedFuncBlock(lit)
 		return token{kind: tokKeyword, lit: lit, line: pos.Line, col: pos.Column}
 	default:
@@ -112,6 +115,52 @@ func (l *lexer) nextToken() token {
 			l.bracketDepth--
 		}
 		return token{kind: tokSym, lit: lit, line: pos.Line, col: pos.Column}
+	}
+}
+
+func unquoteRuneLiteral(raw string) (rune, error) {
+	if len(raw) < 2 {
+		return 0, strconv.ErrSyntax
+	}
+	inner := raw[1 : len(raw)-1]
+	lit, _, _, err := strconv.UnquoteChar(inner, '\'')
+	if err == nil {
+		return lit, nil
+	}
+	if len(inner) >= 2 && len(inner) <= 4 && inner[0] == '\\' {
+		oct := inner[1:]
+		for _, r := range oct {
+			if r < '0' || r > '7' {
+				return 0, err
+			}
+		}
+		value, parseErr := strconv.ParseInt(oct, 8, 32)
+		if parseErr != nil {
+			return 0, err
+		}
+		return rune(value), nil
+	}
+	return 0, err
+}
+
+func (l *lexer) trackBlock(lit string) {
+	switch lit {
+	case "func", "while", "switch", "letrec":
+		l.blockDepth++
+	case "if", "case":
+		l.pendingThenDepth++
+	case "then":
+		if l.pendingThenDepth > 0 {
+			l.pendingThenDepth--
+			l.blockDepth++
+		}
+	case "end":
+		if l.blockDepth > 0 {
+			l.blockDepth--
+		}
+		if l.pendingThenDepth > 0 {
+			l.pendingThenDepth--
+		}
 	}
 }
 

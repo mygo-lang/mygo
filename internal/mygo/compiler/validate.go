@@ -19,6 +19,7 @@ var builtinTypeNames = []string{
 	"Int64", "UInt", "UInt64", "Float32", "Float64",
 	"Byte", "Rune", "String", "Bool", "Unit",
 }
+
 type validator struct {
 	pkg       *pkg.Package
 	typedInfo *typeinference.TypedInfo
@@ -664,10 +665,40 @@ func (v *validator) validateStmt(s Stmt) error {
 		return v.validateExpr(st.Expr)
 	case *LetStmt:
 		return v.validateLet(st)
+	case *LetRecStmt:
+		return v.validateLetRec(st)
 	case *ReturnStmt:
 		return v.validateReturn(st)
 	case *AssignStmt:
 		return v.validateAssign(st)
+	}
+	return nil
+}
+
+func (v *validator) validateLetRec(d *LetRecStmt) error {
+	seen := map[string]struct{}{}
+	for i := range d.Bindings {
+		b := &d.Bindings[i]
+		if b.Name == "" || b.Name == "_" {
+			return common.ErrorAtNode(d.SourceFile, d, "letrec binding requires a non-discard name")
+		}
+		if _, ok := seen[b.Name]; ok {
+			return common.ErrorAtNode(d.SourceFile, d, "duplicate letrec binding %q", b.Name)
+		}
+		seen[b.Name] = struct{}{}
+		if b.Type == nil {
+			return common.ErrorAtNode(d.SourceFile, d, "letrec binding %q requires a type annotation", b.Name)
+		}
+		if err := v.validateTypeExpr(b.Type); err != nil {
+			return err
+		}
+		v.locals[b.Name] = struct{}{}
+		v.letBindings[b.Name] = struct{}{}
+	}
+	for i := range d.Bindings {
+		if err := v.validateExpr(d.Bindings[i].Value); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -105,7 +105,7 @@ type ifParts struct {
 }
 
 %token <token> IDENT NUMBER STRING RUNE
-%token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSIF ELSE SWITCH CASE END USING NOT LET VAR EMBED WHILE RETURN GO IN TYPE AS
+%token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSIF ELSE SWITCH CASE END USING NOT LET LETREC VAR EMBED WHILE RETURN GO IN TYPE AS
 %token <token> NEWLINE
 %token <token> ARROW EQEQ NEQ LTE GTE PIPEFWD PIPEBACK ANDAND OROR
 %token <token> COLON COMMA DOT LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE UNDER
@@ -1921,6 +1921,44 @@ binding_stmt
 		p.currentStmt = &ast.LetStmt{Name: $2.lit, Mutable: true, Type: p.currentAnnotType, Value: p.currentExpr}
 		p.currentExpr = &ast.UnitLitExpr{Line: $2.line, Column: $2.col}
 	}
+	| LETREC {
+		p := yylex.(*parser)
+		p.currentLetRecBindings = nil
+	}
+	opt_newlines letrec_binding_list opt_newlines END {
+		p := yylex.(*parser)
+		p.currentStmt = &ast.LetRecStmt{Line: $1.line, Column: $1.col, Bindings: append([]ast.LetRecBinding(nil), p.currentLetRecBindings...)}
+		p.currentLetRecBindings = nil
+		p.currentExpr = &ast.UnitLitExpr{Line: $1.line, Column: $1.col}
+	}
+	;
+
+letrec_binding_list
+	: letrec_binding
+	| letrec_binding_list opt_newlines letrec_binding
+	;
+
+letrec_binding
+	: IDENT COLON type {
+		p := yylex.(*parser)
+		p.currentLetRecName = $1.lit
+		p.currentLetRecNameLine = $1.line
+		p.currentLetRecNameCol = $1.col
+		p.currentLetRecType = p.currentType
+	}
+	'=' expr {
+		p := yylex.(*parser)
+		p.currentLetRecBindings = append(p.currentLetRecBindings, ast.LetRecBinding{
+			Line: p.currentLetRecNameLine,
+			Column: p.currentLetRecNameCol,
+			Name: p.currentLetRecName,
+			Type: p.currentLetRecType,
+			Value: p.currentExpr,
+		})
+		p.currentLetRecName = ""
+		p.currentLetRecType = nil
+		p.currentExpr = &ast.UnitLitExpr{Line: $1.line, Column: $1.col}
+	}
 	;
 
 bind_pattern
@@ -2045,6 +2083,8 @@ func (p *parser) Lex(lval *yySymType) int {
 			return int(NOT)
 		case "let":
 			return int(LET)
+		case "letrec":
+			return int(LETREC)
 		case "var":
 			return int(VAR)
 		case "embed":

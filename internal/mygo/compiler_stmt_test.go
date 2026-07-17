@@ -331,6 +331,88 @@ func TestCompileDirSupportsMyGoPackageImportExportsOnly(t *testing.T) {
 	}
 }
 
+func TestCompileDirSupportsCurrentModuleMyGoImport(t *testing.T) {
+	root := t.TempDir()
+	apiDir := filepath.Join(root, "lib", "api")
+	appDir := filepath.Join(root, "examples", "app")
+	if err := os.MkdirAll(apiDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(appDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	repoRoot, err := filepath.Abs("../..")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	writeMygoFile(t, root, "go.mod", "module example.com/project\n\ngo 1.26\n\nreplace github.com/mygo-lang/mygo => "+filepath.ToSlash(repoRoot)+"\n")
+	writeMygoFile(t, apiDir, "api.mygo", `package api
+
+  func PublicAdd(x: Int, y: Int) -> Int
+    x + y
+  end
+`)
+	writeMygoFile(t, appDir, "main.mygo", `package app
+  import api "example.com/project/lib/api"
+
+  func demo() -> Int
+    api.PublicAdd(40, 2)
+  end
+`)
+
+	outFiles, err := CompileDir(appDir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, outFiles[0])
+	if !strings.Contains(got, "api.PublicAdd(40, 2)") {
+		t.Fatalf("generated Go missing current-module imported call\n--- got ---\n%s", got)
+	}
+}
+
+func TestCompileDirSupportsReplacedModuleMyGoImport(t *testing.T) {
+	root := t.TempDir()
+	appRoot := filepath.Join(root, "app")
+	depRoot := filepath.Join(root, "dep")
+	depAPIDir := filepath.Join(depRoot, "lib", "api")
+	appDir := filepath.Join(appRoot, "cmd", "app")
+	for _, dir := range []string{depAPIDir, appDir} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	repoRoot, err := filepath.Abs("../..")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	writeMygoFile(t, appRoot, "go.mod", "module example.com/app\n\ngo 1.26\n\nrequire example.com/dep v0.0.0\nreplace example.com/dep => ../dep\nreplace github.com/mygo-lang/mygo => "+filepath.ToSlash(repoRoot)+"\n")
+	writeMygoFile(t, depRoot, "go.mod", "module example.com/dep\n\ngo 1.26\n")
+	writeMygoFile(t, depAPIDir, "api.mygo", `package api
+
+  func PublicAdd(x: Int, y: Int) -> Int
+    x + y
+  end
+`)
+	writeMygoFile(t, appDir, "main.mygo", `package app
+  import api "example.com/dep/lib/api"
+
+  func demo() -> Int
+    api.PublicAdd(40, 2)
+  end
+`)
+
+	outFiles, err := CompileDir(appDir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, outFiles[0])
+	if !strings.Contains(got, "api.PublicAdd(40, 2)") {
+		t.Fatalf("generated Go missing replaced-module imported call\n--- got ---\n%s", got)
+	}
+}
+
 func TestCompileDirRejectsMyGoPackagePrivateSymbol(t *testing.T) {
 	root := t.TempDir()
 	apiDir := filepath.Join(root, "api")
@@ -805,6 +887,41 @@ func TestCompileDirAllowsLetShadowingAndInference(t *testing.T) {
 	}
 }
 
+func TestCompileDirSupportsLetRecBindingGroup(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+  func demo() -> Int
+    letrec
+      even: func(Int) -> Bool = func(n: Int) -> Bool
+        if n == 0 => true else odd(n - 1)
+      end
+      odd: func(Int) -> Bool = func(n: Int) -> Bool
+        if n == 0 => false else even(n - 1)
+      end
+    end
+    if even(4) => 1 else 0
+  end
+`)
+
+	outFiles, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, outFiles[0])
+	for _, want := range []string{
+		"var even_1",
+		"var odd_2",
+		"even_1 = func",
+		"odd_2 = func",
+		"odd_2(n - 1)",
+		"even_1(n - 1)",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
 func TestCompileDirRejectsAssignmentToLet(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
@@ -1253,7 +1370,7 @@ func TestCompileDirLetsLocalBindingShadowTypeclassName(t *testing.T) {
 	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"fmt.Sprint",
-		"ToString(42)",
+		"ToString_1(42)",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)

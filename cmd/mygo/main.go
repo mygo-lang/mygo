@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/mygo-lang/mygo/internal/mygo/compiler"
@@ -37,13 +38,13 @@ func main() {
 			written, err := compiler.SyncNoPrelude(root)
 			must(err)
 			for _, path := range written {
-				fmt.Println(path)
+				fmt.Println(displayPath(path))
 			}
 		} else {
 			written, err := compiler.Sync(root)
 			must(err)
 			for _, path := range written {
-				fmt.Println(path)
+				fmt.Println(displayPath(path))
 			}
 		}
 	case "build":
@@ -88,4 +89,20 @@ func must(err error) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func displayPath(path string) string {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return path
+	}
+	wd, err := os.Getwd()
+	if err != nil {
+		return abs
+	}
+	rel, err := filepath.Rel(wd, abs)
+	if err != nil {
+		return abs
+	}
+	return rel
 }

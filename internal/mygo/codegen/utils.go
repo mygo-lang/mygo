@@ -39,7 +39,7 @@ func declsHaveInterface(decls []Decl) bool {
 
 func sourceToGenName(sourceFile string) string {
 	ext := filepath.Ext(sourceFile)
-	base := strings.TrimSuffix(sourceFile, ext)
+	base := strings.TrimSuffix(filepath.Base(sourceFile), ext)
 	if strings.HasSuffix(base, "_test") {
 		base = strings.TrimSuffix(base, "_test")
 		return "zz_" + base + ".gen_test.go"

@@ -10,6 +10,7 @@
 - Function bodies and other block forms are newline-separated statement lists; the last plain expression in a block is the return value.
 - `if` supports inline arrow expressions like `if cond => a else b`, including `else if cond => ...` chains, and block form `if cond then ... elsif ... else ... end`.
 - `let` introduces an immutable binding. Rebinding the same source name must use a later `let` and is treated as shadowing, not assignment.
+- `letrec ... end` introduces an immutable recursive binding group. All names in the group are visible to every initializer in that group, including earlier initializers. Each binding must be written as `name: Type = expr`; tuple destructuring, `_`, omitted annotations, and `var` are not supported inside `letrec`.
 - `var` introduces a mutable binding and may be assigned again later in the same scope.
 - `let` may omit its type annotation when the initializer provides enough information for inference.
 - `let _ = ...` is the supported discard form for return values that should not be bound.

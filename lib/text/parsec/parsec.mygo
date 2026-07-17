@@ -12,56 +12,56 @@ import utf8 "go:unicode/utf8"
 #   and the smallest possible inline Go surface for runtime primitives.
 
 struct Position
-  offset: Int
-  line: Int
-  column: Int
+  Offset: Int
+  Line: Int
+  Column: Int
 end
 
 struct State
-  input: String
-  index: Int
-  position: Position
+  Input: String
+  Index: Int
+  Position: Position
 end
 
 struct ParseError
-  position: Position
-  expected: Slice[String]
-  message: String
+  Position: Position
+  Expected: Slice[String]
+  Message: String
 end
 
 struct Reply[A]
-  ok: Bool
-  consumed: Bool
-  value: A
-  state: State
-  error: ParseError
+  Ok: Bool
+  Consumed: Bool
+  Value: A
+  State: State
+  Error: ParseError
 end
 
 struct Parser[A]
-  run: func(State) -> Reply[A]
+  Run: func(State) -> Reply[A]
 end
 
 func ParseInput[A](p: Parser[A], input: String) -> Reply[A]
-  p.run(NewState(input))
+  p.Run(NewState(input))
 end
 
 func NewState(input: String) -> State
   State {
-    input: input,
-    index: 0,
-    position: Position { offset: 0, line: 1, column: 1 },
+    Input: input,
+    Index: 0,
+    Position: Position { Offset: 0, Line: 1, Column: 1 },
   }
 end
 
 func PPure[A](value: A) -> Parser[A]
   Parser[A] {
-    run: func(state: State) -> Reply[A]
+    Run: func(state: State) -> Reply[A]
       Reply[A] {
-        ok: true,
-        consumed: false,
-        value: value,
-        state: state,
-        error: EmptyError(state.position),
+        Ok: true,
+        Consumed: false,
+        Value: value,
+        State: state,
+        Error: EmptyError(state.Position),
       }
     end
   }
@@ -69,13 +69,13 @@ end
 
 func PFail[A](message: String) -> Parser[A]
   Parser[A] {
-    run: func(state: State) -> Reply[A]
+    Run: func(state: State) -> Reply[A]
       Reply[A] {
-        ok: false,
-        consumed: false,
-        value: Zero(),
-        state: state,
-        error: ErrorAt(state.position, message, EmptyExpected()),
+        Ok: false,
+        Consumed: false,
+        Value: Zero(),
+        State: state,
+        Error: ErrorAt(state.Position, message, EmptyExpected()),
       }
     end
   }
@@ -83,23 +83,23 @@ end
 
 func PMap[A, B](p: Parser[A], f: func(A) -> B) -> Parser[B]
   Parser[B] {
-    run: func(state: State) -> Reply[B]
-      let r = p.run(state)
-      if !r.ok then
+    Run: func(state: State) -> Reply[B]
+      let r = p.Run(state)
+      if !r.Ok then
         Reply[B] {
-          ok: false,
-          consumed: r.consumed,
-          value: Zero(),
-          state: r.state,
-          error: r.error,
+          Ok: false,
+          Consumed: r.Consumed,
+          Value: Zero(),
+          State: r.State,
+          Error: r.Error,
         }
       else
         Reply[B] {
-          ok: true,
-          consumed: r.consumed,
-          value: f(r.value),
-          state: r.state,
-          error: EmptyError(r.state.position),
+          Ok: true,
+          Consumed: r.Consumed,
+          Value: f(r.Value),
+          State: r.State,
+          Error: EmptyError(r.State.Position),
         }
       end
     end
@@ -108,25 +108,25 @@ end
 
 func PBind[A, B](p: Parser[A], f: func(A) -> Parser[B]) -> Parser[B]
   Parser[B] {
-    run: func(state: State) -> Reply[B]
-      let r = p.run(state)
-      if !r.ok then
+    Run: func(state: State) -> Reply[B]
+      let r = p.Run(state)
+      if !r.Ok then
         Reply[B] {
-          ok: false,
-          consumed: r.consumed,
-          value: Zero(),
-          state: r.state,
-          error: r.error,
+          Ok: false,
+          Consumed: r.Consumed,
+          Value: Zero(),
+          State: r.State,
+          Error: r.Error,
         }
       else
-        let next = f(r.value)
-        let r2 = next.run(r.state)
+        let next = f(r.Value)
+        let r2 = next.Run(r.State)
         Reply[B] {
-          ok: r2.ok,
-          consumed: r.consumed || r2.consumed,
-          value: r2.value,
-          state: r2.state,
-          error: r2.error,
+          Ok: r2.Ok,
+          Consumed: r.Consumed || r2.Consumed,
+          Value: r2.Value,
+          State: r2.State,
+          Error: r2.Error,
         }
       end
     end
@@ -141,14 +141,14 @@ end
 
 func POrElse[A](left: Parser[A], right: Parser[A]) -> Parser[A]
   Parser[A] {
-    run: func(state: State) -> Reply[A]
-      let r = left.run(state)
-      if r.ok then
+    Run: func(state: State) -> Reply[A]
+      let r = left.Run(state)
+      if r.Ok then
         r
-      elsif r.consumed then
+      elsif r.Consumed then
         r
       else
-        right.run(state)
+        right.Run(state)
       end
     end
   }
@@ -162,17 +162,17 @@ end
 
 func PAttempt[A](p: Parser[A]) -> Parser[A]
   Parser[A] {
-    run: func(state: State) -> Reply[A]
-      let r = p.run(state)
-      if r.ok then
+    Run: func(state: State) -> Reply[A]
+      let r = p.Run(state)
+      if r.Ok then
         r
       else
         Reply[A] {
-          ok: false,
-          consumed: false,
-          value: r.value,
-          state: state,
-          error: r.error,
+          Ok: false,
+          Consumed: false,
+          Value: r.Value,
+          State: state,
+          Error: r.Error,
         }
       end
     end
@@ -181,14 +181,14 @@ end
 
 func PLookAhead[A](p: Parser[A]) -> Parser[A]
   Parser[A] {
-    run: func(state: State) -> Reply[A]
-      let r = p.run(state)
+    Run: func(state: State) -> Reply[A]
+      let r = p.Run(state)
       Reply[A] {
-        ok: r.ok,
-        consumed: false,
-        value: r.value,
-        state: state,
-        error: r.error,
+        Ok: r.Ok,
+        Consumed: false,
+        Value: r.Value,
+        State: state,
+        Error: r.Error,
       }
     end
   }
@@ -196,23 +196,23 @@ end
 
 func PNotFollowedBy[A](p: Parser[A], message: String) -> Parser[()] 
   Parser[()] {
-    run: func(state: State) -> Reply[()]
-      let r = p.run(state)
-      if r.ok then
+    Run: func(state: State) -> Reply[()]
+      let r = p.Run(state)
+      if r.Ok then
         Reply[()] {
-          ok: false,
-          consumed: false,
-          value: (),
-          state: state,
-          error: ErrorAt(state.position, message, EmptyExpected()),
+          Ok: false,
+          Consumed: false,
+          Value: (),
+          State: state,
+          Error: ErrorAt(state.Position, message, EmptyExpected()),
         }
       else
         Reply[()] {
-          ok: true,
-          consumed: false,
-          value: (),
-          state: state,
-          error: EmptyError(state.position),
+          Ok: true,
+          Consumed: false,
+          Value: (),
+          State: state,
+          Error: EmptyError(state.Position),
         }
       end
     end
@@ -221,37 +221,37 @@ end
 
 func PMany[A](p: Parser[A]) -> Parser[Slice[A]]
   Parser[Slice[A]] {
-    run: func(state: State) -> Reply[Slice[A]]
-      let r = p.run(state)
-      if !r.ok then
-        if r.consumed then
+    Run: func(state: State) -> Reply[Slice[A]]
+      let r = p.Run(state)
+      if !r.Ok then
+        if r.Consumed then
           Reply[Slice[A]] {
-            ok: false,
-            consumed: true,
-            value: [],
-            state: r.state,
-            error: r.error,
+            Ok: false,
+            Consumed: true,
+            Value: [],
+            State: r.State,
+            Error: r.Error,
           }
         else
           Reply[Slice[A]] {
-            ok: true,
-            consumed: false,
-            value: [],
-            state: state,
-            error: EmptyError(state.position),
+            Ok: true,
+            Consumed: false,
+            Value: [],
+            State: state,
+            Error: EmptyError(state.Position),
           }
         end
       else
-        let tail = PMany(p).run(r.state)
-        if !tail.ok then
+        let tail = PMany(p).Run(r.State)
+        if !tail.Ok then
           tail
         else
           Reply[Slice[A]] {
-            ok: true,
-            consumed: true,
-            value: tail.value.Prepend(r.value),
-            state: tail.state,
-            error: tail.error,
+            Ok: true,
+            Consumed: true,
+            Value: tail.Value.Prepend(r.Value),
+            State: tail.State,
+            Error: tail.Error,
           }
         end
       end
@@ -269,31 +269,31 @@ end
 
 func POptional[A](p: Parser[A]) -> Parser[Option[A]]
   Parser[Option[A]] {
-    run: func(state: State) -> Reply[Option[A]]
-      let r = p.run(state)
-      if r.ok then
+    Run: func(state: State) -> Reply[Option[A]]
+      let r = p.Run(state)
+      if r.Ok then
         Reply[Option[A]] {
-          ok: true,
-          consumed: r.consumed,
-          value: Some(r.value),
-          state: r.state,
-          error: EmptyError(r.state.position),
+          Ok: true,
+          Consumed: r.Consumed,
+          Value: Some(r.Value),
+          State: r.State,
+          Error: EmptyError(r.State.Position),
         }
-      elsif r.consumed then
+      elsif r.Consumed then
         Reply[Option[A]] {
-          ok: false,
-          consumed: true,
-          value: None,
-          state: r.state,
-          error: r.error,
+          Ok: false,
+          Consumed: true,
+          Value: None,
+          State: r.State,
+          Error: r.Error,
         }
       else
         Reply[Option[A]] {
-          ok: true,
-          consumed: false,
-          value: None,
-          state: state,
-          error: EmptyError(state.position),
+          Ok: true,
+          Consumed: false,
+          Value: None,
+          State: state,
+          Error: EmptyError(state.Position),
         }
       end
     end
@@ -322,19 +322,19 @@ end
 
 func PLabel[A](p: Parser[A], name: String) -> Parser[A]
   Parser[A] {
-    run: func(state: State) -> Reply[A]
-      let r = p.run(state)
-      if r.ok then
+    Run: func(state: State) -> Reply[A]
+      let r = p.Run(state)
+      if r.Ok then
         r
-      elsif r.consumed then
+      elsif r.Consumed then
         r
       else
         Reply[A] {
-          ok: false,
-          consumed: false,
-          value: r.value,
-          state: state,
-          error: WithExpected(r.error, name),
+          Ok: false,
+          Consumed: false,
+          Value: r.Value,
+          State: state,
+          Error: WithExpected(r.Error, name),
         }
       end
     end
@@ -343,31 +343,31 @@ end
 
 func PSatisfy(pred: func(Rune) -> Bool, expected: String) -> Parser[Rune]
   Parser[Rune] {
-    run: func(state: State) -> Reply[Rune]
+    Run: func(state: State) -> Reply[Rune]
       let r = PeekRune(state)
-      if !r.ok then
+      if !r.Ok then
         Reply[Rune] {
-          ok: false,
-          consumed: false,
-          value: Zero(),
-          state: state,
-          error: ErrorAt(state.position, expected, EmptyExpected()),
+          Ok: false,
+          Consumed: false,
+          Value: Zero(),
+          State: state,
+          Error: ErrorAt(state.Position, expected, EmptyExpected()),
         }
-      elsif pred(r.value) then
+      elsif pred(r.Value) then
         Reply[Rune] {
-          ok: true,
-          consumed: true,
-          value: r.value,
-          state: AdvanceRune(state),
-          error: EmptyError(state.position),
+          Ok: true,
+          Consumed: true,
+          Value: r.Value,
+          State: AdvanceRune(state),
+          Error: EmptyError(state.Position),
         }
       else
         Reply[Rune] {
-          ok: false,
-          consumed: false,
-          value: r.value,
-          state: state,
-          error: ErrorAt(state.position, expected, EmptyExpected()),
+          Ok: false,
+          Consumed: false,
+          Value: r.Value,
+          State: state,
+          Error: ErrorAt(state.Position, expected, EmptyExpected()),
         }
       end
     end
@@ -383,22 +383,22 @@ end
 func PChar(expectedRune: Rune) -> Parser[Rune]
   PSatisfy(func(r: Rune) -> Bool
     r == expectedRune
-  end, RuneString(expectedRune))
+  end, (expectedRune as String))
 end
 
 func PString(expected: String) -> Parser[String]
   Parser[String] {
-    run: func(state: State) -> Reply[String]
+    Run: func(state: State) -> Reply[String]
       let r = MatchString(state, expected)
-      if r.ok then
+      if r.Ok then
         r
       else
         Reply[String] {
-          ok: false,
-          consumed: r.consumed,
-          value: "",
-          state: r.state,
-          error: r.error,
+          Ok: false,
+          Consumed: r.Consumed,
+          Value: "",
+          State: r.State,
+          Error: r.Error,
         }
       end
     end
@@ -407,22 +407,22 @@ end
 
 func PEof() -> Parser[()]
   Parser[()] {
-    run: func(state: State) -> Reply[()]
-      if state.index >= state.input.Len() then
+    Run: func(state: State) -> Reply[()]
+      if state.Index >= state.Input.Len() then
         Reply[()] {
-          ok: true,
-          consumed: false,
-          value: (),
-          state: state,
-          error: EmptyError(state.position),
+          Ok: true,
+          Consumed: false,
+          Value: (),
+          State: state,
+          Error: EmptyError(state.Position),
         }
       else
         Reply[()] {
-          ok: false,
-          consumed: false,
-          value: (),
-          state: state,
-          error: ErrorAt(state.position, "end of input", EmptyExpected()),
+          Ok: false,
+          Consumed: false,
+          Value: (),
+          State: state,
+          Error: ErrorAt(state.Position, "end of input", EmptyExpected()),
         }
       end
     end
@@ -461,11 +461,11 @@ func PeekRune(state: State) -> Reply[Rune]
   go[Reply[Rune]] {
     code: """
       func() Reply[rune] {
-        if state.index >= len(state.input) {
-          return Reply[rune]{ok: false}
+        if state.Index >= len(state.Input) {
+          return Reply[rune]{Ok: false}
         }
-        r, _ := utf8.DecodeRuneInString(state.input[state.index:])
-        return Reply[rune]{ok: true, value: r}
+        r, _ := utf8.DecodeRuneInString(state.Input[state.Index:])
+        return Reply[rune]{Ok: true, Value: r}
       }()
     """
     in state = state
@@ -476,18 +476,18 @@ func AdvanceRune(state: State) -> State
   go[State] {
     code: """
       func() State {
-        if state.index >= len(state.input) {
+        if state.Index >= len(state.Input) {
           return state
         }
-        r, size := utf8.DecodeRuneInString(state.input[state.index:])
+        r, size := utf8.DecodeRuneInString(state.Input[state.Index:])
         next := state
-        next.index += size
-        next.position.offset += size
+        next.Index += size
+        next.Position.Offset += size
         if r == '\n' {
-          next.position.line += 1
-          next.position.column = 1
+          next.Position.Line += 1
+          next.Position.Column = 1
         } else {
-          next.position.column += 1
+          next.Position.Column += 1
         }
         return next
       }()
@@ -500,17 +500,17 @@ func MatchString(state: State, expected: String) -> Reply[String]
   go[Reply[String]] {
     code: """
       func() Reply[string] {
-        if len(state.input)-state.index < len(expected) {
-          return Reply[string]{ok: false, consumed: false}
+        if len(state.Input)-state.Index < len(expected) {
+          return Reply[string]{Ok: false, Consumed: false}
         }
-        if state.input[state.index:state.index+len(expected)] != expected {
-          return Reply[string]{ok: false, consumed: false}
+        if state.Input[state.Index:state.Index+len(expected)] != expected {
+          return Reply[string]{Ok: false, Consumed: false}
         }
         next := state
-        next.index += len(expected)
-        next.position.offset += len(expected)
-        next.position.column += len(expected)
-        return Reply[string]{ok: true, consumed: true, value: expected, state: next}
+        next.Index += len(expected)
+        next.Position.Offset += len(expected)
+        next.Position.Column += len(expected)
+        return Reply[string]{Ok: true, Consumed: true, Value: expected, State: next}
       }()
     """
     in state = state
@@ -518,19 +518,12 @@ func MatchString(state: State, expected: String) -> Reply[String]
   }
 end
 
-func RuneString(r: Rune) -> String
-  go[String] {
-    code: "string({r})"
-    in r = r
-  }
-end
-
 func EmptyError(pos: Position) -> ParseError
-  ParseError { position: pos, expected: [], message: "" }
+  ParseError { Position: pos, Expected: [], Message: "" }
 end
 
 func ErrorAt(pos: Position, message: String, expected: Slice[String]) -> ParseError
-  ParseError { position: pos, expected: expected, message: message }
+  ParseError { Position: pos, Expected: expected, Message: message }
 end
 
 func EmptyExpected() -> Slice[String]
@@ -539,9 +532,9 @@ end
 
 func WithExpected(err: ParseError, name: String) -> ParseError
   ParseError {
-    position: err.position,
-    expected: err.expected.Append(name),
-    message: err.message,
+    Position: err.Position,
+    Expected: err.Expected.Append(name),
+    Message: err.Message,
   }
 end
 

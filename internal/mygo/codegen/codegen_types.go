@@ -147,7 +147,7 @@ func NewGenerator(p *Package, typedInfo *typeinference.TypedInfo) *Generator {
 		typedInfo:         typedInfo,
 	}
 	for _, impl := range p.Impls {
-		if impl.InterfaceName != "" || impl.Name != "" {
+		if impl.InterfaceName != "" {
 			continue
 		}
 		receiverName := inherentReceiverName(impl.Type)

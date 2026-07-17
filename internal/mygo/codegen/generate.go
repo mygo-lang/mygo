@@ -725,7 +725,7 @@ func newGen(p *Package, typedInfo *typeinference.TypedInfo) *gen {
 		}
 	}
 	for _, impl := range p.Impls {
-		if impl.InterfaceName != "" || impl.Name != "" {
+		if impl.InterfaceName != "" {
 			continue
 		}
 		recvName := inherentReceiverName(impl.Type)
@@ -935,7 +935,7 @@ func (g *gen) genInterfaceDecl(sf *goast.SourceFile, d *InterfaceDecl) {
 
 // genImplDecls generates impl helper functions.
 func (g *gen) genImplDecls(d *ImplDecl) []ast.Decl {
-	if d.InterfaceName == "" && d.Name == "" {
+	if d.InterfaceName == "" {
 		return g.genInherentDecls(d)
 	}
 	ifaceName := d.InterfaceName

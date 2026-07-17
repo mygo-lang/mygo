@@ -2,7 +2,6 @@ package typeinference
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
@@ -507,14 +506,6 @@ func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo,
 				funcType = TFunc{Args: paramTypes, Ret: TUnit{}}
 			} else {
 				declaredRetType := s.ApplyMT(retType)
-				fmt.Fprintf(os.Stderr, "DEBUG inferFuncDecl %q: bodyType=%s inferredRetType=%s retType=%s declaredRetType=%s\n",
-					d.Name, s.ApplyMT(bodyType), inferredRetType, retType, declaredRetType)
-				if dc, ok := declaredRetType.(TCon); ok {
-					fmt.Fprintf(os.Stderr, "DEBUG declaredRetType TCon Name=%s Args=%v\n", dc.Name, dc.Args)
-				}
-				if ic, ok := inferredRetType.(TCon); ok {
-					fmt.Fprintf(os.Stderr, "DEBUG inferredRetType TCon Name=%s Args=%v\n", ic.Name, ic.Args)
-				}
 				if goFFIRefAutoWrapsToOption(d.Body, inferredRetType, declaredRetType) {
 					inferredRetType = declaredRetType
 				} else {
@@ -588,6 +579,52 @@ func inferLetDecl(d *LetStmt, env TypeEnv, state *InferState, info *TypedInfo) (
 	}
 
 	return env, nil
+}
+
+func inferLetRecStmt(d *LetRecStmt, env TypeEnv, state *InferState, info *TypedInfo) (TypeEnv, error) {
+	recEnv := env
+	seen := map[string]struct{}{}
+	for _, b := range d.Bindings {
+		if b.Name == "_" {
+			return nil, fmt.Errorf("letrec binding cannot use discard name")
+		}
+		if b.Type == nil {
+			return nil, fmt.Errorf("letrec binding %q requires a type annotation", b.Name)
+		}
+		if _, ok := seen[b.Name]; ok {
+			return nil, fmt.Errorf("duplicate letrec binding %q", b.Name)
+		}
+		seen[b.Name] = struct{}{}
+		annotType := typeFromAST(b.Type)
+		sch := &Scheme{Body: QualifiedType{Body: annotType}}
+		recEnv = recEnv.Extend(b.Name, sch)
+		if info != nil {
+			info.BindingSchemes[b.Name] = sch
+		}
+	}
+	for _, b := range d.Bindings {
+		valType, s, preds, err := inferExpr(recEnv, b.Value, state)
+		if err != nil {
+			return nil, wrapInferenceError("letrec binding %q: %w", err, b.Name)
+		}
+		valType = s.ApplyMT(valType)
+		annotType := typeFromAST(b.Type)
+		s, err = Unify(valType, annotType, s)
+		if err != nil {
+			return nil, wrapInferenceError("letrec binding %q: type annotation mismatch: %w", err, b.Name)
+		}
+		if len(preds) > 0 {
+			sch := &Scheme{Body: QualifiedType{Body: s.ApplyMT(annotType), Predicates: preds}}
+			recEnv = recEnv.Extend(b.Name, sch)
+			if info != nil {
+				info.BindingSchemes[b.Name] = sch
+			}
+		}
+		if info != nil {
+			info.ExprTypes[b.Value] = s.ApplyMT(annotType)
+		}
+	}
+	return recEnv, nil
 }
 
 func inferBindPattern(p BindPattern, args []MonoType, s Subst, env TypeEnv, info *TypedInfo) (TypeEnv, error) {
@@ -912,7 +949,6 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 	// Build function type from arguments to return type
 	funcType := TFunc{Args: argTypes, Ret: retVar}
 
-	fmt.Fprintf(os.Stderr, "DEBUG inferCall: calleeType=%s funcType=%s argCount=%d\n", calleeType.String(), funcType.String(), len(argTypes))
 	// Unify callee type with function type
 	argSubst, err = Unify(calleeType, funcType, argSubst)
 	if err != nil {
@@ -932,7 +968,25 @@ func structFunctionFieldType(receiverType MonoType, fieldName string, state *Inf
 	if !ok || state == nil || state.PkgInfo == nil {
 		return TFunc{}, false
 	}
-	st := state.PkgInfo.Structs[con.Name]
+	structName := con.Name
+	var pkgAlias string
+	var pkgTypes map[string]struct{}
+	if alias, bare, ok := splitQualifiedName(con.Name); ok && state.MyGoPackages != nil {
+		if pkg := state.MyGoPackages[alias]; pkg != nil {
+			pkgAlias = alias
+			pkgTypes = pkg.Types
+			structName = bare
+		}
+	}
+	var st *StructDecl
+	if pkgAlias != "" && state.MyGoPackages != nil {
+		if pkg := state.MyGoPackages[pkgAlias]; pkg != nil {
+			st = pkg.Structs[structName]
+		}
+	}
+	if st == nil {
+		st = state.PkgInfo.Structs[con.Name]
+	}
 	if st == nil {
 		return TFunc{}, false
 	}
@@ -943,6 +997,9 @@ func structFunctionFieldType(receiverType MonoType, fieldName string, state *Inf
 		fieldType := typeFromAST(f.Type)
 		if len(con.Args) == len(st.TypeParams) {
 			fieldType = substituteTypeParams(fieldType, st.TypeParams, con.Args)
+		}
+		if pkgAlias != "" {
+			fieldType = qualifyMyGoType(pkgAlias, pkgTypes, fieldType)
 		}
 		fn, ok := fieldType.(TFunc)
 		return fn, ok
@@ -1226,19 +1283,49 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 
 	// If the base is a concrete struct, resolve the field type from package metadata.
 	if con, ok := baseType.(TCon); ok && state != nil && state.PkgInfo != nil {
-		if st := state.PkgInfo.Structs[con.Name]; st != nil {
+		if fn, ok := concreteImplMethodType(baseType, n.Field, state, s); ok {
+			return fn, s, preds, nil
+		}
+		structName := con.Name
+		var pkgAlias string
+		var pkgTypes map[string]struct{}
+		if alias, bare, ok := splitQualifiedName(con.Name); ok {
+			if state.MyGoPackages != nil {
+				if pkg := state.MyGoPackages[alias]; pkg != nil {
+					pkgAlias = alias
+					pkgTypes = pkg.Types
+					structName = bare
+				}
+			}
+		}
+		var st *StructDecl
+		if pkgAlias != "" && state.MyGoPackages != nil {
+			if pkg := state.MyGoPackages[pkgAlias]; pkg != nil {
+				st = pkg.Structs[structName]
+			}
+		}
+		if st == nil {
+			st = state.PkgInfo.Structs[con.Name]
+		}
+		if st != nil {
 			for _, f := range st.Fields {
 				if f.Name != n.Field {
 					continue
 				}
+				var fieldType MonoType
 				if len(con.Args) == len(st.TypeParams) {
 					fieldTypeParams := make(map[string]MonoType, len(st.TypeParams))
 					for i, name := range st.TypeParams {
 						fieldTypeParams[name] = con.Args[i]
 					}
-					return typeFromASTWithParams(f.Type, fieldTypeParams), s, preds, nil
+					fieldType = typeFromASTWithParams(f.Type, fieldTypeParams)
+				} else {
+					fieldType = typeFromAST(f.Type)
 				}
-				return typeFromAST(f.Type), s, preds, nil
+				if pkgAlias != "" {
+					fieldType = qualifyMyGoType(pkgAlias, pkgTypes, fieldType)
+				}
+				return fieldType, s, preds, nil
 			}
 			for _, impl := range state.PkgInfo.Impls {
 				if impl.InterfaceName != "" || impl.Name != "" || inherentReceiverName(impl.Type) != con.Name {
@@ -1302,6 +1389,49 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 	// Fall back to a fresh variable when the base type is not concrete yet.
 	fresh := TVar{ID: state.Fresh()}
 	return fresh, s, preds, nil
+}
+
+func concreteImplMethodType(baseType MonoType, field string, state *InferState, subst Subst) (TFunc, bool) {
+	if state == nil || state.PkgInfo == nil {
+		return TFunc{}, false
+	}
+	for _, impl := range state.PkgInfo.Impls {
+		if impl.Type == nil {
+			continue
+		}
+		var method *FuncDecl
+		for _, m := range impl.Methods {
+			if m.Name == field {
+				method = m
+				break
+			}
+		}
+		if method == nil {
+			continue
+		}
+		typeParams := make(map[string]MonoType, len(impl.TypeParams)+len(method.TypeParams))
+		for _, name := range impl.TypeParams {
+			typeParams[name] = TVar{ID: state.Fresh()}
+		}
+		for _, name := range method.TypeParams {
+			typeParams[name] = TVar{ID: state.Fresh()}
+		}
+		recvPattern := typeFromASTWithParams(impl.Type, typeParams)
+		s, err := Unify(subst.ApplyMT(recvPattern), subst.ApplyMT(baseType), subst)
+		if err != nil {
+			continue
+		}
+		paramTypes := make([]MonoType, 0, len(method.Params))
+		for _, p := range method.Params {
+			paramTypes = append(paramTypes, s.ApplyMT(typeFromASTWithParams(p.Type, typeParams)))
+		}
+		ret := MonoType(TUnit{})
+		if method.Ret != nil {
+			ret = s.ApplyMT(typeFromASTWithParams(method.Ret, typeParams))
+		}
+		return TFunc{Args: paramTypes, Ret: ret}, true
+	}
+	return TFunc{}, false
 }
 
 func inherentStaticMethodType(receiverName, methodName string, state *InferState) (TFunc, bool) {
@@ -1880,6 +2010,16 @@ func inferBlock(env TypeEnv, n *BlockExpr, state *InferState) (MonoType, Subst, 
 			if err != nil {
 				return nil, nil, nil, err
 			}
+		case *LetRecStmt:
+			var err error
+			currentEnv, err = inferLetRecStmt(st, currentEnv, state, &TypedInfo{
+				ExprTypes:      make(map[Expr]MonoType),
+				BindingSchemes: make(map[string]*Scheme),
+				Predicates:     make(map[Expr][]Predicate),
+			})
+			if err != nil {
+				return nil, nil, nil, err
+			}
 		case *AssignStmt:
 			// Mutable assignment: infer the value and check it's assignable
 			targetType, ok := currentEnv[st.Name]
@@ -1971,6 +2111,7 @@ func inferSliceLit(env TypeEnv, n *SliceLitExpr, state *InferState) (MonoType, S
 	s := make(Subst)
 	var allPreds []Predicate
 	var elemTypes []MonoType
+	var elemExprs []Expr
 	for _, elem := range n.Elems {
 		elemType, es, preds, err := inferExpr(env, elem, state)
 		if err != nil {
@@ -1979,6 +2120,7 @@ func inferSliceLit(env TypeEnv, n *SliceLitExpr, state *InferState) (MonoType, S
 		s = Compose(s, es)
 		allPreds = append(allPreds, preds...)
 		elemTypes = append(elemTypes, s.ApplyMT(elemType))
+		elemExprs = append(elemExprs, elem)
 	}
 
 	// Unify all element types
@@ -1990,6 +2132,11 @@ func inferSliceLit(env TypeEnv, n *SliceLitExpr, state *InferState) (MonoType, S
 			return nil, nil, nil, wrapInferenceError("slice element type mismatch: %w", err)
 		}
 		elemType = s.ApplyMT(elemType)
+	}
+	if state != nil && state.TypedInfo != nil {
+		for _, elem := range elemExprs {
+			state.TypedInfo.ExprTypes[elem] = elemType
+		}
 	}
 
 	return TCon{Name: "Slice", Args: []MonoType{elemType}}, s, allPreds, nil

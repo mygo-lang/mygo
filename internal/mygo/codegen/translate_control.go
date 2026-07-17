@@ -93,6 +93,49 @@ func (g *gen) translateIf(n *IfExpr, ctx *egCtx, expected string) (ast.Expr, str
 	return &ast.CallExpr{Fun: fn}, resultType, nil
 }
 
+func (g *gen) translateIfStmt(n *IfExpr, ctx *egCtx, returnExpected string, retTypes []string) (*ast.IfStmt, error) {
+	cond, _, err := g.translateExpr(n.Cond, ctx, "bool")
+	if err != nil {
+		return nil, err
+	}
+	if isNilASTExpr(cond) {
+		line, col := common.NodePos(n.Cond)
+		return nil, common.ErrorAtPos(g.currentFile, line, col, "if condition produced nil Go AST")
+	}
+	thenBlock, err := g.exprStmtBlock(n.Then, ctx.child(), returnExpected, retTypes)
+	if err != nil {
+		return nil, err
+	}
+	ifStmt := &ast.IfStmt{Cond: cond, Body: thenBlock}
+	if _, isUnitElse := n.Else.(*UnitLitExpr); n.Else != nil && !isUnitElse {
+		elseBlock, err := g.exprStmtBlock(n.Else, ctx.child(), returnExpected, retTypes)
+		if err != nil {
+			return nil, err
+		}
+		ifStmt.Else = elseBlock
+	}
+	return ifStmt, nil
+}
+
+func (g *gen) exprStmtBlock(e Expr, ctx *egCtx, returnExpected string, retTypes []string) (*ast.BlockStmt, error) {
+	if block, ok := e.(*BlockExpr); ok {
+		stmts, err := g.translateBlockStmts(block, ctx, "", nil)
+		if err != nil {
+			return nil, err
+		}
+		return &ast.BlockStmt{List: stmts}, nil
+	}
+	code, typ, err := g.translateExpr(e, ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	if isNilASTExpr(code) {
+		line, col := common.NodePos(e)
+		return nil, common.ErrorAtPos(g.currentFile, line, col, "if branch produced nil Go AST")
+	}
+	return &ast.BlockStmt{List: []ast.Stmt{stmtForExpr(e, code, typ)}}, nil
+}
+
 // translateSwitch handles switch expressions.
 func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (ast.Expr, string, error) {
 	if isUnitGoType(expected) {

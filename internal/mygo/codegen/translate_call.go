@@ -299,11 +299,15 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			}
 			return &ast.CallExpr{Fun: ast.NewIdent(sanitizeIdent(id.Name)), Args: args}, retType, nil
 		}
-		// Regular function call — check pkg.Funcs for return type
-		var callee ast.Expr = ast.NewIdent(sanitizeIdent(id.Name))
+		// Regular function call — check local bindings first, then pkg.Funcs for return type.
+		calleeName := sanitizeIdent(id.Name)
+		if bound, ok := ctx.bindings[id.Name]; ok {
+			calleeName = bound
+		}
+		var callee ast.Expr = ast.NewIdent(calleeName)
 		// If explicit type args are provided for a generic function, add them
 		if len(typeArgExprs) > 0 && len(n.TypeArgs) > 0 {
-			callee = &ast.IndexListExpr{X: ast.NewIdent(sanitizeIdent(id.Name)), Indices: typeArgExprs}
+			callee = &ast.IndexListExpr{X: ast.NewIdent(calleeName), Indices: typeArgExprs}
 		}
 		if id.Name == "Zero" && len(n.Args) == 0 && expected != "" {
 			return &ast.CallExpr{
@@ -446,7 +450,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		if id, ok := field.Expr.(*IdentExpr); ok {
 			// Check for inherent static method call: Type.method(args)
 			if methods, ok := g.inherentMethods[id.Name]; ok {
-				if method, ok := methods[field.Field]; ok && !method.HasReceiver {
+				if method, ok := methods[field.Field]; ok {
 					retType := g.inferredType(n)
 					if retType == "" {
 						retType = g.goReturnType(method.Func.Ret, ctx.typeParams)
@@ -486,6 +490,13 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 								return nil, "", err
 							}
 							retType := goSigReturnType(sig.ret)
+							if resultType, ok := goSigErrorResultType(sig.ret); ok {
+								retType = resultType
+								if expected != "" {
+									retType = expected
+								}
+								return g.wrapGoErrorResultCall(&ast.CallExpr{Fun: callee, Args: args}, retType), retType, nil
+							}
 							if expected != "" {
 								retType = expected
 							}
@@ -737,6 +748,51 @@ func goSigReturnType(results []string) string {
 		return ""
 	}
 	return mygoSigTypeToGo(results[0])
+}
+
+func goSigErrorResultType(results []string) (string, bool) {
+	if len(results) != 2 || strings.TrimSpace(results[1]) != "error" {
+		return "", false
+	}
+	return "Result[" + mygoSigTypeToGo(results[0]) + ", error]", true
+}
+
+func (g *gen) wrapGoErrorResultCall(call ast.Expr, resultType string) ast.Expr {
+	base, args := splitTypeArgs(resultType)
+	if base != "Result" || len(args) != 2 {
+		return call
+	}
+	okType := goTypeExprFromString(args[0])
+	errType := goTypeExprFromString(args[1])
+	resultTypeExpr := &ast.IndexListExpr{X: ast.NewIdent("Result"), Indices: []ast.Expr{okType, errType}}
+	okCall := &ast.IndexListExpr{X: ast.NewIdent("Ok"), Indices: []ast.Expr{okType, errType}}
+	errCall := &ast.IndexListExpr{X: ast.NewIdent("Err"), Indices: []ast.Expr{okType, errType}}
+	return &ast.CallExpr{
+		Fun: &ast.FuncLit{
+			Type: &ast.FuncType{
+				Params:  &ast.FieldList{},
+				Results: &ast.FieldList{List: []*ast.Field{{Type: resultTypeExpr}}},
+			},
+			Body: &ast.BlockStmt{List: []ast.Stmt{
+				&ast.AssignStmt{
+					Lhs: []ast.Expr{ast.NewIdent("__mygo_result_val"), ast.NewIdent("__mygo_result_err")},
+					Rhs: []ast.Expr{call},
+					Tok: token.DEFINE,
+				},
+				&ast.IfStmt{
+					Cond: &ast.BinaryExpr{X: ast.NewIdent("__mygo_result_err"), Op: token.NEQ, Y: ast.NewIdent("nil")},
+					Body: &ast.BlockStmt{List: []ast.Stmt{
+						&ast.ReturnStmt{Results: []ast.Expr{
+							&ast.CallExpr{Fun: errCall, Args: []ast.Expr{ast.NewIdent("__mygo_result_err")}},
+						}},
+					}},
+				},
+				&ast.ReturnStmt{Results: []ast.Expr{
+					&ast.CallExpr{Fun: okCall, Args: []ast.Expr{ast.NewIdent("__mygo_result_val")}},
+				}},
+			}},
+		},
+	}
 }
 
 func mygoSigTypeToGo(typ string) string {

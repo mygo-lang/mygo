@@ -25,8 +25,6 @@ func CompileDirNoPrelude(dir string) ([]string, error) {
 	return compileDir(dir, filepath.Dir(dir), true)
 }
 
-
-
 func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 	mainPkg, testPkg, err := loadPackage(dir, noPrelude)
 	if err != nil {
@@ -564,6 +562,22 @@ func setSourceFile(file *parserpkg.File, sourceFile string) {
 	}
 }
 
+func displayPath(path string) string {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return path
+	}
+	wd, err := os.Getwd()
+	if err != nil {
+		return abs
+	}
+	rel, err := filepath.Rel(wd, abs)
+	if err != nil {
+		return abs
+	}
+	return rel
+}
+
 func loadPackage(dir string, noPrelude bool) (*pkg.Package, *pkg.Package, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -602,15 +616,17 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, *pkg.Package, error)
 		if entry.IsDir() || !strings.HasSuffix(name, ".mygo") || strings.HasSuffix(name, ".gen.go") {
 			continue
 		}
-		src, err := os.ReadFile(filepath.Join(dir, name))
+		sourcePath := filepath.Join(dir, name)
+		src, err := os.ReadFile(sourcePath)
 		if err != nil {
 			return nil, nil, err
 		}
-		parsed, err := parserpkg.ParseFile(filepath.Join(dir, name), string(src))
+		displaySourcePath := displayPath(sourcePath)
+		parsed, err := parserpkg.ParseFile(displaySourcePath, string(src))
 		if err != nil {
 			return nil, nil, err
 		}
-		setSourceFile(parsed, name)
+		setSourceFile(parsed, displaySourcePath)
 
 		pkgName := parsed.PackageName
 		isSplitTestPackage := strings.HasSuffix(pkgName, "_test")
@@ -618,7 +634,7 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, *pkg.Package, error)
 			if testPkgName == "" {
 				testPkgName = pkgName
 			} else if testPkgName != pkgName {
-				return nil, nil, common.ErrorAtPos(name, parsed.PackageLine, 0, "package %q conflicts with %q", pkgName, testPkgName)
+				return nil, nil, common.ErrorAtPos(displaySourcePath, parsed.PackageLine, 0, "package %q conflicts with %q", pkgName, testPkgName)
 			}
 			testDecls = append(testDecls, parsed.Decls...)
 		} else {
@@ -627,7 +643,7 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, *pkg.Package, error)
 				if mainPkgName == "" {
 					mainPkgName = pkgName
 				} else if mainPkgName != pkgName {
-					return nil, nil, common.ErrorAtPos(name, parsed.PackageLine, 0, "package %q conflicts with %q", pkgName, mainPkgName)
+					return nil, nil, common.ErrorAtPos(displaySourcePath, parsed.PackageLine, 0, "package %q conflicts with %q", pkgName, mainPkgName)
 				}
 			}
 			mainDecls = append(mainDecls, parsed.Decls...)

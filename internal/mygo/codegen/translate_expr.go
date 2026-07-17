@@ -19,6 +19,14 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 		isLast := i == len(n.Stmts)-1
 		switch s := stmt.(type) {
 		case *ExprStmt:
+			if ifExpr, ok := s.Expr.(*IfExpr); ok && !(isLast && returnExpected != "") {
+				ifStmt, err := g.translateIfStmt(ifExpr, child, returnExpected, retTypes)
+				if err != nil {
+					return stmts, err
+				}
+				stmts = append(stmts, ifStmt)
+				continue
+			}
 			if branch := branchStmtForExpr(s.Expr); branch != nil {
 				stmts = append(stmts, branch)
 				continue
@@ -70,11 +78,11 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 		case *LetStmt:
 			if s.Bind != nil {
 				if bind, ok := s.Bind.(*BindTuplePattern); ok {
-					code, _, err := g.translateExpr(s.Value, child, "")
+					code, valType, err := g.translateExpr(s.Value, child, "")
 					if err != nil {
 						return stmts, err
 					}
-					stmts = g.emitBindDestructure(stmts, child, code, bind)
+					stmts = g.emitBindDestructure(stmts, child, code, valType, bind)
 					continue
 				}
 			}
@@ -129,6 +137,39 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 				} else {
 					stmts = append(stmts, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(actual)}, Rhs: []ast.Expr{code}, Tok: token.DEFINE})
 				}
+			}
+		case *LetRecStmt:
+			for _, b := range s.Bindings {
+				g.localSeq++
+				base := sanitizeIdent(b.Name)
+				if base == "" || base == "_" {
+					return nil, common.ErrorAtPos(g.currentFile, b.Line, b.Column, "invalid letrec binding name %q", b.Name)
+				}
+				actual := base + "_" + strconv.Itoa(g.localSeq)
+				goType := g.goType(b.Type, child.typeParams)
+				child.bindings[b.Name] = actual
+				child.locals[b.Name] = goType
+				child.mutable[actual] = false
+				stmts = append(stmts, &ast.DeclStmt{
+					Decl: &ast.GenDecl{
+						Tok: token.VAR,
+						Specs: []ast.Spec{
+							&ast.ValueSpec{
+								Names: []*ast.Ident{ast.NewIdent(actual)},
+								Type:  goastTypeExpr(b.Type),
+							},
+						},
+					},
+				})
+			}
+			for _, b := range s.Bindings {
+				actual := child.bindings[b.Name]
+				expectedType := g.goType(b.Type, child.typeParams)
+				code, _, err := g.translateExpr(b.Value, child, expectedType)
+				if err != nil {
+					return stmts, err
+				}
+				stmts = append(stmts, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(actual)}, Rhs: []ast.Expr{code}, Tok: token.ASSIGN})
 			}
 		case *AssignStmt:
 			actual, ok := child.bindings[s.Name]

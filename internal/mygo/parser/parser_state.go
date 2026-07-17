@@ -28,7 +28,7 @@ type parser struct {
 	currentParams                []ast.Param
 	currentParamsStack           [][]ast.Param
 	currentFuncLitRetStack       []ast.TypeExpr
-	currentFuncLitArgsStack    [][]ast.Expr
+	currentFuncLitArgsStack      [][]ast.Expr
 	currentWhere                 []ast.Constraint
 	currentConstraintArgs        []TypeExpr
 	currentBlock                 []ast.Stmt
@@ -79,6 +79,11 @@ type parser struct {
 	currentBindPatternElemsStack [][]ast.BindPattern
 	currentBindPatternElems      []ast.BindPattern
 	currentBindPattern           ast.BindPattern
+	currentLetRecBindings        []ast.LetRecBinding
+	currentLetRecName            string
+	currentLetRecNameLine        int
+	currentLetRecNameCol         int
+	currentLetRecType            ast.TypeExpr
 	currentStructFields          []ast.StructLitField
 	currentStructTag             string
 	currentStructTypeArgs        []ast.TypeExpr

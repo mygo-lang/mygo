@@ -196,7 +196,13 @@ func exprUsesIdent(e Expr, name string) bool {
 
 // emitBindDestructure handles tuple pattern destructuring.
 // Returns the updated statements slice.
-func (g *gen) emitBindDestructure(stmts []ast.Stmt, ctx *egCtx, rhs ast.Expr, pat *BindTuplePattern) []ast.Stmt {
+func (g *gen) emitBindDestructure(stmts []ast.Stmt, ctx *egCtx, rhs ast.Expr, rhsType string, pat *BindTuplePattern) []ast.Stmt {
+	if tupleUsesFields(rhsType) {
+		g.localSeq++
+		tmpName := "__tuple_" + strconv.Itoa(g.localSeq)
+		stmts = append(stmts, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(tmpName)}, Rhs: []ast.Expr{rhs}, Tok: token.DEFINE})
+		return g.emitBindDestructureFromValue(stmts, ctx, tmpName, pat)
+	}
 	// Check for nested tuple patterns
 	hasNested := false
 	for _, elem := range pat.Elems {
@@ -245,6 +251,33 @@ func (g *gen) emitBindDestructure(stmts []ast.Stmt, ctx *egCtx, rhs ast.Expr, pa
 			}
 		}
 		stmts = append(stmts, &ast.AssignStmt{Lhs: targets, Rhs: []ast.Expr{rhs}, Tok: token.DEFINE})
+	}
+	return stmts
+}
+
+func tupleUsesFields(typ string) bool {
+	typ = strings.TrimSpace(typ)
+	return strings.HasPrefix(typ, "struct {") || strings.HasPrefix(typ, "struct{") || strings.HasPrefix(typ, "Tuple[")
+}
+
+func (g *gen) emitBindDestructureFromValue(stmts []ast.Stmt, ctx *egCtx, valueName string, pat *BindTuplePattern) []ast.Stmt {
+	for i, elem := range pat.Elems {
+		fieldExpr := &ast.SelectorExpr{X: ast.NewIdent(valueName), Sel: ast.NewIdent("F" + strconv.Itoa(i))}
+		switch p := elem.(type) {
+		case *BindNamePattern:
+			if p.Name == "_" {
+				continue
+			}
+			g.localSeq++
+			actual := sanitizeIdent(p.Name) + "_" + strconv.Itoa(g.localSeq)
+			ctx.bindings[p.Name] = actual
+			stmts = append(stmts, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(actual)}, Rhs: []ast.Expr{fieldExpr}, Tok: token.DEFINE})
+		case *BindTuplePattern:
+			g.localSeq++
+			innerTmp := "__tuple_" + strconv.Itoa(g.localSeq)
+			stmts = append(stmts, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(innerTmp)}, Rhs: []ast.Expr{fieldExpr}, Tok: token.DEFINE})
+			stmts = g.emitBindDestructureFromValue(stmts, ctx, innerTmp, p)
+		}
 	}
 	return stmts
 }

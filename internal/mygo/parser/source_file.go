@@ -77,12 +77,25 @@ func setStmtSourceFile(s ast.Stmt, filename string) {
 		setExprSourceFile(n.Expr, filename)
 	case *ast.LetStmt:
 		setLetStmtSourceFile(n, filename)
+	case *ast.LetRecStmt:
+		setLetRecStmtSourceFile(n, filename)
 	case *ast.ReturnStmt:
 		n.SourceFile = filename
 		setExprSourceFile(n.Value, filename)
 	case *ast.AssignStmt:
 		n.SourceFile = filename
 		setExprSourceFile(n.Value, filename)
+	}
+}
+
+func setLetRecStmtSourceFile(n *ast.LetRecStmt, filename string) {
+	if n == nil {
+		return
+	}
+	n.SourceFile = filename
+	for i := range n.Bindings {
+		n.Bindings[i].SourceFile = filename
+		setExprSourceFile(n.Bindings[i].Value, filename)
 	}
 }
 

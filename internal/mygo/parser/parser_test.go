@@ -1226,8 +1226,10 @@ end
 func TestParseFileSupportsRuneLiteralsAndTypes(t *testing.T) {
 	src := `package main
 func demo() -> Rune
-  let r: Rune = 'x'
-  let nl: Rune = '\n'
+	  let r: Rune = 'x'
+	  let nl: Rune = '\n'
+	  let nul: Rune = '\0'
+	  let zero: Rune = '\x0'
   let b: Byte = 97
   r
 end
@@ -1253,6 +1255,7 @@ end
 	}{
 		{"r", "x"},
 		{"nl", "\n"},
+		{"nul", "\x00"},
 	} {
 		letStmt, ok := block.Stmts[i].(*LetStmt)
 		if !ok {
@@ -1422,6 +1425,90 @@ end
 	arg, ok := call.TypeArgs[0].(*NamedType)
 	if !ok || arg.Name != "A" {
 		t.Fatalf("call TypeArgs[0] = %#v, want NamedType A", call.TypeArgs[0])
+	}
+}
+
+func TestParseFileSupportsLetAfterCallWithSliceLiteralArgInFuncLit(t *testing.T) {
+	file, err := ParseFile("test.mygo", `package main
+
+func demo(d0: Rune, d1: Rune, d2: Rune, d3: Rune) -> Rune
+  func() -> Rune
+    let hexStr = String.FromRunes([d0, d1, d2, d3])
+    let result = strconv.ParseInt(hexStr, 16, 32)
+    switch result
+      case Ok(v) => v as Rune
+      case _ => '0'
+    end
+  end()
+end
+`)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn := file.Decls[0].(*FuncDecl)
+	if _, ok := fn.Body.(*CallExpr); !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *CallExpr", fn.Body)
+	}
+}
+
+func TestParseFileSupportsLetRecBindingGroup(t *testing.T) {
+	file, err := ParseFile("test.mygo", `package main
+
+func demo() -> Int
+  letrec
+    even: func(Int) -> Bool = func(n: Int) -> Bool
+      if n == 0 => true else odd(n - 1)
+    end
+    odd: func(Int) -> Bool = func(n: Int) -> Bool
+      if n == 0 => false else even(n - 1)
+    end
+  end
+  if even(4) => 1 else 0
+end
+`)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn := file.Decls[0].(*FuncDecl)
+	block, ok := fn.Body.(*BlockExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *BlockExpr", fn.Body)
+	}
+	rec, ok := block.Stmts[0].(*LetRecStmt)
+	if !ok {
+		t.Fatalf("Stmts[0] type = %T, want *LetRecStmt", block.Stmts[0])
+	}
+	if got := len(rec.Bindings); got != 2 {
+		t.Fatalf("letrec bindings len = %d, want 2", got)
+	}
+}
+
+func TestParseFileSupportsBlockFuncLitInsideSliceLiteralArg(t *testing.T) {
+	_, err := ParseFile("test.mygo", `package main
+
+func demo(pHexDigit: Parser[Rune]) -> Parser[Rune]
+  ps.PChoice([
+    ps.PMap(ps.PChar('u'), func(_: Rune) -> Parser[Rune]
+      ps.PBind(pHexDigit, func(d0: Rune) -> Parser[Rune]
+        ps.PBind(pHexDigit, func(d1: Rune) -> Parser[Rune]
+          ps.PBind(pHexDigit, func(d2: Rune) -> Parser[Rune]
+            ps.PMap(pHexDigit, func(d3: Rune) -> Rune
+              let hexStr = String.FromRunes([d0, d1, d2, d3])
+              let result = strconv.ParseInt(hexStr, 16, 32)
+              switch result
+                case Ok(v) => v as Rune
+                case _ => '0'
+              end
+            end)
+          end)
+        end)
+      end)
+    end),
+  ])
+end
+`)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
 	}
 }
 

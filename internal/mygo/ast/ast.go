@@ -395,6 +395,24 @@ type LetStmt struct {
 
 func (*LetStmt) stmtNode() {}
 
+type LetRecStmt struct {
+	Line       int
+	Column     int
+	SourceFile string
+	Bindings   []LetRecBinding
+}
+
+type LetRecBinding struct {
+	Line       int
+	Column     int
+	SourceFile string
+	Name       string
+	Type       TypeExpr
+	Value      Expr
+}
+
+func (*LetRecStmt) stmtNode() {}
+
 type ReturnStmt struct {
 	Line       int
 	Column     int

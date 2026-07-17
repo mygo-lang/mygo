@@ -6,20 +6,20 @@ import testing "go:testing"
 
 func TestPPureReturnsValue(t: Ref[testing.T]) -> ()
   let result = ParseInput(PPure(42), "hello")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PPure should always succeed")
-  elsif result.value != 42 then
-    t.Fatalf("PPure(42) = %d, want 42", result.value)
+  elsif result.Value != 42 then
+    t.Fatalf("PPure(42) = %d, want 42", result.Value)
   else
     ()
   end
-  if result.consumed then
+  if result.Consumed then
     t.Fatal("PPure should not consume input")
   else
     ()
   end
-  if result.state.index != 0 then
-    t.Fatalf("PPure should not advance state, index=%d, want 0", result.state.index)
+  if result.State.Index != 0 then
+    t.Fatalf("PPure should not advance state, index=%d, want 0", result.State.Index)
   else
     ()
   end
@@ -28,18 +28,18 @@ end
 func TestPPurePreservesState(t: Ref[testing.T]) -> ()
   let _ = NewState("abc")
   let result = ParseInput(PPure("x"), "abc")
-  if result.state.input != "abc" then
+  if result.State.Input != "abc" then
     t.Fatal("PPure should preserve input")
   else
     ()
   end
-  if result.state.position.line != 1 then
-    t.Fatalf("PPure should preserve line, got %d", result.state.position.line)
+  if result.State.Position.Line != 1 then
+    t.Fatalf("PPure should preserve line, got %d", result.State.Position.Line)
   else
     ()
   end
-  if result.state.position.column != 1 then
-    t.Fatalf("PPure should preserve column, got %d", result.state.position.column)
+  if result.State.Position.Column != 1 then
+    t.Fatalf("PPure should preserve column, got %d", result.State.Position.Column)
   else
     ()
   end
@@ -47,13 +47,13 @@ end
 
 func TestPFailReturnsFailure(t: Ref[testing.T]) -> ()
   let result = ParseInput(PFail[Int]("expected x"), "abc")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PFail should always fail")
   end
-  if result.consumed then
+  if result.Consumed then
     t.Fatal("PFail should not consume input")
   end
-  if result.state.index != 0 then
+  if result.State.Index != 0 then
     t.Fatal("PFail should not advance state")
   end
 end
@@ -65,11 +65,11 @@ func TestPMapTransformsValue(t: Ref[testing.T]) -> ()
     c as Int
   end)
   let result = ParseInput(p, "xy")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PMap should succeed when inner parser succeeds")
   end
-  if result.value != ('x' as Int) then
-    t.Fatalf("PMap(PChar('x'), ...) = %d, want %d", result.value, ('x' as Int))
+  if result.Value != ('x' as Int) then
+    t.Fatalf("PMap(PChar('x'), ...) = %d, want %d", result.Value, ('x' as Int))
   end
 end
 
@@ -78,7 +78,7 @@ func TestPMapPropagatesFailure(t: Ref[testing.T]) -> ()
     c as Int
   end)
   let result = ParseInput(p, "yz")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PMap should fail when inner parser fails")
   end
 end
@@ -90,11 +90,11 @@ func TestPBindChainsParsers(t: Ref[testing.T]) -> ()
     PChar('b')
   end)
   let result = ParseInput(p, "ab")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PBind should succeed when both parsers succeed")
   end
-  if result.value != 'b' then
-    t.Fatalf("PBind result = %d, want %d", result.value, 'b')
+  if result.Value != 'b' then
+    t.Fatalf("PBind result = %d, want %d", result.Value, 'b')
   end
 end
 
@@ -103,14 +103,14 @@ end
 func TestPThenSequencesParsers(t: Ref[testing.T]) -> ()
   let p = PThen(PChar('h'), PThen(PChar('i'), PPure(42)))
   let result = ParseInput(p, "hi!")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PThen should succeed")
   end
-  if result.value != 42 then
-    t.Fatalf("PThen result = %d, want 42", result.value)
+  if result.Value != 42 then
+    t.Fatalf("PThen result = %d, want 42", result.Value)
   end
-  if result.state.index != 2 then
-    t.Fatalf("PThen should consume both inputs, index=%d, want 2", result.state.index)
+  if result.State.Index != 2 then
+    t.Fatalf("PThen should consume both inputs, index=%d, want 2", result.State.Index)
   end
 end
 
@@ -119,29 +119,29 @@ end
 func TestPOrElseTakesLeftOnSuccess(t: Ref[testing.T]) -> ()
   let p = POrElse(PChar('a'), PChar('b'))
   let result = ParseInput(p, "ax")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("POrElse should succeed when left succeeds")
   end
-  if result.value != 'a' then
-    t.Fatalf("POrElse = %d, want %d", result.value, 'a')
+  if result.Value != 'a' then
+    t.Fatalf("POrElse = %d, want %d", result.Value, 'a')
   end
 end
 
 func TestPOrElseBacktracksOnFailure(t: Ref[testing.T]) -> ()
   let p = POrElse(PChar('a'), PChar('b'))
   let result = ParseInput(p, "bx")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("POrElse should succeed when right succeeds after left fails")
   end
-  if result.value != 'b' then
-    t.Fatalf("POrElse = %d, want %d", result.value, 'b')
+  if result.Value != 'b' then
+    t.Fatalf("POrElse = %d, want %d", result.Value, 'b')
   end
 end
 
 func TestPOrElseFailsWhenBothFail(t: Ref[testing.T]) -> ()
   let p = POrElse(PChar('a'), PChar('b'))
   let result = ParseInput(p, "cx")
-  if result.ok then
+  if result.Ok then
     t.Fatal("POrElse should fail when both alternatives fail")
   end
 end
@@ -154,7 +154,7 @@ func TestPOrElseDoesNotBacktrackOnConsumedFailure(t: Ref[testing.T]) -> ()
   let choice = POrElse(p, PChar('b'))
   let result = ParseInput(choice, "ax")
   # Should NOT backtrack because left consumed input
-  if result.ok then
+  if result.Ok then
     t.Fatal("POrElse should not backtrack on consumed failure")
   end
 end
@@ -169,11 +169,11 @@ func TestPChoiceSelectsMatchingParser(t: Ref[testing.T]) -> ()
   ]
   let p = PChoice(parsers)
   let result = ParseInput(p, "bx")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PChoice should succeed")
   end
-  if result.value != 'b' then
-    t.Fatalf("PChoice = %d, want %d", result.value, 'b')
+  if result.Value != 'b' then
+    t.Fatalf("PChoice = %d, want %d", result.Value, 'b')
   end
 end
 
@@ -188,11 +188,11 @@ func TestPAttemptAllowsBacktracking(t: Ref[testing.T]) -> ()
     PChar('a'),
   )
   let result = ParseInput(p, "ax")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PAttempt should allow backtracking so right alternative can retry at the original position")
   end
-  if result.value != 'a' then
-    t.Fatalf("PAttempt result = %d, want %d", result.value, 'a')
+  if result.Value != 'a' then
+    t.Fatalf("PAttempt result = %d, want %d", result.Value, 'a')
   end
 end
 
@@ -201,21 +201,21 @@ end
 func TestPLookAheadDoesNotConsume(t: Ref[testing.T]) -> ()
   let p = PThen(PLookAhead(PChar('x')), PChar('x'))
   let result = ParseInput(p, "xy")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PLookAhead should succeed")
   end
-  if result.value != 'x' then
-    t.Fatalf("PLookAhead result = %d, want %d", result.value, 'x')
+  if result.Value != 'x' then
+    t.Fatalf("PLookAhead result = %d, want %d", result.Value, 'x')
   end
-  if result.state.index != 1 then
-    t.Fatalf("PLookAhead should not consume the lookahead, index=%d, want 1", result.state.index)
+  if result.State.Index != 1 then
+    t.Fatalf("PLookAhead should not consume the lookahead, index=%d, want 1", result.State.Index)
   end
 end
 
 func TestPLookAheadFailsWhenLookaheadFails(t: Ref[testing.T]) -> ()
   let p = PThen(PLookAhead(PChar('x')), PChar('y'))
   let result = ParseInput(p, "zy")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PLookAhead should fail when lookahead doesn't match")
   end
 end
@@ -225,18 +225,18 @@ end
 func TestPNotFollowedBySucceedsWhenNotFollowed(t: Ref[testing.T]) -> ()
   let p = PThen(PNotFollowedBy(PChar('x'), "not x"), PChar('a'))
   let result = ParseInput(p, "ab")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PNotFollowedBy should succeed when x is not next")
   end
-  if result.value != 'a' then
-    t.Fatalf("PNotFollowedBy result = %d, want %d", result.value, 'a')
+  if result.Value != 'a' then
+    t.Fatalf("PNotFollowedBy result = %d, want %d", result.Value, 'a')
   end
 end
 
 func TestPNotFollowedByFailsWhenFollowed(t: Ref[testing.T]) -> ()
   let p = PNotFollowedBy(PChar('x'), "not x")
   let result = ParseInput(p, "xy")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PNotFollowedBy should fail when x IS next")
   end
 end
@@ -246,25 +246,25 @@ end
 func TestPManyZeroMatches(t: Ref[testing.T]) -> ()
   let p = PMany(PChar('x'))
   let result = ParseInput(p, "y")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PMany should succeed with empty result")
   end
-  if result.value.Len() != 0 then
-    t.Fatalf("PMany empty result length = %d, want 0", result.value.Len())
+  if result.Value.Len() != 0 then
+    t.Fatalf("PMany empty result length = %d, want 0", result.Value.Len())
   end
 end
 
 func TestPManyMatchesMultiple(t: Ref[testing.T]) -> ()
   let p = PMany(PChar('a'))
   let result = ParseInput(p, "aaa")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PMany should succeed")
   end
-  if result.value.Len() != 3 then
-    t.Fatalf("PMany length = %d, want 3", result.value.Len())
+  if result.Value.Len() != 3 then
+    t.Fatalf("PMany length = %d, want 3", result.Value.Len())
   end
   # Check order: PMany returns in reverse order (last consumed first via Prepend)
-  let _ = result.value.Each(func(v: Rune) -> ()
+  let _ = result.Value.Each(func(v: Rune) -> ()
     if v != 'a' then
       t.Fatalf("PMany element = %d, want %d", v, 'a')
     end
@@ -274,21 +274,21 @@ end
 func TestPManyStopsOnNonConsumingFailure(t: Ref[testing.T]) -> ()
   let p = PMany(PChar('a'))
   let result = ParseInput(p, "aab")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PMany should succeed")
   end
-  if result.value.Len() != 2 then
-    t.Fatalf("PMany length = %d, want 2", result.value.Len())
+  if result.Value.Len() != 2 then
+    t.Fatalf("PMany length = %d, want 2", result.Value.Len())
   end
-  if result.state.index != 2 then
-    t.Fatalf("PMany should stop after consuming 'aa', index=%d, want 2", result.state.index)
+  if result.State.Index != 2 then
+    t.Fatalf("PMany should stop after consuming 'aa', index=%d, want 2", result.State.Index)
   end
 end
 
 func TestPMany1RequiresAtLeastOne(t: Ref[testing.T]) -> ()
   let p = PMany1(PChar('a'))
   let result = ParseInput(p, "x")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PMany1 should fail when no input matches")
   end
 end
@@ -296,11 +296,11 @@ end
 func TestPMany1MatchesOneOrMore(t: Ref[testing.T]) -> ()
   let p = PMany1(PChar('a'))
   let result = ParseInput(p, "aa")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PMany1 should succeed")
   end
-  if result.value.Len() != 2 then
-    t.Fatalf("PMany1 length = %d, want 2", result.value.Len())
+  if result.Value.Len() != 2 then
+    t.Fatalf("PMany1 length = %d, want 2", result.Value.Len())
   end
 end
 
@@ -309,10 +309,10 @@ end
 func TestPOptionalSucceedsWhenPresent(t: Ref[testing.T]) -> ()
   let p = POptional(PChar('a'))
   let result = ParseInput(p, "ab")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("POptional should succeed")
   end
-  switch result.value
+  switch result.Value
     case Some(v) then
       if v != 'a' then
         t.Fatalf("POptional Some value = %d, want %d", v, 'a')
@@ -327,10 +327,10 @@ end
 func TestPOptionalReturnsNoneWhenAbsent(t: Ref[testing.T]) -> ()
   let p = POptional(PChar('a'))
   let result = ParseInput(p, "xb")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("POptional should succeed with None")
   end
-  switch result.value
+  switch result.Value
     case None => ()
     case Some(_) => t.Fatal("POptional should return None when parser fails without consuming")
   end
@@ -341,14 +341,14 @@ end
 func TestPBetweenParsesDelimited(t: Ref[testing.T]) -> ()
   let p = PBetween(PChar('('), PDigit(), PChar(')'))
   let result = ParseInput(p, "(5)x")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PBetween should succeed")
   end
-  if result.value != '5' then
-    t.Fatalf("PBetween result = %d, want %d", result.value, '5')
+  if result.Value != '5' then
+    t.Fatalf("PBetween result = %d, want %d", result.Value, '5')
   end
-  if result.state.index != 3 then
-    t.Fatalf("PBetween should consume '(5)', index=%d, want 3", result.state.index)
+  if result.State.Index != 3 then
+    t.Fatalf("PBetween should consume '(5)', index=%d, want 3", result.State.Index)
   end
 end
 
@@ -357,40 +357,40 @@ end
 func TestPSepByEmpty(t: Ref[testing.T]) -> ()
   let p = PSepBy(PChar('a'), PChar(','))
   let result = ParseInput(p, "b")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PSepBy should succeed with empty result")
   end
-  if result.value.Len() != 0 then
-    t.Fatalf("PSepBy empty length = %d, want 0", result.value.Len())
+  if result.Value.Len() != 0 then
+    t.Fatalf("PSepBy empty length = %d, want 0", result.Value.Len())
   end
 end
 
 func TestPSepBySingle(t: Ref[testing.T]) -> ()
   let p = PSepBy(PChar('a'), PChar(','))
   let result = ParseInput(p, "ax")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PSepBy should succeed")
   end
-  if result.value.Len() != 1 then
-    t.Fatalf("PSepBy length = %d, want 1", result.value.Len())
+  if result.Value.Len() != 1 then
+    t.Fatalf("PSepBy length = %d, want 1", result.Value.Len())
   end
 end
 
 func TestPSepByMultiple(t: Ref[testing.T]) -> ()
   let p = PSepBy(PChar('a'), PChar(','))
   let result = ParseInput(p, "a,a,a")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PSepBy should succeed")
   end
-  if result.value.Len() != 3 then
-    t.Fatalf("PSepBy length = %d, want 3", result.value.Len())
+  if result.Value.Len() != 3 then
+    t.Fatalf("PSepBy length = %d, want 3", result.Value.Len())
   end
 end
 
 func TestPSepBy1RequiresAtLeastOne(t: Ref[testing.T]) -> ()
   let p = PSepBy1(PChar('a'), PChar(','))
   let result = ParseInput(p, "x")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PSepBy1 should fail with no matching items")
   end
 end
@@ -398,11 +398,11 @@ end
 func TestPSepBy1Multiple(t: Ref[testing.T]) -> ()
   let p = PSepBy1(PChar('a'), PChar(','))
   let result = ParseInput(p, "a,a")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PSepBy1 should succeed")
   end
-  if result.value.Len() != 2 then
-    t.Fatalf("PSepBy1 length = %d, want 2", result.value.Len())
+  if result.Value.Len() != 2 then
+    t.Fatalf("PSepBy1 length = %d, want 2", result.Value.Len())
   end
 end
 
@@ -411,11 +411,11 @@ end
 func TestPLabelDoesNotAffectSuccess(t: Ref[testing.T]) -> ()
   let p = PLabel(PChar('x'), "x char")
   let result = ParseInput(p, "xy")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PLabel should not affect success")
   end
-  if result.value != 'x' then
-    t.Fatalf("PLabel result = %d, want %d", result.value, 'x')
+  if result.Value != 'x' then
+    t.Fatalf("PLabel result = %d, want %d", result.Value, 'x')
   end
 end
 
@@ -424,21 +424,21 @@ end
 func TestPCharMatchesExpected(t: Ref[testing.T]) -> ()
   let p = PChar('h')
   let result = ParseInput(p, "hello")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PChar should match 'h'")
   end
-  if result.value != 'h' then
-    t.Fatalf("PChar('h') = %d, want %d", result.value, 'h')
+  if result.Value != 'h' then
+    t.Fatalf("PChar('h') = %d, want %d", result.Value, 'h')
   end
-  if result.state.index != 1 then
-    t.Fatalf("PChar should advance by 1, index=%d, want 1", result.state.index)
+  if result.State.Index != 1 then
+    t.Fatalf("PChar should advance by 1, index=%d, want 1", result.State.Index)
   end
 end
 
 func TestPCharFailsOnMismatch(t: Ref[testing.T]) -> ()
   let p = PChar('h')
   let result = ParseInput(p, "world")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PChar should fail on mismatch")
   end
 end
@@ -446,7 +446,7 @@ end
 func TestPCharFailsOnEmptyInput(t: Ref[testing.T]) -> ()
   let p = PChar('h')
   let result = ParseInput(p, "")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PChar should fail on empty input")
   end
 end
@@ -454,21 +454,21 @@ end
 func TestPStringMatchesExpected(t: Ref[testing.T]) -> ()
   let p = PString("hello")
   let result = ParseInput(p, "hello world")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PString should match 'hello'")
   end
-  if result.value != "hello" then
-    t.Fatalf("PString result = %q, want %q", result.value, "hello")
+  if result.Value != "hello" then
+    t.Fatalf("PString result = %q, want %q", result.Value, "hello")
   end
-  if result.state.index != 5 then
-    t.Fatalf("PString should advance by 5, index=%d, want 5", result.state.index)
+  if result.State.Index != 5 then
+    t.Fatalf("PString should advance by 5, index=%d, want 5", result.State.Index)
   end
 end
 
 func TestPStringFailsOnMismatch(t: Ref[testing.T]) -> ()
   let p = PString("hello")
   let result = ParseInput(p, "world")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PString should fail on mismatch")
   end
 end
@@ -476,7 +476,7 @@ end
 func TestPStringFailsOnPartialMatch(t: Ref[testing.T]) -> ()
   let p = PString("hello")
   let result = ParseInput(p, "hell")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PString should fail when input is shorter than expected")
   end
 end
@@ -486,7 +486,7 @@ end
 func TestPEofSucceedsAtEnd(t: Ref[testing.T]) -> ()
   let p = PThen(PString("hello"), PEof())
   let result = ParseInput(p, "hello")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PEof should succeed at end of input")
   end
 end
@@ -494,21 +494,21 @@ end
 func TestPEofFailsWithRemainingInput(t: Ref[testing.T]) -> ()
   let p = PThen(PString("hello"), PEof())
   let result = ParseInput(p, "hello world")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PEof should fail with remaining input")
   end
 end
 
 func TestPEofSucceedsOnEmptyInput(t: Ref[testing.T]) -> ()
   let result = ParseInput(PEof(), "")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PEof should succeed on empty input")
   end
 end
 
 func TestPEofFailsOnNonEmptyInput(t: Ref[testing.T]) -> ()
   let result = ParseInput(PEof(), "x")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PEof should fail on non-empty input")
   end
 end
@@ -518,18 +518,18 @@ end
 func TestPDigitMatchesDigits(t: Ref[testing.T]) -> ()
   let p = PDigit()
   let result = ParseInput(p, "5abc")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PDigit should match '5'")
   end
-  if result.value != '5' then
-    t.Fatalf("PDigit = %d, want %d", result.value, '5')
+  if result.Value != '5' then
+    t.Fatalf("PDigit = %d, want %d", result.Value, '5')
   end
 end
 
 func TestPDigitFailsOnNonDigit(t: Ref[testing.T]) -> ()
   let p = PDigit()
   let result = ParseInput(p, "abc")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PDigit should fail on non-digit")
   end
 end
@@ -537,11 +537,11 @@ end
 func TestPLetterMatchesLetters(t: Ref[testing.T]) -> ()
   let p = PLetter()
   let result1 = ParseInput(p, "a1")
-  if !result1.ok || result1.value != 'a' then
+  if !result1.Ok || result1.Value != 'a' then
     t.Fatal("PLetter should match lowercase")
   end
   let result2 = ParseInput(p, "Z1")
-  if !result2.ok || result2.value != 'Z' then
+  if !result2.Ok || result2.Value != 'Z' then
     t.Fatal("PLetter should match uppercase")
   end
 end
@@ -549,7 +549,7 @@ end
 func TestPLetterFailsOnNonLetter(t: Ref[testing.T]) -> ()
   let p = PLetter()
   let result = ParseInput(p, "1abc")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PLetter should fail on digit")
   end
 end
@@ -557,11 +557,11 @@ end
 func TestPAlphaNumMatchesAlphanumeric(t: Ref[testing.T]) -> ()
   let p = PAlphaNum()
   let result1 = ParseInput(p, "a1")
-  if !result1.ok || result1.value != 'a' then
+  if !result1.Ok || result1.Value != 'a' then
     t.Fatal("PAlphaNum should match letter")
   end
   let result2 = ParseInput(p, "1abc")
-  if !result2.ok || result2.value != '1' then
+  if !result2.Ok || result2.Value != '1' then
     t.Fatal("PAlphaNum should match digit")
   end
 end
@@ -569,7 +569,7 @@ end
 func TestPAlphaNumFailsOnNonAlphanumeric(t: Ref[testing.T]) -> ()
   let p = PAlphaNum()
   let result = ParseInput(p, "+abc")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PAlphaNum should fail on '+'")
   end
 end
@@ -579,32 +579,32 @@ end
 func TestPIdentifierMatchesSimple(t: Ref[testing.T]) -> ()
   let p = PIdentifier()
   let result = ParseInput(p, "foo123 bar")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PIdentifier should match 'foo123'")
   end
-  if result.value != "foo123" then
-    t.Fatalf("PIdentifier = %q, want %q", result.value, "foo123")
+  if result.Value != "foo123" then
+    t.Fatalf("PIdentifier = %q, want %q", result.Value, "foo123")
   end
-  if result.state.index != 6 then
-    t.Fatalf("PIdentifier should consume 'foo123', index=%d, want 6", result.state.index)
+  if result.State.Index != 6 then
+    t.Fatalf("PIdentifier should consume 'foo123', index=%d, want 6", result.State.Index)
   end
 end
 
 func TestPIdentifierMatchesWithDigits(t: Ref[testing.T]) -> ()
   let p = PIdentifier()
   let result = ParseInput(p, "bar42")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PIdentifier should match 'bar42'")
   end
-  if result.value != "bar42" then
-    t.Fatalf("PIdentifier = %q, want %q", result.value, "bar42")
+  if result.Value != "bar42" then
+    t.Fatalf("PIdentifier = %q, want %q", result.Value, "bar42")
   end
 end
 
 func TestPIdentifierFailsOnDigitStart(t: Ref[testing.T]) -> ()
   let p = PIdentifier()
   let result = ParseInput(p, "1abc")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PIdentifier should fail when starting with digit")
   end
 end
@@ -614,15 +614,15 @@ end
 func TestPAnyRuneMatchesAnyChar(t: Ref[testing.T]) -> ()
   let p = PAnyRune()
   let result1 = ParseInput(p, "a")
-  if !result1.ok || result1.value != 'a' then
+  if !result1.Ok || result1.Value != 'a' then
     t.Fatal("PAnyRune should match 'a'")
   end
   let result2 = ParseInput(p, "1")
-  if !result2.ok || result2.value != '1' then
+  if !result2.Ok || result2.Value != '1' then
     t.Fatal("PAnyRune should match '1'")
   end
   let result3 = ParseInput(p, " ")
-  if !result3.ok || result3.value != ' ' then
+  if !result3.Ok || result3.Value != ' ' then
     t.Fatal("PAnyRune should match space")
   end
 end
@@ -630,7 +630,7 @@ end
 func TestPAnyRuneFailsOnEmpty(t: Ref[testing.T]) -> ()
   let p = PAnyRune()
   let result = ParseInput(p, "")
-  if result.ok then
+  if result.Ok then
     t.Fatal("PAnyRune should fail on empty input")
   end
 end
@@ -640,16 +640,16 @@ end
 func TestStateTracksLineAndColumn(t: Ref[testing.T]) -> ()
   let state = NewState("hello")
   let s1 = AdvanceRune(state)
-  if s1.position.line != 1 then
-    t.Fatalf("After 1 char, line=%d, want 1", s1.position.line)
+  if s1.Position.Line != 1 then
+    t.Fatalf("After 1 char, line=%d, want 1", s1.Position.Line)
   end
-  if s1.position.column != 2 then
-    t.Fatalf("After 1 char, column=%d, want 2", s1.position.column)
+  if s1.Position.Column != 2 then
+    t.Fatalf("After 1 char, column=%d, want 2", s1.Position.Column)
   end
 
   let s2 = AdvanceRune(s1)
-  if s2.position.column != 3 then
-    t.Fatalf("After 2 chars, column=%d, want 3", s2.position.column)
+  if s2.Position.Column != 3 then
+    t.Fatalf("After 2 chars, column=%d, want 3", s2.Position.Column)
   end
 end
 
@@ -658,11 +658,11 @@ func TestStateTracksNewline(t: Ref[testing.T]) -> ()
   let s1 = AdvanceRune(state)
   let s2 = AdvanceRune(s1)
   let s3 = AdvanceRune(s2) # consumes '\n'
-  if s3.position.line != 2 then
-    t.Fatalf("After newline, line=%d, want 2", s3.position.line)
+  if s3.Position.Line != 2 then
+    t.Fatalf("After newline, line=%d, want 2", s3.Position.Line)
   end
-  if s3.position.column != 1 then
-    t.Fatalf("After newline, column=%d, want 1", s3.position.column)
+  if s3.Position.Column != 1 then
+    t.Fatalf("After newline, column=%d, want 1", s3.Position.Column)
   end
 end
 
@@ -678,11 +678,11 @@ func TestParseInteger(t: Ref[testing.T]) -> ()
     }
   end)
   let result = ParseInput(parseInt, "42abc")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("parseInt should succeed")
   end
-  if result.value != 42 then
-    t.Fatalf("parseInt('42') = %d, want 42", result.value)
+  if result.Value != 42 then
+    t.Fatalf("parseInt('42') = %d, want 42", result.Value)
   end
 end
 
@@ -696,13 +696,13 @@ func TestParseCommaSeparatedWords(t: Ref[testing.T]) -> ()
   # words = word separated by ','
   let words = PSepBy(word, PChar(','))
   let result = ParseInput(words, "hello,world,foo")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("parse words should succeed")
   end
-  if result.value.Len() != 3 then
-    t.Fatalf("words length = %d, want 3", result.value.Len())
+  if result.Value.Len() != 3 then
+    t.Fatalf("words length = %d, want 3", result.Value.Len())
   end
-  let w0 = result.value.Get(0)
+  let w0 = result.Value.Get(0)
   switch w0
     case Some(v) then
       if v != "hello" then
@@ -711,7 +711,7 @@ func TestParseCommaSeparatedWords(t: Ref[testing.T]) -> ()
     end
     case None => t.Fatal("words[0] should be Some")
   end
-  let w1 = result.value.Get(1)
+  let w1 = result.Value.Get(1)
   switch w1
     case Some(v) then
       if v != "world" then
@@ -720,7 +720,7 @@ func TestParseCommaSeparatedWords(t: Ref[testing.T]) -> ()
     end
     case None => t.Fatal("words[1] should be Some")
   end
-  let w2 = result.value.Get(2)
+  let w2 = result.Value.Get(2)
   switch w2
     case Some(v) then
       if v != "foo" then
@@ -751,11 +751,11 @@ func TestParseParenthesizedExpr(t: Ref[testing.T]) -> ()
     PChar(')'),
   )
   let result = ParseInput(p, "(hello,world)x")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("parenthesized expr should succeed")
   end
-  if result.value != "hello,world" then
-    t.Fatalf("result = %q, want %q", result.value, "hello,world")
+  if result.Value != "hello,world" then
+    t.Fatalf("result = %q, want %q", result.Value, "hello,world")
   end
 end
 
@@ -769,11 +769,11 @@ func TestPChoiceWithThreeOptions(t: Ref[testing.T]) -> ()
   ]
   let p = PChoice(parsers)
   let result1 = ParseInput(p, "doghouse")
-  if !result1.ok || result1.value != "dog" then
+  if !result1.Ok || result1.Value != "dog" then
     t.Fatal("PChoice should match 'dog'")
   end
   let result2 = ParseInput(p, "birdsong")
-  if !result2.ok || result2.value != "bird" then
+  if !result2.Ok || result2.Value != "bird" then
     t.Fatal("PChoice should match 'bird'")
   end
 end
@@ -787,11 +787,11 @@ func TestPManyWithPBind(t: Ref[testing.T]) -> ()
   end)
   let many = PMany(p)
   let result = ParseInput(many, "ababab")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PMany(PBind) should succeed")
   end
-  if result.value.Len() != 3 then
-    t.Fatalf("PMany(PBind) length = %d, want 3", result.value.Len())
+  if result.Value.Len() != 3 then
+    t.Fatalf("PMany(PBind) length = %d, want 3", result.Value.Len())
   end
 end
 
@@ -802,10 +802,10 @@ func TestPOptionalWithBetween(t: Ref[testing.T]) -> ()
   let group = POptional(PBetween(PChar('('), PChar('x'), PChar(')')))
   # With parens
   let result1 = ParseInput(group, "(x)y")
-  if !result1.ok then
+  if !result1.Ok then
     t.Fatal("optional group with parens should succeed")
   end
-  switch result1.value
+  switch result1.Value
     case Some(v) then
       if v != 'x' then
         t.Fatalf("Some value = %d, want %d", v, 'x')
@@ -815,10 +815,10 @@ func TestPOptionalWithBetween(t: Ref[testing.T]) -> ()
   end
   # Without parens
   let result2 = ParseInput(group, "xy")
-  if !result2.ok then
+  if !result2.Ok then
     t.Fatal("optional group without parens should succeed")
   end
-  switch result2.value
+  switch result2.Value
     case None => ()
     case Some(_) => t.Fatal("expected None")
   end
@@ -831,11 +831,11 @@ func TestPSepBy1WithLabel(t: Ref[testing.T]) -> ()
   let sep = PLabel(PChar(','), "comma")
   let p = PSepBy1(item, sep)
   let result = ParseInput(p, "a,a,a")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PSepBy1 with label should succeed")
   end
-  if result.value.Len() != 3 then
-    t.Fatalf("PSepBy1 length = %d, want 3", result.value.Len())
+  if result.Value.Len() != 3 then
+    t.Fatalf("PSepBy1 length = %d, want 3", result.Value.Len())
   end
 end
 
@@ -844,11 +844,11 @@ end
 func TestPThenWithPPure(t: Ref[testing.T]) -> ()
   let p = PThen(PChar('a'), PThen(PChar('b'), PPure("done")))
   let result = ParseInput(p, "ab")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PThen with PPure should succeed")
   end
-  if result.value != "done" then
-    t.Fatalf("result = %q, want %q", result.value, "done")
+  if result.Value != "done" then
+    t.Fatalf("result = %q, want %q", result.Value, "done")
   end
 end
 
@@ -857,15 +857,15 @@ end
 func TestPCharWithUTF8(t: Ref[testing.T]) -> ()
   let p = PChar('你')
   let result = ParseInput(p, "你好")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PChar should match UTF-8 rune '你'")
   end
-  if result.value != '你' then
-    t.Fatalf("PChar('你') = %d, want %d", result.value, '你')
+  if result.Value != '你' then
+    t.Fatalf("PChar('你') = %d, want %d", result.Value, '你')
   end
   # Should advance by 3 bytes (UTF-8 encoding of 你)
-  if result.state.index != 3 then
-    t.Fatalf("PChar UTF-8 index=%d, want 3", result.state.index)
+  if result.State.Index != 3 then
+    t.Fatalf("PChar UTF-8 index=%d, want 3", result.State.Index)
   end
 end
 
@@ -874,50 +874,50 @@ end
 func TestPStringWithUTF8(t: Ref[testing.T]) -> ()
   let p = PString("你好")
   let result = ParseInput(p, "你好世界")
-  if !result.ok then
+  if !result.Ok then
     t.Fatal("PString should match UTF-8 string '你好'")
   end
-  if result.value != "你好" then
-    t.Fatalf("PString result = %q, want %q", result.value, "你好")
+  if result.Value != "你好" then
+    t.Fatalf("PString result = %q, want %q", result.Value, "你好")
   end
-  if result.state.index != 6 then
-    t.Fatalf("PString UTF-8 index=%d, want 6", result.state.index)
+  if result.State.Index != 6 then
+    t.Fatalf("PString UTF-8 index=%d, want 6", result.State.Index)
   end
 end
 
 # ===== Reply structure validation =====
 
 func TestReplyEmptyError(t: Ref[testing.T]) -> ()
-  let pos = Position { offset: 10, line: 2, column: 5 }
+  let pos = Position { Offset: 10, Line: 2, Column: 5 }
   let err = EmptyError(pos)
-  if err.message != "" then
-    t.Fatalf("EmptyError message = %q, want empty", err.message)
+  if err.Message != "" then
+    t.Fatalf("EmptyError message = %q, want empty", err.Message)
   end
-  if err.expected.Len() != 0 then
-    t.Fatalf("EmptyError expected length = %d, want 0", err.expected.Len())
+  if err.Expected.Len() != 0 then
+    t.Fatalf("EmptyError expected length = %d, want 0", err.Expected.Len())
   end
-  if err.position.offset != 10 then
-    t.Fatalf("EmptyError position.offset = %d, want 10", err.position.offset)
+  if err.Position.Offset != 10 then
+    t.Fatalf("EmptyError position.Offset = %d, want 10", err.Position.Offset)
   end
 end
 
 func TestReplyErrorAt(t: Ref[testing.T]) -> ()
-  let pos = Position { offset: 0, line: 1, column: 1 }
+  let pos = Position { Offset: 0, Line: 1, Column: 1 }
   let expected = ["digit", "letter"]
   let err = ErrorAt(pos, "expected digit", expected)
-  if err.message != "expected digit" then
-    t.Fatalf("ErrorAt message = %q, want %q", err.message, "expected digit")
+  if err.Message != "expected digit" then
+    t.Fatalf("ErrorAt message = %q, want %q", err.Message, "expected digit")
   end
-  if err.expected.Len() != 2 then
-    t.Fatalf("ErrorAt expected length = %d, want 2", err.expected.Len())
+  if err.Expected.Len() != 2 then
+    t.Fatalf("ErrorAt expected length = %d, want 2", err.Expected.Len())
   end
 end
 
 func TestReplyWithExpected(t: Ref[testing.T]) -> ()
-  let pos = Position { offset: 0, line: 1, column: 1 }
+  let pos = Position { Offset: 0, Line: 1, Column: 1 }
   let err = ErrorAt(pos, "expected", ["digit"])
   let err2 = WithExpected(err, "letter")
-  if err2.expected.Len() != 2 then
-    t.Fatalf("WithExpected expected length = %d, want 2", err2.expected.Len())
+  if err2.Expected.Len() != 2 then
+    t.Fatalf("WithExpected expected length = %d, want 2", err2.Expected.Len())
   end
 end
