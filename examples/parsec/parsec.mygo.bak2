@@ -217,63 +217,102 @@ func pNumber() -> ps.Parser[JsonValue]
   }
 end
 
+
 # ----- string -----
 
 func pString() -> ps.Parser[JsonValue]
-  # Single escape sequence: \", \\, \/, \b, \f, \n, \r, \t, \uXXXX
-  let pEscape = func() -> ps.Parser[Rune]
-    let pHexDigit = ps.PSatisfy(func(r: Rune) -> Bool
-      (r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')
-    end, "hex digit")
-    ps.PBind(ps.PChar('\\'), func(_: Rune) -> ps.Parser[Rune]
-      ps.PChoice([
-        ps.PMap(ps.PChar('"'),  func(_: Rune) -> Rune '"' end),
-        ps.PMap(ps.PChar('\\'), func(_: Rune) -> Rune '\\' end),
-        ps.PMap(ps.PChar('/'),  func(_: Rune) -> Rune '/' end),
-        ps.PMap(ps.PChar('b'),  func(_: Rune) -> Rune '\b' end),
-        ps.PMap(ps.PChar('f'),  func(_: Rune) -> Rune '\f' end),
-        ps.PMap(ps.PChar('n'),  func(_: Rune) -> Rune '\n' end),
-        ps.PMap(ps.PChar('r'),  func(_: Rune) -> Rune '\r' end),
-        ps.PMap(ps.PChar('t'),  func(_: Rune) -> Rune '\t' end),
-        ps.PMap(ps.PChar('u'),  func(_: Rune) -> ps.Parser[Rune]
-          # \uXXXX: parse 4 hex digits and decode
-          ps.PBind(pHexDigit, func(d0: Rune) -> ps.Parser[Rune]
-            ps.PBind(pHexDigit, func(d1: Rune) -> ps.Parser[Rune]
-              ps.PBind(pHexDigit, func(d2: Rune) -> ps.Parser[Rune]
-                ps.PMap(pHexDigit, func(d3: Rune) -> Rune
-                  let hexStr = String.FromRunes([d0, d1, d2, d3])
-                  let result = strconv.ParseInt(hexStr, 16, 32)
-                  switch result
-                    case Ok(v) => v as rune
-                    case _ => '\x0'
-                  end
-                end)
-              end)
-            end)
-          end)
-        end),
-      ])
-    end)
-  end
+  ps.Parser[JsonValue] {
+    run: func(state: ps.State) -> ps.Reply[JsonValue]
+      # Must start with "
+      let rOpen = ps.PeekRune(state)
+      if !rOpen.ok || rOpen.value != '"' then
+        return ps.Reply[JsonValue] {
+          ok: false, consumed: false, value: Zero(),
+          state: state, error: ps.ErrorAt(state.position, "string", ps.EmptyExpected())
+        }
+      end
+      
+      var curState = ps.AdvanceRune(state)
+      var runes: Slice[Rune] = []
 
-  # A single string character: either a normal char or an escape
-  let pCharContent = func() -> ps.Parser[Rune]
-    ps.POrElse(
-      pEscape(),
-      ps.PSatisfy(func(r: Rune) -> Bool
-        r != '"' && r != '\\'
-      end, "string character"),
-    )
-  end
+      while true
+        let rCur = ps.PeekRune(curState)
+        if !rCur.ok then
+          # Unterminated string
+          return ps.Reply[JsonValue] {
+            ok: false, consumed: true, value: Zero(),
+            state: state, error: ps.ErrorAt(state.position, "unterminated string", ps.EmptyExpected())
+          }
+        end
 
-  ps.PBind(ps.PChar('"'), func(_: Rune) -> ps.Parser[JsonValue]
-    ps.PBind(ps.PMany(pCharContent()), func(chars: Slice[Rune]) -> ps.Parser[JsonValue]
-      ps.PMap(ps.PChar('"'), func(_: Rune) -> JsonValue
-        JsonValue.JString(String.FromRunes(chars))
-      end)
-    end)
-  end)
+        # Closing "
+        if rCur.value == '"' then
+          let finalState = ps.AdvanceRune(curState)
+          let result = String.FromRunes(runes)
+          return ps.Reply[JsonValue] {
+            ok: true, consumed: true, value: JsonValue.JString(result),
+            state: finalState, error: ps.EmptyError(finalState.position)
+          }
+        end
+
+        # Escape sequence
+        if rCur.value == '\\' then
+          curState = ps.AdvanceRune(curState)
+          let rEsc = ps.PeekRune(curState)
+          if !rEsc.ok then
+            return ps.Reply[JsonValue] {
+              ok: false, consumed: true, value: Zero(),
+              state: state, error: ps.ErrorAt(state.position, "unterminated string", ps.EmptyExpected())
+            }
+          end
+          let (escRune, advanced) = switch rEsc.value
+            case '"' => ('"', true)
+            case '\\' => ('\\', true)
+            case '/' => ('/', true)
+            case 'b' => ('\b', true)
+            case 'f' => ('\f', true)
+            case 'n' => ('\n', true)
+            case 'r' => ('\r', true)
+            case 't' => ('\t', true)
+            case 'u' =>
+              # \uXXXX - consume 4 hex chars
+              # We need to peek at the next 4 runes
+              let s0 = ps.AdvanceRune(curState)
+              let s1 = ps.AdvanceRune(s0)
+              let s2 = ps.AdvanceRune(s1)
+              let s3 = ps.AdvanceRune(s2)
+              # Read hex digits from state.input using Get
+              let b0 = s0.input.Get(s0.index).UnwrapOr(0)
+              let b1 = s1.input.Get(s1.index).UnwrapOr(0)
+              let b2 = s2.input.Get(s2.index).UnwrapOr(0)
+              let b3 = s3.input.Get(s3.index).UnwrapOr(0)
+              let hexStr = (b0 as String) + (b1 as String) + (b2 as String) + (b3 as String)
+              let (hexVal, err) = strconv.ParseUint(hexStr, 16, 32)
+              switch hexVal
+                case Ok(v) =>
+                  # Advance past the 4 hex chars
+                  let advState = ps.AdvanceRune(s3)
+                  (v as Rune, advState)
+                case Err(_) =>
+                  # Invalid hex - return 0 and original state
+                  (0, curState)
+              end
+            case _ => (rEsc.value, true)
+          end
+          if advanced then
+            runes = runes.Append(escRune)
+            curState = ps.AdvanceRune(curState)
+          end
+        else
+          # Normal character
+          runes = runes.Append(rCur.value)
+          curState = ps.AdvanceRune(curState)
+        end
+      end
+    end
+  }
 end
+
 
 # ----- JSON value parser (full recursive grammar) -----
 func parseJson(input: String) -> Result[JsonValue, String]
