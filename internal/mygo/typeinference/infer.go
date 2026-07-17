@@ -1385,12 +1385,29 @@ func sameTypeExpr(a, b TypeExpr) bool {
 }
 
 func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType, Subst, []Predicate, error) {
-	// Look up the struct type
+	// Resolve package-qualified type name (e.g. "ps.Reply" -> alias="ps", typeName="Reply")
+	var mygoPkgAlias string
+	var bareTypeName string
+	if dotIdx := strings.LastIndexByte(n.TypeName, '.'); dotIdx > 0 {
+		mygoPkgAlias = n.TypeName[:dotIdx]
+		bareTypeName = n.TypeName[dotIdx+1:]
+	}
+
+	// For package-qualified names, construct the type from MyGoPackage info if not already in env.
 	sch, ok := env[n.TypeName]
-	fmt.Fprintf(os.Stderr, "DEBUG inferStructLit: TypeName=%q TypeArgs=%v ok=%v\n", n.TypeName, n.TypeArgs, ok)
-	if state != nil && state.PkgInfo != nil {
-		for name := range state.PkgInfo.Structs {
-			fmt.Fprintf(os.Stderr, "DEBUG inferStructLit: PkgInfo.Structs has key=%q\n", name)
+	if !ok && mygoPkgAlias != "" && state != nil && state.MyGoPackages != nil {
+		if pkg := state.MyGoPackages[mygoPkgAlias]; pkg != nil {
+			// Build a type scheme for the qualified struct type and register it.
+			st := pkg.Structs[bareTypeName]
+			if st != nil {
+				typeArgs := make([]MonoType, len(st.TypeParams))
+				for i := range st.TypeParams {
+					typeArgs[i] = TVar{ID: state.Fresh()}
+				}
+				env = env.Clone()
+				env[n.TypeName] = Generalize(env, TCon{Name: n.TypeName, Args: typeArgs}, nil)
+				sch, ok = env[n.TypeName]
+			}
 		}
 	}
 	if !ok {
@@ -1400,6 +1417,20 @@ func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType,
 	structType := Instantiate(sch, state)
 	s := make(Subst)
 	var allPreds []Predicate
+
+	// Resolve the struct declaration for field lookup.
+	// For qualified names (e.g. "ps.Reply"), look in MyGoPackages first.
+	var structDecl *StructDecl
+	if state != nil {
+		if mygoPkgAlias != "" && state.MyGoPackages != nil {
+			if pkg := state.MyGoPackages[mygoPkgAlias]; pkg != nil {
+				structDecl = pkg.Structs[bareTypeName]
+			}
+		}
+		if structDecl == nil && state.PkgInfo != nil {
+			structDecl = state.PkgInfo.Structs[n.TypeName]
+		}
+	}
 
 	// If explicit type args are given, unify with them
 	if len(n.TypeArgs) > 0 {
@@ -1425,16 +1456,15 @@ func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType,
 	// Infer field values
 	for _, f := range n.Fields {
 		var fieldDecl *Field
-		if state != nil && state.PkgInfo != nil {
-			if st := state.PkgInfo.Structs[n.TypeName]; st != nil {
-				for i := range st.Fields {
-					if st.Fields[i].Name == f.Name {
-						fieldDecl = &st.Fields[i]
-						break
-					}
+		if structDecl != nil {
+			for i := range structDecl.Fields {
+				if structDecl.Fields[i].Name == f.Name {
+					fieldDecl = &structDecl.Fields[i]
+					break
 				}
 			}
 		}
+
 		if fieldDecl != nil {
 			if mapLit, ok := f.Value.(*MapLitExpr); ok && len(mapLit.Pairs) == 0 && mapLit.Key == nil && mapLit.Val == nil {
 				if named, ok := fieldDecl.Type.(*NamedType); ok && len(named.Args) == 2 && named.Name == "Map" {
@@ -1443,25 +1473,37 @@ func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType,
 				}
 			}
 		}
+
 		fieldType, fs, preds, err := inferExpr(env, f.Value, state)
 		if err != nil {
 			return nil, nil, nil, wrapInferenceError("struct %q field %q: %w", err, n.TypeName, f.Name)
 		}
 		s = Compose(s, fs)
 		allPreds = append(allPreds, preds...)
+
 		if fieldDecl != nil {
+			// Convert the AST field type to a MonoType.
 			expectedFieldType := typeFromAST(fieldDecl.Type)
-			if state != nil && state.PkgInfo != nil {
-				if st := state.PkgInfo.Structs[n.TypeName]; st != nil {
-					if con, ok := s.ApplyMT(structType).(TCon); ok && len(con.Args) == len(st.TypeParams) {
-						fieldTypeParams := make(map[string]MonoType, len(st.TypeParams))
-						for i, name := range st.TypeParams {
-							fieldTypeParams[name] = con.Args[i]
-						}
-						expectedFieldType = typeFromASTWithParams(fieldDecl.Type, fieldTypeParams)
+
+			// Substitute type parameters if the struct is generic.
+			if structDecl != nil {
+				if con, ok := s.ApplyMT(structType).(TCon); ok && len(con.Args) == len(structDecl.TypeParams) {
+					fieldTypeParams := make(map[string]MonoType, len(structDecl.TypeParams))
+					for i, name := range structDecl.TypeParams {
+						fieldTypeParams[name] = con.Args[i]
 					}
+					expectedFieldType = typeFromASTWithParams(fieldDecl.Type, fieldTypeParams)
 				}
 			}
+
+			// For package-qualified struct types, qualify the field type with the package alias
+			// so that Unify can match e.g. ps.State with ps.State instead of bare State.
+			if mygoPkgAlias != "" && state != nil && state.MyGoPackages != nil {
+				if pkg := state.MyGoPackages[mygoPkgAlias]; pkg != nil {
+					expectedFieldType = qualifyMyGoType(mygoPkgAlias, pkg.Types, expectedFieldType)
+				}
+			}
+
 			var unifyErr error
 			s, unifyErr = Unify(s.ApplyMT(fieldType), expectedFieldType, s)
 			if unifyErr != nil {
