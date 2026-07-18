@@ -816,6 +816,80 @@ func TestInferInherentStaticMethodCall(t *testing.T) {
 	}
 }
 
+func TestInferTypeclassImplMethodUsesConcreteReturnType(t *testing.T) {
+	state := NewInferState()
+	pkg := &PkgInfo{
+		Name:    "prelude",
+		Decls:   []Decl{},
+		Enums:   map[string]*EnumDecl{},
+		Structs: map[string]*StructDecl{},
+		Interfaces: map[string]*InterfaceDecl{
+			"IEnumerable": {
+				Name:       "IEnumerable",
+				TypeParams: []string{"C", "A"},
+				Methods: []*FuncDecl{
+					{
+						Name:       "Map",
+						TypeParams: []string{"B"},
+						Params: []Param{
+							{Name: "c", Type: &NamedType{Name: "C", Args: []TypeExpr{&NamedType{Name: "A"}}}},
+							{Name: "fn", Type: &FuncType{Params: []TypeExpr{&NamedType{Name: "A"}}, Ret: &NamedType{Name: "B"}}},
+						},
+						Ret: &NamedType{Name: "IEnumerable", Args: []TypeExpr{
+							&NamedType{Name: "Slice", Args: []TypeExpr{&NamedType{Name: "B"}}},
+							&NamedType{Name: "B"},
+						}},
+					},
+				},
+			},
+		},
+		Funcs: map[string]*FuncDecl{},
+		Impls: []*ImplDecl{
+			{
+				Name:          "OptionIEnumerable",
+				InterfaceName: "IEnumerable",
+				InterfaceArgs: []TypeExpr{&NamedType{Name: "Option", Args: []TypeExpr{&NamedType{Name: "A"}}}, &NamedType{Name: "A"}},
+				Type:          &NamedType{Name: "OptionIEnumerable", Args: []TypeExpr{&NamedType{Name: "A"}}},
+				TypeParams:    []string{"A"},
+				Methods: []*FuncDecl{
+					{
+						Name:       "Map",
+						TypeParams: []string{"B"},
+						Params: []Param{
+							{Name: "c", Type: &NamedType{Name: "Option", Args: []TypeExpr{&NamedType{Name: "A"}}}},
+							{Name: "fn", Type: &FuncType{Params: []TypeExpr{&NamedType{Name: "A"}}, Ret: &NamedType{Name: "B"}}},
+						},
+						Ret: &NamedType{Name: "Option", Args: []TypeExpr{&NamedType{Name: "B"}}},
+					},
+				},
+			},
+		},
+	}
+	state.PkgInfo = pkg
+	env := TypeEnv{
+		"tail": &Scheme{Body: QualifiedType{Body: TCon{Name: "Option", Args: []MonoType{intType()}}}},
+		"fn": &Scheme{Body: QualifiedType{Body: TFunc{
+			Args: []MonoType{intType()},
+			Ret:  stringType(),
+		}}},
+	}
+	call := &CallExpr{
+		Callee: &FieldExpr{
+			Expr:  &IdentExpr{Name: "tail"},
+			Field: "Map",
+		},
+		Args: []Expr{&IdentExpr{Name: "fn"}},
+	}
+	typ, err := inferExprType(env, call, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := TCon{Name: "Option", Args: []MonoType{stringType()}}
+	if !eqType(typ, want) {
+		t.Fatalf("expected %s, got %s", want, typ)
+	}
+}
+
 func TestInferCallArgsUseAccumulatedSubstitution(t *testing.T) {
 	state := NewInferState()
 	a := TVar{ID: state.Fresh()}
@@ -1089,6 +1163,26 @@ func TestInferBlock(t *testing.T) {
 			&ExprStmt{
 				Expr: &IdentExpr{Name: "x"},
 			},
+		},
+	}
+	typ, err := inferExprType(env, block, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !eqType(typ, intType()) {
+		t.Fatalf("expected Int, got %s", typ)
+	}
+}
+
+func TestInferBlockFinalReturnUsesValueType(t *testing.T) {
+	state := NewInferState()
+	env := TypeEnv{
+		"x": &Scheme{Body: QualifiedType{Body: intType()}},
+	}
+
+	block := &BlockExpr{
+		Stmts: []Stmt{
+			&ReturnStmt{Value: &IdentExpr{Name: "x"}},
 		},
 	}
 	typ, err := inferExprType(env, block, state)

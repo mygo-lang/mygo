@@ -82,6 +82,32 @@ func (t TFunc) String() string {
 func (t TGoPackage) String() string { return "go package " + t.Alias }
 func (TUnit) String() string        { return "Unit" }
 
+// ContainsTypeVariable reports whether a monotype still contains unresolved
+// inference variables. Callers that render public or generated code should not
+// stringify such types as concrete names.
+func ContainsTypeVariable(t MonoType) bool {
+	switch t := t.(type) {
+	case TVar, TKVar:
+		return true
+	case TCon:
+		for _, arg := range t.Args {
+			if ContainsTypeVariable(arg) {
+				return true
+			}
+		}
+	case TFunc:
+		for _, arg := range t.Args {
+			if ContainsTypeVariable(arg) {
+				return true
+			}
+		}
+		return ContainsTypeVariable(t.Ret)
+	case TGoPackage, TUnit:
+		return false
+	}
+	return false
+}
+
 // Predicate represents a typeclass constraint, e.g. ToString[Int].
 type Predicate struct {
 	ClassName string
@@ -429,6 +455,12 @@ func Generalize(env TypeEnv, t MonoType, preds []Predicate) *Scheme {
 // typeFromAST converts an AST TypeExpr into a MonoType.
 func typeFromAST(t TypeExpr) MonoType {
 	return typeFromASTWithParams(t, nil)
+}
+
+// TypeFromAST converts an AST TypeExpr into a MonoType for callers outside
+// the inference package.
+func TypeFromAST(t TypeExpr) MonoType {
+	return typeFromAST(t)
 }
 
 func typeFromASTWithParams(t TypeExpr, typeParams map[string]MonoType) MonoType {

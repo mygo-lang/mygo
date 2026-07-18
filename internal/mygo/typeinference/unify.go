@@ -98,6 +98,13 @@ func Unify(t1, t2 MonoType, s Subst) (Subst, error) {
 	return nil, fmt.Errorf("unexpected unification: %s vs %s", t1, t2)
 }
 
+// Compatible reports whether two monotypes can unify without requiring the
+// caller to manage substitutions.
+func Compatible(t1, t2 MonoType) error {
+	_, err := Unify(t1, t2, make(Subst))
+	return err
+}
+
 func isRuneAliasPair(t1, t2 MonoType) bool {
 	c1, ok1 := t1.(TCon)
 	c2, ok2 := t2.(TCon)

@@ -756,6 +756,9 @@ func (g *gen) inferredType(e Expr) string {
 		return ""
 	}
 	if mt, ok := g.typedInfo.ExprTypes[e]; ok && mt != nil {
+		if typeinference.ContainsTypeVariable(mt) {
+			return ""
+		}
 		return mygoSigTypeToGo(mt.String())
 	}
 	return ""

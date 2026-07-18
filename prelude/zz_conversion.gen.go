@@ -36,37 +36,88 @@ func From_int_string(value int) string {
 }
 func From_string_result_int_string(value string) Result[int, string] {
 	return func() Result[int, string] {
-		_ = func() Result[int, string] {
-			v, err := strconv.Atoi(value)
-			if err != nil {
-				return Err[int, string](err.Error())
+		if v_2, ok := func() Result[int, error] {
+			__mygo_result_val, __mygo_result_err := strconv.Atoi(value)
+			if __mygo_result_err != nil {
+				return Err[int, error](__mygo_result_err)
 			}
-			return Ok[int, string](v)
-		}()
-		return Ok[int, string](0)
+			return Ok[int, error](__mygo_result_val)
+		}().(ResultOk[int, error]); ok {
+			return func() Result[int, string] {
+				return Ok[int, string](v_2.F0)
+			}()
+		} else {
+			if v_1, ok := func() Result[int, error] {
+				__mygo_result_val, __mygo_result_err := strconv.Atoi(value)
+				if __mygo_result_err != nil {
+					return Err[int, error](__mygo_result_err)
+				}
+				return Ok[int, error](__mygo_result_val)
+			}().(ResultErr[int, error]); ok {
+				return func() Result[int, string] {
+					return Err[int, string](v_1.F0.Error())
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
 	}()
 }
 func From_string_result_int64_string(value string) Result[int64, string] {
 	return func() Result[int64, string] {
-		_ = func() Result[int64, string] {
-			v, err := strconv.ParseInt(value, 10, 64)
-			if err != nil {
-				return Err[int64, string](err.Error())
+		if v_4, ok := func() Result[int64, error] {
+			__mygo_result_val, __mygo_result_err := strconv.ParseInt(value, 10, 64)
+			if __mygo_result_err != nil {
+				return Err[int64, error](__mygo_result_err)
 			}
-			return Ok[int64, string](v)
-		}()
-		return Ok[int64, string](0)
+			return Ok[int64, error](__mygo_result_val)
+		}().(ResultOk[int64, error]); ok {
+			return func() Result[int64, string] {
+				return Ok[int64, string](v_4.F0)
+			}()
+		} else {
+			if v_3, ok := func() Result[int64, error] {
+				__mygo_result_val, __mygo_result_err := strconv.ParseInt(value, 10, 64)
+				if __mygo_result_err != nil {
+					return Err[int64, error](__mygo_result_err)
+				}
+				return Ok[int64, error](__mygo_result_val)
+			}().(ResultErr[int64, error]); ok {
+				return func() Result[int64, string] {
+					return Err[int64, string](v_3.F0.Error())
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
 	}()
 }
 func From_string_result_float64_string(value string) Result[float64, string] {
 	return func() Result[float64, string] {
-		_ = func() Result[float64, string] {
-			v, err := strconv.ParseFloat(value, 64)
-			if err != nil {
-				return Err[float64, string](err.Error())
+		if v_6, ok := func() Result[float64, error] {
+			__mygo_result_val, __mygo_result_err := strconv.ParseFloat(value, 64)
+			if __mygo_result_err != nil {
+				return Err[float64, error](__mygo_result_err)
 			}
-			return Ok[float64, string](v)
-		}()
-		return Ok[float64, string](0)
+			return Ok[float64, error](__mygo_result_val)
+		}().(ResultOk[float64, error]); ok {
+			return func() Result[float64, string] {
+				return Ok[float64, string](v_6.F0)
+			}()
+		} else {
+			if v_5, ok := func() Result[float64, error] {
+				__mygo_result_val, __mygo_result_err := strconv.ParseFloat(value, 64)
+				if __mygo_result_err != nil {
+					return Err[float64, error](__mygo_result_err)
+				}
+				return Ok[float64, error](__mygo_result_val)
+			}().(ResultErr[float64, error]); ok {
+				return func() Result[float64, string] {
+					return Err[float64, string](v_5.F0.Error())
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
 	}()
 }

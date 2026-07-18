@@ -4,9 +4,9 @@ package prelude
 
 func Each_option_a_a[A any](c Option[A], fn func(A)) {
 	func() {
-		if v_16, ok := c.(OptionSome[A]); ok {
+		if v_22, ok := c.(OptionSome[A]); ok {
 			func() {
-				fn(v_16.F0)
+				fn(v_22.F0)
 			}()
 		} else {
 			if _, ok := c.(OptionNone[A]); ok {
@@ -36,9 +36,9 @@ func Len_option_a_a[A any](c Option[A]) int {
 }
 func Map_option_a_a[A any, B any](c Option[A], fn func(A) B) Option[B] {
 	return func() Option[B] {
-		if v_20, ok := c.(OptionSome[A]); ok {
+		if v_26, ok := c.(OptionSome[A]); ok {
 			return func() Option[B] {
-				return Some[B](fn(v_20.F0))
+				return Some[B](fn(v_26.F0))
 			}()
 		} else {
 			if _, ok := c.(OptionNone[A]); ok {
@@ -53,11 +53,11 @@ func Map_option_a_a[A any, B any](c Option[A], fn func(A) B) Option[B] {
 }
 func Filter_option_a_a[A any](c Option[A], fn func(A) bool) Option[A] {
 	return func() Option[A] {
-		if v_22, ok := c.(OptionSome[A]); ok {
+		if v_28, ok := c.(OptionSome[A]); ok {
 			return func() Option[A] {
 				return func() Option[A] {
-					if fn(v_22.F0) {
-						return Some[A](v_22.F0)
+					if fn(v_28.F0) {
+						return Some[A](v_28.F0)
 					} else {
 						return None[A]()
 					}
@@ -76,9 +76,9 @@ func Filter_option_a_a[A any](c Option[A], fn func(A) bool) Option[A] {
 }
 func Fold_option_a_a[A any, B any](c Option[A], initial B, fn func(B, A) B) B {
 	return func() B {
-		if v_24, ok := c.(OptionSome[A]); ok {
+		if v_30, ok := c.(OptionSome[A]); ok {
 			return func() B {
-				return fn(initial, v_24.F0)
+				return fn(initial, v_30.F0)
 			}()
 		} else {
 			if _, ok := c.(OptionNone[A]); ok {
@@ -93,11 +93,11 @@ func Fold_option_a_a[A any, B any](c Option[A], initial B, fn func(B, A) B) B {
 }
 func Find_option_a_a[A any](c Option[A], fn func(A) bool) Option[*A] {
 	return func() Option[*A] {
-		if v_26, ok := c.(OptionSome[A]); ok {
+		if v_32, ok := c.(OptionSome[A]); ok {
 			return func() Option[*A] {
 				return func() Option[*A] {
-					if fn(v_26.F0) {
-						return Some[*A](&v_26.F0)
+					if fn(v_32.F0) {
+						return Some[*A](&v_32.F0)
 					} else {
 						return None[*A]()
 					}
@@ -116,9 +116,9 @@ func Find_option_a_a[A any](c Option[A], fn func(A) bool) Option[*A] {
 }
 func Contains_option_a_a[A any](c Option[A], item A, EqualsFn func(A, A) bool) bool {
 	return func() bool {
-		if v_28, ok := c.(OptionSome[A]); ok {
+		if v_34, ok := c.(OptionSome[A]); ok {
 			return func() bool {
-				return EqualsFn(v_28.F0, item)
+				return EqualsFn(v_34.F0, item)
 			}()
 		} else {
 			if _, ok := c.(OptionNone[A]); ok {
@@ -133,9 +133,9 @@ func Contains_option_a_a[A any](c Option[A], item A, EqualsFn func(A, A) bool) b
 }
 func Option_UnwrapOr[A any](opt Option[A], defaultVal A) A {
 	return func() A {
-		if v_30, ok := opt.(OptionSome[A]); ok {
+		if v_36, ok := opt.(OptionSome[A]); ok {
 			return func() A {
-				return v_30.F0
+				return v_36.F0
 			}()
 		} else {
 			if _, ok := opt.(OptionNone[A]); ok {
@@ -150,12 +150,12 @@ func Option_UnwrapOr[A any](opt Option[A], defaultVal A) A {
 }
 func Equals_option_a[A any](left Option[A], right Option[A], EqualsFn func(A, A) bool) bool {
 	return func() bool {
-		if v_34, ok := left.(OptionSome[A]); ok {
+		if v_40, ok := left.(OptionSome[A]); ok {
 			return func() bool {
 				return func() bool {
-					if v_36, ok := right.(OptionSome[A]); ok {
+					if v_42, ok := right.(OptionSome[A]); ok {
 						return func() bool {
-							return EqualsFn(v_34.F0, v_36.F0)
+							return EqualsFn(v_40.F0, v_42.F0)
 						}()
 					} else {
 						if _, ok := right.(OptionNone[A]); ok {

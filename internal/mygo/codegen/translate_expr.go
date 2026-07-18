@@ -442,7 +442,7 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 			ft = lookupMyGoFieldType(n.Expr, n.Field, g)
 		}
 		if ft != "" {
-			if inferred := g.inferredType(n); inferred != "" {
+			if inferred := g.inferredType(n); inferred != "" && !containsGeneratedTypeVar(inferred) && !g.containsUnresolvedTypeName(inferred) {
 				ft = inferred
 			}
 			return &ast.SelectorExpr{X: base, Sel: ast.NewIdent(goastFieldName(n.Field))}, ft, nil

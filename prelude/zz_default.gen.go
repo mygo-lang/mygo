@@ -27,7 +27,7 @@ func Default_int64() int64 {
 	return 0
 }
 func Default_uint() uint {
-	return 0
+	return uint(0)
 }
 func Default_uint64() uint64 {
 	return 0

@@ -224,6 +224,10 @@ func initialTypeEnv(pkg *PkgInfo) TypeEnv {
 	// Boolean literals
 	env["true"] = &Scheme{Body: QualifiedType{Body: TCon{Name: "Bool"}}}
 	env["false"] = &Scheme{Body: QualifiedType{Body: TCon{Name: "Bool"}}}
+	env["len"] = &Scheme{Body: QualifiedType{Body: TFunc{
+		Args: []MonoType{TCon{Name: "Any"}},
+		Ret:  TCon{Name: "Int"},
+	}}}
 
 	// Prelude constructors and helper functions that remain globally visible.
 	for _, name := range []string{"Some", "Ok", "Err", "Zero", "OptionFlatMap", "ResultIsOk", "ResultIsErr", "ResultUnwrap", "ResultMap", "ResultMapErr", "ResultAndThen", "ResultOrElse", "TypeKeyFromType"} {
@@ -326,15 +330,36 @@ func inferDecl(decl Decl, env TypeEnv, state *InferState, info *TypedInfo, pkg *
 		return inferFuncDecl(d, env, state, info, pkg)
 
 	case *ImplDecl:
-		// Impl declarations register instance methods but don't directly
-		// affect type inference of new bindings (they are used for
-		// typeclass resolution).
+		// Impl declarations are not top-level bindings, but their method bodies
+		// still need inference so invalid implementations are rejected.
+		for _, m := range d.Methods {
+			method := *m
+			method.TypeParams = mergeTypeParamNames(d.TypeParams, m.TypeParams)
+			if _, err := inferFuncDecl(&method, env, state, info, pkg); err != nil {
+				return nil, err
+			}
+		}
 		return env, nil
 
 	case *LetStmt:
 		return inferLetDecl(d, env, state, info)
 	}
 	return env, nil
+}
+
+func mergeTypeParamNames(groups ...[]string) []string {
+	var merged []string
+	seen := map[string]bool{}
+	for _, group := range groups {
+		for _, name := range group {
+			if seen[name] {
+				continue
+			}
+			seen[name] = true
+			merged = append(merged, name)
+		}
+	}
+	return merged
 }
 
 func inferEnumDecl(d *EnumDecl, env TypeEnv, state *InferState, pkg *PkgInfo) (TypeEnv, error) {
@@ -1396,7 +1421,11 @@ func concreteImplMethodType(baseType MonoType, field string, state *InferState, 
 		return TFunc{}, false
 	}
 	for _, impl := range state.PkgInfo.Impls {
-		if impl.Type == nil {
+		receiverType := impl.Type
+		if impl.InterfaceName != "" && len(impl.InterfaceArgs) > 0 {
+			receiverType = impl.InterfaceArgs[0]
+		}
+		if receiverType == nil {
 			continue
 		}
 		var method *FuncDecl
@@ -1416,7 +1445,7 @@ func concreteImplMethodType(baseType MonoType, field string, state *InferState, 
 		for _, name := range method.TypeParams {
 			typeParams[name] = TVar{ID: state.Fresh()}
 		}
-		recvPattern := typeFromASTWithParams(impl.Type, typeParams)
+		recvPattern := typeFromASTWithParams(receiverType, typeParams)
 		s, err := Unify(subst.ApplyMT(recvPattern), subst.ApplyMT(baseType), subst)
 		if err != nil {
 			continue
@@ -2040,6 +2069,7 @@ func inferBlock(env TypeEnv, n *BlockExpr, state *InferState) (MonoType, Subst, 
 				return nil, nil, nil, wrapInferenceError("assignment to %q: type mismatch: %w", err, st.Name)
 			}
 		case *ReturnStmt:
+			returnType := MonoType(TUnit{})
 			if st.Value != nil {
 				valType, ss, preds, err := inferExpr(currentEnv, st.Value, state)
 				if err != nil {
@@ -2047,10 +2077,10 @@ func inferBlock(env TypeEnv, n *BlockExpr, state *InferState) (MonoType, Subst, 
 				}
 				s = Compose(s, ss)
 				allPreds = append(allPreds, preds...)
-				_ = valType
+				returnType = s.ApplyMT(valType)
 			}
 			if isLast {
-				return TUnit{}, s, allPreds, nil
+				return returnType, s, allPreds, nil
 			}
 		}
 	}

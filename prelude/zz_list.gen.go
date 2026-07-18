@@ -33,9 +33,9 @@ func Each_list_t_t[T any](c List[T], fn func(T)) {
 							done_2 = true
 						}()
 					} else {
-						if v_1, ok := current_1.tail.(OptionSome[*List[T]]); ok {
+						if v_7, ok := current_1.tail.(OptionSome[*List[T]]); ok {
 							func() {
-								current_1 = v_1.F0
+								current_1 = v_7.F0
 							}()
 						}
 					}
@@ -60,9 +60,9 @@ func Len_list_t_t[T any](c List[T]) int {
 							done_5 = true
 						}()
 					} else {
-						if v_3, ok := current_4.tail.(OptionSome[*List[T]]); ok {
+						if v_9, ok := current_4.tail.(OptionSome[*List[T]]); ok {
 							func() {
-								current_4 = v_3.F0
+								current_4 = v_9.F0
 							}()
 						}
 					}
@@ -86,9 +86,9 @@ func Map_list_t_t[T any, B any](c List[T], fn func(T) B) List[B] {
 							done_6 = true
 						}()
 					} else {
-						if v_5, ok := current_9.tail.(OptionSome[*List[T]]); ok {
+						if v_11, ok := current_9.tail.(OptionSome[*List[T]]); ok {
 							func() {
-								current_9 = v_5.F0
+								current_9 = v_11.F0
 								result_8 = List[B]{head: fn(current_9.head), tail: Some[*List[B]](&result_8)}
 							}()
 						}
@@ -119,9 +119,9 @@ func Filter_list_t_t[T any](c List[T], fn func(T) bool) List[T] {
 							done_10 = true
 						}()
 					} else {
-						if v_7, ok := current_11.tail.(OptionSome[*List[T]]); ok {
+						if v_13, ok := current_11.tail.(OptionSome[*List[T]]); ok {
 							func() {
-								current_11 = v_7.F0
+								current_11 = v_13.F0
 							}()
 						}
 					}
@@ -145,9 +145,9 @@ func Fold_list_t_t[T any, B any](c List[T], initial B, fn func(B, T) B) B {
 							done_14 = true
 						}()
 					} else {
-						if v_9, ok := current_15.tail.(OptionSome[*List[T]]); ok {
+						if v_15, ok := current_15.tail.(OptionSome[*List[T]]); ok {
 							func() {
-								current_15 = v_9.F0
+								current_15 = v_15.F0
 							}()
 						}
 					}
@@ -177,9 +177,9 @@ func Find_list_t_t[T any](c List[T], fn func(T) bool) Option[*T] {
 									done_16 = true
 								}()
 							} else {
-								if v_11, ok := current_18.tail.(OptionSome[*List[T]]); ok {
+								if v_17, ok := current_18.tail.(OptionSome[*List[T]]); ok {
 									func() {
-										current_18 = v_11.F0
+										current_18 = v_17.F0
 									}()
 								}
 							}
@@ -211,9 +211,9 @@ func Contains_list_t_t[T any](c List[T], item T, EqualsFn func(T, T) bool) bool 
 									done_19 = true
 								}()
 							} else {
-								if v_13, ok := current_21.tail.(OptionSome[*List[T]]); ok {
+								if v_19, ok := current_21.tail.(OptionSome[*List[T]]); ok {
 									func() {
-										current_21 = v_13.F0
+										current_21 = v_19.F0
 									}()
 								}
 							}

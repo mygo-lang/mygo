@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
+	"github.com/mygo-lang/mygo/internal/mygo/typeinference"
 )
 
 func TestSplitTypeArgsHandlesGoMapTypes(t *testing.T) {
@@ -50,6 +51,34 @@ func TestGoTypeExprForAssertionHandlesGoMapTypes(t *testing.T) {
 	}
 	if got, want := buf.String(), "OptionSome[map[string]any]"; got != want {
 		t.Fatalf("printed assertion type = %q, want %q", got, want)
+	}
+}
+
+func TestInferredTypeSkipsUnresolvedTypeVariables(t *testing.T) {
+	expr := &IdentExpr{Name: "value"}
+	g := &gen{
+		typedInfo: &typeinference.TypedInfo{
+			ExprTypes: map[Expr]typeinference.MonoType{
+				expr: typeinference.TCon{
+					Name: "Option",
+					Args: []typeinference.MonoType{
+						typeinference.TCon{
+							Name: "Ref",
+							Args: []typeinference.MonoType{
+								typeinference.TCon{
+									Name: "List",
+									Args: []typeinference.MonoType{typeinference.TVar{ID: 55}},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if got := g.inferredType(expr); got != "" {
+		t.Fatalf("inferredType() = %q, want empty for unresolved type variable", got)
 	}
 }
 

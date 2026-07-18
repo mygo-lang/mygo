@@ -218,6 +218,11 @@ func (v *validator) validateFunc(d *FuncDecl) error {
 		if err := v.validateExpr(d.Body); err != nil {
 			return err
 		}
+		if d.Ret != nil {
+			if err := v.validateReturnType(d, d.Body); err != nil {
+				return err
+			}
+		}
 	}
 
 	// Restore scope
@@ -653,6 +658,95 @@ func (v *validator) validateCast(x *CastExpr) error {
 		}
 	}
 	return nil
+}
+
+func (v *validator) validateReturnType(d *FuncDecl, body Expr) error {
+	if v.typedInfo == nil {
+		return nil
+	}
+	expected := typeinference.TypeFromAST(d.Ret)
+	if isUnitType(expected) {
+		return nil
+	}
+	if err := v.validateExprCompatibleWith(body, expected, "function %q return type mismatch", d.Name); err != nil {
+		return err
+	}
+	if sw, ok := body.(*SwitchExpr); ok {
+		for i := range sw.Cases {
+			c := &sw.Cases[i]
+			if c.Body == nil {
+				continue
+			}
+			if err := v.validateExprCompatibleWith(c.Body, expected, "function %q switch case return type mismatch", d.Name); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (v *validator) validateExprCompatibleWith(expr Expr, expected typeinference.MonoType, msg string, args ...any) error {
+	actual, ok := v.typedInfo.ExprTypes[expr]
+	if !ok || actual == nil || expected == nil {
+		return nil
+	}
+	if err := typeinference.Compatible(actual, expected); err != nil {
+		args = append(args, err)
+		return common.ErrorAtNode(nodeSourceFile(expr), expr, msg+": %v", args...)
+	}
+	return nil
+}
+
+func isUnitType(t typeinference.MonoType) bool {
+	if _, ok := t.(typeinference.TUnit); ok {
+		return true
+	}
+	tc, ok := t.(typeinference.TCon)
+	return ok && tc.Name == "Unit" && len(tc.Args) == 0
+}
+
+func nodeSourceFile(expr Expr) string {
+	switch x := expr.(type) {
+	case *IdentExpr:
+		return x.SourceFile
+	case *LiteralExpr:
+		return x.SourceFile
+	case *CallExpr:
+		return x.SourceFile
+	case *BinaryExpr:
+		return x.SourceFile
+	case *PrefixExpr:
+		return x.SourceFile
+	case *CastExpr:
+		return x.SourceFile
+	case *FieldExpr:
+		return x.SourceFile
+	case *FuncLitExpr:
+		return x.SourceFile
+	case *IfExpr:
+		return x.SourceFile
+	case *SwitchExpr:
+		return x.SourceFile
+	case *WhileExpr:
+		return x.SourceFile
+	case *SliceLitExpr:
+		return x.SourceFile
+	case *MapLitExpr:
+		return x.SourceFile
+	case *SetLitExpr:
+		return x.SourceFile
+	case *TupleLitExpr:
+		return x.SourceFile
+	case *UnitLitExpr:
+		return x.SourceFile
+	case *GoExpr:
+		return x.SourceFile
+	case *BlockExpr:
+		return x.SourceFile
+	case *StructLitExpr:
+		return x.SourceFile
+	}
+	return ""
 }
 
 // ---- Statement validation ----

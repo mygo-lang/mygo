@@ -17,27 +17,25 @@ func Range_NewWithStep(start int, stop int, step int) Range {
 func Each_range__int(c Range, fn func(int)) {
 	func() {
 		var i_22 int = c.Start
-		func() {
-			if c.Step > 0 {
-				func() {
-					for i_22 < c.End {
-						fn(i_22)
-						i_22 = i_22 + c.Step
-					}
-				}()
-			} else {
-				func() {
-					if c.Step < 0 {
-						func() {
-							for i_22 > c.End {
-								fn(i_22)
-								i_22 = i_22 + c.Step
-							}
-						}()
-					}
-				}()
-			}
-		}()
+		if c.Step > 0 {
+			func() {
+				for i_22 < c.End {
+					fn(i_22)
+					i_22 = i_22 + c.Step
+				}
+			}()
+		} else {
+			func() {
+				if c.Step < 0 {
+					func() {
+						for i_22 > c.End {
+							fn(i_22)
+							i_22 = i_22 + c.Step
+						}
+					}()
+				}
+			}()
+		}
 		return
 	}()
 	return
@@ -46,27 +44,25 @@ func Len_range__int(c Range) int {
 	return func() int {
 		var count_23 int = 0
 		var i_24 int = c.Start
-		func() {
-			if c.Step > 0 {
-				func() {
-					for i_24 < c.End {
-						count_23 = count_23 + 1
-						i_24 = i_24 + c.Step
-					}
-				}()
-			} else {
-				func() {
-					if c.Step < 0 {
-						func() {
-							for i_24 > c.End {
-								count_23 = count_23 + 1
-								i_24 = i_24 + c.Step
-							}
-						}()
-					}
-				}()
-			}
-		}()
+		if c.Step > 0 {
+			func() {
+				for i_24 < c.End {
+					count_23 = count_23 + 1
+					i_24 = i_24 + c.Step
+				}
+			}()
+		} else {
+			func() {
+				if c.Step < 0 {
+					func() {
+						for i_24 > c.End {
+							count_23 = count_23 + 1
+							i_24 = i_24 + c.Step
+						}
+					}()
+				}
+			}()
+		}
 		return count_23
 	}()
 }
@@ -74,53 +70,49 @@ func Map_range__int[B any](c Range, fn func(int) B) []B {
 	return func() []B {
 		var count_25 int = 0
 		var i_26 int = c.Start
-		func() {
-			if c.Step > 0 {
-				func() {
-					for i_26 < c.End {
-						count_25 = count_25 + 1
-						i_26 = i_26 + c.Step
-					}
-				}()
-			} else {
-				func() {
-					if c.Step < 0 {
-						func() {
-							for i_26 > c.End {
-								count_25 = count_25 + 1
-								i_26 = i_26 + c.Step
-							}
-						}()
-					}
-				}()
-			}
-		}()
+		if c.Step > 0 {
+			func() {
+				for i_26 < c.End {
+					count_25 = count_25 + 1
+					i_26 = i_26 + c.Step
+				}
+			}()
+		} else {
+			func() {
+				if c.Step < 0 {
+					func() {
+						for i_26 > c.End {
+							count_25 = count_25 + 1
+							i_26 = i_26 + c.Step
+						}
+					}()
+				}
+			}()
+		}
 		var result_27 []B = []B{}
 		var j_28 int = 0
 		i_26 = c.Start
-		func() {
-			if c.Step > 0 {
-				func() {
-					for j_28 < count_25 {
-						result_27 = append(result_27, fn(i_26))
-						i_26 = i_26 + c.Step
-						j_28 = j_28 + 1
-					}
-				}()
-			} else {
-				func() {
-					if c.Step < 0 {
-						func() {
-							for j_28 < count_25 {
-								result_27 = append(result_27, fn(i_26))
-								i_26 = i_26 + c.Step
-								j_28 = j_28 + 1
-							}
-						}()
-					}
-				}()
-			}
-		}()
+		if c.Step > 0 {
+			func() {
+				for j_28 < count_25 {
+					result_27 = append(result_27, fn(i_26))
+					i_26 = i_26 + c.Step
+					j_28 = j_28 + 1
+				}
+			}()
+		} else {
+			func() {
+				if c.Step < 0 {
+					func() {
+						for j_28 < count_25 {
+							result_27 = append(result_27, fn(i_26))
+							i_26 = i_26 + c.Step
+							j_28 = j_28 + 1
+						}
+					}()
+				}
+			}()
+		}
 		return result_27
 	}()
 }
@@ -128,77 +120,73 @@ func Filter_range__int(c Range, fn func(int) bool) []int {
 	return func() []int {
 		var count_29 int = 0
 		var i_30 int = c.Start
-		func() {
-			if c.Step > 0 {
-				func() {
-					for i_30 < c.End {
-						func() {
-							if fn(i_30) {
-								func() {
-									count_29 = count_29 + 1
-								}()
-							}
-						}()
-						i_30 = i_30 + c.Step
-					}
-				}()
-			} else {
-				func() {
-					if c.Step < 0 {
-						func() {
-							for i_30 > c.End {
-								func() {
-									if fn(i_30) {
-										func() {
-											count_29 = count_29 + 1
-										}()
-									}
-								}()
-								i_30 = i_30 + c.Step
-							}
-						}()
-					}
-				}()
-			}
-		}()
+		if c.Step > 0 {
+			func() {
+				for i_30 < c.End {
+					func() {
+						if fn(i_30) {
+							func() {
+								count_29 = count_29 + 1
+							}()
+						}
+					}()
+					i_30 = i_30 + c.Step
+				}
+			}()
+		} else {
+			func() {
+				if c.Step < 0 {
+					func() {
+						for i_30 > c.End {
+							func() {
+								if fn(i_30) {
+									func() {
+										count_29 = count_29 + 1
+									}()
+								}
+							}()
+							i_30 = i_30 + c.Step
+						}
+					}()
+				}
+			}()
+		}
 		var result_31 []int = []int{}
 		var j_32 int = 0
 		i_30 = c.Start
-		func() {
-			if c.Step > 0 {
-				func() {
-					for i_30 < c.End {
-						func() {
-							if fn(i_30) {
-								func() {
-									result_31 = append(result_31, i_30)
-									j_32 = j_32 + 1
-								}()
-							}
-						}()
-						i_30 = i_30 + c.Step
-					}
-				}()
-			} else {
-				func() {
-					if c.Step < 0 {
-						func() {
-							for i_30 > c.End {
-								func() {
-									if fn(i_30) {
-										func() {
-											result_31 = append(result_31, i_30)
-											j_32 = j_32 + 1
-										}()
-									}
-								}()
-								i_30 = i_30 + c.Step
-							}
-						}()
-					}
-				}()
-			}
-		}()
+		if c.Step > 0 {
+			func() {
+				for i_30 < c.End {
+					func() {
+						if fn(i_30) {
+							func() {
+								result_31 = append(result_31, i_30)
+								j_32 = j_32 + 1
+							}()
+						}
+					}()
+					i_30 = i_30 + c.Step
+				}
+			}()
+		} else {
+			func() {
+				if c.Step < 0 {
+					func() {
+						for i_30 > c.End {
+							func() {
+								if fn(i_30) {
+									func() {
+										result_31 = append(result_31, i_30)
+										j_32 = j_32 + 1
+									}()
+								}
+							}()
+							i_30 = i_30 + c.Step
+						}
+					}()
+				}
+			}()
+		}
 		return result_31
 	}()
 }
@@ -206,27 +194,25 @@ func Fold_range__int[B any](c Range, initial B, fn func(B, int) B) B {
 	return func() B {
 		var acc_33 B = initial
 		var i_34 int = c.Start
-		func() {
-			if c.Step > 0 {
-				func() {
-					for i_34 < c.End {
-						acc_33 = fn(acc_33, i_34)
-						i_34 = i_34 + c.Step
-					}
-				}()
-			} else {
-				func() {
-					if c.Step < 0 {
-						func() {
-							for i_34 > c.End {
-								acc_33 = fn(acc_33, i_34)
-								i_34 = i_34 + c.Step
-							}
-						}()
-					}
-				}()
-			}
-		}()
+		if c.Step > 0 {
+			func() {
+				for i_34 < c.End {
+					acc_33 = fn(acc_33, i_34)
+					i_34 = i_34 + c.Step
+				}
+			}()
+		} else {
+			func() {
+				if c.Step < 0 {
+					func() {
+						for i_34 > c.End {
+							acc_33 = fn(acc_33, i_34)
+							i_34 = i_34 + c.Step
+						}
+					}()
+				}
+			}()
+		}
 		return acc_33
 	}()
 }
@@ -235,43 +221,41 @@ func Find_range__int(c Range, fn func(int) bool) Option[*int] {
 		var i_35 int = c.Start
 		var found_36 Option[*int] = None[*int]()
 		var done_37 bool = false
-		func() {
-			if c.Step > 0 {
-				func() {
-					for i_35 < c.End && !done_37 {
-						func() {
-							if fn(i_35) {
-								func() {
-									var current_38 int = i_35
-									found_36 = Some[*int](&current_38)
-									done_37 = true
-								}()
-							}
-						}()
-						i_35 = i_35 + c.Step
-					}
-				}()
-			} else {
-				func() {
-					if c.Step < 0 {
-						func() {
-							for i_35 > c.End && !done_37 {
-								func() {
-									if fn(i_35) {
-										func() {
-											var current_39 int = i_35
-											found_36 = Some[*int](&current_39)
-											done_37 = true
-										}()
-									}
-								}()
-								i_35 = i_35 + c.Step
-							}
-						}()
-					}
-				}()
-			}
-		}()
+		if c.Step > 0 {
+			func() {
+				for i_35 < c.End && !done_37 {
+					func() {
+						if fn(i_35) {
+							func() {
+								var current_38 int = i_35
+								found_36 = Some[*int](&current_38)
+								done_37 = true
+							}()
+						}
+					}()
+					i_35 = i_35 + c.Step
+				}
+			}()
+		} else {
+			func() {
+				if c.Step < 0 {
+					func() {
+						for i_35 > c.End && !done_37 {
+							func() {
+								if fn(i_35) {
+									func() {
+										var current_39 int = i_35
+										found_36 = Some[*int](&current_39)
+										done_37 = true
+									}()
+								}
+							}()
+							i_35 = i_35 + c.Step
+						}
+					}()
+				}
+			}()
+		}
 		return found_36
 	}()
 }
@@ -279,39 +263,37 @@ func Contains_range__int(c Range, item int, EqualsFn func(int, int) bool) bool {
 	return func() bool {
 		var i_40 int = c.Start
 		var found_41 bool = false
-		func() {
-			if c.Step > 0 {
-				func() {
-					for i_40 < c.End && !found_41 {
-						func() {
-							if EqualsFn(item, i_40) {
-								func() {
-									found_41 = true
-								}()
-							}
-						}()
-						i_40 = i_40 + c.Step
-					}
-				}()
-			} else {
-				func() {
-					if c.Step < 0 {
-						func() {
-							for i_40 > c.End && !found_41 {
-								func() {
-									if EqualsFn(item, i_40) {
-										func() {
-											found_41 = true
-										}()
-									}
-								}()
-								i_40 = i_40 + c.Step
-							}
-						}()
-					}
-				}()
-			}
-		}()
+		if c.Step > 0 {
+			func() {
+				for i_40 < c.End && !found_41 {
+					func() {
+						if EqualsFn(item, i_40) {
+							func() {
+								found_41 = true
+							}()
+						}
+					}()
+					i_40 = i_40 + c.Step
+				}
+			}()
+		} else {
+			func() {
+				if c.Step < 0 {
+					func() {
+						for i_40 > c.End && !found_41 {
+							func() {
+								if EqualsFn(item, i_40) {
+									func() {
+										found_41 = true
+									}()
+								}
+							}()
+							i_40 = i_40 + c.Step
+						}
+					}()
+				}
+			}()
+		}
 		return found_41
 	}()
 }
