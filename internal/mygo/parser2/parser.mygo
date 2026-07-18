@@ -1,192 +1,599 @@
 package parser2
 
-# ============================================================
-# MyGO parser in MyGO — using parsec combinator library
+import strings "go:strings"
+import ps "github.com/mygo-lang/mygo/lib/text/parsec"
+
+# A MyGO parser written in MyGO, backed by the parsec combinator library.
 #
-# Parses a subset of MyGO (package + func + struct + enum + impl)
-# into a simple S-expression style AST that Go-side code can
-# consume and convert into the real go/ast types.
-# ============================================================
+# parser2 intentionally owns a compact AST first. That keeps this package
+# self-hostable while the yacc parser remains the production parser.
 
-# ---- Position ----
-
-struct Pos
-  line: Int
-  col: Int
+struct File
+  PackageName: String
+  Decls: Slice[Decl]
 end
 
-# ---- AST value types (opaque sum types via wrapper enums) ----
-
 enum Decl
-  Import(TokIdent, TokIdent)  # alias, path
-  Func(TokIdent, Slice[TokIdent], Slice[Param], OptionType, Expr)  # name, typeParams, params, ret, body
-  Struct(TokIdent, Slice[TokIdent], Slice[Field])
-  Enum(TokIdent, Slice[TokIdent], Slice[Variant])
-  Interface(TokIdent, Slice[TokIdent], Slice[FuncSig])
-  Impl(TokIdent, Slice[TokIdent], Slice[Decl])
+  ImportDecl(String, String)
+  FuncDecl(String, Slice[String], Slice[Param], Option[TypeExpr], Expr)
+  StructDecl(String, Slice[String], Slice[Field])
+  EnumDecl(String, Slice[String], Slice[Variant])
+  InterfaceDecl(String, Slice[String], Slice[FuncSig])
+  ImplDecl(Slice[String], TypeExpr, Option[TypeExpr], Slice[FuncSig])
 end
 
 struct Param
-  name: TokIdent
-  typ: Type
+  Name: String
+  Type: TypeExpr
 end
 
 struct Field
-  name: TokIdent
-  typ: Type
+  Name: String
+  Type: TypeExpr
+  Tag: Option[String]
 end
 
 struct Variant
-  name: TokIdent
-  fields: Slice[Field]
+  Name: String
+  Fields: Slice[TypeExpr]
 end
 
 struct FuncSig
-  name: TokIdent
-  params: Slice[Param]
-  ret: OptionType
+  Name: String
+  TypeParams: Slice[String]
+  Params: Slice[Param]
+  Ret: Option[TypeExpr]
 end
 
-# ---- Types ----
-
-enum Type
-  Name(TokIdent, Slice[Type])   # name + type args
-  Func(Slice[Type], Type)       # params -> ret
+enum TypeExpr
+  NamedType(String, Slice[TypeExpr])
+  FuncType(Slice[TypeExpr], Ref[TypeExpr])
+  TupleType(Slice[TypeExpr])
+  UnitType
 end
 
-# ---- Expressions ----
+struct Bind
+  Name: String
+  Type: Option[TypeExpr]
+  Value: Expr
+end
 
 enum Expr
-  Int(String)
-  Float(String)
-  Str(String)
-  Ident(TokIdent)
-  Call(Box[Expr], Slice[Expr])
-  Binary(String, Box[Expr], Box[Expr])
-  If(Box[Expr], Box[Expr], Box[Expr])      # cond, then, else
-  Let(String, Box[Expr])                    # name, value
-  Assign(String, Box[Expr])                # name, value
-  Field(Box[Expr], String)                 # expr.field
-  Block(Slice[Expr])                       # block of expressions (last is result)
-  Unit
+  IdentExpr(String)
+  NumberExpr(String)
+  StringExpr(String)
+  BoolExpr(Bool)
+  UnitExpr
+  CallExpr(Ref[Expr], Slice[Expr])
+  FieldExpr(Ref[Expr], String)
+  UnaryExpr(String, Ref[Expr])
+  BinaryExpr(String, Ref[Expr], Ref[Expr])
+  IfExpr(Ref[Expr], Ref[Expr], Ref[Expr])
+  BlockExpr(Slice[Expr])
+  LetExpr(Bind)
 end
 
-# ---- Convenience sum-type wrappers ----
-
-enum OptionType
-  Some(Type)
-  None_
-end
-
-# For now the parser works directly with string tokens rather than
-# reusing parsec's Rune-level parsers. This is because we need to
-# parse at the character level directly.
-
-# We'll parse the whole source with parsec combinators that go
-# directly from characters to AST nodes.
-
-# The key strategy:
-# - skipTrivia: parsec combinator that skips whitespace/comments/newlines
-# - ident: parsec parser that returns the identifier string and skips trivia after it
-# - keyword(s): parsec parser that matches a keyword and skips trivia
-# - symbol(s): parsec parser that matches a symbol and skips trivia
-
-# Since the only way to write parsers in parsec is via Parser[A] = { run: func(State) -> Reply[A] },
-# every parser is a closure over State. We name them as functions returning Parser[A].
-
-# ---- Import from parsec ----
-# parsec is in lib/text/parsec/ and its types are available since we're in the same
-# mygo module. But we can't import it because MyGO doesn't have normal Go-style imports
-# for other .mygo files — they're compiled independently.
-#
-# Actually, looking at how parsec is used: the tests in parsec_test.mygo use the same
-# "package parsec" declarationling. But parser2 is a different package.
-#
-# MyGO's import works differently: you import .mygo packages by their full path,
-# like `import parsec "lib/text/parsec"`. Let me check if this works...
-
-# For now I'll assume we can import parsec. We need:
-#   import parsec "lib/text/parsec"
-# and then use parsec.PString, parsec.PChar, etc.
-
-# Actually, looking at the LSP server, it does:
-#   import json "go:encoding/json"
-# That's a Go import. For MyGO-to-MyGO imports, the mechanism is...
-# looking at how the compiler resolves them, I think it's:
-#   import parsec "lib/text/parsec"
-# but this may not work if parsec uses "package parsec" (no module path).
-
-# The safest approach: inline all necessary parsec infrastructure in this file.
-# We only need a handful of things: Parser, State, Reply, ParseInput, PPure, PFail,
-# PBind, PThen, POrElse, PAttempt, PLookAhead, PMany, PMany1, POptional,
-# PSatisfy, PChar, PString, PDigit, PLetter, PAlphaNum, PAnyRune, PEof,
-# skipTrivia, and our own lexeme/ident/keyword/symbol helpers.
-
-# This is getting really long. Let me instead just define the key parsers we need
-# and re-export them through a thin wrapper.
-
-# Actually the most pragmatic approach: write a single-file self-contained parser
-# that doesn't depend on parsec at all, but uses the same monadic pattern.
-# We'll define our own simple Parser type and combinators inline.
-
-# But the user wants us to USE parsec. So let me check if cross-package
-# imports between .mygo files work...
-
-# For now, I'll define a tiny mini-parsec inline that has what we need,
-# and keep the rest of the file focused on the actual MyGO grammar.
-# Later if cross-.mygo imports work, we can switch to using parsec directly.
-
-# ============================================================
-# Mini parsec: just enough to build the MyGO parser
-# ============================================================
-
-# (Re-defined here since we can't yet import parsec from another .mygo package.
-#  This is a temporary measure; these are the same types as parsec.)
-
-struct Position
-  offset: Int
-  line: Int
-  column: Int
-end
-
-struct State
-  input: String
-  index: Int
-  position: Position
-end
-
-struct ParseError
-  position: Position
-  expected: Slice[String]
-  message: String
-end
-
-struct Reply[A]
-  ok: Bool
-  consumed: Bool
-  value: A
-  state: State
-  error: ParseError
-end
-
-struct Parser[A]
-  run: func(State) -> Reply[A]
-end
-
-# ---- Primitives ----
-
-func peekRune(state: State) -> Reply[Rune]
-  if state.index >= state.input.Len() then
-    Reply[Rune] { ok: false, consumed: false, value: Zero(), state: state, error: ParseError { position: state.position, expected: [], message: "unexpected EOF" } }
+func ParseFile(input: String) -> Result[File, String]
+  let r = ps.ParseInput(fileParser(), input)
+  if r.Ok then
+    Ok(r.Value)
   else
-    let r = go[Rune] {
-      code: """
-        func() rune {
-          r, _ := /* ::utf8.DecodeRuneInString(state.input[state.index:]) */
-          return r
-        }()
-      """
-    }
-    Reply[Rune] { ok: true, consumed: false, value: r, state: state, error: ParseError { position: state.position, expected: [], message: "" } }
+    Err(formatError(r.Error))
   end
+end
+
+func fileParser() -> ps.Parser[File]
+  ps.PBind(kw("package"), func(_: String) -> ps.Parser[File]
+    ps.PBind(identifier(), func(pkg: String) -> ps.Parser[File]
+      ps.PBind(ps.PMany(decl()), func(decls: Slice[Decl]) -> ps.Parser[File]
+        ps.PThen(trivia(), ps.PThen(ps.PEof(), ps.PPure(File { PackageName: pkg, Decls: decls })))
+      end)
+    end)
+  end)
+end
+
+func decl() -> ps.Parser[Decl]
+  ps.PChoice([
+    ps.PAttempt(importDecl()),
+    ps.PAttempt(structDecl()),
+    ps.PAttempt(enumDecl()),
+    ps.PAttempt(interfaceDecl()),
+    ps.PAttempt(implDecl()),
+    funcDecl(),
+  ])
+end
+
+func importDecl() -> ps.Parser[Decl]
+  ps.PBind(kw("import"), func(_: String) -> ps.Parser[Decl]
+    ps.PBind(ps.POptional(identifierRaw()), func(alias: Option[String]) -> ps.Parser[Decl]
+      ps.PMap(stringLiteral(), func(path: String) -> Decl
+        let realAlias = switch alias
+          case Some(a) => a
+          case None => defaultImportAlias(path)
+        end
+        Decl.ImportDecl(realAlias, path)
+      end)
+    end)
+  end)
+end
+
+func structDecl() -> ps.Parser[Decl]
+  ps.PBind(kw("struct"), func(_: String) -> ps.Parser[Decl]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[Decl]
+      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[Decl]
+        ps.PBind(ps.PMany(fieldDecl()), func(fields: Slice[Field]) -> ps.Parser[Decl]
+          ps.PThen(kw("end"), ps.PPure(Decl.StructDecl(name, tps, fields)))
+        end)
+      end)
+    end)
+  end)
+end
+
+func enumDecl() -> ps.Parser[Decl]
+  ps.PBind(kw("enum"), func(_: String) -> ps.Parser[Decl]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[Decl]
+      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[Decl]
+        ps.PBind(ps.PMany(variantDecl()), func(vars: Slice[Variant]) -> ps.Parser[Decl]
+          ps.PThen(kw("end"), ps.PPure(Decl.EnumDecl(name, tps, vars)))
+        end)
+      end)
+    end)
+  end)
+end
+
+func interfaceDecl() -> ps.Parser[Decl]
+  ps.PBind(kw("interface"), func(_: String) -> ps.Parser[Decl]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[Decl]
+      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[Decl]
+        ps.PBind(ps.PMany(funcSig()), func(methods: Slice[FuncSig]) -> ps.Parser[Decl]
+          ps.PThen(kw("end"), ps.PPure(Decl.InterfaceDecl(name, tps, methods)))
+        end)
+      end)
+    end)
+  end)
+end
+
+func implDecl() -> ps.Parser[Decl]
+  ps.PBind(kw("impl"), func(_: String) -> ps.Parser[Decl]
+    ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[Decl]
+      ps.PBind(typeExpr(), func(target: TypeExpr) -> ps.Parser[Decl]
+        ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(iface: Option[TypeExpr]) -> ps.Parser[Decl]
+          ps.PBind(ps.PMany(funcSig()), func(methods: Slice[FuncSig]) -> ps.Parser[Decl]
+            ps.PThen(kw("end"), ps.PPure(Decl.ImplDecl(tps, target, iface, methods)))
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func funcDecl() -> ps.Parser[Decl]
+  ps.PMap(funcSigAndBody(), func(pair: (FuncSig, Expr)) -> Decl
+    let (sig, body) = pair
+    Decl.FuncDecl(sig.Name, sig.TypeParams, sig.Params, sig.Ret, body)
+  end)
+end
+
+func funcSigAndBody() -> ps.Parser[(FuncSig, Expr)]
+  ps.PBind(funcSig(), func(sig: FuncSig) -> ps.Parser[(FuncSig, Expr)]
+    ps.PBind(blockUntilEnd(), func(body: Expr) -> ps.Parser[(FuncSig, Expr)]
+      ps.PThen(kw("end"), ps.PPure((sig, body)))
+    end)
+  end)
+end
+
+func funcSig() -> ps.Parser[FuncSig]
+  ps.PBind(kw("func"), func(_: String) -> ps.Parser[FuncSig]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[FuncSig]
+      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[FuncSig]
+        ps.PBind(paren(ps.PSepBy(param(), sym(","))), func(params: Slice[Param]) -> ps.Parser[FuncSig]
+          ps.PMap(ps.POptional(ps.PThen(sym("->"), typeExpr())), func(ret: Option[TypeExpr]) -> FuncSig
+            FuncSig { Name: name, TypeParams: tps, Params: params, Ret: ret }
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func fieldDecl() -> ps.Parser[Field]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[Field]
+    ps.PBind(sym(":"), func(_: String) -> ps.Parser[Field]
+      ps.PBind(typeExpr(), func(typ: TypeExpr) -> ps.Parser[Field]
+        ps.PMap(ps.POptional(stringLiteral()), func(tag: Option[String]) -> Field
+          Field { Name: name, Type: typ, Tag: tag }
+        end)
+      end)
+    end)
+  end)
+end
+
+func variantDecl() -> ps.Parser[Variant]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[Variant]
+    ps.PMap(ps.POptional(paren(ps.PSepBy(typeExpr(), sym(",")))), func(fields: Option[Slice[TypeExpr]]) -> Variant
+      let actual = switch fields
+        case Some(items) => items
+        case None => []
+      end
+      Variant { Name: name, Fields: actual }
+    end)
+  end)
+end
+
+func param() -> ps.Parser[Param]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[Param]
+    ps.PBind(sym(":"), func(_: String) -> ps.Parser[Param]
+      ps.PMap(typeExpr(), func(typ: TypeExpr) -> Param
+        Param { Name: name, Type: typ }
+      end)
+    end)
+  end)
+end
+
+func typeExpr() -> ps.Parser[TypeExpr]
+  ps.PChoice([
+    ps.PAttempt(funcType()),
+    ps.PAttempt(namedType()),
+    tupleType(),
+  ])
+end
+
+func lazyTypeExpr() -> ps.Parser[TypeExpr]
+  ps.Parser[TypeExpr] {
+    Run: func(state: ps.State) -> ps.Reply[TypeExpr]
+      typeExpr().Run(state)
+    end
+  }
+end
+
+func funcType() -> ps.Parser[TypeExpr]
+  ps.PBind(kw("func"), func(_: String) -> ps.Parser[TypeExpr]
+    ps.PBind(paren(ps.PSepBy(lazyTypeExpr(), sym(","))), func(params: Slice[TypeExpr]) -> ps.Parser[TypeExpr]
+      ps.PMap(ps.PThen(sym("->"), lazyTypeExpr()), func(ret: TypeExpr) -> TypeExpr
+        TypeExpr.FuncType(params, Ref.new(ret))
+      end)
+    end)
+  end)
+end
+
+func tupleType() -> ps.Parser[TypeExpr]
+  ps.PBind(paren(ps.PSepBy(lazyTypeExpr(), sym(","))), func(items: Slice[TypeExpr]) -> ps.Parser[TypeExpr]
+    if items.Len() == 0 then
+      ps.PPure(TypeExpr.UnitType)
+    else
+      ps.PPure(TypeExpr.TupleType(items))
+    end
+  end)
+end
+
+func namedType() -> ps.Parser[TypeExpr]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[TypeExpr]
+    ps.PMap(typeArgList(), func(args: Slice[TypeExpr]) -> TypeExpr
+      TypeExpr.NamedType(name, args)
+    end)
+  end)
+end
+
+func typeParamList() -> ps.Parser[Slice[String]]
+  ps.POrElse(brackets(ps.PSepBy(identifier(), sym(","))), ps.PPure([] as Slice[String]))
+end
+
+func typeArgList() -> ps.Parser[Slice[TypeExpr]]
+  ps.POrElse(brackets(ps.PSepBy(lazyTypeExpr(), sym(","))), ps.PPure([] as Slice[TypeExpr]))
+end
+
+func blockUntilEnd() -> ps.Parser[Expr]
+  ps.Parser[Expr] {
+    Run: func(state: ps.State) -> ps.Reply[Expr]
+      blockItems(state, state, [])
+    end
+  }
+end
+
+func blockItems(start: ps.State, cur: ps.State, items: Slice[Expr]) -> ps.Reply[Expr]
+  let stop = ps.PLookAhead(kw("end")).Run(cur)
+  if stop.Ok then
+    ps.Reply[Expr] {
+      Ok: true, Consumed: cur.Index != start.Index, Value: Expr.BlockExpr(items),
+      State: cur, Error: ps.EmptyError(cur.Position)
+    }
+  else
+    let r = expr().Run(cur)
+    if !r.Ok then
+      r
+    else
+      blockItems(start, r.State, items.Append(r.Value))
+    end
+  end
+end
+
+func expr() -> ps.Parser[Expr]
+  ps.PChoice([
+    ps.PAttempt(letExpr()),
+    ps.PAttempt(ifExpr()),
+    binaryExpr(),
+  ])
+end
+
+func lazyExpr() -> ps.Parser[Expr]
+  ps.Parser[Expr] {
+    Run: func(state: ps.State) -> ps.Reply[Expr]
+      expr().Run(state)
+    end
+  }
+end
+
+func letExpr() -> ps.Parser[Expr]
+  ps.PBind(kw("let"), func(_: String) -> ps.Parser[Expr]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[Expr]
+      ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ: Option[TypeExpr]) -> ps.Parser[Expr]
+        ps.PBind(sym("="), func(_: String) -> ps.Parser[Expr]
+          ps.PMap(expr(), func(value: Expr) -> Expr
+            Expr.LetExpr(Bind { Name: name, Type: typ, Value: value })
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func ifExpr() -> ps.Parser[Expr]
+  ps.PBind(kw("if"), func(_: String) -> ps.Parser[Expr]
+    ps.PBind(expr(), func(cond: Expr) -> ps.Parser[Expr]
+      ps.PBind(sym("=>"), func(_: String) -> ps.Parser[Expr]
+        ps.PBind(expr(), func(thenExpr: Expr) -> ps.Parser[Expr]
+          ps.PMap(ps.PThen(kw("else"), expr()), func(elseExpr: Expr) -> Expr
+            Expr.IfExpr(Ref.new(cond), Ref.new(thenExpr), Ref.new(elseExpr))
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func binaryExpr() -> ps.Parser[Expr]
+  chainLeft(postfixExpr(), binaryOp(), func(op: String, left: Expr, right: Expr) -> Expr
+    Expr.BinaryExpr(op, Ref.new(left), Ref.new(right))
+  end)
+end
+
+func postfixExpr() -> ps.Parser[Expr]
+  ps.Parser[Expr] {
+    Run: func(state: ps.State) -> ps.Reply[Expr]
+      let first = primaryExpr().Run(state)
+      if !first.Ok then
+        first
+      else
+        postfixTail(state, first.State, first.Value)
+      end
+    end
+  }
+end
+
+func postfixTail(start: ps.State, cur: ps.State, acc: Expr) -> ps.Reply[Expr]
+  let call = paren(ps.PSepBy(lazyExpr(), sym(","))).Run(cur)
+  if call.Ok then
+    postfixTail(start, call.State, Expr.CallExpr(Ref.new(acc), call.Value))
+  else
+    let fld = ps.PThen(sym("."), identifier()).Run(cur)
+    if fld.Ok then
+      postfixTail(start, fld.State, Expr.FieldExpr(Ref.new(acc), fld.Value))
+    else
+      ps.Reply[Expr] {
+        Ok: true, Consumed: cur.Index != start.Index, Value: acc,
+        State: cur, Error: ps.EmptyError(cur.Position)
+      }
+    end
+  end
+end
+
+func primaryExpr() -> ps.Parser[Expr]
+  ps.PChoice([
+    ps.PMap(number(), func(v: String) -> Expr Expr.NumberExpr(v) end),
+    ps.PMap(stringLiteral(), func(v: String) -> Expr Expr.StringExpr(v) end),
+    ps.PMap(kw("true"), func(_: String) -> Expr Expr.BoolExpr(true) end),
+    ps.PMap(kw("false"), func(_: String) -> Expr Expr.BoolExpr(false) end),
+    ps.PMap(paren(ps.PPure(())), func(_: ()) -> Expr Expr.UnitExpr end),
+    paren(lazyExpr()),
+    ps.PMap(identifier(), func(v: String) -> Expr Expr.IdentExpr(v) end),
+  ])
+end
+
+func binaryOp() -> ps.Parser[String]
+  ps.PChoice([
+    sym("=="), sym("!="), sym("<="), sym(">="),
+    sym("<|"), sym("|>"),
+    sym("+"), sym("-"), sym("*"), sym("/"),
+    sym("<"), sym(">"),
+  ])
+end
+
+func chainLeft[A](item: ps.Parser[A], op: ps.Parser[String], combine: func(String, A, A) -> A) -> ps.Parser[A]
+  ps.Parser[A] {
+    Run: func(state: ps.State) -> ps.Reply[A]
+      let first = item.Run(state)
+      if !first.Ok then
+        first
+      else
+        chainLeftTail(item, op, combine, state, first.State, first.Value)
+      end
+    end
+  }
+end
+
+func chainLeftTail[A](item: ps.Parser[A], op: ps.Parser[String], combine: func(String, A, A) -> A, start: ps.State, cur: ps.State, acc: A) -> ps.Reply[A]
+  let rop = op.Run(cur)
+  if !rop.Ok then
+    ps.Reply[A] {
+      Ok: true, Consumed: cur.Index != start.Index, Value: acc,
+      State: cur, Error: ps.EmptyError(cur.Position)
+    }
+  else
+    let rr = item.Run(rop.State)
+    if !rr.Ok then
+      rr
+    else
+      chainLeftTail(item, op, combine, start, rr.State, combine(rop.Value, acc, rr.Value))
+    end
+  end
+end
+
+func identifier() -> ps.Parser[String]
+  lexeme(ps.PAttempt(identifierRaw()))
+end
+
+func identifierRaw() -> ps.Parser[String]
+  ps.PBind(ps.PSatisfy(isIdentStart, "identifier"), func(first: Rune) -> ps.Parser[String]
+    ps.PBind(ps.PMany(ps.PSatisfy(isIdentRest, "identifier character")), func(rest: Slice[Rune]) -> ps.Parser[String]
+      let value = String.FromRunes(rest.Prepend(first))
+      if isKeyword(value) then
+        failIdentifier()
+      else
+        ps.PPure(value)
+      end
+    end)
+  end)
+end
+
+func failIdentifier() -> ps.Parser[String]
+  ps.Parser[String] {
+    Run: func(state: ps.State) -> ps.Reply[String]
+      ps.Reply[String] {
+        Ok: false,
+        Consumed: false,
+        Value: "",
+        State: state,
+        Error: ps.ErrorAt(state.Position, "identifier", ps.EmptyExpected()),
+      }
+    end
+  }
+end
+
+func number() -> ps.Parser[String]
+  lexeme(ps.PBind(ps.PMany1(ps.PSatisfy(func(r: Rune) -> Bool
+    (r >= '0' && r <= '9') || r == '.'
+  end, "number")), func(rs: Slice[Rune]) -> ps.Parser[String]
+    ps.PPure(String.FromRunes(rs))
+  end))
+end
+
+func stringLiteral() -> ps.Parser[String]
+  lexeme(ps.PBind(ps.PChar('"'), func(_: Rune) -> ps.Parser[String]
+    ps.PBind(ps.PMany(stringChar()), func(chars: Slice[Rune]) -> ps.Parser[String]
+      ps.PThen(ps.PChar('"'), ps.PPure(String.FromRunes(chars)))
+    end)
+  end))
+end
+
+func stringChar() -> ps.Parser[Rune]
+  ps.POrElse(
+    ps.PThen(ps.PChar('\\'), ps.PChoice([
+      ps.PMap(ps.PChar('n'), func(_: Rune) -> Rune '\n' end),
+      ps.PMap(ps.PChar('t'), func(_: Rune) -> Rune '\t' end),
+      ps.PMap(ps.PChar('"'), func(_: Rune) -> Rune '"' end),
+      ps.PMap(ps.PChar('\\'), func(_: Rune) -> Rune '\\' end),
+    ])),
+    ps.PSatisfy(func(r: Rune) -> Bool
+      r != '"' && r != '\\'
+    end, "string character"),
+  )
+end
+
+func kw(word: String) -> ps.Parser[String]
+  lexeme(ps.PAttempt(ps.PBind(ps.PString(word), func(value: String) -> ps.Parser[String]
+    ps.PThen(ps.PNotFollowedBy(ps.PSatisfy(isIdentRest, "identifier character"), "keyword boundary"), ps.PPure(value))
+  end)))
+end
+
+func sym(value: String) -> ps.Parser[String]
+  lexeme(ps.PString(value))
+end
+
+func lexeme[A](p: ps.Parser[A]) -> ps.Parser[A]
+  ps.PBind(trivia(), func(_: ()) -> ps.Parser[A]
+    ps.PBind(p, func(value: A) -> ps.Parser[A]
+      ps.PThen(trivia(), ps.PPure(value))
+    end)
+  end)
+end
+
+func trivia() -> ps.Parser[()]
+  ps.PThen(ps.PMany(ps.PChoice([spaceUnit(), lineComment()])), ps.PPure(()))
+end
+
+func spaceUnit() -> ps.Parser[()]
+  ps.PThen(ps.PSatisfy(func(r: Rune) -> Bool
+    r == ' ' || r == '\t' || r == '\n' || r == '\r'
+  end, "whitespace"), ps.PPure(()))
+end
+
+func lineComment() -> ps.Parser[()]
+  ps.PBind(ps.PString("#"), func(_: String) -> ps.Parser[()]
+    ps.PThen(ps.PMany(ps.PSatisfy(func(r: Rune) -> Bool
+      r != '\n'
+    end, "comment character")), ps.PPure(()))
+  end)
+end
+
+func paren[A](p: ps.Parser[A]) -> ps.Parser[A]
+  ps.PBetween(sym("("), p, sym(")"))
+end
+
+func brackets[A](p: ps.Parser[A]) -> ps.Parser[A]
+  ps.PBetween(sym("["), p, sym("]"))
+end
+
+func isIdentStart(r: Rune) -> Bool
+  (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_'
+end
+
+func isIdentRest(r: Rune) -> Bool
+  isIdentStart(r) || (r >= '0' && r <= '9')
+end
+
+func isKeyword(value: String) -> Bool
+  switch value
+    case "package" => true
+    case "import" => true
+    case "enum" => true
+    case "struct" => true
+    case "interface" => true
+    case "impl" => true
+    case "func" => true
+    case "if" => true
+    case "then" => true
+    case "elsif" => true
+    case "else" => true
+    case "switch" => true
+    case "case" => true
+    case "end" => true
+    case "using" => true
+    case "not" => true
+    case "let" => true
+    case "letrec" => true
+    case "var" => true
+    case "embed" => true
+    case "while" => true
+    case "return" => true
+    case "go" => true
+    case "in" => true
+    case "type" => true
+    case "as" => true
+    case "true" => true
+    case "false" => true
+    case _ => false
+  end
+end
+
+func defaultImportAlias(path: String) -> String
+  let parts = strings.Split(path, "/")
+  if parts.Len() == 0 then
+    path
+  else
+    parts.Get(parts.Len() - 1).UnwrapOr(path)
+  end
+end
+
+func formatError(err: ps.ParseError) -> String
+  "parse error at " + err.Position.Line.ToString() + ":" + err.Position.Column.ToString() + ": " + err.Message
 end

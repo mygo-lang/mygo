@@ -7,6 +7,7 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -285,19 +286,28 @@ func validateAST(file *ast.File, declSources []DeclSource) error {
 	}
 
 	walkStmt = func(path string, s ast.Stmt) error {
-		if s == nil {
+		if s == nil || isTypedNil(s) {
 			return fmt.Errorf("nil ast.Stmt at %s", path)
 		}
 		switch v := s.(type) {
 		case *ast.BlockStmt:
+			if v == nil {
+				return fmt.Errorf("nil *ast.BlockStmt at %s", path)
+			}
 			for i, stmt := range v.List {
 				if err := walkStmt(fmt.Sprintf("%s.List[%d]", path, i), stmt); err != nil {
 					return err
 				}
 			}
 		case *ast.ExprStmt:
+			if v == nil {
+				return fmt.Errorf("nil *ast.ExprStmt at %s", path)
+			}
 			return walkExpr(path+".X", v.X)
 		case *ast.AssignStmt:
+			if v == nil {
+				return fmt.Errorf("nil *ast.AssignStmt at %s", path)
+			}
 			for i, e := range v.Lhs {
 				if err := walkExpr(fmt.Sprintf("%s.Lhs[%d]", path, i), e); err != nil {
 					return err
@@ -309,14 +319,23 @@ func validateAST(file *ast.File, declSources []DeclSource) error {
 				}
 			}
 		case *ast.ReturnStmt:
+			if v == nil {
+				return fmt.Errorf("nil *ast.ReturnStmt at %s", path)
+			}
 			for i, e := range v.Results {
 				if err := walkExpr(fmt.Sprintf("%s.Results[%d]", path, i), e); err != nil {
 					return err
 				}
 			}
 		case *ast.DeclStmt:
+			if v == nil {
+				return fmt.Errorf("nil *ast.DeclStmt at %s", path)
+			}
 			return walkDecl(path+".Decl", v.Decl)
 		case *ast.IfStmt:
+			if v == nil {
+				return fmt.Errorf("nil *ast.IfStmt at %s", path)
+			}
 			if err := walkExpr(path+".Cond", v.Cond); err != nil {
 				return err
 			}
@@ -327,6 +346,30 @@ func validateAST(file *ast.File, declSources []DeclSource) error {
 			}
 			if v.Else != nil {
 				if err := walkStmt(path+".Else", v.Else); err != nil {
+					return err
+				}
+			}
+		case *ast.ForStmt:
+			if v == nil {
+				return fmt.Errorf("nil *ast.ForStmt at %s", path)
+			}
+			if v.Init != nil {
+				if err := walkStmt(path+".Init", v.Init); err != nil {
+					return err
+				}
+			}
+			if v.Cond != nil {
+				if err := walkExpr(path+".Cond", v.Cond); err != nil {
+					return err
+				}
+			}
+			if v.Post != nil {
+				if err := walkStmt(path+".Post", v.Post); err != nil {
+					return err
+				}
+			}
+			if v.Body != nil {
+				if err := walkStmt(path+".Body", v.Body); err != nil {
 					return err
 				}
 			}
@@ -403,6 +446,19 @@ func validateAST(file *ast.File, declSources []DeclSource) error {
 		}
 	}
 	return nil
+}
+
+func isTypedNil(v any) bool {
+	if v == nil {
+		return true
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return rv.IsNil()
+	default:
+		return false
+	}
 }
 
 func declName(decl ast.Decl) string {
