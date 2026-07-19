@@ -28,7 +28,7 @@ type Reply[A any] struct {
 	Consumed bool
 	Value    A
 	State    State
-	Error    ParseError
+	Error    Option[ParseError]
 }
 type Parser[A any] struct {
 	Run func(State) Reply[A]
@@ -346,17 +346,31 @@ func MatchString(state State, expected string) Reply[string] {
 		return Reply[string]{Ok: true, Consumed: true, Value: expected, State: next}
 	}()
 }
-func EmptyError(pos Position) ParseError {
-	return ParseError{Position: pos, Expected: []string{}, Message: ""}
+func EmptyError(pos Position) Option[ParseError] {
+	return Some[ParseError](ParseError{Position: pos, Expected: []string{}, Message: ""})
 }
-func ErrorAt(pos Position, message string, expected []string) ParseError {
-	return ParseError{Position: pos, Expected: expected, Message: message}
+func ErrorAt(pos Position, message string, expected []string) Option[ParseError] {
+	return Some[ParseError](ParseError{Position: pos, Expected: expected, Message: message})
 }
 func EmptyExpected() []string {
 	return []string{}
 }
-func WithExpected(err ParseError, name string) ParseError {
-	return ParseError{Position: err.Position, Expected: Slice_Append(err.Expected, name), Message: err.Message}
+func WithExpected(err Option[ParseError], name string) Option[ParseError] {
+	return func() Option[ParseError] {
+		if v_2, ok := err.(OptionSome[ParseError]); ok {
+			return func() Option[ParseError] {
+				return Some[ParseError](ParseError{Position: v_2.F0.Position, Expected: Slice_Append(v_2.F0.Expected, name), Message: v_2.F0.Message})
+			}()
+		} else {
+			if _, ok := err.(OptionNone[ParseError]); ok {
+				return func() Option[ParseError] {
+					return None[ParseError]()
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
+	}()
 }
 func FromRunes(rs []rune) string {
 	return String_FromRunes(rs)

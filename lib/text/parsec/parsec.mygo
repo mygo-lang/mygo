@@ -34,7 +34,7 @@ struct Reply[A]
   Consumed: Bool
   Value: A
   State: State
-  Error: ParseError
+  Error: Option[ParseError]
 end
 
 struct Parser[A]
@@ -518,24 +518,31 @@ func MatchString(state: State, expected: String) -> Reply[String]
   }
 end
 
-func EmptyError(pos: Position) -> ParseError
-  ParseError { Position: pos, Expected: [], Message: "" }
+func EmptyError(pos: Position) -> Option[ParseError]
+  Some(ParseError { Position: pos, Expected: [], Message: "" })
 end
 
-func ErrorAt(pos: Position, message: String, expected: Slice[String]) -> ParseError
-  ParseError { Position: pos, Expected: expected, Message: message }
+func ErrorAt(pos: Position, message: String, expected: Slice[String]) -> Option[ParseError]
+  Some(ParseError { Position: pos, Expected: expected, Message: message })
 end
 
 func EmptyExpected() -> Slice[String]
   []
 end
 
-func WithExpected(err: ParseError, name: String) -> ParseError
-  ParseError {
-    Position: err.Position,
-    Expected: err.Expected.Append(name),
-    Message: err.Message,
-  }
+func WithExpected(err: Option[ParseError], name: String) -> Option[ParseError]
+  switch err
+    case Some(e) then
+      Some(ParseError {
+        Position: e.Position,
+        Expected: e.Expected.Append(name),
+        Message: e.Message,
+      })
+    end
+    case None then
+      None
+    end
+  end
 end
 
 func FromRunes(rs: Slice[Rune]) -> String

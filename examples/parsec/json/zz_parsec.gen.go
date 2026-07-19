@@ -78,7 +78,7 @@ func JsonValueJObjectCtor(a0 []struct {
 }) JsonValue {
 	return JsonValueJObject{F0: a0}
 }
-func JsonValue_ToString(value JsonValue) string {
+func ToString_jsonvalue(value JsonValue) string {
 	return func() string {
 		if _, ok := value.(JsonValueJNull); ok {
 			return func() string {
@@ -109,7 +109,7 @@ func JsonValue_ToString(value JsonValue) string {
 						if v_2, ok := value.(JsonValueJArray); ok {
 							return func() string {
 								parts_5 := Map__t_t(v_2.F0, func(v JsonValue) string {
-									return JsonValue_ToString(v)
+									return ToString_jsonvalue(v)
 								})
 								return "[" + strings.Join(parts_5, ",") + "]"
 							}()
@@ -123,7 +123,7 @@ func JsonValue_ToString(value JsonValue) string {
 										__tuple_1 := p
 										k_2 := __tuple_1.F0
 										v_3 := __tuple_1.F1
-										return "\"" + jsonEscape(k_2) + "\":" + JsonValue_ToString(v_3)
+										return "\"" + jsonEscape(k_2) + "\":" + ToString_jsonvalue(JsonValue(v_3))
 									})
 									return "{" + strings.Join(parts_4, ",") + "}"
 								}()
@@ -476,7 +476,7 @@ func ParseJson(input string) Result[JsonValue, string] {
 		}]{Ok: true, Consumed: true, Value: struct {
 			F0 string
 			F1 JsonValue
-		}{F0: keyStr_41, F1: vr_43.Value}, State: vr_43.State}
+		}{F0: keyStr_41, F1: vr_43.Value}, State: vr_43.State, Error: ps.EmptyError(vr_43.State.Position)}
 	}}
 	objP_39 = ps.PMap(ps.PBetween(ws(ps.PChar('{')), ps.PSepBy(pairP_38, ws(ps.PChar(','))), ws(ps.PChar('}'))), func(pairs []struct {
 		F0 string
@@ -488,8 +488,20 @@ func ParseJson(input string) Result[JsonValue, string] {
 	return func() Result[JsonValue, string] {
 		if !r_44.Ok {
 			return func() Result[JsonValue, string] {
-				errMsg_45 := fmt.Sprintf("parse error at line %d, column %d: %s", r_44.Error.Position.Line, r_44.Error.Position.Column, r_44.Error.Message)
-				return Err[JsonValue, string](errMsg_45)
+				if v_12, ok := r_44.Error.(OptionSome[ps.ParseError]); ok {
+					return func() Result[JsonValue, string] {
+						errMsg_45 := fmt.Sprintf("parse error at line %d, column %d: %s", v_12.F0.Position.Line, v_12.F0.Position.Column, v_12.F0.Message)
+						return Err[JsonValue, string](errMsg_45)
+					}()
+				} else {
+					if _, ok := r_44.Error.(OptionNone[ps.ParseError]); ok {
+						return func() Result[JsonValue, string] {
+							return Err[JsonValue, string]("parse error")
+						}()
+					} else {
+						panic("unreachable")
+					}
+				}
 			}()
 		} else {
 			return Ok[JsonValue, string](r_44.Value)

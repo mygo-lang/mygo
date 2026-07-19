@@ -258,10 +258,10 @@ func TestPOptionalSucceedsWhenPresent(t *testing.T) {
 		t.Fatal("POptional should succeed")
 	}
 	func() {
-		if v_2, ok := result_59.Value.(OptionSome[rune]); ok {
+		if v_4, ok := result_59.Value.(OptionSome[rune]); ok {
 			func() {
-				if v_2.F0 != 'a' {
-					t.Fatalf("POptional Some value = %d, want %d", v_2.F0, 'a')
+				if v_4.F0 != 'a' {
+					t.Fatalf("POptional Some value = %d, want %d", v_4.F0, 'a')
 				}
 			}()
 		} else {
@@ -606,10 +606,10 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 	}
 	w0_133 := Get__t_int_t(result_132.Value, 0)
 	func() {
-		if v_6, ok := w0_133.(OptionSome[string]); ok {
+		if v_8, ok := w0_133.(OptionSome[string]); ok {
 			func() {
-				if v_6.F0 != "hello" {
-					t.Fatalf("words[0] = %q, want %q", v_6.F0, "hello")
+				if v_8.F0 != "hello" {
+					t.Fatalf("words[0] = %q, want %q", v_8.F0, "hello")
 				}
 			}()
 		} else {
@@ -622,10 +622,10 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 	}()
 	w1_134 := Get__t_int_t(result_132.Value, 1)
 	func() {
-		if v_8, ok := w1_134.(OptionSome[string]); ok {
+		if v_10, ok := w1_134.(OptionSome[string]); ok {
 			func() {
-				if v_8.F0 != "world" {
-					t.Fatalf("words[1] = %q, want %q", v_8.F0, "world")
+				if v_10.F0 != "world" {
+					t.Fatalf("words[1] = %q, want %q", v_10.F0, "world")
 				}
 			}()
 		} else {
@@ -638,10 +638,10 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 	}()
 	w2_135 := Get__t_int_t(result_132.Value, 2)
 	func() {
-		if v_10, ok := w2_135.(OptionSome[string]); ok {
+		if v_12, ok := w2_135.(OptionSome[string]); ok {
 			func() {
-				if v_10.F0 != "foo" {
-					t.Fatalf("words[2] = %q, want %q", v_10.F0, "foo")
+				if v_12.F0 != "foo" {
+					t.Fatalf("words[2] = %q, want %q", v_12.F0, "foo")
 				}
 			}()
 		} else {
@@ -705,10 +705,10 @@ func TestPOptionalWithBetween(t *testing.T) {
 		t.Fatal("optional group with parens should succeed")
 	}
 	func() {
-		if v_12, ok := result1_148.Value.(OptionSome[rune]); ok {
+		if v_14, ok := result1_148.Value.(OptionSome[rune]); ok {
 			func() {
-				if v_12.F0 != 'x' {
-					t.Fatalf("Some value = %d, want %d", v_12.F0, 'x')
+				if v_14.F0 != 'x' {
+					t.Fatalf("Some value = %d, want %d", v_14.F0, 'x')
 				}
 			}()
 		} else {
@@ -787,32 +787,68 @@ func TestPStringWithUTF8(t *testing.T) {
 func TestReplyEmptyError(t *testing.T) {
 	pos_160 := Position{Offset: 10, Line: 2, Column: 5}
 	err_161 := EmptyError(pos_160)
-	if err_161.Message != "" {
-		t.Fatalf("EmptyError message = %q, want empty", err_161.Message)
-	}
-	if Len__t_t(err_161.Expected) != 0 {
-		t.Fatalf("EmptyError expected length = %d, want 0", Len__t_t(err_161.Expected))
-	}
-	if err_161.Position.Offset != 10 {
-		t.Fatalf("EmptyError position.Offset = %d, want 10", err_161.Position.Offset)
-	}
+	func() {
+		if v_18, ok := err_161.(OptionSome[ParseError]); ok {
+			func() {
+				if v_18.F0.Message != "" {
+					t.Fatalf("EmptyError message = %q, want empty", v_18.F0.Message)
+				}
+				if Len__t_t(v_18.F0.Expected) != 0 {
+					t.Fatalf("EmptyError expected length = %d, want 0", Len__t_t(v_18.F0.Expected))
+				}
+				if v_18.F0.Position.Offset != 10 {
+					t.Fatalf("EmptyError position.Offset = %d, want 10", v_18.F0.Position.Offset)
+				}
+			}()
+		} else {
+			if _, ok := err_161.(OptionNone[ParseError]); ok {
+				func() {
+					t.Fatal("EmptyError returned None")
+				}()
+			}
+		}
+	}()
 }
 func TestReplyErrorAt(t *testing.T) {
 	pos_162 := Position{Offset: 0, Line: 1, Column: 1}
 	expected_163 := []string{"digit", "letter"}
 	err_164 := ErrorAt(pos_162, "expected digit", expected_163)
-	if err_164.Message != "expected digit" {
-		t.Fatalf("ErrorAt message = %q, want %q", err_164.Message, "expected digit")
-	}
-	if Len__t_t(err_164.Expected) != 2 {
-		t.Fatalf("ErrorAt expected length = %d, want 2", Len__t_t(err_164.Expected))
-	}
+	func() {
+		if v_20, ok := err_164.(OptionSome[ParseError]); ok {
+			func() {
+				if v_20.F0.Message != "expected digit" {
+					t.Fatalf("ErrorAt message = %q, want %q", v_20.F0.Message, "expected digit")
+				}
+				if Len__t_t(v_20.F0.Expected) != 2 {
+					t.Fatalf("ErrorAt expected length = %d, want 2", Len__t_t(v_20.F0.Expected))
+				}
+			}()
+		} else {
+			if _, ok := err_164.(OptionNone[ParseError]); ok {
+				func() {
+					t.Fatal("ErrorAt returned None")
+				}()
+			}
+		}
+	}()
 }
 func TestReplyWithExpected(t *testing.T) {
 	pos_165 := Position{Offset: 0, Line: 1, Column: 1}
 	err_166 := ErrorAt(pos_165, "expected", []string{"digit"})
 	err2_167 := WithExpected(err_166, "letter")
-	if Len__t_t(err2_167.Expected) != 2 {
-		t.Fatalf("WithExpected expected length = %d, want 2", Len__t_t(err2_167.Expected))
-	}
+	func() {
+		if v_22, ok := err2_167.(OptionSome[ParseError]); ok {
+			func() {
+				if Len__t_t(v_22.F0.Expected) != 2 {
+					t.Fatalf("WithExpected expected length = %d, want 2", Len__t_t(v_22.F0.Expected))
+				}
+			}()
+		} else {
+			if _, ok := err2_167.(OptionNone[ParseError]); ok {
+				func() {
+					t.Fatal("WithExpected returned None")
+				}()
+			}
+		}
+	}()
 }

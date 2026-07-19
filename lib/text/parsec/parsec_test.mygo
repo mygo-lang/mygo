@@ -890,14 +890,21 @@ end
 func TestReplyEmptyError(t: Ref[testing.T]) -> ()
   let pos = Position { Offset: 10, Line: 2, Column: 5 }
   let err = EmptyError(pos)
-  if err.Message != "" then
-    t.Fatalf("EmptyError message = %q, want empty", err.Message)
-  end
-  if err.Expected.Len() != 0 then
-    t.Fatalf("EmptyError expected length = %d, want 0", err.Expected.Len())
-  end
-  if err.Position.Offset != 10 then
-    t.Fatalf("EmptyError position.Offset = %d, want 10", err.Position.Offset)
+  switch err
+    case Some(e) then
+      if e.Message != "" then
+        t.Fatalf("EmptyError message = %q, want empty", e.Message)
+      end
+      if e.Expected.Len() != 0 then
+        t.Fatalf("EmptyError expected length = %d, want 0", e.Expected.Len())
+      end
+      if e.Position.Offset != 10 then
+        t.Fatalf("EmptyError position.Offset = %d, want 10", e.Position.Offset)
+      end
+    end
+    case None then
+      t.Fatal("EmptyError returned None")
+    end
   end
 end
 
@@ -905,11 +912,18 @@ func TestReplyErrorAt(t: Ref[testing.T]) -> ()
   let pos = Position { Offset: 0, Line: 1, Column: 1 }
   let expected = ["digit", "letter"]
   let err = ErrorAt(pos, "expected digit", expected)
-  if err.Message != "expected digit" then
-    t.Fatalf("ErrorAt message = %q, want %q", err.Message, "expected digit")
-  end
-  if err.Expected.Len() != 2 then
-    t.Fatalf("ErrorAt expected length = %d, want 2", err.Expected.Len())
+  switch err
+    case Some(e) then
+      if e.Message != "expected digit" then
+        t.Fatalf("ErrorAt message = %q, want %q", e.Message, "expected digit")
+      end
+      if e.Expected.Len() != 2 then
+        t.Fatalf("ErrorAt expected length = %d, want 2", e.Expected.Len())
+      end
+    end
+    case None then
+      t.Fatal("ErrorAt returned None")
+    end
   end
 end
 
@@ -917,7 +931,14 @@ func TestReplyWithExpected(t: Ref[testing.T]) -> ()
   let pos = Position { Offset: 0, Line: 1, Column: 1 }
   let err = ErrorAt(pos, "expected", ["digit"])
   let err2 = WithExpected(err, "letter")
-  if err2.Expected.Len() != 2 then
-    t.Fatalf("WithExpected expected length = %d, want 2", err2.Expected.Len())
+  switch err2
+    case Some(e) then
+      if e.Expected.Len() != 2 then
+        t.Fatalf("WithExpected expected length = %d, want 2", e.Expected.Len())
+      end
+    end
+    case None then
+      t.Fatal("WithExpected returned None")
+    end
   end
 end

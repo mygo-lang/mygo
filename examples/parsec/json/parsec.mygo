@@ -17,7 +17,7 @@ enum JsonValue
   JObject(Slice[(String, JsonValue)])
 end
 
-impl JsonValue
+impl JsonValueToString: ToString[JsonValue]
   func ToString(value: JsonValue) -> String
     switch value
       case JNull => "null"
@@ -26,13 +26,13 @@ impl JsonValue
       case JString(s) => "\"" + jsonEscape(s) + "\""
       case JArray(items) =>
         let parts = items.Map(func(v: JsonValue) -> String
-          JsonValue.ToString(v)
+          v.ToString()
         end)
         "[" + strings.Join(parts, ",") + "]"
       case JObject(pairs) =>
         let parts = pairs.Map(func(p: (String, JsonValue)) -> String
           let (k, v) = p
-          "\"" + jsonEscape(k) + "\":" + JsonValue.ToString(v)
+          "\"" + jsonEscape(k) + "\":" + (v as JsonValue).ToString()
         end)
         "{" + strings.Join(parts, ",") + "}"
     end
@@ -345,7 +345,8 @@ func ParseJson(input: String) -> Result[JsonValue, String]
           Ok: true,
           Consumed: true,
           Value: (keyStr, vr.Value),
-          State: vr.State
+          State: vr.State,
+          Error: ps.EmptyError(vr.State.Position),
         }
       end
     }
@@ -361,8 +362,15 @@ func ParseJson(input: String) -> Result[JsonValue, String]
   # ---- parse ----
   let r = ps.ParseInput(valueP, input)
   if !r.Ok then
-    let errMsg = fmt.Sprintf("parse error at line %d, column %d: %s", r.Error.Position.Line, r.Error.Position.Column, r.Error.Message)
-    Err(errMsg)
+    switch r.Error
+      case Some(err) then
+        let errMsg = fmt.Sprintf("parse error at line %d, column %d: %s", err.Position.Line, err.Position.Column, err.Message)
+        Err(errMsg)
+      end
+      case None then
+        Err("parse error")
+      end
+    end
   else
     Ok(r.Value)
   end
