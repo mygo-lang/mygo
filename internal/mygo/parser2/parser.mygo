@@ -78,7 +78,7 @@ func ParseFile(input: String) -> Result[File, String]
   if r.Ok then
     Ok(r.Value)
   else
-    Err(formatError(r.Error))
+    Err(formatError(r.Error, r.State.Position))
   end
 end
 
@@ -283,15 +283,19 @@ func typeArgList() -> ps.Parser[Slice[TypeExpr]]
 end
 
 func blockUntilEnd() -> ps.Parser[Expr]
+  blockUntil(kw("end"))
+end
+
+func blockUntil(stopParser: ps.Parser[String]) -> ps.Parser[Expr]
   ps.Parser[Expr] {
     Run: func(state: ps.State) -> ps.Reply[Expr]
-      blockItems(state, state, [])
+      blockItems(stopParser, state, state, [])
     end
   }
 end
 
-func blockItems(start: ps.State, cur: ps.State, items: Slice[Expr]) -> ps.Reply[Expr]
-  let stop = ps.PLookAhead(kw("end")).Run(cur)
+func blockItems(stopParser: ps.Parser[String], start: ps.State, cur: ps.State, items: Slice[Expr]) -> ps.Reply[Expr]
+  let stop = ps.PLookAhead(stopParser).Run(cur)
   if stop.Ok then
     ps.Reply[Expr] {
       Ok: true, Consumed: cur.Index != start.Index, Value: Expr.BlockExpr(items),
@@ -302,7 +306,7 @@ func blockItems(start: ps.State, cur: ps.State, items: Slice[Expr]) -> ps.Reply[
     if !r.Ok then
       r
     else
-      blockItems(start, r.State, items.Append(r.Value))
+      blockItems(stopParser, start, r.State, items.Append(r.Value))
     end
   end
 end
@@ -340,21 +344,124 @@ end
 func ifExpr() -> ps.Parser[Expr]
   ps.PBind(kw("if"), func(_: String) -> ps.Parser[Expr]
     ps.PBind(expr(), func(cond: Expr) -> ps.Parser[Expr]
-      ps.PBind(sym("=>"), func(_: String) -> ps.Parser[Expr]
-        ps.PBind(expr(), func(thenExpr: Expr) -> ps.Parser[Expr]
-          ps.PMap(ps.PThen(kw("else"), expr()), func(elseExpr: Expr) -> Expr
-            Expr.IfExpr(Ref.new(cond), Ref.new(thenExpr), Ref.new(elseExpr))
-          end)
-        end)
+      ps.PChoice([
+        ifArrowTail(cond),
+        ifBlockTail(cond),
+      ])
+    end)
+  end)
+end
+
+func ifArrowTail(cond: Expr) -> ps.Parser[Expr]
+  ps.PBind(sym("=>"), func(_: String) -> ps.Parser[Expr]
+    ps.PBind(expr(), func(thenExpr: Expr) -> ps.Parser[Expr]
+      ps.PMap(ps.PThen(kw("else"), expr()), func(elseExpr: Expr) -> Expr
+        Expr.IfExpr(Ref.new(cond), Ref.new(thenExpr), Ref.new(elseExpr))
       end)
     end)
   end)
 end
 
-func binaryExpr() -> ps.Parser[Expr]
-  chainLeft(postfixExpr(), binaryOp(), func(op: String, left: Expr, right: Expr) -> Expr
-    Expr.BinaryExpr(op, Ref.new(left), Ref.new(right))
+func ifBlockTail(cond: Expr) -> ps.Parser[Expr]
+  ps.PBind(kw("then"), func(_: String) -> ps.Parser[Expr]
+    ps.PBind(blockUntil(ps.PChoice([kw("elsif"), kw("else"), kw("end")])), func(thenBlock: Expr) -> ps.Parser[Expr]
+      ps.PBind(ifElseTail(), func(elseExpr: Expr) -> ps.Parser[Expr]
+        ps.PThen(kw("end"), ps.PPure(Expr.IfExpr(Ref.new(cond), Ref.new(bodyExprFromBlock(thenBlock)), Ref.new(elseExpr))))
+      end)
+    end)
   end)
+end
+
+func ifElseTail() -> ps.Parser[Expr]
+  ps.PChoice([
+    ps.PAttempt(ps.PThen(kw("else"), ps.PMap(blockUntil(kw("end")), bodyExprFromBlock))),
+    ps.PAttempt(ps.PBind(kw("elsif"), func(_: String) -> ps.Parser[Expr]
+      ps.PBind(expr(), func(cond: Expr) -> ps.Parser[Expr]
+        ps.PBind(kw("then"), func(_: String) -> ps.Parser[Expr]
+          ps.PBind(blockUntil(ps.PChoice([kw("elsif"), kw("else"), kw("end")])), func(thenBlock: Expr) -> ps.Parser[Expr]
+            ps.PMap(lazyIfElseTail(), func(elseExpr: Expr) -> Expr
+              Expr.IfExpr(Ref.new(cond), Ref.new(bodyExprFromBlock(thenBlock)), Ref.new(elseExpr))
+            end)
+          end)
+        end)
+      end)
+    end)),
+    ps.PPure(Expr.UnitExpr),
+  ])
+end
+
+func lazyIfElseTail() -> ps.Parser[Expr]
+  ps.Parser[Expr] {
+    Run: func(state: ps.State) -> ps.Reply[Expr]
+      ifElseTail().Run(state)
+    end
+  }
+end
+
+func bodyExprFromBlock(body: Expr) -> Expr
+  switch body
+    case BlockExpr(items) =>
+      if items.Len() == 1 then
+        items.Get(0).UnwrapOr(body)
+      else
+        body
+      end
+    case _ => body
+  end
+end
+
+func binaryExpr() -> ps.Parser[Expr]
+  pipeExpr()
+end
+
+func pipeExpr() -> ps.Parser[Expr]
+  chainLeft(orExpr(), pipeOp(), makeBinary())
+end
+
+func orExpr() -> ps.Parser[Expr]
+  chainLeft(andExpr(), sym("||"), makeBinary())
+end
+
+func andExpr() -> ps.Parser[Expr]
+  chainLeft(compareExpr(), sym("&&"), makeBinary())
+end
+
+func compareExpr() -> ps.Parser[Expr]
+  chainLeft(addExpr(), compareOp(), makeBinary())
+end
+
+func addExpr() -> ps.Parser[Expr]
+  chainLeft(mulExpr(), addOp(), makeBinary())
+end
+
+func mulExpr() -> ps.Parser[Expr]
+  chainLeft(unaryExpr(), mulOp(), makeBinary())
+end
+
+func unaryExpr() -> ps.Parser[Expr]
+  ps.PChoice([
+    ps.PAttempt(ps.PMap(ps.PThen(sym("!"), lazyUnaryExpr()), func(e: Expr) -> Expr
+      Expr.UnaryExpr("!", Ref.new(e))
+    end)),
+    ps.PAttempt(ps.PMap(ps.PThen(sym("-"), lazyUnaryExpr()), func(e: Expr) -> Expr
+      Expr.UnaryExpr("-", Ref.new(e))
+    end)),
+    postfixExpr(),
+  ])
+end
+
+func lazyUnaryExpr() -> ps.Parser[Expr]
+  ps.Parser[Expr] {
+    Run: func(state: ps.State) -> ps.Reply[Expr]
+      unaryExpr().Run(state)
+    end
+  }
+end
+
+func makeBinary() -> func(String, Expr, Expr) -> Expr
+  func(op: String, left: Expr, right: Expr) -> Expr
+    Expr.BinaryExpr(op, Ref.new(left), Ref.new(right))
+  end
 end
 
 func postfixExpr() -> ps.Parser[Expr]
@@ -406,6 +513,22 @@ func binaryOp() -> ps.Parser[String]
     sym("+"), sym("-"), sym("*"), sym("/"),
     sym("<"), sym(">"),
   ])
+end
+
+func pipeOp() -> ps.Parser[String]
+  ps.PChoice([sym("|>"), sym("<|")])
+end
+
+func compareOp() -> ps.Parser[String]
+  ps.PChoice([sym("=="), sym("!="), sym("<="), sym(">="), sym("<"), sym(">")])
+end
+
+func addOp() -> ps.Parser[String]
+  ps.PChoice([sym("+"), sym("-")])
+end
+
+func mulOp() -> ps.Parser[String]
+  ps.PChoice([sym("*"), sym("/")])
 end
 
 func chainLeft[A](item: ps.Parser[A], op: ps.Parser[String], combine: func(String, A, A) -> A) -> ps.Parser[A]
@@ -594,6 +717,9 @@ func defaultImportAlias(path: String) -> String
   end
 end
 
-func formatError(err: ps.ParseError) -> String
-  "parse error at " + err.Position.Line.ToString() + ":" + err.Position.Column.ToString() + ": " + err.Message
+func formatError(err: Option[ps.ParseError], pos: ps.Position) -> String
+  switch err
+    case Some(e) => "parse error at " + e.Position.Line.ToString() + ":" + e.Position.Column.ToString() + ": " + e.Message
+    case None => "parse error at " + pos.Line.ToString() + ":" + pos.Column.ToString()
+  end
 end

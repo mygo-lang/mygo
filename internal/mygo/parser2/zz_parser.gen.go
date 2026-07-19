@@ -292,7 +292,7 @@ func ParseFile(input string) Result[File, string] {
 		if r_1.Ok {
 			return Ok[File, string](r_1.Value)
 		} else {
-			return Err[File, string](formatError(r_1.Error))
+			return Err[File, string](formatError(r_1.Error, r_1.State.Position))
 		}
 	}()
 }
@@ -505,12 +505,15 @@ func typeArgList() ps.Parser[[]TypeExpr] {
 	return ps.POrElse(brackets(ps.PSepBy(lazyTypeExpr(), sym(","))), ps.PPure([]TypeExpr([]TypeExpr{})))
 }
 func blockUntilEnd() ps.Parser[Expr] {
+	return blockUntil(kw("end"))
+}
+func blockUntil(stopParser ps.Parser[string]) ps.Parser[Expr] {
 	return ps.Parser[Expr]{Run: func(state ps.State) ps.Reply[Expr] {
-		return blockItems(state, state, []Expr{})
+		return blockItems(stopParser, state, state, []Expr{})
 	}}
 }
-func blockItems(start ps.State, cur ps.State, items []Expr) ps.Reply[Expr] {
-	stop_7 := ps.PLookAhead(kw("end")).Run(cur)
+func blockItems(stopParser ps.Parser[string], start ps.State, cur ps.State, items []Expr) ps.Reply[Expr] {
+	stop_7 := ps.PLookAhead(stopParser).Run(cur)
 	return func() ps.Reply[Expr] {
 		if stop_7.Ok {
 			return ps.Reply[Expr]{Ok: true, Consumed: cur.Index != start.Index, Value: ExprBlockExprCtor(items), State: cur, Error: ps.EmptyError(cur.Position)}
@@ -521,7 +524,7 @@ func blockItems(start ps.State, cur ps.State, items []Expr) ps.Reply[Expr] {
 					if !r_8.Ok {
 						return r_8
 					} else {
-						return blockItems(start, r_8.State, Slice_Append(items, r_8.Value))
+						return blockItems(stopParser, start, r_8.State, Slice_Append(items, r_8.Value))
 					}
 				}()
 			}()
@@ -552,20 +555,108 @@ func letExpr() ps.Parser[Expr] {
 func ifExpr() ps.Parser[Expr] {
 	return ps.PBind(kw("if"), func(_ string) ps.Parser[Expr] {
 		return ps.PBind(expr(), func(cond Expr) ps.Parser[Expr] {
-			return ps.PBind(sym("=>"), func(_ string) ps.Parser[Expr] {
-				return ps.PBind(expr(), func(thenExpr Expr) ps.Parser[Expr] {
-					return ps.PMap(ps.PThen(kw("else"), expr()), func(elseExpr Expr) Expr {
-						return ExprIfExprCtor(&cond, &thenExpr, &elseExpr)
-					})
-				})
+			return ps.PChoice([]ps.Parser[Expr]{ifArrowTail(cond), ifBlockTail(cond)})
+		})
+	})
+}
+func ifArrowTail(cond Expr) ps.Parser[Expr] {
+	return ps.PBind(sym("=>"), func(_ string) ps.Parser[Expr] {
+		return ps.PBind(expr(), func(thenExpr Expr) ps.Parser[Expr] {
+			return ps.PMap(ps.PThen(kw("else"), expr()), func(elseExpr Expr) Expr {
+				return ExprIfExprCtor(&cond, &thenExpr, &elseExpr)
 			})
 		})
 	})
 }
-func binaryExpr() ps.Parser[Expr] {
-	return chainLeft(postfixExpr(), binaryOp(), func(op string, left Expr, right Expr) Expr {
-		return ExprBinaryExprCtor(op, &left, &right)
+func ifBlockTail(cond Expr) ps.Parser[Expr] {
+	return ps.PBind(kw("then"), func(_ string) ps.Parser[Expr] {
+		return ps.PBind(blockUntil(ps.PChoice([]ps.Parser[string]{kw("elsif"), kw("else"), kw("end")})), func(thenBlock Expr) ps.Parser[Expr] {
+			return ps.PBind(ifElseTail(), func(elseExpr Expr) ps.Parser[Expr] {
+				return ps.PThen(kw("end"), ps.PPure(ExprIfExprCtor(&cond, func() *Expr {
+					__ref_tmp := bodyExprFromBlock(thenBlock)
+					return &__ref_tmp
+				}(), &elseExpr)))
+			})
+		})
 	})
+}
+func ifElseTail() ps.Parser[Expr] {
+	return ps.PChoice([]ps.Parser[Expr]{ps.PAttempt(ps.PThen(kw("else"), ps.PMap(blockUntil(kw("end")), bodyExprFromBlock))), ps.PAttempt(ps.PBind(kw("elsif"), func(_ string) ps.Parser[Expr] {
+		return ps.PBind(expr(), func(cond Expr) ps.Parser[Expr] {
+			return ps.PBind(kw("then"), func(_ string) ps.Parser[Expr] {
+				return ps.PBind(blockUntil(ps.PChoice([]ps.Parser[string]{kw("elsif"), kw("else"), kw("end")})), func(thenBlock Expr) ps.Parser[Expr] {
+					return ps.PMap(lazyIfElseTail(), func(elseExpr Expr) Expr {
+						return ExprIfExprCtor(&cond, func() *Expr {
+							__ref_tmp := bodyExprFromBlock(thenBlock)
+							return &__ref_tmp
+						}(), &elseExpr)
+					})
+				})
+			})
+		})
+	})), ps.PPure(ExprUnitExprCtor())})
+}
+func lazyIfElseTail() ps.Parser[Expr] {
+	return ps.Parser[Expr]{Run: func(state ps.State) ps.Reply[Expr] {
+		return ifElseTail().Run(state)
+	}}
+}
+func bodyExprFromBlock(body Expr) Expr {
+	return func() Expr {
+		if v_5, ok := body.(ExprBlockExpr); ok {
+			return func() Expr {
+				return func() Expr {
+					if Len__t_t(v_5.F0) == 1 {
+						return Option_UnwrapOr(Get__t_int_t(v_5.F0, 0), body)
+					} else {
+						return body
+					}
+				}()
+			}()
+		} else {
+			return func() Expr {
+				return body
+			}()
+		}
+	}()
+}
+func binaryExpr() ps.Parser[Expr] {
+	return pipeExpr()
+}
+func pipeExpr() ps.Parser[Expr] {
+	return chainLeft(orExpr(), pipeOp(), makeBinary())
+}
+func orExpr() ps.Parser[Expr] {
+	return chainLeft(andExpr(), sym("||"), makeBinary())
+}
+func andExpr() ps.Parser[Expr] {
+	return chainLeft(compareExpr(), sym("&&"), makeBinary())
+}
+func compareExpr() ps.Parser[Expr] {
+	return chainLeft(addExpr(), compareOp(), makeBinary())
+}
+func addExpr() ps.Parser[Expr] {
+	return chainLeft(mulExpr(), addOp(), makeBinary())
+}
+func mulExpr() ps.Parser[Expr] {
+	return chainLeft(unaryExpr(), mulOp(), makeBinary())
+}
+func unaryExpr() ps.Parser[Expr] {
+	return ps.PChoice([]ps.Parser[Expr]{ps.PAttempt(ps.PMap(ps.PThen(sym("!"), lazyUnaryExpr()), func(e Expr) Expr {
+		return ExprUnaryExprCtor("!", &e)
+	})), ps.PAttempt(ps.PMap(ps.PThen(sym("-"), lazyUnaryExpr()), func(e Expr) Expr {
+		return ExprUnaryExprCtor("-", &e)
+	})), postfixExpr()})
+}
+func lazyUnaryExpr() ps.Parser[Expr] {
+	return ps.Parser[Expr]{Run: func(state ps.State) ps.Reply[Expr] {
+		return unaryExpr().Run(state)
+	}}
+}
+func makeBinary() func(string, Expr, Expr) Expr {
+	return func(op string, left Expr, right Expr) Expr {
+		return ExprBinaryExprCtor(op, &left, &right)
+	}
 }
 func postfixExpr() ps.Parser[Expr] {
 	return ps.Parser[Expr]{Run: func(state ps.State) ps.Reply[Expr] {
@@ -617,6 +708,18 @@ func primaryExpr() ps.Parser[Expr] {
 }
 func binaryOp() ps.Parser[string] {
 	return ps.PChoice([]ps.Parser[string]{sym("=="), sym("!="), sym("<="), sym(">="), sym("<|"), sym("|>"), sym("+"), sym("-"), sym("*"), sym("/"), sym("<"), sym(">")})
+}
+func pipeOp() ps.Parser[string] {
+	return ps.PChoice([]ps.Parser[string]{sym("|>"), sym("<|")})
+}
+func compareOp() ps.Parser[string] {
+	return ps.PChoice([]ps.Parser[string]{sym("=="), sym("!="), sym("<="), sym(">="), sym("<"), sym(">")})
+}
+func addOp() ps.Parser[string] {
+	return ps.PChoice([]ps.Parser[string]{sym("+"), sym("-")})
+}
+func mulOp() ps.Parser[string] {
+	return ps.PChoice([]ps.Parser[string]{sym("*"), sym("/")})
 }
 func chainLeft[A any](item ps.Parser[A], op ps.Parser[string], combine func(string, A, A) A) ps.Parser[A] {
 	return ps.Parser[A]{Run: func(state ps.State) ps.Reply[A] {
@@ -933,6 +1036,20 @@ func defaultImportAlias(path string) string {
 		}
 	}()
 }
-func formatError(err ps.ParseError) string {
-	return "parse error at " + ToString_int(err.Position.Line) + ":" + ToString_int(err.Position.Column) + ": " + err.Message
+func formatError(err Option[ps.ParseError], pos ps.Position) string {
+	return func() string {
+		if v_7, ok := err.(OptionSome[ps.ParseError]); ok {
+			return func() string {
+				return "parse error at " + ToString_int(v_7.F0.Position.Line) + ":" + ToString_int(v_7.F0.Position.Column) + ": " + v_7.F0.Message
+			}()
+		} else {
+			if _, ok := err.(OptionNone[ps.ParseError]); ok {
+				return func() string {
+					return "parse error at " + ToString_int(pos.Line) + ":" + ToString_int(pos.Column)
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
+	}()
 }
