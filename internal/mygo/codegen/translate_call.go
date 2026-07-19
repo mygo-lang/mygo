@@ -58,6 +58,39 @@ func (g *gen) qualifiedEnumVariant(field *FieldExpr) (string, int, bool) {
 	return "", 0, false
 }
 
+func (g *gen) importedQualifiedEnumVariant(field *FieldExpr) (string, string, int, bool) {
+	qualName := exprQualifiedName(field.Expr)
+	if qualName == "" || g == nil || g.typedInfo == nil || g.typedInfo.MyGoPackages == nil {
+		return "", "", 0, false
+	}
+	alias, enumName, ok := splitQualifiedName(qualName)
+	if !ok {
+		return "", "", 0, false
+	}
+	pkg := g.typedInfo.MyGoPackages[alias]
+	if pkg == nil || pkg.Enums == nil {
+		return "", "", 0, false
+	}
+	enum := pkg.Enums[enumName]
+	if enum == nil {
+		return "", "", 0, false
+	}
+	for _, variant := range enum.Variants {
+		if variant.Name == field.Field {
+			return alias, enum.Name, len(variant.Fields), true
+		}
+	}
+	return "", "", 0, false
+}
+
+func splitQualifiedName(name string) (string, string, bool) {
+	idx := strings.LastIndexByte(name, '.')
+	if idx <= 0 || idx == len(name)-1 {
+		return "", "", false
+	}
+	return name[:idx], name[idx+1:], true
+}
+
 func inferExpectedTypeSubst(src TypeExpr, expected string, subst map[string]string) {
 	expected = strings.TrimSpace(expected)
 	if expected == "" || src == nil {
@@ -379,6 +412,17 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 	}
 	// Field access call: x.method(args) or Enum.Variant(args)
 	if field, ok := n.Callee.(*FieldExpr); ok {
+		if alias, enumName, _, ok := g.importedQualifiedEnumVariant(field); ok {
+			args, err := g.translateCallArgs(n.Args, ctx)
+			if err != nil {
+				return nil, "", err
+			}
+			typ := g.inferredType(n)
+			if typ == "" {
+				typ = alias + "." + enumName
+			}
+			return &ast.CallExpr{Fun: ast.NewIdent(alias + "." + enumConstructorGoName(enumName, field.Field)), Args: args}, typ, nil
+		}
 		if enumName, _, ok := g.qualifiedEnumVariant(field); ok {
 			args, err := g.translateCallArgs(n.Args, ctx)
 			if err != nil {

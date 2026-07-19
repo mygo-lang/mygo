@@ -547,7 +547,7 @@ func TestCompileDirResolvesImportedMyGoStructAndEnumSymbols(t *testing.T) {
     Value: Int
   end
 
-  enum Result
+  enum FetchStatus
     Ok(Int)
   end
 
@@ -555,7 +555,7 @@ func TestCompileDirResolvesImportedMyGoStructAndEnumSymbols(t *testing.T) {
     b.Value
   end
 
-  func ReadResult(r: Result) -> Int
+  func ReadStatus(r: FetchStatus) -> Int
     switch r
       case Ok(v) then
         v
@@ -568,8 +568,8 @@ func TestCompileDirResolvesImportedMyGoStructAndEnumSymbols(t *testing.T) {
 
   func demo() -> Int
     let b = api.Box{Value: 40}
-    let r = api.Result.Ok(2)
-    api.ReadBox(b) + api.ReadResult(r)
+    let r = api.FetchStatus.Ok(2)
+    api.ReadBox(b) + api.ReadStatus(r)
   end
 `)
 
@@ -580,12 +580,62 @@ func TestCompileDirResolvesImportedMyGoStructAndEnumSymbols(t *testing.T) {
 	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		`api.Box{Value: 40}`,
-		`api.ResultOk(2)`,
-		`api.ReadBox(b_1) + api.ReadResult(r_2)`,
+		`api.FetchStatusOkCtor(2)`,
+		`api.ReadBox(b_1) + api.ReadStatus(r_2)`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
 		}
+	}
+}
+
+func TestCompileDirRejectsEnumConflictingWithPreludeType(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package app
+  enum Result
+    Done(Int)
+  end
+`)
+
+	_, err := CompileDir(dir)
+	if err == nil {
+		t.Fatal("CompileDir() error = nil, want duplicate visible type failure")
+	}
+	if !strings.Contains(err.Error(), `symbol "Result" conflicts in scope`) {
+		t.Fatalf("CompileDir() error = %v, want Result conflict", err)
+	}
+}
+
+func TestCompileDirRejectsInterfaceConflictingWithPreludeTypeclass(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package app
+  interface ToString[A]
+    func ToString(value: A) -> String
+  end
+`)
+
+	_, err := CompileDir(dir)
+	if err == nil {
+		t.Fatal("CompileDir() error = nil, want duplicate visible typeclass failure")
+	}
+	if !strings.Contains(err.Error(), `symbol "ToString" conflicts in scope`) {
+		t.Fatalf("CompileDir() error = %v, want ToString conflict", err)
+	}
+}
+
+func TestCompileDirAllowsImplForPreludeTypeclass(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package app
+  impl Int64: ToString[Int64]
+    func ToString(value: Int64) -> String
+      "value"
+    end
+  end
+`)
+
+	_, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
 	}
 }
 
@@ -1330,7 +1380,7 @@ func TestCompileDirRejectsRelationWithoutEq(t *testing.T) {
 func TestCompileDirSeparatesSameNamedMethodsByInterface(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
-  interface ToString[A]
+  interface ShowString[A]
     func ToString(value: A) -> String
   end
 
@@ -1338,7 +1388,7 @@ func TestCompileDirSeparatesSameNamedMethodsByInterface(t *testing.T) {
     func ToString(value: A) -> String
   end
 
-  impl Int64: ToString[Int64]
+  impl Int64: ShowString[Int64]
     func ToString(value: Int64) -> String
       "show"
     end
@@ -1370,11 +1420,11 @@ func TestCompileDirLetsLocalBindingShadowTypeclassName(t *testing.T) {
 	writeMygoFile(t, dir, "main.mygo", `package main
   import fmt "go:fmt"
 
-  interface ToString[A]
+  interface LocalToString[A]
     func ToString(value: A) -> String
   end
 
-  impl Int64: ToString[Int64]
+  impl Int64: LocalToString[Int64]
     func ToString(value: Int64) -> String
       "typeclass"
     end
@@ -1409,17 +1459,17 @@ func TestCompileDirDeduplicatesTypeclassMethodParams(t *testing.T) {
 	writeMygoFile(t, dir, "main.mygo", `package main
 	  import fmt "go:fmt"
 
-	  interface ToString[A]
+	  interface LocalToString[A]
 	    func ToString(value: A) -> String
 	  end
 
-	  impl Int64Show: ToString[Int64]
+	  impl Int64Show: LocalToString[Int64]
 	    func ToString(value: Int64) -> String
 		  fmt.Sprint(value)
 		end
 	  end
 
-	  func demo(value: Int64) -> String using ToString[Int64]
+	  func demo(value: Int64) -> String using LocalToString[Int64]
 	    value.ToString()
 	  end
 `)
@@ -1439,7 +1489,7 @@ func TestCompileDirSupportsMultipleUsingConstraints(t *testing.T) {
 	writeMygoFile(t, dir, "main.mygo", `package main
 	  import fmt "go:fmt"
 
-	  interface ToString[A]
+	  interface LocalToString[A]
 	    func ToString(value: A) -> String
 	  end
 
@@ -1447,7 +1497,7 @@ func TestCompileDirSupportsMultipleUsingConstraints(t *testing.T) {
 	    func fancy(value: A) -> String
 	  end
 
-	  impl Int64Show: ToString[Int64]
+	  impl Int64Show: LocalToString[Int64]
 	    func ToString(value: Int64) -> String
 		  fmt.Sprint(value)
 		end
@@ -1459,7 +1509,7 @@ func TestCompileDirSupportsMultipleUsingConstraints(t *testing.T) {
 		end
 	  end
 
-	  func demo(value: Int64, label: String) -> String using ToString[Int64], Fancy[String]
+	  func demo(value: Int64, label: String) -> String using LocalToString[Int64], Fancy[String]
 	    value.ToString()
 	    label.fancy()
 	  end
@@ -1485,23 +1535,23 @@ func TestCompileDirSupportsMultipleUsingConstraints(t *testing.T) {
 func TestCompileDirUsesNamedTypeclassImplementation(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
-  interface Eq[A]
+  interface Equalish[A]
     func Equals(left: A, right: A) -> Bool
   end
 
-  impl Int: Eq[Int]
+  impl Int: Equalish[Int]
     func Equals(left: Int, right: Int) -> Bool
       false
     end
   end
 
-  impl FastEq: Eq[Int]
+  impl FastEq: Equalish[Int]
     func Equals(left: Int, right: Int) -> Bool
       true
     end
   end
 
-  func same(left: Int, right: Int) -> Bool using FastEq: Eq[Int]
+  func same(left: Int, right: Int) -> Bool using FastEq: Equalish[Int]
     left.Equals(right)
   end
 
@@ -1527,11 +1577,11 @@ func TestCompileDirAllowsUsingImplementationName(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main
 
-  interface IEnumerable[C[A], A]
+  interface LocalEnumerable[C[A], A]
     func Len(c: C[A]) -> Int
   end
 
-  impl[T] SliceIEnumerable[T]: IEnumerable[Slice[T], T]
+  impl[T] SliceIEnumerable[T]: LocalEnumerable[Slice[T], T]
     func Len(c: Slice[T]) -> Int
       len(c)
     end

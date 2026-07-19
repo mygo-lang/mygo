@@ -410,6 +410,13 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 		target := g.goType(n.Type, ctx.typeParams)
 		return &ast.CallExpr{Fun: ast.NewIdent(target), Args: []ast.Expr{code}}, target, nil
 	case *FieldExpr:
+		if alias, enumName, arity, ok := g.importedQualifiedEnumVariant(n); ok && arity == 0 {
+			typ := g.inferredType(n)
+			if typ == "" {
+				typ = alias + "." + enumName
+			}
+			return &ast.CallExpr{Fun: ast.NewIdent(alias + "." + enumConstructorGoName(enumName, n.Field))}, typ, nil
+		}
 		if enumName, arity, ok := g.qualifiedEnumVariant(n); ok && arity == 0 {
 			typ := g.inferredType(n)
 			if typ == "" {

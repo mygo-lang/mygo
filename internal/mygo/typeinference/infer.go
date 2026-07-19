@@ -37,6 +37,8 @@ type TypedInfo struct {
 	BindingSchemes map[string]*Scheme
 	// Predicates collects the typeclass predicates generated during inference.
 	Predicates map[Expr][]Predicate
+	// MyGoPackages records imported MyGO packages loaded during inference.
+	MyGoPackages map[string]*MyGoPackageInfo
 }
 
 func inherentReceiverName(t TypeExpr) string {
@@ -158,6 +160,7 @@ func InferPackage(pkg *PkgInfo, state *InferState) (*TypedInfo, error) {
 			return nil, errorAtNode(pkg, decl, err)
 		}
 	}
+	info.MyGoPackages = state.MyGoPackages
 	return info, nil
 }
 
@@ -231,12 +234,6 @@ func initialTypeEnv(pkg *PkgInfo) TypeEnv {
 
 	// Prelude constructors and helper functions that remain globally visible.
 	for _, name := range []string{"Some", "Ok", "Err", "Zero", "OptionFlatMap", "ResultIsOk", "ResultIsErr", "ResultUnwrap", "ResultMap", "ResultMapErr", "ResultAndThen", "ResultOrElse", "TypeKeyFromType"} {
-		env[name] = &Scheme{Body: QualifiedType{Body: TCon{Name: name}}}
-	}
-
-	// Package-local interfaces remain available as types.
-	for name, iface := range pkg.Interfaces {
-		_ = iface
 		env[name] = &Scheme{Body: QualifiedType{Body: TCon{Name: name}}}
 	}
 
@@ -318,10 +315,13 @@ func inferDecl(decl Decl, env TypeEnv, state *InferState, info *TypedInfo, pkg *
 
 	case *StructDecl:
 		// Register struct type constructors
-		return inferStructDecl(d, env, state)
+		return inferStructDecl(d, env, state, pkg)
 
 	case *InterfaceDecl:
 		// Register interface as a type in the environment
+		if _, exists := env[d.Name]; exists && (pkg == nil || pkg.Name != "prelude") {
+			return nil, fmt.Errorf("symbol %q conflicts in scope", d.Name)
+		}
 		env = env.Clone()
 		env[d.Name] = &Scheme{Body: QualifiedType{Body: TCon{Name: d.Name}}}
 		return env, nil
@@ -363,6 +363,9 @@ func mergeTypeParamNames(groups ...[]string) []string {
 }
 
 func inferEnumDecl(d *EnumDecl, env TypeEnv, state *InferState, pkg *PkgInfo) (TypeEnv, error) {
+	if _, exists := env[d.Name]; exists && (pkg == nil || pkg.Name != "prelude") {
+		return nil, fmt.Errorf("symbol %q conflicts in scope", d.Name)
+	}
 	env = env.Clone()
 
 	// Build the enum type: e.g., Option[A] -> TCon{Name: "Option", Args: [TVar]}
@@ -402,7 +405,10 @@ func inferEnumDecl(d *EnumDecl, env TypeEnv, state *InferState, pkg *PkgInfo) (T
 	return env, nil
 }
 
-func inferStructDecl(d *StructDecl, env TypeEnv, state *InferState) (TypeEnv, error) {
+func inferStructDecl(d *StructDecl, env TypeEnv, state *InferState, pkg *PkgInfo) (TypeEnv, error) {
+	if _, exists := env[d.Name]; exists && (pkg == nil || pkg.Name != "prelude") {
+		return nil, fmt.Errorf("symbol %q conflicts in scope", d.Name)
+	}
 	env = env.Clone()
 
 	// Build the struct type with type parameters

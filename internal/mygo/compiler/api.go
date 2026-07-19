@@ -36,6 +36,13 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 	// so their interfaces, impls, enums, and structs are available for
 	// method resolution during code generation (typeclass matching, etc.).
 	if !noPrelude && mainPkg.Name != "prelude" {
+		if preludePkg := loadPreludePackage(dir, workspaceRoot); preludePkg != nil {
+			if err := mergeImportedDecls(mainPkg, preludePkg, true); err != nil {
+				return nil, err
+			}
+		} else if findGoModuleRoot(dir) != "" || findGoModuleRoot(workspaceRoot) != "" {
+			return nil, common.ErrorAtPos("", 0, 0, "cannot locate prelude MyGO sources for auto-import; add github.com/mygo-lang/mygo to go.mod or compile with --no-prelude")
+		}
 		for _, path := range mainPkg.ImportAliases {
 			if strings.HasPrefix(path, "go:") {
 				continue
@@ -44,14 +51,9 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 			if err != nil {
 				continue
 			}
-			mergeImportedDecls(mainPkg, imported)
-		}
-		// Also merge prelude (auto-imported at Go level, not in ImportAliases).
-		// Try to find prelude directory: look relative to workspaceRoot, then walk up.
-		if preludePkg := loadPreludePackage(dir, workspaceRoot); preludePkg != nil {
-			mergeImportedDecls(mainPkg, preludePkg)
-		} else if findGoModuleRoot(dir) != "" || findGoModuleRoot(workspaceRoot) != "" {
-			return nil, common.ErrorAtPos("", 0, 0, "cannot locate prelude MyGO sources for auto-import; add github.com/mygo-lang/mygo to go.mod or compile with --no-prelude")
+			if err := mergeImportedDecls(mainPkg, imported, false); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -112,6 +114,13 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 			SourceFile: "__auto_import__",
 		})
 		if !noPrelude && testPkg.Name != "prelude" {
+			if preludePkg := loadPreludePackage(dir, workspaceRoot); preludePkg != nil {
+				if err := mergeImportedDecls(testPkg, preludePkg, true); err != nil {
+					return nil, err
+				}
+			} else if findGoModuleRoot(dir) != "" || findGoModuleRoot(workspaceRoot) != "" {
+				return nil, common.ErrorAtPos("", 0, 0, "cannot locate prelude MyGO sources for auto-import; add github.com/mygo-lang/mygo to go.mod or compile with --no-prelude")
+			}
 			for _, path := range testPkg.ImportAliases {
 				if strings.HasPrefix(path, "go:") {
 					continue
@@ -124,12 +133,9 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 				if err != nil {
 					continue
 				}
-				mergeImportedDecls(testPkg, imported)
-			}
-			if preludePkg := loadPreludePackage(dir, workspaceRoot); preludePkg != nil {
-				mergeImportedDecls(testPkg, preludePkg)
-			} else if findGoModuleRoot(dir) != "" || findGoModuleRoot(workspaceRoot) != "" {
-				return nil, common.ErrorAtPos("", 0, 0, "cannot locate prelude MyGO sources for auto-import; add github.com/mygo-lang/mygo to go.mod or compile with --no-prelude")
+				if err := mergeImportedDecls(testPkg, imported, false); err != nil {
+					return nil, err
+				}
 			}
 		}
 
@@ -480,20 +486,26 @@ func escapeModulePathElem(s string) string {
 
 // mergeImportedDecls merges declarations from an imported MyGO package into
 // the user package for method resolution during code generation.
-func mergeImportedDecls(userPkg, importedPkg *pkg.Package) {
+func mergeImportedDecls(userPkg, importedPkg *pkg.Package, conflictOnExisting bool) error {
 	for name, st := range importedPkg.Structs {
 		if _, exists := userPkg.Structs[name]; !exists {
 			userPkg.Structs[name] = st
+		} else if conflictOnExisting && st != userPkg.Structs[name] {
+			return common.ErrorAtPos("", 0, 0, "type %q conflicts with imported package %q", name, importedPkg.Name)
 		}
 	}
 	for name, iface := range importedPkg.Interfaces {
 		if _, exists := userPkg.Interfaces[name]; !exists {
 			userPkg.Interfaces[name] = iface
+		} else if conflictOnExisting && iface != userPkg.Interfaces[name] {
+			return common.ErrorAtPos("", 0, 0, "type %q conflicts with imported package %q", name, importedPkg.Name)
 		}
 	}
 	for name, enum := range importedPkg.Enums {
 		if _, exists := userPkg.Enums[name]; !exists {
 			userPkg.Enums[name] = enum
+		} else if conflictOnExisting && enum != userPkg.Enums[name] {
+			return common.ErrorAtPos("", 0, 0, "type %q conflicts with imported package %q", name, importedPkg.Name)
 		}
 	}
 	for _, impl := range importedPkg.Impls {
@@ -508,6 +520,7 @@ func mergeImportedDecls(userPkg, importedPkg *pkg.Package) {
 			userPkg.Impls = append(userPkg.Impls, impl)
 		}
 	}
+	return nil
 }
 
 func mygoDirs(root string) ([]string, error) {
