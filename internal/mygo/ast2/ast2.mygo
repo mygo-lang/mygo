@@ -1,0 +1,71 @@
+package ast2
+
+# ast2 is the compact AST used by the self-hosted parser2 pipeline.
+# It mirrors the syntax currently produced by parser2 and intentionally keeps
+# positions out until parser2 starts carrying source spans.
+
+struct File
+  PackageName: String
+  Decls: Slice[Decl]
+end
+
+enum Decl
+  ImportDecl(String, String)
+  FuncDecl(String, Slice[String], Slice[Param], Option[TypeExpr], Expr)
+  StructDecl(String, Slice[String], Slice[Field])
+  EnumDecl(String, Slice[String], Slice[Variant])
+  InterfaceDecl(String, Slice[String], Slice[FuncSig])
+  ImplDecl(Slice[String], TypeExpr, Option[TypeExpr], Slice[FuncSig])
+end
+
+struct Param
+  Name: String
+  Type: TypeExpr
+end
+
+struct Field
+  Name: String
+  Type: TypeExpr
+  Tag: Option[String]
+end
+
+struct Variant
+  Name: String
+  Fields: Slice[TypeExpr]
+end
+
+struct FuncSig
+  Name: String
+  TypeParams: Slice[String]
+  Params: Slice[Param]
+  Ret: Option[TypeExpr]
+end
+
+enum TypeExpr
+  NamedType(String, Slice[TypeExpr])
+  FuncType(Slice[TypeExpr], Ref[TypeExpr])
+  TupleType(Slice[TypeExpr])
+  UnitType
+end
+
+struct Bind
+  Name: String
+  Type: Option[TypeExpr]
+  Value: Expr
+end
+
+enum Expr
+  IdentExpr(String)
+  NumberExpr(String)
+  StringExpr(String)
+  BoolExpr(Bool)
+  UnitExpr
+  CallExpr(Ref[Expr], Slice[Expr])
+  FieldExpr(Ref[Expr], String)
+  UnaryExpr(String, Ref[Expr])
+  BinaryExpr(String, Ref[Expr], Ref[Expr])
+  IfExpr(Ref[Expr], Ref[Expr], Ref[Expr])
+  BlockExpr(Slice[Expr])
+  LetExpr(Bind)
+end
+
