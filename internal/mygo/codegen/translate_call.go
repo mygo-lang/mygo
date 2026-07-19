@@ -433,6 +433,20 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 				return &ast.UnaryExpr{Op: token.AND, X: arg}, ptrType, nil
 			}
 		}
+		if enumName := exprQualifiedName(field.Expr); enumName != "" {
+			if dotIdx := strings.LastIndexByte(enumName, '.'); dotIdx > 0 {
+				if base, _ := splitTypeArgs(g.inferredType(n)); base == enumName {
+					args, err := g.translateCallArgs(n.Args, ctx)
+					if err != nil {
+						return nil, "", err
+					}
+					alias := enumName[:dotIdx]
+					localEnum := enumName[dotIdx+1:]
+					ctor := enumConstructorGoName(localEnum, field.Field)
+					return &ast.CallExpr{Fun: ast.NewIdent(alias + "." + ctor), Args: args}, enumName, nil
+				}
+			}
+		}
 		if enumName := exprQualifiedName(field.Expr); enumName != "" && g.variantByName[field.Field] != "" {
 			args, err := g.translateCallArgs(n.Args, ctx)
 			if err != nil {

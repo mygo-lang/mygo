@@ -1818,7 +1818,7 @@ func inferSwitch(env TypeEnv, n *SwitchExpr, state *InferState) (MonoType, Subst
 
 	// Resolve target type to enum name and type args for pattern binding
 	enumName, enumTypeArgs := resolveEnumType(targetType)
-	enumDecl := lookupEnum(state.PkgInfo, enumName)
+	enumDecl, enumAlias, enumPkgTypes := lookupEnumByType(state, enumName)
 
 	// Infer each case body type and unify them
 	var caseTypes []MonoType
@@ -1828,7 +1828,7 @@ func inferSwitch(env TypeEnv, n *SwitchExpr, state *InferState) (MonoType, Subst
 
 	for _, cas := range n.Cases {
 		caseEnv := env.Clone()
-		caseEnv, err := inferPatternBindings(caseEnv, cas.Pattern, targetType, s, state, enumDecl, enumTypeArgs)
+		caseEnv, err := inferPatternBindings(caseEnv, cas.Pattern, targetType, s, state, enumDecl, enumTypeArgs, enumAlias, enumPkgTypes)
 		if err != nil {
 			return nil, nil, nil, wrapInferenceError("switch pattern: %w", err)
 		}
@@ -1857,7 +1857,7 @@ func inferSwitch(env TypeEnv, n *SwitchExpr, state *InferState) (MonoType, Subst
 	return resultType, s, allPreds, nil
 }
 
-func inferPatternBindings(env TypeEnv, pat Pattern, targetType MonoType, s Subst, state *InferState, enumDecl *EnumDecl, enumTypeArgs []MonoType) (TypeEnv, error) {
+func inferPatternBindings(env TypeEnv, pat Pattern, targetType MonoType, s Subst, state *InferState, enumDecl *EnumDecl, enumTypeArgs []MonoType, enumAlias string, enumPkgTypes map[string]struct{}) (TypeEnv, error) {
 	switch p := pat.(type) {
 	case *WildcardPattern:
 		return env, nil
@@ -1870,7 +1870,7 @@ func inferPatternBindings(env TypeEnv, pat Pattern, targetType MonoType, s Subst
 			return nil, fmt.Errorf("tuple pattern arity mismatch")
 		}
 		for i, elem := range p.Elems {
-			newEnv, err := inferPatternBindings(env, elem, tupleType.Args[i], s, state, enumDecl, enumTypeArgs)
+			newEnv, err := inferPatternBindings(env, elem, tupleType.Args[i], s, state, enumDecl, enumTypeArgs, enumAlias, enumPkgTypes)
 			if err != nil {
 				return nil, err
 			}
@@ -1946,6 +1946,9 @@ func inferPatternBindings(env TypeEnv, pat Pattern, targetType MonoType, s Subst
 					fieldType := typeFromAST(variant.Fields[i].Type)
 					if activeEnum != nil && len(activeEnum.TypeParams) > 0 && len(enumTypeArgs) > 0 {
 						fieldType = substituteTypeParams(fieldType, activeEnum.TypeParams, enumTypeArgs)
+					}
+					if enumAlias != "" && enumPkgTypes != nil {
+						fieldType = qualifyMyGoType(enumAlias, enumPkgTypes, fieldType)
 					}
 					env[arg] = &Scheme{Body: QualifiedType{Body: fieldType}}
 					bound = true
@@ -2391,6 +2394,28 @@ func lookupEnum(pkg *PkgInfo, name string) *EnumDecl {
 		return nil
 	}
 	return pkg.Enums[name]
+}
+
+func lookupEnumByType(state *InferState, name string) (*EnumDecl, string, map[string]struct{}) {
+	if state == nil {
+		return nil, "", nil
+	}
+	if enum := lookupEnum(state.PkgInfo, name); enum != nil {
+		return enum, "", nil
+	}
+	alias, typeName, ok := splitQualifiedName(name)
+	if !ok || state.MyGoPackages == nil {
+		return nil, "", nil
+	}
+	pkg := state.MyGoPackages[alias]
+	if pkg == nil || pkg.Enums == nil {
+		return nil, "", nil
+	}
+	enum := pkg.Enums[typeName]
+	if enum == nil {
+		return nil, "", nil
+	}
+	return enum, alias, pkg.Types
 }
 
 // findEnumVariant finds a variant by name within an enum declaration.

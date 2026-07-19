@@ -417,6 +417,16 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 			}
 			return &ast.CallExpr{Fun: ast.NewIdent(enumConstructorGoName(enumName, n.Field))}, typ, nil
 		}
+		if enumName := exprQualifiedName(n.Expr); enumName != "" {
+			if dotIdx := strings.LastIndexByte(enumName, '.'); dotIdx > 0 {
+				if baseName, _ := splitTypeArgs(g.inferredType(n)); baseName == enumName {
+					alias := enumName[:dotIdx]
+					localEnum := enumName[dotIdx+1:]
+					ctor := enumConstructorGoName(localEnum, n.Field)
+					return &ast.CallExpr{Fun: ast.NewIdent(alias + "." + ctor)}, enumName, nil
+				}
+			}
+		}
 		base, bt, err := g.translateExpr(n.Expr, ctx, "")
 		if err != nil {
 			return nil, "", err

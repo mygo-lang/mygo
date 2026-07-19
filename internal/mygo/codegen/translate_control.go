@@ -222,6 +222,10 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (ast.E
 			if found {
 				assertTypeName = variantNameForEnum(enumName, vp.Name)
 			}
+			if qualifiedName, ok := qualifiedVariantNameFromTargetType(ttype, vp.Name); ok {
+				assertTypeName = qualifiedName
+				found = true
+			}
 			var assertType ast.Expr = ast.NewIdent(assertTypeName)
 			if found {
 				if _, typeArgs := splitTypeArgs(ttype); len(typeArgs) > 0 {
@@ -422,6 +426,17 @@ func refineSwitchTargetTypeFromCases(targetType string, cases []SwitchCase) stri
 		return targetType
 	}
 	return base + "[" + strings.Join(refined, ", ") + "]"
+}
+
+func qualifiedVariantNameFromTargetType(targetType, variantName string) (string, bool) {
+	baseName, _ := splitTypeArgs(targetType)
+	dotIdx := strings.LastIndexByte(baseName, '.')
+	if dotIdx <= 0 || dotIdx == len(baseName)-1 {
+		return "", false
+	}
+	alias := baseName[:dotIdx]
+	enumName := baseName[dotIdx+1:]
+	return alias + "." + variantNameForEnum(enumName, variantName), true
 }
 
 func inferredPatternNameTypeFromBody(name string, body Expr) string {
