@@ -228,9 +228,21 @@ func demo() string {
 	lst_22 := buildList()
 	sum_23 := sumList(lst_22)
 	var summary_24 string = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v sum=%v", red_7, point_8, op_9, describeOption(empty_10, ToString_float64), describeOption(someVal_11, ToString_int), person_12, rect_13, pair_14, color_15, addr_16, contact_17, areaValue_18, swapped_19, bigger_20, colorText_21, sum_23)
-	fmt.Println(summary_24)
+	func() Result[int, error] {
+		__mygo_result_val, __mygo_result_err := fmt.Println(summary_24)
+		if __mygo_result_err != nil {
+			return Err[int, error](__mygo_result_err)
+		}
+		return Ok[int, error](__mygo_result_val)
+	}()
 	return summary_24
 }
 func main() {
-	fmt.Println(demo())
+	func() Result[int, error] {
+		__mygo_result_val, __mygo_result_err := fmt.Println(demo())
+		if __mygo_result_err != nil {
+			return Err[int, error](__mygo_result_err)
+		}
+		return Ok[int, error](__mygo_result_val)
+	}()
 }

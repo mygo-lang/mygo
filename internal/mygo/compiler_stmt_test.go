@@ -1043,6 +1043,40 @@ func TestCompileDirRejectsStructLiteralMissingField(t *testing.T) {
 	}
 }
 
+func TestCompileDirAllowsOmittedEmbeddedStructLiteralField(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+  struct Address
+    Street: String
+  end
+
+  struct Contact
+    Name: String
+    embed Address
+  end
+
+  func make_contact() -> Contact
+    Contact { Name: "Bob" }
+  end
+`)
+
+	outFiles, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	got := readFile(t, outFiles[0])
+	for _, want := range []string{
+		"type Contact struct {",
+		"Name string",
+		"Address",
+		`Contact{Name: "Bob"}`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
+		}
+	}
+}
+
 func TestCompileDirSupportsRefAndResultTypes(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main

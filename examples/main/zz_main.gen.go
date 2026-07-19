@@ -415,5 +415,11 @@ func demo() string {
 	return "=== MyGO Language Demo ===\n\n" + "--- Basic Types ---\n" + demoBasicTypes() + "\n\n" + "--- Enums ---\n" + demoEnums() + "\n\n" + "--- Structs ---\n" + demoStructs() + "\n\n" + "--- Option/Result ---\n" + demoOptionResult() + "\n\n" + "--- Collections ---\n" + demoCollections() + "\n\n" + "--- Functional Programming ---\n" + demoFunctional() + "\n\n" + "--- Control Flow ---\n" + demoControlFlow() + "\n\n" + "--- Mutable Variables ---\n" + demoMutable() + "\n\n" + "--- Generics ---\n" + demoGenerics() + "\n\n" + "=== End of Demo ==="
 }
 func main() {
-	fmt.Println(demo())
+	func() Result[int, error] {
+		__mygo_result_val, __mygo_result_err := fmt.Println(demo())
+		if __mygo_result_err != nil {
+			return Err[int, error](__mygo_result_err)
+		}
+		return Ok[int, error](__mygo_result_val)
+	}()
 }

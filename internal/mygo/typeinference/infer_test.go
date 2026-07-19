@@ -307,6 +307,46 @@ func TestInferStructLitRequiresAllFields(t *testing.T) {
 	}
 }
 
+func TestInferStructLitAllowsOmittedEmbeddedField(t *testing.T) {
+	state := NewInferState()
+	state.PkgInfo = &PkgInfo{
+		Name: "main",
+		Structs: map[string]*StructDecl{
+			"Address": {
+				Name: "Address",
+				Fields: []Field{
+					{Name: "Street", Type: &NamedType{Name: "String"}},
+				},
+			},
+			"Contact": {
+				Name: "Contact",
+				Fields: []Field{
+					{Name: "Name", Type: &NamedType{Name: "String"}},
+					{Name: "embed", Type: &NamedType{Name: "Address"}},
+				},
+			},
+		},
+	}
+	env := TypeEnv{
+		"Contact": &Scheme{Body: QualifiedType{Body: TCon{Name: "Contact"}}},
+		"String":  &Scheme{Body: QualifiedType{Body: TCon{Name: "String"}}},
+	}
+	expr := &StructLitExpr{
+		TypeName: "Contact",
+		Fields: []StructLitField{
+			{Name: "Name", Value: &LiteralExpr{Kind: "string", Value: "Bob"}},
+		},
+	}
+
+	typ, err := inferExprType(env, expr, state)
+	if err != nil {
+		t.Fatalf("inferExprType() error = %v", err)
+	}
+	if !eqType(typ, TCon{Name: "Contact"}) {
+		t.Fatalf("expected Contact, got %s", typ)
+	}
+}
+
 func TestInferGoExprResultType(t *testing.T) {
 	state := NewInferState()
 	state.TypedInfo = &TypedInfo{
@@ -1114,6 +1154,26 @@ func TestInferIfWithoutElseReturnsUnitWhenThenIsUnit(t *testing.T) {
 	ifExpr := &IfExpr{
 		Cond: &IdentExpr{Name: "true"},
 		Then: &UnitLitExpr{},
+		Else: &UnitLitExpr{},
+	}
+	typ, err := inferExprType(env, ifExpr, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !eqType(typ, unitType()) {
+		t.Fatalf("expected Unit, got %s", typ)
+	}
+}
+
+func TestInferIfWithoutElseAllowsReturningThenBranch(t *testing.T) {
+	state := NewInferState()
+	env := make(TypeEnv)
+
+	ifExpr := &IfExpr{
+		Cond: &IdentExpr{Name: "true"},
+		Then: &BlockExpr{Stmts: []Stmt{
+			&ReturnStmt{Value: &LiteralExpr{Kind: "number", Value: "1"}},
+		}},
 		Else: &UnitLitExpr{},
 	}
 	typ, err := inferExprType(env, ifExpr, state)

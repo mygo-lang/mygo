@@ -426,6 +426,9 @@ func (v *validator) validateStructLit(x *StructLitExpr) error {
 			}
 		}
 		for _, sf := range st.Fields {
+			if sf.Name == "embed" {
+				continue
+			}
 			if _, ok := seen[sf.Name]; !ok {
 				return common.ErrorAtNode(x.SourceFile, x, "struct %s literal missing field %q", x.TypeName, sf.Name)
 			}

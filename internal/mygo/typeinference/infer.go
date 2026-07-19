@@ -1613,6 +1613,9 @@ func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType,
 			seen[f.Name] = struct{}{}
 		}
 		for _, sf := range structDecl.Fields {
+			if sf.Name == "embed" {
+				continue
+			}
 			if _, ok := seen[sf.Name]; !ok {
 				return nil, nil, nil, fmt.Errorf("struct %q literal missing field %q", n.TypeName, sf.Name)
 			}
@@ -1801,6 +1804,10 @@ func inferIf(env TypeEnv, n *IfExpr, state *InferState) (MonoType, Subst, []Pred
 	thenType = s.ApplyMT(thenType)
 	elseType = s.ApplyMT(elseType)
 
+	if isImplicitUnitElse(n.Else) && branchAlwaysReturns(n.Then) {
+		return TUnit{}, s, allPreds, nil
+	}
+
 	// Unify then and else branch types
 	s, err = Unify(thenType, elseType, s)
 	if err != nil {
@@ -1808,6 +1815,37 @@ func inferIf(env TypeEnv, n *IfExpr, state *InferState) (MonoType, Subst, []Pred
 	}
 
 	return s.ApplyMT(thenType), s, allPreds, nil
+}
+
+func isImplicitUnitElse(e Expr) bool {
+	u, ok := e.(*UnitLitExpr)
+	return ok && u.Line == 0 && u.Column == 0
+}
+
+func branchAlwaysReturns(e Expr) bool {
+	switch n := e.(type) {
+	case *BlockExpr:
+		stmts := effectiveBlockStmts(n)
+		if len(stmts) == 0 {
+			return false
+		}
+		return stmtAlwaysReturns(stmts[len(stmts)-1])
+	case *IfExpr:
+		return branchAlwaysReturns(n.Then) && branchAlwaysReturns(n.Else)
+	default:
+		return false
+	}
+}
+
+func stmtAlwaysReturns(s Stmt) bool {
+	switch st := s.(type) {
+	case *ReturnStmt:
+		return true
+	case *ExprStmt:
+		return branchAlwaysReturns(st.Expr)
+	default:
+		return false
+	}
 }
 
 func inferSwitch(env TypeEnv, n *SwitchExpr, state *InferState) (MonoType, Subst, []Predicate, error) {
