@@ -407,17 +407,27 @@ func (v *validator) validatePrefix(x *PrefixExpr) error {
 func (v *validator) validateStructLit(x *StructLitExpr) error {
 	// If we have a struct type, validate field names
 	st := v.pkg.Structs[x.TypeName]
-	if st != nil && len(x.Fields) > 0 {
+	if st != nil {
 		fieldSet := make(map[string]struct{}, len(st.Fields))
 		for _, sf := range st.Fields {
 			fieldSet[sf.Name] = struct{}{}
 		}
+		seen := make(map[string]struct{}, len(x.Fields))
 		for _, f := range x.Fields {
 			if _, ok := fieldSet[f.Name]; !ok {
 				return common.ErrorAtNode(x.SourceFile, f, "struct %s has no field %q", x.TypeName, f.Name)
 			}
+			if _, ok := seen[f.Name]; ok {
+				return common.ErrorAtNode(x.SourceFile, f, "struct %s field %q specified more than once", x.TypeName, f.Name)
+			}
+			seen[f.Name] = struct{}{}
 			if err := v.validateExpr(f.Value); err != nil {
 				return err
+			}
+		}
+		for _, sf := range st.Fields {
+			if _, ok := seen[sf.Name]; !ok {
+				return common.ErrorAtNode(x.SourceFile, x, "struct %s literal missing field %q", x.TypeName, sf.Name)
 			}
 		}
 	}

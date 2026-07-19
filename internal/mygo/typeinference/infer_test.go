@@ -1,6 +1,7 @@
 package typeinference
 
 import (
+	"strings"
 	"testing"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
@@ -269,6 +270,40 @@ func TestInferStructLitWithEmptyMapField(t *testing.T) {
 	}
 	if !eqType(typ, TCon{Name: "DocumentStore"}) {
 		t.Fatalf("expected DocumentStore, got %s", typ)
+	}
+}
+
+func TestInferStructLitRequiresAllFields(t *testing.T) {
+	state := NewInferState()
+	state.PkgInfo = &PkgInfo{
+		Name: "main",
+		Structs: map[string]*StructDecl{
+			"Point": {
+				Name: "Point",
+				Fields: []Field{
+					{Name: "X", Type: &NamedType{Name: "Int64"}},
+					{Name: "Y", Type: &NamedType{Name: "Int64"}},
+				},
+			},
+		},
+	}
+	env := TypeEnv{
+		"Point": &Scheme{Body: QualifiedType{Body: TCon{Name: "Point"}}},
+		"Int64": &Scheme{Body: QualifiedType{Body: TCon{Name: "Int64"}}},
+	}
+	expr := &StructLitExpr{
+		TypeName: "Point",
+		Fields: []StructLitField{
+			{Name: "X", Value: &LiteralExpr{Kind: "number", Value: "1"}},
+		},
+	}
+
+	_, err := inferExprType(env, expr, state)
+	if err == nil {
+		t.Fatal("inferExprType() error = nil, want missing struct field failure")
+	}
+	if !strings.Contains(err.Error(), `struct "Point" literal missing field "Y"`) {
+		t.Fatalf("inferExprType() error = %v, want missing struct field failure", err)
 	}
 }
 

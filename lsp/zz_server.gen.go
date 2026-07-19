@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"unicode"
 
 	. "github.com/mygo-lang/mygo/prelude"
 )
@@ -218,6 +217,113 @@ func writeOneMessage(msg LSPMessage) Result[struct {
 		return Ok[struct{}, error](__mygo_result_val)
 	}()
 }
+func byteLen(text string) int {
+	return Len_string_rune(text)
+}
+func substr(text string, start int, endIndex int) string {
+	return text[start:endIndex]
+}
+func charAt(text string, index int) string {
+	return substr(text, index, index+1)
+}
+func isWordChar(ch string) bool {
+	return func() bool {
+		if ch >= "a" && ch <= "z" {
+			return true
+		} else {
+			return func() bool {
+				if ch >= "A" && ch <= "Z" {
+					return true
+				} else {
+					return func() bool {
+						if ch >= "0" && ch <= "9" {
+							return true
+						} else {
+							return func() bool {
+								if ch == "_" {
+									return true
+								} else {
+									return ch == "-"
+								}
+							}()
+						}
+					}()
+				}
+			}()
+		}
+	}()
+}
+func decodeDocumentItem(params map[string]any) TextDocumentItem {
+	return func() TextDocumentItem {
+		var item TextDocumentItem
+		data, _ := json.Marshal(params["document"])
+		_ = json.Unmarshal(data, &item)
+		return item
+	}()
+}
+func firstChangeText(params map[string]any) string {
+	return func() string {
+		changes, _ := params["contentChanges"].([]any)
+		if len(changes) == 0 {
+			return ""
+		}
+		change, _ := changes[0].(map[string]any)
+		if text, ok := change["text"].(string); ok {
+			return text
+		}
+		return ""
+	}()
+}
+func requestURI(params map[string]any) string {
+	return func() string {
+		td, _ := params["textDocument"].(map[string]any)
+		if uri, ok := td["uri"].(string); ok {
+			return uri
+		}
+		return ""
+	}()
+}
+func requestLine(params map[string]any) int {
+	return func() int {
+		pos, _ := params["position"].(map[string]any)
+		if line, ok := pos["line"].(float64); ok {
+			return int(line)
+		}
+		return 0
+	}()
+}
+func requestChar(params map[string]any) int {
+	return func() int {
+		pos, _ := params["position"].(map[string]any)
+		if ch, ok := pos["character"].(float64); ok {
+			return int(ch)
+		}
+		return 0
+	}()
+}
+func requestVersion(params map[string]any) int {
+	return func() int {
+		td, _ := params["textDocument"].(map[string]any)
+		if version, ok := td["version"].(float64); ok {
+			return int(version)
+		}
+		return 0
+	}()
+}
+func requestQuery(params map[string]any) string {
+	return func() string {
+		if query, ok := params["query"].(string); ok {
+			return query
+		}
+		return ""
+	}()
+}
+func stringAt(items []string, index int) Option[string] {
+	return Get__t_int_t(items, index)
+}
+func completionAt(items []CompletionItem, index int) Option[CompletionItem] {
+	return Get__t_int_t(items, index)
+}
 func parseDocumentURI(uri string) string {
 	return func() string {
 		if strings.HasPrefix(uri, "file://") {
@@ -228,77 +334,73 @@ func parseDocumentURI(uri string) string {
 	}()
 }
 func wordAtPosition(content string, line int, char int) Option[*TextRange] {
+	lines_2 := strings.Split(content, "\n")
 	return func() Option[*TextRange] {
-		__mygo_go_ref := func() *TextRange {
-			lines := strings.Split(content, "\n")
-			if line >= len(lines) {
-				return nil
-			}
-			text := lines[line]
-			start := char
-			end := char
-			for start > 0 {
-				r := rune(text[start-1])
-				if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' && r != '-' {
-					break
-				}
-				start--
-			}
-			for end < len(text) {
-				r := rune(text[end])
-				if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' && r != '-' {
-					break
-				}
-				end++
-			}
-			if start == end {
-				return nil
-			}
-			r := &TextRange{StartPos: Position{Line: line, Character: start}, EndPos: Position{Line: line, Character: end}}
-			return r
-		}()
-		if __mygo_go_ref == nil {
-			return None[*TextRange]()
+		if v_1, ok := stringAt(lines_2, line).(OptionSome[string]); ok {
+			return func() Option[*TextRange] {
+				length_3 := byteLen(v_1.F0)
+				return func() Option[*TextRange] {
+					if char > length_3 {
+						return None[*TextRange]()
+					} else {
+						return func() Option[*TextRange] {
+							start_4 := char
+							wordEnd_5 := char
+							func() {
+								for start_4 > 0 && isWordChar(charAt(v_1.F0, start_4-1)) {
+									start_4 = start_4 - 1
+								}
+							}()
+							func() {
+								for wordEnd_5 < length_3 && isWordChar(charAt(v_1.F0, wordEnd_5)) {
+									wordEnd_5 = wordEnd_5 + 1
+								}
+							}()
+							return func() Option[*TextRange] {
+								if start_4 == wordEnd_5 {
+									return None[*TextRange]()
+								} else {
+									return Some[*TextRange](&TextRange{StartPos: Position{Line: line, Character: start_4}, EndPos: Position{Line: line, Character: wordEnd_5}})
+								}
+							}()
+						}()
+					}
+				}()
+			}()
+		} else {
+			return func() Option[*TextRange] {
+				return None[*TextRange]()
+			}()
 		}
-		return Some[*TextRange](__mygo_go_ref)
 	}()
 }
 func handleCompletion(store *DocumentStore, uri string, line int, char int) CompletionList {
 	return func() CompletionList {
-		if v_1, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
+		if v_2, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
 			return func() CompletionList {
-				content_2 := v_1.F0.Content
-				word_3 := ""
+				content_6 := v_2.F0.Content
+				word_7 := ""
 				func() {
-					if v_2, ok := wordAtPosition(content_2, line, char).(OptionSome[*TextRange]); ok {
+					if v_3, ok := wordAtPosition(content_6, line, char).(OptionSome[*TextRange]); ok {
 						func() {
-							lines_4 := strings.Split(v_1.F0.Content, "\n")
-							func() {
-								if line < Len__t_t(lines_4) {
-									func() {
-										text_5 := Option_UnwrapOr(Get__t_int_t(lines_4, line), "")
-										length_6 := len(text_5)
-										func() {
-											if char <= length_6 {
-												func() {
-													word_3 = text_5[char-(char-v_2.F0.StartPos.Character) : char]
-												}()
-											}
-										}()
-										return
-									}()
+							lines_8 := strings.Split(v_2.F0.Content, "\n")
+							if line < Len__t_t(lines_8) {
+								text_9 := Option_UnwrapOr(stringAt(lines_8, line), "")
+								length_10 := byteLen(text_9)
+								if char <= length_10 {
+									word_7 = substr(text_9, v_3.F0.StartPos.Character, char)
 								}
-							}()
+							}
 						}()
 					} else {
 						func() {
-							word_3 = ""
+							word_7 = ""
 						}()
 					}
 				}()
-				keywords_7 := buildKeywordCompletions()
-				items_8 := appendCompletions(keywords_7, word_3)
-				return CompletionList{IsIncomplete: false, Items: items_8}
+				keywords_11 := buildKeywordCompletions()
+				items_12 := appendCompletions(keywords_11, word_7)
+				return CompletionList{IsIncomplete: false, Items: items_12}
 			}()
 		} else {
 			return func() CompletionList {
@@ -308,41 +410,59 @@ func handleCompletion(store *DocumentStore, uri string, line int, char int) Comp
 	}()
 }
 func buildKeywordCompletions() []CompletionItem {
-	return func() []CompletionItem {
-		return []CompletionItem{{Label: "func", Kind: 14, Detail: "function declaration"}, {Label: "struct", Kind: 14, Detail: "struct declaration"}, {Label: "enum", Kind: 14, Detail: "enum declaration"}, {Label: "interface", Kind: 14, Detail: "interface declaration"}, {Label: "impl", Kind: 14, Detail: "impl block"}, {Label: "let", Kind: 14, Detail: "immutable binding"}, {Label: "var", Kind: 14, Detail: "mutable binding"}, {Label: "if", Kind: 14, Detail: "conditional expression"}, {Label: "else", Kind: 14, Detail: "else clause"}, {Label: "switch", Kind: 14, Detail: "switch expression"}, {Label: "case", Kind: 14, Detail: "case clause"}, {Label: "while", Kind: 14, Detail: "while loop"}, {Label: "return", Kind: 14, Detail: "return statement"}, {Label: "end", Kind: 14, Detail: "block end"}, {Label: "using", Kind: 14, Detail: "typeclass constraint"}, {Label: "import", Kind: 14, Detail: "import statement"}, {Label: "package", Kind: 14, Detail: "package declaration"}, {Label: "Option", Kind: 7, Detail: "Option[A] - nullable type"}, {Label: "Result", Kind: 7, Detail: "Result[A, E] - error type"}, {Label: "Some", Kind: 14, Detail: "Some[A] - option variant"}, {Label: "None", Kind: 14, Detail: "None[A] - none variant"}, {Label: "Ok", Kind: 14, Detail: "Ok[A, E] - result variant"}, {Label: "Err", Kind: 14, Detail: "Err[A, E] - error variant"}, {Label: "List", Kind: 7, Detail: "List[A] - linked list"}, {Label: "Slice", Kind: 7, Detail: "Slice[A] - Go slice"}, {Label: "Map", Kind: 7, Detail: "Map[K, V] - Go map"}, {Label: "Set", Kind: 7, Detail: "Set[A] - Go set"}, {Label: "Ref", Kind: 7, Detail: "Ref[T] - non-nil reference"}}
-	}()
+	return []CompletionItem{completionItem("func", 14, "function declaration"), completionItem("struct", 14, "struct declaration"), completionItem("enum", 14, "enum declaration"), completionItem("interface", 14, "interface declaration"), completionItem("impl", 14, "impl block"), completionItem("let", 14, "immutable binding"), completionItem("var", 14, "mutable binding"), completionItem("if", 14, "conditional expression"), completionItem("else", 14, "else clause"), completionItem("switch", 14, "switch expression"), completionItem("case", 14, "case clause"), completionItem("while", 14, "while loop"), completionItem("return", 14, "return statement"), completionItem("end", 14, "block end"), completionItem("using", 14, "typeclass constraint"), completionItem("import", 14, "import statement"), completionItem("package", 14, "package declaration"), completionItem("Option", 7, "Option[A] - nullable type"), completionItem("Result", 7, "Result[A, E] - error type"), completionItem("Some", 14, "Some[A] - option variant"), completionItem("None", 14, "None[A] - none variant"), completionItem("Ok", 14, "Ok[A, E] - result variant"), completionItem("Err", 14, "Err[A, E] - error variant"), completionItem("List", 7, "List[A] - linked list"), completionItem("Slice", 7, "Slice[A] - Go slice"), completionItem("Map", 7, "Map[K, V] - Go map"), completionItem("Set", 7, "Set[A] - Go set"), completionItem("Ref", 7, "Ref[T] - non-nil reference")}
+}
+func completionItem(label string, kind int, detail string) CompletionItem {
+	return CompletionItem{Label: label, Kind: kind, Detail: detail, Documentation: None[any](), AdditionalTextEdits: []TextEdit{}}
 }
 func appendCompletions(items []CompletionItem, word string) []CompletionItem {
 	return func() []CompletionItem {
 		if word == "" {
 			return items
+		} else {
+			return func() []CompletionItem {
+				var filtered_13 []CompletionItem = []CompletionItem{}
+				lowerWord_14 := strings.ToLower(word)
+				i_15 := 0
+				func() {
+					for i_15 < Len__t_t(items) {
+						func() {
+							if v_4, ok := completionAt(items, i_15).(OptionSome[CompletionItem]); ok {
+								func() {
+									if strings.HasPrefix(strings.ToLower(v_4.F0.Label), lowerWord_14) {
+										filtered_13 = Slice_Append(filtered_13, v_4.F0)
+									}
+								}()
+							} else {
+								func() {
+								}()
+							}
+						}()
+						i_15 = i_15 + 1
+					}
+				}()
+				return filtered_13
+			}()
 		}
-		var filtered []CompletionItem
-		for _, item := range items {
-			if strings.HasPrefix(strings.ToLower(item.Label), strings.ToLower(word)) {
-				filtered = append(filtered, item)
-			}
-		}
-		return filtered
 	}()
 }
 func handleHover(store *DocumentStore, uri string, line int, char int) Option[Hover] {
 	return func() Option[Hover] {
-		if v_3, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
+		if v_5, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
 			return func() Option[Hover] {
 				return func() Option[Hover] {
-					if v_4, ok := wordAtPosition(v_3.F0.Content, line, char).(OptionSome[*TextRange]); ok {
+					if v_6, ok := wordAtPosition(v_5.F0.Content, line, char).(OptionSome[*TextRange]); ok {
 						return func() Option[Hover] {
-							lines_9 := strings.Split(v_3.F0.Content, "\n")
+							lines_16 := strings.Split(v_5.F0.Content, "\n")
 							return func() Option[Hover] {
-								if line < Len__t_t(lines_9) {
+								if line < Len__t_t(lines_16) {
 									return func() Option[Hover] {
-										text_10 := Option_UnwrapOr(Get__t_int_t(lines_9, line), "")
-										word_11 := text_10[v_4.F0.StartPos.Character:v_4.F0.EndPos.Character]
-										docStr_12 := buildHoverDoc(word_11)
-										var hoverRange_13 Option[TextRange] = Some[TextRange](*v_4.F0)
-										hover_14 := Hover{Contents: MarkupContent{Kind: "plaintext", Value: docStr_12}, TextRange: hoverRange_13}
-										return Some[Hover](hover_14)
+										text_17 := Option_UnwrapOr(stringAt(lines_16, line), "")
+										word_18 := substr(text_17, v_6.F0.StartPos.Character, v_6.F0.EndPos.Character)
+										docStr_19 := buildHoverDoc(word_18)
+										var hoverRange_20 Option[TextRange] = Some[TextRange](*v_6.F0)
+										hover_21 := Hover{Contents: MarkupContent{Kind: "plaintext", Value: docStr_19}, TextRange: hoverRange_20}
+										return Some[Hover](hover_21)
 									}()
 								} else {
 									return None[Hover]()
@@ -365,47 +485,106 @@ func handleHover(store *DocumentStore, uri string, line int, char int) Option[Ho
 }
 func buildHoverDoc(word string) string {
 	return func() string {
-		switch word {
-		case "func":
-			return "**func** - function declaration\n\nDeclares a function with optional type parameters, parameters, return type, and body.\n"
-		case "struct":
-			return "**struct** - struct declaration\n\nDeclares a composite type with named fields.\n"
-		case "enum":
-			return "**enum** - enum declaration\n\nDeclares an algebraic data type with variants.\n"
-		case "let":
-			return "**let** - immutable binding\n\nCreates an immutable variable binding.\n"
-		case "var":
-			return "**var** - mutable binding\n\nCreates a mutable variable binding.\n"
-		case "Option":
-			return "**Option[A]** - nullable type\n\nRepresents an optional value. Variants: Some(value) and None.\n"
-		case "Result":
-			return "**Result[A, E]** - error handling type\n\nRepresents either a success value or an error.\n"
-		case "List":
-			return "**List[A]** - singly-linked list\n\nstruct List[A] { head: A; tail: Option[Ref[List[A]]] }\n"
-		case "Ref":
-			return "**Ref[T]** - non-nil reference\n\nLowers to *T in Go. Use Ref.new(expr) to create.\n"
-		case "Slice":
-			return "**Slice[A]** - Go slice\n\nLowers to []A in Go. No array literal syntax.\n"
-		case "Map":
-			return "**Map[K, V]** - Go map\n\nLowers to map[K]V in Go.\n"
-		case "Set":
-			return "**Set[A]** - Go set\n\nLowers to map[A]struct{} in Go.\n"
-		case "using":
-			return "**using** - typeclass constraint\n\nReplaces the old where keyword. Adds typeclass requirements.\n"
-		case "switch":
-			return "**switch** - pattern matching\n\nExhaustive pattern matching on enums and other types.\n"
-		case "while":
-			return "**while** - loop\n\nConditional loop with var mutation.\n"
-		default:
-			return "`" + word + "`\n\nNot a recognized MyGO keyword or type.\n"
+		if word == "func" {
+			return func() string {
+				return "**func** - function declaration\n\nDeclares a function with optional type parameters, parameters, return type, and body.\n"
+			}()
+		} else {
+			if word == "struct" {
+				return func() string {
+					return "**struct** - struct declaration\n\nDeclares a composite type with named fields.\n"
+				}()
+			} else {
+				if word == "enum" {
+					return func() string {
+						return "**enum** - enum declaration\n\nDeclares an algebraic data type with variants.\n"
+					}()
+				} else {
+					if word == "let" {
+						return func() string {
+							return "**let** - immutable binding\n\nCreates an immutable variable binding.\n"
+						}()
+					} else {
+						if word == "var" {
+							return func() string {
+								return "**var** - mutable binding\n\nCreates a mutable variable binding.\n"
+							}()
+						} else {
+							if word == "Option" {
+								return func() string {
+									return "**Option[A]** - nullable type\n\nRepresents an optional value. Variants: Some(value) and None.\n"
+								}()
+							} else {
+								if word == "Result" {
+									return func() string {
+										return "**Result[A, E]** - error handling type\n\nRepresents either a success value or an error.\n"
+									}()
+								} else {
+									if word == "List" {
+										return func() string {
+											return "**List[A]** - singly-linked list\n\nstruct List[A] { head: A; tail: Option[Ref[List[A]]] }\n"
+										}()
+									} else {
+										if word == "Ref" {
+											return func() string {
+												return "**Ref[T]** - non-nil reference\n\nLowers to *T in Go. Use Ref.new(expr) to create.\n"
+											}()
+										} else {
+											if word == "Slice" {
+												return func() string {
+													return "**Slice[A]** - Go slice\n\nLowers to []A in Go. No array literal syntax.\n"
+												}()
+											} else {
+												if word == "Map" {
+													return func() string {
+														return "**Map[K, V]** - Go map\n\nLowers to map[K]V in Go.\n"
+													}()
+												} else {
+													if word == "Set" {
+														return func() string {
+															return "**Set[A]** - Go set\n\nLowers to map[A]struct{} in Go.\n"
+														}()
+													} else {
+														if word == "using" {
+															return func() string {
+																return "**using** - typeclass constraint\n\nReplaces the old where keyword. Adds typeclass requirements.\n"
+															}()
+														} else {
+															if word == "switch" {
+																return func() string {
+																	return "**switch** - pattern matching\n\nExhaustive pattern matching on enums and other types.\n"
+																}()
+															} else {
+																if word == "while" {
+																	return func() string {
+																		return "**while** - loop\n\nConditional loop with var mutation.\n"
+																	}()
+																} else {
+																	return func() string {
+																		return "`" + word + "`\n\nNot a recognized MyGO keyword or type.\n"
+																	}()
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 	}()
 }
 func handleDiagnostics(store *DocumentStore, uri string) []Diagnostic {
 	return func() []Diagnostic {
-		if v_5, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
+		if v_7, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
 			return func() []Diagnostic {
-				return runMyGoDiagnostics(v_5.F0.Content)
+				return runMyGoDiagnostics(v_7.F0.Content)
 			}()
 		} else {
 			return func() []Diagnostic {
@@ -415,28 +594,39 @@ func handleDiagnostics(store *DocumentStore, uri string) []Diagnostic {
 	}()
 }
 func runMyGoDiagnostics(content string) []Diagnostic {
-	return func() []Diagnostic {
-		var diags []Diagnostic
-		lines := strings.Split(content, "\n")
-		for i, line := range lines {
-			trimmed := strings.TrimSpace(line)
-			if strings.Contains(trimmed, "where ") && !strings.HasPrefix(trimmed, "#") {
-				startChar := strings.Index(trimmed, "where")
-				diags = append(diags, Diagnostic{TextRange: TextRange{StartPos: Position{Line: i, Character: startChar}, EndPos: Position{Line: i, Character: startChar + 5}}, Severity: 2, Source: "mygo", Message: "'where' is deprecated, use 'using' instead", Code: "DEPRECATED"})
-			}
-			if strings.Contains(trimmed, "-> Unit") {
-				startChar := strings.Index(trimmed, "-> Unit")
-				diags = append(diags, Diagnostic{TextRange: TextRange{StartPos: Position{Line: i, Character: startChar}, EndPos: Position{Line: i, Character: startChar + 7}}, Severity: 2, Source: "mygo", Message: "'-> Unit' is deprecated, use '-> ()' instead", Code: "DEPRECATED"})
-			}
+	var diags_22 []Diagnostic = []Diagnostic{}
+	lines_23 := strings.Split(content, "\n")
+	i_24 := 0
+	func() {
+		for i_24 < Len__t_t(lines_23) {
+			func() {
+				if v_8, ok := stringAt(lines_23, i_24).(OptionSome[string]); ok {
+					func() {
+						trimmed_25 := strings.TrimSpace(v_8.F0)
+						if strings.Contains(trimmed_25, "where ") && !strings.HasPrefix(trimmed_25, "#") {
+							startChar_26 := strings.Index(trimmed_25, "where")
+							diags_22 = Slice_Append(diags_22, Diagnostic{TextRange: TextRange{StartPos: Position{Line: i_24, Character: startChar_26}, EndPos: Position{Line: i_24, Character: startChar_26 + 5}}, Severity: 2, Source: "mygo", Message: "'where' is deprecated, use 'using' instead", Code: "DEPRECATED"})
+						}
+						if strings.Contains(trimmed_25, "-> Unit") {
+							startChar_27 := strings.Index(trimmed_25, "-> Unit")
+							diags_22 = Slice_Append(diags_22, Diagnostic{TextRange: TextRange{StartPos: Position{Line: i_24, Character: startChar_27}, EndPos: Position{Line: i_24, Character: startChar_27 + 7}}, Severity: 2, Source: "mygo", Message: "'-> Unit' is deprecated, use '-> ()' instead", Code: "DEPRECATED"})
+						}
+					}()
+				} else {
+					func() {
+					}()
+				}
+			}()
+			i_24 = i_24 + 1
 		}
-		return diags
 	}()
+	return diags_22
 }
 func handleDocumentSymbols(store *DocumentStore, uri string) []DocumentSymbol {
 	return func() []DocumentSymbol {
-		if v_6, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
+		if v_9, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
 			return func() []DocumentSymbol {
-				return parseAndBuildSymbols(v_6.F0.Content)
+				return parseAndBuildSymbols(v_9.F0.Content)
 			}()
 		} else {
 			return func() []DocumentSymbol {
@@ -446,78 +636,123 @@ func handleDocumentSymbols(store *DocumentStore, uri string) []DocumentSymbol {
 	}()
 }
 func parseAndBuildSymbols(content string) []DocumentSymbol {
-	return func() []DocumentSymbol {
-		lines := strings.Split(content, "\n")
-		var symbols []DocumentSymbol
-		for i, line := range lines {
-			trimmed := strings.TrimSpace(line)
-			if trimmed == "" || strings.HasPrefix(trimmed, "#") {
-				continue
-			}
-			if strings.HasPrefix(trimmed, "struct ") {
-				parts := strings.Fields(trimmed)
-				if len(parts) >= 2 {
-					name := parts[1]
-					if idx := strings.Index(name, "["); idx != -1 {
-						name = name[:idx]
-					}
-					sym := DocumentSymbol{Name: name, Kind: 23, TextRange: TextRange{StartPos: Position{Line: i}, EndPos: Position{Line: i}}, SelectionTextRange: TextRange{StartPos: Position{Line: i, Character: len(trimmed) - len(name)}, EndPos: Position{Line: i, Character: len(trimmed)}}, Detail: "struct"}
-					symbols = append(symbols, sym)
+	var symbols_28 []DocumentSymbol = []DocumentSymbol{}
+	lines_29 := strings.Split(content, "\n")
+	i_30 := 0
+	func() {
+		for i_30 < Len__t_t(lines_29) {
+			func() {
+				if v_10, ok := stringAt(lines_29, i_30).(OptionSome[string]); ok {
+					func() {
+						trimmed_31 := strings.TrimSpace(v_10.F0)
+						if trimmed_31 == "" || strings.HasPrefix(trimmed_31, "#") {
+						} else {
+							func() {
+								if strings.HasPrefix(trimmed_31, "struct ") {
+									func() {
+										symbols_28 = appendNamedSymbol(symbols_28, trimmed_31, i_30, 23, "struct")
+									}()
+								} else {
+									func() {
+										if strings.HasPrefix(trimmed_31, "enum ") {
+											func() {
+												symbols_28 = appendNamedSymbol(symbols_28, trimmed_31, i_30, 10, "enum")
+											}()
+										} else {
+											func() {
+												if strings.HasPrefix(trimmed_31, "func ") {
+													func() {
+														name_32 := declarationName(strings.TrimPrefix(trimmed_31, "func "))
+														selStart_33 := strings.Index(trimmed_31, name_32)
+														symbols_28 = Slice_Append(symbols_28, documentSymbol(name_32, 12, i_30, selStart_33, selStart_33+byteLen(name_32), "func("+name_32+")"))
+													}()
+												} else {
+													func() {
+														if strings.HasPrefix(trimmed_31, "impl ") {
+															func() {
+																parts_34 := strings.Fields(trimmed_31)
+																func() {
+																	if v_11, ok := stringAt(parts_34, 1).(OptionSome[string]); ok {
+																		func() {
+																			symbols_28 = Slice_Append(symbols_28, documentSymbol("impl "+v_11.F0, 5, i_30, 5, byteLen(trimmed_31), "impl"))
+																		}()
+																	} else {
+																		func() {
+																		}()
+																	}
+																}()
+															}()
+														}
+													}()
+												}
+											}()
+										}
+									}()
+								}
+							}()
+						}
+					}()
+				} else {
+					func() {
+					}()
 				}
-			}
-			if strings.HasPrefix(trimmed, "enum ") {
-				parts := strings.Fields(trimmed)
-				if len(parts) >= 2 {
-					name := parts[1]
-					if idx := strings.Index(name, "["); idx != -1 {
-						name = name[:idx]
-					}
-					sym := DocumentSymbol{Name: name, Kind: 10, TextRange: TextRange{StartPos: Position{Line: i}, EndPos: Position{Line: i}}, SelectionTextRange: TextRange{StartPos: Position{Line: i, Character: len(trimmed) - len(name)}, EndPos: Position{Line: i, Character: len(trimmed)}}, Detail: "enum"}
-					symbols = append(symbols, sym)
-				}
-			}
-			if strings.HasPrefix(trimmed, "func ") {
-				rest := strings.TrimPrefix(trimmed, "func ")
-				name := rest
-				if idx := strings.Index(name, "("); idx != -1 {
-					name = name[:idx]
-				}
-				if idx := strings.Index(name, "["); idx != -1 {
-					name = name[:idx]
-				}
-				selStart := len(trimmed) - len(name)
-				sym := DocumentSymbol{Name: name, Kind: 12, TextRange: TextRange{StartPos: Position{Line: i}, EndPos: Position{Line: i}}, SelectionTextRange: TextRange{StartPos: Position{Line: i, Character: selStart}, EndPos: Position{Line: i, Character: len(trimmed)}}, Detail: "func(" + name + ")"}
-				symbols = append(symbols, sym)
-			}
-			if strings.HasPrefix(trimmed, "impl ") {
-				parts := strings.Fields(trimmed)
-				if len(parts) >= 2 {
-					name := parts[1]
-					sym := DocumentSymbol{Name: "impl " + name, Kind: 5, TextRange: TextRange{StartPos: Position{Line: i}, EndPos: Position{Line: i}}, SelectionTextRange: TextRange{StartPos: Position{Line: i, Character: 4}, EndPos: Position{Line: i, Character: len(trimmed)}}, Detail: "impl"}
-					symbols = append(symbols, sym)
-				}
-			}
+			}()
+			i_30 = i_30 + 1
 		}
-		return symbols
 	}()
+	return symbols_28
+}
+func declarationName(raw string) string {
+	name_35 := raw
+	paren_36 := strings.Index(name_35, "(")
+	if paren_36 >= 0 {
+		name_35 = substr(name_35, 0, paren_36)
+	}
+	bracket_37 := strings.Index(name_35, "[")
+	return func() string {
+		if bracket_37 >= 0 {
+			return substr(name_35, 0, bracket_37)
+		} else {
+			return name_35
+		}
+	}()
+}
+func appendNamedSymbol(symbols []DocumentSymbol, trimmed string, line int, kind int, detail string) []DocumentSymbol {
+	parts_38 := strings.Fields(trimmed)
+	return func() []DocumentSymbol {
+		if v_12, ok := stringAt(parts_38, 1).(OptionSome[string]); ok {
+			return func() []DocumentSymbol {
+				name_39 := declarationName(v_12.F0)
+				selStart_40 := strings.Index(trimmed, name_39)
+				return Slice_Append(symbols, documentSymbol(name_39, kind, line, selStart_40, selStart_40+byteLen(name_39), detail))
+			}()
+		} else {
+			return func() []DocumentSymbol {
+				return symbols
+			}()
+		}
+	}()
+}
+func documentSymbol(name string, kind int, line int, selectionStart int, selectionEnd int, detail string) DocumentSymbol {
+	return DocumentSymbol{Name: name, Detail: detail, Kind: kind, TextRange: TextRange{StartPos: Position{Line: line, Character: 0}, EndPos: Position{Line: line, Character: selectionEnd}}, SelectionTextRange: TextRange{StartPos: Position{Line: line, Character: selectionStart}, EndPos: Position{Line: line, Character: selectionEnd}}, Children: []DocumentSymbol{}}
 }
 func handleDefinition(store *DocumentStore, uri string, line int, char int) Option[[]Location] {
 	return func() Option[[]Location] {
-		if v_7, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
+		if v_13, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
 			return func() Option[[]Location] {
 				return func() Option[[]Location] {
-					if v_8, ok := wordAtPosition(v_7.F0.Content, line, char).(OptionSome[*TextRange]); ok {
+					if v_14, ok := wordAtPosition(v_13.F0.Content, line, char).(OptionSome[*TextRange]); ok {
 						return func() Option[[]Location] {
-							lines_15 := strings.Split(v_7.F0.Content, "\n")
+							lines_41 := strings.Split(v_13.F0.Content, "\n")
 							return func() Option[[]Location] {
-								if line < Len__t_t(lines_15) {
+								if line < Len__t_t(lines_41) {
 									return func() Option[[]Location] {
-										text_16 := Option_UnwrapOr(Get__t_int_t(lines_15, line), "")
-										word_17 := text_16[v_8.F0.StartPos.Character:v_8.F0.EndPos.Character]
-										locs_18 := searchDefinitionInDoc(v_7.F0.Content, word_17, v_7.F0.URI)
+										text_42 := Option_UnwrapOr(stringAt(lines_41, line), "")
+										word_43 := substr(text_42, v_14.F0.StartPos.Character, v_14.F0.EndPos.Character)
+										locs_44 := searchDefinitionInDoc(v_13.F0.Content, word_43, v_13.F0.URI)
 										return func() Option[[]Location] {
-											if Len__t_t(locs_18) > 0 {
-												return Some[[]Location](locs_18)
+											if Len__t_t(locs_44) > 0 {
+												return Some[[]Location](locs_44)
 											} else {
 												return None[[]Location]()
 											}
@@ -543,41 +778,53 @@ func handleDefinition(store *DocumentStore, uri string, line int, char int) Opti
 	}()
 }
 func searchDefinitionInDoc(content string, word string, uri string) []Location {
-	return func() []Location {
-		var locations []Location
-		lines := strings.Split(content, "\n")
-		for i, line := range lines {
-			trimmed := strings.TrimSpace(line)
-			if trimmed == "" || strings.HasPrefix(trimmed, "#") {
-				continue
-			}
-			if strings.HasPrefix(trimmed, "func "+word) {
-				locations = append(locations, Location{URI: "file://" + uri, TextRange: TextRange{StartPos: Position{Line: i, Character: 0}, EndPos: Position{Line: i, Character: len(trimmed)}}})
-			}
-			if strings.HasPrefix(trimmed, "struct "+word) || strings.HasPrefix(trimmed, "enum "+word) {
-				locations = append(locations, Location{URI: "file://" + uri, TextRange: TextRange{StartPos: Position{Line: i, Character: 0}, EndPos: Position{Line: i, Character: len(trimmed)}}})
-			}
+	var locations_45 []Location = []Location{}
+	lines_46 := strings.Split(content, "\n")
+	i_47 := 0
+	func() {
+		for i_47 < Len__t_t(lines_46) {
+			func() {
+				if v_15, ok := stringAt(lines_46, i_47).(OptionSome[string]); ok {
+					func() {
+						trimmed_48 := strings.TrimSpace(v_15.F0)
+						if trimmed_48 == "" || strings.HasPrefix(trimmed_48, "#") {
+						} else {
+							func() {
+								if strings.HasPrefix(trimmed_48, "func "+word) || strings.HasPrefix(trimmed_48, "struct "+word) || strings.HasPrefix(trimmed_48, "enum "+word) {
+									func() {
+										locations_45 = Slice_Append(locations_45, lineLocation(uri, i_47, trimmed_48))
+									}()
+								}
+							}()
+						}
+					}()
+				} else {
+					func() {
+					}()
+				}
+			}()
+			i_47 = i_47 + 1
 		}
-		return locations
 	}()
+	return locations_45
 }
 func handleReferences(store *DocumentStore, uri string, line int, char int) Option[[]Location] {
 	return func() Option[[]Location] {
-		if v_9, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
+		if v_16, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
 			return func() Option[[]Location] {
 				return func() Option[[]Location] {
-					if v_10, ok := wordAtPosition(v_9.F0.Content, line, char).(OptionSome[*TextRange]); ok {
+					if v_17, ok := wordAtPosition(v_16.F0.Content, line, char).(OptionSome[*TextRange]); ok {
 						return func() Option[[]Location] {
-							lines_19 := strings.Split(v_9.F0.Content, "\n")
+							lines_49 := strings.Split(v_16.F0.Content, "\n")
 							return func() Option[[]Location] {
-								if line < Len__t_t(lines_19) {
+								if line < Len__t_t(lines_49) {
 									return func() Option[[]Location] {
-										text_20 := Option_UnwrapOr(Get__t_int_t(lines_19, line), "")
-										word_21 := text_20[v_10.F0.StartPos.Character:v_10.F0.EndPos.Character]
-										locs_22 := searchReferencesInDoc(v_9.F0.Content, word_21, v_9.F0.URI)
+										text_50 := Option_UnwrapOr(stringAt(lines_49, line), "")
+										word_51 := substr(text_50, v_17.F0.StartPos.Character, v_17.F0.EndPos.Character)
+										locs_52 := searchReferencesInDoc(v_16.F0.Content, word_51, v_16.F0.URI)
 										return func() Option[[]Location] {
-											if Len__t_t(locs_22) > 0 {
-												return Some[[]Location](locs_22)
+											if Len__t_t(locs_52) > 0 {
+												return Some[[]Location](locs_52)
 											} else {
 												return None[[]Location]()
 											}
@@ -603,106 +850,102 @@ func handleReferences(store *DocumentStore, uri string, line int, char int) Opti
 	}()
 }
 func searchReferencesInDoc(content string, word string, uri string) []Location {
-	return func() []Location {
-		var locations []Location
-		lines := strings.Split(content, "\n")
-		for i, line := range lines {
-			trimmed := strings.TrimSpace(line)
-			if trimmed == "" || strings.HasPrefix(trimmed, "#") {
-				continue
-			}
-			if strings.Contains(trimmed, word) {
-				startChar := strings.Index(trimmed, word)
-				if startChar >= 0 {
-					locations = append(locations, Location{URI: "file://" + uri, TextRange: TextRange{StartPos: Position{Line: i, Character: startChar}, EndPos: Position{Line: i, Character: startChar + len(word)}}})
+	var locations_53 []Location = []Location{}
+	lines_54 := strings.Split(content, "\n")
+	i_55 := 0
+	func() {
+		for i_55 < Len__t_t(lines_54) {
+			func() {
+				if v_18, ok := stringAt(lines_54, i_55).(OptionSome[string]); ok {
+					func() {
+						trimmed_56 := strings.TrimSpace(v_18.F0)
+						startChar_57 := strings.Index(trimmed_56, word)
+						if trimmed_56 == "" || strings.HasPrefix(trimmed_56, "#") || startChar_57 < 0 {
+						} else {
+							locations_53 = Slice_Append(locations_53, Location{URI: "file://" + uri, TextRange: TextRange{StartPos: Position{Line: i_55, Character: startChar_57}, EndPos: Position{Line: i_55, Character: startChar_57 + byteLen(word)}}})
+						}
+					}()
+				} else {
+					func() {
+					}()
 				}
-			}
+			}()
+			i_55 = i_55 + 1
 		}
-		return locations
 	}()
+	return locations_53
+}
+func lineLocation(uri string, line int, text string) Location {
+	return Location{URI: "file://" + uri, TextRange: TextRange{StartPos: Position{Line: line, Character: 0}, EndPos: Position{Line: line, Character: byteLen(text)}}}
 }
 func handleWorkspaceSymbols(store *DocumentStore, query string) []any {
-	return func() []any {
-		return []any{}
-	}()
+	return emptyAnySlice()
+}
+func emptyAnySlice() []any {
+	return []any{}
 }
 func buildInitializeResponse() InitializeResult {
 	return InitializeResult{Capabilities: ServerCapabilities{TextDocumentSync: 1, CompletionProvider: CompletionOptions{TriggerCharacters: []string{".", "(", " ", "\"", ":"}}, HoverProvider: true, DefinitionProvider: true, ReferencesProvider: true, DocumentSymbolProvider: true, WorkspaceSymbolProvider: true}}
 }
+func responseEmpty(id Option[int]) LSPMessage {
+	return LSPMessage{Jsonrpc: "2.0", Id: id, Method: "", Params: None[map[string]any](), Result: None[any](), Error: None[LSPError]()}
+}
+func responseResult(id Option[int], result any) LSPMessage {
+	return LSPMessage{Jsonrpc: "2.0", Id: id, Method: "", Params: None[map[string]any](), Result: Some[any](result), Error: None[LSPError]()}
+}
+func responseMaybeResult(id Option[int], result Option[any]) LSPMessage {
+	return LSPMessage{Jsonrpc: "2.0", Id: id, Method: "", Params: None[map[string]any](), Result: result, Error: None[LSPError]()}
+}
+func responseError(id Option[int], code int, message string) LSPMessage {
+	return LSPMessage{Jsonrpc: "2.0", Id: id, Method: "", Params: None[map[string]any](), Result: None[any](), Error: Some[LSPError](LSPError{Code: code, Message: message})}
+}
 func handleMessage(store *DocumentStore, raw string) LSPMessage {
-	msg_23 := func() LSPMessage {
+	msg_58 := func() LSPMessage {
 		var m LSPMessage
 		json.Unmarshal([]byte(raw), &m)
 		return m
 	}()
-	id_24 := msg_23.Id
+	id_59 := msg_58.Id
 	return func() LSPMessage {
-		if msg_23.Method == "initialize" {
+		if msg_58.Method == "initialize" {
 			return func() LSPMessage {
-				result_51 := buildInitializeResponse()
-				return LSPMessage{Jsonrpc: "2.0", Id: id_24, Result: Some[any](result_51)}
+				result_86 := buildInitializeResponse()
+				return responseResult(id_59, result_86)
 			}()
 		} else {
-			if msg_23.Method == "initialized" {
+			if msg_58.Method == "initialized" {
 				return func() LSPMessage {
-					return LSPMessage{Jsonrpc: "2.0", Id: id_24}
+					return responseEmpty(id_59)
 				}()
 			} else {
-				if msg_23.Method == "textDocument/didOpen" {
+				if msg_58.Method == "textDocument/didOpen" {
 					return func() LSPMessage {
 						return func() LSPMessage {
-							if v_19, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
+							if v_27, ok := msg_58.Params.(OptionSome[map[string]any]); ok {
 								return func() LSPMessage {
-									docItem_49 := func() TextDocumentItem {
-										var item TextDocumentItem
-										data, _ := json.Marshal(v_19.F0["document"])
-										json.Unmarshal(data, &item)
-										return item
-									}()
-									storePut(store, docItem_49.URI, docItem_49.Version, docItem_49.Content)
-									diags_50 := handleDiagnostics(store, docItem_49.URI)
-									return LSPMessage{Jsonrpc: "2.0", Id: id_24, Result: Some[any](diags_50)}
+									docItem_84 := decodeDocumentItem(v_27.F0)
+									storePut(store, docItem_84.URI, docItem_84.Version, docItem_84.Content)
+									diags_85 := handleDiagnostics(store, docItem_84.URI)
+									return responseResult(id_59, diags_85)
 								}()
 							} else {
 								return func() LSPMessage {
-									return LSPMessage{Jsonrpc: "2.0", Id: id_24}
+									return responseEmpty(id_59)
 								}()
 							}
 						}()
 					}()
 				} else {
-					if msg_23.Method == "textDocument/didChange" {
+					if msg_58.Method == "textDocument/didChange" {
 						return func() LSPMessage {
 							return func() LSPMessage {
-								if v_18, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
+								if v_26, ok := msg_58.Params.(OptionSome[map[string]any]); ok {
 									return func() LSPMessage {
-										version_46 := func() int {
-											td, _ := v_18.F0["textDocument"].(map[string]any)
-											if ver, _ := td["version"].(float64); ok {
-												return int(ver)
-											}
-											return 0
-										}()
-										content_47 := func() string {
-											changes, _ := v_18.F0["contentChanges"].([]any)
-											if len(changes) == 0 {
-												return ""
-											}
-											change, _ := changes[0].(map[string]any)
-											if t, _ := change["text"].(string); ok {
-												return t
-											}
-											return ""
-										}()
-										uri_48 := func() string {
-											td, _ := v_18.F0["textDocument"].(map[string]any)
-											if u, _ := td["uri"].(string); ok {
-												return u
-											}
-											return ""
-										}()
-										storePut(store, uri_48, version_46, content_47)
-										return LSPMessage{Jsonrpc: "2.0", Id: id_24}
+										version_81 := requestVersion(v_26.F0)
+										uri_82 := requestURI(v_26.F0)
+										content_83 := firstChangeText(v_26.F0)
+										storePut(store, uri_82, version_81, content_83)
+										return responseEmpty(id_59)
 									}()
 								} else {
 									panic("unreachable")
@@ -710,224 +953,135 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 							}()
 						}()
 					} else {
-						if msg_23.Method == "textDocument/didClose" {
+						if msg_58.Method == "textDocument/didClose" {
 							return func() LSPMessage {
 								return func() LSPMessage {
-									if v_17, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
+									if v_25, ok := msg_58.Params.(OptionSome[map[string]any]); ok {
 										return func() LSPMessage {
-											uri_45 := func() string {
-												td, _ := v_17.F0["textDocument"].(map[string]any)
-												if u, _ := td["uri"].(string); ok {
-													return u
-												}
-												return ""
-											}()
-											storeDelete(store, uri_45)
-											return LSPMessage{Jsonrpc: "2.0", Id: id_24}
+											uri_80 := requestURI(v_25.F0)
+											storeDelete(store, uri_80)
+											return responseEmpty(id_59)
 										}()
 									} else {
 										return func() LSPMessage {
-											return LSPMessage{Jsonrpc: "2.0", Id: id_24}
+											return responseEmpty(id_59)
 										}()
 									}
 								}()
 							}()
 						} else {
-							if msg_23.Method == "textDocument/completion" {
+							if msg_58.Method == "textDocument/completion" {
 								return func() LSPMessage {
 									return func() LSPMessage {
-										if v_16, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
+										if v_24, ok := msg_58.Params.(OptionSome[map[string]any]); ok {
 											return func() LSPMessage {
-												uri_41 := func() string {
-													td, _ := v_16.F0["textDocument"].(map[string]any)
-													if u, _ := td["uri"].(string); ok {
-														return u
-													}
-													return ""
-												}()
-												line_42 := func() int {
-													pos, _ := v_16.F0["position"].(map[string]any)
-													if l, _ := pos["line"].(float64); ok {
-														return int(l)
-													}
-													return 0
-												}()
-												char_43 := func() int {
-													pos, _ := v_16.F0["position"].(map[string]any)
-													if c, _ := pos["character"].(float64); ok {
-														return int(c)
-													}
-													return 0
-												}()
-												items_44 := handleCompletion(store, uri_41, line_42, char_43)
-												return LSPMessage{Jsonrpc: "2.0", Id: id_24, Result: Some[any](items_44)}
+												uri_76 := requestURI(v_24.F0)
+												line_77 := requestLine(v_24.F0)
+												char_78 := requestChar(v_24.F0)
+												items_79 := handleCompletion(store, uri_76, line_77, char_78)
+												return responseResult(id_59, items_79)
 											}()
 										} else {
 											return func() LSPMessage {
-												return LSPMessage{Jsonrpc: "2.0", Id: id_24}
+												return responseEmpty(id_59)
 											}()
 										}
 									}()
 								}()
 							} else {
-								if msg_23.Method == "textDocument/hover" {
+								if msg_58.Method == "textDocument/hover" {
 									return func() LSPMessage {
 										return func() LSPMessage {
-											if v_15, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
+											if v_23, ok := msg_58.Params.(OptionSome[map[string]any]); ok {
 												return func() LSPMessage {
-													uri_37 := func() string {
-														td, _ := v_15.F0["textDocument"].(map[string]any)
-														if u, _ := td["uri"].(string); ok {
-															return u
-														}
-														return ""
-													}()
-													line_38 := func() int {
-														pos, _ := v_15.F0["position"].(map[string]any)
-														if l, _ := pos["line"].(float64); ok {
-															return int(l)
-														}
-														return 0
-													}()
-													char_39 := func() int {
-														pos, _ := v_15.F0["position"].(map[string]any)
-														if c, _ := pos["character"].(float64); ok {
-															return int(c)
-														}
-														return 0
-													}()
-													hover_40 := handleHover(store, uri_37, line_38, char_39)
-													return LSPMessage{Jsonrpc: "2.0", Id: id_24, Result: hover_40}
+													uri_72 := requestURI(v_23.F0)
+													line_73 := requestLine(v_23.F0)
+													char_74 := requestChar(v_23.F0)
+													hover_75 := handleHover(store, uri_72, line_73, char_74)
+													return responseMaybeResult(id_59, hover_75)
 												}()
 											} else {
 												return func() LSPMessage {
-													return LSPMessage{Jsonrpc: "2.0", Id: id_24}
+													return responseEmpty(id_59)
 												}()
 											}
 										}()
 									}()
 								} else {
-									if msg_23.Method == "textDocument/definition" {
+									if msg_58.Method == "textDocument/definition" {
 										return func() LSPMessage {
 											return func() LSPMessage {
-												if v_14, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
+												if v_22, ok := msg_58.Params.(OptionSome[map[string]any]); ok {
 													return func() LSPMessage {
-														uri_33 := func() string {
-															td, _ := v_14.F0["textDocument"].(map[string]any)
-															if u, _ := td["uri"].(string); ok {
-																return u
-															}
-															return ""
-														}()
-														line_34 := func() int {
-															pos, _ := v_14.F0["position"].(map[string]any)
-															if l, _ := pos["line"].(float64); ok {
-																return int(l)
-															}
-															return 0
-														}()
-														char_35 := func() int {
-															pos, _ := v_14.F0["position"].(map[string]any)
-															if c, _ := pos["character"].(float64); ok {
-																return int(c)
-															}
-															return 0
-														}()
-														locs_36 := handleDefinition(store, uri_33, line_34, char_35)
-														return LSPMessage{Jsonrpc: "2.0", Id: id_24, Result: locs_36}
+														uri_68 := requestURI(v_22.F0)
+														line_69 := requestLine(v_22.F0)
+														char_70 := requestChar(v_22.F0)
+														locs_71 := handleDefinition(store, uri_68, line_69, char_70)
+														return responseMaybeResult(id_59, locs_71)
 													}()
 												} else {
 													return func() LSPMessage {
-														return LSPMessage{Jsonrpc: "2.0", Id: id_24}
+														return responseEmpty(id_59)
 													}()
 												}
 											}()
 										}()
 									} else {
-										if msg_23.Method == "textDocument/references" {
+										if msg_58.Method == "textDocument/references" {
 											return func() LSPMessage {
 												return func() LSPMessage {
-													if v_13, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
+													if v_21, ok := msg_58.Params.(OptionSome[map[string]any]); ok {
 														return func() LSPMessage {
-															uri_29 := func() string {
-																td, _ := v_13.F0["textDocument"].(map[string]any)
-																if u, _ := td["uri"].(string); ok {
-																	return u
-																}
-																return ""
-															}()
-															line_30 := func() int {
-																pos, _ := v_13.F0["position"].(map[string]any)
-																if l, _ := pos["line"].(float64); ok {
-																	return int(l)
-																}
-																return 0
-															}()
-															char_31 := func() int {
-																pos, _ := v_13.F0["position"].(map[string]any)
-																if c, _ := pos["character"].(float64); ok {
-																	return int(c)
-																}
-																return 0
-															}()
-															locs_32 := handleReferences(store, uri_29, line_30, char_31)
-															return LSPMessage{Jsonrpc: "2.0", Id: id_24, Result: locs_32}
+															uri_64 := requestURI(v_21.F0)
+															line_65 := requestLine(v_21.F0)
+															char_66 := requestChar(v_21.F0)
+															locs_67 := handleReferences(store, uri_64, line_65, char_66)
+															return responseMaybeResult(id_59, locs_67)
 														}()
 													} else {
 														return func() LSPMessage {
-															return LSPMessage{Jsonrpc: "2.0", Id: id_24}
+															return responseEmpty(id_59)
 														}()
 													}
 												}()
 											}()
 										} else {
-											if msg_23.Method == "textDocument/documentSymbol" {
+											if msg_58.Method == "textDocument/documentSymbol" {
 												return func() LSPMessage {
 													return func() LSPMessage {
-														if v_12, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
+														if v_20, ok := msg_58.Params.(OptionSome[map[string]any]); ok {
 															return func() LSPMessage {
-																uri_27 := func() string {
-																	td, _ := v_12.F0["textDocument"].(map[string]any)
-																	if u, _ := td["uri"].(string); ok {
-																		return u
-																	}
-																	return ""
-																}()
-																syms_28 := handleDocumentSymbols(store, uri_27)
-																return LSPMessage{Jsonrpc: "2.0", Id: id_24, Result: Some[any](syms_28)}
+																uri_62 := requestURI(v_20.F0)
+																syms_63 := handleDocumentSymbols(store, uri_62)
+																return responseResult(id_59, syms_63)
 															}()
 														} else {
 															return func() LSPMessage {
-																return LSPMessage{Jsonrpc: "2.0", Id: id_24}
+																return responseEmpty(id_59)
 															}()
 														}
 													}()
 												}()
 											} else {
-												if msg_23.Method == "workspace/symbol" {
+												if msg_58.Method == "workspace/symbol" {
 													return func() LSPMessage {
 														return func() LSPMessage {
-															if v_11, ok := msg_23.Params.(OptionSome[map[string]any]); ok {
+															if v_19, ok := msg_58.Params.(OptionSome[map[string]any]); ok {
 																return func() LSPMessage {
-																	query_25 := func() string {
-																		if q, _ := v_11.F0["query"].(string); ok {
-																			return q
-																		}
-																		return ""
-																	}()
-																	syms_26 := handleWorkspaceSymbols(store, query_25)
-																	return LSPMessage{Jsonrpc: "2.0", Id: id_24, Result: Some[any](syms_26)}
+																	query_60 := requestQuery(v_19.F0)
+																	syms_61 := handleWorkspaceSymbols(store, query_60)
+																	return responseResult(id_59, syms_61)
 																}()
 															} else {
 																return func() LSPMessage {
-																	return LSPMessage{Jsonrpc: "2.0", Id: id_24}
+																	return responseEmpty(id_59)
 																}()
 															}
 														}()
 													}()
 												} else {
 													return func() LSPMessage {
-														return LSPMessage{Jsonrpc: "2.0", Id: id_24, Error: Some[LSPError](LSPError{Code: -32601, Message: "method not found: " + msg_23.Method})}
+														return responseError(id_59, -32601, "method not found: "+msg_58.Method)
 													}()
 												}
 											}
@@ -943,9 +1097,21 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 	}()
 }
 func Main() {
-	fmt.Println("MyGO Language Server v0.1.0")
-	fmt.Println("Server initialized, waiting for requests...")
-	store_52 := func() *DocumentStore {
+	func() Result[int, error] {
+		__mygo_result_val, __mygo_result_err := fmt.Println("MyGO Language Server v0.1.0")
+		if __mygo_result_err != nil {
+			return Err[int, error](__mygo_result_err)
+		}
+		return Ok[int, error](__mygo_result_val)
+	}()
+	func() Result[int, error] {
+		__mygo_result_val, __mygo_result_err := fmt.Println("Server initialized, waiting for requests...")
+		if __mygo_result_err != nil {
+			return Err[int, error](__mygo_result_err)
+		}
+		return Ok[int, error](__mygo_result_val)
+	}()
+	store_87 := func() *DocumentStore {
 		__ref_tmp := newDocumentStore()
 		return &__ref_tmp
 	}()
@@ -956,7 +1122,7 @@ func Main() {
 				break
 			} else {
 			}
-			response := handleMessage(store_52, raw)
+			response := handleMessage(store_87, raw)
 			writeOneMessage(response)
 		}
 	}()

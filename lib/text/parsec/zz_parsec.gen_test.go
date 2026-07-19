@@ -10,163 +10,119 @@ import (
 
 func TestPPureReturnsValue(t *testing.T) {
 	result_15 := ParseInput(PPure(42), "hello")
-	func() {
-		if !result_15.Ok {
-			t.Fatal("PPure should always succeed")
-		} else {
-			func() {
-				if result_15.Value != 42 {
-					t.Fatalf("PPure(42) = %d, want 42", result_15.Value)
-				}
-			}()
-		}
-	}()
-	func() {
-		if result_15.Consumed {
-			t.Fatal("PPure should not consume input")
-		}
-	}()
-	func() {
-		if result_15.State.Index != 0 {
-			t.Fatalf("PPure should not advance state, index=%d, want 0", result_15.State.Index)
-		}
-	}()
+	if !result_15.Ok {
+		t.Fatal("PPure should always succeed")
+	} else {
+		func() {
+			if result_15.Value != 42 {
+				t.Fatalf("PPure(42) = %d, want 42", result_15.Value)
+			}
+		}()
+	}
+	if result_15.Consumed {
+		t.Fatal("PPure should not consume input")
+	}
+	if result_15.State.Index != 0 {
+		t.Fatalf("PPure should not advance state, index=%d, want 0", result_15.State.Index)
+	}
 }
 func TestPPurePreservesState(t *testing.T) {
 	NewState("abc")
 	result_16 := ParseInput(PPure("x"), "abc")
-	func() {
-		if result_16.State.Input != "abc" {
-			t.Fatal("PPure should preserve input")
-		}
-	}()
-	func() {
-		if result_16.State.Position.Line != 1 {
-			t.Fatalf("PPure should preserve line, got %d", result_16.State.Position.Line)
-		}
-	}()
-	func() {
-		if result_16.State.Position.Column != 1 {
-			t.Fatalf("PPure should preserve column, got %d", result_16.State.Position.Column)
-		}
-	}()
+	if result_16.State.Input != "abc" {
+		t.Fatal("PPure should preserve input")
+	}
+	if result_16.State.Position.Line != 1 {
+		t.Fatalf("PPure should preserve line, got %d", result_16.State.Position.Line)
+	}
+	if result_16.State.Position.Column != 1 {
+		t.Fatalf("PPure should preserve column, got %d", result_16.State.Position.Column)
+	}
 }
 func TestPFailReturnsFailure(t *testing.T) {
 	result_17 := ParseInput(PFail[int]("expected x"), "abc")
-	func() {
-		if result_17.Ok {
-			t.Fatal("PFail should always fail")
-		}
-	}()
-	func() {
-		if result_17.Consumed {
-			t.Fatal("PFail should not consume input")
-		}
-	}()
-	func() {
-		if result_17.State.Index != 0 {
-			t.Fatal("PFail should not advance state")
-		}
-	}()
+	if result_17.Ok {
+		t.Fatal("PFail should always fail")
+	}
+	if result_17.Consumed {
+		t.Fatal("PFail should not consume input")
+	}
+	if result_17.State.Index != 0 {
+		t.Fatal("PFail should not advance state")
+	}
 }
 func TestPMapTransformsValue(t *testing.T) {
 	p_18 := PMap(PChar('x'), func(c rune) int {
 		return int(c)
 	})
 	result_19 := ParseInput(p_18, "xy")
-	func() {
-		if !result_19.Ok {
-			t.Fatal("PMap should succeed when inner parser succeeds")
-		}
-	}()
-	func() {
-		if result_19.Value != int('x') {
-			t.Fatalf("PMap(PChar('x'), ...) = %d, want %d", result_19.Value, int('x'))
-		}
-	}()
+	if !result_19.Ok {
+		t.Fatal("PMap should succeed when inner parser succeeds")
+	}
+	if result_19.Value != int('x') {
+		t.Fatalf("PMap(PChar('x'), ...) = %d, want %d", result_19.Value, int('x'))
+	}
 }
 func TestPMapPropagatesFailure(t *testing.T) {
 	p_20 := PMap(PChar('x'), func(c rune) int {
 		return int(c)
 	})
 	result_21 := ParseInput(p_20, "yz")
-	func() {
-		if result_21.Ok {
-			t.Fatal("PMap should fail when inner parser fails")
-		}
-	}()
+	if result_21.Ok {
+		t.Fatal("PMap should fail when inner parser fails")
+	}
 }
 func TestPBindChainsParsers(t *testing.T) {
 	p_22 := PBind(PChar('a'), func(_ rune) Parser[rune] {
 		return PChar('b')
 	})
 	result_23 := ParseInput(p_22, "ab")
-	func() {
-		if !result_23.Ok {
-			t.Fatal("PBind should succeed when both parsers succeed")
-		}
-	}()
-	func() {
-		if result_23.Value != 'b' {
-			t.Fatalf("PBind result = %d, want %d", result_23.Value, 'b')
-		}
-	}()
+	if !result_23.Ok {
+		t.Fatal("PBind should succeed when both parsers succeed")
+	}
+	if result_23.Value != 'b' {
+		t.Fatalf("PBind result = %d, want %d", result_23.Value, 'b')
+	}
 }
 func TestPThenSequencesParsers(t *testing.T) {
 	p_24 := PThen(PChar('h'), PThen(PChar('i'), PPure(42)))
 	result_25 := ParseInput(p_24, "hi!")
-	func() {
-		if !result_25.Ok {
-			t.Fatal("PThen should succeed")
-		}
-	}()
-	func() {
-		if result_25.Value != 42 {
-			t.Fatalf("PThen result = %d, want 42", result_25.Value)
-		}
-	}()
-	func() {
-		if result_25.State.Index != 2 {
-			t.Fatalf("PThen should consume both inputs, index=%d, want 2", result_25.State.Index)
-		}
-	}()
+	if !result_25.Ok {
+		t.Fatal("PThen should succeed")
+	}
+	if result_25.Value != 42 {
+		t.Fatalf("PThen result = %d, want 42", result_25.Value)
+	}
+	if result_25.State.Index != 2 {
+		t.Fatalf("PThen should consume both inputs, index=%d, want 2", result_25.State.Index)
+	}
 }
 func TestPOrElseTakesLeftOnSuccess(t *testing.T) {
 	p_26 := POrElse(PChar('a'), PChar('b'))
 	result_27 := ParseInput(p_26, "ax")
-	func() {
-		if !result_27.Ok {
-			t.Fatal("POrElse should succeed when left succeeds")
-		}
-	}()
-	func() {
-		if result_27.Value != 'a' {
-			t.Fatalf("POrElse = %d, want %d", result_27.Value, 'a')
-		}
-	}()
+	if !result_27.Ok {
+		t.Fatal("POrElse should succeed when left succeeds")
+	}
+	if result_27.Value != 'a' {
+		t.Fatalf("POrElse = %d, want %d", result_27.Value, 'a')
+	}
 }
 func TestPOrElseBacktracksOnFailure(t *testing.T) {
 	p_28 := POrElse(PChar('a'), PChar('b'))
 	result_29 := ParseInput(p_28, "bx")
-	func() {
-		if !result_29.Ok {
-			t.Fatal("POrElse should succeed when right succeeds after left fails")
-		}
-	}()
-	func() {
-		if result_29.Value != 'b' {
-			t.Fatalf("POrElse = %d, want %d", result_29.Value, 'b')
-		}
-	}()
+	if !result_29.Ok {
+		t.Fatal("POrElse should succeed when right succeeds after left fails")
+	}
+	if result_29.Value != 'b' {
+		t.Fatalf("POrElse = %d, want %d", result_29.Value, 'b')
+	}
 }
 func TestPOrElseFailsWhenBothFail(t *testing.T) {
 	p_30 := POrElse(PChar('a'), PChar('b'))
 	result_31 := ParseInput(p_30, "cx")
-	func() {
-		if result_31.Ok {
-			t.Fatal("POrElse should fail when both alternatives fail")
-		}
-	}()
+	if result_31.Ok {
+		t.Fatal("POrElse should fail when both alternatives fail")
+	}
 }
 func TestPOrElseDoesNotBacktrackOnConsumedFailure(t *testing.T) {
 	p_32 := PBind(PChar('a'), func(_ rune) Parser[rune] {
@@ -174,121 +130,89 @@ func TestPOrElseDoesNotBacktrackOnConsumedFailure(t *testing.T) {
 	})
 	choice_33 := POrElse(p_32, PChar('b'))
 	result_34 := ParseInput(choice_33, "ax")
-	func() {
-		if result_34.Ok {
-			t.Fatal("POrElse should not backtrack on consumed failure")
-		}
-	}()
+	if result_34.Ok {
+		t.Fatal("POrElse should not backtrack on consumed failure")
+	}
 }
 func TestPChoiceSelectsMatchingParser(t *testing.T) {
 	parsers_35 := []Parser[rune]{PChar('a'), PChar('b'), PChar('c')}
 	p_36 := PChoice(parsers_35)
 	result_37 := ParseInput(p_36, "bx")
-	func() {
-		if !result_37.Ok {
-			t.Fatal("PChoice should succeed")
-		}
-	}()
-	func() {
-		if result_37.Value != 'b' {
-			t.Fatalf("PChoice = %d, want %d", result_37.Value, 'b')
-		}
-	}()
+	if !result_37.Ok {
+		t.Fatal("PChoice should succeed")
+	}
+	if result_37.Value != 'b' {
+		t.Fatalf("PChoice = %d, want %d", result_37.Value, 'b')
+	}
 }
 func TestPAttemptAllowsBacktracking(t *testing.T) {
 	p_38 := POrElse(PAttempt(PBind(PChar('a'), func(_ rune) Parser[rune] {
 		return PFail[rune]("inner fail")
 	})), PChar('a'))
 	result_39 := ParseInput(p_38, "ax")
-	func() {
-		if !result_39.Ok {
-			t.Fatal("PAttempt should allow backtracking so right alternative can retry at the original position")
-		}
-	}()
-	func() {
-		if result_39.Value != 'a' {
-			t.Fatalf("PAttempt result = %d, want %d", result_39.Value, 'a')
-		}
-	}()
+	if !result_39.Ok {
+		t.Fatal("PAttempt should allow backtracking so right alternative can retry at the original position")
+	}
+	if result_39.Value != 'a' {
+		t.Fatalf("PAttempt result = %d, want %d", result_39.Value, 'a')
+	}
 }
 func TestPLookAheadDoesNotConsume(t *testing.T) {
 	p_40 := PThen(PLookAhead(PChar('x')), PChar('x'))
 	result_41 := ParseInput(p_40, "xy")
-	func() {
-		if !result_41.Ok {
-			t.Fatal("PLookAhead should succeed")
-		}
-	}()
-	func() {
-		if result_41.Value != 'x' {
-			t.Fatalf("PLookAhead result = %d, want %d", result_41.Value, 'x')
-		}
-	}()
-	func() {
-		if result_41.State.Index != 1 {
-			t.Fatalf("PLookAhead should not consume the lookahead, index=%d, want 1", result_41.State.Index)
-		}
-	}()
+	if !result_41.Ok {
+		t.Fatal("PLookAhead should succeed")
+	}
+	if result_41.Value != 'x' {
+		t.Fatalf("PLookAhead result = %d, want %d", result_41.Value, 'x')
+	}
+	if result_41.State.Index != 1 {
+		t.Fatalf("PLookAhead should not consume the lookahead, index=%d, want 1", result_41.State.Index)
+	}
 }
 func TestPLookAheadFailsWhenLookaheadFails(t *testing.T) {
 	p_42 := PThen(PLookAhead(PChar('x')), PChar('y'))
 	result_43 := ParseInput(p_42, "zy")
-	func() {
-		if result_43.Ok {
-			t.Fatal("PLookAhead should fail when lookahead doesn't match")
-		}
-	}()
+	if result_43.Ok {
+		t.Fatal("PLookAhead should fail when lookahead doesn't match")
+	}
 }
 func TestPNotFollowedBySucceedsWhenNotFollowed(t *testing.T) {
 	p_44 := PThen(PNotFollowedBy(PChar('x'), "not x"), PChar('a'))
 	result_45 := ParseInput(p_44, "ab")
-	func() {
-		if !result_45.Ok {
-			t.Fatal("PNotFollowedBy should succeed when x is not next")
-		}
-	}()
-	func() {
-		if result_45.Value != 'a' {
-			t.Fatalf("PNotFollowedBy result = %d, want %d", result_45.Value, 'a')
-		}
-	}()
+	if !result_45.Ok {
+		t.Fatal("PNotFollowedBy should succeed when x is not next")
+	}
+	if result_45.Value != 'a' {
+		t.Fatalf("PNotFollowedBy result = %d, want %d", result_45.Value, 'a')
+	}
 }
 func TestPNotFollowedByFailsWhenFollowed(t *testing.T) {
 	p_46 := PNotFollowedBy(PChar('x'), "not x")
 	result_47 := ParseInput(p_46, "xy")
-	func() {
-		if result_47.Ok {
-			t.Fatal("PNotFollowedBy should fail when x IS next")
-		}
-	}()
+	if result_47.Ok {
+		t.Fatal("PNotFollowedBy should fail when x IS next")
+	}
 }
 func TestPManyZeroMatches(t *testing.T) {
 	p_48 := PMany(PChar('x'))
 	result_49 := ParseInput(p_48, "y")
-	func() {
-		if !result_49.Ok {
-			t.Fatal("PMany should succeed with empty result")
-		}
-	}()
-	func() {
-		if Len__t_t(result_49.Value) != 0 {
-			t.Fatalf("PMany empty result length = %d, want 0", Len__t_t(result_49.Value))
-		}
-	}()
+	if !result_49.Ok {
+		t.Fatal("PMany should succeed with empty result")
+	}
+	if Len__t_t(result_49.Value) != 0 {
+		t.Fatalf("PMany empty result length = %d, want 0", Len__t_t(result_49.Value))
+	}
 }
 func TestPManyMatchesMultiple(t *testing.T) {
 	p_50 := PMany(PChar('a'))
 	result_51 := ParseInput(p_50, "aaa")
-	func() {
-		if !result_51.Ok {
-			t.Fatal("PMany should succeed")
-		}
-	}()
-	func() {
-		if Len__t_t(result_51.Value) != 3 {
-			t.Fatalf("PMany length = %d, want 3", Len__t_t(result_51.Value))
-		}
-	}()
+	if !result_51.Ok {
+		t.Fatal("PMany should succeed")
+	}
+	if Len__t_t(result_51.Value) != 3 {
+		t.Fatalf("PMany length = %d, want 3", Len__t_t(result_51.Value))
+	}
 	Each__t_t(result_51.Value, func(v rune) {
 		func() {
 			if v != 'a' {
@@ -300,61 +224,45 @@ func TestPManyMatchesMultiple(t *testing.T) {
 func TestPManyStopsOnNonConsumingFailure(t *testing.T) {
 	p_52 := PMany(PChar('a'))
 	result_53 := ParseInput(p_52, "aab")
-	func() {
-		if !result_53.Ok {
-			t.Fatal("PMany should succeed")
-		}
-	}()
-	func() {
-		if Len__t_t(result_53.Value) != 2 {
-			t.Fatalf("PMany length = %d, want 2", Len__t_t(result_53.Value))
-		}
-	}()
-	func() {
-		if result_53.State.Index != 2 {
-			t.Fatalf("PMany should stop after consuming 'aa', index=%d, want 2", result_53.State.Index)
-		}
-	}()
+	if !result_53.Ok {
+		t.Fatal("PMany should succeed")
+	}
+	if Len__t_t(result_53.Value) != 2 {
+		t.Fatalf("PMany length = %d, want 2", Len__t_t(result_53.Value))
+	}
+	if result_53.State.Index != 2 {
+		t.Fatalf("PMany should stop after consuming 'aa', index=%d, want 2", result_53.State.Index)
+	}
 }
 func TestPMany1RequiresAtLeastOne(t *testing.T) {
 	p_54 := PMany1(PChar('a'))
 	result_55 := ParseInput(p_54, "x")
-	func() {
-		if result_55.Ok {
-			t.Fatal("PMany1 should fail when no input matches")
-		}
-	}()
+	if result_55.Ok {
+		t.Fatal("PMany1 should fail when no input matches")
+	}
 }
 func TestPMany1MatchesOneOrMore(t *testing.T) {
 	p_56 := PMany1(PChar('a'))
 	result_57 := ParseInput(p_56, "aa")
-	func() {
-		if !result_57.Ok {
-			t.Fatal("PMany1 should succeed")
-		}
-	}()
-	func() {
-		if Len__t_t(result_57.Value) != 2 {
-			t.Fatalf("PMany1 length = %d, want 2", Len__t_t(result_57.Value))
-		}
-	}()
+	if !result_57.Ok {
+		t.Fatal("PMany1 should succeed")
+	}
+	if Len__t_t(result_57.Value) != 2 {
+		t.Fatalf("PMany1 length = %d, want 2", Len__t_t(result_57.Value))
+	}
 }
 func TestPOptionalSucceedsWhenPresent(t *testing.T) {
 	p_58 := POptional(PChar('a'))
 	result_59 := ParseInput(p_58, "ab")
-	func() {
-		if !result_59.Ok {
-			t.Fatal("POptional should succeed")
-		}
-	}()
+	if !result_59.Ok {
+		t.Fatal("POptional should succeed")
+	}
 	func() {
 		if v_2, ok := result_59.Value.(OptionSome[rune]); ok {
 			func() {
-				func() {
-					if v_2.F0 != 'a' {
-						t.Fatalf("POptional Some value = %d, want %d", v_2.F0, 'a')
-					}
-				}()
+				if v_2.F0 != 'a' {
+					t.Fatalf("POptional Some value = %d, want %d", v_2.F0, 'a')
+				}
 			}()
 		} else {
 			if _, ok := result_59.Value.(OptionNone[rune]); ok {
@@ -368,11 +276,9 @@ func TestPOptionalSucceedsWhenPresent(t *testing.T) {
 func TestPOptionalReturnsNoneWhenAbsent(t *testing.T) {
 	p_60 := POptional(PChar('a'))
 	result_61 := ParseInput(p_60, "xb")
-	func() {
-		if !result_61.Ok {
-			t.Fatal("POptional should succeed with None")
-		}
-	}()
+	if !result_61.Ok {
+		t.Fatal("POptional should succeed with None")
+	}
 	func() {
 		if _, ok := result_61.Value.(OptionNone[rune]); ok {
 			func() {
@@ -389,387 +295,283 @@ func TestPOptionalReturnsNoneWhenAbsent(t *testing.T) {
 func TestPBetweenParsesDelimited(t *testing.T) {
 	p_62 := PBetween(PChar('('), PDigit(), PChar(')'))
 	result_63 := ParseInput(p_62, "(5)x")
-	func() {
-		if !result_63.Ok {
-			t.Fatal("PBetween should succeed")
-		}
-	}()
-	func() {
-		if result_63.Value != '5' {
-			t.Fatalf("PBetween result = %d, want %d", result_63.Value, '5')
-		}
-	}()
-	func() {
-		if result_63.State.Index != 3 {
-			t.Fatalf("PBetween should consume '(5)', index=%d, want 3", result_63.State.Index)
-		}
-	}()
+	if !result_63.Ok {
+		t.Fatal("PBetween should succeed")
+	}
+	if result_63.Value != '5' {
+		t.Fatalf("PBetween result = %d, want %d", result_63.Value, '5')
+	}
+	if result_63.State.Index != 3 {
+		t.Fatalf("PBetween should consume '(5)', index=%d, want 3", result_63.State.Index)
+	}
 }
 func TestPSepByEmpty(t *testing.T) {
 	p_64 := PSepBy(PChar('a'), PChar(','))
 	result_65 := ParseInput(p_64, "b")
-	func() {
-		if !result_65.Ok {
-			t.Fatal("PSepBy should succeed with empty result")
-		}
-	}()
-	func() {
-		if Len__t_t(result_65.Value) != 0 {
-			t.Fatalf("PSepBy empty length = %d, want 0", Len__t_t(result_65.Value))
-		}
-	}()
+	if !result_65.Ok {
+		t.Fatal("PSepBy should succeed with empty result")
+	}
+	if Len__t_t(result_65.Value) != 0 {
+		t.Fatalf("PSepBy empty length = %d, want 0", Len__t_t(result_65.Value))
+	}
 }
 func TestPSepBySingle(t *testing.T) {
 	p_66 := PSepBy(PChar('a'), PChar(','))
 	result_67 := ParseInput(p_66, "ax")
-	func() {
-		if !result_67.Ok {
-			t.Fatal("PSepBy should succeed")
-		}
-	}()
-	func() {
-		if Len__t_t(result_67.Value) != 1 {
-			t.Fatalf("PSepBy length = %d, want 1", Len__t_t(result_67.Value))
-		}
-	}()
+	if !result_67.Ok {
+		t.Fatal("PSepBy should succeed")
+	}
+	if Len__t_t(result_67.Value) != 1 {
+		t.Fatalf("PSepBy length = %d, want 1", Len__t_t(result_67.Value))
+	}
 }
 func TestPSepByMultiple(t *testing.T) {
 	p_68 := PSepBy(PChar('a'), PChar(','))
 	result_69 := ParseInput(p_68, "a,a,a")
-	func() {
-		if !result_69.Ok {
-			t.Fatal("PSepBy should succeed")
-		}
-	}()
-	func() {
-		if Len__t_t(result_69.Value) != 3 {
-			t.Fatalf("PSepBy length = %d, want 3", Len__t_t(result_69.Value))
-		}
-	}()
+	if !result_69.Ok {
+		t.Fatal("PSepBy should succeed")
+	}
+	if Len__t_t(result_69.Value) != 3 {
+		t.Fatalf("PSepBy length = %d, want 3", Len__t_t(result_69.Value))
+	}
 }
 func TestPSepBy1RequiresAtLeastOne(t *testing.T) {
 	p_70 := PSepBy1(PChar('a'), PChar(','))
 	result_71 := ParseInput(p_70, "x")
-	func() {
-		if result_71.Ok {
-			t.Fatal("PSepBy1 should fail with no matching items")
-		}
-	}()
+	if result_71.Ok {
+		t.Fatal("PSepBy1 should fail with no matching items")
+	}
 }
 func TestPSepBy1Multiple(t *testing.T) {
 	p_72 := PSepBy1(PChar('a'), PChar(','))
 	result_73 := ParseInput(p_72, "a,a")
-	func() {
-		if !result_73.Ok {
-			t.Fatal("PSepBy1 should succeed")
-		}
-	}()
-	func() {
-		if Len__t_t(result_73.Value) != 2 {
-			t.Fatalf("PSepBy1 length = %d, want 2", Len__t_t(result_73.Value))
-		}
-	}()
+	if !result_73.Ok {
+		t.Fatal("PSepBy1 should succeed")
+	}
+	if Len__t_t(result_73.Value) != 2 {
+		t.Fatalf("PSepBy1 length = %d, want 2", Len__t_t(result_73.Value))
+	}
 }
 func TestPLabelDoesNotAffectSuccess(t *testing.T) {
 	p_74 := PLabel(PChar('x'), "x char")
 	result_75 := ParseInput(p_74, "xy")
-	func() {
-		if !result_75.Ok {
-			t.Fatal("PLabel should not affect success")
-		}
-	}()
-	func() {
-		if result_75.Value != 'x' {
-			t.Fatalf("PLabel result = %d, want %d", result_75.Value, 'x')
-		}
-	}()
+	if !result_75.Ok {
+		t.Fatal("PLabel should not affect success")
+	}
+	if result_75.Value != 'x' {
+		t.Fatalf("PLabel result = %d, want %d", result_75.Value, 'x')
+	}
 }
 func TestPCharMatchesExpected(t *testing.T) {
 	p_76 := PChar('h')
 	result_77 := ParseInput(p_76, "hello")
-	func() {
-		if !result_77.Ok {
-			t.Fatal("PChar should match 'h'")
-		}
-	}()
-	func() {
-		if result_77.Value != 'h' {
-			t.Fatalf("PChar('h') = %d, want %d", result_77.Value, 'h')
-		}
-	}()
-	func() {
-		if result_77.State.Index != 1 {
-			t.Fatalf("PChar should advance by 1, index=%d, want 1", result_77.State.Index)
-		}
-	}()
+	if !result_77.Ok {
+		t.Fatal("PChar should match 'h'")
+	}
+	if result_77.Value != 'h' {
+		t.Fatalf("PChar('h') = %d, want %d", result_77.Value, 'h')
+	}
+	if result_77.State.Index != 1 {
+		t.Fatalf("PChar should advance by 1, index=%d, want 1", result_77.State.Index)
+	}
 }
 func TestPCharFailsOnMismatch(t *testing.T) {
 	p_78 := PChar('h')
 	result_79 := ParseInput(p_78, "world")
-	func() {
-		if result_79.Ok {
-			t.Fatal("PChar should fail on mismatch")
-		}
-	}()
+	if result_79.Ok {
+		t.Fatal("PChar should fail on mismatch")
+	}
 }
 func TestPCharFailsOnEmptyInput(t *testing.T) {
 	p_80 := PChar('h')
 	result_81 := ParseInput(p_80, "")
-	func() {
-		if result_81.Ok {
-			t.Fatal("PChar should fail on empty input")
-		}
-	}()
+	if result_81.Ok {
+		t.Fatal("PChar should fail on empty input")
+	}
 }
 func TestPStringMatchesExpected(t *testing.T) {
 	p_82 := PString("hello")
 	result_83 := ParseInput(p_82, "hello world")
-	func() {
-		if !result_83.Ok {
-			t.Fatal("PString should match 'hello'")
-		}
-	}()
-	func() {
-		if result_83.Value != "hello" {
-			t.Fatalf("PString result = %q, want %q", result_83.Value, "hello")
-		}
-	}()
-	func() {
-		if result_83.State.Index != 5 {
-			t.Fatalf("PString should advance by 5, index=%d, want 5", result_83.State.Index)
-		}
-	}()
+	if !result_83.Ok {
+		t.Fatal("PString should match 'hello'")
+	}
+	if result_83.Value != "hello" {
+		t.Fatalf("PString result = %q, want %q", result_83.Value, "hello")
+	}
+	if result_83.State.Index != 5 {
+		t.Fatalf("PString should advance by 5, index=%d, want 5", result_83.State.Index)
+	}
 }
 func TestPStringFailsOnMismatch(t *testing.T) {
 	p_84 := PString("hello")
 	result_85 := ParseInput(p_84, "world")
-	func() {
-		if result_85.Ok {
-			t.Fatal("PString should fail on mismatch")
-		}
-	}()
+	if result_85.Ok {
+		t.Fatal("PString should fail on mismatch")
+	}
 }
 func TestPStringFailsOnPartialMatch(t *testing.T) {
 	p_86 := PString("hello")
 	result_87 := ParseInput(p_86, "hell")
-	func() {
-		if result_87.Ok {
-			t.Fatal("PString should fail when input is shorter than expected")
-		}
-	}()
+	if result_87.Ok {
+		t.Fatal("PString should fail when input is shorter than expected")
+	}
 }
 func TestPEofSucceedsAtEnd(t *testing.T) {
 	p_88 := PThen(PString("hello"), PEof())
 	result_89 := ParseInput(p_88, "hello")
-	func() {
-		if !result_89.Ok {
-			t.Fatal("PEof should succeed at end of input")
-		}
-	}()
+	if !result_89.Ok {
+		t.Fatal("PEof should succeed at end of input")
+	}
 }
 func TestPEofFailsWithRemainingInput(t *testing.T) {
 	p_90 := PThen(PString("hello"), PEof())
 	result_91 := ParseInput(p_90, "hello world")
-	func() {
-		if result_91.Ok {
-			t.Fatal("PEof should fail with remaining input")
-		}
-	}()
+	if result_91.Ok {
+		t.Fatal("PEof should fail with remaining input")
+	}
 }
 func TestPEofSucceedsOnEmptyInput(t *testing.T) {
 	result_92 := ParseInput(PEof(), "")
-	func() {
-		if !result_92.Ok {
-			t.Fatal("PEof should succeed on empty input")
-		}
-	}()
+	if !result_92.Ok {
+		t.Fatal("PEof should succeed on empty input")
+	}
 }
 func TestPEofFailsOnNonEmptyInput(t *testing.T) {
 	result_93 := ParseInput(PEof(), "x")
-	func() {
-		if result_93.Ok {
-			t.Fatal("PEof should fail on non-empty input")
-		}
-	}()
+	if result_93.Ok {
+		t.Fatal("PEof should fail on non-empty input")
+	}
 }
 func TestPDigitMatchesDigits(t *testing.T) {
 	p_94 := PDigit()
 	result_95 := ParseInput(p_94, "5abc")
-	func() {
-		if !result_95.Ok {
-			t.Fatal("PDigit should match '5'")
-		}
-	}()
-	func() {
-		if result_95.Value != '5' {
-			t.Fatalf("PDigit = %d, want %d", result_95.Value, '5')
-		}
-	}()
+	if !result_95.Ok {
+		t.Fatal("PDigit should match '5'")
+	}
+	if result_95.Value != '5' {
+		t.Fatalf("PDigit = %d, want %d", result_95.Value, '5')
+	}
 }
 func TestPDigitFailsOnNonDigit(t *testing.T) {
 	p_96 := PDigit()
 	result_97 := ParseInput(p_96, "abc")
-	func() {
-		if result_97.Ok {
-			t.Fatal("PDigit should fail on non-digit")
-		}
-	}()
+	if result_97.Ok {
+		t.Fatal("PDigit should fail on non-digit")
+	}
 }
 func TestPLetterMatchesLetters(t *testing.T) {
 	p_98 := PLetter()
 	result1_99 := ParseInput(p_98, "a1")
-	func() {
-		if !result1_99.Ok || result1_99.Value != 'a' {
-			t.Fatal("PLetter should match lowercase")
-		}
-	}()
+	if !result1_99.Ok || result1_99.Value != 'a' {
+		t.Fatal("PLetter should match lowercase")
+	}
 	result2_100 := ParseInput(p_98, "Z1")
-	func() {
-		if !result2_100.Ok || result2_100.Value != 'Z' {
-			t.Fatal("PLetter should match uppercase")
-		}
-	}()
+	if !result2_100.Ok || result2_100.Value != 'Z' {
+		t.Fatal("PLetter should match uppercase")
+	}
 }
 func TestPLetterFailsOnNonLetter(t *testing.T) {
 	p_101 := PLetter()
 	result_102 := ParseInput(p_101, "1abc")
-	func() {
-		if result_102.Ok {
-			t.Fatal("PLetter should fail on digit")
-		}
-	}()
+	if result_102.Ok {
+		t.Fatal("PLetter should fail on digit")
+	}
 }
 func TestPAlphaNumMatchesAlphanumeric(t *testing.T) {
 	p_103 := PAlphaNum()
 	result1_104 := ParseInput(p_103, "a1")
-	func() {
-		if !result1_104.Ok || result1_104.Value != 'a' {
-			t.Fatal("PAlphaNum should match letter")
-		}
-	}()
+	if !result1_104.Ok || result1_104.Value != 'a' {
+		t.Fatal("PAlphaNum should match letter")
+	}
 	result2_105 := ParseInput(p_103, "1abc")
-	func() {
-		if !result2_105.Ok || result2_105.Value != '1' {
-			t.Fatal("PAlphaNum should match digit")
-		}
-	}()
+	if !result2_105.Ok || result2_105.Value != '1' {
+		t.Fatal("PAlphaNum should match digit")
+	}
 }
 func TestPAlphaNumFailsOnNonAlphanumeric(t *testing.T) {
 	p_106 := PAlphaNum()
 	result_107 := ParseInput(p_106, "+abc")
-	func() {
-		if result_107.Ok {
-			t.Fatal("PAlphaNum should fail on '+'")
-		}
-	}()
+	if result_107.Ok {
+		t.Fatal("PAlphaNum should fail on '+'")
+	}
 }
 func TestPIdentifierMatchesSimple(t *testing.T) {
 	p_108 := PIdentifier()
 	result_109 := ParseInput(p_108, "foo123 bar")
-	func() {
-		if !result_109.Ok {
-			t.Fatal("PIdentifier should match 'foo123'")
-		}
-	}()
-	func() {
-		if result_109.Value != "foo123" {
-			t.Fatalf("PIdentifier = %q, want %q", result_109.Value, "foo123")
-		}
-	}()
-	func() {
-		if result_109.State.Index != 6 {
-			t.Fatalf("PIdentifier should consume 'foo123', index=%d, want 6", result_109.State.Index)
-		}
-	}()
+	if !result_109.Ok {
+		t.Fatal("PIdentifier should match 'foo123'")
+	}
+	if result_109.Value != "foo123" {
+		t.Fatalf("PIdentifier = %q, want %q", result_109.Value, "foo123")
+	}
+	if result_109.State.Index != 6 {
+		t.Fatalf("PIdentifier should consume 'foo123', index=%d, want 6", result_109.State.Index)
+	}
 }
 func TestPIdentifierMatchesWithDigits(t *testing.T) {
 	p_110 := PIdentifier()
 	result_111 := ParseInput(p_110, "bar42")
-	func() {
-		if !result_111.Ok {
-			t.Fatal("PIdentifier should match 'bar42'")
-		}
-	}()
-	func() {
-		if result_111.Value != "bar42" {
-			t.Fatalf("PIdentifier = %q, want %q", result_111.Value, "bar42")
-		}
-	}()
+	if !result_111.Ok {
+		t.Fatal("PIdentifier should match 'bar42'")
+	}
+	if result_111.Value != "bar42" {
+		t.Fatalf("PIdentifier = %q, want %q", result_111.Value, "bar42")
+	}
 }
 func TestPIdentifierFailsOnDigitStart(t *testing.T) {
 	p_112 := PIdentifier()
 	result_113 := ParseInput(p_112, "1abc")
-	func() {
-		if result_113.Ok {
-			t.Fatal("PIdentifier should fail when starting with digit")
-		}
-	}()
+	if result_113.Ok {
+		t.Fatal("PIdentifier should fail when starting with digit")
+	}
 }
 func TestPAnyRuneMatchesAnyChar(t *testing.T) {
 	p_114 := PAnyRune()
 	result1_115 := ParseInput(p_114, "a")
-	func() {
-		if !result1_115.Ok || result1_115.Value != 'a' {
-			t.Fatal("PAnyRune should match 'a'")
-		}
-	}()
+	if !result1_115.Ok || result1_115.Value != 'a' {
+		t.Fatal("PAnyRune should match 'a'")
+	}
 	result2_116 := ParseInput(p_114, "1")
-	func() {
-		if !result2_116.Ok || result2_116.Value != '1' {
-			t.Fatal("PAnyRune should match '1'")
-		}
-	}()
+	if !result2_116.Ok || result2_116.Value != '1' {
+		t.Fatal("PAnyRune should match '1'")
+	}
 	result3_117 := ParseInput(p_114, " ")
-	func() {
-		if !result3_117.Ok || result3_117.Value != ' ' {
-			t.Fatal("PAnyRune should match space")
-		}
-	}()
+	if !result3_117.Ok || result3_117.Value != ' ' {
+		t.Fatal("PAnyRune should match space")
+	}
 }
 func TestPAnyRuneFailsOnEmpty(t *testing.T) {
 	p_118 := PAnyRune()
 	result_119 := ParseInput(p_118, "")
-	func() {
-		if result_119.Ok {
-			t.Fatal("PAnyRune should fail on empty input")
-		}
-	}()
+	if result_119.Ok {
+		t.Fatal("PAnyRune should fail on empty input")
+	}
 }
 func TestStateTracksLineAndColumn(t *testing.T) {
 	state_120 := NewState("hello")
 	s1_121 := AdvanceRune(state_120)
-	func() {
-		if s1_121.Position.Line != 1 {
-			t.Fatalf("After 1 char, line=%d, want 1", s1_121.Position.Line)
-		}
-	}()
-	func() {
-		if s1_121.Position.Column != 2 {
-			t.Fatalf("After 1 char, column=%d, want 2", s1_121.Position.Column)
-		}
-	}()
+	if s1_121.Position.Line != 1 {
+		t.Fatalf("After 1 char, line=%d, want 1", s1_121.Position.Line)
+	}
+	if s1_121.Position.Column != 2 {
+		t.Fatalf("After 1 char, column=%d, want 2", s1_121.Position.Column)
+	}
 	s2_122 := AdvanceRune(s1_121)
-	func() {
-		if s2_122.Position.Column != 3 {
-			t.Fatalf("After 2 chars, column=%d, want 3", s2_122.Position.Column)
-		}
-	}()
+	if s2_122.Position.Column != 3 {
+		t.Fatalf("After 2 chars, column=%d, want 3", s2_122.Position.Column)
+	}
 }
 func TestStateTracksNewline(t *testing.T) {
 	state_123 := NewState("ab\ncd")
 	s1_124 := AdvanceRune(state_123)
 	s2_125 := AdvanceRune(s1_124)
 	s3_126 := AdvanceRune(s2_125)
-	func() {
-		if s3_126.Position.Line != 2 {
-			t.Fatalf("After newline, line=%d, want 2", s3_126.Position.Line)
-		}
-	}()
-	func() {
-		if s3_126.Position.Column != 1 {
-			t.Fatalf("After newline, column=%d, want 1", s3_126.Position.Column)
-		}
-	}()
+	if s3_126.Position.Line != 2 {
+		t.Fatalf("After newline, line=%d, want 2", s3_126.Position.Line)
+	}
+	if s3_126.Position.Column != 1 {
+		t.Fatalf("After newline, column=%d, want 1", s3_126.Position.Column)
+	}
 }
 func TestParseInteger(t *testing.T) {
 	digitChars_127 := PMany1(PDigit())
@@ -783,16 +585,12 @@ func TestParseInteger(t *testing.T) {
 		}()
 	})
 	result_129 := ParseInput(parseInt_128, "42abc")
-	func() {
-		if !result_129.Ok {
-			t.Fatal("parseInt should succeed")
-		}
-	}()
-	func() {
-		if result_129.Value != 42 {
-			t.Fatalf("parseInt('42') = %d, want 42", result_129.Value)
-		}
-	}()
+	if !result_129.Ok {
+		t.Fatal("parseInt should succeed")
+	}
+	if result_129.Value != 42 {
+		t.Fatalf("parseInt('42') = %d, want 42", result_129.Value)
+	}
 }
 func TestParseCommaSeparatedWords(t *testing.T) {
 	word_130 := PMap(PMany1(PLetter()), func(rs []rune) string {
@@ -800,25 +598,19 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 	})
 	words_131 := PSepBy(word_130, PChar(','))
 	result_132 := ParseInput(words_131, "hello,world,foo")
-	func() {
-		if !result_132.Ok {
-			t.Fatal("parse words should succeed")
-		}
-	}()
-	func() {
-		if Len__t_t(result_132.Value) != 3 {
-			t.Fatalf("words length = %d, want 3", Len__t_t(result_132.Value))
-		}
-	}()
+	if !result_132.Ok {
+		t.Fatal("parse words should succeed")
+	}
+	if Len__t_t(result_132.Value) != 3 {
+		t.Fatalf("words length = %d, want 3", Len__t_t(result_132.Value))
+	}
 	w0_133 := Get__t_int_t(result_132.Value, 0)
 	func() {
 		if v_6, ok := w0_133.(OptionSome[string]); ok {
 			func() {
-				func() {
-					if v_6.F0 != "hello" {
-						t.Fatalf("words[0] = %q, want %q", v_6.F0, "hello")
-					}
-				}()
+				if v_6.F0 != "hello" {
+					t.Fatalf("words[0] = %q, want %q", v_6.F0, "hello")
+				}
 			}()
 		} else {
 			if _, ok := w0_133.(OptionNone[string]); ok {
@@ -832,11 +624,9 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 	func() {
 		if v_8, ok := w1_134.(OptionSome[string]); ok {
 			func() {
-				func() {
-					if v_8.F0 != "world" {
-						t.Fatalf("words[1] = %q, want %q", v_8.F0, "world")
-					}
-				}()
+				if v_8.F0 != "world" {
+					t.Fatalf("words[1] = %q, want %q", v_8.F0, "world")
+				}
 			}()
 		} else {
 			if _, ok := w1_134.(OptionNone[string]); ok {
@@ -850,11 +640,9 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 	func() {
 		if v_10, ok := w2_135.(OptionSome[string]); ok {
 			func() {
-				func() {
-					if v_10.F0 != "foo" {
-						t.Fatalf("words[2] = %q, want %q", v_10.F0, "foo")
-					}
-				}()
+				if v_10.F0 != "foo" {
+					t.Fatalf("words[2] = %q, want %q", v_10.F0, "foo")
+				}
 			}()
 		} else {
 			if _, ok := w2_135.(OptionNone[string]); ok {
@@ -878,32 +666,24 @@ func TestParseParenthesizedExpr(t *testing.T) {
 	}
 	p_138 := PBetween(PChar('('), PBind(word_136, parseTail_137), PChar(')'))
 	result_139 := ParseInput(p_138, "(hello,world)x")
-	func() {
-		if !result_139.Ok {
-			t.Fatal("parenthesized expr should succeed")
-		}
-	}()
-	func() {
-		if result_139.Value != "hello,world" {
-			t.Fatalf("result = %q, want %q", result_139.Value, "hello,world")
-		}
-	}()
+	if !result_139.Ok {
+		t.Fatal("parenthesized expr should succeed")
+	}
+	if result_139.Value != "hello,world" {
+		t.Fatalf("result = %q, want %q", result_139.Value, "hello,world")
+	}
 }
 func TestPChoiceWithThreeOptions(t *testing.T) {
 	parsers_140 := []Parser[string]{PString("cat"), PString("dog"), PString("bird")}
 	p_141 := PChoice(parsers_140)
 	result1_142 := ParseInput(p_141, "doghouse")
-	func() {
-		if !result1_142.Ok || result1_142.Value != "dog" {
-			t.Fatal("PChoice should match 'dog'")
-		}
-	}()
+	if !result1_142.Ok || result1_142.Value != "dog" {
+		t.Fatal("PChoice should match 'dog'")
+	}
 	result2_143 := ParseInput(p_141, "birdsong")
-	func() {
-		if !result2_143.Ok || result2_143.Value != "bird" {
-			t.Fatal("PChoice should match 'bird'")
-		}
-	}()
+	if !result2_143.Ok || result2_143.Value != "bird" {
+		t.Fatal("PChoice should match 'bird'")
+	}
 }
 func TestPManyWithPBind(t *testing.T) {
 	p_144 := PBind(PChar('a'), func(_ rune) Parser[rune] {
@@ -911,33 +691,25 @@ func TestPManyWithPBind(t *testing.T) {
 	})
 	many_145 := PMany(p_144)
 	result_146 := ParseInput(many_145, "ababab")
-	func() {
-		if !result_146.Ok {
-			t.Fatal("PMany(PBind) should succeed")
-		}
-	}()
-	func() {
-		if Len__t_t(result_146.Value) != 3 {
-			t.Fatalf("PMany(PBind) length = %d, want 3", Len__t_t(result_146.Value))
-		}
-	}()
+	if !result_146.Ok {
+		t.Fatal("PMany(PBind) should succeed")
+	}
+	if Len__t_t(result_146.Value) != 3 {
+		t.Fatalf("PMany(PBind) length = %d, want 3", Len__t_t(result_146.Value))
+	}
 }
 func TestPOptionalWithBetween(t *testing.T) {
 	group_147 := POptional(PBetween(PChar('('), PChar('x'), PChar(')')))
 	result1_148 := ParseInput(group_147, "(x)y")
-	func() {
-		if !result1_148.Ok {
-			t.Fatal("optional group with parens should succeed")
-		}
-	}()
+	if !result1_148.Ok {
+		t.Fatal("optional group with parens should succeed")
+	}
 	func() {
 		if v_12, ok := result1_148.Value.(OptionSome[rune]); ok {
 			func() {
-				func() {
-					if v_12.F0 != 'x' {
-						t.Fatalf("Some value = %d, want %d", v_12.F0, 'x')
-					}
-				}()
+				if v_12.F0 != 'x' {
+					t.Fatalf("Some value = %d, want %d", v_12.F0, 'x')
+				}
 			}()
 		} else {
 			if _, ok := result1_148.Value.(OptionNone[rune]); ok {
@@ -948,11 +720,9 @@ func TestPOptionalWithBetween(t *testing.T) {
 		}
 	}()
 	result2_149 := ParseInput(group_147, "xy")
-	func() {
-		if !result2_149.Ok {
-			t.Fatal("optional group without parens should succeed")
-		}
-	}()
+	if !result2_149.Ok {
+		t.Fatal("optional group without parens should succeed")
+	}
 	func() {
 		if _, ok := result2_149.Value.(OptionNone[rune]); ok {
 			func() {
@@ -971,110 +741,78 @@ func TestPSepBy1WithLabel(t *testing.T) {
 	sep_151 := PLabel(PChar(','), "comma")
 	p_152 := PSepBy1(item_150, sep_151)
 	result_153 := ParseInput(p_152, "a,a,a")
-	func() {
-		if !result_153.Ok {
-			t.Fatal("PSepBy1 with label should succeed")
-		}
-	}()
-	func() {
-		if Len__t_t(result_153.Value) != 3 {
-			t.Fatalf("PSepBy1 length = %d, want 3", Len__t_t(result_153.Value))
-		}
-	}()
+	if !result_153.Ok {
+		t.Fatal("PSepBy1 with label should succeed")
+	}
+	if Len__t_t(result_153.Value) != 3 {
+		t.Fatalf("PSepBy1 length = %d, want 3", Len__t_t(result_153.Value))
+	}
 }
 func TestPThenWithPPure(t *testing.T) {
 	p_154 := PThen(PChar('a'), PThen(PChar('b'), PPure("done")))
 	result_155 := ParseInput(p_154, "ab")
-	func() {
-		if !result_155.Ok {
-			t.Fatal("PThen with PPure should succeed")
-		}
-	}()
-	func() {
-		if result_155.Value != "done" {
-			t.Fatalf("result = %q, want %q", result_155.Value, "done")
-		}
-	}()
+	if !result_155.Ok {
+		t.Fatal("PThen with PPure should succeed")
+	}
+	if result_155.Value != "done" {
+		t.Fatalf("result = %q, want %q", result_155.Value, "done")
+	}
 }
 func TestPCharWithUTF8(t *testing.T) {
 	p_156 := PChar('你')
 	result_157 := ParseInput(p_156, "你好")
-	func() {
-		if !result_157.Ok {
-			t.Fatal("PChar should match UTF-8 rune '你'")
-		}
-	}()
-	func() {
-		if result_157.Value != '你' {
-			t.Fatalf("PChar('你') = %d, want %d", result_157.Value, '你')
-		}
-	}()
-	func() {
-		if result_157.State.Index != 3 {
-			t.Fatalf("PChar UTF-8 index=%d, want 3", result_157.State.Index)
-		}
-	}()
+	if !result_157.Ok {
+		t.Fatal("PChar should match UTF-8 rune '你'")
+	}
+	if result_157.Value != '你' {
+		t.Fatalf("PChar('你') = %d, want %d", result_157.Value, '你')
+	}
+	if result_157.State.Index != 3 {
+		t.Fatalf("PChar UTF-8 index=%d, want 3", result_157.State.Index)
+	}
 }
 func TestPStringWithUTF8(t *testing.T) {
 	p_158 := PString("你好")
 	result_159 := ParseInput(p_158, "你好世界")
-	func() {
-		if !result_159.Ok {
-			t.Fatal("PString should match UTF-8 string '你好'")
-		}
-	}()
-	func() {
-		if result_159.Value != "你好" {
-			t.Fatalf("PString result = %q, want %q", result_159.Value, "你好")
-		}
-	}()
-	func() {
-		if result_159.State.Index != 6 {
-			t.Fatalf("PString UTF-8 index=%d, want 6", result_159.State.Index)
-		}
-	}()
+	if !result_159.Ok {
+		t.Fatal("PString should match UTF-8 string '你好'")
+	}
+	if result_159.Value != "你好" {
+		t.Fatalf("PString result = %q, want %q", result_159.Value, "你好")
+	}
+	if result_159.State.Index != 6 {
+		t.Fatalf("PString UTF-8 index=%d, want 6", result_159.State.Index)
+	}
 }
 func TestReplyEmptyError(t *testing.T) {
 	pos_160 := Position{Offset: 10, Line: 2, Column: 5}
 	err_161 := EmptyError(pos_160)
-	func() {
-		if err_161.Message != "" {
-			t.Fatalf("EmptyError message = %q, want empty", err_161.Message)
-		}
-	}()
-	func() {
-		if Len__t_t(err_161.Expected) != 0 {
-			t.Fatalf("EmptyError expected length = %d, want 0", Len__t_t(err_161.Expected))
-		}
-	}()
-	func() {
-		if err_161.Position.Offset != 10 {
-			t.Fatalf("EmptyError position.Offset = %d, want 10", err_161.Position.Offset)
-		}
-	}()
+	if err_161.Message != "" {
+		t.Fatalf("EmptyError message = %q, want empty", err_161.Message)
+	}
+	if Len__t_t(err_161.Expected) != 0 {
+		t.Fatalf("EmptyError expected length = %d, want 0", Len__t_t(err_161.Expected))
+	}
+	if err_161.Position.Offset != 10 {
+		t.Fatalf("EmptyError position.Offset = %d, want 10", err_161.Position.Offset)
+	}
 }
 func TestReplyErrorAt(t *testing.T) {
 	pos_162 := Position{Offset: 0, Line: 1, Column: 1}
 	expected_163 := []string{"digit", "letter"}
 	err_164 := ErrorAt(pos_162, "expected digit", expected_163)
-	func() {
-		if err_164.Message != "expected digit" {
-			t.Fatalf("ErrorAt message = %q, want %q", err_164.Message, "expected digit")
-		}
-	}()
-	func() {
-		if Len__t_t(err_164.Expected) != 2 {
-			t.Fatalf("ErrorAt expected length = %d, want 2", Len__t_t(err_164.Expected))
-		}
-	}()
+	if err_164.Message != "expected digit" {
+		t.Fatalf("ErrorAt message = %q, want %q", err_164.Message, "expected digit")
+	}
+	if Len__t_t(err_164.Expected) != 2 {
+		t.Fatalf("ErrorAt expected length = %d, want 2", Len__t_t(err_164.Expected))
+	}
 }
 func TestReplyWithExpected(t *testing.T) {
 	pos_165 := Position{Offset: 0, Line: 1, Column: 1}
 	err_166 := ErrorAt(pos_165, "expected", []string{"digit"})
 	err2_167 := WithExpected(err_166, "letter")
-	func() {
-		if Len__t_t(err2_167.Expected) != 2 {
-			t.Fatalf("WithExpected expected length = %d, want 2", Len__t_t(err2_167.Expected))
-		}
-	}()
+	if Len__t_t(err2_167.Expected) != 2 {
+		t.Fatalf("WithExpected expected length = %d, want 2", Len__t_t(err2_167.Expected))
+	}
 }

@@ -970,6 +970,29 @@ func TestCompileDirSupportsStructLiterals(t *testing.T) {
 	}
 }
 
+func TestCompileDirRejectsStructLiteralMissingField(t *testing.T) {
+	dir := t.TempDir()
+	writeMygoFile(t, dir, "main.mygo", `package main
+  struct Point
+    X: Int64
+    Y: Int64
+  end
+
+  func make_point() -> Point
+    Point { X: (42 as Int64) }
+  end
+`)
+
+	_, err := CompileDir(dir)
+	if err == nil {
+		t.Fatal("CompileDir() error = nil, want missing struct field failure")
+	}
+	if !strings.Contains(err.Error(), `struct "Point" literal missing field "Y"`) &&
+		!strings.Contains(err.Error(), `struct Point literal missing field "Y"`) {
+		t.Fatalf("CompileDir() error = %v, want missing struct field failure", err)
+	}
+}
+
 func TestCompileDirSupportsRefAndResultTypes(t *testing.T) {
 	dir := t.TempDir()
 	writeMygoFile(t, dir, "main.mygo", `package main

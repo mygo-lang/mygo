@@ -1591,6 +1591,28 @@ func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType,
 		}
 	}
 
+	if structDecl != nil {
+		fieldSet := make(map[string]struct{}, len(structDecl.Fields))
+		for _, sf := range structDecl.Fields {
+			fieldSet[sf.Name] = struct{}{}
+		}
+		seen := make(map[string]struct{}, len(n.Fields))
+		for _, f := range n.Fields {
+			if _, ok := fieldSet[f.Name]; !ok {
+				return nil, nil, nil, fmt.Errorf("struct %q has no field %q", n.TypeName, f.Name)
+			}
+			if _, ok := seen[f.Name]; ok {
+				return nil, nil, nil, fmt.Errorf("struct %q field %q specified more than once", n.TypeName, f.Name)
+			}
+			seen[f.Name] = struct{}{}
+		}
+		for _, sf := range structDecl.Fields {
+			if _, ok := seen[sf.Name]; !ok {
+				return nil, nil, nil, fmt.Errorf("struct %q literal missing field %q", n.TypeName, sf.Name)
+			}
+		}
+	}
+
 	// If explicit type args are given, unify with them
 	if len(n.TypeArgs) > 0 {
 		con, ok := structType.(TCon)
