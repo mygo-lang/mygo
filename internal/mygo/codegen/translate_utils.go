@@ -206,6 +206,10 @@ func exprUsesIdent(e Expr, name string) bool {
 		return exprUsesIdent(n.Expr, name)
 	case *IfExpr:
 		return exprUsesIdent(n.Cond, name) || exprUsesIdent(n.Then, name) || exprUsesIdent(n.Else, name)
+	case *WhileExpr:
+		return exprUsesIdent(n.Cond, name) || exprUsesIdent(n.Body, name)
+	case *FuncLitExpr:
+		return exprUsesIdent(n.Body, name)
 	case *SwitchExpr:
 		if exprUsesIdent(n.Target, name) {
 			return true
@@ -235,6 +239,30 @@ func exprUsesIdent(e Expr, name string) bool {
 	case *StructLitExpr:
 		for _, f := range n.Fields {
 			if exprUsesIdent(f.Value, name) {
+				return true
+			}
+		}
+	case *SliceLitExpr:
+		for _, elem := range n.Elems {
+			if exprUsesIdent(elem, name) {
+				return true
+			}
+		}
+	case *MapLitExpr:
+		for _, pair := range n.Pairs {
+			if exprUsesIdent(pair.Key, name) || exprUsesIdent(pair.Value, name) {
+				return true
+			}
+		}
+	case *SetLitExpr:
+		for _, elem := range n.Elems {
+			if exprUsesIdent(elem, name) {
+				return true
+			}
+		}
+	case *TupleLitExpr:
+		for _, elem := range n.Elems {
+			if exprUsesIdent(elem, name) {
 				return true
 			}
 		}

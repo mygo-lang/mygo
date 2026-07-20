@@ -183,14 +183,14 @@ func (g *gen) methodReturnType(method *struct {
 	return ret
 }
 
-func typeArgExprsFromExpected(expected string) []ast.Expr {
+func (g *gen) typeArgExprsFromExpected(expected string) []ast.Expr {
 	_, args := splitTypeArgs(expected)
 	if len(args) == 0 {
 		return nil
 	}
 	out := make([]ast.Expr, len(args))
 	for i, a := range args {
-		out[i] = goTypeExprFromString(a)
+		out[i] = g.goTypeExprFromString(a)
 	}
 	return out
 }
@@ -222,7 +222,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			}
 			// Use explicit type args if provided, otherwise infer from expected type
 			if len(typeArgExprs) == 0 {
-				typeArgExprs = typeArgExprsFromExpected(useExpected)
+				typeArgExprs = g.typeArgExprsFromExpected(useExpected)
 			}
 			var fun ast.Expr = ast.NewIdent(id.Name)
 			if len(typeArgExprs) > 0 {
@@ -342,11 +342,6 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		if len(typeArgExprs) > 0 && len(n.TypeArgs) > 0 {
 			callee = &ast.IndexListExpr{X: ast.NewIdent(calleeName), Indices: typeArgExprs}
 		}
-		if id.Name == "Zero" && len(n.Args) == 0 && expected != "" {
-			return &ast.CallExpr{
-				Fun: &ast.IndexExpr{X: ast.NewIdent("Zero"), Index: goTypeExprFromString(expected)},
-			}, expected, nil
-		}
 		// Check for constraint function call (e.g., show(value) → showFn(value))
 		if fn, ok := ctx.constraintFuncs[id.Name]; ok && len(n.Args) > 0 {
 			args, err := g.translateCallArgs(n.Args, ctx)
@@ -393,7 +388,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			if base, tas := splitTypeArgs(useExpected); base == "Option" && len(tas) > 0 {
 				ta := make([]ast.Expr, len(tas))
 				for i, a := range tas {
-					ta[i] = goTypeExprFromString(a)
+					ta[i] = g.goTypeExprFromString(a)
 				}
 				if len(ta) == 1 {
 					callee = &ast.IndexExpr{X: ast.NewIdent(id.Name), Index: ta[0]}
@@ -403,7 +398,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			if base, tas := splitTypeArgs(useExpected); base == "Result" && len(tas) == 2 {
 				ta := make([]ast.Expr, len(tas))
 				for i, a := range tas {
-					ta[i] = goTypeExprFromString(a)
+					ta[i] = g.goTypeExprFromString(a)
 				}
 				callee = &ast.IndexListExpr{X: ast.NewIdent(id.Name), Indices: ta}
 			}
@@ -846,8 +841,8 @@ func (g *gen) wrapGoErrorResultCall(call ast.Expr, resultType string) ast.Expr {
 	if base != "Result" || len(args) != 2 {
 		return call
 	}
-	okType := goTypeExprFromString(args[0])
-	errType := goTypeExprFromString(args[1])
+	okType := g.goTypeExprFromString(args[0])
+	errType := g.goTypeExprFromString(args[1])
 	resultTypeExpr := &ast.IndexListExpr{X: ast.NewIdent("Result"), Indices: []ast.Expr{okType, errType}}
 	okCall := &ast.IndexListExpr{X: ast.NewIdent("Ok"), Indices: []ast.Expr{okType, errType}}
 	errCall := &ast.IndexListExpr{X: ast.NewIdent("Err"), Indices: []ast.Expr{okType, errType}}

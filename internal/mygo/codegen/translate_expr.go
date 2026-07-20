@@ -263,7 +263,7 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 				useExpected = ctx.retType
 			}
 			if base, tas := splitTypeArgs(useExpected); base == "Option" && len(tas) > 0 {
-				callee := &ast.IndexExpr{X: ast.NewIdent("None"), Index: goTypeExprFromString(tas[0])}
+				callee := &ast.IndexExpr{X: ast.NewIdent("None"), Index: g.goTypeExprFromString(tas[0])}
 				return &ast.CallExpr{Fun: callee}, useExpected, nil
 			}
 		}
@@ -503,7 +503,7 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 		fn := &ast.FuncLit{
 			Type: &ast.FuncType{
 				Params:  &ast.FieldList{},
-				Results: fieldListForReturn(expected),
+				Results: g.fieldListForReturn(expected),
 			},
 			Body: &ast.BlockStmt{List: stmts},
 		}
@@ -529,11 +529,11 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 	return nil, "", common.ErrorAtPos(g.currentFile, line, col, "unsupported expression %T", e)
 }
 
-func fieldListForReturn(expected string) *ast.FieldList {
+func (g *gen) fieldListForReturn(expected string) *ast.FieldList {
 	if expected == "" || isUnitGoType(expected) {
 		return nil
 	}
-	return &ast.FieldList{List: []*ast.Field{{Type: goTypeExprFromString(expected)}}}
+	return &ast.FieldList{List: []*ast.Field{{Type: g.goTypeExprFromString(expected)}}}
 }
 
 func fieldListIfNonEmptyGoast(fields []*ast.Field) *ast.FieldList {

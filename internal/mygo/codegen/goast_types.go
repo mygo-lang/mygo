@@ -182,6 +182,60 @@ func goTypeExprFromString(typ string) ast.Expr {
 	return ast.NewIdent(typ)
 }
 
+func (g *gen) goTypeExprFromString(typ string) ast.Expr {
+	return g.goTypeExprFromStringSeen(typ, map[string]bool{})
+}
+
+func (g *gen) goTypeExprFromStringSeen(typ string, seen map[string]bool) ast.Expr {
+	typ = strings.TrimSpace(typ)
+	if typ == "" {
+		return ast.NewIdent("any")
+	}
+	typ = mygoSigTypeToGo(typ)
+	if expr := g.parseGoTypeString(typ, seen); expr != nil {
+		return expr
+	}
+	if expr, err := goparser.ParseExpr(typ); err == nil {
+		if id, ok := expr.(*ast.Ident); ok {
+			if sel := g.importedTypeSelector(id.Name); sel != nil {
+				return sel
+			}
+		}
+		return expr
+	}
+	if sel := g.importedTypeSelector(typ); sel != nil {
+		return sel
+	}
+	return ast.NewIdent(typ)
+}
+
+func (g *gen) goTypeExprForAssertion(typ string) ast.Expr {
+	typ = strings.TrimSpace(typ)
+	if typ == "" {
+		return ast.NewIdent("any")
+	}
+	typ = mygoSigTypeToGo(typ)
+	switch typ {
+	case "Any":
+		return ast.NewIdent("any")
+	}
+	if expr := g.parseGoTypeString(typ, map[string]bool{}); expr != nil {
+		return expr
+	}
+	if expr, err := goparser.ParseExpr(typ); err == nil {
+		if id, ok := expr.(*ast.Ident); ok {
+			if sel := g.importedTypeSelector(id.Name); sel != nil {
+				return sel
+			}
+		}
+		return expr
+	}
+	if sel := g.importedTypeSelector(typ); sel != nil {
+		return sel
+	}
+	return ast.NewIdent(typ)
+}
+
 // goTypeExprForAssertion converts a mygo type name to a Go expression suitable
 // for type assertions. It maps mygo built-in names (e.g. "Any") to their Go
 // equivalents (e.g. "any").
@@ -226,6 +280,102 @@ func parseGoTypeString(typ string) ast.Expr {
 		return nil
 	}
 	return st.Fields.List[0].Type
+}
+
+func (g *gen) parseGoTypeString(typ string, seen map[string]bool) ast.Expr {
+	if strings.HasPrefix(typ, "map[") {
+		end := matchingTypeArgEnd(typ, len("map"))
+		if end > len("map") && end+1 < len(typ) {
+			key := strings.TrimSpace(typ[len("map")+1 : end])
+			value := strings.TrimSpace(typ[end+1:])
+			return &ast.MapType{
+				Key:   g.goTypeExprFromStringSeen(key, seen),
+				Value: g.goTypeExprFromStringSeen(value, seen),
+			}
+		}
+	}
+	expr, err := goparser.ParseExpr("struct{ X " + typ + " }")
+	if err != nil {
+		return nil
+	}
+	st, ok := expr.(*ast.StructType)
+	if !ok || st.Fields == nil || len(st.Fields.List) != 1 {
+		return nil
+	}
+	return g.qualifyImportedTypeExpr(st.Fields.List[0].Type, seen)
+}
+
+func (g *gen) qualifyImportedTypeExpr(expr ast.Expr, seen map[string]bool) ast.Expr {
+	switch e := expr.(type) {
+	case *ast.Ident:
+		if sel := g.importedTypeSelector(e.Name); sel != nil {
+			return sel
+		}
+		return e
+	case *ast.ArrayType:
+		e.Elt = g.qualifyImportedTypeExpr(e.Elt, seen)
+		return e
+	case *ast.StarExpr:
+		e.X = g.qualifyImportedTypeExpr(e.X, seen)
+		return e
+	case *ast.MapType:
+		e.Key = g.qualifyImportedTypeExpr(e.Key, seen)
+		e.Value = g.qualifyImportedTypeExpr(e.Value, seen)
+		return e
+	case *ast.ChanType:
+		e.Value = g.qualifyImportedTypeExpr(e.Value, seen)
+		return e
+	case *ast.IndexExpr:
+		e.X = g.qualifyImportedTypeExpr(e.X, seen)
+		e.Index = g.qualifyImportedTypeExpr(e.Index, seen)
+		return e
+	case *ast.IndexListExpr:
+		e.X = g.qualifyImportedTypeExpr(e.X, seen)
+		for i := range e.Indices {
+			e.Indices[i] = g.qualifyImportedTypeExpr(e.Indices[i], seen)
+		}
+		return e
+	case *ast.SelectorExpr:
+		return e
+	case *ast.FuncType:
+		if e.Params != nil {
+			for _, f := range e.Params.List {
+				f.Type = g.qualifyImportedTypeExpr(f.Type, seen)
+			}
+		}
+		if e.Results != nil {
+			for _, f := range e.Results.List {
+				f.Type = g.qualifyImportedTypeExpr(f.Type, seen)
+			}
+		}
+		return e
+	default:
+		return e
+	}
+}
+
+func (g *gen) importedTypeSelector(name string) ast.Expr {
+	if name == "" || strings.Contains(name, ".") || g == nil || g.typedInfo == nil {
+		return nil
+	}
+	for alias, pkg := range g.typedInfo.MyGoPackages {
+		if pkg == nil {
+			continue
+		}
+		if _, ok := pkg.Types[name]; ok {
+			return &ast.SelectorExpr{X: ast.NewIdent(alias), Sel: ast.NewIdent(name)}
+		}
+		if _, ok := pkg.Structs[name]; ok {
+			return &ast.SelectorExpr{X: ast.NewIdent(alias), Sel: ast.NewIdent(name)}
+		}
+		if _, ok := pkg.Enums[name]; ok {
+			return &ast.SelectorExpr{X: ast.NewIdent(alias), Sel: ast.NewIdent(name)}
+		}
+		if _, ok := pkg.Interfaces[name]; ok {
+			return &ast.SelectorExpr{X: ast.NewIdent(alias), Sel: ast.NewIdent(name)}
+		}
+	}
+	return nil
 }
 
 func typeParamFields(params []string) *ast.FieldList {
