@@ -24,6 +24,12 @@ struct EnvEntry
   Scheme: Scheme
 end
 
+struct FieldEntry
+  TypeName: String
+  FieldName: String
+  Type: MonoType
+end
+
 struct SubstEntry
   ID: Int
   Type: MonoType
@@ -41,10 +47,12 @@ end
 
 struct PackageInfo
   Env: Slice[EnvEntry]
+  Fields: Slice[FieldEntry]
 end
 
 struct DeclInfer
   Env: Slice[EnvEntry]
+  Fields: Slice[FieldEntry]
   State: InferState
 end
 
@@ -64,5 +72,5 @@ func NewInferState() -> InferState
 end
 
 func InferFile(file: ast2.File) -> Result[PackageInfo, String]
-  inferDecls(file.Decls, initialEnv(), NewInferState())
+  inferDecls(file.Decls, initialEnv(), [], NewInferState())
 end

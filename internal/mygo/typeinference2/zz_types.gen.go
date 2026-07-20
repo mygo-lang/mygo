@@ -69,6 +69,11 @@ type EnvEntry struct {
 	Name   string
 	Scheme Scheme
 }
+type FieldEntry struct {
+	TypeName  string
+	FieldName string
+	Type      MonoType
+}
 type SubstEntry struct {
 	ID   int
 	Type MonoType
@@ -82,11 +87,13 @@ type InferResult struct {
 	State InferState
 }
 type PackageInfo struct {
-	Env []EnvEntry
+	Env    []EnvEntry
+	Fields []FieldEntry
 }
 type DeclInfer struct {
-	Env   []EnvEntry
-	State InferState
+	Env    []EnvEntry
+	Fields []FieldEntry
+	State  InferState
 }
 type ArgsResult struct {
 	Types []MonoType
@@ -102,5 +109,5 @@ func NewInferState() InferState {
 	return InferState{FreshVarID: 1}
 }
 func InferFile(file ast2.File) Result[PackageInfo, string] {
-	return inferDecls(file.Decls, initialEnv(), NewInferState())
+	return inferDecls(file.Decls, initialEnv(), []FieldEntry{}, NewInferState())
 }

@@ -4,6 +4,7 @@ package codegen2
 
 import (
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
+	"github.com/mygo-lang/mygo/internal/mygo/parser2"
 	. "github.com/mygo-lang/mygo/prelude"
 )
 
@@ -256,7 +257,7 @@ func translateImplMethods(stem string, tps []string, methods []ast2.ImplMethod, 
 	}()
 }
 func defaultImplMethod() ast2.ImplMethod {
-	return ast2.ImplMethod{Sig: ast2.FuncSig{Name: "", TypeParams: []string([]string{}), Params: []ast2.Param([]ast2.Param{}), Ret: None[ast2.TypeExpr]()}, Body: ast2.ExprUnitExprCtor()}
+	return ast2.ImplMethod{Sig: ast2.FuncSig{Name: "", TypeParams: []string([]string{}), Params: []ast2.Param([]ast2.Param{}), Ret: None[parser2.TypeExpr]()}, Body: ast2.ExprUnitExprCtor()}
 }
 func translateImplStubDecl(tps []string, target ast2.TypeExpr, iface Option[ast2.TypeExpr], methods []ast2.FuncSig) Result[string, string] {
 	ctx_45 := newEgCtxWithTypeParams(tps)

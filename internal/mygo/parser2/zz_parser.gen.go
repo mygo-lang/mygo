@@ -660,22 +660,22 @@ func binaryExpr() ps.Parser[Expr] {
 	return pipeExpr()
 }
 func pipeExpr() ps.Parser[Expr] {
-	return chainLeft(orExpr(), pipeOp(), makeBinary())
+	return chainLeft[Expr](orExpr(), pipeOp(), makeBinary())
 }
 func orExpr() ps.Parser[Expr] {
-	return chainLeft(andExpr(), sym("||"), makeBinary())
+	return chainLeft[Expr](andExpr(), sym("||"), makeBinary())
 }
 func andExpr() ps.Parser[Expr] {
-	return chainLeft(compareExpr(), sym("&&"), makeBinary())
+	return chainLeft[Expr](compareExpr(), sym("&&"), makeBinary())
 }
 func compareExpr() ps.Parser[Expr] {
-	return chainLeft(addExpr(), compareOp(), makeBinary())
+	return chainLeft[Expr](addExpr(), compareOp(), makeBinary())
 }
 func addExpr() ps.Parser[Expr] {
-	return chainLeft(mulExpr(), addOp(), makeBinary())
+	return chainLeft[Expr](mulExpr(), addOp(), makeBinary())
 }
 func mulExpr() ps.Parser[Expr] {
-	return chainLeft(unaryExpr(), mulOp(), makeBinary())
+	return chainLeft[Expr](unaryExpr(), mulOp(), makeBinary())
 }
 func unaryExpr() ps.Parser[Expr] {
 	return ps.PChoice([]ps.Parser[Expr]{ps.PAttempt(ps.PMap(ps.PThen(sym("!"), lazyUnaryExpr()), func(e Expr) Expr {
@@ -738,7 +738,7 @@ func primaryExpr() ps.Parser[Expr] {
 	}{})), func(_ struct {
 	}) Expr {
 		return ExprUnitExprCtor()
-	}), paren(lazyExpr()), ps.PMap(identifier(), func(v string) Expr {
+	}), paren[Expr](lazyExpr()), ps.PMap(identifier(), func(v string) Expr {
 		return ExprIdentExprCtor(v)
 	})})
 }
@@ -764,7 +764,7 @@ func chainLeft[A any](item ps.Parser[A], op ps.Parser[string], combine func(stri
 			if !first_15.Ok {
 				return first_15
 			} else {
-				return chainLeftTail(item, op, combine, state, first_15.State, first_15.Value)
+				return chainLeftTail[A](item, op, combine, state, first_15.State, first_15.Value)
 			}
 		}()
 	}}
@@ -781,7 +781,7 @@ func chainLeftTail[A any](item ps.Parser[A], op ps.Parser[string], combine func(
 					if !rr_17.Ok {
 						return rr_17
 					} else {
-						return chainLeftTail(item, op, combine, start, rr_17.State, combine(rop_16.Value, acc, rr_17.Value))
+						return chainLeftTail[A](item, op, combine, start, rr_17.State, combine(rop_16.Value, acc, rr_17.Value))
 					}
 				}()
 			}()
@@ -789,7 +789,7 @@ func chainLeftTail[A any](item ps.Parser[A], op ps.Parser[string], combine func(
 	}()
 }
 func identifier() ps.Parser[string] {
-	return lexeme(ps.PAttempt(identifierRaw()))
+	return lexeme[string](ps.PAttempt(identifierRaw()))
 }
 func identifierRaw() ps.Parser[string] {
 	return ps.PBind(ps.PSatisfy(isIdentStart, "identifier"), func(first rune) ps.Parser[string] {
@@ -811,14 +811,14 @@ func failIdentifier() ps.Parser[string] {
 	}}
 }
 func number() ps.Parser[string] {
-	return lexeme(ps.PBind(ps.PMany1(ps.PSatisfy(func(r rune) bool {
+	return lexeme[string](ps.PBind(ps.PMany1(ps.PSatisfy(func(r rune) bool {
 		return r >= '0' && r <= '9' || r == '.'
 	}, "number")), func(rs []rune) ps.Parser[string] {
 		return ps.PPure(MygoIN6StringM9FromRunes(rs))
 	}))
 }
 func stringLiteral() ps.Parser[string] {
-	return lexeme(ps.PBind(ps.PChar('"'), func(_ rune) ps.Parser[string] {
+	return lexeme[string](ps.PBind(ps.PChar('"'), func(_ rune) ps.Parser[string] {
 		return ps.PBind(ps.PMany(stringChar()), func(chars []rune) ps.Parser[string] {
 			return ps.PThen(ps.PChar('"'), ps.PPure(MygoIN6StringM9FromRunes(chars)))
 		})
@@ -838,12 +838,12 @@ func stringChar() ps.Parser[rune] {
 	}, "string character"))
 }
 func kw(word string) ps.Parser[string] {
-	return lexeme(ps.PAttempt(ps.PBind(ps.PString(word), func(value string) ps.Parser[string] {
+	return lexeme[string](ps.PAttempt(ps.PBind(ps.PString(word), func(value string) ps.Parser[string] {
 		return ps.PThen(ps.PNotFollowedBy(ps.PSatisfy(isIdentRest, "identifier character"), "keyword boundary"), ps.PPure(value))
 	})))
 }
 func sym(value string) ps.Parser[string] {
-	return lexeme(ps.PString(value))
+	return lexeme[string](ps.PString(value))
 }
 func lexeme[A any](p ps.Parser[A]) ps.Parser[A] {
 	return ps.PBind(trivia(), func(_ struct {

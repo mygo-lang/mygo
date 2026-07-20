@@ -2,36 +2,40 @@ package typeinference2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 
-func inferDecls(decls: Slice[ast2.Decl], env: Slice[EnvEntry], state: InferState) -> Result[PackageInfo, String]
+func inferDecls(decls: Slice[ast2.Decl], env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[PackageInfo, String]
   if decls.Len() == 0 then
-    Ok(PackageInfo { Env: env })
+    Ok(PackageInfo { Env: env, Fields: fields })
   else
     let head = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     let tail = sliceDrop(decls, 1)
-    let next = inferDecl(head, env, state)
+    let next = inferDecl(head, env, fields, state)
     switch next
-      case Ok(pair) => inferDecls(tail, pair.Env, pair.State)
+      case Ok(pair) => inferDecls(tail, pair.Env, pair.Fields, pair.State)
       case Err(msg) => Err(msg)
     end
   end
 end
 
-func inferDecl(decl: ast2.Decl, env: Slice[EnvEntry], state: InferState) -> Result[DeclInfer, String]
+func inferDecl(decl: ast2.Decl, env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[DeclInfer, String]
   switch decl
-    case ImportDecl(_, _) => Ok(DeclInfer { Env: env, State: state })
-    case StructDecl(name, tps, _) =>
-      Ok(DeclInfer { Env: envPut(env, name, Scheme { Bound: [], Body: MonoType.TCon(name, emptyMonoTypes()) }), State: state })
+    case ImportDecl(_, _) => Ok(DeclInfer { Env: env, Fields: fields, State: state })
+    case StructDecl(name, tps, structFields) =>
+      Ok(DeclInfer {
+        Env: envWithStructFields(envPut(env, name, Scheme { Bound: [], Body: MonoType.TCon(name, emptyMonoTypes()) }), name, structFields),
+        Fields: fieldsForStruct(name, structFields, fields),
+        State: state,
+      })
     case EnumDecl(name, tps, vars) =>
-      inferVariants(vars, name, tps, env, state)
+      inferVariants(vars, name, tps, env, fields, state)
     case InterfaceDecl(name, _, _) =>
-      Ok(DeclInfer { Env: envPut(env, name, Scheme { Bound: [], Body: MonoType.TCon(name, emptyMonoTypes()) }), State: state })
-    case ImplDecl(_, _, _, _) => Ok(DeclInfer { Env: env, State: state })
+      Ok(DeclInfer { Env: envPut(env, name, Scheme { Bound: [], Body: MonoType.TCon(name, emptyMonoTypes()) }), Fields: fields, State: state })
+    case ImplDecl(_, _, _, _) => Ok(DeclInfer { Env: env, Fields: fields, State: state })
     case FuncDecl(name, tps, params, ret, body) =>
-      inferFuncDecl(name, tps, params, ret, body, env, state)
+      inferFuncDecl(name, tps, params, ret, body, env, fields, state)
   end
 end
 
-func inferFuncDecl(name: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[DeclInfer, String]
+func inferFuncDecl(name: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[DeclInfer, String]
   let paramTypes = paramsToTypes(params)
   let retType = switch ret
     case Some(t) => typeFromAST(t)
@@ -46,7 +50,7 @@ func inferFuncDecl(name: String, tps: Slice[String], params: Slice[ast2.Param], 
       let checked = unify(applySubst(r.Subst, r.Type), retType, r.Subst)
       switch checked
         case Ok(s2) =>
-          Ok(DeclInfer { Env: envPut(env, name, Scheme { Bound: [], Body: applySubst(s2, fnType) }), State: r.State })
+          Ok(DeclInfer { Env: envPut(env, name, Scheme { Bound: [], Body: applySubst(s2, fnType) }), Fields: fields, State: r.State })
         case Err(msg) => Err("function " + name + " return type mismatch: " + msg)
       end
     case Err(msg) => Err("function " + name + ": " + msg)
@@ -67,7 +71,7 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
     case UnaryExpr(op, inner) => inferUnary(op, inner.value(), env, state)
     case BinaryExpr(op, left, right) => inferBinary(op, left.value(), right.value(), env, state)
     case CallExpr(callee, args) => inferCall(callee.value(), args, env, state)
-    case FieldExpr(_, field) => Err("field inference is not implemented yet: " + field)
+    case FieldExpr(base, field) => inferField(base.value(), field, env, state)
     case IfExpr(cond, thenExpr, elseExpr) => inferIf(cond.value(), thenExpr.value(), elseExpr.value(), env, state)
     case BlockExpr(items) => inferBlock(items, env, state)
     case LetExpr(bind) => inferLet(bind, env, state)
@@ -276,9 +280,25 @@ func matchExpected(v: InferResult, expected: MonoType, result: MonoType) -> Resu
   end
 end
 
-func inferVariants(vars: Slice[ast2.Variant], enumName: String, tps: Slice[String], env: Slice[EnvEntry], state: InferState) -> Result[DeclInfer, String]
+func inferField(base: ast2.Expr, field: String, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+  let r = inferExpr(base, env, state)
+  switch r
+    case Err(msg) => Err(msg)
+    case Ok(v) =>
+      switch applySubst(v.Subst, v.Type)
+        case TCon(typeName, _) =>
+          switch envGetField(env, typeName, field)
+            case Some(s) => Ok(InferResult { Type: s.Body, Subst: v.Subst, State: v.State })
+            case None => Err("unknown field " + typeName + "." + field)
+          end
+        case _ => Err("field access on non-struct type")
+      end
+  end
+end
+
+func inferVariants(vars: Slice[ast2.Variant], enumName: String, tps: Slice[String], env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[DeclInfer, String]
   if vars.Len() == 0 then
-    Ok(DeclInfer { Env: envPut(env, enumName, Scheme { Bound: [], Body: MonoType.TCon(enumName, emptyMonoTypes()) }), State: state })
+    Ok(DeclInfer { Env: envPut(env, enumName, Scheme { Bound: [], Body: MonoType.TCon(enumName, emptyMonoTypes()) }), Fields: fields, State: state })
   else
     let v = vars.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: emptyASTTypeExprs() })
     let constructorType = if v.Fields.Len() == 0 then
@@ -286,6 +306,6 @@ func inferVariants(vars: Slice[ast2.Variant], enumName: String, tps: Slice[Strin
     else
       MonoType.TFunc(typeArgsFromAST(v.Fields), Ref.new(MonoType.TCon(enumName, emptyMonoTypes())))
     end
-    inferVariants(sliceDrop(vars, 1), enumName, tps, envPut(env, v.Name, Scheme { Bound: [], Body: constructorType }), state)
+    inferVariants(sliceDrop(vars, 1), enumName, tps, envPut(env, v.Name, Scheme { Bound: [], Body: constructorType }), fields, state)
   end
 end

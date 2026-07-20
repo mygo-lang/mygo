@@ -475,9 +475,9 @@ func exportName(name: String) -> String
   if name == "" then
     return name
   end
-  let runes = name as Slice[Rune]
-  runes.Set(0, toUpper(runes.Get(0).UnwrapOr('\x0')))
-  runes as String
+  let first = name.Slice(0, 1).UnwrapOr("")
+  let rest = name.Slice(1, name.Len()).UnwrapOr("")
+  first.ToUpper() + rest
 end
 
 # 辅助函数：字符转大写

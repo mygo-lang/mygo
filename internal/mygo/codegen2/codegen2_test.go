@@ -130,3 +130,33 @@ end
 		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
 	}
 }
+
+func TestGenerateSourceInfersStructFieldAccess(t *testing.T) {
+	src := `package sample
+
+struct Point
+  x: Int
+  name: String
+end
+
+func getX(p: Point) -> Int
+  p.x
+end
+`
+
+	got := GenerateSource(src)
+	ok, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	code := ok.F0
+	if !strings.Contains(code, "type Point struct") || !strings.Contains(code, "X    int") || !strings.Contains(code, "Name string") {
+		t.Fatalf("struct fields were not generated as expected:\n%s", code)
+	}
+	if !strings.Contains(code, "return p.X") {
+		t.Fatalf("field access was not lowered as expected:\n%s", code)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", code, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
