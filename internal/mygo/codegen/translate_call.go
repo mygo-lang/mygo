@@ -195,6 +195,67 @@ func (g *gen) typeArgExprsFromExpected(expected string) []ast.Expr {
 	return out
 }
 
+func (g *gen) funcTypeArgExprsFromExpected(fn *FuncDecl, expected string, ctx *egCtx) []ast.Expr {
+	if fn == nil || len(fn.TypeParams) == 0 || fn.Ret == nil || strings.TrimSpace(expected) == "" {
+		return nil
+	}
+	subst := map[string]string{}
+	if !inferTypeSubst(fn.Ret, expected, typeParamSet(fn.TypeParams), subst) {
+		return nil
+	}
+	out := make([]ast.Expr, 0, len(fn.TypeParams))
+	for _, tp := range fn.TypeParams {
+		typ := strings.TrimSpace(subst[tp])
+		if typ == "" || containsGeneratedTypeVar(typ) {
+			return nil
+		}
+		if isUnresolvedGoTypeParam(typ) {
+			if ctx == nil {
+				return nil
+			}
+			if _, ok := ctx.typeParams[typ]; !ok {
+				return nil
+			}
+		}
+		if expr, ok := g.typeParamTypeArgExpr(typ, ctx); ok {
+			out = append(out, expr)
+			continue
+		}
+		if isUnresolvedGoTypeParam(typ) {
+			return nil
+		}
+		out = append(out, g.goTypeExprFromString(typ))
+	}
+	return out
+}
+
+func (g *gen) typeParamTypeArgExpr(typ string, ctx *egCtx) (ast.Expr, bool) {
+	if ctx == nil {
+		return nil, false
+	}
+	if _, ok := ctx.typeParams[typ]; !ok {
+		return nil, false
+	}
+	return ast.NewIdent(typ), true
+}
+
+func (g *gen) lookupVisibleFuncDecl(name string) *FuncDecl {
+	if g == nil || g.pkg == nil || name == "" {
+		return nil
+	}
+	if fn := g.pkg.Funcs[name]; fn != nil {
+		return fn
+	}
+	if g.pkg.NoPrelude || g.pkg.Name == "prelude" {
+		return nil
+	}
+	preludePkg := loadPreludePackageForEnums(g.pkg.Dir, g.pkg.WorkspaceRoot)
+	if preludePkg == nil {
+		return nil
+	}
+	return preludePkg.Funcs[name]
+}
+
 // translateCall handles function/method calls.
 func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr, string, error) {
 	// Translate explicit type arguments if provided
@@ -236,7 +297,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		}
 		// Auto-inject constraint function args for functions with using clauses.
 		// E.g., same(1, 2) → same(1, 2, Equals_fasteq_int) when same has using.
-		if fnDecl, ok := g.pkg.Funcs[id.Name]; ok && len(fnDecl.Using) > 0 {
+		if fnDecl := g.lookupVisibleFuncDecl(id.Name); fnDecl != nil && len(fnDecl.Using) > 0 {
 			args, err := g.translateCallArgs(n.Args, ctx)
 			if err != nil {
 				return nil, "", err
@@ -338,10 +399,6 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			calleeName = bound
 		}
 		var callee ast.Expr = ast.NewIdent(calleeName)
-		// If explicit type args are provided for a generic function, add them
-		if len(typeArgExprs) > 0 && len(n.TypeArgs) > 0 {
-			callee = &ast.IndexListExpr{X: ast.NewIdent(calleeName), Indices: typeArgExprs}
-		}
 		// Check for constraint function call (e.g., show(value) → showFn(value))
 		if fn, ok := ctx.constraintFuncs[id.Name]; ok && len(n.Args) > 0 {
 			args, err := g.translateCallArgs(n.Args, ctx)
@@ -357,7 +414,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 
 		retType := ""
 		var fnDecl *FuncDecl
-		if decl, ok := g.pkg.Funcs[id.Name]; ok {
+		if decl := g.lookupVisibleFuncDecl(id.Name); decl != nil {
 			fnDecl = decl
 			if len(n.TypeArgs) > 0 && len(fnDecl.TypeParams) > 0 {
 				subst := map[string]string{}
@@ -373,6 +430,15 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		}
 		if expected != "" {
 			retType = expected
+		}
+		if len(typeArgExprs) == 0 && len(n.TypeArgs) == 0 {
+			typeArgExprs = g.funcTypeArgExprsFromExpected(fnDecl, retType, ctx)
+		}
+		// If type args are provided or inferred for a generic function, add them.
+		if len(typeArgExprs) == 1 {
+			callee = &ast.IndexExpr{X: ast.NewIdent(calleeName), Index: typeArgExprs[0]}
+		} else if len(typeArgExprs) > 1 {
+			callee = &ast.IndexListExpr{X: ast.NewIdent(calleeName), Indices: typeArgExprs}
 		}
 		args, err := g.translateCallArgsExpected(n.Args, g.paramExpectedTypes(fnDecl, retType, ctx), ctx)
 		if err != nil {

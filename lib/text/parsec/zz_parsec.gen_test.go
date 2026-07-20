@@ -604,7 +604,7 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_132.Value) != 3 {
 		t.Fatalf("words length = %d, want 3", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_132.Value))
 	}
-	w0_133 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_132.Value, 0)
+	w0_133 := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_132.Value, 0)
 	func() {
 		if v_8, ok := w0_133.(OptionSome[string]); ok {
 			func() {
@@ -620,7 +620,7 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 			}
 		}
 	}()
-	w1_134 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_132.Value, 1)
+	w1_134 := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_132.Value, 1)
 	func() {
 		if v_10, ok := w1_134.(OptionSome[string]); ok {
 			func() {
@@ -636,7 +636,7 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 			}
 		}
 	}()
-	w2_135 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_132.Value, 2)
+	w2_135 := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_132.Value, 2)
 	func() {
 		if v_12, ok := w2_135.(OptionSome[string]); ok {
 			func() {
@@ -660,7 +660,7 @@ func TestParseParenthesizedExpr(t *testing.T) {
 	parseTail_137 := func(w1 string) Parser[string] {
 		return PBind(PChar(','), func(_ rune) Parser[string] {
 			return PBind(word_136, func(w2 string) Parser[string] {
-				return PPure(w1 + "," + w2)
+				return PPure[string](w1 + "," + w2)
 			})
 		})
 	}

@@ -103,7 +103,7 @@ func POrElse[A any](left Parser[A], right Parser[A]) Parser[A] {
 }
 func PChoice[A any](parsers []Parser[A]) Parser[A] {
 	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(parsers, PFail[A]("no parser matched"), func(acc Parser[A], p Parser[A]) Parser[A] {
-		return POrElse(acc, p)
+		return POrElse[A](acc, p)
 	})
 }
 func PAttempt[A any](p Parser[A]) Parser[A] {
@@ -154,7 +154,7 @@ func PMany[A any](p Parser[A]) Parser[[]A] {
 				}()
 			} else {
 				return func() Reply[[]A] {
-					tail_10 := PMany(p).Run(r_9.State)
+					tail_10 := PMany[A](p).Run(r_9.State)
 					return func() Reply[[]A] {
 						if !tail_10.Ok {
 							return tail_10
@@ -195,12 +195,12 @@ func POptional[A any](p Parser[A]) Parser[Option[A]] {
 func PBetween[A any, L any, R any](open Parser[L], body Parser[A], close Parser[R]) Parser[A] {
 	return PBind(open, func(_ L) Parser[A] {
 		return PBind(body, func(value A) Parser[A] {
-			return PThen(close, PPure(value))
+			return PThen(close, PPure[A](value))
 		})
 	})
 }
 func PSepBy[A any, S any](item Parser[A], sep Parser[S]) Parser[[]A] {
-	return POrElse(PSepBy1(item, sep), PPure([]A{}))
+	return POrElse[[]A](PSepBy1(item, sep), PPure[[]A]([]A{}))
 }
 func PSepBy1[A any, S any](item Parser[A], sep Parser[S]) Parser[[]A] {
 	return PBind(item, func(first A) Parser[[]A] {

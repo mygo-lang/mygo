@@ -98,7 +98,7 @@ func MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(value JsonValue
 			} else {
 				if v_4, ok := value.(JsonValueJNumber); ok {
 					return func() string {
-						return MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(v_4.F0)
+						return MygoIT8ToStringFN7Float64GN7Float64EM8ToString(v_4.F0)
 					}()
 				} else {
 					if v_3, ok := value.(JsonValueJString); ok {

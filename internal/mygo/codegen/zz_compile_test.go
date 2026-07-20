@@ -87,6 +87,62 @@ end
 	}
 }
 
+func TestGenerateInfersGenericCallTypeArgsFromReturnType(t *testing.T) {
+	src := `package p
+
+func Zero[A]() -> A
+  go[A] {
+    code: """
+      func() {A} {
+        var zero {A}
+        return zero
+      }()
+    """
+    type A = A
+  }
+end
+
+func MakeInt() -> Int
+  Zero()
+end
+
+func MakeGeneric[A]() -> A
+  Zero()
+end
+`
+	parsed, err := myparser.ParseFile("p.mygo", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg := &Package{
+		Name:          "p",
+		NoPrelude:     true,
+		Imports:       map[string]struct{}{},
+		ImportAliases: map[string]string{},
+		Enums:         map[string]*EnumDecl{},
+		Structs:       map[string]*StructDecl{},
+		Interfaces:    map[string]*InterfaceDecl{},
+		Funcs:         map[string]*FuncDecl{},
+		Decls:         parsed.Decls,
+	}
+	for _, decl := range parsed.Decls {
+		if fn, ok := decl.(*FuncDecl); ok {
+			pkg.Funcs[fn.Name] = fn
+		}
+	}
+
+	generated, err := Generate(pkg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(generated, "return Zero[int]()") {
+		t.Fatalf("generated code should infer Zero type arg from return type:\n%s", generated)
+	}
+	if !strings.Contains(generated, "return Zero[A]()") {
+		t.Fatalf("generated code should infer Zero type arg from generic return type:\n%s", generated)
+	}
+}
+
 func TestInterfaceImplMethodNamesIncludeImplIdentity(t *testing.T) {
 	src := `package p
 
