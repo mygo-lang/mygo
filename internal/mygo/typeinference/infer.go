@@ -876,6 +876,11 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 		if id, ok := field.Expr.(*IdentExpr); ok && id.Name == "Ref" && field.Field == "new" {
 			return inferRefNew(env, n, state)
 		}
+		if id, ok := field.Expr.(*IdentExpr); ok {
+			if fn, ok := inherentStaticMethodType(id.Name, field.Field, state); ok {
+				return inferKnownFunctionCall(env, n.Args, fn, state, fmt.Sprintf("%s.%s", id.Name, field.Field))
+			}
+		}
 		if field.Field == "value" && len(n.Args) == 0 {
 			baseType, s, preds, err := inferExpr(env, field.Expr, state)
 			if err != nil {
@@ -989,6 +994,32 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 	// Apply substitution to get actual return type
 	returnType := argSubst.ApplyMT(retVar)
 	return returnType, argSubst, allPreds, nil
+}
+
+func inferKnownFunctionCall(env TypeEnv, args []Expr, fn TFunc, state *InferState, label string) (MonoType, Subst, []Predicate, error) {
+	argTypes := make([]MonoType, len(args))
+	argSubst := make(Subst)
+	var allPreds []Predicate
+	for i, arg := range args {
+		argType, s, preds, err := inferExpr(env, arg, state)
+		if err != nil {
+			return nil, nil, nil, wrapInferenceError("argument %d of %s: %w", err, i, label)
+		}
+		argSubst = Compose(argSubst, s)
+		argTypes[i] = argSubst.ApplyMT(argType)
+		allPreds = append(allPreds, preds...)
+	}
+	if fn.Variadic {
+		return inferVariadicCall(fn, argTypes, argSubst, allPreds)
+	}
+	retVar := TVar{ID: state.Fresh()}
+	expected := TFunc{Args: argTypes, Ret: retVar}
+	var err error
+	argSubst, err = Unify(fn, expected, argSubst)
+	if err != nil {
+		return nil, nil, nil, wrapInferenceError("call type mismatch: %w", err)
+	}
+	return argSubst.ApplyMT(retVar), argSubst, allPreds, nil
 }
 
 func structFunctionFieldType(receiverType MonoType, fieldName string, state *InferState) (TFunc, bool) {
