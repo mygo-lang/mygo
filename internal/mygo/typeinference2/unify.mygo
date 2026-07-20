@@ -1,0 +1,137 @@
+package typeinference2
+
+func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
+  let a = applySubst(subst, left)
+  let b = applySubst(subst, right)
+  if monoEqual(a, b) then
+    Ok(subst)
+  else
+    switch a
+      case TVar(id) => bindVar(id, b, subst)
+      case TCon(name, args) =>
+        switch b
+          case TVar(id) => bindVar(id, a, subst)
+          case TCon(name2, args2) =>
+            if name == name2 && args.Len() == args2.Len() then
+              unifyArgs(args, args2, subst)
+            else
+              Err("cannot unify " + monoString(a) + " with " + monoString(b))
+            end
+          case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
+        end
+      case TFunc(args, ret) =>
+        switch b
+          case TVar(id) => bindVar(id, a, subst)
+          case TFunc(args2, ret2) =>
+            if args.Len() == args2.Len() then
+              let s1 = unifyArgs(args, args2, subst)
+              switch s1
+                case Ok(s) => unify(ret.value(), ret2.value(), s)
+                case Err(msg) => Err(msg)
+              end
+            else
+              Err("function arity mismatch")
+            end
+          case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
+        end
+      case TTuple(items) =>
+        switch b
+          case TVar(id) => bindVar(id, a, subst)
+          case TTuple(items2) =>
+            if items.Len() == items2.Len() then
+              unifyArgs(items, items2, subst)
+            else
+              Err("tuple arity mismatch")
+            end
+          case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
+        end
+      case TUnit =>
+        switch b
+          case TVar(id) => bindVar(id, a, subst)
+          case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
+        end
+    end
+  end
+end
+
+func bindVar(id: Int, t: MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
+  if occursIn(id, t) then
+    Err("occurs check failed")
+  else
+    Ok(subst.Prepend(SubstEntry { ID: id, Type: t }))
+  end
+end
+
+func unifyArgs(left: Slice[MonoType], right: Slice[MonoType], subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
+  if left.Len() == 0 then
+    Ok(subst)
+  else
+    let s = unify(left.Get(0).UnwrapOr(MonoType.TUnit), right.Get(0).UnwrapOr(MonoType.TUnit), subst)
+    switch s
+      case Ok(next) => unifyArgs(sliceDrop(left, 1), sliceDrop(right, 1), next)
+      case Err(msg) => Err(msg)
+    end
+  end
+end
+
+func applySubst(subst: Slice[SubstEntry], t: MonoType) -> MonoType
+  switch t
+    case TVar(id) =>
+      switch substGet(subst, id)
+        case Some(found) => applySubst(subst, found)
+        case None => t
+      end
+    case TCon(name, args) => MonoType.TCon(name, applySubstAll(subst, args))
+    case TFunc(args, ret) => MonoType.TFunc(applySubstAll(subst, args), Ref.new(applySubst(subst, ret.value())))
+    case TTuple(items) => MonoType.TTuple(applySubstAll(subst, items))
+    case TUnit => t
+  end
+end
+
+func applySubstAll(subst: Slice[SubstEntry], items: Slice[MonoType]) -> Slice[MonoType]
+  if items.Len() == 0 then
+    []
+  else
+    applySubstAll(subst, sliceDrop(items, 1)).Prepend(applySubst(subst, items.Get(0).UnwrapOr(MonoType.TUnit)))
+  end
+end
+
+func composeSubst(newer: Slice[SubstEntry], older: Slice[SubstEntry]) -> Slice[SubstEntry]
+  if older.Len() == 0 then
+    newer
+  else
+    let head = older.Get(0).UnwrapOr(SubstEntry { ID: 0, Type: MonoType.TUnit })
+    composeSubst(newer, sliceDrop(older, 1)).Prepend(SubstEntry { ID: head.ID, Type: applySubst(newer, head.Type) })
+  end
+end
+
+func substGet(subst: Slice[SubstEntry], id: Int) -> Option[MonoType]
+  if subst.Len() == 0 then
+    None
+  else
+    let head = subst.Get(0).UnwrapOr(SubstEntry { ID: 0, Type: MonoType.TUnit })
+    if head.ID == id then
+      Some(head.Type)
+    else
+      substGet(sliceDrop(subst, 1), id)
+    end
+  end
+end
+
+func occursIn(id: Int, t: MonoType) -> Bool
+  switch t
+    case TVar(other) => id == other
+    case TCon(_, args) => occursInAny(id, args)
+    case TFunc(args, ret) => occursInAny(id, args) || occursIn(id, ret.value())
+    case TTuple(items) => occursInAny(id, items)
+    case TUnit => false
+  end
+end
+
+func occursInAny(id: Int, items: Slice[MonoType]) -> Bool
+  if items.Len() == 0 then
+    false
+  else
+    occursIn(id, items.Get(0).UnwrapOr(MonoType.TUnit)) || occursInAny(id, sliceDrop(items, 1))
+  end
+end

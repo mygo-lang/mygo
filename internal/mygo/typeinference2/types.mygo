@@ -1,0 +1,68 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+# typeinference2 is the self-hosted, parser2-facing inference core.
+# It implements a deliberately small HM-style pass over ast2. The production
+# typeinference package is still richer; this package is the bootstrap lane.
+
+enum MonoType
+  TVar(Int)
+  TCon(String, Slice[MonoType])
+  TFunc(Slice[MonoType], Ref[MonoType])
+  TTuple(Slice[MonoType])
+  TUnit
+end
+
+struct Scheme
+  Bound: Slice[Int]
+  Body: MonoType
+end
+
+struct EnvEntry
+  Name: String
+  Scheme: Scheme
+end
+
+struct SubstEntry
+  ID: Int
+  Type: MonoType
+end
+
+struct InferState
+  FreshVarID: Int
+end
+
+struct InferResult
+  Type: MonoType
+  Subst: Slice[SubstEntry]
+  State: InferState
+end
+
+struct PackageInfo
+  Env: Slice[EnvEntry]
+end
+
+struct DeclInfer
+  Env: Slice[EnvEntry]
+  State: InferState
+end
+
+struct ArgsResult
+  Types: Slice[MonoType]
+  Subst: Slice[SubstEntry]
+  State: InferState
+end
+
+struct BlockInferStep
+  Result: InferResult
+  Env: Slice[EnvEntry]
+end
+
+func NewInferState() -> InferState
+  InferState { FreshVarID: 1 }
+end
+
+func InferFile(file: ast2.File) -> Result[PackageInfo, String]
+  inferDecls(file.Decls, initialEnv(), NewInferState())
+end

@@ -2,55 +2,6 @@ package typeinference2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 
-# typeinference2 is the self-hosted, parser2-facing inference core.
-# It implements a deliberately small HM-style pass over ast2. The production
-# typeinference package is still richer; this package is the bootstrap lane.
-
-enum MonoType
-  TVar(Int)
-  TCon(String, Slice[MonoType])
-  TFunc(Slice[MonoType], Ref[MonoType])
-  TTuple(Slice[MonoType])
-  TUnit
-end
-
-struct Scheme
-  Bound: Slice[Int]
-  Body: MonoType
-end
-
-struct EnvEntry
-  Name: String
-  Scheme: Scheme
-end
-
-struct SubstEntry
-  ID: Int
-  Type: MonoType
-end
-
-struct InferState
-  FreshVarID: Int
-end
-
-struct InferResult
-  Type: MonoType
-  Subst: Slice[SubstEntry]
-  State: InferState
-end
-
-struct PackageInfo
-  Env: Slice[EnvEntry]
-end
-
-func NewInferState() -> InferState
-  InferState { FreshVarID: 1 }
-end
-
-func InferFile(file: ast2.File) -> Result[PackageInfo, String]
-  inferDecls(file.Decls, initialEnv(), NewInferState())
-end
-
 func inferDecls(decls: Slice[ast2.Decl], env: Slice[EnvEntry], state: InferState) -> Result[PackageInfo, String]
   if decls.Len() == 0 then
     Ok(PackageInfo { Env: env })
@@ -63,11 +14,6 @@ func inferDecls(decls: Slice[ast2.Decl], env: Slice[EnvEntry], state: InferState
       case Err(msg) => Err(msg)
     end
   end
-end
-
-struct DeclInfer
-  Env: Slice[EnvEntry]
-  State: InferState
 end
 
 func inferDecl(decl: ast2.Decl, env: Slice[EnvEntry], state: InferState) -> Result[DeclInfer, String]
@@ -233,12 +179,6 @@ func inferCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[EnvEntry], 
   end
 end
 
-struct ArgsResult
-  Types: Slice[MonoType]
-  Subst: Slice[SubstEntry]
-  State: InferState
-end
-
 func inferArgs(args: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState, types: Slice[MonoType], subst: Slice[SubstEntry]) -> Result[ArgsResult, String]
   if args.Len() == 0 then
     Ok(ArgsResult { Types: types, Subst: subst, State: state })
@@ -271,11 +211,6 @@ func inferBlockItems(items: Slice[ast2.Expr], env: Slice[EnvEntry], state: Infer
       case Ok(v) => inferBlockItems(sliceDrop(items, 1), v.Env, v.Result.State, v.Result.Type, composeSubst(v.Result.Subst, subst))
     end
   end
-end
-
-struct BlockInferStep
-  Result: InferResult
-  Env: Slice[EnvEntry]
 end
 
 func inferBlockStep(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[BlockInferStep, String]
@@ -341,40 +276,6 @@ func matchExpected(v: InferResult, expected: MonoType, result: MonoType) -> Resu
   end
 end
 
-func typeFromAST(t: ast2.TypeExpr) -> MonoType
-  switch t
-    case NamedType(name, args) => MonoType.TCon(name, typeArgsFromAST(args))
-    case FuncType(params, ret) => MonoType.TFunc(typeArgsFromAST(params), Ref.new(typeFromAST(ret.value())))
-    case TupleType(items) => MonoType.TTuple(typeArgsFromAST(items))
-    case UnitType => MonoType.TUnit
-  end
-end
-
-func typeArgsFromAST(items: Slice[ast2.TypeExpr]) -> Slice[MonoType]
-  if items.Len() == 0 then
-    []
-  else
-    typeArgsFromAST(sliceDrop(items, 1)).Prepend(typeFromAST(items.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())))
-  end
-end
-
-func paramsToTypes(params: Slice[ast2.Param]) -> Slice[MonoType]
-  if params.Len() == 0 then
-    []
-  else
-    paramsToTypes(sliceDrop(params, 1)).Prepend(typeFromAST(params.Get(0).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType() }).Type))
-  end
-end
-
-func envWithParams(env: Slice[EnvEntry], params: Slice[ast2.Param]) -> Slice[EnvEntry]
-  if params.Len() == 0 then
-    env
-  else
-    let p = params.Get(0).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType() })
-    envWithParams(envPut(env, p.Name, Scheme { Bound: [], Body: typeFromAST(p.Type) }), sliceDrop(params, 1))
-  end
-end
-
 func inferVariants(vars: Slice[ast2.Variant], enumName: String, tps: Slice[String], env: Slice[EnvEntry], state: InferState) -> Result[DeclInfer, String]
   if vars.Len() == 0 then
     Ok(DeclInfer { Env: envPut(env, enumName, Scheme { Bound: [], Body: MonoType.TCon(enumName, emptyMonoTypes()) }), State: state })
@@ -386,261 +287,5 @@ func inferVariants(vars: Slice[ast2.Variant], enumName: String, tps: Slice[Strin
       MonoType.TFunc(typeArgsFromAST(v.Fields), Ref.new(MonoType.TCon(enumName, emptyMonoTypes())))
     end
     inferVariants(sliceDrop(vars, 1), enumName, tps, envPut(env, v.Name, Scheme { Bound: [], Body: constructorType }), state)
-  end
-end
-
-func initialEnv() -> Slice[EnvEntry]
-  [
-    EnvEntry { Name: "true", Scheme: Scheme { Bound: [], Body: MonoType.TCon("Bool", emptyMonoTypes()) } },
-    EnvEntry { Name: "false", Scheme: Scheme { Bound: [], Body: MonoType.TCon("Bool", emptyMonoTypes()) } },
-  ]
-end
-
-func envGet(env: Slice[EnvEntry], name: String) -> Option[Scheme]
-  if env.Len() == 0 then
-    None
-  else
-    let item = env.Get(0).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Body: MonoType.TUnit } })
-    if item.Name == name then
-      Some(item.Scheme)
-    else
-      envGet(sliceDrop(env, 1), name)
-    end
-  end
-end
-
-func envPut(env: Slice[EnvEntry], name: String, scheme: Scheme) -> Slice[EnvEntry]
-  env.Prepend(EnvEntry { Name: name, Scheme: scheme })
-end
-
-func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
-  let a = applySubst(subst, left)
-  let b = applySubst(subst, right)
-  if monoEqual(a, b) then
-    Ok(subst)
-  else
-    switch a
-      case TVar(id) => bindVar(id, b, subst)
-      case TCon(name, args) =>
-        switch b
-          case TVar(id) => bindVar(id, a, subst)
-          case TCon(name2, args2) =>
-            if name == name2 && args.Len() == args2.Len() then
-              unifyArgs(args, args2, subst)
-            else
-              Err("cannot unify " + monoString(a) + " with " + monoString(b))
-            end
-          case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
-        end
-      case TFunc(args, ret) =>
-        switch b
-          case TVar(id) => bindVar(id, a, subst)
-          case TFunc(args2, ret2) =>
-            if args.Len() == args2.Len() then
-              let s1 = unifyArgs(args, args2, subst)
-              switch s1
-                case Ok(s) => unify(ret.value(), ret2.value(), s)
-                case Err(msg) => Err(msg)
-              end
-            else
-              Err("function arity mismatch")
-            end
-          case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
-        end
-      case TTuple(items) =>
-        switch b
-          case TVar(id) => bindVar(id, a, subst)
-          case TTuple(items2) =>
-            if items.Len() == items2.Len() then
-              unifyArgs(items, items2, subst)
-            else
-              Err("tuple arity mismatch")
-            end
-          case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
-        end
-      case TUnit =>
-        switch b
-          case TVar(id) => bindVar(id, a, subst)
-          case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
-        end
-    end
-  end
-end
-
-func bindVar(id: Int, t: MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
-  if occursIn(id, t) then
-    Err("occurs check failed")
-  else
-    Ok(subst.Prepend(SubstEntry { ID: id, Type: t }))
-  end
-end
-
-func unifyArgs(left: Slice[MonoType], right: Slice[MonoType], subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
-  if left.Len() == 0 then
-    Ok(subst)
-  else
-    let s = unify(left.Get(0).UnwrapOr(MonoType.TUnit), right.Get(0).UnwrapOr(MonoType.TUnit), subst)
-    switch s
-      case Ok(next) => unifyArgs(sliceDrop(left, 1), sliceDrop(right, 1), next)
-      case Err(msg) => Err(msg)
-    end
-  end
-end
-
-func applySubst(subst: Slice[SubstEntry], t: MonoType) -> MonoType
-  switch t
-    case TVar(id) =>
-      switch substGet(subst, id)
-        case Some(found) => applySubst(subst, found)
-        case None => t
-      end
-    case TCon(name, args) => MonoType.TCon(name, applySubstAll(subst, args))
-    case TFunc(args, ret) => MonoType.TFunc(applySubstAll(subst, args), Ref.new(applySubst(subst, ret.value())))
-    case TTuple(items) => MonoType.TTuple(applySubstAll(subst, items))
-    case TUnit => t
-  end
-end
-
-func applySubstAll(subst: Slice[SubstEntry], items: Slice[MonoType]) -> Slice[MonoType]
-  if items.Len() == 0 then
-    []
-  else
-    applySubstAll(subst, sliceDrop(items, 1)).Prepend(applySubst(subst, items.Get(0).UnwrapOr(MonoType.TUnit)))
-  end
-end
-
-func composeSubst(newer: Slice[SubstEntry], older: Slice[SubstEntry]) -> Slice[SubstEntry]
-  if older.Len() == 0 then
-    newer
-  else
-    let head = older.Get(0).UnwrapOr(SubstEntry { ID: 0, Type: MonoType.TUnit })
-    composeSubst(newer, sliceDrop(older, 1)).Prepend(SubstEntry { ID: head.ID, Type: applySubst(newer, head.Type) })
-  end
-end
-
-func substGet(subst: Slice[SubstEntry], id: Int) -> Option[MonoType]
-  if subst.Len() == 0 then
-    None
-  else
-    let head = subst.Get(0).UnwrapOr(SubstEntry { ID: 0, Type: MonoType.TUnit })
-    if head.ID == id then
-      Some(head.Type)
-    else
-      substGet(sliceDrop(subst, 1), id)
-    end
-  end
-end
-
-func occursIn(id: Int, t: MonoType) -> Bool
-  switch t
-    case TVar(other) => id == other
-    case TCon(_, args) => occursInAny(id, args)
-    case TFunc(args, ret) => occursInAny(id, args) || occursIn(id, ret.value())
-    case TTuple(items) => occursInAny(id, items)
-    case TUnit => false
-  end
-end
-
-func occursInAny(id: Int, items: Slice[MonoType]) -> Bool
-  if items.Len() == 0 then
-    false
-  else
-    occursIn(id, items.Get(0).UnwrapOr(MonoType.TUnit)) || occursInAny(id, sliceDrop(items, 1))
-  end
-end
-
-func monoEqual(a: MonoType, b: MonoType) -> Bool
-  switch a
-    case TVar(id) =>
-      switch b
-        case TVar(id2) => id == id2
-        case _ => false
-      end
-    case TCon(name, args) =>
-      switch b
-        case TCon(name2, args2) => name == name2 && monoListEqual(args, args2)
-        case _ => false
-      end
-    case TFunc(args, ret) =>
-      switch b
-        case TFunc(args2, ret2) => monoListEqual(args, args2) && monoEqual(ret.value(), ret2.value())
-        case _ => false
-      end
-    case TTuple(items) =>
-      switch b
-        case TTuple(items2) => monoListEqual(items, items2)
-        case _ => false
-      end
-    case TUnit =>
-      switch b
-        case TUnit => true
-        case _ => false
-      end
-  end
-end
-
-func monoListEqual(a: Slice[MonoType], b: Slice[MonoType]) -> Bool
-  if a.Len() != b.Len() then
-    false
-  else
-    if a.Len() == 0 then
-      true
-    else
-      monoEqual(a.Get(0).UnwrapOr(MonoType.TUnit), b.Get(0).UnwrapOr(MonoType.TUnit)) && monoListEqual(sliceDrop(a, 1), sliceDrop(b, 1))
-    end
-  end
-end
-
-func monoString(t: MonoType) -> String
-  switch t
-    case TVar(id) => "t" + id.ToString()
-    case TCon(name, _) => name
-    case TFunc(_, _) => "func"
-    case TTuple(_) => "tuple"
-    case TUnit => "()"
-  end
-end
-
-func isArithmetic(op: String) -> Bool
-  op == "+" || op == "-" || op == "*" || op == "/"
-end
-
-func isComparison(op: String) -> Bool
-  op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">="
-end
-
-func emptyMonoTypes() -> Slice[MonoType]
-  []
-end
-
-func emptyASTTypeExprs() -> Slice[ast2.TypeExpr]
-  []
-end
-
-func sliceDrop[A](items: Slice[A], n: Int) -> Slice[A]
-  if n <= 0 then
-    items
-  else
-    if items.Len() == 0 then
-      []
-    else
-      sliceDrop(sliceTail(items), n - 1)
-    end
-  end
-end
-
-func sliceTail[A](items: Slice[A]) -> Slice[A]
-  sliceTailLoop(items, 1, [])
-end
-
-func sliceTailLoop[A](items: Slice[A], index: Int, out: Slice[A]) -> Slice[A]
-  if index >= items.Len() then
-    out
-  else
-    let item = items.Get(index)
-    switch item
-      case Some(value) => sliceTailLoop(items, index + 1, out.Append(value))
-      case None => out
-    end
   end
 end

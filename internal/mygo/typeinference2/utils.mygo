@@ -1,0 +1,98 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func monoEqual(a: MonoType, b: MonoType) -> Bool
+  switch a
+    case TVar(id) =>
+      switch b
+        case TVar(id2) => id == id2
+        case _ => false
+      end
+    case TCon(name, args) =>
+      switch b
+        case TCon(name2, args2) => name == name2 && monoListEqual(args, args2)
+        case _ => false
+      end
+    case TFunc(args, ret) =>
+      switch b
+        case TFunc(args2, ret2) => monoListEqual(args, args2) && monoEqual(ret.value(), ret2.value())
+        case _ => false
+      end
+    case TTuple(items) =>
+      switch b
+        case TTuple(items2) => monoListEqual(items, items2)
+        case _ => false
+      end
+    case TUnit =>
+      switch b
+        case TUnit => true
+        case _ => false
+      end
+  end
+end
+
+func monoListEqual(a: Slice[MonoType], b: Slice[MonoType]) -> Bool
+  if a.Len() != b.Len() then
+    false
+  else
+    if a.Len() == 0 then
+      true
+    else
+      monoEqual(a.Get(0).UnwrapOr(MonoType.TUnit), b.Get(0).UnwrapOr(MonoType.TUnit)) && monoListEqual(sliceDrop(a, 1), sliceDrop(b, 1))
+    end
+  end
+end
+
+func monoString(t: MonoType) -> String
+  switch t
+    case TVar(id) => "t" + id.ToString()
+    case TCon(name, _) => name
+    case TFunc(_, _) => "func"
+    case TTuple(_) => "tuple"
+    case TUnit => "()"
+  end
+end
+
+func isArithmetic(op: String) -> Bool
+  op == "+" || op == "-" || op == "*" || op == "/"
+end
+
+func isComparison(op: String) -> Bool
+  op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">="
+end
+
+func emptyMonoTypes() -> Slice[MonoType]
+  []
+end
+
+func emptyASTTypeExprs() -> Slice[ast2.TypeExpr]
+  []
+end
+
+func sliceDrop[A](items: Slice[A], n: Int) -> Slice[A]
+  if n <= 0 then
+    items
+  else
+    if items.Len() == 0 then
+      []
+    else
+      sliceDrop(sliceTail(items), n - 1)
+    end
+  end
+end
+
+func sliceTail[A](items: Slice[A]) -> Slice[A]
+  sliceTailLoop(items, 1, [] as Slice[A])
+end
+
+func sliceTailLoop[A](items: Slice[A], index: Int, out: Slice[A]) -> Slice[A]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(value) => sliceTailLoop(items, index + 1, out.Append(value))
+      case None => out
+    end
+  end
+end
