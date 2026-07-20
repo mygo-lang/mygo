@@ -174,11 +174,8 @@ end
 
 # 添加类型参数
 func ctxAddTypeParam(ctx: Ref[egCtx], tp: String) -> ()
-  go[()] {
-    code: "ctx.typeParams = Set_Add(ctx.typeParams, tp)"
-    in ctx = ctx
-    in tp = tp
-  }
+  ctx.typeParams.Add(tp)
+  ()
 end
 
 # 检查是否包含类型参数

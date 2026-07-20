@@ -483,7 +483,7 @@ func funcType() ps.Parser[TypeExpr] {
 func tupleType() ps.Parser[TypeExpr] {
 	return ps.PBind(paren(ps.PSepBy(lazyTypeExpr(), sym(","))), func(items []TypeExpr) ps.Parser[TypeExpr] {
 		return func() ps.Parser[TypeExpr] {
-			if Len__t_t(items) == 0 {
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 				return ps.PPure(TypeExprUnitTypeCtor())
 			} else {
 				return ps.PPure(TypeExprTupleTypeCtor(items))
@@ -545,7 +545,7 @@ func blockItems(stopParser ps.Parser[string], start ps.State, cur ps.State, item
 					if !r_8.Ok {
 						return r_8
 					} else {
-						return blockItems(stopParser, start, r_8.State, Slice_Append(items, r_8.Value))
+						return blockItems(stopParser, start, r_8.State, MygoIN5SliceM6Append(items, r_8.Value))
 					}
 				}()
 			}()
@@ -627,8 +627,8 @@ func bodyExprFromBlock(body Expr) Expr {
 		if v_7, ok := body.(ExprBlockExpr); ok {
 			return func() Expr {
 				return func() Expr {
-					if Len__t_t(v_7.F0) == 1 {
-						return Option_UnwrapOr(Get__t_int_t(v_7.F0, 0), body)
+					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_7.F0) == 1 {
+						return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_7.F0, 0), body)
 					} else {
 						return body
 					}
@@ -779,7 +779,7 @@ func identifier() ps.Parser[string] {
 func identifierRaw() ps.Parser[string] {
 	return ps.PBind(ps.PSatisfy(isIdentStart, "identifier"), func(first rune) ps.Parser[string] {
 		return ps.PBind(ps.PMany(ps.PSatisfy(isIdentRest, "identifier character")), func(rest []rune) ps.Parser[string] {
-			value_15 := String_FromRunes(Slice_Prepend(rest, first))
+			value_15 := MygoIN6StringM9FromRunes(MygoIN5SliceM7Prepend(rest, first))
 			return func() ps.Parser[string] {
 				if isKeyword(value_15) {
 					return failIdentifier()
@@ -799,13 +799,13 @@ func number() ps.Parser[string] {
 	return lexeme(ps.PBind(ps.PMany1(ps.PSatisfy(func(r rune) bool {
 		return r >= '0' && r <= '9' || r == '.'
 	}, "number")), func(rs []rune) ps.Parser[string] {
-		return ps.PPure(String_FromRunes(rs))
+		return ps.PPure(MygoIN6StringM9FromRunes(rs))
 	}))
 }
 func stringLiteral() ps.Parser[string] {
 	return lexeme(ps.PBind(ps.PChar('"'), func(_ rune) ps.Parser[string] {
 		return ps.PBind(ps.PMany(stringChar()), func(chars []rune) ps.Parser[string] {
-			return ps.PThen(ps.PChar('"'), ps.PPure(String_FromRunes(chars)))
+			return ps.PThen(ps.PChar('"'), ps.PPure(MygoIN6StringM9FromRunes(chars)))
 		})
 	}))
 }
@@ -1050,10 +1050,10 @@ func isKeyword(value string) bool {
 func defaultImportAlias(path string) string {
 	parts_16 := strings.Split(path, "/")
 	return func() string {
-		if Len__t_t(parts_16) == 0 {
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_16) == 0 {
 			return path
 		} else {
-			return Option_UnwrapOr(Get__t_int_t(parts_16, Len__t_t(parts_16)-1), path)
+			return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_16, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_16)-1), path)
 		}
 	}()
 }
@@ -1061,12 +1061,12 @@ func formatError(err Option[ps.ParseError], pos ps.Position) string {
 	return func() string {
 		if v_9, ok := err.(OptionSome[ps.ParseError]); ok {
 			return func() string {
-				return "parse error at " + ToString_int(v_9.F0.Position.Line) + ":" + ToString_int(v_9.F0.Position.Column) + ": " + v_9.F0.Message
+				return "parse error at " + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_9.F0.Position.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_9.F0.Position.Column) + ": " + v_9.F0.Message
 			}()
 		} else {
 			if _, ok := err.(OptionNone[ps.ParseError]); ok {
 				return func() string {
-					return "parse error at " + ToString_int(pos.Line) + ":" + ToString_int(pos.Column)
+					return "parse error at " + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Column)
 				}()
 			} else {
 				panic("unreachable")

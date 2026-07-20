@@ -29,7 +29,7 @@ type Generator2 struct {
 }
 
 func newEgCtx() egCtx {
-	return egCtx{locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{}, mutable: map[string]bool{}, usedNames: map[string]int{}, typeParams: Set_New[string](), retType: "", retTypes: []string{}, tailRecFuncName: None[string](), tailRecParamCount: 0, tailRecParamNames: []string{}}
+	return egCtx{locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{}, mutable: map[string]bool{}, usedNames: map[string]int{}, typeParams: MygoIN3SetM3New[string](), retType: "", retTypes: []string{}, tailRecFuncName: None[string](), tailRecParamCount: 0, tailRecParamNames: []string{}}
 }
 func newEgCtxWithTypeParams(params []string) egCtx {
 	return egCtx{locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{}, mutable: map[string]bool{}, usedNames: map[string]int{}, typeParams: typeParamSet(params), retType: "", retTypes: []string{}, tailRecFuncName: None[string](), tailRecParamCount: 0, tailRecParamNames: []string{}}
@@ -44,27 +44,27 @@ func ctxChild(ctx *egCtx) egCtx {
 	return egCtx{locals: ctx.locals, bindings: ctx.bindings, sourceTypes: ctx.sourceTypes, mutable: ctx.mutable, usedNames: ctx.usedNames, typeParams: ctx.typeParams, retType: ctx.retType, retTypes: ctx.retTypes, tailRecFuncName: ctx.tailRecFuncName, tailRecParamCount: ctx.tailRecParamCount, tailRecParamNames: ctx.tailRecParamNames}
 }
 func ctxSetLocal(ctx *egCtx, name string, goType string) {
-	Set_map_kv_k_v(ctx.locals, name, goType)
+	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.locals, name, goType)
 	return
 }
 func ctxSetBinding(ctx *egCtx, name string, goName string) {
-	Set_map_kv_k_v(ctx.bindings, name, goName)
+	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.bindings, name, goName)
 	return
 }
 func ctxFreshBinding(ctx *egCtx, name string) string {
 	base_75 := sanitizeIdent(name)
-	count_76 := Option_UnwrapOr(Get_map_kv_k_v(ctx.usedNames, base_75), 0)
-	Set_map_kv_k_v(ctx.usedNames, base_75, count_76+1)
+	count_76 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.usedNames, base_75), 0)
+	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.usedNames, base_75, count_76+1)
 	if count_76 == 0 {
-		Set_map_kv_k_v(ctx.bindings, name, base_75)
+		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.bindings, name, base_75)
 		return base_75
 	}
-	actual_77 := base_75 + "_" + ToString_int(count_76)
-	Set_map_kv_k_v(ctx.bindings, name, actual_77)
+	actual_77 := base_75 + "_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(count_76)
+	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.bindings, name, actual_77)
 	return actual_77
 }
 func ctxSetMutable(ctx *egCtx, name string, isMutable bool) {
-	Set_map_kv_k_v(ctx.mutable, name, isMutable)
+	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.mutable, name, isMutable)
 	return
 }
 func ctxSetTailRecParamNames(ctx *egCtx, names []string) {
@@ -72,17 +72,16 @@ func ctxSetTailRecParamNames(ctx *egCtx, names []string) {
 	return
 }
 func ctxGetLocal(ctx *egCtx, name string) Option[string] {
-	return Get_map_kv_k_v(ctx.locals, name)
+	return MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.locals, name)
 }
 func ctxGetBinding(ctx *egCtx, name string) Option[string] {
-	return Get_map_kv_k_v(ctx.bindings, name)
+	return MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.bindings, name)
 }
 func ctxAddTypeParam(ctx *egCtx, tp string) {
-	ctx.typeParams = Set_Add(ctx.typeParams, tp)
-	return
+	MygoIN3SetM3Add(ctx.typeParams, tp)
 }
 func ctxHasTypeParam(ctx *egCtx, tp string) bool {
-	return Fold_map_astruct___a(ctx.typeParams, false, func(found bool, current string) bool {
+	return MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM4Fold(ctx.typeParams, false, func(found bool, current string) bool {
 		return found || current == tp
 	})
 }

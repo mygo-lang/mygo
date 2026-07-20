@@ -18,11 +18,11 @@ func goType(t ast2.TypeExpr, typeParams map[string]struct{}) string {
 	return func() string {
 		if v_100, ok := t.(ast2.TypeExprNamedType); ok {
 			return func() string {
-				if setContainsString(typeParams, v_100.F0) && Len__t_t(v_100.F1) == 0 {
+				if setContainsString(typeParams, v_100.F0) && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_100.F1) == 0 {
 					return v_100.F0
 				}
 				fallback_81 := genericNamedType(v_100.F0, v_100.F1, typeParams)
-				return Fold_option_a_a(goPrimitiveType(v_100.F0), Option_UnwrapOr(goSpecialType(v_100.F0, v_100.F1, typeParams), fallback_81), func(_ string, mapped string) string {
+				return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM4Fold(goPrimitiveType(v_100.F0), MygoIN6OptionM8UnwrapOr(goSpecialType(v_100.F0, v_100.F1, typeParams), fallback_81), func(_ string, mapped string) string {
 					return mapped
 				})
 			}()
@@ -39,7 +39,7 @@ func goType(t ast2.TypeExpr, typeParams map[string]struct{}) string {
 			} else {
 				if v_98, ok := t.(ast2.TypeExprTupleType); ok {
 					return func() string {
-						if Len__t_t(v_98.F0) == 0 {
+						if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_98.F0) == 0 {
 							return "struct{}"
 						}
 						parts_78 := tupleElemsToStrings(v_98.F0, typeParams)
@@ -62,7 +62,7 @@ func goType(t ast2.TypeExpr, typeParams map[string]struct{}) string {
 }
 func genericNamedType(name string, args []ast2.TypeExpr, typeParams map[string]struct{}) string {
 	return func() string {
-		if Len__t_t(args) == 0 {
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 {
 			return name
 		} else {
 			return func() string {
@@ -238,8 +238,8 @@ func goSpecialType(name string, args []ast2.TypeExpr, typeParams map[string]stru
 }
 func unarySpecialType(args []ast2.TypeExpr, typeParams map[string]struct{}, prefix string) Option[string] {
 	return func() Option[string] {
-		if Len__t_t(args) == 1 {
-			return Some[string](prefix + goType(Option_UnwrapOr(Get__t_int_t(args, 0), ast2.TypeExprUnitTypeCtor()), typeParams))
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 1 {
+			return Some[string](prefix + goType(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.TypeExprUnitTypeCtor()), typeParams))
 		} else {
 			return None[string]()
 		}
@@ -247,8 +247,8 @@ func unarySpecialType(args []ast2.TypeExpr, typeParams map[string]struct{}, pref
 }
 func mapSpecialType(args []ast2.TypeExpr, typeParams map[string]struct{}) Option[string] {
 	return func() Option[string] {
-		if Len__t_t(args) == 2 {
-			return Some[string]("map[" + goType(Option_UnwrapOr(Get__t_int_t(args, 0), ast2.TypeExprUnitTypeCtor()), typeParams) + "]" + goType(Option_UnwrapOr(Get__t_int_t(args, 1), ast2.TypeExprUnitTypeCtor()), typeParams))
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 2 {
+			return Some[string]("map[" + goType(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.TypeExprUnitTypeCtor()), typeParams) + "]" + goType(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 1), ast2.TypeExprUnitTypeCtor()), typeParams))
 		} else {
 			return None[string]()
 		}
@@ -256,8 +256,8 @@ func mapSpecialType(args []ast2.TypeExpr, typeParams map[string]struct{}) Option
 }
 func setSpecialType(args []ast2.TypeExpr, typeParams map[string]struct{}) Option[string] {
 	return func() Option[string] {
-		if Len__t_t(args) == 1 {
-			return Some[string]("map[" + goType(Option_UnwrapOr(Get__t_int_t(args, 0), ast2.TypeExprUnitTypeCtor()), typeParams) + "]struct{}")
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 1 {
+			return Some[string]("map[" + goType(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.TypeExprUnitTypeCtor()), typeParams) + "]struct{}")
 		} else {
 			return None[string]()
 		}
@@ -273,7 +273,7 @@ func goReturnTypes(t ast2.TypeExpr, typeParams map[string]struct{}) []string {
 	return func() []string {
 		if v_101, ok := t.(ast2.TypeExprTupleType); ok {
 			return func() []string {
-				return Map__t_t(v_101.F0, func(item ast2.TypeExpr) string {
+				return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_101.F0, func(item ast2.TypeExpr) string {
 					return goType(item, typeParams)
 				})
 			}()
@@ -297,12 +297,12 @@ func isUnitType(t ast2.TypeExpr) bool {
 		} else {
 			if v_103, ok := t.(ast2.TypeExprTupleType); ok {
 				return func() bool {
-					return Len__t_t(v_103.F0) == 0
+					return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_103.F0) == 0
 				}()
 			} else {
 				if v_102, ok := t.(ast2.TypeExprNamedType); ok {
 					return func() bool {
-						return v_102.F0 == "Unit" && Len__t_t(v_102.F1) == 0
+						return v_102.F0 == "Unit" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_102.F1) == 0
 					}()
 				} else {
 					return func() bool {
@@ -318,13 +318,13 @@ func isUnitGoType(typ string) bool {
 	return trimmed_84 == "Unit" || trimmed_84 == "struct{}" || trimmed_84 == "()"
 }
 func setContainsString(items map[string]struct{}, target string) bool {
-	return Fold_map_astruct___a(items, false, func(found bool, current string) bool {
+	return MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM4Fold(items, false, func(found bool, current string) bool {
 		return found || current == target
 	})
 }
 func typeParamSet(params []string) map[string]struct{} {
-	return Fold__t_t(params, Set_New[string](), func(s map[string]struct{}, p string) map[string]struct{} {
-		return Set_Add(s, p)
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(params, MygoIN3SetM3New[string](), func(s map[string]struct{}, p string) map[string]struct{} {
+		return MygoIN3SetM3Add(s, p)
 	})
 }
 func sanitizeIdent(s string) string {
@@ -342,7 +342,7 @@ func sanitizeIdent(s string) string {
 		}
 		return b.String()
 	}()
-	if Len_string_rune(result_85) == 0 {
+	if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(result_85) == 0 {
 		return "_"
 	}
 	if isGoKeyword(result_85) {
@@ -558,7 +558,7 @@ func typeKeyFromType(typ string) string {
 	return sanitizeIdent(strings.ToLower(step9_95))
 }
 func typeclassFuncType(paramTypes []string, retType string) string {
-	if Len__t_t(paramTypes) == 0 {
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(paramTypes) == 0 {
 		if retType == "" {
 			return "func()"
 		}
@@ -571,38 +571,38 @@ func typeclassFuncType(paramTypes []string, retType string) string {
 	return fn_96
 }
 func typeArgsToStrings(args []ast2.TypeExpr, typeParams map[string]struct{}) []string {
-	if Len__t_t(args) == 0 {
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 {
 		return []string([]string{})
 	}
-	head_97 := Option_UnwrapOr(Get__t_int_t(args, 0), ast2.TypeExprUnitTypeCtor())
+	head_97 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.TypeExprUnitTypeCtor())
 	tail_98 := typeArgsToStrings(sliceDrop(args, 1), typeParams)
-	return Slice_Prepend(tail_98, goType(head_97, typeParams))
+	return MygoIN5SliceM7Prepend(tail_98, goType(head_97, typeParams))
 }
 func typeExprsToStrings(items []ast2.TypeExpr, typeParams map[string]struct{}) []string {
-	if Len__t_t(items) == 0 {
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		return []string([]string{})
 	}
-	head_99 := Option_UnwrapOr(Get__t_int_t(items, 0), ast2.TypeExprUnitTypeCtor())
+	head_99 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.TypeExprUnitTypeCtor())
 	tail_100 := typeExprsToStrings(sliceDrop(items, 1), typeParams)
-	return Slice_Prepend(tail_100, goType(head_99, typeParams))
+	return MygoIN5SliceM7Prepend(tail_100, goType(head_99, typeParams))
 }
 func tupleElemsToStrings(elems []ast2.TypeExpr, typeParams map[string]struct{}) []string {
-	if Len__t_t(elems) == 0 {
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(elems) == 0 {
 		return []string([]string{})
 	}
-	head_101 := Option_UnwrapOr(Get__t_int_t(elems, 0), ast2.TypeExprUnitTypeCtor())
+	head_101 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(elems, 0), ast2.TypeExprUnitTypeCtor())
 	tail_102 := tupleElemsToStrings(sliceDrop(elems, 1), typeParams)
-	i_103 := Len__t_t(elems) - Len__t_t(elems)
-	return Slice_Prepend(tail_102, "F"+ToString_int(i_103)+" "+goType(head_101, typeParams))
+	i_103 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(elems) - MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(elems)
+	return MygoIN5SliceM7Prepend(tail_102, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(i_103)+" "+goType(head_101, typeParams))
 }
 func joinStrings(items []string, sep string) string {
-	if Len__t_t(items) == 0 {
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		return ""
 	}
-	if Len__t_t(items) == 1 {
-		return Option_UnwrapOr(Get__t_int_t(items, 0), "")
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 1 {
+		return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "")
 	}
-	head_104 := Option_UnwrapOr(Get__t_int_t(items, 0), "")
+	head_104 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "")
 	tail_105 := joinStrings(sliceDrop(items, 1), sep)
 	return head_104 + sep + tail_105
 }
@@ -610,7 +610,7 @@ func sliceDrop[A any](items []A, n int) []A {
 	if n <= 0 {
 		return items
 	}
-	if Len__t_t(items) == 0 {
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		return items
 	}
 	return sliceDrop(sliceTail(items), n-1)
@@ -619,14 +619,14 @@ func sliceTail[A any](items []A) []A {
 	return sliceTailLoop(items, 1, []A([]A{}))
 }
 func sliceTailLoop[A any](items []A, index int, out []A) []A {
-	if index >= Len__t_t(items) {
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
 		return out
 	}
-	item_106 := Get__t_int_t(items, index)
+	item_106 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 	return func() []A {
 		if v_107, ok := item_106.(OptionSome[A]); ok {
 			return func() []A {
-				return sliceTailLoop(items, index+1, Slice_Append(out, v_107.F0))
+				return sliceTailLoop(items, index+1, MygoIN5SliceM6Append(out, v_107.F0))
 			}()
 		} else {
 			if _, ok := item_106.(OptionNone[A]); ok {
@@ -649,7 +649,7 @@ func importAliasForPath(path string) string {
 	}
 	trimmed_108 := strings.TrimSuffix(cleanPath_107, "/")
 	parts_109 := strings.Split(trimmed_108, "/")
-	return toPackageName(Option_UnwrapOr(Get__t_int_t(parts_109, Len__t_t(parts_109)-1), trimmed_108))
+	return toPackageName(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_109, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_109)-1), trimmed_108))
 }
 func toPackageName(name string) string {
 	if name == "" {
@@ -662,7 +662,7 @@ func exportName(name string) string {
 		return name
 	}
 	runes_110 := []rune(name)
-	Set__t_int_t(runes_110, 0, toUpper(Option_UnwrapOr(Get__t_int_t(runes_110, 0), '\'')))
+	MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Set(runes_110, 0, toUpper(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(runes_110, 0), '\'')))
 	return string(runes_110)
 }
 func toUpper(r rune) rune {
@@ -684,8 +684,8 @@ func splitTypeArgs(typ string) TypeArgParts {
 	if endPos_113 < 0 || endPos_113 < idx_112 {
 		return TypeArgParts{Name: clean_111, Args: []string([]string{})}
 	}
-	name_114 := Option_UnwrapOr(Slice_string_int_byte(clean_111, 0, idx_112), "")
-	inner_115 := Option_UnwrapOr(Slice_string_int_byte(clean_111, idx_112+1, endPos_113), "")
+	name_114 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(clean_111, 0, idx_112), "")
+	inner_115 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(clean_111, idx_112+1, endPos_113), "")
 	if inner_115 == "" {
 		return TypeArgParts{Name: name_114, Args: []string([]string{})}
 	}
@@ -739,16 +739,16 @@ func typeString(t ast2.TypeExpr) string {
 	return func() string {
 		if v_109, ok := t.(ast2.TypeExprNamedType); ok {
 			return func() string {
-				if Len__t_t(v_109.F1) == 0 {
+				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_109.F1) == 0 {
 					return v_109.F0
 				}
-				argStrs_118 := typeArgsToStrings(v_109.F1, Set_New[string]())
+				argStrs_118 := typeArgsToStrings(v_109.F1, MygoIN3SetM3New[string]())
 				return v_109.F0 + "[" + joinStrings(argStrs_118, ", ") + "]"
 			}()
 		} else {
 			if v_108, ok := t.(ast2.TypeExprFuncType); ok {
 				return func() string {
-					paramStrs_116 := typeExprsToStrings(v_108.F0, Set_New[string]())
+					paramStrs_116 := typeExprsToStrings(v_108.F0, MygoIN3SetM3New[string]())
 					retStr_117 := typeString(*v_108.F1)
 					if retStr_117 == "" {
 						return "func(" + joinStrings(paramStrs_116, ", ") + ")"
