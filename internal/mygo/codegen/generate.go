@@ -694,6 +694,7 @@ type gen struct {
 		HasReceiver bool
 	}
 	variantByName map[string]string
+	emittedImplHelpers map[string]struct{}
 	needsCallAny  bool
 	localSeq      int
 	switchVarSeq  int
@@ -711,8 +712,9 @@ func newGen(p *Package, typedInfo *typeinference.TypedInfo) *gen {
 			Func        *FuncDecl
 			HasReceiver bool
 		}{},
-		variantByName: map[string]string{},
-		typedInfo:     typedInfo,
+		variantByName:       map[string]string{},
+		emittedImplHelpers:  map[string]struct{}{},
+		typedInfo:           typedInfo,
 	}
 	for name, iface := range p.Interfaces {
 		for _, m := range iface.Methods {
@@ -981,6 +983,9 @@ func (g *gen) genTypedImpl(d *ImplDecl, ifaceName string) []ast.Decl {
 		}
 		retType := g.goReturnType(m.Ret, combinedTP)
 		fnName := helperFuncName(sig.Name, typeKey)
+		if _, ok := g.emittedImplHelpers[fnName]; ok {
+			continue
+		}
 
 		// Params
 		// Build the parameter list with capacity only; using constraints may be skipped
@@ -1108,6 +1113,7 @@ func (g *gen) genTypedImpl(d *ImplDecl, ifaceName string) []ast.Decl {
 						decl := astFuncDecl(fnName, nil, typeParamFieldsWithConstraints(mergedTypeParams(d.TypeParams, sig.TypeParams), constraints),
 							params, results, &ast.BlockStmt{List: bodyStmts})
 						decls = append(decls, decl)
+						g.emittedImplHelpers[fnName] = struct{}{}
 						continue
 					}
 				}
@@ -1123,6 +1129,7 @@ func (g *gen) genTypedImpl(d *ImplDecl, ifaceName string) []ast.Decl {
 		decl := astFuncDecl(fnName, nil, typeParamFieldsWithConstraints(mergedTypeParams(d.TypeParams, sig.TypeParams), constraints),
 			params, results, &ast.BlockStmt{List: bodyStmts})
 		decls = append(decls, decl)
+		g.emittedImplHelpers[fnName] = struct{}{}
 	}
 	return decls
 }

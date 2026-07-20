@@ -77,10 +77,20 @@ func Slice_Prepend[T any](items []T, item T) []T {
 }
 func Get__t_int_t[T any](s []T, index int) Option[T] {
 	return func() Option[T] {
-		if index >= 0 && index < len(s) {
+		if index < 0 || index >= Len__t_t(s) {
+			return None[T]()
+		} else {
 			return Some[T](s[index])
 		}
-		return None[T]()
+	}()
+}
+func Slice__t_int_t[T any](s []T, startPos int, endPos int) Option[[]T] {
+	return func() Option[[]T] {
+		if startPos < 0 || endPos < startPos || endPos > Len__t_t(s) {
+			return None[[]T]()
+		} else {
+			return Some[[]T](s[startPos:endPos])
+		}
 	}()
 }
 func Set__t_int_t[T any](s []T, index int, value T) {
