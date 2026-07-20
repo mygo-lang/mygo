@@ -40,10 +40,25 @@ func (g *gen) fieldType(baseType, field string) string {
 		baseType = strings.TrimSpace(strings.TrimPrefix(baseType, "*"))
 	}
 	baseName, typeArgs := splitTypeArgs(baseType)
+	qualAlias := ""
+	if alias, bare, ok := splitQualifiedName(baseName); ok {
+		qualAlias = alias
+		baseName = bare
+	}
 	st := g.pkg.Structs[baseName]
+	if st == nil && qualAlias != "" && g.typedInfo != nil && g.typedInfo.MyGoPackages != nil {
+		if imported := g.typedInfo.MyGoPackages[qualAlias]; imported != nil {
+			st = imported.Structs[baseName]
+		}
+	}
 	if st == nil {
 		// Check in interface methods
 		iface := g.pkg.Interfaces[baseName]
+		if iface == nil && qualAlias != "" && g.typedInfo != nil && g.typedInfo.MyGoPackages != nil {
+			if imported := g.typedInfo.MyGoPackages[qualAlias]; imported != nil {
+				iface = imported.Interfaces[baseName]
+			}
+		}
 		if iface != nil {
 			for _, m := range iface.Methods {
 				if m.Name == field {
@@ -61,10 +76,49 @@ func (g *gen) fieldType(baseType, field string) string {
 	}
 	for _, f := range st.Fields {
 		if f.Name == field {
+			if qualAlias != "" {
+				return g.goTypeStringSubst(qualifyTypeExprForAlias(f.Type, qualAlias, g, subst), subst)
+			}
 			return g.goTypeStringSubst(f.Type, subst)
 		}
 	}
 	return ""
+}
+
+func qualifyTypeExprForAlias(t TypeExpr, alias string, g *gen, subst map[string]string) TypeExpr {
+	switch tt := t.(type) {
+	case *NamedType:
+		if subst != nil {
+			if _, ok := subst[tt.Name]; ok && len(tt.Args) == 0 {
+				return tt
+			}
+		}
+		args := make([]TypeExpr, len(tt.Args))
+		for i, a := range tt.Args {
+			args[i] = qualifyTypeExprForAlias(a, alias, g, subst)
+		}
+		name := tt.Name
+		if !strings.Contains(name, ".") && !isKnownGoOrMyGoType(name) && g != nil && g.pkg != nil {
+			if g.pkg.Structs[name] != nil || g.pkg.Enums[name] != nil || g.pkg.Interfaces[name] != nil {
+				name = alias + "." + name
+			}
+		}
+		return &NamedType{Line: tt.Line, Column: tt.Column, Name: name, Args: args}
+	case *FuncType:
+		params := make([]TypeExpr, len(tt.Params))
+		for i, p := range tt.Params {
+			params[i] = qualifyTypeExprForAlias(p, alias, g, subst)
+		}
+		return &FuncType{Line: tt.Line, Column: tt.Column, Params: params, Ret: qualifyTypeExprForAlias(tt.Ret, alias, g, subst)}
+	case *TupleType:
+		elems := make([]TypeExpr, len(tt.Elems))
+		for i, e := range tt.Elems {
+			elems[i] = qualifyTypeExprForAlias(e, alias, g, subst)
+		}
+		return &TupleType{Line: tt.Line, Column: tt.Column, Elems: elems}
+	default:
+		return t
+	}
 }
 
 // goTypeStringSubst renders a TypeExpr as a Go type string with type param substitution.

@@ -76,6 +76,7 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 		Interfaces:     mainPkg.Interfaces,
 		Funcs:          mainPkg.Funcs,
 		Impls:          mainPkg.Impls,
+		DotImportTypes: mainPkg.DotImportTypes,
 		DotImportEnums: mainDotImportEnums,
 	}
 	infState := typeinference.NewInferState()
@@ -155,6 +156,7 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 			Interfaces:     testPkg.Interfaces,
 			Funcs:          testPkg.Funcs,
 			Impls:          testPkg.Impls,
+			DotImportTypes: testPkg.DotImportTypes,
 			DotImportEnums: testDotImportEnums,
 		}
 		testInfState := typeinference.NewInferState()
@@ -487,7 +489,11 @@ func escapeModulePathElem(s string) string {
 // mergeImportedDecls merges declarations from an imported MyGO package into
 // the user package for method resolution during code generation.
 func mergeImportedDecls(userPkg, importedPkg *pkg.Package, conflictOnExisting bool) error {
+	if userPkg.DotImportTypes == nil {
+		userPkg.DotImportTypes = map[string]struct{}{}
+	}
 	for name, st := range importedPkg.Structs {
+		userPkg.DotImportTypes[name] = struct{}{}
 		if _, exists := userPkg.Structs[name]; !exists {
 			userPkg.Structs[name] = st
 		} else if conflictOnExisting && st != userPkg.Structs[name] {
@@ -495,6 +501,7 @@ func mergeImportedDecls(userPkg, importedPkg *pkg.Package, conflictOnExisting bo
 		}
 	}
 	for name, iface := range importedPkg.Interfaces {
+		userPkg.DotImportTypes[name] = struct{}{}
 		if _, exists := userPkg.Interfaces[name]; !exists {
 			userPkg.Interfaces[name] = iface
 		} else if conflictOnExisting && iface != userPkg.Interfaces[name] {
@@ -502,6 +509,7 @@ func mergeImportedDecls(userPkg, importedPkg *pkg.Package, conflictOnExisting bo
 		}
 	}
 	for name, enum := range importedPkg.Enums {
+		userPkg.DotImportTypes[name] = struct{}{}
 		if _, exists := userPkg.Enums[name]; !exists {
 			userPkg.Enums[name] = enum
 		} else if conflictOnExisting && enum != userPkg.Enums[name] {
@@ -509,6 +517,9 @@ func mergeImportedDecls(userPkg, importedPkg *pkg.Package, conflictOnExisting bo
 		}
 	}
 	for _, impl := range importedPkg.Impls {
+		if name := inherentReceiverNameForImport(impl.Type); name != "" {
+			userPkg.DotImportTypes[name] = struct{}{}
+		}
 		dup := false
 		for _, existing := range userPkg.Impls {
 			if existing == impl {
@@ -521,6 +532,13 @@ func mergeImportedDecls(userPkg, importedPkg *pkg.Package, conflictOnExisting bo
 		}
 	}
 	return nil
+}
+
+func inherentReceiverNameForImport(t TypeExpr) string {
+	if nt, ok := t.(*NamedType); ok {
+		return nt.Name
+	}
+	return ""
 }
 
 func mygoDirs(root string) ([]string, error) {
@@ -598,26 +616,28 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, *pkg.Package, error)
 	}
 
 	mainPkg := &pkg.Package{
-		Dir:           dir,
-		WorkspaceRoot: filepath.Dir(dir),
-		NoPrelude:     noPrelude,
-		Imports:       map[string]struct{}{},
-		ImportAliases: map[string]string{},
-		Enums:         map[string]*EnumDecl{},
-		Structs:       map[string]*StructDecl{},
-		Interfaces:    map[string]*InterfaceDecl{},
-		Funcs:         map[string]*FuncDecl{},
+		Dir:            dir,
+		WorkspaceRoot:  filepath.Dir(dir),
+		NoPrelude:      noPrelude,
+		Imports:        map[string]struct{}{},
+		ImportAliases:  map[string]string{},
+		Enums:          map[string]*EnumDecl{},
+		Structs:        map[string]*StructDecl{},
+		Interfaces:     map[string]*InterfaceDecl{},
+		Funcs:          map[string]*FuncDecl{},
+		DotImportTypes: map[string]struct{}{},
 	}
 	testPkg := &pkg.Package{
-		Dir:           dir,
-		WorkspaceRoot: filepath.Dir(dir),
-		NoPrelude:     noPrelude,
-		Imports:       map[string]struct{}{},
-		ImportAliases: map[string]string{},
-		Enums:         map[string]*EnumDecl{},
-		Structs:       map[string]*StructDecl{},
-		Interfaces:    map[string]*InterfaceDecl{},
-		Funcs:         map[string]*FuncDecl{},
+		Dir:            dir,
+		WorkspaceRoot:  filepath.Dir(dir),
+		NoPrelude:      noPrelude,
+		Imports:        map[string]struct{}{},
+		ImportAliases:  map[string]string{},
+		Enums:          map[string]*EnumDecl{},
+		Structs:        map[string]*StructDecl{},
+		Interfaces:     map[string]*InterfaceDecl{},
+		Funcs:          map[string]*FuncDecl{},
+		DotImportTypes: map[string]struct{}{},
 	}
 
 	var mainDecls, testDecls []Decl

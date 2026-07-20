@@ -76,6 +76,9 @@ func (g *gen) translateGoExpr(n *GoExpr, ctx *egCtx, expected string) (ast.Expr,
 		if len(innerParts) == 2 {
 			okType := strings.TrimSpace(innerParts[0])
 			errType := strings.TrimSpace(innerParts[1])
+			if strings.Contains(substituted, "Ok[") || strings.Contains(substituted, "Err[") {
+				return expr, resultType, nil
+			}
 			if goTupleErrorRE.MatchString(substituted) {
 				return g.goTupleResultToResult(substituted, okType, errType), resultType, nil
 			}

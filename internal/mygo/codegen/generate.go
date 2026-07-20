@@ -693,13 +693,13 @@ type gen struct {
 		Func        *FuncDecl
 		HasReceiver bool
 	}
-	variantByName map[string]string
+	variantByName      map[string]string
 	emittedImplHelpers map[string]struct{}
-	needsCallAny  bool
-	localSeq      int
-	switchVarSeq  int
-	typedInfo     *typeinference.TypedInfo
-	currentFile   string
+	needsCallAny       bool
+	localSeq           int
+	switchVarSeq       int
+	typedInfo          *typeinference.TypedInfo
+	currentFile        string
 }
 
 func newGen(p *Package, typedInfo *typeinference.TypedInfo) *gen {
@@ -712,9 +712,9 @@ func newGen(p *Package, typedInfo *typeinference.TypedInfo) *gen {
 			Func        *FuncDecl
 			HasReceiver bool
 		}{},
-		variantByName:       map[string]string{},
-		emittedImplHelpers:  map[string]struct{}{},
-		typedInfo:           typedInfo,
+		variantByName:      map[string]string{},
+		emittedImplHelpers: map[string]struct{}{},
+		typedInfo:          typedInfo,
 	}
 	for name, iface := range p.Interfaces {
 		for _, m := range iface.Methods {

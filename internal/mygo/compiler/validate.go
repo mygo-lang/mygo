@@ -48,6 +48,9 @@ func newValidator(p *pkg.Package, info *typeinference.TypedInfo) *validator {
 	for name := range p.Interfaces {
 		globals[name] = struct{}{}
 	}
+	for name := range p.DotImportTypes {
+		globals[name] = struct{}{}
+	}
 	// Register import aliases as globals so import "go:fmt" aliases like
 	// "fmt" are visible during name resolution.
 	for _, decl := range p.Decls {

@@ -17,6 +17,7 @@ func InferTyped(p *Package) (*typeinference.TypedInfo, error) {
 		Interfaces:     p.Interfaces,
 		Funcs:          p.Funcs,
 		Impls:          p.Impls,
+		DotImportTypes: p.DotImportTypes,
 		DotImportEnums: map[string]*ast.EnumDecl{},
 	}
 	state := typeinference.NewInferState()

@@ -518,7 +518,13 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 						return nil, "", err
 					}
 					fnName := inherentMethodName(id.Name, method.Func.Name)
-					return &ast.CallExpr{Fun: ast.NewIdent(fnName), Args: args}, retType, nil
+					var fun ast.Expr = ast.NewIdent(fnName)
+					if len(typeArgExprs) == 1 {
+						fun = &ast.IndexExpr{X: fun, Index: typeArgExprs[0]}
+					} else if len(typeArgExprs) > 1 {
+						fun = &ast.IndexListExpr{X: fun, Indices: typeArgExprs}
+					}
+					return &ast.CallExpr{Fun: fun, Args: args}, retType, nil
 				}
 			}
 			// Imported method call: pkg.Func()
@@ -723,10 +729,15 @@ func containsGeneratedTypeVar(typ string) bool {
 
 func (g *gen) containsUnresolvedTypeName(typ string) bool {
 	for _, part := range strings.FieldsFunc(typ, func(r rune) bool {
-		return r == '[' || r == ']' || r == ',' || r == ' ' || r == '(' || r == ')' || r == '*' || r == '.'
+		return r == '[' || r == ']' || r == ',' || r == ' ' || r == '(' || r == ')' || r == '*'
 	}) {
 		if part == "" || !looksLikeTypeParamName(part) {
 			continue
+		}
+		if strings.Contains(part, ".") {
+			if _, _, ok := splitQualifiedName(part); ok {
+				continue
+			}
 		}
 		if isKnownGoOrMyGoType(part) {
 			continue
@@ -1149,31 +1160,9 @@ func goTypeToMyGoTypeName(goType string) string {
 			}
 		}
 		if closeIdx > 0 {
-			inner := goType[4:closeIdx] // content between "map[" and "]"
-			// Split inner into key and value at the top level
-			depth = 0
-			splitIdx := -1
-			for i, r := range inner {
-				switch r {
-				case '[', '(', '{':
-					depth++
-				case ']', ')', '}':
-					depth--
-				case ',':
-					if depth == 0 {
-						splitIdx = i
-						break
-					}
-				}
-				if splitIdx >= 0 {
-					break
-				}
-			}
-			if splitIdx >= 0 {
-				val := strings.TrimSpace(inner[splitIdx+1:])
-				if val == "struct{}" {
-					return "Set"
-				}
+			val := strings.TrimSpace(goType[closeIdx+1:])
+			if val == "struct{}" {
+				return "Set"
 			}
 		}
 		return "Map"
@@ -1242,6 +1231,7 @@ func (g *gen) matchTypeclassHelper(ifaceName, methodName, recvType string) (stri
 		return "", "", false
 	}
 	recvType = concreteReceiverTypeForInterface(ifaceName, recvType)
+	preferredReceiver := goTypeToMyGoTypeName(recvType)
 	for _, impl := range g.pkg.Impls {
 		iname := impl.InterfaceName
 		if iname == "" {
@@ -1253,6 +1243,11 @@ func (g *gen) matchTypeclassHelper(ifaceName, methodName, recvType string) (stri
 		typeArgs := impl.InterfaceArgs
 		if len(typeArgs) == 0 {
 			typeArgs = impl.TypeArgs
+		}
+		if preferredReceiver != "" && len(typeArgs) > 0 {
+			if nt, ok := typeArgs[0].(*NamedType); ok && nt.Name != preferredReceiver {
+				continue
+			}
 		}
 		subst := g.typeclassSubstForImpl(iface, impl, recvType, typeArgs)
 		if subst == nil {
@@ -1386,11 +1381,11 @@ func inferTypeSubst(pattern TypeExpr, concrete string, typeParams map[string]str
 			if !strings.HasPrefix(concrete, "map[") || !strings.HasSuffix(concrete, "struct{}") {
 				return false
 			}
-			inner := strings.TrimSuffix(strings.TrimPrefix(concrete, "map["), "]struct{}")
-			key, ok := splitMapConcrete(inner)
-			if !ok {
+			closeIdx := matchingMapKeyEnd(concrete)
+			if closeIdx < 0 {
 				return false
 			}
+			key := strings.TrimSpace(concrete[len("map["):closeIdx])
 			return inferTypeSubst(pt.Args[0], key, typeParams, subst)
 		case "Map":
 			if !strings.HasPrefix(concrete, "map[") {
@@ -1422,6 +1417,28 @@ func inferTypeSubst(pattern TypeExpr, concrete string, typeParams map[string]str
 func splitMapConcrete(s string) (string, bool) {
 	key, _, ok := splitMapKeyValue(s)
 	return key, ok
+}
+
+func matchingMapKeyEnd(s string) int {
+	depth := 0
+	for i, r := range s {
+		switch r {
+		case '[':
+			depth++
+		case ']':
+			depth--
+			if depth == 0 {
+				return i
+			}
+		case '(', '{':
+			depth++
+		case ')', '}':
+			if depth > 0 {
+				depth--
+			}
+		}
+	}
+	return -1
 }
 
 func splitMapKeyValue(s string) (string, string, bool) {
