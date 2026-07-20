@@ -17,6 +17,10 @@ struct egCtx
   mutable: Map[String, Bool]
   # SSA 风格命名计数
   usedNames: Map[String, Int]
+  # 表达式位置展开为语句时使用的临时变量序号
+  exprSeq: Int
+  # 表达式位置展开出的前置语句
+  preStmts: Slice[String]
   # 当前作用域的类型参数
   typeParams: Set[String]
   # 当前函数的 Go 返回类型
@@ -55,6 +59,8 @@ func newEgCtx() -> egCtx
     sourceTypes: {},
     mutable: {},
     usedNames: {},
+    exprSeq: 0,
+    preStmts: [],
     typeParams: Set.New[String](),
     retType: "",
     retTypes: [],
@@ -71,6 +77,8 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     sourceTypes: {},
     mutable: {},
     usedNames: {},
+    exprSeq: 0,
+    preStmts: [],
     typeParams: typeParamSet(params),
     retType: "",
     retTypes: [],
@@ -87,6 +95,8 @@ func newFuncEgCtx(params: Slice[String], retType: String, tailName: String, para
     sourceTypes: {},
     mutable: {},
     usedNames: {},
+    exprSeq: 0,
+    preStmts: [],
     typeParams: typeParamSet(params),
     retType: retType,
     retTypes: [],
@@ -116,6 +126,8 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     sourceTypes: ctx.sourceTypes,
     mutable: ctx.mutable,
     usedNames: ctx.usedNames,
+    exprSeq: ctx.exprSeq,
+    preStmts: [],
     typeParams: ctx.typeParams,
     retType: ctx.retType,
     retTypes: ctx.retTypes,
@@ -159,6 +171,44 @@ func ctxSetTailRecParamNames(ctx: Ref[egCtx], names: Slice[String]) -> ()
     code: "ctx.tailRecParamNames = names"
     in ctx = ctx
     in names = names
+  }
+end
+
+func ctxFreshExprTemp(ctx: Ref[egCtx]) -> String
+  let name = "__mygo_expr_" + ctx.exprSeq.ToString()
+  go[()] {
+    code: "ctx.exprSeq = ctx.exprSeq + 1"
+    in ctx = ctx
+  }
+  name
+end
+
+func ctxPushPreStmt(ctx: Ref[egCtx], stmt: String) -> ()
+  go[()] {
+    code: "ctx.preStmts = append(ctx.preStmts, stmt)"
+    in ctx = ctx
+    in stmt = stmt
+  }
+end
+
+func ctxDrainPreStmts(ctx: Ref[egCtx]) -> String
+  let out = joinStrings(ctx.preStmts, "\n")
+  go[()] {
+    code: "ctx.preStmts = nil"
+    in ctx = ctx
+  }
+  out
+end
+
+func ctxAdoptExprSeq(ctx: Ref[egCtx], child: Ref[egCtx]) -> ()
+  go[()] {
+    code: """
+      if child.exprSeq > ctx.exprSeq {
+        ctx.exprSeq = child.exprSeq
+      }
+    """
+    in ctx = ctx
+    in child = child
   }
 end
 

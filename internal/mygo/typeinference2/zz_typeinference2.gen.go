@@ -93,6 +93,10 @@ type ArgsResult struct {
 	Subst []SubstEntry
 	State InferState
 }
+type BlockInferStep struct {
+	Result InferResult
+	Env    []EnvEntry
+}
 
 func NewInferState() InferState {
 	return InferState{FreshVarID: 1}
@@ -106,7 +110,7 @@ func inferDecls(decls []ast2.Decl, env []EnvEntry, state InferState) Result[Pack
 			return Ok[PackageInfo, string](PackageInfo{Env: env})
 		} else {
 			return func() Result[PackageInfo, string] {
-				head_1 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+				head_1 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 				tail_2 := sliceDrop(decls, 1)
 				next_3 := inferDecl(head_1, env, state)
 				return func() Result[PackageInfo, string] {
@@ -575,7 +579,7 @@ func inferArgs(args []ast2.Expr, env []EnvEntry, state InferState, types []MonoT
 			return Ok[ArgsResult, string](ArgsResult{Types: types, Subst: subst, State: state})
 		} else {
 			return func() Result[ArgsResult, string] {
-				head_32 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.ExprUnitExprCtor())
+				head_32 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.ExprUnitExprCtor())
 				r_33 := inferExpr(head_32, env, state)
 				return func() Result[ArgsResult, string] {
 					if v_58, ok := r_33.(ResultErr[InferResult, string]); ok {
@@ -611,16 +615,16 @@ func inferBlockItems(items []ast2.Expr, env []EnvEntry, state InferState, lastTy
 			return Ok[InferResult, string](InferResult{Type: applySubst(subst, lastType), Subst: subst, State: state})
 		} else {
 			return func() Result[InferResult, string] {
-				r_34 := inferExpr(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.ExprUnitExprCtor()), env, state)
+				step_34 := inferBlockStep(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.ExprUnitExprCtor()), env, state)
 				return func() Result[InferResult, string] {
-					if v_60, ok := r_34.(ResultErr[InferResult, string]); ok {
+					if v_60, ok := step_34.(ResultErr[BlockInferStep, string]); ok {
 						return func() Result[InferResult, string] {
 							return Err[InferResult, string](v_60.F0)
 						}()
 					} else {
-						if v_59, ok := r_34.(ResultOk[InferResult, string]); ok {
+						if v_59, ok := step_34.(ResultOk[BlockInferStep, string]); ok {
 							return func() Result[InferResult, string] {
-								return inferBlockItems(sliceDrop(items, 1), env, v_59.F0.State, v_59.F0.Type, composeSubst(v_59.F0.Subst, subst))
+								return inferBlockItems(sliceDrop(items, 1), v_59.F0.Env, v_59.F0.Result.State, v_59.F0.Result.Type, composeSubst(v_59.F0.Result.Subst, subst))
 							}()
 						} else {
 							panic("unreachable")
@@ -631,25 +635,102 @@ func inferBlockItems(items []ast2.Expr, env []EnvEntry, state InferState, lastTy
 		}
 	}()
 }
-func inferLet(bind ast2.Bind, env []EnvEntry, state InferState) Result[InferResult, string] {
-	r_35 := inferExpr(bind.Value, env, state)
-	return func() Result[InferResult, string] {
-		if v_66, ok := r_35.(ResultErr[InferResult, string]); ok {
-			return func() Result[InferResult, string] {
-				return Err[InferResult, string](v_66.F0)
+func inferBlockStep(expr ast2.Expr, env []EnvEntry, state InferState) Result[BlockInferStep, string] {
+	return func() Result[BlockInferStep, string] {
+		if v_63, ok := expr.(ast2.ExprLetExpr); ok {
+			return func() Result[BlockInferStep, string] {
+				return inferBlockLet(v_63.F0, env, state)
 			}()
 		} else {
-			if v_61, ok := r_35.(ResultOk[InferResult, string]); ok {
-				return func() Result[InferResult, string] {
-					annotated_36 := func() Result[[]SubstEntry, string] {
-						if v_63, ok := bind.Type.(OptionSome[ast2.TypeExpr]); ok {
+			return func() Result[BlockInferStep, string] {
+				r_35 := inferExpr(expr, env, state)
+				return func() Result[BlockInferStep, string] {
+					if v_62, ok := r_35.(ResultErr[InferResult, string]); ok {
+						return func() Result[BlockInferStep, string] {
+							return Err[BlockInferStep, string](v_62.F0)
+						}()
+					} else {
+						if v_61, ok := r_35.(ResultOk[InferResult, string]); ok {
+							return func() Result[BlockInferStep, string] {
+								return Ok[BlockInferStep, string](BlockInferStep{Result: v_61.F0, Env: env})
+							}()
+						} else {
+							panic("unreachable")
+						}
+					}
+				}()
+			}()
+		}
+	}()
+}
+func inferBlockLet(bind ast2.Bind, env []EnvEntry, state InferState) Result[BlockInferStep, string] {
+	r_36 := inferExpr(bind.Value, env, state)
+	return func() Result[BlockInferStep, string] {
+		if v_69, ok := r_36.(ResultErr[InferResult, string]); ok {
+			return func() Result[BlockInferStep, string] {
+				return Err[BlockInferStep, string](v_69.F0)
+			}()
+		} else {
+			if v_64, ok := r_36.(ResultOk[InferResult, string]); ok {
+				return func() Result[BlockInferStep, string] {
+					annotated_37 := func() Result[[]SubstEntry, string] {
+						if v_66, ok := bind.Type.(OptionSome[ast2.TypeExpr]); ok {
 							return func() Result[[]SubstEntry, string] {
-								return unify(v_61.F0.Type, typeFromAST(v_63.F0), v_61.F0.Subst)
+								return unify(v_64.F0.Type, typeFromAST(v_66.F0), v_64.F0.Subst)
 							}()
 						} else {
 							if _, ok := bind.Type.(OptionNone[ast2.TypeExpr]); ok {
 								return func() Result[[]SubstEntry, string] {
-									return Ok[[]SubstEntry, string](v_61.F0.Subst)
+									return Ok[[]SubstEntry, string](v_64.F0.Subst)
+								}()
+							} else {
+								panic("unreachable")
+							}
+						}
+					}()
+					return func() Result[BlockInferStep, string] {
+						if v_68, ok := annotated_37.(ResultErr[[]SubstEntry, string]); ok {
+							return func() Result[BlockInferStep, string] {
+								return Err[BlockInferStep, string](v_68.F0)
+							}()
+						} else {
+							if v_67, ok := annotated_37.(ResultOk[[]SubstEntry, string]); ok {
+								return func() Result[BlockInferStep, string] {
+									boundType_38 := applySubst(v_67.F0, v_64.F0.Type)
+									nextEnv_39 := envPut(env, bind.Name, Scheme{Bound: []int{}, Body: boundType_38})
+									return Ok[BlockInferStep, string](BlockInferStep{Result: InferResult{Type: MonoTypeTUnitCtor(), Subst: v_67.F0, State: v_64.F0.State}, Env: nextEnv_39})
+								}()
+							} else {
+								panic("unreachable")
+							}
+						}
+					}()
+				}()
+			} else {
+				panic("unreachable")
+			}
+		}
+	}()
+}
+func inferLet(bind ast2.Bind, env []EnvEntry, state InferState) Result[InferResult, string] {
+	r_40 := inferExpr(bind.Value, env, state)
+	return func() Result[InferResult, string] {
+		if v_75, ok := r_40.(ResultErr[InferResult, string]); ok {
+			return func() Result[InferResult, string] {
+				return Err[InferResult, string](v_75.F0)
+			}()
+		} else {
+			if v_70, ok := r_40.(ResultOk[InferResult, string]); ok {
+				return func() Result[InferResult, string] {
+					annotated_41 := func() Result[[]SubstEntry, string] {
+						if v_72, ok := bind.Type.(OptionSome[ast2.TypeExpr]); ok {
+							return func() Result[[]SubstEntry, string] {
+								return unify(v_70.F0.Type, typeFromAST(v_72.F0), v_70.F0.Subst)
+							}()
+						} else {
+							if _, ok := bind.Type.(OptionNone[ast2.TypeExpr]); ok {
+								return func() Result[[]SubstEntry, string] {
+									return Ok[[]SubstEntry, string](v_70.F0.Subst)
 								}()
 							} else {
 								panic("unreachable")
@@ -657,14 +738,14 @@ func inferLet(bind ast2.Bind, env []EnvEntry, state InferState) Result[InferResu
 						}
 					}()
 					return func() Result[InferResult, string] {
-						if v_65, ok := annotated_36.(ResultErr[[]SubstEntry, string]); ok {
+						if v_74, ok := annotated_41.(ResultErr[[]SubstEntry, string]); ok {
 							return func() Result[InferResult, string] {
-								return Err[InferResult, string](v_65.F0)
+								return Err[InferResult, string](v_74.F0)
 							}()
 						} else {
-							if v_64, ok := annotated_36.(ResultOk[[]SubstEntry, string]); ok {
+							if v_73, ok := annotated_41.(ResultOk[[]SubstEntry, string]); ok {
 								return func() Result[InferResult, string] {
-									return Ok[InferResult, string](InferResult{Type: MonoTypeTUnitCtor(), Subst: v_64.F0, State: v_61.F0.State})
+									return Ok[InferResult, string](InferResult{Type: MonoTypeTUnitCtor(), Subst: v_73.F0, State: v_70.F0.State})
 								}()
 							} else {
 								panic("unreachable")
@@ -679,16 +760,16 @@ func inferLet(bind ast2.Bind, env []EnvEntry, state InferState) Result[InferResu
 	}()
 }
 func matchExpected(v InferResult, expected MonoType, result MonoType) Result[InferResult, string] {
-	s_37 := unify(v.Type, expected, v.Subst)
+	s_42 := unify(v.Type, expected, v.Subst)
 	return func() Result[InferResult, string] {
-		if v_68, ok := s_37.(ResultOk[[]SubstEntry, string]); ok {
+		if v_77, ok := s_42.(ResultOk[[]SubstEntry, string]); ok {
 			return func() Result[InferResult, string] {
-				return Ok[InferResult, string](InferResult{Type: result, Subst: v_68.F0, State: v.State})
+				return Ok[InferResult, string](InferResult{Type: result, Subst: v_77.F0, State: v.State})
 			}()
 		} else {
-			if v_67, ok := s_37.(ResultErr[[]SubstEntry, string]); ok {
+			if v_76, ok := s_42.(ResultErr[[]SubstEntry, string]); ok {
 				return func() Result[InferResult, string] {
-					return Err[InferResult, string](v_67.F0)
+					return Err[InferResult, string](v_76.F0)
 				}()
 			} else {
 				panic("unreachable")
@@ -698,22 +779,22 @@ func matchExpected(v InferResult, expected MonoType, result MonoType) Result[Inf
 }
 func typeFromAST(t ast2.TypeExpr) MonoType {
 	return func() MonoType {
-		if v_72, ok := t.(ast2.TypeExprNamedType); ok {
+		if v_81, ok := t.(ast2.TypeExprNamedType); ok {
 			return func() MonoType {
-				return MonoTypeTConCtor(v_72.F0, typeArgsFromAST(v_72.F1))
+				return MonoTypeTConCtor(v_81.F0, typeArgsFromAST(v_81.F1))
 			}()
 		} else {
-			if v_71, ok := t.(ast2.TypeExprFuncType); ok {
+			if v_80, ok := t.(ast2.TypeExprFuncType); ok {
 				return func() MonoType {
-					return MonoTypeTFuncCtor(typeArgsFromAST(v_71.F0), func() *MonoType {
-						__ref_tmp := typeFromAST(*v_71.F1)
+					return MonoTypeTFuncCtor(typeArgsFromAST(v_80.F0), func() *MonoType {
+						__ref_tmp := typeFromAST(*v_80.F1)
 						return &__ref_tmp
 					}())
 				}()
 			} else {
-				if v_70, ok := t.(ast2.TypeExprTupleType); ok {
+				if v_79, ok := t.(ast2.TypeExprTupleType); ok {
 					return func() MonoType {
-						return MonoTypeTTupleCtor(typeArgsFromAST(v_70.F0))
+						return MonoTypeTTupleCtor(typeArgsFromAST(v_79.F0))
 					}()
 				} else {
 					if _, ok := t.(ast2.TypeExprUnitType); ok {
@@ -733,7 +814,7 @@ func typeArgsFromAST(items []ast2.TypeExpr) []MonoType {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 			return []MonoType{}
 		} else {
-			return MygoIN5SliceM7Prepend(typeArgsFromAST(sliceDrop(items, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.TypeExprUnitTypeCtor())))
+			return MygoIN5SliceM7Prepend(typeArgsFromAST(sliceDrop(items, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.TypeExprUnitTypeCtor())))
 		}
 	}()
 }
@@ -742,7 +823,7 @@ func paramsToTypes(params []ast2.Param) []MonoType {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
 			return []MonoType{}
 		} else {
-			return MygoIN5SliceM7Prepend(paramsToTypes(sliceDrop(params, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()}).Type))
+			return MygoIN5SliceM7Prepend(paramsToTypes(sliceDrop(params, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()}).Type))
 		}
 	}()
 }
@@ -752,8 +833,8 @@ func envWithParams(env []EnvEntry, params []ast2.Param) []EnvEntry {
 			return env
 		} else {
 			return func() []EnvEntry {
-				p_38 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
-				return envWithParams(envPut(env, p_38.Name, Scheme{Bound: []int{}, Body: typeFromAST(p_38.Type)}), sliceDrop(params, 1))
+				p_43 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+				return envWithParams(envPut(env, p_43.Name, Scheme{Bound: []int{}, Body: typeFromAST(p_43.Type)}), sliceDrop(params, 1))
 			}()
 		}
 	}()
@@ -764,18 +845,18 @@ func inferVariants(vars []ast2.Variant, enumName string, tps []string, env []Env
 			return Ok[DeclInfer, string](DeclInfer{Env: envPut(env, enumName, Scheme{Bound: []int{}, Body: MonoTypeTConCtor(enumName, emptyMonoTypes())}), State: state})
 		} else {
 			return func() Result[DeclInfer, string] {
-				v_39 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(vars, 0), ast2.Variant{Name: "", Fields: emptyASTTypeExprs()})
-				constructorType_40 := func() MonoType {
-					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_39.Fields) == 0 {
+				v_44 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(vars, 0), ast2.Variant{Name: "", Fields: emptyASTTypeExprs()})
+				constructorType_45 := func() MonoType {
+					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_44.Fields) == 0 {
 						return MonoTypeTConCtor(enumName, emptyMonoTypes())
 					} else {
-						return MonoTypeTFuncCtor(typeArgsFromAST(v_39.Fields), func() *MonoType {
+						return MonoTypeTFuncCtor(typeArgsFromAST(v_44.Fields), func() *MonoType {
 							__ref_tmp := MonoTypeTConCtor(enumName, emptyMonoTypes())
 							return &__ref_tmp
 						}())
 					}
 				}()
-				return inferVariants(sliceDrop(vars, 1), enumName, tps, envPut(env, v_39.Name, Scheme{Bound: []int{}, Body: constructorType_40}), state)
+				return inferVariants(sliceDrop(vars, 1), enumName, tps, envPut(env, v_44.Name, Scheme{Bound: []int{}, Body: constructorType_45}), state)
 			}()
 		}
 	}()
@@ -789,10 +870,10 @@ func envGet(env []EnvEntry, name string) Option[Scheme] {
 			return None[Scheme]()
 		} else {
 			return func() Option[Scheme] {
-				item_41 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Body: MonoTypeTUnitCtor()}})
+				item_46 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Body: MonoTypeTUnitCtor()}})
 				return func() Option[Scheme] {
-					if item_41.Name == name {
-						return Some[Scheme](item_41.Scheme)
+					if item_46.Name == name {
+						return Some[Scheme](item_46.Scheme)
 					} else {
 						return envGet(sliceDrop(env, 1), name)
 					}
@@ -805,68 +886,68 @@ func envPut(env []EnvEntry, name string, scheme Scheme) []EnvEntry {
 	return MygoIN5SliceM7Prepend(env, EnvEntry{Name: name, Scheme: scheme})
 }
 func unify(left MonoType, right MonoType, subst []SubstEntry) Result[[]SubstEntry, string] {
-	a_42 := applySubst(subst, left)
-	b_43 := applySubst(subst, right)
+	a_47 := applySubst(subst, left)
+	b_48 := applySubst(subst, right)
 	return func() Result[[]SubstEntry, string] {
-		if monoEqual(a_42, b_43) {
+		if monoEqual(a_47, b_48) {
 			return Ok[[]SubstEntry, string](subst)
 		} else {
 			return func() Result[[]SubstEntry, string] {
-				if v_86, ok := a_42.(MonoTypeTVar); ok {
+				if v_95, ok := a_47.(MonoTypeTVar); ok {
 					return func() Result[[]SubstEntry, string] {
-						return bindVar(v_86.F0, b_43, subst)
+						return bindVar(v_95.F0, b_48, subst)
 					}()
 				} else {
-					if v_83, ok := a_42.(MonoTypeTCon); ok {
+					if v_92, ok := a_47.(MonoTypeTCon); ok {
 						return func() Result[[]SubstEntry, string] {
 							return func() Result[[]SubstEntry, string] {
-								if v_85, ok := b_43.(MonoTypeTVar); ok {
+								if v_94, ok := b_48.(MonoTypeTVar); ok {
 									return func() Result[[]SubstEntry, string] {
-										return bindVar(v_85.F0, a_42, subst)
+										return bindVar(v_94.F0, a_47, subst)
 									}()
 								} else {
-									if v_84, ok := b_43.(MonoTypeTCon); ok {
+									if v_93, ok := b_48.(MonoTypeTCon); ok {
 										return func() Result[[]SubstEntry, string] {
 											return func() Result[[]SubstEntry, string] {
-												if v_83.F0 == v_84.F0 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_83.F1) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_84.F1) {
-													return unifyArgs(v_83.F1, v_84.F1, subst)
+												if v_92.F0 == v_93.F0 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_92.F1) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_93.F1) {
+													return unifyArgs(v_92.F1, v_93.F1, subst)
 												} else {
-													return Err[[]SubstEntry, string]("cannot unify " + monoString(a_42) + " with " + monoString(b_43))
+													return Err[[]SubstEntry, string]("cannot unify " + monoString(a_47) + " with " + monoString(b_48))
 												}
 											}()
 										}()
 									} else {
 										return func() Result[[]SubstEntry, string] {
-											return Err[[]SubstEntry, string]("cannot unify " + monoString(a_42) + " with " + monoString(b_43))
+											return Err[[]SubstEntry, string]("cannot unify " + monoString(a_47) + " with " + monoString(b_48))
 										}()
 									}
 								}
 							}()
 						}()
 					} else {
-						if v_78, ok := a_42.(MonoTypeTFunc); ok {
+						if v_87, ok := a_47.(MonoTypeTFunc); ok {
 							return func() Result[[]SubstEntry, string] {
 								return func() Result[[]SubstEntry, string] {
-									if v_82, ok := b_43.(MonoTypeTVar); ok {
+									if v_91, ok := b_48.(MonoTypeTVar); ok {
 										return func() Result[[]SubstEntry, string] {
-											return bindVar(v_82.F0, a_42, subst)
+											return bindVar(v_91.F0, a_47, subst)
 										}()
 									} else {
-										if v_79, ok := b_43.(MonoTypeTFunc); ok {
+										if v_88, ok := b_48.(MonoTypeTFunc); ok {
 											return func() Result[[]SubstEntry, string] {
 												return func() Result[[]SubstEntry, string] {
-													if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_78.F0) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_79.F0) {
+													if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_87.F0) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_88.F0) {
 														return func() Result[[]SubstEntry, string] {
-															s1_44 := unifyArgs(v_78.F0, v_79.F0, subst)
+															s1_49 := unifyArgs(v_87.F0, v_88.F0, subst)
 															return func() Result[[]SubstEntry, string] {
-																if v_81, ok := s1_44.(ResultOk[[]SubstEntry, string]); ok {
+																if v_90, ok := s1_49.(ResultOk[[]SubstEntry, string]); ok {
 																	return func() Result[[]SubstEntry, string] {
-																		return unify(*v_78.F1, *v_79.F1, v_81.F0)
+																		return unify(*v_87.F1, *v_88.F1, v_90.F0)
 																	}()
 																} else {
-																	if v_80, ok := s1_44.(ResultErr[[]SubstEntry, string]); ok {
+																	if v_89, ok := s1_49.(ResultErr[[]SubstEntry, string]); ok {
 																		return func() Result[[]SubstEntry, string] {
-																			return Err[[]SubstEntry, string](v_80.F0)
+																			return Err[[]SubstEntry, string](v_89.F0)
 																		}()
 																	} else {
 																		panic("unreachable")
@@ -881,26 +962,26 @@ func unify(left MonoType, right MonoType, subst []SubstEntry) Result[[]SubstEntr
 											}()
 										} else {
 											return func() Result[[]SubstEntry, string] {
-												return Err[[]SubstEntry, string]("cannot unify " + monoString(a_42) + " with " + monoString(b_43))
+												return Err[[]SubstEntry, string]("cannot unify " + monoString(a_47) + " with " + monoString(b_48))
 											}()
 										}
 									}
 								}()
 							}()
 						} else {
-							if v_75, ok := a_42.(MonoTypeTTuple); ok {
+							if v_84, ok := a_47.(MonoTypeTTuple); ok {
 								return func() Result[[]SubstEntry, string] {
 									return func() Result[[]SubstEntry, string] {
-										if v_77, ok := b_43.(MonoTypeTVar); ok {
+										if v_86, ok := b_48.(MonoTypeTVar); ok {
 											return func() Result[[]SubstEntry, string] {
-												return bindVar(v_77.F0, a_42, subst)
+												return bindVar(v_86.F0, a_47, subst)
 											}()
 										} else {
-											if v_76, ok := b_43.(MonoTypeTTuple); ok {
+											if v_85, ok := b_48.(MonoTypeTTuple); ok {
 												return func() Result[[]SubstEntry, string] {
 													return func() Result[[]SubstEntry, string] {
-														if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_75.F0) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_76.F0) {
-															return unifyArgs(v_75.F0, v_76.F0, subst)
+														if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_84.F0) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_85.F0) {
+															return unifyArgs(v_84.F0, v_85.F0, subst)
 														} else {
 															return Err[[]SubstEntry, string]("tuple arity mismatch")
 														}
@@ -908,23 +989,23 @@ func unify(left MonoType, right MonoType, subst []SubstEntry) Result[[]SubstEntr
 												}()
 											} else {
 												return func() Result[[]SubstEntry, string] {
-													return Err[[]SubstEntry, string]("cannot unify " + monoString(a_42) + " with " + monoString(b_43))
+													return Err[[]SubstEntry, string]("cannot unify " + monoString(a_47) + " with " + monoString(b_48))
 												}()
 											}
 										}
 									}()
 								}()
 							} else {
-								if _, ok := a_42.(MonoTypeTUnit); ok {
+								if _, ok := a_47.(MonoTypeTUnit); ok {
 									return func() Result[[]SubstEntry, string] {
 										return func() Result[[]SubstEntry, string] {
-											if v_74, ok := b_43.(MonoTypeTVar); ok {
+											if v_83, ok := b_48.(MonoTypeTVar); ok {
 												return func() Result[[]SubstEntry, string] {
-													return bindVar(v_74.F0, a_42, subst)
+													return bindVar(v_83.F0, a_47, subst)
 												}()
 											} else {
 												return func() Result[[]SubstEntry, string] {
-													return Err[[]SubstEntry, string]("cannot unify " + monoString(a_42) + " with " + monoString(b_43))
+													return Err[[]SubstEntry, string]("cannot unify " + monoString(a_47) + " with " + monoString(b_48))
 												}()
 											}
 										}()
@@ -955,16 +1036,16 @@ func unifyArgs(left []MonoType, right []MonoType, subst []SubstEntry) Result[[]S
 			return Ok[[]SubstEntry, string](subst)
 		} else {
 			return func() Result[[]SubstEntry, string] {
-				s_45 := unify(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, 0), MonoTypeTUnitCtor()), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), MonoTypeTUnitCtor()), subst)
+				s_50 := unify(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, 0), MonoTypeTUnitCtor()), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), MonoTypeTUnitCtor()), subst)
 				return func() Result[[]SubstEntry, string] {
-					if v_88, ok := s_45.(ResultOk[[]SubstEntry, string]); ok {
+					if v_97, ok := s_50.(ResultOk[[]SubstEntry, string]); ok {
 						return func() Result[[]SubstEntry, string] {
-							return unifyArgs(sliceDrop(left, 1), sliceDrop(right, 1), v_88.F0)
+							return unifyArgs(sliceDrop(left, 1), sliceDrop(right, 1), v_97.F0)
 						}()
 					} else {
-						if v_87, ok := s_45.(ResultErr[[]SubstEntry, string]); ok {
+						if v_96, ok := s_50.(ResultErr[[]SubstEntry, string]); ok {
 							return func() Result[[]SubstEntry, string] {
-								return Err[[]SubstEntry, string](v_87.F0)
+								return Err[[]SubstEntry, string](v_96.F0)
 							}()
 						} else {
 							panic("unreachable")
@@ -977,15 +1058,15 @@ func unifyArgs(left []MonoType, right []MonoType, subst []SubstEntry) Result[[]S
 }
 func applySubst(subst []SubstEntry, t MonoType) MonoType {
 	return func() MonoType {
-		if v_93, ok := t.(MonoTypeTVar); ok {
+		if v_102, ok := t.(MonoTypeTVar); ok {
 			return func() MonoType {
 				return func() MonoType {
-					if v_95, ok := substGet(subst, v_93.F0).(OptionSome[MonoType]); ok {
+					if v_104, ok := substGet(subst, v_102.F0).(OptionSome[MonoType]); ok {
 						return func() MonoType {
-							return applySubst(subst, v_95.F0)
+							return applySubst(subst, v_104.F0)
 						}()
 					} else {
-						if _, ok := substGet(subst, v_93.F0).(OptionNone[MonoType]); ok {
+						if _, ok := substGet(subst, v_102.F0).(OptionNone[MonoType]); ok {
 							return func() MonoType {
 								return t
 							}()
@@ -996,22 +1077,22 @@ func applySubst(subst []SubstEntry, t MonoType) MonoType {
 				}()
 			}()
 		} else {
-			if v_92, ok := t.(MonoTypeTCon); ok {
+			if v_101, ok := t.(MonoTypeTCon); ok {
 				return func() MonoType {
-					return MonoTypeTConCtor(v_92.F0, applySubstAll(subst, v_92.F1))
+					return MonoTypeTConCtor(v_101.F0, applySubstAll(subst, v_101.F1))
 				}()
 			} else {
-				if v_91, ok := t.(MonoTypeTFunc); ok {
+				if v_100, ok := t.(MonoTypeTFunc); ok {
 					return func() MonoType {
-						return MonoTypeTFuncCtor(applySubstAll(subst, v_91.F0), func() *MonoType {
-							__ref_tmp := applySubst(subst, *v_91.F1)
+						return MonoTypeTFuncCtor(applySubstAll(subst, v_100.F0), func() *MonoType {
+							__ref_tmp := applySubst(subst, *v_100.F1)
 							return &__ref_tmp
 						}())
 					}()
 				} else {
-					if v_90, ok := t.(MonoTypeTTuple); ok {
+					if v_99, ok := t.(MonoTypeTTuple); ok {
 						return func() MonoType {
-							return MonoTypeTTupleCtor(applySubstAll(subst, v_90.F0))
+							return MonoTypeTTupleCtor(applySubstAll(subst, v_99.F0))
 						}()
 					} else {
 						if _, ok := t.(MonoTypeTUnit); ok {
@@ -1032,7 +1113,7 @@ func applySubstAll(subst []SubstEntry, items []MonoType) []MonoType {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 			return []MonoType{}
 		} else {
-			return MygoIN5SliceM7Prepend(applySubstAll(subst, sliceDrop(items, 1)), applySubst(subst, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())))
+			return MygoIN5SliceM7Prepend(applySubstAll(subst, sliceDrop(items, 1)), applySubst(subst, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())))
 		}
 	}()
 }
@@ -1042,8 +1123,8 @@ func composeSubst(newer []SubstEntry, older []SubstEntry) []SubstEntry {
 			return newer
 		} else {
 			return func() []SubstEntry {
-				head_46 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(older, 0), SubstEntry{ID: 0, Type: MonoTypeTUnitCtor()})
-				return MygoIN5SliceM7Prepend(composeSubst(newer, sliceDrop(older, 1)), SubstEntry{ID: head_46.ID, Type: applySubst(newer, head_46.Type)})
+				head_51 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(older, 0), SubstEntry{ID: 0, Type: MonoTypeTUnitCtor()})
+				return MygoIN5SliceM7Prepend(composeSubst(newer, sliceDrop(older, 1)), SubstEntry{ID: head_51.ID, Type: applySubst(newer, head_51.Type)})
 			}()
 		}
 	}()
@@ -1054,10 +1135,10 @@ func substGet(subst []SubstEntry, id int) Option[MonoType] {
 			return None[MonoType]()
 		} else {
 			return func() Option[MonoType] {
-				head_47 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(subst, 0), SubstEntry{ID: 0, Type: MonoTypeTUnitCtor()})
+				head_52 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(subst, 0), SubstEntry{ID: 0, Type: MonoTypeTUnitCtor()})
 				return func() Option[MonoType] {
-					if head_47.ID == id {
-						return Some[MonoType](head_47.Type)
+					if head_52.ID == id {
+						return Some[MonoType](head_52.Type)
 					} else {
 						return substGet(sliceDrop(subst, 1), id)
 					}
@@ -1068,24 +1149,24 @@ func substGet(subst []SubstEntry, id int) Option[MonoType] {
 }
 func occursIn(id int, t MonoType) bool {
 	return func() bool {
-		if v_100, ok := t.(MonoTypeTVar); ok {
+		if v_109, ok := t.(MonoTypeTVar); ok {
 			return func() bool {
-				return id == v_100.F0
+				return id == v_109.F0
 			}()
 		} else {
-			if v_99, ok := t.(MonoTypeTCon); ok {
+			if v_108, ok := t.(MonoTypeTCon); ok {
 				return func() bool {
-					return occursInAny(id, v_99.F1)
+					return occursInAny(id, v_108.F1)
 				}()
 			} else {
-				if v_98, ok := t.(MonoTypeTFunc); ok {
+				if v_107, ok := t.(MonoTypeTFunc); ok {
 					return func() bool {
-						return occursInAny(id, v_98.F0) || occursIn(id, *v_98.F1)
+						return occursInAny(id, v_107.F0) || occursIn(id, *v_107.F1)
 					}()
 				} else {
-					if v_97, ok := t.(MonoTypeTTuple); ok {
+					if v_106, ok := t.(MonoTypeTTuple); ok {
 						return func() bool {
-							return occursInAny(id, v_97.F0)
+							return occursInAny(id, v_106.F0)
 						}()
 					} else {
 						if _, ok := t.(MonoTypeTUnit); ok {
@@ -1106,18 +1187,18 @@ func occursInAny(id int, items []MonoType) bool {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 			return false
 		} else {
-			return occursIn(id, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())) || occursInAny(id, sliceDrop(items, 1))
+			return occursIn(id, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())) || occursInAny(id, sliceDrop(items, 1))
 		}
 	}()
 }
 func monoEqual(a MonoType, b MonoType) bool {
 	return func() bool {
-		if v_109, ok := a.(MonoTypeTVar); ok {
+		if v_118, ok := a.(MonoTypeTVar); ok {
 			return func() bool {
 				return func() bool {
-					if v_110, ok := b.(MonoTypeTVar); ok {
+					if v_119, ok := b.(MonoTypeTVar); ok {
 						return func() bool {
-							return v_109.F0 == v_110.F0
+							return v_118.F0 == v_119.F0
 						}()
 					} else {
 						return func() bool {
@@ -1127,12 +1208,12 @@ func monoEqual(a MonoType, b MonoType) bool {
 				}()
 			}()
 		} else {
-			if v_107, ok := a.(MonoTypeTCon); ok {
+			if v_116, ok := a.(MonoTypeTCon); ok {
 				return func() bool {
 					return func() bool {
-						if v_108, ok := b.(MonoTypeTCon); ok {
+						if v_117, ok := b.(MonoTypeTCon); ok {
 							return func() bool {
-								return v_107.F0 == v_108.F0 && monoListEqual(v_107.F1, v_108.F1)
+								return v_116.F0 == v_117.F0 && monoListEqual(v_116.F1, v_117.F1)
 							}()
 						} else {
 							return func() bool {
@@ -1142,12 +1223,12 @@ func monoEqual(a MonoType, b MonoType) bool {
 					}()
 				}()
 			} else {
-				if v_105, ok := a.(MonoTypeTFunc); ok {
+				if v_114, ok := a.(MonoTypeTFunc); ok {
 					return func() bool {
 						return func() bool {
-							if v_106, ok := b.(MonoTypeTFunc); ok {
+							if v_115, ok := b.(MonoTypeTFunc); ok {
 								return func() bool {
-									return monoListEqual(v_105.F0, v_106.F0) && monoEqual(*v_105.F1, *v_106.F1)
+									return monoListEqual(v_114.F0, v_115.F0) && monoEqual(*v_114.F1, *v_115.F1)
 								}()
 							} else {
 								return func() bool {
@@ -1157,12 +1238,12 @@ func monoEqual(a MonoType, b MonoType) bool {
 						}()
 					}()
 				} else {
-					if v_103, ok := a.(MonoTypeTTuple); ok {
+					if v_112, ok := a.(MonoTypeTTuple); ok {
 						return func() bool {
 							return func() bool {
-								if v_104, ok := b.(MonoTypeTTuple); ok {
+								if v_113, ok := b.(MonoTypeTTuple); ok {
 									return func() bool {
-										return monoListEqual(v_103.F0, v_104.F0)
+										return monoListEqual(v_112.F0, v_113.F0)
 									}()
 								} else {
 									return func() bool {
@@ -1204,7 +1285,7 @@ func monoListEqual(a []MonoType, b []MonoType) bool {
 				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(a) == 0 {
 					return true
 				} else {
-					return monoEqual(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, 0), MonoTypeTUnitCtor()), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, 0), MonoTypeTUnitCtor())) && monoListEqual(sliceDrop(a, 1), sliceDrop(b, 1))
+					return monoEqual(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, 0), MonoTypeTUnitCtor()), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, 0), MonoTypeTUnitCtor())) && monoListEqual(sliceDrop(a, 1), sliceDrop(b, 1))
 				}
 			}()
 		}
@@ -1212,14 +1293,14 @@ func monoListEqual(a []MonoType, b []MonoType) bool {
 }
 func monoString(t MonoType) string {
 	return func() string {
-		if v_115, ok := t.(MonoTypeTVar); ok {
+		if v_124, ok := t.(MonoTypeTVar); ok {
 			return func() string {
-				return "t" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_115.F0)
+				return "t" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_124.F0)
 			}()
 		} else {
-			if v_114, ok := t.(MonoTypeTCon); ok {
+			if v_123, ok := t.(MonoTypeTCon); ok {
 				return func() string {
-					return v_114.F0
+					return v_123.F0
 				}()
 			} else {
 				if _, ok := t.(MonoTypeTFunc); ok {
@@ -1281,14 +1362,14 @@ func sliceTailLoop[A any](items []A, index int, out []A) []A {
 			return out
 		} else {
 			return func() []A {
-				item_48 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+				item_53 := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 				return func() []A {
-					if v_117, ok := item_48.(OptionSome[A]); ok {
+					if v_126, ok := item_53.(OptionSome[A]); ok {
 						return func() []A {
-							return sliceTailLoop(items, index+1, MygoIN5SliceM6Append(out, v_117.F0))
+							return sliceTailLoop(items, index+1, MygoIN5SliceM6Append(out, v_126.F0))
 						}()
 					} else {
-						if _, ok := item_48.(OptionNone[A]); ok {
+						if _, ok := item_53.(OptionNone[A]); ok {
 							return func() []A {
 								return out
 							}()

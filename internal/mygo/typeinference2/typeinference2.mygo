@@ -265,11 +265,50 @@ func inferBlockItems(items: Slice[ast2.Expr], env: Slice[EnvEntry], state: Infer
   if items.Len() == 0 then
     Ok(InferResult { Type: applySubst(subst, lastType), Subst: subst, State: state })
   else
-    let r = inferExpr(items.Get(0).UnwrapOr(ast2.Expr.UnitExpr()), env, state)
-    switch r
+    let step = inferBlockStep(items.Get(0).UnwrapOr(ast2.Expr.UnitExpr()), env, state)
+    switch step
       case Err(msg) => Err(msg)
-      case Ok(v) => inferBlockItems(sliceDrop(items, 1), env, v.State, v.Type, composeSubst(v.Subst, subst))
+      case Ok(v) => inferBlockItems(sliceDrop(items, 1), v.Env, v.Result.State, v.Result.Type, composeSubst(v.Result.Subst, subst))
     end
+  end
+end
+
+struct BlockInferStep
+  Result: InferResult
+  Env: Slice[EnvEntry]
+end
+
+func inferBlockStep(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[BlockInferStep, String]
+  switch expr
+    case LetExpr(bind) => inferBlockLet(bind, env, state)
+    case _ =>
+      let r = inferExpr(expr, env, state)
+      switch r
+        case Err(msg) => Err(msg)
+        case Ok(v) => Ok(BlockInferStep { Result: v, Env: env })
+      end
+  end
+end
+
+func inferBlockLet(bind: ast2.Bind, env: Slice[EnvEntry], state: InferState) -> Result[BlockInferStep, String]
+  let r = inferExpr(bind.Value, env, state)
+  switch r
+    case Err(msg) => Err(msg)
+    case Ok(v) =>
+      let annotated = switch bind.Type
+        case Some(t) => unify(v.Type, typeFromAST(t), v.Subst)
+        case None => Ok(v.Subst)
+      end
+      switch annotated
+        case Err(msg) => Err(msg)
+        case Ok(s) =>
+          let boundType = applySubst(s, v.Type)
+          let nextEnv = envPut(env, bind.Name, Scheme { Bound: [], Body: boundType })
+          Ok(BlockInferStep {
+            Result: InferResult { Type: MonoType.TUnit, Subst: s, State: v.State },
+            Env: nextEnv,
+          })
+      end
   end
 end
 

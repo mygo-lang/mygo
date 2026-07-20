@@ -2,6 +2,7 @@ package codegen2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import strconv "go:strconv"
+import strings "go:strings"
 
 func translateFuncBody(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
   switch body
@@ -40,21 +41,28 @@ end
 func translateStmt(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
   switch expr
     case LetExpr(bind) =>
-      let value = translateExpr(bind.Value, ctx)
+      let expected = switch bind.Type
+        case Some(t) => goType(t, ctx.typeParams)
+        case None => ""
+      end
+      let value = translateExprExpected(bind.Value, ctx, expected)
       switch value
         case Err(msg) => Err(msg)
         case Ok(v) =>
           let name = ctxFreshBinding(ctx, bind.Name)
-          let typ = switch bind.Type
-            case Some(t) => " " + goType(t, ctx.typeParams)
-            case None => ""
+          let pre = ctxDrainPreStmts(ctx)
+          let stmt = switch bind.Type
+            case Some(t) => "var " + name + " " + goType(t, ctx.typeParams) + " = " + v
+            case None => name + " := " + v
           end
-          Ok(name + " :=" + typ + " " + v)
+          if pre == "" then Ok(stmt) else Ok(pre + "\n" + stmt) end
       end
     case _ =>
       let value = translateExpr(expr, ctx)
       switch value
-        case Ok(v) => Ok(v)
+        case Ok(v) =>
+          let pre = ctxDrainPreStmts(ctx)
+          if pre == "" then Ok(v) else Ok(pre + "\n" + v) end
         case Err(msg) => Err(msg)
       end
   end
@@ -86,17 +94,28 @@ func translateReturnExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, Str
       if isTailSelfCall(expr, ctx) then
         tailCallStmt(expr, ctx)
       else
-        let v = translateExpr(expr, ctx)
+        let expected = strings.TrimSpace(ctx.retType)
+        let v = translateExprExpected(expr, ctx, expected)
         switch v
           case Err(msg) => Err(msg)
           case Ok(src) =>
+            let pre = ctxDrainPreStmts(ctx)
             if ctx.retType == "" then
-              Ok(src + "\nreturn")
+              if pre == "" then Ok(src + "\nreturn") else Ok(pre + "\n" + src + "\nreturn") end
             else
-              Ok("return " + src)
+              if pre == "" then Ok("return " + src) else Ok(pre + "\nreturn " + src) end
             end
         end
       end
+  end
+end
+
+func translateExprExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String) -> Result[String, String]
+  switch expr
+    case IfExpr(cond, thenExpr, elseExpr) => translateIfExprExpected(cond.value(), thenExpr.value(), elseExpr.value(), ctx, expected)
+    case BlockExpr(items) => translateBlockExprExpected(items, ctx, expected)
+    case LetExpr(bind) => translateLetExprExpected(bind, ctx, expected)
+    case _ => translateExpr(expr, ctx)
   end
 end
 
@@ -122,9 +141,9 @@ func translateExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
         case Err(msg) => Err(msg)
       end
     case CallExpr(callee, args) => translateCall(callee.value(), args, ctx)
-    case IfExpr(cond, thenExpr, elseExpr) => translateIfExpr(cond.value(), thenExpr.value(), elseExpr.value(), ctx)
-    case BlockExpr(items) => translateBlockExpr(items, ctx)
-    case LetExpr(bind) => translateLetExpr(bind, ctx)
+    case IfExpr(cond, thenExpr, elseExpr) => translateIfExprExpected(cond.value(), thenExpr.value(), elseExpr.value(), ctx, "any")
+    case BlockExpr(items) => translateBlockExprExpected(items, ctx, "any")
+    case LetExpr(bind) => translateLetExprExpected(bind, ctx, "any")
   end
 end
 
@@ -175,40 +194,109 @@ func translateArgs(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: Sli
   end
 end
 
-func translateIfExpr(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+func translateIfExprExpected(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, ctx: Ref[egCtx], expected: String) -> Result[String, String]
   let c = translateExpr(cond, ctx)
-  let t = translateExpr(thenExpr, ctx)
-  let e = translateExpr(elseExpr, ctx)
   switch c
     case Err(msg) => Err(msg)
     case Ok(cv) =>
+      let condPre = ctxDrainPreStmts(ctx)
+      let tmp = ctxFreshExprTemp(ctx)
+      let childThen = Ref.new(ctxChild(ctx))
+      let t = translateExprExpected(thenExpr, childThen, expected)
       switch t
         case Err(msg) => Err(msg)
         case Ok(tv) =>
+          let thenPre = ctxDrainPreStmts(childThen)
+          let childElse = Ref.new(ctxChild(ctx))
+          let e = translateExprExpected(elseExpr, childElse, expected)
           switch e
             case Err(msg) => Err(msg)
-            case Ok(ev) => Ok("func() any { if " + cv + " { return " + tv + " }; return " + ev + " }()")
+            case Ok(ev) =>
+              let elsePre = ctxDrainPreStmts(childElse)
+              let typ = if expected == "" then "any" else expected end
+              let thenBody = if thenPre == "" then tmp + " = " + tv else thenPre + "\n" + tmp + " = " + tv end
+              let elseBody = if elsePre == "" then tmp + " = " + ev else elsePre + "\n" + tmp + " = " + ev end
+              let stmt = "var " + tmp + " " + typ + "\nif " + cv + " {\n" + thenBody + "\n} else {\n" + elseBody + "\n}"
+              if condPre == "" then
+                ctxPushPreStmt(ctx, stmt)
+              else
+                ctxPushPreStmt(ctx, condPre + "\n" + stmt)
+              end
+              Ok(tmp)
           end
       end
   end
 end
 
-func translateBlockExpr(items: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[String, String]
+func translateBlockExprExpected(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[String, String]
+  if items.Len() == 0 then
+    return translateExprExpected(ast2.Expr.UnitExpr(), ctx, expected)
+  end
+  let tmp = ctxFreshExprTemp(ctx)
+  let typ = if expected == "" then "any" else expected end
   let child = Ref.new(ctxChild(ctx))
-  let body = translateBlockReturn(items, child)
-  switch body
-    case Ok(src) => Ok("func() any {\n" + src + "\n}()")
+  let leading = translateBlockPrefix(items, child, 0, [] as Slice[String])
+  switch leading
     case Err(msg) => Err(msg)
+    case Ok(prefix) =>
+      let last = items.Get(items.Len() - 1).UnwrapOr(ast2.Expr.UnitExpr())
+      let value = translateExprExpected(last, child, typ)
+      switch value
+        case Err(msg) => Err(msg)
+        case Ok(v) =>
+          let pre = ctxDrainPreStmts(child)
+          ctxAdoptExprSeq(ctx, child)
+          var parts: Slice[String] = ["var " + tmp + " " + typ]
+          if prefix != "" then
+            parts = parts.Append(prefix)
+          end
+          if pre != "" then
+            parts = parts.Append(pre)
+          end
+          parts = parts.Append(tmp + " = " + v)
+          ctxPushPreStmt(ctx, joinStrings(parts, "\n"))
+          Ok(tmp)
+      end
   end
 end
 
+func translateBlockPrefix(items: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: Slice[String]) -> Result[String, String]
+  if index >= items.Len() - 1 then
+    Ok(joinStrings(out, "\n"))
+  else
+    let stmt = translateStmt(items.Get(index).UnwrapOr(ast2.Expr.UnitExpr()), ctx)
+    switch stmt
+      case Err(msg) => Err(msg)
+      case Ok(s) => translateBlockPrefix(items, ctx, index + 1, out.Append(s))
+    end
+  end
+end
+
+func translateBlockValue(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[String, String]
+  translateBlockExprExpected(items, ctx, expected)
+end
+
+func translateIfExpr(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+  translateIfExprExpected(cond, thenExpr, elseExpr, ctx, "any")
+end
+
+func translateBlockExpr(items: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[String, String]
+  translateBlockExprExpected(items, ctx, "any")
+end
+
 func translateLetExpr(bind: ast2.Bind, ctx: Ref[egCtx]) -> Result[String, String]
+  translateLetExprExpected(bind, ctx, "any")
+end
+
+func translateLetExprExpected(bind: ast2.Bind, ctx: Ref[egCtx], expected: String) -> Result[String, String]
   let child = Ref.new(ctxChild(ctx))
   let stmt = translateStmt(ast2.Expr.LetExpr(bind), child)
   switch stmt
     case Err(msg) => Err(msg)
     case Ok(s) =>
       let name = ctxGetBinding(child, bind.Name).UnwrapOr(sanitizeIdent(bind.Name))
-      Ok("func() any { " + s + "; return " + name + " }()")
+      ctxAdoptExprSeq(ctx, child)
+      ctxPushPreStmt(ctx, s)
+      Ok(name)
   end
 end

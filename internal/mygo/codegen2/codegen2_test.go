@@ -97,3 +97,36 @@ func TestGenerateFilesUsesGoTestOutputName(t *testing.T) {
 		t.Fatalf("generated legacy test filename: %#v", ok.F0)
 	}
 }
+
+func TestGenerateSourceLowersExpressionIfToTemp(t *testing.T) {
+	src := `package sample
+
+func pick(flag: Bool) -> Int
+  let value: Int = if flag then
+    1
+  else
+    2
+  end
+  value
+end
+`
+
+	got := GenerateSource(src)
+	ok, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	code := ok.F0
+	if strings.Contains(code, "func() any") {
+		t.Fatalf("generated expression if still uses IIFE:\n%s", code)
+	}
+	if !strings.Contains(code, "var __mygo_expr_0 int") {
+		t.Fatalf("generated expression if does not allocate typed temp:\n%s", code)
+	}
+	if !strings.Contains(code, "var value int = __mygo_expr_0") {
+		t.Fatalf("typed let was not emitted as a Go var declaration:\n%s", code)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", code, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
