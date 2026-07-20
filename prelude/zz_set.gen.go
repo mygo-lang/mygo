@@ -59,3 +59,20 @@ func Contains_map_astruct___a[A comparable](c map[A]struct{}, item A, EqualsFn f
 		return ok
 	}()
 }
+func Set_New[A comparable]() map[A]struct{} {
+	return func() map[A]struct{} {
+		return make(map[A]struct{})
+	}()
+}
+func Set_Add[A comparable](items map[A]struct{}, item A) map[A]struct{} {
+	return func() map[A]struct{} {
+		items[item] = struct{}{}
+		return items
+	}()
+}
+func Set_Delete[A comparable](items map[A]struct{}, item A) map[A]struct{} {
+	return func() map[A]struct{} {
+		delete(items, item)
+		return items
+	}()
+}

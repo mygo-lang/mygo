@@ -1,16 +1,6 @@
 package prelude
 
 impl[A] SetIEnumerable[A]: IEnumerable[Set[A], A]
-  func new() -> Set[A]
-    go[Set[A]] {
-      code: """
-        func() map[A]struct{} {
-          return make(map[A]struct{})
-        }()
-      """
-    }
-  end
-
   func Len(c: Set[A]) -> Int
     go[Int] { code: `len(c)` }
   end
@@ -108,6 +98,44 @@ impl[A] SetIEnumerable[A]: IEnumerable[Set[A], A]
         }()
       """
       in c = c
+      in item = item
+    }
+  end
+end
+
+impl[A] Set[A]
+  func New() -> Set[A]
+    go[Set[A]] {
+      code: """
+        func() map[A]struct{} {
+          return make(map[A]struct{})
+        }()
+      """
+    }
+  end
+
+  func Add(items: Set[A], item: A) -> Set[A]
+    go[Set[A]] {
+      code: """
+        func() map[A]struct{} {
+          items[item] = struct{}{}
+          return items
+        }()
+      """
+      in items = items
+      in item = item
+    }
+  end
+
+  func Delete(items: Set[A], item: A) -> Set[A]
+    go[Set[A]] {
+      code: """
+        func() map[A]struct{} {
+          delete(items, item)
+          return items
+        }()
+      """
+      in items = items
       in item = item
     }
   end

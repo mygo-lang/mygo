@@ -1240,7 +1240,8 @@ func (g *gen) genInherentDecls(d *ImplDecl) []ast.Decl {
 				if goStmts, err := g.translateGoUnitStmts(goExpr, ctx); err == nil {
 					bodyStmts = append(bodyStmts, goStmts...)
 					bodyStmts = append(bodyStmts, &ast.ReturnStmt{})
-					decls = append(decls, astFuncDecl(fnName, nil, typeParamFields(mtp),
+					constraints := mapKeyTypeParamConstraintsForImplMethod(d, m)
+					decls = append(decls, astFuncDecl(fnName, nil, typeParamFieldsWithConstraints(mtp, constraints),
 						params, results, &ast.BlockStmt{List: bodyStmts}))
 					continue
 				}
@@ -1253,7 +1254,8 @@ func (g *gen) genInherentDecls(d *ImplDecl) []ast.Decl {
 			bodyStmts = append(bodyStmts, &ast.ReturnStmt{Results: []ast.Expr{code}})
 		}
 
-		decls = append(decls, astFuncDecl(fnName, nil, typeParamFields(mtp),
+		constraints := mapKeyTypeParamConstraintsForImplMethod(d, m)
+		decls = append(decls, astFuncDecl(fnName, nil, typeParamFieldsWithConstraints(mtp, constraints),
 			params, results, &ast.BlockStmt{List: bodyStmts}))
 	}
 	return decls
