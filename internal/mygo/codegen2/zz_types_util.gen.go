@@ -3,6 +3,7 @@
 package codegen2
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
@@ -521,7 +522,7 @@ func inherentReceiverName(t ast2.TypeExpr) string {
 	}()
 }
 func inherentMethodName(receiverName string, methodName string) string {
-	return sanitizeIdent(receiverName) + "_" + sanitizeIdent(methodName)
+	return implMethodSymbol(mangleInherentImplSymbol(receiverName), methodName)
 }
 func variantGoTypeName(enumName string, variant string) string {
 	if enumName == "" {
@@ -543,7 +544,96 @@ func variantNameForEnum(enumName string, variantName string) string {
 }
 func helperFuncName(method string, typeKey string) string {
 	cleaned_86 := strings.TrimPrefix(typeKey, "_")
-	return sanitizeIdent(method + "_" + cleaned_86)
+	return implMethodSymbol(sanitizeIdent(cleaned_86), method)
+}
+func implMethodSymbol(implSymbol string, methodName string) string {
+	return sanitizeIdent(implSymbol + "M" + mangleComponent(methodName))
+}
+func mangleInherentImplSymbol(receiverName string) string {
+	return "MygoIN" + mangleComponent(receiverName)
+}
+func mangleInterfaceImplSymbol(ifaceName string, implType ast2.TypeExpr, args []ast2.TypeExpr) string {
+	out := "MygoIT" + mangleComponent(ifaceName) + "F" + mangleTypeExpr(implType) + "G"
+	i := 0
+	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) {
+		out = out + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, i), ast2.TypeExprUnitTypeCtor()))
+		i = i + 1
+	}
+	return sanitizeIdent(out + "E")
+}
+func mangleComponent(s string) string {
+	clean := sanitizeIdent(s)
+	return strconv.Itoa(len(clean)) + clean
+}
+func mangleTypeExpr(t ast2.TypeExpr) string {
+	if v, ok := t.(ast2.TypeExprNamedType); ok {
+		out := "N" + mangleComponent(canonicalMyGoTypeName(v.F0))
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v.F1) > 0 {
+			out = out + "G"
+			i := 0
+			for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v.F1) {
+				out = out + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v.F1, i), ast2.TypeExprUnitTypeCtor()))
+				i = i + 1
+			}
+			out = out + "E"
+		}
+		return out
+	}
+	if v, ok := t.(ast2.TypeExprFuncType); ok {
+		out := "F"
+		i := 0
+		for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v.F0) {
+			out = out + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v.F0, i), ast2.TypeExprUnitTypeCtor()))
+			i = i + 1
+		}
+		return out + "R" + mangleTypeExpr(*v.F1) + "E"
+	}
+	if v, ok := t.(ast2.TypeExprTupleType); ok {
+		out := "U"
+		i := 0
+		for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v.F0) {
+			out = out + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v.F0, i), ast2.TypeExprUnitTypeCtor()))
+			i = i + 1
+		}
+		return out + "E"
+	}
+	return "X" + mangleComponent("Unit")
+}
+func canonicalMyGoTypeName(name string) string {
+	switch name {
+	case "int":
+		return "Int"
+	case "int8":
+		return "Int8"
+	case "uint8":
+		return "UInt8"
+	case "int16":
+		return "Int16"
+	case "uint16":
+		return "UInt16"
+	case "int32":
+		return "Int32"
+	case "uint32":
+		return "UInt32"
+	case "int64":
+		return "Int64"
+	case "uint":
+		return "UInt"
+	case "uint64":
+		return "UInt64"
+	case "float32":
+		return "Float32"
+	case "float64":
+		return "Float64"
+	case "string":
+		return "String"
+	case "bool":
+		return "Bool"
+	case "any":
+		return "Any"
+	default:
+		return name
+	}
 }
 func typeKeyFromType(typ string) string {
 	step1_87 := strings.ReplaceAll(typ, "[", "_")

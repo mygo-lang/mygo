@@ -1,6 +1,9 @@
 package codegen2
 
 import (
+	"go/parser"
+	"go/token"
+	"strings"
 	"testing"
 
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
@@ -36,5 +39,34 @@ end
 	}
 	if len(impl.F3) != 1 {
 		t.Fatalf("impl method count = %d, want 1", len(impl.F3))
+	}
+}
+
+func TestGenerateSourceUsesCurrentImplMangling(t *testing.T) {
+	src := `package sample
+
+interface Pretty[A]
+  func Show(value: A) -> String
+end
+
+impl IntPretty: Pretty[Int]
+  func Show(value: Int) -> String
+end
+`
+
+	got := GenerateSource(src)
+	ok, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	code := ok.F0
+	if !strings.Contains(code, "func MygoIT6PrettyFN9IntPrettyGN3IntEM4Show(value int) string") {
+		t.Fatalf("generated impl helper does not use current mangling:\n%s", code)
+	}
+	if strings.Contains(code, "impl_pretty") || strings.Contains(code, "Show_impl") {
+		t.Fatalf("generated impl helper still uses legacy temporary naming:\n%s", code)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", code, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
 	}
 }

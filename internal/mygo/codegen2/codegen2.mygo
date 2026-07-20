@@ -124,7 +124,7 @@ func translateDecl(g: Ref[Generator2], decl: ast2.Decl) -> Result[String, String
     case StructDecl(name, tps, fields) => Ok(translateStructDecl(name, tps, fields))
     case EnumDecl(name, tps, vars) => Ok(translateEnumDecl(name, tps, vars))
     case InterfaceDecl(name, tps, methods) => Ok(translateInterfaceDecl(name, tps, methods))
-    case ImplDecl(_, _, _, _) => Ok("")
+    case ImplDecl(tps, target, iface, methods) => translateImplDecl(tps, target, iface, methods)
     case FuncDecl(name, tps, params, ret, body) => translateFuncDecl(g, name, tps, params, ret, body)
   end
 end
@@ -193,6 +193,35 @@ func translateInterfaceDecl(name: String, tps: Slice[String], methods: Slice[ast
     exportName(m.Name) + funcSignature("", m.TypeParams, m.Params, m.Ret, ctx.typeParams)
   end)
   "type " + sanitizeIdent(name) + typeParamDecl(tps) + " interface {\n" + joinStrings(ms, "\n") + "\n}"
+end
+
+func translateImplDecl(tps: Slice[String], target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], methods: Slice[ast2.FuncSig]) -> Result[String, String]
+  let ctx = newEgCtxWithTypeParams(tps)
+  let stem = implStem(target, iface, ctx.typeParams)
+  let decls = methods.Map(func(m: ast2.FuncSig) -> String
+    let params = m.Params.Map(func(p: ast2.Param) -> String
+      sanitizeIdent(p.Name) + " " + goType(p.Type, ctx.typeParams)
+    end)
+    let ret = returnTypeString(m.Ret, ctx.typeParams)
+    let body = if ret == "" then
+      "return"
+    else
+      "panic(\"unimplemented\")"
+    end
+    "func " + implMethodSymbol(stem, m.Name) + typeParamDecl(tps) + "(" + joinStrings(params, ", ") + ")" + ret + " {\n" + body + "\n}"
+  end)
+  Ok(joinStrings(decls, "\n\n"))
+end
+
+func implStem(target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], tps: Set[String]) -> String
+  switch iface
+    case Some(i) =>
+      switch i
+        case NamedType(name, args) => mangleInterfaceImplSymbol(name, target, args)
+        case _ => mangleInterfaceImplSymbol(typeString(i), target, [] as Slice[ast2.TypeExpr])
+      end
+    case None => mangleInherentImplSymbol(inherentReceiverName(target))
+  end
 end
 
 func translateFuncDecl(g: Ref[Generator2], name: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr) -> Result[String, String]

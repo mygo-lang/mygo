@@ -234,7 +234,7 @@ end
 
 # inherentMethodName: 生成固有方法名（接收者_方法名）
 func inherentMethodName(receiverName: String, methodName: String) -> String
-  return sanitizeIdent(receiverName) + "_" + sanitizeIdent(methodName)
+  return implMethodSymbol(mangleInherentImplSymbol(receiverName), methodName)
 end
 
 # variantGoTypeName: 生成枚举变体 Go 类型名
@@ -264,7 +264,85 @@ end
 # helperFuncName: 生成辅助函数名
 func helperFuncName(method: String, typeKey: String) -> String
   let cleaned = strings.TrimPrefix(typeKey, "_")
-  return sanitizeIdent(method + "_" + cleaned)
+  return implMethodSymbol(sanitizeIdent(cleaned), method)
+end
+
+func implMethodSymbol(implSymbol: String, methodName: String) -> String
+  return sanitizeIdent(implSymbol + "M" + mangleComponent(methodName))
+end
+
+func mangleInherentImplSymbol(receiverName: String) -> String
+  return "MygoIN" + mangleComponent(receiverName)
+end
+
+func mangleInterfaceImplSymbol(ifaceName: String, implType: ast2.TypeExpr, args: Slice[ast2.TypeExpr]) -> String
+  var out = "MygoIT" + mangleComponent(ifaceName) + "F" + mangleTypeExpr(implType) + "G"
+  var i: Int = 0
+  while i < args.Len()
+    out = out + mangleTypeExpr(args.Get(i).UnwrapOr(ast2.TypeExpr.UnitType()))
+    i = i + 1
+  end
+  sanitizeIdent(out + "E")
+end
+
+func mangleComponent(s: String) -> String
+  let clean = sanitizeIdent(s)
+  strconv.Itoa(clean.Len()) + clean
+end
+
+func mangleTypeExpr(t: ast2.TypeExpr) -> String
+  switch t
+    case NamedType(name, args) =>
+      var out = "N" + mangleComponent(canonicalMyGoTypeName(name))
+      if args.Len() > 0 then
+        out = out + "G"
+        var i: Int = 0
+        while i < args.Len()
+          out = out + mangleTypeExpr(args.Get(i).UnwrapOr(ast2.TypeExpr.UnitType()))
+          i = i + 1
+        end
+        out = out + "E"
+      end
+      out
+    case FuncType(params, ret) =>
+      var out = "F"
+      var i: Int = 0
+      while i < params.Len()
+        out = out + mangleTypeExpr(params.Get(i).UnwrapOr(ast2.TypeExpr.UnitType()))
+        i = i + 1
+      end
+      out + "R" + mangleTypeExpr(ret.value()) + "E"
+    case TupleType(elems) =>
+      var out = "U"
+      var i: Int = 0
+      while i < elems.Len()
+        out = out + mangleTypeExpr(elems.Get(i).UnwrapOr(ast2.TypeExpr.UnitType()))
+        i = i + 1
+      end
+      out + "E"
+    case UnitType => "X" + mangleComponent("Unit")
+  end
+end
+
+func canonicalMyGoTypeName(name: String) -> String
+  switch name
+    case "int" => "Int"
+    case "int8" => "Int8"
+    case "uint8" => "UInt8"
+    case "int16" => "Int16"
+    case "uint16" => "UInt16"
+    case "int32" => "Int32"
+    case "uint32" => "UInt32"
+    case "int64" => "Int64"
+    case "uint" => "UInt"
+    case "uint64" => "UInt64"
+    case "float32" => "Float32"
+    case "float64" => "Float64"
+    case "string" => "String"
+    case "bool" => "Bool"
+    case "any" => "Any"
+    case _ => name
+  end
 end
 
 # typeKeyFromType: 从类型字符串生成类型键

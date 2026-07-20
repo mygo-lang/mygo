@@ -217,9 +217,9 @@ func translateDecl(g *Generator2, decl ast2.Decl) Result[string, string] {
 							return Ok[string, string](translateInterfaceDecl(v_16.F0, v_16.F1, v_16.F2))
 						}()
 					} else {
-						if _, ok := decl.(ast2.DeclImplDecl); ok {
+						if v_15, ok := decl.(ast2.DeclImplDecl); ok {
 							return func() Result[string, string] {
-								return Ok[string, string]("")
+								return translateImplDecl(v_15.F0, v_15.F1, v_15.F2, v_15.F3)
 							}()
 						} else {
 							if v_14, ok := decl.(ast2.DeclFuncDecl); ok {
@@ -313,6 +313,33 @@ func translateInterfaceDecl(name string, tps []string, methods []ast2.FuncSig) s
 		return exportName(m.Name) + funcSignature("", m.TypeParams, m.Params, m.Ret, ctx_30.typeParams)
 	})
 	return "type " + sanitizeIdent(name) + typeParamDecl(tps) + " interface {\n" + joinStrings(ms_31, "\n") + "\n}"
+}
+func translateImplDecl(tps []string, target ast2.TypeExpr, iface Option[ast2.TypeExpr], methods []ast2.FuncSig) Result[string, string] {
+	ctx := newEgCtxWithTypeParams(tps)
+	stem := implStem(target, iface, ctx.typeParams)
+	decls := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(methods, func(m ast2.FuncSig) string {
+		params := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(m.Params, func(p ast2.Param) string {
+			return sanitizeIdent(p.Name) + " " + goType(p.Type, ctx.typeParams)
+		})
+		ret := returnTypeString(m.Ret, ctx.typeParams)
+		body := func() string {
+			if ret == "" {
+				return "return"
+			}
+			return "panic(\"unimplemented\")"
+		}()
+		return "func " + implMethodSymbol(stem, m.Name) + typeParamDecl(tps) + "(" + joinStrings(params, ", ") + ")" + ret + " {\n" + body + "\n}"
+	})
+	return Ok[string, string](joinStrings(decls, "\n\n"))
+}
+func implStem(target ast2.TypeExpr, iface Option[ast2.TypeExpr], tps map[string]struct{}) string {
+	if v, ok := iface.(OptionSome[ast2.TypeExpr]); ok {
+		if named, ok := v.F0.(ast2.TypeExprNamedType); ok {
+			return mangleInterfaceImplSymbol(named.F0, target, named.F1)
+		}
+		return mangleInterfaceImplSymbol(typeString(v.F0), target, []ast2.TypeExpr{})
+	}
+	return mangleInherentImplSymbol(inherentReceiverName(target))
 }
 func translateFuncDecl(g *Generator2, name string, tps []string, params []ast2.Param, ret Option[ast2.TypeExpr], body ast2.Expr) Result[string, string] {
 	initialRetType_32 := returnTypeString(ret, typeParamSet(tps))
