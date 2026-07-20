@@ -225,8 +225,25 @@ func initialTypeEnv(pkg *PkgInfo) TypeEnv {
 		env[name] = &Scheme{Body: QualifiedType{Body: t}}
 	}
 	if pkg != nil {
+		for name, st := range pkg.Structs {
+			if _, exists := env[name]; !exists {
+				env[name] = predeclaredCurrentPackageType(name, len(st.TypeParams))
+			}
+		}
+		for name, enum := range pkg.Enums {
+			if _, exists := env[name]; !exists {
+				env[name] = predeclaredCurrentPackageType(name, len(enum.TypeParams))
+			}
+		}
+		for name, iface := range pkg.Interfaces {
+			if _, exists := env[name]; !exists {
+				env[name] = predeclaredCurrentPackageType(name, len(iface.TypeParams))
+			}
+		}
 		for name := range pkg.DotImportTypes {
-			env[name] = &Scheme{Body: QualifiedType{Body: TCon{Name: name}}}
+			if _, exists := env[name]; !exists {
+				env[name] = &Scheme{Body: QualifiedType{Body: TCon{Name: name}}}
+			}
 		}
 	}
 	// Boolean literals
@@ -243,6 +260,26 @@ func initialTypeEnv(pkg *PkgInfo) TypeEnv {
 	}
 
 	return env
+}
+
+func predeclaredCurrentPackageType(name string, arity int) *Scheme {
+	return &Scheme{
+		Bound: []int{predeclaredCurrentPackageTypeMarker},
+		Body:  QualifiedType{Body: TCon{Name: name, Args: freshTypeArgs(arity)}},
+	}
+}
+
+const predeclaredCurrentPackageTypeMarker = -1000000
+
+func freshTypeArgs(n int) []MonoType {
+	if n == 0 {
+		return nil
+	}
+	args := make([]MonoType, n)
+	for i := range args {
+		args[i] = TVar{ID: -(i + 1)}
+	}
+	return args
 }
 
 // ---------------------------------------------------------------------------
@@ -324,7 +361,7 @@ func inferDecl(decl Decl, env TypeEnv, state *InferState, info *TypedInfo, pkg *
 
 	case *InterfaceDecl:
 		// Register interface as a type in the environment
-		if _, exists := env[d.Name]; exists && (pkg == nil || pkg.Name != "prelude") {
+		if existing, exists := env[d.Name]; exists && !isPredeclaredCurrentPackageType(existing) && (pkg == nil || pkg.Name != "prelude") {
 			return nil, fmt.Errorf("symbol %q conflicts in scope", d.Name)
 		}
 		env = env.Clone()
@@ -368,7 +405,7 @@ func mergeTypeParamNames(groups ...[]string) []string {
 }
 
 func inferEnumDecl(d *EnumDecl, env TypeEnv, state *InferState, pkg *PkgInfo) (TypeEnv, error) {
-	if _, exists := env[d.Name]; exists && (pkg == nil || pkg.Name != "prelude") {
+	if existing, exists := env[d.Name]; exists && !isPredeclaredCurrentPackageType(existing) && (pkg == nil || pkg.Name != "prelude") {
 		return nil, fmt.Errorf("symbol %q conflicts in scope", d.Name)
 	}
 	env = env.Clone()
@@ -411,7 +448,7 @@ func inferEnumDecl(d *EnumDecl, env TypeEnv, state *InferState, pkg *PkgInfo) (T
 }
 
 func inferStructDecl(d *StructDecl, env TypeEnv, state *InferState, pkg *PkgInfo) (TypeEnv, error) {
-	if _, exists := env[d.Name]; exists && (pkg == nil || pkg.Name != "prelude") {
+	if existing, exists := env[d.Name]; exists && !isPredeclaredCurrentPackageType(existing) && (pkg == nil || pkg.Name != "prelude") {
 		return nil, fmt.Errorf("symbol %q conflicts in scope", d.Name)
 	}
 	env = env.Clone()
@@ -432,6 +469,10 @@ func inferStructDecl(d *StructDecl, env TypeEnv, state *InferState, pkg *PkgInfo
 	}
 	env[d.Name] = Generalize(env, structType, nil)
 	return env, nil
+}
+
+func isPredeclaredCurrentPackageType(sch *Scheme) bool {
+	return sch != nil && len(sch.Bound) == 1 && sch.Bound[0] == predeclaredCurrentPackageTypeMarker
 }
 
 func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo, pkg *PkgInfo) (TypeEnv, error) {
