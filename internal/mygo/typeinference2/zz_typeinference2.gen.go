@@ -106,7 +106,7 @@ func inferDecls(decls []ast2.Decl, env []EnvEntry, state InferState) Result[Pack
 			return Ok[PackageInfo, string](PackageInfo{Env: env})
 		} else {
 			return func() Result[PackageInfo, string] {
-				head_1 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+				head_1 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 				tail_2 := sliceDrop(decls, 1)
 				next_3 := inferDecl(head_1, env, state)
 				return func() Result[PackageInfo, string] {
@@ -575,7 +575,7 @@ func inferArgs(args []ast2.Expr, env []EnvEntry, state InferState, types []MonoT
 			return Ok[ArgsResult, string](ArgsResult{Types: types, Subst: subst, State: state})
 		} else {
 			return func() Result[ArgsResult, string] {
-				head_32 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.ExprUnitExprCtor())
+				head_32 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.ExprUnitExprCtor())
 				r_33 := inferExpr(head_32, env, state)
 				return func() Result[ArgsResult, string] {
 					if v_58, ok := r_33.(ResultErr[InferResult, string]); ok {
@@ -611,7 +611,7 @@ func inferBlockItems(items []ast2.Expr, env []EnvEntry, state InferState, lastTy
 			return Ok[InferResult, string](InferResult{Type: applySubst(subst, lastType), Subst: subst, State: state})
 		} else {
 			return func() Result[InferResult, string] {
-				r_34 := inferExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.ExprUnitExprCtor()), env, state)
+				r_34 := inferExpr(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.ExprUnitExprCtor()), env, state)
 				return func() Result[InferResult, string] {
 					if v_60, ok := r_34.(ResultErr[InferResult, string]); ok {
 						return func() Result[InferResult, string] {
@@ -733,7 +733,7 @@ func typeArgsFromAST(items []ast2.TypeExpr) []MonoType {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 			return []MonoType{}
 		} else {
-			return MygoIN5SliceM7Prepend(typeArgsFromAST(sliceDrop(items, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.TypeExprUnitTypeCtor())))
+			return MygoIN5SliceM7Prepend(typeArgsFromAST(sliceDrop(items, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.TypeExprUnitTypeCtor())))
 		}
 	}()
 }
@@ -742,7 +742,7 @@ func paramsToTypes(params []ast2.Param) []MonoType {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
 			return []MonoType{}
 		} else {
-			return MygoIN5SliceM7Prepend(paramsToTypes(sliceDrop(params, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()}).Type))
+			return MygoIN5SliceM7Prepend(paramsToTypes(sliceDrop(params, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()}).Type))
 		}
 	}()
 }
@@ -752,7 +752,7 @@ func envWithParams(env []EnvEntry, params []ast2.Param) []EnvEntry {
 			return env
 		} else {
 			return func() []EnvEntry {
-				p_38 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+				p_38 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
 				return envWithParams(envPut(env, p_38.Name, Scheme{Bound: []int{}, Body: typeFromAST(p_38.Type)}), sliceDrop(params, 1))
 			}()
 		}
@@ -764,7 +764,7 @@ func inferVariants(vars []ast2.Variant, enumName string, tps []string, env []Env
 			return Ok[DeclInfer, string](DeclInfer{Env: envPut(env, enumName, Scheme{Bound: []int{}, Body: MonoTypeTConCtor(enumName, emptyMonoTypes())}), State: state})
 		} else {
 			return func() Result[DeclInfer, string] {
-				v_39 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(vars, 0), ast2.Variant{Name: "", Fields: emptyASTTypeExprs()})
+				v_39 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(vars, 0), ast2.Variant{Name: "", Fields: emptyASTTypeExprs()})
 				constructorType_40 := func() MonoType {
 					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_39.Fields) == 0 {
 						return MonoTypeTConCtor(enumName, emptyMonoTypes())
@@ -789,7 +789,7 @@ func envGet(env []EnvEntry, name string) Option[Scheme] {
 			return None[Scheme]()
 		} else {
 			return func() Option[Scheme] {
-				item_41 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Body: MonoTypeTUnitCtor()}})
+				item_41 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Body: MonoTypeTUnitCtor()}})
 				return func() Option[Scheme] {
 					if item_41.Name == name {
 						return Some[Scheme](item_41.Scheme)
@@ -955,7 +955,7 @@ func unifyArgs(left []MonoType, right []MonoType, subst []SubstEntry) Result[[]S
 			return Ok[[]SubstEntry, string](subst)
 		} else {
 			return func() Result[[]SubstEntry, string] {
-				s_45 := unify(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, 0), MonoTypeTUnitCtor()), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), MonoTypeTUnitCtor()), subst)
+				s_45 := unify(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, 0), MonoTypeTUnitCtor()), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), MonoTypeTUnitCtor()), subst)
 				return func() Result[[]SubstEntry, string] {
 					if v_88, ok := s_45.(ResultOk[[]SubstEntry, string]); ok {
 						return func() Result[[]SubstEntry, string] {
@@ -1032,7 +1032,7 @@ func applySubstAll(subst []SubstEntry, items []MonoType) []MonoType {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 			return []MonoType{}
 		} else {
-			return MygoIN5SliceM7Prepend(applySubstAll(subst, sliceDrop(items, 1)), applySubst(subst, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())))
+			return MygoIN5SliceM7Prepend(applySubstAll(subst, sliceDrop(items, 1)), applySubst(subst, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())))
 		}
 	}()
 }
@@ -1042,7 +1042,7 @@ func composeSubst(newer []SubstEntry, older []SubstEntry) []SubstEntry {
 			return newer
 		} else {
 			return func() []SubstEntry {
-				head_46 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(older, 0), SubstEntry{ID: 0, Type: MonoTypeTUnitCtor()})
+				head_46 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(older, 0), SubstEntry{ID: 0, Type: MonoTypeTUnitCtor()})
 				return MygoIN5SliceM7Prepend(composeSubst(newer, sliceDrop(older, 1)), SubstEntry{ID: head_46.ID, Type: applySubst(newer, head_46.Type)})
 			}()
 		}
@@ -1054,7 +1054,7 @@ func substGet(subst []SubstEntry, id int) Option[MonoType] {
 			return None[MonoType]()
 		} else {
 			return func() Option[MonoType] {
-				head_47 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(subst, 0), SubstEntry{ID: 0, Type: MonoTypeTUnitCtor()})
+				head_47 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(subst, 0), SubstEntry{ID: 0, Type: MonoTypeTUnitCtor()})
 				return func() Option[MonoType] {
 					if head_47.ID == id {
 						return Some[MonoType](head_47.Type)
@@ -1106,7 +1106,7 @@ func occursInAny(id int, items []MonoType) bool {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 			return false
 		} else {
-			return occursIn(id, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())) || occursInAny(id, sliceDrop(items, 1))
+			return occursIn(id, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())) || occursInAny(id, sliceDrop(items, 1))
 		}
 	}()
 }
@@ -1204,7 +1204,7 @@ func monoListEqual(a []MonoType, b []MonoType) bool {
 				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(a) == 0 {
 					return true
 				} else {
-					return monoEqual(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, 0), MonoTypeTUnitCtor()), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, 0), MonoTypeTUnitCtor())) && monoListEqual(sliceDrop(a, 1), sliceDrop(b, 1))
+					return monoEqual(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, 0), MonoTypeTUnitCtor()), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, 0), MonoTypeTUnitCtor())) && monoListEqual(sliceDrop(a, 1), sliceDrop(b, 1))
 				}
 			}()
 		}
@@ -1281,7 +1281,7 @@ func sliceTailLoop[A any](items []A, index int, out []A) []A {
 			return out
 		} else {
 			return func() []A {
-				item_48 := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+				item_48 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 				return func() []A {
 					if v_117, ok := item_48.(OptionSome[A]); ok {
 						return func() []A {

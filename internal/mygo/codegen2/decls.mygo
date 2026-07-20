@@ -1,0 +1,222 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+struct EnumVariantParts
+  Fields: Slice[String]
+  Args: Slice[String]
+  Values: Slice[String]
+end
+func translateDecls(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, out: Slice[String]) -> Result[Slice[String], String]
+  if index >= decls.Len() then
+    Ok(out)
+  else
+    let d = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    let one = translateDecl(g, d)
+    switch one
+      case Ok(src) =>
+        if src != "" then
+          translateDecls(g, decls, index + 1, out.Append(src))
+        else
+          translateDecls(g, decls, index + 1, out)
+        end
+      case Err(msg) => Err(msg)
+    end
+  end
+end
+
+func collectImports(decls: Slice[ast2.Decl]) -> Slice[GoImportPart]
+  decls.Fold([] as Slice[GoImportPart], func(out: Slice[GoImportPart], d: ast2.Decl) -> Slice[GoImportPart]
+    switch d
+      case ImportDecl(alias, path) =>
+        out.Append(GoImportPart { Alias: alias, Path: importPathForGo(path) })
+      case _ => out
+    end
+  end)
+end
+
+func translateDecl(g: Ref[Generator2], decl: ast2.Decl) -> Result[String, String]
+  switch decl
+    case ImportDecl(_, _) => Ok("")
+    case StructDecl(name, tps, fields) => Ok(translateStructDecl(name, tps, fields))
+    case EnumDecl(name, tps, vars) => Ok(translateEnumDecl(name, tps, vars))
+    case InterfaceDecl(name, tps, methods) => Ok(translateInterfaceDecl(name, tps, methods))
+    case ImplDecl(tps, target, iface, methods) => translateImplDecl(tps, target, iface, methods)
+    case FuncDecl(name, tps, params, ret, body) => translateFuncDecl(g, name, tps, params, ret, body)
+  end
+end
+
+func translateStructDecl(name: String, tps: Slice[String], fields: Slice[ast2.Field]) -> String
+  let ctx = newEgCtxWithTypeParams(tps)
+  let parts = fields.Map(func(f: ast2.Field) -> String
+    let tag = switch f.Tag
+      case Some(v) => " `" + v + "`"
+      case None => ""
+    end
+    exportName(f.Name) + " " + goType(f.Type, ctx.typeParams) + tag
+  end)
+  "type " + sanitizeIdent(name) + typeParamDecl(tps) + " struct {\n" + joinStrings(parts, "\n") + "\n}"
+end
+
+func translateEnumDecl(name: String, tps: Slice[String], vars: Slice[ast2.Variant]) -> String
+  let enumName = sanitizeIdent(name)
+  let tp = typeParamDecl(tps)
+  let head = "type " + enumName + tp + " interface { is" + enumName + "() }"
+  let body = vars.Map(func(v: ast2.Variant) -> String
+    translateEnumVariant(enumName, tps, v)
+  end)
+  joinStrings(body.Prepend(head), "\n\n")
+end
+
+func translateEnumVariant(enumName: String, tps: Slice[String], v: ast2.Variant) -> String
+  let vt = variantGoTypeName(enumName, v.Name)
+  let tp = typeParamDecl(tps)
+  if v.Fields.Len() == 0 then
+    var lines: Slice[String] = []
+    lines = lines.Append("type " + vt + tp + " struct{}")
+    lines = lines.Append("func (" + vt + typeParamUse(tps) + ") is" + enumName + "() {}")
+    lines = lines.Append("func " + enumConstructorGoName(enumName, v.Name) + typeParamDecl(tps) + "() " + enumName + typeParamUse(tps) + " { return " + vt + typeParamUse(tps) + "{} }")
+    joinStrings(lines, "\n")
+  else
+    let ctx = newEgCtxWithTypeParams(tps)
+    let parts = enumVariantParts(v.Fields, ctx, 0, EnumVariantParts { Fields: [] as Slice[String], Args: [] as Slice[String], Values: [] as Slice[String] })
+    var lines: Slice[String] = []
+    lines = lines.Append("type " + vt + tp + " struct { " + joinStrings(parts.Fields, "; ") + " }")
+    lines = lines.Append("func (" + vt + typeParamUse(tps) + ") is" + enumName + "() {}")
+    lines = lines.Append("func " + enumConstructorGoName(enumName, v.Name) + typeParamDecl(tps) + "(" + joinStrings(parts.Args, ", ") + ") " + enumName + typeParamUse(tps) + " { return " + vt + typeParamUse(tps) + "{" + joinStrings(parts.Values, ", ") + "} }")
+    joinStrings(lines, "\n")
+  end
+end
+
+func enumVariantParts(fields: Slice[ast2.TypeExpr], ctx: egCtx, index: Int, out: EnumVariantParts) -> EnumVariantParts
+  if index >= fields.Len() then
+    out
+  else
+    let typ = fields.Get(index).UnwrapOr(ast2.TypeExpr.UnitType())
+    let an = "v" + index.ToString()
+    let fieldName = "F" + index.ToString()
+    let goTyp = goType(typ, ctx.typeParams)
+    enumVariantParts(fields, ctx, index + 1, EnumVariantParts {
+      Fields: out.Fields.Append(fieldName + " " + goTyp),
+      Args: out.Args.Append(an + " " + goTyp),
+      Values: out.Values.Append(fieldName + ": " + an),
+    })
+  end
+end
+
+func translateInterfaceDecl(name: String, tps: Slice[String], methods: Slice[ast2.FuncSig]) -> String
+  let ctx = newEgCtxWithTypeParams(tps)
+  let ms = methods.Map(func(m: ast2.FuncSig) -> String
+    exportName(m.Name) + funcSignature("", m.TypeParams, m.Params, m.Ret, ctx.typeParams)
+  end)
+  "type " + sanitizeIdent(name) + typeParamDecl(tps) + " interface {\n" + joinStrings(ms, "\n") + "\n}"
+end
+
+func translateImplDecl(tps: Slice[String], target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], methods: Slice[ast2.ImplMethod]) -> Result[String, String]
+  let ctx = newEgCtxWithTypeParams(tps)
+  let stem = implStem(target, iface, ctx.typeParams)
+  let decls = translateImplMethods(stem, tps, methods, ctx, 0, [] as Slice[String])
+  switch decls
+    case Ok(items) => Ok(joinStrings(items, "\n\n"))
+    case Err(msg) => Err(msg)
+  end
+end
+
+func translateImplMethods(stem: String, tps: Slice[String], methods: Slice[ast2.ImplMethod], baseCtx: egCtx, index: Int, out: Slice[String]) -> Result[Slice[String], String]
+  if index >= methods.Len() then
+    Ok(out)
+  else
+    let m = methods.Get(index).UnwrapOr(defaultImplMethod())
+    let sig = m.Sig
+    let ret = returnTypeString(sig.Ret, baseCtx.typeParams)
+    let ctx = Ref.new(newFuncEgCtx(tps, ret, sig.Name, sig.Params.Len()))
+    var goParams: Slice[String] = []
+    var paramNames: Slice[String] = []
+    var i: Int = 0
+    while i < sig.Params.Len()
+      let p = sig.Params.Get(i).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType() })
+      let pn = ctxFreshBinding(ctx, p.Name)
+      ctxSetLocal(ctx, p.Name, goType(p.Type, ctx.typeParams))
+      goParams = goParams.Append(pn + " " + goType(p.Type, ctx.typeParams))
+      paramNames = paramNames.Append(pn)
+      i = i + 1
+    end
+    ctxSetTailRecParamNames(ctx, paramNames)
+    let body = translateFuncBody(m.Body, ctx)
+    switch body
+      case Err(msg) => Err(msg)
+      case Ok(stmts) =>
+        let looped = if containsTailCall(m.Body, sig.Name) then
+          "for {\n" + stmts + "\n}"
+        else
+          stmts
+        end
+        let src = "func " + implMethodSymbol(stem, sig.Name) + typeParamDecl(tps) + "(" + joinStrings(goParams, ", ") + ")" + ret + " {\n" + looped + "\n}"
+        translateImplMethods(stem, tps, methods, baseCtx, index + 1, out.Append(src))
+    end
+  end
+end
+
+func defaultImplMethod() -> ast2.ImplMethod
+  ast2.ImplMethod {
+    Sig: ast2.FuncSig { Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None },
+    Body: ast2.Expr.UnitExpr(),
+  }
+end
+
+func translateImplStubDecl(tps: Slice[String], target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], methods: Slice[ast2.FuncSig]) -> Result[String, String]
+  let ctx = newEgCtxWithTypeParams(tps)
+  let stem = implStem(target, iface, ctx.typeParams)
+  let decls = methods.Map(func(m: ast2.FuncSig) -> String
+    let params = m.Params.Map(func(p: ast2.Param) -> String
+      sanitizeIdent(p.Name) + " " + goType(p.Type, ctx.typeParams)
+    end)
+    let ret = returnTypeString(m.Ret, ctx.typeParams)
+    let body = if ret == "" then
+      "return"
+    else
+      "panic(\"unimplemented\")"
+    end
+    "func " + implMethodSymbol(stem, m.Name) + typeParamDecl(tps) + "(" + joinStrings(params, ", ") + ")" + ret + " {\n" + body + "\n}"
+  end)
+  Ok(joinStrings(decls, "\n\n"))
+end
+
+func implStem(target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], tps: Set[String]) -> String
+  switch iface
+    case Some(i) =>
+      switch i
+        case NamedType(name, args) => mangleInterfaceImplSymbol(name, target, args)
+        case _ => mangleInterfaceImplSymbol(typeString(i), target, [] as Slice[ast2.TypeExpr])
+      end
+    case None => mangleInherentImplSymbol(inherentReceiverName(target))
+  end
+end
+
+func translateFuncDecl(g: Ref[Generator2], name: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr) -> Result[String, String]
+  let initialRetType = returnTypeString(ret, typeParamSet(tps))
+  let ctx = Ref.new(newFuncEgCtx(tps, initialRetType, name, params.Len()))
+  var goParams: Slice[String] = []
+  var paramNames: Slice[String] = []
+  var i: Int = 0
+  while i < params.Len()
+    let p = params.Get(i).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType() })
+    let pn = ctxFreshBinding(ctx, p.Name)
+    ctxSetLocal(ctx, p.Name, goType(p.Type, ctx.typeParams))
+    goParams = goParams.Append(pn + " " + goType(p.Type, ctx.typeParams))
+    paramNames = paramNames.Append(pn)
+    i = i + 1
+  end
+  ctxSetTailRecParamNames(ctx, paramNames)
+  let bodyStmts = translateFuncBody(body, ctx)
+  switch bodyStmts
+    case Err(msg) => Err(msg)
+    case Ok(stmts) =>
+      let looped = if containsTailCall(body, name) then
+        "for {\n" + stmts + "\n}"
+      else
+        stmts
+      end
+      Ok("func " + sanitizeIdent(name) + typeParamDecl(tps) + "(" + joinStrings(goParams, ", ") + ")" + ctx.retType + " {\n" + looped + "\n}")
+  end
+end

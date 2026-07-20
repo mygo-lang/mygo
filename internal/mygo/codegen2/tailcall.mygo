@@ -1,0 +1,68 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+struct TailCallParts
+  Temps: Slice[String]
+  Assigns: Slice[String]
+end
+func tailCallStmt(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+  switch expr
+    case CallExpr(_callee, args) =>
+      let parts = tailCallParts(args, ctx, 0, TailCallParts { Temps: [] as Slice[String], Assigns: [] as Slice[String] })
+      switch parts
+        case Ok(p) => Ok(joinStrings(p.Temps, "\n") + "\n" + joinStrings(p.Assigns, "\n") + "\ncontinue")
+        case Err(msg) => Err(msg)
+      end
+    case _ => Err("internal tail-call mismatch")
+  end
+end
+
+func tailCallParts(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: TailCallParts) -> Result[TailCallParts, String]
+  if index >= args.Len() then
+    Ok(out)
+  else
+    let a = translateExpr(args.Get(index).UnwrapOr(ast2.Expr.UnitExpr()), ctx)
+    switch a
+      case Err(msg) => Err(msg)
+      case Ok(src) =>
+        let tmp = "__tail_" + index.ToString()
+        tailCallParts(args, ctx, index + 1, TailCallParts {
+          Temps: out.Temps.Append(tmp + " := " + src),
+          Assigns: out.Assigns.Append(ctx.tailRecParamNames.Get(index).UnwrapOr("_") + " = " + tmp),
+        })
+    end
+  end
+end
+
+func isTailSelfCall(expr: ast2.Expr, ctx: Ref[egCtx]) -> Bool
+  switch expr
+    case CallExpr(callee, args) =>
+      if args.Len() != ctx.tailRecParamCount then
+        return false
+      end
+      switch callee.value()
+        case IdentExpr(name) =>
+          switch ctx.tailRecFuncName
+            case Some(fn) => name == fn
+            case None => false
+          end
+        case _ => false
+      end
+    case _ => false
+  end
+end
+
+func containsTailCall(expr: ast2.Expr, name: String) -> Bool
+  switch expr
+    case CallExpr(callee, _) =>
+      switch callee.value()
+        case IdentExpr(n) => n == name
+        case _ => false
+      end
+    case IfExpr(_, t, e) => containsTailCall(t.value(), name) || containsTailCall(e.value(), name)
+    case BlockExpr(items) =>
+      if items.Len() == 0 then false else containsTailCall(items.Get(items.Len() - 1).UnwrapOr(ast2.Expr.UnitExpr()), name) end
+    case _ => false
+  end
+end

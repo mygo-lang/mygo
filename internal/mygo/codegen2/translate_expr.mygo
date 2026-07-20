@@ -1,0 +1,214 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import strconv "go:strconv"
+
+func translateFuncBody(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+  switch body
+    case BlockExpr(items) => translateBlockReturn(items, ctx)
+    case _ => translateReturnExpr(body, ctx)
+  end
+end
+
+func translateBlockReturn(items: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[String, String]
+  if items.Len() == 0 then
+    if ctx.retType == "" then
+      return Ok("return")
+    end
+    return Err("non-unit function has empty body")
+  end
+  translateBlockReturnLoop(items, ctx, 0, [] as Slice[String])
+end
+
+func translateBlockReturnLoop(items: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: Slice[String]) -> Result[String, String]
+  let item = items.Get(index).UnwrapOr(ast2.Expr.UnitExpr())
+  if index == items.Len() - 1 then
+    let last = translateReturnExpr(item, ctx)
+    switch last
+      case Ok(s) => Ok(joinStrings(out.Append(s), "\n"))
+      case Err(msg) => Err(msg)
+    end
+  else
+    let stmt = translateStmt(item, ctx)
+    switch stmt
+      case Ok(s) => translateBlockReturnLoop(items, ctx, index + 1, out.Append(s))
+      case Err(msg) => Err(msg)
+    end
+  end
+end
+
+func translateStmt(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+  switch expr
+    case LetExpr(bind) =>
+      let value = translateExpr(bind.Value, ctx)
+      switch value
+        case Err(msg) => Err(msg)
+        case Ok(v) =>
+          let name = ctxFreshBinding(ctx, bind.Name)
+          let typ = switch bind.Type
+            case Some(t) => " " + goType(t, ctx.typeParams)
+            case None => ""
+          end
+          Ok(name + " :=" + typ + " " + v)
+      end
+    case _ =>
+      let value = translateExpr(expr, ctx)
+      switch value
+        case Ok(v) => Ok(v)
+        case Err(msg) => Err(msg)
+      end
+  end
+end
+
+func translateReturnExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+  switch expr
+    case IfExpr(cond, thenExpr, elseExpr) then
+      let c = translateExpr(cond.value(), ctx)
+      switch c
+        case Err(msg) => Err(msg)
+        case Ok(cv) then
+          let t = translateReturnExpr(thenExpr.value(), ctx)
+          let e = translateReturnExpr(elseExpr.value(), ctx)
+          switch t
+            case Err(msg) => Err(msg)
+            case Ok(tv) then
+              switch e
+                case Err(msg) => Err(msg)
+                case Ok(ev) => Ok("if " + cv + " {\n" + tv + "\n} else {\n" + ev + "\n}")
+              end
+            end
+          end
+        end
+      end
+    end
+    case BlockExpr(items) => translateBlockReturn(items, ctx)
+    case _ =>
+      if isTailSelfCall(expr, ctx) then
+        tailCallStmt(expr, ctx)
+      else
+        let v = translateExpr(expr, ctx)
+        switch v
+          case Err(msg) => Err(msg)
+          case Ok(src) =>
+            if ctx.retType == "" then
+              Ok(src + "\nreturn")
+            else
+              Ok("return " + src)
+            end
+        end
+      end
+  end
+end
+
+func translateExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+  switch expr
+    case IdentExpr(name) => Ok(ctxGetBinding(ctx, name).UnwrapOr(sanitizeIdent(name)))
+    case NumberExpr(v) => Ok(v)
+    case StringExpr(v) => Ok(strconv.Quote(v))
+    case BoolExpr(v) =>
+      if v then Ok("true") else Ok("false") end
+    case UnitExpr => Ok("struct{}{}")
+    case UnaryExpr(op, inner) =>
+      let v = translateExpr(inner.value(), ctx)
+      switch v
+        case Ok(src) => Ok(op + src)
+        case Err(msg) => Err(msg)
+      end
+    case BinaryExpr(op, left, right) => translateBinary(op, left.value(), right.value(), ctx)
+    case FieldExpr(base, field) =>
+      let b = translateExpr(base.value(), ctx)
+      switch b
+        case Ok(src) => Ok(src + "." + exportName(field))
+        case Err(msg) => Err(msg)
+      end
+    case CallExpr(callee, args) => translateCall(callee.value(), args, ctx)
+    case IfExpr(cond, thenExpr, elseExpr) => translateIfExpr(cond.value(), thenExpr.value(), elseExpr.value(), ctx)
+    case BlockExpr(items) => translateBlockExpr(items, ctx)
+    case LetExpr(bind) => translateLetExpr(bind, ctx)
+  end
+end
+
+func translateBinary(op: String, left: ast2.Expr, right: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+  let l = translateExpr(left, ctx)
+  let r = translateExpr(right, ctx)
+  switch l
+    case Err(msg) => Err(msg)
+    case Ok(lv) =>
+      switch r
+        case Err(msg) => Err(msg)
+        case Ok(rv) =>
+          if op == "|>" then
+            Ok(rv + "(" + lv + ")")
+          else
+            if op == "<|" then
+              Ok(lv + "(" + rv + ")")
+            else
+              Ok("(" + lv + " " + op + " " + rv + ")")
+            end
+          end
+      end
+  end
+end
+
+func translateCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[String, String]
+  let c = translateExpr(callee, ctx)
+  switch c
+    case Err(msg) => Err(msg)
+    case Ok(cv) =>
+      let parts = translateArgs(args, ctx, 0, [] as Slice[String])
+      switch parts
+        case Ok(xs) => Ok(cv + "(" + joinStrings(xs, ", ") + ")")
+        case Err(msg) => Err(msg)
+      end
+  end
+end
+
+func translateArgs(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: Slice[String]) -> Result[Slice[String], String]
+  if index >= args.Len() then
+    Ok(out)
+  else
+    let a = translateExpr(args.Get(index).UnwrapOr(ast2.Expr.UnitExpr()), ctx)
+    switch a
+      case Ok(src) => translateArgs(args, ctx, index + 1, out.Append(src))
+      case Err(msg) => Err(msg)
+    end
+  end
+end
+
+func translateIfExpr(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+  let c = translateExpr(cond, ctx)
+  let t = translateExpr(thenExpr, ctx)
+  let e = translateExpr(elseExpr, ctx)
+  switch c
+    case Err(msg) => Err(msg)
+    case Ok(cv) =>
+      switch t
+        case Err(msg) => Err(msg)
+        case Ok(tv) =>
+          switch e
+            case Err(msg) => Err(msg)
+            case Ok(ev) => Ok("func() any { if " + cv + " { return " + tv + " }; return " + ev + " }()")
+          end
+      end
+  end
+end
+
+func translateBlockExpr(items: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[String, String]
+  let child = Ref.new(ctxChild(ctx))
+  let body = translateBlockReturn(items, child)
+  switch body
+    case Ok(src) => Ok("func() any {\n" + src + "\n}()")
+    case Err(msg) => Err(msg)
+  end
+end
+
+func translateLetExpr(bind: ast2.Bind, ctx: Ref[egCtx]) -> Result[String, String]
+  let child = Ref.new(ctxChild(ctx))
+  let stmt = translateStmt(ast2.Expr.LetExpr(bind), child)
+  switch stmt
+    case Err(msg) => Err(msg)
+    case Ok(s) =>
+      let name = ctxGetBinding(child, bind.Name).UnwrapOr(sanitizeIdent(bind.Name))
+      Ok("func() any { " + s + "; return " + name + " }()")
+  end
+end

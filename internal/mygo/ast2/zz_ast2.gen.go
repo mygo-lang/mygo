@@ -76,12 +76,12 @@ type DeclImplDecl struct {
 	F0 []string
 	F1 TypeExpr
 	F2 Option[TypeExpr]
-	F3 []FuncSig
+	F3 []ImplMethod
 }
 
 func (_ DeclImplDecl) isDecl() {
 }
-func DeclImplDeclCtor(a0 []string, a1 TypeExpr, a2 Option[TypeExpr], a3 []FuncSig) Decl {
+func DeclImplDeclCtor(a0 []string, a1 TypeExpr, a2 Option[TypeExpr], a3 []ImplMethod) Decl {
 	return DeclImplDecl{F0: a0, F1: a1, F2: a2, F3: a3}
 }
 
@@ -103,6 +103,10 @@ type FuncSig struct {
 	TypeParams []string
 	Params     []Param
 	Ret        Option[TypeExpr]
+}
+type ImplMethod struct {
+	Sig  FuncSig
+	Body Expr
 }
 type TypeExpr interface {
 	isTypeExpr()

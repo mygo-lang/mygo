@@ -19,7 +19,7 @@ enum Decl
   StructDecl(String, Slice[String], Slice[Field])
   EnumDecl(String, Slice[String], Slice[Variant])
   InterfaceDecl(String, Slice[String], Slice[FuncSig])
-  ImplDecl(Slice[String], TypeExpr, Option[TypeExpr], Slice[FuncSig])
+  ImplDecl(Slice[String], TypeExpr, Option[TypeExpr], Slice[ImplMethod])
 end
 
 struct Param
@@ -43,6 +43,11 @@ struct FuncSig
   TypeParams: Slice[String]
   Params: Slice[Param]
   Ret: Option[TypeExpr]
+end
+
+struct ImplMethod
+  Sig: FuncSig
+  Body: Expr
 end
 
 enum TypeExpr
@@ -158,7 +163,7 @@ func implDecl() -> ps.Parser[Decl]
     ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[Decl]
       ps.PBind(typeExpr(), func(target: TypeExpr) -> ps.Parser[Decl]
         ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(iface: Option[TypeExpr]) -> ps.Parser[Decl]
-          ps.PBind(ps.PMany(funcSig()), func(methods: Slice[FuncSig]) -> ps.Parser[Decl]
+          ps.PBind(ps.PMany(implMethod()), func(methods: Slice[ImplMethod]) -> ps.Parser[Decl]
             ps.PThen(kw("end"), ps.PPure(Decl.ImplDecl(tps, target, iface, methods)))
           end)
         end)
@@ -179,6 +184,13 @@ func funcSigAndBody() -> ps.Parser[(FuncSig, Expr)]
     ps.PBind(blockUntilEnd(), func(body: Expr) -> ps.Parser[(FuncSig, Expr)]
       ps.PThen(kw("end"), ps.PPure((sig, body)))
     end)
+  end)
+end
+
+func implMethod() -> ps.Parser[ImplMethod]
+  ps.PMap(funcSigAndBody(), func(pair: (FuncSig, Expr)) -> ImplMethod
+    let (sig, body) = pair
+    ImplMethod { Sig: sig, Body: body }
   end)
 end
 

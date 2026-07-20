@@ -312,11 +312,11 @@ func mangleTypeExpr(t: ast2.TypeExpr) -> String
         i = i + 1
       end
       out + "R" + mangleTypeExpr(ret.value()) + "E"
-    case TupleType(elems) =>
+    case TupleType(items) =>
       var out = "U"
       var i: Int = 0
-      while i < elems.Len()
-        out = out + mangleTypeExpr(elems.Get(i).UnwrapOr(ast2.TypeExpr.UnitType()))
+      while i < items.Len()
+        out = out + mangleTypeExpr(items.Get(i).UnwrapOr(ast2.TypeExpr.UnitType()))
         i = i + 1
       end
       out + "E"

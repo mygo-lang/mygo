@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
+	"github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 	. "github.com/mygo-lang/mygo/prelude"
 )
 
@@ -19,6 +20,8 @@ end
 
 impl IntShow: Show[Int]
   func Show(value: Int) -> String
+    "show"
+  end
 end
 `
 
@@ -40,6 +43,13 @@ end
 	if len(impl.F3) != 1 {
 		t.Fatalf("impl method count = %d, want 1", len(impl.F3))
 	}
+	body, yes := impl.F3[0].Body.(ast2.ExprBlockExpr)
+	if !yes || len(body.F0) != 1 {
+		t.Fatalf("impl method body = %T, want single-item ast2.ExprBlockExpr", impl.F3[0].Body)
+	}
+	if _, yes := body.F0[0].(ast2.ExprStringExpr); !yes {
+		t.Fatalf("impl method body item = %T, want ast2.ExprStringExpr", body.F0[0])
+	}
 }
 
 func TestGenerateSourceUsesCurrentImplMangling(t *testing.T) {
@@ -51,6 +61,8 @@ end
 
 impl IntPretty: Pretty[Int]
   func Show(value: Int) -> String
+    "pretty"
+  end
 end
 `
 
@@ -68,5 +80,20 @@ end
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", code, 0); err != nil {
 		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
+
+func TestGenerateFilesUsesGoTestOutputName(t *testing.T) {
+	file := ast2.File{PackageName: "sample", Decls: []ast2.Decl{}}
+	got := GenerateFiles([]SourceFileInput{{Path: "math_test.mygo", File: file}}, typeinference2.PackageInfo{})
+	ok, yes := got.(ResultOk[map[string]string, string])
+	if !yes {
+		t.Fatalf("GenerateFiles failed: %v", got)
+	}
+	if _, exists := ok.F0["zz_math.gen_test.go"]; !exists {
+		t.Fatalf("generated files = %#v, want zz_math.gen_test.go", ok.F0)
+	}
+	if _, exists := ok.F0["zz_math_test.gen.go"]; exists {
+		t.Fatalf("generated legacy test filename: %#v", ok.F0)
 	}
 }

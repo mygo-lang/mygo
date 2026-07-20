@@ -15,7 +15,7 @@ enum Decl
   StructDecl(String, Slice[String], Slice[Field])
   EnumDecl(String, Slice[String], Slice[Variant])
   InterfaceDecl(String, Slice[String], Slice[FuncSig])
-  ImplDecl(Slice[String], TypeExpr, Option[TypeExpr], Slice[FuncSig])
+  ImplDecl(Slice[String], TypeExpr, Option[TypeExpr], Slice[ImplMethod])
 end
 
 struct Param
@@ -39,6 +39,11 @@ struct FuncSig
   TypeParams: Slice[String]
   Params: Slice[Param]
   Ret: Option[TypeExpr]
+end
+
+struct ImplMethod
+  Sig: FuncSig
+  Body: Expr
 end
 
 enum TypeExpr
@@ -68,4 +73,3 @@ enum Expr
   BlockExpr(Slice[Expr])
   LetExpr(Bind)
 end
-
