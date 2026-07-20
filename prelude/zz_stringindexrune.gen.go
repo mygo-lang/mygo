@@ -2,11 +2,11 @@
 
 package prelude
 
-func Get_string_int_rune(s string, index int) Option[rune] {
+func MygoIT10IIndexableFN15StringRuneIndexGN6StringN3IntN4RuneEM3Get(s string, index int) Option[rune] {
 	return func() Option[rune] {
 		rs_46 := []rune(s)
 		return func() Option[rune] {
-			if index < 0 || index >= Len__t_t(rs_46) {
+			if index < 0 || index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rs_46) {
 				return None[rune]()
 			} else {
 				return Some[rune](rs_46[index])
@@ -14,11 +14,11 @@ func Get_string_int_rune(s string, index int) Option[rune] {
 		}()
 	}()
 }
-func Slice_string_int_rune(s string, startPos int, endPos int) Option[string] {
+func MygoIT10IIndexableFN15StringRuneIndexGN6StringN3IntN4RuneEM5Slice(s string, startPos int, endPos int) Option[string] {
 	return func() Option[string] {
 		rs_47 := []rune(s)
 		return func() Option[string] {
-			if startPos < 0 || endPos < startPos || startPos >= Len__t_t(rs_47) || endPos > Len__t_t(rs_47) {
+			if startPos < 0 || endPos < startPos || startPos >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rs_47) || endPos > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rs_47) {
 				return None[string]()
 			} else {
 				return Some[string](string(rs_47[startPos:endPos]))

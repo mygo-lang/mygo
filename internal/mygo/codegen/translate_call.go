@@ -621,7 +621,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			}
 		}
 		// Check for typeclass method call: value.show() → show_type() or showFn()
-		if ctx.currentImpl != "" && ctx.implSymbol != "" {
+		if ctx.currentImpl != "" && ctx.implSymbol != "" && typeclassReceiverMatches(ctx.implReceiverType, bt) {
 			if iface := g.pkg.Interfaces[ctx.currentImpl]; iface != nil {
 				for _, method := range iface.Methods {
 					if method.Name != field.Field {
@@ -1291,6 +1291,19 @@ func concreteReceiverTypeForInterface(ifaceName, recvType string) string {
 		}
 	}
 	return recvType
+}
+
+func typeclassReceiverMatches(targetType, receiverType string) bool {
+	targetType = strings.TrimSpace(targetType)
+	receiverType = strings.TrimSpace(receiverType)
+	if targetType == "" || receiverType == "" {
+		return false
+	}
+	if targetType == receiverType {
+		return true
+	}
+	_, ok := matchEqImplTarget(targetType, receiverType)
+	return ok
 }
 
 func (g *gen) interfaceNamesForMethod(methodName string) []string {

@@ -2,18 +2,18 @@
 
 package prelude
 
-func Get_string_int_byte(s string, index int) Option[byte] {
+func MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM3Get(s string, index int) Option[byte] {
 	return func() Option[byte] {
-		if index < 0 || index >= Len_string_rune(s) {
+		if index < 0 || index >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) {
 			return None[byte]()
 		} else {
 			return Some[byte](s[index])
 		}
 	}()
 }
-func Slice_string_int_byte(s string, startPos int, endPos int) Option[string] {
+func MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(s string, startPos int, endPos int) Option[string] {
 	return func() Option[string] {
-		if startPos < 0 || endPos < startPos || startPos >= Len_string_rune(s) || endPos > Len_string_rune(s) {
+		if startPos < 0 || endPos < startPos || startPos >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) || endPos > MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) {
 			return None[string]()
 		} else {
 			return Some[string](s[startPos:endPos])

@@ -180,9 +180,9 @@ func describeOption[A any](value Option[A], ToStringFn func(A) string) string {
 }
 func buildList() List[int] {
 	var noneTail_1 Option[List[int]] = None[List[int]]()
-	lastNode_2 := List_Cons(3, noneTail_1)
-	middleNode_3 := List_Cons(2, Some[List[int]](lastNode_2))
-	return List_Cons(1, Some[List[int]](middleNode_3))
+	lastNode_2 := MygoIN4ListM4Cons(3, noneTail_1)
+	middleNode_3 := MygoIN4ListM4Cons(2, Some[List[int]](lastNode_2))
+	return MygoIN4ListM4Cons(1, Some[List[int]](middleNode_3))
 }
 func sumList(lst List[int]) int {
 	var total_4 int = 0
@@ -190,15 +190,15 @@ func sumList(lst List[int]) int {
 	var done_6 bool = false
 	func() {
 		for !done_6 {
-			headVal := List_Head(current_5)
+			headVal := MygoIN4ListM4Head(current_5)
 			total_4 = total_4 + headVal
 			func() {
-				if _, ok := List_Tail(current_5).(OptionNone[List[int]]); ok {
+				if _, ok := MygoIN4ListM4Tail(current_5).(OptionNone[List[int]]); ok {
 					func() {
 						done_6 = true
 					}()
 				} else {
-					if v_6, ok := List_Tail(current_5).(OptionSome[List[int]]); ok {
+					if v_6, ok := MygoIN4ListM4Tail(current_5).(OptionSome[List[int]]); ok {
 						func() {
 							current_5 = v_6.F0
 						}()
@@ -227,7 +227,7 @@ func demo() string {
 	colorText_21 := describeColor(ColorGreenCtor())
 	lst_22 := buildList()
 	sum_23 := sumList(lst_22)
-	var summary_24 string = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v sum=%v", red_7, point_8, op_9, describeOption(empty_10, ToString_float64), describeOption(someVal_11, ToString_int), person_12, rect_13, pair_14, color_15, addr_16, contact_17, areaValue_18, swapped_19, bigger_20, colorText_21, sum_23)
+	var summary_24 string = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v sum=%v", red_7, point_8, op_9, describeOption(empty_10, MygoIT8ToStringFN7Float64GN7Float64EM8ToString), describeOption(someVal_11, MygoIT8ToStringFN3IntGN3IntEM8ToString), person_12, rect_13, pair_14, color_15, addr_16, contact_17, areaValue_18, swapped_19, bigger_20, colorText_21, sum_23)
 	func() Result[int, error] {
 		__mygo_result_val, __mygo_result_err := fmt.Println(summary_24)
 		if __mygo_result_err != nil {

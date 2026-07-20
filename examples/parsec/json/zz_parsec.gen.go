@@ -78,7 +78,7 @@ func JsonValueJObjectCtor(a0 []struct {
 }) JsonValue {
 	return JsonValueJObject{F0: a0}
 }
-func ToString_jsonvalue(value JsonValue) string {
+func MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(value JsonValue) string {
 	return func() string {
 		if _, ok := value.(JsonValueJNull); ok {
 			return func() string {
@@ -98,7 +98,7 @@ func ToString_jsonvalue(value JsonValue) string {
 			} else {
 				if v_4, ok := value.(JsonValueJNumber); ok {
 					return func() string {
-						return ToString_float64(v_4.F0)
+						return MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(v_4.F0)
 					}()
 				} else {
 					if v_3, ok := value.(JsonValueJString); ok {
@@ -108,22 +108,22 @@ func ToString_jsonvalue(value JsonValue) string {
 					} else {
 						if v_2, ok := value.(JsonValueJArray); ok {
 							return func() string {
-								parts_5 := Map__t_t(v_2.F0, func(v JsonValue) string {
-									return ToString_jsonvalue(v)
+								parts_5 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_2.F0, func(v JsonValue) string {
+									return MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(v)
 								})
 								return "[" + strings.Join(parts_5, ",") + "]"
 							}()
 						} else {
 							if v_1, ok := value.(JsonValueJObject); ok {
 								return func() string {
-									parts_4 := Map__t_t(v_1.F0, func(p struct {
+									parts_4 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_1.F0, func(p struct {
 										F0 string
 										F1 JsonValue
 									}) string {
 										__tuple_1 := p
 										k_2 := __tuple_1.F0
 										v_3 := __tuple_1.F1
-										return "\"" + jsonEscape(k_2) + "\":" + ToString_jsonvalue(JsonValue(v_3))
+										return "\"" + jsonEscape(k_2) + "\":" + MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(JsonValue(v_3))
 									})
 									return "{" + strings.Join(parts_4, ",") + "}"
 								}()
@@ -138,7 +138,7 @@ func ToString_jsonvalue(value JsonValue) string {
 	}()
 }
 func jsonEscape(s string) string {
-	parts_14 := Fold_string_rune(s, []string([]string{}), func(acc []string, r rune) []string {
+	parts_14 := MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM4Fold(s, []string([]string{}), func(acc []string, r rune) []string {
 		escaped_13 := func() string {
 			if r == '"' {
 				return func() string {
@@ -185,11 +185,11 @@ func jsonEscape(s string) string {
 														d1_9 := (v_6 - d0_8*4096) / 256
 														d2_10 := (v_6 - d0_8*4096 - d1_9*256) / 16
 														d3_11 := v_6 - d0_8*4096 - d1_9*256 - d2_10*16
-														escapedRunes_12 := []rune{Option_UnwrapOr(Get__t_int_t(hexChars_7, d0_8), '\x00'), Option_UnwrapOr(Get__t_int_t(hexChars_7, d1_9), '\x00'), Option_UnwrapOr(Get__t_int_t(hexChars_7, d2_10), '\x00'), Option_UnwrapOr(Get__t_int_t(hexChars_7, d3_11), '\x00')}
-														return "\\\\u" + String_FromRunes(escapedRunes_12)
+														escapedRunes_12 := []rune{MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_7, d0_8), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_7, d1_9), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_7, d2_10), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_7, d3_11), '\x00')}
+														return "\\\\u" + MygoIN6StringM9FromRunes(escapedRunes_12)
 													}()
 												} else {
-													return String_FromRunes([]rune{r})
+													return MygoIN6StringM9FromRunes([]rune{r})
 												}
 											}()
 										}()
@@ -201,7 +201,7 @@ func jsonEscape(s string) string {
 				}
 			}
 		}()
-		return Slice_Append(acc, escaped_13)
+		return MygoIN5SliceM6Append(acc, escaped_13)
 	})
 	return strings.Join(parts_14, "")
 }
@@ -233,7 +233,7 @@ func pNumber() ps.Parser[JsonValue] {
 		var runes_18 []rune = []rune{}
 		rSign_19 := ps.PeekRune(curState_17)
 		if rSign_19.Ok && rSign_19.Value == '-' {
-			runes_18 = Slice_Append(runes_18, '-')
+			runes_18 = MygoIN5SliceM6Append(runes_18, '-')
 			curState_17 = ps.AdvanceRune(curState_17)
 		}
 		rFirst_20 := ps.PeekRune(curState_17)
@@ -251,13 +251,13 @@ func pNumber() ps.Parser[JsonValue] {
 					break
 				} else {
 				}
-				runes_18 = Slice_Append(runes_18, rn.Value)
+				runes_18 = MygoIN5SliceM6Append(runes_18, rn.Value)
 				curState_17 = ps.AdvanceRune(curState_17)
 			}
 		}()
 		rDot_21 := ps.PeekRune(curState_17)
 		if rDot_21.Ok && rDot_21.Value == '.' {
-			runes_18 = Slice_Append(runes_18, '.')
+			runes_18 = MygoIN5SliceM6Append(runes_18, '.')
 			curState_17 = ps.AdvanceRune(curState_17)
 			rFrac_22 := ps.PeekRune(curState_17)
 			if !rFrac_22.Ok || rFrac_22.Value < '0' || rFrac_22.Value > '9' {
@@ -274,18 +274,18 @@ func pNumber() ps.Parser[JsonValue] {
 						break
 					} else {
 					}
-					runes_18 = Slice_Append(runes_18, rn.Value)
+					runes_18 = MygoIN5SliceM6Append(runes_18, rn.Value)
 					curState_17 = ps.AdvanceRune(curState_17)
 				}
 			}()
 		}
 		rExp_23 := ps.PeekRune(curState_17)
 		if rExp_23.Ok && (rExp_23.Value == 'e' || rExp_23.Value == 'E') {
-			runes_18 = Slice_Append(runes_18, rExp_23.Value)
+			runes_18 = MygoIN5SliceM6Append(runes_18, rExp_23.Value)
 			curState_17 = ps.AdvanceRune(curState_17)
 			rSign2_24 := ps.PeekRune(curState_17)
 			if rSign2_24.Ok && (rSign2_24.Value == '+' || rSign2_24.Value == '-') {
-				runes_18 = Slice_Append(runes_18, rSign2_24.Value)
+				runes_18 = MygoIN5SliceM6Append(runes_18, rSign2_24.Value)
 				curState_17 = ps.AdvanceRune(curState_17)
 			}
 			rExpDig_25 := ps.PeekRune(curState_17)
@@ -303,12 +303,12 @@ func pNumber() ps.Parser[JsonValue] {
 						break
 					} else {
 					}
-					runes_18 = Slice_Append(runes_18, rn.Value)
+					runes_18 = MygoIN5SliceM6Append(runes_18, rn.Value)
 					curState_17 = ps.AdvanceRune(curState_17)
 				}
 			}()
 		}
-		numStr_26 := String_FromRunes(runes_18)
+		numStr_26 := MygoIN6StringM9FromRunes(runes_18)
 		return func() ps.Reply[JsonValue] {
 			if v_8, ok := func() Result[float64, error] {
 				__mygo_result_val, __mygo_result_err := strconv.ParseFloat(numStr_26, 64)
@@ -365,7 +365,7 @@ func pString() ps.Parser[JsonValue] {
 					return ps.PBind(pHexDigit_27, func(d1 rune) ps.Parser[rune] {
 						return ps.PBind(pHexDigit_27, func(d2 rune) ps.Parser[rune] {
 							return ps.PMap(pHexDigit_27, func(d3 rune) rune {
-								hexStr_28 := String_FromRunes([]rune{d0, d1, d2, d3})
+								hexStr_28 := MygoIN6StringM9FromRunes([]rune{d0, d1, d2, d3})
 								result_29 := func() Result[int64, error] {
 									__mygo_result_val, __mygo_result_err := strconv.ParseInt(hexStr_28, 16, 32)
 									if __mygo_result_err != nil {
@@ -399,7 +399,7 @@ func pString() ps.Parser[JsonValue] {
 	return ps.PBind(ps.PChar('"'), func(_ rune) ps.Parser[JsonValue] {
 		return ps.PBind(ps.PMany(pCharContent_31()), func(chars []rune) ps.Parser[JsonValue] {
 			return ps.PMap(ps.PChar('"'), func(_ rune) JsonValue {
-				return JsonValueJStringCtor(String_FromRunes(chars))
+				return JsonValueJStringCtor(MygoIN6StringM9FromRunes(chars))
 			})
 		})
 	})

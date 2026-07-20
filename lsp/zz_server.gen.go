@@ -166,14 +166,14 @@ func newDocumentStore() DocumentStore {
 	return DocumentStore{docs: docs_1}
 }
 func storePut(store *DocumentStore, uri string, version int, content string) {
-	Set_map_kv_k_v(store.docs, uri, &Document{URI: uri, Version: version, Content: content})
+	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(store.docs, uri, &Document{URI: uri, Version: version, Content: content})
 	return
 }
 func storeGet(store *DocumentStore, uri string) Option[*Document] {
-	return Get_map_kv_k_v(store.docs, uri)
+	return MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(store.docs, uri)
 }
 func storeDelete(store *DocumentStore, uri string) {
-	Delete_map_kv_k_v(store.docs, uri)
+	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(store.docs, uri)
 	return
 }
 func readOneMessage() string {
@@ -218,7 +218,7 @@ func writeOneMessage(msg LSPMessage) Result[struct {
 	}()
 }
 func byteLen(text string) int {
-	return Len_string_rune(text)
+	return MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(text)
 }
 func substr(text string, start int, endIndex int) string {
 	return text[start:endIndex]
@@ -319,10 +319,10 @@ func requestQuery(params map[string]any) string {
 	}()
 }
 func stringAt(items []string, index int) Option[string] {
-	return Get__t_int_t(items, index)
+	return MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 }
 func completionAt(items []CompletionItem, index int) Option[CompletionItem] {
-	return Get__t_int_t(items, index)
+	return MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 }
 func parseDocumentURI(uri string) string {
 	return func() string {
@@ -384,8 +384,8 @@ func handleCompletion(store *DocumentStore, uri string, line int, char int) Comp
 					if v_3, ok := wordAtPosition(content_6, line, char).(OptionSome[*TextRange]); ok {
 						func() {
 							lines_8 := strings.Split(v_2.F0.Content, "\n")
-							if line < Len__t_t(lines_8) {
-								text_9 := Option_UnwrapOr(stringAt(lines_8, line), "")
+							if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_8) {
+								text_9 := MygoIN6OptionM8UnwrapOr(stringAt(lines_8, line), "")
 								length_10 := byteLen(text_9)
 								if char <= length_10 {
 									word_7 = substr(text_9, v_3.F0.StartPos.Character, char)
@@ -425,12 +425,12 @@ func appendCompletions(items []CompletionItem, word string) []CompletionItem {
 				lowerWord_14 := strings.ToLower(word)
 				i_15 := 0
 				func() {
-					for i_15 < Len__t_t(items) {
+					for i_15 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
 						func() {
 							if v_4, ok := completionAt(items, i_15).(OptionSome[CompletionItem]); ok {
 								func() {
 									if strings.HasPrefix(strings.ToLower(v_4.F0.Label), lowerWord_14) {
-										filtered_13 = Slice_Append(filtered_13, v_4.F0)
+										filtered_13 = MygoIN5SliceM6Append(filtered_13, v_4.F0)
 									}
 								}()
 							} else {
@@ -455,9 +455,9 @@ func handleHover(store *DocumentStore, uri string, line int, char int) Option[Ho
 						return func() Option[Hover] {
 							lines_16 := strings.Split(v_5.F0.Content, "\n")
 							return func() Option[Hover] {
-								if line < Len__t_t(lines_16) {
+								if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_16) {
 									return func() Option[Hover] {
-										text_17 := Option_UnwrapOr(stringAt(lines_16, line), "")
+										text_17 := MygoIN6OptionM8UnwrapOr(stringAt(lines_16, line), "")
 										word_18 := substr(text_17, v_6.F0.StartPos.Character, v_6.F0.EndPos.Character)
 										docStr_19 := buildHoverDoc(word_18)
 										var hoverRange_20 Option[TextRange] = Some[TextRange](*v_6.F0)
@@ -598,18 +598,18 @@ func runMyGoDiagnostics(content string) []Diagnostic {
 	lines_23 := strings.Split(content, "\n")
 	i_24 := 0
 	func() {
-		for i_24 < Len__t_t(lines_23) {
+		for i_24 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_23) {
 			func() {
 				if v_8, ok := stringAt(lines_23, i_24).(OptionSome[string]); ok {
 					func() {
 						trimmed_25 := strings.TrimSpace(v_8.F0)
 						if strings.Contains(trimmed_25, "where ") && !strings.HasPrefix(trimmed_25, "#") {
 							startChar_26 := strings.Index(trimmed_25, "where")
-							diags_22 = Slice_Append(diags_22, Diagnostic{TextRange: TextRange{StartPos: Position{Line: i_24, Character: startChar_26}, EndPos: Position{Line: i_24, Character: startChar_26 + 5}}, Severity: 2, Source: "mygo", Message: "'where' is deprecated, use 'using' instead", Code: "DEPRECATED"})
+							diags_22 = MygoIN5SliceM6Append(diags_22, Diagnostic{TextRange: TextRange{StartPos: Position{Line: i_24, Character: startChar_26}, EndPos: Position{Line: i_24, Character: startChar_26 + 5}}, Severity: 2, Source: "mygo", Message: "'where' is deprecated, use 'using' instead", Code: "DEPRECATED"})
 						}
 						if strings.Contains(trimmed_25, "-> Unit") {
 							startChar_27 := strings.Index(trimmed_25, "-> Unit")
-							diags_22 = Slice_Append(diags_22, Diagnostic{TextRange: TextRange{StartPos: Position{Line: i_24, Character: startChar_27}, EndPos: Position{Line: i_24, Character: startChar_27 + 7}}, Severity: 2, Source: "mygo", Message: "'-> Unit' is deprecated, use '-> ()' instead", Code: "DEPRECATED"})
+							diags_22 = MygoIN5SliceM6Append(diags_22, Diagnostic{TextRange: TextRange{StartPos: Position{Line: i_24, Character: startChar_27}, EndPos: Position{Line: i_24, Character: startChar_27 + 7}}, Severity: 2, Source: "mygo", Message: "'-> Unit' is deprecated, use '-> ()' instead", Code: "DEPRECATED"})
 						}
 					}()
 				} else {
@@ -640,7 +640,7 @@ func parseAndBuildSymbols(content string) []DocumentSymbol {
 	lines_29 := strings.Split(content, "\n")
 	i_30 := 0
 	func() {
-		for i_30 < Len__t_t(lines_29) {
+		for i_30 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_29) {
 			func() {
 				if v_10, ok := stringAt(lines_29, i_30).(OptionSome[string]); ok {
 					func() {
@@ -664,7 +664,7 @@ func parseAndBuildSymbols(content string) []DocumentSymbol {
 													func() {
 														name_32 := declarationName(strings.TrimPrefix(trimmed_31, "func "))
 														selStart_33 := strings.Index(trimmed_31, name_32)
-														symbols_28 = Slice_Append(symbols_28, documentSymbol(name_32, 12, i_30, selStart_33, selStart_33+byteLen(name_32), "func("+name_32+")"))
+														symbols_28 = MygoIN5SliceM6Append(symbols_28, documentSymbol(name_32, 12, i_30, selStart_33, selStart_33+byteLen(name_32), "func("+name_32+")"))
 													}()
 												} else {
 													func() {
@@ -674,7 +674,7 @@ func parseAndBuildSymbols(content string) []DocumentSymbol {
 																func() {
 																	if v_11, ok := stringAt(parts_34, 1).(OptionSome[string]); ok {
 																		func() {
-																			symbols_28 = Slice_Append(symbols_28, documentSymbol("impl "+v_11.F0, 5, i_30, 5, byteLen(trimmed_31), "impl"))
+																			symbols_28 = MygoIN5SliceM6Append(symbols_28, documentSymbol("impl "+v_11.F0, 5, i_30, 5, byteLen(trimmed_31), "impl"))
 																		}()
 																	} else {
 																		func() {
@@ -724,7 +724,7 @@ func appendNamedSymbol(symbols []DocumentSymbol, trimmed string, line int, kind 
 			return func() []DocumentSymbol {
 				name_39 := declarationName(v_12.F0)
 				selStart_40 := strings.Index(trimmed, name_39)
-				return Slice_Append(symbols, documentSymbol(name_39, kind, line, selStart_40, selStart_40+byteLen(name_39), detail))
+				return MygoIN5SliceM6Append(symbols, documentSymbol(name_39, kind, line, selStart_40, selStart_40+byteLen(name_39), detail))
 			}()
 		} else {
 			return func() []DocumentSymbol {
@@ -745,13 +745,13 @@ func handleDefinition(store *DocumentStore, uri string, line int, char int) Opti
 						return func() Option[[]Location] {
 							lines_41 := strings.Split(v_13.F0.Content, "\n")
 							return func() Option[[]Location] {
-								if line < Len__t_t(lines_41) {
+								if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_41) {
 									return func() Option[[]Location] {
-										text_42 := Option_UnwrapOr(stringAt(lines_41, line), "")
+										text_42 := MygoIN6OptionM8UnwrapOr(stringAt(lines_41, line), "")
 										word_43 := substr(text_42, v_14.F0.StartPos.Character, v_14.F0.EndPos.Character)
 										locs_44 := searchDefinitionInDoc(v_13.F0.Content, word_43, v_13.F0.URI)
 										return func() Option[[]Location] {
-											if Len__t_t(locs_44) > 0 {
+											if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(locs_44) > 0 {
 												return Some[[]Location](locs_44)
 											} else {
 												return None[[]Location]()
@@ -782,7 +782,7 @@ func searchDefinitionInDoc(content string, word string, uri string) []Location {
 	lines_46 := strings.Split(content, "\n")
 	i_47 := 0
 	func() {
-		for i_47 < Len__t_t(lines_46) {
+		for i_47 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_46) {
 			func() {
 				if v_15, ok := stringAt(lines_46, i_47).(OptionSome[string]); ok {
 					func() {
@@ -792,7 +792,7 @@ func searchDefinitionInDoc(content string, word string, uri string) []Location {
 							func() {
 								if strings.HasPrefix(trimmed_48, "func "+word) || strings.HasPrefix(trimmed_48, "struct "+word) || strings.HasPrefix(trimmed_48, "enum "+word) {
 									func() {
-										locations_45 = Slice_Append(locations_45, lineLocation(uri, i_47, trimmed_48))
+										locations_45 = MygoIN5SliceM6Append(locations_45, lineLocation(uri, i_47, trimmed_48))
 									}()
 								}
 							}()
@@ -817,13 +817,13 @@ func handleReferences(store *DocumentStore, uri string, line int, char int) Opti
 						return func() Option[[]Location] {
 							lines_49 := strings.Split(v_16.F0.Content, "\n")
 							return func() Option[[]Location] {
-								if line < Len__t_t(lines_49) {
+								if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_49) {
 									return func() Option[[]Location] {
-										text_50 := Option_UnwrapOr(stringAt(lines_49, line), "")
+										text_50 := MygoIN6OptionM8UnwrapOr(stringAt(lines_49, line), "")
 										word_51 := substr(text_50, v_17.F0.StartPos.Character, v_17.F0.EndPos.Character)
 										locs_52 := searchReferencesInDoc(v_16.F0.Content, word_51, v_16.F0.URI)
 										return func() Option[[]Location] {
-											if Len__t_t(locs_52) > 0 {
+											if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(locs_52) > 0 {
 												return Some[[]Location](locs_52)
 											} else {
 												return None[[]Location]()
@@ -854,7 +854,7 @@ func searchReferencesInDoc(content string, word string, uri string) []Location {
 	lines_54 := strings.Split(content, "\n")
 	i_55 := 0
 	func() {
-		for i_55 < Len__t_t(lines_54) {
+		for i_55 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_54) {
 			func() {
 				if v_18, ok := stringAt(lines_54, i_55).(OptionSome[string]); ok {
 					func() {
@@ -862,7 +862,7 @@ func searchReferencesInDoc(content string, word string, uri string) []Location {
 						startChar_57 := strings.Index(trimmed_56, word)
 						if trimmed_56 == "" || strings.HasPrefix(trimmed_56, "#") || startChar_57 < 0 {
 						} else {
-							locations_53 = Slice_Append(locations_53, Location{URI: "file://" + uri, TextRange: TextRange{StartPos: Position{Line: i_55, Character: startChar_57}, EndPos: Position{Line: i_55, Character: startChar_57 + byteLen(word)}}})
+							locations_53 = MygoIN5SliceM6Append(locations_53, Location{URI: "file://" + uri, TextRange: TextRange{StartPos: Position{Line: i_55, Character: startChar_57}, EndPos: Position{Line: i_55, Character: startChar_57 + byteLen(word)}}})
 						}
 					}()
 				} else {

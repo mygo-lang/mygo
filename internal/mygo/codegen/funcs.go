@@ -376,6 +376,16 @@ func (g *gen) findNamedImpl(bindName, ifaceName string, typeArgs []TypeExpr) *Im
 		if len(impl.InterfaceArgs) != len(typeArgs) {
 			continue
 		}
+		matches := true
+		for i := range typeArgs {
+			if normalizeMyGoTypeName(g.goType(impl.InterfaceArgs[i], nil)) != normalizeMyGoTypeName(g.goType(typeArgs[i], nil)) {
+				matches = false
+				break
+			}
+		}
+		if !matches {
+			continue
+		}
 		return impl
 	}
 	return nil

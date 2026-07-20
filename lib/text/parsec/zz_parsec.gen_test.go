@@ -200,8 +200,8 @@ func TestPManyZeroMatches(t *testing.T) {
 	if !result_49.Ok {
 		t.Fatal("PMany should succeed with empty result")
 	}
-	if Len__t_t(result_49.Value) != 0 {
-		t.Fatalf("PMany empty result length = %d, want 0", Len__t_t(result_49.Value))
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_49.Value) != 0 {
+		t.Fatalf("PMany empty result length = %d, want 0", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_49.Value))
 	}
 }
 func TestPManyMatchesMultiple(t *testing.T) {
@@ -210,10 +210,10 @@ func TestPManyMatchesMultiple(t *testing.T) {
 	if !result_51.Ok {
 		t.Fatal("PMany should succeed")
 	}
-	if Len__t_t(result_51.Value) != 3 {
-		t.Fatalf("PMany length = %d, want 3", Len__t_t(result_51.Value))
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_51.Value) != 3 {
+		t.Fatalf("PMany length = %d, want 3", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_51.Value))
 	}
-	Each__t_t(result_51.Value, func(v rune) {
+	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(result_51.Value, func(v rune) {
 		func() {
 			if v != 'a' {
 				t.Fatalf("PMany element = %d, want %d", v, 'a')
@@ -227,8 +227,8 @@ func TestPManyStopsOnNonConsumingFailure(t *testing.T) {
 	if !result_53.Ok {
 		t.Fatal("PMany should succeed")
 	}
-	if Len__t_t(result_53.Value) != 2 {
-		t.Fatalf("PMany length = %d, want 2", Len__t_t(result_53.Value))
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_53.Value) != 2 {
+		t.Fatalf("PMany length = %d, want 2", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_53.Value))
 	}
 	if result_53.State.Index != 2 {
 		t.Fatalf("PMany should stop after consuming 'aa', index=%d, want 2", result_53.State.Index)
@@ -247,8 +247,8 @@ func TestPMany1MatchesOneOrMore(t *testing.T) {
 	if !result_57.Ok {
 		t.Fatal("PMany1 should succeed")
 	}
-	if Len__t_t(result_57.Value) != 2 {
-		t.Fatalf("PMany1 length = %d, want 2", Len__t_t(result_57.Value))
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_57.Value) != 2 {
+		t.Fatalf("PMany1 length = %d, want 2", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_57.Value))
 	}
 }
 func TestPOptionalSucceedsWhenPresent(t *testing.T) {
@@ -311,8 +311,8 @@ func TestPSepByEmpty(t *testing.T) {
 	if !result_65.Ok {
 		t.Fatal("PSepBy should succeed with empty result")
 	}
-	if Len__t_t(result_65.Value) != 0 {
-		t.Fatalf("PSepBy empty length = %d, want 0", Len__t_t(result_65.Value))
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_65.Value) != 0 {
+		t.Fatalf("PSepBy empty length = %d, want 0", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_65.Value))
 	}
 }
 func TestPSepBySingle(t *testing.T) {
@@ -321,8 +321,8 @@ func TestPSepBySingle(t *testing.T) {
 	if !result_67.Ok {
 		t.Fatal("PSepBy should succeed")
 	}
-	if Len__t_t(result_67.Value) != 1 {
-		t.Fatalf("PSepBy length = %d, want 1", Len__t_t(result_67.Value))
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_67.Value) != 1 {
+		t.Fatalf("PSepBy length = %d, want 1", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_67.Value))
 	}
 }
 func TestPSepByMultiple(t *testing.T) {
@@ -331,8 +331,8 @@ func TestPSepByMultiple(t *testing.T) {
 	if !result_69.Ok {
 		t.Fatal("PSepBy should succeed")
 	}
-	if Len__t_t(result_69.Value) != 3 {
-		t.Fatalf("PSepBy length = %d, want 3", Len__t_t(result_69.Value))
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_69.Value) != 3 {
+		t.Fatalf("PSepBy length = %d, want 3", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_69.Value))
 	}
 }
 func TestPSepBy1RequiresAtLeastOne(t *testing.T) {
@@ -348,8 +348,8 @@ func TestPSepBy1Multiple(t *testing.T) {
 	if !result_73.Ok {
 		t.Fatal("PSepBy1 should succeed")
 	}
-	if Len__t_t(result_73.Value) != 2 {
-		t.Fatalf("PSepBy1 length = %d, want 2", Len__t_t(result_73.Value))
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_73.Value) != 2 {
+		t.Fatalf("PSepBy1 length = %d, want 2", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_73.Value))
 	}
 }
 func TestPLabelDoesNotAffectSuccess(t *testing.T) {
@@ -594,17 +594,17 @@ func TestParseInteger(t *testing.T) {
 }
 func TestParseCommaSeparatedWords(t *testing.T) {
 	word_130 := PMap(PMany1(PLetter()), func(rs []rune) string {
-		return String_FromRunes(rs)
+		return MygoIN6StringM9FromRunes(rs)
 	})
 	words_131 := PSepBy(word_130, PChar(','))
 	result_132 := ParseInput(words_131, "hello,world,foo")
 	if !result_132.Ok {
 		t.Fatal("parse words should succeed")
 	}
-	if Len__t_t(result_132.Value) != 3 {
-		t.Fatalf("words length = %d, want 3", Len__t_t(result_132.Value))
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_132.Value) != 3 {
+		t.Fatalf("words length = %d, want 3", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_132.Value))
 	}
-	w0_133 := Get__t_int_t(result_132.Value, 0)
+	w0_133 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_132.Value, 0)
 	func() {
 		if v_8, ok := w0_133.(OptionSome[string]); ok {
 			func() {
@@ -620,7 +620,7 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 			}
 		}
 	}()
-	w1_134 := Get__t_int_t(result_132.Value, 1)
+	w1_134 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_132.Value, 1)
 	func() {
 		if v_10, ok := w1_134.(OptionSome[string]); ok {
 			func() {
@@ -636,7 +636,7 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 			}
 		}
 	}()
-	w2_135 := Get__t_int_t(result_132.Value, 2)
+	w2_135 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_132.Value, 2)
 	func() {
 		if v_12, ok := w2_135.(OptionSome[string]); ok {
 			func() {
@@ -655,7 +655,7 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 }
 func TestParseParenthesizedExpr(t *testing.T) {
 	word_136 := PMap(PMany1(PLetter()), func(rs []rune) string {
-		return String_FromRunes(rs)
+		return MygoIN6StringM9FromRunes(rs)
 	})
 	parseTail_137 := func(w1 string) Parser[string] {
 		return PBind(PChar(','), func(_ rune) Parser[string] {
@@ -694,8 +694,8 @@ func TestPManyWithPBind(t *testing.T) {
 	if !result_146.Ok {
 		t.Fatal("PMany(PBind) should succeed")
 	}
-	if Len__t_t(result_146.Value) != 3 {
-		t.Fatalf("PMany(PBind) length = %d, want 3", Len__t_t(result_146.Value))
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_146.Value) != 3 {
+		t.Fatalf("PMany(PBind) length = %d, want 3", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_146.Value))
 	}
 }
 func TestPOptionalWithBetween(t *testing.T) {
@@ -744,8 +744,8 @@ func TestPSepBy1WithLabel(t *testing.T) {
 	if !result_153.Ok {
 		t.Fatal("PSepBy1 with label should succeed")
 	}
-	if Len__t_t(result_153.Value) != 3 {
-		t.Fatalf("PSepBy1 length = %d, want 3", Len__t_t(result_153.Value))
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_153.Value) != 3 {
+		t.Fatalf("PSepBy1 length = %d, want 3", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_153.Value))
 	}
 }
 func TestPThenWithPPure(t *testing.T) {
@@ -793,8 +793,8 @@ func TestReplyEmptyError(t *testing.T) {
 				if v_18.F0.Message != "" {
 					t.Fatalf("EmptyError message = %q, want empty", v_18.F0.Message)
 				}
-				if Len__t_t(v_18.F0.Expected) != 0 {
-					t.Fatalf("EmptyError expected length = %d, want 0", Len__t_t(v_18.F0.Expected))
+				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_18.F0.Expected) != 0 {
+					t.Fatalf("EmptyError expected length = %d, want 0", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_18.F0.Expected))
 				}
 				if v_18.F0.Position.Offset != 10 {
 					t.Fatalf("EmptyError position.Offset = %d, want 10", v_18.F0.Position.Offset)
@@ -819,8 +819,8 @@ func TestReplyErrorAt(t *testing.T) {
 				if v_20.F0.Message != "expected digit" {
 					t.Fatalf("ErrorAt message = %q, want %q", v_20.F0.Message, "expected digit")
 				}
-				if Len__t_t(v_20.F0.Expected) != 2 {
-					t.Fatalf("ErrorAt expected length = %d, want 2", Len__t_t(v_20.F0.Expected))
+				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_20.F0.Expected) != 2 {
+					t.Fatalf("ErrorAt expected length = %d, want 2", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_20.F0.Expected))
 				}
 			}()
 		} else {
@@ -839,8 +839,8 @@ func TestReplyWithExpected(t *testing.T) {
 	func() {
 		if v_22, ok := err2_167.(OptionSome[ParseError]); ok {
 			func() {
-				if Len__t_t(v_22.F0.Expected) != 2 {
-					t.Fatalf("WithExpected expected length = %d, want 2", Len__t_t(v_22.F0.Expected))
+				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_22.F0.Expected) != 2 {
+					t.Fatalf("WithExpected expected length = %d, want 2", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_22.F0.Expected))
 				}
 			}()
 		} else {

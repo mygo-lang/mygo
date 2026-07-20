@@ -6,85 +6,85 @@ import (
 	"fmt"
 )
 
-func ToString_int(value int) string {
+func MygoIT8ToStringFN3IntGN3IntEM8ToString(value int) string {
 	return fmt.Sprint(value)
 }
-func ToString_int8(value int8) string {
+func MygoIT8ToStringFN4Int8GN4Int8EM8ToString(value int8) string {
 	return fmt.Sprint(value)
 }
-func ToString_uint8(value uint8) string {
+func MygoIT8ToStringFN5UInt8GN5UInt8EM8ToString(value uint8) string {
 	return fmt.Sprint(value)
 }
-func ToString_int16(value int16) string {
+func MygoIT8ToStringFN5Int16GN5Int16EM8ToString(value int16) string {
 	return fmt.Sprint(value)
 }
-func ToString_uint16(value uint16) string {
+func MygoIT8ToStringFN6UInt16GN6UInt16EM8ToString(value uint16) string {
 	return fmt.Sprint(value)
 }
-func ToString_int32(value int32) string {
+func MygoIT8ToStringFN5Int32GN5Int32EM8ToString(value int32) string {
 	return fmt.Sprint(value)
 }
-func ToString_uint32(value uint32) string {
+func MygoIT8ToStringFN6UInt32GN6UInt32EM8ToString(value uint32) string {
 	return fmt.Sprint(value)
 }
-func ToString_int64(value int64) string {
+func MygoIT8ToStringFN5Int64GN5Int64EM8ToString(value int64) string {
 	return fmt.Sprint(value)
 }
-func ToString_uint(value uint) string {
+func MygoIT8ToStringFN4UIntGN4UIntEM8ToString(value uint) string {
 	return fmt.Sprint(value)
 }
-func ToString_uint64(value uint64) string {
+func MygoIT8ToStringFN6UInt64GN6UInt64EM8ToString(value uint64) string {
 	return fmt.Sprint(value)
 }
-func ToString_float32(value float32) string {
+func MygoIT8ToStringFN7Float32GN7Float32EM8ToString(value float32) string {
 	return fmt.Sprint(value)
 }
-func ToString_float64(value float64) string {
+func MygoIT8ToStringFN7Float64GN7Float64EM8ToString(value float64) string {
 	return fmt.Sprint(value)
 }
-func ToString_string(value string) string {
+func MygoIT8ToStringFN6StringGN6StringEM8ToString(value string) string {
 	return value
 }
-func ToString_bool(value bool) string {
+func MygoIT8ToStringFN4BoolGN4BoolEM8ToString(value bool) string {
 	return fmt.Sprint(value)
 }
-func Equals_int(left int, right int) bool {
+func MygoIT2EqFN3IntGN3IntEM6Equals(left int, right int) bool {
 	return left == right
 }
-func Equals_int8(left int8, right int8) bool {
+func MygoIT2EqFN4Int8GN4Int8EM6Equals(left int8, right int8) bool {
 	return left == right
 }
-func Equals_uint8(left uint8, right uint8) bool {
+func MygoIT2EqFN5UInt8GN5UInt8EM6Equals(left uint8, right uint8) bool {
 	return left == right
 }
-func Equals_int16(left int16, right int16) bool {
+func MygoIT2EqFN5Int16GN5Int16EM6Equals(left int16, right int16) bool {
 	return left == right
 }
-func Equals_uint16(left uint16, right uint16) bool {
+func MygoIT2EqFN6UInt16GN6UInt16EM6Equals(left uint16, right uint16) bool {
 	return left == right
 }
-func Equals_int32(left int32, right int32) bool {
+func MygoIT2EqFN5Int32GN5Int32EM6Equals(left int32, right int32) bool {
 	return left == right
 }
-func Equals_uint32(left uint32, right uint32) bool {
+func MygoIT2EqFN6UInt32GN6UInt32EM6Equals(left uint32, right uint32) bool {
 	return left == right
 }
-func Equals_int64(left int64, right int64) bool {
+func MygoIT2EqFN5Int64GN5Int64EM6Equals(left int64, right int64) bool {
 	return left == right
 }
-func Equals_float32(left float32, right float32) bool {
+func MygoIT2EqFN7Float32GN7Float32EM6Equals(left float32, right float32) bool {
 	return left == right
 }
-func Equals_float64(left float64, right float64) bool {
+func MygoIT2EqFN7Float64GN7Float64EM6Equals(left float64, right float64) bool {
 	return left == right
 }
-func Equals_string(left string, right string) bool {
+func MygoIT2EqFN6StringGN6StringEM6Equals(left string, right string) bool {
 	return left == right
 }
-func Equals_bool(left bool, right bool) bool {
+func MygoIT2EqFN4BoolGN4BoolEM6Equals(left bool, right bool) bool {
 	return left == right
 }
-func Compare_int(left int, right int) int {
+func MygoIT3OrdFN3IntGN3IntEM7Compare(left int, right int) int {
 	return func() int {
 		if left < right {
 			return -1
@@ -95,13 +95,13 @@ func Compare_int(left int, right int) int {
 		return 0
 	}()
 }
-func Less_int(left int, right int) bool {
+func MygoIT3OrdFN3IntGN3IntEM4Less(left int, right int) bool {
 	return left < right
 }
-func Greater_int(left int, right int) bool {
+func MygoIT3OrdFN3IntGN3IntEM7Greater(left int, right int) bool {
 	return left > right
 }
-func Compare_int8(left int8, right int8) int {
+func MygoIT3OrdFN4Int8GN4Int8EM7Compare(left int8, right int8) int {
 	return func() int {
 		if left < right {
 			return -1
@@ -112,13 +112,13 @@ func Compare_int8(left int8, right int8) int {
 		return 0
 	}()
 }
-func Less_int8(left int8, right int8) bool {
+func MygoIT3OrdFN4Int8GN4Int8EM4Less(left int8, right int8) bool {
 	return left < right
 }
-func Greater_int8(left int8, right int8) bool {
+func MygoIT3OrdFN4Int8GN4Int8EM7Greater(left int8, right int8) bool {
 	return left > right
 }
-func Compare_uint8(left uint8, right uint8) int {
+func MygoIT3OrdFN5UInt8GN5UInt8EM7Compare(left uint8, right uint8) int {
 	return func() int {
 		if left < right {
 			return -1
@@ -129,13 +129,13 @@ func Compare_uint8(left uint8, right uint8) int {
 		return 0
 	}()
 }
-func Less_uint8(left uint8, right uint8) bool {
+func MygoIT3OrdFN5UInt8GN5UInt8EM4Less(left uint8, right uint8) bool {
 	return left < right
 }
-func Greater_uint8(left uint8, right uint8) bool {
+func MygoIT3OrdFN5UInt8GN5UInt8EM7Greater(left uint8, right uint8) bool {
 	return left > right
 }
-func Compare_int16(left int16, right int16) int {
+func MygoIT3OrdFN5Int16GN5Int16EM7Compare(left int16, right int16) int {
 	return func() int {
 		if left < right {
 			return -1
@@ -146,13 +146,13 @@ func Compare_int16(left int16, right int16) int {
 		return 0
 	}()
 }
-func Less_int16(left int16, right int16) bool {
+func MygoIT3OrdFN5Int16GN5Int16EM4Less(left int16, right int16) bool {
 	return left < right
 }
-func Greater_int16(left int16, right int16) bool {
+func MygoIT3OrdFN5Int16GN5Int16EM7Greater(left int16, right int16) bool {
 	return left > right
 }
-func Compare_uint16(left uint16, right uint16) int {
+func MygoIT3OrdFN6UInt16GN6UInt16EM7Compare(left uint16, right uint16) int {
 	return func() int {
 		if left < right {
 			return -1
@@ -163,13 +163,13 @@ func Compare_uint16(left uint16, right uint16) int {
 		return 0
 	}()
 }
-func Less_uint16(left uint16, right uint16) bool {
+func MygoIT3OrdFN6UInt16GN6UInt16EM4Less(left uint16, right uint16) bool {
 	return left < right
 }
-func Greater_uint16(left uint16, right uint16) bool {
+func MygoIT3OrdFN6UInt16GN6UInt16EM7Greater(left uint16, right uint16) bool {
 	return left > right
 }
-func Compare_int32(left int32, right int32) int {
+func MygoIT3OrdFN5Int32GN5Int32EM7Compare(left int32, right int32) int {
 	return func() int {
 		if left < right {
 			return -1
@@ -180,13 +180,13 @@ func Compare_int32(left int32, right int32) int {
 		return 0
 	}()
 }
-func Less_int32(left int32, right int32) bool {
+func MygoIT3OrdFN5Int32GN5Int32EM4Less(left int32, right int32) bool {
 	return left < right
 }
-func Greater_int32(left int32, right int32) bool {
+func MygoIT3OrdFN5Int32GN5Int32EM7Greater(left int32, right int32) bool {
 	return left > right
 }
-func Compare_uint32(left uint32, right uint32) int {
+func MygoIT3OrdFN6UInt32GN6UInt32EM7Compare(left uint32, right uint32) int {
 	return func() int {
 		if left < right {
 			return -1
@@ -197,13 +197,13 @@ func Compare_uint32(left uint32, right uint32) int {
 		return 0
 	}()
 }
-func Less_uint32(left uint32, right uint32) bool {
+func MygoIT3OrdFN6UInt32GN6UInt32EM4Less(left uint32, right uint32) bool {
 	return left < right
 }
-func Greater_uint32(left uint32, right uint32) bool {
+func MygoIT3OrdFN6UInt32GN6UInt32EM7Greater(left uint32, right uint32) bool {
 	return left > right
 }
-func Compare_int64(left int64, right int64) int {
+func MygoIT3OrdFN5Int64GN5Int64EM7Compare(left int64, right int64) int {
 	return func() int {
 		if left < right {
 			return -1
@@ -214,13 +214,13 @@ func Compare_int64(left int64, right int64) int {
 		return 0
 	}()
 }
-func Less_int64(left int64, right int64) bool {
+func MygoIT3OrdFN5Int64GN5Int64EM4Less(left int64, right int64) bool {
 	return left < right
 }
-func Greater_int64(left int64, right int64) bool {
+func MygoIT3OrdFN5Int64GN5Int64EM7Greater(left int64, right int64) bool {
 	return left > right
 }
-func Compare_float32(left float32, right float32) int {
+func MygoIT3OrdFN7Float32GN7Float32EM7Compare(left float32, right float32) int {
 	return func() int {
 		if left < right {
 			return -1
@@ -231,13 +231,13 @@ func Compare_float32(left float32, right float32) int {
 		return 0
 	}()
 }
-func Less_float32(left float32, right float32) bool {
+func MygoIT3OrdFN7Float32GN7Float32EM4Less(left float32, right float32) bool {
 	return left < right
 }
-func Greater_float32(left float32, right float32) bool {
+func MygoIT3OrdFN7Float32GN7Float32EM7Greater(left float32, right float32) bool {
 	return left > right
 }
-func Compare_float64(left float64, right float64) int {
+func MygoIT3OrdFN7Float64GN7Float64EM7Compare(left float64, right float64) int {
 	return func() int {
 		if left < right {
 			return -1
@@ -248,13 +248,13 @@ func Compare_float64(left float64, right float64) int {
 		return 0
 	}()
 }
-func Less_float64(left float64, right float64) bool {
+func MygoIT3OrdFN7Float64GN7Float64EM4Less(left float64, right float64) bool {
 	return left < right
 }
-func Greater_float64(left float64, right float64) bool {
+func MygoIT3OrdFN7Float64GN7Float64EM7Greater(left float64, right float64) bool {
 	return left > right
 }
-func Compare_string(left string, right string) int {
+func MygoIT3OrdFN6StringGN6StringEM7Compare(left string, right string) int {
 	return func() int {
 		if left < right {
 			return -1
@@ -265,13 +265,13 @@ func Compare_string(left string, right string) int {
 		return 0
 	}()
 }
-func Less_string(left string, right string) bool {
+func MygoIT3OrdFN6StringGN6StringEM4Less(left string, right string) bool {
 	return left < right
 }
-func Greater_string(left string, right string) bool {
+func MygoIT3OrdFN6StringGN6StringEM7Greater(left string, right string) bool {
 	return left > right
 }
-func Compare_bool(left bool, right bool) int {
+func MygoIT3OrdFN4BoolGN4BoolEM7Compare(left bool, right bool) int {
 	return func() int {
 		if left == right {
 			return 0
@@ -282,9 +282,9 @@ func Compare_bool(left bool, right bool) int {
 		return 1
 	}()
 }
-func Less_bool(left bool, right bool) bool {
+func MygoIT3OrdFN4BoolGN4BoolEM4Less(left bool, right bool) bool {
 	return !left && right
 }
-func Greater_bool(left bool, right bool) bool {
+func MygoIT3OrdFN4BoolGN4BoolEM7Greater(left bool, right bool) bool {
 	return left && !right
 }

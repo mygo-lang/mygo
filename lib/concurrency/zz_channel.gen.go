@@ -4,33 +4,33 @@ package concurrency
 
 import . "github.com/mygo-lang/mygo/prelude"
 
-func Len_chant_t[T any](ch chan T) int {
+func MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Len[T any](ch chan T) int {
 	return len(ch)
 }
-func Cap_chant_t[T any](ch chan T) int {
+func MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Cap[T any](ch chan T) int {
 	return cap(ch)
 }
-func Len_chan__t_t[T any](ch chan<- T) int {
+func MygoIT8IChannelFN8SendChanGN1TEGN8SendChanGN1TEN1TEM3Len[T any](ch chan<- T) int {
 	return len(ch)
 }
-func Cap_chan__t_t[T any](ch chan<- T) int {
+func MygoIT8IChannelFN8SendChanGN1TEGN8SendChanGN1TEN1TEM3Cap[T any](ch chan<- T) int {
 	return cap(ch)
 }
-func Len___chant_t[T any](ch <-chan T) int {
+func MygoIT8IChannelFN8RecvChanGN1TEGN8RecvChanGN1TEN1TEM3Len[T any](ch <-chan T) int {
 	return len(ch)
 }
-func Cap___chant_t[T any](ch <-chan T) int {
+func MygoIT8IChannelFN8RecvChanGN1TEGN8RecvChanGN1TEN1TEM3Cap[T any](ch <-chan T) int {
 	return cap(ch)
 }
-func Send_chan__t_t[T any](ch chan<- T, value T) {
+func MygoIT13IWritableChanFN8SendChanGN1TEGN8SendChanGN1TEN1TEM4Send[T any](ch chan<- T, value T) {
 	ch <- value
 	return
 }
-func Close_chan__t_t[T any](ch chan<- T) {
+func MygoIT13IWritableChanFN8SendChanGN1TEGN8SendChanGN1TEN1TEM5Close[T any](ch chan<- T) {
 	close(ch)
 	return
 }
-func Receive_chant_t[T any](ch chan T) Option[T] {
+func MygoIT13IReadableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM7Receive[T any](ch chan T) Option[T] {
 	return func() Option[T] {
 		value, ok := <-ch
 		if !ok {
@@ -39,7 +39,7 @@ func Receive_chant_t[T any](ch chan T) Option[T] {
 		return Some[T](value)
 	}()
 }
-func TryReceive_chant_t[T any](ch chan T) Option[T] {
+func MygoIT13IReadableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM10TryReceive[T any](ch chan T) Option[T] {
 	return func() Option[T] {
 		select {
 		case value, ok := <-ch:
@@ -52,7 +52,7 @@ func TryReceive_chant_t[T any](ch chan T) Option[T] {
 		}
 	}()
 }
-func Receive___chant_t[T any](ch <-chan T) Option[T] {
+func MygoIT13IReadableChanFN8RecvChanGN1TEGN8RecvChanGN1TEN1TEM7Receive[T any](ch <-chan T) Option[T] {
 	return func() Option[T] {
 		value, ok := <-ch
 		if !ok {
@@ -61,7 +61,7 @@ func Receive___chant_t[T any](ch <-chan T) Option[T] {
 		return Some[T](value)
 	}()
 }
-func TryReceive___chant_t[T any](ch <-chan T) Option[T] {
+func MygoIT13IReadableChanFN8RecvChanGN1TEGN8RecvChanGN1TEN1TEM10TryReceive[T any](ch <-chan T) Option[T] {
 	return func() Option[T] {
 		select {
 		case value, ok := <-ch:
@@ -74,11 +74,11 @@ func TryReceive___chant_t[T any](ch <-chan T) Option[T] {
 		}
 	}()
 }
-func Send_chant_t[T any](ch chan T, value T) {
+func MygoIT13IWritableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM4Send[T any](ch chan T, value T) {
 	ch <- value
 	return
 }
-func Close_chant_t[T any](ch chan T) {
+func MygoIT13IWritableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM5Close[T any](ch chan T) {
 	close(ch)
 	return
 }

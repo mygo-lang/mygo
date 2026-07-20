@@ -599,6 +599,7 @@ type egCtx struct {
 	currentImpl      string
 	implSymbol       string
 	implTypeKey      string
+	implReceiverType string
 	implTypeParams   []string
 }
 
@@ -636,9 +637,6 @@ func (ctx *egCtx) typeclassBindingForReceiver(name, receiverType string) (egTcBi
 			return binding, true
 		}
 	}
-	if len(bindings) == 1 {
-		return bindings[0], true
-	}
 	return egTcBinding{}, false
 }
 
@@ -656,6 +654,7 @@ func (ctx *egCtx) child() *egCtx {
 		currentImpl:      ctx.currentImpl,
 		implSymbol:       ctx.implSymbol,
 		implTypeKey:      ctx.implTypeKey,
+		implReceiverType: ctx.implReceiverType,
 		implTypeParams:   ctx.implTypeParams,
 	}
 	for k, v := range ctx.locals {
@@ -968,6 +967,7 @@ func (g *gen) genTypedImpl(d *ImplDecl, ifaceName string) []ast.Decl {
 	for i, tp := range iface.TypeParams {
 		subst[tp] = g.goType(typeArgs[i], nil)
 	}
+	implReceiverType := firstTypeArgString(typeArgs, subst)
 	implSym := g.implSymbol(d, ifaceName, typeArgs)
 	methodBodies := map[string]*FuncDecl{}
 	for _, m := range d.Methods {
@@ -1102,6 +1102,7 @@ func (g *gen) genTypedImpl(d *ImplDecl, ifaceName string) []ast.Decl {
 				currentImpl:      ifaceName,
 				implSymbol:       implSym,
 				implTypeKey:      implSym,
+				implReceiverType: implReceiverType,
 			}
 			for _, p := range m.Params {
 				ctx.locals[p.Name] = g.goType(p.Type, combinedTP)
@@ -1273,7 +1274,7 @@ func resolveConstraint(c Constraint, p *Package) (*ImplDecl, *InterfaceDecl, boo
 			if iname == "" {
 				iname = impl.Name
 			}
-			if iname == c.Name && len(impl.InterfaceArgs) == len(c.Args) {
+			if iname == c.Name && constraintArgsMatch(impl.InterfaceArgs, c.Args) {
 				return impl, iface, true
 			}
 		}
@@ -1306,6 +1307,20 @@ func resolveConstraint(c Constraint, p *Package) (*ImplDecl, *InterfaceDecl, boo
 		}
 	}
 	return nil, nil, false
+}
+
+func constraintArgsMatch(implArgs, constraintArgs []TypeExpr) bool {
+	if len(implArgs) != len(constraintArgs) {
+		return false
+	}
+	for i := range implArgs {
+		left := canonicalMyGoTypeName(typeString(implArgs[i], nil))
+		right := canonicalMyGoTypeName(typeString(constraintArgs[i], nil))
+		if left != right {
+			return false
+		}
+	}
+	return true
 }
 
 func (g *gen) goType(t TypeExpr, tp map[string]struct{}) string {
@@ -1602,7 +1617,7 @@ func mangleTypeExpr(t TypeExpr) string {
 	case *NamedType:
 		var b strings.Builder
 		b.WriteString("N")
-		b.WriteString(mangleComponent(tt.Name))
+		b.WriteString(mangleComponent(canonicalMyGoTypeName(tt.Name)))
 		if len(tt.Args) > 0 {
 			b.WriteString("G")
 			for _, arg := range tt.Args {
@@ -1632,6 +1647,42 @@ func mangleTypeExpr(t TypeExpr) string {
 	default:
 		return "X" + mangleComponent(typeString(t, nil))
 	}
+}
+
+func canonicalMyGoTypeName(name string) string {
+	switch name {
+	case "int":
+		return "Int"
+	case "int8":
+		return "Int8"
+	case "uint8":
+		return "UInt8"
+	case "int16":
+		return "Int16"
+	case "uint16":
+		return "UInt16"
+	case "int32":
+		return "Int32"
+	case "uint32":
+		return "UInt32"
+	case "int64":
+		return "Int64"
+	case "uint":
+		return "UInt"
+	case "uint64":
+		return "UInt64"
+	case "float32":
+		return "Float32"
+	case "float64":
+		return "Float64"
+	case "string":
+		return "String"
+	case "bool":
+		return "Bool"
+	case "any":
+		return "Any"
+	}
+	return name
 }
 
 func typeKeyFromType(typ string) string {

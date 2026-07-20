@@ -46,7 +46,7 @@ func (_ ResultErr[A, E]) isResult() {
 func Err[A any, E any](a0 E) Result[A, E] {
 	return ResultErr[A, E]{F0: a0}
 }
-func Result_ToOption[A any, E any](res Result[A, E]) Option[A] {
+func MygoIN6ResultM8ToOption[A any, E any](res Result[A, E]) Option[A] {
 	return func() Option[A] {
 		if v_44, ok := res.(ResultOk[A, E]); ok {
 			return func() Option[A] {
@@ -63,7 +63,7 @@ func Result_ToOption[A any, E any](res Result[A, E]) Option[A] {
 		}
 	}()
 }
-func Result_Flatten[A any, E any](res Result[Result[A, E], E]) Result[A, E] {
+func MygoIN6ResultM7Flatten[A any, E any](res Result[Result[A, E], E]) Result[A, E] {
 	return func() Result[A, E] {
 		if v_46, ok := res.(ResultOk[Result[A, E], E]); ok {
 			return func() Result[A, E] {
@@ -80,7 +80,7 @@ func Result_Flatten[A any, E any](res Result[Result[A, E], E]) Result[A, E] {
 		}
 	}()
 }
-func Equals_result_a_e[A any, E any](left Result[A, E], right Result[A, E], EqualsFn func(A, A) bool, EqualsFn1 func(E, E) bool) bool {
+func MygoIT2EqFN8ResultEqGN1AN1EEGN6ResultGN1AN1EEEM6Equals[A any, E any](left Result[A, E], right Result[A, E], EqualsFn func(A, A) bool, EqualsFn1 func(E, E) bool) bool {
 	return func() bool {
 		if v_50, ok := left.(ResultOk[A, E]); ok {
 			return func() bool {

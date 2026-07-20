@@ -7,34 +7,34 @@ import (
 	"strconv"
 )
 
-func From_int_int64(value int) int64 {
+func MygoIT4FromFN3IntGN3IntN5Int64EM4From(value int) int64 {
 	return int64(value)
 }
-func From_int64_int(value int64) int {
+func MygoIT4FromFN5Int64GN5Int64N3IntEM4From(value int64) int {
 	return int(value)
 }
-func From_int64_float64(value int64) float64 {
+func MygoIT4FromFN5Int64GN5Int64N7Float64EM4From(value int64) float64 {
 	return float64(value)
 }
-func From_float64_int64(value float64) int64 {
+func MygoIT4FromFN7Float64GN7Float64N5Int64EM4From(value float64) int64 {
 	return int64(value)
 }
-func From_float32_float64(value float32) float64 {
+func MygoIT4FromFN7Float32GN7Float32N7Float64EM4From(value float32) float64 {
 	return float64(value)
 }
-func From_float64_float32(value float64) float32 {
+func MygoIT4FromFN7Float64GN7Float64N7Float32EM4From(value float64) float32 {
 	return float32(value)
 }
-func From_int_float64(value int) float64 {
+func MygoIT4FromFN3IntGN3IntN7Float64EM4From(value int) float64 {
 	return float64(value)
 }
-func From_float64_int(value float64) int {
+func MygoIT4FromFN7Float64GN7Float64N3IntEM4From(value float64) int {
 	return int(value)
 }
-func From_int_string(value int) string {
+func MygoIT4FromFN3IntGN3IntN6StringEM4From(value int) string {
 	return fmt.Sprint(value)
 }
-func From_string_result_int_string(value string) Result[int, string] {
+func MygoIT4FromFN6StringGN6StringN6ResultGN3IntN6StringEEM4From(value string) Result[int, string] {
 	return func() Result[int, string] {
 		if v_2, ok := func() Result[int, error] {
 			__mygo_result_val, __mygo_result_err := strconv.Atoi(value)
@@ -63,7 +63,7 @@ func From_string_result_int_string(value string) Result[int, string] {
 		}
 	}()
 }
-func From_string_result_int64_string(value string) Result[int64, string] {
+func MygoIT4FromFN6StringGN6StringN6ResultGN5Int64N6StringEEM4From(value string) Result[int64, string] {
 	return func() Result[int64, string] {
 		if v_4, ok := func() Result[int64, error] {
 			__mygo_result_val, __mygo_result_err := strconv.ParseInt(value, 10, 64)
@@ -92,7 +92,7 @@ func From_string_result_int64_string(value string) Result[int64, string] {
 		}
 	}()
 }
-func From_string_result_float64_string(value string) Result[float64, string] {
+func MygoIT4FromFN6StringGN6StringN6ResultGN7Float64N6StringEEM4From(value string) Result[float64, string] {
 	return func() Result[float64, string] {
 		if v_6, ok := func() Result[float64, error] {
 			__mygo_result_val, __mygo_result_err := strconv.ParseFloat(value, 64)

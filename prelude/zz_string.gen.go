@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func Each_string_rune(c string, fn func(rune)) {
+func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM4Each(c string, fn func(rune)) {
 	func() {
 		for _, ru := range c {
 			fn(ru)
@@ -14,96 +14,96 @@ func Each_string_rune(c string, fn func(rune)) {
 	}()
 	return
 }
-func Len_string_rune(c string) int {
+func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(c string) int {
 	return len(c)
 }
-func Map_string_rune[B any](c string, fn func(rune) B) []B {
+func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Map[B any](c string, fn func(rune) B) []B {
 	return func() []B {
 		slc_42 := []rune(c)
-		return Map__t_t(slc_42, fn)
+		return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(slc_42, fn)
 	}()
 }
-func Filter_string_rune(c string, fn func(rune) bool) []rune {
+func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM6Filter(c string, fn func(rune) bool) []rune {
 	return func() []rune {
 		slc_43 := []rune(c)
-		return Filter__t_t(slc_43, fn)
+		return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(slc_43, fn)
 	}()
 }
-func Fold_string_rune[B any](c string, initial B, fn func(B, rune) B) B {
+func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM4Fold[B any](c string, initial B, fn func(B, rune) B) B {
 	return func() B {
 		slc_44 := []rune(c)
-		return Fold__t_t(slc_44, initial, fn)
+		return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(slc_44, initial, fn)
 	}()
 }
-func Find_string_rune(c string, fn func(rune) bool) Option[*rune] {
+func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM4Find(c string, fn func(rune) bool) Option[*rune] {
 	return func() Option[*rune] {
 		slc_45 := []rune(c)
-		return Find__t_t(slc_45, fn)
+		return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(slc_45, fn)
 	}()
 }
-func Contains_string_rune(c string, item rune) bool {
+func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM8Contains(c string, item rune) bool {
 	return strings.ContainsRune(c, item)
 }
-func String_FromRunes(rs []rune) string {
+func MygoIN6StringM9FromRunes(rs []rune) string {
 	return string(rs)
 }
-func String_MatchString(s string, prefix string) bool {
+func MygoIN6StringM11MatchString(s string, prefix string) bool {
 	return func() bool {
-		if Len_string_rune(s) >= Len_string_rune(prefix) {
+		if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(prefix) {
 			return s[:len(prefix)] == prefix
 		} else {
 			return false
 		}
 	}()
 }
-func String_HasPrefix(s string, prefix string) bool {
+func MygoIN6StringM9HasPrefix(s string, prefix string) bool {
 	return strings.HasPrefix(s, prefix)
 }
-func String_HasSuffix(s string, suffix string) bool {
+func MygoIN6StringM9HasSuffix(s string, suffix string) bool {
 	return strings.HasSuffix(s, suffix)
 }
-func String_Trim(s string, cutset string) string {
+func MygoIN6StringM4Trim(s string, cutset string) string {
 	return strings.Trim(s, cutset)
 }
-func String_TrimSpace(s string) string {
+func MygoIN6StringM9TrimSpace(s string) string {
 	return strings.TrimSpace(s)
 }
-func String_TrimPrefix(s string, prefix string) string {
+func MygoIN6StringM10TrimPrefix(s string, prefix string) string {
 	return strings.TrimPrefix(s, prefix)
 }
-func String_TrimSuffix(s string, suffix string) string {
+func MygoIN6StringM10TrimSuffix(s string, suffix string) string {
 	return strings.TrimSuffix(s, suffix)
 }
-func String_Split(s string, sep string) []string {
+func MygoIN6StringM5Split(s string, sep string) []string {
 	return strings.Split(s, sep)
 }
-func String_SplitN(s string, sep string, n int) []string {
+func MygoIN6StringM6SplitN(s string, sep string, n int) []string {
 	return strings.SplitN(s, sep, n)
 }
-func String_Join(sep string, elems []string) string {
+func MygoIN6StringM4Join(sep string, elems []string) string {
 	return strings.Join(elems, sep)
 }
-func String_Replace(s string, old string, new string, n int) string {
+func MygoIN6StringM7Replace(s string, old string, new string, n int) string {
 	return strings.Replace(s, old, new, n)
 }
-func String_ReplaceAll(s string, old string, new string) string {
+func MygoIN6StringM10ReplaceAll(s string, old string, new string) string {
 	return strings.ReplaceAll(s, old, new)
 }
-func String_ToUpper(s string) string {
+func MygoIN6StringM7ToUpper(s string) string {
 	return strings.ToUpper(s)
 }
-func String_ToLower(s string) string {
+func MygoIN6StringM7ToLower(s string) string {
 	return strings.ToLower(s)
 }
-func String_Repeat(s string, count int) string {
+func MygoIN6StringM6Repeat(s string, count int) string {
 	return strings.Repeat(s, count)
 }
-func String_Index(s string, substr string) int {
+func MygoIN6StringM5Index(s string, substr string) int {
 	return strings.Index(s, substr)
 }
-func String_LastIndex(s string, substr string) int {
+func MygoIN6StringM9LastIndex(s string, substr string) int {
 	return strings.LastIndex(s, substr)
 }
-func String_Fields(s string) []string {
+func MygoIN6StringM6Fields(s string) []string {
 	return strings.Fields(s)
 }

@@ -2,7 +2,7 @@
 
 package prelude
 
-func Each__t_t[T any](c []T, fn func(T)) {
+func MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each[T any](c []T, fn func(T)) {
 	func() {
 		for _, v := range c {
 			fn(v)
@@ -10,10 +10,10 @@ func Each__t_t[T any](c []T, fn func(T)) {
 	}()
 	return
 }
-func Len__t_t[T any](c []T) int {
+func MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len[T any](c []T) int {
 	return len(c)
 }
-func Map__t_t[T any, B any](c []T, fn func(T) B) []B {
+func MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map[T any, B any](c []T, fn func(T) B) []B {
 	return func() []B {
 		out := make([]B, len(c))
 		for i, v := range c {
@@ -22,7 +22,7 @@ func Map__t_t[T any, B any](c []T, fn func(T) B) []B {
 		return out
 	}()
 }
-func Filter__t_t[T any](c []T, fn func(T) bool) []T {
+func MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter[T any](c []T, fn func(T) bool) []T {
 	return func() []T {
 		out := make([]T, 0, len(c))
 		for _, v := range c {
@@ -33,7 +33,7 @@ func Filter__t_t[T any](c []T, fn func(T) bool) []T {
 		return out
 	}()
 }
-func Fold__t_t[T any, B any](c []T, initial B, fn func(B, T) B) B {
+func MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold[T any, B any](c []T, initial B, fn func(B, T) B) B {
 	return func() B {
 		acc := initial
 		for _, v := range c {
@@ -42,7 +42,7 @@ func Fold__t_t[T any, B any](c []T, initial B, fn func(B, T) B) B {
 		return acc
 	}()
 }
-func Find__t_t[T any](c []T, fn func(T) bool) Option[*T] {
+func MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find[T any](c []T, fn func(T) bool) Option[*T] {
 	return func() Option[*T] {
 		for i := range c {
 			if fn(c[i]) {
@@ -52,7 +52,7 @@ func Find__t_t[T any](c []T, fn func(T) bool) Option[*T] {
 		return None[*T]()
 	}()
 }
-func Contains__t_t[T any](c []T, item T, EqualsFn func(T, T) bool) bool {
+func MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM8Contains[T any](c []T, item T, EqualsFn func(T, T) bool) bool {
 	return func() bool {
 		for _, v := range c {
 			if EqualsFn(v, item) {
@@ -62,12 +62,12 @@ func Contains__t_t[T any](c []T, item T, EqualsFn func(T, T) bool) bool {
 		return false
 	}()
 }
-func Slice_Append[T any](items []T, item T) []T {
+func MygoIN5SliceM6Append[T any](items []T, item T) []T {
 	return func() []T {
 		return append(items, item)
 	}()
 }
-func Slice_Prepend[T any](items []T, item T) []T {
+func MygoIN5SliceM7Prepend[T any](items []T, item T) []T {
 	return func() []T {
 		out := make([]T, 0, len(items)+1)
 		out = append(out, item)
@@ -75,29 +75,37 @@ func Slice_Prepend[T any](items []T, item T) []T {
 		return out
 	}()
 }
-func Get__t_int_t[T any](s []T, index int) Option[T] {
+func MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get[T any](s []T, index int) Option[T] {
 	return func() Option[T] {
-		if index < 0 || index >= Len__t_t(s) {
+		if index < 0 || index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(s) {
 			return None[T]()
 		} else {
 			return Some[T](s[index])
 		}
 	}()
 }
-func Slice__t_int_t[T any](s []T, startPos int, endPos int) Option[[]T] {
+func MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice[T any](s []T, startPos int, endPos int) Option[[]T] {
 	return func() Option[[]T] {
-		if startPos < 0 || endPos < startPos || endPos > Len__t_t(s) {
+		if startPos < 0 || endPos < startPos || endPos > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(s) {
 			return None[[]T]()
 		} else {
 			return Some[[]T](s[startPos:endPos])
 		}
 	}()
 }
-func Set__t_int_t[T any](s []T, index int, value T) {
+func MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get[T any](s []T, index int) Option[T] {
+	return func() Option[T] {
+		if index >= 0 && index < len(s) {
+			return Some[T](s[index])
+		}
+		return None[T]()
+	}()
+}
+func MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Set[T any](s []T, index int, value T) {
 	s[index] = value
 	return
 }
-func Delete__t_int_t[T any](s []T, index int) {
+func MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM6Delete[T any](s []T, index int) {
 	s = append(s[:index], s[index+1:]...)
 	return
 }

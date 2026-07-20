@@ -2,7 +2,7 @@
 
 package prelude
 
-func Each_map_astruct___a[A comparable](c map[A]struct{}, fn func(A)) {
+func MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM4Each[A comparable](c map[A]struct{}, fn func(A)) {
 	func() {
 		for v := range c {
 			fn(v)
@@ -10,10 +10,10 @@ func Each_map_astruct___a[A comparable](c map[A]struct{}, fn func(A)) {
 	}()
 	return
 }
-func Len_map_astruct___a[A comparable](c map[A]struct{}) int {
+func MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM3Len[A comparable](c map[A]struct{}) int {
 	return len(c)
 }
-func Map_map_astruct___a[A comparable, B comparable](c map[A]struct{}, fn func(A) B) map[B]struct{} {
+func MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM3Map[A comparable, B comparable](c map[A]struct{}, fn func(A) B) map[B]struct{} {
 	return func() map[B]struct{} {
 		out := make(map[B]struct{}, len(c))
 		for v := range c {
@@ -22,7 +22,7 @@ func Map_map_astruct___a[A comparable, B comparable](c map[A]struct{}, fn func(A
 		return out
 	}()
 }
-func Filter_map_astruct___a[A comparable](c map[A]struct{}, fn func(A) bool) map[A]struct{} {
+func MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM6Filter[A comparable](c map[A]struct{}, fn func(A) bool) map[A]struct{} {
 	return func() map[A]struct{} {
 		out := make(map[A]struct{}, len(c))
 		for v := range c {
@@ -33,7 +33,7 @@ func Filter_map_astruct___a[A comparable](c map[A]struct{}, fn func(A) bool) map
 		return out
 	}()
 }
-func Fold_map_astruct___a[A comparable, B any](c map[A]struct{}, initial B, fn func(B, A) B) B {
+func MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM4Fold[A comparable, B any](c map[A]struct{}, initial B, fn func(B, A) B) B {
 	return func() B {
 		acc := initial
 		for v := range c {
@@ -42,7 +42,7 @@ func Fold_map_astruct___a[A comparable, B any](c map[A]struct{}, initial B, fn f
 		return acc
 	}()
 }
-func Find_map_astruct___a[A comparable](c map[A]struct{}, fn func(A) bool) Option[*A] {
+func MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM4Find[A comparable](c map[A]struct{}, fn func(A) bool) Option[*A] {
 	return func() Option[*A] {
 		for v := range c {
 			if fn(v) {
@@ -53,24 +53,24 @@ func Find_map_astruct___a[A comparable](c map[A]struct{}, fn func(A) bool) Optio
 		return None[*A]()
 	}()
 }
-func Contains_map_astruct___a[A comparable](c map[A]struct{}, item A, EqualsFn func(A, A) bool) bool {
+func MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM8Contains[A comparable](c map[A]struct{}, item A, EqualsFn func(A, A) bool) bool {
 	return func() bool {
 		_, ok := c[item]
 		return ok
 	}()
 }
-func Set_New[A comparable]() map[A]struct{} {
+func MygoIN3SetM3New[A comparable]() map[A]struct{} {
 	return func() map[A]struct{} {
 		return make(map[A]struct{})
 	}()
 }
-func Set_Add[A comparable](items map[A]struct{}, item A) map[A]struct{} {
+func MygoIN3SetM3Add[A comparable](items map[A]struct{}, item A) map[A]struct{} {
 	return func() map[A]struct{} {
 		items[item] = struct{}{}
 		return items
 	}()
 }
-func Set_Delete[A comparable](items map[A]struct{}, item A) map[A]struct{} {
+func MygoIN3SetM6Delete[A comparable](items map[A]struct{}, item A) map[A]struct{} {
 	return func() map[A]struct{} {
 		delete(items, item)
 		return items

@@ -2,7 +2,7 @@
 
 package prelude
 
-func Each_map_kv_v[K comparable, V any](c map[K]V, fn func(V)) {
+func MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM4Each[K comparable, V any](c map[K]V, fn func(V)) {
 	func() {
 		for _, v := range c {
 			fn(v)
@@ -10,10 +10,10 @@ func Each_map_kv_v[K comparable, V any](c map[K]V, fn func(V)) {
 	}()
 	return
 }
-func Len_map_kv_v[K comparable, V any](c map[K]V) int {
+func MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len[K comparable, V any](c map[K]V) int {
 	return len(c)
 }
-func Map_map_kv_v[K comparable, V any, B any](c map[K]V, fn func(V) B) map[K]B {
+func MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Map[K comparable, V any, B any](c map[K]V, fn func(V) B) map[K]B {
 	return func() map[K]B {
 		out := make(map[K]B, len(c))
 		for k, v := range c {
@@ -22,7 +22,7 @@ func Map_map_kv_v[K comparable, V any, B any](c map[K]V, fn func(V) B) map[K]B {
 		return out
 	}()
 }
-func Filter_map_kv_v[K comparable, V any](c map[K]V, fn func(V) bool) map[K]V {
+func MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM6Filter[K comparable, V any](c map[K]V, fn func(V) bool) map[K]V {
 	return func() map[K]V {
 		out := make(map[K]V, len(c))
 		for k, v := range c {
@@ -33,7 +33,7 @@ func Filter_map_kv_v[K comparable, V any](c map[K]V, fn func(V) bool) map[K]V {
 		return out
 	}()
 }
-func Fold_map_kv_v[K comparable, V any, B any](c map[K]V, initial B, fn func(B, V) B) B {
+func MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM4Fold[K comparable, V any, B any](c map[K]V, initial B, fn func(B, V) B) B {
 	return func() B {
 		acc := initial
 		for _, v := range c {
@@ -42,7 +42,7 @@ func Fold_map_kv_v[K comparable, V any, B any](c map[K]V, initial B, fn func(B, 
 		return acc
 	}()
 }
-func Find_map_kv_v[K comparable, V any](c map[K]V, fn func(V) bool) Option[*V] {
+func MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM4Find[K comparable, V any](c map[K]V, fn func(V) bool) Option[*V] {
 	return func() Option[*V] {
 		for _, v := range c {
 			if fn(v) {
@@ -53,7 +53,7 @@ func Find_map_kv_v[K comparable, V any](c map[K]V, fn func(V) bool) Option[*V] {
 		return None[*V]()
 	}()
 }
-func Contains_map_kv_v[K comparable, V any](c map[K]V, item V, EqualsFn func(V, V) bool) bool {
+func MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM8Contains[K comparable, V any](c map[K]V, item V, EqualsFn func(V, V) bool) bool {
 	return func() bool {
 		for _, v := range c {
 			if EqualsFn(v, item) {
@@ -63,7 +63,7 @@ func Contains_map_kv_v[K comparable, V any](c map[K]V, item V, EqualsFn func(V, 
 		return false
 	}()
 }
-func Get_map_kv_k_v[K comparable, V any](m map[K]V, index K) Option[V] {
+func MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get[K comparable, V any](m map[K]V, index K) Option[V] {
 	return func() Option[V] {
 		if v, ok := m[index]; ok {
 			return Some[V](v)
@@ -71,11 +71,11 @@ func Get_map_kv_k_v[K comparable, V any](m map[K]V, index K) Option[V] {
 		return None[V]()
 	}()
 }
-func Set_map_kv_k_v[K comparable, V any](m map[K]V, index K, value V) {
+func MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set[K comparable, V any](m map[K]V, index K, value V) {
 	m[index] = value
 	return
 }
-func Delete_map_kv_k_v[K comparable, V any](m map[K]V, index K) {
+func MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete[K comparable, V any](m map[K]V, index K) {
 	delete(m, index)
 	return
 }

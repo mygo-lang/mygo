@@ -7,20 +7,20 @@ type List[A any] struct {
 	tail Option[*List[A]]
 }
 
-func List_Cons[T any](head T, tail Option[List[T]]) List[T] {
-	return List[T]{head: head, tail: Map_option_a_a(tail, func(a List[T]) *List[T] {
+func MygoIN4ListM4Cons[T any](head T, tail Option[List[T]]) List[T] {
+	return List[T]{head: head, tail: MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(tail, func(a List[T]) *List[T] {
 		return &a
 	})}
 }
-func List_Head[T any](self List[T]) T {
+func MygoIN4ListM4Head[T any](self List[T]) T {
 	return self.head
 }
-func List_Tail[T any](self List[T]) Option[List[T]] {
-	return Map_option_a_a(self.tail, func(a *List[T]) List[T] {
+func MygoIN4ListM4Tail[T any](self List[T]) Option[List[T]] {
+	return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(self.tail, func(a *List[T]) List[T] {
 		return *a
 	})
 }
-func Each_list_t_t[T any](c List[T], fn func(T)) {
+func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Each[T any](c List[T], fn func(T)) {
 	func() {
 		var current_1 *List[T] = &c
 		var done_2 bool = false
@@ -46,7 +46,7 @@ func Each_list_t_t[T any](c List[T], fn func(T)) {
 	}()
 	return
 }
-func Len_list_t_t[T any](c List[T]) int {
+func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Len[T any](c List[T]) int {
 	return func() int {
 		var count_3 int = 0
 		var current_4 *List[T] = &c
@@ -72,7 +72,7 @@ func Len_list_t_t[T any](c List[T]) int {
 		return count_3
 	}()
 }
-func Map_list_t_t[T any, B any](c List[T], fn func(T) B) List[B] {
+func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Map[T any, B any](c List[T], fn func(T) B) List[B] {
 	return func() List[B] {
 		var done_6 bool = false
 		var headVal_7 B = fn(c.head)
@@ -99,7 +99,7 @@ func Map_list_t_t[T any, B any](c List[T], fn func(T) B) List[B] {
 		return result_8
 	}()
 }
-func Filter_list_t_t[T any](c List[T], fn func(T) bool) List[T] {
+func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM6Filter[T any](c List[T], fn func(T) bool) List[T] {
 	return func() List[T] {
 		var done_10 bool = false
 		var current_11 *List[T] = &c
@@ -131,7 +131,7 @@ func Filter_list_t_t[T any](c List[T], fn func(T) bool) List[T] {
 		return result_12
 	}()
 }
-func Fold_list_t_t[T any, B any](c List[T], initial B, fn func(B, T) B) B {
+func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Fold[T any, B any](c List[T], initial B, fn func(B, T) B) B {
 	return func() B {
 		var acc_13 B = initial
 		var done_14 bool = false
@@ -157,7 +157,7 @@ func Fold_list_t_t[T any, B any](c List[T], initial B, fn func(B, T) B) B {
 		return acc_13
 	}()
 }
-func Find_list_t_t[T any](c List[T], fn func(T) bool) Option[*T] {
+func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Find[T any](c List[T], fn func(T) bool) Option[*T] {
 	return func() Option[*T] {
 		var done_16 bool = false
 		var result_17 Option[*T] = None[*T]()
@@ -191,7 +191,7 @@ func Find_list_t_t[T any](c List[T], fn func(T) bool) Option[*T] {
 		return result_17
 	}()
 }
-func Contains_list_t_t[T any](c List[T], item T, EqualsFn func(T, T) bool) bool {
+func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM8Contains[T any](c List[T], item T, EqualsFn func(T, T) bool) bool {
 	return func() bool {
 		var done_19 bool = false
 		var result_20 bool = false

@@ -102,7 +102,7 @@ func POrElse[A any](left Parser[A], right Parser[A]) Parser[A] {
 	}}
 }
 func PChoice[A any](parsers []Parser[A]) Parser[A] {
-	return Fold__t_t(parsers, PFail[A]("no parser matched"), func(acc Parser[A], p Parser[A]) Parser[A] {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(parsers, PFail[A]("no parser matched"), func(acc Parser[A], p Parser[A]) Parser[A] {
 		return POrElse(acc, p)
 	})
 }
@@ -159,7 +159,7 @@ func PMany[A any](p Parser[A]) Parser[[]A] {
 						if !tail_10.Ok {
 							return tail_10
 						} else {
-							return Reply[[]A]{Ok: true, Consumed: true, Value: Slice_Prepend(tail_10.Value, r_9.Value), State: tail_10.State, Error: tail_10.Error}
+							return Reply[[]A]{Ok: true, Consumed: true, Value: MygoIN5SliceM7Prepend(tail_10.Value, r_9.Value), State: tail_10.State, Error: tail_10.Error}
 						}
 					}()
 				}()
@@ -170,7 +170,7 @@ func PMany[A any](p Parser[A]) Parser[[]A] {
 func PMany1[A any](p Parser[A]) Parser[[]A] {
 	return PBind(p, func(first A) Parser[[]A] {
 		return PMap(PMany(p), func(rest []A) []A {
-			return Slice_Prepend(rest, first)
+			return MygoIN5SliceM7Prepend(rest, first)
 		})
 	})
 }
@@ -205,7 +205,7 @@ func PSepBy[A any, S any](item Parser[A], sep Parser[S]) Parser[[]A] {
 func PSepBy1[A any, S any](item Parser[A], sep Parser[S]) Parser[[]A] {
 	return PBind(item, func(first A) Parser[[]A] {
 		return PMap(PMany(PThen(sep, item)), func(rest []A) []A {
-			return Slice_Prepend(rest, first)
+			return MygoIN5SliceM7Prepend(rest, first)
 		})
 	})
 }
@@ -272,7 +272,7 @@ func PEof() Parser[struct {
 	return Parser[struct {
 	}]{Run: func(state State) Reply[struct{}] {
 		return func() Reply[struct{}] {
-			if state.Index >= Len_string_rune(state.Input) {
+			if state.Index >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(state.Input) {
 				return Reply[struct{}]{Ok: true, Consumed: false, Value: struct {
 				}{}, State: state, Error: EmptyError(state.Position)}
 			} else {
@@ -300,7 +300,7 @@ func PAlphaNum() Parser[rune] {
 func PIdentifier() Parser[string] {
 	return PBind(PLetter(), func(first rune) Parser[string] {
 		return PMap(PMany(PAlphaNum()), func(rest []rune) string {
-			return FromRunes(Slice_Prepend(rest, first))
+			return FromRunes(MygoIN5SliceM7Prepend(rest, first))
 		})
 	})
 }
@@ -359,7 +359,7 @@ func WithExpected(err Option[ParseError], name string) Option[ParseError] {
 	return func() Option[ParseError] {
 		if v_2, ok := err.(OptionSome[ParseError]); ok {
 			return func() Option[ParseError] {
-				return Some[ParseError](ParseError{Position: v_2.F0.Position, Expected: Slice_Append(v_2.F0.Expected, name), Message: v_2.F0.Message})
+				return Some[ParseError](ParseError{Position: v_2.F0.Position, Expected: MygoIN5SliceM6Append(v_2.F0.Expected, name), Message: v_2.F0.Message})
 			}()
 		} else {
 			if _, ok := err.(OptionNone[ParseError]); ok {
@@ -373,5 +373,5 @@ func WithExpected(err Option[ParseError], name string) Option[ParseError] {
 	}()
 }
 func FromRunes(rs []rune) string {
-	return String_FromRunes(rs)
+	return MygoIN6StringM9FromRunes(rs)
 }

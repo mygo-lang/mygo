@@ -2,7 +2,7 @@
 
 package prelude
 
-func Each_option_a_a[A any](c Option[A], fn func(A)) {
+func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM4Each[A any](c Option[A], fn func(A)) {
 	func() {
 		if v_22, ok := c.(OptionSome[A]); ok {
 			func() {
@@ -17,7 +17,7 @@ func Each_option_a_a[A any](c Option[A], fn func(A)) {
 	}()
 	return
 }
-func Len_option_a_a[A any](c Option[A]) int {
+func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Len[A any](c Option[A]) int {
 	return func() int {
 		if _, ok := c.(OptionSome[A]); ok {
 			return func() int {
@@ -34,7 +34,7 @@ func Len_option_a_a[A any](c Option[A]) int {
 		}
 	}()
 }
-func Map_option_a_a[A any, B any](c Option[A], fn func(A) B) Option[B] {
+func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map[A any, B any](c Option[A], fn func(A) B) Option[B] {
 	return func() Option[B] {
 		if v_26, ok := c.(OptionSome[A]); ok {
 			return func() Option[B] {
@@ -51,7 +51,7 @@ func Map_option_a_a[A any, B any](c Option[A], fn func(A) B) Option[B] {
 		}
 	}()
 }
-func Filter_option_a_a[A any](c Option[A], fn func(A) bool) Option[A] {
+func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM6Filter[A any](c Option[A], fn func(A) bool) Option[A] {
 	return func() Option[A] {
 		if v_28, ok := c.(OptionSome[A]); ok {
 			return func() Option[A] {
@@ -74,7 +74,7 @@ func Filter_option_a_a[A any](c Option[A], fn func(A) bool) Option[A] {
 		}
 	}()
 }
-func Fold_option_a_a[A any, B any](c Option[A], initial B, fn func(B, A) B) B {
+func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM4Fold[A any, B any](c Option[A], initial B, fn func(B, A) B) B {
 	return func() B {
 		if v_30, ok := c.(OptionSome[A]); ok {
 			return func() B {
@@ -91,7 +91,7 @@ func Fold_option_a_a[A any, B any](c Option[A], initial B, fn func(B, A) B) B {
 		}
 	}()
 }
-func Find_option_a_a[A any](c Option[A], fn func(A) bool) Option[*A] {
+func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM4Find[A any](c Option[A], fn func(A) bool) Option[*A] {
 	return func() Option[*A] {
 		if v_32, ok := c.(OptionSome[A]); ok {
 			return func() Option[*A] {
@@ -114,7 +114,7 @@ func Find_option_a_a[A any](c Option[A], fn func(A) bool) Option[*A] {
 		}
 	}()
 }
-func Contains_option_a_a[A any](c Option[A], item A, EqualsFn func(A, A) bool) bool {
+func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM8Contains[A any](c Option[A], item A, EqualsFn func(A, A) bool) bool {
 	return func() bool {
 		if v_34, ok := c.(OptionSome[A]); ok {
 			return func() bool {
@@ -131,7 +131,7 @@ func Contains_option_a_a[A any](c Option[A], item A, EqualsFn func(A, A) bool) b
 		}
 	}()
 }
-func Option_UnwrapOr[A any](opt Option[A], defaultVal A) A {
+func MygoIN6OptionM8UnwrapOr[A any](opt Option[A], defaultVal A) A {
 	return func() A {
 		if v_36, ok := opt.(OptionSome[A]); ok {
 			return func() A {
@@ -148,7 +148,7 @@ func Option_UnwrapOr[A any](opt Option[A], defaultVal A) A {
 		}
 	}()
 }
-func Equals_option_a[A any](left Option[A], right Option[A], EqualsFn func(A, A) bool) bool {
+func MygoIT2EqFN8OptionEqGN1AEGN6OptionGN1AEEM6Equals[A any](left Option[A], right Option[A], EqualsFn func(A, A) bool) bool {
 	return func() bool {
 		if v_40, ok := left.(OptionSome[A]); ok {
 			return func() bool {

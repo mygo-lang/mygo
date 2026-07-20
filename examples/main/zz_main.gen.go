@@ -108,10 +108,10 @@ type Person struct {
 	email string
 }
 
-func Box_Value[A any](self Box[A]) A {
+func MygoIN3BoxM5Value[A any](self Box[A]) A {
 	return self.value
 }
-func Box_Map[A any, B any](self Box[A], f func(A) B) Box[B] {
+func MygoIN3BoxM3Map[A any, B any](self Box[A], f func(A) B) Box[B] {
 	return Box[B]{value: f(self.value)}
 }
 func demoBasicTypes() string {
@@ -134,7 +134,7 @@ func demoBasicTypes() string {
 	var greeting_17 string = "Hello, MyGO!"
 	var multiline_18 string = "\n    This is a\n    multiline string\n  "
 	var raw_19 string = "raw string with \\n no escapes"
-	return "Int8=" + ToString_int8(i8_1) + ", UInt8=" + ToString_uint8(ui8_2) + ", Int16=" + ToString_int16(i16_3) + ", UInt16=" + ToString_uint16(ui16_4) + ", Int32=" + ToString_int32(i32_5) + ", UInt32=" + ToString_uint32(ui32_6) + ", Int64=" + ToString_int64(i64_7) + ", UInt=" + ToString_uint(ui_8) + ", UInt64=" + ToString_uint64(ui64_9) + ", Float32=" + ToString_float32(f32_10) + ", Float64=" + ToString_float64(f64_11) + ", Int=" + ToString_int(i_12) + ", hex=" + ToString_int(hex_13) + ", oct=" + ToString_int(oct_14) + ", bin=" + ToString_int(bin_15) + ", flag=" + ToString_bool(flag_16) + ", greeting=" + greeting_17 + ", multiline=" + multiline_18 + ", raw=" + raw_19
+	return "Int8=" + MygoIT8ToStringFN4Int8GN4Int8EM8ToString(i8_1) + ", UInt8=" + MygoIT8ToStringFN5UInt8GN5UInt8EM8ToString(ui8_2) + ", Int16=" + MygoIT8ToStringFN5Int16GN5Int16EM8ToString(i16_3) + ", UInt16=" + MygoIT8ToStringFN6UInt16GN6UInt16EM8ToString(ui16_4) + ", Int32=" + MygoIT8ToStringFN5Int32GN5Int32EM8ToString(i32_5) + ", UInt32=" + MygoIT8ToStringFN6UInt32GN6UInt32EM8ToString(ui32_6) + ", Int64=" + MygoIT8ToStringFN5Int64GN5Int64EM8ToString(i64_7) + ", UInt=" + MygoIT8ToStringFN4UIntGN4UIntEM8ToString(ui_8) + ", UInt64=" + MygoIT8ToStringFN6UInt64GN6UInt64EM8ToString(ui64_9) + ", Float32=" + MygoIT8ToStringFN7Float32GN7Float32EM8ToString(f32_10) + ", Float64=" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(f64_11) + ", Int=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(i_12) + ", hex=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(hex_13) + ", oct=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(oct_14) + ", bin=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(bin_15) + ", flag=" + MygoIT8ToStringFN4BoolGN4BoolEM8ToString(flag_16) + ", greeting=" + greeting_17 + ", multiline=" + multiline_18 + ", raw=" + raw_19
 }
 func describeColor(c Color) string {
 	return func() string {
@@ -186,14 +186,14 @@ func demoEnums() string {
 	c_20 := ColorGreenCtor()
 	circle_21 := ShapeCircleCtor(5.0)
 	rect_22 := ShapeRectangleCtor(10.0, 20.0)
-	return "Color=" + describeColor(c_20) + ", CircleArea=" + ToString_float64(area(circle_21)) + ", RectArea=" + ToString_float64(area(rect_22))
+	return "Color=" + describeColor(c_20) + ", CircleArea=" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(area(circle_21)) + ", RectArea=" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(area(rect_22))
 }
 func demoStructs() string {
 	p_23 := Point{x: 3.0, y: 4.0}
 	box_24 := Box[int]{value: 42}
 	var box_value_25 int = box_24.value
 	person_26 := Person{name: "Alice", age: 30, email: "alice@example.com"}
-	return "Point=(" + ToString_float64(p_23.x) + "," + ToString_float64(p_23.y) + ")" + ", Box=" + ToString_int(box_value_25) + ", Person=" + person_26.name + ":" + ToString_int(person_26.age)
+	return "Point=(" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(p_23.x) + "," + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(p_23.y) + ")" + ", Box=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(box_value_25) + ", Person=" + person_26.name + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(person_26.age)
 }
 func safeDivide(a float64, b float64) Result[float64, string] {
 	return func() Result[float64, string] {
@@ -214,7 +214,7 @@ func demoOptionResult() string {
 	some_text_33 := func() string {
 		if v_8, ok := some_val_27.(OptionSome[int]); ok {
 			return func() string {
-				return ToString_int(v_8.F0)
+				return MygoIT8ToStringFN3IntGN3IntEM8ToString(v_8.F0)
 			}()
 		} else {
 			if _, ok := some_val_27.(OptionNone[int]); ok {
@@ -229,7 +229,7 @@ func demoOptionResult() string {
 	none_text_34 := func() string {
 		if v_10, ok := none_val_28.(OptionSome[int]); ok {
 			return func() string {
-				return ToString_int(v_10.F0)
+				return MygoIT8ToStringFN3IntGN3IntEM8ToString(v_10.F0)
 			}()
 		} else {
 			if _, ok := none_val_28.(OptionNone[int]); ok {
@@ -244,7 +244,7 @@ func demoOptionResult() string {
 	ok_text_35 := func() string {
 		if v_12, ok := ok_res_29.(ResultOk[int, string]); ok {
 			return func() string {
-				return ToString_int(v_12.F0)
+				return MygoIT8ToStringFN3IntGN3IntEM8ToString(v_12.F0)
 			}()
 		} else {
 			if v_11, ok := ok_res_29.(ResultErr[int, string]); ok {
@@ -259,7 +259,7 @@ func demoOptionResult() string {
 	err_text_36 := func() string {
 		if v_14, ok := err_res_30.(ResultOk[int, string]); ok {
 			return func() string {
-				return ToString_int(v_14.F0)
+				return MygoIT8ToStringFN3IntGN3IntEM8ToString(v_14.F0)
 			}()
 		} else {
 			if v_13, ok := err_res_30.(ResultErr[int, string]); ok {
@@ -274,7 +274,7 @@ func demoOptionResult() string {
 	result_text_37 := func() string {
 		if v_16, ok := result_31.(ResultOk[float64, string]); ok {
 			return func() string {
-				return ToString_float64(v_16.F0)
+				return MygoIT8ToStringFN7Float64GN7Float64EM8ToString(v_16.F0)
 			}()
 		} else {
 			if v_15, ok := result_31.(ResultErr[float64, string]); ok {
@@ -289,7 +289,7 @@ func demoOptionResult() string {
 	div_zero_text_38 := func() string {
 		if v_18, ok := div_zero_32.(ResultOk[float64, string]); ok {
 			return func() string {
-				return ToString_float64(v_18.F0)
+				return MygoIT8ToStringFN7Float64GN7Float64EM8ToString(v_18.F0)
 			}()
 		} else {
 			if v_17, ok := div_zero_32.(ResultErr[float64, string]); ok {
@@ -313,27 +313,27 @@ func demoCollections() string {
 		__set["hello"] = struct{}{}
 		return __set
 	}()
-	return "Slice len=" + ToString_int(Len__t_t(nums_39)) + ", Map len=" + ToString_int(Len_map_kv_v(scores_40)) + ", Set len=" + ToString_int(Len_map_kv_v(words_41))
+	return "Slice len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(nums_39)) + ", Map len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len(scores_40)) + ", Set len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM3Len(words_41))
 }
 func demoFunctional() string {
 	var nums_42 []int = []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	doubled_43 := Map__t_t(nums_42, func(x int) int {
+	doubled_43 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(nums_42, func(x int) int {
 		return x * 2
 	})
-	evens_44 := Filter__t_t(nums_42, func(x int) bool {
+	evens_44 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(nums_42, func(x int) bool {
 		return x/2*2 == x
 	})
-	sum_45 := Fold__t_t(nums_42, 0, func(acc int, x int) int {
+	sum_45 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(nums_42, 0, func(acc int, x int) int {
 		return acc + x
 	})
-	result_46 := Fold__t_t(Map__t_t(Filter__t_t(nums_42, func(x int) bool {
+	result_46 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(nums_42, func(x int) bool {
 		return x > 3
 	}), func(x int) int {
 		return x * x
 	}), 0, func(acc int, x int) int {
 		return acc + x
 	})
-	return "Sum=" + ToString_int(sum_45) + ", Evens len=" + ToString_int(Len__t_t(evens_44)) + ", Doubled len=" + ToString_int(Len__t_t(doubled_43)) + ", Pipeline result=" + ToString_int(result_46)
+	return "Sum=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(sum_45) + ", Evens len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(evens_44)) + ", Doubled len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(doubled_43)) + ", Pipeline result=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(result_46)
 }
 func demoControlFlow() string {
 	max_47 := func() int {
@@ -388,7 +388,7 @@ func demoControlFlow() string {
 			}
 		}
 	}()
-	return "max=" + ToString_int(max_47) + ", msg=" + msg_48 + ", sum=1..10=" + ToString_int(sum_49) + ", desc=" + desc_52
+	return "max=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(max_47) + ", msg=" + msg_48 + ", sum=1..10=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(sum_49) + ", desc=" + desc_52
 }
 func demoMutable() string {
 	var counter_53 int = 0
@@ -396,10 +396,10 @@ func demoMutable() string {
 	counter_53 = counter_53 + 1
 	counter_53 = counter_53 + 1
 	var items_54 []string = []string{}
-	items_54 = Slice_Append(items_54, "first")
-	items_54 = Slice_Append(items_54, "second")
-	items_54 = Slice_Append(items_54, "third")
-	return "counter=" + ToString_int(counter_53) + ", items len=" + ToString_int(Len__t_t(items_54))
+	items_54 = MygoIN5SliceM6Append(items_54, "first")
+	items_54 = MygoIN5SliceM6Append(items_54, "second")
+	items_54 = MygoIN5SliceM6Append(items_54, "third")
+	return "counter=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(counter_53) + ", items len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items_54))
 }
 func identity[A any](value A) A {
 	return value
@@ -409,7 +409,7 @@ func demoGenerics() string {
 	str_val_56 := identity[string]("hello")
 	boxed_int_57 := Box[int]{value: 42}
 	boxed_str_58 := Box[string]{value: "hello"}
-	return "Identity[Int]=" + ToString_int(int_val_55) + ", Identity[String]=" + str_val_56 + ", BoxedInt=" + ToString_int(boxed_int_57.value) + ", BoxedStr=" + ToString_string(boxed_str_58.value)
+	return "Identity[Int]=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(int_val_55) + ", Identity[String]=" + str_val_56 + ", BoxedInt=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(boxed_int_57.value) + ", BoxedStr=" + MygoIT8ToStringFN6StringGN6StringEM8ToString(boxed_str_58.value)
 }
 func demo() string {
 	return "=== MyGO Language Demo ===\n\n" + "--- Basic Types ---\n" + demoBasicTypes() + "\n\n" + "--- Enums ---\n" + demoEnums() + "\n\n" + "--- Structs ---\n" + demoStructs() + "\n\n" + "--- Option/Result ---\n" + demoOptionResult() + "\n\n" + "--- Collections ---\n" + demoCollections() + "\n\n" + "--- Functional Programming ---\n" + demoFunctional() + "\n\n" + "--- Control Flow ---\n" + demoControlFlow() + "\n\n" + "--- Mutable Variables ---\n" + demoMutable() + "\n\n" + "--- Generics ---\n" + demoGenerics() + "\n\n" + "=== End of Demo ==="
