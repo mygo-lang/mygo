@@ -645,6 +645,19 @@ func parseSourceAsAst2(input: String) -> Result[ast2.File, String]
             return ast2.ExprUnitExprCtor()
           }
         }
+        convParam := func(p parser2.Param) ast2.Param {
+          return ast2.Param{Name: p.Name, Type: convType(p.Type)}
+        }
+        convRet := func(ret Option[parser2.TypeExpr]) Option[ast2.TypeExpr] {
+          var out Option[ast2.TypeExpr] = None[ast2.TypeExpr]()
+          if rv, yes := ret.(OptionSome[parser2.TypeExpr]); yes { out = Some(convType(rv.F0)) }
+          return out
+        }
+        convFuncSig := func(sig parser2.FuncSig) ast2.FuncSig {
+          ps := make([]ast2.Param, 0, len(sig.Params))
+          for _, p := range sig.Params { ps = append(ps, convParam(p)) }
+          return ast2.FuncSig{Name: sig.Name, TypeParams: sig.TypeParams, Params: ps, Ret: convRet(sig.Ret)}
+        }
         decls := make([]ast2.Decl, 0, len(ok.F0.Decls))
         for _, d := range ok.F0.Decls {
           switch v := d.(type) {
@@ -666,12 +679,20 @@ func parseSourceAsAst2(input: String) -> Result[ast2.File, String]
               vs = append(vs, ast2.Variant{Name: item.Name, Fields: fields})
             }
             decls = append(decls, ast2.DeclEnumDeclCtor(v.F0, v.F1, vs))
+          case parser2.DeclInterfaceDecl:
+            methods := make([]ast2.FuncSig, 0, len(v.F2))
+            for _, m := range v.F2 { methods = append(methods, convFuncSig(m)) }
+            decls = append(decls, ast2.DeclInterfaceDeclCtor(v.F0, v.F1, methods))
+          case parser2.DeclImplDecl:
+            methods := make([]ast2.FuncSig, 0, len(v.F3))
+            for _, m := range v.F3 { methods = append(methods, convFuncSig(m)) }
+            var iface Option[ast2.TypeExpr] = None[ast2.TypeExpr]()
+            if tv, yes := v.F2.(OptionSome[parser2.TypeExpr]); yes { iface = Some(convType(tv.F0)) }
+            decls = append(decls, ast2.DeclImplDeclCtor(v.F0, convType(v.F1), iface, methods))
           case parser2.DeclFuncDecl:
             ps := make([]ast2.Param, 0, len(v.F2))
-            for _, p := range v.F2 { ps = append(ps, ast2.Param{Name: p.Name, Type: convType(p.Type)}) }
-            var ret Option[ast2.TypeExpr] = None[ast2.TypeExpr]()
-            if rv, yes := v.F3.(OptionSome[parser2.TypeExpr]); yes { ret = Some(convType(rv.F0)) }
-            decls = append(decls, ast2.DeclFuncDeclCtor(v.F0, v.F1, ps, ret, convExpr(v.F4)))
+            for _, p := range v.F2 { ps = append(ps, convParam(p)) }
+            decls = append(decls, ast2.DeclFuncDeclCtor(v.F0, v.F1, ps, convRet(v.F3), convExpr(v.F4)))
           }
         }
         return Ok[ast2.File, string](ast2.File{PackageName: ok.F0.PackageName, Decls: decls})

@@ -69,7 +69,7 @@ func generateFilesLoop(files []SourceFileInput, info typeinference2.PackageInfo,
 			return Ok[map[string]string, string](out)
 		} else {
 			return func() Result[map[string]string, string] {
-				input_4 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{})}})
+				input_4 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{})}})
 				src_5 := generateOneFile(input_4.File, info)
 				return func() Result[map[string]string, string] {
 					if v_4, ok := src_5.(ResultOk[string, string]); ok {
@@ -153,7 +153,7 @@ func translateDecls(g *Generator2, decls []ast2.Decl, index int, out []string) R
 			return Ok[[]string, string](out)
 		} else {
 			return func() Result[[]string, string] {
-				d_11 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
+				d_11 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
 				one_12 := translateDecl(g, d_11)
 				return func() Result[[]string, string] {
 					if v_12, ok := one_12.(ResultOk[string, string]); ok {
@@ -298,7 +298,7 @@ func enumVariantParts(fields []ast2.TypeExpr, ctx egCtx, index int, out EnumVari
 			return out
 		} else {
 			return func() EnumVariantParts {
-				typ_26 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, index), ast2.TypeExprUnitTypeCtor())
+				typ_26 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, index), ast2.TypeExprUnitTypeCtor())
 				an_27 := "v" + MygoIT8ToStringFN3IntGN3IntEM8ToString(index)
 				fieldName_28 := "F" + MygoIT8ToStringFN3IntGN3IntEM8ToString(index)
 				goTyp_29 := goType(typ_26, ctx.typeParams)
@@ -325,7 +325,7 @@ func translateFuncDecl(g *Generator2, name string, tps []string, params []ast2.P
 	var i_36 int = 0
 	func() {
 		for i_36 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
-			p := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, i_36), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+			p := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, i_36), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
 			pn := ctxFreshBinding(ctx_33, p.Name)
 			ctxSetLocal(ctx_33, p.Name, goType(p.Type, ctx_33.typeParams))
 			goParams_34 = MygoIN5SliceM6Append(goParams_34, pn+" "+goType(p.Type, ctx_33.typeParams))
@@ -381,7 +381,7 @@ func translateBlockReturn(items []ast2.Expr, ctx *egCtx) Result[string, string] 
 	return translateBlockReturnLoop(items, ctx, 0, []string([]string{}))
 }
 func translateBlockReturnLoop(items []ast2.Expr, ctx *egCtx, index int, out []string) Result[string, string] {
-	item_39 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.ExprUnitExprCtor())
+	item_39 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.ExprUnitExprCtor())
 	return func() Result[string, string] {
 		if index == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1 {
 			return func() Result[string, string] {
@@ -773,7 +773,7 @@ func translateArgs(args []ast2.Expr, ctx *egCtx, index int, out []string) Result
 			return Ok[[]string, string](out)
 		} else {
 			return func() Result[[]string, string] {
-				a_56 := translateExpr(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.ExprUnitExprCtor()), ctx)
+				a_56 := translateExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.ExprUnitExprCtor()), ctx)
 				return func() Result[[]string, string] {
 					if v_71, ok := a_56.(ResultOk[string, string]); ok {
 						return func() Result[[]string, string] {
@@ -920,7 +920,7 @@ func tailCallParts(args []ast2.Expr, ctx *egCtx, index int, out TailCallParts) R
 			return Ok[TailCallParts, string](out)
 		} else {
 			return func() Result[TailCallParts, string] {
-				a_66 := translateExpr(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.ExprUnitExprCtor()), ctx)
+				a_66 := translateExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.ExprUnitExprCtor()), ctx)
 				return func() Result[TailCallParts, string] {
 					if v_86, ok := a_66.(ResultErr[string, string]); ok {
 						return func() Result[TailCallParts, string] {
@@ -930,7 +930,7 @@ func tailCallParts(args []ast2.Expr, ctx *egCtx, index int, out TailCallParts) R
 						if v_85, ok := a_66.(ResultOk[string, string]); ok {
 							return func() Result[TailCallParts, string] {
 								tmp_67 := "__tail_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(index)
-								return tailCallParts(args, ctx, index+1, TailCallParts{Temps: MygoIN5SliceM6Append(out.Temps, tmp_67+" := "+v_85.F0), Assigns: MygoIN5SliceM6Append(out.Assigns, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ctx.tailRecParamNames, index), "_")+" = "+tmp_67)})
+								return tailCallParts(args, ctx, index+1, TailCallParts{Temps: MygoIN5SliceM6Append(out.Temps, tmp_67+" := "+v_85.F0), Assigns: MygoIN5SliceM6Append(out.Assigns, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ctx.tailRecParamNames, index), "_")+" = "+tmp_67)})
 							}()
 						} else {
 							panic("unreachable")
@@ -1009,7 +1009,7 @@ func containsTailCall(expr ast2.Expr, name string) bool {
 							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_91.F0) == 0 {
 								return false
 							} else {
-								return containsTailCall(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_91.F0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_91.F0)-1), ast2.ExprUnitExprCtor()), name)
+								return containsTailCall(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_91.F0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_91.F0)-1), ast2.ExprUnitExprCtor()), name)
 							}
 						}()
 					}()
@@ -1086,7 +1086,7 @@ func typeParamUse(tps []string) string {
 }
 func sourceToGenName(path string) string {
 	parts_73 := strings.Split(path, "/")
-	var base_74 string = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_73, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_73)-1), path)
+	var base_74 string = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_73, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_73)-1), path)
 	base_74 = strings.TrimSuffix(base_74, ".mygo")
 	if base_74 == "" {
 		base_74 = "mygo"
@@ -1200,6 +1200,23 @@ func parseSourceAsAst2(input string) Result[ast2.File, string] {
 				return ast2.ExprUnitExprCtor()
 			}
 		}
+		convParam := func(p parser2.Param) ast2.Param {
+			return ast2.Param{Name: p.Name, Type: convType(p.Type)}
+		}
+		convRet := func(ret Option[parser2.TypeExpr]) Option[ast2.TypeExpr] {
+			var out Option[ast2.TypeExpr] = None[ast2.TypeExpr]()
+			if rv, yes := ret.(OptionSome[parser2.TypeExpr]); yes {
+				out = Some(convType(rv.F0))
+			}
+			return out
+		}
+		convFuncSig := func(sig parser2.FuncSig) ast2.FuncSig {
+			ps := make([]ast2.Param, 0, len(sig.Params))
+			for _, p := range sig.Params {
+				ps = append(ps, convParam(p))
+			}
+			return ast2.FuncSig{Name: sig.Name, TypeParams: sig.TypeParams, Params: ps, Ret: convRet(sig.Ret)}
+		}
 		decls := make([]ast2.Decl, 0, len(ok.F0.Decls))
 		for _, d := range ok.F0.Decls {
 			switch v := d.(type) {
@@ -1225,16 +1242,28 @@ func parseSourceAsAst2(input string) Result[ast2.File, string] {
 					vs = append(vs, ast2.Variant{Name: item.Name, Fields: fields})
 				}
 				decls = append(decls, ast2.DeclEnumDeclCtor(v.F0, v.F1, vs))
+			case parser2.DeclInterfaceDecl:
+				methods := make([]ast2.FuncSig, 0, len(v.F2))
+				for _, m := range v.F2 {
+					methods = append(methods, convFuncSig(m))
+				}
+				decls = append(decls, ast2.DeclInterfaceDeclCtor(v.F0, v.F1, methods))
+			case parser2.DeclImplDecl:
+				methods := make([]ast2.FuncSig, 0, len(v.F3))
+				for _, m := range v.F3 {
+					methods = append(methods, convFuncSig(m))
+				}
+				var iface Option[ast2.TypeExpr] = None[ast2.TypeExpr]()
+				if tv, yes := v.F2.(OptionSome[parser2.TypeExpr]); yes {
+					iface = Some(convType(tv.F0))
+				}
+				decls = append(decls, ast2.DeclImplDeclCtor(v.F0, convType(v.F1), iface, methods))
 			case parser2.DeclFuncDecl:
 				ps := make([]ast2.Param, 0, len(v.F2))
 				for _, p := range v.F2 {
-					ps = append(ps, ast2.Param{Name: p.Name, Type: convType(p.Type)})
+					ps = append(ps, convParam(p))
 				}
-				var ret Option[ast2.TypeExpr] = None[ast2.TypeExpr]()
-				if rv, yes := v.F3.(OptionSome[parser2.TypeExpr]); yes {
-					ret = Some(convType(rv.F0))
-				}
-				decls = append(decls, ast2.DeclFuncDeclCtor(v.F0, v.F1, ps, ret, convExpr(v.F4)))
+				decls = append(decls, ast2.DeclFuncDeclCtor(v.F0, v.F1, ps, convRet(v.F3), convExpr(v.F4)))
 			}
 		}
 		return Ok[ast2.File, string](ast2.File{PackageName: ok.F0.PackageName, Decls: decls})
