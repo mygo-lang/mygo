@@ -1,0 +1,517 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+# types_util.mygo — Go 类型映射和命名规则工具
+
+struct TypeArgParts
+  Name: String
+  Args: Slice[String]
+end
+
+# goType: MyGO 类型表达式 → Go 类型字符串
+func goType(t: ast2.TypeExpr, typeParams: Set[String]) -> String
+  switch t
+    case NamedType(name, args) =>
+      # 检查是否是类型参数
+      if setContainsString(typeParams, name) && args.Len() == 0 then
+        return name
+      end
+      let fallback = genericNamedType(name, args, typeParams)
+      goPrimitiveType(name).Fold(goSpecialType(name, args, typeParams).UnwrapOr(fallback), func(_: String, mapped: String) -> String
+        mapped
+      end)
+    case FuncType(params, ret) =>
+      let paramStrs = typeExprsToStrings(params, typeParams)
+      let retStr = goType(ret.value(), typeParams)
+      if retStr == "" || retStr == "struct{}" then
+        return "func(" + joinStrings(paramStrs, ", ") + ")"
+      end
+      return "func(" + joinStrings(paramStrs, ", ") + ") " + retStr
+    case TupleType(elems) =>
+      if elems.Len() == 0 then
+        return "struct{}"
+      end
+      let parts = tupleElemsToStrings(elems, typeParams)
+      return "struct { " + joinStrings(parts, "; ") + " }"
+    case UnitType =>
+      return "struct{}"
+    case _ =>
+      return "any"
+  end
+end
+
+func genericNamedType(name: String, args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> String
+  if args.Len() == 0 then
+    name
+  else
+    let argStrs = typeArgsToStrings(args, typeParams)
+    name + "[" + joinStrings(argStrs, ", ") + "]"
+  end
+end
+
+func goPrimitiveType(name: String) -> Option[String]
+  switch name
+    case "Int" => Some("int")
+    case "Int8" => Some("int8")
+    case "Int16" => Some("int16")
+    case "Int32" => Some("int32")
+    case "Int64" => Some("int64")
+    case "UInt" => Some("uint")
+    case "UInt8" => Some("uint8")
+    case "UInt16" => Some("uint16")
+    case "UInt32" => Some("uint32")
+    case "UInt64" => Some("uint64")
+    case "Byte" => Some("byte")
+    case "Rune" => Some("rune")
+    case "Float32" => Some("float32")
+    case "Float64" => Some("float64")
+    case "String" => Some("string")
+    case "Bool" => Some("bool")
+    case "Any" => Some("any")
+    case "Unit" => Some("struct{}")
+    case _ => None
+  end
+end
+
+func goSpecialType(name: String, args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> Option[String]
+  switch name
+    case "Ref" => unarySpecialType(args, typeParams, "*")
+    case "Slice" => unarySpecialType(args, typeParams, "[]")
+    case "Map" => mapSpecialType(args, typeParams)
+    case "Set" => setSpecialType(args, typeParams)
+    case "Chan" => unarySpecialType(args, typeParams, "chan ")
+    case "SendChan" => unarySpecialType(args, typeParams, "chan<- ")
+    case "RecvChan" => unarySpecialType(args, typeParams, "<-chan ")
+    case _ => None
+  end
+end
+
+func unarySpecialType(args: Slice[ast2.TypeExpr], typeParams: Set[String], prefix: String) -> Option[String]
+  if args.Len() == 1 then
+    Some(prefix + goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), typeParams))
+  else
+    None
+  end
+end
+
+func mapSpecialType(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> Option[String]
+  if args.Len() == 2 then
+    Some("map[" + goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), typeParams) + "]" + goType(args.Get(1).UnwrapOr(ast2.TypeExpr.UnitType()), typeParams))
+  else
+    None
+  end
+end
+
+func setSpecialType(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> Option[String]
+  if args.Len() == 1 then
+    Some("map[" + goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), typeParams) + "]struct{}")
+  else
+    None
+  end
+end
+
+# goReturnType: 同 goType，但单元类型返回空字符串
+func goReturnType(t: ast2.TypeExpr, typeParams: Set[String]) -> String
+  if isUnitType(t) then
+    return ""
+  end
+  return goType(t, typeParams)
+end
+
+# goReturnTypes: 返回多返回值类型列表
+func goReturnTypes(t: ast2.TypeExpr, typeParams: Set[String]) -> Slice[String]
+  switch t
+    case TupleType(elems) =>
+      elems.Map(func(item: ast2.TypeExpr) -> String goType(item, typeParams) end)
+    case _ =>
+      let rt = goReturnType(t, typeParams)
+      if rt != "" then
+        return [rt]
+      end
+      return [] as Slice[String]
+  end
+end
+
+# isUnitType: 检查是否是单元类型
+func isUnitType(t: ast2.TypeExpr) -> Bool
+  switch t
+    case UnitType => true
+    case TupleType(elems) => elems.Len() == 0
+    case NamedType(name, args) => name == "Unit" && args.Len() == 0
+    case _ => false
+  end
+end
+
+# isUnitGoType: 检查 Go 类型字符串是否是单元类型
+func isUnitGoType(typ: String) -> Bool
+  let trimmed = strings.TrimSpace(typ)
+  return trimmed == "Unit" || trimmed == "struct{}" || trimmed == "()"
+end
+
+func setContainsString(items: Set[String], target: String) -> Bool
+  items.Fold(false, func(found: Bool, current: String) -> Bool
+    found || current == target
+  end)
+end
+
+# typeParamSet: 类型参数列表 → Set
+func typeParamSet(params: Slice[String]) -> Set[String]
+  params.Fold(Set.New[String](), func(s: Set[String], p: String) -> Set[String]
+    s.Add(p)
+  end)
+end
+
+# sanitizeIdent: 清理标识符，使其成为合法的 Go 标识符
+func sanitizeIdent(s: String) -> String
+  var result: String = go[String] {
+    code: """
+      func() string {
+        var b strings.Builder
+        for i, r := range s {
+          if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' {
+            if i == 0 && r >= '0' && r <= '9' {
+              b.WriteRune('_')
+            }
+            b.WriteRune(r)
+            continue
+          }
+          b.WriteRune('_')
+        }
+        return b.String()
+      }()
+    """
+    in s = s
+  }
+  if result.Len() == 0 then
+    return "_"
+  end
+  if isGoKeyword(result) then
+    return result + "_"
+  end
+  return result
+end
+
+# isGoKeyword: 检查是否是 Go 关键字
+func isGoKeyword(s: String) -> Bool
+  switch s
+    case "break" => true
+    case "case" => true
+    case "chan" => true
+    case "const" => true
+    case "continue" => true
+    case "default" => true
+    case "defer" => true
+    case "else" => true
+    case "fallthrough" => true
+    case "for" => true
+    case "func" => true
+    case "go" => true
+    case "goto" => true
+    case "if" => true
+    case "import" => true
+    case "interface" => true
+    case "map" => true
+    case "package" => true
+    case "range" => true
+    case "return" => true
+    case "select" => true
+    case "struct" => true
+    case "switch" => true
+    case "type" => true
+    case "var" => true
+    case _ => false
+  end
+end
+
+# inherentReceiverName: 从类型表达式中提取接收者名称
+func inherentReceiverName(t: ast2.TypeExpr) -> String
+  switch t
+    case NamedType(name, _) => name
+    case _ => ""
+  end
+end
+
+# inherentMethodName: 生成固有方法名（接收者_方法名）
+func inherentMethodName(receiverName: String, methodName: String) -> String
+  return sanitizeIdent(receiverName) + "_" + sanitizeIdent(methodName)
+end
+
+# variantGoTypeName: 生成枚举变体 Go 类型名
+func variantGoTypeName(enumName: String, variant: String) -> String
+  if enumName == "" then
+    return variant
+  end
+  return enumName + variant
+end
+
+# enumConstructorGoName: 生成枚举构造函数名
+func enumConstructorGoName(enumName: String, variantName: String) -> String
+  if (enumName == "Option" || enumName == "Result") && (variantName == "Some" || variantName == "None" || variantName == "Ok" || variantName == "Err") then
+    return variantName
+  end
+  return variantNameForEnum(enumName, variantName) + "Ctor"
+end
+
+# variantNameForEnum: 生成枚举变体名
+func variantNameForEnum(enumName: String, variantName: String) -> String
+  if enumName == "" then
+    return variantName
+  end
+  return enumName + variantName
+end
+
+# helperFuncName: 生成辅助函数名
+func helperFuncName(method: String, typeKey: String) -> String
+  let cleaned = strings.TrimPrefix(typeKey, "_")
+  return sanitizeIdent(method + "_" + cleaned)
+end
+
+# typeKeyFromType: 从类型字符串生成类型键
+func typeKeyFromType(typ: String) -> String
+  let step1 = strings.ReplaceAll(typ, "[", "_")
+  let step2 = strings.ReplaceAll(step1, "]", "")
+  let step3 = strings.ReplaceAll(step2, ", ", "_")
+  let step4 = strings.ReplaceAll(step3, ",", "_")
+  let step5 = strings.ReplaceAll(step4, " ", "")
+  let step6 = strings.ReplaceAll(step5, "*", "Ptr")
+  let step7 = strings.ReplaceAll(step6, ".", "_")
+  let step8 = strings.ReplaceAll(step7, "func(", "Func_")
+  let step9 = strings.ReplaceAll(step8, ")", "")
+  return sanitizeIdent(strings.ToLower(step9))
+end
+
+# typeclassFuncType: 生成类型类函数类型字符串
+func typeclassFuncType(paramTypes: Slice[String], retType: String) -> String
+  if paramTypes.Len() == 0 then
+    if retType == "" then
+      return "func()"
+    end
+    return "func() " + retType
+  end
+  var fn: String = "func(" + joinStrings(paramTypes, ", ") + ")"
+  if retType != "" then
+    fn = fn + " " + retType
+  end
+  return fn
+end
+
+# 辅助函数：类型参数列表 → 字符串列表
+func typeArgsToStrings(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> Slice[String]
+  if args.Len() == 0 then
+    return [] as Slice[String]
+  end
+  let head = args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+  let tail = typeArgsToStrings(sliceDrop(args, 1), typeParams)
+  return tail.Prepend(goType(head, typeParams))
+end
+
+# 辅助函数：类型表达式列表 → 字符串列表
+func typeExprsToStrings(items: Slice[ast2.TypeExpr], typeParams: Set[String]) -> Slice[String]
+  if items.Len() == 0 then
+    return [] as Slice[String]
+  end
+  let head = items.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+  let tail = typeExprsToStrings(sliceDrop(items, 1), typeParams)
+  return tail.Prepend(goType(head, typeParams))
+end
+
+# 辅助函数：元组元素 → Go 字段字符串列表
+func tupleElemsToStrings(elems: Slice[ast2.TypeExpr], typeParams: Set[String]) -> Slice[String]
+  if elems.Len() == 0 then
+    return [] as Slice[String]
+  end
+  let head = elems.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+  let tail = tupleElemsToStrings(sliceDrop(elems, 1), typeParams)
+  let i = elems.Len() - elems.Len()
+  return tail.Prepend("F" + i.ToString() + " " + goType(head, typeParams))
+end
+
+# 辅助函数：字符串列表连接
+func joinStrings(items: Slice[String], sep: String) -> String
+  if items.Len() == 0 then
+    return ""
+  end
+  if items.Len() == 1 then
+    return items.Get(0).UnwrapOr("")
+  end
+  let head = items.Get(0).UnwrapOr("")
+  let tail = joinStrings(sliceDrop(items, 1), sep)
+  return head + sep + tail
+end
+
+# 辅助函数：切片截断
+func sliceDrop[A](items: Slice[A], n: Int) -> Slice[A]
+  if n <= 0 then
+    return items
+  end
+  if items.Len() == 0 then
+    return items
+  end
+  return sliceDrop(sliceTail(items), n - 1)
+end
+
+# 辅助函数：获取切片尾部
+func sliceTail[A](items: Slice[A]) -> Slice[A]
+  return sliceTailLoop(items, 1, [] as Slice[A])
+end
+
+# 辅助函数：切片尾部循环实现
+func sliceTailLoop[A](items: Slice[A], index: Int, out: Slice[A]) -> Slice[A]
+  if index >= items.Len() then
+    return out
+  end
+  let item = items.Get(index)
+  switch item
+    case Some(value) => sliceTailLoop(items, index + 1, out.Append(value))
+    case None => out
+  end
+end
+
+# 辅助函数：导入路径转换
+func importPathForGo(path: String) -> String
+  return strings.TrimPrefix(path, "go:")
+end
+
+# 辅助函数：导入别名生成
+func importAliasForPath(path: String) -> String
+  let cleanPath = importPathForGo(path)
+  if cleanPath == "" then
+    return ""
+  end
+  let trimmed = strings.TrimSuffix(cleanPath, "/")
+  let parts = strings.Split(trimmed, "/")
+  return toPackageName(parts.Get(parts.Len() - 1).UnwrapOr(trimmed))
+end
+
+# 辅助函数：包名转换
+func toPackageName(name: String) -> String
+  if name == "" then
+    return "main"
+  end
+  return strings.ToLower(sanitizeIdent(name))
+end
+
+# 辅助函数：导出名（首字母大写）
+func exportName(name: String) -> String
+  if name == "" then
+    return name
+  end
+  let runes = name as Slice[Rune]
+  runes.Set(0, toUpper(runes.Get(0).UnwrapOr('\x0')))
+  runes as String
+end
+
+# 辅助函数：字符转大写
+func toUpper(r: Rune) -> Rune
+  if r >= 'a' && r <= 'z' then
+    return r - ('a' - 'A')
+  end
+  return r
+end
+
+# 辅助函数：分割类型参数
+func splitTypeArgs(typ: String) -> TypeArgParts
+  let clean = strings.TrimSpace(typ)
+  if clean == "" then
+    return TypeArgParts { Name: "", Args: [] as Slice[String] }
+  end
+  let idx = strings.Index(clean, "[")
+  if idx < 0 then
+    return TypeArgParts { Name: clean, Args: [] as Slice[String] }
+  end
+  let endPos = matchingTypeArgEnd(clean, idx)
+  if endPos < 0 || endPos < idx then
+    return TypeArgParts { Name: clean, Args: [] as Slice[String] }
+  end
+  let name = clean.Slice(0, idx).UnwrapOr("")
+  let inner = clean.Slice(idx + 1, endPos).UnwrapOr("")
+  if inner == "" then
+    return TypeArgParts { Name: name, Args: [] as Slice[String] }
+  end
+  return TypeArgParts { Name: name, Args: splitTopLevel(inner, ',') }
+end
+
+# 辅助函数：匹配类型参数结束位置
+func matchingTypeArgEnd(typ: String, open: Int) -> Int
+
+  go[Int] {
+    code: """
+      func() int {
+        depth := 0
+        for i, r := range typ[open:] {
+          switch r {
+          case '[':
+            depth++
+          case ']':
+            depth--
+            if depth == 0 {
+              return open + i
+            }
+          }
+        }
+        return -1
+      }()
+    """
+    in typ = typ
+    in open = open
+  }
+end
+
+# 辅助函数：分割顶层逗号分隔的字符串
+func splitTopLevel(s: String, sep: Rune) -> Slice[String]
+  go[Slice[String]] {
+    code: """
+      func() []string {
+        parts := []string{}
+        depth := 0
+        start := 0
+        for i, r := range s {
+          switch r {
+          case '[', '(':
+            depth++
+          case ']', ')':
+            if depth > 0 {
+              depth--
+            }
+          default:
+            if r == sep && depth == 0 {
+              parts = append(parts, strings.TrimSpace(s[start:i]))
+              start = i + len(string(r))
+            }
+          }
+        }
+        parts = append(parts, strings.TrimSpace(s[start:]))
+        return parts
+      }()
+    """
+    in s = s
+    in sep = sep
+  }
+end
+
+# 辅助函数：检查固有接收者参数
+func isInherentReceiverParam(paramType: ast2.TypeExpr, implType: ast2.TypeExpr) -> Bool
+  return typeString(paramType) == typeString(implType)
+end
+
+# 辅助函数：类型字符串
+func typeString(t: ast2.TypeExpr) -> String
+  switch t
+    case NamedType(name, args) =>
+      if args.Len() == 0 then
+        return name
+      end
+      let argStrs = typeArgsToStrings(args, Set.New[String]())
+      return name + "[" + joinStrings(argStrs, ", ") + "]"
+    case FuncType(params, ret) =>
+      let paramStrs = typeExprsToStrings(params, Set.New[String]())
+      let retStr = typeString(ret.value())
+      if retStr == "" then
+        return "func(" + joinStrings(paramStrs, ", ") + ")"
+      end
+      return "func(" + joinStrings(paramStrs, ", ") + ") " + retStr
+    case _ =>
+      return "any"
+  end
+end

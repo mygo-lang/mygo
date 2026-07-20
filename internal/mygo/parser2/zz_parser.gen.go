@@ -492,9 +492,30 @@ func tupleType() ps.Parser[TypeExpr] {
 	})
 }
 func namedType() ps.Parser[TypeExpr] {
-	return ps.PBind(identifier(), func(name string) ps.Parser[TypeExpr] {
+	return ps.PBind(qualifiedIdentifier(), func(name string) ps.Parser[TypeExpr] {
 		return ps.PMap(typeArgList(), func(args []TypeExpr) TypeExpr {
 			return TypeExprNamedTypeCtor(name, args)
+		})
+	})
+}
+func qualifiedIdentifier() ps.Parser[string] {
+	return ps.PBind(identifier(), func(first string) ps.Parser[string] {
+		return ps.PMap(ps.POptional(ps.PThen(sym("."), identifier())), func(second Option[string]) string {
+			return func() string {
+				if v_6, ok := second.(OptionSome[string]); ok {
+					return func() string {
+						return first + "." + v_6.F0
+					}()
+				} else {
+					if _, ok := second.(OptionNone[string]); ok {
+						return func() string {
+							return first
+						}()
+					} else {
+						panic("unreachable")
+					}
+				}
+			}()
 		})
 	})
 }
@@ -603,11 +624,11 @@ func lazyIfElseTail() ps.Parser[Expr] {
 }
 func bodyExprFromBlock(body Expr) Expr {
 	return func() Expr {
-		if v_5, ok := body.(ExprBlockExpr); ok {
+		if v_7, ok := body.(ExprBlockExpr); ok {
 			return func() Expr {
 				return func() Expr {
-					if Len__t_t(v_5.F0) == 1 {
-						return Option_UnwrapOr(Get__t_int_t(v_5.F0, 0), body)
+					if Len__t_t(v_7.F0) == 1 {
+						return Option_UnwrapOr(Get__t_int_t(v_7.F0, 0), body)
 					} else {
 						return body
 					}
@@ -1038,9 +1059,9 @@ func defaultImportAlias(path string) string {
 }
 func formatError(err Option[ps.ParseError], pos ps.Position) string {
 	return func() string {
-		if v_7, ok := err.(OptionSome[ps.ParseError]); ok {
+		if v_9, ok := err.(OptionSome[ps.ParseError]); ok {
 			return func() string {
-				return "parse error at " + ToString_int(v_7.F0.Position.Line) + ":" + ToString_int(v_7.F0.Position.Column) + ": " + v_7.F0.Message
+				return "parse error at " + ToString_int(v_9.F0.Position.Line) + ":" + ToString_int(v_9.F0.Position.Column) + ": " + v_9.F0.Message
 			}()
 		} else {
 			if _, ok := err.(OptionNone[ps.ParseError]); ok {

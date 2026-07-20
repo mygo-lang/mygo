@@ -267,9 +267,20 @@ func tupleType() -> ps.Parser[TypeExpr]
 end
 
 func namedType() -> ps.Parser[TypeExpr]
-  ps.PBind(identifier(), func(name: String) -> ps.Parser[TypeExpr]
+  ps.PBind(qualifiedIdentifier(), func(name: String) -> ps.Parser[TypeExpr]
     ps.PMap(typeArgList(), func(args: Slice[TypeExpr]) -> TypeExpr
       TypeExpr.NamedType(name, args)
+    end)
+  end)
+end
+
+func qualifiedIdentifier() -> ps.Parser[String]
+  ps.PBind(identifier(), func(first: String) -> ps.Parser[String]
+    ps.PMap(ps.POptional(ps.PThen(sym("."), identifier())), func(second: Option[String]) -> String
+      switch second
+        case Some(name) => first + "." + name
+        case None => first
+      end
     end)
   end)
 end

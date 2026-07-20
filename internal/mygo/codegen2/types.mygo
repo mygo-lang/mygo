@@ -1,0 +1,189 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+# types.mygo — 核心类型定义
+
+# egCtx 是表达式/语句翻译的上下文
+# 包含局部变量、绑定、类型信息等
+struct egCtx
+  # 局部变量名 → Go 类型
+  locals: Map[String, String]
+  # MyGO 名 → Go 名
+  bindings: Map[String, String]
+  # 源类型信息
+  sourceTypes: Map[String, String]
+  # 变量是否可变
+  mutable: Map[String, Bool]
+  # SSA 风格命名计数
+  usedNames: Map[String, Int]
+  # 当前作用域的类型参数
+  typeParams: Set[String]
+  # 当前函数的 Go 返回类型
+  retType: String
+  # 多返回值类型
+  retTypes: Slice[String]
+  # 尾递归候选函数名
+  tailRecFuncName: Option[String]
+  # 参数数量
+  tailRecParamCount: Int
+  # 尾递归参数 Go 名
+  tailRecParamNames: Slice[String]
+end
+
+# Generator2 是代码生成器主结构体
+struct Generator2
+  # 包名
+  pkgName: String
+  # import 路径列表
+  importPaths: Slice[String]
+  # 当前处理的文件名
+  currentFile: String
+  # 局部变量序号
+  localSeq: Int
+  # switch 变量序号
+  switchVarSeq: Int
+  # 是否需要 callAny 辅助
+  needsCallAny: Bool
+end
+
+# 创建空的 egCtx
+func newEgCtx() -> egCtx
+  egCtx {
+    locals: {},
+    bindings: {},
+    sourceTypes: {},
+    mutable: {},
+    usedNames: {},
+    typeParams: Set.New[String](),
+    retType: "",
+    retTypes: [],
+    tailRecFuncName: None,
+    tailRecParamCount: 0,
+    tailRecParamNames: [],
+  }
+end
+
+func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
+  egCtx {
+    locals: {},
+    bindings: {},
+    sourceTypes: {},
+    mutable: {},
+    usedNames: {},
+    typeParams: typeParamSet(params),
+    retType: "",
+    retTypes: [],
+    tailRecFuncName: None,
+    tailRecParamCount: 0,
+    tailRecParamNames: [],
+  }
+end
+
+func newFuncEgCtx(params: Slice[String], retType: String, tailName: String, paramCount: Int) -> egCtx
+  egCtx {
+    locals: {},
+    bindings: {},
+    sourceTypes: {},
+    mutable: {},
+    usedNames: {},
+    typeParams: typeParamSet(params),
+    retType: retType,
+    retTypes: [],
+    tailRecFuncName: Some(tailName),
+    tailRecParamCount: paramCount,
+    tailRecParamNames: [],
+  }
+end
+
+# 创建空的 Generator2
+func newGenerator2(pkgName: String) -> Generator2
+  Generator2 {
+    pkgName: pkgName,
+    importPaths: [],
+    currentFile: "",
+    localSeq: 0,
+    switchVarSeq: 0,
+    needsCallAny: false,
+  }
+end
+
+# egCtx.child() 创建子上下文（复制当前上下文）
+func ctxChild(ctx: Ref[egCtx]) -> egCtx
+  egCtx {
+    locals: ctx.locals,
+    bindings: ctx.bindings,
+    sourceTypes: ctx.sourceTypes,
+    mutable: ctx.mutable,
+    usedNames: ctx.usedNames,
+    typeParams: ctx.typeParams,
+    retType: ctx.retType,
+    retTypes: ctx.retTypes,
+    tailRecFuncName: ctx.tailRecFuncName,
+    tailRecParamCount: ctx.tailRecParamCount,
+    tailRecParamNames: ctx.tailRecParamNames,
+  }
+end
+
+# 设置局部变量
+func ctxSetLocal(ctx: Ref[egCtx], name: String, goType: String) -> ()
+  ctx.locals.Set(name, goType)
+end
+
+# 设置绑定
+func ctxSetBinding(ctx: Ref[egCtx], name: String, goName: String) -> ()
+  ctx.bindings.Set(name, goName)
+end
+
+# 分配 SSA 风格 Go 变量名。第一次尽量保留原名，重名时加稳定后缀。
+func ctxFreshBinding(ctx: Ref[egCtx], name: String) -> String
+  let base = sanitizeIdent(name)
+  let count = ctx.usedNames.Get(base).UnwrapOr(0)
+  ctx.usedNames.Set(base, count + 1)
+  if count == 0 then
+    ctx.bindings.Set(name, base)
+    return base
+  end
+  let actual = base + "_" + count.ToString()
+  ctx.bindings.Set(name, actual)
+  actual
+end
+
+# 设置可变标志
+func ctxSetMutable(ctx: Ref[egCtx], name: String, isMutable: Bool) -> ()
+  ctx.mutable.Set(name, isMutable)
+end
+
+func ctxSetTailRecParamNames(ctx: Ref[egCtx], names: Slice[String]) -> ()
+  go[()] {
+    code: "ctx.tailRecParamNames = names"
+    in ctx = ctx
+    in names = names
+  }
+end
+
+# 查找局部变量类型
+func ctxGetLocal(ctx: Ref[egCtx], name: String) -> Option[String]
+  ctx.locals.Get(name)
+end
+
+# 查找绑定
+func ctxGetBinding(ctx: Ref[egCtx], name: String) -> Option[String]
+  ctx.bindings.Get(name)
+end
+
+# 添加类型参数
+func ctxAddTypeParam(ctx: Ref[egCtx], tp: String) -> ()
+  go[()] {
+    code: "ctx.typeParams = Set_Add(ctx.typeParams, tp)"
+    in ctx = ctx
+    in tp = tp
+  }
+end
+
+# 检查是否包含类型参数
+func ctxHasTypeParam(ctx: Ref[egCtx], tp: String) -> Bool
+  ctx.typeParams.Fold(false, func(found: Bool, current: String) -> Bool
+    found || current == tp
+  end)
+end

@@ -1,0 +1,682 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import ast "go:go/ast"
+import token "go:go/token"
+import parser "go:go/parser"
+import format "go:go/format"
+import bytes "go:bytes"
+import strconv "go:strconv"
+import strings "go:strings"
+
+struct GoFileParts
+  PackageName: String
+  Imports: Slice[GoImportPart]
+  Decls: Slice[String]
+end
+
+struct GoImportPart
+  Alias: String
+  Path: String
+end
+
+struct SourceFileInput
+  Path: String
+  File: ast2.File
+end
+
+struct EnumVariantParts
+  Fields: Slice[String]
+  Args: Slice[String]
+  Values: Slice[String]
+end
+
+struct TailCallParts
+  Temps: Slice[String]
+  Assigns: Slice[String]
+end
+
+func Generate(file: ast2.File, info: typeinference2.PackageInfo) -> Result[String, String]
+  let path = file.PackageName + ".mygo"
+  let files = GenerateFiles([SourceFileInput { Path: path, File: file }], info)
+  switch files
+    case Ok(out) => Ok(out.Get(sourceToGenName(path)).UnwrapOr(""))
+    case Err(msg) => Err(msg)
+  end
+end
+
+func GenerateFiles(files: Slice[SourceFileInput], info: typeinference2.PackageInfo) -> Result[Map[String, String], String]
+  let out: Map[String, String] = {}
+  generateFilesLoop(files, info, 0, out)
+end
+
+func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.PackageInfo, index: Int, out: Map[String, String]) -> Result[Map[String, String], String]
+  if index >= files.Len() then
+    Ok(out)
+  else
+    let input = files.Get(index).UnwrapOr(SourceFileInput { Path: "main.mygo", File: ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl] } })
+    let src = generateOneFile(input.File, info)
+    switch src
+      case Ok(code) =>
+        out.Set(sourceToGenName(input.Path), code)
+        generateFilesLoop(files, info, index + 1, out)
+      case Err(msg) => Err(msg)
+    end
+  end
+end
+
+func GenerateSource(input: String) -> Result[String, String]
+  let parsed = parseSourceAsAst2(input)
+  switch parsed
+    case Err(msg) => Err(msg)
+    case Ok(file) =>
+      let inferred = typeinference2.InferFile(file)
+      switch inferred
+        case Err(msg) => Err(msg)
+        case Ok(info) => Generate(file, info)
+      end
+  end
+end
+
+func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo) -> Result[String, String]
+  let g = Ref.new(newGenerator2(file.PackageName))
+  let imports = collectImports(file.Decls)
+  let decls = translateDecls(g, file.Decls, 0, [] as Slice[String])
+  switch decls
+    case Ok(items) => renderGoFile(GoFileParts { PackageName: file.PackageName, Imports: imports, Decls: items })
+    case Err(msg) => Err(msg)
+  end
+end
+
+func translateDecls(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, out: Slice[String]) -> Result[Slice[String], String]
+  if index >= decls.Len() then
+    Ok(out)
+  else
+    let d = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    let one = translateDecl(g, d)
+    switch one
+      case Ok(src) =>
+        if src != "" then
+          translateDecls(g, decls, index + 1, out.Append(src))
+        else
+          translateDecls(g, decls, index + 1, out)
+        end
+      case Err(msg) => Err(msg)
+    end
+  end
+end
+
+func collectImports(decls: Slice[ast2.Decl]) -> Slice[GoImportPart]
+  decls.Fold([] as Slice[GoImportPart], func(out: Slice[GoImportPart], d: ast2.Decl) -> Slice[GoImportPart]
+    switch d
+      case ImportDecl(alias, path) =>
+        out.Append(GoImportPart { Alias: alias, Path: importPathForGo(path) })
+      case _ => out
+    end
+  end)
+end
+
+func translateDecl(g: Ref[Generator2], decl: ast2.Decl) -> Result[String, String]
+  switch decl
+    case ImportDecl(_, _) => Ok("")
+    case StructDecl(name, tps, fields) => Ok(translateStructDecl(name, tps, fields))
+    case EnumDecl(name, tps, vars) => Ok(translateEnumDecl(name, tps, vars))
+    case InterfaceDecl(name, tps, methods) => Ok(translateInterfaceDecl(name, tps, methods))
+    case ImplDecl(_, _, _, _) => Ok("")
+    case FuncDecl(name, tps, params, ret, body) => translateFuncDecl(g, name, tps, params, ret, body)
+  end
+end
+
+func translateStructDecl(name: String, tps: Slice[String], fields: Slice[ast2.Field]) -> String
+  let ctx = newEgCtxWithTypeParams(tps)
+  let parts = fields.Map(func(f: ast2.Field) -> String
+    let tag = switch f.Tag
+      case Some(v) => " `" + v + "`"
+      case None => ""
+    end
+    exportName(f.Name) + " " + goType(f.Type, ctx.typeParams) + tag
+  end)
+  "type " + sanitizeIdent(name) + typeParamDecl(tps) + " struct {\n" + joinStrings(parts, "\n") + "\n}"
+end
+
+func translateEnumDecl(name: String, tps: Slice[String], vars: Slice[ast2.Variant]) -> String
+  let enumName = sanitizeIdent(name)
+  let tp = typeParamDecl(tps)
+  let head = "type " + enumName + tp + " interface { is" + enumName + "() }"
+  let body = vars.Map(func(v: ast2.Variant) -> String
+    translateEnumVariant(enumName, tps, v)
+  end)
+  joinStrings(body.Prepend(head), "\n\n")
+end
+
+func translateEnumVariant(enumName: String, tps: Slice[String], v: ast2.Variant) -> String
+  let vt = variantGoTypeName(enumName, v.Name)
+  let tp = typeParamDecl(tps)
+  if v.Fields.Len() == 0 then
+    var lines: Slice[String] = []
+    lines = lines.Append("type " + vt + tp + " struct{}")
+    lines = lines.Append("func (" + vt + typeParamUse(tps) + ") is" + enumName + "() {}")
+    lines = lines.Append("func " + enumConstructorGoName(enumName, v.Name) + typeParamDecl(tps) + "() " + enumName + typeParamUse(tps) + " { return " + vt + typeParamUse(tps) + "{} }")
+    joinStrings(lines, "\n")
+  else
+    let ctx = newEgCtxWithTypeParams(tps)
+    let parts = enumVariantParts(v.Fields, ctx, 0, EnumVariantParts { Fields: [] as Slice[String], Args: [] as Slice[String], Values: [] as Slice[String] })
+    var lines: Slice[String] = []
+    lines = lines.Append("type " + vt + tp + " struct { " + joinStrings(parts.Fields, "; ") + " }")
+    lines = lines.Append("func (" + vt + typeParamUse(tps) + ") is" + enumName + "() {}")
+    lines = lines.Append("func " + enumConstructorGoName(enumName, v.Name) + typeParamDecl(tps) + "(" + joinStrings(parts.Args, ", ") + ") " + enumName + typeParamUse(tps) + " { return " + vt + typeParamUse(tps) + "{" + joinStrings(parts.Values, ", ") + "} }")
+    joinStrings(lines, "\n")
+  end
+end
+
+func enumVariantParts(fields: Slice[ast2.TypeExpr], ctx: egCtx, index: Int, out: EnumVariantParts) -> EnumVariantParts
+  if index >= fields.Len() then
+    out
+  else
+    let typ = fields.Get(index).UnwrapOr(ast2.TypeExpr.UnitType())
+    let an = "v" + index.ToString()
+    let fieldName = "F" + index.ToString()
+    let goTyp = goType(typ, ctx.typeParams)
+    enumVariantParts(fields, ctx, index + 1, EnumVariantParts {
+      Fields: out.Fields.Append(fieldName + " " + goTyp),
+      Args: out.Args.Append(an + " " + goTyp),
+      Values: out.Values.Append(fieldName + ": " + an),
+    })
+  end
+end
+
+func translateInterfaceDecl(name: String, tps: Slice[String], methods: Slice[ast2.FuncSig]) -> String
+  let ctx = newEgCtxWithTypeParams(tps)
+  let ms = methods.Map(func(m: ast2.FuncSig) -> String
+    exportName(m.Name) + funcSignature("", m.TypeParams, m.Params, m.Ret, ctx.typeParams)
+  end)
+  "type " + sanitizeIdent(name) + typeParamDecl(tps) + " interface {\n" + joinStrings(ms, "\n") + "\n}"
+end
+
+func translateFuncDecl(g: Ref[Generator2], name: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr) -> Result[String, String]
+  let initialRetType = returnTypeString(ret, typeParamSet(tps))
+  let ctx = Ref.new(newFuncEgCtx(tps, initialRetType, name, params.Len()))
+  var goParams: Slice[String] = []
+  var paramNames: Slice[String] = []
+  var i: Int = 0
+  while i < params.Len()
+    let p = params.Get(i).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType() })
+    let pn = ctxFreshBinding(ctx, p.Name)
+    ctxSetLocal(ctx, p.Name, goType(p.Type, ctx.typeParams))
+    goParams = goParams.Append(pn + " " + goType(p.Type, ctx.typeParams))
+    paramNames = paramNames.Append(pn)
+    i = i + 1
+  end
+  ctxSetTailRecParamNames(ctx, paramNames)
+  let bodyStmts = translateFuncBody(body, ctx)
+  switch bodyStmts
+    case Err(msg) => Err(msg)
+    case Ok(stmts) =>
+      let looped = if containsTailCall(body, name) then
+        "for {\n" + stmts + "\n}"
+      else
+        stmts
+      end
+      Ok("func " + sanitizeIdent(name) + typeParamDecl(tps) + "(" + joinStrings(goParams, ", ") + ")" + ctx.retType + " {\n" + looped + "\n}")
+  end
+end
+
+func translateFuncBody(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+  switch body
+    case BlockExpr(items) => translateBlockReturn(items, ctx)
+    case _ => translateReturnExpr(body, ctx)
+  end
+end
+
+func translateBlockReturn(items: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[String, String]
+  if items.Len() == 0 then
+    if ctx.retType == "" then
+      return Ok("return")
+    end
+    return Err("non-unit function has empty body")
+  end
+  translateBlockReturnLoop(items, ctx, 0, [] as Slice[String])
+end
+
+func translateBlockReturnLoop(items: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: Slice[String]) -> Result[String, String]
+  let item = items.Get(index).UnwrapOr(ast2.Expr.UnitExpr())
+  if index == items.Len() - 1 then
+    let last = translateReturnExpr(item, ctx)
+    switch last
+      case Ok(s) => Ok(joinStrings(out.Append(s), "\n"))
+      case Err(msg) => Err(msg)
+    end
+  else
+    let stmt = translateStmt(item, ctx)
+    switch stmt
+      case Ok(s) => translateBlockReturnLoop(items, ctx, index + 1, out.Append(s))
+      case Err(msg) => Err(msg)
+    end
+  end
+end
+
+func translateStmt(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+  switch expr
+    case LetExpr(bind) =>
+      let value = translateExpr(bind.Value, ctx)
+      switch value
+        case Err(msg) => Err(msg)
+        case Ok(v) =>
+          let name = ctxFreshBinding(ctx, bind.Name)
+          let typ = switch bind.Type
+            case Some(t) => " " + goType(t, ctx.typeParams)
+            case None => ""
+          end
+          Ok(name + " :=" + typ + " " + v)
+      end
+    case _ =>
+      let value = translateExpr(expr, ctx)
+      switch value
+        case Ok(v) => Ok(v)
+        case Err(msg) => Err(msg)
+      end
+  end
+end
+
+func translateReturnExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+  switch expr
+    case IfExpr(cond, thenExpr, elseExpr) then
+      let c = translateExpr(cond.value(), ctx)
+      switch c
+        case Err(msg) => Err(msg)
+        case Ok(cv) then
+          let t = translateReturnExpr(thenExpr.value(), ctx)
+          let e = translateReturnExpr(elseExpr.value(), ctx)
+          switch t
+            case Err(msg) => Err(msg)
+            case Ok(tv) then
+              switch e
+                case Err(msg) => Err(msg)
+                case Ok(ev) => Ok("if " + cv + " {\n" + tv + "\n} else {\n" + ev + "\n}")
+              end
+            end
+          end
+        end
+      end
+    end
+    case BlockExpr(items) => translateBlockReturn(items, ctx)
+    case _ =>
+      if isTailSelfCall(expr, ctx) then
+        tailCallStmt(expr, ctx)
+      else
+        let v = translateExpr(expr, ctx)
+        switch v
+          case Err(msg) => Err(msg)
+          case Ok(src) =>
+            if ctx.retType == "" then
+              Ok(src + "\nreturn")
+            else
+              Ok("return " + src)
+            end
+        end
+      end
+  end
+end
+
+func translateExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+  switch expr
+    case IdentExpr(name) => Ok(ctxGetBinding(ctx, name).UnwrapOr(sanitizeIdent(name)))
+    case NumberExpr(v) => Ok(v)
+    case StringExpr(v) => Ok(strconv.Quote(v))
+    case BoolExpr(v) =>
+      if v then Ok("true") else Ok("false") end
+    case UnitExpr => Ok("struct{}{}")
+    case UnaryExpr(op, inner) =>
+      let v = translateExpr(inner.value(), ctx)
+      switch v
+        case Ok(src) => Ok(op + src)
+        case Err(msg) => Err(msg)
+      end
+    case BinaryExpr(op, left, right) => translateBinary(op, left.value(), right.value(), ctx)
+    case FieldExpr(base, field) =>
+      let b = translateExpr(base.value(), ctx)
+      switch b
+        case Ok(src) => Ok(src + "." + exportName(field))
+        case Err(msg) => Err(msg)
+      end
+    case CallExpr(callee, args) => translateCall(callee.value(), args, ctx)
+    case IfExpr(cond, thenExpr, elseExpr) => translateIfExpr(cond.value(), thenExpr.value(), elseExpr.value(), ctx)
+    case BlockExpr(items) => translateBlockExpr(items, ctx)
+    case LetExpr(bind) => translateLetExpr(bind, ctx)
+  end
+end
+
+func translateBinary(op: String, left: ast2.Expr, right: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+  let l = translateExpr(left, ctx)
+  let r = translateExpr(right, ctx)
+  switch l
+    case Err(msg) => Err(msg)
+    case Ok(lv) =>
+      switch r
+        case Err(msg) => Err(msg)
+        case Ok(rv) =>
+          if op == "|>" then
+            Ok(rv + "(" + lv + ")")
+          else
+            if op == "<|" then
+              Ok(lv + "(" + rv + ")")
+            else
+              Ok("(" + lv + " " + op + " " + rv + ")")
+            end
+          end
+      end
+  end
+end
+
+func translateCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[String, String]
+  let c = translateExpr(callee, ctx)
+  switch c
+    case Err(msg) => Err(msg)
+    case Ok(cv) =>
+      let parts = translateArgs(args, ctx, 0, [] as Slice[String])
+      switch parts
+        case Ok(xs) => Ok(cv + "(" + joinStrings(xs, ", ") + ")")
+        case Err(msg) => Err(msg)
+      end
+  end
+end
+
+func translateArgs(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: Slice[String]) -> Result[Slice[String], String]
+  if index >= args.Len() then
+    Ok(out)
+  else
+    let a = translateExpr(args.Get(index).UnwrapOr(ast2.Expr.UnitExpr()), ctx)
+    switch a
+      case Ok(src) => translateArgs(args, ctx, index + 1, out.Append(src))
+      case Err(msg) => Err(msg)
+    end
+  end
+end
+
+func translateIfExpr(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+  let c = translateExpr(cond, ctx)
+  let t = translateExpr(thenExpr, ctx)
+  let e = translateExpr(elseExpr, ctx)
+  switch c
+    case Err(msg) => Err(msg)
+    case Ok(cv) =>
+      switch t
+        case Err(msg) => Err(msg)
+        case Ok(tv) =>
+          switch e
+            case Err(msg) => Err(msg)
+            case Ok(ev) => Ok("func() any { if " + cv + " { return " + tv + " }; return " + ev + " }()")
+          end
+      end
+  end
+end
+
+func translateBlockExpr(items: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[String, String]
+  let child = Ref.new(ctxChild(ctx))
+  let body = translateBlockReturn(items, child)
+  switch body
+    case Ok(src) => Ok("func() any {\n" + src + "\n}()")
+    case Err(msg) => Err(msg)
+  end
+end
+
+func translateLetExpr(bind: ast2.Bind, ctx: Ref[egCtx]) -> Result[String, String]
+  let child = Ref.new(ctxChild(ctx))
+  let stmt = translateStmt(ast2.Expr.LetExpr(bind), child)
+  switch stmt
+    case Err(msg) => Err(msg)
+    case Ok(s) =>
+      let name = ctxGetBinding(child, bind.Name).UnwrapOr(sanitizeIdent(bind.Name))
+      Ok("func() any { " + s + "; return " + name + " }()")
+  end
+end
+
+func tailCallStmt(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+  switch expr
+    case CallExpr(_callee, args) =>
+      let parts = tailCallParts(args, ctx, 0, TailCallParts { Temps: [] as Slice[String], Assigns: [] as Slice[String] })
+      switch parts
+        case Ok(p) => Ok(joinStrings(p.Temps, "\n") + "\n" + joinStrings(p.Assigns, "\n") + "\ncontinue")
+        case Err(msg) => Err(msg)
+      end
+    case _ => Err("internal tail-call mismatch")
+  end
+end
+
+func tailCallParts(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: TailCallParts) -> Result[TailCallParts, String]
+  if index >= args.Len() then
+    Ok(out)
+  else
+    let a = translateExpr(args.Get(index).UnwrapOr(ast2.Expr.UnitExpr()), ctx)
+    switch a
+      case Err(msg) => Err(msg)
+      case Ok(src) =>
+        let tmp = "__tail_" + index.ToString()
+        tailCallParts(args, ctx, index + 1, TailCallParts {
+          Temps: out.Temps.Append(tmp + " := " + src),
+          Assigns: out.Assigns.Append(ctx.tailRecParamNames.Get(index).UnwrapOr("_") + " = " + tmp),
+        })
+    end
+  end
+end
+
+func isTailSelfCall(expr: ast2.Expr, ctx: Ref[egCtx]) -> Bool
+  switch expr
+    case CallExpr(callee, args) =>
+      if args.Len() != ctx.tailRecParamCount then
+        return false
+      end
+      switch callee.value()
+        case IdentExpr(name) =>
+          switch ctx.tailRecFuncName
+            case Some(fn) => name == fn
+            case None => false
+          end
+        case _ => false
+      end
+    case _ => false
+  end
+end
+
+func containsTailCall(expr: ast2.Expr, name: String) -> Bool
+  switch expr
+    case CallExpr(callee, _) =>
+      switch callee.value()
+        case IdentExpr(n) => n == name
+        case _ => false
+      end
+    case IfExpr(_, t, e) => containsTailCall(t.value(), name) || containsTailCall(e.value(), name)
+    case BlockExpr(items) =>
+      if items.Len() == 0 then false else containsTailCall(items.Get(items.Len() - 1).UnwrapOr(ast2.Expr.UnitExpr()), name) end
+    case _ => false
+  end
+end
+
+func funcSignature(prefix: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], outer: Set[String]) -> String
+  var allTypes: Set[String] = outer
+  allTypes = tps.Fold(allTypes, func(acc: Set[String], tp: String) -> Set[String] acc.Add(tp) end)
+  let ps = params.Map(func(p: ast2.Param) -> String
+    sanitizeIdent(p.Name) + " " + goType(p.Type, allTypes)
+  end)
+  prefix + typeParamDecl(tps) + "(" + joinStrings(ps, ", ") + ")" + returnTypeString(ret, allTypes)
+end
+
+func returnTypeString(ret: Option[ast2.TypeExpr], tps: Set[String]) -> String
+  switch ret
+    case Some(t) =>
+      let r = goReturnType(t, tps)
+      if r == "" then "" else " " + r end
+    case None => ""
+  end
+end
+
+func typeParamDecl(tps: Slice[String]) -> String
+  if tps.Len() == 0 then
+    ""
+  else
+    let parts = tps.Map(func(tp: String) -> String sanitizeIdent(tp) + " any" end)
+    "[" + joinStrings(parts, ", ") + "]"
+  end
+end
+
+func typeParamUse(tps: Slice[String]) -> String
+  if tps.Len() == 0 then
+    ""
+  else
+    let parts = tps.Map(func(tp: String) -> String sanitizeIdent(tp) end)
+    "[" + joinStrings(parts, ", ") + "]"
+  end
+end
+
+func sourceToGenName(path: String) -> String
+  let parts = strings.Split(path, "/")
+  var base: String = parts.Get(parts.Len() - 1).UnwrapOr(path)
+  base = strings.TrimSuffix(base, ".mygo")
+  if base == "" then
+    base = "mygo"
+  end
+  "zz_" + base + ".gen.go"
+end
+
+func renderGoFile(parts: GoFileParts) -> Result[String, String]
+  go[Result[String, String]] {
+    code: """
+      func() Result[string, string] {
+        f := &ast.File{Name: ast.NewIdent(parts.PackageName)}
+        for _, im := range parts.Imports {
+          spec := &ast.ImportSpec{Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(im.Path)}}
+          if im.Alias != "" && im.Alias != importAliasForPath(im.Path) {
+            spec.Name = ast.NewIdent(im.Alias)
+          }
+          f.Decls = append(f.Decls, &ast.GenDecl{Tok: token.IMPORT, Specs: append([]ast.Spec(nil), spec)})
+        }
+        for _, src := range parts.Decls {
+          declSrc := "package p\n" + src
+          parsed, err := parser.ParseFile(token.NewFileSet(), "decl.go", declSrc, parser.ParseComments)
+          if err != nil {
+            return Err[string, string]("go/ast parse decl: " + err.Error() + "\n" + src)
+          }
+          f.Decls = append(f.Decls, parsed.Decls...)
+        }
+        var buf bytes.Buffer
+        if err := format.Node(&buf, token.NewFileSet(), f); err != nil {
+          return Err[string, string]("go/format: " + err.Error())
+        }
+        return Ok[string, string](buf.String())
+      }()
+    """
+    in parts = parts
+  }
+end
+
+func parseSourceAsAst2(input: String) -> Result[ast2.File, String]
+  go[Result[ast2.File, String]] {
+    code: """
+      func() Result[ast2.File, string] {
+        parsed := parser2.ParseFile(input)
+        ok, yes := parsed.(ResultOk[parser2.File, string])
+        if !yes {
+          if err, no := parsed.(ResultErr[parser2.File, string]); no {
+            return Err[ast2.File, string](err.F0)
+          }
+          return Err[ast2.File, string]("parser2 returned an unknown result")
+        }
+        var convType func(parser2.TypeExpr) ast2.TypeExpr
+        convType = func(t parser2.TypeExpr) ast2.TypeExpr {
+          switch v := t.(type) {
+          case parser2.TypeExprNamedType:
+            args := make([]ast2.TypeExpr, 0, len(v.F1))
+            for _, a := range v.F1 { args = append(args, convType(a)) }
+            return ast2.TypeExprNamedTypeCtor(v.F0, args)
+          case parser2.TypeExprFuncType:
+            args := make([]ast2.TypeExpr, 0, len(v.F0))
+            for _, a := range v.F0 { args = append(args, convType(a)) }
+            r := convType(*v.F1)
+            return ast2.TypeExprFuncTypeCtor(args, &r)
+          case parser2.TypeExprTupleType:
+            args := make([]ast2.TypeExpr, 0, len(v.F0))
+            for _, a := range v.F0 { args = append(args, convType(a)) }
+            return ast2.TypeExprTupleTypeCtor(args)
+          default:
+            return ast2.TypeExprUnitTypeCtor()
+          }
+        }
+        var convExpr func(parser2.Expr) ast2.Expr
+        convExpr = func(e parser2.Expr) ast2.Expr {
+          switch v := e.(type) {
+          case parser2.ExprIdentExpr:
+            return ast2.ExprIdentExprCtor(v.F0)
+          case parser2.ExprNumberExpr:
+            return ast2.ExprNumberExprCtor(v.F0)
+          case parser2.ExprStringExpr:
+            return ast2.ExprStringExprCtor(v.F0)
+          case parser2.ExprBoolExpr:
+            return ast2.ExprBoolExprCtor(v.F0)
+          case parser2.ExprUnaryExpr:
+            inner := convExpr(*v.F1)
+            return ast2.ExprUnaryExprCtor(v.F0, &inner)
+          case parser2.ExprBinaryExpr:
+            l, r := convExpr(*v.F1), convExpr(*v.F2)
+            return ast2.ExprBinaryExprCtor(v.F0, &l, &r)
+          case parser2.ExprCallExpr:
+            c := convExpr(*v.F0)
+            args := make([]ast2.Expr, 0, len(v.F1))
+            for _, a := range v.F1 { args = append(args, convExpr(a)) }
+            return ast2.ExprCallExprCtor(&c, args)
+          case parser2.ExprFieldExpr:
+            b := convExpr(*v.F0)
+            return ast2.ExprFieldExprCtor(&b, v.F1)
+          case parser2.ExprIfExpr:
+            c, t, e := convExpr(*v.F0), convExpr(*v.F1), convExpr(*v.F2)
+            return ast2.ExprIfExprCtor(&c, &t, &e)
+          case parser2.ExprBlockExpr:
+            items := make([]ast2.Expr, 0, len(v.F0))
+            for _, a := range v.F0 { items = append(items, convExpr(a)) }
+            return ast2.ExprBlockExprCtor(items)
+          case parser2.ExprLetExpr:
+            var typ Option[ast2.TypeExpr] = None[ast2.TypeExpr]()
+            if tv, yes := v.F0.Type.(OptionSome[parser2.TypeExpr]); yes {
+              typ = Some(convType(tv.F0))
+            }
+            return ast2.ExprLetExprCtor(ast2.Bind{Name: v.F0.Name, Type: typ, Value: convExpr(v.F0.Value)})
+          default:
+            return ast2.ExprUnitExprCtor()
+          }
+        }
+        decls := make([]ast2.Decl, 0, len(ok.F0.Decls))
+        for _, d := range ok.F0.Decls {
+          switch v := d.(type) {
+          case parser2.DeclImportDecl:
+            decls = append(decls, ast2.DeclImportDeclCtor(v.F0, v.F1))
+          case parser2.DeclStructDecl:
+            fs := make([]ast2.Field, 0, len(v.F2))
+            for _, f := range v.F2 {
+              var tag Option[string] = None[string]()
+              if tv, yes := f.Tag.(OptionSome[string]); yes { tag = Some(tv.F0) }
+              fs = append(fs, ast2.Field{Name: f.Name, Type: convType(f.Type), Tag: tag})
+            }
+            decls = append(decls, ast2.DeclStructDeclCtor(v.F0, v.F1, fs))
+          case parser2.DeclEnumDecl:
+            vs := make([]ast2.Variant, 0, len(v.F2))
+            for _, item := range v.F2 {
+              fields := make([]ast2.TypeExpr, 0, len(item.Fields))
+              for _, ft := range item.Fields { fields = append(fields, convType(ft)) }
+              vs = append(vs, ast2.Variant{Name: item.Name, Fields: fields})
+            }
+            decls = append(decls, ast2.DeclEnumDeclCtor(v.F0, v.F1, vs))
+          case parser2.DeclFuncDecl:
+            ps := make([]ast2.Param, 0, len(v.F2))
+            for _, p := range v.F2 { ps = append(ps, ast2.Param{Name: p.Name, Type: convType(p.Type)}) }
+            var ret Option[ast2.TypeExpr] = None[ast2.TypeExpr]()
+            if rv, yes := v.F3.(OptionSome[parser2.TypeExpr]); yes { ret = Some(convType(rv.F0)) }
+            decls = append(decls, ast2.DeclFuncDeclCtor(v.F0, v.F1, ps, ret, convExpr(v.F4)))
+          }
+        }
+        return Ok[ast2.File, string](ast2.File{PackageName: ok.F0.PackageName, Decls: decls})
+      }()
+    """
+    in input = input
+  }
+end
