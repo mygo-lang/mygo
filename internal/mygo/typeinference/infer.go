@@ -324,7 +324,7 @@ func inferDecl(decl Decl, env TypeEnv, state *InferState, info *TypedInfo, pkg *
 
 	case *InterfaceDecl:
 		// Register interface as a type in the environment
-		if existing, exists := env[d.Name]; exists && (pkg == nil || pkg.Name != "prelude") && !isSameTypeConstructorBinding(existing, d.Name) {
+		if _, exists := env[d.Name]; exists && (pkg == nil || pkg.Name != "prelude") {
 			return nil, fmt.Errorf("symbol %q conflicts in scope", d.Name)
 		}
 		env = env.Clone()
@@ -368,7 +368,7 @@ func mergeTypeParamNames(groups ...[]string) []string {
 }
 
 func inferEnumDecl(d *EnumDecl, env TypeEnv, state *InferState, pkg *PkgInfo) (TypeEnv, error) {
-	if existing, exists := env[d.Name]; exists && (pkg == nil || pkg.Name != "prelude") && !isSameTypeConstructorBinding(existing, d.Name) {
+	if _, exists := env[d.Name]; exists && (pkg == nil || pkg.Name != "prelude") {
 		return nil, fmt.Errorf("symbol %q conflicts in scope", d.Name)
 	}
 	env = env.Clone()
@@ -411,7 +411,7 @@ func inferEnumDecl(d *EnumDecl, env TypeEnv, state *InferState, pkg *PkgInfo) (T
 }
 
 func inferStructDecl(d *StructDecl, env TypeEnv, state *InferState, pkg *PkgInfo) (TypeEnv, error) {
-	if existing, exists := env[d.Name]; exists && (pkg == nil || pkg.Name != "prelude") && !isSameTypeConstructorBinding(existing, d.Name) {
+	if _, exists := env[d.Name]; exists && (pkg == nil || pkg.Name != "prelude") {
 		return nil, fmt.Errorf("symbol %q conflicts in scope", d.Name)
 	}
 	env = env.Clone()
@@ -432,16 +432,6 @@ func inferStructDecl(d *StructDecl, env TypeEnv, state *InferState, pkg *PkgInfo
 	}
 	env[d.Name] = Generalize(env, structType, nil)
 	return env, nil
-}
-
-func isSameTypeConstructorBinding(s *Scheme, name string) bool {
-	if s == nil {
-		return false
-	}
-	if con, ok := s.Body.Body.(TCon); ok {
-		return con.Name == name
-	}
-	return false
 }
 
 func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo, pkg *PkgInfo) (TypeEnv, error) {
