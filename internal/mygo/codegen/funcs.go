@@ -432,25 +432,17 @@ func (g *gen) hasDuplicateImplForTypeKey(target *ImplDecl, args []TypeExpr) bool
 	return count > 1
 }
 
-// implHelperKey generates a unique key for an impl's type arguments.
-// When there are duplicate impls with the same type key (e.g., two impls of
-// Eq[Int]), it prefixes the type name to disambiguate.
+// implHelperKey returns the mangled impl symbol used as the stem for helper
+// functions generated from this impl.
 func (g *gen) implHelperKey(d *ImplDecl, args []TypeExpr) string {
-	typeKey := g.implTypeKey(args)
-	if d == nil || d.Type == nil || !g.hasDuplicateImplForTypeKey(d, args) {
-		return typeKey
+	if d == nil {
+		return ""
 	}
-	name := implDisplayTypeName(d.Type)
-	if name == "" {
-		return typeKey
+	ifaceName := d.InterfaceName
+	if ifaceName == "" {
+		ifaceName = d.Name
 	}
-	// If the type name matches the first arg, no prefix needed.
-	if len(args) > 0 {
-		if nt, ok := args[0].(*NamedType); ok && nt.Name == name {
-			return typeKey
-		}
-	}
-	return "_" + typeKeyFromType(name) + typeKey
+	return g.implSymbol(d, ifaceName, args)
 }
 
 // genFuncDecl exports genFunc for test usage

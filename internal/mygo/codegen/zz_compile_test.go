@@ -80,8 +80,73 @@ end
 	if strings.Contains(generated, "parsers.Fold") {
 		t.Fatalf("PChoice generated direct selector call, want typeclass helper:\n%s", generated)
 	}
-	if !strings.Contains(generated, "Fold__t_t") {
+	if !strings.Contains(generated, "MygoIT") ||
+		!strings.Contains(generated, "16SliceIEnumerable") ||
+		!strings.Contains(generated, "M4Fold") {
 		t.Fatalf("PChoice did not generate SliceIEnumerable Fold helper call:\n%s", generated)
+	}
+}
+
+func TestInterfaceImplMethodNamesIncludeImplIdentity(t *testing.T) {
+	src := `package p
+
+interface Pretty[A]
+  func Show(value: A) -> String
+end
+
+interface Debug[A]
+  func Show(value: A) -> String
+end
+
+impl IntPretty: Pretty[Int]
+  func Show(value: Int) -> String
+    "pretty"
+  end
+end
+
+impl IntDebug: Debug[Int]
+  func Show(value: Int) -> String
+    "debug"
+  end
+end
+`
+	parsed, err := myparser.ParseFile("p.mygo", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg := &Package{
+		Name:          "p",
+		NoPrelude:     true,
+		Imports:       map[string]struct{}{},
+		ImportAliases: map[string]string{},
+		Enums:         map[string]*EnumDecl{},
+		Structs:       map[string]*StructDecl{},
+		Interfaces:    map[string]*InterfaceDecl{},
+		Funcs:         map[string]*FuncDecl{},
+		Decls:         parsed.Decls,
+	}
+	for _, decl := range parsed.Decls {
+		switch d := decl.(type) {
+		case *InterfaceDecl:
+			pkg.Interfaces[d.Name] = d
+		case *ImplDecl:
+			pkg.Impls = append(pkg.Impls, d)
+		}
+	}
+
+	generated, err := Generate(pkg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Count(generated, "func MygoIT") != 2 {
+		t.Fatalf("generated code should contain two distinct impl helpers:\n%s", generated)
+	}
+	if !strings.Contains(generated, "6Pretty") || !strings.Contains(generated, "5Debug") ||
+		!strings.Contains(generated, "9IntPretty") || !strings.Contains(generated, "8IntDebug") {
+		t.Fatalf("generated impl helper names should include interface and impl identity:\n%s", generated)
+	}
+	if strings.Count(generated, "M4Show") != 2 {
+		t.Fatalf("generated impl helper names should include the method name:\n%s", generated)
 	}
 }
 

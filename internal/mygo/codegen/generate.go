@@ -597,6 +597,7 @@ type egCtx struct {
 	retType          string
 	retTypes         []string
 	currentImpl      string
+	implSymbol       string
 	implTypeKey      string
 	implTypeParams   []string
 }
@@ -653,6 +654,7 @@ func (ctx *egCtx) child() *egCtx {
 		retType:          ctx.retType,
 		retTypes:         append([]string(nil), ctx.retTypes...),
 		currentImpl:      ctx.currentImpl,
+		implSymbol:       ctx.implSymbol,
 		implTypeKey:      ctx.implTypeKey,
 		implTypeParams:   ctx.implTypeParams,
 	}
@@ -966,7 +968,7 @@ func (g *gen) genTypedImpl(d *ImplDecl, ifaceName string) []ast.Decl {
 	for i, tp := range iface.TypeParams {
 		subst[tp] = g.goType(typeArgs[i], nil)
 	}
-	typeKey := g.implHelperKey(d, typeArgs)
+	implSym := g.implSymbol(d, ifaceName, typeArgs)
 	methodBodies := map[string]*FuncDecl{}
 	for _, m := range d.Methods {
 		methodBodies[m.Name] = m
@@ -982,7 +984,7 @@ func (g *gen) genTypedImpl(d *ImplDecl, ifaceName string) []ast.Decl {
 			combinedTP[tp] = struct{}{}
 		}
 		retType := g.goReturnType(m.Ret, combinedTP)
-		fnName := helperFuncName(sig.Name, typeKey)
+		fnName := implMethodSymbol(implSym, sig.Name)
 		if _, ok := g.emittedImplHelpers[fnName]; ok {
 			continue
 		}
@@ -1098,7 +1100,8 @@ func (g *gen) genTypedImpl(d *ImplDecl, ifaceName string) []ast.Decl {
 				typeclassMethods: usingTypeclassMethods,
 				retType:          retType,
 				currentImpl:      ifaceName,
-				implTypeKey:      typeKey,
+				implSymbol:       implSym,
+				implTypeKey:      implSym,
 			}
 			for _, p := range m.Params {
 				ctx.locals[p.Name] = g.goType(p.Type, combinedTP)
@@ -1553,12 +1556,82 @@ func isInherentReceiverParam(paramType TypeExpr, implType TypeExpr, receiverName
 }
 
 func inherentMethodName(receiverName, methodName string) string {
-	return sanitizeIdent(receiverName) + "_" + sanitizeIdent(methodName)
+	return implMethodSymbol(mangleInherentImplSymbol(receiverName), methodName)
 }
 
 func helperFuncName(method, typeKey string) string {
-	typeKey = strings.TrimPrefix(typeKey, "_")
-	return sanitizeIdent(method + "_" + typeKey)
+	return implMethodSymbol(sanitizeIdent(strings.TrimPrefix(typeKey, "_")), method)
+}
+
+func implMethodSymbol(implSymbol, methodName string) string {
+	return sanitizeIdent(implSymbol + "M" + mangleComponent(methodName))
+}
+
+func mangleInherentImplSymbol(receiverName string) string {
+	return "MygoIN" + mangleComponent(receiverName)
+}
+
+func (g *gen) implSymbol(d *ImplDecl, ifaceName string, args []TypeExpr) string {
+	if d == nil || d.InterfaceName == "" {
+		return mangleInherentImplSymbol(implDisplayTypeName(d.Type))
+	}
+	var b strings.Builder
+	b.WriteString("MygoIT")
+	b.WriteString(mangleComponent(ifaceName))
+	if d.Type != nil {
+		b.WriteString("F")
+		b.WriteString(mangleTypeExpr(d.Type))
+	} else {
+		b.WriteString("A")
+	}
+	b.WriteString("G")
+	for _, arg := range args {
+		b.WriteString(mangleTypeExpr(arg))
+	}
+	b.WriteString("E")
+	return sanitizeIdent(b.String())
+}
+
+func mangleComponent(s string) string {
+	s = sanitizeIdent(s)
+	return strconv.Itoa(len(s)) + s
+}
+
+func mangleTypeExpr(t TypeExpr) string {
+	switch tt := t.(type) {
+	case *NamedType:
+		var b strings.Builder
+		b.WriteString("N")
+		b.WriteString(mangleComponent(tt.Name))
+		if len(tt.Args) > 0 {
+			b.WriteString("G")
+			for _, arg := range tt.Args {
+				b.WriteString(mangleTypeExpr(arg))
+			}
+			b.WriteString("E")
+		}
+		return b.String()
+	case *FuncType:
+		var b strings.Builder
+		b.WriteString("F")
+		for _, p := range tt.Params {
+			b.WriteString(mangleTypeExpr(p))
+		}
+		b.WriteString("R")
+		b.WriteString(mangleTypeExpr(tt.Ret))
+		b.WriteString("E")
+		return b.String()
+	case *TupleType:
+		var b strings.Builder
+		b.WriteString("U")
+		for _, e := range tt.Elems {
+			b.WriteString(mangleTypeExpr(e))
+		}
+		b.WriteString("E")
+		return b.String()
+	default:
+		return "X" + mangleComponent(typeString(t, nil))
+	}
 }
 
 func typeKeyFromType(typ string) string {

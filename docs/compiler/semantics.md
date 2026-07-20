@@ -100,20 +100,24 @@ let bigger = r.scale(2.0)
 The calls above resolve as if written:
 
 ```mygo
-let a = Rectangle_area(r)
-let bigger = Rectangle_scale(r, 2.0)
+let a = MygoIN9RectangleM4area(r)
+let bigger = MygoIN9RectangleM5scale(r, 2.0)
 ```
 
 ### Name Mangling
 
-Inherent methods are emitted as top-level Go functions with a stable receiver-name prefix. This keeps MyGO source free to reuse method names across receiver types while avoiding Go symbol collisions.
+Impl methods are emitted as top-level Go functions whose names include the impl identity and the method name. This keeps MyGO source free to reuse method names across receiver types and interfaces while avoiding Go symbol collisions during code generation.
 
-- `impl Rectangle` method `area` lowers to `Rectangle_area`.
-- `impl[A] Box[A]` method `get` lowers to `Box_get`.
-- `impl[K, V] MapEntry[K, V]` method `key` lowers to `MapEntry_key`.
-- The receiver's base named type participates in the mangled name; type arguments and impl type parameters remain in the generated Go signature, not in the symbol name.
+- Mangled names use a Go-safe, length-prefixed component scheme inspired by C++ Itanium/Rust-style symbol encoding.
+- Inherent impl stem: `MygoIN` + mangled receiver type. Example: `impl Rectangle`.
+- Interface/typeclass impl stem: `MygoIT` + mangled interface + `F` + mangled impl type + `G` + mangled interface args + `E`. Example: `impl[T] SliceIEnumerable[T]: IEnumerable[Slice[T], T]`.
+- Method symbol: impl stem + `M` + mangled method name.
+- `impl Rectangle` method `area` lowers to `MygoIN9RectangleM4area`.
+- `impl[A] Box[A]` method `get` lowers to `MygoIN3BoxM3get`.
+- `impl[T] SliceIEnumerable[T]: IEnumerable[Slice[T], T]` method `Fold` lowers to a symbol containing both the impl name and method name, such as `MygoIT11IEnumerableF...16SliceIEnumerable...M4Fold`.
 - If two inherent impl methods have the same receiver base type and method name in the same package, report a duplicate method error.
-- Different receiver base types may use the same method name because their mangled Go symbols differ.
+- Different receiver base types, impl names, interfaces, or interface arguments may use the same method name because their mangled Go symbols differ.
+- While generating an impl method body, calls to methods from the same impl use the current impl stem directly, so generated functions carry the impl name consistently.
 
 For example:
 
@@ -134,8 +138,8 @@ end
 lowers to distinct Go functions:
 
 ```go
-func Rectangle_area(self Rectangle) float64
-func Circle_area(self Circle) float64
+func MygoIN9RectangleM4area(self Rectangle) float64
+func MygoIN6CircleM4area(self Circle) float64
 ```
 
 Selectors without a call keep their existing field-access meaning. Method lookup only applies to call expressions such as `value.method(args...)`, and field access takes precedence when resolving non-call selectors.
@@ -164,7 +168,7 @@ let s = String.FromRunes(['h', 'e', 'l', 'l', 'o'])
 Key points:
 - The compiler detects static methods via `isInherentReceiverParam()`: if the first parameter's type doesn't match the impl's type, the method has no receiver.
 - Static methods are called as `TypeName.method(args)` (no receiver instance needed).
-- They lower to top-level Go functions with the same `TypeName_methodName` mangling convention.
+- They lower to top-level Go functions with the same impl-stem mangling convention.
 - Both static and instance methods can coexist in the same `impl Type` block.
 
 ## Go Multi-Return Value Tuple Destructuring

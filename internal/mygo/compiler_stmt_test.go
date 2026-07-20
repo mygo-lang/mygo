@@ -73,7 +73,7 @@ func TestCompileDirAutoImportsPrelude(t *testing.T) {
 	for _, want := range []string{
 		`. "github.com/mygo-lang/mygo/prelude"`,
 		"var maybe_1 Option[int] = Some[int](41)",
-		"Option_UnwrapOr(maybe_1, 0) + 1",
+		"MygoIN6OptionM8UnwrapOr(maybe_1, 0) + 1",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -125,7 +125,7 @@ end
 	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		`. "github.com/mygo-lang/mygo/prelude"`,
-		"Option_UnwrapOr(maybe_1, 0) + 1",
+		"MygoIN6OptionM8UnwrapOr(maybe_1, 0) + 1",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -1441,7 +1441,8 @@ func TestCompileDirSeparatesSameNamedMethodsByInterface(t *testing.T) {
 	}
 	got := readFile(t, outFiles[0])
 	for _, want := range []string{
-		"func ToString_int64(value int64) string {",
+		"func MygoIT10ShowStringFN5Int64GN5Int64EM8ToString(value int64) string {",
+		"func MygoIT6RenderFN5Int64GN5Int64EM8ToString(value int64) string {",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -1599,10 +1600,10 @@ func TestCompileDirUsesNamedTypeclassImplementation(t *testing.T) {
 		t.Fatalf("CompileDir() error = %v", err)
 	}
 	got := readFile(t, outFiles[0])
-	if !strings.Contains(got, "func Equals_fasteq_int") {
+	if !strings.Contains(got, "func MygoIT8EqualishFN6FastEqGN3IntEM6Equals") {
 		t.Fatalf("expected named impl helper, got:\n%s", got)
 	}
-	if !strings.Contains(got, "same(1, 2, Equals_fasteq_int)") {
+	if !strings.Contains(got, "same(1, 2, MygoIT8EqualishFN6FastEqGN3IntEM6Equals)") {
 		t.Fatalf("expected call to pass named impl helper, got:\n%s", got)
 	}
 }

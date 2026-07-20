@@ -621,6 +621,21 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			}
 		}
 		// Check for typeclass method call: value.show() → show_type() or showFn()
+		if ctx.currentImpl != "" && ctx.implSymbol != "" {
+			if iface := g.pkg.Interfaces[ctx.currentImpl]; iface != nil {
+				for _, method := range iface.Methods {
+					if method.Name != field.Field {
+						continue
+					}
+					allArgs := append([]ast.Expr{base}, args...)
+					retType := g.typeclassMethodReturnType(iface, field.Field, bt)
+					return &ast.CallExpr{
+						Fun:  ast.NewIdent(implMethodSymbol(ctx.implSymbol, field.Field)),
+						Args: allArgs,
+					}, retType, nil
+				}
+			}
+		}
 		var fallbackIface *InterfaceDecl
 		for _, ifaceName := range g.interfaceNamesForMethod(field.Field) {
 			if iface := g.pkg.Interfaces[ifaceName]; iface != nil {

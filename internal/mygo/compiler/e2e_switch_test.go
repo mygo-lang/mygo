@@ -186,10 +186,10 @@ func TestGenerateInherentImplUsesMangledMethodName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
-	if !strings.Contains(generated, "func Rectangle_area") {
+	if !strings.Contains(generated, "func MygoIN9RectangleM4area") {
 		t.Fatalf("generated code missing mangled method:\n%s", generated)
 	}
-	if !strings.Contains(generated, "return Rectangle_area(r") {
+	if !strings.Contains(generated, "return MygoIN9RectangleM4area(r") {
 		t.Fatalf("generated code missing mangled call:\n%s", generated)
 	}
 	fset := token.NewFileSet()

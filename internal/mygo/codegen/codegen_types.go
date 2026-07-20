@@ -41,6 +41,7 @@ type exprCtx struct {
 	retType          string
 	retTypes         []string
 	currentImpl      string
+	implSymbol       string
 	implTypeKey      string
 	implTypeParams   []string
 }
@@ -105,6 +106,7 @@ func (ctx *exprCtx) child() *exprCtx {
 		retType:          ctx.retType,
 		retTypes:         append([]string(nil), ctx.retTypes...),
 		currentImpl:      ctx.currentImpl,
+		implSymbol:       ctx.implSymbol,
 		implTypeKey:      ctx.implTypeKey,
 		implTypeParams:   ctx.implTypeParams,
 	}

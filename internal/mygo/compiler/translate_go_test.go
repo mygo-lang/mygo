@@ -74,10 +74,10 @@ func demo(rs: Slice[rune]) -> String
 end
 `
 	goSrc := compileInlineGoTestPackage(t, src)
-	if !strings.Contains(goSrc, "func String_FromRunes(rs []rune) string") {
+	if !strings.Contains(goSrc, "func MygoIN6StringM9FromRunes(rs []rune) string") {
 		t.Fatalf("generated source missing static inherent helper:\n%s", goSrc)
 	}
-	if !strings.Contains(goSrc, "return String_FromRunes(rs)") {
+	if !strings.Contains(goSrc, "return MygoIN6StringM9FromRunes(rs)") {
 		t.Fatalf("generated source missing static inherent call:\n%s", goSrc)
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), "static_inherent.go", goSrc, 0); err != nil {
