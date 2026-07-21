@@ -173,6 +173,10 @@ type Bind struct {
 	Type  Option[TypeExpr]
 	Value Expr
 }
+type StructLitField struct {
+	Name  string
+	Value Expr
+}
 type Expr interface {
 	isExpr()
 }
@@ -323,6 +327,17 @@ func ExprWhileExprCtor(a0 *Expr, a1 *Expr) Expr {
 	return ExprWhileExpr{F0: a0, F1: a1}
 }
 
+type ExprAssignExpr struct {
+	F0 *Expr
+	F1 *Expr
+}
+
+func (_ ExprAssignExpr) isExpr() {
+}
+func ExprAssignExprCtor(a0 *Expr, a1 *Expr) Expr {
+	return ExprAssignExpr{F0: a0, F1: a1}
+}
+
 type ExprReturnExpr struct {
 }
 
@@ -340,6 +355,17 @@ func (_ ExprReturnWithExpr) isExpr() {
 }
 func ExprReturnWithExprCtor(a0 *Expr) Expr {
 	return ExprReturnWithExpr{F0: a0}
+}
+
+type ExprStructLitExpr struct {
+	F0 string
+	F1 []StructLitField
+}
+
+func (_ ExprStructLitExpr) isExpr() {
+}
+func ExprStructLitExprCtor(a0 string, a1 []StructLitField) Expr {
+	return ExprStructLitExpr{F0: a0, F1: a1}
 }
 
 type ExprInlineGoExpr struct {
@@ -630,7 +656,16 @@ func blockItems(stopParser ps.Parser[string], start ps.State, cur ps.State, item
 	}()
 }
 func expr() ps.Parser[Expr] {
-	return ps.PChoice([]ps.Parser[Expr]{ps.PAttempt(inlineGoExpr()), ps.PAttempt(returnExpr()), ps.PAttempt(varExpr()), ps.PAttempt(whileExpr()), ps.PAttempt(letExpr()), ps.PAttempt(ifExpr()), binaryExpr()})
+	return ps.PChoice([]ps.Parser[Expr]{ps.PAttempt(inlineGoExpr()), ps.PAttempt(returnExpr()), ps.PAttempt(varExpr()), ps.PAttempt(whileExpr()), ps.PAttempt(letExpr()), ps.PAttempt(ifExpr()), ps.PAttempt(assignExpr()), binaryExpr()})
+}
+func assignExpr() ps.Parser[Expr] {
+	return ps.PBind(postfixExpr(), func(lhs Expr) ps.Parser[Expr] {
+		return ps.PBind(sym("="), func(_ string) ps.Parser[Expr] {
+			return ps.PMap(expr(), func(rhs Expr) Expr {
+				return ExprAssignExprCtor(&lhs, &rhs)
+			})
+		})
+	})
 }
 func lazyExpr() ps.Parser[Expr] {
 	return ps.Parser[Expr]{Run: func(state ps.State) ps.Reply[Expr] {
@@ -761,7 +796,7 @@ func bodyExprFromBlock(body Expr) Expr {
 			return func() Expr {
 				return func() Expr {
 					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_7.F0) == 1 {
-						return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_7.F0, 0), body)
+						return MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_7.F0, 0), body)
 					} else {
 						return body
 					}
@@ -843,6 +878,22 @@ func postfixTail(start ps.State, cur ps.State, acc Expr) ps.Reply[Expr] {
 		}
 	}()
 }
+func structLitFields(typeName string) ps.Parser[Expr] {
+	return ps.PBind(sym("{"), func(_ string) ps.Parser[Expr] {
+		return ps.PBind(ps.PSepBy(structLitField(), sym(",")), func(fields []StructLitField) ps.Parser[Expr] {
+			return ps.PThen(sym("}"), ps.PPure(ExprStructLitExprCtor(typeName, fields)))
+		})
+	})
+}
+func structLitField() ps.Parser[StructLitField] {
+	return ps.PBind(identifier(), func(name string) ps.Parser[StructLitField] {
+		return ps.PBind(sym(":"), func(_ string) ps.Parser[StructLitField] {
+			return ps.PMap(expr(), func(value Expr) StructLitField {
+				return StructLitField{Name: name, Value: value}
+			})
+		})
+	})
+}
 func primaryExpr() ps.Parser[Expr] {
 	return ps.PChoice([]ps.Parser[Expr]{ps.PMap(number(), func(v string) Expr {
 		return ExprNumberExprCtor(v)
@@ -856,7 +907,9 @@ func primaryExpr() ps.Parser[Expr] {
 	}{})), func(_ struct {
 	}) Expr {
 		return ExprUnitExprCtor()
-	}), paren[Expr](lazyExpr()), ps.PMap(identifier(), func(v string) Expr {
+	}), paren[Expr](lazyExpr()), ps.PAttempt(ps.PBind(identifier(), func(typeName string) ps.Parser[Expr] {
+		return structLitFields(typeName)
+	})), ps.PMap(identifier(), func(v string) Expr {
 		return ExprIdentExprCtor(v)
 	})})
 }
@@ -1186,7 +1239,7 @@ func defaultImportAlias(path string) string {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_19) == 0 {
 			return path
 		} else {
-			return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_19, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_19)-1), path)
+			return MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_19, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_19)-1), path)
 		}
 	}()
 }

@@ -21,9 +21,10 @@ end
 
 func returnTypeString(ret: Option[ast2.TypeExpr], tps: Set[String]) -> String
   switch ret
-    case Some(t) =>
+    case Some(t) then
       let r = goReturnType(t, tps)
-      if r == "" then "" else " " + r end
+      if r == "" => "" else " " + r
+    end
     case None => ""
   end
 end
@@ -104,19 +105,23 @@ end
 func convertType(t: parser2.TypeExpr) -> ast2.TypeExpr
   switch t
     case NamedType(name, args) => ast2.TypeExpr.NamedType(name, convertTypes(args))
-    case FuncType(params, ret) =>
+    case FuncType(params, ret) then
       let r = convertType(ret.value())
       ast2.TypeExpr.FuncType(convertTypes(params), Ref.new(r))
+    end
     case TupleType(items) => ast2.TypeExpr.TupleType(convertTypes(items))
     case UnitType => ast2.TypeExpr.UnitType()
-    case InlineGo(bodyType, body) =>
+    case InlineGo(bodyType, body) then
       let bt = convertType(bodyType.value())
       ast2.TypeExpr.InlineGo(Ref.new(bt), body)
+    end
   end
 end
 
 func convertDecls(items: Slice[parser2.Decl]) -> Slice[ast2.Decl]
-  items.Map(func(d: parser2.Decl) -> ast2.Decl convertDecl(d) end)
+  items.Map(func(d: parser2.Decl) -> ast2.Decl
+    convertDecl(d)
+  end)
 end
 
 func convertDecl(d: parser2.Decl) -> ast2.Decl
@@ -149,39 +154,61 @@ func convertExpr(e: parser2.Expr) -> ast2.Expr
     case StringExpr(v) => ast2.Expr.StringExpr(v)
     case BoolExpr(v) => ast2.Expr.BoolExpr(v)
     case UnitExpr => ast2.Expr.UnitExpr()
-    case CallExpr(callee, args) =>
+    case CallExpr(callee, args) then
       let c = convertExpr(callee.value())
       ast2.Expr.CallExpr(Ref.new(c), convertExprs(args))
-    case FieldExpr(base, field) =>
+    end
+    case FieldExpr(base, field) then
       let b = convertExpr(base.value())
       ast2.Expr.FieldExpr(Ref.new(b), field)
-    case UnaryExpr(op, inner) =>
+    end
+    case UnaryExpr(op, inner) then
       let v = convertExpr(inner.value())
       ast2.Expr.UnaryExpr(op, Ref.new(v))
-    case BinaryExpr(op, left, right) =>
+    end
+    case BinaryExpr(op, left, right) then
       let l = convertExpr(left.value())
       let r = convertExpr(right.value())
       ast2.Expr.BinaryExpr(op, Ref.new(l), Ref.new(r))
-    case IfExpr(cond, thenExpr, elseExpr) =>
+    end
+    case IfExpr(cond, thenExpr, elseExpr) then
       let c = convertExpr(cond.value())
       let t = convertExpr(thenExpr.value())
       let e2 = convertExpr(elseExpr.value())
       ast2.Expr.IfExpr(Ref.new(c), Ref.new(t), Ref.new(e2))
+    end
     case BlockExpr(items) => ast2.Expr.BlockExpr(convertExprs(items))
     case LetExpr(bind) => ast2.Expr.LetExpr(ast2.Bind { Name: bind.Name, Type: convertTypeOption(bind.Type), Value: convertExpr(bind.Value) })
     case VarExpr(bind) => ast2.Expr.VarExpr(ast2.Bind { Name: bind.Name, Type: convertTypeOption(bind.Type), Value: convertExpr(bind.Value) })
-    case WhileExpr(cond, body) =>
+    case WhileExpr(cond, body) then
       let c = convertExpr(cond.value())
       let b = convertExpr(body.value())
       ast2.Expr.WhileExpr(Ref.new(c), Ref.new(b))
+    end
+    case AssignExpr(target, value) then
+      let t = convertExpr(target.value())
+      let v = convertExpr(value.value())
+      ast2.Expr.AssignExpr(Ref.new(t), Ref.new(v))
+    end
     case ReturnExpr => ast2.Expr.ReturnExpr()
-    case ReturnWithExpr(value) =>
+    case ReturnWithExpr(value) then
       let v = convertExpr(value.value())
       ast2.Expr.ReturnWithExpr(Ref.new(v))
-    case InlineGoExpr(typ, body) =>
+    end
+    case StructLitExpr(typeName, fields) then
+      ast2.Expr.StructLitExpr(typeName, convertStructLitFields(fields))
+    end
+    case InlineGoExpr(typ, body) then
       let t = convertType(typ.value())
       ast2.Expr.InlineGoExpr(Ref.new(t), body)
+    end
   end
+end
+
+func convertStructLitFields(items: Slice[parser2.StructLitField]) -> Slice[ast2.StructLitField]
+  items.Map(func(f: parser2.StructLitField) -> ast2.StructLitField
+    ast2.StructLitField { Name: f.Name, Value: convertExpr(f.Value) }
+  end)
 end
 
 func convertExprs(items: Slice[parser2.Expr]) -> Slice[ast2.Expr]

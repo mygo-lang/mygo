@@ -242,24 +242,24 @@ func convertTypeOption(item Option[parser2.TypeExpr]) Option[ast2.TypeExpr] {
 }
 func convertExpr(e parser2.Expr) ast2.Expr {
 	return func() ast2.Expr {
-		if v_64, ok := e.(parser2.ExprIdentExpr); ok {
+		if v_66, ok := e.(parser2.ExprIdentExpr); ok {
 			return func() ast2.Expr {
-				return ast2.ExprIdentExprCtor(v_64.F0)
+				return ast2.ExprIdentExprCtor(v_66.F0)
 			}()
 		} else {
-			if v_63, ok := e.(parser2.ExprNumberExpr); ok {
+			if v_65, ok := e.(parser2.ExprNumberExpr); ok {
 				return func() ast2.Expr {
-					return ast2.ExprNumberExprCtor(v_63.F0)
+					return ast2.ExprNumberExprCtor(v_65.F0)
 				}()
 			} else {
-				if v_62, ok := e.(parser2.ExprStringExpr); ok {
+				if v_64, ok := e.(parser2.ExprStringExpr); ok {
 					return func() ast2.Expr {
-						return ast2.ExprStringExprCtor(v_62.F0)
+						return ast2.ExprStringExprCtor(v_64.F0)
 					}()
 				} else {
-					if v_61, ok := e.(parser2.ExprBoolExpr); ok {
+					if v_63, ok := e.(parser2.ExprBoolExpr); ok {
 						return func() ast2.Expr {
-							return ast2.ExprBoolExprCtor(v_61.F0)
+							return ast2.ExprBoolExprCtor(v_63.F0)
 						}()
 					} else {
 						if _, ok := e.(parser2.ExprUnitExpr); ok {
@@ -267,79 +267,93 @@ func convertExpr(e parser2.Expr) ast2.Expr {
 								return ast2.ExprUnitExprCtor()
 							}()
 						} else {
-							if v_59, ok := e.(parser2.ExprCallExpr); ok {
+							if v_61, ok := e.(parser2.ExprCallExpr); ok {
 								return func() ast2.Expr {
-									c_78 := convertExpr(*v_59.F0)
-									return ast2.ExprCallExprCtor(&c_78, convertExprs(v_59.F1))
+									c_80 := convertExpr(*v_61.F0)
+									return ast2.ExprCallExprCtor(&c_80, convertExprs(v_61.F1))
 								}()
 							} else {
-								if v_58, ok := e.(parser2.ExprFieldExpr); ok {
+								if v_60, ok := e.(parser2.ExprFieldExpr); ok {
 									return func() ast2.Expr {
-										b_77 := convertExpr(*v_58.F0)
-										return ast2.ExprFieldExprCtor(&b_77, v_58.F1)
+										b_79 := convertExpr(*v_60.F0)
+										return ast2.ExprFieldExprCtor(&b_79, v_60.F1)
 									}()
 								} else {
-									if v_57, ok := e.(parser2.ExprUnaryExpr); ok {
+									if v_59, ok := e.(parser2.ExprUnaryExpr); ok {
 										return func() ast2.Expr {
-											v_76 := convertExpr(*v_57.F1)
-											return ast2.ExprUnaryExprCtor(v_57.F0, &v_76)
+											v_78 := convertExpr(*v_59.F1)
+											return ast2.ExprUnaryExprCtor(v_59.F0, &v_78)
 										}()
 									} else {
-										if v_56, ok := e.(parser2.ExprBinaryExpr); ok {
+										if v_58, ok := e.(parser2.ExprBinaryExpr); ok {
 											return func() ast2.Expr {
-												l_74 := convertExpr(*v_56.F1)
-												r_75 := convertExpr(*v_56.F2)
-												return ast2.ExprBinaryExprCtor(v_56.F0, &l_74, &r_75)
+												l_76 := convertExpr(*v_58.F1)
+												r_77 := convertExpr(*v_58.F2)
+												return ast2.ExprBinaryExprCtor(v_58.F0, &l_76, &r_77)
 											}()
 										} else {
-											if v_55, ok := e.(parser2.ExprIfExpr); ok {
+											if v_57, ok := e.(parser2.ExprIfExpr); ok {
 												return func() ast2.Expr {
-													c_71 := convertExpr(*v_55.F0)
-													t_72 := convertExpr(*v_55.F1)
-													e2_73 := convertExpr(*v_55.F2)
-													return ast2.ExprIfExprCtor(&c_71, &t_72, &e2_73)
+													c_73 := convertExpr(*v_57.F0)
+													t_74 := convertExpr(*v_57.F1)
+													e2_75 := convertExpr(*v_57.F2)
+													return ast2.ExprIfExprCtor(&c_73, &t_74, &e2_75)
 												}()
 											} else {
-												if v_54, ok := e.(parser2.ExprBlockExpr); ok {
+												if v_56, ok := e.(parser2.ExprBlockExpr); ok {
 													return func() ast2.Expr {
-														return ast2.ExprBlockExprCtor(convertExprs(v_54.F0))
+														return ast2.ExprBlockExprCtor(convertExprs(v_56.F0))
 													}()
 												} else {
-													if v_53, ok := e.(parser2.ExprLetExpr); ok {
+													if v_55, ok := e.(parser2.ExprLetExpr); ok {
 														return func() ast2.Expr {
-															return ast2.ExprLetExprCtor(ast2.Bind{Name: v_53.F0.Name, Type: convertTypeOption(v_53.F0.Type), Value: convertExpr(v_53.F0.Value)})
+															return ast2.ExprLetExprCtor(ast2.Bind{Name: v_55.F0.Name, Type: convertTypeOption(v_55.F0.Type), Value: convertExpr(v_55.F0.Value)})
 														}()
 													} else {
-														if v_52, ok := e.(parser2.ExprVarExpr); ok {
+														if v_54, ok := e.(parser2.ExprVarExpr); ok {
 															return func() ast2.Expr {
-																return ast2.ExprVarExprCtor(ast2.Bind{Name: v_52.F0.Name, Type: convertTypeOption(v_52.F0.Type), Value: convertExpr(v_52.F0.Value)})
+																return ast2.ExprVarExprCtor(ast2.Bind{Name: v_54.F0.Name, Type: convertTypeOption(v_54.F0.Type), Value: convertExpr(v_54.F0.Value)})
 															}()
 														} else {
-															if v_51, ok := e.(parser2.ExprWhileExpr); ok {
+															if v_53, ok := e.(parser2.ExprWhileExpr); ok {
 																return func() ast2.Expr {
-																	c_69 := convertExpr(*v_51.F0)
-																	b_70 := convertExpr(*v_51.F1)
-																	return ast2.ExprWhileExprCtor(&c_69, &b_70)
+																	c_71 := convertExpr(*v_53.F0)
+																	b_72 := convertExpr(*v_53.F1)
+																	return ast2.ExprWhileExprCtor(&c_71, &b_72)
 																}()
 															} else {
-																if _, ok := e.(parser2.ExprReturnExpr); ok {
+																if v_52, ok := e.(parser2.ExprAssignExpr); ok {
 																	return func() ast2.Expr {
-																		return ast2.ExprReturnExprCtor()
+																		t_69 := convertExpr(*v_52.F0)
+																		v_70 := convertExpr(*v_52.F1)
+																		return ast2.ExprAssignExprCtor(&t_69, &v_70)
 																	}()
 																} else {
-																	if v_49, ok := e.(parser2.ExprReturnWithExpr); ok {
+																	if _, ok := e.(parser2.ExprReturnExpr); ok {
 																		return func() ast2.Expr {
-																			v_68 := convertExpr(*v_49.F0)
-																			return ast2.ExprReturnWithExprCtor(&v_68)
+																			return ast2.ExprReturnExprCtor()
 																		}()
 																	} else {
-																		if v_48, ok := e.(parser2.ExprInlineGoExpr); ok {
+																		if v_50, ok := e.(parser2.ExprReturnWithExpr); ok {
 																			return func() ast2.Expr {
-																				t_67 := convertType(*v_48.F0)
-																				return ast2.ExprInlineGoExprCtor(&t_67, v_48.F1)
+																				v_68 := convertExpr(*v_50.F0)
+																				return ast2.ExprReturnWithExprCtor(&v_68)
 																			}()
 																		} else {
-																			panic("unreachable")
+																			if v_49, ok := e.(parser2.ExprStructLitExpr); ok {
+																				return func() ast2.Expr {
+																					return ast2.ExprStructLitExprCtor(v_49.F0, convertStructLitFields(v_49.F1))
+																				}()
+																			} else {
+																				if v_48, ok := e.(parser2.ExprInlineGoExpr); ok {
+																					return func() ast2.Expr {
+																						t_67 := convertType(*v_48.F0)
+																						return ast2.ExprInlineGoExprCtor(&t_67, v_48.F1)
+																					}()
+																				} else {
+																					panic("unreachable")
+																				}
+																			}
 																		}
 																	}
 																}
@@ -358,6 +372,11 @@ func convertExpr(e parser2.Expr) ast2.Expr {
 			}
 		}
 	}()
+}
+func convertStructLitFields(items []parser2.StructLitField) []ast2.StructLitField {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(items, func(f parser2.StructLitField) ast2.StructLitField {
+		return ast2.StructLitField{Name: f.Name, Value: convertExpr(f.Value)}
+	})
 }
 func convertExprs(items []parser2.Expr) []ast2.Expr {
 	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(items, func(e parser2.Expr) ast2.Expr {

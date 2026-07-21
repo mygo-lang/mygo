@@ -160,3 +160,133 @@ end
 		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
 	}
 }
+
+func TestGenerateSourceVarDeclaration(t *testing.T) {
+	src := `package sample
+
+func foo() -> Int
+  var x: Int = 42
+  x
+end
+`
+
+	got := GenerateSource(src)
+	ok, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	code := ok.F0
+	if !strings.Contains(code, "var x int = 42") {
+		t.Fatalf("generated var declaration is missing:\n%s", code)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", code, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
+
+func TestGenerateSourceWhileLoop(t *testing.T) {
+	src := `package sample
+
+func count(n: Int) -> Int
+  var i: Int = 0
+  while i > 10
+    i = i + 1
+  end
+  i
+end
+`
+
+	got := GenerateSource(src)
+	ok, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	code := ok.F0
+	if !strings.Contains(code, "for") {
+		t.Fatalf("generated while loop is missing 'for':\n%s", code)
+	}
+	if !strings.Contains(code, ">") {
+		t.Fatalf("generated while loop is missing condition operator '>':\n%s", code)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", code, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
+
+func TestGenerateSourceInlineGoExpression(t *testing.T) {
+	src := `package sample
+
+import strconv "go:strconv"
+
+func toString(n: Int) -> String
+  go[String]{code: "return strconv.Itoa(n)"}
+end
+`
+
+	got := GenerateSource(src)
+	ok, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	code := ok.F0
+	if !strings.Contains(code, "return strconv.Itoa(n)") {
+		t.Fatalf("generated inline go is missing body:\n%s", code)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", code, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
+
+func TestGenerateSourceReturnStatement(t *testing.T) {
+	src := `package sample
+
+func earlyReturn(flag: Bool) -> Int
+  if flag then
+    return 1
+  else
+    return 2
+  end
+end
+`
+
+	got := GenerateSource(src)
+	ok, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	code := ok.F0
+	if !strings.Contains(code, "return 1") {
+		t.Fatalf("generated return statement is missing 'return 1':\n%s", code)
+	}
+	if !strings.Contains(code, "return 2") {
+		t.Fatalf("generated return statement is missing 'return 2':\n%s", code)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", code, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
+
+func TestGenerateSourceBareReturn(t *testing.T) {
+	src := `package sample
+
+func bareReturn(flag: Bool)
+  if flag then
+    return
+  end
+  ()
+end
+`
+
+	got := GenerateSource(src)
+	ok, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	code := ok.F0
+	if !strings.Contains(code, "return") {
+		t.Fatalf("generated bare return is missing 'return':\n%s", code)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", code, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}

@@ -77,9 +77,14 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
     case LetExpr(bind) => inferLet(bind, env, state)
     case VarExpr(bind) => inferLet(bind, env, state)
     case WhileExpr(cond, body) => inferWhile(cond.value(), body.value(), env, state)
+    case AssignExpr(target, value) => inferAssign(target.value(), value.value(), env, state)
     case ReturnExpr => Ok(InferResult { Type: MonoType.TUnit, Subst: [], State: state })
     case ReturnWithExpr(value) => inferExpr(value.value(), env, state)
-    case InlineGoExpr(_, _) => Ok(InferResult { Type: MonoType.TUnit, Subst: [], State: state })
+    case StructLitExpr(typeName, fields) =>
+      inferStructLit(typeName, fields, env, state)
+    case InlineGoExpr(typ, _) =>
+      let mono = typeFromAST(typ.value())
+      Ok(InferResult { Type: mono, Subst: [], State: state })
   end
 end
 
@@ -97,6 +102,25 @@ func inferWhile(cond: ast2.Expr, body: ast2.Expr, env: Slice[EnvEntry], state: I
             case Err(msg) => Err(msg)
             case Ok(bv) => Ok(InferResult { Type: MonoType.TUnit, Subst: bv.Subst, State: bv.State })
           end
+      end
+  end
+end
+
+func inferAssign(target: ast2.Expr, value: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+  let t = inferExpr(target, env, state)
+  switch t
+    case Err(msg) => Err(msg)
+    case Ok(tv) =>
+      let v = inferExpr(value, env, tv.State)
+      switch v
+        case Err(msg) => Err(msg)
+        case Ok(vv) then
+          let s = unify(applySubst(vv.Subst, tv.Type), applySubst(vv.Subst, vv.Type), vv.Subst)
+          switch s
+            case Err(msg) => Err(msg)
+            case Ok(s2) => Ok(InferResult { Type: MonoType.TUnit, Subst: s2, State: vv.State })
+          end
+        end
       end
   end
 end
@@ -333,5 +357,25 @@ func inferVariants(vars: Slice[ast2.Variant], enumName: String, tps: Slice[Strin
       MonoType.TFunc(typeArgsFromAST(v.Fields), Ref.new(MonoType.TCon(enumName, emptyMonoTypes())))
     end
     inferVariants(sliceDrop(vars, 1), enumName, tps, envPut(env, v.Name, Scheme { Bound: [], Body: constructorType }), fields, state)
+  end
+end
+
+# 推断结构体字面量的类型: TypeName { field1: expr1, field2: expr2 }
+# 遍历所有字段，对每个字段进行类型推断，最终返回结构体类型 TCon(typeName, [])
+func inferStructLit(typeName: String, fields: Slice[ast2.StructLitField], env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+  inferStructLitFields(typeName, fields, env, state, [], state)
+end
+
+func inferStructLitFields(typeName: String, fields: Slice[ast2.StructLitField], env: Slice[EnvEntry], state: InferState, subst: Slice[SubstEntry], curState: InferState) -> Result[InferResult, String]
+  if fields.Len() == 0 then
+    Ok(InferResult { Type: MonoType.TCon(typeName, emptyMonoTypes()), Subst: subst, State: curState })
+  else
+    let f = fields.Get(0).UnwrapOr(ast2.StructLitField { Name: "", Value: ast2.Expr.UnitExpr() })
+    let r = inferExpr(f.Value, env, curState)
+    switch r
+      case Err(msg) => Err(msg)
+      case Ok(v) =>
+        inferStructLitFields(typeName, sliceDrop(fields, 1), env, v.State, composeSubst(v.Subst, subst), v.State)
+    end
   end
 end

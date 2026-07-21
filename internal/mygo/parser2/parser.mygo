@@ -65,6 +65,11 @@ struct Bind
   Value: Expr
 end
 
+struct StructLitField
+  Name: String
+  Value: Expr
+end
+
 enum Expr
   IdentExpr(String)
   NumberExpr(String)
@@ -83,9 +88,13 @@ enum Expr
   # while 循环
   WhileExpr(Ref[Expr], Ref[Expr])
   # return 语句
+  # 赋值语句
+  AssignExpr(Ref[Expr], Ref[Expr])
   ReturnExpr
   ReturnWithExpr(Ref[Expr])
   # 内联 Go 嵌入
+  # 结构体字面量
+  StructLitExpr(String, Slice[StructLitField])
   InlineGoExpr(Ref[TypeExpr], String)
 end
 
@@ -353,8 +362,20 @@ func expr() -> ps.Parser[Expr]
     ps.PAttempt(whileExpr()),
     ps.PAttempt(letExpr()),
     ps.PAttempt(ifExpr()),
+    ps.PAttempt(assignExpr()),
     binaryExpr(),
   ])
+end
+
+# 赋值语句解析: 左值 = 右值
+func assignExpr() -> ps.Parser[Expr]
+  ps.PBind(postfixExpr(), func(lhs: Expr) -> ps.Parser[Expr]
+    ps.PBind(sym("="), func(_: String) -> ps.Parser[Expr]
+      ps.PMap(expr(), func(rhs: Expr) -> Expr
+        Expr.AssignExpr(Ref.new(lhs), Ref.new(rhs))
+      end)
+    end)
+  end)
 end
 
 func lazyExpr() -> ps.Parser[Expr]
@@ -595,6 +616,26 @@ func postfixTail(start: ps.State, cur: ps.State, acc: Expr) -> ps.Reply[Expr]
   end
 end
 
+# 结构体字段列表解析器: { field1: expr1, field2: expr2, ... }
+func structLitFields(typeName: String) -> ps.Parser[Expr]
+  ps.PBind(sym("{"), func(_: String) -> ps.Parser[Expr]
+    ps.PBind(ps.PSepBy(structLitField(), sym(",")), func(fields: Slice[StructLitField]) -> ps.Parser[Expr]
+      ps.PThen(sym("}"), ps.PPure(Expr.StructLitExpr(typeName, fields)))
+    end)
+  end)
+end
+
+# 结构体字面量中的单个字段: field: expr
+func structLitField() -> ps.Parser[StructLitField]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[StructLitField]
+    ps.PBind(sym(":"), func(_: String) -> ps.Parser[StructLitField]
+      ps.PMap(expr(), func(value: Expr) -> StructLitField
+        StructLitField { Name: name, Value: value }
+      end)
+    end)
+  end)
+end
+
 func primaryExpr() -> ps.Parser[Expr]
   ps.PChoice([
     ps.PMap(number(), func(v: String) -> Expr Expr.NumberExpr(v) end),
@@ -603,6 +644,10 @@ func primaryExpr() -> ps.Parser[Expr]
     ps.PMap(kw("false"), func(_: String) -> Expr Expr.BoolExpr(false) end),
     ps.PMap(paren(ps.PPure(())), func(_: ()) -> Expr Expr.UnitExpr end),
     paren(lazyExpr()),
+    # 结构体字面量: TypeName { field: expr, ... } — 先解析标识符，再尝试花括号
+    ps.PAttempt(ps.PBind(identifier(), func(typeName: String) -> ps.Parser[Expr]
+      structLitFields(typeName)
+    end)),
     ps.PMap(identifier(), func(v: String) -> Expr Expr.IdentExpr(v) end),
   ])
 end

@@ -242,3 +242,125 @@ func parseSingleFunc(t *testing.T, src string) DeclFuncDecl {
 	}
 	return fn
 }
+
+func TestParseAssignSimpleVar(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func foo() -> Int
+  var x: Int = 42
+  x = 1
+  x
+end
+`)
+
+	body := fn.F4.(ExprBlockExpr)
+	if len(body.F0) != 3 {
+		t.Fatalf("body expr count = %d, want 3", len(body.F0))
+	}
+	assign, ok := body.F0[1].(ExprAssignExpr)
+	if !ok {
+		t.Fatalf("second expr = %T, want ExprAssignExpr", body.F0[1])
+	}
+	lhs := *assign.F0
+	rhs := *assign.F1
+	if lhs.(ExprIdentExpr).F0 != "x" {
+		t.Fatalf("assign lhs = %q, want x", lhs.(ExprIdentExpr).F0)
+	}
+	if rhs.(ExprNumberExpr).F0 != "1" {
+		t.Fatalf("assign rhs = %q, want 1", rhs.(ExprNumberExpr).F0)
+	}
+}
+
+func TestParseAssignFieldSimple(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func foo()
+  var p: Point = Point { x: 1, y: 2 }
+  p.x = 99
+end
+`)
+
+	body := fn.F4.(ExprBlockExpr)
+	assign, ok := body.F0[1].(ExprAssignExpr)
+	if !ok {
+		t.Fatalf("second expr = %T, want ExprAssignExpr", body.F0[1])
+	}
+	lhs := *assign.F0
+	field, ok := lhs.(ExprFieldExpr)
+	if !ok {
+		t.Fatalf("assign lhs = %T, want ExprFieldExpr", lhs)
+	}
+	if field.F1 != "x" {
+		t.Fatalf("assign field name = %q, want x", field.F1)
+	}
+	obj := *field.F0
+	if obj.(ExprIdentExpr).F0 != "p" {
+		t.Fatalf("assign field obj = %q, want p", obj.(ExprIdentExpr).F0)
+	}
+	rhs := *assign.F1
+	if rhs.(ExprNumberExpr).F0 != "99" {
+		t.Fatalf("assign rhs = %q, want 99", rhs.(ExprNumberExpr).F0)
+	}
+}
+
+func TestParseAssignFieldChain(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func foo()
+  cfg.settings.theme = "dark"
+end
+`)
+
+	body := fn.F4.(ExprBlockExpr)
+	assign, ok := body.F0[0].(ExprAssignExpr)
+	if !ok {
+		t.Fatalf("first expr = %T, want ExprAssignExpr", body.F0[0])
+	}
+	// lhs = cfg.settings.theme
+	lhs := *assign.F0
+	themeField, ok := lhs.(ExprFieldExpr)
+	if !ok {
+		t.Fatalf("assign lhs = %T, want ExprFieldExpr", lhs)
+	}
+	if themeField.F1 != "theme" {
+		t.Fatalf("outer field = %q, want theme", themeField.F1)
+	}
+	// cfg.settings
+	inner := *themeField.F0
+	settingsField, ok := inner.(ExprFieldExpr)
+	if !ok {
+		t.Fatalf("inner = %T, want ExprFieldExpr", inner)
+	}
+	if settingsField.F1 != "settings" {
+		t.Fatalf("inner field = %q, want settings", settingsField.F1)
+	}
+	cfg := *settingsField.F0
+	if cfg.(ExprIdentExpr).F0 != "cfg" {
+		t.Fatalf("base ident = %q, want cfg", cfg.(ExprIdentExpr).F0)
+	}
+	rhs := *assign.F1
+	if rhs.(ExprStringExpr).F0 != "dark" {
+		t.Fatalf("assign rhs = %q, want dark", rhs.(ExprStringExpr).F0)
+	}
+}
+
+func TestParseAssignInBlock(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func foo() -> Int
+  var x: Int = 1
+  var y: Int = 2
+  x = y
+  x + y
+end
+`)
+
+	body := fn.F4.(ExprBlockExpr)
+	if len(body.F0) != 4 {
+		t.Fatalf("body expr count = %d, want 4", len(body.F0))
+	}
+	_, ok := body.F0[2].(ExprAssignExpr)
+	if !ok {
+		t.Fatalf("third expr = %T, want ExprAssignExpr", body.F0[2])
+	}
+}

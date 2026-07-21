@@ -46,6 +46,11 @@ struct ImplMethod
   Body: Expr
 end
 
+struct StructLitField
+  Name: String
+  Value: Expr
+end
+
 enum TypeExpr
   NamedType(String, Slice[TypeExpr])
   FuncType(Slice[TypeExpr], Ref[TypeExpr])
@@ -78,9 +83,13 @@ enum Expr
   VarExpr(Bind)
   # while 循环
   WhileExpr(Ref[Expr], Ref[Expr])
+  # 赋值语句
+  AssignExpr(Ref[Expr], Ref[Expr])
   # return 语句
   ReturnExpr
   ReturnWithExpr(Ref[Expr])
+  # 结构体字面量
+  StructLitExpr(String, Slice[StructLitField])
   # 内联 Go 嵌入
   InlineGoExpr(Ref[TypeExpr], String)
 end

@@ -108,6 +108,10 @@ type ImplMethod struct {
 	Sig  FuncSig
 	Body Expr
 }
+type StructLitField struct {
+	Name  string
+	Value Expr
+}
 type TypeExpr interface {
 	isTypeExpr()
 }
@@ -318,6 +322,17 @@ func ExprWhileExprCtor(a0 *Expr, a1 *Expr) Expr {
 	return ExprWhileExpr{F0: a0, F1: a1}
 }
 
+type ExprAssignExpr struct {
+	F0 *Expr
+	F1 *Expr
+}
+
+func (_ ExprAssignExpr) isExpr() {
+}
+func ExprAssignExprCtor(a0 *Expr, a1 *Expr) Expr {
+	return ExprAssignExpr{F0: a0, F1: a1}
+}
+
 type ExprReturnExpr struct {
 }
 
@@ -335,6 +350,17 @@ func (_ ExprReturnWithExpr) isExpr() {
 }
 func ExprReturnWithExprCtor(a0 *Expr) Expr {
 	return ExprReturnWithExpr{F0: a0}
+}
+
+type ExprStructLitExpr struct {
+	F0 string
+	F1 []StructLitField
+}
+
+func (_ ExprStructLitExpr) isExpr() {
+}
+func ExprStructLitExprCtor(a0 string, a1 []StructLitField) Expr {
+	return ExprStructLitExpr{F0: a0, F1: a1}
 }
 
 type ExprInlineGoExpr struct {

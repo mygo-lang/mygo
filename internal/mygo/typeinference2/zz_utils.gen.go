@@ -9,12 +9,12 @@ import (
 
 func monoEqual(a MonoType, b MonoType) bool {
 	return func() bool {
-		if v_135, ok := a.(MonoTypeTVar); ok {
+		if v_145, ok := a.(MonoTypeTVar); ok {
 			return func() bool {
 				return func() bool {
-					if v_136, ok := b.(MonoTypeTVar); ok {
+					if v_146, ok := b.(MonoTypeTVar); ok {
 						return func() bool {
-							return v_135.F0 == v_136.F0
+							return v_145.F0 == v_146.F0
 						}()
 					} else {
 						return func() bool {
@@ -24,12 +24,12 @@ func monoEqual(a MonoType, b MonoType) bool {
 				}()
 			}()
 		} else {
-			if v_133, ok := a.(MonoTypeTCon); ok {
+			if v_143, ok := a.(MonoTypeTCon); ok {
 				return func() bool {
 					return func() bool {
-						if v_134, ok := b.(MonoTypeTCon); ok {
+						if v_144, ok := b.(MonoTypeTCon); ok {
 							return func() bool {
-								return v_133.F0 == v_134.F0 && monoListEqual(v_133.F1, v_134.F1)
+								return v_143.F0 == v_144.F0 && monoListEqual(v_143.F1, v_144.F1)
 							}()
 						} else {
 							return func() bool {
@@ -39,12 +39,12 @@ func monoEqual(a MonoType, b MonoType) bool {
 					}()
 				}()
 			} else {
-				if v_131, ok := a.(MonoTypeTFunc); ok {
+				if v_141, ok := a.(MonoTypeTFunc); ok {
 					return func() bool {
 						return func() bool {
-							if v_132, ok := b.(MonoTypeTFunc); ok {
+							if v_142, ok := b.(MonoTypeTFunc); ok {
 								return func() bool {
-									return monoListEqual(v_131.F0, v_132.F0) && monoEqual(*v_131.F1, *v_132.F1)
+									return monoListEqual(v_141.F0, v_142.F0) && monoEqual(*v_141.F1, *v_142.F1)
 								}()
 							} else {
 								return func() bool {
@@ -54,12 +54,12 @@ func monoEqual(a MonoType, b MonoType) bool {
 						}()
 					}()
 				} else {
-					if v_129, ok := a.(MonoTypeTTuple); ok {
+					if v_139, ok := a.(MonoTypeTTuple); ok {
 						return func() bool {
 							return func() bool {
-								if v_130, ok := b.(MonoTypeTTuple); ok {
+								if v_140, ok := b.(MonoTypeTTuple); ok {
 									return func() bool {
-										return monoListEqual(v_129.F0, v_130.F0)
+										return monoListEqual(v_139.F0, v_140.F0)
 									}()
 								} else {
 									return func() bool {
@@ -101,7 +101,7 @@ func monoListEqual(a []MonoType, b []MonoType) bool {
 				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(a) == 0 {
 					return true
 				} else {
-					return monoEqual(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, 0), MonoTypeTUnitCtor()), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, 0), MonoTypeTUnitCtor())) && monoListEqual(sliceDrop[MonoType](a, 1), sliceDrop[MonoType](b, 1))
+					return monoEqual(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, 0), MonoTypeTUnitCtor()), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, 0), MonoTypeTUnitCtor())) && monoListEqual(sliceDrop[MonoType](a, 1), sliceDrop[MonoType](b, 1))
 				}
 			}()
 		}
@@ -109,14 +109,14 @@ func monoListEqual(a []MonoType, b []MonoType) bool {
 }
 func monoString(t MonoType) string {
 	return func() string {
-		if v_141, ok := t.(MonoTypeTVar); ok {
+		if v_151, ok := t.(MonoTypeTVar); ok {
 			return func() string {
-				return "t" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_141.F0)
+				return "t" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_151.F0)
 			}()
 		} else {
-			if v_140, ok := t.(MonoTypeTCon); ok {
+			if v_150, ok := t.(MonoTypeTCon); ok {
 				return func() string {
-					return v_140.F0
+					return v_150.F0
 				}()
 			} else {
 				if _, ok := t.(MonoTypeTFunc); ok {
@@ -178,12 +178,12 @@ func sliceTailLoop[A any](items []A, index int, out []A) []A {
 			return out
 		} else {
 			return func() []A {
-				if v_143, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionSome[A]); ok {
+				if v_153, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionSome[A]); ok {
 					return func() []A {
-						return sliceTailLoop[A](items, index+1, MygoIN5SliceM6Append(out, v_143.F0))
+						return sliceTailLoop[A](items, index+1, MygoIN5SliceM6Append(out, v_153.F0))
 					}()
 				} else {
-					if _, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionNone[A]); ok {
+					if _, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionNone[A]); ok {
 						return func() []A {
 							return out
 						}()
