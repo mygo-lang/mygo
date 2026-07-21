@@ -24,8 +24,8 @@ enum Shape {
 
 func area(shape: Shape) -> Float64
   switch shape
-    case Shape.Circle(r) => 3.14 * r * r,
-    case Shape.Rectangle { width, height } => width * height,
+    case Circle(r) => 3.14 * r * r,
+    case Rectangle { width, height } => width * height,
   end
 end
 
@@ -38,7 +38,7 @@ end
 Compile:
 
 ```bash
-mygo examples/main/main.mygo
+mygo sync examples/main/main.mygo
 ```
 
 MyGO files now declare the generated Go package with a leading `package <name>` header. The old file-level `module` wrapper is no longer used, and declarations follow directly after the package line.
@@ -48,14 +48,14 @@ Every package now receives a built-in prelude during compilation. The prelude is
 Run with `go run`:
 
 ```bash
-go run examples/main/zz_mygo.gen.go
+go run examples/main/zz_main.gen.go
 ```
 
 Or build and run:
 
 ```bash
-go build -o zz_mygo.gen.exe examples/main/zz_mygo.gen.go
-./zz_mygo.gen.exe
+go build -o zz_main.gen.exe examples/main/zz_main.gen.go
+./zz_main.gen.exe
 ```
 
 ## Key Features

@@ -36,7 +36,7 @@ func demoBasicTypes() -> String
   "Int8=" + i8.ToString() + ", UInt8=" + ui8.ToString() + ", Int16=" + i16.ToString() + ", UInt16=" + ui16.ToString() + ", Int32=" + i32.ToString() + ", UInt32=" + ui32.ToString() + ", Int64=" + i64.ToString() + ", UInt=" + ui.ToString() + ", UInt64=" + ui64.ToString() + ", Float32=" + f32.ToString() + ", Float64=" + f64.ToString() + ", Int=" + i.ToString() + ", hex=" + hex.ToString() + ", oct=" + oct.ToString() + ", bin=" + bin.ToString() + ", flag=" + flag.ToString() + ", greeting=" + greeting + ", multiline=" + multiline + ", raw=" + raw
 end
 
-# ===== 枚举演示 =====
+# ===== Enums =====
 
 enum Color
   Red
@@ -158,16 +158,16 @@ func demoOptionResult() -> String
   "Some=" + some_text + ", None=" + none_text + ", Ok=" + ok_text + ", Err=" + err_text + ", 10/3=" + result_text + ", 10/0=" + div_zero_text
 end
 
-# ===== 集合演示 =====
+# ===== Collections =====
 
 func demoCollections() -> String
-  # 切片
+  # Slice
   let nums: Slice[Int] = [1, 2, 3, 4, 5]
 
-  # 映射
+  # Map
   let scores: Map[String, Int] = {"Alice": 90, "Bob": 85, "Charlie": 95}
 
-  # 集合
+  # Set
   let words: Set[String] = {"hello", "world", "hello"}
 
   "Slice len=" + nums.Len().ToString() + ", Map len=" + scores.Len().ToString() + ", Set len=" + words.Len().ToString()
@@ -254,7 +254,7 @@ func demoMutable() -> String
   "counter=" + counter.ToString() + ", items len=" + items.Len().ToString()
 end
 
-# ===== 泛型演示 =====
+# ===== Generics =====
 
 func identity[A](value: A) -> A
   value
@@ -272,7 +272,7 @@ func demoGenerics() -> String
   "Identity[Int]=" + int_val.ToString() + ", Identity[String]=" + str_val + ", BoxedInt=" + boxed_int.value.ToString() + ", BoxedStr=" + boxed_str.value.ToString()
 end
 
-# ===== 主演示函数 =====
+# ===== Main demo function =====
 
 func demo() -> String
   "=== MyGO Language Demo ===\n\n" + "--- Basic Types ---\n" + demoBasicTypes() + "\n\n" + "--- Enums ---\n" + demoEnums() + "\n\n" + "--- Structs ---\n" + demoStructs() + "\n\n" + "--- Option/Result ---\n" + demoOptionResult() + "\n\n" + "--- Collections ---\n" + demoCollections() + "\n\n" + "--- Functional Programming ---\n" + demoFunctional() + "\n\n" + "--- Control Flow ---\n" + demoControlFlow() + "\n\n" + "--- Mutable Variables ---\n" + demoMutable() + "\n\n" + "--- Generics ---\n" + demoGenerics() + "\n\n" + "=== End of Demo ==="
