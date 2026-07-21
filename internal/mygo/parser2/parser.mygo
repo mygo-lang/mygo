@@ -55,6 +55,8 @@ enum TypeExpr
   FuncType(Slice[TypeExpr], Ref[TypeExpr])
   TupleType(Slice[TypeExpr])
   UnitType
+  # 内联 Go 嵌入类型: go[T]{...}
+  InlineGo(Ref[TypeExpr], String)
 end
 
 struct Bind
@@ -76,6 +78,15 @@ enum Expr
   IfExpr(Ref[Expr], Ref[Expr], Ref[Expr])
   BlockExpr(Slice[Expr])
   LetExpr(Bind)
+  # var 可变变量声明
+  VarExpr(Bind)
+  # while 循环
+  WhileExpr(Ref[Expr], Ref[Expr])
+  # return 语句
+  ReturnExpr
+  ReturnWithExpr(Ref[Expr])
+  # 内联 Go 嵌入
+  InlineGoExpr(Ref[TypeExpr], String)
 end
 
 func ParseFile(input: String) -> Result[File, String]
@@ -336,6 +347,10 @@ end
 
 func expr() -> ps.Parser[Expr]
   ps.PChoice([
+    ps.PAttempt(inlineGoExpr()),
+    ps.PAttempt(returnExpr()),
+    ps.PAttempt(varExpr()),
+    ps.PAttempt(whileExpr()),
     ps.PAttempt(letExpr()),
     ps.PAttempt(ifExpr()),
     binaryExpr(),
@@ -362,6 +377,69 @@ func letExpr() -> ps.Parser[Expr]
       end)
     end)
   end)
+end
+
+func varExpr() -> ps.Parser[Expr]
+  ps.PBind(kw("var"), func(_: String) -> ps.Parser[Expr]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[Expr]
+      ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ: Option[TypeExpr]) -> ps.Parser[Expr]
+        ps.PBind(sym("="), func(_: String) -> ps.Parser[Expr]
+          ps.PMap(expr(), func(value: Expr) -> Expr
+            Expr.VarExpr(Bind { Name: name, Type: typ, Value: value })
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func whileExpr() -> ps.Parser[Expr]
+  ps.PBind(kw("while"), func(_: String) -> ps.Parser[Expr]
+    ps.PBind(expr(), func(cond: Expr) -> ps.Parser[Expr]
+      ps.PBind(blockUntil(kw("end")), func(body: Expr) -> ps.Parser[Expr]
+        ps.PThen(kw("end"), ps.PPure(Expr.WhileExpr(Ref.new(cond), Ref.new(body))))
+      end)
+    end)
+  end)
+end
+
+func returnExpr() -> ps.Parser[Expr]
+  ps.PBind(kw("return"), func(_: String) -> ps.Parser[Expr]
+    ps.PChoice([
+      ps.PAttempt(ps.PMap(expr(), func(value: Expr) -> Expr
+        Expr.ReturnWithExpr(Ref.new(value))
+      end)),
+      ps.PPure(Expr.ReturnExpr),
+    ])
+  end)
+end
+
+func inlineGoExpr() -> ps.Parser[Expr]
+  ps.PBind(kw("go"), func(_: String) -> ps.Parser[Expr]
+    ps.PBind(sym("["), func(_: String) -> ps.Parser[Expr]
+      ps.PBind(typeExpr(), func(typ: TypeExpr) -> ps.Parser[Expr]
+        ps.PBind(sym("]"), func(_: String) -> ps.Parser[Expr]
+          ps.PBind(sym("{"), func(_: String) -> ps.Parser[Expr]
+            ps.PBind(ps.PMap(rawGoBody(), func(body: String) -> String body end), func(body: String) -> ps.Parser[Expr]
+              ps.PThen(sym("}"), ps.PPure(Expr.InlineGoExpr(Ref.new(typ), body)))
+            end)
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func rawGoBody() -> ps.Parser[String]
+  ps.PBind(ps.PMany(rawGoBodyChar()), func(chars: Slice[Rune]) -> ps.Parser[String]
+    ps.PPure(String.FromRunes(chars))
+  end)
+end
+
+func rawGoBodyChar() -> ps.Parser[Rune]
+  ps.PSatisfy(func(r: Rune) -> Bool
+    r != '}'
+  end, "go body character")
 end
 
 func ifExpr() -> ps.Parser[Expr]

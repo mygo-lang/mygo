@@ -75,6 +75,29 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
     case IfExpr(cond, thenExpr, elseExpr) => inferIf(cond.value(), thenExpr.value(), elseExpr.value(), env, state)
     case BlockExpr(items) => inferBlock(items, env, state)
     case LetExpr(bind) => inferLet(bind, env, state)
+    case VarExpr(bind) => inferLet(bind, env, state)
+    case WhileExpr(cond, body) => inferWhile(cond.value(), body.value(), env, state)
+    case ReturnExpr => Ok(InferResult { Type: MonoType.TUnit, Subst: [], State: state })
+    case ReturnWithExpr(value) => inferExpr(value.value(), env, state)
+    case InlineGoExpr(_, _) => Ok(InferResult { Type: MonoType.TUnit, Subst: [], State: state })
+  end
+end
+
+func inferWhile(cond: ast2.Expr, body: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+  let c = inferExpr(cond, env, state)
+  switch c
+    case Err(msg) => Err(msg)
+    case Ok(cv) =>
+      let csubst = unify(cv.Type, MonoType.TCon("Bool", emptyMonoTypes()), cv.Subst)
+      switch csubst
+        case Err(msg) => Err(msg)
+        case Ok(_) =>
+          let b = inferExpr(body, env, cv.State)
+          switch b
+            case Err(msg) => Err(msg)
+            case Ok(bv) => Ok(InferResult { Type: MonoType.TUnit, Subst: bv.Subst, State: bv.State })
+          end
+      end
   end
 end
 
@@ -220,12 +243,14 @@ end
 func inferBlockStep(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[BlockInferStep, String]
   switch expr
     case LetExpr(bind) => inferBlockLet(bind, env, state)
-    case _ =>
+    case VarExpr(bind) => inferBlockLet(bind, env, state)
+    case _ then
       let r = inferExpr(expr, env, state)
       switch r
         case Err(msg) => Err(msg)
         case Ok(v) => Ok(BlockInferStep { Result: v, Env: env })
       end
+    end
   end
 end
 
@@ -240,13 +265,14 @@ func inferBlockLet(bind: ast2.Bind, env: Slice[EnvEntry], state: InferState) -> 
       end
       switch annotated
         case Err(msg) => Err(msg)
-        case Ok(s) =>
+        case Ok(s) then
           let boundType = applySubst(s, v.Type)
           let nextEnv = envPut(env, bind.Name, Scheme { Bound: [], Body: boundType })
           Ok(BlockInferStep {
             Result: InferResult { Type: MonoType.TUnit, Subst: s, State: v.State },
             Env: nextEnv,
           })
+        end
       end
   end
 end

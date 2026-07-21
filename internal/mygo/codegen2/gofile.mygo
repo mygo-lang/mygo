@@ -101,6 +101,20 @@ func convertFile(file: parser2.File) -> ast2.File
   ast2.File { PackageName: file.PackageName, Decls: convertDecls(file.Decls) }
 end
 
+func convertType(t: parser2.TypeExpr) -> ast2.TypeExpr
+  switch t
+    case NamedType(name, args) => ast2.TypeExpr.NamedType(name, convertTypes(args))
+    case FuncType(params, ret) =>
+      let r = convertType(ret.value())
+      ast2.TypeExpr.FuncType(convertTypes(params), Ref.new(r))
+    case TupleType(items) => ast2.TypeExpr.TupleType(convertTypes(items))
+    case UnitType => ast2.TypeExpr.UnitType()
+    case InlineGo(bodyType, body) =>
+      let bt = convertType(bodyType.value())
+      ast2.TypeExpr.InlineGo(Ref.new(bt), body)
+  end
+end
+
 func convertDecls(items: Slice[parser2.Decl]) -> Slice[ast2.Decl]
   items.Map(func(d: parser2.Decl) -> ast2.Decl convertDecl(d) end)
 end
@@ -116,16 +130,6 @@ func convertDecl(d: parser2.Decl) -> ast2.Decl
   end
 end
 
-func convertType(t: parser2.TypeExpr) -> ast2.TypeExpr
-  switch t
-    case NamedType(name, args) => ast2.TypeExpr.NamedType(name, convertTypes(args))
-    case FuncType(params, ret) =>
-      let r = convertType(ret.value())
-      ast2.TypeExpr.FuncType(convertTypes(params), Ref.new(r))
-    case TupleType(items) => ast2.TypeExpr.TupleType(convertTypes(items))
-    case UnitType => ast2.TypeExpr.UnitType()
-  end
-end
 
 func convertTypes(items: Slice[parser2.TypeExpr]) -> Slice[ast2.TypeExpr]
   items.Map(func(t: parser2.TypeExpr) -> ast2.TypeExpr convertType(t) end)
@@ -165,6 +169,18 @@ func convertExpr(e: parser2.Expr) -> ast2.Expr
       ast2.Expr.IfExpr(Ref.new(c), Ref.new(t), Ref.new(e2))
     case BlockExpr(items) => ast2.Expr.BlockExpr(convertExprs(items))
     case LetExpr(bind) => ast2.Expr.LetExpr(ast2.Bind { Name: bind.Name, Type: convertTypeOption(bind.Type), Value: convertExpr(bind.Value) })
+    case VarExpr(bind) => ast2.Expr.VarExpr(ast2.Bind { Name: bind.Name, Type: convertTypeOption(bind.Type), Value: convertExpr(bind.Value) })
+    case WhileExpr(cond, body) =>
+      let c = convertExpr(cond.value())
+      let b = convertExpr(body.value())
+      ast2.Expr.WhileExpr(Ref.new(c), Ref.new(b))
+    case ReturnExpr => ast2.Expr.ReturnExpr()
+    case ReturnWithExpr(value) =>
+      let v = convertExpr(value.value())
+      ast2.Expr.ReturnWithExpr(Ref.new(v))
+    case InlineGoExpr(typ, body) =>
+      let t = convertType(typ.value())
+      ast2.Expr.InlineGoExpr(Ref.new(t), body)
   end
 end
 

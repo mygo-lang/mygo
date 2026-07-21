@@ -51,6 +51,8 @@ enum TypeExpr
   FuncType(Slice[TypeExpr], Ref[TypeExpr])
   TupleType(Slice[TypeExpr])
   UnitType
+  # 内联 Go 嵌入类型: go[T]{...}
+  InlineGo(Ref[TypeExpr], String)
 end
 
 struct Bind
@@ -72,4 +74,13 @@ enum Expr
   IfExpr(Ref[Expr], Ref[Expr], Ref[Expr])
   BlockExpr(Slice[Expr])
   LetExpr(Bind)
+  # var 可变变量声明
+  VarExpr(Bind)
+  # while 循环
+  WhileExpr(Ref[Expr], Ref[Expr])
+  # return 语句
+  ReturnExpr
+  ReturnWithExpr(Ref[Expr])
+  # 内联 Go 嵌入
+  InlineGoExpr(Ref[TypeExpr], String)
 end

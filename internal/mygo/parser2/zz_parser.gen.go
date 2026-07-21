@@ -157,6 +157,17 @@ func TypeExprUnitTypeCtor() TypeExpr {
 	return TypeExprUnitType{}
 }
 
+type TypeExprInlineGo struct {
+	F0 *TypeExpr
+	F1 string
+}
+
+func (_ TypeExprInlineGo) isTypeExpr() {
+}
+func TypeExprInlineGoCtor(a0 *TypeExpr, a1 string) TypeExpr {
+	return TypeExprInlineGo{F0: a0, F1: a1}
+}
+
 type Bind struct {
 	Name  string
 	Type  Option[TypeExpr]
@@ -289,6 +300,57 @@ func (_ ExprLetExpr) isExpr() {
 }
 func ExprLetExprCtor(a0 Bind) Expr {
 	return ExprLetExpr{F0: a0}
+}
+
+type ExprVarExpr struct {
+	F0 Bind
+}
+
+func (_ ExprVarExpr) isExpr() {
+}
+func ExprVarExprCtor(a0 Bind) Expr {
+	return ExprVarExpr{F0: a0}
+}
+
+type ExprWhileExpr struct {
+	F0 *Expr
+	F1 *Expr
+}
+
+func (_ ExprWhileExpr) isExpr() {
+}
+func ExprWhileExprCtor(a0 *Expr, a1 *Expr) Expr {
+	return ExprWhileExpr{F0: a0, F1: a1}
+}
+
+type ExprReturnExpr struct {
+}
+
+func (_ ExprReturnExpr) isExpr() {
+}
+func ExprReturnExprCtor() Expr {
+	return ExprReturnExpr{}
+}
+
+type ExprReturnWithExpr struct {
+	F0 *Expr
+}
+
+func (_ ExprReturnWithExpr) isExpr() {
+}
+func ExprReturnWithExprCtor(a0 *Expr) Expr {
+	return ExprReturnWithExpr{F0: a0}
+}
+
+type ExprInlineGoExpr struct {
+	F0 *TypeExpr
+	F1 string
+}
+
+func (_ ExprInlineGoExpr) isExpr() {
+}
+func ExprInlineGoExprCtor(a0 *TypeExpr, a1 string) Expr {
+	return ExprInlineGoExpr{F0: a0, F1: a1}
 }
 func ParseFile(input string) Result[File, string] {
 	r_1 := ps.ParseInput(fileParser(), input)
@@ -568,7 +630,7 @@ func blockItems(stopParser ps.Parser[string], start ps.State, cur ps.State, item
 	}()
 }
 func expr() ps.Parser[Expr] {
-	return ps.PChoice([]ps.Parser[Expr]{ps.PAttempt(letExpr()), ps.PAttempt(ifExpr()), binaryExpr()})
+	return ps.PChoice([]ps.Parser[Expr]{ps.PAttempt(inlineGoExpr()), ps.PAttempt(returnExpr()), ps.PAttempt(varExpr()), ps.PAttempt(whileExpr()), ps.PAttempt(letExpr()), ps.PAttempt(ifExpr()), binaryExpr()})
 }
 func lazyExpr() ps.Parser[Expr] {
 	return ps.Parser[Expr]{Run: func(state ps.State) ps.Reply[Expr] {
@@ -587,6 +649,62 @@ func letExpr() ps.Parser[Expr] {
 			})
 		})
 	})
+}
+func varExpr() ps.Parser[Expr] {
+	return ps.PBind(kw("var"), func(_ string) ps.Parser[Expr] {
+		return ps.PBind(identifier(), func(name string) ps.Parser[Expr] {
+			return ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ Option[TypeExpr]) ps.Parser[Expr] {
+				return ps.PBind(sym("="), func(_ string) ps.Parser[Expr] {
+					return ps.PMap(expr(), func(value Expr) Expr {
+						return ExprVarExprCtor(Bind{Name: name, Type: typ, Value: value})
+					})
+				})
+			})
+		})
+	})
+}
+func whileExpr() ps.Parser[Expr] {
+	return ps.PBind(kw("while"), func(_ string) ps.Parser[Expr] {
+		return ps.PBind(expr(), func(cond Expr) ps.Parser[Expr] {
+			return ps.PBind(blockUntil(kw("end")), func(body Expr) ps.Parser[Expr] {
+				return ps.PThen(kw("end"), ps.PPure(ExprWhileExprCtor(&cond, &body)))
+			})
+		})
+	})
+}
+func returnExpr() ps.Parser[Expr] {
+	return ps.PBind(kw("return"), func(_ string) ps.Parser[Expr] {
+		return ps.PChoice([]ps.Parser[Expr]{ps.PAttempt(ps.PMap(expr(), func(value Expr) Expr {
+			return ExprReturnWithExprCtor(&value)
+		})), ps.PPure(ExprReturnExprCtor())})
+	})
+}
+func inlineGoExpr() ps.Parser[Expr] {
+	return ps.PBind(kw("go"), func(_ string) ps.Parser[Expr] {
+		return ps.PBind(sym("["), func(_ string) ps.Parser[Expr] {
+			return ps.PBind(typeExpr(), func(typ TypeExpr) ps.Parser[Expr] {
+				return ps.PBind(sym("]"), func(_ string) ps.Parser[Expr] {
+					return ps.PBind(sym("{"), func(_ string) ps.Parser[Expr] {
+						return ps.PBind(ps.PMap(rawGoBody(), func(body string) string {
+							return body
+						}), func(body string) ps.Parser[Expr] {
+							return ps.PThen(sym("}"), ps.PPure(ExprInlineGoExprCtor(&typ, body)))
+						})
+					})
+				})
+			})
+		})
+	})
+}
+func rawGoBody() ps.Parser[string] {
+	return ps.PBind(ps.PMany(rawGoBodyChar()), func(chars []rune) ps.Parser[string] {
+		return ps.PPure(MygoIN6StringM9FromRunes(chars))
+	})
+}
+func rawGoBodyChar() ps.Parser[rune] {
+	return ps.PSatisfy(func(r rune) bool {
+		return r != '}'
+	}, "go body character")
 }
 func ifExpr() ps.Parser[Expr] {
 	return ps.PBind(kw("if"), func(_ string) ps.Parser[Expr] {
@@ -643,7 +761,7 @@ func bodyExprFromBlock(body Expr) Expr {
 			return func() Expr {
 				return func() Expr {
 					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_7.F0) == 1 {
-						return MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_7.F0, 0), body)
+						return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_7.F0, 0), body)
 					} else {
 						return body
 					}
@@ -1068,7 +1186,7 @@ func defaultImportAlias(path string) string {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_19) == 0 {
 			return path
 		} else {
-			return MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_19, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_19)-1), path)
+			return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_19, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_19)-1), path)
 		}
 	}()
 }

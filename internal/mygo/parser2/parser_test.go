@@ -128,6 +128,103 @@ end
 	}
 }
 
+func TestParseVarDeclaration(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func foo() -> Int
+  var x: Int = 42
+  x
+end
+`)
+
+	body := fn.F4.(ExprBlockExpr)
+	if len(body.F0) != 2 {
+		t.Fatalf("body expr count = %d, want 2", len(body.F0))
+	}
+	varExpr, ok := body.F0[0].(ExprVarExpr)
+	if !ok {
+		t.Fatalf("first expr = %T, want ExprVarExpr", body.F0[0])
+	}
+	if varExpr.F0.Name != "x" {
+		t.Fatalf("var name = %q, want x", varExpr.F0.Name)
+	}
+}
+
+func TestParseWhileLoop(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func foo(n: Int) -> Int
+  while n > 0
+    n
+  end
+  n
+end
+`)
+
+	body := fn.F4.(ExprBlockExpr)
+	if len(body.F0) != 2 {
+		t.Fatalf("body expr count = %d, want 2", len(body.F0))
+	}
+	whileExpr, ok := body.F0[0].(ExprWhileExpr)
+	if !ok {
+		t.Fatalf("first expr = %T, want ExprWhileExpr", body.F0[0])
+	}
+	cond := (*whileExpr.F0).(ExprBinaryExpr)
+	if cond.F0 != ">" {
+		t.Fatalf("while cond op = %q, want >", cond.F0)
+	}
+}
+
+func TestParseReturnStatement(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func foo(n: Int) -> Int
+  return n
+end
+`)
+
+	body := fn.F4.(ExprBlockExpr)
+	retExpr, ok := body.F0[0].(ExprReturnWithExpr)
+	if !ok {
+		t.Fatalf("expr = %T, want ExprReturnWithExpr", body.F0[0])
+	}
+	identExpr := (*retExpr.F0).(ExprIdentExpr)
+	if identExpr.F0 != "n" {
+		t.Fatalf("return ident = %q, want n", identExpr.F0)
+	}
+}
+
+func TestParseBareReturnStatement(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func foo(n: Int)
+  return
+end
+`)
+
+	body := fn.F4.(ExprBlockExpr)
+	_, ok := body.F0[0].(ExprReturnExpr)
+	if !ok {
+		t.Fatalf("expr = %T, want ExprReturnExpr", body.F0[0])
+	}
+}
+
+func TestParseInlineGoExpression(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func foo(n: Int) -> Int
+  go[String]{code: "return strconv.Itoa(n)"}
+end
+`)
+
+	body := fn.F4.(ExprBlockExpr)
+	goExpr, ok := body.F0[0].(ExprInlineGoExpr)
+	if !ok {
+		t.Fatalf("expr = %T, want ExprInlineGoExpr", body.F0[0])
+	}
+	_ = goExpr
+}
+
 func parseSingleFunc(t *testing.T, src string) DeclFuncDecl {
 	t.Helper()
 

@@ -152,6 +152,17 @@ func TypeExprUnitTypeCtor() TypeExpr {
 	return TypeExprUnitType{}
 }
 
+type TypeExprInlineGo struct {
+	F0 *TypeExpr
+	F1 string
+}
+
+func (_ TypeExprInlineGo) isTypeExpr() {
+}
+func TypeExprInlineGoCtor(a0 *TypeExpr, a1 string) TypeExpr {
+	return TypeExprInlineGo{F0: a0, F1: a1}
+}
+
 type Bind struct {
 	Name  string
 	Type  Option[TypeExpr]
@@ -284,4 +295,55 @@ func (_ ExprLetExpr) isExpr() {
 }
 func ExprLetExprCtor(a0 Bind) Expr {
 	return ExprLetExpr{F0: a0}
+}
+
+type ExprVarExpr struct {
+	F0 Bind
+}
+
+func (_ ExprVarExpr) isExpr() {
+}
+func ExprVarExprCtor(a0 Bind) Expr {
+	return ExprVarExpr{F0: a0}
+}
+
+type ExprWhileExpr struct {
+	F0 *Expr
+	F1 *Expr
+}
+
+func (_ ExprWhileExpr) isExpr() {
+}
+func ExprWhileExprCtor(a0 *Expr, a1 *Expr) Expr {
+	return ExprWhileExpr{F0: a0, F1: a1}
+}
+
+type ExprReturnExpr struct {
+}
+
+func (_ ExprReturnExpr) isExpr() {
+}
+func ExprReturnExprCtor() Expr {
+	return ExprReturnExpr{}
+}
+
+type ExprReturnWithExpr struct {
+	F0 *Expr
+}
+
+func (_ ExprReturnWithExpr) isExpr() {
+}
+func ExprReturnWithExprCtor(a0 *Expr) Expr {
+	return ExprReturnWithExpr{F0: a0}
+}
+
+type ExprInlineGoExpr struct {
+	F0 *TypeExpr
+	F1 string
+}
+
+func (_ ExprInlineGoExpr) isExpr() {
+}
+func ExprInlineGoExprCtor(a0 *TypeExpr, a1 string) Expr {
+	return ExprInlineGoExpr{F0: a0, F1: a1}
 }

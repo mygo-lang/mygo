@@ -80,7 +80,7 @@ func typeParamUse(tps []string) string {
 }
 func sourceToGenName(path string) string {
 	parts_63 := strings.Split(path, "/")
-	var base_64 string = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_63, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_63)-1), path)
+	var base_64 string = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_63, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_63)-1), path)
 	base_64 = strings.TrimSuffix(base_64, ".mygo")
 	if base_64 == "" {
 		base_64 = "mygo"
@@ -135,68 +135,22 @@ func parseSourceAsAst2(input string) Result[ast2.File, string] {
 func convertFile(file parser2.File) ast2.File {
 	return ast2.File{PackageName: file.PackageName, Decls: convertDecls(file.Decls)}
 }
-func convertDecls(items []parser2.Decl) []ast2.Decl {
-	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(items, func(d parser2.Decl) ast2.Decl {
-		return convertDecl(d)
-	})
-}
-func convertDecl(d parser2.Decl) ast2.Decl {
-	return func() ast2.Decl {
-		if v_40, ok := d.(parser2.DeclImportDecl); ok {
-			return func() ast2.Decl {
-				return ast2.DeclImportDeclCtor(v_40.F0, v_40.F1)
-			}()
-		} else {
-			if v_39, ok := d.(parser2.DeclFuncDecl); ok {
-				return func() ast2.Decl {
-					return ast2.DeclFuncDeclCtor(v_39.F0, v_39.F1, convertParams(v_39.F2), convertTypeOption(v_39.F3), convertExpr(v_39.F4))
-				}()
-			} else {
-				if v_38, ok := d.(parser2.DeclStructDecl); ok {
-					return func() ast2.Decl {
-						return ast2.DeclStructDeclCtor(v_38.F0, v_38.F1, convertFields(v_38.F2))
-					}()
-				} else {
-					if v_37, ok := d.(parser2.DeclEnumDecl); ok {
-						return func() ast2.Decl {
-							return ast2.DeclEnumDeclCtor(v_37.F0, v_37.F1, convertVariants(v_37.F2))
-						}()
-					} else {
-						if v_36, ok := d.(parser2.DeclInterfaceDecl); ok {
-							return func() ast2.Decl {
-								return ast2.DeclInterfaceDeclCtor(v_36.F0, v_36.F1, convertFuncSigs(v_36.F2))
-							}()
-						} else {
-							if v_35, ok := d.(parser2.DeclImplDecl); ok {
-								return func() ast2.Decl {
-									return ast2.DeclImplDeclCtor(v_35.F0, convertType(v_35.F1), convertTypeOption(v_35.F2), convertImplMethods(v_35.F3))
-								}()
-							} else {
-								panic("unreachable")
-							}
-						}
-					}
-				}
-			}
-		}
-	}()
-}
 func convertType(t parser2.TypeExpr) ast2.TypeExpr {
 	return func() ast2.TypeExpr {
-		if v_44, ok := t.(parser2.TypeExprNamedType); ok {
+		if v_39, ok := t.(parser2.TypeExprNamedType); ok {
 			return func() ast2.TypeExpr {
-				return ast2.TypeExprNamedTypeCtor(v_44.F0, convertTypes(v_44.F1))
+				return ast2.TypeExprNamedTypeCtor(v_39.F0, convertTypes(v_39.F1))
 			}()
 		} else {
-			if v_43, ok := t.(parser2.TypeExprFuncType); ok {
+			if v_38, ok := t.(parser2.TypeExprFuncType); ok {
 				return func() ast2.TypeExpr {
-					r_65 := convertType(*v_43.F1)
-					return ast2.TypeExprFuncTypeCtor(convertTypes(v_43.F0), &r_65)
+					r_66 := convertType(*v_38.F1)
+					return ast2.TypeExprFuncTypeCtor(convertTypes(v_38.F0), &r_66)
 				}()
 			} else {
-				if v_42, ok := t.(parser2.TypeExprTupleType); ok {
+				if v_37, ok := t.(parser2.TypeExprTupleType); ok {
 					return func() ast2.TypeExpr {
-						return ast2.TypeExprTupleTypeCtor(convertTypes(v_42.F0))
+						return ast2.TypeExprTupleTypeCtor(convertTypes(v_37.F0))
 					}()
 				} else {
 					if _, ok := t.(parser2.TypeExprUnitType); ok {
@@ -204,7 +158,60 @@ func convertType(t parser2.TypeExpr) ast2.TypeExpr {
 							return ast2.TypeExprUnitTypeCtor()
 						}()
 					} else {
-						panic("unreachable")
+						if v_35, ok := t.(parser2.TypeExprInlineGo); ok {
+							return func() ast2.TypeExpr {
+								bt_65 := convertType(*v_35.F0)
+								return ast2.TypeExprInlineGoCtor(&bt_65, v_35.F1)
+							}()
+						} else {
+							panic("unreachable")
+						}
+					}
+				}
+			}
+		}
+	}()
+}
+func convertDecls(items []parser2.Decl) []ast2.Decl {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(items, func(d parser2.Decl) ast2.Decl {
+		return convertDecl(d)
+	})
+}
+func convertDecl(d parser2.Decl) ast2.Decl {
+	return func() ast2.Decl {
+		if v_45, ok := d.(parser2.DeclImportDecl); ok {
+			return func() ast2.Decl {
+				return ast2.DeclImportDeclCtor(v_45.F0, v_45.F1)
+			}()
+		} else {
+			if v_44, ok := d.(parser2.DeclFuncDecl); ok {
+				return func() ast2.Decl {
+					return ast2.DeclFuncDeclCtor(v_44.F0, v_44.F1, convertParams(v_44.F2), convertTypeOption(v_44.F3), convertExpr(v_44.F4))
+				}()
+			} else {
+				if v_43, ok := d.(parser2.DeclStructDecl); ok {
+					return func() ast2.Decl {
+						return ast2.DeclStructDeclCtor(v_43.F0, v_43.F1, convertFields(v_43.F2))
+					}()
+				} else {
+					if v_42, ok := d.(parser2.DeclEnumDecl); ok {
+						return func() ast2.Decl {
+							return ast2.DeclEnumDeclCtor(v_42.F0, v_42.F1, convertVariants(v_42.F2))
+						}()
+					} else {
+						if v_41, ok := d.(parser2.DeclInterfaceDecl); ok {
+							return func() ast2.Decl {
+								return ast2.DeclInterfaceDeclCtor(v_41.F0, v_41.F1, convertFuncSigs(v_41.F2))
+							}()
+						} else {
+							if v_40, ok := d.(parser2.DeclImplDecl); ok {
+								return func() ast2.Decl {
+									return ast2.DeclImplDeclCtor(v_40.F0, convertType(v_40.F1), convertTypeOption(v_40.F2), convertImplMethods(v_40.F3))
+								}()
+							} else {
+								panic("unreachable")
+							}
+						}
 					}
 				}
 			}
@@ -218,9 +225,9 @@ func convertTypes(items []parser2.TypeExpr) []ast2.TypeExpr {
 }
 func convertTypeOption(item Option[parser2.TypeExpr]) Option[ast2.TypeExpr] {
 	return func() Option[ast2.TypeExpr] {
-		if v_46, ok := item.(OptionSome[parser2.TypeExpr]); ok {
+		if v_47, ok := item.(OptionSome[parser2.TypeExpr]); ok {
 			return func() Option[ast2.TypeExpr] {
-				return Some[ast2.TypeExpr](convertType(v_46.F0))
+				return Some[ast2.TypeExpr](convertType(v_47.F0))
 			}()
 		} else {
 			if _, ok := item.(OptionNone[parser2.TypeExpr]); ok {
@@ -235,24 +242,24 @@ func convertTypeOption(item Option[parser2.TypeExpr]) Option[ast2.TypeExpr] {
 }
 func convertExpr(e parser2.Expr) ast2.Expr {
 	return func() ast2.Expr {
-		if v_58, ok := e.(parser2.ExprIdentExpr); ok {
+		if v_64, ok := e.(parser2.ExprIdentExpr); ok {
 			return func() ast2.Expr {
-				return ast2.ExprIdentExprCtor(v_58.F0)
+				return ast2.ExprIdentExprCtor(v_64.F0)
 			}()
 		} else {
-			if v_57, ok := e.(parser2.ExprNumberExpr); ok {
+			if v_63, ok := e.(parser2.ExprNumberExpr); ok {
 				return func() ast2.Expr {
-					return ast2.ExprNumberExprCtor(v_57.F0)
+					return ast2.ExprNumberExprCtor(v_63.F0)
 				}()
 			} else {
-				if v_56, ok := e.(parser2.ExprStringExpr); ok {
+				if v_62, ok := e.(parser2.ExprStringExpr); ok {
 					return func() ast2.Expr {
-						return ast2.ExprStringExprCtor(v_56.F0)
+						return ast2.ExprStringExprCtor(v_62.F0)
 					}()
 				} else {
-					if v_55, ok := e.(parser2.ExprBoolExpr); ok {
+					if v_61, ok := e.(parser2.ExprBoolExpr); ok {
 						return func() ast2.Expr {
-							return ast2.ExprBoolExprCtor(v_55.F0)
+							return ast2.ExprBoolExprCtor(v_61.F0)
 						}()
 					} else {
 						if _, ok := e.(parser2.ExprUnitExpr); ok {
@@ -260,50 +267,84 @@ func convertExpr(e parser2.Expr) ast2.Expr {
 								return ast2.ExprUnitExprCtor()
 							}()
 						} else {
-							if v_53, ok := e.(parser2.ExprCallExpr); ok {
+							if v_59, ok := e.(parser2.ExprCallExpr); ok {
 								return func() ast2.Expr {
-									c_73 := convertExpr(*v_53.F0)
-									return ast2.ExprCallExprCtor(&c_73, convertExprs(v_53.F1))
+									c_78 := convertExpr(*v_59.F0)
+									return ast2.ExprCallExprCtor(&c_78, convertExprs(v_59.F1))
 								}()
 							} else {
-								if v_52, ok := e.(parser2.ExprFieldExpr); ok {
+								if v_58, ok := e.(parser2.ExprFieldExpr); ok {
 									return func() ast2.Expr {
-										b_72 := convertExpr(*v_52.F0)
-										return ast2.ExprFieldExprCtor(&b_72, v_52.F1)
+										b_77 := convertExpr(*v_58.F0)
+										return ast2.ExprFieldExprCtor(&b_77, v_58.F1)
 									}()
 								} else {
-									if v_51, ok := e.(parser2.ExprUnaryExpr); ok {
+									if v_57, ok := e.(parser2.ExprUnaryExpr); ok {
 										return func() ast2.Expr {
-											v_71 := convertExpr(*v_51.F1)
-											return ast2.ExprUnaryExprCtor(v_51.F0, &v_71)
+											v_76 := convertExpr(*v_57.F1)
+											return ast2.ExprUnaryExprCtor(v_57.F0, &v_76)
 										}()
 									} else {
-										if v_50, ok := e.(parser2.ExprBinaryExpr); ok {
+										if v_56, ok := e.(parser2.ExprBinaryExpr); ok {
 											return func() ast2.Expr {
-												l_69 := convertExpr(*v_50.F1)
-												r_70 := convertExpr(*v_50.F2)
-												return ast2.ExprBinaryExprCtor(v_50.F0, &l_69, &r_70)
+												l_74 := convertExpr(*v_56.F1)
+												r_75 := convertExpr(*v_56.F2)
+												return ast2.ExprBinaryExprCtor(v_56.F0, &l_74, &r_75)
 											}()
 										} else {
-											if v_49, ok := e.(parser2.ExprIfExpr); ok {
+											if v_55, ok := e.(parser2.ExprIfExpr); ok {
 												return func() ast2.Expr {
-													c_66 := convertExpr(*v_49.F0)
-													t_67 := convertExpr(*v_49.F1)
-													e2_68 := convertExpr(*v_49.F2)
-													return ast2.ExprIfExprCtor(&c_66, &t_67, &e2_68)
+													c_71 := convertExpr(*v_55.F0)
+													t_72 := convertExpr(*v_55.F1)
+													e2_73 := convertExpr(*v_55.F2)
+													return ast2.ExprIfExprCtor(&c_71, &t_72, &e2_73)
 												}()
 											} else {
-												if v_48, ok := e.(parser2.ExprBlockExpr); ok {
+												if v_54, ok := e.(parser2.ExprBlockExpr); ok {
 													return func() ast2.Expr {
-														return ast2.ExprBlockExprCtor(convertExprs(v_48.F0))
+														return ast2.ExprBlockExprCtor(convertExprs(v_54.F0))
 													}()
 												} else {
-													if v_47, ok := e.(parser2.ExprLetExpr); ok {
+													if v_53, ok := e.(parser2.ExprLetExpr); ok {
 														return func() ast2.Expr {
-															return ast2.ExprLetExprCtor(ast2.Bind{Name: v_47.F0.Name, Type: convertTypeOption(v_47.F0.Type), Value: convertExpr(v_47.F0.Value)})
+															return ast2.ExprLetExprCtor(ast2.Bind{Name: v_53.F0.Name, Type: convertTypeOption(v_53.F0.Type), Value: convertExpr(v_53.F0.Value)})
 														}()
 													} else {
-														panic("unreachable")
+														if v_52, ok := e.(parser2.ExprVarExpr); ok {
+															return func() ast2.Expr {
+																return ast2.ExprVarExprCtor(ast2.Bind{Name: v_52.F0.Name, Type: convertTypeOption(v_52.F0.Type), Value: convertExpr(v_52.F0.Value)})
+															}()
+														} else {
+															if v_51, ok := e.(parser2.ExprWhileExpr); ok {
+																return func() ast2.Expr {
+																	c_69 := convertExpr(*v_51.F0)
+																	b_70 := convertExpr(*v_51.F1)
+																	return ast2.ExprWhileExprCtor(&c_69, &b_70)
+																}()
+															} else {
+																if _, ok := e.(parser2.ExprReturnExpr); ok {
+																	return func() ast2.Expr {
+																		return ast2.ExprReturnExprCtor()
+																	}()
+																} else {
+																	if v_49, ok := e.(parser2.ExprReturnWithExpr); ok {
+																		return func() ast2.Expr {
+																			v_68 := convertExpr(*v_49.F0)
+																			return ast2.ExprReturnWithExprCtor(&v_68)
+																		}()
+																	} else {
+																		if v_48, ok := e.(parser2.ExprInlineGoExpr); ok {
+																			return func() ast2.Expr {
+																				t_67 := convertType(*v_48.F0)
+																				return ast2.ExprInlineGoExprCtor(&t_67, v_48.F1)
+																			}()
+																		} else {
+																			panic("unreachable")
+																		}
+																	}
+																}
+															}
+														}
 													}
 												}
 											}
