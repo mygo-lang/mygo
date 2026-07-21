@@ -43,12 +43,16 @@ end
 	if len(impl.F3) != 1 {
 		t.Fatalf("impl method count = %d, want 1", len(impl.F3))
 	}
-	body, yes := impl.F3[0].Body.(ast2.ExprBlockExpr)
-	if !yes || len(body.F0) != 1 {
+	bodyExpr, yes := impl.F3[0].Body.(ast2.ExprBlockExpr)
+	if !yes || len(bodyExpr.F0) != 1 {
 		t.Fatalf("impl method body = %T, want single-item ast2.ExprBlockExpr", impl.F3[0].Body)
 	}
-	if _, yes := body.F0[0].(ast2.ExprStringExpr); !yes {
-		t.Fatalf("impl method body item = %T, want ast2.ExprStringExpr", body.F0[0])
+	first, yes := bodyExpr.F0[0].(ast2.StmtExprStmt)
+	if !yes {
+		t.Fatalf("impl method body item = %T, want ast2.StmtExprStmt", bodyExpr.F0[0])
+	}
+	if _, yes := first.F0.(ast2.ExprStringExpr); !yes {
+		t.Fatalf("impl method body expr = %T, want ast2.ExprStringExpr", first.F0)
 	}
 }
 

@@ -52,7 +52,8 @@ end
 	if len(body.F0) != 1 {
 		t.Fatalf("body expr count = %d, want 1", len(body.F0))
 	}
-	root := body.F0[0].(ExprBinaryExpr)
+	first := body.F0[0].(StmtExprStmt)
+	root := first.F0.(ExprBinaryExpr)
 	if root.F0 != "-" {
 		t.Fatalf("root op = %q, want -", root.F0)
 	}
@@ -75,7 +76,8 @@ end
 `)
 
 	body := fn.F4.(ExprBlockExpr)
-	root := body.F0[0].(ExprBinaryExpr)
+	first := body.F0[0].(StmtExprStmt)
+	root := first.F0.(ExprBinaryExpr)
 	if root.F0 != "||" {
 		t.Fatalf("root op = %q, want ||", root.F0)
 	}
@@ -112,7 +114,8 @@ end
 `)
 
 	body := fn.F4.(ExprBlockExpr)
-	root := body.F0[0].(ExprIfExpr)
+	first := body.F0[0].(StmtExprStmt)
+	root := first.F0.(ExprIfExpr)
 	thenExpr := (*root.F1).(ExprNumberExpr)
 	if thenExpr.F0 != "1" {
 		t.Fatalf("then value = %q, want 1", thenExpr.F0)
@@ -141,12 +144,12 @@ end
 	if len(body.F0) != 2 {
 		t.Fatalf("body expr count = %d, want 2", len(body.F0))
 	}
-	varExpr, ok := body.F0[0].(ExprVarExpr)
+	varStmt, ok := body.F0[0].(StmtVarStmt)
 	if !ok {
-		t.Fatalf("first expr = %T, want ExprVarExpr", body.F0[0])
+		t.Fatalf("first stmt = %T, want StmtVarStmt", body.F0[0])
 	}
-	if varExpr.F0.Name != "x" {
-		t.Fatalf("var name = %q, want x", varExpr.F0.Name)
+	if varStmt.F0.Name != "x" {
+		t.Fatalf("var name = %q, want x", varStmt.F0.Name)
 	}
 }
 
@@ -165,11 +168,11 @@ end
 	if len(body.F0) != 2 {
 		t.Fatalf("body expr count = %d, want 2", len(body.F0))
 	}
-	whileExpr, ok := body.F0[0].(ExprWhileExpr)
+	whileStmt, ok := body.F0[0].(StmtWhileStmt)
 	if !ok {
-		t.Fatalf("first expr = %T, want ExprWhileExpr", body.F0[0])
+		t.Fatalf("first stmt = %T, want StmtWhileStmt", body.F0[0])
 	}
-	cond := (*whileExpr.F0).(ExprBinaryExpr)
+	cond := whileStmt.F0.(ExprBinaryExpr)
 	if cond.F0 != ">" {
 		t.Fatalf("while cond op = %q, want >", cond.F0)
 	}
@@ -184,11 +187,11 @@ end
 `)
 
 	body := fn.F4.(ExprBlockExpr)
-	retExpr, ok := body.F0[0].(ExprReturnWithExpr)
+	retStmt, ok := body.F0[0].(StmtReturnWithStmt)
 	if !ok {
-		t.Fatalf("expr = %T, want ExprReturnWithExpr", body.F0[0])
+		t.Fatalf("stmt = %T, want StmtReturnWithStmt", body.F0[0])
 	}
-	identExpr := (*retExpr.F0).(ExprIdentExpr)
+	identExpr := retStmt.F0.(ExprIdentExpr)
 	if identExpr.F0 != "n" {
 		t.Fatalf("return ident = %q, want n", identExpr.F0)
 	}
@@ -203,9 +206,9 @@ end
 `)
 
 	body := fn.F4.(ExprBlockExpr)
-	_, ok := body.F0[0].(ExprReturnExpr)
+	_, ok := body.F0[0].(StmtReturnStmt)
 	if !ok {
-		t.Fatalf("expr = %T, want ExprReturnExpr", body.F0[0])
+		t.Fatalf("stmt = %T, want StmtReturnStmt", body.F0[0])
 	}
 }
 
@@ -218,11 +221,11 @@ end
 `)
 
 	body := fn.F4.(ExprBlockExpr)
-	goExpr, ok := body.F0[0].(ExprInlineGoExpr)
+	first := body.F0[0].(StmtExprStmt)
+	_, ok := first.F0.(ExprInlineGoExpr)
 	if !ok {
-		t.Fatalf("expr = %T, want ExprInlineGoExpr", body.F0[0])
+		t.Fatalf("expr = %T, want ExprInlineGoExpr", first.F0)
 	}
-	_ = goExpr
 }
 
 func parseSingleFunc(t *testing.T, src string) DeclFuncDecl {
@@ -257,12 +260,12 @@ end
 	if len(body.F0) != 3 {
 		t.Fatalf("body expr count = %d, want 3", len(body.F0))
 	}
-	assign, ok := body.F0[1].(ExprAssignExpr)
+	assign, ok := body.F0[1].(StmtAssignStmt)
 	if !ok {
-		t.Fatalf("second expr = %T, want ExprAssignExpr", body.F0[1])
+		t.Fatalf("second stmt = %T, want StmtAssignStmt", body.F0[1])
 	}
-	lhs := *assign.F0
-	rhs := *assign.F1
+	lhs := assign.F0
+	rhs := assign.F1
 	if lhs.(ExprIdentExpr).F0 != "x" {
 		t.Fatalf("assign lhs = %q, want x", lhs.(ExprIdentExpr).F0)
 	}
@@ -281,11 +284,11 @@ end
 `)
 
 	body := fn.F4.(ExprBlockExpr)
-	assign, ok := body.F0[1].(ExprAssignExpr)
+	assign, ok := body.F0[1].(StmtAssignStmt)
 	if !ok {
-		t.Fatalf("second expr = %T, want ExprAssignExpr", body.F0[1])
+		t.Fatalf("second stmt = %T, want StmtAssignStmt", body.F0[1])
 	}
-	lhs := *assign.F0
+	lhs := assign.F0
 	field, ok := lhs.(ExprFieldExpr)
 	if !ok {
 		t.Fatalf("assign lhs = %T, want ExprFieldExpr", lhs)
@@ -297,7 +300,7 @@ end
 	if obj.(ExprIdentExpr).F0 != "p" {
 		t.Fatalf("assign field obj = %q, want p", obj.(ExprIdentExpr).F0)
 	}
-	rhs := *assign.F1
+	rhs := assign.F1
 	if rhs.(ExprNumberExpr).F0 != "99" {
 		t.Fatalf("assign rhs = %q, want 99", rhs.(ExprNumberExpr).F0)
 	}
@@ -312,12 +315,12 @@ end
 `)
 
 	body := fn.F4.(ExprBlockExpr)
-	assign, ok := body.F0[0].(ExprAssignExpr)
+	assign, ok := body.F0[0].(StmtAssignStmt)
 	if !ok {
-		t.Fatalf("first expr = %T, want ExprAssignExpr", body.F0[0])
+		t.Fatalf("first stmt = %T, want StmtAssignStmt", body.F0[0])
 	}
 	// lhs = cfg.settings.theme
-	lhs := *assign.F0
+	lhs := assign.F0
 	themeField, ok := lhs.(ExprFieldExpr)
 	if !ok {
 		t.Fatalf("assign lhs = %T, want ExprFieldExpr", lhs)
@@ -338,7 +341,7 @@ end
 	if cfg.(ExprIdentExpr).F0 != "cfg" {
 		t.Fatalf("base ident = %q, want cfg", cfg.(ExprIdentExpr).F0)
 	}
-	rhs := *assign.F1
+	rhs := assign.F1
 	if rhs.(ExprStringExpr).F0 != "dark" {
 		t.Fatalf("assign rhs = %q, want dark", rhs.(ExprStringExpr).F0)
 	}
@@ -359,8 +362,8 @@ end
 	if len(body.F0) != 4 {
 		t.Fatalf("body expr count = %d, want 4", len(body.F0))
 	}
-	_, ok := body.F0[2].(ExprAssignExpr)
+	_, ok := body.F0[2].(StmtAssignStmt)
 	if !ok {
-		t.Fatalf("third expr = %T, want ExprAssignExpr", body.F0[2])
+		t.Fatalf("third stmt = %T, want StmtAssignStmt", body.F0[2])
 	}
 }

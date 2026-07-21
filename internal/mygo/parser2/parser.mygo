@@ -70,6 +70,27 @@ struct StructLitField
   Value: Expr
 end
 
+# Stmt 语句类型，用于块中的独立语句。
+# 每个 Stmt 变体内的 Expr 均为纯表达式（不包含语句语义的语法节点）。
+enum Stmt
+  # 表达式语句：将表达式用作语句（丢弃其值）
+  ExprStmt(Expr)
+  # let 不可变变量声明
+  LetStmt(Bind)
+  # var 可变变量声明
+  VarStmt(Bind)
+  # while 循环
+  WhileStmt(Expr, Expr)
+  # 赋值语句
+  AssignStmt(Expr, Expr)
+  # return 语句（无返回值）
+  ReturnStmt
+  # return 语句（有返回值）
+  ReturnWithStmt(Expr)
+end
+
+# Expr 纯表达式类型，不包含语句语义。
+# 所有控制流结构和带副作用的语法节点均为 Stmt。
 enum Expr
   IdentExpr(String)
   NumberExpr(String)
@@ -81,20 +102,10 @@ enum Expr
   UnaryExpr(String, Ref[Expr])
   BinaryExpr(String, Ref[Expr], Ref[Expr])
   IfExpr(Ref[Expr], Ref[Expr], Ref[Expr])
-  BlockExpr(Slice[Expr])
-  LetExpr(Bind)
-  # var 可变变量声明
-  VarExpr(Bind)
-  # while 循环
-  WhileExpr(Ref[Expr], Ref[Expr])
-  # return 语句
-  # 赋值语句
-  AssignExpr(Ref[Expr], Ref[Expr])
-  ReturnExpr
-  ReturnWithExpr(Ref[Expr])
-  # 内联 Go 嵌入
+  BlockExpr(Slice[Stmt])
   # 结构体字面量
   StructLitExpr(String, Slice[StructLitField])
+  # 内联 Go 嵌入
   InlineGoExpr(Ref[TypeExpr], String)
 end
 
@@ -337,7 +348,7 @@ func blockUntil(stopParser: ps.Parser[String]) -> ps.Parser[Expr]
   }
 end
 
-func blockItems(stopParser: ps.Parser[String], start: ps.State, cur: ps.State, items: Slice[Expr]) -> ps.Reply[Expr]
+func blockItems(stopParser: ps.Parser[String], start: ps.State, cur: ps.State, items: Slice[Stmt]) -> ps.Reply[Expr]
   let stop = ps.PLookAhead(stopParser).Run(cur)
   if stop.Ok then
     ps.Reply[Expr] {
@@ -345,34 +356,115 @@ func blockItems(stopParser: ps.Parser[String], start: ps.State, cur: ps.State, i
       State: cur, Error: ps.EmptyError(cur.Position)
     }
   else
-    let r = expr().Run(cur)
-    if !r.Ok then
-      r
-    else
+    let r = stmt().Run(cur)
+    if r.Ok then
       blockItems(stopParser, start, r.State, items.Append(r.Value))
+    else
+      ps.Reply[Expr] {
+        Ok: false, Consumed: false, Value: Expr.UnitExpr(),
+        State: cur, Error: r.Error
+      }
     end
   end
 end
 
-func expr() -> ps.Parser[Expr]
+# stmt 解析语句。语句可以包含内嵌的表达式。
+func stmt() -> ps.Parser[Stmt]
   ps.PChoice([
-    ps.PAttempt(inlineGoExpr()),
-    ps.PAttempt(returnExpr()),
-    ps.PAttempt(varExpr()),
-    ps.PAttempt(whileExpr()),
-    ps.PAttempt(letExpr()),
-    ps.PAttempt(ifExpr()),
-    ps.PAttempt(assignExpr()),
-    binaryExpr(),
+    ps.PAttempt(inlineGoStmt()),
+    ps.PAttempt(returnStmt()),
+    ps.PAttempt(varStmt()),
+    ps.PAttempt(whileStmt()),
+    ps.PAttempt(letStmt()),
+    ps.PAttempt(ifStmt()),
+    ps.PAttempt(assignStmt()),
+    exprStmt(),
   ])
 end
 
+# ifStmt 将 if 表达式包装为语句。
+func ifStmt() -> ps.Parser[Stmt]
+  ps.PMap(ifExpr(), func(e: Expr) -> Stmt
+    Stmt.ExprStmt(e)
+  end)
+end
+
+# exprStmt 将表达式包装为表达式语句
+func exprStmt() -> ps.Parser[Stmt]
+  ps.PMap(expr(), func(e: Expr) -> Stmt Stmt.ExprStmt(e) end)
+end
+
 # 赋值语句解析: 左值 = 右值
-func assignExpr() -> ps.Parser[Expr]
-  ps.PBind(postfixExpr(), func(lhs: Expr) -> ps.Parser[Expr]
-    ps.PBind(sym("="), func(_: String) -> ps.Parser[Expr]
-      ps.PMap(expr(), func(rhs: Expr) -> Expr
-        Expr.AssignExpr(Ref.new(lhs), Ref.new(rhs))
+func assignStmt() -> ps.Parser[Stmt]
+  ps.PBind(postfixExpr(), func(lhs: Expr) -> ps.Parser[Stmt]
+    ps.PBind(sym("="), func(_: String) -> ps.Parser[Stmt]
+      ps.PMap(expr(), func(rhs: Expr) -> Stmt
+        Stmt.AssignStmt(lhs, rhs)
+      end)
+    end)
+  end)
+end
+
+func letStmt() -> ps.Parser[Stmt]
+  ps.PBind(kw("let"), func(_: String) -> ps.Parser[Stmt]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[Stmt]
+      ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ: Option[TypeExpr]) -> ps.Parser[Stmt]
+        ps.PBind(sym("="), func(_: String) -> ps.Parser[Stmt]
+          ps.PMap(expr(), func(value: Expr) -> Stmt
+            Stmt.LetStmt(Bind { Name: name, Type: typ, Value: value })
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func varStmt() -> ps.Parser[Stmt]
+  ps.PBind(kw("var"), func(_: String) -> ps.Parser[Stmt]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[Stmt]
+      ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ: Option[TypeExpr]) -> ps.Parser[Stmt]
+        ps.PBind(sym("="), func(_: String) -> ps.Parser[Stmt]
+          ps.PMap(expr(), func(value: Expr) -> Stmt
+            Stmt.VarStmt(Bind { Name: name, Type: typ, Value: value })
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func whileStmt() -> ps.Parser[Stmt]
+  ps.PBind(kw("while"), func(_: String) -> ps.Parser[Stmt]
+    ps.PBind(expr(), func(cond: Expr) -> ps.Parser[Stmt]
+      ps.PBind(blockUntil(kw("end")), func(body: Expr) -> ps.Parser[Stmt]
+        ps.PThen(kw("end"), ps.PPure(Stmt.WhileStmt(cond, body)))
+      end)
+    end)
+  end)
+end
+
+func returnStmt() -> ps.Parser[Stmt]
+  ps.PBind(kw("return"), func(_: String) -> ps.Parser[Stmt]
+    ps.PChoice([
+      ps.PAttempt(ps.PMap(expr(), func(value: Expr) -> Stmt
+        Stmt.ReturnWithStmt(value)
+      end)),
+      ps.PPure(Stmt.ReturnStmt),
+    ])
+  end)
+end
+
+func inlineGoStmt() -> ps.Parser[Stmt]
+  ps.PBind(kw("go"), func(_: String) -> ps.Parser[Stmt]
+    ps.PBind(sym("["), func(_: String) -> ps.Parser[Stmt]
+      ps.PBind(typeExpr(), func(typ: TypeExpr) -> ps.Parser[Stmt]
+        ps.PBind(sym("]"), func(_: String) -> ps.Parser[Stmt]
+          ps.PBind(sym("{"), func(_: String) -> ps.Parser[Stmt]
+            ps.PBind(ps.PMap(rawGoBody(), func(body: String) -> String body end), func(body: String) -> ps.Parser[Stmt]
+              ps.PThen(sym("}"), ps.PPure(Stmt.ExprStmt(Expr.InlineGoExpr(Ref.new(typ), body))))
+            end)
+          end)
+        end)
       end)
     end)
   end)
@@ -386,53 +478,14 @@ func lazyExpr() -> ps.Parser[Expr]
   }
 end
 
-func letExpr() -> ps.Parser[Expr]
-  ps.PBind(kw("let"), func(_: String) -> ps.Parser[Expr]
-    ps.PBind(identifier(), func(name: String) -> ps.Parser[Expr]
-      ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ: Option[TypeExpr]) -> ps.Parser[Expr]
-        ps.PBind(sym("="), func(_: String) -> ps.Parser[Expr]
-          ps.PMap(expr(), func(value: Expr) -> Expr
-            Expr.LetExpr(Bind { Name: name, Type: typ, Value: value })
-          end)
-        end)
-      end)
-    end)
-  end)
-end
-
-func varExpr() -> ps.Parser[Expr]
-  ps.PBind(kw("var"), func(_: String) -> ps.Parser[Expr]
-    ps.PBind(identifier(), func(name: String) -> ps.Parser[Expr]
-      ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ: Option[TypeExpr]) -> ps.Parser[Expr]
-        ps.PBind(sym("="), func(_: String) -> ps.Parser[Expr]
-          ps.PMap(expr(), func(value: Expr) -> Expr
-            Expr.VarExpr(Bind { Name: name, Type: typ, Value: value })
-          end)
-        end)
-      end)
-    end)
-  end)
-end
-
-func whileExpr() -> ps.Parser[Expr]
-  ps.PBind(kw("while"), func(_: String) -> ps.Parser[Expr]
-    ps.PBind(expr(), func(cond: Expr) -> ps.Parser[Expr]
-      ps.PBind(blockUntil(kw("end")), func(body: Expr) -> ps.Parser[Expr]
-        ps.PThen(kw("end"), ps.PPure(Expr.WhileExpr(Ref.new(cond), Ref.new(body))))
-      end)
-    end)
-  end)
-end
-
-func returnExpr() -> ps.Parser[Expr]
-  ps.PBind(kw("return"), func(_: String) -> ps.Parser[Expr]
-    ps.PChoice([
-      ps.PAttempt(ps.PMap(expr(), func(value: Expr) -> Expr
-        Expr.ReturnWithExpr(Ref.new(value))
-      end)),
-      ps.PPure(Expr.ReturnExpr),
-    ])
-  end)
+# expr 解析纯表达式。
+# 注意：expr 不处理语句变体。要解析包含语句的代码，请使用 stmt()。
+func expr() -> ps.Parser[Expr]
+  ps.PChoice([
+    ps.PAttempt(inlineGoExpr()),
+    ps.PAttempt(ifExpr()),
+    binaryExpr(),
+  ])
 end
 
 func inlineGoExpr() -> ps.Parser[Expr]
@@ -524,7 +577,11 @@ func bodyExprFromBlock(body: Expr) -> Expr
   switch body
     case BlockExpr(items) =>
       if items.Len() == 1 then
-        items.Get(0).UnwrapOr(body)
+        let first = items.Get(0).UnwrapOr(Stmt.ExprStmt(Expr.UnitExpr))
+        switch first
+          case ExprStmt(e) => e
+          case _ => body
+        end
       else
         body
       end

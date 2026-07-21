@@ -15,7 +15,7 @@ end
 # 但不对最后一条表达式添加 return 前缀（while 循环体不应该添加返回值）。
 func translateWhileBody(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
   switch body
-    case BlockExpr(items) =>
+    case BlockExpr(items) then
       if items.Len() == 0 then
         return Ok("")
       end
@@ -24,19 +24,21 @@ func translateWhileBody(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, Stri
         case Err(msg) => Err(msg)
         case Ok(_) => Ok("")
       end
-    case _ =>
+    end
+    case _ then
       # 非 Block 表达式（理论上不会出现），直接翻译
-      let v = translateExpr(body, ctx)
-      switch v
+      switch translateExpr(body, ctx)
         case Err(msg) => Err(msg)
-        case Ok(src) =>
+        case Ok(src) then
           let pre = ctxDrainPreStmts(ctx)
-          if pre == "" then Ok(src) else Ok(pre + "\n" + src) end
+          if pre == "" => Ok(src) else Ok(pre + "\n" + src)
+        end
       end
+    end
   end
 end
 
-func translateBlockReturn(items: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[String, String]
+func translateBlockReturn(items: Slice[ast2.Stmt], ctx: Ref[egCtx]) -> Result[String, String]
   if items.Len() == 0 then
     if ctx.retType == "" then
       return Ok("return")
@@ -46,10 +48,10 @@ func translateBlockReturn(items: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[St
   translateBlockReturnLoop(items, ctx, 0, [] as Slice[String])
 end
 
-func translateBlockReturnLoop(items: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: Slice[String]) -> Result[String, String]
-  let item = items.Get(index).UnwrapOr(ast2.Expr.UnitExpr())
+func translateBlockReturnLoop(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, out: Slice[String]) -> Result[String, String]
+  let item = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr()))
   if index == items.Len() - 1 then
-    let last = translateReturnExpr(item, ctx)
+    let last = translateReturnStmt(item, ctx)
     switch last
       case Ok(s) => Ok(joinStrings(out.Append(s), "\n"))
       case Err(msg) => Err(msg)
@@ -63,9 +65,20 @@ func translateBlockReturnLoop(items: Slice[ast2.Expr], ctx: Ref[egCtx], index: I
   end
 end
 
-func translateStmt(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
-  switch expr
-    case LetExpr(bind) =>
+# translateStmt 翻译语句。这是 stmt 的核心分发函数。
+func translateStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[String, String]
+  switch stmt
+    case ExprStmt(expr) then
+      let value = translateExpr(expr, ctx)
+      switch value
+        case Ok(v) then
+          let pre = ctxDrainPreStmts(ctx)
+          if pre == "" then Ok(v) else Ok(pre + "\n" + v) end
+        end
+        case Err(msg) => Err(msg)
+      end
+    end
+    case LetStmt(bind) then
       let expected = switch bind.Type
         case Some(t) => goType(t, ctx.typeParams)
         case None => ""
@@ -73,16 +86,18 @@ func translateStmt(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
       let value = translateExprExpected(bind.Value, ctx, expected)
       switch value
         case Err(msg) => Err(msg)
-        case Ok(v) =>
+        case Ok(v) then
           let name = ctxFreshBinding(ctx, bind.Name)
           let pre = ctxDrainPreStmts(ctx)
-          let stmt = switch bind.Type
+          let stmtStr = switch bind.Type
             case Some(t) => "var " + name + " " + goType(t, ctx.typeParams) + " = " + v
             case None => name + " := " + v
           end
-          if pre == "" then Ok(stmt) else Ok(pre + "\n" + stmt) end
+          if pre == "" => Ok(stmtStr) else Ok(pre + "\n" + stmtStr)
+        end
       end
-    case VarExpr(bind) =>
+    end
+    case VarStmt(bind) then
       let expected = switch bind.Type
         case Some(t) => goType(t, ctx.typeParams)
         case None => ""
@@ -90,7 +105,7 @@ func translateStmt(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
       let value = translateExprExpected(bind.Value, ctx, expected)
       switch value
         case Err(msg) => Err(msg)
-        case Ok(v) =>
+        case Ok(v) then
           let name = ctxFreshBinding(ctx, bind.Name)
           ctxSetMutable(ctx, bind.Name, true)
           let pre = ctxDrainPreStmts(ctx)
@@ -98,44 +113,51 @@ func translateStmt(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
             case Some(t) => goType(t, ctx.typeParams)
             case None => ""
           end
-          let stmt = if varType == "" then
+          let stmtStr = if varType == "" then
             name + " := " + v
           else
             "var " + name + " " + varType + " = " + v
           end
-          if pre == "" then Ok(stmt) else Ok(pre + "\n" + stmt) end
+          if pre == "" => Ok(stmtStr) else Ok(pre + "\n" + stmtStr)
+        end
       end
-    case AssignExpr(target, value) =>
-      let t = translateExpr(target.value(), ctx)
+    end
+    case WhileStmt(cond, body) then
+      translateWhileExprExpected(cond, body, ctx, ctx.retType)
+    end
+    case AssignStmt(target, value) then
+      let t = translateExpr(target, ctx)
       switch t
         case Err(msg) => Err(msg)
-        case Ok(tv) =>
-          let v = translateExpr(value.value(), ctx)
+        case Ok(tv) then
+          let v = translateExpr(value, ctx)
           switch v
             case Err(msg) => Err(msg)
-            case Ok(vv) =>
+            case Ok(vv) then
               let pre = ctxDrainPreStmts(ctx)
-              let stmt = tv + " = " + vv
-              if pre == "" then Ok(stmt) else Ok(pre + "\n" + stmt) end
+              let stmtStr = tv + " = " + vv
+              if pre == "" then Ok(stmtStr) else Ok(pre + "\n" + stmtStr) end
+            end
           end
+        end
       end
-    case ReturnExpr => Ok("return")
-    case ReturnWithExpr(value) then
-      switch translateExprExpected(value.value(), ctx, strings.TrimSpace(ctx.retType))
+    end
+    case ReturnStmt => Ok("return")
+    case ReturnWithStmt(value) then
+      switch translateExprExpected(value, ctx, strings.TrimSpace(ctx.retType))
         case Err(msg) => Err(msg)
         case Ok(src) => Ok("return " + src)
       end
     end
-    case _ then
-        let value = translateExpr(expr, ctx)
-        switch value
-          case Ok(v) then
-            let pre = ctxDrainPreStmts(ctx)
-            if pre == "" then Ok(v) else Ok(pre + "\n" + v) end
-          end
-          case Err(msg) => Err(msg)
-        end
-    end
+  end
+end
+
+# translateReturnStmt 翻译块中的最后一条语句作为返回值。
+# 返回语句或表达式值需要用 return 包装。
+func translateReturnStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[String, String]
+  switch stmt
+    case ExprStmt(expr) => translateReturnExpr(expr, ctx)
+    case _ => translateStmt(stmt, ctx)
   end
 end
 
@@ -161,22 +183,6 @@ func translateReturnExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, Str
       end
     end
     case BlockExpr(items) => translateBlockReturn(items, ctx)
-    # ReturnExpr and ReturnWithExpr are already handled by translateExpr/translateExprExpected.
-    # Delegate to translateExpr to avoid double-wrapping "return return ...".
-    case ReturnExpr => Ok("return")
-    case ReturnWithExpr(value) =>
-      let v = translateExprExpected(value.value(), ctx, strings.TrimSpace(ctx.retType))
-      switch v
-        case Ok(src) =>
-          let pre = ctxDrainPreStmts(ctx)
-          if pre == "" then
-            Ok("return " + src)
-          else
-            Ok(pre + "\nreturn " + src)
-          end
-        case Err(msg) => Err(msg)
-      end
-    # InlineGo 表达式已经是原始的 Go 代码，不要添加 return 前缀。
     case InlineGoExpr(typ, body) => Ok(body)
     case _ =>
       if isTailSelfCall(expr, ctx) then
@@ -186,13 +192,14 @@ func translateReturnExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, Str
         let v = translateExprExpected(expr, ctx, expected)
         switch v
           case Err(msg) => Err(msg)
-          case Ok(src) =>
+          case Ok(src) then
             let pre = ctxDrainPreStmts(ctx)
             if ctx.retType == "" then
-              if pre == "" then Ok(src + "\nreturn") else Ok(pre + "\n" + src + "\nreturn") end
+              if pre == "" => Ok(src + "\nreturn") else Ok(pre + "\n" + src + "\nreturn")
             else
-              if pre == "" then Ok("return " + src) else Ok(pre + "\nreturn " + src) end
+              if pre == "" => Ok("return " + src) else Ok(pre + "\n return " + src)
             end
+          end
         end
       end
   end
@@ -202,11 +209,6 @@ func translateExprExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String) -
   switch expr
     case IfExpr(cond, thenExpr, elseExpr) => translateIfExprExpected(cond.value(), thenExpr.value(), elseExpr.value(), ctx, expected)
     case BlockExpr(items) => translateBlockExprExpected(items, ctx, expected)
-    case LetExpr(bind) => translateLetExprExpected(bind, ctx, expected)
-    case VarExpr(bind) => translateVarExprExpected(bind, ctx, expected)
-    case WhileExpr(cond, body) => translateWhileExprExpected(cond.value(), body.value(), ctx, expected)
-    case ReturnExpr => Ok("return")
-    case ReturnWithExpr(value) => translateReturnExpr(value.value(), ctx)
     case StructLitExpr(typeName, fields) => translateStructLitExpr(typeName, fields, ctx, expected)
     case InlineGoExpr(typ, body) => Ok(body)
     case _ => translateExpr(expr, ctx)
@@ -238,28 +240,6 @@ func translateExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
     case CallExpr(callee, args) => translateCall(callee.value(), args, ctx)
     case IfExpr(cond, thenExpr, elseExpr) => translateIfExprExpected(cond.value(), thenExpr.value(), elseExpr.value(), ctx, "any")
     case BlockExpr(items) => translateBlockExprExpected(items, ctx, "any")
-    case LetExpr(bind) => translateLetExprExpected(bind, ctx, "any")
-    case VarExpr(bind) => translateVarExprExpected(bind, ctx, "any")
-    case WhileExpr(cond, body) => translateWhileExprExpected(cond.value(), body.value(), ctx, "any")
-    case AssignExpr(target, value) =>
-      let t = translateExpr(target.value(), ctx)
-      switch t
-        case Err(msg) => Err(msg)
-        case Ok(tv) =>
-          let v = translateExpr(value.value(), ctx)
-          switch v
-            case Err(msg) => Err(msg)
-            case Ok(vv) => Ok(tv + " = " + vv)
-          end
-      end
-    case ReturnExpr => Ok("return")
-    case ReturnWithExpr(value) then
-      let v = translateExprExpected(value.value(), ctx, strings.TrimSpace(ctx.retType))
-      switch v
-        case Err(msg) => Err(msg)
-        case Ok(src) => Ok("return " + src)
-      end
-    end
     case StructLitExpr(typeName, fields) => translateStructLitExpr(typeName, fields, ctx, "any")
     case InlineGoExpr(typ, body) => Ok(body)
   end
@@ -321,79 +301,40 @@ func translateIfExprExpected(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast
   let c = translateExpr(cond, ctx)
   switch c
     case Err(msg) => Err(msg)
-    case Ok(cv) =>
+    case Ok(cv) then
       let condPre = ctxDrainPreStmts(ctx)
-      # 如果 then 或 else 分支是 return，则需要特殊处理：
-      # 不能使用临时变量赋值模式（例如 tmp = return 无效）。
-      # 直接生成 if { return } 语句，不捕获分支的值。
-      let thenIsReturn = switch thenExpr
-        case ReturnExpr => true
-        case ReturnWithExpr(_) => true
-        case _ => false
-      end
-      let elseIsReturn = switch elseExpr
-        case ReturnExpr => true
-        case ReturnWithExpr(_) => true
-        case _ => false
-      end
-      if thenIsReturn || elseIsReturn then
-        let childThen = Ref.new(ctxChild(ctx))
-        let t = translateReturnExpr(thenExpr, childThen)
-        switch t
-          case Err(msg) => Err(msg)
-          case Ok(tv) =>
-            let thenPre = ctxDrainPreStmts(childThen)
-            let childElse = Ref.new(ctxChild(ctx))
-            let e = translateReturnExpr(elseExpr, childElse)
-            switch e
-              case Err(msg) => Err(msg)
-              case Ok(ev) =>
-                let elsePre = ctxDrainPreStmts(childElse)
-                let thenBody = if thenPre == "" then tv else thenPre + "\n" + tv end
-                let elseBody = if elsePre == "" then ev else elsePre + "\n" + ev end
-                let typ = if expected == "" then "any" else expected end
-                let tmp = ctxFreshExprTemp(ctx)
-                let ifStmt = "if " + cv + " {\n" + thenBody + "\n} else {\n" + elseBody + "\n}"
-                let stmt = "var " + tmp + " " + typ + "\n" + ifStmt
-                if condPre == "" then
-                  ctxPushPreStmt(ctx, stmt)
-                else
-                  ctxPushPreStmt(ctx, condPre + "\n" + stmt)
-                end
-                Ok(tmp)
+      let tmp = ctxFreshExprTemp(ctx)
+      let childThen = Ref.new(ctxChild(ctx))
+      let t = translateExprExpected(thenExpr, childThen, expected)
+      switch t
+        case Err(msg) => Err(msg)
+        case Ok(tv) then
+          let thenPre = ctxDrainPreStmts(childThen)
+          let childElse = Ref.new(ctxChild(ctx))
+          let e = translateExprExpected(elseExpr, childElse, expected)
+          switch e
+            case Err(msg) => Err(msg)
+            case Ok(ev) then
+              let elsePre = ctxDrainPreStmts(childElse)
+              let typ = if expected == "" then "any" else expected end
+              let thenBody = if thenPre == "" then tmp + " = " + tv else thenPre + "\n" + tmp + " = " + tv end
+              let elseBody = if elsePre == "" then tmp + " = " + ev else elsePre + "\n" + tmp + " = " + ev end
+              let stmt = "var " + tmp + " " + typ + "\nif " + cv + " {\n" + thenBody + "\n} else {\n" + elseBody + "\n}"
+              if condPre == "" then
+                ctxPushPreStmt(ctx, stmt)
+              else
+                ctxPushPreStmt(ctx, condPre + "\n" + stmt)
+              end
+              Ok(tmp)
             end
-        end
-      else
-        let tmp = ctxFreshExprTemp(ctx)
-        let childThen = Ref.new(ctxChild(ctx))
-        let t = translateExprExpected(thenExpr, childThen, expected)
-        switch t
-          case Err(msg) => Err(msg)
-          case Ok(tv) =>
-            let thenPre = ctxDrainPreStmts(childThen)
-            let childElse = Ref.new(ctxChild(ctx))
-            let e = translateExprExpected(elseExpr, childElse, expected)
-            switch e
-              case Err(msg) => Err(msg)
-              case Ok(ev) =>
-                let elsePre = ctxDrainPreStmts(childElse)
-                let typ = if expected == "" then "any" else expected end
-                let thenBody = if thenPre == "" then tmp + " = " + tv else thenPre + "\n" + tmp + " = " + tv end
-                let elseBody = if elsePre == "" then tmp + " = " + ev else elsePre + "\n" + tmp + " = " + ev end
-                let stmt = "var " + tmp + " " + typ + "\nif " + cv + " {\n" + thenBody + "\n} else {\n" + elseBody + "\n}"
-                if condPre == "" then
-                  ctxPushPreStmt(ctx, stmt)
-                else
-                  ctxPushPreStmt(ctx, condPre + "\n" + stmt)
-                end
-                Ok(tmp)
-            end
+          end
         end
       end
+    end
   end
 end
 
-func translateBlockExprExpected(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[String, String]
+func translateBlockExprExpected(items: Slice[ast2.Stmt], ctx: Ref[egCtx], expected: String) -> Result[String, String]
   if items.Len() == 0 then
     return translateExprExpected(ast2.Expr.UnitExpr(), ctx, expected)
   end
@@ -404,8 +345,8 @@ func translateBlockExprExpected(items: Slice[ast2.Expr], ctx: Ref[egCtx], expect
   switch leading
     case Err(msg) => Err(msg)
     case Ok(prefix) =>
-      let last = items.Get(items.Len() - 1).UnwrapOr(ast2.Expr.UnitExpr())
-      let value = translateExprExpected(last, child, typ)
+      let last = items.Get(items.Len() - 1).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr()))
+      let value = translateReturnStmt(last, child)
       switch value
         case Err(msg) => Err(msg)
         case Ok(v) =>
@@ -425,19 +366,19 @@ func translateBlockExprExpected(items: Slice[ast2.Expr], ctx: Ref[egCtx], expect
   end
 end
 
-func translateBlockPrefix(items: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: Slice[String]) -> Result[String, String]
+func translateBlockPrefix(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, out: Slice[String]) -> Result[String, String]
   if index >= items.Len() - 1 then
     Ok(joinStrings(out, "\n"))
   else
-    let stmt = translateStmt(items.Get(index).UnwrapOr(ast2.Expr.UnitExpr()), ctx)
-    switch stmt
+    let s = translateStmt(items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr())), ctx)
+    switch s
       case Err(msg) => Err(msg)
       case Ok(s) => translateBlockPrefix(items, ctx, index + 1, out.Append(s))
     end
   end
 end
 
-func translateBlockValue(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[String, String]
+func translateBlockValue(items: Slice[ast2.Stmt], ctx: Ref[egCtx], expected: String) -> Result[String, String]
   translateBlockExprExpected(items, ctx, expected)
 end
 
@@ -445,7 +386,7 @@ func translateIfExpr(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, 
   translateIfExprExpected(cond, thenExpr, elseExpr, ctx, "any")
 end
 
-func translateBlockExpr(items: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[String, String]
+func translateBlockExpr(items: Slice[ast2.Stmt], ctx: Ref[egCtx]) -> Result[String, String]
   translateBlockExprExpected(items, ctx, "any")
 end
 
@@ -455,7 +396,7 @@ end
 
 func translateLetExprExpected(bind: ast2.Bind, ctx: Ref[egCtx], expected: String) -> Result[String, String]
   let child = Ref.new(ctxChild(ctx))
-  let stmt = translateStmt(ast2.Expr.LetExpr(bind), child)
+  let stmt = translateStmt(ast2.Stmt.LetStmt(bind), child)
   switch stmt
     case Err(msg) => Err(msg)
     case Ok(s) =>
@@ -468,7 +409,7 @@ end
 
 func translateVarExprExpected(bind: ast2.Bind, ctx: Ref[egCtx], expected: String) -> Result[String, String]
   let child = Ref.new(ctxChild(ctx))
-  let stmt = translateStmt(ast2.Expr.VarExpr(bind), child)
+  let stmt = translateStmt(ast2.Stmt.VarStmt(bind), child)
   switch stmt
     case Err(msg) => Err(msg)
     case Ok(s) =>

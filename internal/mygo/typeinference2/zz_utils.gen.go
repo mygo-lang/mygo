@@ -9,12 +9,12 @@ import (
 
 func monoEqual(a MonoType, b MonoType) bool {
 	return func() bool {
-		if v_145, ok := a.(MonoTypeTVar); ok {
+		if v_146, ok := a.(MonoTypeTVar); ok {
 			return func() bool {
 				return func() bool {
-					if v_146, ok := b.(MonoTypeTVar); ok {
+					if v_147, ok := b.(MonoTypeTVar); ok {
 						return func() bool {
-							return v_145.F0 == v_146.F0
+							return v_146.F0 == v_147.F0
 						}()
 					} else {
 						return func() bool {
@@ -24,12 +24,12 @@ func monoEqual(a MonoType, b MonoType) bool {
 				}()
 			}()
 		} else {
-			if v_143, ok := a.(MonoTypeTCon); ok {
+			if v_144, ok := a.(MonoTypeTCon); ok {
 				return func() bool {
 					return func() bool {
-						if v_144, ok := b.(MonoTypeTCon); ok {
+						if v_145, ok := b.(MonoTypeTCon); ok {
 							return func() bool {
-								return v_143.F0 == v_144.F0 && monoListEqual(v_143.F1, v_144.F1)
+								return v_144.F0 == v_145.F0 && monoListEqual(v_144.F1, v_145.F1)
 							}()
 						} else {
 							return func() bool {
@@ -39,12 +39,12 @@ func monoEqual(a MonoType, b MonoType) bool {
 					}()
 				}()
 			} else {
-				if v_141, ok := a.(MonoTypeTFunc); ok {
+				if v_142, ok := a.(MonoTypeTFunc); ok {
 					return func() bool {
 						return func() bool {
-							if v_142, ok := b.(MonoTypeTFunc); ok {
+							if v_143, ok := b.(MonoTypeTFunc); ok {
 								return func() bool {
-									return monoListEqual(v_141.F0, v_142.F0) && monoEqual(*v_141.F1, *v_142.F1)
+									return monoListEqual(v_142.F0, v_143.F0) && monoEqual(*v_142.F1, *v_143.F1)
 								}()
 							} else {
 								return func() bool {
@@ -54,12 +54,12 @@ func monoEqual(a MonoType, b MonoType) bool {
 						}()
 					}()
 				} else {
-					if v_139, ok := a.(MonoTypeTTuple); ok {
+					if v_140, ok := a.(MonoTypeTTuple); ok {
 						return func() bool {
 							return func() bool {
-								if v_140, ok := b.(MonoTypeTTuple); ok {
+								if v_141, ok := b.(MonoTypeTTuple); ok {
 									return func() bool {
-										return monoListEqual(v_139.F0, v_140.F0)
+										return monoListEqual(v_140.F0, v_141.F0)
 									}()
 								} else {
 									return func() bool {
@@ -109,14 +109,14 @@ func monoListEqual(a []MonoType, b []MonoType) bool {
 }
 func monoString(t MonoType) string {
 	return func() string {
-		if v_151, ok := t.(MonoTypeTVar); ok {
+		if v_152, ok := t.(MonoTypeTVar); ok {
 			return func() string {
-				return "t" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_151.F0)
+				return "t" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_152.F0)
 			}()
 		} else {
-			if v_150, ok := t.(MonoTypeTCon); ok {
+			if v_151, ok := t.(MonoTypeTCon); ok {
 				return func() string {
-					return v_150.F0
+					return v_151.F0
 				}()
 			} else {
 				if _, ok := t.(MonoTypeTFunc); ok {
@@ -178,9 +178,9 @@ func sliceTailLoop[A any](items []A, index int, out []A) []A {
 			return out
 		} else {
 			return func() []A {
-				if v_153, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionSome[A]); ok {
+				if v_154, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionSome[A]); ok {
 					return func() []A {
-						return sliceTailLoop[A](items, index+1, MygoIN5SliceM6Append(out, v_153.F0))
+						return sliceTailLoop[A](items, index+1, MygoIN5SliceM6Append(out, v_154.F0))
 					}()
 				} else {
 					if _, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionNone[A]); ok {

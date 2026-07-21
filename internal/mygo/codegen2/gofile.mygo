@@ -147,6 +147,26 @@ func convertTypeOption(item: Option[parser2.TypeExpr]) -> Option[ast2.TypeExpr]
   end
 end
 
+func convertStmt(s: parser2.Stmt) -> ast2.Stmt
+  switch s
+    case ExprStmt(e) => ast2.Stmt.ExprStmt(convertExpr(e))
+    case LetStmt(bind) => ast2.Stmt.LetStmt(ast2.Bind { Name: bind.Name, Type: convertTypeOption(bind.Type), Value: convertExpr(bind.Value) })
+    case VarStmt(bind) => ast2.Stmt.VarStmt(ast2.Bind { Name: bind.Name, Type: convertTypeOption(bind.Type), Value: convertExpr(bind.Value) })
+    case WhileStmt(cond, body) then
+      let c = convertExpr(cond)
+      let b = convertExpr(body)
+      ast2.Stmt.WhileStmt(c, b)
+    end
+    case AssignStmt(target, value) then
+      let t = convertExpr(target)
+      let v = convertExpr(value)
+      ast2.Stmt.AssignStmt(t, v)
+    end
+    case ReturnStmt => ast2.Stmt.ReturnStmt()
+    case ReturnWithStmt(value) => ast2.Stmt.ReturnWithStmt(convertExpr(value))
+  end
+end
+
 func convertExpr(e: parser2.Expr) -> ast2.Expr
   switch e
     case IdentExpr(name) => ast2.Expr.IdentExpr(name)
@@ -177,24 +197,7 @@ func convertExpr(e: parser2.Expr) -> ast2.Expr
       let e2 = convertExpr(elseExpr.value())
       ast2.Expr.IfExpr(Ref.new(c), Ref.new(t), Ref.new(e2))
     end
-    case BlockExpr(items) => ast2.Expr.BlockExpr(convertExprs(items))
-    case LetExpr(bind) => ast2.Expr.LetExpr(ast2.Bind { Name: bind.Name, Type: convertTypeOption(bind.Type), Value: convertExpr(bind.Value) })
-    case VarExpr(bind) => ast2.Expr.VarExpr(ast2.Bind { Name: bind.Name, Type: convertTypeOption(bind.Type), Value: convertExpr(bind.Value) })
-    case WhileExpr(cond, body) then
-      let c = convertExpr(cond.value())
-      let b = convertExpr(body.value())
-      ast2.Expr.WhileExpr(Ref.new(c), Ref.new(b))
-    end
-    case AssignExpr(target, value) then
-      let t = convertExpr(target.value())
-      let v = convertExpr(value.value())
-      ast2.Expr.AssignExpr(Ref.new(t), Ref.new(v))
-    end
-    case ReturnExpr => ast2.Expr.ReturnExpr()
-    case ReturnWithExpr(value) then
-      let v = convertExpr(value.value())
-      ast2.Expr.ReturnWithExpr(Ref.new(v))
-    end
+    case BlockExpr(items) => ast2.Expr.BlockExpr(convertStmts(items))
     case StructLitExpr(typeName, fields) then
       ast2.Expr.StructLitExpr(typeName, convertStructLitFields(fields))
     end
@@ -209,6 +212,10 @@ func convertStructLitFields(items: Slice[parser2.StructLitField]) -> Slice[ast2.
   items.Map(func(f: parser2.StructLitField) -> ast2.StructLitField
     ast2.StructLitField { Name: f.Name, Value: convertExpr(f.Value) }
   end)
+end
+
+func convertStmts(items: Slice[parser2.Stmt]) -> Slice[ast2.Stmt]
+  items.Map(func(s: parser2.Stmt) -> ast2.Stmt convertStmt(s) end)
 end
 
 func convertExprs(items: Slice[parser2.Expr]) -> Slice[ast2.Expr]

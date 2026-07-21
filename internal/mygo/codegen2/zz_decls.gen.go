@@ -4,6 +4,7 @@ package codegen2
 
 import (
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
+	"github.com/mygo-lang/mygo/internal/mygo/parser2"
 	. "github.com/mygo-lang/mygo/prelude"
 )
 
@@ -19,7 +20,7 @@ func translateDecls(g *Generator2, decls []ast2.Decl, index int, out []string) R
 			return Ok[[]string, string](out)
 		} else {
 			return func() Result[[]string, string] {
-				d_11 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
+				d_11 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
 				one_12 := translateDecl(g, d_11)
 				return func() Result[[]string, string] {
 					if v_12, ok := one_12.(ResultOk[string, string]); ok {
@@ -164,7 +165,7 @@ func enumVariantParts(fields []ast2.TypeExpr, ctx egCtx, index int, out EnumVari
 			return out
 		} else {
 			return func() EnumVariantParts {
-				typ_26 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, index), ast2.TypeExprUnitTypeCtor())
+				typ_26 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, index), ast2.TypeExprUnitTypeCtor())
 				an_27 := "v" + MygoIT8ToStringFN3IntGN3IntEM8ToString(index)
 				fieldName_28 := "F" + MygoIT8ToStringFN3IntGN3IntEM8ToString(index)
 				goTyp_29 := goType(typ_26, ctx.typeParams)
@@ -206,7 +207,7 @@ func translateImplMethods(stem string, tps []string, methods []ast2.ImplMethod, 
 			return Ok[[]string, string](out)
 		} else {
 			return func() Result[[]string, string] {
-				m_35 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, index), defaultImplMethod())
+				m_35 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, index), defaultImplMethod())
 				sig_36 := m_35.Sig
 				ret_37 := returnTypeString(sig_36.Ret, baseCtx.typeParams)
 				ctx_38 := func() *egCtx {
@@ -218,7 +219,7 @@ func translateImplMethods(stem string, tps []string, methods []ast2.ImplMethod, 
 				var i_41 int = 0
 				func() {
 					for i_41 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig_36.Params) {
-						p := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sig_36.Params, i_41), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+						p := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sig_36.Params, i_41), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
 						pn := ctxFreshBinding(ctx_38, p.Name)
 						ctxSetLocal(ctx_38, p.Name, goType(p.Type, ctx_38.typeParams))
 						goParams_39 = MygoIN5SliceM6Append(goParams_39, pn+" "+goType(p.Type, ctx_38.typeParams))
@@ -256,7 +257,7 @@ func translateImplMethods(stem string, tps []string, methods []ast2.ImplMethod, 
 	}()
 }
 func defaultImplMethod() ast2.ImplMethod {
-	return ast2.ImplMethod{Sig: ast2.FuncSig{Name: "", TypeParams: []string([]string{}), Params: []ast2.Param([]ast2.Param{}), Ret: None[ast2.TypeExpr]()}, Body: ast2.ExprUnitExprCtor()}
+	return ast2.ImplMethod{Sig: ast2.FuncSig{Name: "", TypeParams: []string([]string{}), Params: []ast2.Param([]ast2.Param{}), Ret: None[parser2.TypeExpr]()}, Body: ast2.ExprUnitExprCtor()}
 }
 func translateImplStubDecl(tps []string, target ast2.TypeExpr, iface Option[ast2.TypeExpr], methods []ast2.FuncSig) Result[string, string] {
 	ctx_45 := newEgCtxWithTypeParams(tps)
@@ -315,7 +316,7 @@ func translateFuncDecl(g *Generator2, name string, tps []string, params []ast2.P
 	var i_55 int = 0
 	func() {
 		for i_55 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
-			p := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, i_55), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+			p := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, i_55), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
 			pn := ctxFreshBinding(ctx_52, p.Name)
 			ctxSetLocal(ctx_52, p.Name, goType(p.Type, ctx_52.typeParams))
 			goParams_53 = MygoIN5SliceM6Append(goParams_53, pn+" "+goType(p.Type, ctx_52.typeParams))

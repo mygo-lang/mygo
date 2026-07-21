@@ -51,7 +51,7 @@ func generateFilesLoop(files []SourceFileInput, info typeinference2.PackageInfo,
 			return Ok[map[string]string, string](out)
 		} else {
 			return func() Result[map[string]string, string] {
-				input_4 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{})}})
+				input_4 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{})}})
 				src_5 := generateOneFile(input_4.File, info)
 				return func() Result[map[string]string, string] {
 					if v_4, ok := src_5.(ResultOk[string, string]); ok {

@@ -56,7 +56,7 @@ enum TypeExpr
   FuncType(Slice[TypeExpr], Ref[TypeExpr])
   TupleType(Slice[TypeExpr])
   UnitType
-  # 内联 Go 嵌入类型: go[T]{...}
+  # Inline Golang: go[T]{...}
   InlineGo(Ref[TypeExpr], String)
 end
 
@@ -66,6 +66,27 @@ struct Bind
   Value: Expr
 end
 
+# Stmt statement type, used for independent statements within a block.
+# Expr within each Stmt variant is a pure expression (a syntax node without statement semantics).
+enum Stmt
+  # expression statement, use expr as stmt
+  ExprStmt(Expr)
+  # let immutable variable declaration
+  LetStmt(Bind)
+  # var mutable variable declaration
+  VarStmt(Bind)
+  # while loop
+  WhileStmt(Expr, Expr)
+  # assignment statement
+  AssignStmt(Expr, Expr)
+  # return statement (without return value)
+  ReturnStmt
+  # return statement (with return value)
+  ReturnWithStmt(Expr)
+end
+
+# `Expr` is a pure expression type, containing no statement semantics.
+# All control flow structures and syntax nodes with side effects are `Stmt`.
 enum Expr
   IdentExpr(String)
   NumberExpr(String)
@@ -77,19 +98,7 @@ enum Expr
   UnaryExpr(String, Ref[Expr])
   BinaryExpr(String, Ref[Expr], Ref[Expr])
   IfExpr(Ref[Expr], Ref[Expr], Ref[Expr])
-  BlockExpr(Slice[Expr])
-  LetExpr(Bind)
-  # var 可变变量声明
-  VarExpr(Bind)
-  # while 循环
-  WhileExpr(Ref[Expr], Ref[Expr])
-  # 赋值语句
-  AssignExpr(Ref[Expr], Ref[Expr])
-  # return 语句
-  ReturnExpr
-  ReturnWithExpr(Ref[Expr])
-  # 结构体字面量
+  BlockExpr(Slice[Stmt])
   StructLitExpr(String, Slice[StructLitField])
-  # 内联 Go 嵌入
   InlineGoExpr(Ref[TypeExpr], String)
 end

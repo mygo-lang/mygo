@@ -62,7 +62,19 @@ func containsTailCall(expr: ast2.Expr, name: String) -> Bool
       end
     case IfExpr(_, t, e) => containsTailCall(t.value(), name) || containsTailCall(e.value(), name)
     case BlockExpr(items) =>
-      if items.Len() == 0 then false else containsTailCall(items.Get(items.Len() - 1).UnwrapOr(ast2.Expr.UnitExpr()), name) end
+      if items.Len() == 0 then false else containsTailCallBlock(items, name) end
     case _ => false
+  end
+end
+
+func containsTailCallBlock(items: Slice[ast2.Stmt], name: String) -> Bool
+  if items.Len() == 0 then
+    false
+  else
+    let last = items.Get(items.Len() - 1).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr()))
+    switch last
+      case ExprStmt(e) => containsTailCall(e, name)
+      case _ => false
+    end
   end
 end

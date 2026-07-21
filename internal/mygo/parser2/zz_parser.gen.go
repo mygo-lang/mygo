@@ -177,6 +177,80 @@ type StructLitField struct {
 	Name  string
 	Value Expr
 }
+type Stmt interface {
+	isStmt()
+}
+type StmtExprStmt struct {
+	F0 Expr
+}
+
+func (_ StmtExprStmt) isStmt() {
+}
+func StmtExprStmtCtor(a0 Expr) Stmt {
+	return StmtExprStmt{F0: a0}
+}
+
+type StmtLetStmt struct {
+	F0 Bind
+}
+
+func (_ StmtLetStmt) isStmt() {
+}
+func StmtLetStmtCtor(a0 Bind) Stmt {
+	return StmtLetStmt{F0: a0}
+}
+
+type StmtVarStmt struct {
+	F0 Bind
+}
+
+func (_ StmtVarStmt) isStmt() {
+}
+func StmtVarStmtCtor(a0 Bind) Stmt {
+	return StmtVarStmt{F0: a0}
+}
+
+type StmtWhileStmt struct {
+	F0 Expr
+	F1 Expr
+}
+
+func (_ StmtWhileStmt) isStmt() {
+}
+func StmtWhileStmtCtor(a0 Expr, a1 Expr) Stmt {
+	return StmtWhileStmt{F0: a0, F1: a1}
+}
+
+type StmtAssignStmt struct {
+	F0 Expr
+	F1 Expr
+}
+
+func (_ StmtAssignStmt) isStmt() {
+}
+func StmtAssignStmtCtor(a0 Expr, a1 Expr) Stmt {
+	return StmtAssignStmt{F0: a0, F1: a1}
+}
+
+type StmtReturnStmt struct {
+}
+
+func (_ StmtReturnStmt) isStmt() {
+}
+func StmtReturnStmtCtor() Stmt {
+	return StmtReturnStmt{}
+}
+
+type StmtReturnWithStmt struct {
+	F0 Expr
+}
+
+func (_ StmtReturnWithStmt) isStmt() {
+}
+func StmtReturnWithStmtCtor(a0 Expr) Stmt {
+	return StmtReturnWithStmt{F0: a0}
+}
+
 type Expr interface {
 	isExpr()
 }
@@ -287,74 +361,13 @@ func ExprIfExprCtor(a0 *Expr, a1 *Expr, a2 *Expr) Expr {
 }
 
 type ExprBlockExpr struct {
-	F0 []Expr
+	F0 []Stmt
 }
 
 func (_ ExprBlockExpr) isExpr() {
 }
-func ExprBlockExprCtor(a0 []Expr) Expr {
+func ExprBlockExprCtor(a0 []Stmt) Expr {
 	return ExprBlockExpr{F0: a0}
-}
-
-type ExprLetExpr struct {
-	F0 Bind
-}
-
-func (_ ExprLetExpr) isExpr() {
-}
-func ExprLetExprCtor(a0 Bind) Expr {
-	return ExprLetExpr{F0: a0}
-}
-
-type ExprVarExpr struct {
-	F0 Bind
-}
-
-func (_ ExprVarExpr) isExpr() {
-}
-func ExprVarExprCtor(a0 Bind) Expr {
-	return ExprVarExpr{F0: a0}
-}
-
-type ExprWhileExpr struct {
-	F0 *Expr
-	F1 *Expr
-}
-
-func (_ ExprWhileExpr) isExpr() {
-}
-func ExprWhileExprCtor(a0 *Expr, a1 *Expr) Expr {
-	return ExprWhileExpr{F0: a0, F1: a1}
-}
-
-type ExprAssignExpr struct {
-	F0 *Expr
-	F1 *Expr
-}
-
-func (_ ExprAssignExpr) isExpr() {
-}
-func ExprAssignExprCtor(a0 *Expr, a1 *Expr) Expr {
-	return ExprAssignExpr{F0: a0, F1: a1}
-}
-
-type ExprReturnExpr struct {
-}
-
-func (_ ExprReturnExpr) isExpr() {
-}
-func ExprReturnExprCtor() Expr {
-	return ExprReturnExpr{}
-}
-
-type ExprReturnWithExpr struct {
-	F0 *Expr
-}
-
-func (_ ExprReturnWithExpr) isExpr() {
-}
-func ExprReturnWithExprCtor(a0 *Expr) Expr {
-	return ExprReturnWithExpr{F0: a0}
 }
 
 type ExprStructLitExpr struct {
@@ -633,36 +646,105 @@ func blockUntilEnd() ps.Parser[Expr] {
 }
 func blockUntil(stopParser ps.Parser[string]) ps.Parser[Expr] {
 	return ps.Parser[Expr]{Run: func(state ps.State) ps.Reply[Expr] {
-		return blockItems(stopParser, state, state, []Expr{})
+		return blockItems(stopParser, state, state, []Stmt{})
 	}}
 }
-func blockItems(stopParser ps.Parser[string], start ps.State, cur ps.State, items []Expr) ps.Reply[Expr] {
+func blockItems(stopParser ps.Parser[string], start ps.State, cur ps.State, items []Stmt) ps.Reply[Expr] {
 	stop_10 := ps.PLookAhead(stopParser).Run(cur)
 	return func() ps.Reply[Expr] {
 		if stop_10.Ok {
 			return ps.Reply[Expr]{Ok: true, Consumed: cur.Index != start.Index, Value: ExprBlockExprCtor(items), State: cur, Error: ps.EmptyError(cur.Position)}
 		} else {
 			return func() ps.Reply[Expr] {
-				r_11 := expr().Run(cur)
+				r_11 := stmt().Run(cur)
 				return func() ps.Reply[Expr] {
-					if !r_11.Ok {
-						return r_11
-					} else {
+					if r_11.Ok {
 						return blockItems(stopParser, start, r_11.State, MygoIN5SliceM6Append(items, r_11.Value))
+					} else {
+						return ps.Reply[Expr]{Ok: false, Consumed: false, Value: ExprUnitExprCtor(), State: cur, Error: r_11.Error}
 					}
 				}()
 			}()
 		}
 	}()
 }
-func expr() ps.Parser[Expr] {
-	return ps.PChoice([]ps.Parser[Expr]{ps.PAttempt(inlineGoExpr()), ps.PAttempt(returnExpr()), ps.PAttempt(varExpr()), ps.PAttempt(whileExpr()), ps.PAttempt(letExpr()), ps.PAttempt(ifExpr()), ps.PAttempt(assignExpr()), binaryExpr()})
+func stmt() ps.Parser[Stmt] {
+	return ps.PChoice([]ps.Parser[Stmt]{ps.PAttempt(inlineGoStmt()), ps.PAttempt(returnStmt()), ps.PAttempt(varStmt()), ps.PAttempt(whileStmt()), ps.PAttempt(letStmt()), ps.PAttempt(ifStmt()), ps.PAttempt(assignStmt()), exprStmt()})
 }
-func assignExpr() ps.Parser[Expr] {
-	return ps.PBind(postfixExpr(), func(lhs Expr) ps.Parser[Expr] {
-		return ps.PBind(sym("="), func(_ string) ps.Parser[Expr] {
-			return ps.PMap(expr(), func(rhs Expr) Expr {
-				return ExprAssignExprCtor(&lhs, &rhs)
+func ifStmt() ps.Parser[Stmt] {
+	return ps.PMap(ifExpr(), func(e Expr) Stmt {
+		return StmtExprStmtCtor(e)
+	})
+}
+func exprStmt() ps.Parser[Stmt] {
+	return ps.PMap(expr(), func(e Expr) Stmt {
+		return StmtExprStmtCtor(e)
+	})
+}
+func assignStmt() ps.Parser[Stmt] {
+	return ps.PBind(postfixExpr(), func(lhs Expr) ps.Parser[Stmt] {
+		return ps.PBind(sym("="), func(_ string) ps.Parser[Stmt] {
+			return ps.PMap(expr(), func(rhs Expr) Stmt {
+				return StmtAssignStmtCtor(lhs, rhs)
+			})
+		})
+	})
+}
+func letStmt() ps.Parser[Stmt] {
+	return ps.PBind(kw("let"), func(_ string) ps.Parser[Stmt] {
+		return ps.PBind(identifier(), func(name string) ps.Parser[Stmt] {
+			return ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ Option[TypeExpr]) ps.Parser[Stmt] {
+				return ps.PBind(sym("="), func(_ string) ps.Parser[Stmt] {
+					return ps.PMap(expr(), func(value Expr) Stmt {
+						return StmtLetStmtCtor(Bind{Name: name, Type: typ, Value: value})
+					})
+				})
+			})
+		})
+	})
+}
+func varStmt() ps.Parser[Stmt] {
+	return ps.PBind(kw("var"), func(_ string) ps.Parser[Stmt] {
+		return ps.PBind(identifier(), func(name string) ps.Parser[Stmt] {
+			return ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ Option[TypeExpr]) ps.Parser[Stmt] {
+				return ps.PBind(sym("="), func(_ string) ps.Parser[Stmt] {
+					return ps.PMap(expr(), func(value Expr) Stmt {
+						return StmtVarStmtCtor(Bind{Name: name, Type: typ, Value: value})
+					})
+				})
+			})
+		})
+	})
+}
+func whileStmt() ps.Parser[Stmt] {
+	return ps.PBind(kw("while"), func(_ string) ps.Parser[Stmt] {
+		return ps.PBind(expr(), func(cond Expr) ps.Parser[Stmt] {
+			return ps.PBind(blockUntil(kw("end")), func(body Expr) ps.Parser[Stmt] {
+				return ps.PThen(kw("end"), ps.PPure(StmtWhileStmtCtor(cond, body)))
+			})
+		})
+	})
+}
+func returnStmt() ps.Parser[Stmt] {
+	return ps.PBind(kw("return"), func(_ string) ps.Parser[Stmt] {
+		return ps.PChoice([]ps.Parser[Stmt]{ps.PAttempt(ps.PMap(expr(), func(value Expr) Stmt {
+			return StmtReturnWithStmtCtor(value)
+		})), ps.PPure(StmtReturnStmtCtor())})
+	})
+}
+func inlineGoStmt() ps.Parser[Stmt] {
+	return ps.PBind(kw("go"), func(_ string) ps.Parser[Stmt] {
+		return ps.PBind(sym("["), func(_ string) ps.Parser[Stmt] {
+			return ps.PBind(typeExpr(), func(typ TypeExpr) ps.Parser[Stmt] {
+				return ps.PBind(sym("]"), func(_ string) ps.Parser[Stmt] {
+					return ps.PBind(sym("{"), func(_ string) ps.Parser[Stmt] {
+						return ps.PBind(ps.PMap(rawGoBody(), func(body string) string {
+							return body
+						}), func(body string) ps.Parser[Stmt] {
+							return ps.PThen(sym("}"), ps.PPure(StmtExprStmtCtor(ExprInlineGoExprCtor(&typ, body))))
+						})
+					})
+				})
 			})
 		})
 	})
@@ -672,47 +754,8 @@ func lazyExpr() ps.Parser[Expr] {
 		return expr().Run(state)
 	}}
 }
-func letExpr() ps.Parser[Expr] {
-	return ps.PBind(kw("let"), func(_ string) ps.Parser[Expr] {
-		return ps.PBind(identifier(), func(name string) ps.Parser[Expr] {
-			return ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ Option[TypeExpr]) ps.Parser[Expr] {
-				return ps.PBind(sym("="), func(_ string) ps.Parser[Expr] {
-					return ps.PMap(expr(), func(value Expr) Expr {
-						return ExprLetExprCtor(Bind{Name: name, Type: typ, Value: value})
-					})
-				})
-			})
-		})
-	})
-}
-func varExpr() ps.Parser[Expr] {
-	return ps.PBind(kw("var"), func(_ string) ps.Parser[Expr] {
-		return ps.PBind(identifier(), func(name string) ps.Parser[Expr] {
-			return ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ Option[TypeExpr]) ps.Parser[Expr] {
-				return ps.PBind(sym("="), func(_ string) ps.Parser[Expr] {
-					return ps.PMap(expr(), func(value Expr) Expr {
-						return ExprVarExprCtor(Bind{Name: name, Type: typ, Value: value})
-					})
-				})
-			})
-		})
-	})
-}
-func whileExpr() ps.Parser[Expr] {
-	return ps.PBind(kw("while"), func(_ string) ps.Parser[Expr] {
-		return ps.PBind(expr(), func(cond Expr) ps.Parser[Expr] {
-			return ps.PBind(blockUntil(kw("end")), func(body Expr) ps.Parser[Expr] {
-				return ps.PThen(kw("end"), ps.PPure(ExprWhileExprCtor(&cond, &body)))
-			})
-		})
-	})
-}
-func returnExpr() ps.Parser[Expr] {
-	return ps.PBind(kw("return"), func(_ string) ps.Parser[Expr] {
-		return ps.PChoice([]ps.Parser[Expr]{ps.PAttempt(ps.PMap(expr(), func(value Expr) Expr {
-			return ExprReturnWithExprCtor(&value)
-		})), ps.PPure(ExprReturnExprCtor())})
-	})
+func expr() ps.Parser[Expr] {
+	return ps.PChoice([]ps.Parser[Expr]{ps.PAttempt(inlineGoExpr()), ps.PAttempt(ifExpr()), binaryExpr()})
 }
 func inlineGoExpr() ps.Parser[Expr] {
 	return ps.PBind(kw("go"), func(_ string) ps.Parser[Expr] {
@@ -796,7 +839,20 @@ func bodyExprFromBlock(body Expr) Expr {
 			return func() Expr {
 				return func() Expr {
 					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_7.F0) == 1 {
-						return MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_7.F0, 0), body)
+						return func() Expr {
+							first_12 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_7.F0, 0), StmtExprStmtCtor(ExprUnitExprCtor()))
+							return func() Expr {
+								if v_8, ok := first_12.(StmtExprStmt); ok {
+									return func() Expr {
+										return v_8.F0
+									}()
+								} else {
+									return func() Expr {
+										return body
+									}()
+								}
+							}()
+						}()
 					} else {
 						return body
 					}
@@ -849,27 +905,27 @@ func makeBinary() func(string, Expr, Expr) Expr {
 }
 func postfixExpr() ps.Parser[Expr] {
 	return ps.Parser[Expr]{Run: func(state ps.State) ps.Reply[Expr] {
-		first_12 := primaryExpr().Run(state)
+		first_13 := primaryExpr().Run(state)
 		return func() ps.Reply[Expr] {
-			if !first_12.Ok {
-				return first_12
+			if !first_13.Ok {
+				return first_13
 			} else {
-				return postfixTail(state, first_12.State, first_12.Value)
+				return postfixTail(state, first_13.State, first_13.Value)
 			}
 		}()
 	}}
 }
 func postfixTail(start ps.State, cur ps.State, acc Expr) ps.Reply[Expr] {
-	call_13 := paren(ps.PSepBy(lazyExpr(), sym(","))).Run(cur)
+	call_14 := paren(ps.PSepBy(lazyExpr(), sym(","))).Run(cur)
 	return func() ps.Reply[Expr] {
-		if call_13.Ok {
-			return postfixTail(start, call_13.State, ExprCallExprCtor(&acc, call_13.Value))
+		if call_14.Ok {
+			return postfixTail(start, call_14.State, ExprCallExprCtor(&acc, call_14.Value))
 		} else {
 			return func() ps.Reply[Expr] {
-				fld_14 := ps.PThen(sym("."), identifier()).Run(cur)
+				fld_15 := ps.PThen(sym("."), identifier()).Run(cur)
 				return func() ps.Reply[Expr] {
-					if fld_14.Ok {
-						return postfixTail(start, fld_14.State, ExprFieldExprCtor(&acc, fld_14.Value))
+					if fld_15.Ok {
+						return postfixTail(start, fld_15.State, ExprFieldExprCtor(&acc, fld_15.Value))
 					} else {
 						return ps.Reply[Expr]{Ok: true, Consumed: cur.Index != start.Index, Value: acc, State: cur, Error: ps.EmptyError(cur.Position)}
 					}
@@ -930,29 +986,29 @@ func mulOp() ps.Parser[string] {
 }
 func chainLeft[A any](item ps.Parser[A], op ps.Parser[string], combine func(string, A, A) A) ps.Parser[A] {
 	return ps.Parser[A]{Run: func(state ps.State) ps.Reply[A] {
-		first_15 := item.Run(state)
+		first_16 := item.Run(state)
 		return func() ps.Reply[A] {
-			if !first_15.Ok {
-				return first_15
+			if !first_16.Ok {
+				return first_16
 			} else {
-				return chainLeftTail[A](item, op, combine, state, first_15.State, first_15.Value)
+				return chainLeftTail[A](item, op, combine, state, first_16.State, first_16.Value)
 			}
 		}()
 	}}
 }
 func chainLeftTail[A any](item ps.Parser[A], op ps.Parser[string], combine func(string, A, A) A, start ps.State, cur ps.State, acc A) ps.Reply[A] {
-	rop_16 := op.Run(cur)
+	rop_17 := op.Run(cur)
 	return func() ps.Reply[A] {
-		if !rop_16.Ok {
+		if !rop_17.Ok {
 			return ps.Reply[A]{Ok: true, Consumed: cur.Index != start.Index, Value: acc, State: cur, Error: ps.EmptyError(cur.Position)}
 		} else {
 			return func() ps.Reply[A] {
-				rr_17 := item.Run(rop_16.State)
+				rr_18 := item.Run(rop_17.State)
 				return func() ps.Reply[A] {
-					if !rr_17.Ok {
-						return rr_17
+					if !rr_18.Ok {
+						return rr_18
 					} else {
-						return chainLeftTail[A](item, op, combine, start, rr_17.State, combine(rop_16.Value, acc, rr_17.Value))
+						return chainLeftTail[A](item, op, combine, start, rr_18.State, combine(rop_17.Value, acc, rr_18.Value))
 					}
 				}()
 			}()
@@ -965,12 +1021,12 @@ func identifier() ps.Parser[string] {
 func identifierRaw() ps.Parser[string] {
 	return ps.PBind(ps.PSatisfy(isIdentStart, "identifier"), func(first rune) ps.Parser[string] {
 		return ps.PBind(ps.PMany(ps.PSatisfy(isIdentRest, "identifier character")), func(rest []rune) ps.Parser[string] {
-			value_18 := MygoIN6StringM9FromRunes(MygoIN5SliceM7Prepend(rest, first))
+			value_19 := MygoIN6StringM9FromRunes(MygoIN5SliceM7Prepend(rest, first))
 			return func() ps.Parser[string] {
-				if isKeyword(value_18) {
+				if isKeyword(value_19) {
 					return failIdentifier()
 				} else {
-					return ps.PPure(value_18)
+					return ps.PPure(value_19)
 				}
 			}()
 		})
@@ -1234,20 +1290,20 @@ func isKeyword(value string) bool {
 	}()
 }
 func defaultImportAlias(path string) string {
-	parts_19 := strings.Split(path, "/")
+	parts_20 := strings.Split(path, "/")
 	return func() string {
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_19) == 0 {
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_20) == 0 {
 			return path
 		} else {
-			return MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_19, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_19)-1), path)
+			return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_20, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_20)-1), path)
 		}
 	}()
 }
 func formatError(err Option[ps.ParseError], pos ps.Position) string {
 	return func() string {
-		if v_9, ok := err.(OptionSome[ps.ParseError]); ok {
+		if v_10, ok := err.(OptionSome[ps.ParseError]); ok {
 			return func() string {
-				return "parse error at " + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_9.F0.Position.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_9.F0.Position.Column) + ": " + v_9.F0.Message
+				return "parse error at " + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_10.F0.Position.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_10.F0.Position.Column) + ": " + v_10.F0.Message
 			}()
 		} else {
 			if _, ok := err.(OptionNone[ps.ParseError]); ok {

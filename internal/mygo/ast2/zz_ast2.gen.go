@@ -172,6 +172,80 @@ type Bind struct {
 	Type  Option[TypeExpr]
 	Value Expr
 }
+type Stmt interface {
+	isStmt()
+}
+type StmtExprStmt struct {
+	F0 Expr
+}
+
+func (_ StmtExprStmt) isStmt() {
+}
+func StmtExprStmtCtor(a0 Expr) Stmt {
+	return StmtExprStmt{F0: a0}
+}
+
+type StmtLetStmt struct {
+	F0 Bind
+}
+
+func (_ StmtLetStmt) isStmt() {
+}
+func StmtLetStmtCtor(a0 Bind) Stmt {
+	return StmtLetStmt{F0: a0}
+}
+
+type StmtVarStmt struct {
+	F0 Bind
+}
+
+func (_ StmtVarStmt) isStmt() {
+}
+func StmtVarStmtCtor(a0 Bind) Stmt {
+	return StmtVarStmt{F0: a0}
+}
+
+type StmtWhileStmt struct {
+	F0 Expr
+	F1 Expr
+}
+
+func (_ StmtWhileStmt) isStmt() {
+}
+func StmtWhileStmtCtor(a0 Expr, a1 Expr) Stmt {
+	return StmtWhileStmt{F0: a0, F1: a1}
+}
+
+type StmtAssignStmt struct {
+	F0 Expr
+	F1 Expr
+}
+
+func (_ StmtAssignStmt) isStmt() {
+}
+func StmtAssignStmtCtor(a0 Expr, a1 Expr) Stmt {
+	return StmtAssignStmt{F0: a0, F1: a1}
+}
+
+type StmtReturnStmt struct {
+}
+
+func (_ StmtReturnStmt) isStmt() {
+}
+func StmtReturnStmtCtor() Stmt {
+	return StmtReturnStmt{}
+}
+
+type StmtReturnWithStmt struct {
+	F0 Expr
+}
+
+func (_ StmtReturnWithStmt) isStmt() {
+}
+func StmtReturnWithStmtCtor(a0 Expr) Stmt {
+	return StmtReturnWithStmt{F0: a0}
+}
+
 type Expr interface {
 	isExpr()
 }
@@ -282,74 +356,13 @@ func ExprIfExprCtor(a0 *Expr, a1 *Expr, a2 *Expr) Expr {
 }
 
 type ExprBlockExpr struct {
-	F0 []Expr
+	F0 []Stmt
 }
 
 func (_ ExprBlockExpr) isExpr() {
 }
-func ExprBlockExprCtor(a0 []Expr) Expr {
+func ExprBlockExprCtor(a0 []Stmt) Expr {
 	return ExprBlockExpr{F0: a0}
-}
-
-type ExprLetExpr struct {
-	F0 Bind
-}
-
-func (_ ExprLetExpr) isExpr() {
-}
-func ExprLetExprCtor(a0 Bind) Expr {
-	return ExprLetExpr{F0: a0}
-}
-
-type ExprVarExpr struct {
-	F0 Bind
-}
-
-func (_ ExprVarExpr) isExpr() {
-}
-func ExprVarExprCtor(a0 Bind) Expr {
-	return ExprVarExpr{F0: a0}
-}
-
-type ExprWhileExpr struct {
-	F0 *Expr
-	F1 *Expr
-}
-
-func (_ ExprWhileExpr) isExpr() {
-}
-func ExprWhileExprCtor(a0 *Expr, a1 *Expr) Expr {
-	return ExprWhileExpr{F0: a0, F1: a1}
-}
-
-type ExprAssignExpr struct {
-	F0 *Expr
-	F1 *Expr
-}
-
-func (_ ExprAssignExpr) isExpr() {
-}
-func ExprAssignExprCtor(a0 *Expr, a1 *Expr) Expr {
-	return ExprAssignExpr{F0: a0, F1: a1}
-}
-
-type ExprReturnExpr struct {
-}
-
-func (_ ExprReturnExpr) isExpr() {
-}
-func ExprReturnExprCtor() Expr {
-	return ExprReturnExpr{}
-}
-
-type ExprReturnWithExpr struct {
-	F0 *Expr
-}
-
-func (_ ExprReturnWithExpr) isExpr() {
-}
-func ExprReturnWithExprCtor(a0 *Expr) Expr {
-	return ExprReturnWithExpr{F0: a0}
 }
 
 type ExprStructLitExpr struct {

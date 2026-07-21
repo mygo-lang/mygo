@@ -74,17 +74,24 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
     case FieldExpr(base, field) => inferField(base.value(), field, env, state)
     case IfExpr(cond, thenExpr, elseExpr) => inferIf(cond.value(), thenExpr.value(), elseExpr.value(), env, state)
     case BlockExpr(items) => inferBlock(items, env, state)
-    case LetExpr(bind) => inferLet(bind, env, state)
-    case VarExpr(bind) => inferLet(bind, env, state)
-    case WhileExpr(cond, body) => inferWhile(cond.value(), body.value(), env, state)
-    case AssignExpr(target, value) => inferAssign(target.value(), value.value(), env, state)
-    case ReturnExpr => Ok(InferResult { Type: MonoType.TUnit, Subst: [], State: state })
-    case ReturnWithExpr(value) => inferExpr(value.value(), env, state)
     case StructLitExpr(typeName, fields) =>
       inferStructLit(typeName, fields, env, state)
     case InlineGoExpr(typ, _) =>
       let mono = typeFromAST(typ.value())
       Ok(InferResult { Type: mono, Subst: [], State: state })
+  end
+end
+
+# inferStmt 推断语句的类型。
+func inferStmt(stmt: ast2.Stmt, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+  switch stmt
+    case ExprStmt(expr) => inferExpr(expr, env, state)
+    case LetStmt(bind) => inferLet(bind, env, state)
+    case VarStmt(bind) => inferLet(bind, env, state)
+    case WhileStmt(cond, body) => inferWhile(cond, body, env, state)
+    case AssignStmt(target, value) => inferAssign(target, value, env, state)
+    case ReturnStmt => Ok(InferResult { Type: MonoType.TUnit, Subst: [], State: state })
+    case ReturnWithStmt(value) => inferExpr(value, env, state)
   end
 end
 
@@ -244,7 +251,7 @@ func inferArgs(args: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState, 
   end
 end
 
-func inferBlock(items: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+func inferBlock(items: Slice[ast2.Stmt], env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
   if items.Len() == 0 then
     Ok(InferResult { Type: MonoType.TUnit, Subst: [], State: state })
   else
@@ -252,11 +259,11 @@ func inferBlock(items: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState
   end
 end
 
-func inferBlockItems(items: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState, lastType: MonoType, subst: Slice[SubstEntry]) -> Result[InferResult, String]
+func inferBlockItems(items: Slice[ast2.Stmt], env: Slice[EnvEntry], state: InferState, lastType: MonoType, subst: Slice[SubstEntry]) -> Result[InferResult, String]
   if items.Len() == 0 then
     Ok(InferResult { Type: applySubst(subst, lastType), Subst: subst, State: state })
   else
-    let step = inferBlockStep(items.Get(0).UnwrapOr(ast2.Expr.UnitExpr()), env, state)
+    let step = inferBlockStep(items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr())), env, state)
     switch step
       case Err(msg) => Err(msg)
       case Ok(v) => inferBlockItems(sliceDrop(items, 1), v.Env, v.Result.State, v.Result.Type, composeSubst(v.Result.Subst, subst))
@@ -264,12 +271,12 @@ func inferBlockItems(items: Slice[ast2.Expr], env: Slice[EnvEntry], state: Infer
   end
 end
 
-func inferBlockStep(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[BlockInferStep, String]
-  switch expr
-    case LetExpr(bind) => inferBlockLet(bind, env, state)
-    case VarExpr(bind) => inferBlockLet(bind, env, state)
+func inferBlockStep(stmt: ast2.Stmt, env: Slice[EnvEntry], state: InferState) -> Result[BlockInferStep, String]
+  switch stmt
+    case LetStmt(bind) => inferBlockLet(bind, env, state)
+    case VarStmt(bind) => inferBlockLet(bind, env, state)
     case _ then
-      let r = inferExpr(expr, env, state)
+      let r = inferStmt(stmt, env, state)
       switch r
         case Err(msg) => Err(msg)
         case Ok(v) => Ok(BlockInferStep { Result: v, Env: env })
