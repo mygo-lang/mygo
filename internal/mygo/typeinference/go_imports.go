@@ -15,9 +15,10 @@ import (
 )
 
 type GoPackageInfo struct {
-	Alias string
-	Path  string
-	Funcs map[string]TFunc
+	Alias   string
+	Path    string
+	Funcs   map[string]TFunc
+	Aliases map[string]string
 }
 
 func loadGoPackageInfo(alias, path, dir string) (*GoPackageInfo, error) {
@@ -39,11 +40,19 @@ func loadGoPackageInfo(alias, path, dir string) (*GoPackageInfo, error) {
 		return nil, fmt.Errorf("package %q has no type information", path)
 	}
 	info := &GoPackageInfo{
-		Alias: alias,
-		Path:  path,
-		Funcs: map[string]TFunc{},
+		Alias:   alias,
+		Path:    path,
+		Funcs:   map[string]TFunc{},
+		Aliases: map[string]string{},
 	}
 	scope := pkg.Types.Scope()
+	for _, name := range scope.Names() {
+		obj, ok := scope.Lookup(name).(*types.TypeName)
+		if !ok || !obj.IsAlias() || !isExportedGoName(name) {
+			continue
+		}
+		info.Aliases[monoTypeFromGoType(types.Unalias(obj.Type())).String()] = pkg.Types.Name() + "." + name
+	}
 	for _, name := range scope.Names() {
 		if !isExportedGoName(name) {
 			continue
@@ -57,9 +66,31 @@ func loadGoPackageInfo(alias, path, dir string) (*GoPackageInfo, error) {
 		if !ok {
 			continue
 		}
-		info.Funcs[name] = goSignatureType(sig)
+		info.Funcs[name] = replaceGoAliases(goSignatureType(sig), info.Aliases).(TFunc)
 	}
 	return info, nil
+}
+
+func replaceGoAliases(t MonoType, aliases map[string]string) MonoType {
+	switch t := t.(type) {
+	case TCon:
+		if name, ok := aliases[t.Name]; ok && len(t.Args) == 0 {
+			return TCon{Name: name}
+		}
+		args := make([]MonoType, len(t.Args))
+		for i, arg := range t.Args {
+			args[i] = replaceGoAliases(arg, aliases)
+		}
+		return TCon{Name: t.Name, Args: args}
+	case TFunc:
+		args := make([]MonoType, len(t.Args))
+		for i, arg := range t.Args {
+			args[i] = replaceGoAliases(arg, aliases)
+		}
+		return TFunc{Args: args, Ret: replaceGoAliases(t.Ret, aliases), Variadic: t.Variadic}
+	default:
+		return t
+	}
 }
 
 func isExportedGoName(name string) bool {
@@ -555,7 +586,15 @@ func monoTypeFromGoType(t types.Type) MonoType {
 		}
 		return TCon{Name: name}
 	case *types.Alias:
-		return monoTypeFromGoType(types.Unalias(t))
+		// Keep the exported alias name.  MyGO type annotations name the FFI
+		// package's public surface (for example goast.Expr), so eagerly
+		// unaliasing it to ast.Expr makes an otherwise identical annotation
+		// fail unification.
+		name := t.Obj().Name()
+		if pkg := t.Obj().Pkg(); pkg != nil && pkg.Name() != "" {
+			name = pkg.Name() + "." + name
+		}
+		return TCon{Name: name}
 	}
 	return TCon{Name: goTypeName(t)}
 }
