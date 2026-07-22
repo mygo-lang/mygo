@@ -295,7 +295,7 @@ func inferDecl(decl Decl, env TypeEnv, state *InferState, info *TypedInfo, pkg *
 		}
 		if strings.HasPrefix(d.Path, "go:") {
 			path := strings.TrimPrefix(d.Path, "go:")
-			goInfo, err := loadGoPackageInfo(alias, path)
+			goInfo, err := loadGoPackageInfo(alias, path, pkg.Dir)
 			if err != nil {
 				return nil, wrapInferenceError("import %q: %w", err, d.Path)
 			}

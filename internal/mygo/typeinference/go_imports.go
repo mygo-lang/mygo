@@ -2,12 +2,13 @@ package typeinference
 
 import (
 	"fmt"
-	"go/importer"
 	"go/types"
 	"os"
 	"path/filepath"
 	"strings"
 	"unicode"
+
+	"golang.org/x/tools/go/packages"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 	parserpkg "github.com/mygo-lang/mygo/internal/mygo/parser"
@@ -19,17 +20,30 @@ type GoPackageInfo struct {
 	Funcs map[string]TFunc
 }
 
-func loadGoPackageInfo(alias, path string) (*GoPackageInfo, error) {
-	pkg, err := importer.Default().Import(path)
+func loadGoPackageInfo(alias, path, dir string) (*GoPackageInfo, error) {
+	pkgs, err := packages.Load(&packages.Config{
+		Mode: packages.NeedName | packages.NeedTypes,
+		Dir:  dir,
+	}, path)
 	if err != nil {
 		return nil, err
+	}
+	if len(pkgs) != 1 {
+		return nil, fmt.Errorf("loaded %d packages for %q, want 1", len(pkgs), path)
+	}
+	pkg := pkgs[0]
+	if len(pkg.Errors) != 0 {
+		return nil, fmt.Errorf("%s", pkg.Errors[0])
+	}
+	if pkg.Types == nil {
+		return nil, fmt.Errorf("package %q has no type information", path)
 	}
 	info := &GoPackageInfo{
 		Alias: alias,
 		Path:  path,
 		Funcs: map[string]TFunc{},
 	}
-	scope := pkg.Scope()
+	scope := pkg.Types.Scope()
 	for _, name := range scope.Names() {
 		if !isExportedGoName(name) {
 			continue
