@@ -317,8 +317,10 @@ func translateIfExprExpected(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast
             case Ok(ev) then
               let elsePre = ctxDrainPreStmts(childElse)
               let typ = if expected == "" then "any" else expected end
-              let thenBody = if thenPre == "" then tmp + " = " + tv else thenPre + "\n" + tmp + " = " + tv end
-              let elseBody = if elsePre == "" then tmp + " = " + ev else elsePre + "\n" + tmp + " = " + ev end
+              # A branch ending in return has already emitted its control-flow
+              # statement into the child context and intentionally has no value.
+              let thenBody = if tv == "" then thenPre else if thenPre == "" then tmp + " = " + tv else thenPre + "\n" + tmp + " = " + tv end end
+              let elseBody = if ev == "" then elsePre else if elsePre == "" then tmp + " = " + ev else elsePre + "\n" + tmp + " = " + ev end end
               let stmt = "var " + tmp + " " + typ + "\nif " + cv + " {\n" + thenBody + "\n} else {\n" + elseBody + "\n}"
               if condPre == "" then
                 ctxPushPreStmt(ctx, stmt)
@@ -346,6 +348,52 @@ func translateBlockExprExpected(items: Slice[ast2.Stmt], ctx: Ref[egCtx], expect
     case Err(msg) => Err(msg)
     case Ok(prefix) =>
       let last = items.Get(items.Len() - 1).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr()))
+      # ReturnStmt/ReturnWithStmt 短路：不产生值，直接 emit return 语句
+      var is_return = false
+      switch last
+        case ReturnStmt then
+          let pre = ctxDrainPreStmts(child)
+          ctxAdoptExprSeq(ctx, child)
+          var parts: Slice[String] = []
+          if prefix != "" then
+            parts = parts.Append(prefix)
+          end
+          if pre != "" then
+            parts = parts.Append(pre)
+          end
+          parts = parts.Append("return")
+          ctxPushPreStmt(ctx, joinStrings(parts, "\n"))
+          is_return = true
+        end
+        case ReturnWithStmt(_) then
+          let return_stmt = translateReturnStmt(last, child)
+          switch return_stmt
+            case Err(msg) then
+              is_return = false
+            end
+            case Ok(v) then
+              let pre = ctxDrainPreStmts(child)
+              ctxAdoptExprSeq(ctx, child)
+              var parts: Slice[String] = []
+              if prefix != "" then
+                parts = parts.Append(prefix)
+              end
+              if pre != "" then
+                parts = parts.Append(pre)
+              end
+              parts = parts.Append(v)
+              ctxPushPreStmt(ctx, joinStrings(parts, "\n"))
+              is_return = true
+            end
+          end
+        end
+        case _ then
+          is_return = false
+        end
+      end
+      if is_return then
+        return Ok("")
+      end
       let value = translateReturnStmt(last, child)
       switch value
         case Err(msg) => Err(msg)

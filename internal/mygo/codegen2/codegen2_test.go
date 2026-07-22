@@ -273,7 +273,7 @@ end
 func TestGenerateSourceBareReturn(t *testing.T) {
 	src := `package sample
 
-func bareReturn(flag: Bool)
+func bareReturn(flag: Bool) -> ()
   if flag then
     return
   end
