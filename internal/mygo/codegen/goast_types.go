@@ -648,10 +648,6 @@ func astFuncLit(params, results []*ast.Field, body *ast.BlockStmt) *ast.FuncLit 
 	return &ast.FuncLit{Type: ft, Body: body}
 }
 
-func astIIFE(params, results []*ast.Field, body *ast.BlockStmt) *ast.CallExpr {
-	return &ast.CallExpr{Fun: astFuncLit(params, results, body)}
-}
-
 func astBinaryOp(x ast.Expr, op token.Token, y ast.Expr) ast.Expr {
 	return &ast.BinaryExpr{X: x, Op: op, Y: y}
 }

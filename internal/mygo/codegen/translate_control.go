@@ -526,6 +526,17 @@ func literalGoType(e Expr) string {
 
 // translateWhile handles while loops.
 func (g *gen) translateWhile(n *WhileExpr, ctx *egCtx) (ast.Expr, string, error) {
+	forStmt, err := g.translateWhileFor(n, ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	// While is normally a statement.  Keep this fallback for expression
+	// contexts; statement callers flatten the ForStmt directly.
+	fn := astFuncLit(nil, nil, &ast.BlockStmt{List: []ast.Stmt{forStmt}})
+	return &ast.CallExpr{Fun: fn}, "", nil
+}
+
+func (g *gen) translateWhileFor(n *WhileExpr, ctx *egCtx) (*ast.ForStmt, error) {
 	cond, _, _ := g.translateExpr(n.Cond, ctx, "bool")
 	body := &ast.BlockStmt{}
 	switch b := n.Body.(type) {
@@ -538,8 +549,7 @@ func (g *gen) translateWhile(n *WhileExpr, ctx *egCtx) (ast.Expr, string, error)
 		body.List = append(body.List, &ast.ExprStmt{X: code})
 	}
 	forStmt := &ast.ForStmt{Cond: cond, Body: body}
-	fn := astFuncLit(nil, nil, &ast.BlockStmt{List: []ast.Stmt{forStmt}})
-	return &ast.CallExpr{Fun: fn}, "", nil
+	return forStmt, nil
 }
 
 func isBreakOrContinue(e Expr) bool {

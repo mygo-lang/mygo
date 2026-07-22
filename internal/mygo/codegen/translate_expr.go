@@ -19,12 +19,46 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 		isLast := i == len(n.Stmts)-1
 		switch s := stmt.(type) {
 		case *ExprStmt:
+			// A block used as a statement already has the correct lexical
+			// representation.  Flatten it instead of turning it into an IIFE.
+			if block, ok := s.Expr.(*BlockExpr); ok && !(isLast && returnExpected != "") {
+				blockStmts, err := g.translateBlockStmts(block, child, "", nil)
+				if err != nil {
+					return stmts, err
+				}
+				stmts = append(stmts, blockStmts...)
+				continue
+			}
 			if ifExpr, ok := s.Expr.(*IfExpr); ok && !(isLast && returnExpected != "") {
 				ifStmt, err := g.translateIfStmt(ifExpr, child, returnExpected, retTypes)
 				if err != nil {
 					return stmts, err
 				}
 				stmts = append(stmts, ifStmt)
+				continue
+			}
+			if whileExpr, ok := s.Expr.(*WhileExpr); ok && !(isLast && returnExpected != "") {
+				forStmt, err := g.translateWhileFor(whileExpr, child)
+				if err != nil {
+					return stmts, err
+				}
+				stmts = append(stmts, forStmt)
+				continue
+			}
+			if switchExpr, ok := s.Expr.(*SwitchExpr); ok && !(isLast && returnExpected != "") {
+				code, _, err := g.translateSwitch(switchExpr, child, "")
+				if err != nil {
+					return stmts, err
+				}
+				if iife, ok := code.(*ast.CallExpr); ok {
+					if fn, ok := iife.Fun.(*ast.FuncLit); ok && fn.Body != nil {
+						stmts = append(stmts, fn.Body.List...)
+						continue
+					}
+				}
+				if !isNilASTExpr(code) {
+					stmts = append(stmts, stmtForExpr(s.Expr, code, ""))
+				}
 				continue
 			}
 			if branch := branchStmtForExpr(s.Expr); branch != nil {
@@ -66,6 +100,38 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 				}
 			}
 		case *ReturnStmt:
+			if ifExpr, ok := s.Value.(*IfExpr); ok {
+				ifStmt, err := g.translateIfStmt(ifExpr, child, returnExpected, retTypes)
+				if err != nil {
+					return stmts, err
+				}
+				stmts = append(stmts, ifStmt)
+				continue
+			}
+			if switchExpr, ok := s.Value.(*SwitchExpr); ok {
+				code, _, err := g.translateSwitch(switchExpr, child, returnExpected)
+				if err != nil {
+					return stmts, err
+				}
+				if iife, ok := code.(*ast.CallExpr); ok {
+					if fn, ok := iife.Fun.(*ast.FuncLit); ok && fn.Body != nil {
+						stmts = append(stmts, fn.Body.List...)
+						continue
+					}
+				}
+			}
+			if blockExpr, ok := s.Value.(*BlockExpr); ok {
+				code, _, err := g.translateExpr(blockExpr, child, returnExpected)
+				if err != nil {
+					return stmts, err
+				}
+				if iife, ok := code.(*ast.CallExpr); ok {
+					if fn, ok := iife.Fun.(*ast.FuncLit); ok && fn.Body != nil {
+						stmts = append(stmts, fn.Body.List...)
+						continue
+					}
+				}
+			}
 			if s.Value != nil {
 				code, _, err := g.translateExpr(s.Value, child, returnExpected)
 				if err != nil {
@@ -120,6 +186,19 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 				child.bindings[s.Name] = actual
 				child.locals[s.Name] = lbType
 				child.mutable[actual] = s.Mutable
+				// If/switch expressions used to hide their branch statements in an
+				// IIFE.  Move those statements into the current scope and rename each
+				// return target to the freshly allocated binding.
+				if (isControlExpr(s.Value)) && isIIFEExpr(code) && lbType != "" {
+					if fn := code.(*ast.CallExpr).Fun.(*ast.FuncLit); fn.Body != nil {
+						stmts = append(stmts, &ast.DeclStmt{Decl: &ast.GenDecl{
+							Tok:   token.VAR,
+							Specs: []ast.Spec{&ast.ValueSpec{Names: []*ast.Ident{ast.NewIdent(actual)}, Type: g.goTypeExprFromString(lbType)}},
+						}})
+						stmts = append(stmts, renameIIFEReturns(fn.Body.List, actual)...)
+						continue
+					}
+				}
 				if s.Type != nil {
 					typeExpr := goastTypeExpr(s.Type)
 					stmts = append(stmts, &ast.DeclStmt{
@@ -187,6 +266,45 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 		}
 	}
 	return stmts, nil
+}
+
+func isControlExpr(e Expr) bool {
+	switch e.(type) {
+	case *IfExpr, *SwitchExpr, *BlockExpr:
+		return true
+	default:
+		return false
+	}
+}
+
+func isIIFEExpr(e ast.Expr) bool {
+	call, ok := e.(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	_, ok = call.Fun.(*ast.FuncLit)
+	return ok
+}
+
+func renameIIFEReturns(stmts []ast.Stmt, name string) []ast.Stmt {
+	var out []ast.Stmt
+	for _, stmt := range stmts {
+		switch s := stmt.(type) {
+		case *ast.ReturnStmt:
+			if len(s.Results) == 1 {
+				out = append(out, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(name)}, Rhs: s.Results, Tok: token.ASSIGN})
+			}
+		case *ast.IfStmt:
+			s.Body.List = renameIIFEReturns(s.Body.List, name)
+			if block, ok := s.Else.(*ast.BlockStmt); ok {
+				block.List = renameIIFEReturns(block.List, name)
+			}
+			out = append(out, s)
+		default:
+			out = append(out, stmt)
+		}
+	}
+	return out
 }
 
 func (g *gen) isUnitGoExpr(n *GoExpr, ctx *egCtx) bool {

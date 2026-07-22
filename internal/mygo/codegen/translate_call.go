@@ -515,25 +515,19 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 					return nil, "", err
 				}
 				ptrType := "*" + argType
-				// If arg is a function call, wrap in IIFE: func() *T { v := expr; return &v }()
+				// Taking the address of a call result cannot use &arg directly.  A
+				// one-element slice gives the result an addressable slot while keeping
+				// this expression inline; the old IIFE introduced an unnecessary
+				// scope (and made nested generated expressions grow rapidly).
 				if _, ok := n.Args[0].(*CallExpr); ok {
-					fn := &ast.FuncLit{
-						Type: &ast.FuncType{
-							Params:  &ast.FieldList{},
-							Results: &ast.FieldList{List: []*ast.Field{{Type: ast.NewIdent(ptrType)}}},
+					slot := &ast.IndexExpr{
+						X: &ast.CompositeLit{
+							Type: &ast.ArrayType{Elt: g.goTypeExprFromString(argType)},
+							Elts: []ast.Expr{arg},
 						},
-						Body: &ast.BlockStmt{
-							List: []ast.Stmt{
-								&ast.AssignStmt{
-									Lhs: []ast.Expr{ast.NewIdent("__ref_tmp")},
-									Rhs: []ast.Expr{arg},
-									Tok: token.DEFINE,
-								},
-								&ast.ReturnStmt{Results: []ast.Expr{&ast.UnaryExpr{Op: token.AND, X: ast.NewIdent("__ref_tmp")}}},
-							},
-						},
+						Index: &ast.BasicLit{Kind: token.INT, Value: "0"},
 					}
-					return &ast.CallExpr{Fun: fn}, ptrType, nil
+					return &ast.UnaryExpr{Op: token.AND, X: slot}, ptrType, nil
 				}
 				return &ast.UnaryExpr{Op: token.AND, X: arg}, ptrType, nil
 			}
