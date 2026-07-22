@@ -68,6 +68,7 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
     case StringExpr(_) => Ok(InferResult { Type: MonoType.TCon("String", emptyMonoTypes()), Subst: [], State: state })
     case BoolExpr(_) => Ok(InferResult { Type: MonoType.TCon("Bool", emptyMonoTypes()), Subst: [], State: state })
     case UnitExpr => Ok(InferResult { Type: MonoType.TUnit, Subst: [], State: state })
+    case TupleExpr(items) => inferTuple(items, env, state)
     case UnaryExpr(op, inner) => inferUnary(op, inner.value(), env, state)
     case BinaryExpr(op, left, right) => inferBinary(op, left.value(), right.value(), env, state)
     case CallExpr(callee, args) => inferCall(callee.value(), args, env, state)
@@ -76,9 +77,25 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
     case BlockExpr(items) => inferBlock(items, env, state)
     case StructLitExpr(typeName, fields) =>
       inferStructLit(typeName, fields, env, state)
-    case InlineGoExpr(typ, _) =>
+    case InlineGoExpr(typ, _, _, _) =>
       let mono = typeFromAST(typ.value())
       Ok(InferResult { Type: mono, Subst: [], State: state })
+  end
+end
+
+func inferTuple(items: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+  inferTupleItems(items, env, state, [] as Slice[MonoType], [] as Slice[SubstEntry])
+end
+
+func inferTupleItems(items: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState, types: Slice[MonoType], subst: Slice[SubstEntry]) -> Result[InferResult, String]
+  if items.Len() == 0 then
+    Ok(InferResult { Type: MonoType.TTuple(types), Subst: subst, State: state })
+  else
+    let r = inferExpr(items.Get(0).UnwrapOr(ast2.Expr.UnitExpr()), env, state)
+    switch r
+      case Err(msg) => Err(msg)
+      case Ok(v) => inferTupleItems(sliceDrop(items, 1), env, v.State, types.Append(v.Type), composeSubst(v.Subst, subst))
+    end
   end
 end
 

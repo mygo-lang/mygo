@@ -14,6 +14,9 @@ func TestLoadGoPackageInfoResolvesCurrentModule(t *testing.T) {
 	if _, ok := info.Funcs["Ident"]; !ok {
 		t.Fatalf("loaded functions = %#v, want Ident", info.Funcs)
 	}
+	if _, ok := info.Funcs["StructDeclFromParts"]; !ok {
+		t.Fatalf("loaded functions = %#v, want StructDeclFromParts", info.Funcs)
+	}
 }
 
 func TestLoadGoPackageInfoPreservesExportedAliasName(t *testing.T) {

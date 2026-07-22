@@ -241,6 +241,27 @@ end
 	}
 }
 
+func TestGenerateSourceInlineGoOperands(t *testing.T) {
+	src := `package sample
+
+func toString(n: Int) -> String
+  go[String]{code: "{T}({v})" in v = n type T = String}
+end
+`
+
+	got := GenerateSource(src)
+	ok, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	if !strings.Contains(ok.F0, "return string(n)") {
+		t.Fatalf("inline operands were not substituted in generated AST:\n%s", ok.F0)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", ok.F0, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, ok.F0)
+	}
+}
+
 func TestGenerateSourceReturnStatement(t *testing.T) {
 	src := `package sample
 

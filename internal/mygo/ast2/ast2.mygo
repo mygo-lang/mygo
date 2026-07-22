@@ -66,6 +66,16 @@ struct Bind
   Value: Expr
 end
 
+struct GoOperand
+  Name: String
+  Value: Expr
+end
+
+struct GoTypeOperand
+  Name: String
+  Type: TypeExpr
+end
+
 # Stmt statement type, used for independent statements within a block.
 # Expr within each Stmt variant is a pure expression (a syntax node without statement semantics).
 enum Stmt
@@ -93,6 +103,8 @@ enum Expr
   StringExpr(String)
   BoolExpr(Bool)
   UnitExpr
+  # tuple expression; an empty tuple is represented by UnitExpr
+  TupleExpr(Slice[Expr])
   CallExpr(Ref[Expr], Slice[Expr])
   FieldExpr(Ref[Expr], String)
   UnaryExpr(String, Ref[Expr])
@@ -100,5 +112,5 @@ enum Expr
   IfExpr(Ref[Expr], Ref[Expr], Ref[Expr])
   BlockExpr(Slice[Stmt])
   StructLitExpr(String, Slice[StructLitField])
-  InlineGoExpr(Ref[TypeExpr], String)
+  InlineGoExpr(Ref[TypeExpr], String, Slice[GoOperand], Slice[GoTypeOperand])
 end

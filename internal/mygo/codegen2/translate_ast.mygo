@@ -1,0 +1,228 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import strconv "go:strconv"
+
+# translateExprAst 是替代 translateExpr 的新入口。当前覆盖无副作用的
+# 基础表达式；控制流和绑定将在同一结果模型上继续扩展。
+func translateExprAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+  translateExprAstExpected(expr, ctx, "")
+end
+
+func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+  switch expr
+    case IdentExpr(name) => Ok(newAstExprResult(goast.Ident(ctxGetBinding(ctx, name).UnwrapOr(sanitizeIdent(name)))))
+    case NumberExpr(v) => Ok(newAstExprResult(goast.Number(v)))
+    case StringExpr(v) => Ok(newAstExprResult(goast.String(strconv.Quote(v))))
+    case BoolExpr(v) => if v then Ok(newAstExprResult(goast.Ident("true"))) else Ok(newAstExprResult(goast.Ident("false"))) end
+    case UnitExpr => Ok(newAstExprResult(goast.Unit()))
+    case InlineGoExpr(_, body, values, types) =>
+      let parts = translateInlineOperands(values, types, ctx, 0, [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[goast.Stmt])
+      switch parts
+        case Err(msg) => Err(msg)
+        case Ok(p) => Ok(astExprWithPre(goast.MustInlineGoExprWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources), p.Pre))
+      end
+    case TupleExpr(_) => Err("tuple expression is only valid in value positions")
+    case FieldExpr(base, field) =>
+      let value = translateExprAstExpected(base.value(), ctx, expected)
+      switch value
+        case Ok(v) => Ok(astExprWithPre(goast.Selector(v.Expr, exportName(field)), v.Pre))
+        case Err(msg) => Err(msg)
+      end
+    case UnaryExpr(op, inner) =>
+      let value = translateExprAstExpected(inner.value(), ctx, expected)
+      switch value
+        case Ok(v) => Ok(astExprWithPre(goast.Unary(op, v.Expr), v.Pre))
+        case Err(msg) => Err(msg)
+      end
+    case BinaryExpr(op, left, right) => translateBinaryAstExpected(op, left.value(), right.value(), ctx, expected)
+    case CallExpr(callee, args) => translateCallAstExpected(callee.value(), args, ctx, expected)
+    case StructLitExpr(typeName, fields) => translateStructLitAstExpected(typeName, fields, ctx, expected)
+    case IfExpr(cond, thenExpr, elseExpr) => translateIfAst(cond.value(), thenExpr.value(), elseExpr.value(), ctx, expected)
+    case BlockExpr(items) => translateBlockExprAstExpected(items, ctx, 0, [] as Slice[goast.Stmt], expected)
+    case _ => Err("AST lowering for this expression is not implemented")
+  end
+end
+
+func translateBlockExprAstExpected(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, pre: Slice[goast.Stmt], expected: String) -> Result[AstExprResult, String]
+  if items.Len() == 0 then
+    Ok(astExprWithPre(goast.Unit(), pre))
+  else
+    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr()))
+    if index == items.Len() - 1 then
+      switch stmt
+        case ExprStmt(expr) =>
+          let value = translateExprAstExpected(expr, ctx, expected)
+          switch value
+            case Ok(v) => Ok(astExprWithPre(v.Expr, goast.AppendStmts(pre, v.Pre)))
+            case Err(msg) => Err(msg)
+          end
+        case WhileStmt(cond, body) =>
+          let value = translateAstWhileExpr(cond, body, ctx)
+          switch value
+            case Ok(v) => Ok(astExprWithPre(v.Expr, goast.AppendStmts(pre, v.Pre)))
+            case Err(msg) => Err(msg)
+          end
+        case _ => Err("block expression ends with a non-value statement")
+      end
+    else
+      let leading = translateAstLeadingStmt(stmt, ctx)
+      switch leading
+        case Ok(stmts) => translateBlockExprAstExpected(items, ctx, index + 1, goast.AppendStmts(pre, stmts), expected)
+        case Err(msg) => Err(msg)
+      end
+    end
+  end
+end
+
+# While is unit-valued in a block expression. Keep the loop in the prelude
+# and expose an explicit unit expression to the surrounding value context.
+func translateAstWhileExpr(cond: ast2.Expr, body: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+  let stmts = translateAstWhileStmt(cond, body, ctx)
+  switch stmts
+    case Err(msg) => Err(msg)
+    case Ok(v) => Ok(astExprWithPre(goast.Unit(), v))
+  end
+end
+
+func translateBlockExprAst(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, pre: Slice[goast.Stmt]) -> Result[AstExprResult, String]
+  if items.Len() == 0 then
+    Ok(astExprWithPre(goast.Unit(), pre))
+  else
+    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr()))
+    if index == items.Len() - 1 then
+      switch stmt
+        case ExprStmt(expr) =>
+          let value = translateExprAst(expr, ctx)
+          switch value
+            case Ok(v) => Ok(astExprWithPre(v.Expr, goast.AppendStmts(pre, v.Pre)))
+            case Err(msg) => Err(msg)
+          end
+        case _ => Err("block expression ends with a non-value statement")
+      end
+    else
+      let leading = translateAstLeadingStmt(stmt, ctx)
+      switch leading
+        case Ok(stmts) => translateBlockExprAst(items, ctx, index + 1, goast.AppendStmts(pre, stmts))
+        case Err(msg) => Err(msg)
+      end
+    end
+  end
+end
+
+func translateIfAst(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+  let c = translateExprAst(cond, ctx)
+  let t = translateExprAstExpected(thenExpr, ctx, expected)
+  let e = translateExprAstExpected(elseExpr, ctx, expected)
+  switch c
+    case Err(msg) => Err(msg)
+    case Ok(cv) =>
+      switch t
+        case Err(msg) => Err(msg)
+        case Ok(tv) =>
+          switch e
+            case Err(msg) => Err(msg)
+            case Ok(ev) =>
+              let temp = ctxFreshExprTemp(ctx)
+              let typ = if expected == "" then "any" else expected end
+              let thenStmts = goast.AppendStmts(tv.Pre, astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(temp)), "=", astSingleExpr(tv.Expr))))
+              let elseStmts = goast.AppendStmts(ev.Pre, astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(temp)), "=", astSingleExpr(ev.Expr))))
+              let pre = goast.AppendStmts(
+                cv.Pre,
+                astTwoStmts(goast.DeclareFromType(temp, typ), goast.If(cv.Expr, thenStmts, elseStmts)),
+              )
+              Ok(astExprWithPre(goast.Ident(temp), pre))
+          end
+      end
+  end
+end
+
+func translateStructLitAst(typeName: String, fields: Slice[ast2.StructLitField], ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+  translateStructLitAstExpected(typeName, fields, ctx, "")
+end
+
+func translateStructLitAstExpected(typeName: String, fields: Slice[ast2.StructLitField], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+  let result = translateAstCompositeFields(fields, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], expected)
+  switch result
+    case Err(msg) => Err(msg)
+    case Ok(value) => Ok(astExprWithPre(goast.Composite(goast.Ident(typeName), value.Elts), value.Pre))
+  end
+end
+
+func translateAstCompositeFields(fields: Slice[ast2.StructLitField], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expected: String) -> Result[AstCompositeFields, String]
+  if index >= fields.Len() then
+    Ok(AstCompositeFields { Elts: out, Pre: pre })
+  else
+    let field = fields.Get(index).UnwrapOr(ast2.StructLitField { Name: "", Value: ast2.Expr.UnitExpr() })
+    let value = translateExprAstExpected(field.Value, ctx, expected)
+    switch value
+      case Err(msg) => Err(msg)
+      case Ok(v) => translateAstCompositeFields(
+        fields,
+        ctx,
+        index + 1,
+        out.Append(goast.KeyValue(goast.Ident(exportName(field.Name)), v.Expr)),
+        goast.AppendStmts(pre, v.Pre),
+        expected,
+      )
+    end
+  end
+end
+
+func translateBinaryAst(op: String, left: ast2.Expr, right: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+  translateBinaryAstExpected(op, left, right, ctx, "")
+end
+
+func translateBinaryAstExpected(op: String, left: ast2.Expr, right: ast2.Expr, ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+  let l = translateExprAstExpected(left, ctx, expected)
+  let r = translateExprAstExpected(right, ctx, expected)
+  switch l
+    case Err(msg) => Err(msg)
+    case Ok(lv) =>
+      switch r
+        case Err(msg) => Err(msg)
+        case Ok(rv) =>
+          let pre = goast.AppendStmts(lv.Pre, rv.Pre)
+          if op == "|>" then
+            Ok(astExprWithPre(goast.Call(rv.Expr, astSingleExpr(lv.Expr)), pre))
+          else
+            if op == "<|" then
+              Ok(astExprWithPre(goast.Call(lv.Expr, astSingleExpr(rv.Expr)), pre))
+            else
+              Ok(astExprWithPre(goast.Binary(lv.Expr, op, rv.Expr), pre))
+            end
+          end
+      end
+  end
+end
+
+func translateCallAst(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+  translateCallAstExpected(callee, args, ctx, "")
+end
+
+func translateCallAstExpected(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+  let c = translateExprAstExpected(callee, ctx, expected)
+  let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
+  switch c
+    case Err(msg) => Err(msg)
+    case Ok(cv) =>
+      switch values
+        case Err(msg) => Err(msg)
+        case Ok(v) => Ok(astExprWithPre(goast.Call(cv.Expr, v.Exprs), goast.AppendStmts(cv.Pre, v.Pre)))
+      end
+  end
+end
+
+func translateAstArgs(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expectedTypes: Slice[String]) -> Result[AstArgsResult, String]
+  if index >= args.Len() then
+    Ok(AstArgsResult { Exprs: out, Pre: pre })
+  else
+    let expected = expectedTypes.Get(index).UnwrapOr("")
+    let value = translateExprAstExpected(args.Get(index).UnwrapOr(ast2.Expr.UnitExpr()), ctx, expected)
+    switch value
+      case Err(msg) => Err(msg)
+      case Ok(v) => translateAstArgs(args, ctx, index + 1, out.Append(v.Expr), goast.AppendStmts(pre, v.Pre), expectedTypes)
+    end
+  end
+end

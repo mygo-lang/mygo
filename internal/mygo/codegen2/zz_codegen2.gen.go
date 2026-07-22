@@ -4,6 +4,7 @@ package codegen2
 
 import (
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
+	"github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 	"github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 	. "github.com/mygo-lang/mygo/prelude"
 )
@@ -11,6 +12,7 @@ import (
 type GoFileParts struct {
 	PackageName string
 	Imports     []GoImportPart
+	AstDecls    []goast.Decl
 	Decls       []string
 }
 type GoImportPart struct {
@@ -51,7 +53,7 @@ func generateFilesLoop(files []SourceFileInput, info typeinference2.PackageInfo,
 			return Ok[map[string]string, string](out)
 		} else {
 			return func() Result[map[string]string, string] {
-				input_4 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{})}})
+				input_4 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{})}})
 				src_5 := generateOneFile(input_4.File, info)
 				return func() Result[map[string]string, string] {
 					if v_4, ok := src_5.(ResultOk[string, string]); ok {
@@ -112,16 +114,16 @@ func generateOneFile(file ast2.File, info typeinference2.PackageInfo) Result[str
 		return &__ref_tmp
 	}()
 	imports_9 := collectImports(file.Decls)
-	decls_10 := translateDecls(g_8, file.Decls, 0, []string([]string{}))
+	decls_10 := translateDeclsAst(g_8, file.Decls, 0, []goast.Decl([]goast.Decl{}))
 	return func() Result[string, string] {
-		if v_10, ok := decls_10.(ResultOk[[]string, string]); ok {
+		if v_10, ok := decls_10.(ResultErr[[]goast.Decl, string]); ok {
 			return func() Result[string, string] {
-				return renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: imports_9, Decls: v_10.F0})
+				return Err[string, string](v_10.F0)
 			}()
 		} else {
-			if v_9, ok := decls_10.(ResultErr[[]string, string]); ok {
+			if v_9, ok := decls_10.(ResultOk[[]goast.Decl, string]); ok {
 				return func() Result[string, string] {
-					return Err[string, string](v_9.F0)
+					return renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: imports_9, AstDecls: v_9.F0, Decls: []string([]string{})})
 				}()
 			} else {
 				panic("unreachable")

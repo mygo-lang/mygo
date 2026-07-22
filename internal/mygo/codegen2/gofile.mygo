@@ -2,12 +2,7 @@ package codegen2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
-import ast "go:go/ast"
-import token "go:go/token"
-import parser "go:go/parser"
-import format "go:go/format"
-import bytes "go:bytes"
-import strconv "go:strconv"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import strings "go:strings"
 
 func funcSignature(prefix: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], outer: Set[String]) -> String
@@ -64,32 +59,25 @@ func renderGoFile(parts: GoFileParts) -> Result[String, String]
   go[Result[String, String]] {
     code: """
       func() Result[string, string] {
-        f := &ast.File{Name: ast.NewIdent(parts.PackageName)}
+        imports := make([]goast.Import, 0, len(parts.Imports))
         for _, im := range parts.Imports {
-          spec := &ast.ImportSpec{Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(im.Path)}}
-          if im.Alias != "" && im.Alias != importAliasForPath(im.Path) {
-            spec.Name = ast.NewIdent(im.Alias)
+          alias := im.Alias
+          if alias == importAliasForPath(im.Path) {
+            alias = ""
           }
-          f.Decls = append(f.Decls, &ast.GenDecl{Tok: token.IMPORT, Specs: append([]ast.Spec(nil), spec)})
+          imports = append(imports, goast.Import{Alias: alias, Path: im.Path})
         }
-        for _, src := range parts.Decls {
-          declSrc := "package p\n" + src
-          parsed, err := parser.ParseFile(token.NewFileSet(), "decl.go", declSrc, parser.ParseComments)
-          if err != nil {
-            return Err[string, string]("go/ast parse decl: " + err.Error() + "\n" + src)
-          }
-          f.Decls = append(f.Decls, parsed.Decls...)
+        source, err := goast.RenderWithLegacy(parts.PackageName, imports, parts.AstDecls, parts.Decls)
+        if err != nil {
+          return Err[string, string]("goast render: " + err.Error())
         }
-        var buf bytes.Buffer
-        if err := format.Node(&buf, token.NewFileSet(), f); err != nil {
-          return Err[string, string]("go/format: " + err.Error())
-        }
-        return Ok[string, string](buf.String())
+        return Ok[string, string](source)
       }()
     """
     in parts = parts
   }
 end
+
 
 func parseSourceAsAst2(input: String) -> Result[ast2.File, String]
   parser2.ParseFile(input)

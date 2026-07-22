@@ -172,6 +172,14 @@ type Bind struct {
 	Type  Option[TypeExpr]
 	Value Expr
 }
+type GoOperand struct {
+	Name  string
+	Value Expr
+}
+type GoTypeOperand struct {
+	Name string
+	Type TypeExpr
+}
 type Stmt interface {
 	isStmt()
 }
@@ -298,6 +306,16 @@ func ExprUnitExprCtor() Expr {
 	return ExprUnitExpr{}
 }
 
+type ExprTupleExpr struct {
+	F0 []Expr
+}
+
+func (_ ExprTupleExpr) isExpr() {
+}
+func ExprTupleExprCtor(a0 []Expr) Expr {
+	return ExprTupleExpr{F0: a0}
+}
+
 type ExprCallExpr struct {
 	F0 *Expr
 	F1 []Expr
@@ -379,10 +397,12 @@ func ExprStructLitExprCtor(a0 string, a1 []StructLitField) Expr {
 type ExprInlineGoExpr struct {
 	F0 *TypeExpr
 	F1 string
+	F2 []GoOperand
+	F3 []GoTypeOperand
 }
 
 func (_ ExprInlineGoExpr) isExpr() {
 }
-func ExprInlineGoExprCtor(a0 *TypeExpr, a1 string) Expr {
-	return ExprInlineGoExpr{F0: a0, F1: a1}
+func ExprInlineGoExprCtor(a0 *TypeExpr, a1 string, a2 []GoOperand, a3 []GoTypeOperand) Expr {
+	return ExprInlineGoExpr{F0: a0, F1: a1, F2: a2, F3: a3}
 }

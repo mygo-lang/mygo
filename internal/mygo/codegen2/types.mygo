@@ -1,6 +1,7 @@
 package codegen2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 
 # types.mygo — 核心类型定义
 
@@ -21,6 +22,8 @@ struct egCtx
   exprSeq: Int
   # 表达式位置展开出的前置语句
   preStmts: Slice[String]
+  # AST 原生的前置语句，供控制流迁移使用。
+  astPreStmts: Slice[goast.Stmt]
   # 当前作用域的类型参数
   typeParams: Set[String]
   # 当前函数的 Go 返回类型
@@ -51,6 +54,39 @@ struct Generator2
   needsCallAny: Bool
 end
 
+# AstExprResult 是新 AST 降低管线的表达式结果。Expr 是可嵌入父表达式
+# 的 Go AST；Pre 保存必须在使用 Expr 前执行的局部声明或控制流语句。
+struct AstExprResult
+  Expr: goast.Expr
+  Pre: Slice[goast.Stmt]
+end
+
+struct AstArgsResult
+  Exprs: Slice[goast.Expr]
+  Pre: Slice[goast.Stmt]
+end
+
+struct AstCompositeFields
+  Elts: Slice[goast.Expr]
+  Pre: Slice[goast.Stmt]
+end
+
+struct AstInlineOperands
+  ValueNames: Slice[String]
+  ValueSources: Slice[String]
+  TypeNames: Slice[String]
+  TypeSources: Slice[String]
+  Pre: Slice[goast.Stmt]
+end
+
+func newAstExprResult(expr: goast.Expr) -> AstExprResult
+  AstExprResult { Expr: expr, Pre: [] }
+end
+
+func astExprWithPre(expr: goast.Expr, pre: Slice[goast.Stmt]) -> AstExprResult
+  AstExprResult { Expr: expr, Pre: pre }
+end
+
 # 创建空的 egCtx
 func newEgCtx() -> egCtx
   egCtx {
@@ -61,6 +97,7 @@ func newEgCtx() -> egCtx
     usedNames: {},
     exprSeq: 0,
     preStmts: [],
+    astPreStmts: [],
     typeParams: Set.New[String](),
     retType: "",
     retTypes: [],
@@ -79,6 +116,7 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     usedNames: {},
     exprSeq: 0,
     preStmts: [],
+    astPreStmts: [],
     typeParams: typeParamSet(params),
     retType: "",
     retTypes: [],
@@ -97,6 +135,7 @@ func newFuncEgCtx(params: Slice[String], retType: String, tailName: String, para
     usedNames: {},
     exprSeq: 0,
     preStmts: [],
+    astPreStmts: [],
     typeParams: typeParamSet(params),
     retType: retType,
     retTypes: [],
@@ -128,6 +167,7 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     usedNames: ctx.usedNames,
     exprSeq: ctx.exprSeq,
     preStmts: [],
+    astPreStmts: [],
     typeParams: ctx.typeParams,
     retType: ctx.retType,
     retTypes: ctx.retTypes,
@@ -195,6 +235,23 @@ func ctxDrainPreStmts(ctx: Ref[egCtx]) -> String
   let out = joinStrings(ctx.preStmts, "\n")
   go[()] {
     code: "ctx.preStmts = nil"
+    in ctx = ctx
+  }
+  out
+end
+
+func ctxPushAstPreStmt(ctx: Ref[egCtx], stmt: goast.Stmt) -> ()
+  go[()] {
+    code: "ctx.astPreStmts = append(ctx.astPreStmts, stmt)"
+    in ctx = ctx
+    in stmt = stmt
+  }
+end
+
+func ctxDrainAstPreStmts(ctx: Ref[egCtx]) -> Slice[goast.Stmt]
+  let out = ctx.astPreStmts
+  go[()] {
+    code: "ctx.astPreStmts = nil"
     in ctx = ctx
   }
   out

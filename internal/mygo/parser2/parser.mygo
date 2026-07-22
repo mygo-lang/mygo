@@ -4,6 +4,17 @@ import strings "go:strings"
 import ps "github.com/mygo-lang/mygo/lib/text/parsec"
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 
+enum InlineGoBinding
+  ValueBinding(String, ast2.Expr)
+  TypeBinding(String, ast2.TypeExpr)
+end
+
+struct InlineGoParts
+  Code: String
+  Values: Slice[ast2.GoOperand]
+  Types: Slice[ast2.GoTypeOperand]
+end
+
 # A MyGO parser written in MyGO, backed by the parsec combinator library.
 #
 # parser2 intentionally owns a compact AST first. That keeps this package
@@ -362,8 +373,8 @@ func inlineGoStmt() -> ps.Parser[ast2.Stmt]
       ps.PBind(typeExpr(), func(typ: ast2.TypeExpr) -> ps.Parser[ast2.Stmt]
         ps.PBind(sym("]"), func(_: String) -> ps.Parser[ast2.Stmt]
           ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Stmt]
-            ps.PBind(ps.PMap(rawGoBody(), func(body: String) -> String body end), func(body: String) -> ps.Parser[ast2.Stmt]
-              ps.PThen(sym("}"), ps.PPure(ast2.Stmt.ExprStmt(ast2.Expr.InlineGoExpr(Ref.new(typ), body))))
+            ps.PBind(inlineGoBody(), func(parts: InlineGoParts) -> ps.Parser[ast2.Stmt]
+              ps.PThen(sym("}"), ps.PPure(ast2.Stmt.ExprStmt(ast2.Expr.InlineGoExpr(Ref.new(typ), parts.Code, parts.Values, parts.Types))))
             end)
           end)
         end)
@@ -396,14 +407,46 @@ func inlineGoExpr() -> ps.Parser[ast2.Expr]
       ps.PBind(typeExpr(), func(typ: ast2.TypeExpr) -> ps.Parser[ast2.Expr]
         ps.PBind(sym("]"), func(_: String) -> ps.Parser[ast2.Expr]
           ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Expr]
-            ps.PBind(ps.PMap(rawGoBody(), func(body: String) -> String body end), func(body: String) -> ps.Parser[ast2.Expr]
-              ps.PThen(sym("}"), ps.PPure(ast2.Expr.InlineGoExpr(Ref.new(typ), body)))
+            ps.PBind(inlineGoBody(), func(parts: InlineGoParts) -> ps.Parser[ast2.Expr]
+              ps.PThen(sym("}"), ps.PPure(ast2.Expr.InlineGoExpr(Ref.new(typ), parts.Code, parts.Values, parts.Types)))
             end)
           end)
         end)
       end)
     end)
   end)
+end
+
+func inlineGoBody() -> ps.Parser[InlineGoParts]
+  ps.PBind(kw("code"), func(_: String) -> ps.Parser[InlineGoParts]
+    ps.PBind(sym(":"), func(_: String) -> ps.Parser[InlineGoParts]
+      ps.PBind(stringLiteral(), func(code: String) -> ps.Parser[InlineGoParts]
+        ps.PMap(ps.PMany(inlineGoBinding()), func(bindings: Slice[InlineGoBinding]) -> InlineGoParts
+          bindings.Fold(InlineGoParts { Code: code, Values: [] as Slice[ast2.GoOperand], Types: [] as Slice[ast2.GoTypeOperand] }, func(out: InlineGoParts, binding: InlineGoBinding) -> InlineGoParts
+            switch binding
+              case ValueBinding(name, value) => InlineGoParts { Code: out.Code, Values: out.Values.Append(ast2.GoOperand { Name: name, Value: value }), Types: out.Types }
+              case TypeBinding(name, typ) => InlineGoParts { Code: out.Code, Values: out.Values, Types: out.Types.Append(ast2.GoTypeOperand { Name: name, Type: typ }) }
+            end
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func inlineGoBinding() -> ps.Parser[InlineGoBinding]
+  ps.PChoice([
+    ps.PAttempt(ps.PBind(kw("in"), func(_: String) -> ps.Parser[InlineGoBinding]
+      ps.PBind(identifier(), func(name: String) -> ps.Parser[InlineGoBinding]
+        ps.PMap(ps.PThen(sym("="), expr()), func(value: ast2.Expr) -> InlineGoBinding InlineGoBinding.ValueBinding(name, value) end)
+      end)
+    end)),
+    ps.PBind(kw("type"), func(_: String) -> ps.Parser[InlineGoBinding]
+      ps.PBind(identifier(), func(name: String) -> ps.Parser[InlineGoBinding]
+        ps.PMap(ps.PThen(sym("="), typeExpr()), func(typ: ast2.TypeExpr) -> InlineGoBinding InlineGoBinding.TypeBinding(name, typ) end)
+      end)
+    end),
+  ])
 end
 
 func rawGoBody() -> ps.Parser[String]
@@ -609,10 +652,7 @@ func primaryExpr() -> ps.Parser[ast2.Expr]
     ps.PMap(kw("false"), func(_: String) -> ast2.Expr
       ast2.Expr.BoolExpr(false)
     end),
-    ps.PMap(paren(ps.PPure(())), func(_: ()) -> ast2.Expr
-      ast2.Expr.UnitExpr
-    end),
-    paren(lazyExpr()),
+    tupleOrParenExpr(),
     # 结构体字面量: TypeName { field: ast2.Expr, ... } — 先解析标识符，再尝试花括号
     ps.PAttempt(ps.PBind(identifier(), func(typeName: String) -> ps.Parser[ast2.Expr]
       structLitFields(typeName)
@@ -621,6 +661,18 @@ func primaryExpr() -> ps.Parser[ast2.Expr]
       ast2.Expr.IdentExpr(v)
     end),
   ])
+end
+
+func tupleOrParenExpr() -> ps.Parser[ast2.Expr]
+  ps.PBind(paren(ps.PSepBy(lazyExpr(), sym(","))), func(items: Slice[ast2.Expr]) -> ps.Parser[ast2.Expr]
+    if items.Len() == 0 then
+      ps.PPure(ast2.Expr.UnitExpr)
+    else if items.Len() == 1 then
+      ps.PPure(items.Get(0).UnwrapOr(ast2.Expr.UnitExpr()))
+    else
+      ps.PPure(ast2.Expr.TupleExpr(items))
+    end end
+  end)
 end
 
 func binaryOp() -> ps.Parser[String]

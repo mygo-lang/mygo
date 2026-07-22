@@ -1,11 +1,13 @@
 package codegen2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 
 struct GoFileParts
   PackageName: String
   Imports: Slice[GoImportPart]
+  AstDecls: Slice[goast.Decl]
   Decls: Slice[String]
 end
 
@@ -64,9 +66,9 @@ end
 func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo) -> Result[String, String]
   let g = Ref.new(newGenerator2(file.PackageName))
   let imports = collectImports(file.Decls)
-  let decls = translateDecls(g, file.Decls, 0, [] as Slice[String])
+  let decls = translateDeclsAst(g, file.Decls, 0, [] as Slice[goast.Decl])
   switch decls
-    case Ok(items) => renderGoFile(GoFileParts { PackageName: file.PackageName, Imports: imports, Decls: items })
     case Err(msg) => Err(msg)
+    case Ok(items) => renderGoFile(GoFileParts { PackageName: file.PackageName, Imports: imports, AstDecls: items, Decls: [] as Slice[String] })
   end
 end

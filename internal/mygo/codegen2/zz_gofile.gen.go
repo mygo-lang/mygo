@@ -3,39 +3,34 @@
 package codegen2
 
 import (
-	"bytes"
-	"go/ast"
-	"go/format"
-	"go/parser"
-	"go/token"
-	"strconv"
 	"strings"
 
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
+	"github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 	"github.com/mygo-lang/mygo/internal/mygo/parser2"
 	. "github.com/mygo-lang/mygo/prelude"
 )
 
 func funcSignature(prefix string, tps []string, params []ast2.Param, ret Option[ast2.TypeExpr], outer map[string]struct{}) string {
-	var allTypes_58 map[string]struct{} = outer
-	allTypes_58 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(tps, allTypes_58, func(acc map[string]struct{}, tp string) map[string]struct{} {
+	var allTypes_43 map[string]struct{} = outer
+	allTypes_43 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(tps, allTypes_43, func(acc map[string]struct{}, tp string) map[string]struct{} {
 		return MygoIN3SetM3Add(acc, tp)
 	})
-	ps_59 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(params, func(p ast2.Param) string {
-		return sanitizeIdent(p.Name) + " " + goType(p.Type, allTypes_58)
+	ps_44 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(params, func(p ast2.Param) string {
+		return sanitizeIdent(p.Name) + " " + goType(p.Type, allTypes_43)
 	})
-	return prefix + typeParamDecl(tps) + "(" + joinStrings(ps_59, ", ") + ")" + returnTypeString(ret, allTypes_58)
+	return prefix + typeParamDecl(tps) + "(" + joinStrings(ps_44, ", ") + ")" + returnTypeString(ret, allTypes_43)
 }
 func returnTypeString(ret Option[ast2.TypeExpr], tps map[string]struct{}) string {
 	return func() string {
-		if v_32, ok := ret.(OptionSome[ast2.TypeExpr]); ok {
+		if v_40, ok := ret.(OptionSome[ast2.TypeExpr]); ok {
 			return func() string {
-				r_60 := goReturnType(v_32.F0, tps)
+				r_45 := goReturnType(v_40.F0, tps)
 				return func() string {
-					if r_60 == "" {
+					if r_45 == "" {
 						return ""
 					} else {
-						return " " + r_60
+						return " " + r_45
 					}
 				}()
 			}()
@@ -56,10 +51,10 @@ func typeParamDecl(tps []string) string {
 			return ""
 		} else {
 			return func() string {
-				parts_61 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(tps, func(tp string) string {
+				parts_46 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(tps, func(tp string) string {
 					return sanitizeIdent(tp) + " any"
 				})
-				return "[" + joinStrings(parts_61, ", ") + "]"
+				return "[" + joinStrings(parts_46, ", ") + "]"
 			}()
 		}
 	}()
@@ -70,49 +65,41 @@ func typeParamUse(tps []string) string {
 			return ""
 		} else {
 			return func() string {
-				parts_62 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(tps, func(tp string) string {
+				parts_47 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(tps, func(tp string) string {
 					return sanitizeIdent(tp)
 				})
-				return "[" + joinStrings(parts_62, ", ") + "]"
+				return "[" + joinStrings(parts_47, ", ") + "]"
 			}()
 		}
 	}()
 }
 func sourceToGenName(path string) string {
-	parts_63 := strings.Split(path, "/")
-	var base_64 string = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_63, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_63)-1), path)
-	base_64 = strings.TrimSuffix(base_64, ".mygo")
-	if base_64 == "" {
-		base_64 = "mygo"
+	parts_48 := strings.Split(path, "/")
+	var base_49 string = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_48, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_48)-1), path)
+	base_49 = strings.TrimSuffix(base_49, ".mygo")
+	if base_49 == "" {
+		base_49 = "mygo"
 	}
-	if strings.HasSuffix(base_64, "_test") {
-		return "zz_" + strings.TrimSuffix(base_64, "_test") + ".gen_test.go"
+	if strings.HasSuffix(base_49, "_test") {
+		return "zz_" + strings.TrimSuffix(base_49, "_test") + ".gen_test.go"
 	}
-	return "zz_" + base_64 + ".gen.go"
+	return "zz_" + base_49 + ".gen.go"
 }
 func renderGoFile(parts GoFileParts) Result[string, string] {
 	return func() Result[string, string] {
-		f := &ast.File{Name: ast.NewIdent(parts.PackageName)}
+		imports := make([]goast.Import, 0, len(parts.Imports))
 		for _, im := range parts.Imports {
-			spec := &ast.ImportSpec{Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(im.Path)}}
-			if im.Alias != "" && im.Alias != importAliasForPath(im.Path) {
-				spec.Name = ast.NewIdent(im.Alias)
+			alias := im.Alias
+			if alias == importAliasForPath(im.Path) {
+				alias = ""
 			}
-			f.Decls = append(f.Decls, &ast.GenDecl{Tok: token.IMPORT, Specs: append([]ast.Spec(nil), spec)})
+			imports = append(imports, goast.Import{Alias: alias, Path: im.Path})
 		}
-		for _, src := range parts.Decls {
-			declSrc := "package p\n" + src
-			parsed, err := parser.ParseFile(token.NewFileSet(), "decl.go", declSrc, parser.ParseComments)
-			if err != nil {
-				return Err[string, string]("go/ast parse decl: " + err.Error() + "\n" + src)
-			}
-			f.Decls = append(f.Decls, parsed.Decls...)
+		source, err := goast.RenderWithLegacy(parts.PackageName, imports, parts.AstDecls, parts.Decls)
+		if err != nil {
+			return Err[string, string]("goast render: " + err.Error())
 		}
-		var buf bytes.Buffer
-		if err := format.Node(&buf, token.NewFileSet(), f); err != nil {
-			return Err[string, string]("go/format: " + err.Error())
-		}
-		return Ok[string, string](buf.String())
+		return Ok[string, string](source)
 	}()
 }
 func parseSourceAsAst2(input string) Result[ast2.File, string] {

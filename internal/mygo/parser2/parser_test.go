@@ -229,6 +229,23 @@ end
 	}
 }
 
+func TestParseInlineGoOperands(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func foo(n: Int) -> String
+  go[String]{code: "{T}({v})" in v = n type T = String}
+end
+`)
+	body := fn.F4.(ast2.ExprBlockExpr)
+	expr := body.F0[0].(ast2.StmtExprStmt).F0.(ast2.ExprInlineGoExpr)
+	if len(expr.F2) != 1 || expr.F2[0].Name != "v" {
+		t.Fatalf("value operands = %#v, want one v operand", expr.F2)
+	}
+	if len(expr.F3) != 1 || expr.F3[0].Name != "T" {
+		t.Fatalf("type operands = %#v, want one T operand", expr.F3)
+	}
+}
+
 func parseSingleFunc(t *testing.T, src string) ast2.DeclFuncDecl {
 	t.Helper()
 

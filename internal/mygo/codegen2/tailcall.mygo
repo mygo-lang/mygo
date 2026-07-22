@@ -1,40 +1,44 @@
 package codegen2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 
-struct TailCallParts
-  Temps: Slice[String]
-  Assigns: Slice[String]
+struct TailAstParts
+  Stmts: Slice[goast.Stmt]
+  Values: Slice[goast.Expr]
 end
-func tailCallStmt(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
+
+func tailCallAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
   switch expr
-    case CallExpr(_callee, args) =>
-      let parts = tailCallParts(args, ctx, 0, TailCallParts { Temps: [] as Slice[String], Assigns: [] as Slice[String] })
+    case CallExpr(_, args) =>
+      let parts = tailCallAstParts(args, ctx, 0, TailAstParts { Stmts: [] as Slice[goast.Stmt], Values: [] as Slice[goast.Expr] })
       switch parts
-        case Ok(p) => Ok(joinStrings(p.Temps, "\n") + "\n" + joinStrings(p.Assigns, "\n") + "\ncontinue")
         case Err(msg) => Err(msg)
+        case Ok(p) =>
+          let lhs = ctx.tailRecParamNames.Map(func(name: String) -> goast.Expr goast.Ident(name) end)
+          Ok(goast.AppendStmts(p.Stmts, astTwoStmts(goast.Assign(lhs, "=", p.Values), goast.Continue())))
       end
     case _ => Err("internal tail-call mismatch")
   end
 end
 
-func tailCallParts(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: TailCallParts) -> Result[TailCallParts, String]
+func tailCallAstParts(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: TailAstParts) -> Result[TailAstParts, String]
   if index >= args.Len() then
     Ok(out)
   else
-    let a = translateExpr(args.Get(index).UnwrapOr(ast2.Expr.UnitExpr()), ctx)
-    switch a
+    let value = translateExprAst(args.Get(index).UnwrapOr(ast2.Expr.UnitExpr()), ctx)
+    switch value
       case Err(msg) => Err(msg)
-      case Ok(src) =>
-        let tmp = "__tail_" + index.ToString()
-        tailCallParts(args, ctx, index + 1, TailCallParts {
-          Temps: out.Temps.Append(tmp + " := " + src),
-          Assigns: out.Assigns.Append(ctx.tailRecParamNames.Get(index).UnwrapOr("_") + " = " + tmp),
+      case Ok(v) =>
+        let temp = "__tail_" + index.ToString()
+        let stmts = goast.AppendStmts(v.Pre, astSingleStmt(goast.LocalFromParts(temp, "", v.Expr)))
+        tailCallAstParts(args, ctx, index + 1, TailAstParts {
+          Stmts: goast.AppendStmts(out.Stmts, stmts),
+          Values: out.Values.Append(goast.Ident(temp)),
         })
     end
   end
 end
-
 func isTailSelfCall(expr: ast2.Expr, ctx: Ref[egCtx]) -> Bool
   switch expr
     case CallExpr(callee, args) =>
@@ -71,7 +75,7 @@ func containsTailCallBlock(items: Slice[ast2.Stmt], name: String) -> Bool
   if items.Len() == 0 then
     false
   else
-    let last = items.Get(items.Len() - 1).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr()))
+    let last: ast2.Stmt = items.Get(items.Len() - 1).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr()))
     switch last
       case ExprStmt(e) => containsTailCall(e, name)
       case _ => false

@@ -10,6 +10,37 @@ import (
 	. "github.com/mygo-lang/mygo/prelude"
 )
 
+type InlineGoBinding interface {
+	isInlineGoBinding()
+}
+type InlineGoBindingValueBinding struct {
+	F0 string
+	F1 ast2.Expr
+}
+
+func (_ InlineGoBindingValueBinding) isInlineGoBinding() {
+}
+func InlineGoBindingValueBindingCtor(a0 string, a1 ast2.Expr) InlineGoBinding {
+	return InlineGoBindingValueBinding{F0: a0, F1: a1}
+}
+
+type InlineGoBindingTypeBinding struct {
+	F0 string
+	F1 ast2.TypeExpr
+}
+
+func (_ InlineGoBindingTypeBinding) isInlineGoBinding() {
+}
+func InlineGoBindingTypeBindingCtor(a0 string, a1 ast2.TypeExpr) InlineGoBinding {
+	return InlineGoBindingTypeBinding{F0: a0, F1: a1}
+}
+
+type InlineGoParts struct {
+	Code   string
+	Values []ast2.GoOperand
+	Types  []ast2.GoTypeOperand
+}
+
 func ParseFile(input string) Result[ast2.File, string] {
 	r_1 := ps.ParseInput(fileParser(), input)
 	return func() Result[ast2.File, string] {
@@ -357,10 +388,8 @@ func inlineGoStmt() ps.Parser[ast2.Stmt] {
 			return ps.PBind(typeExpr(), func(typ ast2.TypeExpr) ps.Parser[ast2.Stmt] {
 				return ps.PBind(sym("]"), func(_ string) ps.Parser[ast2.Stmt] {
 					return ps.PBind(sym("{"), func(_ string) ps.Parser[ast2.Stmt] {
-						return ps.PBind(ps.PMap(rawGoBody(), func(body string) string {
-							return body
-						}), func(body string) ps.Parser[ast2.Stmt] {
-							return ps.PThen(sym("}"), ps.PPure(ast2.StmtExprStmtCtor(ast2.ExprInlineGoExprCtor(&typ, body))))
+						return ps.PBind(inlineGoBody(), func(parts InlineGoParts) ps.Parser[ast2.Stmt] {
+							return ps.PThen(sym("}"), ps.PPure(ast2.StmtExprStmtCtor(ast2.ExprInlineGoExprCtor(&typ, parts.Code, parts.Values, parts.Types))))
 						})
 					})
 				})
@@ -382,16 +411,56 @@ func inlineGoExpr() ps.Parser[ast2.Expr] {
 			return ps.PBind(typeExpr(), func(typ ast2.TypeExpr) ps.Parser[ast2.Expr] {
 				return ps.PBind(sym("]"), func(_ string) ps.Parser[ast2.Expr] {
 					return ps.PBind(sym("{"), func(_ string) ps.Parser[ast2.Expr] {
-						return ps.PBind(ps.PMap(rawGoBody(), func(body string) string {
-							return body
-						}), func(body string) ps.Parser[ast2.Expr] {
-							return ps.PThen(sym("}"), ps.PPure(ast2.ExprInlineGoExprCtor(&typ, body)))
+						return ps.PBind(inlineGoBody(), func(parts InlineGoParts) ps.Parser[ast2.Expr] {
+							return ps.PThen(sym("}"), ps.PPure(ast2.ExprInlineGoExprCtor(&typ, parts.Code, parts.Values, parts.Types)))
 						})
 					})
 				})
 			})
 		})
 	})
+}
+func inlineGoBody() ps.Parser[InlineGoParts] {
+	return ps.PBind(kw("code"), func(_ string) ps.Parser[InlineGoParts] {
+		return ps.PBind(sym(":"), func(_ string) ps.Parser[InlineGoParts] {
+			return ps.PBind(stringLiteral(), func(code string) ps.Parser[InlineGoParts] {
+				return ps.PMap(ps.PMany(inlineGoBinding()), func(bindings []InlineGoBinding) InlineGoParts {
+					return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(bindings, InlineGoParts{Code: code, Values: []ast2.GoOperand([]ast2.GoOperand{}), Types: []ast2.GoTypeOperand([]ast2.GoTypeOperand{})}, func(out InlineGoParts, binding InlineGoBinding) InlineGoParts {
+						return func() InlineGoParts {
+							if v_8, ok := binding.(InlineGoBindingValueBinding); ok {
+								return func() InlineGoParts {
+									return InlineGoParts{Code: out.Code, Values: MygoIN5SliceM6Append(out.Values, ast2.GoOperand{Name: v_8.F0, Value: v_8.F1}), Types: out.Types}
+								}()
+							} else {
+								if v_7, ok := binding.(InlineGoBindingTypeBinding); ok {
+									return func() InlineGoParts {
+										return InlineGoParts{Code: out.Code, Values: out.Values, Types: MygoIN5SliceM6Append(out.Types, ast2.GoTypeOperand{Name: v_7.F0, Type: v_7.F1})}
+									}()
+								} else {
+									panic("unreachable")
+								}
+							}
+						}()
+					})
+				})
+			})
+		})
+	})
+}
+func inlineGoBinding() ps.Parser[InlineGoBinding] {
+	return ps.PChoice([]ps.Parser[InlineGoBinding]{ps.PAttempt(ps.PBind(kw("in"), func(_ string) ps.Parser[InlineGoBinding] {
+		return ps.PBind(identifier(), func(name string) ps.Parser[InlineGoBinding] {
+			return ps.PMap(ps.PThen(sym("="), expr()), func(value ast2.Expr) InlineGoBinding {
+				return InlineGoBindingValueBindingCtor(name, value)
+			})
+		})
+	})), ps.PBind(kw("type"), func(_ string) ps.Parser[InlineGoBinding] {
+		return ps.PBind(identifier(), func(name string) ps.Parser[InlineGoBinding] {
+			return ps.PMap(ps.PThen(sym("="), typeExpr()), func(typ ast2.TypeExpr) InlineGoBinding {
+				return InlineGoBindingTypeBindingCtor(name, typ)
+			})
+		})
+	})})
 }
 func rawGoBody() ps.Parser[string] {
 	return ps.PBind(ps.PMany(rawGoBodyChar()), func(chars []rune) ps.Parser[string] {
@@ -454,16 +523,16 @@ func lazyIfElseTail() ps.Parser[ast2.Expr] {
 }
 func bodyExprFromBlock(body ast2.Expr) ast2.Expr {
 	return func() ast2.Expr {
-		if v_7, ok := body.(ast2.ExprBlockExpr); ok {
+		if v_9, ok := body.(ast2.ExprBlockExpr); ok {
 			return func() ast2.Expr {
 				return func() ast2.Expr {
-					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_7.F0) == 1 {
+					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_9.F0) == 1 {
 						return func() ast2.Expr {
-							first_12 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_7.F0, 0), ast2.StmtExprStmtCtor(ast2.ExprUnitExprCtor()))
+							first_12 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_9.F0, 0), ast2.StmtExprStmtCtor(ast2.ExprUnitExprCtor()))
 							return func() ast2.Expr {
-								if v_8, ok := first_12.(ast2.StmtExprStmt); ok {
+								if v_10, ok := first_12.(ast2.StmtExprStmt); ok {
 									return func() ast2.Expr {
-										return v_8.F0
+										return v_10.F0
 									}()
 								} else {
 									return func() ast2.Expr {
@@ -578,15 +647,28 @@ func primaryExpr() ps.Parser[ast2.Expr] {
 		return ast2.ExprBoolExprCtor(true)
 	}), ps.PMap(kw("false"), func(_ string) ast2.Expr {
 		return ast2.ExprBoolExprCtor(false)
-	}), ps.PMap(paren(ps.PPure(struct {
-	}{})), func(_ struct {
-	}) ast2.Expr {
-		return ast2.ExprUnitExprCtor()
-	}), paren[ast2.Expr](lazyExpr()), ps.PAttempt(ps.PBind(identifier(), func(typeName string) ps.Parser[ast2.Expr] {
+	}), tupleOrParenExpr(), ps.PAttempt(ps.PBind(identifier(), func(typeName string) ps.Parser[ast2.Expr] {
 		return structLitFields(typeName)
 	})), ps.PMap(identifier(), func(v string) ast2.Expr {
 		return ast2.ExprIdentExprCtor(v)
 	})})
+}
+func tupleOrParenExpr() ps.Parser[ast2.Expr] {
+	return ps.PBind(paren(ps.PSepBy(lazyExpr(), sym(","))), func(items []ast2.Expr) ps.Parser[ast2.Expr] {
+		return func() ps.Parser[ast2.Expr] {
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
+				return ps.PPure(ast2.ExprUnitExprCtor())
+			} else {
+				return func() ps.Parser[ast2.Expr] {
+					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 1 {
+						return ps.PPure(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.ExprUnitExprCtor()))
+					} else {
+						return ps.PPure(ast2.ExprTupleExprCtor(items))
+					}
+				}()
+			}
+		}()
+	})
 }
 func binaryOp() ps.Parser[string] {
 	return ps.PChoice([]ps.Parser[string]{sym("=="), sym("!="), sym("<="), sym(">="), sym("<|"), sym("|>"), sym("+"), sym("-"), sym("*"), sym("/"), sym("<"), sym(">")})
@@ -920,9 +1002,9 @@ func defaultImportAlias(path string) string {
 }
 func formatError(err Option[ps.ParseError], pos ps.Position) string {
 	return func() string {
-		if v_10, ok := err.(OptionSome[ps.ParseError]); ok {
+		if v_12, ok := err.(OptionSome[ps.ParseError]); ok {
 			return func() string {
-				return "parse error at " + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_10.F0.Position.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_10.F0.Position.Column) + ": " + v_10.F0.Message
+				return "parse error at " + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_12.F0.Position.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_12.F0.Position.Column) + ": " + v_12.F0.Message
 			}()
 		} else {
 			if _, ok := err.(OptionNone[ps.ParseError]); ok {
