@@ -2,114 +2,14 @@ package parser2
 
 import strings "go:strings"
 import ps "github.com/mygo-lang/mygo/lib/text/parsec"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 
 # A MyGO parser written in MyGO, backed by the parsec combinator library.
 #
 # parser2 intentionally owns a compact AST first. That keeps this package
 # self-hostable while the yacc parser remains the production parser.
 
-struct File
-  PackageName: String
-  Decls: Slice[Decl]
-end
-
-enum Decl
-  ImportDecl(String, String)
-  FuncDecl(String, Slice[String], Slice[Param], Option[TypeExpr], Expr)
-  StructDecl(String, Slice[String], Slice[Field])
-  EnumDecl(String, Slice[String], Slice[Variant])
-  InterfaceDecl(String, Slice[String], Slice[FuncSig])
-  ImplDecl(Slice[String], TypeExpr, Option[TypeExpr], Slice[ImplMethod])
-end
-
-struct Param
-  Name: String
-  Type: TypeExpr
-end
-
-struct Field
-  Name: String
-  Type: TypeExpr
-  Tag: Option[String]
-end
-
-struct Variant
-  Name: String
-  Fields: Slice[TypeExpr]
-end
-
-struct FuncSig
-  Name: String
-  TypeParams: Slice[String]
-  Params: Slice[Param]
-  Ret: Option[TypeExpr]
-end
-
-struct ImplMethod
-  Sig: FuncSig
-  Body: Expr
-end
-
-enum TypeExpr
-  NamedType(String, Slice[TypeExpr])
-  FuncType(Slice[TypeExpr], Ref[TypeExpr])
-  TupleType(Slice[TypeExpr])
-  UnitType
-  # 内联 Go 嵌入类型: go[T]{...}
-  InlineGo(Ref[TypeExpr], String)
-end
-
-struct Bind
-  Name: String
-  Type: Option[TypeExpr]
-  Value: Expr
-end
-
-struct StructLitField
-  Name: String
-  Value: Expr
-end
-
-# Stmt 语句类型，用于块中的独立语句。
-# 每个 Stmt 变体内的 Expr 均为纯表达式（不包含语句语义的语法节点）。
-enum Stmt
-  # 表达式语句：将表达式用作语句（丢弃其值）
-  ExprStmt(Expr)
-  # let 不可变变量声明
-  LetStmt(Bind)
-  # var 可变变量声明
-  VarStmt(Bind)
-  # while 循环
-  WhileStmt(Expr, Expr)
-  # 赋值语句
-  AssignStmt(Expr, Expr)
-  # return 语句（无返回值）
-  ReturnStmt
-  # return 语句（有返回值）
-  ReturnWithStmt(Expr)
-end
-
-# Expr 纯表达式类型，不包含语句语义。
-# 所有控制流结构和带副作用的语法节点均为 Stmt。
-enum Expr
-  IdentExpr(String)
-  NumberExpr(String)
-  StringExpr(String)
-  BoolExpr(Bool)
-  UnitExpr
-  CallExpr(Ref[Expr], Slice[Expr])
-  FieldExpr(Ref[Expr], String)
-  UnaryExpr(String, Ref[Expr])
-  BinaryExpr(String, Ref[Expr], Ref[Expr])
-  IfExpr(Ref[Expr], Ref[Expr], Ref[Expr])
-  BlockExpr(Slice[Stmt])
-  # 结构体字面量
-  StructLitExpr(String, Slice[StructLitField])
-  # 内联 Go 嵌入
-  InlineGoExpr(Ref[TypeExpr], String)
-end
-
-func ParseFile(input: String) -> Result[File, String]
+func ParseFile(input: String) -> Result[ast2.File, String]
   let r = ps.ParseInput(fileParser(), input)
   if r.Ok then
     Ok(r.Value)
@@ -118,17 +18,17 @@ func ParseFile(input: String) -> Result[File, String]
   end
 end
 
-func fileParser() -> ps.Parser[File]
-  ps.PBind(kw("package"), func(_: String) -> ps.Parser[File]
-    ps.PBind(identifier(), func(pkg: String) -> ps.Parser[File]
-      ps.PBind(ps.PMany(decl()), func(decls: Slice[Decl]) -> ps.Parser[File]
-        ps.PThen(trivia(), ps.PThen(ps.PEof(), ps.PPure(File { PackageName: pkg, Decls: decls })))
+func fileParser() -> ps.Parser[ast2.File]
+  ps.PBind(kw("package"), func(_: String) -> ps.Parser[ast2.File]
+    ps.PBind(identifier(), func(pkg: String) -> ps.Parser[ast2.File]
+      ps.PBind(ps.PMany(decl()), func(decls: Slice[ast2.Decl]) -> ps.Parser[ast2.File]
+        ps.PThen(trivia(), ps.PThen(ps.PEof(), ps.PPure(ast2.File { PackageName: pkg, Decls: decls })))
       end)
     end)
   end)
 end
 
-func decl() -> ps.Parser[Decl]
+func decl() -> ps.Parser[ast2.Decl]
   ps.PChoice([
     ps.PAttempt(importDecl()),
     ps.PAttempt(structDecl()),
@@ -139,63 +39,63 @@ func decl() -> ps.Parser[Decl]
   ])
 end
 
-func importDecl() -> ps.Parser[Decl]
-  ps.PBind(kw("import"), func(_: String) -> ps.Parser[Decl]
-    ps.PBind(ps.POptional(identifierRaw()), func(alias: Option[String]) -> ps.Parser[Decl]
-      ps.PMap(stringLiteral(), func(path: String) -> Decl
+func importDecl() -> ps.Parser[ast2.Decl]
+  ps.PBind(kw("import"), func(_: String) -> ps.Parser[ast2.Decl]
+    ps.PBind(ps.POptional(identifierRaw()), func(alias: Option[String]) -> ps.Parser[ast2.Decl]
+      ps.PMap(stringLiteral(), func(path: String) -> ast2.Decl
         let realAlias = switch alias
           case Some(a) => a
           case None => defaultImportAlias(path)
         end
-        Decl.ImportDecl(realAlias, path)
+        ast2.Decl.ImportDecl(realAlias, path)
       end)
     end)
   end)
 end
 
-func structDecl() -> ps.Parser[Decl]
-  ps.PBind(kw("struct"), func(_: String) -> ps.Parser[Decl]
-    ps.PBind(identifier(), func(name: String) -> ps.Parser[Decl]
-      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[Decl]
-        ps.PBind(ps.PMany(fieldDecl()), func(fields: Slice[Field]) -> ps.Parser[Decl]
-          ps.PThen(kw("end"), ps.PPure(Decl.StructDecl(name, tps, fields)))
+func structDecl() -> ps.Parser[ast2.Decl]
+  ps.PBind(kw("struct"), func(_: String) -> ps.Parser[ast2.Decl]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Decl]
+      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[ast2.Decl]
+        ps.PBind(ps.PMany(fieldDecl()), func(fields: Slice[ast2.Field]) -> ps.Parser[ast2.Decl]
+          ps.PThen(kw("end"), ps.PPure(ast2.Decl.StructDecl(name, tps, fields)))
         end)
       end)
     end)
   end)
 end
 
-func enumDecl() -> ps.Parser[Decl]
-  ps.PBind(kw("enum"), func(_: String) -> ps.Parser[Decl]
-    ps.PBind(identifier(), func(name: String) -> ps.Parser[Decl]
-      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[Decl]
-        ps.PBind(ps.PMany(variantDecl()), func(vars: Slice[Variant]) -> ps.Parser[Decl]
-          ps.PThen(kw("end"), ps.PPure(Decl.EnumDecl(name, tps, vars)))
+func enumDecl() -> ps.Parser[ast2.Decl]
+  ps.PBind(kw("enum"), func(_: String) -> ps.Parser[ast2.Decl]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Decl]
+      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[ast2.Decl]
+        ps.PBind(ps.PMany(variantDecl()), func(vars: Slice[ast2.Variant]) -> ps.Parser[ast2.Decl]
+          ps.PThen(kw("end"), ps.PPure(ast2.Decl.EnumDecl(name, tps, vars)))
         end)
       end)
     end)
   end)
 end
 
-func interfaceDecl() -> ps.Parser[Decl]
-  ps.PBind(kw("interface"), func(_: String) -> ps.Parser[Decl]
-    ps.PBind(identifier(), func(name: String) -> ps.Parser[Decl]
-      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[Decl]
-        ps.PBind(ps.PMany(funcSig()), func(methods: Slice[FuncSig]) -> ps.Parser[Decl]
-          ps.PThen(kw("end"), ps.PPure(Decl.InterfaceDecl(name, tps, methods)))
+func interfaceDecl() -> ps.Parser[ast2.Decl]
+  ps.PBind(kw("interface"), func(_: String) -> ps.Parser[ast2.Decl]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Decl]
+      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[ast2.Decl]
+        ps.PBind(ps.PMany(funcSig()), func(methods: Slice[ast2.FuncSig]) -> ps.Parser[ast2.Decl]
+          ps.PThen(kw("end"), ps.PPure(ast2.Decl.InterfaceDecl(name, tps, methods)))
         end)
       end)
     end)
   end)
 end
 
-func implDecl() -> ps.Parser[Decl]
-  ps.PBind(kw("impl"), func(_: String) -> ps.Parser[Decl]
-    ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[Decl]
-      ps.PBind(typeExpr(), func(target: TypeExpr) -> ps.Parser[Decl]
-        ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(iface: Option[TypeExpr]) -> ps.Parser[Decl]
-          ps.PBind(ps.PMany(implMethod()), func(methods: Slice[ImplMethod]) -> ps.Parser[Decl]
-            ps.PThen(kw("end"), ps.PPure(Decl.ImplDecl(tps, target, iface, methods)))
+func implDecl() -> ps.Parser[ast2.Decl]
+  ps.PBind(kw("impl"), func(_: String) -> ps.Parser[ast2.Decl]
+    ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[ast2.Decl]
+      ps.PBind(typeExpr(), func(target: ast2.TypeExpr) -> ps.Parser[ast2.Decl]
+        ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(iface: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Decl]
+          ps.PBind(ps.PMany(implMethod()), func(methods: Slice[ast2.ImplMethod]) -> ps.Parser[ast2.Decl]
+            ps.PThen(kw("end"), ps.PPure(ast2.Decl.ImplDecl(tps, target, iface, methods)))
           end)
         end)
       end)
@@ -203,35 +103,35 @@ func implDecl() -> ps.Parser[Decl]
   end)
 end
 
-func funcDecl() -> ps.Parser[Decl]
-  ps.PMap(funcSigAndBody(), func(pair: (FuncSig, Expr)) -> Decl
+func funcDecl() -> ps.Parser[ast2.Decl]
+  ps.PMap(funcSigAndBody(), func(pair: (ast2.FuncSig, ast2.Expr)) -> ast2.Decl
     let (sig, body) = pair
-    Decl.FuncDecl(sig.Name, sig.TypeParams, sig.Params, sig.Ret, body)
+    ast2.Decl.FuncDecl(sig.Name, sig.TypeParams, sig.Params, sig.Ret, body)
   end)
 end
 
-func funcSigAndBody() -> ps.Parser[(FuncSig, Expr)]
-  ps.PBind(funcSig(), func(sig: FuncSig) -> ps.Parser[(FuncSig, Expr)]
-    ps.PBind(blockUntilEnd(), func(body: Expr) -> ps.Parser[(FuncSig, Expr)]
+func funcSigAndBody() -> ps.Parser[(ast2.FuncSig, ast2.Expr)]
+  ps.PBind(funcSig(), func(sig: ast2.FuncSig) -> ps.Parser[(ast2.FuncSig, ast2.Expr)]
+    ps.PBind(blockUntilEnd(), func(body: ast2.Expr) -> ps.Parser[(ast2.FuncSig, ast2.Expr)]
       ps.PThen(kw("end"), ps.PPure((sig, body)))
     end)
   end)
 end
 
-func implMethod() -> ps.Parser[ImplMethod]
-  ps.PMap(funcSigAndBody(), func(pair: (FuncSig, Expr)) -> ImplMethod
+func implMethod() -> ps.Parser[ast2.ImplMethod]
+  ps.PMap(funcSigAndBody(), func(pair: (ast2.FuncSig, ast2.Expr)) -> ast2.ImplMethod
     let (sig, body) = pair
-    ImplMethod { Sig: sig, Body: body }
+    ast2.ImplMethod { Sig: sig, Body: body }
   end)
 end
 
-func funcSig() -> ps.Parser[FuncSig]
-  ps.PBind(kw("func"), func(_: String) -> ps.Parser[FuncSig]
-    ps.PBind(identifier(), func(name: String) -> ps.Parser[FuncSig]
-      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[FuncSig]
-        ps.PBind(paren(ps.PSepBy(param(), sym(","))), func(params: Slice[Param]) -> ps.Parser[FuncSig]
-          ps.PMap(ps.POptional(ps.PThen(sym("->"), typeExpr())), func(ret: Option[TypeExpr]) -> FuncSig
-            FuncSig { Name: name, TypeParams: tps, Params: params, Ret: ret }
+func funcSig() -> ps.Parser[ast2.FuncSig]
+  ps.PBind(kw("func"), func(_: String) -> ps.Parser[ast2.FuncSig]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.FuncSig]
+      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[ast2.FuncSig]
+        ps.PBind(paren(ps.PSepBy(param(), sym(","))), func(params: Slice[ast2.Param]) -> ps.Parser[ast2.FuncSig]
+          ps.PMap(ps.POptional(ps.PThen(sym("->"), typeExpr())), func(ret: Option[ast2.TypeExpr]) -> ast2.FuncSig
+            ast2.FuncSig { Name: name, TypeParams: tps, Params: params, Ret: ret }
           end)
         end)
       end)
@@ -239,41 +139,41 @@ func funcSig() -> ps.Parser[FuncSig]
   end)
 end
 
-func fieldDecl() -> ps.Parser[Field]
-  ps.PBind(identifier(), func(name: String) -> ps.Parser[Field]
-    ps.PBind(sym(":"), func(_: String) -> ps.Parser[Field]
-      ps.PBind(typeExpr(), func(typ: TypeExpr) -> ps.Parser[Field]
-        ps.PMap(ps.POptional(stringLiteral()), func(tag: Option[String]) -> Field
-          Field { Name: name, Type: typ, Tag: tag }
+func fieldDecl() -> ps.Parser[ast2.Field]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Field]
+    ps.PBind(sym(":"), func(_: String) -> ps.Parser[ast2.Field]
+      ps.PBind(typeExpr(), func(typ: ast2.TypeExpr) -> ps.Parser[ast2.Field]
+        ps.PMap(ps.POptional(stringLiteral()), func(tag: Option[String]) -> ast2.Field
+          ast2.Field { Name: name, Type: typ, Tag: tag }
         end)
       end)
     end)
   end)
 end
 
-func variantDecl() -> ps.Parser[Variant]
-  ps.PBind(identifier(), func(name: String) -> ps.Parser[Variant]
-    ps.PMap(ps.POptional(paren(ps.PSepBy(typeExpr(), sym(",")))), func(fields: Option[Slice[TypeExpr]]) -> Variant
+func variantDecl() -> ps.Parser[ast2.Variant]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Variant]
+    ps.PMap(ps.POptional(paren(ps.PSepBy(typeExpr(), sym(",")))), func(fields: Option[Slice[ast2.TypeExpr]]) -> ast2.Variant
       let actual = switch fields
         case Some(items) => items
         case None => []
       end
-      Variant { Name: name, Fields: actual }
+      ast2.Variant { Name: name, Fields: actual }
     end)
   end)
 end
 
-func param() -> ps.Parser[Param]
-  ps.PBind(identifier(), func(name: String) -> ps.Parser[Param]
-    ps.PBind(sym(":"), func(_: String) -> ps.Parser[Param]
-      ps.PMap(typeExpr(), func(typ: TypeExpr) -> Param
-        Param { Name: name, Type: typ }
+func param() -> ps.Parser[ast2.Param]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Param]
+    ps.PBind(sym(":"), func(_: String) -> ps.Parser[ast2.Param]
+      ps.PMap(typeExpr(), func(typ: ast2.TypeExpr) -> ast2.Param
+        ast2.Param { Name: name, Type: typ }
       end)
     end)
   end)
 end
 
-func typeExpr() -> ps.Parser[TypeExpr]
+func typeExpr() -> ps.Parser[ast2.TypeExpr]
   ps.PChoice([
     ps.PAttempt(funcType()),
     ps.PAttempt(namedType()),
@@ -281,38 +181,38 @@ func typeExpr() -> ps.Parser[TypeExpr]
   ])
 end
 
-func lazyTypeExpr() -> ps.Parser[TypeExpr]
-  ps.Parser[TypeExpr] {
-    Run: func(state: ps.State) -> ps.Reply[TypeExpr]
+func lazyTypeExpr() -> ps.Parser[ast2.TypeExpr]
+  ps.Parser[ast2.TypeExpr] {
+    Run: func(state: ps.State) -> ps.Reply[ast2.TypeExpr]
       typeExpr().Run(state)
     end
   }
 end
 
-func funcType() -> ps.Parser[TypeExpr]
-  ps.PBind(kw("func"), func(_: String) -> ps.Parser[TypeExpr]
-    ps.PBind(paren(ps.PSepBy(lazyTypeExpr(), sym(","))), func(params: Slice[TypeExpr]) -> ps.Parser[TypeExpr]
-      ps.PMap(ps.PThen(sym("->"), lazyTypeExpr()), func(ret: TypeExpr) -> TypeExpr
-        TypeExpr.FuncType(params, Ref.new(ret))
+func funcType() -> ps.Parser[ast2.TypeExpr]
+  ps.PBind(kw("func"), func(_: String) -> ps.Parser[ast2.TypeExpr]
+    ps.PBind(paren(ps.PSepBy(lazyTypeExpr(), sym(","))), func(params: Slice[ast2.TypeExpr]) -> ps.Parser[ast2.TypeExpr]
+      ps.PMap(ps.PThen(sym("->"), lazyTypeExpr()), func(ret: ast2.TypeExpr) -> ast2.TypeExpr
+        ast2.TypeExpr.FuncType(params, Ref.new(ret))
       end)
     end)
   end)
 end
 
-func tupleType() -> ps.Parser[TypeExpr]
-  ps.PBind(paren(ps.PSepBy(lazyTypeExpr(), sym(","))), func(items: Slice[TypeExpr]) -> ps.Parser[TypeExpr]
+func tupleType() -> ps.Parser[ast2.TypeExpr]
+  ps.PBind(paren(ps.PSepBy(lazyTypeExpr(), sym(","))), func(items: Slice[ast2.TypeExpr]) -> ps.Parser[ast2.TypeExpr]
     if items.Len() == 0 then
-      ps.PPure(TypeExpr.UnitType)
+      ps.PPure(ast2.TypeExpr.UnitType)
     else
-      ps.PPure(TypeExpr.TupleType(items))
+      ps.PPure(ast2.TypeExpr.TupleType(items))
     end
   end)
 end
 
-func namedType() -> ps.Parser[TypeExpr]
-  ps.PBind(qualifiedIdentifier(), func(name: String) -> ps.Parser[TypeExpr]
-    ps.PMap(typeArgList(), func(args: Slice[TypeExpr]) -> TypeExpr
-      TypeExpr.NamedType(name, args)
+func namedType() -> ps.Parser[ast2.TypeExpr]
+  ps.PBind(qualifiedIdentifier(), func(name: String) -> ps.Parser[ast2.TypeExpr]
+    ps.PMap(typeArgList(), func(args: Slice[ast2.TypeExpr]) -> ast2.TypeExpr
+      ast2.TypeExpr.NamedType(name, args)
     end)
   end)
 end
@@ -332,27 +232,27 @@ func typeParamList() -> ps.Parser[Slice[String]]
   ps.POrElse(brackets(ps.PSepBy(identifier(), sym(","))), ps.PPure([] as Slice[String]))
 end
 
-func typeArgList() -> ps.Parser[Slice[TypeExpr]]
-  ps.POrElse(brackets(ps.PSepBy(lazyTypeExpr(), sym(","))), ps.PPure([] as Slice[TypeExpr]))
+func typeArgList() -> ps.Parser[Slice[ast2.TypeExpr]]
+  ps.POrElse(brackets(ps.PSepBy(lazyTypeExpr(), sym(","))), ps.PPure([] as Slice[ast2.TypeExpr]))
 end
 
-func blockUntilEnd() -> ps.Parser[Expr]
+func blockUntilEnd() -> ps.Parser[ast2.Expr]
   blockUntil(kw("end"))
 end
 
-func blockUntil(stopParser: ps.Parser[String]) -> ps.Parser[Expr]
-  ps.Parser[Expr] {
-    Run: func(state: ps.State) -> ps.Reply[Expr]
+func blockUntil(stopParser: ps.Parser[String]) -> ps.Parser[ast2.Expr]
+  ps.Parser[ast2.Expr] {
+    Run: func(state: ps.State) -> ps.Reply[ast2.Expr]
       blockItems(stopParser, state, state, [])
     end
   }
 end
 
-func blockItems(stopParser: ps.Parser[String], start: ps.State, cur: ps.State, items: Slice[Stmt]) -> ps.Reply[Expr]
+func blockItems(stopParser: ps.Parser[String], start: ps.State, cur: ps.State, items: Slice[ast2.Stmt]) -> ps.Reply[ast2.Expr]
   let stop = ps.PLookAhead(stopParser).Run(cur)
   if stop.Ok then
-    ps.Reply[Expr] {
-      Ok: true, Consumed: cur.Index != start.Index, Value: Expr.BlockExpr(items),
+    ps.Reply[ast2.Expr] {
+      Ok: true, Consumed: cur.Index != start.Index, Value: ast2.Expr.BlockExpr(items),
       State: cur, Error: ps.EmptyError(cur.Position)
     }
   else
@@ -360,8 +260,8 @@ func blockItems(stopParser: ps.Parser[String], start: ps.State, cur: ps.State, i
     if r.Ok then
       blockItems(stopParser, start, r.State, items.Append(r.Value))
     else
-      ps.Reply[Expr] {
-        Ok: false, Consumed: false, Value: Expr.UnitExpr(),
+      ps.Reply[ast2.Expr] {
+        Ok: false, Consumed: false, Value: ast2.Expr.UnitExpr(),
         State: cur, Error: r.Error
       }
     end
@@ -369,7 +269,7 @@ func blockItems(stopParser: ps.Parser[String], start: ps.State, cur: ps.State, i
 end
 
 # stmt 解析语句。语句可以包含内嵌的表达式。
-func stmt() -> ps.Parser[Stmt]
+func stmt() -> ps.Parser[ast2.Stmt]
   ps.PChoice([
     ps.PAttempt(inlineGoStmt()),
     ps.PAttempt(returnStmt()),
@@ -383,35 +283,37 @@ func stmt() -> ps.Parser[Stmt]
 end
 
 # ifStmt 将 if 表达式包装为语句。
-func ifStmt() -> ps.Parser[Stmt]
-  ps.PMap(ifExpr(), func(e: Expr) -> Stmt
-    Stmt.ExprStmt(e)
+func ifStmt() -> ps.Parser[ast2.Stmt]
+  ps.PMap(ifExpr(), func(e: ast2.Expr) -> ast2.Stmt
+    ast2.Stmt.ExprStmt(e)
   end)
 end
 
 # exprStmt 将表达式包装为表达式语句
-func exprStmt() -> ps.Parser[Stmt]
-  ps.PMap(expr(), func(e: Expr) -> Stmt Stmt.ExprStmt(e) end)
+func exprStmt() -> ps.Parser[ast2.Stmt]
+  ps.PMap(expr(), func(e: ast2.Expr) -> ast2.Stmt
+    ast2.Stmt.ExprStmt(e)
+  end)
 end
 
 # 赋值语句解析: 左值 = 右值
-func assignStmt() -> ps.Parser[Stmt]
-  ps.PBind(postfixExpr(), func(lhs: Expr) -> ps.Parser[Stmt]
-    ps.PBind(sym("="), func(_: String) -> ps.Parser[Stmt]
-      ps.PMap(expr(), func(rhs: Expr) -> Stmt
-        Stmt.AssignStmt(lhs, rhs)
+func assignStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(postfixExpr(), func(lhs: ast2.Expr) -> ps.Parser[ast2.Stmt]
+    ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
+      ps.PMap(expr(), func(rhs: ast2.Expr) -> ast2.Stmt
+        ast2.Stmt.AssignStmt(lhs, rhs)
       end)
     end)
   end)
 end
 
-func letStmt() -> ps.Parser[Stmt]
-  ps.PBind(kw("let"), func(_: String) -> ps.Parser[Stmt]
-    ps.PBind(identifier(), func(name: String) -> ps.Parser[Stmt]
-      ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ: Option[TypeExpr]) -> ps.Parser[Stmt]
-        ps.PBind(sym("="), func(_: String) -> ps.Parser[Stmt]
-          ps.PMap(expr(), func(value: Expr) -> Stmt
-            Stmt.LetStmt(Bind { Name: name, Type: typ, Value: value })
+func letStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(kw("let"), func(_: String) -> ps.Parser[ast2.Stmt]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Stmt]
+      ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Stmt]
+        ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
+          ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
+            ast2.Stmt.LetStmt(ast2.Bind { Name: name, Type: typ, Value: value })
           end)
         end)
       end)
@@ -419,13 +321,13 @@ func letStmt() -> ps.Parser[Stmt]
   end)
 end
 
-func varStmt() -> ps.Parser[Stmt]
-  ps.PBind(kw("var"), func(_: String) -> ps.Parser[Stmt]
-    ps.PBind(identifier(), func(name: String) -> ps.Parser[Stmt]
-      ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ: Option[TypeExpr]) -> ps.Parser[Stmt]
-        ps.PBind(sym("="), func(_: String) -> ps.Parser[Stmt]
-          ps.PMap(expr(), func(value: Expr) -> Stmt
-            Stmt.VarStmt(Bind { Name: name, Type: typ, Value: value })
+func varStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(kw("var"), func(_: String) -> ps.Parser[ast2.Stmt]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Stmt]
+      ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Stmt]
+        ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
+          ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
+            ast2.Stmt.VarStmt(ast2.Bind { Name: name, Type: typ, Value: value })
           end)
         end)
       end)
@@ -433,35 +335,35 @@ func varStmt() -> ps.Parser[Stmt]
   end)
 end
 
-func whileStmt() -> ps.Parser[Stmt]
-  ps.PBind(kw("while"), func(_: String) -> ps.Parser[Stmt]
-    ps.PBind(expr(), func(cond: Expr) -> ps.Parser[Stmt]
-      ps.PBind(blockUntil(kw("end")), func(body: Expr) -> ps.Parser[Stmt]
-        ps.PThen(kw("end"), ps.PPure(Stmt.WhileStmt(cond, body)))
+func whileStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(kw("while"), func(_: String) -> ps.Parser[ast2.Stmt]
+    ps.PBind(expr(), func(cond: ast2.Expr) -> ps.Parser[ast2.Stmt]
+      ps.PBind(blockUntil(kw("end")), func(body: ast2.Expr) -> ps.Parser[ast2.Stmt]
+        ps.PThen(kw("end"), ps.PPure(ast2.Stmt.WhileStmt(cond, body)))
       end)
     end)
   end)
 end
 
-func returnStmt() -> ps.Parser[Stmt]
-  ps.PBind(kw("return"), func(_: String) -> ps.Parser[Stmt]
+func returnStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(kw("return"), func(_: String) -> ps.Parser[ast2.Stmt]
     ps.PChoice([
-      ps.PAttempt(ps.PMap(expr(), func(value: Expr) -> Stmt
-        Stmt.ReturnWithStmt(value)
+      ps.PAttempt(ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
+        ast2.Stmt.ReturnWithStmt(value)
       end)),
-      ps.PPure(Stmt.ReturnStmt),
+      ps.PPure(ast2.Stmt.ReturnStmt),
     ])
   end)
 end
 
-func inlineGoStmt() -> ps.Parser[Stmt]
-  ps.PBind(kw("go"), func(_: String) -> ps.Parser[Stmt]
-    ps.PBind(sym("["), func(_: String) -> ps.Parser[Stmt]
-      ps.PBind(typeExpr(), func(typ: TypeExpr) -> ps.Parser[Stmt]
-        ps.PBind(sym("]"), func(_: String) -> ps.Parser[Stmt]
-          ps.PBind(sym("{"), func(_: String) -> ps.Parser[Stmt]
-            ps.PBind(ps.PMap(rawGoBody(), func(body: String) -> String body end), func(body: String) -> ps.Parser[Stmt]
-              ps.PThen(sym("}"), ps.PPure(Stmt.ExprStmt(Expr.InlineGoExpr(Ref.new(typ), body))))
+func inlineGoStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(kw("go"), func(_: String) -> ps.Parser[ast2.Stmt]
+    ps.PBind(sym("["), func(_: String) -> ps.Parser[ast2.Stmt]
+      ps.PBind(typeExpr(), func(typ: ast2.TypeExpr) -> ps.Parser[ast2.Stmt]
+        ps.PBind(sym("]"), func(_: String) -> ps.Parser[ast2.Stmt]
+          ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Stmt]
+            ps.PBind(ps.PMap(rawGoBody(), func(body: String) -> String body end), func(body: String) -> ps.Parser[ast2.Stmt]
+              ps.PThen(sym("}"), ps.PPure(ast2.Stmt.ExprStmt(ast2.Expr.InlineGoExpr(Ref.new(typ), body))))
             end)
           end)
         end)
@@ -470,9 +372,9 @@ func inlineGoStmt() -> ps.Parser[Stmt]
   end)
 end
 
-func lazyExpr() -> ps.Parser[Expr]
-  ps.Parser[Expr] {
-    Run: func(state: ps.State) -> ps.Reply[Expr]
+func lazyExpr() -> ps.Parser[ast2.Expr]
+  ps.Parser[ast2.Expr] {
+    Run: func(state: ps.State) -> ps.Reply[ast2.Expr]
       expr().Run(state)
     end
   }
@@ -480,7 +382,7 @@ end
 
 # expr 解析纯表达式。
 # 注意：expr 不处理语句变体。要解析包含语句的代码，请使用 stmt()。
-func expr() -> ps.Parser[Expr]
+func expr() -> ps.Parser[ast2.Expr]
   ps.PChoice([
     ps.PAttempt(inlineGoExpr()),
     ps.PAttempt(ifExpr()),
@@ -488,14 +390,14 @@ func expr() -> ps.Parser[Expr]
   ])
 end
 
-func inlineGoExpr() -> ps.Parser[Expr]
-  ps.PBind(kw("go"), func(_: String) -> ps.Parser[Expr]
-    ps.PBind(sym("["), func(_: String) -> ps.Parser[Expr]
-      ps.PBind(typeExpr(), func(typ: TypeExpr) -> ps.Parser[Expr]
-        ps.PBind(sym("]"), func(_: String) -> ps.Parser[Expr]
-          ps.PBind(sym("{"), func(_: String) -> ps.Parser[Expr]
-            ps.PBind(ps.PMap(rawGoBody(), func(body: String) -> String body end), func(body: String) -> ps.Parser[Expr]
-              ps.PThen(sym("}"), ps.PPure(Expr.InlineGoExpr(Ref.new(typ), body)))
+func inlineGoExpr() -> ps.Parser[ast2.Expr]
+  ps.PBind(kw("go"), func(_: String) -> ps.Parser[ast2.Expr]
+    ps.PBind(sym("["), func(_: String) -> ps.Parser[ast2.Expr]
+      ps.PBind(typeExpr(), func(typ: ast2.TypeExpr) -> ps.Parser[ast2.Expr]
+        ps.PBind(sym("]"), func(_: String) -> ps.Parser[ast2.Expr]
+          ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Expr]
+            ps.PBind(ps.PMap(rawGoBody(), func(body: String) -> String body end), func(body: String) -> ps.Parser[ast2.Expr]
+              ps.PThen(sym("}"), ps.PPure(ast2.Expr.InlineGoExpr(Ref.new(typ), body)))
             end)
           end)
         end)
@@ -516,9 +418,9 @@ func rawGoBodyChar() -> ps.Parser[Rune]
   end, "go body character")
 end
 
-func ifExpr() -> ps.Parser[Expr]
-  ps.PBind(kw("if"), func(_: String) -> ps.Parser[Expr]
-    ps.PBind(expr(), func(cond: Expr) -> ps.Parser[Expr]
+func ifExpr() -> ps.Parser[ast2.Expr]
+  ps.PBind(kw("if"), func(_: String) -> ps.Parser[ast2.Expr]
+    ps.PBind(expr(), func(cond: ast2.Expr) -> ps.Parser[ast2.Expr]
       ps.PChoice([
         ifArrowTail(cond),
         ifBlockTail(cond),
@@ -527,57 +429,57 @@ func ifExpr() -> ps.Parser[Expr]
   end)
 end
 
-func ifArrowTail(cond: Expr) -> ps.Parser[Expr]
-  ps.PBind(sym("=>"), func(_: String) -> ps.Parser[Expr]
-    ps.PBind(expr(), func(thenExpr: Expr) -> ps.Parser[Expr]
-      ps.PMap(ps.PThen(kw("else"), expr()), func(elseExpr: Expr) -> Expr
-        Expr.IfExpr(Ref.new(cond), Ref.new(thenExpr), Ref.new(elseExpr))
+func ifArrowTail(cond: ast2.Expr) -> ps.Parser[ast2.Expr]
+  ps.PBind(sym("=>"), func(_: String) -> ps.Parser[ast2.Expr]
+    ps.PBind(expr(), func(thenExpr: ast2.Expr) -> ps.Parser[ast2.Expr]
+      ps.PMap(ps.PThen(kw("else"), expr()), func(elseExpr: ast2.Expr) -> ast2.Expr
+        ast2.Expr.IfExpr(Ref.new(cond), Ref.new(thenExpr), Ref.new(elseExpr))
       end)
     end)
   end)
 end
 
-func ifBlockTail(cond: Expr) -> ps.Parser[Expr]
-  ps.PBind(kw("then"), func(_: String) -> ps.Parser[Expr]
-    ps.PBind(blockUntil(ps.PChoice([kw("elsif"), kw("else"), kw("end")])), func(thenBlock: Expr) -> ps.Parser[Expr]
-      ps.PBind(ifElseTail(), func(elseExpr: Expr) -> ps.Parser[Expr]
-        ps.PThen(kw("end"), ps.PPure(Expr.IfExpr(Ref.new(cond), Ref.new(bodyExprFromBlock(thenBlock)), Ref.new(elseExpr))))
+func ifBlockTail(cond: ast2.Expr) -> ps.Parser[ast2.Expr]
+  ps.PBind(kw("then"), func(_: String) -> ps.Parser[ast2.Expr]
+    ps.PBind(blockUntil(ps.PChoice([kw("elsif"), kw("else"), kw("end")])), func(thenBlock: ast2.Expr) -> ps.Parser[ast2.Expr]
+      ps.PBind(ifElseTail(), func(elseExpr: ast2.Expr) -> ps.Parser[ast2.Expr]
+        ps.PThen(kw("end"), ps.PPure(ast2.Expr.IfExpr(Ref.new(cond), Ref.new(bodyExprFromBlock(thenBlock)), Ref.new(elseExpr))))
       end)
     end)
   end)
 end
 
-func ifElseTail() -> ps.Parser[Expr]
+func ifElseTail() -> ps.Parser[ast2.Expr]
   ps.PChoice([
     ps.PAttempt(ps.PThen(kw("else"), ps.PMap(blockUntil(kw("end")), bodyExprFromBlock))),
-    ps.PAttempt(ps.PBind(kw("elsif"), func(_: String) -> ps.Parser[Expr]
-      ps.PBind(expr(), func(cond: Expr) -> ps.Parser[Expr]
-        ps.PBind(kw("then"), func(_: String) -> ps.Parser[Expr]
-          ps.PBind(blockUntil(ps.PChoice([kw("elsif"), kw("else"), kw("end")])), func(thenBlock: Expr) -> ps.Parser[Expr]
-            ps.PMap(lazyIfElseTail(), func(elseExpr: Expr) -> Expr
-              Expr.IfExpr(Ref.new(cond), Ref.new(bodyExprFromBlock(thenBlock)), Ref.new(elseExpr))
+    ps.PAttempt(ps.PBind(kw("elsif"), func(_: String) -> ps.Parser[ast2.Expr]
+      ps.PBind(expr(), func(cond: ast2.Expr) -> ps.Parser[ast2.Expr]
+        ps.PBind(kw("then"), func(_: String) -> ps.Parser[ast2.Expr]
+          ps.PBind(blockUntil(ps.PChoice([kw("elsif"), kw("else"), kw("end")])), func(thenBlock: ast2.Expr) -> ps.Parser[ast2.Expr]
+            ps.PMap(lazyIfElseTail(), func(elseExpr: ast2.Expr) -> ast2.Expr
+              ast2.Expr.IfExpr(Ref.new(cond), Ref.new(bodyExprFromBlock(thenBlock)), Ref.new(elseExpr))
             end)
           end)
         end)
       end)
     end)),
-    ps.PPure(Expr.UnitExpr),
+    ps.PPure(ast2.Expr.UnitExpr),
   ])
 end
 
-func lazyIfElseTail() -> ps.Parser[Expr]
-  ps.Parser[Expr] {
-    Run: func(state: ps.State) -> ps.Reply[Expr]
+func lazyIfElseTail() -> ps.Parser[ast2.Expr]
+  ps.Parser[ast2.Expr] {
+    Run: func(state: ps.State) -> ps.Reply[ast2.Expr]
       ifElseTail().Run(state)
     end
   }
 end
 
-func bodyExprFromBlock(body: Expr) -> Expr
+func bodyExprFromBlock(body: ast2.Expr) -> ast2.Expr
   switch body
     case BlockExpr(items) =>
       if items.Len() == 1 then
-        let first = items.Get(0).UnwrapOr(Stmt.ExprStmt(Expr.UnitExpr))
+        let first = items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr))
         switch first
           case ExprStmt(e) => e
           case _ => body
@@ -589,63 +491,63 @@ func bodyExprFromBlock(body: Expr) -> Expr
   end
 end
 
-func binaryExpr() -> ps.Parser[Expr]
+func binaryExpr() -> ps.Parser[ast2.Expr]
   pipeExpr()
 end
 
-func pipeExpr() -> ps.Parser[Expr]
+func pipeExpr() -> ps.Parser[ast2.Expr]
   chainLeft(orExpr(), pipeOp(), makeBinary())
 end
 
-func orExpr() -> ps.Parser[Expr]
+func orExpr() -> ps.Parser[ast2.Expr]
   chainLeft(andExpr(), sym("||"), makeBinary())
 end
 
-func andExpr() -> ps.Parser[Expr]
+func andExpr() -> ps.Parser[ast2.Expr]
   chainLeft(compareExpr(), sym("&&"), makeBinary())
 end
 
-func compareExpr() -> ps.Parser[Expr]
+func compareExpr() -> ps.Parser[ast2.Expr]
   chainLeft(addExpr(), compareOp(), makeBinary())
 end
 
-func addExpr() -> ps.Parser[Expr]
+func addExpr() -> ps.Parser[ast2.Expr]
   chainLeft(mulExpr(), addOp(), makeBinary())
 end
 
-func mulExpr() -> ps.Parser[Expr]
+func mulExpr() -> ps.Parser[ast2.Expr]
   chainLeft(unaryExpr(), mulOp(), makeBinary())
 end
 
-func unaryExpr() -> ps.Parser[Expr]
+func unaryExpr() -> ps.Parser[ast2.Expr]
   ps.PChoice([
-    ps.PAttempt(ps.PMap(ps.PThen(sym("!"), lazyUnaryExpr()), func(e: Expr) -> Expr
-      Expr.UnaryExpr("!", Ref.new(e))
+    ps.PAttempt(ps.PMap(ps.PThen(sym("!"), lazyUnaryExpr()), func(e: ast2.Expr) -> ast2.Expr
+      ast2.Expr.UnaryExpr("!", Ref.new(e))
     end)),
-    ps.PAttempt(ps.PMap(ps.PThen(sym("-"), lazyUnaryExpr()), func(e: Expr) -> Expr
-      Expr.UnaryExpr("-", Ref.new(e))
+    ps.PAttempt(ps.PMap(ps.PThen(sym("-"), lazyUnaryExpr()), func(e: ast2.Expr) -> ast2.Expr
+      ast2.Expr.UnaryExpr("-", Ref.new(e))
     end)),
     postfixExpr(),
   ])
 end
 
-func lazyUnaryExpr() -> ps.Parser[Expr]
-  ps.Parser[Expr] {
-    Run: func(state: ps.State) -> ps.Reply[Expr]
+func lazyUnaryExpr() -> ps.Parser[ast2.Expr]
+  ps.Parser[ast2.Expr] {
+    Run: func(state: ps.State) -> ps.Reply[ast2.Expr]
       unaryExpr().Run(state)
     end
   }
 end
 
-func makeBinary() -> func(String, Expr, Expr) -> Expr
-  func(op: String, left: Expr, right: Expr) -> Expr
-    Expr.BinaryExpr(op, Ref.new(left), Ref.new(right))
+func makeBinary() -> func(String, ast2.Expr, ast2.Expr) -> ast2.Expr
+  func(op: String, left: ast2.Expr, right: ast2.Expr) -> ast2.Expr
+    ast2.Expr.BinaryExpr(op, Ref.new(left), Ref.new(right))
   end
 end
 
-func postfixExpr() -> ps.Parser[Expr]
-  ps.Parser[Expr] {
-    Run: func(state: ps.State) -> ps.Reply[Expr]
+func postfixExpr() -> ps.Parser[ast2.Expr]
+  ps.Parser[ast2.Expr] {
+    Run: func(state: ps.State) -> ps.Reply[ast2.Expr]
       let first = primaryExpr().Run(state)
       if !first.Ok then
         first
@@ -656,16 +558,16 @@ func postfixExpr() -> ps.Parser[Expr]
   }
 end
 
-func postfixTail(start: ps.State, cur: ps.State, acc: Expr) -> ps.Reply[Expr]
+func postfixTail(start: ps.State, cur: ps.State, acc: ast2.Expr) -> ps.Reply[ast2.Expr]
   let call = paren(ps.PSepBy(lazyExpr(), sym(","))).Run(cur)
   if call.Ok then
-    postfixTail(start, call.State, Expr.CallExpr(Ref.new(acc), call.Value))
+    postfixTail(start, call.State, ast2.Expr.CallExpr(Ref.new(acc), call.Value))
   else
     let fld = ps.PThen(sym("."), identifier()).Run(cur)
     if fld.Ok then
-      postfixTail(start, fld.State, Expr.FieldExpr(Ref.new(acc), fld.Value))
+      postfixTail(start, fld.State, ast2.Expr.FieldExpr(Ref.new(acc), fld.Value))
     else
-      ps.Reply[Expr] {
+      ps.Reply[ast2.Expr] {
         Ok: true, Consumed: cur.Index != start.Index, Value: acc,
         State: cur, Error: ps.EmptyError(cur.Position)
       }
@@ -673,39 +575,51 @@ func postfixTail(start: ps.State, cur: ps.State, acc: Expr) -> ps.Reply[Expr]
   end
 end
 
-# 结构体字段列表解析器: { field1: expr1, field2: expr2, ... }
-func structLitFields(typeName: String) -> ps.Parser[Expr]
-  ps.PBind(sym("{"), func(_: String) -> ps.Parser[Expr]
-    ps.PBind(ps.PSepBy(structLitField(), sym(",")), func(fields: Slice[StructLitField]) -> ps.Parser[Expr]
-      ps.PThen(sym("}"), ps.PPure(Expr.StructLitExpr(typeName, fields)))
+# 结构体字段列表解析器: { field1: ast2.Expr1, field2: ast2.Expr2, ... }
+func structLitFields(typeName: String) -> ps.Parser[ast2.Expr]
+  ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Expr]
+    ps.PBind(ps.PSepBy(structLitField(), sym(",")), func(fields: Slice[ast2.StructLitField]) -> ps.Parser[ast2.Expr]
+      ps.PThen(sym("}"), ps.PPure(ast2.Expr.StructLitExpr(typeName, fields)))
     end)
   end)
 end
 
-# 结构体字面量中的单个字段: field: expr
-func structLitField() -> ps.Parser[StructLitField]
-  ps.PBind(identifier(), func(name: String) -> ps.Parser[StructLitField]
-    ps.PBind(sym(":"), func(_: String) -> ps.Parser[StructLitField]
-      ps.PMap(expr(), func(value: Expr) -> StructLitField
-        StructLitField { Name: name, Value: value }
+# 结构体字面量中的单个字段: field: ast2.Expr
+func structLitField() -> ps.Parser[ast2.StructLitField]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.StructLitField]
+    ps.PBind(sym(":"), func(_: String) -> ps.Parser[ast2.StructLitField]
+      ps.PMap(expr(), func(value: ast2.Expr) -> ast2.StructLitField
+        ast2.StructLitField { Name: name, Value: value }
       end)
     end)
   end)
 end
 
-func primaryExpr() -> ps.Parser[Expr]
+func primaryExpr() -> ps.Parser[ast2.Expr]
   ps.PChoice([
-    ps.PMap(number(), func(v: String) -> Expr Expr.NumberExpr(v) end),
-    ps.PMap(stringLiteral(), func(v: String) -> Expr Expr.StringExpr(v) end),
-    ps.PMap(kw("true"), func(_: String) -> Expr Expr.BoolExpr(true) end),
-    ps.PMap(kw("false"), func(_: String) -> Expr Expr.BoolExpr(false) end),
-    ps.PMap(paren(ps.PPure(())), func(_: ()) -> Expr Expr.UnitExpr end),
+    ps.PMap(number(), func(v: String) -> ast2.Expr
+      ast2.Expr.NumberExpr(v)
+    end),
+    ps.PMap(stringLiteral(), func(v: String) -> ast2.Expr
+      ast2.Expr.StringExpr(v)
+    end),
+    ps.PMap(kw("true"), func(_: String) -> ast2.Expr
+      ast2.Expr.BoolExpr(true)
+    end),
+    ps.PMap(kw("false"), func(_: String) -> ast2.Expr
+      ast2.Expr.BoolExpr(false)
+    end),
+    ps.PMap(paren(ps.PPure(())), func(_: ()) -> ast2.Expr
+      ast2.Expr.UnitExpr
+    end),
     paren(lazyExpr()),
-    # 结构体字面量: TypeName { field: expr, ... } — 先解析标识符，再尝试花括号
-    ps.PAttempt(ps.PBind(identifier(), func(typeName: String) -> ps.Parser[Expr]
+    # 结构体字面量: TypeName { field: ast2.Expr, ... } — 先解析标识符，再尝试花括号
+    ps.PAttempt(ps.PBind(identifier(), func(typeName: String) -> ps.Parser[ast2.Expr]
       structLitFields(typeName)
     end)),
-    ps.PMap(identifier(), func(v: String) -> Expr Expr.IdentExpr(v) end),
+    ps.PMap(identifier(), func(v: String) -> ast2.Expr
+      ast2.Expr.IdentExpr(v)
+    end),
   ])
 end
 

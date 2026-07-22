@@ -44,7 +44,7 @@ func typeArgsFromAST(items []ast2.TypeExpr) []MonoType {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 			return []MonoType{}
 		} else {
-			return MygoIN5SliceM7Prepend(typeArgsFromAST(sliceDrop[ast2.TypeExpr](items, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.TypeExprUnitTypeCtor())))
+			return MygoIN5SliceM7Prepend(typeArgsFromAST(sliceDrop[ast2.TypeExpr](items, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.TypeExprUnitTypeCtor())))
 		}
 	}()
 }
@@ -53,7 +53,7 @@ func paramsToTypes(params []ast2.Param) []MonoType {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
 			return []MonoType{}
 		} else {
-			return MygoIN5SliceM7Prepend(paramsToTypes(sliceDrop[ast2.Param](params, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()}).Type))
+			return MygoIN5SliceM7Prepend(paramsToTypes(sliceDrop[ast2.Param](params, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()}).Type))
 		}
 	}()
 }
@@ -63,7 +63,7 @@ func envWithParams(env []EnvEntry, params []ast2.Param) []EnvEntry {
 			return env
 		} else {
 			return func() []EnvEntry {
-				p_1 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+				p_1 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
 				return envWithParams(envPut(env, p_1.Name, Scheme{Bound: []int{}, Body: typeFromAST(p_1.Type)}), sliceDrop[ast2.Param](params, 1))
 			}()
 		}
@@ -78,7 +78,7 @@ func envGet(env []EnvEntry, name string) Option[Scheme] {
 			return None[Scheme]()
 		} else {
 			return func() Option[Scheme] {
-				item_2 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Body: MonoTypeTUnitCtor()}})
+				item_2 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Body: MonoTypeTUnitCtor()}})
 				return func() Option[Scheme] {
 					if item_2.Name == name {
 						return Some[Scheme](item_2.Scheme)
@@ -105,7 +105,7 @@ func envWithStructFields(env []EnvEntry, typeName string, fields []ast2.Field) [
 			return env
 		} else {
 			return func() []EnvEntry {
-				f_3 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
+				f_3 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
 				next_4 := envPut(env, fieldEnvName(typeName, f_3.Name), Scheme{Bound: []int{}, Body: typeFromAST(f_3.Type)})
 				return envWithStructFields(next_4, typeName, sliceDrop[ast2.Field](fields, 1))
 			}()
@@ -118,7 +118,7 @@ func fieldsForStruct(typeName string, fields []ast2.Field, out []FieldEntry) []F
 			return out
 		} else {
 			return func() []FieldEntry {
-				f_5 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
+				f_5 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
 				return fieldsForStruct(typeName, sliceDrop[ast2.Field](fields, 1), MygoIN5SliceM6Append(out, FieldEntry{TypeName: typeName, FieldName: f_5.Name, Type: typeFromAST(f_5.Type)}))
 			}()
 		}

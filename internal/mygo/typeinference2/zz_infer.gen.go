@@ -13,7 +13,7 @@ func inferDecls(decls []ast2.Decl, env []EnvEntry, fields []FieldEntry, state In
 			return Ok[PackageInfo, string](PackageInfo{Env: env, Fields: fields})
 		} else {
 			return func() Result[PackageInfo, string] {
-				head_6 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+				head_6 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 				tail_7 := sliceDrop(decls, 1)
 				next_8 := inferDecl(head_6, env, fields, state)
 				return func() Result[PackageInfo, string] {
@@ -632,7 +632,7 @@ func inferArgs(args []ast2.Expr, env []EnvEntry, state InferState, types []MonoT
 			return Ok[ArgsResult, string](ArgsResult{Types: types, Subst: subst, State: state})
 		} else {
 			return func() Result[ArgsResult, string] {
-				head_44 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.ExprUnitExprCtor())
+				head_44 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.ExprUnitExprCtor())
 				r_45 := inferExpr(head_44, env, state)
 				return func() Result[ArgsResult, string] {
 					if v_82, ok := r_45.(ResultErr[InferResult, string]); ok {
@@ -668,7 +668,7 @@ func inferBlockItems(items []ast2.Stmt, env []EnvEntry, state InferState, lastTy
 			return Ok[InferResult, string](InferResult{Type: applySubst(subst, lastType), Subst: subst, State: state})
 		} else {
 			return func() Result[InferResult, string] {
-				step_46 := inferBlockStep(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.StmtExprStmtCtor(ast2.ExprUnitExprCtor())), env, state)
+				step_46 := inferBlockStep(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.StmtExprStmtCtor(ast2.ExprUnitExprCtor())), env, state)
 				return func() Result[InferResult, string] {
 					if v_84, ok := step_46.(ResultErr[BlockInferStep, string]); ok {
 						return func() Result[InferResult, string] {
@@ -884,7 +884,7 @@ func inferVariants(vars []ast2.Variant, enumName string, tps []string, env []Env
 			return Ok[DeclInfer, string](DeclInfer{Env: envPut(env, enumName, Scheme{Bound: []int{}, Body: MonoTypeTConCtor(enumName, emptyMonoTypes())}), Fields: fields, State: state})
 		} else {
 			return func() Result[DeclInfer, string] {
-				v_56 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(vars, 0), ast2.Variant{Name: "", Fields: emptyASTTypeExprs()})
+				v_56 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(vars, 0), ast2.Variant{Name: "", Fields: emptyASTTypeExprs()})
 				constructorType_57 := func() MonoType {
 					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_56.Fields) == 0 {
 						return MonoTypeTConCtor(enumName, emptyMonoTypes())
@@ -909,7 +909,7 @@ func inferStructLitFields(typeName string, fields []ast2.StructLitField, env []E
 			return Ok[InferResult, string](InferResult{Type: MonoTypeTConCtor(typeName, emptyMonoTypes()), Subst: subst, State: curState})
 		} else {
 			return func() Result[InferResult, string] {
-				f_58 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.StructLitField{Name: "", Value: ast2.ExprUnitExprCtor()})
+				f_58 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.StructLitField{Name: "", Value: ast2.ExprUnitExprCtor()})
 				r_59 := inferExpr(f_58.Value, env, curState)
 				return func() Result[InferResult, string] {
 					if v_109, ok := r_59.(ResultErr[InferResult, string]); ok {

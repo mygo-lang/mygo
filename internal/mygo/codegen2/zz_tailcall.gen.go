@@ -14,18 +14,18 @@ type TailCallParts struct {
 
 func tailCallStmt(expr ast2.Expr, ctx *egCtx) Result[string, string] {
 	return func() Result[string, string] {
-		if v_68, ok := expr.(ast2.ExprCallExpr); ok {
+		if v_33, ok := expr.(ast2.ExprCallExpr); ok {
 			return func() Result[string, string] {
-				parts_80 := tailCallParts(v_68.F1, ctx, 0, TailCallParts{Temps: []string([]string{}), Assigns: []string([]string{})})
+				parts_65 := tailCallParts(v_33.F1, ctx, 0, TailCallParts{Temps: []string([]string{}), Assigns: []string([]string{})})
 				return func() Result[string, string] {
-					if v_70, ok := parts_80.(ResultOk[TailCallParts, string]); ok {
+					if v_35, ok := parts_65.(ResultOk[TailCallParts, string]); ok {
 						return func() Result[string, string] {
-							return Ok[string, string](joinStrings(v_70.F0.Temps, "\n") + "\n" + joinStrings(v_70.F0.Assigns, "\n") + "\ncontinue")
+							return Ok[string, string](joinStrings(v_35.F0.Temps, "\n") + "\n" + joinStrings(v_35.F0.Assigns, "\n") + "\ncontinue")
 						}()
 					} else {
-						if v_69, ok := parts_80.(ResultErr[TailCallParts, string]); ok {
+						if v_34, ok := parts_65.(ResultErr[TailCallParts, string]); ok {
 							return func() Result[string, string] {
-								return Err[string, string](v_69.F0)
+								return Err[string, string](v_34.F0)
 							}()
 						} else {
 							panic("unreachable")
@@ -46,17 +46,17 @@ func tailCallParts(args []ast2.Expr, ctx *egCtx, index int, out TailCallParts) R
 			return Ok[TailCallParts, string](out)
 		} else {
 			return func() Result[TailCallParts, string] {
-				a_81 := translateExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.ExprUnitExprCtor()), ctx)
+				a_66 := translateExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.ExprUnitExprCtor()), ctx)
 				return func() Result[TailCallParts, string] {
-					if v_72, ok := a_81.(ResultErr[string, string]); ok {
+					if v_37, ok := a_66.(ResultErr[string, string]); ok {
 						return func() Result[TailCallParts, string] {
-							return Err[TailCallParts, string](v_72.F0)
+							return Err[TailCallParts, string](v_37.F0)
 						}()
 					} else {
-						if v_71, ok := a_81.(ResultOk[string, string]); ok {
+						if v_36, ok := a_66.(ResultOk[string, string]); ok {
 							return func() Result[TailCallParts, string] {
-								tmp_82 := "__tail_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(index)
-								return tailCallParts(args, ctx, index+1, TailCallParts{Temps: MygoIN5SliceM6Append(out.Temps, tmp_82+" := "+v_71.F0), Assigns: MygoIN5SliceM6Append(out.Assigns, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ctx.tailRecParamNames, index), "_")+" = "+tmp_82)})
+								tmp_67 := "__tail_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(index)
+								return tailCallParts(args, ctx, index+1, TailCallParts{Temps: MygoIN5SliceM6Append(out.Temps, tmp_67+" := "+v_36.F0), Assigns: MygoIN5SliceM6Append(out.Assigns, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ctx.tailRecParamNames, index), "_")+" = "+tmp_67)})
 							}()
 						} else {
 							panic("unreachable")
@@ -69,18 +69,18 @@ func tailCallParts(args []ast2.Expr, ctx *egCtx, index int, out TailCallParts) R
 }
 func isTailSelfCall(expr ast2.Expr, ctx *egCtx) bool {
 	return func() bool {
-		if v_73, ok := expr.(ast2.ExprCallExpr); ok {
+		if v_38, ok := expr.(ast2.ExprCallExpr); ok {
 			return func() bool {
-				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_73.F1) != ctx.tailRecParamCount {
+				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_38.F1) != ctx.tailRecParamCount {
 					return false
 				}
 				return func() bool {
-					if v_74, ok := (*v_73.F0).(ast2.ExprIdentExpr); ok {
+					if v_39, ok := (*v_38.F0).(ast2.ExprIdentExpr); ok {
 						return func() bool {
 							return func() bool {
-								if v_76, ok := ctx.tailRecFuncName.(OptionSome[string]); ok {
+								if v_41, ok := ctx.tailRecFuncName.(OptionSome[string]); ok {
 									return func() bool {
-										return v_74.F0 == v_76.F0
+										return v_39.F0 == v_41.F0
 									}()
 								} else {
 									if _, ok := ctx.tailRecFuncName.(OptionNone[string]); ok {
@@ -109,12 +109,12 @@ func isTailSelfCall(expr ast2.Expr, ctx *egCtx) bool {
 }
 func containsTailCall(expr ast2.Expr, name string) bool {
 	return func() bool {
-		if v_79, ok := expr.(ast2.ExprCallExpr); ok {
+		if v_44, ok := expr.(ast2.ExprCallExpr); ok {
 			return func() bool {
 				return func() bool {
-					if v_80, ok := (*v_79.F0).(ast2.ExprIdentExpr); ok {
+					if v_45, ok := (*v_44.F0).(ast2.ExprIdentExpr); ok {
 						return func() bool {
-							return v_80.F0 == name
+							return v_45.F0 == name
 						}()
 					} else {
 						return func() bool {
@@ -124,18 +124,18 @@ func containsTailCall(expr ast2.Expr, name string) bool {
 				}()
 			}()
 		} else {
-			if v_78, ok := expr.(ast2.ExprIfExpr); ok {
+			if v_43, ok := expr.(ast2.ExprIfExpr); ok {
 				return func() bool {
-					return containsTailCall(*v_78.F1, name) || containsTailCall(*v_78.F2, name)
+					return containsTailCall(*v_43.F1, name) || containsTailCall(*v_43.F2, name)
 				}()
 			} else {
-				if v_77, ok := expr.(ast2.ExprBlockExpr); ok {
+				if v_42, ok := expr.(ast2.ExprBlockExpr); ok {
 					return func() bool {
 						return func() bool {
-							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_77.F0) == 0 {
+							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_42.F0) == 0 {
 								return false
 							} else {
-								return containsTailCallBlock(v_77.F0, name)
+								return containsTailCallBlock(v_42.F0, name)
 							}
 						}()
 					}()
@@ -154,11 +154,11 @@ func containsTailCallBlock(items []ast2.Stmt, name string) bool {
 			return false
 		} else {
 			return func() bool {
-				last_83 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1), ast2.StmtExprStmtCtor(ast2.ExprUnitExprCtor()))
+				last_68 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1), ast2.StmtExprStmtCtor(ast2.ExprUnitExprCtor()))
 				return func() bool {
-					if v_81, ok := last_83.(ast2.StmtExprStmt); ok {
+					if v_46, ok := last_68.(ast2.StmtExprStmt); ok {
 						return func() bool {
-							return containsTailCall(v_81.F0, name)
+							return containsTailCall(v_46.F0, name)
 						}()
 					} else {
 						return func() bool {

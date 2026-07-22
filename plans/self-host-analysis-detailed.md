@@ -33,22 +33,27 @@
 - **节点结构**：使用 MyGO 的 `enum`（标签联合）表示变体
 - **位置信息**：**有意省略**了位置信息（`intentionally keeps positions out`），当前假设直到 `parser2` 开始携带源码位置
 - **类型声明**：`TypeExpr` 是 MyGO 的 `enum`，使用 `NamedType`、`FuncType`、`TupleType`、`UnitType`、`InlineGo` 五个变体
-- **语句与表达式合并**：**没有独立的语句类型**，一切（let/var/while/return/assign）都是 `Expr` 的变体
+- **语句与表达式分离**：存在独立的 `Stmt` enum（`LetStmt`、`VarStmt`、`WhileStmt`、`ReturnStmt`、`AssignStmt`、`ExprStmt`）和 `Expr` enum（纯表达式）
+  - `BlockExpr(Slice[Stmt])` 包含语句列表，而非表达式列表
+  - `Expr` 不包含 let/var/while/return/assign 等语句语义
 - **更简洁的结构**：
   - 没有 `Constraint` 类型
+  - `EnumDecl` 和 `ImplDecl` 也存在于 ast2 中（旧版也有）
   - `Variant.Fields` 是 `Slice[TypeExpr]`（仅类型列表，没有字段名）
-  - 使用 `Expr` 枚举统一表达 let、var、while、return、assign
+  - `FuncDecl` 没有 `Using []Constraint` 字段（旧版有）
 
 ### 关键差异总结
 
 | 特性 | ast (旧) | ast2 (新) |
 |------|----------|-----------|
 | 语言 | Go | MyGO |
-| 语句节点 | 独立 Stmt 类型 | 统一为 Expr |
+| 语句节点 | 独立 Stmt 类型 | 独立 Stmt 类型 |
 | 位置信息 | 每节点携带 | 未携带 |
 | 类型系统 | interface + struct | enum + struct |
-| 类型类约束 | Constraint struct | 不支持 |
-| 元数 | ~50+ 个节点类型 | ~20 个节点类型 |
+| 类型类约束 | `Constraint` struct + `FuncDecl.Using` | 不支持 |
+| 元数 | ~50+ 个节点类型 | ~25 个节点类型 |
+| Pattern 匹配 | `Pattern`/`BindPattern` 体系 | 不支持 |
+| 复合字面量 | `SliceLitExpr`/`MapLitExpr`/`SetLitExpr` | 仅 `StructLitExpr` |
 
 ---
 
@@ -74,7 +79,8 @@
 - **语法**：
   - 没有独立的词法分析器，使用 `lexeme` 组合子自动跳过空白
   - 中缀运算符使用 `chainLeft` 组合子实现优先级和结合性解析
-  - 支持 `if ... then ... elsif ... else ... end` 块风格
+  - 支持 `if ... then ... elsif ... else ... end` 块风格，以及 `if =>` 箭头风格
+  - `bodyExprFromBlock()` 特殊逻辑：从 `then`/`elsif`/`else` 的 block 中提取单个表达式作为分支值（单语句块直接返回该语句的表达式，多语句块返回 `BlockExpr`）
 - **AST 输出**：产生 `parser2.Decl` / `parser2.Expr`（parser2 自己的 AST 类型），由 `codegen2` 中的 `convertFile` 转换为 `ast2.File`
 
 ### 关键差异总结
@@ -94,7 +100,7 @@
 ## 3. 类型推理对比（typeinference vs typeinference2）
 
 ### 旧类型推理（`typeinference/`）
-- **规模**：**2805 行** Go 代码（仅 `infer.go` 一个文件）
+- **规模**：**~4500+ 行** Go 代码（`infer.go` 约 2800 行 + `solver.go` + `unify.go` + `go_imports.go`）
 - **类型系统**：完整 Hindley-Milner（Algorithm W）+ 带约束的类型类（typeclass）
 - **核心类型**：
   - `MonoType` 接口：`TVar`、`TKVar`（高阶类型变量）、`TCon`、`TFunc`、`TGoPackage`、`TUnit`
@@ -114,20 +120,24 @@
   - `go_imports.go`：Go 包导入处理
 
 ### 新类型推理（`typeinference2/`）
-- **规模**：~380 行 MyGO 代码
+- **规模**：~700 行 MyGO 代码（`types.mygo` 77 行 + `infer.mygo` 389 行 + `unify.mygo` + `utils.mygo` + `env.mygo`）
 - **类型系统**：极简的 Hindley-Milner（HM）子集，**不支持类型类**
 - **核心类型**（`MonoType` 枚举）：
-  - `TVar(Int)`：类型变量
+  - `TVar(Int)`：类型变量（用 Int ID 表示）
   - `TCon(String, Slice[MonoType])`：类型构造器
   - `TFunc(Slice[MonoType], Ref[MonoType])`：函数类型
   - `TTuple(Slice[MonoType])`：元组类型
   - `TUnit`：单元类型
+- **Scheme 结构**：`Bound: Slice[Int]` + `Body: MonoType`（旧版用 `QualifiedType`，新版简化为直接绑 `MonoType`）
 - **核心实现**：
   - `unify`：标准合一
   - `applySubst`：替换应用
   - `composeSubst`：替换组合
   - `inferExpr`：对表达式进行类型推断（模式匹配）
   - `inferDecl`：对声明进行类型推断
+  - `inferStmt`：对语句进行类型推断（`LetStmt`、`VarStmt`、`WhileStmt`、`AssignStmt`、`ReturnStmt` 等）
+  - `inferBlock`/`inferBlockItems`：块级语句推理
+- **输出类型**：`PackageInfo`（包含 `Env: Slice[EnvEntry]` 和 `Fields: Slice[FieldEntry]`），而非旧版的 `TypedInfo`（表达式→类型映射）
 - **文件组织**：
   - `types.mygo`：类型定义 + `InferFile` 入口
   - `infer.mygo`：推理核心
@@ -139,15 +149,16 @@
 
 | 特性 | typeinference (旧) | typeinference2 (新) |
 |------|---------------------|---------------------|
-| 语言 | Go（2805 行） | MyGO（~380 行） |
+| 语言 | Go（~4500 行） | MyGO（~700 行） |
 | 类型类 | ✅ 完整支持（`using` 约束） | ❌ 不支持 |
 | HKT | ✅ 支持高阶类型 | ❌ 不支持 |
 | Go 互操作 | ✅ 支持 Go 类型导入 | ❌ 通过 `InlineGo` 嵌入 |
 | 包间推理 | ✅ 跨包类型推理 | ❌ 单文件推理 |
 | 多态泛化 | ✅ `Generalize` | 基本的 let 泛化 |
 | 约束求解 | ✅ `solver.go` | ❌ 无 |
-| `TypedInfo` | ✅ 表达式→类型映射 | ❌ 不生成 |
+| 类型映射 | `TypedInfo`（表达式→类型映射） | `PackageInfo`（环境变量+字段映射） |
 | 类型类方法 | ✅ `using` 约束函数参数 | ❌ 不支持 |
+| 语句推理 | ✅ 完整支持 | ✅ 完整支持（`inferStmt`） |
 
 ---
 
@@ -164,8 +175,9 @@
 - **泛型约束**：支持 `using` 约束参数
 
 ### 新代码生成器（`codegen2/`）
-- **规模**：~600 行 MyGO 代码
+- **规模**：~900+ 行 MyGO 代码（`codegen2.mygo` 73 行 + `decls.mygo` 222 行 + `gofile.mygo` 264 行 + `translate_expr.mygo` + `types.mygo` + `types_util.mygo` + `tailcall.mygo`）
 - **输出方式**：字符串拼接生成 Go 源码，然后通过 `go/parser` 和 `go/format` 格式化
+  - 关键实现：`renderGoFile()` 使用内联 Go 嵌入（`go[Result[String, String]] { code: "..." }`）拼接包声明+import+声明，再用 `go/parser.ParseFile` 解析各部分 AST 后合并输出
 - **包管理**：简单的文件级处理，通过 `GenerateFiles` 支持多文件
 - **Prelude 处理**：不需要特殊逻辑
 - **类型类支持**：**不支持**
@@ -218,7 +230,7 @@ graph TB
 |------|-----------------|-------------------|
 | 实现语言 | Go | MyGO |
 | 设计目标 | 功能完整的产品级编译器 | 最小可自举的子集 |
-| 代码规模 | ~10000+ 行 | ~1500 行 |
+| 代码规模 | ~10000+ 行 | ~2300+ 行（ast2 45 行 + parser2 870 行 + typeinference2 700 行 + codegen2 900 行） |
 | 类型系统 | HM + Typeclass + HKT | 简单 HM 子集 |
 | 解析器 | yacc/LALR(1) | parsec 组合子 |
 | 泛型实现 | 完整泛型 + 约束 | 仅基础泛型 |
@@ -229,22 +241,24 @@ graph TB
 ```mermaid
 graph LR
     subgraph "第一阶段：引导"
-        A[parser.gen.yacc] -.->|解析| B[ast nodes]
-        C[typeinference.Go] -.->|类型检查| D[codegen.Go]
-        D -.->|生成| E[codegen2.gen.go]
+        A[parser/parser.y] -.->|解析| B[ast nodes]
+        C[typeinference/infer.go] -.->|类型检查| D[codegen/generate.go]
+        D -.->|生成| E[codegen2/*.gen.go]
     end
     
     subgraph "第二阶段：自举"
-        F[parser2.mygo] -.->|解析| G[ast2 nodes]
-        H[typeinference2.mygo] -.->|类型检查| I[codegen2.mygo]
-        I -.->|使用旧编译器编译| J[MyGO 可自我编译]
+        F[parser2/parser.mygo] -.->|解析| G[parser2.Decl/Expr]
+        G -.->|convertFile| H[ast2 nodes]
+        I[typeinference2/*.mygo] -.->|类型检查| J[codegen2/*.mygo]
+        H -.->|输入| I
+        J -.->|使用旧编译器编译| K[MyGO 可自我编译]
     end
 ```
 
 ### 自举策略的关键设计选择
 
 1. **最小化语言子集**：`codegen2` 只实现了 MyGO 功能的最小子集（无类型类、无 HKT、无缝合类型类），降低引导负担
-2. **紧凑 AST**：`ast2` 去除了位置信息、独立语句类型等非核心部分，简化自举代码
+2. **紧凑 AST**：`ast2` 去除了位置信息、Pattern 匹配体系、复合字面量（SliceLit/MapLit/SetLit）等非核心部分，但**保留了独立的 `Stmt` 类型**以简化自举代码
 3. **Parsec 库自托管**：`lib/text/parsec/` 也用 MyGO 编写，使得整个解析器可以完全自举
 4. **内联 Go 嵌入**：`go[T]{ code: "..."; in x = expr }` 语法允许在自举代码中嵌入原生 Go 代码，处理无法用纯 MyGO 表达的操作
 5. **渐进式替换**：现有 Go 编译器仍可编译所有 MyGO 源码，新编译器逐步扩展以达到完全自举
