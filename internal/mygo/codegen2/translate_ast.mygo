@@ -32,9 +32,15 @@ end
 func translateExprAstExpectedInner(expr: ast2.Expr, ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
   switch expr.Kind
     case IdentExpr(name) =>
-      # A `using` dictionary shadows package-level typeclass dispatch, just
-      # like ordinary lexical bindings shadow top-level functions.
-      Ok(newAstExprResult(goast.Ident(ctx.constraintFuncs.Get(name).UnwrapOr(ctxGetBinding(ctx, name).UnwrapOr(sanitizeIdent(name))))))
+      # None is a zero-argument generic constructor and is commonly written
+      # without parentheses.  Go still requires its type argument.
+      if name == "None" && noneTypeArg(expected, ctx) != "" then
+        Ok(newAstExprResult(goast.GenericCall(goast.Ident("None"), [noneTypeArg(expected, ctx)], [] as Slice[goast.Expr])))
+      else
+        # A `using` dictionary shadows package-level typeclass dispatch, just
+        # like ordinary lexical bindings shadow top-level functions.
+        Ok(newAstExprResult(goast.Ident(ctx.constraintFuncs.Get(name).UnwrapOr(ctxGetBinding(ctx, name).UnwrapOr(sanitizeIdent(name))))))
+      end
     case NumberExpr(v) => Ok(newAstExprResult(goast.Number(normalizeNumberLiteral(v))))
     case StringExpr(v) => Ok(newAstExprResult(goast.String(strconv.Quote(v))))
     case RuneExpr(v) => Ok(newAstExprResult(goast.Rune(v)))
@@ -75,6 +81,16 @@ func translateExprAstExpectedInner(expr: ast2.Expr, ctx: Ref[egCtx], expected: S
     case BlockExpr(items) => translateBlockExprAstExpected(items, ctx, 0, [] as Slice[goast.Stmt], expected)
     case FuncLitExpr(params, ret, body) => translateFuncLitAst(params, ret, body, ctx)
     case _ => Err("AST lowering for this expression is not implemented")
+  end
+end
+
+func noneTypeArg(expected: String, ctx: Ref[egCtx]) -> String
+  if strings.HasPrefix(expected, "Option[") && strings.HasSuffix(expected, "]") then
+    strings.TrimSuffix(strings.TrimPrefix(expected, "Option["), "]")
+  else
+    ctx.typeParams.Fold("", func(found: String, item: String) -> String
+      if found != "" || strings.HasSuffix(item, "#hkt") || strings.Index(item, "[") >= 0 then found else item end
+    end)
   end
 end
 

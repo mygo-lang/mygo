@@ -52,36 +52,42 @@ func errorAtExpr(expr ast2.Expr, msg string) string {
 	return expr_238
 }
 func translateExprAstExpectedInner(expr ast2.Expr, ctx *egCtx, expected string) Result[AstExprResult, string] {
-	var expr_277 Result[AstExprResult, string]
+	var expr_278 Result[AstExprResult, string]
 	if v_99, ok := expr.Kind.(ast2.ExprKindIdentExpr); ok {
+		var expr_277 Result[AstExprResult, string]
 		var expr_276 Result[AstExprResult, string]
-		expr_276 = Ok[AstExprResult, string](newAstExprResult(goast.Ident(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.constraintFuncs, v_99.F0), MygoIN6OptionM8UnwrapOr(ctxGetBinding(ctx, v_99.F0), sanitizeIdent(v_99.F0))))))
+		if v_99.F0 == "None" && noneTypeArg(expected, ctx) != "" {
+			expr_276 = Ok[AstExprResult, string](newAstExprResult(goast.GenericCall(goast.Ident("None"), []string{noneTypeArg(expected, ctx)}, []goast.Expr([]goast.Expr{}))))
+		} else {
+			expr_276 = Ok[AstExprResult, string](newAstExprResult(goast.Ident(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.constraintFuncs, v_99.F0), MygoIN6OptionM8UnwrapOr(ctxGetBinding(ctx, v_99.F0), sanitizeIdent(v_99.F0))))))
+		}
 		expr_277 = expr_276
+		expr_278 = expr_277
 	} else {
 		if v_98, ok := expr.Kind.(ast2.ExprKindNumberExpr); ok {
 			var expr_275 Result[AstExprResult, string]
 			expr_275 = Ok[AstExprResult, string](newAstExprResult(goast.Number(normalizeNumberLiteral(v_98.F0))))
-			expr_277 = expr_275
+			expr_278 = expr_275
 		} else {
 			if v_97, ok := expr.Kind.(ast2.ExprKindStringExpr); ok {
 				var expr_274 Result[AstExprResult, string]
 				expr_274 = Ok[AstExprResult, string](newAstExprResult(goast.String(strconv.Quote(v_97.F0))))
-				expr_277 = expr_274
+				expr_278 = expr_274
 			} else {
 				if v_96, ok := expr.Kind.(ast2.ExprKindRuneExpr); ok {
 					var expr_273 Result[AstExprResult, string]
 					expr_273 = Ok[AstExprResult, string](newAstExprResult(goast.Rune(v_96.F0)))
-					expr_277 = expr_273
+					expr_278 = expr_273
 				} else {
 					if v_95, ok := expr.Kind.(ast2.ExprKindSliceLitExpr); ok {
 						var expr_272 Result[AstExprResult, string]
 						expr_272 = translateSliceLitAst(v_95.F0, ctx, expected)
-						expr_277 = expr_272
+						expr_278 = expr_272
 					} else {
 						if v_94, ok := expr.Kind.(ast2.ExprKindTypeAsExpr); ok {
 							var expr_271 Result[AstExprResult, string]
 							expr_271 = translateTypeAsAst(v_94.F0, v_94.F1, ctx)
-							expr_277 = expr_271
+							expr_278 = expr_271
 						} else {
 							if v_93, ok := expr.Kind.(ast2.ExprKindBoolExpr); ok {
 								var expr_270 Result[AstExprResult, string]
@@ -92,12 +98,12 @@ func translateExprAstExpectedInner(expr ast2.Expr, ctx *egCtx, expected string) 
 									expr_269 = Ok[AstExprResult, string](newAstExprResult(goast.Ident("false")))
 								}
 								expr_270 = expr_269
-								expr_277 = expr_270
+								expr_278 = expr_270
 							} else {
 								if _, ok := expr.Kind.(ast2.ExprKindUnitExpr); ok {
 									var expr_268 Result[AstExprResult, string]
 									expr_268 = Ok[AstExprResult, string](newAstExprResult(goast.Unit()))
-									expr_277 = expr_268
+									expr_278 = expr_268
 								} else {
 									if v_89, ok := expr.Kind.(ast2.ExprKindInlineGoExpr); ok {
 										var expr_267 Result[AstExprResult, string]
@@ -117,12 +123,12 @@ func translateExprAstExpectedInner(expr ast2.Expr, ctx *egCtx, expected string) 
 											}
 										}
 										expr_267 = expr_266
-										expr_277 = expr_267
+										expr_278 = expr_267
 									} else {
 										if v_88, ok := expr.Kind.(ast2.ExprKindTupleExpr); ok {
 											var expr_262 Result[AstExprResult, string]
 											expr_262 = translateTupleLitAst(v_88.F0, ctx, expected)
-											expr_277 = expr_262
+											expr_278 = expr_262
 										} else {
 											if v_84, ok := expr.Kind.(ast2.ExprKindFieldExpr); ok {
 												var expr_261 Result[AstExprResult, string]
@@ -153,7 +159,7 @@ func translateExprAstExpectedInner(expr ast2.Expr, ctx *egCtx, expected string) 
 													}
 												}
 												expr_261 = expr_260
-												expr_277 = expr_261
+												expr_278 = expr_261
 											} else {
 												if v_81, ok := expr.Kind.(ast2.ExprKindUnaryExpr); ok {
 													var expr_254 Result[AstExprResult, string]
@@ -173,62 +179,62 @@ func translateExprAstExpectedInner(expr ast2.Expr, ctx *egCtx, expected string) 
 														}
 													}
 													expr_254 = expr_253
-													expr_277 = expr_254
+													expr_278 = expr_254
 												} else {
 													if v_80, ok := expr.Kind.(ast2.ExprKindBinaryExpr); ok {
 														var expr_249 Result[AstExprResult, string]
 														expr_249 = translateBinaryAstExpected(v_80.F0, v_80.F1, v_80.F2, ctx, expected)
-														expr_277 = expr_249
+														expr_278 = expr_249
 													} else {
 														if v_79, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
 															var expr_248 Result[AstExprResult, string]
 															expr_248 = translateCallAstExpected(v_79.F0, v_79.F1, v_79.F2, ctx, expected)
-															expr_277 = expr_248
+															expr_278 = expr_248
 														} else {
 															if v_78, ok := expr.Kind.(ast2.ExprKindStructLitExpr); ok {
 																var expr_247 Result[AstExprResult, string]
 																expr_247 = translateStructLitAstExpected(v_78.F0, v_78.F1, ctx, expected)
-																expr_277 = expr_247
+																expr_278 = expr_247
 															} else {
 																if v_77, ok := expr.Kind.(ast2.ExprKindGenericStructLitExpr); ok {
 																	var expr_246 Result[AstExprResult, string]
 																	expr_246 = translateGenericStructLitAstExpected(v_77.F0, v_77.F1, v_77.F2, ctx, expected)
-																	expr_277 = expr_246
+																	expr_278 = expr_246
 																} else {
 																	if v_76, ok := expr.Kind.(ast2.ExprKindMapLitExpr); ok {
 																		var expr_245 Result[AstExprResult, string]
 																		expr_245 = translateMapLitAstExpected(v_76.F0, ctx, expected)
-																		expr_277 = expr_245
+																		expr_278 = expr_245
 																	} else {
 																		if v_75, ok := expr.Kind.(ast2.ExprKindSetLitExpr); ok {
 																			var expr_244 Result[AstExprResult, string]
 																			expr_244 = translateSetLitAstExpected(v_75.F0, ctx, expected)
-																			expr_277 = expr_244
+																			expr_278 = expr_244
 																		} else {
 																			if v_74, ok := expr.Kind.(ast2.ExprKindIfExpr); ok {
 																				var expr_243 Result[AstExprResult, string]
 																				expr_243 = translateIfAst(v_74.F0, v_74.F1, v_74.F2, ctx, expected)
-																				expr_277 = expr_243
+																				expr_278 = expr_243
 																			} else {
 																				if v_73, ok := expr.Kind.(ast2.ExprKindSwitchExpr); ok {
 																					var expr_242 Result[AstExprResult, string]
 																					expr_242 = translateSwitchAst(v_73.F0, v_73.F1, ctx, expected)
-																					expr_277 = expr_242
+																					expr_278 = expr_242
 																				} else {
 																					if v_72, ok := expr.Kind.(ast2.ExprKindBlockExpr); ok {
 																						var expr_241 Result[AstExprResult, string]
 																						expr_241 = translateBlockExprAstExpected(v_72.F0, ctx, 0, []goast.Stmt([]goast.Stmt{}), expected)
-																						expr_277 = expr_241
+																						expr_278 = expr_241
 																					} else {
 																						if v_71, ok := expr.Kind.(ast2.ExprKindFuncLitExpr); ok {
 																							var expr_240 Result[AstExprResult, string]
 																							expr_240 = translateFuncLitAst(v_71.F0, v_71.F1, v_71.F2, ctx)
-																							expr_277 = expr_240
+																							expr_278 = expr_240
 																						} else {
 																							{
 																								var expr_239 Result[AstExprResult, string]
 																								expr_239 = Err[AstExprResult, string]("AST lowering for this expression is not implemented")
-																								expr_277 = expr_239
+																								expr_278 = expr_239
 																							}
 																						}
 																					}
@@ -252,404 +258,421 @@ func translateExprAstExpectedInner(expr ast2.Expr, ctx *egCtx, expected string) 
 			}
 		}
 	}
-	return expr_277
+	return expr_278
+}
+func noneTypeArg(expected string, ctx *egCtx) string {
+	var expr_280 string
+	if strings.HasPrefix(expected, "Option[") && strings.HasSuffix(expected, "]") {
+		expr_280 = strings.TrimSuffix(strings.TrimPrefix(expected, "Option["), "]")
+	} else {
+		expr_280 = MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM4Fold(ctx.typeParams, "", func(found string, item string) string {
+			var expr_279 string
+			if found != "" || strings.HasSuffix(item, "#hkt") || strings.Index(item, "[") >= 0 {
+				expr_279 = found
+			} else {
+				expr_279 = item
+			}
+			return expr_279
+		})
+	}
+	return expr_280
 }
 func translateFieldAst(base ast2.Expr, field string, ctx *egCtx, expected string) Result[AstExprResult, string] {
-	value_278 := translateExprAstExpected(base, ctx, expected)
-	var expr_281 Result[AstExprResult, string]
-	if v_101, ok := value_278.(ResultOk[AstExprResult, string]); ok {
-		var expr_280 Result[AstExprResult, string]
-		expr_280 = Ok[AstExprResult, string](astExprWithPre(goast.Selector(v_101.F0.Expr, exportName(field)), v_101.F0.Pre))
-		expr_281 = expr_280
+	value_281 := translateExprAstExpected(base, ctx, expected)
+	var expr_284 Result[AstExprResult, string]
+	if v_101, ok := value_281.(ResultOk[AstExprResult, string]); ok {
+		var expr_283 Result[AstExprResult, string]
+		expr_283 = Ok[AstExprResult, string](astExprWithPre(goast.Selector(v_101.F0.Expr, exportName(field)), v_101.F0.Pre))
+		expr_284 = expr_283
 	} else {
-		if v_100, ok := value_278.(ResultErr[AstExprResult, string]); ok {
-			var expr_279 Result[AstExprResult, string]
-			expr_279 = Err[AstExprResult, string](v_100.F0)
-			expr_281 = expr_279
+		if v_100, ok := value_281.(ResultErr[AstExprResult, string]); ok {
+			var expr_282 Result[AstExprResult, string]
+			expr_282 = Err[AstExprResult, string](v_100.F0)
+			expr_284 = expr_282
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_281
+	return expr_284
 }
 func translateTupleLitAst(items []ast2.Expr, ctx *egCtx, expected string) Result[AstExprResult, string] {
-	var expr_294 Result[AstExprResult, string]
+	var expr_297 Result[AstExprResult, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_294 = Ok[AstExprResult, string](newAstExprResult(goast.Unit()))
+		expr_297 = Ok[AstExprResult, string](newAstExprResult(goast.Unit()))
 	} else {
-		var expr_293 Result[AstExprResult, string]
-		values_282 := translateAstArgs(items, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), []string([]string{}))
-		var expr_292 Result[AstExprResult, string]
-		if v_103, ok := values_282.(ResultErr[AstArgsResult, string]); ok {
-			var expr_291 Result[AstExprResult, string]
-			expr_291 = Err[AstExprResult, string](v_103.F0)
-			expr_292 = expr_291
+		var expr_296 Result[AstExprResult, string]
+		values_285 := translateAstArgs(items, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), []string([]string{}))
+		var expr_295 Result[AstExprResult, string]
+		if v_103, ok := values_285.(ResultErr[AstArgsResult, string]); ok {
+			var expr_294 Result[AstExprResult, string]
+			expr_294 = Err[AstExprResult, string](v_103.F0)
+			expr_295 = expr_294
 		} else {
-			if v_102, ok := values_282.(ResultOk[AstArgsResult, string]); ok {
-				var expr_290 Result[AstExprResult, string]
-				var types_283 []string = []string{}
-				var i_284 int = 0
-				for i_284 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-					types_283 = MygoIN5SliceM6Append(types_283, "any")
-					i_284 = i_284 + 1
+			if v_102, ok := values_285.(ResultOk[AstArgsResult, string]); ok {
+				var expr_293 Result[AstExprResult, string]
+				var types_286 []string = []string{}
+				var i_287 int = 0
+				for i_287 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+					types_286 = MygoIN5SliceM6Append(types_286, "any")
+					i_287 = i_287 + 1
 				}
-				var expr_285 []string
+				var expr_288 []string
 				if expected == "" {
-					expr_285 = types_283
+					expr_288 = types_286
 				} else {
-					expr_285 = inferTupleTypesFromExpected(expected, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items))
+					expr_288 = inferTupleTypesFromExpected(expected, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items))
 				}
-				expectedTypes_286 := expr_285
-				var fields_287 []string = []string{}
-				var j_288 int = 0
-				for j_288 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-					fieldType := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(expectedTypes_286, j_288), "any")
-					fields_287 = MygoIN5SliceM6Append(fields_287, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(j_288)+" "+fieldType)
-					j_288 = j_288 + 1
+				expectedTypes_289 := expr_288
+				var fields_290 []string = []string{}
+				var j_291 int = 0
+				for j_291 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+					fieldType := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(expectedTypes_289, j_291), "any")
+					fields_290 = MygoIN5SliceM6Append(fields_290, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(j_291)+" "+fieldType)
+					j_291 = j_291 + 1
 				}
-				structTypeStr_289 := "struct { " + joinStrings(fields_287, "; ") + " }"
-				expr_290 = Ok[AstExprResult, string](astExprWithPre(goast.Composite(goast.MustTypeExpr(structTypeStr_289), v_102.F0.Exprs), v_102.F0.Pre))
-				expr_292 = expr_290
+				structTypeStr_292 := "struct { " + joinStrings(fields_290, "; ") + " }"
+				expr_293 = Ok[AstExprResult, string](astExprWithPre(goast.Composite(goast.MustTypeExpr(structTypeStr_292), v_102.F0.Exprs), v_102.F0.Pre))
+				expr_295 = expr_293
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_293 = expr_292
-		expr_294 = expr_293
+		expr_296 = expr_295
+		expr_297 = expr_296
 	}
-	return expr_294
+	return expr_297
 }
 func inferTupleTypesFromExpected(expected string, count int) []string {
-	var types_295 []string = []string{}
-	var i_296 int = 0
-	for i_296 < count {
-		types_295 = MygoIN5SliceM6Append(types_295, "any")
-		i_296 = i_296 + 1
+	var types_298 []string = []string{}
+	var i_299 int = 0
+	for i_299 < count {
+		types_298 = MygoIN5SliceM6Append(types_298, "any")
+		i_299 = i_299 + 1
 	}
-	return types_295
+	return types_298
 }
 func translateFuncLitAst(params []ast2.Param, ret Option[ast2.TypeExpr], body ast2.Expr, ctx *egCtx) Result[AstExprResult, string] {
-	child_297 := &[]egCtx{ctxChild(ctx)}[0]
-	returnTypes_298 := goReturnTypesFromOption(ret, child_297.typeParams)
-	returnType_299 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(returnTypes_298, 0), "")
-	child_297.retType = returnType_299
-	var names_300 []string = []string{}
-	var index_301 int = 0
-	for index_301 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
-		param := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, index_301), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
-		name := ctxFreshBinding(child_297, param.Name)
-		ctxSetLocal(child_297, param.Name, goType(param.Type, child_297.typeParams))
-		names_300 = MygoIN5SliceM6Append(names_300, name)
-		index_301 = index_301 + 1
+	child_300 := &[]egCtx{ctxChild(ctx)}[0]
+	returnTypes_301 := goReturnTypesFromOption(ret, child_300.typeParams)
+	returnType_302 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(returnTypes_301, 0), "")
+	child_300.retType = returnType_302
+	var names_303 []string = []string{}
+	var index_304 int = 0
+	for index_304 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
+		param := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, index_304), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+		name := ctxFreshBinding(child_300, param.Name)
+		ctxSetLocal(child_300, param.Name, goType(param.Type, child_300.typeParams))
+		names_303 = MygoIN5SliceM6Append(names_303, name)
+		index_304 = index_304 + 1
 	}
-	lowered_302 := translateFuncBodyAst(body, child_297)
-	var expr_305 Result[AstExprResult, string]
-	if v_105, ok := lowered_302.(ResultErr[[]goast.Stmt, string]); ok {
-		var expr_304 Result[AstExprResult, string]
-		expr_304 = Err[AstExprResult, string](v_105.F0)
-		expr_305 = expr_304
+	lowered_305 := translateFuncBodyAst(body, child_300)
+	var expr_308 Result[AstExprResult, string]
+	if v_105, ok := lowered_305.(ResultErr[[]goast.Stmt, string]); ok {
+		var expr_307 Result[AstExprResult, string]
+		expr_307 = Err[AstExprResult, string](v_105.F0)
+		expr_308 = expr_307
 	} else {
-		if v_104, ok := lowered_302.(ResultOk[[]goast.Stmt, string]); ok {
-			var expr_303 Result[AstExprResult, string]
-			expr_303 = Ok[AstExprResult, string](newAstExprResult(goast.FuncLitFromStmts(names_300, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(params, func(p ast2.Param) string {
-				return goType(p.Type, child_297.typeParams)
-			}), returnTypes_298, v_104.F0)))
-			expr_305 = expr_303
+		if v_104, ok := lowered_305.(ResultOk[[]goast.Stmt, string]); ok {
+			var expr_306 Result[AstExprResult, string]
+			expr_306 = Ok[AstExprResult, string](newAstExprResult(goast.FuncLitFromStmts(names_303, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(params, func(p ast2.Param) string {
+				return goType(p.Type, child_300.typeParams)
+			}), returnTypes_301, v_104.F0)))
+			expr_308 = expr_306
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_305
+	return expr_308
 }
 func translateGenericStructLitAstExpected(typeName string, typeArgs []ast2.TypeExpr, fields []ast2.StructLitField, ctx *egCtx, expected string) Result[AstExprResult, string] {
-	result_306 := translateAstCompositeFields(fields, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), expected)
-	var expr_310 Result[AstExprResult, string]
-	if v_107, ok := result_306.(ResultErr[AstCompositeFields, string]); ok {
-		var expr_309 Result[AstExprResult, string]
-		expr_309 = Err[AstExprResult, string](v_107.F0)
-		expr_310 = expr_309
+	result_309 := translateAstCompositeFields(fields, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), expected)
+	var expr_313 Result[AstExprResult, string]
+	if v_107, ok := result_309.(ResultErr[AstCompositeFields, string]); ok {
+		var expr_312 Result[AstExprResult, string]
+		expr_312 = Err[AstExprResult, string](v_107.F0)
+		expr_313 = expr_312
 	} else {
-		if v_106, ok := result_306.(ResultOk[AstCompositeFields, string]); ok {
-			var expr_308 Result[AstExprResult, string]
-			typ_307 := goType(ast2.TypeExprNamedTypeCtor(typeName, typeArgs), ctx.typeParams)
-			expr_308 = Ok[AstExprResult, string](astExprWithPre(goast.Composite(goast.MustTypeExpr(typ_307), v_106.F0.Elts), v_106.F0.Pre))
-			expr_310 = expr_308
+		if v_106, ok := result_309.(ResultOk[AstCompositeFields, string]); ok {
+			var expr_311 Result[AstExprResult, string]
+			typ_310 := goType(ast2.TypeExprNamedTypeCtor(typeName, typeArgs), ctx.typeParams)
+			expr_311 = Ok[AstExprResult, string](astExprWithPre(goast.Composite(goast.MustTypeExpr(typ_310), v_106.F0.Elts), v_106.F0.Pre))
+			expr_313 = expr_311
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_310
+	return expr_313
 }
 func translateTypeAsAst(value ast2.Expr, typ ast2.TypeExpr, ctx *egCtx) Result[AstExprResult, string] {
-	target_311 := goType(typ, ctx.typeParams)
-	var expr_318 Result[AstExprResult, string]
+	target_314 := goType(typ, ctx.typeParams)
+	var expr_321 Result[AstExprResult, string]
 	if v_110, ok := value.Kind.(ast2.ExprKindSliceLitExpr); ok {
-		var expr_317 Result[AstExprResult, string]
-		expr_317 = translateSliceLitAst(v_110.F0, ctx, target_311)
-		expr_318 = expr_317
+		var expr_320 Result[AstExprResult, string]
+		expr_320 = translateSliceLitAst(v_110.F0, ctx, target_314)
+		expr_321 = expr_320
 	} else {
 		{
-			var expr_316 Result[AstExprResult, string]
-			translated_312 := translateExprAstExpected(value, ctx, target_311)
-			var expr_315 Result[AstExprResult, string]
-			if v_109, ok := translated_312.(ResultErr[AstExprResult, string]); ok {
-				var expr_314 Result[AstExprResult, string]
-				expr_314 = Err[AstExprResult, string](v_109.F0)
-				expr_315 = expr_314
+			var expr_319 Result[AstExprResult, string]
+			translated_315 := translateExprAstExpected(value, ctx, target_314)
+			var expr_318 Result[AstExprResult, string]
+			if v_109, ok := translated_315.(ResultErr[AstExprResult, string]); ok {
+				var expr_317 Result[AstExprResult, string]
+				expr_317 = Err[AstExprResult, string](v_109.F0)
+				expr_318 = expr_317
 			} else {
-				if v_108, ok := translated_312.(ResultOk[AstExprResult, string]); ok {
-					var expr_313 Result[AstExprResult, string]
-					expr_313 = Ok[AstExprResult, string](astExprWithPre(goast.Convert(target_311, v_108.F0.Expr), v_108.F0.Pre))
-					expr_315 = expr_313
+				if v_108, ok := translated_315.(ResultOk[AstExprResult, string]); ok {
+					var expr_316 Result[AstExprResult, string]
+					expr_316 = Ok[AstExprResult, string](astExprWithPre(goast.Convert(target_314, v_108.F0.Expr), v_108.F0.Pre))
+					expr_318 = expr_316
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_316 = expr_315
-			expr_318 = expr_316
+			expr_319 = expr_318
+			expr_321 = expr_319
 		}
 	}
-	return expr_318
+	return expr_321
 }
 func translateSliceLitAst(items []ast2.Expr, ctx *egCtx, expected string) Result[AstExprResult, string] {
-	values_319 := translateAstArgs(items, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), []string([]string{}))
-	var expr_324 Result[AstExprResult, string]
-	if v_112, ok := values_319.(ResultErr[AstArgsResult, string]); ok {
-		var expr_323 Result[AstExprResult, string]
-		expr_323 = Err[AstExprResult, string](v_112.F0)
-		expr_324 = expr_323
+	values_322 := translateAstArgs(items, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), []string([]string{}))
+	var expr_327 Result[AstExprResult, string]
+	if v_112, ok := values_322.(ResultErr[AstArgsResult, string]); ok {
+		var expr_326 Result[AstExprResult, string]
+		expr_326 = Err[AstExprResult, string](v_112.F0)
+		expr_327 = expr_326
 	} else {
-		if v_111, ok := values_319.(ResultOk[AstArgsResult, string]); ok {
-			var expr_322 Result[AstExprResult, string]
-			var expr_320 string
+		if v_111, ok := values_322.(ResultOk[AstArgsResult, string]); ok {
+			var expr_325 Result[AstExprResult, string]
+			var expr_323 string
 			if expected == "" {
-				expr_320 = "[]any"
+				expr_323 = "[]any"
 			} else {
-				expr_320 = expected
+				expr_323 = expected
 			}
-			typ_321 := expr_320
-			expr_322 = Ok[AstExprResult, string](astExprWithPre(goast.SliceLiteral(typ_321, v_111.F0.Exprs), v_111.F0.Pre))
-			expr_324 = expr_322
+			typ_324 := expr_323
+			expr_325 = Ok[AstExprResult, string](astExprWithPre(goast.SliceLiteral(typ_324, v_111.F0.Exprs), v_111.F0.Pre))
+			expr_327 = expr_325
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_324
+	return expr_327
 }
 func translateSwitchAst(target ast2.Expr, cases []ast2.SwitchCase, ctx *egCtx, expected string) Result[AstExprResult, string] {
-	subject_325 := translateSwitchSubject(target, ctx)
-	var expr_336 Result[AstExprResult, string]
-	if v_116, ok := subject_325.(ResultErr[AstExprResult, string]); ok {
-		var expr_335 Result[AstExprResult, string]
-		expr_335 = Err[AstExprResult, string](v_116.F0)
-		expr_336 = expr_335
+	subject_328 := translateSwitchSubject(target, ctx)
+	var expr_339 Result[AstExprResult, string]
+	if v_116, ok := subject_328.(ResultErr[AstExprResult, string]); ok {
+		var expr_338 Result[AstExprResult, string]
+		expr_338 = Err[AstExprResult, string](v_116.F0)
+		expr_339 = expr_338
 	} else {
-		if v_113, ok := subject_325.(ResultOk[AstExprResult, string]); ok {
-			var expr_334 Result[AstExprResult, string]
-			temp_326 := ctxFreshExprTemp(ctx)
-			var expr_328 string
+		if v_113, ok := subject_328.(ResultOk[AstExprResult, string]); ok {
+			var expr_337 Result[AstExprResult, string]
+			temp_329 := ctxFreshExprTemp(ctx)
+			var expr_331 string
 			if expected == "" {
-				var expr_327 string
+				var expr_330 string
 				if ctx.retType == "" {
-					expr_327 = "any"
+					expr_330 = "any"
 				} else {
-					expr_327 = ctx.retType
+					expr_330 = ctx.retType
 				}
-				expr_328 = expr_327
+				expr_331 = expr_330
 			} else {
-				expr_328 = expected
+				expr_331 = expected
 			}
-			typ_329 := expr_328
-			branches_330 := translateSwitchBranches(cases, target, v_113.F0.Expr, temp_326, ctx, typ_329)
-			var expr_333 Result[AstExprResult, string]
-			if v_115, ok := branches_330.(ResultErr[[]goast.Stmt, string]); ok {
-				var expr_332 Result[AstExprResult, string]
-				expr_332 = Err[AstExprResult, string](v_115.F0)
-				expr_333 = expr_332
+			typ_332 := expr_331
+			branches_333 := translateSwitchBranches(cases, target, v_113.F0.Expr, temp_329, ctx, typ_332)
+			var expr_336 Result[AstExprResult, string]
+			if v_115, ok := branches_333.(ResultErr[[]goast.Stmt, string]); ok {
+				var expr_335 Result[AstExprResult, string]
+				expr_335 = Err[AstExprResult, string](v_115.F0)
+				expr_336 = expr_335
 			} else {
-				if v_114, ok := branches_330.(ResultOk[[]goast.Stmt, string]); ok {
-					var expr_331 Result[AstExprResult, string]
-					expr_331 = Ok[AstExprResult, string](astExprWithPre(goast.Ident(temp_326), goast.AppendStmts(v_113.F0.Pre, goast.AppendStmts(astSingleStmt(goast.DeclareFromType(temp_326, typ_329)), v_114.F0))))
-					expr_333 = expr_331
+				if v_114, ok := branches_333.(ResultOk[[]goast.Stmt, string]); ok {
+					var expr_334 Result[AstExprResult, string]
+					expr_334 = Ok[AstExprResult, string](astExprWithPre(goast.Ident(temp_329), goast.AppendStmts(v_113.F0.Pre, goast.AppendStmts(astSingleStmt(goast.DeclareFromType(temp_329, typ_332)), v_114.F0))))
+					expr_336 = expr_334
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_334 = expr_333
-			expr_336 = expr_334
+			expr_337 = expr_336
+			expr_339 = expr_337
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_336
+	return expr_339
 }
 func translateSwitchSubject(target ast2.Expr, ctx *egCtx) Result[AstExprResult, string] {
-	var expr_344 Result[AstExprResult, string]
+	var expr_347 Result[AstExprResult, string]
 	if v_117, ok := target.Kind.(ast2.ExprKindCallExpr); ok {
-		var expr_343 Result[AstExprResult, string]
-		var expr_342 Result[AstExprResult, string]
+		var expr_346 Result[AstExprResult, string]
+		var expr_345 Result[AstExprResult, string]
 		if v_119, ok := ffiResultSignature(v_117.F0, ctx).(OptionSome[typeinference2.GoFuncSignature]); ok {
-			var expr_341 Result[AstExprResult, string]
-			valueType_339 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_119.F0.Results, 0), "")
-			var expr_340 Result[AstExprResult, string]
-			if valueType_339 == "" {
-				expr_340 = Err[AstExprResult, string]("Go FFI function has no value return type")
+			var expr_344 Result[AstExprResult, string]
+			valueType_342 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_119.F0.Results, 0), "")
+			var expr_343 Result[AstExprResult, string]
+			if valueType_342 == "" {
+				expr_343 = Err[AstExprResult, string]("Go FFI function has no value return type")
 			} else {
-				expr_340 = translateFFIResultCall(v_117.F0, v_117.F1, v_117.F2, ctx, "Result["+valueType_339+", error]", v_119.F0)
+				expr_343 = translateFFIResultCall(v_117.F0, v_117.F1, v_117.F2, ctx, "Result["+valueType_342+", error]", v_119.F0)
 			}
-			expr_341 = expr_340
-			expr_342 = expr_341
+			expr_344 = expr_343
+			expr_345 = expr_344
 		} else {
 			if _, ok := ffiResultSignature(v_117.F0, ctx).(OptionNone[typeinference2.GoFuncSignature]); ok {
-				var expr_338 Result[AstExprResult, string]
-				expr_338 = translateExprAst(target, ctx)
-				expr_342 = expr_338
+				var expr_341 Result[AstExprResult, string]
+				expr_341 = translateExprAst(target, ctx)
+				expr_345 = expr_341
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_343 = expr_342
-		expr_344 = expr_343
+		expr_346 = expr_345
+		expr_347 = expr_346
 	} else {
 		{
-			var expr_337 Result[AstExprResult, string]
-			expr_337 = translateExprAst(target, ctx)
-			expr_344 = expr_337
+			var expr_340 Result[AstExprResult, string]
+			expr_340 = translateExprAst(target, ctx)
+			expr_347 = expr_340
 		}
 	}
-	return expr_344
+	return expr_347
 }
 func normalizeNumberLiteral(value string) string {
-	suffixes_345 := []string([]string{"i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "f32"})
-	return normalizeNumberLiteralSuffix(value, suffixes_345)
+	suffixes_348 := []string([]string{"i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "f32"})
+	return normalizeNumberLiteralSuffix(value, suffixes_348)
 }
 func normalizeNumberLiteralSuffix(value string, suffixes []string) string {
-	var expr_349 string
+	var expr_352 string
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(suffixes) == 0 {
-		expr_349 = value
+		expr_352 = value
 	} else {
-		var expr_348 string
-		suffix_346 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(suffixes, 0), "")
-		var expr_347 string
-		if strings.HasSuffix(value, suffix_346) {
-			expr_347 = strings.TrimSuffix(value, suffix_346)
+		var expr_351 string
+		suffix_349 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(suffixes, 0), "")
+		var expr_350 string
+		if strings.HasSuffix(value, suffix_349) {
+			expr_350 = strings.TrimSuffix(value, suffix_349)
 		} else {
-			expr_347 = normalizeNumberLiteralSuffix(value, sliceDrop[string](suffixes, 1))
+			expr_350 = normalizeNumberLiteralSuffix(value, sliceDrop[string](suffixes, 1))
 		}
-		expr_348 = expr_347
-		expr_349 = expr_348
+		expr_351 = expr_350
+		expr_352 = expr_351
 	}
-	return expr_349
+	return expr_352
 }
 func translateSwitchBranches(cases []ast2.SwitchCase, sourceTarget ast2.Expr, target goast.Expr, temp string, ctx *egCtx, expected string) Result[[]goast.Stmt, string] {
-	var expr_382 Result[[]goast.Stmt, string]
+	var expr_385 Result[[]goast.Stmt, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) == 0 {
-		var expr_351 Result[[]goast.Stmt, string]
-		var noBranches_350 []goast.Stmt = []goast.Stmt{}
-		expr_351 = Ok[[]goast.Stmt, string](noBranches_350)
-		expr_382 = expr_351
+		var expr_354 Result[[]goast.Stmt, string]
+		var noBranches_353 []goast.Stmt = []goast.Stmt{}
+		expr_354 = Ok[[]goast.Stmt, string](noBranches_353)
+		expr_385 = expr_354
 	} else {
-		var expr_381 Result[[]goast.Stmt, string]
-		current_352 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), ast2.SwitchCase{Pattern: ast2.PatternWildcardPatternCtor(), Body: ast2.EmptyExpr()})
-		var expr_380 Result[[]goast.Stmt, string]
-		if v_132, ok := current_352.Pattern.(ast2.PatternBindPattern); ok {
-			var expr_379 Result[[]goast.Stmt, string]
-			child_378 := &[]egCtx{ctxChild(ctx)}[0]
-			ctxSetBinding(child_378, v_132.F0, temp)
-			expr_379 = translateSwitchCaseBody(current_352.Body, child_378, expected, temp)
-			expr_380 = expr_379
+		var expr_384 Result[[]goast.Stmt, string]
+		current_355 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), ast2.SwitchCase{Pattern: ast2.PatternWildcardPatternCtor(), Body: ast2.EmptyExpr()})
+		var expr_383 Result[[]goast.Stmt, string]
+		if v_132, ok := current_355.Pattern.(ast2.PatternBindPattern); ok {
+			var expr_382 Result[[]goast.Stmt, string]
+			child_381 := &[]egCtx{ctxChild(ctx)}[0]
+			ctxSetBinding(child_381, v_132.F0, temp)
+			expr_382 = translateSwitchCaseBody(current_355.Body, child_381, expected, temp)
+			expr_383 = expr_382
 		} else {
-			if _, ok := current_352.Pattern.(ast2.PatternWildcardPattern); ok {
-				var expr_377 Result[[]goast.Stmt, string]
-				expr_377 = translateSwitchCaseBody(current_352.Body, ctx, expected, temp)
-				expr_380 = expr_377
+			if _, ok := current_355.Pattern.(ast2.PatternWildcardPattern); ok {
+				var expr_380 Result[[]goast.Stmt, string]
+				expr_380 = translateSwitchCaseBody(current_355.Body, ctx, expected, temp)
+				expr_383 = expr_380
 			} else {
-				if v_130, ok := current_352.Pattern.(ast2.PatternTuplePattern); ok {
-					var expr_376 Result[[]goast.Stmt, string]
-					child_375 := &[]egCtx{ctxChild(ctx)}[0]
-					bindTuplePattern(child_375, v_130.F0, temp, 0)
-					expr_376 = translateSwitchCaseBody(current_352.Body, child_375, expected, temp)
-					expr_380 = expr_376
+				if v_130, ok := current_355.Pattern.(ast2.PatternTuplePattern); ok {
+					var expr_379 Result[[]goast.Stmt, string]
+					child_378 := &[]egCtx{ctxChild(ctx)}[0]
+					bindTuplePattern(child_378, v_130.F0, temp, 0)
+					expr_379 = translateSwitchCaseBody(current_355.Body, child_378, expected, temp)
+					expr_383 = expr_379
 				} else {
-					if v_125, ok := current_352.Pattern.(ast2.PatternLiteralPattern); ok {
-						var expr_374 Result[[]goast.Stmt, string]
-						body_364 := translateSwitchCaseBody(current_352.Body, ctx, expected, temp)
-						rest_365 := translateSwitchBranches(sliceDrop[ast2.SwitchCase](cases, 1), sourceTarget, target, temp, ctx, expected)
-						var expr_373 Result[[]goast.Stmt, string]
-						if v_129, ok := body_364.(ResultErr[[]goast.Stmt, string]); ok {
-							var expr_372 Result[[]goast.Stmt, string]
-							expr_372 = Err[[]goast.Stmt, string](v_129.F0)
-							expr_373 = expr_372
+					if v_125, ok := current_355.Pattern.(ast2.PatternLiteralPattern); ok {
+						var expr_377 Result[[]goast.Stmt, string]
+						body_367 := translateSwitchCaseBody(current_355.Body, ctx, expected, temp)
+						rest_368 := translateSwitchBranches(sliceDrop[ast2.SwitchCase](cases, 1), sourceTarget, target, temp, ctx, expected)
+						var expr_376 Result[[]goast.Stmt, string]
+						if v_129, ok := body_367.(ResultErr[[]goast.Stmt, string]); ok {
+							var expr_375 Result[[]goast.Stmt, string]
+							expr_375 = Err[[]goast.Stmt, string](v_129.F0)
+							expr_376 = expr_375
 						} else {
-							if v_126, ok := body_364.(ResultOk[[]goast.Stmt, string]); ok {
-								var expr_371 Result[[]goast.Stmt, string]
-								var expr_370 Result[[]goast.Stmt, string]
-								if v_128, ok := rest_365.(ResultErr[[]goast.Stmt, string]); ok {
-									var expr_369 Result[[]goast.Stmt, string]
-									expr_369 = Err[[]goast.Stmt, string](v_128.F0)
-									expr_370 = expr_369
+							if v_126, ok := body_367.(ResultOk[[]goast.Stmt, string]); ok {
+								var expr_374 Result[[]goast.Stmt, string]
+								var expr_373 Result[[]goast.Stmt, string]
+								if v_128, ok := rest_368.(ResultErr[[]goast.Stmt, string]); ok {
+									var expr_372 Result[[]goast.Stmt, string]
+									expr_372 = Err[[]goast.Stmt, string](v_128.F0)
+									expr_373 = expr_372
 								} else {
-									if v_127, ok := rest_365.(ResultOk[[]goast.Stmt, string]); ok {
-										var expr_368 Result[[]goast.Stmt, string]
-										var expr_366 goast.Expr
+									if v_127, ok := rest_368.(ResultOk[[]goast.Stmt, string]); ok {
+										var expr_371 Result[[]goast.Stmt, string]
+										var expr_369 goast.Expr
 										if v_125.F0 == "string" {
-											expr_366 = goast.String(strconv.Quote(v_125.F1))
+											expr_369 = goast.String(strconv.Quote(v_125.F1))
 										} else {
-											expr_366 = goast.Number(v_125.F1)
+											expr_369 = goast.Number(v_125.F1)
 										}
-										pattern_367 := expr_366
-										expr_368 = Ok[[]goast.Stmt, string](astSingleStmt(goast.If(goast.Binary(target, "==", pattern_367), v_126.F0, v_127.F0)))
-										expr_370 = expr_368
+										pattern_370 := expr_369
+										expr_371 = Ok[[]goast.Stmt, string](astSingleStmt(goast.If(goast.Binary(target, "==", pattern_370), v_126.F0, v_127.F0)))
+										expr_373 = expr_371
 									} else {
 										panic("unreachable")
 									}
 								}
-								expr_371 = expr_370
-								expr_373 = expr_371
+								expr_374 = expr_373
+								expr_376 = expr_374
 							} else {
 								panic("unreachable")
 							}
 						}
-						expr_374 = expr_373
-						expr_380 = expr_374
+						expr_377 = expr_376
+						expr_383 = expr_377
 					} else {
-						if v_120, ok := current_352.Pattern.(ast2.PatternVariantPattern); ok {
-							var expr_363 Result[[]goast.Stmt, string]
-							rest_353 := translateSwitchBranches(sliceDrop[ast2.SwitchCase](cases, 1), sourceTarget, target, temp, ctx, expected)
-							var expr_362 Result[[]goast.Stmt, string]
-							if v_124, ok := rest_353.(ResultErr[[]goast.Stmt, string]); ok {
-								var expr_361 Result[[]goast.Stmt, string]
-								expr_361 = Err[[]goast.Stmt, string](v_124.F0)
-								expr_362 = expr_361
+						if v_120, ok := current_355.Pattern.(ast2.PatternVariantPattern); ok {
+							var expr_366 Result[[]goast.Stmt, string]
+							rest_356 := translateSwitchBranches(sliceDrop[ast2.SwitchCase](cases, 1), sourceTarget, target, temp, ctx, expected)
+							var expr_365 Result[[]goast.Stmt, string]
+							if v_124, ok := rest_356.(ResultErr[[]goast.Stmt, string]); ok {
+								var expr_364 Result[[]goast.Stmt, string]
+								expr_364 = Err[[]goast.Stmt, string](v_124.F0)
+								expr_365 = expr_364
 							} else {
-								if v_121, ok := rest_353.(ResultOk[[]goast.Stmt, string]); ok {
-									var expr_360 Result[[]goast.Stmt, string]
-									valueName_354 := "__mygo_match_" + ctxFreshExprTemp(ctx)
-									child_355 := &[]egCtx{ctxChild(ctx)}[0]
-									bindPatternArguments(child_355, v_120.F1, valueName_354, 0)
-									body_356 := translateSwitchCaseBody(current_352.Body, child_355, expected, temp)
-									var expr_359 Result[[]goast.Stmt, string]
-									if v_123, ok := body_356.(ResultErr[[]goast.Stmt, string]); ok {
-										var expr_358 Result[[]goast.Stmt, string]
-										expr_358 = Err[[]goast.Stmt, string](v_123.F0)
-										expr_359 = expr_358
+								if v_121, ok := rest_356.(ResultOk[[]goast.Stmt, string]); ok {
+									var expr_363 Result[[]goast.Stmt, string]
+									valueName_357 := "__mygo_match_" + ctxFreshExprTemp(ctx)
+									child_358 := &[]egCtx{ctxChild(ctx)}[0]
+									bindPatternArguments(child_358, v_120.F1, valueName_357, 0)
+									body_359 := translateSwitchCaseBody(current_355.Body, child_358, expected, temp)
+									var expr_362 Result[[]goast.Stmt, string]
+									if v_123, ok := body_359.(ResultErr[[]goast.Stmt, string]); ok {
+										var expr_361 Result[[]goast.Stmt, string]
+										expr_361 = Err[[]goast.Stmt, string](v_123.F0)
+										expr_362 = expr_361
 									} else {
-										if v_122, ok := body_356.(ResultOk[[]goast.Stmt, string]); ok {
-											var expr_357 Result[[]goast.Stmt, string]
-											expr_357 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(switchTargetGoType(sourceTarget, ctx), v_120.F0), valueName_354, v_122.F0, v_121.F0)))
-											expr_359 = expr_357
+										if v_122, ok := body_359.(ResultOk[[]goast.Stmt, string]); ok {
+											var expr_360 Result[[]goast.Stmt, string]
+											expr_360 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(switchTargetGoType(sourceTarget, ctx), v_120.F0), valueName_357, v_122.F0, v_121.F0)))
+											expr_362 = expr_360
 										} else {
 											panic("unreachable")
 										}
 									}
-									expr_360 = expr_359
-									expr_362 = expr_360
+									expr_363 = expr_362
+									expr_365 = expr_363
 								} else {
 									panic("unreachable")
 								}
 							}
-							expr_363 = expr_362
-							expr_380 = expr_363
+							expr_366 = expr_365
+							expr_383 = expr_366
 						} else {
 							panic("unreachable")
 						}
@@ -657,28 +680,28 @@ func translateSwitchBranches(cases []ast2.SwitchCase, sourceTarget ast2.Expr, ta
 				}
 			}
 		}
-		expr_381 = expr_380
-		expr_382 = expr_381
+		expr_384 = expr_383
+		expr_385 = expr_384
 	}
-	return expr_382
+	return expr_385
 }
 func translateSwitchCaseBody(body ast2.Expr, ctx *egCtx, expected string, temp string) Result[[]goast.Stmt, string] {
-	value_383 := translateExprAstExpected(body, ctx, expected)
-	var expr_386 Result[[]goast.Stmt, string]
-	if v_134, ok := value_383.(ResultErr[AstExprResult, string]); ok {
-		var expr_385 Result[[]goast.Stmt, string]
-		expr_385 = Err[[]goast.Stmt, string](v_134.F0)
-		expr_386 = expr_385
+	value_386 := translateExprAstExpected(body, ctx, expected)
+	var expr_389 Result[[]goast.Stmt, string]
+	if v_134, ok := value_386.(ResultErr[AstExprResult, string]); ok {
+		var expr_388 Result[[]goast.Stmt, string]
+		expr_388 = Err[[]goast.Stmt, string](v_134.F0)
+		expr_389 = expr_388
 	} else {
-		if v_133, ok := value_383.(ResultOk[AstExprResult, string]); ok {
-			var expr_384 Result[[]goast.Stmt, string]
-			expr_384 = Ok[[]goast.Stmt, string](goast.AppendStmts(v_133.F0.Pre, astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(temp)), "=", astSingleExpr(v_133.F0.Expr)))))
-			expr_386 = expr_384
+		if v_133, ok := value_386.(ResultOk[AstExprResult, string]); ok {
+			var expr_387 Result[[]goast.Stmt, string]
+			expr_387 = Ok[[]goast.Stmt, string](goast.AppendStmts(v_133.F0.Pre, astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(temp)), "=", astSingleExpr(v_133.F0.Expr)))))
+			expr_389 = expr_387
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_386
+	return expr_389
 }
 func bindPatternArguments(ctx *egCtx, args []ast2.Pattern, valueName string, index int) {
 	if index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) {
@@ -724,397 +747,377 @@ func bindTuplePattern(ctx *egCtx, items []ast2.Pattern, valueName string, index 
 	return
 }
 func switchTargetGoType(target ast2.Expr, ctx *egCtx) string {
-	var expr_393 string
+	var expr_396 string
 	if v_141, ok := target.Kind.(ast2.ExprKindIdentExpr); ok {
-		var expr_392 string
-		expr_392 = MygoIN6OptionM8UnwrapOr(ctxGetLocal(ctx, v_141.F0), "any")
-		expr_393 = expr_392
+		var expr_395 string
+		expr_395 = MygoIN6OptionM8UnwrapOr(ctxGetLocal(ctx, v_141.F0), "any")
+		expr_396 = expr_395
 	} else {
 		{
-			var expr_391 string
-			var expr_390 string
+			var expr_394 string
+			var expr_393 string
 			if v_140, ok := ffiResultSignature(target, ctx).(OptionSome[typeinference2.GoFuncSignature]); ok {
-				var expr_389 string
-				valueType_388 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_140.F0.Results, 0), "")
-				expr_389 = "Result[" + valueType_388 + ", error]"
-				expr_390 = expr_389
+				var expr_392 string
+				valueType_391 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_140.F0.Results, 0), "")
+				expr_392 = "Result[" + valueType_391 + ", error]"
+				expr_393 = expr_392
 			} else {
 				if _, ok := ffiResultSignature(target, ctx).(OptionNone[typeinference2.GoFuncSignature]); ok {
-					var expr_387 string
-					expr_387 = "any"
-					expr_390 = expr_387
+					var expr_390 string
+					expr_390 = "any"
+					expr_393 = expr_390
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_391 = expr_390
-			expr_393 = expr_391
+			expr_394 = expr_393
+			expr_396 = expr_394
 		}
 	}
-	return expr_393
+	return expr_396
 }
 func translateBlockExprAstExpected(items []ast2.Stmt, ctx *egCtx, index int, pre []goast.Stmt, expected string) Result[AstExprResult, string] {
-	var expr_418 Result[AstExprResult, string]
+	var expr_421 Result[AstExprResult, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_418 = Ok[AstExprResult, string](astExprWithPre(goast.Unit(), pre))
+		expr_421 = Ok[AstExprResult, string](astExprWithPre(goast.Unit(), pre))
 	} else {
-		var expr_417 Result[AstExprResult, string]
-		var stmt_394 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
-		var expr_416 Result[AstExprResult, string]
+		var expr_420 Result[AstExprResult, string]
+		var stmt_397 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
+		var expr_419 Result[AstExprResult, string]
 		if index == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1 {
-			var expr_410 Result[AstExprResult, string]
-			if v_147, ok := stmt_394.(ast2.StmtExprStmt); ok {
-				var expr_409 Result[AstExprResult, string]
-				value_405 := translateExprAstExpected(v_147.F0, ctx, expected)
-				var expr_408 Result[AstExprResult, string]
-				if v_149, ok := value_405.(ResultOk[AstExprResult, string]); ok {
-					var expr_407 Result[AstExprResult, string]
-					expr_407 = Ok[AstExprResult, string](astExprWithPre(v_149.F0.Expr, goast.AppendStmts(pre, v_149.F0.Pre)))
-					expr_408 = expr_407
+			var expr_413 Result[AstExprResult, string]
+			if v_147, ok := stmt_397.(ast2.StmtExprStmt); ok {
+				var expr_412 Result[AstExprResult, string]
+				value_408 := translateExprAstExpected(v_147.F0, ctx, expected)
+				var expr_411 Result[AstExprResult, string]
+				if v_149, ok := value_408.(ResultOk[AstExprResult, string]); ok {
+					var expr_410 Result[AstExprResult, string]
+					expr_410 = Ok[AstExprResult, string](astExprWithPre(v_149.F0.Expr, goast.AppendStmts(pre, v_149.F0.Pre)))
+					expr_411 = expr_410
 				} else {
-					if v_148, ok := value_405.(ResultErr[AstExprResult, string]); ok {
-						var expr_406 Result[AstExprResult, string]
-						expr_406 = Err[AstExprResult, string](v_148.F0)
-						expr_408 = expr_406
+					if v_148, ok := value_408.(ResultErr[AstExprResult, string]); ok {
+						var expr_409 Result[AstExprResult, string]
+						expr_409 = Err[AstExprResult, string](v_148.F0)
+						expr_411 = expr_409
 					} else {
 						panic("unreachable")
 					}
 				}
-				expr_409 = expr_408
-				expr_410 = expr_409
+				expr_412 = expr_411
+				expr_413 = expr_412
 			} else {
-				if v_144, ok := stmt_394.(ast2.StmtWhileStmt); ok {
-					var expr_404 Result[AstExprResult, string]
-					value_400 := translateAstWhileExpr(v_144.F0, v_144.F1, ctx)
-					var expr_403 Result[AstExprResult, string]
-					if v_146, ok := value_400.(ResultOk[AstExprResult, string]); ok {
-						var expr_402 Result[AstExprResult, string]
-						expr_402 = Ok[AstExprResult, string](astExprWithPre(v_146.F0.Expr, goast.AppendStmts(pre, v_146.F0.Pre)))
-						expr_403 = expr_402
+				if v_144, ok := stmt_397.(ast2.StmtWhileStmt); ok {
+					var expr_407 Result[AstExprResult, string]
+					value_403 := translateAstWhileExpr(v_144.F0, v_144.F1, ctx)
+					var expr_406 Result[AstExprResult, string]
+					if v_146, ok := value_403.(ResultOk[AstExprResult, string]); ok {
+						var expr_405 Result[AstExprResult, string]
+						expr_405 = Ok[AstExprResult, string](astExprWithPre(v_146.F0.Expr, goast.AppendStmts(pre, v_146.F0.Pre)))
+						expr_406 = expr_405
 					} else {
-						if v_145, ok := value_400.(ResultErr[AstExprResult, string]); ok {
-							var expr_401 Result[AstExprResult, string]
-							expr_401 = Err[AstExprResult, string](v_145.F0)
-							expr_403 = expr_401
+						if v_145, ok := value_403.(ResultErr[AstExprResult, string]); ok {
+							var expr_404 Result[AstExprResult, string]
+							expr_404 = Err[AstExprResult, string](v_145.F0)
+							expr_406 = expr_404
 						} else {
 							panic("unreachable")
 						}
 					}
-					expr_404 = expr_403
-					expr_410 = expr_404
+					expr_407 = expr_406
+					expr_413 = expr_407
 				} else {
 					{
-						var expr_399 Result[AstExprResult, string]
-						stmts_395 := translateAstLeadingStmt(stmt_394, ctx)
-						var expr_398 Result[AstExprResult, string]
-						if v_143, ok := stmts_395.(ResultErr[[]goast.Stmt, string]); ok {
-							var expr_397 Result[AstExprResult, string]
-							expr_397 = Err[AstExprResult, string](v_143.F0)
-							expr_398 = expr_397
+						var expr_402 Result[AstExprResult, string]
+						stmts_398 := translateAstLeadingStmt(stmt_397, ctx)
+						var expr_401 Result[AstExprResult, string]
+						if v_143, ok := stmts_398.(ResultErr[[]goast.Stmt, string]); ok {
+							var expr_400 Result[AstExprResult, string]
+							expr_400 = Err[AstExprResult, string](v_143.F0)
+							expr_401 = expr_400
 						} else {
-							if v_142, ok := stmts_395.(ResultOk[[]goast.Stmt, string]); ok {
-								var expr_396 Result[AstExprResult, string]
-								expr_396 = Ok[AstExprResult, string](astExprWithPre(goast.Unit(), goast.AppendStmts(pre, v_142.F0)))
-								expr_398 = expr_396
+							if v_142, ok := stmts_398.(ResultOk[[]goast.Stmt, string]); ok {
+								var expr_399 Result[AstExprResult, string]
+								expr_399 = Ok[AstExprResult, string](astExprWithPre(goast.Unit(), goast.AppendStmts(pre, v_142.F0)))
+								expr_401 = expr_399
 							} else {
 								panic("unreachable")
 							}
 						}
-						expr_399 = expr_398
-						expr_410 = expr_399
+						expr_402 = expr_401
+						expr_413 = expr_402
 					}
 				}
 			}
-			expr_416 = expr_410
+			expr_419 = expr_413
 		} else {
-			var expr_415 Result[AstExprResult, string]
-			leading_411 := translateAstLeadingStmt(stmt_394, ctx)
-			var expr_414 Result[AstExprResult, string]
-			if v_151, ok := leading_411.(ResultOk[[]goast.Stmt, string]); ok {
-				var expr_413 Result[AstExprResult, string]
-				expr_413 = translateBlockExprAstExpected(items, ctx, index+1, goast.AppendStmts(pre, v_151.F0), expected)
-				expr_414 = expr_413
+			var expr_418 Result[AstExprResult, string]
+			leading_414 := translateAstLeadingStmt(stmt_397, ctx)
+			var expr_417 Result[AstExprResult, string]
+			if v_151, ok := leading_414.(ResultOk[[]goast.Stmt, string]); ok {
+				var expr_416 Result[AstExprResult, string]
+				expr_416 = translateBlockExprAstExpected(items, ctx, index+1, goast.AppendStmts(pre, v_151.F0), expected)
+				expr_417 = expr_416
 			} else {
-				if v_150, ok := leading_411.(ResultErr[[]goast.Stmt, string]); ok {
-					var expr_412 Result[AstExprResult, string]
-					expr_412 = Err[AstExprResult, string](v_150.F0)
-					expr_414 = expr_412
+				if v_150, ok := leading_414.(ResultErr[[]goast.Stmt, string]); ok {
+					var expr_415 Result[AstExprResult, string]
+					expr_415 = Err[AstExprResult, string](v_150.F0)
+					expr_417 = expr_415
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_415 = expr_414
-			expr_416 = expr_415
+			expr_418 = expr_417
+			expr_419 = expr_418
 		}
-		expr_417 = expr_416
-		expr_418 = expr_417
+		expr_420 = expr_419
+		expr_421 = expr_420
 	}
-	return expr_418
+	return expr_421
 }
 func translateAstWhileExpr(cond ast2.Expr, body ast2.Expr, ctx *egCtx) Result[AstExprResult, string] {
-	stmts_419 := translateAstWhileStmt(cond, body, ctx)
-	var expr_422 Result[AstExprResult, string]
-	if v_153, ok := stmts_419.(ResultErr[[]goast.Stmt, string]); ok {
-		var expr_421 Result[AstExprResult, string]
-		expr_421 = Err[AstExprResult, string](v_153.F0)
-		expr_422 = expr_421
+	stmts_422 := translateAstWhileStmt(cond, body, ctx)
+	var expr_425 Result[AstExprResult, string]
+	if v_153, ok := stmts_422.(ResultErr[[]goast.Stmt, string]); ok {
+		var expr_424 Result[AstExprResult, string]
+		expr_424 = Err[AstExprResult, string](v_153.F0)
+		expr_425 = expr_424
 	} else {
-		if v_152, ok := stmts_419.(ResultOk[[]goast.Stmt, string]); ok {
-			var expr_420 Result[AstExprResult, string]
-			expr_420 = Ok[AstExprResult, string](astExprWithPre(goast.Unit(), v_152.F0))
-			expr_422 = expr_420
+		if v_152, ok := stmts_422.(ResultOk[[]goast.Stmt, string]); ok {
+			var expr_423 Result[AstExprResult, string]
+			expr_423 = Ok[AstExprResult, string](astExprWithPre(goast.Unit(), v_152.F0))
+			expr_425 = expr_423
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_422
+	return expr_425
 }
 func translateBlockExprAst(items []ast2.Stmt, ctx *egCtx, index int, pre []goast.Stmt) Result[AstExprResult, string] {
-	var expr_442 Result[AstExprResult, string]
+	var expr_445 Result[AstExprResult, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_442 = Ok[AstExprResult, string](astExprWithPre(goast.Unit(), pre))
+		expr_445 = Ok[AstExprResult, string](astExprWithPre(goast.Unit(), pre))
 	} else {
-		var expr_441 Result[AstExprResult, string]
-		var stmt_423 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
-		var expr_440 Result[AstExprResult, string]
+		var expr_444 Result[AstExprResult, string]
+		var stmt_426 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
+		var expr_443 Result[AstExprResult, string]
 		if index == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1 {
-			var expr_434 Result[AstExprResult, string]
-			if v_156, ok := stmt_423.(ast2.StmtExprStmt); ok {
-				var expr_433 Result[AstExprResult, string]
-				value_429 := translateExprAst(v_156.F0, ctx)
-				var expr_432 Result[AstExprResult, string]
-				if v_158, ok := value_429.(ResultOk[AstExprResult, string]); ok {
-					var expr_431 Result[AstExprResult, string]
-					expr_431 = Ok[AstExprResult, string](astExprWithPre(v_158.F0.Expr, goast.AppendStmts(pre, v_158.F0.Pre)))
-					expr_432 = expr_431
+			var expr_437 Result[AstExprResult, string]
+			if v_156, ok := stmt_426.(ast2.StmtExprStmt); ok {
+				var expr_436 Result[AstExprResult, string]
+				value_432 := translateExprAst(v_156.F0, ctx)
+				var expr_435 Result[AstExprResult, string]
+				if v_158, ok := value_432.(ResultOk[AstExprResult, string]); ok {
+					var expr_434 Result[AstExprResult, string]
+					expr_434 = Ok[AstExprResult, string](astExprWithPre(v_158.F0.Expr, goast.AppendStmts(pre, v_158.F0.Pre)))
+					expr_435 = expr_434
 				} else {
-					if v_157, ok := value_429.(ResultErr[AstExprResult, string]); ok {
-						var expr_430 Result[AstExprResult, string]
-						expr_430 = Err[AstExprResult, string](v_157.F0)
-						expr_432 = expr_430
+					if v_157, ok := value_432.(ResultErr[AstExprResult, string]); ok {
+						var expr_433 Result[AstExprResult, string]
+						expr_433 = Err[AstExprResult, string](v_157.F0)
+						expr_435 = expr_433
 					} else {
 						panic("unreachable")
 					}
 				}
-				expr_433 = expr_432
-				expr_434 = expr_433
+				expr_436 = expr_435
+				expr_437 = expr_436
 			} else {
 				{
-					var expr_428 Result[AstExprResult, string]
-					stmts_424 := translateAstLeadingStmt(stmt_423, ctx)
-					var expr_427 Result[AstExprResult, string]
-					if v_155, ok := stmts_424.(ResultErr[[]goast.Stmt, string]); ok {
-						var expr_426 Result[AstExprResult, string]
-						expr_426 = Err[AstExprResult, string](v_155.F0)
-						expr_427 = expr_426
+					var expr_431 Result[AstExprResult, string]
+					stmts_427 := translateAstLeadingStmt(stmt_426, ctx)
+					var expr_430 Result[AstExprResult, string]
+					if v_155, ok := stmts_427.(ResultErr[[]goast.Stmt, string]); ok {
+						var expr_429 Result[AstExprResult, string]
+						expr_429 = Err[AstExprResult, string](v_155.F0)
+						expr_430 = expr_429
 					} else {
-						if v_154, ok := stmts_424.(ResultOk[[]goast.Stmt, string]); ok {
-							var expr_425 Result[AstExprResult, string]
-							expr_425 = Ok[AstExprResult, string](astExprWithPre(goast.Unit(), goast.AppendStmts(pre, v_154.F0)))
-							expr_427 = expr_425
+						if v_154, ok := stmts_427.(ResultOk[[]goast.Stmt, string]); ok {
+							var expr_428 Result[AstExprResult, string]
+							expr_428 = Ok[AstExprResult, string](astExprWithPre(goast.Unit(), goast.AppendStmts(pre, v_154.F0)))
+							expr_430 = expr_428
 						} else {
 							panic("unreachable")
 						}
 					}
-					expr_428 = expr_427
-					expr_434 = expr_428
+					expr_431 = expr_430
+					expr_437 = expr_431
 				}
 			}
-			expr_440 = expr_434
+			expr_443 = expr_437
 		} else {
-			var expr_439 Result[AstExprResult, string]
-			leading_435 := translateAstLeadingStmt(stmt_423, ctx)
-			var expr_438 Result[AstExprResult, string]
-			if v_160, ok := leading_435.(ResultOk[[]goast.Stmt, string]); ok {
-				var expr_437 Result[AstExprResult, string]
-				expr_437 = translateBlockExprAst(items, ctx, index+1, goast.AppendStmts(pre, v_160.F0))
-				expr_438 = expr_437
+			var expr_442 Result[AstExprResult, string]
+			leading_438 := translateAstLeadingStmt(stmt_426, ctx)
+			var expr_441 Result[AstExprResult, string]
+			if v_160, ok := leading_438.(ResultOk[[]goast.Stmt, string]); ok {
+				var expr_440 Result[AstExprResult, string]
+				expr_440 = translateBlockExprAst(items, ctx, index+1, goast.AppendStmts(pre, v_160.F0))
+				expr_441 = expr_440
 			} else {
-				if v_159, ok := leading_435.(ResultErr[[]goast.Stmt, string]); ok {
-					var expr_436 Result[AstExprResult, string]
-					expr_436 = Err[AstExprResult, string](v_159.F0)
-					expr_438 = expr_436
+				if v_159, ok := leading_438.(ResultErr[[]goast.Stmt, string]); ok {
+					var expr_439 Result[AstExprResult, string]
+					expr_439 = Err[AstExprResult, string](v_159.F0)
+					expr_441 = expr_439
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_439 = expr_438
-			expr_440 = expr_439
+			expr_442 = expr_441
+			expr_443 = expr_442
 		}
-		expr_441 = expr_440
-		expr_442 = expr_441
+		expr_444 = expr_443
+		expr_445 = expr_444
 	}
-	return expr_442
+	return expr_445
 }
 func translateIfAst(cond ast2.Expr, thenExpr ast2.Expr, elseExpr ast2.Expr, ctx *egCtx, expected string) Result[AstExprResult, string] {
-	c_443 := translateExprAst(cond, ctx)
-	t_444 := translateExprAstExpected(thenExpr, ctx, expected)
-	e_445 := translateExprAstExpected(elseExpr, ctx, expected)
-	var expr_460 Result[AstExprResult, string]
-	if v_166, ok := c_443.(ResultErr[AstExprResult, string]); ok {
-		var expr_459 Result[AstExprResult, string]
-		expr_459 = Err[AstExprResult, string](v_166.F0)
-		expr_460 = expr_459
+	c_446 := translateExprAst(cond, ctx)
+	t_447 := translateExprAstExpected(thenExpr, ctx, expected)
+	e_448 := translateExprAstExpected(elseExpr, ctx, expected)
+	var expr_463 Result[AstExprResult, string]
+	if v_166, ok := c_446.(ResultErr[AstExprResult, string]); ok {
+		var expr_462 Result[AstExprResult, string]
+		expr_462 = Err[AstExprResult, string](v_166.F0)
+		expr_463 = expr_462
 	} else {
-		if v_161, ok := c_443.(ResultOk[AstExprResult, string]); ok {
-			var expr_458 Result[AstExprResult, string]
-			var expr_457 Result[AstExprResult, string]
-			if v_165, ok := t_444.(ResultErr[AstExprResult, string]); ok {
-				var expr_456 Result[AstExprResult, string]
-				expr_456 = Err[AstExprResult, string](v_165.F0)
-				expr_457 = expr_456
+		if v_161, ok := c_446.(ResultOk[AstExprResult, string]); ok {
+			var expr_461 Result[AstExprResult, string]
+			var expr_460 Result[AstExprResult, string]
+			if v_165, ok := t_447.(ResultErr[AstExprResult, string]); ok {
+				var expr_459 Result[AstExprResult, string]
+				expr_459 = Err[AstExprResult, string](v_165.F0)
+				expr_460 = expr_459
 			} else {
-				if v_162, ok := t_444.(ResultOk[AstExprResult, string]); ok {
-					var expr_455 Result[AstExprResult, string]
-					var expr_454 Result[AstExprResult, string]
-					if v_164, ok := e_445.(ResultErr[AstExprResult, string]); ok {
-						var expr_453 Result[AstExprResult, string]
-						expr_453 = Err[AstExprResult, string](v_164.F0)
-						expr_454 = expr_453
+				if v_162, ok := t_447.(ResultOk[AstExprResult, string]); ok {
+					var expr_458 Result[AstExprResult, string]
+					var expr_457 Result[AstExprResult, string]
+					if v_164, ok := e_448.(ResultErr[AstExprResult, string]); ok {
+						var expr_456 Result[AstExprResult, string]
+						expr_456 = Err[AstExprResult, string](v_164.F0)
+						expr_457 = expr_456
 					} else {
-						if v_163, ok := e_445.(ResultOk[AstExprResult, string]); ok {
-							var expr_452 Result[AstExprResult, string]
-							temp_446 := ctxFreshExprTemp(ctx)
-							var expr_447 string
+						if v_163, ok := e_448.(ResultOk[AstExprResult, string]); ok {
+							var expr_455 Result[AstExprResult, string]
+							temp_449 := ctxFreshExprTemp(ctx)
+							var expr_450 string
 							if expected == "" {
-								expr_447 = "any"
+								expr_450 = "any"
 							} else {
-								expr_447 = expected
+								expr_450 = expected
 							}
-							typ_448 := expr_447
-							thenStmts_449 := goast.AppendStmts(v_162.F0.Pre, astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(temp_446)), "=", astSingleExpr(v_162.F0.Expr))))
-							elseStmts_450 := goast.AppendStmts(v_163.F0.Pre, astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(temp_446)), "=", astSingleExpr(v_163.F0.Expr))))
-							pre_451 := goast.AppendStmts(v_161.F0.Pre, astTwoStmts(goast.DeclareFromType(temp_446, typ_448), goast.If(v_161.F0.Expr, thenStmts_449, elseStmts_450)))
-							expr_452 = Ok[AstExprResult, string](astExprWithPre(goast.Ident(temp_446), pre_451))
-							expr_454 = expr_452
+							typ_451 := expr_450
+							thenStmts_452 := goast.AppendStmts(v_162.F0.Pre, astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(temp_449)), "=", astSingleExpr(v_162.F0.Expr))))
+							elseStmts_453 := goast.AppendStmts(v_163.F0.Pre, astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(temp_449)), "=", astSingleExpr(v_163.F0.Expr))))
+							pre_454 := goast.AppendStmts(v_161.F0.Pre, astTwoStmts(goast.DeclareFromType(temp_449, typ_451), goast.If(v_161.F0.Expr, thenStmts_452, elseStmts_453)))
+							expr_455 = Ok[AstExprResult, string](astExprWithPre(goast.Ident(temp_449), pre_454))
+							expr_457 = expr_455
 						} else {
 							panic("unreachable")
 						}
 					}
-					expr_455 = expr_454
-					expr_457 = expr_455
+					expr_458 = expr_457
+					expr_460 = expr_458
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_458 = expr_457
-			expr_460 = expr_458
+			expr_461 = expr_460
+			expr_463 = expr_461
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_460
+	return expr_463
 }
 func translateStructLitAst(typeName string, fields []ast2.StructLitField, ctx *egCtx) Result[AstExprResult, string] {
 	return translateStructLitAstExpected(typeName, fields, ctx, "")
 }
 func translateStructLitAstExpected(typeName string, fields []ast2.StructLitField, ctx *egCtx, expected string) Result[AstExprResult, string] {
-	result_461 := translateAstCompositeFields(fields, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), expected)
-	var expr_464 Result[AstExprResult, string]
-	if v_168, ok := result_461.(ResultErr[AstCompositeFields, string]); ok {
-		var expr_463 Result[AstExprResult, string]
-		expr_463 = Err[AstExprResult, string](v_168.F0)
-		expr_464 = expr_463
+	result_464 := translateAstCompositeFields(fields, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), expected)
+	var expr_467 Result[AstExprResult, string]
+	if v_168, ok := result_464.(ResultErr[AstCompositeFields, string]); ok {
+		var expr_466 Result[AstExprResult, string]
+		expr_466 = Err[AstExprResult, string](v_168.F0)
+		expr_467 = expr_466
 	} else {
-		if v_167, ok := result_461.(ResultOk[AstCompositeFields, string]); ok {
-			var expr_462 Result[AstExprResult, string]
-			expr_462 = Ok[AstExprResult, string](astExprWithPre(goast.Composite(goast.Ident(typeName), v_167.F0.Elts), v_167.F0.Pre))
-			expr_464 = expr_462
+		if v_167, ok := result_464.(ResultOk[AstCompositeFields, string]); ok {
+			var expr_465 Result[AstExprResult, string]
+			expr_465 = Ok[AstExprResult, string](astExprWithPre(goast.Composite(goast.Ident(typeName), v_167.F0.Elts), v_167.F0.Pre))
+			expr_467 = expr_465
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_464
+	return expr_467
 }
 func translateAstCompositeFields(fields []ast2.StructLitField, ctx *egCtx, index int, out []goast.Expr, pre []goast.Stmt, expected string) Result[AstCompositeFields, string] {
-	var expr_471 Result[AstCompositeFields, string]
+	var expr_474 Result[AstCompositeFields, string]
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) {
-		expr_471 = Ok[AstCompositeFields, string](AstCompositeFields{Elts: out, Pre: pre})
+		expr_474 = Ok[AstCompositeFields, string](AstCompositeFields{Elts: out, Pre: pre})
 	} else {
-		var expr_470 Result[AstCompositeFields, string]
-		field_465 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, index), ast2.StructLitField{Name: "", Value: ast2.EmptyExpr()})
-		value_466 := translateExprAstExpected(field_465.Value, ctx, expected)
-		var expr_469 Result[AstCompositeFields, string]
-		if v_170, ok := value_466.(ResultErr[AstExprResult, string]); ok {
-			var expr_468 Result[AstCompositeFields, string]
-			expr_468 = Err[AstCompositeFields, string](v_170.F0)
-			expr_469 = expr_468
+		var expr_473 Result[AstCompositeFields, string]
+		field_468 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, index), ast2.StructLitField{Name: "", Value: ast2.EmptyExpr()})
+		value_469 := translateExprAstExpected(field_468.Value, ctx, expected)
+		var expr_472 Result[AstCompositeFields, string]
+		if v_170, ok := value_469.(ResultErr[AstExprResult, string]); ok {
+			var expr_471 Result[AstCompositeFields, string]
+			expr_471 = Err[AstCompositeFields, string](v_170.F0)
+			expr_472 = expr_471
 		} else {
-			if v_169, ok := value_466.(ResultOk[AstExprResult, string]); ok {
-				var expr_467 Result[AstCompositeFields, string]
-				expr_467 = translateAstCompositeFields(fields, ctx, index+1, MygoIN5SliceM6Append(out, goast.KeyValue(goast.Ident(exportName(field_465.Name)), v_169.F0.Expr)), goast.AppendStmts(pre, v_169.F0.Pre), expected)
-				expr_469 = expr_467
+			if v_169, ok := value_469.(ResultOk[AstExprResult, string]); ok {
+				var expr_470 Result[AstCompositeFields, string]
+				expr_470 = translateAstCompositeFields(fields, ctx, index+1, MygoIN5SliceM6Append(out, goast.KeyValue(goast.Ident(exportName(field_468.Name)), v_169.F0.Expr)), goast.AppendStmts(pre, v_169.F0.Pre), expected)
+				expr_472 = expr_470
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_470 = expr_469
-		expr_471 = expr_470
+		expr_473 = expr_472
+		expr_474 = expr_473
 	}
-	return expr_471
+	return expr_474
 }
 func translateBinaryAst(op string, left ast2.Expr, right ast2.Expr, ctx *egCtx) Result[AstExprResult, string] {
 	return translateBinaryAstExpected(op, left, right, ctx, "")
 }
 func translateBinaryAstExpected(op string, left ast2.Expr, right ast2.Expr, ctx *egCtx, expected string) Result[AstExprResult, string] {
-	l_472 := translateExprAstExpected(left, ctx, expected)
-	r_473 := translateExprAstExpected(right, ctx, expected)
-	var expr_482 Result[AstExprResult, string]
-	if v_174, ok := l_472.(ResultErr[AstExprResult, string]); ok {
-		var expr_481 Result[AstExprResult, string]
-		expr_481 = Err[AstExprResult, string](v_174.F0)
-		expr_482 = expr_481
+	l_475 := translateExprAstExpected(left, ctx, expected)
+	r_476 := translateExprAstExpected(right, ctx, expected)
+	var expr_485 Result[AstExprResult, string]
+	if v_174, ok := l_475.(ResultErr[AstExprResult, string]); ok {
+		var expr_484 Result[AstExprResult, string]
+		expr_484 = Err[AstExprResult, string](v_174.F0)
+		expr_485 = expr_484
 	} else {
-		if v_171, ok := l_472.(ResultOk[AstExprResult, string]); ok {
-			var expr_480 Result[AstExprResult, string]
-			var expr_479 Result[AstExprResult, string]
-			if v_173, ok := r_473.(ResultErr[AstExprResult, string]); ok {
-				var expr_478 Result[AstExprResult, string]
-				expr_478 = Err[AstExprResult, string](v_173.F0)
-				expr_479 = expr_478
+		if v_171, ok := l_475.(ResultOk[AstExprResult, string]); ok {
+			var expr_483 Result[AstExprResult, string]
+			var expr_482 Result[AstExprResult, string]
+			if v_173, ok := r_476.(ResultErr[AstExprResult, string]); ok {
+				var expr_481 Result[AstExprResult, string]
+				expr_481 = Err[AstExprResult, string](v_173.F0)
+				expr_482 = expr_481
 			} else {
-				if v_172, ok := r_473.(ResultOk[AstExprResult, string]); ok {
-					var expr_477 Result[AstExprResult, string]
-					pre_474 := goast.AppendStmts(v_171.F0.Pre, v_172.F0.Pre)
-					var expr_476 Result[AstExprResult, string]
+				if v_172, ok := r_476.(ResultOk[AstExprResult, string]); ok {
+					var expr_480 Result[AstExprResult, string]
+					pre_477 := goast.AppendStmts(v_171.F0.Pre, v_172.F0.Pre)
+					var expr_479 Result[AstExprResult, string]
 					if op == "|>" {
-						expr_476 = Ok[AstExprResult, string](astExprWithPre(goast.Call(v_172.F0.Expr, astSingleExpr(v_171.F0.Expr)), pre_474))
+						expr_479 = Ok[AstExprResult, string](astExprWithPre(goast.Call(v_172.F0.Expr, astSingleExpr(v_171.F0.Expr)), pre_477))
 					} else {
-						var expr_475 Result[AstExprResult, string]
+						var expr_478 Result[AstExprResult, string]
 						if op == "<|" {
-							expr_475 = Ok[AstExprResult, string](astExprWithPre(goast.Call(v_171.F0.Expr, astSingleExpr(v_172.F0.Expr)), pre_474))
+							expr_478 = Ok[AstExprResult, string](astExprWithPre(goast.Call(v_171.F0.Expr, astSingleExpr(v_172.F0.Expr)), pre_477))
 						} else {
-							expr_475 = Ok[AstExprResult, string](astExprWithPre(goast.Binary(v_171.F0.Expr, op, v_172.F0.Expr), pre_474))
+							expr_478 = Ok[AstExprResult, string](astExprWithPre(goast.Binary(v_171.F0.Expr, op, v_172.F0.Expr), pre_477))
 						}
-						expr_476 = expr_475
+						expr_479 = expr_478
 					}
-					expr_477 = expr_476
-					expr_479 = expr_477
+					expr_480 = expr_479
+					expr_482 = expr_480
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_480 = expr_479
-			expr_482 = expr_480
-		} else {
-			panic("unreachable")
-		}
-	}
-	return expr_482
-}
-func translateCallAst(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx) Result[AstExprResult, string] {
-	return translateCallAstExpected(callee, typeArgs, args, ctx, "")
-}
-func translateCallAstExpected(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx, expected string) Result[AstExprResult, string] {
-	var expr_485 Result[AstExprResult, string]
-	if v_176, ok := translateRefCall(callee, args, ctx, expected).(OptionSome[Result[AstExprResult, string]]); ok {
-		var expr_484 Result[AstExprResult, string]
-		expr_484 = v_176.F0
-		expr_485 = expr_484
-	} else {
-		if _, ok := translateRefCall(callee, args, ctx, expected).(OptionNone[Result[AstExprResult, string]]); ok {
-			var expr_483 Result[AstExprResult, string]
-			expr_483 = translateCallAstExpectedNonRef(callee, typeArgs, args, ctx, expected)
+			expr_483 = expr_482
 			expr_485 = expr_483
 		} else {
 			panic("unreachable")
@@ -1122,942 +1125,962 @@ func translateCallAstExpected(callee ast2.Expr, typeArgs []ast2.TypeExpr, args [
 	}
 	return expr_485
 }
+func translateCallAst(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx) Result[AstExprResult, string] {
+	return translateCallAstExpected(callee, typeArgs, args, ctx, "")
+}
+func translateCallAstExpected(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx, expected string) Result[AstExprResult, string] {
+	var expr_488 Result[AstExprResult, string]
+	if v_176, ok := translateRefCall(callee, args, ctx, expected).(OptionSome[Result[AstExprResult, string]]); ok {
+		var expr_487 Result[AstExprResult, string]
+		expr_487 = v_176.F0
+		expr_488 = expr_487
+	} else {
+		if _, ok := translateRefCall(callee, args, ctx, expected).(OptionNone[Result[AstExprResult, string]]); ok {
+			var expr_486 Result[AstExprResult, string]
+			expr_486 = translateCallAstExpectedNonRef(callee, typeArgs, args, ctx, expected)
+			expr_488 = expr_486
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_488
+}
 func translateRefCall(callee ast2.Expr, args []ast2.Expr, ctx *egCtx, expected string) Option[Result[AstExprResult, string]] {
-	var expr_510 Option[Result[AstExprResult, string]]
+	var expr_513 Option[Result[AstExprResult, string]]
 	if v_177, ok := callee.Kind.(ast2.ExprKindFieldExpr); ok {
-		var expr_509 Option[Result[AstExprResult, string]]
-		var expr_508 Option[Result[AstExprResult, string]]
+		var expr_512 Option[Result[AstExprResult, string]]
+		var expr_511 Option[Result[AstExprResult, string]]
 		if v_180, ok := v_177.F0.Kind.(ast2.ExprKindIdentExpr); ok {
-			var expr_507 Option[Result[AstExprResult, string]]
-			var expr_506 Option[Result[AstExprResult, string]]
+			var expr_510 Option[Result[AstExprResult, string]]
+			var expr_509 Option[Result[AstExprResult, string]]
 			if v_180.F0 == "Ref" && v_177.F1 == "new" {
-				var expr_499 Option[Result[AstExprResult, string]]
+				var expr_502 Option[Result[AstExprResult, string]]
 				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) != 1 {
-					expr_499 = Some[Result[AstExprResult, string]](Err[AstExprResult, string]("Ref.new expects exactly one argument"))
+					expr_502 = Some[Result[AstExprResult, string]](Err[AstExprResult, string]("Ref.new expects exactly one argument"))
 				} else {
-					var expr_498 Option[Result[AstExprResult, string]]
-					value_494 := translateExprAstExpected(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.EmptyExpr()), ctx, refInnerExpected(expected, ctx.retType))
-					var expr_497 Option[Result[AstExprResult, string]]
-					if v_182, ok := value_494.(ResultOk[AstExprResult, string]); ok {
-						var expr_496 Option[Result[AstExprResult, string]]
-						expr_496 = Some[Result[AstExprResult, string]](Ok[AstExprResult, string](astExprWithPre(goast.RefNew(v_182.F0.Expr, refInnerExpected(expected, ctx.retType)), v_182.F0.Pre)))
-						expr_497 = expr_496
+					var expr_501 Option[Result[AstExprResult, string]]
+					value_497 := translateExprAstExpected(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.EmptyExpr()), ctx, refInnerExpected(expected, ctx.retType))
+					var expr_500 Option[Result[AstExprResult, string]]
+					if v_182, ok := value_497.(ResultOk[AstExprResult, string]); ok {
+						var expr_499 Option[Result[AstExprResult, string]]
+						expr_499 = Some[Result[AstExprResult, string]](Ok[AstExprResult, string](astExprWithPre(goast.RefNew(v_182.F0.Expr, refInnerExpected(expected, ctx.retType)), v_182.F0.Pre)))
+						expr_500 = expr_499
 					} else {
-						if v_181, ok := value_494.(ResultErr[AstExprResult, string]); ok {
-							var expr_495 Option[Result[AstExprResult, string]]
-							expr_495 = Some[Result[AstExprResult, string]](Err[AstExprResult, string](v_181.F0))
-							expr_497 = expr_495
+						if v_181, ok := value_497.(ResultErr[AstExprResult, string]); ok {
+							var expr_498 Option[Result[AstExprResult, string]]
+							expr_498 = Some[Result[AstExprResult, string]](Err[AstExprResult, string](v_181.F0))
+							expr_500 = expr_498
 						} else {
 							panic("unreachable")
 						}
 					}
-					expr_498 = expr_497
-					expr_499 = expr_498
+					expr_501 = expr_500
+					expr_502 = expr_501
 				}
-				expr_506 = expr_499
+				expr_509 = expr_502
 			} else {
-				var expr_505 Option[Result[AstExprResult, string]]
+				var expr_508 Option[Result[AstExprResult, string]]
 				if v_177.F1 == "value" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 {
-					var expr_504 Option[Result[AstExprResult, string]]
-					value_500 := translateExprAstExpected(v_177.F0, ctx, "")
-					var expr_503 Option[Result[AstExprResult, string]]
-					if v_184, ok := value_500.(ResultOk[AstExprResult, string]); ok {
-						var expr_502 Option[Result[AstExprResult, string]]
-						expr_502 = Some[Result[AstExprResult, string]](Ok[AstExprResult, string](astExprWithPre(goast.Unary("*", v_184.F0.Expr), v_184.F0.Pre)))
-						expr_503 = expr_502
+					var expr_507 Option[Result[AstExprResult, string]]
+					value_503 := translateExprAstExpected(v_177.F0, ctx, "")
+					var expr_506 Option[Result[AstExprResult, string]]
+					if v_184, ok := value_503.(ResultOk[AstExprResult, string]); ok {
+						var expr_505 Option[Result[AstExprResult, string]]
+						expr_505 = Some[Result[AstExprResult, string]](Ok[AstExprResult, string](astExprWithPre(goast.Unary("*", v_184.F0.Expr), v_184.F0.Pre)))
+						expr_506 = expr_505
 					} else {
-						if v_183, ok := value_500.(ResultErr[AstExprResult, string]); ok {
-							var expr_501 Option[Result[AstExprResult, string]]
-							expr_501 = Some[Result[AstExprResult, string]](Err[AstExprResult, string](v_183.F0))
-							expr_503 = expr_501
+						if v_183, ok := value_503.(ResultErr[AstExprResult, string]); ok {
+							var expr_504 Option[Result[AstExprResult, string]]
+							expr_504 = Some[Result[AstExprResult, string]](Err[AstExprResult, string](v_183.F0))
+							expr_506 = expr_504
 						} else {
 							panic("unreachable")
 						}
 					}
-					expr_504 = expr_503
-					expr_505 = expr_504
+					expr_507 = expr_506
+					expr_508 = expr_507
 				} else {
-					expr_505 = None[Result[AstExprResult, string]]()
+					expr_508 = None[Result[AstExprResult, string]]()
 				}
-				expr_506 = expr_505
+				expr_509 = expr_508
 			}
-			expr_507 = expr_506
-			expr_508 = expr_507
+			expr_510 = expr_509
+			expr_511 = expr_510
 		} else {
 			{
-				var expr_493 Option[Result[AstExprResult, string]]
-				var expr_492 Option[Result[AstExprResult, string]]
+				var expr_496 Option[Result[AstExprResult, string]]
+				var expr_495 Option[Result[AstExprResult, string]]
 				if v_177.F1 == "value" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 {
-					var expr_491 Option[Result[AstExprResult, string]]
-					value_487 := translateExprAstExpected(v_177.F0, ctx, "")
-					var expr_490 Option[Result[AstExprResult, string]]
-					if v_179, ok := value_487.(ResultOk[AstExprResult, string]); ok {
-						var expr_489 Option[Result[AstExprResult, string]]
-						expr_489 = Some[Result[AstExprResult, string]](Ok[AstExprResult, string](astExprWithPre(goast.Unary("*", v_179.F0.Expr), v_179.F0.Pre)))
-						expr_490 = expr_489
+					var expr_494 Option[Result[AstExprResult, string]]
+					value_490 := translateExprAstExpected(v_177.F0, ctx, "")
+					var expr_493 Option[Result[AstExprResult, string]]
+					if v_179, ok := value_490.(ResultOk[AstExprResult, string]); ok {
+						var expr_492 Option[Result[AstExprResult, string]]
+						expr_492 = Some[Result[AstExprResult, string]](Ok[AstExprResult, string](astExprWithPre(goast.Unary("*", v_179.F0.Expr), v_179.F0.Pre)))
+						expr_493 = expr_492
 					} else {
-						if v_178, ok := value_487.(ResultErr[AstExprResult, string]); ok {
-							var expr_488 Option[Result[AstExprResult, string]]
-							expr_488 = Some[Result[AstExprResult, string]](Err[AstExprResult, string](v_178.F0))
-							expr_490 = expr_488
+						if v_178, ok := value_490.(ResultErr[AstExprResult, string]); ok {
+							var expr_491 Option[Result[AstExprResult, string]]
+							expr_491 = Some[Result[AstExprResult, string]](Err[AstExprResult, string](v_178.F0))
+							expr_493 = expr_491
 						} else {
 							panic("unreachable")
 						}
 					}
-					expr_491 = expr_490
-					expr_492 = expr_491
+					expr_494 = expr_493
+					expr_495 = expr_494
 				} else {
-					expr_492 = None[Result[AstExprResult, string]]()
+					expr_495 = None[Result[AstExprResult, string]]()
 				}
-				expr_493 = expr_492
-				expr_508 = expr_493
+				expr_496 = expr_495
+				expr_511 = expr_496
 			}
 		}
-		expr_509 = expr_508
-		expr_510 = expr_509
+		expr_512 = expr_511
+		expr_513 = expr_512
 	} else {
 		{
-			var expr_486 Option[Result[AstExprResult, string]]
-			expr_486 = None[Result[AstExprResult, string]]()
-			expr_510 = expr_486
+			var expr_489 Option[Result[AstExprResult, string]]
+			expr_489 = None[Result[AstExprResult, string]]()
+			expr_513 = expr_489
 		}
 	}
-	return expr_510
+	return expr_513
 }
 func refInnerExpected(expected string, fallback string) string {
-	var expr_511 string
-	if expected == "" {
-		expr_511 = fallback
-	} else {
-		expr_511 = expected
-	}
-	target_512 := expr_511
-	marker_513 := strings.Index(target_512, "*")
 	var expr_514 string
-	if marker_513 < 0 {
-		expr_514 = ""
+	if expected == "" {
+		expr_514 = fallback
 	} else {
-		expr_514 = strings.TrimSuffix(strings.TrimSpace(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(strings.Split(target_512, "*"), 1), "")), "]")
+		expr_514 = expected
 	}
-	return expr_514
+	target_515 := expr_514
+	marker_516 := strings.Index(target_515, "*")
+	var expr_517 string
+	if marker_516 < 0 {
+		expr_517 = ""
+	} else {
+		expr_517 = strings.TrimSuffix(strings.TrimSpace(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(strings.Split(target_515, "*"), 1), "")), "]")
+	}
+	return expr_517
 }
 func translateCallAstExpectedNonRef(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx, expected string) Result[AstExprResult, string] {
-	normalizedExpected_515 := strings.TrimSpace(expected)
-	var expr_523 Result[AstExprResult, string]
+	normalizedExpected_518 := strings.TrimSpace(expected)
+	var expr_526 Result[AstExprResult, string]
 	if v_188, ok := ffiOptionSignature(callee, ctx).(OptionSome[typeinference2.GoFuncSignature]); ok {
-		var expr_522 Result[AstExprResult, string]
-		var expr_521 Result[AstExprResult, string]
-		if strings.HasPrefix(normalizedExpected_515, "Option[") && strings.HasSuffix(normalizedExpected_515, "]") {
-			expr_521 = translateFFIOptionCall(callee, typeArgs, args, ctx, normalizedExpected_515, v_188.F0)
+		var expr_525 Result[AstExprResult, string]
+		var expr_524 Result[AstExprResult, string]
+		if strings.HasPrefix(normalizedExpected_518, "Option[") && strings.HasSuffix(normalizedExpected_518, "]") {
+			expr_524 = translateFFIOptionCall(callee, typeArgs, args, ctx, normalizedExpected_518, v_188.F0)
 		} else {
-			expr_521 = translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
+			expr_524 = translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
 		}
-		expr_522 = expr_521
-		expr_523 = expr_522
+		expr_525 = expr_524
+		expr_526 = expr_525
 	} else {
 		if _, ok := ffiOptionSignature(callee, ctx).(OptionNone[typeinference2.GoFuncSignature]); ok {
-			var expr_520 Result[AstExprResult, string]
-			var expr_519 Result[AstExprResult, string]
+			var expr_523 Result[AstExprResult, string]
+			var expr_522 Result[AstExprResult, string]
 			if v_187, ok := ffiResultSignature(callee, ctx).(OptionSome[typeinference2.GoFuncSignature]); ok {
-				var expr_518 Result[AstExprResult, string]
-				var expr_517 Result[AstExprResult, string]
-				if strings.HasPrefix(normalizedExpected_515, "Result[") && strings.HasSuffix(normalizedExpected_515, ", string]") {
-					expr_517 = translateFFIResultCall(callee, typeArgs, args, ctx, normalizedExpected_515, v_187.F0)
+				var expr_521 Result[AstExprResult, string]
+				var expr_520 Result[AstExprResult, string]
+				if strings.HasPrefix(normalizedExpected_518, "Result[") && strings.HasSuffix(normalizedExpected_518, ", string]") {
+					expr_520 = translateFFIResultCall(callee, typeArgs, args, ctx, normalizedExpected_518, v_187.F0)
 				} else {
-					expr_517 = translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
+					expr_520 = translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
 				}
-				expr_518 = expr_517
-				expr_519 = expr_518
+				expr_521 = expr_520
+				expr_522 = expr_521
 			} else {
 				if _, ok := ffiResultSignature(callee, ctx).(OptionNone[typeinference2.GoFuncSignature]); ok {
-					var expr_516 Result[AstExprResult, string]
-					expr_516 = translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
-					expr_519 = expr_516
+					var expr_519 Result[AstExprResult, string]
+					expr_519 = translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
+					expr_522 = expr_519
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_520 = expr_519
-			expr_523 = expr_520
+			expr_523 = expr_522
+			expr_526 = expr_523
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_523
+	return expr_526
 }
 func translatePlainCallAstExpected(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx, expected string) Result[AstExprResult, string] {
-	c_524 := translateExprAstExpected(callee, ctx, expected)
-	values_525 := translateAstArgs(args, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), []string([]string{}))
-	var expr_536 Result[AstExprResult, string]
-	if v_192, ok := c_524.(ResultErr[AstExprResult, string]); ok {
-		var expr_535 Result[AstExprResult, string]
-		expr_535 = Err[AstExprResult, string](v_192.F0)
-		expr_536 = expr_535
+	c_527 := translateExprAstExpected(callee, ctx, expected)
+	values_528 := translateAstArgs(args, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), []string([]string{}))
+	var expr_539 Result[AstExprResult, string]
+	if v_192, ok := c_527.(ResultErr[AstExprResult, string]); ok {
+		var expr_538 Result[AstExprResult, string]
+		expr_538 = Err[AstExprResult, string](v_192.F0)
+		expr_539 = expr_538
 	} else {
-		if v_189, ok := c_524.(ResultOk[AstExprResult, string]); ok {
-			var expr_534 Result[AstExprResult, string]
-			var expr_533 Result[AstExprResult, string]
-			if v_191, ok := values_525.(ResultErr[AstArgsResult, string]); ok {
-				var expr_532 Result[AstExprResult, string]
-				expr_532 = Err[AstExprResult, string](v_191.F0)
-				expr_533 = expr_532
+		if v_189, ok := c_527.(ResultOk[AstExprResult, string]); ok {
+			var expr_537 Result[AstExprResult, string]
+			var expr_536 Result[AstExprResult, string]
+			if v_191, ok := values_528.(ResultErr[AstArgsResult, string]); ok {
+				var expr_535 Result[AstExprResult, string]
+				expr_535 = Err[AstExprResult, string](v_191.F0)
+				expr_536 = expr_535
 			} else {
-				if v_190, ok := values_525.(ResultOk[AstArgsResult, string]); ok {
-					var expr_531 Result[AstExprResult, string]
-					injected_526 := dictionaryArgsForCall(callee, ctx, v_190.F0.Exprs)
-					var expr_527 string
+				if v_190, ok := values_528.(ResultOk[AstArgsResult, string]); ok {
+					var expr_534 Result[AstExprResult, string]
+					injected_529 := dictionaryArgsForCall(callee, ctx, v_190.F0.Exprs)
+					var expr_530 string
 					if expected == "" {
-						expr_527 = ctx.retType
+						expr_530 = ctx.retType
 					} else {
-						expr_527 = expected
+						expr_530 = expected
 					}
-					constructorExpected_528 := expr_527
-					var expr_529 []string
+					constructorExpected_531 := expr_530
+					var expr_532 []string
 					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(typeArgs) > 0 {
-						expr_529 = typeExprsToStrings(typeArgs, ctx.typeParams)
+						expr_532 = typeExprsToStrings(typeArgs, ctx.typeParams)
 					} else {
-						expr_529 = inferredConstructorArgs(callee, constructorExpected_528, ctx)
+						expr_532 = inferredConstructorArgs(callee, constructorExpected_531, ctx)
 					}
-					inferredArgs_530 := expr_529
-					expr_531 = Ok[AstExprResult, string](astExprWithPre(goast.GenericCall(v_189.F0.Expr, inferredArgs_530, injected_526), goast.AppendStmts(v_189.F0.Pre, v_190.F0.Pre)))
-					expr_533 = expr_531
+					inferredArgs_533 := expr_532
+					expr_534 = Ok[AstExprResult, string](astExprWithPre(goast.GenericCall(v_189.F0.Expr, inferredArgs_533, injected_529), goast.AppendStmts(v_189.F0.Pre, v_190.F0.Pre)))
+					expr_536 = expr_534
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_534 = expr_533
-			expr_536 = expr_534
+			expr_537 = expr_536
+			expr_539 = expr_537
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_536
+	return expr_539
 }
 func inferredConstructorArgs(callee ast2.Expr, expected string, ctx *egCtx) []string {
-	var expr_543 []string
+	var expr_546 []string
 	if v_195, ok := callee.Kind.(ast2.ExprKindIdentExpr); ok {
-		var expr_542 []string
-		expr_542 = inferredConstructorArgsByName(v_195.F0, MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.enumVariantOwners, v_195.F0), expected)
-		expr_543 = expr_542
+		var expr_545 []string
+		expr_545 = inferredConstructorArgsByName(v_195.F0, MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.enumVariantOwners, v_195.F0), expected)
+		expr_546 = expr_545
 	} else {
 		if v_193, ok := callee.Kind.(ast2.ExprKindFieldExpr); ok {
-			var expr_541 []string
-			var expr_540 []string
+			var expr_544 []string
+			var expr_543 []string
 			if v_194, ok := v_193.F0.Kind.(ast2.ExprKindIdentExpr); ok {
-				var expr_539 []string
-				expr_539 = inferredConstructorArgsByName(v_193.F1, Some[string](v_194.F0), expected)
-				expr_540 = expr_539
+				var expr_542 []string
+				expr_542 = inferredConstructorArgsByName(v_193.F1, Some[string](v_194.F0), expected)
+				expr_543 = expr_542
 			} else {
 				{
-					var expr_538 []string
-					expr_538 = inferredConstructorArgsByName(v_193.F1, MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.enumVariantOwners, v_193.F1), expected)
-					expr_540 = expr_538
+					var expr_541 []string
+					expr_541 = inferredConstructorArgsByName(v_193.F1, MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.enumVariantOwners, v_193.F1), expected)
+					expr_543 = expr_541
 				}
 			}
-			expr_541 = expr_540
-			expr_543 = expr_541
+			expr_544 = expr_543
+			expr_546 = expr_544
 		} else {
 			{
-				var expr_537 []string
-				expr_537 = []string([]string{})
-				expr_543 = expr_537
+				var expr_540 []string
+				expr_540 = []string([]string{})
+				expr_546 = expr_540
 			}
 		}
 	}
-	return expr_543
+	return expr_546
 }
 func inferredConstructorArgsByName(name string, enumName Option[string], expected string) []string {
-	target_544 := strings.TrimSpace(expected)
-	var expr_547 []string
+	target_547 := strings.TrimSpace(expected)
+	var expr_550 []string
 	if v_197, ok := enumName.(OptionSome[string]); ok {
-		var expr_546 []string
-		expr_546 = enumTypeArgs(v_197.F0, target_544)
-		expr_547 = expr_546
+		var expr_549 []string
+		expr_549 = enumTypeArgs(v_197.F0, target_547)
+		expr_550 = expr_549
 	} else {
 		if _, ok := enumName.(OptionNone[string]); ok {
-			var expr_545 []string
-			expr_545 = inferredBuiltinConstructorArgs(name, target_544)
-			expr_547 = expr_545
+			var expr_548 []string
+			expr_548 = inferredBuiltinConstructorArgs(name, target_547)
+			expr_550 = expr_548
 		} else {
 			panic("unreachable")
 		}
-	}
-	return expr_547
-}
-func enumTypeArgs(enumName string, expected string) []string {
-	prefix_548 := enumName + "["
-	var expr_549 []string
-	if strings.HasPrefix(expected, prefix_548) {
-		expr_549 = trimTypeArgs(strings.Split(strings.TrimSuffix(strings.TrimPrefix(expected, prefix_548), "]"), ","), 0, []string([]string{}))
-	} else {
-		expr_549 = []string([]string{})
-	}
-	return expr_549
-}
-func trimTypeArgs(args []string, index int, out []string) []string {
-	var expr_550 []string
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) {
-		expr_550 = out
-	} else {
-		expr_550 = trimTypeArgs(args, index+1, MygoIN5SliceM6Append(out, strings.TrimSpace(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ""))))
 	}
 	return expr_550
 }
-func inferredBuiltinConstructorArgs(name string, target string) []string {
+func enumTypeArgs(enumName string, expected string) []string {
+	prefix_551 := enumName + "["
 	var expr_552 []string
-	if name == "None" && strings.HasPrefix(target, "Option[") {
-		expr_552 = []string{strings.TrimSuffix(strings.TrimPrefix(target, "Option["), "]")}
+	if strings.HasPrefix(expected, prefix_551) {
+		expr_552 = trimTypeArgs(strings.Split(strings.TrimSuffix(strings.TrimPrefix(expected, prefix_551), "]"), ","), 0, []string([]string{}))
 	} else {
-		var expr_551 []string
-		if (name == "Ok" || name == "Err") && strings.HasPrefix(target, "Result[") {
-			expr_551 = enumTypeArgs("Result", target)
-		} else {
-			expr_551 = []string([]string{})
-		}
-		expr_552 = expr_551
+		expr_552 = []string([]string{})
 	}
 	return expr_552
 }
+func trimTypeArgs(args []string, index int, out []string) []string {
+	var expr_553 []string
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) {
+		expr_553 = out
+	} else {
+		expr_553 = trimTypeArgs(args, index+1, MygoIN5SliceM6Append(out, strings.TrimSpace(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ""))))
+	}
+	return expr_553
+}
+func inferredBuiltinConstructorArgs(name string, target string) []string {
+	var expr_555 []string
+	if name == "None" && strings.HasPrefix(target, "Option[") {
+		expr_555 = []string{strings.TrimSuffix(strings.TrimPrefix(target, "Option["), "]")}
+	} else {
+		var expr_554 []string
+		if (name == "Ok" || name == "Err") && strings.HasPrefix(target, "Result[") {
+			expr_554 = enumTypeArgs("Result", target)
+		} else {
+			expr_554 = []string([]string{})
+		}
+		expr_555 = expr_554
+	}
+	return expr_555
+}
 func ffiOptionSignature(callee ast2.Expr, ctx *egCtx) Option[typeinference2.GoFuncSignature] {
-	var expr_559 Option[typeinference2.GoFuncSignature]
+	var expr_562 Option[typeinference2.GoFuncSignature]
 	if v_200, ok := callee.Kind.(ast2.ExprKindCallExpr); ok {
-		var expr_558 Option[typeinference2.GoFuncSignature]
-		expr_558 = ffiOptionSignature(v_200.F0, ctx)
-		expr_559 = expr_558
+		var expr_561 Option[typeinference2.GoFuncSignature]
+		expr_561 = ffiOptionSignature(v_200.F0, ctx)
+		expr_562 = expr_561
 	} else {
 		if v_198, ok := callee.Kind.(ast2.ExprKindFieldExpr); ok {
-			var expr_557 Option[typeinference2.GoFuncSignature]
-			var expr_556 Option[typeinference2.GoFuncSignature]
+			var expr_560 Option[typeinference2.GoFuncSignature]
+			var expr_559 Option[typeinference2.GoFuncSignature]
 			if v_199, ok := v_198.F0.Kind.(ast2.ExprKindIdentExpr); ok {
-				var expr_555 Option[typeinference2.GoFuncSignature]
-				expr_555 = ffiSignatureInPackages(ctx.goPackages, v_199.F0, v_198.F1)
-				expr_556 = expr_555
+				var expr_558 Option[typeinference2.GoFuncSignature]
+				expr_558 = ffiSignatureInPackages(ctx.goPackages, v_199.F0, v_198.F1)
+				expr_559 = expr_558
 			} else {
 				{
-					var expr_554 Option[typeinference2.GoFuncSignature]
-					expr_554 = None[typeinference2.GoFuncSignature]()
-					expr_556 = expr_554
+					var expr_557 Option[typeinference2.GoFuncSignature]
+					expr_557 = None[typeinference2.GoFuncSignature]()
+					expr_559 = expr_557
 				}
 			}
-			expr_557 = expr_556
-			expr_559 = expr_557
+			expr_560 = expr_559
+			expr_562 = expr_560
 		} else {
 			{
-				var expr_553 Option[typeinference2.GoFuncSignature]
-				expr_553 = None[typeinference2.GoFuncSignature]()
-				expr_559 = expr_553
+				var expr_556 Option[typeinference2.GoFuncSignature]
+				expr_556 = None[typeinference2.GoFuncSignature]()
+				expr_562 = expr_556
 			}
 		}
 	}
-	return expr_559
+	return expr_562
 }
 func ffiSignatureInPackages(packages []typeinference2.GoPackageEntry, alias string, name string) Option[typeinference2.GoFuncSignature] {
-	var expr_564 Option[typeinference2.GoFuncSignature]
+	var expr_567 Option[typeinference2.GoFuncSignature]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(packages) == 0 {
-		expr_564 = None[typeinference2.GoFuncSignature]()
+		expr_567 = None[typeinference2.GoFuncSignature]()
 	} else {
-		var expr_563 Option[typeinference2.GoFuncSignature]
+		var expr_566 Option[typeinference2.GoFuncSignature]
 		if v_202, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0).(OptionSome[typeinference2.GoPackageEntry]); ok {
-			var expr_562 Option[typeinference2.GoFuncSignature]
-			var expr_561 Option[typeinference2.GoFuncSignature]
+			var expr_565 Option[typeinference2.GoFuncSignature]
+			var expr_564 Option[typeinference2.GoFuncSignature]
 			if v_202.F0.Alias == alias {
-				expr_561 = ffiSignatureInFuncs(v_202.F0.Funcs, name)
+				expr_564 = ffiSignatureInFuncs(v_202.F0.Funcs, name)
 			} else {
-				expr_561 = ffiSignatureInPackages(sliceDrop[typeinference2.GoPackageEntry](packages, 1), alias, name)
+				expr_564 = ffiSignatureInPackages(sliceDrop[typeinference2.GoPackageEntry](packages, 1), alias, name)
 			}
-			expr_562 = expr_561
-			expr_563 = expr_562
+			expr_565 = expr_564
+			expr_566 = expr_565
 		} else {
 			if _, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0).(OptionNone[typeinference2.GoPackageEntry]); ok {
-				var expr_560 Option[typeinference2.GoFuncSignature]
-				expr_560 = None[typeinference2.GoFuncSignature]()
-				expr_563 = expr_560
+				var expr_563 Option[typeinference2.GoFuncSignature]
+				expr_563 = None[typeinference2.GoFuncSignature]()
+				expr_566 = expr_563
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_564 = expr_563
+		expr_567 = expr_566
 	}
-	return expr_564
+	return expr_567
 }
 func ffiSignatureInFuncs(funcs []typeinference2.GoFuncSignature, name string) Option[typeinference2.GoFuncSignature] {
-	var expr_569 Option[typeinference2.GoFuncSignature]
+	var expr_572 Option[typeinference2.GoFuncSignature]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(funcs) == 0 {
-		expr_569 = None[typeinference2.GoFuncSignature]()
+		expr_572 = None[typeinference2.GoFuncSignature]()
 	} else {
-		var expr_568 Option[typeinference2.GoFuncSignature]
+		var expr_571 Option[typeinference2.GoFuncSignature]
 		if v_204, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(funcs, 0).(OptionSome[typeinference2.GoFuncSignature]); ok {
-			var expr_567 Option[typeinference2.GoFuncSignature]
-			var expr_566 Option[typeinference2.GoFuncSignature]
+			var expr_570 Option[typeinference2.GoFuncSignature]
+			var expr_569 Option[typeinference2.GoFuncSignature]
 			if v_204.F0.Name == name && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_204.F0.Results) == 2 && MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_204.F0.Results, 1), "") == "bool" {
-				expr_566 = Some[typeinference2.GoFuncSignature](v_204.F0)
+				expr_569 = Some[typeinference2.GoFuncSignature](v_204.F0)
 			} else {
-				expr_566 = ffiSignatureInFuncs(sliceDrop[typeinference2.GoFuncSignature](funcs, 1), name)
+				expr_569 = ffiSignatureInFuncs(sliceDrop[typeinference2.GoFuncSignature](funcs, 1), name)
 			}
-			expr_567 = expr_566
-			expr_568 = expr_567
+			expr_570 = expr_569
+			expr_571 = expr_570
 		} else {
 			if _, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(funcs, 0).(OptionNone[typeinference2.GoFuncSignature]); ok {
-				var expr_565 Option[typeinference2.GoFuncSignature]
-				expr_565 = None[typeinference2.GoFuncSignature]()
-				expr_568 = expr_565
+				var expr_568 Option[typeinference2.GoFuncSignature]
+				expr_568 = None[typeinference2.GoFuncSignature]()
+				expr_571 = expr_568
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_569 = expr_568
+		expr_572 = expr_571
 	}
-	return expr_569
+	return expr_572
 }
 func translateFFIOptionCall(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx, expected string, _ typeinference2.GoFuncSignature) Result[AstExprResult, string] {
-	c_570 := translateExprAstExpected(callee, ctx, "")
-	values_571 := translateAstArgs(args, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), []string([]string{}))
-	var expr_588 Result[AstExprResult, string]
-	if v_208, ok := c_570.(ResultErr[AstExprResult, string]); ok {
-		var expr_587 Result[AstExprResult, string]
-		expr_587 = Err[AstExprResult, string](v_208.F0)
-		expr_588 = expr_587
+	c_573 := translateExprAstExpected(callee, ctx, "")
+	values_574 := translateAstArgs(args, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), []string([]string{}))
+	var expr_591 Result[AstExprResult, string]
+	if v_208, ok := c_573.(ResultErr[AstExprResult, string]); ok {
+		var expr_590 Result[AstExprResult, string]
+		expr_590 = Err[AstExprResult, string](v_208.F0)
+		expr_591 = expr_590
 	} else {
-		if v_205, ok := c_570.(ResultOk[AstExprResult, string]); ok {
-			var expr_586 Result[AstExprResult, string]
-			var expr_585 Result[AstExprResult, string]
-			if v_207, ok := values_571.(ResultErr[AstArgsResult, string]); ok {
-				var expr_584 Result[AstExprResult, string]
-				expr_584 = Err[AstExprResult, string](v_207.F0)
-				expr_585 = expr_584
+		if v_205, ok := c_573.(ResultOk[AstExprResult, string]); ok {
+			var expr_589 Result[AstExprResult, string]
+			var expr_588 Result[AstExprResult, string]
+			if v_207, ok := values_574.(ResultErr[AstArgsResult, string]); ok {
+				var expr_587 Result[AstExprResult, string]
+				expr_587 = Err[AstExprResult, string](v_207.F0)
+				expr_588 = expr_587
 			} else {
-				if v_206, ok := values_571.(ResultOk[AstArgsResult, string]); ok {
-					var expr_583 Result[AstExprResult, string]
-					valueName_572 := ctxFreshExprTemp(ctx)
-					okName_573 := ctxFreshExprTemp(ctx)
-					optionName_574 := ctxFreshExprTemp(ctx)
-					inner_575 := strings.TrimSuffix(strings.TrimPrefix(expected, "Option["), "]")
-					call_576 := goast.GenericCall(v_205.F0.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), v_206.F0.Exprs)
-					define_577 := goast.Assign([]goast.Expr{goast.Ident(valueName_572), goast.Ident(okName_573)}, ":=", []goast.Expr{call_576})
-					some_578 := goast.GenericCall(goast.Ident("Some"), []string{inner_575}, []goast.Expr{goast.Ident(valueName_572)})
-					none_579 := goast.GenericCall(goast.Ident("None"), []string{inner_575}, []goast.Expr([]goast.Expr{}))
-					yes_580 := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(optionName_574)), "=", astSingleExpr(some_578)))
-					no_581 := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(optionName_574)), "=", astSingleExpr(none_579)))
-					pre_582 := goast.AppendStmts(goast.AppendStmts(v_205.F0.Pre, v_206.F0.Pre), goast.AppendStmts(astTwoStmts(goast.DeclareFromType(optionName_574, expected), define_577), astSingleStmt(goast.If(goast.Ident(okName_573), yes_580, no_581))))
-					expr_583 = Ok[AstExprResult, string](astExprWithPre(goast.Ident(optionName_574), pre_582))
-					expr_585 = expr_583
+				if v_206, ok := values_574.(ResultOk[AstArgsResult, string]); ok {
+					var expr_586 Result[AstExprResult, string]
+					valueName_575 := ctxFreshExprTemp(ctx)
+					okName_576 := ctxFreshExprTemp(ctx)
+					optionName_577 := ctxFreshExprTemp(ctx)
+					inner_578 := strings.TrimSuffix(strings.TrimPrefix(expected, "Option["), "]")
+					call_579 := goast.GenericCall(v_205.F0.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), v_206.F0.Exprs)
+					define_580 := goast.Assign([]goast.Expr{goast.Ident(valueName_575), goast.Ident(okName_576)}, ":=", []goast.Expr{call_579})
+					some_581 := goast.GenericCall(goast.Ident("Some"), []string{inner_578}, []goast.Expr{goast.Ident(valueName_575)})
+					none_582 := goast.GenericCall(goast.Ident("None"), []string{inner_578}, []goast.Expr([]goast.Expr{}))
+					yes_583 := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(optionName_577)), "=", astSingleExpr(some_581)))
+					no_584 := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(optionName_577)), "=", astSingleExpr(none_582)))
+					pre_585 := goast.AppendStmts(goast.AppendStmts(v_205.F0.Pre, v_206.F0.Pre), goast.AppendStmts(astTwoStmts(goast.DeclareFromType(optionName_577, expected), define_580), astSingleStmt(goast.If(goast.Ident(okName_576), yes_583, no_584))))
+					expr_586 = Ok[AstExprResult, string](astExprWithPre(goast.Ident(optionName_577), pre_585))
+					expr_588 = expr_586
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_586 = expr_585
-			expr_588 = expr_586
+			expr_589 = expr_588
+			expr_591 = expr_589
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_588
+	return expr_591
 }
 func ffiResultSignature(callee ast2.Expr, ctx *egCtx) Option[typeinference2.GoFuncSignature] {
-	var expr_595 Option[typeinference2.GoFuncSignature]
+	var expr_598 Option[typeinference2.GoFuncSignature]
 	if v_211, ok := callee.Kind.(ast2.ExprKindCallExpr); ok {
-		var expr_594 Option[typeinference2.GoFuncSignature]
-		expr_594 = ffiResultSignature(v_211.F0, ctx)
-		expr_595 = expr_594
+		var expr_597 Option[typeinference2.GoFuncSignature]
+		expr_597 = ffiResultSignature(v_211.F0, ctx)
+		expr_598 = expr_597
 	} else {
 		if v_209, ok := callee.Kind.(ast2.ExprKindFieldExpr); ok {
-			var expr_593 Option[typeinference2.GoFuncSignature]
-			var expr_592 Option[typeinference2.GoFuncSignature]
+			var expr_596 Option[typeinference2.GoFuncSignature]
+			var expr_595 Option[typeinference2.GoFuncSignature]
 			if v_210, ok := v_209.F0.Kind.(ast2.ExprKindIdentExpr); ok {
-				var expr_591 Option[typeinference2.GoFuncSignature]
-				expr_591 = ffiResultSignatureInPackages(ctx.goPackages, v_210.F0, v_209.F1)
-				expr_592 = expr_591
+				var expr_594 Option[typeinference2.GoFuncSignature]
+				expr_594 = ffiResultSignatureInPackages(ctx.goPackages, v_210.F0, v_209.F1)
+				expr_595 = expr_594
 			} else {
 				{
-					var expr_590 Option[typeinference2.GoFuncSignature]
-					expr_590 = None[typeinference2.GoFuncSignature]()
-					expr_592 = expr_590
+					var expr_593 Option[typeinference2.GoFuncSignature]
+					expr_593 = None[typeinference2.GoFuncSignature]()
+					expr_595 = expr_593
 				}
 			}
-			expr_593 = expr_592
-			expr_595 = expr_593
+			expr_596 = expr_595
+			expr_598 = expr_596
 		} else {
 			{
-				var expr_589 Option[typeinference2.GoFuncSignature]
-				expr_589 = None[typeinference2.GoFuncSignature]()
-				expr_595 = expr_589
+				var expr_592 Option[typeinference2.GoFuncSignature]
+				expr_592 = None[typeinference2.GoFuncSignature]()
+				expr_598 = expr_592
 			}
 		}
 	}
-	return expr_595
+	return expr_598
 }
 func ffiResultSignatureInPackages(packages []typeinference2.GoPackageEntry, alias string, name string) Option[typeinference2.GoFuncSignature] {
-	var expr_600 Option[typeinference2.GoFuncSignature]
+	var expr_603 Option[typeinference2.GoFuncSignature]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(packages) == 0 {
-		expr_600 = None[typeinference2.GoFuncSignature]()
+		expr_603 = None[typeinference2.GoFuncSignature]()
 	} else {
-		var expr_599 Option[typeinference2.GoFuncSignature]
+		var expr_602 Option[typeinference2.GoFuncSignature]
 		if v_213, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0).(OptionSome[typeinference2.GoPackageEntry]); ok {
-			var expr_598 Option[typeinference2.GoFuncSignature]
-			var expr_597 Option[typeinference2.GoFuncSignature]
+			var expr_601 Option[typeinference2.GoFuncSignature]
+			var expr_600 Option[typeinference2.GoFuncSignature]
 			if v_213.F0.Alias == alias {
-				expr_597 = ffiResultSignatureInFuncs(v_213.F0.Funcs, name)
+				expr_600 = ffiResultSignatureInFuncs(v_213.F0.Funcs, name)
 			} else {
-				expr_597 = ffiResultSignatureInPackages(sliceDrop[typeinference2.GoPackageEntry](packages, 1), alias, name)
+				expr_600 = ffiResultSignatureInPackages(sliceDrop[typeinference2.GoPackageEntry](packages, 1), alias, name)
 			}
-			expr_598 = expr_597
-			expr_599 = expr_598
+			expr_601 = expr_600
+			expr_602 = expr_601
 		} else {
 			if _, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0).(OptionNone[typeinference2.GoPackageEntry]); ok {
-				var expr_596 Option[typeinference2.GoFuncSignature]
-				expr_596 = None[typeinference2.GoFuncSignature]()
-				expr_599 = expr_596
+				var expr_599 Option[typeinference2.GoFuncSignature]
+				expr_599 = None[typeinference2.GoFuncSignature]()
+				expr_602 = expr_599
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_600 = expr_599
+		expr_603 = expr_602
 	}
-	return expr_600
+	return expr_603
 }
 func ffiResultSignatureInFuncs(funcs []typeinference2.GoFuncSignature, name string) Option[typeinference2.GoFuncSignature] {
-	var expr_605 Option[typeinference2.GoFuncSignature]
+	var expr_608 Option[typeinference2.GoFuncSignature]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(funcs) == 0 {
-		expr_605 = None[typeinference2.GoFuncSignature]()
+		expr_608 = None[typeinference2.GoFuncSignature]()
 	} else {
-		var expr_604 Option[typeinference2.GoFuncSignature]
+		var expr_607 Option[typeinference2.GoFuncSignature]
 		if v_215, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(funcs, 0).(OptionSome[typeinference2.GoFuncSignature]); ok {
-			var expr_603 Option[typeinference2.GoFuncSignature]
-			var expr_602 Option[typeinference2.GoFuncSignature]
+			var expr_606 Option[typeinference2.GoFuncSignature]
+			var expr_605 Option[typeinference2.GoFuncSignature]
 			if v_215.F0.Name == name && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_215.F0.Results) == 2 && MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_215.F0.Results, 1), "") == "error" {
-				expr_602 = Some[typeinference2.GoFuncSignature](v_215.F0)
+				expr_605 = Some[typeinference2.GoFuncSignature](v_215.F0)
 			} else {
-				expr_602 = ffiResultSignatureInFuncs(sliceDrop[typeinference2.GoFuncSignature](funcs, 1), name)
+				expr_605 = ffiResultSignatureInFuncs(sliceDrop[typeinference2.GoFuncSignature](funcs, 1), name)
 			}
-			expr_603 = expr_602
-			expr_604 = expr_603
+			expr_606 = expr_605
+			expr_607 = expr_606
 		} else {
 			if _, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(funcs, 0).(OptionNone[typeinference2.GoFuncSignature]); ok {
-				var expr_601 Option[typeinference2.GoFuncSignature]
-				expr_601 = None[typeinference2.GoFuncSignature]()
-				expr_604 = expr_601
+				var expr_604 Option[typeinference2.GoFuncSignature]
+				expr_604 = None[typeinference2.GoFuncSignature]()
+				expr_607 = expr_604
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_605 = expr_604
+		expr_608 = expr_607
 	}
-	return expr_605
+	return expr_608
 }
 func translateFFIResultCall(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx, expected string, _ typeinference2.GoFuncSignature) Result[AstExprResult, string] {
-	c_606 := translateExprAstExpected(callee, ctx, "")
-	values_607 := translateAstArgs(args, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), []string([]string{}))
-	var expr_629 Result[AstExprResult, string]
-	if v_219, ok := c_606.(ResultErr[AstExprResult, string]); ok {
-		var expr_628 Result[AstExprResult, string]
-		expr_628 = Err[AstExprResult, string](v_219.F0)
-		expr_629 = expr_628
+	c_609 := translateExprAstExpected(callee, ctx, "")
+	values_610 := translateAstArgs(args, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), []string([]string{}))
+	var expr_632 Result[AstExprResult, string]
+	if v_219, ok := c_609.(ResultErr[AstExprResult, string]); ok {
+		var expr_631 Result[AstExprResult, string]
+		expr_631 = Err[AstExprResult, string](v_219.F0)
+		expr_632 = expr_631
 	} else {
-		if v_216, ok := c_606.(ResultOk[AstExprResult, string]); ok {
-			var expr_627 Result[AstExprResult, string]
-			var expr_626 Result[AstExprResult, string]
-			if v_218, ok := values_607.(ResultErr[AstArgsResult, string]); ok {
-				var expr_625 Result[AstExprResult, string]
-				expr_625 = Err[AstExprResult, string](v_218.F0)
-				expr_626 = expr_625
+		if v_216, ok := c_609.(ResultOk[AstExprResult, string]); ok {
+			var expr_630 Result[AstExprResult, string]
+			var expr_629 Result[AstExprResult, string]
+			if v_218, ok := values_610.(ResultErr[AstArgsResult, string]); ok {
+				var expr_628 Result[AstExprResult, string]
+				expr_628 = Err[AstExprResult, string](v_218.F0)
+				expr_629 = expr_628
 			} else {
-				if v_217, ok := values_607.(ResultOk[AstArgsResult, string]); ok {
-					var expr_624 Result[AstExprResult, string]
-					valueName_608 := ctxFreshExprTemp(ctx)
-					errorName_609 := ctxFreshExprTemp(ctx)
-					resultName_610 := ctxFreshExprTemp(ctx)
-					var expr_611 string
+				if v_217, ok := values_610.(ResultOk[AstArgsResult, string]); ok {
+					var expr_627 Result[AstExprResult, string]
+					valueName_611 := ctxFreshExprTemp(ctx)
+					errorName_612 := ctxFreshExprTemp(ctx)
+					resultName_613 := ctxFreshExprTemp(ctx)
+					var expr_614 string
 					if strings.HasSuffix(expected, ", error]") {
-						expr_611 = "error"
+						expr_614 = "error"
 					} else {
-						expr_611 = "string"
+						expr_614 = "string"
 					}
-					errorType_612 := expr_611
-					var expr_613 string
-					if errorType_612 == "error" {
-						expr_613 = strings.TrimSuffix(strings.TrimPrefix(expected, "Result["), ", error]")
+					errorType_615 := expr_614
+					var expr_616 string
+					if errorType_615 == "error" {
+						expr_616 = strings.TrimSuffix(strings.TrimPrefix(expected, "Result["), ", error]")
 					} else {
-						expr_613 = strings.TrimSuffix(strings.TrimPrefix(expected, "Result["), ", string]")
+						expr_616 = strings.TrimSuffix(strings.TrimPrefix(expected, "Result["), ", string]")
 					}
-					inner_614 := expr_613
-					call_615 := goast.GenericCall(v_216.F0.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), v_217.F0.Exprs)
-					define_616 := goast.Assign([]goast.Expr{goast.Ident(valueName_608), goast.Ident(errorName_609)}, ":=", []goast.Expr{call_615})
-					ok_617 := goast.GenericCall(goast.Ident("Ok"), []string{inner_614, errorType_612}, []goast.Expr{goast.Ident(valueName_608)})
-					var expr_618 goast.Expr
-					if errorType_612 == "error" {
-						expr_618 = goast.Ident(errorName_609)
+					inner_617 := expr_616
+					call_618 := goast.GenericCall(v_216.F0.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), v_217.F0.Exprs)
+					define_619 := goast.Assign([]goast.Expr{goast.Ident(valueName_611), goast.Ident(errorName_612)}, ":=", []goast.Expr{call_618})
+					ok_620 := goast.GenericCall(goast.Ident("Ok"), []string{inner_617, errorType_615}, []goast.Expr{goast.Ident(valueName_611)})
+					var expr_621 goast.Expr
+					if errorType_615 == "error" {
+						expr_621 = goast.Ident(errorName_612)
 					} else {
-						expr_618 = goast.Call(goast.Selector(goast.Ident(errorName_609), "Error"), []goast.Expr([]goast.Expr{}))
+						expr_621 = goast.Call(goast.Selector(goast.Ident(errorName_612), "Error"), []goast.Expr([]goast.Expr{}))
 					}
-					message_619 := expr_618
-					err_620 := goast.GenericCall(goast.Ident("Err"), []string{inner_614, errorType_612}, []goast.Expr{message_619})
-					failed_621 := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName_610)), "=", astSingleExpr(err_620)))
-					succeeded_622 := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName_610)), "=", astSingleExpr(ok_617)))
-					pre_623 := goast.AppendStmts(goast.AppendStmts(v_216.F0.Pre, v_217.F0.Pre), goast.AppendStmts(astTwoStmts(goast.DeclareFromType(resultName_610, expected), define_616), astSingleStmt(goast.If(goast.Binary(goast.Ident(errorName_609), "!=", goast.Ident("nil")), failed_621, succeeded_622))))
-					expr_624 = Ok[AstExprResult, string](astExprWithPre(goast.Ident(resultName_610), pre_623))
-					expr_626 = expr_624
+					message_622 := expr_621
+					err_623 := goast.GenericCall(goast.Ident("Err"), []string{inner_617, errorType_615}, []goast.Expr{message_622})
+					failed_624 := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName_613)), "=", astSingleExpr(err_623)))
+					succeeded_625 := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName_613)), "=", astSingleExpr(ok_620)))
+					pre_626 := goast.AppendStmts(goast.AppendStmts(v_216.F0.Pre, v_217.F0.Pre), goast.AppendStmts(astTwoStmts(goast.DeclareFromType(resultName_613, expected), define_619), astSingleStmt(goast.If(goast.Binary(goast.Ident(errorName_612), "!=", goast.Ident("nil")), failed_624, succeeded_625))))
+					expr_627 = Ok[AstExprResult, string](astExprWithPre(goast.Ident(resultName_613), pre_626))
+					expr_629 = expr_627
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_627 = expr_626
-			expr_629 = expr_627
+			expr_630 = expr_629
+			expr_632 = expr_630
 		} else {
 			panic("unreachable")
-		}
-	}
-	return expr_629
-}
-func dictionaryArgsForCall(callee ast2.Expr, ctx *egCtx, args []goast.Expr) []goast.Expr {
-	var expr_632 []goast.Expr
-	if v_220, ok := callee.Kind.(ast2.ExprKindIdentExpr); ok {
-		var expr_631 []goast.Expr
-		expr_631 = appendRequirementArgs(args, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.callRequirements, v_220.F0), []DictionaryRequirement([]DictionaryRequirement{})), ctx)
-		expr_632 = expr_631
-	} else {
-		{
-			var expr_630 []goast.Expr
-			expr_630 = args
-			expr_632 = expr_630
 		}
 	}
 	return expr_632
 }
-func appendRequirementArgs(args []goast.Expr, requirements []DictionaryRequirement, ctx *egCtx) []goast.Expr {
-	var expr_644 []goast.Expr
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(requirements) == 0 {
-		expr_644 = args
+func dictionaryArgsForCall(callee ast2.Expr, ctx *egCtx, args []goast.Expr) []goast.Expr {
+	var expr_635 []goast.Expr
+	if v_220, ok := callee.Kind.(ast2.ExprKindIdentExpr); ok {
+		var expr_634 []goast.Expr
+		expr_634 = appendRequirementArgs(args, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.callRequirements, v_220.F0), []DictionaryRequirement([]DictionaryRequirement{})), ctx)
+		expr_635 = expr_634
 	} else {
-		var expr_643 []goast.Expr
-		requirement_633 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(requirements, 0), DictionaryRequirement{Interface: "", Method: "", Args: []ast2.TypeExpr([]ast2.TypeExpr{})})
-		var expr_642 []goast.Expr
-		if v_226, ok := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.constraintFuncs, requirement_633.Method).(OptionSome[string]); ok {
-			var expr_641 []goast.Expr
-			expr_641 = appendRequirementArgs(MygoIN5SliceM6Append(args, goast.Ident(v_226.F0)), sliceDrop[DictionaryRequirement](requirements, 1), ctx)
-			expr_642 = expr_641
+		{
+			var expr_633 []goast.Expr
+			expr_633 = args
+			expr_635 = expr_633
+		}
+	}
+	return expr_635
+}
+func appendRequirementArgs(args []goast.Expr, requirements []DictionaryRequirement, ctx *egCtx) []goast.Expr {
+	var expr_647 []goast.Expr
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(requirements) == 0 {
+		expr_647 = args
+	} else {
+		var expr_646 []goast.Expr
+		requirement_636 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(requirements, 0), DictionaryRequirement{Interface: "", Method: "", Args: []ast2.TypeExpr([]ast2.TypeExpr{})})
+		var expr_645 []goast.Expr
+		if v_226, ok := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.constraintFuncs, requirement_636.Method).(OptionSome[string]); ok {
+			var expr_644 []goast.Expr
+			expr_644 = appendRequirementArgs(MygoIN5SliceM6Append(args, goast.Ident(v_226.F0)), sliceDrop[DictionaryRequirement](requirements, 1), ctx)
+			expr_645 = expr_644
 		} else {
-			if _, ok := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.constraintFuncs, requirement_633.Method).(OptionNone[string]); ok {
-				var expr_640 []goast.Expr
-				var expr_639 []goast.Expr
-				if v_225, ok := matchingCandidate(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageCandidates, requirement_633.Interface+"."+requirement_633.Method), []ImplDictionaryCandidate([]ImplDictionaryCandidate{})), requirement_633).(OptionSome[ImplDictionaryCandidate]); ok {
-					var expr_638 []goast.Expr
-					expr_638 = appendRequirementArgs(MygoIN5SliceM6Append(args, goast.Ident(v_225.F0.Helper)), sliceDrop[DictionaryRequirement](requirements, 1), ctx)
-					expr_639 = expr_638
+			if _, ok := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.constraintFuncs, requirement_636.Method).(OptionNone[string]); ok {
+				var expr_643 []goast.Expr
+				var expr_642 []goast.Expr
+				if v_225, ok := matchingCandidate(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageCandidates, requirement_636.Interface+"."+requirement_636.Method), []ImplDictionaryCandidate([]ImplDictionaryCandidate{})), requirement_636).(OptionSome[ImplDictionaryCandidate]); ok {
+					var expr_641 []goast.Expr
+					expr_641 = appendRequirementArgs(MygoIN5SliceM6Append(args, goast.Ident(v_225.F0.Helper)), sliceDrop[DictionaryRequirement](requirements, 1), ctx)
+					expr_642 = expr_641
 				} else {
-					if _, ok := matchingCandidate(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageCandidates, requirement_633.Interface+"."+requirement_633.Method), []ImplDictionaryCandidate([]ImplDictionaryCandidate{})), requirement_633).(OptionNone[ImplDictionaryCandidate]); ok {
-						var expr_637 []goast.Expr
-						var expr_636 []goast.Expr
-						if v_224, ok := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageDictionaries, requirement_633.Interface+"."+requirement_633.Method).(OptionSome[string]); ok {
-							var expr_635 []goast.Expr
-							expr_635 = appendRequirementArgs(MygoIN5SliceM6Append(args, goast.Ident(v_224.F0)), sliceDrop[DictionaryRequirement](requirements, 1), ctx)
-							expr_636 = expr_635
+					if _, ok := matchingCandidate(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageCandidates, requirement_636.Interface+"."+requirement_636.Method), []ImplDictionaryCandidate([]ImplDictionaryCandidate{})), requirement_636).(OptionNone[ImplDictionaryCandidate]); ok {
+						var expr_640 []goast.Expr
+						var expr_639 []goast.Expr
+						if v_224, ok := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageDictionaries, requirement_636.Interface+"."+requirement_636.Method).(OptionSome[string]); ok {
+							var expr_638 []goast.Expr
+							expr_638 = appendRequirementArgs(MygoIN5SliceM6Append(args, goast.Ident(v_224.F0)), sliceDrop[DictionaryRequirement](requirements, 1), ctx)
+							expr_639 = expr_638
 						} else {
-							if _, ok := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageDictionaries, requirement_633.Interface+"."+requirement_633.Method).(OptionNone[string]); ok {
-								var expr_634 []goast.Expr
-								expr_634 = appendRequirementArgs(args, sliceDrop[DictionaryRequirement](requirements, 1), ctx)
-								expr_636 = expr_634
+							if _, ok := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageDictionaries, requirement_636.Interface+"."+requirement_636.Method).(OptionNone[string]); ok {
+								var expr_637 []goast.Expr
+								expr_637 = appendRequirementArgs(args, sliceDrop[DictionaryRequirement](requirements, 1), ctx)
+								expr_639 = expr_637
 							} else {
 								panic("unreachable")
 							}
 						}
-						expr_637 = expr_636
-						expr_639 = expr_637
+						expr_640 = expr_639
+						expr_642 = expr_640
 					} else {
 						panic("unreachable")
 					}
 				}
-				expr_640 = expr_639
-				expr_642 = expr_640
+				expr_643 = expr_642
+				expr_645 = expr_643
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_643 = expr_642
-		expr_644 = expr_643
+		expr_646 = expr_645
+		expr_647 = expr_646
 	}
-	return expr_644
+	return expr_647
 }
 func matchingCandidate(candidates []ImplDictionaryCandidate, requirement DictionaryRequirement) Option[ImplDictionaryCandidate] {
-	var expr_648 Option[ImplDictionaryCandidate]
+	var expr_651 Option[ImplDictionaryCandidate]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(candidates) == 0 {
-		expr_648 = None[ImplDictionaryCandidate]()
+		expr_651 = None[ImplDictionaryCandidate]()
 	} else {
-		var expr_647 Option[ImplDictionaryCandidate]
-		candidate_645 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(candidates, 0), ImplDictionaryCandidate{Interface: "", Method: "", InterfaceArgs: []ast2.TypeExpr([]ast2.TypeExpr{}), TypeParams: []string([]string{}), Helper: ""})
-		var expr_646 Option[ImplDictionaryCandidate]
-		if typeExprListMatches(candidate_645.InterfaceArgs, requirement.Args, typeParamSet(candidate_645.TypeParams)) {
-			expr_646 = Some[ImplDictionaryCandidate](candidate_645)
+		var expr_650 Option[ImplDictionaryCandidate]
+		candidate_648 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(candidates, 0), ImplDictionaryCandidate{Interface: "", Method: "", InterfaceArgs: []ast2.TypeExpr([]ast2.TypeExpr{}), TypeParams: []string([]string{}), Helper: ""})
+		var expr_649 Option[ImplDictionaryCandidate]
+		if typeExprListMatches(candidate_648.InterfaceArgs, requirement.Args, typeParamSet(candidate_648.TypeParams)) {
+			expr_649 = Some[ImplDictionaryCandidate](candidate_648)
 		} else {
-			expr_646 = matchingCandidate(sliceDrop[ImplDictionaryCandidate](candidates, 1), requirement)
-		}
-		expr_647 = expr_646
-		expr_648 = expr_647
-	}
-	return expr_648
-}
-func typeExprListMatches(patterns []ast2.TypeExpr, actuals []ast2.TypeExpr, variables map[string]struct{}) bool {
-	var expr_650 bool
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(patterns) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(actuals) {
-		expr_650 = false
-	} else {
-		var expr_649 bool
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(patterns) == 0 {
-			expr_649 = true
-		} else {
-			expr_649 = typeExprMatches(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(patterns, 0), ast2.TypeExprUnitTypeCtor()), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(actuals, 0), ast2.TypeExprUnitTypeCtor()), variables) && typeExprListMatches(sliceDrop[ast2.TypeExpr](patterns, 1), sliceDrop[ast2.TypeExpr](actuals, 1), variables)
+			expr_649 = matchingCandidate(sliceDrop[ImplDictionaryCandidate](candidates, 1), requirement)
 		}
 		expr_650 = expr_649
+		expr_651 = expr_650
 	}
-	return expr_650
+	return expr_651
+}
+func typeExprListMatches(patterns []ast2.TypeExpr, actuals []ast2.TypeExpr, variables map[string]struct{}) bool {
+	var expr_653 bool
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(patterns) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(actuals) {
+		expr_653 = false
+	} else {
+		var expr_652 bool
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(patterns) == 0 {
+			expr_652 = true
+		} else {
+			expr_652 = typeExprMatches(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(patterns, 0), ast2.TypeExprUnitTypeCtor()), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(actuals, 0), ast2.TypeExprUnitTypeCtor()), variables) && typeExprListMatches(sliceDrop[ast2.TypeExpr](patterns, 1), sliceDrop[ast2.TypeExpr](actuals, 1), variables)
+		}
+		expr_653 = expr_652
+	}
+	return expr_653
 }
 func typeExprMatches(pattern ast2.TypeExpr, actual ast2.TypeExpr, variables map[string]struct{}) bool {
-	var expr_661 bool
+	var expr_664 bool
 	if v_229, ok := pattern.(ast2.TypeExprNamedType); ok {
-		var expr_660 bool
-		var expr_659 bool
+		var expr_663 bool
+		var expr_662 bool
 		if setContainsString(variables, v_229.F0) && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_229.F1) == 0 {
-			expr_659 = true
+			expr_662 = true
 		} else {
-			var expr_658 bool
+			var expr_661 bool
 			if v_230, ok := actual.(ast2.TypeExprNamedType); ok {
-				var expr_657 bool
-				expr_657 = v_229.F0 == v_230.F0 && typeExprListMatches(v_229.F1, v_230.F1, variables)
-				expr_658 = expr_657
+				var expr_660 bool
+				expr_660 = v_229.F0 == v_230.F0 && typeExprListMatches(v_229.F1, v_230.F1, variables)
+				expr_661 = expr_660
 			} else {
 				{
-					var expr_656 bool
-					expr_656 = false
-					expr_658 = expr_656
+					var expr_659 bool
+					expr_659 = false
+					expr_661 = expr_659
 				}
 			}
-			expr_659 = expr_658
+			expr_662 = expr_661
 		}
-		expr_660 = expr_659
-		expr_661 = expr_660
+		expr_663 = expr_662
+		expr_664 = expr_663
 	} else {
 		if _, ok := pattern.(ast2.TypeExprUnitType); ok {
-			var expr_655 bool
-			var expr_654 bool
+			var expr_658 bool
+			var expr_657 bool
 			if _, ok := actual.(ast2.TypeExprUnitType); ok {
-				var expr_653 bool
-				expr_653 = true
-				expr_654 = expr_653
+				var expr_656 bool
+				expr_656 = true
+				expr_657 = expr_656
 			} else {
 				{
-					var expr_652 bool
-					expr_652 = false
-					expr_654 = expr_652
+					var expr_655 bool
+					expr_655 = false
+					expr_657 = expr_655
 				}
 			}
-			expr_655 = expr_654
-			expr_661 = expr_655
+			expr_658 = expr_657
+			expr_664 = expr_658
 		} else {
 			{
-				var expr_651 bool
-				expr_651 = typeString(pattern) == typeString(actual)
-				expr_661 = expr_651
+				var expr_654 bool
+				expr_654 = typeString(pattern) == typeString(actual)
+				expr_664 = expr_654
 			}
 		}
 	}
-	return expr_661
+	return expr_664
 }
 func appendDictionaryArgs(args []goast.Expr, methods []string, ctx *egCtx) []goast.Expr {
-	var expr_671 []goast.Expr
+	var expr_674 []goast.Expr
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) == 0 {
-		expr_671 = args
+		expr_674 = args
 	} else {
-		var expr_670 []goast.Expr
-		method_662 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), "")
-		next_663 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.constraintFuncs, method_662)
-		var expr_669 []goast.Expr
-		if v_234, ok := next_663.(OptionSome[string]); ok {
-			var expr_668 []goast.Expr
-			expr_668 = appendDictionaryArgs(MygoIN5SliceM6Append(args, goast.Ident(v_234.F0)), sliceDrop[string](methods, 1), ctx)
-			expr_669 = expr_668
+		var expr_673 []goast.Expr
+		method_665 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), "")
+		next_666 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.constraintFuncs, method_665)
+		var expr_672 []goast.Expr
+		if v_234, ok := next_666.(OptionSome[string]); ok {
+			var expr_671 []goast.Expr
+			expr_671 = appendDictionaryArgs(MygoIN5SliceM6Append(args, goast.Ident(v_234.F0)), sliceDrop[string](methods, 1), ctx)
+			expr_672 = expr_671
 		} else {
-			if _, ok := next_663.(OptionNone[string]); ok {
-				var expr_667 []goast.Expr
-				var expr_666 []goast.Expr
-				if v_233, ok := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageDictionaries, method_662).(OptionSome[string]); ok {
-					var expr_665 []goast.Expr
-					expr_665 = appendDictionaryArgs(MygoIN5SliceM6Append(args, goast.Ident(v_233.F0)), sliceDrop[string](methods, 1), ctx)
-					expr_666 = expr_665
+			if _, ok := next_666.(OptionNone[string]); ok {
+				var expr_670 []goast.Expr
+				var expr_669 []goast.Expr
+				if v_233, ok := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageDictionaries, method_665).(OptionSome[string]); ok {
+					var expr_668 []goast.Expr
+					expr_668 = appendDictionaryArgs(MygoIN5SliceM6Append(args, goast.Ident(v_233.F0)), sliceDrop[string](methods, 1), ctx)
+					expr_669 = expr_668
 				} else {
-					if _, ok := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageDictionaries, method_662).(OptionNone[string]); ok {
-						var expr_664 []goast.Expr
-						expr_664 = appendDictionaryArgs(args, sliceDrop[string](methods, 1), ctx)
-						expr_666 = expr_664
+					if _, ok := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageDictionaries, method_665).(OptionNone[string]); ok {
+						var expr_667 []goast.Expr
+						expr_667 = appendDictionaryArgs(args, sliceDrop[string](methods, 1), ctx)
+						expr_669 = expr_667
 					} else {
 						panic("unreachable")
 					}
 				}
-				expr_667 = expr_666
-				expr_669 = expr_667
+				expr_670 = expr_669
+				expr_672 = expr_670
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_670 = expr_669
-		expr_671 = expr_670
+		expr_673 = expr_672
+		expr_674 = expr_673
 	}
-	return expr_671
+	return expr_674
 }
 func translateAstArgs(args []ast2.Expr, ctx *egCtx, index int, out []goast.Expr, pre []goast.Stmt, expectedTypes []string) Result[AstArgsResult, string] {
-	var expr_678 Result[AstArgsResult, string]
+	var expr_681 Result[AstArgsResult, string]
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) {
-		expr_678 = Ok[AstArgsResult, string](AstArgsResult{Exprs: out, Pre: pre})
+		expr_681 = Ok[AstArgsResult, string](AstArgsResult{Exprs: out, Pre: pre})
 	} else {
-		var expr_677 Result[AstArgsResult, string]
-		expected_672 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(expectedTypes, index), "")
-		value_673 := translateExprAstExpected(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.EmptyExpr()), ctx, expected_672)
-		var expr_676 Result[AstArgsResult, string]
-		if v_236, ok := value_673.(ResultErr[AstExprResult, string]); ok {
-			var expr_675 Result[AstArgsResult, string]
-			expr_675 = Err[AstArgsResult, string](v_236.F0)
-			expr_676 = expr_675
+		var expr_680 Result[AstArgsResult, string]
+		expected_675 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(expectedTypes, index), "")
+		value_676 := translateExprAstExpected(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.EmptyExpr()), ctx, expected_675)
+		var expr_679 Result[AstArgsResult, string]
+		if v_236, ok := value_676.(ResultErr[AstExprResult, string]); ok {
+			var expr_678 Result[AstArgsResult, string]
+			expr_678 = Err[AstArgsResult, string](v_236.F0)
+			expr_679 = expr_678
 		} else {
-			if v_235, ok := value_673.(ResultOk[AstExprResult, string]); ok {
-				var expr_674 Result[AstArgsResult, string]
-				expr_674 = translateAstArgs(args, ctx, index+1, MygoIN5SliceM6Append(out, v_235.F0.Expr), goast.AppendStmts(pre, v_235.F0.Pre), expectedTypes)
-				expr_676 = expr_674
+			if v_235, ok := value_676.(ResultOk[AstExprResult, string]); ok {
+				var expr_677 Result[AstArgsResult, string]
+				expr_677 = translateAstArgs(args, ctx, index+1, MygoIN5SliceM6Append(out, v_235.F0.Expr), goast.AppendStmts(pre, v_235.F0.Pre), expectedTypes)
+				expr_679 = expr_677
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_677 = expr_676
-		expr_678 = expr_677
+		expr_680 = expr_679
+		expr_681 = expr_680
 	}
-	return expr_678
+	return expr_681
 }
 func translateMapLitAstExpected(pairs []struct {
 	F0 ast2.Expr
 	F1 ast2.Expr
 }, ctx *egCtx, expected string) Result[AstExprResult, string] {
-	var expr_679 string
+	var expr_682 string
 	if expected == "" {
-		expr_679 = "map[string]any"
+		expr_682 = "map[string]any"
 	} else {
-		expr_679 = expected
+		expr_682 = expected
 	}
-	typ_680 := expr_679
-	result_681 := translateMapLitPairs(pairs, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), expected)
-	var expr_684 Result[AstExprResult, string]
-	if v_238, ok := result_681.(ResultErr[AstCompositeFields, string]); ok {
-		var expr_683 Result[AstExprResult, string]
-		expr_683 = Err[AstExprResult, string](v_238.F0)
-		expr_684 = expr_683
+	typ_683 := expr_682
+	result_684 := translateMapLitPairs(pairs, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), expected)
+	var expr_687 Result[AstExprResult, string]
+	if v_238, ok := result_684.(ResultErr[AstCompositeFields, string]); ok {
+		var expr_686 Result[AstExprResult, string]
+		expr_686 = Err[AstExprResult, string](v_238.F0)
+		expr_687 = expr_686
 	} else {
-		if v_237, ok := result_681.(ResultOk[AstCompositeFields, string]); ok {
-			var expr_682 Result[AstExprResult, string]
-			expr_682 = Ok[AstExprResult, string](astExprWithPre(goast.Composite(goast.MustTypeExpr(typ_680), v_237.F0.Elts), v_237.F0.Pre))
-			expr_684 = expr_682
+		if v_237, ok := result_684.(ResultOk[AstCompositeFields, string]); ok {
+			var expr_685 Result[AstExprResult, string]
+			expr_685 = Ok[AstExprResult, string](astExprWithPre(goast.Composite(goast.MustTypeExpr(typ_683), v_237.F0.Elts), v_237.F0.Pre))
+			expr_687 = expr_685
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_684
+	return expr_687
 }
 func translateMapLitPairs(pairs []struct {
 	F0 ast2.Expr
 	F1 ast2.Expr
 }, ctx *egCtx, index int, out []goast.Expr, pre []goast.Stmt, expected string) Result[AstCompositeFields, string] {
-	var expr_698 Result[AstCompositeFields, string]
+	var expr_701 Result[AstCompositeFields, string]
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pairs) {
-		expr_698 = Ok[AstCompositeFields, string](AstCompositeFields{Elts: out, Pre: pre})
+		expr_701 = Ok[AstCompositeFields, string](AstCompositeFields{Elts: out, Pre: pre})
 	} else {
-		var expr_697 Result[AstCompositeFields, string]
-		pair_685 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pairs, index), struct {
+		var expr_700 Result[AstCompositeFields, string]
+		pair_688 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pairs, index), struct {
 			F0 ast2.Expr
 			F1 ast2.Expr
 		}{F0: ast2.EmptyExpr(), F1: ast2.EmptyExpr()})
-		__tuple_686 := pair_685
-		key_687 := __tuple_686.F0
-		value_688 := __tuple_686.F1
-		k_689 := translateExprAstExpected(key_687, ctx, "")
-		var expr_696 Result[AstCompositeFields, string]
-		if v_242, ok := k_689.(ResultErr[AstExprResult, string]); ok {
-			var expr_695 Result[AstCompositeFields, string]
-			expr_695 = Err[AstCompositeFields, string](v_242.F0)
-			expr_696 = expr_695
+		__tuple_689 := pair_688
+		key_690 := __tuple_689.F0
+		value_691 := __tuple_689.F1
+		k_692 := translateExprAstExpected(key_690, ctx, "")
+		var expr_699 Result[AstCompositeFields, string]
+		if v_242, ok := k_692.(ResultErr[AstExprResult, string]); ok {
+			var expr_698 Result[AstCompositeFields, string]
+			expr_698 = Err[AstCompositeFields, string](v_242.F0)
+			expr_699 = expr_698
 		} else {
-			if v_239, ok := k_689.(ResultOk[AstExprResult, string]); ok {
-				var expr_694 Result[AstCompositeFields, string]
-				v_690 := translateExprAstExpected(value_688, ctx, "")
-				var expr_693 Result[AstCompositeFields, string]
-				if v_241, ok := v_690.(ResultErr[AstExprResult, string]); ok {
-					var expr_692 Result[AstCompositeFields, string]
-					expr_692 = Err[AstCompositeFields, string](v_241.F0)
-					expr_693 = expr_692
+			if v_239, ok := k_692.(ResultOk[AstExprResult, string]); ok {
+				var expr_697 Result[AstCompositeFields, string]
+				v_693 := translateExprAstExpected(value_691, ctx, "")
+				var expr_696 Result[AstCompositeFields, string]
+				if v_241, ok := v_693.(ResultErr[AstExprResult, string]); ok {
+					var expr_695 Result[AstCompositeFields, string]
+					expr_695 = Err[AstCompositeFields, string](v_241.F0)
+					expr_696 = expr_695
 				} else {
-					if v_240, ok := v_690.(ResultOk[AstExprResult, string]); ok {
-						var expr_691 Result[AstCompositeFields, string]
-						expr_691 = translateMapLitPairs(pairs, ctx, index+1, MygoIN5SliceM6Append(out, goast.KeyValue(v_239.F0.Expr, v_240.F0.Expr)), goast.AppendStmts(goast.AppendStmts(pre, v_239.F0.Pre), v_240.F0.Pre), expected)
-						expr_693 = expr_691
+					if v_240, ok := v_693.(ResultOk[AstExprResult, string]); ok {
+						var expr_694 Result[AstCompositeFields, string]
+						expr_694 = translateMapLitPairs(pairs, ctx, index+1, MygoIN5SliceM6Append(out, goast.KeyValue(v_239.F0.Expr, v_240.F0.Expr)), goast.AppendStmts(goast.AppendStmts(pre, v_239.F0.Pre), v_240.F0.Pre), expected)
+						expr_696 = expr_694
 					} else {
 						panic("unreachable")
 					}
 				}
-				expr_694 = expr_693
-				expr_696 = expr_694
+				expr_697 = expr_696
+				expr_699 = expr_697
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_697 = expr_696
-		expr_698 = expr_697
+		expr_700 = expr_699
+		expr_701 = expr_700
 	}
-	return expr_698
+	return expr_701
 }
 func translateSetLitAstExpected(items []ast2.Expr, ctx *egCtx, expected string) Result[AstExprResult, string] {
-	var expr_699 string
+	var expr_702 string
 	if expected == "" {
-		expr_699 = "map[string]struct{}"
+		expr_702 = "map[string]struct{}"
 	} else {
-		expr_699 = expected
+		expr_702 = expected
 	}
-	typ_700 := expr_699
-	result_701 := translateSetLitItems(items, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), expected)
-	var expr_704 Result[AstExprResult, string]
-	if v_244, ok := result_701.(ResultErr[AstCompositeFields, string]); ok {
-		var expr_703 Result[AstExprResult, string]
-		expr_703 = Err[AstExprResult, string](v_244.F0)
-		expr_704 = expr_703
+	typ_703 := expr_702
+	result_704 := translateSetLitItems(items, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), expected)
+	var expr_707 Result[AstExprResult, string]
+	if v_244, ok := result_704.(ResultErr[AstCompositeFields, string]); ok {
+		var expr_706 Result[AstExprResult, string]
+		expr_706 = Err[AstExprResult, string](v_244.F0)
+		expr_707 = expr_706
 	} else {
-		if v_243, ok := result_701.(ResultOk[AstCompositeFields, string]); ok {
-			var expr_702 Result[AstExprResult, string]
-			expr_702 = Ok[AstExprResult, string](astExprWithPre(goast.Composite(goast.MustTypeExpr(typ_700), v_243.F0.Elts), v_243.F0.Pre))
-			expr_704 = expr_702
+		if v_243, ok := result_704.(ResultOk[AstCompositeFields, string]); ok {
+			var expr_705 Result[AstExprResult, string]
+			expr_705 = Ok[AstExprResult, string](astExprWithPre(goast.Composite(goast.MustTypeExpr(typ_703), v_243.F0.Elts), v_243.F0.Pre))
+			expr_707 = expr_705
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_704
+	return expr_707
 }
 func translateSetLitItems(items []ast2.Expr, ctx *egCtx, index int, out []goast.Expr, pre []goast.Stmt, expected string) Result[AstCompositeFields, string] {
-	var expr_712 Result[AstCompositeFields, string]
+	var expr_715 Result[AstCompositeFields, string]
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-		expr_712 = Ok[AstCompositeFields, string](AstCompositeFields{Elts: out, Pre: pre})
+		expr_715 = Ok[AstCompositeFields, string](AstCompositeFields{Elts: out, Pre: pre})
 	} else {
-		var expr_711 Result[AstCompositeFields, string]
-		elem_705 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.EmptyExpr())
-		e_706 := translateExprAstExpected(elem_705, ctx, "")
-		var expr_710 Result[AstCompositeFields, string]
-		if v_246, ok := e_706.(ResultErr[AstExprResult, string]); ok {
-			var expr_709 Result[AstCompositeFields, string]
-			expr_709 = Err[AstCompositeFields, string](v_246.F0)
-			expr_710 = expr_709
+		var expr_714 Result[AstCompositeFields, string]
+		elem_708 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.EmptyExpr())
+		e_709 := translateExprAstExpected(elem_708, ctx, "")
+		var expr_713 Result[AstCompositeFields, string]
+		if v_246, ok := e_709.(ResultErr[AstExprResult, string]); ok {
+			var expr_712 Result[AstCompositeFields, string]
+			expr_712 = Err[AstCompositeFields, string](v_246.F0)
+			expr_713 = expr_712
 		} else {
-			if v_245, ok := e_706.(ResultOk[AstExprResult, string]); ok {
-				var expr_708 Result[AstCompositeFields, string]
-				kv_707 := goast.KeyValue(v_245.F0.Expr, goast.Composite(goast.Ident("struct{}"), []goast.Expr([]goast.Expr{})))
-				expr_708 = translateSetLitItems(items, ctx, index+1, MygoIN5SliceM6Append(out, kv_707), goast.AppendStmts(pre, v_245.F0.Pre), expected)
-				expr_710 = expr_708
+			if v_245, ok := e_709.(ResultOk[AstExprResult, string]); ok {
+				var expr_711 Result[AstCompositeFields, string]
+				kv_710 := goast.KeyValue(v_245.F0.Expr, goast.Composite(goast.Ident("struct{}"), []goast.Expr([]goast.Expr{})))
+				expr_711 = translateSetLitItems(items, ctx, index+1, MygoIN5SliceM6Append(out, kv_710), goast.AppendStmts(pre, v_245.F0.Pre), expected)
+				expr_713 = expr_711
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_711 = expr_710
-		expr_712 = expr_711
+		expr_714 = expr_713
+		expr_715 = expr_714
 	}
-	return expr_712
+	return expr_715
 }

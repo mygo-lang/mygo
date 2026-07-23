@@ -334,7 +334,16 @@ func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[g
       else
         Ok(astSingleStmt(goast.Return([] as Slice[goast.Expr])))
       end
-    case IdentExpr(_) => translateAstReturnSingle(expr, ctx)
+    case IdentExpr(name) =>
+      # Bare None is a generic zero-argument constructor.  Handle it at the
+      # return boundary as well as expression lowering so impl methods retain
+      # their declared Option[A] return context.
+      let inner = noneTypeArg(ctx.retType, ctx)
+      if name == "None" && inner != "" then
+        Ok(astSingleStmt(goast.Return(astSingleExpr(goast.GenericCall(goast.Ident("None"), [inner], [] as Slice[goast.Expr])))))
+      else
+        translateAstReturnSingle(expr, ctx)
+      end
     case NumberExpr(_) => translateAstReturnSingle(expr, ctx)
     case StringExpr(_) => translateAstReturnSingle(expr, ctx)
     case RuneExpr(_) => translateAstReturnSingle(expr, ctx)
