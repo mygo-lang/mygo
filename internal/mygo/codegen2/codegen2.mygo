@@ -41,7 +41,7 @@ func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.Packa
     Ok(out)
   else
     let input = files.Get(index).UnwrapOr(SourceFileInput { Path: "main.mygo", File: ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] } })
-    let src = generateOneFile(input.File, info)
+    let src = generateOneFile(input.File, info, index == 0)
     switch src
       case Ok(code) =>
         out.Set(sourceToGenName(input.Path), code)
@@ -75,14 +75,14 @@ func GenerateSourceAt(sourceName: String, input: String) -> Result[String, Strin
   end
 end
 
-func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo) -> Result[String, String]
+func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo, includeHKT: Bool) -> Result[String, String]
   let g = Ref.new(newGenerator2(file.PackageName, file.Decls, info.GoPackages))
   let imports = collectImports(file.Decls)
   let decls = translateDeclsAst(g, file.Decls, 0, [] as Slice[goast.Decl])
   switch decls
     case Err(msg) => Err(msg)
     case Ok(items) =>
-      let withHKT = if needsHKTDecls(file.Decls) then goast.AppendDecls(goast.HKTDecls(), items) else items end
+      let withHKT = if includeHKT && needsHKTDecls(file.Decls) then goast.AppendDecls(goast.HKTDecls(), items) else items end
       renderGoFile(GoFileParts { PackageName: file.PackageName, Imports: imports, AstDecls: withHKT, Decls: [] as Slice[String] })
   end
 end

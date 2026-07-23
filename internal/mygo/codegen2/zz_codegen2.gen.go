@@ -56,7 +56,7 @@ func generateFilesLoop(files []SourceFileInput, info typeinference2.PackageInfo,
 	} else {
 		var expr_12 Result[map[string]string, string]
 		input_7 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{}), SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos([]ast2.SourcePos{})}})
-		src_8 := generateOneFile(input_7.File, info)
+		src_8 := generateOneFile(input_7.File, info, index == 0)
 		var expr_11 Result[map[string]string, string]
 		if v_4, ok := src_8.(ResultOk[string, string]); ok {
 			var expr_10 Result[map[string]string, string]
@@ -122,7 +122,7 @@ func GenerateSourceAt(sourceName string, input string) Result[string, string] {
 	}
 	return expr_22
 }
-func generateOneFile(file ast2.File, info typeinference2.PackageInfo) Result[string, string] {
+func generateOneFile(file ast2.File, info typeinference2.PackageInfo, includeHKT bool) Result[string, string] {
 	g_23 := &[]Generator2{newGenerator2(file.PackageName, file.Decls, info.GoPackages)}[0]
 	imports_24 := collectImports(file.Decls)
 	decls_25 := translateDeclsAst(g_23, file.Decls, 0, []goast.Decl([]goast.Decl{}))
@@ -135,7 +135,7 @@ func generateOneFile(file ast2.File, info typeinference2.PackageInfo) Result[str
 		if v_9, ok := decls_25.(ResultOk[[]goast.Decl, string]); ok {
 			var expr_28 Result[string, string]
 			var expr_26 []goast.Decl
-			if needsHKTDecls(file.Decls) {
+			if includeHKT && needsHKTDecls(file.Decls) {
 				expr_26 = goast.AppendDecls(goast.HKTDecls(), v_9.F0)
 			} else {
 				expr_26 = v_9.F0

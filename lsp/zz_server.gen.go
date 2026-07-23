@@ -319,10 +319,10 @@ func requestQuery(params map[string]any) string {
 	}()
 }
 func stringAt(items []string, index int) Option[string] {
-	return MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+	return MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 }
 func completionAt(items []CompletionItem, index int) Option[CompletionItem] {
-	return MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+	return MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 }
 func parseDocumentURI(uri string) string {
 	var expr_6 string

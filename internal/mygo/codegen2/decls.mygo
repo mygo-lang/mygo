@@ -118,8 +118,9 @@ func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[as
   else
     let method = methods.Get(index).UnwrapOr(defaultImplMethod())
     let sig = method.Sig
-    let ret = returnTypeString(sig.Ret, baseCtx.typeParams)
-    let ctx = Ref.new(newFuncEgCtx(tps, ret, sig.Name, sig.Params.Len()))
+    let methodTps = appendStrings(tps, sig.TypeParams)
+    let ret = returnTypeString(sig.Ret, typeParamSet(methodTps))
+    let ctx = Ref.new(newFuncEgCtx(methodTps, ret, sig.Name, sig.Params.Len()))
     var names: Slice[String] = []
     var i: Int = 0
     while i < sig.Params.Len()
@@ -136,7 +137,7 @@ func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[as
       case Ok(stmts) =>
         let decl = goast.MustFuncDeclFromStmtsMulti(
           implMethodSymbol(stem, sig.Name),
-          tps,
+          methodTps,
           names,
           sig.Params.Map(func(p: ast2.Param) -> String goType(p.Type, ctx.typeParams) end),
           goReturnTypesFromOption(sig.Ret, ctx.typeParams),

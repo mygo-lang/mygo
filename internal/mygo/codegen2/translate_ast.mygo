@@ -319,7 +319,13 @@ func translateBlockExprAstExpected(items: Slice[ast2.Stmt], ctx: Ref[egCtx], ind
             case Ok(v) => Ok(astExprWithPre(v.Expr, goast.AppendStmts(pre, v.Pre)))
             case Err(msg) => Err(msg)
           end
-        case _ => Err("block expression ends with a non-value statement")
+        case _ =>
+          # A statement-only tail still gives the block the unit value.
+          let stmts = translateAstLeadingStmt(stmt, ctx)
+          switch stmts
+            case Err(msg) => Err(msg)
+            case Ok(v) => Ok(astExprWithPre(goast.Unit(), goast.AppendStmts(pre, v)))
+          end
       end
     else
       let leading = translateAstLeadingStmt(stmt, ctx)
@@ -354,7 +360,13 @@ func translateBlockExprAst(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int,
             case Ok(v) => Ok(astExprWithPre(v.Expr, goast.AppendStmts(pre, v.Pre)))
             case Err(msg) => Err(msg)
           end
-        case _ => Err("block expression ends with a non-value statement")
+        case _ =>
+          # A statement-only tail still gives the block the unit value.
+          let stmts = translateAstLeadingStmt(stmt, ctx)
+          switch stmts
+            case Err(msg) => Err(msg)
+            case Ok(v) => Ok(astExprWithPre(goast.Unit(), goast.AppendStmts(pre, v)))
+          end
       end
     else
       let leading = translateAstLeadingStmt(stmt, ctx)

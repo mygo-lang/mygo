@@ -186,7 +186,7 @@ func jsonEscape(s string) string {
 											d1_17 := (v_14 - d0_16*4096) / 256
 											d2_18 := (v_14 - d0_16*4096 - d1_17*256) / 16
 											d3_19 := v_14 - d0_16*4096 - d1_17*256 - d2_18*16
-											escapedRunes_20 := []rune{MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_15, d0_16), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_15, d1_17), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_15, d2_18), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_15, d3_19), '\x00')}
+											escapedRunes_20 := []rune{MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_15, d0_16), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_15, d1_17), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_15, d2_18), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_15, d3_19), '\x00')}
 											expr_21 = "\\\\u" + MygoIN6StringM9FromRunes(escapedRunes_20)
 											expr_22 = expr_21
 										} else {
@@ -415,9 +415,9 @@ func ParseJson(input string) Result[JsonValue, string] {
 	}]
 	var objP_64 ps.Parser[JsonValue]
 	valueP_61 = ps.Parser[JsonValue]{Run: func(state ps.State) ps.Reply[JsonValue] {
-		return ws(ps.PChoice([]ps.Parser[JsonValue]{nullP_57, boolP_58, numP_59, strP_60, arrP_62, objP_64})).Run(state)
+		return ws[JsonValue](ps.PChoice([]ps.Parser[JsonValue]{nullP_57, boolP_58, numP_59, strP_60, arrP_62, objP_64})).Run(state)
 	}}
-	arrP_62 = ps.PMap(ps.PBetween(ws(ps.PChar('[')), ps.PSepBy(valueP_61, ws(ps.PChar(','))), ws(ps.PChar(']'))), func(items []JsonValue) JsonValue {
+	arrP_62 = ps.PMap(ps.PBetween(ws[rune](ps.PChar('[')), ps.PSepBy(valueP_61, ws[rune](ps.PChar(','))), ws[rune](ps.PChar(']'))), func(items []JsonValue) JsonValue {
 		return JsonValueJArrayCtor(items)
 	})
 	pairP_63 = ps.Parser[struct {
@@ -427,7 +427,7 @@ func ParseJson(input string) Result[JsonValue, string] {
 		F0 string
 		F1 JsonValue
 	}] {
-		kr_65 := ws(pString()).Run(s)
+		kr_65 := ws[JsonValue](pString()).Run(s)
 		if !kr_65.Ok {
 			return ps.Reply[struct {
 				F0 string
@@ -450,7 +450,7 @@ func ParseJson(input string) Result[JsonValue, string] {
 			}
 		}
 		keyStr_69 := expr_68
-		cr_70 := ws(ps.PChar(':')).Run(kr_65.State)
+		cr_70 := ws[rune](ps.PChar(':')).Run(kr_65.State)
 		if !cr_70.Ok {
 			return ps.Reply[struct {
 				F0 string
@@ -478,7 +478,7 @@ func ParseJson(input string) Result[JsonValue, string] {
 			F1 JsonValue
 		}{F0: keyStr_69, F1: vr_71.Value}, State: vr_71.State, Error: ps.EmptyError(vr_71.State.Position)}
 	}}
-	objP_64 = ps.PMap(ps.PBetween(ws(ps.PChar('{')), ps.PSepBy(pairP_63, ws(ps.PChar(','))), ws(ps.PChar('}'))), func(pairs []struct {
+	objP_64 = ps.PMap(ps.PBetween(ws[rune](ps.PChar('{')), ps.PSepBy(pairP_63, ws[rune](ps.PChar(','))), ws[rune](ps.PChar('}'))), func(pairs []struct {
 		F0 string
 		F1 JsonValue
 	}) JsonValue {

@@ -198,7 +198,18 @@ func translateAstReturnStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[go
     case ReturnStmt => Ok(astSingleStmt(goast.Return([] as Slice[goast.Expr])))
     case ReturnWithStmt(expr) =>
       translateAstReturnValue(expr, ctx)
-    case _ => Err("function body requires statement expansion")
+        case _ =>
+          # Statement-only blocks have unit as their implicit final value.
+          let stmts = translateAstLeadingStmt(stmt, ctx)
+          switch stmts
+            case Err(msg) => Err(msg)
+            case Ok(v) =>
+              if ctx.retType == "" then
+                Ok(goast.AppendStmts(v, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
+              else
+                Ok(v)
+              end
+          end
   end
 end
 

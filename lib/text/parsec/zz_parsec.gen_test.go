@@ -83,7 +83,7 @@ func TestPBindChainsParsers(t *testing.T) {
 	}
 }
 func TestPThenSequencesParsers(t *testing.T) {
-	p_46 := PThen(PChar('h'), PThen(PChar('i'), PPure[int](42)))
+	p_46 := PThen[rune, int](PChar('h'), PThen[rune, int](PChar('i'), PPure[int](42)))
 	result_47 := ParseInput[int](p_46, "hi!")
 	if !result_47.Ok {
 		t.Fatal("PThen should succeed")
@@ -156,7 +156,7 @@ func TestPAttemptAllowsBacktracking(t *testing.T) {
 	}
 }
 func TestPLookAheadDoesNotConsume(t *testing.T) {
-	p_62 := PThen(PLookAhead(PChar('x')), PChar('x'))
+	p_62 := PThen[rune, rune](PLookAhead[rune](PChar('x')), PChar('x'))
 	result_63 := ParseInput[rune](p_62, "xy")
 	if !result_63.Ok {
 		t.Fatal("PLookAhead should succeed")
@@ -169,14 +169,14 @@ func TestPLookAheadDoesNotConsume(t *testing.T) {
 	}
 }
 func TestPLookAheadFailsWhenLookaheadFails(t *testing.T) {
-	p_64 := PThen(PLookAhead(PChar('x')), PChar('y'))
+	p_64 := PThen[rune, rune](PLookAhead[rune](PChar('x')), PChar('y'))
 	result_65 := ParseInput[rune](p_64, "zy")
 	if result_65.Ok {
 		t.Fatal("PLookAhead should fail when lookahead doesn't match")
 	}
 }
 func TestPNotFollowedBySucceedsWhenNotFollowed(t *testing.T) {
-	p_66 := PThen(PNotFollowedBy(PChar('x'), "not x"), PChar('a'))
+	p_66 := PThen[struct{}, rune](PNotFollowedBy[rune](PChar('x'), "not x"), PChar('a'))
 	result_67 := ParseInput[rune](p_66, "ab")
 	if !result_67.Ok {
 		t.Fatal("PNotFollowedBy should succeed when x is not next")
@@ -186,7 +186,7 @@ func TestPNotFollowedBySucceedsWhenNotFollowed(t *testing.T) {
 	}
 }
 func TestPNotFollowedByFailsWhenFollowed(t *testing.T) {
-	p_68 := PNotFollowedBy(PChar('x'), "not x")
+	p_68 := PNotFollowedBy[rune](PChar('x'), "not x")
 	result_69 := ParseInput[struct{}](p_68, "xy")
 	if result_69.Ok {
 		t.Fatal("PNotFollowedBy should fail when x IS next")
@@ -279,7 +279,7 @@ func TestPOptionalReturnsNoneWhenAbsent(t *testing.T) {
 	}
 }
 func TestPBetweenParsesDelimited(t *testing.T) {
-	p_84 := PBetween(PChar('('), PDigit(), PChar(')'))
+	p_84 := PBetween[rune, rune, rune](PChar('('), PDigit(), PChar(')'))
 	result_85 := ParseInput[rune](p_84, "(5)x")
 	if !result_85.Ok {
 		t.Fatal("PBetween should succeed")
@@ -292,7 +292,7 @@ func TestPBetweenParsesDelimited(t *testing.T) {
 	}
 }
 func TestPSepByEmpty(t *testing.T) {
-	p_86 := PSepBy(PChar('a'), PChar(','))
+	p_86 := PSepBy[rune, rune](PChar('a'), PChar(','))
 	result_87 := ParseInput[[]rune](p_86, "b")
 	if !result_87.Ok {
 		t.Fatal("PSepBy should succeed with empty result")
@@ -302,7 +302,7 @@ func TestPSepByEmpty(t *testing.T) {
 	}
 }
 func TestPSepBySingle(t *testing.T) {
-	p_88 := PSepBy(PChar('a'), PChar(','))
+	p_88 := PSepBy[rune, rune](PChar('a'), PChar(','))
 	result_89 := ParseInput[[]rune](p_88, "ax")
 	if !result_89.Ok {
 		t.Fatal("PSepBy should succeed")
@@ -312,7 +312,7 @@ func TestPSepBySingle(t *testing.T) {
 	}
 }
 func TestPSepByMultiple(t *testing.T) {
-	p_90 := PSepBy(PChar('a'), PChar(','))
+	p_90 := PSepBy[rune, rune](PChar('a'), PChar(','))
 	result_91 := ParseInput[[]rune](p_90, "a,a,a")
 	if !result_91.Ok {
 		t.Fatal("PSepBy should succeed")
@@ -322,14 +322,14 @@ func TestPSepByMultiple(t *testing.T) {
 	}
 }
 func TestPSepBy1RequiresAtLeastOne(t *testing.T) {
-	p_92 := PSepBy1(PChar('a'), PChar(','))
+	p_92 := PSepBy1[rune, rune](PChar('a'), PChar(','))
 	result_93 := ParseInput[[]rune](p_92, "x")
 	if result_93.Ok {
 		t.Fatal("PSepBy1 should fail with no matching items")
 	}
 }
 func TestPSepBy1Multiple(t *testing.T) {
-	p_94 := PSepBy1(PChar('a'), PChar(','))
+	p_94 := PSepBy1[rune, rune](PChar('a'), PChar(','))
 	result_95 := ParseInput[[]rune](p_94, "a,a")
 	if !result_95.Ok {
 		t.Fatal("PSepBy1 should succeed")
@@ -403,14 +403,14 @@ func TestPStringFailsOnPartialMatch(t *testing.T) {
 	}
 }
 func TestPEofSucceedsAtEnd(t *testing.T) {
-	p_110 := PThen(PString("hello"), PEof())
+	p_110 := PThen[string, struct{}](PString("hello"), PEof())
 	result_111 := ParseInput[struct{}](p_110, "hello")
 	if !result_111.Ok {
 		t.Fatal("PEof should succeed at end of input")
 	}
 }
 func TestPEofFailsWithRemainingInput(t *testing.T) {
-	p_112 := PThen(PString("hello"), PEof())
+	p_112 := PThen[string, struct{}](PString("hello"), PEof())
 	result_113 := ParseInput[struct{}](p_112, "hello world")
 	if result_113.Ok {
 		t.Fatal("PEof should fail with remaining input")
@@ -579,10 +579,10 @@ func TestParseInteger(t *testing.T) {
 	}
 }
 func TestParseCommaSeparatedWords(t *testing.T) {
-	word_152 := PMap(PMany1(PLetter()), func(rs []rune) string {
+	word_152 := PMap(PMany1[rune](PLetter()), func(rs []rune) string {
 		return MygoIN6StringM9FromRunes(rs)
 	})
-	words_153 := PSepBy(word_152, PChar(','))
+	words_153 := PSepBy[string, rune](word_152, PChar(','))
 	result_154 := ParseInput[[]string](words_153, "hello,world,foo")
 	if !result_154.Ok {
 		t.Fatal("parse words should succeed")
@@ -625,7 +625,7 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 	}
 }
 func TestParseParenthesizedExpr(t *testing.T) {
-	word_158 := PMap(PMany1(PLetter()), func(rs []rune) string {
+	word_158 := PMap(PMany1[rune](PLetter()), func(rs []rune) string {
 		return MygoIN6StringM9FromRunes(rs)
 	})
 	parseTail_159 := func(w1 string) Parser[string] {
@@ -635,7 +635,7 @@ func TestParseParenthesizedExpr(t *testing.T) {
 			})
 		})
 	}
-	p_160 := PBetween(PChar('('), PBind(word_158, parseTail_159), PChar(')'))
+	p_160 := PBetween[string, rune, rune](PChar('('), PBind(word_158, parseTail_159), PChar(')'))
 	result_161 := ParseInput[string](p_160, "(hello,world)x")
 	if !result_161.Ok {
 		t.Fatal("parenthesized expr should succeed")
@@ -670,7 +670,7 @@ func TestPManyWithPBind(t *testing.T) {
 	}
 }
 func TestPOptionalWithBetween(t *testing.T) {
-	group_169 := POptional[rune](PBetween(PChar('('), PChar('x'), PChar(')')))
+	group_169 := POptional[rune](PBetween[rune, rune, rune](PChar('('), PChar('x'), PChar(')')))
 	result1_170 := ParseInput[Option[rune]](group_169, "(x)y")
 	if !result1_170.Ok {
 		t.Fatal("optional group with parens should succeed")
@@ -700,7 +700,7 @@ func TestPOptionalWithBetween(t *testing.T) {
 func TestPSepBy1WithLabel(t *testing.T) {
 	item_172 := PLabel[rune](PChar('a'), "letter a")
 	sep_173 := PLabel[rune](PChar(','), "comma")
-	p_174 := PSepBy1(item_172, sep_173)
+	p_174 := PSepBy1[rune, rune](item_172, sep_173)
 	result_175 := ParseInput[[]rune](p_174, "a,a,a")
 	if !result_175.Ok {
 		t.Fatal("PSepBy1 with label should succeed")
@@ -710,7 +710,7 @@ func TestPSepBy1WithLabel(t *testing.T) {
 	}
 }
 func TestPThenWithPPure(t *testing.T) {
-	p_176 := PThen(PChar('a'), PThen(PChar('b'), PPure[string]("done")))
+	p_176 := PThen[rune, string](PChar('a'), PThen[rune, string](PChar('b'), PPure[string]("done")))
 	result_177 := ParseInput[string](p_176, "ab")
 	if !result_177.Ok {
 		t.Fatal("PThen with PPure should succeed")
