@@ -215,26 +215,9 @@ func translateSwitchSubject(target: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExp
         case Some(sig) =>
           let valueType = sig.Results.Get(0).UnwrapOr("any")
           translateFFIResultCall(fn, typeArgs, args, ctx, "Result[" + valueType + ", error]", sig)
-        case None =>
-          switch fn.Kind
-            case FieldExpr(_, name) =>
-              let valueType = knownGoErrorValueType(name)
-              if valueType == "" then translateExprAst(target, ctx) else
-                let sig = typeinference2.GoFuncSignature { Name: name, Params: [], Results: [valueType, "error"], Variadic: false }
-                translateFFIResultCall(fn, typeArgs, args, ctx, "Result[" + valueType + ", error]", sig)
-              end
-            case _ => translateExprAst(target, ctx)
-          end
+        case None => translateExprAst(target, ctx)
       end
     case _ => translateExprAst(target, ctx)
-  end
-end
-
-func knownGoErrorValueType(name: String) -> String
-  if name == "Atoi" then "int" else
-    if name == "ParseInt" then "int64" else
-      if name == "ParseFloat" then "float64" else "" end
-    end
   end
 end
 
@@ -341,17 +324,7 @@ func switchTargetGoType(target: ast2.Expr, ctx: Ref[egCtx]) -> String
     case _ =>
       switch ffiResultSignature(target, ctx)
         case Some(sig) => "Result[" + sig.Results.Get(0).UnwrapOr("any") + ", error]"
-        case None =>
-          switch target.Kind
-            case CallExpr(fn, _, _) =>
-              switch fn.Kind
-                case FieldExpr(_, name) =>
-                  let valueType = knownGoErrorValueType(name)
-                  if valueType == "" then "any" else "Result[" + valueType + ", error]" end
-                case _ => "any"
-              end
-            case _ => "any"
-          end
+        case None => "any"
       end
   end
 end
@@ -566,11 +539,15 @@ end
 func inferredConstructorArgs(callee: ast2.Expr, expected: String) -> Slice[String]
   switch callee.Kind
     case IdentExpr(name) =>
-      if (name == "Ok" || name == "Err") && strings.HasPrefix(expected, "Result[") then
-        let body = strings.TrimSuffix(strings.TrimPrefix(expected, "Result["), "]")
-        let parts = strings.Split(body, ", ")
-        parts
-      else [] as Slice[String] end
+      if name == "None" && strings.HasPrefix(expected, "Option[") then
+        [strings.TrimSuffix(strings.TrimPrefix(expected, "Option["), "]")]
+      else
+        if (name == "Ok" || name == "Err") && strings.HasPrefix(expected, "Result[") then
+          let body = strings.TrimSuffix(strings.TrimPrefix(expected, "Result["), "]")
+          let parts = strings.Split(body, ", ")
+          parts
+        else [] as Slice[String] end
+      end
     case _ => [] as Slice[String]
   end
 end

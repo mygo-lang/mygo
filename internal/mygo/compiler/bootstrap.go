@@ -76,6 +76,10 @@ func compileDirBootstrap(dir string, compiling map[string]bool, compiled map[str
 	if len(inputs) == 0 {
 		return nil, nil
 	}
+	goPackages := collectBootstrapGoPackages(sources)
+	if err := populateBootstrapGoPackageSignatures(&goPackages); err != nil {
+		return nil, err
+	}
 	var written []string
 	for _, input := range inputs {
 		for _, decl := range input.File.Decls {
@@ -92,17 +96,25 @@ func compileDirBootstrap(dir string, compiling map[string]bool, compiled map[str
 				return nil, err
 			}
 			written = append(written, dependencyFiles...)
+			if !strings.HasPrefix(imp.F1, "go:") {
+				pkg, err := loadMyGoPackageSignatures(dependencyDir, imp.F0, imp.F1)
+				if err != nil {
+					return nil, err
+				}
+				goPackages = append(goPackages, pkg)
+			}
 		}
 	}
+	if err := populateBootstrapGoPackageSignatures(&goPackages); err != nil {
+		return nil, err
+	}
 
-	inferred := typeinference2.InferPackage(sources)
+	inferred := typeinference2.InferPackageWithGoPackages(sources, goPackages)
 	info, ok := inferred.(ResultOk[typeinference2.PackageInfo, string])
 	if !ok {
 		return nil, bootstrapResultError("infer", absDir, inferred)
 	}
-	if err := populateBootstrapGoSignatures(&info.F0); err != nil {
-		return nil, err
-	}
+	info.F0.GoPackages = goPackages
 	generated := codegen2.GenerateFiles(inputs, info.F0)
 	files, ok := generated.(ResultOk[map[string]string, string])
 	if !ok {
@@ -123,8 +135,12 @@ func compileDirBootstrap(dir string, compiling map[string]bool, compiled map[str
 }
 
 func populateBootstrapGoSignatures(info *typeinference2.PackageInfo) error {
-	for i := range info.GoPackages {
-		entry := &info.GoPackages[i]
+	return populateBootstrapGoPackageSignatures(&info.GoPackages)
+}
+
+func populateBootstrapGoPackageSignatures(packages *[]typeinference2.GoPackageEntry) error {
+	for i := range *packages {
+		entry := &(*packages)[i]
 		if !strings.HasPrefix(entry.Path, "go:") {
 			continue
 		}
@@ -150,6 +166,54 @@ func populateBootstrapGoSignatures(info *typeinference2.PackageInfo) error {
 		}
 	}
 	return nil
+}
+
+func collectBootstrapGoPackages(sources []typeinference2.PkgDeclSource) []typeinference2.GoPackageEntry {
+	seen := map[string]bool{}
+	var out []typeinference2.GoPackageEntry
+	for _, source := range sources {
+		for _, decl := range source.Decls {
+			imp, ok := decl.(ast2.DeclImportDecl)
+			if !ok || !strings.HasPrefix(imp.F1, "go:") || seen[imp.F0] {
+				continue
+			}
+			seen[imp.F0] = true
+			out = append(out, typeinference2.GoPackageEntry{Alias: imp.F0, Path: imp.F1})
+		}
+	}
+	return out
+}
+
+func loadMyGoPackageSignatures(dir, alias, path string) (typeinference2.GoPackageEntry, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil { return typeinference2.GoPackageEntry{}, err }
+	pkg := typeinference2.GoPackageEntry{Alias: alias, Path: path}
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".mygo") { continue }
+		raw, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+		if err != nil { return typeinference2.GoPackageEntry{}, err }
+		parsed := parser2.ParseFileAt(filepath.Join(dir, entry.Name()), string(raw))
+		file, ok := parsed.(ResultOk[ast2.File, string])
+		if !ok { return typeinference2.GoPackageEntry{}, fmt.Errorf("parse dependency %s: %v", dir, parsed) }
+		for _, decl := range file.F0.Decls {
+			if fn, ok := decl.(ast2.DeclFuncDecl); ok {
+				params := make([]string, len(fn.F2))
+				for i, p := range fn.F2 { params[i] = bootstrapTypeName(p.Type) }
+				results := []string{}
+				if ret, ok := fn.F3.(OptionSome[ast2.TypeExpr]); ok { results = []string{bootstrapTypeName(ret.F0)} }
+				pkg.Funcs = append(pkg.Funcs, typeinference2.GoFuncSignature{Name: fn.F0, Params: params, Results: results})
+			}
+		}
+	}
+	return pkg, nil
+}
+
+func bootstrapTypeName(typ ast2.TypeExpr) string {
+	switch t := typ.(type) {
+	case ast2.TypeExprNamedType: return t.F0
+	case ast2.TypeExprUnitType: return "()"
+	default: return "any"
+	}
 }
 
 func goTupleTypes(tuple *types.Tuple) []string {

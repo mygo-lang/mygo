@@ -1,0 +1,72 @@
+package typeinference2
+
+# Constraint solving for the bootstrap inference pipeline.  Instances are
+# deliberately kept separate from the lexical environment: predicates belong
+# to schemes, while instances belong to the package being inferred.
+struct Instance
+  ClassName: String
+  Type: MonoType
+  Predicates: Slice[Predicate]
+end
+
+struct Solver
+  Instances: Slice[Instance]
+end
+
+func newSolver() -> Solver
+  Solver { Instances: [] as Slice[Instance] }
+end
+
+func solverRegister(solver: Solver, instance: Instance) -> Solver
+  Solver { Instances: solver.Instances.Append(instance) }
+end
+
+func solverFromInstances(instances: Slice[Instance]) -> Solver
+  if instances.Len() == 0 then newSolver() else
+    solverRegister(solverFromInstances(sliceDrop(instances, 1)), instances.Get(0).UnwrapOr(Instance { ClassName: "", Type: MonoType.TUnit, Predicates: [] as Slice[Predicate] }))
+  end
+end
+
+func solverResolve(solver: Solver, predicates: Slice[Predicate], subst: Slice[SubstEntry]) -> Result[Slice[Predicate], String]
+  if predicates.Len() == 0 then Ok(emptyPredicates()) else
+    let predicate = predicates.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[MonoType] })
+    let rest = solverResolve(solver, sliceDrop(predicates, 1), subst)
+    switch rest
+      case Err(msg) => Err(msg)
+      case Ok(tail) =>
+        switch solverResolveOne(solver, predicate, subst)
+          case Err(msg) => Err(msg)
+          case Ok(head) => Ok(appendPredicates(head, tail))
+        end
+    end
+  end
+end
+
+func emptyPredicates() -> Slice[Predicate]
+  [] as Slice[Predicate]
+end
+
+func solverResolveOne(solver: Solver, predicate: Predicate, subst: Slice[SubstEntry]) -> Result[Slice[Predicate], String]
+  let args = substTypes(predicate.Args, subst)
+  solverFindInstance(solver.Instances, Predicate { ClassName: predicate.ClassName, Args: args }, subst)
+end
+
+func solverFindInstance(instances: Slice[Instance], predicate: Predicate, subst: Slice[SubstEntry]) -> Result[Slice[Predicate], String]
+  if instances.Len() == 0 then Ok(([predicate] as Slice[Predicate])) else
+    let instance = instances.Get(0).UnwrapOr(Instance { ClassName: "", Type: MonoType.TUnit, Predicates: [] as Slice[Predicate] })
+    if instance.ClassName != predicate.ClassName || predicate.Args.Len() == 0 then
+      solverFindInstance(sliceDrop(instances, 1), predicate, subst)
+    else
+      switch unify(predicate.Args.Get(0).UnwrapOr(MonoType.TUnit), instance.Type, subst)
+        case Ok(next) => solverResolve(instanceSolver(instance, instances), instance.Predicates, next)
+        case Err(_) => solverFindInstance(sliceDrop(instances, 1), predicate, subst)
+      end
+    end
+  end
+end
+
+# The instance list is sufficient for resolving the instance's super-predicates;
+# this helper keeps the recursive API explicit while avoiding global state.
+func instanceSolver(instance: Instance, instances: Slice[Instance]) -> Solver
+  Solver { Instances: instances }
+end

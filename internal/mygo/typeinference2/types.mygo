@@ -76,6 +76,8 @@ struct PackageInfo
   Env: Slice[EnvEntry]
   Fields: Slice[FieldEntry]
   GoPackages: Slice[GoPackageEntry]
+  Instances: Slice[Instance]
+  Solver: Solver
 end
 
 # GoPackageEntry records an imported Go package with its alias and type info.
@@ -134,7 +136,10 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
   let goPkgImports = collectGoPackageImports(file.Decls)
   let envWithGoPkgs = seedGoPackageEnv(goPkgImports, env)
   switch inferDecls(file.Decls, envWithGoPkgs, [], NewInferState())
-    case Ok(info) => Ok(PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: goPkgImports })
+    case Ok(info) =>
+      let instances = collectInstances(file.Decls)
+      let solver = solverFromInstances(instances)
+      Ok(PackageInfo { Env: resolveEnvironment(solver, info.Env), Fields: info.Fields, GoPackages: goPkgImports, Instances: instances, Solver: solver })
     case Err(msg) => Err(withExpressionSourceName(msg, file.SourceName))
   end
 end
@@ -144,6 +149,10 @@ end
 # references work, then processes declarations file-by-file.
 # The goImports parameter maps import aliases to their Go import paths.
 func InferPackage(files: Slice[PkgDeclSource]) -> Result[PackageInfo, String]
+  InferPackageWithGoPackages(files, collectGoPackageImports(flattenPkgDecls(files, 0, [] as Slice[ast2.Decl])))
+end
+
+func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice[GoPackageEntry]) -> Result[PackageInfo, String]
   # Collect all decls first for predeclaration and cross-file lookups.
   let allDecls = flattenPkgDecls(files, 0, [] as Slice[ast2.Decl])
 
@@ -151,8 +160,6 @@ func InferPackage(files: Slice[PkgDeclSource]) -> Result[PackageInfo, String]
   let predeclEnv = predeclareAllFunctions(allDecls, initialEnv())
 
   # Record Go package imports for reference in env.
-  let goPkgImports = collectGoPackageImports(allDecls)
-
   # Add Go package aliases to the environment so qualified references work.
   let envWithGoPkgs = seedGoPackageEnv(goPkgImports, predeclEnv)
 
@@ -160,14 +167,49 @@ func InferPackage(files: Slice[PkgDeclSource]) -> Result[PackageInfo, String]
   let result = inferDecls(allDecls, envWithGoPkgs, [], NewInferState())
   switch result
     case Ok(info) =>
+      let instances = collectInstances(allDecls)
+      let solver = solverFromInstances(instances)
       Ok(PackageInfo {
-        Env: info.Env,
+        Env: resolveEnvironment(solver, info.Env),
         Fields: info.Fields,
         GoPackages: goPkgImports,
+        Instances: instances,
+        Solver: solver,
       })
     case Err(msg) =>
       let source = files.Get(0).UnwrapOr(PkgDeclSource { Path: "<input>", Decls: [] as Slice[ast2.Decl] }).Path
       Err(withExpressionSourceName(msg, source))
+  end
+end
+
+func resolveEnvironment(solver: Solver, env: Slice[EnvEntry]) -> Slice[EnvEntry]
+  if env.Len() == 0 then [] else
+    let entry = env.Get(0).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: MonoType.TUnit } })
+    let resolved = solverResolve(solver, entry.Scheme.Predicates, [])
+    let predicates = switch resolved
+      case Ok(items) => items
+      case Err(_) => entry.Scheme.Predicates
+    end
+    resolveEnvironment(solver, sliceDrop(env, 1)).Prepend(EnvEntry { Name: entry.Name, Scheme: Scheme { Bound: entry.Scheme.Bound, Predicates: predicates, Body: entry.Scheme.Body } })
+  end
+end
+
+func collectInstances(decls: Slice[ast2.Decl]) -> Slice[Instance]
+  if decls.Len() == 0 then [] as Slice[Instance] else
+    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    let rest = collectInstances(sliceDrop(decls, 1))
+    switch decl
+      case ImplDecl(_, target, interfaceOpt, _) =>
+        switch interfaceOpt
+          case Some(interfaceType) =>
+            switch typeFromAST(interfaceType)
+              case TCon(name, _) => rest.Append(Instance { ClassName: name, Type: typeFromAST(target), Predicates: [] as Slice[Predicate] })
+              case _ => rest
+            end
+          case None => rest
+        end
+      case _ => rest
+    end
   end
 end
 
@@ -201,7 +243,54 @@ func seedGoPackageEnv(goPkgs: Slice[GoPackageEntry], env: Slice[EnvEntry]) -> Sl
     env
   else
     let pkg = goPkgs.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "", Funcs: [] })
-    seedGoPackageEnv(sliceDrop(goPkgs, 1), envPut(env, pkg.Alias, Scheme { Bound: [], Predicates: [], Body: MonoType.TGoPackage(pkg.Path) }))
+    seedGoPackageEnv(sliceDrop(goPkgs, 1), seedGoPackageMembers(pkg, envPut(env, pkg.Alias, Scheme { Bound: [], Predicates: [], Body: MonoType.TGoPackage(pkg.Path) })))
+  end
+end
+
+func seedGoPackageMembers(pkg: GoPackageEntry, env: Slice[EnvEntry]) -> Slice[EnvEntry]
+  if pkg.Funcs.Len() == 0 then env else
+    let fn = pkg.Funcs.Get(0).UnwrapOr(GoFuncSignature { Name: "", Params: [], Results: [], Variadic: false })
+    seedGoPackageMembers(GoPackageEntry { Alias: pkg.Alias, Path: pkg.Path, Funcs: sliceDrop(pkg.Funcs, 1) }, envPut(env, pkg.Alias + "." + fn.Name, Scheme { Bound: [], Predicates: [], Body: goSignatureType(fn) }))
+  end
+end
+
+func goSignatureType(sig: GoFuncSignature) -> MonoType
+  let params = goSignatureTypes(sig.Params)
+  let results = goSignatureTypes(sig.Results)
+  let result = if results.Len() == 0 then
+    MonoType.TUnit
+  else
+    if results.Len() == 1 then results.Get(0).UnwrapOr(MonoType.TUnit) else MonoType.TTuple(results) end
+  end
+  MonoType.TFunc(params, Ref.new(result))
+end
+
+func goSignatureTypes(items: Slice[String]) -> Slice[MonoType]
+  if items.Len() == 0 then emptyGoTypes() else goSignatureTypes(sliceDrop(items, 1)).Prepend(goTypeName(items.Get(0).UnwrapOr("any"))) end
+end
+
+func emptyGoTypes() -> Slice[MonoType]
+  [] as Slice[MonoType]
+end
+
+func goTypeName(name: String) -> MonoType
+  switch name
+    case "int" => MonoType.TCon("Int", emptyGoTypes())
+    case "int8" => MonoType.TCon("Int8", emptyGoTypes())
+    case "int16" => MonoType.TCon("Int16", emptyGoTypes())
+    case "int32" => MonoType.TCon("Int32", emptyGoTypes())
+    case "int64" => MonoType.TCon("Int64", emptyGoTypes())
+    case "uint" => MonoType.TCon("UInt", emptyGoTypes())
+    case "uint8" => MonoType.TCon("UInt8", emptyGoTypes())
+    case "uint16" => MonoType.TCon("UInt16", emptyGoTypes())
+    case "uint32" => MonoType.TCon("UInt32", emptyGoTypes())
+    case "uint64" => MonoType.TCon("UInt64", emptyGoTypes())
+    case "float32" => MonoType.TCon("Float32", emptyGoTypes())
+    case "float64" => MonoType.TCon("Float64", emptyGoTypes())
+    case "string" => MonoType.TCon("String", emptyGoTypes())
+    case "bool" => MonoType.TCon("Bool", emptyGoTypes())
+    case "error" => MonoType.TCon("Error", emptyGoTypes())
+    case _ => MonoType.TVar(0)
   end
 end
 

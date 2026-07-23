@@ -28,7 +28,7 @@ end
 
 func inferDecls(decls: Slice[ast2.Decl], env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[PackageInfo, String]
   if decls.Len() == 0 then
-    Ok(PackageInfo { Env: env, Fields: fields, GoPackages: [] as Slice[GoPackageEntry] })
+    Ok(PackageInfo { Env: env, Fields: fields, GoPackages: [] as Slice[GoPackageEntry], Instances: [] as Slice[Instance], Solver: newSolver() })
   else
     let head = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     let tail = sliceDrop(decls, 1)
@@ -72,13 +72,25 @@ func inferFuncDecl(name: String, tps: Slice[String], params: Slice[ast2.Param], 
   let inferred = inferExpr(body, bodyEnv, state)
   switch inferred
     case Ok(r) =>
-      let checked = unify(applySubst(r.Subst, r.Type), retType, r.Subst)
+      let inferredType = applySubst(r.Subst, r.Type)
+      let checked = if isGoBoundaryTuple(inferredType, retType) then Ok(r.Subst) else unify(inferredType, retType, r.Subst) end
       switch checked
         case Ok(s2) =>
           Ok(DeclInfer { Env: envPut(env, name, Scheme { Bound: [], Predicates: predicates, Body: applySubst(s2, fnType) }), Fields: fields, State: r.State })
-        case Err(msg) => Err("function " + name + " return type mismatch: " + msg)
+            case Err(msg) => Err("function " + name + " return type mismatch: " + msg)
       end
     case Err(msg) => Err("function " + name + ": " + msg)
+  end
+end
+
+func isGoBoundaryTuple(inferred: MonoType, expected: MonoType) -> Bool
+  switch inferred
+    case TTuple(items) =>
+      switch expected
+        case TCon(name, _) => (name == "Option" || name == "Result") && items.Len() == 2
+        case _ => false
+      end
+    case _ => false
   end
 end
 
@@ -388,6 +400,25 @@ func inferWhile(cond: ast2.Expr, body: ast2.Expr, env: Slice[EnvEntry], state: I
   end
 end
 
+func isGoPackageCall(callee: ast2.Expr, env: Slice[EnvEntry]) -> Bool
+  switch callee.Kind
+    case FieldExpr(base, _) =>
+      switch base.Kind
+        case IdentExpr(alias) =>
+          switch envGet(env, alias)
+            case Some(scheme) =>
+              switch scheme.Body
+                case TGoPackage(_) => true
+                case _ => false
+              end
+            case None => false
+          end
+        case _ => false
+      end
+    case _ => false
+  end
+end
+
 func inferAssign(target: ast2.Expr, value: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
   let t = inferExpr(target, env, state)
   switch t
@@ -498,9 +529,6 @@ func inferCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[EnvEntry], 
       switch ar
         case Err(msg) => Err(msg)
             case Ok(argsResult) =>
-          if isGoFuncMarker(cv.Type) then
-            inferGoFuncCall(cv.Type, argsResult, cv)
-          else
           # The instantiated callee can contain fresh variables from the same
           # supply. Pick a result variable after both the callee and arguments
           # so unifying a polymorphic constructor call cannot create t ~ F[t].
@@ -513,8 +541,7 @@ func inferCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[EnvEntry], 
           let s2 = unify(applySubst(s1, cv.Type), expected, s1)
           switch s2
             case Ok(s) => Ok(InferResult { Type: applySubst(s, ret), Predicates: appendPredicates(cv.Predicates, argsResult.Predicates), Subst: s, State: nextState })
-            case Err(msg) => Err(msg)
-          end
+            case Err(msg) => if isGoPackageCall(callee, env) then Err("Go function argument count mismatch") else Err(msg) end
           end
       end
   end
@@ -694,6 +721,19 @@ end
 func inferField(base: ast2.Expr, field: String, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
   switch base.Kind
     case IdentExpr(name) =>
+      let packageCandidate = envGet(env, name + "." + field)
+      switch packageCandidate
+        case Some(packageScheme) =>
+          let qualified = instantiateQualified(packageScheme, state)
+          Ok(InferResult { Type: qualified.Body, Predicates: qualified.Predicates, Subst: [], State: state })
+        case None =>
+          inferNamedField(base, name, field, env, state)
+      end
+    case _ => inferOrdinaryField(base, field, env, state)
+  end
+end
+
+func inferNamedField(base: ast2.Expr, name: String, field: String, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
       let candidate = envGet(env, field)
       switch candidate
         case Some(scheme) =>
@@ -711,8 +751,6 @@ func inferField(base: ast2.Expr, field: String, env: Slice[EnvEntry], state: Inf
           end
         case None => inferOrdinaryField(base, field, env, state)
       end
-    case _ => inferOrdinaryField(base, field, env, state)
-  end
 end
 
 func inferOrdinaryField(base: ast2.Expr, field: String, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
@@ -728,12 +766,7 @@ func inferOrdinaryField(base: ast2.Expr, field: String, env: Slice[EnvEntry], st
           # a fresh type variable and let its surrounding call/annotation
           # constrain it.
           if strings.HasPrefix(path, "go:") then
-            let arity = goFuncArity(strings.TrimPrefix(path, "go:"), field)
-            if arity == -2 then
-              Err("unknown Go package member " + field)
-            else
-              Ok(InferResult { Type: MonoType.TCon("$gofunc$" + arity.ToString(), emptyMonoTypes()), Predicates: v.Predicates, Subst: v.Subst, State: v.State })
-            end
+            Err("unknown Go package member " + field)
           else
             let fresh = MonoType.TVar(v.State.FreshVarID)
             Ok(InferResult { Type: fresh, Predicates: v.Predicates, Subst: v.Subst, State: InferState { FreshVarID: v.State.FreshVarID + 1 } })
@@ -749,6 +782,7 @@ func inferOrdinaryField(base: ast2.Expr, field: String, env: Slice[EnvEntry], st
       end
   end
 end
+
 
 func goFuncArity(path: String, name: String) -> Int
   go[Int] {
