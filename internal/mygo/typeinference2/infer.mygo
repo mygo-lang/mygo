@@ -528,6 +528,54 @@ func inferIf(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, env: Sli
 end
 
 func inferCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+  switch inferRefCall(callee, args, env, state)
+    case Some(result) => result
+    case None => inferOrdinaryCall(callee, args, env, state)
+  end
+end
+
+# Ref is a compiler boundary type.  Its constructor and dereference operation
+# are not ordinary fields in the lexical environment.
+func inferRefCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState) -> Option[Result[InferResult, String]]
+  switch callee.Kind
+    case FieldExpr(base, field) =>
+      switch base.Kind
+        case IdentExpr(name) =>
+          if name == "Ref" && field == "new" then
+            if args.Len() != 1 then Some[Result[InferResult, String]](Err[InferResult, String]("Ref.new expects exactly one argument")) else
+              switch inferExpr(args.Get(0).UnwrapOr(ast2.EmptyExpr()), env, state)
+                case Ok(value) => Some[Result[InferResult, String]](Ok[InferResult, String](InferResult { Type: MonoType.TCon("Ref", [applySubst(value.Subst, value.Type)]), Predicates: value.Predicates, Subst: value.Subst, State: value.State }))
+                case Err(msg) => Some[Result[InferResult, String]](Err[InferResult, String](msg))
+              end
+            end
+          else
+            inferRefValueCall(base, field, args, env, state)
+          end
+        case _ => inferRefValueCall(base, field, args, env, state)
+      end
+    case _ => None
+  end
+end
+
+func inferRefValueCall(base: ast2.Expr, field: String, args: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState) -> Option[Result[InferResult, String]]
+  if field != "value" || args.Len() != 0 then None else
+    switch inferExpr(base, env, state)
+      case Err(msg) => Some[Result[InferResult, String]](Err[InferResult, String](msg))
+      case Ok(value) =>
+        switch applySubst(value.Subst, value.Type)
+          case TCon(name, inner) =>
+            if name == "Ref" && inner.Len() == 1 then
+              Some[Result[InferResult, String]](Ok[InferResult, String](InferResult { Type: inner.Get(0).UnwrapOr(MonoType.TUnit), Predicates: value.Predicates, Subst: value.Subst, State: value.State }))
+            else
+              Some[Result[InferResult, String]](Err[InferResult, String]("value() requires Ref[T]"))
+            end
+          case _ => Some[Result[InferResult, String]](Err[InferResult, String]("value() requires Ref[T]"))
+        end
+    end
+  end
+end
+
+func inferOrdinaryCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
   let c = inferExpr(callee, env, state)
   switch c
     case Err(msg) => Err(msg)

@@ -502,6 +502,64 @@ func translateCallAst(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: S
 end
 
 func translateCallAstExpected(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+  switch translateRefCall(callee, args, ctx, expected)
+    case Some(result) => result
+    case None => translateCallAstExpectedNonRef(callee, typeArgs, args, ctx, expected)
+  end
+end
+
+# Ref is a compiler boundary type, not a Go value with exported methods.
+# Keep these two spellings aligned with the legacy backend:
+#   Ref.new(x) -> &x
+#   ref.value() -> *ref
+func translateRefCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Option[Result[AstExprResult, String]]
+  switch callee.Kind
+    case FieldExpr(base, field) =>
+      switch base.Kind
+        case IdentExpr(name) =>
+          if name == "Ref" && field == "new" then
+            if args.Len() != 1 then Some[Result[AstExprResult, String]](Err[AstExprResult, String]("Ref.new expects exactly one argument")) else
+              let value = translateExprAstExpected(args.Get(0).UnwrapOr(ast2.EmptyExpr()), ctx, refInnerExpected(expected, ctx.retType))
+              switch value
+                case Ok(v) => Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(goast.RefNew(v.Expr, refInnerExpected(expected, ctx.retType)), v.Pre)))
+                case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+              end
+            end
+          else
+            if field == "value" && args.Len() == 0 then
+              let value = translateExprAstExpected(base, ctx, "")
+              switch value
+                case Ok(v) => Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(goast.Unary("*", v.Expr), v.Pre)))
+                case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+              end
+            else
+              None
+            end
+          end
+        case _ =>
+          if field == "value" && args.Len() == 0 then
+            let value = translateExprAstExpected(base, ctx, "")
+            switch value
+              case Ok(v) => Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(goast.Unary("*", v.Expr), v.Pre)))
+              case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+            end
+          else
+            None
+          end
+      end
+    case _ => None
+  end
+end
+
+# expected is normally *T for a Ref[T] binding.  When Ref.new occurs under an
+# Option constructor, the current function return type supplies the same hint.
+func refInnerExpected(expected: String, fallback: String) -> String
+  let target = if expected == "" then fallback else expected end
+  let marker = strings.Index(target, "*")
+  if marker < 0 then "" else strings.TrimSuffix(strings.TrimSpace(strings.Split(target, "*").Get(1).UnwrapOr("")), "]") end
+end
+
+func translateCallAstExpectedNonRef(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
   let normalizedExpected = strings.TrimSpace(expected)
   switch ffiOptionSignature(callee, ctx)
     case Some(sig) =>

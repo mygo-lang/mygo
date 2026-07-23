@@ -44,6 +44,37 @@ end
 	}
 }
 
+func TestGenerateSourceLowersRefBoundaryOperations(t *testing.T) {
+	src := `package sample
+
+func copy(value: Ref[Int]) -> Int
+  value.value()
+end
+
+func address(value: Int) -> Ref[Int]
+  Ref.new(value)
+end
+
+func number() -> Int
+  1
+end
+
+func address_call() -> Ref[Int]
+  Ref.new(number())
+end
+`
+	got := GenerateSource(src)
+	result, ok := got.(ResultOk[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	for _, want := range []string{"func copy(value *int) int", "return *value", "func address(value int) *int", "return &value", "return &[]int{number()}[0]"} {
+		if !strings.Contains(result.F0, want) {
+			t.Fatalf("generated Go missing %q:\n%s", want, result.F0)
+		}
+	}
+}
+
 func TestGenerateSourceAllowsExhaustiveVariantSwitchWithoutWildcard(t *testing.T) {
 	src := `package sample
 

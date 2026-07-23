@@ -578,6 +578,26 @@ func Unary(op string, x ast.Expr) ast.Expr {
 	return &ast.UnaryExpr{Op: operator(op), X: x}
 }
 
+// RefNew returns an addressable pointer expression. Go call results are not
+// addressable, so preserve the legacy compiler's one-element slice strategy
+// for that case: &[]T{call()}[0].
+func RefNew(value ast.Expr, elementType string) ast.Expr {
+	if _, ok := value.(*ast.CallExpr); ok && elementType != "" {
+		typ, err := parser.ParseExpr(elementType)
+		if err != nil {
+			panic(fmt.Sprintf("invalid Ref element type %q: %v", elementType, err))
+		}
+		return &ast.UnaryExpr{
+			Op: token.AND,
+			X: &ast.IndexExpr{
+				X:     &ast.CompositeLit{Type: &ast.ArrayType{Elt: typ}, Elts: []ast.Expr{value}},
+				Index: &ast.BasicLit{Kind: token.INT, Value: "0"},
+			},
+		}
+	}
+	return Unary("&", value)
+}
+
 func Binary(left ast.Expr, op string, right ast.Expr) ast.Expr {
 	return &ast.BinaryExpr{X: left, Op: operator(op), Y: right}
 }
@@ -714,7 +734,7 @@ func VarDecl(name string, typ ast.Expr) ast.Stmt { return Var(name, typ, nil) }
 func operator(op string) token.Token {
 	if tok, ok := map[string]token.Token{
 		"=": token.ASSIGN, ":=": token.DEFINE, "+": token.ADD, "-": token.SUB,
-		"*": token.MUL, "/": token.QUO, "%": token.REM, "!": token.NOT,
+		"*": token.MUL, "&": token.AND, "/": token.QUO, "%": token.REM, "!": token.NOT,
 		"==": token.EQL, "!=": token.NEQ, "<": token.LSS, "<=": token.LEQ,
 		">": token.GTR, ">=": token.GEQ, "&&": token.LAND, "||": token.LOR,
 	}[op]; ok {
