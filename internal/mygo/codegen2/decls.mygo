@@ -169,6 +169,11 @@ end
 func translateFuncAstDecl(g: Ref[Generator2], name: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, constraints: Slice[ast2.Constraint]) -> Result[goast.Decl, String]
   let initialRetType = returnTypeString(ret, typeParamSet(tps))
   let ctx = Ref.new(newFuncEgCtx(tps, initialRetType, name, params.Len()))
+  go[()] {
+    code: "{ctx}.goPackages = {g}.goPackages"
+    in ctx = ctx
+    in g = g
+  }
   seedCallDictionaries(g.decls, ctx)
   seedCallRequirements(g.decls, ctx)
   seedPackageDictionaries(g.decls, ctx)

@@ -2,6 +2,8 @@ package compiler
 
 import (
 	"fmt"
+	"go/importer"
+	"go/types"
 	"os"
 	"path/filepath"
 	"sort"
@@ -88,6 +90,9 @@ func compileDirBootstrap(dir string, compiling map[string]bool, compiled map[str
 	if !ok {
 		return nil, bootstrapResultError("infer", absDir, inferred)
 	}
+	if err := populateBootstrapGoSignatures(&info.F0); err != nil {
+		return nil, err
+	}
 	generated := codegen2.GenerateFiles(inputs, info.F0)
 	files, ok := generated.(ResultOk[map[string]string, string])
 	if !ok {
@@ -105,6 +110,44 @@ func compileDirBootstrap(dir string, compiling map[string]bool, compiled map[str
 	sort.Strings(written)
 	compiled[absDir] = written
 	return written, nil
+}
+
+func populateBootstrapGoSignatures(info *typeinference2.PackageInfo) error {
+	for i := range info.GoPackages {
+		entry := &info.GoPackages[i]
+		if !strings.HasPrefix(entry.Path, "go:") {
+			continue
+		}
+		pkg, err := importer.Default().Import(strings.TrimPrefix(entry.Path, "go:"))
+		if err != nil {
+			return fmt.Errorf("load Go FFI package %q: %w", entry.Path, err)
+		}
+		for _, name := range pkg.Scope().Names() {
+			obj, ok := pkg.Scope().Lookup(name).(*types.Func)
+			if !ok {
+				continue
+			}
+			sig, ok := obj.Type().(*types.Signature)
+			if !ok {
+				continue
+			}
+			entry.Funcs = append(entry.Funcs, typeinference2.GoFuncSignature{
+				Name:     name,
+				Params:   goTupleTypes(sig.Params()),
+				Results:  goTupleTypes(sig.Results()),
+				Variadic: sig.Variadic(),
+			})
+		}
+	}
+	return nil
+}
+
+func goTupleTypes(tuple *types.Tuple) []string {
+	items := make([]string, tuple.Len())
+	for i := range items {
+		items[i] = types.TypeString(tuple.At(i).Type(), func(p *types.Package) string { return p.Name() })
+	}
+	return items
 }
 
 // SyncBootstrap walks root and compiles every MyGO package using the

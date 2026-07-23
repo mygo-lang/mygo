@@ -72,7 +72,7 @@ func GenerateSourceAt(sourceName: String, input: String) -> Result[String, Strin
 end
 
 func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo) -> Result[String, String]
-  let g = Ref.new(newGenerator2(file.PackageName, file.Decls))
+  let g = Ref.new(newGenerator2(file.PackageName, file.Decls, info.GoPackages))
   let imports = collectImports(file.Decls)
   let decls = translateDeclsAst(g, file.Decls, 0, [] as Slice[goast.Decl])
   switch decls

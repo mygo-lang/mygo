@@ -114,7 +114,7 @@ func GenerateSourceAt(sourceName string, input string) Result[string, string] {
 	return expr_21
 }
 func generateOneFile(file ast2.File, info typeinference2.PackageInfo) Result[string, string] {
-	g_22 := &[]Generator2{newGenerator2(file.PackageName, file.Decls)}[0]
+	g_22 := &[]Generator2{newGenerator2(file.PackageName, file.Decls, info.GoPackages)}[0]
 	imports_23 := collectImports(file.Decls)
 	decls_24 := translateDeclsAst(g_22, file.Decls, 0, []goast.Decl([]goast.Decl{}))
 	var expr_29 Result[string, string]

@@ -3,7 +3,6 @@ package typeinference2
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import os "go:os"
 import strconv "go:strconv"
-import strings "go:strings"
 
 # typeinference2 is the self-hosted, parser2-facing inference core.
 # It implements a deliberately small HM-style pass over ast2. The production
@@ -82,6 +81,16 @@ end
 struct GoPackageEntry
   Alias: String
   Path: String
+  Funcs: Slice[GoFuncSignature]
+end
+
+# GoFuncSignature is populated by the bootstrap entry from go/types and is
+# passed unchanged to codegen2 for FFI-specific lowering.
+struct GoFuncSignature
+  Name: String
+  Params: Slice[String]
+  Results: Slice[String]
+  Variadic: Bool
 end
 
 struct DeclInfer
@@ -166,11 +175,10 @@ func collectGoPackageImports(decls: Slice[ast2.Decl]) -> Slice[GoPackageEntry]
   decls.Fold([] as Slice[GoPackageEntry], func(out: Slice[GoPackageEntry], d: ast2.Decl) -> Slice[GoPackageEntry]
     switch d
       case ImportDecl(alias, path) =>
-        let cleanPath = strings.TrimPrefix(path, "go:")
         let existing = out.Fold(false, func(found: Bool, e: GoPackageEntry) -> Bool
           found || e.Alias == alias
         end)
-        if existing then out else out.Append(GoPackageEntry { Alias: alias, Path: cleanPath }) end
+        if existing then out else out.Append(GoPackageEntry { Alias: alias, Path: path, Funcs: [] }) end
       case _ => out
     end
   end)
@@ -182,8 +190,8 @@ func seedGoPackageEnv(goPkgs: Slice[GoPackageEntry], env: Slice[EnvEntry]) -> Sl
   if goPkgs.Len() == 0 then
     env
   else
-    let pkg = goPkgs.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "" })
-    seedGoPackageEnv(sliceDrop(goPkgs, 1), envPut(env, pkg.Alias, Scheme { Bound: [], Predicates: [], Body: MonoType.TGoPackage(pkg.Alias) }))
+    let pkg = goPkgs.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "", Funcs: [] })
+    seedGoPackageEnv(sliceDrop(goPkgs, 1), envPut(env, pkg.Alias, Scheme { Bound: [], Predicates: [], Body: MonoType.TGoPackage(pkg.Path) }))
   end
 end
 

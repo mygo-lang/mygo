@@ -1,6 +1,9 @@
 package typeinference2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import importer "go:go/importer"
+import gotypes "go:go/types"
+import strings "go:strings"
 
 # Predeclare function signatures so a declaration can call functions defined
 # later in the same source file. This is required by the self-hosted modules,
@@ -478,6 +481,9 @@ func inferCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[EnvEntry], 
       switch ar
         case Err(msg) => Err(msg)
             case Ok(argsResult) =>
+          if isGoFuncMarker(cv.Type) then
+            inferGoFuncCall(cv.Type, argsResult, cv)
+          else
           # The instantiated callee can contain fresh variables from the same
           # supply. Pick a result variable after both the callee and arguments
           # so unifying a polymorphic constructor call cannot create t ~ F[t].
@@ -492,7 +498,31 @@ func inferCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[EnvEntry], 
             case Ok(s) => Ok(InferResult { Type: applySubst(s, ret), Predicates: appendPredicates(cv.Predicates, argsResult.Predicates), Subst: s, State: nextState })
             case Err(msg) => Err(msg)
           end
+          end
       end
+  end
+end
+
+func inferGoFuncCall(marker: MonoType, args: ArgsResult, callee: InferResult) -> Result[InferResult, String]
+  if goFuncAccepts(marker, args.Types.Len()) then
+    let fresh = args.State.FreshVarID
+    Ok(InferResult { Type: MonoType.TVar(fresh), Predicates: appendPredicates(callee.Predicates, args.Predicates), Subst: composeSubst(args.Subst, callee.Subst), State: InferState { FreshVarID: fresh + 1 } })
+  else
+    Err("Go function argument count mismatch")
+  end
+end
+
+func isGoFuncMarker(t: MonoType) -> Bool
+  switch t
+    case TCon(name, _) => strings.HasPrefix(name, "$gofunc$")
+    case _ => false
+  end
+end
+
+func goFuncAccepts(t: MonoType, count: Int) -> Bool
+  switch t
+    case TCon(name, _) => name == "$gofunc$-1" || name == "$gofunc$" + count.ToString()
+    case _ => false
   end
 end
 
@@ -650,14 +680,23 @@ func inferField(base: ast2.Expr, field: String, env: Slice[EnvEntry], state: Inf
     case Err(msg) => Err(msg)
     case Ok(v) =>
       switch applySubst(v.Subst, v.Type)
-        case TGoPackage(_) =>
+        case TGoPackage(path) =>
           # MyGO dependencies are compiled as normal Go packages by the
           # bootstrap entry. Their exported selector signatures are not yet
           # loaded into the compact environment, so model a selected member as
           # a fresh type variable and let its surrounding call/annotation
           # constrain it.
-          let fresh = MonoType.TVar(v.State.FreshVarID)
-          Ok(InferResult { Type: fresh, Predicates: v.Predicates, Subst: v.Subst, State: InferState { FreshVarID: v.State.FreshVarID + 1 } })
+          if strings.HasPrefix(path, "go:") then
+            let arity = goFuncArity(strings.TrimPrefix(path, "go:"), field)
+            if arity == -2 then
+              Err("unknown Go package member " + field)
+            else
+              Ok(InferResult { Type: MonoType.TCon("$gofunc$" + arity.ToString(), emptyMonoTypes()), Predicates: v.Predicates, Subst: v.Subst, State: v.State })
+            end
+          else
+            let fresh = MonoType.TVar(v.State.FreshVarID)
+            Ok(InferResult { Type: fresh, Predicates: v.Predicates, Subst: v.Subst, State: InferState { FreshVarID: v.State.FreshVarID + 1 } })
+          end
         case TCon(typeName, _) =>
           switch envGetField(env, typeName, field)
             case Some(s) =>
@@ -668,6 +707,16 @@ func inferField(base: ast2.Expr, field: String, env: Slice[EnvEntry], state: Inf
         case _ => Err("field access on non-struct type")
       end
   end
+end
+
+func goFuncArity(path: String, name: String) -> Int
+  go[Int] {
+    code: "func() int { pkg, err := {importer}.Default().Import({path}); if err != nil { return -2 }; obj := pkg.Scope().Lookup({name}); if obj == nil { return -2 }; sig, ok := obj.Type().(*{gotypes}.Signature); if !ok { return -2 }; if sig.Variadic() { return -1 }; return sig.Params().Len() }()"
+    in importer = importer
+    in path = path
+    in name = name
+    in gotypes = gotypes
+  }
 end
 
 func inferVariants(vars: Slice[ast2.Variant], enumName: String, tps: Slice[String], env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[DeclInfer, String]

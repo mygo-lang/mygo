@@ -2,6 +2,8 @@ package codegen2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import strings "go:strings"
 import strconv "go:strconv"
 
 # translateExprAst 是替代 translateExpr 的新入口。当前覆盖无副作用的
@@ -427,6 +429,19 @@ func translateCallAst(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: S
 end
 
 func translateCallAstExpected(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+  let normalizedExpected = strings.TrimSpace(expected)
+  switch ffiOptionSignature(callee, ctx)
+    case Some(sig) =>
+      if strings.HasPrefix(normalizedExpected, "Option[") && strings.HasSuffix(normalizedExpected, "]") then
+        translateFFIOptionCall(callee, typeArgs, args, ctx, normalizedExpected, sig)
+      else
+        translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
+      end
+    case None => translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
+  end
+end
+
+func translatePlainCallAstExpected(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
   let c = translateExprAstExpected(callee, ctx, expected)
   let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
   switch c
@@ -438,6 +453,59 @@ func translateCallAstExpected(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr],
           let injected = dictionaryArgsForCall(callee, ctx, v.Exprs)
           Ok(astExprWithPre(goast.GenericCall(cv.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), injected), goast.AppendStmts(cv.Pre, v.Pre)))
       end
+  end
+end
+
+func ffiOptionSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
+  switch callee
+    case FieldExpr(base, field) =>
+      switch base.value()
+        case IdentExpr(alias) => ffiSignatureInPackages(ctx.goPackages, alias, field)
+        case _ => None
+      end
+    case _ => None
+  end
+end
+
+func ffiSignatureInPackages(packages: Slice[typeinference2.GoPackageEntry], alias: String, name: String) -> Option[typeinference2.GoFuncSignature]
+  if packages.Len() == 0 then None else
+    switch packages.Get(0)
+      case Some(pkg) => if pkg.Alias == alias then ffiSignatureInFuncs(pkg.Funcs, name) else ffiSignatureInPackages(sliceDrop(packages, 1), alias, name) end
+      case None => None
+    end
+  end
+end
+
+func ffiSignatureInFuncs(funcs: Slice[typeinference2.GoFuncSignature], name: String) -> Option[typeinference2.GoFuncSignature]
+  if funcs.Len() == 0 then None else
+    switch funcs.Get(0)
+      case Some(sig) => if sig.Name == name && sig.Results.Len() == 2 && sig.Results.Get(1).UnwrapOr("") == "bool" then Some(sig) else ffiSignatureInFuncs(sliceDrop(funcs, 1), name) end
+      case None => None
+    end
+  end
+end
+
+func translateFFIOptionCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String, _: typeinference2.GoFuncSignature) -> Result[AstExprResult, String]
+  let c = translateExprAstExpected(callee, ctx, "")
+  let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
+  switch c
+    case Err(msg) => Err(msg)
+    case Ok(cv) => switch values
+      case Err(msg) => Err(msg)
+      case Ok(v) =>
+        let valueName = ctxFreshExprTemp(ctx)
+        let okName = ctxFreshExprTemp(ctx)
+        let optionName = ctxFreshExprTemp(ctx)
+        let inner = strings.TrimSuffix(strings.TrimPrefix(expected, "Option["), "]")
+        let call = goast.GenericCall(cv.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), v.Exprs)
+        let define = goast.Assign([goast.Ident(valueName), goast.Ident(okName)], ":=", [call])
+        let some = goast.GenericCall(goast.Ident("Some"), [inner], [goast.Ident(valueName)])
+        let none = goast.GenericCall(goast.Ident("None"), [inner], [] as Slice[goast.Expr])
+        let yes = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(optionName)), "=", astSingleExpr(some)))
+        let no = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(optionName)), "=", astSingleExpr(none)))
+        let pre = goast.AppendStmts(goast.AppendStmts(cv.Pre, v.Pre), goast.AppendStmts(astTwoStmts(goast.DeclareFromType(optionName, expected), define), astSingleStmt(goast.If(goast.Ident(okName), yes, no))))
+        Ok(astExprWithPre(goast.Ident(optionName), pre))
+    end
   end
 end
 

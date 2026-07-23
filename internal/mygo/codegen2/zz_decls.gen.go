@@ -319,6 +319,7 @@ func implStem(target ast2.TypeExpr, iface Option[ast2.TypeExpr], tps map[string]
 func translateFuncAstDecl(g *Generator2, name string, tps []string, params []ast2.Param, ret Option[ast2.TypeExpr], body ast2.Expr, constraints []ast2.Constraint) Result[goast.Decl, string] {
 	initialRetType_116 := returnTypeString(ret, typeParamSet(tps))
 	ctx_117 := &[]egCtx{newFuncEgCtx(tps, initialRetType_116, name, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params))}[0]
+	ctx_117.goPackages = g.goPackages
 	seedCallDictionaries(g.decls, ctx_117)
 	seedCallRequirements(g.decls, ctx_117)
 	seedPackageDictionaries(g.decls, ctx_117)

@@ -346,7 +346,7 @@ func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[g
 end
 
 func translateAstReturnSingle(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
-  let value = translateExprAst(expr, ctx)
+  let value = translateExprAstExpected(expr, ctx, ctx.retType)
   switch value
     case Err(msg) => Err(msg)
     case Ok(v) =>
