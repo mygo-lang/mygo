@@ -385,6 +385,9 @@ func removeInts(items []int, removed []int) []int {
 func generalize(env []EnvEntry, t MonoType) []int {
 	return removeInts(freeVars(t, []int{}), envFreeVars(env, []int{}))
 }
+func generalizeQualified(env []EnvEntry, t MonoType, predicates []Predicate) []int {
+	return removeInts(freeVarsPredicates(predicates, freeVars(t, []int{})), envFreeVars(env, []int{}))
+}
 func isArithmetic(op string) bool {
 	return op == "+" || op == "-" || op == "*" || op == "/"
 }

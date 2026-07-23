@@ -162,6 +162,13 @@ func generalize(env: Slice[EnvEntry], t: MonoType) -> Slice[Int]
   removeInts(freeVars(t, []), envFreeVars(env, []))
 end
 
+# Generalize a qualified type.  Predicates are part of the type's free
+# variables too: dropping them here makes a let-bound value look
+# unconstrained even though its initializer required a typeclass instance.
+func generalizeQualified(env: Slice[EnvEntry], t: MonoType, predicates: Slice[Predicate]) -> Slice[Int]
+  removeInts(freeVarsPredicates(predicates, freeVars(t, [])), envFreeVars(env, []))
+end
+
 func isArithmetic(op: String) -> Bool
   op == "+" || op == "-" || op == "*" || op == "/"
 end
