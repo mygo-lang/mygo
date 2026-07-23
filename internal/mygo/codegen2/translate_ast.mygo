@@ -33,10 +33,13 @@ func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String
       end
     case TupleExpr(items) => translateTupleLitAst(items, ctx, expected)
     case FieldExpr(base, field) =>
-      let value = translateExprAstExpected(base, ctx, expected)
-      switch value
-        case Ok(v) => Ok(astExprWithPre(goast.Selector(v.Expr, exportName(field)), v.Pre))
-        case Err(msg) => Err(msg)
+      switch base.Kind
+        case IdentExpr(name) =>
+          switch ctx.enumValueConstructors.Get(name + "." + field)
+            case Some(ctor) => Ok(newAstExprResult(goast.Call(goast.Ident(ctor), [] as Slice[goast.Expr])))
+            case None => translateFieldAst(base, field, ctx, expected)
+          end
+        case _ => translateFieldAst(base, field, ctx, expected)
       end
     case UnaryExpr(op, inner) =>
       let value = translateExprAstExpected(inner, ctx, expected)
@@ -55,6 +58,14 @@ func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String
     case BlockExpr(items) => translateBlockExprAstExpected(items, ctx, 0, [] as Slice[goast.Stmt], expected)
     case FuncLitExpr(params, ret, body) => translateFuncLitAst(params, ret, body, ctx)
     case _ => Err("AST lowering for this expression is not implemented")
+  end
+end
+
+func translateFieldAst(base: ast2.Expr, field: String, ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+  let value = translateExprAstExpected(base, ctx, expected)
+  switch value
+    case Ok(v) => Ok(astExprWithPre(goast.Selector(v.Expr, exportName(field)), v.Pre))
+    case Err(msg) => Err(msg)
   end
 end
 
@@ -142,7 +153,7 @@ end
 
 func translateTypeAsAst(value: ast2.Expr, typ: ast2.TypeExpr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
   let target = goType(typ, ctx.typeParams)
-  switch value
+  switch value.Kind
     case SliceLitExpr(items) => translateSliceLitAst(items, ctx, target)
     case _ =>
       let translated = translateExprAstExpected(value, ctx, target)
@@ -266,7 +277,7 @@ func bindTuplePattern(ctx: Ref[egCtx], items: Slice[ast2.Pattern], valueName: St
 end
 
 func switchTargetGoType(target: ast2.Expr, ctx: Ref[egCtx]) -> String
-  switch target
+  switch target.Kind
     case IdentExpr(name) => ctxGetLocal(ctx, name).UnwrapOr("any")
     case _ => "any"
   end

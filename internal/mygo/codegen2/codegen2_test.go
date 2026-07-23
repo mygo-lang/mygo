@@ -22,6 +22,28 @@ func TestGenerateSourceBootstrapsPrelude(t *testing.T) {
 	assertBootstrapsMyGOFile(t, filepath.Join("..", "..", "..", "prelude", "prelude.mygo"))
 }
 
+func TestGenerateSourceLowersZeroArgumentEnumVariantSelector(t *testing.T) {
+	src := `package sample
+
+enum Flag
+  Ready
+  Failed(String)
+end
+
+func ready() -> Flag
+  Flag.Ready
+end
+`
+	got := GenerateSource(src)
+	result, ok := got.(ResultOk[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	if !strings.Contains(result.F0, "FlagReadyCtor()") {
+		t.Fatalf("generated Go does not call zero-argument enum ctor:\n%s", result.F0)
+	}
+}
+
 func TestGenerateSourceAllowsExhaustiveVariantSwitchWithoutWildcard(t *testing.T) {
 	src := `package sample
 
@@ -111,7 +133,7 @@ end
 	if len(impl.F3) != 1 {
 		t.Fatalf("impl method count = %d, want 1", len(impl.F3))
 	}
-	bodyExpr, yes := impl.F3[0].Body.(ast2.ExprBlockExpr)
+	bodyExpr, yes := impl.F3[0].Body.Kind.(ast2.ExprKindBlockExpr)
 	if !yes || len(bodyExpr.F0) != 1 {
 		t.Fatalf("impl method body = %T, want single-item ast2.ExprBlockExpr", impl.F3[0].Body)
 	}
@@ -119,7 +141,7 @@ end
 	if !yes {
 		t.Fatalf("impl method body item = %T, want ast2.StmtExprStmt", bodyExpr.F0[0])
 	}
-	if _, yes := first.F0.(ast2.ExprStringExpr); !yes {
+	if _, yes := first.F0.Kind.(ast2.ExprKindStringExpr); !yes {
 		t.Fatalf("impl method body expr = %T, want ast2.ExprStringExpr", first.F0)
 	}
 }

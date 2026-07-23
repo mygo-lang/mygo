@@ -178,6 +178,7 @@ func translateFuncAstDecl(g: Ref[Generator2], name: String, tps: Slice[String], 
   seedCallDictionaries(g.decls, ctx)
   seedCallRequirements(g.decls, ctx)
   seedPackageDictionaries(g.decls, ctx)
+  seedEnumValueConstructors(g.decls, ctx)
   var goParams: Slice[String] = []
   var paramNames: Slice[String] = []
   var i: Int = 0
@@ -203,6 +204,27 @@ func translateFuncAstDecl(g: Ref[Generator2], name: String, tps: Slice[String], 
       containsTailCall(body, name),
     ))
     case Err(msg) => Err(msg)
+  end
+end
+
+func seedEnumValueConstructors(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
+  if decls.Len() != 0 then
+    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    switch decl
+      case EnumDecl(name, _, variants) => seedEnumValueConstructorsForVariants(name, variants, ctx, 0)
+      case _ => ()
+    end
+    seedEnumValueConstructors(sliceDrop(decls, 1), ctx)
+  end
+end
+
+func seedEnumValueConstructorsForVariants(enumName: String, variants: Slice[ast2.Variant], ctx: Ref[egCtx], index: Int) -> ()
+  if index < variants.Len() then
+    let variant = variants.Get(index).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr] })
+    if variant.Fields.Len() == 0 then
+      ctx.enumValueConstructors.Set(enumName + "." + variant.Name, enumConstructorGoName(sanitizeIdent(enumName), variant.Name))
+    end
+    seedEnumValueConstructorsForVariants(enumName, variants, ctx, index + 1)
   end
 end
 

@@ -48,6 +48,8 @@ struct egCtx
   callRequirements: Map[String, Slice[DictionaryRequirement]]
   packageCandidates: Map[String, Slice[ImplDictionaryCandidate]]
   goPackages: Slice[typeinference2.GoPackageEntry]
+  # "Enum.Variant" -> generated Go constructor for zero-argument variants.
+  enumValueConstructors: Map[String, String]
 end
 
 # Generator2 是代码生成器主结构体
@@ -138,6 +140,7 @@ func newEgCtx() -> egCtx
     callRequirements: {},
     packageCandidates: {},
     goPackages: [],
+    enumValueConstructors: {},
   }
 end
 
@@ -163,6 +166,7 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     callRequirements: {},
     packageCandidates: {},
     goPackages: [],
+    enumValueConstructors: {},
   }
 end
 
@@ -188,6 +192,7 @@ func newFuncEgCtx(params: Slice[String], retType: String, tailName: String, para
     callRequirements: {},
     packageCandidates: {},
     goPackages: [],
+    enumValueConstructors: {},
   }
 end
 
@@ -228,6 +233,7 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     callRequirements: ctx.callRequirements,
     packageCandidates: ctx.packageCandidates,
     goPackages: ctx.goPackages,
+    enumValueConstructors: ctx.enumValueConstructors,
   }
 end
 

@@ -168,7 +168,7 @@ enum ExprKind
   SwitchExpr(Expr, Slice[SwitchCase])
   FuncLitExpr(Slice[Param], Option[TypeExpr], Expr)
   SliceLitExpr(Slice[Expr])
-  TypeAsExpr(Ref[Expr], TypeExpr)
+  TypeAsExpr(Expr, TypeExpr)
   StructLitExpr(String, Slice[StructLitField])
   GenericStructLitExpr(String, Slice[TypeExpr], Slice[StructLitField])
   InlineGoExpr(Ref[TypeExpr], String, Slice[GoOperand], Slice[GoTypeOperand])
@@ -188,5 +188,8 @@ struct Expr
 end
 
 func EmptyExpr() -> Expr
-  Expr { Pos: SourcePos { SourceName: "", Line: 0, Column: 0 }, Kind: ExprKind.UnitExpr }
+  Expr {
+    Pos: SourcePos{SourceName: "", Line: 0, Column: 0},
+    Kind: ExprKind.UnitExpr
+  }
 end

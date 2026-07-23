@@ -91,12 +91,18 @@ func TestParseFileParsesPreludeMapImpl(t *testing.T) {
 
 func TestParseFileParsesPreludeStringIndexImpl(t *testing.T) {
 	_, thisFile, _, ok := runtime.Caller(0)
-	if !ok { t.Fatal("cannot determine parser test path") }
+	if !ok {
+		t.Fatal("cannot determine parser test path")
+	}
 	sourcePath := filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "prelude", "stringindexrune.mygo")
 	source, err := os.ReadFile(sourcePath)
-	if err != nil { t.Fatalf("read %s: %v", sourcePath, err) }
+	if err != nil {
+		t.Fatalf("read %s: %v", sourcePath, err)
+	}
 	parsed := ParseFileAt(sourcePath, string(source))
-	if _, ok := parsed.(ResultOk[ast2.File, string]); !ok { t.Fatalf("ParseFileAt(%s) failed: %v", sourcePath, parsed) }
+	if _, ok := parsed.(ResultOk[ast2.File, string]); !ok {
+		t.Fatalf("ParseFileAt(%s) failed: %v", sourcePath, parsed)
+	}
 }
 
 func TestParseFunctionLiteral(t *testing.T) {
@@ -110,9 +116,9 @@ func(_: String) -> ps.Parser[ast2.File]
   end
 end
 `)
-	body := fn.F4.(ast2.ExprBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
 	got := body.F0[0].(ast2.StmtExprStmt).F0
-	if _, ok := got.(ast2.ExprFuncLitExpr); !ok {
+	if _, ok := got.Kind.(ast2.ExprKindFuncLitExpr); !ok {
 		t.Fatalf("body = %T, want ExprFuncLitExpr", got)
 	}
 }
@@ -132,7 +138,7 @@ func parity(n: Int) -> Bool
   even(n)
 end
 `)
-	body := fn.F4.(ast2.ExprBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
 	if len(body.F0) != 2 {
 		t.Fatalf("body statement count = %d, want 2", len(body.F0))
 	}
@@ -152,14 +158,14 @@ func values()
   [1, 2,] as Slice[Int]
 end
 `)
-	body := fn.F4.(ast2.ExprBlockExpr)
-	cast, ok := body.F0[0].(ast2.StmtExprStmt).F0.(ast2.ExprTypeAsExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
+	cast, ok := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindTypeAsExpr)
 	if !ok {
 		t.Fatalf("body = %T, want ExprTypeAsExpr", body.F0[0].(ast2.StmtExprStmt).F0)
 	}
-	slice, ok := (*cast.F0).(ast2.ExprSliceLitExpr)
+	slice, ok := (cast.F0).Kind.(ast2.ExprKindSliceLitExpr)
 	if !ok || len(slice.F0) != 2 {
-		t.Fatalf("cast value = %T, want two-item ExprSliceLitExpr", *cast.F0)
+		t.Fatalf("cast value = %T, want two-item ExprSliceLitExpr", cast.F0)
 	}
 }
 
@@ -170,8 +176,8 @@ func newline() -> Rune
   '\n'
 end
 `)
-	body := fn.F4.(ast2.ExprBlockExpr)
-	runeExpr, ok := body.F0[0].(ast2.StmtExprStmt).F0.(ast2.ExprRuneExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
+	runeExpr, ok := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindRuneExpr)
 	if !ok {
 		t.Fatalf("body = %T, want ExprRuneExpr", body.F0[0].(ast2.StmtExprStmt).F0)
 	}
@@ -204,8 +210,8 @@ end
 	if !ok {
 		t.Fatalf("decl[1] = %T, want DeclFuncDecl", parsed.F0.Decls[1])
 	}
-	body := fn.F4.(ast2.ExprBlockExpr)
-	sw, ok := body.F0[0].(ast2.StmtExprStmt).F0.(ast2.ExprSwitchExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
+	sw, ok := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindSwitchExpr)
 	if !ok {
 		t.Fatalf("body = %T, want ExprSwitchExpr", body.F0[0].(ast2.StmtExprStmt).F0)
 	}
@@ -244,12 +250,12 @@ end
 		t.Fatalf("ParseFile failed: %v", got)
 	}
 	fn := parsed.F0.Decls[1].(ast2.DeclFuncDecl)
-	body := fn.F4.(ast2.ExprBlockExpr)
-	sw := body.F0[0].(ast2.StmtExprStmt).F0.(ast2.ExprSwitchExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
+	sw := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindSwitchExpr)
 	if len(sw.F1) != 2 {
 		t.Fatalf("case count = %d, want 2", len(sw.F1))
 	}
-	if _, ok := sw.F1[0].Body.(ast2.ExprIdentExpr); !ok {
+	if _, ok := sw.F1[0].Body.Kind.(ast2.ExprKindIdentExpr); !ok {
 		t.Fatalf("block case body = %T, want ast2.ExprIdentExpr", sw.F1[0].Body)
 	}
 }
@@ -296,20 +302,20 @@ func calc(a: Int, b: Int, c: Int, d: Int) -> Int
 end
 `)
 
-	body := fn.F4.(ast2.ExprBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
 	if len(body.F0) != 1 {
 		t.Fatalf("body expr count = %d, want 1", len(body.F0))
 	}
 	first := body.F0[0].(ast2.StmtExprStmt)
-	root := first.F0.(ast2.ExprBinaryExpr)
+	root := first.F0.Kind.(ast2.ExprKindBinaryExpr)
 	if root.F0 != "-" {
 		t.Fatalf("root op = %q, want -", root.F0)
 	}
-	left := (*root.F1).(ast2.ExprBinaryExpr)
+	left := (root.F1).Kind.(ast2.ExprKindBinaryExpr)
 	if left.F0 != "+" {
 		t.Fatalf("left op = %q, want +", left.F0)
 	}
-	rightMul := (*left.F2).(ast2.ExprBinaryExpr)
+	rightMul := (left.F2).Kind.(ast2.ExprKindBinaryExpr)
 	if rightMul.F0 != "*" {
 		t.Fatalf("nested op = %q, want *", rightMul.F0)
 	}
@@ -323,25 +329,25 @@ func ok(a: Bool, b: Bool, c: Bool, n: Int) -> Bool
 end
 `)
 
-	body := fn.F4.(ast2.ExprBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
 	first := body.F0[0].(ast2.StmtExprStmt)
-	root := first.F0.(ast2.ExprBinaryExpr)
+	root := first.F0.Kind.(ast2.ExprKindBinaryExpr)
 	if root.F0 != "||" {
 		t.Fatalf("root op = %q, want ||", root.F0)
 	}
-	left := (*root.F1).(ast2.ExprUnaryExpr)
+	left := (root.F1).Kind.(ast2.ExprKindUnaryExpr)
 	if left.F0 != "!" {
 		t.Fatalf("left unary op = %q, want !", left.F0)
 	}
-	right := (*root.F2).(ast2.ExprBinaryExpr)
+	right := (root.F2).Kind.(ast2.ExprKindBinaryExpr)
 	if right.F0 != "&&" {
 		t.Fatalf("right op = %q, want &&", right.F0)
 	}
-	cmp := (*right.F2).(ast2.ExprBinaryExpr)
+	cmp := (right.F2).Kind.(ast2.ExprKindBinaryExpr)
 	if cmp.F0 != ">" {
 		t.Fatalf("comparison op = %q, want >", cmp.F0)
 	}
-	neg := (*cmp.F1).(ast2.ExprUnaryExpr)
+	neg := (cmp.F1).Kind.(ast2.ExprKindUnaryExpr)
 	if neg.F0 != "-" {
 		t.Fatalf("comparison left unary op = %q, want -", neg.F0)
 	}
@@ -361,19 +367,19 @@ func choose(a: Int) -> Int
 end
 `)
 
-	body := fn.F4.(ast2.ExprBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
 	first := body.F0[0].(ast2.StmtExprStmt)
-	root := first.F0.(ast2.ExprIfExpr)
-	thenExpr := (*root.F1).(ast2.ExprNumberExpr)
+	root := first.F0.Kind.(ast2.ExprKindIfExpr)
+	thenExpr := (root.F1).Kind.(ast2.ExprKindNumberExpr)
 	if thenExpr.F0 != "1" {
 		t.Fatalf("then value = %q, want 1", thenExpr.F0)
 	}
-	nested := (*root.F2).(ast2.ExprIfExpr)
-	nestedThen := (*nested.F1).(ast2.ExprNumberExpr)
+	nested := (root.F2).Kind.(ast2.ExprKindIfExpr)
+	nestedThen := (nested.F1).Kind.(ast2.ExprKindNumberExpr)
 	if nestedThen.F0 != "2" {
 		t.Fatalf("elsif value = %q, want 2", nestedThen.F0)
 	}
-	elseExpr := (*nested.F2).(ast2.ExprNumberExpr)
+	elseExpr := (nested.F2).Kind.(ast2.ExprKindNumberExpr)
 	if elseExpr.F0 != "3" {
 		t.Fatalf("else value = %q, want 3", elseExpr.F0)
 	}
@@ -388,7 +394,7 @@ func foo() -> Int
 end
 `)
 
-	body := fn.F4.(ast2.ExprBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
 	if len(body.F0) != 2 {
 		t.Fatalf("body expr count = %d, want 2", len(body.F0))
 	}
@@ -412,7 +418,7 @@ func foo(n: Int) -> Int
 end
 `)
 
-	body := fn.F4.(ast2.ExprBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
 	if len(body.F0) != 2 {
 		t.Fatalf("body expr count = %d, want 2", len(body.F0))
 	}
@@ -420,7 +426,7 @@ end
 	if !ok {
 		t.Fatalf("first stmt = %T, want StmtWhileStmt", body.F0[0])
 	}
-	cond := whileStmt.F0.(ast2.ExprBinaryExpr)
+	cond := whileStmt.F0.Kind.(ast2.ExprKindBinaryExpr)
 	if cond.F0 != ">" {
 		t.Fatalf("while cond op = %q, want >", cond.F0)
 	}
@@ -434,12 +440,12 @@ func foo(n: Int) -> Int
 end
 `)
 
-	body := fn.F4.(ast2.ExprBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
 	retStmt, ok := body.F0[0].(ast2.StmtReturnWithStmt)
 	if !ok {
 		t.Fatalf("stmt = %T, want StmtReturnWithStmt", body.F0[0])
 	}
-	identExpr := retStmt.F0.(ast2.ExprIdentExpr)
+	identExpr := retStmt.F0.Kind.(ast2.ExprKindIdentExpr)
 	if identExpr.F0 != "n" {
 		t.Fatalf("return ident = %q, want n", identExpr.F0)
 	}
@@ -453,7 +459,7 @@ func foo(n: Int)
 end
 `)
 
-	body := fn.F4.(ast2.ExprBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
 	_, ok := body.F0[0].(ast2.StmtReturnStmt)
 	if !ok {
 		t.Fatalf("stmt = %T, want StmtReturnStmt", body.F0[0])
@@ -468,9 +474,9 @@ func foo(n: Int) -> Int
 end
 `)
 
-	body := fn.F4.(ast2.ExprBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
 	first := body.F0[0].(ast2.StmtExprStmt)
-	_, ok := first.F0.(ast2.ExprInlineGoExpr)
+	_, ok := first.F0.Kind.(ast2.ExprKindInlineGoExpr)
 	if !ok {
 		t.Fatalf("expr = %T, want ExprInlineGoExpr", first.F0)
 	}
@@ -483,8 +489,8 @@ func foo(n: Int) -> String
   go[String]{code: "{T}({v})" in v = n type T = String}
 end
 `)
-	body := fn.F4.(ast2.ExprBlockExpr)
-	expr := body.F0[0].(ast2.StmtExprStmt).F0.(ast2.ExprInlineGoExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
+	expr := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindInlineGoExpr)
 	if len(expr.F2) != 1 || expr.F2[0].Name != "v" {
 		t.Fatalf("value operands = %#v, want one v operand", expr.F2)
 	}
@@ -521,7 +527,7 @@ func foo() -> Int
 end
 `)
 
-	body := fn.F4.(ast2.ExprBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
 	if len(body.F0) != 3 {
 		t.Fatalf("body expr count = %d, want 3", len(body.F0))
 	}
@@ -531,11 +537,11 @@ end
 	}
 	lhs := assign.F0
 	rhs := assign.F1
-	if lhs.(ast2.ExprIdentExpr).F0 != "x" {
-		t.Fatalf("assign lhs = %q, want x", lhs.(ast2.ExprIdentExpr).F0)
+	if lhs.Kind.(ast2.ExprKindIdentExpr).F0 != "x" {
+		t.Fatalf("assign lhs = %q, want x", lhs.Kind.(ast2.ExprKindIdentExpr).F0)
 	}
-	if rhs.(ast2.ExprNumberExpr).F0 != "1" {
-		t.Fatalf("assign rhs = %q, want 1", rhs.(ast2.ExprNumberExpr).F0)
+	if rhs.Kind.(ast2.ExprKindNumberExpr).F0 != "1" {
+		t.Fatalf("assign rhs = %q, want 1", rhs.Kind.(ast2.ExprKindNumberExpr).F0)
 	}
 }
 
@@ -548,26 +554,26 @@ func foo()
 end
 `)
 
-	body := fn.F4.(ast2.ExprBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
 	assign, ok := body.F0[1].(ast2.StmtAssignStmt)
 	if !ok {
 		t.Fatalf("second stmt = %T, want StmtAssignStmt", body.F0[1])
 	}
 	lhs := assign.F0
-	field, ok := lhs.(ast2.ExprFieldExpr)
+	field, ok := lhs.Kind.(ast2.ExprKindFieldExpr)
 	if !ok {
 		t.Fatalf("assign lhs = %T, want ExprFieldExpr", lhs)
 	}
 	if field.F1 != "x" {
 		t.Fatalf("assign field name = %q, want x", field.F1)
 	}
-	obj := *field.F0
-	if obj.(ast2.ExprIdentExpr).F0 != "p" {
-		t.Fatalf("assign field obj = %q, want p", obj.(ast2.ExprIdentExpr).F0)
+	obj := field.F0
+	if obj.Kind.(ast2.ExprKindIdentExpr).F0 != "p" {
+		t.Fatalf("assign field obj = %q, want p", obj.Kind.(ast2.ExprKindIdentExpr).F0)
 	}
 	rhs := assign.F1
-	if rhs.(ast2.ExprNumberExpr).F0 != "99" {
-		t.Fatalf("assign rhs = %q, want 99", rhs.(ast2.ExprNumberExpr).F0)
+	if rhs.Kind.(ast2.ExprKindNumberExpr).F0 != "99" {
+		t.Fatalf("assign rhs = %q, want 99", rhs.Kind.(ast2.ExprKindNumberExpr).F0)
 	}
 }
 
@@ -579,14 +585,14 @@ func foo()
 end
 `)
 
-	body := fn.F4.(ast2.ExprBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
 	assign, ok := body.F0[0].(ast2.StmtAssignStmt)
 	if !ok {
 		t.Fatalf("first stmt = %T, want StmtAssignStmt", body.F0[0])
 	}
 	// lhs = cfg.settings.theme
 	lhs := assign.F0
-	themeField, ok := lhs.(ast2.ExprFieldExpr)
+	themeField, ok := lhs.Kind.(ast2.ExprKindFieldExpr)
 	if !ok {
 		t.Fatalf("assign lhs = %T, want ExprFieldExpr", lhs)
 	}
@@ -594,21 +600,21 @@ end
 		t.Fatalf("outer field = %q, want theme", themeField.F1)
 	}
 	// cfg.settings
-	inner := *themeField.F0
-	settingsField, ok := inner.(ast2.ExprFieldExpr)
+	inner := themeField.F0
+	settingsField, ok := inner.Kind.(ast2.ExprKindFieldExpr)
 	if !ok {
 		t.Fatalf("inner = %T, want ExprFieldExpr", inner)
 	}
 	if settingsField.F1 != "settings" {
 		t.Fatalf("inner field = %q, want settings", settingsField.F1)
 	}
-	cfg := *settingsField.F0
-	if cfg.(ast2.ExprIdentExpr).F0 != "cfg" {
-		t.Fatalf("base ident = %q, want cfg", cfg.(ast2.ExprIdentExpr).F0)
+	cfg := settingsField.F0
+	if cfg.Kind.(ast2.ExprKindIdentExpr).F0 != "cfg" {
+		t.Fatalf("base ident = %q, want cfg", cfg.Kind.(ast2.ExprKindIdentExpr).F0)
 	}
 	rhs := assign.F1
-	if rhs.(ast2.ExprStringExpr).F0 != "dark" {
-		t.Fatalf("assign rhs = %q, want dark", rhs.(ast2.ExprStringExpr).F0)
+	if rhs.Kind.(ast2.ExprKindStringExpr).F0 != "dark" {
+		t.Fatalf("assign rhs = %q, want dark", rhs.Kind.(ast2.ExprKindStringExpr).F0)
 	}
 }
 
@@ -623,12 +629,37 @@ func foo() -> Int
 end
 `)
 
-	body := fn.F4.(ast2.ExprBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
 	if len(body.F0) != 4 {
 		t.Fatalf("body expr count = %d, want 4", len(body.F0))
 	}
 	_, ok := body.F0[2].(ast2.StmtAssignStmt)
 	if !ok {
 		t.Fatalf("third stmt = %T, want StmtAssignStmt", body.F0[2])
+	}
+}
+
+func TestExpressionsCarrySourcePositions(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func foo() -> Int
+  1 + 2
+end
+`)
+
+	body := fn.F4
+	if body.Pos.Line != 4 || body.Pos.Column != 3 {
+		t.Fatalf("body position = %d:%d, want 4:3", body.Pos.Line, body.Pos.Column)
+	}
+	root := body.Kind.(ast2.ExprKindBlockExpr).F0[0].(ast2.StmtExprStmt).F0
+	if root.Pos.Line != 4 || root.Pos.Column != 3 {
+		t.Fatalf("root position = %d:%d, want 4:3", root.Pos.Line, root.Pos.Column)
+	}
+	binary := root.Kind.(ast2.ExprKindBinaryExpr)
+	if binary.F1.Pos.Line != 4 || binary.F1.Pos.Column != 3 {
+		t.Fatalf("left operand position = %d:%d, want 4:3", binary.F1.Pos.Line, binary.F1.Pos.Column)
+	}
+	if binary.F2.Pos.Line != 4 || binary.F2.Pos.Column != 7 {
+		t.Fatalf("right operand position = %d:%d, want 4:7", binary.F2.Pos.Line, binary.F2.Pos.Column)
 	}
 }

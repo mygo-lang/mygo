@@ -534,13 +534,13 @@ func ExprKindSliceLitExprCtor(a0 []Expr) ExprKind {
 }
 
 type ExprKindTypeAsExpr struct {
-	F0 *Expr
+	F0 Expr
 	F1 TypeExpr
 }
 
 func (_ ExprKindTypeAsExpr) isExprKind() {
 }
-func ExprKindTypeAsExprCtor(a0 *Expr, a1 TypeExpr) ExprKind {
+func ExprKindTypeAsExprCtor(a0 Expr, a1 TypeExpr) ExprKind {
 	return ExprKindTypeAsExpr{F0: a0, F1: a1}
 }
 

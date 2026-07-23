@@ -675,6 +675,30 @@ func matchExpected(v: InferResult, expected: MonoType, result: MonoType) -> Resu
 end
 
 func inferField(base: ast2.Expr, field: String, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+  switch base.Kind
+    case IdentExpr(name) =>
+      let candidate = envGet(env, field)
+      switch candidate
+        case Some(scheme) =>
+          switch scheme.Body
+            # Variants with fields are functions; a zero-argument variant has
+            # the enum type itself as its scheme body.
+            case TCon(enumName, _) =>
+              if enumName == name then
+                let qualified = instantiateQualified(scheme, state)
+                Ok(InferResult { Type: qualified.Body, Predicates: qualified.Predicates, Subst: [], State: state })
+              else
+                inferOrdinaryField(base, field, env, state)
+              end
+            case _ => inferOrdinaryField(base, field, env, state)
+          end
+        case None => inferOrdinaryField(base, field, env, state)
+      end
+    case _ => inferOrdinaryField(base, field, env, state)
+  end
+end
+
+func inferOrdinaryField(base: ast2.Expr, field: String, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
   let r = inferExpr(base, env, state)
   switch r
     case Err(msg) => Err(msg)
