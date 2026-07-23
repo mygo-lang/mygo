@@ -598,6 +598,74 @@ func translateCallAstExpectedNonRef(callee: ast2.Expr, typeArgs: Slice[ast2.Type
 end
 
 func translatePlainCallAstExpected(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+  switch translateImplMethodCall(callee, args, ctx)
+    case Some(result) => result
+    case None => translatePlainCallAstExpectedOrdinary(callee, typeArgs, args, ctx, expected)
+  end
+end
+
+# A method call is syntax sugar for an impl helper.  Candidates are selected
+# from the receiver shape recorded by the impl interface arguments, rather
+# than from a hard-coded interface such as IEnumerable.
+func translateImplMethodCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Option[Result[AstExprResult, String]]
+  switch callee.Kind
+    case FieldExpr(base, method) =>
+      switch base.Kind
+        case IdentExpr(name) =>
+          let receiverType = receiverStaticType(base, ctx)
+          switch matchingReceiverCandidate(ctx.packageCandidates.Get("$method$" + method).UnwrapOr([] as Slice[ImplDictionaryCandidate]), receiverType, ctx)
+            case Some(candidate) =>
+              let receiver = translateExprAstExpected(base, ctx, "")
+              let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
+              switch receiver
+                case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+                case Ok(rv) => switch values
+                  case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+                  case Ok(v) => Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(goast.Call(goast.Ident(candidate.Helper), v.Exprs.Prepend(rv.Expr)), goast.AppendStmts(rv.Pre, v.Pre))))
+                end
+              end
+            case None => None
+          end
+        case _ => None
+      end
+    case _ => None
+  end
+end
+
+func receiverStaticType(receiver: ast2.Expr, ctx: Ref[egCtx]) -> String
+  switch receiver.Kind
+    case IdentExpr(name) => ctx.sourceTypes.Get(name).UnwrapOr(ctx.locals.Get(name).UnwrapOr(""))
+    case FieldExpr(base, field) =>
+      let baseType = receiverStaticType(base, ctx)
+      let owner = typeConstructor(baseType)
+      ctx.sourceTypes.Get("$field$" + owner + "." + exportName(field)).UnwrapOr("")
+    case _ => ""
+  end
+end
+
+func matchingReceiverCandidate(candidates: Slice[ImplDictionaryCandidate], receiverType: String, ctx: Ref[egCtx]) -> Option[ImplDictionaryCandidate]
+  if candidates.Len() == 0 || receiverType == "" then None else
+    let candidate = candidates.Get(0).UnwrapOr(ImplDictionaryCandidate { Interface: "", Method: "", InterfaceArgs: [] as Slice[ast2.TypeExpr], TypeParams: [] as Slice[String], Helper: "" })
+    let receiverPattern = candidate.InterfaceArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+    if receiverShapeMatches(goType(receiverPattern, ctx.typeParams), receiverType, candidate.TypeParams) then Some(candidate) else matchingReceiverCandidate(sliceDrop(candidates, 1), receiverType, ctx) end
+  end
+end
+
+func receiverShapeMatches(pattern: String, actual: String, typeParams: Slice[String]) -> Bool
+  let constructor = typeConstructor(pattern)
+  constructor != "" && constructor == typeConstructor(actual)
+end
+
+func typeConstructor(typ: String) -> String
+  let bracket = strings.Index(typ, "[")
+  if bracket >= 0 then strings.TrimSpace(strings.Split(typ, "[").Get(0).UnwrapOr("")) else
+    if strings.HasPrefix(typ, "[]") then "[]" else
+      if strings.HasPrefix(typ, "map[") then "map" else strings.TrimSpace(typ) end
+    end
+  end
+end
+
+func translatePlainCallAstExpectedOrdinary(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
   let c = translateExprAstExpected(callee, ctx, expected)
   let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
   switch c

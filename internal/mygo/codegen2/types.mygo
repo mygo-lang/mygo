@@ -247,6 +247,7 @@ end
 # 设置局部变量
 func ctxSetLocal(ctx: Ref[egCtx], name: String, goType: String) -> ()
   ctx.locals.Set(name, goType)
+  ctx.sourceTypes.Set(name, goType)
 end
 
 # 设置绑定

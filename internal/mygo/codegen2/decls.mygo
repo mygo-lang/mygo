@@ -189,6 +189,7 @@ func translateFuncAstDecl(g: Ref[Generator2], name: String, tps: Slice[String], 
   seedCallDictionaries(g.decls, ctx)
   seedCallRequirements(g.decls, ctx)
   seedPackageDictionaries(g.decls, ctx)
+  seedStructSourceTypes(g.decls, ctx)
   seedEnumValueConstructors(g.decls, ctx)
   var goParams: Slice[String] = []
   var paramNames: Slice[String] = []
@@ -215,6 +216,27 @@ func translateFuncAstDecl(g: Ref[Generator2], name: String, tps: Slice[String], 
       containsTailCall(body, name),
     ))
     case Err(msg) => Err(msg)
+  end
+end
+
+# Keep source-level field types available while lowering receiver syntax.
+# Keys use the Go-visible struct constructor and exported field spelling.
+func seedStructSourceTypes(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
+  if decls.Len() != 0 then
+    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    switch decl
+      case StructDecl(name, _, fields) => seedOneStructSourceTypes(name, fields, ctx)
+      case _ => ()
+    end
+    seedStructSourceTypes(sliceDrop(decls, 1), ctx)
+  end
+end
+
+func seedOneStructSourceTypes(name: String, fields: Slice[ast2.Field], ctx: Ref[egCtx]) -> ()
+  if fields.Len() != 0 then
+    let field = fields.Get(0).UnwrapOr(ast2.Field { Name: "", Type: ast2.TypeExpr.UnitType(), Tag: None })
+    ctx.sourceTypes.Set("$field$" + name + "." + exportName(field.Name), goType(field.Type, ctx.typeParams))
+    seedOneStructSourceTypes(name, sliceDrop(fields, 1), ctx)
   end
 end
 
@@ -312,6 +334,10 @@ func seedImplCandidates(methods: Slice[ast2.ImplMethod], stem: String, interface
     let key = interfaceName + "." + method.Sig.Name
     let candidate = ImplDictionaryCandidate { Interface: interfaceName, Method: method.Sig.Name, InterfaceArgs: interfaceArgs, TypeParams: typeParams, Helper: implMethodSymbol(stem, method.Sig.Name) }
     ctx.packageCandidates.Set(key, ctx.packageCandidates.Get(key).UnwrapOr([] as Slice[ImplDictionaryCandidate]).Append(candidate))
+    # Receiver syntax has only a method name; retain the same candidates under
+    # a method key and resolve their C[A] receiver shape at the call site.
+    let methodKey = "$method$" + method.Sig.Name
+    ctx.packageCandidates.Set(methodKey, ctx.packageCandidates.Get(methodKey).UnwrapOr([] as Slice[ImplDictionaryCandidate]).Append(candidate))
     seedImplCandidates(sliceDrop(methods, 1), stem, interfaceName, interfaceArgs, typeParams, ctx)
   end
 end
