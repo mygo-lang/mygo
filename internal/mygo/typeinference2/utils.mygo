@@ -9,6 +9,11 @@ func monoEqual(a: MonoType, b: MonoType) -> Bool
         case TVar(id2) => id == id2
         case _ => false
       end
+    case TKVar(id) =>
+      switch b
+        case TKVar(id2) => id == id2
+        case _ => false
+      end
     case TCon(name, args) =>
       switch b
         case TCon(name2, args2) => name == name2 && monoListEqual(args, args2)
@@ -52,6 +57,7 @@ end
 func monoString(t: MonoType) -> String
   switch t
     case TVar(id) => "t" + id.ToString()
+    case TKVar(id) => "K" + id.ToString()
     case TCon(name, _) => name
     case TFunc(_, _) => "func"
     case TTuple(_) => "tuple"

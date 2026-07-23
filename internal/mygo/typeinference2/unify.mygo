@@ -8,9 +8,11 @@ func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[
   else
     switch a
       case TVar(id) => bindVar(id, b, subst)
+      case TKVar(id) => bindVar(id, b, subst)
       case TCon(name, args) =>
         switch b
           case TVar(id) => bindVar(id, a, subst)
+          case TKVar(id) => bindVar(id, a, subst)
           case TCon(name2, args2) =>
             if name == name2 && args.Len() == args2.Len() then
               unifyArgs(args, args2, subst)
@@ -22,6 +24,7 @@ func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[
       case TFunc(args, ret) =>
         switch b
           case TVar(id) => bindVar(id, a, subst)
+          case TKVar(id) => bindVar(id, a, subst)
           case TFunc(args2, ret2) =>
             if args.Len() == args2.Len() then
               let s1 = unifyArgs(args, args2, subst)
@@ -37,6 +40,7 @@ func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[
       case TTuple(items) =>
         switch b
           case TVar(id) => bindVar(id, a, subst)
+          case TKVar(id) => bindVar(id, a, subst)
           case TTuple(items2) =>
             if items.Len() == items2.Len() then
               unifyArgs(items, items2, subst)
@@ -48,6 +52,7 @@ func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[
       case TUnit =>
         switch b
           case TVar(id) => bindVar(id, a, subst)
+          case TKVar(id) => bindVar(id, a, subst)
           case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
         end
     end
@@ -77,6 +82,11 @@ end
 func applySubst(subst: Slice[SubstEntry], t: MonoType) -> MonoType
   switch t
     case TVar(id) =>
+      switch substGet(subst, id)
+        case Some(found) => applySubst(subst, found)
+        case None => t
+      end
+    case TKVar(id) =>
       switch substGet(subst, id)
         case Some(found) => applySubst(subst, found)
         case None => t
@@ -122,6 +132,7 @@ end
 func occursIn(id: Int, t: MonoType) -> Bool
   switch t
     case TVar(other) => id == other
+    case TKVar(other) => id == other
     case TCon(_, args) => occursInAny(id, args)
     case TFunc(args, ret) => occursInAny(id, args) || occursIn(id, ret.value())
     case TTuple(items) => occursInAny(id, items)
