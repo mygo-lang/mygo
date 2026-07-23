@@ -1098,7 +1098,9 @@ func number() -> ps.Parser[String]
   lexeme(ps.PBind(ps.PMany1(ps.PSatisfy(func(r: Rune) -> Bool
     (r >= '0' && r <= '9') || r == '.'
   end, "number")), func(rs: Slice[Rune]) -> ps.Parser[String]
-    ps.PPure(String.FromRunes(rs))
+    ps.PMap(ps.POptional(identifierRaw()), func(suffix: Option[String]) -> String
+      String.FromRunes(rs) + suffix.UnwrapOr("")
+    end)
   end))
 end
 

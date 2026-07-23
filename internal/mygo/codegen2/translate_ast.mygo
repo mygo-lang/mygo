@@ -35,7 +35,7 @@ func translateExprAstExpectedInner(expr: ast2.Expr, ctx: Ref[egCtx], expected: S
       # A `using` dictionary shadows package-level typeclass dispatch, just
       # like ordinary lexical bindings shadow top-level functions.
       Ok(newAstExprResult(goast.Ident(ctx.constraintFuncs.Get(name).UnwrapOr(ctxGetBinding(ctx, name).UnwrapOr(sanitizeIdent(name))))))
-    case NumberExpr(v) => Ok(newAstExprResult(goast.Number(v)))
+    case NumberExpr(v) => Ok(newAstExprResult(goast.Number(normalizeNumberLiteral(v))))
     case StringExpr(v) => Ok(newAstExprResult(goast.String(strconv.Quote(v))))
     case RuneExpr(v) => Ok(newAstExprResult(goast.Rune(v)))
     case SliceLitExpr(items) => translateSliceLitAst(items, ctx, expected)
@@ -194,17 +194,59 @@ end
 # Switch cases lower to an if/else chain. Enum variants use a Go type assertion;
 # the target enum's type arguments are preserved in the asserted variant type.
 func translateSwitchAst(target: ast2.Expr, cases: Slice[ast2.SwitchCase], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
-  let subject = translateExprAst(target, ctx)
+  let subject = translateSwitchSubject(target, ctx)
   switch subject
     case Err(msg) => Err(msg)
     case Ok(value) =>
       let temp = ctxFreshExprTemp(ctx)
-      let typ = if expected == "" then "any" else expected end
+      let typ = if expected == "" then if ctx.retType == "" then "any" else ctx.retType end else expected end
       let branches = translateSwitchBranches(cases, target, value.Expr, temp, ctx, typ)
       switch branches
         case Err(msg) => Err(msg)
         case Ok(stmts) => Ok(astExprWithPre(goast.Ident(temp), goast.AppendStmts(value.Pre, goast.AppendStmts(astSingleStmt(goast.DeclareFromType(temp, typ)), stmts))))
       end
+  end
+end
+
+func translateSwitchSubject(target: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+  switch target.Kind
+    case CallExpr(fn, typeArgs, args) =>
+      switch ffiResultSignature(fn, ctx)
+        case Some(sig) =>
+          let valueType = sig.Results.Get(0).UnwrapOr("any")
+          translateFFIResultCall(fn, typeArgs, args, ctx, "Result[" + valueType + ", error]", sig)
+        case None =>
+          switch fn.Kind
+            case FieldExpr(_, name) =>
+              let valueType = knownGoErrorValueType(name)
+              if valueType == "" then translateExprAst(target, ctx) else
+                let sig = typeinference2.GoFuncSignature { Name: name, Params: [], Results: [valueType, "error"], Variadic: false }
+                translateFFIResultCall(fn, typeArgs, args, ctx, "Result[" + valueType + ", error]", sig)
+              end
+            case _ => translateExprAst(target, ctx)
+          end
+      end
+    case _ => translateExprAst(target, ctx)
+  end
+end
+
+func knownGoErrorValueType(name: String) -> String
+  if name == "Atoi" then "int" else
+    if name == "ParseInt" then "int64" else
+      if name == "ParseFloat" then "float64" else "" end
+    end
+  end
+end
+
+func normalizeNumberLiteral(value: String) -> String
+  let suffixes = ["i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "f32"] as Slice[String]
+  normalizeNumberLiteralSuffix(value, suffixes)
+end
+
+func normalizeNumberLiteralSuffix(value: String, suffixes: Slice[String]) -> String
+  if suffixes.Len() == 0 then value else
+    let suffix = suffixes.Get(0).UnwrapOr("")
+    if strings.HasSuffix(value, suffix) then strings.TrimSuffix(value, suffix) else normalizeNumberLiteralSuffix(value, sliceDrop(suffixes, 1)) end
   end
 end
 
@@ -296,7 +338,21 @@ end
 func switchTargetGoType(target: ast2.Expr, ctx: Ref[egCtx]) -> String
   switch target.Kind
     case IdentExpr(name) => ctxGetLocal(ctx, name).UnwrapOr("any")
-    case _ => "any"
+    case _ =>
+      switch ffiResultSignature(target, ctx)
+        case Some(sig) => "Result[" + sig.Results.Get(0).UnwrapOr("any") + ", error]"
+        case None =>
+          switch target.Kind
+            case CallExpr(fn, _, _) =>
+              switch fn.Kind
+                case FieldExpr(_, name) =>
+                  let valueType = knownGoErrorValueType(name)
+                  if valueType == "" then "any" else "Result[" + valueType + ", error]" end
+                case _ => "any"
+              end
+            case _ => "any"
+          end
+      end
   end
 end
 
@@ -500,13 +556,28 @@ func translatePlainCallAstExpected(callee: ast2.Expr, typeArgs: Slice[ast2.TypeE
         case Err(msg) => Err(msg)
         case Ok(v) =>
           let injected = dictionaryArgsForCall(callee, ctx, v.Exprs)
-          Ok(astExprWithPre(goast.GenericCall(cv.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), injected), goast.AppendStmts(cv.Pre, v.Pre)))
+          let constructorExpected = if expected == "" then ctx.retType else expected end
+          let inferredArgs = if typeArgs.Len() > 0 then typeExprsToStrings(typeArgs, ctx.typeParams) else inferredConstructorArgs(callee, constructorExpected) end
+          Ok(astExprWithPre(goast.GenericCall(cv.Expr, inferredArgs, injected), goast.AppendStmts(cv.Pre, v.Pre)))
       end
+  end
+end
+
+func inferredConstructorArgs(callee: ast2.Expr, expected: String) -> Slice[String]
+  switch callee.Kind
+    case IdentExpr(name) =>
+      if (name == "Ok" || name == "Err") && strings.HasPrefix(expected, "Result[") then
+        let body = strings.TrimSuffix(strings.TrimPrefix(expected, "Result["), "]")
+        let parts = strings.Split(body, ", ")
+        parts
+      else [] as Slice[String] end
+    case _ => [] as Slice[String]
   end
 end
 
 func ffiOptionSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
   switch callee.Kind
+    case CallExpr(fn, _, _) => ffiOptionSignature(fn, ctx)
     case FieldExpr(base, field) =>
       switch base.Kind
         case IdentExpr(alias) => ffiSignatureInPackages(ctx.goPackages, alias, field)
@@ -562,6 +633,7 @@ end
 # Result[T, String], matching the prelude's dedicated error-bearing type.
 func ffiResultSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
   switch callee.Kind
+    case CallExpr(fn, _, _) => ffiResultSignature(fn, ctx)
     case FieldExpr(base, field) =>
       switch base.Kind
         case IdentExpr(alias) => ffiResultSignatureInPackages(ctx.goPackages, alias, field)
@@ -600,12 +672,13 @@ func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], a
         let valueName = ctxFreshExprTemp(ctx)
         let errorName = ctxFreshExprTemp(ctx)
         let resultName = ctxFreshExprTemp(ctx)
-        let inner = strings.TrimSuffix(strings.TrimPrefix(expected, "Result["), ", string]")
+        let errorType = if strings.HasSuffix(expected, ", error]") then "error" else "string" end
+        let inner = if errorType == "error" then strings.TrimSuffix(strings.TrimPrefix(expected, "Result["), ", error]") else strings.TrimSuffix(strings.TrimPrefix(expected, "Result["), ", string]") end
         let call = goast.GenericCall(cv.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), v.Exprs)
         let define = goast.Assign([goast.Ident(valueName), goast.Ident(errorName)], ":=", [call])
-        let ok = goast.GenericCall(goast.Ident("Ok"), [inner, "string"], [goast.Ident(valueName)])
-        let message = goast.Call(goast.Selector(goast.Ident(errorName), "Error"), [] as Slice[goast.Expr])
-        let err = goast.GenericCall(goast.Ident("Err"), [inner, "string"], [message])
+        let ok = goast.GenericCall(goast.Ident("Ok"), [inner, errorType], [goast.Ident(valueName)])
+        let message = if errorType == "error" then goast.Ident(errorName) else goast.Call(goast.Selector(goast.Ident(errorName), "Error"), [] as Slice[goast.Expr]) end
+        let err = goast.GenericCall(goast.Ident("Err"), [inner, errorType], [message])
         let failed = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(err)))
         let succeeded = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(ok)))
         let pre = goast.AppendStmts(goast.AppendStmts(cv.Pre, v.Pre), goast.AppendStmts(astTwoStmts(goast.DeclareFromType(resultName, expected), define), astSingleStmt(goast.If(goast.Binary(goast.Ident(errorName), "!=", goast.Ident("nil")), failed, succeeded))))
