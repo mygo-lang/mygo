@@ -519,19 +519,28 @@ end
 
 func pattern() -> ps.Parser[ast2.Pattern]
   ps.PChoice([
+    ps.PAttempt(ps.PMap(paren(ps.PSepBy(lazyPattern(), sym(","))), func(items: Slice[ast2.Pattern]) -> ast2.Pattern ast2.Pattern.TuplePattern(items) end)),
     ps.PMap(sym("_"), func(_: String) -> ast2.Pattern ast2.Pattern.WildcardPattern end),
     ps.PMap(number(), func(value: String) -> ast2.Pattern ast2.Pattern.LiteralPattern("number", value) end),
     ps.PMap(stringLiteral(), func(value: String) -> ast2.Pattern ast2.Pattern.LiteralPattern("string", value) end),
     ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Pattern]
-      ps.PMap(ps.POptional(paren(ps.PSepBy(identifier(), sym(",")))), func(args: Option[Slice[String]]) -> ast2.Pattern
+      ps.PMap(ps.POptional(paren(ps.PSepBy(lazyPattern(), sym(",")))), func(args: Option[Slice[ast2.Pattern]]) -> ast2.Pattern
         let names = switch args
           case Some(items) => items
-          case None => [] as Slice[String]
+          case None => [] as Slice[ast2.Pattern]
         end
         ast2.Pattern.VariantPattern(name, names)
       end)
     end),
   ])
+end
+
+func lazyPattern() -> ps.Parser[ast2.Pattern]
+  ps.Parser[ast2.Pattern] {
+    Run: func(state: ps.State) -> ps.Reply[ast2.Pattern]
+      pattern().Run(state)
+    end
+  }
 end
 
 func inlineGoExpr() -> ps.Parser[ast2.Expr]

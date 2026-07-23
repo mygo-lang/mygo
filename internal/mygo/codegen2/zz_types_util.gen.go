@@ -17,19 +17,19 @@ type TypeArgParts struct {
 
 func goType(t ast2.TypeExpr, typeParams map[string]struct{}) string {
 	var expr_754 string
-	if v_285, ok := t.(ast2.TypeExprNamedType); ok {
+	if v_289, ok := t.(ast2.TypeExprNamedType); ok {
 		var expr_753 string
 		var expr_752 string
-		if setContainsString(typeParams, v_285.F0) && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_285.F1) == 0 {
-			expr_752 = v_285.F0
+		if setContainsString(typeParams, v_289.F0) && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_289.F1) == 0 {
+			expr_752 = v_289.F0
 		} else {
 			var expr_751 string
-			if isHKTConstructor(v_285.F0, v_285.F1, typeParams) {
-				expr_751 = "HKT[" + v_285.F0 + ", " + hktApplicationArgs(v_285.F1, typeParams) + "]"
+			if isHKTConstructor(v_289.F0, v_289.F1, typeParams) {
+				expr_751 = "HKT[" + v_289.F0 + ", " + hktApplicationArgs(v_289.F1, typeParams) + "]"
 			} else {
 				var expr_750 string
-				fallback_749 := genericNamedType(v_285.F0, v_285.F1, typeParams)
-				expr_750 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM4Fold(goPrimitiveType(v_285.F0), MygoIN6OptionM8UnwrapOr(goSpecialType(v_285.F0, v_285.F1, typeParams), fallback_749), func(_ string, mapped string) string {
+				fallback_749 := genericNamedType(v_289.F0, v_289.F1, typeParams)
+				expr_750 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM4Fold(goPrimitiveType(v_289.F0), MygoIN6OptionM8UnwrapOr(goSpecialType(v_289.F0, v_289.F1, typeParams), fallback_749), func(_ string, mapped string) string {
 					return mapped
 				})
 				expr_751 = expr_750
@@ -39,22 +39,22 @@ func goType(t ast2.TypeExpr, typeParams map[string]struct{}) string {
 		expr_753 = expr_752
 		expr_754 = expr_753
 	} else {
-		if v_284, ok := t.(ast2.TypeExprFuncType); ok {
+		if v_288, ok := t.(ast2.TypeExprFuncType); ok {
 			var expr_748 string
-			paramStrs_746 := typeExprsToStrings(v_284.F0, typeParams)
-			retStr_747 := goType(*v_284.F1, typeParams)
+			paramStrs_746 := typeExprsToStrings(v_288.F0, typeParams)
+			retStr_747 := goType(*v_288.F1, typeParams)
 			if retStr_747 == "" || retStr_747 == "struct{}" {
 				expr_748 = "func(" + joinStrings(paramStrs_746, ", ") + ")"
 			}
 			expr_748 = "func(" + joinStrings(paramStrs_746, ", ") + ") " + retStr_747
 			expr_754 = expr_748
 		} else {
-			if v_283, ok := t.(ast2.TypeExprTupleType); ok {
+			if v_287, ok := t.(ast2.TypeExprTupleType); ok {
 				var expr_745 string
-				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_283.F0) == 0 {
+				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_287.F0) == 0 {
 					expr_745 = "struct{}"
 				}
-				parts_744 := tupleElemsToStrings(v_283.F0, typeParams)
+				parts_744 := tupleElemsToStrings(v_287.F0, typeParams)
 				expr_745 = "struct { " + joinStrings(parts_744, "; ") + " }"
 				expr_754 = expr_745
 			} else {
@@ -63,16 +63,16 @@ func goType(t ast2.TypeExpr, typeParams map[string]struct{}) string {
 					expr_743 = "struct{}"
 					expr_754 = expr_743
 				} else {
-					if v_281, ok := t.(ast2.TypeExprInlineGo); ok {
+					if v_285, ok := t.(ast2.TypeExprInlineGo); ok {
 						var expr_742 string
 						var expr_741 string
-						if v_281.F1 == "" {
+						if v_285.F1 == "" {
 							var expr_739 string
-							expr_739 = goType(*v_281.F0, typeParams)
+							expr_739 = goType(*v_285.F0, typeParams)
 							expr_741 = expr_739
 						} else {
 							var expr_740 string
-							expr_740 = goType(*v_281.F0, typeParams)
+							expr_740 = goType(*v_285.F0, typeParams)
 							expr_741 = expr_740
 						}
 						expr_742 = expr_741
@@ -332,9 +332,9 @@ func goReturnType(t ast2.TypeExpr, typeParams map[string]struct{}) string {
 }
 func goReturnTypes(t ast2.TypeExpr, typeParams map[string]struct{}) []string {
 	var expr_799 []string
-	if v_286, ok := t.(ast2.TypeExprTupleType); ok {
+	if v_290, ok := t.(ast2.TypeExprTupleType); ok {
 		var expr_798 []string
-		expr_798 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_286.F0, func(item ast2.TypeExpr) string {
+		expr_798 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_290.F0, func(item ast2.TypeExpr) string {
 			return goType(item, typeParams)
 		})
 		expr_799 = expr_798
@@ -361,14 +361,14 @@ func isUnitType(t ast2.TypeExpr) bool {
 		expr_803 = true
 		expr_804 = expr_803
 	} else {
-		if v_288, ok := t.(ast2.TypeExprTupleType); ok {
+		if v_292, ok := t.(ast2.TypeExprTupleType); ok {
 			var expr_802 bool
-			expr_802 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_288.F0) == 0
+			expr_802 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_292.F0) == 0
 			expr_804 = expr_802
 		} else {
-			if v_287, ok := t.(ast2.TypeExprNamedType); ok {
+			if v_291, ok := t.(ast2.TypeExprNamedType); ok {
 				var expr_801 bool
-				expr_801 = v_287.F0 == "Unit" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_287.F1) == 0
+				expr_801 = v_291.F0 == "Unit" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_291.F1) == 0
 				expr_804 = expr_801
 			} else {
 				{
@@ -586,9 +586,9 @@ func isGoKeyword(s string) bool {
 }
 func inherentReceiverName(t ast2.TypeExpr) string {
 	var expr_837 string
-	if v_290, ok := t.(ast2.TypeExprNamedType); ok {
+	if v_294, ok := t.(ast2.TypeExprNamedType); ok {
 		var expr_836 string
-		expr_836 = v_290.F0
+		expr_836 = v_294.F0
 		expr_837 = expr_836
 	} else {
 		{
@@ -645,14 +645,14 @@ func mangleComponent(s string) string {
 }
 func mangleTypeExpr(t ast2.TypeExpr) string {
 	var expr_852 string
-	if v_294, ok := t.(ast2.TypeExprNamedType); ok {
+	if v_298, ok := t.(ast2.TypeExprNamedType); ok {
 		var expr_851 string
-		out_849 := "N" + mangleComponent(canonicalMyGoTypeName(v_294.F0))
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_294.F1) > 0 {
+		out_849 := "N" + mangleComponent(canonicalMyGoTypeName(v_298.F0))
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_298.F1) > 0 {
 			out_849 = out_849 + "G"
 			var i_850 int = 0
-			for i_850 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_294.F1) {
-				out_849 = out_849 + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_294.F1, i_850), ast2.TypeExprUnitTypeCtor()))
+			for i_850 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_298.F1) {
+				out_849 = out_849 + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_298.F1, i_850), ast2.TypeExprUnitTypeCtor()))
 				i_850 = i_850 + 1
 			}
 			out_849 = out_849 + "E"
@@ -660,23 +660,23 @@ func mangleTypeExpr(t ast2.TypeExpr) string {
 		expr_851 = out_849
 		expr_852 = expr_851
 	} else {
-		if v_293, ok := t.(ast2.TypeExprFuncType); ok {
+		if v_297, ok := t.(ast2.TypeExprFuncType); ok {
 			var expr_848 string
 			out_846 := "F"
 			var i_847 int = 0
-			for i_847 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_293.F0) {
-				out_846 = out_846 + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_293.F0, i_847), ast2.TypeExprUnitTypeCtor()))
+			for i_847 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_297.F0) {
+				out_846 = out_846 + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_297.F0, i_847), ast2.TypeExprUnitTypeCtor()))
 				i_847 = i_847 + 1
 			}
-			expr_848 = out_846 + "R" + mangleTypeExpr(*v_293.F1) + "E"
+			expr_848 = out_846 + "R" + mangleTypeExpr(*v_297.F1) + "E"
 			expr_852 = expr_848
 		} else {
-			if v_292, ok := t.(ast2.TypeExprTupleType); ok {
+			if v_296, ok := t.(ast2.TypeExprTupleType); ok {
 				var expr_845 string
 				out_843 := "U"
 				var i_844 int = 0
-				for i_844 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_292.F0) {
-					out_843 = out_843 + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_292.F0, i_844), ast2.TypeExprUnitTypeCtor()))
+				for i_844 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_296.F0) {
+					out_843 = out_843 + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_296.F0, i_844), ast2.TypeExprUnitTypeCtor()))
 					i_844 = i_844 + 1
 				}
 				expr_845 = out_843 + "E"
@@ -872,9 +872,9 @@ func sliceTailLoop[A any](items []A, index int, out []A) []A {
 	}
 	item_889 := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 	var expr_892 []A
-	if v_296, ok := item_889.(OptionSome[A]); ok {
+	if v_300, ok := item_889.(OptionSome[A]); ok {
 		var expr_891 []A
-		expr_891 = sliceTailLoop[A](items, index+1, MygoIN5SliceM6Append(out, v_296.F0))
+		expr_891 = sliceTailLoop[A](items, index+1, MygoIN5SliceM6Append(out, v_300.F0))
 		expr_892 = expr_891
 	} else {
 		if _, ok := item_889.(OptionNone[A]); ok {
@@ -985,19 +985,19 @@ func isInherentReceiverParam(paramType ast2.TypeExpr, implType ast2.TypeExpr) bo
 }
 func typeString(t ast2.TypeExpr) string {
 	var expr_909 string
-	if v_298, ok := t.(ast2.TypeExprNamedType); ok {
+	if v_302, ok := t.(ast2.TypeExprNamedType); ok {
 		var expr_908 string
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_298.F1) == 0 {
-			expr_908 = v_298.F0
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_302.F1) == 0 {
+			expr_908 = v_302.F0
 		}
-		argStrs_907 := typeArgsToStrings(v_298.F1, MygoIN3SetM3New[string]())
-		expr_908 = v_298.F0 + "[" + joinStrings(argStrs_907, ", ") + "]"
+		argStrs_907 := typeArgsToStrings(v_302.F1, MygoIN3SetM3New[string]())
+		expr_908 = v_302.F0 + "[" + joinStrings(argStrs_907, ", ") + "]"
 		expr_909 = expr_908
 	} else {
-		if v_297, ok := t.(ast2.TypeExprFuncType); ok {
+		if v_301, ok := t.(ast2.TypeExprFuncType); ok {
 			var expr_906 string
-			paramStrs_904 := typeExprsToStrings(v_297.F0, MygoIN3SetM3New[string]())
-			retStr_905 := typeString(*v_297.F1)
+			paramStrs_904 := typeExprsToStrings(v_301.F0, MygoIN3SetM3New[string]())
+			retStr_905 := typeString(*v_301.F1)
 			if retStr_905 == "" {
 				expr_906 = "func(" + joinStrings(paramStrs_904, ", ") + ")"
 			}

@@ -510,23 +510,25 @@ func switchCase() ps.Parser[ast2.SwitchCase] {
 	})
 }
 func pattern() ps.Parser[ast2.Pattern] {
-	return ps.PChoice([]ps.Parser[ast2.Pattern]{ps.PMap(sym("_"), func(_ string) ast2.Pattern {
+	return ps.PChoice([]ps.Parser[ast2.Pattern]{ps.PAttempt(ps.PMap(paren[[]ast2.Pattern](ps.PSepBy(lazyPattern(), sym(","))), func(items []ast2.Pattern) ast2.Pattern {
+		return ast2.PatternTuplePatternCtor(items)
+	})), ps.PMap(sym("_"), func(_ string) ast2.Pattern {
 		return ast2.PatternWildcardPatternCtor()
 	}), ps.PMap(number(), func(value string) ast2.Pattern {
 		return ast2.PatternLiteralPatternCtor("number", value)
 	}), ps.PMap(stringLiteral(), func(value string) ast2.Pattern {
 		return ast2.PatternLiteralPatternCtor("string", value)
 	}), ps.PBind(identifier(), func(name string) ps.Parser[ast2.Pattern] {
-		return ps.PMap(ps.POptional(paren[[]string](ps.PSepBy(identifier(), sym(",")))), func(args Option[[]string]) ast2.Pattern {
-			var expr_31 []string
-			if v_10, ok := args.(OptionSome[[]string]); ok {
-				var expr_30 []string
+		return ps.PMap(ps.POptional(paren[[]ast2.Pattern](ps.PSepBy(lazyPattern(), sym(",")))), func(args Option[[]ast2.Pattern]) ast2.Pattern {
+			var expr_31 []ast2.Pattern
+			if v_10, ok := args.(OptionSome[[]ast2.Pattern]); ok {
+				var expr_30 []ast2.Pattern
 				expr_30 = v_10.F0
 				expr_31 = expr_30
 			} else {
-				if _, ok := args.(OptionNone[[]string]); ok {
-					var expr_29 []string
-					expr_29 = []string([]string{})
+				if _, ok := args.(OptionNone[[]ast2.Pattern]); ok {
+					var expr_29 []ast2.Pattern
+					expr_29 = []ast2.Pattern([]ast2.Pattern{})
 					expr_31 = expr_29
 				} else {
 					panic("unreachable")
@@ -536,6 +538,11 @@ func pattern() ps.Parser[ast2.Pattern] {
 			return ast2.PatternVariantPatternCtor(name, names_32)
 		})
 	})})
+}
+func lazyPattern() ps.Parser[ast2.Pattern] {
+	return ps.Parser[ast2.Pattern]{Run: func(state ps.State) ps.Reply[ast2.Pattern] {
+		return pattern().Run(state)
+	}}
 }
 func inlineGoExpr() ps.Parser[ast2.Expr] {
 	return ps.PBind(kw("go"), func(_ string) ps.Parser[ast2.Expr] {
@@ -654,7 +661,7 @@ func bodyExprFromBlock(body ast2.Expr) ast2.Expr {
 		var expr_42 ast2.Expr
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_13.F0) == 1 {
 			var expr_41 ast2.Expr
-			var first_37 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_13.F0, 0), ast2.StmtExprStmtCtor(ast2.ExprUnitExprCtor()))
+			var first_37 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_13.F0, 0), ast2.StmtExprStmtCtor(ast2.ExprUnitExprCtor()))
 			var expr_40 ast2.Expr
 			if v_14, ok := first_37.(ast2.StmtExprStmt); ok {
 				var expr_39 ast2.Expr
@@ -894,7 +901,7 @@ func tupleOrParenExpr() ps.Parser[ast2.Expr] {
 		} else {
 			var expr_58 ps.Parser[ast2.Expr]
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 1 {
-				expr_58 = ps.PPure(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.ExprUnitExprCtor()))
+				expr_58 = ps.PPure(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.ExprUnitExprCtor()))
 			} else {
 				expr_58 = ps.PPure(ast2.ExprTupleExprCtor(items))
 			}
@@ -1269,7 +1276,7 @@ func defaultImportAlias(path string) string {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_99) == 0 {
 		expr_100 = path
 	} else {
-		expr_100 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_99, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_99)-1), path)
+		expr_100 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_99, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_99)-1), path)
 	}
 	return expr_100
 }

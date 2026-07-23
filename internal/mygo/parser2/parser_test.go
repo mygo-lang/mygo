@@ -161,7 +161,8 @@ end
 		t.Fatalf("case count = %d, want 3", len(sw.F1))
 	}
 	variant, ok := sw.F1[0].Pattern.(ast2.PatternVariantPattern)
-	if !ok || variant.F0 != "Some" || len(variant.F1) != 1 || variant.F1[0] != "item" {
+	item, itemOK := variant.F1[0].(ast2.PatternVariantPattern)
+	if !ok || variant.F0 != "Some" || len(variant.F1) != 1 || !itemOK || item.F0 != "item" {
 		t.Fatalf("first pattern = %#v, want Some(item)", sw.F1[0].Pattern)
 	}
 	if _, ok := sw.F1[2].Pattern.(ast2.PatternWildcardPattern); !ok {

@@ -240,6 +240,11 @@ end
 func envWithPattern(env: Slice[EnvEntry], pattern: ast2.Pattern, targetType: MonoType) -> Result[Slice[EnvEntry], String]
   switch pattern
     case WildcardPattern => Ok(env)
+    case TuplePattern(items) =>
+      switch targetType
+        case TTuple(types) => envWithTuplePattern(env, items, types)
+        case _ => Err("tuple pattern requires tuple target")
+      end
     case LiteralPattern(kind, _) =>
       let expected = if kind == "string" then MonoType.TCon("String", emptyMonoTypes()) else MonoType.TCon("Int", emptyMonoTypes()) end
       switch unify(targetType, expected, [])
@@ -248,7 +253,12 @@ func envWithPattern(env: Slice[EnvEntry], pattern: ast2.Pattern, targetType: Mon
       end
     case VariantPattern(name, args) =>
       switch envGet(env, name)
-        case None => Err("unknown variant " + name)
+        case None =>
+          if args.Len() == 0 then
+            Ok(envPut(env, name, Scheme { Bound: [], Predicates: [], Body: targetType }))
+          else
+            Err("unknown variant " + name)
+          end
         case Some(scheme) =>
           let variantType = instantiate(scheme, NewInferState())
           switch variantType
@@ -268,7 +278,23 @@ func envWithPattern(env: Slice[EnvEntry], pattern: ast2.Pattern, targetType: Mon
   end
 end
 
-func envWithPatternBindings(env: Slice[EnvEntry], names: Slice[String], fields: Slice[MonoType], targetType: MonoType, variantType: MonoType) -> Result[Slice[EnvEntry], String]
+func envWithTuplePattern(env: Slice[EnvEntry], patterns: Slice[ast2.Pattern], types: Slice[MonoType]) -> Result[Slice[EnvEntry], String]
+  if patterns.Len() != types.Len() then Err("tuple pattern arity mismatch") else envWithTuplePatternLoop(env, patterns, types) end
+end
+
+func envWithTuplePatternLoop(env: Slice[EnvEntry], patterns: Slice[ast2.Pattern], types: Slice[MonoType]) -> Result[Slice[EnvEntry], String]
+  if patterns.Len() == 0 then Ok(env)
+  else
+    let p = patterns.Get(0).UnwrapOr(ast2.Pattern.WildcardPattern)
+    let t = types.Get(0).UnwrapOr(MonoType.TUnit)
+    switch envWithPattern(env, p, t)
+      case Ok(next) => envWithTuplePatternLoop(next, sliceDrop(patterns, 1), sliceDrop(types, 1))
+      case Err(msg) => Err(msg)
+    end
+  end
+end
+
+func envWithPatternBindings(env: Slice[EnvEntry], names: Slice[ast2.Pattern], fields: Slice[MonoType], targetType: MonoType, variantType: MonoType) -> Result[Slice[EnvEntry], String]
   if names.Len() != fields.Len() then
     Err("pattern argument count mismatch")
   else
@@ -279,14 +305,15 @@ func envWithPatternBindings(env: Slice[EnvEntry], names: Slice[String], fields: 
   end
 end
 
-func envWithPatternBindingLoop(env: Slice[EnvEntry], names: Slice[String], fields: Slice[MonoType]) -> Result[Slice[EnvEntry], String]
+func envWithPatternBindingLoop(env: Slice[EnvEntry], names: Slice[ast2.Pattern], fields: Slice[MonoType]) -> Result[Slice[EnvEntry], String]
   if names.Len() == 0 then
     Ok(env)
   else
-    let name = names.Get(0).UnwrapOr("_")
     let field = fields.Get(0).UnwrapOr(MonoType.TUnit)
-    let next = if name == "_" then env else envPut(env, name, Scheme { Bound: [], Predicates: [], Body: field }) end
-    envWithPatternBindingLoop(next, sliceDrop(names, 1), sliceDrop(fields, 1))
+    switch envWithPattern(env, names.Get(0).UnwrapOr(ast2.Pattern.WildcardPattern), field)
+      case Ok(next) => envWithPatternBindingLoop(next, sliceDrop(names, 1), sliceDrop(fields, 1))
+      case Err(msg) => Err(msg)
+    end
   end
 end
 

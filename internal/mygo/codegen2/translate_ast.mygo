@@ -185,6 +185,7 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], sourceTarget: ast2.E
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.Expr.UnitExpr() })
     switch current.Pattern
       case WildcardPattern => translateSwitchCaseBody(current.Body, ctx, expected, temp)
+      case TuplePattern(_) => translateSwitchCaseBody(current.Body, ctx, expected, temp)
       case LiteralPattern(kind, literal) =>
         let body = translateSwitchCaseBody(current.Body, ctx, expected, temp)
         let rest = translateSwitchBranches(sliceDrop(cases, 1), sourceTarget, target, temp, ctx, expected)
@@ -224,13 +225,27 @@ func translateSwitchCaseBody(body: ast2.Expr, ctx: Ref[egCtx], expected: String,
   end
 end
 
-func bindPatternArguments(ctx: Ref[egCtx], args: Slice[String], valueName: String, index: Int) -> ()
+func bindPatternArguments(ctx: Ref[egCtx], args: Slice[ast2.Pattern], valueName: String, index: Int) -> ()
   if index < args.Len() then
-    let name = args.Get(index).UnwrapOr("_")
-    if name != "_" then
-      ctxSetBinding(ctx, name, valueName + ".F" + index.ToString())
-    end
+    bindPattern(ctx, args.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern), valueName + ".F" + index.ToString())
     bindPatternArguments(ctx, args, valueName, index + 1)
+  end
+end
+
+func bindPattern(ctx: Ref[egCtx], pattern: ast2.Pattern, valueName: String) -> ()
+  switch pattern
+    case WildcardPattern => ()
+    case VariantPattern(name, args) =>
+      if args.Len() == 0 then ctxSetBinding(ctx, name, valueName) else bindPatternArguments(ctx, args, valueName, 0) end
+    case TuplePattern(items) => bindTuplePattern(ctx, items, valueName, 0)
+    case _ => ()
+  end
+end
+
+func bindTuplePattern(ctx: Ref[egCtx], items: Slice[ast2.Pattern], valueName: String, index: Int) -> ()
+  if index < items.Len() then
+    bindPattern(ctx, items.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern), valueName + ".F" + index.ToString())
+    bindTuplePattern(ctx, items, valueName, index + 1)
   end
 end
 

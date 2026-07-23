@@ -132,13 +132,23 @@ type Pattern interface {
 }
 type PatternVariantPattern struct {
 	F0 string
-	F1 []string
+	F1 []Pattern
 }
 
 func (_ PatternVariantPattern) isPattern() {
 }
-func PatternVariantPatternCtor(a0 string, a1 []string) Pattern {
+func PatternVariantPatternCtor(a0 string, a1 []Pattern) Pattern {
 	return PatternVariantPattern{F0: a0, F1: a1}
+}
+
+type PatternTuplePattern struct {
+	F0 []Pattern
+}
+
+func (_ PatternTuplePattern) isPattern() {
+}
+func PatternTuplePatternCtor(a0 []Pattern) Pattern {
+	return PatternTuplePattern{F0: a0}
 }
 
 type PatternLiteralPattern struct {

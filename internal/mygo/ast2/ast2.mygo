@@ -72,7 +72,8 @@ struct SwitchCase
 end
 
 enum Pattern
-  VariantPattern(String, Slice[String])
+  VariantPattern(String, Slice[Pattern])
+  TuplePattern(Slice[Pattern])
   LiteralPattern(String, String)
   WildcardPattern
 end
