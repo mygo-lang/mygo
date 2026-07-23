@@ -46,7 +46,7 @@ func translateDeclsAst(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, 
         end
       case ImportDecl(_, _) => translateDeclsAst(g, decls, index + 1, out)
       case ImplDecl(tps, target, iface, methods) =>
-        let result = translateImplAstDecl(tps, target, iface, methods)
+        let result = translateImplAstDecl(g, tps, target, iface, methods)
         switch result
           case Ok(items) => translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, items))
           case Err(msg) => Err("impl " + typeString(target) + ": " + msg)
@@ -55,10 +55,15 @@ func translateDeclsAst(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, 
   end
 end
 
-func translateImplAstDecl(tps: Slice[String], target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], methods: Slice[ast2.ImplMethod]) -> Result[Slice[goast.Decl], String]
-  let ctx = newEgCtxWithTypeParams(tps)
+func translateImplAstDecl(g: Ref[Generator2], tps: Slice[String], target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], methods: Slice[ast2.ImplMethod]) -> Result[Slice[goast.Decl], String]
+  let ctx = Ref.new(newEgCtxWithTypeParams(tps))
+  go[()] {
+    code: "{ctx}.goPackages = {packages}"
+    in ctx = ctx
+    in packages = g.goPackages
+  }
   let stem = implStem(target, iface, ctx.typeParams)
-  translateImplAstMethods(stem, tps, methods, ctx, 0, [] as Slice[goast.Decl])
+  translateImplAstMethods(stem, tps, methods, ctx.value(), 0, [] as Slice[goast.Decl])
 end
 
 func collectFuncDecls(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, out: Slice[goast.Decl]) -> Result[Slice[goast.Decl], String]
@@ -121,6 +126,11 @@ func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[as
     let methodTps = appendStrings(tps, sig.TypeParams)
     let ret = returnTypeString(sig.Ret, typeParamSet(methodTps))
     let ctx = Ref.new(newFuncEgCtx(methodTps, ret, sig.Name, sig.Params.Len()))
+    go[()] {
+      code: "{ctx}.goPackages = {packages}"
+      in ctx = ctx
+      in packages = baseCtx.goPackages
+    }
     var names: Slice[String] = []
     var i: Int = 0
     while i < sig.Params.Len()
@@ -212,20 +222,21 @@ func seedEnumValueConstructors(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
   if decls.Len() != 0 then
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     switch decl
-      case EnumDecl(name, _, variants) => seedEnumValueConstructorsForVariants(name, variants, ctx, 0)
+      case EnumDecl(name, _, variants) => seedEnumVariantsForVariants(name, variants, ctx, 0)
       case _ => ()
     end
     seedEnumValueConstructors(sliceDrop(decls, 1), ctx)
   end
 end
 
-func seedEnumValueConstructorsForVariants(enumName: String, variants: Slice[ast2.Variant], ctx: Ref[egCtx], index: Int) -> ()
+func seedEnumVariantsForVariants(enumName: String, variants: Slice[ast2.Variant], ctx: Ref[egCtx], index: Int) -> ()
   if index < variants.Len() then
     let variant = variants.Get(index).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr] })
+    ctx.enumVariantOwners.Set(variant.Name, enumName)
     if variant.Fields.Len() == 0 then
       ctx.enumValueConstructors.Set(enumName + "." + variant.Name, enumConstructorGoName(sanitizeIdent(enumName), variant.Name))
     end
-    seedEnumValueConstructorsForVariants(enumName, variants, ctx, index + 1)
+    seedEnumVariantsForVariants(enumName, variants, ctx, index + 1)
   end
 end
 

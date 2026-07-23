@@ -540,6 +540,37 @@ end
 	}
 }
 
+func TestGenerateSourceInfersResultVariantArgumentsInSwitchBranches(t *testing.T) {
+	src := `package sample
+
+enum Outcome[A, E]
+  Success(A)
+  Failure(E)
+end
+
+func parse(value: String) -> Outcome[Int, String]
+  switch value
+    case "ok" => Success(1)
+    case _ => Failure("invalid")
+  end
+end
+`
+
+	got := GenerateSource(src)
+	result, ok := got.(ResultOk[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	for _, want := range []string{"Success[int, string](1)", "Failure[int, string](\"invalid\")"} {
+		if !strings.Contains(result.F0, want) {
+			t.Fatalf("generated Go is missing %q:\n%s", want, result.F0)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "result-switch.gen.go", result.F0, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, result.F0)
+	}
+}
+
 func TestGenerateSourceSupportsForwardFunctionReferences(t *testing.T) {
 	src := `package sample
 

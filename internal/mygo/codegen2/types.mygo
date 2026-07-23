@@ -50,6 +50,9 @@ struct egCtx
   goPackages: Slice[typeinference2.GoPackageEntry]
   # "Enum.Variant" -> generated Go constructor for zero-argument variants.
   enumValueConstructors: Map[String, String]
+  # Variant name -> owning enum. Used to recover generic arguments from an
+  # expected enum type when lowering a constructor call without source args.
+  enumVariantOwners: Map[String, String]
 end
 
 # Generator2 是代码生成器主结构体
@@ -141,6 +144,7 @@ func newEgCtx() -> egCtx
     packageCandidates: {},
     goPackages: [],
     enumValueConstructors: {},
+    enumVariantOwners: {},
   }
 end
 
@@ -167,6 +171,7 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     packageCandidates: {},
     goPackages: [],
     enumValueConstructors: {},
+    enumVariantOwners: {},
   }
 end
 
@@ -193,6 +198,7 @@ func newFuncEgCtx(params: Slice[String], retType: String, tailName: String, para
     packageCandidates: {},
     goPackages: [],
     enumValueConstructors: {},
+    enumVariantOwners: {},
   }
 end
 
@@ -234,6 +240,7 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     packageCandidates: ctx.packageCandidates,
     goPackages: ctx.goPackages,
     enumValueConstructors: ctx.enumValueConstructors,
+    enumVariantOwners: ctx.enumVariantOwners,
   }
 end
 

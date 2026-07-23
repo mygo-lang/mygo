@@ -534,26 +534,58 @@ func translatePlainCallAstExpected(callee: ast2.Expr, typeArgs: Slice[ast2.TypeE
         case Ok(v) =>
           let injected = dictionaryArgsForCall(callee, ctx, v.Exprs)
           let constructorExpected = if expected == "" then ctx.retType else expected end
-          let inferredArgs = if typeArgs.Len() > 0 then typeExprsToStrings(typeArgs, ctx.typeParams) else inferredConstructorArgs(callee, constructorExpected) end
+          let inferredArgs = if typeArgs.Len() > 0 then typeExprsToStrings(typeArgs, ctx.typeParams) else inferredConstructorArgs(callee, constructorExpected, ctx) end
           Ok(astExprWithPre(goast.GenericCall(cv.Expr, inferredArgs, injected), goast.AppendStmts(cv.Pre, v.Pre)))
       end
   end
 end
 
-func inferredConstructorArgs(callee: ast2.Expr, expected: String) -> Slice[String]
+func inferredConstructorArgs(callee: ast2.Expr, expected: String, ctx: Ref[egCtx]) -> Slice[String]
   switch callee.Kind
     case IdentExpr(name) =>
-      if name == "None" && strings.HasPrefix(expected, "Option[") then
-        [strings.TrimSuffix(strings.TrimPrefix(expected, "Option["), "]")]
-      else
-        if (name == "Ok" || name == "Err") && strings.HasPrefix(expected, "Result[") then
-          let body = strings.TrimSuffix(strings.TrimPrefix(expected, "Result["), "]")
-          let parts = strings.Split(body, ", ")
-          parts
-        else [] as Slice[String] end
+      inferredConstructorArgsByName(name, ctx.enumVariantOwners.Get(name), expected)
+    case FieldExpr(base, name) =>
+      switch base.Kind
+        case IdentExpr(enumName) => inferredConstructorArgsByName(name, Some(enumName), expected)
+        case _ => inferredConstructorArgsByName(name, ctx.enumVariantOwners.Get(name), expected)
       end
     case _ => [] as Slice[String]
   end
+end
+
+func inferredConstructorArgsByName(name: String, enumName: Option[String], expected: String) -> Slice[String]
+  let target = strings.TrimSpace(expected)
+  switch enumName
+    case Some(owner) => enumTypeArgs(owner, target)
+    case None => inferredBuiltinConstructorArgs(name, target)
+  end
+end
+
+func enumTypeArgs(enumName: String, expected: String) -> Slice[String]
+  let prefix = enumName + "["
+  if strings.HasPrefix(expected, prefix) then
+    trimTypeArgs(strings.Split(strings.TrimSuffix(strings.TrimPrefix(expected, prefix), "]"), ","), 0, [] as Slice[String])
+  else
+    [] as Slice[String]
+  end
+end
+
+func trimTypeArgs(args: Slice[String], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= args.Len() then
+    out
+  else
+    trimTypeArgs(args, index + 1, out.Append(strings.TrimSpace(args.Get(index).UnwrapOr(""))))
+  end
+end
+
+func inferredBuiltinConstructorArgs(name: String, target: String) -> Slice[String]
+  if name == "None" && strings.HasPrefix(target, "Option[") then
+        [strings.TrimSuffix(strings.TrimPrefix(target, "Option["), "]")]
+      else
+        if (name == "Ok" || name == "Err") && strings.HasPrefix(target, "Result[") then
+          enumTypeArgs("Result", target)
+        else [] as Slice[String] end
+      end
 end
 
 func ffiOptionSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
