@@ -139,6 +139,37 @@ end
 	}
 }
 
+func TestCompileDirBootstrapDecodesGoValueErrorAsResult(t *testing.T) {
+	dir := t.TempDir()
+	source := `package sample
+
+import strconv "go:strconv"
+
+func Parse(value: String) -> Result[Int, String]
+  strconv.Atoi(value)
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDirBootstrap(dir)
+	if err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	generated, err := os.ReadFile(written[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"strconv.Atoi", "Ok[int, string]", "Err[int, string]", ".Error()"} {
+		if !strings.Contains(string(generated), want) {
+			t.Fatalf("generated Go missing %q:\n%s", want, generated)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), written[0], generated, parser.AllErrors); err != nil {
+		t.Fatalf("bootstrap output is invalid Go: %v\n%s", err, generated)
+	}
+}
+
 func TestCompileDirBootstrapCompilesMyGOImports(t *testing.T) {
 	root := t.TempDir()
 	libDir := filepath.Join(root, "lib")

@@ -55,7 +55,7 @@ func generateFilesLoop(files []SourceFileInput, info typeinference2.PackageInfo,
 		expr_13 = Ok[map[string]string, string](out)
 	} else {
 		var expr_12 Result[map[string]string, string]
-		input_7 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{})}})
+		input_7 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{})}})
 		src_8 := generateOneFile(input_7.File, info)
 		var expr_11 Result[map[string]string, string]
 		if v_4, ok := src_8.(ResultOk[string, string]); ok {
@@ -146,7 +146,7 @@ func needsHKTDecls(decls []ast2.Decl) bool {
 		expr_40 = false
 	} else {
 		var expr_39 bool
-		head_30 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		head_30 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 		var expr_37 bool
 		if v_15, ok := head_30.(ast2.DeclInterfaceDecl); ok {
 			var expr_36 bool
@@ -195,7 +195,7 @@ func hasHKTTypeParam(tps []string) bool {
 		expr_43 = false
 	} else {
 		var expr_42 bool
-		current_41 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tps, 0), "")
+		current_41 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tps, 0), "")
 		expr_42 = strings.Index(current_41, "[") >= 0 || hasHKTTypeParam(sliceDrop[string](tps, 1))
 		expr_43 = expr_42
 	}

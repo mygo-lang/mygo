@@ -437,7 +437,16 @@ func translateCallAstExpected(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr],
       else
         translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
       end
-    case None => translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
+    case None =>
+      switch ffiResultSignature(callee, ctx)
+        case Some(sig) =>
+          if strings.HasPrefix(normalizedExpected, "Result[") && strings.HasSuffix(normalizedExpected, ", string]") then
+            translateFFIResultCall(callee, typeArgs, args, ctx, normalizedExpected, sig)
+          else
+            translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
+          end
+        case None => translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
+      end
   end
 end
 
@@ -505,6 +514,62 @@ func translateFFIOptionCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], a
         let no = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(optionName)), "=", astSingleExpr(none)))
         let pre = goast.AppendStmts(goast.AppendStmts(cv.Pre, v.Pre), goast.AppendStmts(astTwoStmts(goast.DeclareFromType(optionName, expected), define), astSingleStmt(goast.If(goast.Ident(okName), yes, no))))
         Ok(astExprWithPre(goast.Ident(optionName), pre))
+    end
+  end
+end
+
+# Go functions with a trailing error return are decoded at the boundary into
+# Result[T, String], matching the prelude's dedicated error-bearing type.
+func ffiResultSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
+  switch callee
+    case FieldExpr(base, field) =>
+      switch base.value()
+        case IdentExpr(alias) => ffiResultSignatureInPackages(ctx.goPackages, alias, field)
+        case _ => None
+      end
+    case _ => None
+  end
+end
+
+func ffiResultSignatureInPackages(packages: Slice[typeinference2.GoPackageEntry], alias: String, name: String) -> Option[typeinference2.GoFuncSignature]
+  if packages.Len() == 0 then None else
+    switch packages.Get(0)
+      case Some(pkg) => if pkg.Alias == alias then ffiResultSignatureInFuncs(pkg.Funcs, name) else ffiResultSignatureInPackages(sliceDrop(packages, 1), alias, name) end
+      case None => None
+    end
+  end
+end
+
+func ffiResultSignatureInFuncs(funcs: Slice[typeinference2.GoFuncSignature], name: String) -> Option[typeinference2.GoFuncSignature]
+  if funcs.Len() == 0 then None else
+    switch funcs.Get(0)
+      case Some(sig) => if sig.Name == name && sig.Results.Len() == 2 && sig.Results.Get(1).UnwrapOr("") == "error" then Some(sig) else ffiResultSignatureInFuncs(sliceDrop(funcs, 1), name) end
+      case None => None
+    end
+  end
+end
+
+func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String, _: typeinference2.GoFuncSignature) -> Result[AstExprResult, String]
+  let c = translateExprAstExpected(callee, ctx, "")
+  let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
+  switch c
+    case Err(msg) => Err(msg)
+    case Ok(cv) => switch values
+      case Err(msg) => Err(msg)
+      case Ok(v) =>
+        let valueName = ctxFreshExprTemp(ctx)
+        let errorName = ctxFreshExprTemp(ctx)
+        let resultName = ctxFreshExprTemp(ctx)
+        let inner = strings.TrimSuffix(strings.TrimPrefix(expected, "Result["), ", string]")
+        let call = goast.GenericCall(cv.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), v.Exprs)
+        let define = goast.Assign([goast.Ident(valueName), goast.Ident(errorName)], ":=", [call])
+        let ok = goast.GenericCall(goast.Ident("Ok"), [inner, "string"], [goast.Ident(valueName)])
+        let message = goast.Call(goast.Selector(goast.Ident(errorName), "Error"), [] as Slice[goast.Expr])
+        let err = goast.GenericCall(goast.Ident("Err"), [inner, "string"], [message])
+        let failed = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(err)))
+        let succeeded = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(ok)))
+        let pre = goast.AppendStmts(goast.AppendStmts(cv.Pre, v.Pre), goast.AppendStmts(astTwoStmts(goast.DeclareFromType(resultName, expected), define), astSingleStmt(goast.If(goast.Binary(goast.Ident(errorName), "!=", goast.Ident("nil")), failed, succeeded))))
+        Ok(astExprWithPre(goast.Ident(resultName), pre))
     end
   end
 end
