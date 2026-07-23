@@ -60,11 +60,18 @@ func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[
 end
 
 func bindVar(id: Int, t: MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
-  if occursIn(id, t) then
-    Err("occurs check failed")
-  else
-    Ok(subst.Prepend(SubstEntry { ID: id, Type: t }))
+  # Unifying a variable with itself is already solved.  It must be handled
+  # before the occurs check, otherwise polymorphic constructor instantiation
+  # spuriously reports an infinite type for equations such as t1 ~ t1.
+  switch t
+    case TVar(other) => if id == other then Ok(subst) else bindDistinctVar(id, t, subst) end
+    case TKVar(other) => if id == other then Ok(subst) else bindDistinctVar(id, t, subst) end
+    case _ => bindDistinctVar(id, t, subst)
   end
+end
+
+func bindDistinctVar(id: Int, t: MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
+  if occursIn(id, t) then Err("occurs check failed") else Ok(subst.Prepend(SubstEntry { ID: id, Type: t })) end
 end
 
 func unifyArgs(left: Slice[MonoType], right: Slice[MonoType], subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]

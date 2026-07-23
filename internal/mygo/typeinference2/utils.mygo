@@ -111,6 +111,28 @@ func instantiateBound(bound: Slice[Int], body: MonoType, state: InferState, subs
   end
 end
 
+# Instantiation currently returns only a type, so callers must select result
+# variables that cannot collide with variables already present in that type.
+func nextFreshVarID(t: MonoType, current: Int) -> Int
+  switch t
+    case TVar(id) => if id >= current then id + 1 else current end
+    case TKVar(id) => if id >= current then id + 1 else current end
+    case TCon(_, args) => nextFreshVarIDInAll(args, current)
+    case TFunc(args, ret) => nextFreshVarID(ret.value(), nextFreshVarIDInAll(args, current))
+    case TTuple(items) => nextFreshVarIDInAll(items, current)
+    case TUnit => current
+    case TGoPackage(_) => current
+  end
+end
+
+func nextFreshVarIDInAll(items: Slice[MonoType], current: Int) -> Int
+  if items.Len() == 0 then
+    current
+  else
+    nextFreshVarIDInAll(sliceDrop(items, 1), nextFreshVarID(items.Get(0).UnwrapOr(MonoType.TUnit), current))
+  end
+end
+
 # Collect free variables for the small HM generalizer.
 func freeVars(t: MonoType, out: Slice[Int]) -> Slice[Int]
   switch t

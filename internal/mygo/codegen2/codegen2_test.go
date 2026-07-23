@@ -18,6 +18,35 @@ func TestGenerateSourceBootstrapsAst2(t *testing.T) {
 	assertBootstrapsMyGOFile(t, filepath.Join("..", "ast2", "ast2.mygo"))
 }
 
+func TestGenerateSourceBootstrapsPrelude(t *testing.T) {
+	assertBootstrapsMyGOFile(t, filepath.Join("..", "..", "..", "prelude", "prelude.mygo"))
+}
+
+func TestGenerateSourceAllowsExhaustiveVariantSwitchWithoutWildcard(t *testing.T) {
+	src := `package sample
+
+enum Maybe[A]
+  Some(A)
+  None
+end
+
+func unwrap(value: Maybe[Int]) -> Int
+  switch value
+    case Some(item) => item
+    case None => 0
+  end
+end
+`
+	got := GenerateSource(src)
+	result, ok := got.(ResultOk[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "exhaustive-switch.gen.go", result.F0, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, result.F0)
+	}
+}
+
 func TestGenerateSourceAtIncludesSourceLocation(t *testing.T) {
 	got := GenerateSourceAt("broken.mygo", "package sample\n\nfunc")
 	err, ok := got.(ResultErr[string, string])

@@ -180,7 +180,13 @@ end
 
 func translateSwitchBranches(cases: Slice[ast2.SwitchCase], sourceTarget: ast2.Expr, target: goast.Expr, temp: String, ctx: Ref[egCtx], expected: String) -> Result[Slice[goast.Stmt], String]
   if cases.Len() == 0 then
-    Err("switch requires a wildcard case")
+    # Enum cases are lowered to a type-assertion if/else chain.  A final
+    # variant needs no synthetic wildcard branch: for an exhaustive enum
+    # match (for example Some/None) every runtime value is already covered.
+    # Leaving the final else absent also keeps the generated Go valid for
+    # switches whose exhaustiveness is checked by the type layer.
+    let noBranches: Slice[goast.Stmt] = []
+    Ok(noBranches)
   else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.Expr.UnitExpr() })
     switch current.Pattern

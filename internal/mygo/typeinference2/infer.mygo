@@ -478,7 +478,11 @@ func inferCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[EnvEntry], 
       switch ar
         case Err(msg) => Err(msg)
             case Ok(argsResult) =>
-          let fresh = argsResult.State.FreshVarID
+          # The instantiated callee can contain fresh variables from the same
+          # supply. Pick a result variable after both the callee and arguments
+          # so unifying a polymorphic constructor call cannot create t ~ F[t].
+          let afterCallee = nextFreshVarID(cv.Type, argsResult.State.FreshVarID)
+          let fresh = nextFreshVarIDInAll(argsResult.Types, afterCallee)
           let nextState = InferState { FreshVarID: fresh + 1 }
           let ret = MonoType.TVar(fresh)
           let expected = MonoType.TFunc(argsResult.Types, Ref.new(ret))
@@ -660,15 +664,24 @@ end
 
 func inferVariants(vars: Slice[ast2.Variant], enumName: String, tps: Slice[String], env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[DeclInfer, String]
   if vars.Len() == 0 then
-    Ok(DeclInfer { Env: envPut(env, enumName, Scheme { Bound: [], Predicates: [], Body: MonoType.TCon(enumName, emptyMonoTypes()) }), Fields: fields, State: state })
+    Ok(DeclInfer { Env: envPut(env, enumName, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: MonoType.TCon(enumName, typeParamsAsTypes(tps, 1)) }), Fields: fields, State: state })
   else
     let v = vars.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: emptyASTTypeExprs() })
+    let enumType = MonoType.TCon(enumName, typeParamsAsTypes(tps, 1))
     let constructorType = if v.Fields.Len() == 0 then
-      MonoType.TCon(enumName, emptyMonoTypes())
+      enumType
     else
-      MonoType.TFunc(typeArgsFromAST(v.Fields), Ref.new(MonoType.TCon(enumName, emptyMonoTypes())))
+      MonoType.TFunc(typeArgsFromASTWithParams(v.Fields, tps), Ref.new(enumType))
     end
-    inferVariants(sliceDrop(vars, 1), enumName, tps, envPut(env, v.Name, Scheme { Bound: [], Predicates: [], Body: constructorType }), fields, state)
+    inferVariants(sliceDrop(vars, 1), enumName, tps, envPut(env, v.Name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: constructorType }), fields, state)
+  end
+end
+
+func typeParamsAsTypes(params: Slice[String], index: Int) -> Slice[MonoType]
+  if params.Len() == 0 then
+    []
+  else
+    typeParamsAsTypes(sliceDrop(params, 1), index + 1).Prepend(MonoType.TVar(-index))
   end
 end
 
