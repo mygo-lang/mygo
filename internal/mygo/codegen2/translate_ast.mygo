@@ -46,6 +46,8 @@ func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String
     case CallExpr(callee, args) => translateCallAstExpected(callee.value(), args, ctx, expected)
     case StructLitExpr(typeName, fields) => translateStructLitAstExpected(typeName, fields, ctx, expected)
     case GenericStructLitExpr(typeName, typeArgs, fields) => translateGenericStructLitAstExpected(typeName, typeArgs, fields, ctx, expected)
+    case MapLitExpr(pairs) => translateMapLitAstExpected(pairs, ctx, expected)
+    case SetLitExpr(items) => translateSetLitAstExpected(items, ctx, expected)
     case IfExpr(cond, thenExpr, elseExpr) => translateIfAst(cond.value(), thenExpr.value(), elseExpr.value(), ctx, expected)
     case SwitchExpr(target, cases) => translateSwitchAst(target.value(), cases, ctx, expected)
     case BlockExpr(items) => translateBlockExprAstExpected(items, ctx, 0, [] as Slice[goast.Stmt], expected)
@@ -447,6 +449,62 @@ func translateAstArgs(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: 
     switch value
       case Err(msg) => Err(msg)
       case Ok(v) => translateAstArgs(args, ctx, index + 1, out.Append(v.Expr), goast.AppendStmts(pre, v.Pre), expectedTypes)
+    end
+  end
+end
+
+func translateMapLitAstExpected(pairs: Slice[(ast2.Expr, ast2.Expr)], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+  let typ = if expected == "" then "map[string]any" else expected end
+  let result = translateMapLitPairs(pairs, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], expected)
+  switch result
+    case Err(msg) => Err(msg)
+    case Ok(v) => Ok(astExprWithPre(goast.Composite(goast.MustTypeExpr(typ), v.Elts), v.Pre))
+  end
+end
+
+func translateMapLitPairs(pairs: Slice[(ast2.Expr, ast2.Expr)], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expected: String) -> Result[AstCompositeFields, String]
+  if index >= pairs.Len() then
+    Ok(AstCompositeFields { Elts: out, Pre: pre })
+  else
+    let pair = pairs.Get(index).UnwrapOr((ast2.Expr.UnitExpr(), ast2.Expr.UnitExpr()))
+    let (key, value) = pair
+    let k = translateExprAstExpected(key, ctx, "")
+    switch k
+      case Err(msg) => Err(msg)
+      case Ok(kv) then
+        let v = translateExprAstExpected(value, ctx, "")
+        switch v
+          case Err(msg) => Err(msg)
+          case Ok(vv) then
+            translateMapLitPairs(pairs, ctx, index + 1, out.Append(goast.KeyValue(kv.Expr, vv.Expr)), goast.AppendStmts(goast.AppendStmts(pre, kv.Pre), vv.Pre), expected)
+          end
+        end
+      end
+    end
+  end
+end
+
+func translateSetLitAstExpected(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+  let typ = if expected == "" then "map[string]struct{}" else expected end
+  let result = translateSetLitItems(items, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], expected)
+  switch result
+    case Err(msg) => Err(msg)
+    case Ok(v) => Ok(astExprWithPre(goast.Composite(goast.MustTypeExpr(typ), v.Elts), v.Pre))
+  end
+end
+
+func translateSetLitItems(items: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expected: String) -> Result[AstCompositeFields, String]
+  if index >= items.Len() then
+    Ok(AstCompositeFields { Elts: out, Pre: pre })
+  else
+    let elem = items.Get(index).UnwrapOr(ast2.Expr.UnitExpr())
+    let e = translateExprAstExpected(elem, ctx, "")
+    switch e
+      case Err(msg) => Err(msg)
+      case Ok(ev) then
+        let kv = goast.KeyValue(ev.Expr, goast.Composite(goast.Ident("struct{}"), [] as Slice[goast.Expr]))
+        translateSetLitItems(items, ctx, index + 1, out.Append(kv), goast.AppendStmts(pre, ev.Pre), expected)
+      end
     end
   end
 end

@@ -340,6 +340,8 @@ func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[g
     case StructLitExpr(_, _) => translateAstReturnSingle(expr, ctx)
     case GenericStructLitExpr(_, _, _) => translateAstReturnSingle(expr, ctx)
     case InlineGoExpr(_, _, _, _) => translateAstReturnSingle(expr, ctx)
+    case MapLitExpr(_) => translateAstReturnSingle(expr, ctx)
+    case SetLitExpr(_) => translateAstReturnSingle(expr, ctx)
   end
 end
 

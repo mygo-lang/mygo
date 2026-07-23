@@ -128,6 +128,6 @@ func NewInferState() InferState {
 	return InferState{FreshVarID: 1}
 }
 func InferFile(file ast2.File) Result[PackageInfo, string] {
-	env_395 := predeclareFunctions(file.Decls, initialEnv())
-	return inferDecls(file.Decls, env_395, []FieldEntry{}, NewInferState())
+	env_443 := predeclareFunctions(file.Decls, initialEnv())
+	return inferDecls(file.Decls, env_443, []FieldEntry{}, NewInferState())
 }

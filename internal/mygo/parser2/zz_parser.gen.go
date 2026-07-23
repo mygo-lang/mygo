@@ -654,7 +654,7 @@ func bodyExprFromBlock(body ast2.Expr) ast2.Expr {
 		var expr_42 ast2.Expr
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_13.F0) == 1 {
 			var expr_41 ast2.Expr
-			var first_37 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_13.F0, 0), ast2.StmtExprStmtCtor(ast2.ExprUnitExprCtor()))
+			var first_37 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_13.F0, 0), ast2.StmtExprStmtCtor(ast2.ExprUnitExprCtor()))
 			var expr_40 ast2.Expr
 			if v_14, ok := first_37.(ast2.StmtExprStmt); ok {
 				var expr_39 ast2.Expr
@@ -795,7 +795,7 @@ func primaryExpr() ps.Parser[ast2.Expr] {
 		return ast2.ExprBoolExprCtor(true)
 	}), ps.PMap(kw("false"), func(_ string) ast2.Expr {
 		return ast2.ExprBoolExprCtor(false)
-	}), funcLit(), sliceLiteral(), tupleOrParenExpr(), ps.PAttempt(ps.PBind(structLitTypeName(), func(head ast2.StructLitHead) ps.Parser[ast2.Expr] {
+	}), funcLit(), sliceLiteral(), ps.PAttempt(mapLiteral()), ps.PAttempt(setLiteral()), tupleOrParenExpr(), ps.PAttempt(ps.PBind(structLitTypeName(), func(head ast2.StructLitHead) ps.Parser[ast2.Expr] {
 		return structLitFields(head)
 	})), ps.PMap(identifier(), func(v string) ast2.Expr {
 		return ast2.ExprIdentExprCtor(v)
@@ -811,6 +811,40 @@ func structLitTypeName() ps.Parser[ast2.StructLitHead] {
 func sliceLiteral() ps.Parser[ast2.Expr] {
 	return ps.PMap(brackets(sepByEnd(lazyExpr(), sym(","))), func(items []ast2.Expr) ast2.Expr {
 		return ast2.ExprSliceLitExprCtor(items)
+	})
+}
+func mapLiteral() ps.Parser[ast2.Expr] {
+	return ps.PBind(sym("{"), func(_ string) ps.Parser[ast2.Expr] {
+		return ps.PBind(sepByEnd(mapEntry(), sym(",")), func(pairs []struct {
+			F0 ast2.Expr
+			F1 ast2.Expr
+		}) ps.Parser[ast2.Expr] {
+			return ps.PThen(sym("}"), ps.PPure(ast2.ExprMapLitExprCtor(pairs)))
+		})
+	})
+}
+func mapEntry() ps.Parser[struct {
+	F0 ast2.Expr
+	F1 ast2.Expr
+}] {
+	return ps.PBind(lazyExpr(), func(key ast2.Expr) ps.Parser[struct {
+		F0 ast2.Expr
+		F1 ast2.Expr
+	}] {
+		return ps.PThen(sym(":"), ps.PMap(lazyExpr(), func(value ast2.Expr) struct {
+			F0 ast2.Expr
+			F1 ast2.Expr
+		} {
+			return struct {
+				F0 ast2.Expr
+				F1 ast2.Expr
+			}{F0: key, F1: value}
+		}))
+	})
+}
+func setLiteral() ps.Parser[ast2.Expr] {
+	return ps.PMap(ps.PBetween(sym("{"), sepByEnd(lazyExpr(), sym(",")), sym("}")), func(items []ast2.Expr) ast2.Expr {
+		return ast2.ExprSetLitExprCtor(items)
 	})
 }
 func sepByEnd[A any, S any](item ps.Parser[A], sep ps.Parser[S]) ps.Parser[[]A] {
@@ -838,7 +872,7 @@ func tupleOrParenExpr() ps.Parser[ast2.Expr] {
 		} else {
 			var expr_58 ps.Parser[ast2.Expr]
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 1 {
-				expr_58 = ps.PPure(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.ExprUnitExprCtor()))
+				expr_58 = ps.PPure(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.ExprUnitExprCtor()))
 			} else {
 				expr_58 = ps.PPure(ast2.ExprTupleExprCtor(items))
 			}
@@ -1213,7 +1247,7 @@ func defaultImportAlias(path string) string {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_99) == 0 {
 		expr_100 = path
 	} else {
-		expr_100 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_99, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_99)-1), path)
+		expr_100 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_99, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_99)-1), path)
 	}
 	return expr_100
 }

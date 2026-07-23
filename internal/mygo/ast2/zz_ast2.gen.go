@@ -547,3 +547,29 @@ func (_ ExprInlineGoExpr) isExpr() {
 func ExprInlineGoExprCtor(a0 *TypeExpr, a1 string, a2 []GoOperand, a3 []GoTypeOperand) Expr {
 	return ExprInlineGoExpr{F0: a0, F1: a1, F2: a2, F3: a3}
 }
+
+type ExprMapLitExpr struct {
+	F0 []struct {
+		F0 Expr
+		F1 Expr
+	}
+}
+
+func (_ ExprMapLitExpr) isExpr() {
+}
+func ExprMapLitExprCtor(a0 []struct {
+	F0 Expr
+	F1 Expr
+}) Expr {
+	return ExprMapLitExpr{F0: a0}
+}
+
+type ExprSetLitExpr struct {
+	F0 []Expr
+}
+
+func (_ ExprSetLitExpr) isExpr() {
+}
+func ExprSetLitExprCtor(a0 []Expr) Expr {
+	return ExprSetLitExpr{F0: a0}
+}

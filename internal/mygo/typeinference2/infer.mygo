@@ -118,6 +118,10 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
       inferStructLit(typeName, fields, env, state)
     case GenericStructLitExpr(typeName, typeArgs, fields) =>
       inferGenericStructLit(typeName, typeArgs, fields, env, state)
+    case MapLitExpr(pairs) =>
+      inferMapLit(pairs, env, state)
+    case SetLitExpr(items) =>
+      inferSetLit(items, env, state)
     case InlineGoExpr(typ, _, _, _) =>
       let mono = typeFromAST(typ.value())
       Ok(InferResult { Type: mono, Subst: [], State: state })
@@ -646,6 +650,74 @@ func inferStructLitFields(typeName: String, fields: Slice[ast2.StructLitField], 
       case Err(msg) => Err(msg)
       case Ok(v) =>
         inferStructLitFields(typeName, sliceDrop(fields, 1), env, v.State, composeSubst(v.Subst, subst), v.State)
+    end
+  end
+end
+
+func inferMapLit(pairs: Slice[(ast2.Expr, ast2.Expr)], env: Slice[EnvEntry], s0: InferState) -> Result[InferResult, String]
+  if pairs.Len() == 0 then
+    let kt = MonoType.TVar(s0.FreshVarID)
+    let vt = MonoType.TVar(s0.FreshVarID + 1)
+    Ok(InferResult { Type: MonoType.TCon("Map", [kt, vt]), Subst: [], State: InferState { FreshVarID: s0.FreshVarID + 2 } })
+  else
+    let (k0, v0) = pairs.Get(0).UnwrapOr((ast2.Expr.UnitExpr(), ast2.Expr.UnitExpr()))
+    let kr = inferExpr(k0, env, s0)
+    switch kr
+      case Err(msg) => Err("map key: " + msg)
+      case Ok(kv) =>
+        let vr = inferExpr(v0, env, kv.State)
+        switch vr
+          case Err(msg) => Err("map value: " + msg)
+          case Ok(vv) =>
+            let s1 = composeSubst(vv.Subst, kv.Subst)
+            let resultType = MonoType.TCon("Map", [applySubst(s1, kv.Type), applySubst(s1, vv.Type)])
+            inferMapLitTail(sliceDrop(pairs, 1), env, vv.State, s1, resultType)
+        end
+    end
+  end
+end
+
+func inferMapLitTail(pairs: Slice[(ast2.Expr, ast2.Expr)], env: Slice[EnvEntry], s0: InferState, subst: Slice[SubstEntry], resultType: MonoType) -> Result[InferResult, String]
+  if pairs.Len() == 0 then
+    Ok(InferResult { Type: resultType, Subst: subst, State: s0 })
+  else
+    let (k, v) = pairs.Get(0).UnwrapOr((ast2.Expr.UnitExpr(), ast2.Expr.UnitExpr()))
+    let kr = inferExpr(k, env, s0)
+    switch kr
+      case Err(msg) => Err("map key: " + msg)
+      case Ok(kv) =>
+        let vr = inferExpr(v, env, kv.State)
+        switch vr
+          case Err(msg) => Err("map value: " + msg)
+          case Ok(vv) => inferMapLitTail(sliceDrop(pairs, 1), env, vv.State, composeSubst(vv.Subst, composeSubst(kv.Subst, subst)), resultType)
+        end
+    end
+  end
+end
+
+func inferSetLit(items: Slice[ast2.Expr], env: Slice[EnvEntry], s0: InferState) -> Result[InferResult, String]
+  if items.Len() == 0 then
+    let et = MonoType.TVar(s0.FreshVarID)
+    Ok(InferResult { Type: MonoType.TCon("Set", [et]), Subst: [], State: InferState { FreshVarID: s0.FreshVarID + 1 } })
+  else
+    let r0 = inferExpr(items.Get(0).UnwrapOr(ast2.Expr.UnitExpr()), env, s0)
+    switch r0
+      case Err(msg) => Err("set element: " + msg)
+      case Ok(v0) =>
+        let resultType = MonoType.TCon("Set", [applySubst(v0.Subst, v0.Type)])
+        inferSetLitTail(sliceDrop(items, 1), env, v0.State, v0.Subst, resultType)
+    end
+  end
+end
+
+func inferSetLitTail(items: Slice[ast2.Expr], env: Slice[EnvEntry], s0: InferState, subst: Slice[SubstEntry], resultType: MonoType) -> Result[InferResult, String]
+  if items.Len() == 0 then
+    Ok(InferResult { Type: resultType, Subst: subst, State: s0 })
+  else
+    let r = inferExpr(items.Get(0).UnwrapOr(ast2.Expr.UnitExpr()), env, s0)
+    switch r
+      case Err(msg) => Err("set element: " + msg)
+      case Ok(v) => inferSetLitTail(sliceDrop(items, 1), env, v.State, composeSubst(v.Subst, subst), resultType)
     end
   end
 end

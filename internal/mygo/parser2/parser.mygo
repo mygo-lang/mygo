@@ -796,6 +796,10 @@ func primaryExpr() -> ps.Parser[ast2.Expr]
     end),
     funcLit(),
     sliceLiteral(),
+    # Map literal: {"a": 1, "b": 2} — attempt first so set literal is fallback
+    ps.PAttempt(mapLiteral()),
+    # Set literal: {"a", "b", ...}
+    ps.PAttempt(setLiteral()),
     tupleOrParenExpr(),
     # 结构体字面量支持导入类型名，例如 ast2.File { ... }。
     ps.PAttempt(ps.PBind(structLitTypeName(), func(head: ast2.StructLitHead) -> ps.Parser[ast2.Expr]
@@ -818,6 +822,32 @@ func sliceLiteral() -> ps.Parser[ast2.Expr]
     ast2.Expr.SliceLitExpr(items)
   end)
 end
+
+# mapLiteral parses { key1: val1, key2: val2, ... }
+func mapLiteral() -> ps.Parser[ast2.Expr]
+  ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Expr]
+    ps.PBind(sepByEnd(mapEntry(), sym(",")), func(pairs: Slice[(ast2.Expr, ast2.Expr)]) -> ps.Parser[ast2.Expr]
+      ps.PThen(sym("}"), ps.PPure(ast2.Expr.MapLitExpr(pairs)))
+    end)
+  end)
+end
+
+# mapEntry parses key_expr : value_expr and returns a (key, value) pair.
+func mapEntry() -> ps.Parser[(ast2.Expr, ast2.Expr)]
+  ps.PBind(lazyExpr(), func(key: ast2.Expr) -> ps.Parser[(ast2.Expr, ast2.Expr)]
+    ps.PThen(sym(":"), ps.PMap(lazyExpr(), func(value: ast2.Expr) -> (ast2.Expr, ast2.Expr)
+      (key, value)
+    end))
+  end)
+end
+
+# setLiteral parses { elem1, elem2, ... }
+func setLiteral() -> ps.Parser[ast2.Expr]
+  ps.PMap(ps.PBetween(sym("{"), sepByEnd(lazyExpr(), sym(",")), sym("}")), func(items: Slice[ast2.Expr]) -> ast2.Expr
+    ast2.Expr.SetLitExpr(items)
+  end)
+end
+
 
 # sepByEnd accepts an optional trailing separator without allowing a consumed
 # separator to make PSepBy fail before the closing delimiter.
