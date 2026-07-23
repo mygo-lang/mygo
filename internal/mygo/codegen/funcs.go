@@ -187,11 +187,16 @@ func (g *gen) genFuncDecl(d *FuncDecl) (ast.Decl, error) {
 			bodyStmts = append(bodyStmts, &ast.ReturnStmt{})
 			return astFuncDecl(d.Name, nil, tp, params, results, &ast.BlockStmt{List: bodyStmts}), nil
 		}
-		code, _, err := g.translateExpr(d.Body, ctx, ctx.retType)
+		// A non-block body in a function without Go return values is still a
+		// statement context. Preserve that distinction for control expressions.
+		translated, err := g.translateExprResult(d.Body, ctx, "Unit")
 		if err != nil {
 			return nil, err
 		}
-		bodyStmts = append(bodyStmts, &ast.ExprStmt{X: code})
+		bodyStmts = append(bodyStmts, translated.Stmts...)
+		if translated.Expr != nil {
+			bodyStmts = append(bodyStmts, &ast.ExprStmt{X: translated.Expr})
+		}
 		bodyStmts = append(bodyStmts, &ast.ReturnStmt{})
 	} else if len(retTypes) > 1 {
 		if tuple, ok := d.Body.(*TupleLitExpr); ok {
@@ -212,11 +217,12 @@ func (g *gen) genFuncDecl(d *FuncDecl) (ast.Decl, error) {
 			bodyStmts = append(bodyStmts, &ast.ReturnStmt{Results: []ast.Expr{code}})
 		}
 	} else {
-		code, _, err := g.translateExpr(d.Body, ctx, ctx.retType)
+		translated, err := g.translateExprResult(d.Body, ctx, ctx.retType)
 		if err != nil {
 			return nil, err
 		}
-		bodyStmts = append(bodyStmts, &ast.ReturnStmt{Results: []ast.Expr{code}})
+		bodyStmts = append(bodyStmts, translated.Stmts...)
+		bodyStmts = append(bodyStmts, &ast.ReturnStmt{Results: []ast.Expr{translated.Expr}})
 	}
 
 	return astFuncDecl(d.Name, nil, tp, params, results, &ast.BlockStmt{List: bodyStmts}), nil

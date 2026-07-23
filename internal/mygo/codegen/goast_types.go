@@ -640,14 +640,6 @@ func astMapLit(keyType, valType ast.Expr, elts []ast.Expr) *ast.CompositeLit {
 	return &ast.CompositeLit{Type: &ast.MapType{Key: keyType, Value: valType}, Elts: elts}
 }
 
-func astFuncLit(params, results []*ast.Field, body *ast.BlockStmt) *ast.FuncLit {
-	ft := &ast.FuncType{Params: &ast.FieldList{List: params}}
-	if len(results) > 0 {
-		ft.Results = &ast.FieldList{List: results}
-	}
-	return &ast.FuncLit{Type: ft, Body: body}
-}
-
 func astBinaryOp(x ast.Expr, op token.Token, y ast.Expr) ast.Expr {
 	return &ast.BinaryExpr{X: x, Op: op, Y: y}
 }

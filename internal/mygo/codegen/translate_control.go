@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -12,33 +13,27 @@ import (
 )
 
 // translateIf handles if expressions.
-func (g *gen) translateIf(n *IfExpr, ctx *egCtx, expected string) (ast.Expr, string, error) {
+func (g *gen) translateIf(n *IfExpr, ctx *egCtx, expected string) (translatedExpr, error) {
 	cond, _, err := g.translateExpr(n.Cond, ctx, "bool")
 	if err != nil {
-		return nil, "", err
+		return translatedExpr{}, err
 	}
 	if cond == nil {
 		line, col := common.NodePos(n.Cond)
-		return nil, "", common.ErrorAtPos(g.currentFile, line, col, "if condition produced nil Go AST")
+		return translatedExpr{}, common.ErrorAtPos(g.currentFile, line, col, "if condition produced nil Go AST")
 	}
 	thenCtx := ctx.child()
 	elseCtx := ctx.child()
-	thenCode, thenType, err := g.translateExpr(n.Then, thenCtx, expected)
+	thenResult, err := g.translateExprResult(n.Then, thenCtx, expected)
 	if err != nil {
-		return nil, "", err
+		return translatedExpr{}, err
 	}
-	if isNilASTExpr(thenCode) {
-		line, col := common.NodePos(n.Then)
-		return nil, "", common.ErrorAtPos(g.currentFile, line, col, "if then branch produced nil Go AST")
-	}
-	elseCode, elseType, err := g.translateExpr(n.Else, elseCtx, expected)
+	thenCode, thenType := thenResult.Expr, thenResult.Type
+	elseResult, err := g.translateExprResult(n.Else, elseCtx, expected)
 	if err != nil {
-		return nil, "", err
+		return translatedExpr{}, err
 	}
-	if isNilASTExpr(elseCode) {
-		line, col := common.NodePos(n.Else)
-		return nil, "", common.ErrorAtPos(g.currentFile, line, col, "if else branch produced nil Go AST")
-	}
+	elseCode, elseType := elseResult.Expr, elseResult.Type
 
 	resultType := expected
 	if resultType == "" {
@@ -54,43 +49,32 @@ func (g *gen) translateIf(n *IfExpr, ctx *egCtx, expected string) (ast.Expr, str
 	}
 	if resultType == "" || resultType == "any" || isUnitGoType(resultType) {
 		// Statement form: wrap in IIFE so both branches are expressions
-		thenStmt := stmtForExpr(n.Then, thenCode, thenType)
-		if exprStmt, ok := thenStmt.(*ast.ExprStmt); ok && isNilASTExpr(exprStmt.X) {
-			line, col := common.NodePos(n.Then)
-			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "if then branch statement produced nil Go AST")
+		thenStmts := append([]ast.Stmt{}, thenResult.Stmts...)
+		if thenCode != nil {
+			thenStmts = append(thenStmts, stmtForExpr(n.Then, thenCode, thenType))
 		}
+		thenStmt := &ast.BlockStmt{List: thenStmts}
 		ifStmt := &ast.IfStmt{
 			Cond: cond,
-			Body: &ast.BlockStmt{List: []ast.Stmt{thenStmt}},
+			Body: thenStmt,
 		}
 		if _, isUnitElse := n.Else.(*UnitLitExpr); elseCode != nil && !isUnitElse {
-			elseStmt := stmtForExpr(n.Else, elseCode, elseType)
-			if exprStmt, ok := elseStmt.(*ast.ExprStmt); ok && isNilASTExpr(exprStmt.X) {
-				line, col := common.NodePos(n.Else)
-				return nil, "", common.ErrorAtPos(g.currentFile, line, col, "if else branch statement produced nil Go AST")
+			elseStmts := append([]ast.Stmt{}, elseResult.Stmts...)
+			if elseCode != nil {
+				elseStmts = append(elseStmts, stmtForExpr(n.Else, elseCode, elseType))
 			}
-			ifStmt.Else = &ast.BlockStmt{List: []ast.Stmt{elseStmt}}
+			elseStmt := &ast.BlockStmt{List: elseStmts}
+			ifStmt.Else = elseStmt
 		}
-		fn := astFuncLit(nil, nil, &ast.BlockStmt{List: []ast.Stmt{ifStmt}})
-		return &ast.CallExpr{Fun: fn}, "", nil
+		return translatedExpr{Stmts: []ast.Stmt{ifStmt}}, nil
 	}
-	// Expression form: wrap in IIFE returning resultType
-	fn := &ast.FuncLit{
-		Type: &ast.FuncType{
-			Params:  &ast.FieldList{},
-			Results: &ast.FieldList{List: []*ast.Field{{Type: ast.NewIdent(resultType)}}},
-		},
-		Body: &ast.BlockStmt{
-			List: []ast.Stmt{
-				&ast.IfStmt{
-					Cond: cond,
-					Body: &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{Results: []ast.Expr{thenCode}}}},
-					Else: &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{Results: []ast.Expr{elseCode}}}},
-				},
-			},
-		},
+	g.localSeq++
+	tmp := "expr_" + strconv.Itoa(g.localSeq)
+	ifStmt := &ast.IfStmt{Cond: cond,
+		Body: &ast.BlockStmt{List: append(thenResult.Stmts, &ast.ReturnStmt{Results: []ast.Expr{thenCode}})},
+		Else: &ast.BlockStmt{List: append(elseResult.Stmts, &ast.ReturnStmt{Results: []ast.Expr{elseCode}})},
 	}
-	return &ast.CallExpr{Fun: fn}, resultType, nil
+	return translatedExpr{Expr: ast.NewIdent(tmp), Type: resultType, Stmts: append([]ast.Stmt{&ast.DeclStmt{Decl: &ast.GenDecl{Tok: token.VAR, Specs: []ast.Spec{&ast.ValueSpec{Names: []*ast.Ident{ast.NewIdent(tmp)}, Type: g.goTypeExprFromString(resultType)}}}}}, renameIIFEReturns([]ast.Stmt{ifStmt}, tmp)...)}, nil
 }
 
 func (g *gen) translateIfStmt(n *IfExpr, ctx *egCtx, returnExpected string, retTypes []string) (*ast.IfStmt, error) {
@@ -125,6 +109,27 @@ func (g *gen) exprStmtBlock(e Expr, ctx *egCtx, returnExpected string, retTypes 
 		}
 		return &ast.BlockStmt{List: stmts}, nil
 	}
+	if whileExpr, ok := e.(*WhileExpr); ok {
+		forStmt, err := g.translateWhileFor(whileExpr, ctx)
+		if err != nil {
+			return nil, err
+		}
+		return &ast.BlockStmt{List: []ast.Stmt{forStmt}}, nil
+	}
+	if ifExpr, ok := e.(*IfExpr); ok {
+		ifStmt, err := g.translateIfStmt(ifExpr, ctx, "", nil)
+		if err != nil {
+			return nil, err
+		}
+		return &ast.BlockStmt{List: []ast.Stmt{ifStmt}}, nil
+	}
+	if switchExpr, ok := e.(*SwitchExpr); ok {
+		translated, err := g.translateExprResult(switchExpr, ctx, "")
+		if err != nil {
+			return nil, err
+		}
+		return &ast.BlockStmt{List: translated.Stmts}, nil
+	}
 	code, typ, err := g.translateExpr(e, ctx, "")
 	if err != nil {
 		return nil, err
@@ -137,13 +142,14 @@ func (g *gen) exprStmtBlock(e Expr, ctx *egCtx, returnExpected string, retTypes 
 }
 
 // translateSwitch handles switch expressions.
-func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (ast.Expr, string, error) {
-	if isUnitGoType(expected) {
+func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (translatedExpr, error) {
+	statementForm := isUnitGoType(expected)
+	if statementForm {
 		expected = ""
 	}
 	target, ttype, err := g.translateExpr(n.Target, ctx, "")
 	if err != nil {
-		return nil, "", err
+		return translatedExpr{}, err
 	}
 	if inferred := g.inferredType(n.Target); inferred != "" && !containsGeneratedTypeVar(inferred) {
 		ttype = inferred
@@ -151,9 +157,19 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (ast.E
 	ttype = refineSwitchTargetTypeFromCases(ttype, n.Cases)
 	if isNilASTExpr(target) {
 		line, col := common.NodePos(n.Target)
-		return nil, "", common.ErrorAtPos(g.currentFile, line, col, "switch target produced nil Go AST")
+		return translatedExpr{}, common.ErrorAtPos(g.currentFile, line, col, "switch target produced nil Go AST")
 	}
 	_, _ = target, ttype
+	if !statementForm {
+		for _, c := range n.Cases {
+			if typ := switchBodyType(c.Body, g, ctx); typ != "" {
+				if expected == "" || !sameSwitchResultType(expected, typ, g) {
+					expected = typ
+				}
+				break
+			}
+		}
+	}
 
 	lastIsWildcard := false
 	if len(n.Cases) > 0 {
@@ -163,40 +179,46 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (ast.E
 	}
 
 	var tail ast.Stmt
+	caseBody := func(body Expr, bodyCtx *egCtx) (*ast.BlockStmt, ast.Expr, error) {
+		translated, err := g.translateExprResult(body, bodyCtx, expected)
+		if err != nil {
+			return nil, nil, err
+		}
+		if expected == "" || isUnitGoType(expected) {
+			if translated.Expr != nil && !isNilASTExpr(translated.Expr) {
+				translated.Stmts = append(translated.Stmts, stmtForExpr(body, translated.Expr, translated.Type))
+			}
+			return &ast.BlockStmt{List: translated.Stmts}, nil, nil
+		}
+		if translated.Expr == nil || isNilASTExpr(translated.Expr) {
+			return nil, nil, common.ErrorAtPos(g.currentFile, 0, 0, "switch case body produced nil Go AST")
+		}
+		stmts := append([]ast.Stmt{}, translated.Stmts...)
+		stmts = append(stmts, &ast.ReturnStmt{Results: []ast.Expr{translated.Expr}})
+		return &ast.BlockStmt{List: stmts}, nil, nil
+	}
 	for i := len(n.Cases) - 1; i >= 0; i-- {
 		c := n.Cases[i]
 		if _, ok := c.Pattern.(*WildcardPattern); ok {
-			code, _, err := g.translateExpr(c.Body, ctx.child(), expected)
+			bodyBlock, code, err := caseBody(c.Body, ctx.child())
 			if err != nil {
-				return nil, "", err
+				return translatedExpr{}, err
 			}
-			if isNilASTExpr(code) {
-				line, col := common.NodePos(c.Body)
-				return nil, "", common.ErrorAtPos(g.currentFile, line, col, "switch wildcard case body produced nil Go AST")
-			}
-			if expected == "" {
-				tail = stmtForExpr(c.Body, code, "")
-			} else {
-				tail = &ast.ReturnStmt{Results: []ast.Expr{code}}
+			tail = bodyBlock
+			if code != nil {
+				tail = stmtForExpr(c.Body, code, expected)
 			}
 			continue
 		}
 		if lit, ok := c.Pattern.(*LiteralPattern); ok {
 			patExpr := litToExpr(lit)
 			child := ctx.child()
-			code, _, err := g.translateExpr(c.Body, child, expected)
+			bodyBlock, code, err := caseBody(c.Body, child)
 			if err != nil {
-				return nil, "", err
+				return translatedExpr{}, err
 			}
-			if isNilASTExpr(code) {
-				line, col := common.NodePos(c.Body)
-				return nil, "", common.ErrorAtPos(g.currentFile, line, col, "switch literal case body produced nil Go AST")
-			}
-			var bodyBlock *ast.BlockStmt
-			if expected == "" {
-				bodyBlock = &ast.BlockStmt{List: []ast.Stmt{stmtForExpr(c.Body, code, "")}}
-			} else {
-				bodyBlock = &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{Results: []ast.Expr{code}}}}
+			if code != nil {
+				bodyBlock = &ast.BlockStmt{List: []ast.Stmt{stmtForExpr(c.Body, code, expected)}}
 			}
 			cond := &ast.BinaryExpr{X: target, Op: token.EQL, Y: patExpr}
 			ifStmt := &ast.IfStmt{Cond: cond, Body: bodyBlock}
@@ -279,19 +301,12 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (ast.E
 				}
 				refinePatternBindingTypesFromBody(child, vp.Args, c.Body)
 			}
-			code, _, err := g.translateExpr(c.Body, child, expected)
+			bodyBlock, code, err := caseBody(c.Body, child)
 			if err != nil {
-				return nil, "", err
+				return translatedExpr{}, err
 			}
-			if isNilASTExpr(code) {
-				line, col := common.NodePos(c.Body)
-				return nil, "", common.ErrorAtPos(g.currentFile, line, col, "switch variant case body produced nil Go AST")
-			}
-			var bodyBlock *ast.BlockStmt
-			if expected == "" {
-				bodyBlock = &ast.BlockStmt{List: []ast.Stmt{stmtForExpr(c.Body, code, "")}}
-			} else {
-				bodyBlock = &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{Results: []ast.Expr{code}}}}
+			if code != nil {
+				bodyBlock = &ast.BlockStmt{List: []ast.Stmt{stmtForExpr(c.Body, code, expected)}}
 			}
 			ifStmt := &ast.IfStmt{
 				Init: &ast.AssignStmt{
@@ -314,22 +329,50 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (ast.E
 	}
 	_ = lastIsWildcard
 	if tail == nil {
-		return ast.NewIdent("_"), "", nil
+		return translatedExpr{Expr: ast.NewIdent("_")}, nil
 	}
 	if expected == "" || isUnitGoType(expected) {
-		// Wrap in IIFE since Stmt can't be returned as Expr
-		fn := astFuncLit(nil, nil, &ast.BlockStmt{List: []ast.Stmt{tail}})
-		return &ast.CallExpr{Fun: fn}, "", nil
+		return translatedExpr{Stmts: []ast.Stmt{tail}}, nil
 	}
-	// Wrap in IIFE for expression form
-	fn := &ast.FuncLit{
-		Type: &ast.FuncType{
-			Params:  &ast.FieldList{},
-			Results: &ast.FieldList{List: []*ast.Field{{Type: ast.NewIdent(expected)}}},
-		},
-		Body: &ast.BlockStmt{List: []ast.Stmt{tail}},
+	g.localSeq++
+	tmp := "expr_" + strconv.Itoa(g.localSeq)
+	return translatedExpr{
+		Expr: ast.NewIdent(tmp), Type: expected,
+		Stmts: append([]ast.Stmt{&ast.DeclStmt{Decl: &ast.GenDecl{Tok: token.VAR, Specs: []ast.Spec{&ast.ValueSpec{
+			Names: []*ast.Ident{ast.NewIdent(tmp)}, Type: g.goTypeExprFromString(expected),
+		}}}}}, renameIIFEReturns([]ast.Stmt{tail}, tmp)...),
+	}, nil
+}
+
+func switchBodyType(body Expr, g *gen, ctx *egCtx) string {
+	// A case block is an expression in its own right. Its result is its final
+	// expression, rather than the return type expected by an enclosing callback.
+	if block, ok := body.(*BlockExpr); ok {
+		if len(block.Stmts) == 0 {
+			return ""
+		}
+		if last, ok := block.Stmts[len(block.Stmts)-1].(*ExprStmt); ok {
+			return switchBodyType(last.Expr, g, ctx)
+		}
+		return ""
 	}
-	return &ast.CallExpr{Fun: fn}, expected, nil
+	if inferred := g.inferredType(body); inferred != "" {
+		return inferred
+	}
+	if ifExpr, ok := body.(*IfExpr); ok {
+		if typ := switchBodyType(ifExpr.Then, g, ctx.child()); typ != "" {
+			return typ
+		}
+	}
+	_, typ, err := g.translateExpr(body, ctx.child(), "")
+	if err != nil {
+		return ""
+	}
+	return typ
+}
+
+func sameSwitchResultType(a, b string, g *gen) bool {
+	return reflect.DeepEqual(g.goTypeExprFromString(a), g.goTypeExprFromString(b))
 }
 
 func litToExpr(l *LiteralPattern) ast.Expr {
@@ -525,15 +568,12 @@ func literalGoType(e Expr) string {
 }
 
 // translateWhile handles while loops.
-func (g *gen) translateWhile(n *WhileExpr, ctx *egCtx) (ast.Expr, string, error) {
+func (g *gen) translateWhile(n *WhileExpr, ctx *egCtx) (translatedExpr, error) {
 	forStmt, err := g.translateWhileFor(n, ctx)
 	if err != nil {
-		return nil, "", err
+		return translatedExpr{}, err
 	}
-	// While is normally a statement.  Keep this fallback for expression
-	// contexts; statement callers flatten the ForStmt directly.
-	fn := astFuncLit(nil, nil, &ast.BlockStmt{List: []ast.Stmt{forStmt}})
-	return &ast.CallExpr{Fun: fn}, "", nil
+	return translatedExpr{Stmts: []ast.Stmt{forStmt}}, nil
 }
 
 func (g *gen) translateWhileFor(n *WhileExpr, ctx *egCtx) (*ast.ForStmt, error) {
@@ -580,10 +620,19 @@ func (g *gen) translateWhileStmt(stmt Stmt, ctx *egCtx, body *ast.BlockStmt) {
 				return
 			}
 		}
-		code, _, _ := g.translateExpr(s.Expr, ctx, "")
-		body.List = append(body.List, &ast.ExprStmt{X: code})
+		translated, err := g.translateExprResult(s.Expr, ctx, "")
+		if err != nil {
+			return
+		}
+		body.List = append(body.List, translated.Stmts...)
+		if translated.Expr != nil {
+			body.List = append(body.List, &ast.ExprStmt{X: translated.Expr})
+		}
 	case *LetStmt:
 		code, vtype, _ := g.translateExpr(s.Value, ctx, "")
+		if code == nil {
+			return
+		}
 		if s.Name == "_" {
 			body.List = append(body.List, &ast.ExprStmt{X: code})
 		} else {
@@ -594,6 +643,9 @@ func (g *gen) translateWhileStmt(stmt Stmt, ctx *egCtx, body *ast.BlockStmt) {
 		}
 	case *AssignStmt:
 		code, retType, _ := g.translateExpr(s.Value, ctx, "")
+		if code == nil {
+			return
+		}
 		actual := ctx.bindings[s.Name]
 		if retType != "" {
 			ctx.locals[actual] = retType
@@ -635,17 +687,21 @@ func (g *gen) translateFuncLit(n *FuncLitExpr, ctx *egCtx) (ast.Expr, string, er
 			Body: &ast.BlockStmt{List: stmts},
 		}, retType, nil
 	}
-	bodyCode, _, err := g.translateExpr(n.Body, child, retType)
+	bodyResult, err := g.translateExprResult(n.Body, child, retType)
 	if err != nil {
 		return nil, "", err
 	}
-	if bodyCode == nil {
+	bodyCode := bodyResult.Expr
+	if bodyCode == nil && retType != "" && !isUnitGoType(retType) {
 		line, col := common.NodePos(n.Body)
 		return nil, "", common.ErrorAtPos(g.currentFile, line, col, "function literal body produced nil Go AST")
 	}
-	body := &ast.BlockStmt{List: []ast.Stmt{&ast.ReturnStmt{Results: []ast.Expr{bodyCode}}}}
+	body := &ast.BlockStmt{List: append(bodyResult.Stmts, &ast.ReturnStmt{Results: []ast.Expr{bodyCode}})}
 	if retType == "" || isUnitGoType(retType) {
-		body = &ast.BlockStmt{List: []ast.Stmt{stmtForExpr(n.Body, bodyCode, "")}}
+		body = &ast.BlockStmt{List: bodyResult.Stmts}
+		if bodyCode != nil {
+			body.List = append(body.List, stmtForExpr(n.Body, bodyCode, ""))
+		}
 	}
 	return &ast.FuncLit{
 		Type: &ast.FuncType{

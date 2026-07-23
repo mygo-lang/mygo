@@ -35,89 +35,89 @@ func MygoIT4FromFN3IntGN3IntN6StringEM4From(value int) string {
 	return fmt.Sprint(value)
 }
 func MygoIT4FromFN6StringGN6StringN6ResultGN3IntN6StringEEM4From(value string) Result[int, string] {
-	return func() Result[int, string] {
-		if v_2, ok := func() Result[int, error] {
+	var expr_3 Result[int, string]
+	if v_2, ok := func() Result[int, error] {
+		__mygo_result_val, __mygo_result_err := strconv.Atoi(value)
+		if __mygo_result_err != nil {
+			return Err[int, error](__mygo_result_err)
+		}
+		return Ok[int, error](__mygo_result_val)
+	}().(ResultOk[int, error]); ok {
+		var expr_2 Result[int, string]
+		expr_2 = Ok[int, string](v_2.F0)
+		expr_3 = expr_2
+	} else {
+		if v_1, ok := func() Result[int, error] {
 			__mygo_result_val, __mygo_result_err := strconv.Atoi(value)
 			if __mygo_result_err != nil {
 				return Err[int, error](__mygo_result_err)
 			}
 			return Ok[int, error](__mygo_result_val)
-		}().(ResultOk[int, error]); ok {
-			return func() Result[int, string] {
-				return Ok[int, string](v_2.F0)
-			}()
+		}().(ResultErr[int, error]); ok {
+			var expr_1 Result[int, string]
+			expr_1 = Err[int, string](v_1.F0.Error())
+			expr_3 = expr_1
 		} else {
-			if v_1, ok := func() Result[int, error] {
-				__mygo_result_val, __mygo_result_err := strconv.Atoi(value)
-				if __mygo_result_err != nil {
-					return Err[int, error](__mygo_result_err)
-				}
-				return Ok[int, error](__mygo_result_val)
-			}().(ResultErr[int, error]); ok {
-				return func() Result[int, string] {
-					return Err[int, string](v_1.F0.Error())
-				}()
-			} else {
-				panic("unreachable")
-			}
+			panic("unreachable")
 		}
-	}()
+	}
+	return expr_3
 }
 func MygoIT4FromFN6StringGN6StringN6ResultGN5Int64N6StringEEM4From(value string) Result[int64, string] {
-	return func() Result[int64, string] {
-		if v_4, ok := func() Result[int64, error] {
+	var expr_6 Result[int64, string]
+	if v_4, ok := func() Result[int64, error] {
+		__mygo_result_val, __mygo_result_err := strconv.ParseInt(value, 10, 64)
+		if __mygo_result_err != nil {
+			return Err[int64, error](__mygo_result_err)
+		}
+		return Ok[int64, error](__mygo_result_val)
+	}().(ResultOk[int64, error]); ok {
+		var expr_5 Result[int64, string]
+		expr_5 = Ok[int64, string](v_4.F0)
+		expr_6 = expr_5
+	} else {
+		if v_3, ok := func() Result[int64, error] {
 			__mygo_result_val, __mygo_result_err := strconv.ParseInt(value, 10, 64)
 			if __mygo_result_err != nil {
 				return Err[int64, error](__mygo_result_err)
 			}
 			return Ok[int64, error](__mygo_result_val)
-		}().(ResultOk[int64, error]); ok {
-			return func() Result[int64, string] {
-				return Ok[int64, string](v_4.F0)
-			}()
+		}().(ResultErr[int64, error]); ok {
+			var expr_4 Result[int64, string]
+			expr_4 = Err[int64, string](v_3.F0.Error())
+			expr_6 = expr_4
 		} else {
-			if v_3, ok := func() Result[int64, error] {
-				__mygo_result_val, __mygo_result_err := strconv.ParseInt(value, 10, 64)
-				if __mygo_result_err != nil {
-					return Err[int64, error](__mygo_result_err)
-				}
-				return Ok[int64, error](__mygo_result_val)
-			}().(ResultErr[int64, error]); ok {
-				return func() Result[int64, string] {
-					return Err[int64, string](v_3.F0.Error())
-				}()
-			} else {
-				panic("unreachable")
-			}
+			panic("unreachable")
 		}
-	}()
+	}
+	return expr_6
 }
 func MygoIT4FromFN6StringGN6StringN6ResultGN7Float64N6StringEEM4From(value string) Result[float64, string] {
-	return func() Result[float64, string] {
-		if v_6, ok := func() Result[float64, error] {
+	var expr_9 Result[float64, string]
+	if v_6, ok := func() Result[float64, error] {
+		__mygo_result_val, __mygo_result_err := strconv.ParseFloat(value, 64)
+		if __mygo_result_err != nil {
+			return Err[float64, error](__mygo_result_err)
+		}
+		return Ok[float64, error](__mygo_result_val)
+	}().(ResultOk[float64, error]); ok {
+		var expr_8 Result[float64, string]
+		expr_8 = Ok[float64, string](v_6.F0)
+		expr_9 = expr_8
+	} else {
+		if v_5, ok := func() Result[float64, error] {
 			__mygo_result_val, __mygo_result_err := strconv.ParseFloat(value, 64)
 			if __mygo_result_err != nil {
 				return Err[float64, error](__mygo_result_err)
 			}
 			return Ok[float64, error](__mygo_result_val)
-		}().(ResultOk[float64, error]); ok {
-			return func() Result[float64, string] {
-				return Ok[float64, string](v_6.F0)
-			}()
+		}().(ResultErr[float64, error]); ok {
+			var expr_7 Result[float64, string]
+			expr_7 = Err[float64, string](v_5.F0.Error())
+			expr_9 = expr_7
 		} else {
-			if v_5, ok := func() Result[float64, error] {
-				__mygo_result_val, __mygo_result_err := strconv.ParseFloat(value, 64)
-				if __mygo_result_err != nil {
-					return Err[float64, error](__mygo_result_err)
-				}
-				return Ok[float64, error](__mygo_result_val)
-			}().(ResultErr[float64, error]); ok {
-				return func() Result[float64, string] {
-					return Err[float64, string](v_5.F0.Error())
-				}()
-			} else {
-				panic("unreachable")
-			}
+			panic("unreachable")
 		}
-	}()
+	}
+	return expr_9
 }

@@ -1111,7 +1111,7 @@ func TestCompileDirSupportsRefAndResultTypes(t *testing.T) {
 		"Item Option[*Node]",
 		"func use_ref(node *Node) int {",
 		"func describe(ok bool) Result[string, string] {",
-		"return Ok[string, string](\"yes\")",
+		"expr_1 = Ok[string, string](\"yes\")",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -1145,8 +1145,8 @@ func TestCompileDirSupportsOptionOfRefTypes(t *testing.T) {
 		"type Holder struct {",
 		"Item Option[*Node]",
 		"func maybe_node(ok bool, node *Node) Option[*Node] {",
-		"return Some[*Node](node)",
-		"return None[*Node]()",
+		"expr_1 = Some[*Node](node)",
+		"expr_1 = None[*Node]()",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -1198,8 +1198,8 @@ func TestCompileDirSupportsRefNew(t *testing.T) {
 	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"func maybe_node(ok bool, node Node) Option[*Node] {",
-		"return Some[*Node](&node)",
-		"return None[*Node]()",
+		"expr_1 = Some[*Node](&node)",
+		"expr_1 = None[*Node]()",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -1328,8 +1328,8 @@ func TestCompileDirSupportsResultOfRefTypes(t *testing.T) {
 	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		"func lookup(ok bool, node *Node) Result[*Node, string] {",
-		"return Ok[*Node, string](node)",
-		"return Err[*Node, string](\"missing\")",
+		"expr_1 = Ok[*Node, string](node)",
+		"expr_1 = Err[*Node, string](\"missing\")",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -1361,9 +1361,9 @@ func TestCompileDirSupportsIfExpressionForms(t *testing.T) {
 	for _, want := range []string{
 		"func compact(ok bool) int {",
 		"if ok {",
-		"return 1",
+		"expr_1 = 1",
 		"} else {",
-		"return 2",
+		"expr_1 = 2",
 		"func block(ok bool) int {",
 	} {
 		if !strings.Contains(got, want) {

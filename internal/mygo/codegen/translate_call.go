@@ -973,6 +973,8 @@ func mygoSigTypeToGo(typ string) string {
 		return "float64"
 	case "Any":
 		return "any"
+	case "Unit", "()":
+		return "struct{}"
 	}
 	base, args := splitTypeArgs(typ)
 	switch base {

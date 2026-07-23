@@ -47,123 +47,123 @@ func Err[A any, E any](a0 E) Result[A, E] {
 	return ResultErr[A, E]{F0: a0}
 }
 func MygoIN6ResultM8ToOption[A any, E any](res Result[A, E]) Option[A] {
-	return func() Option[A] {
-		if v_44, ok := res.(ResultOk[A, E]); ok {
-			return func() Option[A] {
-				return Some[A](v_44.F0)
-			}()
+	var expr_71 Option[A]
+	if v_44, ok := res.(ResultOk[A, E]); ok {
+		var expr_70 Option[A]
+		expr_70 = Some[A](v_44.F0)
+		expr_71 = expr_70
+	} else {
+		if _, ok := res.(ResultErr[A, E]); ok {
+			var expr_69 Option[A]
+			expr_69 = None[A]()
+			expr_71 = expr_69
 		} else {
-			if _, ok := res.(ResultErr[A, E]); ok {
-				return func() Option[A] {
-					return None[A]()
-				}()
-			} else {
-				panic("unreachable")
-			}
+			panic("unreachable")
 		}
-	}()
+	}
+	return expr_71
 }
 func MygoIN6ResultM7Flatten[A any, E any](res Result[Result[A, E], E]) Result[A, E] {
-	return func() Result[A, E] {
-		if v_46, ok := res.(ResultOk[Result[A, E], E]); ok {
-			return func() Result[A, E] {
-				return v_46.F0
-			}()
+	var expr_74 Result[A, E]
+	if v_46, ok := res.(ResultOk[Result[A, E], E]); ok {
+		var expr_73 Result[A, E]
+		expr_73 = v_46.F0
+		expr_74 = expr_73
+	} else {
+		if v_45, ok := res.(ResultErr[Result[A, E], E]); ok {
+			var expr_72 Result[A, E]
+			expr_72 = Err[A, E](v_45.F0)
+			expr_74 = expr_72
 		} else {
-			if v_45, ok := res.(ResultErr[Result[A, E], E]); ok {
-				return func() Result[A, E] {
-					return Err[A, E](v_45.F0)
-				}()
-			} else {
-				panic("unreachable")
-			}
+			panic("unreachable")
 		}
-	}()
+	}
+	return expr_74
 }
 func MygoIT2EqFN8ResultEqGN1AN1EEGN6ResultGN1AN1EEEM6Equals[A any, E any](left Result[A, E], right Result[A, E], EqualsFn func(A, A) bool, EqualsFn1 func(E, E) bool) bool {
-	return func() bool {
-		if v_50, ok := left.(ResultOk[A, E]); ok {
-			return func() bool {
-				return func() bool {
-					if v_52, ok := right.(ResultOk[A, E]); ok {
-						return func() bool {
-							return EqualsFn(v_50.F0, v_52.F0)
-						}()
-					} else {
-						if _, ok := right.(ResultErr[A, E]); ok {
-							return func() bool {
-								return false
-							}()
-						} else {
-							panic("unreachable")
-						}
-					}
-				}()
-			}()
+	var expr_83 bool
+	if v_50, ok := left.(ResultOk[A, E]); ok {
+		var expr_82 bool
+		var expr_81 bool
+		if v_52, ok := right.(ResultOk[A, E]); ok {
+			var expr_80 bool
+			expr_80 = EqualsFn(v_50.F0, v_52.F0)
+			expr_81 = expr_80
 		} else {
-			if v_47, ok := left.(ResultErr[A, E]); ok {
-				return func() bool {
-					return func() bool {
-						if _, ok := right.(ResultOk[A, E]); ok {
-							return func() bool {
-								return false
-							}()
-						} else {
-							if v_48, ok := right.(ResultErr[A, E]); ok {
-								return func() bool {
-									return EqualsFn1(v_47.F0, v_48.F0)
-								}()
-							} else {
-								panic("unreachable")
-							}
-						}
-					}()
-				}()
+			if _, ok := right.(ResultErr[A, E]); ok {
+				var expr_79 bool
+				expr_79 = false
+				expr_81 = expr_79
 			} else {
 				panic("unreachable")
 			}
 		}
-	}()
+		expr_82 = expr_81
+		expr_83 = expr_82
+	} else {
+		if v_47, ok := left.(ResultErr[A, E]); ok {
+			var expr_78 bool
+			var expr_77 bool
+			if _, ok := right.(ResultOk[A, E]); ok {
+				var expr_76 bool
+				expr_76 = false
+				expr_77 = expr_76
+			} else {
+				if v_48, ok := right.(ResultErr[A, E]); ok {
+					var expr_75 bool
+					expr_75 = EqualsFn1(v_47.F0, v_48.F0)
+					expr_77 = expr_75
+				} else {
+					panic("unreachable")
+				}
+			}
+			expr_78 = expr_77
+			expr_83 = expr_78
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_83
 }
 func OptionToResult[A any, E any](opt Option[A], errVal E) Result[A, E] {
-	return func() Result[A, E] {
-		if v_54, ok := opt.(OptionSome[A]); ok {
-			return func() Result[A, E] {
-				return Ok[A, E](v_54.F0)
-			}()
+	var expr_86 Result[A, E]
+	if v_54, ok := opt.(OptionSome[A]); ok {
+		var expr_85 Result[A, E]
+		expr_85 = Ok[A, E](v_54.F0)
+		expr_86 = expr_85
+	} else {
+		if _, ok := opt.(OptionNone[A]); ok {
+			var expr_84 Result[A, E]
+			expr_84 = Err[A, E](errVal)
+			expr_86 = expr_84
 		} else {
-			if _, ok := opt.(OptionNone[A]); ok {
-				return func() Result[A, E] {
-					return Err[A, E](errVal)
-				}()
-			} else {
-				panic("unreachable")
-			}
+			panic("unreachable")
 		}
-	}()
+	}
+	return expr_86
 }
 func OptionFilter[A any](opt Option[A], fn func(A) bool) Option[A] {
-	return func() Option[A] {
-		if v_56, ok := opt.(OptionSome[A]); ok {
-			return func() Option[A] {
-				return func() Option[A] {
-					if fn(v_56.F0) {
-						return opt
-					} else {
-						return None[A]()
-					}
-				}()
-			}()
+	var expr_90 Option[A]
+	if v_56, ok := opt.(OptionSome[A]); ok {
+		var expr_89 Option[A]
+		var expr_88 Option[A]
+		if fn(v_56.F0) {
+			expr_88 = opt
 		} else {
-			if _, ok := opt.(OptionNone[A]); ok {
-				return func() Option[A] {
-					return None[A]()
-				}()
-			} else {
-				panic("unreachable")
-			}
+			expr_88 = None[A]()
 		}
-	}()
+		expr_89 = expr_88
+		expr_90 = expr_89
+	} else {
+		if _, ok := opt.(OptionNone[A]); ok {
+			var expr_87 Option[A]
+			expr_87 = None[A]()
+			expr_90 = expr_87
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_90
 }
 func Panic(msg string) {
 	panic(msg)

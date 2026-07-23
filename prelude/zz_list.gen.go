@@ -21,207 +21,137 @@ func MygoIN4ListM4Tail[T any](self List[T]) Option[List[T]] {
 	})
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Each[T any](c List[T], fn func(T)) {
-	func() {
-		var current_1 *List[T] = &c
-		var done_2 bool = false
-		func() {
-			for !done_2 {
-				fn(current_1.head)
-				func() {
-					if _, ok := current_1.tail.(OptionNone[*List[T]]); ok {
-						func() {
-							done_2 = true
-						}()
-					} else {
-						if v_7, ok := current_1.tail.(OptionSome[*List[T]]); ok {
-							func() {
-								current_1 = v_7.F0
-							}()
-						}
-					}
-				}()
+	var current_10 *List[T] = &c
+	var done_11 bool = false
+	for !done_11 {
+		fn(current_10.head)
+		if _, ok := current_10.tail.(OptionNone[*List[T]]); ok {
+			done_11 = true
+		} else {
+			if v_7, ok := current_10.tail.(OptionSome[*List[T]]); ok {
+				current_10 = v_7.F0
 			}
-		}()
-		return
-	}()
+		}
+	}
+	return
 	return
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Len[T any](c List[T]) int {
-	return func() int {
-		var count_3 int = 0
-		var current_4 *List[T] = &c
-		var done_5 bool = false
-		func() {
-			for !done_5 {
-				count_3 = count_3 + 1
-				func() {
-					if _, ok := current_4.tail.(OptionNone[*List[T]]); ok {
-						func() {
-							done_5 = true
-						}()
-					} else {
-						if v_9, ok := current_4.tail.(OptionSome[*List[T]]); ok {
-							func() {
-								current_4 = v_9.F0
-							}()
-						}
-					}
-				}()
+	var expr_15 int
+	var count_12 int = 0
+	var current_13 *List[T] = &c
+	var done_14 bool = false
+	for !done_14 {
+		count_12 = count_12 + 1
+		if _, ok := current_13.tail.(OptionNone[*List[T]]); ok {
+			done_14 = true
+		} else {
+			if v_9, ok := current_13.tail.(OptionSome[*List[T]]); ok {
+				current_13 = v_9.F0
 			}
-		}()
-		return count_3
-	}()
+		}
+	}
+	expr_15 = count_12
+	return expr_15
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Map[T any, B any](c List[T], fn func(T) B) List[B] {
-	return func() List[B] {
-		var done_6 bool = false
-		var headVal_7 B = fn(c.head)
-		var result_8 List[B] = List[B]{head: headVal_7, tail: None[*List[B]]()}
-		var current_9 *List[T] = &c
-		func() {
-			for !done_6 {
-				func() {
-					if _, ok := current_9.tail.(OptionNone[*List[T]]); ok {
-						func() {
-							done_6 = true
-						}()
-					} else {
-						if v_11, ok := current_9.tail.(OptionSome[*List[T]]); ok {
-							func() {
-								current_9 = v_11.F0
-								result_8 = List[B]{head: fn(current_9.head), tail: Some[*List[B]](&result_8)}
-							}()
-						}
-					}
-				}()
+	var expr_20 List[B]
+	var done_16 bool = false
+	var headVal_17 B = fn(c.head)
+	var result_18 List[B] = List[B]{head: headVal_17, tail: None[*List[B]]()}
+	var current_19 *List[T] = &c
+	for !done_16 {
+		if _, ok := current_19.tail.(OptionNone[*List[T]]); ok {
+			done_16 = true
+		} else {
+			if v_11, ok := current_19.tail.(OptionSome[*List[T]]); ok {
+				current_19 = v_11.F0
+				result_18 = List[B]{head: fn(current_19.head), tail: Some[*List[B]](&result_18)}
 			}
-		}()
-		return result_8
-	}()
+		}
+	}
+	expr_20 = result_18
+	return expr_20
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM6Filter[T any](c List[T], fn func(T) bool) List[T] {
-	return func() List[T] {
-		var done_10 bool = false
-		var current_11 *List[T] = &c
-		var result_12 List[T] = List[T]{head: current_11.head, tail: None[*List[T]]()}
-		func() {
-			for !done_10 {
-				func() {
-					if fn(current_11.head) {
-						func() {
-							result_12 = List[T]{head: current_11.head, tail: Some[*List[T]](&result_12)}
-						}()
-					}
-				}()
-				func() {
-					if _, ok := current_11.tail.(OptionNone[*List[T]]); ok {
-						func() {
-							done_10 = true
-						}()
-					} else {
-						if v_13, ok := current_11.tail.(OptionSome[*List[T]]); ok {
-							func() {
-								current_11 = v_13.F0
-							}()
-						}
-					}
-				}()
+	var expr_24 List[T]
+	var done_21 bool = false
+	var current_22 *List[T] = &c
+	var result_23 List[T] = List[T]{head: current_22.head, tail: None[*List[T]]()}
+	for !done_21 {
+		if fn(current_22.head) {
+			result_23 = List[T]{head: current_22.head, tail: Some[*List[T]](&result_23)}
+		}
+		if _, ok := current_22.tail.(OptionNone[*List[T]]); ok {
+			done_21 = true
+		} else {
+			if v_13, ok := current_22.tail.(OptionSome[*List[T]]); ok {
+				current_22 = v_13.F0
 			}
-		}()
-		return result_12
-	}()
+		}
+	}
+	expr_24 = result_23
+	return expr_24
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Fold[T any, B any](c List[T], initial B, fn func(B, T) B) B {
-	return func() B {
-		var acc_13 B = initial
-		var done_14 bool = false
-		var current_15 *List[T] = &c
-		func() {
-			for !done_14 {
-				acc_13 = fn(acc_13, current_15.head)
-				func() {
-					if _, ok := current_15.tail.(OptionNone[*List[T]]); ok {
-						func() {
-							done_14 = true
-						}()
-					} else {
-						if v_15, ok := current_15.tail.(OptionSome[*List[T]]); ok {
-							func() {
-								current_15 = v_15.F0
-							}()
-						}
-					}
-				}()
+	var expr_28 B
+	var acc_25 B = initial
+	var done_26 bool = false
+	var current_27 *List[T] = &c
+	for !done_26 {
+		acc_25 = fn(acc_25, current_27.head)
+		if _, ok := current_27.tail.(OptionNone[*List[T]]); ok {
+			done_26 = true
+		} else {
+			if v_15, ok := current_27.tail.(OptionSome[*List[T]]); ok {
+				current_27 = v_15.F0
 			}
-		}()
-		return acc_13
-	}()
+		}
+	}
+	expr_28 = acc_25
+	return expr_28
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Find[T any](c List[T], fn func(T) bool) Option[*T] {
-	return func() Option[*T] {
-		var done_16 bool = false
-		var result_17 Option[*T] = None[*T]()
-		var current_18 *List[T] = &c
-		func() {
-			for !done_16 {
-				func() {
-					if fn(current_18.head) {
-						func() {
-							result_17 = Some[*T](&current_18.head)
-							done_16 = true
-						}()
-					} else {
-						func() {
-							if _, ok := current_18.tail.(OptionNone[*List[T]]); ok {
-								func() {
-									done_16 = true
-								}()
-							} else {
-								if v_17, ok := current_18.tail.(OptionSome[*List[T]]); ok {
-									func() {
-										current_18 = v_17.F0
-									}()
-								}
-							}
-						}()
-					}
-				}()
+	var expr_32 Option[*T]
+	var done_29 bool = false
+	var result_30 Option[*T] = None[*T]()
+	var current_31 *List[T] = &c
+	for !done_29 {
+		if fn(current_31.head) {
+			result_30 = Some[*T](&current_31.head)
+			done_29 = true
+		} else {
+			if _, ok := current_31.tail.(OptionNone[*List[T]]); ok {
+				done_29 = true
+			} else {
+				if v_17, ok := current_31.tail.(OptionSome[*List[T]]); ok {
+					current_31 = v_17.F0
+				}
 			}
-		}()
-		return result_17
-	}()
+		}
+	}
+	expr_32 = result_30
+	return expr_32
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM8Contains[T any](c List[T], item T, EqualsFn func(T, T) bool) bool {
-	return func() bool {
-		var done_19 bool = false
-		var result_20 bool = false
-		var current_21 *List[T] = &c
-		func() {
-			for !done_19 {
-				func() {
-					if EqualsFn(current_21.head, item) {
-						func() {
-							result_20 = true
-							done_19 = true
-						}()
-					} else {
-						func() {
-							if _, ok := current_21.tail.(OptionNone[*List[T]]); ok {
-								func() {
-									done_19 = true
-								}()
-							} else {
-								if v_19, ok := current_21.tail.(OptionSome[*List[T]]); ok {
-									func() {
-										current_21 = v_19.F0
-									}()
-								}
-							}
-						}()
-					}
-				}()
+	var expr_36 bool
+	var done_33 bool = false
+	var result_34 bool = false
+	var current_35 *List[T] = &c
+	for !done_33 {
+		if EqualsFn(current_35.head, item) {
+			result_34 = true
+			done_33 = true
+		} else {
+			if _, ok := current_35.tail.(OptionNone[*List[T]]); ok {
+				done_33 = true
+			} else {
+				if v_19, ok := current_35.tail.(OptionSome[*List[T]]); ok {
+					current_35 = v_19.F0
+				}
 			}
-		}()
-		return result_20
-	}()
+		}
+	}
+	expr_36 = result_34
+	return expr_36
 }

@@ -79,120 +79,121 @@ func JsonValueJObjectCtor(a0 []struct {
 	return JsonValueJObject{F0: a0}
 }
 func MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(value JsonValue) string {
-	return func() string {
-		if _, ok := value.(JsonValueJNull); ok {
-			return func() string {
-				return "null"
-			}()
-		} else {
-			if v_5, ok := value.(JsonValueJBool); ok {
-				return func() string {
-					return func() string {
-						if v_5.F0 {
-							return "true"
-						} else {
-							return "false"
-						}
-					}()
-				}()
+	var expr_13 string
+	if _, ok := value.(JsonValueJNull); ok {
+		var expr_12 string
+		expr_12 = "null"
+		expr_13 = expr_12
+	} else {
+		if v_5, ok := value.(JsonValueJBool); ok {
+			var expr_11 string
+			var expr_10 string
+			if v_5.F0 {
+				expr_10 = "true"
 			} else {
-				if v_4, ok := value.(JsonValueJNumber); ok {
-					return func() string {
-						return MygoIT8ToStringFN7Float64GN7Float64EM8ToString(v_4.F0)
-					}()
+				expr_10 = "false"
+			}
+			expr_11 = expr_10
+			expr_13 = expr_11
+		} else {
+			if v_4, ok := value.(JsonValueJNumber); ok {
+				var expr_9 string
+				expr_9 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(v_4.F0)
+				expr_13 = expr_9
+			} else {
+				if v_3, ok := value.(JsonValueJString); ok {
+					var expr_8 string
+					expr_8 = "\"" + jsonEscape(v_3.F0) + "\""
+					expr_13 = expr_8
 				} else {
-					if v_3, ok := value.(JsonValueJString); ok {
-						return func() string {
-							return "\"" + jsonEscape(v_3.F0) + "\""
-						}()
+					if v_2, ok := value.(JsonValueJArray); ok {
+						var expr_7 string
+						parts_6 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_2.F0, func(v JsonValue) string {
+							return MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(v)
+						})
+						expr_7 = "[" + strings.Join(parts_6, ",") + "]"
+						expr_13 = expr_7
 					} else {
-						if v_2, ok := value.(JsonValueJArray); ok {
-							return func() string {
-								parts_5 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_2.F0, func(v JsonValue) string {
-									return MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(v)
-								})
-								return "[" + strings.Join(parts_5, ",") + "]"
-							}()
+						if v_1, ok := value.(JsonValueJObject); ok {
+							var expr_5 string
+							parts_4 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_1.F0, func(p struct {
+								F0 string
+								F1 JsonValue
+							}) string {
+								__tuple_1 := p
+								k_2 := __tuple_1.F0
+								v_3 := __tuple_1.F1
+								return "\"" + jsonEscape(k_2) + "\":" + MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(JsonValue(v_3))
+							})
+							expr_5 = "{" + strings.Join(parts_4, ",") + "}"
+							expr_13 = expr_5
 						} else {
-							if v_1, ok := value.(JsonValueJObject); ok {
-								return func() string {
-									parts_4 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_1.F0, func(p struct {
-										F0 string
-										F1 JsonValue
-									}) string {
-										__tuple_1 := p
-										k_2 := __tuple_1.F0
-										v_3 := __tuple_1.F1
-										return "\"" + jsonEscape(k_2) + "\":" + MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(JsonValue(v_3))
-									})
-									return "{" + strings.Join(parts_4, ",") + "}"
-								}()
-							} else {
-								panic("unreachable")
-							}
+							panic("unreachable")
 						}
 					}
 				}
 			}
 		}
-	}()
+	}
+	return expr_13
 }
 func jsonEscape(s string) string {
-	parts_14 := MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM4Fold(s, []string([]string{}), func(acc []string, r rune) []string {
-		escaped_13 := func() string {
-			if r == '"' {
-				return func() string {
-					return "\\\""
-				}()
+	parts_33 := MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM4Fold(s, []string([]string{}), func(acc []string, r rune) []string {
+		var expr_31 string
+		if r == '"' {
+			var expr_30 string
+			expr_30 = "\\\""
+			expr_31 = expr_30
+		} else {
+			if r == '\\' {
+				var expr_29 string
+				expr_29 = "\\\\\\\\"
+				expr_31 = expr_29
 			} else {
-				if r == '\\' {
-					return func() string {
-						return "\\\\\\\\"
-					}()
+				if r == '\b' {
+					var expr_28 string
+					expr_28 = "\\b"
+					expr_31 = expr_28
 				} else {
-					if r == '\b' {
-						return func() string {
-							return "\\b"
-						}()
+					if r == '\f' {
+						var expr_27 string
+						expr_27 = "\\f"
+						expr_31 = expr_27
 					} else {
-						if r == '\f' {
-							return func() string {
-								return "\\f"
-							}()
+						if r == '\n' {
+							var expr_26 string
+							expr_26 = "\\n"
+							expr_31 = expr_26
 						} else {
-							if r == '\n' {
-								return func() string {
-									return "\\n"
-								}()
+							if r == '\r' {
+								var expr_25 string
+								expr_25 = "\\r"
+								expr_31 = expr_25
 							} else {
-								if r == '\r' {
-									return func() string {
-										return "\\r"
-									}()
+								if r == '\t' {
+									var expr_24 string
+									expr_24 = "\\t"
+									expr_31 = expr_24
 								} else {
-									if r == '\t' {
-										return func() string {
-											return "\\t"
-										}()
-									} else {
-										return func() string {
-											return func() string {
-												if r < ' ' {
-													return func() string {
-														v_6 := int(r)
-														var hexChars_7 []rune = []rune{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
-														d0_8 := v_6 / 4096
-														d1_9 := (v_6 - d0_8*4096) / 256
-														d2_10 := (v_6 - d0_8*4096 - d1_9*256) / 16
-														d3_11 := v_6 - d0_8*4096 - d1_9*256 - d2_10*16
-														escapedRunes_12 := []rune{MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_7, d0_8), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_7, d1_9), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_7, d2_10), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_7, d3_11), '\x00')}
-														return "\\\\u" + MygoIN6StringM9FromRunes(escapedRunes_12)
-													}()
-												} else {
-													return MygoIN6StringM9FromRunes([]rune{r})
-												}
-											}()
-										}()
+									{
+										var expr_23 string
+										var expr_22 string
+										if r < ' ' {
+											var expr_21 string
+											v_14 := int(r)
+											var hexChars_15 []rune = []rune{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
+											d0_16 := v_14 / 4096
+											d1_17 := (v_14 - d0_16*4096) / 256
+											d2_18 := (v_14 - d0_16*4096 - d1_17*256) / 16
+											d3_19 := v_14 - d0_16*4096 - d1_17*256 - d2_18*16
+											escapedRunes_20 := []rune{MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_15, d0_16), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_15, d1_17), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_15, d2_18), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_15, d3_19), '\x00')}
+											expr_21 = "\\\\u" + MygoIN6StringM9FromRunes(escapedRunes_20)
+											expr_22 = expr_21
+										} else {
+											expr_22 = MygoIN6StringM9FromRunes([]rune{r})
+										}
+										expr_23 = expr_22
+										expr_31 = expr_23
 									}
 								}
 							}
@@ -200,16 +201,17 @@ func jsonEscape(s string) string {
 					}
 				}
 			}
-		}()
-		return MygoIN5SliceM6Append(acc, escaped_13)
+		}
+		escaped_32 := expr_31
+		return MygoIN5SliceM6Append(acc, escaped_32)
 	})
-	return strings.Join(parts_14, "")
+	return strings.Join(parts_33, "")
 }
 func ws[A any](p ps.Parser[A]) ps.Parser[A] {
-	sp_15 := ps.PMany(ps.PSatisfy(func(r rune) bool {
+	sp_34 := ps.PMany(ps.PSatisfy(func(r rune) bool {
 		return r == ' ' || r == '\t' || r == '\n' || r == '\r'
 	}, "whitespace"))
-	return ps.PBetween(sp_15, p, sp_15)
+	return ps.PBetween(sp_34, p, sp_34)
 }
 func pNull() ps.Parser[JsonValue] {
 	return ps.PMap(ps.PString("null"), func(_ string) JsonValue {
@@ -225,24 +227,44 @@ func pBool() ps.Parser[JsonValue] {
 }
 func pNumber() ps.Parser[JsonValue] {
 	return ps.Parser[JsonValue]{Run: func(state ps.State) ps.Reply[JsonValue] {
-		r1_16 := ps.PeekRune(state)
-		if !r1_16.Ok {
+		r1_35 := ps.PeekRune(state)
+		if !r1_35.Ok {
 			return ps.Reply[JsonValue]{Ok: false, Consumed: false, Value: Zero[JsonValue](), State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())}
 		}
-		curState_17 := state
-		var runes_18 []rune = []rune{}
-		rSign_19 := ps.PeekRune(curState_17)
-		if rSign_19.Ok && rSign_19.Value == '-' {
-			runes_18 = MygoIN5SliceM6Append(runes_18, '-')
-			curState_17 = ps.AdvanceRune(curState_17)
+		curState_36 := state
+		var runes_37 []rune = []rune{}
+		rSign_38 := ps.PeekRune(curState_36)
+		if rSign_38.Ok && rSign_38.Value == '-' {
+			runes_37 = MygoIN5SliceM6Append(runes_37, '-')
+			curState_36 = ps.AdvanceRune(curState_36)
 		}
-		rFirst_20 := ps.PeekRune(curState_17)
-		if !rFirst_20.Ok || rFirst_20.Value < '0' || rFirst_20.Value > '9' {
+		rFirst_39 := ps.PeekRune(curState_36)
+		if !rFirst_39.Ok || rFirst_39.Value < '0' || rFirst_39.Value > '9' {
 			return ps.Reply[JsonValue]{Ok: false, Consumed: false, Value: Zero[JsonValue](), State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())}
 		}
-		func() {
+		for true {
+			rn := ps.PeekRune(curState_36)
+			if !rn.Ok {
+				break
+			} else {
+			}
+			if rn.Value < '0' || rn.Value > '9' {
+				break
+			} else {
+			}
+			runes_37 = MygoIN5SliceM6Append(runes_37, rn.Value)
+			curState_36 = ps.AdvanceRune(curState_36)
+		}
+		rDot_40 := ps.PeekRune(curState_36)
+		if rDot_40.Ok && rDot_40.Value == '.' {
+			runes_37 = MygoIN5SliceM6Append(runes_37, '.')
+			curState_36 = ps.AdvanceRune(curState_36)
+			rFrac_41 := ps.PeekRune(curState_36)
+			if !rFrac_41.Ok || rFrac_41.Value < '0' || rFrac_41.Value > '9' {
+				return ps.Reply[JsonValue]{Ok: false, Consumed: false, Value: Zero[JsonValue](), State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())}
+			}
 			for true {
-				rn := ps.PeekRune(curState_17)
+				rn := ps.PeekRune(curState_36)
 				if !rn.Ok {
 					break
 				} else {
@@ -251,96 +273,70 @@ func pNumber() ps.Parser[JsonValue] {
 					break
 				} else {
 				}
-				runes_18 = MygoIN5SliceM6Append(runes_18, rn.Value)
-				curState_17 = ps.AdvanceRune(curState_17)
+				runes_37 = MygoIN5SliceM6Append(runes_37, rn.Value)
+				curState_36 = ps.AdvanceRune(curState_36)
 			}
-		}()
-		rDot_21 := ps.PeekRune(curState_17)
-		if rDot_21.Ok && rDot_21.Value == '.' {
-			runes_18 = MygoIN5SliceM6Append(runes_18, '.')
-			curState_17 = ps.AdvanceRune(curState_17)
-			rFrac_22 := ps.PeekRune(curState_17)
-			if !rFrac_22.Ok || rFrac_22.Value < '0' || rFrac_22.Value > '9' {
+		}
+		rExp_42 := ps.PeekRune(curState_36)
+		if rExp_42.Ok && (rExp_42.Value == 'e' || rExp_42.Value == 'E') {
+			runes_37 = MygoIN5SliceM6Append(runes_37, rExp_42.Value)
+			curState_36 = ps.AdvanceRune(curState_36)
+			rSign2_43 := ps.PeekRune(curState_36)
+			if rSign2_43.Ok && (rSign2_43.Value == '+' || rSign2_43.Value == '-') {
+				runes_37 = MygoIN5SliceM6Append(runes_37, rSign2_43.Value)
+				curState_36 = ps.AdvanceRune(curState_36)
+			}
+			rExpDig_44 := ps.PeekRune(curState_36)
+			if !rExpDig_44.Ok || rExpDig_44.Value < '0' || rExpDig_44.Value > '9' {
 				return ps.Reply[JsonValue]{Ok: false, Consumed: false, Value: Zero[JsonValue](), State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())}
 			}
-			func() {
-				for true {
-					rn := ps.PeekRune(curState_17)
-					if !rn.Ok {
-						break
-					} else {
-					}
-					if rn.Value < '0' || rn.Value > '9' {
-						break
-					} else {
-					}
-					runes_18 = MygoIN5SliceM6Append(runes_18, rn.Value)
-					curState_17 = ps.AdvanceRune(curState_17)
+			for true {
+				rn := ps.PeekRune(curState_36)
+				if !rn.Ok {
+					break
+				} else {
 				}
-			}()
-		}
-		rExp_23 := ps.PeekRune(curState_17)
-		if rExp_23.Ok && (rExp_23.Value == 'e' || rExp_23.Value == 'E') {
-			runes_18 = MygoIN5SliceM6Append(runes_18, rExp_23.Value)
-			curState_17 = ps.AdvanceRune(curState_17)
-			rSign2_24 := ps.PeekRune(curState_17)
-			if rSign2_24.Ok && (rSign2_24.Value == '+' || rSign2_24.Value == '-') {
-				runes_18 = MygoIN5SliceM6Append(runes_18, rSign2_24.Value)
-				curState_17 = ps.AdvanceRune(curState_17)
-			}
-			rExpDig_25 := ps.PeekRune(curState_17)
-			if !rExpDig_25.Ok || rExpDig_25.Value < '0' || rExpDig_25.Value > '9' {
-				return ps.Reply[JsonValue]{Ok: false, Consumed: false, Value: Zero[JsonValue](), State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())}
-			}
-			func() {
-				for true {
-					rn := ps.PeekRune(curState_17)
-					if !rn.Ok {
-						break
-					} else {
-					}
-					if rn.Value < '0' || rn.Value > '9' {
-						break
-					} else {
-					}
-					runes_18 = MygoIN5SliceM6Append(runes_18, rn.Value)
-					curState_17 = ps.AdvanceRune(curState_17)
+				if rn.Value < '0' || rn.Value > '9' {
+					break
+				} else {
 				}
-			}()
+				runes_37 = MygoIN5SliceM6Append(runes_37, rn.Value)
+				curState_36 = ps.AdvanceRune(curState_36)
+			}
 		}
-		numStr_26 := MygoIN6StringM9FromRunes(runes_18)
-		return func() ps.Reply[JsonValue] {
-			if v_8, ok := func() Result[float64, error] {
-				__mygo_result_val, __mygo_result_err := strconv.ParseFloat(numStr_26, 64)
+		numStr_45 := MygoIN6StringM9FromRunes(runes_37)
+		var expr_48 ps.Reply[JsonValue]
+		if v_8, ok := func() Result[float64, error] {
+			__mygo_result_val, __mygo_result_err := strconv.ParseFloat(numStr_45, 64)
+			if __mygo_result_err != nil {
+				return Err[float64, error](__mygo_result_err)
+			}
+			return Ok[float64, error](__mygo_result_val)
+		}().(ResultOk[float64, error]); ok {
+			var expr_47 ps.Reply[JsonValue]
+			expr_47 = ps.Reply[JsonValue]{Ok: true, Consumed: true, Value: JsonValueJNumberCtor(v_8.F0), State: curState_36, Error: ps.EmptyError(curState_36.Position)}
+			expr_48 = expr_47
+		} else {
+			if v_7, ok := func() Result[float64, error] {
+				__mygo_result_val, __mygo_result_err := strconv.ParseFloat(numStr_45, 64)
 				if __mygo_result_err != nil {
 					return Err[float64, error](__mygo_result_err)
 				}
 				return Ok[float64, error](__mygo_result_val)
-			}().(ResultOk[float64, error]); ok {
-				return func() ps.Reply[JsonValue] {
-					return ps.Reply[JsonValue]{Ok: true, Consumed: true, Value: JsonValueJNumberCtor(v_8.F0), State: curState_17, Error: ps.EmptyError(curState_17.Position)}
-				}()
+			}().(ResultErr[float64, error]); ok {
+				var expr_46 ps.Reply[JsonValue]
+				expr_46 = ps.Reply[JsonValue]{Ok: false, Consumed: true, Value: Zero[JsonValue](), State: curState_36, Error: ps.ErrorAt(state.Position, v_7.F0.Error(), ps.EmptyExpected())}
+				expr_48 = expr_46
 			} else {
-				if v_7, ok := func() Result[float64, error] {
-					__mygo_result_val, __mygo_result_err := strconv.ParseFloat(numStr_26, 64)
-					if __mygo_result_err != nil {
-						return Err[float64, error](__mygo_result_err)
-					}
-					return Ok[float64, error](__mygo_result_val)
-				}().(ResultErr[float64, error]); ok {
-					return func() ps.Reply[JsonValue] {
-						return ps.Reply[JsonValue]{Ok: false, Consumed: true, Value: Zero[JsonValue](), State: curState_17, Error: ps.ErrorAt(state.Position, v_7.F0.Error(), ps.EmptyExpected())}
-					}()
-				} else {
-					panic("unreachable")
-				}
+				panic("unreachable")
 			}
-		}()
+		}
+		return expr_48
 	}}
 }
 func pString() ps.Parser[JsonValue] {
-	pEscape_30 := func() ps.Parser[rune] {
-		pHexDigit_27 := ps.PSatisfy(func(r rune) bool {
+	pEscape_55 := func() ps.Parser[rune] {
+		pHexDigit_49 := ps.PSatisfy(func(r rune) bool {
 			return r >= '0' && r <= '9' || r >= 'a' && r <= 'f' || r >= 'A' && r <= 'F'
 		}, "hex digit")
 		return ps.PBind(ps.PChar('\\'), func(_ rune) ps.Parser[rune] {
@@ -361,29 +357,31 @@ func pString() ps.Parser[JsonValue] {
 			}), ps.PMap(ps.PChar('t'), func(_ rune) rune {
 				return '\t'
 			}), ps.PBind(ps.PChar('u'), func(_ rune) ps.Parser[rune] {
-				return ps.PBind(pHexDigit_27, func(d0 rune) ps.Parser[rune] {
-					return ps.PBind(pHexDigit_27, func(d1 rune) ps.Parser[rune] {
-						return ps.PBind(pHexDigit_27, func(d2 rune) ps.Parser[rune] {
-							return ps.PMap(pHexDigit_27, func(d3 rune) rune {
-								hexStr_28 := MygoIN6StringM9FromRunes([]rune{d0, d1, d2, d3})
-								result_29 := func() Result[int64, error] {
-									__mygo_result_val, __mygo_result_err := strconv.ParseInt(hexStr_28, 16, 32)
+				return ps.PBind(pHexDigit_49, func(d0 rune) ps.Parser[rune] {
+					return ps.PBind(pHexDigit_49, func(d1 rune) ps.Parser[rune] {
+						return ps.PBind(pHexDigit_49, func(d2 rune) ps.Parser[rune] {
+							return ps.PMap(pHexDigit_49, func(d3 rune) rune {
+								hexStr_50 := MygoIN6StringM9FromRunes([]rune{d0, d1, d2, d3})
+								result_51 := func() Result[int64, error] {
+									__mygo_result_val, __mygo_result_err := strconv.ParseInt(hexStr_50, 16, 32)
 									if __mygo_result_err != nil {
 										return Err[int64, error](__mygo_result_err)
 									}
 									return Ok[int64, error](__mygo_result_val)
 								}()
-								return func() rune {
-									if v_9, ok := result_29.(ResultOk[int64, error]); ok {
-										return func() rune {
-											return rune(v_9.F0)
-										}()
-									} else {
-										return func() rune {
-											return rune(0)
-										}()
+								var expr_54 rune
+								if v_9, ok := result_51.(ResultOk[int64, error]); ok {
+									var expr_53 rune
+									expr_53 = rune(v_9.F0)
+									expr_54 = expr_53
+								} else {
+									{
+										var expr_52 rune
+										expr_52 = rune(0)
+										expr_54 = expr_52
 									}
-								}()
+								}
+								return expr_54
 							})
 						})
 					})
@@ -391,13 +389,13 @@ func pString() ps.Parser[JsonValue] {
 			})})
 		})
 	}
-	pCharContent_31 := func() ps.Parser[rune] {
-		return ps.POrElse(pEscape_30(), ps.PSatisfy(func(r rune) bool {
+	pCharContent_56 := func() ps.Parser[rune] {
+		return ps.POrElse(pEscape_55(), ps.PSatisfy(func(r rune) bool {
 			return r != '"' && r != '\\'
 		}, "string character"))
 	}
 	return ps.PBind(ps.PChar('"'), func(_ rune) ps.Parser[JsonValue] {
-		return ps.PBind(ps.PMany(pCharContent_31()), func(chars []rune) ps.Parser[JsonValue] {
+		return ps.PBind(ps.PMany(pCharContent_56()), func(chars []rune) ps.Parser[JsonValue] {
 			return ps.PMap(ps.PChar('"'), func(_ rune) JsonValue {
 				return JsonValueJStringCtor(MygoIN6StringM9FromRunes(chars))
 			})
@@ -405,67 +403,69 @@ func pString() ps.Parser[JsonValue] {
 	})
 }
 func ParseJson(input string) Result[JsonValue, string] {
-	nullP_32 := pNull()
-	boolP_33 := pBool()
-	numP_34 := pNumber()
-	strP_35 := pString()
-	var valueP_36 ps.Parser[JsonValue]
-	var arrP_37 ps.Parser[JsonValue]
-	var pairP_38 ps.Parser[struct {
+	nullP_57 := pNull()
+	boolP_58 := pBool()
+	numP_59 := pNumber()
+	strP_60 := pString()
+	var valueP_61 ps.Parser[JsonValue]
+	var arrP_62 ps.Parser[JsonValue]
+	var pairP_63 ps.Parser[struct {
 		F0 string
 		F1 JsonValue
 	}]
-	var objP_39 ps.Parser[JsonValue]
-	valueP_36 = ps.Parser[JsonValue]{Run: func(state ps.State) ps.Reply[JsonValue] {
-		return ws(ps.PChoice([]ps.Parser[JsonValue]{nullP_32, boolP_33, numP_34, strP_35, arrP_37, objP_39})).Run(state)
+	var objP_64 ps.Parser[JsonValue]
+	valueP_61 = ps.Parser[JsonValue]{Run: func(state ps.State) ps.Reply[JsonValue] {
+		return ws(ps.PChoice([]ps.Parser[JsonValue]{nullP_57, boolP_58, numP_59, strP_60, arrP_62, objP_64})).Run(state)
 	}}
-	arrP_37 = ps.PMap(ps.PBetween(ws(ps.PChar('[')), ps.PSepBy(valueP_36, ws(ps.PChar(','))), ws(ps.PChar(']'))), func(items []JsonValue) JsonValue {
+	arrP_62 = ps.PMap(ps.PBetween(ws(ps.PChar('[')), ps.PSepBy(valueP_61, ws(ps.PChar(','))), ws(ps.PChar(']'))), func(items []JsonValue) JsonValue {
 		return JsonValueJArrayCtor(items)
 	})
-	pairP_38 = ps.Parser[struct {
+	pairP_63 = ps.Parser[struct {
 		F0 string
 		F1 JsonValue
 	}]{Run: func(s ps.State) ps.Reply[struct {
 		F0 string
 		F1 JsonValue
 	}] {
-		kr_40 := ws(pString()).Run(s)
-		if !kr_40.Ok {
+		kr_65 := ws(pString()).Run(s)
+		if !kr_65.Ok {
 			return ps.Reply[struct {
 				F0 string
 				F1 JsonValue
-			}]{Ok: kr_40.Ok, Consumed: kr_40.Consumed, State: kr_40.State, Error: kr_40.Error, Value: struct {
+			}]{Ok: kr_65.Ok, Consumed: kr_65.Consumed, State: kr_65.State, Error: kr_65.Error, Value: struct {
 				F0 string
 				F1 JsonValue
 			}{F0: "", F1: JsonValueJNullCtor()}}
 		}
-		keyStr_41 := func() string {
-			if v_10, ok := kr_40.Value.(JsonValueJString); ok {
-				return func() string {
-					return string(v_10.F0)
-				}()
-			} else {
-				return func() string {
-					return ""
-				}()
+		var expr_68 string
+		if v_10, ok := kr_65.Value.(JsonValueJString); ok {
+			var expr_67 string
+			expr_67 = string(v_10.F0)
+			expr_68 = expr_67
+		} else {
+			{
+				var expr_66 string
+				expr_66 = ""
+				expr_68 = expr_66
 			}
-		}()
-		cr_42 := ws(ps.PChar(':')).Run(kr_40.State)
-		if !cr_42.Ok {
+		}
+		keyStr_69 := expr_68
+		cr_70 := ws(ps.PChar(':')).Run(kr_65.State)
+		if !cr_70.Ok {
 			return ps.Reply[struct {
 				F0 string
 				F1 JsonValue
-			}]{Ok: cr_42.Ok, Consumed: cr_42.Consumed, State: cr_42.State, Error: cr_42.Error, Value: struct {
+			}]{Ok: cr_70.Ok, Consumed: cr_70.Consumed, State: cr_70.State, Error: cr_70.Error, Value: struct {
 				F0 string
 				F1 JsonValue
 			}{F0: "", F1: JsonValueJNullCtor()}}
 		}
-		vr_43 := valueP_36.Run(cr_42.State)
-		if !vr_43.Ok {
+		vr_71 := valueP_61.Run(cr_70.State)
+		if !vr_71.Ok {
 			return ps.Reply[struct {
 				F0 string
 				F1 JsonValue
-			}]{Ok: vr_43.Ok, Consumed: vr_43.Consumed, State: vr_43.State, Error: vr_43.Error, Value: struct {
+			}]{Ok: vr_71.Ok, Consumed: vr_71.Consumed, State: vr_71.State, Error: vr_71.Error, Value: struct {
 				F0 string
 				F1 JsonValue
 			}{F0: "", F1: JsonValueJNullCtor()}}
@@ -476,35 +476,35 @@ func ParseJson(input string) Result[JsonValue, string] {
 		}]{Ok: true, Consumed: true, Value: struct {
 			F0 string
 			F1 JsonValue
-		}{F0: keyStr_41, F1: vr_43.Value}, State: vr_43.State, Error: ps.EmptyError(vr_43.State.Position)}
+		}{F0: keyStr_69, F1: vr_71.Value}, State: vr_71.State, Error: ps.EmptyError(vr_71.State.Position)}
 	}}
-	objP_39 = ps.PMap(ps.PBetween(ws(ps.PChar('{')), ps.PSepBy(pairP_38, ws(ps.PChar(','))), ws(ps.PChar('}'))), func(pairs []struct {
+	objP_64 = ps.PMap(ps.PBetween(ws(ps.PChar('{')), ps.PSepBy(pairP_63, ws(ps.PChar(','))), ws(ps.PChar('}'))), func(pairs []struct {
 		F0 string
 		F1 JsonValue
 	}) JsonValue {
 		return JsonValueJObjectCtor(pairs)
 	})
-	r_44 := ps.ParseInput(valueP_36, input)
-	return func() Result[JsonValue, string] {
-		if !r_44.Ok {
-			return func() Result[JsonValue, string] {
-				if v_12, ok := r_44.Error.(OptionSome[ps.ParseError]); ok {
-					return func() Result[JsonValue, string] {
-						errMsg_45 := fmt.Sprintf("parse error at line %d, column %d: %s", v_12.F0.Position.Line, v_12.F0.Position.Column, v_12.F0.Message)
-						return Err[JsonValue, string](errMsg_45)
-					}()
-				} else {
-					if _, ok := r_44.Error.(OptionNone[ps.ParseError]); ok {
-						return func() Result[JsonValue, string] {
-							return Err[JsonValue, string]("parse error")
-						}()
-					} else {
-						panic("unreachable")
-					}
-				}
-			}()
+	r_72 := ps.ParseInput(valueP_61, input)
+	var expr_77 Result[JsonValue, string]
+	if !r_72.Ok {
+		var expr_76 Result[JsonValue, string]
+		if v_12, ok := r_72.Error.(OptionSome[ps.ParseError]); ok {
+			var expr_75 Result[JsonValue, string]
+			errMsg_74 := fmt.Sprintf("parse error at line %d, column %d: %s", v_12.F0.Position.Line, v_12.F0.Position.Column, v_12.F0.Message)
+			expr_75 = Err[JsonValue, string](errMsg_74)
+			expr_76 = expr_75
 		} else {
-			return Ok[JsonValue, string](r_44.Value)
+			if _, ok := r_72.Error.(OptionNone[ps.ParseError]); ok {
+				var expr_73 Result[JsonValue, string]
+				expr_73 = Err[JsonValue, string]("parse error")
+				expr_76 = expr_73
+			} else {
+				panic("unreachable")
+			}
 		}
-	}()
+		expr_77 = expr_76
+	} else {
+		expr_77 = Ok[JsonValue, string](r_72.Value)
+	}
+	return expr_77
 }

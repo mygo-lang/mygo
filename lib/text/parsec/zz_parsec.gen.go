@@ -53,29 +53,29 @@ func PFail[A any](message string) Parser[A] {
 func PMap[A any, B any](p Parser[A], f func(A) B) Parser[B] {
 	return Parser[B]{Run: func(state State) Reply[B] {
 		r_1 := p.Run(state)
-		return func() Reply[B] {
-			if !r_1.Ok {
-				return Reply[B]{Ok: false, Consumed: r_1.Consumed, Value: Zero[B](), State: r_1.State, Error: r_1.Error}
-			} else {
-				return Reply[B]{Ok: true, Consumed: r_1.Consumed, Value: f(r_1.Value), State: r_1.State, Error: EmptyError(r_1.State.Position)}
-			}
-		}()
+		var expr_2 Reply[B]
+		if !r_1.Ok {
+			expr_2 = Reply[B]{Ok: false, Consumed: r_1.Consumed, Value: Zero[B](), State: r_1.State, Error: r_1.Error}
+		} else {
+			expr_2 = Reply[B]{Ok: true, Consumed: r_1.Consumed, Value: f(r_1.Value), State: r_1.State, Error: EmptyError(r_1.State.Position)}
+		}
+		return expr_2
 	}}
 }
 func PBind[A any, B any](p Parser[A], f func(A) Parser[B]) Parser[B] {
 	return Parser[B]{Run: func(state State) Reply[B] {
-		r_2 := p.Run(state)
-		return func() Reply[B] {
-			if !r_2.Ok {
-				return Reply[B]{Ok: false, Consumed: r_2.Consumed, Value: Zero[B](), State: r_2.State, Error: r_2.Error}
-			} else {
-				return func() Reply[B] {
-					next_3 := f(r_2.Value)
-					r2_4 := next_3.Run(r_2.State)
-					return Reply[B]{Ok: r2_4.Ok, Consumed: r_2.Consumed || r2_4.Consumed, Value: r2_4.Value, State: r2_4.State, Error: r2_4.Error}
-				}()
-			}
-		}()
+		r_3 := p.Run(state)
+		var expr_7 Reply[B]
+		if !r_3.Ok {
+			expr_7 = Reply[B]{Ok: false, Consumed: r_3.Consumed, Value: Zero[B](), State: r_3.State, Error: r_3.Error}
+		} else {
+			var expr_6 Reply[B]
+			next_4 := f(r_3.Value)
+			r2_5 := next_4.Run(r_3.State)
+			expr_6 = Reply[B]{Ok: r2_5.Ok, Consumed: r_3.Consumed || r2_5.Consumed, Value: r2_5.Value, State: r2_5.State, Error: r2_5.Error}
+			expr_7 = expr_6
+		}
+		return expr_7
 	}}
 }
 func PThen[A any, B any](pa Parser[A], pb Parser[B]) Parser[B] {
@@ -85,20 +85,20 @@ func PThen[A any, B any](pa Parser[A], pb Parser[B]) Parser[B] {
 }
 func POrElse[A any](left Parser[A], right Parser[A]) Parser[A] {
 	return Parser[A]{Run: func(state State) Reply[A] {
-		r_5 := left.Run(state)
-		return func() Reply[A] {
-			if r_5.Ok {
-				return r_5
+		r_8 := left.Run(state)
+		var expr_10 Reply[A]
+		if r_8.Ok {
+			expr_10 = r_8
+		} else {
+			var expr_9 Reply[A]
+			if r_8.Consumed {
+				expr_9 = r_8
 			} else {
-				return func() Reply[A] {
-					if r_5.Consumed {
-						return r_5
-					} else {
-						return right.Run(state)
-					}
-				}()
+				expr_9 = right.Run(state)
 			}
-		}()
+			expr_10 = expr_9
+		}
+		return expr_10
 	}}
 }
 func PChoice[A any](parsers []Parser[A]) Parser[A] {
@@ -108,63 +108,63 @@ func PChoice[A any](parsers []Parser[A]) Parser[A] {
 }
 func PAttempt[A any](p Parser[A]) Parser[A] {
 	return Parser[A]{Run: func(state State) Reply[A] {
-		r_6 := p.Run(state)
-		return func() Reply[A] {
-			if r_6.Ok {
-				return r_6
-			} else {
-				return Reply[A]{Ok: false, Consumed: false, Value: r_6.Value, State: state, Error: r_6.Error}
-			}
-		}()
+		r_11 := p.Run(state)
+		var expr_12 Reply[A]
+		if r_11.Ok {
+			expr_12 = r_11
+		} else {
+			expr_12 = Reply[A]{Ok: false, Consumed: false, Value: r_11.Value, State: state, Error: r_11.Error}
+		}
+		return expr_12
 	}}
 }
 func PLookAhead[A any](p Parser[A]) Parser[A] {
 	return Parser[A]{Run: func(state State) Reply[A] {
-		r_7 := p.Run(state)
-		return Reply[A]{Ok: r_7.Ok, Consumed: false, Value: r_7.Value, State: state, Error: r_7.Error}
+		r_13 := p.Run(state)
+		return Reply[A]{Ok: r_13.Ok, Consumed: false, Value: r_13.Value, State: state, Error: r_13.Error}
 	}}
 }
 func PNotFollowedBy[A any](p Parser[A], message string) Parser[struct {
 }] {
 	return Parser[struct {
 	}]{Run: func(state State) Reply[struct{}] {
-		r_8 := p.Run(state)
-		return func() Reply[struct{}] {
-			if r_8.Ok {
-				return Reply[struct{}]{Ok: false, Consumed: false, Value: struct {
-				}{}, State: state, Error: ErrorAt(state.Position, message, EmptyExpected())}
-			} else {
-				return Reply[struct{}]{Ok: true, Consumed: false, Value: struct {
-				}{}, State: state, Error: EmptyError(state.Position)}
-			}
-		}()
+		r_14 := p.Run(state)
+		var expr_15 Reply[struct{}]
+		if r_14.Ok {
+			expr_15 = Reply[struct{}]{Ok: false, Consumed: false, Value: struct {
+			}{}, State: state, Error: ErrorAt(state.Position, message, EmptyExpected())}
+		} else {
+			expr_15 = Reply[struct{}]{Ok: true, Consumed: false, Value: struct {
+			}{}, State: state, Error: EmptyError(state.Position)}
+		}
+		return expr_15
 	}}
 }
 func PMany[A any](p Parser[A]) Parser[[]A] {
 	return Parser[[]A]{Run: func(state State) Reply[[]A] {
-		r_9 := p.Run(state)
-		return func() Reply[[]A] {
-			if !r_9.Ok {
-				return func() Reply[[]A] {
-					if r_9.Consumed {
-						return Reply[[]A]{Ok: false, Consumed: true, Value: []A{}, State: r_9.State, Error: r_9.Error}
-					} else {
-						return Reply[[]A]{Ok: true, Consumed: false, Value: []A{}, State: state, Error: EmptyError(state.Position)}
-					}
-				}()
+		r_16 := p.Run(state)
+		var expr_21 Reply[[]A]
+		if !r_16.Ok {
+			var expr_17 Reply[[]A]
+			if r_16.Consumed {
+				expr_17 = Reply[[]A]{Ok: false, Consumed: true, Value: []A{}, State: r_16.State, Error: r_16.Error}
 			} else {
-				return func() Reply[[]A] {
-					tail_10 := PMany[A](p).Run(r_9.State)
-					return func() Reply[[]A] {
-						if !tail_10.Ok {
-							return tail_10
-						} else {
-							return Reply[[]A]{Ok: true, Consumed: true, Value: MygoIN5SliceM7Prepend(tail_10.Value, r_9.Value), State: tail_10.State, Error: tail_10.Error}
-						}
-					}()
-				}()
+				expr_17 = Reply[[]A]{Ok: true, Consumed: false, Value: []A{}, State: state, Error: EmptyError(state.Position)}
 			}
-		}()
+			expr_21 = expr_17
+		} else {
+			var expr_20 Reply[[]A]
+			tail_18 := PMany[A](p).Run(r_16.State)
+			var expr_19 Reply[[]A]
+			if !tail_18.Ok {
+				expr_19 = tail_18
+			} else {
+				expr_19 = Reply[[]A]{Ok: true, Consumed: true, Value: MygoIN5SliceM7Prepend(tail_18.Value, r_16.Value), State: tail_18.State, Error: tail_18.Error}
+			}
+			expr_20 = expr_19
+			expr_21 = expr_20
+		}
+		return expr_21
 	}}
 }
 func PMany1[A any](p Parser[A]) Parser[[]A] {
@@ -176,20 +176,20 @@ func PMany1[A any](p Parser[A]) Parser[[]A] {
 }
 func POptional[A any](p Parser[A]) Parser[Option[A]] {
 	return Parser[Option[A]]{Run: func(state State) Reply[Option[A]] {
-		r_11 := p.Run(state)
-		return func() Reply[Option[A]] {
-			if r_11.Ok {
-				return Reply[Option[A]]{Ok: true, Consumed: r_11.Consumed, Value: Some[A](r_11.Value), State: r_11.State, Error: EmptyError(r_11.State.Position)}
+		r_22 := p.Run(state)
+		var expr_24 Reply[Option[A]]
+		if r_22.Ok {
+			expr_24 = Reply[Option[A]]{Ok: true, Consumed: r_22.Consumed, Value: Some[A](r_22.Value), State: r_22.State, Error: EmptyError(r_22.State.Position)}
+		} else {
+			var expr_23 Reply[Option[A]]
+			if r_22.Consumed {
+				expr_23 = Reply[Option[A]]{Ok: false, Consumed: true, Value: None[A](), State: r_22.State, Error: r_22.Error}
 			} else {
-				return func() Reply[Option[A]] {
-					if r_11.Consumed {
-						return Reply[Option[A]]{Ok: false, Consumed: true, Value: None[A](), State: r_11.State, Error: r_11.Error}
-					} else {
-						return Reply[Option[A]]{Ok: true, Consumed: false, Value: None[A](), State: state, Error: EmptyError(state.Position)}
-					}
-				}()
+				expr_23 = Reply[Option[A]]{Ok: true, Consumed: false, Value: None[A](), State: state, Error: EmptyError(state.Position)}
 			}
-		}()
+			expr_24 = expr_23
+		}
+		return expr_24
 	}}
 }
 func PBetween[A any, L any, R any](open Parser[L], body Parser[A], close Parser[R]) Parser[A] {
@@ -211,38 +211,38 @@ func PSepBy1[A any, S any](item Parser[A], sep Parser[S]) Parser[[]A] {
 }
 func PLabel[A any](p Parser[A], name string) Parser[A] {
 	return Parser[A]{Run: func(state State) Reply[A] {
-		r_12 := p.Run(state)
-		return func() Reply[A] {
-			if r_12.Ok {
-				return r_12
+		r_25 := p.Run(state)
+		var expr_27 Reply[A]
+		if r_25.Ok {
+			expr_27 = r_25
+		} else {
+			var expr_26 Reply[A]
+			if r_25.Consumed {
+				expr_26 = r_25
 			} else {
-				return func() Reply[A] {
-					if r_12.Consumed {
-						return r_12
-					} else {
-						return Reply[A]{Ok: false, Consumed: false, Value: r_12.Value, State: state, Error: WithExpected(r_12.Error, name)}
-					}
-				}()
+				expr_26 = Reply[A]{Ok: false, Consumed: false, Value: r_25.Value, State: state, Error: WithExpected(r_25.Error, name)}
 			}
-		}()
+			expr_27 = expr_26
+		}
+		return expr_27
 	}}
 }
 func PSatisfy(pred func(rune) bool, expected string) Parser[rune] {
 	return Parser[rune]{Run: func(state State) Reply[rune] {
-		r_13 := PeekRune(state)
-		return func() Reply[rune] {
-			if !r_13.Ok {
-				return Reply[rune]{Ok: false, Consumed: false, Value: Zero[rune](), State: state, Error: ErrorAt(state.Position, expected, EmptyExpected())}
+		r_28 := PeekRune(state)
+		var expr_30 Reply[rune]
+		if !r_28.Ok {
+			expr_30 = Reply[rune]{Ok: false, Consumed: false, Value: Zero[rune](), State: state, Error: ErrorAt(state.Position, expected, EmptyExpected())}
+		} else {
+			var expr_29 Reply[rune]
+			if pred(r_28.Value) {
+				expr_29 = Reply[rune]{Ok: true, Consumed: true, Value: r_28.Value, State: AdvanceRune(state), Error: EmptyError(state.Position)}
 			} else {
-				return func() Reply[rune] {
-					if pred(r_13.Value) {
-						return Reply[rune]{Ok: true, Consumed: true, Value: r_13.Value, State: AdvanceRune(state), Error: EmptyError(state.Position)}
-					} else {
-						return Reply[rune]{Ok: false, Consumed: false, Value: r_13.Value, State: state, Error: ErrorAt(state.Position, expected, EmptyExpected())}
-					}
-				}()
+				expr_29 = Reply[rune]{Ok: false, Consumed: false, Value: r_28.Value, State: state, Error: ErrorAt(state.Position, expected, EmptyExpected())}
 			}
-		}()
+			expr_30 = expr_29
+		}
+		return expr_30
 	}}
 }
 func PAnyRune() Parser[rune] {
@@ -257,29 +257,29 @@ func PChar(expectedRune rune) Parser[rune] {
 }
 func PString(expected string) Parser[string] {
 	return Parser[string]{Run: func(state State) Reply[string] {
-		r_14 := MatchString(state, expected)
-		return func() Reply[string] {
-			if r_14.Ok {
-				return r_14
-			} else {
-				return Reply[string]{Ok: false, Consumed: r_14.Consumed, Value: "", State: r_14.State, Error: r_14.Error}
-			}
-		}()
+		r_31 := MatchString(state, expected)
+		var expr_32 Reply[string]
+		if r_31.Ok {
+			expr_32 = r_31
+		} else {
+			expr_32 = Reply[string]{Ok: false, Consumed: r_31.Consumed, Value: "", State: r_31.State, Error: r_31.Error}
+		}
+		return expr_32
 	}}
 }
 func PEof() Parser[struct {
 }] {
 	return Parser[struct {
 	}]{Run: func(state State) Reply[struct{}] {
-		return func() Reply[struct{}] {
-			if state.Index >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(state.Input) {
-				return Reply[struct{}]{Ok: true, Consumed: false, Value: struct {
-				}{}, State: state, Error: EmptyError(state.Position)}
-			} else {
-				return Reply[struct{}]{Ok: false, Consumed: false, Value: struct {
-				}{}, State: state, Error: ErrorAt(state.Position, "end of input", EmptyExpected())}
-			}
-		}()
+		var expr_33 Reply[struct{}]
+		if state.Index >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(state.Input) {
+			expr_33 = Reply[struct{}]{Ok: true, Consumed: false, Value: struct {
+			}{}, State: state, Error: EmptyError(state.Position)}
+		} else {
+			expr_33 = Reply[struct{}]{Ok: false, Consumed: false, Value: struct {
+			}{}, State: state, Error: ErrorAt(state.Position, "end of input", EmptyExpected())}
+		}
+		return expr_33
 	}}
 }
 func PDigit() Parser[rune] {
@@ -356,21 +356,21 @@ func EmptyExpected() []string {
 	return []string{}
 }
 func WithExpected(err Option[ParseError], name string) Option[ParseError] {
-	return func() Option[ParseError] {
-		if v_2, ok := err.(OptionSome[ParseError]); ok {
-			return func() Option[ParseError] {
-				return Some[ParseError](ParseError{Position: v_2.F0.Position, Expected: MygoIN5SliceM6Append(v_2.F0.Expected, name), Message: v_2.F0.Message})
-			}()
+	var expr_36 Option[ParseError]
+	if v_2, ok := err.(OptionSome[ParseError]); ok {
+		var expr_35 Option[ParseError]
+		expr_35 = Some[ParseError](ParseError{Position: v_2.F0.Position, Expected: MygoIN5SliceM6Append(v_2.F0.Expected, name), Message: v_2.F0.Message})
+		expr_36 = expr_35
+	} else {
+		if _, ok := err.(OptionNone[ParseError]); ok {
+			var expr_34 Option[ParseError]
+			expr_34 = None[ParseError]()
+			expr_36 = expr_34
 		} else {
-			if _, ok := err.(OptionNone[ParseError]); ok {
-				return func() Option[ParseError] {
-					return None[ParseError]()
-				}()
-			} else {
-				panic("unreachable")
-			}
+			panic("unreachable")
 		}
-	}()
+	}
+	return expr_36
 }
 func FromRunes(rs []rune) string {
 	return MygoIN6StringM9FromRunes(rs)

@@ -137,279 +137,277 @@ func demoBasicTypes() string {
 	return "Int8=" + MygoIT8ToStringFN4Int8GN4Int8EM8ToString(i8_1) + ", UInt8=" + MygoIT8ToStringFN5UInt8GN5UInt8EM8ToString(ui8_2) + ", Int16=" + MygoIT8ToStringFN5Int16GN5Int16EM8ToString(i16_3) + ", UInt16=" + MygoIT8ToStringFN6UInt16GN6UInt16EM8ToString(ui16_4) + ", Int32=" + MygoIT8ToStringFN5Int32GN5Int32EM8ToString(i32_5) + ", UInt32=" + MygoIT8ToStringFN6UInt32GN6UInt32EM8ToString(ui32_6) + ", Int64=" + MygoIT8ToStringFN5Int64GN5Int64EM8ToString(i64_7) + ", UInt=" + MygoIT8ToStringFN4UIntGN4UIntEM8ToString(ui_8) + ", UInt64=" + MygoIT8ToStringFN6UInt64GN6UInt64EM8ToString(ui64_9) + ", Float32=" + MygoIT8ToStringFN7Float32GN7Float32EM8ToString(f32_10) + ", Float64=" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(f64_11) + ", Int=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(i_12) + ", hex=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(hex_13) + ", oct=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(oct_14) + ", bin=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(bin_15) + ", flag=" + MygoIT8ToStringFN4BoolGN4BoolEM8ToString(flag_16) + ", greeting=" + greeting_17 + ", multiline=" + multiline_18 + ", raw=" + raw_19
 }
 func describeColor(c Color) string {
-	return func() string {
-		if _, ok := c.(ColorRed); ok {
-			return func() string {
-				return "red"
-			}()
+	var expr_23 string
+	if _, ok := c.(ColorRed); ok {
+		var expr_22 string
+		expr_22 = "red"
+		expr_23 = expr_22
+	} else {
+		if _, ok := c.(ColorGreen); ok {
+			var expr_21 string
+			expr_21 = "green"
+			expr_23 = expr_21
 		} else {
-			if _, ok := c.(ColorGreen); ok {
-				return func() string {
-					return "green"
-				}()
+			if _, ok := c.(ColorBlue); ok {
+				var expr_20 string
+				expr_20 = "blue"
+				expr_23 = expr_20
 			} else {
-				if _, ok := c.(ColorBlue); ok {
-					return func() string {
-						return "blue"
-					}()
-				} else {
-					panic("unreachable")
-				}
+				panic("unreachable")
 			}
 		}
-	}()
+	}
+	return expr_23
 }
 func area(s Shape) float64 {
-	return func() float64 {
-		if v_6, ok := s.(ShapeCircle); ok {
-			return func() float64 {
-				return 3.14159 * v_6.F0 * v_6.F0
-			}()
+	var expr_27 float64
+	if v_6, ok := s.(ShapeCircle); ok {
+		var expr_26 float64
+		expr_26 = 3.14159 * v_6.F0 * v_6.F0
+		expr_27 = expr_26
+	} else {
+		if v_5, ok := s.(ShapeRectangle); ok {
+			var expr_25 float64
+			expr_25 = v_5.F0 * v_5.F1
+			expr_27 = expr_25
 		} else {
-			if v_5, ok := s.(ShapeRectangle); ok {
-				return func() float64 {
-					return v_5.F0 * v_5.F1
-				}()
+			if v_4, ok := s.(ShapeTriangle); ok {
+				var expr_24 float64
+				expr_24 = 0.5 * v_4.F0 * v_4.F1
+				expr_27 = expr_24
 			} else {
-				if v_4, ok := s.(ShapeTriangle); ok {
-					return func() float64 {
-						return 0.5 * v_4.F0 * v_4.F1
-					}()
-				} else {
-					panic("unreachable")
-				}
+				panic("unreachable")
 			}
 		}
-	}()
+	}
+	return expr_27
 }
 func demoEnums() string {
-	c_20 := ColorGreenCtor()
-	circle_21 := ShapeCircleCtor(5.0)
-	rect_22 := ShapeRectangleCtor(10.0, 20.0)
-	return "Color=" + describeColor(c_20) + ", CircleArea=" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(area(circle_21)) + ", RectArea=" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(area(rect_22))
+	c_28 := ColorGreenCtor()
+	circle_29 := ShapeCircleCtor(5.0)
+	rect_30 := ShapeRectangleCtor(10.0, 20.0)
+	return "Color=" + describeColor(c_28) + ", CircleArea=" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(area(circle_29)) + ", RectArea=" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(area(rect_30))
 }
 func demoStructs() string {
-	p_23 := Point{x: 3.0, y: 4.0}
-	box_24 := Box[int]{value: 42}
-	var box_value_25 int = box_24.value
-	person_26 := Person{name: "Alice", age: 30, email: "alice@example.com"}
-	return "Point=(" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(p_23.x) + "," + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(p_23.y) + ")" + ", Box=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(box_value_25) + ", Person=" + person_26.name + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(person_26.age)
+	p_31 := Point{x: 3.0, y: 4.0}
+	box_32 := Box[int]{value: 42}
+	var box_value_33 int = box_32.value
+	person_34 := Person{name: "Alice", age: 30, email: "alice@example.com"}
+	return "Point=(" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(p_31.x) + "," + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(p_31.y) + ")" + ", Box=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(box_value_33) + ", Person=" + person_34.name + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(person_34.age)
 }
 func safeDivide(a float64, b float64) Result[float64, string] {
-	return func() Result[float64, string] {
-		if b == 0.0 {
-			return Err[float64, string]("division by zero")
-		} else {
-			return Ok[float64, string](a / b)
-		}
-	}()
+	var expr_35 Result[float64, string]
+	if b == 0.0 {
+		expr_35 = Err[float64, string]("division by zero")
+	} else {
+		expr_35 = Ok[float64, string](a / b)
+	}
+	return expr_35
 }
 func demoOptionResult() string {
-	var some_val_27 Option[int] = Some[int](42)
-	var none_val_28 Option[int] = None[int]()
-	var ok_res_29 Result[int, string] = Ok[int, string](100)
-	var err_res_30 Result[int, string] = Err[int, string]("something went wrong")
-	result_31 := safeDivide(10.0, 3.0)
-	div_zero_32 := safeDivide(10.0, 0.0)
-	some_text_33 := func() string {
-		if v_8, ok := some_val_27.(OptionSome[int]); ok {
-			return func() string {
-				return MygoIT8ToStringFN3IntGN3IntEM8ToString(v_8.F0)
-			}()
+	var some_val_36 Option[int] = Some[int](42)
+	var none_val_37 Option[int] = None[int]()
+	var ok_res_38 Result[int, string] = Ok[int, string](100)
+	var err_res_39 Result[int, string] = Err[int, string]("something went wrong")
+	result_40 := safeDivide(10.0, 3.0)
+	div_zero_41 := safeDivide(10.0, 0.0)
+	var expr_44 string
+	if v_8, ok := some_val_36.(OptionSome[int]); ok {
+		var expr_43 string
+		expr_43 = MygoIT8ToStringFN3IntGN3IntEM8ToString(v_8.F0)
+		expr_44 = expr_43
+	} else {
+		if _, ok := some_val_36.(OptionNone[int]); ok {
+			var expr_42 string
+			expr_42 = "none"
+			expr_44 = expr_42
 		} else {
-			if _, ok := some_val_27.(OptionNone[int]); ok {
-				return func() string {
-					return "none"
-				}()
-			} else {
-				panic("unreachable")
-			}
+			panic("unreachable")
 		}
-	}()
-	none_text_34 := func() string {
-		if v_10, ok := none_val_28.(OptionSome[int]); ok {
-			return func() string {
-				return MygoIT8ToStringFN3IntGN3IntEM8ToString(v_10.F0)
-			}()
+	}
+	some_text_45 := expr_44
+	var expr_48 string
+	if v_10, ok := none_val_37.(OptionSome[int]); ok {
+		var expr_47 string
+		expr_47 = MygoIT8ToStringFN3IntGN3IntEM8ToString(v_10.F0)
+		expr_48 = expr_47
+	} else {
+		if _, ok := none_val_37.(OptionNone[int]); ok {
+			var expr_46 string
+			expr_46 = "none"
+			expr_48 = expr_46
 		} else {
-			if _, ok := none_val_28.(OptionNone[int]); ok {
-				return func() string {
-					return "none"
-				}()
-			} else {
-				panic("unreachable")
-			}
+			panic("unreachable")
 		}
-	}()
-	ok_text_35 := func() string {
-		if v_12, ok := ok_res_29.(ResultOk[int, string]); ok {
-			return func() string {
-				return MygoIT8ToStringFN3IntGN3IntEM8ToString(v_12.F0)
-			}()
+	}
+	none_text_49 := expr_48
+	var expr_52 string
+	if v_12, ok := ok_res_38.(ResultOk[int, string]); ok {
+		var expr_51 string
+		expr_51 = MygoIT8ToStringFN3IntGN3IntEM8ToString(v_12.F0)
+		expr_52 = expr_51
+	} else {
+		if v_11, ok := ok_res_38.(ResultErr[int, string]); ok {
+			var expr_50 string
+			expr_50 = v_11.F0
+			expr_52 = expr_50
 		} else {
-			if v_11, ok := ok_res_29.(ResultErr[int, string]); ok {
-				return func() string {
-					return v_11.F0
-				}()
-			} else {
-				panic("unreachable")
-			}
+			panic("unreachable")
 		}
-	}()
-	err_text_36 := func() string {
-		if v_14, ok := err_res_30.(ResultOk[int, string]); ok {
-			return func() string {
-				return MygoIT8ToStringFN3IntGN3IntEM8ToString(v_14.F0)
-			}()
+	}
+	ok_text_53 := expr_52
+	var expr_56 string
+	if v_14, ok := err_res_39.(ResultOk[int, string]); ok {
+		var expr_55 string
+		expr_55 = MygoIT8ToStringFN3IntGN3IntEM8ToString(v_14.F0)
+		expr_56 = expr_55
+	} else {
+		if v_13, ok := err_res_39.(ResultErr[int, string]); ok {
+			var expr_54 string
+			expr_54 = v_13.F0
+			expr_56 = expr_54
 		} else {
-			if v_13, ok := err_res_30.(ResultErr[int, string]); ok {
-				return func() string {
-					return v_13.F0
-				}()
-			} else {
-				panic("unreachable")
-			}
+			panic("unreachable")
 		}
-	}()
-	result_text_37 := func() string {
-		if v_16, ok := result_31.(ResultOk[float64, string]); ok {
-			return func() string {
-				return MygoIT8ToStringFN7Float64GN7Float64EM8ToString(v_16.F0)
-			}()
+	}
+	err_text_57 := expr_56
+	var expr_60 string
+	if v_16, ok := result_40.(ResultOk[float64, string]); ok {
+		var expr_59 string
+		expr_59 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(v_16.F0)
+		expr_60 = expr_59
+	} else {
+		if v_15, ok := result_40.(ResultErr[float64, string]); ok {
+			var expr_58 string
+			expr_58 = v_15.F0
+			expr_60 = expr_58
 		} else {
-			if v_15, ok := result_31.(ResultErr[float64, string]); ok {
-				return func() string {
-					return v_15.F0
-				}()
-			} else {
-				panic("unreachable")
-			}
+			panic("unreachable")
 		}
-	}()
-	div_zero_text_38 := func() string {
-		if v_18, ok := div_zero_32.(ResultOk[float64, string]); ok {
-			return func() string {
-				return MygoIT8ToStringFN7Float64GN7Float64EM8ToString(v_18.F0)
-			}()
+	}
+	result_text_61 := expr_60
+	var expr_64 string
+	if v_18, ok := div_zero_41.(ResultOk[float64, string]); ok {
+		var expr_63 string
+		expr_63 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(v_18.F0)
+		expr_64 = expr_63
+	} else {
+		if v_17, ok := div_zero_41.(ResultErr[float64, string]); ok {
+			var expr_62 string
+			expr_62 = v_17.F0
+			expr_64 = expr_62
 		} else {
-			if v_17, ok := div_zero_32.(ResultErr[float64, string]); ok {
-				return func() string {
-					return v_17.F0
-				}()
-			} else {
-				panic("unreachable")
-			}
+			panic("unreachable")
 		}
-	}()
-	return "Some=" + some_text_33 + ", None=" + none_text_34 + ", Ok=" + ok_text_35 + ", Err=" + err_text_36 + ", 10/3=" + result_text_37 + ", 10/0=" + div_zero_text_38
+	}
+	div_zero_text_65 := expr_64
+	return "Some=" + some_text_45 + ", None=" + none_text_49 + ", Ok=" + ok_text_53 + ", Err=" + err_text_57 + ", 10/3=" + result_text_61 + ", 10/0=" + div_zero_text_65
 }
 func demoCollections() string {
-	var nums_39 []int = []int{1, 2, 3, 4, 5}
-	var scores_40 map[string]int = map[string]int{"Alice": 90, "Bob": 85, "Charlie": 95}
-	var words_41 map[string]struct{} = func() map[string]struct{} {
-		__set := map[string]struct{}{}
-		__set["hello"] = struct{}{}
-		__set["world"] = struct{}{}
-		__set["hello"] = struct{}{}
-		return __set
-	}()
-	return "Slice len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(nums_39)) + ", Map len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len(scores_40)) + ", Set len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM3Len(words_41))
+	var nums_66 []int = []int{1, 2, 3, 4, 5}
+	var scores_67 map[string]int = map[string]int{"Alice": 90, "Bob": 85, "Charlie": 95}
+	set_68 := map[string]struct{}{}
+	set_68["hello"] = struct{}{}
+	set_68["world"] = struct{}{}
+	set_68["hello"] = struct{}{}
+	var words_69 map[string]struct{} = set_68
+	return "Slice len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(nums_66)) + ", Map len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len(scores_67)) + ", Set len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM3Len(words_69))
 }
 func demoFunctional() string {
-	var nums_42 []int = []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	doubled_43 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(nums_42, func(x int) int {
+	var nums_70 []int = []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+	doubled_71 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(nums_70, func(x int) int {
 		return x * 2
 	})
-	evens_44 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(nums_42, func(x int) bool {
+	evens_72 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(nums_70, func(x int) bool {
 		return x/2*2 == x
 	})
-	sum_45 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(nums_42, 0, func(acc int, x int) int {
+	sum_73 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(nums_70, 0, func(acc int, x int) int {
 		return acc + x
 	})
-	result_46 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(nums_42, func(x int) bool {
+	result_74 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(nums_70, func(x int) bool {
 		return x > 3
 	}), func(x int) int {
 		return x * x
 	}), 0, func(acc int, x int) int {
 		return acc + x
 	})
-	return "Sum=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(sum_45) + ", Evens len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(evens_44)) + ", Doubled len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(doubled_43)) + ", Pipeline result=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(result_46)
+	return "Sum=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(sum_73) + ", Evens len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(evens_72)) + ", Doubled len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(doubled_71)) + ", Pipeline result=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(result_74)
 }
 func demoControlFlow() string {
-	max_47 := func() int {
-		if 10 > 5 {
-			return 10
+	var expr_75 int
+	if 10 > 5 {
+		expr_75 = 10
+	} else {
+		expr_75 = 5
+	}
+	max_76 := expr_75
+	var expr_78 string
+	if 10 > 5 {
+		expr_78 = "greater"
+	} else {
+		var expr_77 string
+		if 10 == 5 {
+			expr_77 = "equal"
 		} else {
-			return 5
+			expr_77 = "lesser"
 		}
-	}()
-	msg_48 := func() string {
-		if 10 > 5 {
-			return "greater"
+		expr_78 = expr_77
+	}
+	msg_79 := expr_78
+	var sum_80 int = 0
+	var i_81 int = 1
+	for i_81 <= 10 {
+		sum_80 = sum_80 + i_81
+		i_81 = i_81 + 1
+	}
+	var n_82 int = 5
+	var expr_87 string
+	if n_82 == 1 {
+		var expr_86 string
+		expr_86 = "one"
+		expr_87 = expr_86
+	} else {
+		if n_82 == 2 {
+			var expr_85 string
+			expr_85 = "two"
+			expr_87 = expr_85
 		} else {
-			return func() string {
-				if 10 == 5 {
-					return "equal"
-				} else {
-					return "lesser"
-				}
-			}()
-		}
-	}()
-	var sum_49 int = 0
-	var i_50 int = 1
-	func() {
-		for i_50 <= 10 {
-			sum_49 = sum_49 + i_50
-			i_50 = i_50 + 1
-		}
-	}()
-	var n_51 int = 5
-	desc_52 := func() string {
-		if n_51 == 1 {
-			return func() string {
-				return "one"
-			}()
-		} else {
-			if n_51 == 2 {
-				return func() string {
-					return "two"
-				}()
+			if n_82 == 3 {
+				var expr_84 string
+				expr_84 = "three"
+				expr_87 = expr_84
 			} else {
-				if n_51 == 3 {
-					return func() string {
-						return "three"
-					}()
-				} else {
-					return func() string {
-						return "other"
-					}()
+				{
+					var expr_83 string
+					expr_83 = "other"
+					expr_87 = expr_83
 				}
 			}
 		}
-	}()
-	return "max=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(max_47) + ", msg=" + msg_48 + ", sum=1..10=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(sum_49) + ", desc=" + desc_52
+	}
+	desc_88 := expr_87
+	return "max=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(max_76) + ", msg=" + msg_79 + ", sum=1..10=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(sum_80) + ", desc=" + desc_88
 }
 func demoMutable() string {
-	var counter_53 int = 0
-	counter_53 = counter_53 + 1
-	counter_53 = counter_53 + 1
-	counter_53 = counter_53 + 1
-	var items_54 []string = []string{}
-	items_54 = MygoIN5SliceM6Append(items_54, "first")
-	items_54 = MygoIN5SliceM6Append(items_54, "second")
-	items_54 = MygoIN5SliceM6Append(items_54, "third")
-	return "counter=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(counter_53) + ", items len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items_54))
+	var counter_89 int = 0
+	counter_89 = counter_89 + 1
+	counter_89 = counter_89 + 1
+	counter_89 = counter_89 + 1
+	var items_90 []string = []string{}
+	items_90 = MygoIN5SliceM6Append(items_90, "first")
+	items_90 = MygoIN5SliceM6Append(items_90, "second")
+	items_90 = MygoIN5SliceM6Append(items_90, "third")
+	return "counter=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(counter_89) + ", items len=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items_90))
 }
 func identity[A any](value A) A {
 	return value
 }
 func demoGenerics() string {
-	int_val_55 := identity[int](100)
-	str_val_56 := identity[string]("hello")
-	boxed_int_57 := Box[int]{value: 42}
-	boxed_str_58 := Box[string]{value: "hello"}
-	return "Identity[Int]=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(int_val_55) + ", Identity[String]=" + str_val_56 + ", BoxedInt=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(boxed_int_57.value) + ", BoxedStr=" + MygoIT8ToStringFN6StringGN6StringEM8ToString(boxed_str_58.value)
+	int_val_91 := identity[int](100)
+	str_val_92 := identity[string]("hello")
+	boxed_int_93 := Box[int]{value: 42}
+	boxed_str_94 := Box[string]{value: "hello"}
+	return "Identity[Int]=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(int_val_91) + ", Identity[String]=" + str_val_92 + ", BoxedInt=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(boxed_int_93.value) + ", BoxedStr=" + MygoIT8ToStringFN6StringGN6StringEM8ToString(boxed_str_94.value)
 }
 func demo() string {
 	return "=== MyGO Language Demo ===\n\n" + "--- Basic Types ---\n" + demoBasicTypes() + "\n\n" + "--- Enums ---\n" + demoEnums() + "\n\n" + "--- Structs ---\n" + demoStructs() + "\n\n" + "--- Option/Result ---\n" + demoOptionResult() + "\n\n" + "--- Collections ---\n" + demoCollections() + "\n\n" + "--- Functional Programming ---\n" + demoFunctional() + "\n\n" + "--- Control Flow ---\n" + demoControlFlow() + "\n\n" + "--- Mutable Variables ---\n" + demoMutable() + "\n\n" + "--- Generics ---\n" + demoGenerics() + "\n\n" + "=== End of Demo ==="

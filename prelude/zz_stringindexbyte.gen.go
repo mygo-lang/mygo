@@ -3,20 +3,20 @@
 package prelude
 
 func MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM3Get(s string, index int) Option[byte] {
-	return func() Option[byte] {
-		if index < 0 || index >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) {
-			return None[byte]()
-		} else {
-			return Some[byte](s[index])
-		}
-	}()
+	var expr_128 Option[byte]
+	if index < 0 || index >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) {
+		expr_128 = None[byte]()
+	} else {
+		expr_128 = Some[byte](s[index])
+	}
+	return expr_128
 }
 func MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(s string, startPos int, endPos int) Option[string] {
-	return func() Option[string] {
-		if startPos < 0 || endPos < startPos || startPos >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) || endPos > MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) {
-			return None[string]()
-		} else {
-			return Some[string](s[startPos:endPos])
-		}
-	}()
+	var expr_129 Option[string]
+	if startPos < 0 || endPos < startPos || startPos >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) || endPos > MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) {
+		expr_129 = None[string]()
+	} else {
+		expr_129 = Some[string](s[startPos:endPos])
+	}
+	return expr_129
 }

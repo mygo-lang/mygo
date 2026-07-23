@@ -603,6 +603,14 @@ type egCtx struct {
 	implTypeParams   []string
 }
 
+// translatedExpr carries statements that must be emitted before an
+// expression. It is the statement-aware boundary for expression lowering.
+type translatedExpr struct {
+	Expr  ast.Expr
+	Stmts []ast.Stmt
+	Type  string
+}
+
 type egTcBinding struct {
 	Interface  string
 	TargetType string
@@ -1121,12 +1129,27 @@ func (g *gen) genTypedImpl(d *ImplDecl, ifaceName string) []ast.Decl {
 						continue
 					}
 				}
-				code, _, _ := g.translateExpr(m.Body, ctx, retType)
-				bodyStmts = append(bodyStmts, &ast.ExprStmt{X: code})
+				translated, _ := g.translateExprResult(m.Body, ctx, retType)
+				bodyStmts = append(bodyStmts, translated.Stmts...)
+				if translated.Expr != nil {
+					bodyStmts = append(bodyStmts, &ast.ExprStmt{X: translated.Expr})
+				}
 				bodyStmts = append(bodyStmts, &ast.ReturnStmt{})
 			} else {
-				code, _, _ := g.translateExpr(m.Body, ctx, retType)
-				bodyStmts = append(bodyStmts, &ast.ReturnStmt{Results: []ast.Expr{code}})
+				var translated translatedExpr
+				var err error
+				if switchExpr, ok := m.Body.(*SwitchExpr); ok {
+					translated, err = g.translateSwitch(switchExpr, ctx, retType)
+				} else {
+					translated, err = g.translateExprResult(m.Body, ctx, retType)
+				}
+				if err != nil {
+					translated = translatedExpr{}
+				}
+				bodyStmts = append(bodyStmts, translated.Stmts...)
+				if translated.Expr != nil {
+					bodyStmts = append(bodyStmts, &ast.ReturnStmt{Results: []ast.Expr{translated.Expr}})
+				}
 			}
 		}
 		constraints := mapKeyTypeParamConstraintsForImplMethod(d, m)
@@ -1237,7 +1260,10 @@ func (g *gen) genInherentDecls(d *ImplDecl) []ast.Decl {
 		// Body
 		var bodyStmts []ast.Stmt
 		if block, ok := m.Body.(*BlockExpr); ok {
-			blockStmts, _ := g.translateBlockStmts(block, ctx, retType, retTypes)
+			blockStmts, err := g.translateBlockStmts(block, ctx, retType, retTypes)
+			if err != nil {
+				blockStmts = nil
+			}
 			bodyStmts = append(bodyStmts, blockStmts...)
 		} else if len(retTypes) == 0 {
 			if goExpr, ok := m.Body.(*GoExpr); ok && g.isUnitGoExpr(goExpr, ctx) {
@@ -1254,8 +1280,16 @@ func (g *gen) genInherentDecls(d *ImplDecl) []ast.Decl {
 			bodyStmts = append(bodyStmts, &ast.ExprStmt{X: code})
 			bodyStmts = append(bodyStmts, &ast.ReturnStmt{})
 		} else {
-			code, _, _ := g.translateExpr(m.Body, ctx, retType)
-			bodyStmts = append(bodyStmts, &ast.ReturnStmt{Results: []ast.Expr{code}})
+			var translated translatedExpr
+			if switchExpr, ok := m.Body.(*SwitchExpr); ok {
+				translated, _ = g.translateSwitch(switchExpr, ctx, retType)
+			} else {
+				translated, _ = g.translateExprResult(m.Body, ctx, retType)
+			}
+			bodyStmts = append(bodyStmts, translated.Stmts...)
+			if translated.Expr != nil {
+				bodyStmts = append(bodyStmts, &ast.ReturnStmt{Results: []ast.Expr{translated.Expr}})
+			}
 		}
 
 		constraints := mapKeyTypeParamConstraintsForImplMethod(d, m)

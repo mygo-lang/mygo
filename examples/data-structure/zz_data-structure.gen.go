@@ -130,112 +130,104 @@ func swapPair[T any](p Pair[T]) Pair[T] {
 	return Pair[T]{first: p.second, second: p.first}
 }
 func describeColor(color Color) string {
-	return func() string {
-		if _, ok := color.(ColorRed); ok {
-			return func() string {
-				return "red"
-			}()
+	var expr_4 string
+	if _, ok := color.(ColorRed); ok {
+		var expr_3 string
+		expr_3 = "red"
+		expr_4 = expr_3
+	} else {
+		if _, ok := color.(ColorGreen); ok {
+			var expr_2 string
+			expr_2 = "green"
+			expr_4 = expr_2
 		} else {
-			if _, ok := color.(ColorGreen); ok {
-				return func() string {
-					return "green"
-				}()
-			} else {
-				if _, ok := color.(ColorBlue); ok {
-					return func() string {
-						return "blue"
-					}()
-				} else {
-					panic("unreachable")
-				}
-			}
-		}
-	}()
-}
-func maxInt(a int, b int) int {
-	return func() int {
-		if a > b {
-			return a
-		} else {
-			return b
-		}
-	}()
-}
-func describeOption[A any](value Option[A], ToStringFn func(A) string) string {
-	return func() string {
-		if _, ok := value.(OptionNone[A]); ok {
-			return func() string {
-				return "None"
-			}()
-		} else {
-			if v_4, ok := value.(OptionSome[A]); ok {
-				return func() string {
-					return "Some(" + ToStringFn(v_4.F0) + ")"
-				}()
+			if _, ok := color.(ColorBlue); ok {
+				var expr_1 string
+				expr_1 = "blue"
+				expr_4 = expr_1
 			} else {
 				panic("unreachable")
 			}
 		}
-	}()
+	}
+	return expr_4
+}
+func maxInt(a int, b int) int {
+	var expr_5 int
+	if a > b {
+		expr_5 = a
+	} else {
+		expr_5 = b
+	}
+	return expr_5
+}
+func describeOption[A any](value Option[A], ToStringFn func(A) string) string {
+	var expr_8 string
+	if _, ok := value.(OptionNone[A]); ok {
+		var expr_7 string
+		expr_7 = "None"
+		expr_8 = expr_7
+	} else {
+		if v_4, ok := value.(OptionSome[A]); ok {
+			var expr_6 string
+			expr_6 = "Some(" + ToStringFn(v_4.F0) + ")"
+			expr_8 = expr_6
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_8
 }
 func buildList() List[int] {
-	var noneTail_1 Option[List[int]] = None[List[int]]()
-	lastNode_2 := MygoIN4ListM4Cons(3, noneTail_1)
-	middleNode_3 := MygoIN4ListM4Cons(2, Some[List[int]](lastNode_2))
-	return MygoIN4ListM4Cons(1, Some[List[int]](middleNode_3))
+	var noneTail_9 Option[List[int]] = None[List[int]]()
+	lastNode_10 := MygoIN4ListM4Cons(3, noneTail_9)
+	middleNode_11 := MygoIN4ListM4Cons(2, Some[List[int]](lastNode_10))
+	return MygoIN4ListM4Cons(1, Some[List[int]](middleNode_11))
 }
 func sumList(lst List[int]) int {
-	var total_4 int = 0
-	var current_5 List[int] = lst
-	var done_6 bool = false
-	func() {
-		for !done_6 {
-			headVal := MygoIN4ListM4Head(current_5)
-			total_4 = total_4 + headVal
-			func() {
-				if _, ok := MygoIN4ListM4Tail(current_5).(OptionNone[List[int]]); ok {
-					func() {
-						done_6 = true
-					}()
-				} else {
-					if v_6, ok := MygoIN4ListM4Tail(current_5).(OptionSome[List[int]]); ok {
-						func() {
-							current_5 = v_6.F0
-						}()
-					}
-				}
-			}()
+	var total_12 int = 0
+	var current_13 List[int] = lst
+	var done_14 bool = false
+	for !done_14 {
+		headVal := MygoIN4ListM4Head(current_13)
+		total_12 = total_12 + headVal
+		if _, ok := MygoIN4ListM4Tail(current_13).(OptionNone[List[int]]); ok {
+			done_14 = true
+		} else {
+			if v_6, ok := MygoIN4ListM4Tail(current_13).(OptionSome[List[int]]); ok {
+				current_13 = v_6.F0
+			}
 		}
-	}()
-	return total_4
+	}
+	return total_12
 }
 func demo() string {
-	red_7 := ColorRedCtor()
-	point_8 := Point2DWithYCtor(20)
-	op_9 := OperationMultiplyCtor()
-	var empty_10 Option[float64] = None[float64]()
-	var someVal_11 Option[int] = Some[int](42)
-	person_12 := Person{name: "Charlie", age: 25}
-	rect_13 := Rectangle{width: 10.0, height: 5.0}
-	var pair_14 Pair[int] = Pair[int]{first: 1, second: 2}
-	color_15 := ColorTuple{}
-	addr_16 := Address{street: "Main St", city: "NYC"}
-	contact_17 := Contact{name: "Bob"}
-	areaValue_18 := area(rect_13)
-	swapped_19 := swapPair(pair_14)
-	bigger_20 := maxInt(3, 5)
-	colorText_21 := describeColor(ColorGreenCtor())
-	lst_22 := buildList()
-	sum_23 := sumList(lst_22)
-	var summary_24 string = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v sum=%v", red_7, point_8, op_9, describeOption(empty_10, MygoIT8ToStringFN7Float64GN7Float64EM8ToString), describeOption(someVal_11, MygoIT8ToStringFN3IntGN3IntEM8ToString), person_12, rect_13, pair_14, color_15, addr_16, contact_17, areaValue_18, swapped_19, bigger_20, colorText_21, sum_23)
+	red_15 := ColorRedCtor()
+	point_16 := Point2DWithYCtor(20)
+	op_17 := OperationMultiplyCtor()
+	var empty_18 Option[float64] = None[float64]()
+	var someVal_19 Option[int] = Some[int](42)
+	person_20 := Person{name: "Charlie", age: 25}
+	rect_21 := Rectangle{width: 10.0, height: 5.0}
+	var pair_22 Pair[int] = Pair[int]{first: 1, second: 2}
+	color_23 := ColorTuple{}
+	addr_24 := Address{street: "Main St", city: "NYC"}
+	contact_25 := Contact{name: "Bob"}
+	areaValue_26 := area(rect_21)
+	swapped_27 := swapPair[int](pair_22)
+	bigger_28 := maxInt(3, 5)
+	colorText_29 := describeColor(ColorGreenCtor())
+	lst_30 := buildList()
+	sum_31 := sumList(lst_30)
+	var summary_32 string = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v sum=%v", red_15, point_16, op_17, describeOption(empty_18, MygoIT8ToStringFN7Float64GN7Float64EM8ToString), describeOption(someVal_19, MygoIT8ToStringFN3IntGN3IntEM8ToString), person_20, rect_21, pair_22, color_23, addr_24, contact_25, areaValue_26, swapped_27, bigger_28, colorText_29, sum_31)
 	func() Result[int, error] {
-		__mygo_result_val, __mygo_result_err := fmt.Println(summary_24)
+		__mygo_result_val, __mygo_result_err := fmt.Println(summary_32)
 		if __mygo_result_err != nil {
 			return Err[int, error](__mygo_result_err)
 		}
 		return Ok[int, error](__mygo_result_val)
 	}()
-	return summary_24
+	return summary_32
 }
 func main() {
 	func() Result[int, error] {

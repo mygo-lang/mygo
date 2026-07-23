@@ -279,7 +279,11 @@ func (g *Generator) translateSwitch(n *SwitchExpr, ctx *exprCtx, expected string
 		retType:     ctx.retType,
 		retTypes:    ctx.retTypes,
 	}
-	return ng.translateSwitch(n, eg, expected)
+	result, err := ng.translateSwitch(n, eg, expected)
+	if result.Expr == nil && err == nil {
+		return ast.NewIdent("_"), result.Type, nil
+	}
+	return result.Expr, result.Type, err
 }
 
 // genImpl delegates to gen.genImplDecls for test compatibility.
