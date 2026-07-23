@@ -148,9 +148,9 @@ enum Stmt
   ReturnWithStmt(Expr)
 end
 
-# `Expr` is a pure expression type, containing no statement semantics.
+# `ExprKind` is a pure expression shape, containing no statement semantics.
 # All control flow structures and syntax nodes with side effects are `Stmt`.
-enum Expr
+enum ExprKind
   IdentExpr(String)
   NumberExpr(String)
   StringExpr(String)
@@ -159,14 +159,14 @@ enum Expr
   UnitExpr
   # tuple expression; an empty tuple is represented by UnitExpr
   TupleExpr(Slice[Expr])
-  CallExpr(Ref[Expr], Slice[TypeExpr], Slice[Expr])
-  FieldExpr(Ref[Expr], String)
-  UnaryExpr(String, Ref[Expr])
-  BinaryExpr(String, Ref[Expr], Ref[Expr])
-  IfExpr(Ref[Expr], Ref[Expr], Ref[Expr])
+  CallExpr(Expr, Slice[TypeExpr], Slice[Expr])
+  FieldExpr(Expr, String)
+  UnaryExpr(String, Expr)
+  BinaryExpr(String, Expr, Expr)
+  IfExpr(Expr, Expr, Expr)
   BlockExpr(Slice[Stmt])
-  SwitchExpr(Ref[Expr], Slice[SwitchCase])
-  FuncLitExpr(Slice[Param], Option[TypeExpr], Ref[Expr])
+  SwitchExpr(Expr, Slice[SwitchCase])
+  FuncLitExpr(Slice[Param], Option[TypeExpr], Expr)
   SliceLitExpr(Slice[Expr])
   TypeAsExpr(Ref[Expr], TypeExpr)
   StructLitExpr(String, Slice[StructLitField])
@@ -177,4 +177,16 @@ enum Expr
   MapLitExpr(Slice[(Expr, Expr)])
   # Set literal: {"a", "b", ...}
   SetLitExpr(Slice[Expr])
+end
+
+# `Expr` is the positioned expression node.  Expression shape belongs to
+# `ExprKind`, so every expression—including recursive children—has one
+# canonical source location.
+struct Expr
+  Pos: SourcePos
+  Kind: ExprKind
+end
+
+func EmptyExpr() -> Expr
+  Expr { Pos: SourcePos { SourceName: "", Line: 0, Column: 0 }, Kind: ExprKind.UnitExpr }
 end

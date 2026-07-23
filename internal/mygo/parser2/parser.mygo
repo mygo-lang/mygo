@@ -41,6 +41,26 @@ func ParseFileAt(sourceName: String, input: String) -> Result[ast2.File, String]
   end
 end
 
+func sourcePos(state: ps.State) -> ast2.SourcePos
+  ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }
+end
+
+func emptyExpr() -> ast2.Expr
+  ast2.EmptyExpr()
+end
+
+func exprWithPos(pos: ast2.SourcePos, kind: ast2.ExprKind) -> ast2.Expr
+  ast2.Expr { Pos: pos, Kind: kind }
+end
+
+func exprAt(state: ps.State, kind: ast2.ExprKind) -> ast2.Expr
+  exprWithPos(sourcePos(state), kind)
+end
+
+func exprKindOnly(kind: ast2.ExprKind) -> ast2.Expr
+  exprWithPos(ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, kind)
+end
+
 func annotateDeclSource(decl: ast2.Decl, sourceName: String) -> ast2.Decl
   switch decl
     case FuncDecl(name, tps, params, ret, body, constraints) =>
@@ -364,7 +384,7 @@ func blockItems(stopParser: ps.Parser[String], start: ps.State, cur: ps.State, i
   let stop = ps.PLookAhead(stopParser).Run(cur)
   if stop.Ok then
     ps.Reply[ast2.Expr] {
-      Ok: true, Consumed: cur.Index != start.Index, Value: ast2.Expr.BlockExpr(items),
+      Ok: true, Consumed: cur.Index != start.Index, Value: exprAt(start, ast2.ExprKind.BlockExpr(items)),
       State: cur, Error: ps.EmptyError(cur.Position)
     }
   else
@@ -373,7 +393,7 @@ func blockItems(stopParser: ps.Parser[String], start: ps.State, cur: ps.State, i
       blockItems(stopParser, start, r.State, items.Append(r.Value))
     else
       ps.Reply[ast2.Expr] {
-        Ok: false, Consumed: false, Value: ast2.Expr.UnitExpr(),
+        Ok: false, Consumed: false, Value: emptyExpr(),
         State: cur, Error: r.Error
       }
     end
@@ -529,7 +549,7 @@ func inlineGoStmt() -> ps.Parser[ast2.Stmt]
         ps.PBind(sym("]"), func(_: String) -> ps.Parser[ast2.Stmt]
           ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Stmt]
             ps.PBind(inlineGoBody(), func(parts: InlineGoParts) -> ps.Parser[ast2.Stmt]
-              ps.PThen(sym("}"), ps.PPure(ast2.Stmt.ExprStmt(ast2.Expr.InlineGoExpr(Ref.new(typ), parts.Code, parts.Values, parts.Types))))
+              ps.PThen(sym("}"), ps.PPure(ast2.Stmt.ExprStmt(exprKindOnly(ast2.ExprKind.InlineGoExpr(Ref.new(typ), parts.Code, parts.Values, parts.Types)))))
             end)
           end)
         end)
@@ -549,6 +569,23 @@ end
 # expr 解析纯表达式。
 # 注意：expr 不处理语句变体。要解析包含语句的代码，请使用 stmt()。
 func expr() -> ps.Parser[ast2.Expr]
+  positionedExpr(exprKind())
+end
+
+func positionedExpr(inner: ps.Parser[ast2.Expr]) -> ps.Parser[ast2.Expr]
+  ps.Parser[ast2.Expr] {
+    Run: func(state: ps.State) -> ps.Reply[ast2.Expr]
+      let r = inner.Run(state)
+      if r.Ok then
+        ps.Reply[ast2.Expr] { Ok: true, Consumed: r.Consumed, Value: exprAt(state, r.Value.Kind), State: r.State, Error: r.Error }
+      else
+        r
+      end
+    end
+  }
+end
+
+func exprKind() -> ps.Parser[ast2.Expr]
   ps.PChoice([
     ps.PAttempt(ifExpr()),
     ps.PAttempt(switchExpr()),
@@ -560,7 +597,7 @@ func switchExpr() -> ps.Parser[ast2.Expr]
   ps.PBind(kw("switch"), func(_: String) -> ps.Parser[ast2.Expr]
     ps.PBind(expr(), func(target: ast2.Expr) -> ps.Parser[ast2.Expr]
       ps.PBind(ps.PMany1(switchCase()), func(cases: Slice[ast2.SwitchCase]) -> ps.Parser[ast2.Expr]
-        ps.PThen(kw("end"), ps.PPure(ast2.Expr.SwitchExpr(Ref.new(target), cases)))
+        ps.PThen(kw("end"), ps.PPure(exprWithPos(target.Pos, ast2.ExprKind.SwitchExpr(target, cases))))
       end)
     end)
   end)
@@ -617,7 +654,7 @@ func inlineGoExpr() -> ps.Parser[ast2.Expr]
         ps.PBind(sym("]"), func(_: String) -> ps.Parser[ast2.Expr]
           ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Expr]
             ps.PBind(inlineGoBody(), func(parts: InlineGoParts) -> ps.Parser[ast2.Expr]
-              ps.PThen(sym("}"), ps.PPure(ast2.Expr.InlineGoExpr(Ref.new(typ), parts.Code, parts.Values, parts.Types)))
+              ps.PThen(sym("}"), ps.PPure(exprKindOnly(ast2.ExprKind.InlineGoExpr(Ref.new(typ), parts.Code, parts.Values, parts.Types))))
             end)
           end)
         end)
@@ -685,7 +722,7 @@ func ifArrowTail(cond: ast2.Expr) -> ps.Parser[ast2.Expr]
   ps.PBind(sym("=>"), func(_: String) -> ps.Parser[ast2.Expr]
     ps.PBind(expr(), func(thenExpr: ast2.Expr) -> ps.Parser[ast2.Expr]
       ps.PMap(ps.PThen(kw("else"), expr()), func(elseExpr: ast2.Expr) -> ast2.Expr
-        ast2.Expr.IfExpr(Ref.new(cond), Ref.new(thenExpr), Ref.new(elseExpr))
+        exprWithPos(cond.Pos, ast2.ExprKind.IfExpr(cond, thenExpr, elseExpr))
       end)
     end)
   end)
@@ -695,7 +732,7 @@ func ifBlockTail(cond: ast2.Expr) -> ps.Parser[ast2.Expr]
   ps.PBind(kw("then"), func(_: String) -> ps.Parser[ast2.Expr]
     ps.PBind(blockUntil(ps.PChoice([kw("elsif"), kw("else"), kw("end")])), func(thenBlock: ast2.Expr) -> ps.Parser[ast2.Expr]
       ps.PBind(ifElseTail(), func(elseExpr: ast2.Expr) -> ps.Parser[ast2.Expr]
-        ps.PThen(kw("end"), ps.PPure(ast2.Expr.IfExpr(Ref.new(cond), Ref.new(bodyExprFromBlock(thenBlock)), Ref.new(elseExpr))))
+        ps.PThen(kw("end"), ps.PPure(exprWithPos(cond.Pos, ast2.ExprKind.IfExpr(cond, bodyExprFromBlock(thenBlock), elseExpr))))
       end)
     end)
   end)
@@ -709,13 +746,13 @@ func ifElseTail() -> ps.Parser[ast2.Expr]
         ps.PBind(kw("then"), func(_: String) -> ps.Parser[ast2.Expr]
           ps.PBind(blockUntil(ps.PChoice([kw("elsif"), kw("else"), kw("end")])), func(thenBlock: ast2.Expr) -> ps.Parser[ast2.Expr]
             ps.PMap(lazyIfElseTail(), func(elseExpr: ast2.Expr) -> ast2.Expr
-              ast2.Expr.IfExpr(Ref.new(cond), Ref.new(bodyExprFromBlock(thenBlock)), Ref.new(elseExpr))
+              exprWithPos(cond.Pos, ast2.ExprKind.IfExpr(cond, bodyExprFromBlock(thenBlock), elseExpr))
             end)
           end)
         end)
       end)
     end)),
-    ps.PPure(ast2.Expr.UnitExpr),
+    ps.PPure(emptyExpr()),
   ])
 end
 
@@ -728,10 +765,10 @@ func lazyIfElseTail() -> ps.Parser[ast2.Expr]
 end
 
 func bodyExprFromBlock(body: ast2.Expr) -> ast2.Expr
-  switch body
+  switch body.Kind
     case BlockExpr(items) =>
       if items.Len() == 1 then
-        let first: ast2.Stmt = items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr))
+        let first: ast2.Stmt = items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(emptyExpr()))
         switch first
           case ExprStmt(e) => e
           case _ => body
@@ -774,10 +811,10 @@ end
 func unaryExpr() -> ps.Parser[ast2.Expr]
   ps.PChoice([
     ps.PAttempt(ps.PMap(ps.PThen(sym("!"), lazyUnaryExpr()), func(e: ast2.Expr) -> ast2.Expr
-      ast2.Expr.UnaryExpr("!", Ref.new(e))
+      exprWithPos(e.Pos, ast2.ExprKind.UnaryExpr("!", e))
     end)),
     ps.PAttempt(ps.PMap(ps.PThen(sym("-"), lazyUnaryExpr()), func(e: ast2.Expr) -> ast2.Expr
-      ast2.Expr.UnaryExpr("-", Ref.new(e))
+      exprWithPos(e.Pos, ast2.ExprKind.UnaryExpr("-", e))
     end)),
     postfixExpr(),
   ])
@@ -793,7 +830,7 @@ end
 
 func makeBinary() -> func(String, ast2.Expr, ast2.Expr) -> ast2.Expr
   func(op: String, left: ast2.Expr, right: ast2.Expr) -> ast2.Expr
-    ast2.Expr.BinaryExpr(op, Ref.new(left), Ref.new(right))
+    exprWithPos(left.Pos, ast2.ExprKind.BinaryExpr(op, left, right))
   end
 end
 
@@ -813,15 +850,15 @@ end
 func postfixTail(start: ps.State, cur: ps.State, acc: ast2.Expr) -> ps.Reply[ast2.Expr]
   let cast = ps.PThen(kw("as"), typeExpr()).Run(cur)
   if cast.Ok then
-    postfixTail(start, cast.State, ast2.Expr.TypeAsExpr(Ref.new(acc), cast.Value))
+    postfixTail(start, cast.State, exprWithPos(acc.Pos, ast2.ExprKind.TypeAsExpr(acc, cast.Value)))
   else
     let call = callSuffix().Run(cur)
     if call.Ok then
-      postfixTail(start, call.State, ast2.Expr.CallExpr(Ref.new(acc), call.Value.F0, call.Value.F1))
+      postfixTail(start, call.State, exprWithPos(acc.Pos, ast2.ExprKind.CallExpr(acc, call.Value.F0, call.Value.F1)))
     else
       let fld = ps.PThen(sym("."), identifier()).Run(cur)
       if fld.Ok then
-        postfixTail(start, fld.State, ast2.Expr.FieldExpr(Ref.new(acc), fld.Value))
+        postfixTail(start, fld.State, exprWithPos(acc.Pos, ast2.ExprKind.FieldExpr(acc, fld.Value)))
       else
         ps.Reply[ast2.Expr] {
           Ok: true, Consumed: cur.Index != start.Index, Value: acc,
@@ -844,7 +881,7 @@ end
 func structLitFields(head: ast2.StructLitHead) -> ps.Parser[ast2.Expr]
   ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Expr]
     ps.PBind(sepByEnd(structLitField(), sym(",")), func(fields: Slice[ast2.StructLitField]) -> ps.Parser[ast2.Expr]
-      let value = if head.TypeArgs.Len() == 0 then ast2.Expr.StructLitExpr(head.Name, fields) else ast2.Expr.GenericStructLitExpr(head.Name, head.TypeArgs, fields) end
+      let value = if head.TypeArgs.Len() == 0 then exprKindOnly(ast2.ExprKind.StructLitExpr(head.Name, fields)) else exprKindOnly(ast2.ExprKind.GenericStructLitExpr(head.Name, head.TypeArgs, fields)) end
       ps.PThen(sym("}"), ps.PPure(value))
     end)
   end)
@@ -862,22 +899,26 @@ func structLitField() -> ps.Parser[ast2.StructLitField]
 end
 
 func primaryExpr() -> ps.Parser[ast2.Expr]
+  positionedExpr(primaryExprKind())
+end
+
+func primaryExprKind() -> ps.Parser[ast2.Expr]
   ps.PChoice([
     ps.PAttempt(inlineGoExpr()),
     ps.PMap(number(), func(v: String) -> ast2.Expr
-      ast2.Expr.NumberExpr(v)
+      exprKindOnly(ast2.ExprKind.NumberExpr(v))
     end),
     ps.PMap(stringLiteral(), func(v: String) -> ast2.Expr
-      ast2.Expr.StringExpr(v)
+      exprKindOnly(ast2.ExprKind.StringExpr(v))
     end),
     ps.PMap(runeLiteral(), func(v: String) -> ast2.Expr
-      ast2.Expr.RuneExpr(v)
+      exprKindOnly(ast2.ExprKind.RuneExpr(v))
     end),
     ps.PMap(kw("true"), func(_: String) -> ast2.Expr
-      ast2.Expr.BoolExpr(true)
+      exprKindOnly(ast2.ExprKind.BoolExpr(true))
     end),
     ps.PMap(kw("false"), func(_: String) -> ast2.Expr
-      ast2.Expr.BoolExpr(false)
+      exprKindOnly(ast2.ExprKind.BoolExpr(false))
     end),
     funcLit(),
     sliceLiteral(),
@@ -891,7 +932,7 @@ func primaryExpr() -> ps.Parser[ast2.Expr]
       structLitFields(head)
     end)),
     ps.PMap(identifier(), func(v: String) -> ast2.Expr
-      ast2.Expr.IdentExpr(v)
+      exprKindOnly(ast2.ExprKind.IdentExpr(v))
     end),
   ])
 end
@@ -904,7 +945,7 @@ end
 
 func sliceLiteral() -> ps.Parser[ast2.Expr]
   ps.PMap(brackets(sepByEnd(lazyExpr(), sym(","))), func(items: Slice[ast2.Expr]) -> ast2.Expr
-    ast2.Expr.SliceLitExpr(items)
+    exprKindOnly(ast2.ExprKind.SliceLitExpr(items))
   end)
 end
 
@@ -912,7 +953,7 @@ end
 func mapLiteral() -> ps.Parser[ast2.Expr]
   ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Expr]
     ps.PBind(sepByEnd(mapEntry(), sym(",")), func(pairs: Slice[(ast2.Expr, ast2.Expr)]) -> ps.Parser[ast2.Expr]
-      ps.PThen(sym("}"), ps.PPure(ast2.Expr.MapLitExpr(pairs)))
+      ps.PThen(sym("}"), ps.PPure(exprKindOnly(ast2.ExprKind.MapLitExpr(pairs))))
     end)
   end)
 end
@@ -929,7 +970,7 @@ end
 # setLiteral parses { elem1, elem2, ... }
 func setLiteral() -> ps.Parser[ast2.Expr]
   ps.PMap(ps.PBetween(sym("{"), sepByEnd(lazyExpr(), sym(",")), sym("}")), func(items: Slice[ast2.Expr]) -> ast2.Expr
-    ast2.Expr.SetLitExpr(items)
+    exprKindOnly(ast2.ExprKind.SetLitExpr(items))
   end)
 end
 
@@ -948,7 +989,7 @@ func funcLit() -> ps.Parser[ast2.Expr]
     ps.PBind(paren(ps.PSepBy(param(), sym(","))), func(params: Slice[ast2.Param]) -> ps.Parser[ast2.Expr]
       ps.PBind(ps.POptional(ps.PThen(sym("->"), typeExpr())), func(ret: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Expr]
         ps.PBind(blockUntilEnd(), func(body: ast2.Expr) -> ps.Parser[ast2.Expr]
-          ps.PThen(kw("end"), ps.PPure(ast2.Expr.FuncLitExpr(params, ret, Ref.new(body))))
+          ps.PThen(kw("end"), ps.PPure(exprWithPos(body.Pos, ast2.ExprKind.FuncLitExpr(params, ret, body))))
         end)
       end)
     end)
@@ -958,11 +999,11 @@ end
 func tupleOrParenExpr() -> ps.Parser[ast2.Expr]
   ps.PBind(paren(ps.PSepBy(lazyExpr(), sym(","))), func(items: Slice[ast2.Expr]) -> ps.Parser[ast2.Expr]
     if items.Len() == 0 then
-      ps.PPure(ast2.Expr.UnitExpr)
+      ps.PPure(emptyExpr())
     else if items.Len() == 1 then
-      ps.PPure(items.Get(0).UnwrapOr(ast2.Expr.UnitExpr()))
+      ps.PPure(items.Get(0).UnwrapOr(emptyExpr()))
     else
-      ps.PPure(ast2.Expr.TupleExpr(items))
+      ps.PPure(exprKindOnly(ast2.ExprKind.TupleExpr(items)))
     end end
   end)
 end

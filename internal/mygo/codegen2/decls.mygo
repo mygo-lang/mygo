@@ -152,7 +152,7 @@ func defaultImplMethod() -> ast2.ImplMethod
   ast2.ImplMethod {
     Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 },
     Sig: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] },
-    Body: ast2.Expr.UnitExpr(),
+    Body: ast2.EmptyExpr(),
   }
 end
 

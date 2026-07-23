@@ -9,7 +9,7 @@ struct TailAstParts
 end
 
 func tailCallAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
-  switch expr
+  switch expr.Kind
     case CallExpr(_, _, args) =>
       let parts = tailCallAstParts(args, ctx, 0, TailAstParts { Stmts: [] as Slice[goast.Stmt], Values: [] as Slice[goast.Expr] })
       switch parts
@@ -26,7 +26,7 @@ func tailCallAstParts(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: 
   if index >= args.Len() then
     Ok(out)
   else
-    let value = translateExprAst(args.Get(index).UnwrapOr(ast2.Expr.UnitExpr()), ctx)
+    let value = translateExprAst(args.Get(index).UnwrapOr(ast2.EmptyExpr()), ctx)
     switch value
       case Err(msg) => Err(msg)
       case Ok(v) =>
@@ -40,12 +40,12 @@ func tailCallAstParts(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: 
   end
 end
 func isTailSelfCall(expr: ast2.Expr, ctx: Ref[egCtx]) -> Bool
-  switch expr
+  switch expr.Kind
     case CallExpr(callee, _, args) =>
       if args.Len() != ctx.tailRecParamCount then
         return false
       end
-      switch callee.value()
+      switch callee.Kind
         case IdentExpr(name) =>
           switch ctx.tailRecFuncName
             case Some(fn) => name == fn
@@ -58,13 +58,13 @@ func isTailSelfCall(expr: ast2.Expr, ctx: Ref[egCtx]) -> Bool
 end
 
 func containsTailCall(expr: ast2.Expr, name: String) -> Bool
-  switch expr
+  switch expr.Kind
     case CallExpr(callee, _, _) =>
-      switch callee.value()
+      switch callee.Kind
         case IdentExpr(n) => n == name
         case _ => false
       end
-    case IfExpr(_, t, e) => containsTailCall(t.value(), name) || containsTailCall(e.value(), name)
+    case IfExpr(_, t, e) => containsTailCall(t, name) || containsTailCall(e, name)
     case BlockExpr(items) =>
       if items.Len() == 0 then false else containsTailCallBlock(items, name) end
     case _ => false
@@ -75,7 +75,7 @@ func containsTailCallBlock(items: Slice[ast2.Stmt], name: String) -> Bool
   if items.Len() == 0 then
     false
   else
-    let last: ast2.Stmt = items.Get(items.Len() - 1).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr()))
+    let last: ast2.Stmt = items.Get(items.Len() - 1).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
     switch last
       case ExprStmt(e) => containsTailCall(e, name)
       case _ => false

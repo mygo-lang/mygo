@@ -95,7 +95,7 @@ func predicatesFromConstraints(items: Slice[ast2.Constraint]) -> Slice[Predicate
 end
 
 func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
-  switch expr
+  switch expr.Kind
     case IdentExpr(name) =>
       switch envGet(env, name)
         case Some(s) =>
@@ -107,18 +107,18 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
     case StringExpr(_) => Ok(InferResult { Type: MonoType.TCon("String", emptyMonoTypes()), Predicates: [], Subst: [], State: state })
     case RuneExpr(_) => Ok(InferResult { Type: MonoType.TCon("Rune", emptyMonoTypes()), Predicates: [], Subst: [], State: state })
     case SliceLitExpr(items) => inferSlice(items, env, state)
-    case TypeAsExpr(value, typ) => inferTypeAs(value.value(), typ, env, state)
+    case TypeAsExpr(value, typ) => inferTypeAs(value, typ, env, state)
     case BoolExpr(_) => Ok(InferResult { Type: MonoType.TCon("Bool", emptyMonoTypes()), Predicates: [], Subst: [], State: state })
     case UnitExpr => Ok(InferResult { Type: MonoType.TUnit, Predicates: [], Subst: [], State: state })
     case TupleExpr(items) => inferTuple(items, env, state)
-    case UnaryExpr(op, inner) => inferUnary(op, inner.value(), env, state)
-    case BinaryExpr(op, left, right) => inferBinary(op, left.value(), right.value(), env, state)
-    case CallExpr(callee, _, args) => inferCall(callee.value(), args, env, state)
-    case FieldExpr(base, field) => inferField(base.value(), field, env, state)
-    case IfExpr(cond, thenExpr, elseExpr) => inferIf(cond.value(), thenExpr.value(), elseExpr.value(), env, state)
-    case SwitchExpr(target, cases) => inferSwitch(target.value(), cases, env, state)
+    case UnaryExpr(op, inner) => inferUnary(op, inner, env, state)
+    case BinaryExpr(op, left, right) => inferBinary(op, left, right, env, state)
+    case CallExpr(callee, _, args) => inferCall(callee, args, env, state)
+    case FieldExpr(base, field) => inferField(base, field, env, state)
+    case IfExpr(cond, thenExpr, elseExpr) => inferIf(cond, thenExpr, elseExpr, env, state)
+    case SwitchExpr(target, cases) => inferSwitch(target, cases, env, state)
     case BlockExpr(items) => inferBlock(items, env, state)
-    case FuncLitExpr(params, ret, body) => inferFuncLit(params, ret, body.value(), env, state)
+    case FuncLitExpr(params, ret, body) => inferFuncLit(params, ret, body, env, state)
     case StructLitExpr(typeName, fields) =>
       inferStructLit(typeName, fields, env, state)
     case GenericStructLitExpr(typeName, typeArgs, fields) =>
@@ -179,7 +179,7 @@ func inferSlice(items: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState
     let element = MonoType.TVar(state.FreshVarID)
     Ok(InferResult { Type: MonoType.TCon("Slice", [element]), Predicates: [], Subst: [], State: InferState { FreshVarID: state.FreshVarID + 1 } })
   else
-    let first = inferExpr(items.Get(0).UnwrapOr(ast2.Expr.UnitExpr()), env, state)
+    let first = inferExpr(items.Get(0).UnwrapOr(ast2.EmptyExpr()), env, state)
     switch first
       case Err(msg) => Err(msg)
       case Ok(value) => inferSliceItems(sliceDrop(items, 1), value.Type, env, value.State, value.Subst)
@@ -191,7 +191,7 @@ func inferSliceItems(items: Slice[ast2.Expr], element: MonoType, env: Slice[EnvE
   if items.Len() == 0 then
     Ok(InferResult { Type: MonoType.TCon("Slice", [applySubst(subst, element)]), Predicates: [], Subst: subst, State: state })
   else
-    let next = inferExpr(items.Get(0).UnwrapOr(ast2.Expr.UnitExpr()), env, state)
+    let next = inferExpr(items.Get(0).UnwrapOr(ast2.EmptyExpr()), env, state)
     switch next
       case Err(msg) => Err(msg)
       case Ok(value) =>
@@ -219,7 +219,7 @@ func inferSwitchCases(cases: Slice[ast2.SwitchCase], targetType: MonoType, env: 
       case None => Err("switch requires at least one case")
     end
   else
-    let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.Expr.UnitExpr() })
+    let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
     let caseEnv = envWithPattern(env, current.Pattern, targetType)
     switch caseEnv
       case Err(msg) => Err(msg)
@@ -331,7 +331,7 @@ func inferTupleItems(items: Slice[ast2.Expr], env: Slice[EnvEntry], state: Infer
   if items.Len() == 0 then
     Ok(InferResult { Type: MonoType.TTuple(types), Predicates: [], Subst: subst, State: state })
   else
-    let r = inferExpr(items.Get(0).UnwrapOr(ast2.Expr.UnitExpr()), env, state)
+    let r = inferExpr(items.Get(0).UnwrapOr(ast2.EmptyExpr()), env, state)
     switch r
       case Err(msg) => Err(msg)
       case Ok(v) => inferTupleItems(sliceDrop(items, 1), env, v.State, types.Append(v.Type), composeSubst(v.Subst, subst))
@@ -530,7 +530,7 @@ func inferArgs(args: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState, 
   if args.Len() == 0 then
     Ok(ArgsResult { Types: types, Predicates: predicates, Subst: subst, State: state })
   else
-    let head = args.Get(0).UnwrapOr(ast2.Expr.UnitExpr())
+    let head = args.Get(0).UnwrapOr(ast2.EmptyExpr())
     let r = inferExpr(head, env, state)
     switch r
       case Err(msg) => Err(msg)
@@ -552,7 +552,7 @@ func inferBlockItems(items: Slice[ast2.Stmt], env: Slice[EnvEntry], state: Infer
   if items.Len() == 0 then
     Ok(InferResult { Type: applySubst(subst, lastType), Predicates: predicates, Subst: subst, State: state })
   else
-    let step = inferBlockStep(items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr())), env, state)
+    let step = inferBlockStep(items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr())), env, state)
     switch step
       case Err(msg) => Err(msg)
       case Ok(v) => inferBlockItems(sliceDrop(items, 1), v.Env, v.Result.State, v.Result.Type, composeSubst(v.Result.Subst, subst), appendPredicates(predicates, v.Result.Predicates))
@@ -584,7 +584,7 @@ func predeclareLetRec(bindings: Slice[ast2.LetRecBind], env: Slice[EnvEntry]) ->
   if bindings.Len() == 0 then
     env
   else
-    let binding = bindings.Get(0).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType(), Value: ast2.Expr.UnitExpr() })
+    let binding = bindings.Get(0).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType(), Value: ast2.EmptyExpr() })
     predeclareLetRec(sliceDrop(bindings, 1), envPut(env, binding.Name, Scheme { Bound: [], Predicates: [], Body: typeFromAST(binding.Type) }))
   end
 end
@@ -602,7 +602,7 @@ func inferLetRecValues(bindings: Slice[ast2.LetRecBind], recEnv: Slice[EnvEntry]
   if bindings.Len() == 0 then
     Ok(BlockInferStep { Result: InferResult { Type: MonoType.TUnit, Predicates: [], Subst: subst, State: state }, Env: recEnv })
   else
-    let binding = bindings.Get(0).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType(), Value: ast2.Expr.UnitExpr() })
+    let binding = bindings.Get(0).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType(), Value: ast2.EmptyExpr() })
     let inferred = inferExpr(binding.Value, recEnv, state)
     switch inferred
       case Err(msg) => Err("letrec binding " + binding.Name + ": " + msg)
@@ -752,7 +752,7 @@ func inferStructLitFields(typeName: String, fields: Slice[ast2.StructLitField], 
   if fields.Len() == 0 then
     Ok(InferResult { Type: MonoType.TCon(typeName, emptyMonoTypes()), Predicates: predicates, Subst: subst, State: curState })
   else
-    let f = fields.Get(0).UnwrapOr(ast2.StructLitField { Name: "", Value: ast2.Expr.UnitExpr() })
+    let f = fields.Get(0).UnwrapOr(ast2.StructLitField { Name: "", Value: ast2.EmptyExpr() })
     let r = inferExpr(f.Value, env, curState)
     switch r
       case Err(msg) => Err(msg)
@@ -768,7 +768,7 @@ func inferMapLit(pairs: Slice[(ast2.Expr, ast2.Expr)], env: Slice[EnvEntry], s0:
     let vt = MonoType.TVar(s0.FreshVarID + 1)
     Ok(InferResult { Type: MonoType.TCon("Map", [kt, vt]), Predicates: [], Subst: [], State: InferState { FreshVarID: s0.FreshVarID + 2 } })
   else
-    let (k0, v0) = pairs.Get(0).UnwrapOr((ast2.Expr.UnitExpr(), ast2.Expr.UnitExpr()))
+    let (k0, v0) = pairs.Get(0).UnwrapOr((ast2.EmptyExpr(), ast2.EmptyExpr()))
     let kr = inferExpr(k0, env, s0)
     switch kr
       case Err(msg) => Err("map key: " + msg)
@@ -789,7 +789,7 @@ func inferMapLitTail(pairs: Slice[(ast2.Expr, ast2.Expr)], env: Slice[EnvEntry],
   if pairs.Len() == 0 then
     Ok(InferResult { Type: resultType, Predicates: predicates, Subst: subst, State: s0 })
   else
-    let (k, v) = pairs.Get(0).UnwrapOr((ast2.Expr.UnitExpr(), ast2.Expr.UnitExpr()))
+    let (k, v) = pairs.Get(0).UnwrapOr((ast2.EmptyExpr(), ast2.EmptyExpr()))
     let kr = inferExpr(k, env, s0)
     switch kr
       case Err(msg) => Err("map key: " + msg)
@@ -808,7 +808,7 @@ func inferSetLit(items: Slice[ast2.Expr], env: Slice[EnvEntry], s0: InferState) 
     let et = MonoType.TVar(s0.FreshVarID)
     Ok(InferResult { Type: MonoType.TCon("Set", [et]), Predicates: [], Subst: [], State: InferState { FreshVarID: s0.FreshVarID + 1 } })
   else
-    let r0 = inferExpr(items.Get(0).UnwrapOr(ast2.Expr.UnitExpr()), env, s0)
+    let r0 = inferExpr(items.Get(0).UnwrapOr(ast2.EmptyExpr()), env, s0)
     switch r0
       case Err(msg) => Err("set element: " + msg)
       case Ok(v0) =>
@@ -822,7 +822,7 @@ func inferSetLitTail(items: Slice[ast2.Expr], env: Slice[EnvEntry], s0: InferSta
   if items.Len() == 0 then
     Ok(InferResult { Type: resultType, Predicates: predicates, Subst: subst, State: s0 })
   else
-    let r = inferExpr(items.Get(0).UnwrapOr(ast2.Expr.UnitExpr()), env, s0)
+    let r = inferExpr(items.Get(0).UnwrapOr(ast2.EmptyExpr()), env, s0)
     switch r
       case Err(msg) => Err("set element: " + msg)
       case Ok(v) => inferSetLitTail(sliceDrop(items, 1), env, v.State, composeSubst(v.Subst, subst), resultType, appendPredicates(predicates, v.Predicates))

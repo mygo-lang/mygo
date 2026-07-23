@@ -9,7 +9,7 @@ import strings "go:strings"
 # translateFuncBodyAst is the direct go/ast lowering path for function bodies
 # whose result can be represented without statement-expansion temporaries.
 func translateFuncBodyAst(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
-  switch body
+  switch body.Kind
     case BlockExpr(items) => translateAstBlock(items, ctx, 0, [] as Slice[goast.Stmt])
     case _ => translateAstReturnExpr(body, ctx)
   end
@@ -19,7 +19,7 @@ func translateAstBlock(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, out
   if items.Len() == 0 then
     if ctx.retType == "" then Ok(astSingleStmt(goast.Return([] as Slice[goast.Expr]))) else Err("non-unit function has empty body") end
   else
-    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr()))
+    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
     if index == items.Len() - 1 then
       let final = translateAstReturnStmt(stmt, ctx)
       switch final
@@ -39,9 +39,9 @@ end
 func translateAstLeadingStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
   switch stmt
     case ExprStmt(expr) =>
-      switch expr
+      switch expr.Kind
         case InlineGoExpr(typ, body, values, types) => translateInlineGoAst(body, values, types, ctx)
-        case IfExpr(cond, thenExpr, elseExpr) => translateAstReturnIf(cond.value(), thenExpr.value(), elseExpr.value(), ctx)
+        case IfExpr(cond, thenExpr, elseExpr) => translateAstReturnIf(cond, thenExpr, elseExpr, ctx)
         case _ =>
           let value = translateExprAst(expr, ctx)
           switch value
@@ -88,7 +88,7 @@ func declareAstLetRec(bindings: Slice[ast2.LetRecBind], ctx: Ref[egCtx], index: 
   if index >= bindings.Len() then
     Ok(out)
   else
-    let binding = bindings.Get(index).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType(), Value: ast2.Expr.UnitExpr() })
+    let binding = bindings.Get(index).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType(), Value: ast2.EmptyExpr() })
     let name = ctxFreshBinding(ctx, binding.Name)
     let typ = goType(binding.Type, ctx.typeParams)
     ctxSetLocal(ctx, binding.Name, typ)
@@ -101,7 +101,7 @@ func initializeAstLetRec(bindings: Slice[ast2.LetRecBind], ctx: Ref[egCtx], inde
   if index >= bindings.Len() then
     Ok(out)
   else
-    let binding = bindings.Get(index).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType(), Value: ast2.Expr.UnitExpr() })
+    let binding = bindings.Get(index).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType(), Value: ast2.EmptyExpr() })
     let value = translateAstBindingValue(binding.Value, Some(binding.Type), ctx)
     switch value
       case Err(msg) => Err(msg)
@@ -127,7 +127,7 @@ func translateAstWhileStmt(cond: ast2.Expr, body: ast2.Expr, ctx: Ref[egCtx]) ->
 end
 
 func translateAstLoopBody(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
-  switch body
+  switch body.Kind
     case BlockExpr(items) => translateAstLoopItems(items, ctx, 0, [] as Slice[goast.Stmt])
     case _ =>
       let value = translateExprAst(body, ctx)
@@ -142,7 +142,7 @@ func translateAstLoopItems(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int,
   if index >= items.Len() then
     Ok(out)
   else
-    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr()))
+    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
     let lowered = translateAstLoopStmt(stmt, ctx)
     switch lowered
       case Ok(stmts) => translateAstLoopItems(items, ctx, index + 1, goast.AppendStmts(out, stmts))
@@ -154,8 +154,8 @@ end
 func translateAstLoopStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
   switch stmt
     case ExprStmt(expr) =>
-      switch expr
-        case IfExpr(cond, thenExpr, elseExpr) => translateAstReturnIf(cond.value(), thenExpr.value(), elseExpr.value(), ctx)
+      switch expr.Kind
+        case IfExpr(cond, thenExpr, elseExpr) => translateAstReturnIf(cond, thenExpr, elseExpr, ctx)
         case _ => translateAstLeadingStmt(stmt, ctx)
       end
     case _ => translateAstLeadingStmt(stmt, ctx)
@@ -186,8 +186,8 @@ func translateAstBindingValue(expr: ast2.Expr, typ: Option[ast2.TypeExpr], ctx: 
     case Some(t) => goType(t, ctx.typeParams)
     case None => "any"
   end
-  switch expr
-    case IfExpr(cond, thenExpr, elseExpr) => translateIfAst(cond.value(), thenExpr.value(), elseExpr.value(), ctx, expected)
+  switch expr.Kind
+    case IfExpr(cond, thenExpr, elseExpr) => translateIfAst(cond, thenExpr, elseExpr, ctx, expected)
     case _ => translateExprAstExpected(expr, ctx, expected)
   end
 end
@@ -203,14 +203,14 @@ func translateAstReturnStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[go
 end
 
 func translateAstReturnExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
-  switch expr
+  switch expr.Kind
     case InlineGoExpr(typ, body, values, types) =>
       let parts = translateInlineOperands(values, types, ctx, 0, [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[goast.Stmt])
       switch parts
         case Err(msg) => Err(msg)
         case Ok(p) => Ok(goast.AppendStmts(p.Pre, goast.MustInlineGoFinalStatementsWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)))
       end
-    case IfExpr(cond, thenExpr, elseExpr) => translateAstReturnIf(cond.value(), thenExpr.value(), elseExpr.value(), ctx)
+    case IfExpr(cond, thenExpr, elseExpr) => translateAstReturnIf(cond, thenExpr, elseExpr, ctx)
     case BlockExpr(items) => translateAstReturnBlock(items, ctx, 0, [] as Slice[goast.Stmt])
     case _ =>
       if isTailSelfCall(expr, ctx) then
@@ -225,7 +225,7 @@ func translateAstReturnBlock(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: In
   if index >= items.Len() then
     Ok(out)
   else
-    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr()))
+    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
     if index == items.Len() - 1 then
       switch stmt
         case ExprStmt(value) =>
@@ -263,7 +263,7 @@ end
 
 func translateInlineOperands(values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], ctx: Ref[egCtx], index: Int, valueNames: Slice[String], valueSources: Slice[String], typeNames: Slice[String], typeSources: Slice[String], pre: Slice[goast.Stmt]) -> Result[AstInlineOperands, String]
   if index < values.Len() then
-    let operand = values.Get(index).UnwrapOr(ast2.GoOperand { Name: "", Value: ast2.Expr.UnitExpr() })
+    let operand = values.Get(index).UnwrapOr(ast2.GoOperand { Name: "", Value: ast2.EmptyExpr() })
     let value = translateExprAst(operand.Value, ctx)
     switch value
       case Err(msg) => Err(msg)
@@ -298,14 +298,14 @@ func translateAstReturnIf(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.E
 end
 
 func translateAstBranchReturn(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
-  switch expr
+  switch expr.Kind
     case BlockExpr(items) => translateAstBlock(items, ctx, 0, [] as Slice[goast.Stmt])
     case _ => translateAstReturnExpr(expr, ctx)
   end
 end
 
 func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
-  switch expr
+  switch expr.Kind
     case TupleExpr(items) =>
       let values = translateAstArgs(items, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], ctx.retTypes)
       switch values

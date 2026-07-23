@@ -13,7 +13,7 @@ func translateExprAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult,
 end
 
 func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
-  switch expr
+  switch expr.Kind
     case IdentExpr(name) =>
       # A `using` dictionary shadows package-level typeclass dispatch, just
       # like ordinary lexical bindings shadow top-level functions.
@@ -22,7 +22,7 @@ func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String
     case StringExpr(v) => Ok(newAstExprResult(goast.String(strconv.Quote(v))))
     case RuneExpr(v) => Ok(newAstExprResult(goast.Rune(v)))
     case SliceLitExpr(items) => translateSliceLitAst(items, ctx, expected)
-    case TypeAsExpr(value, typ) => translateTypeAsAst(value.value(), typ, ctx)
+    case TypeAsExpr(value, typ) => translateTypeAsAst(value, typ, ctx)
     case BoolExpr(v) => if v then Ok(newAstExprResult(goast.Ident("true"))) else Ok(newAstExprResult(goast.Ident("false"))) end
     case UnitExpr => Ok(newAstExprResult(goast.Unit()))
     case InlineGoExpr(_, body, values, types) =>
@@ -33,27 +33,27 @@ func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String
       end
     case TupleExpr(items) => translateTupleLitAst(items, ctx, expected)
     case FieldExpr(base, field) =>
-      let value = translateExprAstExpected(base.value(), ctx, expected)
+      let value = translateExprAstExpected(base, ctx, expected)
       switch value
         case Ok(v) => Ok(astExprWithPre(goast.Selector(v.Expr, exportName(field)), v.Pre))
         case Err(msg) => Err(msg)
       end
     case UnaryExpr(op, inner) =>
-      let value = translateExprAstExpected(inner.value(), ctx, expected)
+      let value = translateExprAstExpected(inner, ctx, expected)
       switch value
         case Ok(v) => Ok(astExprWithPre(goast.Unary(op, v.Expr), v.Pre))
         case Err(msg) => Err(msg)
       end
-    case BinaryExpr(op, left, right) => translateBinaryAstExpected(op, left.value(), right.value(), ctx, expected)
-    case CallExpr(callee, typeArgs, args) => translateCallAstExpected(callee.value(), typeArgs, args, ctx, expected)
+    case BinaryExpr(op, left, right) => translateBinaryAstExpected(op, left, right, ctx, expected)
+    case CallExpr(callee, typeArgs, args) => translateCallAstExpected(callee, typeArgs, args, ctx, expected)
     case StructLitExpr(typeName, fields) => translateStructLitAstExpected(typeName, fields, ctx, expected)
     case GenericStructLitExpr(typeName, typeArgs, fields) => translateGenericStructLitAstExpected(typeName, typeArgs, fields, ctx, expected)
     case MapLitExpr(pairs) => translateMapLitAstExpected(pairs, ctx, expected)
     case SetLitExpr(items) => translateSetLitAstExpected(items, ctx, expected)
-    case IfExpr(cond, thenExpr, elseExpr) => translateIfAst(cond.value(), thenExpr.value(), elseExpr.value(), ctx, expected)
-    case SwitchExpr(target, cases) => translateSwitchAst(target.value(), cases, ctx, expected)
+    case IfExpr(cond, thenExpr, elseExpr) => translateIfAst(cond, thenExpr, elseExpr, ctx, expected)
+    case SwitchExpr(target, cases) => translateSwitchAst(target, cases, ctx, expected)
     case BlockExpr(items) => translateBlockExprAstExpected(items, ctx, 0, [] as Slice[goast.Stmt], expected)
-    case FuncLitExpr(params, ret, body) => translateFuncLitAst(params, ret, body.value(), ctx)
+    case FuncLitExpr(params, ret, body) => translateFuncLitAst(params, ret, body, ctx)
     case _ => Err("AST lowering for this expression is not implemented")
   end
 end
@@ -190,7 +190,7 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], sourceTarget: ast2.E
     let noBranches: Slice[goast.Stmt] = []
     Ok(noBranches)
   else
-    let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.Expr.UnitExpr() })
+    let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
     switch current.Pattern
       case BindPattern(name) =>
         let child = Ref.new(ctxChild(ctx))
@@ -276,7 +276,7 @@ func translateBlockExprAstExpected(items: Slice[ast2.Stmt], ctx: Ref[egCtx], ind
   if items.Len() == 0 then
     Ok(astExprWithPre(goast.Unit(), pre))
   else
-    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr()))
+    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
     if index == items.Len() - 1 then
       switch stmt
         case ExprStmt(expr) =>
@@ -317,7 +317,7 @@ func translateBlockExprAst(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int,
   if items.Len() == 0 then
     Ok(astExprWithPre(goast.Unit(), pre))
   else
-    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr()))
+    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
     if index == items.Len() - 1 then
       switch stmt
         case ExprStmt(expr) =>
@@ -381,7 +381,7 @@ func translateAstCompositeFields(fields: Slice[ast2.StructLitField], ctx: Ref[eg
   if index >= fields.Len() then
     Ok(AstCompositeFields { Elts: out, Pre: pre })
   else
-    let field = fields.Get(index).UnwrapOr(ast2.StructLitField { Name: "", Value: ast2.Expr.UnitExpr() })
+    let field = fields.Get(index).UnwrapOr(ast2.StructLitField { Name: "", Value: ast2.EmptyExpr() })
     let value = translateExprAstExpected(field.Value, ctx, expected)
     switch value
       case Err(msg) => Err(msg)
@@ -466,9 +466,9 @@ func translatePlainCallAstExpected(callee: ast2.Expr, typeArgs: Slice[ast2.TypeE
 end
 
 func ffiOptionSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
-  switch callee
+  switch callee.Kind
     case FieldExpr(base, field) =>
-      switch base.value()
+      switch base.Kind
         case IdentExpr(alias) => ffiSignatureInPackages(ctx.goPackages, alias, field)
         case _ => None
       end
@@ -521,9 +521,9 @@ end
 # Go functions with a trailing error return are decoded at the boundary into
 # Result[T, String], matching the prelude's dedicated error-bearing type.
 func ffiResultSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
-  switch callee
+  switch callee.Kind
     case FieldExpr(base, field) =>
-      switch base.value()
+      switch base.Kind
         case IdentExpr(alias) => ffiResultSignatureInPackages(ctx.goPackages, alias, field)
         case _ => None
       end
@@ -575,7 +575,7 @@ func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], a
 end
 
 func dictionaryArgsForCall(callee: ast2.Expr, ctx: Ref[egCtx], args: Slice[goast.Expr]) -> Slice[goast.Expr]
-  switch callee
+  switch callee.Kind
     case IdentExpr(name) => appendRequirementArgs(args, ctx.callRequirements.Get(name).UnwrapOr([] as Slice[DictionaryRequirement]), ctx)
     case _ => args
   end
@@ -654,7 +654,7 @@ func translateAstArgs(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: 
     Ok(AstArgsResult { Exprs: out, Pre: pre })
   else
     let expected = expectedTypes.Get(index).UnwrapOr("")
-    let value = translateExprAstExpected(args.Get(index).UnwrapOr(ast2.Expr.UnitExpr()), ctx, expected)
+    let value = translateExprAstExpected(args.Get(index).UnwrapOr(ast2.EmptyExpr()), ctx, expected)
     switch value
       case Err(msg) => Err(msg)
       case Ok(v) => translateAstArgs(args, ctx, index + 1, out.Append(v.Expr), goast.AppendStmts(pre, v.Pre), expectedTypes)
@@ -675,7 +675,7 @@ func translateMapLitPairs(pairs: Slice[(ast2.Expr, ast2.Expr)], ctx: Ref[egCtx],
   if index >= pairs.Len() then
     Ok(AstCompositeFields { Elts: out, Pre: pre })
   else
-    let pair = pairs.Get(index).UnwrapOr((ast2.Expr.UnitExpr(), ast2.Expr.UnitExpr()))
+    let pair = pairs.Get(index).UnwrapOr((ast2.EmptyExpr(), ast2.EmptyExpr()))
     let (key, value) = pair
     let k = translateExprAstExpected(key, ctx, "")
     switch k
@@ -706,7 +706,7 @@ func translateSetLitItems(items: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, 
   if index >= items.Len() then
     Ok(AstCompositeFields { Elts: out, Pre: pre })
   else
-    let elem = items.Get(index).UnwrapOr(ast2.Expr.UnitExpr())
+    let elem = items.Get(index).UnwrapOr(ast2.EmptyExpr())
     let e = translateExprAstExpected(elem, ctx, "")
     switch e
       case Err(msg) => Err(msg)

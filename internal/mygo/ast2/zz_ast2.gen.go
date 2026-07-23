@@ -360,248 +360,257 @@ func StmtReturnWithStmtCtor(a0 Expr) Stmt {
 	return StmtReturnWithStmt{F0: a0}
 }
 
-type Expr interface {
-	isExpr()
+type ExprKind interface {
+	isExprKind()
 }
-type ExprIdentExpr struct {
+type ExprKindIdentExpr struct {
 	F0 string
 }
 
-func (_ ExprIdentExpr) isExpr() {
+func (_ ExprKindIdentExpr) isExprKind() {
 }
-func ExprIdentExprCtor(a0 string) Expr {
-	return ExprIdentExpr{F0: a0}
+func ExprKindIdentExprCtor(a0 string) ExprKind {
+	return ExprKindIdentExpr{F0: a0}
 }
 
-type ExprNumberExpr struct {
+type ExprKindNumberExpr struct {
 	F0 string
 }
 
-func (_ ExprNumberExpr) isExpr() {
+func (_ ExprKindNumberExpr) isExprKind() {
 }
-func ExprNumberExprCtor(a0 string) Expr {
-	return ExprNumberExpr{F0: a0}
+func ExprKindNumberExprCtor(a0 string) ExprKind {
+	return ExprKindNumberExpr{F0: a0}
 }
 
-type ExprStringExpr struct {
+type ExprKindStringExpr struct {
 	F0 string
 }
 
-func (_ ExprStringExpr) isExpr() {
+func (_ ExprKindStringExpr) isExprKind() {
 }
-func ExprStringExprCtor(a0 string) Expr {
-	return ExprStringExpr{F0: a0}
+func ExprKindStringExprCtor(a0 string) ExprKind {
+	return ExprKindStringExpr{F0: a0}
 }
 
-type ExprRuneExpr struct {
+type ExprKindRuneExpr struct {
 	F0 string
 }
 
-func (_ ExprRuneExpr) isExpr() {
+func (_ ExprKindRuneExpr) isExprKind() {
 }
-func ExprRuneExprCtor(a0 string) Expr {
-	return ExprRuneExpr{F0: a0}
+func ExprKindRuneExprCtor(a0 string) ExprKind {
+	return ExprKindRuneExpr{F0: a0}
 }
 
-type ExprBoolExpr struct {
+type ExprKindBoolExpr struct {
 	F0 bool
 }
 
-func (_ ExprBoolExpr) isExpr() {
+func (_ ExprKindBoolExpr) isExprKind() {
 }
-func ExprBoolExprCtor(a0 bool) Expr {
-	return ExprBoolExpr{F0: a0}
-}
-
-type ExprUnitExpr struct {
+func ExprKindBoolExprCtor(a0 bool) ExprKind {
+	return ExprKindBoolExpr{F0: a0}
 }
 
-func (_ ExprUnitExpr) isExpr() {
-}
-func ExprUnitExprCtor() Expr {
-	return ExprUnitExpr{}
+type ExprKindUnitExpr struct {
 }
 
-type ExprTupleExpr struct {
+func (_ ExprKindUnitExpr) isExprKind() {
+}
+func ExprKindUnitExprCtor() ExprKind {
+	return ExprKindUnitExpr{}
+}
+
+type ExprKindTupleExpr struct {
 	F0 []Expr
 }
 
-func (_ ExprTupleExpr) isExpr() {
+func (_ ExprKindTupleExpr) isExprKind() {
 }
-func ExprTupleExprCtor(a0 []Expr) Expr {
-	return ExprTupleExpr{F0: a0}
+func ExprKindTupleExprCtor(a0 []Expr) ExprKind {
+	return ExprKindTupleExpr{F0: a0}
 }
 
-type ExprCallExpr struct {
-	F0 *Expr
+type ExprKindCallExpr struct {
+	F0 Expr
 	F1 []TypeExpr
 	F2 []Expr
 }
 
-func (_ ExprCallExpr) isExpr() {
+func (_ ExprKindCallExpr) isExprKind() {
 }
-func ExprCallExprCtor(a0 *Expr, a1 []TypeExpr, a2 []Expr) Expr {
-	return ExprCallExpr{F0: a0, F1: a1, F2: a2}
+func ExprKindCallExprCtor(a0 Expr, a1 []TypeExpr, a2 []Expr) ExprKind {
+	return ExprKindCallExpr{F0: a0, F1: a1, F2: a2}
 }
 
-type ExprFieldExpr struct {
-	F0 *Expr
+type ExprKindFieldExpr struct {
+	F0 Expr
 	F1 string
 }
 
-func (_ ExprFieldExpr) isExpr() {
+func (_ ExprKindFieldExpr) isExprKind() {
 }
-func ExprFieldExprCtor(a0 *Expr, a1 string) Expr {
-	return ExprFieldExpr{F0: a0, F1: a1}
+func ExprKindFieldExprCtor(a0 Expr, a1 string) ExprKind {
+	return ExprKindFieldExpr{F0: a0, F1: a1}
 }
 
-type ExprUnaryExpr struct {
+type ExprKindUnaryExpr struct {
 	F0 string
-	F1 *Expr
+	F1 Expr
 }
 
-func (_ ExprUnaryExpr) isExpr() {
+func (_ ExprKindUnaryExpr) isExprKind() {
 }
-func ExprUnaryExprCtor(a0 string, a1 *Expr) Expr {
-	return ExprUnaryExpr{F0: a0, F1: a1}
+func ExprKindUnaryExprCtor(a0 string, a1 Expr) ExprKind {
+	return ExprKindUnaryExpr{F0: a0, F1: a1}
 }
 
-type ExprBinaryExpr struct {
+type ExprKindBinaryExpr struct {
 	F0 string
-	F1 *Expr
-	F2 *Expr
+	F1 Expr
+	F2 Expr
 }
 
-func (_ ExprBinaryExpr) isExpr() {
+func (_ ExprKindBinaryExpr) isExprKind() {
 }
-func ExprBinaryExprCtor(a0 string, a1 *Expr, a2 *Expr) Expr {
-	return ExprBinaryExpr{F0: a0, F1: a1, F2: a2}
-}
-
-type ExprIfExpr struct {
-	F0 *Expr
-	F1 *Expr
-	F2 *Expr
+func ExprKindBinaryExprCtor(a0 string, a1 Expr, a2 Expr) ExprKind {
+	return ExprKindBinaryExpr{F0: a0, F1: a1, F2: a2}
 }
 
-func (_ ExprIfExpr) isExpr() {
-}
-func ExprIfExprCtor(a0 *Expr, a1 *Expr, a2 *Expr) Expr {
-	return ExprIfExpr{F0: a0, F1: a1, F2: a2}
+type ExprKindIfExpr struct {
+	F0 Expr
+	F1 Expr
+	F2 Expr
 }
 
-type ExprBlockExpr struct {
+func (_ ExprKindIfExpr) isExprKind() {
+}
+func ExprKindIfExprCtor(a0 Expr, a1 Expr, a2 Expr) ExprKind {
+	return ExprKindIfExpr{F0: a0, F1: a1, F2: a2}
+}
+
+type ExprKindBlockExpr struct {
 	F0 []Stmt
 }
 
-func (_ ExprBlockExpr) isExpr() {
+func (_ ExprKindBlockExpr) isExprKind() {
 }
-func ExprBlockExprCtor(a0 []Stmt) Expr {
-	return ExprBlockExpr{F0: a0}
+func ExprKindBlockExprCtor(a0 []Stmt) ExprKind {
+	return ExprKindBlockExpr{F0: a0}
 }
 
-type ExprSwitchExpr struct {
-	F0 *Expr
+type ExprKindSwitchExpr struct {
+	F0 Expr
 	F1 []SwitchCase
 }
 
-func (_ ExprSwitchExpr) isExpr() {
+func (_ ExprKindSwitchExpr) isExprKind() {
 }
-func ExprSwitchExprCtor(a0 *Expr, a1 []SwitchCase) Expr {
-	return ExprSwitchExpr{F0: a0, F1: a1}
+func ExprKindSwitchExprCtor(a0 Expr, a1 []SwitchCase) ExprKind {
+	return ExprKindSwitchExpr{F0: a0, F1: a1}
 }
 
-type ExprFuncLitExpr struct {
+type ExprKindFuncLitExpr struct {
 	F0 []Param
 	F1 Option[TypeExpr]
-	F2 *Expr
+	F2 Expr
 }
 
-func (_ ExprFuncLitExpr) isExpr() {
+func (_ ExprKindFuncLitExpr) isExprKind() {
 }
-func ExprFuncLitExprCtor(a0 []Param, a1 Option[TypeExpr], a2 *Expr) Expr {
-	return ExprFuncLitExpr{F0: a0, F1: a1, F2: a2}
+func ExprKindFuncLitExprCtor(a0 []Param, a1 Option[TypeExpr], a2 Expr) ExprKind {
+	return ExprKindFuncLitExpr{F0: a0, F1: a1, F2: a2}
 }
 
-type ExprSliceLitExpr struct {
+type ExprKindSliceLitExpr struct {
 	F0 []Expr
 }
 
-func (_ ExprSliceLitExpr) isExpr() {
+func (_ ExprKindSliceLitExpr) isExprKind() {
 }
-func ExprSliceLitExprCtor(a0 []Expr) Expr {
-	return ExprSliceLitExpr{F0: a0}
+func ExprKindSliceLitExprCtor(a0 []Expr) ExprKind {
+	return ExprKindSliceLitExpr{F0: a0}
 }
 
-type ExprTypeAsExpr struct {
+type ExprKindTypeAsExpr struct {
 	F0 *Expr
 	F1 TypeExpr
 }
 
-func (_ ExprTypeAsExpr) isExpr() {
+func (_ ExprKindTypeAsExpr) isExprKind() {
 }
-func ExprTypeAsExprCtor(a0 *Expr, a1 TypeExpr) Expr {
-	return ExprTypeAsExpr{F0: a0, F1: a1}
+func ExprKindTypeAsExprCtor(a0 *Expr, a1 TypeExpr) ExprKind {
+	return ExprKindTypeAsExpr{F0: a0, F1: a1}
 }
 
-type ExprStructLitExpr struct {
+type ExprKindStructLitExpr struct {
 	F0 string
 	F1 []StructLitField
 }
 
-func (_ ExprStructLitExpr) isExpr() {
+func (_ ExprKindStructLitExpr) isExprKind() {
 }
-func ExprStructLitExprCtor(a0 string, a1 []StructLitField) Expr {
-	return ExprStructLitExpr{F0: a0, F1: a1}
+func ExprKindStructLitExprCtor(a0 string, a1 []StructLitField) ExprKind {
+	return ExprKindStructLitExpr{F0: a0, F1: a1}
 }
 
-type ExprGenericStructLitExpr struct {
+type ExprKindGenericStructLitExpr struct {
 	F0 string
 	F1 []TypeExpr
 	F2 []StructLitField
 }
 
-func (_ ExprGenericStructLitExpr) isExpr() {
+func (_ ExprKindGenericStructLitExpr) isExprKind() {
 }
-func ExprGenericStructLitExprCtor(a0 string, a1 []TypeExpr, a2 []StructLitField) Expr {
-	return ExprGenericStructLitExpr{F0: a0, F1: a1, F2: a2}
+func ExprKindGenericStructLitExprCtor(a0 string, a1 []TypeExpr, a2 []StructLitField) ExprKind {
+	return ExprKindGenericStructLitExpr{F0: a0, F1: a1, F2: a2}
 }
 
-type ExprInlineGoExpr struct {
+type ExprKindInlineGoExpr struct {
 	F0 *TypeExpr
 	F1 string
 	F2 []GoOperand
 	F3 []GoTypeOperand
 }
 
-func (_ ExprInlineGoExpr) isExpr() {
+func (_ ExprKindInlineGoExpr) isExprKind() {
 }
-func ExprInlineGoExprCtor(a0 *TypeExpr, a1 string, a2 []GoOperand, a3 []GoTypeOperand) Expr {
-	return ExprInlineGoExpr{F0: a0, F1: a1, F2: a2, F3: a3}
+func ExprKindInlineGoExprCtor(a0 *TypeExpr, a1 string, a2 []GoOperand, a3 []GoTypeOperand) ExprKind {
+	return ExprKindInlineGoExpr{F0: a0, F1: a1, F2: a2, F3: a3}
 }
 
-type ExprMapLitExpr struct {
+type ExprKindMapLitExpr struct {
 	F0 []struct {
 		F0 Expr
 		F1 Expr
 	}
 }
 
-func (_ ExprMapLitExpr) isExpr() {
+func (_ ExprKindMapLitExpr) isExprKind() {
 }
-func ExprMapLitExprCtor(a0 []struct {
+func ExprKindMapLitExprCtor(a0 []struct {
 	F0 Expr
 	F1 Expr
-}) Expr {
-	return ExprMapLitExpr{F0: a0}
+}) ExprKind {
+	return ExprKindMapLitExpr{F0: a0}
 }
 
-type ExprSetLitExpr struct {
+type ExprKindSetLitExpr struct {
 	F0 []Expr
 }
 
-func (_ ExprSetLitExpr) isExpr() {
+func (_ ExprKindSetLitExpr) isExprKind() {
 }
-func ExprSetLitExprCtor(a0 []Expr) Expr {
-	return ExprSetLitExpr{F0: a0}
+func ExprKindSetLitExprCtor(a0 []Expr) ExprKind {
+	return ExprKindSetLitExpr{F0: a0}
+}
+
+type Expr struct {
+	Pos  SourcePos
+	Kind ExprKind
+}
+
+func EmptyExpr() Expr {
+	return Expr{Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Kind: ExprKindUnitExprCtor()}
 }
