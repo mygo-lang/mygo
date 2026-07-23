@@ -286,6 +286,7 @@ func stmt() -> ps.Parser[ast2.Stmt]
     ps.PAttempt(returnStmt()),
     ps.PAttempt(varStmt()),
     ps.PAttempt(whileStmt()),
+    ps.PAttempt(letrecStmt()),
     ps.PAttempt(letStmt()),
     ps.PAttempt(ifStmt()),
     ps.PAttempt(assignStmt()),
@@ -314,6 +315,45 @@ func assignStmt() -> ps.Parser[ast2.Stmt]
       ps.PMap(expr(), func(rhs: ast2.Expr) -> ast2.Stmt
         ast2.Stmt.AssignStmt(lhs, rhs)
       end)
+    end)
+  end)
+end
+
+# letrec introduces a group of explicitly typed bindings.  Parse all
+# declarations before the closing end so function literals in an initializer
+# may consume their own end independently.
+func letrecStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(kw("letrec"), func(_: String) -> ps.Parser[ast2.Stmt]
+    ps.PBind(letrecBindings(), func(bindings: Slice[ast2.LetRecBind]) -> ps.Parser[ast2.Stmt]
+      ps.PThen(kw("end"), ps.PPure(ast2.Stmt.LetRecStmt(bindings)))
+    end)
+  end)
+end
+
+func letrecBinding() -> ps.Parser[ast2.LetRecBind]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.LetRecBind]
+    ps.PBind(sym(":"), func(_: String) -> ps.Parser[ast2.LetRecBind]
+      ps.PBind(typeExpr(), func(typ: ast2.TypeExpr) -> ps.Parser[ast2.LetRecBind]
+        ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.LetRecBind]
+          ps.PMap(expr(), func(value: ast2.Expr) -> ast2.LetRecBind
+            ast2.LetRecBind { Name: name, Type: typ, Value: value }
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func prependLetRecBinding(first: ast2.LetRecBind, rest: Slice[ast2.LetRecBind]) -> Slice[ast2.LetRecBind]
+  rest.Fold([first], func(out: Slice[ast2.LetRecBind], next: ast2.LetRecBind) -> Slice[ast2.LetRecBind]
+    out.Append(next)
+  end)
+end
+
+func letrecBindings() -> ps.Parser[Slice[ast2.LetRecBind]]
+  ps.PBind(letrecBinding(), func(first: ast2.LetRecBind) -> ps.Parser[Slice[ast2.LetRecBind]]
+    ps.PMap(ps.PMany(letrecBinding()), func(rest: Slice[ast2.LetRecBind]) -> Slice[ast2.LetRecBind]
+      prependLetRecBinding(first, rest)
     end)
   end)
 end

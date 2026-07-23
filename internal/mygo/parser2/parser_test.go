@@ -53,6 +53,34 @@ end
 	}
 }
 
+func TestParseLetRecBindingGroup(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func parity(n: Int) -> Bool
+  letrec
+    even: func(Int) -> Bool = func(value: Int) -> Bool
+      if value == 0 => true else odd(value - 1)
+    end
+    odd: func(Int) -> Bool = func(value: Int) -> Bool
+      if value == 0 => false else even(value - 1)
+    end
+  end
+  even(n)
+end
+`)
+	body := fn.F4.(ast2.ExprBlockExpr)
+	if len(body.F0) != 2 {
+		t.Fatalf("body statement count = %d, want 2", len(body.F0))
+	}
+	rec, ok := body.F0[0].(ast2.StmtLetRecStmt)
+	if !ok {
+		t.Fatalf("first statement = %T, want StmtLetRecStmt", body.F0[0])
+	}
+	if len(rec.F0) != 2 || rec.F0[0].Name != "even" || rec.F0[1].Name != "odd" {
+		t.Fatalf("letrec bindings = %#v, want even/odd", rec.F0)
+	}
+}
+
 func TestParseSliceLiteralWithTrailingCommaAndTypeAs(t *testing.T) {
 	fn := parseSingleFunc(t, `package sample
 

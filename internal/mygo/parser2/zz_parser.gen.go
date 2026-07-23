@@ -319,7 +319,7 @@ func blockItems(stopParser ps.Parser[string], start ps.State, cur ps.State, item
 	return expr_25
 }
 func stmt() ps.Parser[ast2.Stmt] {
-	return ps.PChoice([]ps.Parser[ast2.Stmt]{ps.PAttempt(inlineGoStmt()), ps.PAttempt(returnStmt()), ps.PAttempt(varStmt()), ps.PAttempt(whileStmt()), ps.PAttempt(letStmt()), ps.PAttempt(ifStmt()), ps.PAttempt(assignStmt()), exprStmt()})
+	return ps.PChoice([]ps.Parser[ast2.Stmt]{ps.PAttempt(inlineGoStmt()), ps.PAttempt(returnStmt()), ps.PAttempt(varStmt()), ps.PAttempt(whileStmt()), ps.PAttempt(letrecStmt()), ps.PAttempt(letStmt()), ps.PAttempt(ifStmt()), ps.PAttempt(assignStmt()), exprStmt()})
 }
 func ifStmt() ps.Parser[ast2.Stmt] {
 	return ps.PMap(ifExpr(), func(e ast2.Expr) ast2.Stmt {
@@ -337,6 +337,38 @@ func assignStmt() ps.Parser[ast2.Stmt] {
 			return ps.PMap(expr(), func(rhs ast2.Expr) ast2.Stmt {
 				return ast2.StmtAssignStmtCtor(lhs, rhs)
 			})
+		})
+	})
+}
+func letrecStmt() ps.Parser[ast2.Stmt] {
+	return ps.PBind(kw("letrec"), func(_ string) ps.Parser[ast2.Stmt] {
+		return ps.PBind(letrecBindings(), func(bindings []ast2.LetRecBind) ps.Parser[ast2.Stmt] {
+			return ps.PThen(kw("end"), ps.PPure(ast2.StmtLetRecStmtCtor(bindings)))
+		})
+	})
+}
+func letrecBinding() ps.Parser[ast2.LetRecBind] {
+	return ps.PBind(identifier(), func(name string) ps.Parser[ast2.LetRecBind] {
+		return ps.PBind(sym(":"), func(_ string) ps.Parser[ast2.LetRecBind] {
+			return ps.PBind(typeExpr(), func(typ ast2.TypeExpr) ps.Parser[ast2.LetRecBind] {
+				return ps.PBind(sym("="), func(_ string) ps.Parser[ast2.LetRecBind] {
+					return ps.PMap(expr(), func(value ast2.Expr) ast2.LetRecBind {
+						return ast2.LetRecBind{Name: name, Type: typ, Value: value}
+					})
+				})
+			})
+		})
+	})
+}
+func prependLetRecBinding(first ast2.LetRecBind, rest []ast2.LetRecBind) []ast2.LetRecBind {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(rest, []ast2.LetRecBind{first}, func(out []ast2.LetRecBind, next ast2.LetRecBind) []ast2.LetRecBind {
+		return MygoIN5SliceM6Append(out, next)
+	})
+}
+func letrecBindings() ps.Parser[[]ast2.LetRecBind] {
+	return ps.PBind(letrecBinding(), func(first ast2.LetRecBind) ps.Parser[[]ast2.LetRecBind] {
+		return ps.PMap(ps.PMany(letrecBinding()), func(rest []ast2.LetRecBind) []ast2.LetRecBind {
+			return prependLetRecBinding(first, rest)
 		})
 	})
 }

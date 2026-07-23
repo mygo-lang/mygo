@@ -82,6 +82,14 @@ struct Bind
   Value: Expr
 end
 
+# A letrec binding is always annotated.  The annotation lets the entire group
+# enter scope before any initializer is inferred or lowered.
+struct LetRecBind
+  Name: String
+  Type: TypeExpr
+  Value: Expr
+end
+
 struct GoOperand
   Name: String
   Value: Expr
@@ -99,6 +107,8 @@ enum Stmt
   ExprStmt(Expr)
   # let immutable variable declaration
   LetStmt(Bind)
+  # mutually-recursive immutable bindings
+  LetRecStmt(Slice[LetRecBind])
   # tuple destructuring declaration
   TupleLetStmt(Slice[String], Expr)
   # var mutable variable declaration

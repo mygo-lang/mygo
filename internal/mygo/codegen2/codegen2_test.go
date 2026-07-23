@@ -216,6 +216,45 @@ end
 	}
 }
 
+func TestGenerateSourceLetRecBindingGroup(t *testing.T) {
+	src := `package sample
+
+func parity(n: Int) -> Bool
+  letrec
+    even: func(Int) -> Bool = func(value: Int) -> Bool
+      if value == 0 => true else odd(value - 1)
+    end
+    odd: func(Int) -> Bool = func(value: Int) -> Bool
+      if value == 0 => false else even(value - 1)
+    end
+  end
+  even(n)
+end
+`
+
+	got := GenerateSource(src)
+	ok, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	code := ok.F0
+	for _, want := range []string{
+		"var even func(int) bool",
+		"var odd func(int) bool",
+		"even = func(value int) bool",
+		"odd = func(",
+		"return odd(value - 1)",
+		"return even(value_1 - 1)",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("generated letrec is missing %q:\n%s", want, code)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", code, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
+
 func TestGenerateSourceWhileLoop(t *testing.T) {
 	src := `package sample
 

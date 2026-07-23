@@ -212,6 +212,32 @@ func MustFuncDeclFromStmtsMulti(name string, typeParams, paramNames, paramTypes,
 	return &ast.FuncDecl{Name: ast.NewIdent(name), Type: &ast.FuncType{TypeParams: typeParamsFieldList(typeParams), Params: &ast.FieldList{List: params}, Results: results}, Body: block}
 }
 
+// FuncLitFromStmts constructs a function literal from already-lowered body
+// statements.  Recursive local bindings use this instead of reparsing a Go
+// source fragment, so their captured names retain normal Go lexical scope.
+func FuncLitFromStmts(paramNames, paramTypes, returnTypes []string, body []ast.Stmt) ast.Expr {
+	if len(paramNames) != len(paramTypes) {
+		panic("mismatched function literal parameter metadata")
+	}
+	params := make([]*ast.Field, 0, len(paramNames))
+	for i, sourceType := range paramTypes {
+		typ, err := parser.ParseExpr(sourceType)
+		if err != nil {
+			panic(err)
+		}
+		params = append(params, &ast.Field{Names: []*ast.Ident{ast.NewIdent(paramNames[i])}, Type: typ})
+	}
+	results := &ast.FieldList{}
+	for _, sourceType := range returnTypes {
+		typ, err := parser.ParseExpr(sourceType)
+		if err != nil {
+			panic(err)
+		}
+		results.List = append(results.List, &ast.Field{Type: typ})
+	}
+	return &ast.FuncLit{Type: &ast.FuncType{Params: &ast.FieldList{List: params}, Results: results}, Body: &ast.BlockStmt{List: body}}
+}
+
 func Unit() ast.Expr { return &ast.CompositeLit{Type: &ast.StructType{Fields: &ast.FieldList{}}} }
 
 func AppendStmts(dst, more []ast.Stmt) []ast.Stmt { return append(dst, more...) }
@@ -630,6 +656,11 @@ func Var(name string, typ, value ast.Expr) ast.Stmt {
 	}
 	return &ast.DeclStmt{Decl: &ast.GenDecl{Tok: token.VAR, Specs: []ast.Spec{spec}}}
 }
+
+// VarDecl creates an uninitialized typed local declaration.  It is used by
+// recursive binding groups, whose initializers must run only after every name
+// has been placed in scope.
+func VarDecl(name string, typ ast.Expr) ast.Stmt { return Var(name, typ, nil) }
 
 func operator(op string) token.Token {
 	if tok, ok := map[string]token.Token{

@@ -214,6 +214,11 @@ type Bind struct {
 	Type  Option[TypeExpr]
 	Value Expr
 }
+type LetRecBind struct {
+	Name  string
+	Type  TypeExpr
+	Value Expr
+}
 type GoOperand struct {
 	Name  string
 	Value Expr
@@ -243,6 +248,16 @@ func (_ StmtLetStmt) isStmt() {
 }
 func StmtLetStmtCtor(a0 Bind) Stmt {
 	return StmtLetStmt{F0: a0}
+}
+
+type StmtLetRecStmt struct {
+	F0 []LetRecBind
+}
+
+func (_ StmtLetRecStmt) isStmt() {
+}
+func StmtLetRecStmtCtor(a0 []LetRecBind) Stmt {
+	return StmtLetRecStmt{F0: a0}
 }
 
 type StmtTupleLetStmt struct {

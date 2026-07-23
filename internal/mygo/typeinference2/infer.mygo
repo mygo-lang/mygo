@@ -100,6 +100,7 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
     case IfExpr(cond, thenExpr, elseExpr) => inferIf(cond.value(), thenExpr.value(), elseExpr.value(), env, state)
     case SwitchExpr(target, cases) => inferSwitch(target.value(), cases, env, state)
     case BlockExpr(items) => inferBlock(items, env, state)
+    case FuncLitExpr(params, ret, body) => inferFuncLit(params, ret, body.value(), env, state)
     case StructLitExpr(typeName, fields) =>
       inferStructLit(typeName, fields, env, state)
     case GenericStructLitExpr(typeName, typeArgs, fields) =>
@@ -107,6 +108,25 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
     case InlineGoExpr(typ, _, _, _) =>
       let mono = typeFromAST(typ.value())
       Ok(InferResult { Type: mono, Subst: [], State: state })
+  end
+end
+
+func inferFuncLit(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+  let paramTypes = paramsToTypes(params)
+  let retType = switch ret
+    case Some(t) => typeFromAST(t)
+    case None => MonoType.TUnit
+  end
+  let bodyEnv = envWithParams(env, params)
+  let inferred = inferExpr(body, bodyEnv, state)
+  switch inferred
+    case Err(msg) => Err("function literal: " + msg)
+    case Ok(value) =>
+      let checked = unify(applySubst(value.Subst, value.Type), retType, value.Subst)
+      switch checked
+        case Err(msg) => Err("function literal return type mismatch: " + msg)
+        case Ok(subst) => Ok(InferResult { Type: MonoType.TFunc(paramTypes, Ref.new(applySubst(subst, retType))), Subst: subst, State: value.State })
+      end
   end
 end
 
@@ -273,6 +293,7 @@ func inferStmt(stmt: ast2.Stmt, env: Slice[EnvEntry], state: InferState) -> Resu
   switch stmt
     case ExprStmt(expr) => inferExpr(expr, env, state)
     case LetStmt(bind) => inferLet(bind, env, state)
+    case LetRecStmt(bindings) => inferLetRec(bindings, env, state)
     case VarStmt(bind) => inferLet(bind, env, state)
     case WhileStmt(cond, body) => inferWhile(cond, body, env, state)
     case AssignStmt(target, value) => inferAssign(target, value, env, state)
@@ -460,6 +481,7 @@ end
 func inferBlockStep(stmt: ast2.Stmt, env: Slice[EnvEntry], state: InferState) -> Result[BlockInferStep, String]
   switch stmt
     case LetStmt(bind) => inferBlockLet(bind, env, state)
+    case LetRecStmt(bindings) => inferBlockLetRec(bindings, env, state)
     case VarStmt(bind) => inferBlockLet(bind, env, state)
     case _ then
       let r = inferStmt(stmt, env, state)
@@ -467,6 +489,48 @@ func inferBlockStep(stmt: ast2.Stmt, env: Slice[EnvEntry], state: InferState) ->
         case Err(msg) => Err(msg)
         case Ok(v) => Ok(BlockInferStep { Result: v, Env: env })
       end
+    end
+  end
+end
+
+func inferBlockLetRec(bindings: Slice[ast2.LetRecBind], env: Slice[EnvEntry], state: InferState) -> Result[BlockInferStep, String]
+  let recEnv = predeclareLetRec(bindings, env)
+  inferLetRecValues(bindings, recEnv, state, [])
+end
+
+func predeclareLetRec(bindings: Slice[ast2.LetRecBind], env: Slice[EnvEntry]) -> Slice[EnvEntry]
+  if bindings.Len() == 0 then
+    env
+  else
+    let binding = bindings.Get(0).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType(), Value: ast2.Expr.UnitExpr() })
+    predeclareLetRec(sliceDrop(bindings, 1), envPut(env, binding.Name, Scheme { Bound: [], Body: typeFromAST(binding.Type) }))
+  end
+end
+
+func inferLetRec(bindings: Slice[ast2.LetRecBind], env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+  let recEnv = predeclareLetRec(bindings, env)
+  let checked = inferLetRecValues(bindings, recEnv, state, [])
+  switch checked
+    case Err(msg) => Err(msg)
+    case Ok(step) => Ok(step.Result)
+  end
+end
+
+func inferLetRecValues(bindings: Slice[ast2.LetRecBind], recEnv: Slice[EnvEntry], state: InferState, subst: Slice[SubstEntry]) -> Result[BlockInferStep, String]
+  if bindings.Len() == 0 then
+    Ok(BlockInferStep { Result: InferResult { Type: MonoType.TUnit, Subst: subst, State: state }, Env: recEnv })
+  else
+    let binding = bindings.Get(0).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType(), Value: ast2.Expr.UnitExpr() })
+    let inferred = inferExpr(binding.Value, recEnv, state)
+    switch inferred
+      case Err(msg) => Err("letrec binding " + binding.Name + ": " + msg)
+      case Ok(value) =>
+        let combined = composeSubst(value.Subst, subst)
+        let checked = unify(applySubst(combined, value.Type), applySubst(combined, typeFromAST(binding.Type)), combined)
+        switch checked
+          case Err(msg) => Err("letrec binding " + binding.Name + ": type annotation mismatch: " + msg)
+          case Ok(nextSubst) => inferLetRecValues(sliceDrop(bindings, 1), recEnv, value.State, nextSubst)
+        end
     end
   end
 end
