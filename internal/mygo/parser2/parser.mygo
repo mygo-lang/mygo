@@ -30,20 +30,59 @@ end
 func ParseFileAt(sourceName: String, input: String) -> Result[ast2.File, String]
   let r = ps.ParseInput(fileParser(), input)
   if r.Ok then
-    Ok(r.Value)
+    let file = r.Value
+    let positions = file.DeclPositions.Map(func(pos: ast2.SourcePos) -> ast2.SourcePos
+      ast2.SourcePos { SourceName: sourceName, Line: pos.Line, Column: pos.Column }
+    end)
+    let decls = file.Decls.Map(func(decl: ast2.Decl) -> ast2.Decl annotateDeclSource(decl, sourceName) end)
+    Ok(ast2.File { PackageName: file.PackageName, Decls: decls, SourceName: sourceName, Line: 1, Column: 1, DeclPositions: positions })
   else
     Err(formatError(sourceName, r.Error, r.State.Position))
+  end
+end
+
+func annotateDeclSource(decl: ast2.Decl, sourceName: String) -> ast2.Decl
+  switch decl
+    case FuncDecl(name, tps, params, ret, body, constraints) =>
+      ast2.Decl.FuncDecl(name, tps, params, ret, body, constraints)
+    case ImplDecl(tps, target, iface, methods) =>
+      ast2.Decl.ImplDecl(tps, target, iface, methods.Map(func(method: ast2.ImplMethod) -> ast2.ImplMethod
+        let sig = method.Sig
+        ast2.ImplMethod { Pos: ast2.SourcePos { SourceName: sourceName, Line: method.Pos.Line, Column: method.Pos.Column }, Sig: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: sourceName, Line: sig.Pos.Line, Column: sig.Pos.Column }, Name: sig.Name, TypeParams: sig.TypeParams, Params: sig.Params, Ret: sig.Ret, Using: sig.Using }, Body: method.Body }
+      end))
+    case _ => decl
   end
 end
 
 func fileParser() -> ps.Parser[ast2.File]
   ps.PBind(kw("package"), func(_: String) -> ps.Parser[ast2.File]
     ps.PBind(identifier(), func(pkg: String) -> ps.Parser[ast2.File]
-      ps.PBind(ps.PMany(decl()), func(decls: Slice[ast2.Decl]) -> ps.Parser[ast2.File]
-        ps.PThen(trivia(), ps.PThen(ps.PEof(), ps.PPure(ast2.File { PackageName: pkg, Decls: decls })))
+      ps.PBind(ps.PMany(positionedDecl()), func(items: Slice[(ast2.Decl, ast2.SourcePos)]) -> ps.Parser[ast2.File]
+        let decls = items.Map(func(item: (ast2.Decl, ast2.SourcePos)) -> ast2.Decl item.F0 end)
+        let positions = items.Map(func(item: (ast2.Decl, ast2.SourcePos)) -> ast2.SourcePos item.F1 end)
+        ps.PThen(trivia(), ps.PThen(ps.PEof(), ps.PPure(ast2.File { PackageName: pkg, Decls: decls, SourceName: "", Line: 1, Column: 1, DeclPositions: positions })))
       end)
     end)
   end)
+end
+
+func positionedDecl() -> ps.Parser[(ast2.Decl, ast2.SourcePos)]
+  ps.Parser[(ast2.Decl, ast2.SourcePos)] {
+    Run: func(state: ps.State) -> ps.Reply[(ast2.Decl, ast2.SourcePos)]
+      let r = decl().Run(state)
+      if r.Ok then
+        ps.Reply[(ast2.Decl, ast2.SourcePos)] {
+          Ok: true,
+          Consumed: r.Consumed,
+          Value: (r.Value, ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }),
+          State: r.State,
+          Error: r.Error,
+        }
+      else
+        ps.Reply[(ast2.Decl, ast2.SourcePos)] { Ok: false, Consumed: r.Consumed, Value: (ast2.Decl.ImportDecl("", ""), ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }), State: r.State, Error: r.Error }
+      end
+    end
+  }
 end
 
 func decl() -> ps.Parser[ast2.Decl]
@@ -111,7 +150,7 @@ func implDecl() -> ps.Parser[ast2.Decl]
   ps.PBind(kw("impl"), func(_: String) -> ps.Parser[ast2.Decl]
     ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[ast2.Decl]
       ps.PBind(typeExpr(), func(target: ast2.TypeExpr) -> ps.Parser[ast2.Decl]
-        ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(iface: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Decl]
+        ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), typeExpr()))), func(iface: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Decl]
           ps.PBind(ps.PMany(implMethod()), func(methods: Slice[ast2.ImplMethod]) -> ps.Parser[ast2.Decl]
             ps.PThen(kw("end"), ps.PPure(ast2.Decl.ImplDecl(tps, target, iface, methods)))
           end)
@@ -139,18 +178,32 @@ end
 func implMethod() -> ps.Parser[ast2.ImplMethod]
   ps.PMap(funcSigAndBody(), func(pair: (ast2.FuncSig, ast2.Expr)) -> ast2.ImplMethod
     let (sig, body) = pair
-    ast2.ImplMethod { Sig: sig, Body: body }
+    ast2.ImplMethod { Pos: sig.Pos, Sig: sig, Body: body }
   end)
 end
 
 func funcSig() -> ps.Parser[ast2.FuncSig]
+  ps.Parser[ast2.FuncSig] {
+    Run: func(state: ps.State) -> ps.Reply[ast2.FuncSig]
+      let r = funcSigCore().Run(state)
+      if r.Ok then
+        let sig = r.Value
+        ps.Reply[ast2.FuncSig] { Ok: true, Consumed: r.Consumed, Value: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }, Name: sig.Name, TypeParams: sig.TypeParams, Params: sig.Params, Ret: sig.Ret, Using: sig.Using }, State: r.State, Error: r.Error }
+      else
+        r
+      end
+    end
+  }
+end
+
+func funcSigCore() -> ps.Parser[ast2.FuncSig]
   ps.PBind(kw("func"), func(_: String) -> ps.Parser[ast2.FuncSig]
     ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.FuncSig]
       ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[ast2.FuncSig]
         ps.PBind(paren(ps.PSepBy(param(), sym(","))), func(params: Slice[ast2.Param]) -> ps.Parser[ast2.FuncSig]
           ps.PBind(ps.POptional(ps.PThen(sym("->"), typeExpr())), func(ret: Option[ast2.TypeExpr]) -> ps.Parser[ast2.FuncSig]
             ps.PMap(usingClause(), func(constraints: Slice[ast2.Constraint]) -> ast2.FuncSig
-              ast2.FuncSig { Name: name, TypeParams: tps, Params: params, Ret: ret, Using: constraints }
+              ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, Name: name, TypeParams: tps, Params: params, Ret: ret, Using: constraints }
             end)
           end)
         end)
@@ -248,7 +301,7 @@ end
 
 func qualifiedIdentifier() -> ps.Parser[String]
   ps.PBind(identifier(), func(first: String) -> ps.Parser[String]
-    ps.PMap(ps.POptional(ps.PThen(sym("."), identifier())), func(second: Option[String]) -> String
+    ps.PMap(ps.POptional(ps.PAttempt(ps.PThen(sym("."), identifier()))), func(second: Option[String]) -> String
       switch second
         case Some(name) => first + "." + name
         case None => first
@@ -258,7 +311,7 @@ func qualifiedIdentifier() -> ps.Parser[String]
 end
 
 func typeParamList() -> ps.Parser[Slice[String]]
-  ps.POrElse(brackets(ps.PSepBy(typeParam(), sym(","))), ps.PPure([] as Slice[String]))
+  ps.POrElse(ps.PAttempt(brackets(ps.PSepBy(typeParam(), sym(",")))), ps.PPure([] as Slice[String]))
 end
 
 # HKT parameters are represented in the compact AST using their source shape,
@@ -292,7 +345,7 @@ func constraint() -> ps.Parser[ast2.Constraint]
 end
 
 func typeArgList() -> ps.Parser[Slice[ast2.TypeExpr]]
-  ps.POrElse(brackets(ps.PSepBy(lazyTypeExpr(), sym(","))), ps.PPure([] as Slice[ast2.TypeExpr]))
+  ps.POrElse(ps.PAttempt(brackets(ps.PSepBy(lazyTypeExpr(), sym(",")))), ps.PPure([] as Slice[ast2.TypeExpr]))
 end
 
 func blockUntilEnd() -> ps.Parser[ast2.Expr]
@@ -414,7 +467,7 @@ end
 
 func namedLetStmt() -> ps.Parser[ast2.Stmt]
   ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Stmt]
-    ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Stmt]
+          ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), typeExpr()))), func(typ: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Stmt]
       ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
         ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
           ast2.Stmt.LetStmt(ast2.Bind { Name: name, Type: typ, Value: value })
@@ -437,7 +490,7 @@ end
 func varStmt() -> ps.Parser[ast2.Stmt]
   ps.PBind(kw("var"), func(_: String) -> ps.Parser[ast2.Stmt]
     ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Stmt]
-      ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Stmt]
+      ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), typeExpr()))), func(typ: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Stmt]
         ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
           ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
             ast2.Stmt.VarStmt(ast2.Bind { Name: name, Type: typ, Value: value })
@@ -497,7 +550,6 @@ end
 # 注意：expr 不处理语句变体。要解析包含语句的代码，请使用 stmt()。
 func expr() -> ps.Parser[ast2.Expr]
   ps.PChoice([
-    ps.PAttempt(inlineGoExpr()),
     ps.PAttempt(ifExpr()),
     ps.PAttempt(switchExpr()),
     binaryExpr(),
@@ -598,11 +650,11 @@ func inlineGoBinding() -> ps.Parser[InlineGoBinding]
         ps.PMap(ps.PThen(sym("="), expr()), func(value: ast2.Expr) -> InlineGoBinding InlineGoBinding.ValueBinding(name, value) end)
       end)
     end)),
-    ps.PBind(kw("type"), func(_: String) -> ps.Parser[InlineGoBinding]
+    ps.PAttempt(ps.PBind(kw("type"), func(_: String) -> ps.Parser[InlineGoBinding]
       ps.PBind(identifier(), func(name: String) -> ps.Parser[InlineGoBinding]
         ps.PMap(ps.PThen(sym("="), typeExpr()), func(typ: ast2.TypeExpr) -> InlineGoBinding InlineGoBinding.TypeBinding(name, typ) end)
       end)
-    end),
+    end)),
   ])
 end
 
@@ -759,17 +811,17 @@ func postfixExpr() -> ps.Parser[ast2.Expr]
 end
 
 func postfixTail(start: ps.State, cur: ps.State, acc: ast2.Expr) -> ps.Reply[ast2.Expr]
-  let call = callSuffix().Run(cur)
-  if call.Ok then
-    postfixTail(start, call.State, ast2.Expr.CallExpr(Ref.new(acc), call.Value.F0, call.Value.F1))
+  let cast = ps.PThen(kw("as"), typeExpr()).Run(cur)
+  if cast.Ok then
+    postfixTail(start, cast.State, ast2.Expr.TypeAsExpr(Ref.new(acc), cast.Value))
   else
-    let fld = ps.PThen(sym("."), identifier()).Run(cur)
-    if fld.Ok then
-      postfixTail(start, fld.State, ast2.Expr.FieldExpr(Ref.new(acc), fld.Value))
+    let call = callSuffix().Run(cur)
+    if call.Ok then
+      postfixTail(start, call.State, ast2.Expr.CallExpr(Ref.new(acc), call.Value.F0, call.Value.F1))
     else
-      let cast = ps.PThen(kw("as"), typeExpr()).Run(cur)
-      if cast.Ok then
-        postfixTail(start, cast.State, ast2.Expr.TypeAsExpr(Ref.new(acc), cast.Value))
+      let fld = ps.PThen(sym("."), identifier()).Run(cur)
+      if fld.Ok then
+        postfixTail(start, fld.State, ast2.Expr.FieldExpr(Ref.new(acc), fld.Value))
       else
         ps.Reply[ast2.Expr] {
           Ok: true, Consumed: cur.Index != start.Index, Value: acc,
@@ -811,6 +863,7 @@ end
 
 func primaryExpr() -> ps.Parser[ast2.Expr]
   ps.PChoice([
+    ps.PAttempt(inlineGoExpr()),
     ps.PMap(number(), func(v: String) -> ast2.Expr
       ast2.Expr.NumberExpr(v)
     end),
@@ -1011,12 +1064,23 @@ end
 func stringLiteral() -> ps.Parser[String]
   ps.PChoice([
     ps.PAttempt(multilineStringLiteral()),
+    ps.PAttempt(rawStringLiteral()),
     lexeme(ps.PBind(ps.PChar('"'), func(_: Rune) -> ps.Parser[String]
       ps.PBind(ps.PMany(stringChar()), func(chars: Slice[Rune]) -> ps.Parser[String]
         ps.PThen(ps.PChar('"'), ps.PPure(String.FromRunes(chars)))
       end)
     end)),
   ])
+end
+
+func rawStringLiteral() -> ps.Parser[String]
+  lexeme(ps.PBind(ps.PChar('`'), func(_: Rune) -> ps.Parser[String]
+    ps.PBind(ps.PMany(ps.PSatisfy(func(r: Rune) -> Bool
+      r != '`'
+    end, "raw string character")), func(chars: Slice[Rune]) -> ps.Parser[String]
+      ps.PThen(ps.PChar('`'), ps.PPure(String.FromRunes(chars)))
+    end)
+  end))
 end
 
 func multilineStringLiteral() -> ps.Parser[String]

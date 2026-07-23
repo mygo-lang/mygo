@@ -4,9 +4,19 @@ package ast2
 # It mirrors the syntax currently produced by parser2 and intentionally keeps
 # positions out until parser2 starts carrying source spans.
 
+struct SourcePos
+  SourceName: String
+  Line: Int
+  Column: Int
+end
+
 struct File
   PackageName: String
   Decls: Slice[Decl]
+  SourceName: String
+  Line: Int
+  Column: Int
+  DeclPositions: Slice[SourcePos]
 end
 
 enum Decl
@@ -36,6 +46,7 @@ struct Variant
 end
 
 struct FuncSig
+  Pos: SourcePos
   Name: String
   TypeParams: Slice[String]
   Params: Slice[Param]
@@ -52,6 +63,7 @@ struct Constraint
 end
 
 struct ImplMethod
+  Pos: SourcePos
   Sig: FuncSig
   Body: Expr
 end

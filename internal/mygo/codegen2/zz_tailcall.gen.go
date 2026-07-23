@@ -52,7 +52,7 @@ func tailCallAstParts(args []ast2.Expr, ctx *egCtx, index int, out TailAstParts)
 		expr_202 = Ok[TailAstParts, string](out)
 	} else {
 		var expr_201 Result[TailAstParts, string]
-		value_195 := translateExprAst(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.ExprUnitExprCtor()), ctx)
+		value_195 := translateExprAst(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.ExprUnitExprCtor()), ctx)
 		var expr_200 Result[TailAstParts, string]
 		if v_58, ok := value_195.(ResultErr[AstExprResult, string]); ok {
 			var expr_199 Result[TailAstParts, string]
@@ -169,7 +169,7 @@ func containsTailCallBlock(items []ast2.Stmt, name string) bool {
 		expr_226 = false
 	} else {
 		var expr_225 bool
-		var last_221 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1), ast2.StmtExprStmtCtor(ast2.ExprUnitExprCtor()))
+		var last_221 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1), ast2.StmtExprStmtCtor(ast2.ExprUnitExprCtor()))
 		var expr_224 bool
 		if v_67, ok := last_221.(ast2.StmtExprStmt); ok {
 			var expr_223 bool

@@ -42,14 +42,14 @@ func translateDeclsAst(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, 
         let result = translateFuncAstDecl(g, name, tps, params, ret, body, constraints)
         switch result
           case Ok(fn) => translateDeclsAst(g, decls, index + 1, out.Append(fn))
-          case Err(msg) => Err(msg)
+          case Err(msg) => Err("function " + name + ": " + msg)
         end
       case ImportDecl(_, _) => translateDeclsAst(g, decls, index + 1, out)
       case ImplDecl(tps, target, iface, methods) =>
         let result = translateImplAstDecl(tps, target, iface, methods)
         switch result
           case Ok(items) => translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, items))
-          case Err(msg) => Err(msg)
+          case Err(msg) => Err("impl " + typeString(target) + ": " + msg)
         end
     end
   end
@@ -132,7 +132,7 @@ func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[as
     ctxSetTailRecParamNames(ctx, names)
     let body = translateFuncBodyAst(method.Body, ctx)
     switch body
-      case Err(msg) => Err(msg)
+      case Err(msg) => Err("impl method " + sig.Name + ": " + msg)
       case Ok(stmts) =>
         let decl = goast.MustFuncDeclFromStmtsMulti(
           implMethodSymbol(stem, sig.Name),
@@ -150,7 +150,8 @@ end
 
 func defaultImplMethod() -> ast2.ImplMethod
   ast2.ImplMethod {
-    Sig: ast2.FuncSig { Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] },
+    Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 },
+    Sig: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] },
     Body: ast2.Expr.UnitExpr(),
   }
 end
@@ -334,7 +335,7 @@ func addDictionaryMethods(decls: Slice[ast2.Decl], rest: Slice[ast2.Constraint],
   if methods.Len() == 0 then
     addConstraintParams(decls, rest, ctx, names, types)
   else
-    let method = methods.Get(0).UnwrapOr(ast2.FuncSig { Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] })
+    let method = methods.Get(0).UnwrapOr(ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] })
     let paramName = sanitizeIdent(method.Name) + "Fn"
     ctx.constraintFuncs.Set(method.Name, paramName)
     let argTypes = method.Params.Map(func(p: ast2.Param) -> String goType(p.Type, ctx.typeParams) end)

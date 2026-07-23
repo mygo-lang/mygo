@@ -40,7 +40,7 @@ func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.Packa
   if index >= files.Len() then
     Ok(out)
   else
-    let input = files.Get(index).UnwrapOr(SourceFileInput { Path: "main.mygo", File: ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl] } })
+    let input = files.Get(index).UnwrapOr(SourceFileInput { Path: "main.mygo", File: ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] } })
     let src = generateOneFile(input.File, info)
     switch src
       case Ok(code) =>

@@ -65,6 +65,38 @@ func TestParseFileParsesPrelude(t *testing.T) {
 	if len(parsed.F0.Decls) == 0 {
 		t.Fatalf("ParseFileAt(%s) returned no declarations", sourcePath)
 	}
+	if parsed.F0.SourceName != sourcePath || parsed.F0.Line != 1 || parsed.F0.Column != 1 {
+		t.Fatalf("file position = %q:%d:%d, want %q:1:1", parsed.F0.SourceName, parsed.F0.Line, parsed.F0.Column, sourcePath)
+	}
+	if len(parsed.F0.DeclPositions) != len(parsed.F0.Decls) || parsed.F0.DeclPositions[0].SourceName != sourcePath || parsed.F0.DeclPositions[0].Line != 3 {
+		t.Fatalf("first declaration position = %#v, want %q:3:*", parsed.F0.DeclPositions[0], sourcePath)
+	}
+}
+
+func TestParseFileParsesPreludeMapImpl(t *testing.T) {
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("cannot determine parser test path")
+	}
+	sourcePath := filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "prelude", "map.mygo")
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("read %s: %v", sourcePath, err)
+	}
+	parsed := ParseFileAt(sourcePath, string(source))
+	if _, ok := parsed.(ResultOk[ast2.File, string]); !ok {
+		t.Fatalf("ParseFileAt(%s) failed: %v", sourcePath, parsed)
+	}
+}
+
+func TestParseFileParsesPreludeStringIndexImpl(t *testing.T) {
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok { t.Fatal("cannot determine parser test path") }
+	sourcePath := filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "prelude", "stringindexrune.mygo")
+	source, err := os.ReadFile(sourcePath)
+	if err != nil { t.Fatalf("read %s: %v", sourcePath, err) }
+	parsed := ParseFileAt(sourcePath, string(source))
+	if _, ok := parsed.(ResultOk[ast2.File, string]); !ok { t.Fatalf("ParseFileAt(%s) failed: %v", sourcePath, parsed) }
 }
 
 func TestParseFunctionLiteral(t *testing.T) {

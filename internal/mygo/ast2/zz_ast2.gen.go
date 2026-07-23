@@ -4,9 +4,18 @@ package ast2
 
 import . "github.com/mygo-lang/mygo/prelude"
 
+type SourcePos struct {
+	SourceName string
+	Line       int
+	Column     int
+}
 type File struct {
-	PackageName string
-	Decls       []Decl
+	PackageName   string
+	Decls         []Decl
+	SourceName    string
+	Line          int
+	Column        int
+	DeclPositions []SourcePos
 }
 type Decl interface {
 	isDecl()
@@ -100,6 +109,7 @@ type Variant struct {
 	Fields []TypeExpr
 }
 type FuncSig struct {
+	Pos        SourcePos
 	Name       string
 	TypeParams []string
 	Params     []Param
@@ -112,6 +122,7 @@ type Constraint struct {
 	Args     []TypeExpr
 }
 type ImplMethod struct {
+	Pos  SourcePos
 	Sig  FuncSig
 	Body Expr
 }
