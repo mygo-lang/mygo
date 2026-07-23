@@ -302,6 +302,25 @@ func MustInlineGoStatementsWithOperands(body string, valueNames, valueSources, t
 	return MustInlineGoStatements(body)
 }
 
+// MustInlineGoFinalStatementsWithOperands lowers the final inline-Go form of
+// a non-unit MyGO function. Expression snippets become a Go return value,
+// while statement snippets (notably an explicit "return ...") remain intact.
+func MustInlineGoFinalStatementsWithOperands(body string, valueNames, valueSources, typeNames, typeSources []string) []ast.Stmt {
+	if len(valueNames) != len(valueSources) || len(typeNames) != len(typeSources) {
+		panic("mismatched inline Go operand metadata")
+	}
+	for i, name := range valueNames {
+		body = replaceInlineOperand(body, name, valueSources[i])
+	}
+	for i, name := range typeNames {
+		body = replaceInlineOperand(body, name, typeSources[i])
+	}
+	if expr, err := parser.ParseExpr(body); err == nil {
+		return []ast.Stmt{&ast.ReturnStmt{Results: []ast.Expr{expr}}}
+	}
+	return MustInlineGoStatements(body)
+}
+
 func replaceInlineOperand(body, name, value string) string {
 	re := regexp.MustCompile(`\{` + regexp.QuoteMeta(name) + `\}`)
 	return re.ReplaceAllString(body, value)

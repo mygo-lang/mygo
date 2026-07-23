@@ -126,10 +126,7 @@ func goReturnTypes(t: ast2.TypeExpr, typeParams: Set[String]) -> Slice[String]
       elems.Map(func(item: ast2.TypeExpr) -> String goType(item, typeParams) end)
     case _ =>
       let rt = goReturnType(t, typeParams)
-      if rt != "" then
-        return [rt]
-      end
-      return [] as Slice[String]
+      if rt != "" then [rt] else [] as Slice[String] end
   end
 end
 

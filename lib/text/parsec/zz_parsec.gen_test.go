@@ -590,7 +590,7 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_154.Value) != 3 {
 		t.Fatalf("words length = %d, want 3", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_154.Value))
 	}
-	w0_155 := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_154.Value, 0)
+	w0_155 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_154.Value, 0)
 	if v_8, ok := w0_155.(OptionSome[string]); ok {
 		if v_8.F0 != "hello" {
 			t.Fatalf("words[0] = %q, want %q", v_8.F0, "hello")
@@ -601,7 +601,7 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 			t.Fatal("words[0] should be Some")
 		}
 	}
-	w1_156 := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_154.Value, 1)
+	w1_156 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_154.Value, 1)
 	if v_10, ok := w1_156.(OptionSome[string]); ok {
 		if v_10.F0 != "world" {
 			t.Fatalf("words[1] = %q, want %q", v_10.F0, "world")
@@ -612,7 +612,7 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 			t.Fatal("words[1] should be Some")
 		}
 	}
-	w2_157 := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_154.Value, 2)
+	w2_157 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_154.Value, 2)
 	if v_12, ok := w2_157.(OptionSome[string]); ok {
 		if v_12.F0 != "foo" {
 			t.Fatalf("words[2] = %q, want %q", v_12.F0, "foo")

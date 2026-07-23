@@ -27,107 +27,104 @@ type SourceFileInput struct {
 func Generate(file ast2.File, info typeinference2.PackageInfo) Result[string, string] {
 	path_1 := file.PackageName + ".mygo"
 	files_2 := GenerateFiles([]SourceFileInput{SourceFileInput{Path: path_1, File: file}}, info)
-	return func() Result[string, string] {
-		if v_2, ok := files_2.(ResultOk[map[string]string, string]); ok {
-			return func() Result[string, string] {
-				return Ok[string, string](MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(v_2.F0, sourceToGenName(path_1)), ""))
-			}()
+	var expr_5 Result[string, string]
+	if v_2, ok := files_2.(ResultOk[map[string]string, string]); ok {
+		var expr_4 Result[string, string]
+		expr_4 = Ok[string, string](MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(v_2.F0, sourceToGenName(path_1)), ""))
+		expr_5 = expr_4
+	} else {
+		if v_1, ok := files_2.(ResultErr[map[string]string, string]); ok {
+			var expr_3 Result[string, string]
+			expr_3 = Err[string, string](v_1.F0)
+			expr_5 = expr_3
 		} else {
-			if v_1, ok := files_2.(ResultErr[map[string]string, string]); ok {
-				return func() Result[string, string] {
-					return Err[string, string](v_1.F0)
-				}()
-			} else {
-				panic("unreachable")
-			}
+			panic("unreachable")
 		}
-	}()
+	}
+	return expr_5
 }
 func GenerateFiles(files []SourceFileInput, info typeinference2.PackageInfo) Result[map[string]string, string] {
-	var out_3 map[string]string = map[string]string{}
-	return generateFilesLoop(files, info, 0, out_3)
+	var out_6 map[string]string = map[string]string{}
+	return generateFilesLoop(files, info, 0, out_6)
 }
 func generateFilesLoop(files []SourceFileInput, info typeinference2.PackageInfo, index int, out map[string]string) Result[map[string]string, string] {
-	return func() Result[map[string]string, string] {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(files) {
-			return Ok[map[string]string, string](out)
+	var expr_13 Result[map[string]string, string]
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(files) {
+		expr_13 = Ok[map[string]string, string](out)
+	} else {
+		var expr_12 Result[map[string]string, string]
+		input_7 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{})}})
+		src_8 := generateOneFile(input_7.File, info)
+		var expr_11 Result[map[string]string, string]
+		if v_4, ok := src_8.(ResultOk[string, string]); ok {
+			var expr_10 Result[map[string]string, string]
+			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(out, sourceToGenName(input_7.Path), v_4.F0)
+			expr_10 = generateFilesLoop(files, info, index+1, out)
+			expr_11 = expr_10
 		} else {
-			return func() Result[map[string]string, string] {
-				input_4 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{})}})
-				src_5 := generateOneFile(input_4.File, info)
-				return func() Result[map[string]string, string] {
-					if v_4, ok := src_5.(ResultOk[string, string]); ok {
-						return func() Result[map[string]string, string] {
-							MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(out, sourceToGenName(input_4.Path), v_4.F0)
-							return generateFilesLoop(files, info, index+1, out)
-						}()
-					} else {
-						if v_3, ok := src_5.(ResultErr[string, string]); ok {
-							return func() Result[map[string]string, string] {
-								return Err[map[string]string, string](v_3.F0)
-							}()
-						} else {
-							panic("unreachable")
-						}
-					}
-				}()
-			}()
+			if v_3, ok := src_8.(ResultErr[string, string]); ok {
+				var expr_9 Result[map[string]string, string]
+				expr_9 = Err[map[string]string, string](v_3.F0)
+				expr_11 = expr_9
+			} else {
+				panic("unreachable")
+			}
 		}
-	}()
+		expr_12 = expr_11
+		expr_13 = expr_12
+	}
+	return expr_13
 }
 func GenerateSource(input string) Result[string, string] {
-	parsed_6 := parseSourceAsAst2(input)
-	return func() Result[string, string] {
-		if v_8, ok := parsed_6.(ResultErr[ast2.File, string]); ok {
-			return func() Result[string, string] {
-				return Err[string, string](v_8.F0)
-			}()
-		} else {
-			if v_5, ok := parsed_6.(ResultOk[ast2.File, string]); ok {
-				return func() Result[string, string] {
-					inferred_7 := typeinference2.InferFile(v_5.F0)
-					return func() Result[string, string] {
-						if v_7, ok := inferred_7.(ResultErr[typeinference2.PackageInfo, string]); ok {
-							return func() Result[string, string] {
-								return Err[string, string](v_7.F0)
-							}()
-						} else {
-							if v_6, ok := inferred_7.(ResultOk[typeinference2.PackageInfo, string]); ok {
-								return func() Result[string, string] {
-									return Generate(v_5.F0, v_6.F0)
-								}()
-							} else {
-								panic("unreachable")
-							}
-						}
-					}()
-				}()
+	parsed_14 := parseSourceAsAst2(input)
+	var expr_21 Result[string, string]
+	if v_8, ok := parsed_14.(ResultErr[ast2.File, string]); ok {
+		var expr_20 Result[string, string]
+		expr_20 = Err[string, string](v_8.F0)
+		expr_21 = expr_20
+	} else {
+		if v_5, ok := parsed_14.(ResultOk[ast2.File, string]); ok {
+			var expr_19 Result[string, string]
+			inferred_15 := typeinference2.InferFile(v_5.F0)
+			var expr_18 Result[string, string]
+			if v_7, ok := inferred_15.(ResultErr[typeinference2.PackageInfo, string]); ok {
+				var expr_17 Result[string, string]
+				expr_17 = Err[string, string](v_7.F0)
+				expr_18 = expr_17
 			} else {
-				panic("unreachable")
+				if v_6, ok := inferred_15.(ResultOk[typeinference2.PackageInfo, string]); ok {
+					var expr_16 Result[string, string]
+					expr_16 = Generate(v_5.F0, v_6.F0)
+					expr_18 = expr_16
+				} else {
+					panic("unreachable")
+				}
 			}
+			expr_19 = expr_18
+			expr_21 = expr_19
+		} else {
+			panic("unreachable")
 		}
-	}()
+	}
+	return expr_21
 }
 func generateOneFile(file ast2.File, info typeinference2.PackageInfo) Result[string, string] {
-	g_8 := func() *Generator2 {
-		__ref_tmp := newGenerator2(file.PackageName)
-		return &__ref_tmp
-	}()
-	imports_9 := collectImports(file.Decls)
-	decls_10 := translateDeclsAst(g_8, file.Decls, 0, []goast.Decl([]goast.Decl{}))
-	return func() Result[string, string] {
-		if v_10, ok := decls_10.(ResultErr[[]goast.Decl, string]); ok {
-			return func() Result[string, string] {
-				return Err[string, string](v_10.F0)
-			}()
+	g_22 := &[]Generator2{newGenerator2(file.PackageName)}[0]
+	imports_23 := collectImports(file.Decls)
+	decls_24 := translateDeclsAst(g_22, file.Decls, 0, []goast.Decl([]goast.Decl{}))
+	var expr_27 Result[string, string]
+	if v_10, ok := decls_24.(ResultErr[[]goast.Decl, string]); ok {
+		var expr_26 Result[string, string]
+		expr_26 = Err[string, string](v_10.F0)
+		expr_27 = expr_26
+	} else {
+		if v_9, ok := decls_24.(ResultOk[[]goast.Decl, string]); ok {
+			var expr_25 Result[string, string]
+			expr_25 = renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: imports_23, AstDecls: v_9.F0, Decls: []string([]string{})})
+			expr_27 = expr_25
 		} else {
-			if v_9, ok := decls_10.(ResultOk[[]goast.Decl, string]); ok {
-				return func() Result[string, string] {
-					return renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: imports_9, AstDecls: v_9.F0, Decls: []string([]string{})})
-				}()
-			} else {
-				panic("unreachable")
-			}
+			panic("unreachable")
 		}
-	}()
+	}
+	return expr_27
 }

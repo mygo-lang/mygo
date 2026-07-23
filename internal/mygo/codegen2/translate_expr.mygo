@@ -167,7 +167,7 @@ func translateAstReturnExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[go
       let parts = translateInlineOperands(values, types, ctx, 0, [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[goast.Stmt])
       switch parts
         case Err(msg) => Err(msg)
-        case Ok(p) => Ok(goast.AppendStmts(p.Pre, goast.MustInlineGoStatementsWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)))
+        case Ok(p) => Ok(goast.AppendStmts(p.Pre, goast.MustInlineGoFinalStatementsWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)))
       end
     case IfExpr(cond, thenExpr, elseExpr) => translateAstReturnIf(cond.value(), thenExpr.value(), elseExpr.value(), ctx)
     case BlockExpr(items) => translateAstReturnBlock(items, ctx, 0, [] as Slice[goast.Stmt])
@@ -184,7 +184,7 @@ func translateAstReturnBlock(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: In
   if index >= items.Len() then
     Ok(out)
   else
-    let stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr()))
+    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr()))
     if index == items.Len() - 1 then
       switch stmt
         case ExprStmt(value) =>
