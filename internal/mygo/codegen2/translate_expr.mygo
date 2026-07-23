@@ -285,6 +285,7 @@ func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[g
     case IdentExpr(_) => translateAstReturnSingle(expr, ctx)
     case NumberExpr(_) => translateAstReturnSingle(expr, ctx)
     case StringExpr(_) => translateAstReturnSingle(expr, ctx)
+    case RuneExpr(_) => translateAstReturnSingle(expr, ctx)
     case BoolExpr(_) => translateAstReturnSingle(expr, ctx)
     case CallExpr(_, _) => translateAstReturnSingle(expr, ctx)
     case FieldExpr(_, _) => translateAstReturnSingle(expr, ctx)

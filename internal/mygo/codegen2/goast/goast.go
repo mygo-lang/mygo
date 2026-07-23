@@ -483,6 +483,14 @@ func Number(value string) ast.Expr {
 	return &ast.BasicLit{Kind: token.INT, Value: value}
 }
 
+func Rune(value string) ast.Expr {
+	chars := []rune(value)
+	if len(chars) != 1 {
+		panic(fmt.Sprintf("invalid rune literal %q", value))
+	}
+	return &ast.BasicLit{Kind: token.CHAR, Value: strconv.QuoteRune(chars[0])}
+}
+
 func Selector(x ast.Expr, sel string) ast.Expr {
 	return &ast.SelectorExpr{X: x, Sel: ast.NewIdent(sel)}
 }

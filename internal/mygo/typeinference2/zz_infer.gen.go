@@ -13,7 +13,7 @@ func predeclareFunctions(decls []ast2.Decl, env []EnvEntry) []EnvEntry {
 		expr_32 = env
 	} else {
 		var expr_31 []EnvEntry
-		decl_22 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		decl_22 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 		var expr_29 []EnvEntry
 		if v_5, ok := decl_22.(ast2.DeclFuncDecl); ok {
 			var expr_28 []EnvEntry
@@ -53,7 +53,7 @@ func inferDecls(decls []ast2.Decl, env []EnvEntry, fields []FieldEntry, state In
 		expr_40 = Ok[PackageInfo, string](PackageInfo{Env: env, Fields: fields})
 	} else {
 		var expr_39 Result[PackageInfo, string]
-		head_33 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		head_33 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 		tail_34 := sliceDrop[ast2.Decl](decls, 1)
 		next_35 := inferDecl(head_33, env, fields, state)
 		var expr_38 Result[PackageInfo, string]
@@ -169,98 +169,104 @@ func inferFuncDecl(name string, tps []string, params []ast2.Param, ret Option[as
 	return expr_63
 }
 func inferExpr(expr ast2.Expr, env []EnvEntry, state InferState) Result[InferResult, string] {
-	var expr_83 Result[InferResult, string]
-	if v_36, ok := expr.(ast2.ExprIdentExpr); ok {
+	var expr_84 Result[InferResult, string]
+	if v_37, ok := expr.(ast2.ExprIdentExpr); ok {
+		var expr_83 Result[InferResult, string]
 		var expr_82 Result[InferResult, string]
-		var expr_81 Result[InferResult, string]
-		if v_38, ok := envGet(env, v_36.F0).(OptionSome[Scheme]); ok {
-			var expr_80 Result[InferResult, string]
-			expr_80 = Ok[InferResult, string](InferResult{Type: v_38.F0.Body, Subst: []SubstEntry{}, State: state})
-			expr_81 = expr_80
+		if v_39, ok := envGet(env, v_37.F0).(OptionSome[Scheme]); ok {
+			var expr_81 Result[InferResult, string]
+			expr_81 = Ok[InferResult, string](InferResult{Type: v_39.F0.Body, Subst: []SubstEntry{}, State: state})
+			expr_82 = expr_81
 		} else {
-			if _, ok := envGet(env, v_36.F0).(OptionNone[Scheme]); ok {
-				var expr_79 Result[InferResult, string]
-				expr_79 = Err[InferResult, string]("unknown identifier " + v_36.F0)
-				expr_81 = expr_79
+			if _, ok := envGet(env, v_37.F0).(OptionNone[Scheme]); ok {
+				var expr_80 Result[InferResult, string]
+				expr_80 = Err[InferResult, string]("unknown identifier " + v_37.F0)
+				expr_82 = expr_80
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_82 = expr_81
 		expr_83 = expr_82
+		expr_84 = expr_83
 	} else {
 		if _, ok := expr.(ast2.ExprNumberExpr); ok {
-			var expr_78 Result[InferResult, string]
-			expr_78 = Ok[InferResult, string](InferResult{Type: MonoTypeTConCtor("Int", emptyMonoTypes()), Subst: []SubstEntry{}, State: state})
-			expr_83 = expr_78
+			var expr_79 Result[InferResult, string]
+			expr_79 = Ok[InferResult, string](InferResult{Type: MonoTypeTConCtor("Int", emptyMonoTypes()), Subst: []SubstEntry{}, State: state})
+			expr_84 = expr_79
 		} else {
 			if _, ok := expr.(ast2.ExprStringExpr); ok {
-				var expr_77 Result[InferResult, string]
-				expr_77 = Ok[InferResult, string](InferResult{Type: MonoTypeTConCtor("String", emptyMonoTypes()), Subst: []SubstEntry{}, State: state})
-				expr_83 = expr_77
+				var expr_78 Result[InferResult, string]
+				expr_78 = Ok[InferResult, string](InferResult{Type: MonoTypeTConCtor("String", emptyMonoTypes()), Subst: []SubstEntry{}, State: state})
+				expr_84 = expr_78
 			} else {
-				if _, ok := expr.(ast2.ExprBoolExpr); ok {
-					var expr_76 Result[InferResult, string]
-					expr_76 = Ok[InferResult, string](InferResult{Type: MonoTypeTConCtor("Bool", emptyMonoTypes()), Subst: []SubstEntry{}, State: state})
-					expr_83 = expr_76
+				if _, ok := expr.(ast2.ExprRuneExpr); ok {
+					var expr_77 Result[InferResult, string]
+					expr_77 = Ok[InferResult, string](InferResult{Type: MonoTypeTConCtor("Rune", emptyMonoTypes()), Subst: []SubstEntry{}, State: state})
+					expr_84 = expr_77
 				} else {
-					if _, ok := expr.(ast2.ExprUnitExpr); ok {
-						var expr_75 Result[InferResult, string]
-						expr_75 = Ok[InferResult, string](InferResult{Type: MonoTypeTUnitCtor(), Subst: []SubstEntry{}, State: state})
-						expr_83 = expr_75
+					if _, ok := expr.(ast2.ExprBoolExpr); ok {
+						var expr_76 Result[InferResult, string]
+						expr_76 = Ok[InferResult, string](InferResult{Type: MonoTypeTConCtor("Bool", emptyMonoTypes()), Subst: []SubstEntry{}, State: state})
+						expr_84 = expr_76
 					} else {
-						if v_31, ok := expr.(ast2.ExprTupleExpr); ok {
-							var expr_74 Result[InferResult, string]
-							expr_74 = inferTuple(v_31.F0, env, state)
-							expr_83 = expr_74
+						if _, ok := expr.(ast2.ExprUnitExpr); ok {
+							var expr_75 Result[InferResult, string]
+							expr_75 = Ok[InferResult, string](InferResult{Type: MonoTypeTUnitCtor(), Subst: []SubstEntry{}, State: state})
+							expr_84 = expr_75
 						} else {
-							if v_30, ok := expr.(ast2.ExprUnaryExpr); ok {
-								var expr_73 Result[InferResult, string]
-								expr_73 = inferUnary(v_30.F0, *v_30.F1, env, state)
-								expr_83 = expr_73
+							if v_31, ok := expr.(ast2.ExprTupleExpr); ok {
+								var expr_74 Result[InferResult, string]
+								expr_74 = inferTuple(v_31.F0, env, state)
+								expr_84 = expr_74
 							} else {
-								if v_29, ok := expr.(ast2.ExprBinaryExpr); ok {
-									var expr_72 Result[InferResult, string]
-									expr_72 = inferBinary(v_29.F0, *v_29.F1, *v_29.F2, env, state)
-									expr_83 = expr_72
+								if v_30, ok := expr.(ast2.ExprUnaryExpr); ok {
+									var expr_73 Result[InferResult, string]
+									expr_73 = inferUnary(v_30.F0, *v_30.F1, env, state)
+									expr_84 = expr_73
 								} else {
-									if v_28, ok := expr.(ast2.ExprCallExpr); ok {
-										var expr_71 Result[InferResult, string]
-										expr_71 = inferCall(*v_28.F0, v_28.F1, env, state)
-										expr_83 = expr_71
+									if v_29, ok := expr.(ast2.ExprBinaryExpr); ok {
+										var expr_72 Result[InferResult, string]
+										expr_72 = inferBinary(v_29.F0, *v_29.F1, *v_29.F2, env, state)
+										expr_84 = expr_72
 									} else {
-										if v_27, ok := expr.(ast2.ExprFieldExpr); ok {
-											var expr_70 Result[InferResult, string]
-											expr_70 = inferField(*v_27.F0, v_27.F1, env, state)
-											expr_83 = expr_70
+										if v_28, ok := expr.(ast2.ExprCallExpr); ok {
+											var expr_71 Result[InferResult, string]
+											expr_71 = inferCall(*v_28.F0, v_28.F1, env, state)
+											expr_84 = expr_71
 										} else {
-											if v_26, ok := expr.(ast2.ExprIfExpr); ok {
-												var expr_69 Result[InferResult, string]
-												expr_69 = inferIf(*v_26.F0, *v_26.F1, *v_26.F2, env, state)
-												expr_83 = expr_69
+											if v_27, ok := expr.(ast2.ExprFieldExpr); ok {
+												var expr_70 Result[InferResult, string]
+												expr_70 = inferField(*v_27.F0, v_27.F1, env, state)
+												expr_84 = expr_70
 											} else {
-												if v_25, ok := expr.(ast2.ExprSwitchExpr); ok {
-													var expr_68 Result[InferResult, string]
-													expr_68 = inferSwitch(*v_25.F0, v_25.F1, env, state)
-													expr_83 = expr_68
+												if v_26, ok := expr.(ast2.ExprIfExpr); ok {
+													var expr_69 Result[InferResult, string]
+													expr_69 = inferIf(*v_26.F0, *v_26.F1, *v_26.F2, env, state)
+													expr_84 = expr_69
 												} else {
-													if v_24, ok := expr.(ast2.ExprBlockExpr); ok {
-														var expr_67 Result[InferResult, string]
-														expr_67 = inferBlock(v_24.F0, env, state)
-														expr_83 = expr_67
+													if v_25, ok := expr.(ast2.ExprSwitchExpr); ok {
+														var expr_68 Result[InferResult, string]
+														expr_68 = inferSwitch(*v_25.F0, v_25.F1, env, state)
+														expr_84 = expr_68
 													} else {
-														if v_23, ok := expr.(ast2.ExprStructLitExpr); ok {
-															var expr_66 Result[InferResult, string]
-															expr_66 = inferStructLit(v_23.F0, v_23.F1, env, state)
-															expr_83 = expr_66
+														if v_24, ok := expr.(ast2.ExprBlockExpr); ok {
+															var expr_67 Result[InferResult, string]
+															expr_67 = inferBlock(v_24.F0, env, state)
+															expr_84 = expr_67
 														} else {
-															if v_22, ok := expr.(ast2.ExprInlineGoExpr); ok {
-																var expr_65 Result[InferResult, string]
-																mono_64 := typeFromAST(*v_22.F0)
-																expr_65 = Ok[InferResult, string](InferResult{Type: mono_64, Subst: []SubstEntry{}, State: state})
-																expr_83 = expr_65
+															if v_23, ok := expr.(ast2.ExprStructLitExpr); ok {
+																var expr_66 Result[InferResult, string]
+																expr_66 = inferStructLit(v_23.F0, v_23.F1, env, state)
+																expr_84 = expr_66
 															} else {
-																panic("unreachable")
+																if v_22, ok := expr.(ast2.ExprInlineGoExpr); ok {
+																	var expr_65 Result[InferResult, string]
+																	mono_64 := typeFromAST(*v_22.F0)
+																	expr_65 = Ok[InferResult, string](InferResult{Type: mono_64, Subst: []SubstEntry{}, State: state})
+																	expr_84 = expr_65
+																} else {
+																	panic("unreachable")
+																}
 															}
 														}
 													}
@@ -276,315 +282,315 @@ func inferExpr(expr ast2.Expr, env []EnvEntry, state InferState) Result[InferRes
 			}
 		}
 	}
-	return expr_83
+	return expr_84
 }
 func inferSwitch(target ast2.Expr, cases []ast2.SwitchCase, env []EnvEntry, state InferState) Result[InferResult, string] {
-	matched_84 := inferExpr(target, env, state)
-	var expr_87 Result[InferResult, string]
-	if v_40, ok := matched_84.(ResultErr[InferResult, string]); ok {
-		var expr_86 Result[InferResult, string]
-		expr_86 = Err[InferResult, string](v_40.F0)
-		expr_87 = expr_86
+	matched_85 := inferExpr(target, env, state)
+	var expr_88 Result[InferResult, string]
+	if v_41, ok := matched_85.(ResultErr[InferResult, string]); ok {
+		var expr_87 Result[InferResult, string]
+		expr_87 = Err[InferResult, string](v_41.F0)
+		expr_88 = expr_87
 	} else {
-		if v_39, ok := matched_84.(ResultOk[InferResult, string]); ok {
-			var expr_85 Result[InferResult, string]
-			expr_85 = inferSwitchCases(cases, v_39.F0.Type, env, v_39.F0.State, v_39.F0.Subst, None[MonoType]())
-			expr_87 = expr_85
+		if v_40, ok := matched_85.(ResultOk[InferResult, string]); ok {
+			var expr_86 Result[InferResult, string]
+			expr_86 = inferSwitchCases(cases, v_40.F0.Type, env, v_40.F0.State, v_40.F0.Subst, None[MonoType]())
+			expr_88 = expr_86
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_87
+	return expr_88
 }
 func inferSwitchCases(cases []ast2.SwitchCase, targetType MonoType, env []EnvEntry, state InferState, subst []SubstEntry, resultType Option[MonoType]) Result[InferResult, string] {
-	var expr_108 Result[InferResult, string]
+	var expr_109 Result[InferResult, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) == 0 {
-		var expr_90 Result[InferResult, string]
-		if v_42, ok := resultType.(OptionSome[MonoType]); ok {
-			var expr_89 Result[InferResult, string]
-			expr_89 = Ok[InferResult, string](InferResult{Type: applySubst(subst, v_42.F0), Subst: subst, State: state})
-			expr_90 = expr_89
+		var expr_91 Result[InferResult, string]
+		if v_43, ok := resultType.(OptionSome[MonoType]); ok {
+			var expr_90 Result[InferResult, string]
+			expr_90 = Ok[InferResult, string](InferResult{Type: applySubst(subst, v_43.F0), Subst: subst, State: state})
+			expr_91 = expr_90
 		} else {
 			if _, ok := resultType.(OptionNone[MonoType]); ok {
-				var expr_88 Result[InferResult, string]
-				expr_88 = Err[InferResult, string]("switch requires at least one case")
-				expr_90 = expr_88
+				var expr_89 Result[InferResult, string]
+				expr_89 = Err[InferResult, string]("switch requires at least one case")
+				expr_91 = expr_89
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_108 = expr_90
+		expr_109 = expr_91
 	} else {
+		var expr_108 Result[InferResult, string]
+		current_92 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), ast2.SwitchCase{Pattern: ast2.PatternWildcardPatternCtor(), Body: ast2.ExprUnitExprCtor()})
+		caseEnv_93 := envWithPattern(env, current_92.Pattern, targetType)
 		var expr_107 Result[InferResult, string]
-		current_91 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), ast2.SwitchCase{Pattern: ast2.PatternWildcardPatternCtor(), Body: ast2.ExprUnitExprCtor()})
-		caseEnv_92 := envWithPattern(env, current_91.Pattern, targetType)
-		var expr_106 Result[InferResult, string]
-		if v_50, ok := caseEnv_92.(ResultErr[[]EnvEntry, string]); ok {
-			var expr_105 Result[InferResult, string]
-			expr_105 = Err[InferResult, string](v_50.F0)
-			expr_106 = expr_105
+		if v_51, ok := caseEnv_93.(ResultErr[[]EnvEntry, string]); ok {
+			var expr_106 Result[InferResult, string]
+			expr_106 = Err[InferResult, string](v_51.F0)
+			expr_107 = expr_106
 		} else {
-			if v_43, ok := caseEnv_92.(ResultOk[[]EnvEntry, string]); ok {
+			if v_44, ok := caseEnv_93.(ResultOk[[]EnvEntry, string]); ok {
+				var expr_105 Result[InferResult, string]
+				body_94 := inferExpr(current_92.Body, v_44.F0, state)
 				var expr_104 Result[InferResult, string]
-				body_93 := inferExpr(current_91.Body, v_43.F0, state)
-				var expr_103 Result[InferResult, string]
-				if v_49, ok := body_93.(ResultErr[InferResult, string]); ok {
-					var expr_102 Result[InferResult, string]
-					expr_102 = Err[InferResult, string](v_49.F0)
-					expr_103 = expr_102
+				if v_50, ok := body_94.(ResultErr[InferResult, string]); ok {
+					var expr_103 Result[InferResult, string]
+					expr_103 = Err[InferResult, string](v_50.F0)
+					expr_104 = expr_103
 				} else {
-					if v_44, ok := body_93.(ResultOk[InferResult, string]); ok {
+					if v_45, ok := body_94.(ResultOk[InferResult, string]); ok {
+						var expr_102 Result[InferResult, string]
 						var expr_101 Result[InferResult, string]
-						var expr_100 Result[InferResult, string]
 						if _, ok := resultType.(OptionNone[MonoType]); ok {
-							var expr_99 Result[InferResult, string]
-							expr_99 = inferSwitchCases(sliceDrop[ast2.SwitchCase](cases, 1), targetType, env, v_44.F0.State, composeSubst(v_44.F0.Subst, subst), Some[MonoType](v_44.F0.Type))
-							expr_100 = expr_99
+							var expr_100 Result[InferResult, string]
+							expr_100 = inferSwitchCases(sliceDrop[ast2.SwitchCase](cases, 1), targetType, env, v_45.F0.State, composeSubst(v_45.F0.Subst, subst), Some[MonoType](v_45.F0.Type))
+							expr_101 = expr_100
 						} else {
-							if v_45, ok := resultType.(OptionSome[MonoType]); ok {
+							if v_46, ok := resultType.(OptionSome[MonoType]); ok {
+								var expr_99 Result[InferResult, string]
+								nextSubst_95 := unify(applySubst(v_45.F0.Subst, v_46.F0), applySubst(v_45.F0.Subst, v_45.F0.Type), composeSubst(v_45.F0.Subst, subst))
 								var expr_98 Result[InferResult, string]
-								nextSubst_94 := unify(applySubst(v_44.F0.Subst, v_45.F0), applySubst(v_44.F0.Subst, v_44.F0.Type), composeSubst(v_44.F0.Subst, subst))
-								var expr_97 Result[InferResult, string]
-								if v_47, ok := nextSubst_94.(ResultErr[[]SubstEntry, string]); ok {
-									var expr_96 Result[InferResult, string]
-									expr_96 = Err[InferResult, string]("switch case type mismatch: " + v_47.F0)
-									expr_97 = expr_96
+								if v_48, ok := nextSubst_95.(ResultErr[[]SubstEntry, string]); ok {
+									var expr_97 Result[InferResult, string]
+									expr_97 = Err[InferResult, string]("switch case type mismatch: " + v_48.F0)
+									expr_98 = expr_97
 								} else {
-									if v_46, ok := nextSubst_94.(ResultOk[[]SubstEntry, string]); ok {
-										var expr_95 Result[InferResult, string]
-										expr_95 = inferSwitchCases(sliceDrop[ast2.SwitchCase](cases, 1), targetType, env, v_44.F0.State, v_46.F0, Some[MonoType](applySubst(v_46.F0, v_45.F0)))
-										expr_97 = expr_95
+									if v_47, ok := nextSubst_95.(ResultOk[[]SubstEntry, string]); ok {
+										var expr_96 Result[InferResult, string]
+										expr_96 = inferSwitchCases(sliceDrop[ast2.SwitchCase](cases, 1), targetType, env, v_45.F0.State, v_47.F0, Some[MonoType](applySubst(v_47.F0, v_46.F0)))
+										expr_98 = expr_96
 									} else {
 										panic("unreachable")
 									}
 								}
-								expr_98 = expr_97
-								expr_100 = expr_98
+								expr_99 = expr_98
+								expr_101 = expr_99
 							} else {
 								panic("unreachable")
 							}
 						}
-						expr_101 = expr_100
-						expr_103 = expr_101
+						expr_102 = expr_101
+						expr_104 = expr_102
 					} else {
 						panic("unreachable")
 					}
 				}
-				expr_104 = expr_103
-				expr_106 = expr_104
+				expr_105 = expr_104
+				expr_107 = expr_105
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_107 = expr_106
 		expr_108 = expr_107
+		expr_109 = expr_108
 	}
-	return expr_108
+	return expr_109
 }
 func envWithPattern(env []EnvEntry, pattern ast2.Pattern, targetType MonoType) Result[[]EnvEntry, string] {
-	var expr_128 Result[[]EnvEntry, string]
+	var expr_129 Result[[]EnvEntry, string]
 	if _, ok := pattern.(ast2.PatternWildcardPattern); ok {
-		var expr_127 Result[[]EnvEntry, string]
-		expr_127 = Ok[[]EnvEntry, string](env)
-		expr_128 = expr_127
+		var expr_128 Result[[]EnvEntry, string]
+		expr_128 = Ok[[]EnvEntry, string](env)
+		expr_129 = expr_128
 	} else {
-		if v_58, ok := pattern.(ast2.PatternLiteralPattern); ok {
-			var expr_126 Result[[]EnvEntry, string]
-			var expr_121 MonoType
-			if v_58.F0 == "string" {
-				expr_121 = MonoTypeTConCtor("String", emptyMonoTypes())
+		if v_59, ok := pattern.(ast2.PatternLiteralPattern); ok {
+			var expr_127 Result[[]EnvEntry, string]
+			var expr_122 MonoType
+			if v_59.F0 == "string" {
+				expr_122 = MonoTypeTConCtor("String", emptyMonoTypes())
 			} else {
-				expr_121 = MonoTypeTConCtor("Int", emptyMonoTypes())
+				expr_122 = MonoTypeTConCtor("Int", emptyMonoTypes())
 			}
-			expected_122 := expr_121
-			var expr_125 Result[[]EnvEntry, string]
-			if _, ok := unify(targetType, expected_122, []SubstEntry{}).(ResultOk[[]SubstEntry, string]); ok {
-				var expr_124 Result[[]EnvEntry, string]
-				expr_124 = Ok[[]EnvEntry, string](env)
-				expr_125 = expr_124
+			expected_123 := expr_122
+			var expr_126 Result[[]EnvEntry, string]
+			if _, ok := unify(targetType, expected_123, []SubstEntry{}).(ResultOk[[]SubstEntry, string]); ok {
+				var expr_125 Result[[]EnvEntry, string]
+				expr_125 = Ok[[]EnvEntry, string](env)
+				expr_126 = expr_125
 			} else {
-				if v_59, ok := unify(targetType, expected_122, []SubstEntry{}).(ResultErr[[]SubstEntry, string]); ok {
-					var expr_123 Result[[]EnvEntry, string]
-					expr_123 = Err[[]EnvEntry, string]("pattern does not match switch target: " + v_59.F0)
-					expr_125 = expr_123
+				if v_60, ok := unify(targetType, expected_123, []SubstEntry{}).(ResultErr[[]SubstEntry, string]); ok {
+					var expr_124 Result[[]EnvEntry, string]
+					expr_124 = Err[[]EnvEntry, string]("pattern does not match switch target: " + v_60.F0)
+					expr_126 = expr_124
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_126 = expr_125
-			expr_128 = expr_126
+			expr_127 = expr_126
+			expr_129 = expr_127
 		} else {
-			if v_51, ok := pattern.(ast2.PatternVariantPattern); ok {
+			if v_52, ok := pattern.(ast2.PatternVariantPattern); ok {
+				var expr_121 Result[[]EnvEntry, string]
 				var expr_120 Result[[]EnvEntry, string]
-				var expr_119 Result[[]EnvEntry, string]
-				if _, ok := envGet(env, v_51.F0).(OptionNone[Scheme]); ok {
-					var expr_118 Result[[]EnvEntry, string]
-					expr_118 = Err[[]EnvEntry, string]("unknown variant " + v_51.F0)
-					expr_119 = expr_118
+				if _, ok := envGet(env, v_52.F0).(OptionNone[Scheme]); ok {
+					var expr_119 Result[[]EnvEntry, string]
+					expr_119 = Err[[]EnvEntry, string]("unknown variant " + v_52.F0)
+					expr_120 = expr_119
 				} else {
-					if v_52, ok := envGet(env, v_51.F0).(OptionSome[Scheme]); ok {
+					if v_53, ok := envGet(env, v_52.F0).(OptionSome[Scheme]); ok {
+						var expr_118 Result[[]EnvEntry, string]
 						var expr_117 Result[[]EnvEntry, string]
-						var expr_116 Result[[]EnvEntry, string]
-						if v_56, ok := v_52.F0.Body.(MonoTypeTFunc); ok {
-							var expr_115 Result[[]EnvEntry, string]
-							expr_115 = envWithPatternBindings(env, v_51.F1, v_56.F0, targetType, *v_56.F1)
-							expr_116 = expr_115
+						if v_57, ok := v_53.F0.Body.(MonoTypeTFunc); ok {
+							var expr_116 Result[[]EnvEntry, string]
+							expr_116 = envWithPatternBindings(env, v_52.F1, v_57.F0, targetType, *v_57.F1)
+							expr_117 = expr_116
 						} else {
-							if _, ok := v_52.F0.Body.(MonoTypeTCon); ok {
+							if _, ok := v_53.F0.Body.(MonoTypeTCon); ok {
+								var expr_115 Result[[]EnvEntry, string]
 								var expr_114 Result[[]EnvEntry, string]
-								var expr_113 Result[[]EnvEntry, string]
-								if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_51.F1) == 0 {
-									var expr_112 Result[[]EnvEntry, string]
-									if _, ok := unify(targetType, v_52.F0.Body, []SubstEntry{}).(ResultOk[[]SubstEntry, string]); ok {
-										var expr_111 Result[[]EnvEntry, string]
-										expr_111 = Ok[[]EnvEntry, string](env)
-										expr_112 = expr_111
+								if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_52.F1) == 0 {
+									var expr_113 Result[[]EnvEntry, string]
+									if _, ok := unify(targetType, v_53.F0.Body, []SubstEntry{}).(ResultOk[[]SubstEntry, string]); ok {
+										var expr_112 Result[[]EnvEntry, string]
+										expr_112 = Ok[[]EnvEntry, string](env)
+										expr_113 = expr_112
 									} else {
-										if v_54, ok := unify(targetType, v_52.F0.Body, []SubstEntry{}).(ResultErr[[]SubstEntry, string]); ok {
-											var expr_110 Result[[]EnvEntry, string]
-											expr_110 = Err[[]EnvEntry, string]("pattern does not match switch target: " + v_54.F0)
-											expr_112 = expr_110
+										if v_55, ok := unify(targetType, v_53.F0.Body, []SubstEntry{}).(ResultErr[[]SubstEntry, string]); ok {
+											var expr_111 Result[[]EnvEntry, string]
+											expr_111 = Err[[]EnvEntry, string]("pattern does not match switch target: " + v_55.F0)
+											expr_113 = expr_111
 										} else {
 											panic("unreachable")
 										}
 									}
-									expr_113 = expr_112
+									expr_114 = expr_113
 								} else {
-									expr_113 = Err[[]EnvEntry, string]("variant " + v_51.F0 + " does not accept pattern arguments")
+									expr_114 = Err[[]EnvEntry, string]("variant " + v_52.F0 + " does not accept pattern arguments")
 								}
-								expr_114 = expr_113
-								expr_116 = expr_114
+								expr_115 = expr_114
+								expr_117 = expr_115
 							} else {
 								{
-									var expr_109 Result[[]EnvEntry, string]
-									expr_109 = Err[[]EnvEntry, string]("pattern " + v_51.F0 + " is not an enum variant")
-									expr_116 = expr_109
+									var expr_110 Result[[]EnvEntry, string]
+									expr_110 = Err[[]EnvEntry, string]("pattern " + v_52.F0 + " is not an enum variant")
+									expr_117 = expr_110
 								}
 							}
 						}
-						expr_117 = expr_116
-						expr_119 = expr_117
+						expr_118 = expr_117
+						expr_120 = expr_118
 					} else {
 						panic("unreachable")
 					}
 				}
-				expr_120 = expr_119
-				expr_128 = expr_120
+				expr_121 = expr_120
+				expr_129 = expr_121
 			} else {
 				panic("unreachable")
 			}
 		}
 	}
-	return expr_128
+	return expr_129
 }
 func envWithPatternBindings(env []EnvEntry, names []string, fields []MonoType, targetType MonoType, variantType MonoType) Result[[]EnvEntry, string] {
-	var expr_132 Result[[]EnvEntry, string]
+	var expr_133 Result[[]EnvEntry, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(names) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) {
-		expr_132 = Err[[]EnvEntry, string]("pattern argument count mismatch")
+		expr_133 = Err[[]EnvEntry, string]("pattern argument count mismatch")
 	} else {
-		var expr_131 Result[[]EnvEntry, string]
-		if v_63, ok := unify(targetType, variantType, []SubstEntry{}).(ResultErr[[]SubstEntry, string]); ok {
-			var expr_130 Result[[]EnvEntry, string]
-			expr_130 = Err[[]EnvEntry, string]("pattern does not match switch target: " + v_63.F0)
-			expr_131 = expr_130
+		var expr_132 Result[[]EnvEntry, string]
+		if v_64, ok := unify(targetType, variantType, []SubstEntry{}).(ResultErr[[]SubstEntry, string]); ok {
+			var expr_131 Result[[]EnvEntry, string]
+			expr_131 = Err[[]EnvEntry, string]("pattern does not match switch target: " + v_64.F0)
+			expr_132 = expr_131
 		} else {
 			if _, ok := unify(targetType, variantType, []SubstEntry{}).(ResultOk[[]SubstEntry, string]); ok {
-				var expr_129 Result[[]EnvEntry, string]
-				expr_129 = envWithPatternBindingLoop(env, names, fields)
-				expr_131 = expr_129
+				var expr_130 Result[[]EnvEntry, string]
+				expr_130 = envWithPatternBindingLoop(env, names, fields)
+				expr_132 = expr_130
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_132 = expr_131
+		expr_133 = expr_132
 	}
-	return expr_132
+	return expr_133
 }
 func envWithPatternBindingLoop(env []EnvEntry, names []string, fields []MonoType) Result[[]EnvEntry, string] {
-	var expr_138 Result[[]EnvEntry, string]
+	var expr_139 Result[[]EnvEntry, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(names) == 0 {
-		expr_138 = Ok[[]EnvEntry, string](env)
+		expr_139 = Ok[[]EnvEntry, string](env)
 	} else {
-		var expr_137 Result[[]EnvEntry, string]
-		name_133 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, 0), "_")
-		field_134 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), MonoTypeTUnitCtor())
-		var expr_135 []EnvEntry
-		if name_133 == "_" {
-			expr_135 = env
+		var expr_138 Result[[]EnvEntry, string]
+		name_134 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, 0), "_")
+		field_135 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), MonoTypeTUnitCtor())
+		var expr_136 []EnvEntry
+		if name_134 == "_" {
+			expr_136 = env
 		} else {
-			expr_135 = envPut(env, name_133, Scheme{Bound: []int{}, Body: field_134})
+			expr_136 = envPut(env, name_134, Scheme{Bound: []int{}, Body: field_135})
 		}
-		next_136 := expr_135
-		expr_137 = envWithPatternBindingLoop(next_136, sliceDrop[string](names, 1), sliceDrop[MonoType](fields, 1))
-		expr_138 = expr_137
+		next_137 := expr_136
+		expr_138 = envWithPatternBindingLoop(next_137, sliceDrop[string](names, 1), sliceDrop[MonoType](fields, 1))
+		expr_139 = expr_138
 	}
-	return expr_138
+	return expr_139
 }
 func inferTuple(items []ast2.Expr, env []EnvEntry, state InferState) Result[InferResult, string] {
 	return inferTupleItems(items, env, state, []MonoType([]MonoType{}), []SubstEntry([]SubstEntry{}))
 }
 func inferTupleItems(items []ast2.Expr, env []EnvEntry, state InferState, types []MonoType, subst []SubstEntry) Result[InferResult, string] {
-	var expr_144 Result[InferResult, string]
+	var expr_145 Result[InferResult, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_144 = Ok[InferResult, string](InferResult{Type: MonoTypeTTupleCtor(types), Subst: subst, State: state})
+		expr_145 = Ok[InferResult, string](InferResult{Type: MonoTypeTTupleCtor(types), Subst: subst, State: state})
 	} else {
+		var expr_144 Result[InferResult, string]
+		r_140 := inferExpr(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.ExprUnitExprCtor()), env, state)
 		var expr_143 Result[InferResult, string]
-		r_139 := inferExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.ExprUnitExprCtor()), env, state)
-		var expr_142 Result[InferResult, string]
-		if v_65, ok := r_139.(ResultErr[InferResult, string]); ok {
-			var expr_141 Result[InferResult, string]
-			expr_141 = Err[InferResult, string](v_65.F0)
-			expr_142 = expr_141
+		if v_66, ok := r_140.(ResultErr[InferResult, string]); ok {
+			var expr_142 Result[InferResult, string]
+			expr_142 = Err[InferResult, string](v_66.F0)
+			expr_143 = expr_142
 		} else {
-			if v_64, ok := r_139.(ResultOk[InferResult, string]); ok {
-				var expr_140 Result[InferResult, string]
-				expr_140 = inferTupleItems(sliceDrop[ast2.Expr](items, 1), env, v_64.F0.State, MygoIN5SliceM6Append(types, v_64.F0.Type), composeSubst(v_64.F0.Subst, subst))
-				expr_142 = expr_140
+			if v_65, ok := r_140.(ResultOk[InferResult, string]); ok {
+				var expr_141 Result[InferResult, string]
+				expr_141 = inferTupleItems(sliceDrop[ast2.Expr](items, 1), env, v_65.F0.State, MygoIN5SliceM6Append(types, v_65.F0.Type), composeSubst(v_65.F0.Subst, subst))
+				expr_143 = expr_141
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_143 = expr_142
 		expr_144 = expr_143
+		expr_145 = expr_144
 	}
-	return expr_144
+	return expr_145
 }
 func inferStmt(stmt ast2.Stmt, env []EnvEntry, state InferState) Result[InferResult, string] {
-	var expr_152 Result[InferResult, string]
-	if v_72, ok := stmt.(ast2.StmtExprStmt); ok {
-		var expr_151 Result[InferResult, string]
-		expr_151 = inferExpr(v_72.F0, env, state)
-		expr_152 = expr_151
+	var expr_153 Result[InferResult, string]
+	if v_73, ok := stmt.(ast2.StmtExprStmt); ok {
+		var expr_152 Result[InferResult, string]
+		expr_152 = inferExpr(v_73.F0, env, state)
+		expr_153 = expr_152
 	} else {
-		if v_71, ok := stmt.(ast2.StmtLetStmt); ok {
-			var expr_150 Result[InferResult, string]
-			expr_150 = inferLet(v_71.F0, env, state)
-			expr_152 = expr_150
+		if v_72, ok := stmt.(ast2.StmtLetStmt); ok {
+			var expr_151 Result[InferResult, string]
+			expr_151 = inferLet(v_72.F0, env, state)
+			expr_153 = expr_151
 		} else {
-			if v_70, ok := stmt.(ast2.StmtVarStmt); ok {
-				var expr_149 Result[InferResult, string]
-				expr_149 = inferLet(v_70.F0, env, state)
-				expr_152 = expr_149
+			if v_71, ok := stmt.(ast2.StmtVarStmt); ok {
+				var expr_150 Result[InferResult, string]
+				expr_150 = inferLet(v_71.F0, env, state)
+				expr_153 = expr_150
 			} else {
-				if v_69, ok := stmt.(ast2.StmtWhileStmt); ok {
-					var expr_148 Result[InferResult, string]
-					expr_148 = inferWhile(v_69.F0, v_69.F1, env, state)
-					expr_152 = expr_148
+				if v_70, ok := stmt.(ast2.StmtWhileStmt); ok {
+					var expr_149 Result[InferResult, string]
+					expr_149 = inferWhile(v_70.F0, v_70.F1, env, state)
+					expr_153 = expr_149
 				} else {
-					if v_68, ok := stmt.(ast2.StmtAssignStmt); ok {
-						var expr_147 Result[InferResult, string]
-						expr_147 = inferAssign(v_68.F0, v_68.F1, env, state)
-						expr_152 = expr_147
+					if v_69, ok := stmt.(ast2.StmtAssignStmt); ok {
+						var expr_148 Result[InferResult, string]
+						expr_148 = inferAssign(v_69.F0, v_69.F1, env, state)
+						expr_153 = expr_148
 					} else {
 						if _, ok := stmt.(ast2.StmtReturnStmt); ok {
-							var expr_146 Result[InferResult, string]
-							expr_146 = Ok[InferResult, string](InferResult{Type: MonoTypeTUnitCtor(), Subst: []SubstEntry{}, State: state})
-							expr_152 = expr_146
+							var expr_147 Result[InferResult, string]
+							expr_147 = Ok[InferResult, string](InferResult{Type: MonoTypeTUnitCtor(), Subst: []SubstEntry{}, State: state})
+							expr_153 = expr_147
 						} else {
-							if v_66, ok := stmt.(ast2.StmtReturnWithStmt); ok {
-								var expr_145 Result[InferResult, string]
-								expr_145 = inferExpr(v_66.F0, env, state)
-								expr_152 = expr_145
+							if v_67, ok := stmt.(ast2.StmtReturnWithStmt); ok {
+								var expr_146 Result[InferResult, string]
+								expr_146 = inferExpr(v_67.F0, env, state)
+								expr_153 = expr_146
 							} else {
 								panic("unreachable")
 							}
@@ -594,663 +600,663 @@ func inferStmt(stmt ast2.Stmt, env []EnvEntry, state InferState) Result[InferRes
 			}
 		}
 	}
-	return expr_152
+	return expr_153
 }
 func inferWhile(cond ast2.Expr, body ast2.Expr, env []EnvEntry, state InferState) Result[InferResult, string] {
-	c_153 := inferExpr(cond, env, state)
-	var expr_164 Result[InferResult, string]
-	if v_78, ok := c_153.(ResultErr[InferResult, string]); ok {
-		var expr_163 Result[InferResult, string]
-		expr_163 = Err[InferResult, string](v_78.F0)
-		expr_164 = expr_163
+	c_154 := inferExpr(cond, env, state)
+	var expr_165 Result[InferResult, string]
+	if v_79, ok := c_154.(ResultErr[InferResult, string]); ok {
+		var expr_164 Result[InferResult, string]
+		expr_164 = Err[InferResult, string](v_79.F0)
+		expr_165 = expr_164
 	} else {
-		if v_73, ok := c_153.(ResultOk[InferResult, string]); ok {
+		if v_74, ok := c_154.(ResultOk[InferResult, string]); ok {
+			var expr_163 Result[InferResult, string]
+			csubst_155 := unify(v_74.F0.Type, MonoTypeTConCtor("Bool", emptyMonoTypes()), v_74.F0.Subst)
 			var expr_162 Result[InferResult, string]
-			csubst_154 := unify(v_73.F0.Type, MonoTypeTConCtor("Bool", emptyMonoTypes()), v_73.F0.Subst)
-			var expr_161 Result[InferResult, string]
-			if v_77, ok := csubst_154.(ResultErr[[]SubstEntry, string]); ok {
-				var expr_160 Result[InferResult, string]
-				expr_160 = Err[InferResult, string](v_77.F0)
-				expr_161 = expr_160
+			if v_78, ok := csubst_155.(ResultErr[[]SubstEntry, string]); ok {
+				var expr_161 Result[InferResult, string]
+				expr_161 = Err[InferResult, string](v_78.F0)
+				expr_162 = expr_161
 			} else {
-				if _, ok := csubst_154.(ResultOk[[]SubstEntry, string]); ok {
+				if _, ok := csubst_155.(ResultOk[[]SubstEntry, string]); ok {
+					var expr_160 Result[InferResult, string]
+					b_156 := inferExpr(body, env, v_74.F0.State)
 					var expr_159 Result[InferResult, string]
-					b_155 := inferExpr(body, env, v_73.F0.State)
-					var expr_158 Result[InferResult, string]
-					if v_76, ok := b_155.(ResultErr[InferResult, string]); ok {
-						var expr_157 Result[InferResult, string]
-						expr_157 = Err[InferResult, string](v_76.F0)
-						expr_158 = expr_157
+					if v_77, ok := b_156.(ResultErr[InferResult, string]); ok {
+						var expr_158 Result[InferResult, string]
+						expr_158 = Err[InferResult, string](v_77.F0)
+						expr_159 = expr_158
 					} else {
-						if v_75, ok := b_155.(ResultOk[InferResult, string]); ok {
-							var expr_156 Result[InferResult, string]
-							expr_156 = Ok[InferResult, string](InferResult{Type: MonoTypeTUnitCtor(), Subst: v_75.F0.Subst, State: v_75.F0.State})
-							expr_158 = expr_156
+						if v_76, ok := b_156.(ResultOk[InferResult, string]); ok {
+							var expr_157 Result[InferResult, string]
+							expr_157 = Ok[InferResult, string](InferResult{Type: MonoTypeTUnitCtor(), Subst: v_76.F0.Subst, State: v_76.F0.State})
+							expr_159 = expr_157
 						} else {
 							panic("unreachable")
 						}
 					}
-					expr_159 = expr_158
-					expr_161 = expr_159
+					expr_160 = expr_159
+					expr_162 = expr_160
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_162 = expr_161
-			expr_164 = expr_162
+			expr_163 = expr_162
+			expr_165 = expr_163
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_164
+	return expr_165
 }
 func inferAssign(target ast2.Expr, value ast2.Expr, env []EnvEntry, state InferState) Result[InferResult, string] {
-	t_165 := inferExpr(target, env, state)
-	var expr_176 Result[InferResult, string]
-	if v_84, ok := t_165.(ResultErr[InferResult, string]); ok {
-		var expr_175 Result[InferResult, string]
-		expr_175 = Err[InferResult, string](v_84.F0)
-		expr_176 = expr_175
+	t_166 := inferExpr(target, env, state)
+	var expr_177 Result[InferResult, string]
+	if v_85, ok := t_166.(ResultErr[InferResult, string]); ok {
+		var expr_176 Result[InferResult, string]
+		expr_176 = Err[InferResult, string](v_85.F0)
+		expr_177 = expr_176
 	} else {
-		if v_79, ok := t_165.(ResultOk[InferResult, string]); ok {
+		if v_80, ok := t_166.(ResultOk[InferResult, string]); ok {
+			var expr_175 Result[InferResult, string]
+			v_167 := inferExpr(value, env, v_80.F0.State)
 			var expr_174 Result[InferResult, string]
-			v_166 := inferExpr(value, env, v_79.F0.State)
-			var expr_173 Result[InferResult, string]
-			if v_83, ok := v_166.(ResultErr[InferResult, string]); ok {
-				var expr_172 Result[InferResult, string]
-				expr_172 = Err[InferResult, string](v_83.F0)
-				expr_173 = expr_172
+			if v_84, ok := v_167.(ResultErr[InferResult, string]); ok {
+				var expr_173 Result[InferResult, string]
+				expr_173 = Err[InferResult, string](v_84.F0)
+				expr_174 = expr_173
 			} else {
-				if v_80, ok := v_166.(ResultOk[InferResult, string]); ok {
+				if v_81, ok := v_167.(ResultOk[InferResult, string]); ok {
+					var expr_172 Result[InferResult, string]
+					s_168 := unify(applySubst(v_81.F0.Subst, v_80.F0.Type), applySubst(v_81.F0.Subst, v_81.F0.Type), v_81.F0.Subst)
 					var expr_171 Result[InferResult, string]
-					s_167 := unify(applySubst(v_80.F0.Subst, v_79.F0.Type), applySubst(v_80.F0.Subst, v_80.F0.Type), v_80.F0.Subst)
-					var expr_170 Result[InferResult, string]
-					if v_82, ok := s_167.(ResultErr[[]SubstEntry, string]); ok {
-						var expr_169 Result[InferResult, string]
-						expr_169 = Err[InferResult, string](v_82.F0)
-						expr_170 = expr_169
+					if v_83, ok := s_168.(ResultErr[[]SubstEntry, string]); ok {
+						var expr_170 Result[InferResult, string]
+						expr_170 = Err[InferResult, string](v_83.F0)
+						expr_171 = expr_170
 					} else {
-						if v_81, ok := s_167.(ResultOk[[]SubstEntry, string]); ok {
-							var expr_168 Result[InferResult, string]
-							expr_168 = Ok[InferResult, string](InferResult{Type: MonoTypeTUnitCtor(), Subst: v_81.F0, State: v_80.F0.State})
-							expr_170 = expr_168
+						if v_82, ok := s_168.(ResultOk[[]SubstEntry, string]); ok {
+							var expr_169 Result[InferResult, string]
+							expr_169 = Ok[InferResult, string](InferResult{Type: MonoTypeTUnitCtor(), Subst: v_82.F0, State: v_81.F0.State})
+							expr_171 = expr_169
 						} else {
 							panic("unreachable")
 						}
 					}
-					expr_171 = expr_170
-					expr_173 = expr_171
+					expr_172 = expr_171
+					expr_174 = expr_172
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_174 = expr_173
-			expr_176 = expr_174
+			expr_175 = expr_174
+			expr_177 = expr_175
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_176
+	return expr_177
 }
 func inferUnary(op string, inner ast2.Expr, env []EnvEntry, state InferState) Result[InferResult, string] {
-	r_177 := inferExpr(inner, env, state)
-	var expr_182 Result[InferResult, string]
-	if v_86, ok := r_177.(ResultOk[InferResult, string]); ok {
+	r_178 := inferExpr(inner, env, state)
+	var expr_183 Result[InferResult, string]
+	if v_87, ok := r_178.(ResultOk[InferResult, string]); ok {
+		var expr_182 Result[InferResult, string]
 		var expr_181 Result[InferResult, string]
-		var expr_180 Result[InferResult, string]
 		if op == "!" {
-			expr_180 = matchExpected(v_86.F0, MonoTypeTConCtor("Bool", emptyMonoTypes()), MonoTypeTConCtor("Bool", emptyMonoTypes()))
+			expr_181 = matchExpected(v_87.F0, MonoTypeTConCtor("Bool", emptyMonoTypes()), MonoTypeTConCtor("Bool", emptyMonoTypes()))
 		} else {
-			var expr_179 Result[InferResult, string]
+			var expr_180 Result[InferResult, string]
 			if op == "-" {
-				expr_179 = matchExpected(v_86.F0, MonoTypeTConCtor("Int", emptyMonoTypes()), MonoTypeTConCtor("Int", emptyMonoTypes()))
+				expr_180 = matchExpected(v_87.F0, MonoTypeTConCtor("Int", emptyMonoTypes()), MonoTypeTConCtor("Int", emptyMonoTypes()))
 			} else {
-				expr_179 = Err[InferResult, string]("unknown unary operator " + op)
+				expr_180 = Err[InferResult, string]("unknown unary operator " + op)
 			}
-			expr_180 = expr_179
+			expr_181 = expr_180
 		}
-		expr_181 = expr_180
 		expr_182 = expr_181
+		expr_183 = expr_182
 	} else {
-		if v_85, ok := r_177.(ResultErr[InferResult, string]); ok {
-			var expr_178 Result[InferResult, string]
-			expr_178 = Err[InferResult, string](v_85.F0)
-			expr_182 = expr_178
+		if v_86, ok := r_178.(ResultErr[InferResult, string]); ok {
+			var expr_179 Result[InferResult, string]
+			expr_179 = Err[InferResult, string](v_86.F0)
+			expr_183 = expr_179
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_182
+	return expr_183
 }
 func inferBinary(op string, left ast2.Expr, right ast2.Expr, env []EnvEntry, state InferState) Result[InferResult, string] {
-	l_183 := inferExpr(left, env, state)
-	var expr_207 Result[InferResult, string]
-	if v_96, ok := l_183.(ResultErr[InferResult, string]); ok {
-		var expr_206 Result[InferResult, string]
-		expr_206 = Err[InferResult, string](v_96.F0)
-		expr_207 = expr_206
+	l_184 := inferExpr(left, env, state)
+	var expr_208 Result[InferResult, string]
+	if v_97, ok := l_184.(ResultErr[InferResult, string]); ok {
+		var expr_207 Result[InferResult, string]
+		expr_207 = Err[InferResult, string](v_97.F0)
+		expr_208 = expr_207
 	} else {
-		if v_87, ok := l_183.(ResultOk[InferResult, string]); ok {
+		if v_88, ok := l_184.(ResultOk[InferResult, string]); ok {
+			var expr_206 Result[InferResult, string]
+			r_185 := inferExpr(right, env, v_88.F0.State)
 			var expr_205 Result[InferResult, string]
-			r_184 := inferExpr(right, env, v_87.F0.State)
-			var expr_204 Result[InferResult, string]
-			if v_95, ok := r_184.(ResultErr[InferResult, string]); ok {
-				var expr_203 Result[InferResult, string]
-				expr_203 = Err[InferResult, string](v_95.F0)
-				expr_204 = expr_203
+			if v_96, ok := r_185.(ResultErr[InferResult, string]); ok {
+				var expr_204 Result[InferResult, string]
+				expr_204 = Err[InferResult, string](v_96.F0)
+				expr_205 = expr_204
 			} else {
-				if v_88, ok := r_184.(ResultOk[InferResult, string]); ok {
+				if v_89, ok := r_185.(ResultOk[InferResult, string]); ok {
+					var expr_203 Result[InferResult, string]
+					s1_186 := composeSubst(v_89.F0.Subst, v_88.F0.Subst)
 					var expr_202 Result[InferResult, string]
-					s1_185 := composeSubst(v_88.F0.Subst, v_87.F0.Subst)
-					var expr_201 Result[InferResult, string]
 					if isArithmetic(op) {
+						var expr_195 Result[InferResult, string]
+						s2_187 := unify(applySubst(s1_186, v_88.F0.Type), MonoTypeTConCtor("Int", emptyMonoTypes()), s1_186)
 						var expr_194 Result[InferResult, string]
-						s2_186 := unify(applySubst(s1_185, v_87.F0.Type), MonoTypeTConCtor("Int", emptyMonoTypes()), s1_185)
-						var expr_193 Result[InferResult, string]
-						if v_92, ok := s2_186.(ResultErr[[]SubstEntry, string]); ok {
-							var expr_192 Result[InferResult, string]
-							expr_192 = Err[InferResult, string](v_92.F0)
-							expr_193 = expr_192
+						if v_93, ok := s2_187.(ResultErr[[]SubstEntry, string]); ok {
+							var expr_193 Result[InferResult, string]
+							expr_193 = Err[InferResult, string](v_93.F0)
+							expr_194 = expr_193
 						} else {
-							if v_89, ok := s2_186.(ResultOk[[]SubstEntry, string]); ok {
+							if v_90, ok := s2_187.(ResultOk[[]SubstEntry, string]); ok {
+								var expr_192 Result[InferResult, string]
+								s3_188 := unify(applySubst(v_90.F0, v_89.F0.Type), MonoTypeTConCtor("Int", emptyMonoTypes()), v_90.F0)
 								var expr_191 Result[InferResult, string]
-								s3_187 := unify(applySubst(v_89.F0, v_88.F0.Type), MonoTypeTConCtor("Int", emptyMonoTypes()), v_89.F0)
-								var expr_190 Result[InferResult, string]
-								if v_91, ok := s3_187.(ResultOk[[]SubstEntry, string]); ok {
-									var expr_189 Result[InferResult, string]
-									expr_189 = Ok[InferResult, string](InferResult{Type: MonoTypeTConCtor("Int", emptyMonoTypes()), Subst: v_91.F0, State: v_88.F0.State})
-									expr_190 = expr_189
+								if v_92, ok := s3_188.(ResultOk[[]SubstEntry, string]); ok {
+									var expr_190 Result[InferResult, string]
+									expr_190 = Ok[InferResult, string](InferResult{Type: MonoTypeTConCtor("Int", emptyMonoTypes()), Subst: v_92.F0, State: v_89.F0.State})
+									expr_191 = expr_190
 								} else {
-									if v_90, ok := s3_187.(ResultErr[[]SubstEntry, string]); ok {
-										var expr_188 Result[InferResult, string]
-										expr_188 = Err[InferResult, string](v_90.F0)
-										expr_190 = expr_188
+									if v_91, ok := s3_188.(ResultErr[[]SubstEntry, string]); ok {
+										var expr_189 Result[InferResult, string]
+										expr_189 = Err[InferResult, string](v_91.F0)
+										expr_191 = expr_189
 									} else {
 										panic("unreachable")
 									}
 								}
-								expr_191 = expr_190
-								expr_193 = expr_191
+								expr_192 = expr_191
+								expr_194 = expr_192
 							} else {
 								panic("unreachable")
 							}
 						}
-						expr_194 = expr_193
-						expr_201 = expr_194
+						expr_195 = expr_194
+						expr_202 = expr_195
 					} else {
-						var expr_200 Result[InferResult, string]
+						var expr_201 Result[InferResult, string]
 						if isComparison(op) {
+							var expr_200 Result[InferResult, string]
+							s2_196 := unify(applySubst(s1_186, v_88.F0.Type), applySubst(s1_186, v_89.F0.Type), s1_186)
 							var expr_199 Result[InferResult, string]
-							s2_195 := unify(applySubst(s1_185, v_87.F0.Type), applySubst(s1_185, v_88.F0.Type), s1_185)
-							var expr_198 Result[InferResult, string]
-							if v_94, ok := s2_195.(ResultOk[[]SubstEntry, string]); ok {
-								var expr_197 Result[InferResult, string]
-								expr_197 = Ok[InferResult, string](InferResult{Type: MonoTypeTConCtor("Bool", emptyMonoTypes()), Subst: v_94.F0, State: v_88.F0.State})
-								expr_198 = expr_197
+							if v_95, ok := s2_196.(ResultOk[[]SubstEntry, string]); ok {
+								var expr_198 Result[InferResult, string]
+								expr_198 = Ok[InferResult, string](InferResult{Type: MonoTypeTConCtor("Bool", emptyMonoTypes()), Subst: v_95.F0, State: v_89.F0.State})
+								expr_199 = expr_198
 							} else {
-								if v_93, ok := s2_195.(ResultErr[[]SubstEntry, string]); ok {
-									var expr_196 Result[InferResult, string]
-									expr_196 = Err[InferResult, string](v_93.F0)
-									expr_198 = expr_196
+								if v_94, ok := s2_196.(ResultErr[[]SubstEntry, string]); ok {
+									var expr_197 Result[InferResult, string]
+									expr_197 = Err[InferResult, string](v_94.F0)
+									expr_199 = expr_197
 								} else {
 									panic("unreachable")
 								}
 							}
-							expr_199 = expr_198
 							expr_200 = expr_199
+							expr_201 = expr_200
 						} else {
-							expr_200 = Err[InferResult, string]("unknown binary operator " + op)
+							expr_201 = Err[InferResult, string]("unknown binary operator " + op)
 						}
-						expr_201 = expr_200
+						expr_202 = expr_201
 					}
-					expr_202 = expr_201
-					expr_204 = expr_202
+					expr_203 = expr_202
+					expr_205 = expr_203
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_205 = expr_204
-			expr_207 = expr_205
+			expr_206 = expr_205
+			expr_208 = expr_206
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_207
+	return expr_208
 }
 func inferIf(cond ast2.Expr, thenExpr ast2.Expr, elseExpr ast2.Expr, env []EnvEntry, state InferState) Result[InferResult, string] {
-	c_208 := inferExpr(cond, env, state)
-	var expr_228 Result[InferResult, string]
-	if v_106, ok := c_208.(ResultErr[InferResult, string]); ok {
-		var expr_227 Result[InferResult, string]
-		expr_227 = Err[InferResult, string](v_106.F0)
-		expr_228 = expr_227
+	c_209 := inferExpr(cond, env, state)
+	var expr_229 Result[InferResult, string]
+	if v_107, ok := c_209.(ResultErr[InferResult, string]); ok {
+		var expr_228 Result[InferResult, string]
+		expr_228 = Err[InferResult, string](v_107.F0)
+		expr_229 = expr_228
 	} else {
-		if v_97, ok := c_208.(ResultOk[InferResult, string]); ok {
+		if v_98, ok := c_209.(ResultOk[InferResult, string]); ok {
+			var expr_227 Result[InferResult, string]
+			csubst_210 := unify(v_98.F0.Type, MonoTypeTConCtor("Bool", emptyMonoTypes()), v_98.F0.Subst)
 			var expr_226 Result[InferResult, string]
-			csubst_209 := unify(v_97.F0.Type, MonoTypeTConCtor("Bool", emptyMonoTypes()), v_97.F0.Subst)
-			var expr_225 Result[InferResult, string]
-			if v_105, ok := csubst_209.(ResultErr[[]SubstEntry, string]); ok {
-				var expr_224 Result[InferResult, string]
-				expr_224 = Err[InferResult, string](v_105.F0)
-				expr_225 = expr_224
+			if v_106, ok := csubst_210.(ResultErr[[]SubstEntry, string]); ok {
+				var expr_225 Result[InferResult, string]
+				expr_225 = Err[InferResult, string](v_106.F0)
+				expr_226 = expr_225
 			} else {
-				if v_98, ok := csubst_209.(ResultOk[[]SubstEntry, string]); ok {
+				if v_99, ok := csubst_210.(ResultOk[[]SubstEntry, string]); ok {
+					var expr_224 Result[InferResult, string]
+					t_211 := inferExpr(thenExpr, env, v_98.F0.State)
 					var expr_223 Result[InferResult, string]
-					t_210 := inferExpr(thenExpr, env, v_97.F0.State)
-					var expr_222 Result[InferResult, string]
-					if v_104, ok := t_210.(ResultErr[InferResult, string]); ok {
-						var expr_221 Result[InferResult, string]
-						expr_221 = Err[InferResult, string](v_104.F0)
-						expr_222 = expr_221
+					if v_105, ok := t_211.(ResultErr[InferResult, string]); ok {
+						var expr_222 Result[InferResult, string]
+						expr_222 = Err[InferResult, string](v_105.F0)
+						expr_223 = expr_222
 					} else {
-						if v_99, ok := t_210.(ResultOk[InferResult, string]); ok {
+						if v_100, ok := t_211.(ResultOk[InferResult, string]); ok {
+							var expr_221 Result[InferResult, string]
+							e_212 := inferExpr(elseExpr, env, v_100.F0.State)
 							var expr_220 Result[InferResult, string]
-							e_211 := inferExpr(elseExpr, env, v_99.F0.State)
-							var expr_219 Result[InferResult, string]
-							if v_103, ok := e_211.(ResultErr[InferResult, string]); ok {
-								var expr_218 Result[InferResult, string]
-								expr_218 = Err[InferResult, string](v_103.F0)
-								expr_219 = expr_218
+							if v_104, ok := e_212.(ResultErr[InferResult, string]); ok {
+								var expr_219 Result[InferResult, string]
+								expr_219 = Err[InferResult, string](v_104.F0)
+								expr_220 = expr_219
 							} else {
-								if v_100, ok := e_211.(ResultOk[InferResult, string]); ok {
+								if v_101, ok := e_212.(ResultOk[InferResult, string]); ok {
+									var expr_218 Result[InferResult, string]
+									s1_213 := composeSubst(v_101.F0.Subst, composeSubst(v_100.F0.Subst, v_99.F0))
+									same_214 := unify(applySubst(s1_213, v_100.F0.Type), applySubst(s1_213, v_101.F0.Type), s1_213)
 									var expr_217 Result[InferResult, string]
-									s1_212 := composeSubst(v_100.F0.Subst, composeSubst(v_99.F0.Subst, v_98.F0))
-									same_213 := unify(applySubst(s1_212, v_99.F0.Type), applySubst(s1_212, v_100.F0.Type), s1_212)
-									var expr_216 Result[InferResult, string]
-									if v_102, ok := same_213.(ResultOk[[]SubstEntry, string]); ok {
-										var expr_215 Result[InferResult, string]
-										expr_215 = Ok[InferResult, string](InferResult{Type: applySubst(v_102.F0, v_99.F0.Type), Subst: v_102.F0, State: v_100.F0.State})
-										expr_216 = expr_215
+									if v_103, ok := same_214.(ResultOk[[]SubstEntry, string]); ok {
+										var expr_216 Result[InferResult, string]
+										expr_216 = Ok[InferResult, string](InferResult{Type: applySubst(v_103.F0, v_100.F0.Type), Subst: v_103.F0, State: v_101.F0.State})
+										expr_217 = expr_216
 									} else {
-										if v_101, ok := same_213.(ResultErr[[]SubstEntry, string]); ok {
-											var expr_214 Result[InferResult, string]
-											expr_214 = Err[InferResult, string](v_101.F0)
-											expr_216 = expr_214
+										if v_102, ok := same_214.(ResultErr[[]SubstEntry, string]); ok {
+											var expr_215 Result[InferResult, string]
+											expr_215 = Err[InferResult, string](v_102.F0)
+											expr_217 = expr_215
 										} else {
 											panic("unreachable")
 										}
 									}
-									expr_217 = expr_216
-									expr_219 = expr_217
+									expr_218 = expr_217
+									expr_220 = expr_218
 								} else {
 									panic("unreachable")
 								}
 							}
-							expr_220 = expr_219
-							expr_222 = expr_220
+							expr_221 = expr_220
+							expr_223 = expr_221
 						} else {
 							panic("unreachable")
 						}
 					}
-					expr_223 = expr_222
-					expr_225 = expr_223
+					expr_224 = expr_223
+					expr_226 = expr_224
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_226 = expr_225
-			expr_228 = expr_226
+			expr_227 = expr_226
+			expr_229 = expr_227
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_228
+	return expr_229
 }
 func inferCall(callee ast2.Expr, args []ast2.Expr, env []EnvEntry, state InferState) Result[InferResult, string] {
-	c_229 := inferExpr(callee, env, state)
-	var expr_245 Result[InferResult, string]
-	if v_112, ok := c_229.(ResultErr[InferResult, string]); ok {
-		var expr_244 Result[InferResult, string]
-		expr_244 = Err[InferResult, string](v_112.F0)
-		expr_245 = expr_244
+	c_230 := inferExpr(callee, env, state)
+	var expr_246 Result[InferResult, string]
+	if v_113, ok := c_230.(ResultErr[InferResult, string]); ok {
+		var expr_245 Result[InferResult, string]
+		expr_245 = Err[InferResult, string](v_113.F0)
+		expr_246 = expr_245
 	} else {
-		if v_107, ok := c_229.(ResultOk[InferResult, string]); ok {
+		if v_108, ok := c_230.(ResultOk[InferResult, string]); ok {
+			var expr_244 Result[InferResult, string]
+			ar_231 := inferArgs(args, env, v_108.F0.State, []MonoType{}, v_108.F0.Subst)
 			var expr_243 Result[InferResult, string]
-			ar_230 := inferArgs(args, env, v_107.F0.State, []MonoType{}, v_107.F0.Subst)
-			var expr_242 Result[InferResult, string]
-			if v_111, ok := ar_230.(ResultErr[ArgsResult, string]); ok {
-				var expr_241 Result[InferResult, string]
-				expr_241 = Err[InferResult, string](v_111.F0)
-				expr_242 = expr_241
+			if v_112, ok := ar_231.(ResultErr[ArgsResult, string]); ok {
+				var expr_242 Result[InferResult, string]
+				expr_242 = Err[InferResult, string](v_112.F0)
+				expr_243 = expr_242
 			} else {
-				if v_108, ok := ar_230.(ResultOk[ArgsResult, string]); ok {
+				if v_109, ok := ar_231.(ResultOk[ArgsResult, string]); ok {
+					var expr_241 Result[InferResult, string]
+					fresh_232 := v_109.F0.State.FreshVarID
+					nextState_233 := InferState{FreshVarID: fresh_232 + 1}
+					ret_234 := MonoTypeTVarCtor(fresh_232)
+					expected_235 := MonoTypeTFuncCtor(v_109.F0.Types, &ret_234)
+					s1_236 := composeSubst(v_109.F0.Subst, v_108.F0.Subst)
+					s2_237 := unify(applySubst(s1_236, v_108.F0.Type), expected_235, s1_236)
 					var expr_240 Result[InferResult, string]
-					fresh_231 := v_108.F0.State.FreshVarID
-					nextState_232 := InferState{FreshVarID: fresh_231 + 1}
-					ret_233 := MonoTypeTVarCtor(fresh_231)
-					expected_234 := MonoTypeTFuncCtor(v_108.F0.Types, &ret_233)
-					s1_235 := composeSubst(v_108.F0.Subst, v_107.F0.Subst)
-					s2_236 := unify(applySubst(s1_235, v_107.F0.Type), expected_234, s1_235)
-					var expr_239 Result[InferResult, string]
-					if v_110, ok := s2_236.(ResultOk[[]SubstEntry, string]); ok {
-						var expr_238 Result[InferResult, string]
-						expr_238 = Ok[InferResult, string](InferResult{Type: applySubst(v_110.F0, ret_233), Subst: v_110.F0, State: nextState_232})
-						expr_239 = expr_238
+					if v_111, ok := s2_237.(ResultOk[[]SubstEntry, string]); ok {
+						var expr_239 Result[InferResult, string]
+						expr_239 = Ok[InferResult, string](InferResult{Type: applySubst(v_111.F0, ret_234), Subst: v_111.F0, State: nextState_233})
+						expr_240 = expr_239
 					} else {
-						if v_109, ok := s2_236.(ResultErr[[]SubstEntry, string]); ok {
-							var expr_237 Result[InferResult, string]
-							expr_237 = Err[InferResult, string](v_109.F0)
-							expr_239 = expr_237
+						if v_110, ok := s2_237.(ResultErr[[]SubstEntry, string]); ok {
+							var expr_238 Result[InferResult, string]
+							expr_238 = Err[InferResult, string](v_110.F0)
+							expr_240 = expr_238
 						} else {
 							panic("unreachable")
 						}
 					}
-					expr_240 = expr_239
-					expr_242 = expr_240
+					expr_241 = expr_240
+					expr_243 = expr_241
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_243 = expr_242
-			expr_245 = expr_243
+			expr_244 = expr_243
+			expr_246 = expr_244
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_245
+	return expr_246
 }
 func inferArgs(args []ast2.Expr, env []EnvEntry, state InferState, types []MonoType, subst []SubstEntry) Result[ArgsResult, string] {
-	var expr_252 Result[ArgsResult, string]
+	var expr_253 Result[ArgsResult, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 {
-		expr_252 = Ok[ArgsResult, string](ArgsResult{Types: types, Subst: subst, State: state})
+		expr_253 = Ok[ArgsResult, string](ArgsResult{Types: types, Subst: subst, State: state})
 	} else {
+		var expr_252 Result[ArgsResult, string]
+		head_247 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.ExprUnitExprCtor())
+		r_248 := inferExpr(head_247, env, state)
 		var expr_251 Result[ArgsResult, string]
-		head_246 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.ExprUnitExprCtor())
-		r_247 := inferExpr(head_246, env, state)
-		var expr_250 Result[ArgsResult, string]
-		if v_114, ok := r_247.(ResultErr[InferResult, string]); ok {
-			var expr_249 Result[ArgsResult, string]
-			expr_249 = Err[ArgsResult, string](v_114.F0)
-			expr_250 = expr_249
+		if v_115, ok := r_248.(ResultErr[InferResult, string]); ok {
+			var expr_250 Result[ArgsResult, string]
+			expr_250 = Err[ArgsResult, string](v_115.F0)
+			expr_251 = expr_250
 		} else {
-			if v_113, ok := r_247.(ResultOk[InferResult, string]); ok {
-				var expr_248 Result[ArgsResult, string]
-				expr_248 = inferArgs(sliceDrop[ast2.Expr](args, 1), env, v_113.F0.State, MygoIN5SliceM6Append(types, applySubst(v_113.F0.Subst, v_113.F0.Type)), composeSubst(v_113.F0.Subst, subst))
-				expr_250 = expr_248
+			if v_114, ok := r_248.(ResultOk[InferResult, string]); ok {
+				var expr_249 Result[ArgsResult, string]
+				expr_249 = inferArgs(sliceDrop[ast2.Expr](args, 1), env, v_114.F0.State, MygoIN5SliceM6Append(types, applySubst(v_114.F0.Subst, v_114.F0.Type)), composeSubst(v_114.F0.Subst, subst))
+				expr_251 = expr_249
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_251 = expr_250
 		expr_252 = expr_251
-	}
-	return expr_252
-}
-func inferBlock(items []ast2.Stmt, env []EnvEntry, state InferState) Result[InferResult, string] {
-	var expr_253 Result[InferResult, string]
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_253 = Ok[InferResult, string](InferResult{Type: MonoTypeTUnitCtor(), Subst: []SubstEntry{}, State: state})
-	} else {
-		expr_253 = inferBlockItems(items, env, state, MonoTypeTUnitCtor(), []SubstEntry{})
+		expr_253 = expr_252
 	}
 	return expr_253
 }
-func inferBlockItems(items []ast2.Stmt, env []EnvEntry, state InferState, lastType MonoType, subst []SubstEntry) Result[InferResult, string] {
-	var expr_259 Result[InferResult, string]
+func inferBlock(items []ast2.Stmt, env []EnvEntry, state InferState) Result[InferResult, string] {
+	var expr_254 Result[InferResult, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_259 = Ok[InferResult, string](InferResult{Type: applySubst(subst, lastType), Subst: subst, State: state})
+		expr_254 = Ok[InferResult, string](InferResult{Type: MonoTypeTUnitCtor(), Subst: []SubstEntry{}, State: state})
 	} else {
+		expr_254 = inferBlockItems(items, env, state, MonoTypeTUnitCtor(), []SubstEntry{})
+	}
+	return expr_254
+}
+func inferBlockItems(items []ast2.Stmt, env []EnvEntry, state InferState, lastType MonoType, subst []SubstEntry) Result[InferResult, string] {
+	var expr_260 Result[InferResult, string]
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
+		expr_260 = Ok[InferResult, string](InferResult{Type: applySubst(subst, lastType), Subst: subst, State: state})
+	} else {
+		var expr_259 Result[InferResult, string]
+		step_255 := inferBlockStep(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.StmtExprStmtCtor(ast2.ExprUnitExprCtor())), env, state)
 		var expr_258 Result[InferResult, string]
-		step_254 := inferBlockStep(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.StmtExprStmtCtor(ast2.ExprUnitExprCtor())), env, state)
-		var expr_257 Result[InferResult, string]
-		if v_116, ok := step_254.(ResultErr[BlockInferStep, string]); ok {
-			var expr_256 Result[InferResult, string]
-			expr_256 = Err[InferResult, string](v_116.F0)
-			expr_257 = expr_256
+		if v_117, ok := step_255.(ResultErr[BlockInferStep, string]); ok {
+			var expr_257 Result[InferResult, string]
+			expr_257 = Err[InferResult, string](v_117.F0)
+			expr_258 = expr_257
 		} else {
-			if v_115, ok := step_254.(ResultOk[BlockInferStep, string]); ok {
-				var expr_255 Result[InferResult, string]
-				expr_255 = inferBlockItems(sliceDrop[ast2.Stmt](items, 1), v_115.F0.Env, v_115.F0.Result.State, v_115.F0.Result.Type, composeSubst(v_115.F0.Result.Subst, subst))
-				expr_257 = expr_255
+			if v_116, ok := step_255.(ResultOk[BlockInferStep, string]); ok {
+				var expr_256 Result[InferResult, string]
+				expr_256 = inferBlockItems(sliceDrop[ast2.Stmt](items, 1), v_116.F0.Env, v_116.F0.Result.State, v_116.F0.Result.Type, composeSubst(v_116.F0.Result.Subst, subst))
+				expr_258 = expr_256
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_258 = expr_257
 		expr_259 = expr_258
+		expr_260 = expr_259
 	}
-	return expr_259
+	return expr_260
 }
 func inferBlockStep(stmt ast2.Stmt, env []EnvEntry, state InferState) Result[BlockInferStep, string] {
-	var expr_267 Result[BlockInferStep, string]
-	if v_120, ok := stmt.(ast2.StmtLetStmt); ok {
-		var expr_266 Result[BlockInferStep, string]
-		expr_266 = inferBlockLet(v_120.F0, env, state)
-		expr_267 = expr_266
+	var expr_268 Result[BlockInferStep, string]
+	if v_121, ok := stmt.(ast2.StmtLetStmt); ok {
+		var expr_267 Result[BlockInferStep, string]
+		expr_267 = inferBlockLet(v_121.F0, env, state)
+		expr_268 = expr_267
 	} else {
-		if v_119, ok := stmt.(ast2.StmtVarStmt); ok {
-			var expr_265 Result[BlockInferStep, string]
-			expr_265 = inferBlockLet(v_119.F0, env, state)
-			expr_267 = expr_265
+		if v_120, ok := stmt.(ast2.StmtVarStmt); ok {
+			var expr_266 Result[BlockInferStep, string]
+			expr_266 = inferBlockLet(v_120.F0, env, state)
+			expr_268 = expr_266
 		} else {
 			{
+				var expr_265 Result[BlockInferStep, string]
+				r_261 := inferStmt(stmt, env, state)
 				var expr_264 Result[BlockInferStep, string]
-				r_260 := inferStmt(stmt, env, state)
-				var expr_263 Result[BlockInferStep, string]
-				if v_118, ok := r_260.(ResultErr[InferResult, string]); ok {
-					var expr_262 Result[BlockInferStep, string]
-					expr_262 = Err[BlockInferStep, string](v_118.F0)
-					expr_263 = expr_262
+				if v_119, ok := r_261.(ResultErr[InferResult, string]); ok {
+					var expr_263 Result[BlockInferStep, string]
+					expr_263 = Err[BlockInferStep, string](v_119.F0)
+					expr_264 = expr_263
 				} else {
-					if v_117, ok := r_260.(ResultOk[InferResult, string]); ok {
-						var expr_261 Result[BlockInferStep, string]
-						expr_261 = Ok[BlockInferStep, string](BlockInferStep{Result: v_117.F0, Env: env})
-						expr_263 = expr_261
+					if v_118, ok := r_261.(ResultOk[InferResult, string]); ok {
+						var expr_262 Result[BlockInferStep, string]
+						expr_262 = Ok[BlockInferStep, string](BlockInferStep{Result: v_118.F0, Env: env})
+						expr_264 = expr_262
 					} else {
 						panic("unreachable")
 					}
 				}
-				expr_264 = expr_263
-				expr_267 = expr_264
+				expr_265 = expr_264
+				expr_268 = expr_265
 			}
 		}
 	}
-	return expr_267
+	return expr_268
 }
 func inferBlockLet(bind ast2.Bind, env []EnvEntry, state InferState) Result[BlockInferStep, string] {
-	r_268 := inferExpr(bind.Value, env, state)
-	var expr_280 Result[BlockInferStep, string]
-	if v_126, ok := r_268.(ResultErr[InferResult, string]); ok {
-		var expr_279 Result[BlockInferStep, string]
-		expr_279 = Err[BlockInferStep, string](v_126.F0)
-		expr_280 = expr_279
+	r_269 := inferExpr(bind.Value, env, state)
+	var expr_281 Result[BlockInferStep, string]
+	if v_127, ok := r_269.(ResultErr[InferResult, string]); ok {
+		var expr_280 Result[BlockInferStep, string]
+		expr_280 = Err[BlockInferStep, string](v_127.F0)
+		expr_281 = expr_280
 	} else {
-		if v_121, ok := r_268.(ResultOk[InferResult, string]); ok {
-			var expr_278 Result[BlockInferStep, string]
-			var expr_271 Result[[]SubstEntry, string]
-			if v_123, ok := bind.Type.(OptionSome[ast2.TypeExpr]); ok {
-				var expr_270 Result[[]SubstEntry, string]
-				expr_270 = unify(v_121.F0.Type, typeFromAST(v_123.F0), v_121.F0.Subst)
-				expr_271 = expr_270
+		if v_122, ok := r_269.(ResultOk[InferResult, string]); ok {
+			var expr_279 Result[BlockInferStep, string]
+			var expr_272 Result[[]SubstEntry, string]
+			if v_124, ok := bind.Type.(OptionSome[ast2.TypeExpr]); ok {
+				var expr_271 Result[[]SubstEntry, string]
+				expr_271 = unify(v_122.F0.Type, typeFromAST(v_124.F0), v_122.F0.Subst)
+				expr_272 = expr_271
 			} else {
 				if _, ok := bind.Type.(OptionNone[ast2.TypeExpr]); ok {
-					var expr_269 Result[[]SubstEntry, string]
-					expr_269 = Ok[[]SubstEntry, string](v_121.F0.Subst)
-					expr_271 = expr_269
+					var expr_270 Result[[]SubstEntry, string]
+					expr_270 = Ok[[]SubstEntry, string](v_122.F0.Subst)
+					expr_272 = expr_270
 				} else {
 					panic("unreachable")
 				}
 			}
-			annotated_272 := expr_271
-			var expr_277 Result[BlockInferStep, string]
-			if v_125, ok := annotated_272.(ResultErr[[]SubstEntry, string]); ok {
-				var expr_276 Result[BlockInferStep, string]
-				expr_276 = Err[BlockInferStep, string](v_125.F0)
-				expr_277 = expr_276
+			annotated_273 := expr_272
+			var expr_278 Result[BlockInferStep, string]
+			if v_126, ok := annotated_273.(ResultErr[[]SubstEntry, string]); ok {
+				var expr_277 Result[BlockInferStep, string]
+				expr_277 = Err[BlockInferStep, string](v_126.F0)
+				expr_278 = expr_277
 			} else {
-				if v_124, ok := annotated_272.(ResultOk[[]SubstEntry, string]); ok {
-					var expr_275 Result[BlockInferStep, string]
-					boundType_273 := applySubst(v_124.F0, v_121.F0.Type)
-					nextEnv_274 := envPut(env, bind.Name, Scheme{Bound: []int{}, Body: boundType_273})
-					expr_275 = Ok[BlockInferStep, string](BlockInferStep{Result: InferResult{Type: MonoTypeTUnitCtor(), Subst: v_124.F0, State: v_121.F0.State}, Env: nextEnv_274})
-					expr_277 = expr_275
+				if v_125, ok := annotated_273.(ResultOk[[]SubstEntry, string]); ok {
+					var expr_276 Result[BlockInferStep, string]
+					boundType_274 := applySubst(v_125.F0, v_122.F0.Type)
+					nextEnv_275 := envPut(env, bind.Name, Scheme{Bound: []int{}, Body: boundType_274})
+					expr_276 = Ok[BlockInferStep, string](BlockInferStep{Result: InferResult{Type: MonoTypeTUnitCtor(), Subst: v_125.F0, State: v_122.F0.State}, Env: nextEnv_275})
+					expr_278 = expr_276
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_278 = expr_277
-			expr_280 = expr_278
+			expr_279 = expr_278
+			expr_281 = expr_279
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_280
+	return expr_281
 }
 func inferLet(bind ast2.Bind, env []EnvEntry, state InferState) Result[InferResult, string] {
-	r_281 := inferExpr(bind.Value, env, state)
-	var expr_291 Result[InferResult, string]
-	if v_132, ok := r_281.(ResultErr[InferResult, string]); ok {
-		var expr_290 Result[InferResult, string]
-		expr_290 = Err[InferResult, string](v_132.F0)
-		expr_291 = expr_290
+	r_282 := inferExpr(bind.Value, env, state)
+	var expr_292 Result[InferResult, string]
+	if v_133, ok := r_282.(ResultErr[InferResult, string]); ok {
+		var expr_291 Result[InferResult, string]
+		expr_291 = Err[InferResult, string](v_133.F0)
+		expr_292 = expr_291
 	} else {
-		if v_127, ok := r_281.(ResultOk[InferResult, string]); ok {
-			var expr_289 Result[InferResult, string]
-			var expr_284 Result[[]SubstEntry, string]
-			if v_129, ok := bind.Type.(OptionSome[ast2.TypeExpr]); ok {
-				var expr_283 Result[[]SubstEntry, string]
-				expr_283 = unify(v_127.F0.Type, typeFromAST(v_129.F0), v_127.F0.Subst)
-				expr_284 = expr_283
+		if v_128, ok := r_282.(ResultOk[InferResult, string]); ok {
+			var expr_290 Result[InferResult, string]
+			var expr_285 Result[[]SubstEntry, string]
+			if v_130, ok := bind.Type.(OptionSome[ast2.TypeExpr]); ok {
+				var expr_284 Result[[]SubstEntry, string]
+				expr_284 = unify(v_128.F0.Type, typeFromAST(v_130.F0), v_128.F0.Subst)
+				expr_285 = expr_284
 			} else {
 				if _, ok := bind.Type.(OptionNone[ast2.TypeExpr]); ok {
-					var expr_282 Result[[]SubstEntry, string]
-					expr_282 = Ok[[]SubstEntry, string](v_127.F0.Subst)
-					expr_284 = expr_282
+					var expr_283 Result[[]SubstEntry, string]
+					expr_283 = Ok[[]SubstEntry, string](v_128.F0.Subst)
+					expr_285 = expr_283
 				} else {
 					panic("unreachable")
 				}
 			}
-			annotated_285 := expr_284
-			var expr_288 Result[InferResult, string]
-			if v_131, ok := annotated_285.(ResultErr[[]SubstEntry, string]); ok {
-				var expr_287 Result[InferResult, string]
-				expr_287 = Err[InferResult, string](v_131.F0)
-				expr_288 = expr_287
+			annotated_286 := expr_285
+			var expr_289 Result[InferResult, string]
+			if v_132, ok := annotated_286.(ResultErr[[]SubstEntry, string]); ok {
+				var expr_288 Result[InferResult, string]
+				expr_288 = Err[InferResult, string](v_132.F0)
+				expr_289 = expr_288
 			} else {
-				if v_130, ok := annotated_285.(ResultOk[[]SubstEntry, string]); ok {
-					var expr_286 Result[InferResult, string]
-					expr_286 = Ok[InferResult, string](InferResult{Type: MonoTypeTUnitCtor(), Subst: v_130.F0, State: v_127.F0.State})
-					expr_288 = expr_286
+				if v_131, ok := annotated_286.(ResultOk[[]SubstEntry, string]); ok {
+					var expr_287 Result[InferResult, string]
+					expr_287 = Ok[InferResult, string](InferResult{Type: MonoTypeTUnitCtor(), Subst: v_131.F0, State: v_128.F0.State})
+					expr_289 = expr_287
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_289 = expr_288
-			expr_291 = expr_289
+			expr_290 = expr_289
+			expr_292 = expr_290
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_291
+	return expr_292
 }
 func matchExpected(v InferResult, expected MonoType, result MonoType) Result[InferResult, string] {
-	s_292 := unify(v.Type, expected, v.Subst)
-	var expr_295 Result[InferResult, string]
-	if v_134, ok := s_292.(ResultOk[[]SubstEntry, string]); ok {
-		var expr_294 Result[InferResult, string]
-		expr_294 = Ok[InferResult, string](InferResult{Type: result, Subst: v_134.F0, State: v.State})
-		expr_295 = expr_294
+	s_293 := unify(v.Type, expected, v.Subst)
+	var expr_296 Result[InferResult, string]
+	if v_135, ok := s_293.(ResultOk[[]SubstEntry, string]); ok {
+		var expr_295 Result[InferResult, string]
+		expr_295 = Ok[InferResult, string](InferResult{Type: result, Subst: v_135.F0, State: v.State})
+		expr_296 = expr_295
 	} else {
-		if v_133, ok := s_292.(ResultErr[[]SubstEntry, string]); ok {
-			var expr_293 Result[InferResult, string]
-			expr_293 = Err[InferResult, string](v_133.F0)
-			expr_295 = expr_293
+		if v_134, ok := s_293.(ResultErr[[]SubstEntry, string]); ok {
+			var expr_294 Result[InferResult, string]
+			expr_294 = Err[InferResult, string](v_134.F0)
+			expr_296 = expr_294
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_295
+	return expr_296
 }
 func inferField(base ast2.Expr, field string, env []EnvEntry, state InferState) Result[InferResult, string] {
-	r_296 := inferExpr(base, env, state)
-	var expr_305 Result[InferResult, string]
-	if v_139, ok := r_296.(ResultErr[InferResult, string]); ok {
-		var expr_304 Result[InferResult, string]
-		expr_304 = Err[InferResult, string](v_139.F0)
-		expr_305 = expr_304
+	r_297 := inferExpr(base, env, state)
+	var expr_306 Result[InferResult, string]
+	if v_140, ok := r_297.(ResultErr[InferResult, string]); ok {
+		var expr_305 Result[InferResult, string]
+		expr_305 = Err[InferResult, string](v_140.F0)
+		expr_306 = expr_305
 	} else {
-		if v_135, ok := r_296.(ResultOk[InferResult, string]); ok {
+		if v_136, ok := r_297.(ResultOk[InferResult, string]); ok {
+			var expr_304 Result[InferResult, string]
 			var expr_303 Result[InferResult, string]
-			var expr_302 Result[InferResult, string]
-			if v_136, ok := applySubst(v_135.F0.Subst, v_135.F0.Type).(MonoTypeTCon); ok {
+			if v_137, ok := applySubst(v_136.F0.Subst, v_136.F0.Type).(MonoTypeTCon); ok {
+				var expr_302 Result[InferResult, string]
 				var expr_301 Result[InferResult, string]
-				var expr_300 Result[InferResult, string]
-				if v_138, ok := envGetField(env, v_136.F0, field).(OptionSome[Scheme]); ok {
-					var expr_299 Result[InferResult, string]
-					expr_299 = Ok[InferResult, string](InferResult{Type: v_138.F0.Body, Subst: v_135.F0.Subst, State: v_135.F0.State})
-					expr_300 = expr_299
+				if v_139, ok := envGetField(env, v_137.F0, field).(OptionSome[Scheme]); ok {
+					var expr_300 Result[InferResult, string]
+					expr_300 = Ok[InferResult, string](InferResult{Type: v_139.F0.Body, Subst: v_136.F0.Subst, State: v_136.F0.State})
+					expr_301 = expr_300
 				} else {
-					if _, ok := envGetField(env, v_136.F0, field).(OptionNone[Scheme]); ok {
-						var expr_298 Result[InferResult, string]
-						expr_298 = Err[InferResult, string]("unknown field " + v_136.F0 + "." + field)
-						expr_300 = expr_298
+					if _, ok := envGetField(env, v_137.F0, field).(OptionNone[Scheme]); ok {
+						var expr_299 Result[InferResult, string]
+						expr_299 = Err[InferResult, string]("unknown field " + v_137.F0 + "." + field)
+						expr_301 = expr_299
 					} else {
 						panic("unreachable")
 					}
 				}
-				expr_301 = expr_300
 				expr_302 = expr_301
+				expr_303 = expr_302
 			} else {
 				{
-					var expr_297 Result[InferResult, string]
-					expr_297 = Err[InferResult, string]("field access on non-struct type")
-					expr_302 = expr_297
+					var expr_298 Result[InferResult, string]
+					expr_298 = Err[InferResult, string]("field access on non-struct type")
+					expr_303 = expr_298
 				}
 			}
-			expr_303 = expr_302
-			expr_305 = expr_303
+			expr_304 = expr_303
+			expr_306 = expr_304
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_305
+	return expr_306
 }
 func inferVariants(vars []ast2.Variant, enumName string, tps []string, env []EnvEntry, fields []FieldEntry, state InferState) Result[DeclInfer, string] {
-	var expr_310 Result[DeclInfer, string]
+	var expr_311 Result[DeclInfer, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(vars) == 0 {
-		expr_310 = Ok[DeclInfer, string](DeclInfer{Env: envPut(env, enumName, Scheme{Bound: []int{}, Body: MonoTypeTConCtor(enumName, emptyMonoTypes())}), Fields: fields, State: state})
+		expr_311 = Ok[DeclInfer, string](DeclInfer{Env: envPut(env, enumName, Scheme{Bound: []int{}, Body: MonoTypeTConCtor(enumName, emptyMonoTypes())}), Fields: fields, State: state})
 	} else {
-		var expr_309 Result[DeclInfer, string]
-		v_306 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(vars, 0), ast2.Variant{Name: "", Fields: emptyASTTypeExprs()})
-		var expr_307 MonoType
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_306.Fields) == 0 {
-			expr_307 = MonoTypeTConCtor(enumName, emptyMonoTypes())
+		var expr_310 Result[DeclInfer, string]
+		v_307 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(vars, 0), ast2.Variant{Name: "", Fields: emptyASTTypeExprs()})
+		var expr_308 MonoType
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_307.Fields) == 0 {
+			expr_308 = MonoTypeTConCtor(enumName, emptyMonoTypes())
 		} else {
-			expr_307 = MonoTypeTFuncCtor(typeArgsFromAST(v_306.Fields), &[]MonoType{MonoTypeTConCtor(enumName, emptyMonoTypes())}[0])
+			expr_308 = MonoTypeTFuncCtor(typeArgsFromAST(v_307.Fields), &[]MonoType{MonoTypeTConCtor(enumName, emptyMonoTypes())}[0])
 		}
-		constructorType_308 := expr_307
-		expr_309 = inferVariants(sliceDrop[ast2.Variant](vars, 1), enumName, tps, envPut(env, v_306.Name, Scheme{Bound: []int{}, Body: constructorType_308}), fields, state)
-		expr_310 = expr_309
+		constructorType_309 := expr_308
+		expr_310 = inferVariants(sliceDrop[ast2.Variant](vars, 1), enumName, tps, envPut(env, v_307.Name, Scheme{Bound: []int{}, Body: constructorType_309}), fields, state)
+		expr_311 = expr_310
 	}
-	return expr_310
+	return expr_311
 }
 func inferStructLit(typeName string, fields []ast2.StructLitField, env []EnvEntry, state InferState) Result[InferResult, string] {
 	return inferStructLitFields(typeName, fields, env, state, []SubstEntry{}, state)
 }
 func inferStructLitFields(typeName string, fields []ast2.StructLitField, env []EnvEntry, state InferState, subst []SubstEntry, curState InferState) Result[InferResult, string] {
-	var expr_317 Result[InferResult, string]
+	var expr_318 Result[InferResult, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) == 0 {
-		expr_317 = Ok[InferResult, string](InferResult{Type: MonoTypeTConCtor(typeName, emptyMonoTypes()), Subst: subst, State: curState})
+		expr_318 = Ok[InferResult, string](InferResult{Type: MonoTypeTConCtor(typeName, emptyMonoTypes()), Subst: subst, State: curState})
 	} else {
+		var expr_317 Result[InferResult, string]
+		f_312 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.StructLitField{Name: "", Value: ast2.ExprUnitExprCtor()})
+		r_313 := inferExpr(f_312.Value, env, curState)
 		var expr_316 Result[InferResult, string]
-		f_311 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.StructLitField{Name: "", Value: ast2.ExprUnitExprCtor()})
-		r_312 := inferExpr(f_311.Value, env, curState)
-		var expr_315 Result[InferResult, string]
-		if v_141, ok := r_312.(ResultErr[InferResult, string]); ok {
-			var expr_314 Result[InferResult, string]
-			expr_314 = Err[InferResult, string](v_141.F0)
-			expr_315 = expr_314
+		if v_142, ok := r_313.(ResultErr[InferResult, string]); ok {
+			var expr_315 Result[InferResult, string]
+			expr_315 = Err[InferResult, string](v_142.F0)
+			expr_316 = expr_315
 		} else {
-			if v_140, ok := r_312.(ResultOk[InferResult, string]); ok {
-				var expr_313 Result[InferResult, string]
-				expr_313 = inferStructLitFields(typeName, sliceDrop[ast2.StructLitField](fields, 1), env, v_140.F0.State, composeSubst(v_140.F0.Subst, subst), v_140.F0.State)
-				expr_315 = expr_313
+			if v_141, ok := r_313.(ResultOk[InferResult, string]); ok {
+				var expr_314 Result[InferResult, string]
+				expr_314 = inferStructLitFields(typeName, sliceDrop[ast2.StructLitField](fields, 1), env, v_141.F0.State, composeSubst(v_141.F0.Subst, subst), v_141.F0.State)
+				expr_316 = expr_314
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_316 = expr_315
 		expr_317 = expr_316
+		expr_318 = expr_317
 	}
-	return expr_317
+	return expr_318
 }

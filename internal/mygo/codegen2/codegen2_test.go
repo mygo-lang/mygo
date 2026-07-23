@@ -420,3 +420,20 @@ end
 		t.Fatalf("generated Go is invalid: %v\n%s", err, result.F0)
 	}
 }
+
+func TestGenerateSourceLowersEscapedRune(t *testing.T) {
+	src := `package sample
+
+func newline() -> Rune
+  '\n'
+end
+`
+	got := GenerateSource(src)
+	result, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	if !strings.Contains(result.F0, "return '\\n'") {
+		t.Fatalf("generated rune literal is missing:\n%s", result.F0)
+	}
+}

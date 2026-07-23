@@ -87,6 +87,7 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
       end
     case NumberExpr(_) => Ok(InferResult { Type: MonoType.TCon("Int", emptyMonoTypes()), Subst: [], State: state })
     case StringExpr(_) => Ok(InferResult { Type: MonoType.TCon("String", emptyMonoTypes()), Subst: [], State: state })
+    case RuneExpr(_) => Ok(InferResult { Type: MonoType.TCon("Rune", emptyMonoTypes()), Subst: [], State: state })
     case BoolExpr(_) => Ok(InferResult { Type: MonoType.TCon("Bool", emptyMonoTypes()), Subst: [], State: state })
     case UnitExpr => Ok(InferResult { Type: MonoType.TUnit, Subst: [], State: state })
     case TupleExpr(items) => inferTuple(items, env, state)

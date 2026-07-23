@@ -15,6 +15,7 @@ func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String
     case IdentExpr(name) => Ok(newAstExprResult(goast.Ident(ctxGetBinding(ctx, name).UnwrapOr(sanitizeIdent(name)))))
     case NumberExpr(v) => Ok(newAstExprResult(goast.Number(v)))
     case StringExpr(v) => Ok(newAstExprResult(goast.String(strconv.Quote(v))))
+    case RuneExpr(v) => Ok(newAstExprResult(goast.Rune(v)))
     case BoolExpr(v) => if v then Ok(newAstExprResult(goast.Ident("true"))) else Ok(newAstExprResult(goast.Ident("false"))) end
     case UnitExpr => Ok(newAstExprResult(goast.Unit()))
     case InlineGoExpr(_, body, values, types) =>
