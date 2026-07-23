@@ -437,3 +437,47 @@ end
 		t.Fatalf("generated rune literal is missing:\n%s", result.F0)
 	}
 }
+
+func TestGenerateSourceLowersTypedSliceLiteral(t *testing.T) {
+	src := `package sample
+
+func values() -> Slice[Int]
+  [1, 2,] as Slice[Int]
+end
+`
+	got := GenerateSource(src)
+	result, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	if !strings.Contains(result.F0, "return []int{1, 2}") {
+		t.Fatalf("generated typed slice literal is missing:\n%s", result.F0)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", result.F0, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, result.F0)
+	}
+}
+
+func TestGenerateSourcePreservesGenericStructLiteralArguments(t *testing.T) {
+	src := `package sample
+
+struct Box[A]
+  value: A
+end
+
+func makeBox() -> Box[Int]
+  Box[Int] { value: 42 }
+end
+`
+	got := GenerateSource(src)
+	result, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	if !strings.Contains(result.F0, "return Box[int]{Value: 42}") {
+		t.Fatalf("generated generic struct literal lost type arguments:\n%s", result.F0)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", result.F0, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, result.F0)
+	}
+}

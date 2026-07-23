@@ -16,6 +16,8 @@ func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String
     case NumberExpr(v) => Ok(newAstExprResult(goast.Number(v)))
     case StringExpr(v) => Ok(newAstExprResult(goast.String(strconv.Quote(v))))
     case RuneExpr(v) => Ok(newAstExprResult(goast.Rune(v)))
+    case SliceLitExpr(items) => translateSliceLitAst(items, ctx, expected)
+    case TypeAsExpr(value, typ) => translateTypeAsAst(value.value(), typ, ctx)
     case BoolExpr(v) => if v then Ok(newAstExprResult(goast.Ident("true"))) else Ok(newAstExprResult(goast.Ident("false"))) end
     case UnitExpr => Ok(newAstExprResult(goast.Unit()))
     case InlineGoExpr(_, body, values, types) =>
@@ -40,10 +42,44 @@ func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String
     case BinaryExpr(op, left, right) => translateBinaryAstExpected(op, left.value(), right.value(), ctx, expected)
     case CallExpr(callee, args) => translateCallAstExpected(callee.value(), args, ctx, expected)
     case StructLitExpr(typeName, fields) => translateStructLitAstExpected(typeName, fields, ctx, expected)
+    case GenericStructLitExpr(typeName, typeArgs, fields) => translateGenericStructLitAstExpected(typeName, typeArgs, fields, ctx, expected)
     case IfExpr(cond, thenExpr, elseExpr) => translateIfAst(cond.value(), thenExpr.value(), elseExpr.value(), ctx, expected)
     case SwitchExpr(target, cases) => translateSwitchAst(target.value(), cases, ctx, expected)
     case BlockExpr(items) => translateBlockExprAstExpected(items, ctx, 0, [] as Slice[goast.Stmt], expected)
     case _ => Err("AST lowering for this expression is not implemented")
+  end
+end
+
+func translateGenericStructLitAstExpected(typeName: String, typeArgs: Slice[ast2.TypeExpr], fields: Slice[ast2.StructLitField], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+  let result = translateAstCompositeFields(fields, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], expected)
+  switch result
+    case Err(msg) => Err(msg)
+    case Ok(value) =>
+      let typ = goType(ast2.TypeExpr.NamedType(typeName, typeArgs), ctx.typeParams)
+      Ok(astExprWithPre(goast.Composite(goast.MustTypeExpr(typ), value.Elts), value.Pre))
+  end
+end
+
+func translateTypeAsAst(value: ast2.Expr, typ: ast2.TypeExpr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+  let target = goType(typ, ctx.typeParams)
+  switch value
+    case SliceLitExpr(items) => translateSliceLitAst(items, ctx, target)
+    case _ =>
+      let translated = translateExprAstExpected(value, ctx, target)
+      switch translated
+        case Err(msg) => Err(msg)
+        case Ok(v) => Ok(astExprWithPre(goast.Convert(target, v.Expr), v.Pre))
+      end
+  end
+end
+
+func translateSliceLitAst(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+  let values = translateAstArgs(items, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
+  switch values
+    case Err(msg) => Err(msg)
+    case Ok(v) =>
+      let typ = if expected == "" then "[]any" else expected end
+      Ok(astExprWithPre(goast.SliceLiteral(typ, v.Exprs), v.Pre))
   end
 end
 

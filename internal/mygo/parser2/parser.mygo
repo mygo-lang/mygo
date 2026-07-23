@@ -678,10 +678,11 @@ func postfixTail(start: ps.State, cur: ps.State, acc: ast2.Expr) -> ps.Reply[ast
 end
 
 # 结构体字段列表解析器: { field1: ast2.Expr1, field2: ast2.Expr2, ... }
-func structLitFields(typeName: String) -> ps.Parser[ast2.Expr]
+func structLitFields(head: ast2.StructLitHead) -> ps.Parser[ast2.Expr]
   ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Expr]
     ps.PBind(sepByEnd(structLitField(), sym(",")), func(fields: Slice[ast2.StructLitField]) -> ps.Parser[ast2.Expr]
-      ps.PThen(sym("}"), ps.PPure(ast2.Expr.StructLitExpr(typeName, fields)))
+      let value = if head.TypeArgs.Len() == 0 then ast2.Expr.StructLitExpr(head.Name, fields) else ast2.Expr.GenericStructLitExpr(head.Name, head.TypeArgs, fields) end
+      ps.PThen(sym("}"), ps.PPure(value))
     end)
   end)
 end
@@ -718,8 +719,8 @@ func primaryExpr() -> ps.Parser[ast2.Expr]
     sliceLiteral(),
     tupleOrParenExpr(),
     # 结构体字面量支持导入类型名，例如 ast2.File { ... }。
-    ps.PAttempt(ps.PBind(structLitTypeName(), func(typeName: String) -> ps.Parser[ast2.Expr]
-      structLitFields(typeName)
+    ps.PAttempt(ps.PBind(structLitTypeName(), func(head: ast2.StructLitHead) -> ps.Parser[ast2.Expr]
+      structLitFields(head)
     end)),
     ps.PMap(identifier(), func(v: String) -> ast2.Expr
       ast2.Expr.IdentExpr(v)
@@ -727,9 +728,9 @@ func primaryExpr() -> ps.Parser[ast2.Expr]
   ])
 end
 
-func structLitTypeName() -> ps.Parser[String]
-  ps.PBind(qualifiedIdentifier(), func(name: String) -> ps.Parser[String]
-    ps.PMap(typeArgList(), func(_: Slice[ast2.TypeExpr]) -> String name end)
+func structLitTypeName() -> ps.Parser[ast2.StructLitHead]
+  ps.PBind(qualifiedIdentifier(), func(name: String) -> ps.Parser[ast2.StructLitHead]
+    ps.PMap(typeArgList(), func(args: Slice[ast2.TypeExpr]) -> ast2.StructLitHead ast2.StructLitHead { Name: name, TypeArgs: args } end)
   end)
 end
 

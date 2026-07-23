@@ -88,6 +88,8 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
     case NumberExpr(_) => Ok(InferResult { Type: MonoType.TCon("Int", emptyMonoTypes()), Subst: [], State: state })
     case StringExpr(_) => Ok(InferResult { Type: MonoType.TCon("String", emptyMonoTypes()), Subst: [], State: state })
     case RuneExpr(_) => Ok(InferResult { Type: MonoType.TCon("Rune", emptyMonoTypes()), Subst: [], State: state })
+    case SliceLitExpr(items) => inferSlice(items, env, state)
+    case TypeAsExpr(value, typ) => inferTypeAs(value.value(), typ, env, state)
     case BoolExpr(_) => Ok(InferResult { Type: MonoType.TCon("Bool", emptyMonoTypes()), Subst: [], State: state })
     case UnitExpr => Ok(InferResult { Type: MonoType.TUnit, Subst: [], State: state })
     case TupleExpr(items) => inferTuple(items, env, state)
@@ -100,9 +102,63 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
     case BlockExpr(items) => inferBlock(items, env, state)
     case StructLitExpr(typeName, fields) =>
       inferStructLit(typeName, fields, env, state)
+    case GenericStructLitExpr(typeName, typeArgs, fields) =>
+      inferGenericStructLit(typeName, typeArgs, fields, env, state)
     case InlineGoExpr(typ, _, _, _) =>
       let mono = typeFromAST(typ.value())
       Ok(InferResult { Type: mono, Subst: [], State: state })
+  end
+end
+
+func inferGenericStructLit(typeName: String, typeArgs: Slice[ast2.TypeExpr], fields: Slice[ast2.StructLitField], env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+  let checked = inferStructLit(typeName, fields, env, state)
+  switch checked
+    case Err(msg) => Err(msg)
+    case Ok(value) => Ok(InferResult { Type: MonoType.TCon(typeName, typeArgsFromAST(typeArgs)), Subst: value.Subst, State: value.State })
+  end
+end
+
+func inferTypeAs(value: ast2.Expr, typ: ast2.TypeExpr, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+  let inferred = inferExpr(value, env, state)
+  let expected = typeFromAST(typ)
+  switch inferred
+    case Err(msg) => Err(msg)
+    case Ok(v) =>
+      let matched = unify(v.Type, expected, v.Subst)
+      switch matched
+        case Err(msg) => Err("type assertion mismatch: " + msg)
+        case Ok(s) => Ok(InferResult { Type: applySubst(s, expected), Subst: s, State: v.State })
+      end
+  end
+end
+
+func inferSlice(items: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+  if items.Len() == 0 then
+    let element = MonoType.TVar(state.FreshVarID)
+    Ok(InferResult { Type: MonoType.TCon("Slice", [element]), Subst: [], State: InferState { FreshVarID: state.FreshVarID + 1 } })
+  else
+    let first = inferExpr(items.Get(0).UnwrapOr(ast2.Expr.UnitExpr()), env, state)
+    switch first
+      case Err(msg) => Err(msg)
+      case Ok(value) => inferSliceItems(sliceDrop(items, 1), value.Type, env, value.State, value.Subst)
+    end
+  end
+end
+
+func inferSliceItems(items: Slice[ast2.Expr], element: MonoType, env: Slice[EnvEntry], state: InferState, subst: Slice[SubstEntry]) -> Result[InferResult, String]
+  if items.Len() == 0 then
+    Ok(InferResult { Type: MonoType.TCon("Slice", [applySubst(subst, element)]), Subst: subst, State: state })
+  else
+    let next = inferExpr(items.Get(0).UnwrapOr(ast2.Expr.UnitExpr()), env, state)
+    switch next
+      case Err(msg) => Err(msg)
+      case Ok(value) =>
+        let combined = unify(applySubst(value.Subst, element), applySubst(value.Subst, value.Type), composeSubst(value.Subst, subst))
+        switch combined
+          case Err(msg) => Err("slice element type mismatch: " + msg)
+          case Ok(s) => inferSliceItems(sliceDrop(items, 1), element, env, value.State, s)
+        end
+    end
   end
 end
 

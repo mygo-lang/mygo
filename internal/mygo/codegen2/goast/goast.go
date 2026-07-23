@@ -515,6 +515,22 @@ func Composite(typ ast.Expr, elts []ast.Expr) ast.Expr {
 	return &ast.CompositeLit{Type: typ, Elts: elts}
 }
 
+func Convert(typ string, value ast.Expr) ast.Expr {
+	parsed, err := parser.ParseExpr(typ)
+	if err != nil {
+		panic(fmt.Sprintf("invalid conversion type %q: %v", typ, err))
+	}
+	return &ast.CallExpr{Fun: parsed, Args: []ast.Expr{value}}
+}
+
+func SliceLiteral(typ string, elems []ast.Expr) ast.Expr {
+	parsed, err := parser.ParseExpr(typ)
+	if err != nil {
+		panic(fmt.Sprintf("invalid slice literal type %q: %v", typ, err))
+	}
+	return &ast.CompositeLit{Type: parsed, Elts: elems}
+}
+
 func ExpressionStmt(expr ast.Expr) ast.Stmt { return &ast.ExprStmt{X: expr} }
 
 func Assign(left []ast.Expr, op string, right []ast.Expr) ast.Stmt {

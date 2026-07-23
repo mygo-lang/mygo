@@ -286,6 +286,8 @@ func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[g
     case NumberExpr(_) => translateAstReturnSingle(expr, ctx)
     case StringExpr(_) => translateAstReturnSingle(expr, ctx)
     case RuneExpr(_) => translateAstReturnSingle(expr, ctx)
+    case SliceLitExpr(_) => translateAstReturnSingle(expr, ctx)
+    case TypeAsExpr(_, _) => translateAstReturnSingle(expr, ctx)
     case BoolExpr(_) => translateAstReturnSingle(expr, ctx)
     case CallExpr(_, _) => translateAstReturnSingle(expr, ctx)
     case FieldExpr(_, _) => translateAstReturnSingle(expr, ctx)
@@ -295,6 +297,7 @@ func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[g
     case SwitchExpr(_, _) => translateAstReturnSingle(expr, ctx)
     case BlockExpr(_) => translateAstReturnSingle(expr, ctx)
     case StructLitExpr(_, _) => translateAstReturnSingle(expr, ctx)
+    case GenericStructLitExpr(_, _, _) => translateAstReturnSingle(expr, ctx)
     case InlineGoExpr(_, _, _, _) => translateAstReturnSingle(expr, ctx)
   end
 end

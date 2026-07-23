@@ -112,6 +112,10 @@ type StructLitField struct {
 	Name  string
 	Value Expr
 }
+type StructLitHead struct {
+	Name     string
+	TypeArgs []TypeExpr
+}
 type SwitchCase struct {
 	Pattern Pattern
 	Body    Expr
@@ -495,6 +499,18 @@ func (_ ExprStructLitExpr) isExpr() {
 }
 func ExprStructLitExprCtor(a0 string, a1 []StructLitField) Expr {
 	return ExprStructLitExpr{F0: a0, F1: a1}
+}
+
+type ExprGenericStructLitExpr struct {
+	F0 string
+	F1 []TypeExpr
+	F2 []StructLitField
+}
+
+func (_ ExprGenericStructLitExpr) isExpr() {
+}
+func ExprGenericStructLitExprCtor(a0 string, a1 []TypeExpr, a2 []StructLitField) Expr {
+	return ExprGenericStructLitExpr{F0: a0, F1: a1, F2: a2}
 }
 
 type ExprInlineGoExpr struct {

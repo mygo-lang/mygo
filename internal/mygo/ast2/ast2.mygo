@@ -51,6 +51,11 @@ struct StructLitField
   Value: Expr
 end
 
+struct StructLitHead
+  Name: String
+  TypeArgs: Slice[TypeExpr]
+end
+
 struct SwitchCase
   Pattern: Pattern
   Body: Expr
@@ -130,5 +135,6 @@ enum Expr
   SliceLitExpr(Slice[Expr])
   TypeAsExpr(Ref[Expr], TypeExpr)
   StructLitExpr(String, Slice[StructLitField])
+  GenericStructLitExpr(String, Slice[TypeExpr], Slice[StructLitField])
   InlineGoExpr(Ref[TypeExpr], String, Slice[GoOperand], Slice[GoTypeOperand])
 end
