@@ -3,6 +3,7 @@ package typeinference2
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import os "go:os"
 import strconv "go:strconv"
+import strings "go:strings"
 
 # typeinference2 is the self-hosted, parser2-facing inference core.
 # It implements a deliberately small HM-style pass over ast2. The production
@@ -134,7 +135,7 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
   let envWithGoPkgs = seedGoPackageEnv(goPkgImports, env)
   switch inferDecls(file.Decls, envWithGoPkgs, [], NewInferState())
     case Ok(info) => Ok(PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: goPkgImports })
-    case Err(msg) => Err(msg)
+    case Err(msg) => Err(withExpressionSourceName(msg, file.SourceName))
   end
 end
 
@@ -164,8 +165,17 @@ func InferPackage(files: Slice[PkgDeclSource]) -> Result[PackageInfo, String]
         Fields: info.Fields,
         GoPackages: goPkgImports,
       })
-    case Err(msg) => Err(msg)
+    case Err(msg) =>
+      let source = files.Get(0).UnwrapOr(PkgDeclSource { Path: "<input>", Decls: [] as Slice[ast2.Decl] }).Path
+      Err(withExpressionSourceName(msg, source))
   end
+end
+
+# Parser2 assigns line and column while parsing expressions.  Package-level
+# inference receives declarations rather than full files, so replace the
+# expression-location placeholder with the known source path at this boundary.
+func withExpressionSourceName(msg: String, source: String) -> String
+  if source == "" then msg else strings.ReplaceAll(msg, "<input>:", source + ":") end
 end
 
 # Collect imported package aliases from the declarations.  The bootstrap lane

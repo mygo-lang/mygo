@@ -13,6 +13,23 @@ func translateExprAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult,
 end
 
 func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+  let result = translateExprAstExpectedInner(expr, ctx, expected)
+  switch result
+    case Ok(value) => Ok(value)
+    case Err(msg) => Err(errorAtExpr(expr, msg))
+  end
+end
+
+func errorAtExpr(expr: ast2.Expr, msg: String) -> String
+  if strings.Contains(msg, ":") then
+    msg
+  else
+    let source = if expr.Pos.SourceName == "" then "<input>" else expr.Pos.SourceName end
+    source + ":" + expr.Pos.Line.ToString() + ":" + expr.Pos.Column.ToString() + ": " + msg
+  end
+end
+
+func translateExprAstExpectedInner(expr: ast2.Expr, ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
   switch expr.Kind
     case IdentExpr(name) =>
       # A `using` dictionary shadows package-level typeclass dispatch, just

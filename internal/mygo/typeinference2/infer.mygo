@@ -95,6 +95,23 @@ func predicatesFromConstraints(items: Slice[ast2.Constraint]) -> Slice[Predicate
 end
 
 func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+  let result = inferExprInner(expr, env, state)
+  switch result
+    case Ok(value) => Ok(value)
+    case Err(msg) => Err(errorAtExpr(expr, msg))
+  end
+end
+
+func errorAtExpr(expr: ast2.Expr, msg: String) -> String
+  if strings.Contains(msg, ":") then
+    msg
+  else
+    let source = if expr.Pos.SourceName == "" then "<input>" else expr.Pos.SourceName end
+    source + ":" + expr.Pos.Line.ToString() + ":" + expr.Pos.Column.ToString() + ": " + msg
+  end
+end
+
+func inferExprInner(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
   switch expr.Kind
     case IdentExpr(name) =>
       switch envGet(env, name)

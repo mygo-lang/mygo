@@ -80,6 +80,22 @@ func TestGenerateSourceAtIncludesSourceLocation(t *testing.T) {
 	}
 }
 
+func TestGenerateSourceIncludesExpressionPositionInInferenceErrors(t *testing.T) {
+	got := GenerateSource(`package sample
+
+func broken() -> Int
+  missing
+end
+`)
+	err, ok := got.(ResultErr[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource unexpectedly succeeded: %v", got)
+	}
+	if !strings.Contains(err.F0, "<input>:4:3: unknown identifier missing") {
+		t.Fatalf("error lacks expression position: %q", err.F0)
+	}
+}
+
 func assertBootstrapsMyGOFile(t *testing.T, relativePath string) {
 	t.Helper()
 	_, thisFile, _, found := runtime.Caller(0)

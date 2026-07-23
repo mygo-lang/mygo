@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
@@ -28,6 +29,27 @@ func TestInferFilePrelude(t *testing.T) {
 	}
 	if got := InferFile(file.F0); !isPackageInfo(got) {
 		t.Fatalf("InferFile(%s) failed: %v", sourcePath, got)
+	}
+}
+
+func TestInferErrorIncludesExpressionPosition(t *testing.T) {
+	parsed := parser2.ParseFile(`package sample
+
+func broken() -> Int
+  missing
+end
+`)
+	file, ok := parsed.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	got := InferFile(file.F0)
+	err, ok := got.(ResultErr[PackageInfo, string])
+	if !ok {
+		t.Fatalf("InferFile unexpectedly succeeded: %v", got)
+	}
+	if !strings.Contains(err.F0, "<input>:4:3: unknown identifier missing") {
+		t.Fatalf("inference error lacks expression position: %q", err.F0)
 	}
 }
 

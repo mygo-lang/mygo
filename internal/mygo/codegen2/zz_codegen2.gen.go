@@ -66,7 +66,7 @@ func generateFilesLoop(files []SourceFileInput, info typeinference2.PackageInfo,
 		} else {
 			if v_3, ok := src_8.(ResultErr[string, string]); ok {
 				var expr_9 Result[map[string]string, string]
-				expr_9 = Err[map[string]string, string](v_3.F0)
+				expr_9 = Err[map[string]string, string](withExpressionSourceName(v_3.F0, input_7.File.SourceName))
 				expr_11 = expr_9
 			} else {
 				panic("unreachable")
@@ -77,127 +77,136 @@ func generateFilesLoop(files []SourceFileInput, info typeinference2.PackageInfo,
 	}
 	return expr_13
 }
+func withExpressionSourceName(msg string, source string) string {
+	var expr_14 string
+	if source == "" {
+		expr_14 = msg
+	} else {
+		expr_14 = strings.ReplaceAll(msg, "<input>:", source+":")
+	}
+	return expr_14
+}
 func GenerateSource(input string) Result[string, string] {
 	return GenerateSourceAt("<input>", input)
 }
 func GenerateSourceAt(sourceName string, input string) Result[string, string] {
-	parsed_14 := parseSourceAsAst2At(sourceName, input)
-	var expr_21 Result[string, string]
-	if v_8, ok := parsed_14.(ResultErr[ast2.File, string]); ok {
-		var expr_20 Result[string, string]
-		expr_20 = Err[string, string](v_8.F0)
-		expr_21 = expr_20
+	parsed_15 := parseSourceAsAst2At(sourceName, input)
+	var expr_22 Result[string, string]
+	if v_8, ok := parsed_15.(ResultErr[ast2.File, string]); ok {
+		var expr_21 Result[string, string]
+		expr_21 = Err[string, string](v_8.F0)
+		expr_22 = expr_21
 	} else {
-		if v_5, ok := parsed_14.(ResultOk[ast2.File, string]); ok {
+		if v_5, ok := parsed_15.(ResultOk[ast2.File, string]); ok {
+			var expr_20 Result[string, string]
+			inferred_16 := typeinference2.InferFile(v_5.F0)
 			var expr_19 Result[string, string]
-			inferred_15 := typeinference2.InferFile(v_5.F0)
-			var expr_18 Result[string, string]
-			if v_7, ok := inferred_15.(ResultErr[typeinference2.PackageInfo, string]); ok {
-				var expr_17 Result[string, string]
-				expr_17 = Err[string, string](v_7.F0)
-				expr_18 = expr_17
+			if v_7, ok := inferred_16.(ResultErr[typeinference2.PackageInfo, string]); ok {
+				var expr_18 Result[string, string]
+				expr_18 = Err[string, string](v_7.F0)
+				expr_19 = expr_18
 			} else {
-				if v_6, ok := inferred_15.(ResultOk[typeinference2.PackageInfo, string]); ok {
-					var expr_16 Result[string, string]
-					expr_16 = Generate(v_5.F0, v_6.F0)
-					expr_18 = expr_16
+				if v_6, ok := inferred_16.(ResultOk[typeinference2.PackageInfo, string]); ok {
+					var expr_17 Result[string, string]
+					expr_17 = Generate(v_5.F0, v_6.F0)
+					expr_19 = expr_17
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_19 = expr_18
-			expr_21 = expr_19
+			expr_20 = expr_19
+			expr_22 = expr_20
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_21
+	return expr_22
 }
 func generateOneFile(file ast2.File, info typeinference2.PackageInfo) Result[string, string] {
-	g_22 := &[]Generator2{newGenerator2(file.PackageName, file.Decls, info.GoPackages)}[0]
-	imports_23 := collectImports(file.Decls)
-	decls_24 := translateDeclsAst(g_22, file.Decls, 0, []goast.Decl([]goast.Decl{}))
-	var expr_29 Result[string, string]
-	if v_10, ok := decls_24.(ResultErr[[]goast.Decl, string]); ok {
-		var expr_28 Result[string, string]
-		expr_28 = Err[string, string](v_10.F0)
-		expr_29 = expr_28
+	g_23 := &[]Generator2{newGenerator2(file.PackageName, file.Decls, info.GoPackages)}[0]
+	imports_24 := collectImports(file.Decls)
+	decls_25 := translateDeclsAst(g_23, file.Decls, 0, []goast.Decl([]goast.Decl{}))
+	var expr_30 Result[string, string]
+	if v_10, ok := decls_25.(ResultErr[[]goast.Decl, string]); ok {
+		var expr_29 Result[string, string]
+		expr_29 = Err[string, string](v_10.F0)
+		expr_30 = expr_29
 	} else {
-		if v_9, ok := decls_24.(ResultOk[[]goast.Decl, string]); ok {
-			var expr_27 Result[string, string]
-			var expr_25 []goast.Decl
+		if v_9, ok := decls_25.(ResultOk[[]goast.Decl, string]); ok {
+			var expr_28 Result[string, string]
+			var expr_26 []goast.Decl
 			if needsHKTDecls(file.Decls) {
-				expr_25 = goast.AppendDecls(goast.HKTDecls(), v_9.F0)
+				expr_26 = goast.AppendDecls(goast.HKTDecls(), v_9.F0)
 			} else {
-				expr_25 = v_9.F0
+				expr_26 = v_9.F0
 			}
-			withHKT_26 := expr_25
-			expr_27 = renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: imports_23, AstDecls: withHKT_26, Decls: []string([]string{})})
-			expr_29 = expr_27
+			withHKT_27 := expr_26
+			expr_28 = renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: imports_24, AstDecls: withHKT_27, Decls: []string([]string{})})
+			expr_30 = expr_28
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_29
+	return expr_30
 }
 func needsHKTDecls(decls []ast2.Decl) bool {
-	var expr_40 bool
+	var expr_41 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
-		expr_40 = false
+		expr_41 = false
 	} else {
-		var expr_39 bool
-		head_30 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
-		var expr_37 bool
-		if v_15, ok := head_30.(ast2.DeclInterfaceDecl); ok {
-			var expr_36 bool
-			expr_36 = hasHKTTypeParam(v_15.F1)
-			expr_37 = expr_36
+		var expr_40 bool
+		head_31 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		var expr_38 bool
+		if v_15, ok := head_31.(ast2.DeclInterfaceDecl); ok {
+			var expr_37 bool
+			expr_37 = hasHKTTypeParam(v_15.F1)
+			expr_38 = expr_37
 		} else {
-			if v_14, ok := head_30.(ast2.DeclStructDecl); ok {
-				var expr_35 bool
-				expr_35 = hasHKTTypeParam(v_14.F1)
-				expr_37 = expr_35
+			if v_14, ok := head_31.(ast2.DeclStructDecl); ok {
+				var expr_36 bool
+				expr_36 = hasHKTTypeParam(v_14.F1)
+				expr_38 = expr_36
 			} else {
-				if v_13, ok := head_30.(ast2.DeclEnumDecl); ok {
-					var expr_34 bool
-					expr_34 = hasHKTTypeParam(v_13.F1)
-					expr_37 = expr_34
+				if v_13, ok := head_31.(ast2.DeclEnumDecl); ok {
+					var expr_35 bool
+					expr_35 = hasHKTTypeParam(v_13.F1)
+					expr_38 = expr_35
 				} else {
-					if v_12, ok := head_30.(ast2.DeclFuncDecl); ok {
-						var expr_33 bool
-						expr_33 = hasHKTTypeParam(v_12.F1)
-						expr_37 = expr_33
+					if v_12, ok := head_31.(ast2.DeclFuncDecl); ok {
+						var expr_34 bool
+						expr_34 = hasHKTTypeParam(v_12.F1)
+						expr_38 = expr_34
 					} else {
-						if v_11, ok := head_30.(ast2.DeclImplDecl); ok {
-							var expr_32 bool
-							expr_32 = hasHKTTypeParam(v_11.F0)
-							expr_37 = expr_32
+						if v_11, ok := head_31.(ast2.DeclImplDecl); ok {
+							var expr_33 bool
+							expr_33 = hasHKTTypeParam(v_11.F0)
+							expr_38 = expr_33
 						} else {
 							{
-								var expr_31 bool
-								expr_31 = false
-								expr_37 = expr_31
+								var expr_32 bool
+								expr_32 = false
+								expr_38 = expr_32
 							}
 						}
 					}
 				}
 			}
 		}
-		here_38 := expr_37
-		expr_39 = here_38 || needsHKTDecls(sliceDrop[ast2.Decl](decls, 1))
-		expr_40 = expr_39
+		here_39 := expr_38
+		expr_40 = here_39 || needsHKTDecls(sliceDrop[ast2.Decl](decls, 1))
+		expr_41 = expr_40
 	}
-	return expr_40
+	return expr_41
 }
 func hasHKTTypeParam(tps []string) bool {
-	var expr_43 bool
+	var expr_44 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tps) == 0 {
-		expr_43 = false
+		expr_44 = false
 	} else {
-		var expr_42 bool
-		current_41 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tps, 0), "")
-		expr_42 = strings.Index(current_41, "[") >= 0 || hasHKTTypeParam(sliceDrop[string](tps, 1))
-		expr_43 = expr_42
+		var expr_43 bool
+		current_42 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tps, 0), "")
+		expr_43 = strings.Index(current_42, "[") >= 0 || hasHKTTypeParam(sliceDrop[string](tps, 1))
+		expr_44 = expr_43
 	}
-	return expr_43
+	return expr_44
 }

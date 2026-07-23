@@ -46,9 +46,13 @@ func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.Packa
       case Ok(code) =>
         out.Set(sourceToGenName(input.Path), code)
         generateFilesLoop(files, info, index + 1, out)
-      case Err(msg) => Err(msg)
+      case Err(msg) => Err(withExpressionSourceName(msg, input.File.SourceName))
     end
   end
+end
+
+func withExpressionSourceName(msg: String, source: String) -> String
+  if source == "" then msg else strings.ReplaceAll(msg, "<input>:", source + ":") end
 end
 
 func GenerateSource(input: String) -> Result[String, String]

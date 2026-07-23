@@ -45,23 +45,33 @@ func compileDirBootstrap(dir string, compiling map[string]bool, compiled map[str
 
 	var inputs []codegen2.SourceFileInput
 	var sources []typeinference2.PkgDeclSource
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() || !strings.HasSuffix(name, ".mygo") {
 			continue
 		}
 		path := filepath.Join(absDir, name)
+		sourcePath, err := filepath.Rel(cwd, path)
+		if err != nil {
+			return nil, err
+		}
 		source, err := os.ReadFile(path)
 		if err != nil {
 			return nil, err
 		}
-		parsed := parser2.ParseFileAt(path, string(source))
+		// Generated files remain rooted at absDir, while diagnostics are relative
+		// to the invoking process's working directory.
+		parsed := parser2.ParseFileAt(sourcePath, string(source))
 		file, ok := parsed.(ResultOk[ast2.File, string])
 		if !ok {
 			return nil, bootstrapResultError("parse", path, parsed)
 		}
 		inputs = append(inputs, codegen2.SourceFileInput{Path: name, File: file.F0})
-		sources = append(sources, typeinference2.PkgDeclSource{Path: path, Decls: file.F0.Decls})
+		sources = append(sources, typeinference2.PkgDeclSource{Path: sourcePath, Decls: file.F0.Decls})
 	}
 	if len(inputs) == 0 {
 		return nil, nil
