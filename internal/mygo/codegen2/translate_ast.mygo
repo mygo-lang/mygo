@@ -29,7 +29,7 @@ func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String
         case Err(msg) => Err(msg)
         case Ok(p) => Ok(astExprWithPre(goast.MustInlineGoExprWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources), p.Pre))
       end
-    case TupleExpr(_) => Err("tuple expression is only valid in value positions")
+    case TupleExpr(items) => translateTupleLitAst(items, ctx, expected)
     case FieldExpr(base, field) =>
       let value = translateExprAstExpected(base.value(), ctx, expected)
       switch value
@@ -54,6 +54,53 @@ func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String
     case FuncLitExpr(params, ret, body) => translateFuncLitAst(params, ret, body.value(), ctx)
     case _ => Err("AST lowering for this expression is not implemented")
   end
+end
+
+# translateTupleLitAst lowers a TupleExpr in value context (non-return position).
+# It generates an anonymous struct literal like the old TupleLitExpr:
+#   (1, "hello")  =>  struct{F0 int; F1 string}{F0: 1, F1: "hello"}
+# This is the value-position lowering; the return-position expansion (multi-return)
+# is handled in translateAstReturnValue in translate_expr.mygo.
+func translateTupleLitAst(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+  if items.Len() == 0 then
+    Ok(newAstExprResult(goast.Unit()))
+  else
+    let values = translateAstArgs(items, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
+    switch values
+      case Err(msg) => Err(msg)
+      case Ok(v) =>
+        # Build anonymous struct type: struct{F0 type0; F1 type1; ...}
+        var types: Slice[String] = []
+        var i: Int = 0
+        while i < items.Len()
+          types = types.Append("any")
+          i = i + 1
+        end
+        let expectedTypes = if expected == "" then types else inferTupleTypesFromExpected(expected, items.Len()) end
+        var fields: Slice[String] = []
+        var j: Int = 0
+        while j < items.Len()
+          let fieldType = expectedTypes.Get(j).UnwrapOr("any")
+          fields = fields.Append("F" + j.ToString() + " " + fieldType)
+          j = j + 1
+        end
+        let structTypeStr = "struct { " + joinStrings(fields, "; ") + " }"
+        Ok(astExprWithPre(goast.Composite(goast.MustTypeExpr(structTypeStr), v.Exprs), v.Pre))
+    end
+  end
+end
+
+# inferTupleTypesFromExpected extracts element types from an expected anonymous
+# struct type string like "struct { F0 int; F1 string }" for multi-field tuples
+# or returns "any" for all elements if parsing fails.
+func inferTupleTypesFromExpected(expected: String, count: Int) -> Slice[String]
+  var types: Slice[String] = []
+  var i: Int = 0
+  while i < count
+    types = types.Append("any")
+    i = i + 1
+  end
+  types
 end
 
 func translateFuncLitAst(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
