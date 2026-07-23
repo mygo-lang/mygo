@@ -159,20 +159,18 @@ func InferPackage(files: Slice[PkgDeclSource]) -> Result[PackageInfo, String]
   end
 end
 
-# Collect all go: import aliases from the declarations.
+# Collect imported package aliases from the declarations.  The bootstrap lane
+# treats both Go packages and compiled MyGO packages as qualified providers;
+# their selected members are inferred on demand in inferField.
 func collectGoPackageImports(decls: Slice[ast2.Decl]) -> Slice[GoPackageEntry]
   decls.Fold([] as Slice[GoPackageEntry], func(out: Slice[GoPackageEntry], d: ast2.Decl) -> Slice[GoPackageEntry]
     switch d
       case ImportDecl(alias, path) =>
-        if strings.HasPrefix(path, "go:") then
-          let cleanPath = strings.TrimPrefix(path, "go:")
-          let existing = out.Fold(false, func(found: Bool, e: GoPackageEntry) -> Bool
-            found || e.Alias == alias
-          end)
-          if existing then out else out.Append(GoPackageEntry { Alias: alias, Path: cleanPath }) end
-        else
-          out
-        end
+        let cleanPath = strings.TrimPrefix(path, "go:")
+        let existing = out.Fold(false, func(found: Bool, e: GoPackageEntry) -> Bool
+          found || e.Alias == alias
+        end)
+        if existing then out else out.Append(GoPackageEntry { Alias: alias, Path: cleanPath }) end
       case _ => out
     end
   end)

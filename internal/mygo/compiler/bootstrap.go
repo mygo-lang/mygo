@@ -19,7 +19,24 @@ import (
 // legacy prelude or imported MyGO packages; those capabilities remain on the
 // legacy backend until the bootstrap lane supports package resolution.
 func CompileDirBootstrap(dir string) ([]string, error) {
-	entries, err := os.ReadDir(dir)
+	return compileDirBootstrap(dir, map[string]bool{}, map[string][]string{})
+}
+
+func compileDirBootstrap(dir string, compiling map[string]bool, compiled map[string][]string) ([]string, error) {
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, err
+	}
+	if files, ok := compiled[absDir]; ok {
+		return files, nil
+	}
+	if compiling[absDir] {
+		return nil, fmt.Errorf("bootstrap import cycle at %s", absDir)
+	}
+	compiling[absDir] = true
+	defer delete(compiling, absDir)
+
+	entries, err := os.ReadDir(absDir)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +48,7 @@ func CompileDirBootstrap(dir string) ([]string, error) {
 		if entry.IsDir() || !strings.HasSuffix(name, ".mygo") {
 			continue
 		}
-		path := filepath.Join(dir, name)
+		path := filepath.Join(absDir, name)
 		source, err := os.ReadFile(path)
 		if err != nil {
 			return nil, err
@@ -47,27 +64,46 @@ func CompileDirBootstrap(dir string) ([]string, error) {
 	if len(inputs) == 0 {
 		return nil, nil
 	}
+	var written []string
+	for _, input := range inputs {
+		for _, decl := range input.File.Decls {
+			imp, ok := decl.(ast2.DeclImportDecl)
+			if !ok || strings.HasPrefix(imp.F1, "go:") {
+				continue
+			}
+			dependencyDir, err := resolveMyGoImport(absDir, absDir, imp.F1)
+			if err != nil {
+				return nil, err
+			}
+			dependencyFiles, err := compileDirBootstrap(dependencyDir, compiling, compiled)
+			if err != nil {
+				return nil, err
+			}
+			written = append(written, dependencyFiles...)
+		}
+	}
 
 	inferred := typeinference2.InferPackage(sources)
 	info, ok := inferred.(ResultOk[typeinference2.PackageInfo, string])
 	if !ok {
-		return nil, bootstrapResultError("infer", dir, inferred)
+		return nil, bootstrapResultError("infer", absDir, inferred)
 	}
 	generated := codegen2.GenerateFiles(inputs, info.F0)
 	files, ok := generated.(ResultOk[map[string]string, string])
 	if !ok {
-		return nil, bootstrapResultError("generate", dir, generated)
+		return nil, bootstrapResultError("generate", absDir, generated)
 	}
 
-	written := make([]string, 0, len(files.F0))
+	written = append(written, make([]string, 0, len(files.F0))...)
 	for name, source := range files.F0 {
-		path := filepath.Join(dir, name)
+		path := filepath.Join(absDir, name)
 		if err := os.WriteFile(path, []byte(source), 0o644); err != nil {
 			return nil, err
 		}
 		written = append(written, path)
 	}
 	sort.Strings(written)
+	compiled[absDir] = written
 	return written, nil
 }
 

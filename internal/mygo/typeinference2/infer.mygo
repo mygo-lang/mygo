@@ -650,6 +650,14 @@ func inferField(base: ast2.Expr, field: String, env: Slice[EnvEntry], state: Inf
     case Err(msg) => Err(msg)
     case Ok(v) =>
       switch applySubst(v.Subst, v.Type)
+        case TGoPackage(_) =>
+          # MyGO dependencies are compiled as normal Go packages by the
+          # bootstrap entry. Their exported selector signatures are not yet
+          # loaded into the compact environment, so model a selected member as
+          # a fresh type variable and let its surrounding call/annotation
+          # constrain it.
+          let fresh = MonoType.TVar(v.State.FreshVarID)
+          Ok(InferResult { Type: fresh, Predicates: v.Predicates, Subst: v.Subst, State: InferState { FreshVarID: v.State.FreshVarID + 1 } })
         case TCon(typeName, _) =>
           switch envGetField(env, typeName, field)
             case Some(s) =>

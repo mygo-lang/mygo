@@ -42,3 +42,49 @@ end
 		t.Fatalf("bootstrap output is invalid Go: %v\n%s", err, generated)
 	}
 }
+
+func TestCompileDirBootstrapCompilesMyGOImports(t *testing.T) {
+	root := t.TempDir()
+	libDir := filepath.Join(root, "lib")
+	appDir := filepath.Join(root, "app")
+	if err := os.MkdirAll(libDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(appDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libDir, "lib.mygo"), []byte(`package lib
+
+func Add(left: Int, right: Int) -> Int
+  left + right
+end
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(appDir, "app.mygo"), []byte(`package app
+
+import lib "../lib"
+
+func Run() -> Int
+  lib.Add(1, 2)
+end
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDirBootstrap(appDir)
+	if err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	if len(written) != 2 {
+		t.Fatalf("CompileDirBootstrap() wrote %d files, want app and dependency", len(written))
+	}
+	for _, path := range written {
+		generated, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := parser.ParseFile(token.NewFileSet(), path, generated, parser.AllErrors); err != nil {
+			t.Fatalf("bootstrap output %s is invalid Go: %v\n%s", path, err, generated)
+		}
+	}
+}
