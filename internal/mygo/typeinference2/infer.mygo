@@ -2,6 +2,27 @@ package typeinference2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 
+# Predeclare function signatures so a declaration can call functions defined
+# later in the same source file. This is required by the self-hosted modules,
+# whose mutually-recursive helpers are intentionally grouped by concern.
+func predeclareFunctions(decls: Slice[ast2.Decl], env: Slice[EnvEntry]) -> Slice[EnvEntry]
+  if decls.Len() == 0 then
+    env
+  else
+    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    let next = switch decl
+      case FuncDecl(name, _, params, ret, _) =>
+        let retType = switch ret
+          case Some(t) => typeFromAST(t)
+          case None => MonoType.TUnit
+        end
+        envPut(env, name, Scheme { Bound: [], Body: MonoType.TFunc(paramsToTypes(params), Ref.new(retType)) })
+      case _ => env
+    end
+    predeclareFunctions(sliceDrop(decls, 1), next)
+  end
+end
+
 func inferDecls(decls: Slice[ast2.Decl], env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[PackageInfo, String]
   if decls.Len() == 0 then
     Ok(PackageInfo { Env: env, Fields: fields })

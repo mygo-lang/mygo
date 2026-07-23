@@ -72,5 +72,6 @@ func NewInferState() -> InferState
 end
 
 func InferFile(file: ast2.File) -> Result[PackageInfo, String]
-  inferDecls(file.Decls, initialEnv(), [], NewInferState())
+  let env = predeclareFunctions(file.Decls, initialEnv())
+  inferDecls(file.Decls, env, [], NewInferState())
 end

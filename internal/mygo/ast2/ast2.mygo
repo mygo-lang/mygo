@@ -94,6 +94,8 @@ enum Stmt
   ExprStmt(Expr)
   # let immutable variable declaration
   LetStmt(Bind)
+  # tuple destructuring declaration
+  TupleLetStmt(Slice[String], Expr)
   # var mutable variable declaration
   VarStmt(Bind)
   # while loop
@@ -112,6 +114,7 @@ enum Expr
   IdentExpr(String)
   NumberExpr(String)
   StringExpr(String)
+  RuneExpr(String)
   BoolExpr(Bool)
   UnitExpr
   # tuple expression; an empty tuple is represented by UnitExpr

@@ -3,6 +3,9 @@ package codegen2
 import (
 	"go/parser"
 	"go/token"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -10,6 +13,31 @@ import (
 	"github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 	. "github.com/mygo-lang/mygo/prelude"
 )
+
+func TestGenerateSourceBootstrapsAst2(t *testing.T) {
+	assertBootstrapsMyGOFile(t, filepath.Join("..", "ast2", "ast2.mygo"))
+}
+
+func assertBootstrapsMyGOFile(t *testing.T, relativePath string) {
+	t.Helper()
+	_, thisFile, _, found := runtime.Caller(0)
+	if !found {
+		t.Fatal("cannot determine codegen2 test path")
+	}
+	sourcePath := filepath.Join(filepath.Dir(thisFile), relativePath)
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("read %s: %v", sourcePath, err)
+	}
+	got := GenerateSource(string(source))
+	result, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource(%s) failed: %v", sourcePath, got)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "ast2.bootstrap.go", result.F0, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, result.F0)
+	}
+}
 
 func TestParseSourceAsAst2KeepsInterfaceAndImplDecls(t *testing.T) {
 	src := `package sample
@@ -369,5 +397,26 @@ end
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", code, 0); err != nil {
 		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
+
+func TestGenerateSourceSupportsForwardFunctionReferences(t *testing.T) {
+	src := `package sample
+
+func first() -> Int
+  second()
+end
+
+func second() -> Int
+  42
+end
+`
+	got := GenerateSource(src)
+	result, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", result.F0, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, result.F0)
 	}
 }

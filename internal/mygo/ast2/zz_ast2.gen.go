@@ -241,6 +241,17 @@ func StmtLetStmtCtor(a0 Bind) Stmt {
 	return StmtLetStmt{F0: a0}
 }
 
+type StmtTupleLetStmt struct {
+	F0 []string
+	F1 Expr
+}
+
+func (_ StmtTupleLetStmt) isStmt() {
+}
+func StmtTupleLetStmtCtor(a0 []string, a1 Expr) Stmt {
+	return StmtTupleLetStmt{F0: a0, F1: a1}
+}
+
 type StmtVarStmt struct {
 	F0 Bind
 }
@@ -323,6 +334,16 @@ func (_ ExprStringExpr) isExpr() {
 }
 func ExprStringExprCtor(a0 string) Expr {
 	return ExprStringExpr{F0: a0}
+}
+
+type ExprRuneExpr struct {
+	F0 string
+}
+
+func (_ ExprRuneExpr) isExpr() {
+}
+func ExprRuneExprCtor(a0 string) Expr {
+	return ExprRuneExpr{F0: a0}
 }
 
 type ExprBoolExpr struct {

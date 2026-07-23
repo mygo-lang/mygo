@@ -320,13 +320,27 @@ end
 
 func letStmt() -> ps.Parser[ast2.Stmt]
   ps.PBind(kw("let"), func(_: String) -> ps.Parser[ast2.Stmt]
-    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Stmt]
-      ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Stmt]
-        ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
-          ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
-            ast2.Stmt.LetStmt(ast2.Bind { Name: name, Type: typ, Value: value })
-          end)
+    ps.PChoice([tupleLetStmt(), namedLetStmt()])
+  end)
+end
+
+func namedLetStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Stmt]
+    ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Stmt]
+      ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
+        ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
+          ast2.Stmt.LetStmt(ast2.Bind { Name: name, Type: typ, Value: value })
         end)
+      end)
+    end)
+  end)
+end
+
+func tupleLetStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(paren(ps.PSepBy(identifier(), sym(","))), func(names: Slice[String]) -> ps.Parser[ast2.Stmt]
+    ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
+      ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
+        ast2.Stmt.TupleLetStmt(names, value)
       end)
     end)
   end)
@@ -666,7 +680,7 @@ end
 # 结构体字段列表解析器: { field1: ast2.Expr1, field2: ast2.Expr2, ... }
 func structLitFields(typeName: String) -> ps.Parser[ast2.Expr]
   ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Expr]
-    ps.PBind(ps.PSepBy(structLitField(), sym(",")), func(fields: Slice[ast2.StructLitField]) -> ps.Parser[ast2.Expr]
+    ps.PBind(sepByEnd(structLitField(), sym(",")), func(fields: Slice[ast2.StructLitField]) -> ps.Parser[ast2.Expr]
       ps.PThen(sym("}"), ps.PPure(ast2.Expr.StructLitExpr(typeName, fields)))
     end)
   end)
@@ -691,6 +705,9 @@ func primaryExpr() -> ps.Parser[ast2.Expr]
     ps.PMap(stringLiteral(), func(v: String) -> ast2.Expr
       ast2.Expr.StringExpr(v)
     end),
+    ps.PMap(runeLiteral(), func(v: String) -> ast2.Expr
+      ast2.Expr.RuneExpr(v)
+    end),
     ps.PMap(kw("true"), func(_: String) -> ast2.Expr
       ast2.Expr.BoolExpr(true)
     end),
@@ -701,13 +718,19 @@ func primaryExpr() -> ps.Parser[ast2.Expr]
     sliceLiteral(),
     tupleOrParenExpr(),
     # 结构体字面量支持导入类型名，例如 ast2.File { ... }。
-    ps.PAttempt(ps.PBind(qualifiedIdentifier(), func(typeName: String) -> ps.Parser[ast2.Expr]
+    ps.PAttempt(ps.PBind(structLitTypeName(), func(typeName: String) -> ps.Parser[ast2.Expr]
       structLitFields(typeName)
     end)),
     ps.PMap(identifier(), func(v: String) -> ast2.Expr
       ast2.Expr.IdentExpr(v)
     end),
   ])
+end
+
+func structLitTypeName() -> ps.Parser[String]
+  ps.PBind(qualifiedIdentifier(), func(name: String) -> ps.Parser[String]
+    ps.PMap(typeArgList(), func(_: Slice[ast2.TypeExpr]) -> String name end)
+  end)
 end
 
 func sliceLiteral() -> ps.Parser[ast2.Expr]
@@ -851,18 +874,64 @@ func stringLiteral() -> ps.Parser[String]
   end))
 end
 
-func stringChar() -> ps.Parser[Rune]
+func runeLiteral() -> ps.Parser[String]
+  lexeme(ps.PBind(ps.PChar(singleQuoteRune()), func(_: Rune) -> ps.Parser[String]
+    ps.PBind(runeCharacter(), func(value: Rune) -> ps.Parser[String]
+      ps.PThen(ps.PChar(singleQuoteRune()), ps.PPure(String.FromRunes([value])))
+    end)
+  end))
+end
+
+func runeCharacter() -> ps.Parser[Rune]
   ps.POrElse(
-    ps.PThen(ps.PChar('\\'), ps.PChoice([
-      ps.PMap(ps.PChar('n'), func(_: Rune) -> Rune '\n' end),
-      ps.PMap(ps.PChar('t'), func(_: Rune) -> Rune '\t' end),
-      ps.PMap(ps.PChar('"'), func(_: Rune) -> Rune '"' end),
-      ps.PMap(ps.PChar('\\'), func(_: Rune) -> Rune '\\' end),
+    ps.PThen(ps.PChar(backslashRune()), ps.PChoice([
+      ps.PMap(ps.PChar('n'), func(_: Rune) -> Rune newlineRune() end),
+      ps.PMap(ps.PChar('t'), func(_: Rune) -> Rune tabRune() end),
+      ps.PMap(ps.PChar(singleQuoteRune()), func(_: Rune) -> Rune singleQuoteRune() end),
+      ps.PMap(ps.PChar(backslashRune()), func(_: Rune) -> Rune backslashRune() end),
     ])),
     ps.PSatisfy(func(r: Rune) -> Bool
-      r != '"' && r != '\\'
-    end, "string character"),
+      r != singleQuoteRune() && r != backslashRune() && r != newlineRune()
+    end, "rune character")
   )
+end
+
+func singleQuoteRune() -> Rune
+  go[Rune] { code: "rune(39)" }
+end
+
+func backslashRune() -> Rune
+  go[Rune] { code: "rune(92)" }
+end
+
+func newlineRune() -> Rune
+  go[Rune] { code: "rune(10)" }
+end
+
+func tabRune() -> Rune
+  go[Rune] { code: "rune(9)" }
+end
+
+func carriageReturnRune() -> Rune
+  go[Rune] { code: "rune(13)" }
+end
+
+func stringChar() -> ps.Parser[Rune]
+  ps.POrElse(
+    ps.PThen(ps.PChar(backslashRune()), ps.PChoice([
+      ps.PMap(ps.PChar('n'), func(_: Rune) -> Rune newlineRune() end),
+      ps.PMap(ps.PChar('t'), func(_: Rune) -> Rune tabRune() end),
+      ps.PMap(ps.PChar(doubleQuoteRune()), func(_: Rune) -> Rune doubleQuoteRune() end),
+      ps.PMap(ps.PChar(backslashRune()), func(_: Rune) -> Rune backslashRune() end),
+    ])),
+    ps.PSatisfy(func(r: Rune) -> Bool
+      r != doubleQuoteRune() && r != backslashRune()
+    end, "string character")
+  )
+end
+
+func doubleQuoteRune() -> Rune
+  go[Rune] { code: "rune(34)" }
 end
 
 func kw(word: String) -> ps.Parser[String]
@@ -889,14 +958,14 @@ end
 
 func spaceUnit() -> ps.Parser[()]
   ps.PThen(ps.PSatisfy(func(r: Rune) -> Bool
-    r == ' ' || r == '\t' || r == '\n' || r == '\r'
+    r == ' ' || r == tabRune() || r == newlineRune() || r == carriageReturnRune()
   end, "whitespace"), ps.PPure(()))
 end
 
 func lineComment() -> ps.Parser[()]
   ps.PBind(ps.PString("#"), func(_: String) -> ps.Parser[()]
     ps.PThen(ps.PMany(ps.PSatisfy(func(r: Rune) -> Bool
-      r != '\n'
+      r != newlineRune()
     end, "comment character")), ps.PPure(()))
   end)
 end

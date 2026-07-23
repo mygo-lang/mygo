@@ -7,138 +7,138 @@ import (
 )
 
 func unify(left MonoType, right MonoType, subst []SubstEntry) Result[[]SubstEntry, string] {
-	a_307 := applySubst(subst, left)
-	b_308 := applySubst(subst, right)
-	var expr_338 Result[[]SubstEntry, string]
-	if monoEqual(a_307, b_308) {
-		expr_338 = Ok[[]SubstEntry, string](subst)
+	a_319 := applySubst(subst, left)
+	b_320 := applySubst(subst, right)
+	var expr_350 Result[[]SubstEntry, string]
+	if monoEqual(a_319, b_320) {
+		expr_350 = Ok[[]SubstEntry, string](subst)
 	} else {
-		var expr_337 Result[[]SubstEntry, string]
-		if v_152, ok := a_307.(MonoTypeTVar); ok {
-			var expr_336 Result[[]SubstEntry, string]
-			expr_336 = bindVar(v_152.F0, b_308, subst)
-			expr_337 = expr_336
+		var expr_349 Result[[]SubstEntry, string]
+		if v_155, ok := a_319.(MonoTypeTVar); ok {
+			var expr_348 Result[[]SubstEntry, string]
+			expr_348 = bindVar(v_155.F0, b_320, subst)
+			expr_349 = expr_348
 		} else {
-			if v_149, ok := a_307.(MonoTypeTCon); ok {
-				var expr_335 Result[[]SubstEntry, string]
-				var expr_334 Result[[]SubstEntry, string]
-				if v_151, ok := b_308.(MonoTypeTVar); ok {
-					var expr_333 Result[[]SubstEntry, string]
-					expr_333 = bindVar(v_151.F0, a_307, subst)
-					expr_334 = expr_333
+			if v_152, ok := a_319.(MonoTypeTCon); ok {
+				var expr_347 Result[[]SubstEntry, string]
+				var expr_346 Result[[]SubstEntry, string]
+				if v_154, ok := b_320.(MonoTypeTVar); ok {
+					var expr_345 Result[[]SubstEntry, string]
+					expr_345 = bindVar(v_154.F0, a_319, subst)
+					expr_346 = expr_345
 				} else {
-					if v_150, ok := b_308.(MonoTypeTCon); ok {
-						var expr_332 Result[[]SubstEntry, string]
-						var expr_331 Result[[]SubstEntry, string]
-						if v_149.F0 == v_150.F0 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_149.F1) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_150.F1) {
-							expr_331 = unifyArgs(v_149.F1, v_150.F1, subst)
+					if v_153, ok := b_320.(MonoTypeTCon); ok {
+						var expr_344 Result[[]SubstEntry, string]
+						var expr_343 Result[[]SubstEntry, string]
+						if v_152.F0 == v_153.F0 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_152.F1) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_153.F1) {
+							expr_343 = unifyArgs(v_152.F1, v_153.F1, subst)
 						} else {
-							expr_331 = Err[[]SubstEntry, string]("cannot unify " + monoString(a_307) + " with " + monoString(b_308))
+							expr_343 = Err[[]SubstEntry, string]("cannot unify " + monoString(a_319) + " with " + monoString(b_320))
 						}
-						expr_332 = expr_331
-						expr_334 = expr_332
+						expr_344 = expr_343
+						expr_346 = expr_344
 					} else {
 						{
-							var expr_330 Result[[]SubstEntry, string]
-							expr_330 = Err[[]SubstEntry, string]("cannot unify " + monoString(a_307) + " with " + monoString(b_308))
-							expr_334 = expr_330
+							var expr_342 Result[[]SubstEntry, string]
+							expr_342 = Err[[]SubstEntry, string]("cannot unify " + monoString(a_319) + " with " + monoString(b_320))
+							expr_346 = expr_342
 						}
 					}
 				}
-				expr_335 = expr_334
-				expr_337 = expr_335
+				expr_347 = expr_346
+				expr_349 = expr_347
 			} else {
-				if v_144, ok := a_307.(MonoTypeTFunc); ok {
-					var expr_329 Result[[]SubstEntry, string]
-					var expr_328 Result[[]SubstEntry, string]
-					if v_148, ok := b_308.(MonoTypeTVar); ok {
-						var expr_327 Result[[]SubstEntry, string]
-						expr_327 = bindVar(v_148.F0, a_307, subst)
-						expr_328 = expr_327
+				if v_147, ok := a_319.(MonoTypeTFunc); ok {
+					var expr_341 Result[[]SubstEntry, string]
+					var expr_340 Result[[]SubstEntry, string]
+					if v_151, ok := b_320.(MonoTypeTVar); ok {
+						var expr_339 Result[[]SubstEntry, string]
+						expr_339 = bindVar(v_151.F0, a_319, subst)
+						expr_340 = expr_339
 					} else {
-						if v_145, ok := b_308.(MonoTypeTFunc); ok {
-							var expr_326 Result[[]SubstEntry, string]
-							var expr_325 Result[[]SubstEntry, string]
-							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_144.F0) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_145.F0) {
-								var expr_324 Result[[]SubstEntry, string]
-								s1_320 := unifyArgs(v_144.F0, v_145.F0, subst)
-								var expr_323 Result[[]SubstEntry, string]
-								if v_147, ok := s1_320.(ResultOk[[]SubstEntry, string]); ok {
-									var expr_322 Result[[]SubstEntry, string]
-									expr_322 = unify(*v_144.F1, *v_145.F1, v_147.F0)
-									expr_323 = expr_322
+						if v_148, ok := b_320.(MonoTypeTFunc); ok {
+							var expr_338 Result[[]SubstEntry, string]
+							var expr_337 Result[[]SubstEntry, string]
+							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_147.F0) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_148.F0) {
+								var expr_336 Result[[]SubstEntry, string]
+								s1_332 := unifyArgs(v_147.F0, v_148.F0, subst)
+								var expr_335 Result[[]SubstEntry, string]
+								if v_150, ok := s1_332.(ResultOk[[]SubstEntry, string]); ok {
+									var expr_334 Result[[]SubstEntry, string]
+									expr_334 = unify(*v_147.F1, *v_148.F1, v_150.F0)
+									expr_335 = expr_334
 								} else {
-									if v_146, ok := s1_320.(ResultErr[[]SubstEntry, string]); ok {
-										var expr_321 Result[[]SubstEntry, string]
-										expr_321 = Err[[]SubstEntry, string](v_146.F0)
-										expr_323 = expr_321
+									if v_149, ok := s1_332.(ResultErr[[]SubstEntry, string]); ok {
+										var expr_333 Result[[]SubstEntry, string]
+										expr_333 = Err[[]SubstEntry, string](v_149.F0)
+										expr_335 = expr_333
 									} else {
 										panic("unreachable")
 									}
 								}
-								expr_324 = expr_323
-								expr_325 = expr_324
+								expr_336 = expr_335
+								expr_337 = expr_336
 							} else {
-								expr_325 = Err[[]SubstEntry, string]("function arity mismatch")
+								expr_337 = Err[[]SubstEntry, string]("function arity mismatch")
 							}
-							expr_326 = expr_325
-							expr_328 = expr_326
+							expr_338 = expr_337
+							expr_340 = expr_338
 						} else {
 							{
-								var expr_319 Result[[]SubstEntry, string]
-								expr_319 = Err[[]SubstEntry, string]("cannot unify " + monoString(a_307) + " with " + monoString(b_308))
-								expr_328 = expr_319
+								var expr_331 Result[[]SubstEntry, string]
+								expr_331 = Err[[]SubstEntry, string]("cannot unify " + monoString(a_319) + " with " + monoString(b_320))
+								expr_340 = expr_331
 							}
 						}
 					}
-					expr_329 = expr_328
-					expr_337 = expr_329
+					expr_341 = expr_340
+					expr_349 = expr_341
 				} else {
-					if v_141, ok := a_307.(MonoTypeTTuple); ok {
-						var expr_318 Result[[]SubstEntry, string]
-						var expr_317 Result[[]SubstEntry, string]
-						if v_143, ok := b_308.(MonoTypeTVar); ok {
-							var expr_316 Result[[]SubstEntry, string]
-							expr_316 = bindVar(v_143.F0, a_307, subst)
-							expr_317 = expr_316
+					if v_144, ok := a_319.(MonoTypeTTuple); ok {
+						var expr_330 Result[[]SubstEntry, string]
+						var expr_329 Result[[]SubstEntry, string]
+						if v_146, ok := b_320.(MonoTypeTVar); ok {
+							var expr_328 Result[[]SubstEntry, string]
+							expr_328 = bindVar(v_146.F0, a_319, subst)
+							expr_329 = expr_328
 						} else {
-							if v_142, ok := b_308.(MonoTypeTTuple); ok {
-								var expr_315 Result[[]SubstEntry, string]
-								var expr_314 Result[[]SubstEntry, string]
-								if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_141.F0) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_142.F0) {
-									expr_314 = unifyArgs(v_141.F0, v_142.F0, subst)
+							if v_145, ok := b_320.(MonoTypeTTuple); ok {
+								var expr_327 Result[[]SubstEntry, string]
+								var expr_326 Result[[]SubstEntry, string]
+								if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_144.F0) == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_145.F0) {
+									expr_326 = unifyArgs(v_144.F0, v_145.F0, subst)
 								} else {
-									expr_314 = Err[[]SubstEntry, string]("tuple arity mismatch")
+									expr_326 = Err[[]SubstEntry, string]("tuple arity mismatch")
 								}
-								expr_315 = expr_314
-								expr_317 = expr_315
+								expr_327 = expr_326
+								expr_329 = expr_327
 							} else {
 								{
-									var expr_313 Result[[]SubstEntry, string]
-									expr_313 = Err[[]SubstEntry, string]("cannot unify " + monoString(a_307) + " with " + monoString(b_308))
-									expr_317 = expr_313
+									var expr_325 Result[[]SubstEntry, string]
+									expr_325 = Err[[]SubstEntry, string]("cannot unify " + monoString(a_319) + " with " + monoString(b_320))
+									expr_329 = expr_325
 								}
 							}
 						}
-						expr_318 = expr_317
-						expr_337 = expr_318
+						expr_330 = expr_329
+						expr_349 = expr_330
 					} else {
-						if _, ok := a_307.(MonoTypeTUnit); ok {
-							var expr_312 Result[[]SubstEntry, string]
-							var expr_311 Result[[]SubstEntry, string]
-							if v_140, ok := b_308.(MonoTypeTVar); ok {
-								var expr_310 Result[[]SubstEntry, string]
-								expr_310 = bindVar(v_140.F0, a_307, subst)
-								expr_311 = expr_310
+						if _, ok := a_319.(MonoTypeTUnit); ok {
+							var expr_324 Result[[]SubstEntry, string]
+							var expr_323 Result[[]SubstEntry, string]
+							if v_143, ok := b_320.(MonoTypeTVar); ok {
+								var expr_322 Result[[]SubstEntry, string]
+								expr_322 = bindVar(v_143.F0, a_319, subst)
+								expr_323 = expr_322
 							} else {
 								{
-									var expr_309 Result[[]SubstEntry, string]
-									expr_309 = Err[[]SubstEntry, string]("cannot unify " + monoString(a_307) + " with " + monoString(b_308))
-									expr_311 = expr_309
+									var expr_321 Result[[]SubstEntry, string]
+									expr_321 = Err[[]SubstEntry, string]("cannot unify " + monoString(a_319) + " with " + monoString(b_320))
+									expr_323 = expr_321
 								}
 							}
-							expr_312 = expr_311
-							expr_337 = expr_312
+							expr_324 = expr_323
+							expr_349 = expr_324
 						} else {
 							panic("unreachable")
 						}
@@ -146,85 +146,85 @@ func unify(left MonoType, right MonoType, subst []SubstEntry) Result[[]SubstEntr
 				}
 			}
 		}
-		expr_338 = expr_337
+		expr_350 = expr_349
 	}
-	return expr_338
+	return expr_350
 }
 func bindVar(id int, t MonoType, subst []SubstEntry) Result[[]SubstEntry, string] {
-	var expr_339 Result[[]SubstEntry, string]
+	var expr_351 Result[[]SubstEntry, string]
 	if occursIn(id, t) {
-		expr_339 = Err[[]SubstEntry, string]("occurs check failed")
+		expr_351 = Err[[]SubstEntry, string]("occurs check failed")
 	} else {
-		expr_339 = Ok[[]SubstEntry, string](MygoIN5SliceM7Prepend(subst, SubstEntry{ID: id, Type: t}))
+		expr_351 = Ok[[]SubstEntry, string](MygoIN5SliceM7Prepend(subst, SubstEntry{ID: id, Type: t}))
 	}
-	return expr_339
+	return expr_351
 }
 func unifyArgs(left []MonoType, right []MonoType, subst []SubstEntry) Result[[]SubstEntry, string] {
-	var expr_345 Result[[]SubstEntry, string]
+	var expr_357 Result[[]SubstEntry, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(left) == 0 {
-		expr_345 = Ok[[]SubstEntry, string](subst)
+		expr_357 = Ok[[]SubstEntry, string](subst)
 	} else {
-		var expr_344 Result[[]SubstEntry, string]
-		s_340 := unify(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, 0), MonoTypeTUnitCtor()), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), MonoTypeTUnitCtor()), subst)
-		var expr_343 Result[[]SubstEntry, string]
-		if v_154, ok := s_340.(ResultOk[[]SubstEntry, string]); ok {
-			var expr_342 Result[[]SubstEntry, string]
-			expr_342 = unifyArgs(sliceDrop[MonoType](left, 1), sliceDrop[MonoType](right, 1), v_154.F0)
-			expr_343 = expr_342
+		var expr_356 Result[[]SubstEntry, string]
+		s_352 := unify(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, 0), MonoTypeTUnitCtor()), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), MonoTypeTUnitCtor()), subst)
+		var expr_355 Result[[]SubstEntry, string]
+		if v_157, ok := s_352.(ResultOk[[]SubstEntry, string]); ok {
+			var expr_354 Result[[]SubstEntry, string]
+			expr_354 = unifyArgs(sliceDrop[MonoType](left, 1), sliceDrop[MonoType](right, 1), v_157.F0)
+			expr_355 = expr_354
 		} else {
-			if v_153, ok := s_340.(ResultErr[[]SubstEntry, string]); ok {
-				var expr_341 Result[[]SubstEntry, string]
-				expr_341 = Err[[]SubstEntry, string](v_153.F0)
-				expr_343 = expr_341
+			if v_156, ok := s_352.(ResultErr[[]SubstEntry, string]); ok {
+				var expr_353 Result[[]SubstEntry, string]
+				expr_353 = Err[[]SubstEntry, string](v_156.F0)
+				expr_355 = expr_353
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_344 = expr_343
-		expr_345 = expr_344
+		expr_356 = expr_355
+		expr_357 = expr_356
 	}
-	return expr_345
+	return expr_357
 }
 func applySubst(subst []SubstEntry, t MonoType) MonoType {
-	var expr_354 MonoType
-	if v_159, ok := t.(MonoTypeTVar); ok {
-		var expr_353 MonoType
-		var expr_352 MonoType
-		if v_161, ok := substGet(subst, v_159.F0).(OptionSome[MonoType]); ok {
-			var expr_351 MonoType
-			expr_351 = applySubst(subst, v_161.F0)
-			expr_352 = expr_351
+	var expr_366 MonoType
+	if v_162, ok := t.(MonoTypeTVar); ok {
+		var expr_365 MonoType
+		var expr_364 MonoType
+		if v_164, ok := substGet(subst, v_162.F0).(OptionSome[MonoType]); ok {
+			var expr_363 MonoType
+			expr_363 = applySubst(subst, v_164.F0)
+			expr_364 = expr_363
 		} else {
-			if _, ok := substGet(subst, v_159.F0).(OptionNone[MonoType]); ok {
-				var expr_350 MonoType
-				expr_350 = t
-				expr_352 = expr_350
+			if _, ok := substGet(subst, v_162.F0).(OptionNone[MonoType]); ok {
+				var expr_362 MonoType
+				expr_362 = t
+				expr_364 = expr_362
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_353 = expr_352
-		expr_354 = expr_353
+		expr_365 = expr_364
+		expr_366 = expr_365
 	} else {
-		if v_158, ok := t.(MonoTypeTCon); ok {
-			var expr_349 MonoType
-			expr_349 = MonoTypeTConCtor(v_158.F0, applySubstAll(subst, v_158.F1))
-			expr_354 = expr_349
+		if v_161, ok := t.(MonoTypeTCon); ok {
+			var expr_361 MonoType
+			expr_361 = MonoTypeTConCtor(v_161.F0, applySubstAll(subst, v_161.F1))
+			expr_366 = expr_361
 		} else {
-			if v_157, ok := t.(MonoTypeTFunc); ok {
-				var expr_348 MonoType
-				expr_348 = MonoTypeTFuncCtor(applySubstAll(subst, v_157.F0), &[]MonoType{applySubst(subst, *v_157.F1)}[0])
-				expr_354 = expr_348
+			if v_160, ok := t.(MonoTypeTFunc); ok {
+				var expr_360 MonoType
+				expr_360 = MonoTypeTFuncCtor(applySubstAll(subst, v_160.F0), &[]MonoType{applySubst(subst, *v_160.F1)}[0])
+				expr_366 = expr_360
 			} else {
-				if v_156, ok := t.(MonoTypeTTuple); ok {
-					var expr_347 MonoType
-					expr_347 = MonoTypeTTupleCtor(applySubstAll(subst, v_156.F0))
-					expr_354 = expr_347
+				if v_159, ok := t.(MonoTypeTTuple); ok {
+					var expr_359 MonoType
+					expr_359 = MonoTypeTTupleCtor(applySubstAll(subst, v_159.F0))
+					expr_366 = expr_359
 				} else {
 					if _, ok := t.(MonoTypeTUnit); ok {
-						var expr_346 MonoType
-						expr_346 = t
-						expr_354 = expr_346
+						var expr_358 MonoType
+						expr_358 = t
+						expr_366 = expr_358
 					} else {
 						panic("unreachable")
 					}
@@ -232,73 +232,73 @@ func applySubst(subst []SubstEntry, t MonoType) MonoType {
 			}
 		}
 	}
-	return expr_354
+	return expr_366
 }
 func applySubstAll(subst []SubstEntry, items []MonoType) []MonoType {
-	var expr_355 []MonoType
+	var expr_367 []MonoType
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_355 = []MonoType{}
+		expr_367 = []MonoType{}
 	} else {
-		expr_355 = MygoIN5SliceM7Prepend(applySubstAll(subst, sliceDrop[MonoType](items, 1)), applySubst(subst, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())))
+		expr_367 = MygoIN5SliceM7Prepend(applySubstAll(subst, sliceDrop[MonoType](items, 1)), applySubst(subst, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())))
 	}
-	return expr_355
+	return expr_367
 }
 func composeSubst(newer []SubstEntry, older []SubstEntry) []SubstEntry {
-	var expr_358 []SubstEntry
+	var expr_370 []SubstEntry
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(older) == 0 {
-		expr_358 = newer
+		expr_370 = newer
 	} else {
-		var expr_357 []SubstEntry
-		head_356 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(older, 0), SubstEntry{ID: 0, Type: MonoTypeTUnitCtor()})
-		expr_357 = MygoIN5SliceM7Prepend(composeSubst(newer, sliceDrop[SubstEntry](older, 1)), SubstEntry{ID: head_356.ID, Type: applySubst(newer, head_356.Type)})
-		expr_358 = expr_357
+		var expr_369 []SubstEntry
+		head_368 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(older, 0), SubstEntry{ID: 0, Type: MonoTypeTUnitCtor()})
+		expr_369 = MygoIN5SliceM7Prepend(composeSubst(newer, sliceDrop[SubstEntry](older, 1)), SubstEntry{ID: head_368.ID, Type: applySubst(newer, head_368.Type)})
+		expr_370 = expr_369
 	}
-	return expr_358
+	return expr_370
 }
 func substGet(subst []SubstEntry, id int) Option[MonoType] {
-	var expr_362 Option[MonoType]
+	var expr_374 Option[MonoType]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(subst) == 0 {
-		expr_362 = None[MonoType]()
+		expr_374 = None[MonoType]()
 	} else {
-		var expr_361 Option[MonoType]
-		head_359 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(subst, 0), SubstEntry{ID: 0, Type: MonoTypeTUnitCtor()})
-		var expr_360 Option[MonoType]
-		if head_359.ID == id {
-			expr_360 = Some[MonoType](head_359.Type)
+		var expr_373 Option[MonoType]
+		head_371 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(subst, 0), SubstEntry{ID: 0, Type: MonoTypeTUnitCtor()})
+		var expr_372 Option[MonoType]
+		if head_371.ID == id {
+			expr_372 = Some[MonoType](head_371.Type)
 		} else {
-			expr_360 = substGet(sliceDrop[SubstEntry](subst, 1), id)
+			expr_372 = substGet(sliceDrop[SubstEntry](subst, 1), id)
 		}
-		expr_361 = expr_360
-		expr_362 = expr_361
+		expr_373 = expr_372
+		expr_374 = expr_373
 	}
-	return expr_362
+	return expr_374
 }
 func occursIn(id int, t MonoType) bool {
-	var expr_368 bool
-	if v_166, ok := t.(MonoTypeTVar); ok {
-		var expr_367 bool
-		expr_367 = id == v_166.F0
-		expr_368 = expr_367
+	var expr_380 bool
+	if v_169, ok := t.(MonoTypeTVar); ok {
+		var expr_379 bool
+		expr_379 = id == v_169.F0
+		expr_380 = expr_379
 	} else {
-		if v_165, ok := t.(MonoTypeTCon); ok {
-			var expr_366 bool
-			expr_366 = occursInAny(id, v_165.F1)
-			expr_368 = expr_366
+		if v_168, ok := t.(MonoTypeTCon); ok {
+			var expr_378 bool
+			expr_378 = occursInAny(id, v_168.F1)
+			expr_380 = expr_378
 		} else {
-			if v_164, ok := t.(MonoTypeTFunc); ok {
-				var expr_365 bool
-				expr_365 = occursInAny(id, v_164.F0) || occursIn(id, *v_164.F1)
-				expr_368 = expr_365
+			if v_167, ok := t.(MonoTypeTFunc); ok {
+				var expr_377 bool
+				expr_377 = occursInAny(id, v_167.F0) || occursIn(id, *v_167.F1)
+				expr_380 = expr_377
 			} else {
-				if v_163, ok := t.(MonoTypeTTuple); ok {
-					var expr_364 bool
-					expr_364 = occursInAny(id, v_163.F0)
-					expr_368 = expr_364
+				if v_166, ok := t.(MonoTypeTTuple); ok {
+					var expr_376 bool
+					expr_376 = occursInAny(id, v_166.F0)
+					expr_380 = expr_376
 				} else {
 					if _, ok := t.(MonoTypeTUnit); ok {
-						var expr_363 bool
-						expr_363 = false
-						expr_368 = expr_363
+						var expr_375 bool
+						expr_375 = false
+						expr_380 = expr_375
 					} else {
 						panic("unreachable")
 					}
@@ -306,14 +306,14 @@ func occursIn(id int, t MonoType) bool {
 			}
 		}
 	}
-	return expr_368
+	return expr_380
 }
 func occursInAny(id int, items []MonoType) bool {
-	var expr_369 bool
+	var expr_381 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_369 = false
+		expr_381 = false
 	} else {
-		expr_369 = occursIn(id, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())) || occursInAny(id, sliceDrop[MonoType](items, 1))
+		expr_381 = occursIn(id, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())) || occursInAny(id, sliceDrop[MonoType](items, 1))
 	}
-	return expr_369
+	return expr_381
 }

@@ -342,13 +342,25 @@ func assignStmt() ps.Parser[ast2.Stmt] {
 }
 func letStmt() ps.Parser[ast2.Stmt] {
 	return ps.PBind(kw("let"), func(_ string) ps.Parser[ast2.Stmt] {
-		return ps.PBind(identifier(), func(name string) ps.Parser[ast2.Stmt] {
-			return ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ Option[ast2.TypeExpr]) ps.Parser[ast2.Stmt] {
-				return ps.PBind(sym("="), func(_ string) ps.Parser[ast2.Stmt] {
-					return ps.PMap(expr(), func(value ast2.Expr) ast2.Stmt {
-						return ast2.StmtLetStmtCtor(ast2.Bind{Name: name, Type: typ, Value: value})
-					})
+		return ps.PChoice([]ps.Parser[ast2.Stmt]{tupleLetStmt(), namedLetStmt()})
+	})
+}
+func namedLetStmt() ps.Parser[ast2.Stmt] {
+	return ps.PBind(identifier(), func(name string) ps.Parser[ast2.Stmt] {
+		return ps.PBind(ps.POptional(ps.PThen(sym(":"), typeExpr())), func(typ Option[ast2.TypeExpr]) ps.Parser[ast2.Stmt] {
+			return ps.PBind(sym("="), func(_ string) ps.Parser[ast2.Stmt] {
+				return ps.PMap(expr(), func(value ast2.Expr) ast2.Stmt {
+					return ast2.StmtLetStmtCtor(ast2.Bind{Name: name, Type: typ, Value: value})
 				})
+			})
+		})
+	})
+}
+func tupleLetStmt() ps.Parser[ast2.Stmt] {
+	return ps.PBind(paren(ps.PSepBy(identifier(), sym(","))), func(names []string) ps.Parser[ast2.Stmt] {
+		return ps.PBind(sym("="), func(_ string) ps.Parser[ast2.Stmt] {
+			return ps.PMap(expr(), func(value ast2.Expr) ast2.Stmt {
+				return ast2.StmtTupleLetStmtCtor(names, value)
 			})
 		})
 	})
@@ -679,7 +691,7 @@ func postfixTail(start ps.State, cur ps.State, acc ast2.Expr) ps.Reply[ast2.Expr
 }
 func structLitFields(typeName string) ps.Parser[ast2.Expr] {
 	return ps.PBind(sym("{"), func(_ string) ps.Parser[ast2.Expr] {
-		return ps.PBind(ps.PSepBy(structLitField(), sym(",")), func(fields []ast2.StructLitField) ps.Parser[ast2.Expr] {
+		return ps.PBind(sepByEnd(structLitField(), sym(",")), func(fields []ast2.StructLitField) ps.Parser[ast2.Expr] {
 			return ps.PThen(sym("}"), ps.PPure(ast2.ExprStructLitExprCtor(typeName, fields)))
 		})
 	})
@@ -698,15 +710,24 @@ func primaryExpr() ps.Parser[ast2.Expr] {
 		return ast2.ExprNumberExprCtor(v)
 	}), ps.PMap(stringLiteral(), func(v string) ast2.Expr {
 		return ast2.ExprStringExprCtor(v)
+	}), ps.PMap(runeLiteral(), func(v string) ast2.Expr {
+		return ast2.ExprRuneExprCtor(v)
 	}), ps.PMap(kw("true"), func(_ string) ast2.Expr {
 		return ast2.ExprBoolExprCtor(true)
 	}), ps.PMap(kw("false"), func(_ string) ast2.Expr {
 		return ast2.ExprBoolExprCtor(false)
-	}), funcLit(), sliceLiteral(), tupleOrParenExpr(), ps.PAttempt(ps.PBind(qualifiedIdentifier(), func(typeName string) ps.Parser[ast2.Expr] {
+	}), funcLit(), sliceLiteral(), tupleOrParenExpr(), ps.PAttempt(ps.PBind(structLitTypeName(), func(typeName string) ps.Parser[ast2.Expr] {
 		return structLitFields(typeName)
 	})), ps.PMap(identifier(), func(v string) ast2.Expr {
 		return ast2.ExprIdentExprCtor(v)
 	})})
+}
+func structLitTypeName() ps.Parser[string] {
+	return ps.PBind(qualifiedIdentifier(), func(name string) ps.Parser[string] {
+		return ps.PMap(typeArgList(), func(_ []ast2.TypeExpr) string {
+			return name
+		})
+	})
 }
 func sliceLiteral() ps.Parser[ast2.Expr] {
 	return ps.PMap(brackets(sepByEnd(lazyExpr(), sym(","))), func(items []ast2.Expr) ast2.Expr {
@@ -829,18 +850,56 @@ func stringLiteral() ps.Parser[string] {
 		})
 	}))
 }
-func stringChar() ps.Parser[rune] {
-	return ps.POrElse(ps.PThen(ps.PChar('\\'), ps.PChoice([]ps.Parser[rune]{ps.PMap(ps.PChar('n'), func(_ rune) rune {
-		return '\n'
+func runeLiteral() ps.Parser[string] {
+	return lexeme[string](ps.PBind(ps.PChar(singleQuoteRune()), func(_ rune) ps.Parser[string] {
+		return ps.PBind(runeCharacter(), func(value rune) ps.Parser[string] {
+			return ps.PThen(ps.PChar(singleQuoteRune()), ps.PPure(MygoIN6StringM9FromRunes([]rune{value})))
+		})
+	}))
+}
+func runeCharacter() ps.Parser[rune] {
+	return ps.POrElse(ps.PThen(ps.PChar(backslashRune()), ps.PChoice([]ps.Parser[rune]{ps.PMap(ps.PChar('n'), func(_ rune) rune {
+		return newlineRune()
 	}), ps.PMap(ps.PChar('t'), func(_ rune) rune {
-		return '\t'
-	}), ps.PMap(ps.PChar('"'), func(_ rune) rune {
-		return '"'
-	}), ps.PMap(ps.PChar('\\'), func(_ rune) rune {
-		return '\\'
+		return tabRune()
+	}), ps.PMap(ps.PChar(singleQuoteRune()), func(_ rune) rune {
+		return singleQuoteRune()
+	}), ps.PMap(ps.PChar(backslashRune()), func(_ rune) rune {
+		return backslashRune()
 	})})), ps.PSatisfy(func(r rune) bool {
-		return r != '"' && r != '\\'
+		return r != singleQuoteRune() && r != backslashRune() && r != newlineRune()
+	}, "rune character"))
+}
+func singleQuoteRune() rune {
+	return rune(39)
+}
+func backslashRune() rune {
+	return rune(92)
+}
+func newlineRune() rune {
+	return rune(10)
+}
+func tabRune() rune {
+	return rune(9)
+}
+func carriageReturnRune() rune {
+	return rune(13)
+}
+func stringChar() ps.Parser[rune] {
+	return ps.POrElse(ps.PThen(ps.PChar(backslashRune()), ps.PChoice([]ps.Parser[rune]{ps.PMap(ps.PChar('n'), func(_ rune) rune {
+		return newlineRune()
+	}), ps.PMap(ps.PChar('t'), func(_ rune) rune {
+		return tabRune()
+	}), ps.PMap(ps.PChar(doubleQuoteRune()), func(_ rune) rune {
+		return doubleQuoteRune()
+	}), ps.PMap(ps.PChar(backslashRune()), func(_ rune) rune {
+		return backslashRune()
+	})})), ps.PSatisfy(func(r rune) bool {
+		return r != doubleQuoteRune() && r != backslashRune()
 	}, "string character"))
+}
+func doubleQuoteRune() rune {
+	return rune(34)
 }
 func kw(word string) ps.Parser[string] {
 	return lexeme[string](ps.PAttempt(ps.PBind(ps.PString(word), func(value string) ps.Parser[string] {
@@ -867,7 +926,7 @@ func trivia() ps.Parser[struct {
 func spaceUnit() ps.Parser[struct {
 }] {
 	return ps.PThen(ps.PSatisfy(func(r rune) bool {
-		return r == ' ' || r == '\t' || r == '\n' || r == '\r'
+		return r == ' ' || r == tabRune() || r == newlineRune() || r == carriageReturnRune()
 	}, "whitespace"), ps.PPure(struct {
 	}{}))
 }
@@ -875,7 +934,7 @@ func lineComment() ps.Parser[struct {
 }] {
 	return ps.PBind(ps.PString("#"), func(_ string) ps.Parser[struct{}] {
 		return ps.PThen(ps.PMany(ps.PSatisfy(func(r rune) bool {
-			return r != '\n'
+			return r != newlineRune()
 		}, "comment character")), ps.PPure(struct {
 		}{}))
 	})

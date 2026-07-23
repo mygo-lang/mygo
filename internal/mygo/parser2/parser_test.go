@@ -1,11 +1,39 @@
 package parser2
 
 import (
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
+	ps "github.com/mygo-lang/mygo/lib/text/parsec"
 	. "github.com/mygo-lang/mygo/prelude"
 )
+
+func TestParseFileParsesSelf(t *testing.T) {
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("cannot determine parser test path")
+	}
+	sourcePath := filepath.Join(filepath.Dir(thisFile), "parser.mygo")
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("read %s: %v", sourcePath, err)
+	}
+	reply := ps.ParseInput(fileParser(), string(source))
+	if !reply.Ok {
+		t.Fatalf("ParseInput(%s) failed at %#v: %#v", sourcePath, reply.State.Position, reply.Error)
+	}
+	got := ParseFile(string(source))
+	parsed, ok := got.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile(%s) failed: %v", sourcePath, got)
+	}
+	if len(parsed.F0.Decls) == 0 {
+		t.Fatalf("ParseFile(%s) returned no declarations", sourcePath)
+	}
+}
 
 func TestParseFunctionLiteral(t *testing.T) {
 	fn := parseSingleFunc(t, `package sample
@@ -40,6 +68,23 @@ end
 	slice, ok := (*cast.F0).(ast2.ExprSliceLitExpr)
 	if !ok || len(slice.F0) != 2 {
 		t.Fatalf("cast value = %T, want two-item ExprSliceLitExpr", *cast.F0)
+	}
+}
+
+func TestParseEscapedRuneLiterals(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func newline() -> Rune
+  '\n'
+end
+`)
+	body := fn.F4.(ast2.ExprBlockExpr)
+	runeExpr, ok := body.F0[0].(ast2.StmtExprStmt).F0.(ast2.ExprRuneExpr)
+	if !ok {
+		t.Fatalf("body = %T, want ExprRuneExpr", body.F0[0].(ast2.StmtExprStmt).F0)
+	}
+	if runeExpr.F0 != "\n" {
+		t.Fatalf("rune value = %q, want newline", runeExpr.F0)
 	}
 }
 
