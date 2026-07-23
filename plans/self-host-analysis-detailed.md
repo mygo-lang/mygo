@@ -64,11 +64,11 @@
 | # | 特性 | 旧版状态 | 新版状态 | 影响 |
 |---|------|---------|---------|------|
 | 1 | **类型类约束（`using`）** | ✅ 完整 | ⚠️ 已解析存储，未用于推理/代码生成 | 类型类方法调用、impl dispatch |
-| 2 | **高阶类型（HKT）** | ✅ 完整 | ⚠️ `TKVar` 仅定义未匹配 | 泛型接口（如 `IEnumerable[C[A], A]`）|
+| 2 | **高阶类型（HKT）** | ✅ 完整 | ⚠️ 类型变量基础操作已完成，HKT 声明生成未实现 | 泛型接口（如 `IEnumerable[C[A], A]`）|
 | 3 | **Map/Set 字面量** | ✅ 完整 | ✅ 完整 | `{"a": 1}` 和 `{"a"}` 解析和生成 — 已实现 |
 | 4 | **`embed` 声明** | ✅ 完整 | ❌ 未实现 | 内嵌外部资源 |
 | 5 | **位置信息** | ✅ 每节点有 Line/Column/SourceFile | ⚠️ 有意省略 | 错误消息无行号 |
-| 6 | **`TKVar` 匹配** | ✅ 完整 | ⚠️ 仅定义未使用 | `MonoType.TKVar` 变体在 unify/utils/infer 中无任何 match arm（死代码） |
+| 6 | **`TKVar` 匹配** | ✅ 完整 | ✅ 完整 | 已覆盖 unify、替换、occurs 检查、相等性比较、自由变量收集和字符串化 |
 | 7 | **`TupleLitExpr`（括号元组字面量）** | ✅ 完整 | ⚠️ 仅 `TupleExpr` | 语义不完全等价，parser2 的 `tupleOrParenExpr()` 生成 `TupleExpr` |
 | 8 | **`TuplePattern` / `BindPattern`** | ✅ 完整 | ⚠️ 仅 `VariantPattern` | 模式匹配不支持元组模式和绑定模式 |
 | 9 | **LiteralExpr / UnitLitExpr 合并变体** | ✅ 单一结构体 | ❌ 拆为四种 | 语义相同但 AST 设计不同（Number/String/Rune/Bool vs 合并） |
@@ -77,8 +77,8 @@
 | 12 | **`TypedInfo`** | ✅ 表达式→类型映射 | ⚠️ `PackageInfo`（仅变量映射） | 代码生成无法查询表达式类型 |
 | 13 | **`Instantiate`/`Generalize`** | ✅ 完整 | ⚠️ 简单 let 泛化 | `Scheme.Bound` 未真正使用量化 |
 | 14 | **`Predicate` + `QualifiedType`** | ✅ 完整 | ⚠️ 已定义但未参与推理 | 类型类谓词类型已定义并用于约束转换，未用于推理和代码生成 |
-| 15 | **`TKVar`（高阶类型变量）** | ✅ 完整 | ⚠️ 变体已定义，match arm 缺失 | HKT 推理和代码生成均未实现 |
-| 16 | **`freeVarsMT`/`freeVarsScheme`** | ✅ 完整 | ❌ 无 | 多态泛化无法工作 |
+| 15 | **`TKVar`（高阶类型变量）** | ✅ 完整 | ✅ 类型层已完成 | 已支持类型推理基础操作；HKT 声明生成仍未实现 |
+| 16 | **`freeVarsMT`/`freeVarsScheme`** | ✅ 完整 | ✅ 完整 | 已用于自由变量收集；完整多态泛化仍未完成 |
 | 17 | **测试包 dot-import** | ✅ 自动注入 | ❌ 不支持 | 测试文件无法引用主包符号 |
 | 18 | **`CallExpr.TypeArgs`** | ✅ 泛型调用类型参数 | ❌ 未实现 | ast2 的 `CallExpr` 仅有 `Callee` + `Args`，无 `TypeArgs` 字段 |
 | 19 | **`TuplePattern`** | ✅ 完整 | ❌ 未实现 | 元组模式匹配不支持 |
@@ -211,7 +211,7 @@
   - `unify.go`：合一算法
   - `go_imports.go`：Go 包导入处理
 
-### 新类型推理（`typeinference2/`）— 1260 行 MyGO 代码（5 文件）
+### 新类型推理（`typeinference2/`）— MyGO 源码及生成 Go 代码
 
 - **类型系统**：Hindley-Milner 子集，**部分支持类型类谓词**
 - **核心类型**（`MonoType` 枚举，7 变体）：
@@ -249,24 +249,24 @@
 | Map/Set 字面量推断 | ✅ `inferMapLit`/`inferSetLit` + tail |
 | Go 包导入注册 | ✅ `collectGoPackageImports` / `seedGoPackageEnv` |
 | TGoPackage unify/subst | ✅ unified、substituted、used in env |
-| 自由变量计算 | ❌ |
+| 自由变量计算 | ✅ `freeVarsMT` / `freeVarsScheme` |
 | 实例化/泛化（完整） | ❌ |
 | 类型类谓词 | ⚠️ `Predicate` 已定义且用于解析约束，未参与推理 |
-| TKVar | ⚠️ 变体定义存在，但 unify/utils/infer 中无任何 match arm（死代码） |
+| TKVar | ✅ 已覆盖合一、替换、occurs 检查、相等性比较、自由变量收集和字符串化 |
 
 ### 关键差异总结
 
 | 特性 | typeinference (旧, ~4500 行) | typeinference2 (新, ~1260 行) |
 |------|-----------------------------|-------------------------------|
 | 类型类 | ✅ 完整支持（`using` 约束） | ⚠️ `Predicate` 已定义且解析，未参与推理 |
-| HKT | ✅ 支持高阶类型（`TKVar`） | ⚠️ `TKVar` 变体定义存在但未使用 |
+| HKT | ✅ 支持高阶类型（`TKVar`） | ⚠️ `TKVar` 类型操作已实现，但 HKT 声明生成未实现 |
 | Go 互操作 | ✅ 支持 Go 类型导入（`TGoPackage`） | ✅ `TGoPackage` 已实现并用于 env |
 | 包间推理 | ✅ `InferPackage` 多文件 | ✅ `InferPackage` 多文件 |
 | 多态泛化 | ✅ `Generalize` + `Instantiate` + `freeVarsScheme` | ⚠️ 简单 let 泛化 |
 | 约束求解 | ✅ `solver.go` | ❌ 无 |
 | 类型映射 | `TypedInfo`（表达式→类型映射） | `PackageInfo`（仅变量映射） |
 | 谓词系统 | ✅ `Predicate` + `QualifiedType` | ✅ 已定义并用于约束转换 |
-| 多态自由变量 | ✅ `freeVarsMT`/`freeVarsQual` | ❌ 无 |
+| 多态自由变量 | ✅ `freeVarsMT`/`freeVarsQual` | ✅ `freeVarsMT`/`freeVarsScheme` |
 | 类型变量检测 | ✅ `ContainsTypeVariable` | ❌ 无 |
 | 测试包 dot-import | ✅ 自动注入 | ❌ 不支持 |
 | 语句推理 | ✅ 完整支持 | ✅ 完整支持（`inferStmt`） |
@@ -285,7 +285,7 @@
 - **泛型约束**：`using` 约束参数（通过 `constraintFuncs`/`typeclassMethods`/`egTcBinding`）
 - **`TypedInfo` 使用**：`inferredType(e)` 查询表达式推断类型
 
-### 新代码生成器（`codegen2/`）— 2947 行 MyGO 代码（未编译），8 个源文件
+### 新代码生成器（`codegen2/`）— MyGO 源码及生成 Go 代码
 
 - **输出方式**：字符串拼接生成 Go 源码，然后通过 `go/parser` 和 `go/format` 格式化
   - 关键实现：`renderGoFile()` 使用内联 Go 嵌入（`go[Result[String, String]] { code: "..." }`）
@@ -298,6 +298,8 @@
   - `types.mygo`：翻译上下文（`egCtx`、`Generator2`）定义（84 行）
   - `types_util.mygo`：类型映射和命名工具（626 行）
   - `tailcall.mygo`：尾递归优化（84 行）
+
+`codegen2` 的 MyGO 源码已经由旧版编译器生成对应的 `.gen.go` 文件，并有 `codegen2_test.go` 覆盖基本生成流程。
 
 **当前实现覆盖：**
 
@@ -384,7 +386,7 @@ graph LR
 
 ### P0 — 自举阻塞（不实现则无法编译预编译器）
 
-- 当前无 P0 缺口。预编译器（prelude + lib + parser2 + typeinference2 + codegen2）可以被旧编译器编译通过。`TKVar` 变体为死代码但不阻塞。
+- 当前无 P0 缺口。预编译器（prelude + lib + parser2 + typeinference2 + codegen2）可以被旧编译器编译通过。
 
 ### P1 — 自举后可用的核心功能
 
@@ -397,13 +399,12 @@ graph LR
   - ~~需 `FuncDecl.Using []Constraint`~~：✅ 已完成
   - ~~需 `QualifiedType`、`Predicate` 到 typeinference2~~：✅ 已完成定义
   - ❌ 仍需 `Instantiate`/`Generalize` 完整实现
-  - ❌ 仍需 `freeVarsMT`/`freeVarsScheme`
+  - ~~需 `freeVarsMT`/`freeVarsScheme`~~：✅ 已完成
   - ⚠️ 代码生成侧 `seedCallDictionaries`/`seedCallRequirements`/`seedPackageDictionaries` 已实现字典参数注入，但推理层未传递谓词
   - 影响：预编译器中大量使用类型类（如 `Show`、`Eq`、`Enumerable`）
 
 - **高阶类型（HKT）**：
-  - ~~需 `TKVar` 到 typeinference2~~：✅ 变体已定义
-  - ❌ unify/mygo/utils/infer 中均无 `case TKVar` match arm（需补全 unify/applySubst/occursIn/monoEqual/monoString）
+  - ~~需 `TKVar` 到 typeinference2~~：✅ 已完成（包含合一、替换、occurs 检查、相等性比较、自由变量收集和字符串化）
   - ❌ 需 `genHKTDecls` 等效逻辑
   - ❌ 需 HKT 类型参数检测和生成
   - Parser2 的 `typeParam()` 函数会将 HKT 参数保存为字符串形式（如 `C[A]`），这保留了 kind 信息
