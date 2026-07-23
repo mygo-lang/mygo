@@ -185,7 +185,10 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], sourceTarget: ast2.E
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.Expr.UnitExpr() })
     switch current.Pattern
       case WildcardPattern => translateSwitchCaseBody(current.Body, ctx, expected, temp)
-      case TuplePattern(_) => translateSwitchCaseBody(current.Body, ctx, expected, temp)
+      case TuplePattern(items) =>
+        let child = Ref.new(ctxChild(ctx))
+        bindTuplePattern(child, items, temp, 0)
+        translateSwitchCaseBody(current.Body, child, expected, temp)
       case LiteralPattern(kind, literal) =>
         let body = translateSwitchCaseBody(current.Body, ctx, expected, temp)
         let rest = translateSwitchBranches(sliceDrop(cases, 1), sourceTarget, target, temp, ctx, expected)
