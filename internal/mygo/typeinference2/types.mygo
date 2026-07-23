@@ -119,7 +119,12 @@ end
 # This is a convenience wrapper around InferPackage for single-file packages.
 func InferFile(file: ast2.File) -> Result[PackageInfo, String]
   let env = predeclareFunctions(file.Decls, initialEnv())
-  inferDecls(file.Decls, env, [], NewInferState())
+  let goPkgImports = collectGoPackageImports(file.Decls)
+  let envWithGoPkgs = seedGoPackageEnv(goPkgImports, env)
+  switch inferDecls(file.Decls, envWithGoPkgs, [], NewInferState())
+    case Ok(info) => Ok(PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: goPkgImports })
+    case Err(msg) => Err(msg)
+  end
 end
 
 # InferPackage runs HM type inference across all files in a package.
