@@ -213,8 +213,10 @@ func translateSwitchSubject(target: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExp
     case CallExpr(fn, typeArgs, args) =>
       switch ffiResultSignature(fn, ctx)
         case Some(sig) =>
-          let valueType = sig.Results.Get(0).UnwrapOr("any")
-          translateFFIResultCall(fn, typeArgs, args, ctx, "Result[" + valueType + ", error]", sig)
+          let valueType = sig.Results.Get(0).UnwrapOr("")
+          if valueType == "" then Err("Go FFI function has no value return type") else
+            translateFFIResultCall(fn, typeArgs, args, ctx, "Result[" + valueType + ", error]", sig)
+          end
         case None => translateExprAst(target, ctx)
       end
     case _ => translateExprAst(target, ctx)
@@ -323,7 +325,9 @@ func switchTargetGoType(target: ast2.Expr, ctx: Ref[egCtx]) -> String
     case IdentExpr(name) => ctxGetLocal(ctx, name).UnwrapOr("any")
     case _ =>
       switch ffiResultSignature(target, ctx)
-        case Some(sig) => "Result[" + sig.Results.Get(0).UnwrapOr("any") + ", error]"
+        case Some(sig) =>
+          let valueType = sig.Results.Get(0).UnwrapOr("")
+          "Result[" + valueType + ", error]"
         case None => "any"
       end
   end
