@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"strconv"
 	"strings"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
@@ -229,6 +230,46 @@ func (g *gen) funcTypeArgExprsFromExpected(fn *FuncDecl, expected string, ctx *e
 	return out
 }
 
+// funcTypeArgExprsFromArgs infers a generic function's type arguments from
+// its value arguments.  This is needed when the result type does not carry
+// enough information (for example, sliceDrop(pairs, 1)): the element type of
+// pairs may be a tuple, which lowers to an anonymous Go struct.
+func (g *gen) funcTypeArgExprsFromArgs(fn *FuncDecl, args []Expr, ctx *egCtx) []ast.Expr {
+	if fn == nil || len(fn.TypeParams) == 0 {
+		return nil
+	}
+	subst := map[string]string{}
+	typeParams := typeParamSet(fn.TypeParams)
+	for i, arg := range args {
+		if i >= len(fn.Params) {
+			break
+		}
+		argType := g.inferredType(arg)
+		if argType == "" || isUnresolvedGoTypeParam(argType) || containsGeneratedTypeVar(argType) {
+			argType = g.goTypeFromExpr(arg, ctx)
+		}
+		if argType == "" || !inferTypeSubst(fn.Params[i].Type, argType, typeParams, subst) {
+			continue
+		}
+	}
+	out := make([]ast.Expr, 0, len(fn.TypeParams))
+	for _, tp := range fn.TypeParams {
+		typ := strings.TrimSpace(subst[tp])
+		if typ == "" || containsGeneratedTypeVar(typ) {
+			return nil
+		}
+		if expr, ok := g.typeParamTypeArgExpr(typ, ctx); ok {
+			out = append(out, expr)
+			continue
+		}
+		if isUnresolvedGoTypeParam(typ) {
+			return nil
+		}
+		out = append(out, g.goTypeExprFromString(typ))
+	}
+	return out
+}
+
 func (g *gen) typeParamTypeArgExpr(typ string, ctx *egCtx) (ast.Expr, bool) {
 	if ctx == nil {
 		return nil, false
@@ -432,7 +473,14 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			retType = expected
 		}
 		if len(typeArgExprs) == 0 && len(n.TypeArgs) == 0 {
-			typeArgExprs = g.funcTypeArgExprsFromExpected(fnDecl, retType, ctx)
+			// Arguments carry the most precise instantiation information. In
+			// particular, a tuple argument is lowered to an anonymous struct;
+			// deriving from an expected result type can degrade that argument to
+			// any before its element type reaches the generic call.
+			typeArgExprs = g.funcTypeArgExprsFromArgs(fnDecl, n.Args, ctx)
+			if len(typeArgExprs) == 0 {
+				typeArgExprs = g.funcTypeArgExprsFromExpected(fnDecl, retType, ctx)
+			}
 		}
 		// If type args are provided or inferred for a generic function, add them.
 		if len(typeArgExprs) == 1 {
@@ -996,6 +1044,12 @@ func mygoSigTypeToGo(typ string) string {
 		if len(args) == 1 {
 			return "map[" + mygoSigTypeToGo(args[0]) + "]struct{}"
 		}
+	case "Tuple":
+		fields := make([]string, len(args))
+		for i, arg := range args {
+			fields[i] = "F" + strconv.Itoa(i) + " " + mygoSigTypeToGo(arg)
+		}
+		return "struct { " + strings.Join(fields, "; ") + " }"
 	}
 	if len(args) > 0 {
 		goArgs := make([]string, len(args))
