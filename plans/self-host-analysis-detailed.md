@@ -63,8 +63,8 @@
 
 | # | 特性 | 旧版状态 | 新版状态 | 影响 |
 |---|------|---------|---------|------|
-| 1 | **类型类约束（`using`）** | ✅ 完整 | ✅ 约束已贯通推理与代码生成 | 类型类方法调用、impl dispatch |
-| 2 | **高阶类型（HKT）** | ✅ 完整 | ⚠️ 类型变量及辅助声明已完成，完整 HKT 类型推理仍未实现 | 泛型接口（如 `IEnumerable[C[A], A]`）|
+| 1 | **类型类约束（`using`）** | ✅ 完整 | ⚠️ 约束已解析并传播，完整求解、谓词泛化和 impl dispatch 仍未完成 | 类型类方法调用、impl dispatch |
+| 2 | **高阶类型（HKT）** | ✅ 完整 | ⚠️ `TKVar`、类型参数编码及辅助声明已完成，完整 HKT 类型推理仍未实现 | 泛型接口（如 `IEnumerable[C[A], A]`）|
 | 3 | **Map/Set 字面量** | ✅ 完整 | ✅ 完整 | `{"a": 1}` 和 `{"a"}` 解析和生成 — 已实现 |
 | 4 | **`embed` 声明** | ✅ 完整 | ✅ 完整 | ast2/parser2/codegen2 已支持结构体嵌入字段 |
 | 5 | **位置信息** | ✅ 每节点有 Line/Column/SourceFile | ⚠️ 有意省略 | 错误消息无行号 |
@@ -76,7 +76,7 @@
 | 11 | **Go 包导入类型解析** | ✅ `TGoPackage` + `loadMyGoPackageInfo` | ✅ `TGoPackage` 枚举变体 + `PackageInfo.GoPackages` | `TGoPackage` 注册到 env，codegen 可获取 |
 | 12 | **`TypedInfo`** | ✅ 表达式→类型映射 | ⚠️ `PackageInfo`（仅变量映射） | 代码生成无法查询表达式类型 |
 | 13 | **`Instantiate`/`Generalize`** | ✅ 完整 | ✅ 基础实现 | `instantiate` 在查找点替换量化变量，`generalize` 计算环境差集；尚未覆盖谓词量化 |
-| 14 | **`Predicate` + `QualifiedType`** | ✅ 完整 | ✅ 已参与推理与代码生成 | 谓词随 `InferResult` 传递，实例化时替换类型变量，调用时合并并供字典注入 |
+| 14 | **`Predicate` + `QualifiedType`** | ✅ 完整 | ⚠️ 已参与推理结果传播，完整求解和谓词泛化仍未完成 | 实例化时替换类型变量，调用时合并并供字典注入 |
 | 15 | **`TKVar`（高阶类型变量）** | ✅ 完整 | ✅ 类型层已完成 | 已支持类型推理基础操作；HKT 完整推理仍未实现 |
 | 16 | **`freeVarsMT`/`freeVarsScheme`** | ✅ 完整 | ✅ 完整 | 已用于自由变量收集；完整多态泛化仍未完成 |
 | 17 | **测试包 dot-import** | ✅ 自动注入 | ❌ 不支持 | 测试文件无法引用主包符号 |
@@ -118,7 +118,7 @@
 - **MapLitExpr/SetLitExpr**：✅ 新增 `MapLitExpr(Slice[(Expr, Expr)])` 和 `SetLitExpr(Slice[Expr])`
 - **GoOperand/GoTypeOperand**：✅ 新增结构体用于 InlineGo
 - **StructLitField/StructLitHead**：✅ 新增结构体
-- **缺少**：`TupleLitExpr`、`UnitLitExpr`、`BindPattern`
+- **设计差异**：`TupleLitExpr`、`UnitLitExpr` 未单独建模；`BindPattern` 已支持
 
 ### 关键差异总结
 
@@ -127,8 +127,8 @@
 | 语言 | Go | MyGO |
 | 位置信息 | 每节点携带 | 未携带 |
 | 类型系统 | interface + struct | enum + struct |
-| 类型类约束 | `Constraint` + `FuncDecl.Using` | ⚠️ 已解析并存储，未用于推理/代码生成 |
-| Pattern 匹配 | `Pattern`/`BindPattern`（含 `TuplePattern`） | ⚠️ `VariantPattern`/`TuplePattern`/`WildcardPattern`/`LiteralPattern`，仍缺 `BindPattern` |
+| 类型类约束 | `Constraint` + `FuncDecl.Using` | ⚠️ 已解析、参与谓词传播；完整求解和 impl dispatch 仍未完成 |
+| Pattern 匹配 | `Pattern`/`BindPattern`（含 `TuplePattern`） | ✅ `VariantPattern`/`TuplePattern`/`WildcardPattern`/`LiteralPattern`/`BindPattern` |
 | 复合字面量 | `SliceLitExpr`/`MapLitExpr`/`SetLitExpr` | ✅ 已添加 `MapLitExpr`/`SetLitExpr` |
 | `CallExpr.TypeArgs` | ✅ 泛型调用类型参数 | ✅ 完整 |
 | `TupleLitExpr` | ✅ 括号元组 | ❌ 无此变体，使用 `TupleExpr` |
@@ -178,10 +178,10 @@
 | 扩展性 | 改语法需修改 .y 文件并重新生成 | 改语法即改 MyGO 函数 |
 | AST 输出 | 直接产生 `ast.*` | 直接产生 `ast2.*` |
 | `using` 约束 | ✅ 完整解析 | ✅ 完整解析（`usingClause()` / `constraint()`） |
-| `embed` 声明 | ✅ 内嵌为 struct 字段 | ❌ 未实现 |
+| `embed` 声明 | ✅ 内嵌为 struct 字段 | ✅ 已实现，解析为 `Field{Name: "embed"}` |
 | Map/Set 字面量 | ✅ `MapLitExpr`/`SetLitExpr` | ✅ `mapLiteral()` / `setLiteral()` |
 | TuplePattern | ✅ 完整 `TuplePattern` | ✅ 完整 |
-| `BindPattern` | ✅ `BindName`/`BindTuple` | ❌ 未实现 |
+| `BindPattern` | ✅ `BindName`/`BindTuple` | ✅ 已实现 |
 | `CallExpr.TypeArgs` | ✅ 泛型调用类型参数 | ✅ 完整 |
 
 ---
@@ -242,7 +242,7 @@
 |---------|------|
 | 单文件 HM 推理 | ✅ |
 | 多文件包级推理 | ✅ `InferPackage` |
-| let 绑定泛化 | ⚠️ 有简单泛化，但 `Scheme.Bound` 未真正使用 |
+| let 绑定泛化 | ⚠️ 基础 `generalize`/`instantiate` 已使用 `Scheme.Bound`，但谓词泛化仍未完成 |
 | 枚举变体构造器类型 | ✅ |
 | 模式匹配类型检查 | ✅ |
 | 结构体字面量类型推断 | ✅ |
@@ -251,21 +251,21 @@
 | TGoPackage unify/subst | ✅ unified、substituted、used in env |
 | 自由变量计算 | ✅ `freeVarsMT` / `freeVarsScheme` |
 | 实例化/泛化（基础） | ✅ `instantiate` / `generalize`；谓词量化仍未完成 |
-| 类型类谓词 | ⚠️ `Predicate` 已定义且用于解析约束，未参与推理 |
+| 类型类谓词 | ⚠️ `Predicate` 已定义并在推理结果中传播，但尚无完整约束求解和谓词泛化 |
 | TKVar | ✅ 已覆盖合一、替换、occurs 检查、相等性比较、自由变量收集和字符串化 |
 
 ### 关键差异总结
 
 | 特性 | typeinference (旧, ~4500 行) | typeinference2 (新, ~1260 行) |
 |------|-----------------------------|-------------------------------|
-| 类型类 | ✅ 完整支持（`using` 约束） | ⚠️ `Predicate` 已定义且解析，未参与推理 |
-| HKT | ✅ 支持高阶类型（`TKVar`） | ⚠️ `TKVar` 类型操作已实现，但 HKT 声明生成未实现 |
+| 类型类 | ✅ 完整支持（`using` 约束） | ⚠️ 约束已解析并传播，完整求解器、谓词泛化和 impl dispatch 仍未完成 |
+| HKT | ✅ 支持高阶类型（`TKVar`） | ⚠️ `TKVar` 操作、类型参数编码和辅助声明已实现，但完整 HKT 推理未实现 |
 | Go 互操作 | ✅ 支持 Go 类型导入（`TGoPackage`） | ✅ `TGoPackage` 已实现并用于 env |
 | 包间推理 | ✅ `InferPackage` 多文件 | ✅ `InferPackage` 多文件 |
 | 多态泛化 | ✅ `Generalize` + `Instantiate` + `freeVarsScheme` | ✅ 基础 `generalize` + `instantiate` |
 | 约束求解 | ✅ `solver.go` | ❌ 无 |
 | 类型映射 | `TypedInfo`（表达式→类型映射） | `PackageInfo`（仅变量映射） |
-| 谓词系统 | ✅ `Predicate` + `QualifiedType` | ✅ 已定义并用于约束转换 |
+| 谓词系统 | ✅ `Predicate` + `QualifiedType` | ⚠️ 已定义、实例化并传播，但缺少完整求解和谓词泛化 |
 | 多态自由变量 | ✅ `freeVarsMT`/`freeVarsQual` | ✅ `freeVarsMT`/`freeVarsScheme` |
 | 类型变量检测 | ✅ `ContainsTypeVariable` | ❌ 无 |
 | 测试包 dot-import | ✅ 自动注入 | ❌ 不支持 |
@@ -398,9 +398,9 @@ graph LR
   - ~~需新增 `Constraint` 到 ast2~~：✅ 已完成
   - ~~需 `FuncDecl.Using []Constraint`~~：✅ 已完成
   - ~~需 `QualifiedType`、`Predicate` 到 typeinference2~~：✅ 已完成定义
-  - ~~需 `Instantiate`/`Generalize`~~：✅ 已支持限定类型实例化；谓词随推理结果传递并在调用点合并
+  - ~~需 `Instantiate`/`Generalize`~~：⚠️ 基础实例化/泛化已完成；谓词量化和约束求解仍未完成
   - ~~需 `freeVarsMT`/`freeVarsScheme`~~：✅ 已完成
-  - ✅ 代码生成侧 `seedCallDictionaries`/`seedCallRequirements`/`seedPackageDictionaries` 已实现字典参数注入，推理层现已传递谓词
+  - ⚠️ 代码生成侧字典参数注入已实现；推理层可传播谓词，但完整求解仍未完成
   - 影响：预编译器中大量使用类型类（如 `Show`、`Eq`、`Enumerable`）
 
 - **高阶类型（HKT）**：
@@ -425,4 +425,4 @@ graph LR
 - ~~**`CallExpr.TypeArgs`**~~：✅ ast2、parser2、typeinference2、codegen2 已支持泛型调用类型参数
 - **`embed` 声明**：✅ parser2 解析为 `Field{Name: "embed"}`，codegen2 生成 Go 匿名嵌入字段
 - **`TupleLitExpr`**：ast2 无 `TupleLitExpr` 变体，parser2 的 `tupleOrParenExpr()` 生成 `TupleExpr`
-- **`BindPattern`**：模式匹配已支持元组模式，仍不支持绑定模式
+- **`BindPattern`**：✅ 已支持解析、类型检查和代码生成
