@@ -245,10 +245,10 @@ func (g *gen) funcTypeArgExprsFromArgs(fn *FuncDecl, args []Expr, ctx *egCtx) []
 			break
 		}
 		argType := g.inferredType(arg)
-		if argType == "" || isUnresolvedGoTypeParam(argType) || containsGeneratedTypeVar(argType) {
+		if argType == "" || isUnresolvedAnyType(argType) || isUnresolvedGoTypeParam(argType) || containsGeneratedTypeVar(argType) {
 			argType = g.goTypeFromExpr(arg, ctx)
 		}
-		if argType == "" || !inferTypeSubst(fn.Params[i].Type, argType, typeParams, subst) {
+		if argType == "" || isUnresolvedAnyType(argType) || !inferTypeSubst(fn.Params[i].Type, argType, typeParams, subst) {
 			continue
 		}
 	}
@@ -268,6 +268,14 @@ func (g *gen) funcTypeArgExprsFromArgs(fn *FuncDecl, args []Expr, ctx *egCtx) []
 		out = append(out, g.goTypeExprFromString(typ))
 	}
 	return out
+}
+
+// Empty collection literals can only be rendered as any until their expected
+// type is available. Do not let that placeholder determine a generic call's
+// type argument; the result type may carry the required information.
+func isUnresolvedAnyType(typ string) bool {
+	typ = strings.TrimSpace(typ)
+	return typ == "any" || strings.Contains(typ, "[any]") || strings.Contains(typ, ",any]")
 }
 
 func (g *gen) typeParamTypeArgExpr(typ string, ctx *egCtx) (ast.Expr, bool) {
