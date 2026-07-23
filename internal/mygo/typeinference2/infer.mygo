@@ -250,11 +250,12 @@ func envWithPattern(env: Slice[EnvEntry], pattern: ast2.Pattern, targetType: Mon
       switch envGet(env, name)
         case None => Err("unknown variant " + name)
         case Some(scheme) =>
-          switch scheme.Body
+          let variantType = instantiate(scheme, NewInferState())
+          switch variantType
             case TFunc(fields, ret) => envWithPatternBindings(env, args, fields, targetType, ret.value())
             case TCon(_, _) =>
               if args.Len() == 0 then
-                switch unify(targetType, scheme.Body, [])
+                switch unify(targetType, variantType, [])
                   case Ok(_) => Ok(env)
                   case Err(msg) => Err("pattern does not match switch target: " + msg)
                 end
@@ -612,7 +613,7 @@ func inferField(base: ast2.Expr, field: String, env: Slice[EnvEntry], state: Inf
       switch applySubst(v.Subst, v.Type)
         case TCon(typeName, _) =>
           switch envGetField(env, typeName, field)
-            case Some(s) => Ok(InferResult { Type: s.Body, Subst: v.Subst, State: v.State })
+            case Some(s) => Ok(InferResult { Type: instantiate(s, v.State), Subst: v.Subst, State: v.State })
             case None => Err("unknown field " + typeName + "." + field)
           end
         case _ => Err("field access on non-struct type")

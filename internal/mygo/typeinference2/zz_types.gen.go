@@ -152,99 +152,99 @@ func NewInferState() InferState {
 	return InferState{FreshVarID: 1}
 }
 func InferFile(file ast2.File) Result[PackageInfo, string] {
-	env_443 := predeclareFunctions(file.Decls, initialEnv())
-	return inferDecls(file.Decls, env_443, []FieldEntry{}, NewInferState())
+	env_444 := predeclareFunctions(file.Decls, initialEnv())
+	return inferDecls(file.Decls, env_444, []FieldEntry{}, NewInferState())
 }
 func InferPackage(files []PkgDeclSource) Result[PackageInfo, string] {
-	allDecls_444 := flattenPkgDecls(files, 0, []ast2.Decl([]ast2.Decl{}))
-	predeclEnv_445 := predeclareAllFunctions(allDecls_444, initialEnv())
-	goPkgImports_446 := collectGoPackageImports(allDecls_444)
-	envWithGoPkgs_447 := seedGoPackageEnv(goPkgImports_446, predeclEnv_445)
-	result_448 := inferDecls(allDecls_444, envWithGoPkgs_447, []FieldEntry{}, NewInferState())
-	var expr_451 Result[PackageInfo, string]
-	if v_188, ok := result_448.(ResultOk[PackageInfo, string]); ok {
-		var expr_450 Result[PackageInfo, string]
-		expr_450 = Ok[PackageInfo, string](PackageInfo{Env: v_188.F0.Env, Fields: v_188.F0.Fields, GoPackages: goPkgImports_446})
-		expr_451 = expr_450
+	allDecls_445 := flattenPkgDecls(files, 0, []ast2.Decl([]ast2.Decl{}))
+	predeclEnv_446 := predeclareAllFunctions(allDecls_445, initialEnv())
+	goPkgImports_447 := collectGoPackageImports(allDecls_445)
+	envWithGoPkgs_448 := seedGoPackageEnv(goPkgImports_447, predeclEnv_446)
+	result_449 := inferDecls(allDecls_445, envWithGoPkgs_448, []FieldEntry{}, NewInferState())
+	var expr_452 Result[PackageInfo, string]
+	if v_188, ok := result_449.(ResultOk[PackageInfo, string]); ok {
+		var expr_451 Result[PackageInfo, string]
+		expr_451 = Ok[PackageInfo, string](PackageInfo{Env: v_188.F0.Env, Fields: v_188.F0.Fields, GoPackages: goPkgImports_447})
+		expr_452 = expr_451
 	} else {
-		if v_187, ok := result_448.(ResultErr[PackageInfo, string]); ok {
-			var expr_449 Result[PackageInfo, string]
-			expr_449 = Err[PackageInfo, string](v_187.F0)
-			expr_451 = expr_449
+		if v_187, ok := result_449.(ResultErr[PackageInfo, string]); ok {
+			var expr_450 Result[PackageInfo, string]
+			expr_450 = Err[PackageInfo, string](v_187.F0)
+			expr_452 = expr_450
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_451
+	return expr_452
 }
 func collectGoPackageImports(decls []ast2.Decl) []GoPackageEntry {
 	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(decls, []GoPackageEntry([]GoPackageEntry{}), func(out []GoPackageEntry, d ast2.Decl) []GoPackageEntry {
-		var expr_459 []GoPackageEntry
+		var expr_460 []GoPackageEntry
 		if v_189, ok := d.(ast2.DeclImportDecl); ok {
+			var expr_459 []GoPackageEntry
 			var expr_458 []GoPackageEntry
-			var expr_457 []GoPackageEntry
 			if strings.HasPrefix(v_189.F1, "go:") {
-				var expr_456 []GoPackageEntry
-				cleanPath_453 := strings.TrimPrefix(v_189.F1, "go:")
-				existing_454 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(out, false, func(found bool, e GoPackageEntry) bool {
+				var expr_457 []GoPackageEntry
+				cleanPath_454 := strings.TrimPrefix(v_189.F1, "go:")
+				existing_455 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(out, false, func(found bool, e GoPackageEntry) bool {
 					return found || e.Alias == v_189.F0
 				})
-				var expr_455 []GoPackageEntry
-				if existing_454 {
-					expr_455 = out
+				var expr_456 []GoPackageEntry
+				if existing_455 {
+					expr_456 = out
 				} else {
-					expr_455 = MygoIN5SliceM6Append(out, GoPackageEntry{Alias: v_189.F0, Path: cleanPath_453})
+					expr_456 = MygoIN5SliceM6Append(out, GoPackageEntry{Alias: v_189.F0, Path: cleanPath_454})
 				}
-				expr_456 = expr_455
 				expr_457 = expr_456
+				expr_458 = expr_457
 			} else {
-				expr_457 = out
+				expr_458 = out
 			}
-			expr_458 = expr_457
 			expr_459 = expr_458
+			expr_460 = expr_459
 		} else {
 			{
-				var expr_452 []GoPackageEntry
-				expr_452 = out
-				expr_459 = expr_452
+				var expr_453 []GoPackageEntry
+				expr_453 = out
+				expr_460 = expr_453
 			}
 		}
-		return expr_459
+		return expr_460
 	})
 }
 func seedGoPackageEnv(goPkgs []GoPackageEntry, env []EnvEntry) []EnvEntry {
-	var expr_462 []EnvEntry
+	var expr_463 []EnvEntry
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(goPkgs) == 0 {
-		expr_462 = env
+		expr_463 = env
 	} else {
-		var expr_461 []EnvEntry
-		pkg_460 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(goPkgs, 0), GoPackageEntry{Alias: "", Path: ""})
-		expr_461 = seedGoPackageEnv(sliceDrop[GoPackageEntry](goPkgs, 1), envPut(env, pkg_460.Alias, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: MonoTypeTGoPackageCtor(pkg_460.Alias)}))
-		expr_462 = expr_461
+		var expr_462 []EnvEntry
+		pkg_461 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(goPkgs, 0), GoPackageEntry{Alias: "", Path: ""})
+		expr_462 = seedGoPackageEnv(sliceDrop[GoPackageEntry](goPkgs, 1), envPut(env, pkg_461.Alias, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: MonoTypeTGoPackageCtor(pkg_461.Alias)}))
+		expr_463 = expr_462
 	}
-	return expr_462
+	return expr_463
 }
 func flattenPkgDecls(files []PkgDeclSource, index int, out []ast2.Decl) []ast2.Decl {
-	var expr_465 []ast2.Decl
+	var expr_466 []ast2.Decl
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(files) {
-		expr_465 = out
+		expr_466 = out
 	} else {
-		var expr_464 []ast2.Decl
-		f_463 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), PkgDeclSource{Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
-		expr_464 = flattenPkgDecls(files, index+1, appendDecls(out, f_463.Decls))
-		expr_465 = expr_464
+		var expr_465 []ast2.Decl
+		f_464 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), PkgDeclSource{Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
+		expr_465 = flattenPkgDecls(files, index+1, appendDecls(out, f_464.Decls))
+		expr_466 = expr_465
 	}
-	return expr_465
+	return expr_466
 }
 func predeclareAllFunctions(decls []ast2.Decl, env []EnvEntry) []EnvEntry {
 	return predeclareFunctions(decls, env)
 }
 func appendDecls(acc []ast2.Decl, items []ast2.Decl) []ast2.Decl {
-	var expr_466 []ast2.Decl
+	var expr_467 []ast2.Decl
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_466 = acc
+		expr_467 = acc
 	} else {
-		expr_466 = appendDecls(MygoIN5SliceM6Append(acc, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.DeclImportDeclCtor("", ""))), sliceDrop[ast2.Decl](items, 1))
+		expr_467 = appendDecls(MygoIN5SliceM6Append(acc, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.DeclImportDeclCtor("", ""))), sliceDrop[ast2.Decl](items, 1))
 	}
-	return expr_466
+	return expr_467
 }
