@@ -1,6 +1,8 @@
 package codegen
 
 import (
+	"go/ast"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -140,6 +142,43 @@ end
 	}
 	if !strings.Contains(generated, "return Zero[A]()") {
 		t.Fatalf("generated code should infer Zero type arg from generic return type:\n%s", generated)
+	}
+}
+
+func TestGenericCallInfersTupleTypeArgumentFromArgument(t *testing.T) {
+	pairs := &IdentExpr{Name: "pairs"}
+	fn := &FuncDecl{
+		Name:       "sliceDrop",
+		TypeParams: []string{"A"},
+		Params: []Param{{Name: "items", Type: &NamedType{Name: "Slice", Args: []TypeExpr{
+			&NamedType{Name: "A"},
+		}}}},
+	}
+	g := &gen{typedInfo: &typeinference.TypedInfo{ExprTypes: map[Expr]typeinference.MonoType{
+		pairs: typeinference.TCon{Name: "Slice", Args: []typeinference.MonoType{
+			typeinference.TCon{Name: "Tuple", Args: []typeinference.MonoType{
+				typeinference.TCon{Name: "ast2.Expr"},
+				typeinference.TCon{Name: "ast2.Expr"},
+			}},
+		}},
+	}}}
+
+	typeArgs := g.funcTypeArgExprsFromArgs(fn, []Expr{pairs}, &egCtx{})
+	if len(typeArgs) != 1 {
+		t.Fatalf("got %d inferred type arguments, want 1", len(typeArgs))
+	}
+	tuple, ok := typeArgs[0].(*ast.StructType)
+	if !ok || tuple.Fields == nil || len(tuple.Fields.List) != 2 {
+		t.Fatalf("tuple type argument = %T, want two-field anonymous struct", typeArgs[0])
+	}
+	for i, field := range tuple.Fields.List {
+		if len(field.Names) != 1 || field.Names[0].Name != "F"+strconv.Itoa(i) {
+			t.Fatalf("tuple field %d = %#v, want F%d", i, field.Names, i)
+		}
+		selector, ok := field.Type.(*ast.SelectorExpr)
+		if !ok || selector.Sel.Name != "Expr" {
+			t.Fatalf("tuple field %d type = %T, want ast2.Expr", i, field.Type)
+		}
 	}
 }
 
