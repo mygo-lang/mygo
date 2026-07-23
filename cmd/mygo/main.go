@@ -17,12 +17,22 @@ func main() {
 	}
 
 	noPrelude := false
+	bootstrap := false
 	args := os.Args[1:]
-	// Parse --no-prelude flag before the subcommand.
-	if len(args) > 0 && args[0] == "--no-prelude" {
-		noPrelude = true
-		args = args[1:]
+	for len(args) > 0 {
+		switch args[0] {
+		case "--no-prelude":
+			noPrelude = true
+			args = args[1:]
+		case "--bootstrap":
+			bootstrap = true
+			args = args[1:]
+		default:
+			goto parsedFlags
+		}
 	}
+
+parsedFlags:
 	if len(args) < 1 {
 		usage()
 		os.Exit(2)
@@ -34,7 +44,13 @@ func main() {
 		if len(args) > 1 {
 			root = args[1]
 		}
-		if noPrelude {
+		if bootstrap {
+			written, err := compiler.SyncBootstrap(root)
+			must(err)
+			for _, path := range written {
+				fmt.Println(displayPath(path))
+			}
+		} else if noPrelude {
 			written, err := compiler.SyncNoPrelude(root)
 			must(err)
 			for _, path := range written {
@@ -60,7 +76,9 @@ func main() {
 		}
 		var written []string
 		var err error
-		if noPrelude {
+		if bootstrap {
+			written, err = compiler.SyncBootstrap(root)
+		} else if noPrelude {
 			written, err = compiler.SyncNoPrelude(root)
 		} else {
 			written, err = compiler.Sync(root)
@@ -80,8 +98,9 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: mygo [--no-prelude] <sync|build> [path|go build args...]")
+	fmt.Fprintln(os.Stderr, "usage: mygo [--bootstrap] [--no-prelude] <sync|build> [path|go build args...]")
 	fmt.Fprintln(os.Stderr, "  --no-prelude  disable prelude auto-import (use when compiling prelude itself)")
+	fmt.Fprintln(os.Stderr, "  --bootstrap   use parser2, typeinference2, and codegen2 (currently no MyGO package import resolution)")
 }
 
 func must(err error) {

@@ -1,0 +1,44 @@
+package compiler
+
+import (
+	"go/parser"
+	"go/token"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestCompileDirBootstrapUsesSelfHostedPipeline(t *testing.T) {
+	dir := t.TempDir()
+	source := `package sample
+
+enum Maybe[A]
+  Some(A)
+  None
+end
+
+func unwrap(value: Maybe[Int]) -> Int
+  switch value
+    case Some(item) => item
+    case None => 0
+  end
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDirBootstrap(dir)
+	if err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	if len(written) != 1 {
+		t.Fatalf("CompileDirBootstrap() wrote %d files, want 1", len(written))
+	}
+	generated, err := os.ReadFile(written[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), written[0], generated, parser.AllErrors); err != nil {
+		t.Fatalf("bootstrap output is invalid Go: %v\n%s", err, generated)
+	}
+}
