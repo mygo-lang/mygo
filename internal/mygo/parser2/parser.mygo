@@ -160,7 +160,15 @@ func funcSig() -> ps.Parser[ast2.FuncSig]
 end
 
 func fieldDecl() -> ps.Parser[ast2.Field]
-  ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Field]
+  ps.PChoice([
+    ps.PAttempt(ps.PBind(kw("embed"), func(_: String) -> ps.Parser[ast2.Field]
+      ps.PBind(typeExpr(), func(typ: ast2.TypeExpr) -> ps.Parser[ast2.Field]
+        ps.PMap(ps.POptional(stringLiteral()), func(tag: Option[String]) -> ast2.Field
+          ast2.Field { Name: "embed", Type: typ, Tag: tag }
+        end)
+      end)
+    end)),
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Field]
     ps.PBind(sym(":"), func(_: String) -> ps.Parser[ast2.Field]
       ps.PBind(typeExpr(), func(typ: ast2.TypeExpr) -> ps.Parser[ast2.Field]
         ps.PMap(ps.POptional(stringLiteral()), func(tag: Option[String]) -> ast2.Field
@@ -168,7 +176,8 @@ func fieldDecl() -> ps.Parser[ast2.Field]
         end)
       end)
     end)
-  end)
+    end)
+  ])
 end
 
 func variantDecl() -> ps.Parser[ast2.Variant]

@@ -12,88 +12,88 @@ import (
 )
 
 func funcSignature(prefix string, tps []string, params []ast2.Param, ret Option[ast2.TypeExpr], outer map[string]struct{}) string {
-	var allTypes_169 map[string]struct{} = outer
-	allTypes_169 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(tps, allTypes_169, func(acc map[string]struct{}, tp string) map[string]struct{} {
+	var allTypes_170 map[string]struct{} = outer
+	allTypes_170 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(tps, allTypes_170, func(acc map[string]struct{}, tp string) map[string]struct{} {
 		return MygoIN3SetM3Add(acc, tp)
 	})
-	ps_170 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(params, func(p ast2.Param) string {
-		return sanitizeIdent(p.Name) + " " + goType(p.Type, allTypes_169)
+	ps_171 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(params, func(p ast2.Param) string {
+		return sanitizeIdent(p.Name) + " " + goType(p.Type, allTypes_170)
 	})
-	return prefix + typeParamDecl(tps) + "(" + joinStrings(ps_170, ", ") + ")" + returnTypeString(ret, allTypes_169)
+	return prefix + typeParamDecl(tps) + "(" + joinStrings(ps_171, ", ") + ")" + returnTypeString(ret, allTypes_170)
 }
 func returnTypeString(ret Option[ast2.TypeExpr], tps map[string]struct{}) string {
-	var expr_175 string
+	var expr_176 string
 	if v_53, ok := ret.(OptionSome[ast2.TypeExpr]); ok {
+		var expr_175 string
+		r_173 := goReturnType(v_53.F0, tps)
 		var expr_174 string
-		r_172 := goReturnType(v_53.F0, tps)
-		var expr_173 string
-		if r_172 == "" {
-			expr_173 = ""
+		if r_173 == "" {
+			expr_174 = ""
 		} else {
-			expr_173 = " " + r_172
+			expr_174 = " " + r_173
 		}
-		expr_174 = expr_173
 		expr_175 = expr_174
+		expr_176 = expr_175
 	} else {
 		if _, ok := ret.(OptionNone[ast2.TypeExpr]); ok {
-			var expr_171 string
-			expr_171 = ""
-			expr_175 = expr_171
+			var expr_172 string
+			expr_172 = ""
+			expr_176 = expr_172
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_175
+	return expr_176
 }
 func typeParamDecl(tps []string) string {
-	var expr_178 string
+	var expr_179 string
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tps) == 0 {
-		expr_178 = ""
+		expr_179 = ""
 	} else {
-		var expr_177 string
-		parts_176 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(tps, func(tp string) string {
+		var expr_178 string
+		parts_177 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(tps, func(tp string) string {
 			return hktTypeParamName(tp) + " any"
 		})
-		expr_177 = "[" + joinStrings(parts_176, ", ") + "]"
-		expr_178 = expr_177
+		expr_178 = "[" + joinStrings(parts_177, ", ") + "]"
+		expr_179 = expr_178
 	}
-	return expr_178
+	return expr_179
 }
 func typeParamUse(tps []string) string {
-	var expr_181 string
+	var expr_182 string
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tps) == 0 {
-		expr_181 = ""
+		expr_182 = ""
 	} else {
-		var expr_180 string
-		parts_179 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(tps, func(tp string) string {
+		var expr_181 string
+		parts_180 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(tps, func(tp string) string {
 			return hktTypeParamName(tp)
 		})
-		expr_180 = "[" + joinStrings(parts_179, ", ") + "]"
-		expr_181 = expr_180
+		expr_181 = "[" + joinStrings(parts_180, ", ") + "]"
+		expr_182 = expr_181
 	}
-	return expr_181
+	return expr_182
 }
 func hktTypeParamName(tp string) string {
-	index_182 := strings.Index(tp, "[")
-	var expr_183 string
-	if index_182 < 0 {
-		expr_183 = sanitizeIdent(tp)
+	index_183 := strings.Index(tp, "[")
+	var expr_184 string
+	if index_183 < 0 {
+		expr_184 = sanitizeIdent(tp)
 	} else {
-		expr_183 = sanitizeIdent(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(strings.Split(tp, "["), 0), tp))
+		expr_184 = sanitizeIdent(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(strings.Split(tp, "["), 0), tp))
 	}
-	return expr_183
+	return expr_184
 }
 func sourceToGenName(path string) string {
-	parts_184 := strings.Split(path, "/")
-	var base_185 string = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_184, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_184)-1), path)
-	base_185 = strings.TrimSuffix(base_185, ".mygo")
-	if base_185 == "" {
-		base_185 = "mygo"
+	parts_185 := strings.Split(path, "/")
+	var base_186 string = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_185, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_185)-1), path)
+	base_186 = strings.TrimSuffix(base_186, ".mygo")
+	if base_186 == "" {
+		base_186 = "mygo"
 	}
-	if strings.HasSuffix(base_185, "_test") {
-		return "zz_" + strings.TrimSuffix(base_185, "_test") + ".gen_test.go"
+	if strings.HasSuffix(base_186, "_test") {
+		return "zz_" + strings.TrimSuffix(base_186, "_test") + ".gen_test.go"
 	}
-	return "zz_" + base_185 + ".gen.go"
+	return "zz_" + base_186 + ".gen.go"
 }
 func renderGoFile(parts GoFileParts) Result[string, string] {
 	return func() Result[string, string] {

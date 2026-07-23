@@ -66,7 +66,7 @@
 | 1 | **类型类约束（`using`）** | ✅ 完整 | ✅ 约束已贯通推理与代码生成 | 类型类方法调用、impl dispatch |
 | 2 | **高阶类型（HKT）** | ✅ 完整 | ⚠️ 类型变量及辅助声明已完成，完整 HKT 类型推理仍未实现 | 泛型接口（如 `IEnumerable[C[A], A]`）|
 | 3 | **Map/Set 字面量** | ✅ 完整 | ✅ 完整 | `{"a": 1}` 和 `{"a"}` 解析和生成 — 已实现 |
-| 4 | **`embed` 声明** | ✅ 完整 | ❌ 未实现 | 内嵌外部资源 |
+| 4 | **`embed` 声明** | ✅ 完整 | ✅ 完整 | ast2/parser2/codegen2 已支持结构体嵌入字段 |
 | 5 | **位置信息** | ✅ 每节点有 Line/Column/SourceFile | ⚠️ 有意省略 | 错误消息无行号 |
 | 6 | **`TKVar` 匹配** | ✅ 完整 | ✅ 完整 | 已覆盖 unify、替换、occurs 检查、相等性比较、自由变量收集和字符串化 |
 | 7 | **`TupleLitExpr`（括号元组字面量）** | ✅ 完整 | ⚠️ 使用 `TupleExpr` 表示 | 语义不完全等价，parser2 的 `tupleOrParenExpr()` 生成 `TupleExpr` |
@@ -423,6 +423,6 @@ graph LR
 
 - **测试包 dot-import**：测试文件中自动注入主包符号
 - ~~**`CallExpr.TypeArgs`**~~：✅ ast2、parser2、typeinference2、codegen2 已支持泛型调用类型参数
-- **`embed` 声明**：parser2 支持 `embed` 关键字但未解析为 AST 节点
+- **`embed` 声明**：✅ parser2 解析为 `Field{Name: "embed"}`，codegen2 生成 Go 匿名嵌入字段
 - **`TupleLitExpr`**：ast2 无 `TupleLitExpr` 变体，parser2 的 `tupleOrParenExpr()` 生成 `TupleExpr`
 - **`BindPattern`**：模式匹配已支持元组模式，仍不支持绑定模式

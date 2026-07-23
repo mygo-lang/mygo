@@ -80,7 +80,9 @@ end
 
 func translateStructAstDecl(name: String, tps: Slice[String], fields: Slice[ast2.Field]) -> goast.Decl
   let ctx = newEgCtxWithTypeParams(tps)
-  let names = fields.Map(func(f: ast2.Field) -> String exportName(f.Name) end)
+  let names = fields.Map(func(f: ast2.Field) -> String
+    if f.Name == "embed" then "" else exportName(f.Name) end
+  end)
   let types = fields.Map(func(f: ast2.Field) -> String goType(f.Type, ctx.typeParams) end)
   let tags = fields.Map(func(f: ast2.Field) -> String
     switch f.Tag

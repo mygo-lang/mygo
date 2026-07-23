@@ -62,7 +62,10 @@ func StructDecl(name string, typeParams []string, fields []StructField) ast.Decl
 		if err != nil {
 			panic(fmt.Sprintf("invalid generated field type %q: %v", field.Type, err))
 		}
-		astField := &ast.Field{Names: []*ast.Ident{ast.NewIdent(field.Name)}, Type: typ}
+		astField := &ast.Field{Type: typ}
+		if field.Name != "" {
+			astField.Names = []*ast.Ident{ast.NewIdent(field.Name)}
+		}
 		if field.Tag != "" {
 			astField.Tag = &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(field.Tag)}
 		}
