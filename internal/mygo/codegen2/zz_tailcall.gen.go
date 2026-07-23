@@ -17,7 +17,7 @@ func tailCallAst(expr ast2.Expr, ctx *egCtx) Result[[]goast.Stmt, string] {
 	var expr_193 Result[[]goast.Stmt, string]
 	if v_54, ok := expr.(ast2.ExprCallExpr); ok {
 		var expr_192 Result[[]goast.Stmt, string]
-		parts_187 := tailCallAstParts(v_54.F1, ctx, 0, TailAstParts{Stmts: []goast.Stmt([]goast.Stmt{}), Values: []goast.Expr([]goast.Expr{})})
+		parts_187 := tailCallAstParts(v_54.F2, ctx, 0, TailAstParts{Stmts: []goast.Stmt([]goast.Stmt{}), Values: []goast.Expr([]goast.Expr{})})
 		var expr_191 Result[[]goast.Stmt, string]
 		if v_56, ok := parts_187.(ResultErr[TailAstParts, string]); ok {
 			var expr_190 Result[[]goast.Stmt, string]
@@ -78,7 +78,7 @@ func isTailSelfCall(expr ast2.Expr, ctx *egCtx) bool {
 	var expr_210 bool
 	if v_59, ok := expr.(ast2.ExprCallExpr); ok {
 		var expr_209 bool
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_59.F1) != ctx.tailRecParamCount {
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_59.F2) != ctx.tailRecParamCount {
 			expr_209 = false
 		}
 		var expr_208 bool

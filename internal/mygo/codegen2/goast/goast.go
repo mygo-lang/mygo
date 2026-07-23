@@ -554,6 +554,23 @@ func Call(fun ast.Expr, args []ast.Expr) ast.Expr {
 	return &ast.CallExpr{Fun: fun, Args: args}
 }
 
+// GenericCall applies explicit type arguments before constructing a call.
+func GenericCall(fun ast.Expr, typeArgs []string, args []ast.Expr) ast.Expr {
+	if len(typeArgs) == 0 {
+		return Call(fun, args)
+	}
+	indices := make([]ast.Expr, 0, len(typeArgs))
+	for _, typ := range typeArgs {
+		indices = append(indices, MustTypeExpr(typ))
+	}
+	if len(indices) == 1 {
+		fun = &ast.IndexExpr{X: fun, Index: indices[0]}
+	} else {
+		fun = &ast.IndexListExpr{X: fun, Indices: indices}
+	}
+	return Call(fun, args)
+}
+
 func Unary(op string, x ast.Expr) ast.Expr {
 	return &ast.UnaryExpr{Op: operator(op), X: x}
 }

@@ -734,10 +734,10 @@ func postfixExpr() ps.Parser[ast2.Expr] {
 	}}
 }
 func postfixTail(start ps.State, cur ps.State, acc ast2.Expr) ps.Reply[ast2.Expr] {
-	call_47 := paren[[]ast2.Expr](ps.PSepBy(lazyExpr(), sym(","))).Run(cur)
+	call_47 := callSuffix().Run(cur)
 	var expr_54 ps.Reply[ast2.Expr]
 	if call_47.Ok {
-		expr_54 = postfixTail(start, call_47.State, ast2.ExprCallExprCtor(&acc, call_47.Value))
+		expr_54 = postfixTail(start, call_47.State, ast2.ExprCallExprCtor(&acc, call_47.Value.F0, call_47.Value.F1))
 	} else {
 		var expr_53 ps.Reply[ast2.Expr]
 		fld_48 := ps.PThen(sym("."), identifier()).Run(cur)
@@ -760,6 +760,25 @@ func postfixTail(start ps.State, cur ps.State, acc ast2.Expr) ps.Reply[ast2.Expr
 		expr_54 = expr_53
 	}
 	return expr_54
+}
+func callSuffix() ps.Parser[struct {
+	F0 []ast2.TypeExpr
+	F1 []ast2.Expr
+}] {
+	return ps.PBind(ps.POrElse(typeArgList(), ps.PPure([]ast2.TypeExpr([]ast2.TypeExpr{}))), func(typeArgs []ast2.TypeExpr) ps.Parser[struct {
+		F0 []ast2.TypeExpr
+		F1 []ast2.Expr
+	}] {
+		return ps.PMap(paren[[]ast2.Expr](ps.PSepBy(lazyExpr(), sym(","))), func(args []ast2.Expr) struct {
+			F0 []ast2.TypeExpr
+			F1 []ast2.Expr
+		} {
+			return struct {
+				F0 []ast2.TypeExpr
+				F1 []ast2.Expr
+			}{F0: typeArgs, F1: args}
+		})
+	})
 }
 func structLitFields(head ast2.StructLitHead) ps.Parser[ast2.Expr] {
 	return ps.PBind(sym("{"), func(_ string) ps.Parser[ast2.Expr] {

@@ -133,7 +133,7 @@ func translateExprAstExpected(expr ast2.Expr, ctx *egCtx, expected string) Resul
 													} else {
 														if v_76, ok := expr.(ast2.ExprCallExpr); ok {
 															var expr_235 Result[AstExprResult, string]
-															expr_235 = translateCallAstExpected(*v_76.F0, v_76.F1, ctx, expected)
+															expr_235 = translateCallAstExpected(*v_76.F0, v_76.F1, v_76.F2, ctx, expected)
 															expr_262 = expr_235
 														} else {
 															if v_75, ok := expr.(ast2.ExprStructLitExpr); ok {
@@ -874,10 +874,10 @@ func translateBinaryAstExpected(op string, left ast2.Expr, right ast2.Expr, ctx 
 	}
 	return expr_432
 }
-func translateCallAst(callee ast2.Expr, args []ast2.Expr, ctx *egCtx) Result[AstExprResult, string] {
-	return translateCallAstExpected(callee, args, ctx, "")
+func translateCallAst(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx) Result[AstExprResult, string] {
+	return translateCallAstExpected(callee, typeArgs, args, ctx, "")
 }
-func translateCallAstExpected(callee ast2.Expr, args []ast2.Expr, ctx *egCtx, expected string) Result[AstExprResult, string] {
+func translateCallAstExpected(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx, expected string) Result[AstExprResult, string] {
 	c_433 := translateExprAstExpected(callee, ctx, expected)
 	values_434 := translateAstArgs(args, ctx, 0, []goast.Expr([]goast.Expr{}), []goast.Stmt([]goast.Stmt{}), []string([]string{}))
 	var expr_441 Result[AstExprResult, string]
@@ -897,7 +897,7 @@ func translateCallAstExpected(callee ast2.Expr, args []ast2.Expr, ctx *egCtx, ex
 				if v_155, ok := values_434.(ResultOk[AstArgsResult, string]); ok {
 					var expr_436 Result[AstExprResult, string]
 					injected_435 := dictionaryArgsForCall(callee, ctx, v_155.F0.Exprs)
-					expr_436 = Ok[AstExprResult, string](astExprWithPre(goast.Call(v_154.F0.Expr, injected_435), goast.AppendStmts(v_154.F0.Pre, v_155.F0.Pre)))
+					expr_436 = Ok[AstExprResult, string](astExprWithPre(goast.GenericCall(v_154.F0.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), injected_435), goast.AppendStmts(v_154.F0.Pre, v_155.F0.Pre)))
 					expr_438 = expr_436
 				} else {
 					panic("unreachable")

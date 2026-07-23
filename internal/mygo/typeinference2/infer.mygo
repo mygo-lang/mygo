@@ -108,7 +108,7 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
     case TupleExpr(items) => inferTuple(items, env, state)
     case UnaryExpr(op, inner) => inferUnary(op, inner.value(), env, state)
     case BinaryExpr(op, left, right) => inferBinary(op, left.value(), right.value(), env, state)
-    case CallExpr(callee, args) => inferCall(callee.value(), args, env, state)
+    case CallExpr(callee, _, args) => inferCall(callee.value(), args, env, state)
     case FieldExpr(base, field) => inferField(base.value(), field, env, state)
     case IfExpr(cond, thenExpr, elseExpr) => inferIf(cond.value(), thenExpr.value(), elseExpr.value(), env, state)
     case SwitchExpr(target, cases) => inferSwitch(target.value(), cases, env, state)

@@ -144,7 +144,7 @@ enum Expr
   UnitExpr
   # tuple expression; an empty tuple is represented by UnitExpr
   TupleExpr(Slice[Expr])
-  CallExpr(Ref[Expr], Slice[Expr])
+  CallExpr(Ref[Expr], Slice[TypeExpr], Slice[Expr])
   FieldExpr(Ref[Expr], String)
   UnaryExpr(String, Ref[Expr])
   BinaryExpr(String, Ref[Expr], Ref[Expr])

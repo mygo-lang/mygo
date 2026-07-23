@@ -10,7 +10,7 @@ end
 
 func tailCallAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
   switch expr
-    case CallExpr(_, args) =>
+    case CallExpr(_, _, args) =>
       let parts = tailCallAstParts(args, ctx, 0, TailAstParts { Stmts: [] as Slice[goast.Stmt], Values: [] as Slice[goast.Expr] })
       switch parts
         case Err(msg) => Err(msg)
@@ -41,7 +41,7 @@ func tailCallAstParts(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: 
 end
 func isTailSelfCall(expr: ast2.Expr, ctx: Ref[egCtx]) -> Bool
   switch expr
-    case CallExpr(callee, args) =>
+    case CallExpr(callee, _, args) =>
       if args.Len() != ctx.tailRecParamCount then
         return false
       end
@@ -59,7 +59,7 @@ end
 
 func containsTailCall(expr: ast2.Expr, name: String) -> Bool
   switch expr
-    case CallExpr(callee, _) =>
+    case CallExpr(callee, _, _) =>
       switch callee.value()
         case IdentExpr(n) => n == name
         case _ => false

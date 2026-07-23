@@ -735,9 +735,9 @@ func postfixExpr() -> ps.Parser[ast2.Expr]
 end
 
 func postfixTail(start: ps.State, cur: ps.State, acc: ast2.Expr) -> ps.Reply[ast2.Expr]
-  let call = paren(ps.PSepBy(lazyExpr(), sym(","))).Run(cur)
+  let call = callSuffix().Run(cur)
   if call.Ok then
-    postfixTail(start, call.State, ast2.Expr.CallExpr(Ref.new(acc), call.Value))
+    postfixTail(start, call.State, ast2.Expr.CallExpr(Ref.new(acc), call.Value.F0, call.Value.F1))
   else
     let fld = ps.PThen(sym("."), identifier()).Run(cur)
     if fld.Ok then
@@ -754,6 +754,14 @@ func postfixTail(start: ps.State, cur: ps.State, acc: ast2.Expr) -> ps.Reply[ast
       end
     end
   end
+end
+
+func callSuffix() -> ps.Parser[(Slice[ast2.TypeExpr], Slice[ast2.Expr])]
+  ps.PBind(ps.POrElse(typeArgList(), ps.PPure([] as Slice[ast2.TypeExpr])), func(typeArgs: Slice[ast2.TypeExpr]) -> ps.Parser[(Slice[ast2.TypeExpr], Slice[ast2.Expr])]
+    ps.PMap(paren(ps.PSepBy(lazyExpr(), sym(","))), func(args: Slice[ast2.Expr]) -> (Slice[ast2.TypeExpr], Slice[ast2.Expr])
+      (typeArgs, args)
+    end)
+  end)
 end
 
 # 结构体字段列表解析器: { field1: ast2.Expr1, field2: ast2.Expr2, ... }

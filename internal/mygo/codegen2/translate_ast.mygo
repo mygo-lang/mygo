@@ -43,7 +43,7 @@ func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String
         case Err(msg) => Err(msg)
       end
     case BinaryExpr(op, left, right) => translateBinaryAstExpected(op, left.value(), right.value(), ctx, expected)
-    case CallExpr(callee, args) => translateCallAstExpected(callee.value(), args, ctx, expected)
+    case CallExpr(callee, typeArgs, args) => translateCallAstExpected(callee.value(), typeArgs, args, ctx, expected)
     case StructLitExpr(typeName, fields) => translateStructLitAstExpected(typeName, fields, ctx, expected)
     case GenericStructLitExpr(typeName, typeArgs, fields) => translateGenericStructLitAstExpected(typeName, typeArgs, fields, ctx, expected)
     case MapLitExpr(pairs) => translateMapLitAstExpected(pairs, ctx, expected)
@@ -393,11 +393,11 @@ func translateBinaryAstExpected(op: String, left: ast2.Expr, right: ast2.Expr, c
   end
 end
 
-func translateCallAst(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[AstExprResult, String]
-  translateCallAstExpected(callee, args, ctx, "")
+func translateCallAst(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+  translateCallAstExpected(callee, typeArgs, args, ctx, "")
 end
 
-func translateCallAstExpected(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+func translateCallAstExpected(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
   let c = translateExprAstExpected(callee, ctx, expected)
   let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
   switch c
@@ -407,7 +407,7 @@ func translateCallAstExpected(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Re
         case Err(msg) => Err(msg)
         case Ok(v) =>
           let injected = dictionaryArgsForCall(callee, ctx, v.Exprs)
-          Ok(astExprWithPre(goast.Call(cv.Expr, injected), goast.AppendStmts(cv.Pre, v.Pre)))
+          Ok(astExprWithPre(goast.GenericCall(cv.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), injected), goast.AppendStmts(cv.Pre, v.Pre)))
       end
   end
 end

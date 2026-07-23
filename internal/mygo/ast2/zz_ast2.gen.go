@@ -403,13 +403,14 @@ func ExprTupleExprCtor(a0 []Expr) Expr {
 
 type ExprCallExpr struct {
 	F0 *Expr
-	F1 []Expr
+	F1 []TypeExpr
+	F2 []Expr
 }
 
 func (_ ExprCallExpr) isExpr() {
 }
-func ExprCallExprCtor(a0 *Expr, a1 []Expr) Expr {
-	return ExprCallExpr{F0: a0, F1: a1}
+func ExprCallExprCtor(a0 *Expr, a1 []TypeExpr, a2 []Expr) Expr {
+	return ExprCallExpr{F0: a0, F1: a1, F2: a2}
 }
 
 type ExprFieldExpr struct {
