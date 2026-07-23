@@ -28,7 +28,7 @@ func typeParamDecl(tps: Slice[String]) -> String
   if tps.Len() == 0 then
     ""
   else
-    let parts = tps.Map(func(tp: String) -> String sanitizeIdent(tp) + " any" end)
+    let parts = tps.Map(func(tp: String) -> String hktTypeParamName(tp) + " any" end)
     "[" + joinStrings(parts, ", ") + "]"
   end
 end
@@ -37,9 +37,16 @@ func typeParamUse(tps: Slice[String]) -> String
   if tps.Len() == 0 then
     ""
   else
-    let parts = tps.Map(func(tp: String) -> String sanitizeIdent(tp) end)
+    let parts = tps.Map(func(tp: String) -> String hktTypeParamName(tp) end)
     "[" + joinStrings(parts, ", ") + "]"
   end
+end
+
+# Go has no higher-kinded generic parameters. For a source parameter C[A],
+# declare the constructor placeholder as C and use HKT[C, A] at use sites.
+func hktTypeParamName(tp: String) -> String
+  let index = strings.Index(tp, "[")
+  if index < 0 then sanitizeIdent(tp) else sanitizeIdent(strings.Split(tp, "[").Get(0).UnwrapOr(tp)) end
 end
 
 func sourceToGenName(path: String) -> String

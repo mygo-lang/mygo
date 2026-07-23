@@ -28,12 +28,13 @@ type DeclFuncDecl struct {
 	F2 []Param
 	F3 Option[TypeExpr]
 	F4 Expr
+	F5 []Constraint
 }
 
 func (_ DeclFuncDecl) isDecl() {
 }
-func DeclFuncDeclCtor(a0 string, a1 []string, a2 []Param, a3 Option[TypeExpr], a4 Expr) Decl {
-	return DeclFuncDecl{F0: a0, F1: a1, F2: a2, F3: a3, F4: a4}
+func DeclFuncDeclCtor(a0 string, a1 []string, a2 []Param, a3 Option[TypeExpr], a4 Expr, a5 []Constraint) Decl {
+	return DeclFuncDecl{F0: a0, F1: a1, F2: a2, F3: a3, F4: a4, F5: a5}
 }
 
 type DeclStructDecl struct {
@@ -103,6 +104,12 @@ type FuncSig struct {
 	TypeParams []string
 	Params     []Param
 	Ret        Option[TypeExpr]
+	Using      []Constraint
+}
+type Constraint struct {
+	Name     string
+	BindName Option[string]
+	Args     []TypeExpr
 }
 type ImplMethod struct {
 	Sig  FuncSig

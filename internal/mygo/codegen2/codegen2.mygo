@@ -3,6 +3,7 @@ package codegen2
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import strings "go:strings"
 
 struct GoFileParts
   PackageName: String
@@ -71,11 +72,41 @@ func GenerateSourceAt(sourceName: String, input: String) -> Result[String, Strin
 end
 
 func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo) -> Result[String, String]
-  let g = Ref.new(newGenerator2(file.PackageName))
+  let g = Ref.new(newGenerator2(file.PackageName, file.Decls))
   let imports = collectImports(file.Decls)
   let decls = translateDeclsAst(g, file.Decls, 0, [] as Slice[goast.Decl])
   switch decls
     case Err(msg) => Err(msg)
-    case Ok(items) => renderGoFile(GoFileParts { PackageName: file.PackageName, Imports: imports, AstDecls: items, Decls: [] as Slice[String] })
+    case Ok(items) =>
+      let withHKT = if needsHKTDecls(file.Decls) then goast.AppendDecls(goast.HKTDecls(), items) else items end
+      renderGoFile(GoFileParts { PackageName: file.PackageName, Imports: imports, AstDecls: withHKT, Decls: [] as Slice[String] })
+  end
+end
+
+# This mirrors legacy genHKTDecls: helper declarations are emitted only for
+# declarations that actually declare a higher-kinded parameter such as C[A].
+func needsHKTDecls(decls: Slice[ast2.Decl]) -> Bool
+  if decls.Len() == 0 then
+    false
+  else
+    let head = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    let here = switch head
+      case InterfaceDecl(_, tps, _) => hasHKTTypeParam(tps)
+      case StructDecl(_, tps, _) => hasHKTTypeParam(tps)
+      case EnumDecl(_, tps, _) => hasHKTTypeParam(tps)
+      case FuncDecl(_, tps, _, _, _, _) => hasHKTTypeParam(tps)
+      case ImplDecl(tps, _, _, _) => hasHKTTypeParam(tps)
+      case _ => false
+    end
+    here || needsHKTDecls(sliceDrop(decls, 1))
+  end
+end
+
+func hasHKTTypeParam(tps: Slice[String]) -> Bool
+  if tps.Len() == 0 then
+    false
+  else
+    let current = tps.Get(0).UnwrapOr("")
+    strings.Index(current, "[") >= 0 || hasHKTTypeParam(sliceDrop(tps, 1))
   end
 end

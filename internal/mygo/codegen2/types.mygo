@@ -36,6 +36,16 @@ struct egCtx
   tailRecParamCount: Int
   # 尾递归参数 Go 名
   tailRecParamNames: Slice[String]
+  # 当前 lexical scope 中可见的 typeclass dictionary methods.
+  # Key is the MyGO interface method name; value is its Go function binding.
+  constraintFuncs: Map[String, String]
+  # Callee name -> required dictionary method names, in declaration order.
+  callDictionaries: Map[String, Slice[String]]
+  # Package-level impl helper fallback for a typeclass method.
+  packageDictionaries: Map[String, String]
+  # Structured requirements retain interface identity and type arguments.
+  callRequirements: Map[String, Slice[DictionaryRequirement]]
+  packageCandidates: Map[String, Slice[ImplDictionaryCandidate]]
 end
 
 # Generator2 是代码生成器主结构体
@@ -52,6 +62,7 @@ struct Generator2
   switchVarSeq: Int
   # 是否需要 callAny 辅助
   needsCallAny: Bool
+  decls: Slice[ast2.Decl]
 end
 
 # AstExprResult 是新 AST 降低管线的表达式结果。Expr 是可嵌入父表达式
@@ -79,6 +90,20 @@ struct AstInlineOperands
   Pre: Slice[goast.Stmt]
 end
 
+struct DictionaryRequirement
+  Interface: String
+  Method: String
+  Args: Slice[ast2.TypeExpr]
+end
+
+struct ImplDictionaryCandidate
+  Interface: String
+  Method: String
+  InterfaceArgs: Slice[ast2.TypeExpr]
+  TypeParams: Slice[String]
+  Helper: String
+end
+
 func newAstExprResult(expr: goast.Expr) -> AstExprResult
   AstExprResult { Expr: expr, Pre: [] }
 end
@@ -104,6 +129,11 @@ func newEgCtx() -> egCtx
     tailRecFuncName: None,
     tailRecParamCount: 0,
     tailRecParamNames: [],
+    constraintFuncs: {},
+    callDictionaries: {},
+    packageDictionaries: {},
+    callRequirements: {},
+    packageCandidates: {},
   }
 end
 
@@ -123,6 +153,11 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     tailRecFuncName: None,
     tailRecParamCount: 0,
     tailRecParamNames: [],
+    constraintFuncs: {},
+    callDictionaries: {},
+    packageDictionaries: {},
+    callRequirements: {},
+    packageCandidates: {},
   }
 end
 
@@ -142,11 +177,16 @@ func newFuncEgCtx(params: Slice[String], retType: String, tailName: String, para
     tailRecFuncName: Some(tailName),
     tailRecParamCount: paramCount,
     tailRecParamNames: [],
+    constraintFuncs: {},
+    callDictionaries: {},
+    packageDictionaries: {},
+    callRequirements: {},
+    packageCandidates: {},
   }
 end
 
 # 创建空的 Generator2
-func newGenerator2(pkgName: String) -> Generator2
+func newGenerator2(pkgName: String, decls: Slice[ast2.Decl]) -> Generator2
   Generator2 {
     pkgName: pkgName,
     importPaths: [],
@@ -154,6 +194,7 @@ func newGenerator2(pkgName: String) -> Generator2
     localSeq: 0,
     switchVarSeq: 0,
     needsCallAny: false,
+    decls: decls,
   }
 end
 
@@ -174,6 +215,11 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     tailRecFuncName: ctx.tailRecFuncName,
     tailRecParamCount: ctx.tailRecParamCount,
     tailRecParamNames: ctx.tailRecParamNames,
+    constraintFuncs: ctx.constraintFuncs,
+    callDictionaries: ctx.callDictionaries,
+    packageDictionaries: ctx.packageDictionaries,
+    callRequirements: ctx.callRequirements,
+    packageCandidates: ctx.packageCandidates,
   }
 end
 

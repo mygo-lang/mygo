@@ -11,7 +11,8 @@ end
 
 enum Decl
   ImportDecl(String, String)
-  FuncDecl(String, Slice[String], Slice[Param], Option[TypeExpr], Expr)
+  # Keep Body before Using so the established generated Go API retains F4.
+  FuncDecl(String, Slice[String], Slice[Param], Option[TypeExpr], Expr, Slice[Constraint])
   StructDecl(String, Slice[String], Slice[Field])
   EnumDecl(String, Slice[String], Slice[Variant])
   InterfaceDecl(String, Slice[String], Slice[FuncSig])
@@ -39,6 +40,15 @@ struct FuncSig
   TypeParams: Slice[String]
   Params: Slice[Param]
   Ret: Option[TypeExpr]
+  Using: Slice[Constraint]
+end
+
+# Constraint is a typeclass requirement carried by a function or interface
+# method. BindName is populated by `using Local: Class[Args]`.
+struct Constraint
+  Name: String
+  BindName: Option[String]
+  Args: Slice[TypeExpr]
 end
 
 struct ImplMethod

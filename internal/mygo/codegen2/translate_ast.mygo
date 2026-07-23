@@ -12,7 +12,10 @@ end
 
 func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
   switch expr
-    case IdentExpr(name) => Ok(newAstExprResult(goast.Ident(ctxGetBinding(ctx, name).UnwrapOr(sanitizeIdent(name)))))
+    case IdentExpr(name) =>
+      # A `using` dictionary shadows package-level typeclass dispatch, just
+      # like ordinary lexical bindings shadow top-level functions.
+      Ok(newAstExprResult(goast.Ident(ctx.constraintFuncs.Get(name).UnwrapOr(ctxGetBinding(ctx, name).UnwrapOr(sanitizeIdent(name))))))
     case NumberExpr(v) => Ok(newAstExprResult(goast.Number(v)))
     case StringExpr(v) => Ok(newAstExprResult(goast.String(strconv.Quote(v))))
     case RuneExpr(v) => Ok(newAstExprResult(goast.Rune(v)))
@@ -353,8 +356,85 @@ func translateCallAstExpected(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Re
     case Ok(cv) =>
       switch values
         case Err(msg) => Err(msg)
-        case Ok(v) => Ok(astExprWithPre(goast.Call(cv.Expr, v.Exprs), goast.AppendStmts(cv.Pre, v.Pre)))
+        case Ok(v) =>
+          let injected = dictionaryArgsForCall(callee, ctx, v.Exprs)
+          Ok(astExprWithPre(goast.Call(cv.Expr, injected), goast.AppendStmts(cv.Pre, v.Pre)))
       end
+  end
+end
+
+func dictionaryArgsForCall(callee: ast2.Expr, ctx: Ref[egCtx], args: Slice[goast.Expr]) -> Slice[goast.Expr]
+  switch callee
+    case IdentExpr(name) => appendRequirementArgs(args, ctx.callRequirements.Get(name).UnwrapOr([] as Slice[DictionaryRequirement]), ctx)
+    case _ => args
+  end
+end
+
+func appendRequirementArgs(args: Slice[goast.Expr], requirements: Slice[DictionaryRequirement], ctx: Ref[egCtx]) -> Slice[goast.Expr]
+  if requirements.Len() == 0 then
+    args
+  else
+    let requirement = requirements.Get(0).UnwrapOr(DictionaryRequirement { Interface: "", Method: "", Args: [] as Slice[ast2.TypeExpr] })
+    switch ctx.constraintFuncs.Get(requirement.Method)
+      case Some(fn) => appendRequirementArgs(args.Append(goast.Ident(fn)), sliceDrop(requirements, 1), ctx)
+      case None =>
+        switch matchingCandidate(ctx.packageCandidates.Get(requirement.Interface + "." + requirement.Method).UnwrapOr([] as Slice[ImplDictionaryCandidate]), requirement)
+          case Some(candidate) => appendRequirementArgs(args.Append(goast.Ident(candidate.Helper)), sliceDrop(requirements, 1), ctx)
+          case None =>
+            switch ctx.packageDictionaries.Get(requirement.Interface + "." + requirement.Method)
+              case Some(helper) => appendRequirementArgs(args.Append(goast.Ident(helper)), sliceDrop(requirements, 1), ctx)
+              case None => appendRequirementArgs(args, sliceDrop(requirements, 1), ctx)
+            end
+        end
+    end
+  end
+end
+
+func matchingCandidate(candidates: Slice[ImplDictionaryCandidate], requirement: DictionaryRequirement) -> Option[ImplDictionaryCandidate]
+  if candidates.Len() == 0 then
+    None
+  else
+    let candidate = candidates.Get(0).UnwrapOr(ImplDictionaryCandidate { Interface: "", Method: "", InterfaceArgs: [] as Slice[ast2.TypeExpr], TypeParams: [] as Slice[String], Helper: "" })
+    if typeExprListMatches(candidate.InterfaceArgs, requirement.Args, typeParamSet(candidate.TypeParams)) then Some(candidate) else matchingCandidate(sliceDrop(candidates, 1), requirement) end
+  end
+end
+
+func typeExprListMatches(patterns: Slice[ast2.TypeExpr], actuals: Slice[ast2.TypeExpr], variables: Set[String]) -> Bool
+  if patterns.Len() != actuals.Len() then false else
+    if patterns.Len() == 0 then true else
+      typeExprMatches(patterns.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), actuals.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), variables) && typeExprListMatches(sliceDrop(patterns, 1), sliceDrop(actuals, 1), variables)
+    end
+  end
+end
+
+func typeExprMatches(pattern: ast2.TypeExpr, actual: ast2.TypeExpr, variables: Set[String]) -> Bool
+  switch pattern
+    case NamedType(name, args) =>
+      if setContainsString(variables, name) && args.Len() == 0 then true else
+        switch actual
+          case NamedType(actualName, actualArgs) => name == actualName && typeExprListMatches(args, actualArgs, variables)
+          case _ => false
+        end
+      end
+    case UnitType => switch actual case UnitType => true case _ => false end
+    case _ => typeString(pattern) == typeString(actual)
+  end
+end
+
+func appendDictionaryArgs(args: Slice[goast.Expr], methods: Slice[String], ctx: Ref[egCtx]) -> Slice[goast.Expr]
+  if methods.Len() == 0 then
+    args
+  else
+    let method = methods.Get(0).UnwrapOr("")
+    let next = ctx.constraintFuncs.Get(method)
+    switch next
+      case Some(fn) => appendDictionaryArgs(args.Append(goast.Ident(fn)), sliceDrop(methods, 1), ctx)
+      case None =>
+        switch ctx.packageDictionaries.Get(method)
+          case Some(helper) => appendDictionaryArgs(args.Append(goast.Ident(helper)), sliceDrop(methods, 1), ctx)
+          case None => appendDictionaryArgs(args, sliceDrop(methods, 1), ctx)
+        end
+    end
   end
 end
 

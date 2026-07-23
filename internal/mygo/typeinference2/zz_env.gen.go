@@ -61,13 +61,13 @@ func envWithParams(env []EnvEntry, params []ast2.Param) []EnvEntry {
 	} else {
 		var expr_9 []EnvEntry
 		p_8 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
-		expr_9 = envWithParams(envPut(env, p_8.Name, Scheme{Bound: []int{}, Body: typeFromAST(p_8.Type)}), sliceDrop[ast2.Param](params, 1))
+		expr_9 = envWithParams(envPut(env, p_8.Name, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: typeFromAST(p_8.Type)}), sliceDrop[ast2.Param](params, 1))
 		expr_10 = expr_9
 	}
 	return expr_10
 }
 func initialEnv() []EnvEntry {
-	return []EnvEntry{EnvEntry{Name: "true", Scheme: Scheme{Bound: []int{}, Body: MonoTypeTConCtor("Bool", emptyMonoTypes())}}, EnvEntry{Name: "false", Scheme: Scheme{Bound: []int{}, Body: MonoTypeTConCtor("Bool", emptyMonoTypes())}}}
+	return []EnvEntry{EnvEntry{Name: "true", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: MonoTypeTConCtor("Bool", emptyMonoTypes())}}, EnvEntry{Name: "false", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: MonoTypeTConCtor("Bool", emptyMonoTypes())}}}
 }
 func envGet(env []EnvEntry, name string) Option[Scheme] {
 	var expr_14 Option[Scheme]
@@ -75,7 +75,7 @@ func envGet(env []EnvEntry, name string) Option[Scheme] {
 		expr_14 = None[Scheme]()
 	} else {
 		var expr_13 Option[Scheme]
-		item_11 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Body: MonoTypeTUnitCtor()}})
+		item_11 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: MonoTypeTUnitCtor()}})
 		var expr_12 Option[Scheme]
 		if item_11.Name == name {
 			expr_12 = Some[Scheme](item_11.Scheme)
@@ -103,7 +103,7 @@ func envWithStructFields(env []EnvEntry, typeName string, fields []ast2.Field) [
 	} else {
 		var expr_17 []EnvEntry
 		f_15 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
-		next_16 := envPut(env, fieldEnvName(typeName, f_15.Name), Scheme{Bound: []int{}, Body: typeFromAST(f_15.Type)})
+		next_16 := envPut(env, fieldEnvName(typeName, f_15.Name), Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: typeFromAST(f_15.Type)})
 		expr_17 = envWithStructFields(next_16, typeName, sliceDrop[ast2.Field](fields, 1))
 		expr_18 = expr_17
 	}

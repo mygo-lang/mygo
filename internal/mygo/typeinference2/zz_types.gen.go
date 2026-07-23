@@ -20,6 +20,16 @@ func MonoTypeTVarCtor(a0 int) MonoType {
 	return MonoTypeTVar{F0: a0}
 }
 
+type MonoTypeTKVar struct {
+	F0 int
+}
+
+func (_ MonoTypeTKVar) isMonoType() {
+}
+func MonoTypeTKVarCtor(a0 int) MonoType {
+	return MonoTypeTKVar{F0: a0}
+}
+
 type MonoTypeTCon struct {
 	F0 string
 	F1 []MonoType
@@ -62,8 +72,17 @@ func MonoTypeTUnitCtor() MonoType {
 }
 
 type Scheme struct {
-	Bound []int
-	Body  MonoType
+	Bound      []int
+	Predicates []Predicate
+	Body       MonoType
+}
+type Predicate struct {
+	ClassName string
+	Args      []MonoType
+}
+type QualifiedType struct {
+	Predicates []Predicate
+	Body       MonoType
 }
 type EnvEntry struct {
 	Name   string
@@ -109,6 +128,6 @@ func NewInferState() InferState {
 	return InferState{FreshVarID: 1}
 }
 func InferFile(file ast2.File) Result[PackageInfo, string] {
-	env_391 := predeclareFunctions(file.Decls, initialEnv())
-	return inferDecls(file.Decls, env_391, []FieldEntry{}, NewInferState())
+	env_395 := predeclareFunctions(file.Decls, initialEnv())
+	return inferDecls(file.Decls, env_395, []FieldEntry{}, NewInferState())
 }

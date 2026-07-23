@@ -95,6 +95,29 @@ end
 	}
 }
 
+func TestGenerateSourceEncodesHigherKindedParameters(t *testing.T) {
+	src := `package sample
+
+interface Enumerable[C[A], A]
+  func First(value: C[A]) -> A
+end
+`
+	got := GenerateSource(src)
+	ok, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	if !strings.Contains(ok.F0, "type HKT[F any, A any] interface{}") {
+		t.Fatalf("HKT application was not preserved:\n%s", ok.F0)
+	}
+	if strings.Contains(ok.F0, "type Enumerable") {
+		t.Fatalf("typeclass interface must not be emitted as a Go interface:\n%s", ok.F0)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "hkt.gen.go", ok.F0, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, ok.F0)
+	}
+}
+
 func TestGenerateSourceUsesCurrentImplMangling(t *testing.T) {
 	src := `package sample
 

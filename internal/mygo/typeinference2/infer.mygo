@@ -11,12 +11,12 @@ func predeclareFunctions(decls: Slice[ast2.Decl], env: Slice[EnvEntry]) -> Slice
   else
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     let next = switch decl
-      case FuncDecl(name, _, params, ret, _) =>
+      case FuncDecl(name, _, params, ret, _, constraints) =>
         let retType = switch ret
           case Some(t) => typeFromAST(t)
           case None => MonoType.TUnit
         end
-        envPut(env, name, Scheme { Bound: [], Body: MonoType.TFunc(paramsToTypes(params), Ref.new(retType)) })
+        envPut(env, name, Scheme { Bound: [], Predicates: predicatesFromConstraints(constraints), Body: MonoType.TFunc(paramsToTypes(params), Ref.new(retType)) })
       case _ => env
     end
     predeclareFunctions(sliceDrop(decls, 1), next)
@@ -42,28 +42,29 @@ func inferDecl(decl: ast2.Decl, env: Slice[EnvEntry], fields: Slice[FieldEntry],
     case ImportDecl(_, _) => Ok(DeclInfer { Env: env, Fields: fields, State: state })
     case StructDecl(name, tps, structFields) =>
       Ok(DeclInfer {
-        Env: envWithStructFields(envPut(env, name, Scheme { Bound: [], Body: MonoType.TCon(name, emptyMonoTypes()) }), name, structFields),
+        Env: envWithStructFields(envPut(env, name, Scheme { Bound: [], Predicates: [], Body: MonoType.TCon(name, emptyMonoTypes()) }), name, structFields),
         Fields: fieldsForStruct(name, structFields, fields),
         State: state,
       })
     case EnumDecl(name, tps, vars) =>
       inferVariants(vars, name, tps, env, fields, state)
     case InterfaceDecl(name, _, _) =>
-      Ok(DeclInfer { Env: envPut(env, name, Scheme { Bound: [], Body: MonoType.TCon(name, emptyMonoTypes()) }), Fields: fields, State: state })
+      Ok(DeclInfer { Env: envPut(env, name, Scheme { Bound: [], Predicates: [], Body: MonoType.TCon(name, emptyMonoTypes()) }), Fields: fields, State: state })
     case ImplDecl(_, _, _, _) => Ok(DeclInfer { Env: env, Fields: fields, State: state })
-    case FuncDecl(name, tps, params, ret, body) =>
-      inferFuncDecl(name, tps, params, ret, body, env, fields, state)
+    case FuncDecl(name, tps, params, ret, body, constraints) =>
+      inferFuncDecl(name, tps, params, ret, body, constraints, env, fields, state)
   end
 end
 
-func inferFuncDecl(name: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[DeclInfer, String]
+func inferFuncDecl(name: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, constraints: Slice[ast2.Constraint], env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[DeclInfer, String]
   let paramTypes = paramsToTypes(params)
   let retType = switch ret
     case Some(t) => typeFromAST(t)
     case None => MonoType.TUnit
   end
   let fnType = MonoType.TFunc(paramTypes, Ref.new(retType))
-  let envWithSig = envPut(env, name, Scheme { Bound: [], Body: fnType })
+  let predicates = predicatesFromConstraints(constraints)
+  let envWithSig = envPut(env, name, Scheme { Bound: [], Predicates: predicates, Body: fnType })
   let bodyEnv = envWithParams(envWithSig, params)
   let inferred = inferExpr(body, bodyEnv, state)
   switch inferred
@@ -71,10 +72,22 @@ func inferFuncDecl(name: String, tps: Slice[String], params: Slice[ast2.Param], 
       let checked = unify(applySubst(r.Subst, r.Type), retType, r.Subst)
       switch checked
         case Ok(s2) =>
-          Ok(DeclInfer { Env: envPut(env, name, Scheme { Bound: [], Body: applySubst(s2, fnType) }), Fields: fields, State: r.State })
+          Ok(DeclInfer { Env: envPut(env, name, Scheme { Bound: [], Predicates: predicates, Body: applySubst(s2, fnType) }), Fields: fields, State: r.State })
         case Err(msg) => Err("function " + name + " return type mismatch: " + msg)
       end
     case Err(msg) => Err("function " + name + ": " + msg)
+  end
+end
+
+# Convert parser constraints to inference predicates. Resolution is deliberately
+# deferred: a predicate may mention a type parameter and must survive until a
+# call site supplies concrete arguments.
+func predicatesFromConstraints(items: Slice[ast2.Constraint]) -> Slice[Predicate]
+  if items.Len() == 0 then
+    []
+  else
+    let item = items.Get(0).UnwrapOr(ast2.Constraint { Name: "", BindName: None, Args: [] as Slice[ast2.TypeExpr] })
+    predicatesFromConstraints(sliceDrop(items, 1)).Prepend(Predicate { ClassName: item.Name, Args: typeArgsFromAST(item.Args) })
   end
 end
 
@@ -267,7 +280,7 @@ func envWithPatternBindingLoop(env: Slice[EnvEntry], names: Slice[String], field
   else
     let name = names.Get(0).UnwrapOr("_")
     let field = fields.Get(0).UnwrapOr(MonoType.TUnit)
-    let next = if name == "_" then env else envPut(env, name, Scheme { Bound: [], Body: field }) end
+    let next = if name == "_" then env else envPut(env, name, Scheme { Bound: [], Predicates: [], Body: field }) end
     envWithPatternBindingLoop(next, sliceDrop(names, 1), sliceDrop(fields, 1))
   end
 end
@@ -503,7 +516,7 @@ func predeclareLetRec(bindings: Slice[ast2.LetRecBind], env: Slice[EnvEntry]) ->
     env
   else
     let binding = bindings.Get(0).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType(), Value: ast2.Expr.UnitExpr() })
-    predeclareLetRec(sliceDrop(bindings, 1), envPut(env, binding.Name, Scheme { Bound: [], Body: typeFromAST(binding.Type) }))
+    predeclareLetRec(sliceDrop(bindings, 1), envPut(env, binding.Name, Scheme { Bound: [], Predicates: [], Body: typeFromAST(binding.Type) }))
   end
 end
 
@@ -548,7 +561,7 @@ func inferBlockLet(bind: ast2.Bind, env: Slice[EnvEntry], state: InferState) -> 
         case Err(msg) => Err(msg)
         case Ok(s) then
           let boundType = applySubst(s, v.Type)
-          let nextEnv = envPut(env, bind.Name, Scheme { Bound: [], Body: boundType })
+          let nextEnv = envPut(env, bind.Name, Scheme { Bound: [], Predicates: [], Body: boundType })
           Ok(BlockInferStep {
             Result: InferResult { Type: MonoType.TUnit, Subst: s, State: v.State },
             Env: nextEnv,
@@ -605,7 +618,7 @@ end
 
 func inferVariants(vars: Slice[ast2.Variant], enumName: String, tps: Slice[String], env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[DeclInfer, String]
   if vars.Len() == 0 then
-    Ok(DeclInfer { Env: envPut(env, enumName, Scheme { Bound: [], Body: MonoType.TCon(enumName, emptyMonoTypes()) }), Fields: fields, State: state })
+    Ok(DeclInfer { Env: envPut(env, enumName, Scheme { Bound: [], Predicates: [], Body: MonoType.TCon(enumName, emptyMonoTypes()) }), Fields: fields, State: state })
   else
     let v = vars.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: emptyASTTypeExprs() })
     let constructorType = if v.Fields.Len() == 0 then
@@ -613,7 +626,7 @@ func inferVariants(vars: Slice[ast2.Variant], enumName: String, tps: Slice[Strin
     else
       MonoType.TFunc(typeArgsFromAST(v.Fields), Ref.new(MonoType.TCon(enumName, emptyMonoTypes())))
     end
-    inferVariants(sliceDrop(vars, 1), enumName, tps, envPut(env, v.Name, Scheme { Bound: [], Body: constructorType }), fields, state)
+    inferVariants(sliceDrop(vars, 1), enumName, tps, envPut(env, v.Name, Scheme { Bound: [], Predicates: [], Body: constructorType }), fields, state)
   end
 end
 

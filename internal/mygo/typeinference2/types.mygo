@@ -8,6 +8,8 @@ import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 
 enum MonoType
   TVar(Int)
+  # TKVar is a type-constructor variable (kind * -> *), used by HKT params.
+  TKVar(Int)
   TCon(String, Slice[MonoType])
   TFunc(Slice[MonoType], Ref[MonoType])
   TTuple(Slice[MonoType])
@@ -16,6 +18,20 @@ end
 
 struct Scheme
   Bound: Slice[Int]
+  # Predicates are the typeclass requirements carried by a polymorphic
+  # binding. Keeping Body separate preserves the existing HM consumers while
+  # making dictionary requirements explicit for codegen2.
+  Predicates: Slice[Predicate]
+  Body: MonoType
+end
+
+struct Predicate
+  ClassName: String
+  Args: Slice[MonoType]
+end
+
+struct QualifiedType
+  Predicates: Slice[Predicate]
   Body: MonoType
 end
 

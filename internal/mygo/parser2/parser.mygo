@@ -124,7 +124,7 @@ end
 func funcDecl() -> ps.Parser[ast2.Decl]
   ps.PMap(funcSigAndBody(), func(pair: (ast2.FuncSig, ast2.Expr)) -> ast2.Decl
     let (sig, body) = pair
-    ast2.Decl.FuncDecl(sig.Name, sig.TypeParams, sig.Params, sig.Ret, body)
+    ast2.Decl.FuncDecl(sig.Name, sig.TypeParams, sig.Params, sig.Ret, body, sig.Using)
   end)
 end
 
@@ -148,8 +148,10 @@ func funcSig() -> ps.Parser[ast2.FuncSig]
     ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.FuncSig]
       ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[ast2.FuncSig]
         ps.PBind(paren(ps.PSepBy(param(), sym(","))), func(params: Slice[ast2.Param]) -> ps.Parser[ast2.FuncSig]
-          ps.PMap(ps.POptional(ps.PThen(sym("->"), typeExpr())), func(ret: Option[ast2.TypeExpr]) -> ast2.FuncSig
-            ast2.FuncSig { Name: name, TypeParams: tps, Params: params, Ret: ret }
+          ps.PBind(ps.POptional(ps.PThen(sym("->"), typeExpr())), func(ret: Option[ast2.TypeExpr]) -> ps.Parser[ast2.FuncSig]
+            ps.PMap(usingClause(), func(constraints: Slice[ast2.Constraint]) -> ast2.FuncSig
+              ast2.FuncSig { Name: name, TypeParams: tps, Params: params, Ret: ret, Using: constraints }
+            end)
           end)
         end)
       end)
@@ -247,7 +249,37 @@ func qualifiedIdentifier() -> ps.Parser[String]
 end
 
 func typeParamList() -> ps.Parser[Slice[String]]
-  ps.POrElse(brackets(ps.PSepBy(identifier(), sym(","))), ps.PPure([] as Slice[String]))
+  ps.POrElse(brackets(ps.PSepBy(typeParam(), sym(","))), ps.PPure([] as Slice[String]))
+end
+
+# HKT parameters are represented in the compact AST using their source shape,
+# e.g. C[A] or C[K, A]. This keeps the existing type-parameter representation
+# stable while preserving kind information for inference and lowering.
+func typeParam() -> ps.Parser[String]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[String]
+    ps.PMap(ps.POptional(brackets(ps.PSepBy(typeParam(), sym(",")))), func(args: Option[Slice[String]]) -> String
+      switch args
+        case Some(items) => name + "[" + strings.Join(items, ", ") + "]"
+        case None => name
+      end
+    end)
+  end)
+end
+
+func usingClause() -> ps.Parser[Slice[ast2.Constraint]]
+  ps.POrElse(ps.PThen(kw("using"), ps.PSepBy1(constraint(), sym(","))), ps.PPure([] as Slice[ast2.Constraint]))
+end
+
+func constraint() -> ps.Parser[ast2.Constraint]
+  ps.PBind(ps.POptional(ps.PAttempt(ps.PBind(identifier(), func(bind: String) -> ps.Parser[String]
+    ps.PThen(sym(":"), ps.PPure(bind))
+  end))), func(bind: Option[String]) -> ps.Parser[ast2.Constraint]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Constraint]
+      ps.PMap(typeArgList(), func(args: Slice[ast2.TypeExpr]) -> ast2.Constraint
+        ast2.Constraint { Name: name, BindName: bind, Args: args }
+      end)
+    end)
+  end)
 end
 
 func typeArgList() -> ps.Parser[Slice[ast2.TypeExpr]]

@@ -20,6 +20,25 @@ type Expr = ast.Expr
 type Stmt = ast.Stmt
 type Decl = ast.Decl
 
+// HKTDecls supplies the encoding used by codegen2 for source-level higher
+// kinded parameters. The phantom constructor parameter F is intentionally
+// unconstrained: MyGO typeclasses use these types only as compile-time shape
+// markers and dispatch dictionaries.
+func HKTDecls() []ast.Decl {
+	return []ast.Decl{
+		hktTypeDecl("HKTType", nil),
+		hktTypeDecl("HKT1", []string{"F"}),
+		hktTypeDecl("HKT2", []string{"A"}),
+		hktTypeDecl("HKT", []string{"F", "A"}),
+	}
+}
+
+func hktTypeDecl(name string, params []string) ast.Decl {
+	spec := &ast.TypeSpec{Name: ast.NewIdent(name), Type: ast.NewIdent("interface{}")}
+	spec.TypeParams = typeParamsFieldList(params)
+	return &ast.GenDecl{Tok: token.TYPE, Specs: []ast.Spec{spec}}
+}
+
 // Import is the FFI representation of a Go import declaration.
 type Import struct {
 	Alias string
@@ -57,7 +76,7 @@ func StructDecl(name string, typeParams []string, fields []StructField) ast.Decl
 	if len(typeParams) != 0 {
 		params := make([]*ast.Field, 0, len(typeParams))
 		for _, param := range typeParams {
-			params = append(params, &ast.Field{Names: []*ast.Ident{ast.NewIdent(param)}, Type: ast.NewIdent("any")})
+			params = append(params, &ast.Field{Names: []*ast.Ident{ast.NewIdent(hktParamName(param))}, Type: ast.NewIdent("any")})
 		}
 		spec.TypeParams = &ast.FieldList{List: params}
 	}
@@ -104,7 +123,7 @@ func InterfaceDeclFromParts(name string, typeParams, methodNames, signatures []s
 	if len(typeParams) != 0 {
 		params := make([]*ast.Field, 0, len(typeParams))
 		for _, param := range typeParams {
-			params = append(params, &ast.Field{Names: []*ast.Ident{ast.NewIdent(param)}, Type: ast.NewIdent("any")})
+			params = append(params, &ast.Field{Names: []*ast.Ident{ast.NewIdent(hktParamName(param))}, Type: ast.NewIdent("any")})
 		}
 		spec.TypeParams = &ast.FieldList{List: params}
 	}
@@ -414,9 +433,19 @@ func typeParamsFieldList(typeParams []string) *ast.FieldList {
 	}
 	fields := make([]*ast.Field, 0, len(typeParams))
 	for _, param := range typeParams {
-		fields = append(fields, &ast.Field{Names: []*ast.Ident{ast.NewIdent(param)}, Type: ast.NewIdent("any")})
+		fields = append(fields, &ast.Field{Names: []*ast.Ident{ast.NewIdent(hktParamName(param))}, Type: ast.NewIdent("any")})
 	}
 	return &ast.FieldList{List: fields}
+}
+
+// hktParamName projects the constructor name out of a source HKT parameter
+// such as C[A]. Go declares C as an ordinary phantom type parameter; uses are
+// lowered separately to HKT[C, A].
+func hktParamName(param string) string {
+	if i := strings.IndexByte(param, '['); i >= 0 {
+		return param[:i]
+	}
+	return param
 }
 
 func namedWithTypeParams(name string, typeParams []string) ast.Expr {

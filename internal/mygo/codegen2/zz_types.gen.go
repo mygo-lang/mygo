@@ -3,25 +3,31 @@
 package codegen2
 
 import (
+	"github.com/mygo-lang/mygo/internal/mygo/ast2"
 	"github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 	. "github.com/mygo-lang/mygo/prelude"
 )
 
 type egCtx struct {
-	locals            map[string]string
-	bindings          map[string]string
-	sourceTypes       map[string]string
-	mutable           map[string]bool
-	usedNames         map[string]int
-	exprSeq           int
-	preStmts          []string
-	astPreStmts       []goast.Stmt
-	typeParams        map[string]struct{}
-	retType           string
-	retTypes          []string
-	tailRecFuncName   Option[string]
-	tailRecParamCount int
-	tailRecParamNames []string
+	locals              map[string]string
+	bindings            map[string]string
+	sourceTypes         map[string]string
+	mutable             map[string]bool
+	usedNames           map[string]int
+	exprSeq             int
+	preStmts            []string
+	astPreStmts         []goast.Stmt
+	typeParams          map[string]struct{}
+	retType             string
+	retTypes            []string
+	tailRecFuncName     Option[string]
+	tailRecParamCount   int
+	tailRecParamNames   []string
+	constraintFuncs     map[string]string
+	callDictionaries    map[string][]string
+	packageDictionaries map[string]string
+	callRequirements    map[string][]DictionaryRequirement
+	packageCandidates   map[string][]ImplDictionaryCandidate
 }
 type Generator2 struct {
 	pkgName      string
@@ -30,6 +36,7 @@ type Generator2 struct {
 	localSeq     int
 	switchVarSeq int
 	needsCallAny bool
+	decls        []ast2.Decl
 }
 type AstExprResult struct {
 	Expr goast.Expr
@@ -50,6 +57,18 @@ type AstInlineOperands struct {
 	TypeSources  []string
 	Pre          []goast.Stmt
 }
+type DictionaryRequirement struct {
+	Interface string
+	Method    string
+	Args      []ast2.TypeExpr
+}
+type ImplDictionaryCandidate struct {
+	Interface     string
+	Method        string
+	InterfaceArgs []ast2.TypeExpr
+	TypeParams    []string
+	Helper        string
+}
 
 func newAstExprResult(expr goast.Expr) AstExprResult {
 	return AstExprResult{Expr: expr, Pre: []goast.Stmt{}}
@@ -58,19 +77,19 @@ func astExprWithPre(expr goast.Expr, pre []goast.Stmt) AstExprResult {
 	return AstExprResult{Expr: expr, Pre: pre}
 }
 func newEgCtx() egCtx {
-	return egCtx{locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{}, mutable: map[string]bool{}, usedNames: map[string]int{}, exprSeq: 0, preStmts: []string{}, astPreStmts: []goast.Stmt{}, typeParams: MygoIN3SetM3New[string](), retType: "", retTypes: []string{}, tailRecFuncName: None[string](), tailRecParamCount: 0, tailRecParamNames: []string{}}
+	return egCtx{locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{}, mutable: map[string]bool{}, usedNames: map[string]int{}, exprSeq: 0, preStmts: []string{}, astPreStmts: []goast.Stmt{}, typeParams: MygoIN3SetM3New[string](), retType: "", retTypes: []string{}, tailRecFuncName: None[string](), tailRecParamCount: 0, tailRecParamNames: []string{}, constraintFuncs: map[string]string{}, callDictionaries: map[string][]string{}, packageDictionaries: map[string]string{}, callRequirements: map[string][]DictionaryRequirement{}, packageCandidates: map[string][]ImplDictionaryCandidate{}}
 }
 func newEgCtxWithTypeParams(params []string) egCtx {
-	return egCtx{locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{}, mutable: map[string]bool{}, usedNames: map[string]int{}, exprSeq: 0, preStmts: []string{}, astPreStmts: []goast.Stmt{}, typeParams: typeParamSet(params), retType: "", retTypes: []string{}, tailRecFuncName: None[string](), tailRecParamCount: 0, tailRecParamNames: []string{}}
+	return egCtx{locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{}, mutable: map[string]bool{}, usedNames: map[string]int{}, exprSeq: 0, preStmts: []string{}, astPreStmts: []goast.Stmt{}, typeParams: typeParamSet(params), retType: "", retTypes: []string{}, tailRecFuncName: None[string](), tailRecParamCount: 0, tailRecParamNames: []string{}, constraintFuncs: map[string]string{}, callDictionaries: map[string][]string{}, packageDictionaries: map[string]string{}, callRequirements: map[string][]DictionaryRequirement{}, packageCandidates: map[string][]ImplDictionaryCandidate{}}
 }
 func newFuncEgCtx(params []string, retType string, tailName string, paramCount int) egCtx {
-	return egCtx{locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{}, mutable: map[string]bool{}, usedNames: map[string]int{}, exprSeq: 0, preStmts: []string{}, astPreStmts: []goast.Stmt{}, typeParams: typeParamSet(params), retType: retType, retTypes: []string{}, tailRecFuncName: Some[string](tailName), tailRecParamCount: paramCount, tailRecParamNames: []string{}}
+	return egCtx{locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{}, mutable: map[string]bool{}, usedNames: map[string]int{}, exprSeq: 0, preStmts: []string{}, astPreStmts: []goast.Stmt{}, typeParams: typeParamSet(params), retType: retType, retTypes: []string{}, tailRecFuncName: Some[string](tailName), tailRecParamCount: paramCount, tailRecParamNames: []string{}, constraintFuncs: map[string]string{}, callDictionaries: map[string][]string{}, packageDictionaries: map[string]string{}, callRequirements: map[string][]DictionaryRequirement{}, packageCandidates: map[string][]ImplDictionaryCandidate{}}
 }
-func newGenerator2(pkgName string) Generator2 {
-	return Generator2{pkgName: pkgName, importPaths: []string{}, currentFile: "", localSeq: 0, switchVarSeq: 0, needsCallAny: false}
+func newGenerator2(pkgName string, decls []ast2.Decl) Generator2 {
+	return Generator2{pkgName: pkgName, importPaths: []string{}, currentFile: "", localSeq: 0, switchVarSeq: 0, needsCallAny: false, decls: decls}
 }
 func ctxChild(ctx *egCtx) egCtx {
-	return egCtx{locals: ctx.locals, bindings: ctx.bindings, sourceTypes: ctx.sourceTypes, mutable: ctx.mutable, usedNames: ctx.usedNames, exprSeq: ctx.exprSeq, preStmts: []string{}, astPreStmts: []goast.Stmt{}, typeParams: ctx.typeParams, retType: ctx.retType, retTypes: ctx.retTypes, tailRecFuncName: ctx.tailRecFuncName, tailRecParamCount: ctx.tailRecParamCount, tailRecParamNames: ctx.tailRecParamNames}
+	return egCtx{locals: ctx.locals, bindings: ctx.bindings, sourceTypes: ctx.sourceTypes, mutable: ctx.mutable, usedNames: ctx.usedNames, exprSeq: ctx.exprSeq, preStmts: []string{}, astPreStmts: []goast.Stmt{}, typeParams: ctx.typeParams, retType: ctx.retType, retTypes: ctx.retTypes, tailRecFuncName: ctx.tailRecFuncName, tailRecParamCount: ctx.tailRecParamCount, tailRecParamNames: ctx.tailRecParamNames, constraintFuncs: ctx.constraintFuncs, callDictionaries: ctx.callDictionaries, packageDictionaries: ctx.packageDictionaries, callRequirements: ctx.callRequirements, packageCandidates: ctx.packageCandidates}
 }
 func ctxSetLocal(ctx *egCtx, name string, goType string) {
 	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.locals, name, goType)
@@ -81,16 +100,16 @@ func ctxSetBinding(ctx *egCtx, name string, goName string) {
 	return
 }
 func ctxFreshBinding(ctx *egCtx, name string) string {
-	base_576 := sanitizeIdent(name)
-	count_577 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.usedNames, base_576), 0)
-	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.usedNames, base_576, count_577+1)
-	if count_577 == 0 {
-		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.bindings, name, base_576)
-		return base_576
+	base_679 := sanitizeIdent(name)
+	count_680 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.usedNames, base_679), 0)
+	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.usedNames, base_679, count_680+1)
+	if count_680 == 0 {
+		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.bindings, name, base_679)
+		return base_679
 	}
-	actual_578 := base_576 + "_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(count_577)
-	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.bindings, name, actual_578)
-	return actual_578
+	actual_681 := base_679 + "_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(count_680)
+	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.bindings, name, actual_681)
+	return actual_681
 }
 func ctxSetMutable(ctx *egCtx, name string, isMutable bool) {
 	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.mutable, name, isMutable)
@@ -101,27 +120,27 @@ func ctxSetTailRecParamNames(ctx *egCtx, names []string) {
 	return
 }
 func ctxFreshExprTemp(ctx *egCtx) string {
-	name_579 := "__mygo_expr_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(ctx.exprSeq)
+	name_682 := "__mygo_expr_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(ctx.exprSeq)
 	ctx.exprSeq = ctx.exprSeq + 1
-	return name_579
+	return name_682
 }
 func ctxPushPreStmt(ctx *egCtx, stmt string) {
 	ctx.preStmts = append(ctx.preStmts, stmt)
 	return
 }
 func ctxDrainPreStmts(ctx *egCtx) string {
-	out_580 := joinStrings(ctx.preStmts, "\n")
+	out_683 := joinStrings(ctx.preStmts, "\n")
 	ctx.preStmts = nil
-	return out_580
+	return out_683
 }
 func ctxPushAstPreStmt(ctx *egCtx, stmt goast.Stmt) {
 	ctx.astPreStmts = append(ctx.astPreStmts, stmt)
 	return
 }
 func ctxDrainAstPreStmts(ctx *egCtx) []goast.Stmt {
-	out_581 := ctx.astPreStmts
+	out_684 := ctx.astPreStmts
 	ctx.astPreStmts = nil
-	return out_581
+	return out_684
 }
 func ctxAdoptExprSeq(ctx *egCtx, child *egCtx) {
 	if child.exprSeq > ctx.exprSeq {

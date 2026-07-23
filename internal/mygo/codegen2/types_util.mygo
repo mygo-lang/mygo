@@ -1,6 +1,7 @@
 package codegen2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import strings "go:strings"
 
 # types_util.mygo — Go 类型映射和命名规则工具
 
@@ -15,12 +16,17 @@ func goType(t: ast2.TypeExpr, typeParams: Set[String]) -> String
     case NamedType(name, args) =>
       # 检查是否是类型参数
       if setContainsString(typeParams, name) && args.Len() == 0 then
-        return name
+        name
+      else
+        if isHKTConstructor(name, args, typeParams) then
+          "HKT[" + name + ", " + hktApplicationArgs(args, typeParams) + "]"
+        else
+          let fallback = genericNamedType(name, args, typeParams)
+          goPrimitiveType(name).Fold(goSpecialType(name, args, typeParams).UnwrapOr(fallback), func(_: String, mapped: String) -> String
+            mapped
+          end)
+        end
       end
-      let fallback = genericNamedType(name, args, typeParams)
-      goPrimitiveType(name).Fold(goSpecialType(name, args, typeParams).UnwrapOr(fallback), func(_: String, mapped: String) -> String
-        mapped
-      end)
     case FuncType(params, ret) =>
       let paramStrs = typeExprsToStrings(params, typeParams)
       let retStr = goType(ret.value(), typeParams)
@@ -38,6 +44,29 @@ func goType(t: ast2.TypeExpr, typeParams: Set[String]) -> String
       return "struct{}"
     case _ =>
       return "any"
+  end
+end
+
+# Encode a multi-argument application with binary HKT nesting. Thus C[A, B]
+# becomes HKT[C, HKT[A, B]], while C[A] remains HKT[C, A].
+func hktApplicationArgs(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> String
+  if args.Len() == 0 then
+    "any"
+  else
+    if args.Len() == 1 then
+      goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), typeParams)
+    else
+      let first = goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), typeParams)
+      "HKT[" + first + ", " + hktApplicationArgs(sliceDrop(args, 1), typeParams) + "]"
+    end
+  end
+end
+
+func isHKTConstructor(name: String, args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> Bool
+  if args.Len() == 0 then
+    false
+  else
+    setContainsString(typeParams, name + "#hkt")
   end
 end
 
@@ -156,6 +185,11 @@ end
 func typeParamSet(params: Slice[String]) -> Set[String]
   params.Fold(Set.New[String](), func(s: Set[String], p: String) -> Set[String]
     s.Add(p)
+    if strings.HasPrefix(p, hktTypeParamName(p) + "[") then
+      s.Add(hktTypeParamName(p) + "#hkt")
+    else
+      s
+    end
   end)
 end
 
