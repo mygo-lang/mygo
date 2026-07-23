@@ -47,7 +47,7 @@ func typeArgsFromAST(items []ast2.TypeExpr) []MonoType {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		expr_7 = []MonoType{}
 	} else {
-		expr_7 = MygoIN5SliceM7Prepend(typeArgsFromAST(sliceDrop[ast2.TypeExpr](items, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.TypeExprUnitTypeCtor())))
+		expr_7 = MygoIN5SliceM7Prepend(typeArgsFromAST(sliceDrop[ast2.TypeExpr](items, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.TypeExprUnitTypeCtor())))
 	}
 	return expr_7
 }
@@ -56,7 +56,7 @@ func paramsToTypes(params []ast2.Param) []MonoType {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
 		expr_8 = []MonoType{}
 	} else {
-		expr_8 = MygoIN5SliceM7Prepend(paramsToTypes(sliceDrop[ast2.Param](params, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()}).Type))
+		expr_8 = MygoIN5SliceM7Prepend(paramsToTypes(sliceDrop[ast2.Param](params, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()}).Type))
 	}
 	return expr_8
 }
@@ -66,7 +66,7 @@ func envWithParams(env []EnvEntry, params []ast2.Param) []EnvEntry {
 		expr_11 = env
 	} else {
 		var expr_10 []EnvEntry
-		p_9 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+		p_9 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
 		expr_10 = envWithParams(envPut(env, p_9.Name, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: typeFromAST(p_9.Type)}), sliceDrop[ast2.Param](params, 1))
 		expr_11 = expr_10
 	}
@@ -81,7 +81,7 @@ func envGet(env []EnvEntry, name string) Option[Scheme] {
 		expr_15 = None[Scheme]()
 	} else {
 		var expr_14 Option[Scheme]
-		item_12 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: MonoTypeTUnitCtor()}})
+		item_12 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: MonoTypeTUnitCtor()}})
 		var expr_13 Option[Scheme]
 		if item_12.Name == name {
 			expr_13 = Some[Scheme](item_12.Scheme)
@@ -108,7 +108,7 @@ func envWithStructFields(env []EnvEntry, typeName string, fields []ast2.Field) [
 		expr_19 = env
 	} else {
 		var expr_18 []EnvEntry
-		f_16 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
+		f_16 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
 		next_17 := envPut(env, fieldEnvName(typeName, f_16.Name), Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: typeFromAST(f_16.Type)})
 		expr_18 = envWithStructFields(next_17, typeName, sliceDrop[ast2.Field](fields, 1))
 		expr_19 = expr_18
@@ -121,7 +121,7 @@ func fieldsForStruct(typeName string, fields []ast2.Field, out []FieldEntry) []F
 		expr_22 = out
 	} else {
 		var expr_21 []FieldEntry
-		f_20 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
+		f_20 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
 		expr_21 = fieldsForStruct(typeName, sliceDrop[ast2.Field](fields, 1), MygoIN5SliceM6Append(out, FieldEntry{TypeName: typeName, FieldName: f_20.Name, Type: typeFromAST(f_20.Type)}))
 		expr_22 = expr_21
 	}

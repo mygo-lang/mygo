@@ -507,11 +507,15 @@ func switchExpr() ps.Parser[ast2.Expr] {
 func switchCase() ps.Parser[ast2.SwitchCase] {
 	return ps.PBind(kw("case"), func(_ string) ps.Parser[ast2.SwitchCase] {
 		return ps.PBind(pattern(), func(pat ast2.Pattern) ps.Parser[ast2.SwitchCase] {
-			return ps.PBind(sym("=>"), func(_ string) ps.Parser[ast2.SwitchCase] {
+			return ps.PChoice([]ps.Parser[ast2.SwitchCase]{ps.PBind(sym("=>"), func(_ string) ps.Parser[ast2.SwitchCase] {
 				return ps.PMap(blockUntil(ps.PChoice([]ps.Parser[string]{kw("case"), kw("end")})), func(body ast2.Expr) ast2.SwitchCase {
 					return ast2.SwitchCase{Pattern: pat, Body: bodyExprFromBlock(body)}
 				})
-			})
+			}), ps.PBind(kw("then"), func(_ string) ps.Parser[ast2.SwitchCase] {
+				return ps.PBind(blockUntil(kw("end")), func(body ast2.Expr) ps.Parser[ast2.SwitchCase] {
+					return ps.PThen(kw("end"), ps.PPure(ast2.SwitchCase{Pattern: pat, Body: bodyExprFromBlock(body)}))
+				})
+			})})
 		})
 	})
 }
@@ -991,11 +995,22 @@ func number() ps.Parser[string] {
 	}))
 }
 func stringLiteral() ps.Parser[string] {
-	return lexeme[string](ps.PBind(ps.PChar('"'), func(_ rune) ps.Parser[string] {
+	return ps.PChoice([]ps.Parser[string]{ps.PAttempt(multilineStringLiteral()), lexeme[string](ps.PBind(ps.PChar('"'), func(_ rune) ps.Parser[string] {
 		return ps.PBind(ps.PMany(stringChar()), func(chars []rune) ps.Parser[string] {
 			return ps.PThen(ps.PChar('"'), ps.PPure(MygoIN6StringM9FromRunes(chars)))
 		})
+	}))})
+}
+func multilineStringLiteral() ps.Parser[string] {
+	delimiter_68 := tripleQuoteString()
+	return lexeme[string](ps.PBind(ps.PString(delimiter_68), func(_ string) ps.Parser[string] {
+		return ps.PBind(ps.PMany(ps.PThen(ps.PNotFollowedBy(ps.PString(delimiter_68), "triple quote"), ps.PAnyRune())), func(chars []rune) ps.Parser[string] {
+			return ps.PThen(ps.PString(delimiter_68), ps.PPure(MygoIN6StringM9FromRunes(chars)))
+		})
 	}))
+}
+func tripleQuoteString() string {
+	return MygoIN6StringM9FromRunes([]rune{doubleQuoteRune(), doubleQuoteRune(), doubleQuoteRune()})
 }
 func runeLiteral() ps.Parser[string] {
 	return lexeme[string](ps.PBind(ps.PChar(singleQuoteRune()), func(_ rune) ps.Parser[string] {
@@ -1099,151 +1114,151 @@ func isIdentRest(r rune) bool {
 	return isIdentStart(r) || r >= '0' && r <= '9'
 }
 func isKeyword(value string) bool {
-	var expr_97 bool
+	var expr_98 bool
 	if value == "package" {
-		var expr_96 bool
-		expr_96 = true
-		expr_97 = expr_96
+		var expr_97 bool
+		expr_97 = true
+		expr_98 = expr_97
 	} else {
 		if value == "import" {
-			var expr_95 bool
-			expr_95 = true
-			expr_97 = expr_95
+			var expr_96 bool
+			expr_96 = true
+			expr_98 = expr_96
 		} else {
 			if value == "enum" {
-				var expr_94 bool
-				expr_94 = true
-				expr_97 = expr_94
+				var expr_95 bool
+				expr_95 = true
+				expr_98 = expr_95
 			} else {
 				if value == "struct" {
-					var expr_93 bool
-					expr_93 = true
-					expr_97 = expr_93
+					var expr_94 bool
+					expr_94 = true
+					expr_98 = expr_94
 				} else {
 					if value == "interface" {
-						var expr_92 bool
-						expr_92 = true
-						expr_97 = expr_92
+						var expr_93 bool
+						expr_93 = true
+						expr_98 = expr_93
 					} else {
 						if value == "impl" {
-							var expr_91 bool
-							expr_91 = true
-							expr_97 = expr_91
+							var expr_92 bool
+							expr_92 = true
+							expr_98 = expr_92
 						} else {
 							if value == "func" {
-								var expr_90 bool
-								expr_90 = true
-								expr_97 = expr_90
+								var expr_91 bool
+								expr_91 = true
+								expr_98 = expr_91
 							} else {
 								if value == "if" {
-									var expr_89 bool
-									expr_89 = true
-									expr_97 = expr_89
+									var expr_90 bool
+									expr_90 = true
+									expr_98 = expr_90
 								} else {
 									if value == "then" {
-										var expr_88 bool
-										expr_88 = true
-										expr_97 = expr_88
+										var expr_89 bool
+										expr_89 = true
+										expr_98 = expr_89
 									} else {
 										if value == "elsif" {
-											var expr_87 bool
-											expr_87 = true
-											expr_97 = expr_87
+											var expr_88 bool
+											expr_88 = true
+											expr_98 = expr_88
 										} else {
 											if value == "else" {
-												var expr_86 bool
-												expr_86 = true
-												expr_97 = expr_86
+												var expr_87 bool
+												expr_87 = true
+												expr_98 = expr_87
 											} else {
 												if value == "switch" {
-													var expr_85 bool
-													expr_85 = true
-													expr_97 = expr_85
+													var expr_86 bool
+													expr_86 = true
+													expr_98 = expr_86
 												} else {
 													if value == "case" {
-														var expr_84 bool
-														expr_84 = true
-														expr_97 = expr_84
+														var expr_85 bool
+														expr_85 = true
+														expr_98 = expr_85
 													} else {
 														if value == "end" {
-															var expr_83 bool
-															expr_83 = true
-															expr_97 = expr_83
+															var expr_84 bool
+															expr_84 = true
+															expr_98 = expr_84
 														} else {
 															if value == "using" {
-																var expr_82 bool
-																expr_82 = true
-																expr_97 = expr_82
+																var expr_83 bool
+																expr_83 = true
+																expr_98 = expr_83
 															} else {
 																if value == "not" {
-																	var expr_81 bool
-																	expr_81 = true
-																	expr_97 = expr_81
+																	var expr_82 bool
+																	expr_82 = true
+																	expr_98 = expr_82
 																} else {
 																	if value == "let" {
-																		var expr_80 bool
-																		expr_80 = true
-																		expr_97 = expr_80
+																		var expr_81 bool
+																		expr_81 = true
+																		expr_98 = expr_81
 																	} else {
 																		if value == "letrec" {
-																			var expr_79 bool
-																			expr_79 = true
-																			expr_97 = expr_79
+																			var expr_80 bool
+																			expr_80 = true
+																			expr_98 = expr_80
 																		} else {
 																			if value == "var" {
-																				var expr_78 bool
-																				expr_78 = true
-																				expr_97 = expr_78
+																				var expr_79 bool
+																				expr_79 = true
+																				expr_98 = expr_79
 																			} else {
 																				if value == "embed" {
-																					var expr_77 bool
-																					expr_77 = true
-																					expr_97 = expr_77
+																					var expr_78 bool
+																					expr_78 = true
+																					expr_98 = expr_78
 																				} else {
 																					if value == "while" {
-																						var expr_76 bool
-																						expr_76 = true
-																						expr_97 = expr_76
+																						var expr_77 bool
+																						expr_77 = true
+																						expr_98 = expr_77
 																					} else {
 																						if value == "return" {
-																							var expr_75 bool
-																							expr_75 = true
-																							expr_97 = expr_75
+																							var expr_76 bool
+																							expr_76 = true
+																							expr_98 = expr_76
 																						} else {
 																							if value == "go" {
-																								var expr_74 bool
-																								expr_74 = true
-																								expr_97 = expr_74
+																								var expr_75 bool
+																								expr_75 = true
+																								expr_98 = expr_75
 																							} else {
 																								if value == "in" {
-																									var expr_73 bool
-																									expr_73 = true
-																									expr_97 = expr_73
+																									var expr_74 bool
+																									expr_74 = true
+																									expr_98 = expr_74
 																								} else {
 																									if value == "type" {
-																										var expr_72 bool
-																										expr_72 = true
-																										expr_97 = expr_72
+																										var expr_73 bool
+																										expr_73 = true
+																										expr_98 = expr_73
 																									} else {
 																										if value == "as" {
-																											var expr_71 bool
-																											expr_71 = true
-																											expr_97 = expr_71
+																											var expr_72 bool
+																											expr_72 = true
+																											expr_98 = expr_72
 																										} else {
 																											if value == "true" {
-																												var expr_70 bool
-																												expr_70 = true
-																												expr_97 = expr_70
+																												var expr_71 bool
+																												expr_71 = true
+																												expr_98 = expr_71
 																											} else {
 																												if value == "false" {
-																													var expr_69 bool
-																													expr_69 = true
-																													expr_97 = expr_69
+																													var expr_70 bool
+																													expr_70 = true
+																													expr_98 = expr_70
 																												} else {
 																													{
-																														var expr_68 bool
-																														expr_68 = false
-																														expr_97 = expr_68
+																														var expr_69 bool
+																														expr_69 = false
+																														expr_98 = expr_69
 																													}
 																												}
 																											}
@@ -1273,32 +1288,32 @@ func isKeyword(value string) bool {
 			}
 		}
 	}
-	return expr_97
+	return expr_98
 }
 func defaultImportAlias(path string) string {
-	parts_98 := strings.Split(path, "/")
-	var expr_99 string
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_98) == 0 {
-		expr_99 = path
+	parts_99 := strings.Split(path, "/")
+	var expr_100 string
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_99) == 0 {
+		expr_100 = path
 	} else {
-		expr_99 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_98, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_98)-1), path)
+		expr_100 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_99, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_99)-1), path)
 	}
-	return expr_99
+	return expr_100
 }
 func formatError(sourceName string, err Option[ps.ParseError], pos ps.Position) string {
-	var expr_102 string
+	var expr_103 string
 	if v_16, ok := err.(OptionSome[ps.ParseError]); ok {
-		var expr_101 string
-		expr_101 = sourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_16.F0.Position.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_16.F0.Position.Column) + ": parse error: " + v_16.F0.Message
-		expr_102 = expr_101
+		var expr_102 string
+		expr_102 = sourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_16.F0.Position.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_16.F0.Position.Column) + ": parse error: " + v_16.F0.Message
+		expr_103 = expr_102
 	} else {
 		if _, ok := err.(OptionNone[ps.ParseError]); ok {
-			var expr_100 string
-			expr_100 = sourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Column) + ": parse error"
-			expr_102 = expr_100
+			var expr_101 string
+			expr_101 = sourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Column) + ": parse error"
+			expr_103 = expr_101
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_102
+	return expr_103
 }

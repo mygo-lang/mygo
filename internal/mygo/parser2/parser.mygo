@@ -517,11 +517,18 @@ end
 func switchCase() -> ps.Parser[ast2.SwitchCase]
   ps.PBind(kw("case"), func(_: String) -> ps.Parser[ast2.SwitchCase]
     ps.PBind(pattern(), func(pat: ast2.Pattern) -> ps.Parser[ast2.SwitchCase]
-      ps.PBind(sym("=>"), func(_: String) -> ps.Parser[ast2.SwitchCase]
-        ps.PMap(blockUntil(ps.PChoice([kw("case"), kw("end")])), func(body: ast2.Expr) -> ast2.SwitchCase
-          ast2.SwitchCase { Pattern: pat, Body: bodyExprFromBlock(body) }
-        end)
-      end)
+      ps.PChoice([
+        ps.PBind(sym("=>"), func(_: String) -> ps.Parser[ast2.SwitchCase]
+          ps.PMap(blockUntil(ps.PChoice([kw("case"), kw("end")])), func(body: ast2.Expr) -> ast2.SwitchCase
+            ast2.SwitchCase { Pattern: pat, Body: bodyExprFromBlock(body) }
+          end)
+        end),
+        ps.PBind(kw("then"), func(_: String) -> ps.Parser[ast2.SwitchCase]
+          ps.PBind(blockUntil(kw("end")), func(body: ast2.Expr) -> ps.Parser[ast2.SwitchCase]
+            ps.PThen(kw("end"), ps.PPure(ast2.SwitchCase { Pattern: pat, Body: bodyExprFromBlock(body) }))
+          end)
+        end),
+      ])
     end)
   end)
 end
@@ -1002,11 +1009,27 @@ func number() -> ps.Parser[String]
 end
 
 func stringLiteral() -> ps.Parser[String]
-  lexeme(ps.PBind(ps.PChar('"'), func(_: Rune) -> ps.Parser[String]
-    ps.PBind(ps.PMany(stringChar()), func(chars: Slice[Rune]) -> ps.Parser[String]
-      ps.PThen(ps.PChar('"'), ps.PPure(String.FromRunes(chars)))
+  ps.PChoice([
+    ps.PAttempt(multilineStringLiteral()),
+    lexeme(ps.PBind(ps.PChar('"'), func(_: Rune) -> ps.Parser[String]
+      ps.PBind(ps.PMany(stringChar()), func(chars: Slice[Rune]) -> ps.Parser[String]
+        ps.PThen(ps.PChar('"'), ps.PPure(String.FromRunes(chars)))
+      end)
+    end)),
+  ])
+end
+
+func multilineStringLiteral() -> ps.Parser[String]
+  let delimiter = tripleQuoteString()
+  lexeme(ps.PBind(ps.PString(delimiter), func(_: String) -> ps.Parser[String]
+    ps.PBind(ps.PMany(ps.PThen(ps.PNotFollowedBy(ps.PString(delimiter), "triple quote"), ps.PAnyRune())), func(chars: Slice[Rune]) -> ps.Parser[String]
+      ps.PThen(ps.PString(delimiter), ps.PPure(String.FromRunes(chars)))
     end)
   end))
+end
+
+func tripleQuoteString() -> String
+  String.FromRunes([doubleQuoteRune(), doubleQuoteRune(), doubleQuoteRune()])
 end
 
 func runeLiteral() -> ps.Parser[String]

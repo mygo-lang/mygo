@@ -47,6 +47,26 @@ func TestParseFileParsesSelf(t *testing.T) {
 	}
 }
 
+func TestParseFileParsesPrelude(t *testing.T) {
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("cannot determine parser test path")
+	}
+	sourcePath := filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "prelude", "prelude.mygo")
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("read %s: %v", sourcePath, err)
+	}
+	got := ParseFileAt(sourcePath, string(source))
+	parsed, ok := got.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFileAt(%s) failed: %v", sourcePath, got)
+	}
+	if len(parsed.F0.Decls) == 0 {
+		t.Fatalf("ParseFileAt(%s) returned no declarations", sourcePath)
+	}
+}
+
 func TestParseFunctionLiteral(t *testing.T) {
 	fn := parseSingleFunc(t, `package sample
 
@@ -167,6 +187,38 @@ end
 	}
 	if _, ok := sw.F1[2].Pattern.(ast2.PatternWildcardPattern); !ok {
 		t.Fatalf("third pattern = %T, want PatternWildcardPattern", sw.F1[2].Pattern)
+	}
+}
+
+func TestParseSwitchCaseBlock(t *testing.T) {
+	got := ParseFile(`package sample
+
+enum Maybe[A]
+  Some(A)
+  None
+end
+
+func unwrap(value: Maybe[Int]) -> Int
+  switch value
+    case Some(item) then
+      item
+    end
+    case None => 0
+  end
+end
+`)
+	parsed, ok := got.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", got)
+	}
+	fn := parsed.F0.Decls[1].(ast2.DeclFuncDecl)
+	body := fn.F4.(ast2.ExprBlockExpr)
+	sw := body.F0[0].(ast2.StmtExprStmt).F0.(ast2.ExprSwitchExpr)
+	if len(sw.F1) != 2 {
+		t.Fatalf("case count = %d, want 2", len(sw.F1))
+	}
+	if _, ok := sw.F1[0].Body.(ast2.ExprIdentExpr); !ok {
+		t.Fatalf("block case body = %T, want ast2.ExprIdentExpr", sw.F1[0].Body)
 	}
 }
 

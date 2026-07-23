@@ -147,7 +147,7 @@ func monoListEqual(a []MonoType, b []MonoType) bool {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(a) == 0 {
 			expr_594 = true
 		} else {
-			expr_594 = monoEqual(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, 0), MonoTypeTUnitCtor()), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, 0), MonoTypeTUnitCtor())) && monoListEqual(sliceDrop[MonoType](a, 1), sliceDrop[MonoType](b, 1))
+			expr_594 = monoEqual(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, 0), MonoTypeTUnitCtor()), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, 0), MonoTypeTUnitCtor())) && monoListEqual(sliceDrop[MonoType](a, 1), sliceDrop[MonoType](b, 1))
 		}
 		expr_595 = expr_594
 	}
@@ -213,7 +213,7 @@ func instantiateBoundSubst(bound []int, state InferState, out []SubstEntry) []Su
 		expr_607 = out
 	} else {
 		var expr_606 []SubstEntry
-		id_605 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bound, 0), 0)
+		id_605 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bound, 0), 0)
 		expr_606 = instantiateBoundSubst(sliceDrop[int](bound, 1), InferState{FreshVarID: state.FreshVarID + 1}, MygoIN5SliceM6Append(out, SubstEntry{ID: id_605, Type: MonoTypeTVarCtor(state.FreshVarID)}))
 		expr_607 = expr_606
 	}
@@ -225,7 +225,7 @@ func substPredicates(items []Predicate, subst []SubstEntry) []Predicate {
 		expr_610 = []Predicate{}
 	} else {
 		var expr_609 []Predicate
-		p_608 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), Predicate{ClassName: "", Args: []MonoType([]MonoType{})})
+		p_608 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), Predicate{ClassName: "", Args: []MonoType([]MonoType{})})
 		expr_609 = MygoIN5SliceM7Prepend(substPredicates(sliceDrop[Predicate](items, 1), subst), Predicate{ClassName: p_608.ClassName, Args: substTypes(p_608.Args, subst)})
 		expr_610 = expr_609
 	}
@@ -236,7 +236,7 @@ func substTypes(items []MonoType, subst []SubstEntry) []MonoType {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		expr_611 = []MonoType{}
 	} else {
-		expr_611 = MygoIN5SliceM7Prepend(substTypes(sliceDrop[MonoType](items, 1), subst), applySubst(subst, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())))
+		expr_611 = MygoIN5SliceM7Prepend(substTypes(sliceDrop[MonoType](items, 1), subst), applySubst(subst, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())))
 	}
 	return expr_611
 }
@@ -245,7 +245,7 @@ func appendPredicates(left []Predicate, right []Predicate) []Predicate {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(right) == 0 {
 		expr_612 = left
 	} else {
-		expr_612 = appendPredicates(MygoIN5SliceM6Append(left, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), Predicate{ClassName: "", Args: []MonoType([]MonoType{})})), sliceDrop[Predicate](right, 1))
+		expr_612 = appendPredicates(MygoIN5SliceM6Append(left, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), Predicate{ClassName: "", Args: []MonoType([]MonoType{})})), sliceDrop[Predicate](right, 1))
 	}
 	return expr_612
 }
@@ -255,7 +255,7 @@ func instantiateBound(bound []int, body MonoType, state InferState, subst []Subs
 		expr_615 = applySubst(subst, body)
 	} else {
 		var expr_614 MonoType
-		id_613 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bound, 0), 0)
+		id_613 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bound, 0), 0)
 		expr_614 = instantiateBound(sliceDrop[int](bound, 1), body, InferState{FreshVarID: state.FreshVarID + 1}, MygoIN5SliceM7Prepend(subst, SubstEntry{ID: id_613, Type: MonoTypeTVarCtor(state.FreshVarID)}))
 		expr_615 = expr_614
 	}
@@ -325,7 +325,7 @@ func freeVarsAll(items []MonoType, out []int) []int {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		expr_626 = out
 	} else {
-		expr_626 = freeVarsAll(sliceDrop[MonoType](items, 1), freeVars(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor()), out))
+		expr_626 = freeVarsAll(sliceDrop[MonoType](items, 1), freeVars(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor()), out))
 	}
 	return expr_626
 }
@@ -334,7 +334,7 @@ func containsInt(items []int, value int) bool {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		expr_627 = false
 	} else {
-		expr_627 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), 0) == value || containsInt(sliceDrop[int](items, 1), value)
+		expr_627 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), 0) == value || containsInt(sliceDrop[int](items, 1), value)
 	}
 	return expr_627
 }
@@ -344,7 +344,7 @@ func envFreeVars(env []EnvEntry, out []int) []int {
 		expr_632 = out
 	} else {
 		var expr_631 []int
-		item_628 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: MonoTypeTUnitCtor()}})
+		item_628 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: MonoTypeTUnitCtor()}})
 		bodyVars_629 := freeVars(item_628.Scheme.Body, out)
 		predicateVars_630 := freeVarsPredicates(item_628.Scheme.Predicates, bodyVars_629)
 		expr_631 = envFreeVars(sliceDrop[EnvEntry](env, 1), removeInts(predicateVars_630, item_628.Scheme.Bound))
@@ -358,7 +358,7 @@ func freeVarsPredicates(items []Predicate, out []int) []int {
 		expr_635 = out
 	} else {
 		var expr_634 []int
-		predicate_633 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), Predicate{ClassName: "", Args: []MonoType([]MonoType{})})
+		predicate_633 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), Predicate{ClassName: "", Args: []MonoType([]MonoType{})})
 		expr_634 = freeVarsPredicates(sliceDrop[Predicate](items, 1), freeVarsAll(predicate_633.Args, out))
 		expr_635 = expr_634
 	}
@@ -372,10 +372,10 @@ func removeInts(items []int, removed []int) []int {
 		var expr_638 []int
 		tail_636 := removeInts(sliceDrop[int](items, 1), removed)
 		var expr_637 []int
-		if containsInt(removed, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), 0)) {
+		if containsInt(removed, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), 0)) {
 			expr_637 = tail_636
 		} else {
-			expr_637 = MygoIN5SliceM7Prepend(tail_636, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), 0))
+			expr_637 = MygoIN5SliceM7Prepend(tail_636, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), 0))
 		}
 		expr_638 = expr_637
 		expr_639 = expr_638
@@ -424,12 +424,12 @@ func sliceTailLoop[A any](items []A, index int, out []A) []A {
 		expr_645 = out
 	} else {
 		var expr_644 []A
-		if v_268, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionSome[A]); ok {
+		if v_268, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionSome[A]); ok {
 			var expr_643 []A
 			expr_643 = sliceTailLoop[A](items, index+1, MygoIN5SliceM6Append(out, v_268.F0))
 			expr_644 = expr_643
 		} else {
-			if _, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionNone[A]); ok {
+			if _, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionNone[A]); ok {
 				var expr_642 []A
 				expr_642 = out
 				expr_644 = expr_642

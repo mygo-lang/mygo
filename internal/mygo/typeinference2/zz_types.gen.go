@@ -236,7 +236,7 @@ func seedGoPackageEnv(goPkgs []GoPackageEntry, env []EnvEntry) []EnvEntry {
 		expr_485 = env
 	} else {
 		var expr_484 []EnvEntry
-		pkg_483 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(goPkgs, 0), GoPackageEntry{Alias: "", Path: ""})
+		pkg_483 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(goPkgs, 0), GoPackageEntry{Alias: "", Path: ""})
 		expr_484 = seedGoPackageEnv(sliceDrop[GoPackageEntry](goPkgs, 1), envPut(env, pkg_483.Alias, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: MonoTypeTGoPackageCtor(pkg_483.Alias)}))
 		expr_485 = expr_484
 	}
@@ -248,7 +248,7 @@ func flattenPkgDecls(files []PkgDeclSource, index int, out []ast2.Decl) []ast2.D
 		expr_488 = out
 	} else {
 		var expr_487 []ast2.Decl
-		f_486 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), PkgDeclSource{Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
+		f_486 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), PkgDeclSource{Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
 		expr_487 = flattenPkgDecls(files, index+1, appendDecls(out, f_486.Decls))
 		expr_488 = expr_487
 	}
@@ -262,7 +262,7 @@ func appendDecls(acc []ast2.Decl, items []ast2.Decl) []ast2.Decl {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		expr_489 = acc
 	} else {
-		expr_489 = appendDecls(MygoIN5SliceM6Append(acc, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.DeclImportDeclCtor("", ""))), sliceDrop[ast2.Decl](items, 1))
+		expr_489 = appendDecls(MygoIN5SliceM6Append(acc, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.DeclImportDeclCtor("", ""))), sliceDrop[ast2.Decl](items, 1))
 	}
 	return expr_489
 }

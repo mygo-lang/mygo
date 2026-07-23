@@ -40,7 +40,7 @@ func assertBootstrapsMyGOFile(t *testing.T, relativePath string) {
 	if err != nil {
 		t.Fatalf("read %s: %v", sourcePath, err)
 	}
-	got := GenerateSource(string(source))
+	got := GenerateSourceAt(sourcePath, string(source))
 	result, yes := got.(ResultOk[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource(%s) failed: %v", sourcePath, got)
