@@ -522,7 +522,7 @@ func bodyExprFromBlock(body: ast2.Expr) -> ast2.Expr
   switch body
     case BlockExpr(items) =>
       if items.Len() == 1 then
-        let first = items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr))
+        let first: ast2.Stmt = items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(ast2.Expr.UnitExpr))
         switch first
           case ExprStmt(e) => e
           case _ => body
@@ -610,10 +610,15 @@ func postfixTail(start: ps.State, cur: ps.State, acc: ast2.Expr) -> ps.Reply[ast
     if fld.Ok then
       postfixTail(start, fld.State, ast2.Expr.FieldExpr(Ref.new(acc), fld.Value))
     else
-      ps.Reply[ast2.Expr] {
-        Ok: true, Consumed: cur.Index != start.Index, Value: acc,
-        State: cur, Error: ps.EmptyError(cur.Position)
-      }
+      let cast = ps.PThen(kw("as"), typeExpr()).Run(cur)
+      if cast.Ok then
+        postfixTail(start, cast.State, ast2.Expr.TypeAsExpr(Ref.new(acc), cast.Value))
+      else
+        ps.Reply[ast2.Expr] {
+          Ok: true, Consumed: cur.Index != start.Index, Value: acc,
+          State: cur, Error: ps.EmptyError(cur.Position)
+        }
+      end
     end
   end
 end
@@ -652,15 +657,44 @@ func primaryExpr() -> ps.Parser[ast2.Expr]
     ps.PMap(kw("false"), func(_: String) -> ast2.Expr
       ast2.Expr.BoolExpr(false)
     end),
+    funcLit(),
+    sliceLiteral(),
     tupleOrParenExpr(),
-    # 结构体字面量: TypeName { field: ast2.Expr, ... } — 先解析标识符，再尝试花括号
-    ps.PAttempt(ps.PBind(identifier(), func(typeName: String) -> ps.Parser[ast2.Expr]
+    # 结构体字面量支持导入类型名，例如 ast2.File { ... }。
+    ps.PAttempt(ps.PBind(qualifiedIdentifier(), func(typeName: String) -> ps.Parser[ast2.Expr]
       structLitFields(typeName)
     end)),
     ps.PMap(identifier(), func(v: String) -> ast2.Expr
       ast2.Expr.IdentExpr(v)
     end),
   ])
+end
+
+func sliceLiteral() -> ps.Parser[ast2.Expr]
+  ps.PMap(brackets(sepByEnd(lazyExpr(), sym(","))), func(items: Slice[ast2.Expr]) -> ast2.Expr
+    ast2.Expr.SliceLitExpr(items)
+  end)
+end
+
+# sepByEnd accepts an optional trailing separator without allowing a consumed
+# separator to make PSepBy fail before the closing delimiter.
+func sepByEnd[A, S](item: ps.Parser[A], sep: ps.Parser[S]) -> ps.Parser[Slice[A]]
+  let guardedSep = ps.PAttempt(ps.PThen(sep, ps.PLookAhead(item)))
+  ps.PBind(ps.PSepBy(item, guardedSep), func(items: Slice[A]) -> ps.Parser[Slice[A]]
+    ps.PThen(ps.POptional(sep), ps.PPure(items))
+  end)
+end
+
+func funcLit() -> ps.Parser[ast2.Expr]
+  ps.PBind(kw("func"), func(_: String) -> ps.Parser[ast2.Expr]
+    ps.PBind(paren(ps.PSepBy(param(), sym(","))), func(params: Slice[ast2.Param]) -> ps.Parser[ast2.Expr]
+      ps.PBind(ps.POptional(ps.PThen(sym("->"), typeExpr())), func(ret: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Expr]
+        ps.PBind(blockUntilEnd(), func(body: ast2.Expr) -> ps.Parser[ast2.Expr]
+          ps.PThen(kw("end"), ps.PPure(ast2.Expr.FuncLitExpr(params, ret, Ref.new(body))))
+        end)
+      end)
+    end)
+  end)
 end
 
 func tupleOrParenExpr() -> ps.Parser[ast2.Expr]

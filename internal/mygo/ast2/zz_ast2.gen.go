@@ -383,6 +383,39 @@ func ExprBlockExprCtor(a0 []Stmt) Expr {
 	return ExprBlockExpr{F0: a0}
 }
 
+type ExprFuncLitExpr struct {
+	F0 []Param
+	F1 Option[TypeExpr]
+	F2 *Expr
+}
+
+func (_ ExprFuncLitExpr) isExpr() {
+}
+func ExprFuncLitExprCtor(a0 []Param, a1 Option[TypeExpr], a2 *Expr) Expr {
+	return ExprFuncLitExpr{F0: a0, F1: a1, F2: a2}
+}
+
+type ExprSliceLitExpr struct {
+	F0 []Expr
+}
+
+func (_ ExprSliceLitExpr) isExpr() {
+}
+func ExprSliceLitExprCtor(a0 []Expr) Expr {
+	return ExprSliceLitExpr{F0: a0}
+}
+
+type ExprTypeAsExpr struct {
+	F0 *Expr
+	F1 TypeExpr
+}
+
+func (_ ExprTypeAsExpr) isExpr() {
+}
+func ExprTypeAsExprCtor(a0 *Expr, a1 TypeExpr) Expr {
+	return ExprTypeAsExpr{F0: a0, F1: a1}
+}
+
 type ExprStructLitExpr struct {
 	F0 string
 	F1 []StructLitField

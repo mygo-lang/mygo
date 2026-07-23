@@ -111,6 +111,9 @@ enum Expr
   BinaryExpr(String, Ref[Expr], Ref[Expr])
   IfExpr(Ref[Expr], Ref[Expr], Ref[Expr])
   BlockExpr(Slice[Stmt])
+  FuncLitExpr(Slice[Param], Option[TypeExpr], Ref[Expr])
+  SliceLitExpr(Slice[Expr])
+  TypeAsExpr(Ref[Expr], TypeExpr)
   StructLitExpr(String, Slice[StructLitField])
   InlineGoExpr(Ref[TypeExpr], String, Slice[GoOperand], Slice[GoTypeOperand])
 end

@@ -7,6 +7,42 @@ import (
 	. "github.com/mygo-lang/mygo/prelude"
 )
 
+func TestParseFunctionLiteral(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func make(values: Slice[ast2.Decl])
+func(_: String) -> ps.Parser[ast2.File]
+    ps.PBind(kw("x"), func(_: String) -> ps.Parser[ast2.File]
+      ps.PPure(ast2.File { PackageName: "sample", Decls: values })
+    end)
+  end
+end
+`)
+	body := fn.F4.(ast2.ExprBlockExpr)
+	got := body.F0[0].(ast2.StmtExprStmt).F0
+	if _, ok := got.(ast2.ExprFuncLitExpr); !ok {
+		t.Fatalf("body = %T, want ExprFuncLitExpr", got)
+	}
+}
+
+func TestParseSliceLiteralWithTrailingCommaAndTypeAs(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func values()
+  [1, 2,] as Slice[Int]
+end
+`)
+	body := fn.F4.(ast2.ExprBlockExpr)
+	cast, ok := body.F0[0].(ast2.StmtExprStmt).F0.(ast2.ExprTypeAsExpr)
+	if !ok {
+		t.Fatalf("body = %T, want ExprTypeAsExpr", body.F0[0].(ast2.StmtExprStmt).F0)
+	}
+	slice, ok := (*cast.F0).(ast2.ExprSliceLitExpr)
+	if !ok || len(slice.F0) != 2 {
+		t.Fatalf("cast value = %T, want two-item ExprSliceLitExpr", *cast.F0)
+	}
+}
+
 func TestParseFileBasicDeclarations(t *testing.T) {
 	src := `package sample
 
