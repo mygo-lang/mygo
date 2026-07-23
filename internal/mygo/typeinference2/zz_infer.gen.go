@@ -188,7 +188,7 @@ func inferExpr(expr ast2.Expr, env []EnvEntry, state InferState) Result[InferRes
 		var expr_92 Result[InferResult, string]
 		if v_45, ok := envGet(env, v_43.F0).(OptionSome[Scheme]); ok {
 			var expr_91 Result[InferResult, string]
-			expr_91 = Ok[InferResult, string](InferResult{Type: v_45.F0.Body, Subst: []SubstEntry{}, State: state})
+			expr_91 = Ok[InferResult, string](InferResult{Type: instantiate(v_45.F0, state), Subst: []SubstEntry{}, State: state})
 			expr_92 = expr_91
 		} else {
 			if _, ok := envGet(env, v_43.F0).(OptionNone[Scheme]); ok {
@@ -1398,7 +1398,7 @@ func inferBlockLet(bind ast2.Bind, env []EnvEntry, state InferState) Result[Bloc
 				if v_157, ok := annotated_351.(ResultOk[[]SubstEntry, string]); ok {
 					var expr_354 Result[BlockInferStep, string]
 					boundType_352 := applySubst(v_157.F0, v_154.F0.Type)
-					nextEnv_353 := envPut(env, bind.Name, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: boundType_352})
+					nextEnv_353 := envPut(env, bind.Name, Scheme{Bound: generalize(env, boundType_352), Predicates: []Predicate{}, Body: boundType_352})
 					expr_354 = Ok[BlockInferStep, string](BlockInferStep{Result: InferResult{Type: MonoTypeTUnitCtor(), Subst: v_157.F0, State: v_154.F0.State}, Env: nextEnv_353})
 					expr_356 = expr_354
 				} else {

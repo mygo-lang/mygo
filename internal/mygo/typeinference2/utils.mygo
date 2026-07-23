@@ -66,6 +66,60 @@ func monoString(t: MonoType) -> String
   end
 end
 
+# Instantiate a polymorphic binding at each lookup site.
+func instantiate(scheme: Scheme, state: InferState) -> MonoType
+  instantiateBound(scheme.Bound, scheme.Body, state, [])
+end
+
+func instantiateBound(bound: Slice[Int], body: MonoType, state: InferState, subst: Slice[SubstEntry]) -> MonoType
+  if bound.Len() == 0 then
+    applySubst(subst, body)
+  else
+    let id = bound.Get(0).UnwrapOr(0)
+    instantiateBound(sliceDrop(bound, 1), body, InferState { FreshVarID: state.FreshVarID + 1 }, subst.Prepend(SubstEntry { ID: id, Type: MonoType.TVar(state.FreshVarID) }))
+  end
+end
+
+# Collect free variables for the small HM generalizer.
+func freeVars(t: MonoType, out: Slice[Int]) -> Slice[Int]
+  switch t
+    case TVar(id) => if containsInt(out, id) then out else out.Append(id) end
+    case TKVar(id) => if containsInt(out, id) then out else out.Append(id) end
+    case TCon(_, args) => freeVarsAll(args, out)
+    case TFunc(args, ret) => freeVarsAll(args, freeVars(ret.value(), out))
+    case TTuple(items) => freeVarsAll(items, out)
+    case TUnit => out
+    case TGoPackage(_) => out
+  end
+end
+
+func freeVarsAll(items: Slice[MonoType], out: Slice[Int]) -> Slice[Int]
+  if items.Len() == 0 then out else freeVarsAll(sliceDrop(items, 1), freeVars(items.Get(0).UnwrapOr(MonoType.TUnit), out)) end
+end
+
+func containsInt(items: Slice[Int], value: Int) -> Bool
+  if items.Len() == 0 then false else items.Get(0).UnwrapOr(0) == value || containsInt(sliceDrop(items, 1), value) end
+end
+
+func envFreeVars(env: Slice[EnvEntry], out: Slice[Int]) -> Slice[Int]
+  if env.Len() == 0 then out
+  else
+    let item = env.Get(0).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: MonoType.TUnit } })
+    envFreeVars(sliceDrop(env, 1), freeVars(item.Scheme.Body, removeInts(out, item.Scheme.Bound)))
+  end
+end
+
+func removeInts(items: Slice[Int], removed: Slice[Int]) -> Slice[Int]
+  if items.Len() == 0 then [] else
+    let tail = removeInts(sliceDrop(items, 1), removed)
+    if containsInt(removed, items.Get(0).UnwrapOr(0)) then tail else tail.Prepend(items.Get(0).UnwrapOr(0)) end
+  end
+end
+
+func generalize(env: Slice[EnvEntry], t: MonoType) -> Slice[Int]
+  removeInts(freeVars(t, []), envFreeVars(env, []))
+end
+
 func isArithmetic(op: String) -> Bool
   op == "+" || op == "-" || op == "*" || op == "/"
 end

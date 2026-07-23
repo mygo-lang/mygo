@@ -95,7 +95,7 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
   switch expr
     case IdentExpr(name) =>
       switch envGet(env, name)
-        case Some(s) => Ok(InferResult { Type: s.Body, Subst: [], State: state })
+        case Some(s) => Ok(InferResult { Type: instantiate(s, state), Subst: [], State: state })
         case None => Err("unknown identifier " + name)
       end
     case NumberExpr(_) => Ok(InferResult { Type: MonoType.TCon("Int", emptyMonoTypes()), Subst: [], State: state })
@@ -565,7 +565,7 @@ func inferBlockLet(bind: ast2.Bind, env: Slice[EnvEntry], state: InferState) -> 
         case Err(msg) => Err(msg)
         case Ok(s) then
           let boundType = applySubst(s, v.Type)
-          let nextEnv = envPut(env, bind.Name, Scheme { Bound: [], Predicates: [], Body: boundType })
+          let nextEnv = envPut(env, bind.Name, Scheme { Bound: generalize(env, boundType), Predicates: [], Body: boundType })
           Ok(BlockInferStep {
             Result: InferResult { Type: MonoType.TUnit, Subst: s, State: v.State },
             Env: nextEnv,
