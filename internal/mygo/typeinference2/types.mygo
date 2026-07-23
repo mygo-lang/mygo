@@ -63,6 +63,7 @@ end
 
 struct InferResult
   Type: MonoType
+  Predicates: Slice[Predicate]
   Subst: Slice[SubstEntry]
   State: InferState
 end
@@ -91,6 +92,7 @@ end
 
 struct ArgsResult
   Types: Slice[MonoType]
+  Predicates: Slice[Predicate]
   Subst: Slice[SubstEntry]
   State: InferState
 end

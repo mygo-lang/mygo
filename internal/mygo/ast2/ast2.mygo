@@ -72,6 +72,8 @@ struct SwitchCase
 end
 
 enum Pattern
+  # A binding pattern introduces the matched value under a local name.
+  BindPattern(String)
   VariantPattern(String, Slice[Pattern])
   TuplePattern(Slice[Pattern])
   LiteralPattern(String, String)

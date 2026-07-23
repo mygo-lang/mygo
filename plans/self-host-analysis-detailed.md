@@ -63,26 +63,26 @@
 
 | # | 特性 | 旧版状态 | 新版状态 | 影响 |
 |---|------|---------|---------|------|
-| 1 | **类型类约束（`using`）** | ✅ 完整 | ⚠️ 已解析存储，未用于推理/代码生成 | 类型类方法调用、impl dispatch |
+| 1 | **类型类约束（`using`）** | ✅ 完整 | ✅ 约束已贯通推理与代码生成 | 类型类方法调用、impl dispatch |
 | 2 | **高阶类型（HKT）** | ✅ 完整 | ⚠️ 类型变量及辅助声明已完成，完整 HKT 类型推理仍未实现 | 泛型接口（如 `IEnumerable[C[A], A]`）|
 | 3 | **Map/Set 字面量** | ✅ 完整 | ✅ 完整 | `{"a": 1}` 和 `{"a"}` 解析和生成 — 已实现 |
 | 4 | **`embed` 声明** | ✅ 完整 | ❌ 未实现 | 内嵌外部资源 |
 | 5 | **位置信息** | ✅ 每节点有 Line/Column/SourceFile | ⚠️ 有意省略 | 错误消息无行号 |
 | 6 | **`TKVar` 匹配** | ✅ 完整 | ✅ 完整 | 已覆盖 unify、替换、occurs 检查、相等性比较、自由变量收集和字符串化 |
 | 7 | **`TupleLitExpr`（括号元组字面量）** | ✅ 完整 | ⚠️ 使用 `TupleExpr` 表示 | 语义不完全等价，parser2 的 `tupleOrParenExpr()` 生成 `TupleExpr` |
-| 8 | **`TuplePattern` / `BindPattern`** | ✅ 完整 | ⚠️ 已支持 `TuplePattern`，仍缺 `BindPattern` | 元组模式已解析、推理并生成，绑定模式仍不支持 |
+| 8 | **`TuplePattern` / `BindPattern`** | ✅ 完整 | ✅ 完整 | 元组和绑定模式均已解析、推理并生成 |
 | 9 | **LiteralExpr / UnitLitExpr 合并变体** | ✅ 单一结构体 | ❌ 拆为四种 | 语义相同但 AST 设计不同（Number/String/Rune/Bool vs 合并） |
 | 10 | **跨包类型推理** | ✅ `InferPackage` 多文件 | ✅ `InferPackage` 多文件 | 支持包级类型检查 |
 | 11 | **Go 包导入类型解析** | ✅ `TGoPackage` + `loadMyGoPackageInfo` | ✅ `TGoPackage` 枚举变体 + `PackageInfo.GoPackages` | `TGoPackage` 注册到 env，codegen 可获取 |
 | 12 | **`TypedInfo`** | ✅ 表达式→类型映射 | ⚠️ `PackageInfo`（仅变量映射） | 代码生成无法查询表达式类型 |
 | 13 | **`Instantiate`/`Generalize`** | ✅ 完整 | ✅ 基础实现 | `instantiate` 在查找点替换量化变量，`generalize` 计算环境差集；尚未覆盖谓词量化 |
-| 14 | **`Predicate` + `QualifiedType`** | ✅ 完整 | ⚠️ 已定义但未参与推理 | 类型类谓词类型已定义并用于约束转换，未用于推理和代码生成 |
+| 14 | **`Predicate` + `QualifiedType`** | ✅ 完整 | ✅ 已参与推理与代码生成 | 谓词随 `InferResult` 传递，实例化时替换类型变量，调用时合并并供字典注入 |
 | 15 | **`TKVar`（高阶类型变量）** | ✅ 完整 | ✅ 类型层已完成 | 已支持类型推理基础操作；HKT 完整推理仍未实现 |
 | 16 | **`freeVarsMT`/`freeVarsScheme`** | ✅ 完整 | ✅ 完整 | 已用于自由变量收集；完整多态泛化仍未完成 |
 | 17 | **测试包 dot-import** | ✅ 自动注入 | ❌ 不支持 | 测试文件无法引用主包符号 |
 | 18 | **`CallExpr.TypeArgs`** | ✅ 泛型调用类型参数 | ✅ 完整 | ast2、parser2、推理和 codegen2 均支持 |
 | 19 | **`TuplePattern`** | ✅ 完整 | ✅ 完整 | 已支持解析、类型检查和代码生成 |
-| 20 | **`BindPattern`** | ✅ `BindName`/`BindTuple` | ❌ 未实现 | 绑定模式不存在 |
+| 20 | **`BindPattern`** | ✅ `BindName`/`BindTuple` | ✅ 完整 | 支持变体参数和 switch 分支中的局部绑定 |
 
 ---
 
@@ -398,9 +398,9 @@ graph LR
   - ~~需新增 `Constraint` 到 ast2~~：✅ 已完成
   - ~~需 `FuncDecl.Using []Constraint`~~：✅ 已完成
   - ~~需 `QualifiedType`、`Predicate` 到 typeinference2~~：✅ 已完成定义
-  - ~~需 `Instantiate`/`Generalize`~~：✅ 基础实现已完成；谓词量化仍待补齐
+  - ~~需 `Instantiate`/`Generalize`~~：✅ 已支持限定类型实例化；谓词随推理结果传递并在调用点合并
   - ~~需 `freeVarsMT`/`freeVarsScheme`~~：✅ 已完成
-  - ⚠️ 代码生成侧 `seedCallDictionaries`/`seedCallRequirements`/`seedPackageDictionaries` 已实现字典参数注入，但推理层未传递谓词
+  - ✅ 代码生成侧 `seedCallDictionaries`/`seedCallRequirements`/`seedPackageDictionaries` 已实现字典参数注入，推理层现已传递谓词
   - 影响：预编译器中大量使用类型类（如 `Show`、`Eq`、`Enumerable`）
 
 - **高阶类型（HKT）**：

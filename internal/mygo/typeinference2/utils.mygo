@@ -71,6 +71,37 @@ func instantiate(scheme: Scheme, state: InferState) -> MonoType
   instantiateBound(scheme.Bound, scheme.Body, state, [])
 end
 
+func instantiateQualified(scheme: Scheme, state: InferState) -> QualifiedType
+  let subst = instantiateBoundSubst(scheme.Bound, state, [])
+  QualifiedType { Predicates: substPredicates(scheme.Predicates, subst), Body: applySubst(subst, scheme.Body) }
+end
+
+func instantiateBoundSubst(bound: Slice[Int], state: InferState, out: Slice[SubstEntry]) -> Slice[SubstEntry]
+  if bound.Len() == 0 then out
+  else
+    let id = bound.Get(0).UnwrapOr(0)
+    instantiateBoundSubst(sliceDrop(bound, 1), InferState { FreshVarID: state.FreshVarID + 1 }, out.Append(SubstEntry { ID: id, Type: MonoType.TVar(state.FreshVarID) }))
+  end
+end
+
+func substPredicates(items: Slice[Predicate], subst: Slice[SubstEntry]) -> Slice[Predicate]
+  if items.Len() == 0 then []
+  else
+    let p = items.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[MonoType] })
+    substPredicates(sliceDrop(items, 1), subst).Prepend(Predicate { ClassName: p.ClassName, Args: substTypes(p.Args, subst) })
+  end
+end
+
+func substTypes(items: Slice[MonoType], subst: Slice[SubstEntry]) -> Slice[MonoType]
+  if items.Len() == 0 then []
+  else substTypes(sliceDrop(items, 1), subst).Prepend(applySubst(subst, items.Get(0).UnwrapOr(MonoType.TUnit))) end
+end
+
+func appendPredicates(left: Slice[Predicate], right: Slice[Predicate]) -> Slice[Predicate]
+  if right.Len() == 0 then left
+  else appendPredicates(left.Append(right.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[MonoType] })), sliceDrop(right, 1)) end
+end
+
 func instantiateBound(bound: Slice[Int], body: MonoType, state: InferState, subst: Slice[SubstEntry]) -> MonoType
   if bound.Len() == 0 then
     applySubst(subst, body)

@@ -130,6 +130,16 @@ type SwitchCase struct {
 type Pattern interface {
 	isPattern()
 }
+type PatternBindPattern struct {
+	F0 string
+}
+
+func (_ PatternBindPattern) isPattern() {
+}
+func PatternBindPatternCtor(a0 string) Pattern {
+	return PatternBindPattern{F0: a0}
+}
+
 type PatternVariantPattern struct {
 	F0 string
 	F1 []Pattern
