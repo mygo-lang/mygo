@@ -105,7 +105,18 @@ func envFreeVars(env: Slice[EnvEntry], out: Slice[Int]) -> Slice[Int]
   if env.Len() == 0 then out
   else
     let item = env.Get(0).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: MonoType.TUnit } })
-    envFreeVars(sliceDrop(env, 1), freeVars(item.Scheme.Body, removeInts(out, item.Scheme.Bound)))
+    let bodyVars = freeVars(item.Scheme.Body, out)
+    let predicateVars = freeVarsPredicates(item.Scheme.Predicates, bodyVars)
+    envFreeVars(sliceDrop(env, 1), removeInts(predicateVars, item.Scheme.Bound))
+  end
+end
+
+func freeVarsPredicates(items: Slice[Predicate], out: Slice[Int]) -> Slice[Int]
+  if items.Len() == 0 then
+    out
+  else
+    let predicate = items.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[MonoType] })
+    freeVarsPredicates(sliceDrop(items, 1), freeVarsAll(predicate.Args, out))
   end
 end
 

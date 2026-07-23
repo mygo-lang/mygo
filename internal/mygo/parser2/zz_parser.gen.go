@@ -181,7 +181,7 @@ func funcSig() ps.Parser[ast2.FuncSig] {
 	return ps.PBind(kw("func"), func(_ string) ps.Parser[ast2.FuncSig] {
 		return ps.PBind(identifier(), func(name string) ps.Parser[ast2.FuncSig] {
 			return ps.PBind(typeParamList(), func(tps []string) ps.Parser[ast2.FuncSig] {
-				return ps.PBind(paren(ps.PSepBy(param(), sym(","))), func(params []ast2.Param) ps.Parser[ast2.FuncSig] {
+				return ps.PBind(paren[[]ast2.Param](ps.PSepBy(param(), sym(","))), func(params []ast2.Param) ps.Parser[ast2.FuncSig] {
 					return ps.PBind(ps.POptional(ps.PThen(sym("->"), typeExpr())), func(ret Option[ast2.TypeExpr]) ps.Parser[ast2.FuncSig] {
 						return ps.PMap(usingClause(), func(constraints []ast2.Constraint) ast2.FuncSig {
 							return ast2.FuncSig{Name: name, TypeParams: tps, Params: params, Ret: ret, Using: constraints}
@@ -205,7 +205,7 @@ func fieldDecl() ps.Parser[ast2.Field] {
 }
 func variantDecl() ps.Parser[ast2.Variant] {
 	return ps.PBind(identifier(), func(name string) ps.Parser[ast2.Variant] {
-		return ps.PMap(ps.POptional(paren(ps.PSepBy(typeExpr(), sym(",")))), func(fields Option[[]ast2.TypeExpr]) ast2.Variant {
+		return ps.PMap(ps.POptional(paren[[]ast2.TypeExpr](ps.PSepBy(typeExpr(), sym(",")))), func(fields Option[[]ast2.TypeExpr]) ast2.Variant {
 			var expr_15 []ast2.TypeExpr
 			if v_4, ok := fields.(OptionSome[[]ast2.TypeExpr]); ok {
 				var expr_14 []ast2.TypeExpr
@@ -244,7 +244,7 @@ func lazyTypeExpr() ps.Parser[ast2.TypeExpr] {
 }
 func funcType() ps.Parser[ast2.TypeExpr] {
 	return ps.PBind(kw("func"), func(_ string) ps.Parser[ast2.TypeExpr] {
-		return ps.PBind(paren(ps.PSepBy(lazyTypeExpr(), sym(","))), func(params []ast2.TypeExpr) ps.Parser[ast2.TypeExpr] {
+		return ps.PBind(paren[[]ast2.TypeExpr](ps.PSepBy(lazyTypeExpr(), sym(","))), func(params []ast2.TypeExpr) ps.Parser[ast2.TypeExpr] {
 			return ps.PMap(ps.PThen(sym("->"), lazyTypeExpr()), func(ret ast2.TypeExpr) ast2.TypeExpr {
 				return ast2.TypeExprFuncTypeCtor(params, &ret)
 			})
@@ -252,7 +252,7 @@ func funcType() ps.Parser[ast2.TypeExpr] {
 	})
 }
 func tupleType() ps.Parser[ast2.TypeExpr] {
-	return ps.PBind(paren(ps.PSepBy(lazyTypeExpr(), sym(","))), func(items []ast2.TypeExpr) ps.Parser[ast2.TypeExpr] {
+	return ps.PBind(paren[[]ast2.TypeExpr](ps.PSepBy(lazyTypeExpr(), sym(","))), func(items []ast2.TypeExpr) ps.Parser[ast2.TypeExpr] {
 		var expr_17 ps.Parser[ast2.TypeExpr]
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 			expr_17 = ps.PPure(ast2.TypeExprUnitTypeCtor())
@@ -291,11 +291,11 @@ func qualifiedIdentifier() ps.Parser[string] {
 	})
 }
 func typeParamList() ps.Parser[[]string] {
-	return ps.POrElse(brackets(ps.PSepBy(typeParam(), sym(","))), ps.PPure([]string([]string{})))
+	return ps.POrElse(brackets[[]string](ps.PSepBy(typeParam(), sym(","))), ps.PPure([]string([]string{})))
 }
 func typeParam() ps.Parser[string] {
 	return ps.PBind(identifier(), func(name string) ps.Parser[string] {
-		return ps.PMap(ps.POptional(brackets(ps.PSepBy(typeParam(), sym(",")))), func(args Option[[]string]) string {
+		return ps.PMap(ps.POptional(brackets[[]string](ps.PSepBy(typeParam(), sym(",")))), func(args Option[[]string]) string {
 			var expr_23 string
 			if v_8, ok := args.(OptionSome[[]string]); ok {
 				var expr_22 string
@@ -329,7 +329,7 @@ func constraint() ps.Parser[ast2.Constraint] {
 	})
 }
 func typeArgList() ps.Parser[[]ast2.TypeExpr] {
-	return ps.POrElse(brackets(ps.PSepBy(lazyTypeExpr(), sym(","))), ps.PPure([]ast2.TypeExpr([]ast2.TypeExpr{})))
+	return ps.POrElse(brackets[[]ast2.TypeExpr](ps.PSepBy(lazyTypeExpr(), sym(","))), ps.PPure([]ast2.TypeExpr([]ast2.TypeExpr{})))
 }
 func blockUntilEnd() ps.Parser[ast2.Expr] {
 	return blockUntil(kw("end"))
@@ -429,7 +429,7 @@ func namedLetStmt() ps.Parser[ast2.Stmt] {
 	})
 }
 func tupleLetStmt() ps.Parser[ast2.Stmt] {
-	return ps.PBind(paren(ps.PSepBy(identifier(), sym(","))), func(names []string) ps.Parser[ast2.Stmt] {
+	return ps.PBind(paren[[]string](ps.PSepBy(identifier(), sym(","))), func(names []string) ps.Parser[ast2.Stmt] {
 		return ps.PBind(sym("="), func(_ string) ps.Parser[ast2.Stmt] {
 			return ps.PMap(expr(), func(value ast2.Expr) ast2.Stmt {
 				return ast2.StmtTupleLetStmtCtor(names, value)
@@ -517,7 +517,7 @@ func pattern() ps.Parser[ast2.Pattern] {
 	}), ps.PMap(stringLiteral(), func(value string) ast2.Pattern {
 		return ast2.PatternLiteralPatternCtor("string", value)
 	}), ps.PBind(identifier(), func(name string) ps.Parser[ast2.Pattern] {
-		return ps.PMap(ps.POptional(paren(ps.PSepBy(identifier(), sym(",")))), func(args Option[[]string]) ast2.Pattern {
+		return ps.PMap(ps.POptional(paren[[]string](ps.PSepBy(identifier(), sym(",")))), func(args Option[[]string]) ast2.Pattern {
 			var expr_31 []string
 			if v_10, ok := args.(OptionSome[[]string]); ok {
 				var expr_30 []string
@@ -734,7 +734,7 @@ func postfixExpr() ps.Parser[ast2.Expr] {
 	}}
 }
 func postfixTail(start ps.State, cur ps.State, acc ast2.Expr) ps.Reply[ast2.Expr] {
-	call_47 := paren(ps.PSepBy(lazyExpr(), sym(","))).Run(cur)
+	call_47 := paren[[]ast2.Expr](ps.PSepBy(lazyExpr(), sym(","))).Run(cur)
 	var expr_54 ps.Reply[ast2.Expr]
 	if call_47.Ok {
 		expr_54 = postfixTail(start, call_47.State, ast2.ExprCallExprCtor(&acc, call_47.Value))
@@ -763,7 +763,7 @@ func postfixTail(start ps.State, cur ps.State, acc ast2.Expr) ps.Reply[ast2.Expr
 }
 func structLitFields(head ast2.StructLitHead) ps.Parser[ast2.Expr] {
 	return ps.PBind(sym("{"), func(_ string) ps.Parser[ast2.Expr] {
-		return ps.PBind(sepByEnd(structLitField(), sym(",")), func(fields []ast2.StructLitField) ps.Parser[ast2.Expr] {
+		return ps.PBind(sepByEnd[ast2.StructLitField, string](structLitField(), sym(",")), func(fields []ast2.StructLitField) ps.Parser[ast2.Expr] {
 			var expr_55 ast2.Expr
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(head.TypeArgs) == 0 {
 				expr_55 = ast2.ExprStructLitExprCtor(head.Name, fields)
@@ -809,13 +809,16 @@ func structLitTypeName() ps.Parser[ast2.StructLitHead] {
 	})
 }
 func sliceLiteral() ps.Parser[ast2.Expr] {
-	return ps.PMap(brackets(sepByEnd(lazyExpr(), sym(","))), func(items []ast2.Expr) ast2.Expr {
+	return ps.PMap(brackets[[]ast2.Expr](sepByEnd[ast2.Expr, string](lazyExpr(), sym(","))), func(items []ast2.Expr) ast2.Expr {
 		return ast2.ExprSliceLitExprCtor(items)
 	})
 }
 func mapLiteral() ps.Parser[ast2.Expr] {
 	return ps.PBind(sym("{"), func(_ string) ps.Parser[ast2.Expr] {
-		return ps.PBind(sepByEnd(mapEntry(), sym(",")), func(pairs []struct {
+		return ps.PBind(sepByEnd[struct {
+			F0 ast2.Expr
+			F1 ast2.Expr
+		}, string](mapEntry(), sym(",")), func(pairs []struct {
 			F0 ast2.Expr
 			F1 ast2.Expr
 		}) ps.Parser[ast2.Expr] {
@@ -843,7 +846,7 @@ func mapEntry() ps.Parser[struct {
 	})
 }
 func setLiteral() ps.Parser[ast2.Expr] {
-	return ps.PMap(ps.PBetween(sym("{"), sepByEnd(lazyExpr(), sym(",")), sym("}")), func(items []ast2.Expr) ast2.Expr {
+	return ps.PMap(ps.PBetween(sym("{"), sepByEnd[ast2.Expr, string](lazyExpr(), sym(",")), sym("}")), func(items []ast2.Expr) ast2.Expr {
 		return ast2.ExprSetLitExprCtor(items)
 	})
 }
@@ -855,7 +858,7 @@ func sepByEnd[A any, S any](item ps.Parser[A], sep ps.Parser[S]) ps.Parser[[]A] 
 }
 func funcLit() ps.Parser[ast2.Expr] {
 	return ps.PBind(kw("func"), func(_ string) ps.Parser[ast2.Expr] {
-		return ps.PBind(paren(ps.PSepBy(param(), sym(","))), func(params []ast2.Param) ps.Parser[ast2.Expr] {
+		return ps.PBind(paren[[]ast2.Param](ps.PSepBy(param(), sym(","))), func(params []ast2.Param) ps.Parser[ast2.Expr] {
 			return ps.PBind(ps.POptional(ps.PThen(sym("->"), typeExpr())), func(ret Option[ast2.TypeExpr]) ps.Parser[ast2.Expr] {
 				return ps.PBind(blockUntilEnd(), func(body ast2.Expr) ps.Parser[ast2.Expr] {
 					return ps.PThen(kw("end"), ps.PPure(ast2.ExprFuncLitExprCtor(params, ret, &body)))
@@ -865,7 +868,7 @@ func funcLit() ps.Parser[ast2.Expr] {
 	})
 }
 func tupleOrParenExpr() ps.Parser[ast2.Expr] {
-	return ps.PBind(paren(ps.PSepBy(lazyExpr(), sym(","))), func(items []ast2.Expr) ps.Parser[ast2.Expr] {
+	return ps.PBind(paren[[]ast2.Expr](ps.PSepBy(lazyExpr(), sym(","))), func(items []ast2.Expr) ps.Parser[ast2.Expr] {
 		var expr_59 ps.Parser[ast2.Expr]
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 			expr_59 = ps.PPure(ast2.ExprUnitExprCtor())

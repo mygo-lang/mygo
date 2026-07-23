@@ -293,34 +293,48 @@ func containsInt(items []int, value int) bool {
 	return expr_597
 }
 func envFreeVars(env []EnvEntry, out []int) []int {
-	var expr_600 []int
+	var expr_602 []int
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(env) == 0 {
-		expr_600 = out
+		expr_602 = out
 	} else {
-		var expr_599 []int
+		var expr_601 []int
 		item_598 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: MonoTypeTUnitCtor()}})
-		expr_599 = envFreeVars(sliceDrop[EnvEntry](env, 1), freeVars(item_598.Scheme.Body, removeInts(out, item_598.Scheme.Bound)))
-		expr_600 = expr_599
+		bodyVars_599 := freeVars(item_598.Scheme.Body, out)
+		predicateVars_600 := freeVarsPredicates(item_598.Scheme.Predicates, bodyVars_599)
+		expr_601 = envFreeVars(sliceDrop[EnvEntry](env, 1), removeInts(predicateVars_600, item_598.Scheme.Bound))
+		expr_602 = expr_601
 	}
-	return expr_600
+	return expr_602
+}
+func freeVarsPredicates(items []Predicate, out []int) []int {
+	var expr_605 []int
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
+		expr_605 = out
+	} else {
+		var expr_604 []int
+		predicate_603 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), Predicate{ClassName: "", Args: []MonoType([]MonoType{})})
+		expr_604 = freeVarsPredicates(sliceDrop[Predicate](items, 1), freeVarsAll(predicate_603.Args, out))
+		expr_605 = expr_604
+	}
+	return expr_605
 }
 func removeInts(items []int, removed []int) []int {
-	var expr_604 []int
+	var expr_609 []int
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_604 = []int{}
+		expr_609 = []int{}
 	} else {
-		var expr_603 []int
-		tail_601 := removeInts(sliceDrop[int](items, 1), removed)
-		var expr_602 []int
+		var expr_608 []int
+		tail_606 := removeInts(sliceDrop[int](items, 1), removed)
+		var expr_607 []int
 		if containsInt(removed, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), 0)) {
-			expr_602 = tail_601
+			expr_607 = tail_606
 		} else {
-			expr_602 = MygoIN5SliceM7Prepend(tail_601, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), 0))
+			expr_607 = MygoIN5SliceM7Prepend(tail_606, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), 0))
 		}
-		expr_603 = expr_602
-		expr_604 = expr_603
+		expr_608 = expr_607
+		expr_609 = expr_608
 	}
-	return expr_604
+	return expr_609
 }
 func generalize(env []EnvEntry, t MonoType) []int {
 	return removeInts(freeVars(t, []int{}), envFreeVars(env, []int{}))
@@ -338,43 +352,43 @@ func emptyASTTypeExprs() []ast2.TypeExpr {
 	return []ast2.TypeExpr{}
 }
 func sliceDrop[A any](items []A, n int) []A {
-	var expr_606 []A
+	var expr_611 []A
 	if n <= 0 {
-		expr_606 = items
+		expr_611 = items
 	} else {
-		var expr_605 []A
+		var expr_610 []A
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-			expr_605 = []A{}
+			expr_610 = []A{}
 		} else {
-			expr_605 = sliceDrop[A](sliceTail[A](items), n-1)
+			expr_610 = sliceDrop[A](sliceTail[A](items), n-1)
 		}
-		expr_606 = expr_605
+		expr_611 = expr_610
 	}
-	return expr_606
+	return expr_611
 }
 func sliceTail[A any](items []A) []A {
 	return sliceTailLoop[A](items, 1, []A([]A{}))
 }
 func sliceTailLoop[A any](items []A, index int, out []A) []A {
-	var expr_610 []A
+	var expr_615 []A
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-		expr_610 = out
+		expr_615 = out
 	} else {
-		var expr_609 []A
+		var expr_614 []A
 		if v_259, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionSome[A]); ok {
-			var expr_608 []A
-			expr_608 = sliceTailLoop[A](items, index+1, MygoIN5SliceM6Append(out, v_259.F0))
-			expr_609 = expr_608
+			var expr_613 []A
+			expr_613 = sliceTailLoop[A](items, index+1, MygoIN5SliceM6Append(out, v_259.F0))
+			expr_614 = expr_613
 		} else {
 			if _, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionNone[A]); ok {
-				var expr_607 []A
-				expr_607 = out
-				expr_609 = expr_607
+				var expr_612 []A
+				expr_612 = out
+				expr_614 = expr_612
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_610 = expr_609
+		expr_615 = expr_614
 	}
-	return expr_610
+	return expr_615
 }

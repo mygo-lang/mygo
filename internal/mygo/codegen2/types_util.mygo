@@ -42,6 +42,12 @@ func goType(t: ast2.TypeExpr, typeParams: Set[String]) -> String
       return "struct { " + joinStrings(parts, "; ") + " }"
     case UnitType =>
       return "struct{}"
+    case InlineGo(inner, code) =>
+      if code == "" then
+        return goType(inner.value(), typeParams)
+      else
+        return goType(inner.value(), typeParams)
+      end
     case _ =>
       return "any"
   end
