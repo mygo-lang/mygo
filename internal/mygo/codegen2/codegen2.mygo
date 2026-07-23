@@ -51,7 +51,14 @@ func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.Packa
 end
 
 func GenerateSource(input: String) -> Result[String, String]
-  let parsed = parseSourceAsAst2(input)
+  GenerateSourceAt("<input>", input)
+end
+
+# GenerateSourceAt is the file-aware bootstrap entry point.  In particular it
+# preserves parser2's source location in errors instead of reducing every
+# input to an anonymous string.
+func GenerateSourceAt(sourceName: String, input: String) -> Result[String, String]
+  let parsed = parseSourceAsAst2At(sourceName, input)
   switch parsed
     case Err(msg) => Err(msg)
     case Ok(file) =>

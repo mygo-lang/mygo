@@ -4,12 +4,24 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
 	ps "github.com/mygo-lang/mygo/lib/text/parsec"
 	. "github.com/mygo-lang/mygo/prelude"
 )
+
+func TestParseFileAtIncludesSourceLocation(t *testing.T) {
+	got := ParseFileAt("broken.mygo", "package sample\n\nfunc")
+	err, ok := got.(ResultErr[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFileAt() = %T, want parse error", got)
+	}
+	if !strings.Contains(err.F0, "broken.mygo:3:5: parse error") {
+		t.Fatalf("ParseFileAt() error = %q, want source name, line, and column", err.F0)
+	}
+}
 
 func TestParseFileParsesSelf(t *testing.T) {
 	_, thisFile, _, ok := runtime.Caller(0)

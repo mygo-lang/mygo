@@ -75,7 +75,7 @@ func typeParamUse(tps []string) string {
 }
 func sourceToGenName(path string) string {
 	parts_124 := strings.Split(path, "/")
-	var base_125 string = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_124, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_124)-1), path)
+	var base_125 string = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_124, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_124)-1), path)
 	base_125 = strings.TrimSuffix(base_125, ".mygo")
 	if base_125 == "" {
 		base_125 = "mygo"
@@ -103,5 +103,8 @@ func renderGoFile(parts GoFileParts) Result[string, string] {
 	}()
 }
 func parseSourceAsAst2(input string) Result[ast2.File, string] {
-	return parser2.ParseFile(input)
+	return parseSourceAsAst2At("<input>", input)
+}
+func parseSourceAsAst2At(sourceName string, input string) Result[ast2.File, string] {
+	return parser2.ParseFileAt(sourceName, input)
 }

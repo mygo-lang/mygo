@@ -53,7 +53,7 @@ func generateFilesLoop(files []SourceFileInput, info typeinference2.PackageInfo,
 		expr_13 = Ok[map[string]string, string](out)
 	} else {
 		var expr_12 Result[map[string]string, string]
-		input_7 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{})}})
+		input_7 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{})}})
 		src_8 := generateOneFile(input_7.File, info)
 		var expr_11 Result[map[string]string, string]
 		if v_4, ok := src_8.(ResultOk[string, string]); ok {
@@ -76,7 +76,10 @@ func generateFilesLoop(files []SourceFileInput, info typeinference2.PackageInfo,
 	return expr_13
 }
 func GenerateSource(input string) Result[string, string] {
-	parsed_14 := parseSourceAsAst2(input)
+	return GenerateSourceAt("<input>", input)
+}
+func GenerateSourceAt(sourceName string, input string) Result[string, string] {
+	parsed_14 := parseSourceAsAst2At(sourceName, input)
 	var expr_21 Result[string, string]
 	if v_8, ok := parsed_14.(ResultErr[ast2.File, string]); ok {
 		var expr_20 Result[string, string]

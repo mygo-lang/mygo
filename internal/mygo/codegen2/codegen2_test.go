@@ -18,6 +18,17 @@ func TestGenerateSourceBootstrapsAst2(t *testing.T) {
 	assertBootstrapsMyGOFile(t, filepath.Join("..", "ast2", "ast2.mygo"))
 }
 
+func TestGenerateSourceAtIncludesSourceLocation(t *testing.T) {
+	got := GenerateSourceAt("broken.mygo", "package sample\n\nfunc")
+	err, ok := got.(ResultErr[string, string])
+	if !ok {
+		t.Fatalf("GenerateSourceAt() = %T, want parse error", got)
+	}
+	if !strings.Contains(err.F0, "broken.mygo:3:5: parse error") {
+		t.Fatalf("GenerateSourceAt() error = %q, want source name, line, and column", err.F0)
+	}
+}
+
 func assertBootstrapsMyGOFile(t *testing.T, relativePath string) {
 	t.Helper()
 	_, thisFile, _, found := runtime.Caller(0)

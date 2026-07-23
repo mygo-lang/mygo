@@ -80,5 +80,9 @@ end
 
 
 func parseSourceAsAst2(input: String) -> Result[ast2.File, String]
-  parser2.ParseFile(input)
+  parseSourceAsAst2At("<input>", input)
+end
+
+func parseSourceAsAst2At(sourceName: String, input: String) -> Result[ast2.File, String]
+  parser2.ParseFileAt(sourceName, input)
 end

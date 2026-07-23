@@ -21,11 +21,18 @@ end
 # self-hostable while the yacc parser remains the production parser.
 
 func ParseFile(input: String) -> Result[ast2.File, String]
+  ParseFileAt("<input>", input)
+end
+
+# ParseFileAt retains the source name in diagnostics.  Callers that compile a
+# file should use this entry point so an editor or command-line user can jump
+# directly to the malformed source.
+func ParseFileAt(sourceName: String, input: String) -> Result[ast2.File, String]
   let r = ps.ParseInput(fileParser(), input)
   if r.Ok then
     Ok(r.Value)
   else
-    Err(formatError(r.Error, r.State.Position))
+    Err(formatError(sourceName, r.Error, r.State.Position))
   end
 end
 
@@ -1070,9 +1077,9 @@ func defaultImportAlias(path: String) -> String
   end
 end
 
-func formatError(err: Option[ps.ParseError], pos: ps.Position) -> String
+func formatError(sourceName: String, err: Option[ps.ParseError], pos: ps.Position) -> String
   switch err
-    case Some(e) => "parse error at " + e.Position.Line.ToString() + ":" + e.Position.Column.ToString() + ": " + e.Message
-    case None => "parse error at " + pos.Line.ToString() + ":" + pos.Column.ToString()
+    case Some(e) => sourceName + ":" + e.Position.Line.ToString() + ":" + e.Position.Column.ToString() + ": parse error: " + e.Message
+    case None => sourceName + ":" + pos.Line.ToString() + ":" + pos.Column.ToString() + ": parse error"
   end
 end

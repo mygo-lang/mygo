@@ -42,12 +42,15 @@ type InlineGoParts struct {
 }
 
 func ParseFile(input string) Result[ast2.File, string] {
+	return ParseFileAt("<input>", input)
+}
+func ParseFileAt(sourceName string, input string) Result[ast2.File, string] {
 	r_1 := ps.ParseInput(fileParser(), input)
 	var expr_2 Result[ast2.File, string]
 	if r_1.Ok {
 		expr_2 = Ok[ast2.File, string](r_1.Value)
 	} else {
-		expr_2 = Err[ast2.File, string](formatError(r_1.Error, r_1.State.Position))
+		expr_2 = Err[ast2.File, string](formatError(sourceName, r_1.Error, r_1.State.Position))
 	}
 	return expr_2
 }
@@ -1177,16 +1180,16 @@ func defaultImportAlias(path string) string {
 	}
 	return expr_97
 }
-func formatError(err Option[ps.ParseError], pos ps.Position) string {
+func formatError(sourceName string, err Option[ps.ParseError], pos ps.Position) string {
 	var expr_100 string
 	if v_14, ok := err.(OptionSome[ps.ParseError]); ok {
 		var expr_99 string
-		expr_99 = "parse error at " + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_14.F0.Position.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_14.F0.Position.Column) + ": " + v_14.F0.Message
+		expr_99 = sourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_14.F0.Position.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_14.F0.Position.Column) + ": parse error: " + v_14.F0.Message
 		expr_100 = expr_99
 	} else {
 		if _, ok := err.(OptionNone[ps.ParseError]); ok {
 			var expr_98 string
-			expr_98 = "parse error at " + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Column)
+			expr_98 = sourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Column) + ": parse error"
 			expr_100 = expr_98
 		} else {
 			panic("unreachable")
