@@ -29,6 +29,11 @@ func monoEqual(a: MonoType, b: MonoType) -> Bool
         case TUnit => true
         case _ => false
       end
+    case TGoPackage(alias) =>
+      switch b
+        case TGoPackage(alias2) => alias == alias2
+        case _ => false
+      end
   end
 end
 
@@ -51,6 +56,7 @@ func monoString(t: MonoType) -> String
     case TFunc(_, _) => "func"
     case TTuple(_) => "tuple"
     case TUnit => "()"
+    case TGoPackage(alias) => "go package " + alias
   end
 end
 

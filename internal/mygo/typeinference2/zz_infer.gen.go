@@ -50,7 +50,7 @@ func predeclareFunctions(decls []ast2.Decl, env []EnvEntry) []EnvEntry {
 func inferDecls(decls []ast2.Decl, env []EnvEntry, fields []FieldEntry, state InferState) Result[PackageInfo, string] {
 	var expr_40 Result[PackageInfo, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
-		expr_40 = Ok[PackageInfo, string](PackageInfo{Env: env, Fields: fields})
+		expr_40 = Ok[PackageInfo, string](PackageInfo{Env: env, Fields: fields, GoPackages: []GoPackageEntry([]GoPackageEntry{})})
 	} else {
 		var expr_39 Result[PackageInfo, string]
 		head_33 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))

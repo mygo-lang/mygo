@@ -1,6 +1,9 @@
 package typeinference2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import os "go:os"
+import strconv "go:strconv"
+import strings "go:strings"
 
 # typeinference2 is the self-hosted, parser2-facing inference core.
 # It implements a deliberately small HM-style pass over ast2. The production
@@ -14,6 +17,9 @@ enum MonoType
   TFunc(Slice[MonoType], Ref[MonoType])
   TTuple(Slice[MonoType])
   TUnit
+  # TGoPackage represents an imported Go package, storing its alias so the
+  # code generator can qualify Go symbols properly.
+  TGoPackage(String)
 end
 
 struct Scheme
@@ -61,9 +67,20 @@ struct InferResult
   State: InferState
 end
 
+# PackageInfo contains the inferred types for a whole package.
+# The Env holds all top-level bindings (functions, types, etc.) visible
+# across files, and Fields stores struct field type information for
+# field access resolution. GoPackages records imported Go package info.
 struct PackageInfo
   Env: Slice[EnvEntry]
   Fields: Slice[FieldEntry]
+  GoPackages: Slice[GoPackageEntry]
+end
+
+# GoPackageEntry records an imported Go package with its alias and type info.
+struct GoPackageEntry
+  Alias: String
+  Path: String
 end
 
 struct DeclInfer
@@ -83,11 +100,107 @@ struct BlockInferStep
   Env: Slice[EnvEntry]
 end
 
+# PkgDecls bundles all file declarations in a package.
+struct PkgDecls
+  Decls: Slice[ast2.Decl]
+end
+
+# PkgDeclSource is a single file's declarations with its path.
+struct PkgDeclSource
+  Path: String
+  Decls: Slice[ast2.Decl]
+end
+
 func NewInferState() -> InferState
   InferState { FreshVarID: 1 }
 end
 
+# InferFile runs type inference on a single file in isolation.
+# This is a convenience wrapper around InferPackage for single-file packages.
 func InferFile(file: ast2.File) -> Result[PackageInfo, String]
   let env = predeclareFunctions(file.Decls, initialEnv())
   inferDecls(file.Decls, env, [], NewInferState())
+end
+
+# InferPackage runs HM type inference across all files in a package.
+# It first predeclares all function signatures across all files so forward
+# references work, then processes declarations file-by-file.
+# The goImports parameter maps import aliases to their Go import paths.
+func InferPackage(files: Slice[PkgDeclSource]) -> Result[PackageInfo, String]
+  # Collect all decls first for predeclaration and cross-file lookups.
+  let allDecls = flattenPkgDecls(files, 0, [] as Slice[ast2.Decl])
+
+  # Predeclare all function signatures across all files.
+  let predeclEnv = predeclareAllFunctions(allDecls, initialEnv())
+
+  # Record Go package imports for reference in env.
+  let goPkgImports = collectGoPackageImports(allDecls)
+
+  # Add Go package aliases to the environment so qualified references work.
+  let envWithGoPkgs = seedGoPackageEnv(goPkgImports, predeclEnv)
+
+  # Infer all declarations in order.
+  let result = inferDecls(allDecls, envWithGoPkgs, [], NewInferState())
+  switch result
+    case Ok(info) =>
+      Ok(PackageInfo {
+        Env: info.Env,
+        Fields: info.Fields,
+        GoPackages: goPkgImports,
+      })
+    case Err(msg) => Err(msg)
+  end
+end
+
+# Collect all go: import aliases from the declarations.
+func collectGoPackageImports(decls: Slice[ast2.Decl]) -> Slice[GoPackageEntry]
+  decls.Fold([] as Slice[GoPackageEntry], func(out: Slice[GoPackageEntry], d: ast2.Decl) -> Slice[GoPackageEntry]
+    switch d
+      case ImportDecl(alias, path) =>
+        if strings.HasPrefix(path, "go:") then
+          let cleanPath = strings.TrimPrefix(path, "go:")
+          let existing = out.Fold(false, func(found: Bool, e: GoPackageEntry) -> Bool
+            found || e.Alias == alias
+          end)
+          if existing then out else out.Append(GoPackageEntry { Alias: alias, Path: cleanPath }) end
+        else
+          out
+        end
+      case _ => out
+    end
+  end)
+end
+
+# Seed the environment with Go package alias -> TGoPackage bindings
+# so that field access like `pkg.Ident` resolves `pkg` to a Go package reference.
+func seedGoPackageEnv(goPkgs: Slice[GoPackageEntry], env: Slice[EnvEntry]) -> Slice[EnvEntry]
+  if goPkgs.Len() == 0 then
+    env
+  else
+    let pkg = goPkgs.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "" })
+    seedGoPackageEnv(sliceDrop(goPkgs, 1), envPut(env, pkg.Alias, Scheme { Bound: [], Predicates: [], Body: MonoType.TGoPackage(pkg.Alias) }))
+  end
+end
+
+# Flatten all package file declarations into a single slice.
+func flattenPkgDecls(files: Slice[PkgDeclSource], index: Int, out: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+  if index >= files.Len() then
+    out
+  else
+    let f = files.Get(index).UnwrapOr(PkgDeclSource { Path: "", Decls: [] as Slice[ast2.Decl] })
+    flattenPkgDecls(files, index + 1, appendDecls(out, f.Decls))
+  end
+end
+
+# Predeclare all function signatures for forward reference support.
+func predeclareAllFunctions(decls: Slice[ast2.Decl], env: Slice[EnvEntry]) -> Slice[EnvEntry]
+  predeclareFunctions(decls, env)
+end
+
+func appendDecls(acc: Slice[ast2.Decl], items: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+  if items.Len() == 0 then
+    acc
+  else
+    appendDecls(acc.Append(items.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))), sliceDrop(items, 1))
+  end
 end

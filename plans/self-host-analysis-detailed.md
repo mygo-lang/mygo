@@ -64,8 +64,8 @@
 | 5 | **位置信息** | ✅ 每节点有 Line/Column/SourceFile | ⚠️ 有意省略 | 错误消息无行号 |
 | 6 | **`TupleLitExpr`** | ✅ 括号元组 `(1, 2)` | ⚠️ 仅 `TupleExpr` | 语义不完全等价 |
 | 7 | **`LiteralExpr` vs 分离变体** | ✅ 单一结构体 | ❌ 拆为四种 | 语义相同但 AST 不同 |
-| 8 | **跨包类型推理** | ✅ 完整 | ❌ 单文件推理 | 无法做包级类型检查 |
-| 9 | **Go 包导入类型解析** | ✅ `TGoPackage` + `loadMyGoPackageInfo` | ❌ 无 | 无法解析外部 Go 包中的类型 |
+| 8 | **跨包类型推理** | ✅ `InferPackage` 多文件 | ✅ `InferPackage` 多文件 | 支持包级类型检查 |
+| 9 | **Go 包导入类型解析** | ✅ `TGoPackage` + `loadMyGoPackageInfo` | ✅ `TGoPackage` 枚举变体 + `PackageInfo.GoPackages` | `TGoPackage` 注册到 env，codegen 可获取 |
 | 10 | **`TypedInfo`** | ✅ 表达式→类型映射 | ⚠️ `PackageInfo`（仅变量映射） | 代码生成无法查询表达式类型 |
 | 11 | **`Instantiate`/`Generalize`** | ✅ 完整 | ⚠️ 简单 let 泛化 | `Scheme.Bound` 未真正使用量化 |
 | 12 | **`Predicate` + `QualifiedType`** | ✅ 完整 | ❌ 无 | 类型类谓词无法表达 |

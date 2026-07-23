@@ -3,6 +3,8 @@
 package typeinference2
 
 import (
+	"strings"
+
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
 	. "github.com/mygo-lang/mygo/prelude"
 )
@@ -71,6 +73,16 @@ func MonoTypeTUnitCtor() MonoType {
 	return MonoTypeTUnit{}
 }
 
+type MonoTypeTGoPackage struct {
+	F0 string
+}
+
+func (_ MonoTypeTGoPackage) isMonoType() {
+}
+func MonoTypeTGoPackageCtor(a0 string) MonoType {
+	return MonoTypeTGoPackage{F0: a0}
+}
+
 type Scheme struct {
 	Bound      []int
 	Predicates []Predicate
@@ -106,8 +118,13 @@ type InferResult struct {
 	State InferState
 }
 type PackageInfo struct {
-	Env    []EnvEntry
-	Fields []FieldEntry
+	Env        []EnvEntry
+	Fields     []FieldEntry
+	GoPackages []GoPackageEntry
+}
+type GoPackageEntry struct {
+	Alias string
+	Path  string
 }
 type DeclInfer struct {
 	Env    []EnvEntry
@@ -123,6 +140,13 @@ type BlockInferStep struct {
 	Result InferResult
 	Env    []EnvEntry
 }
+type PkgDecls struct {
+	Decls []ast2.Decl
+}
+type PkgDeclSource struct {
+	Path  string
+	Decls []ast2.Decl
+}
 
 func NewInferState() InferState {
 	return InferState{FreshVarID: 1}
@@ -130,4 +154,97 @@ func NewInferState() InferState {
 func InferFile(file ast2.File) Result[PackageInfo, string] {
 	env_443 := predeclareFunctions(file.Decls, initialEnv())
 	return inferDecls(file.Decls, env_443, []FieldEntry{}, NewInferState())
+}
+func InferPackage(files []PkgDeclSource) Result[PackageInfo, string] {
+	allDecls_444 := flattenPkgDecls(files, 0, []ast2.Decl([]ast2.Decl{}))
+	predeclEnv_445 := predeclareAllFunctions(allDecls_444, initialEnv())
+	goPkgImports_446 := collectGoPackageImports(allDecls_444)
+	envWithGoPkgs_447 := seedGoPackageEnv(goPkgImports_446, predeclEnv_445)
+	result_448 := inferDecls(allDecls_444, envWithGoPkgs_447, []FieldEntry{}, NewInferState())
+	var expr_451 Result[PackageInfo, string]
+	if v_188, ok := result_448.(ResultOk[PackageInfo, string]); ok {
+		var expr_450 Result[PackageInfo, string]
+		expr_450 = Ok[PackageInfo, string](PackageInfo{Env: v_188.F0.Env, Fields: v_188.F0.Fields, GoPackages: goPkgImports_446})
+		expr_451 = expr_450
+	} else {
+		if v_187, ok := result_448.(ResultErr[PackageInfo, string]); ok {
+			var expr_449 Result[PackageInfo, string]
+			expr_449 = Err[PackageInfo, string](v_187.F0)
+			expr_451 = expr_449
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_451
+}
+func collectGoPackageImports(decls []ast2.Decl) []GoPackageEntry {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(decls, []GoPackageEntry([]GoPackageEntry{}), func(out []GoPackageEntry, d ast2.Decl) []GoPackageEntry {
+		var expr_459 []GoPackageEntry
+		if v_189, ok := d.(ast2.DeclImportDecl); ok {
+			var expr_458 []GoPackageEntry
+			var expr_457 []GoPackageEntry
+			if strings.HasPrefix(v_189.F1, "go:") {
+				var expr_456 []GoPackageEntry
+				cleanPath_453 := strings.TrimPrefix(v_189.F1, "go:")
+				existing_454 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(out, false, func(found bool, e GoPackageEntry) bool {
+					return found || e.Alias == v_189.F0
+				})
+				var expr_455 []GoPackageEntry
+				if existing_454 {
+					expr_455 = out
+				} else {
+					expr_455 = MygoIN5SliceM6Append(out, GoPackageEntry{Alias: v_189.F0, Path: cleanPath_453})
+				}
+				expr_456 = expr_455
+				expr_457 = expr_456
+			} else {
+				expr_457 = out
+			}
+			expr_458 = expr_457
+			expr_459 = expr_458
+		} else {
+			{
+				var expr_452 []GoPackageEntry
+				expr_452 = out
+				expr_459 = expr_452
+			}
+		}
+		return expr_459
+	})
+}
+func seedGoPackageEnv(goPkgs []GoPackageEntry, env []EnvEntry) []EnvEntry {
+	var expr_462 []EnvEntry
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(goPkgs) == 0 {
+		expr_462 = env
+	} else {
+		var expr_461 []EnvEntry
+		pkg_460 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(goPkgs, 0), GoPackageEntry{Alias: "", Path: ""})
+		expr_461 = seedGoPackageEnv(sliceDrop[GoPackageEntry](goPkgs, 1), envPut(env, pkg_460.Alias, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: MonoTypeTGoPackageCtor(pkg_460.Alias)}))
+		expr_462 = expr_461
+	}
+	return expr_462
+}
+func flattenPkgDecls(files []PkgDeclSource, index int, out []ast2.Decl) []ast2.Decl {
+	var expr_465 []ast2.Decl
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(files) {
+		expr_465 = out
+	} else {
+		var expr_464 []ast2.Decl
+		f_463 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), PkgDeclSource{Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
+		expr_464 = flattenPkgDecls(files, index+1, appendDecls(out, f_463.Decls))
+		expr_465 = expr_464
+	}
+	return expr_465
+}
+func predeclareAllFunctions(decls []ast2.Decl, env []EnvEntry) []EnvEntry {
+	return predeclareFunctions(decls, env)
+}
+func appendDecls(acc []ast2.Decl, items []ast2.Decl) []ast2.Decl {
+	var expr_466 []ast2.Decl
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
+		expr_466 = acc
+	} else {
+		expr_466 = appendDecls(MygoIN5SliceM6Append(acc, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.DeclImportDeclCtor("", ""))), sliceDrop[ast2.Decl](items, 1))
+	}
+	return expr_466
 }

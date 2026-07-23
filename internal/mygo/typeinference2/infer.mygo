@@ -25,7 +25,7 @@ end
 
 func inferDecls(decls: Slice[ast2.Decl], env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[PackageInfo, String]
   if decls.Len() == 0 then
-    Ok(PackageInfo { Env: env, Fields: fields })
+    Ok(PackageInfo { Env: env, Fields: fields, GoPackages: [] as Slice[GoPackageEntry] })
   else
     let head = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     let tail = sliceDrop(decls, 1)

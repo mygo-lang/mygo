@@ -85,6 +85,7 @@ func applySubst(subst: Slice[SubstEntry], t: MonoType) -> MonoType
     case TFunc(args, ret) => MonoType.TFunc(applySubstAll(subst, args), Ref.new(applySubst(subst, ret.value())))
     case TTuple(items) => MonoType.TTuple(applySubstAll(subst, items))
     case TUnit => t
+    case TGoPackage(_) => t
   end
 end
 
@@ -125,6 +126,7 @@ func occursIn(id: Int, t: MonoType) -> Bool
     case TFunc(args, ret) => occursInAny(id, args) || occursIn(id, ret.value())
     case TTuple(items) => occursInAny(id, items)
     case TUnit => false
+    case TGoPackage(_) => false
   end
 end
 
