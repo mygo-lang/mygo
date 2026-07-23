@@ -13,6 +13,8 @@ enum MonoType
   TVar(Int)
   # TKVar is a type-constructor variable (kind * -> *), used by HKT params.
   TKVar(Int)
+  # TApp applies a type constructor to value-level type arguments.
+  TApp(Ref[MonoType], Slice[MonoType])
   TCon(String, Slice[MonoType])
   TFunc(Slice[MonoType], Ref[MonoType])
   TTuple(Slice[MonoType])

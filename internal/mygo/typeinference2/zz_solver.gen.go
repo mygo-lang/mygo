@@ -22,93 +22,93 @@ func solverRegister(solver Solver, instance Instance) Solver {
 	return Solver{Instances: MygoIN5SliceM6Append(solver.Instances, instance)}
 }
 func solverFromInstances(instances []Instance) Solver {
-	var expr_537 Solver
+	var expr_567 Solver
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(instances) == 0 {
-		expr_537 = newSolver()
+		expr_567 = newSolver()
 	} else {
-		expr_537 = solverRegister(solverFromInstances(sliceDrop[Instance](instances, 1)), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(instances, 0), Instance{ClassName: "", Type: MonoTypeTUnitCtor(), Predicates: []Predicate([]Predicate{})}))
+		expr_567 = solverRegister(solverFromInstances(sliceDrop[Instance](instances, 1)), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(instances, 0), Instance{ClassName: "", Type: MonoTypeTUnitCtor(), Predicates: []Predicate([]Predicate{})}))
 	}
-	return expr_537
+	return expr_567
 }
 func solverResolve(solver Solver, predicates []Predicate, subst []SubstEntry) Result[[]Predicate, string] {
-	var expr_547 Result[[]Predicate, string]
+	var expr_577 Result[[]Predicate, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(predicates) == 0 {
-		expr_547 = Ok[[]Predicate, string](emptyPredicates())
+		expr_577 = Ok[[]Predicate, string](emptyPredicates())
 	} else {
-		var expr_546 Result[[]Predicate, string]
-		predicate_538 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicates, 0), Predicate{ClassName: "", Args: []MonoType([]MonoType{})})
-		rest_539 := solverResolve(solver, sliceDrop[Predicate](predicates, 1), subst)
-		var expr_545 Result[[]Predicate, string]
-		if v_223, ok := rest_539.(ResultErr[[]Predicate, string]); ok {
-			var expr_544 Result[[]Predicate, string]
-			expr_544 = Err[[]Predicate, string](v_223.F0)
-			expr_545 = expr_544
+		var expr_576 Result[[]Predicate, string]
+		predicate_568 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicates, 0), Predicate{ClassName: "", Args: []MonoType([]MonoType{})})
+		rest_569 := solverResolve(solver, sliceDrop[Predicate](predicates, 1), subst)
+		var expr_575 Result[[]Predicate, string]
+		if v_230, ok := rest_569.(ResultErr[[]Predicate, string]); ok {
+			var expr_574 Result[[]Predicate, string]
+			expr_574 = Err[[]Predicate, string](v_230.F0)
+			expr_575 = expr_574
 		} else {
-			if v_220, ok := rest_539.(ResultOk[[]Predicate, string]); ok {
-				var expr_543 Result[[]Predicate, string]
-				var expr_542 Result[[]Predicate, string]
-				if v_222, ok := solverResolveOne(solver, predicate_538, subst).(ResultErr[[]Predicate, string]); ok {
-					var expr_541 Result[[]Predicate, string]
-					expr_541 = Err[[]Predicate, string](v_222.F0)
-					expr_542 = expr_541
+			if v_227, ok := rest_569.(ResultOk[[]Predicate, string]); ok {
+				var expr_573 Result[[]Predicate, string]
+				var expr_572 Result[[]Predicate, string]
+				if v_229, ok := solverResolveOne(solver, predicate_568, subst).(ResultErr[[]Predicate, string]); ok {
+					var expr_571 Result[[]Predicate, string]
+					expr_571 = Err[[]Predicate, string](v_229.F0)
+					expr_572 = expr_571
 				} else {
-					if v_221, ok := solverResolveOne(solver, predicate_538, subst).(ResultOk[[]Predicate, string]); ok {
-						var expr_540 Result[[]Predicate, string]
-						expr_540 = Ok[[]Predicate, string](appendPredicates(v_221.F0, v_220.F0))
-						expr_542 = expr_540
+					if v_228, ok := solverResolveOne(solver, predicate_568, subst).(ResultOk[[]Predicate, string]); ok {
+						var expr_570 Result[[]Predicate, string]
+						expr_570 = Ok[[]Predicate, string](appendPredicates(v_228.F0, v_227.F0))
+						expr_572 = expr_570
 					} else {
 						panic("unreachable")
 					}
 				}
-				expr_543 = expr_542
-				expr_545 = expr_543
+				expr_573 = expr_572
+				expr_575 = expr_573
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_546 = expr_545
-		expr_547 = expr_546
+		expr_576 = expr_575
+		expr_577 = expr_576
 	}
-	return expr_547
+	return expr_577
 }
 func emptyPredicates() []Predicate {
 	return []Predicate([]Predicate{})
 }
 func solverResolveOne(solver Solver, predicate Predicate, subst []SubstEntry) Result[[]Predicate, string] {
-	args_548 := substTypes(predicate.Args, subst)
-	return solverFindInstance(solver.Instances, Predicate{ClassName: predicate.ClassName, Args: args_548}, subst)
+	args_578 := substTypes(predicate.Args, subst)
+	return solverFindInstance(solver.Instances, Predicate{ClassName: predicate.ClassName, Args: args_578}, subst)
 }
 func solverFindInstance(instances []Instance, predicate Predicate, subst []SubstEntry) Result[[]Predicate, string] {
-	var expr_555 Result[[]Predicate, string]
+	var expr_585 Result[[]Predicate, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(instances) == 0 {
-		expr_555 = Ok[[]Predicate, string]([]Predicate([]Predicate{predicate}))
+		expr_585 = Ok[[]Predicate, string]([]Predicate([]Predicate{predicate}))
 	} else {
-		var expr_554 Result[[]Predicate, string]
-		instance_549 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(instances, 0), Instance{ClassName: "", Type: MonoTypeTUnitCtor(), Predicates: []Predicate([]Predicate{})})
-		var expr_553 Result[[]Predicate, string]
-		if instance_549.ClassName != predicate.ClassName || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(predicate.Args) == 0 {
-			expr_553 = solverFindInstance(sliceDrop[Instance](instances, 1), predicate, subst)
+		var expr_584 Result[[]Predicate, string]
+		instance_579 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(instances, 0), Instance{ClassName: "", Type: MonoTypeTUnitCtor(), Predicates: []Predicate([]Predicate{})})
+		var expr_583 Result[[]Predicate, string]
+		if instance_579.ClassName != predicate.ClassName || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(predicate.Args) == 0 {
+			expr_583 = solverFindInstance(sliceDrop[Instance](instances, 1), predicate, subst)
 		} else {
-			var expr_552 Result[[]Predicate, string]
-			if v_225, ok := unify(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicate.Args, 0), MonoTypeTUnitCtor()), instance_549.Type, subst).(ResultOk[[]SubstEntry, string]); ok {
-				var expr_551 Result[[]Predicate, string]
-				expr_551 = solverResolve(instanceSolver(instance_549, instances), instance_549.Predicates, v_225.F0)
-				expr_552 = expr_551
+			var expr_582 Result[[]Predicate, string]
+			if v_232, ok := unify(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicate.Args, 0), MonoTypeTUnitCtor()), instance_579.Type, subst).(ResultOk[[]SubstEntry, string]); ok {
+				var expr_581 Result[[]Predicate, string]
+				expr_581 = solverResolve(instanceSolver(instance_579, instances), instance_579.Predicates, v_232.F0)
+				expr_582 = expr_581
 			} else {
-				if _, ok := unify(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicate.Args, 0), MonoTypeTUnitCtor()), instance_549.Type, subst).(ResultErr[[]SubstEntry, string]); ok {
-					var expr_550 Result[[]Predicate, string]
-					expr_550 = solverFindInstance(sliceDrop[Instance](instances, 1), predicate, subst)
-					expr_552 = expr_550
+				if _, ok := unify(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicate.Args, 0), MonoTypeTUnitCtor()), instance_579.Type, subst).(ResultErr[[]SubstEntry, string]); ok {
+					var expr_580 Result[[]Predicate, string]
+					expr_580 = solverFindInstance(sliceDrop[Instance](instances, 1), predicate, subst)
+					expr_582 = expr_580
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_553 = expr_552
+			expr_583 = expr_582
 		}
-		expr_554 = expr_553
-		expr_555 = expr_554
+		expr_584 = expr_583
+		expr_585 = expr_584
 	}
-	return expr_555
+	return expr_585
 }
 func instanceSolver(instance Instance, instances []Instance) Solver {
 	return Solver{Instances: instances}

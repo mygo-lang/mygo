@@ -14,6 +14,11 @@ func monoEqual(a: MonoType, b: MonoType) -> Bool
         case TKVar(id2) => id == id2
         case _ => false
       end
+    case TApp(ctor, args) =>
+      switch b
+        case TApp(ctor2, args2) => monoEqual(ctor.value(), ctor2.value()) && monoListEqual(args, args2)
+        case _ => false
+      end
     case TCon(name, args) =>
       switch b
         case TCon(name2, args2) => name == name2 && monoListEqual(args, args2)
@@ -59,6 +64,7 @@ func monoString(t: MonoType) -> String
     case TVar(id) => "t" + id.ToString()
     case TKVar(id) => "K" + id.ToString()
     case TCon(name, _) => name
+    case TApp(ctor, _) => monoString(ctor.value()) + "[...]"
     case TFunc(_, _) => "func"
     case TTuple(_) => "tuple"
     case TUnit => "()"
@@ -72,7 +78,7 @@ func instantiate(scheme: Scheme, state: InferState) -> MonoType
 end
 
 func instantiateQualified(scheme: Scheme, state: InferState) -> QualifiedType
-  let subst = instantiateBoundSubst(scheme.Bound, state, [])
+  let subst = instantiateBoundSubstFor(scheme.Bound, scheme.Body, state, [])
   QualifiedType { Predicates: substPredicates(scheme.Predicates, subst), Body: applySubst(subst, scheme.Body) }
 end
 
@@ -81,6 +87,14 @@ func instantiateBoundSubst(bound: Slice[Int], state: InferState, out: Slice[Subs
   else
     let id = bound.Get(0).UnwrapOr(0)
     instantiateBoundSubst(sliceDrop(bound, 1), InferState { FreshVarID: state.FreshVarID + 1 }, out.Append(SubstEntry { ID: id, Type: MonoType.TVar(state.FreshVarID) }))
+  end
+end
+
+func instantiateBoundSubstFor(bound: Slice[Int], body: MonoType, state: InferState, out: Slice[SubstEntry]) -> Slice[SubstEntry]
+  if bound.Len() == 0 then out else
+    let id = bound.Get(0).UnwrapOr(0)
+    let replacement = if isKindVar(body, id) then MonoType.TKVar(state.FreshVarID) else MonoType.TVar(state.FreshVarID) end
+    instantiateBoundSubstFor(sliceDrop(bound, 1), body, InferState { FreshVarID: state.FreshVarID + 1 }, out.Append(SubstEntry { ID: id, Type: replacement }))
   end
 end
 
@@ -107,8 +121,24 @@ func instantiateBound(bound: Slice[Int], body: MonoType, state: InferState, subs
     applySubst(subst, body)
   else
     let id = bound.Get(0).UnwrapOr(0)
-    instantiateBound(sliceDrop(bound, 1), body, InferState { FreshVarID: state.FreshVarID + 1 }, subst.Prepend(SubstEntry { ID: id, Type: MonoType.TVar(state.FreshVarID) }))
+    let replacement = if isKindVar(body, id) then MonoType.TKVar(state.FreshVarID) else MonoType.TVar(state.FreshVarID) end
+    instantiateBound(sliceDrop(bound, 1), body, InferState { FreshVarID: state.FreshVarID + 1 }, subst.Prepend(SubstEntry { ID: id, Type: replacement }))
   end
+end
+
+func isKindVar(t: MonoType, id: Int) -> Bool
+  switch t
+    case TKVar(other) => id == other
+    case TApp(ctor, args) => isKindVar(ctor.value(), id) || isKindVarAll(args, id)
+    case TCon(_, args) => isKindVarAll(args, id)
+    case TFunc(args, ret) => isKindVarAll(args, id) || isKindVar(ret.value(), id)
+    case TTuple(items) => isKindVarAll(items, id)
+    case _ => false
+  end
+end
+
+func isKindVarAll(items: Slice[MonoType], id: Int) -> Bool
+  if items.Len() == 0 then false else isKindVar(items.Get(0).UnwrapOr(MonoType.TUnit), id) || isKindVarAll(sliceDrop(items, 1), id) end
 end
 
 # Instantiation currently returns only a type, so callers must select result
@@ -118,6 +148,7 @@ func nextFreshVarID(t: MonoType, current: Int) -> Int
     case TVar(id) => if id >= current then id + 1 else current end
     case TKVar(id) => if id >= current then id + 1 else current end
     case TCon(_, args) => nextFreshVarIDInAll(args, current)
+    case TApp(ctor, args) => nextFreshVarIDInAll(args, nextFreshVarID(ctor.value(), current))
     case TFunc(args, ret) => nextFreshVarID(ret.value(), nextFreshVarIDInAll(args, current))
     case TTuple(items) => nextFreshVarIDInAll(items, current)
     case TUnit => current
@@ -139,6 +170,7 @@ func freeVars(t: MonoType, out: Slice[Int]) -> Slice[Int]
     case TVar(id) => if containsInt(out, id) then out else out.Append(id) end
     case TKVar(id) => if containsInt(out, id) then out else out.Append(id) end
     case TCon(_, args) => freeVarsAll(args, out)
+    case TApp(ctor, args) => freeVarsAll(args, freeVars(ctor.value(), out))
     case TFunc(args, ret) => freeVarsAll(args, freeVars(ret.value(), out))
     case TTuple(items) => freeVarsAll(items, out)
     case TUnit => out

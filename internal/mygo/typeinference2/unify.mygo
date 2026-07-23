@@ -9,10 +9,12 @@ func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[
     switch a
       case TVar(id) => bindVar(id, b, subst)
       case TKVar(id) => bindVar(id, b, subst)
+      case TApp(ctor, args) => unifyApplication(ctor.value(), args, b, subst)
       case TCon(name, args) =>
         switch b
           case TVar(id) => bindVar(id, a, subst)
           case TKVar(id) => bindVar(id, a, subst)
+          case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
           case TCon(name2, args2) =>
             if name == name2 && args.Len() == args2.Len() then
               unifyArgs(args, args2, subst)
@@ -25,6 +27,7 @@ func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[
         switch b
           case TVar(id) => bindVar(id, a, subst)
           case TKVar(id) => bindVar(id, a, subst)
+          case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
           case TFunc(args2, ret2) =>
             if args.Len() == args2.Len() then
               let s1 = unifyArgs(args, args2, subst)
@@ -41,6 +44,7 @@ func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[
         switch b
           case TVar(id) => bindVar(id, a, subst)
           case TKVar(id) => bindVar(id, a, subst)
+          case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
           case TTuple(items2) =>
             if items.Len() == items2.Len() then
               unifyArgs(items, items2, subst)
@@ -53,9 +57,30 @@ func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[
         switch b
           case TVar(id) => bindVar(id, a, subst)
           case TKVar(id) => bindVar(id, a, subst)
+          case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
           case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
         end
     end
+  end
+end
+
+func unifyApplication(ctor: MonoType, args: Slice[MonoType], other: MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
+  let resolvedCtor = applySubst(subst, ctor)
+  let resolvedOther = applySubst(subst, other)
+  switch resolvedOther
+    case TVar(id) => bindVar(id, MonoType.TApp(Ref.new(resolvedCtor), args), subst)
+    case TKVar(id) => bindVar(id, MonoType.TApp(Ref.new(resolvedCtor), args), subst)
+    case TApp(otherCtor, otherArgs) =>
+      switch unify(resolvedCtor, otherCtor.value(), subst)
+        case Ok(next) => unifyArgs(args, otherArgs, next)
+        case Err(msg) => Err(msg)
+      end
+    case TCon(name, otherArgs) =>
+      switch unify(resolvedCtor, MonoType.TCon(name, [] as Slice[MonoType]), subst)
+        case Ok(next) => unifyArgs(args, otherArgs, next)
+        case Err(msg) => Err(msg)
+      end
+    case _ => Err("cannot unify type application with " + monoString(resolvedOther))
   end
 end
 
@@ -99,6 +124,7 @@ func applySubst(subst: Slice[SubstEntry], t: MonoType) -> MonoType
         case None => t
       end
     case TCon(name, args) => MonoType.TCon(name, applySubstAll(subst, args))
+    case TApp(ctor, args) => MonoType.TApp(Ref.new(applySubst(subst, ctor.value())), applySubstAll(subst, args))
     case TFunc(args, ret) => MonoType.TFunc(applySubstAll(subst, args), Ref.new(applySubst(subst, ret.value())))
     case TTuple(items) => MonoType.TTuple(applySubstAll(subst, items))
     case TUnit => t
@@ -141,6 +167,7 @@ func occursIn(id: Int, t: MonoType) -> Bool
     case TVar(other) => id == other
     case TKVar(other) => id == other
     case TCon(_, args) => occursInAny(id, args)
+    case TApp(ctor, args) => occursIn(id, ctor.value()) || occursInAny(id, args)
     case TFunc(args, ret) => occursInAny(id, args) || occursIn(id, ret.value())
     case TTuple(items) => occursInAny(id, items)
     case TUnit => false

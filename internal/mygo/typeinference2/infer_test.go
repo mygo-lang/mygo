@@ -53,6 +53,26 @@ end
 	}
 }
 
+func TestInferHKTApplicationRecoversElementType(t *testing.T) {
+	parsed := parser2.ParseFile(`package sample
+
+func Keep[C[A], A](c: C[A]) -> C[A]
+  c
+end
+
+func Use() -> Slice[Int]
+  Keep([1])
+end
+`)
+	file, ok := parsed.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	if got := InferFile(file.F0); !isPackageInfo(got) {
+		t.Fatalf("HKT inference failed: %v", got)
+	}
+}
+
 func isPackageInfo(value Result[PackageInfo, string]) bool {
 	_, ok := value.(ResultOk[PackageInfo, string])
 	return ok
