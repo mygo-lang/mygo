@@ -43,6 +43,47 @@ end
 	}
 }
 
+func TestParseSwitchVariantAndWildcardPatterns(t *testing.T) {
+	got := ParseFile(`package sample
+
+enum Maybe[A]
+  Some(A)
+  None
+end
+
+func unwrap(value: Maybe[Int]) -> Int
+  switch value
+    case Some(item) => item
+    case None => 0
+    case _ => -1
+  end
+end
+`)
+	parsed, ok := got.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", got)
+	}
+	fn, ok := parsed.F0.Decls[1].(ast2.DeclFuncDecl)
+	if !ok {
+		t.Fatalf("decl[1] = %T, want DeclFuncDecl", parsed.F0.Decls[1])
+	}
+	body := fn.F4.(ast2.ExprBlockExpr)
+	sw, ok := body.F0[0].(ast2.StmtExprStmt).F0.(ast2.ExprSwitchExpr)
+	if !ok {
+		t.Fatalf("body = %T, want ExprSwitchExpr", body.F0[0].(ast2.StmtExprStmt).F0)
+	}
+	if len(sw.F1) != 3 {
+		t.Fatalf("case count = %d, want 3", len(sw.F1))
+	}
+	variant, ok := sw.F1[0].Pattern.(ast2.PatternVariantPattern)
+	if !ok || variant.F0 != "Some" || len(variant.F1) != 1 || variant.F1[0] != "item" {
+		t.Fatalf("first pattern = %#v, want Some(item)", sw.F1[0].Pattern)
+	}
+	if _, ok := sw.F1[2].Pattern.(ast2.PatternWildcardPattern); !ok {
+		t.Fatalf("third pattern = %T, want PatternWildcardPattern", sw.F1[2].Pattern)
+	}
+}
+
 func TestParseFileBasicDeclarations(t *testing.T) {
 	src := `package sample
 

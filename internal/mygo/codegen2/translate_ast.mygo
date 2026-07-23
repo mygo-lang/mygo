@@ -40,8 +40,89 @@ func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String
     case CallExpr(callee, args) => translateCallAstExpected(callee.value(), args, ctx, expected)
     case StructLitExpr(typeName, fields) => translateStructLitAstExpected(typeName, fields, ctx, expected)
     case IfExpr(cond, thenExpr, elseExpr) => translateIfAst(cond.value(), thenExpr.value(), elseExpr.value(), ctx, expected)
+    case SwitchExpr(target, cases) => translateSwitchAst(target.value(), cases, ctx, expected)
     case BlockExpr(items) => translateBlockExprAstExpected(items, ctx, 0, [] as Slice[goast.Stmt], expected)
     case _ => Err("AST lowering for this expression is not implemented")
+  end
+end
+
+# Switch cases lower to an if/else chain. Enum variants use a Go type assertion;
+# the target enum's type arguments are preserved in the asserted variant type.
+func translateSwitchAst(target: ast2.Expr, cases: Slice[ast2.SwitchCase], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+  let subject = translateExprAst(target, ctx)
+  switch subject
+    case Err(msg) => Err(msg)
+    case Ok(value) =>
+      let temp = ctxFreshExprTemp(ctx)
+      let typ = if expected == "" then "any" else expected end
+      let branches = translateSwitchBranches(cases, target, value.Expr, temp, ctx, typ)
+      switch branches
+        case Err(msg) => Err(msg)
+        case Ok(stmts) => Ok(astExprWithPre(goast.Ident(temp), goast.AppendStmts(value.Pre, goast.AppendStmts(astSingleStmt(goast.DeclareFromType(temp, typ)), stmts))))
+      end
+  end
+end
+
+func translateSwitchBranches(cases: Slice[ast2.SwitchCase], sourceTarget: ast2.Expr, target: goast.Expr, temp: String, ctx: Ref[egCtx], expected: String) -> Result[Slice[goast.Stmt], String]
+  if cases.Len() == 0 then
+    Err("switch requires a wildcard case")
+  else
+    let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.Expr.UnitExpr() })
+    switch current.Pattern
+      case WildcardPattern => translateSwitchCaseBody(current.Body, ctx, expected, temp)
+      case LiteralPattern(kind, literal) =>
+        let body = translateSwitchCaseBody(current.Body, ctx, expected, temp)
+        let rest = translateSwitchBranches(sliceDrop(cases, 1), sourceTarget, target, temp, ctx, expected)
+        switch body
+          case Err(msg) => Err(msg)
+          case Ok(bodyStmts) =>
+            switch rest
+              case Err(msg) => Err(msg)
+              case Ok(next) =>
+                let pattern = if kind == "string" then goast.String(strconv.Quote(literal)) else goast.Number(literal) end
+                Ok(astSingleStmt(goast.If(goast.Binary(target, "==", pattern), bodyStmts, next)))
+            end
+        end
+      case VariantPattern(name, args) =>
+        let rest = translateSwitchBranches(sliceDrop(cases, 1), sourceTarget, target, temp, ctx, expected)
+        switch rest
+          case Err(msg) => Err(msg)
+          case Ok(next) =>
+            let valueName = "__mygo_match_" + ctxFreshExprTemp(ctx)
+            let child = Ref.new(ctxChild(ctx))
+            bindPatternArguments(child, args, valueName, 0)
+            let body = translateSwitchCaseBody(current.Body, child, expected, temp)
+            switch body
+              case Err(msg) => Err(msg)
+              case Ok(branchStmts) => Ok(astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(switchTargetGoType(sourceTarget, ctx), name), valueName, branchStmts, next)))
+            end
+        end
+    end
+  end
+end
+
+func translateSwitchCaseBody(body: ast2.Expr, ctx: Ref[egCtx], expected: String, temp: String) -> Result[Slice[goast.Stmt], String]
+  let value = translateExprAstExpected(body, ctx, expected)
+  switch value
+    case Err(msg) => Err(msg)
+    case Ok(v) => Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(temp)), "=", astSingleExpr(v.Expr)))) )
+  end
+end
+
+func bindPatternArguments(ctx: Ref[egCtx], args: Slice[String], valueName: String, index: Int) -> ()
+  if index < args.Len() then
+    let name = args.Get(index).UnwrapOr("_")
+    if name != "_" then
+      ctxSetBinding(ctx, name, valueName + ".F" + index.ToString())
+    end
+    bindPatternArguments(ctx, args, valueName, index + 1)
+  end
+end
+
+func switchTargetGoType(target: ast2.Expr, ctx: Ref[egCtx]) -> String
+  switch target
+    case IdentExpr(name) => ctxGetLocal(ctx, name).UnwrapOr("any")
+    case _ => "any"
   end
 end
 

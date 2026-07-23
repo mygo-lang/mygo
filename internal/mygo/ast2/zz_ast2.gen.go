@@ -112,6 +112,44 @@ type StructLitField struct {
 	Name  string
 	Value Expr
 }
+type SwitchCase struct {
+	Pattern Pattern
+	Body    Expr
+}
+type Pattern interface {
+	isPattern()
+}
+type PatternVariantPattern struct {
+	F0 string
+	F1 []string
+}
+
+func (_ PatternVariantPattern) isPattern() {
+}
+func PatternVariantPatternCtor(a0 string, a1 []string) Pattern {
+	return PatternVariantPattern{F0: a0, F1: a1}
+}
+
+type PatternLiteralPattern struct {
+	F0 string
+	F1 string
+}
+
+func (_ PatternLiteralPattern) isPattern() {
+}
+func PatternLiteralPatternCtor(a0 string, a1 string) Pattern {
+	return PatternLiteralPattern{F0: a0, F1: a1}
+}
+
+type PatternWildcardPattern struct {
+}
+
+func (_ PatternWildcardPattern) isPattern() {
+}
+func PatternWildcardPatternCtor() Pattern {
+	return PatternWildcardPattern{}
+}
+
 type TypeExpr interface {
 	isTypeExpr()
 }
@@ -381,6 +419,17 @@ func (_ ExprBlockExpr) isExpr() {
 }
 func ExprBlockExprCtor(a0 []Stmt) Expr {
 	return ExprBlockExpr{F0: a0}
+}
+
+type ExprSwitchExpr struct {
+	F0 *Expr
+	F1 []SwitchCase
+}
+
+func (_ ExprSwitchExpr) isExpr() {
+}
+func ExprSwitchExprCtor(a0 *Expr, a1 []SwitchCase) Expr {
+	return ExprSwitchExpr{F0: a0, F1: a1}
 }
 
 type ExprFuncLitExpr struct {

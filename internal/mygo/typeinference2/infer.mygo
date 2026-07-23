@@ -74,12 +74,103 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
     case CallExpr(callee, args) => inferCall(callee.value(), args, env, state)
     case FieldExpr(base, field) => inferField(base.value(), field, env, state)
     case IfExpr(cond, thenExpr, elseExpr) => inferIf(cond.value(), thenExpr.value(), elseExpr.value(), env, state)
+    case SwitchExpr(target, cases) => inferSwitch(target.value(), cases, env, state)
     case BlockExpr(items) => inferBlock(items, env, state)
     case StructLitExpr(typeName, fields) =>
       inferStructLit(typeName, fields, env, state)
     case InlineGoExpr(typ, _, _, _) =>
       let mono = typeFromAST(typ.value())
       Ok(InferResult { Type: mono, Subst: [], State: state })
+  end
+end
+
+func inferSwitch(target: ast2.Expr, cases: Slice[ast2.SwitchCase], env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+  let matched = inferExpr(target, env, state)
+  switch matched
+    case Err(msg) => Err(msg)
+    case Ok(value) => inferSwitchCases(cases, value.Type, env, value.State, value.Subst, None)
+  end
+end
+
+func inferSwitchCases(cases: Slice[ast2.SwitchCase], targetType: MonoType, env: Slice[EnvEntry], state: InferState, subst: Slice[SubstEntry], resultType: Option[MonoType]) -> Result[InferResult, String]
+  if cases.Len() == 0 then
+    switch resultType
+      case Some(t) => Ok(InferResult { Type: applySubst(subst, t), Subst: subst, State: state })
+      case None => Err("switch requires at least one case")
+    end
+  else
+    let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.Expr.UnitExpr() })
+    let caseEnv = envWithPattern(env, current.Pattern, targetType)
+    switch caseEnv
+      case Err(msg) => Err(msg)
+      case Ok(nextEnv) =>
+        let body = inferExpr(current.Body, nextEnv, state)
+        switch body
+          case Err(msg) => Err(msg)
+          case Ok(value) =>
+            switch resultType
+              case None => inferSwitchCases(sliceDrop(cases, 1), targetType, env, value.State, composeSubst(value.Subst, subst), Some(value.Type))
+              case Some(previous) =>
+                let nextSubst = unify(applySubst(value.Subst, previous), applySubst(value.Subst, value.Type), composeSubst(value.Subst, subst))
+                switch nextSubst
+                  case Err(msg) => Err("switch case type mismatch: " + msg)
+                  case Ok(s) => inferSwitchCases(sliceDrop(cases, 1), targetType, env, value.State, s, Some(applySubst(s, previous)))
+                end
+            end
+        end
+    end
+  end
+end
+
+func envWithPattern(env: Slice[EnvEntry], pattern: ast2.Pattern, targetType: MonoType) -> Result[Slice[EnvEntry], String]
+  switch pattern
+    case WildcardPattern => Ok(env)
+    case LiteralPattern(kind, _) =>
+      let expected = if kind == "string" then MonoType.TCon("String", emptyMonoTypes()) else MonoType.TCon("Int", emptyMonoTypes()) end
+      switch unify(targetType, expected, [])
+        case Ok(_) => Ok(env)
+        case Err(msg) => Err("pattern does not match switch target: " + msg)
+      end
+    case VariantPattern(name, args) =>
+      switch envGet(env, name)
+        case None => Err("unknown variant " + name)
+        case Some(scheme) =>
+          switch scheme.Body
+            case TFunc(fields, ret) => envWithPatternBindings(env, args, fields, targetType, ret.value())
+            case TCon(_, _) =>
+              if args.Len() == 0 then
+                switch unify(targetType, scheme.Body, [])
+                  case Ok(_) => Ok(env)
+                  case Err(msg) => Err("pattern does not match switch target: " + msg)
+                end
+              else
+                Err("variant " + name + " does not accept pattern arguments")
+              end
+            case _ => Err("pattern " + name + " is not an enum variant")
+          end
+      end
+  end
+end
+
+func envWithPatternBindings(env: Slice[EnvEntry], names: Slice[String], fields: Slice[MonoType], targetType: MonoType, variantType: MonoType) -> Result[Slice[EnvEntry], String]
+  if names.Len() != fields.Len() then
+    Err("pattern argument count mismatch")
+  else
+    switch unify(targetType, variantType, [])
+      case Err(msg) => Err("pattern does not match switch target: " + msg)
+      case Ok(_) => envWithPatternBindingLoop(env, names, fields)
+    end
+  end
+end
+
+func envWithPatternBindingLoop(env: Slice[EnvEntry], names: Slice[String], fields: Slice[MonoType]) -> Result[Slice[EnvEntry], String]
+  if names.Len() == 0 then
+    Ok(env)
+  else
+    let name = names.Get(0).UnwrapOr("_")
+    let field = fields.Get(0).UnwrapOr(MonoType.TUnit)
+    let next = if name == "_" then env else envPut(env, name, Scheme { Bound: [], Body: field }) end
+    envWithPatternBindingLoop(next, sliceDrop(names, 1), sliceDrop(fields, 1))
   end
 end
 

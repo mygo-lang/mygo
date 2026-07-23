@@ -397,7 +397,47 @@ func expr() -> ps.Parser[ast2.Expr]
   ps.PChoice([
     ps.PAttempt(inlineGoExpr()),
     ps.PAttempt(ifExpr()),
+    ps.PAttempt(switchExpr()),
     binaryExpr(),
+  ])
+end
+
+func switchExpr() -> ps.Parser[ast2.Expr]
+  ps.PBind(kw("switch"), func(_: String) -> ps.Parser[ast2.Expr]
+    ps.PBind(expr(), func(target: ast2.Expr) -> ps.Parser[ast2.Expr]
+      ps.PBind(ps.PMany1(switchCase()), func(cases: Slice[ast2.SwitchCase]) -> ps.Parser[ast2.Expr]
+        ps.PThen(kw("end"), ps.PPure(ast2.Expr.SwitchExpr(Ref.new(target), cases)))
+      end)
+    end)
+  end)
+end
+
+func switchCase() -> ps.Parser[ast2.SwitchCase]
+  ps.PBind(kw("case"), func(_: String) -> ps.Parser[ast2.SwitchCase]
+    ps.PBind(pattern(), func(pat: ast2.Pattern) -> ps.Parser[ast2.SwitchCase]
+      ps.PBind(sym("=>"), func(_: String) -> ps.Parser[ast2.SwitchCase]
+        ps.PMap(blockUntil(ps.PChoice([kw("case"), kw("end")])), func(body: ast2.Expr) -> ast2.SwitchCase
+          ast2.SwitchCase { Pattern: pat, Body: bodyExprFromBlock(body) }
+        end)
+      end)
+    end)
+  end)
+end
+
+func pattern() -> ps.Parser[ast2.Pattern]
+  ps.PChoice([
+    ps.PMap(sym("_"), func(_: String) -> ast2.Pattern ast2.Pattern.WildcardPattern end),
+    ps.PMap(number(), func(value: String) -> ast2.Pattern ast2.Pattern.LiteralPattern("number", value) end),
+    ps.PMap(stringLiteral(), func(value: String) -> ast2.Pattern ast2.Pattern.LiteralPattern("string", value) end),
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Pattern]
+      ps.PMap(ps.POptional(paren(ps.PSepBy(identifier(), sym(",")))), func(args: Option[Slice[String]]) -> ast2.Pattern
+        let names = switch args
+          case Some(items) => items
+          case None => [] as Slice[String]
+        end
+        ast2.Pattern.VariantPattern(name, names)
+      end)
+    end),
   ])
 end
 

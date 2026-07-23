@@ -291,6 +291,7 @@ func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[g
     case UnaryExpr(_, _) => translateAstReturnSingle(expr, ctx)
     case BinaryExpr(_, _, _) => translateAstReturnSingle(expr, ctx)
     case IfExpr(_, _, _) => translateAstReturnSingle(expr, ctx)
+    case SwitchExpr(_, _) => translateAstReturnSingle(expr, ctx)
     case BlockExpr(_) => translateAstReturnSingle(expr, ctx)
     case StructLitExpr(_, _) => translateAstReturnSingle(expr, ctx)
     case InlineGoExpr(_, _, _, _) => translateAstReturnSingle(expr, ctx)

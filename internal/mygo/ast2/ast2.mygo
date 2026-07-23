@@ -51,6 +51,17 @@ struct StructLitField
   Value: Expr
 end
 
+struct SwitchCase
+  Pattern: Pattern
+  Body: Expr
+end
+
+enum Pattern
+  VariantPattern(String, Slice[String])
+  LiteralPattern(String, String)
+  WildcardPattern
+end
+
 enum TypeExpr
   NamedType(String, Slice[TypeExpr])
   FuncType(Slice[TypeExpr], Ref[TypeExpr])
@@ -111,6 +122,7 @@ enum Expr
   BinaryExpr(String, Ref[Expr], Ref[Expr])
   IfExpr(Ref[Expr], Ref[Expr], Ref[Expr])
   BlockExpr(Slice[Stmt])
+  SwitchExpr(Ref[Expr], Slice[SwitchCase])
   FuncLitExpr(Slice[Param], Option[TypeExpr], Ref[Expr])
   SliceLitExpr(Slice[Expr])
   TypeAsExpr(Ref[Expr], TypeExpr)

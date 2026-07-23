@@ -315,3 +315,59 @@ end
 		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
 	}
 }
+
+func TestGenerateSourceLowersLiteralSwitch(t *testing.T) {
+	src := `package sample
+
+func classify(value: Int) -> String
+  switch value
+    case 0 => "zero"
+    case _ => "other"
+  end
+end
+`
+
+	got := GenerateSource(src)
+	ok, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	code := ok.F0
+	if !strings.Contains(code, "if value == 0") {
+		t.Fatalf("generated switch is missing literal guard:\n%s", code)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", code, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
+
+func TestGenerateSourceLowersVariantSwitchWithBinding(t *testing.T) {
+	src := `package sample
+
+enum Maybe
+  Some(Int)
+  None
+end
+
+func unwrap(value: Maybe) -> Int
+  switch value
+    case Some(item) => item
+    case None => 0
+    case _ => 0
+  end
+end
+`
+
+	got := GenerateSource(src)
+	ok, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	code := ok.F0
+	if !strings.Contains(code, "value.(MaybeSome)") || !strings.Contains(code, ".F0") {
+		t.Fatalf("generated variant switch is missing assertion or field binding:\n%s", code)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", code, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}

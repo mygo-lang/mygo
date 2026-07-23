@@ -12,6 +12,7 @@ import (
 	"go/token"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 // These aliases are the FFI-facing node categories used by MyGO codegen2.
@@ -528,6 +529,35 @@ func If(cond ast.Expr, body []ast.Stmt, elseBody []ast.Stmt) ast.Stmt {
 		n.Else = Block(elseBody)
 	}
 	return n
+}
+
+// VariantIf builds the type-assertion form used for enum pattern matching.
+// variantType is Go source such as "MaybeSome[int]".
+func VariantIf(target ast.Expr, variantType, valueName string, body, elseBody []ast.Stmt) ast.Stmt {
+	typ, err := parser.ParseExpr(variantType)
+	if err != nil {
+		panic(fmt.Sprintf("invalid enum variant type %q: %v", variantType, err))
+	}
+	init := &ast.AssignStmt{
+		Lhs: []ast.Expr{ast.NewIdent(valueName), ast.NewIdent("ok")},
+		Tok: token.DEFINE,
+		Rhs: []ast.Expr{&ast.TypeAssertExpr{X: target, Type: typ}},
+	}
+	n := &ast.IfStmt{Init: init, Cond: ast.NewIdent("ok"), Body: Block(body)}
+	if elseBody != nil {
+		n.Else = Block(elseBody)
+	}
+	return n
+}
+
+// VariantTypeForTarget applies the target enum's type arguments to a variant
+// type named by joining its enum base and variant name.
+func VariantTypeForTarget(targetType, variant string) string {
+	base, args, hasArgs := strings.Cut(targetType, "[")
+	if !hasArgs {
+		return base + variant
+	}
+	return base + variant + "[" + args
 }
 
 func For(cond ast.Expr, body []ast.Stmt) ast.Stmt {
