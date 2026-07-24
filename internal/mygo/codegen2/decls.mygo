@@ -440,25 +440,108 @@ func addConstraintParams(decls: Slice[ast2.Decl], constraints: Slice[ast2.Constr
     DictionaryParams { Names: names, Types: types }
   else
     let constraint = constraints.Get(0).UnwrapOr(ast2.Constraint { Name: "", BindName: None, Args: [] as Slice[ast2.TypeExpr] })
-    addDictionaryMethods(decls, sliceDrop(constraints, 1), interfaceMethods(decls, constraint.Name), ctx, names, types)
+    let ifaceTps = interfaceTypeParams(decls, constraint.Name)
+    addDictionaryMethods(decls, sliceDrop(constraints, 1), interfaceMethods(decls, constraint.Name), ctx, names, types, constraint.Args, ifaceTps)
   end
 end
 
-func addDictionaryMethods(decls: Slice[ast2.Decl], rest: Slice[ast2.Constraint], methods: Slice[ast2.FuncSig], ctx: Ref[egCtx], names: Slice[String], types: Slice[String]) -> DictionaryParams
+func addDictionaryMethods(decls: Slice[ast2.Decl], rest: Slice[ast2.Constraint], methods: Slice[ast2.FuncSig], ctx: Ref[egCtx], names: Slice[String], types: Slice[String], constraintArgs: Slice[ast2.TypeExpr], ifaceTps: Slice[String]) -> DictionaryParams
   if methods.Len() == 0 then
     addConstraintParams(decls, rest, ctx, names, types)
   else
     let method = methods.Get(0).UnwrapOr(ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] })
-    let paramName = sanitizeIdent(method.Name) + "Fn"
+    let baseName = sanitizeIdent(method.Name) + "Fn"
+    let paramName = ctxFreshBinding(ctx, baseName)
     ctx.constraintFuncs.Set(method.Name, paramName)
-    # Use "any" for dictionary param types when the interface type params
-    # don't match the caller's type params (e.g. Eq[A] method used in
-    # impl[T] context).  The Go function signature is valid either way.
+    # Substitute interface type params with constraint type args so
+    # e.g. Eq[A].Equals(A, A) with constraint Eq[T] yields func(T, T) bool.
     let argTypes = method.Params.Map(func(p: ast2.Param) -> String
-      let t = goType(p.Type, ctx.typeParams)
-      if t == "" || (t.Len() == 1 && t >= "A" && t <= "Z") then "any" else t end
+      substituteTypeParamsInTypeExpr(p.Type, ifaceTps, constraintArgs, ctx.typeParams)
     end)
-    addDictionaryMethods(decls, rest, sliceDrop(methods, 1), ctx, names.Append(paramName), types.Append("func(" + joinStrings(argTypes, ", ") + ")" + returnTypeString(method.Ret, ctx.typeParams)))
+    let retStr = switch method.Ret
+      case Some(t) => substituteTypeParamsInTypeExpr(t, ifaceTps, constraintArgs, ctx.typeParams)
+      case None => ""
+    end
+    addDictionaryMethods(decls, rest, sliceDrop(methods, 1), ctx, names.Append(paramName), types.Append("func(" + joinStrings(argTypes, ", ") + ")" + retStr), constraintArgs, ifaceTps)
+  end
+end
+
+# Build a func type string after substituting interface type parameters.
+func funcTypeSubstitutedResult(params: Slice[ast2.TypeExpr], ret: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr], typeParams: Set[String]) -> String
+  let paramStrs = params.Map(func(p: ast2.TypeExpr) -> String
+    substituteTypeParamsInTypeExpr(p, ifaceTps, constraintArgs, typeParams)
+  end)
+  let retStr = substituteTypeParamsInTypeExpr(ret, ifaceTps, constraintArgs, typeParams)
+  funcTypeResultWithRet(paramStrs, retStr)
+end
+
+func funcTypeResultWithRet(paramStrs: Slice[String], retStr: String) -> String
+  let base = "func(" + joinStrings(paramStrs, ", ") + ")"
+  if retStr == "" then
+    base
+  else
+    base + " " + retStr
+  end
+end
+
+func substituteTypeParamsInTypeExpr(typ: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr], typeParams: Set[String]) -> String
+  switch typ
+    case NamedType(name, args) then
+      let index = findStringIndex(ifaceTps, name)
+      if index >= 0 && index < constraintArgs.Len() then
+        let replacement = constraintArgs.Get(index).UnwrapOr(ast2.TypeExpr.UnitType())
+        goType(replacement, typeParams)
+      else
+        if args.Len() == 0 then
+          goType(typ, typeParams)
+        else
+          let replacedArgs = typeExprsToStrings(args.Map(func(a: ast2.TypeExpr) -> ast2.TypeExpr
+            substituteTypeExpr(a, ifaceTps, constraintArgs)
+          end), typeParams)
+          name + "[" + joinStrings(replacedArgs, ", ") + "]"
+        end
+      end
+    end
+    case FuncType(params, retRef) then
+      funcTypeSubstitutedResult(params, retRef.value(), ifaceTps, constraintArgs, typeParams)
+    end
+    case UnitType => "struct{}"
+    case _ => goType(typ, typeParams)
+  end
+end
+
+func substituteTypeExpr(typ: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr]) -> ast2.TypeExpr
+  switch typ
+    case NamedType(name, args) =>
+      let index = findStringIndex(ifaceTps, name)
+      if index >= 0 && index < constraintArgs.Len() then
+        constraintArgs.Get(index).UnwrapOr(ast2.TypeExpr.UnitType())
+      else
+        if args.Len() == 0 then typ else
+          ast2.TypeExpr.NamedType(name, args.Map(func(a: ast2.TypeExpr) -> ast2.TypeExpr substituteTypeExpr(a, ifaceTps, constraintArgs) end))
+        end
+      end
+    case _ => typ
+  end
+end
+
+func findStringIndex(items: Slice[String], target: String) -> Int
+  if items.Len() == 0 then -1 else
+    let head = items.Get(0).UnwrapOr("")
+    if head == target then 0 else
+      let found = findStringIndex(sliceDrop(items, 1), target)
+      if found < 0 then -1 else found + 1 end
+    end
+  end
+end
+
+func interfaceTypeParams(decls: Slice[ast2.Decl], name: String) -> Slice[String]
+  if decls.Len() == 0 then [] as Slice[String] else
+    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    switch decl
+      case InterfaceDecl(interfaceName, tps, _) => if interfaceName == name then tps else interfaceTypeParams(sliceDrop(decls, 1), name) end
+      case _ => interfaceTypeParams(sliceDrop(decls, 1), name)
+    end
   end
 end
 
