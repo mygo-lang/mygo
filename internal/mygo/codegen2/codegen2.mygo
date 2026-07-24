@@ -32,20 +32,42 @@ func Generate(file: ast2.File, info: typeinference2.PackageInfo) -> Result[Strin
 end
 
 func GenerateFiles(files: Slice[SourceFileInput], info: typeinference2.PackageInfo) -> Result[Map[String, String], String]
+  # Merge all file declarations so cross-file method dispatch (e.g. tail.Map
+  # from list.mygo resolving to the Option IEnumerable impl in option.mygo)
+  # works through seedPackageDictionaries / seedImplCandidates.
+  let allDecls = mergeFileDecls(files, 0, [] as Slice[ast2.Decl])
   let out: Map[String, String] = {}
-  generateFilesLoop(files, info, 0, out)
+  generateFilesLoop(files, info, allDecls, 0, out)
 end
 
-func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.PackageInfo, index: Int, out: Map[String, String]) -> Result[Map[String, String], String]
+func mergeFileDecls(files: Slice[SourceFileInput], index: Int, acc: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+  if index >= files.Len() then
+    acc
+  else
+    let input = files.Get(index).UnwrapOr(SourceFileInput { Path: "main.mygo", File: ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] } })
+    mergeFileDecls(files, index + 1, mergeDeclSlices(acc, input.File.Decls))
+  end
+end
+
+func mergeDeclSlices(dst: Slice[ast2.Decl], src: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+  if src.Len() == 0 then
+    dst
+  else
+    let item = src.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    mergeDeclSlices(dst.Append(item), sliceDrop(src, 1))
+  end
+end
+
+func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], index: Int, out: Map[String, String]) -> Result[Map[String, String], String]
   if index >= files.Len() then
     Ok(out)
   else
     let input = files.Get(index).UnwrapOr(SourceFileInput { Path: "main.mygo", File: ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] } })
-    let src = generateOneFile(input.File, info, index == 0)
+    let src = generateOneFile(input.File, info, allDecls, index == 0)
     switch src
       case Ok(code) =>
         out.Set(sourceToGenName(input.Path), code)
-        generateFilesLoop(files, info, index + 1, out)
+        generateFilesLoop(files, info, allDecls, index + 1, out)
       case Err(msg) => Err(withExpressionSourceName(msg, input.File.SourceName))
     end
   end
@@ -75,8 +97,11 @@ func GenerateSourceAt(sourceName: String, input: String) -> Result[String, Strin
   end
 end
 
-func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo, includeHKT: Bool) -> Result[String, String]
-  let g = Ref.new(newGenerator2WithInfo(file.PackageName, file.Decls, info.GoPackages, info.TypedInfo, None))
+func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], includeHKT: Bool) -> Result[String, String]
+  # Use merged allDecls for the Generator2 so seedPackageDictionaries /
+  # seedImplCandidates see impl declarations from all files in the package,
+  # enabling cross-file method dispatch like tail.Map -> OptionIEnumerable.
+  let g = Ref.new(newGenerator2WithInfo(file.PackageName, allDecls, info.GoPackages, info.TypedInfo, None))
   let imports = collectImports(file.Decls)
   let decls = translateDeclsAst(g, file.Decls, 0, [] as Slice[goast.Decl])
   switch decls

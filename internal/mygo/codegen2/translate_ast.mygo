@@ -251,14 +251,19 @@ func translateSwitchBranchesStmt(cases: Slice[ast2.SwitchCase], sourceTarget: as
         switch rest
           case Err(msg) => Err(msg)
           case Ok(next) =>
-            # For zero-arg variants (e.g. None) use _ to avoid "unused" errors.
-            let valueName = if args.Len() == 0 then "_" else "__mygo_match_" + ctxFreshExprTemp(ctx) end
-            let child = Ref.new(ctxChild(ctx))
-            bindPatternArguments(child, args, valueName, 0)
-            let body = translateSwitchCaseBodyStmt(current.Body, child)
-            switch body
+            let targetType = switchTargetGoType(sourceTarget, ctx)
+            switch targetType
               case Err(msg) => Err(msg)
-              case Ok(branchStmts) => Ok(astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(switchTargetGoType(sourceTarget, ctx), name), valueName, branchStmts, next)))
+              case Ok(typ) =>
+                # For zero-arg variants (e.g. None) use _ to avoid "unused" errors.
+                let valueName = if args.Len() == 0 then "_" else "__mygo_match_" + ctxFreshExprTemp(ctx) end
+                let child = Ref.new(ctxChild(ctx))
+                bindPatternArguments(child, args, valueName, 0)
+                let body = translateSwitchCaseBodyStmt(current.Body, child)
+                switch body
+                  case Err(msg) => Err(msg)
+                  case Ok(branchStmts) => Ok(astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ, name), valueName, branchStmts, next)))
+                end
             end
         end
       case _ => Err("unsupported pattern in statement-context switch")
@@ -354,13 +359,18 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], sourceTarget: ast2.E
         switch rest
           case Err(msg) => Err(msg)
           case Ok(next) =>
-            let valueName = "__mygo_match_" + ctxFreshExprTemp(ctx)
-            let child = Ref.new(ctxChild(ctx))
-            bindPatternArguments(child, args, valueName, 0)
-            let body = translateSwitchCaseBody(current.Body, child, expected, temp)
-            switch body
+            let targetType = switchTargetGoType(sourceTarget, ctx)
+            switch targetType
               case Err(msg) => Err(msg)
-              case Ok(branchStmts) => Ok(astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(switchTargetGoType(sourceTarget, ctx), name), valueName, branchStmts, next)))
+              case Ok(typ) =>
+                let valueName = "__mygo_match_" + ctxFreshExprTemp(ctx)
+                let child = Ref.new(ctxChild(ctx))
+                bindPatternArguments(child, args, valueName, 0)
+                let body = translateSwitchCaseBody(current.Body, child, expected, temp)
+                switch body
+                  case Err(msg) => Err(msg)
+                  case Ok(branchStmts) => Ok(astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ, name), valueName, branchStmts, next)))
+                end
             end
         end
     end
@@ -408,36 +418,42 @@ func bindTuplePattern(ctx: Ref[egCtx], items: Slice[ast2.Pattern], valueName: St
   end
 end
 
-func switchTargetGoType(target: ast2.Expr, ctx: Ref[egCtx]) -> String
+func switchTargetGoType(target: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, String]
   switch target.Kind
-    case IdentExpr(name) => ctxGetLocal(ctx, name).UnwrapOr("any")
+    case IdentExpr(name) =>
+      let found = ctxGetLocal(ctx, name)
+      switch found
+        case Some(typ) => Ok(typ)
+        case None => Err("unresolved identifier " + name + " in switch target")
+      end
     case FieldExpr(base, field) =>
-      let baseType = switchTargetGoType(base, ctx)
-      let rawOwner = typeConstructor(baseType)
-      let owner = if strings.HasPrefix(rawOwner, "*") then strings.TrimPrefix(rawOwner, "*") else rawOwner end
-      let key = "$field$" + owner + "." + exportName(field)
-      let rawFieldType = ctx.sourceTypes.Get(key)
-      switch rawFieldType
-        case Some(fieldType) =>
-          let structTparams = ctx.sourceTypes.Get("$tparams$" + owner).UnwrapOr("")
-          if structTparams != "" then
-            let actualArgs = extractTypeArgs(baseType)
-            let tparamList = strings.Split(structTparams, ",")
-            substituteTypeParams(fieldType, tparamList, actualArgs, 0)
-          else
-            fieldType
+      let baseResult = switchTargetGoType(base, ctx)
+      switch baseResult
+        case Err(msg) => Err(msg)
+        case Ok(baseType) =>
+          let rawOwner = typeConstructor(baseType)
+          let owner = if strings.HasPrefix(rawOwner, "*") then strings.TrimPrefix(rawOwner, "*") else rawOwner end
+          let key = "$field$" + owner + "." + exportName(field)
+          let rawFieldType = ctx.sourceTypes.Get(key)
+          switch rawFieldType
+            case Some(fieldType) =>
+              let structTparams = ctx.sourceTypes.Get("$tparams$" + owner).UnwrapOr("")
+              if structTparams != "" then
+                let actualArgs = extractTypeArgs(baseType)
+                let tparamList = strings.Split(structTparams, ",")
+                Ok(substituteTypeParams(fieldType, tparamList, actualArgs, 0))
+              else
+                Ok(fieldType)
+              end
+            case None => Err("unresolved field " + key + " on " + baseType)
           end
-        case None =>
-          # Diagnostic: check what sourceTypes contains for this owner
-          let diag: String = "unresolved_field:" + key + ":base=" + baseType
-          diag
       end
     case _ =>
       switch ffiResultSignature(target, ctx)
         case Some(sig) =>
           let valueType = sig.Results.Get(0).UnwrapOr("")
-          "Result[" + valueType + ", error]"
-        case None => "any"
+          Ok("Result[" + valueType + ", error]")
+        case None => Err("cannot determine switch target type")
       end
   end
 end

@@ -232,18 +232,33 @@ end
 
 # Keep source-level field types available while lowering receiver syntax.
 # Keys use the Go-visible struct constructor and exported field spelling.
+# Uses if/else chain instead of switch to avoid the old mygo compiler
+# inserting return statements that break the recursive iteration.
 func seedStructSourceTypes(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
   if decls.Len() != 0 then
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    switch decl
-      case StructDecl(name, tps, fields) =>
-        # Store struct type param list so switchTargetGoType can substitute
-        # them with actual type arguments when resolving a field type.
-        ctx.sourceTypes.Set("$tparams$" + name, strings.Join(tps, ","))
-        seedOneStructSourceTypes(name, fields, ctx, tps)
-      case _ => ()
+    if isStructDecl(decl) then
+      seedStructSourceTypesFromDecl(decl, ctx)
+    else
+      ()
     end
     seedStructSourceTypes(sliceDrop(decls, 1), ctx)
+  end
+end
+
+func isStructDecl(decl: ast2.Decl) -> Bool
+  switch decl
+    case StructDecl(_, _, _) => true
+    case _ => false
+  end
+end
+
+func seedStructSourceTypesFromDecl(decl: ast2.Decl, ctx: Ref[egCtx]) -> ()
+  switch decl
+    case StructDecl(name, tps, fields) =>
+      ctx.sourceTypes.Set("$tparams$" + name, strings.Join(tps, ","))
+      seedOneStructSourceTypes(name, fields, ctx, tps)
+    case _ => ()
   end
 end
 

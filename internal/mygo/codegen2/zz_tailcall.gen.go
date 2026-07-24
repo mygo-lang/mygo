@@ -14,176 +14,176 @@ type TailAstParts struct {
 }
 
 func tailCallAst(expr ast2.Expr, ctx *egCtx) Result[[]goast.Stmt, string] {
-	var expr_202 Result[[]goast.Stmt, string]
-	if v_56, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
-		var expr_201 Result[[]goast.Stmt, string]
-		parts_196 := tailCallAstParts(v_56.F2, ctx, 0, TailAstParts{Stmts: []goast.Stmt([]goast.Stmt{}), Values: []goast.Expr([]goast.Expr{})})
-		var expr_200 Result[[]goast.Stmt, string]
-		if v_58, ok := parts_196.(ResultErr[TailAstParts, string]); ok {
-			var expr_199 Result[[]goast.Stmt, string]
-			expr_199 = Err[[]goast.Stmt, string](v_58.F0)
-			expr_200 = expr_199
+	var expr_212 Result[[]goast.Stmt, string]
+	if v_57, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
+		var expr_211 Result[[]goast.Stmt, string]
+		parts_206 := tailCallAstParts(v_57.F2, ctx, 0, TailAstParts{Stmts: []goast.Stmt([]goast.Stmt{}), Values: []goast.Expr([]goast.Expr{})})
+		var expr_210 Result[[]goast.Stmt, string]
+		if v_59, ok := parts_206.(ResultErr[TailAstParts, string]); ok {
+			var expr_209 Result[[]goast.Stmt, string]
+			expr_209 = Err[[]goast.Stmt, string](v_59.F0)
+			expr_210 = expr_209
 		} else {
-			if v_57, ok := parts_196.(ResultOk[TailAstParts, string]); ok {
-				var expr_198 Result[[]goast.Stmt, string]
-				lhs_197 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(ctx.tailRecParamNames, func(name string) goast.Expr {
+			if v_58, ok := parts_206.(ResultOk[TailAstParts, string]); ok {
+				var expr_208 Result[[]goast.Stmt, string]
+				lhs_207 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(ctx.tailRecParamNames, func(name string) goast.Expr {
 					return goast.Ident(name)
 				})
-				expr_198 = Ok[[]goast.Stmt, string](goast.AppendStmts(v_57.F0.Stmts, astTwoStmts(goast.Assign(lhs_197, "=", v_57.F0.Values), goast.Continue())))
-				expr_200 = expr_198
+				expr_208 = Ok[[]goast.Stmt, string](goast.AppendStmts(v_58.F0.Stmts, astTwoStmts(goast.Assign(lhs_207, "=", v_58.F0.Values), goast.Continue())))
+				expr_210 = expr_208
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_201 = expr_200
-		expr_202 = expr_201
+		expr_211 = expr_210
+		expr_212 = expr_211
 	} else {
 		{
-			var expr_195 Result[[]goast.Stmt, string]
-			expr_195 = Err[[]goast.Stmt, string]("internal tail-call mismatch")
-			expr_202 = expr_195
+			var expr_205 Result[[]goast.Stmt, string]
+			expr_205 = Err[[]goast.Stmt, string]("internal tail-call mismatch")
+			expr_212 = expr_205
 		}
 	}
-	return expr_202
+	return expr_212
 }
 func tailCallAstParts(args []ast2.Expr, ctx *egCtx, index int, out TailAstParts) Result[TailAstParts, string] {
-	var expr_210 Result[TailAstParts, string]
+	var expr_220 Result[TailAstParts, string]
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) {
-		expr_210 = Ok[TailAstParts, string](out)
+		expr_220 = Ok[TailAstParts, string](out)
 	} else {
-		var expr_209 Result[TailAstParts, string]
-		value_203 := translateExprAst(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.EmptyExpr()), ctx)
-		var expr_208 Result[TailAstParts, string]
-		if v_60, ok := value_203.(ResultErr[AstExprResult, string]); ok {
-			var expr_207 Result[TailAstParts, string]
-			expr_207 = Err[TailAstParts, string](v_60.F0)
-			expr_208 = expr_207
+		var expr_219 Result[TailAstParts, string]
+		value_213 := translateExprAst(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.EmptyExpr()), ctx)
+		var expr_218 Result[TailAstParts, string]
+		if v_61, ok := value_213.(ResultErr[AstExprResult, string]); ok {
+			var expr_217 Result[TailAstParts, string]
+			expr_217 = Err[TailAstParts, string](v_61.F0)
+			expr_218 = expr_217
 		} else {
-			if v_59, ok := value_203.(ResultOk[AstExprResult, string]); ok {
-				var expr_206 Result[TailAstParts, string]
-				temp_204 := "__tail_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(index)
-				stmts_205 := goast.AppendStmts(v_59.F0.Pre, astSingleStmt(goast.LocalFromParts(temp_204, "", v_59.F0.Expr)))
-				expr_206 = tailCallAstParts(args, ctx, index+1, TailAstParts{Stmts: goast.AppendStmts(out.Stmts, stmts_205), Values: MygoIN5SliceM6Append(out.Values, goast.Ident(temp_204))})
-				expr_208 = expr_206
+			if v_60, ok := value_213.(ResultOk[AstExprResult, string]); ok {
+				var expr_216 Result[TailAstParts, string]
+				temp_214 := "__tail_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(index)
+				stmts_215 := goast.AppendStmts(v_60.F0.Pre, astSingleStmt(goast.LocalFromParts(temp_214, "", v_60.F0.Expr)))
+				expr_216 = tailCallAstParts(args, ctx, index+1, TailAstParts{Stmts: goast.AppendStmts(out.Stmts, stmts_215), Values: MygoIN5SliceM6Append(out.Values, goast.Ident(temp_214))})
+				expr_218 = expr_216
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_209 = expr_208
-		expr_210 = expr_209
+		expr_219 = expr_218
+		expr_220 = expr_219
 	}
-	return expr_210
+	return expr_220
 }
 func isTailSelfCall(expr ast2.Expr, ctx *egCtx) bool {
-	var expr_219 bool
-	if v_61, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
-		var expr_218 bool
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_61.F2) != ctx.tailRecParamCount {
-			expr_218 = false
+	var expr_229 bool
+	if v_62, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
+		var expr_228 bool
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_62.F2) != ctx.tailRecParamCount {
+			expr_228 = false
 		}
-		var expr_217 bool
-		if v_62, ok := v_61.F0.Kind.(ast2.ExprKindIdentExpr); ok {
-			var expr_216 bool
-			var expr_215 bool
-			if v_64, ok := ctx.tailRecFuncName.(OptionSome[string]); ok {
-				var expr_214 bool
-				expr_214 = v_62.F0 == v_64.F0
-				expr_215 = expr_214
+		var expr_227 bool
+		if v_63, ok := v_62.F0.Kind.(ast2.ExprKindIdentExpr); ok {
+			var expr_226 bool
+			var expr_225 bool
+			if v_65, ok := ctx.tailRecFuncName.(OptionSome[string]); ok {
+				var expr_224 bool
+				expr_224 = v_63.F0 == v_65.F0
+				expr_225 = expr_224
 			} else {
 				if _, ok := ctx.tailRecFuncName.(OptionNone[string]); ok {
-					var expr_213 bool
-					expr_213 = false
-					expr_215 = expr_213
+					var expr_223 bool
+					expr_223 = false
+					expr_225 = expr_223
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_216 = expr_215
-			expr_217 = expr_216
+			expr_226 = expr_225
+			expr_227 = expr_226
 		} else {
 			{
-				var expr_212 bool
-				expr_212 = false
-				expr_217 = expr_212
+				var expr_222 bool
+				expr_222 = false
+				expr_227 = expr_222
 			}
 		}
-		expr_218 = expr_217
-		expr_219 = expr_218
+		expr_228 = expr_227
+		expr_229 = expr_228
 	} else {
 		{
-			var expr_211 bool
-			expr_211 = false
-			expr_219 = expr_211
+			var expr_221 bool
+			expr_221 = false
+			expr_229 = expr_221
 		}
 	}
-	return expr_219
+	return expr_229
 }
 func containsTailCall(expr ast2.Expr, name string) bool {
-	var expr_228 bool
-	if v_67, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
-		var expr_227 bool
-		var expr_226 bool
-		if v_68, ok := v_67.F0.Kind.(ast2.ExprKindIdentExpr); ok {
-			var expr_225 bool
-			expr_225 = v_68.F0 == name
-			expr_226 = expr_225
+	var expr_238 bool
+	if v_68, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
+		var expr_237 bool
+		var expr_236 bool
+		if v_69, ok := v_68.F0.Kind.(ast2.ExprKindIdentExpr); ok {
+			var expr_235 bool
+			expr_235 = v_69.F0 == name
+			expr_236 = expr_235
 		} else {
 			{
-				var expr_224 bool
-				expr_224 = false
-				expr_226 = expr_224
+				var expr_234 bool
+				expr_234 = false
+				expr_236 = expr_234
 			}
 		}
-		expr_227 = expr_226
-		expr_228 = expr_227
+		expr_237 = expr_236
+		expr_238 = expr_237
 	} else {
-		if v_66, ok := expr.Kind.(ast2.ExprKindIfExpr); ok {
-			var expr_223 bool
-			expr_223 = containsTailCall(v_66.F1, name) || containsTailCall(v_66.F2, name)
-			expr_228 = expr_223
+		if v_67, ok := expr.Kind.(ast2.ExprKindIfExpr); ok {
+			var expr_233 bool
+			expr_233 = containsTailCall(v_67.F1, name) || containsTailCall(v_67.F2, name)
+			expr_238 = expr_233
 		} else {
-			if v_65, ok := expr.Kind.(ast2.ExprKindBlockExpr); ok {
-				var expr_222 bool
-				var expr_221 bool
-				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_65.F0) == 0 {
-					expr_221 = false
+			if v_66, ok := expr.Kind.(ast2.ExprKindBlockExpr); ok {
+				var expr_232 bool
+				var expr_231 bool
+				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_66.F0) == 0 {
+					expr_231 = false
 				} else {
-					expr_221 = containsTailCallBlock(v_65.F0, name)
+					expr_231 = containsTailCallBlock(v_66.F0, name)
 				}
-				expr_222 = expr_221
-				expr_228 = expr_222
+				expr_232 = expr_231
+				expr_238 = expr_232
 			} else {
 				{
-					var expr_220 bool
-					expr_220 = false
-					expr_228 = expr_220
+					var expr_230 bool
+					expr_230 = false
+					expr_238 = expr_230
 				}
 			}
 		}
 	}
-	return expr_228
+	return expr_238
 }
 func containsTailCallBlock(items []ast2.Stmt, name string) bool {
-	var expr_234 bool
+	var expr_244 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_234 = false
+		expr_244 = false
 	} else {
-		var expr_233 bool
-		var last_229 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
-		var expr_232 bool
-		if v_69, ok := last_229.(ast2.StmtExprStmt); ok {
-			var expr_231 bool
-			expr_231 = containsTailCall(v_69.F0, name)
-			expr_232 = expr_231
+		var expr_243 bool
+		var last_239 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
+		var expr_242 bool
+		if v_70, ok := last_239.(ast2.StmtExprStmt); ok {
+			var expr_241 bool
+			expr_241 = containsTailCall(v_70.F0, name)
+			expr_242 = expr_241
 		} else {
 			{
-				var expr_230 bool
-				expr_230 = false
-				expr_232 = expr_230
+				var expr_240 bool
+				expr_240 = false
+				expr_242 = expr_240
 			}
 		}
-		expr_233 = expr_232
-		expr_234 = expr_233
+		expr_243 = expr_242
+		expr_244 = expr_243
 	}
-	return expr_234
+	return expr_244
 }
