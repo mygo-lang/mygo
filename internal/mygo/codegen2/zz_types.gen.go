@@ -116,16 +116,16 @@ func ctxSetBinding(ctx *egCtx, name string, goName string) {
 	return
 }
 func ctxFreshBinding(ctx *egCtx, name string) string {
-	base_1270 := sanitizeIdent(name)
-	count_1271 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.usedNames, base_1270), 0)
-	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.usedNames, base_1270, count_1271+1)
-	if count_1271 == 0 {
-		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.bindings, name, base_1270)
-		return base_1270
+	base_1273 := sanitizeIdent(name)
+	count_1274 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.usedNames, base_1273), 0)
+	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.usedNames, base_1273, count_1274+1)
+	if count_1274 == 0 {
+		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.bindings, name, base_1273)
+		return base_1273
 	}
-	actual_1272 := base_1270 + "_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(count_1271)
-	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.bindings, name, actual_1272)
-	return actual_1272
+	actual_1275 := base_1273 + "_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(count_1274)
+	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.bindings, name, actual_1275)
+	return actual_1275
 }
 func ctxSetMutable(ctx *egCtx, name string, isMutable bool) {
 	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.mutable, name, isMutable)
@@ -136,27 +136,27 @@ func ctxSetTailRecParamNames(ctx *egCtx, names []string) {
 	return
 }
 func ctxFreshExprTemp(ctx *egCtx) string {
-	name_1273 := "__mygo_expr_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(ctx.exprSeq)
+	name_1276 := "__mygo_expr_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(ctx.exprSeq)
 	ctx.exprSeq = ctx.exprSeq + 1
-	return name_1273
+	return name_1276
 }
 func ctxPushPreStmt(ctx *egCtx, stmt string) {
 	ctx.preStmts = append(ctx.preStmts, stmt)
 	return
 }
 func ctxDrainPreStmts(ctx *egCtx) string {
-	out_1274 := joinStrings(ctx.preStmts, "\n")
+	out_1277 := joinStrings(ctx.preStmts, "\n")
 	ctx.preStmts = nil
-	return out_1274
+	return out_1277
 }
 func ctxPushAstPreStmt(ctx *egCtx, stmt goast.Stmt) {
 	ctx.astPreStmts = append(ctx.astPreStmts, stmt)
 	return
 }
 func ctxDrainAstPreStmts(ctx *egCtx) []goast.Stmt {
-	out_1275 := ctx.astPreStmts
+	out_1278 := ctx.astPreStmts
 	ctx.astPreStmts = nil
-	return out_1275
+	return out_1278
 }
 func ctxAdoptExprSeq(ctx *egCtx, child *egCtx) {
 	if child.exprSeq > ctx.exprSeq {

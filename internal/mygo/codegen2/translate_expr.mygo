@@ -268,21 +268,43 @@ func translateAstBinding(bind: ast2.Bind, ctx: Ref[egCtx]) -> Result[Slice[goast
       let name = ctxFreshBinding(ctx, bind.Name)
       let mygoTyp = switch bind.Type
         case Some(t) => mygoTypeString(t)
-        case None => ""
-      end
-      let typ = switch bind.Type
-        case Some(t) => goType(t, ctx.typeParams)
-        case None => ""
+        case None => inferredBindingMygoType(bind)
       end
       if mygoTyp != "" then
         ctxSetLocal(ctx, bind.Name, mygoTyp)
       end
-      let decl = if typ == "" then
-        goast.Define(name, v.Expr)
-      else
-        goast.Var(name, goast.MustTypeExpr(typ), v.Expr)
-      end
+      let decl = goast.Define(name, v.Expr)
       Ok(goast.AppendStmts(v.Pre, astSingleStmt(decl)))
+  end
+end
+
+# inferredBindingMygoType returns the MyGO type string for a let/var binding
+# that has no explicit type annotation.  Without this, let-bindings like
+#   let rs = s as Slice[Rune]
+#   let slc = go[Slice[Rune]]{...}
+# are invisible to receiverStaticType (ctx.locals / ctx.sourceTypes),
+# causing matchingReceiverCandidate to return None and generating broken Go
+# (e.g. rs.Len() on []rune instead of MygoIT...Len(rs)).
+func inferredBindingMygoType(bind: ast2.Bind) -> String
+  let inferred = extractLetBindingType(bind.Value)
+  switch inferred
+    case Some(t) => mygoTypeString(t)
+    case None => ""
+  end
+end
+
+# extractLetBindingType extracts the result type from a value expression when
+# the let binding lacks an explicit type annotation.  Handles:
+#   - InlineGoExpr: go[T]{...}  → the declared result type T
+#   - TypeAsExpr:   expr as T   → the target type T
+# These cover all prelude cases where let-bindings need receiver type info
+# for impl method dispatch (e.g. Slice[Rune].Len, Slice[Rune].Map).
+func extractLetBindingType(expr: ast2.Expr) -> Option[ast2.TypeExpr]
+  switch expr.Kind
+    # InlineGoExpr's first field is Ref[TypeExpr], deref with .value()
+    case InlineGoExpr(typ, _, _, _) => Some(typ.value())
+    case TypeAsExpr(_, typ) => Some(typ)
+    case _ => None
   end
 end
 
