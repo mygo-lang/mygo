@@ -641,10 +641,24 @@ func collectComparableParams(typ: ast2.TypeExpr, typeParams: Set[String]) -> Sli
           case _ => [] as Slice[String]
         end
       else
-        if args.Len() > 0 then
-          collectComparableParamsFromArgs(args, typeParams, 0, [] as Slice[String])
+        if name == "Set" && args.Len() == 1 then
+          # Set[A] -> map[A]struct{} requires A to be comparable
+          let elemType = args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+          switch elemType
+            case NamedType(elemName, elemArgs) =>
+              if elemArgs.Len() == 0 && setContainsString(typeParams, elemName) then
+                [elemName]
+              else
+                [] as Slice[String]
+              end
+            case _ => [] as Slice[String]
+          end
         else
-          [] as Slice[String]
+          if args.Len() > 0 then
+            collectComparableParamsFromArgs(args, typeParams, 0, [] as Slice[String])
+          else
+            [] as Slice[String]
+          end
         end
       end
     case _ => [] as Slice[String]
