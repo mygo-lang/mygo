@@ -631,7 +631,7 @@ func pattern() -> ps.Parser[ast2.Pattern]
     ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Pattern]
       ps.PMap(ps.POptional(paren(ps.PSepBy(lazyPattern(), sym(",")))), func(args: Option[Slice[ast2.Pattern]]) -> ast2.Pattern
         switch args
-          case None => ast2.Pattern.BindPattern(name)
+          case None => ast2.Pattern.VariantPattern(name, [] as Slice[ast2.Pattern])
           case Some(items) => ast2.Pattern.VariantPattern(name, items)
         end
       end)

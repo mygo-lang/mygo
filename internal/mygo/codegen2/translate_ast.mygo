@@ -209,17 +209,78 @@ end
 
 # Switch cases lower to an if/else chain. Enum variants use a Go type assertion;
 # the target enum's type arguments are preserved in the asserted variant type.
+# When expected is "" or a unit type, the switch is in statement context and
+# no temp variable is created — the if/else chain stands alone.
 func translateSwitchAst(target: ast2.Expr, cases: Slice[ast2.SwitchCase], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
   let subject = translateSwitchSubject(target, ctx)
   switch subject
     case Err(msg) => Err(msg)
     case Ok(value) =>
-      let temp = ctxFreshExprTemp(ctx)
-      let typ = if expected == "" then if ctx.retType == "" then "any" else ctx.retType end else expected end
-      let branches = translateSwitchBranches(cases, target, value.Expr, temp, ctx, typ)
-      switch branches
+      if expected == "" then
+        # Statement context: emit only the if/else chain, no temp variable.
+        let branches = translateSwitchBranchesStmt(cases, target, value.Expr, ctx)
+        switch branches
+          case Err(msg) => Err(msg)
+          case Ok(stmts) => Ok(astExprWithPre(goast.Unit(), goast.AppendStmts(value.Pre, stmts)))
+        end
+      else
+        # Expression context: use a temp variable to hold the case result.
+        let temp = ctxFreshExprTemp(ctx)
+        let branches = translateSwitchBranches(cases, target, value.Expr, temp, ctx, expected)
+        switch branches
+          case Err(msg) => Err(msg)
+          case Ok(stmts) => Ok(astExprWithPre(goast.Ident(temp), goast.AppendStmts(value.Pre, goast.AppendStmts(astSingleStmt(goast.DeclareFromType(temp, expected)), stmts))))
+        end
+      end
+  end
+end
+
+# translateSwitchBranchesStmt is the statement-context version that does not
+# create a temp variable — each case body emits plain statements directly.
+func translateSwitchBranchesStmt(cases: Slice[ast2.SwitchCase], sourceTarget: ast2.Expr, target: goast.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+  if cases.Len() == 0 then
+    let empty: Slice[goast.Stmt] = []
+    Ok(empty)
+  else
+    let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
+    switch current.Pattern
+      case WildcardPattern =>
+        translateSwitchCaseBodyStmt(current.Body, ctx)
+      case VariantPattern(name, args) =>
+        let rest = translateSwitchBranchesStmt(sliceDrop(cases, 1), sourceTarget, target, ctx)
+        switch rest
+          case Err(msg) => Err(msg)
+          case Ok(next) =>
+            # For zero-arg variants (e.g. None) use _ to avoid "unused" errors.
+            let valueName = if args.Len() == 0 then "_" else "__mygo_match_" + ctxFreshExprTemp(ctx) end
+            let child = Ref.new(ctxChild(ctx))
+            bindPatternArguments(child, args, valueName, 0)
+            let body = translateSwitchCaseBodyStmt(current.Body, child)
+            switch body
+              case Err(msg) => Err(msg)
+              case Ok(branchStmts) => Ok(astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(switchTargetGoType(sourceTarget, ctx), name), valueName, branchStmts, next)))
+            end
+        end
+      case _ => Err("unsupported pattern in statement-context switch")
+    end
+  end
+end
+
+# translateSwitchCaseBodyStmt translates a switch case body as statements
+# without assigning the result to a temp variable or adding trailing return.
+func translateSwitchCaseBodyStmt(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+  switch body.Kind
+    case BlockExpr(items) =>
+      let stmts = translateAstBlockAsStmts(items, ctx, 0, [] as Slice[goast.Stmt])
+      switch stmts
         case Err(msg) => Err(msg)
-        case Ok(stmts) => Ok(astExprWithPre(goast.Ident(temp), goast.AppendStmts(value.Pre, goast.AppendStmts(astSingleStmt(goast.DeclareFromType(temp, typ)), stmts))))
+        case Ok(v) => Ok(v)
+      end
+    case _ =>
+      let value = translateExprAst(body, ctx)
+      switch value
+        case Ok(v) => Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.ExpressionStmt(v.Expr))))
+        case Err(msg) => Err(msg)
       end
   end
 end
@@ -264,6 +325,9 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], sourceTarget: ast2.E
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
     switch current.Pattern
       case BindPattern(name) =>
+        # BindPattern at switch top level is no longer produced by parser2;
+        # bare identifiers are now VariantPattern(name, []).  Keep this branch
+        # for backward compatibility: bind the whole value to `name`.
         let child = Ref.new(ctxChild(ctx))
         ctxSetBinding(child, name, temp)
         translateSwitchCaseBody(current.Body, child, expected, temp)
@@ -303,6 +367,14 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], sourceTarget: ast2.E
   end
 end
 
+# translateSwitchBranchesBindPattern handles a BindPattern that is NOT an enum
+# variant, i.e. a true variable-binding pattern.
+func translateSwitchBranchesBindPattern(name: String, body: ast2.Expr, target: goast.Expr, temp: String, ctx: Ref[egCtx], expected: String) -> Result[Slice[goast.Stmt], String]
+  let child = Ref.new(ctxChild(ctx))
+  ctxSetBinding(child, name, temp)
+  translateSwitchCaseBody(body, child, expected, temp)
+end
+
 func translateSwitchCaseBody(body: ast2.Expr, ctx: Ref[egCtx], expected: String, temp: String) -> Result[Slice[goast.Stmt], String]
   let value = translateExprAstExpected(body, ctx, expected)
   switch value
@@ -339,6 +411,27 @@ end
 func switchTargetGoType(target: ast2.Expr, ctx: Ref[egCtx]) -> String
   switch target.Kind
     case IdentExpr(name) => ctxGetLocal(ctx, name).UnwrapOr("any")
+    case FieldExpr(base, field) =>
+      let baseType = switchTargetGoType(base, ctx)
+      let rawOwner = typeConstructor(baseType)
+      let owner = if strings.HasPrefix(rawOwner, "*") then strings.TrimPrefix(rawOwner, "*") else rawOwner end
+      let key = "$field$" + owner + "." + exportName(field)
+      let rawFieldType = ctx.sourceTypes.Get(key)
+      switch rawFieldType
+        case Some(fieldType) =>
+          let structTparams = ctx.sourceTypes.Get("$tparams$" + owner).UnwrapOr("")
+          if structTparams != "" then
+            let actualArgs = extractTypeArgs(baseType)
+            let tparamList = strings.Split(structTparams, ",")
+            substituteTypeParams(fieldType, tparamList, actualArgs, 0)
+          else
+            fieldType
+          end
+        case None =>
+          # Diagnostic: check what sourceTypes contains for this owner
+          let diag: String = "unresolved_field:" + key + ":base=" + baseType
+          diag
+      end
     case _ =>
       switch ffiResultSignature(target, ctx)
         case Some(sig) =>
@@ -346,6 +439,29 @@ func switchTargetGoType(target: ast2.Expr, ctx: Ref[egCtx]) -> String
           "Result[" + valueType + ", error]"
         case None => "any"
       end
+  end
+end
+
+# extractTypeArgs extracts type arguments from a Go type string.
+# e.g. "*List[T]" → ["T"], "Option[*List[T]]" → ["*List[T]"]
+func extractTypeArgs(typ: String) -> Slice[String]
+  let parts = splitTypeArgs(typ)
+  parts.Args
+end
+
+# substituteTypeParams replaces struct type parameter names with actual type
+# arguments in a type string. Processes params in order so param[i]→args[i].
+func substituteTypeParams(typ: String, params: Slice[String], args: Slice[String], index: Int) -> String
+  if index >= params.Len() || index >= args.Len() then
+    typ
+  else
+    let param = params.Get(index).UnwrapOr("")
+    let arg = args.Get(index).UnwrapOr("")
+    if param != "" && arg != "" then
+      substituteTypeParams(strings.ReplaceAll(typ, param, arg), params, args, index + 1)
+    else
+      substituteTypeParams(typ, params, args, index + 1)
+    end
   end
 end
 

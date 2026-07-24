@@ -65,7 +65,7 @@ func translateImplAstDecl(g: Ref[Generator2], tps: Slice[String], target: ast2.T
     in pkgInfo = g.pkgInfo
   }
   let stem = implStem(target, iface, ctx.typeParams)
-  translateImplAstMethods(stem, tps, methods, ctx.value(), 0, [] as Slice[goast.Decl])
+  translateImplAstMethods(stem, tps, methods, ctx.value(), 0, [] as Slice[goast.Decl], g.decls)
 end
 
 func collectFuncDecls(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, out: Slice[goast.Decl]) -> Result[Slice[goast.Decl], String]
@@ -119,7 +119,7 @@ func translateInterfaceAstDecl(name: String, tps: Slice[String], methods: Slice[
   goast.InterfaceDeclFromParts(sanitizeIdent(name), tps, names, sigs)
 end
 
-func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[ast2.ImplMethod], baseCtx: egCtx, index: Int, out: Slice[goast.Decl]) -> Result[Slice[goast.Decl], String]
+func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[ast2.ImplMethod], baseCtx: egCtx, index: Int, out: Slice[goast.Decl], decls: Slice[ast2.Decl]) -> Result[Slice[goast.Decl], String]
   if index >= methods.Len() then
     Ok(out)
   else
@@ -129,9 +129,11 @@ func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[as
     let ret = returnTypeString(sig.Ret, typeParamSet(methodTps))
     let ctx = Ref.new(newFuncEgCtx(methodTps, ret, sig.Name, sig.Params.Len()))
     go[()] {
-      code: "{ctx}.goPackages = {packages}"
+      code: "{ctx}.goPackages = {packages}; {ctx}.typedInfo = {typedInfo}; {ctx}.pkgInfo = {pkgInfo}"
       in ctx = ctx
       in packages = baseCtx.goPackages
+      in typedInfo = baseCtx.typedInfo
+      in pkgInfo = baseCtx.pkgInfo
     }
     var names: Slice[String] = []
     var i: Int = 0
@@ -143,6 +145,13 @@ func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[as
       i = i + 1
     end
     ctxSetTailRecParamNames(ctx, names)
+    # Seed type and dispatch information so impl method bodies can resolve
+    # field types and method calls just like standalone function declarations.
+    seedCallDictionaries(decls, ctx)
+    seedCallRequirements(decls, ctx)
+    seedPackageDictionaries(decls, ctx)
+    seedStructSourceTypes(decls, ctx)
+    seedEnumValueConstructors(decls, ctx)
     let body = translateFuncBodyAst(method.Body, ctx)
     switch body
       case Err(msg) => Err("impl method " + sig.Name + ": " + msg)
@@ -156,7 +165,7 @@ func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[as
           stmts,
           containsTailCall(method.Body, sig.Name),
         )
-        translateImplAstMethods(stem, tps, methods, baseCtx, index + 1, out.Append(decl))
+        translateImplAstMethods(stem, tps, methods, baseCtx, index + 1, out.Append(decl), decls)
     end
   end
 end
@@ -227,18 +236,25 @@ func seedStructSourceTypes(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
   if decls.Len() != 0 then
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     switch decl
-      case StructDecl(name, _, fields) => seedOneStructSourceTypes(name, fields, ctx)
+      case StructDecl(name, tps, fields) =>
+        # Store struct type param list so switchTargetGoType can substitute
+        # them with actual type arguments when resolving a field type.
+        ctx.sourceTypes.Set("$tparams$" + name, strings.Join(tps, ","))
+        seedOneStructSourceTypes(name, fields, ctx, tps)
       case _ => ()
     end
     seedStructSourceTypes(sliceDrop(decls, 1), ctx)
   end
 end
 
-func seedOneStructSourceTypes(name: String, fields: Slice[ast2.Field], ctx: Ref[egCtx]) -> ()
+func seedOneStructSourceTypes(name: String, fields: Slice[ast2.Field], ctx: Ref[egCtx], tps: Slice[String]) -> ()
   if fields.Len() != 0 then
     let field = fields.Get(0).UnwrapOr(ast2.Field { Name: "", Type: ast2.TypeExpr.UnitType(), Tag: None })
-    ctx.sourceTypes.Set("$field$" + name + "." + exportName(field.Name), goType(field.Type, ctx.typeParams))
-    seedOneStructSourceTypes(name, sliceDrop(fields, 1), ctx)
+    # Use the struct's own type parameters for computing field types, not the
+    # caller's, so stored types use the struct's param names (e.g. A not T).
+    let structCtx = Ref.new(newEgCtxWithTypeParams(tps))
+    ctx.sourceTypes.Set("$field$" + name + "." + exportName(field.Name), goType(field.Type, structCtx.typeParams))
+    seedOneStructSourceTypes(name, sliceDrop(fields, 1), ctx, tps)
   end
 end
 

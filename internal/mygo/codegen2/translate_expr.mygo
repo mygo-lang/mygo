@@ -42,6 +42,14 @@ func translateAstLeadingStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[g
       switch expr.Kind
         case InlineGoExpr(typ, body, values, types) => translateInlineGoAst(body, values, types, ctx)
         case IfExpr(cond, thenExpr, elseExpr) => translateAstReturnIf(cond, thenExpr, elseExpr, ctx)
+        case SwitchExpr(target, cases) =>
+          # Switch in statement context: emit only the Pre statements, discard
+          # the Expr (which is Unit() for statement-form switches).
+          let value = translateExprAst(expr, ctx)
+          switch value
+            case Ok(v) => Ok(v.Pre)
+            case Err(msg) => Err(msg)
+          end
         case _ =>
           let value = translateExprAst(expr, ctx)
           switch value
@@ -155,10 +163,90 @@ func translateAstLoopStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[goas
   switch stmt
     case ExprStmt(expr) =>
       switch expr.Kind
-        case IfExpr(cond, thenExpr, elseExpr) => translateAstReturnIf(cond, thenExpr, elseExpr, ctx)
+        case IfExpr(cond, thenExpr, elseExpr) => translateAstIfStmt(cond, thenExpr, elseExpr, ctx)
         case _ => translateAstLeadingStmt(stmt, ctx)
       end
     case _ => translateAstLeadingStmt(stmt, ctx)
+  end
+end
+
+# translateAstIfStmt lowers an if-expression as a statement (no return wrapping).
+# This mirrors the legacy codegen's translateWhileStmt which emits plain if/else
+# Go blocks instead of IIFE-based expression lowering.
+func translateAstIfStmt(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+  let c = translateExprAst(cond, ctx)
+  switch c
+    case Err(msg) => Err(msg)
+    case Ok(cv) =>
+      let t = translateAstIfStmtBranch(thenExpr, ctx)
+      switch t
+        case Err(msg) => Err(msg)
+        case Ok(tv) =>
+          let e = translateAstIfStmtBranch(elseExpr, ctx)
+          switch e
+            case Err(msg) => Err(msg)
+            case Ok(ev) =>
+              if ev.Len() == 0 then
+                Ok(goast.AppendStmts(cv.Pre, astSingleStmt(goast.If(cv.Expr, tv, ev))))
+              else
+                Ok(goast.AppendStmts(cv.Pre, astSingleStmt(goast.If(cv.Expr, tv, ev))))
+              end
+          end
+      end
+  end
+end
+
+func translateAstIfStmtBranch(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+  switch expr.Kind
+    case BlockExpr(items) => translateAstBlockAsStmts(items, ctx, 0, [] as Slice[goast.Stmt])
+    case UnitExpr =>
+      let empty: Slice[goast.Stmt] = []
+      Ok(empty)
+    case _ =>
+      let value = translateExprAst(expr, ctx)
+      switch value
+        case Ok(v) => Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.ExpressionStmt(v.Expr))))
+        case Err(msg) => Err(msg)
+      end
+  end
+end
+
+# translateAstBlockAsStmts translates a block of statements without adding a
+# trailing return — intended for if/else branches inside loop bodies.
+func translateAstBlockAsStmts(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
+  if items.Len() == 0 then
+    Ok(out)
+  else
+    let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
+    if index == items.Len() - 1 then
+      switch stmt
+        case ExprStmt(expr) =>
+          let value = translateExprAst(expr, ctx)
+          switch value
+            case Ok(v) => Ok(goast.AppendStmts(goast.AppendStmts(out, v.Pre), astSingleStmt(goast.ExpressionStmt(v.Expr))))
+            case Err(msg) => Err(msg)
+          end
+        case ReturnStmt => Ok(goast.AppendStmts(out, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
+        case ReturnWithStmt(value) =>
+          let v = translateExprAstExpected(value, ctx, "")
+          switch v
+            case Ok(vv) => Ok(goast.AppendStmts(goast.AppendStmts(out, vv.Pre), astSingleStmt(goast.Return(astSingleExpr(vv.Expr)))))
+            case Err(msg) => Err(msg)
+          end
+        case _ =>
+          let stmts = translateAstLeadingStmt(stmt, ctx)
+          switch stmts
+            case Ok(v) => Ok(goast.AppendStmts(out, v))
+            case Err(msg) => Err(msg)
+          end
+      end
+    else
+      let leading = translateAstLeadingStmt(stmt, ctx)
+      switch leading
+        case Ok(v) => translateAstBlockAsStmts(items, ctx, index + 1, goast.AppendStmts(out, v))
+        case Err(msg) => Err(msg)
+      end
+    end
   end
 end
 
@@ -171,6 +259,9 @@ func translateAstBinding(bind: ast2.Bind, ctx: Ref[egCtx]) -> Result[Slice[goast
       let typ = switch bind.Type
         case Some(t) => goType(t, ctx.typeParams)
         case None => ""
+      end
+      if typ != "" then
+        ctxSetLocal(ctx, bind.Name, typ)
       end
       let decl = if typ == "" then
         goast.Define(name, v.Expr)
