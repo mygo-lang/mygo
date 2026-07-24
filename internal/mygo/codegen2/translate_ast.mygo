@@ -256,8 +256,9 @@ func translateSwitchBranchesStmt(cases: Slice[ast2.SwitchCase], sourceTarget: as
             switch targetType
               case Err(msg) => Err(msg)
               case Ok(typ) =>
-                # For zero-arg variants (e.g. None) use _ to avoid "unused" errors.
-                let valueName = if args.Len() == 0 then "_" else "__mygo_match_" + ctxFreshExprTemp(ctx) end
+                # For zero-arg or all-wildcard variants (e.g. None, Some(_)) use _
+                # to avoid "declared and not used" errors on the match variable.
+                let valueName = if args.Len() == 0 || allWildcards(args, 0) then "_" else "__mygo_match_" + ctxFreshExprTemp(ctx) end
                 let child = Ref.new(ctxChild(ctx))
                 bindPatternArgumentsWithTypes(child, args, valueName, 0, name, typ, ctx)
                 let body = translateSwitchCaseBodyStmt(current.Body, child)
@@ -367,8 +368,9 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], sourceTarget: ast2.E
             switch targetType
               case Err(msg) => Err(msg)
               case Ok(typ) =>
-                # For zero-arg variants (e.g. None) use _ to avoid "unused" errors.
-                let valueName = if args.Len() == 0 then "_" else "__mygo_match_" + ctxFreshExprTemp(ctx) end
+                # For zero-arg or all-wildcard variants (e.g. None, Some(_)) use _
+                # to avoid "declared and not used" errors on the match variable.
+                let valueName = if args.Len() == 0 || allWildcards(args, 0) then "_" else "__mygo_match_" + ctxFreshExprTemp(ctx) end
                 let child = Ref.new(ctxChild(ctx))
                 bindPatternArgumentsWithTypes(child, args, valueName, 0, name, typ, ctx)
                 # Override constraintFuncs for this variant's pattern-bound methods
@@ -454,6 +456,21 @@ func bindPatternArgumentsWithTypes(ctx: Ref[egCtx], args: Slice[ast2.Pattern], v
   end
 end
 
+
+# allWildcards returns true when all patterns in the slice (from index onward)
+# are WildcardPattern. Used to decide whether to emit "_" as the match variable
+# name instead of a named temp, avoiding "declared and not used" Go errors.
+func allWildcards(patterns: Slice[ast2.Pattern], index: Int) -> Bool
+  if index >= patterns.Len() then
+    true
+  else
+    let p = patterns.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern)
+    switch p
+      case WildcardPattern => allWildcards(patterns, index + 1)
+      case _ => false
+    end
+  end
+end
 
 func bindPattern(ctx: Ref[egCtx], pattern: ast2.Pattern, valueName: String) -> ()
   switch pattern
