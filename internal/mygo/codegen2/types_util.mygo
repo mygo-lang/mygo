@@ -605,6 +605,79 @@ func splitTopLevel(s: String, sep: Rune) -> Slice[String]
   }
 end
 
+# 辅助函数：从函数参数和返回类型中提取需要 comparable 约束的类型参数
+# 即那些出现在 Map[K, V] 的 K 位置的类型参数。
+func comparableTypeParamsFromFunc(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], typeParams: Set[String]) -> Slice[String]
+  var found: Slice[String] = []
+  var i: Int = 0
+  while i < params.Len()
+    let param = params.Get(i).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType() })
+    let collected = collectComparableParams(param.Type, typeParams)
+    found = mergeStrings(found, collected)
+    i = i + 1
+  end
+  switch ret
+    case Some(t) =>
+      let collected = collectComparableParams(t, typeParams)
+      mergeStrings(found, collected)
+    case None => found
+  end
+end
+
+func collectComparableParams(typ: ast2.TypeExpr, typeParams: Set[String]) -> Slice[String]
+  switch typ
+    case NamedType(name, args) =>
+      if name == "Map" && args.Len() == 2 then
+        # First type arg of Map[K, V] is the key — needs comparable
+        let keyType = args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+        switch keyType
+          case NamedType(keyName, keyArgs) =>
+            if keyArgs.Len() == 0 && setContainsString(typeParams, keyName) then
+              [keyName]
+            else
+              [] as Slice[String]
+            end
+          case _ => [] as Slice[String]
+        end
+      else
+        if args.Len() > 0 then
+          collectComparableParamsFromArgs(args, typeParams, 0, [] as Slice[String])
+        else
+          [] as Slice[String]
+        end
+      end
+    case _ => [] as Slice[String]
+  end
+end
+
+func collectComparableParamsFromArgs(args: Slice[ast2.TypeExpr], typeParams: Set[String], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= args.Len() then
+    out
+  else
+    let arg = args.Get(index).UnwrapOr(ast2.TypeExpr.UnitType())
+    let collected = collectComparableParams(arg, typeParams)
+    collectComparableParamsFromArgs(args, typeParams, index + 1, mergeStrings(out, collected))
+  end
+end
+
+func mergeStrings(a: Slice[String], b: Slice[String]) -> Slice[String]
+  if b.Len() == 0 then a else
+    let head = b.Get(0).UnwrapOr("")
+    if containsString(a, head) then
+      mergeStrings(a, sliceDrop(b, 1))
+    else
+      mergeStrings(a.Append(head), sliceDrop(b, 1))
+    end
+  end
+end
+
+func containsString(items: Slice[String], target: String) -> Bool
+  if items.Len() == 0 then false else
+    let head = items.Get(0).UnwrapOr("")
+    head == target || containsString(sliceDrop(items, 1), target)
+  end
+end
+
 # 辅助函数：检查固有接收者参数
 func isInherentReceiverParam(paramType: ast2.TypeExpr, implType: ast2.TypeExpr) -> Bool
   return typeString(paramType) == typeString(implType)

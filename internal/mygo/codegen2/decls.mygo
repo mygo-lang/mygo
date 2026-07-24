@@ -157,15 +157,17 @@ func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[as
     seedStructSourceTypes(decls, ctx)
     seedEnumValueConstructors(decls, ctx)
     let body = translateFuncBodyAst(method.Body, ctx)
+    let comparableParams = comparableTypeParamsFromFunc(sig.Params, sig.Ret, ctx.typeParams)
     switch body
       case Err(msg) => Err("impl method " + sig.Name + ": " + msg)
       case Ok(stmts) =>
-        let decl = goast.MustFuncDeclFromStmtsMulti(
+        let decl = goast.MustFuncDeclFromStmtsMultiComparable(
           implMethodSymbol(stem, sig.Name),
           methodTps,
           dictionary.Names,
           dictionary.Types,
           goReturnTypesFromOption(sig.Ret, ctx.typeParams),
+          comparableParams,
           stmts,
           containsTailCall(method.Body, sig.Name),
         )
@@ -219,14 +221,16 @@ func translateFuncAstDecl(g: Ref[Generator2], name: String, tps: Slice[String], 
   end
   let dictionary = addConstraintParams(g.decls, constraints, ctx, paramNames, params.Map(func(p: ast2.Param) -> String goType(p.Type, ctx.typeParams) end))
   ctxSetTailRecParamNames(ctx, dictionary.Names)
+  let comparableParams = comparableTypeParamsFromFunc(params, ret, ctx.typeParams)
   let astBody = translateFuncBodyAst(body, ctx)
   switch astBody
-    case Ok(stmts) => Ok(goast.MustFuncDeclFromStmtsMulti(
+    case Ok(stmts) => Ok(goast.MustFuncDeclFromStmtsMultiComparable(
       sanitizeIdent(name),
       tps,
       dictionary.Names,
       dictionary.Types,
       goReturnTypesFromOption(ret, ctx.typeParams),
+      comparableParams,
       stmts,
       containsTailCall(body, name),
     ))

@@ -208,8 +208,19 @@ func MustFuncDeclFromStmts(name string, typeParams, paramNames, paramTypes []str
 }
 
 func MustFuncDeclFromStmtsMulti(name string, typeParams, paramNames, paramTypes, returnTypes []string, body []ast.Stmt, loop bool) ast.Decl {
+	return MustFuncDeclFromStmtsMultiComparable(name, typeParams, paramNames, paramTypes, returnTypes, nil, body, loop)
+}
+
+// MustFuncDeclFromStmtsMultiComparable is like MustFuncDeclFromStmtsMulti but
+// accepts a set of type parameter names that require the "comparable"
+// constraint instead of "any" (needed for map key types in Go 1.18+).
+func MustFuncDeclFromStmtsMultiComparable(name string, typeParams, paramNames, paramTypes, returnTypes []string, comparableParams []string, body []ast.Stmt, loop bool) ast.Decl {
 	if len(paramNames) != len(paramTypes) {
 		panic("mismatched function parameter metadata")
+	}
+	compSet := make(map[string]bool, len(comparableParams))
+	for _, p := range comparableParams {
+		compSet[p] = true
 	}
 	params := make([]*ast.Field, 0, len(paramNames))
 	for i, sourceType := range paramTypes {
@@ -231,7 +242,30 @@ func MustFuncDeclFromStmtsMulti(name string, typeParams, paramNames, paramTypes,
 	if loop {
 		block = &ast.BlockStmt{List: []ast.Stmt{&ast.ForStmt{Body: block}}}
 	}
-	return &ast.FuncDecl{Name: ast.NewIdent(name), Type: &ast.FuncType{TypeParams: typeParamsFieldList(typeParams), Params: &ast.FieldList{List: params}, Results: results}, Body: block}
+	return &ast.FuncDecl{Name: ast.NewIdent(name), Type: &ast.FuncType{TypeParams: comparableTypeParamsFieldList(typeParams, compSet), Params: &ast.FieldList{List: params}, Results: results}, Body: block}
+}
+
+// typeParamsFieldList creates a type parameter field list with "any" constraints.
+func typeParamsFieldList(typeParams []string) *ast.FieldList {
+	return comparableTypeParamsFieldList(typeParams, nil)
+}
+
+// comparableTypeParamsFieldList creates a type parameter field list where
+// params in the compSet use "comparable" constraint instead of "any".
+func comparableTypeParamsFieldList(typeParams []string, compSet map[string]bool) *ast.FieldList {
+	if len(typeParams) == 0 {
+		return nil
+	}
+	fields := make([]*ast.Field, 0, len(typeParams))
+	for _, param := range typeParams {
+		name := hktParamName(param)
+		constraint := "any"
+		if compSet[name] {
+			constraint = "comparable"
+		}
+		fields = append(fields, &ast.Field{Names: []*ast.Ident{ast.NewIdent(name)}, Type: ast.NewIdent(constraint)})
+	}
+	return &ast.FieldList{List: fields}
 }
 
 // FuncLitFromStmts constructs a function literal from already-lowered body
@@ -430,16 +464,6 @@ func enumVariantDecls(enumName string, typeParams []string, variantName string, 
 	return []ast.Decl{variantDecl, markerDecl, constructor}
 }
 
-func typeParamsFieldList(typeParams []string) *ast.FieldList {
-	if len(typeParams) == 0 {
-		return nil
-	}
-	fields := make([]*ast.Field, 0, len(typeParams))
-	for _, param := range typeParams {
-		fields = append(fields, &ast.Field{Names: []*ast.Ident{ast.NewIdent(hktParamName(param))}, Type: ast.NewIdent("any")})
-	}
-	return &ast.FieldList{List: fields}
-}
 
 // hktParamName projects the constructor name out of a source HKT parameter
 // such as C[A]. Go declares C as an ordinary phantom type parameter; uses are
