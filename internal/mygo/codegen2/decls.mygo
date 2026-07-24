@@ -303,7 +303,18 @@ func seedEnumVariantsForVariants(enumName: String, variants: Slice[ast2.Variant]
     if variant.Fields.Len() == 0 then
       ctx.enumValueConstructors.Set(enumName + "." + variant.Name, enumConstructorGoName(sanitizeIdent(enumName), variant.Name))
     end
+    # Store variant field types for pattern-bound variable type resolution.
+    seedEnumVariantFieldTypes(enumName, variant.Name, variant.Fields, ctx, 0)
     seedEnumVariantsForVariants(enumName, variants, ctx, index + 1)
+  end
+end
+
+func seedEnumVariantFieldTypes(enumName: String, variantName: String, fields: Slice[ast2.TypeExpr], ctx: Ref[egCtx], index: Int) -> ()
+  if index < fields.Len() then
+    let fieldType = fields.Get(index).UnwrapOr(ast2.TypeExpr.UnitType())
+    let key = "$variant$" + enumName + "." + variantName + "." + index.ToString()
+    ctx.sourceTypes.Set(key, goType(fieldType, ctx.typeParams))
+    seedEnumVariantFieldTypes(enumName, variantName, fields, ctx, index + 1)
   end
 end
 
@@ -456,14 +467,14 @@ func addDictionaryMethods(decls: Slice[ast2.Decl], rest: Slice[ast2.Constraint],
     let method = methods.Get(0).UnwrapOr(ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] })
     let baseName = sanitizeIdent(method.Name) + "Fn"
     let paramName = ctxFreshBinding(ctx, baseName)
-    # Keep the first registered function in the simple "methodName" key,
-    # and store ALL entries with compound keys for type-based dispatch.
-    if ctx.constraintFuncs.Get(method.Name) == None then
-      ctx.constraintFuncs.Set(method.Name, paramName)
-    end
+    ctx.constraintFuncs.Set(method.Name, paramName)
+    # Maintain ordered lists for multi-constraint dispatch.
+    let existingNames = ctx.constraintFuncNames.Get(method.Name).UnwrapOr([] as Slice[String])
+    ctx.constraintFuncNames.Set(method.Name, existingNames.Append(paramName))
     if constraintArgs.Len() > 0 then
-      let receiverKey = method.Name + ":" + substituteTypeParamsInTypeExpr(constraintArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), ifaceTps, constraintArgs, ctx.typeParams)
-      ctx.constraintFuncs.Set(receiverKey, paramName)
+      let typeArg = substituteTypeParamsInTypeExpr(constraintArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), ifaceTps, constraintArgs, ctx.typeParams)
+      let existingTypes = ctx.constraintFuncArgTypes.Get(method.Name).UnwrapOr([] as Slice[String])
+      ctx.constraintFuncArgTypes.Set(method.Name, existingTypes.Append(typeArg))
     end
     # Substitute interface type params with constraint type args so
     # e.g. Eq[A].Equals(A, A) with constraint Eq[T] yields func(T, T) bool.

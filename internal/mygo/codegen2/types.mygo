@@ -37,9 +37,15 @@ struct egCtx
   tailRecParamCount: Int
   # 尾递归参数 Go 名
   tailRecParamNames: Slice[String]
-  # 当前 lexical scope 中可见的 typeclass dictionary methods.
-  # Key is the MyGO interface method name; value is its Go function binding.
+  # constraintFuncs maps "methodName" → last registered Go function binding.
+  # constraintFuncNames maps "methodName" → Slice[String] of Go function
+  #   names in registration order, for multi-constraint disambiguation.
+  # constraintFuncArgTypes maps "methodName" → Slice[String] of type arg
+  #   strings in the same order as constraintFuncNames, so the call site
+  #   can match the receiver's static type against the correct function.
   constraintFuncs: Map[String, String]
+  constraintFuncNames: Map[String, Slice[String]]
+  constraintFuncArgTypes: Map[String, Slice[String]]
   # Callee name -> required dictionary method names, in declaration order.
   callDictionaries: Map[String, Slice[String]]
   # Package-level impl helper fallback for a typeclass method.
@@ -145,6 +151,8 @@ func newEgCtx() -> egCtx
     tailRecParamCount: 0,
     tailRecParamNames: [],
     constraintFuncs: {},
+    constraintFuncNames: {},
+    constraintFuncArgTypes: {},
     callDictionaries: {},
     packageDictionaries: {},
     callRequirements: {},
@@ -174,6 +182,8 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     tailRecParamCount: 0,
     tailRecParamNames: [],
     constraintFuncs: {},
+    constraintFuncNames: {},
+    constraintFuncArgTypes: {},
     callDictionaries: {},
     packageDictionaries: {},
     callRequirements: {},
@@ -203,6 +213,8 @@ func newFuncEgCtx(params: Slice[String], retType: String, tailName: String, para
     tailRecParamCount: paramCount,
     tailRecParamNames: [],
     constraintFuncs: {},
+    constraintFuncNames: {},
+    constraintFuncArgTypes: {},
     callDictionaries: {},
     packageDictionaries: {},
     callRequirements: {},
@@ -264,6 +276,8 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     tailRecParamCount: ctx.tailRecParamCount,
     tailRecParamNames: ctx.tailRecParamNames,
     constraintFuncs: ctx.constraintFuncs,
+    constraintFuncNames: ctx.constraintFuncNames,
+    constraintFuncArgTypes: ctx.constraintFuncArgTypes,
     callDictionaries: ctx.callDictionaries,
     packageDictionaries: ctx.packageDictionaries,
     callRequirements: ctx.callRequirements,

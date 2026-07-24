@@ -31,9 +31,10 @@ func goType(t: ast2.TypeExpr, typeParams: Set[String]) -> String
       let paramStrs = typeExprsToStrings(params, typeParams)
       let retStr = goType(ret.value(), typeParams)
       if retStr == "" || retStr == "struct{}" then
-        return "func(" + joinStrings(paramStrs, ", ") + ")"
+        "func(" + joinStrings(paramStrs, ", ") + ")"
+      else
+        "func(" + joinStrings(paramStrs, ", ") + ") " + retStr
       end
-      return "func(" + joinStrings(paramStrs, ", ") + ") " + retStr
     case TupleType(elems) =>
       if elems.Len() == 0 then
         return "struct{}"
