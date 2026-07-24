@@ -296,6 +296,19 @@ func FuncLitFromStmts(paramNames, paramTypes, returnTypes []string, body []ast.S
 
 func Unit() ast.Expr { return &ast.CompositeLit{Type: &ast.StructType{Fields: &ast.FieldList{}}} }
 
+// IsUnitExpr reports whether expr is a Unit() expression (struct{}{}).
+func IsUnitExpr(expr ast.Expr) bool {
+	cl, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		return false
+	}
+	st, ok := cl.Type.(*ast.StructType)
+	if !ok {
+		return false
+	}
+	return st.Fields == nil || len(st.Fields.List) == 0
+}
+
 func AppendStmts(dst, more []ast.Stmt) []ast.Stmt { return append(dst, more...) }
 
 // LocalFromParts creates either a short declaration or a typed var
@@ -463,7 +476,6 @@ func enumVariantDecls(enumName string, typeParams []string, variantName string, 
 	}
 	return []ast.Decl{variantDecl, markerDecl, constructor}
 }
-
 
 // hktParamName projects the constructor name out of a source HKT parameter
 // such as C[A]. Go declares C as an ordinary phantom type parameter; uses are
