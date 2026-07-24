@@ -144,7 +144,11 @@ func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[as
       names = names.Append(goName)
       i = i + 1
     end
-    ctxSetTailRecParamNames(ctx, names)
+    # Process `using` constraints (e.g. using Eq[T]) to inject dictionary
+    # parameters like equalsFn, matching translateFuncAstDecl behavior.
+    let paramTypes = sig.Params.Map(func(p: ast2.Param) -> String goType(p.Type, ctx.typeParams) end)
+    let dictionary = addConstraintParams(decls, sig.Using, ctx, names, paramTypes)
+    ctxSetTailRecParamNames(ctx, dictionary.Names)
     # Seed type and dispatch information so impl method bodies can resolve
     # field types and method calls just like standalone function declarations.
     seedCallDictionaries(decls, ctx)
@@ -159,8 +163,8 @@ func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[as
         let decl = goast.MustFuncDeclFromStmtsMulti(
           implMethodSymbol(stem, sig.Name),
           methodTps,
-          names,
-          sig.Params.Map(func(p: ast2.Param) -> String goType(p.Type, ctx.typeParams) end),
+          dictionary.Names,
+          dictionary.Types,
           goReturnTypesFromOption(sig.Ret, ctx.typeParams),
           stmts,
           containsTailCall(method.Body, sig.Name),
@@ -447,7 +451,13 @@ func addDictionaryMethods(decls: Slice[ast2.Decl], rest: Slice[ast2.Constraint],
     let method = methods.Get(0).UnwrapOr(ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] })
     let paramName = sanitizeIdent(method.Name) + "Fn"
     ctx.constraintFuncs.Set(method.Name, paramName)
-    let argTypes = method.Params.Map(func(p: ast2.Param) -> String goType(p.Type, ctx.typeParams) end)
+    # Use "any" for dictionary param types when the interface type params
+    # don't match the caller's type params (e.g. Eq[A] method used in
+    # impl[T] context).  The Go function signature is valid either way.
+    let argTypes = method.Params.Map(func(p: ast2.Param) -> String
+      let t = goType(p.Type, ctx.typeParams)
+      if t == "" || (t.Len() == 1 && t >= "A" && t <= "Z") then "any" else t end
+    end)
     addDictionaryMethods(decls, rest, sliceDrop(methods, 1), ctx, names.Append(paramName), types.Append("func(" + joinStrings(argTypes, ", ") + ")" + returnTypeString(method.Ret, ctx.typeParams)))
   end
 end
