@@ -99,7 +99,7 @@ func declareAstLetRec(bindings: Slice[ast2.LetRecBind], ctx: Ref[egCtx], index: 
     let binding = bindings.Get(index).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType(), Value: ast2.EmptyExpr() })
     let name = ctxFreshBinding(ctx, binding.Name)
     let typ = goType(binding.Type, ctx.typeParams)
-    ctxSetLocal(ctx, binding.Name, typ)
+    ctxSetLocal(ctx, binding.Name, mygoTypeString(binding.Type))
     ctxSetMutable(ctx, name, false)
     declareAstLetRec(bindings, ctx, index + 1, goast.AppendStmts(out, astSingleStmt(goast.VarDecl(name, goast.MustTypeExpr(typ)))))
   end
@@ -266,12 +266,16 @@ func translateAstBinding(bind: ast2.Bind, ctx: Ref[egCtx]) -> Result[Slice[goast
     case Err(msg) => Err(msg)
     case Ok(v) =>
       let name = ctxFreshBinding(ctx, bind.Name)
+      let mygoTyp = switch bind.Type
+        case Some(t) => mygoTypeString(t)
+        case None => ""
+      end
       let typ = switch bind.Type
         case Some(t) => goType(t, ctx.typeParams)
         case None => ""
       end
-      if typ != "" then
-        ctxSetLocal(ctx, bind.Name, typ)
+      if mygoTyp != "" then
+        ctxSetLocal(ctx, bind.Name, mygoTyp)
       end
       let decl = if typ == "" then
         goast.Define(name, v.Expr)

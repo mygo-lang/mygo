@@ -1,0 +1,32 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import strings "go:strings"
+
+# Debug test for the s.Len() dispatch issue
+func debugSliceLen() -> String
+  let src = """
+package sample
+
+impl[T] SliceIEnumerable[T]: IEnumerable[Slice[T], T]
+  func Len(c: Slice[T]) -> Int
+    go[Int] { code: `len(c)` }
+  end
+end
+
+impl[T] SliceIndexable[T]: IIndexable[Slice[T], Int, T]
+  func Get(s: Slice[T], index: Int) -> Option[T]
+    if index < 0 || index >= s.Len() then
+      None
+    else
+      Some(go[T] { code: `{s}[{index}]` in s = s in index = index })
+    end
+  end
+end
+"""
+  let result = GenerateSourceAt("<debug>", src)
+  switch result
+    case Ok(code) => code
+    case Err(msg) => "ERROR: " + msg
+  end
+end

@@ -718,3 +718,105 @@ func typeString(t: ast2.TypeExpr) -> String
       return "any"
   end
 end
+
+# mygoTypeString: 将 MyGO 类型表达式转换为 MyGO 类型字符串，不转换为 Go 类型。
+# 与 goType 不同，此函数保留 MyGO 类型名称（如 Slice[T]、Ref[T]、Int 等），
+# 不将其转换为 Go 原生类型表示。
+func mygoTypeString(t: ast2.TypeExpr) -> String
+  switch t
+    case NamedType(name, args) =>
+      if args.Len() == 0 then
+        name
+      else
+        name + "[" + joinStrings(mygoTypeExprStrings(args), ", ") + "]"
+      end
+    case FuncType(params, ret) =>
+      let paramStrs = mygoTypeExprStrings(params)
+      let retStr = mygoTypeString(ret.value())
+      if retStr == "()" then
+        "func(" + joinStrings(paramStrs, ", ") + ")"
+      else
+        "func(" + joinStrings(paramStrs, ", ") + ") -> " + retStr
+      end
+    case TupleType(elems) =>
+      "(" + joinStrings(mygoTypeExprStrings(elems), ", ") + ")"
+    case UnitType => "()"
+    case InlineGo(inner, _) => mygoTypeString(inner.value())
+    case _ => "any"
+  end
+end
+
+# mygoTypeExprStrings: 辅助函数，将类型表达式列表转换为 MyGO 类型字符串列表
+func mygoTypeExprStrings(items: Slice[ast2.TypeExpr]) -> Slice[String]
+  if items.Len() == 0 then
+    [] as Slice[String]
+  else
+    let head = items.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+    let tail = mygoTypeExprStrings(sliceDrop(items, 1))
+    tail.Prepend(mygoTypeString(head))
+  end
+end
+
+# mygoToGoTypeStr: 将 MyGO 类型字符串（如 "Ref[T]"、"Slice[Int]"）转换为
+# Go 类型字符串（如 "*T"、"[]int"）。仅用于输出到 goast 时的最终转换。
+func mygoToGoTypeStr(typ: String) -> String
+  let clean = strings.TrimSpace(typ)
+  if clean == "" then return "" end
+  if clean == "()" then return "struct{}" end
+  let parts = splitTypeArgs(clean)
+  let name = parts.Name
+  let args = parts.Args
+  switch name
+    case "Ref" => unaryGoTypeStr(args, "*")
+    case "Slice" => unaryGoTypeStr(args, "[]")
+    case "Set" =>
+      if args.Len() == 1 then "map[" + mygoToGoTypeStr(args.Get(0).UnwrapOr("")) + "]struct{}" else clean end
+    case "Map" =>
+      if args.Len() == 2 then
+        "map[" + mygoToGoTypeStr(args.Get(0).UnwrapOr("")) + "]" + mygoToGoTypeStr(args.Get(1).UnwrapOr(""))
+      else clean end
+    case "Chan" => unaryGoTypeStr(args, "chan ")
+    case "SendChan" => unaryGoTypeStr(args, "chan<- ")
+    case "RecvChan" => unaryGoTypeStr(args, "<-chan ")
+    case _ =>
+      if args.Len() == 0 then
+        goPrimitiveTypeName(name)
+      else
+        name + "[" + joinStrings(args.Map(func(a: String) -> String mygoToGoTypeStr(a) end), ", ") + "]"
+      end
+  end
+end
+
+# unaryGoTypeStr: 辅助函数，对一元 MyGO 类型应用 Go 前缀
+func unaryGoTypeStr(args: Slice[String], prefix: String) -> String
+  if args.Len() == 1 then
+    prefix + mygoToGoTypeStr(args.Get(0).UnwrapOr(""))
+  else
+    prefix + "any"
+  end
+end
+
+# goPrimitiveTypeName: MyGO 基本类型名 → Go 基本类型名
+func goPrimitiveTypeName(name: String) -> String
+  switch name
+    case "Int" => "int"
+    case "Int8" => "int8"
+    case "Int16" => "int16"
+    case "Int32" => "int32"
+    case "Int64" => "int64"
+    case "UInt" => "uint"
+    case "UInt8" => "uint8"
+    case "UInt16" => "uint16"
+    case "UInt32" => "uint32"
+    case "UInt64" => "uint64"
+    case "Byte" => "byte"
+    case "Rune" => "rune"
+    case "Float32" => "float32"
+    case "Float64" => "float64"
+    case "String" => "string"
+    case "Bool" => "bool"
+    case "Any" => "any"
+    case "Unit" => "struct{}"
+    case _ => name
+  end
+end

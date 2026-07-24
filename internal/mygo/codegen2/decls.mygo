@@ -140,7 +140,7 @@ func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[as
     while i < sig.Params.Len()
       let param = sig.Params.Get(i).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType() })
       let goName = ctxFreshBinding(ctx, param.Name)
-      ctxSetLocal(ctx, param.Name, goType(param.Type, ctx.typeParams))
+      ctxSetLocal(ctx, param.Name, mygoTypeString(param.Type))
       names = names.Append(goName)
       i = i + 1
     end
@@ -214,7 +214,7 @@ func translateFuncAstDecl(g: Ref[Generator2], name: String, tps: Slice[String], 
   while i < params.Len()
     let p = params.Get(i).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType() })
     let pn = ctxFreshBinding(ctx, p.Name)
-    ctxSetLocal(ctx, p.Name, goType(p.Type, ctx.typeParams))
+    ctxSetLocal(ctx, p.Name, mygoTypeString(p.Type))
     goParams = goParams.Append(pn + " " + goType(p.Type, ctx.typeParams))
     paramNames = paramNames.Append(pn)
     i = i + 1
@@ -273,10 +273,7 @@ end
 func seedOneStructSourceTypes(name: String, fields: Slice[ast2.Field], ctx: Ref[egCtx], tps: Slice[String]) -> ()
   if fields.Len() != 0 then
     let field = fields.Get(0).UnwrapOr(ast2.Field { Name: "", Type: ast2.TypeExpr.UnitType(), Tag: None })
-    # Use the struct's own type parameters for computing field types, not the
-    # caller's, so stored types use the struct's param names (e.g. A not T).
-    let structCtx = Ref.new(newEgCtxWithTypeParams(tps))
-    ctx.sourceTypes.Set("$field$" + name + "." + exportName(field.Name), goType(field.Type, structCtx.typeParams))
+    ctx.sourceTypes.Set("$field$" + name + "." + exportName(field.Name), mygoTypeString(field.Type))
     seedOneStructSourceTypes(name, sliceDrop(fields, 1), ctx, tps)
   end
 end
@@ -316,7 +313,7 @@ func seedEnumVariantFieldTypes(enumName: String, variantName: String, fields: Sl
   if index < fields.Len() then
     let fieldType = fields.Get(index).UnwrapOr(ast2.TypeExpr.UnitType())
     let key = "$variant$" + enumName + "." + variantName + "." + index.ToString()
-    let typeStr = goType(fieldType, ctx.typeParams)
+    let typeStr = mygoTypeString(fieldType)
     ctx.sourceTypes.Set(key, typeStr)
     seedEnumVariantFieldTypes(enumName, variantName, fields, ctx, index + 1)
   end
@@ -482,7 +479,8 @@ func addDictionaryMethods(decls: Slice[ast2.Decl], rest: Slice[ast2.Constraint],
     let existingNames = ctx.constraintFuncNames.Get(method.Name).UnwrapOr([] as Slice[String])
     ctx.constraintFuncNames.Set(method.Name, existingNames.Append(paramName))
     if constraintArgs.Len() > 0 then
-      let typeArg = substituteTypeParamsInTypeExpr(constraintArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), ifaceTps, constraintArgs, ctx.typeParams)
+      # Store MyGO type string for receiver type matching (dictFuncForMethod).
+      let typeArg = substituteTypeParamsMyGO(constraintArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), ifaceTps, constraintArgs)
       let existingTypes = ctx.constraintFuncArgTypes.Get(method.Name).UnwrapOr([] as Slice[String])
       ctx.constraintFuncArgTypes.Set(method.Name, existingTypes.Append(typeArg))
     end
@@ -540,6 +538,49 @@ func substituteTypeParamsInTypeExpr(typ: ast2.TypeExpr, ifaceTps: Slice[String],
     end
     case UnitType => "struct{}"
     case _ => goType(typ, typeParams)
+  end
+end
+
+# substituteTypeParamsMyGO: 像 substituteTypeParamsInTypeExpr 一样替换接口类型参数，
+# 但返回 MyGO 类型字符串（例如 "Slice[T]"）而非 Go 类型字符串（例如 "[]T"）。
+# 用于 constraintFuncArgTypes 的接收者类型匹配。
+func substituteTypeParamsMyGO(typ: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr]) -> String
+  switch typ
+    case NamedType(name, args) then
+      let index = findStringIndex(ifaceTps, name)
+      if index >= 0 && index < constraintArgs.Len() then
+        let replacement = constraintArgs.Get(index).UnwrapOr(ast2.TypeExpr.UnitType())
+        mygoTypeString(replacement)
+      else
+        if args.Len() == 0 then
+          mygoTypeString(typ)
+        else
+          let replacedArgs = mygoTypeExprStrings(args.Map(func(a: ast2.TypeExpr) -> ast2.TypeExpr
+            substituteTypeExpr(a, ifaceTps, constraintArgs)
+          end))
+          name + "[" + joinStrings(replacedArgs, ", ") + "]"
+        end
+      end
+    end
+    case FuncType(params, retRef) then
+      funcTypeSubstitutedResultMyGO(params, retRef.value(), ifaceTps, constraintArgs)
+    end
+    case UnitType => "()"
+    case _ => mygoTypeString(typ)
+  end
+end
+
+# funcTypeSubstitutedResultMyGO: MyGO 版本的 funcTypeSubstitutedResult，
+# 返回 MyGO 函数类型字符串。
+func funcTypeSubstitutedResultMyGO(params: Slice[ast2.TypeExpr], ret: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr]) -> String
+  let paramStrs = params.Map(func(p: ast2.TypeExpr) -> String
+    substituteTypeParamsMyGO(p, ifaceTps, constraintArgs)
+  end)
+  let retStr = substituteTypeParamsMyGO(ret, ifaceTps, constraintArgs)
+  if retStr == "()" then
+    "func(" + joinStrings(paramStrs, ", ") + ")"
+  else
+    "func(" + joinStrings(paramStrs, ", ") + ") -> " + retStr
   end
 end
 
