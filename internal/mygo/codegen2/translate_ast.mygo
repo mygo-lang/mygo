@@ -86,8 +86,10 @@ func translateExprAstExpectedInner(expr: ast2.Expr, ctx: Ref[egCtx], expected: S
 end
 
 func noneTypeArg(expected: String, ctx: Ref[egCtx]) -> String
-  if strings.HasPrefix(expected, "Option[") && strings.HasSuffix(expected, "]") then
-    strings.TrimSuffix(strings.TrimPrefix(expected, "Option["), "]")
+  # Trim space because ctx.retType may have a leading space from returnTypeString.
+  let trimmed = strings.TrimSpace(expected)
+  if strings.HasPrefix(trimmed, "Option[") && strings.HasSuffix(trimmed, "]") then
+    strings.TrimSuffix(strings.TrimPrefix(trimmed, "Option["), "]")
   else
     ctx.typeParams.Fold("", func(found: String, item: String) -> String
       if found != "" || strings.HasSuffix(item, "#hkt") || strings.Index(item, "[") >= 0 then found else item end
