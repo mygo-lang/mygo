@@ -456,7 +456,15 @@ func addDictionaryMethods(decls: Slice[ast2.Decl], rest: Slice[ast2.Constraint],
     let method = methods.Get(0).UnwrapOr(ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] })
     let baseName = sanitizeIdent(method.Name) + "Fn"
     let paramName = ctxFreshBinding(ctx, baseName)
-    ctx.constraintFuncs.Set(method.Name, paramName)
+    # Keep the first registered function in the simple "methodName" key,
+    # and store ALL entries with compound keys for type-based dispatch.
+    if ctx.constraintFuncs.Get(method.Name) == None then
+      ctx.constraintFuncs.Set(method.Name, paramName)
+    end
+    if constraintArgs.Len() > 0 then
+      let receiverKey = method.Name + ":" + substituteTypeParamsInTypeExpr(constraintArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), ifaceTps, constraintArgs, ctx.typeParams)
+      ctx.constraintFuncs.Set(receiverKey, paramName)
+    end
     # Substitute interface type params with constraint type args so
     # e.g. Eq[A].Equals(A, A) with constraint Eq[T] yields func(T, T) bool.
     let argTypes = method.Params.Map(func(p: ast2.Param) -> String

@@ -462,7 +462,12 @@ func translateAstReturnSingle(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[
     case Err(msg) => Err(msg)
     case Ok(v) =>
       if ctx.retType == "" then
-        Ok(goast.AppendStmts(v.Pre, astTwoStmts(goast.ExpressionStmt(v.Expr), goast.Return([] as Slice[goast.Expr]))))
+        # In a unit-returning function the expression value is discarded.
+        # Skip ExpressionStmt for Unit expressions to avoid "not used".
+        switch expr.Kind
+          case UnitExpr => Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
+          case _ => Ok(goast.AppendStmts(v.Pre, astTwoStmts(goast.ExpressionStmt(v.Expr), goast.Return([] as Slice[goast.Expr]))))
+        end
       else
         Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return(astSingleExpr(v.Expr)))))
       end
