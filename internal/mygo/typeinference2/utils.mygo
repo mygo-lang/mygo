@@ -86,7 +86,7 @@ func instantiateBoundSubst(bound: Slice[Int], state: InferState, out: Slice[Subs
   if bound.Len() == 0 then out
   else
     let id = bound.Get(0).UnwrapOr(0)
-    instantiateBoundSubst(sliceDrop(bound, 1), InferState { FreshVarID: state.FreshVarID + 1 }, out.Append(SubstEntry { ID: id, Type: MonoType.TVar(state.FreshVarID) }))
+    instantiateBoundSubst(sliceDrop(bound, 1), withFreshID(state, state.FreshVarID + 1), out.Append(SubstEntry { ID: id, Type: MonoType.TVar(state.FreshVarID) }))
   end
 end
 
@@ -94,7 +94,7 @@ func instantiateBoundSubstFor(bound: Slice[Int], body: MonoType, state: InferSta
   if bound.Len() == 0 then out else
     let id = bound.Get(0).UnwrapOr(0)
     let replacement = if isKindVar(body, id) then MonoType.TKVar(state.FreshVarID) else MonoType.TVar(state.FreshVarID) end
-    instantiateBoundSubstFor(sliceDrop(bound, 1), body, InferState { FreshVarID: state.FreshVarID + 1 }, out.Append(SubstEntry { ID: id, Type: replacement }))
+    instantiateBoundSubstFor(sliceDrop(bound, 1), body, withFreshID(state, state.FreshVarID + 1), out.Append(SubstEntry { ID: id, Type: replacement }))
   end
 end
 
@@ -122,7 +122,7 @@ func instantiateBound(bound: Slice[Int], body: MonoType, state: InferState, subs
   else
     let id = bound.Get(0).UnwrapOr(0)
     let replacement = if isKindVar(body, id) then MonoType.TKVar(state.FreshVarID) else MonoType.TVar(state.FreshVarID) end
-    instantiateBound(sliceDrop(bound, 1), body, InferState { FreshVarID: state.FreshVarID + 1 }, subst.Prepend(SubstEntry { ID: id, Type: replacement }))
+    instantiateBound(sliceDrop(bound, 1), body, withFreshID(state, state.FreshVarID + 1), subst.Prepend(SubstEntry { ID: id, Type: replacement }))
   end
 end
 

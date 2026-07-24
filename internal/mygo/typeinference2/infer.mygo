@@ -28,7 +28,7 @@ end
 
 func inferDecls(decls: Slice[ast2.Decl], env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[PackageInfo, String]
   if decls.Len() == 0 then
-    Ok(PackageInfo { Env: env, Fields: fields, GoPackages: [] as Slice[GoPackageEntry], Instances: [] as Slice[Instance], Solver: newSolver() })
+    Ok(PackageInfo { Env: env, Fields: fields, GoPackages: [] as Slice[GoPackageEntry], Instances: [] as Slice[Instance], Solver: newSolver(), TypedInfo: state.TypedInfo })
   else
     let head = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     let tail = sliceDrop(decls, 1)
@@ -116,8 +116,40 @@ end
 func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
   let result = inferExprInner(expr, env, state)
   switch result
-    case Ok(value) => Ok(value)
+    case Ok(value) =>
+      let nextState = recordInferredExprType(expr, value.Type, value.Predicates, value.Subst, state)
+      Ok(InferResult { Type: value.Type, Predicates: value.Predicates, Subst: value.Subst, State: nextState })
     case Err(msg) => Err(errorAtExpr(expr, msg))
+  end
+end
+
+# Record the inferred expression type in TypedInfo when the state carries one.
+# This mirrors the old typeinference pattern where inferExpr records every
+# successfully inferred expression in state.TypedInfo.ExprTypes.
+func recordInferredExprType(expr: ast2.Expr, typ: MonoType, preds: Slice[Predicate], subst: Slice[SubstEntry], state: InferState) -> InferState
+  switch state.TypedInfo
+    case Some(ti) =>
+      let resolvedType = applySubst(subst, typ)
+      let newExprTypes = ti.ExprTypes.Append(TypedInfoExprType { Expr: Ref.new(expr), Type: resolvedType })
+      let newPredicates = if preds.Len() > 0 then
+        ti.Predicates.Append(TypedInfoPredicate { Expr: Ref.new(expr), Predicates: preds })
+      else
+        ti.Predicates
+      end
+      InferState {
+        FreshVarID: state.FreshVarID,
+        PkgInfo: state.PkgInfo,
+        GoPackages: state.GoPackages,
+        MyGoPackages: state.MyGoPackages,
+        MyGoPackageCache: state.MyGoPackageCache,
+        TypedInfo: Some(TypedInfo {
+          ExprTypes: newExprTypes,
+          BindingSchemes: ti.BindingSchemes,
+          Predicates: newPredicates,
+          MyGoPackages: ti.MyGoPackages,
+        }),
+      }
+    case None => state
   end
 end
 
@@ -213,7 +245,7 @@ end
 func inferSlice(items: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
   if items.Len() == 0 then
     let element = MonoType.TVar(state.FreshVarID)
-    Ok(InferResult { Type: MonoType.TCon("Slice", [element]), Predicates: [], Subst: [], State: InferState { FreshVarID: state.FreshVarID + 1 } })
+    Ok(InferResult { Type: MonoType.TCon("Slice", [element]), Predicates: [], Subst: [], State: withFreshID(state, state.FreshVarID + 1) })
   else
     let first = inferExpr(items.Get(0).UnwrapOr(ast2.EmptyExpr()), env, state)
     switch first
@@ -589,7 +621,7 @@ func inferOrdinaryCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[Env
           # so unifying a polymorphic constructor call cannot create t ~ F[t].
           let afterCallee = nextFreshVarID(cv.Type, argsResult.State.FreshVarID)
           let fresh = nextFreshVarIDInAll(argsResult.Types, afterCallee)
-          let nextState = InferState { FreshVarID: fresh + 1 }
+          let nextState = withFreshID(argsResult.State, fresh + 1)
           let ret = MonoType.TVar(fresh)
           let expected = MonoType.TFunc(argsResult.Types, Ref.new(ret))
           let s1 = composeSubst(argsResult.Subst, cv.Subst)
@@ -605,7 +637,7 @@ end
 func inferGoFuncCall(marker: MonoType, args: ArgsResult, callee: InferResult) -> Result[InferResult, String]
   if goFuncAccepts(marker, args.Types.Len()) then
     let fresh = args.State.FreshVarID
-    Ok(InferResult { Type: MonoType.TVar(fresh), Predicates: appendPredicates(callee.Predicates, args.Predicates), Subst: composeSubst(args.Subst, callee.Subst), State: InferState { FreshVarID: fresh + 1 } })
+    Ok(InferResult { Type: MonoType.TVar(fresh), Predicates: appendPredicates(callee.Predicates, args.Predicates), Subst: composeSubst(args.Subst, callee.Subst), State: withFreshID(args.State, fresh + 1) })
   else
     Err("Go function argument count mismatch")
   end
@@ -824,7 +856,7 @@ func inferOrdinaryField(base: ast2.Expr, field: String, env: Slice[EnvEntry], st
             Err("unknown Go package member " + field)
           else
             let fresh = MonoType.TVar(v.State.FreshVarID)
-            Ok(InferResult { Type: fresh, Predicates: v.Predicates, Subst: v.Subst, State: InferState { FreshVarID: v.State.FreshVarID + 1 } })
+            Ok(InferResult { Type: fresh, Predicates: v.Predicates, Subst: v.Subst, State: withFreshID(v.State, v.State.FreshVarID + 1) })
           end
         case TCon(typeName, _) =>
           switch envGetField(env, typeName, field)
@@ -896,7 +928,7 @@ func inferMapLit(pairs: Slice[(ast2.Expr, ast2.Expr)], env: Slice[EnvEntry], s0:
   if pairs.Len() == 0 then
     let kt = MonoType.TVar(s0.FreshVarID)
     let vt = MonoType.TVar(s0.FreshVarID + 1)
-    Ok(InferResult { Type: MonoType.TCon("Map", [kt, vt]), Predicates: [], Subst: [], State: InferState { FreshVarID: s0.FreshVarID + 2 } })
+    Ok(InferResult { Type: MonoType.TCon("Map", [kt, vt]), Predicates: [], Subst: [], State: withFreshID(s0, s0.FreshVarID + 2) })
   else
     let (k0, v0) = pairs.Get(0).UnwrapOr((ast2.EmptyExpr(), ast2.EmptyExpr()))
     let kr = inferExpr(k0, env, s0)
@@ -936,7 +968,7 @@ end
 func inferSetLit(items: Slice[ast2.Expr], env: Slice[EnvEntry], s0: InferState) -> Result[InferResult, String]
   if items.Len() == 0 then
     let et = MonoType.TVar(s0.FreshVarID)
-    Ok(InferResult { Type: MonoType.TCon("Set", [et]), Predicates: [], Subst: [], State: InferState { FreshVarID: s0.FreshVarID + 1 } })
+    Ok(InferResult { Type: MonoType.TCon("Set", [et]), Predicates: [], Subst: [], State: withFreshID(s0, s0.FreshVarID + 1) })
   else
     let r0 = inferExpr(items.Get(0).UnwrapOr(ast2.EmptyExpr()), env, s0)
     switch r0

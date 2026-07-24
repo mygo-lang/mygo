@@ -59,8 +59,61 @@ struct SubstEntry
   Type: MonoType
 end
 
+# ---------------------------------------------------------------------------
+# Package-level inference context
+# ---------------------------------------------------------------------------
+
+# PkgInfo holds package-level AST declarations for enum/struct/interface
+# lookups during type inference. It mirrors the old typeinference.PkgInfo
+# without the per-type-name maps — mygo enums require pattern matching over
+# the full declaration slice instead.
+struct PkgInfo
+  Dir: String
+  Name: String
+  Decls: Slice[ast2.Decl]
+end
+
+# MyGoPackageInfo records the exported surface of an imported MyGO package.
+struct MyGoPackageInfo
+  Alias: String
+  Path: String
+  Name: String
+  Funcs: Slice[EnvEntry]
+  Types: Slice[String]
+end
+
+# TypedInfoExprType maps an expression node to its inferred monotype.
+struct TypedInfoExprType
+  Expr: Ref[ast2.Expr]
+  Type: MonoType
+end
+
+# TypedInfoPredicate maps an expression node to its typeclass predicates.
+struct TypedInfoPredicate
+  Expr: Ref[ast2.Expr]
+  Predicates: Slice[Predicate]
+end
+
+# TypedInfo holds the results of type inference for an entire package.
+# The code generator can consult this info to avoid re-inferring types.
+struct TypedInfo
+  ExprTypes: Slice[TypedInfoExprType]
+  BindingSchemes: Slice[EnvEntry]
+  Predicates: Slice[TypedInfoPredicate]
+  MyGoPackages: Slice[MyGoPackageInfo]
+end
+
+# InferState holds inference state: fresh variable counter, package info for
+# lookups, and (optionally) a TypedInfo accumulator that records every
+# successfully inferred expression type.  Callers that do not need expression
+# granularity can leave TypedInfo as None.
 struct InferState
   FreshVarID: Int
+  PkgInfo: Option[PkgInfo]
+  GoPackages: Slice[GoPackageEntry]
+  MyGoPackages: Slice[MyGoPackageInfo]
+  MyGoPackageCache: Slice[MyGoPackageInfo]
+  TypedInfo: Option[TypedInfo]
 end
 
 struct InferResult
@@ -80,6 +133,7 @@ struct PackageInfo
   GoPackages: Slice[GoPackageEntry]
   Instances: Slice[Instance]
   Solver: Solver
+  TypedInfo: Option[TypedInfo]
 end
 
 # GoPackageEntry records an imported Go package with its alias and type info.
@@ -128,7 +182,45 @@ struct PkgDeclSource
 end
 
 func NewInferState() -> InferState
-  InferState { FreshVarID: 1 }
+  InferState {
+    FreshVarID: 1,
+    PkgInfo: None,
+    GoPackages: [] as Slice[GoPackageEntry],
+    MyGoPackages: [] as Slice[MyGoPackageInfo],
+    MyGoPackageCache: [] as Slice[MyGoPackageInfo],
+    TypedInfo: None,
+  }
+end
+
+# NewInferStateWithTypedInfo creates an InferState with a fresh TypedInfo
+# accumulator, so every successfully inferred expression is recorded.
+func newInferStateWithTypedInfo() -> InferState
+  InferState {
+    FreshVarID: 1,
+    PkgInfo: None,
+    GoPackages: [] as Slice[GoPackageEntry],
+    MyGoPackages: [] as Slice[MyGoPackageInfo],
+    MyGoPackageCache: [] as Slice[MyGoPackageInfo],
+    TypedInfo: Some(TypedInfo {
+      ExprTypes: [] as Slice[TypedInfoExprType],
+      BindingSchemes: [] as Slice[EnvEntry],
+      Predicates: [] as Slice[TypedInfoPredicate],
+      MyGoPackages: [] as Slice[MyGoPackageInfo],
+    }),
+  }
+end
+
+# Copy an InferState with an updated FreshVarID, preserving all other fields.
+# This avoids repeating the full struct literal at every fresh-variable site.
+func withFreshID(state: InferState, id: Int) -> InferState
+  InferState {
+    FreshVarID: id,
+    PkgInfo: state.PkgInfo,
+    GoPackages: state.GoPackages,
+    MyGoPackages: state.MyGoPackages,
+    MyGoPackageCache: state.MyGoPackageCache,
+    TypedInfo: state.TypedInfo,
+  }
 end
 
 # InferFile runs type inference on a single file in isolation.
@@ -137,11 +229,18 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
   let env = predeclareFunctions(file.Decls, initialEnv())
   let goPkgImports = collectGoPackageImports(file.Decls)
   let envWithGoPkgs = seedGoPackageEnv(goPkgImports, env)
-  switch inferDecls(file.Decls, envWithGoPkgs, [], NewInferState())
+  switch inferDecls(file.Decls, envWithGoPkgs, [], newInferStateWithTypedInfo())
     case Ok(info) =>
       let instances = collectInstances(file.Decls)
       let solver = solverFromInstances(instances)
-      Ok(PackageInfo { Env: resolveEnvironment(solver, info.Env), Fields: info.Fields, GoPackages: goPkgImports, Instances: instances, Solver: solver })
+      Ok(PackageInfo {
+        Env: resolveEnvironment(solver, info.Env),
+        Fields: info.Fields,
+        GoPackages: goPkgImports,
+        Instances: instances,
+        Solver: solver,
+        TypedInfo: info.TypedInfo,
+      })
     case Err(msg) => Err(withExpressionSourceName(msg, file.SourceName))
   end
 end
@@ -166,7 +265,7 @@ func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice
   let envWithGoPkgs = seedGoPackageEnv(goPkgImports, predeclEnv)
 
   # Infer all declarations in order.
-  let result = inferDecls(allDecls, envWithGoPkgs, [], NewInferState())
+  let result = inferDecls(allDecls, envWithGoPkgs, [], newInferStateWithTypedInfo())
   switch result
     case Ok(info) =>
       let instances = collectInstances(allDecls)
@@ -177,6 +276,7 @@ func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice
         GoPackages: goPkgImports,
         Instances: instances,
         Solver: solver,
+        TypedInfo: info.TypedInfo,
       })
     case Err(msg) =>
       let source = files.Get(0).UnwrapOr(PkgDeclSource { Path: "<input>", Decls: [] as Slice[ast2.Decl] }).Path
