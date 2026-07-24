@@ -41,7 +41,7 @@ func translateAstLeadingStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[g
     case ExprStmt(expr) =>
       switch expr.Kind
         case InlineGoExpr(typ, body, values, types) => translateInlineGoAst(body, values, types, ctx)
-        case IfExpr(cond, thenExpr, elseExpr) => translateAstReturnIf(cond, thenExpr, elseExpr, ctx)
+        case IfExpr(cond, thenExpr, elseExpr) => translateAstIfStmt(cond, thenExpr, elseExpr, ctx)
         case SwitchExpr(target, cases) =>
           # Switch in statement context: emit only the Pre statements, discard
           # the Expr (which is Unit() for statement-form switches).
@@ -202,6 +202,7 @@ func translateAstIfStmtBranch(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[
     case UnitExpr =>
       let empty: Slice[goast.Stmt] = []
       Ok(empty)
+    case IfExpr(cond, thenExpr, elseExpr) => translateAstIfStmt(cond, thenExpr, elseExpr, ctx)
     case _ =>
       let value = translateExprAst(expr, ctx)
       switch value
@@ -221,10 +222,19 @@ func translateAstBlockAsStmts(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: I
     if index == items.Len() - 1 then
       switch stmt
         case ExprStmt(expr) =>
-          let value = translateExprAst(expr, ctx)
-          switch value
-            case Ok(v) => Ok(goast.AppendStmts(goast.AppendStmts(out, v.Pre), astSingleStmt(goast.ExpressionStmt(v.Expr))))
-            case Err(msg) => Err(msg)
+          switch expr.Kind
+            case IfExpr(cond, thenExpr, elseExpr) =>
+              let stmts = translateAstIfStmt(cond, thenExpr, elseExpr, ctx)
+              switch stmts
+                case Ok(v) => Ok(goast.AppendStmts(out, v))
+                case Err(msg) => Err(msg)
+              end
+            case _ =>
+              let value = translateExprAst(expr, ctx)
+              switch value
+                case Ok(v) => Ok(goast.AppendStmts(goast.AppendStmts(out, v.Pre), astSingleStmt(goast.ExpressionStmt(v.Expr))))
+                case Err(msg) => Err(msg)
+              end
           end
         case ReturnStmt => Ok(goast.AppendStmts(out, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
         case ReturnWithStmt(value) =>
@@ -310,7 +320,14 @@ func translateAstReturnExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[go
       let parts = translateInlineOperands(values, types, ctx, 0, [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[goast.Stmt])
       switch parts
         case Err(msg) => Err(msg)
-        case Ok(p) => Ok(goast.AppendStmts(p.Pre, goast.MustInlineGoFinalStatementsWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)))
+        case Ok(p) =>
+          # For unit-returning inline Go expressions, use statement form
+          # (no "return" wrapper) to avoid "no value used as value" errors.
+          if isUnitType(typ.value()) then
+            Ok(goast.AppendStmts(p.Pre, goast.MustInlineGoStatementsWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)))
+          else
+            Ok(goast.AppendStmts(p.Pre, goast.MustInlineGoFinalStatementsWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)))
+          end
       end
     case IfExpr(cond, thenExpr, elseExpr) => translateAstReturnIf(cond, thenExpr, elseExpr, ctx)
     case BlockExpr(items) => translateAstReturnBlock(items, ctx, 0, [] as Slice[goast.Stmt])
