@@ -48,6 +48,11 @@ struct egCtx
   callRequirements: Map[String, Slice[DictionaryRequirement]]
   packageCandidates: Map[String, Slice[ImplDictionaryCandidate]]
   goPackages: Slice[typeinference2.GoPackageEntry]
+  # Inferred expression types from type inference, consulted when the code
+  # generator needs concrete type information for an expression node.
+  typedInfo: Option[typeinference2.TypedInfo]
+  # Package-level declaration info for lookup during code generation.
+  pkgInfo: Option[typeinference2.PkgInfo]
   # "Enum.Variant" -> generated Go constructor for zero-argument variants.
   enumValueConstructors: Map[String, String]
   # Variant name -> owning enum. Used to recover generic arguments from an
@@ -71,6 +76,8 @@ struct Generator2
   needsCallAny: Bool
   decls: Slice[ast2.Decl]
   goPackages: Slice[typeinference2.GoPackageEntry]
+  typedInfo: Option[typeinference2.TypedInfo]
+  pkgInfo: Option[typeinference2.PkgInfo]
 end
 
 # AstExprResult 是新 AST 降低管线的表达式结果。Expr 是可嵌入父表达式
@@ -143,6 +150,8 @@ func newEgCtx() -> egCtx
     callRequirements: {},
     packageCandidates: {},
     goPackages: [],
+    typedInfo: None,
+    pkgInfo: None,
     enumValueConstructors: {},
     enumVariantOwners: {},
   }
@@ -170,6 +179,8 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     callRequirements: {},
     packageCandidates: {},
     goPackages: [],
+    typedInfo: None,
+    pkgInfo: None,
     enumValueConstructors: {},
     enumVariantOwners: {},
   }
@@ -197,6 +208,8 @@ func newFuncEgCtx(params: Slice[String], retType: String, tailName: String, para
     callRequirements: {},
     packageCandidates: {},
     goPackages: [],
+    typedInfo: None,
+    pkgInfo: None,
     enumValueConstructors: {},
     enumVariantOwners: {},
   }
@@ -213,10 +226,27 @@ func newGenerator2(pkgName: String, decls: Slice[ast2.Decl], goPackages: Slice[t
     needsCallAny: false,
     decls: decls,
     goPackages: goPackages,
+    typedInfo: None,
+    pkgInfo: None,
   }
 end
 
 # egCtx.child() 创建子上下文（复制当前上下文）
+func newGenerator2WithInfo(pkgName: String, decls: Slice[ast2.Decl], goPackages: Slice[typeinference2.GoPackageEntry], typedInfo: Option[typeinference2.TypedInfo], pkgInfo: Option[typeinference2.PkgInfo]) -> Generator2
+  Generator2 {
+    pkgName: pkgName,
+    importPaths: [],
+    currentFile: "",
+    localSeq: 0,
+    switchVarSeq: 0,
+    needsCallAny: false,
+    decls: decls,
+    goPackages: goPackages,
+    typedInfo: typedInfo,
+    pkgInfo: pkgInfo,
+  }
+end
+
 func ctxChild(ctx: Ref[egCtx]) -> egCtx
   egCtx {
     locals: ctx.locals,
@@ -239,6 +269,8 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     callRequirements: ctx.callRequirements,
     packageCandidates: ctx.packageCandidates,
     goPackages: ctx.goPackages,
+    typedInfo: ctx.typedInfo,
+    pkgInfo: ctx.pkgInfo,
     enumValueConstructors: ctx.enumValueConstructors,
     enumVariantOwners: ctx.enumVariantOwners,
   }

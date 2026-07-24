@@ -58,9 +58,11 @@ end
 func translateImplAstDecl(g: Ref[Generator2], tps: Slice[String], target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], methods: Slice[ast2.ImplMethod]) -> Result[Slice[goast.Decl], String]
   let ctx = Ref.new(newEgCtxWithTypeParams(tps))
   go[()] {
-    code: "{ctx}.goPackages = {packages}"
+    code: "{ctx}.goPackages = {packages}; {ctx}.typedInfo = {typedInfo}; {ctx}.pkgInfo = {pkgInfo}"
     in ctx = ctx
     in packages = g.goPackages
+    in typedInfo = g.typedInfo
+    in pkgInfo = g.pkgInfo
   }
   let stem = implStem(target, iface, ctx.typeParams)
   translateImplAstMethods(stem, tps, methods, ctx.value(), 0, [] as Slice[goast.Decl])
@@ -182,7 +184,7 @@ func translateFuncAstDecl(g: Ref[Generator2], name: String, tps: Slice[String], 
   let initialRetType = returnTypeString(ret, typeParamSet(tps))
   let ctx = Ref.new(newFuncEgCtx(tps, initialRetType, name, params.Len()))
   go[()] {
-    code: "{ctx}.goPackages = {g}.goPackages"
+    code: "{ctx}.goPackages = {g}.goPackages; {ctx}.typedInfo = {g}.typedInfo; {ctx}.pkgInfo = {g}.pkgInfo"
     in ctx = ctx
     in g = g
   }
