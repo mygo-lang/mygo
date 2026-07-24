@@ -276,11 +276,15 @@ end
 func seedEnumValueConstructors(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
   if decls.Len() != 0 then
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    switch decl
-      case EnumDecl(name, _, variants) => seedEnumVariantsForVariants(name, variants, ctx, 0)
-      case _ => ()
-    end
+    seedOneEnumValueConstructor(decl, ctx)
     seedEnumValueConstructors(sliceDrop(decls, 1), ctx)
+  end
+end
+
+func seedOneEnumValueConstructor(decl: ast2.Decl, ctx: Ref[egCtx]) -> ()
+  switch decl
+    case EnumDecl(name, _, variants) => seedEnumVariantsForVariants(name, variants, ctx, 0)
+    case _ => ()
   end
 end
 
@@ -298,22 +302,30 @@ end
 func seedCallDictionaries(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
   if decls.Len() != 0 then
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    switch decl
-      case FuncDecl(name, _, _, _, _, constraints) => ctx.callDictionaries.Set(name, dictionaryMethodNames(decls, constraints))
-      case _ => ()
-    end
+    seedOneCallDictionary(decl, ctx, decls)
     seedCallDictionaries(sliceDrop(decls, 1), ctx)
+  end
+end
+
+func seedOneCallDictionary(decl: ast2.Decl, ctx: Ref[egCtx], allDecls: Slice[ast2.Decl]) -> ()
+  switch decl
+    case FuncDecl(name, _, _, _, _, constraints) => ctx.callDictionaries.Set(name, dictionaryMethodNames(allDecls, constraints))
+    case _ => ()
   end
 end
 
 func seedCallRequirements(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
   if decls.Len() != 0 then
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    switch decl
-      case FuncDecl(name, _, _, _, _, constraints) => ctx.callRequirements.Set(name, requirementsForConstraints(decls, constraints))
-      case _ => ()
-    end
+    seedOneCallRequirement(decl, ctx, decls)
     seedCallRequirements(sliceDrop(decls, 1), ctx)
+  end
+end
+
+func seedOneCallRequirement(decl: ast2.Decl, ctx: Ref[egCtx], allDecls: Slice[ast2.Decl]) -> ()
+  switch decl
+    case FuncDecl(name, _, _, _, _, constraints) => ctx.callRequirements.Set(name, requirementsForConstraints(allDecls, constraints))
+    case _ => ()
   end
 end
 
@@ -346,18 +358,22 @@ end
 func seedPackageDictionaries(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
   if decls.Len() != 0 then
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    switch decl
-      case ImplDecl(tps, target, iface, methods) =>
-        switch iface
-          case Some(interfaceType) =>
-            let stem = implStem(target, Some(interfaceType), typeParamSet(tps))
-            seedImplMethodDictionaries(methods, stem, interfaceTypeName(interfaceType), ctx)
-            seedImplCandidates(methods, stem, interfaceTypeName(interfaceType), interfaceTypeArgs(interfaceType), tps, ctx)
-          case None => ()
-        end
-      case _ => ()
-    end
+    seedOnePackageDictionary(decl, ctx)
     seedPackageDictionaries(sliceDrop(decls, 1), ctx)
+  end
+end
+
+func seedOnePackageDictionary(decl: ast2.Decl, ctx: Ref[egCtx]) -> ()
+  switch decl
+    case ImplDecl(tps, target, iface, methods) =>
+      switch iface
+        case Some(interfaceType) =>
+          let stem = implStem(target, Some(interfaceType), typeParamSet(tps))
+          seedImplMethodDictionaries(methods, stem, interfaceTypeName(interfaceType), ctx)
+          seedImplCandidates(methods, stem, interfaceTypeName(interfaceType), interfaceTypeArgs(interfaceType), tps, ctx)
+        case None => ()
+      end
+    case _ => ()
   end
 end
 

@@ -742,23 +742,19 @@ end
 func translateImplMethodCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Option[Result[AstExprResult, String]]
   switch callee.Kind
     case FieldExpr(base, method) =>
-      switch base.Kind
-        case IdentExpr(name) =>
-          let receiverType = receiverStaticType(base, ctx)
-          switch matchingReceiverCandidate(ctx.packageCandidates.Get("$method$" + method).UnwrapOr([] as Slice[ImplDictionaryCandidate]), receiverType, ctx)
-            case Some(candidate) =>
-              let receiver = translateExprAstExpected(base, ctx, "")
-              let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
-              switch receiver
-                case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
-                case Ok(rv) => switch values
-                  case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
-                  case Ok(v) => Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(goast.Call(goast.Ident(candidate.Helper), v.Exprs.Prepend(rv.Expr)), goast.AppendStmts(rv.Pre, v.Pre))))
-                end
-              end
-            case None => None
+      let receiverType = receiverStaticType(base, ctx)
+      switch matchingReceiverCandidate(ctx.packageCandidates.Get("$method$" + method).UnwrapOr([] as Slice[ImplDictionaryCandidate]), receiverType, ctx)
+        case Some(candidate) =>
+          let receiver = translateExprAstExpected(base, ctx, "")
+          let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
+          switch receiver
+            case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+            case Ok(rv) => switch values
+              case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+              case Ok(v) => Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(goast.Call(goast.Ident(candidate.Helper), v.Exprs.Prepend(rv.Expr)), goast.AppendStmts(rv.Pre, v.Pre))))
+            end
           end
-        case _ => None
+        case None => None
       end
     case _ => None
   end

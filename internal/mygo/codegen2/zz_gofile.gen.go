@@ -79,13 +79,13 @@ func hktTypeParamName(tp string) string {
 	if index_201 < 0 {
 		expr_202 = sanitizeIdent(tp)
 	} else {
-		expr_202 = sanitizeIdent(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(strings.Split(tp, "["), 0), tp))
+		expr_202 = sanitizeIdent(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(strings.Split(tp, "["), 0), tp))
 	}
 	return expr_202
 }
 func sourceToGenName(path string) string {
 	parts_203 := strings.Split(path, "/")
-	var base_204 string = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_203, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_203)-1), path)
+	var base_204 string = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_203, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_203)-1), path)
 	base_204 = strings.TrimSuffix(base_204, ".mygo")
 	if base_204 == "" {
 		base_204 = "mygo"
