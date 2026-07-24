@@ -871,7 +871,7 @@ end
 
 func callSuffix() -> ps.Parser[(Slice[ast2.TypeExpr], Slice[ast2.Expr])]
   ps.PBind(ps.POrElse(typeArgList(), ps.PPure([] as Slice[ast2.TypeExpr])), func(typeArgs: Slice[ast2.TypeExpr]) -> ps.Parser[(Slice[ast2.TypeExpr], Slice[ast2.Expr])]
-    ps.PMap(paren(ps.PSepBy(lazyExpr(), sym(","))), func(args: Slice[ast2.Expr]) -> (Slice[ast2.TypeExpr], Slice[ast2.Expr])
+    ps.PMap(paren(sepByEnd(lazyExpr(), sym(","))), func(args: Slice[ast2.Expr]) -> (Slice[ast2.TypeExpr], Slice[ast2.Expr])
       (typeArgs, args)
     end)
   end)

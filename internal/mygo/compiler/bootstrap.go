@@ -17,9 +17,7 @@ import (
 )
 
 // CompileDirBootstrap compiles one package through the self-hosted pipeline:
-// parser2 -> typeinference2 -> codegen2. It intentionally does not merge the
-// legacy prelude or imported MyGO packages; those capabilities remain on the
-// legacy backend until the bootstrap lane supports package resolution.
+// parser2 -> typeinference2 -> codegen2. The prelude is auto-imported.
 func CompileDirBootstrap(dir string) ([]string, error) {
 	return compileDirBootstrap(dir, map[string]bool{}, map[string][]string{})
 }
@@ -75,6 +73,18 @@ func compileDirBootstrap(dir string, compiling map[string]bool, compiled map[str
 	}
 	if len(inputs) == 0 {
 		return nil, nil
+	}
+	// Auto-merge prelude declarations and their Go FFI imports.
+	workspaceRoot := findGoModuleRoot(absDir)
+	if workspaceRoot == "" {
+		workspaceRoot = absDir
+	}
+	preludeSources, err := loadPreludeSources(workspaceRoot)
+	if err != nil {
+		return nil, err
+	}
+	if preludeSources != nil {
+		sources = append(preludeSources, sources...)
 	}
 	goPackages := collectBootstrapGoPackages(sources)
 	if err := populateBootstrapGoPackageSignatures(&goPackages); err != nil {
@@ -206,6 +216,40 @@ func loadMyGoPackageSignatures(dir, alias, path string) (typeinference2.GoPackag
 		}
 	}
 	return pkg, nil
+}
+
+func loadPreludeSources(workspaceRoot string) ([]typeinference2.PkgDeclSource, error) {
+	preludeDir := filepath.Join(workspaceRoot, "prelude")
+	entries, err := os.ReadDir(preludeDir)
+	if err != nil {
+		return nil, nil
+	}
+	cwd, _ := os.Getwd()
+	var sources []typeinference2.PkgDeclSource
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".mygo") {
+			continue
+		}
+		path := filepath.Join(preludeDir, name)
+		sourcePath := path
+		if cwd != "" {
+			if rel, err := filepath.Rel(cwd, path); err == nil {
+				sourcePath = rel
+			}
+		}
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		parsed := parser2.ParseFileAt(sourcePath, string(raw))
+		file, ok := parsed.(ResultOk[ast2.File, string])
+		if !ok {
+			continue
+		}
+		sources = append(sources, typeinference2.PkgDeclSource{Path: sourcePath, Decls: file.F0.Decls})
+	}
+	return sources, nil
 }
 
 func bootstrapTypeName(typ ast2.TypeExpr) string {

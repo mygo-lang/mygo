@@ -799,7 +799,7 @@ func bodyExprFromBlock(body ast2.Expr) ast2.Expr {
 		var expr_60 ast2.Expr
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_15.F0) == 1 {
 			var expr_59 ast2.Expr
-			var first_55 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_15.F0, 0), ast2.StmtExprStmtCtor(emptyExpr()))
+			var first_55 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_15.F0, 0), ast2.StmtExprStmtCtor(emptyExpr()))
 			var expr_58 ast2.Expr
 			if v_16, ok := first_55.(ast2.StmtExprStmt); ok {
 				var expr_57 ast2.Expr
@@ -914,7 +914,7 @@ func callSuffix() ps.Parser[struct {
 		F0 []ast2.TypeExpr
 		F1 []ast2.Expr
 	}] {
-		return ps.PMap(paren[[]ast2.Expr](ps.PSepBy(lazyExpr(), sym(","))), func(args []ast2.Expr) struct {
+		return ps.PMap(paren[[]ast2.Expr](sepByEnd[ast2.Expr, string](lazyExpr(), sym(","))), func(args []ast2.Expr) struct {
 			F0 []ast2.TypeExpr
 			F1 []ast2.Expr
 		} {
@@ -1042,7 +1042,7 @@ func tupleOrParenExpr() ps.Parser[ast2.Expr] {
 		} else {
 			var expr_76 ps.Parser[ast2.Expr]
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 1 {
-				expr_76 = ps.PPure(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), emptyExpr()))
+				expr_76 = ps.PPure(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), emptyExpr()))
 			} else {
 				expr_76 = ps.PPure(exprKindOnly(ast2.ExprKindTupleExprCtor(items)))
 			}
@@ -1439,7 +1439,7 @@ func defaultImportAlias(path string) string {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_118) == 0 {
 		expr_119 = path
 	} else {
-		expr_119 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_118, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_118)-1), path)
+		expr_119 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_118, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_118)-1), path)
 	}
 	return expr_119
 }

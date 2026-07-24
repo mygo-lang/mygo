@@ -45,7 +45,7 @@ func inferDecl(decl: ast2.Decl, env: Slice[EnvEntry], fields: Slice[FieldEntry],
     case ImportDecl(_, _) => Ok(DeclInfer { Env: env, Fields: fields, State: state })
     case StructDecl(name, tps, structFields) =>
       Ok(DeclInfer {
-        Env: envWithStructFields(envPut(env, name, Scheme { Bound: [], Predicates: [], Body: MonoType.TCon(name, emptyMonoTypes()) }), name, structFields),
+        Env: envWithStructFields(envPut(env, name, Scheme { Bound: [], Predicates: [], Body: MonoType.TCon(name, emptyMonoTypes()) }), name, tps, structFields),
         Fields: fieldsForStruct(name, structFields, fields),
         State: state,
       })
@@ -621,10 +621,18 @@ func inferOrdinaryCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[Env
           # so unifying a polymorphic constructor call cannot create t ~ F[t].
           let afterCallee = nextFreshVarID(cv.Type, argsResult.State.FreshVarID)
           let fresh = nextFreshVarIDInAll(argsResult.Types, afterCallee)
-          let nextState = withFreshID(argsResult.State, fresh + 1)
-          let ret = MonoType.TVar(fresh)
-          let expected = MonoType.TFunc(argsResult.Types, Ref.new(ret))
+          # Ensure the fresh variable does not collide with any ID already
+          # present in the accumulated substitution (argsResult.Subst).  When an
+          # inner function call (e.g. GetMeAState() inside p.Run(GetMeAState()))
+          # binds ID N in its substitution, the outer call must use at least
+          # N+1 for its own fresh variable; otherwise applySubst would replace
+          # the outer's fresh TVar with the inner's bound type.
           let s1 = composeSubst(argsResult.Subst, cv.Subst)
+          let used = maxSubstID(s1)
+          let safeFresh = if fresh <= used then used + 1 else fresh end
+          let nextState = withFreshID(argsResult.State, safeFresh + 1)
+          let ret = MonoType.TVar(safeFresh)
+          let expected = MonoType.TFunc(argsResult.Types, Ref.new(ret))
           let s2 = unify(applySubst(s1, cv.Type), expected, s1)
           switch s2
             case Ok(s) => Ok(InferResult { Type: applySubst(s, ret), Predicates: appendPredicates(cv.Predicates, argsResult.Predicates), Subst: s, State: nextState })
@@ -858,15 +866,52 @@ func inferOrdinaryField(base: ast2.Expr, field: String, env: Slice[EnvEntry], st
             let fresh = MonoType.TVar(v.State.FreshVarID)
             Ok(InferResult { Type: fresh, Predicates: v.Predicates, Subst: v.Subst, State: withFreshID(v.State, v.State.FreshVarID + 1) })
           end
-        case TCon(typeName, _) =>
+        case TCon(typeName, args) =>
           switch envGetField(env, typeName, field)
             case Some(s) =>
               let q = instantiateQualified(s, v.State)
-              Ok(InferResult { Type: q.Body, Predicates: appendPredicates(v.Predicates, q.Predicates), Subst: v.Subst, State: v.State })
+              # Substitute the struct's type arguments into the field type so
+              # that e.g. p.Run on Parser[Int] yields func(State) -> Reply[Int]
+              # rather than func(State) -> Reply[t-1].  When the arg is a bare
+              # TVar with the same ID as the bound param they are already the
+              # same variable and substitution is skipped to avoid infinite
+              # recursion in applySubst.
+              let substed = switchFieldTypeArgs(q.Body, typeName, args, env)
+              Ok(InferResult { Type: substed, Predicates: appendPredicates(v.Predicates, q.Predicates), Subst: v.Subst, State: v.State })
             case None => Err("unknown field " + typeName + "." + field)
           end
         case _ => Err("field access on non-struct type")
       end
+  end
+end
+
+func switchFieldTypeArgs(fieldType: MonoType, typeName: String, args: Slice[MonoType], env: Slice[EnvEntry]) -> MonoType
+  # Read the struct's type param IDs from its env Scheme Bound.
+  let scheme = envGet(env, typeName)
+  switch scheme
+    case Some(s) =>
+      if s.Bound.Len() == 0 || args.Len() == 0 then
+        fieldType
+      else
+        let subst = bindDistinctFieldArgs(s.Bound, args, 0, [] as Slice[SubstEntry])
+        if subst.Len() == 0 then fieldType else applySubst(subst, fieldType) end
+      end
+    case None => fieldType
+  end
+end
+
+func bindDistinctFieldArgs(bound: Slice[Int], args: Slice[MonoType], index: Int, out: Slice[SubstEntry]) -> Slice[SubstEntry]
+  if index >= bound.Len() || index >= args.Len() then
+    out
+  else
+    let id = bound.Get(index).UnwrapOr(0)
+    let typ = args.Get(index).UnwrapOr(MonoType.TUnit)
+    # Skip self-mappings (TVar with same ID as the bound param).
+    let next = switch typ
+      case TVar(other) => if other == id then out else out.Prepend(SubstEntry { ID: id, Type: typ }) end
+      case _ => out.Prepend(SubstEntry { ID: id, Type: typ })
+    end
+    bindDistinctFieldArgs(bound, args, index + 1, next)
   end
 end
 
@@ -990,4 +1035,14 @@ func inferSetLitTail(items: Slice[ast2.Expr], env: Slice[EnvEntry], s0: InferSta
       case Ok(v) => inferSetLitTail(sliceDrop(items, 1), env, v.State, composeSubst(v.Subst, subst), resultType, appendPredicates(predicates, v.Predicates))
     end
   end
+end
+
+func maxSubstID(subst: Slice[SubstEntry]) -> Int
+	if subst.Len() == 0 then
+		0
+	else
+		let head = subst.Get(0).UnwrapOr(SubstEntry { ID: 0, Type: MonoType.TUnit })
+		let rest = maxSubstID(sliceDrop(subst, 1))
+		if head.ID > rest then head.ID else rest end
+	end
 end
