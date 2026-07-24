@@ -253,7 +253,7 @@ func InferPackageWithGoPackages(files []PkgDeclSource, goPkgImports []GoPackageE
 	} else {
 		if v_246, ok := result_633.(ResultErr[PackageInfo, string]); ok {
 			var expr_635 Result[PackageInfo, string]
-			source_634 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, 0), PkgDeclSource{Path: "<input>", Decls: []ast2.Decl([]ast2.Decl{})}).Path
+			source_634 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, 0), PkgDeclSource{Path: "<input>", Decls: []ast2.Decl([]ast2.Decl{})}).Path
 			expr_635 = Err[PackageInfo, string](withExpressionSourceName(v_246.F0, source_634))
 			expr_640 = expr_635
 		} else {
@@ -268,7 +268,7 @@ func resolveEnvironment(solver Solver, env []EnvEntry) []EnvEntry {
 		expr_648 = []EnvEntry{}
 	} else {
 		var expr_647 []EnvEntry
-		entry_641 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: MonoTypeTUnitCtor()}})
+		entry_641 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: MonoTypeTUnitCtor()}})
 		resolved_642 := solverResolve(solver, entry_641.Scheme.Predicates, []SubstEntry{})
 		var expr_645 []Predicate
 		if v_249, ok := resolved_642.(ResultOk[[]Predicate, string]); ok {
@@ -296,7 +296,7 @@ func collectInstances(decls []ast2.Decl) []Instance {
 		expr_661 = []Instance([]Instance{})
 	} else {
 		var expr_660 []Instance
-		decl_649 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		decl_649 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 		rest_650 := collectInstances(sliceDrop[ast2.Decl](decls, 1))
 		var expr_659 []Instance
 		if v_250, ok := decl_649.(ast2.DeclImplDecl); ok {
@@ -382,7 +382,7 @@ func seedGoPackageEnv(goPkgs []GoPackageEntry, env []EnvEntry) []EnvEntry {
 		expr_670 = env
 	} else {
 		var expr_669 []EnvEntry
-		pkg_668 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(goPkgs, 0), GoPackageEntry{Alias: "", Path: "", Funcs: []GoFuncSignature{}})
+		pkg_668 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(goPkgs, 0), GoPackageEntry{Alias: "", Path: "", Funcs: []GoFuncSignature{}})
 		expr_669 = seedGoPackageEnv(sliceDrop[GoPackageEntry](goPkgs, 1), seedGoPackageMembers(pkg_668, envPut(env, pkg_668.Alias, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: MonoTypeTGoPackageCtor(pkg_668.Path)})))
 		expr_670 = expr_669
 	}
@@ -394,7 +394,7 @@ func seedGoPackageMembers(pkg GoPackageEntry, env []EnvEntry) []EnvEntry {
 		expr_673 = env
 	} else {
 		var expr_672 []EnvEntry
-		fn_671 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pkg.Funcs, 0), GoFuncSignature{Name: "", Params: []string{}, Results: []string{}, Variadic: false})
+		fn_671 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pkg.Funcs, 0), GoFuncSignature{Name: "", Params: []string{}, Results: []string{}, Variadic: false})
 		expr_672 = seedGoPackageMembers(GoPackageEntry{Alias: pkg.Alias, Path: pkg.Path, Funcs: sliceDrop[GoFuncSignature](pkg.Funcs, 1)}, envPut(env, pkg.Alias+"."+fn_671.Name, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: goSignatureType(fn_671)}))
 		expr_673 = expr_672
 	}
@@ -409,7 +409,7 @@ func goSignatureType(sig GoFuncSignature) MonoType {
 	} else {
 		var expr_676 MonoType
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(results_675) == 1 {
-			expr_676 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results_675, 0), MonoTypeTUnitCtor())
+			expr_676 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results_675, 0), MonoTypeTUnitCtor())
 		} else {
 			expr_676 = MonoTypeTTupleCtor(results_675)
 		}
@@ -423,7 +423,7 @@ func goSignatureTypes(items []string) []MonoType {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		expr_679 = emptyGoTypes()
 	} else {
-		expr_679 = MygoIN5SliceM7Prepend(goSignatureTypes(sliceDrop[string](items, 1)), goTypeName(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "any")))
+		expr_679 = MygoIN5SliceM7Prepend(goSignatureTypes(sliceDrop[string](items, 1)), goTypeName(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "any")))
 	}
 	return expr_679
 }
@@ -535,7 +535,7 @@ func flattenPkgDecls(files []PkgDeclSource, index int, out []ast2.Decl) []ast2.D
 		expr_699 = out
 	} else {
 		var expr_698 []ast2.Decl
-		f_697 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), PkgDeclSource{Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
+		f_697 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), PkgDeclSource{Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
 		expr_698 = flattenPkgDecls(files, index+1, appendDecls(out, f_697.Decls))
 		expr_699 = expr_698
 	}
@@ -549,7 +549,7 @@ func appendDecls(acc []ast2.Decl, items []ast2.Decl) []ast2.Decl {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		expr_700 = acc
 	} else {
-		expr_700 = appendDecls(MygoIN5SliceM6Append(acc, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.DeclImportDeclCtor("", ""))), sliceDrop[ast2.Decl](items, 1))
+		expr_700 = appendDecls(MygoIN5SliceM6Append(acc, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.DeclImportDeclCtor("", ""))), sliceDrop[ast2.Decl](items, 1))
 	}
 	return expr_700
 }

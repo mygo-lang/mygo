@@ -16,218 +16,218 @@ type TypeArgParts struct {
 }
 
 func goType(t ast2.TypeExpr, typeParams map[string]struct{}) string {
-	var expr_1261 string
+	var expr_1264 string
 	if v_454, ok := t.(ast2.TypeExprNamedType); ok {
-		var expr_1260 string
-		var expr_1259 string
+		var expr_1263 string
+		var expr_1262 string
 		if setContainsString(typeParams, v_454.F0) && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_454.F1) == 0 {
-			expr_1259 = v_454.F0
+			expr_1262 = v_454.F0
 		} else {
-			var expr_1258 string
+			var expr_1261 string
 			if isHKTConstructor(v_454.F0, v_454.F1, typeParams) {
-				expr_1258 = "HKT[" + v_454.F0 + ", " + hktApplicationArgs(v_454.F1, typeParams) + "]"
+				expr_1261 = "HKT[" + v_454.F0 + ", " + hktApplicationArgs(v_454.F1, typeParams) + "]"
 			} else {
-				var expr_1257 string
-				fallback_1256 := genericNamedType(v_454.F0, v_454.F1, typeParams)
-				expr_1257 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM4Fold(goPrimitiveType(v_454.F0), MygoIN6OptionM8UnwrapOr(goSpecialType(v_454.F0, v_454.F1, typeParams), fallback_1256), func(_ string, mapped string) string {
+				var expr_1260 string
+				fallback_1259 := genericNamedType(v_454.F0, v_454.F1, typeParams)
+				expr_1260 = MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM4Fold(goPrimitiveType(v_454.F0), MygoIN6OptionM8UnwrapOr(goSpecialType(v_454.F0, v_454.F1, typeParams), fallback_1259), func(_ string, mapped string) string {
 					return mapped
 				})
-				expr_1258 = expr_1257
+				expr_1261 = expr_1260
 			}
-			expr_1259 = expr_1258
+			expr_1262 = expr_1261
 		}
-		expr_1260 = expr_1259
-		expr_1261 = expr_1260
+		expr_1263 = expr_1262
+		expr_1264 = expr_1263
 	} else {
 		if v_453, ok := t.(ast2.TypeExprFuncType); ok {
-			var expr_1255 string
-			paramStrs_1252 := typeExprsToStrings(v_453.F0, typeParams)
-			retStr_1253 := goType(*v_453.F1, typeParams)
-			var expr_1254 string
-			if retStr_1253 == "" || retStr_1253 == "struct{}" {
-				expr_1254 = "func(" + joinStrings(paramStrs_1252, ", ") + ")"
+			var expr_1258 string
+			paramStrs_1255 := typeExprsToStrings(v_453.F0, typeParams)
+			retStr_1256 := goType(*v_453.F1, typeParams)
+			var expr_1257 string
+			if retStr_1256 == "" || retStr_1256 == "struct{}" {
+				expr_1257 = "func(" + joinStrings(paramStrs_1255, ", ") + ")"
 			} else {
-				expr_1254 = "func(" + joinStrings(paramStrs_1252, ", ") + ") " + retStr_1253
+				expr_1257 = "func(" + joinStrings(paramStrs_1255, ", ") + ") " + retStr_1256
 			}
-			expr_1255 = expr_1254
-			expr_1261 = expr_1255
+			expr_1258 = expr_1257
+			expr_1264 = expr_1258
 		} else {
 			if v_452, ok := t.(ast2.TypeExprTupleType); ok {
-				var expr_1251 string
+				var expr_1254 string
 				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_452.F0) == 0 {
-					expr_1251 = "struct{}"
+					expr_1254 = "struct{}"
 				}
-				parts_1250 := tupleElemsToStrings(v_452.F0, typeParams)
-				expr_1251 = "struct { " + joinStrings(parts_1250, "; ") + " }"
-				expr_1261 = expr_1251
+				parts_1253 := tupleElemsToStrings(v_452.F0, typeParams)
+				expr_1254 = "struct { " + joinStrings(parts_1253, "; ") + " }"
+				expr_1264 = expr_1254
 			} else {
 				if _, ok := t.(ast2.TypeExprUnitType); ok {
-					var expr_1249 string
-					expr_1249 = "struct{}"
-					expr_1261 = expr_1249
+					var expr_1252 string
+					expr_1252 = "struct{}"
+					expr_1264 = expr_1252
 				} else {
 					if v_450, ok := t.(ast2.TypeExprInlineGo); ok {
-						var expr_1248 string
-						var expr_1247 string
+						var expr_1251 string
+						var expr_1250 string
 						if v_450.F1 == "" {
-							var expr_1245 string
-							expr_1245 = goType(*v_450.F0, typeParams)
-							expr_1247 = expr_1245
+							var expr_1248 string
+							expr_1248 = goType(*v_450.F0, typeParams)
+							expr_1250 = expr_1248
 						} else {
-							var expr_1246 string
-							expr_1246 = goType(*v_450.F0, typeParams)
-							expr_1247 = expr_1246
+							var expr_1249 string
+							expr_1249 = goType(*v_450.F0, typeParams)
+							expr_1250 = expr_1249
 						}
-						expr_1248 = expr_1247
-						expr_1261 = expr_1248
+						expr_1251 = expr_1250
+						expr_1264 = expr_1251
 					} else {
 						{
-							var expr_1244 string
-							expr_1244 = "any"
-							expr_1261 = expr_1244
+							var expr_1247 string
+							expr_1247 = "any"
+							expr_1264 = expr_1247
 						}
 					}
 				}
 			}
 		}
 	}
-	return expr_1261
+	return expr_1264
 }
 func hktApplicationArgs(args []ast2.TypeExpr, typeParams map[string]struct{}) string {
-	var expr_1265 string
+	var expr_1268 string
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 {
-		expr_1265 = "any"
+		expr_1268 = "any"
 	} else {
-		var expr_1264 string
+		var expr_1267 string
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 1 {
-			expr_1264 = goType(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.TypeExprUnitTypeCtor()), typeParams)
+			expr_1267 = goType(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.TypeExprUnitTypeCtor()), typeParams)
 		} else {
-			var expr_1263 string
-			first_1262 := goType(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.TypeExprUnitTypeCtor()), typeParams)
-			expr_1263 = "HKT[" + first_1262 + ", " + hktApplicationArgs(sliceDrop[ast2.TypeExpr](args, 1), typeParams) + "]"
-			expr_1264 = expr_1263
+			var expr_1266 string
+			first_1265 := goType(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.TypeExprUnitTypeCtor()), typeParams)
+			expr_1266 = "HKT[" + first_1265 + ", " + hktApplicationArgs(sliceDrop[ast2.TypeExpr](args, 1), typeParams) + "]"
+			expr_1267 = expr_1266
 		}
-		expr_1265 = expr_1264
+		expr_1268 = expr_1267
 	}
-	return expr_1265
+	return expr_1268
 }
 func isHKTConstructor(name string, args []ast2.TypeExpr, typeParams map[string]struct{}) bool {
-	var expr_1266 bool
+	var expr_1269 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 {
-		expr_1266 = false
+		expr_1269 = false
 	} else {
-		expr_1266 = setContainsString(typeParams, name+"#hkt")
-	}
-	return expr_1266
-}
-func genericNamedType(name string, args []ast2.TypeExpr, typeParams map[string]struct{}) string {
-	var expr_1269 string
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 {
-		expr_1269 = name
-	} else {
-		var expr_1268 string
-		argStrs_1267 := typeArgsToStrings(args, typeParams)
-		expr_1268 = name + "[" + joinStrings(argStrs_1267, ", ") + "]"
-		expr_1269 = expr_1268
+		expr_1269 = setContainsString(typeParams, name+"#hkt")
 	}
 	return expr_1269
 }
+func genericNamedType(name string, args []ast2.TypeExpr, typeParams map[string]struct{}) string {
+	var expr_1272 string
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 {
+		expr_1272 = name
+	} else {
+		var expr_1271 string
+		argStrs_1270 := typeArgsToStrings(args, typeParams)
+		expr_1271 = name + "[" + joinStrings(argStrs_1270, ", ") + "]"
+		expr_1272 = expr_1271
+	}
+	return expr_1272
+}
 func goPrimitiveType(name string) Option[string] {
-	var expr_1289 Option[string]
+	var expr_1292 Option[string]
 	if name == "Int" {
-		var expr_1288 Option[string]
-		expr_1288 = Some[string]("int")
-		expr_1289 = expr_1288
+		var expr_1291 Option[string]
+		expr_1291 = Some[string]("int")
+		expr_1292 = expr_1291
 	} else {
 		if name == "Int8" {
-			var expr_1287 Option[string]
-			expr_1287 = Some[string]("int8")
-			expr_1289 = expr_1287
+			var expr_1290 Option[string]
+			expr_1290 = Some[string]("int8")
+			expr_1292 = expr_1290
 		} else {
 			if name == "Int16" {
-				var expr_1286 Option[string]
-				expr_1286 = Some[string]("int16")
-				expr_1289 = expr_1286
+				var expr_1289 Option[string]
+				expr_1289 = Some[string]("int16")
+				expr_1292 = expr_1289
 			} else {
 				if name == "Int32" {
-					var expr_1285 Option[string]
-					expr_1285 = Some[string]("int32")
-					expr_1289 = expr_1285
+					var expr_1288 Option[string]
+					expr_1288 = Some[string]("int32")
+					expr_1292 = expr_1288
 				} else {
 					if name == "Int64" {
-						var expr_1284 Option[string]
-						expr_1284 = Some[string]("int64")
-						expr_1289 = expr_1284
+						var expr_1287 Option[string]
+						expr_1287 = Some[string]("int64")
+						expr_1292 = expr_1287
 					} else {
 						if name == "UInt" {
-							var expr_1283 Option[string]
-							expr_1283 = Some[string]("uint")
-							expr_1289 = expr_1283
+							var expr_1286 Option[string]
+							expr_1286 = Some[string]("uint")
+							expr_1292 = expr_1286
 						} else {
 							if name == "UInt8" {
-								var expr_1282 Option[string]
-								expr_1282 = Some[string]("uint8")
-								expr_1289 = expr_1282
+								var expr_1285 Option[string]
+								expr_1285 = Some[string]("uint8")
+								expr_1292 = expr_1285
 							} else {
 								if name == "UInt16" {
-									var expr_1281 Option[string]
-									expr_1281 = Some[string]("uint16")
-									expr_1289 = expr_1281
+									var expr_1284 Option[string]
+									expr_1284 = Some[string]("uint16")
+									expr_1292 = expr_1284
 								} else {
 									if name == "UInt32" {
-										var expr_1280 Option[string]
-										expr_1280 = Some[string]("uint32")
-										expr_1289 = expr_1280
+										var expr_1283 Option[string]
+										expr_1283 = Some[string]("uint32")
+										expr_1292 = expr_1283
 									} else {
 										if name == "UInt64" {
-											var expr_1279 Option[string]
-											expr_1279 = Some[string]("uint64")
-											expr_1289 = expr_1279
+											var expr_1282 Option[string]
+											expr_1282 = Some[string]("uint64")
+											expr_1292 = expr_1282
 										} else {
 											if name == "Byte" {
-												var expr_1278 Option[string]
-												expr_1278 = Some[string]("byte")
-												expr_1289 = expr_1278
+												var expr_1281 Option[string]
+												expr_1281 = Some[string]("byte")
+												expr_1292 = expr_1281
 											} else {
 												if name == "Rune" {
-													var expr_1277 Option[string]
-													expr_1277 = Some[string]("rune")
-													expr_1289 = expr_1277
+													var expr_1280 Option[string]
+													expr_1280 = Some[string]("rune")
+													expr_1292 = expr_1280
 												} else {
 													if name == "Float32" {
-														var expr_1276 Option[string]
-														expr_1276 = Some[string]("float32")
-														expr_1289 = expr_1276
+														var expr_1279 Option[string]
+														expr_1279 = Some[string]("float32")
+														expr_1292 = expr_1279
 													} else {
 														if name == "Float64" {
-															var expr_1275 Option[string]
-															expr_1275 = Some[string]("float64")
-															expr_1289 = expr_1275
+															var expr_1278 Option[string]
+															expr_1278 = Some[string]("float64")
+															expr_1292 = expr_1278
 														} else {
 															if name == "String" {
-																var expr_1274 Option[string]
-																expr_1274 = Some[string]("string")
-																expr_1289 = expr_1274
+																var expr_1277 Option[string]
+																expr_1277 = Some[string]("string")
+																expr_1292 = expr_1277
 															} else {
 																if name == "Bool" {
-																	var expr_1273 Option[string]
-																	expr_1273 = Some[string]("bool")
-																	expr_1289 = expr_1273
+																	var expr_1276 Option[string]
+																	expr_1276 = Some[string]("bool")
+																	expr_1292 = expr_1276
 																} else {
 																	if name == "Any" {
-																		var expr_1272 Option[string]
-																		expr_1272 = Some[string]("any")
-																		expr_1289 = expr_1272
+																		var expr_1275 Option[string]
+																		expr_1275 = Some[string]("any")
+																		expr_1292 = expr_1275
 																	} else {
 																		if name == "Unit" {
-																			var expr_1271 Option[string]
-																			expr_1271 = Some[string]("struct{}")
-																			expr_1289 = expr_1271
+																			var expr_1274 Option[string]
+																			expr_1274 = Some[string]("struct{}")
+																			expr_1292 = expr_1274
 																		} else {
 																			{
-																				var expr_1270 Option[string]
-																				expr_1270 = None[string]()
-																				expr_1289 = expr_1270
+																				var expr_1273 Option[string]
+																				expr_1273 = None[string]()
+																				expr_1292 = expr_1273
 																			}
 																		}
 																	}
@@ -247,49 +247,49 @@ func goPrimitiveType(name string) Option[string] {
 			}
 		}
 	}
-	return expr_1289
+	return expr_1292
 }
 func goSpecialType(name string, args []ast2.TypeExpr, typeParams map[string]struct{}) Option[string] {
-	var expr_1298 Option[string]
+	var expr_1301 Option[string]
 	if name == "Ref" {
-		var expr_1297 Option[string]
-		expr_1297 = unarySpecialType(args, typeParams, "*")
-		expr_1298 = expr_1297
+		var expr_1300 Option[string]
+		expr_1300 = unarySpecialType(args, typeParams, "*")
+		expr_1301 = expr_1300
 	} else {
 		if name == "Slice" {
-			var expr_1296 Option[string]
-			expr_1296 = unarySpecialType(args, typeParams, "[]")
-			expr_1298 = expr_1296
+			var expr_1299 Option[string]
+			expr_1299 = unarySpecialType(args, typeParams, "[]")
+			expr_1301 = expr_1299
 		} else {
 			if name == "Map" {
-				var expr_1295 Option[string]
-				expr_1295 = mapSpecialType(args, typeParams)
-				expr_1298 = expr_1295
+				var expr_1298 Option[string]
+				expr_1298 = mapSpecialType(args, typeParams)
+				expr_1301 = expr_1298
 			} else {
 				if name == "Set" {
-					var expr_1294 Option[string]
-					expr_1294 = setSpecialType(args, typeParams)
-					expr_1298 = expr_1294
+					var expr_1297 Option[string]
+					expr_1297 = setSpecialType(args, typeParams)
+					expr_1301 = expr_1297
 				} else {
 					if name == "Chan" {
-						var expr_1293 Option[string]
-						expr_1293 = unarySpecialType(args, typeParams, "chan ")
-						expr_1298 = expr_1293
+						var expr_1296 Option[string]
+						expr_1296 = unarySpecialType(args, typeParams, "chan ")
+						expr_1301 = expr_1296
 					} else {
 						if name == "SendChan" {
-							var expr_1292 Option[string]
-							expr_1292 = unarySpecialType(args, typeParams, "chan<- ")
-							expr_1298 = expr_1292
+							var expr_1295 Option[string]
+							expr_1295 = unarySpecialType(args, typeParams, "chan<- ")
+							expr_1301 = expr_1295
 						} else {
 							if name == "RecvChan" {
-								var expr_1291 Option[string]
-								expr_1291 = unarySpecialType(args, typeParams, "<-chan ")
-								expr_1298 = expr_1291
+								var expr_1294 Option[string]
+								expr_1294 = unarySpecialType(args, typeParams, "<-chan ")
+								expr_1301 = expr_1294
 							} else {
 								{
-									var expr_1290 Option[string]
-									expr_1290 = None[string]()
-									expr_1298 = expr_1290
+									var expr_1293 Option[string]
+									expr_1293 = None[string]()
+									expr_1301 = expr_1293
 								}
 							}
 						}
@@ -298,34 +298,34 @@ func goSpecialType(name string, args []ast2.TypeExpr, typeParams map[string]stru
 			}
 		}
 	}
-	return expr_1298
+	return expr_1301
 }
 func unarySpecialType(args []ast2.TypeExpr, typeParams map[string]struct{}, prefix string) Option[string] {
-	var expr_1299 Option[string]
+	var expr_1302 Option[string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 1 {
-		expr_1299 = Some[string](prefix + goType(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.TypeExprUnitTypeCtor()), typeParams))
+		expr_1302 = Some[string](prefix + goType(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.TypeExprUnitTypeCtor()), typeParams))
 	} else {
-		expr_1299 = None[string]()
+		expr_1302 = None[string]()
 	}
-	return expr_1299
+	return expr_1302
 }
 func mapSpecialType(args []ast2.TypeExpr, typeParams map[string]struct{}) Option[string] {
-	var expr_1300 Option[string]
+	var expr_1303 Option[string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 2 {
-		expr_1300 = Some[string]("map[" + goType(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.TypeExprUnitTypeCtor()), typeParams) + "]" + goType(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 1), ast2.TypeExprUnitTypeCtor()), typeParams))
+		expr_1303 = Some[string]("map[" + goType(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.TypeExprUnitTypeCtor()), typeParams) + "]" + goType(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 1), ast2.TypeExprUnitTypeCtor()), typeParams))
 	} else {
-		expr_1300 = None[string]()
+		expr_1303 = None[string]()
 	}
-	return expr_1300
+	return expr_1303
 }
 func setSpecialType(args []ast2.TypeExpr, typeParams map[string]struct{}) Option[string] {
-	var expr_1301 Option[string]
+	var expr_1304 Option[string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 1 {
-		expr_1301 = Some[string]("map[" + goType(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.TypeExprUnitTypeCtor()), typeParams) + "]struct{}")
+		expr_1304 = Some[string]("map[" + goType(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.TypeExprUnitTypeCtor()), typeParams) + "]struct{}")
 	} else {
-		expr_1301 = None[string]()
+		expr_1304 = None[string]()
 	}
-	return expr_1301
+	return expr_1304
 }
 func goReturnType(t ast2.TypeExpr, typeParams map[string]struct{}) string {
 	if isUnitType(t) {
@@ -334,59 +334,59 @@ func goReturnType(t ast2.TypeExpr, typeParams map[string]struct{}) string {
 	return goType(t, typeParams)
 }
 func goReturnTypes(t ast2.TypeExpr, typeParams map[string]struct{}) []string {
-	var expr_1306 []string
+	var expr_1309 []string
 	if v_455, ok := t.(ast2.TypeExprTupleType); ok {
-		var expr_1305 []string
-		expr_1305 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_455.F0, func(item ast2.TypeExpr) string {
+		var expr_1308 []string
+		expr_1308 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_455.F0, func(item ast2.TypeExpr) string {
 			return goType(item, typeParams)
 		})
-		expr_1306 = expr_1305
+		expr_1309 = expr_1308
 	} else {
 		{
-			var expr_1304 []string
-			rt_1302 := goReturnType(t, typeParams)
-			var expr_1303 []string
-			if rt_1302 != "" {
-				expr_1303 = []string{rt_1302}
+			var expr_1307 []string
+			rt_1305 := goReturnType(t, typeParams)
+			var expr_1306 []string
+			if rt_1305 != "" {
+				expr_1306 = []string{rt_1305}
 			} else {
-				expr_1303 = []string([]string{})
+				expr_1306 = []string([]string{})
 			}
-			expr_1304 = expr_1303
-			expr_1306 = expr_1304
+			expr_1307 = expr_1306
+			expr_1309 = expr_1307
 		}
 	}
-	return expr_1306
+	return expr_1309
 }
 func isUnitType(t ast2.TypeExpr) bool {
-	var expr_1311 bool
+	var expr_1314 bool
 	if _, ok := t.(ast2.TypeExprUnitType); ok {
-		var expr_1310 bool
-		expr_1310 = true
-		expr_1311 = expr_1310
+		var expr_1313 bool
+		expr_1313 = true
+		expr_1314 = expr_1313
 	} else {
 		if v_457, ok := t.(ast2.TypeExprTupleType); ok {
-			var expr_1309 bool
-			expr_1309 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_457.F0) == 0
-			expr_1311 = expr_1309
+			var expr_1312 bool
+			expr_1312 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_457.F0) == 0
+			expr_1314 = expr_1312
 		} else {
 			if v_456, ok := t.(ast2.TypeExprNamedType); ok {
-				var expr_1308 bool
-				expr_1308 = v_456.F0 == "Unit" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_456.F1) == 0
-				expr_1311 = expr_1308
+				var expr_1311 bool
+				expr_1311 = v_456.F0 == "Unit" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_456.F1) == 0
+				expr_1314 = expr_1311
 			} else {
 				{
-					var expr_1307 bool
-					expr_1307 = false
-					expr_1311 = expr_1307
+					var expr_1310 bool
+					expr_1310 = false
+					expr_1314 = expr_1310
 				}
 			}
 		}
 	}
-	return expr_1311
+	return expr_1314
 }
 func isUnitGoType(typ string) bool {
-	trimmed_1312 := strings.TrimSpace(typ)
-	return trimmed_1312 == "Unit" || trimmed_1312 == "struct{}" || trimmed_1312 == "()"
+	trimmed_1315 := strings.TrimSpace(typ)
+	return trimmed_1315 == "Unit" || trimmed_1315 == "struct{}" || trimmed_1315 == "()"
 }
 func setContainsString(items map[string]struct{}, target string) bool {
 	return MygoIT11IEnumerableFN14SetIEnumerableGN1AEGN3SetGN1AEN1AEM4Fold(items, false, func(found bool, current string) bool {
@@ -396,17 +396,17 @@ func setContainsString(items map[string]struct{}, target string) bool {
 func typeParamSet(params []string) map[string]struct{} {
 	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(params, MygoIN3SetM3New[string](), func(s map[string]struct{}, p string) map[string]struct{} {
 		MygoIN3SetM3Add(s, p)
-		var expr_1313 map[string]struct{}
+		var expr_1316 map[string]struct{}
 		if strings.HasPrefix(p, hktTypeParamName(p)+"[") {
-			expr_1313 = MygoIN3SetM3Add(s, hktTypeParamName(p)+"#hkt")
+			expr_1316 = MygoIN3SetM3Add(s, hktTypeParamName(p)+"#hkt")
 		} else {
-			expr_1313 = s
+			expr_1316 = s
 		}
-		return expr_1313
+		return expr_1316
 	})
 }
 func sanitizeIdent(s string) string {
-	var result_1314 string = func() string {
+	var result_1317 string = func() string {
 		var b strings.Builder
 		for i, r := range s {
 			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' {
@@ -420,145 +420,145 @@ func sanitizeIdent(s string) string {
 		}
 		return b.String()
 	}()
-	if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(result_1314) == 0 {
+	if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(result_1317) == 0 {
 		return "_"
 	}
-	if isGoKeyword(result_1314) {
-		return result_1314 + "_"
+	if isGoKeyword(result_1317) {
+		return result_1317 + "_"
 	}
-	return result_1314
+	return result_1317
 }
 func isGoKeyword(s string) bool {
-	var expr_1341 bool
+	var expr_1344 bool
 	if s == "break" {
-		var expr_1340 bool
-		expr_1340 = true
-		expr_1341 = expr_1340
+		var expr_1343 bool
+		expr_1343 = true
+		expr_1344 = expr_1343
 	} else {
 		if s == "case" {
-			var expr_1339 bool
-			expr_1339 = true
-			expr_1341 = expr_1339
+			var expr_1342 bool
+			expr_1342 = true
+			expr_1344 = expr_1342
 		} else {
 			if s == "chan" {
-				var expr_1338 bool
-				expr_1338 = true
-				expr_1341 = expr_1338
+				var expr_1341 bool
+				expr_1341 = true
+				expr_1344 = expr_1341
 			} else {
 				if s == "const" {
-					var expr_1337 bool
-					expr_1337 = true
-					expr_1341 = expr_1337
+					var expr_1340 bool
+					expr_1340 = true
+					expr_1344 = expr_1340
 				} else {
 					if s == "continue" {
-						var expr_1336 bool
-						expr_1336 = true
-						expr_1341 = expr_1336
+						var expr_1339 bool
+						expr_1339 = true
+						expr_1344 = expr_1339
 					} else {
 						if s == "default" {
-							var expr_1335 bool
-							expr_1335 = true
-							expr_1341 = expr_1335
+							var expr_1338 bool
+							expr_1338 = true
+							expr_1344 = expr_1338
 						} else {
 							if s == "defer" {
-								var expr_1334 bool
-								expr_1334 = true
-								expr_1341 = expr_1334
+								var expr_1337 bool
+								expr_1337 = true
+								expr_1344 = expr_1337
 							} else {
 								if s == "else" {
-									var expr_1333 bool
-									expr_1333 = true
-									expr_1341 = expr_1333
+									var expr_1336 bool
+									expr_1336 = true
+									expr_1344 = expr_1336
 								} else {
 									if s == "fallthrough" {
-										var expr_1332 bool
-										expr_1332 = true
-										expr_1341 = expr_1332
+										var expr_1335 bool
+										expr_1335 = true
+										expr_1344 = expr_1335
 									} else {
 										if s == "for" {
-											var expr_1331 bool
-											expr_1331 = true
-											expr_1341 = expr_1331
+											var expr_1334 bool
+											expr_1334 = true
+											expr_1344 = expr_1334
 										} else {
 											if s == "func" {
-												var expr_1330 bool
-												expr_1330 = true
-												expr_1341 = expr_1330
+												var expr_1333 bool
+												expr_1333 = true
+												expr_1344 = expr_1333
 											} else {
 												if s == "go" {
-													var expr_1329 bool
-													expr_1329 = true
-													expr_1341 = expr_1329
+													var expr_1332 bool
+													expr_1332 = true
+													expr_1344 = expr_1332
 												} else {
 													if s == "goto" {
-														var expr_1328 bool
-														expr_1328 = true
-														expr_1341 = expr_1328
+														var expr_1331 bool
+														expr_1331 = true
+														expr_1344 = expr_1331
 													} else {
 														if s == "if" {
-															var expr_1327 bool
-															expr_1327 = true
-															expr_1341 = expr_1327
+															var expr_1330 bool
+															expr_1330 = true
+															expr_1344 = expr_1330
 														} else {
 															if s == "import" {
-																var expr_1326 bool
-																expr_1326 = true
-																expr_1341 = expr_1326
+																var expr_1329 bool
+																expr_1329 = true
+																expr_1344 = expr_1329
 															} else {
 																if s == "interface" {
-																	var expr_1325 bool
-																	expr_1325 = true
-																	expr_1341 = expr_1325
+																	var expr_1328 bool
+																	expr_1328 = true
+																	expr_1344 = expr_1328
 																} else {
 																	if s == "map" {
-																		var expr_1324 bool
-																		expr_1324 = true
-																		expr_1341 = expr_1324
+																		var expr_1327 bool
+																		expr_1327 = true
+																		expr_1344 = expr_1327
 																	} else {
 																		if s == "package" {
-																			var expr_1323 bool
-																			expr_1323 = true
-																			expr_1341 = expr_1323
+																			var expr_1326 bool
+																			expr_1326 = true
+																			expr_1344 = expr_1326
 																		} else {
 																			if s == "range" {
-																				var expr_1322 bool
-																				expr_1322 = true
-																				expr_1341 = expr_1322
+																				var expr_1325 bool
+																				expr_1325 = true
+																				expr_1344 = expr_1325
 																			} else {
 																				if s == "return" {
-																					var expr_1321 bool
-																					expr_1321 = true
-																					expr_1341 = expr_1321
+																					var expr_1324 bool
+																					expr_1324 = true
+																					expr_1344 = expr_1324
 																				} else {
 																					if s == "select" {
-																						var expr_1320 bool
-																						expr_1320 = true
-																						expr_1341 = expr_1320
+																						var expr_1323 bool
+																						expr_1323 = true
+																						expr_1344 = expr_1323
 																					} else {
 																						if s == "struct" {
-																							var expr_1319 bool
-																							expr_1319 = true
-																							expr_1341 = expr_1319
+																							var expr_1322 bool
+																							expr_1322 = true
+																							expr_1344 = expr_1322
 																						} else {
 																							if s == "switch" {
-																								var expr_1318 bool
-																								expr_1318 = true
-																								expr_1341 = expr_1318
+																								var expr_1321 bool
+																								expr_1321 = true
+																								expr_1344 = expr_1321
 																							} else {
 																								if s == "type" {
-																									var expr_1317 bool
-																									expr_1317 = true
-																									expr_1341 = expr_1317
+																									var expr_1320 bool
+																									expr_1320 = true
+																									expr_1344 = expr_1320
 																								} else {
 																									if s == "var" {
-																										var expr_1316 bool
-																										expr_1316 = true
-																										expr_1341 = expr_1316
+																										var expr_1319 bool
+																										expr_1319 = true
+																										expr_1344 = expr_1319
 																									} else {
 																										{
-																											var expr_1315 bool
-																											expr_1315 = false
-																											expr_1341 = expr_1315
+																											var expr_1318 bool
+																											expr_1318 = false
+																											expr_1344 = expr_1318
 																										}
 																									}
 																								}
@@ -585,22 +585,22 @@ func isGoKeyword(s string) bool {
 			}
 		}
 	}
-	return expr_1341
+	return expr_1344
 }
 func inherentReceiverName(t ast2.TypeExpr) string {
-	var expr_1344 string
+	var expr_1347 string
 	if v_459, ok := t.(ast2.TypeExprNamedType); ok {
-		var expr_1343 string
-		expr_1343 = v_459.F0
-		expr_1344 = expr_1343
+		var expr_1346 string
+		expr_1346 = v_459.F0
+		expr_1347 = expr_1346
 	} else {
 		{
-			var expr_1342 string
-			expr_1342 = ""
-			expr_1344 = expr_1342
+			var expr_1345 string
+			expr_1345 = ""
+			expr_1347 = expr_1345
 		}
 	}
-	return expr_1344
+	return expr_1347
 }
 func inherentMethodName(receiverName string, methodName string) string {
 	return implMethodSymbol(mangleInherentImplSymbol(receiverName), methodName)
@@ -624,8 +624,8 @@ func variantNameForEnum(enumName string, variantName string) string {
 	return enumName + variantName
 }
 func helperFuncName(method string, typeKey string) string {
-	cleaned_1345 := strings.TrimPrefix(typeKey, "_")
-	return implMethodSymbol(sanitizeIdent(cleaned_1345), method)
+	cleaned_1348 := strings.TrimPrefix(typeKey, "_")
+	return implMethodSymbol(sanitizeIdent(cleaned_1348), method)
 }
 func implMethodSymbol(implSymbol string, methodName string) string {
 	return sanitizeIdent(implSymbol + "M" + mangleComponent(methodName))
@@ -634,150 +634,150 @@ func mangleInherentImplSymbol(receiverName string) string {
 	return "MygoIN" + mangleComponent(receiverName)
 }
 func mangleInterfaceImplSymbol(ifaceName string, implType ast2.TypeExpr, args []ast2.TypeExpr) string {
-	out_1346 := "MygoIT" + mangleComponent(ifaceName) + "F" + mangleTypeExpr(implType) + "G"
-	var i_1347 int = 0
-	for i_1347 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) {
-		out_1346 = out_1346 + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, i_1347), ast2.TypeExprUnitTypeCtor()))
-		i_1347 = i_1347 + 1
+	out_1349 := "MygoIT" + mangleComponent(ifaceName) + "F" + mangleTypeExpr(implType) + "G"
+	var i_1350 int = 0
+	for i_1350 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) {
+		out_1349 = out_1349 + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, i_1350), ast2.TypeExprUnitTypeCtor()))
+		i_1350 = i_1350 + 1
 	}
-	return sanitizeIdent(out_1346 + "E")
+	return sanitizeIdent(out_1349 + "E")
 }
 func mangleComponent(s string) string {
-	clean_1348 := sanitizeIdent(s)
-	return strconv.Itoa(MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(clean_1348)) + clean_1348
+	clean_1351 := sanitizeIdent(s)
+	return strconv.Itoa(MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(clean_1351)) + clean_1351
 }
 func mangleTypeExpr(t ast2.TypeExpr) string {
-	var expr_1359 string
+	var expr_1362 string
 	if v_463, ok := t.(ast2.TypeExprNamedType); ok {
-		var expr_1358 string
-		out_1356 := "N" + mangleComponent(canonicalMyGoTypeName(v_463.F0))
+		var expr_1361 string
+		out_1359 := "N" + mangleComponent(canonicalMyGoTypeName(v_463.F0))
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_463.F1) > 0 {
-			out_1356 = out_1356 + "G"
-			var i_1357 int = 0
-			for i_1357 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_463.F1) {
-				out_1356 = out_1356 + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_463.F1, i_1357), ast2.TypeExprUnitTypeCtor()))
-				i_1357 = i_1357 + 1
+			out_1359 = out_1359 + "G"
+			var i_1360 int = 0
+			for i_1360 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_463.F1) {
+				out_1359 = out_1359 + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_463.F1, i_1360), ast2.TypeExprUnitTypeCtor()))
+				i_1360 = i_1360 + 1
 			}
-			out_1356 = out_1356 + "E"
+			out_1359 = out_1359 + "E"
 		}
-		expr_1358 = out_1356
-		expr_1359 = expr_1358
+		expr_1361 = out_1359
+		expr_1362 = expr_1361
 	} else {
 		if v_462, ok := t.(ast2.TypeExprFuncType); ok {
-			var expr_1355 string
-			out_1353 := "F"
-			var i_1354 int = 0
-			for i_1354 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_462.F0) {
-				out_1353 = out_1353 + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_462.F0, i_1354), ast2.TypeExprUnitTypeCtor()))
-				i_1354 = i_1354 + 1
+			var expr_1358 string
+			out_1356 := "F"
+			var i_1357 int = 0
+			for i_1357 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_462.F0) {
+				out_1356 = out_1356 + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_462.F0, i_1357), ast2.TypeExprUnitTypeCtor()))
+				i_1357 = i_1357 + 1
 			}
-			expr_1355 = out_1353 + "R" + mangleTypeExpr(*v_462.F1) + "E"
-			expr_1359 = expr_1355
+			expr_1358 = out_1356 + "R" + mangleTypeExpr(*v_462.F1) + "E"
+			expr_1362 = expr_1358
 		} else {
 			if v_461, ok := t.(ast2.TypeExprTupleType); ok {
-				var expr_1352 string
-				out_1350 := "U"
-				var i_1351 int = 0
-				for i_1351 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_461.F0) {
-					out_1350 = out_1350 + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_461.F0, i_1351), ast2.TypeExprUnitTypeCtor()))
-					i_1351 = i_1351 + 1
+				var expr_1355 string
+				out_1353 := "U"
+				var i_1354 int = 0
+				for i_1354 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_461.F0) {
+					out_1353 = out_1353 + mangleTypeExpr(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_461.F0, i_1354), ast2.TypeExprUnitTypeCtor()))
+					i_1354 = i_1354 + 1
 				}
-				expr_1352 = out_1350 + "E"
-				expr_1359 = expr_1352
+				expr_1355 = out_1353 + "E"
+				expr_1362 = expr_1355
 			} else {
 				if _, ok := t.(ast2.TypeExprUnitType); ok {
-					var expr_1349 string
-					expr_1349 = "X" + mangleComponent("Unit")
-					expr_1359 = expr_1349
+					var expr_1352 string
+					expr_1352 = "X" + mangleComponent("Unit")
+					expr_1362 = expr_1352
 				} else {
 					panic("unreachable")
 				}
 			}
 		}
 	}
-	return expr_1359
+	return expr_1362
 }
 func canonicalMyGoTypeName(name string) string {
-	var expr_1376 string
+	var expr_1379 string
 	if name == "int" {
-		var expr_1375 string
-		expr_1375 = "Int"
-		expr_1376 = expr_1375
+		var expr_1378 string
+		expr_1378 = "Int"
+		expr_1379 = expr_1378
 	} else {
 		if name == "int8" {
-			var expr_1374 string
-			expr_1374 = "Int8"
-			expr_1376 = expr_1374
+			var expr_1377 string
+			expr_1377 = "Int8"
+			expr_1379 = expr_1377
 		} else {
 			if name == "uint8" {
-				var expr_1373 string
-				expr_1373 = "UInt8"
-				expr_1376 = expr_1373
+				var expr_1376 string
+				expr_1376 = "UInt8"
+				expr_1379 = expr_1376
 			} else {
 				if name == "int16" {
-					var expr_1372 string
-					expr_1372 = "Int16"
-					expr_1376 = expr_1372
+					var expr_1375 string
+					expr_1375 = "Int16"
+					expr_1379 = expr_1375
 				} else {
 					if name == "uint16" {
-						var expr_1371 string
-						expr_1371 = "UInt16"
-						expr_1376 = expr_1371
+						var expr_1374 string
+						expr_1374 = "UInt16"
+						expr_1379 = expr_1374
 					} else {
 						if name == "int32" {
-							var expr_1370 string
-							expr_1370 = "Int32"
-							expr_1376 = expr_1370
+							var expr_1373 string
+							expr_1373 = "Int32"
+							expr_1379 = expr_1373
 						} else {
 							if name == "uint32" {
-								var expr_1369 string
-								expr_1369 = "UInt32"
-								expr_1376 = expr_1369
+								var expr_1372 string
+								expr_1372 = "UInt32"
+								expr_1379 = expr_1372
 							} else {
 								if name == "int64" {
-									var expr_1368 string
-									expr_1368 = "Int64"
-									expr_1376 = expr_1368
+									var expr_1371 string
+									expr_1371 = "Int64"
+									expr_1379 = expr_1371
 								} else {
 									if name == "uint" {
-										var expr_1367 string
-										expr_1367 = "UInt"
-										expr_1376 = expr_1367
+										var expr_1370 string
+										expr_1370 = "UInt"
+										expr_1379 = expr_1370
 									} else {
 										if name == "uint64" {
-											var expr_1366 string
-											expr_1366 = "UInt64"
-											expr_1376 = expr_1366
+											var expr_1369 string
+											expr_1369 = "UInt64"
+											expr_1379 = expr_1369
 										} else {
 											if name == "float32" {
-												var expr_1365 string
-												expr_1365 = "Float32"
-												expr_1376 = expr_1365
+												var expr_1368 string
+												expr_1368 = "Float32"
+												expr_1379 = expr_1368
 											} else {
 												if name == "float64" {
-													var expr_1364 string
-													expr_1364 = "Float64"
-													expr_1376 = expr_1364
+													var expr_1367 string
+													expr_1367 = "Float64"
+													expr_1379 = expr_1367
 												} else {
 													if name == "string" {
-														var expr_1363 string
-														expr_1363 = "String"
-														expr_1376 = expr_1363
+														var expr_1366 string
+														expr_1366 = "String"
+														expr_1379 = expr_1366
 													} else {
 														if name == "bool" {
-															var expr_1362 string
-															expr_1362 = "Bool"
-															expr_1376 = expr_1362
+															var expr_1365 string
+															expr_1365 = "Bool"
+															expr_1379 = expr_1365
 														} else {
 															if name == "any" {
-																var expr_1361 string
-																expr_1361 = "Any"
-																expr_1376 = expr_1361
+																var expr_1364 string
+																expr_1364 = "Any"
+																expr_1379 = expr_1364
 															} else {
 																{
-																	var expr_1360 string
-																	expr_1360 = name
-																	expr_1376 = expr_1360
+																	var expr_1363 string
+																	expr_1363 = name
+																	expr_1379 = expr_1363
 																}
 															}
 														}
@@ -794,19 +794,19 @@ func canonicalMyGoTypeName(name string) string {
 			}
 		}
 	}
-	return expr_1376
+	return expr_1379
 }
 func typeKeyFromType(typ string) string {
-	step1_1377 := strings.ReplaceAll(typ, "[", "_")
-	step2_1378 := strings.ReplaceAll(step1_1377, "]", "")
-	step3_1379 := strings.ReplaceAll(step2_1378, ", ", "_")
-	step4_1380 := strings.ReplaceAll(step3_1379, ",", "_")
-	step5_1381 := strings.ReplaceAll(step4_1380, " ", "")
-	step6_1382 := strings.ReplaceAll(step5_1381, "*", "Ptr")
-	step7_1383 := strings.ReplaceAll(step6_1382, ".", "_")
-	step8_1384 := strings.ReplaceAll(step7_1383, "func(", "Func_")
-	step9_1385 := strings.ReplaceAll(step8_1384, ")", "")
-	return sanitizeIdent(strings.ToLower(step9_1385))
+	step1_1380 := strings.ReplaceAll(typ, "[", "_")
+	step2_1381 := strings.ReplaceAll(step1_1380, "]", "")
+	step3_1382 := strings.ReplaceAll(step2_1381, ", ", "_")
+	step4_1383 := strings.ReplaceAll(step3_1382, ",", "_")
+	step5_1384 := strings.ReplaceAll(step4_1383, " ", "")
+	step6_1385 := strings.ReplaceAll(step5_1384, "*", "Ptr")
+	step7_1386 := strings.ReplaceAll(step6_1385, ".", "_")
+	step8_1387 := strings.ReplaceAll(step7_1386, "func(", "Func_")
+	step9_1388 := strings.ReplaceAll(step8_1387, ")", "")
+	return sanitizeIdent(strings.ToLower(step9_1388))
 }
 func typeclassFuncType(paramTypes []string, retType string) string {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(paramTypes) == 0 {
@@ -815,47 +815,47 @@ func typeclassFuncType(paramTypes []string, retType string) string {
 		}
 		return "func() " + retType
 	}
-	var fn_1386 string = "func(" + joinStrings(paramTypes, ", ") + ")"
+	var fn_1389 string = "func(" + joinStrings(paramTypes, ", ") + ")"
 	if retType != "" {
-		fn_1386 = fn_1386 + " " + retType
+		fn_1389 = fn_1389 + " " + retType
 	}
-	return fn_1386
+	return fn_1389
 }
 func typeArgsToStrings(args []ast2.TypeExpr, typeParams map[string]struct{}) []string {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) == 0 {
 		return []string([]string{})
 	}
-	head_1387 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.TypeExprUnitTypeCtor())
-	tail_1388 := typeArgsToStrings(sliceDrop[ast2.TypeExpr](args, 1), typeParams)
-	return MygoIN5SliceM7Prepend(tail_1388, goType(head_1387, typeParams))
+	head_1390 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, 0), ast2.TypeExprUnitTypeCtor())
+	tail_1391 := typeArgsToStrings(sliceDrop[ast2.TypeExpr](args, 1), typeParams)
+	return MygoIN5SliceM7Prepend(tail_1391, goType(head_1390, typeParams))
 }
 func typeExprsToStrings(items []ast2.TypeExpr, typeParams map[string]struct{}) []string {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		return []string([]string{})
 	}
-	head_1389 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.TypeExprUnitTypeCtor())
-	tail_1390 := typeExprsToStrings(sliceDrop[ast2.TypeExpr](items, 1), typeParams)
-	return MygoIN5SliceM7Prepend(tail_1390, goType(head_1389, typeParams))
+	head_1392 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.TypeExprUnitTypeCtor())
+	tail_1393 := typeExprsToStrings(sliceDrop[ast2.TypeExpr](items, 1), typeParams)
+	return MygoIN5SliceM7Prepend(tail_1393, goType(head_1392, typeParams))
 }
 func tupleElemsToStrings(elems []ast2.TypeExpr, typeParams map[string]struct{}) []string {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(elems) == 0 {
 		return []string([]string{})
 	}
-	head_1391 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(elems, 0), ast2.TypeExprUnitTypeCtor())
-	tail_1392 := tupleElemsToStrings(sliceDrop[ast2.TypeExpr](elems, 1), typeParams)
-	i_1393 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(elems) - MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(elems)
-	return MygoIN5SliceM7Prepend(tail_1392, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(i_1393)+" "+goType(head_1391, typeParams))
+	head_1394 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(elems, 0), ast2.TypeExprUnitTypeCtor())
+	tail_1395 := tupleElemsToStrings(sliceDrop[ast2.TypeExpr](elems, 1), typeParams)
+	i_1396 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(elems) - MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(elems)
+	return MygoIN5SliceM7Prepend(tail_1395, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(i_1396)+" "+goType(head_1394, typeParams))
 }
 func joinStrings(items []string, sep string) string {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		return ""
 	}
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 1 {
-		return MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "")
+		return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "")
 	}
-	head_1394 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "")
-	tail_1395 := joinStrings(sliceDrop[string](items, 1), sep)
-	return head_1394 + sep + tail_1395
+	head_1397 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "")
+	tail_1398 := joinStrings(sliceDrop[string](items, 1), sep)
+	return head_1397 + sep + tail_1398
 }
 func sliceDrop[A any](items []A, n int) []A {
 	if n <= 0 {
@@ -873,34 +873,34 @@ func sliceTailLoop[A any](items []A, index int, out []A) []A {
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
 		return out
 	}
-	item_1396 := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
-	var expr_1399 []A
-	if v_465, ok := item_1396.(OptionSome[A]); ok {
-		var expr_1398 []A
-		expr_1398 = sliceTailLoop[A](items, index+1, MygoIN5SliceM6Append(out, v_465.F0))
-		expr_1399 = expr_1398
+	item_1399 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+	var expr_1402 []A
+	if v_465, ok := item_1399.(OptionSome[A]); ok {
+		var expr_1401 []A
+		expr_1401 = sliceTailLoop[A](items, index+1, MygoIN5SliceM6Append(out, v_465.F0))
+		expr_1402 = expr_1401
 	} else {
-		if _, ok := item_1396.(OptionNone[A]); ok {
-			var expr_1397 []A
-			expr_1397 = out
-			expr_1399 = expr_1397
+		if _, ok := item_1399.(OptionNone[A]); ok {
+			var expr_1400 []A
+			expr_1400 = out
+			expr_1402 = expr_1400
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_1399
+	return expr_1402
 }
 func importPathForGo(path string) string {
 	return strings.TrimPrefix(path, "go:")
 }
 func importAliasForPath(path string) string {
-	cleanPath_1400 := importPathForGo(path)
-	if cleanPath_1400 == "" {
+	cleanPath_1403 := importPathForGo(path)
+	if cleanPath_1403 == "" {
 		return ""
 	}
-	trimmed_1401 := strings.TrimSuffix(cleanPath_1400, "/")
-	parts_1402 := strings.Split(trimmed_1401, "/")
-	return toPackageName(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_1402, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_1402)-1), trimmed_1401))
+	trimmed_1404 := strings.TrimSuffix(cleanPath_1403, "/")
+	parts_1405 := strings.Split(trimmed_1404, "/")
+	return toPackageName(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_1405, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_1405)-1), trimmed_1404))
 }
 func toPackageName(name string) string {
 	if name == "" {
@@ -912,9 +912,9 @@ func exportName(name string) string {
 	if name == "" {
 		return name
 	}
-	first_1403 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(name, 0, 1), "")
-	rest_1404 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(name, 1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(name)), "")
-	return MygoIN6StringM7ToUpper(first_1403) + rest_1404
+	first_1406 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(name, 0, 1), "")
+	rest_1407 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(name, 1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(name)), "")
+	return MygoIN6StringM7ToUpper(first_1406) + rest_1407
 }
 func toUpper(r rune) rune {
 	if r >= 'a' && r <= 'z' {
@@ -923,24 +923,24 @@ func toUpper(r rune) rune {
 	return r
 }
 func splitTypeArgs(typ string) TypeArgParts {
-	clean_1405 := strings.TrimSpace(typ)
-	if clean_1405 == "" {
+	clean_1408 := strings.TrimSpace(typ)
+	if clean_1408 == "" {
 		return TypeArgParts{Name: "", Args: []string([]string{})}
 	}
-	idx_1406 := strings.Index(clean_1405, "[")
-	if idx_1406 < 0 {
-		return TypeArgParts{Name: clean_1405, Args: []string([]string{})}
+	idx_1409 := strings.Index(clean_1408, "[")
+	if idx_1409 < 0 {
+		return TypeArgParts{Name: clean_1408, Args: []string([]string{})}
 	}
-	endPos_1407 := matchingTypeArgEnd(clean_1405, idx_1406)
-	if endPos_1407 < 0 || endPos_1407 < idx_1406 {
-		return TypeArgParts{Name: clean_1405, Args: []string([]string{})}
+	endPos_1410 := matchingTypeArgEnd(clean_1408, idx_1409)
+	if endPos_1410 < 0 || endPos_1410 < idx_1409 {
+		return TypeArgParts{Name: clean_1408, Args: []string([]string{})}
 	}
-	name_1408 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(clean_1405, 0, idx_1406), "")
-	inner_1409 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(clean_1405, idx_1406+1, endPos_1407), "")
-	if inner_1409 == "" {
-		return TypeArgParts{Name: name_1408, Args: []string([]string{})}
+	name_1411 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(clean_1408, 0, idx_1409), "")
+	inner_1412 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(clean_1408, idx_1409+1, endPos_1410), "")
+	if inner_1412 == "" {
+		return TypeArgParts{Name: name_1411, Args: []string([]string{})}
 	}
-	return TypeArgParts{Name: name_1408, Args: splitTopLevel(inner_1409, ',')}
+	return TypeArgParts{Name: name_1411, Args: splitTopLevel(inner_1412, ',')}
 }
 func matchingTypeArgEnd(typ string, open int) int {
 	return func() int {
@@ -984,179 +984,179 @@ func splitTopLevel(s string, sep rune) []string {
 	}()
 }
 func comparableTypeParamsFromFunc(params []ast2.Param, ret Option[ast2.TypeExpr], typeParams map[string]struct{}) []string {
-	var found_1410 []string = []string{}
-	var i_1411 int = 0
-	for i_1411 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
-		param := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, i_1411), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+	var found_1413 []string = []string{}
+	var i_1414 int = 0
+	for i_1414 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
+		param := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, i_1414), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
 		collected := collectComparableParams(param.Type, typeParams)
-		found_1410 = mergeStrings(found_1410, collected)
-		i_1411 = i_1411 + 1
+		found_1413 = mergeStrings(found_1413, collected)
+		i_1414 = i_1414 + 1
 	}
-	var expr_1415 []string
+	var expr_1418 []string
 	if v_467, ok := ret.(OptionSome[ast2.TypeExpr]); ok {
-		var expr_1414 []string
-		collected_1413 := collectComparableParams(v_467.F0, typeParams)
-		expr_1414 = mergeStrings(found_1410, collected_1413)
-		expr_1415 = expr_1414
+		var expr_1417 []string
+		collected_1416 := collectComparableParams(v_467.F0, typeParams)
+		expr_1417 = mergeStrings(found_1413, collected_1416)
+		expr_1418 = expr_1417
 	} else {
 		if _, ok := ret.(OptionNone[ast2.TypeExpr]); ok {
-			var expr_1412 []string
-			expr_1412 = found_1410
-			expr_1415 = expr_1412
+			var expr_1415 []string
+			expr_1415 = found_1413
+			expr_1418 = expr_1415
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_1415
+	return expr_1418
 }
 func collectComparableParams(typ ast2.TypeExpr, typeParams map[string]struct{}) []string {
-	var expr_1433 []string
+	var expr_1436 []string
 	if v_468, ok := typ.(ast2.TypeExprNamedType); ok {
-		var expr_1432 []string
-		var expr_1431 []string
+		var expr_1435 []string
+		var expr_1434 []string
 		if v_468.F0 == "Map" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_468.F1) == 2 {
-			var expr_1422 []string
-			keyType_1417 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_468.F1, 0), ast2.TypeExprUnitTypeCtor())
-			var expr_1421 []string
-			if v_469, ok := keyType_1417.(ast2.TypeExprNamedType); ok {
-				var expr_1420 []string
-				var expr_1419 []string
+			var expr_1425 []string
+			keyType_1420 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_468.F1, 0), ast2.TypeExprUnitTypeCtor())
+			var expr_1424 []string
+			if v_469, ok := keyType_1420.(ast2.TypeExprNamedType); ok {
+				var expr_1423 []string
+				var expr_1422 []string
 				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_469.F1) == 0 && setContainsString(typeParams, v_469.F0) {
-					expr_1419 = []string{v_469.F0}
+					expr_1422 = []string{v_469.F0}
 				} else {
-					expr_1419 = []string([]string{})
+					expr_1422 = []string([]string{})
 				}
-				expr_1420 = expr_1419
-				expr_1421 = expr_1420
+				expr_1423 = expr_1422
+				expr_1424 = expr_1423
 			} else {
 				{
-					var expr_1418 []string
-					expr_1418 = []string([]string{})
-					expr_1421 = expr_1418
+					var expr_1421 []string
+					expr_1421 = []string([]string{})
+					expr_1424 = expr_1421
 				}
 			}
-			expr_1422 = expr_1421
-			expr_1431 = expr_1422
+			expr_1425 = expr_1424
+			expr_1434 = expr_1425
 		} else {
-			var expr_1430 []string
+			var expr_1433 []string
 			if v_468.F0 == "Set" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_468.F1) == 1 {
-				var expr_1428 []string
-				elemType_1423 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_468.F1, 0), ast2.TypeExprUnitTypeCtor())
-				var expr_1427 []string
-				if v_470, ok := elemType_1423.(ast2.TypeExprNamedType); ok {
-					var expr_1426 []string
-					var expr_1425 []string
+				var expr_1431 []string
+				elemType_1426 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_468.F1, 0), ast2.TypeExprUnitTypeCtor())
+				var expr_1430 []string
+				if v_470, ok := elemType_1426.(ast2.TypeExprNamedType); ok {
+					var expr_1429 []string
+					var expr_1428 []string
 					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_470.F1) == 0 && setContainsString(typeParams, v_470.F0) {
-						expr_1425 = []string{v_470.F0}
+						expr_1428 = []string{v_470.F0}
 					} else {
-						expr_1425 = []string([]string{})
+						expr_1428 = []string([]string{})
 					}
-					expr_1426 = expr_1425
-					expr_1427 = expr_1426
+					expr_1429 = expr_1428
+					expr_1430 = expr_1429
 				} else {
 					{
-						var expr_1424 []string
-						expr_1424 = []string([]string{})
-						expr_1427 = expr_1424
+						var expr_1427 []string
+						expr_1427 = []string([]string{})
+						expr_1430 = expr_1427
 					}
 				}
-				expr_1428 = expr_1427
-				expr_1430 = expr_1428
+				expr_1431 = expr_1430
+				expr_1433 = expr_1431
 			} else {
-				var expr_1429 []string
+				var expr_1432 []string
 				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_468.F1) > 0 {
-					expr_1429 = collectComparableParamsFromArgs(v_468.F1, typeParams, 0, []string([]string{}))
+					expr_1432 = collectComparableParamsFromArgs(v_468.F1, typeParams, 0, []string([]string{}))
 				} else {
-					expr_1429 = []string([]string{})
+					expr_1432 = []string([]string{})
 				}
-				expr_1430 = expr_1429
+				expr_1433 = expr_1432
 			}
-			expr_1431 = expr_1430
+			expr_1434 = expr_1433
 		}
-		expr_1432 = expr_1431
-		expr_1433 = expr_1432
+		expr_1435 = expr_1434
+		expr_1436 = expr_1435
 	} else {
 		{
-			var expr_1416 []string
-			expr_1416 = []string([]string{})
-			expr_1433 = expr_1416
+			var expr_1419 []string
+			expr_1419 = []string([]string{})
+			expr_1436 = expr_1419
 		}
 	}
-	return expr_1433
+	return expr_1436
 }
 func collectComparableParamsFromArgs(args []ast2.TypeExpr, typeParams map[string]struct{}, index int, out []string) []string {
-	var expr_1437 []string
+	var expr_1440 []string
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) {
-		expr_1437 = out
+		expr_1440 = out
 	} else {
-		var expr_1436 []string
-		arg_1434 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.TypeExprUnitTypeCtor())
-		collected_1435 := collectComparableParams(arg_1434, typeParams)
-		expr_1436 = collectComparableParamsFromArgs(args, typeParams, index+1, mergeStrings(out, collected_1435))
-		expr_1437 = expr_1436
+		var expr_1439 []string
+		arg_1437 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.TypeExprUnitTypeCtor())
+		collected_1438 := collectComparableParams(arg_1437, typeParams)
+		expr_1439 = collectComparableParamsFromArgs(args, typeParams, index+1, mergeStrings(out, collected_1438))
+		expr_1440 = expr_1439
 	}
-	return expr_1437
+	return expr_1440
 }
 func mergeStrings(a []string, b []string) []string {
-	var expr_1441 []string
+	var expr_1444 []string
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(b) == 0 {
-		expr_1441 = a
+		expr_1444 = a
 	} else {
-		var expr_1440 []string
-		head_1438 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, 0), "")
-		var expr_1439 []string
-		if containsString(a, head_1438) {
-			expr_1439 = mergeStrings(a, sliceDrop[string](b, 1))
+		var expr_1443 []string
+		head_1441 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, 0), "")
+		var expr_1442 []string
+		if containsString(a, head_1441) {
+			expr_1442 = mergeStrings(a, sliceDrop[string](b, 1))
 		} else {
-			expr_1439 = mergeStrings(MygoIN5SliceM6Append(a, head_1438), sliceDrop[string](b, 1))
+			expr_1442 = mergeStrings(MygoIN5SliceM6Append(a, head_1441), sliceDrop[string](b, 1))
 		}
-		expr_1440 = expr_1439
-		expr_1441 = expr_1440
-	}
-	return expr_1441
-}
-func containsString(items []string, target string) bool {
-	var expr_1444 bool
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_1444 = false
-	} else {
-		var expr_1443 bool
-		head_1442 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "")
-		expr_1443 = head_1442 == target || containsString(sliceDrop[string](items, 1), target)
+		expr_1443 = expr_1442
 		expr_1444 = expr_1443
 	}
 	return expr_1444
+}
+func containsString(items []string, target string) bool {
+	var expr_1447 bool
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
+		expr_1447 = false
+	} else {
+		var expr_1446 bool
+		head_1445 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "")
+		expr_1446 = head_1445 == target || containsString(sliceDrop[string](items, 1), target)
+		expr_1447 = expr_1446
+	}
+	return expr_1447
 }
 func isInherentReceiverParam(paramType ast2.TypeExpr, implType ast2.TypeExpr) bool {
 	return typeString(paramType) == typeString(implType)
 }
 func typeString(t ast2.TypeExpr) string {
-	var expr_1451 string
+	var expr_1454 string
 	if v_472, ok := t.(ast2.TypeExprNamedType); ok {
-		var expr_1450 string
+		var expr_1453 string
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_472.F1) == 0 {
-			expr_1450 = v_472.F0
+			expr_1453 = v_472.F0
 		}
-		argStrs_1449 := typeArgsToStrings(v_472.F1, MygoIN3SetM3New[string]())
-		expr_1450 = v_472.F0 + "[" + joinStrings(argStrs_1449, ", ") + "]"
-		expr_1451 = expr_1450
+		argStrs_1452 := typeArgsToStrings(v_472.F1, MygoIN3SetM3New[string]())
+		expr_1453 = v_472.F0 + "[" + joinStrings(argStrs_1452, ", ") + "]"
+		expr_1454 = expr_1453
 	} else {
 		if v_471, ok := t.(ast2.TypeExprFuncType); ok {
-			var expr_1448 string
-			paramStrs_1446 := typeExprsToStrings(v_471.F0, MygoIN3SetM3New[string]())
-			retStr_1447 := typeString(*v_471.F1)
-			if retStr_1447 == "" {
-				expr_1448 = "func(" + joinStrings(paramStrs_1446, ", ") + ")"
+			var expr_1451 string
+			paramStrs_1449 := typeExprsToStrings(v_471.F0, MygoIN3SetM3New[string]())
+			retStr_1450 := typeString(*v_471.F1)
+			if retStr_1450 == "" {
+				expr_1451 = "func(" + joinStrings(paramStrs_1449, ", ") + ")"
 			}
-			expr_1448 = "func(" + joinStrings(paramStrs_1446, ", ") + ") " + retStr_1447
-			expr_1451 = expr_1448
+			expr_1451 = "func(" + joinStrings(paramStrs_1449, ", ") + ") " + retStr_1450
+			expr_1454 = expr_1451
 		} else {
 			{
-				var expr_1445 string
-				expr_1445 = "any"
-				expr_1451 = expr_1445
+				var expr_1448 string
+				expr_1448 = "any"
+				expr_1454 = expr_1448
 			}
 		}
 	}
-	return expr_1451
+	return expr_1454
 }

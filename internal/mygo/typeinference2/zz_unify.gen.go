@@ -321,7 +321,7 @@ func unifyArgs(left []MonoType, right []MonoType, subst []SubstEntry) Result[[]S
 		expr_769 = Ok[[]SubstEntry, string](subst)
 	} else {
 		var expr_768 Result[[]SubstEntry, string]
-		s_764 := unify(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, 0), MonoTypeTUnitCtor()), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), MonoTypeTUnitCtor()), subst)
+		s_764 := unify(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, 0), MonoTypeTUnitCtor()), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), MonoTypeTUnitCtor()), subst)
 		var expr_767 Result[[]SubstEntry, string]
 		if v_290, ok := s_764.(ResultOk[[]SubstEntry, string]); ok {
 			var expr_766 Result[[]SubstEntry, string]
@@ -427,7 +427,7 @@ func applySubstAll(subst []SubstEntry, items []MonoType) []MonoType {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		expr_785 = []MonoType{}
 	} else {
-		expr_785 = MygoIN5SliceM7Prepend(applySubstAll(subst, sliceDrop[MonoType](items, 1)), applySubst(subst, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())))
+		expr_785 = MygoIN5SliceM7Prepend(applySubstAll(subst, sliceDrop[MonoType](items, 1)), applySubst(subst, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())))
 	}
 	return expr_785
 }
@@ -437,7 +437,7 @@ func composeSubst(newer []SubstEntry, older []SubstEntry) []SubstEntry {
 		expr_788 = newer
 	} else {
 		var expr_787 []SubstEntry
-		head_786 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(older, 0), SubstEntry{ID: 0, Type: MonoTypeTUnitCtor()})
+		head_786 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(older, 0), SubstEntry{ID: 0, Type: MonoTypeTUnitCtor()})
 		expr_787 = MygoIN5SliceM7Prepend(composeSubst(newer, sliceDrop[SubstEntry](older, 1)), SubstEntry{ID: head_786.ID, Type: applySubst(newer, head_786.Type)})
 		expr_788 = expr_787
 	}
@@ -449,7 +449,7 @@ func substGet(subst []SubstEntry, id int) Option[MonoType] {
 		expr_792 = None[MonoType]()
 	} else {
 		var expr_791 Option[MonoType]
-		head_789 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(subst, 0), SubstEntry{ID: 0, Type: MonoTypeTUnitCtor()})
+		head_789 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(subst, 0), SubstEntry{ID: 0, Type: MonoTypeTUnitCtor()})
 		var expr_790 Option[MonoType]
 		if head_789.ID == id {
 			expr_790 = Some[MonoType](head_789.Type)
@@ -519,7 +519,7 @@ func occursInAny(id int, items []MonoType) bool {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		expr_802 = false
 	} else {
-		expr_802 = occursIn(id, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())) || occursInAny(id, sliceDrop[MonoType](items, 1))
+		expr_802 = occursIn(id, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), MonoTypeTUnitCtor())) || occursInAny(id, sliceDrop[MonoType](items, 1))
 	}
 	return expr_802
 }

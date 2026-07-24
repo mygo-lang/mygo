@@ -801,7 +801,6 @@ func translateImplMethodCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref
   switch callee.Kind
     case FieldExpr(base, method) =>
       let receiverType = receiverStaticType(base, ctx)
-      fmt.Println("DEBUG translateImplMethodCall method=" + method + " receiverType=" + receiverType)
       # 1. Lexical dictionary from `using` constraint (e.g. equalsFn for Eq.Equals).
       # When multiple constraints of the same interface exist (e.g. Eq[A], Eq[E]),
       # match the receiver type against each constraint's type arg.
@@ -909,13 +908,30 @@ func matchingReceiverCandidate(candidates: Slice[ImplDictionaryCandidate], recei
   if candidates.Len() == 0 || receiverType == "" then None else
     let candidate = candidates.Get(0).UnwrapOr(ImplDictionaryCandidate { Interface: "", Method: "", InterfaceArgs: [] as Slice[ast2.TypeExpr], TypeParams: [] as Slice[String], Helper: "" })
     let receiverPattern = candidate.InterfaceArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
-    if receiverShapeMatches(goType(receiverPattern, ctx.typeParams), receiverType, candidate.TypeParams) then Some(candidate) else matchingReceiverCandidate(sliceDrop(candidates, 1), receiverType, ctx) end
+    let goPattern = goType(receiverPattern, ctx.typeParams)
+    let matched = receiverShapeMatches(goPattern, receiverType, candidate.TypeParams)
+    if matched then Some(candidate) else matchingReceiverCandidate(sliceDrop(candidates, 1), receiverType, ctx) end
   end
 end
 
 func receiverShapeMatches(pattern: String, actual: String, typeParams: Slice[String]) -> Bool
-  let constructor = typeConstructor(pattern)
-  constructor != "" && constructor == typeConstructor(actual)
+  let patternCtor = typeConstructor(pattern)
+  let actualCtor = typeConstructor(actual)
+  # Direct match.
+  if patternCtor != "" && patternCtor == actualCtor then
+    return true
+  end
+  # Special type mapping: Slice[T] -> []T, Map[K,V] -> map[K]V, Set[A] -> map[A]struct{}
+  if patternCtor == "Slice" && actualCtor == "[]" then
+    return true
+  end
+  if patternCtor == "Map" && actualCtor == "map" then
+    return true
+  end
+  if patternCtor == "Set" && actualCtor == "map" then
+    return true
+  end
+  false
 end
 
 func typeConstructor(typ: String) -> String
