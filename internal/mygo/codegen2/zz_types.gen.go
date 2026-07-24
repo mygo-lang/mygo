@@ -36,6 +36,8 @@ type egCtx struct {
 	pkgInfo                Option[typeinference2.PkgInfo]
 	enumValueConstructors  map[string]string
 	enumVariantOwners      map[string]string
+	patternTypes           map[string]string
+	patternFuncIdx         map[string]int
 }
 type Generator2 struct {
 	pkgName      string
@@ -88,13 +90,13 @@ func astExprWithPre(expr goast.Expr, pre []goast.Stmt) AstExprResult {
 	return AstExprResult{Expr: expr, Pre: pre}
 }
 func newEgCtx() egCtx {
-	return egCtx{locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{}, mutable: map[string]bool{}, usedNames: map[string]int{}, exprSeq: 0, preStmts: []string{}, astPreStmts: []goast.Stmt{}, typeParams: MygoIN3SetM3New[string](), retType: "", retTypes: []string{}, tailRecFuncName: None[string](), tailRecParamCount: 0, tailRecParamNames: []string{}, constraintFuncs: map[string]string{}, constraintFuncNames: map[string][]string{}, constraintFuncArgTypes: map[string][]string{}, callDictionaries: map[string][]string{}, packageDictionaries: map[string]string{}, callRequirements: map[string][]DictionaryRequirement{}, packageCandidates: map[string][]ImplDictionaryCandidate{}, goPackages: []typeinference2.GoPackageEntry{}, typedInfo: None[typeinference2.TypedInfo](), pkgInfo: None[typeinference2.PkgInfo](), enumValueConstructors: map[string]string{}, enumVariantOwners: map[string]string{}}
+	return egCtx{locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{}, mutable: map[string]bool{}, usedNames: map[string]int{}, exprSeq: 0, preStmts: []string{}, astPreStmts: []goast.Stmt{}, typeParams: MygoIN3SetM3New[string](), retType: "", retTypes: []string{}, tailRecFuncName: None[string](), tailRecParamCount: 0, tailRecParamNames: []string{}, constraintFuncs: map[string]string{}, constraintFuncNames: map[string][]string{}, constraintFuncArgTypes: map[string][]string{}, callDictionaries: map[string][]string{}, packageDictionaries: map[string]string{}, callRequirements: map[string][]DictionaryRequirement{}, packageCandidates: map[string][]ImplDictionaryCandidate{}, goPackages: []typeinference2.GoPackageEntry{}, typedInfo: None[typeinference2.TypedInfo](), pkgInfo: None[typeinference2.PkgInfo](), enumValueConstructors: map[string]string{}, enumVariantOwners: map[string]string{}, patternTypes: map[string]string{}, patternFuncIdx: map[string]int{}}
 }
 func newEgCtxWithTypeParams(params []string) egCtx {
-	return egCtx{locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{}, mutable: map[string]bool{}, usedNames: map[string]int{}, exprSeq: 0, preStmts: []string{}, astPreStmts: []goast.Stmt{}, typeParams: typeParamSet(params), retType: "", retTypes: []string{}, tailRecFuncName: None[string](), tailRecParamCount: 0, tailRecParamNames: []string{}, constraintFuncs: map[string]string{}, constraintFuncNames: map[string][]string{}, constraintFuncArgTypes: map[string][]string{}, callDictionaries: map[string][]string{}, packageDictionaries: map[string]string{}, callRequirements: map[string][]DictionaryRequirement{}, packageCandidates: map[string][]ImplDictionaryCandidate{}, goPackages: []typeinference2.GoPackageEntry{}, typedInfo: None[typeinference2.TypedInfo](), pkgInfo: None[typeinference2.PkgInfo](), enumValueConstructors: map[string]string{}, enumVariantOwners: map[string]string{}}
+	return egCtx{locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{}, mutable: map[string]bool{}, usedNames: map[string]int{}, exprSeq: 0, preStmts: []string{}, astPreStmts: []goast.Stmt{}, typeParams: typeParamSet(params), retType: "", retTypes: []string{}, tailRecFuncName: None[string](), tailRecParamCount: 0, tailRecParamNames: []string{}, constraintFuncs: map[string]string{}, constraintFuncNames: map[string][]string{}, constraintFuncArgTypes: map[string][]string{}, callDictionaries: map[string][]string{}, packageDictionaries: map[string]string{}, callRequirements: map[string][]DictionaryRequirement{}, packageCandidates: map[string][]ImplDictionaryCandidate{}, goPackages: []typeinference2.GoPackageEntry{}, typedInfo: None[typeinference2.TypedInfo](), pkgInfo: None[typeinference2.PkgInfo](), enumValueConstructors: map[string]string{}, enumVariantOwners: map[string]string{}, patternTypes: map[string]string{}, patternFuncIdx: map[string]int{}}
 }
 func newFuncEgCtx(params []string, retType string, tailName string, paramCount int) egCtx {
-	return egCtx{locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{}, mutable: map[string]bool{}, usedNames: map[string]int{}, exprSeq: 0, preStmts: []string{}, astPreStmts: []goast.Stmt{}, typeParams: typeParamSet(params), retType: retType, retTypes: []string{}, tailRecFuncName: Some[string](tailName), tailRecParamCount: paramCount, tailRecParamNames: []string{}, constraintFuncs: map[string]string{}, constraintFuncNames: map[string][]string{}, constraintFuncArgTypes: map[string][]string{}, callDictionaries: map[string][]string{}, packageDictionaries: map[string]string{}, callRequirements: map[string][]DictionaryRequirement{}, packageCandidates: map[string][]ImplDictionaryCandidate{}, goPackages: []typeinference2.GoPackageEntry{}, typedInfo: None[typeinference2.TypedInfo](), pkgInfo: None[typeinference2.PkgInfo](), enumValueConstructors: map[string]string{}, enumVariantOwners: map[string]string{}}
+	return egCtx{locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{}, mutable: map[string]bool{}, usedNames: map[string]int{}, exprSeq: 0, preStmts: []string{}, astPreStmts: []goast.Stmt{}, typeParams: typeParamSet(params), retType: retType, retTypes: []string{}, tailRecFuncName: Some[string](tailName), tailRecParamCount: paramCount, tailRecParamNames: []string{}, constraintFuncs: map[string]string{}, constraintFuncNames: map[string][]string{}, constraintFuncArgTypes: map[string][]string{}, callDictionaries: map[string][]string{}, packageDictionaries: map[string]string{}, callRequirements: map[string][]DictionaryRequirement{}, packageCandidates: map[string][]ImplDictionaryCandidate{}, goPackages: []typeinference2.GoPackageEntry{}, typedInfo: None[typeinference2.TypedInfo](), pkgInfo: None[typeinference2.PkgInfo](), enumValueConstructors: map[string]string{}, enumVariantOwners: map[string]string{}, patternTypes: map[string]string{}, patternFuncIdx: map[string]int{}}
 }
 func newGenerator2(pkgName string, decls []ast2.Decl, goPackages []typeinference2.GoPackageEntry) Generator2 {
 	return Generator2{pkgName: pkgName, importPaths: []string{}, currentFile: "", localSeq: 0, switchVarSeq: 0, needsCallAny: false, decls: decls, goPackages: goPackages, typedInfo: None[typeinference2.TypedInfo](), pkgInfo: None[typeinference2.PkgInfo]()}
@@ -103,7 +105,7 @@ func newGenerator2WithInfo(pkgName string, decls []ast2.Decl, goPackages []typei
 	return Generator2{pkgName: pkgName, importPaths: []string{}, currentFile: "", localSeq: 0, switchVarSeq: 0, needsCallAny: false, decls: decls, goPackages: goPackages, typedInfo: typedInfo, pkgInfo: pkgInfo}
 }
 func ctxChild(ctx *egCtx) egCtx {
-	return egCtx{locals: ctx.locals, bindings: ctx.bindings, sourceTypes: ctx.sourceTypes, mutable: ctx.mutable, usedNames: ctx.usedNames, exprSeq: ctx.exprSeq, preStmts: []string{}, astPreStmts: []goast.Stmt{}, typeParams: ctx.typeParams, retType: ctx.retType, retTypes: ctx.retTypes, tailRecFuncName: ctx.tailRecFuncName, tailRecParamCount: ctx.tailRecParamCount, tailRecParamNames: ctx.tailRecParamNames, constraintFuncs: ctx.constraintFuncs, constraintFuncNames: ctx.constraintFuncNames, constraintFuncArgTypes: ctx.constraintFuncArgTypes, callDictionaries: ctx.callDictionaries, packageDictionaries: ctx.packageDictionaries, callRequirements: ctx.callRequirements, packageCandidates: ctx.packageCandidates, goPackages: ctx.goPackages, typedInfo: ctx.typedInfo, pkgInfo: ctx.pkgInfo, enumValueConstructors: ctx.enumValueConstructors, enumVariantOwners: ctx.enumVariantOwners}
+	return egCtx{locals: ctx.locals, bindings: ctx.bindings, sourceTypes: ctx.sourceTypes, mutable: ctx.mutable, usedNames: ctx.usedNames, exprSeq: ctx.exprSeq, preStmts: []string{}, astPreStmts: []goast.Stmt{}, typeParams: ctx.typeParams, retType: ctx.retType, retTypes: ctx.retTypes, tailRecFuncName: ctx.tailRecFuncName, tailRecParamCount: ctx.tailRecParamCount, tailRecParamNames: ctx.tailRecParamNames, constraintFuncs: ctx.constraintFuncs, constraintFuncNames: ctx.constraintFuncNames, constraintFuncArgTypes: ctx.constraintFuncArgTypes, callDictionaries: ctx.callDictionaries, packageDictionaries: ctx.packageDictionaries, callRequirements: ctx.callRequirements, packageCandidates: ctx.packageCandidates, goPackages: ctx.goPackages, typedInfo: ctx.typedInfo, pkgInfo: ctx.pkgInfo, enumValueConstructors: ctx.enumValueConstructors, enumVariantOwners: ctx.enumVariantOwners, patternTypes: ctx.patternTypes, patternFuncIdx: ctx.patternFuncIdx}
 }
 func ctxSetLocal(ctx *egCtx, name string, goType string) {
 	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.locals, name, goType)
@@ -114,16 +116,16 @@ func ctxSetBinding(ctx *egCtx, name string, goName string) {
 	return
 }
 func ctxFreshBinding(ctx *egCtx, name string) string {
-	base_1203 := sanitizeIdent(name)
-	count_1204 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.usedNames, base_1203), 0)
-	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.usedNames, base_1203, count_1204+1)
-	if count_1204 == 0 {
-		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.bindings, name, base_1203)
-		return base_1203
+	base_1229 := sanitizeIdent(name)
+	count_1230 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.usedNames, base_1229), 0)
+	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.usedNames, base_1229, count_1230+1)
+	if count_1230 == 0 {
+		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.bindings, name, base_1229)
+		return base_1229
 	}
-	actual_1205 := base_1203 + "_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(count_1204)
-	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.bindings, name, actual_1205)
-	return actual_1205
+	actual_1231 := base_1229 + "_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(count_1230)
+	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.bindings, name, actual_1231)
+	return actual_1231
 }
 func ctxSetMutable(ctx *egCtx, name string, isMutable bool) {
 	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.mutable, name, isMutable)
@@ -134,27 +136,27 @@ func ctxSetTailRecParamNames(ctx *egCtx, names []string) {
 	return
 }
 func ctxFreshExprTemp(ctx *egCtx) string {
-	name_1206 := "__mygo_expr_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(ctx.exprSeq)
+	name_1232 := "__mygo_expr_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(ctx.exprSeq)
 	ctx.exprSeq = ctx.exprSeq + 1
-	return name_1206
+	return name_1232
 }
 func ctxPushPreStmt(ctx *egCtx, stmt string) {
 	ctx.preStmts = append(ctx.preStmts, stmt)
 	return
 }
 func ctxDrainPreStmts(ctx *egCtx) string {
-	out_1207 := joinStrings(ctx.preStmts, "\n")
+	out_1233 := joinStrings(ctx.preStmts, "\n")
 	ctx.preStmts = nil
-	return out_1207
+	return out_1233
 }
 func ctxPushAstPreStmt(ctx *egCtx, stmt goast.Stmt) {
 	ctx.astPreStmts = append(ctx.astPreStmts, stmt)
 	return
 }
 func ctxDrainAstPreStmts(ctx *egCtx) []goast.Stmt {
-	out_1208 := ctx.astPreStmts
+	out_1234 := ctx.astPreStmts
 	ctx.astPreStmts = nil
-	return out_1208
+	return out_1234
 }
 func ctxAdoptExprSeq(ctx *egCtx, child *egCtx) {
 	if child.exprSeq > ctx.exprSeq {

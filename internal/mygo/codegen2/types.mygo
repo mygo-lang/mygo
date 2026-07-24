@@ -64,6 +64,12 @@ struct egCtx
   # Variant name -> owning enum. Used to recover generic arguments from an
   # expected enum type when lowering a constructor call without source args.
   enumVariantOwners: Map[String, String]
+  # patternTypes stores pattern-bound variable types across nested contexts.
+  patternTypes: Map[String, String]
+  # patternFuncIdx stores the dict function index for pattern-bound variables,
+  # used to select the correct constraint function for multi-constraint methods
+  # (e.g. using Eq[A], Eq[E] => EqualsFn vs EqualsFn_1).
+  patternFuncIdx: Map[String, Int]
 end
 
 # Generator2 是代码生成器主结构体
@@ -162,6 +168,8 @@ func newEgCtx() -> egCtx
     pkgInfo: None,
     enumValueConstructors: {},
     enumVariantOwners: {},
+    patternTypes: {},
+    patternFuncIdx: {},
   }
 end
 
@@ -193,6 +201,8 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     pkgInfo: None,
     enumValueConstructors: {},
     enumVariantOwners: {},
+    patternTypes: {},
+    patternFuncIdx: {},
   }
 end
 
@@ -224,6 +234,8 @@ func newFuncEgCtx(params: Slice[String], retType: String, tailName: String, para
     pkgInfo: None,
     enumValueConstructors: {},
     enumVariantOwners: {},
+    patternTypes: {},
+    patternFuncIdx: {},
   }
 end
 
@@ -287,6 +299,8 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     pkgInfo: ctx.pkgInfo,
     enumValueConstructors: ctx.enumValueConstructors,
     enumVariantOwners: ctx.enumVariantOwners,
+    patternTypes: ctx.patternTypes,
+    patternFuncIdx: ctx.patternFuncIdx,
   }
 end
 

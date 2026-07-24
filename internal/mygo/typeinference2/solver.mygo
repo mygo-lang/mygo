@@ -70,3 +70,32 @@ end
 func instanceSolver(instance: Instance, instances: Slice[Instance]) -> Solver
   Solver { Instances: instances }
 end
+
+# ---------------------------------------------------------------------------
+# Built-in Eq Instances
+# ---------------------------------------------------------------------------
+# Register Eq for all primitive types (matching the old typeinference solver).
+# These are always available without a source-level impl declaration.
+
+func builtInEqInstances() -> Slice[Instance]
+  let emptyArgs = [] as Slice[MonoType]
+  # Ref[T] uses a TVar with a sentinel ID to match any Ref type.
+  let refType = MonoType.TCon("Ref", [MonoType.TVar(999)])
+  let primitives = ["Int", "Int8", "Int16", "Int32", "Int64", "UInt8", "UInt16", "UInt32", "UInt64", "Float32", "Float64", "String", "Bool", "Rune", "Byte"] as Slice[String]
+  let instances = primitives.Fold([] as Slice[Instance], func(acc: Slice[Instance], name: String) -> Slice[Instance]
+    acc.Append(Instance { ClassName: "Eq", Type: MonoType.TCon(name, emptyArgs), Predicates: [] as Slice[Predicate] })
+  end)
+  instances.Append(Instance { ClassName: "Eq", Type: refType, Predicates: [] as Slice[Predicate] })
+end
+
+# Merge built-in instances into a collected instance list, avoiding duplicates.
+# Built-in instances are added first so collected impl declarations override them.
+func mergeBuiltInInstances(instances: Slice[Instance]) -> Slice[Instance]
+  appendInstances(builtInEqInstances(), instances)
+end
+
+func appendInstances(left: Slice[Instance], right: Slice[Instance]) -> Slice[Instance]
+  if right.Len() == 0 then left else
+    appendInstances(left.Append(right.Get(0).UnwrapOr(Instance { ClassName: "", Type: MonoType.TUnit, Predicates: [] as Slice[Predicate] })), sliceDrop(right, 1))
+  end
+end

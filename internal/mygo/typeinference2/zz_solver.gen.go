@@ -113,3 +113,24 @@ func solverFindInstance(instances []Instance, predicate Predicate, subst []Subst
 func instanceSolver(instance Instance, instances []Instance) Solver {
 	return Solver{Instances: instances}
 }
+func builtInEqInstances() []Instance {
+	emptyArgs_616 := []MonoType([]MonoType{})
+	refType_617 := MonoTypeTConCtor("Ref", []MonoType{MonoTypeTVarCtor(999)})
+	primitives_618 := []string([]string{"Int", "Int8", "Int16", "Int32", "Int64", "UInt8", "UInt16", "UInt32", "UInt64", "Float32", "Float64", "String", "Bool", "Rune", "Byte"})
+	instances_619 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(primitives_618, []Instance([]Instance{}), func(acc []Instance, name string) []Instance {
+		return MygoIN5SliceM6Append(acc, Instance{ClassName: "Eq", Type: MonoTypeTConCtor(name, emptyArgs_616), Predicates: []Predicate([]Predicate{})})
+	})
+	return MygoIN5SliceM6Append(instances_619, Instance{ClassName: "Eq", Type: refType_617, Predicates: []Predicate([]Predicate{})})
+}
+func mergeBuiltInInstances(instances []Instance) []Instance {
+	return appendInstances(builtInEqInstances(), instances)
+}
+func appendInstances(left []Instance, right []Instance) []Instance {
+	var expr_620 []Instance
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(right) == 0 {
+		expr_620 = left
+	} else {
+		expr_620 = appendInstances(MygoIN5SliceM6Append(left, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), Instance{ClassName: "", Type: MonoTypeTUnitCtor(), Predicates: []Predicate([]Predicate{})})), sliceDrop[Instance](right, 1))
+	}
+	return expr_620
+}

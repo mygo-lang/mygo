@@ -5,6 +5,7 @@ import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 import strings "go:strings"
 import strconv "go:strconv"
+import fmt "go:fmt"
 
 # translateExprAst 是替代 translateExpr 的新入口。当前覆盖无副作用的
 # 基础表达式；控制流和绑定将在同一结果模型上继续扩展。
@@ -370,6 +371,24 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], sourceTarget: ast2.E
                 let valueName = if args.Len() == 0 then "_" else "__mygo_match_" + ctxFreshExprTemp(ctx) end
                 let child = Ref.new(ctxChild(ctx))
                 bindPatternArgumentsWithTypes(child, args, valueName, 0, name, typ, ctx)
+                # Override constraintFuncs for this variant's pattern-bound methods
+                # so dictFuncForMethod picks the correct function when receiverType is empty.
+                let enumName = typeConstructor(typ)
+                let vIdxKey = "$variantIndex$" + enumName + "." + name
+                let vIdx = switch ctx.sourceTypes.Get(vIdxKey)
+                  case Some(s) => s
+                  case None => "0"
+                end
+                let idx = if vIdx == "0" then 0 else 1 end
+                let eqNames = ctx.constraintFuncNames.Get("Equals")
+                switch eqNames
+                  case Some(list) =>
+                    switch list.Get(idx)
+                      case Some(fn) => ctx.constraintFuncs.Set("Equals", fn)
+                      case None => ()
+                    end
+                  case None => ()
+                end
                 let body = translateSwitchCaseBody(current.Body, child, expected, temp)
                 switch body
                   case Err(msg) => Err(msg)
@@ -411,24 +430,30 @@ func bindPatternArgumentsWithTypes(ctx: Ref[egCtx], args: Slice[ast2.Pattern], v
   if index < args.Len() then
     let pattern = args.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern)
     bindPattern(ctx, pattern, valueName + ".F" + index.ToString())
-    # Set local type for BindPattern from the enum variant field type.
     switch pattern
       case BindPattern(name) =>
-        let enumName = typeConstructor(targetType)
-        let fieldKey = "$variant$" + enumName + "." + variantName + "." + index.ToString()
-        switch outerCtx.sourceTypes.Get(fieldKey)
-          case Some(fieldType) => ctxSetLocal(ctx, name, fieldType)
-          case None =>
-            # Missing variant field type — usually means the enum seeding
-            # didn't run. Use the match variable name as a fallback type.
-            let msg: String = "missing variant field type: " + fieldKey
-            ctxSetLocal(ctx, name, msg)
-        end
+          let enumName = typeConstructor(targetType)
+          let fieldKey = "$variant$" + enumName + "." + variantName + "." + index.ToString()
+          let fieldType = switch outerCtx.sourceTypes.Get(fieldKey)
+            case Some(t) => t
+            case None =>
+              # Look up variant field type from the target type's type args.
+              # For single-param enums (Option[A]), field 0 -> type arg 0.
+              # For multi-param enums (Result[A,E]), use variantIndex + fieldIndex.
+              let parts = splitTypeArgs(targetType)
+              let argCount = parts.Args.Len()
+              let argIdx = if argCount == 1 then 0 else index end
+              parts.Args.Get(argIdx).UnwrapOr("any")
+          end
+          ctxSetLocal(ctx, name, fieldType)
+          ctxSetLocal(outerCtx, name, fieldType)
+          ctx.patternTypes.Set(name, fieldType)
       case _ => ()
     end
     bindPatternArgumentsWithTypes(ctx, args, valueName, index + 1, variantName, targetType, outerCtx)
   end
 end
+
 
 func bindPattern(ctx: Ref[egCtx], pattern: ast2.Pattern, valueName: String) -> ()
   switch pattern
@@ -775,10 +800,12 @@ end
 func translateImplMethodCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Option[Result[AstExprResult, String]]
   switch callee.Kind
     case FieldExpr(base, method) =>
+      let receiverType = receiverStaticType(base, ctx)
+      fmt.Println("DEBUG translateImplMethodCall method=" + method + " receiverType=" + receiverType)
       # 1. Lexical dictionary from `using` constraint (e.g. equalsFn for Eq.Equals).
       # When multiple constraints of the same interface exist (e.g. Eq[A], Eq[E]),
       # match the receiver type against each constraint's type arg.
-      let fn = dictFuncForMethod(method, receiverStaticType(base, ctx), ctx)
+      let fn = dictFuncForMethod(method, receiverType, ctx)
       switch fn
         case Some(fnName) =>
           let receiver = translateExprAstExpected(base, ctx, "")
@@ -792,7 +819,6 @@ func translateImplMethodCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref
           end
         case None =>
           # 2. Package-level impl helper (e.g. IEnumerable.Map → MygoIT...Map).
-          let receiverType = receiverStaticType(base, ctx)
           switch matchingReceiverCandidate(ctx.packageCandidates.Get("$method$" + method).UnwrapOr([] as Slice[ImplDictionaryCandidate]), receiverType, ctx)
             case Some(candidate) =>
               let receiver = translateExprAstExpected(base, ctx, "")
@@ -818,27 +844,16 @@ end
 func dictFuncForMethod(method: String, receiverType: String, ctx: Ref[egCtx]) -> Option[String]
   let names = ctx.constraintFuncNames.Get(method)
   let types = ctx.constraintFuncArgTypes.Get(method)
-  switch names
-    case Some(nameList) =>
-      switch types
-        case Some(typeList) =>
-          if receiverType == "" then
-            # Fallback to first registered function.
-            nameList.Get(0).UnwrapOr("")
-            switch nameList.Get(0)
-              case Some(f) => Some(f)
-              case None => None
-            end
-          else
-            matchDictFuncByType(nameList, typeList, receiverType, 0)
-          end
-        case None =>
-          nameList.Get(0).UnwrapOr("")
-          switch nameList.Get(0)
-            case Some(f) => Some(f)
-            case None => None
-          end
+  let exactMatch = switch types
+    case Some(typeList) =>
+      switch names
+        case Some(nameList) => if receiverType == "" then None else matchDictFuncByType(nameList, typeList, receiverType, 0) end
+        case None => None
       end
+    case None => None
+  end
+  switch exactMatch
+    case Some(f) => Some(f)
     case None => ctx.constraintFuncs.Get(method)
   end
 end
@@ -866,7 +881,22 @@ end
 
 func receiverStaticType(receiver: ast2.Expr, ctx: Ref[egCtx]) -> String
   switch receiver.Kind
-    case IdentExpr(name) => ctx.sourceTypes.Get(name).UnwrapOr(ctx.locals.Get(name).UnwrapOr(""))
+    case IdentExpr(name) =>
+      let pt = ctx.patternTypes.Get(name)
+      let st = ctx.sourceTypes.Get(name)
+      let lt = ctx.locals.Get(name)
+      switch pt
+        case Some(v) => v
+        case None =>
+          switch st
+            case Some(v) => v
+            case None =>
+              switch lt
+                case Some(v) => v
+                case None => ""
+              end
+          end
+      end
     case FieldExpr(base, field) =>
       let baseType = receiverStaticType(base, ctx)
       let owner = typeConstructor(baseType)

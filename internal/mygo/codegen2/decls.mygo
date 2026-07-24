@@ -300,6 +300,9 @@ func seedEnumVariantsForVariants(enumName: String, variants: Slice[ast2.Variant]
   if index < variants.Len() then
     let variant = variants.Get(index).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr] })
     ctx.enumVariantOwners.Set(variant.Name, enumName)
+    # Store the variant index so bindPatternArgumentsWithTypes can map
+    # variant fields to the correct type argument position.
+    ctx.sourceTypes.Set("$variantIndex$" + enumName + "." + variant.Name, index.ToString())
     if variant.Fields.Len() == 0 then
       ctx.enumValueConstructors.Set(enumName + "." + variant.Name, enumConstructorGoName(sanitizeIdent(enumName), variant.Name))
     end
@@ -313,9 +316,16 @@ func seedEnumVariantFieldTypes(enumName: String, variantName: String, fields: Sl
   if index < fields.Len() then
     let fieldType = fields.Get(index).UnwrapOr(ast2.TypeExpr.UnitType())
     let key = "$variant$" + enumName + "." + variantName + "." + index.ToString()
-    ctx.sourceTypes.Set(key, goType(fieldType, ctx.typeParams))
+    let typeStr = goType(fieldType, ctx.typeParams)
+    ctx.sourceTypes.Set(key, typeStr)
     seedEnumVariantFieldTypes(enumName, variantName, fields, ctx, index + 1)
   end
+end
+
+# Debug helper: check if seedEnumVariantFieldTypes was called for Result.Ok.0
+func debugCheckSeed(ctx: Ref[egCtx]) -> ()
+  let _ = ctx.sourceTypes.Get("$variant$Result.Ok.0")
+  ()
 end
 
 func seedCallDictionaries(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()

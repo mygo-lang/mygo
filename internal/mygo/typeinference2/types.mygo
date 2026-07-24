@@ -231,7 +231,8 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
   let envWithGoPkgs = seedGoPackageEnv(goPkgImports, env)
   switch inferDecls(file.Decls, envWithGoPkgs, [], newInferStateWithTypedInfo())
     case Ok(info) =>
-      let instances = collectInstances(file.Decls)
+      let collected = collectInstances(file.Decls)
+      let instances = mergeBuiltInInstances(collected)
       let solver = solverFromInstances(instances)
       Ok(PackageInfo {
         Env: resolveEnvironment(solver, info.Env),
@@ -268,7 +269,8 @@ func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice
   let result = inferDecls(allDecls, envWithGoPkgs, [], newInferStateWithTypedInfo())
   switch result
     case Ok(info) =>
-      let instances = collectInstances(allDecls)
+      let collected = collectInstances(allDecls)
+      let instances = mergeBuiltInInstances(collected)
       let solver = solverFromInstances(instances)
       Ok(PackageInfo {
         Env: resolveEnvironment(solver, info.Env),
