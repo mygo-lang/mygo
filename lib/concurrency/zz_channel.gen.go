@@ -4,6 +4,23 @@ package concurrency
 
 import . "github.com/mygo-lang/mygo/prelude"
 
+type HKTType interface{}
+type HKT1[F any] interface{}
+type HKT2[A any] interface{}
+type HKT[F any, A any] interface{}
+
+func MakeChan[T any](buffer int) chan T {
+	return make(chan T, buffer)
+}
+func MakeChanUnbuffered[T any]() chan T {
+	return make(chan T)
+}
+func AsSend[T any](ch chan T) chan<- T {
+	return (chan<- T)(ch)
+}
+func AsRecv[T any](ch chan T) <-chan T {
+	return (<-chan T)(ch)
+}
 func MygoIT8IChannelFN4ChanGN1TEGN4ChanGN1TEN1TEM3Len[T any](ch chan T) int {
 	return len(ch)
 }
@@ -24,11 +41,9 @@ func MygoIT8IChannelFN8RecvChanGN1TEGN8RecvChanGN1TEN1TEM3Cap[T any](ch <-chan T
 }
 func MygoIT13IWritableChanFN8SendChanGN1TEGN8SendChanGN1TEN1TEM4Send[T any](ch chan<- T, value T) {
 	ch <- value
-	return
 }
 func MygoIT13IWritableChanFN8SendChanGN1TEGN8SendChanGN1TEN1TEM5Close[T any](ch chan<- T) {
 	close(ch)
-	return
 }
 func MygoIT13IReadableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM7Receive[T any](ch chan T) Option[T] {
 	return func() Option[T] {
@@ -76,21 +91,7 @@ func MygoIT13IReadableChanFN8RecvChanGN1TEGN8RecvChanGN1TEN1TEM10TryReceive[T an
 }
 func MygoIT13IWritableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM4Send[T any](ch chan T, value T) {
 	ch <- value
-	return
 }
 func MygoIT13IWritableChanFN4ChanGN1TEGN4ChanGN1TEN1TEM5Close[T any](ch chan T) {
 	close(ch)
-	return
-}
-func MakeChan[T any](buffer int) chan T {
-	return make(chan T, buffer)
-}
-func MakeChanUnbuffered[T any]() chan T {
-	return make(chan T)
-}
-func AsSend[T any](ch chan T) chan<- T {
-	return (chan<- T)(ch)
-}
-func AsRecv[T any](ch chan T) <-chan T {
-	return (<-chan T)(ch)
 }

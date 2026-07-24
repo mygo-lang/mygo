@@ -108,7 +108,14 @@ func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo, allDecls
     case Err(msg) => Err(msg)
     case Ok(items) =>
       let withHKT = if includeHKT && needsHKTDecls(file.Decls) then goast.AppendDecls(goast.HKTDecls(), items) else items end
-      renderGoFile(GoFileParts { PackageName: file.PackageName, Imports: imports, AstDecls: withHKT, Decls: [] as Slice[String] })
+      # Auto-add prelude dot-import when the generated Go declarations reference
+      # prelude types such as Option/Result (heuristic: scan Go AST identifiers).
+      let withPrelude = if file.PackageName != "prelude" && goast.NeedsPreludeImport(withHKT) then
+        imports.Append(GoImportPart { Alias: ".", Path: "github.com/mygo-lang/mygo/prelude" })
+      else
+        imports
+      end
+      renderGoFile(GoFileParts { PackageName: file.PackageName, Imports: withPrelude, AstDecls: withHKT, Decls: [] as Slice[String] })
   end
 end
 
