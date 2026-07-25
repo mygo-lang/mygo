@@ -99,7 +99,7 @@ end
 
 func bindDistinctVar(id: Int, t: MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
   if occursIn(id, t) then
-    let _ = fmt.Println("[DEBUG] OCCURS: t" + id.ToString() + " ~ " + monoStringFull(t) + " subst=" + substString(subst))
+    let _ = fmt.Println("[DEBUG-OCCURS] t" + id.ToString() + " ~ " + monoStringFull(t) + "  subst=" + substString(subst))
     Err("occurs check failed: t" + id.ToString() + " ~ " + monoStringFull(t))
   else
     Ok(subst.Prepend(SubstEntry { ID: id, Type: t }))
@@ -122,12 +122,19 @@ func applySubst(subst: Slice[SubstEntry], t: MonoType) -> MonoType
   switch t
     case TVar(id) =>
       switch substGet(subst, id)
-        case Some(found) => applySubst(subst, found)
+        # Strip the bound variable's own entry from the substitution before
+        # recursing on its image.  This stops self-referential mappings such
+        # as `[-1 -> Reply[TVar(-1)]]` (produced when a generic struct field
+        # mentions the struct's type parameter and the field type is
+        # specialised to the same outer type, e.g. `Reply[Reply[A]]`'s
+        # `Value: A` field accessed on a `Reply[Reply[A]]` receiver) from
+        # re-expanding `TVar(-1)` forever.
+        case Some(found) => applySubst(substDropVar(subst, id), found)
         case None => t
       end
     case TKVar(id) =>
       switch substGet(subst, id)
-        case Some(found) => applySubst(subst, found)
+        case Some(found) => applySubst(substDropVar(subst, id), found)
         case None => t
       end
     case TCon(name, args) => MonoType.TCon(name, applySubstAll(subst, args))
@@ -136,6 +143,18 @@ func applySubst(subst: Slice[SubstEntry], t: MonoType) -> MonoType
     case TTuple(items) => MonoType.TTuple(applySubstAll(subst, items))
     case TUnit => t
     case TGoPackage(_) => t
+  end
+end
+
+func substDropVar(subst: Slice[SubstEntry], id: Int) -> Slice[SubstEntry]
+  substDropVarLoop(subst, id, [] as Slice[SubstEntry])
+end
+
+func substDropVarLoop(subst: Slice[SubstEntry], id: Int, out: Slice[SubstEntry]) -> Slice[SubstEntry]
+  if subst.Len() == 0 then out else
+    let head = subst.Get(0).UnwrapOr(SubstEntry { ID: 0, Type: MonoType.TUnit })
+    let next = if head.ID == id then out else out.Prepend(head) end
+    substDropVarLoop(sliceDrop(subst, 1), id, next)
   end
 end
 

@@ -420,3 +420,138 @@ func fieldsForStruct(typeName string, fields []ast2.Field, out []FieldEntry) []F
 	}
 	return expr_79
 }
+func predeclareImplMethods(decls []ast2.Decl, env []EnvEntry) []EnvEntry {
+	var expr_86 []EnvEntry
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
+		expr_86 = env
+	} else {
+		var expr_85 []EnvEntry
+		head_80 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		var expr_83 []EnvEntry
+		if v_27, ok := head_80.(ast2.DeclImplDecl); ok {
+			var expr_82 []EnvEntry
+			expr_82 = registerImplMethods(v_27.F0, v_27.F1, v_27.F2, v_27.F3, env)
+			expr_83 = expr_82
+		} else {
+			{
+				var expr_81 []EnvEntry
+				expr_81 = env
+				expr_83 = expr_81
+			}
+		}
+		next_84 := expr_83
+		expr_85 = predeclareImplMethods(sliceDrop[ast2.Decl](decls, 1), next_84)
+		expr_86 = expr_85
+	}
+	return expr_86
+}
+func registerImplMethods(implTps []string, target ast2.TypeExpr, iface Option[ast2.TypeExpr], methods []ast2.ImplMethod, env []EnvEntry) []EnvEntry {
+	receiverName_87 := implReceiverName(target, iface)
+	var expr_88 []EnvEntry
+	if receiverName_87 == "" || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) == 0 {
+		expr_88 = env
+	} else {
+		expr_88 = registerImplMethodsLoop(implTps, receiverName_87, methods, env)
+	}
+	return expr_88
+}
+func registerImplMethodsLoop(implTps []string, receiverName string, methods []ast2.ImplMethod, env []EnvEntry) []EnvEntry {
+	var expr_100 []EnvEntry
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) == 0 {
+		expr_100 = env
+	} else {
+		var expr_99 []EnvEntry
+		m_89 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), defaultImplMethod())
+		combined_90 := appendStringSlice(implTps, m_89.Sig.TypeParams)
+		bound_91 := typeParamIDs(combined_90, 1)
+		paramTypes_92 := paramsToTypesWithParams(m_89.Sig.Params, combined_90)
+		var expr_95 MonoType
+		if v_29, ok := m_89.Sig.Ret.(OptionSome[ast2.TypeExpr]); ok {
+			var expr_94 MonoType
+			expr_94 = typeFromASTWithParams(v_29.F0, combined_90)
+			expr_95 = expr_94
+		} else {
+			if _, ok := m_89.Sig.Ret.(OptionNone[ast2.TypeExpr]); ok {
+				var expr_93 MonoType
+				expr_93 = MonoTypeTUnitCtor()
+				expr_95 = expr_93
+			} else {
+				panic("unreachable")
+			}
+		}
+		retType_96 := expr_95
+		predicates_97 := predicatesFromConstraintsWithParams(m_89.Sig.Using, combined_90)
+		scheme_98 := Scheme{Bound: bound_91, Predicates: predicates_97, Body: MonoTypeTFuncCtor(paramTypes_92, &retType_96)}
+		expr_99 = registerImplMethodsLoop(implTps, receiverName, sliceDrop[ast2.ImplMethod](methods, 1), envPut(env, fieldEnvName(receiverName, m_89.Sig.Name), scheme_98))
+		expr_100 = expr_99
+	}
+	return expr_100
+}
+func implReceiverName(target ast2.TypeExpr, iface Option[ast2.TypeExpr]) string {
+	var expr_112 string
+	if v_32, ok := iface.(OptionSome[ast2.TypeExpr]); ok {
+		var expr_111 string
+		var expr_110 string
+		if v_33, ok := v_32.F0.(ast2.TypeExprNamedType); ok {
+			var expr_109 string
+			var expr_108 string
+			if v_34, ok := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_33.F1, 0), ast2.TypeExprUnitTypeCtor()).(ast2.TypeExprNamedType); ok {
+				var expr_107 string
+				expr_107 = v_34.F0
+				expr_108 = expr_107
+			} else {
+				{
+					var expr_106 string
+					expr_106 = ""
+					expr_108 = expr_106
+				}
+			}
+			expr_109 = expr_108
+			expr_110 = expr_109
+		} else {
+			{
+				var expr_105 string
+				expr_105 = ""
+				expr_110 = expr_105
+			}
+		}
+		expr_111 = expr_110
+		expr_112 = expr_111
+	} else {
+		if _, ok := iface.(OptionNone[ast2.TypeExpr]); ok {
+			var expr_104 string
+			var expr_103 string
+			if v_31, ok := target.(ast2.TypeExprNamedType); ok {
+				var expr_102 string
+				expr_102 = v_31.F0
+				expr_103 = expr_102
+			} else {
+				{
+					var expr_101 string
+					expr_101 = ""
+					expr_103 = expr_101
+				}
+			}
+			expr_104 = expr_103
+			expr_112 = expr_104
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_112
+}
+func appendStringSlice(a []string, b []string) []string {
+	var expr_113 []string
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(a) == 0 {
+		expr_113 = b
+	} else {
+		expr_113 = MygoIN5SliceM7Prepend(appendStringSlice(sliceDrop[string](a, 1), b), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, 0), ""))
+	}
+	return expr_113
+}
+func defaultImplMethod() ast2.ImplMethod {
+	return ast2.ImplMethod{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: defaultFuncSig(), Body: ast2.EmptyExpr()}
+}
+func defaultFuncSig() ast2.FuncSig {
+	return ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string([]string{}), Params: []ast2.Param([]ast2.Param{}), Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint([]ast2.Constraint{})}
+}

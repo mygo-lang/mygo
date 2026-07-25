@@ -35,7 +35,7 @@ func translateAstBlock(items []ast2.Stmt, ctx *egCtx, index int, out []goast.Stm
 		expr_1013 = expr_999
 	} else {
 		var expr_1012 Result[[]goast.Stmt, string]
-		var stmt_1000 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
+		var stmt_1000 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
 		var expr_1011 Result[[]goast.Stmt, string]
 		if index == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1 {
 			var expr_1005 Result[[]goast.Stmt, string]
@@ -252,7 +252,7 @@ func declareAstLetRec(bindings []ast2.LetRecBind, ctx *egCtx, index int, out []g
 		expr_1054 = Ok[[]goast.Stmt, string](out)
 	} else {
 		var expr_1053 Result[[]goast.Stmt, string]
-		binding_1050 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, index), ast2.LetRecBind{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Value: ast2.EmptyExpr()})
+		binding_1050 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, index), ast2.LetRecBind{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Value: ast2.EmptyExpr()})
 		name_1051 := ctxFreshBinding(ctx, binding_1050.Name)
 		typ_1052 := goType(binding_1050.Type, ctx.typeParams)
 		ctxSetLocal(ctx, binding_1050.Name, mygoTypeString(binding_1050.Type))
@@ -268,7 +268,7 @@ func initializeAstLetRec(bindings []ast2.LetRecBind, ctx *egCtx, index int, out 
 		expr_1063 = Ok[[]goast.Stmt, string](out)
 	} else {
 		var expr_1062 Result[[]goast.Stmt, string]
-		binding_1055 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, index), ast2.LetRecBind{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Value: ast2.EmptyExpr()})
+		binding_1055 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, index), ast2.LetRecBind{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Value: ast2.EmptyExpr()})
 		value_1056 := translateAstBindingValue(binding_1055.Value, Some[ast2.TypeExpr](binding_1055.Type), ctx)
 		var expr_1061 Result[[]goast.Stmt, string]
 		if v_356, ok := value_1056.(ResultErr[AstExprResult, string]); ok {
@@ -360,7 +360,7 @@ func translateAstLoopItems(items []ast2.Stmt, ctx *egCtx, index int, out []goast
 		expr_1085 = Ok[[]goast.Stmt, string](out)
 	} else {
 		var expr_1084 Result[[]goast.Stmt, string]
-		var stmt_1079 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
+		var stmt_1079 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
 		lowered_1080 := translateAstLoopStmt(stmt_1079, ctx)
 		var expr_1083 Result[[]goast.Stmt, string]
 		if v_365, ok := lowered_1080.(ResultOk[[]goast.Stmt, string]); ok {
@@ -517,7 +517,7 @@ func translateAstBlockAsStmts(items []ast2.Stmt, ctx *egCtx, index int, out []go
 		expr_1149 = Ok[[]goast.Stmt, string](out)
 	} else {
 		var expr_1148 Result[[]goast.Stmt, string]
-		var stmt_1116 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
+		var stmt_1116 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
 		var expr_1147 Result[[]goast.Stmt, string]
 		if index == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1 {
 			var expr_1141 Result[[]goast.Stmt, string]
@@ -863,7 +863,7 @@ func translateAstReturnBlock(items []ast2.Stmt, ctx *egCtx, index int, out []goa
 		expr_1217 = Ok[[]goast.Stmt, string](out)
 	} else {
 		var expr_1216 Result[[]goast.Stmt, string]
-		var stmt_1196 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
+		var stmt_1196 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
 		var expr_1215 Result[[]goast.Stmt, string]
 		if index == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1 {
 			var expr_1209 Result[[]goast.Stmt, string]
@@ -968,7 +968,7 @@ func translateInlineOperands(values []ast2.GoOperand, types []ast2.GoTypeOperand
 	var expr_1231 Result[AstInlineOperands, string]
 	if index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(values) {
 		var expr_1227 Result[AstInlineOperands, string]
-		operand_1222 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(values, index), ast2.GoOperand{Name: "", Value: ast2.EmptyExpr()})
+		operand_1222 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(values, index), ast2.GoOperand{Name: "", Value: ast2.EmptyExpr()})
 		value_1223 := translateExprAst(operand_1222.Value, ctx)
 		var expr_1226 Result[AstInlineOperands, string]
 		if v_426, ok := value_1223.(ResultErr[AstExprResult, string]); ok {
@@ -990,7 +990,7 @@ func translateInlineOperands(values []ast2.GoOperand, types []ast2.GoTypeOperand
 		var expr_1230 Result[AstInlineOperands, string]
 		if index-MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(values) < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(types) {
 			var expr_1229 Result[AstInlineOperands, string]
-			typeOperand_1228 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, index-MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(values)), ast2.GoTypeOperand{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+			typeOperand_1228 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, index-MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(values)), ast2.GoTypeOperand{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
 			expr_1229 = translateInlineOperands(values, types, ctx, index+1, valueNames, valueSources, MygoIN5SliceM6Append(typeNames, typeOperand_1228.Name), MygoIN5SliceM6Append(typeSources, goType(typeOperand_1228.Type, ctx.typeParams)), pre)
 			expr_1230 = expr_1229
 		} else {

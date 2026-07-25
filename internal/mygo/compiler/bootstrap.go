@@ -158,21 +158,62 @@ func populateBootstrapGoPackageSignatures(packages *[]typeinference2.GoPackageEn
 		if err != nil {
 			return fmt.Errorf("load Go FFI package %q: %w", entry.Path, err)
 		}
-		for _, name := range pkg.Scope().Names() {
-			obj, ok := pkg.Scope().Lookup(name).(*types.Func)
-			if !ok {
-				continue
+		scope := pkg.Scope()
+		for _, name := range scope.Names() {
+			obj := scope.Lookup(name)
+			switch obj := obj.(type) {
+			case *types.Func:
+				sig, ok := obj.Type().(*types.Signature)
+				if !ok {
+					continue
+				}
+				entry.Funcs = append(entry.Funcs, typeinference2.GoFuncSignature{
+					Name:     name,
+					Params:   goTupleTypes(sig.Params()),
+					Results:  goTupleTypes(sig.Results()),
+					Variadic: sig.Variadic(),
+				})
+			case *types.TypeName:
+				named, ok := obj.Type().(*types.Named)
+				if !ok {
+					continue
+				}
+				typeParams := named.TypeParams()
+				typeParamNames := make([]string, 0, typeParams.Len())
+				for i := 0; i < typeParams.Len(); i++ {
+					typeParamNames = append(typeParamNames, typeParams.At(i).Obj().Name())
+				}
+				// Compute the full promoted method set, including methods
+				// embedded via unexported fields (testing.T inherits Fatal /
+				// Fatalf from its unexported `common` field, so plain
+				// `named.NumMethods()` omits them).  The pointer method set
+				// is a superset of the value method set, so it covers both
+				// `recv.Method` and `(&recv).Method` call shapes.
+				methodSet := types.NewMethodSet(types.NewPointer(named))
+				var methods []typeinference2.GoFuncSignature
+				for j := 0; j < methodSet.Len(); j++ {
+					sel := methodSet.At(j)
+					fn, ok := sel.Obj().(*types.Func)
+					if !ok || !fn.Exported() {
+						continue
+					}
+					sig, ok := fn.Type().(*types.Signature)
+					if !ok {
+						continue
+					}
+					methods = append(methods, typeinference2.GoFuncSignature{
+						Name:     fn.Name(),
+						Params:   goTupleTypes(sig.Params()),
+						Results:  goTupleTypes(sig.Results()),
+						Variadic: sig.Variadic(),
+					})
+				}
+				entry.Types = append(entry.Types, typeinference2.GoTypeSignature{
+					TypeName:   name,
+					TypeParams: typeParamNames,
+					Methods:    methods,
+				})
 			}
-			sig, ok := obj.Type().(*types.Signature)
-			if !ok {
-				continue
-			}
-			entry.Funcs = append(entry.Funcs, typeinference2.GoFuncSignature{
-				Name:     name,
-				Params:   goTupleTypes(sig.Params()),
-				Results:  goTupleTypes(sig.Results()),
-				Variadic: sig.Variadic(),
-			})
 		}
 	}
 	return nil

@@ -141,6 +141,7 @@ struct GoPackageEntry
   Alias: String
   Path: String
   Funcs: Slice[GoFuncSignature]
+  Types: Slice[GoTypeSignature]
 end
 
 # GoFuncSignature is populated by the bootstrap entry from go/types and is
@@ -150,6 +151,17 @@ struct GoFuncSignature
   Params: Slice[String]
   Results: Slice[String]
   Variadic: Bool
+end
+
+# GoTypeSignature is populated by the bootstrap entry from go/types and carries
+# a Go type alias (alias.TypeName) plus the exported methods on that type
+# (alias.Methods).  This lets the bootstrap type checker resolve qualified
+# `pkg.Type` references and `recv.Method` selectors against real Go packages
+# (e.g. `testing.T.Fatal`) without special-casing.
+struct GoTypeSignature
+  TypeName: String
+  TypeParams: Slice[String]
+  Methods: Slice[GoFuncSignature]
 end
 
 struct DeclInfer
@@ -226,7 +238,7 @@ end
 # InferFile runs type inference on a single file in isolation.
 # This is a convenience wrapper around InferPackage for single-file packages.
 func InferFile(file: ast2.File) -> Result[PackageInfo, String]
-  let env = predeclareFunctions(file.Decls, initialEnv())
+  let env = predeclareImplMethods(file.Decls, predeclareFunctions(file.Decls, initialEnv()))
   let goPkgImports = collectGoPackageImports(file.Decls)
   let envWithGoPkgs = seedGoPackageEnv(goPkgImports, env)
   switch inferDecls(file.Decls, envWithGoPkgs, [], newInferStateWithTypedInfo())
@@ -334,7 +346,7 @@ func collectGoPackageImports(decls: Slice[ast2.Decl]) -> Slice[GoPackageEntry]
         let existing = out.Fold(false, func(found: Bool, e: GoPackageEntry) -> Bool
           found || e.Alias == alias
         end)
-        if existing then out else out.Append(GoPackageEntry { Alias: alias, Path: path, Funcs: [] }) end
+        if existing then out else out.Append(GoPackageEntry { Alias: alias, Path: path, Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] }) end
       case _ => out
     end
   end)
@@ -346,27 +358,68 @@ func seedGoPackageEnv(goPkgs: Slice[GoPackageEntry], env: Slice[EnvEntry]) -> Sl
   if goPkgs.Len() == 0 then
     env
   else
-    let pkg = goPkgs.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "", Funcs: [] })
+    let pkg = goPkgs.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "", Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] })
     seedGoPackageEnv(sliceDrop(goPkgs, 1), seedGoPackageMembers(pkg, envPut(env, pkg.Alias, Scheme { Bound: [], Predicates: [], Body: MonoType.TGoPackage(pkg.Path) })))
   end
 end
 
 func seedGoPackageMembers(pkg: GoPackageEntry, env: Slice[EnvEntry]) -> Slice[EnvEntry]
-  if pkg.Funcs.Len() == 0 then env else
-    let fn = pkg.Funcs.Get(0).UnwrapOr(GoFuncSignature { Name: "", Params: [], Results: [], Variadic: false })
-    seedGoPackageMembers(GoPackageEntry { Alias: pkg.Alias, Path: pkg.Path, Funcs: sliceDrop(pkg.Funcs, 1) }, envPut(env, pkg.Alias + "." + fn.Name, Scheme { Bound: [], Predicates: [], Body: goSignatureType(fn) }))
+  let withFuncs = seedGoPackageFuncs(pkg, pkg.Funcs, env)
+  seedGoPackageTypes(pkg, pkg.Types, withFuncs)
+end
+
+func seedGoPackageFuncs(pkg: GoPackageEntry, funcs: Slice[GoFuncSignature], env: Slice[EnvEntry]) -> Slice[EnvEntry]
+  if funcs.Len() == 0 then env else
+    let fn = funcs.Get(0).UnwrapOr(GoFuncSignature { Name: "", Params: [] as Slice[String], Results: [] as Slice[String], Variadic: false })
+    seedGoPackageFuncs(pkg, sliceDrop(funcs, 1), envPut(env, pkg.Alias + "." + fn.Name, Scheme { Bound: [], Predicates: [], Body: goSignatureType(fn) }))
+  end
+end
+
+# Register Go package-level types as `pkg.TypeName` and their exported methods
+# as field-scheme entries keyed by `$field$pkg.TypeName.Method`.  The method
+# scheme is a bare function type (no leading receiver parameter), matching
+# how Go method selectors are invoked from MyGO (`recv.Method(args)`).
+func seedGoPackageTypes(pkg: GoPackageEntry, types: Slice[GoTypeSignature], env: Slice[EnvEntry]) -> Slice[EnvEntry]
+  if types.Len() == 0 then env else
+    let t = types.Get(0).UnwrapOr(GoTypeSignature { TypeName: "", TypeParams: [] as Slice[String], Methods: [] as Slice[GoFuncSignature] })
+    let qualifiedName = pkg.Alias + "." + t.TypeName
+    # The type constructor's scheme body mirrors a generic type: the qualified
+    # name keeps the structure of `pkg.X` so downstream codegen qualifies it,
+    # and the type parameters are bound fresh so a polymorphic Go type can be
+    # instantiated at each use site (rare, but supported symmetrically).
+    let bound = typeParamIDs(t.TypeParams, 1)
+    let body = MonoType.TCon(qualifiedName, typeParamsAsTypes(t.TypeParams, 1))
+    let withType = envPut(env, qualifiedName, Scheme { Bound: bound, Predicates: [], Body: body })
+    let withMethods = seedGoTypeMethods(qualifiedName, t.Methods, withType)
+    seedGoPackageTypes(pkg, sliceDrop(types, 1), withMethods)
+  end
+end
+
+func seedGoTypeMethods(typeName: String, methods: Slice[GoFuncSignature], env: Slice[EnvEntry]) -> Slice[EnvEntry]
+  if methods.Len() == 0 then env else
+    let m = methods.Get(0).UnwrapOr(GoFuncSignature { Name: "", Params: [] as Slice[String], Results: [] as Slice[String], Variadic: false })
+    seedGoTypeMethods(typeName, sliceDrop(methods, 1), envPut(env, fieldEnvName(typeName, m.Name), Scheme { Bound: [], Predicates: [], Body: goSignatureType(m) }))
   end
 end
 
 func goSignatureType(sig: GoFuncSignature) -> MonoType
-  let params = goSignatureTypes(sig.Params)
-  let results = goSignatureTypes(sig.Results)
-  let result = if results.Len() == 0 then
-    MonoType.TUnit
+  if sig.Variadic then
+    # A variadic Go function accepts any count at or above its fixed
+    # parameter count, with trailing arguments coerced to the slice of the
+    # variadic element type.  Encode it with a `$gofunc$-1` marker so that
+    # inferOrdinaryCall's go-func fast path can accept any matching arity;
+    # codegen needs the original `sig` to lower the call correctly.
+    MonoType.TCon("$gofunc$-1", [] as Slice[MonoType])
   else
-    if results.Len() == 1 then results.Get(0).UnwrapOr(MonoType.TUnit) else MonoType.TTuple(results) end
+    let params = goSignatureTypes(sig.Params)
+    let results = goSignatureTypes(sig.Results)
+    let result = if results.Len() == 0 then
+      MonoType.TUnit
+    else
+      if results.Len() == 1 then results.Get(0).UnwrapOr(MonoType.TUnit) else MonoType.TTuple(results) end
+    end
+    MonoType.TFunc(params, Ref.new(result))
   end
-  MonoType.TFunc(params, Ref.new(result))
 end
 
 func goSignatureTypes(items: Slice[String]) -> Slice[MonoType]
@@ -410,7 +463,7 @@ end
 
 # Predeclare all function signatures for forward reference support.
 func predeclareAllFunctions(decls: Slice[ast2.Decl], env: Slice[EnvEntry]) -> Slice[EnvEntry]
-  predeclareFunctions(decls, env)
+  predeclareImplMethods(decls, predeclareFunctions(decls, env))
 end
 
 func appendDecls(acc: Slice[ast2.Decl], items: Slice[ast2.Decl]) -> Slice[ast2.Decl]

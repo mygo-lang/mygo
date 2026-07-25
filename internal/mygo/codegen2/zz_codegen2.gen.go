@@ -56,7 +56,7 @@ func mergeFileDecls(files []SourceFileInput, index int, acc []ast2.Decl) []ast2.
 		expr_10 = acc
 	} else {
 		var expr_9 []ast2.Decl
-		input_8 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{}), SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos([]ast2.SourcePos{})}})
+		input_8 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{}), SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos([]ast2.SourcePos{})}})
 		expr_9 = mergeFileDecls(files, index+1, mergeDeclSlices(acc, input_8.File.Decls))
 		expr_10 = expr_9
 	}
@@ -68,7 +68,7 @@ func mergeDeclSlices(dst []ast2.Decl, src []ast2.Decl) []ast2.Decl {
 		expr_13 = dst
 	} else {
 		var expr_12 []ast2.Decl
-		item_11 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(src, 0), ast2.DeclImportDeclCtor("", ""))
+		item_11 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(src, 0), ast2.DeclImportDeclCtor("", ""))
 		expr_12 = mergeDeclSlices(MygoIN5SliceM6Append(dst, item_11), sliceDrop[ast2.Decl](src, 1))
 		expr_13 = expr_12
 	}
@@ -80,7 +80,7 @@ func generateFilesLoop(files []SourceFileInput, info typeinference2.PackageInfo,
 		expr_20 = Ok[map[string]string, string](out)
 	} else {
 		var expr_19 Result[map[string]string, string]
-		input_14 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{}), SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos([]ast2.SourcePos{})}})
+		input_14 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{}), SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos([]ast2.SourcePos{})}})
 		src_15 := generateOneFile(input_14.File, info, allDecls, index == 0)
 		var expr_18 Result[map[string]string, string]
 		if v_4, ok := src_15.(ResultOk[string, string]); ok {
@@ -187,7 +187,7 @@ func needsHKTDecls(decls []ast2.Decl) bool {
 		expr_50 = false
 	} else {
 		var expr_49 bool
-		head_40 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		head_40 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 		var expr_47 bool
 		if v_15, ok := head_40.(ast2.DeclInterfaceDecl); ok {
 			var expr_46 bool
@@ -236,7 +236,7 @@ func hasHKTTypeParam(tps []string) bool {
 		expr_53 = false
 	} else {
 		var expr_52 bool
-		current_51 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tps, 0), "")
+		current_51 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tps, 0), "")
 		expr_52 = strings.Index(current_51, "[") >= 0 || hasHKTTypeParam(sliceDrop[string](tps, 1))
 		expr_53 = expr_52
 	}
