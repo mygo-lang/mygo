@@ -82,14 +82,14 @@ func annotateDeclSource(decl ast2.Decl, sourceName string) ast2.Decl {
 	var expr_11 ast2.Decl
 	if v_2, ok := decl.(ast2.DeclFuncDecl); ok {
 		var expr_10 ast2.Decl
-		expr_10 = ast2.DeclFuncDeclCtor(v_2.F0, v_2.F1, v_2.F2, v_2.F3, v_2.F4, v_2.F5)
+		expr_10 = ast2.DeclFuncDeclCtor(v_2.F0, v_2.F1, v_2.F2, v_2.F3, annotateExprSource(v_2.F4, sourceName), v_2.F5)
 		expr_11 = expr_10
 	} else {
 		if v_1, ok := decl.(ast2.DeclImplDecl); ok {
 			var expr_9 ast2.Decl
 			expr_9 = ast2.DeclImplDeclCtor(v_1.F0, v_1.F1, v_1.F2, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_1.F3, func(method ast2.ImplMethod) ast2.ImplMethod {
 				sig_8 := method.Sig
-				return ast2.ImplMethod{Pos: ast2.SourcePos{SourceName: sourceName, Line: method.Pos.Line, Column: method.Pos.Column}, Sig: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: sourceName, Line: sig_8.Pos.Line, Column: sig_8.Pos.Column}, Name: sig_8.Name, TypeParams: sig_8.TypeParams, Params: sig_8.Params, Ret: sig_8.Ret, Using: sig_8.Using}, Body: method.Body}
+				return ast2.ImplMethod{Pos: ast2.SourcePos{SourceName: sourceName, Line: method.Pos.Line, Column: method.Pos.Column}, Sig: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: sourceName, Line: sig_8.Pos.Line, Column: sig_8.Pos.Column}, Name: sig_8.Name, TypeParams: sig_8.TypeParams, Params: sig_8.Params, Ret: sig_8.Ret, Using: sig_8.Using}, Body: annotateExprSource(method.Body, sourceName)}
 			}))
 			expr_11 = expr_9
 		} else {
@@ -102,6 +102,234 @@ func annotateDeclSource(decl ast2.Decl, sourceName string) ast2.Decl {
 	}
 	return expr_11
 }
+func annotateExprSource(expr ast2.Expr, sourceName string) ast2.Expr {
+	pos_12 := ast2.SourcePos{SourceName: sourceName, Line: expr.Pos.Line, Column: expr.Pos.Column}
+	var expr_35 ast2.Expr
+	if _, ok := expr.Kind.(ast2.ExprKindIdentExpr); ok {
+		var expr_34 ast2.Expr
+		expr_34 = ast2.Expr{Pos: pos_12, Kind: expr.Kind}
+		expr_35 = expr_34
+	} else {
+		if _, ok := expr.Kind.(ast2.ExprKindNumberExpr); ok {
+			var expr_33 ast2.Expr
+			expr_33 = ast2.Expr{Pos: pos_12, Kind: expr.Kind}
+			expr_35 = expr_33
+		} else {
+			if _, ok := expr.Kind.(ast2.ExprKindStringExpr); ok {
+				var expr_32 ast2.Expr
+				expr_32 = ast2.Expr{Pos: pos_12, Kind: expr.Kind}
+				expr_35 = expr_32
+			} else {
+				if _, ok := expr.Kind.(ast2.ExprKindRuneExpr); ok {
+					var expr_31 ast2.Expr
+					expr_31 = ast2.Expr{Pos: pos_12, Kind: expr.Kind}
+					expr_35 = expr_31
+				} else {
+					if _, ok := expr.Kind.(ast2.ExprKindBoolExpr); ok {
+						var expr_30 ast2.Expr
+						expr_30 = ast2.Expr{Pos: pos_12, Kind: expr.Kind}
+						expr_35 = expr_30
+					} else {
+						if _, ok := expr.Kind.(ast2.ExprKindUnitExpr); ok {
+							var expr_29 ast2.Expr
+							expr_29 = ast2.Expr{Pos: pos_12, Kind: expr.Kind}
+							expr_35 = expr_29
+						} else {
+							if v_18, ok := expr.Kind.(ast2.ExprKindTupleExpr); ok {
+								var expr_28 ast2.Expr
+								expr_28 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindTupleExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_18.F0, func(e ast2.Expr) ast2.Expr {
+									return annotateExprSource(e, sourceName)
+								}))}
+								expr_35 = expr_28
+							} else {
+								if v_17, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
+									var expr_27 ast2.Expr
+									expr_27 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindCallExprCtor(annotateExprSource(v_17.F0, sourceName), v_17.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_17.F2, func(e ast2.Expr) ast2.Expr {
+										return annotateExprSource(e, sourceName)
+									}))}
+									expr_35 = expr_27
+								} else {
+									if v_16, ok := expr.Kind.(ast2.ExprKindFieldExpr); ok {
+										var expr_26 ast2.Expr
+										expr_26 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindFieldExprCtor(annotateExprSource(v_16.F0, sourceName), v_16.F1)}
+										expr_35 = expr_26
+									} else {
+										if v_15, ok := expr.Kind.(ast2.ExprKindUnaryExpr); ok {
+											var expr_25 ast2.Expr
+											expr_25 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindUnaryExprCtor(v_15.F0, annotateExprSource(v_15.F1, sourceName))}
+											expr_35 = expr_25
+										} else {
+											if v_14, ok := expr.Kind.(ast2.ExprKindBinaryExpr); ok {
+												var expr_24 ast2.Expr
+												expr_24 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindBinaryExprCtor(v_14.F0, annotateExprSource(v_14.F1, sourceName), annotateExprSource(v_14.F2, sourceName))}
+												expr_35 = expr_24
+											} else {
+												if v_13, ok := expr.Kind.(ast2.ExprKindIfExpr); ok {
+													var expr_23 ast2.Expr
+													expr_23 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindIfExprCtor(annotateExprSource(v_13.F0, sourceName), annotateExprSource(v_13.F1, sourceName), annotateExprSource(v_13.F2, sourceName))}
+													expr_35 = expr_23
+												} else {
+													if v_12, ok := expr.Kind.(ast2.ExprKindBlockExpr); ok {
+														var expr_22 ast2.Expr
+														expr_22 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindBlockExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_12.F0, func(s ast2.Stmt) ast2.Stmt {
+															return annotateStmtSource(s, sourceName)
+														}))}
+														expr_35 = expr_22
+													} else {
+														if v_11, ok := expr.Kind.(ast2.ExprKindSwitchExpr); ok {
+															var expr_21 ast2.Expr
+															expr_21 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindSwitchExprCtor(annotateExprSource(v_11.F0, sourceName), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_11.F1, func(c ast2.SwitchCase) ast2.SwitchCase {
+																return ast2.SwitchCase{Pattern: c.Pattern, Body: annotateExprSource(c.Body, sourceName)}
+															}))}
+															expr_35 = expr_21
+														} else {
+															if v_10, ok := expr.Kind.(ast2.ExprKindFuncLitExpr); ok {
+																var expr_20 ast2.Expr
+																expr_20 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindFuncLitExprCtor(v_10.F0, v_10.F1, annotateExprSource(v_10.F2, sourceName))}
+																expr_35 = expr_20
+															} else {
+																if v_9, ok := expr.Kind.(ast2.ExprKindSliceLitExpr); ok {
+																	var expr_19 ast2.Expr
+																	expr_19 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindSliceLitExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_9.F0, func(e ast2.Expr) ast2.Expr {
+																		return annotateExprSource(e, sourceName)
+																	}))}
+																	expr_35 = expr_19
+																} else {
+																	if v_8, ok := expr.Kind.(ast2.ExprKindTypeAsExpr); ok {
+																		var expr_18 ast2.Expr
+																		expr_18 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindTypeAsExprCtor(annotateExprSource(v_8.F0, sourceName), v_8.F1)}
+																		expr_35 = expr_18
+																	} else {
+																		if v_7, ok := expr.Kind.(ast2.ExprKindStructLitExpr); ok {
+																			var expr_17 ast2.Expr
+																			expr_17 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindStructLitExprCtor(v_7.F0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_7.F1, func(f ast2.StructLitField) ast2.StructLitField {
+																				return ast2.StructLitField{Name: f.Name, Value: annotateExprSource(f.Value, sourceName)}
+																			}))}
+																			expr_35 = expr_17
+																		} else {
+																			if v_6, ok := expr.Kind.(ast2.ExprKindGenericStructLitExpr); ok {
+																				var expr_16 ast2.Expr
+																				expr_16 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindGenericStructLitExprCtor(v_6.F0, v_6.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_6.F2, func(f ast2.StructLitField) ast2.StructLitField {
+																					return ast2.StructLitField{Name: f.Name, Value: annotateExprSource(f.Value, sourceName)}
+																				}))}
+																				expr_35 = expr_16
+																			} else {
+																				if v_5, ok := expr.Kind.(ast2.ExprKindInlineGoExpr); ok {
+																					var expr_15 ast2.Expr
+																					expr_15 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindInlineGoExprCtor(v_5.F0, v_5.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_5.F2, func(o ast2.GoOperand) ast2.GoOperand {
+																						return ast2.GoOperand{Name: o.Name, Value: annotateExprSource(o.Value, sourceName)}
+																					}), v_5.F3)}
+																					expr_35 = expr_15
+																				} else {
+																					if v_4, ok := expr.Kind.(ast2.ExprKindMapLitExpr); ok {
+																						var expr_14 ast2.Expr
+																						expr_14 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindMapLitExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_4.F0, func(p struct {
+																							F0 ast2.Expr
+																							F1 ast2.Expr
+																						}) struct {
+																							F0 ast2.Expr
+																							F1 ast2.Expr
+																						} {
+																							return struct {
+																								F0 ast2.Expr
+																								F1 ast2.Expr
+																							}{F0: annotateExprSource(p.F0, sourceName), F1: annotateExprSource(p.F1, sourceName)}
+																						}))}
+																						expr_35 = expr_14
+																					} else {
+																						if v_3, ok := expr.Kind.(ast2.ExprKindSetLitExpr); ok {
+																							var expr_13 ast2.Expr
+																							expr_13 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindSetLitExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_3.F0, func(e ast2.Expr) ast2.Expr {
+																								return annotateExprSource(e, sourceName)
+																							}))}
+																							expr_35 = expr_13
+																						} else {
+																							panic("unreachable")
+																						}
+																					}
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return expr_35
+}
+func annotateStmtSource(stmt ast2.Stmt, sourceName string) ast2.Stmt {
+	var expr_45 ast2.Stmt
+	if v_33, ok := stmt.(ast2.StmtExprStmt); ok {
+		var expr_44 ast2.Stmt
+		expr_44 = ast2.StmtExprStmtCtor(annotateExprSource(v_33.F0, sourceName))
+		expr_45 = expr_44
+	} else {
+		if v_32, ok := stmt.(ast2.StmtLetStmt); ok {
+			var expr_43 ast2.Stmt
+			expr_43 = ast2.StmtLetStmtCtor(ast2.Bind{Name: v_32.F0.Name, Type: v_32.F0.Type, Value: annotateExprSource(v_32.F0.Value, sourceName)})
+			expr_45 = expr_43
+		} else {
+			if v_31, ok := stmt.(ast2.StmtLetRecStmt); ok {
+				var expr_42 ast2.Stmt
+				expr_42 = ast2.StmtLetRecStmtCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_31.F0, func(b ast2.LetRecBind) ast2.LetRecBind {
+					return ast2.LetRecBind{Name: b.Name, Type: b.Type, Value: annotateExprSource(b.Value, sourceName)}
+				}))
+				expr_45 = expr_42
+			} else {
+				if v_30, ok := stmt.(ast2.StmtTupleLetStmt); ok {
+					var expr_41 ast2.Stmt
+					expr_41 = ast2.StmtTupleLetStmtCtor(v_30.F0, annotateExprSource(v_30.F1, sourceName))
+					expr_45 = expr_41
+				} else {
+					if v_29, ok := stmt.(ast2.StmtVarStmt); ok {
+						var expr_40 ast2.Stmt
+						expr_40 = ast2.StmtVarStmtCtor(ast2.Bind{Name: v_29.F0.Name, Type: v_29.F0.Type, Value: annotateExprSource(v_29.F0.Value, sourceName)})
+						expr_45 = expr_40
+					} else {
+						if v_28, ok := stmt.(ast2.StmtWhileStmt); ok {
+							var expr_39 ast2.Stmt
+							expr_39 = ast2.StmtWhileStmtCtor(annotateExprSource(v_28.F0, sourceName), annotateExprSource(v_28.F1, sourceName))
+							expr_45 = expr_39
+						} else {
+							if v_27, ok := stmt.(ast2.StmtAssignStmt); ok {
+								var expr_38 ast2.Stmt
+								expr_38 = ast2.StmtAssignStmtCtor(annotateExprSource(v_27.F0, sourceName), annotateExprSource(v_27.F1, sourceName))
+								expr_45 = expr_38
+							} else {
+								if v_26, ok := stmt.(ast2.StmtReturnWithStmt); ok {
+									var expr_37 ast2.Stmt
+									expr_37 = ast2.StmtReturnWithStmtCtor(annotateExprSource(v_26.F0, sourceName))
+									expr_45 = expr_37
+								} else {
+									if _, ok := stmt.(ast2.StmtReturnStmt); ok {
+										var expr_36 ast2.Stmt
+										expr_36 = stmt
+										expr_45 = expr_36
+									} else {
+										panic("unreachable")
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return expr_45
+}
 func fileParser() ps.Parser[ast2.File] {
 	return ps.PBind(kw("package"), func(_ string) ps.Parser[ast2.File] {
 		return ps.PBind(identifier(), func(pkg string) ps.Parser[ast2.File] {
@@ -109,19 +337,19 @@ func fileParser() ps.Parser[ast2.File] {
 				F0 ast2.Decl
 				F1 ast2.SourcePos
 			}) ps.Parser[ast2.File] {
-				decls_12 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(items, func(item struct {
+				decls_46 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(items, func(item struct {
 					F0 ast2.Decl
 					F1 ast2.SourcePos
 				}) ast2.Decl {
 					return item.F0
 				})
-				positions_13 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(items, func(item struct {
+				positions_47 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(items, func(item struct {
 					F0 ast2.Decl
 					F1 ast2.SourcePos
 				}) ast2.SourcePos {
 					return item.F1
 				})
-				return ps.PThen(trivia(), ps.PThen(ps.PEof(), ps.PPure(ast2.File{PackageName: pkg, Decls: decls_12, SourceName: "", Line: 1, Column: 1, DeclPositions: positions_13})))
+				return ps.PThen(trivia(), ps.PThen(ps.PEof(), ps.PPure(ast2.File{PackageName: pkg, Decls: decls_46, SourceName: "", Line: 1, Column: 1, DeclPositions: positions_47})))
 			})
 		})
 	})
@@ -137,29 +365,29 @@ func positionedDecl() ps.Parser[struct {
 		F0 ast2.Decl
 		F1 ast2.SourcePos
 	}] {
-		r_14 := decl().Run(state)
-		var expr_15 ps.Reply[struct {
+		r_48 := decl().Run(state)
+		var expr_49 ps.Reply[struct {
 			F0 ast2.Decl
 			F1 ast2.SourcePos
 		}]
-		if r_14.Ok {
-			expr_15 = ps.Reply[struct {
+		if r_48.Ok {
+			expr_49 = ps.Reply[struct {
 				F0 ast2.Decl
 				F1 ast2.SourcePos
-			}]{Ok: true, Consumed: r_14.Consumed, Value: struct {
+			}]{Ok: true, Consumed: r_48.Consumed, Value: struct {
 				F0 ast2.Decl
 				F1 ast2.SourcePos
-			}{F0: r_14.Value, F1: ast2.SourcePos{SourceName: "", Line: state.Position.Line, Column: state.Position.Column}}, State: r_14.State, Error: r_14.Error}
+			}{F0: r_48.Value, F1: ast2.SourcePos{SourceName: "", Line: state.Position.Line, Column: state.Position.Column}}, State: r_48.State, Error: r_48.Error}
 		} else {
-			expr_15 = ps.Reply[struct {
+			expr_49 = ps.Reply[struct {
 				F0 ast2.Decl
 				F1 ast2.SourcePos
-			}]{Ok: false, Consumed: r_14.Consumed, Value: struct {
+			}]{Ok: false, Consumed: r_48.Consumed, Value: struct {
 				F0 ast2.Decl
 				F1 ast2.SourcePos
-			}{F0: ast2.DeclImportDeclCtor("", ""), F1: ast2.SourcePos{SourceName: "", Line: state.Position.Line, Column: state.Position.Column}}, State: r_14.State, Error: r_14.Error}
+			}{F0: ast2.DeclImportDeclCtor("", ""), F1: ast2.SourcePos{SourceName: "", Line: state.Position.Line, Column: state.Position.Column}}, State: r_48.State, Error: r_48.Error}
 		}
-		return expr_15
+		return expr_49
 	}}
 }
 func decl() ps.Parser[ast2.Decl] {
@@ -169,22 +397,22 @@ func importDecl() ps.Parser[ast2.Decl] {
 	return ps.PBind(kw("import"), func(_ string) ps.Parser[ast2.Decl] {
 		return ps.PBind(ps.POptional(identifierRaw()), func(alias Option[string]) ps.Parser[ast2.Decl] {
 			return ps.PMap(stringLiteral(), func(path string) ast2.Decl {
-				var expr_18 string
-				if v_4, ok := alias.(OptionSome[string]); ok {
-					var expr_17 string
-					expr_17 = v_4.F0
-					expr_18 = expr_17
+				var expr_52 string
+				if v_35, ok := alias.(OptionSome[string]); ok {
+					var expr_51 string
+					expr_51 = v_35.F0
+					expr_52 = expr_51
 				} else {
 					if _, ok := alias.(OptionNone[string]); ok {
-						var expr_16 string
-						expr_16 = defaultImportAlias(path)
-						expr_18 = expr_16
+						var expr_50 string
+						expr_50 = defaultImportAlias(path)
+						expr_52 = expr_50
 					} else {
 						panic("unreachable")
 					}
 				}
-				realAlias_19 := expr_18
-				return ast2.DeclImportDeclCtor(realAlias_19, path)
+				realAlias_53 := expr_52
+				return ast2.DeclImportDeclCtor(realAlias_53, path)
 			})
 		})
 	})
@@ -240,10 +468,10 @@ func funcDecl() ps.Parser[ast2.Decl] {
 		F0 ast2.FuncSig
 		F1 ast2.Expr
 	}) ast2.Decl {
-		__tuple_20 := pair
-		sig_21 := __tuple_20.F0
-		body_22 := __tuple_20.F1
-		return ast2.DeclFuncDeclCtor(sig_21.Name, sig_21.TypeParams, sig_21.Params, sig_21.Ret, body_22, sig_21.Using)
+		__tuple_54 := pair
+		sig_55 := __tuple_54.F0
+		body_56 := __tuple_54.F1
+		return ast2.DeclFuncDeclCtor(sig_55.Name, sig_55.TypeParams, sig_55.Params, sig_55.Ret, body_56, sig_55.Using)
 	})
 }
 func funcSigAndBody() ps.Parser[struct {
@@ -270,25 +498,25 @@ func implMethod() ps.Parser[ast2.ImplMethod] {
 		F0 ast2.FuncSig
 		F1 ast2.Expr
 	}) ast2.ImplMethod {
-		__tuple_23 := pair
-		sig_24 := __tuple_23.F0
-		body_25 := __tuple_23.F1
-		return ast2.ImplMethod{Pos: sig_24.Pos, Sig: sig_24, Body: body_25}
+		__tuple_57 := pair
+		sig_58 := __tuple_57.F0
+		body_59 := __tuple_57.F1
+		return ast2.ImplMethod{Pos: sig_58.Pos, Sig: sig_58, Body: body_59}
 	})
 }
 func funcSig() ps.Parser[ast2.FuncSig] {
 	return ps.Parser[ast2.FuncSig]{Run: func(state ps.State) ps.Reply[ast2.FuncSig] {
-		r_26 := funcSigCore().Run(state)
-		var expr_29 ps.Reply[ast2.FuncSig]
-		if r_26.Ok {
-			var expr_28 ps.Reply[ast2.FuncSig]
-			sig_27 := r_26.Value
-			expr_28 = ps.Reply[ast2.FuncSig]{Ok: true, Consumed: r_26.Consumed, Value: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: state.Position.Line, Column: state.Position.Column}, Name: sig_27.Name, TypeParams: sig_27.TypeParams, Params: sig_27.Params, Ret: sig_27.Ret, Using: sig_27.Using}, State: r_26.State, Error: r_26.Error}
-			expr_29 = expr_28
+		r_60 := funcSigCore().Run(state)
+		var expr_63 ps.Reply[ast2.FuncSig]
+		if r_60.Ok {
+			var expr_62 ps.Reply[ast2.FuncSig]
+			sig_61 := r_60.Value
+			expr_62 = ps.Reply[ast2.FuncSig]{Ok: true, Consumed: r_60.Consumed, Value: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: state.Position.Line, Column: state.Position.Column}, Name: sig_61.Name, TypeParams: sig_61.TypeParams, Params: sig_61.Params, Ret: sig_61.Ret, Using: sig_61.Using}, State: r_60.State, Error: r_60.Error}
+			expr_63 = expr_62
 		} else {
-			expr_29 = r_26
+			expr_63 = r_60
 		}
-		return expr_29
+		return expr_63
 	}}
 }
 func funcSigCore() ps.Parser[ast2.FuncSig] {
@@ -326,22 +554,22 @@ func fieldDecl() ps.Parser[ast2.Field] {
 func variantDecl() ps.Parser[ast2.Variant] {
 	return ps.PBind(identifier(), func(name string) ps.Parser[ast2.Variant] {
 		return ps.PMap(ps.POptional(paren[[]ast2.TypeExpr](ps.PSepBy(typeExpr(), sym(",")))), func(fields Option[[]ast2.TypeExpr]) ast2.Variant {
-			var expr_32 []ast2.TypeExpr
-			if v_6, ok := fields.(OptionSome[[]ast2.TypeExpr]); ok {
-				var expr_31 []ast2.TypeExpr
-				expr_31 = v_6.F0
-				expr_32 = expr_31
+			var expr_66 []ast2.TypeExpr
+			if v_37, ok := fields.(OptionSome[[]ast2.TypeExpr]); ok {
+				var expr_65 []ast2.TypeExpr
+				expr_65 = v_37.F0
+				expr_66 = expr_65
 			} else {
 				if _, ok := fields.(OptionNone[[]ast2.TypeExpr]); ok {
-					var expr_30 []ast2.TypeExpr
-					expr_30 = []ast2.TypeExpr{}
-					expr_32 = expr_30
+					var expr_64 []ast2.TypeExpr
+					expr_64 = []ast2.TypeExpr{}
+					expr_66 = expr_64
 				} else {
 					panic("unreachable")
 				}
 			}
-			actual_33 := expr_32
-			return ast2.Variant{Name: name, Fields: actual_33}
+			actual_67 := expr_66
+			return ast2.Variant{Name: name, Fields: actual_67}
 		})
 	})
 }
@@ -373,13 +601,13 @@ func funcType() ps.Parser[ast2.TypeExpr] {
 }
 func tupleType() ps.Parser[ast2.TypeExpr] {
 	return ps.PBind(paren[[]ast2.TypeExpr](ps.PSepBy(lazyTypeExpr(), sym(","))), func(items []ast2.TypeExpr) ps.Parser[ast2.TypeExpr] {
-		var expr_34 ps.Parser[ast2.TypeExpr]
+		var expr_68 ps.Parser[ast2.TypeExpr]
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-			expr_34 = ps.PPure(ast2.TypeExprUnitTypeCtor())
+			expr_68 = ps.PPure(ast2.TypeExprUnitTypeCtor())
 		} else {
-			expr_34 = ps.PPure(ast2.TypeExprTupleTypeCtor(items))
+			expr_68 = ps.PPure(ast2.TypeExprTupleTypeCtor(items))
 		}
-		return expr_34
+		return expr_68
 	})
 }
 func namedType() ps.Parser[ast2.TypeExpr] {
@@ -392,21 +620,21 @@ func namedType() ps.Parser[ast2.TypeExpr] {
 func qualifiedIdentifier() ps.Parser[string] {
 	return ps.PBind(identifier(), func(first string) ps.Parser[string] {
 		return ps.PMap(ps.POptional(ps.PAttempt(ps.PThen(sym("."), identifier()))), func(second Option[string]) string {
-			var expr_37 string
-			if v_8, ok := second.(OptionSome[string]); ok {
-				var expr_36 string
-				expr_36 = first + "." + v_8.F0
-				expr_37 = expr_36
+			var expr_71 string
+			if v_39, ok := second.(OptionSome[string]); ok {
+				var expr_70 string
+				expr_70 = first + "." + v_39.F0
+				expr_71 = expr_70
 			} else {
 				if _, ok := second.(OptionNone[string]); ok {
-					var expr_35 string
-					expr_35 = first
-					expr_37 = expr_35
+					var expr_69 string
+					expr_69 = first
+					expr_71 = expr_69
 				} else {
 					panic("unreachable")
 				}
 			}
-			return expr_37
+			return expr_71
 		})
 	})
 }
@@ -416,21 +644,21 @@ func typeParamList() ps.Parser[[]string] {
 func typeParam() ps.Parser[string] {
 	return ps.PBind(identifier(), func(name string) ps.Parser[string] {
 		return ps.PMap(ps.POptional(brackets[[]string](ps.PSepBy(typeParam(), sym(",")))), func(args Option[[]string]) string {
-			var expr_40 string
-			if v_10, ok := args.(OptionSome[[]string]); ok {
-				var expr_39 string
-				expr_39 = name + "[" + strings.Join(v_10.F0, ", ") + "]"
-				expr_40 = expr_39
+			var expr_74 string
+			if v_41, ok := args.(OptionSome[[]string]); ok {
+				var expr_73 string
+				expr_73 = name + "[" + strings.Join(v_41.F0, ", ") + "]"
+				expr_74 = expr_73
 			} else {
 				if _, ok := args.(OptionNone[[]string]); ok {
-					var expr_38 string
-					expr_38 = name
-					expr_40 = expr_38
+					var expr_72 string
+					expr_72 = name
+					expr_74 = expr_72
 				} else {
 					panic("unreachable")
 				}
 			}
-			return expr_40
+			return expr_74
 		})
 	})
 }
@@ -460,23 +688,23 @@ func blockUntil(stopParser ps.Parser[string]) ps.Parser[ast2.Expr] {
 	}}
 }
 func blockItems(stopParser ps.Parser[string], start ps.State, cur ps.State, items []ast2.Stmt) ps.Reply[ast2.Expr] {
-	stop_41 := ps.PLookAhead(stopParser).Run(cur)
-	var expr_45 ps.Reply[ast2.Expr]
-	if stop_41.Ok {
-		expr_45 = ps.Reply[ast2.Expr]{Ok: true, Consumed: cur.Index != start.Index, Value: exprAt(start, ast2.ExprKindBlockExprCtor(items)), State: cur, Error: ps.EmptyError(cur.Position)}
+	stop_75 := ps.PLookAhead(stopParser).Run(cur)
+	var expr_79 ps.Reply[ast2.Expr]
+	if stop_75.Ok {
+		expr_79 = ps.Reply[ast2.Expr]{Ok: true, Consumed: cur.Index != start.Index, Value: exprAt(start, ast2.ExprKindBlockExprCtor(items)), State: cur, Error: ps.EmptyError(cur.Position)}
 	} else {
-		var expr_44 ps.Reply[ast2.Expr]
-		r_42 := stmt().Run(cur)
-		var expr_43 ps.Reply[ast2.Expr]
-		if r_42.Ok {
-			expr_43 = blockItems(stopParser, start, r_42.State, MygoIN5SliceM6Append(items, r_42.Value))
+		var expr_78 ps.Reply[ast2.Expr]
+		r_76 := stmt().Run(cur)
+		var expr_77 ps.Reply[ast2.Expr]
+		if r_76.Ok {
+			expr_77 = blockItems(stopParser, start, r_76.State, MygoIN5SliceM6Append(items, r_76.Value))
 		} else {
-			expr_43 = ps.Reply[ast2.Expr]{Ok: false, Consumed: false, Value: emptyExpr(), State: cur, Error: r_42.Error}
+			expr_77 = ps.Reply[ast2.Expr]{Ok: false, Consumed: false, Value: emptyExpr(), State: cur, Error: r_76.Error}
 		}
-		expr_44 = expr_43
-		expr_45 = expr_44
+		expr_78 = expr_77
+		expr_79 = expr_78
 	}
-	return expr_45
+	return expr_79
 }
 func stmt() ps.Parser[ast2.Stmt] {
 	return ps.PChoice([]ps.Parser[ast2.Stmt]{ps.PAttempt(inlineGoStmt()), ps.PAttempt(returnStmt()), ps.PAttempt(varStmt()), ps.PAttempt(whileStmt()), ps.PAttempt(letrecStmt()), ps.PAttempt(letStmt()), ps.PAttempt(ifStmt()), ps.PAttempt(assignStmt()), exprStmt()})
@@ -611,14 +839,14 @@ func expr() ps.Parser[ast2.Expr] {
 }
 func positionedExpr(inner ps.Parser[ast2.Expr]) ps.Parser[ast2.Expr] {
 	return ps.Parser[ast2.Expr]{Run: func(state ps.State) ps.Reply[ast2.Expr] {
-		r_46 := inner.Run(state)
-		var expr_47 ps.Reply[ast2.Expr]
-		if r_46.Ok {
-			expr_47 = ps.Reply[ast2.Expr]{Ok: true, Consumed: r_46.Consumed, Value: exprAt(state, r_46.Value.Kind), State: r_46.State, Error: r_46.Error}
+		r_80 := inner.Run(state)
+		var expr_81 ps.Reply[ast2.Expr]
+		if r_80.Ok {
+			expr_81 = ps.Reply[ast2.Expr]{Ok: true, Consumed: r_80.Consumed, Value: exprAt(state, r_80.Value.Kind), State: r_80.State, Error: r_80.Error}
 		} else {
-			expr_47 = r_46
+			expr_81 = r_80
 		}
-		return expr_47
+		return expr_81
 	}}
 }
 func exprKind() ps.Parser[ast2.Expr] {
@@ -659,21 +887,21 @@ func pattern() ps.Parser[ast2.Pattern] {
 		return ast2.PatternLiteralPatternCtor("string", value)
 	}), ps.PBind(identifier(), func(name string) ps.Parser[ast2.Pattern] {
 		return ps.PMap(ps.POptional(paren[[]ast2.Pattern](ps.PSepBy(lazyPattern(), sym(",")))), func(args Option[[]ast2.Pattern]) ast2.Pattern {
-			var expr_50 ast2.Pattern
+			var expr_84 ast2.Pattern
 			if _, ok := args.(OptionNone[[]ast2.Pattern]); ok {
-				var expr_49 ast2.Pattern
-				expr_49 = ast2.PatternVariantPatternCtor(name, []ast2.Pattern([]ast2.Pattern{}))
-				expr_50 = expr_49
+				var expr_83 ast2.Pattern
+				expr_83 = ast2.PatternVariantPatternCtor(name, []ast2.Pattern([]ast2.Pattern{}))
+				expr_84 = expr_83
 			} else {
-				if v_11, ok := args.(OptionSome[[]ast2.Pattern]); ok {
-					var expr_48 ast2.Pattern
-					expr_48 = ast2.PatternVariantPatternCtor(name, v_11.F0)
-					expr_50 = expr_48
+				if v_42, ok := args.(OptionSome[[]ast2.Pattern]); ok {
+					var expr_82 ast2.Pattern
+					expr_82 = ast2.PatternVariantPatternCtor(name, v_42.F0)
+					expr_84 = expr_82
 				} else {
 					panic("unreachable")
 				}
 			}
-			return expr_50
+			return expr_84
 		})
 	})})
 }
@@ -703,21 +931,21 @@ func inlineGoBody() ps.Parser[InlineGoParts] {
 			return ps.PBind(stringLiteral(), func(code string) ps.Parser[InlineGoParts] {
 				return ps.PMap(ps.PMany(inlineGoBinding()), func(bindings []InlineGoBinding) InlineGoParts {
 					return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(bindings, InlineGoParts{Code: code, Values: []ast2.GoOperand([]ast2.GoOperand{}), Types: []ast2.GoTypeOperand([]ast2.GoTypeOperand{})}, func(out InlineGoParts, binding InlineGoBinding) InlineGoParts {
-						var expr_53 InlineGoParts
-						if v_14, ok := binding.(InlineGoBindingValueBinding); ok {
-							var expr_52 InlineGoParts
-							expr_52 = InlineGoParts{Code: out.Code, Values: MygoIN5SliceM6Append(out.Values, ast2.GoOperand{Name: v_14.F0, Value: v_14.F1}), Types: out.Types}
-							expr_53 = expr_52
+						var expr_87 InlineGoParts
+						if v_45, ok := binding.(InlineGoBindingValueBinding); ok {
+							var expr_86 InlineGoParts
+							expr_86 = InlineGoParts{Code: out.Code, Values: MygoIN5SliceM6Append(out.Values, ast2.GoOperand{Name: v_45.F0, Value: v_45.F1}), Types: out.Types}
+							expr_87 = expr_86
 						} else {
-							if v_13, ok := binding.(InlineGoBindingTypeBinding); ok {
-								var expr_51 InlineGoParts
-								expr_51 = InlineGoParts{Code: out.Code, Values: out.Values, Types: MygoIN5SliceM6Append(out.Types, ast2.GoTypeOperand{Name: v_13.F0, Type: v_13.F1})}
-								expr_53 = expr_51
+							if v_44, ok := binding.(InlineGoBindingTypeBinding); ok {
+								var expr_85 InlineGoParts
+								expr_85 = InlineGoParts{Code: out.Code, Values: out.Values, Types: MygoIN5SliceM6Append(out.Types, ast2.GoTypeOperand{Name: v_44.F0, Type: v_44.F1})}
+								expr_87 = expr_85
 							} else {
 								panic("unreachable")
 							}
 						}
-						return expr_53
+						return expr_87
 					})
 				})
 			})
@@ -793,40 +1021,40 @@ func lazyIfElseTail() ps.Parser[ast2.Expr] {
 	}}
 }
 func bodyExprFromBlock(body ast2.Expr) ast2.Expr {
-	var expr_62 ast2.Expr
-	if v_15, ok := body.Kind.(ast2.ExprKindBlockExpr); ok {
-		var expr_61 ast2.Expr
-		var expr_60 ast2.Expr
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_15.F0) == 1 {
-			var expr_59 ast2.Expr
-			var first_55 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_15.F0, 0), ast2.StmtExprStmtCtor(emptyExpr()))
-			var expr_58 ast2.Expr
-			if v_16, ok := first_55.(ast2.StmtExprStmt); ok {
-				var expr_57 ast2.Expr
-				expr_57 = v_16.F0
-				expr_58 = expr_57
+	var expr_96 ast2.Expr
+	if v_46, ok := body.Kind.(ast2.ExprKindBlockExpr); ok {
+		var expr_95 ast2.Expr
+		var expr_94 ast2.Expr
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_46.F0) == 1 {
+			var expr_93 ast2.Expr
+			var first_89 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_46.F0, 0), ast2.StmtExprStmtCtor(emptyExpr()))
+			var expr_92 ast2.Expr
+			if v_47, ok := first_89.(ast2.StmtExprStmt); ok {
+				var expr_91 ast2.Expr
+				expr_91 = v_47.F0
+				expr_92 = expr_91
 			} else {
 				{
-					var expr_56 ast2.Expr
-					expr_56 = body
-					expr_58 = expr_56
+					var expr_90 ast2.Expr
+					expr_90 = body
+					expr_92 = expr_90
 				}
 			}
-			expr_59 = expr_58
-			expr_60 = expr_59
+			expr_93 = expr_92
+			expr_94 = expr_93
 		} else {
-			expr_60 = body
+			expr_94 = body
 		}
-		expr_61 = expr_60
-		expr_62 = expr_61
+		expr_95 = expr_94
+		expr_96 = expr_95
 	} else {
 		{
-			var expr_54 ast2.Expr
-			expr_54 = body
-			expr_62 = expr_54
+			var expr_88 ast2.Expr
+			expr_88 = body
+			expr_96 = expr_88
 		}
 	}
-	return expr_62
+	return expr_96
 }
 func binaryExpr() ps.Parser[ast2.Expr] {
 	return pipeExpr()
@@ -868,43 +1096,43 @@ func makeBinary() func(string, ast2.Expr, ast2.Expr) ast2.Expr {
 }
 func postfixExpr() ps.Parser[ast2.Expr] {
 	return ps.Parser[ast2.Expr]{Run: func(state ps.State) ps.Reply[ast2.Expr] {
-		first_63 := primaryExpr().Run(state)
-		var expr_64 ps.Reply[ast2.Expr]
-		if !first_63.Ok {
-			expr_64 = first_63
+		first_97 := primaryExpr().Run(state)
+		var expr_98 ps.Reply[ast2.Expr]
+		if !first_97.Ok {
+			expr_98 = first_97
 		} else {
-			expr_64 = postfixTail(state, first_63.State, first_63.Value)
+			expr_98 = postfixTail(state, first_97.State, first_97.Value)
 		}
-		return expr_64
+		return expr_98
 	}}
 }
 func postfixTail(start ps.State, cur ps.State, acc ast2.Expr) ps.Reply[ast2.Expr] {
-	cast_65 := ps.PThen(kw("as"), typeExpr()).Run(cur)
-	var expr_72 ps.Reply[ast2.Expr]
-	if cast_65.Ok {
-		expr_72 = postfixTail(start, cast_65.State, exprWithPos(acc.Pos, ast2.ExprKindTypeAsExprCtor(acc, cast_65.Value)))
+	cast_99 := ps.PThen(kw("as"), typeExpr()).Run(cur)
+	var expr_106 ps.Reply[ast2.Expr]
+	if cast_99.Ok {
+		expr_106 = postfixTail(start, cast_99.State, exprWithPos(acc.Pos, ast2.ExprKindTypeAsExprCtor(acc, cast_99.Value)))
 	} else {
-		var expr_71 ps.Reply[ast2.Expr]
-		call_66 := callSuffix().Run(cur)
-		var expr_70 ps.Reply[ast2.Expr]
-		if call_66.Ok {
-			expr_70 = postfixTail(start, call_66.State, exprWithPos(acc.Pos, ast2.ExprKindCallExprCtor(acc, call_66.Value.F0, call_66.Value.F1)))
+		var expr_105 ps.Reply[ast2.Expr]
+		call_100 := callSuffix().Run(cur)
+		var expr_104 ps.Reply[ast2.Expr]
+		if call_100.Ok {
+			expr_104 = postfixTail(start, call_100.State, exprWithPos(acc.Pos, ast2.ExprKindCallExprCtor(acc, call_100.Value.F0, call_100.Value.F1)))
 		} else {
-			var expr_69 ps.Reply[ast2.Expr]
-			fld_67 := ps.PThen(sym("."), identifier()).Run(cur)
-			var expr_68 ps.Reply[ast2.Expr]
-			if fld_67.Ok {
-				expr_68 = postfixTail(start, fld_67.State, exprWithPos(acc.Pos, ast2.ExprKindFieldExprCtor(acc, fld_67.Value)))
+			var expr_103 ps.Reply[ast2.Expr]
+			fld_101 := ps.PThen(sym("."), identifier()).Run(cur)
+			var expr_102 ps.Reply[ast2.Expr]
+			if fld_101.Ok {
+				expr_102 = postfixTail(start, fld_101.State, exprWithPos(acc.Pos, ast2.ExprKindFieldExprCtor(acc, fld_101.Value)))
 			} else {
-				expr_68 = ps.Reply[ast2.Expr]{Ok: true, Consumed: cur.Index != start.Index, Value: acc, State: cur, Error: ps.EmptyError(cur.Position)}
+				expr_102 = ps.Reply[ast2.Expr]{Ok: true, Consumed: cur.Index != start.Index, Value: acc, State: cur, Error: ps.EmptyError(cur.Position)}
 			}
-			expr_69 = expr_68
-			expr_70 = expr_69
+			expr_103 = expr_102
+			expr_104 = expr_103
 		}
-		expr_71 = expr_70
-		expr_72 = expr_71
+		expr_105 = expr_104
+		expr_106 = expr_105
 	}
-	return expr_72
+	return expr_106
 }
 func callSuffix() ps.Parser[struct {
 	F0 []ast2.TypeExpr
@@ -928,14 +1156,14 @@ func callSuffix() ps.Parser[struct {
 func structLitFields(head ast2.StructLitHead) ps.Parser[ast2.Expr] {
 	return ps.PBind(sym("{"), func(_ string) ps.Parser[ast2.Expr] {
 		return ps.PBind(sepByEnd[ast2.StructLitField, string](structLitField(), sym(",")), func(fields []ast2.StructLitField) ps.Parser[ast2.Expr] {
-			var expr_73 ast2.Expr
+			var expr_107 ast2.Expr
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(head.TypeArgs) == 0 {
-				expr_73 = exprKindOnly(ast2.ExprKindStructLitExprCtor(head.Name, fields))
+				expr_107 = exprKindOnly(ast2.ExprKindStructLitExprCtor(head.Name, fields))
 			} else {
-				expr_73 = exprKindOnly(ast2.ExprKindGenericStructLitExprCtor(head.Name, head.TypeArgs, fields))
+				expr_107 = exprKindOnly(ast2.ExprKindGenericStructLitExprCtor(head.Name, head.TypeArgs, fields))
 			}
-			value_74 := expr_73
-			return ps.PThen(sym("}"), ps.PPure(value_74))
+			value_108 := expr_107
+			return ps.PThen(sym("}"), ps.PPure(value_108))
 		})
 	})
 }
@@ -1018,8 +1246,8 @@ func setLiteral() ps.Parser[ast2.Expr] {
 	})
 }
 func sepByEnd[A any, S any](item ps.Parser[A], sep ps.Parser[S]) ps.Parser[[]A] {
-	guardedSep_75 := ps.PAttempt(ps.PThen(sep, ps.PLookAhead(item)))
-	return ps.PBind(ps.PSepBy(item, guardedSep_75), func(items []A) ps.Parser[[]A] {
+	guardedSep_109 := ps.PAttempt(ps.PThen(sep, ps.PLookAhead(item)))
+	return ps.PBind(ps.PSepBy(item, guardedSep_109), func(items []A) ps.Parser[[]A] {
 		return ps.PThen(ps.POptional(sep), ps.PPure(items))
 	})
 }
@@ -1036,19 +1264,19 @@ func funcLit() ps.Parser[ast2.Expr] {
 }
 func tupleOrParenExpr() ps.Parser[ast2.Expr] {
 	return ps.PBind(paren[[]ast2.Expr](ps.PSepBy(lazyExpr(), sym(","))), func(items []ast2.Expr) ps.Parser[ast2.Expr] {
-		var expr_77 ps.Parser[ast2.Expr]
+		var expr_111 ps.Parser[ast2.Expr]
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-			expr_77 = ps.PPure(emptyExpr())
+			expr_111 = ps.PPure(emptyExpr())
 		} else {
-			var expr_76 ps.Parser[ast2.Expr]
+			var expr_110 ps.Parser[ast2.Expr]
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 1 {
-				expr_76 = ps.PPure(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), emptyExpr()))
+				expr_110 = ps.PPure(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), emptyExpr()))
 			} else {
-				expr_76 = ps.PPure(exprKindOnly(ast2.ExprKindTupleExprCtor(items)))
+				expr_110 = ps.PPure(exprKindOnly(ast2.ExprKindTupleExprCtor(items)))
 			}
-			expr_77 = expr_76
+			expr_111 = expr_110
 		}
-		return expr_77
+		return expr_111
 	})
 }
 func binaryOp() ps.Parser[string] {
@@ -1068,34 +1296,34 @@ func mulOp() ps.Parser[string] {
 }
 func chainLeft[A any](item ps.Parser[A], op ps.Parser[string], combine func(string, A, A) A) ps.Parser[A] {
 	return ps.Parser[A]{Run: func(state ps.State) ps.Reply[A] {
-		first_78 := item.Run(state)
-		var expr_79 ps.Reply[A]
-		if !first_78.Ok {
-			expr_79 = first_78
+		first_112 := item.Run(state)
+		var expr_113 ps.Reply[A]
+		if !first_112.Ok {
+			expr_113 = first_112
 		} else {
-			expr_79 = chainLeftTail[A](item, op, combine, state, first_78.State, first_78.Value)
+			expr_113 = chainLeftTail[A](item, op, combine, state, first_112.State, first_112.Value)
 		}
-		return expr_79
+		return expr_113
 	}}
 }
 func chainLeftTail[A any](item ps.Parser[A], op ps.Parser[string], combine func(string, A, A) A, start ps.State, cur ps.State, acc A) ps.Reply[A] {
-	rop_80 := op.Run(cur)
-	var expr_84 ps.Reply[A]
-	if !rop_80.Ok {
-		expr_84 = ps.Reply[A]{Ok: true, Consumed: cur.Index != start.Index, Value: acc, State: cur, Error: ps.EmptyError(cur.Position)}
+	rop_114 := op.Run(cur)
+	var expr_118 ps.Reply[A]
+	if !rop_114.Ok {
+		expr_118 = ps.Reply[A]{Ok: true, Consumed: cur.Index != start.Index, Value: acc, State: cur, Error: ps.EmptyError(cur.Position)}
 	} else {
-		var expr_83 ps.Reply[A]
-		rr_81 := item.Run(rop_80.State)
-		var expr_82 ps.Reply[A]
-		if !rr_81.Ok {
-			expr_82 = rr_81
+		var expr_117 ps.Reply[A]
+		rr_115 := item.Run(rop_114.State)
+		var expr_116 ps.Reply[A]
+		if !rr_115.Ok {
+			expr_116 = rr_115
 		} else {
-			expr_82 = chainLeftTail[A](item, op, combine, start, rr_81.State, combine(rop_80.Value, acc, rr_81.Value))
+			expr_116 = chainLeftTail[A](item, op, combine, start, rr_115.State, combine(rop_114.Value, acc, rr_115.Value))
 		}
-		expr_83 = expr_82
-		expr_84 = expr_83
+		expr_117 = expr_116
+		expr_118 = expr_117
 	}
-	return expr_84
+	return expr_118
 }
 func identifier() ps.Parser[string] {
 	return lexeme[string](ps.PAttempt(identifierRaw()))
@@ -1103,14 +1331,14 @@ func identifier() ps.Parser[string] {
 func identifierRaw() ps.Parser[string] {
 	return ps.PBind(ps.PSatisfy(isIdentStart, "identifier"), func(first rune) ps.Parser[string] {
 		return ps.PBind(ps.PMany(ps.PSatisfy(isIdentRest, "identifier character")), func(rest []rune) ps.Parser[string] {
-			value_85 := MygoIN6StringM9FromRunes(MygoIN5SliceM7Prepend(rest, first))
-			var expr_86 ps.Parser[string]
-			if isKeyword(value_85) {
-				expr_86 = failIdentifier()
+			value_119 := MygoIN6StringM9FromRunes(MygoIN5SliceM7Prepend(rest, first))
+			var expr_120 ps.Parser[string]
+			if isKeyword(value_119) {
+				expr_120 = failIdentifier()
 			} else {
-				expr_86 = ps.PPure(value_85)
+				expr_120 = ps.PPure(value_119)
 			}
-			return expr_86
+			return expr_120
 		})
 	})
 }
@@ -1145,10 +1373,10 @@ func rawStringLiteral() ps.Parser[string] {
 	}))
 }
 func multilineStringLiteral() ps.Parser[string] {
-	delimiter_87 := tripleQuoteString()
-	return lexeme[string](ps.PBind(ps.PString(delimiter_87), func(_ string) ps.Parser[string] {
-		return ps.PBind(ps.PMany(ps.PThen(ps.PNotFollowedBy(ps.PString(delimiter_87), "triple quote"), ps.PAnyRune())), func(chars []rune) ps.Parser[string] {
-			return ps.PThen(ps.PString(delimiter_87), ps.PPure(MygoIN6StringM9FromRunes(chars)))
+	delimiter_121 := tripleQuoteString()
+	return lexeme[string](ps.PBind(ps.PString(delimiter_121), func(_ string) ps.Parser[string] {
+		return ps.PBind(ps.PMany(ps.PThen(ps.PNotFollowedBy(ps.PString(delimiter_121), "triple quote"), ps.PAnyRune())), func(chars []rune) ps.Parser[string] {
+			return ps.PThen(ps.PString(delimiter_121), ps.PPure(MygoIN6StringM9FromRunes(chars)))
 		})
 	}))
 }
@@ -1257,151 +1485,151 @@ func isIdentRest(r rune) bool {
 	return isIdentStart(r) || r >= '0' && r <= '9'
 }
 func isKeyword(value string) bool {
-	var expr_117 bool
+	var expr_151 bool
 	if value == "package" {
-		var expr_116 bool
-		expr_116 = true
-		expr_117 = expr_116
+		var expr_150 bool
+		expr_150 = true
+		expr_151 = expr_150
 	} else {
 		if value == "import" {
-			var expr_115 bool
-			expr_115 = true
-			expr_117 = expr_115
+			var expr_149 bool
+			expr_149 = true
+			expr_151 = expr_149
 		} else {
 			if value == "enum" {
-				var expr_114 bool
-				expr_114 = true
-				expr_117 = expr_114
+				var expr_148 bool
+				expr_148 = true
+				expr_151 = expr_148
 			} else {
 				if value == "struct" {
-					var expr_113 bool
-					expr_113 = true
-					expr_117 = expr_113
+					var expr_147 bool
+					expr_147 = true
+					expr_151 = expr_147
 				} else {
 					if value == "interface" {
-						var expr_112 bool
-						expr_112 = true
-						expr_117 = expr_112
+						var expr_146 bool
+						expr_146 = true
+						expr_151 = expr_146
 					} else {
 						if value == "impl" {
-							var expr_111 bool
-							expr_111 = true
-							expr_117 = expr_111
+							var expr_145 bool
+							expr_145 = true
+							expr_151 = expr_145
 						} else {
 							if value == "func" {
-								var expr_110 bool
-								expr_110 = true
-								expr_117 = expr_110
+								var expr_144 bool
+								expr_144 = true
+								expr_151 = expr_144
 							} else {
 								if value == "if" {
-									var expr_109 bool
-									expr_109 = true
-									expr_117 = expr_109
+									var expr_143 bool
+									expr_143 = true
+									expr_151 = expr_143
 								} else {
 									if value == "then" {
-										var expr_108 bool
-										expr_108 = true
-										expr_117 = expr_108
+										var expr_142 bool
+										expr_142 = true
+										expr_151 = expr_142
 									} else {
 										if value == "elsif" {
-											var expr_107 bool
-											expr_107 = true
-											expr_117 = expr_107
+											var expr_141 bool
+											expr_141 = true
+											expr_151 = expr_141
 										} else {
 											if value == "else" {
-												var expr_106 bool
-												expr_106 = true
-												expr_117 = expr_106
+												var expr_140 bool
+												expr_140 = true
+												expr_151 = expr_140
 											} else {
 												if value == "switch" {
-													var expr_105 bool
-													expr_105 = true
-													expr_117 = expr_105
+													var expr_139 bool
+													expr_139 = true
+													expr_151 = expr_139
 												} else {
 													if value == "case" {
-														var expr_104 bool
-														expr_104 = true
-														expr_117 = expr_104
+														var expr_138 bool
+														expr_138 = true
+														expr_151 = expr_138
 													} else {
 														if value == "end" {
-															var expr_103 bool
-															expr_103 = true
-															expr_117 = expr_103
+															var expr_137 bool
+															expr_137 = true
+															expr_151 = expr_137
 														} else {
 															if value == "using" {
-																var expr_102 bool
-																expr_102 = true
-																expr_117 = expr_102
+																var expr_136 bool
+																expr_136 = true
+																expr_151 = expr_136
 															} else {
 																if value == "not" {
-																	var expr_101 bool
-																	expr_101 = true
-																	expr_117 = expr_101
+																	var expr_135 bool
+																	expr_135 = true
+																	expr_151 = expr_135
 																} else {
 																	if value == "let" {
-																		var expr_100 bool
-																		expr_100 = true
-																		expr_117 = expr_100
+																		var expr_134 bool
+																		expr_134 = true
+																		expr_151 = expr_134
 																	} else {
 																		if value == "letrec" {
-																			var expr_99 bool
-																			expr_99 = true
-																			expr_117 = expr_99
+																			var expr_133 bool
+																			expr_133 = true
+																			expr_151 = expr_133
 																		} else {
 																			if value == "var" {
-																				var expr_98 bool
-																				expr_98 = true
-																				expr_117 = expr_98
+																				var expr_132 bool
+																				expr_132 = true
+																				expr_151 = expr_132
 																			} else {
 																				if value == "embed" {
-																					var expr_97 bool
-																					expr_97 = true
-																					expr_117 = expr_97
+																					var expr_131 bool
+																					expr_131 = true
+																					expr_151 = expr_131
 																				} else {
 																					if value == "while" {
-																						var expr_96 bool
-																						expr_96 = true
-																						expr_117 = expr_96
+																						var expr_130 bool
+																						expr_130 = true
+																						expr_151 = expr_130
 																					} else {
 																						if value == "return" {
-																							var expr_95 bool
-																							expr_95 = true
-																							expr_117 = expr_95
+																							var expr_129 bool
+																							expr_129 = true
+																							expr_151 = expr_129
 																						} else {
 																							if value == "go" {
-																								var expr_94 bool
-																								expr_94 = true
-																								expr_117 = expr_94
+																								var expr_128 bool
+																								expr_128 = true
+																								expr_151 = expr_128
 																							} else {
 																								if value == "in" {
-																									var expr_93 bool
-																									expr_93 = true
-																									expr_117 = expr_93
+																									var expr_127 bool
+																									expr_127 = true
+																									expr_151 = expr_127
 																								} else {
 																									if value == "type" {
-																										var expr_92 bool
-																										expr_92 = true
-																										expr_117 = expr_92
+																										var expr_126 bool
+																										expr_126 = true
+																										expr_151 = expr_126
 																									} else {
 																										if value == "as" {
-																											var expr_91 bool
-																											expr_91 = true
-																											expr_117 = expr_91
+																											var expr_125 bool
+																											expr_125 = true
+																											expr_151 = expr_125
 																										} else {
 																											if value == "true" {
-																												var expr_90 bool
-																												expr_90 = true
-																												expr_117 = expr_90
+																												var expr_124 bool
+																												expr_124 = true
+																												expr_151 = expr_124
 																											} else {
 																												if value == "false" {
-																													var expr_89 bool
-																													expr_89 = true
-																													expr_117 = expr_89
+																													var expr_123 bool
+																													expr_123 = true
+																													expr_151 = expr_123
 																												} else {
 																													{
-																														var expr_88 bool
-																														expr_88 = false
-																														expr_117 = expr_88
+																														var expr_122 bool
+																														expr_122 = false
+																														expr_151 = expr_122
 																													}
 																												}
 																											}
@@ -1431,32 +1659,32 @@ func isKeyword(value string) bool {
 			}
 		}
 	}
-	return expr_117
+	return expr_151
 }
 func defaultImportAlias(path string) string {
-	parts_118 := strings.Split(path, "/")
-	var expr_119 string
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_118) == 0 {
-		expr_119 = path
+	parts_152 := strings.Split(path, "/")
+	var expr_153 string
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_152) == 0 {
+		expr_153 = path
 	} else {
-		expr_119 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_118, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_118)-1), path)
+		expr_153 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_152, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_152)-1), path)
 	}
-	return expr_119
+	return expr_153
 }
 func formatError(sourceName string, err Option[ps.ParseError], pos ps.Position) string {
-	var expr_122 string
-	if v_18, ok := err.(OptionSome[ps.ParseError]); ok {
-		var expr_121 string
-		expr_121 = sourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_18.F0.Position.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_18.F0.Position.Column) + ": parse error: " + v_18.F0.Message
-		expr_122 = expr_121
+	var expr_156 string
+	if v_49, ok := err.(OptionSome[ps.ParseError]); ok {
+		var expr_155 string
+		expr_155 = sourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_49.F0.Position.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_49.F0.Position.Column) + ": parse error: " + v_49.F0.Message
+		expr_156 = expr_155
 	} else {
 		if _, ok := err.(OptionNone[ps.ParseError]); ok {
-			var expr_120 string
-			expr_120 = sourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Column) + ": parse error"
-			expr_122 = expr_120
+			var expr_154 string
+			expr_154 = sourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Column) + ": parse error"
+			expr_156 = expr_154
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_122
+	return expr_156
 }

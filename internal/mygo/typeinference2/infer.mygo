@@ -1,6 +1,7 @@
 package typeinference2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import fmt "go:fmt"
 import importer "go:go/importer"
 import gotypes "go:go/types"
 import strings "go:strings"
@@ -68,11 +69,12 @@ func inferFuncDecl(name: String, tps: Slice[String], params: Slice[ast2.Param], 
   let fnType = MonoType.TFunc(paramTypes, Ref.new(retType))
   let predicates = predicatesFromConstraintsWithParams(constraints, tps)
   let envWithSig = envPut(env, name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: predicates, Body: fnType })
-  let bodyEnv = envWithParamsAndTypes(envWithSig, params, paramTypes)
+  let bodyEnv = envWithTypeParams(envWithParamsAndTypes(envWithSig, params, paramTypes), tps)
   let inferred = inferExpr(body, bodyEnv, state)
   switch inferred
     case Ok(r) =>
       let inferredType = applySubst(r.Subst, r.Type)
+      debugFuncDecl(name, r.Subst, inferredType, retType)
       let checked = if isGoBoundaryTuple(inferredType, retType) then Ok(r.Subst) else unify(inferredType, retType, r.Subst) end
       switch checked
         case Ok(s2) =>
@@ -91,6 +93,16 @@ func isGoBoundaryTuple(inferred: MonoType, expected: MonoType) -> Bool
         case _ => false
       end
     case _ => false
+  end
+end
+
+func debugFuncDecl(name: String, subst: Slice[SubstEntry], inferredType: MonoType, retType: MonoType) -> ()
+  if strings.Contains(name, "PMap") || strings.Contains(name, "PPure") || strings.Contains(name, "PFail") || strings.Contains(name, "PBind") || strings.Contains(name, "PThen") || strings.Contains(name, "POrElse") then
+    fmt.Println("[DEBUG] " + name + ": subst=" + substString(subst))
+    fmt.Println("[DEBUG]   inferredType = " + monoStringFull(inferredType))
+    fmt.Println("[DEBUG]   retType     = " + monoStringFull(retType))
+    fmt.Println("[DEBUG]   applySubst(retType) = " + monoStringFull(applySubst(subst, retType)))
+    ()
   end
 end
 
@@ -202,9 +214,9 @@ func inferExprInner(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) ->
 end
 
 func inferFuncLit(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
-  let paramTypes = paramsToTypes(params)
+  let paramTypes = paramsToTypesInEnv(params, env, state)
   let retType = switch ret
-    case Some(t) => typeFromAST(t)
+    case Some(t) => typeFromASTInEnv(t, env, state)
     case None => MonoType.TUnit
   end
   let bodyEnv = envWithParams(env, params)
@@ -212,7 +224,9 @@ func inferFuncLit(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: a
   switch inferred
     case Err(msg) => Err("function literal: " + msg)
     case Ok(value) =>
-      let checked = unify(applySubst(value.Subst, value.Type), retType, value.Subst)
+      let bodyApplied = applySubst(value.Subst, value.Type)
+      fmt.Println("[DEBUG]   inferFuncLit: bodyType=" + monoStringFull(bodyApplied) + " retType=" + monoStringFull(retType) + " subst=" + substString(value.Subst))
+      let checked = unify(bodyApplied, retType, value.Subst)
       switch checked
         case Err(msg) => Err("function literal return type mismatch: " + msg)
         case Ok(subst) => Ok(InferResult { Type: MonoType.TFunc(paramTypes, Ref.new(applySubst(subst, retType))), Predicates: value.Predicates, Subst: subst, State: value.State })
@@ -224,7 +238,17 @@ func inferGenericStructLit(typeName: String, typeArgs: Slice[ast2.TypeExpr], fie
   let checked = inferStructLit(typeName, fields, env, state)
   switch checked
     case Err(msg) => Err(msg)
-    case Ok(value) => Ok(InferResult { Type: MonoType.TCon(typeName, typeArgsFromAST(typeArgs)), Predicates: value.Predicates, Subst: value.Subst, State: value.State })
+    case Ok(value) =>
+      let resultType = MonoType.TCon(typeName, typeArgsFromASTInEnv(typeArgs, env, state))
+      debugStructLit(typeName, typeArgs, resultType, value.Subst)
+      Ok(InferResult { Type: resultType, Predicates: value.Predicates, Subst: value.Subst, State: value.State })
+  end
+end
+
+func debugStructLit(typeName: String, typeArgs: Slice[ast2.TypeExpr], resultType: MonoType, subst: Slice[SubstEntry]) -> ()
+  if typeName == "Reply" || typeName == "Parser" then
+    fmt.Println("[DEBUG]   inferGenericStructLit " + typeName + "[" + typeExprListString(typeArgs) + "]: resultType=" + monoStringFull(resultType) + " subst=" + substString(subst))
+    ()
   end
 end
 
@@ -523,7 +547,20 @@ func inferBinary(op: String, left: ast2.Expr, right: ast2.Expr, env: Slice[EnvEn
                 case Err(msg) => Err(msg)
               end
             else
-              Err("unknown binary operator " + op)
+              if isLogical(op) then
+                let s2 = unify(applySubst(s1, lv.Type), MonoType.TCon("Bool", emptyMonoTypes()), s1)
+                switch s2
+                  case Err(msg) => Err("logical operator requires Bool operands: " + msg)
+                  case Ok(sa) =>
+                    let s3 = unify(applySubst(sa, rv.Type), MonoType.TCon("Bool", emptyMonoTypes()), sa)
+                    switch s3
+                      case Ok(sb) => Ok(InferResult { Type: MonoType.TCon("Bool", emptyMonoTypes()), Predicates: appendPredicates(lv.Predicates, rv.Predicates), Subst: sb, State: rv.State })
+                      case Err(msg) => Err("logical operator requires Bool operands: " + msg)
+                    end
+                end
+              else
+                Err("unknown binary operator " + op)
+              end
             end
           end
       end
@@ -548,7 +585,10 @@ func inferIf(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, env: Sli
                 case Err(msg) => Err(msg)
                 case Ok(ev) =>
                   let s1 = composeSubst(ev.Subst, composeSubst(tv.Subst, scond))
-                  let same = unify(applySubst(s1, tv.Type), applySubst(s1, ev.Type), s1)
+                  let thenApplied = applySubst(s1, tv.Type)
+                  let elseApplied = applySubst(s1, ev.Type)
+                  let _ = fmt.Println("[DEBUG]   inferIf: then=" + monoStringFull(thenApplied) + " else=" + monoStringFull(elseApplied) + " subst=" + substString(s1))
+                  let same = unify(thenApplied, elseApplied, s1)
                   switch same
                     case Ok(s2) => Ok(InferResult { Type: applySubst(s2, tv.Type), Predicates: appendPredicates(cv.Predicates, appendPredicates(tv.Predicates, ev.Predicates)), Subst: s2, State: ev.State })
                     case Err(msg) => Err(msg)
@@ -960,11 +1000,20 @@ func inferStructLitFields(typeName: String, fields: Slice[ast2.StructLitField], 
     Ok(InferResult { Type: MonoType.TCon(typeName, emptyMonoTypes()), Predicates: predicates, Subst: subst, State: curState })
   else
     let f = fields.Get(0).UnwrapOr(ast2.StructLitField { Name: "", Value: ast2.EmptyExpr() })
+    if typeName == "Reply" || typeName == "Parser" then
+      fmt.Println("[DEBUG]     field " + f.Name + ": substBefore=" + substString(subst))
+      ()
+    end
     let r = inferExpr(f.Value, env, curState)
     switch r
       case Err(msg) => Err(msg)
-      case Ok(v) =>
+      case Ok(v) then
+        if typeName == "Reply" || typeName == "Parser" then
+          fmt.Println("[DEBUG]     field " + f.Name + ": fieldType=" + monoStringFull(v.Type) + " substAfter=" + substString(v.Subst))
+          ()
+        end
         inferStructLitFields(typeName, sliceDrop(fields, 1), env, v.State, composeSubst(v.Subst, subst), v.State, appendPredicates(predicates, v.Predicates))
+      end
     end
   end
 end

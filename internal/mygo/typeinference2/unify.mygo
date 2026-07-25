@@ -1,5 +1,7 @@
 package typeinference2
 
+import fmt "go:fmt"
+
 func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
   let a = applySubst(subst, left)
   let b = applySubst(subst, right)
@@ -96,7 +98,12 @@ func bindVar(id: Int, t: MonoType, subst: Slice[SubstEntry]) -> Result[Slice[Sub
 end
 
 func bindDistinctVar(id: Int, t: MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
-  if occursIn(id, t) then Err("occurs check failed") else Ok(subst.Prepend(SubstEntry { ID: id, Type: t })) end
+  if occursIn(id, t) then
+    let _ = fmt.Println("[DEBUG] OCCURS: t" + id.ToString() + " ~ " + monoStringFull(t) + " subst=" + substString(subst))
+    Err("occurs check failed: t" + id.ToString() + " ~ " + monoStringFull(t))
+  else
+    Ok(subst.Prepend(SubstEntry { ID: id, Type: t }))
+  end
 end
 
 func unifyArgs(left: Slice[MonoType], right: Slice[MonoType], subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]

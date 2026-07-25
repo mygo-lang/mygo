@@ -72,6 +72,43 @@ func monoString(t: MonoType) -> String
   end
 end
 
+func monoStringFull(t: MonoType) -> String
+  switch t
+    case TVar(id) => "t" + id.ToString()
+    case TKVar(id) => "K" + id.ToString()
+    case TCon(name, args) =>
+      if args.Len() == 0 then name else name + "[" + monoListString(args) + "]" end
+    case TApp(ctor, args) => monoStringFull(ctor.value()) + "[" + monoListString(args) + "]"
+    case TFunc(args, ret) => "func(" + monoListString(args) + ") -> " + monoStringFull(ret.value())
+    case TTuple(items) => "tuple(" + monoListString(items) + ")"
+    case TUnit => "()"
+    case TGoPackage(alias) => "go package " + alias
+  end
+end
+
+func monoListString(items: Slice[MonoType]) -> String
+  if items.Len() == 0 then "" else
+    let head = monoStringFull(items.Get(0).UnwrapOr(MonoType.TUnit))
+    let tail = monoListString(sliceDrop(items, 1))
+    if tail == "" then head else head + ", " + tail end
+  end
+end
+
+func substString(subst: Slice[SubstEntry]) -> String
+  if subst.Len() == 0 then "[]" else
+    "[" + substStringLoop(subst, 0) + "]"
+  end
+end
+
+func substStringLoop(subst: Slice[SubstEntry], index: Int) -> String
+  if index >= subst.Len() then "" else
+    let entry = subst.Get(index).UnwrapOr(SubstEntry { ID: 0, Type: MonoType.TUnit })
+    let head = "t" + entry.ID.ToString() + "->" + monoStringFull(entry.Type)
+    let tail = substStringLoop(subst, index + 1)
+    if tail == "" then head else head + ", " + tail end
+  end
+end
+
 # Instantiate a polymorphic binding at each lookup site.
 func instantiate(scheme: Scheme, state: InferState) -> MonoType
   instantiateBound(scheme.Bound, scheme.Body, state, [])
@@ -229,6 +266,10 @@ end
 
 func isComparison(op: String) -> Bool
   op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">="
+end
+
+func isLogical(op: String) -> Bool
+  op == "&&" || op == "||"
 end
 
 func emptyMonoTypes() -> Slice[MonoType]
