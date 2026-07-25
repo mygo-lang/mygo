@@ -166,7 +166,7 @@ func translateFuncLitAst(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], 
   while index < params.Len()
     let param = params.Get(index).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType() })
     let name = ctxFreshBinding(child, param.Name)
-    ctxSetLocal(child, param.Name, mygoTypeString(param.Type))
+    ctxSetLocal(child, param.Name, typeinference2.TypeFromAST(param.Type))
     names = names.Append(name)
     index = index + 1
   end
@@ -253,22 +253,22 @@ func translateSwitchBranchesStmt(cases: Slice[ast2.SwitchCase], sourceTarget: as
         let rest = translateSwitchBranchesStmt(sliceDrop(cases, 1), sourceTarget, target, ctx)
         switch rest
           case Err(msg) => Err(msg)
-          case Ok(next) =>
-            let targetType = switchTargetGoType(sourceTarget, ctx)
-            switch targetType
-              case Err(msg) => Err(msg)
-              case Ok(typ) =>
-                # For zero-arg or all-wildcard variants (e.g. None, Some(_)) use _
-                # to avoid "declared and not used" errors on the match variable.
+          case Ok(next) then
+            let targetMono = resolveExprMonoType(sourceTarget, ctx)
+            switch targetMono
+              case Some(tm) =>
+                let typ = monoTypeToGoStr(tm)
                 let valueName = if args.Len() == 0 || allWildcards(args, 0) then "_" else "__mygo_match_" + ctxFreshExprTemp(ctx) end
                 let child = Ref.new(ctxChild(ctx))
-                bindPatternArgumentsWithTypes(child, args, valueName, 0, name, typ, ctx)
+                bindPatternArgumentsWithTypes(child, args, valueName, 0, name, tm, ctx)
                 let body = translateSwitchCaseBodyStmt(current.Body, child)
                 switch body
                   case Err(msg) => Err(msg)
                   case Ok(branchStmts) => Ok(astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ, name), valueName, branchStmts, next)))
                 end
+              case None => Err("cannot resolve switch target type")
             end
+          end
         end
       case _ => Err("unsupported pattern in statement-context switch")
     end
@@ -336,19 +336,21 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], sourceTarget: ast2.E
   else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
     switch current.Pattern
-      case BindPattern(name) =>
+      case BindPattern(name) then
         # BindPattern at switch top level is no longer produced by parser2;
         # bare identifiers are now VariantPattern(name, []).  Keep this branch
         # for backward compatibility: bind the whole value to `name`.
         let child = Ref.new(ctxChild(ctx))
         ctxSetBinding(child, name, temp)
         translateSwitchCaseBody(current.Body, child, expected, temp)
+      end
       case WildcardPattern => translateSwitchCaseBody(current.Body, ctx, expected, temp)
-      case TuplePattern(items) =>
+      case TuplePattern(items) then
         let child = Ref.new(ctxChild(ctx))
         bindTuplePattern(child, items, temp, 0)
         translateSwitchCaseBody(current.Body, child, expected, temp)
-      case LiteralPattern(kind, literal) =>
+      end
+      case LiteralPattern(kind, literal) then
         let body = translateSwitchCaseBody(current.Body, ctx, expected, temp)
         let rest = translateSwitchBranches(sliceDrop(cases, 1), sourceTarget, target, temp, ctx, expected)
         switch body
@@ -361,45 +363,29 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], sourceTarget: ast2.E
                 Ok(astSingleStmt(goast.If(goast.Binary(target, "==", pattern), bodyStmts, next)))
             end
         end
-      case VariantPattern(name, args) =>
+      end
+      case VariantPattern(name, args) then
         let rest = translateSwitchBranches(sliceDrop(cases, 1), sourceTarget, target, temp, ctx, expected)
         switch rest
           case Err(msg) => Err(msg)
-          case Ok(next) =>
-            let targetType = switchTargetGoType(sourceTarget, ctx)
-            switch targetType
-              case Err(msg) => Err(msg)
-              case Ok(typ) =>
-                # For zero-arg or all-wildcard variants (e.g. None, Some(_)) use _
-                # to avoid "declared and not used" errors on the match variable.
+          case Ok(next) then
+            let targetMono = resolveExprMonoType(sourceTarget, ctx)
+            switch targetMono
+              case Some(tm) =>
+                let typ = monoTypeToGoStr(tm)
                 let valueName = if args.Len() == 0 || allWildcards(args, 0) then "_" else "__mygo_match_" + ctxFreshExprTemp(ctx) end
                 let child = Ref.new(ctxChild(ctx))
-                bindPatternArgumentsWithTypes(child, args, valueName, 0, name, typ, ctx)
-                # Override constraintFuncs for this variant's pattern-bound methods
-                # so dictFuncForMethod picks the correct function when receiverType is empty.
-                let enumName = typeConstructor(typ)
-                let vIdxKey = "$variantIndex$" + enumName + "." + name
-                let vIdx = switch ctx.sourceTypes.Get(vIdxKey)
-                  case Some(s) => s
-                  case None => "0"
-                end
-                let idx = if vIdx == "0" then 0 else 1 end
-                let eqNames = ctx.constraintFuncNames.Get("Equals")
-                switch eqNames
-                  case Some(list) =>
-                    switch list.Get(idx)
-                      case Some(fn) => ctx.constraintFuncs.Set("Equals", fn)
-                      case None => ()
-                    end
-                  case None => ()
-                end
+                bindPatternArgumentsWithTypes(child, args, valueName, 0, name, tm, ctx)
                 let body = translateSwitchCaseBody(current.Body, child, expected, temp)
                 switch body
                   case Err(msg) => Err(msg)
                   case Ok(branchStmts) => Ok(astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ, name), valueName, branchStmts, next)))
                 end
+              case None => Err("cannot resolve switch target type for variant " + name)
             end
+          end
         end
+      end
     end
   end
 end
@@ -430,31 +416,32 @@ end
 # bindPatternArgumentsWithTypes is like bindPatternArguments but also sets
 # the local type for each bound variable by looking up the enum variant's
 # field types from sourceTypes (seeded by seedEnumVariantFieldTypes).
-func bindPatternArgumentsWithTypes(ctx: Ref[egCtx], args: Slice[ast2.Pattern], valueName: String, index: Int, variantName: String, targetType: String, outerCtx: Ref[egCtx]) -> ()
+func bindPatternArgumentsWithTypes(ctx: Ref[egCtx], args: Slice[ast2.Pattern], valueName: String, index: Int, variantName: String, targetMono: ast2.MonoType, outerCtx: Ref[egCtx]) -> ()
   if index < args.Len() then
     let pattern = args.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern)
     bindPattern(ctx, pattern, valueName + ".F" + index.ToString())
     switch pattern
       case BindPattern(name) =>
-          let enumName = typeConstructor(targetType)
-          let fieldKey = "$variant$" + enumName + "." + variantName + "." + index.ToString()
-          let fieldType = switch outerCtx.sourceTypes.Get(fieldKey)
-            case Some(t) => t
-            case None =>
-              # Look up variant field type from the target type's type args.
-              # For single-param enums (Option[A]), field 0 -> type arg 0.
-              # For multi-param enums (Result[A,E]), use variantIndex + fieldIndex.
-              let parts = splitTypeArgs(targetType)
-              let argCount = parts.Args.Len()
-              let argIdx = if argCount == 1 then 0 else index end
-              parts.Args.Get(argIdx).UnwrapOr("any")
-          end
-          ctxSetLocal(ctx, name, fieldType)
-          ctxSetLocal(outerCtx, name, fieldType)
-          ctx.patternTypes.Set(name, fieldType)
+          let fieldMono = extractVariantFieldType(targetMono, index)
+          ctxSetLocal(ctx, name, fieldMono)
+          ctxSetLocal(outerCtx, name, fieldMono)
+          ctx.patternTypes.Set(name, monoTypeToMygoStr(fieldMono))
       case _ => ()
     end
-    bindPatternArgumentsWithTypes(ctx, args, valueName, index + 1, variantName, targetType, outerCtx)
+    bindPatternArgumentsWithTypes(ctx, args, valueName, index + 1, variantName, targetMono, outerCtx)
+  end
+end
+
+func extractVariantFieldType(targetMono: ast2.MonoType, index: Int) -> ast2.MonoType
+  switch targetMono
+    case TCon(_, args) =>
+      let argCount = args.Len()
+      let argIdx = if argCount == 1 then 0 else index end
+      args.Get(argIdx).UnwrapOr(ast2.MonoType.TUnit)
+    case TApp(ctor, args) =>
+      let argIdx = if args.Len() == 1 then 0 else index end
+      args.Get(argIdx).UnwrapOr(ast2.MonoType.TUnit)
+    case _ => ast2.MonoType.TUnit
   end
 end
 
@@ -497,30 +484,20 @@ func switchTargetGoType(target: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, St
     case IdentExpr(name) =>
       let found = ctxGetLocal(ctx, name)
       switch found
-        case Some(typ) => Ok(mygoToGoTypeStr(typ))
+        case Some(typ) => Ok(monoTypeToGoStr(typ))
         case None => Err("unresolved identifier " + name + " in switch target")
       end
     case FieldExpr(base, field) =>
-      let baseResult = switchTargetGoType(base, ctx)
-      switch baseResult
-        case Err(msg) => Err(msg)
-        case Ok(baseType) =>
-          let rawOwner = typeConstructor(baseType)
-          let owner = if strings.HasPrefix(rawOwner, "*") then strings.TrimPrefix(rawOwner, "*") else rawOwner end
-          let key = "$field$" + owner + "." + exportName(field)
-          let rawFieldType = ctx.sourceTypes.Get(key)
-          switch rawFieldType
-            case Some(fieldType) =>
-              let structTparams = ctx.sourceTypes.Get("$tparams$" + owner).UnwrapOr("")
-              if structTparams != "" then
-                let actualArgs = extractTypeArgs(baseType)
-                let tparamList = strings.Split(structTparams, ",")
-                Ok(mygoToGoTypeStr(substituteTypeParams(fieldType, tparamList, actualArgs, 0)))
-              else
-                Ok(mygoToGoTypeStr(fieldType))
-              end
-            case None => Err("unresolved field " + key + " on " + baseType)
+      let baseMono = resolveExprMonoType(base, ctx)
+      switch baseMono
+        case Some(bt) =>
+          switch lookupFieldInMonoType(bt, field, ctx)
+            case Some(fieldMono) => Ok(monoTypeToGoStr(fieldMono))
+            case None =>
+              let btStr = monoTypeToMygoStr(bt)
+              Err("unresolved field " + field + " on " + btStr)
           end
+        case None => Err("cannot resolve base type for field " + field)
       end
     case _ =>
       switch ffiResultSignature(target, ctx)
@@ -528,6 +505,18 @@ func switchTargetGoType(target: ast2.Expr, ctx: Ref[egCtx]) -> Result[String, St
           let valueType = sig.Results.Get(0).UnwrapOr("")
           Ok("Result[" + valueType + ", error]")
         case None => Err("cannot determine switch target type")
+      end
+  end
+end
+
+# resolveExprMonoType resolves an expression to its MonoType.
+func resolveExprMonoType(expr: ast2.Expr, ctx: Ref[egCtx]) -> Option[ast2.MonoType]
+  switch expr.Type
+    case Some(t) => Some(t)
+    case None =>
+      switch expr.Kind
+        case IdentExpr(name) => ctxGetLocal(ctx, name)
+        case _ => None
       end
   end
 end
@@ -901,24 +890,25 @@ func receiverStaticType(receiver: ast2.Expr, ctx: Ref[egCtx]) -> String
   switch receiver.Kind
     case IdentExpr(name) =>
       let pt = ctx.patternTypes.Get(name)
-      let st = ctx.sourceTypes.Get(name)
       let lt = ctx.locals.Get(name)
       switch pt
         case Some(v) => v
         case None =>
-          switch st
-            case Some(v) => v
-            case None =>
-              switch lt
-                case Some(v) => v
-                case None => ""
-              end
+          switch lt
+            case Some(mono) => monoTypeToMygoStr(mono)
+            case None => ""
           end
       end
     case FieldExpr(base, field) =>
-      let baseType = receiverStaticType(base, ctx)
-      let owner = resolveStructOwner(baseType)
-      ctx.sourceTypes.Get("$field$" + owner + "." + exportName(field)).UnwrapOr("")
+      let baseMono = resolveExprMonoType(base, ctx)
+      switch baseMono
+        case Some(bt) =>
+          switch lookupFieldInMonoType(bt, field, ctx)
+            case Some(fieldMono) => monoTypeToMygoStr(fieldMono)
+            case None => ""
+          end
+        case None => ""
+      end
     case _ => ""
   end
 end
@@ -1290,4 +1280,12 @@ func translateSetLitItems(items: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, 
       end
     end
   end
+end
+
+# lookupExprTypeInTypedInfo searches TypedInfo.ExprTypes for an expression
+# whose ID matches the given expression's ID.  Because the ID is copied along
+# with the value-type Expr struct, this lookup works across the value copies
+# that occur between type inference and code generation.
+func lookupExprTypeInTypedInfo(expr: ast2.Expr) -> Option[ast2.MonoType]
+  expr.Type
 end

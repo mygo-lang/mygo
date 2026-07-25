@@ -14,14 +14,21 @@ enum MonoType
   # TKVar is a type-constructor variable (kind * -> *), used by HKT params.
   TKVar(Int)
   # TApp applies a type constructor to value-level type arguments.
-  TApp(Ref[MonoType], Slice[MonoType])
-  TCon(String, Slice[MonoType])
-  TFunc(Slice[MonoType], Ref[MonoType])
-  TTuple(Slice[MonoType])
+  TApp(Ref[ast2.MonoType], Slice[ast2.MonoType])
+  TCon(String, Slice[ast2.MonoType])
+  TFunc(Slice[ast2.MonoType], Ref[ast2.MonoType])
+  TTuple(Slice[ast2.MonoType])
   TUnit
   # TGoPackage represents an imported Go package, storing its alias so the
   # code generator can qualify Go symbols properly.
   TGoPackage(String)
+  # TParam is a type parameter placeholder used in struct field types and
+  # function signatures BEFORE instantiation.  Unlike TVar (which uses
+  # negative IDs in the old scheme), TParam always carries the type
+  # parameter's declaration index (1, 2, 3, ...).  It is replaced by a
+  # fresh TVar during instantiation or by the concrete type argument
+  # during field-type substitution.
+  TParam(Int)
 end
 
 struct Scheme
@@ -30,17 +37,17 @@ struct Scheme
   # binding. Keeping Body separate preserves the existing HM consumers while
   # making dictionary requirements explicit for codegen2.
   Predicates: Slice[Predicate]
-  Body: MonoType
+  Body: ast2.MonoType
 end
 
 struct Predicate
   ClassName: String
-  Args: Slice[MonoType]
+  Args: Slice[ast2.MonoType]
 end
 
 struct QualifiedType
   Predicates: Slice[Predicate]
-  Body: MonoType
+  Body: ast2.MonoType
 end
 
 struct EnvEntry
@@ -51,12 +58,12 @@ end
 struct FieldEntry
   TypeName: String
   FieldName: String
-  Type: MonoType
+  Type: ast2.MonoType
 end
 
 struct SubstEntry
   ID: Int
-  Type: MonoType
+  Type: ast2.MonoType
 end
 
 # ---------------------------------------------------------------------------
@@ -82,27 +89,6 @@ struct MyGoPackageInfo
   Types: Slice[String]
 end
 
-# TypedInfoExprType maps an expression node to its inferred monotype.
-struct TypedInfoExprType
-  Expr: Ref[ast2.Expr]
-  Type: MonoType
-end
-
-# TypedInfoPredicate maps an expression node to its typeclass predicates.
-struct TypedInfoPredicate
-  Expr: Ref[ast2.Expr]
-  Predicates: Slice[Predicate]
-end
-
-# TypedInfo holds the results of type inference for an entire package.
-# The code generator can consult this info to avoid re-inferring types.
-struct TypedInfo
-  ExprTypes: Slice[TypedInfoExprType]
-  BindingSchemes: Slice[EnvEntry]
-  Predicates: Slice[TypedInfoPredicate]
-  MyGoPackages: Slice[MyGoPackageInfo]
-end
-
 # InferState holds inference state: fresh variable counter, package info for
 # lookups, and (optionally) a TypedInfo accumulator that records every
 # successfully inferred expression type.  Callers that do not need expression
@@ -113,11 +99,10 @@ struct InferState
   GoPackages: Slice[GoPackageEntry]
   MyGoPackages: Slice[MyGoPackageInfo]
   MyGoPackageCache: Slice[MyGoPackageInfo]
-  TypedInfo: Option[TypedInfo]
 end
 
 struct InferResult
-  Type: MonoType
+  Type: ast2.MonoType
   Predicates: Slice[Predicate]
   Subst: Slice[SubstEntry]
   State: InferState
@@ -133,7 +118,7 @@ struct PackageInfo
   GoPackages: Slice[GoPackageEntry]
   Instances: Slice[Instance]
   Solver: Solver
-  TypedInfo: Option[TypedInfo]
+  TypedDecls: Slice[ast2.Decl]
 end
 
 # GoPackageEntry records an imported Go package with its alias and type info.
@@ -168,10 +153,11 @@ struct DeclInfer
   Env: Slice[EnvEntry]
   Fields: Slice[FieldEntry]
   State: InferState
+  TypedDecl: Option[ast2.Decl]
 end
 
 struct ArgsResult
-  Types: Slice[MonoType]
+  Types: Slice[ast2.MonoType]
   Predicates: Slice[Predicate]
   Subst: Slice[SubstEntry]
   State: InferState
@@ -180,6 +166,7 @@ end
 struct BlockInferStep
   Result: InferResult
   Env: Slice[EnvEntry]
+  Stmt: ast2.Stmt
 end
 
 # PkgDecls bundles all file declarations in a package.
@@ -200,25 +187,6 @@ func NewInferState() -> InferState
     GoPackages: [] as Slice[GoPackageEntry],
     MyGoPackages: [] as Slice[MyGoPackageInfo],
     MyGoPackageCache: [] as Slice[MyGoPackageInfo],
-    TypedInfo: None,
-  }
-end
-
-# NewInferStateWithTypedInfo creates an InferState with a fresh TypedInfo
-# accumulator, so every successfully inferred expression is recorded.
-func newInferStateWithTypedInfo() -> InferState
-  InferState {
-    FreshVarID: 1,
-    PkgInfo: None,
-    GoPackages: [] as Slice[GoPackageEntry],
-    MyGoPackages: [] as Slice[MyGoPackageInfo],
-    MyGoPackageCache: [] as Slice[MyGoPackageInfo],
-    TypedInfo: Some(TypedInfo {
-      ExprTypes: [] as Slice[TypedInfoExprType],
-      BindingSchemes: [] as Slice[EnvEntry],
-      Predicates: [] as Slice[TypedInfoPredicate],
-      MyGoPackages: [] as Slice[MyGoPackageInfo],
-    }),
   }
 end
 
@@ -231,7 +199,6 @@ func withFreshID(state: InferState, id: Int) -> InferState
     GoPackages: state.GoPackages,
     MyGoPackages: state.MyGoPackages,
     MyGoPackageCache: state.MyGoPackageCache,
-    TypedInfo: state.TypedInfo,
   }
 end
 
@@ -241,7 +208,7 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
   let env = predeclareImplMethods(file.Decls, predeclareFunctions(file.Decls, initialEnv()))
   let goPkgImports = collectGoPackageImports(file.Decls)
   let envWithGoPkgs = seedGoPackageEnv(goPkgImports, env)
-  switch inferDecls(file.Decls, envWithGoPkgs, [], newInferStateWithTypedInfo())
+  switch inferDecls(file.Decls, envWithGoPkgs, [], NewInferState())
     case Ok(info) =>
       let collected = collectInstances(file.Decls)
       let instances = mergeBuiltInInstances(collected)
@@ -252,7 +219,7 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
         GoPackages: goPkgImports,
         Instances: instances,
         Solver: solver,
-        TypedInfo: info.TypedInfo,
+        TypedDecls: info.TypedDecls,
       })
     case Err(msg) => Err(withExpressionSourceName(msg, file.SourceName))
   end
@@ -267,18 +234,10 @@ func InferPackage(files: Slice[PkgDeclSource]) -> Result[PackageInfo, String]
 end
 
 func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice[GoPackageEntry]) -> Result[PackageInfo, String]
-  # Collect all decls first for predeclaration and cross-file lookups.
   let allDecls = flattenPkgDecls(files, 0, [] as Slice[ast2.Decl])
-
-  # Predeclare all function signatures across all files.
   let predeclEnv = predeclareAllFunctions(allDecls, initialEnv())
-
-  # Record Go package imports for reference in env.
-  # Add Go package aliases to the environment so qualified references work.
   let envWithGoPkgs = seedGoPackageEnv(goPkgImports, predeclEnv)
-
-  # Infer all declarations in order.
-  let result = inferDecls(allDecls, envWithGoPkgs, [], newInferStateWithTypedInfo())
+  let result = inferDecls(allDecls, envWithGoPkgs, [], NewInferState())
   switch result
     case Ok(info) =>
       let collected = collectInstances(allDecls)
@@ -290,7 +249,7 @@ func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice
         GoPackages: goPkgImports,
         Instances: instances,
         Solver: solver,
-        TypedInfo: info.TypedInfo,
+        TypedDecls: info.TypedDecls,
       })
     case Err(msg) =>
       let source = files.Get(0).UnwrapOr(PkgDeclSource { Path: "<input>", Decls: [] as Slice[ast2.Decl] }).Path
@@ -300,7 +259,7 @@ end
 
 func resolveEnvironment(solver: Solver, env: Slice[EnvEntry]) -> Slice[EnvEntry]
   if env.Len() == 0 then [] else
-    let entry = env.Get(0).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: MonoType.TUnit } })
+    let entry = env.Get(0).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TUnit } })
     let resolved = solverResolve(solver, entry.Scheme.Predicates, [])
     let predicates = switch resolved
       case Ok(items) => items
@@ -359,7 +318,7 @@ func seedGoPackageEnv(goPkgs: Slice[GoPackageEntry], env: Slice[EnvEntry]) -> Sl
     env
   else
     let pkg = goPkgs.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "", Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] })
-    seedGoPackageEnv(sliceDrop(goPkgs, 1), seedGoPackageMembers(pkg, envPut(env, pkg.Alias, Scheme { Bound: [], Predicates: [], Body: MonoType.TGoPackage(pkg.Path) })))
+    seedGoPackageEnv(sliceDrop(goPkgs, 1), seedGoPackageMembers(pkg, envPut(env, pkg.Alias, Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TGoPackage(pkg.Path) })))
   end
 end
 
@@ -388,7 +347,7 @@ func seedGoPackageTypes(pkg: GoPackageEntry, types: Slice[GoTypeSignature], env:
     # and the type parameters are bound fresh so a polymorphic Go type can be
     # instantiated at each use site (rare, but supported symmetrically).
     let bound = typeParamIDs(t.TypeParams, 1)
-    let body = MonoType.TCon(qualifiedName, typeParamsAsTypes(t.TypeParams, 1))
+    let body = ast2.MonoType.TCon(qualifiedName, typeParamsAsTypes(t.TypeParams, 1))
     let withType = envPut(env, qualifiedName, Scheme { Bound: bound, Predicates: [], Body: body })
     let withMethods = seedGoTypeMethods(qualifiedName, t.Methods, withType)
     seedGoPackageTypes(pkg, sliceDrop(types, 1), withMethods)
@@ -402,52 +361,52 @@ func seedGoTypeMethods(typeName: String, methods: Slice[GoFuncSignature], env: S
   end
 end
 
-func goSignatureType(sig: GoFuncSignature) -> MonoType
+func goSignatureType(sig: GoFuncSignature) -> ast2.MonoType
   if sig.Variadic then
     # A variadic Go function accepts any count at or above its fixed
     # parameter count, with trailing arguments coerced to the slice of the
     # variadic element type.  Encode it with a `$gofunc$-1` marker so that
     # inferOrdinaryCall's go-func fast path can accept any matching arity;
     # codegen needs the original `sig` to lower the call correctly.
-    MonoType.TCon("$gofunc$-1", [] as Slice[MonoType])
+    ast2.MonoType.TCon("$gofunc$-1", [] as Slice[ast2.MonoType])
   else
     let params = goSignatureTypes(sig.Params)
     let results = goSignatureTypes(sig.Results)
     let result = if results.Len() == 0 then
-      MonoType.TUnit
+      ast2.MonoType.TUnit
     else
-      if results.Len() == 1 then results.Get(0).UnwrapOr(MonoType.TUnit) else MonoType.TTuple(results) end
+      if results.Len() == 1 then results.Get(0).UnwrapOr(ast2.MonoType.TUnit) else ast2.MonoType.TTuple(results) end
     end
-    MonoType.TFunc(params, Ref.new(result))
+    ast2.MonoType.TFunc(params, Ref.new(result))
   end
 end
 
-func goSignatureTypes(items: Slice[String]) -> Slice[MonoType]
+func goSignatureTypes(items: Slice[String]) -> Slice[ast2.MonoType]
   if items.Len() == 0 then emptyGoTypes() else goSignatureTypes(sliceDrop(items, 1)).Prepend(goTypeName(items.Get(0).UnwrapOr("any"))) end
 end
 
-func emptyGoTypes() -> Slice[MonoType]
-  [] as Slice[MonoType]
+func emptyGoTypes() -> Slice[ast2.MonoType]
+  [] as Slice[ast2.MonoType]
 end
 
-func goTypeName(name: String) -> MonoType
+func goTypeName(name: String) -> ast2.MonoType
   switch name
-    case "int" => MonoType.TCon("Int", emptyGoTypes())
-    case "int8" => MonoType.TCon("Int8", emptyGoTypes())
-    case "int16" => MonoType.TCon("Int16", emptyGoTypes())
-    case "int32" => MonoType.TCon("Int32", emptyGoTypes())
-    case "int64" => MonoType.TCon("Int64", emptyGoTypes())
-    case "uint" => MonoType.TCon("UInt", emptyGoTypes())
-    case "uint8" => MonoType.TCon("UInt8", emptyGoTypes())
-    case "uint16" => MonoType.TCon("UInt16", emptyGoTypes())
-    case "uint32" => MonoType.TCon("UInt32", emptyGoTypes())
-    case "uint64" => MonoType.TCon("UInt64", emptyGoTypes())
-    case "float32" => MonoType.TCon("Float32", emptyGoTypes())
-    case "float64" => MonoType.TCon("Float64", emptyGoTypes())
-    case "string" => MonoType.TCon("String", emptyGoTypes())
-    case "bool" => MonoType.TCon("Bool", emptyGoTypes())
-    case "error" => MonoType.TCon("Error", emptyGoTypes())
-    case _ => MonoType.TVar(0)
+    case "int" => ast2.MonoType.TCon("Int", emptyGoTypes())
+    case "int8" => ast2.MonoType.TCon("Int8", emptyGoTypes())
+    case "int16" => ast2.MonoType.TCon("Int16", emptyGoTypes())
+    case "int32" => ast2.MonoType.TCon("Int32", emptyGoTypes())
+    case "int64" => ast2.MonoType.TCon("Int64", emptyGoTypes())
+    case "uint" => ast2.MonoType.TCon("UInt", emptyGoTypes())
+    case "uint8" => ast2.MonoType.TCon("UInt8", emptyGoTypes())
+    case "uint16" => ast2.MonoType.TCon("UInt16", emptyGoTypes())
+    case "uint32" => ast2.MonoType.TCon("UInt32", emptyGoTypes())
+    case "uint64" => ast2.MonoType.TCon("UInt64", emptyGoTypes())
+    case "float32" => ast2.MonoType.TCon("Float32", emptyGoTypes())
+    case "float64" => ast2.MonoType.TCon("Float64", emptyGoTypes())
+    case "string" => ast2.MonoType.TCon("String", emptyGoTypes())
+    case "bool" => ast2.MonoType.TCon("Bool", emptyGoTypes())
+    case "error" => ast2.MonoType.TCon("Error", emptyGoTypes())
+    case _ => ast2.MonoType.TVar(0)
   end
 end
 

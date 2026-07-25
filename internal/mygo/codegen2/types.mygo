@@ -4,17 +4,18 @@ import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 
-# types.mygo — 核心类型定义
-
 # egCtx 是表达式/语句翻译的上下文
-# 包含局部变量、绑定、类型信息等
 struct egCtx
-  # 局部变量名 → Go 类型
-  locals: Map[String, String]
+  # 局部变量名 → MonoType（不再使用字符串拼接查找 field）
+  locals: Map[String, ast2.MonoType]
   # MyGO 名 → Go 名
   bindings: Map[String, String]
-  # 源类型信息
+  # 源类型信息（仍然保留字符串版本用于 enumValueConstructors 等）
   sourceTypes: Map[String, String]
+  # Struct 字段类型：TypeName → [FieldEntry]
+  structFields: Map[String, Slice[typeinference2.FieldEntry]]
+  # Struct 类型参数 ID：TypeName → Bound IDs
+  structTypeParams: Map[String, Slice[Int]]
   # 变量是否可变
   mutable: Map[String, Bool]
   # SSA 风格命名计数
@@ -37,63 +38,33 @@ struct egCtx
   tailRecParamCount: Int
   # 尾递归参数 Go 名
   tailRecParamNames: Slice[String]
-  # constraintFuncs maps "methodName" → last registered Go function binding.
-  # constraintFuncNames maps "methodName" → Slice[String] of Go function
-  #   names in registration order, for multi-constraint disambiguation.
-  # constraintFuncArgTypes maps "methodName" → Slice[String] of type arg
-  #   strings in the same order as constraintFuncNames, so the call site
-  #   can match the receiver's static type against the correct function.
   constraintFuncs: Map[String, String]
   constraintFuncNames: Map[String, Slice[String]]
   constraintFuncArgTypes: Map[String, Slice[String]]
-  # Callee name -> required dictionary method names, in declaration order.
   callDictionaries: Map[String, Slice[String]]
-  # Package-level impl helper fallback for a typeclass method.
   packageDictionaries: Map[String, String]
-  # Structured requirements retain interface identity and type arguments.
   callRequirements: Map[String, Slice[DictionaryRequirement]]
   packageCandidates: Map[String, Slice[ImplDictionaryCandidate]]
   goPackages: Slice[typeinference2.GoPackageEntry]
-  # Inferred expression types from type inference, consulted when the code
-  # generator needs concrete type information for an expression node.
-  typedInfo: Option[typeinference2.TypedInfo]
-  # Package-level declaration info for lookup during code generation.
   pkgInfo: Option[typeinference2.PkgInfo]
-  # "Enum.Variant" -> generated Go constructor for zero-argument variants.
   enumValueConstructors: Map[String, String]
-  # Variant name -> owning enum. Used to recover generic arguments from an
-  # expected enum type when lowering a constructor call without source args.
   enumVariantOwners: Map[String, String]
-  # patternTypes stores pattern-bound variable types across nested contexts.
   patternTypes: Map[String, String]
-  # patternFuncIdx stores the dict function index for pattern-bound variables,
-  # used to select the correct constraint function for multi-constraint methods
-  # (e.g. using Eq[A], Eq[E] => EqualsFn vs EqualsFn_1).
   patternFuncIdx: Map[String, Int]
 end
 
-# Generator2 是代码生成器主结构体
 struct Generator2
-  # 包名
   pkgName: String
-  # import 路径列表
   importPaths: Slice[String]
-  # 当前处理的文件名
   currentFile: String
-  # 局部变量序号
   localSeq: Int
-  # switch 变量序号
   switchVarSeq: Int
-  # 是否需要 callAny 辅助
   needsCallAny: Bool
   decls: Slice[ast2.Decl]
   goPackages: Slice[typeinference2.GoPackageEntry]
-  typedInfo: Option[typeinference2.TypedInfo]
   pkgInfo: Option[typeinference2.PkgInfo]
 end
 
-# AstExprResult 是新 AST 降低管线的表达式结果。Expr 是可嵌入父表达式
-# 的 Go AST；Pre 保存必须在使用 Expr 前执行的局部声明或控制流语句。
 struct AstExprResult
   Expr: goast.Expr
   Pre: Slice[goast.Stmt]
@@ -139,12 +110,13 @@ func astExprWithPre(expr: goast.Expr, pre: Slice[goast.Stmt]) -> AstExprResult
   AstExprResult { Expr: expr, Pre: pre }
 end
 
-# 创建空的 egCtx
 func newEgCtx() -> egCtx
   egCtx {
     locals: {},
     bindings: {},
     sourceTypes: {},
+    structFields: {},
+    structTypeParams: {},
     mutable: {},
     usedNames: {},
     exprSeq: 0,
@@ -164,7 +136,6 @@ func newEgCtx() -> egCtx
     callRequirements: {},
     packageCandidates: {},
     goPackages: [],
-    typedInfo: None,
     pkgInfo: None,
     enumValueConstructors: {},
     enumVariantOwners: {},
@@ -178,6 +149,8 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     locals: {},
     bindings: {},
     sourceTypes: {},
+    structFields: {},
+    structTypeParams: {},
     mutable: {},
     usedNames: {},
     exprSeq: 0,
@@ -197,7 +170,6 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     callRequirements: {},
     packageCandidates: {},
     goPackages: [],
-    typedInfo: None,
     pkgInfo: None,
     enumValueConstructors: {},
     enumVariantOwners: {},
@@ -211,6 +183,8 @@ func newFuncEgCtx(params: Slice[String], retType: String, tailName: String, para
     locals: {},
     bindings: {},
     sourceTypes: {},
+    structFields: {},
+    structTypeParams: {},
     mutable: {},
     usedNames: {},
     exprSeq: 0,
@@ -230,7 +204,6 @@ func newFuncEgCtx(params: Slice[String], retType: String, tailName: String, para
     callRequirements: {},
     packageCandidates: {},
     goPackages: [],
-    typedInfo: None,
     pkgInfo: None,
     enumValueConstructors: {},
     enumVariantOwners: {},
@@ -239,7 +212,6 @@ func newFuncEgCtx(params: Slice[String], retType: String, tailName: String, para
   }
 end
 
-# 创建空的 Generator2
 func newGenerator2(pkgName: String, decls: Slice[ast2.Decl], goPackages: Slice[typeinference2.GoPackageEntry]) -> Generator2
   Generator2 {
     pkgName: pkgName,
@@ -250,24 +222,7 @@ func newGenerator2(pkgName: String, decls: Slice[ast2.Decl], goPackages: Slice[t
     needsCallAny: false,
     decls: decls,
     goPackages: goPackages,
-    typedInfo: None,
     pkgInfo: None,
-  }
-end
-
-# egCtx.child() 创建子上下文（复制当前上下文）
-func newGenerator2WithInfo(pkgName: String, decls: Slice[ast2.Decl], goPackages: Slice[typeinference2.GoPackageEntry], typedInfo: Option[typeinference2.TypedInfo], pkgInfo: Option[typeinference2.PkgInfo]) -> Generator2
-  Generator2 {
-    pkgName: pkgName,
-    importPaths: [],
-    currentFile: "",
-    localSeq: 0,
-    switchVarSeq: 0,
-    needsCallAny: false,
-    decls: decls,
-    goPackages: goPackages,
-    typedInfo: typedInfo,
-    pkgInfo: pkgInfo,
   }
 end
 
@@ -276,6 +231,8 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     locals: ctx.locals,
     bindings: ctx.bindings,
     sourceTypes: ctx.sourceTypes,
+    structFields: ctx.structFields,
+    structTypeParams: ctx.structTypeParams,
     mutable: ctx.mutable,
     usedNames: ctx.usedNames,
     exprSeq: ctx.exprSeq,
@@ -295,7 +252,6 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     callRequirements: ctx.callRequirements,
     packageCandidates: ctx.packageCandidates,
     goPackages: ctx.goPackages,
-    typedInfo: ctx.typedInfo,
     pkgInfo: ctx.pkgInfo,
     enumValueConstructors: ctx.enumValueConstructors,
     enumVariantOwners: ctx.enumVariantOwners,
@@ -304,18 +260,18 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
   }
 end
 
-# 设置局部变量
-func ctxSetLocal(ctx: Ref[egCtx], name: String, goType: String) -> ()
-  ctx.locals.Set(name, goType)
-  ctx.sourceTypes.Set(name, goType)
+func ctxSetLocal(ctx: Ref[egCtx], name: String, typ: ast2.MonoType) -> ()
+  ctx.locals.Set(name, typ)
 end
 
-# 设置绑定
+func ctxGetLocal(ctx: Ref[egCtx], name: String) -> Option[ast2.MonoType]
+  ctx.locals.Get(name)
+end
+
 func ctxSetBinding(ctx: Ref[egCtx], name: String, goName: String) -> ()
   ctx.bindings.Set(name, goName)
 end
 
-# 分配 SSA 风格 Go 变量名。第一次尽量保留原名，重名时加稳定后缀。
 func ctxFreshBinding(ctx: Ref[egCtx], name: String) -> String
   let base = sanitizeIdent(name)
   let count = ctx.usedNames.Get(base).UnwrapOr(0)
@@ -329,7 +285,6 @@ func ctxFreshBinding(ctx: Ref[egCtx], name: String) -> String
   actual
 end
 
-# 设置可变标志
 func ctxSetMutable(ctx: Ref[egCtx], name: String, isMutable: Bool) -> ()
   ctx.mutable.Set(name, isMutable)
 end
@@ -397,25 +352,95 @@ func ctxAdoptExprSeq(ctx: Ref[egCtx], child: Ref[egCtx]) -> ()
   }
 end
 
-# 查找局部变量类型
-func ctxGetLocal(ctx: Ref[egCtx], name: String) -> Option[String]
-  ctx.locals.Get(name)
-end
-
-# 查找绑定
 func ctxGetBinding(ctx: Ref[egCtx], name: String) -> Option[String]
   ctx.bindings.Get(name)
 end
 
-# 添加类型参数
 func ctxAddTypeParam(ctx: Ref[egCtx], tp: String) -> ()
   ctx.typeParams.Add(tp)
   ()
 end
 
-# 检查是否包含类型参数
 func ctxHasTypeParam(ctx: Ref[egCtx], tp: String) -> Bool
   ctx.typeParams.Fold(false, func(found: Bool, current: String) -> Bool
     found || current == tp
   end)
+end
+
+# lookupFieldInMonoType: 对 MonoType.TCon(typeName, args) 查找字段 field，
+# 替换 typeName 的类型参数 args 后返回字段的 MonoType。
+func lookupFieldInMonoType(base: ast2.MonoType, field: String, ctx: Ref[egCtx]) -> Option[ast2.MonoType]
+  switch base
+    case TCon(typeName, args) =>
+      let fields = ctx.structFields.Get(typeName)
+      switch fields
+        case Some(list) =>
+          let found = findFieldInSlice(list, field, 0)
+          switch found
+            case Some(fieldEntry) =>
+              let bound = ctx.structTypeParams.Get(typeName).UnwrapOr([] as Slice[Int])
+              if bound.Len() == 0 || args.Len() == 0 then
+                Some(fieldEntry.Type)
+              else
+                let subst = bindTypeArgs(bound, args, 0, [] as Slice[typeinference2.SubstEntry])
+                Some(typeinference2.ApplySubst(subst, fieldEntry.Type))
+              end
+            case None => None
+          end
+        case None => None
+      end
+    case _ => None
+  end
+end
+
+func findFieldInSlice(fields: Slice[typeinference2.FieldEntry], name: String, index: Int) -> Option[typeinference2.FieldEntry]
+  if index >= fields.Len() then None else
+    let f = fields.Get(index).UnwrapOr(typeinference2.FieldEntry { TypeName: "", FieldName: "", Type: ast2.MonoType.TUnit })
+    if f.FieldName == name then Some(f) else findFieldInSlice(fields, name, index + 1) end
+  end
+end
+
+func bindTypeArgs(bound: Slice[Int], args: Slice[ast2.MonoType], index: Int, out: Slice[typeinference2.SubstEntry]) -> Slice[typeinference2.SubstEntry]
+  if index >= bound.Len() || index >= args.Len() then out else
+    let id = bound.Get(index).UnwrapOr(0)
+    let typ = args.Get(index).UnwrapOr(ast2.MonoType.TUnit)
+    let next = out.Prepend(typeinference2.SubstEntry { ID: id, Type: typ })
+    bindTypeArgs(bound, args, index + 1, next)
+  end
+end
+
+# monoTypeToGoStr: 将 MonoType 转换为 Go 类型字符串，用于 goast 调用。
+func monoTypeToGoStr(t: ast2.MonoType) -> String
+  switch t
+    case TCon(name, args) =>
+      if args.Len() == 0 then goPrimitiveTypeName(name) else
+        let argStrs = args.Map(func(a: ast2.MonoType) -> String monoTypeToGoStr(a) end)
+        mygoToGoTypeStr(name + "[" + joinStrings(argStrs, ", ") + "]")
+      end
+    case TFunc(params, ret) =>
+      let paramStrs = params.Map(func(p: ast2.MonoType) -> String monoTypeToGoStr(p) end)
+      let retStr = monoTypeToGoStr(ret.value())
+      if retStr == "struct{}" then
+        "func(" + joinStrings(paramStrs, ", ") + ")"
+      else
+        "func(" + joinStrings(paramStrs, ", ") + ") " + retStr
+      end
+    case TApp(ctor, args) =>
+      let ctorStr = monoTypeToGoStr(ctor.value())
+      let argStrs = args.Map(func(a: ast2.MonoType) -> String monoTypeToGoStr(a) end)
+      if argStrs.Len() == 0 then ctorStr else ctorStr + "[" + joinStrings(argStrs, ", ") + "]" end
+    case TTuple(items) =>
+      let parts = items.Map(func(i: ast2.MonoType) -> String monoTypeToGoStr(i) end)
+      "struct { " + joinStrings(parts, "; ") + " }"
+    case TUnit => "struct{}"
+    case TVar(_) => "any"
+    case TKVar(_) => "any"
+    case TParam(_) => "any"
+    case TGoPackage(_) => "any"
+  end
+end
+
+# monoTypeToMygoStr: 将 MonoType 转换为 MyGO 类型字符串（用于打印/调试）。
+func monoTypeToMygoStr(t: ast2.MonoType) -> String
+  typeinference2.MonoStringFull(t)
 end

@@ -182,14 +182,36 @@ end
 # `Expr` is the positioned expression node.  Expression shape belongs to
 # `ExprKind`, so every expression—including recursive children—has one
 # canonical source location.
+# `ID` is a unique identifier assigned after parsing so type inference
+# results can be looked up by code generation via pointer-identity in the
+# generated Go (the ID field is copied with every value copy, so the
+# mapping from Expr → MonoType in TypedInfo.ExprTypes can be recovered
+# by comparing the ID carried in the caller's local copy with the ID
+# stored alongside the MonoType during inference).
+enum MonoType
+  TVar(Int)
+  TKVar(Int)
+  TApp(Ref[MonoType], Slice[MonoType])
+  TCon(String, Slice[MonoType])
+  TFunc(Slice[MonoType], Ref[MonoType])
+  TTuple(Slice[MonoType])
+  TUnit
+  TGoPackage(String)
+  TParam(Int)
+end
+
 struct Expr
+  ID: Int
   Pos: SourcePos
   Kind: ExprKind
+  Type: Option[MonoType]
 end
 
 func EmptyExpr() -> Expr
   Expr {
+    ID: 0,
     Pos: SourcePos{SourceName: "", Line: 0, Column: 0},
-    Kind: ExprKind.UnitExpr
+    Kind: ExprKind.UnitExpr,
+    Type: None
   }
 end

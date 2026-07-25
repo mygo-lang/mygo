@@ -68,8 +68,11 @@ func compileDirBootstrap(dir string, compiling map[string]bool, compiled map[str
 		if !ok {
 			return nil, bootstrapResultError("parse", path, parsed)
 		}
-		inputs = append(inputs, codegen2.SourceFileInput{Path: name, File: file.F0})
-		sources = append(sources, typeinference2.PkgDeclSource{Path: sourcePath, Decls: file.F0.Decls})
+		// Assign unique IDs to every expression so that codegen2 can look up
+		// type-inference results by comparing the ID field.
+		fileWithIDs := ast2.AssignFileExprIDs(file.F0)
+		inputs = append(inputs, codegen2.SourceFileInput{Path: name, File: fileWithIDs})
+		sources = append(sources, typeinference2.PkgDeclSource{Path: sourcePath, Decls: fileWithIDs.Decls})
 	}
 	if len(inputs) == 0 {
 		return nil, nil

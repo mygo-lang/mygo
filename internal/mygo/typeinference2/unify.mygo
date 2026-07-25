@@ -2,7 +2,7 @@ package typeinference2
 
 import fmt "go:fmt"
 
-func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
+func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
   let a = applySubst(subst, left)
   let b = applySubst(subst, right)
   if monoEqual(a, b) then
@@ -11,11 +11,19 @@ func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[
     switch a
       case TVar(id) => bindVar(id, b, subst)
       case TKVar(id) => bindVar(id, b, subst)
+      case TParam(id) =>
+        switch b
+          case TParam(id2) => if id == id2 then Ok(subst) else Err("cannot unify " + monoString(a) + " with " + monoString(b)) end
+          case TVar(id2) => bindVar(id2, a, subst)
+          case TKVar(id2) => bindVar(id2, a, subst)
+          case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
+        end
       case TApp(ctor, args) => unifyApplication(ctor.value(), args, b, subst)
       case TCon(name, args) =>
         switch b
           case TVar(id) => bindVar(id, a, subst)
           case TKVar(id) => bindVar(id, a, subst)
+          case TParam(id) => bindVar(id, a, subst)
           case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
           case TCon(name2, args2) =>
             if name == name2 && args.Len() == args2.Len() then
@@ -29,6 +37,7 @@ func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[
         switch b
           case TVar(id) => bindVar(id, a, subst)
           case TKVar(id) => bindVar(id, a, subst)
+          case TParam(id) => bindVar(id, a, subst)
           case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
           case TFunc(args2, ret2) =>
             if args.Len() == args2.Len() then
@@ -46,6 +55,7 @@ func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[
         switch b
           case TVar(id) => bindVar(id, a, subst)
           case TKVar(id) => bindVar(id, a, subst)
+          case TParam(id) => bindVar(id, a, subst)
           case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
           case TTuple(items2) =>
             if items.Len() == items2.Len() then
@@ -59,6 +69,7 @@ func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[
         switch b
           case TVar(id) => bindVar(id, a, subst)
           case TKVar(id) => bindVar(id, a, subst)
+          case TParam(id) => bindVar(id, a, subst)
           case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
           case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
         end
@@ -66,19 +77,20 @@ func unify(left: MonoType, right: MonoType, subst: Slice[SubstEntry]) -> Result[
   end
 end
 
-func unifyApplication(ctor: MonoType, args: Slice[MonoType], other: MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
+func unifyApplication(ctor: ast2.MonoType, args: Slice[ast2.MonoType], other: ast2.MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
   let resolvedCtor = applySubst(subst, ctor)
   let resolvedOther = applySubst(subst, other)
   switch resolvedOther
-    case TVar(id) => bindVar(id, MonoType.TApp(Ref.new(resolvedCtor), args), subst)
-    case TKVar(id) => bindVar(id, MonoType.TApp(Ref.new(resolvedCtor), args), subst)
+    case TVar(id) => bindVar(id, ast2.MonoType.TApp(Ref.new(resolvedCtor), args), subst)
+    case TKVar(id) => bindVar(id, ast2.MonoType.TApp(Ref.new(resolvedCtor), args), subst)
+    case TParam(id) => bindVar(id, ast2.MonoType.TApp(Ref.new(resolvedCtor), args), subst)
     case TApp(otherCtor, otherArgs) =>
       switch unify(resolvedCtor, otherCtor.value(), subst)
         case Ok(next) => unifyArgs(args, otherArgs, next)
         case Err(msg) => Err(msg)
       end
     case TCon(name, otherArgs) =>
-      switch unify(resolvedCtor, MonoType.TCon(name, [] as Slice[MonoType]), subst)
+      switch unify(resolvedCtor, ast2.MonoType.TCon(name, [] as Slice[ast2.MonoType]), subst)
         case Ok(next) => unifyArgs(args, otherArgs, next)
         case Err(msg) => Err(msg)
       end
@@ -86,18 +98,19 @@ func unifyApplication(ctor: MonoType, args: Slice[MonoType], other: MonoType, su
   end
 end
 
-func bindVar(id: Int, t: MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
+func bindVar(id: Int, t: ast2.MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
   # Unifying a variable with itself is already solved.  It must be handled
   # before the occurs check, otherwise polymorphic constructor instantiation
   # spuriously reports an infinite type for equations such as t1 ~ t1.
   switch t
     case TVar(other) => if id == other then Ok(subst) else bindDistinctVar(id, t, subst) end
     case TKVar(other) => if id == other then Ok(subst) else bindDistinctVar(id, t, subst) end
+    case TParam(_) => bindDistinctVar(id, t, subst)
     case _ => bindDistinctVar(id, t, subst)
   end
 end
 
-func bindDistinctVar(id: Int, t: MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
+func bindDistinctVar(id: Int, t: ast2.MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
   if occursIn(id, t) then
     let _ = fmt.Println("[DEBUG-OCCURS] t" + id.ToString() + " ~ " + monoStringFull(t) + "  subst=" + substString(subst))
     Err("occurs check failed: t" + id.ToString() + " ~ " + monoStringFull(t))
@@ -106,11 +119,11 @@ func bindDistinctVar(id: Int, t: MonoType, subst: Slice[SubstEntry]) -> Result[S
   end
 end
 
-func unifyArgs(left: Slice[MonoType], right: Slice[MonoType], subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
+func unifyArgs(left: Slice[ast2.MonoType], right: Slice[ast2.MonoType], subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
   if left.Len() == 0 then
     Ok(subst)
   else
-    let s = unify(left.Get(0).UnwrapOr(MonoType.TUnit), right.Get(0).UnwrapOr(MonoType.TUnit), subst)
+    let s = unify(left.Get(0).UnwrapOr(ast2.MonoType.TUnit), right.Get(0).UnwrapOr(ast2.MonoType.TUnit), subst)
     switch s
       case Ok(next) => unifyArgs(sliceDrop(left, 1), sliceDrop(right, 1), next)
       case Err(msg) => Err(msg)
@@ -118,7 +131,7 @@ func unifyArgs(left: Slice[MonoType], right: Slice[MonoType], subst: Slice[Subst
   end
 end
 
-func applySubst(subst: Slice[SubstEntry], t: MonoType) -> MonoType
+func applySubst(subst: Slice[SubstEntry], t: ast2.MonoType) -> ast2.MonoType
   switch t
     case TVar(id) =>
       switch substGet(subst, id)
@@ -137,10 +150,15 @@ func applySubst(subst: Slice[SubstEntry], t: MonoType) -> MonoType
         case Some(found) => applySubst(substDropVar(subst, id), found)
         case None => t
       end
-    case TCon(name, args) => MonoType.TCon(name, applySubstAll(subst, args))
-    case TApp(ctor, args) => MonoType.TApp(Ref.new(applySubst(subst, ctor.value())), applySubstAll(subst, args))
-    case TFunc(args, ret) => MonoType.TFunc(applySubstAll(subst, args), Ref.new(applySubst(subst, ret.value())))
-    case TTuple(items) => MonoType.TTuple(applySubstAll(subst, items))
+    case TParam(id) =>
+      switch substGet(subst, id)
+        case Some(found) => applySubst(substDropVar(subst, id), found)
+        case None => t
+      end
+    case TCon(name, args) => ast2.MonoType.TCon(name, applySubstAll(subst, args))
+    case TApp(ctor, args) => ast2.MonoType.TApp(Ref.new(applySubst(subst, ctor.value())), applySubstAll(subst, args))
+    case TFunc(args, ret) => ast2.MonoType.TFunc(applySubstAll(subst, args), Ref.new(applySubst(subst, ret.value())))
+    case TTuple(items) => ast2.MonoType.TTuple(applySubstAll(subst, items))
     case TUnit => t
     case TGoPackage(_) => t
   end
@@ -152,17 +170,17 @@ end
 
 func substDropVarLoop(subst: Slice[SubstEntry], id: Int, out: Slice[SubstEntry]) -> Slice[SubstEntry]
   if subst.Len() == 0 then out else
-    let head = subst.Get(0).UnwrapOr(SubstEntry { ID: 0, Type: MonoType.TUnit })
+    let head = subst.Get(0).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })
     let next = if head.ID == id then out else out.Prepend(head) end
     substDropVarLoop(sliceDrop(subst, 1), id, next)
   end
 end
 
-func applySubstAll(subst: Slice[SubstEntry], items: Slice[MonoType]) -> Slice[MonoType]
+func applySubstAll(subst: Slice[SubstEntry], items: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
   if items.Len() == 0 then
     []
   else
-    applySubstAll(subst, sliceDrop(items, 1)).Prepend(applySubst(subst, items.Get(0).UnwrapOr(MonoType.TUnit)))
+    applySubstAll(subst, sliceDrop(items, 1)).Prepend(applySubst(subst, items.Get(0).UnwrapOr(ast2.MonoType.TUnit)))
   end
 end
 
@@ -170,16 +188,16 @@ func composeSubst(newer: Slice[SubstEntry], older: Slice[SubstEntry]) -> Slice[S
   if older.Len() == 0 then
     newer
   else
-    let head = older.Get(0).UnwrapOr(SubstEntry { ID: 0, Type: MonoType.TUnit })
+    let head = older.Get(0).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })
     composeSubst(newer, sliceDrop(older, 1)).Prepend(SubstEntry { ID: head.ID, Type: applySubst(newer, head.Type) })
   end
 end
 
-func substGet(subst: Slice[SubstEntry], id: Int) -> Option[MonoType]
+func substGet(subst: Slice[SubstEntry], id: Int) -> Option[ast2.MonoType]
   if subst.Len() == 0 then
     None
   else
-    let head = subst.Get(0).UnwrapOr(SubstEntry { ID: 0, Type: MonoType.TUnit })
+    let head = subst.Get(0).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })
     if head.ID == id then
       Some(head.Type)
     else
@@ -188,10 +206,11 @@ func substGet(subst: Slice[SubstEntry], id: Int) -> Option[MonoType]
   end
 end
 
-func occursIn(id: Int, t: MonoType) -> Bool
+func occursIn(id: Int, t: ast2.MonoType) -> Bool
   switch t
     case TVar(other) => id == other
     case TKVar(other) => id == other
+    case TParam(_) => false
     case TCon(_, args) => occursInAny(id, args)
     case TApp(ctor, args) => occursIn(id, ctor.value()) || occursInAny(id, args)
     case TFunc(args, ret) => occursInAny(id, args) || occursIn(id, ret.value())
@@ -201,10 +220,10 @@ func occursIn(id: Int, t: MonoType) -> Bool
   end
 end
 
-func occursInAny(id: Int, items: Slice[MonoType]) -> Bool
+func occursInAny(id: Int, items: Slice[ast2.MonoType]) -> Bool
   if items.Len() == 0 then
     false
   else
-    occursIn(id, items.Get(0).UnwrapOr(MonoType.TUnit)) || occursInAny(id, sliceDrop(items, 1))
+    occursIn(id, items.Get(0).UnwrapOr(ast2.MonoType.TUnit)) || occursInAny(id, sliceDrop(items, 1))
   end
 end

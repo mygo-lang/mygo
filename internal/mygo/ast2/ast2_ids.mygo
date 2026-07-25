@@ -1,0 +1,315 @@
+# ast2_ids.mygo — Post‑parse expression ID assignment.
+# Every Expr node gets a unique sequential ID so that codegen2 can look up
+# the type inferred by typeinference2 via TypedInfo.ExprTypes without needing
+# pointer identity (which fails because MyGO passes structs by value).
+
+func AssignExprIDs(decls: Slice[Decl]) -> Slice[Decl]
+  let result = assignDeclIDs(decls, 1)
+  result.Decls
+end
+
+struct AssignIDsResult
+  Decls: Slice[Decl]
+  NextID: Int
+end
+
+struct ExprResult
+  Expr: Expr
+  NextID: Int
+end
+
+struct StmtResult
+  Stmt: Stmt
+  NextID: Int
+end
+
+struct ExprSliceResult
+  Items: Slice[Expr]
+  NextID: Int
+end
+
+struct ImplMethodResult
+  Methods: Slice[ImplMethod]
+  NextID: Int
+end
+
+struct SwitchCaseResult
+  Cases: Slice[SwitchCase]
+  NextID: Int
+end
+
+struct LetRecBindResult
+  Bindings: Slice[LetRecBind]
+  NextID: Int
+end
+
+struct StructLitFieldResult
+  Fields: Slice[StructLitField]
+  NextID: Int
+end
+
+struct GoOperandResult
+  Operands: Slice[GoOperand]
+  NextID: Int
+end
+
+struct MapPairResult
+  Pairs: Slice[(Expr, Expr)]
+  NextID: Int
+end
+
+struct StmtSliceResult
+  Stmts: Slice[Stmt]
+  NextID: Int
+end
+
+func assignDeclIDs(decls: Slice[Decl], nextID: Int) -> AssignIDsResult
+  if decls.Len() == 0 then
+    AssignIDsResult { Decls: [] as Slice[Decl], NextID: nextID }
+  else
+    let d = decls.Get(0).UnwrapOr(Decl.ImportDecl("", ""))
+    let rest = assignDeclIDs(sliceDrop(decls, 1), nextID)
+    switch d
+      case FuncDecl(name, tps, params, ret, body, constraints) =>
+        let r = assignExprID(body, rest.NextID)
+        AssignIDsResult {
+          Decls: rest.Decls.Prepend(Decl.FuncDecl(name, tps, params, ret, r.Expr, constraints)),
+          NextID: r.NextID,
+        }
+      case ImplDecl(tps, target, iface, methods) =>
+        let r = assignImplMethodIDs(methods, rest.NextID)
+        AssignIDsResult {
+          Decls: rest.Decls.Prepend(Decl.ImplDecl(tps, target, iface, r.Methods)),
+          NextID: r.NextID,
+        }
+      case _ =>
+        AssignIDsResult {
+          Decls: rest.Decls.Prepend(d),
+          NextID: rest.NextID,
+        }
+    end
+  end
+end
+
+func assignImplMethodIDs(methods: Slice[ImplMethod], nextID: Int) -> ImplMethodResult
+  if methods.Len() == 0 then
+    ImplMethodResult { Methods: [] as Slice[ImplMethod], NextID: nextID }
+  else
+    let m = methods.Get(0).UnwrapOr(ImplMethod { Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: defaultFuncSig(), Body: EmptyExpr() })
+    let r1 = assignExprID(m.Body, nextID)
+    let rest = assignImplMethodIDs(sliceDrop(methods, 1), r1.NextID)
+    ImplMethodResult {
+      Methods: rest.Methods.Prepend(ImplMethod { Pos: m.Pos, Sig: m.Sig, Body: r1.Expr }),
+      NextID: rest.NextID,
+    }
+  end
+end
+
+func defaultFuncSig() -> FuncSig
+  FuncSig { Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[Param], Ret: None, Using: [] as Slice[Constraint] }
+end
+
+func assignStmtIDs(stmts: Slice[Stmt], nextID: Int) -> StmtSliceResult
+  if stmts.Len() == 0 then
+    StmtSliceResult { Stmts: [] as Slice[Stmt], NextID: nextID }
+  else
+    let s = stmts.Get(0).UnwrapOr(Stmt.ExprStmt(EmptyExpr()))
+    let r1 = assignStmtID(s, nextID)
+    let rest = assignStmtIDs(sliceDrop(stmts, 1), r1.NextID)
+    StmtSliceResult { Stmts: rest.Stmts.Prepend(r1.Stmt), NextID: rest.NextID }
+  end
+end
+
+func assignStmtID(stmt: Stmt, nextID: Int) -> StmtResult
+  switch stmt
+    case ExprStmt(expr) =>
+      let r = assignExprID(expr, nextID)
+      StmtResult { Stmt: Stmt.ExprStmt(r.Expr), NextID: r.NextID }
+    case LetStmt(bind) =>
+      let r = assignExprID(bind.Value, nextID)
+      StmtResult { Stmt: Stmt.LetStmt(Bind { Name: bind.Name, Type: bind.Type, Value: r.Expr }), NextID: r.NextID }
+    case VarStmt(bind) =>
+      let r = assignExprID(bind.Value, nextID)
+      StmtResult { Stmt: Stmt.VarStmt(Bind { Name: bind.Name, Type: bind.Type, Value: r.Expr }), NextID: r.NextID }
+    case LetRecStmt(bindings) =>
+      let r = assignLetRecBindIDs(bindings, nextID)
+      StmtResult { Stmt: Stmt.LetRecStmt(r.Bindings), NextID: r.NextID }
+    case TupleLetStmt(names, expr) =>
+      let r = assignExprID(expr, nextID)
+      StmtResult { Stmt: Stmt.TupleLetStmt(names, r.Expr), NextID: r.NextID }
+    case WhileStmt(cond, body) =>
+      let r1 = assignExprID(cond, nextID)
+      let r2 = assignExprID(body, r1.NextID)
+      StmtResult { Stmt: Stmt.WhileStmt(r1.Expr, r2.Expr), NextID: r2.NextID }
+    case AssignStmt(target, value) =>
+      let r1 = assignExprID(target, nextID)
+      let r2 = assignExprID(value, r1.NextID)
+      StmtResult { Stmt: Stmt.AssignStmt(r1.Expr, r2.Expr), NextID: r2.NextID }
+    case ReturnWithStmt(expr) =>
+      let r = assignExprID(expr, nextID)
+      StmtResult { Stmt: Stmt.ReturnWithStmt(r.Expr), NextID: r.NextID }
+    case ReturnStmt =>
+      StmtResult { Stmt: stmt, NextID: nextID }
+  end
+end
+
+func assignLetRecBindIDs(bindings: Slice[LetRecBind], nextID: Int) -> LetRecBindResult
+  if bindings.Len() == 0 then
+    LetRecBindResult { Bindings: [] as Slice[LetRecBind], NextID: nextID }
+  else
+    let b = bindings.Get(0).UnwrapOr(LetRecBind { Name: "", Type: TypeExpr.UnitType, Value: EmptyExpr() })
+    let r = assignExprID(b.Value, nextID)
+    let rest = assignLetRecBindIDs(sliceDrop(bindings, 1), r.NextID)
+    LetRecBindResult { Bindings: rest.Bindings.Prepend(LetRecBind { Name: b.Name, Type: b.Type, Value: r.Expr }), NextID: rest.NextID }
+  end
+end
+
+func assignExprID(expr: Expr, nextID: Int) -> ExprResult
+  let newExpr = Expr { ID: nextID, Pos: expr.Pos, Kind: expr.Kind, Type: None }
+  switch expr.Kind
+    case IdentExpr(_) => ExprResult { Expr: newExpr, NextID: nextID + 1 }
+    case NumberExpr(_) => ExprResult { Expr: newExpr, NextID: nextID + 1 }
+    case StringExpr(_) => ExprResult { Expr: newExpr, NextID: nextID + 1 }
+    case RuneExpr(_) => ExprResult { Expr: newExpr, NextID: nextID + 1 }
+    case BoolExpr(_) => ExprResult { Expr: newExpr, NextID: nextID + 1 }
+    case UnitExpr => ExprResult { Expr: newExpr, NextID: nextID + 1 }
+    case TupleExpr(items) =>
+      let r = assignExprListIDs(items, nextID + 1)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.TupleExpr(r.Items), Type: None }, NextID: r.NextID }
+    case CallExpr(callee, typeArgs, args) =>
+      let r1 = assignExprID(callee, nextID + 1)
+      let r2 = assignExprListIDs(args, r1.NextID)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.CallExpr(r1.Expr, typeArgs, r2.Items), Type: None }, NextID: r2.NextID }
+    case FieldExpr(base, field) =>
+      let r = assignExprID(base, nextID + 1)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.FieldExpr(r.Expr, field), Type: None }, NextID: r.NextID }
+    case UnaryExpr(op, inner) =>
+      let r = assignExprID(inner, nextID + 1)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.UnaryExpr(op, r.Expr), Type: None }, NextID: r.NextID }
+    case BinaryExpr(op, left, right) =>
+      let r1 = assignExprID(left, nextID + 1)
+      let r2 = assignExprID(right, r1.NextID)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.BinaryExpr(op, r1.Expr, r2.Expr), Type: None }, NextID: r2.NextID }
+    case IfExpr(cond, thenExpr, elseExpr) =>
+      let r1 = assignExprID(cond, nextID + 1)
+      let r2 = assignExprID(thenExpr, r1.NextID)
+      let r3 = assignExprID(elseExpr, r2.NextID)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.IfExpr(r1.Expr, r2.Expr, r3.Expr), Type: None }, NextID: r3.NextID }
+    case BlockExpr(stmts) =>
+      let r = assignStmtIDs(stmts, nextID + 1)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.BlockExpr(r.Stmts), Type: None }, NextID: r.NextID }
+    case SwitchExpr(target, cases) =>
+      let r1 = assignExprID(target, nextID + 1)
+      let r2 = assignSwitchCaseIDs(cases, r1.NextID)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.SwitchExpr(r1.Expr, r2.Cases), Type: None }, NextID: r2.NextID }
+    case FuncLitExpr(params, ret, body) =>
+      let r = assignExprID(body, nextID + 1)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.FuncLitExpr(params, ret, r.Expr), Type: None }, NextID: r.NextID }
+    case SliceLitExpr(items) =>
+      let r = assignExprListIDs(items, nextID + 1)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.SliceLitExpr(r.Items), Type: None }, NextID: r.NextID }
+    case TypeAsExpr(value, typ) =>
+      let r = assignExprID(value, nextID + 1)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.TypeAsExpr(r.Expr, typ), Type: None }, NextID: r.NextID }
+    case StructLitExpr(typeName, fields) =>
+      let r = assignStructLitFieldIDs(fields, nextID + 1)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.StructLitExpr(typeName, r.Fields), Type: None }, NextID: r.NextID }
+    case GenericStructLitExpr(typeName, typeArgs, fields) =>
+      let r = assignStructLitFieldIDs(fields, nextID + 1)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.GenericStructLitExpr(typeName, typeArgs, r.Fields), Type: None }, NextID: r.NextID }
+    case InlineGoExpr(typ, code, operands, typeOperands) =>
+      let r = assignGoOperandIDs(operands, nextID + 1)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.InlineGoExpr(typ, code, r.Operands, typeOperands), Type: None }, NextID: r.NextID }
+    case MapLitExpr(pairs) =>
+      let r = assignMapPairIDs(pairs, nextID + 1)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.MapLitExpr(r.Pairs), Type: None }, NextID: r.NextID }
+    case SetLitExpr(items) =>
+      let r = assignExprListIDs(items, nextID + 1)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.SetLitExpr(r.Items), Type: None }, NextID: r.NextID }
+  end
+end
+
+func assignExprListIDs(items: Slice[Expr], nextID: Int) -> ExprSliceResult
+  if items.Len() == 0 then
+    ExprSliceResult { Items: [] as Slice[Expr], NextID: nextID }
+  else
+    let head = items.Get(0).UnwrapOr(EmptyExpr())
+    let r = assignExprID(head, nextID)
+    let rest = assignExprListIDs(sliceDrop(items, 1), r.NextID)
+    ExprSliceResult { Items: rest.Items.Prepend(r.Expr), NextID: rest.NextID }
+  end
+end
+
+func assignSwitchCaseIDs(cases: Slice[SwitchCase], nextID: Int) -> SwitchCaseResult
+  if cases.Len() == 0 then
+    SwitchCaseResult { Cases: [] as Slice[SwitchCase], NextID: nextID }
+  else
+    let c = cases.Get(0).UnwrapOr(SwitchCase { Pattern: Pattern.WildcardPattern, Body: EmptyExpr() })
+    let r = assignExprID(c.Body, nextID)
+    let rest = assignSwitchCaseIDs(sliceDrop(cases, 1), r.NextID)
+    SwitchCaseResult { Cases: rest.Cases.Prepend(SwitchCase { Pattern: c.Pattern, Body: r.Expr }), NextID: rest.NextID }
+  end
+end
+
+func assignStructLitFieldIDs(fields: Slice[StructLitField], nextID: Int) -> StructLitFieldResult
+  if fields.Len() == 0 then
+    StructLitFieldResult { Fields: [] as Slice[StructLitField], NextID: nextID }
+  else
+    let f = fields.Get(0).UnwrapOr(StructLitField { Name: "", Value: EmptyExpr() })
+    let r = assignExprID(f.Value, nextID)
+    let rest = assignStructLitFieldIDs(sliceDrop(fields, 1), r.NextID)
+    StructLitFieldResult { Fields: rest.Fields.Prepend(StructLitField { Name: f.Name, Value: r.Expr }), NextID: rest.NextID }
+  end
+end
+
+func assignGoOperandIDs(operands: Slice[GoOperand], nextID: Int) -> GoOperandResult
+  if operands.Len() == 0 then
+    GoOperandResult { Operands: [] as Slice[GoOperand], NextID: nextID }
+  else
+    let o = operands.Get(0).UnwrapOr(GoOperand { Name: "", Value: EmptyExpr() })
+    let r = assignExprID(o.Value, nextID)
+    let rest = assignGoOperandIDs(sliceDrop(operands, 1), r.NextID)
+    GoOperandResult { Operands: rest.Operands.Prepend(GoOperand { Name: o.Name, Value: r.Expr }), NextID: rest.NextID }
+  end
+end
+
+func assignMapPairIDs(pairs: Slice[(Expr, Expr)], nextID: Int) -> MapPairResult
+  if pairs.Len() == 0 then
+    MapPairResult { Pairs: [] as Slice[(Expr, Expr)], NextID: nextID }
+  else
+    let (pairItem1, pairItem2) = pairs.Get(0).UnwrapOr((EmptyExpr(), EmptyExpr()))
+    let r1 = assignExprID(pairItem1, nextID)
+    let r2 = assignExprID(pairItem2, r1.NextID)
+    let rest = assignMapPairIDs(sliceDrop(pairs, 1), r2.NextID)
+    MapPairResult { Pairs: rest.Pairs.Prepend((r1.Expr, r2.Expr)), NextID: rest.NextID }
+  end
+end
+
+func AssignFileExprIDs(file: File) -> File
+  File {
+    PackageName: file.PackageName,
+    Decls: AssignExprIDs(file.Decls),
+    SourceName: file.SourceName,
+    Line: file.Line,
+    Column: file.Column,
+    DeclPositions: file.DeclPositions,
+  }
+end
+
+func sliceDrop[A](items: Slice[A], n: Int) -> Slice[A]
+  if n <= 0 || items.Len() == 0 then items else sliceDrop(sliceTail(items), n - 1) end
+end
+
+func sliceTail[A](items: Slice[A]) -> Slice[A]
+  sliceTailLoop(items, 1, [] as Slice[A])
+end
+
+func sliceTailLoop[A](items: Slice[A], index: Int, out: Slice[A]) -> Slice[A]
+  if index >= items.Len() then out else
+    let item = items.Get(index)
+    switch item
+      case Some(value) => sliceTailLoop(items, index + 1, out.Append(value))
+      case None => out
+    end
+  end
+end

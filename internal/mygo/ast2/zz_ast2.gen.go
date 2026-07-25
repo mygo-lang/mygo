@@ -606,11 +606,108 @@ func ExprKindSetLitExprCtor(a0 []Expr) ExprKind {
 	return ExprKindSetLitExpr{F0: a0}
 }
 
+type MonoType interface {
+	isMonoType()
+}
+type MonoTypeTVar struct {
+	F0 int
+}
+
+func (_ MonoTypeTVar) isMonoType() {
+}
+func MonoTypeTVarCtor(a0 int) MonoType {
+	return MonoTypeTVar{F0: a0}
+}
+
+type MonoTypeTKVar struct {
+	F0 int
+}
+
+func (_ MonoTypeTKVar) isMonoType() {
+}
+func MonoTypeTKVarCtor(a0 int) MonoType {
+	return MonoTypeTKVar{F0: a0}
+}
+
+type MonoTypeTApp struct {
+	F0 *MonoType
+	F1 []MonoType
+}
+
+func (_ MonoTypeTApp) isMonoType() {
+}
+func MonoTypeTAppCtor(a0 *MonoType, a1 []MonoType) MonoType {
+	return MonoTypeTApp{F0: a0, F1: a1}
+}
+
+type MonoTypeTCon struct {
+	F0 string
+	F1 []MonoType
+}
+
+func (_ MonoTypeTCon) isMonoType() {
+}
+func MonoTypeTConCtor(a0 string, a1 []MonoType) MonoType {
+	return MonoTypeTCon{F0: a0, F1: a1}
+}
+
+type MonoTypeTFunc struct {
+	F0 []MonoType
+	F1 *MonoType
+}
+
+func (_ MonoTypeTFunc) isMonoType() {
+}
+func MonoTypeTFuncCtor(a0 []MonoType, a1 *MonoType) MonoType {
+	return MonoTypeTFunc{F0: a0, F1: a1}
+}
+
+type MonoTypeTTuple struct {
+	F0 []MonoType
+}
+
+func (_ MonoTypeTTuple) isMonoType() {
+}
+func MonoTypeTTupleCtor(a0 []MonoType) MonoType {
+	return MonoTypeTTuple{F0: a0}
+}
+
+type MonoTypeTUnit struct {
+}
+
+func (_ MonoTypeTUnit) isMonoType() {
+}
+func MonoTypeTUnitCtor() MonoType {
+	return MonoTypeTUnit{}
+}
+
+type MonoTypeTGoPackage struct {
+	F0 string
+}
+
+func (_ MonoTypeTGoPackage) isMonoType() {
+}
+func MonoTypeTGoPackageCtor(a0 string) MonoType {
+	return MonoTypeTGoPackage{F0: a0}
+}
+
+type MonoTypeTParam struct {
+	F0 int
+}
+
+func (_ MonoTypeTParam) isMonoType() {
+}
+func MonoTypeTParamCtor(a0 int) MonoType {
+	return MonoTypeTParam{F0: a0}
+}
+
 type Expr struct {
+	ID   int
 	Pos  SourcePos
 	Kind ExprKind
+	Type Option[MonoType]
 }
 
 func EmptyExpr() Expr {
-	return Expr{Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Kind: ExprKindUnitExprCtor()}
+	return Expr{ID: 0, Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Kind: ExprKindUnitExprCtor(), Type: None[MonoType]()}
 }

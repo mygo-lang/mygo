@@ -50,7 +50,7 @@ func emptyExpr() -> ast2.Expr
 end
 
 func exprWithPos(pos: ast2.SourcePos, kind: ast2.ExprKind) -> ast2.Expr
-  ast2.Expr { Pos: pos, Kind: kind }
+  ast2.Expr { ID: 0, Pos: pos, Kind: kind, Type: None}
 end
 
 func exprAt(state: ps.State, kind: ast2.ExprKind) -> ast2.Expr
@@ -77,44 +77,44 @@ end
 func annotateExprSource(expr: ast2.Expr, sourceName: String) -> ast2.Expr
   let pos = ast2.SourcePos { SourceName: sourceName, Line: expr.Pos.Line, Column: expr.Pos.Column }
   switch expr.Kind
-    case IdentExpr(_) => ast2.Expr { Pos: pos, Kind: expr.Kind }
-    case NumberExpr(_) => ast2.Expr { Pos: pos, Kind: expr.Kind }
-    case StringExpr(_) => ast2.Expr { Pos: pos, Kind: expr.Kind }
-    case RuneExpr(_) => ast2.Expr { Pos: pos, Kind: expr.Kind }
-    case BoolExpr(_) => ast2.Expr { Pos: pos, Kind: expr.Kind }
-    case UnitExpr => ast2.Expr { Pos: pos, Kind: expr.Kind }
+    case IdentExpr(_) => ast2.Expr { ID: 0, Pos: pos, Kind: expr.Kind, Type: None }
+    case NumberExpr(_) => ast2.Expr { ID: 0, Pos: pos, Kind: expr.Kind, Type: None }
+    case StringExpr(_) => ast2.Expr { ID: 0, Pos: pos, Kind: expr.Kind, Type: None }
+    case RuneExpr(_) => ast2.Expr { ID: 0, Pos: pos, Kind: expr.Kind, Type: None }
+    case BoolExpr(_) => ast2.Expr { ID: 0, Pos: pos, Kind: expr.Kind, Type: None }
+    case UnitExpr => ast2.Expr { ID: 0, Pos: pos, Kind: expr.Kind, Type: None }
     case TupleExpr(items) =>
-      ast2.Expr { Pos: pos, Kind: ast2.ExprKind.TupleExpr(items.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)) }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.TupleExpr(items.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: None }
     case CallExpr(callee, typeArgs, args) =>
-      ast2.Expr { Pos: pos, Kind: ast2.ExprKind.CallExpr(annotateExprSource(callee, sourceName), typeArgs, args.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)) }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.CallExpr(annotateExprSource(callee, sourceName), typeArgs, args.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: None }
     case FieldExpr(base, field) =>
-      ast2.Expr { Pos: pos, Kind: ast2.ExprKind.FieldExpr(annotateExprSource(base, sourceName), field) }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.FieldExpr(annotateExprSource(base, sourceName), field), Type: None }
     case UnaryExpr(op, inner) =>
-      ast2.Expr { Pos: pos, Kind: ast2.ExprKind.UnaryExpr(op, annotateExprSource(inner, sourceName)) }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.UnaryExpr(op, annotateExprSource(inner, sourceName)), Type: None }
     case BinaryExpr(op, left, right) =>
-      ast2.Expr { Pos: pos, Kind: ast2.ExprKind.BinaryExpr(op, annotateExprSource(left, sourceName), annotateExprSource(right, sourceName)) }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.BinaryExpr(op, annotateExprSource(left, sourceName), annotateExprSource(right, sourceName)), Type: None }
     case IfExpr(cond, thenExpr, elseExpr) =>
-      ast2.Expr { Pos: pos, Kind: ast2.ExprKind.IfExpr(annotateExprSource(cond, sourceName), annotateExprSource(thenExpr, sourceName), annotateExprSource(elseExpr, sourceName)) }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.IfExpr(annotateExprSource(cond, sourceName), annotateExprSource(thenExpr, sourceName), annotateExprSource(elseExpr, sourceName)), Type: None }
     case BlockExpr(stmts) =>
-      ast2.Expr { Pos: pos, Kind: ast2.ExprKind.BlockExpr(stmts.Map(func(s: ast2.Stmt) -> ast2.Stmt annotateStmtSource(s, sourceName) end)) }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.BlockExpr(stmts.Map(func(s: ast2.Stmt) -> ast2.Stmt annotateStmtSource(s, sourceName) end)), Type: None }
     case SwitchExpr(target, cases) =>
-      ast2.Expr { Pos: pos, Kind: ast2.ExprKind.SwitchExpr(annotateExprSource(target, sourceName), cases.Map(func(c: ast2.SwitchCase) -> ast2.SwitchCase ast2.SwitchCase { Pattern: c.Pattern, Body: annotateExprSource(c.Body, sourceName) } end)) }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.SwitchExpr(annotateExprSource(target, sourceName), cases.Map(func(c: ast2.SwitchCase) -> ast2.SwitchCase ast2.SwitchCase { Pattern: c.Pattern, Body: annotateExprSource(c.Body, sourceName) } end)), Type: None }
     case FuncLitExpr(params, ret, body) =>
-      ast2.Expr { Pos: pos, Kind: ast2.ExprKind.FuncLitExpr(params, ret, annotateExprSource(body, sourceName)) }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.FuncLitExpr(params, ret, annotateExprSource(body, sourceName)), Type: None }
     case SliceLitExpr(items) =>
-      ast2.Expr { Pos: pos, Kind: ast2.ExprKind.SliceLitExpr(items.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)) }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.SliceLitExpr(items.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: None }
     case TypeAsExpr(value, typ) =>
-      ast2.Expr { Pos: pos, Kind: ast2.ExprKind.TypeAsExpr(annotateExprSource(value, sourceName), typ) }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.TypeAsExpr(annotateExprSource(value, sourceName), typ), Type: None }
     case StructLitExpr(typeName, fields) =>
-      ast2.Expr { Pos: pos, Kind: ast2.ExprKind.StructLitExpr(typeName, fields.Map(func(f: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: f.Name, Value: annotateExprSource(f.Value, sourceName) } end)) }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.StructLitExpr(typeName, fields.Map(func(f: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: f.Name, Value: annotateExprSource(f.Value, sourceName) } end)), Type: None }
     case GenericStructLitExpr(typeName, typeArgs, fields) =>
-      ast2.Expr { Pos: pos, Kind: ast2.ExprKind.GenericStructLitExpr(typeName, typeArgs, fields.Map(func(f: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: f.Name, Value: annotateExprSource(f.Value, sourceName) } end)) }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.GenericStructLitExpr(typeName, typeArgs, fields.Map(func(f: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: f.Name, Value: annotateExprSource(f.Value, sourceName) } end)), Type: None }
     case InlineGoExpr(typ, code, operands, typeOperands) =>
-      ast2.Expr { Pos: pos, Kind: ast2.ExprKind.InlineGoExpr(typ, code, operands.Map(func(o: ast2.GoOperand) -> ast2.GoOperand ast2.GoOperand { Name: o.Name, Value: annotateExprSource(o.Value, sourceName) } end), typeOperands) }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.InlineGoExpr(typ, code, operands.Map(func(o: ast2.GoOperand) -> ast2.GoOperand ast2.GoOperand { Name: o.Name, Value: annotateExprSource(o.Value, sourceName) } end), typeOperands), Type: None }
     case MapLitExpr(pairs) =>
-      ast2.Expr { Pos: pos, Kind: ast2.ExprKind.MapLitExpr(pairs.Map(func(p: (ast2.Expr, ast2.Expr)) -> (ast2.Expr, ast2.Expr) (annotateExprSource(p.F0, sourceName), annotateExprSource(p.F1, sourceName)) end)) }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.MapLitExpr(pairs.Map(func(p: (ast2.Expr, ast2.Expr)) -> (ast2.Expr, ast2.Expr) (annotateExprSource(p.F0, sourceName), annotateExprSource(p.F1, sourceName)) end)), Type: None }
     case SetLitExpr(items) =>
-      ast2.Expr { Pos: pos, Kind: ast2.ExprKind.SetLitExpr(items.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)) }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.SetLitExpr(items.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: None }
   end
 end
 

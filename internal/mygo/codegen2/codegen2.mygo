@@ -89,27 +89,27 @@ func GenerateSourceAt(sourceName: String, input: String) -> Result[String, Strin
   switch parsed
     case Err(msg) => Err(msg)
     case Ok(file) =>
-      let inferred = typeinference2.InferFile(file)
+      # Assign unique IDs to every expression node so that codegen2 can
+      # look up type-inference results by comparing the ID field (which is
+      # preserved across value copies) instead of relying on pointer identity.
+      let fileWithIDs = ast2.AssignFileExprIDs(file)
+      let inferred = typeinference2.InferFile(fileWithIDs)
       switch inferred
         case Err(msg) => Err(msg)
-        case Ok(info) => Generate(file, info)
+        case Ok(info) => Generate(fileWithIDs, info)
       end
   end
 end
 
 func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], includeHKT: Bool) -> Result[String, String]
-  # Use merged allDecls for the Generator2 so seedPackageDictionaries /
-  # seedImplCandidates see impl declarations from all files in the package,
-  # enabling cross-file method dispatch like tail.Map -> OptionIEnumerable.
-  let g = Ref.new(newGenerator2WithInfo(file.PackageName, allDecls, info.GoPackages, info.TypedInfo, None))
+  let typedDecls = if info.TypedDecls.Len() > 0 then info.TypedDecls else file.Decls end
+  let g = Ref.new(newGenerator2(file.PackageName, allDecls, info.GoPackages))
   let imports = collectImports(file.Decls)
-  let decls = translateDeclsAst(g, file.Decls, 0, [] as Slice[goast.Decl])
+  let decls = translateDeclsAst(g, typedDecls, 0, [] as Slice[goast.Decl])
   switch decls
     case Err(msg) => Err(msg)
     case Ok(items) =>
-      let withHKT = if includeHKT && needsHKTDecls(file.Decls) then goast.AppendDecls(goast.HKTDecls(), items) else items end
-      # Auto-add prelude dot-import when the generated Go declarations reference
-      # prelude types such as Option/Result (heuristic: scan Go AST identifiers).
+      let withHKT = if includeHKT && needsHKTDecls(typedDecls) then goast.AppendDecls(goast.HKTDecls(), items) else items end
       let withPrelude = if file.PackageName != "prelude" && goast.NeedsPreludeImport(withHKT) then
         imports.Append(GoImportPart { Alias: ".", Path: "github.com/mygo-lang/mygo/prelude" })
       else

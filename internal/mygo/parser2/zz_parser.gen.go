@@ -70,7 +70,7 @@ func emptyExpr() ast2.Expr {
 	return ast2.EmptyExpr()
 }
 func exprWithPos(pos ast2.SourcePos, kind ast2.ExprKind) ast2.Expr {
-	return ast2.Expr{Pos: pos, Kind: kind}
+	return ast2.Expr{ID: 0, Pos: pos, Kind: kind, Type: None[ast2.MonoType]()}
 }
 func exprAt(state ps.State, kind ast2.ExprKind) ast2.Expr {
 	return exprWithPos(sourcePos(state), kind)
@@ -107,123 +107,123 @@ func annotateExprSource(expr ast2.Expr, sourceName string) ast2.Expr {
 	var expr_35 ast2.Expr
 	if _, ok := expr.Kind.(ast2.ExprKindIdentExpr); ok {
 		var expr_34 ast2.Expr
-		expr_34 = ast2.Expr{Pos: pos_12, Kind: expr.Kind}
+		expr_34 = ast2.Expr{ID: 0, Pos: pos_12, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 		expr_35 = expr_34
 	} else {
 		if _, ok := expr.Kind.(ast2.ExprKindNumberExpr); ok {
 			var expr_33 ast2.Expr
-			expr_33 = ast2.Expr{Pos: pos_12, Kind: expr.Kind}
+			expr_33 = ast2.Expr{ID: 0, Pos: pos_12, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 			expr_35 = expr_33
 		} else {
 			if _, ok := expr.Kind.(ast2.ExprKindStringExpr); ok {
 				var expr_32 ast2.Expr
-				expr_32 = ast2.Expr{Pos: pos_12, Kind: expr.Kind}
+				expr_32 = ast2.Expr{ID: 0, Pos: pos_12, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 				expr_35 = expr_32
 			} else {
 				if _, ok := expr.Kind.(ast2.ExprKindRuneExpr); ok {
 					var expr_31 ast2.Expr
-					expr_31 = ast2.Expr{Pos: pos_12, Kind: expr.Kind}
+					expr_31 = ast2.Expr{ID: 0, Pos: pos_12, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 					expr_35 = expr_31
 				} else {
 					if _, ok := expr.Kind.(ast2.ExprKindBoolExpr); ok {
 						var expr_30 ast2.Expr
-						expr_30 = ast2.Expr{Pos: pos_12, Kind: expr.Kind}
+						expr_30 = ast2.Expr{ID: 0, Pos: pos_12, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 						expr_35 = expr_30
 					} else {
 						if _, ok := expr.Kind.(ast2.ExprKindUnitExpr); ok {
 							var expr_29 ast2.Expr
-							expr_29 = ast2.Expr{Pos: pos_12, Kind: expr.Kind}
+							expr_29 = ast2.Expr{ID: 0, Pos: pos_12, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 							expr_35 = expr_29
 						} else {
 							if v_18, ok := expr.Kind.(ast2.ExprKindTupleExpr); ok {
 								var expr_28 ast2.Expr
-								expr_28 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindTupleExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_18.F0, func(e ast2.Expr) ast2.Expr {
+								expr_28 = ast2.Expr{ID: 0, Pos: pos_12, Kind: ast2.ExprKindTupleExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_18.F0, func(e ast2.Expr) ast2.Expr {
 									return annotateExprSource(e, sourceName)
-								}))}
+								})), Type: None[ast2.MonoType]()}
 								expr_35 = expr_28
 							} else {
 								if v_17, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
 									var expr_27 ast2.Expr
-									expr_27 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindCallExprCtor(annotateExprSource(v_17.F0, sourceName), v_17.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_17.F2, func(e ast2.Expr) ast2.Expr {
+									expr_27 = ast2.Expr{ID: 0, Pos: pos_12, Kind: ast2.ExprKindCallExprCtor(annotateExprSource(v_17.F0, sourceName), v_17.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_17.F2, func(e ast2.Expr) ast2.Expr {
 										return annotateExprSource(e, sourceName)
-									}))}
+									})), Type: None[ast2.MonoType]()}
 									expr_35 = expr_27
 								} else {
 									if v_16, ok := expr.Kind.(ast2.ExprKindFieldExpr); ok {
 										var expr_26 ast2.Expr
-										expr_26 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindFieldExprCtor(annotateExprSource(v_16.F0, sourceName), v_16.F1)}
+										expr_26 = ast2.Expr{ID: 0, Pos: pos_12, Kind: ast2.ExprKindFieldExprCtor(annotateExprSource(v_16.F0, sourceName), v_16.F1), Type: None[ast2.MonoType]()}
 										expr_35 = expr_26
 									} else {
 										if v_15, ok := expr.Kind.(ast2.ExprKindUnaryExpr); ok {
 											var expr_25 ast2.Expr
-											expr_25 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindUnaryExprCtor(v_15.F0, annotateExprSource(v_15.F1, sourceName))}
+											expr_25 = ast2.Expr{ID: 0, Pos: pos_12, Kind: ast2.ExprKindUnaryExprCtor(v_15.F0, annotateExprSource(v_15.F1, sourceName)), Type: None[ast2.MonoType]()}
 											expr_35 = expr_25
 										} else {
 											if v_14, ok := expr.Kind.(ast2.ExprKindBinaryExpr); ok {
 												var expr_24 ast2.Expr
-												expr_24 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindBinaryExprCtor(v_14.F0, annotateExprSource(v_14.F1, sourceName), annotateExprSource(v_14.F2, sourceName))}
+												expr_24 = ast2.Expr{ID: 0, Pos: pos_12, Kind: ast2.ExprKindBinaryExprCtor(v_14.F0, annotateExprSource(v_14.F1, sourceName), annotateExprSource(v_14.F2, sourceName)), Type: None[ast2.MonoType]()}
 												expr_35 = expr_24
 											} else {
 												if v_13, ok := expr.Kind.(ast2.ExprKindIfExpr); ok {
 													var expr_23 ast2.Expr
-													expr_23 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindIfExprCtor(annotateExprSource(v_13.F0, sourceName), annotateExprSource(v_13.F1, sourceName), annotateExprSource(v_13.F2, sourceName))}
+													expr_23 = ast2.Expr{ID: 0, Pos: pos_12, Kind: ast2.ExprKindIfExprCtor(annotateExprSource(v_13.F0, sourceName), annotateExprSource(v_13.F1, sourceName), annotateExprSource(v_13.F2, sourceName)), Type: None[ast2.MonoType]()}
 													expr_35 = expr_23
 												} else {
 													if v_12, ok := expr.Kind.(ast2.ExprKindBlockExpr); ok {
 														var expr_22 ast2.Expr
-														expr_22 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindBlockExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_12.F0, func(s ast2.Stmt) ast2.Stmt {
+														expr_22 = ast2.Expr{ID: 0, Pos: pos_12, Kind: ast2.ExprKindBlockExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_12.F0, func(s ast2.Stmt) ast2.Stmt {
 															return annotateStmtSource(s, sourceName)
-														}))}
+														})), Type: None[ast2.MonoType]()}
 														expr_35 = expr_22
 													} else {
 														if v_11, ok := expr.Kind.(ast2.ExprKindSwitchExpr); ok {
 															var expr_21 ast2.Expr
-															expr_21 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindSwitchExprCtor(annotateExprSource(v_11.F0, sourceName), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_11.F1, func(c ast2.SwitchCase) ast2.SwitchCase {
+															expr_21 = ast2.Expr{ID: 0, Pos: pos_12, Kind: ast2.ExprKindSwitchExprCtor(annotateExprSource(v_11.F0, sourceName), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_11.F1, func(c ast2.SwitchCase) ast2.SwitchCase {
 																return ast2.SwitchCase{Pattern: c.Pattern, Body: annotateExprSource(c.Body, sourceName)}
-															}))}
+															})), Type: None[ast2.MonoType]()}
 															expr_35 = expr_21
 														} else {
 															if v_10, ok := expr.Kind.(ast2.ExprKindFuncLitExpr); ok {
 																var expr_20 ast2.Expr
-																expr_20 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindFuncLitExprCtor(v_10.F0, v_10.F1, annotateExprSource(v_10.F2, sourceName))}
+																expr_20 = ast2.Expr{ID: 0, Pos: pos_12, Kind: ast2.ExprKindFuncLitExprCtor(v_10.F0, v_10.F1, annotateExprSource(v_10.F2, sourceName)), Type: None[ast2.MonoType]()}
 																expr_35 = expr_20
 															} else {
 																if v_9, ok := expr.Kind.(ast2.ExprKindSliceLitExpr); ok {
 																	var expr_19 ast2.Expr
-																	expr_19 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindSliceLitExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_9.F0, func(e ast2.Expr) ast2.Expr {
+																	expr_19 = ast2.Expr{ID: 0, Pos: pos_12, Kind: ast2.ExprKindSliceLitExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_9.F0, func(e ast2.Expr) ast2.Expr {
 																		return annotateExprSource(e, sourceName)
-																	}))}
+																	})), Type: None[ast2.MonoType]()}
 																	expr_35 = expr_19
 																} else {
 																	if v_8, ok := expr.Kind.(ast2.ExprKindTypeAsExpr); ok {
 																		var expr_18 ast2.Expr
-																		expr_18 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindTypeAsExprCtor(annotateExprSource(v_8.F0, sourceName), v_8.F1)}
+																		expr_18 = ast2.Expr{ID: 0, Pos: pos_12, Kind: ast2.ExprKindTypeAsExprCtor(annotateExprSource(v_8.F0, sourceName), v_8.F1), Type: None[ast2.MonoType]()}
 																		expr_35 = expr_18
 																	} else {
 																		if v_7, ok := expr.Kind.(ast2.ExprKindStructLitExpr); ok {
 																			var expr_17 ast2.Expr
-																			expr_17 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindStructLitExprCtor(v_7.F0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_7.F1, func(f ast2.StructLitField) ast2.StructLitField {
+																			expr_17 = ast2.Expr{ID: 0, Pos: pos_12, Kind: ast2.ExprKindStructLitExprCtor(v_7.F0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_7.F1, func(f ast2.StructLitField) ast2.StructLitField {
 																				return ast2.StructLitField{Name: f.Name, Value: annotateExprSource(f.Value, sourceName)}
-																			}))}
+																			})), Type: None[ast2.MonoType]()}
 																			expr_35 = expr_17
 																		} else {
 																			if v_6, ok := expr.Kind.(ast2.ExprKindGenericStructLitExpr); ok {
 																				var expr_16 ast2.Expr
-																				expr_16 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindGenericStructLitExprCtor(v_6.F0, v_6.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_6.F2, func(f ast2.StructLitField) ast2.StructLitField {
+																				expr_16 = ast2.Expr{ID: 0, Pos: pos_12, Kind: ast2.ExprKindGenericStructLitExprCtor(v_6.F0, v_6.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_6.F2, func(f ast2.StructLitField) ast2.StructLitField {
 																					return ast2.StructLitField{Name: f.Name, Value: annotateExprSource(f.Value, sourceName)}
-																				}))}
+																				})), Type: None[ast2.MonoType]()}
 																				expr_35 = expr_16
 																			} else {
 																				if v_5, ok := expr.Kind.(ast2.ExprKindInlineGoExpr); ok {
 																					var expr_15 ast2.Expr
-																					expr_15 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindInlineGoExprCtor(v_5.F0, v_5.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_5.F2, func(o ast2.GoOperand) ast2.GoOperand {
+																					expr_15 = ast2.Expr{ID: 0, Pos: pos_12, Kind: ast2.ExprKindInlineGoExprCtor(v_5.F0, v_5.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_5.F2, func(o ast2.GoOperand) ast2.GoOperand {
 																						return ast2.GoOperand{Name: o.Name, Value: annotateExprSource(o.Value, sourceName)}
-																					}), v_5.F3)}
+																					}), v_5.F3), Type: None[ast2.MonoType]()}
 																					expr_35 = expr_15
 																				} else {
 																					if v_4, ok := expr.Kind.(ast2.ExprKindMapLitExpr); ok {
 																						var expr_14 ast2.Expr
-																						expr_14 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindMapLitExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_4.F0, func(p struct {
+																						expr_14 = ast2.Expr{ID: 0, Pos: pos_12, Kind: ast2.ExprKindMapLitExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_4.F0, func(p struct {
 																							F0 ast2.Expr
 																							F1 ast2.Expr
 																						}) struct {
@@ -234,14 +234,14 @@ func annotateExprSource(expr ast2.Expr, sourceName string) ast2.Expr {
 																								F0 ast2.Expr
 																								F1 ast2.Expr
 																							}{F0: annotateExprSource(p.F0, sourceName), F1: annotateExprSource(p.F1, sourceName)}
-																						}))}
+																						})), Type: None[ast2.MonoType]()}
 																						expr_35 = expr_14
 																					} else {
 																						if v_3, ok := expr.Kind.(ast2.ExprKindSetLitExpr); ok {
 																							var expr_13 ast2.Expr
-																							expr_13 = ast2.Expr{Pos: pos_12, Kind: ast2.ExprKindSetLitExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_3.F0, func(e ast2.Expr) ast2.Expr {
+																							expr_13 = ast2.Expr{ID: 0, Pos: pos_12, Kind: ast2.ExprKindSetLitExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_3.F0, func(e ast2.Expr) ast2.Expr {
 																								return annotateExprSource(e, sourceName)
-																							}))}
+																							})), Type: None[ast2.MonoType]()}
 																							expr_35 = expr_13
 																						} else {
 																							panic("unreachable")

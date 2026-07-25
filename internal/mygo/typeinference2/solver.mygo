@@ -5,7 +5,7 @@ package typeinference2
 # to schemes, while instances belong to the package being inferred.
 struct Instance
   ClassName: String
-  Type: MonoType
+  Type: ast2.MonoType
   Predicates: Slice[Predicate]
 end
 
@@ -23,13 +23,13 @@ end
 
 func solverFromInstances(instances: Slice[Instance]) -> Solver
   if instances.Len() == 0 then newSolver() else
-    solverRegister(solverFromInstances(sliceDrop(instances, 1)), instances.Get(0).UnwrapOr(Instance { ClassName: "", Type: MonoType.TUnit, Predicates: [] as Slice[Predicate] }))
+    solverRegister(solverFromInstances(sliceDrop(instances, 1)), instances.Get(0).UnwrapOr(Instance { ClassName: "", Type: ast2.MonoType.TUnit, Predicates: [] as Slice[Predicate] }))
   end
 end
 
 func solverResolve(solver: Solver, predicates: Slice[Predicate], subst: Slice[SubstEntry]) -> Result[Slice[Predicate], String]
   if predicates.Len() == 0 then Ok(emptyPredicates()) else
-    let predicate = predicates.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[MonoType] })
+    let predicate = predicates.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[ast2.MonoType] })
     let rest = solverResolve(solver, sliceDrop(predicates, 1), subst)
     switch rest
       case Err(msg) => Err(msg)
@@ -53,11 +53,11 @@ end
 
 func solverFindInstance(instances: Slice[Instance], predicate: Predicate, subst: Slice[SubstEntry]) -> Result[Slice[Predicate], String]
   if instances.Len() == 0 then Ok(([predicate] as Slice[Predicate])) else
-    let instance = instances.Get(0).UnwrapOr(Instance { ClassName: "", Type: MonoType.TUnit, Predicates: [] as Slice[Predicate] })
+    let instance = instances.Get(0).UnwrapOr(Instance { ClassName: "", Type: ast2.MonoType.TUnit, Predicates: [] as Slice[Predicate] })
     if instance.ClassName != predicate.ClassName || predicate.Args.Len() == 0 then
       solverFindInstance(sliceDrop(instances, 1), predicate, subst)
     else
-      switch unify(predicate.Args.Get(0).UnwrapOr(MonoType.TUnit), instance.Type, subst)
+      switch unify(predicate.Args.Get(0).UnwrapOr(ast2.MonoType.TUnit), instance.Type, subst)
         case Ok(next) => solverResolve(instanceSolver(instance, instances), instance.Predicates, next)
         case Err(_) => solverFindInstance(sliceDrop(instances, 1), predicate, subst)
       end
@@ -78,12 +78,12 @@ end
 # These are always available without a source-level impl declaration.
 
 func builtInEqInstances() -> Slice[Instance]
-  let emptyArgs = [] as Slice[MonoType]
+  let emptyArgs = [] as Slice[ast2.MonoType]
   # Ref[T] uses a TVar with a sentinel ID to match any Ref type.
-  let refType = MonoType.TCon("Ref", [MonoType.TVar(999)])
+  let refType = ast2.MonoType.TCon("Ref", [ast2.MonoType.TVar(999)])
   let primitives = ["Int", "Int8", "Int16", "Int32", "Int64", "UInt8", "UInt16", "UInt32", "UInt64", "Float32", "Float64", "String", "Bool", "Rune", "Byte"] as Slice[String]
   let instances = primitives.Fold([] as Slice[Instance], func(acc: Slice[Instance], name: String) -> Slice[Instance]
-    acc.Append(Instance { ClassName: "Eq", Type: MonoType.TCon(name, emptyArgs), Predicates: [] as Slice[Predicate] })
+    acc.Append(Instance { ClassName: "Eq", Type: ast2.MonoType.TCon(name, emptyArgs), Predicates: [] as Slice[Predicate] })
   end)
   instances.Append(Instance { ClassName: "Eq", Type: refType, Predicates: [] as Slice[Predicate] })
 end
@@ -96,6 +96,6 @@ end
 
 func appendInstances(left: Slice[Instance], right: Slice[Instance]) -> Slice[Instance]
   if right.Len() == 0 then left else
-    appendInstances(left.Append(right.Get(0).UnwrapOr(Instance { ClassName: "", Type: MonoType.TUnit, Predicates: [] as Slice[Predicate] })), sliceDrop(right, 1))
+    appendInstances(left.Append(right.Get(0).UnwrapOr(Instance { ClassName: "", Type: ast2.MonoType.TUnit, Predicates: [] as Slice[Predicate] })), sliceDrop(right, 1))
   end
 end
