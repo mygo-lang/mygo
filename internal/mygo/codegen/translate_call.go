@@ -316,34 +316,8 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		}
 	}
 
-	// Check for IdentExpr callee — handles Some, None, Ok, Err, func calls
+	// Check for IdentExpr callee — handles func calls (including Some/Ok/Err aliases)
 	if id, ok := n.Callee.(*IdentExpr); ok {
-		switch id.Name {
-		case "None":
-			return nil, "", common.ErrorAtPos(g.currentFile, id.Line, id.Column, "None is a value constructor; use None, not None()")
-		case "Some", "Ok", "Err":
-			args, err := g.translateCallArgs(n.Args, ctx)
-			if err != nil {
-				return nil, "", err
-			}
-			useExpected := expected
-			if useExpected == "" {
-				useExpected = ctx.retType
-			}
-			// Use explicit type args if provided, otherwise infer from expected type
-			if len(typeArgExprs) == 0 {
-				typeArgExprs = g.typeArgExprsFromExpected(useExpected)
-			}
-			var fun ast.Expr = ast.NewIdent(id.Name)
-			if len(typeArgExprs) > 0 {
-				if len(typeArgExprs) == 1 {
-					fun = &ast.IndexExpr{X: fun, Index: typeArgExprs[0]}
-				} else {
-					fun = &ast.IndexListExpr{X: fun, Indices: typeArgExprs}
-				}
-			}
-			return &ast.CallExpr{Fun: fun, Args: args}, useExpected, nil
-		}
 		// Auto-inject constraint function args for functions with using clauses.
 		// E.g., same(1, 2) → same(1, 2, Equals_fasteq_int) when same has using.
 		if fnDecl := g.lookupVisibleFuncDecl(id.Name); fnDecl != nil && len(fnDecl.Using) > 0 {
@@ -496,11 +470,9 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		} else if len(typeArgExprs) > 1 {
 			callee = &ast.IndexListExpr{X: ast.NewIdent(calleeName), Indices: typeArgExprs}
 		}
-		args, err := g.translateCallArgsExpected(n.Args, g.paramExpectedTypes(fnDecl, retType, ctx), ctx)
-		if err != nil {
-			return nil, "", err
-		}
-		// For Some/Ok/Err, add type args from expected or retType.
+		// For Some/Ok/Err, add type args from expected or retType,
+		// and propagate the inner type as the expected type for the argument.
+		argExpected := g.paramExpectedTypes(fnDecl, retType, ctx)
 		useExpected := expected
 		if useExpected == "" {
 			useExpected = ctx.retType
@@ -515,6 +487,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 				if len(ta) == 1 {
 					callee = &ast.IndexExpr{X: ast.NewIdent(id.Name), Index: ta[0]}
 				}
+				argExpected = tas
 			}
 		case "Ok", "Err":
 			if base, tas := splitTypeArgs(useExpected); base == "Result" && len(tas) == 2 {
@@ -523,7 +496,19 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 					ta[i] = g.goTypeExprFromString(a)
 				}
 				callee = &ast.IndexListExpr{X: ast.NewIdent(id.Name), Indices: ta}
+				// The argument corresponds to the payload type:
+				//   Ok(x)  — payload is A  (first type arg)
+				//   Err(x) — payload is E  (second type arg)
+				if id.Name == "Ok" {
+					argExpected = []string{tas[0]}
+				} else {
+					argExpected = []string{tas[1]}
+				}
 			}
+		}
+		args, err := g.translateCallArgsExpected(n.Args, argExpected, ctx)
+		if err != nil {
+			return nil, "", err
 		}
 		return &ast.CallExpr{Fun: callee, Args: args}, retType, nil
 	}

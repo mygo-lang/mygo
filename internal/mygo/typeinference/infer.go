@@ -823,26 +823,49 @@ func inferIdent(env TypeEnv, n *IdentExpr, state *InferState) (MonoType, Subst, 
 	switch n.Name {
 	case "true", "false":
 		return TCon{Name: "Bool"}, make(Subst), nil, nil
-	case "None":
-		// None: Option[A] with a fresh type variable
-		a := TVar{ID: state.Fresh()}
-		return TCon{Name: "Option", Args: []MonoType{a}}, make(Subst), nil, nil
-	case "Some":
-		a := TVar{ID: state.Fresh()}
-		return TFunc{Args: []MonoType{a}, Ret: TCon{Name: "Option", Args: []MonoType{a}}}, make(Subst), nil, nil
 	case "Zero":
 		a := TVar{ID: state.Fresh()}
 		return TFunc{Ret: a}, make(Subst), nil, nil
+	case "Nil":
+		return nil, nil, nil, fmt.Errorf("Nil is not a valid value; use Option[Ref[T]] for nullable references")
+	}
+
+	// Some/None/Ok/Err are aliases for Option.Some/None and Result.Ok/Err.
+	// Route them through normal enum variant resolution so their generic
+	// parameters (especially Result's E) are consistently tracked.
+	// Falls back to hardcoded types when the prelude enum info is unavailable
+	// (e.g. during prelude self-compilation or in isolated tests).
+	switch n.Name {
+	case "None":
+		field := &FieldExpr{Expr: &IdentExpr{Name: "Option"}, Field: "None"}
+		if _, fn, arity, ok := qualifiedEnumVariantConstructor(field, state); ok && arity == 0 {
+			return fn.Ret, make(Subst), nil, nil
+		}
+		a := TVar{ID: state.Fresh()}
+		return TCon{Name: "Option", Args: []MonoType{a}}, make(Subst), nil, nil
+	case "Some":
+		field := &FieldExpr{Expr: &IdentExpr{Name: "Option"}, Field: "Some"}
+		if _, fn, arity, ok := qualifiedEnumVariantConstructor(field, state); ok && arity > 0 {
+			return fn, make(Subst), nil, nil
+		}
+		a := TVar{ID: state.Fresh()}
+		return TFunc{Args: []MonoType{a}, Ret: TCon{Name: "Option", Args: []MonoType{a}}}, make(Subst), nil, nil
 	case "Ok":
+		field := &FieldExpr{Expr: &IdentExpr{Name: "Result"}, Field: "Ok"}
+		if _, fn, arity, ok := qualifiedEnumVariantConstructor(field, state); ok && arity > 0 {
+			return fn, make(Subst), nil, nil
+		}
 		a := TVar{ID: state.Fresh()}
 		e := TVar{ID: state.Fresh()}
 		return TFunc{Args: []MonoType{a}, Ret: TCon{Name: "Result", Args: []MonoType{a, e}}}, make(Subst), nil, nil
 	case "Err":
+		field := &FieldExpr{Expr: &IdentExpr{Name: "Result"}, Field: "Err"}
+		if _, fn, arity, ok := qualifiedEnumVariantConstructor(field, state); ok && arity > 0 {
+			return fn, make(Subst), nil, nil
+		}
 		a := TVar{ID: state.Fresh()}
 		e := TVar{ID: state.Fresh()}
 		return TFunc{Args: []MonoType{e}, Ret: TCon{Name: "Result", Args: []MonoType{a, e}}}, make(Subst), nil, nil
-	case "Nil":
-		return nil, nil, nil, fmt.Errorf("Nil is not a valid value; use Option[Ref[T]] for nullable references")
 	}
 
 	// Look up in type environment
@@ -894,9 +917,6 @@ func inferLiteral(n *LiteralExpr) (MonoType, Subst, []Predicate, error) {
 }
 
 func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []Predicate, error) {
-	if id, ok := n.Callee.(*IdentExpr); ok && id.Name == "None" {
-		return nil, nil, nil, fmt.Errorf("None is a value constructor; use None, not None()")
-	}
 	// Special case: Ref.new(expr)
 	if field, ok := n.Callee.(*FieldExpr); ok {
 		if enumName, fn, _, ok := qualifiedEnumVariantConstructor(field, state); ok {
@@ -2514,7 +2534,15 @@ func lookupEnum(pkg *PkgInfo, name string) *EnumDecl {
 	if pkg == nil {
 		return nil
 	}
-	return pkg.Enums[name]
+	if enum, ok := pkg.Enums[name]; ok {
+		return enum
+	}
+	if pkg.DotImportEnums != nil {
+		if enum, ok := pkg.DotImportEnums[name]; ok {
+			return enum
+		}
+	}
+	return nil
 }
 
 func lookupEnumByType(state *InferState, name string) (*EnumDecl, string, map[string]struct{}) {
