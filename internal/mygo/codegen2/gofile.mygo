@@ -24,6 +24,13 @@ func returnTypeString(ret: Option[ast2.TypeExpr], tps: Set[String]) -> String
   end
 end
 
+func returnMonoType(ret: Option[ast2.TypeExpr]) -> ast2.MonoType
+  switch ret
+    case Some(t) => typeinference2.TypeFromAST(t)
+    case None => ast2.MonoType.TUnit
+  end
+end
+
 func typeParamDecl(tps: Slice[String]) -> String
   if tps.Len() == 0 then
     ""

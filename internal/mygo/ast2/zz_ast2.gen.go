@@ -662,6 +662,17 @@ func MonoTypeTFuncCtor(a0 []MonoType, a1 *MonoType) MonoType {
 	return MonoTypeTFunc{F0: a0, F1: a1}
 }
 
+type MonoTypeTVariadic struct {
+	F0 []MonoType
+	F1 *MonoType
+}
+
+func (_ MonoTypeTVariadic) isMonoType() {
+}
+func MonoTypeTVariadicCtor(a0 []MonoType, a1 *MonoType) MonoType {
+	return MonoTypeTVariadic{F0: a0, F1: a1}
+}
+
 type MonoTypeTTuple struct {
 	F0 []MonoType
 }

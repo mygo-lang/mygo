@@ -10,10 +10,10 @@ import fmt "go:fmt"
 # translateExprAst 是替代 translateExpr 的新入口。当前覆盖无副作用的
 # 基础表达式；控制流和绑定将在同一结果模型上继续扩展。
 func translateExprAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
-  translateExprAstExpected(expr, ctx, "")
+  translateExprAstExpected(expr, ctx, ast2.MonoType.TUnit)
 end
 
-func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
   let result = translateExprAstExpectedInner(expr, ctx, expected)
   switch result
     case Ok(value) => Ok(value)
@@ -30,7 +30,7 @@ func errorAtExpr(expr: ast2.Expr, msg: String) -> String
   end
 end
 
-func translateExprAstExpectedInner(expr: ast2.Expr, ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+func translateExprAstExpectedInner(expr: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
   switch expr.Kind
     case IdentExpr(name) =>
       # None is a zero-argument generic constructor and is commonly written
@@ -78,26 +78,39 @@ func translateExprAstExpectedInner(expr: ast2.Expr, ctx: Ref[egCtx], expected: S
     case MapLitExpr(pairs) => translateMapLitAstExpected(pairs, ctx, expected)
     case SetLitExpr(items) => translateSetLitAstExpected(items, ctx, expected)
     case IfExpr(cond, thenExpr, elseExpr) => translateIfAst(cond, thenExpr, elseExpr, ctx, expected)
-    case SwitchExpr(target, cases) => translateSwitchAst(target, cases, ctx, expected)
+    case SwitchExpr(target, cases) =>
+      translateSwitchAst(target, cases, ctx, expected)
     case BlockExpr(items) => translateBlockExprAstExpected(items, ctx, 0, [] as Slice[goast.Stmt], expected)
     case FuncLitExpr(params, ret, body) => translateFuncLitAst(params, ret, body, ctx)
     case _ => Err("AST lowering for this expression is not implemented")
   end
 end
 
-func noneTypeArg(expected: String, ctx: Ref[egCtx]) -> String
-  # Trim space because ctx.retType may have a leading space from returnTypeString.
-  let trimmed = strings.TrimSpace(expected)
-  if strings.HasPrefix(trimmed, "Option[") && strings.HasSuffix(trimmed, "]") then
-    strings.TrimSuffix(strings.TrimPrefix(trimmed, "Option["), "]")
-  else
-    ctx.typeParams.Fold("", func(found: String, item: String) -> String
-      if found != "" || strings.HasSuffix(item, "#hkt") || strings.Index(item, "[") >= 0 then found else item end
-    end)
+func expectedGoType(expected: ast2.MonoType) -> String
+  switch expected
+    case TUnit => ""
+    case _ => monoTypeToGoStr(expected)
   end
 end
 
-func translateFieldAst(base: ast2.Expr, field: String, ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+func noneTypeArg(expected: ast2.MonoType, ctx: Ref[egCtx]) -> String
+  switch expected
+    case TCon(name, args) =>
+      if name == "Option" && args.Len() == 1 then
+        monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit))
+      else
+        ctx.typeParams.Fold("", func(found: String, item: String) -> String
+          if found != "" || strings.HasSuffix(item, "#hkt") || strings.Index(item, "[") >= 0 then found else item end
+        end)
+      end
+    case _ =>
+      ctx.typeParams.Fold("", func(found: String, item: String) -> String
+        if found != "" || strings.HasSuffix(item, "#hkt") || strings.Index(item, "[") >= 0 then found else item end
+      end)
+  end
+end
+
+func translateFieldAst(base: ast2.Expr, field: String, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
   let value = translateExprAstExpected(base, ctx, expected)
   switch value
     case Ok(v) => Ok(astExprWithPre(goast.Selector(v.Expr, exportName(field)), v.Pre))
@@ -110,11 +123,11 @@ end
 #   (1, "hello")  =>  struct{F0 int; F1 string}{F0: 1, F1: "hello"}
 # This is the value-position lowering; the return-position expansion (multi-return)
 # is handled in translateAstReturnValue in translate_expr.mygo.
-func translateTupleLitAst(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+func translateTupleLitAst(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
   if items.Len() == 0 then
     Ok(newAstExprResult(goast.Unit()))
   else
-    let values = translateAstArgs(items, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
+    let values = translateAstArgs(items, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
     switch values
       case Err(msg) => Err(msg)
       case Ok(v) =>
@@ -125,7 +138,10 @@ func translateTupleLitAst(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: St
           types = types.Append("any")
           i = i + 1
         end
-        let expectedTypes = if expected == "" then types else inferTupleTypesFromExpected(expected, items.Len()) end
+        let expectedTypes = switch expected
+          case TUnit => types
+          case _ => inferTupleTypesFromExpected(expected, items.Len())
+        end
         var fields: Slice[String] = []
         var j: Int = 0
         while j < items.Len()
@@ -142,7 +158,7 @@ end
 # inferTupleTypesFromExpected extracts element types from an expected anonymous
 # struct type string like "struct { F0 int; F1 string }" for multi-field tuples
 # or returns "any" for all elements if parsing fails.
-func inferTupleTypesFromExpected(expected: String, count: Int) -> Slice[String]
+func inferTupleTypesFromExpected(expected: ast2.MonoType, count: Int) -> Slice[String]
   var types: Slice[String] = []
   var i: Int = 0
   while i < count
@@ -155,11 +171,11 @@ end
 func translateFuncLitAst(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
   let child = Ref.new(ctxChild(ctx))
   let returnTypes = goReturnTypesFromOption(ret, child.typeParams)
-  let returnType = returnTypes.Get(0).UnwrapOr("")
+  let retMono = returnMonoType(ret)
   go[()] {
-    code: "{child}.retType = {returnType}"
+    code: "{child}.retType = {retMono}"
     in child = child
-    in returnType = returnType
+    in retMono = retMono
   }
   var names: Slice[String] = []
   var index: Int = 0
@@ -177,7 +193,7 @@ func translateFuncLitAst(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], 
   end
 end
 
-func translateGenericStructLitAstExpected(typeName: String, typeArgs: Slice[ast2.TypeExpr], fields: Slice[ast2.StructLitField], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+func translateGenericStructLitAstExpected(typeName: String, typeArgs: Slice[ast2.TypeExpr], fields: Slice[ast2.StructLitField], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
   let result = translateAstCompositeFields(fields, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], expected)
   switch result
     case Err(msg) => Err(msg)
@@ -188,25 +204,29 @@ func translateGenericStructLitAstExpected(typeName: String, typeArgs: Slice[ast2
 end
 
 func translateTypeAsAst(value: ast2.Expr, typ: ast2.TypeExpr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
-  let target = goType(typ, ctx.typeParams)
+  let target = typeinference2.TypeFromAST(typ)
   switch value.Kind
     case SliceLitExpr(items) => translateSliceLitAst(items, ctx, target)
     case _ =>
       let translated = translateExprAstExpected(value, ctx, target)
       switch translated
         case Err(msg) => Err(msg)
-        case Ok(v) => Ok(astExprWithPre(goast.Convert(target, v.Expr), v.Pre))
+        case Ok(v) => Ok(astExprWithPre(goast.Convert(monoTypeToGoStr(target), v.Expr), v.Pre))
       end
   end
 end
 
-func translateSliceLitAst(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
-  let values = translateAstArgs(items, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
+func translateSliceLitAst(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+  let values = translateAstArgs(items, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
   switch values
     case Err(msg) => Err(msg)
-    case Ok(v) =>
-      let typ = if expected == "" then "[]any" else expected end
+    case Ok(v) then
+      let typ = switch expected
+        case TUnit => "[]any"
+        case _ => monoTypeToGoStr(expected)
+      end
       Ok(astExprWithPre(goast.SliceLiteral(typ, v.Exprs), v.Pre))
+    end
   end
 end
 
@@ -214,12 +234,16 @@ end
 # the target enum's type arguments are preserved in the asserted variant type.
 # When expected is "" or a unit type, the switch is in statement context and
 # no temp variable is created — the if/else chain stands alone.
-func translateSwitchAst(target: ast2.Expr, cases: Slice[ast2.SwitchCase], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+func translateSwitchAst(target: ast2.Expr, cases: Slice[ast2.SwitchCase], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
   let subject = translateSwitchSubject(target, ctx)
   switch subject
     case Err(msg) => Err(msg)
     case Ok(value) =>
-      if expected == "" then
+      let isStmt = switch expected
+        case TUnit => true
+        case _ => false
+      end
+      if isStmt then
         # Statement context: emit only the if/else chain, no temp variable.
         let branches = translateSwitchBranchesStmt(cases, target, value.Expr, ctx)
         switch branches
@@ -232,7 +256,7 @@ func translateSwitchAst(target: ast2.Expr, cases: Slice[ast2.SwitchCase], ctx: R
         let branches = translateSwitchBranches(cases, target, value.Expr, temp, ctx, expected)
         switch branches
           case Err(msg) => Err(msg)
-          case Ok(stmts) => Ok(astExprWithPre(goast.Ident(temp), goast.AppendStmts(value.Pre, goast.AppendStmts(astSingleStmt(goast.DeclareFromType(temp, expected)), stmts))))
+          case Ok(stmts) => Ok(astExprWithPre(goast.Ident(temp), goast.AppendStmts(value.Pre, goast.AppendStmts(astSingleStmt(goast.DeclareFromType(temp, monoTypeToGoStr(expected))), stmts))))
         end
       end
   end
@@ -304,7 +328,8 @@ func translateSwitchSubject(target: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExp
         case Some(sig) =>
           let valueType = sig.Results.Get(0).UnwrapOr("")
           if valueType == "" then Err("Go FFI function has no value return type") else
-            translateFFIResultCall(fn, typeArgs, args, ctx, "Result[" + valueType + ", error]", sig)
+            let resultType = ast2.MonoType.TCon("Result", [ast2.MonoType.TCon(valueType, [] as Slice[ast2.MonoType]), ast2.MonoType.TCon("Error", [] as Slice[ast2.MonoType])])
+            translateFFIResultCall(fn, typeArgs, args, ctx, resultType, sig)
           end
         case None => translateExprAst(target, ctx)
       end
@@ -324,7 +349,7 @@ func normalizeNumberLiteralSuffix(value: String, suffixes: Slice[String]) -> Str
   end
 end
 
-func translateSwitchBranches(cases: Slice[ast2.SwitchCase], sourceTarget: ast2.Expr, target: goast.Expr, temp: String, ctx: Ref[egCtx], expected: String) -> Result[Slice[goast.Stmt], String]
+func translateSwitchBranches(cases: Slice[ast2.SwitchCase], sourceTarget: ast2.Expr, target: goast.Expr, temp: String, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[Slice[goast.Stmt], String]
   if cases.Len() == 0 then
     # Enum cases are lowered to a type-assertion if/else chain.  A final
     # variant needs no synthetic wildcard branch: for an exhaustive enum
@@ -392,13 +417,13 @@ end
 
 # translateSwitchBranchesBindPattern handles a BindPattern that is NOT an enum
 # variant, i.e. a true variable-binding pattern.
-func translateSwitchBranchesBindPattern(name: String, body: ast2.Expr, target: goast.Expr, temp: String, ctx: Ref[egCtx], expected: String) -> Result[Slice[goast.Stmt], String]
+func translateSwitchBranchesBindPattern(name: String, body: ast2.Expr, target: goast.Expr, temp: String, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[Slice[goast.Stmt], String]
   let child = Ref.new(ctxChild(ctx))
   ctxSetBinding(child, name, temp)
   translateSwitchCaseBody(body, child, expected, temp)
 end
 
-func translateSwitchCaseBody(body: ast2.Expr, ctx: Ref[egCtx], expected: String, temp: String) -> Result[Slice[goast.Stmt], String]
+func translateSwitchCaseBody(body: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType, temp: String) -> Result[Slice[goast.Stmt], String]
   let value = translateExprAstExpected(body, ctx, expected)
   switch value
     case Err(msg) => Err(msg)
@@ -515,10 +540,65 @@ func resolveExprMonoType(expr: ast2.Expr, ctx: Ref[egCtx]) -> Option[ast2.MonoTy
     case Some(t) => Some(t)
     case None =>
       switch expr.Kind
-        case IdentExpr(name) => ctxGetLocal(ctx, name)
+        case IdentExpr(name) =>
+          switch ctxGetLocal(ctx, name)
+            case Some(t) => Some(t)
+            case None =>
+              if isGoPackageAlias(name, ctx.goPackages) then
+                Some(ast2.MonoType.TGoPackage(name))
+              else
+                None
+              end
+          end
+        case FieldExpr(base, field) =>
+          switch resolveExprMonoType(base, ctx)
+            case Some(bt) =>
+              let resolvedBase = switch bt
+                case TCon(name, args) =>
+                  if name == "Ref" && args.Len() == 1 then args.Get(0).UnwrapOr(bt) else bt end
+                case _ => bt
+              end
+              switch resolvedBase
+                case TGoPackage(alias) =>
+                  switch ffiResultSignatureInPackages(ctx.goPackages, alias, field)
+                    case Some(sig) => Some(goSignatureToMono(sig))
+                    case None =>
+                      switch ffiSignatureInPackages(ctx.goPackages, alias, field)
+                        case Some(sig) => Some(goSignatureToMono(sig))
+                        case None => lookupFieldInMonoType(resolvedBase, field, ctx)
+                      end
+                  end
+                case _ => lookupFieldInMonoType(resolvedBase, field, ctx)
+              end
+            case None => None
+          end
+        case CallExpr(fn, typeArgs, args) =>
+          let fnMono = resolveExprMonoType(fn, ctx)
+          switch fnMono
+            case Some(m) =>
+              switch m
+                case TFunc(tfnArgs, tret) => Some(tret.value())
+                case TVariadic(tfnArgs, tret) => Some(tret.value())
+                case _ => None
+              end
+            case None => None
+          end
         case _ => None
       end
   end
+end
+
+func isGoPackageAlias(alias: String, packages: Slice[typeinference2.GoPackageEntry]) -> Bool
+  if packages.Len() == 0 then false else
+    switch packages.Get(0)
+      case Some(pkg) => (pkg.Alias == alias) || isGoPackageAlias(alias, sliceDrop(packages, 1))
+      case None => isGoPackageAlias(alias, sliceDrop(packages, 1))
+    end
+  end
+end
+
+func goSignatureToMono(sig: typeinference2.GoFuncSignature) -> ast2.MonoType
+  typeinference2.GoSignatureType(sig)
 end
 
 # extractTypeArgs extracts type arguments from a Go type string.
@@ -544,7 +624,7 @@ func substituteTypeParams(typ: String, params: Slice[String], args: Slice[String
   end
 end
 
-func translateBlockExprAstExpected(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, pre: Slice[goast.Stmt], expected: String) -> Result[AstExprResult, String]
+func translateBlockExprAstExpected(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, pre: Slice[goast.Stmt], expected: ast2.MonoType) -> Result[AstExprResult, String]
   if items.Len() == 0 then
     Ok(astExprWithPre(goast.Unit(), pre))
   else
@@ -622,7 +702,7 @@ func translateBlockExprAst(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int,
   end
 end
 
-func translateIfAst(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+func translateIfAst(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
   let c = translateExprAst(cond, ctx)
   let t = translateExprAstExpected(thenExpr, ctx, expected)
   let e = translateExprAstExpected(elseExpr, ctx, expected)
@@ -636,7 +716,8 @@ func translateIfAst(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, c
             case Err(msg) => Err(msg)
             case Ok(ev) =>
               let temp = ctxFreshExprTemp(ctx)
-              let typ = if expected == "" then "any" else expected end
+              let expStr = expectedGoType(expected)
+              let typ = if expStr == "" then "any" else expStr end
               let thenStmts = goast.AppendStmts(tv.Pre, astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(temp)), "=", astSingleExpr(tv.Expr))))
               let elseStmts = goast.AppendStmts(ev.Pre, astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(temp)), "=", astSingleExpr(ev.Expr))))
               let pre = goast.AppendStmts(
@@ -650,10 +731,10 @@ func translateIfAst(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, c
 end
 
 func translateStructLitAst(typeName: String, fields: Slice[ast2.StructLitField], ctx: Ref[egCtx]) -> Result[AstExprResult, String]
-  translateStructLitAstExpected(typeName, fields, ctx, "")
+  translateStructLitAstExpected(typeName, fields, ctx, ast2.MonoType.TUnit)
 end
 
-func translateStructLitAstExpected(typeName: String, fields: Slice[ast2.StructLitField], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+func translateStructLitAstExpected(typeName: String, fields: Slice[ast2.StructLitField], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
   let result = translateAstCompositeFields(fields, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], expected)
   switch result
     case Err(msg) => Err(msg)
@@ -661,7 +742,7 @@ func translateStructLitAstExpected(typeName: String, fields: Slice[ast2.StructLi
   end
 end
 
-func translateAstCompositeFields(fields: Slice[ast2.StructLitField], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expected: String) -> Result[AstCompositeFields, String]
+func translateAstCompositeFields(fields: Slice[ast2.StructLitField], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expected: ast2.MonoType) -> Result[AstCompositeFields, String]
   if index >= fields.Len() then
     Ok(AstCompositeFields { Elts: out, Pre: pre })
   else
@@ -682,10 +763,10 @@ func translateAstCompositeFields(fields: Slice[ast2.StructLitField], ctx: Ref[eg
 end
 
 func translateBinaryAst(op: String, left: ast2.Expr, right: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
-  translateBinaryAstExpected(op, left, right, ctx, "")
+  translateBinaryAstExpected(op, left, right, ctx, ast2.MonoType.TUnit)
 end
 
-func translateBinaryAstExpected(op: String, left: ast2.Expr, right: ast2.Expr, ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+func translateBinaryAstExpected(op: String, left: ast2.Expr, right: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
   let l = translateExprAstExpected(left, ctx, expected)
   let r = translateExprAstExpected(right, ctx, expected)
   switch l
@@ -709,10 +790,10 @@ func translateBinaryAstExpected(op: String, left: ast2.Expr, right: ast2.Expr, c
 end
 
 func translateCallAst(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[AstExprResult, String]
-  translateCallAstExpected(callee, typeArgs, args, ctx, "")
+  translateCallAstExpected(callee, typeArgs, args, ctx, ast2.MonoType.TUnit)
 end
 
-func translateCallAstExpected(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+func translateCallAstExpected(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
   switch translateRefCall(callee, args, ctx, expected)
     case Some(result) => result
     case None => translateCallAstExpectedNonRef(callee, typeArgs, args, ctx, expected)
@@ -723,25 +804,27 @@ end
 # Keep these two spellings aligned with the legacy backend:
 #   Ref.new(x) -> &x
 #   ref.value() -> *ref
-func translateRefCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Option[Result[AstExprResult, String]]
+func translateRefCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Option[Result[AstExprResult, String]]
   switch callee.Kind
     case FieldExpr(base, field) =>
       switch base.Kind
         case IdentExpr(name) =>
           if name == "Ref" && field == "new" then
             if args.Len() != 1 then Some[Result[AstExprResult, String]](Err[AstExprResult, String]("Ref.new expects exactly one argument")) else
-              let value = translateExprAstExpected(args.Get(0).UnwrapOr(ast2.EmptyExpr()), ctx, refInnerExpected(expected, ctx.retType))
+              let refFallback = ctx.retType
+              let innerMono = refInnerExpected(expected, refFallback)
+              let value = translateExprAstExpected(args.Get(0).UnwrapOr(ast2.EmptyExpr()), ctx, innerMono)
               switch value
-                case Ok(v) => Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(goast.RefNew(v.Expr, refInnerExpected(expected, ctx.retType)), v.Pre)))
-                case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+                case Ok(v) => Some(Ok(astExprWithPre(goast.RefNew(v.Expr, monoTypeToGoStr(innerMono)), v.Pre)))
+                case Err(msg) => Some(Err(msg))
               end
             end
           else
             if field == "value" && args.Len() == 0 then
-              let value = translateExprAstExpected(base, ctx, "")
+              let value = translateExprAstExpected(base, ctx, ast2.MonoType.TUnit)
               switch value
-                case Ok(v) => Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(goast.Unary("*", v.Expr), v.Pre)))
-                case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+                case Ok(v) => Some(Ok(astExprWithPre(goast.Unary("*", v.Expr), v.Pre)))
+                case Err(msg) => Some(Err(msg))
               end
             else
               None
@@ -749,10 +832,10 @@ func translateRefCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx]
           end
         case _ =>
           if field == "value" && args.Len() == 0 then
-            let value = translateExprAstExpected(base, ctx, "")
+            let value = translateExprAstExpected(base, ctx, ast2.MonoType.TUnit)
             switch value
-              case Ok(v) => Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(goast.Unary("*", v.Expr), v.Pre)))
-              case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+              case Ok(v) => Some(Ok(astExprWithPre(goast.Unary("*", v.Expr), v.Pre)))
+              case Err(msg) => Some(Err(msg))
             end
           else
             None
@@ -764,35 +847,36 @@ end
 
 # expected is normally *T for a Ref[T] binding.  When Ref.new occurs under an
 # Option constructor, the current function return type supplies the same hint.
-func refInnerExpected(expected: String, fallback: String) -> String
-  let target = if expected == "" then fallback else expected end
-  let marker = strings.Index(target, "*")
-  if marker < 0 then "" else strings.TrimSuffix(strings.TrimSpace(strings.Split(target, "*").Get(1).UnwrapOr("")), "]") end
+func refInnerExpected(expected: ast2.MonoType, fallback: ast2.MonoType) -> ast2.MonoType
+  switch expected
+    case TCon(name, args) =>
+      if name == "Ref" && args.Len() == 1 then args.Get(0).UnwrapOr(ast2.MonoType.TUnit) else fallback end
+    case _ => fallback
+  end
 end
 
-func translateCallAstExpectedNonRef(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
-  let normalizedExpected = strings.TrimSpace(expected)
+func translateCallAstExpectedNonRef(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+  let isOption = switch expected
+    case TCon(name, _) => name == "Option"
+    case _ => false
+  end
   switch ffiOptionSignature(callee, ctx)
     case Some(sig) =>
-      if strings.HasPrefix(normalizedExpected, "Option[") && strings.HasSuffix(normalizedExpected, "]") then
-        translateFFIOptionCall(callee, typeArgs, args, ctx, normalizedExpected, sig)
+      if isOption then
+        translateFFIOptionCall(callee, typeArgs, args, ctx, expected, sig)
       else
         translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
       end
     case None =>
       switch ffiResultSignature(callee, ctx)
         case Some(sig) =>
-          if strings.HasPrefix(normalizedExpected, "Result[") && strings.HasSuffix(normalizedExpected, ", string]") then
-            translateFFIResultCall(callee, typeArgs, args, ctx, normalizedExpected, sig)
-          else
-            translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
-          end
+          translateFFIResultCall(callee, typeArgs, args, ctx, expected, sig)
         case None => translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
       end
   end
 end
 
-func translatePlainCallAstExpected(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+func translatePlainCallAstExpected(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
   switch translateImplMethodCall(callee, args, ctx)
     case Some(result) => result
     case None => translatePlainCallAstExpectedOrdinary(callee, typeArgs, args, ctx, expected)
@@ -815,8 +899,8 @@ func translateImplMethodCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref
       let fn = dictFuncForMethod(method, receiverType, ctx)
       switch fn
         case Some(fnName) =>
-          let receiver = translateExprAstExpected(base, ctx, "")
-          let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
+          let receiver = translateExprAstExpected(base, ctx, ast2.MonoType.TUnit)
+          let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
           switch receiver
             case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
             case Ok(rv) => switch values
@@ -828,8 +912,8 @@ func translateImplMethodCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref
           # 2. Package-level impl helper (e.g. IEnumerable.Map → MygoIT...Map).
           switch matchingReceiverCandidate(ctx.packageCandidates.Get("$method$" + method).UnwrapOr([] as Slice[ImplDictionaryCandidate]), receiverType, ctx)
             case Some(candidate) =>
-              let receiver = translateExprAstExpected(base, ctx, "")
-              let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
+              let receiver = translateExprAstExpected(base, ctx, ast2.MonoType.TUnit)
+              let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
               switch receiver
                 case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
                 case Ok(rv) => switch values
@@ -961,9 +1045,9 @@ func typeConstructor(typ: String) -> String
   end
 end
 
-func translatePlainCallAstExpectedOrdinary(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
+func translatePlainCallAstExpectedOrdinary(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
   let c = translateExprAstExpected(callee, ctx, expected)
-  let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
+  let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
   switch c
     case Err(msg) => Err(msg)
     case Ok(cv) =>
@@ -971,14 +1055,17 @@ func translatePlainCallAstExpectedOrdinary(callee: ast2.Expr, typeArgs: Slice[as
         case Err(msg) => Err(msg)
         case Ok(v) =>
           let injected = dictionaryArgsForCall(callee, ctx, v.Exprs)
-          let constructorExpected = if expected == "" then ctx.retType else expected end
+          let constructorExpected = switch expected
+            case TUnit => ctx.retType
+            case _ => expected
+          end
           let inferredArgs = if typeArgs.Len() > 0 then typeExprsToStrings(typeArgs, ctx.typeParams) else inferredConstructorArgs(callee, constructorExpected, ctx) end
           Ok(astExprWithPre(goast.GenericCall(cv.Expr, inferredArgs, injected), goast.AppendStmts(cv.Pre, v.Pre)))
       end
   end
 end
 
-func inferredConstructorArgs(callee: ast2.Expr, expected: String, ctx: Ref[egCtx]) -> Slice[String]
+func inferredConstructorArgs(callee: ast2.Expr, expected: ast2.MonoType, ctx: Ref[egCtx]) -> Slice[String]
   switch callee.Kind
     case IdentExpr(name) =>
       inferredConstructorArgsByName(name, ctx.enumVariantOwners.Get(name), expected)
@@ -991,39 +1078,39 @@ func inferredConstructorArgs(callee: ast2.Expr, expected: String, ctx: Ref[egCtx
   end
 end
 
-func inferredConstructorArgsByName(name: String, enumName: Option[String], expected: String) -> Slice[String]
-  let target = strings.TrimSpace(expected)
+func inferredConstructorArgsByName(name: String, enumName: Option[String], expected: ast2.MonoType) -> Slice[String]
   switch enumName
-    case Some(owner) => enumTypeArgs(owner, target)
-    case None => inferredBuiltinConstructorArgs(name, target)
+    case Some(owner) => enumTypeArgs(owner, expected)
+    case None => inferredBuiltinConstructorArgs(name, expected)
   end
 end
 
-func enumTypeArgs(enumName: String, expected: String) -> Slice[String]
-  let prefix = enumName + "["
-  if strings.HasPrefix(expected, prefix) then
-    trimTypeArgs(strings.Split(strings.TrimSuffix(strings.TrimPrefix(expected, prefix), "]"), ","), 0, [] as Slice[String])
-  else
-    [] as Slice[String]
-  end
-end
-
-func trimTypeArgs(args: Slice[String], index: Int, out: Slice[String]) -> Slice[String]
-  if index >= args.Len() then
-    out
-  else
-    trimTypeArgs(args, index + 1, out.Append(strings.TrimSpace(args.Get(index).UnwrapOr(""))))
-  end
-end
-
-func inferredBuiltinConstructorArgs(name: String, target: String) -> Slice[String]
-  if name == "None" && strings.HasPrefix(target, "Option[") then
-        [strings.TrimSuffix(strings.TrimPrefix(target, "Option["), "]")]
+func enumTypeArgs(enumName: String, expected: ast2.MonoType) -> Slice[String]
+  switch expected
+    case TCon(n, args) =>
+      if n == enumName then
+        args.Map(func(a: ast2.MonoType) -> String monoTypeToGoStr(a) end)
       else
-        if (name == "Ok" || name == "Err") && strings.HasPrefix(target, "Result[") then
-          enumTypeArgs("Result", target)
-        else [] as Slice[String] end
+        [] as Slice[String]
       end
+    case _ => [] as Slice[String]
+  end
+end
+
+func inferredBuiltinConstructorArgs(name: String, expected: ast2.MonoType) -> Slice[String]
+  switch expected
+    case TCon(n, args) =>
+      if name == "None" && n == "Option" && args.Len() == 1 then
+        [monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit))]
+      else
+        if (name == "Ok" || name == "Err") && n == "Result" && args.Len() == 2 then
+          [monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit)), monoTypeToGoStr(args.Get(1).UnwrapOr(ast2.MonoType.TUnit))]
+        else
+          [] as Slice[String]
+        end
+      end
+    case _ => [] as Slice[String]
+  end
 end
 
 func ffiOptionSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
@@ -1056,9 +1143,9 @@ func ffiSignatureInFuncs(funcs: Slice[typeinference2.GoFuncSignature], name: Str
   end
 end
 
-func translateFFIOptionCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String, _: typeinference2.GoFuncSignature) -> Result[AstExprResult, String]
-  let c = translateExprAstExpected(callee, ctx, "")
-  let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
+func translateFFIOptionCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType, _: typeinference2.GoFuncSignature) -> Result[AstExprResult, String]
+  let c = translateExprAstExpected(callee, ctx, ast2.MonoType.TUnit)
+  let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
   switch c
     case Err(msg) => Err(msg)
     case Ok(cv) => switch values
@@ -1067,14 +1154,18 @@ func translateFFIOptionCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], a
         let valueName = ctxFreshExprTemp(ctx)
         let okName = ctxFreshExprTemp(ctx)
         let optionName = ctxFreshExprTemp(ctx)
-        let inner = strings.TrimSuffix(strings.TrimPrefix(expected, "Option["), "]")
+        let inner = switch expected
+          case TCon(n, args) =>
+            if n == "Option" && args.Len() == 1 then monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit)) else "any" end
+          case _ => "any"
+        end
         let call = goast.GenericCall(cv.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), v.Exprs)
         let define = goast.Assign([goast.Ident(valueName), goast.Ident(okName)], ":=", [call])
         let some = goast.GenericCall(goast.Ident("Some"), [inner], [goast.Ident(valueName)])
         let none = goast.GenericCall(goast.Ident("None"), [inner], [] as Slice[goast.Expr])
         let yes = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(optionName)), "=", astSingleExpr(some)))
         let no = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(optionName)), "=", astSingleExpr(none)))
-        let pre = goast.AppendStmts(goast.AppendStmts(cv.Pre, v.Pre), goast.AppendStmts(astTwoStmts(goast.DeclareFromType(optionName, expected), define), astSingleStmt(goast.If(goast.Ident(okName), yes, no))))
+        let pre = goast.AppendStmts(goast.AppendStmts(cv.Pre, v.Pre), goast.AppendStmts(astTwoStmts(goast.DeclareFromType(optionName, monoTypeToGoStr(expected)), define), astSingleStmt(goast.If(goast.Ident(okName), yes, no))))
         Ok(astExprWithPre(goast.Ident(optionName), pre))
     end
   end
@@ -1112,9 +1203,9 @@ func ffiResultSignatureInFuncs(funcs: Slice[typeinference2.GoFuncSignature], nam
   end
 end
 
-func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String, _: typeinference2.GoFuncSignature) -> Result[AstExprResult, String]
-  let c = translateExprAstExpected(callee, ctx, "")
-  let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[String])
+func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType, _: typeinference2.GoFuncSignature) -> Result[AstExprResult, String]
+  let c = translateExprAstExpected(callee, ctx, ast2.MonoType.TUnit)
+  let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
   switch c
     case Err(msg) => Err(msg)
     case Ok(cv) => switch values
@@ -1123,8 +1214,17 @@ func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], a
         let valueName = ctxFreshExprTemp(ctx)
         let errorName = ctxFreshExprTemp(ctx)
         let resultName = ctxFreshExprTemp(ctx)
-        let errorType = if strings.HasSuffix(expected, ", error]") then "error" else "string" end
-        let inner = if errorType == "error" then strings.TrimSuffix(strings.TrimPrefix(expected, "Result["), ", error]") else strings.TrimSuffix(strings.TrimPrefix(expected, "Result["), ", string]") end
+        let inner = switch expected
+          case TCon(n, args) =>
+            if n == "Result" && args.Len() == 2 then monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit)) else "any" end
+          case _ => "any"
+        end
+        let errorGoType = switch expected
+          case TCon(n, args) =>
+            if n == "Result" && args.Len() == 2 then monoTypeToGoStr(args.Get(1).UnwrapOr(ast2.MonoType.TUnit)) else "string" end
+          case _ => "string"
+        end
+        let errorType = if errorGoType == "error" then "error" else "string" end
         let call = goast.GenericCall(cv.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), v.Exprs)
         let define = goast.Assign([goast.Ident(valueName), goast.Ident(errorName)], ":=", [call])
         let ok = goast.GenericCall(goast.Ident("Ok"), [inner, errorType], [goast.Ident(valueName)])
@@ -1132,7 +1232,7 @@ func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], a
         let err = goast.GenericCall(goast.Ident("Err"), [inner, errorType], [message])
         let failed = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(err)))
         let succeeded = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(ok)))
-        let pre = goast.AppendStmts(goast.AppendStmts(cv.Pre, v.Pre), goast.AppendStmts(astTwoStmts(goast.DeclareFromType(resultName, expected), define), astSingleStmt(goast.If(goast.Binary(goast.Ident(errorName), "!=", goast.Ident("nil")), failed, succeeded))))
+        let pre = goast.AppendStmts(goast.AppendStmts(cv.Pre, v.Pre), goast.AppendStmts(astTwoStmts(goast.DeclareFromType(resultName, monoTypeToGoStr(expected)), define), astSingleStmt(goast.If(goast.Binary(goast.Ident(errorName), "!=", goast.Ident("nil")), failed, succeeded))))
         Ok(astExprWithPre(goast.Ident(resultName), pre))
     end
   end
@@ -1213,11 +1313,11 @@ func appendDictionaryArgs(args: Slice[goast.Expr], methods: Slice[String], ctx: 
   end
 end
 
-func translateAstArgs(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expectedTypes: Slice[String]) -> Result[AstArgsResult, String]
+func translateAstArgs(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expectedTypes: Slice[ast2.MonoType]) -> Result[AstArgsResult, String]
   if index >= args.Len() then
     Ok(AstArgsResult { Exprs: out, Pre: pre })
   else
-    let expected = expectedTypes.Get(index).UnwrapOr("")
+    let expected = expectedTypes.Get(index).UnwrapOr(ast2.MonoType.TUnit)
     let value = translateExprAstExpected(args.Get(index).UnwrapOr(ast2.EmptyExpr()), ctx, expected)
     switch value
       case Err(msg) => Err(msg)
@@ -1226,8 +1326,11 @@ func translateAstArgs(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: 
   end
 end
 
-func translateMapLitAstExpected(pairs: Slice[(ast2.Expr, ast2.Expr)], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
-  let typ = if expected == "" then "map[string]any" else expected end
+func translateMapLitAstExpected(pairs: Slice[(ast2.Expr, ast2.Expr)], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+  let typ = switch expected
+    case TUnit => "map[string]any"
+    case _ => monoTypeToGoStr(expected)
+  end
   let result = translateMapLitPairs(pairs, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], expected)
   switch result
     case Err(msg) => Err(msg)
@@ -1235,17 +1338,17 @@ func translateMapLitAstExpected(pairs: Slice[(ast2.Expr, ast2.Expr)], ctx: Ref[e
   end
 end
 
-func translateMapLitPairs(pairs: Slice[(ast2.Expr, ast2.Expr)], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expected: String) -> Result[AstCompositeFields, String]
+func translateMapLitPairs(pairs: Slice[(ast2.Expr, ast2.Expr)], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expected: ast2.MonoType) -> Result[AstCompositeFields, String]
   if index >= pairs.Len() then
     Ok(AstCompositeFields { Elts: out, Pre: pre })
   else
     let pair = pairs.Get(index).UnwrapOr((ast2.EmptyExpr(), ast2.EmptyExpr()))
     let (key, value) = pair
-    let k = translateExprAstExpected(key, ctx, "")
+    let k = translateExprAstExpected(key, ctx, ast2.MonoType.TUnit)
     switch k
       case Err(msg) => Err(msg)
       case Ok(kv) then
-        let v = translateExprAstExpected(value, ctx, "")
+        let v = translateExprAstExpected(value, ctx, ast2.MonoType.TUnit)
         switch v
           case Err(msg) => Err(msg)
           case Ok(vv) then
@@ -1257,8 +1360,11 @@ func translateMapLitPairs(pairs: Slice[(ast2.Expr, ast2.Expr)], ctx: Ref[egCtx],
   end
 end
 
-func translateSetLitAstExpected(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: String) -> Result[AstExprResult, String]
-  let typ = if expected == "" then "map[string]struct{}" else expected end
+func translateSetLitAstExpected(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
+  let typ = switch expected
+    case TUnit => "map[string]struct{}"
+    case _ => monoTypeToGoStr(expected)
+  end
   let result = translateSetLitItems(items, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], expected)
   switch result
     case Err(msg) => Err(msg)
@@ -1266,12 +1372,12 @@ func translateSetLitAstExpected(items: Slice[ast2.Expr], ctx: Ref[egCtx], expect
   end
 end
 
-func translateSetLitItems(items: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expected: String) -> Result[AstCompositeFields, String]
+func translateSetLitItems(items: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expected: ast2.MonoType) -> Result[AstCompositeFields, String]
   if index >= items.Len() then
     Ok(AstCompositeFields { Elts: out, Pre: pre })
   else
     let elem = items.Get(index).UnwrapOr(ast2.EmptyExpr())
-    let e = translateExprAstExpected(elem, ctx, "")
+    let e = translateExprAstExpected(elem, ctx, ast2.MonoType.TUnit)
     switch e
       case Err(msg) => Err(msg)
       case Ok(ev) then

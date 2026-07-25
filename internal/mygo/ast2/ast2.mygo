@@ -194,6 +194,7 @@ enum MonoType
   TApp(Ref[MonoType], Slice[MonoType])
   TCon(String, Slice[MonoType])
   TFunc(Slice[MonoType], Ref[MonoType])
+  TVariadic(Slice[MonoType], Ref[MonoType])
   TTuple(Slice[MonoType])
   TUnit
   TGoPackage(String)

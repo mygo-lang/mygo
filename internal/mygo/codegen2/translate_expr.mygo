@@ -17,7 +17,10 @@ end
 
 func translateAstBlock(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: Int, out: Slice[goast.Stmt]) -> Result[Slice[goast.Stmt], String]
   if items.Len() == 0 then
-    if ctx.retType == "" then Ok(astSingleStmt(goast.Return([] as Slice[goast.Expr]))) else Err("non-unit function has empty body") end
+    switch ctx.retType
+      case TUnit => Ok(astSingleStmt(goast.Return([] as Slice[goast.Expr])))
+      case _ => Err("non-unit function has empty body")
+    end
   else
     let stmt: ast2.Stmt = items.Get(index).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
     if index == items.Len() - 1 then
@@ -253,7 +256,7 @@ func translateAstBlockAsStmts(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: I
           end
         case ReturnStmt => Ok(goast.AppendStmts(out, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
         case ReturnWithStmt(value) =>
-          let v = translateExprAstExpected(value, ctx, "")
+          let v = translateExprAstExpected(value, ctx, ast2.MonoType.TUnit)
           switch v
             case Ok(vv) => Ok(goast.AppendStmts(goast.AppendStmts(out, vv.Pre), astSingleStmt(goast.Return(astSingleExpr(vv.Expr)))))
             case Err(msg) => Err(msg)
@@ -317,8 +320,8 @@ end
 
 func translateAstBindingValue(expr: ast2.Expr, typ: Option[ast2.TypeExpr], ctx: Ref[egCtx]) -> Result[AstExprResult, String]
   let expected = switch typ
-    case Some(t) => goType(t, ctx.typeParams)
-    case None => "any"
+    case Some(t) => typeinference2.TypeFromAST(t)
+    case None => ast2.MonoType.TUnit
   end
   switch expr.Kind
     case IfExpr(cond, thenExpr, elseExpr) => translateIfAst(cond, thenExpr, elseExpr, ctx, expected)
@@ -338,10 +341,9 @@ func translateAstReturnStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[go
           switch stmts
             case Err(msg) => Err(msg)
             case Ok(v) =>
-              if ctx.retType == "" then
-                Ok(goast.AppendStmts(v, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
-              else
-                Ok(v)
+              switch ctx.retType
+                case TUnit => Ok(goast.AppendStmts(v, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
+                case _ => Ok(v)
               end
           end
   end
@@ -463,18 +465,13 @@ func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[g
       switch values
         case Err(msg) => Err(msg)
         case Ok(v) =>
-          if ctx.retType == "" then
-            Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
-          else
-            Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return(v.Exprs))))
+          switch ctx.retType
+            case TUnit => Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
+            case _ => Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return(v.Exprs))))
           end
       end
     case UnitExpr =>
-      if ctx.retType == "" then
-        Ok(astSingleStmt(goast.Return([] as Slice[goast.Expr])))
-      else
-        Ok(astSingleStmt(goast.Return([] as Slice[goast.Expr])))
-      end
+      Ok(astSingleStmt(goast.Return([] as Slice[goast.Expr])))
     case IdentExpr(name) =>
       # Bare None is a generic zero-argument constructor.  Handle it at the
       # return boundary as well as expression lowering so impl methods retain
@@ -511,18 +508,19 @@ func translateAstReturnSingle(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[
   switch value
     case Err(msg) => Err(msg)
     case Ok(v) =>
-      if ctx.retType == "" then
-        # In a unit-returning function the expression value is discarded.
-        # Skip ExpressionStmt for Unit expressions to avoid "not used".
-        # Use structural check via goast.IsUnitExpr instead of just expr.Kind
-        # because switch/if/block lowering also produces Unit() as v.Expr.
-        if goast.IsUnitExpr(v.Expr) then
-          Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
-        else
-          Ok(goast.AppendStmts(v.Pre, astTwoStmts(goast.ExpressionStmt(v.Expr), goast.Return([] as Slice[goast.Expr]))))
-        end
-      else
-        Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return(astSingleExpr(v.Expr)))))
+      switch ctx.retType
+        case TUnit =>
+          # In a unit-returning function the expression value is discarded.
+          # Skip ExpressionStmt for Unit expressions to avoid "not used".
+          # Use structural check via goast.IsUnitExpr instead of just expr.Kind
+          # because switch/if/block lowering also produces Unit() as v.Expr.
+          if goast.IsUnitExpr(v.Expr) then
+            Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
+          else
+            Ok(goast.AppendStmts(v.Pre, astTwoStmts(goast.ExpressionStmt(v.Expr), goast.Return([] as Slice[goast.Expr]))))
+          end
+        case _ =>
+          Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return(astSingleExpr(v.Expr)))))
       end
   end
 end

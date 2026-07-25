@@ -34,6 +34,11 @@ func monoEqual(a: ast2.MonoType, b: ast2.MonoType) -> Bool
         case TFunc(args2, ret2) => monoListEqual(args, args2) && monoEqual(ret.value(), ret2.value())
         case _ => false
       end
+    case TVariadic(args, ret) =>
+      switch b
+        case TVariadic(args2, ret2) => monoListEqual(args, args2) && monoEqual(ret.value(), ret2.value())
+        case _ => false
+      end
     case TTuple(items) =>
       switch b
         case TTuple(items2) => monoListEqual(items, items2)
@@ -72,6 +77,7 @@ func monoString(t: ast2.MonoType) -> String
     case TCon(name, _) => name
     case TApp(ctor, _) => monoString(ctor.value()) + "[...]"
     case TFunc(_, _) => "func"
+    case TVariadic(_, _) => "variadic"
     case TTuple(_) => "tuple"
     case TUnit => "()"
     case TGoPackage(alias) => "go package " + alias
@@ -87,6 +93,7 @@ func monoStringFull(t: ast2.MonoType) -> String
       if args.Len() == 0 then name else name + "[" + monoListString(args) + "]" end
     case TApp(ctor, args) => monoStringFull(ctor.value()) + "[" + monoListString(args) + "]"
     case TFunc(args, ret) => "func(" + monoListString(args) + ") -> " + monoStringFull(ret.value())
+    case TVariadic(args, ret) => "variadic(" + monoListString(args) + ") -> " + monoStringFull(ret.value())
     case TTuple(items) => "tuple(" + monoListString(items) + ")"
     case TUnit => "()"
     case TGoPackage(alias) => "go package " + alias
@@ -190,6 +197,7 @@ func isKindVar(t: ast2.MonoType, id: Int) -> Bool
     case TApp(ctor, args) => isKindVar(ctor.value(), id) || isKindVarAll(args, id)
     case TCon(_, args) => isKindVarAll(args, id)
     case TFunc(args, ret) => isKindVarAll(args, id) || isKindVar(ret.value(), id)
+    case TVariadic(args, ret) => isKindVarAll(args, id) || isKindVar(ret.value(), id)
     case TTuple(items) => isKindVarAll(items, id)
     case _ => false
   end
@@ -209,6 +217,7 @@ func nextFreshVarID(t: ast2.MonoType, current: Int) -> Int
     case TCon(_, args) => nextFreshVarIDInAll(args, current)
     case TApp(ctor, args) => nextFreshVarIDInAll(args, nextFreshVarID(ctor.value(), current))
     case TFunc(args, ret) => nextFreshVarID(ret.value(), nextFreshVarIDInAll(args, current))
+    case TVariadic(args, ret) => nextFreshVarID(ret.value(), nextFreshVarIDInAll(args, current))
     case TTuple(items) => nextFreshVarIDInAll(items, current)
     case TUnit => current
     case TGoPackage(_) => current
@@ -232,6 +241,7 @@ func freeVars(t: ast2.MonoType, out: Slice[Int]) -> Slice[Int]
     case TCon(_, args) => freeVarsAll(args, out)
     case TApp(ctor, args) => freeVarsAll(args, freeVars(ctor.value(), out))
     case TFunc(args, ret) => freeVarsAll(args, freeVars(ret.value(), out))
+    case TVariadic(args, ret) => freeVarsAll(args, freeVars(ret.value(), out))
     case TTuple(items) => freeVarsAll(items, out)
     case TUnit => out
     case TGoPackage(_) => out

@@ -9,27 +9,7 @@ import strings "go:strings"
 # It implements a deliberately small HM-style pass over ast2. The production
 # typeinference package is still richer; this package is the bootstrap lane.
 
-enum MonoType
-  TVar(Int)
-  # TKVar is a type-constructor variable (kind * -> *), used by HKT params.
-  TKVar(Int)
-  # TApp applies a type constructor to value-level type arguments.
-  TApp(Ref[ast2.MonoType], Slice[ast2.MonoType])
-  TCon(String, Slice[ast2.MonoType])
-  TFunc(Slice[ast2.MonoType], Ref[ast2.MonoType])
-  TTuple(Slice[ast2.MonoType])
-  TUnit
-  # TGoPackage represents an imported Go package, storing its alias so the
-  # code generator can qualify Go symbols properly.
-  TGoPackage(String)
-  # TParam is a type parameter placeholder used in struct field types and
-  # function signatures BEFORE instantiation.  Unlike TVar (which uses
-  # negative IDs in the old scheme), TParam always carries the type
-  # parameter's declaration index (1, 2, 3, ...).  It is replaced by a
-  # fresh TVar during instantiation or by the concrete type argument
-  # during field-type substitution.
-  TParam(Int)
-end
+# MonoType is now defined in ast2 package with the same variants plus TVariadic.
 
 struct Scheme
   Bound: Slice[Int]
@@ -59,6 +39,12 @@ struct FieldEntry
   TypeName: String
   FieldName: String
   Type: ast2.MonoType
+end
+
+enum Symbol
+  StructField(String, String, ast2.MonoType)
+  GoMethod(String, String, GoFuncSignature)
+  ImplMethod(String, String, Scheme)
 end
 
 struct SubstEntry
@@ -99,6 +85,7 @@ struct InferState
   GoPackages: Slice[GoPackageEntry]
   MyGoPackages: Slice[MyGoPackageInfo]
   MyGoPackageCache: Slice[MyGoPackageInfo]
+  Symbols: Slice[Symbol]
 end
 
 struct InferResult
@@ -187,6 +174,7 @@ func NewInferState() -> InferState
     GoPackages: [] as Slice[GoPackageEntry],
     MyGoPackages: [] as Slice[MyGoPackageInfo],
     MyGoPackageCache: [] as Slice[MyGoPackageInfo],
+    Symbols: [] as Slice[Symbol],
   }
 end
 
@@ -199,7 +187,67 @@ func withFreshID(state: InferState, id: Int) -> InferState
     GoPackages: state.GoPackages,
     MyGoPackages: state.MyGoPackages,
     MyGoPackageCache: state.MyGoPackageCache,
+    Symbols: state.Symbols,
   }
+end
+
+func goBuiltinSymbols() -> Slice[Symbol]
+  # Go's built-in error interface has Error() string method.
+  let errorMethod = GoFuncSignature { Name: "Error", Params: [] as Slice[String], Results: ["string"] as Slice[String], Variadic: false }
+  [Symbol.GoMethod("Error", "Error", errorMethod)] as Slice[Symbol]
+end
+
+func goSymbolsFromPackages(packages: Slice[GoPackageEntry], out: Slice[Symbol]) -> Slice[Symbol]
+  if packages.Len() == 0 then out else
+    let pkg = packages.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "", Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] })
+    goSymbolsFromPackages(sliceDrop(packages, 1), goSymbolsFromTypes(pkg.Types, out))
+  end
+end
+
+func goSymbolsFromTypes(types: Slice[GoTypeSignature], out: Slice[Symbol]) -> Slice[Symbol]
+  if types.Len() == 0 then out else
+    let t = types.Get(0).UnwrapOr(GoTypeSignature { TypeName: "", TypeParams: [] as Slice[String], Methods: [] as Slice[GoFuncSignature] })
+    goSymbolsFromTypes(sliceDrop(types, 1), goMethodsFromSigs(t.TypeName, t.Methods, out))
+  end
+end
+
+func goMethodsFromSigs(typeName: String, methods: Slice[GoFuncSignature], out: Slice[Symbol]) -> Slice[Symbol]
+  if methods.Len() == 0 then out else
+    let m = methods.Get(0).UnwrapOr(GoFuncSignature { Name: "", Params: [] as Slice[String], Results: [] as Slice[String], Variadic: false })
+    goMethodsFromSigs(typeName, sliceDrop(methods, 1), out.Prepend(Symbol.GoMethod(typeName, m.Name, m)))
+  end
+end
+
+func buildSymbolTable(goPkgs: Slice[GoPackageEntry], decls: Slice[ast2.Decl]) -> Slice[Symbol]
+  let builtinSyms = goBuiltinSymbols()
+  let goSyms = goSymbolsFromPackages(goPkgs, [] as Slice[Symbol])
+  let declSyms = collectDeclSymbols(decls, [] as Slice[Symbol])
+  concatSymbols(concatSymbols(builtinSyms, goSyms), declSyms)
+end
+
+func collectDeclSymbols(decls: Slice[ast2.Decl], out: Slice[Symbol]) -> Slice[Symbol]
+  if decls.Len() == 0 then out else
+    let d = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    let rest = collectDeclSymbols(sliceDrop(decls, 1), out)
+    switch d
+      case StructDecl(name, tps, fields) =>
+        let syms = structFieldSymbols(name, fields, tps, [] as Slice[Symbol])
+        concatSymbols(rest, syms)
+      case ImplDecl(tps, target, iface, methods) =>
+        let receiverName = implReceiverName(target, iface)
+        let syms = implMethodSymbols(receiverName, tps, methods, [] as Slice[Symbol])
+        concatSymbols(rest, syms)
+      case _ => rest
+    end
+  end
+end
+
+func structFieldSymbols(typeName: String, fields: Slice[ast2.Field], typeParams: Slice[String], out: Slice[Symbol]) -> Slice[Symbol]
+  if fields.Len() == 0 then out else
+    let f = fields.Get(0).UnwrapOr(ast2.Field { Name: "", Type: ast2.TypeExpr.UnitType(), Tag: None })
+    let fieldType = typeFromASTWithParams(f.Type, typeParams)
+    structFieldSymbols(typeName, sliceDrop(fields, 1), typeParams, out.Prepend(Symbol.StructField(typeName, f.Name, fieldType)))
+  end
 end
 
 # InferFile runs type inference on a single file in isolation.
@@ -208,7 +256,16 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
   let env = predeclareImplMethods(file.Decls, predeclareFunctions(file.Decls, initialEnv()))
   let goPkgImports = collectGoPackageImports(file.Decls)
   let envWithGoPkgs = seedGoPackageEnv(goPkgImports, env)
-  switch inferDecls(file.Decls, envWithGoPkgs, [], NewInferState())
+  let initialSymbols = buildSymbolTable(goPkgImports, file.Decls)
+  let state = InferState {
+    FreshVarID: 1,
+    PkgInfo: None,
+    GoPackages: goPkgImports,
+    MyGoPackages: [] as Slice[MyGoPackageInfo],
+    MyGoPackageCache: [] as Slice[MyGoPackageInfo],
+    Symbols: initialSymbols,
+  }
+  switch inferDecls(file.Decls, envWithGoPkgs, [], state)
     case Ok(info) =>
       let collected = collectInstances(file.Decls)
       let instances = mergeBuiltInInstances(collected)
@@ -237,7 +294,16 @@ func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice
   let allDecls = flattenPkgDecls(files, 0, [] as Slice[ast2.Decl])
   let predeclEnv = predeclareAllFunctions(allDecls, initialEnv())
   let envWithGoPkgs = seedGoPackageEnv(goPkgImports, predeclEnv)
-  let result = inferDecls(allDecls, envWithGoPkgs, [], NewInferState())
+  let initialSymbols = buildSymbolTable(goPkgImports, allDecls)
+  let state = InferState {
+    FreshVarID: 1,
+    PkgInfo: None,
+    GoPackages: goPkgImports,
+    MyGoPackages: [] as Slice[MyGoPackageInfo],
+    MyGoPackageCache: [] as Slice[MyGoPackageInfo],
+    Symbols: initialSymbols,
+  }
+  let result = inferDecls(allDecls, envWithGoPkgs, [], state)
   switch result
     case Ok(info) =>
       let collected = collectInstances(allDecls)
@@ -330,7 +396,7 @@ end
 func seedGoPackageFuncs(pkg: GoPackageEntry, funcs: Slice[GoFuncSignature], env: Slice[EnvEntry]) -> Slice[EnvEntry]
   if funcs.Len() == 0 then env else
     let fn = funcs.Get(0).UnwrapOr(GoFuncSignature { Name: "", Params: [] as Slice[String], Results: [] as Slice[String], Variadic: false })
-    seedGoPackageFuncs(pkg, sliceDrop(funcs, 1), envPut(env, pkg.Alias + "." + fn.Name, Scheme { Bound: [], Predicates: [], Body: goSignatureType(fn) }))
+    seedGoPackageFuncs(pkg, sliceDrop(funcs, 1), envPut(env, pkg.Alias + "." + fn.Name, Scheme { Bound: [], Predicates: [], Body: GoSignatureType(fn) }))
   end
 end
 
@@ -349,47 +415,51 @@ func seedGoPackageTypes(pkg: GoPackageEntry, types: Slice[GoTypeSignature], env:
     let bound = typeParamIDs(t.TypeParams, 1)
     let body = ast2.MonoType.TCon(qualifiedName, typeParamsAsTypes(t.TypeParams, 1))
     let withType = envPut(env, qualifiedName, Scheme { Bound: bound, Predicates: [], Body: body })
-    let withMethods = seedGoTypeMethods(qualifiedName, t.Methods, withType)
-    seedGoPackageTypes(pkg, sliceDrop(types, 1), withMethods)
+    seedGoPackageTypes(pkg, sliceDrop(types, 1), withType)
   end
 end
 
-func seedGoTypeMethods(typeName: String, methods: Slice[GoFuncSignature], env: Slice[EnvEntry]) -> Slice[EnvEntry]
-  if methods.Len() == 0 then env else
-    let m = methods.Get(0).UnwrapOr(GoFuncSignature { Name: "", Params: [] as Slice[String], Results: [] as Slice[String], Variadic: false })
-    seedGoTypeMethods(typeName, sliceDrop(methods, 1), envPut(env, fieldEnvName(typeName, m.Name), Scheme { Bound: [], Predicates: [], Body: goSignatureType(m) }))
-  end
-end
-
-func goSignatureType(sig: GoFuncSignature) -> ast2.MonoType
-  if sig.Variadic then
-    # A variadic Go function accepts any count at or above its fixed
-    # parameter count, with trailing arguments coerced to the slice of the
-    # variadic element type.  Encode it with a `$gofunc$-1` marker so that
-    # inferOrdinaryCall's go-func fast path can accept any matching arity;
-    # codegen needs the original `sig` to lower the call correctly.
-    ast2.MonoType.TCon("$gofunc$-1", [] as Slice[ast2.MonoType])
+func GoSignatureType(sig: GoFuncSignature) -> ast2.MonoType
+  let params = goSignatureTypes(sig.Params)
+  let results = goSignatureTypes(sig.Results)
+  let result = if results.Len() == 0 then
+    ast2.MonoType.TUnit
   else
-    let params = goSignatureTypes(sig.Params)
-    let results = goSignatureTypes(sig.Results)
-    let result = if results.Len() == 0 then
-      ast2.MonoType.TUnit
+    if results.Len() == 2 then
+      # Go convention: (value, error) maps to Result[value, error],
+      # (value, bool) maps to Option[value]
+      let first = results.Get(0).UnwrapOr(ast2.MonoType.TUnit)
+      let second = results.Get(1).UnwrapOr(ast2.MonoType.TUnit)
+      switch second
+        case TCon(name, _) =>
+          if name == "Bool" then
+            ast2.MonoType.TCon("Option", [first])
+          else
+            ast2.MonoType.TCon("Result", [first, second])
+          end
+        case _ => ast2.MonoType.TCon("Result", [first, second])
+      end
     else
       if results.Len() == 1 then results.Get(0).UnwrapOr(ast2.MonoType.TUnit) else ast2.MonoType.TTuple(results) end
     end
+  end
+  if sig.Variadic then
+    ast2.MonoType.TVariadic(params, Ref.new(result))
+  else
     ast2.MonoType.TFunc(params, Ref.new(result))
   end
 end
 
 func goSignatureTypes(items: Slice[String]) -> Slice[ast2.MonoType]
-  if items.Len() == 0 then emptyGoTypes() else goSignatureTypes(sliceDrop(items, 1)).Prepend(goTypeName(items.Get(0).UnwrapOr("any"))) end
+  if items.Len() == 0 then emptyGoTypes() else goSignatureTypes(sliceDrop(items, 1)).Prepend(GoTypeName(items.Get(0).UnwrapOr("any"))) end
+
 end
 
 func emptyGoTypes() -> Slice[ast2.MonoType]
   [] as Slice[ast2.MonoType]
 end
 
-func goTypeName(name: String) -> ast2.MonoType
+func GoTypeName(name: String) -> ast2.MonoType
   switch name
     case "int" => ast2.MonoType.TCon("Int", emptyGoTypes())
     case "int8" => ast2.MonoType.TCon("Int8", emptyGoTypes())

@@ -10,8 +10,7 @@ struct egCtx
   locals: Map[String, ast2.MonoType]
   # MyGO 名 → Go 名
   bindings: Map[String, String]
-  # 源类型信息（仍然保留字符串版本用于 enumValueConstructors 等）
-  sourceTypes: Map[String, String]
+  # TODO: 需要存储 enum 变体的字段类型
   # Struct 字段类型：TypeName → [FieldEntry]
   structFields: Map[String, Slice[typeinference2.FieldEntry]]
   # Struct 类型参数 ID：TypeName → Bound IDs
@@ -28,10 +27,10 @@ struct egCtx
   astPreStmts: Slice[goast.Stmt]
   # 当前作用域的类型参数
   typeParams: Set[String]
-  # 当前函数的 Go 返回类型
-  retType: String
+  # 当前函数的返回类型
+  retType: ast2.MonoType
   # 多返回值类型
-  retTypes: Slice[String]
+  retTypes: Slice[ast2.MonoType]
   # 尾递归候选函数名
   tailRecFuncName: Option[String]
   # 参数数量
@@ -60,6 +59,7 @@ struct Generator2
   localSeq: Int
   switchVarSeq: Int
   needsCallAny: Bool
+  allDecls: Slice[ast2.Decl]
   decls: Slice[ast2.Decl]
   goPackages: Slice[typeinference2.GoPackageEntry]
   pkgInfo: Option[typeinference2.PkgInfo]
@@ -114,7 +114,6 @@ func newEgCtx() -> egCtx
   egCtx {
     locals: {},
     bindings: {},
-    sourceTypes: {},
     structFields: {},
     structTypeParams: {},
     mutable: {},
@@ -123,7 +122,7 @@ func newEgCtx() -> egCtx
     preStmts: [],
     astPreStmts: [],
     typeParams: Set.New[String](),
-    retType: "",
+    retType: ast2.MonoType.TUnit,
     retTypes: [],
     tailRecFuncName: None,
     tailRecParamCount: 0,
@@ -148,7 +147,6 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
   egCtx {
     locals: {},
     bindings: {},
-    sourceTypes: {},
     structFields: {},
     structTypeParams: {},
     mutable: {},
@@ -157,7 +155,7 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     preStmts: [],
     astPreStmts: [],
     typeParams: typeParamSet(params),
-    retType: "",
+    retType: ast2.MonoType.TUnit,
     retTypes: [],
     tailRecFuncName: None,
     tailRecParamCount: 0,
@@ -178,11 +176,10 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
   }
 end
 
-func newFuncEgCtx(params: Slice[String], retType: String, tailName: String, paramCount: Int) -> egCtx
+func newFuncEgCtx(params: Slice[String], retType: ast2.MonoType, tailName: String, paramCount: Int) -> egCtx
   egCtx {
     locals: {},
     bindings: {},
-    sourceTypes: {},
     structFields: {},
     structTypeParams: {},
     mutable: {},
@@ -212,7 +209,7 @@ func newFuncEgCtx(params: Slice[String], retType: String, tailName: String, para
   }
 end
 
-func newGenerator2(pkgName: String, decls: Slice[ast2.Decl], goPackages: Slice[typeinference2.GoPackageEntry]) -> Generator2
+func newGenerator2(pkgName: String, typedDecls: Slice[ast2.Decl], goPackages: Slice[typeinference2.GoPackageEntry]) -> Generator2
   Generator2 {
     pkgName: pkgName,
     importPaths: [],
@@ -220,7 +217,8 @@ func newGenerator2(pkgName: String, decls: Slice[ast2.Decl], goPackages: Slice[t
     localSeq: 0,
     switchVarSeq: 0,
     needsCallAny: false,
-    decls: decls,
+    allDecls: [] as Slice[ast2.Decl],
+    decls: typedDecls,
     goPackages: goPackages,
     pkgInfo: None,
   }
@@ -230,7 +228,6 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
   egCtx {
     locals: ctx.locals,
     bindings: ctx.bindings,
-    sourceTypes: ctx.sourceTypes,
     structFields: ctx.structFields,
     structTypeParams: ctx.structTypeParams,
     mutable: ctx.mutable,

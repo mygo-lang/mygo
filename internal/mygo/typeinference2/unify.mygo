@@ -51,6 +51,19 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Slice[SubstEntry]) 
             end
           case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
         end
+      case TVariadic(args, ret) =>
+        switch b
+          case TVar(id) => bindVar(id, a, subst)
+          case TKVar(id) => bindVar(id, a, subst)
+          case TParam(id) => bindVar(id, a, subst)
+          case TVariadic(args2, ret2) =>
+            let s1 = unifyArgs(args, args2, subst)
+            switch s1
+              case Ok(s) => unify(ret.value(), ret2.value(), s)
+              case Err(msg) => Err(msg)
+            end
+          case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
+        end
       case TTuple(items) =>
         switch b
           case TVar(id) => bindVar(id, a, subst)
@@ -71,6 +84,19 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Slice[SubstEntry]) 
           case TKVar(id) => bindVar(id, a, subst)
           case TParam(id) => bindVar(id, a, subst)
           case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
+          case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
+        end
+      case TVariadic(args, ret) =>
+        switch b
+          case TVar(id) => bindVar(id, a, subst)
+          case TKVar(id) => bindVar(id, a, subst)
+          case TParam(id) => bindVar(id, a, subst)
+          case TVariadic(args2, ret2) =>
+            let s1 = unifyArgs(args, args2, subst)
+            switch s1
+              case Ok(s) => unify(ret.value(), ret2.value(), s)
+              case Err(msg) => Err(msg)
+            end
           case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
         end
     end
@@ -106,6 +132,8 @@ func bindVar(id: Int, t: ast2.MonoType, subst: Slice[SubstEntry]) -> Result[Slic
     case TVar(other) => if id == other then Ok(subst) else bindDistinctVar(id, t, subst) end
     case TKVar(other) => if id == other then Ok(subst) else bindDistinctVar(id, t, subst) end
     case TParam(_) => bindDistinctVar(id, t, subst)
+    case TVariadic(_, _) => bindDistinctVar(id, t, subst)
+    case TGoPackage(_) => bindDistinctVar(id, t, subst)
     case _ => bindDistinctVar(id, t, subst)
   end
 end
@@ -158,6 +186,7 @@ func applySubst(subst: Slice[SubstEntry], t: ast2.MonoType) -> ast2.MonoType
     case TCon(name, args) => ast2.MonoType.TCon(name, applySubstAll(subst, args))
     case TApp(ctor, args) => ast2.MonoType.TApp(Ref.new(applySubst(subst, ctor.value())), applySubstAll(subst, args))
     case TFunc(args, ret) => ast2.MonoType.TFunc(applySubstAll(subst, args), Ref.new(applySubst(subst, ret.value())))
+    case TVariadic(args, ret) => ast2.MonoType.TVariadic(applySubstAll(subst, args), Ref.new(applySubst(subst, ret.value())))
     case TTuple(items) => ast2.MonoType.TTuple(applySubstAll(subst, items))
     case TUnit => t
     case TGoPackage(_) => t
@@ -214,6 +243,7 @@ func occursIn(id: Int, t: ast2.MonoType) -> Bool
     case TCon(_, args) => occursInAny(id, args)
     case TApp(ctor, args) => occursIn(id, ctor.value()) || occursInAny(id, args)
     case TFunc(args, ret) => occursInAny(id, args) || occursIn(id, ret.value())
+    case TVariadic(args, ret) => occursInAny(id, args) || occursIn(id, ret.value())
     case TTuple(items) => occursInAny(id, items)
     case TUnit => false
     case TGoPackage(_) => false

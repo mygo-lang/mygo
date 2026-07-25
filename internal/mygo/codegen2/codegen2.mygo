@@ -102,14 +102,13 @@ func GenerateSourceAt(sourceName: String, input: String) -> Result[String, Strin
 end
 
 func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], includeHKT: Bool) -> Result[String, String]
-  let typedDecls = if info.TypedDecls.Len() > 0 then info.TypedDecls else file.Decls end
-  let g = Ref.new(newGenerator2(file.PackageName, allDecls, info.GoPackages))
+  let g = Ref.new(newGenerator2(file.PackageName, info.TypedDecls, info.GoPackages))
   let imports = collectImports(file.Decls)
-  let decls = translateDeclsAst(g, typedDecls, 0, [] as Slice[goast.Decl])
+  let decls = translateDeclsAst(g, info.TypedDecls, 0, [] as Slice[goast.Decl])
   switch decls
     case Err(msg) => Err(msg)
     case Ok(items) =>
-      let withHKT = if includeHKT && needsHKTDecls(typedDecls) then goast.AppendDecls(goast.HKTDecls(), items) else items end
+      let withHKT = if includeHKT && needsHKTDecls(info.TypedDecls) then goast.AppendDecls(goast.HKTDecls(), items) else items end
       let withPrelude = if file.PackageName != "prelude" && goast.NeedsPreludeImport(withHKT) then
         imports.Append(GoImportPart { Alias: ".", Path: "github.com/mygo-lang/mygo/prelude" })
       else

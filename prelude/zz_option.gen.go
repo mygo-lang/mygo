@@ -3,138 +3,189 @@
 package prelude
 
 func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM4Each[A any](c Option[A], fn func(A)) {
-	if __mygo_match___mygo_expr_0, ok := c.(OptionSome[A]); ok {
-		fn(__mygo_match___mygo_expr_0.F0)
+	if v_22, ok := c.(OptionSome[A]); ok {
+		fn(v_22.F0)
+		return
 	} else {
 		if _, ok := c.(OptionNone[A]); ok {
-		} else {
+			return
 		}
 	}
 	return
 }
-func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map[A any, B any](c Option[A], fn func(A) B) Option[B] {
-	var __mygo_expr_0 Option[B]
-	if __mygo_match___mygo_expr_1, ok := c.(OptionSome[A]); ok {
-		__mygo_expr_0 = Some[B](fn(__mygo_match___mygo_expr_1.F0))
+func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Len[A any](c Option[A]) int {
+	var expr_39 int
+	if _, ok := c.(OptionSome[A]); ok {
+		var expr_38 int
+		expr_38 = 1
+		expr_39 = expr_38
 	} else {
 		if _, ok := c.(OptionNone[A]); ok {
-			__mygo_expr_0 = None[B]()
+			var expr_37 int
+			expr_37 = 0
+			expr_39 = expr_37
 		} else {
+			panic("unreachable")
 		}
 	}
-	return __mygo_expr_0
+	return expr_39
+}
+func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map[A any, B any](c Option[A], fn func(A) B) Option[B] {
+	var expr_42 Option[B]
+	if v_26, ok := c.(OptionSome[A]); ok {
+		var expr_41 Option[B]
+		expr_41 = Some[B](fn(v_26.F0))
+		expr_42 = expr_41
+	} else {
+		if _, ok := c.(OptionNone[A]); ok {
+			var expr_40 Option[B]
+			expr_40 = None[B]()
+			expr_42 = expr_40
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_42
 }
 func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM6Filter[A any](c Option[A], fn func(A) bool) Option[A] {
-	var __mygo_expr_0 Option[A]
-	if __mygo_match___mygo_expr_1, ok := c.(OptionSome[A]); ok {
-		var __mygo_expr_2 Option[A]
-		if fn(__mygo_match___mygo_expr_1.F0) {
-			__mygo_expr_2 = Some[A](__mygo_match___mygo_expr_1.F0)
+	var expr_47 Option[A]
+	if v_28, ok := c.(OptionSome[A]); ok {
+		var expr_46 Option[A]
+		var expr_45 Option[A]
+		if fn(v_28.F0) {
+			expr_45 = Some[A](v_28.F0)
 		} else {
-			__mygo_expr_2 = None[A]()
+			expr_45 = None[A]()
 		}
-		__mygo_expr_0 = __mygo_expr_2
+		expr_46 = expr_45
+		expr_47 = expr_46
 	} else {
 		if _, ok := c.(OptionNone[A]); ok {
-			__mygo_expr_0 = None[A]()
+			var expr_44 Option[A]
+			expr_44 = None[A]()
+			expr_47 = expr_44
 		} else {
+			panic("unreachable")
 		}
 	}
-	return __mygo_expr_0
+	return expr_47
 }
 func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM4Fold[A any, B any](c Option[A], initial B, fn func(B, A) B) B {
-	var __mygo_expr_0 B
-	if __mygo_match___mygo_expr_1, ok := c.(OptionSome[A]); ok {
-		__mygo_expr_0 = fn(initial, __mygo_match___mygo_expr_1.F0)
+	var expr_50 B
+	if v_30, ok := c.(OptionSome[A]); ok {
+		var expr_49 B
+		expr_49 = fn(initial, v_30.F0)
+		expr_50 = expr_49
 	} else {
 		if _, ok := c.(OptionNone[A]); ok {
-			__mygo_expr_0 = initial
+			var expr_48 B
+			expr_48 = initial
+			expr_50 = expr_48
 		} else {
+			panic("unreachable")
 		}
 	}
-	return __mygo_expr_0
+	return expr_50
 }
 func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM4Find[A any](c Option[A], fn func(A) bool) Option[*A] {
-	var __mygo_expr_0 Option[*A]
-	if __mygo_match___mygo_expr_1, ok := c.(OptionSome[A]); ok {
-		var __mygo_expr_2 Option[*A]
-		if fn(__mygo_match___mygo_expr_1.F0) {
-			__mygo_expr_2 = Some[*A](&__mygo_match___mygo_expr_1.F0)
+	var expr_55 Option[*A]
+	if v_32, ok := c.(OptionSome[A]); ok {
+		var expr_54 Option[*A]
+		var expr_53 Option[*A]
+		if fn(v_32.F0) {
+			expr_53 = Some[*A](&v_32.F0)
 		} else {
-			__mygo_expr_2 = None[*A]()
+			expr_53 = None[*A]()
 		}
-		__mygo_expr_0 = __mygo_expr_2
+		expr_54 = expr_53
+		expr_55 = expr_54
 	} else {
 		if _, ok := c.(OptionNone[A]); ok {
-			__mygo_expr_0 = None[*A]()
+			var expr_52 Option[*A]
+			expr_52 = None[*A]()
+			expr_55 = expr_52
 		} else {
+			panic("unreachable")
 		}
 	}
-	return __mygo_expr_0
+	return expr_55
 }
 func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM8Contains[A any](c Option[A], item A, EqualsFn func(A, A) bool) bool {
-	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_1, ok := c.(OptionSome[A]); ok {
-		__mygo_expr_0 = EqualsFn(__mygo_match___mygo_expr_1.F0, item)
+	var expr_58 bool
+	if v_34, ok := c.(OptionSome[A]); ok {
+		var expr_57 bool
+		expr_57 = EqualsFn(v_34.F0, item)
+		expr_58 = expr_57
 	} else {
 		if _, ok := c.(OptionNone[A]); ok {
-			__mygo_expr_0 = false
+			var expr_56 bool
+			expr_56 = false
+			expr_58 = expr_56
 		} else {
+			panic("unreachable")
 		}
 	}
-	return __mygo_expr_0
-}
-func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Len[A any](c Option[A]) int {
-	var __mygo_expr_0 int
-	if _, ok := c.(OptionSome[A]); ok {
-		__mygo_expr_0 = 1
-	} else {
-		if _, ok := c.(OptionNone[A]); ok {
-			__mygo_expr_0 = 0
-		} else {
-		}
-	}
-	return __mygo_expr_0
+	return expr_58
 }
 func MygoIN6OptionM8UnwrapOr[A any](opt Option[A], defaultVal A) A {
-	var __mygo_expr_0 A
-	if __mygo_match___mygo_expr_1, ok := opt.(OptionSome[A]); ok {
-		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
+	var expr_61 A
+	if v_36, ok := opt.(OptionSome[A]); ok {
+		var expr_60 A
+		expr_60 = v_36.F0
+		expr_61 = expr_60
 	} else {
 		if _, ok := opt.(OptionNone[A]); ok {
-			__mygo_expr_0 = defaultVal
+			var expr_59 A
+			expr_59 = defaultVal
+			expr_61 = expr_59
 		} else {
+			panic("unreachable")
 		}
 	}
-	return __mygo_expr_0
+	return expr_61
 }
 func MygoIT2EqFN8OptionEqGN1AEGN6OptionGN1AEEM6Equals[A any](left Option[A], right Option[A], EqualsFn func(A, A) bool) bool {
-	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_1, ok := left.(OptionSome[A]); ok {
-		var __mygo_expr_2 bool
-		if __mygo_match___mygo_expr_3, ok := right.(OptionSome[A]); ok {
-			__mygo_expr_2 = EqualsFn(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_3.F0)
+	var expr_70 bool
+	if v_40, ok := left.(OptionSome[A]); ok {
+		var expr_69 bool
+		var expr_68 bool
+		if v_42, ok := right.(OptionSome[A]); ok {
+			var expr_67 bool
+			expr_67 = EqualsFn(v_40.F0, v_42.F0)
+			expr_68 = expr_67
 		} else {
 			if _, ok := right.(OptionNone[A]); ok {
-				__mygo_expr_2 = false
+				var expr_66 bool
+				expr_66 = false
+				expr_68 = expr_66
 			} else {
+				panic("unreachable")
 			}
 		}
-		__mygo_expr_0 = __mygo_expr_2
+		expr_69 = expr_68
+		expr_70 = expr_69
 	} else {
 		if _, ok := left.(OptionNone[A]); ok {
-			var __mygo_expr_1 bool
+			var expr_65 bool
+			var expr_64 bool
 			if _, ok := right.(OptionSome[A]); ok {
-				__mygo_expr_1 = false
+				var expr_63 bool
+				expr_63 = false
+				expr_64 = expr_63
 			} else {
 				if _, ok := right.(OptionNone[A]); ok {
-					__mygo_expr_1 = true
+					var expr_62 bool
+					expr_62 = true
+					expr_64 = expr_62
 				} else {
+					panic("unreachable")
 				}
 			}
-			__mygo_expr_0 = __mygo_expr_1
+			expr_65 = expr_64
+			expr_70 = expr_65
 		} else {
+			panic("unreachable")
 		}
 	}
-	return __mygo_expr_0
+	return expr_70
 }

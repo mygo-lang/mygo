@@ -149,104 +149,97 @@ func GenerateSourceAt(sourceName string, input string) Result[string, string] {
 	return expr_30
 }
 func generateOneFile(file ast2.File, info typeinference2.PackageInfo, allDecls []ast2.Decl, includeHKT bool) Result[string, string] {
-	var expr_31 []ast2.Decl
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(info.TypedDecls) > 0 {
-		expr_31 = info.TypedDecls
+	g_31 := &[]Generator2{newGenerator2(file.PackageName, info.TypedDecls, info.GoPackages)}[0]
+	imports_32 := collectImports(file.Decls)
+	decls_33 := translateDeclsAst(g_31, info.TypedDecls, 0, []goast.Decl([]goast.Decl{}))
+	var expr_40 Result[string, string]
+	if v_10, ok := decls_33.(ResultErr[[]goast.Decl, string]); ok {
+		var expr_39 Result[string, string]
+		expr_39 = Err[string, string](v_10.F0)
+		expr_40 = expr_39
 	} else {
-		expr_31 = file.Decls
-	}
-	typedDecls_32 := expr_31
-	g_33 := &[]Generator2{newGenerator2(file.PackageName, allDecls, info.GoPackages)}[0]
-	imports_34 := collectImports(file.Decls)
-	decls_35 := translateDeclsAst(g_33, typedDecls_32, 0, []goast.Decl([]goast.Decl{}))
-	var expr_42 Result[string, string]
-	if v_10, ok := decls_35.(ResultErr[[]goast.Decl, string]); ok {
-		var expr_41 Result[string, string]
-		expr_41 = Err[string, string](v_10.F0)
-		expr_42 = expr_41
-	} else {
-		if v_9, ok := decls_35.(ResultOk[[]goast.Decl, string]); ok {
-			var expr_40 Result[string, string]
-			var expr_36 []goast.Decl
-			if includeHKT && needsHKTDecls(typedDecls_32) {
-				expr_36 = goast.AppendDecls(goast.HKTDecls(), v_9.F0)
+		if v_9, ok := decls_33.(ResultOk[[]goast.Decl, string]); ok {
+			var expr_38 Result[string, string]
+			var expr_34 []goast.Decl
+			if includeHKT && needsHKTDecls(info.TypedDecls) {
+				expr_34 = goast.AppendDecls(goast.HKTDecls(), v_9.F0)
 			} else {
-				expr_36 = v_9.F0
+				expr_34 = v_9.F0
 			}
-			withHKT_37 := expr_36
-			var expr_38 []GoImportPart
-			if file.PackageName != "prelude" && goast.NeedsPreludeImport(withHKT_37) {
-				expr_38 = MygoIN5SliceM6Append(imports_34, GoImportPart{Alias: ".", Path: "github.com/mygo-lang/mygo/prelude"})
+			withHKT_35 := expr_34
+			var expr_36 []GoImportPart
+			if file.PackageName != "prelude" && goast.NeedsPreludeImport(withHKT_35) {
+				expr_36 = MygoIN5SliceM6Append(imports_32, GoImportPart{Alias: ".", Path: "github.com/mygo-lang/mygo/prelude"})
 			} else {
-				expr_38 = imports_34
+				expr_36 = imports_32
 			}
-			withPrelude_39 := expr_38
-			expr_40 = renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: withPrelude_39, AstDecls: withHKT_37, Decls: []string([]string{})})
-			expr_42 = expr_40
+			withPrelude_37 := expr_36
+			expr_38 = renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: withPrelude_37, AstDecls: withHKT_35, Decls: []string([]string{})})
+			expr_40 = expr_38
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_42
+	return expr_40
 }
 func needsHKTDecls(decls []ast2.Decl) bool {
-	var expr_53 bool
+	var expr_51 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
-		expr_53 = false
+		expr_51 = false
 	} else {
-		var expr_52 bool
-		head_43 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 		var expr_50 bool
-		if v_15, ok := head_43.(ast2.DeclInterfaceDecl); ok {
-			var expr_49 bool
-			expr_49 = hasHKTTypeParam(v_15.F1)
-			expr_50 = expr_49
+		head_41 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		var expr_48 bool
+		if v_15, ok := head_41.(ast2.DeclInterfaceDecl); ok {
+			var expr_47 bool
+			expr_47 = hasHKTTypeParam(v_15.F1)
+			expr_48 = expr_47
 		} else {
-			if v_14, ok := head_43.(ast2.DeclStructDecl); ok {
-				var expr_48 bool
-				expr_48 = hasHKTTypeParam(v_14.F1)
-				expr_50 = expr_48
+			if v_14, ok := head_41.(ast2.DeclStructDecl); ok {
+				var expr_46 bool
+				expr_46 = hasHKTTypeParam(v_14.F1)
+				expr_48 = expr_46
 			} else {
-				if v_13, ok := head_43.(ast2.DeclEnumDecl); ok {
-					var expr_47 bool
-					expr_47 = hasHKTTypeParam(v_13.F1)
-					expr_50 = expr_47
+				if v_13, ok := head_41.(ast2.DeclEnumDecl); ok {
+					var expr_45 bool
+					expr_45 = hasHKTTypeParam(v_13.F1)
+					expr_48 = expr_45
 				} else {
-					if v_12, ok := head_43.(ast2.DeclFuncDecl); ok {
-						var expr_46 bool
-						expr_46 = hasHKTTypeParam(v_12.F1)
-						expr_50 = expr_46
+					if v_12, ok := head_41.(ast2.DeclFuncDecl); ok {
+						var expr_44 bool
+						expr_44 = hasHKTTypeParam(v_12.F1)
+						expr_48 = expr_44
 					} else {
-						if v_11, ok := head_43.(ast2.DeclImplDecl); ok {
-							var expr_45 bool
-							expr_45 = hasHKTTypeParam(v_11.F0)
-							expr_50 = expr_45
+						if v_11, ok := head_41.(ast2.DeclImplDecl); ok {
+							var expr_43 bool
+							expr_43 = hasHKTTypeParam(v_11.F0)
+							expr_48 = expr_43
 						} else {
 							{
-								var expr_44 bool
-								expr_44 = false
-								expr_50 = expr_44
+								var expr_42 bool
+								expr_42 = false
+								expr_48 = expr_42
 							}
 						}
 					}
 				}
 			}
 		}
-		here_51 := expr_50
-		expr_52 = here_51 || needsHKTDecls(sliceDrop[ast2.Decl](decls, 1))
-		expr_53 = expr_52
+		here_49 := expr_48
+		expr_50 = here_49 || needsHKTDecls(sliceDrop[ast2.Decl](decls, 1))
+		expr_51 = expr_50
 	}
-	return expr_53
+	return expr_51
 }
 func hasHKTTypeParam(tps []string) bool {
-	var expr_56 bool
+	var expr_54 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tps) == 0 {
-		expr_56 = false
+		expr_54 = false
 	} else {
-		var expr_55 bool
-		current_54 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tps, 0), "")
-		expr_55 = strings.Index(current_54, "[") >= 0 || hasHKTTypeParam(sliceDrop[string](tps, 1))
-		expr_56 = expr_55
+		var expr_53 bool
+		current_52 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tps, 0), "")
+		expr_53 = strings.Index(current_52, "[") >= 0 || hasHKTTypeParam(sliceDrop[string](tps, 1))
+		expr_54 = expr_53
 	}
-	return expr_56
+	return expr_54
 }

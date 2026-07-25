@@ -2,7 +2,9 @@
 
 package prelude
 
-import "strings"
+import (
+	"strings"
+)
 
 func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM4Each(c string, fn func(rune)) {
 	func() {
@@ -10,25 +12,34 @@ func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM4Each(c string, fn
 			fn(ru)
 		}
 	}()
+	return
 }
 func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(c string) int {
 	return len(c)
 }
 func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Map[B any](c string, fn func(rune) B) []B {
-	slc := []rune(c)
-	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(slc, fn)
+	var expr_122 []B
+	slc_121 := []rune(c)
+	expr_122 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(slc_121, fn)
+	return expr_122
 }
 func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM6Filter(c string, fn func(rune) bool) []rune {
-	slc := []rune(c)
-	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(slc, fn)
+	var expr_124 []rune
+	slc_123 := []rune(c)
+	expr_124 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(slc_123, fn)
+	return expr_124
 }
 func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM4Fold[B any](c string, initial B, fn func(B, rune) B) B {
-	slc := []rune(c)
-	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(slc, initial, fn)
+	var expr_126 B
+	slc_125 := []rune(c)
+	expr_126 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(slc_125, initial, fn)
+	return expr_126
 }
 func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM4Find(c string, fn func(rune) bool) Option[*rune] {
-	slc := []rune(c)
-	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(slc, fn)
+	var expr_128 Option[*rune]
+	slc_127 := []rune(c)
+	expr_128 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(slc_127, fn)
+	return expr_128
 }
 func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM8Contains(c string, item rune) bool {
 	return strings.ContainsRune(c, item)
@@ -37,11 +48,13 @@ func MygoIN6StringM9FromRunes(rs []rune) string {
 	return string(rs)
 }
 func MygoIN6StringM11MatchString(s string, prefix string) bool {
+	var expr_129 bool
 	if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(prefix) {
-		return s[:len(prefix)] == prefix
+		expr_129 = s[:len(prefix)] == prefix
 	} else {
-		return false
+		expr_129 = false
 	}
+	return expr_129
 }
 func MygoIN6StringM9HasPrefix(s string, prefix string) bool {
 	return strings.HasPrefix(s, prefix)

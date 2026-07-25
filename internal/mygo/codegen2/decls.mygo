@@ -3,6 +3,7 @@ package codegen2
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import strings "go:strings"
+import fmt "go:fmt"
 
 func collectImports(decls: Slice[ast2.Decl]) -> Slice[GoImportPart]
   decls.Fold([] as Slice[GoImportPart], func(out: Slice[GoImportPart], d: ast2.Decl) -> Slice[GoImportPart]
@@ -125,7 +126,8 @@ func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[as
     let method = methods.Get(index).UnwrapOr(defaultImplMethod())
     let sig = method.Sig
     let methodTps = appendStrings(tps, sig.TypeParams)
-    let ret = returnTypeString(sig.Ret, typeParamSet(methodTps))
+    let ret = returnMonoType(sig.Ret)
+
     let ctx = Ref.new(newFuncEgCtx(methodTps, ret, sig.Name, sig.Params.Len()))
     go[()] {
       code: "{ctx}.goPackages = {packages}; {ctx}.pkgInfo = {pkgInfo}"
@@ -194,7 +196,7 @@ func implStem(target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], tps: Set[Stri
 end
 
 func translateFuncAstDecl(g: Ref[Generator2], name: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, constraints: Slice[ast2.Constraint]) -> Result[goast.Decl, String]
-  let initialRetType = returnTypeString(ret, typeParamSet(tps))
+  let initialRetType = returnMonoType(ret)
   let ctx = Ref.new(newFuncEgCtx(tps, initialRetType, name, params.Len()))
   go[()] {
     code: "{ctx}.goPackages = {g}.goPackages; {ctx}.pkgInfo = {g}.pkgInfo"
@@ -239,8 +241,8 @@ end
 # Keep source-level field types available while lowering receiver syntax.
 # Keys use the Go-visible struct constructor and exported field spelling.
 # Uses if/else chain instead of switch to avoid the old mygo compiler
-# inserting return statements that break the recursive iteration.
 func seedStructSourceTypes(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
+  fmt.Printf("[DEBUG] typedDecls count: %d, first=%T\n", decls.Len(), decls.Get(0))
   if decls.Len() != 0 then
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     if isStructDecl(decl) then
@@ -262,13 +264,13 @@ end
 func seedStructSourceTypesFromDecl(decl: ast2.Decl, ctx: Ref[egCtx]) -> ()
   switch decl
     case StructDecl(name, tps, fields) =>
-      ctx.sourceTypes.Set("$tparams$" + name, strings.Join(tps, ","))
+      # FIXME: To Be Removed
+      # ctx.sourceTypes.Set("$tparams$" + name, strings.Join(tps, ","))
       # Also populate MonoType-based struct field storage.
       let bound = typeParamIDsMono(tps, 1)
       ctx.structTypeParams.Set(name, bound)
       let fieldEntries = fieldsToFieldEntries(name, fields, tps, 0, [] as Slice[typeinference2.FieldEntry])
       ctx.structFields.Set(name, fieldEntries)
-      seedOneStructSourceTypes(name, fields, ctx, tps)
     case _ => ()
   end
 end
@@ -282,18 +284,10 @@ end
 func fieldsToFieldEntries(typeName: String, fields: Slice[ast2.Field], tps: Slice[String], index: Int, out: Slice[typeinference2.FieldEntry]) -> Slice[typeinference2.FieldEntry]
   if index >= fields.Len() then out else
     let f = fields.Get(index).UnwrapOr(ast2.Field { Name: "", Type: ast2.TypeExpr.UnitType(), Tag: None })
-    let fieldName = if f.Name == "embed" then "" else exportName(f.Name) end
+    let fieldName = f.Name
     let monoType = typeinference2.TypeFromASTWithParams(f.Type, tps)
     let entry = typeinference2.FieldEntry { TypeName: typeName, FieldName: fieldName, Type: monoType }
     fieldsToFieldEntries(typeName, fields, tps, index + 1, out.Append(entry))
-  end
-end
-
-func seedOneStructSourceTypes(name: String, fields: Slice[ast2.Field], ctx: Ref[egCtx], tps: Slice[String]) -> ()
-  if fields.Len() != 0 then
-    let field = fields.Get(0).UnwrapOr(ast2.Field { Name: "", Type: ast2.TypeExpr.UnitType(), Tag: None })
-    ctx.sourceTypes.Set("$field$" + name + "." + exportName(field.Name), mygoTypeString(field.Type))
-    seedOneStructSourceTypes(name, sliceDrop(fields, 1), ctx, tps)
   end
 end
 
@@ -318,7 +312,8 @@ func seedEnumVariantsForVariants(enumName: String, variants: Slice[ast2.Variant]
     ctx.enumVariantOwners.Set(variant.Name, enumName)
     # Store the variant index so bindPatternArgumentsWithTypes can map
     # variant fields to the correct type argument position.
-    ctx.sourceTypes.Set("$variantIndex$" + enumName + "." + variant.Name, index.ToString())
+    # FIXME: To Be Removed
+    # ctx.sourceTypes.Set("$variantIndex$" + enumName + "." + variant.Name, index.ToString())
     if variant.Fields.Len() == 0 then
       ctx.enumValueConstructors.Set(enumName + "." + variant.Name, enumConstructorGoName(sanitizeIdent(enumName), variant.Name))
     end
@@ -330,18 +325,8 @@ end
 
 func seedEnumVariantFieldTypes(enumName: String, variantName: String, fields: Slice[ast2.TypeExpr], ctx: Ref[egCtx], index: Int) -> ()
   if index < fields.Len() then
-    let fieldType = fields.Get(index).UnwrapOr(ast2.TypeExpr.UnitType())
-    let key = "$variant$" + enumName + "." + variantName + "." + index.ToString()
-    let typeStr = mygoTypeString(fieldType)
-    ctx.sourceTypes.Set(key, typeStr)
     seedEnumVariantFieldTypes(enumName, variantName, fields, ctx, index + 1)
   end
-end
-
-# Debug helper: check if seedEnumVariantFieldTypes was called for Result.Ok.0
-func debugCheckSeed(ctx: Ref[egCtx]) -> ()
-  let _ = ctx.sourceTypes.Get("$variant$Result.Ok.0")
-  ()
 end
 
 func seedCallDictionaries(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
