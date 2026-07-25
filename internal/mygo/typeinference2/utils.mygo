@@ -227,9 +227,29 @@ func envFreeVars(env: Slice[EnvEntry], out: Slice[Int]) -> Slice[Int]
   if env.Len() == 0 then out
   else
     let item = env.Get(0).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: MonoType.TUnit } })
-    let bodyVars = freeVars(item.Scheme.Body, out)
-    let predicateVars = freeVarsPredicates(item.Scheme.Predicates, bodyVars)
-    envFreeVars(sliceDrop(env, 1), removeInts(predicateVars, item.Scheme.Bound))
+    # Compute this entry's contribution to the environment's free type
+    # variables independently: freeVars(body) minus the entry's own Bound.
+    # Removing Bound from the running accumulator (as the previous
+    # implementation did) is wrong: a scheme like POrElse's own signature --
+    # forall A. func(Parser[A], Parser[A]) -> Reply[A] -- has Body that
+    # mentions A but lists A in Bound. When such an entry is processed it
+    # would erase A from the accumulator even though other entries (params and
+    # type-param bindings) keep A free in the environment. The result is that
+    # let-bound values mentioning A become spuriously polymorphic and
+    # inference falls over with occurs-check failures like t-1 ~ Reply[t-1].
+    let bodyFree = removeInts(freeVars(item.Scheme.Body, []), item.Scheme.Bound)
+    let entryFree = freeVarsPredicates(item.Scheme.Predicates, bodyFree)
+    envFreeVars(sliceDrop(env, 1), unionInts(out, entryFree))
+  end
+end
+
+func unionInts(left: Slice[Int], right: Slice[Int]) -> Slice[Int]
+  if right.Len() == 0 then
+    left
+  else
+    let head = right.Get(0).UnwrapOr(0)
+    let next = if containsInt(left, head) then left else left.Append(head) end
+    unionInts(next, sliceDrop(right, 1))
   end
 end
 

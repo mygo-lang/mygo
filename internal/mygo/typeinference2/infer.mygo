@@ -129,7 +129,12 @@ func inferExpr(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Resu
   let result = inferExprInner(expr, env, state)
   switch result
     case Ok(value) =>
-      let nextState = recordInferredExprType(expr, value.Type, value.Predicates, value.Subst, state)
+      # Pass value.State (which carries the bumped FreshVarID produced by inner
+      # inference) instead of the inbound state: recordInferredExprType uses
+      # state.FreshVarID verbatim, so reverting to the original counter would
+      # cause fresh type variable IDs to be reused across nested expressions
+      # and trigger spurious occurs-check failures (e.g. t-1 ~ Reply[t-1]).
+      let nextState = recordInferredExprType(expr, value.Type, value.Predicates, value.Subst, value.State)
       Ok(InferResult { Type: value.Type, Predicates: value.Predicates, Subst: value.Subst, State: nextState })
     case Err(msg) => Err(errorAtExpr(expr, msg))
   end
