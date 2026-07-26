@@ -2,7 +2,9 @@
 
 package prelude
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func MygoIT8ToStringFN3IntGN3IntEM8ToString(value int) string {
 	return fmt.Sprint(value)

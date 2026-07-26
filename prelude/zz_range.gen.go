@@ -15,201 +15,197 @@ func MygoIN5RangeM11NewWithStep(start int, stop int, step int) Range {
 	return Range{Start: start, End: stop, Step: step}
 }
 func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM4Each(c Range, fn func(int)) {
-	i := c.Start
+	var i_93 int = c.Start
 	if c.Step > 0 {
-		for i < c.End {
-			fn(i)
-			i = i + c.Step
+		for i_93 < c.End {
+			fn(i_93)
+			i_93 = i_93 + c.Step
 		}
 	} else {
 		if c.Step < 0 {
-			for i > c.End {
-				fn(i)
-				i = i + c.Step
+			for i_93 > c.End {
+				fn(i_93)
+				i_93 = i_93 + c.Step
 			}
-		} else {
 		}
 	}
 	return
+	return
 }
 func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM3Len(c Range) int {
-	count := 0
-	i := c.Start
+	var expr_96 int
+	var count_94 int = 0
+	var i_95 int = c.Start
 	if c.Step > 0 {
-		for i < c.End {
-			count = count + 1
-			i = i + c.Step
+		for i_95 < c.End {
+			count_94 = count_94 + 1
+			i_95 = i_95 + c.Step
 		}
 	} else {
 		if c.Step < 0 {
-			for i > c.End {
-				count = count + 1
-				i = i + c.Step
+			for i_95 > c.End {
+				count_94 = count_94 + 1
+				i_95 = i_95 + c.Step
 			}
-		} else {
 		}
 	}
-	return count
+	expr_96 = count_94
+	return expr_96
 }
 func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM3Map[B any](c Range, fn func(int) B) []B {
-	count := 0
-	i := c.Start
+	var expr_101 []B
+	var count_97 int = 0
+	var i_98 int = c.Start
 	if c.Step > 0 {
-		for i < c.End {
-			count = count + 1
-			i = i + c.Step
+		for i_98 < c.End {
+			count_97 = count_97 + 1
+			i_98 = i_98 + c.Step
 		}
 	} else {
 		if c.Step < 0 {
-			for i > c.End {
-				count = count + 1
-				i = i + c.Step
+			for i_98 > c.End {
+				count_97 = count_97 + 1
+				i_98 = i_98 + c.Step
 			}
-		} else {
 		}
 	}
-	result := []B{}
-	j := 0
-	i = c.Start
+	var result_99 []B = []B{}
+	var j_100 int = 0
+	i_98 = c.Start
 	if c.Step > 0 {
-		for j < count {
-			result = append(result, fn(i))
-			i = i + c.Step
-			j = j + 1
+		for j_100 < count_97 {
+			result_99 = append(result_99, fn(i_98))
+			i_98 = i_98 + c.Step
+			j_100 = j_100 + 1
 		}
 	} else {
 		if c.Step < 0 {
-			for j < count {
-				result = append(result, fn(i))
-				i = i + c.Step
-				j = j + 1
+			for j_100 < count_97 {
+				result_99 = append(result_99, fn(i_98))
+				i_98 = i_98 + c.Step
+				j_100 = j_100 + 1
 			}
-		} else {
 		}
 	}
-	return result
+	expr_101 = result_99
+	return expr_101
 }
 func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM6Filter(c Range, fn func(int) bool) []int {
-	count := 0
-	i := c.Start
+	var expr_106 []int
+	var count_102 int = 0
+	var i_103 int = c.Start
 	if c.Step > 0 {
-		for i < c.End {
-			if fn(i) {
-				count = count + 1
-			} else {
+		for i_103 < c.End {
+			if fn(i_103) {
+				count_102 = count_102 + 1
 			}
-			i = i + c.Step
+			i_103 = i_103 + c.Step
 		}
 	} else {
 		if c.Step < 0 {
-			for i > c.End {
-				if fn(i) {
-					count = count + 1
-				} else {
+			for i_103 > c.End {
+				if fn(i_103) {
+					count_102 = count_102 + 1
 				}
-				i = i + c.Step
+				i_103 = i_103 + c.Step
 			}
-		} else {
 		}
 	}
-	result := []int{}
-	j := 0
-	i = c.Start
+	var result_104 []int = []int{}
+	var j_105 int = 0
+	i_103 = c.Start
 	if c.Step > 0 {
-		for i < c.End {
-			if fn(i) {
-				result = append(result, i)
-				j = j + 1
-			} else {
+		for i_103 < c.End {
+			if fn(i_103) {
+				result_104 = append(result_104, i_103)
+				j_105 = j_105 + 1
 			}
-			i = i + c.Step
+			i_103 = i_103 + c.Step
 		}
 	} else {
 		if c.Step < 0 {
-			for i > c.End {
-				if fn(i) {
-					result = append(result, i)
-					j = j + 1
-				} else {
+			for i_103 > c.End {
+				if fn(i_103) {
+					result_104 = append(result_104, i_103)
+					j_105 = j_105 + 1
 				}
-				i = i + c.Step
+				i_103 = i_103 + c.Step
 			}
-		} else {
 		}
 	}
-	return result
+	expr_106 = result_104
+	return expr_106
 }
 func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM4Fold[B any](c Range, initial B, fn func(B, int) B) B {
-	acc := initial
-	i := c.Start
+	var expr_109 B
+	var acc_107 B = initial
+	var i_108 int = c.Start
 	if c.Step > 0 {
-		for i < c.End {
-			acc = fn(acc, i)
-			i = i + c.Step
+		for i_108 < c.End {
+			acc_107 = fn(acc_107, i_108)
+			i_108 = i_108 + c.Step
 		}
 	} else {
 		if c.Step < 0 {
-			for i > c.End {
-				acc = fn(acc, i)
-				i = i + c.Step
+			for i_108 > c.End {
+				acc_107 = fn(acc_107, i_108)
+				i_108 = i_108 + c.Step
 			}
-		} else {
 		}
 	}
-	return acc
+	expr_109 = acc_107
+	return expr_109
 }
 func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM4Find(c Range, fn func(int) bool) Option[*int] {
-	i := c.Start
-	found := None[*int]()
-	done := false
+	var expr_115 Option[*int]
+	var i_110 int = c.Start
+	var found_111 Option[*int] = None[*int]()
+	var done_112 bool = false
 	if c.Step > 0 {
-		for i < c.End && !done {
-			if fn(i) {
-				current := i
-				found = Some[*int](&current)
-				done = true
-			} else {
+		for i_110 < c.End && !done_112 {
+			if fn(i_110) {
+				var current_113 int = i_110
+				found_111 = Some[*int](&current_113)
+				done_112 = true
 			}
-			i = i + c.Step
+			i_110 = i_110 + c.Step
 		}
 	} else {
 		if c.Step < 0 {
-			for i > c.End && !done {
-				if fn(i) {
-					current_1 := i
-					found = Some[*int](&current_1)
-					done = true
-				} else {
+			for i_110 > c.End && !done_112 {
+				if fn(i_110) {
+					var current_114 int = i_110
+					found_111 = Some[*int](&current_114)
+					done_112 = true
 				}
-				i = i + c.Step
+				i_110 = i_110 + c.Step
 			}
-		} else {
 		}
 	}
-	return found
+	expr_115 = found_111
+	return expr_115
 }
 func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM8Contains(c Range, item int, EqualsFn func(int, int) bool) bool {
-	i := c.Start
-	found := false
+	var expr_118 bool
+	var i_116 int = c.Start
+	var found_117 bool = false
 	if c.Step > 0 {
-		for i < c.End && !found {
-			if EqualsFn(item, i) {
-				found = true
-			} else {
+		for i_116 < c.End && !found_117 {
+			if EqualsFn(item, i_116) {
+				found_117 = true
 			}
-			i = i + c.Step
+			i_116 = i_116 + c.Step
 		}
 	} else {
 		if c.Step < 0 {
-			for i > c.End && !found {
-				if EqualsFn(item, i) {
-					found = true
-				} else {
+			for i_116 > c.End && !found_117 {
+				if EqualsFn(item, i_116) {
+					found_117 = true
 				}
-				i = i + c.Step
+				i_116 = i_116 + c.Step
 			}
-		} else {
 		}
 	}
-	return found
+	expr_118 = found_117
+	return expr_118
 }

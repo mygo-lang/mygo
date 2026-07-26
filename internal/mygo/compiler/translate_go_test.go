@@ -351,3 +351,29 @@ end
 		t.Fatalf("generated source is not valid Go: %v\n%s", err, goSrc)
 	}
 }
+
+func TestResultIntErrorFromFFIMatchesErrAndCallsErrorMethod(t *testing.T) {
+	src := `package main
+import strconv "go:strconv"
+
+func parseOrMsg(s: String) -> String
+  switch strconv.Atoi(s)
+    case Err(e) => e.Error()
+    case Ok(_) => "ok"
+  end
+end
+`
+	goSrc := compileInlineGoTestPackage(t, src)
+	for _, want := range []string{
+		"func parseOrMsg(s string) string",
+		"ResultErr[int, error]",
+		".F0.Error()",
+	} {
+		if !strings.Contains(goSrc, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, goSrc)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "result_err.go", goSrc, 0); err != nil {
+		t.Fatalf("generated source is not valid Go: %v\n%s", err, goSrc)
+	}
+}
