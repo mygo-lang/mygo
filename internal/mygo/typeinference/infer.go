@@ -2217,10 +2217,16 @@ func inferBlock(env TypeEnv, n *BlockExpr, state *InferState) (MonoType, Subst, 
 			}
 		case *AssignStmt:
 			// Mutable assignment: infer the value and check it's assignable
-			targetType, ok := currentEnv[st.Name]
-			if !ok {
-				return nil, nil, nil, fmt.Errorf("unknown binding %q in assignment", st.Name)
+			target := st.Target
+			if target == nil {
+				target = &IdentExpr{Name: st.Name}
 			}
+			targetType, targetSubst, targetPreds, err := inferExpr(currentEnv, target, state)
+			if err != nil {
+				return nil, nil, nil, wrapInferenceError("assignment target: %w", err)
+			}
+			s = Compose(s, targetSubst)
+			allPreds = append(allPreds, targetPreds...)
 			valType, ss, preds, err := inferExpr(currentEnv, st.Value, state)
 			if err != nil {
 				return nil, nil, nil, err
@@ -2228,7 +2234,7 @@ func inferBlock(env TypeEnv, n *BlockExpr, state *InferState) (MonoType, Subst, 
 			s = Compose(s, ss)
 			allPreds = append(allPreds, preds...)
 
-			targetInst := Instantiate(targetType, state)
+			targetInst := s.ApplyMT(targetType)
 			valType = s.ApplyMT(valType)
 			s, err = Unify(targetInst, valType, s)
 			if err != nil {

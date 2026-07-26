@@ -510,7 +510,7 @@ func stmtUsesPreludeName(s Stmt, names map[string]struct{}) bool {
 	case *ReturnStmt:
 		return exprUsesPreludeName(st.Value, names)
 	case *AssignStmt:
-		return exprUsesPreludeName(st.Value, names)
+		return exprUsesPreludeName(st.Target, names) || exprUsesPreludeName(st.Value, names)
 	}
 	return false
 }

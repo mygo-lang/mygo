@@ -231,7 +231,7 @@ func exprUsesIdent(e Expr, name string) bool {
 					return true
 				}
 			case *AssignStmt:
-				if exprUsesIdent(s.Value, name) {
+				if exprUsesIdent(s.Target, name) || exprUsesIdent(s.Value, name) {
 					return true
 				}
 			}
