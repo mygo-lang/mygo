@@ -829,9 +829,10 @@ func (v *validator) validateAssign(s *AssignStmt) error {
 	if !ok {
 		return common.ErrorAtNode(s.SourceFile, s, "assignment target must be a variable or one of its fields")
 	}
-	// Field assignment mutates the value held by its root binding, so it has
-	// the same mutability rule as direct assignment.
-	if _, isLet := v.letBindings[root]; isLet {
+	// A Ref[T] points at mutable storage. Assigning one of its fields mutates
+	// that storage, not the binding that holds the reference, so it is valid
+	// for let bindings and parameters as well as vars.
+	if _, isLet := v.letBindings[root]; isLet && !v.assignsThroughRef(target) {
 		return common.ErrorAtNode(s.SourceFile, s,
 			"immutable binding %q cannot be assigned", root)
 	}
@@ -846,6 +847,19 @@ func (v *validator) validateAssign(s *AssignStmt) error {
 		return err
 	}
 	return nil
+}
+
+func (v *validator) assignsThroughRef(target Expr) bool {
+	field, ok := target.(*FieldExpr)
+	if !ok {
+		return false
+	}
+	if v.typedInfo != nil {
+		if typ, ok := v.typedInfo.ExprTypes[field.Expr].(typeinference.TCon); ok && typ.Name == "Ref" && len(typ.Args) == 1 {
+			return true
+		}
+	}
+	return v.assignsThroughRef(field.Expr)
 }
 
 func assignTargetRoot(target Expr) (string, bool) {

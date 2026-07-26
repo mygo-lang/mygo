@@ -279,7 +279,7 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 			if !ok {
 				return nil, common.ErrorAtPos(g.currentFile, s.Line, s.Column, "unknown binding %q", root)
 			}
-			if !child.mutable[actual] {
+			if !child.mutable[actual] && !g.assignsThroughRef(target, child) {
 				return nil, common.ErrorAtPos(g.currentFile, s.Line, s.Column, "cannot assign to immutable binding %q", root)
 			}
 			lhs, lhsType, err := g.translateExpr(target, child, "")
@@ -305,6 +305,23 @@ func assignmentTargetRoot(target Expr) (string, bool) {
 	default:
 		return "", false
 	}
+}
+
+func (g *gen) assignsThroughRef(target Expr, ctx *egCtx) bool {
+	field, ok := target.(*FieldExpr)
+	if !ok {
+		return false
+	}
+	baseType := strings.TrimSpace(g.inferredType(field.Expr))
+	if baseType == "" {
+		if ident, ok := field.Expr.(*IdentExpr); ok {
+			baseType = strings.TrimSpace(ctx.locals[ident.Name])
+		}
+	}
+	if strings.HasPrefix(baseType, "Ref[") || strings.HasPrefix(baseType, "*") {
+		return true
+	}
+	return g.assignsThroughRef(field.Expr, ctx)
 }
 
 func isControlExpr(e Expr) bool {
