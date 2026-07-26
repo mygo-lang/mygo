@@ -8,7 +8,6 @@ func MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM4Each[K com
 			fn(v)
 		}
 	}()
-	return
 }
 func MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len[K comparable, V any](c map[K]V) int {
 	return len(c)
@@ -73,9 +72,7 @@ func MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get[K comparable, V
 }
 func MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set[K comparable, V any](m map[K]V, index K, value V) {
 	m[index] = value
-	return
 }
 func MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete[K comparable, V any](m map[K]V, index K) {
 	delete(m, index)
-	return
 }

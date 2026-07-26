@@ -194,7 +194,7 @@ end
 }
 
 func TestGenerateSourceEncodesHigherKindedParameters(t *testing.T) {
-	src := `package sample
+	src := `package prelude
 
 interface Enumerable[C[A], A]
   func First(value: C[A]) -> A
@@ -213,6 +213,51 @@ end
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), "hkt.gen.go", ok.F0, 0); err != nil {
 		t.Fatalf("generated Go is invalid: %v\n%s", err, ok.F0)
+	}
+}
+
+func TestGenerateSourceUsesPreludeHKTDeclarations(t *testing.T) {
+	src := `package sample
+
+interface Enumerable[C[A], A]
+  func First(value: C[A]) -> A
+end
+
+func Default(value: Option[Int]) -> Option[Int]
+  value
+end
+`
+	got := GenerateSource(src)
+	ok, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	if strings.Contains(ok.F0, "type HKTType interface{}") {
+		t.Fatalf("non-prelude package redeclared prelude HKT helpers:\n%s", ok.F0)
+	}
+	if !strings.Contains(ok.F0, `. "github.com/mygo-lang/mygo/prelude"`) {
+		t.Fatalf("non-prelude package did not dot-import prelude:\n%s", ok.F0)
+	}
+}
+
+func TestGenerateSourceLowersEmptySliceStructFieldWithGenericElement(t *testing.T) {
+	src := `package sample
+
+struct Reply[A]
+  Value: A
+end
+
+func Empty[A]() -> Reply[Slice[A]]
+  Reply[Slice[A]] { Value: [] }
+end
+`
+	got := GenerateSource(src)
+	ok, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	if !strings.Contains(ok.F0, "Reply[[]A]{Value: []A{}}") {
+		t.Fatalf("empty generic slice field was not lowered with its field type:\n%s", ok.F0)
 	}
 }
 

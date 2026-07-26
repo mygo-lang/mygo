@@ -56,7 +56,7 @@ func mergeFileDecls(files []SourceFileInput, index int, acc []ast2.Decl) []ast2.
 		expr_10 = acc
 	} else {
 		var expr_9 []ast2.Decl
-		input_8 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{}), SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos([]ast2.SourcePos{})}})
+		input_8 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{}), SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos([]ast2.SourcePos{})}})
 		expr_9 = mergeFileDecls(files, index+1, mergeDeclSlices(acc, input_8.File.Decls))
 		expr_10 = expr_9
 	}
@@ -68,7 +68,7 @@ func mergeDeclSlices(dst []ast2.Decl, src []ast2.Decl) []ast2.Decl {
 		expr_13 = dst
 	} else {
 		var expr_12 []ast2.Decl
-		item_11 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(src, 0), ast2.DeclImportDeclCtor("", ""))
+		item_11 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(src, 0), ast2.DeclImportDeclCtor("", ""))
 		expr_12 = mergeDeclSlices(MygoIN5SliceM6Append(dst, item_11), sliceDrop[ast2.Decl](src, 1))
 		expr_13 = expr_12
 	}
@@ -80,7 +80,7 @@ func generateFilesLoop(files []SourceFileInput, info typeinference2.PackageInfo,
 		expr_20 = Ok[map[string]string, string](out)
 	} else {
 		var expr_19 Result[map[string]string, string]
-		input_14 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{}), SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos([]ast2.SourcePos{})}})
+		input_14 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{}), SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos([]ast2.SourcePos{})}})
 		src_15 := generateOneFile(input_14.File, info, allDecls, index == 0)
 		var expr_18 Result[map[string]string, string]
 		if v_4, ok := src_15.(ResultOk[string, string]); ok {
@@ -149,253 +149,254 @@ func GenerateSourceAt(sourceName string, input string) Result[string, string] {
 	return expr_30
 }
 func generateOneFile(file ast2.File, info typeinference2.PackageInfo, allDecls []ast2.Decl, includeHKT bool) Result[string, string] {
-	g_31 := &[]Generator2{newGenerator2(file.PackageName, info.TypedDecls, info.GoPackages, info)}[0]
-	imports_32 := collectImports(file.Decls)
-	fileTypedDecls_33 := filterTypedDeclsForFile(info.TypedDecls, file.Decls)
-	decls_34 := translateDeclsAst(g_31, fileTypedDecls_33, 0, []goast.Decl([]goast.Decl{}))
-	var expr_41 Result[string, string]
-	if v_10, ok := decls_34.(ResultErr[[]goast.Decl, string]); ok {
-		var expr_40 Result[string, string]
-		expr_40 = Err[string, string](v_10.F0)
-		expr_41 = expr_40
+	visibleDecls_31 := mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
+	g_32 := &[]Generator2{newGenerator2(file.PackageName, visibleDecls_31, info.GoPackages, info)}[0]
+	imports_33 := collectImports(file.Decls)
+	fileTypedDecls_34 := filterTypedDeclsForFile(info.TypedDecls, file.Decls)
+	decls_35 := translateDeclsAst(g_32, fileTypedDecls_34, 0, []goast.Decl([]goast.Decl{}))
+	var expr_42 Result[string, string]
+	if v_10, ok := decls_35.(ResultErr[[]goast.Decl, string]); ok {
+		var expr_41 Result[string, string]
+		expr_41 = Err[string, string](v_10.F0)
+		expr_42 = expr_41
 	} else {
-		if v_9, ok := decls_34.(ResultOk[[]goast.Decl, string]); ok {
-			var expr_39 Result[string, string]
-			var expr_35 []goast.Decl
-			if includeHKT && needsHKTDecls(info.TypedDecls) {
-				expr_35 = goast.AppendDecls(goast.HKTDecls(), v_9.F0)
+		if v_9, ok := decls_35.(ResultOk[[]goast.Decl, string]); ok {
+			var expr_40 Result[string, string]
+			var expr_36 []goast.Decl
+			if file.PackageName == "prelude" && includeHKT && needsHKTDecls(allDecls) {
+				expr_36 = goast.AppendDecls(goast.HKTDecls(), v_9.F0)
 			} else {
-				expr_35 = v_9.F0
+				expr_36 = v_9.F0
 			}
-			withHKT_36 := expr_35
-			var expr_37 []GoImportPart
-			if file.PackageName != "prelude" && goast.NeedsPreludeImport(withHKT_36) {
-				expr_37 = MygoIN5SliceM6Append(imports_32, GoImportPart{Alias: ".", Path: "github.com/mygo-lang/mygo/prelude"})
+			withHKT_37 := expr_36
+			var expr_38 []GoImportPart
+			if file.PackageName != "prelude" && goast.NeedsPreludeImport(withHKT_37) {
+				expr_38 = MygoIN5SliceM6Append(imports_33, GoImportPart{Alias: ".", Path: "github.com/mygo-lang/mygo/prelude"})
 			} else {
-				expr_37 = imports_32
+				expr_38 = imports_33
 			}
-			withPrelude_38 := expr_37
-			expr_39 = renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: withPrelude_38, AstDecls: withHKT_36, Decls: []string([]string{})})
-			expr_41 = expr_39
+			withPrelude_39 := expr_38
+			expr_40 = renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: withPrelude_39, AstDecls: withHKT_37, Decls: []string([]string{})})
+			expr_42 = expr_40
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_41
+	return expr_42
 }
 func needsHKTDecls(decls []ast2.Decl) bool {
-	var expr_52 bool
+	var expr_53 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
-		expr_52 = false
+		expr_53 = false
 	} else {
-		var expr_51 bool
-		head_42 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
-		var expr_49 bool
-		if v_15, ok := head_42.(ast2.DeclInterfaceDecl); ok {
-			var expr_48 bool
-			expr_48 = hasHKTTypeParam(v_15.F1)
-			expr_49 = expr_48
+		var expr_52 bool
+		head_43 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		var expr_50 bool
+		if v_15, ok := head_43.(ast2.DeclInterfaceDecl); ok {
+			var expr_49 bool
+			expr_49 = hasHKTTypeParam(v_15.F1)
+			expr_50 = expr_49
 		} else {
-			if v_14, ok := head_42.(ast2.DeclStructDecl); ok {
-				var expr_47 bool
-				expr_47 = hasHKTTypeParam(v_14.F1)
-				expr_49 = expr_47
+			if v_14, ok := head_43.(ast2.DeclStructDecl); ok {
+				var expr_48 bool
+				expr_48 = hasHKTTypeParam(v_14.F1)
+				expr_50 = expr_48
 			} else {
-				if v_13, ok := head_42.(ast2.DeclEnumDecl); ok {
-					var expr_46 bool
-					expr_46 = hasHKTTypeParam(v_13.F1)
-					expr_49 = expr_46
+				if v_13, ok := head_43.(ast2.DeclEnumDecl); ok {
+					var expr_47 bool
+					expr_47 = hasHKTTypeParam(v_13.F1)
+					expr_50 = expr_47
 				} else {
-					if v_12, ok := head_42.(ast2.DeclFuncDecl); ok {
-						var expr_45 bool
-						expr_45 = hasHKTTypeParam(v_12.F1)
-						expr_49 = expr_45
+					if v_12, ok := head_43.(ast2.DeclFuncDecl); ok {
+						var expr_46 bool
+						expr_46 = hasHKTTypeParam(v_12.F1)
+						expr_50 = expr_46
 					} else {
-						if v_11, ok := head_42.(ast2.DeclImplDecl); ok {
-							var expr_44 bool
-							expr_44 = hasHKTTypeParam(v_11.F0)
-							expr_49 = expr_44
+						if v_11, ok := head_43.(ast2.DeclImplDecl); ok {
+							var expr_45 bool
+							expr_45 = hasHKTTypeParam(v_11.F0)
+							expr_50 = expr_45
 						} else {
 							{
-								var expr_43 bool
-								expr_43 = false
-								expr_49 = expr_43
+								var expr_44 bool
+								expr_44 = false
+								expr_50 = expr_44
 							}
 						}
 					}
 				}
 			}
 		}
-		here_50 := expr_49
-		expr_51 = here_50 || needsHKTDecls(sliceDrop[ast2.Decl](decls, 1))
-		expr_52 = expr_51
+		here_51 := expr_50
+		expr_52 = here_51 || needsHKTDecls(sliceDrop[ast2.Decl](decls, 1))
+		expr_53 = expr_52
 	}
-	return expr_52
+	return expr_53
 }
 func hasHKTTypeParam(tps []string) bool {
-	var expr_55 bool
+	var expr_56 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tps) == 0 {
-		expr_55 = false
+		expr_56 = false
 	} else {
-		var expr_54 bool
-		current_53 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tps, 0), "")
-		expr_54 = strings.Index(current_53, "[") >= 0 || hasHKTTypeParam(sliceDrop[string](tps, 1))
-		expr_55 = expr_54
+		var expr_55 bool
+		current_54 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tps, 0), "")
+		expr_55 = strings.Index(current_54, "[") >= 0 || hasHKTTypeParam(sliceDrop[string](tps, 1))
+		expr_56 = expr_55
 	}
-	return expr_55
+	return expr_56
 }
 func filterTypedDeclsForFile(typedDecls []ast2.Decl, fileDecls []ast2.Decl) []ast2.Decl {
 	return filterTypedDeclsLoop(typedDecls, fileDecls, 0, []ast2.Decl([]ast2.Decl{}))
 }
 func filterTypedDeclsLoop(typedDecls []ast2.Decl, fileDecls []ast2.Decl, index int, out []ast2.Decl) []ast2.Decl {
-	var expr_59 []ast2.Decl
+	var expr_60 []ast2.Decl
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(typedDecls) {
-		expr_59 = out
+		expr_60 = out
 	} else {
+		var expr_59 []ast2.Decl
+		decl_57 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(typedDecls, index), ast2.DeclImportDeclCtor("", ""))
 		var expr_58 []ast2.Decl
-		decl_56 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(typedDecls, index), ast2.DeclImportDeclCtor("", ""))
-		var expr_57 []ast2.Decl
-		if typedDeclMatchesAnyFileDecl(decl_56, fileDecls, 0) {
-			expr_57 = filterTypedDeclsLoop(typedDecls, fileDecls, index+1, MygoIN5SliceM6Append(out, decl_56))
+		if typedDeclMatchesAnyFileDecl(decl_57, fileDecls, 0) {
+			expr_58 = filterTypedDeclsLoop(typedDecls, fileDecls, index+1, MygoIN5SliceM6Append(out, decl_57))
 		} else {
-			expr_57 = filterTypedDeclsLoop(typedDecls, fileDecls, index+1, out)
+			expr_58 = filterTypedDeclsLoop(typedDecls, fileDecls, index+1, out)
 		}
-		expr_58 = expr_57
 		expr_59 = expr_58
+		expr_60 = expr_59
 	}
-	return expr_59
+	return expr_60
 }
 func typedDeclMatchesAnyFileDecl(decl ast2.Decl, fileDecls []ast2.Decl, index int) bool {
-	var expr_63 bool
+	var expr_64 bool
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fileDecls) {
-		expr_63 = false
+		expr_64 = false
 	} else {
+		var expr_63 bool
+		candidate_61 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fileDecls, index), ast2.DeclImportDeclCtor("", ""))
 		var expr_62 bool
-		candidate_60 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fileDecls, index), ast2.DeclImportDeclCtor("", ""))
-		var expr_61 bool
-		if typedDeclMatchesFileDecl(decl, candidate_60) {
-			expr_61 = true
+		if typedDeclMatchesFileDecl(decl, candidate_61) {
+			expr_62 = true
 		} else {
-			expr_61 = typedDeclMatchesAnyFileDecl(decl, fileDecls, index+1)
+			expr_62 = typedDeclMatchesAnyFileDecl(decl, fileDecls, index+1)
 		}
-		expr_62 = expr_61
 		expr_63 = expr_62
+		expr_64 = expr_63
 	}
-	return expr_63
+	return expr_64
 }
 func typedDeclMatchesFileDecl(typedDecl ast2.Decl, fileDecl ast2.Decl) bool {
-	var expr_85 bool
+	var expr_86 bool
 	if v_24, ok := typedDecl.(ast2.DeclStructDecl); ok {
+		var expr_85 bool
 		var expr_84 bool
-		var expr_83 bool
 		if v_25, ok := fileDecl.(ast2.DeclStructDecl); ok {
-			var expr_82 bool
-			expr_82 = v_24.F0 == v_25.F0
-			expr_83 = expr_82
+			var expr_83 bool
+			expr_83 = v_24.F0 == v_25.F0
+			expr_84 = expr_83
 		} else {
 			{
-				var expr_81 bool
-				expr_81 = false
-				expr_83 = expr_81
+				var expr_82 bool
+				expr_82 = false
+				expr_84 = expr_82
 			}
 		}
-		expr_84 = expr_83
 		expr_85 = expr_84
+		expr_86 = expr_85
 	} else {
 		if v_22, ok := typedDecl.(ast2.DeclEnumDecl); ok {
+			var expr_81 bool
 			var expr_80 bool
-			var expr_79 bool
 			if v_23, ok := fileDecl.(ast2.DeclEnumDecl); ok {
-				var expr_78 bool
-				expr_78 = v_22.F0 == v_23.F0
-				expr_79 = expr_78
+				var expr_79 bool
+				expr_79 = v_22.F0 == v_23.F0
+				expr_80 = expr_79
 			} else {
 				{
-					var expr_77 bool
-					expr_77 = false
-					expr_79 = expr_77
+					var expr_78 bool
+					expr_78 = false
+					expr_80 = expr_78
 				}
 			}
-			expr_80 = expr_79
-			expr_85 = expr_80
+			expr_81 = expr_80
+			expr_86 = expr_81
 		} else {
 			if v_20, ok := typedDecl.(ast2.DeclInterfaceDecl); ok {
+				var expr_77 bool
 				var expr_76 bool
-				var expr_75 bool
 				if v_21, ok := fileDecl.(ast2.DeclInterfaceDecl); ok {
-					var expr_74 bool
-					expr_74 = v_20.F0 == v_21.F0
-					expr_75 = expr_74
+					var expr_75 bool
+					expr_75 = v_20.F0 == v_21.F0
+					expr_76 = expr_75
 				} else {
 					{
-						var expr_73 bool
-						expr_73 = false
-						expr_75 = expr_73
+						var expr_74 bool
+						expr_74 = false
+						expr_76 = expr_74
 					}
 				}
-				expr_76 = expr_75
-				expr_85 = expr_76
+				expr_77 = expr_76
+				expr_86 = expr_77
 			} else {
 				if v_18, ok := typedDecl.(ast2.DeclFuncDecl); ok {
+					var expr_73 bool
 					var expr_72 bool
-					var expr_71 bool
 					if v_19, ok := fileDecl.(ast2.DeclFuncDecl); ok {
-						var expr_70 bool
-						expr_70 = v_18.F0 == v_19.F0
-						expr_71 = expr_70
+						var expr_71 bool
+						expr_71 = v_18.F0 == v_19.F0
+						expr_72 = expr_71
 					} else {
 						{
-							var expr_69 bool
-							expr_69 = false
-							expr_71 = expr_69
+							var expr_70 bool
+							expr_70 = false
+							expr_72 = expr_70
 						}
 					}
-					expr_72 = expr_71
-					expr_85 = expr_72
+					expr_73 = expr_72
+					expr_86 = expr_73
 				} else {
 					if v_16, ok := typedDecl.(ast2.DeclImplDecl); ok {
+						var expr_69 bool
 						var expr_68 bool
-						var expr_67 bool
 						if v_17, ok := fileDecl.(ast2.DeclImplDecl); ok {
-							var expr_66 bool
-							expr_66 = typeString(v_16.F1) == typeString(v_17.F1) && optionTypeExprString(v_16.F2) == optionTypeExprString(v_17.F2)
-							expr_67 = expr_66
+							var expr_67 bool
+							expr_67 = typeString(v_16.F1) == typeString(v_17.F1) && optionTypeExprString(v_16.F2) == optionTypeExprString(v_17.F2)
+							expr_68 = expr_67
 						} else {
 							{
-								var expr_65 bool
-								expr_65 = false
-								expr_67 = expr_65
+								var expr_66 bool
+								expr_66 = false
+								expr_68 = expr_66
 							}
 						}
-						expr_68 = expr_67
-						expr_85 = expr_68
+						expr_69 = expr_68
+						expr_86 = expr_69
 					} else {
 						{
-							var expr_64 bool
-							expr_64 = false
-							expr_85 = expr_64
+							var expr_65 bool
+							expr_65 = false
+							expr_86 = expr_65
 						}
 					}
 				}
 			}
 		}
 	}
-	return expr_85
+	return expr_86
 }
 func optionTypeExprString(opt Option[ast2.TypeExpr]) string {
-	var expr_88 string
+	var expr_89 string
 	if v_27, ok := opt.(OptionSome[ast2.TypeExpr]); ok {
-		var expr_87 string
-		expr_87 = typeString(v_27.F0)
-		expr_88 = expr_87
+		var expr_88 string
+		expr_88 = typeString(v_27.F0)
+		expr_89 = expr_88
 	} else {
 		if _, ok := opt.(OptionNone[ast2.TypeExpr]); ok {
-			var expr_86 string
-			expr_86 = ""
-			expr_88 = expr_86
+			var expr_87 string
+			expr_87 = ""
+			expr_89 = expr_87
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_88
+	return expr_89
 }

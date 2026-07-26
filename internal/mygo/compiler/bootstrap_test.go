@@ -44,6 +44,58 @@ end
 	}
 }
 
+func TestCompileDirBootstrapUsesPreludeHKTDeclarations(t *testing.T) {
+	root := t.TempDir()
+	preludeDir := filepath.Join(root, "prelude")
+	appDir := filepath.Join(root, "app")
+	for _, dir := range []string{preludeDir, appDir} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.com/hkt-test\n\ngo 1.26\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(preludeDir, "prelude.mygo"), []byte(`package prelude
+
+enum Option[A]
+  Some(A)
+  None
+end
+
+interface Enumerable[C[A], A]
+  func First(value: C[A]) -> A
+end
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(appDir, "app.mygo"), []byte(`package app
+
+func Keep(value: Option[Int]) -> Option[Int]
+  value
+end
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDirBootstrap(appDir)
+	if err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	if len(written) != 1 {
+		t.Fatalf("CompileDirBootstrap() wrote %d files, want 1", len(written))
+	}
+	generated, err := os.ReadFile(written[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(generated), "type HKTType interface{}") {
+		t.Fatalf("non-prelude bootstrap output redeclared prelude HKT helpers:\n%s", generated)
+	}
+	if !strings.Contains(string(generated), `. "github.com/mygo-lang/mygo/prelude"`) {
+		t.Fatalf("non-prelude bootstrap output did not dot-import prelude:\n%s", generated)
+	}
+}
+
 func TestCompileDirBootstrapSupportsGoFFI(t *testing.T) {
 	dir := t.TempDir()
 	source := `package sample
@@ -67,6 +119,61 @@ end
 	}
 	if !strings.Contains(string(generated), `import "fmt"`) || !strings.Contains(string(generated), "fmt.Sprint") {
 		t.Fatalf("generated Go did not preserve fmt FFI:\n%s", generated)
+	}
+}
+
+func TestCompileDirBootstrapRegistersGoTypeMethodsWithImportAlias(t *testing.T) {
+	dir := t.TempDir()
+	source := `package sample
+
+import testing "go:testing"
+
+func TestFatal(t: Ref[testing.T]) -> ()
+  t.Fatal("expected failure")
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.mygo"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDirBootstrap(dir)
+	if err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	if len(written) != 1 {
+		t.Fatalf("CompileDirBootstrap() wrote %d files, want 1", len(written))
+	}
+	generated, err := os.ReadFile(written[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(generated), `t.Fatal("expected failure")`) {
+		t.Fatalf("generated Go did not preserve testing.T.Fatal:\n%s", generated)
+	}
+}
+
+func TestCompileDirBootstrapRegistersGoTypeMethodsWithDotImport(t *testing.T) {
+	dir := t.TempDir()
+	source := `package sample
+
+import . "go:testing"
+
+func TestFatal(t: Ref[T]) -> ()
+  t.Fatal("expected failure")
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.mygo"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDirBootstrap(dir)
+	if err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	generated, err := os.ReadFile(written[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(generated), `. "testing"`) || !strings.Contains(string(generated), `t.Fatal("expected failure")`) {
+		t.Fatalf("generated Go did not preserve dot-imported testing.T.Fatal:\n%s", generated)
 	}
 }
 

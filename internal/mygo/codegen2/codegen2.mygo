@@ -102,14 +102,21 @@ func GenerateSourceAt(sourceName: String, input: String) -> Result[String, Strin
 end
 
 func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], includeHKT: Bool) -> Result[String, String]
-  let g = Ref.new(newGenerator2(file.PackageName, info.TypedDecls, info.GoPackages, info))
+  # Method dispatch must see every impl visible to this package: its complete
+  # typed declaration set plus externally supplied declarations (the prelude).
+  # `fileTypedDecls` below still limits emitted Go declarations to this file.
+  let visibleDecls = mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
+  let g = Ref.new(newGenerator2(file.PackageName, visibleDecls, info.GoPackages, info))
   let imports = collectImports(file.Decls)
   let fileTypedDecls = filterTypedDeclsForFile(info.TypedDecls, file.Decls)
   let decls = translateDeclsAst(g, fileTypedDecls, 0, [] as Slice[goast.Decl])
   switch decls
     case Err(msg) => Err(msg)
     case Ok(items) =>
-      let withHKT = if includeHKT && needsHKTDecls(info.TypedDecls) then goast.AppendDecls(goast.HKTDecls(), items) else items end
+      # HKT helper types are owned by prelude.  Non-prelude packages receive
+      # them through the automatically-added dot import, so emitting them
+      # locally would redeclare the imported names.
+      let withHKT = if file.PackageName == "prelude" && includeHKT && needsHKTDecls(allDecls) then goast.AppendDecls(goast.HKTDecls(), items) else items end
       let withPrelude = if file.PackageName != "prelude" && goast.NeedsPreludeImport(withHKT) then
         imports.Append(GoImportPart { Alias: ".", Path: "github.com/mygo-lang/mygo/prelude" })
       else

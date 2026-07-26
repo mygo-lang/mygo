@@ -7,21 +7,21 @@ import (
 )
 
 func debugSliceLen() string {
-	src_89 := "\npackage sample\n\nimpl[T] SliceIEnumerable[T]: IEnumerable[Slice[T], T]\n  func Len(c: Slice[T]) -> Int\n    go[Int] { code: `len(c)` }\n  end\nend\n\nimpl[T] SliceIndexable[T]: IIndexable[Slice[T], Int, T]\n  func Get(s: Slice[T], index: Int) -> Option[T]\n    if index < 0 || index >= s.Len() then\n      None\n    else\n      Some(go[T] { code: `{s}[{index}]` in s = s in index = index })\n    end\n  end\nend\n"
-	result_90 := GenerateSourceAt("<debug>", src_89)
-	var expr_93 string
-	if v_29, ok := result_90.(ResultOk[string, string]); ok {
-		var expr_92 string
-		expr_92 = v_29.F0
-		expr_93 = expr_92
+	src_90 := "\npackage sample\n\nimpl[T] SliceIEnumerable[T]: IEnumerable[Slice[T], T]\n  func Len(c: Slice[T]) -> Int\n    go[Int] { code: `len(c)` }\n  end\nend\n\nimpl[T] SliceIndexable[T]: IIndexable[Slice[T], Int, T]\n  func Get(s: Slice[T], index: Int) -> Option[T]\n    if index < 0 || index >= s.Len() then\n      None\n    else\n      Some(go[T] { code: `{s}[{index}]` in s = s in index = index })\n    end\n  end\nend\n"
+	result_91 := GenerateSourceAt("<debug>", src_90)
+	var expr_94 string
+	if v_29, ok := result_91.(ResultOk[string, string]); ok {
+		var expr_93 string
+		expr_93 = v_29.F0
+		expr_94 = expr_93
 	} else {
-		if v_28, ok := result_90.(ResultErr[string, string]); ok {
-			var expr_91 string
-			expr_91 = "ERROR: " + v_28.F0
-			expr_93 = expr_91
+		if v_28, ok := result_91.(ResultErr[string, string]); ok {
+			var expr_92 string
+			expr_92 = "ERROR: " + v_28.F0
+			expr_94 = expr_92
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_93
+	return expr_94
 }

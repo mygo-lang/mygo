@@ -413,9 +413,36 @@ func seedOnePackageDictionary(decl: ast2.Decl, ctx: Ref[egCtx]) -> ()
           let stem = implStem(target, Some(interfaceType), typeParamSet(tps))
           seedImplMethodDictionaries(methods, stem, interfaceTypeName(interfaceType), ctx)
           seedImplCandidates(methods, stem, interfaceTypeName(interfaceType), interfaceTypeArgs(interfaceType), tps, ctx)
-        case None => ()
+        case None =>
+          # Inherent methods are callable with receiver syntax too.  Keep
+          # instance and static methods in separate lookup keys: `x.f()` has
+          # a receiver, whereas `Type.f()` must not pass the type name as one.
+          let stem = implStem(target, None, typeParamSet(tps))
+          seedInherentCandidates(methods, stem, target, tps, ctx)
       end
     case _ => ()
+  end
+end
+
+func seedInherentCandidates(methods: Slice[ast2.ImplMethod], stem: String, target: ast2.TypeExpr, typeParams: Slice[String], ctx: Ref[egCtx]) -> ()
+  if methods.Len() != 0 then
+    let method = methods.Get(0).UnwrapOr(defaultImplMethod())
+    let helper = implMethodSymbol(stem, method.Sig.Name)
+    let first = method.Sig.Params.Get(0)
+    let isInstance = switch first
+      case Some(param) => isInherentReceiverParam(param.Type, target)
+      case None => false
+    end
+    if isInstance then
+      let candidate = ImplDictionaryCandidate { Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: [target], TypeParams: typeParams, Helper: helper }
+      let key = "$method$" + method.Sig.Name
+      ctx.packageCandidates.Set(key, ctx.packageCandidates.Get(key).UnwrapOr([] as Slice[ImplDictionaryCandidate]).Append(candidate))
+    else
+      let key = "$static$" + inherentReceiverName(target) + "." + method.Sig.Name
+      let candidate = ImplDictionaryCandidate { Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: [target], TypeParams: typeParams, Helper: helper }
+      ctx.packageCandidates.Set(key, ctx.packageCandidates.Get(key).UnwrapOr([] as Slice[ImplDictionaryCandidate]).Append(candidate))
+    end
+    seedInherentCandidates(sliceDrop(methods, 1), stem, target, typeParams, ctx)
   end
 end
 

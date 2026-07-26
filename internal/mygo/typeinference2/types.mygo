@@ -237,15 +237,21 @@ end
 func goSymbolsFromPackages(packages: Slice[GoPackageEntry], out: Slice[Symbol]) -> Slice[Symbol]
   if packages.Len() == 0 then out else
     let pkg = packages.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "", Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] })
-    goSymbolsFromPackages(sliceDrop(packages, 1), goSymbolsFromTypes(pkg.Types, out))
+    goSymbolsFromPackages(sliceDrop(packages, 1), goSymbolsFromTypes(pkg.Alias, pkg.Types, out))
   end
 end
 
-func goSymbolsFromTypes(types: Slice[GoTypeSignature], out: Slice[Symbol]) -> Slice[Symbol]
+func goSymbolsFromTypes(alias: String, types: Slice[GoTypeSignature], out: Slice[Symbol]) -> Slice[Symbol]
   if types.Len() == 0 then out else
     let t = types.Get(0).UnwrapOr(GoTypeSignature { TypeName: "", TypeParams: [] as Slice[String], Methods: [] as Slice[GoFuncSignature] })
-    goSymbolsFromTypes(sliceDrop(types, 1), goMethodsFromSigs(t.TypeName, t.Methods, out))
+    goSymbolsFromTypes(alias, sliceDrop(types, 1), goMethodsFromSigs(goPackageMemberName(alias, t.TypeName), t.Methods, out))
   end
+end
+
+# A dot-import exposes members directly, while a regular import exposes them
+# through its source alias.
+func goPackageMemberName(alias: String, name: String) -> String
+  if alias == "." then name else alias + "." + name end
 end
 
 func goMethodsFromSigs(typeName: String, methods: Slice[GoFuncSignature], out: Slice[Symbol]) -> Slice[Symbol]
@@ -566,7 +572,7 @@ end
 func seedGoPackageFuncs(pkg: GoPackageEntry, funcs: Slice[GoFuncSignature], env: Slice[EnvEntry]) -> Slice[EnvEntry]
   if funcs.Len() == 0 then env else
     let fn = funcs.Get(0).UnwrapOr(GoFuncSignature { Name: "", Params: [] as Slice[String], Results: [] as Slice[String], Variadic: false })
-    seedGoPackageFuncs(pkg, sliceDrop(funcs, 1), envPut(env, pkg.Alias + "." + fn.Name, Scheme { Bound: [], Predicates: [], Body: GoSignatureType(fn) }))
+    seedGoPackageFuncs(pkg, sliceDrop(funcs, 1), envPut(env, goPackageMemberName(pkg.Alias, fn.Name), Scheme { Bound: [], Predicates: [], Body: GoSignatureType(fn) }))
   end
 end
 
@@ -577,7 +583,7 @@ end
 func seedGoPackageTypes(pkg: GoPackageEntry, types: Slice[GoTypeSignature], env: Slice[EnvEntry]) -> Slice[EnvEntry]
   if types.Len() == 0 then env else
     let t = types.Get(0).UnwrapOr(GoTypeSignature { TypeName: "", TypeParams: [] as Slice[String], Methods: [] as Slice[GoFuncSignature] })
-    let qualifiedName = pkg.Alias + "." + t.TypeName
+    let qualifiedName = goPackageMemberName(pkg.Alias, t.TypeName)
     # The type constructor's scheme body mirrors a generic type: the qualified
     # name keeps the structure of `pkg.X` so downstream codegen qualifies it,
     # and the type parameters are bound fresh so a polymorphic Go type can be

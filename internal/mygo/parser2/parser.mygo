@@ -176,7 +176,7 @@ end
 
 func importDecl() -> ps.Parser[ast2.Decl]
   ps.PBind(kw("import"), func(_: String) -> ps.Parser[ast2.Decl]
-    ps.PBind(ps.POptional(identifierRaw()), func(alias: Option[String]) -> ps.Parser[ast2.Decl]
+    ps.PBind(ps.POptional(importAlias()), func(alias: Option[String]) -> ps.Parser[ast2.Decl]
       ps.PMap(stringLiteral(), func(path: String) -> ast2.Decl
         let realAlias = switch alias
           case Some(a) => a
@@ -186,6 +186,13 @@ func importDecl() -> ps.Parser[ast2.Decl]
       end)
     end)
   end)
+end
+
+func importAlias() -> ps.Parser[String]
+  ps.PChoice([
+    ps.PMap(sym("."), func(_: String) -> String "." end),
+    identifierRaw(),
+  ])
 end
 
 func structDecl() -> ps.Parser[ast2.Decl]

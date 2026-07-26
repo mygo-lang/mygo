@@ -195,7 +195,8 @@ func translateFuncLitAst(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], 
 end
 
 func translateGenericStructLitAstExpected(typeName: String, typeArgs: Slice[ast2.TypeExpr], fields: Slice[ast2.StructLitField], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
-  let result = translateAstCompositeFields(fields, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], expected)
+  let owner = typeinference2.TypeFromAST(ast2.TypeExpr.NamedType(typeName, typeArgs))
+  let result = translateAstCompositeFields(fields, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], expected, owner)
   switch result
     case Err(msg) => Err(msg)
     case Ok(value) =>
@@ -223,11 +224,30 @@ func translateSliceLitAst(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: as
     case Err(msg) => Err(msg)
     case Ok(v) then
       let typ = switch expected
-        case TUnit => "[]any"
-        case _ => monoTypeToGoStr(expected)
+        case TUnit => emptySliceTypeFromReturn(ctx.retType, ctx.typeParamNames)
+        case _ => monoTypeToGoStrWithParams(expected, ctx.typeParamNames)
       end
       Ok(astExprWithPre(goast.SliceLiteral(typ, v.Exprs), v.Pre))
     end
+  end
+end
+
+# A bare `[]` nested in a call has no direct expected type while its enclosing
+# function often does (for example PSepBy returns Parser[Slice[A]]).  Preserve
+# that element type instead of eagerly falling back to []any.
+func emptySliceTypeFromReturn(typ: ast2.MonoType, typeParams: Slice[String]) -> String
+  switch typ
+    case TCon(name, args) =>
+      if name == "Slice" then monoTypeToGoStrWithParams(typ, typeParams) else findSliceTypeInMonos(args, typeParams, 0) end
+    case TApp(_, args) => findSliceTypeInMonos(args, typeParams, 0)
+    case _ => "[]any"
+  end
+end
+
+func findSliceTypeInMonos(items: Slice[ast2.MonoType], typeParams: Slice[String], index: Int) -> String
+  if index >= items.Len() then "[]any" else
+    let found = emptySliceTypeFromReturn(items.Get(index).UnwrapOr(ast2.MonoType.TUnit), typeParams)
+    if found == "[]any" then findSliceTypeInMonos(items, typeParams, index + 1) else found end
   end
 end
 
@@ -764,19 +784,21 @@ func translateStructLitAst(typeName: String, fields: Slice[ast2.StructLitField],
 end
 
 func translateStructLitAstExpected(typeName: String, fields: Slice[ast2.StructLitField], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
-  let result = translateAstCompositeFields(fields, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], expected)
+  let owner = typeinference2.TypeFromAST(ast2.TypeExpr.NamedType(typeName, [] as Slice[ast2.TypeExpr]))
+  let result = translateAstCompositeFields(fields, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], expected, owner)
   switch result
     case Err(msg) => Err(msg)
     case Ok(value) => Ok(astExprWithPre(goast.Composite(goast.Ident(typeName), value.Elts), value.Pre))
   end
 end
 
-func translateAstCompositeFields(fields: Slice[ast2.StructLitField], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expected: ast2.MonoType) -> Result[AstCompositeFields, String]
+func translateAstCompositeFields(fields: Slice[ast2.StructLitField], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr], pre: Slice[goast.Stmt], expected: ast2.MonoType, owner: ast2.MonoType) -> Result[AstCompositeFields, String]
   if index >= fields.Len() then
     Ok(AstCompositeFields { Elts: out, Pre: pre })
   else
     let field = fields.Get(index).UnwrapOr(ast2.StructLitField { Name: "", Value: ast2.EmptyExpr() })
-    let value = translateExprAstExpected(field.Value, ctx, expected)
+    let fieldExpected = lookupFieldInMonoType(owner, field.Name, ctx).UnwrapOr(expected)
+    let value = translateExprAstExpected(field.Value, ctx, fieldExpected)
     switch value
       case Err(msg) => Err(msg)
       case Ok(v) => translateAstCompositeFields(
@@ -786,6 +808,7 @@ func translateAstCompositeFields(fields: Slice[ast2.StructLitField], ctx: Ref[eg
         out.Append(goast.KeyValue(goast.Ident(exportName(field.Name)), v.Expr)),
         goast.AppendStmts(pre, v.Pre),
         expected,
+        owner,
       )
     end
   end
@@ -938,12 +961,36 @@ end
 func translateImplMethodCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Option[Result[AstExprResult, String]]
   switch callee.Kind
     case FieldExpr(base, method) =>
-      let receiverType = receiverStaticType(base, ctx)
-      # 1. Lexical dictionary from `using` constraint (e.g. equalsFn for Eq.Equals).
-      # When multiple constraints of the same interface exist (e.g. Eq[A], Eq[E]),
-      # match the receiver type against each constraint's type arg.
-      let fn = dictFuncForMethod(method, receiverType, ctx)
-      switch fn
+      switch base.Kind
+        # Static inherent methods have TypeName.method(args) syntax.  TypeName
+        # is not a value, so resolve these before receiver-method dispatch.
+        case IdentExpr(typeName) =>
+          switch ctx.packageCandidates.Get("$static$" + typeName + "." + method)
+            case Some(candidates) =>
+              switch candidates.Get(0)
+                case Some(candidate) =>
+                  let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
+                  switch values
+                    case Ok(v) => Some(Ok(astExprWithPre(goast.Call(goast.Ident(candidate.Helper), v.Exprs), v.Pre)))
+                    case Err(msg) => Some(Err(msg))
+                  end
+                case None => translateReceiverImplMethodCall(base, method, args, ctx)
+              end
+            case None => translateReceiverImplMethodCall(base, method, args, ctx)
+          end
+        case _ => translateReceiverImplMethodCall(base, method, args, ctx)
+      end
+    case _ => None
+  end
+end
+
+func translateReceiverImplMethodCall(base: ast2.Expr, method: String, args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Option[Result[AstExprResult, String]]
+  let receiverType = receiverStaticType(base, ctx)
+  # 1. Lexical dictionary from `using` constraint (e.g. equalsFn for Eq.Equals).
+  # When multiple constraints of the same interface exist (e.g. Eq[A], Eq[E]),
+  # match the receiver type against each constraint's type arg.
+  let fn = dictFuncForMethod(method, receiverType, ctx)
+  switch fn
         case Some(fnName) =>
           let receiver = translateExprAstExpected(base, ctx, ast2.MonoType.TUnit)
           let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
@@ -971,9 +1018,7 @@ func translateImplMethodCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref
             case None => None
           end
       end
-    case _ => None
   end
-end
 
 # dictFuncForMethod looks up the correct dictionary function for a method
 # call originating from a `using` constraint.  When multiple constraints of
@@ -1127,7 +1172,7 @@ end
 func typeConstructor(typ: String) -> String
   let bracket = strings.Index(typ, "[")
   if bracket >= 0 then strings.TrimSpace(strings.Split(typ, "[").Get(0).UnwrapOr("")) else
-    if strings.HasPrefix(typ, "[]") then "[]" else
+    if strings.HasPrefix(typ, "[]") then "Slice" else
       if strings.HasPrefix(typ, "map[") then "map" else strings.TrimSpace(typ) end
     end
   end
@@ -1156,20 +1201,20 @@ end
 func inferredConstructorArgs(callee: ast2.Expr, expected: ast2.MonoType, ctx: Ref[egCtx]) -> Slice[String]
   switch callee.Kind
     case IdentExpr(name) =>
-      inferredConstructorArgsByName(name, ctx.enumVariantOwners.Get(name), expected)
+      inferredConstructorArgsByName(name, ctx.enumVariantOwners.Get(name), expected, ctx)
     case FieldExpr(base, name) =>
       switch base.Kind
-        case IdentExpr(enumName) => inferredConstructorArgsByName(name, Some(enumName), expected)
-        case _ => inferredConstructorArgsByName(name, ctx.enumVariantOwners.Get(name), expected)
+        case IdentExpr(enumName) => inferredConstructorArgsByName(name, Some(enumName), expected, ctx)
+        case _ => inferredConstructorArgsByName(name, ctx.enumVariantOwners.Get(name), expected, ctx)
       end
     case _ => [] as Slice[String]
   end
 end
 
-func inferredConstructorArgsByName(name: String, enumName: Option[String], expected: ast2.MonoType) -> Slice[String]
+func inferredConstructorArgsByName(name: String, enumName: Option[String], expected: ast2.MonoType, ctx: Ref[egCtx]) -> Slice[String]
   switch enumName
     case Some(owner) => enumTypeArgs(owner, expected)
-    case None => inferredBuiltinConstructorArgs(name, expected)
+    case None => inferredBuiltinConstructorArgs(name, expected, ctx)
   end
 end
 
@@ -1185,19 +1230,23 @@ func enumTypeArgs(enumName: String, expected: ast2.MonoType) -> Slice[String]
   end
 end
 
-func inferredBuiltinConstructorArgs(name: String, expected: ast2.MonoType) -> Slice[String]
-  switch expected
-    case TCon(n, args) =>
-      if name == "None" && n == "Option" && args.Len() == 1 then
-        [monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit))]
-      else
-        if (name == "Ok" || name == "Err") && n == "Result" && args.Len() == 2 then
-          [monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit)), monoTypeToGoStr(args.Get(1).UnwrapOr(ast2.MonoType.TUnit))]
+func inferredBuiltinConstructorArgs(name: String, expected: ast2.MonoType, ctx: Ref[egCtx]) -> Slice[String]
+  if name == "Zero" then
+    [monoTypeToGoStrWithParams(expected, ctx.typeParamNames)]
+  else
+    switch expected
+      case TCon(n, args) =>
+        if name == "None" && n == "Option" && args.Len() == 1 then
+          [monoTypeToGoStrWithParams(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), ctx.typeParamNames)]
         else
-          [] as Slice[String]
+          if (name == "Ok" || name == "Err") && n == "Result" && args.Len() == 2 then
+            [monoTypeToGoStrWithParams(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), ctx.typeParamNames), monoTypeToGoStrWithParams(args.Get(1).UnwrapOr(ast2.MonoType.TUnit), ctx.typeParamNames)]
+          else
+            [] as Slice[String]
+          end
         end
-      end
-    case _ => [] as Slice[String]
+      case _ => [] as Slice[String]
+    end
   end
 end
 
