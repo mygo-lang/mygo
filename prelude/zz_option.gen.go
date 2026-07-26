@@ -48,144 +48,144 @@ func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map[A any,
 	return expr_42
 }
 func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM6Filter[A any](c Option[A], fn func(A) bool) Option[A] {
-	var expr_46 Option[A]
+	var expr_47 Option[A]
 	if v_28, ok := c.(OptionSome[A]); ok {
+		var expr_46 Option[A]
 		var expr_45 Option[A]
-		var expr_44 Option[A]
 		if fn(v_28.F0) {
-			expr_44 = Some[A](v_28.F0)
+			expr_45 = Some[A](v_28.F0)
 		} else {
-			expr_44 = None[A]()
+			expr_45 = None[A]()
 		}
-		expr_45 = expr_44
 		expr_46 = expr_45
+		expr_47 = expr_46
 	} else {
 		if _, ok := c.(OptionNone[A]); ok {
-			var expr_43 Option[A]
-			expr_43 = None[A]()
-			expr_46 = expr_43
+			var expr_44 Option[A]
+			expr_44 = None[A]()
+			expr_47 = expr_44
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_46
+	return expr_47
 }
 func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM4Fold[A any, B any](c Option[A], initial B, fn func(B, A) B) B {
-	var expr_49 B
+	var expr_50 B
 	if v_30, ok := c.(OptionSome[A]); ok {
-		var expr_48 B
-		expr_48 = fn(initial, v_30.F0)
-		expr_49 = expr_48
+		var expr_49 B
+		expr_49 = fn(initial, v_30.F0)
+		expr_50 = expr_49
 	} else {
 		if _, ok := c.(OptionNone[A]); ok {
-			var expr_47 B
-			expr_47 = initial
-			expr_49 = expr_47
+			var expr_48 B
+			expr_48 = initial
+			expr_50 = expr_48
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_49
+	return expr_50
 }
 func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM4Find[A any](c Option[A], fn func(A) bool) Option[*A] {
-	var expr_53 Option[*A]
+	var expr_55 Option[*A]
 	if v_32, ok := c.(OptionSome[A]); ok {
-		var expr_52 Option[*A]
-		var expr_51 Option[*A]
+		var expr_54 Option[*A]
+		var expr_53 Option[*A]
 		if fn(v_32.F0) {
-			expr_51 = Some[*A](&v_32.F0)
+			expr_53 = Some[*A](&v_32.F0)
 		} else {
-			expr_51 = None[*A]()
+			expr_53 = None[*A]()
 		}
-		expr_52 = expr_51
-		expr_53 = expr_52
+		expr_54 = expr_53
+		expr_55 = expr_54
 	} else {
 		if _, ok := c.(OptionNone[A]); ok {
-			var expr_50 Option[*A]
-			expr_50 = None[*A]()
-			expr_53 = expr_50
+			var expr_52 Option[*A]
+			expr_52 = None[*A]()
+			expr_55 = expr_52
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_53
+	return expr_55
 }
 func MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM8Contains[A any](c Option[A], item A, EqualsFn func(A, A) bool) bool {
-	var expr_56 bool
+	var expr_58 bool
 	if v_34, ok := c.(OptionSome[A]); ok {
-		var expr_55 bool
-		expr_55 = EqualsFn(v_34.F0, item)
-		expr_56 = expr_55
+		var expr_57 bool
+		expr_57 = EqualsFn(v_34.F0, item)
+		expr_58 = expr_57
 	} else {
 		if _, ok := c.(OptionNone[A]); ok {
-			var expr_54 bool
-			expr_54 = false
-			expr_56 = expr_54
+			var expr_56 bool
+			expr_56 = false
+			expr_58 = expr_56
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_56
+	return expr_58
 }
 func MygoIN6OptionM8UnwrapOr[A any](opt Option[A], defaultVal A) A {
-	var expr_59 A
+	var expr_61 A
 	if v_36, ok := opt.(OptionSome[A]); ok {
-		var expr_58 A
-		expr_58 = v_36.F0
-		expr_59 = expr_58
+		var expr_60 A
+		expr_60 = v_36.F0
+		expr_61 = expr_60
 	} else {
 		if _, ok := opt.(OptionNone[A]); ok {
-			var expr_57 A
-			expr_57 = defaultVal
-			expr_59 = expr_57
+			var expr_59 A
+			expr_59 = defaultVal
+			expr_61 = expr_59
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_59
+	return expr_61
 }
 func MygoIT2EqFN8OptionEqGN1AEGN6OptionGN1AEEM6Equals[A any](left Option[A], right Option[A], EqualsFn func(A, A) bool) bool {
-	var expr_68 bool
+	var expr_70 bool
 	if v_40, ok := left.(OptionSome[A]); ok {
-		var expr_67 bool
-		var expr_66 bool
+		var expr_69 bool
+		var expr_68 bool
 		if v_42, ok := right.(OptionSome[A]); ok {
-			var expr_65 bool
-			expr_65 = EqualsFn(v_40.F0, v_42.F0)
-			expr_66 = expr_65
+			var expr_67 bool
+			expr_67 = EqualsFn(v_40.F0, v_42.F0)
+			expr_68 = expr_67
 		} else {
 			if _, ok := right.(OptionNone[A]); ok {
-				var expr_64 bool
-				expr_64 = false
-				expr_66 = expr_64
+				var expr_66 bool
+				expr_66 = false
+				expr_68 = expr_66
 			} else {
 				panic("unreachable")
 			}
 		}
-		expr_67 = expr_66
-		expr_68 = expr_67
+		expr_69 = expr_68
+		expr_70 = expr_69
 	} else {
 		if _, ok := left.(OptionNone[A]); ok {
-			var expr_63 bool
-			var expr_62 bool
+			var expr_65 bool
+			var expr_64 bool
 			if _, ok := right.(OptionSome[A]); ok {
-				var expr_61 bool
-				expr_61 = false
-				expr_62 = expr_61
+				var expr_63 bool
+				expr_63 = false
+				expr_64 = expr_63
 			} else {
 				if _, ok := right.(OptionNone[A]); ok {
-					var expr_60 bool
-					expr_60 = true
-					expr_62 = expr_60
+					var expr_62 bool
+					expr_62 = true
+					expr_64 = expr_62
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_63 = expr_62
-			expr_68 = expr_63
+			expr_65 = expr_64
+			expr_70 = expr_65
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_68
+	return expr_70
 }

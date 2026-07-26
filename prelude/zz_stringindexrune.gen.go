@@ -3,26 +3,26 @@
 package prelude
 
 func MygoIT10IIndexableFN15StringRuneIndexGN6StringN3IntN4RuneEM3Get(s string, index int) Option[rune] {
-	var expr_132 Option[rune]
-	rs_130 := []rune(s)
-	var expr_131 Option[rune]
-	if index < 0 || index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rs_130) {
-		expr_131 = None[rune]()
+	var expr_134 Option[rune]
+	rs_132 := []rune(s)
+	var expr_133 Option[rune]
+	if index < 0 || index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rs_132) {
+		expr_133 = None[rune]()
 	} else {
-		expr_131 = Some[rune](rs_130[index])
+		expr_133 = Some[rune](rs_132[index])
 	}
-	expr_132 = expr_131
-	return expr_132
+	expr_134 = expr_133
+	return expr_134
 }
 func MygoIT10IIndexableFN15StringRuneIndexGN6StringN3IntN4RuneEM5Slice(s string, startPos int, endPos int) Option[string] {
-	var expr_135 Option[string]
-	rs_133 := []rune(s)
-	var expr_134 Option[string]
-	if startPos < 0 || endPos < startPos || startPos >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rs_133) || endPos > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rs_133) {
-		expr_134 = None[string]()
+	var expr_137 Option[string]
+	rs_135 := []rune(s)
+	var expr_136 Option[string]
+	if startPos < 0 || endPos < startPos || startPos >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rs_135) || endPos > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rs_135) {
+		expr_136 = None[string]()
 	} else {
-		expr_134 = Some[string](string(rs_133[startPos:endPos]))
+		expr_136 = Some[string](string(rs_135[startPos:endPos]))
 	}
-	expr_135 = expr_134
-	return expr_135
+	expr_137 = expr_136
+	return expr_137
 }
