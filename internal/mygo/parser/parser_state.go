@@ -34,6 +34,7 @@ type parser struct {
 	currentBlock                 []ast.Stmt
 	currentBlockStack            [][]ast.Stmt
 	currentStmt                  ast.Stmt
+	currentAssignTarget          ast.Expr
 	currentExpr                  ast.Expr
 	currentLeftExpr              ast.Expr
 	currentPipeLeftExpr          ast.Expr

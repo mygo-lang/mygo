@@ -267,21 +267,44 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 				stmts = append(stmts, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(actual)}, Rhs: []ast.Expr{code}, Tok: token.ASSIGN})
 			}
 		case *AssignStmt:
-			actual, ok := child.bindings[s.Name]
+			target := s.Target
+			if target == nil {
+				target = &IdentExpr{Name: s.Name}
+			}
+			root, ok := assignmentTargetRoot(target)
 			if !ok {
-				return nil, common.ErrorAtPos(g.currentFile, s.Line, s.Column, "unknown binding %q", s.Name)
+				return nil, common.ErrorAtPos(g.currentFile, s.Line, s.Column, "assignment target must be a variable or one of its fields")
+			}
+			actual, ok := child.bindings[root]
+			if !ok {
+				return nil, common.ErrorAtPos(g.currentFile, s.Line, s.Column, "unknown binding %q", root)
 			}
 			if !child.mutable[actual] {
-				return nil, common.ErrorAtPos(g.currentFile, s.Line, s.Column, "cannot assign to immutable binding %q", s.Name)
+				return nil, common.ErrorAtPos(g.currentFile, s.Line, s.Column, "cannot assign to immutable binding %q", root)
 			}
-			code, _, err := g.translateExpr(s.Value, child, child.locals[s.Name])
+			lhs, lhsType, err := g.translateExpr(target, child, "")
 			if err != nil {
 				return stmts, err
 			}
-			stmts = append(stmts, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(actual)}, Rhs: []ast.Expr{code}, Tok: token.ASSIGN})
+			code, _, err := g.translateExpr(s.Value, child, lhsType)
+			if err != nil {
+				return stmts, err
+			}
+			stmts = append(stmts, &ast.AssignStmt{Lhs: []ast.Expr{lhs}, Rhs: []ast.Expr{code}, Tok: token.ASSIGN})
 		}
 	}
 	return stmts, nil
+}
+
+func assignmentTargetRoot(target Expr) (string, bool) {
+	switch t := target.(type) {
+	case *IdentExpr:
+		return t.Name, t.Name != ""
+	case *FieldExpr:
+		return assignmentTargetRoot(t.Expr)
+	default:
+		return "", false
+	}
 }
 
 func isControlExpr(e Expr) bool {

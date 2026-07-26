@@ -427,8 +427,12 @@ type AssignStmt struct {
 	Line       int
 	Column     int
 	SourceFile string
-	Name       string
-	Value      Expr
+	// Target is either an identifier or a field-selection chain rooted at an
+	// identifier. Name is retained for compatibility with existing direct
+	// assignments and is the root identifier when Target is present.
+	Target Expr
+	Name   string
+	Value  Expr
 }
 
 func (*AssignStmt) stmtNode() {}

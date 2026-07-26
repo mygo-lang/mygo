@@ -95,6 +95,17 @@ func bodyExprFromBlock(e ast.Expr) ast.Expr {
 	return &ast.BlockExpr{Line: block.Line, Column: block.Column, Stmts: append([]ast.Stmt(nil), block.Stmts...)}
 }
 
+func assignTargetRootName(target ast.Expr) (string, bool) {
+	switch t := target.(type) {
+	case *ast.IdentExpr:
+		return t.Name, t.Name != ""
+	case *ast.FieldExpr:
+		return assignTargetRootName(t.Expr)
+	default:
+		return "", false
+	}
+}
+
 type ifParts struct {
 	cond ast.Expr
 	then ast.Expr
@@ -2001,10 +2012,17 @@ bind_pattern_list
 	;
 
 assign_stmt
-	: IDENT '=' expr {
+	: postfix_expr {
 		p := yylex.(*parser)
-		p.currentStmt = &ast.AssignStmt{Line: $1.line, Column: $1.col, Name: $1.lit, Value: p.currentExpr}
-		p.currentExpr = &ast.UnitLitExpr{Line: $1.line, Column: $1.col}
+		p.currentAssignTarget = p.currentExpr
+	}
+	'=' expr {
+		p := yylex.(*parser)
+		line, col := common.NodePos(p.currentAssignTarget)
+		name, _ := assignTargetRootName(p.currentAssignTarget)
+		p.currentStmt = &ast.AssignStmt{Line: line, Column: col, Target: p.currentAssignTarget, Name: name, Value: p.currentExpr}
+		p.currentAssignTarget = nil
+		p.currentExpr = &ast.UnitLitExpr{Line: line, Column: col}
 	}
 	;
 

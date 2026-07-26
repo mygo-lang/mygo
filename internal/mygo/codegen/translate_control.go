@@ -642,15 +642,27 @@ func (g *gen) translateWhileStmt(stmt Stmt, ctx *egCtx, body *ast.BlockStmt) {
 			body.List = append(body.List, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(actual)}, Rhs: []ast.Expr{code}, Tok: token.DEFINE})
 		}
 	case *AssignStmt:
-		code, retType, _ := g.translateExpr(s.Value, ctx, "")
+		target := s.Target
+		if target == nil {
+			target = &IdentExpr{Name: s.Name}
+		}
+		lhs, targetType, _ := g.translateExpr(target, ctx, "")
+		if lhs == nil {
+			return
+		}
+		code, retType, _ := g.translateExpr(s.Value, ctx, targetType)
 		if code == nil {
 			return
 		}
-		actual := ctx.bindings[s.Name]
+		root, ok := assignmentTargetRoot(target)
+		if !ok {
+			return
+		}
+		actual := ctx.bindings[root]
 		if retType != "" {
 			ctx.locals[actual] = retType
 		}
-		body.List = append(body.List, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(actual)}, Rhs: []ast.Expr{code}, Tok: token.ASSIGN})
+		body.List = append(body.List, &ast.AssignStmt{Lhs: []ast.Expr{lhs}, Rhs: []ast.Expr{code}, Tok: token.ASSIGN})
 	}
 }
 

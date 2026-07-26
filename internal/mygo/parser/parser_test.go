@@ -429,6 +429,34 @@ end
 	}
 }
 
+func TestParseFileSupportsVarFieldAssignment(t *testing.T) {
+	src := `package main
+func demo() -> Int
+  var point: Point = Point { x: 1, y: 2 }
+  point.x = 3
+  point.coords.y = 4
+  point.x
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	block := file.Decls[0].(*FuncDecl).Body.(*BlockExpr)
+	for _, index := range []int{1, 2} {
+		assign, ok := block.Stmts[index].(*AssignStmt)
+		if !ok {
+			t.Fatalf("Stmt[%d] type = %T, want *AssignStmt", index, block.Stmts[index])
+		}
+		if assign.Name != "point" {
+			t.Errorf("Stmt[%d] root name = %q, want point", index, assign.Name)
+		}
+		if _, ok := assign.Target.(*FieldExpr); !ok {
+			t.Errorf("Stmt[%d] target = %T, want *FieldExpr", index, assign.Target)
+		}
+	}
+}
+
 func TestParseFileSupportsArrowIfAndFuncLit(t *testing.T) {
 	src := `package main
 func demo() -> Int

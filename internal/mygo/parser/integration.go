@@ -34,6 +34,7 @@ func (p *parser) parseWithYacc() error {
 	p.currentBlock = nil
 	p.currentBlockStack = nil
 	p.currentStmt = nil
+	p.currentAssignTarget = nil
 	p.currentExpr = nil
 	p.currentLeftExpr = nil
 	p.currentPipeLeftExpr = nil

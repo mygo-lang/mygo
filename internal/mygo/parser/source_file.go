@@ -84,6 +84,7 @@ func setStmtSourceFile(s ast.Stmt, filename string) {
 		setExprSourceFile(n.Value, filename)
 	case *ast.AssignStmt:
 		n.SourceFile = filename
+		setExprSourceFile(n.Target, filename)
 		setExprSourceFile(n.Value, filename)
 	}
 }

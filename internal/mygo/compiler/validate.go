@@ -821,12 +821,22 @@ func (v *validator) validateReturn(s *ReturnStmt) error {
 }
 
 func (v *validator) validateAssign(s *AssignStmt) error {
-	// Check that the target is not a "let" (immutable) binding.
-	if s.Name != "" {
-		if _, isLet := v.letBindings[s.Name]; isLet {
-			return common.ErrorAtNode(s.SourceFile, s,
-				"immutable binding %q cannot be assigned", s.Name)
-		}
+	target := s.Target
+	if target == nil {
+		target = &IdentExpr{Name: s.Name}
+	}
+	root, ok := assignTargetRoot(target)
+	if !ok {
+		return common.ErrorAtNode(s.SourceFile, s, "assignment target must be a variable or one of its fields")
+	}
+	// Field assignment mutates the value held by its root binding, so it has
+	// the same mutability rule as direct assignment.
+	if _, isLet := v.letBindings[root]; isLet {
+		return common.ErrorAtNode(s.SourceFile, s,
+			"immutable binding %q cannot be assigned", root)
+	}
+	if err := v.validateExpr(target); err != nil {
+		return err
 	}
 
 	if s.Value == nil {
@@ -836,6 +846,17 @@ func (v *validator) validateAssign(s *AssignStmt) error {
 		return err
 	}
 	return nil
+}
+
+func assignTargetRoot(target Expr) (string, bool) {
+	switch t := target.(type) {
+	case *IdentExpr:
+		return t.Name, t.Name != ""
+	case *FieldExpr:
+		return assignTargetRoot(t.Expr)
+	default:
+		return "", false
+	}
 }
 
 // ---- Helpers ----
