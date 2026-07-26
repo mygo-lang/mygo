@@ -160,6 +160,10 @@ enum ExprKind
   # tuple expression; an empty tuple is represented by UnitExpr
   TupleExpr(Slice[Expr])
   CallExpr(Expr, Slice[TypeExpr], Slice[Expr])
+  # DictionaryCallExpr is introduced by type inference after a method call is
+  # unified with a lexical `using` constraint.  The key identifies that exact
+  # inferred dictionary; parser2 never produces this node directly.
+  DictionaryCallExpr(String, Expr, Slice[Expr])
   FieldExpr(Expr, String)
   UnaryExpr(String, Expr)
   BinaryExpr(String, Expr, Expr)
@@ -208,6 +212,30 @@ struct Expr
   Type: Option[MonoType]
 end
 
+
+
+func typeExprSliceEq(left: Slice[TypeExpr], right: Slice[TypeExpr]) -> Bool
+  if left.Len() != right.Len() then
+    false
+  else
+    typeExprSliceEqElems(left, right, 0)
+  end
+end
+
+func typeExprSliceEqElems(left: Slice[TypeExpr], right: Slice[TypeExpr], index: Int) -> Bool
+  if index >= left.Len() then
+    true
+  else
+    let l = left.Get(index).UnwrapOr(TypeExpr.UnitType)
+    let r = right.Get(index).UnwrapOr(TypeExpr.UnitType)
+    if l.Equals(r) then
+      typeExprSliceEqElems(left, right, index + 1)
+    else
+      false
+    end
+  end
+end
+
 func EmptyExpr() -> Expr
   Expr {
     ID: 0,
@@ -215,4 +243,42 @@ func EmptyExpr() -> Expr
     Kind: ExprKind.UnitExpr,
     Type: None
   }
+end
+
+impl TypeExpr: Eq[TypeExpr]
+  func Equals(left: TypeExpr, right: TypeExpr) -> Bool
+    switch left
+      case NamedType(nameL, argsL) =>
+        switch right
+          case NamedType(nameR, argsR) => nameL == nameR && typeExprSliceEq(argsL, argsR)
+          case _ => false
+        end
+      case FuncType(paramsL, retL) =>
+        switch right
+          case FuncType(paramsR, retR) =>
+            typeExprSliceEq(paramsL, paramsR) && retL.value().Equals(retR.value())
+          case _ => false
+        end
+      case TupleType(itemsL) =>
+        switch right
+          case TupleType(itemsR) => typeExprSliceEq(itemsL, itemsR)
+          case _ => false
+        end
+      case UnitType =>
+        switch right
+          case UnitType => true
+          case _ => false
+        end
+      case InlineGo(innerL, codeL) =>
+        switch right
+          case InlineGo(innerR, codeR) =>
+            innerL.value().Equals(innerR.value()) && codeL == codeR
+          case _ => false
+        end
+    end
+  end
+end
+
+func TypesEqual(a: TypeExpr, b: TypeExpr) -> Bool
+  a.Equals(b)
 end

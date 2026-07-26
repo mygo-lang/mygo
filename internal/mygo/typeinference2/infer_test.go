@@ -53,6 +53,84 @@ end
 	}
 }
 
+func TestInferImplUsingMarksDictionaryCall(t *testing.T) {
+	parsed := parser2.ParseFile(`package sample
+
+interface Eq[A]
+  func Equals(left: A, right: A) -> Bool
+end
+
+struct Box[A]
+  Value: A
+end
+
+impl[A] BoxEq[A]: Eq[Box[A]]
+  func Equals(left: Box[A], right: Box[A]) -> Bool using Eq[A]
+    left.Value.Equals(right.Value)
+  end
+end
+`)
+	file, ok := parsed.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	result := InferFile(file.F0)
+	info, ok := result.(ResultOk[PackageInfo, string])
+	if !ok {
+		t.Fatalf("InferFile failed: %v", result)
+	}
+	if !typedDeclsContainDictionaryCall(info.F0.TypedDecls) {
+		t.Fatal("typed impl body did not retain DictionaryCallExpr")
+	}
+}
+
+func typedDeclsContainDictionaryCall(decls []ast2.Decl) bool {
+	for _, decl := range decls {
+		if impl, ok := decl.(ast2.DeclImplDecl); ok {
+			for _, method := range impl.F3 {
+				if typedExprContainsDictionaryCall(method.Body) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func typedExprContainsDictionaryCall(expr ast2.Expr) bool {
+	switch kind := expr.Kind.(type) {
+	case ast2.ExprKindDictionaryCallExpr:
+		return true
+	case ast2.ExprKindCallExpr:
+		if typedExprContainsDictionaryCall(kind.F0) {
+			return true
+		}
+		for _, arg := range kind.F2 {
+			if typedExprContainsDictionaryCall(arg) {
+				return true
+			}
+		}
+	case ast2.ExprKindFieldExpr:
+		return typedExprContainsDictionaryCall(kind.F0)
+	case ast2.ExprKindSwitchExpr:
+		if typedExprContainsDictionaryCall(kind.F0) {
+			return true
+		}
+		for _, item := range kind.F1 {
+			if typedExprContainsDictionaryCall(item.Body) {
+				return true
+			}
+		}
+	case ast2.ExprKindBlockExpr:
+		for _, stmt := range kind.F0 {
+			if exprStmt, ok := stmt.(ast2.StmtExprStmt); ok && typedExprContainsDictionaryCall(exprStmt.F0) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func TestInferHKTApplicationRecoversElementType(t *testing.T) {
 	parsed := parser2.ParseFile(`package sample
 

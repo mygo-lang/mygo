@@ -86,7 +86,8 @@ func compileDirBootstrap(dir string, compiling map[string]bool, compiled map[str
 	if err != nil {
 		return nil, err
 	}
-	if preludeSources != nil {
+	preludeDir := filepath.Join(workspaceRoot, "prelude")
+	if preludeSources != nil && absDir != preludeDir {
 		sources = append(preludeSources, sources...)
 	}
 	goPackages := collectBootstrapGoPackages(sources)

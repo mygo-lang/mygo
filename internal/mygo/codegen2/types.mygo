@@ -27,6 +27,8 @@ struct egCtx
   astPreStmts: Slice[goast.Stmt]
   # 当前作用域的类型参数
   typeParams: Set[String]
+  # 保留声明顺序，用于把推断中的 TParam(-1/-2) 渲染为 Go 的 A/E。
+  typeParamNames: Slice[String]
   # 当前函数的返回类型
   retType: ast2.MonoType
   # 多返回值类型
@@ -40,16 +42,19 @@ struct egCtx
   constraintFuncs: Map[String, String]
   constraintFuncNames: Map[String, Slice[String]]
   constraintFuncArgTypes: Map[String, Slice[String]]
+  constraintFuncArgMonoTypes: Map[String, Slice[ast2.MonoType]]
+  dictionaryCallFuncs: Map[String, String]
   callDictionaries: Map[String, Slice[String]]
   packageDictionaries: Map[String, String]
   callRequirements: Map[String, Slice[DictionaryRequirement]]
   packageCandidates: Map[String, Slice[ImplDictionaryCandidate]]
   goPackages: Slice[typeinference2.GoPackageEntry]
-  pkgInfo: Option[typeinference2.PkgInfo]
+  pkgInfo: Option[typeinference2.PackageInfo]
   enumValueConstructors: Map[String, String]
   enumVariantOwners: Map[String, String]
-  patternTypes: Map[String, String]
+  patternTypes: Map[String, ast2.MonoType]
   patternFuncIdx: Map[String, Int]
+  variantFieldMonoTypes: Map[String, Slice[ast2.MonoType]]
 end
 
 struct Generator2
@@ -62,7 +67,7 @@ struct Generator2
   allDecls: Slice[ast2.Decl]
   decls: Slice[ast2.Decl]
   goPackages: Slice[typeinference2.GoPackageEntry]
-  pkgInfo: Option[typeinference2.PkgInfo]
+  pkgInfo: Option[typeinference2.PackageInfo]
 end
 
 struct AstExprResult
@@ -122,6 +127,7 @@ func newEgCtx() -> egCtx
     preStmts: [],
     astPreStmts: [],
     typeParams: Set.New[String](),
+    typeParamNames: [],
     retType: ast2.MonoType.TUnit,
     retTypes: [],
     tailRecFuncName: None,
@@ -130,6 +136,8 @@ func newEgCtx() -> egCtx
     constraintFuncs: {},
     constraintFuncNames: {},
     constraintFuncArgTypes: {},
+    constraintFuncArgMonoTypes: {},
+    dictionaryCallFuncs: {},
     callDictionaries: {},
     packageDictionaries: {},
     callRequirements: {},
@@ -140,6 +148,7 @@ func newEgCtx() -> egCtx
     enumVariantOwners: {},
     patternTypes: {},
     patternFuncIdx: {},
+    variantFieldMonoTypes: {},
   }
 end
 
@@ -155,6 +164,7 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     preStmts: [],
     astPreStmts: [],
     typeParams: typeParamSet(params),
+    typeParamNames: params,
     retType: ast2.MonoType.TUnit,
     retTypes: [],
     tailRecFuncName: None,
@@ -163,6 +173,8 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     constraintFuncs: {},
     constraintFuncNames: {},
     constraintFuncArgTypes: {},
+    constraintFuncArgMonoTypes: {},
+    dictionaryCallFuncs: {},
     callDictionaries: {},
     packageDictionaries: {},
     callRequirements: {},
@@ -173,6 +185,7 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     enumVariantOwners: {},
     patternTypes: {},
     patternFuncIdx: {},
+    variantFieldMonoTypes: {},
   }
 end
 
@@ -188,6 +201,7 @@ func newFuncEgCtx(params: Slice[String], retType: ast2.MonoType, tailName: Strin
     preStmts: [],
     astPreStmts: [],
     typeParams: typeParamSet(params),
+    typeParamNames: params,
     retType: retType,
     retTypes: [],
     tailRecFuncName: Some(tailName),
@@ -196,6 +210,8 @@ func newFuncEgCtx(params: Slice[String], retType: ast2.MonoType, tailName: Strin
     constraintFuncs: {},
     constraintFuncNames: {},
     constraintFuncArgTypes: {},
+    constraintFuncArgMonoTypes: {},
+    dictionaryCallFuncs: {},
     callDictionaries: {},
     packageDictionaries: {},
     callRequirements: {},
@@ -206,10 +222,11 @@ func newFuncEgCtx(params: Slice[String], retType: ast2.MonoType, tailName: Strin
     enumVariantOwners: {},
     patternTypes: {},
     patternFuncIdx: {},
+    variantFieldMonoTypes: {},
   }
 end
 
-func newGenerator2(pkgName: String, typedDecls: Slice[ast2.Decl], goPackages: Slice[typeinference2.GoPackageEntry]) -> Generator2
+func newGenerator2(pkgName: String, typedDecls: Slice[ast2.Decl], goPackages: Slice[typeinference2.GoPackageEntry], pkgInfo: typeinference2.PackageInfo) -> Generator2
   Generator2 {
     pkgName: pkgName,
     importPaths: [],
@@ -220,7 +237,7 @@ func newGenerator2(pkgName: String, typedDecls: Slice[ast2.Decl], goPackages: Sl
     allDecls: [] as Slice[ast2.Decl],
     decls: typedDecls,
     goPackages: goPackages,
-    pkgInfo: None,
+    pkgInfo: Some(pkgInfo),
   }
 end
 
@@ -236,6 +253,7 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     preStmts: [],
     astPreStmts: [],
     typeParams: ctx.typeParams,
+    typeParamNames: ctx.typeParamNames,
     retType: ctx.retType,
     retTypes: ctx.retTypes,
     tailRecFuncName: ctx.tailRecFuncName,
@@ -244,6 +262,8 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     constraintFuncs: ctx.constraintFuncs,
     constraintFuncNames: ctx.constraintFuncNames,
     constraintFuncArgTypes: ctx.constraintFuncArgTypes,
+    constraintFuncArgMonoTypes: ctx.constraintFuncArgMonoTypes,
+    dictionaryCallFuncs: ctx.dictionaryCallFuncs,
     callDictionaries: ctx.callDictionaries,
     packageDictionaries: ctx.packageDictionaries,
     callRequirements: ctx.callRequirements,
@@ -254,6 +274,7 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     enumVariantOwners: ctx.enumVariantOwners,
     patternTypes: ctx.patternTypes,
     patternFuncIdx: ctx.patternFuncIdx,
+    variantFieldMonoTypes: ctx.variantFieldMonoTypes,
   }
 end
 
@@ -434,6 +455,29 @@ func monoTypeToGoStr(t: ast2.MonoType) -> String
     case TKVar(_) => "any"
     case TParam(_) => "any"
     case TGoPackage(_) => "any"
+  end
+end
+
+# monoTypeToGoStrWithParams renders inference TParams using the ordered
+# type-parameter names of the current function/impl context.
+func monoTypeToGoStrWithParams(t: ast2.MonoType, params: Slice[String]) -> String
+  switch t
+    case TParam(id) =>
+      let index = -id - 1
+      params.Get(index).UnwrapOr("any")
+    case TCon(name, args) =>
+      if args.Len() == 0 then goPrimitiveTypeName(name) else
+        let argStrs = args.Map(func(arg: ast2.MonoType) -> String monoTypeToGoStrWithParams(arg, params) end)
+        mygoToGoTypeStr(name + "[" + joinStrings(argStrs, ", ") + "]")
+      end
+    case TFunc(items, ret) =>
+      let argStrs = items.Map(func(arg: ast2.MonoType) -> String monoTypeToGoStrWithParams(arg, params) end)
+      let retStr = monoTypeToGoStrWithParams(ret.value(), params)
+      if retStr == "struct{}" then "func(" + joinStrings(argStrs, ", ") + ")" else "func(" + joinStrings(argStrs, ", ") + ") " + retStr end
+    case TTuple(items) =>
+      let parts = items.Map(func(item: ast2.MonoType) -> String monoTypeToGoStrWithParams(item, params) end)
+      "struct { " + joinStrings(parts, "; ") + " }"
+    case _ => monoTypeToGoStr(t)
   end
 end
 

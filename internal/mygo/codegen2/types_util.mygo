@@ -816,9 +816,8 @@ func goPrimitiveTypeName(name: String) -> String
     case "String" => "string"
     case "Bool" => "bool"
     case "Any" => "any"
+    case "Error" => "error"
     case "Unit" => "struct{}"
     case _ => name
   end
 end
-
-

@@ -86,6 +86,9 @@ struct InferState
   MyGoPackages: Slice[MyGoPackageInfo]
   MyGoPackageCache: Slice[MyGoPackageInfo]
   Symbols: Slice[Symbol]
+  ActiveConstraints: Slice[Predicate]
+  NamedImpls: Slice[String]
+  ResolvedConstraintArgs: Map[MethodConstraintKey, Slice[ast2.MonoType]]
 end
 
 struct InferResult
@@ -99,6 +102,18 @@ end
 # The Env holds all top-level bindings (functions, types, etc.) visible
 # across files, and Fields stores struct field type information for
 # field access resolution. GoPackages records imported Go package info.
+enum MethodConstraintRef
+  Interface(String)
+  NamedImpl(String)
+end
+
+struct MethodConstraintKey
+  Receiver: String
+  Constraint: MethodConstraintRef
+  ArgsKey: String
+  Method: String
+end
+
 struct PackageInfo
   Env: Slice[EnvEntry]
   Fields: Slice[FieldEntry]
@@ -106,6 +121,8 @@ struct PackageInfo
   Instances: Slice[Instance]
   Solver: Solver
   TypedDecls: Slice[ast2.Decl]
+  ExternalTypedDecls: Slice[ast2.Decl]
+  ResolvedConstraintArgs: Map[MethodConstraintKey, Slice[ast2.MonoType]]
 end
 
 # GoPackageEntry records an imported Go package with its alias and type info.
@@ -175,6 +192,9 @@ func NewInferState() -> InferState
     MyGoPackages: [] as Slice[MyGoPackageInfo],
     MyGoPackageCache: [] as Slice[MyGoPackageInfo],
     Symbols: [] as Slice[Symbol],
+    ActiveConstraints: [] as Slice[Predicate],
+    NamedImpls: [] as Slice[String],
+    ResolvedConstraintArgs: {},
   }
 end
 
@@ -188,6 +208,23 @@ func withFreshID(state: InferState, id: Int) -> InferState
     MyGoPackages: state.MyGoPackages,
     MyGoPackageCache: state.MyGoPackageCache,
     Symbols: state.Symbols,
+    ActiveConstraints: state.ActiveConstraints,
+    NamedImpls: state.NamedImpls,
+    ResolvedConstraintArgs: state.ResolvedConstraintArgs,
+  }
+end
+
+func withActiveConstraints(state: InferState, constraints: Slice[Predicate]) -> InferState
+  InferState {
+    FreshVarID: state.FreshVarID,
+    PkgInfo: state.PkgInfo,
+    GoPackages: state.GoPackages,
+    MyGoPackages: state.MyGoPackages,
+    MyGoPackageCache: state.MyGoPackageCache,
+    Symbols: state.Symbols,
+    ActiveConstraints: constraints,
+    NamedImpls: state.NamedImpls,
+    ResolvedConstraintArgs: state.ResolvedConstraintArgs,
   }
 end
 
@@ -264,6 +301,9 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
     MyGoPackages: [] as Slice[MyGoPackageInfo],
     MyGoPackageCache: [] as Slice[MyGoPackageInfo],
     Symbols: initialSymbols,
+    ActiveConstraints: [] as Slice[Predicate],
+    NamedImpls: namedImplNames(file.Decls, 0, [] as Slice[String]),
+    ResolvedConstraintArgs: {},
   }
   switch inferDecls(file.Decls, envWithGoPkgs, [], state)
     case Ok(info) =>
@@ -277,15 +317,14 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
         Instances: instances,
         Solver: solver,
         TypedDecls: info.TypedDecls,
+        ExternalTypedDecls: [] as Slice[ast2.Decl],
+        ResolvedConstraintArgs: info.ResolvedConstraintArgs,
       })
     case Err(msg) => Err(withExpressionSourceName(msg, file.SourceName))
   end
 end
 
 # InferPackage runs HM type inference across all files in a package.
-# It first predeclares all function signatures across all files so forward
-# references work, then processes declarations file-by-file.
-# The goImports parameter maps import aliases to their Go import paths.
 func InferPackage(files: Slice[PkgDeclSource]) -> Result[PackageInfo, String]
   InferPackageWithGoPackages(files, collectGoPackageImports(flattenPkgDecls(files, 0, [] as Slice[ast2.Decl])))
 end
@@ -302,6 +341,9 @@ func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice
     MyGoPackages: [] as Slice[MyGoPackageInfo],
     MyGoPackageCache: [] as Slice[MyGoPackageInfo],
     Symbols: initialSymbols,
+    ActiveConstraints: [] as Slice[Predicate],
+    NamedImpls: namedImplNames(allDecls, 0, [] as Slice[String]),
+    ResolvedConstraintArgs: {},
   }
   let result = inferDecls(allDecls, envWithGoPkgs, [], state)
   switch result
@@ -316,10 +358,138 @@ func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice
         Instances: instances,
         Solver: solver,
         TypedDecls: info.TypedDecls,
+        ExternalTypedDecls: [] as Slice[ast2.Decl],
+        ResolvedConstraintArgs: info.ResolvedConstraintArgs,
       })
     case Err(msg) =>
       let source = files.Get(0).UnwrapOr(PkgDeclSource { Path: "<input>", Decls: [] as Slice[ast2.Decl] }).Path
       Err(withExpressionSourceName(msg, source))
+  end
+end
+
+func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDeclSource], goPkgImports: Slice[GoPackageEntry]) -> Result[PackageInfo, String]
+  # Merge user and external declarations for inference, then separate results.
+  # External decls participate in type inference (so prelude types are visible)
+  # but their typed forms go into ExternalTypedDecls instead of TypedDecls.
+  let allDecls = flattenPkgDecls(files, 0, [] as Slice[ast2.Decl])
+  let extDecls = flattenPkgDecls(external, 0, [] as Slice[ast2.Decl])
+  let combined = appendDecls(allDecls, extDecls)
+  let predeclEnv = predeclareAllFunctions(combined, initialEnv())
+  let envWithGoPkgs = seedGoPackageEnv(goPkgImports, predeclEnv)
+  let userSyms = buildSymbolTable(goPkgImports, allDecls)
+  let extSyms = buildSymbolTable([] as Slice[GoPackageEntry], extDecls)
+  let initialSymbols = concatSymbols(userSyms, extSyms)
+  let state = InferState {
+    FreshVarID: 1,
+    PkgInfo: None,
+    GoPackages: goPkgImports,
+    MyGoPackages: [] as Slice[MyGoPackageInfo],
+    MyGoPackageCache: [] as Slice[MyGoPackageInfo],
+    Symbols: initialSymbols,
+    ActiveConstraints: [] as Slice[Predicate],
+    NamedImpls: namedImplNames(combined, 0, [] as Slice[String]),
+    ResolvedConstraintArgs: {},
+  }
+  let result = inferDecls(combined, envWithGoPkgs, [], state)
+  switch result
+    case Ok(info) =>
+      let collected = collectInstances(allDecls)
+      let instances = mergeBuiltInInstances(collected)
+      let solver = solverFromInstances(instances)
+      # Separate typed decls: from allDecls (user) and extDecls (external).
+      let separated = separateTypedDecls(info.TypedDecls, allDecls, extDecls)
+      Ok(PackageInfo {
+        Env: resolveEnvironment(solver, info.Env),
+        Fields: info.Fields,
+        GoPackages: goPkgImports,
+        Instances: instances,
+        Solver: solver,
+        TypedDecls: separated.User,
+        ExternalTypedDecls: separated.External,
+        ResolvedConstraintArgs: info.ResolvedConstraintArgs,
+      })
+    case Err(msg) =>
+      Err(withExpressionSourceName(msg, "<input>"))
+  end
+end
+
+func separateTypedDecls(all: Slice[ast2.Decl], user: Slice[ast2.Decl], ext: Slice[ast2.Decl]) -> DividedDecls
+  # Match each typed decl back to its source (user or external) by name.
+  DividedDecls {
+    User: filterDeclsAgainst(all, user, 0, [] as Slice[ast2.Decl]),
+    External: filterDeclsAgainst(all, ext, 0, [] as Slice[ast2.Decl]),
+  }
+end
+
+struct DividedDecls
+  User: Slice[ast2.Decl]
+  External: Slice[ast2.Decl]
+end
+
+func filterDeclsAgainst(typedDecls: Slice[ast2.Decl], sourceDecls: Slice[ast2.Decl], index: Int, out: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+  if index >= typedDecls.Len() then
+    out
+  else
+    let decl = typedDecls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    if typedDeclInSource(decl, sourceDecls, 0) then
+      filterDeclsAgainst(typedDecls, sourceDecls, index + 1, out.Append(decl))
+    else
+      filterDeclsAgainst(typedDecls, sourceDecls, index + 1, out)
+    end
+  end
+end
+
+func typedDeclInSource(decl: ast2.Decl, source: Slice[ast2.Decl], index: Int) -> Bool
+  if index >= source.Len() then false else
+    let d = source.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    if typedDeclEq(decl, d) then true else typedDeclInSource(decl, source, index + 1) end
+  end
+end
+
+func typedDeclEq(a: ast2.Decl, b: ast2.Decl) -> Bool
+  switch a
+    case StructDecl(nameA, _, _) =>
+      switch b
+        case StructDecl(nameB, _, _) => nameA == nameB
+        case _ => false
+      end
+    case EnumDecl(nameA, _, _) =>
+      switch b
+        case EnumDecl(nameB, _, _) => nameA == nameB
+        case _ => false
+      end
+    case InterfaceDecl(nameA, _, _) =>
+      switch b
+        case InterfaceDecl(nameB, _, _) => nameA == nameB
+        case _ => false
+      end
+    case FuncDecl(nameA, _, _, _, _, _) =>
+      switch b
+        case FuncDecl(nameB, _, _, _, _, _) => nameA == nameB
+        case _ => false
+      end
+    case ImplDecl(_, targetA, ifaceA, _) =>
+      switch b
+        case ImplDecl(_, targetB, ifaceB, _) =>
+          ast2.TypesEqual(targetA, targetB) && optionTypesEqual(ifaceA, ifaceB)
+        case _ => false
+      end
+    case _ => false
+  end
+end
+
+func optionTypesEqual(a: Option[ast2.TypeExpr], b: Option[ast2.TypeExpr]) -> Bool
+  switch a
+    case Some(ta) =>
+      switch b
+        case Some(tb) => ast2.TypesEqual(ta, tb)
+        case _ => false
+      end
+    case None =>
+      switch b
+        case None => true
+        case _ => false
+      end
   end
 end
 
@@ -487,6 +657,26 @@ func flattenPkgDecls(files: Slice[PkgDeclSource], index: Int, out: Slice[ast2.De
   else
     let f = files.Get(index).UnwrapOr(PkgDeclSource { Path: "", Decls: [] as Slice[ast2.Decl] })
     flattenPkgDecls(files, index + 1, appendDecls(out, f.Decls))
+  end
+end
+
+func namedImplNames(decls: Slice[ast2.Decl], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= decls.Len() then
+    out
+  else
+    let decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    switch decl
+      case ImplDecl(_, target, iface, _) =>
+        switch iface
+          case Some(_) =>
+            switch target
+              case NamedType(name, _) => namedImplNames(decls, index + 1, out.Append(name))
+              case _ => namedImplNames(decls, index + 1, out)
+            end
+          case None => namedImplNames(decls, index + 1, out)
+        end
+      case _ => namedImplNames(decls, index + 1, out)
+    end
   end
 end
 

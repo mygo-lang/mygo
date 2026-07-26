@@ -444,6 +444,18 @@ func ExprKindCallExprCtor(a0 Expr, a1 []TypeExpr, a2 []Expr) ExprKind {
 	return ExprKindCallExpr{F0: a0, F1: a1, F2: a2}
 }
 
+type ExprKindDictionaryCallExpr struct {
+	F0 string
+	F1 Expr
+	F2 []Expr
+}
+
+func (_ ExprKindDictionaryCallExpr) isExprKind() {
+}
+func ExprKindDictionaryCallExprCtor(a0 string, a1 Expr, a2 []Expr) ExprKind {
+	return ExprKindDictionaryCallExpr{F0: a0, F1: a1, F2: a2}
+}
+
 type ExprKindFieldExpr struct {
 	F0 Expr
 	F1 string
@@ -719,6 +731,132 @@ type Expr struct {
 	Type Option[MonoType]
 }
 
+func MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(left TypeExpr, right TypeExpr) bool {
+	var expr_21 bool
+	if v_9, ok := left.(TypeExprNamedType); ok {
+		var expr_20 bool
+		var expr_19 bool
+		if v_10, ok := right.(TypeExprNamedType); ok {
+			var expr_18 bool
+			expr_18 = v_9.F0 == v_10.F0 && typeExprSliceEq(v_9.F1, v_10.F1)
+			expr_19 = expr_18
+		} else {
+			{
+				var expr_17 bool
+				expr_17 = false
+				expr_19 = expr_17
+			}
+		}
+		expr_20 = expr_19
+		expr_21 = expr_20
+	} else {
+		if v_7, ok := left.(TypeExprFuncType); ok {
+			var expr_16 bool
+			var expr_15 bool
+			if v_8, ok := right.(TypeExprFuncType); ok {
+				var expr_14 bool
+				expr_14 = typeExprSliceEq(v_7.F0, v_8.F0) && MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(*v_7.F1, *v_8.F1)
+				expr_15 = expr_14
+			} else {
+				{
+					var expr_13 bool
+					expr_13 = false
+					expr_15 = expr_13
+				}
+			}
+			expr_16 = expr_15
+			expr_21 = expr_16
+		} else {
+			if v_5, ok := left.(TypeExprTupleType); ok {
+				var expr_12 bool
+				var expr_11 bool
+				if v_6, ok := right.(TypeExprTupleType); ok {
+					var expr_10 bool
+					expr_10 = typeExprSliceEq(v_5.F0, v_6.F0)
+					expr_11 = expr_10
+				} else {
+					{
+						var expr_9 bool
+						expr_9 = false
+						expr_11 = expr_9
+					}
+				}
+				expr_12 = expr_11
+				expr_21 = expr_12
+			} else {
+				if _, ok := left.(TypeExprUnitType); ok {
+					var expr_8 bool
+					var expr_7 bool
+					if _, ok := right.(TypeExprUnitType); ok {
+						var expr_6 bool
+						expr_6 = true
+						expr_7 = expr_6
+					} else {
+						{
+							var expr_5 bool
+							expr_5 = false
+							expr_7 = expr_5
+						}
+					}
+					expr_8 = expr_7
+					expr_21 = expr_8
+				} else {
+					if v_1, ok := left.(TypeExprInlineGo); ok {
+						var expr_4 bool
+						var expr_3 bool
+						if v_2, ok := right.(TypeExprInlineGo); ok {
+							var expr_2 bool
+							expr_2 = MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(*v_1.F0, *v_2.F0) && v_1.F1 == v_2.F1
+							expr_3 = expr_2
+						} else {
+							{
+								var expr_1 bool
+								expr_1 = false
+								expr_3 = expr_1
+							}
+						}
+						expr_4 = expr_3
+						expr_21 = expr_4
+					} else {
+						panic("unreachable")
+					}
+				}
+			}
+		}
+	}
+	return expr_21
+}
+func typeExprSliceEq(left []TypeExpr, right []TypeExpr) bool {
+	var expr_22 bool
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(left) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(right) {
+		expr_22 = false
+	} else {
+		expr_22 = typeExprSliceEqElems(left, right, 0)
+	}
+	return expr_22
+}
+func typeExprSliceEqElems(left []TypeExpr, right []TypeExpr, index int) bool {
+	var expr_27 bool
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(left) {
+		expr_27 = true
+	} else {
+		var expr_26 bool
+		l_23 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, index), TypeExprUnitTypeCtor())
+		r_24 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, index), TypeExprUnitTypeCtor())
+		var expr_25 bool
+		if MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(l_23, r_24) {
+			expr_25 = typeExprSliceEqElems(left, right, index+1)
+		} else {
+			expr_25 = false
+		}
+		expr_26 = expr_25
+		expr_27 = expr_26
+	}
+	return expr_27
+}
 func EmptyExpr() Expr {
 	return Expr{ID: 0, Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Kind: ExprKindUnitExprCtor(), Type: None[MonoType]()}
+}
+func TypesEqual(a TypeExpr, b TypeExpr) bool {
+	return MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(a, b)
 }

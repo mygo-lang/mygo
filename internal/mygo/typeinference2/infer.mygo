@@ -46,7 +46,7 @@ end
 
 func inferDecls(decls: Slice[ast2.Decl], env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[PackageInfo, String]
   if decls.Len() == 0 then
-    Ok(PackageInfo { Env: env, Fields: fields, GoPackages: [] as Slice[GoPackageEntry], Instances: [] as Slice[Instance], Solver: newSolver(), TypedDecls: [] as Slice[ast2.Decl] })
+    Ok(PackageInfo { Env: env, Fields: fields, GoPackages: [] as Slice[GoPackageEntry], Instances: [] as Slice[Instance], Solver: newSolver(), TypedDecls: [] as Slice[ast2.Decl], ExternalTypedDecls: [] as Slice[ast2.Decl], ResolvedConstraintArgs: state.ResolvedConstraintArgs })
   else
     let head = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     let tail = sliceDrop(decls, 1)
@@ -60,7 +60,7 @@ func inferDecls(decls: Slice[ast2.Decl], env: Slice[EnvEntry], fields: Slice[Fie
               case Some(d) => info.TypedDecls.Prepend(d)
               case None => info.TypedDecls
             end
-            Ok(PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: info.GoPackages, Instances: info.Instances, Solver: info.Solver, TypedDecls: newDecls })
+            Ok(PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: info.GoPackages, Instances: info.Instances, Solver: info.Solver, TypedDecls: newDecls, ExternalTypedDecls: info.ExternalTypedDecls, ResolvedConstraintArgs: info.ResolvedConstraintArgs })
           case Err(m) => Err(m)
         end
       case Err(msg) => Err(msg)
@@ -70,7 +70,7 @@ end
 
 func inferDecl(decl: ast2.Decl, env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[DeclInfer, String]
   switch decl
-    case ImportDecl(_, _) => Ok(DeclInfer { Env: env, Fields: fields, State: state, TypedDecl: None })
+    case ImportDecl(_, _) => Ok(DeclInfer { Env: env, Fields: fields, State: state, TypedDecl: None})
     case StructDecl(name, tps, structFields) =>
       let newSymbols = structSymbols(name, structFields, tps, [] as Slice[Symbol])
       let stateWithSymbols = InferState {
@@ -80,6 +80,9 @@ func inferDecl(decl: ast2.Decl, env: Slice[EnvEntry], fields: Slice[FieldEntry],
         MyGoPackages: state.MyGoPackages,
         MyGoPackageCache: state.MyGoPackageCache,
         Symbols: concatSymbols(state.Symbols, newSymbols),
+        ActiveConstraints: state.ActiveConstraints,
+        NamedImpls: state.NamedImpls,
+        ResolvedConstraintArgs: state.ResolvedConstraintArgs,
       }
       Ok(DeclInfer {
         Env: envWithStructFields(envPut(env, name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: ast2.MonoType.TCon(name, typeParamsAsTypes(tps, 1)) }), name, tps, structFields),
@@ -90,11 +93,11 @@ func inferDecl(decl: ast2.Decl, env: Slice[EnvEntry], fields: Slice[FieldEntry],
     case EnumDecl(name, tps, vars) =>
       let res = inferVariants(vars, name, tps, env, fields, state)
       switch res
-        case Ok(di) => Ok(DeclInfer { Env: di.Env, Fields: di.Fields, State: di.State, TypedDecl: Some(decl) })
+        case Ok(di) => Ok(DeclInfer { Env: di.Env, Fields: di.Fields, State: di.State, TypedDecl: Some(decl)})
         case Err(m) => Err(m)
       end
     case InterfaceDecl(name, _, _) =>
-      Ok(DeclInfer { Env: envPut(env, name, Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TCon(name, emptyMonoTypes()) }), Fields: fields, State: state, TypedDecl: Some(decl) })
+      Ok(DeclInfer { Env: envPut(env, name, Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TCon(name, emptyMonoTypes()) }), Fields: fields, State: state, TypedDecl: Some(decl)})
     case ImplDecl(tps, target, iface, methods) =>
       let receiverName = implReceiverName(target, iface)
       let implSyms = implMethodSymbols(receiverName, tps, methods, [] as Slice[Symbol])
@@ -105,8 +108,11 @@ func inferDecl(decl: ast2.Decl, env: Slice[EnvEntry], fields: Slice[FieldEntry],
         MyGoPackages: state.MyGoPackages,
         MyGoPackageCache: state.MyGoPackageCache,
         Symbols: concatSymbols(state.Symbols, implSyms),
+        ActiveConstraints: state.ActiveConstraints,
+        NamedImpls: state.NamedImpls,
+        ResolvedConstraintArgs: state.ResolvedConstraintArgs,
       }
-      let res = inferImplMethods(methods, tps, env, fields, stateWithSyms, [] as Slice[ast2.ImplMethod])
+      let res = inferImplMethods(methods, tps, env, fields, stateWithSyms, [] as Slice[ast2.ImplMethod], receiverName)
       switch res
         case Ok(pair) then
           let (typedMethods, newState) = pair
@@ -157,7 +163,7 @@ func inferFuncDecl(name: String, tps: Slice[String], params: Slice[ast2.Param], 
   end
 end
 
-func inferImplMethods(methods: Slice[ast2.ImplMethod], tps: Slice[String], env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState, out: Slice[ast2.ImplMethod]) -> Result[(Slice[ast2.ImplMethod], InferState), String]
+func inferImplMethods(methods: Slice[ast2.ImplMethod], tps: Slice[String], env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState, out: Slice[ast2.ImplMethod], receiverName: String) -> Result[(Slice[ast2.ImplMethod], InferState), String]
   if methods.Len() == 0 then
     Ok((out, state))
   else
@@ -166,15 +172,71 @@ func inferImplMethods(methods: Slice[ast2.ImplMethod], tps: Slice[String], env: 
     let combined = appendStringSlice(tps, sig.TypeParams)
     let paramTypes = paramsToTypesWithParams(sig.Params, combined)
     let bodyEnv = envWithTypeParams(envWithParamsAndTypes(env, sig.Params, paramTypes), combined)
-    let inferred = inferExpr(m.Body, bodyEnv, state)
+    let methodState = withActiveConstraints(state, predicatesFromConstraintsWithParams(sig.Using, combined))
+    let inferred = inferExpr(m.Body, bodyEnv, methodState)
     switch inferred
       case Ok(eir) then
         let typedBody = eir.Expr
         let typedMethod = ast2.ImplMethod { Pos: m.Pos, Sig: sig, Body: typedBody }
-        inferImplMethods(sliceDrop(methods, 1), tps, env, fields, eir.Result.State, out.Append(typedMethod))
+        # The predicates collected from the body are instantiated at each
+        # method-call site.  Their TVar IDs are therefore local inference
+        # details (and a method may collect the same predicate more than
+        # once).  Store the method's declared constraints instead: these
+        # retain the declared constraint identity used by codegen dispatch.
+        let newState = withActiveConstraints(storeResolvedConstraintArgs(receiverName, sig, combined, eir.Result.State), state.ActiveConstraints)
+        inferImplMethods(sliceDrop(methods, 1), tps, env, fields, newState, out.Append(typedMethod), receiverName)
       end
       case Err(msg) => Err(msg)
     end
+  end
+end
+
+func storeResolvedConstraintArgs(receiverName: String, sig: ast2.FuncSig, typeParams: Slice[String], state: InferState) -> InferState
+  storeMethodConstraintArgs(receiverName, sig.Name, sig.Using, typeParams, state)
+end
+
+# Store each `using` entry under its own identity.  Methods such as Equals
+# commonly occur in multiple constraints, so {receiver, method} alone cannot
+# distinguish Eq[A] from Eq[E] or a named impl such as ResultEq[A, E].
+func storeMethodConstraintArgs(receiverName: String, methodName: String, constraints: Slice[ast2.Constraint], typeParams: Slice[String], state: InferState) -> InferState
+  if constraints.Len() == 0 then
+    state
+  else
+    let constraint = constraints.Get(0).UnwrapOr(ast2.Constraint { Name: "", BindName: None, Args: [] as Slice[ast2.TypeExpr] })
+    let args = typeArgsFromASTWithParams(constraint.Args, typeParams)
+    let key = MethodConstraintKey { Receiver: receiverName, Constraint: methodConstraintRef(constraint.Name, state.NamedImpls), ArgsKey: constraintArgsKey(args), Method: methodName }
+    state.ResolvedConstraintArgs.Set(key, args)
+    storeMethodConstraintArgs(receiverName, methodName, sliceDrop(constraints, 1), typeParams, state)
+  end
+end
+
+func constraintArgsKey(args: Slice[ast2.MonoType]) -> String
+  constraintArgsKeyLoop(args, 0, "")
+end
+
+func constraintArgsKeyLoop(args: Slice[ast2.MonoType], index: Int, out: String) -> String
+  if index >= args.Len() then out else
+    let item = args.Get(index).UnwrapOr(ast2.MonoType.TUnit)
+    let next = if out == "" then monoStringFull(item) else out + "," + monoStringFull(item) end
+    constraintArgsKeyLoop(args, index + 1, next)
+  end
+end
+
+func methodConstraintRef(name: String, namedImpls: Slice[String]) -> MethodConstraintRef
+  if stringSliceContains(namedImpls, name) then MethodConstraintRef.NamedImpl(name) else MethodConstraintRef.Interface(name) end
+end
+
+func stringSliceContains(items: Slice[String], wanted: String) -> Bool
+  if items.Len() == 0 then false else
+    if items.Get(0).UnwrapOr("") == wanted then true else stringSliceContains(sliceDrop(items, 1), wanted) end
+  end
+end
+
+func collectResolvedMonos(predicates: Slice[Predicate], index: Int, out: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
+  if index >= predicates.Len() then out else
+    let p = predicates.Get(index).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[ast2.MonoType] })
+    let arg = p.Args.Get(0).UnwrapOr(ast2.MonoType.TUnit)
+    collectResolvedMonos(predicates, index + 1, out.Append(arg))
   end
 end
 
@@ -303,7 +365,9 @@ func inferExprInner(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) ->
     case CallExpr(callee, _, args) =>
       let r = inferCall(callee, args, env, state)
       switch r
-        case Ok(eir) => Ok(mkTyped(expr, eir.Result.Type, eir.Result.State, None))
+        # inferCall constructs the typed call itself.  Keeping the parsed
+        # expression here used to discard DictionaryCallExpr annotations.
+        case Ok(eir) => Ok(eir)
         case Err(m) => Err(m)
       end
     case FieldExpr(base, field) =>
@@ -316,23 +380,23 @@ func inferExprInner(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) ->
         case Err(msg) => Err(msg)
       end
     case IfExpr(cond, thenExpr, elseExpr) =>
-      let r = inferIf(cond, thenExpr, elseExpr, env, state)
-      switch r
-        case Ok(v) => Ok(mkTyped(expr, v.Type, v.State, None))
-        case Err(m) => Err(m)
-      end
+      inferIf(expr, cond, thenExpr, elseExpr, env, state)
     case SwitchExpr(target, cases) =>
       let r = inferSwitch(target, cases, env, state)
       switch r
-        case Ok(eir) =>
-          let typedKind = ast2.ExprKind.SwitchExpr(eir.Expr, cases)
-          Ok(mkTyped(expr, eir.Result.Type, eir.Result.State, Some(typedKind)))
+        # inferSwitch already returns the fully reconstructed typed switch,
+        # including its inferred case bodies.
+        case Ok(eir) => Ok(eir)
         case Err(m) => Err(m)
       end
     case BlockExpr(items) =>
-      let r = inferBlock(items, env, state)
+      let r = inferTypedBlock(items, env, state)
       switch r
-        case Ok(v) => Ok(mkTyped(expr, v.Type, v.State, None))
+        case Ok(pair) then
+          let (v, typedItems) = pair
+          let typedKind = ast2.ExprKind.BlockExpr(typedItems)
+          Ok(mkTyped(expr, v.Type, v.State, Some(typedKind)))
+        end
         case Err(m) => Err(m)
       end
     case FuncLitExpr(params, ret, body) =>
@@ -475,11 +539,48 @@ func inferSwitch(target: ast2.Expr, cases: Slice[ast2.SwitchCase], env: Slice[En
     case Ok(eir) then
       let typedTarget = eir.Expr
       let value = eir.Result
-      let next = inferSwitchCases(cases, value.Type, env, value.State, value.Subst, None, value.Predicates)
+      let next = inferTypedSwitchCases(cases, value.Type, env, value.State, value.Subst, None, value.Predicates, [] as Slice[ast2.SwitchCase])
       switch next
         case Err(msg) => Err(msg)
-        case Ok(r) => Ok(ExprInferResult { Expr: typedTarget, Result: r })
+        case Ok(pair) then
+          let (r, typedCases) = pair
+          let typedExpr = ast2.Expr { ID: 0, Pos: typedTarget.Pos, Kind: ast2.ExprKind.SwitchExpr(typedTarget, typedCases), Type: Some(r.Type) }
+          Ok(ExprInferResult { Expr: typedExpr, Result: r })
+        end
       end
+    end
+  end
+end
+
+# Preserve the inferred case bodies in the typed AST.  In particular this
+# carries DictionaryCallExpr annotations out of nested matches to codegen2.
+func inferTypedSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoType, env: Slice[EnvEntry], state: InferState, subst: Slice[SubstEntry], resultType: Option[ast2.MonoType], predicates: Slice[Predicate], out: Slice[ast2.SwitchCase]) -> Result[(InferResult, Slice[ast2.SwitchCase]), String]
+  if cases.Len() == 0 then
+    switch resultType
+      case Some(t) => Ok((InferResult { Type: applySubst(subst, t), Predicates: predicates, Subst: subst, State: state }, out))
+      case None => Err("switch requires at least one case")
+    end
+  else
+    let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
+    switch envWithPattern(env, current.Pattern, targetType)
+      case Err(msg) => Err(msg)
+      case Ok(caseEnv) =>
+        switch inferExpr(current.Body, caseEnv, state)
+          case Err(msg) => Err(msg)
+          case Ok(eir) then
+            let value = eir.Result
+            let typedOut = out.Append(ast2.SwitchCase { Pattern: current.Pattern, Body: eir.Expr })
+            switch resultType
+              case None => inferTypedSwitchCases(sliceDrop(cases, 1), targetType, env, value.State, composeSubst(value.Subst, subst), Some(value.Type), appendPredicates(predicates, value.Predicates), typedOut)
+              case Some(previous) =>
+                let nextSubst = unify(applySubst(value.Subst, previous), applySubst(value.Subst, value.Type), composeSubst(value.Subst, subst))
+                switch nextSubst
+                  case Err(msg) => Err("switch case type mismatch: " + msg)
+                  case Ok(s) => inferTypedSwitchCases(sliceDrop(cases, 1), targetType, env, value.State, s, Some(applySubst(s, previous)), appendPredicates(predicates, value.Predicates), typedOut)
+                end
+            end
+          end
+        end
     end
   end
 end
@@ -826,7 +927,7 @@ func inferBinary(op: String, left: ast2.Expr, right: ast2.Expr, env: Slice[EnvEn
   end
 end
 
-func inferIf(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
+func inferIf(expr: ast2.Expr, cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[ExprInferResult, String]
   let c = inferExpr(cond, env, state)
   switch c
     case Err(msg) => Err(msg)
@@ -852,7 +953,11 @@ func inferIf(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, env: Sli
                   let _ = fmt.Println("[DEBUG]   inferIf: then=" + monoStringFull(thenApplied) + " else=" + monoStringFull(elseApplied) + " subst=" + substString(s1))
                   let same = unify(thenApplied, elseApplied, s1)
                   switch same
-                    case Ok(s2) => Ok(InferResult { Type: applySubst(s2, tv.Type), Predicates: appendPredicates(cv.Predicates, appendPredicates(tv.Predicates, ev.Predicates)), Subst: s2, State: ev.State })
+                    case Ok(s2) then
+                      let result = InferResult { Type: applySubst(s2, tv.Type), Predicates: appendPredicates(cv.Predicates, appendPredicates(tv.Predicates, ev.Predicates)), Subst: s2, State: ev.State }
+                      let typedKind = ast2.ExprKind.IfExpr(ceir.Expr, eirT.Expr, eeir.Expr)
+                      Ok(ExprInferResult { Expr: ast2.Expr { ID: expr.ID, Pos: expr.Pos, Kind: typedKind, Type: Some(result.Type) }, Result: result })
+                    end
                     case Err(msg) => Err(msg)
                   end
                 end
@@ -877,10 +982,40 @@ func inferCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[EnvEntry], 
     case None =>
       switch inferOrdinaryCall(callee, args, env, state)
         case Ok(v) =>
-          let callExprKind = ast2.ExprKind.CallExpr(v.Expr, [] as Slice[ast2.TypeExpr], args)
+          let callExprKind = switch inferredDictionaryCall(callee, v.Expr, v.Result.State.ActiveConstraints)
+            case Some(key) =>
+              switch v.Expr.Kind
+                case FieldExpr(base, _) => ast2.ExprKind.DictionaryCallExpr(key, base, args)
+                case _ => ast2.ExprKind.CallExpr(v.Expr, [] as Slice[ast2.TypeExpr], args)
+              end
+            case None => ast2.ExprKind.CallExpr(v.Expr, [] as Slice[ast2.TypeExpr], args)
+          end
           Ok(ExprInferResult { Expr: ast2.Expr { ID: 0, Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Kind: callExprKind, Type: Some(v.Result.Type) }, Result: v.Result })
         case Err(m) => Err(m)
       end
+  end
+end
+
+func inferredDictionaryCall(callee: ast2.Expr, typedCallee: ast2.Expr, constraints: Slice[Predicate]) -> Option[String]
+  switch callee.Kind
+    case FieldExpr(_, method) =>
+      switch typedCallee.Kind
+        case FieldExpr(base, _) =>
+          switch base.Type
+            case Some(receiver) => dictionaryCallKeyForReceiver(method, receiver, constraints)
+            case None => None
+          end
+        case _ => None
+      end
+    case _ => None
+  end
+end
+
+func dictionaryCallKeyForReceiver(method: String, receiver: ast2.MonoType, constraints: Slice[Predicate]) -> Option[String]
+  if constraints.Len() == 0 then None else
+    let current = constraints.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[ast2.MonoType] })
+    let arg = current.Args.Get(0).UnwrapOr(ast2.MonoType.TUnit)
+    if monoEqual(arg, receiver) then Some(current.ClassName + ":" + constraintArgsKey(current.Args) + ":" + method) else dictionaryCallKeyForReceiver(method, receiver, sliceDrop(constraints, 1)) end
   end
 end
 
@@ -1001,6 +1136,24 @@ func inferBlock(items: Slice[ast2.Stmt], env: Slice[EnvEntry], state: InferState
   end
 end
 
+# A block is part of the typed AST, not merely a type-checking scope.  Keep
+# the inferred statements so nested calls retain their dispatch annotations.
+func inferTypedBlock(items: Slice[ast2.Stmt], env: Slice[EnvEntry], state: InferState) -> Result[(InferResult, Slice[ast2.Stmt]), String]
+  inferTypedBlockItems(items, env, state, ast2.MonoType.TUnit, [], [], [] as Slice[ast2.Stmt])
+end
+
+func inferTypedBlockItems(items: Slice[ast2.Stmt], env: Slice[EnvEntry], state: InferState, lastType: ast2.MonoType, subst: Slice[SubstEntry], predicates: Slice[Predicate], out: Slice[ast2.Stmt]) -> Result[(InferResult, Slice[ast2.Stmt]), String]
+  if items.Len() == 0 then
+    Ok((InferResult { Type: applySubst(subst, lastType), Predicates: predicates, Subst: subst, State: state }, out))
+  else
+    let step = inferBlockStep(items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr())), env, state)
+    switch step
+      case Err(msg) => Err(msg)
+      case Ok(v) => inferTypedBlockItems(sliceDrop(items, 1), v.Env, v.Result.State, v.Result.Type, composeSubst(v.Result.Subst, subst), appendPredicates(predicates, v.Result.Predicates), out.Append(v.Stmt))
+    end
+  end
+end
+
 func inferBlockItems(items: Slice[ast2.Stmt], env: Slice[EnvEntry], state: InferState, lastType: ast2.MonoType, subst: Slice[SubstEntry], predicates: Slice[Predicate]) -> Result[InferResult, String]
   if items.Len() == 0 then
     Ok(InferResult { Type: applySubst(subst, lastType), Predicates: predicates, Subst: subst, State: state })
@@ -1015,9 +1168,10 @@ end
 
 func inferBlockStep(stmt: ast2.Stmt, env: Slice[EnvEntry], state: InferState) -> Result[BlockInferStep, String]
   switch stmt
-    case LetStmt(bind) => inferBlockLet(bind, env, state)
-    case LetRecStmt(bindings) => inferBlockLetRec(bindings, env, state)
-    case VarStmt(bind) => inferBlockLet(bind, env, state)
+    case LetStmt(bind) => inferBlockBind(bind, false, env, state)
+    case LetRecStmt(bindings) => inferBlockLetRecTyped(bindings, env, state)
+    case VarStmt(bind) => inferBlockBind(bind, true, env, state)
+    case WhileStmt(cond, body) => inferTypedWhileStmt(cond, body, env, state)
     case _ then
       let r = inferStmt(stmt, env, state)
       switch r
@@ -1030,6 +1184,37 @@ func inferBlockStep(stmt: ast2.Stmt, env: Slice[EnvEntry], state: InferState) ->
           Ok(BlockInferStep { Result: sir.Result, Env: env, Stmt: typedStmt })
       end
     end
+  end
+end
+
+func inferTypedWhileStmt(cond: ast2.Expr, body: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[BlockInferStep, String]
+  let condition = inferExpr(cond, env, state)
+  switch condition
+    case Err(msg) => Err(msg)
+    case Ok(eirCond) =>
+      let cv = eirCond.Result
+      let checked = unify(cv.Type, ast2.MonoType.TCon("Bool", emptyMonoTypes()), cv.Subst)
+      switch checked
+        case Err(msg) => Err(msg)
+        case Ok(s) =>
+          let inferredBody = inferExpr(body, env, cv.State)
+          switch inferredBody
+            case Err(msg) => Err(msg)
+            case Ok(eirBody) => Ok(BlockInferStep {
+              Result: InferResult { Type: ast2.MonoType.TUnit, Predicates: eirBody.Result.Predicates, Subst: composeSubst(eirBody.Result.Subst, s), State: eirBody.Result.State },
+              Env: env,
+              Stmt: ast2.Stmt.WhileStmt(eirCond.Expr, eirBody.Expr),
+            })
+          end
+      end
+  end
+end
+
+func inferBlockLetRecTyped(bindings: Slice[ast2.LetRecBind], env: Slice[EnvEntry], state: InferState) -> Result[BlockInferStep, String]
+  let inferred = inferBlockLetRec(bindings, env, state)
+  switch inferred
+    case Ok(step) => Ok(BlockInferStep { Result: step.Result, Env: step.Env, Stmt: ast2.Stmt.LetRecStmt(bindings) })
+    case Err(msg) => Err(msg)
   end
 end
 
@@ -1076,7 +1261,7 @@ func inferLetRecValues(bindings: Slice[ast2.LetRecBind], recEnv: Slice[EnvEntry]
   end
 end
 
-func inferBlockLet(bind: ast2.Bind, env: Slice[EnvEntry], state: InferState) -> Result[BlockInferStep, String]
+func inferBlockBind(bind: ast2.Bind, isVar: Bool, env: Slice[EnvEntry], state: InferState) -> Result[BlockInferStep, String]
   let r = inferExpr(bind.Value, env, state)
   switch r
     case Err(msg) => Err(msg)
@@ -1095,10 +1280,12 @@ func inferBlockLet(bind: ast2.Bind, env: Slice[EnvEntry], state: InferState) -> 
             Predicates: v.Predicates,
             Body: boundType,
           })
+          let typedBind = ast2.Bind { Name: bind.Name, Type: bind.Type, Value: eir.Expr }
+          let typedStmt = if isVar then ast2.Stmt.VarStmt(typedBind) else ast2.Stmt.LetStmt(typedBind) end
           Ok(BlockInferStep {
             Result: InferResult { Type: ast2.MonoType.TUnit, Predicates: v.Predicates, Subst: s, State: v.State },
             Env: nextEnv,
-            Stmt: ast2.Stmt.ExprStmt(ast2.Expr { ID: 0, Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Kind: ast2.ExprKind.UnitExpr, Type: Some(ast2.MonoType.TUnit) }),
+            Stmt: typedStmt,
           })
         end
       end

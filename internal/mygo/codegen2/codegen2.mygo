@@ -102,9 +102,10 @@ func GenerateSourceAt(sourceName: String, input: String) -> Result[String, Strin
 end
 
 func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], includeHKT: Bool) -> Result[String, String]
-  let g = Ref.new(newGenerator2(file.PackageName, info.TypedDecls, info.GoPackages))
+  let g = Ref.new(newGenerator2(file.PackageName, info.TypedDecls, info.GoPackages, info))
   let imports = collectImports(file.Decls)
-  let decls = translateDeclsAst(g, info.TypedDecls, 0, [] as Slice[goast.Decl])
+  let fileTypedDecls = filterTypedDeclsForFile(info.TypedDecls, file.Decls)
+  let decls = translateDeclsAst(g, fileTypedDecls, 0, [] as Slice[goast.Decl])
   switch decls
     case Err(msg) => Err(msg)
     case Ok(items) =>
@@ -143,5 +144,74 @@ func hasHKTTypeParam(tps: Slice[String]) -> Bool
   else
     let current = tps.Get(0).UnwrapOr("")
     strings.Index(current, "[") >= 0 || hasHKTTypeParam(sliceDrop(tps, 1))
+  end
+end
+
+func filterTypedDeclsForFile(typedDecls: Slice[ast2.Decl], fileDecls: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+  filterTypedDeclsLoop(typedDecls, fileDecls, 0, [] as Slice[ast2.Decl])
+end
+
+func filterTypedDeclsLoop(typedDecls: Slice[ast2.Decl], fileDecls: Slice[ast2.Decl], index: Int, out: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+  if index >= typedDecls.Len() then
+    out
+  else
+    let decl = typedDecls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    if typedDeclMatchesAnyFileDecl(decl, fileDecls, 0) then
+      filterTypedDeclsLoop(typedDecls, fileDecls, index + 1, out.Append(decl))
+    else
+      filterTypedDeclsLoop(typedDecls, fileDecls, index + 1, out)
+    end
+  end
+end
+
+func typedDeclMatchesAnyFileDecl(decl: ast2.Decl, fileDecls: Slice[ast2.Decl], index: Int) -> Bool
+  if index >= fileDecls.Len() then
+    false
+  else
+    let candidate = fileDecls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    if typedDeclMatchesFileDecl(decl, candidate) then
+      true
+    else
+      typedDeclMatchesAnyFileDecl(decl, fileDecls, index + 1)
+    end
+  end
+end
+
+func typedDeclMatchesFileDecl(typedDecl: ast2.Decl, fileDecl: ast2.Decl) -> Bool
+  switch typedDecl
+    case StructDecl(name, _, _) =>
+      switch fileDecl
+        case StructDecl(fileName, _, _) => name == fileName
+        case _ => false
+      end
+    case EnumDecl(name, _, _) =>
+      switch fileDecl
+        case EnumDecl(fileName, _, _) => name == fileName
+        case _ => false
+      end
+    case InterfaceDecl(name, _, _) =>
+      switch fileDecl
+        case InterfaceDecl(fileName, _, _) => name == fileName
+        case _ => false
+      end
+    case FuncDecl(name, _, _, _, _, _) =>
+      switch fileDecl
+        case FuncDecl(fileName, _, _, _, _, _) => name == fileName
+        case _ => false
+      end
+    case ImplDecl(_, target, iface, _) =>
+      switch fileDecl
+        case ImplDecl(_, fileTarget, fileIface, _) =>
+          typeString(target) == typeString(fileTarget) && optionTypeExprString(iface) == optionTypeExprString(fileIface)
+        case _ => false
+      end
+    case _ => false
+  end
+end
+
+func optionTypeExprString(opt: Option[ast2.TypeExpr]) -> String
+  switch opt
+    case Some(t) => typeString(t)
+    case None => ""
   end
 end
