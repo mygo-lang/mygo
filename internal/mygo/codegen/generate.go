@@ -1717,6 +1717,8 @@ func canonicalMyGoTypeName(name string) string {
 		return "Bool"
 	case "any":
 		return "Any"
+	case "error":
+		return "Error"
 	}
 	return name
 }
@@ -1804,6 +1806,8 @@ func goTypeString(t TypeExpr, subst map[string]string) string {
 			return "any"
 		case "Unit":
 			return "struct{}"
+		case "Error", "error":
+			return "error"
 		case "Ref":
 			if len(tt.Args) == 1 {
 				return "*" + goTypeString(tt.Args[0], subst)
