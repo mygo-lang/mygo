@@ -247,6 +247,8 @@ func TypeStringToGo(typ string) string {
 		return "any"
 	case "Unit":
 		return "struct{}"
+	case "Error":
+		return "error"
 	}
 	return typ
 }

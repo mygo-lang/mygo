@@ -324,3 +324,30 @@ func writeInlineGoTestPackage(t *testing.T, src string) string {
 	}
 	return dir
 }
+
+func TestErrorTypeAndMethodCall(t *testing.T) {
+	src := `package main
+import strconv "go:strconv"
+
+func describeErr(e: Error) -> String
+  go[String] {
+    code: "({e}).Error()"
+    in e = e
+  }
+end
+
+func main() -> ()
+  describeErr(strconv.Atoi("123").F1)
+end
+`
+	goSrc := compileInlineGoTestPackage(t, src)
+	if !strings.Contains(goSrc, "func describeErr(e error) string") {
+		t.Fatalf("generated source missing `error` type for Error param:\n%s", goSrc)
+	}
+	if !strings.Contains(goSrc, "(e).Error()") {
+		t.Fatalf("generated source missing `e.Error()` method call:\n%s", goSrc)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "error_method.go", goSrc, 0); err != nil {
+		t.Fatalf("generated source is not valid Go: %v\n%s", err, goSrc)
+	}
+}

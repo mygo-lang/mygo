@@ -54,6 +54,8 @@ func goastTypeExpr(t TypeExpr) ast.Expr {
 			return ast.NewIdent("bool")
 		case "Unit":
 			return ast.NewIdent("struct{}")
+		case "Error", "error":
+			return ast.NewIdent("error")
 		case "Ref":
 			if len(tt.Args) == 1 {
 				return &ast.StarExpr{X: goastTypeExpr(tt.Args[0])}
