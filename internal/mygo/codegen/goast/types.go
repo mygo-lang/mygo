@@ -143,7 +143,7 @@ func TypeExprToGo(typ string) (ast.Expr, error) {
 		return PrimitiveType("any"), nil
 	case "Unit", "struct{}":
 		return StructType(nil), nil
-	case "error":
+	case "Error", "error":
 		return ast.NewIdent("error"), nil
 	case "nil":
 		return Nil(), nil

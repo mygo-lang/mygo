@@ -1610,7 +1610,7 @@ func sameTypeExpr(a, b TypeExpr) bool {
 	switch a := a.(type) {
 	case *NamedType:
 		b, ok := b.(*NamedType)
-		if !ok || a.Name != b.Name || len(a.Args) != len(b.Args) {
+		if !ok || !sameTypeName(a.Name, b.Name) || len(a.Args) != len(b.Args) {
 			return false
 		}
 		for i := range a.Args {
@@ -1851,7 +1851,7 @@ func typeFromASTInEnv(t TypeExpr, env TypeEnv, state *InferState) MonoType {
 		for i, arg := range t.Args {
 			args[i] = typeFromASTInEnv(arg, env, state)
 		}
-		return TCon{Name: t.Name, Args: args}
+		return TCon{Name: canonicalTypeName(t.Name), Args: args}
 	case *FuncType:
 		params := make([]MonoType, len(t.Params))
 		for i, p := range t.Params {
@@ -2486,7 +2486,7 @@ func monoTypesEqual(a, b MonoType) bool {
 		return ok && a.ID == b.ID
 	case TCon:
 		b, ok := b.(TCon)
-		if !ok || a.Name != b.Name || len(a.Args) != len(b.Args) {
+		if !ok || !sameTypeName(a.Name, b.Name) || len(a.Args) != len(b.Args) {
 			return false
 		}
 		for i := range a.Args {
@@ -2747,7 +2747,7 @@ func substituteTypeParams(t MonoType, typeParams []string, typeArgs []MonoType) 
 			for i, a := range t.Args {
 				args[i] = substituteTypeParams(a, typeParams, typeArgs)
 			}
-			return TCon{Name: t.Name, Args: args}
+			return TCon{Name: canonicalTypeName(t.Name), Args: args}
 		}
 		return t
 

@@ -44,6 +44,19 @@ func TestUnifyRuneWithInt32Alias(t *testing.T) {
 	}
 }
 
+func TestUnifyErrorWithGoErrorAlias(t *testing.T) {
+	if _, err := Unify(TCon{Name: "Error"}, TCon{Name: "error"}, make(Subst)); err != nil {
+		t.Fatalf("Error and error should be the same type: %v", err)
+	}
+}
+
+func TestTypeFromASTCanonicalizesGoErrorAlias(t *testing.T) {
+	got := TypeFromAST(&NamedType{Name: "error"})
+	if !eqType(got, TCon{Name: "Error"}) {
+		t.Fatalf("TypeFromAST(error) = %s, want Error", got)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Basic tests
 // ---------------------------------------------------------------------------
