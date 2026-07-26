@@ -841,8 +841,8 @@ func typeExprSliceEqElems(left []TypeExpr, right []TypeExpr, index int) bool {
 		expr_27 = true
 	} else {
 		var expr_26 bool
-		l_23 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, index), TypeExprUnitTypeCtor())
-		r_24 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, index), TypeExprUnitTypeCtor())
+		l_23 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, index), TypeExprUnitTypeCtor())
+		r_24 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, index), TypeExprUnitTypeCtor())
 		var expr_25 bool
 		if MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(l_23, r_24) {
 			expr_25 = typeExprSliceEqElems(left, right, index+1)

@@ -9,8 +9,21 @@ import (
 	"testing"
 )
 
+func bootstrapTestModule(t *testing.T, dir string) {
+	t.Helper()
+	root, err := filepath.Abs("../../..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	goMod := "module example.com/bootstrap-test\n\ngo 1.26\n\nrequire github.com/mygo-lang/mygo v0.0.0\n\nreplace github.com/mygo-lang/mygo => " + filepath.ToSlash(root) + "\n"
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestCompileDirBootstrapUsesSelfHostedPipeline(t *testing.T) {
 	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
 	source := `package sample
 
 enum Maybe[A]
@@ -53,9 +66,7 @@ func TestCompileDirBootstrapUsesPreludeHKTDeclarations(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.com/hkt-test\n\ngo 1.26\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	bootstrapTestModule(t, root)
 	if err := os.WriteFile(filepath.Join(preludeDir, "prelude.mygo"), []byte(`package prelude
 
 enum Option[A]
@@ -98,6 +109,7 @@ end
 
 func TestCompileDirBootstrapSupportsGoFFI(t *testing.T) {
 	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
 	source := `package sample
 
 import fmt "go:fmt"
@@ -124,6 +136,7 @@ end
 
 func TestCompileDirBootstrapRegistersGoTypeMethodsWithImportAlias(t *testing.T) {
 	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
 	source := `package sample
 
 import testing "go:testing"
@@ -153,6 +166,7 @@ end
 
 func TestCompileDirBootstrapRegistersGoTypeMethodsWithDotImport(t *testing.T) {
 	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
 	source := `package sample
 
 import . "go:testing"
@@ -179,6 +193,7 @@ end
 
 func TestCompileDirBootstrapRejectsUnknownGoFFISelector(t *testing.T) {
 	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
 	source := `package sample
 
 import fmt "go:fmt"
@@ -198,6 +213,7 @@ end
 
 func TestCompileDirBootstrapRejectsWrongFixedGoFFIArity(t *testing.T) {
 	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
 	source := `package sample
 
 import strconv "go:strconv"
@@ -217,6 +233,7 @@ end
 
 func TestCompileDirBootstrapDecodesGoValueBoolAsOption(t *testing.T) {
 	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
 	source := `package sample
 
 import strings "go:strings"
@@ -248,6 +265,7 @@ end
 
 func TestCompileDirBootstrapDecodesGoValueErrorAsResult(t *testing.T) {
 	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
 	source := `package sample
 
 import strconv "go:strconv"
@@ -279,6 +297,7 @@ end
 
 func TestCompileDirBootstrapCompilesMyGOImports(t *testing.T) {
 	root := t.TempDir()
+	bootstrapTestModule(t, root)
 	libDir := filepath.Join(root, "lib")
 	appDir := filepath.Join(root, "app")
 	if err := os.MkdirAll(libDir, 0o755); err != nil {

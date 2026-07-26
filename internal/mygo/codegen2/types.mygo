@@ -48,6 +48,10 @@ struct egCtx
   packageDictionaries: Map[String, String]
   callRequirements: Map[String, Slice[DictionaryRequirement]]
   packageCandidates: Map[String, Slice[ImplDictionaryCandidate]]
+  # Inherent impls and typeclass instances share receiver-call syntax but
+  # differ in how they are selected. Keep their candidate pools distinct.
+  inherentCandidates: Slice[ImplDictionaryCandidate]
+  typeclassCandidates: Slice[ImplDictionaryCandidate]
   goPackages: Slice[typeinference2.GoPackageEntry]
   pkgInfo: Option[typeinference2.PackageInfo]
   enumValueConstructors: Map[String, String]
@@ -103,6 +107,7 @@ struct ImplDictionaryCandidate
   Interface: String
   Method: String
   InterfaceArgs: Slice[ast2.TypeExpr]
+  Receiver: ast2.MonoType
   TypeParams: Slice[String]
   Helper: String
 end
@@ -142,6 +147,8 @@ func newEgCtx() -> egCtx
     packageDictionaries: {},
     callRequirements: {},
     packageCandidates: {},
+    inherentCandidates: [],
+    typeclassCandidates: [],
     goPackages: [],
     pkgInfo: None,
     enumValueConstructors: {},
@@ -179,6 +186,8 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     packageDictionaries: {},
     callRequirements: {},
     packageCandidates: {},
+    inherentCandidates: [],
+    typeclassCandidates: [],
     goPackages: [],
     pkgInfo: None,
     enumValueConstructors: {},
@@ -216,6 +225,8 @@ func newFuncEgCtx(params: Slice[String], retType: ast2.MonoType, tailName: Strin
     packageDictionaries: {},
     callRequirements: {},
     packageCandidates: {},
+    inherentCandidates: [],
+    typeclassCandidates: [],
     goPackages: [],
     pkgInfo: None,
     enumValueConstructors: {},
@@ -268,6 +279,8 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     packageDictionaries: ctx.packageDictionaries,
     callRequirements: ctx.callRequirements,
     packageCandidates: ctx.packageCandidates,
+    inherentCandidates: ctx.inherentCandidates,
+    typeclassCandidates: ctx.typeclassCandidates,
     goPackages: ctx.goPackages,
     pkgInfo: ctx.pkgInfo,
     enumValueConstructors: ctx.enumValueConstructors,

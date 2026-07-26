@@ -1,7 +1,5 @@
 package typeinference2
 
-import fmt "go:fmt"
-
 func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
   let a = applySubst(subst, left)
   let b = applySubst(subst, right)
@@ -140,7 +138,6 @@ end
 
 func bindDistinctVar(id: Int, t: ast2.MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
   if occursIn(id, t) then
-    let _ = fmt.Println("[DEBUG-OCCURS] t" + id.ToString() + " ~ " + monoStringFull(t) + "  subst=" + substString(subst))
     Err("occurs check failed: t" + id.ToString() + " ~ " + monoStringFull(t))
   else
     Ok(subst.Prepend(SubstEntry { ID: id, Type: t }))

@@ -283,31 +283,32 @@ func translateAstBinding(bind: ast2.Bind, ctx: Ref[egCtx]) -> Result[Slice[goast
   switch value
     case Err(msg) => Err(msg)
     case Ok(v) =>
-      let name = ctxFreshBinding(ctx, bind.Name)
       let monoType = switch bind.Type
         case Some(t) => Some(typeinference2.TypeFromAST(t))
-        case None =>
-          let inferred = inferredBindingMonoType(bind)
-          switch inferred
-            case Some(_) => inferred
-            case None => None
-          end
+        case None => inferredBindingMonoType(bind)
       end
       switch monoType
         case Some(t) => ctxSetLocal(ctx, bind.Name, t)
         case None => ()
       end
-      let decl = goast.Define(name, v.Expr)
-      Ok(goast.AppendStmts(v.Pre, astSingleStmt(decl)))
+      if bind.Name == "_" then
+        Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.ExpressionStmt(v.Expr))))
+      else
+        let name = ctxFreshBinding(ctx, bind.Name)
+        switch bind.Type
+          case Some(t) =>
+            let decl = goast.Var(name, goast.MustTypeExpr(monoTypeToGoStr(typeinference2.TypeFromAST(t))), v.Expr)
+            Ok(goast.AppendStmts(v.Pre, astSingleStmt(decl)))
+          case None =>
+            let decl = goast.Define(name, v.Expr)
+            Ok(goast.AppendStmts(v.Pre, astSingleStmt(decl)))
+        end
+      end
   end
 end
 
 func inferredBindingMonoType(bind: ast2.Bind) -> Option[ast2.MonoType]
-  let inferred = extractLetBindingType(bind.Value)
-  switch inferred
-    case Some(t) => Some(typeinference2.TypeFromAST(t))
-    case None => None
-  end
+  bind.Value.Type
 end
 
 func extractLetBindingType(expr: ast2.Expr) -> Option[ast2.TypeExpr]
@@ -321,7 +322,7 @@ end
 func translateAstBindingValue(expr: ast2.Expr, typ: Option[ast2.TypeExpr], ctx: Ref[egCtx]) -> Result[AstExprResult, String]
   let expected = switch typ
     case Some(t) => typeinference2.TypeFromAST(t)
-    case None => ast2.MonoType.TUnit
+    case None => expr.Type.UnwrapOr(ast2.MonoType.TUnit)
   end
   switch expr.Kind
     case IfExpr(cond, thenExpr, elseExpr) => translateIfAst(cond, thenExpr, elseExpr, ctx, expected)

@@ -4,5 +4,4 @@ package concurrency
 
 func Spawn(fn func()) {
 	go fn()
-	return
 }

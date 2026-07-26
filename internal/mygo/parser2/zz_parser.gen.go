@@ -1032,7 +1032,7 @@ func bodyExprFromBlock(body ast2.Expr) ast2.Expr {
 		var expr_94 ast2.Expr
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_46.F0) == 1 {
 			var expr_93 ast2.Expr
-			var first_89 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_46.F0, 0), ast2.StmtExprStmtCtor(emptyExpr()))
+			var first_89 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_46.F0, 0), ast2.StmtExprStmtCtor(emptyExpr()))
 			var expr_92 ast2.Expr
 			if v_47, ok := first_89.(ast2.StmtExprStmt); ok {
 				var expr_91 ast2.Expr
@@ -1275,7 +1275,7 @@ func tupleOrParenExpr() ps.Parser[ast2.Expr] {
 		} else {
 			var expr_110 ps.Parser[ast2.Expr]
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 1 {
-				expr_110 = ps.PPure(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), emptyExpr()))
+				expr_110 = ps.PPure(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), emptyExpr()))
 			} else {
 				expr_110 = ps.PPure(exprKindOnly(ast2.ExprKindTupleExprCtor(items)))
 			}
@@ -1672,7 +1672,7 @@ func defaultImportAlias(path string) string {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_152) == 0 {
 		expr_153 = path
 	} else {
-		expr_153 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_152, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_152)-1), path)
+		expr_153 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_152, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_152)-1), path)
 	}
 	return expr_153
 }

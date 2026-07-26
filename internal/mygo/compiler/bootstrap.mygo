@@ -1,0 +1,607 @@
+package compiler
+
+# Self-hosted bootstrap implementation.
+#
+# This source owns the bootstrap orchestration.  Go standard-library access is
+# kept behind small FFI helpers; parsing, dependency traversal, external-decl
+# aggregation, inference and code generation remain MyGO-level operations.
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import codegen2 "github.com/mygo-lang/mygo/internal/mygo/codegen2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+
+import fmt "go:fmt"
+import importer "go:go/importer"
+import gotypes "go:go/types"
+import os "go:os"
+import filepath "go:path/filepath"
+import sort "go:sort"
+import strings "go:strings"
+
+struct BootstrapState
+  Compiling: Map[String, Bool]
+  Compiled: Map[String, Slice[String]]
+end
+
+# BootstrapInputs pairs the per-file codegen inputs with the decl sources that
+# feed the type-inference pass.  Mirrors bootstrap.go.bak's parallel slices.
+struct BootstrapInputs
+  Inputs: Slice[codegen2.SourceFileInput]
+  Sources: Slice[typeinference2.PkgDeclSource]
+end
+
+struct BootstrapGoPackageCollection
+  Packages: Slice[typeinference2.GoPackageEntry]
+  Seen: Map[String, Bool]
+end
+
+struct BootstrapImport
+  Alias: String
+  Path: String
+end
+
+func newBootstrapState() -> BootstrapState
+  BootstrapState { Compiling: {}, Compiled: {} }
+end
+
+func emptyBootstrapInputs() -> BootstrapInputs
+  BootstrapInputs { Inputs: [], Sources: [] }
+end
+
+func emptyBootstrapGoPackageCollection() -> BootstrapGoPackageCollection
+  BootstrapGoPackageCollection { Packages: [], Seen: {} }
+end
+
+# Public bootstrap entry points.  The implementation below is intentionally
+# state-threaded so imported packages can contribute typed external decls to
+# their importers without falling back to the legacy compiler pipeline.
+func compileDirBootstrapEntry(dir: String) -> Result[Slice[String], Error]
+  compileDirBootstrapMyGO(dir, newBootstrapState())
+end
+
+func syncBootstrapMyGO(root: String) -> Result[Slice[String], Error]
+  let dirs = bootstrapMygoDirs(root)
+  switch dirs
+    case Ok(items) => syncBootstrapDirs(items, 0, [])
+    case Err(err) => Err(err)
+  end
+end
+
+func bootstrapMygoDirs(root: String) -> Result[Slice[String], Error]
+  go[Result[Slice[String], Error]] {
+    code: "func() Result[[]string, error] { files, err := mygoDirs(root); if err != nil { return Err[[]string, error](err) }; return Ok[[]string, error](files) }()"
+    in root = root
+  }
+end
+
+func syncBootstrapDirs(dirs: Slice[String], index: Int, written: Slice[String]) -> Result[Slice[String], Error]
+  if index >= dirs.Len() then
+    sort.Strings(written)
+    Ok(written)
+  else
+    let dir = dirs.Get(index).UnwrapOr("")
+    switch compileDirBootstrapEntry(dir)
+      case Err(err) => Err(err)
+      case Ok(files) => syncBootstrapDirs(dirs, index + 1, appendBootstrapStrings(written, files))
+    end
+  end
+end
+
+func compileDirBootstrapMyGO(dir: String, state: BootstrapState) -> Result[Slice[String], Error]
+  let absolute = bootstrapAbsolutePath(dir)
+  switch absolute
+    case Err(err) => Err(err)
+    case Ok(absDir) => compileAbsoluteBootstrapDir(absDir, state)
+  end
+end
+
+func bootstrapAbsolutePath(path: String) -> Result[String, Error]
+  go[Result[String, Error]] { code: "func() Result[string, error] { value, err := filepath.Abs(path); if err != nil { return Err[string, error](err) }; return Ok[string, error](value) }()" in filepath = filepath in path = path }
+end
+
+func compileAbsoluteBootstrapDir(dir: String, state: BootstrapState) -> Result[Slice[String], Error]
+  switch state.Compiled.Get(dir)
+    case Some(files) => Ok(files)
+    case None =>
+      switch state.Compiling.Get(dir)
+        case Some(true) => Err(fmt.Errorf("bootstrap import cycle at %s", dir))
+        case _ => compileUncachedBootstrapDir(dir, state)
+      end
+  end
+end
+
+# Parse the package, then expose the canonical prelude as an external MyGO
+# package.  Its declarations take part in inference but are never merged into
+# this package's sources or emitted declarations.
+func compileUncachedBootstrapDir(dir: String, state: BootstrapState) -> Result[Slice[String], Error]
+  state.Compiling.Set(dir, true)
+  let loaded = bootstrapLoadPackageSources(dir)
+  switch loaded
+    case Err(msg) then
+      state.Compiling.Delete(dir)
+      Err(fmt.Errorf("bootstrap parse %s: %s", dir, msg))
+    end
+    case Ok(inputs) then
+      if inputs.Inputs.Len() == 0 then
+        state.Compiling.Delete(dir)
+        Ok([])
+      else
+        let root = bootstrapWorkspaceRoot(dir)
+        let workspaceRoot = if root == "" => dir else root
+        let preludeResolved = bootstrapResolveImport(workspaceRoot, dir, "github.com/mygo-lang/mygo/prelude")
+        switch preludeResolved
+          case Err(err) then
+            state.Compiling.Delete(dir)
+            Err(fmt.Errorf("bootstrap resolve prelude %s: %s", dir, err.Error()))
+          end
+          case Ok(preludeDir) then
+            let preludeFiles = if dir == preludeDir => Ok([] as Slice[String]) else compileDirBootstrapMyGO(preludeDir, state)
+            switch preludeFiles
+              case Err(err) then
+                state.Compiling.Delete(dir)
+                Err(err)
+              end
+              case Ok(preludeWritten) then
+                let preludeLoaded = bootstrapLoadPackageSources(preludeDir)
+                switch preludeLoaded
+                  case Err(msg) then
+                    state.Compiling.Delete(dir)
+                    Err(fmt.Errorf("bootstrap prelude %s: %s", dir, msg))
+                  end
+                  case Ok(prelude) then
+                    # The prelude itself has no external prelude dependency.
+                    # For every other package, its declarations stay external
+                    # to inputs.Sources while their go: imports participate in
+                    # FFI signature collection.
+                    let externalSources = if dir == preludeDir => [] as Slice[typeinference2.PkgDeclSource] else prelude.Sources
+                    let sourceSets = appendBootstrapSources(inputs.Sources, externalSources)
+                    let packagesRef = Ref.new(bootstrapCollectGoPackages(sourceSets))
+                    if dir != preludeDir then
+                      packagesRef.value().Append(bootstrapMyGoPackageSignatures(".", "github.com/mygo-lang/mygo/prelude", externalSources))
+                      ()
+                    end
+                    let initialPopulated = bootstrapPopulateGoSignatures(packagesRef)
+                    switch initialPopulated
+                      case Err(err) then
+                        state.Compiling.Delete(dir)
+                        Err(fmt.Errorf("bootstrap Go FFI %s: %s", dir, err.Error()))
+                      end
+                      case Ok(_) then
+                        let walked = bootstrapWalkImports(workspaceRoot, dir, bootstrapImportsFromSources(inputs.Sources), 0, state, [], packagesRef)
+                        switch walked
+                          case Err(err) then
+                            state.Compiling.Delete(dir)
+                            Err(err)
+                          end
+                          case Ok(dependencyFiles) then
+                            let finalPopulated = bootstrapPopulateGoSignatures(packagesRef)
+                            switch finalPopulated
+                              case Err(err) then
+                                state.Compiling.Delete(dir)
+                                Err(fmt.Errorf("bootstrap Go FFI %s: %s", dir, err.Error()))
+                              end
+                              case Ok(_) then
+                                let inferred = typeinference2.InferPackageWithExternal(inputs.Sources, externalSources, packagesRef.value())
+                                switch inferred
+                                  case Err(msg) then
+                                    state.Compiling.Delete(dir)
+                                    Err(fmt.Errorf("bootstrap infer %s: %s", dir, msg))
+                                  end
+                                  case Ok(info) then
+                                    let infoWithPackages = typeinference2.PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: packagesRef.value(), Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, ResolvedConstraintArgs: info.ResolvedConstraintArgs }
+                                    let generated = codegen2.GenerateFiles(inputs.Inputs, infoWithPackages)
+                                    switch generated
+                                      case Err(msg) then
+                                        state.Compiling.Delete(dir)
+                                        Err(fmt.Errorf("bootstrap generate %s: %s", dir, msg))
+                                      end
+                                      case Ok(files) then
+                                        let written = bootstrapWriteGenerated(dir, files)
+                                        switch written
+                                          case Err(err) then
+                                            state.Compiling.Delete(dir)
+                                            Err(fmt.Errorf("bootstrap write %s: %s", dir, err.Error()))
+                                          end
+                                          case Ok(paths) then
+                                            let allFiles = appendBootstrapStrings(preludeWritten, appendBootstrapStrings(dependencyFiles, paths))
+                                            state.Compiled.Set(dir, allFiles)
+                                            state.Compiling.Delete(dir)
+                                            Ok(allFiles)
+                                          end
+                                        end
+                                      end
+                                    end
+                                  end
+                                end
+                              end
+                            end
+                          end
+                        end
+                      end
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func appendBootstrapStrings(left: Slice[String], right: Slice[String]) -> Slice[String]
+  appendBootstrapStringsAt(left, right, 0)
+end
+
+func appendBootstrapStringsAt(left: Slice[String], right: Slice[String], index: Int) -> Slice[String]
+  if index >= right.Len() then left else appendBootstrapStringsAt(left.Append(right.Get(index).UnwrapOr("")), right, index + 1) end
+end
+
+# Walk the package's non-Go imports in declaration order.  For each one we
+# (1) recursively compile the dependency, (2) read its MyGo package signatures
+# from the already-parsed sources, and (3) append the entry to the running
+# goPackages slice.  This mirrors bootstrap.go.bak's per-input import loop.
+func bootstrapWalkImports(workspaceRoot: String, fromDir: String, imports: Slice[BootstrapImport], index: Int, state: BootstrapState, written: Slice[String], packages: Ref[Slice[typeinference2.GoPackageEntry]]) -> Result[Slice[String], Error]
+  if index >= imports.Len() then
+    Ok(written)
+  else
+    let imp = imports.Get(index).UnwrapOr(BootstrapImport { Alias: "", Path: "" })
+    let resolved = bootstrapResolveImport(workspaceRoot, fromDir, imp.Path)
+    switch resolved
+      case Err(err) => Err(err)
+      case Ok(dependencyDir) then
+        switch compileDirBootstrapMyGO(dependencyDir, state)
+          case Err(err) => Err(err)
+          case Ok(files) then
+            let loaded = bootstrapLoadPackageSources(dependencyDir)
+            switch loaded
+              case Err(err) => Err(fmt.Errorf("%s", err))
+              case Ok(dependency) =>
+                packages.value().Append(bootstrapMyGoPackageSignatures(imp.Alias, imp.Path, dependency.Sources))
+                bootstrapWalkImports(workspaceRoot, fromDir, imports, index + 1, state, appendBootstrapStrings(written, files), packages)
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+# Bootstrap source discovery: only the package's own files feed codegen2.
+func bootstrapParseSource(path: String, sourcePath: String, source: String) -> Result[BootstrapInputs, String]
+  let parsed = parser2.ParseFileAt(sourcePath, source)
+  switch parsed
+    case Ok(file) =>
+      let typed = ast2.AssignFileExprIDs(file)
+      let input = codegen2.SourceFileInput { Path: path, File: typed }
+      let pkg = typeinference2.PkgDeclSource { Path: sourcePath, Decls: typed.Decls }
+      Ok(BootstrapInputs { Inputs: [input], Sources: [pkg] })
+    case Err(msg) => Err(msg)
+  end
+end
+
+func bootstrapReadDir(dir: String) -> Result[Slice[String], Error]
+  go[Result[Slice[String], Error]] {
+    code: """
+      func() Result[[]string, error] {
+        entries, err := os.ReadDir(dir)
+        if err != nil { return Err[[]string, error](err) }
+        names := make([]string, 0, len(entries))
+        for _, entry := range entries {
+          if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".mygo") {
+            names = append(names, entry.Name())
+          }
+        }
+        sort.Strings(names)
+        return Ok[[]string, error](names)
+      }()
+    """
+    in os = os
+    in strings = strings
+    in sort = sort
+    in dir = dir
+  }
+end
+
+func bootstrapReadFile(path: String) -> Result[String, Error]
+  go[Result[String, Error]] {
+    code: """
+      func() Result[string, error] {
+        raw, err := os.ReadFile(path)
+        if err != nil { return Err[string, error](err) }
+        return Ok[string, error](string(raw))
+      }()
+    """
+    in os = os
+    in path = path
+  }
+end
+
+func bootstrapJoin(dir: String, name: String) -> String
+  go[String] { code: "filepath.Join(dir, name)" in filepath = filepath in dir = dir in name = name }
+end
+
+func appendBootstrapSources(left: Slice[typeinference2.PkgDeclSource], right: Slice[typeinference2.PkgDeclSource]) -> Slice[typeinference2.PkgDeclSource]
+  appendBootstrapSourcesAt(left, right, 0)
+end
+
+func appendBootstrapSourcesAt(left: Slice[typeinference2.PkgDeclSource], right: Slice[typeinference2.PkgDeclSource], index: Int) -> Slice[typeinference2.PkgDeclSource]
+  if index >= right.Len() then left else
+    switch right.Get(index)
+      case Some(value) => appendBootstrapSourcesAt(left.Append(value), right, index + 1)
+      case None => appendBootstrapSourcesAt(left, right, index + 1)
+    end
+  end
+end
+
+func bootstrapWorkingDir() -> Result[String, Error]
+  go[Result[String, Error]] { code: "func() Result[string, error] { value, err := os.Getwd(); if err != nil { return Err[string, error](err) }; return Ok[string, error](value) }()" in os = os }
+end
+
+func bootstrapRelativePath(cwd: String, path: String) -> Result[String, Error]
+  go[Result[String, Error]] { code: "func() Result[string, error] { value, err := filepath.Rel(cwd, path); if err != nil { return Err[string, error](err) }; return Ok[string, error](value) }()" in filepath = filepath in cwd = cwd in path = path }
+end
+
+func bootstrapLoadInputs(dir: String, cwd: String, names: Slice[String], index: Int, out: BootstrapInputs) -> Result[BootstrapInputs, String]
+  if index >= names.Len() then
+    Ok(out)
+  else
+    let name = names.Get(index).UnwrapOr("")
+    let path = bootstrapJoin(dir, name)
+    let relative = bootstrapRelativePath(cwd, path)
+    switch relative
+      case Err(err) => Err(err.Error())
+      case Ok(sourcePath) =>
+        let raw = bootstrapReadFile(path)
+        switch raw
+          case Err(err) => Err(err.Error())
+          case Ok(source) =>
+            let parsed = bootstrapParseSource(name, sourcePath, source)
+            switch parsed
+              case Err(msg) => Err(msg)
+              case Ok(one) =>
+                switch one.Inputs.Get(0)
+                  case Some(input) =>
+                    let next = BootstrapInputs { Inputs: out.Inputs.Append(input), Sources: appendBootstrapSources(out.Sources, one.Sources) }
+                    bootstrapLoadInputs(dir, cwd, names, index + 1, next)
+                  case None => bootstrapLoadInputs(dir, cwd, names, index + 1, out)
+                end
+            end
+        end
+    end
+  end
+end
+
+func bootstrapImportsFromSources(sources: Slice[typeinference2.PkgDeclSource]) -> Slice[BootstrapImport]
+  bootstrapImportsFromSourcesAt(sources, 0, [])
+end
+
+func bootstrapImportsFromSourcesAt(sources: Slice[typeinference2.PkgDeclSource], index: Int, out: Slice[BootstrapImport]) -> Slice[BootstrapImport]
+  if index >= sources.Len() then out else
+    let source = sources.Get(index).UnwrapOr(typeinference2.PkgDeclSource { Path: "", Decls: [] })
+    bootstrapImportsFromSourcesAt(sources, index + 1, bootstrapImportsFromDecls(source.Decls, 0, out))
+  end
+end
+
+func bootstrapImportsFromDecls(decls: Slice[ast2.Decl], index: Int, out: Slice[BootstrapImport]) -> Slice[BootstrapImport]
+  if index >= decls.Len() then out else
+    let decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    let next = switch decl
+      case ImportDecl(alias, path) =>
+        if strings.HasPrefix(path, "go:") then out else out.Append(BootstrapImport { Alias: alias, Path: path }) end
+      case _ => out
+    end
+    bootstrapImportsFromDecls(decls, index + 1, next)
+  end
+end
+
+func bootstrapResolveImport(workspaceRoot: String, fromDir: String, importPath: String) -> Result[String, Error]
+  go[Result[String, Error]] {
+    code: "func() Result[string, error] { value, err := resolveMyGoImport(workspaceRoot, fromDir, importPath); if err != nil { return Err[string, error](err) }; return Ok[string, error](value) }()"
+    in workspaceRoot = workspaceRoot
+    in fromDir = fromDir
+    in importPath = importPath
+  }
+end
+
+func bootstrapWorkspaceRoot(dir: String) -> String
+  go[String] { code: "findGoModuleRoot(dir)" in dir = dir }
+end
+
+func bootstrapLoadPackageSources(dir: String) -> Result[BootstrapInputs, String]
+  let cwd = bootstrapWorkingDir()
+  switch cwd
+    case Err(err) => Err(err.Error())
+    case Ok(cwdPath) =>
+      let names = bootstrapReadDir(dir)
+      switch names
+        case Err(err) => Err(err.Error())
+        case Ok(items) => bootstrapLoadInputs(dir, cwdPath, items, 0, emptyBootstrapInputs())
+      end
+  end
+end
+
+
+func bootstrapPopulateGoSignatures(packages: Ref[Slice[typeinference2.GoPackageEntry]]) -> Result[(), Error]
+  go[Result[(), Error]] {
+    code: """
+      func() Result[struct{}, error] {
+        goTupleTypes := func(tuple *{gotypes}.Tuple) []string {
+          items := make([]string, tuple.Len())
+          for i := range items {
+            items[i] = {gotypes}.TypeString(tuple.At(i).Type(), func(p *{gotypes}.Package) string { return p.Name() })
+          }
+          return items
+        }
+        for i := range *packages {
+          entry := &(*packages)[i]
+          if !strings.HasPrefix(entry.Path, "go:") { continue }
+          pkg, err := {importer}.Default().Import(strings.TrimPrefix(entry.Path, "go:"))
+          if err != nil { return Err[struct{}, error](err) }
+          scope := pkg.Scope()
+          for _, name := range scope.Names() {
+            switch obj := scope.Lookup(name).(type) {
+            case *{gotypes}.Func:
+              sig, ok := obj.Type().(*{gotypes}.Signature)
+              if !ok { continue }
+              entry.Funcs = append(entry.Funcs, typeinference2.GoFuncSignature{Name: name, Params: goTupleTypes(sig.Params()), Results: goTupleTypes(sig.Results()), Variadic: sig.Variadic()})
+            case *{gotypes}.TypeName:
+              named, ok := obj.Type().(*{gotypes}.Named)
+              if !ok { continue }
+              params := named.TypeParams()
+              paramNames := make([]string, 0, params.Len())
+              for j := 0; j < params.Len(); j++ { paramNames = append(paramNames, params.At(j).Obj().Name()) }
+              methods := []typeinference2.GoFuncSignature{}
+              methodSet := {gotypes}.NewMethodSet({gotypes}.NewPointer(named))
+              for j := 0; j < methodSet.Len(); j++ {
+                fn, ok := methodSet.At(j).Obj().(*{gotypes}.Func)
+                if !ok || !fn.Exported() { continue }
+                sig, ok := fn.Type().(*{gotypes}.Signature)
+                if !ok { continue }
+                methods = append(methods, typeinference2.GoFuncSignature{Name: fn.Name(), Params: goTupleTypes(sig.Params()), Results: goTupleTypes(sig.Results()), Variadic: sig.Variadic()})
+              }
+              entry.Types = append(entry.Types, typeinference2.GoTypeSignature{TypeName: name, TypeParams: paramNames, Methods: methods})
+            }
+          }
+        }
+        return Ok[struct{}, error](struct{}{})
+      }()
+    """
+    in packages = packages
+    in strings = strings
+    in typeinference2 = typeinference2
+    in importer = importer
+    in gotypes = gotypes
+  }
+end
+
+func bootstrapCollectGoPackages(sources: Slice[typeinference2.PkgDeclSource]) -> Slice[typeinference2.GoPackageEntry]
+  bootstrapCollectGoPackagesAt(sources, 0, emptyBootstrapGoPackageCollection()).Packages
+end
+
+func bootstrapCollectGoPackagesAt(sources: Slice[typeinference2.PkgDeclSource], index: Int, state: BootstrapGoPackageCollection) -> BootstrapGoPackageCollection
+  if index >= sources.Len() then state else
+    switch sources.Get(index)
+      case Some(source) => bootstrapCollectGoPackagesAt(sources, index + 1, bootstrapCollectGoPackagesFromDecls(source.Decls, 0, state))
+      case None => bootstrapCollectGoPackagesAt(sources, index + 1, state)
+    end
+  end
+end
+
+func bootstrapCollectGoPackagesFromDecls(decls: Slice[ast2.Decl], index: Int, state: BootstrapGoPackageCollection) -> BootstrapGoPackageCollection
+  if index >= decls.Len() then state else
+    switch decls.Get(index)
+      case Some(decl) =>
+        switch decl
+          case ImportDecl(alias, path) =>
+            if strings.HasPrefix(path, "go:") && state.Seen.Get(alias).UnwrapOr(false) == false then
+              state.Seen.Set(alias, true)
+              bootstrapCollectGoPackagesFromDecls(
+                decls,
+                index + 1,
+                BootstrapGoPackageCollection {
+                  Packages: state.Packages.Append(
+                    typeinference2.GoPackageEntry {
+                      Alias: alias,
+                      Path: path,
+                      Funcs: [] as Slice[typeinference2.GoFuncSignature],
+                      Types: [] as Slice[typeinference2.GoTypeSignature],
+                    }
+                  ),
+                  Seen: state.Seen
+                }
+              )
+            else
+              bootstrapCollectGoPackagesFromDecls(decls, index + 1, state)
+            end
+          case _ => bootstrapCollectGoPackagesFromDecls(decls, index + 1, state)
+        end
+      case None => bootstrapCollectGoPackagesFromDecls(decls, index + 1, state)
+    end
+  end
+end
+
+# Non-Go imports are exposed to inference as qualified packages too.  This
+# mirrors loadMyGoPackageSignatures in bootstrap.go.bak, but derives signatures
+# from the already-parsed dependency sources instead of reading them again.
+func bootstrapMyGoPackageSignatures(alias: String, path: String, sources: Slice[typeinference2.PkgDeclSource]) -> typeinference2.GoPackageEntry
+  bootstrapMyGoPackageSignaturesAt(alias, path, sources, 0, typeinference2.GoPackageEntry { Alias: alias, Path: path, Funcs: [] as Slice[typeinference2.GoFuncSignature], Types: [] as Slice[typeinference2.GoTypeSignature] })
+end
+
+func bootstrapMyGoPackageSignaturesAt(alias: String, path: String, sources: Slice[typeinference2.PkgDeclSource], index: Int, entry: typeinference2.GoPackageEntry) -> typeinference2.GoPackageEntry
+  if index >= sources.Len() then entry else
+    switch sources.Get(index)
+      case Some(source) => bootstrapMyGoPackageDeclSignatures(alias, path, source.Decls, 0, bootstrapMyGoPackageSignaturesAt(alias, path, sources, index + 1, entry))
+      case None => bootstrapMyGoPackageSignaturesAt(alias, path, sources, index + 1, entry)
+    end
+  end
+end
+
+func bootstrapMyGoPackageDeclSignatures(alias: String, path: String, decls: Slice[ast2.Decl], index: Int, entry: typeinference2.GoPackageEntry) -> typeinference2.GoPackageEntry
+  if index >= decls.Len() then entry else
+    switch decls.Get(index)
+      case Some(decl) =>
+        switch decl
+          case FuncDecl(name, _, params, ret, _, _) =>
+            let signature = typeinference2.GoFuncSignature { Name: name, Params: bootstrapParamTypes(params, 0, []), Results: bootstrapResultTypes(ret), Variadic: false }
+            let next = typeinference2.GoPackageEntry { Alias: entry.Alias, Path: entry.Path, Funcs: entry.Funcs.Append(signature), Types: entry.Types }
+            bootstrapMyGoPackageDeclSignatures(alias, path, decls, index + 1, next)
+          case _ => bootstrapMyGoPackageDeclSignatures(alias, path, decls, index + 1, entry)
+        end
+      case None => bootstrapMyGoPackageDeclSignatures(alias, path, decls, index + 1, entry)
+    end
+  end
+end
+
+func bootstrapParamTypes(params: Slice[ast2.Param], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= params.Len() then out else
+    switch params.Get(index)
+      case Some(param) => bootstrapParamTypes(params, index + 1, out.Append(bootstrapTypeName(param.Type)))
+      case None => bootstrapParamTypes(params, index + 1, out)
+    end
+  end
+end
+
+func bootstrapResultTypes(ret: Option[ast2.TypeExpr]) -> Slice[String]
+  switch ret
+    case Some(typ) => [bootstrapTypeName(typ)]
+    case None => []
+  end
+end
+
+func bootstrapTypeName(typ: ast2.TypeExpr) -> String
+  switch typ
+    case NamedType(name, _) => name
+    case UnitType => "()"
+    case _ => "any"
+  end
+end
+
+func bootstrapWriteGenerated(dir: String, generated: Map[String, String]) -> Result[Slice[String], Error]
+  let res = go[Result[Slice[String], Error]] {
+    code: """
+      func() Result[[]string, error] {
+        names := make([]string, 0, len(generated))
+        for name := range generated { names = append(names, name) }
+        sort.Strings(names)
+        written := make([]string, 0, len(names))
+        for _, name := range names {
+          path := filepath.Join(dir, name)
+          if err := os.WriteFile(path, []byte(generated[name]), 0o644); err != nil {
+            return Err[[]string, error](err)
+          }
+          written = append(written, path)
+        }
+        return Ok[[]string, error](written)
+      }()
+    """
+    in dir = dir
+    in generated = generated
+    in os = os
+    in filepath = filepath
+    in sort = sort
+  }
+  res
+end

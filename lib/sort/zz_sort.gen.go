@@ -23,7 +23,6 @@ func Sort[A any](slc []A, less func(A, A) bool) {
 		sortFn(arr, i+1, hi)
 	}
 	sortFn(slc, 0, len(slc)-1)
-	return
 }
 func IsSorted[A any](slc []A, less func(A, A) bool) bool {
 	return func() bool {

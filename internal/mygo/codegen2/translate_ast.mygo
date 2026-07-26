@@ -14,7 +14,17 @@ func translateExprAst(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult,
 end
 
 func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
-  let result = translateExprAstExpectedInner(expr, ctx, expected)
+  # An expression's inferred type is authoritative when its parent has no
+  # contextual expectation (notably call arguments). This preserves types of
+  # literals such as ["digit"] instead of lowering them as []any.
+  let effectiveExpected = switch expected
+    case TUnit => switch expr.Type
+      case Some(t) => t
+      case None => expected
+    end
+    case _ => expected
+  end
+  let result = translateExprAstExpectedInner(expr, ctx, effectiveExpected)
   switch result
     case Ok(value) => Ok(value)
     case Err(msg) => Err(errorAtExpr(expr, msg))
@@ -338,7 +348,7 @@ func translateSwitchCaseBodyStmt(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[Sli
     case _ =>
       let value = translateExprAst(body, ctx)
       switch value
-        case Ok(v) => Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.ExpressionStmt(v.Expr))))
+        case Ok(v) => Ok(translateUnitBranchStmts(body, v))
         case Err(msg) => Err(msg)
       end
   end
@@ -764,18 +774,38 @@ func translateIfAst(cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, c
           switch e
             case Err(msg) => Err(msg)
             case Ok(ev) =>
-              let temp = ctxFreshExprTemp(ctx)
-              let expStr = expectedGoType(expected)
-              let typ = if expStr == "" then "any" else expStr end
-              let thenStmts = goast.AppendStmts(tv.Pre, astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(temp)), "=", astSingleExpr(tv.Expr))))
-              let elseStmts = goast.AppendStmts(ev.Pre, astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(temp)), "=", astSingleExpr(ev.Expr))))
-              let pre = goast.AppendStmts(
-                cv.Pre,
-                astTwoStmts(goast.DeclareFromType(temp, typ), goast.If(cv.Expr, thenStmts, elseStmts)),
-              )
-              Ok(astExprWithPre(goast.Ident(temp), pre))
+              switch expected
+                # A Unit-valued conditional is statement control flow.  Do
+                # not synthesize an `any` result slot: calls such as
+                # testing.T.Fatalf have no Go value to assign into it.
+                case TUnit =>
+                  let thenStmts = translateUnitBranchStmts(thenExpr, tv)
+                  let elseStmts = translateUnitBranchStmts(elseExpr, ev)
+                  Ok(astExprWithPre(goast.Unit(), goast.AppendStmts(cv.Pre, astSingleStmt(goast.If(cv.Expr, thenStmts, elseStmts)))))
+                case _ =>
+                  let temp = ctxFreshExprTemp(ctx)
+                  let expStr = expectedGoType(expected)
+                  let typ = if expStr == "" then "any" else expStr end
+                  let thenStmts = goast.AppendStmts(tv.Pre, astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(temp)), "=", astSingleExpr(tv.Expr))))
+                  let elseStmts = goast.AppendStmts(ev.Pre, astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(temp)), "=", astSingleExpr(ev.Expr))))
+                  let pre = goast.AppendStmts(
+                    cv.Pre,
+                    astTwoStmts(goast.DeclareFromType(temp, typ), goast.If(cv.Expr, thenStmts, elseStmts)),
+                  )
+                  Ok(astExprWithPre(goast.Ident(temp), pre))
+              end
           end
       end
+  end
+end
+
+func translateUnitBranchStmts(source: ast2.Expr, value: AstExprResult) -> Slice[goast.Stmt]
+  switch source.Kind
+    # `()` has no Go statement representation. Its prelude (if any) is still
+    # significant, but emitting the lowered `struct{}{}` as an expression
+    # statement produces Go's "value ... is not used" error.
+    case UnitExpr => value.Pre
+    case _ => goast.AppendStmts(value.Pre, astSingleStmt(goast.ExpressionStmt(value.Expr)))
   end
 end
 
@@ -985,7 +1015,9 @@ func translateImplMethodCall(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref
 end
 
 func translateReceiverImplMethodCall(base: ast2.Expr, method: String, args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Option[Result[AstExprResult, String]]
-  let receiverType = receiverStaticType(base, ctx)
+  # Inference writes the receiver type onto every typed expression. Codegen
+  # dispatches from that annotation and never reconstructs it as a fallback.
+  let receiverType = base.Type
   # 1. Lexical dictionary from `using` constraint (e.g. equalsFn for Eq.Equals).
   # When multiple constraints of the same interface exist (e.g. Eq[A], Eq[E]),
   # match the receiver type against each constraint's type arg.
@@ -1002,9 +1034,10 @@ func translateReceiverImplMethodCall(base: ast2.Expr, method: String, args: Slic
             end
           end
         case None =>
-          # 2. Package-level impl helper (e.g. IEnumerable.Map → MygoIT...Map).
-          let receiverTypeStr = switch receiverType case Some(m) => typeinference2.MonoStringFull(m) case None => "" end
-  switch matchingReceiverCandidate(ctx.packageCandidates.Get("$method$" + method).UnwrapOr([] as Slice[ImplDictionaryCandidate]), receiverTypeStr, ctx)
+          # 2. Inherent impls belong to the receiver's nominal type and do
+          # not need typeclass evidence. They take precedence over a global
+          # typeclass instance with the same method name.
+  switch matchingReceiverCandidate(ctx.inherentCandidates, method, receiverType)
             case Some(candidate) =>
               let receiver = translateExprAstExpected(base, ctx, ast2.MonoType.TUnit)
               let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
@@ -1015,7 +1048,22 @@ func translateReceiverImplMethodCall(base: ast2.Expr, method: String, args: Slic
                   case Ok(v) => Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(goast.Call(goast.Ident(candidate.Helper), v.Exprs.Prepend(rv.Expr)), goast.AppendStmts(rv.Pre, v.Pre))))
                 end
               end
-            case None => None
+            case None =>
+              # 3. Package-level typeclass fallback. Lexical dictionaries
+              # were handled above; this path selects a concrete instance.
+              switch matchingReceiverCandidate(ctx.typeclassCandidates, method, receiverType)
+                case Some(candidate) =>
+                  let receiver = translateExprAstExpected(base, ctx, ast2.MonoType.TUnit)
+                  let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
+                  switch receiver
+                    case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+                    case Ok(rv) => switch values
+                      case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
+                      case Ok(v) => Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(goast.Call(goast.Ident(candidate.Helper), v.Exprs.Prepend(rv.Expr)), goast.AppendStmts(rv.Pre, v.Pre))))
+                    end
+                  end
+                case None => None
+              end
           end
       end
   end
@@ -1104,6 +1152,46 @@ func monoTypeListEquals(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType]) -> Boo
 end
 
 func receiverStaticType(receiver: ast2.Expr, ctx: Ref[egCtx]) -> Option[ast2.MonoType]
+  # A selector's annotation describes the selected field, and may be stale
+  # after a later inference substitution.  For a nested receiver such as
+  # `tail.Value.Prepend(...)`, recover the field type from the receiver chain
+  # first so that `tail: Reply[Slice[A]]` retains `Value: Slice[A]`.
+  switch receiver.Kind
+    # For a local receiver, the declaration's fully inferred type is more
+    # reliable than the identifier node's earlier annotation.
+    case IdentExpr(name) => receiverStaticTypeFromKind(receiver, ctx)
+    case FieldExpr(base, field) then
+      switch receiverStaticTypeFromKind(receiver, ctx)
+        # A field lookup reconstructed from the context can still expose the
+        # struct's bare type parameter.  Prefer it only when it identifies a
+        # concrete receiver constructor; otherwise the field node's typed-AST
+        # annotation carries the instantiated type (for example Slice[A]).
+        case Some(t) =>
+          switch monoTypeConstructor(t)
+            case Some(_) => Some(t)
+            case None => receiver.Type
+          end
+        # Synthetic selectors may not have a recoverable base; retain their
+        # annotation as the fallback in that case.
+        case None => receiver.Type
+      end
+    end
+    case _ then
+      switch receiver.Type
+        # A bare inference variable is not enough to select an impl helper.
+        case Some(t) then
+          switch t
+            case TCon(_, _) => Some(t)
+            case _ => receiverStaticTypeFromKind(receiver, ctx)
+          end
+        end
+        case None => receiverStaticTypeFromKind(receiver, ctx)
+      end
+    end
+  end
+end
+
+func receiverStaticTypeFromKind(receiver: ast2.Expr, ctx: Ref[egCtx]) -> Option[ast2.MonoType]
   switch receiver.Kind
     case IdentExpr(name) =>
       let pt = ctx.patternTypes.Get(name)
@@ -1117,7 +1205,12 @@ func receiverStaticType(receiver: ast2.Expr, ctx: Ref[egCtx]) -> Option[ast2.Mon
           end
       end
     case FieldExpr(base, field) =>
-      let baseMono = resolveExprMonoType(base, ctx)
+      # Preserve the statically inferred type through every selector in a
+      # chain (for example `tail.Value.Prepend(...)`).  resolveExprMonoType
+      # only consults ordinary locals for an identifier, while this helper
+      # also knows pattern bindings; recursing here keeps both sources of
+      # type information available for nested field receivers.
+      let baseMono = receiverStaticType(base, ctx)
       switch baseMono
         case Some(bt) =>
           switch lookupFieldInMonoType(bt, field, ctx)
@@ -1148,27 +1241,42 @@ func resolveStructOwner(typ: String) -> String
   end
 end
 
-func matchingReceiverCandidate(candidates: Slice[ImplDictionaryCandidate], receiverType: String, ctx: Ref[egCtx]) -> Option[ImplDictionaryCandidate]
-  if candidates.Len() == 0 || receiverType == "" then None else
-    let candidate = candidates.Get(0).UnwrapOr(ImplDictionaryCandidate { Interface: "", Method: "", InterfaceArgs: [] as Slice[ast2.TypeExpr], TypeParams: [] as Slice[String], Helper: "" })
-    let receiverPattern = candidate.InterfaceArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
-    # Both receiverType and mygoPattern are MyGO type strings (e.g. "Slice[T]"),
-    # not Go type strings (e.g. "[]T"), so direct constructor comparison works.
-    let mygoPattern = mygoTypeString(receiverPattern)
-    let matched = receiverShapeMatches(mygoPattern, receiverType)
-    if matched then Some(candidate) else matchingReceiverCandidate(sliceDrop(candidates, 1), receiverType, ctx) end
+func matchingReceiverCandidate(candidates: Slice[ImplDictionaryCandidate], method: String, receiverType: Option[ast2.MonoType]) -> Option[ImplDictionaryCandidate]
+  if candidates.Len() == 0 then None else
+    let candidate = candidates.Get(0).UnwrapOr(ImplDictionaryCandidate { Interface: "", Method: "", InterfaceArgs: [] as Slice[ast2.TypeExpr], Receiver: ast2.MonoType.TUnit, TypeParams: [] as Slice[String], Helper: "" })
+    let matched = switch receiverType
+      case Some(receiver) => candidate.Method == method && receiverMonoMatches(candidate.Receiver, receiver)
+      case None => false
+    end
+    if matched then Some(candidate) else matchingReceiverCandidate(sliceDrop(candidates, 1), method, receiverType) end
   end
 end
 
-# receiverShapeMatches compares two MyGO type strings by their type constructors.
-# Since both sides use MyGO type names (Slice, Map, Set, Ref, etc.),
-# no special Go-native type mapping is needed.
-func receiverShapeMatches(pattern: String, actual: String) -> Bool
-  let patternCtor = typeConstructor(pattern)
-  let actualCtor = typeConstructor(actual)
-  patternCtor != "" && patternCtor == actualCtor
+func receiverMonoMatches(pattern: ast2.MonoType, actual: ast2.MonoType) -> Bool
+  switch monoTypeConstructor(pattern)
+    case Some(patternName) => switch monoTypeConstructor(actual)
+      case Some(actualName) => patternName == actualName
+      case None => false
+    end
+    case None => monoTypeEquals(pattern, actual)
+  end
 end
 
+# HKT applications may be represented as TApp(TCon("Slice"), [A]) rather
+# than TCon("Slice", [A]).  Compare their MonoType constructors directly.
+func monoTypeConstructor(typ: ast2.MonoType) -> Option[String]
+  switch typ
+    case TCon(name, _) => Some(name)
+    case TApp(ctor, _) => switch ctor.value()
+      case TCon(name, _) => Some(name)
+      case _ => None
+    end
+    case _ => None
+  end
+end
+
+# typeConstructor is used only when resolving an inherent struct owner for
+# emitted Go names.  Receiver typeclass dispatch uses receiverMonoMatches.
 func typeConstructor(typ: String) -> String
   let bracket = strings.Index(typ, "[")
   if bracket >= 0 then strings.TrimSpace(strings.Split(typ, "[").Get(0).UnwrapOr("")) else
@@ -1406,7 +1514,7 @@ func matchingCandidate(candidates: Slice[ImplDictionaryCandidate], requirement: 
   if candidates.Len() == 0 then
     None
   else
-    let candidate = candidates.Get(0).UnwrapOr(ImplDictionaryCandidate { Interface: "", Method: "", InterfaceArgs: [] as Slice[ast2.TypeExpr], TypeParams: [] as Slice[String], Helper: "" })
+    let candidate = candidates.Get(0).UnwrapOr(ImplDictionaryCandidate { Interface: "", Method: "", InterfaceArgs: [] as Slice[ast2.TypeExpr], Receiver: ast2.MonoType.TUnit, TypeParams: [] as Slice[String], Helper: "" })
     if typeExprListMatches(candidate.InterfaceArgs, requirement.Args, typeParamSet(candidate.TypeParams)) then Some(candidate) else matchingCandidate(sliceDrop(candidates, 1), requirement) end
   end
 end

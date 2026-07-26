@@ -62,7 +62,7 @@ func assignDeclIDs(decls []Decl, nextID int) AssignIDsResult {
 		expr_38 = AssignIDsResult{Decls: []Decl([]Decl{}), NextID: nextID}
 	} else {
 		var expr_37 AssignIDsResult
-		d_29 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), DeclImportDeclCtor("", ""))
+		d_29 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), DeclImportDeclCtor("", ""))
 		rest_30 := assignDeclIDs(sliceDrop[Decl](decls, 1), nextID)
 		var expr_36 AssignIDsResult
 		if v_12, ok := d_29.(DeclFuncDecl); ok {
@@ -95,7 +95,7 @@ func assignImplMethodIDs(methods []ImplMethod, nextID int) ImplMethodResult {
 		expr_43 = ImplMethodResult{Methods: []ImplMethod([]ImplMethod{}), NextID: nextID}
 	} else {
 		var expr_42 ImplMethodResult
-		m_39 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), ImplMethod{Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: defaultFuncSig(), Body: EmptyExpr()})
+		m_39 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), ImplMethod{Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: defaultFuncSig(), Body: EmptyExpr()})
 		r1_40 := assignExprID(m_39.Body, nextID)
 		rest_41 := assignImplMethodIDs(sliceDrop[ImplMethod](methods, 1), r1_40.NextID)
 		expr_42 = ImplMethodResult{Methods: MygoIN5SliceM7Prepend(rest_41.Methods, ImplMethod{Pos: m_39.Pos, Sig: m_39.Sig, Body: r1_40.Expr}), NextID: rest_41.NextID}
@@ -112,7 +112,7 @@ func assignStmtIDs(stmts []Stmt, nextID int) StmtSliceResult {
 		expr_48 = StmtSliceResult{Stmts: []Stmt([]Stmt{}), NextID: nextID}
 	} else {
 		var expr_47 StmtSliceResult
-		s_44 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(stmts, 0), StmtExprStmtCtor(EmptyExpr()))
+		s_44 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(stmts, 0), StmtExprStmtCtor(EmptyExpr()))
 		r1_45 := assignStmtID(s_44, nextID)
 		rest_46 := assignStmtIDs(sliceDrop[Stmt](stmts, 1), r1_45.NextID)
 		expr_47 = StmtSliceResult{Stmts: MygoIN5SliceM7Prepend(rest_46.Stmts, r1_45.Stmt), NextID: rest_46.NextID}
@@ -195,7 +195,7 @@ func assignLetRecBindIDs(bindings []LetRecBind, nextID int) LetRecBindResult {
 		expr_73 = LetRecBindResult{Bindings: []LetRecBind([]LetRecBind{}), NextID: nextID}
 	} else {
 		var expr_72 LetRecBindResult
-		b_69 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, 0), LetRecBind{Name: "", Type: TypeExprUnitTypeCtor(), Value: EmptyExpr()})
+		b_69 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, 0), LetRecBind{Name: "", Type: TypeExprUnitTypeCtor(), Value: EmptyExpr()})
 		r_70 := assignExprID(b_69.Value, nextID)
 		rest_71 := assignLetRecBindIDs(sliceDrop[LetRecBind](bindings, 1), r_70.NextID)
 		expr_72 = LetRecBindResult{Bindings: MygoIN5SliceM7Prepend(rest_71.Bindings, LetRecBind{Name: b_69.Name, Type: b_69.Type, Value: r_70.Expr}), NextID: rest_71.NextID}
@@ -368,7 +368,7 @@ func assignExprListIDs(items []Expr, nextID int) ExprSliceResult {
 		expr_123 = ExprSliceResult{Items: []Expr([]Expr{}), NextID: nextID}
 	} else {
 		var expr_122 ExprSliceResult
-		head_119 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), EmptyExpr())
+		head_119 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), EmptyExpr())
 		r_120 := assignExprID(head_119, nextID)
 		rest_121 := assignExprListIDs(sliceDrop[Expr](items, 1), r_120.NextID)
 		expr_122 = ExprSliceResult{Items: MygoIN5SliceM7Prepend(rest_121.Items, r_120.Expr), NextID: rest_121.NextID}
@@ -382,7 +382,7 @@ func assignSwitchCaseIDs(cases []SwitchCase, nextID int) SwitchCaseResult {
 		expr_128 = SwitchCaseResult{Cases: []SwitchCase([]SwitchCase{}), NextID: nextID}
 	} else {
 		var expr_127 SwitchCaseResult
-		c_124 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), SwitchCase{Pattern: PatternWildcardPatternCtor(), Body: EmptyExpr()})
+		c_124 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), SwitchCase{Pattern: PatternWildcardPatternCtor(), Body: EmptyExpr()})
 		r_125 := assignExprID(c_124.Body, nextID)
 		rest_126 := assignSwitchCaseIDs(sliceDrop[SwitchCase](cases, 1), r_125.NextID)
 		expr_127 = SwitchCaseResult{Cases: MygoIN5SliceM7Prepend(rest_126.Cases, SwitchCase{Pattern: c_124.Pattern, Body: r_125.Expr}), NextID: rest_126.NextID}
@@ -396,7 +396,7 @@ func assignStructLitFieldIDs(fields []StructLitField, nextID int) StructLitField
 		expr_133 = StructLitFieldResult{Fields: []StructLitField([]StructLitField{}), NextID: nextID}
 	} else {
 		var expr_132 StructLitFieldResult
-		f_129 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), StructLitField{Name: "", Value: EmptyExpr()})
+		f_129 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), StructLitField{Name: "", Value: EmptyExpr()})
 		r_130 := assignExprID(f_129.Value, nextID)
 		rest_131 := assignStructLitFieldIDs(sliceDrop[StructLitField](fields, 1), r_130.NextID)
 		expr_132 = StructLitFieldResult{Fields: MygoIN5SliceM7Prepend(rest_131.Fields, StructLitField{Name: f_129.Name, Value: r_130.Expr}), NextID: rest_131.NextID}
@@ -410,7 +410,7 @@ func assignGoOperandIDs(operands []GoOperand, nextID int) GoOperandResult {
 		expr_138 = GoOperandResult{Operands: []GoOperand([]GoOperand{}), NextID: nextID}
 	} else {
 		var expr_137 GoOperandResult
-		o_134 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0), GoOperand{Name: "", Value: EmptyExpr()})
+		o_134 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0), GoOperand{Name: "", Value: EmptyExpr()})
 		r_135 := assignExprID(o_134.Value, nextID)
 		rest_136 := assignGoOperandIDs(sliceDrop[GoOperand](operands, 1), r_135.NextID)
 		expr_137 = GoOperandResult{Operands: MygoIN5SliceM7Prepend(rest_136.Operands, GoOperand{Name: o_134.Name, Value: r_135.Expr}), NextID: rest_136.NextID}
@@ -433,7 +433,7 @@ func assignMapPairIDs(pairs []struct {
 		}{}), NextID: nextID}
 	} else {
 		var expr_145 MapPairResult
-		__tuple_139 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pairs, 0), struct {
+		__tuple_139 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pairs, 0), struct {
 			F0 Expr
 			F1 Expr
 		}{F0: EmptyExpr(), F1: EmptyExpr()})
@@ -474,7 +474,7 @@ func sliceTailLoop[A any](items []A, index int, out []A) []A {
 		expr_153 = out
 	} else {
 		var expr_152 []A
-		item_148 := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+		item_148 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 		var expr_151 []A
 		if v_45, ok := item_148.(OptionSome[A]); ok {
 			var expr_150 []A

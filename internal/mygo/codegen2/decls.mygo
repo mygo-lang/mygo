@@ -255,7 +255,6 @@ end
 # Keys use the Go-visible struct constructor and exported field spelling.
 # Uses if/else chain instead of switch to avoid the old mygo compiler
 func seedStructSourceTypes(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
-  fmt.Printf("[DEBUG] typedDecls count: %d, first=%T\n", decls.Len(), decls.Get(0))
   if decls.Len() != 0 then
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     if isStructDecl(decl) then
@@ -434,12 +433,11 @@ func seedInherentCandidates(methods: Slice[ast2.ImplMethod], stem: String, targe
       case None => false
     end
     if isInstance then
-      let candidate = ImplDictionaryCandidate { Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: [target], TypeParams: typeParams, Helper: helper }
-      let key = "$method$" + method.Sig.Name
-      ctx.packageCandidates.Set(key, ctx.packageCandidates.Get(key).UnwrapOr([] as Slice[ImplDictionaryCandidate]).Append(candidate))
+      let candidate = ImplDictionaryCandidate { Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: [target], Receiver: typeinference2.TypeFromASTWithParams(target, typeParams), TypeParams: typeParams, Helper: helper }
+      ctx.inherentCandidates = ctx.inherentCandidates.Append(candidate)
     else
       let key = "$static$" + inherentReceiverName(target) + "." + method.Sig.Name
-      let candidate = ImplDictionaryCandidate { Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: [target], TypeParams: typeParams, Helper: helper }
+      let candidate = ImplDictionaryCandidate { Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: [target], Receiver: typeinference2.TypeFromASTWithParams(target, typeParams), TypeParams: typeParams, Helper: helper }
       ctx.packageCandidates.Set(key, ctx.packageCandidates.Get(key).UnwrapOr([] as Slice[ImplDictionaryCandidate]).Append(candidate))
     end
     seedInherentCandidates(sliceDrop(methods, 1), stem, target, typeParams, ctx)
@@ -450,12 +448,10 @@ func seedImplCandidates(methods: Slice[ast2.ImplMethod], stem: String, interface
   if methods.Len() != 0 then
     let method = methods.Get(0).UnwrapOr(defaultImplMethod())
     let key = interfaceName + "." + method.Sig.Name
-    let candidate = ImplDictionaryCandidate { Interface: interfaceName, Method: method.Sig.Name, InterfaceArgs: interfaceArgs, TypeParams: typeParams, Helper: implMethodSymbol(stem, method.Sig.Name) }
+    let receiver = interfaceArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+    let candidate = ImplDictionaryCandidate { Interface: interfaceName, Method: method.Sig.Name, InterfaceArgs: interfaceArgs, Receiver: typeinference2.TypeFromASTWithParams(receiver, typeParams), TypeParams: typeParams, Helper: implMethodSymbol(stem, method.Sig.Name) }
     ctx.packageCandidates.Set(key, ctx.packageCandidates.Get(key).UnwrapOr([] as Slice[ImplDictionaryCandidate]).Append(candidate))
-    # Receiver syntax has only a method name; retain the same candidates under
-    # a method key and resolve their C[A] receiver shape at the call site.
-    let methodKey = "$method$" + method.Sig.Name
-    ctx.packageCandidates.Set(methodKey, ctx.packageCandidates.Get(methodKey).UnwrapOr([] as Slice[ImplDictionaryCandidate]).Append(candidate))
+    ctx.typeclassCandidates = ctx.typeclassCandidates.Append(candidate)
     seedImplCandidates(sliceDrop(methods, 1), stem, interfaceName, interfaceArgs, typeParams, ctx)
   end
 end

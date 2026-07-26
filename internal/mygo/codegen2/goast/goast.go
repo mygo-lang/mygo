@@ -702,7 +702,15 @@ func SliceLiteral(typ string, elems []ast.Expr) ast.Expr {
 	return &ast.CompositeLit{Type: parsed, Elts: elems}
 }
 
-func ExpressionStmt(expr ast.Expr) ast.Stmt { return &ast.ExprStmt{X: expr} }
+func ExpressionStmt(expr ast.Expr) ast.Stmt {
+	// Unit is represented internally as struct{}{}, but Go rejects a bare
+	// composite-literal statement as an unused value.  Unit has no statement
+	// effect, so normalize it to an empty statement at the AST boundary.
+	if IsUnitExpr(expr) {
+		return &ast.EmptyStmt{}
+	}
+	return &ast.ExprStmt{X: expr}
+}
 
 func Assign(left []ast.Expr, op string, right []ast.Expr) ast.Stmt {
 	return &ast.AssignStmt{Lhs: left, Tok: operator(op), Rhs: right}
