@@ -1,6 +1,9 @@
 package typeinference
 
-import "testing"
+import (
+	"go/types"
+	"testing"
+)
 
 func TestLoadGoPackageInfoResolvesCurrentModule(t *testing.T) {
 	info, err := loadGoPackageInfo(
@@ -28,5 +31,23 @@ func TestLoadGoPackageInfoPreservesExportedAliasName(t *testing.T) {
 	got := info.Funcs["String"].Ret
 	if got.String() != "goast.Expr" {
 		t.Fatalf("String() return type = %s, aliases = %#v, want goast.Expr", got, info.Aliases)
+	}
+}
+
+func TestGoSignatureCanonicalizesError(t *testing.T) {
+	errorType := types.Universe.Lookup("error").Type()
+	sig := types.NewSignatureType(
+		nil,
+		nil,
+		nil,
+		types.NewTuple(),
+		types.NewTuple(types.NewVar(0, nil, "err", errorType)),
+		false,
+	)
+
+	got := goSignatureType(sig)
+	result, ok := got.Ret.(TCon)
+	if !ok || result.Name != "Error" {
+		t.Fatalf("Go error return type = %s, want Error", got.Ret)
 	}
 }

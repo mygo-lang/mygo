@@ -1427,6 +1427,8 @@ func goTypeInner(t TypeExpr, tp map[string]struct{}, p *Package) string {
 			return "any"
 		case "Unit":
 			return "struct{}"
+		case "Error":
+			return "error"
 		case "Ref":
 			if len(tt.Args) == 1 {
 				return "*" + goTypeInner(tt.Args[0], tp, p)

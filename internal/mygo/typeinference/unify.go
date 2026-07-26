@@ -30,7 +30,7 @@ func Unify(t1, t2 MonoType, s Subst) (Subst, error) {
 			if t2.Name == "Any" || t2.Name == "any" {
 				return s, nil
 			}
-			if t1.Name != t2.Name || len(t1.Args) != len(t2.Args) {
+			if !sameTypeName(t1.Name, t2.Name) || len(t1.Args) != len(t2.Args) {
 				return nil, fmt.Errorf("cannot unify %s with %s", t1, t2)
 			}
 			for i := range t1.Args {
@@ -166,7 +166,7 @@ func eqType(a, b MonoType) bool {
 		return ok && a.ID == b.ID
 	case TCon:
 		b, ok := b.(TCon)
-		if !ok || a.Name != b.Name || len(a.Args) != len(b.Args) {
+		if !ok || !sameTypeName(a.Name, b.Name) || len(a.Args) != len(b.Args) {
 			return false
 		}
 		for i := range a.Args {

@@ -45,6 +45,20 @@ type (
 	TUnit struct{}
 )
 
+// canonicalTypeName returns the canonical MyGO spelling for names that have
+// compatibility aliases. Error is the language-level spelling of Go's error
+// interface; keep the lower-case Go spelling accepted at the boundary.
+func canonicalTypeName(name string) string {
+	if name == "error" {
+		return "Error"
+	}
+	return name
+}
+
+func sameTypeName(a, b string) bool {
+	return canonicalTypeName(a) == canonicalTypeName(b)
+}
+
 func (TVar) monoType()       {}
 func (TKVar) monoType()      {}
 func (TCon) monoType()       {}
@@ -312,7 +326,7 @@ func (s Subst) ApplyMT(t MonoType) MonoType {
 		for i, a := range t.Args {
 			args[i] = s.ApplyMT(a)
 		}
-		return TCon{Name: t.Name, Args: args}
+		return TCon{Name: canonicalTypeName(t.Name), Args: args}
 	case TFunc:
 		args := make([]MonoType, len(t.Args))
 		for i, a := range t.Args {
@@ -480,7 +494,7 @@ func typeFromASTWithParams(t TypeExpr, typeParams map[string]MonoType) MonoType 
 		for i, a := range t.Args {
 			args[i] = typeFromASTWithParams(a, typeParams)
 		}
-		return TCon{Name: t.Name, Args: args}
+		return TCon{Name: canonicalTypeName(t.Name), Args: args}
 	case *FuncType:
 		params := make([]MonoType, len(t.Params))
 		for i, p := range t.Params {

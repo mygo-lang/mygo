@@ -81,7 +81,7 @@ func replaceGoAliases(t MonoType, aliases map[string]string) MonoType {
 		for i, arg := range t.Args {
 			args[i] = replaceGoAliases(arg, aliases)
 		}
-		return TCon{Name: t.Name, Args: args}
+		return TCon{Name: canonicalTypeName(t.Name), Args: args}
 	case TFunc:
 		args := make([]MonoType, len(t.Args))
 		for i, arg := range t.Args {
@@ -523,7 +523,7 @@ func isErrorType(t MonoType) bool {
 	if !ok {
 		return false
 	}
-	return con.Name == "error" || con.Name == "builtin.error" || con.Name == "errors.error"
+	return sameTypeName(con.Name, "Error") || con.Name == "builtin.error" || con.Name == "errors.error"
 }
 
 func monoTypeFromGoType(t types.Type) MonoType {
@@ -584,7 +584,7 @@ func monoTypeFromGoType(t types.Type) MonoType {
 		if pkg := t.Obj().Pkg(); pkg != nil && pkg.Name() != "" {
 			name = pkg.Name() + "." + name
 		}
-		return TCon{Name: name}
+		return TCon{Name: canonicalTypeName(name)}
 	case *types.Alias:
 		// Keep the exported alias name.  MyGO type annotations name the FFI
 		// package's public surface (for example goast.Expr), so eagerly
@@ -594,9 +594,9 @@ func monoTypeFromGoType(t types.Type) MonoType {
 		if pkg := t.Obj().Pkg(); pkg != nil && pkg.Name() != "" {
 			name = pkg.Name() + "." + name
 		}
-		return TCon{Name: name}
+		return TCon{Name: canonicalTypeName(name)}
 	}
-	return TCon{Name: goTypeName(t)}
+	return TCon{Name: canonicalTypeName(goTypeName(t))}
 }
 
 func goTypeName(t types.Type) string {
