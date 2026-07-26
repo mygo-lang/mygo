@@ -22,6 +22,7 @@ import strings "go:strings"
 struct BootstrapState
   Compiling: Map[String, Bool]
   Compiled: Map[String, Slice[String]]
+  SourcesCache: Map[String, BootstrapInputs]
 end
 
 # BootstrapInputs pairs the per-file codegen inputs with the decl sources that
@@ -42,7 +43,7 @@ struct BootstrapImport
 end
 
 func newBootstrapState() -> BootstrapState
-  BootstrapState { Compiling: {}, Compiled: {} }
+  BootstrapState { Compiling: {}, Compiled: {}, SourcesCache: {} }
 end
 
 func emptyBootstrapInputs() -> BootstrapInputs
@@ -143,7 +144,7 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState) -> Result[S
                 Err(err)
               end
               case Ok(preludeWritten) then
-                let preludeLoaded = bootstrapLoadPackageSources(preludeDir)
+                let preludeLoaded = bootstrapLoadCachedSources(preludeDir, state)
                 switch preludeLoaded
                   case Err(msg) then
                     state.Compiling.Delete(dir)
@@ -255,7 +256,7 @@ func bootstrapWalkImports(workspaceRoot: String, fromDir: String, imports: Slice
         switch compileDirBootstrapMyGO(dependencyDir, state)
           case Err(err) => Err(err)
           case Ok(files) then
-            let loaded = bootstrapLoadPackageSources(dependencyDir)
+            let loaded = bootstrapLoadCachedSources(dependencyDir, state)
             switch loaded
               case Err(err) => Err(fmt.Errorf("%s", err))
               case Ok(dependency) =>
@@ -423,6 +424,18 @@ func bootstrapLoadPackageSources(dir: String) -> Result[BootstrapInputs, String]
   end
 end
 
+func bootstrapLoadCachedSources(dir: String, state: BootstrapState) -> Result[BootstrapInputs, String]
+  switch state.SourcesCache.Get(dir)
+    case Some(inputs) => Ok(inputs)
+    case None =>
+      switch bootstrapLoadPackageSources(dir)
+        case Ok(inputs) =>
+          state.SourcesCache.Set(dir, inputs)
+          Ok(inputs)
+        case Err(msg) => Err(msg)
+      end
+  end
+end
 
 func bootstrapPopulateGoSignatures(packages: Ref[Slice[typeinference2.GoPackageEntry]]) -> Result[(), Error]
   go[Result[(), Error]] {
@@ -592,6 +605,7 @@ func bootstrapWriteGenerated(dir: String, generated: Map[String, String]) -> Res
           if err := os.WriteFile(path, []byte(generated[name]), 0o644); err != nil {
             return Err[[]string, error](err)
           }
+          fmt.Println(displayPath(path))
           written = append(written, path)
         }
         return Ok[[]string, error](written)
@@ -602,6 +616,7 @@ func bootstrapWriteGenerated(dir: String, generated: Map[String, String]) -> Res
     in os = os
     in filepath = filepath
     in sort = sort
+    in fmt = fmt
   }
   res
 end

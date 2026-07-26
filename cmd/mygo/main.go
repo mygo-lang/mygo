@@ -45,11 +45,8 @@ parsedFlags:
 			root = args[1]
 		}
 		if bootstrap {
-			written, err := compiler.SyncBootstrap(root)
+			_, err := compiler.SyncBootstrap(root)
 			must(err)
-			for _, path := range written {
-				fmt.Println(displayPath(path))
-			}
 		} else if noPrelude {
 			written, err := compiler.SyncNoPrelude(root)
 			must(err)
