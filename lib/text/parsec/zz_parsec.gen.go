@@ -334,16 +334,16 @@ func AdvanceRune(state State) State {
 func MatchString(state State, expected string) Reply[string] {
 	return func() Reply[string] {
 		if len(state.Input)-state.Index < len(expected) {
-			return Reply[string]{Ok: false, Consumed: false}
+			return Reply[string]{Ok: false, Consumed: false, State: state, Error: ErrorAt(state.Position, expected, EmptyExpected())}
 		}
 		if state.Input[state.Index:state.Index+len(expected)] != expected {
-			return Reply[string]{Ok: false, Consumed: false}
+			return Reply[string]{Ok: false, Consumed: false, State: state, Error: ErrorAt(state.Position, expected, EmptyExpected())}
 		}
 		next := state
 		next.Index += len(expected)
 		next.Position.Offset += len(expected)
 		next.Position.Column += len(expected)
-		return Reply[string]{Ok: true, Consumed: true, Value: expected, State: next}
+		return Reply[string]{Ok: true, Consumed: true, Value: expected, State: next, Error: EmptyError(state.Position)}
 	}()
 }
 func EmptyError(pos Position) Option[ParseError] {
