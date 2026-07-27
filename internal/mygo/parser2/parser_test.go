@@ -228,6 +228,41 @@ end
 	}
 }
 
+func TestParseSwitchExpressionTarget(t *testing.T) {
+	got := ParseFile(`package sample
+
+enum Maybe[A]
+  Some(A)
+  None
+end
+
+func select(value: Maybe[Int]) -> Int
+  switch value.map(func(item: Int) -> Int item + 1 end)
+    case Some(item) => item
+    case None => 0
+  end
+end
+`)
+	parsed, ok := got.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", got)
+	}
+	fn := parsed.F0.Decls[1].(ast2.DeclFuncDecl)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
+	sw, ok := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindSwitchExpr)
+	if !ok {
+		t.Fatalf("body = %T, want ExprSwitchExpr", body.F0[0].(ast2.StmtExprStmt).F0)
+	}
+	call, ok := sw.F0.Kind.(ast2.ExprKindCallExpr)
+	if !ok {
+		t.Fatalf("switch target = %T, want ExprCallExpr", sw.F0.Kind)
+	}
+	field, ok := call.F0.Kind.(ast2.ExprKindFieldExpr)
+	if !ok || field.F1 != "map" {
+		t.Fatalf("switch call callee = %#v, want value.map", call.F0.Kind)
+	}
+}
+
 func TestParseSwitchCaseBlock(t *testing.T) {
 	got := ParseFile(`package sample
 

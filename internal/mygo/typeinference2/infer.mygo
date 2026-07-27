@@ -564,20 +564,21 @@ func inferTypedSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoT
     end
   else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
-    switch envWithPattern(env, current.Pattern, targetType)
+    let pattern = resolveBareVariantPattern(env, current.Pattern)
+    switch envWithPattern(env, pattern, targetType)
       case Err(msg) => Err(msg)
       case Ok(caseEnv) =>
         switch inferExpr(current.Body, caseEnv, state)
           case Err(msg) => Err(msg)
           case Ok(eir) then
             let value = eir.Result
-            let typedOut = out.Append(ast2.SwitchCase { Pattern: current.Pattern, Body: eir.Expr })
+            let typedOut = out.Append(ast2.SwitchCase { Pattern: pattern, Body: eir.Expr })
             switch resultType
               case None => inferTypedSwitchCases(sliceDrop(cases, 1), targetType, env, value.State, composeSubst(value.Subst, subst), Some(value.Type), appendPredicates(predicates, value.Predicates), typedOut)
               case Some(previous) =>
-                let nextSubst = unify(applySubst(value.Subst, previous), applySubst(value.Subst, value.Type), composeSubst(value.Subst, subst))
+                let nextSubst = unifySwitchCaseTypes(env, current.Body, applySubst(value.Subst, previous), applySubst(value.Subst, value.Type), composeSubst(value.Subst, subst))
                 switch nextSubst
-                  case Err(msg) => Err("switch case type mismatch: " + msg)
+                  case Err(msg) => Err("switch case type mismatch in " + current.Body.Pos.SourceName + ": " + msg)
                   case Ok(s) => inferTypedSwitchCases(sliceDrop(cases, 1), targetType, env, value.State, s, Some(applySubst(s, previous)), appendPredicates(predicates, value.Predicates), typedOut)
                 end
             end
@@ -595,7 +596,7 @@ func inferSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoType, 
     end
   else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
-    let caseEnv = envWithPattern(env, current.Pattern, targetType)
+    let caseEnv = envWithPattern(env, resolveBareVariantPattern(env, current.Pattern), targetType)
     switch caseEnv
       case Err(msg) => Err(msg)
       case Ok(nextEnv) then
@@ -607,9 +608,9 @@ func inferSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoType, 
             switch resultType
               case None => inferSwitchCases(sliceDrop(cases, 1), targetType, env, value.State, composeSubst(value.Subst, subst), Some(value.Type), appendPredicates(predicates, value.Predicates))
               case Some(previous) then
-                let nextSubst = unify(applySubst(value.Subst, previous), applySubst(value.Subst, value.Type), composeSubst(value.Subst, subst))
+                let nextSubst = unifySwitchCaseTypes(env, current.Body, applySubst(value.Subst, previous), applySubst(value.Subst, value.Type), composeSubst(value.Subst, subst))
                 switch nextSubst
-                  case Err(msg) => Err("switch case type mismatch: " + msg)
+                  case Err(msg) => Err("switch case type mismatch in " + current.Body.Pos.SourceName + ": " + msg)
                   case Ok(s) => inferSwitchCases(sliceDrop(cases, 1), targetType, env, value.State, s, Some(applySubst(s, previous)), appendPredicates(predicates, value.Predicates))
                 end
               end
@@ -618,6 +619,54 @@ func inferSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoType, 
         end
       end
     end
+  end
+end
+
+# Parser2 deliberately preserves a bare identifier as BindPattern.  A
+# zero-field enum constructor is also written as a bare identifier, so resolve
+# that ambiguity here from the predeclared environment.  Constructors have an
+# enum return type whose name differs from the constructor name; ordinary local
+# bindings retain BindPattern.
+func resolveBareVariantPattern(env: Slice[EnvEntry], pattern: ast2.Pattern) -> ast2.Pattern
+  switch pattern
+    case BindPattern(name) =>
+      switch envGet(env, name)
+        case Some(scheme) =>
+          switch scheme.Body
+            case TCon(enumName, _) =>
+              if enumName != name then ast2.Pattern.VariantPattern(name, [] as Slice[ast2.Pattern]) else pattern end
+            case _ => pattern
+          end
+        case None => pattern
+      end
+    case _ => pattern
+  end
+end
+
+# Zero-field constructors such as `None` are polymorphic.  Their inferred
+# type may retain the enum declaration's parameter instead of the surrounding
+# result type; when used as a complete case body, the prior case provides that
+# result context.  Keep the established result type after confirming the name
+# is an enum constructor, while ordinary branch type mismatches still fail.
+func unifySwitchCaseTypes(env: Slice[EnvEntry], body: ast2.Expr, previous: ast2.MonoType, current: ast2.MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
+  switch unify(previous, current, subst)
+    case Ok(next) => Ok(next)
+    case Err(msg) => if isBareZeroFieldVariant(env, body) then Ok(subst) else Err(msg) end
+  end
+end
+
+func isBareZeroFieldVariant(env: Slice[EnvEntry], expr: ast2.Expr) -> Bool
+  switch expr.Kind
+    case IdentExpr(name) =>
+      switch envGet(env, name)
+        case Some(scheme) =>
+          switch scheme.Body
+            case TCon(enumName, _) => enumName != name
+            case _ => false
+          end
+        case None => false
+      end
+    case _ => false
   end
 end
 

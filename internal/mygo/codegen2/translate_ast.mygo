@@ -395,9 +395,8 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], sourceTarget: ast2.E
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
     switch current.Pattern
       case BindPattern(name) then
-        # BindPattern at switch top level is no longer produced by parser2;
-        # bare identifiers are now VariantPattern(name, []).  Keep this branch
-        # for backward compatibility: bind the whole value to `name`.
+        # Inference leaves this form only when the bare name was not a
+        # zero-field enum constructor in the surrounding environment.
         let child = Ref.new(ctxChild(ctx))
         ctxSetBinding(child, name, temp)
         translateSwitchCaseBody(current.Body, child, expected, temp)

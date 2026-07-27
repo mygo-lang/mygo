@@ -895,7 +895,7 @@ func pattern() ps.Parser[ast2.Pattern] {
 			var expr_84 ast2.Pattern
 			if _, ok := args.(OptionNone[[]ast2.Pattern]); ok {
 				var expr_83 ast2.Pattern
-				expr_83 = ast2.PatternVariantPatternCtor(name, []ast2.Pattern([]ast2.Pattern{}))
+				expr_83 = ast2.PatternBindPatternCtor(name)
 				expr_84 = expr_83
 			} else {
 				if v_42, ok := args.(OptionSome[[]ast2.Pattern]); ok {
