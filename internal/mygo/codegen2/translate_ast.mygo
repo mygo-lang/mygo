@@ -151,7 +151,7 @@ func translateTupleLitAst(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: as
         end
         let expectedTypes = switch expected
           case TUnit => types
-          case _ => inferTupleTypesFromExpected(expected, items.Len())
+          case _ => inferTupleTypesFromExpected(ctx, expected, items.Len())
         end
         var fields: Slice[String] = []
         var j: Int = 0
@@ -161,19 +161,41 @@ func translateTupleLitAst(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: as
           j = j + 1
         end
         let structTypeStr = "struct { " + joinStrings(fields, "; ") + " }"
-        Ok(astExprWithPre(goast.Composite(goast.MustTypeExpr(structTypeStr), v.Exprs), v.Pre))
+        # Wrap each positional element in an `F0: x` keyed composite so the
+        # generated Go CompositeLit initializes struct fields by name rather
+        # than by position.  Position-only literals are valid for arrays and
+        # slices but the struct lowering here needs explicit field names.
+        let keyed = wrapExprsAsStructFields(v.Exprs, 0, [] as Slice[goast.Expr])
+        Ok(astExprWithPre(goast.Composite(goast.MustTypeExpr(structTypeStr), keyed), v.Pre))
     end
   end
 end
 
-# inferTupleTypesFromExpected extracts element types from an expected anonymous
-# struct type string like "struct { F0 int; F1 string }" for multi-field tuples
-# or returns "any" for all elements if parsing fails.
-func inferTupleTypesFromExpected(expected: ast2.MonoType, count: Int) -> Slice[String]
+func wrapExprsAsStructFields(elts: Slice[goast.Expr], index: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
+  if index >= elts.Len() then out else
+    let elt = elts.Get(index).UnwrapOr(goast.Unit())
+    let keyed = goast.KeyValue(goast.Ident("F" + index.ToString()), elt)
+    wrapExprsAsStructFields(elts, index + 1, out.Append(keyed))
+  end
+end
+
+# inferTupleTypesFromExpected extracts element types from an expected
+# tuple type.  When the expected type is a `TTuple` the elements are
+# rendered through the type parameter substitution so the generated
+# anonymous struct carries the precise Go types for each `F<n>` field.
+# Falls back to `any` for each position when the expected type is not
+# a tuple (e.g. a raw struct string that the old parser could not split).
+func inferTupleTypesFromExpected(ctx: Ref[egCtx], expected: ast2.MonoType, count: Int) -> Slice[String]
   var types: Slice[String] = []
   var i: Int = 0
+  let elementTypes = switch expected
+      case TTuple(items) => items
+      case _ => []
+  end
+
   while i < count
-    types = types.Append("any")
+    let elementType = elementTypes.Get(i).UnwrapOr(ast2.MonoType.TUnit)
+    types = types.Append(monoTypeToGoStrWithParams(elementType, ctx.typeParamNames))
     i = i + 1
   end
   types
@@ -937,23 +959,53 @@ func refInnerExpected(expected: ast2.MonoType, fallback: ast2.MonoType) -> ast2.
 end
 
 func translateCallAstExpectedNonRef(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
-  let isOption = switch expected
-    case TCon(name, _) => name == "Option"
-    case _ => false
-  end
-  switch ffiOptionSignature(callee, ctx)
-    case Some(sig) =>
-      if isOption then
-        translateFFIOptionCall(callee, typeArgs, args, ctx, expected, sig)
-      else
-        translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
-      end
+  switch translateEnumVariantCallAst(callee, args, ctx)
+    case Some(result) => result
     case None =>
-      switch ffiResultSignature(callee, ctx)
-        case Some(sig) =>
-          translateFFIResultCall(callee, typeArgs, args, ctx, expected, sig)
-        case None => translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
+      let isOption = switch expected
+        case TCon(name, _) => name == "Option"
+        case _ => false
       end
+      switch ffiOptionSignature(callee, ctx)
+        case Some(sig) =>
+          if isOption then
+            translateFFIOptionCall(callee, typeArgs, args, ctx, expected, sig)
+          else
+            translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
+          end
+        case None =>
+          switch ffiResultSignature(callee, ctx)
+            case Some(sig) =>
+              translateFFIResultCall(callee, typeArgs, args, ctx, expected, sig)
+            case None => translatePlainCallAstExpected(callee, typeArgs, args, ctx, expected)
+          end
+      end
+  end
+end
+
+# Recognize `EnumName.VariantName(args...)` as an enum variant constructor
+# call.  The variant table populated by seedEnumVariantsForVariants exposes
+# every variant (zero- and non-zero-arity) under `EnumName.VariantName`.
+# Without this lowering, the call form would route through the plain call
+# path and codegen2 would emit a Go call against a non-existent field
+# selector, breaking constructors such as `Decl.FuncDecl(name, ...)`.
+func translateEnumVariantCallAst(callee: ast2.Expr, args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Option[Result[AstExprResult, String]]
+  switch callee.Kind
+    case FieldExpr(base, field) =>
+      switch base.Kind
+        case IdentExpr(name) =>
+          switch ctx.enumValueConstructors.Get(name + "." + field)
+            case Some(ctor) =>
+              let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
+              switch values
+                case Ok(v) => Some(Ok(astExprWithPre(goast.Call(goast.Ident(ctor), v.Exprs), v.Pre)))
+                case Err(msg) => Some(Err(msg))
+              end
+            case None => None
+          end
+        case _ => None
+      end
+    case _ => None
   end
 end
 
@@ -1287,7 +1339,13 @@ end
 
 func translatePlainCallAstExpectedOrdinary(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
   let c = translateExprAstExpected(callee, ctx, expected)
-  let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
+  # Derive per-argument expected types from the callee's inferred function
+  # type so tuple literals like `(EmptyExpr(), EmptyExpr())` keep their
+  # element types when passed to a generic prelude function such as
+  # `Option.UnwrapOr`.  Without this the literal falls back to
+  # `struct{F0 any; F1 any}` and the call fails to type-check.
+  let argExpected = callArgExpectedTypes(callee)
+  let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], argExpected)
   switch c
     case Err(msg) => Err(msg)
     case Ok(cv) =>
@@ -1638,4 +1696,21 @@ end
 # that occur between type inference and code generation.
 func lookupExprTypeInTypedInfo(expr: ast2.Expr) -> Option[ast2.MonoType]
   expr.Type
+end
+
+# Extract the parameter types from the callee's inferred `TFunc` so that
+# tuple and other composite literals carried as arguments can be lowered
+# with their element types intact.  The result is empty when the callee
+# has no inferred function type (e.g. a Go FFI call), so callers can
+# safely fall back to no per-argument expectations.
+func callArgExpectedTypes(callee: ast2.Expr) -> Slice[ast2.MonoType]
+  switch callee.Type
+    case Some(t) =>
+      switch t
+        case TFunc(items, _) => items
+        case TVariadic(items, _) => items
+        case _ => [] as Slice[ast2.MonoType]
+      end
+    case None => [] as Slice[ast2.MonoType]
+  end
 end

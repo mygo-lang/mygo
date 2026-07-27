@@ -58,13 +58,19 @@ end
 # state-threaded so imported packages can contribute typed external decls to
 # their importers without falling back to the legacy compiler pipeline.
 func compileDirBootstrapEntry(dir: String) -> Result[Slice[String], Error]
-  compileDirBootstrapMyGO(dir, newBootstrapState())
+  compileDirBootstrapWithCodegen(dir, newBootstrapState(), true)
 end
 
+# Sharing one BootstrapState across the whole sync run lets prelude (and every
+# other transitive dependency) be compiled exactly once.  In addition, the
+# per-package import walk and the prelude handler only request *inference* of
+# dependencies (no codegen and no write) because every package is a top-level
+# sync target on its own; its .gen.go files are produced when the package
+# itself is later processed by syncBootstrapDirs.
 func syncBootstrapMyGO(root: String) -> Result[Slice[String], Error]
   let dirs = bootstrapMygoDirs(root)
   switch dirs
-    case Ok(items) => syncBootstrapDirs(items, 0, [])
+    case Ok(items) => syncBootstrapDirs(items, 0, newBootstrapState(), [])
     case Err(err) => Err(err)
   end
 end
@@ -76,24 +82,31 @@ func bootstrapMygoDirs(root: String) -> Result[Slice[String], Error]
   }
 end
 
-func syncBootstrapDirs(dirs: Slice[String], index: Int, written: Slice[String]) -> Result[Slice[String], Error]
+func syncBootstrapDirs(dirs: Slice[String], index: Int, state: BootstrapState, written: Slice[String]) -> Result[Slice[String], Error]
   if index >= dirs.Len() then
     sort.Strings(written)
     Ok(written)
   else
     let dir = dirs.Get(index).UnwrapOr("")
-    switch compileDirBootstrapEntry(dir)
+    switch compileDirBootstrapWithCodegen(dir, state, true)
       case Err(err) => Err(err)
-      case Ok(files) => syncBootstrapDirs(dirs, index + 1, appendBootstrapStrings(written, files))
+      case Ok(files) => syncBootstrapDirs(dirs, index + 1, state, appendBootstrapStrings(written, files))
     end
   end
 end
 
+# compileDirBootstrapMyGO is the inference-only entry point used while walking
+# a package's imports.  The same package may be reached again as a top-level
+# sync target, in which case the codegen path is taken from the start.
 func compileDirBootstrapMyGO(dir: String, state: BootstrapState) -> Result[Slice[String], Error]
+  compileDirBootstrapWithCodegen(dir, state, false)
+end
+
+func compileDirBootstrapWithCodegen(dir: String, state: BootstrapState, codegen: Bool) -> Result[Slice[String], Error]
   let absolute = bootstrapAbsolutePath(dir)
   switch absolute
     case Err(err) => Err(err)
-    case Ok(absDir) => compileAbsoluteBootstrapDir(absDir, state)
+    case Ok(absDir) => compileAbsoluteBootstrapDir(absDir, state, codegen)
   end
 end
 
@@ -101,21 +114,44 @@ func bootstrapAbsolutePath(path: String) -> Result[String, Error]
   go[Result[String, Error]] { code: "func() Result[string, error] { value, err := filepath.Abs(path); if err != nil { return Err[string, error](err) }; return Ok[string, error](value) }()" in filepath = filepath in path = path }
 end
 
-func compileAbsoluteBootstrapDir(dir: String, state: BootstrapState) -> Result[Slice[String], Error]
-  switch state.Compiled.Get(dir)
-    case Some(files) => Ok(files)
-    case None =>
-      switch state.Compiling.Get(dir)
-        case Some(true) => Err(fmt.Errorf("bootstrap import cycle at %s", dir))
-        case _ => compileUncachedBootstrapDir(dir, state)
-      end
+# compileAbsoluteBootstrapDir routes through the cache when the package has
+# already been fully processed (codegen path).  When called as an inference
+# dependency, only the parse + signature-collection side runs; the result is
+# stored in SourcesCache but not in Compiled, so the sync loop still drives a
+# full codegen pass for the same dir.
+func compileAbsoluteBootstrapDir(dir: String, state: BootstrapState, codegen: Bool) -> Result[Slice[String], Error]
+  if codegen then
+    switch state.Compiled.Get(dir)
+      case Some(files) => Ok(files)
+      case None =>
+        switch state.Compiling.Get(dir)
+          case Some(true) => Err(fmt.Errorf("bootstrap import cycle at %s", dir))
+          case _ => compileUncachedBootstrapDir(dir, state, true)
+        end
+    end
+  else
+    switch state.SourcesCache.Get(dir)
+      case Some(_) => Ok([])
+      case None =>
+        switch state.Compiling.Get(dir)
+          case Some(true) => Err(fmt.Errorf("bootstrap import cycle at %s", dir))
+          case _ => compileUncachedBootstrapDir(dir, state, false)
+        end
+    end
   end
 end
 
 # Parse the package, then expose the canonical prelude as an external MyGO
 # package.  Its declarations take part in inference but are never merged into
 # this package's sources or emitted declarations.
-func compileUncachedBootstrapDir(dir: String, state: BootstrapState) -> Result[Slice[String], Error]
+#
+# When `codegen` is false the package is only being inspected because it is a
+# dependency of another package being built.  In that case we run the same
+# parse + inference + Go-FFI collection pipeline (so the dependency's
+# declarations are visible to its importer) but we skip code generation and
+# file emission.  The sync loop will eventually run the codegen path for
+# every package on its own.
+func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bool) -> Result[Slice[String], Error]
   state.Compiling.Set(dir, true)
   let loaded = bootstrapLoadPackageSources(dir)
   switch loaded
@@ -189,31 +225,8 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState) -> Result[S
                                     state.Compiling.Delete(dir)
                                     Err(fmt.Errorf("bootstrap infer %s: %s", dir, msg))
                                   end
-                                  case Ok(info) then
-                                    let infoWithPackages = typeinference2.PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: packagesRef.value(), Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, ResolvedConstraintArgs: info.ResolvedConstraintArgs }
-                                    let generated = codegen2.GenerateFiles(inputs.Inputs, infoWithPackages)
-                                    switch generated
-                                      case Err(msg) then
-                                        state.Compiling.Delete(dir)
-                                        Err(fmt.Errorf("bootstrap generate %s: %s", dir, msg))
-                                      end
-                                      case Ok(files) then
-                                        let written = bootstrapWriteGenerated(dir, files)
-                                        switch written
-                                          case Err(err) then
-                                            state.Compiling.Delete(dir)
-                                            Err(fmt.Errorf("bootstrap write %s: %s", dir, err.Error()))
-                                          end
-                                          case Ok(paths) then
-                                            let allFiles = appendBootstrapStrings(preludeWritten, appendBootstrapStrings(dependencyFiles, paths))
-                                            state.Compiled.Set(dir, allFiles)
-                                            state.Compiling.Delete(dir)
-                                            Ok(allFiles)
-                                          end
-                                        end
-                                      end
-                                    end
-                                  end
+                                  case Ok(info) =>
+                                    bootstrapFinishPackage(dir, state, codegen, inputs, info, packagesRef, preludeWritten, dependencyFiles)
                                 end
                               end
                             end
@@ -225,6 +238,42 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState) -> Result[S
                 end
               end
             end
+          end
+        end
+      end
+    end
+  end
+end
+
+# bootstrapFinishPackage drives the post-inference half of the bootstrap
+# pipeline.  When the caller asked for inference only (codegen == false) we
+# release the Compiling flag, leave the parsed sources cached for future
+# re-use, and return an empty file list.  The sync loop will eventually
+# revisit the same dir with codegen == true.
+func bootstrapFinishPackage(dir: String, state: BootstrapState, codegen: Bool, inputs: BootstrapInputs, info: typeinference2.PackageInfo, packagesRef: Ref[Slice[typeinference2.GoPackageEntry]], preludeWritten: Slice[String], dependencyFiles: Slice[String]) -> Result[Slice[String], Error]
+  if !codegen then
+    state.Compiling.Delete(dir)
+    Ok([])
+  else
+    let infoWithPackages = typeinference2.PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: packagesRef.value(), Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, ResolvedConstraintArgs: info.ResolvedConstraintArgs }
+    let generated = codegen2.GenerateFiles(inputs.Inputs, infoWithPackages)
+    switch generated
+      case Err(msg) then
+        state.Compiling.Delete(dir)
+        Err(fmt.Errorf("bootstrap generate %s: %s", dir, msg))
+      end
+      case Ok(files) then
+        let written = bootstrapWriteGenerated(dir, files)
+        switch written
+          case Err(err) then
+            state.Compiling.Delete(dir)
+            Err(fmt.Errorf("bootstrap write %s: %s", dir, err.Error()))
+          end
+          case Ok(paths) then
+            let allFiles = appendBootstrapStrings(preludeWritten, appendBootstrapStrings(dependencyFiles, paths))
+            state.Compiled.Set(dir, allFiles)
+            state.Compiling.Delete(dir)
+            Ok(allFiles)
           end
         end
       end

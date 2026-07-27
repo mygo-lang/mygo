@@ -45,6 +45,11 @@ enum Symbol
   StructField(String, String, ast2.MonoType)
   GoMethod(String, String, GoFuncSignature)
   ImplMethod(String, String, Scheme)
+  # EnumVariant captures the type-name + variant-name + constructor type for
+  # an enum variant constructor.  FieldExpr on an enum type (e.g. `Decl.ImportDecl`)
+  # has to look the variant up in the symbol table because the constructor has
+  # at least one field and therefore its scheme body is a TFunc, not a TCon.
+  EnumVariant(String, String, ast2.MonoType)
 end
 
 struct SubstEntry
@@ -277,12 +282,27 @@ func collectDeclSymbols(decls: Slice[ast2.Decl], out: Slice[Symbol]) -> Slice[Sy
       case StructDecl(name, tps, fields) =>
         let syms = structFieldSymbols(name, fields, tps, [] as Slice[Symbol])
         concatSymbols(rest, syms)
+      case EnumDecl(name, tps, variants) =>
+        let syms = enumVariantSymbols(name, variants, tps, [] as Slice[Symbol])
+        concatSymbols(rest, syms)
       case ImplDecl(tps, target, iface, methods) =>
         let receiverName = implReceiverName(target, iface)
         let syms = implMethodSymbols(receiverName, tps, methods, [] as Slice[Symbol])
         concatSymbols(rest, syms)
       case _ => rest
     end
+  end
+end
+
+# enumVariantSymbols seeds one EnumVariant symbol per variant of the enum so
+# that FieldExpr on an enum-typed receiver can resolve `TypeName.VariantName`
+# via findSymbol.  Mirrors predeclareEnum's constructor-type computation.
+func enumVariantSymbols(enumName: String, variants: Slice[ast2.Variant], tps: Slice[String], out: Slice[Symbol]) -> Slice[Symbol]
+  if variants.Len() == 0 then out else
+    let v = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr] })
+    let enumType = ast2.MonoType.TCon(enumName, typeParamsAsTypes(tps, 1))
+    let constructorType = if v.Fields.Len() == 0 then enumType else ast2.MonoType.TFunc(typeArgsFromASTWithParams(v.Fields, tps), Ref.new(enumType)) end
+    enumVariantSymbols(enumName, sliceDrop(variants, 1), tps, out.Prepend(Symbol.EnumVariant(enumName, v.Name, constructorType)))
   end
 end
 

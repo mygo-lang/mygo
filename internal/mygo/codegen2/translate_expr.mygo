@@ -41,11 +41,11 @@ end
 
 func translateAstLeadingStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
   switch stmt
-    case ExprStmt(expr) =>
+    case ExprStmt(expr) then
       switch expr.Kind
         case InlineGoExpr(typ, body, values, types) => translateInlineGoAst(body, values, types, ctx)
         case IfExpr(cond, thenExpr, elseExpr) => translateAstIfStmt(cond, thenExpr, elseExpr, ctx)
-        case SwitchExpr(target, cases) =>
+        case SwitchExpr(target, cases) then
           # Switch in statement context: emit only the Pre statements, discard
           # the Expr (which is Unit() for statement-form switches).
           let value = translateExprAst(expr, ctx)
@@ -53,7 +53,8 @@ func translateAstLeadingStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[g
             case Ok(v) => Ok(v.Pre)
             case Err(msg) => Err(msg)
           end
-        case _ =>
+        end
+        case _ then
           let value = translateExprAst(expr, ctx)
           switch value
             case Ok(v) =>
@@ -64,16 +65,18 @@ func translateAstLeadingStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[g
               end
             case Err(msg) => Err(msg)
           end
+        end
       end
+    end
     case LetStmt(bind) => translateAstBinding(bind, ctx)
     case LetRecStmt(bindings) => translateAstLetRec(bindings, ctx)
     case VarStmt(bind) => translateAstBinding(bind, ctx)
-    case AssignStmt(target, value) =>
+    case AssignStmt(target, value) then
       let t = translateExprAst(target, ctx)
       let v = translateExprAst(value, ctx)
       switch t
         case Err(msg) => Err(msg)
-        case Ok(tv) =>
+        case Ok(tv) then
           switch v
             case Ok(vv) => Ok(goast.AppendStmts(
               goast.AppendStmts(tv.Pre, vv.Pre),
@@ -81,11 +84,91 @@ func translateAstLeadingStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[g
             ))
             case Err(msg) => Err(msg)
           end
+        end
       end
+    end
     case WhileStmt(cond, body) => translateAstWhileStmt(cond, body, ctx)
     case ReturnStmt => Ok(astSingleStmt(goast.Return([] as Slice[goast.Expr])))
     case ReturnWithStmt(expr) => translateAstReturnExpr(expr, ctx)
+    case TupleLetStmt(names, value) => translateAstTupleLetStmt(names, value, ctx)
     case _ => Err("statement requires control-flow lowering")
+  end
+end
+
+# Tuple destructuring lowers to a sequence of individual let-bindings.  The
+# inferred types in TypedInfo do not yet expose tuple element types per
+# source position, so we conservatively introduce each bound name with the
+# unit type and rely on subsequent uses to widen it via unification.  This
+# keeps the bootstrap pipeline compiling packages like ast2_ids.mygo that
+# use `let (a, b) = expr.Get(0).UnwrapOr((EmptyExpr(), EmptyExpr()))` in
+# their helper functions.
+func translateAstTupleLetStmt(names: Slice[String], value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+  # `let (a, b) = expr` lowers to a single evaluation of `expr` followed
+  # by per-name bindings to the corresponding `F<n>` field on the
+  # resulting tuple.  Using one evaluation site guards against repeated
+  # evaluation of side-effecting expressions; the temp also carries a
+  # precise anonymous-struct type so each bound name is typed instead of
+  # falling back to `interface{}`.
+  let monoType = value.Type.UnwrapOr(ast2.MonoType.TUnit)
+  let tupleMono = tupleInnerType(monoType)
+  let tupleTypeStr = monoTypeToGoStrWithParams(tupleMono, ctx.typeParamNames)
+  let v = translateExprAst(value, ctx)
+  switch v
+    case Err(msg) => Err(msg)
+    case Ok(rv) =>
+      let tempName = ctxFreshExprTemp(ctx)
+      let tempDecl = astSingleStmt(goast.VarDecl(tempName, goast.MustTypeExpr(tupleTypeStr)))
+      let tempAssign = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(tempName)), "=", astSingleExpr(rv.Expr)))
+      let stmts = goast.AppendStmts(goast.AppendStmts(goast.AppendStmts(rv.Pre, tempDecl), tempAssign), [] as Slice[goast.Stmt])
+      let bound = bindTupleNames(names, tempName, tupleMono, ctx, stmts, 0)
+      Ok(bound)
+  end
+end
+
+func bindTupleNames(names: Slice[String], valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int) -> Slice[goast.Stmt]
+  if index >= names.Len() then stmts else
+    let name = names.Get(index).UnwrapOr("")
+    let goName = ctxFreshBinding(ctx, name)
+    # `let (a, b) = expr` lowers to `a := temp.F0; b := temp.F1`.  The
+    # bound name adopts the corresponding element type from the tuple
+    # type so subsequent uses stay typed instead of reverting to
+    # `interface{}`.
+    let fieldType = tupleElementType(tupleType, index)
+    let goFieldType = monoTypeToGoStrWithParams(fieldType, ctx.typeParamNames)
+    let decl = astSingleStmt(goast.VarDecl(goName, goast.MustTypeExpr(goFieldType)))
+    let fieldAccess = goast.Selector(goast.Ident(valueName), "F" + index.ToString())
+    let assignStmt = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(goName)), "=", astSingleExpr(fieldAccess)))
+    ctxSetLocal(ctx, name, fieldType)
+    bindTupleNames(names, valueName, tupleType, ctx, goast.AppendStmts(goast.AppendStmts(stmts, decl), assignStmt), index + 1)
+  end
+end
+
+# Strip one layer of Slice / TApp(Slice, ...) to recover the tuple type
+# that the let expression produces.  Falls back to the input type when
+# the source expression is not a slice-of-tuple, so other destructuring
+# call sites still type-check.
+func tupleInnerType(t: ast2.MonoType) -> ast2.MonoType
+  switch t
+    case TCon(name, args) =>
+      if name == "Slice" && args.Len() == 1 then args.Get(0).UnwrapOr(ast2.MonoType.TUnit) else t end
+    case TApp(ctor, args) =>
+      let ctorStr = ctor.value()
+      switch ctorStr
+        case TCon(name, _) =>
+          if name == "Slice" && args.Len() == 1 then args.Get(0).UnwrapOr(ast2.MonoType.TUnit) else t end
+        case _ => t
+      end
+    case _ => t
+  end
+end
+
+# Extract the i-th element MonoType from a tuple type.  Falls back to
+# TUnit for the unexpected non-tuple case so that the generated program
+# still type-checks; downstream usage will widen the type as needed.
+func tupleElementType(t: ast2.MonoType, index: Int) -> ast2.MonoType
+  switch t
+    case TTuple(items) => items.Get(index).UnwrapOr(ast2.MonoType.TUnit)
+    case _ => ast2.MonoType.TUnit
   end
 end
 

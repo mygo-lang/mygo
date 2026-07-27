@@ -433,14 +433,19 @@ func typeExprsToStrings(items: Slice[ast2.TypeExpr], typeParams: Set[String]) ->
 end
 
 # 辅助函数：元组元素 → Go 字段字符串列表
+# index tracks the current field position across the recursive call.
 func tupleElemsToStrings(elems: Slice[ast2.TypeExpr], typeParams: Set[String]) -> Slice[String]
+  tupleElemsToStringsLoop(elems, typeParams, 0)
+end
+
+func tupleElemsToStringsLoop(elems: Slice[ast2.TypeExpr], typeParams: Set[String], index: Int) -> Slice[String]
   if elems.Len() == 0 then
-    return [] as Slice[String]
+    [] as Slice[String]
+  else
+    let head = elems.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+    let tail = tupleElemsToStringsLoop(sliceDrop(elems, 1), typeParams, index + 1)
+    tail.Prepend("F" + index.ToString() + " " + goType(head, typeParams))
   end
-  let head = elems.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
-  let tail = tupleElemsToStrings(sliceDrop(elems, 1), typeParams)
-  let i = elems.Len() - elems.Len()
-  return tail.Prepend("F" + i.ToString() + " " + goType(head, typeParams))
 end
 
 # 辅助函数：字符串列表连接

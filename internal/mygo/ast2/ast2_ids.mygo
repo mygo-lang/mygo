@@ -1,3 +1,5 @@
+package ast2
+
 # ast2_ids.mygo — Post‑parse expression ID assignment.
 # Every Expr node gets a unique sequential ID so that codegen2 can look up
 # the type inferred by typeinference2 via TypedInfo.ExprTypes without needing
@@ -70,23 +72,26 @@ func assignDeclIDs(decls: Slice[Decl], nextID: Int) -> AssignIDsResult
     let d = decls.Get(0).UnwrapOr(Decl.ImportDecl("", ""))
     let rest = assignDeclIDs(sliceDrop(decls, 1), nextID)
     switch d
-      case FuncDecl(name, tps, params, ret, body, constraints) =>
+      case FuncDecl(name, tps, params, ret, body, constraints) then
         let r = assignExprID(body, rest.NextID)
         AssignIDsResult {
           Decls: rest.Decls.Prepend(Decl.FuncDecl(name, tps, params, ret, r.Expr, constraints)),
           NextID: r.NextID,
         }
-      case ImplDecl(tps, target, iface, methods) =>
+      end
+      case ImplDecl(tps, target, iface, methods) then
         let r = assignImplMethodIDs(methods, rest.NextID)
         AssignIDsResult {
           Decls: rest.Decls.Prepend(Decl.ImplDecl(tps, target, iface, r.Methods)),
           NextID: r.NextID,
         }
-      case _ =>
+      end
+      case _ then
         AssignIDsResult {
           Decls: rest.Decls.Prepend(d),
           NextID: rest.NextID,
         }
+      end
     end
   end
 end

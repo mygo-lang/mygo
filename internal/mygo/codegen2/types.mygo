@@ -461,8 +461,7 @@ func monoTypeToGoStr(t: ast2.MonoType) -> String
       let argStrs = args.Map(func(a: ast2.MonoType) -> String monoTypeToGoStr(a) end)
       if argStrs.Len() == 0 then ctorStr else ctorStr + "[" + joinStrings(argStrs, ", ") + "]" end
     case TTuple(items) =>
-      let parts = items.Map(func(i: ast2.MonoType) -> String monoTypeToGoStr(i) end)
-      "struct { " + joinStrings(parts, "; ") + " }"
+      "struct { " + joinStrings(tupleMonoElemsToStringsNoParams(items, 0, [] as Slice[String]), "; ") + " }"
     case TUnit => "struct{}"
     case TVar(_) => "any"
     case TKVar(_) => "any"
@@ -488,8 +487,7 @@ func monoTypeToGoStrWithParams(t: ast2.MonoType, params: Slice[String]) -> Strin
       let retStr = monoTypeToGoStrWithParams(ret.value(), params)
       if retStr == "struct{}" then "func(" + joinStrings(argStrs, ", ") + ")" else "func(" + joinStrings(argStrs, ", ") + ") " + retStr end
     case TTuple(items) =>
-      let parts = items.Map(func(item: ast2.MonoType) -> String monoTypeToGoStrWithParams(item, params) end)
-      "struct { " + joinStrings(parts, "; ") + " }"
+      "struct { " + joinStrings(tupleMonoElemsToStrings(items, params, 0, [] as Slice[String]), "; ") + " }"
     case _ => monoTypeToGoStr(t)
   end
 end
@@ -497,4 +495,25 @@ end
 # monoTypeToMygoStr: 将 MonoType 转换为 MyGO 类型字符串（用于打印/调试）。
 func monoTypeToMygoStr(t: ast2.MonoType) -> String
   typeinference2.MonoStringFull(t)
+end
+
+# tupleMonoElemsToStrings renders each tuple element as a `F<n> <GoType>`
+# pair so the resulting anonymous struct literal can be matched field by
+# field.  Recursive instead of `Map(func(i: Int, item: T) ...)` because
+# the mygo type for `items.Map` only exposes the element value, not its
+# index.  This mirrors tupleElemsToStringsLoop in types_util.mygo.
+func tupleMonoElemsToStrings(items: Slice[ast2.MonoType], params: Slice[String], index: Int, out: Slice[String]) -> Slice[String]
+  if items.Len() == 0 then out else
+    let head = items.Get(0).UnwrapOr(ast2.MonoType.TUnit)
+    let tail = tupleMonoElemsToStrings(sliceDrop(items, 1), params, index + 1, out)
+    tail.Prepend("F" + index.ToString() + " " + monoTypeToGoStrWithParams(head, params))
+  end
+end
+
+func tupleMonoElemsToStringsNoParams(items: Slice[ast2.MonoType], index: Int, out: Slice[String]) -> Slice[String]
+  if items.Len() == 0 then out else
+    let head = items.Get(0).UnwrapOr(ast2.MonoType.TUnit)
+    let tail = tupleMonoElemsToStringsNoParams(sliceDrop(items, 1), index + 1, out)
+    tail.Prepend("F" + index.ToString() + " " + monoTypeToGoStr(head))
+  end
 end

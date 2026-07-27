@@ -783,33 +783,48 @@ end
 # inferStmt 推断语句的类型。
 func inferStmt(stmt: ast2.Stmt, env: Slice[EnvEntry], state: InferState) -> Result[StmtInferResult, String]
   switch stmt
-    case ExprStmt(expr) =>
+    case ExprStmt(expr) then
       let inferred = inferExpr(expr, env, state)
       switch inferred
-        case Ok(eir) then
-          Ok(StmtInferResult { MaybeExpr: Some(eir.Expr), Result: eir.Result })
-        end
+        case Ok(eir)  => Ok(StmtInferResult { MaybeExpr: Some(eir.Expr), Result: eir.Result })
         case Err(msg) => Err(msg)
       end
-    case LetStmt(bind) =>
+    end
+    case LetStmt(bind) then
       let res = inferLet(bind, env, state)
       switch res
         case Ok(r) => Ok(StmtInferResult { MaybeExpr: None, Result: r })
         case Err(msg) => Err(msg)
       end
-    case VarStmt(bind) =>
+    end
+    case VarStmt(bind) then
       let res = inferLet(bind, env, state)
       switch res
         case Ok(r) => Ok(StmtInferResult { MaybeExpr: None, Result: r })
         case Err(msg) => Err(msg)
       end
-    case LetRecStmt(bindings) =>
+    end
+    case LetRecStmt(bindings) then
       let res = inferLetRec(bindings, env, state)
       switch res
         case Ok(r) => Ok(StmtInferResult { MaybeExpr: None, Result: r })
         case Err(msg) => Err(msg)
       end
-    case WhileStmt(cond, body) =>
+    end
+    case TupleLetStmt(names, value) then
+      # Tuple destructuring: `let (a, b) = expr`.  Infer the right-hand side as a
+      # tuple type, then bind each name to the corresponding element.  The
+      # bootstrap pipeline (codegen2) does not need per-element TypedDecls
+      # here — the result type is the tuple's tail type.  This mirrors the
+      # single-name LetStmt path so that any package using tuple destructuring
+      # can still complete inference instead of panicking.
+      let r = inferExpr(value, env, state)
+      switch r
+        case Err(msg) => Err(msg)
+        case Ok(eir) => Ok(StmtInferResult { MaybeExpr: Some(eir.Expr), Result: eir.Result })
+      end
+    end
+    case WhileStmt(cond, body) then
       let inferred = inferExpr(cond, env, state)
       switch inferred
         case Ok(eirCond) then
@@ -829,7 +844,8 @@ func inferStmt(stmt: ast2.Stmt, env: Slice[EnvEntry], state: InferState) -> Resu
         end
         case Err(msg) => Err(msg)
       end
-    case AssignStmt(target, value) =>
+    end
+    case AssignStmt(target, value) then
       let t = inferExpr(target, env, state)
       switch t
         case Err(msg) => Err(msg)
@@ -849,8 +865,9 @@ func inferStmt(stmt: ast2.Stmt, env: Slice[EnvEntry], state: InferState) -> Resu
           end
         end
       end
+    end
     case ReturnStmt => Ok(StmtInferResult { MaybeExpr: None, Result: InferResult { Type: ast2.MonoType.TUnit, Predicates: [], Subst: [], State: state } })
-    case ReturnWithStmt(value) =>
+    case ReturnWithStmt(value) then
       let inferred = inferExpr(value, env, state)
       switch inferred
         case Ok(eir) then
@@ -858,6 +875,7 @@ func inferStmt(stmt: ast2.Stmt, env: Slice[EnvEntry], state: InferState) -> Resu
         end
         case Err(msg) => Err(msg)
       end
+    end
   end
 end
 
@@ -1255,6 +1273,7 @@ func inferBlockStep(stmt: ast2.Stmt, env: Slice[EnvEntry], state: InferState) ->
     case LetRecStmt(bindings) => inferBlockLetRecTyped(bindings, env, state)
     case VarStmt(bind) => inferBlockBind(bind, true, env, state)
     case WhileStmt(cond, body) => inferTypedWhileStmt(cond, body, env, state)
+    case TupleLetStmt(names, value) => inferBlockTupleLet(names, value, env, state)
     case _ then
       let r = inferStmt(stmt, env, state)
       switch r
@@ -1267,6 +1286,40 @@ func inferBlockStep(stmt: ast2.Stmt, env: Slice[EnvEntry], state: InferState) ->
           Ok(BlockInferStep { Result: sir.Result, Env: env, Stmt: typedStmt })
       end
     end
+  end
+end
+
+# inferBlockTupleLet handles `let (a, b) = expr`.  We don't currently know
+# the tuple's element types from a generic expression, so we infer the RHS,
+# then introduce each bound name as a fresh type variable.  The result env
+# exposes them so the rest of the block can reference them, which is all
+# inference needs; codegen2 walks the untyped TupleLetStmt shape directly
+# in its own pipeline.
+func inferBlockTupleLet(names: Slice[String], value: ast2.Expr, env: Slice[EnvEntry], state: InferState) -> Result[BlockInferStep, String]
+  let r = inferExpr(value, env, state)
+  switch r
+    case Err(msg) => Err(msg)
+    case Ok(eir) then
+      let nextState = eir.Result.State
+      let nextEnv = envWithFreshTupleBindings(env, names, nextState.FreshVarID, eir.Result.Subst)
+      let typedValue = eir.Expr
+      let stepState = withFreshID(nextState, nextState.FreshVarID + names.Len())
+      let newStmt = ast2.Stmt.TupleLetStmt(names, typedValue)
+      Ok(BlockInferStep { Result: InferResult { Type: ast2.MonoType.TUnit, Predicates: eir.Result.Predicates, Subst: eir.Result.Subst, State: stepState }, Env: nextEnv, Stmt: newStmt })
+    end
+  end
+end
+
+# envWithFreshTupleBindings puts each name into env as a Scheme wrapping a
+# fresh type variable.  It walks the slice recursively and returns the new
+# env (an extension of the input).  `freshBase` is the next free FreshVarID.
+func envWithFreshTupleBindings(env: Slice[EnvEntry], names: Slice[String], freshBase: Int, subst: Slice[SubstEntry]) -> Slice[EnvEntry]
+  if names.Len() == 0 then env else
+    let name = names.Get(0).UnwrapOr("")
+    let rest = sliceDrop(names, 1)
+    let fresh = ast2.MonoType.TVar(freshBase + rest.Len())
+    let bound = envPut(env, name, Scheme { Bound: [], Predicates: [], Body: fresh })
+    envWithFreshTupleBindings(bound, rest, freshBase, subst)
   end
 end
 
@@ -1464,47 +1517,69 @@ func inferOrdinaryField(base: ast2.Expr, field: String, env: Slice[EnvEntry], st
         case _ => applySubst(v.Subst, v.Type)
       end
       switch resolvedType
-        case TGoPackage(path) =>
+        case TGoPackage(path) then
           if strings.HasPrefix(path, "go:") then
             Err("unknown Go package member " + field)
           else
             let fresh = ast2.MonoType.TVar(v.State.FreshVarID)
             Ok(ExprInferResult { Expr: typedBase, Result: InferResult { Type: fresh, Predicates: v.Predicates, Subst: v.Subst, State: withFreshID(v.State, v.State.FreshVarID + 1) } })
           end
-        case TCon(typeName, args) =>
+        end
+        case TCon(typeName, args) then
           switch findSymbol(typeName, field, state.Symbols)
-            case Some(symbol) =>
+            case Some(symbol) then
               switch symbol
-                case StructField(_, _, fieldType) =>
+                case StructField(_, _, fieldType) then
                   let substed = switchFieldTypeArgs(fieldType, typeName, args, env)
                   let instState = withFreshID(v.State, v.State.FreshVarID + 1)
                   Ok(ExprInferResult { Expr: typedBase, Result: InferResult { Type: substed, Predicates: v.Predicates, Subst: v.Subst, State: instState } })
-                case GoMethod(_, _, sig) =>
+                end
+                case GoMethod(_, _, sig) then
                   let methodType = GoSignatureType(sig)
                   let instState = withFreshID(v.State, v.State.FreshVarID + 1)
                   Ok(ExprInferResult { Expr: typedBase, Result: InferResult { Type: methodType, Predicates: v.Predicates, Subst: v.Subst, State: instState } })
-                case ImplMethod(_, _, scheme) =>
+                end
+                case ImplMethod(_, _, scheme) then
                   let q = instantiateQualified(scheme, v.State)
                   let instState = withFreshID(v.State, v.State.FreshVarID + scheme.Bound.Len())
                   let substed = switchFieldTypeArgs(q.Body, typeName, args, env)
                   switch stripReceiverArg(substed, typeName, args, v.Subst)
-                    case Some(stripResult) =>
+                    case Some(stripResult) then
                       switch stripResult
-                        case Ok(pair2) =>
+                        case Ok(pair2) then
                           let (strippedType, s2) = pair2
                           Ok(ExprInferResult { Expr: typedBase, Result: InferResult { Type: strippedType, Predicates: appendPredicates(v.Predicates, q.Predicates), Subst: s2, State: instState } })
+                        end
                         case Err(msg) => Err(msg)
                       end
-                    case None =>
-                      Ok(ExprInferResult { Expr: typedBase, Result: InferResult { Type: substed, Predicates: appendPredicates(v.Predicates, q.Predicates), Subst: v.Subst, State: instState } })
+                    end
+                    case None then
+                      Ok(ExprInferResult {
+                        Expr: typedBase,
+                        Result: InferResult {
+                          Type: substed,
+                          Predicates: appendPredicates(v.Predicates, q.Predicates),
+                          Subst: v.Subst,
+                          State: instState
+                        }
+                      })
+                    end
                   end
+                end
+                case EnumVariant(_, _, ctorType) then
+                  let substed = switchFieldTypeArgs(ctorType, typeName, args, env)
+                  let instState = withFreshID(v.State, v.State.FreshVarID + 1)
+                  Ok(ExprInferResult { Expr: typedBase, Result: InferResult { Type: substed, Predicates: v.Predicates, Subst: v.Subst, State: instState } })
+                end
               end
-            case None =>
-              Err("unknown field " + typeName + "." + field)
+            end
+            case None => Err("unknown field " + typeName + "." + field)
           end
-        case _ =>
+        end
+        case _ then
           let fresh = ast2.MonoType.TVar(v.State.FreshVarID)
           Ok(ExprInferResult { Expr: typedBase, Result: InferResult { Type: fresh, Predicates: v.Predicates, Subst: v.Subst, State: withFreshID(v.State, v.State.FreshVarID + 1) } })
+        end
       end
     end
   end
@@ -1813,6 +1888,8 @@ func findSymbol(typeName: String, field: String, symbols: Slice[Symbol]) -> Opti
         if tn == typeName && mn == field then Some(s) else findSymbol(typeName, field, sliceDrop(symbols, 1)) end
       case ImplMethod(tn, mn, _) =>
         if tn == typeName && mn == field then Some(s) else findSymbol(typeName, field, sliceDrop(symbols, 1)) end
+      case EnumVariant(tn, vn, _) =>
+        if tn == typeName && vn == field then Some(s) else findSymbol(typeName, field, sliceDrop(symbols, 1)) end
     end
   end
 end
