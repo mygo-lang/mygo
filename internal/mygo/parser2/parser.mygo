@@ -128,6 +128,8 @@ func annotateStmtSource(stmt: ast2.Stmt, sourceName: String) -> ast2.Stmt
     case WhileStmt(cond, body) => ast2.Stmt.WhileStmt(annotateExprSource(cond, sourceName), annotateExprSource(body, sourceName))
     case AssignStmt(target, value) => ast2.Stmt.AssignStmt(annotateExprSource(target, sourceName), annotateExprSource(value, sourceName))
     case ReturnWithStmt(expr) => ast2.Stmt.ReturnWithStmt(annotateExprSource(expr, sourceName))
+    case BreakStmt => stmt
+    case ContinueStmt => stmt
     case ReturnStmt => stmt
   end
 end
@@ -470,6 +472,8 @@ func stmt() -> ps.Parser[ast2.Stmt]
   ps.PChoice([
     ps.PAttempt(inlineGoStmt()),
     ps.PAttempt(returnStmt()),
+    ps.PAttempt(breakStmt()),
+    ps.PAttempt(continueStmt()),
     ps.PAttempt(varStmt()),
     ps.PAttempt(whileStmt()),
     ps.PAttempt(letrecStmt()),
@@ -478,6 +482,14 @@ func stmt() -> ps.Parser[ast2.Stmt]
     ps.PAttempt(assignStmt()),
     exprStmt(),
   ])
+end
+
+func breakStmt() -> ps.Parser[ast2.Stmt]
+  ps.PMap(kw("break"), func(_: String) -> ast2.Stmt ast2.Stmt.BreakStmt end)
+end
+
+func continueStmt() -> ps.Parser[ast2.Stmt]
+  ps.PMap(kw("continue"), func(_: String) -> ast2.Stmt ast2.Stmt.ContinueStmt end)
 end
 
 # ifStmt 将 if 表达式包装为语句。
@@ -1341,6 +1353,8 @@ func isKeyword(value: String) -> Bool
     case "var" => true
     case "embed" => true
     case "while" => true
+    case "break" => true
+    case "continue" => true
     case "return" => true
     case "go" => true
     case "in" => true

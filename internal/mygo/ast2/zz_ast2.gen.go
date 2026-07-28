@@ -360,6 +360,24 @@ func StmtReturnWithStmtCtor(v0 Expr) Stmt {
 	return StmtReturnWithStmt{F0: v0}
 }
 
+type StmtBreakStmt struct {
+}
+
+func (StmtBreakStmt) isStmt() {
+}
+func StmtBreakStmtCtor() Stmt {
+	return StmtBreakStmt{}
+}
+
+type StmtContinueStmt struct {
+}
+
+func (StmtContinueStmt) isStmt() {
+}
+func StmtContinueStmtCtor() Stmt {
+	return StmtContinueStmt{}
+}
+
 type ExprKind interface {
 	isExprKind()
 }
@@ -616,112 +634,6 @@ func (ExprKindSetLitExpr) isExprKind() {
 }
 func ExprKindSetLitExprCtor(v0 []Expr) ExprKind {
 	return ExprKindSetLitExpr{F0: v0}
-}
-
-type MonoType interface {
-	isMonoType()
-}
-type MonoTypeTVar struct {
-	F0 int
-}
-
-func (MonoTypeTVar) isMonoType() {
-}
-func MonoTypeTVarCtor(v0 int) MonoType {
-	return MonoTypeTVar{F0: v0}
-}
-
-type MonoTypeTKVar struct {
-	F0 int
-}
-
-func (MonoTypeTKVar) isMonoType() {
-}
-func MonoTypeTKVarCtor(v0 int) MonoType {
-	return MonoTypeTKVar{F0: v0}
-}
-
-type MonoTypeTApp struct {
-	F0 *MonoType
-	F1 []MonoType
-}
-
-func (MonoTypeTApp) isMonoType() {
-}
-func MonoTypeTAppCtor(v0 *MonoType, v1 []MonoType) MonoType {
-	return MonoTypeTApp{F0: v0, F1: v1}
-}
-
-type MonoTypeTCon struct {
-	F0 string
-	F1 []MonoType
-}
-
-func (MonoTypeTCon) isMonoType() {
-}
-func MonoTypeTConCtor(v0 string, v1 []MonoType) MonoType {
-	return MonoTypeTCon{F0: v0, F1: v1}
-}
-
-type MonoTypeTFunc struct {
-	F0 []MonoType
-	F1 *MonoType
-}
-
-func (MonoTypeTFunc) isMonoType() {
-}
-func MonoTypeTFuncCtor(v0 []MonoType, v1 *MonoType) MonoType {
-	return MonoTypeTFunc{F0: v0, F1: v1}
-}
-
-type MonoTypeTVariadic struct {
-	F0 []MonoType
-	F1 *MonoType
-}
-
-func (MonoTypeTVariadic) isMonoType() {
-}
-func MonoTypeTVariadicCtor(v0 []MonoType, v1 *MonoType) MonoType {
-	return MonoTypeTVariadic{F0: v0, F1: v1}
-}
-
-type MonoTypeTTuple struct {
-	F0 []MonoType
-}
-
-func (MonoTypeTTuple) isMonoType() {
-}
-func MonoTypeTTupleCtor(v0 []MonoType) MonoType {
-	return MonoTypeTTuple{F0: v0}
-}
-
-type MonoTypeTUnit struct {
-}
-
-func (MonoTypeTUnit) isMonoType() {
-}
-func MonoTypeTUnitCtor() MonoType {
-	return MonoTypeTUnit{}
-}
-
-type MonoTypeTGoPackage struct {
-	F0 string
-}
-
-func (MonoTypeTGoPackage) isMonoType() {
-}
-func MonoTypeTGoPackageCtor(v0 string) MonoType {
-	return MonoTypeTGoPackage{F0: v0}
-}
-
-type MonoTypeTParam struct {
-	F0 int
-}
-
-func (MonoTypeTParam) isMonoType() {
-}
-func MonoTypeTParamCtor(v0 int) MonoType {
-	return MonoTypeTParam{F0: v0}
 }
 
 type Expr struct {

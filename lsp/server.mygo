@@ -43,7 +43,7 @@ struct MarkupContent
 end
 
 struct Hover
-  Contents: any `json:"contents"`
+  Contents: Any `json:"contents"`
   TextRange: Option[TextRange] `json:"range,omitempty"`
 end
 

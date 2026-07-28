@@ -146,6 +146,10 @@ enum Stmt
   ReturnStmt
   # return statement (with return value)
   ReturnWithStmt(Expr)
+  # leave the innermost while loop
+  BreakStmt
+  # begin the next iteration of the innermost while loop
+  ContinueStmt
 end
 
 # `ExprKind` is a pure expression shape, containing no statement semantics.
@@ -192,19 +196,6 @@ end
 # mapping from Expr → MonoType in TypedInfo.ExprTypes can be recovered
 # by comparing the ID carried in the caller's local copy with the ID
 # stored alongside the MonoType during inference).
-enum MonoType
-  TVar(Int)
-  TKVar(Int)
-  TApp(Ref[MonoType], Slice[MonoType])
-  TCon(String, Slice[MonoType])
-  TFunc(Slice[MonoType], Ref[MonoType])
-  TVariadic(Slice[MonoType], Ref[MonoType])
-  TTuple(Slice[MonoType])
-  TUnit
-  TGoPackage(String)
-  TParam(Int)
-end
-
 struct Expr
   ID: Int
   Pos: SourcePos

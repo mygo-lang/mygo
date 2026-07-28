@@ -155,6 +155,10 @@ func assignStmtID(stmt: Stmt, nextID: Int) -> StmtResult
       StmtResult { Stmt: Stmt.ReturnWithStmt(r.Expr), NextID: r.NextID }
     case ReturnStmt =>
       StmtResult { Stmt: stmt, NextID: nextID }
+    case BreakStmt =>
+      StmtResult { Stmt: stmt, NextID: nextID }
+    case ContinueStmt =>
+      StmtResult { Stmt: stmt, NextID: nextID }
   end
 end
 

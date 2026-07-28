@@ -402,22 +402,44 @@ end
 # 替换 typeName 的类型参数 args 后返回字段的 MonoType。
 func lookupFieldInMonoType(base: ast2.MonoType, field: String, ctx: Ref[egCtx]) -> Option[ast2.MonoType]
   switch base
-    case TCon(typeName, args) =>
-      let fields = ctx.structFields.Get(typeName)
-      switch fields
-        case Some(list) =>
-          let found = findFieldInSlice(list, field, 0)
-          switch found
-            case Some(fieldEntry) =>
-              let bound = ctx.structTypeParams.Get(typeName).UnwrapOr([] as Slice[Int])
-              if bound.Len() == 0 || args.Len() == 0 then
-                Some(fieldEntry.Type)
-              else
-                let subst = bindTypeArgs(bound, args, 0, [] as Slice[typeinference2.SubstEntry])
-                Some(typeinference2.ApplySubst(subst, fieldEntry.Type))
+    case TApp(typeRef, args) then
+      switch typeRef.value()
+        case TCon(typeName) then
+          let fields = ctx.structFields.Get(typeName)
+          switch fields
+            case Some(list) then
+              let found = findFieldInSlice(list, field, 0)
+              switch found
+                case Some(fieldEntry) then
+                  let bound = ctx.structTypeParams.Get(typeName).UnwrapOr([] as Slice[Int])
+                  if bound.Len() == 0 || args.Len() == 0 then
+                    Some(fieldEntry.Type)
+                  else
+                    let subst = bindTypeArgs(bound, args, 0, [] as Slice[typeinference2.SubstEntry])
+                    Some(typeinference2.ApplySubst(subst, fieldEntry.Type))
+                  end
+                end
+                case None => None
               end
+            end
             case None => None
           end
+        end
+        case _ => None
+      end
+    end
+    case TCon(typeName) =>
+      let fields = ctx.structFields.Get(typeName)
+      switch fields
+        case Some(list) then
+          let found = findFieldInSlice(list, field, 0)
+          switch found
+            case Some(fieldEntry) then
+              Some(fieldEntry.Type)
+            end
+            case None => None
+          end
+        end
         case None => None
       end
     case _ => None
@@ -443,12 +465,8 @@ end
 # monoTypeToGoStr: 将 MonoType 转换为 Go 类型字符串，用于 goast 调用。
 func monoTypeToGoStr(t: ast2.MonoType) -> String
   switch t
-    case TCon(name, args) =>
-      if args.Len() == 0 then goPrimitiveTypeName(name) else
-        let argStrs = args.Map(func(a: ast2.MonoType) -> String monoTypeToGoStr(a) end)
-        mygoToGoTypeStr(name + "[" + joinStrings(argStrs, ", ") + "]")
-      end
-    case TFunc(params, ret) =>
+    case TCon(name) => goPrimitiveTypeName(name)
+    case TFunc(params, ret) then
       let paramStrs = params.Map(func(p: ast2.MonoType) -> String monoTypeToGoStr(p) end)
       let retStr = monoTypeToGoStr(ret.value())
       if retStr == "struct{}" then
@@ -456,17 +474,40 @@ func monoTypeToGoStr(t: ast2.MonoType) -> String
       else
         "func(" + joinStrings(paramStrs, ", ") + ") " + retStr
       end
-    case TApp(ctor, args) =>
-      let ctorStr = monoTypeToGoStr(ctor.value())
-      let argStrs = args.Map(func(a: ast2.MonoType) -> String monoTypeToGoStr(a) end)
-      if argStrs.Len() == 0 then ctorStr else ctorStr + "[" + joinStrings(argStrs, ", ") + "]" end
+    end
+    case TApp(ctor, args) then
+      switch ctor.value()
+        # Ref is a compiler-recognised boundary type, never a generated Go
+        # generic.  This path is used for typed local declarations, unlike
+        # goType which already handles Ref in source signatures.
+        case TCon(name) then
+          if name == "Ref" && args.Len() == 1 then
+            "*" + monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit))
+          elsif name == "Slice" && args.Len() == 1 then
+            "[]" + monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit))
+          elsif name == "Map" && args.Len() == 2 then
+            "map[" + monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit)) + "]" + monoTypeToGoStr(args.Get(1).UnwrapOr(ast2.MonoType.TUnit))
+          elsif name == "Set" && args.Len() == 1 then
+            "map[" + monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit)) + "]struct{}"
+          else
+            let ctorStr = monoTypeToGoStr(ctor.value())
+            let argStrs = args.Map(func(a: ast2.MonoType) -> String monoTypeToGoStr(a) end)
+            if argStrs.Len() == 0 then ctorStr else ctorStr + "[" + joinStrings(argStrs, ", ") + "]" end
+          end
+        end
+        case _ =>
+          let ctorStr = monoTypeToGoStr(ctor.value())
+          let argStrs = args.Map(func(a: ast2.MonoType) -> String monoTypeToGoStr(a) end)
+          if argStrs.Len() == 0 then ctorStr else ctorStr + "[" + joinStrings(argStrs, ", ") + "]" end
+      end
+    end
     case TTuple(items) =>
       "struct { " + joinStrings(tupleMonoElemsToStringsNoParams(items, 0, [] as Slice[String]), "; ") + " }"
     case TUnit => "struct{}"
     case TVar(_) => "any"
     case TKVar(_) => "any"
     case TParam(_) => "any"
-    case TGoPackage(_) => "any"
+    case TQualifiedName(path, inner) => monoTypeToGoStr(inner.value())
   end
 end
 
@@ -474,18 +515,37 @@ end
 # type-parameter names of the current function/impl context.
 func monoTypeToGoStrWithParams(t: ast2.MonoType, params: Slice[String]) -> String
   switch t
-    case TParam(id) =>
+    case TParam(id) then
       let index = -id - 1
       params.Get(index).UnwrapOr("any")
-    case TCon(name, args) =>
-      if args.Len() == 0 then goPrimitiveTypeName(name) else
-        let argStrs = args.Map(func(arg: ast2.MonoType) -> String monoTypeToGoStrWithParams(arg, params) end)
-        mygoToGoTypeStr(name + "[" + joinStrings(argStrs, ", ") + "]")
+    end
+    case TApp(typeRef, args) then
+      switch typeRef.value()
+        case TCon(name) then
+          let argStrs = args.Map(func(arg: ast2.MonoType) -> String
+            monoTypeToGoStrWithParams(arg, params)
+          end)
+          if name == "Ref" && argStrs.Len() == 1 then
+            "*" + argStrs.Get(0).UnwrapOr("any")
+          elsif name == "Slice" && argStrs.Len() == 1 then
+            "[]" + argStrs.Get(0).UnwrapOr("any")
+          elsif name == "Map" && argStrs.Len() == 2 then
+            "map[" + argStrs.Get(0).UnwrapOr("any") + "]" + argStrs.Get(1).UnwrapOr("any")
+          elsif name == "Set" && argStrs.Len() == 1 then
+            "map[" + argStrs.Get(0).UnwrapOr("any") + "]struct{}"
+          else
+            mygoToGoTypeStr(name + "[" + joinStrings(argStrs, ", ") + "]")
+          end
+        end
+        case _ => monoTypeToGoStr(t)
       end
-    case TFunc(items, ret) =>
+    end
+    case TCon(name) => goPrimitiveTypeName(name)
+    case TFunc(items, ret) then
       let argStrs = items.Map(func(arg: ast2.MonoType) -> String monoTypeToGoStrWithParams(arg, params) end)
       let retStr = monoTypeToGoStrWithParams(ret.value(), params)
       if retStr == "struct{}" then "func(" + joinStrings(argStrs, ", ") + ")" else "func(" + joinStrings(argStrs, ", ") + ") " + retStr end
+    end
     case TTuple(items) =>
       "struct { " + joinStrings(tupleMonoElemsToStrings(items, params, 0, [] as Slice[String]), "; ") + " }"
     case _ => monoTypeToGoStr(t)

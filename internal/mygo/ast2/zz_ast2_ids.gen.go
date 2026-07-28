@@ -140,6 +140,14 @@ func assignStmtID(stmt Stmt, nextID int) StmtResult {
 									if _, ok := stmt.(StmtReturnStmt); ok {
 										__mygo_expr_0 = StmtResult{Stmt: stmt, NextID: nextID}
 									} else {
+										if _, ok := stmt.(StmtBreakStmt); ok {
+											__mygo_expr_0 = StmtResult{Stmt: stmt, NextID: nextID}
+										} else {
+											if _, ok := stmt.(StmtContinueStmt); ok {
+												__mygo_expr_0 = StmtResult{Stmt: stmt, NextID: nextID}
+											} else {
+											}
+										}
 									}
 								}
 							}

@@ -219,7 +219,8 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                                 Err(fmt.Errorf("bootstrap Go FFI %s: %s", dir, err.Error()))
                               end
                               case Ok(_) then
-                                let inferred = typeinference2.InferPackageWithExternal(inputs.Sources, externalSources, packagesRef.value())
+                                let myGoPkgInfos = bootstrapCollectMyGoPkgInfos(workspaceRoot, bootstrapImportsFromSources(inputs.Sources), 0, state, [] as Slice[typeinference2.MyGoPackageInfo])
+                                let inferred = typeinference2.InferPackageWithExternal(inputs.Sources, externalSources, packagesRef.value(), myGoPkgInfos)
                                 switch inferred
                                   case Err(msg) then
                                     state.Compiling.Delete(dir)
@@ -638,6 +639,35 @@ func bootstrapTypeName(typ: ast2.TypeExpr) -> String
     case NamedType(name, _) => name
     case UnitType => "()"
     case _ => "any"
+  end
+end
+
+# bootstrapCollectMyGoPkgInfos collects MyGO package info (alias + decls) from the
+# bootstrap sources cache so they can be passed to InferPackageWithExternal.
+func bootstrapCollectMyGoPkgInfos(workspaceRoot: String, imports: Slice[BootstrapImport], index: Int, state: BootstrapState, out: Slice[typeinference2.MyGoPackageInfo]) -> Slice[typeinference2.MyGoPackageInfo]
+  if index >= imports.Len() then
+    out
+  else
+    let imp = imports.Get(index).UnwrapOr(BootstrapImport { Alias: "", Path: "" })
+    let resolved = bootstrapResolveImport(workspaceRoot, "", imp.Path)
+    switch resolved
+      case Err(_) => bootstrapCollectMyGoPkgInfos(workspaceRoot, imports, index + 1, state, out)
+      case Ok(depDir) =>
+        switch state.SourcesCache.Get(depDir)
+          case Some(inputs) =>
+            let info = typeinference2.MyGoPackageInfo { Alias: imp.Alias, Path: imp.Path, Decls: bootstrapFlattenSources(inputs.Sources, 0, [] as Slice[ast2.Decl]) }
+            bootstrapCollectMyGoPkgInfos(workspaceRoot, imports, index + 1, state, out.Append(info))
+          case None => bootstrapCollectMyGoPkgInfos(workspaceRoot, imports, index + 1, state, out)
+        end
+    end
+  end
+end
+
+func bootstrapFlattenSources(sources: Slice[typeinference2.PkgDeclSource], index: Int, out: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+  if index >= sources.Len() then out else
+    let source = sources.Get(index).UnwrapOr(typeinference2.PkgDeclSource { Path: "", Decls: [] as Slice[ast2.Decl] })
+    let next = source.Decls.Fold(out, func(acc: Slice[ast2.Decl], d: ast2.Decl) -> Slice[ast2.Decl] acc.Append(d) end)
+    bootstrapFlattenSources(sources, index + 1, next)
   end
 end
 

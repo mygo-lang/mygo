@@ -88,6 +88,8 @@ func translateAstLeadingStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[g
       end
     end
     case WhileStmt(cond, body) => translateAstWhileStmt(cond, body, ctx)
+    case BreakStmt => Ok(astSingleStmt(goast.Break()))
+    case ContinueStmt => Ok(astSingleStmt(goast.Continue()))
     case ReturnStmt => Ok(astSingleStmt(goast.Return([] as Slice[goast.Expr])))
     case ReturnWithStmt(expr) => translateAstReturnExpr(expr, ctx)
     case TupleLetStmt(names, value) => translateAstTupleLetStmt(names, value, ctx)
@@ -149,15 +151,15 @@ end
 # call sites still type-check.
 func tupleInnerType(t: ast2.MonoType) -> ast2.MonoType
   switch t
-    case TCon(name, args) =>
-      if name == "Slice" && args.Len() == 1 then args.Get(0).UnwrapOr(ast2.MonoType.TUnit) else t end
-    case TApp(ctor, args) =>
+    case TApp(ctor, args) then
       let ctorStr = ctor.value()
       switch ctorStr
-        case TCon(name, _) =>
-          if name == "Slice" && args.Len() == 1 then args.Get(0).UnwrapOr(ast2.MonoType.TUnit) else t end
+        case TCon(name) then
+          if name == "Slice" && args.Len() == 1 => args.Get(0).UnwrapOr(ast2.MonoType.TUnit) else t
+        end
         case _ => t
       end
+    end
     case _ => t
   end
 end

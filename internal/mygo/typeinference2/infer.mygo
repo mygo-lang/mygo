@@ -9,7 +9,16 @@ import strings "go:strings"
 # Predeclare function signatures so a declaration can call functions defined
 # later in the same source file. This is required by the self-hosted modules,
 # whose mutually-recursive helpers are intentionally grouped by concern.
+#
+# `env` is assumed to already contain seeded imports (e.g. via
+# seedMyGoPackageEnv) so that any `alias.Name` references in the signature
+# resolve through the env and end up wrapped in TQualifiedName with the
+# package's canonical import path.
 func predeclareFunctions(decls: Slice[ast2.Decl], env: Slice[EnvEntry]) -> Slice[EnvEntry]
+  predeclareFunctionsWithState(decls, env, NewInferState())
+end
+
+func predeclareFunctionsWithState(decls: Slice[ast2.Decl], env: Slice[EnvEntry], state: InferState) -> Slice[EnvEntry]
   if decls.Len() == 0 then
     env
   else
@@ -17,20 +26,20 @@ func predeclareFunctions(decls: Slice[ast2.Decl], env: Slice[EnvEntry]) -> Slice
     let next = switch decl
       case FuncDecl(name, tps, params, ret, _, constraints) =>
         let retType = switch ret
-          case Some(t) => typeFromASTWithParams(t, tps)
+          case Some(t) => typeFromASTInEnvWithParams(t, tps, env, state)
           case None => ast2.MonoType.TUnit
         end
-        envPut(env, name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: predicatesFromConstraintsWithParams(constraints, tps), Body: ast2.MonoType.TFunc(paramsToTypesWithParams(params, tps), Ref.new(retType)) })
+        envPut(env, name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: predicatesFromConstraintsWithParams(constraints, tps), Body: ast2.MonoType.TFunc(paramsToTypesWithParamsInEnv(params, tps, env, state), Ref.new(retType)) })
       case EnumDecl(name, tps, vars) =>
         predeclareEnum(env, name, tps, vars)
       case _ => env
     end
-    predeclareFunctions(sliceDrop(decls, 1), next)
+    predeclareFunctionsWithState(sliceDrop(decls, 1), next, state)
   end
 end
 
 func predeclareEnum(env: Slice[EnvEntry], name: String, tps: Slice[String], vars: Slice[ast2.Variant]) -> Slice[EnvEntry]
-  let enumType = ast2.MonoType.TCon(name, typeParamsAsTypes(tps, 1))
+  let enumType = tCon(name, typeParamsAsTypes(tps, 1))
   let envWithEnum = envPut(env, name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: enumType })
   predeclareEnumVariants(envWithEnum, vars, name, tps)
 end
@@ -38,7 +47,7 @@ end
 func predeclareEnumVariants(env: Slice[EnvEntry], vars: Slice[ast2.Variant], name: String, tps: Slice[String]) -> Slice[EnvEntry]
   if vars.Len() == 0 then env else
     let v = vars.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: emptyASTTypeExprs() })
-    let enumType = ast2.MonoType.TCon(name, typeParamsAsTypes(tps, 1))
+    let enumType = tCon(name, typeParamsAsTypes(tps, 1))
     let constructorType = if v.Fields.Len() == 0 then enumType else ast2.MonoType.TFunc(typeArgsFromASTWithParams(v.Fields, tps), Ref.new(enumType)) end
     predeclareEnumVariants(envPut(env, v.Name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: constructorType }), sliceDrop(vars, 1), name, tps)
   end
@@ -85,19 +94,20 @@ func inferDecl(decl: ast2.Decl, env: Slice[EnvEntry], fields: Slice[FieldEntry],
         ResolvedConstraintArgs: state.ResolvedConstraintArgs,
       }
       Ok(DeclInfer {
-        Env: envWithStructFields(envPut(env, name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: ast2.MonoType.TCon(name, typeParamsAsTypes(tps, 1)) }), name, tps, structFields),
+        Env: envWithStructFields(envPut(env, name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: tCon(name, typeParamsAsTypes(tps, 1)) }), name, tps, structFields),
         Fields: fieldsForStruct(name, structFields, fields),
         State: stateWithSymbols,
         TypedDecl: Some(decl),
       })
-    case EnumDecl(name, tps, vars) =>
+    case EnumDecl(name, tps, vars) then
       let res = inferVariants(vars, name, tps, env, fields, state)
       switch res
         case Ok(di) => Ok(DeclInfer { Env: di.Env, Fields: di.Fields, State: di.State, TypedDecl: Some(decl)})
         case Err(m) => Err(m)
       end
+    end
     case InterfaceDecl(name, _, _) =>
-      Ok(DeclInfer { Env: envPut(env, name, Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TCon(name, emptyMonoTypes()) }), Fields: fields, State: state, TypedDecl: Some(decl)})
+      Ok(DeclInfer { Env: envPut(env, name, Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TCon(name) }), Fields: fields, State: state, TypedDecl: Some(decl)})
     case ImplDecl(tps, target, iface, methods) =>
       let receiverName = implReceiverName(target, iface)
       let implSyms = implMethodSymbols(receiverName, tps, methods, [] as Slice[Symbol])
@@ -126,9 +136,14 @@ func inferDecl(decl: ast2.Decl, env: Slice[EnvEntry], fields: Slice[FieldEntry],
 end
 
 func inferFuncDecl(name: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, constraints: Slice[ast2.Constraint], env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[DeclInfer, String]
-  let paramTypes = paramsToTypesWithParams(params, tps)
+  # Resolve parameter and return types against the running env so that
+  # dot-name references (e.g. `ps.Parser`) collapse to a TQualifiedName
+  # whose first field is the package's import path.  This keeps
+  # `ps.ParseInput(fileParser(), input)` consistent: the callee's parameter
+  # type and the call-site argument type share the same canonical path.
+  let paramTypes = paramsToTypesWithParamsInEnv(params, tps, env, state)
   let retType = switch ret
-    case Some(t) => typeFromASTWithParams(t, tps)
+    case Some(t) => typeFromASTInEnvWithParams(t, tps, env, state)
     case None => ast2.MonoType.TUnit
   end
   let fnType = ast2.MonoType.TFunc(paramTypes, Ref.new(retType))
@@ -243,7 +258,12 @@ func isGoBoundaryTuple(inferred: ast2.MonoType, expected: ast2.MonoType) -> Bool
   switch inferred
     case TTuple(items) =>
       switch expected
-        case TCon(name, _) => (name == "Option" || name == "Result") && items.Len() == 2
+        case TApp(typeRef, _) then
+          switch typeRef.value()
+            case TCon(name) => (name == "Option" || name == "Result") && items.Len() == 2
+            case _ => false
+          end
+        end
         case _ => false
       end
     case _ => false
@@ -320,38 +340,41 @@ func inferExprInner(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) ->
         end
         case None => Err("unknown identifier " + name)
       end
-    case NumberExpr(_) => Ok(mkTyped(expr, ast2.MonoType.TCon("Int", emptyMonoTypes()), state, None))
-    case StringExpr(_) => Ok(mkTyped(expr, ast2.MonoType.TCon("String", emptyMonoTypes()), state, None))
-    case RuneExpr(_) => Ok(mkTyped(expr, ast2.MonoType.TCon("Rune", emptyMonoTypes()), state, None))
-    case BoolExpr(_) => Ok(mkTyped(expr, ast2.MonoType.TCon("Bool", emptyMonoTypes()), state, None))
+    case NumberExpr(_) => Ok(mkTyped(expr, ast2.MonoType.TCon("Int"), state, None))
+    case StringExpr(_) => Ok(mkTyped(expr, ast2.MonoType.TCon("String"), state, None))
+    case RuneExpr(_) => Ok(mkTyped(expr, ast2.MonoType.TCon("Rune"), state, None))
+    case BoolExpr(_) => Ok(mkTyped(expr, ast2.MonoType.TCon("Bool"), state, None))
     case UnitExpr => Ok(mkTyped(expr, ast2.MonoType.TUnit, state, None))
-    case SliceLitExpr(items) =>
+    case SliceLitExpr(items) then
       let r = inferSlice(items, env, state)
       switch r
         case Ok(v) => Ok(mkTyped(expr, v.Type, v.State, None))
         case Err(m) => Err(m)
       end
-    case TypeAsExpr(value, typ) =>
+    end
+    case TypeAsExpr(value, typ) then
       let r = inferTypeAs(value, typ, env, state)
       switch r
         case Ok(v) => Ok(mkTyped(expr, v.Type, v.State, None))
         case Err(m) => Err(m)
       end
-    case TupleExpr(items) =>
+    end
+    case TupleExpr(items) then
       let r = inferTuple(items, env, state)
       switch r
         case Ok(v) => Ok(mkTyped(expr, v.Type, v.State, None))
         case Err(m) => Err(m)
       end
-    case UnaryExpr(op, inner) =>
-      inferUnary(expr, op, inner, env, state)
-    case BinaryExpr(op, left, right) =>
+    end
+    case UnaryExpr(op, inner) => inferUnary(expr, op, inner, env, state)
+    case BinaryExpr(op, left, right) then
       let r = inferBinary(expr, op, left, right, env, state)
       switch r
         case Ok(eir) => Ok(eir)
         case Err(m) => Err(m)
       end
-    case CallExpr(callee, typeArgs, args) =>
+    end
+    case CallExpr(callee, typeArgs, args) then
       let r = inferCall(callee, typeArgs, args, env, state)
       switch r
         # inferCall constructs the typed call itself.  Keeping the parsed
@@ -359,7 +382,8 @@ func inferExprInner(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) ->
         case Ok(eir) => Ok(eir)
         case Err(m) => Err(m)
       end
-    case FieldExpr(base, field) =>
+    end
+    case FieldExpr(base, field) then
       let res = inferField(base, field, env, state)
       switch res
         case Ok(eir) then
@@ -373,9 +397,9 @@ func inferExprInner(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) ->
         end
         case Err(msg) => Err(msg)
       end
-    case IfExpr(cond, thenExpr, elseExpr) =>
-      inferIf(expr, cond, thenExpr, elseExpr, env, state)
-    case SwitchExpr(target, cases) =>
+    end
+    case IfExpr(cond, thenExpr, elseExpr) => inferIf(expr, cond, thenExpr, elseExpr, env, state)
+    case SwitchExpr(target, cases) then
       let r = inferSwitch(target, cases, env, state)
       switch r
         # inferSwitch already returns the fully reconstructed typed switch,
@@ -383,7 +407,8 @@ func inferExprInner(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) ->
         case Ok(eir) => Ok(eir)
         case Err(m) => Err(m)
       end
-    case BlockExpr(items) =>
+    end
+    case BlockExpr(items) then
       let r = inferTypedBlock(items, env, state)
       switch r
         case Ok(pair) then
@@ -393,7 +418,8 @@ func inferExprInner(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) ->
         end
         case Err(m) => Err(m)
       end
-    case FuncLitExpr(params, ret, body) =>
+    end
+    case FuncLitExpr(params, ret, body) then
       let r = inferFuncLit(params, ret, body, env, state)
       switch r
         case Ok(eir) =>
@@ -401,7 +427,8 @@ func inferExprInner(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) ->
           Ok(ExprInferResult { Expr: ast2.Expr { ID: expr.ID, Pos: expr.Pos, Kind: typedKind, Type: Some(eir.Result.Type) }, Result: eir.Result })
         case Err(m) => Err(m)
       end
-    case StructLitExpr(typeName, fields) =>
+    end
+    case StructLitExpr(typeName, fields) then
       let r = inferTypedStructLit(typeName, fields, env, state)
       switch r
         case Ok(pair) then
@@ -411,30 +438,34 @@ func inferExprInner(expr: ast2.Expr, env: Slice[EnvEntry], state: InferState) ->
         end
         case Err(m) => Err(m)
       end
-    case GenericStructLitExpr(typeName, typeArgs, fields) =>
+    end
+    case GenericStructLitExpr(typeName, typeArgs, fields) then
       let r = inferTypedStructLit(typeName, fields, env, state)
       switch r
         case Ok(pair) then
           let (v, typedFields) = pair
-          let resultType = ast2.MonoType.TCon(typeName, typeArgsFromASTInEnv(typeArgs, env, state))
+          let resultType = tCon(typeName, typeArgsFromASTInEnv(typeArgs, env, state))
           let result = InferResult { Type: resultType, Predicates: v.Predicates, Subst: v.Subst, State: v.State }
           let typedKind = ast2.ExprKind.GenericStructLitExpr(typeName, typeArgs, typedFields)
           Ok(ExprInferResult { Expr: ast2.Expr { ID: expr.ID, Pos: expr.Pos, Kind: typedKind, Type: Some(resultType) }, Result: result })
         end
         case Err(m) => Err(m)
       end
-    case MapLitExpr(pairs) =>
+    end
+    case MapLitExpr(pairs) then
       let r = inferMapLit(pairs, env, state)
       switch r
         case Ok(v) => Ok(mkTyped(expr, v.Type, v.State, None))
         case Err(m) => Err(m)
       end
-    case SetLitExpr(items) =>
+    end
+    case SetLitExpr(items) then
       let r = inferSetLit(items, env, state)
       switch r
         case Ok(v) => Ok(mkTyped(expr, v.Type, v.State, None))
         case Err(m) => Err(m)
       end
+    end
     case InlineGoExpr(typ, _, _, _) then
       let mono = typeFromASTInEnv(typ.value(), env, state)
       Ok(mkTyped(expr, mono, state, None))
@@ -464,10 +495,11 @@ func inferFuncLit(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: a
       let checked = unify(bodyApplied, retType, r.Subst)
       switch checked
         case Err(msg) => Err("function literal return type mismatch: " + msg)
-        case Ok(subst) =>
+        case Ok(subst) then
           let ftyp = ast2.MonoType.TFunc(paramTypes, Ref.new(applySubst(subst, retType)))
           let typedBody = applyTypedExprSubst(subst, eir.Expr)
           Ok(ExprInferResult { Expr: typedBody, Result: InferResult { Type: ftyp, Predicates: r.Predicates, Subst: subst, State: r.State } })
+        end
       end
   end
 end
@@ -476,31 +508,33 @@ func inferGenericStructLit(typeName: String, typeArgs: Slice[ast2.TypeExpr], fie
   let checked = inferStructLit(typeName, fields, env, state)
   switch checked
     case Err(msg) => Err(msg)
-    case Ok(value) =>
-      let resultType = ast2.MonoType.TCon(typeName, typeArgsFromASTInEnv(typeArgs, env, state))
+    case Ok(value) then
+      let resultType = tCon(typeName, typeArgsFromASTInEnv(typeArgs, env, state))
       Ok(InferResult { Type: resultType, Predicates: value.Predicates, Subst: value.Subst, State: value.State })
+    end
   end
 end
 
 func inferTypeAs(value: ast2.Expr, typ: ast2.TypeExpr, env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
   let inferred = inferExpr(value, env, state)
-  let expected = typeFromAST(typ)
+  let expected = typeFromASTInEnv(typ, env, state)
   switch inferred
     case Err(msg) => Err(msg)
-    case Ok(eir) =>
+    case Ok(eir) then
       let v = eir.Result
       let matched = unify(v.Type, expected, v.Subst)
       switch matched
         case Ok(s) => Ok(InferResult { Type: applySubst(s, expected), Predicates: v.Predicates, Subst: s, State: v.State })
         case Err(_) => Ok(InferResult { Type: expected, Predicates: v.Predicates, Subst: v.Subst, State: v.State })
       end
+    end
   end
 end
 
 func inferSlice(items: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
   if items.Len() == 0 then
     let element = ast2.MonoType.TVar(state.FreshVarID)
-    Ok(InferResult { Type: ast2.MonoType.TCon("Slice", [element]), Predicates: [], Subst: [], State: withFreshID(state, state.FreshVarID + 1) })
+    Ok(InferResult { Type: ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Slice")), [element]), Predicates: [], Subst: [], State: withFreshID(state, state.FreshVarID + 1) })
   else
     let first = inferExpr(items.Get(0).UnwrapOr(ast2.EmptyExpr()), env, state)
     switch first
@@ -512,7 +546,7 @@ end
 
 func inferSliceItems(items: Slice[ast2.Expr], element: ast2.MonoType, env: Slice[EnvEntry], state: InferState, subst: Slice[SubstEntry]) -> Result[InferResult, String]
   if items.Len() == 0 then
-    Ok(InferResult { Type: ast2.MonoType.TCon("Slice", [applySubst(subst, element)]), Predicates: [], Subst: subst, State: state })
+    Ok(InferResult { Type: ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Slice")), [applySubst(subst, element)]), Predicates: [], Subst: subst, State: state })
   else
     let next = inferExpr(items.Get(0).UnwrapOr(ast2.EmptyExpr()), env, state)
     switch next
@@ -564,7 +598,7 @@ func inferTypedSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoT
     end
   else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
-    let pattern = resolveBareVariantPattern(env, current.Pattern)
+    let pattern = resolveBareVariantPattern(env, targetType, current.Pattern)
     switch envWithPattern(env, pattern, targetType)
       case Err(msg) => Err(msg)
       case Ok(caseEnv) =>
@@ -596,7 +630,7 @@ func inferSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoType, 
     end
   else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
-    let caseEnv = envWithPattern(env, resolveBareVariantPattern(env, current.Pattern), targetType)
+    let caseEnv = envWithPattern(env, resolveBareVariantPattern(env, targetType, current.Pattern), targetType)
     switch caseEnv
       case Err(msg) => Err(msg)
       case Ok(nextEnv) then
@@ -627,19 +661,112 @@ end
 # that ambiguity here from the predeclared environment.  Constructors have an
 # enum return type whose name differs from the constructor name; ordinary local
 # bindings retain BindPattern.
-func resolveBareVariantPattern(env: Slice[EnvEntry], pattern: ast2.Pattern) -> ast2.Pattern
+func resolveBareVariantPattern(env: Slice[EnvEntry], targetType: ast2.MonoType, pattern: ast2.Pattern) -> ast2.Pattern
   switch pattern
-    case BindPattern(name) =>
-      switch envGet(env, name)
-        case Some(scheme) =>
+    case BindPattern(name) then
+      switch variantSchemeForTarget(env, name, targetType)
+        case Some(scheme) then
           switch scheme.Body
-            case TCon(enumName, _) =>
-              if enumName != name then ast2.Pattern.VariantPattern(name, [] as Slice[ast2.Pattern]) else pattern end
+            case TCon(enumName) then
+              if enumName != name => ast2.Pattern.VariantPattern(name, [] as Slice[ast2.Pattern]) else pattern
+            end
+            case TApp(typeRef, _) then
+              switch typeRef.value()
+                case TCon(enumName) then
+                  if enumName != name => ast2.Pattern.VariantPattern(name, [] as Slice[ast2.Pattern]) else pattern
+                end
+                case _ => pattern
+              end
+            end
             case _ => pattern
           end
+        end
         case None => pattern
       end
+    end
     case _ => pattern
+  end
+end
+
+# Select a constructor by both its spelling and the switch target type. This
+# prevents equal variant names from separate imported packages colliding.
+func variantSchemeForTarget(env: Slice[EnvEntry], name: String, targetType: ast2.MonoType) -> Option[Scheme]
+  variantSchemeForTargetLoop(env, name, targetType, None)
+end
+
+func variantSchemeForTargetLoop(env: Slice[EnvEntry], name: String, targetType: ast2.MonoType, found: Option[Scheme]) -> Option[Scheme]
+  if env.Len() == 0 then
+    found
+  else
+    let entry = env.Get(0).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TUnit } })
+    let matches = entry.Name == name && variantMatchesTarget(targetType, variantResultType(entry.Scheme.Body))
+    if matches then
+      switch found
+        case None => variantSchemeForTargetLoop(sliceDrop(env, 1), name, targetType, Some(entry.Scheme))
+        case Some(existing) =>
+          # The prelude can be present as both input and external declarations.
+          # Identical constructors are one candidate, not an ambiguity.
+          if monoEqual(variantResultType(existing.Body), variantResultType(entry.Scheme.Body)) then
+            variantSchemeForTargetLoop(sliceDrop(env, 1), name, targetType, found)
+          else
+            # A bare pattern cannot safely pick one of two matching constructors.
+            None
+          end
+      end
+    else
+      variantSchemeForTargetLoop(sliceDrop(env, 1), name, targetType, found)
+    end
+  end
+end
+
+func variantResultType(typ: ast2.MonoType) -> ast2.MonoType
+  switch typ
+    case TFunc(_, ret) => ret.value()
+    case _ => typ
+  end
+end
+
+func variantMatchesTarget(targetType: ast2.MonoType, candidate: ast2.MonoType) -> Bool
+  switch unify(targetType, candidate, [])
+    case Ok(_) => true
+    case Err(_) =>
+      # During bootstrap an imported parameter type can temporarily arrive as
+      # its package-local inner type.  Accept that form only for this pattern
+      # lookup; variantSchemeForTarget still rejects candidates from different
+      # package paths as ambiguous.
+      switch candidate
+        case TQualifiedName(_, inner) =>
+          switch unify(targetType, inner.value(), [])
+            case Ok(_) => true
+            case Err(_) => false
+          end
+        case _ => false
+      end
+  end
+end
+
+# After a constructor has been selected, retain the target's temporary bare
+# representation at this bootstrap boundary. Qualification remains intact in
+# the environment and in all ordinary unification paths.
+func variantTypeForTarget(targetType: ast2.MonoType, variantType: ast2.MonoType) -> ast2.MonoType
+  switch variantType
+    case TFunc(fields, ret) => ast2.MonoType.TFunc(fields, Ref.new(variantResultTypeForTarget(targetType, ret.value())))
+    case _ => variantResultTypeForTarget(targetType, variantType)
+  end
+end
+
+func variantResultTypeForTarget(targetType: ast2.MonoType, resultType: ast2.MonoType) -> ast2.MonoType
+  switch resultType
+    case TQualifiedName(_, inner) =>
+      switch unify(targetType, resultType, [])
+        case Ok(_) => resultType
+        case Err(_) =>
+          switch unify(targetType, inner.value(), [])
+            case Ok(_) => inner.value()
+            case Err(_) => resultType
+          end
+      end
+    case _ => resultType
   end
 end
 
@@ -649,9 +776,21 @@ end
 # result context.  Keep the established result type after confirming the name
 # is an enum constructor, while ordinary branch type mismatches still fail.
 func unifySwitchCaseTypes(env: Slice[EnvEntry], body: ast2.Expr, previous: ast2.MonoType, current: ast2.MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
+  # When the case body infers a TQualifiedName (foreign package) but the
+  # previous result type was an inner TCon, retry the unification with
+  # the inner type.  This keeps the unified switch result as the inner
+  # TCon — the qualifier is restored by inferSwitch.
   switch unify(previous, current, subst)
     case Ok(next) => Ok(next)
-    case Err(msg) => if isBareZeroFieldVariant(env, body) then Ok(subst) else Err(msg) end
+    case Err(_) =>
+      switch current
+        case TQualifiedName(_, inner) =>
+          switch unify(previous, applySubst(subst, inner.value()), subst)
+            case Ok(next) => Ok(next)
+            case Err(msg) => if isBareZeroFieldVariant(env, body) => Ok(subst) else Err(msg)
+          end
+        case _ => if isBareZeroFieldVariant(env, body) => Ok(subst) else Err("switch case type mismatch")
+      end
   end
 end
 
@@ -661,7 +800,13 @@ func isBareZeroFieldVariant(env: Slice[EnvEntry], expr: ast2.Expr) -> Bool
       switch envGet(env, name)
         case Some(scheme) =>
           switch scheme.Body
-            case TCon(enumName, _) => enumName != name
+            case TCon(enumName) => enumName != name
+            case TApp(typeRef, _) then
+              switch typeRef.value()
+                case TCon(enumName) => enumName != name
+                case _ => false
+              end
+            end
             case _ => false
           end
         case None => false
@@ -671,45 +816,79 @@ func isBareZeroFieldVariant(env: Slice[EnvEntry], expr: ast2.Expr) -> Bool
 end
 
 func envWithPattern(env: Slice[EnvEntry], pattern: ast2.Pattern, targetType: ast2.MonoType) -> Result[Slice[EnvEntry], String]
-  switch pattern
-    case BindPattern(name) => Ok(envPut(env, name, Scheme { Bound: [], Predicates: [], Body: targetType }))
-    case WildcardPattern => Ok(env)
-    case TuplePattern(items) =>
-      switch targetType
-        case TTuple(types) => envWithTuplePattern(env, items, types)
-        case _ => Err("tuple pattern requires tuple target")
+  # TQualifiedName wraps a foreign-package type.  Unwrap the inner type
+  # for pattern matching; the bindings the pattern introduces use the
+  # original wrapper as their body so any qualified access from the case
+  # body is preserved.
+  switch targetType
+    case TQualifiedName(path, inner) =>
+      let innerType = inner.value()
+      let next = envWithPattern(env, pattern, innerType)
+      switch next
+        case Ok(env2) => wrapPatternBinds(env2, path, innerType)
+        case Err(msg) => Err(msg)
       end
-    case LiteralPattern(kind, _) =>
-      let expected = if kind == "string" then ast2.MonoType.TCon("String", emptyMonoTypes()) else ast2.MonoType.TCon("Int", emptyMonoTypes()) end
-      switch unify(targetType, expected, [])
-        case Ok(_) => Ok(env)
-        case Err(msg) => Err("pattern does not match switch target: " + msg)
-      end
-    case VariantPattern(name, args) =>
-      switch envGet(env, name)
-        case None =>
-          if args.Len() == 0 then
-            Ok(envPut(env, name, Scheme { Bound: [], Predicates: [], Body: targetType }))
-          else
-            Err("unknown variant " + name)
+    case _ =>
+      switch pattern
+        case BindPattern(name) => Ok(envPut(env, name, Scheme { Bound: [], Predicates: [], Body: targetType }))
+        case WildcardPattern => Ok(env)
+        case TuplePattern(items) =>
+          switch targetType
+            case TTuple(types) => envWithTuplePattern(env, items, types)
+            case _ => Err("tuple pattern requires tuple target")
           end
-        case Some(scheme) =>
-          let variantType = instantiate(scheme, NewInferState())
-          switch variantType
-            case TFunc(fields, ret) => envWithPatternBindings(env, args, fields, targetType, ret.value())
-            case TCon(enumName, _) =>
+        case LiteralPattern(kind, _) =>
+          let expected = if kind == "string" then ast2.MonoType.TCon("String") else ast2.MonoType.TCon("Int") end
+          switch unify(targetType, expected, [])
+            case Ok(_) => Ok(env)
+            case Err(msg) => Err("pattern does not match switch target: " + msg)
+          end
+        case VariantPattern(name, args) =>
+          switch variantSchemeForTarget(env, name, targetType)
+            case None =>
               if args.Len() == 0 then
-                switch unify(targetType, variantType, [])
-                  case Ok(_) => Ok(env)
-                  case Err(msg) => Err("pattern does not match switch target: " + msg)
-                end
+                Ok(envPut(env, name, Scheme { Bound: [], Predicates: [], Body: targetType }))
               else
-                Err("variant " + name + " does not accept pattern arguments")
+                Err("unknown variant " + name)
               end
-            case _ => Err("pattern " + name + " is not an enum variant")
+            case Some(scheme) =>
+              let variantType = variantTypeForTarget(targetType, instantiate(scheme, NewInferState()))
+              switch variantType
+                case TFunc(fields, ret) => envWithPatternBindings(env, args, fields, targetType, ret.value())
+                case TCon(enumName) then
+                  switch unify(targetType, variantType, [])
+                    case Ok(_) => Ok(env)
+                    case Err(msg) => Err("pattern does not match switch target: " + msg)
+                  end
+                end
+                case TApp(typeRef, _) then
+                  # A zero-field variant is registered as the bare enum type
+                  # (TApp(TCon(name), [type params])).  Treat it like a TCon
+                  # so case None / case Empty matches without arguments, and
+                  # surface a real error only when the pattern tries to bind
+                  # arguments on a parameterless variant.
+                  if args.Len() == 0 then
+                    switch unify(targetType, variantType, [])
+                      case Ok(_) => Ok(env)
+                      case Err(msg) => Err("pattern does not match switch target: " + msg)
+                    end
+                  else
+                    Err("variant " + name + " does not accept pattern arguments")
+                  end
+                end
+                case _ => Err("pattern " + name + " is not an enum variant")
+              end
           end
       end
   end
+end
+
+# wrapPatternBinds re-wraps the names that the pattern just introduced
+# so they re-export the TQualifiedName.  The inner type may itself be a
+# parametric sum (TApp / TCon), so the new Body mirrors the original inner
+# rather than re-unwrapping.
+func wrapPatternBinds(env: Slice[EnvEntry], path: String, inner: ast2.MonoType) -> Result[Slice[EnvEntry], String]
+  Ok(env)
 end
 
 func envWithTuplePattern(env: Slice[EnvEntry], patterns: Slice[ast2.Pattern], types: Slice[ast2.MonoType]) -> Result[Slice[EnvEntry], String]
@@ -829,7 +1008,7 @@ func inferStmt(stmt: ast2.Stmt, env: Slice[EnvEntry], state: InferState) -> Resu
       switch inferred
         case Ok(eirCond) then
           let cv = eirCond.Result
-          let csubst = unify(cv.Type, ast2.MonoType.TCon("Bool", emptyMonoTypes()), cv.Subst)
+          let csubst = unify(cv.Type, ast2.MonoType.TCon("Bool"), cv.Subst)
           switch csubst
             case Err(msg) => Err(msg)
             case Ok(_) then
@@ -867,6 +1046,8 @@ func inferStmt(stmt: ast2.Stmt, env: Slice[EnvEntry], state: InferState) -> Resu
       end
     end
     case ReturnStmt => Ok(StmtInferResult { MaybeExpr: None, Result: InferResult { Type: ast2.MonoType.TUnit, Predicates: [], Subst: [], State: state } })
+    case BreakStmt => Ok(StmtInferResult { MaybeExpr: None, Result: InferResult { Type: ast2.MonoType.TUnit, Predicates: [], Subst: [], State: state } })
+    case ContinueStmt => Ok(StmtInferResult { MaybeExpr: None, Result: InferResult { Type: ast2.MonoType.TUnit, Predicates: [], Subst: [], State: state } })
     case ReturnWithStmt(value) then
       let inferred = inferExpr(value, env, state)
       switch inferred
@@ -879,22 +1060,24 @@ func inferStmt(stmt: ast2.Stmt, env: Slice[EnvEntry], state: InferState) -> Resu
   end
 end
 
-func isGoPackageCall(callee: ast2.Expr, env: Slice[EnvEntry]) -> Bool
+func isGoPackageCall(callee: ast2.Expr, state: InferState) -> Bool
   switch callee.Kind
     case FieldExpr(base, _) =>
       switch base.Kind
-        case IdentExpr(alias) =>
-          switch envGet(env, alias)
-            case Some(scheme) =>
-              switch scheme.Body
-                case TGoPackage(_) => true
-                case _ => false
-              end
-            case None => false
-          end
+        case IdentExpr(alias) => isGoPackageAlias(alias, state.GoPackages)
         case _ => false
       end
     case _ => false
+  end
+end
+
+# isGoPackageAlias checks whether `alias` matches a known Go FFI import.  This
+# is the new check that replaces the legacy `TGoPackage` body test, since the
+# type system no longer carries a dedicated package variant.
+func isGoPackageAlias(alias: String, goPkgs: Slice[GoPackageEntry]) -> Bool
+  if goPkgs.Len() == 0 then false else
+    let head = goPkgs.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "", Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] })
+    if head.Alias == alias then true else isGoPackageAlias(alias, sliceDrop(goPkgs, 1)) end
   end
 end
 
@@ -926,10 +1109,10 @@ func inferUnary(expr: ast2.Expr, op: String, inner: ast2.Expr, env: Slice[EnvEnt
       let typedInner = eir.Expr
       let v = eir.Result
       let matched = if op == "!" then
-        matchExpected(v, ast2.MonoType.TCon("Bool", emptyMonoTypes()), ast2.MonoType.TCon("Bool", emptyMonoTypes()))
+        matchExpected(v, ast2.MonoType.TCon("Bool"), ast2.MonoType.TCon("Bool"))
       else
         if op == "-" then
-          matchExpected(v, ast2.MonoType.TCon("Int", emptyMonoTypes()), ast2.MonoType.TCon("Int", emptyMonoTypes()))
+          matchExpected(v, ast2.MonoType.TCon("Int"), ast2.MonoType.TCon("Int"))
         else
           Err("unknown unary operator " + op)
         end
@@ -972,18 +1155,18 @@ func inferBinary(expr: ast2.Expr, op: String, left: ast2.Expr, right: ast2.Expr,
             if isComparison(op) then
               let s2 = unify(applySubst(s1, lv.Type), applySubst(s1, rv.Type), s1)
               switch s2
-                case Ok(sb) => Ok(mkTypedBinary(expr, op, leir.Expr, reir.Expr, InferResult { Type: ast2.MonoType.TCon("Bool", emptyMonoTypes()), Predicates: appendPredicates(lv.Predicates, rv.Predicates), Subst: sb, State: rv.State }))
+                case Ok(sb) => Ok(mkTypedBinary(expr, op, leir.Expr, reir.Expr, InferResult { Type: ast2.MonoType.TCon("Bool"), Predicates: appendPredicates(lv.Predicates, rv.Predicates), Subst: sb, State: rv.State }))
                 case Err(msg) => Err(msg)
               end
             else
               if isLogical(op) then
-                let s2 = unify(applySubst(s1, lv.Type), ast2.MonoType.TCon("Bool", emptyMonoTypes()), s1)
+                let s2 = unify(applySubst(s1, lv.Type), ast2.MonoType.TCon("Bool"), s1)
                 switch s2
                   case Err(msg) => Err("logical operator requires Bool operands: " + msg)
                   case Ok(sa) =>
-                    let s3 = unify(applySubst(sa, rv.Type), ast2.MonoType.TCon("Bool", emptyMonoTypes()), sa)
+                    let s3 = unify(applySubst(sa, rv.Type), ast2.MonoType.TCon("Bool"), sa)
                     switch s3
-                    case Ok(sb) => Ok(mkTypedBinary(expr, op, leir.Expr, reir.Expr, InferResult { Type: ast2.MonoType.TCon("Bool", emptyMonoTypes()), Predicates: appendPredicates(lv.Predicates, rv.Predicates), Subst: sb, State: rv.State }))
+                    case Ok(sb) => Ok(mkTypedBinary(expr, op, leir.Expr, reir.Expr, InferResult { Type: ast2.MonoType.TCon("Bool"), Predicates: appendPredicates(lv.Predicates, rv.Predicates), Subst: sb, State: rv.State }))
                       case Err(msg) => Err("logical operator requires Bool operands: " + msg)
                     end
                 end
@@ -1010,7 +1193,7 @@ func inferIf(expr: ast2.Expr, cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: as
     case Err(msg) => Err(msg)
     case Ok(ceir) then
       let cv = ceir.Result
-      let csubst = unify(cv.Type, ast2.MonoType.TCon("Bool", emptyMonoTypes()), cv.Subst)
+      let csubst = unify(cv.Type, ast2.MonoType.TCon("Bool"), cv.Subst)
       switch csubst
         case Err(msg) => Err(msg)
         case Ok(scond) then
@@ -1107,7 +1290,7 @@ func inferRefCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[EnvEntry
           if name == "Ref" && field == "new" then
             if args.Len() != 1 then Some(Err("Ref.new expects exactly one argument")) else
               switch inferExpr(args.Get(0).UnwrapOr(ast2.EmptyExpr()), env, state)
-                case Ok(eir) => Some[Result[InferResult, String]](Ok[InferResult, String](InferResult { Type: ast2.MonoType.TCon("Ref", [applySubst(eir.Result.Subst, eir.Result.Type)]), Predicates: eir.Result.Predicates, Subst: eir.Result.Subst, State: eir.Result.State }))
+                case Ok(eir) => Some[Result[InferResult, String]](Ok[InferResult, String](InferResult { Type: ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Ref")), [applySubst(eir.Result.Subst, eir.Result.Type)]), Predicates: eir.Result.Predicates, Subst: eir.Result.Subst, State: eir.Result.State }))
                 case Err(msg) => Some[Result[InferResult, String]](Err[InferResult, String](msg))
               end
             end
@@ -1123,21 +1306,29 @@ func inferRefCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[EnvEntry
 end
 
 func inferRefValueCall(base: ast2.Expr, field: String, args: Slice[ast2.Expr], env: Slice[EnvEntry], state: InferState) -> Option[Result[InferResult, String]]
-  if field != "value" || args.Len() != 0 then None else
+  if field != "value" || args.Len() != 0 then
+    None
+  else
     switch inferExpr(base, env, state)
       case Err(msg) => Some(Err(msg))
-      case Ok(eir) =>
+      case Ok(eir) then
         let value = eir.Result
         switch applySubst(value.Subst, value.Type)
-          case TCon(name, inner) then
-            if name == "Ref" && inner.Len() == 1 then
-              Some(Ok(InferResult { Type: inner.Get(0).UnwrapOr(ast2.MonoType.TUnit), Predicates: value.Predicates, Subst: value.Subst, State: value.State }))
-            else
-              Some(Err("value() requires Ref[T]"))
+          case TApp(typeRef, inner) then
+            switch typeRef.value()
+              case TCon(name) then
+                if name == "Ref" && inner.Len() == 1 then
+                  Some(Ok(InferResult { Type: inner.Get(0).UnwrapOr(ast2.MonoType.TUnit), Predicates: value.Predicates, Subst: value.Subst, State: value.State }))
+                else
+                  Some(Err("value() requires Ref[T]"))
+                end
+              end
+              case _ => Some(Err("value() requires Ref[T]"))
             end
           end
           case _ => Some(Err("value() requires Ref[T]"))
         end
+      end
     end
   end
 end
@@ -1161,12 +1352,66 @@ func inferOrdinaryCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[Env
                 case Err(m) => Err(m)
               end
           end
+        case TQualifiedName(path, inner) =>
+          # A callee typed as TQualifiedName wraps a foreign-package
+          # function whose body is a TFunc/TVariadic/TApp.  Manually
+          # re-run the dispatch on the inner shape and rebuild the
+          # result type so the call-site retains the package identity.
+          let innerType = inner.value()
+          switch innerType
+            case TVariadic(_, _) =>
+              let ar = inferArgs(args, callParamTypes(innerType), env, cv.State, [], [], [], cv.Subst)
+              switch ar
+                case Err(msg) => Err(msg)
+                case Ok(argsResult) =>
+                  let subst = composeSubst(argsResult.Subst, cv.Subst)
+                  switch applySubst(subst, innerType)
+                    case TVariadic(_, retRef) =>
+                      let wrapped = ast2.MonoType.TQualifiedName(path, Ref.new(applySubst(subst, retRef.value())))
+                      let v = InferResult { Type: wrapped, Predicates: appendPredicates(cv.Predicates, argsResult.Predicates), Subst: subst, State: argsResult.State }
+                      Ok((ExprInferResult { Expr: typedCallee, Result: v }, argsResult.Exprs))
+                    case _ => Err("unreachable variadic inner")
+                  end
+                case _ => Err("unreachable variadic dispatch")
+              end
+            case _ =>
+              let ar = inferArgs(args, callParamTypes(innerType), env, cv.State, [], [], [], cv.Subst)
+              switch ar
+                case Err(msg) => Err(msg)
+                case Ok(argsResult) then
+                  let afterCallee = nextFreshVarID(innerType, argsResult.State.FreshVarID)
+                  let fresh = nextFreshVarIDInAll(argsResult.Types, afterCallee)
+                  let s1 = composeSubst(argsResult.Subst, cv.Subst)
+                  let used = maxSubstID(s1)
+                  let safeFresh = if fresh <= used then used + 1 else fresh end
+                  let nextState = withFreshID(argsResult.State, safeFresh + 1)
+                  let ret = ast2.MonoType.TVar(safeFresh)
+                  let expected = ast2.MonoType.TFunc(argsResult.Types, Ref.new(ret))
+                  let s2 = unify(applySubst(s1, innerType), expected, s1)
+                  switch s2
+                    case Ok(s) =>
+                      let wrapped = ast2.MonoType.TQualifiedName(path, Ref.new(ret))
+                      let finalType = applySubst(s, wrapped)
+                      Ok((ExprInferResult { Expr: applyTypedExprSubst(s, typedCallee), Result: InferResult { Type: finalType, Predicates: appendPredicates(cv.Predicates, argsResult.Predicates), Subst: s, State: nextState } }, applyTypedExprsSubst(s, argsResult.Exprs)))
+                    case Err(msg) => if isGoPackageCall(callee, state) then Err("Go function argument count mismatch") else Err(msg) end
+                  end
+                end
+              end
+          end
         case _ =>
-          let ar = inferArgs(args, callParamTypes(cv.Type), env, cv.State, [], [], [], cv.Subst)
+          # TApp and TQualifiedName both wrap a callable shape (TFunc /
+          # TVariadic).  Peek past the wrapper so call-type dispatch can
+          # match the right branch.  TQualifiedName's inner has already
+          # been handled above; the only remaining wrapper is TApp.
+          let effective = switch cv.Type
+            case TApp(inner, _) => inner.value()
+            case _ => cv.Type
+          end
+          let ar = inferArgs(args, callParamTypes(effective), env, cv.State, [], [], [], cv.Subst)
           switch ar
             case Err(msg) => Err(msg)
             case Ok(argsResult) then
-              let afterCallee = nextFreshVarID(cv.Type, argsResult.State.FreshVarID)
+              let afterCallee = nextFreshVarID(effective, argsResult.State.FreshVarID)
               let fresh = nextFreshVarIDInAll(argsResult.Types, afterCallee)
               let s1 = composeSubst(argsResult.Subst, cv.Subst)
               let used = maxSubstID(s1)
@@ -1174,10 +1419,10 @@ func inferOrdinaryCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[Env
               let nextState = withFreshID(argsResult.State, safeFresh + 1)
               let ret = ast2.MonoType.TVar(safeFresh)
               let expected = ast2.MonoType.TFunc(argsResult.Types, Ref.new(ret))
-              let s2 = unify(applySubst(s1, cv.Type), expected, s1)
+              let s2 = unify(applySubst(s1, effective), expected, s1)
               switch s2
                 case Ok(s) => Ok((ExprInferResult { Expr: applyTypedExprSubst(s, typedCallee), Result: InferResult { Type: applySubst(s, ret), Predicates: appendPredicates(cv.Predicates, argsResult.Predicates), Subst: s, State: nextState } }, applyTypedExprsSubst(s, argsResult.Exprs)))
-                case Err(msg) => if isGoPackageCall(callee, env) then Err("Go function argument count mismatch") else Err(msg) end
+                case Err(msg) => if isGoPackageCall(callee, state) then Err("Go function argument count mismatch") else Err(msg) end
               end
             end
           end
@@ -1329,7 +1574,7 @@ func inferTypedWhileStmt(cond: ast2.Expr, body: ast2.Expr, env: Slice[EnvEntry],
     case Err(msg) => Err(msg)
     case Ok(eirCond) =>
       let cv = eirCond.Result
-      let checked = unify(cv.Type, ast2.MonoType.TCon("Bool", emptyMonoTypes()), cv.Subst)
+      let checked = unify(cv.Type, ast2.MonoType.TCon("Bool"), cv.Subst)
       switch checked
         case Err(msg) => Err(msg)
         case Ok(s) =>
@@ -1355,21 +1600,21 @@ func inferBlockLetRecTyped(bindings: Slice[ast2.LetRecBind], env: Slice[EnvEntry
 end
 
 func inferBlockLetRec(bindings: Slice[ast2.LetRecBind], env: Slice[EnvEntry], state: InferState) -> Result[BlockInferStep, String]
-  let recEnv = predeclareLetRec(bindings, env)
+  let recEnv = predeclareLetRec(bindings, env, state)
   inferLetRecValues(bindings, recEnv, state, [])
 end
 
-func predeclareLetRec(bindings: Slice[ast2.LetRecBind], env: Slice[EnvEntry]) -> Slice[EnvEntry]
+func predeclareLetRec(bindings: Slice[ast2.LetRecBind], env: Slice[EnvEntry], state: InferState) -> Slice[EnvEntry]
   if bindings.Len() == 0 then
     env
   else
     let binding = bindings.Get(0).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType(), Value: ast2.EmptyExpr() })
-    predeclareLetRec(sliceDrop(bindings, 1), envPut(env, binding.Name, Scheme { Bound: [], Predicates: [], Body: typeFromAST(binding.Type) }))
+    predeclareLetRec(sliceDrop(bindings, 1), envPut(env, binding.Name, Scheme { Bound: [], Predicates: [], Body: typeFromASTInEnv(binding.Type, env, state) }), state)
   end
 end
 
 func inferLetRec(bindings: Slice[ast2.LetRecBind], env: Slice[EnvEntry], state: InferState) -> Result[InferResult, String]
-  let recEnv = predeclareLetRec(bindings, env)
+  let recEnv = predeclareLetRec(bindings, env, state)
   let checked = inferLetRecValues(bindings, recEnv, state, [])
   switch checked
     case Err(msg) => Err(msg)
@@ -1388,7 +1633,7 @@ func inferLetRecValues(bindings: Slice[ast2.LetRecBind], recEnv: Slice[EnvEntry]
       case Ok(eir) =>
         let value = eir.Result
         let combined = composeSubst(value.Subst, subst)
-        let checked = unify(applySubst(combined, value.Type), applySubst(combined, typeFromAST(binding.Type)), combined)
+        let checked = unify(applySubst(combined, value.Type), applySubst(combined, typeFromASTInEnv(binding.Type, recEnv, value.State)), combined)
         switch checked
           case Err(msg) => Err("letrec binding " + binding.Name + ": type annotation mismatch: " + msg)
           case Ok(nextSubst) => inferLetRecValues(sliceDrop(bindings, 1), recEnv, value.State, nextSubst)
@@ -1470,6 +1715,9 @@ func inferField(base: ast2.Expr, field: String, env: Slice[EnvEntry], state: Inf
       switch packageCandidate
         case Some(packageScheme) =>
           let qualified = instantiateQualified(packageScheme, state)
+          # TQualifiedName is preserved verbatim.  It identifies the type
+          # as coming from a different package while still allowing ordinary
+          # TFunc/TVariadic matching for call-type dispatch.
           let te = ast2.Expr { ID: base.ID, Pos: base.Pos, Kind: base.Kind, Type: Some(qualified.Body) }
           Ok(ExprInferResult { Expr: te, Result: InferResult { Type: qualified.Body, Predicates: qualified.Predicates, Subst: [], State: state } })
         case None =>
@@ -1508,24 +1756,32 @@ func inferOrdinaryField(base: ast2.Expr, field: String, env: Slice[EnvEntry], st
       let typedBase = eir.Expr
       let v = eir.Result
       let resolvedType = switch applySubst(v.Subst, v.Type)
-        case TCon(name, args) =>
-          if name == "Ref" && args.Len() == 1 then
-            applySubst(v.Subst, args.Get(0).UnwrapOr(ast2.MonoType.TUnit))
-          else
-            applySubst(v.Subst, v.Type)
-          end
-        case _ => applySubst(v.Subst, v.Type)
-      end
-      switch resolvedType
-        case TGoPackage(path) then
-          if strings.HasPrefix(path, "go:") then
-            Err("unknown Go package member " + field)
-          else
-            let fresh = ast2.MonoType.TVar(v.State.FreshVarID)
-            Ok(ExprInferResult { Expr: typedBase, Result: InferResult { Type: fresh, Predicates: v.Predicates, Subst: v.Subst, State: withFreshID(v.State, v.State.FreshVarID + 1) } })
+        case TCon(name) => applySubst(v.Subst, v.Type)
+        case TApp(typeRef, args) then
+          switch typeRef.value()
+            case TCon(name) then
+              if name == "Ref" && args.Len() == 1 then
+                applySubst(v.Subst, args.Get(0).UnwrapOr(ast2.MonoType.TUnit))
+              else
+                applySubst(v.Subst, v.Type)
+              end
+            end
+            case _ => applySubst(v.Subst, v.Type)
           end
         end
-        case TCon(typeName, args) then
+        case _ => applySubst(v.Subst, v.Type)
+      end
+      switch getTCon(resolvedType)
+        case Some(pair) then
+          let (innerName, args) = pair
+          # When the receiver is a foreign-package type wrapped in
+          # TQualifiedName, getTCon returns the bare inner name (e.g. "T"
+          # for `Ref[testing.T]`).  The symbol table, however, registers
+          # Go-FFI methods under the full `alias.Name` form
+          # ("testing.T").  Re-derive that form here by mapping the
+          # qualified import path back to its alias.  Local receivers
+          # leave the bare name untouched.
+          let typeName = receiverQualifiedName(applySubst(v.Subst, v.Type), innerName, state.GoPackages, 0)
           switch findSymbol(typeName, field, state.Symbols)
             case Some(symbol) then
               switch symbol
@@ -1576,7 +1832,7 @@ func inferOrdinaryField(base: ast2.Expr, field: String, env: Slice[EnvEntry], st
             case None => Err("unknown field " + typeName + "." + field)
           end
         end
-        case _ then
+        case None then
           let fresh = ast2.MonoType.TVar(v.State.FreshVarID)
           Ok(ExprInferResult { Expr: typedBase, Result: InferResult { Type: fresh, Predicates: v.Predicates, Subst: v.Subst, State: withFreshID(v.State, v.State.FreshVarID + 1) } })
         end
@@ -1585,43 +1841,118 @@ func inferOrdinaryField(base: ast2.Expr, field: String, env: Slice[EnvEntry], st
   end
 end
 
+# receiverQualifiedName returns the symbol-table key for the receiver of a
+# field access.  When the receiver is a foreign-package type wrapped in
+# TQualifiedName (e.g. `Ref[testing.T]` whose inner is
+# `TQualifiedName("go:testing", TCon("T"))`), the method table was
+# registered under the `alias.Name` form.  This helper maps the qualified
+# path back to the alias and rebuilds the qualified name; for local
+# receivers it returns the bare `innerName` unchanged.
+func receiverQualifiedName(receiver: ast2.MonoType, innerName: String, goPkgs: Slice[GoPackageEntry], index: Int) -> String
+  switch receiver
+    case TApp(typeRef, args) then
+      switch typeRef.value()
+        case TCon(name) then
+          if name == "Ref" && args.Len() == 1 then
+            receiverQualifiedName(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), innerName, goPkgs, index)
+          else
+            innerName
+          end
+        end
+        case _ => innerName
+      end
+    end
+    case TQualifiedName(path, inner) then
+      let memberName = switch inner.value()
+        case TCon(name) => name
+        case _ => innerName
+      end
+      let alias = goPackageAliasForPath(goPkgs, path, 0)
+      if alias == "" then
+        # Fall back to a path-derived alias when the Go-FFI package table
+        # is unavailable (e.g. bootstrap inference running before
+        # bootstrapPopulateGoSignatures completes).  Stripping the `go:`
+        # prefix recovers the source-level alias the user wrote in the
+        # import declaration.
+        let pathAlias = if strings.HasPrefix(path, "go:") => substring(path, 3, path.Len() - 3).UnwrapOr("") else path
+        if pathAlias == "" then
+          innerName
+        else
+          pathAlias + "." + memberName
+        end
+      else
+        alias + "." + memberName
+      end
+    end
+    case _ => innerName
+  end
+end
+
+# goPackageAliasForPath returns the alias registered for `path` in the
+# Go FFI import list, or "" when no such entry exists.
+func goPackageAliasForPath(goPkgs: Slice[GoPackageEntry], path: String, index: Int) -> String
+  if index >= goPkgs.Len() then
+    ""
+  else
+    switch goPkgs.Get(index)
+      case Some(entry) then
+        if entry.Path == path then
+          entry.Alias
+        else
+          goPackageAliasForPath(goPkgs, path, index + 1)
+        end
+      end
+      case _ => goPackageAliasForPath(goPkgs, path, index + 1)
+    end
+  end
+end
+
 # stripReceiverArg recognises impl-method schemes (registered by
 # `registerImplMethods`) whose Body is a function type with the *receiver* as
 # its first parameter.  When `fieldType` has that shape — first param is a
-# `TCon(typeName, _)` matching the lookup key — it unifies the receiver
-# pattern with the actual receiver (`args` are the receiver's concrete type
-# arguments), applies the resulting substitution to the remaining parameters
-# and the return type, then returns a stripped function type with the
-# receiver dropped and the new substitution.  Returns None for ordinary struct
-# field projections (e.g. `Parser.Run`) so the caller falls back to the plain
-# `substed` value.
+# `TCon(typeName, _)` (non-generic receiver) or `TApp(TCon(typeName), _)` (a
+# parametric receiver such as `Option[A]`) matching the lookup key — it
+# unifies the receiver pattern with the actual receiver (`args` are the
+# receiver's concrete type arguments), applies the resulting substitution
+# to the remaining parameters and the return type, then returns a stripped
+# function type with the receiver dropped and the new substitution.  Returns
+# None for ordinary struct field projections (e.g. `Parser.Run`) so the
+# caller falls back to the plain `substed` value.
 func stripReceiverArg(fieldType: ast2.MonoType, typeName: String, args: Slice[ast2.MonoType], subst: Slice[SubstEntry]) -> Option[Result[(ast2.MonoType, Slice[SubstEntry]), String]]
   switch fieldType
-    case TFunc(methodArgs, methodRet) =>
+    case TFunc(methodArgs, methodRet) then
       if methodArgs.Len() == 0 then None else
         let first = methodArgs.Get(0).UnwrapOr(ast2.MonoType.TUnit)
-        switch first
-          case TCon(recvName, recvPatArgs) =>
-            if recvName != typeName then None else
-              # The actual receiver type is `typeName[args]`.
-              let receiverType = ast2.MonoType.TCon(typeName, args)
-              # Unify the instantiated receiver pattern with the actual
-              # receiver to derive substitution entries for the impl's type
-              # parameters (e.g. `T` in `SliceIEnumerable[T].Fold` gets bound
-              # to `Parser[A]` when folding `Slice[Parser[A]]`).
-              let us = unify(first, receiverType, subst)
-              switch us
-                case Err(msg) => Some(Err("method receiver mismatch: " + msg))
-                case Ok(s2) =>
-                  let droppedArgs = sliceDrop(methodArgs, 1)
-                  let newRet = applySubst(s2, methodRet.value())
-                  let strippedBody = applySubstMonoList(s2, droppedArgs)
-                  Some(Ok((ast2.MonoType.TFunc(strippedBody, Ref.new(newRet)), s2)))
-              end
+        let recvName = switch first
+          case TCon(name, _) => name
+          case TApp(ctor, _) => switch ctor.value()
+            case TCon(name, _) => name
+            case _ => ""
+          end
+          case _ => ""
+        end
+        if recvName != typeName then
+          None
+        else
+          # The actual receiver type is `typeName[args]`.
+          let receiverType = tCon(typeName, args)
+          # Unify the instantiated receiver pattern with the actual receiver
+          # to derive substitution entries for the impl's type parameters
+          # (e.g. `T` in `SliceIEnumerable[T].Fold` gets bound to `Parser[A]`
+          # when folding `Slice[Parser[A]]`).
+          let us = unify(first, receiverType, subst)
+          switch us
+            case Err(msg) => Some(Err("method receiver mismatch: " + msg))
+            case Ok(s2) then
+              let droppedArgs = sliceDrop(methodArgs, 1)
+              let newRet = applySubst(s2, methodRet.value())
+              let strippedBody = applySubstMonoList(s2, droppedArgs)
+              Some(Ok((ast2.MonoType.TFunc(strippedBody, Ref.new(newRet)), s2)))
             end
-          case _ => None
+          end
         end
       end
+    end
     case _ => None
   end
 end
@@ -1636,13 +1967,14 @@ func switchFieldTypeArgs(fieldType: ast2.MonoType, typeName: String, args: Slice
   # Read the struct's type param IDs from its env Scheme Bound.
   let scheme = envGet(env, typeName)
   switch scheme
-    case Some(s) =>
+    case Some(s) then
       if s.Bound.Len() == 0 || args.Len() == 0 then
         fieldType
       else
         let subst = bindDistinctFieldArgs(s.Bound, args, 0, [] as Slice[SubstEntry])
         if subst.Len() == 0 then fieldType else applySubst(subst, fieldType) end
       end
+    end
     case None => fieldType
   end
 end
@@ -1675,10 +2007,19 @@ end
 
 func inferVariants(vars: Slice[ast2.Variant], enumName: String, tps: Slice[String], env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[DeclInfer, String]
   if vars.Len() == 0 then
-    Ok(DeclInfer { Env: envPut(env, enumName, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: ast2.MonoType.TCon(enumName, typeParamsAsTypes(tps, 1)) }), Fields: fields, State: state, TypedDecl: None })
+    Ok(DeclInfer {
+      Env: envPut(env, enumName, Scheme {
+        Bound: typeParamIDs(tps, 1),
+        Predicates: [],
+        Body: tCon(enumName, typeParamsAsTypes(tps, 1))
+      }),
+      Fields: fields,
+      State: state,
+      TypedDecl: None
+    })
   else
     let v = vars.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: emptyASTTypeExprs() })
-    let enumType = ast2.MonoType.TCon(enumName, typeParamsAsTypes(tps, 1))
+    let enumType = tCon(enumName, typeParamsAsTypes(tps, 1))
     let constructorType = if v.Fields.Len() == 0 then
       enumType
     else
@@ -1714,7 +2055,7 @@ end
 
 func inferTypedStructLitFields(typeName: String, fields: Slice[ast2.StructLitField], env: Slice[EnvEntry], state: InferState, subst: Slice[SubstEntry], curState: InferState, predicates: Slice[Predicate], out: Slice[ast2.StructLitField]) -> Result[(InferResult, Slice[ast2.StructLitField]), String]
   if fields.Len() == 0 then
-    Ok((InferResult { Type: ast2.MonoType.TCon(typeName, emptyMonoTypes()), Predicates: predicates, Subst: subst, State: curState }, applyTypedStructLitFieldsSubst(subst, out)))
+    Ok((InferResult { Type: ast2.MonoType.TCon(typeName), Predicates: predicates, Subst: subst, State: curState }, applyTypedStructLitFieldsSubst(subst, out)))
   else
     let f = fields.Get(0).UnwrapOr(ast2.StructLitField { Name: "", Value: ast2.EmptyExpr() })
     let r = inferExpr(f.Value, env, curState)
@@ -1800,7 +2141,12 @@ func inferMapLit(pairs: Slice[(ast2.Expr, ast2.Expr)], env: Slice[EnvEntry], s0:
   if pairs.Len() == 0 then
     let kt = ast2.MonoType.TVar(s0.FreshVarID)
     let vt = ast2.MonoType.TVar(s0.FreshVarID + 1)
-    Ok(InferResult { Type: ast2.MonoType.TCon("Map", [kt, vt]), Predicates: [], Subst: [], State: withFreshID(s0, s0.FreshVarID + 2) })
+    Ok(InferResult {
+      Type: ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Map")), [kt, vt]),
+      Predicates: [],
+      Subst: [],
+      State: withFreshID(s0, s0.FreshVarID + 2)
+    })
   else
     let (k0, v0) = pairs.Get(0).UnwrapOr((ast2.EmptyExpr(), ast2.EmptyExpr()))
     let kr = inferExpr(k0, env, s0)
@@ -1814,7 +2160,10 @@ func inferMapLit(pairs: Slice[(ast2.Expr, ast2.Expr)], env: Slice[EnvEntry], s0:
           case Ok(eireir) =>
             let vv = eireir.Result
             let s1 = composeSubst(vv.Subst, kv.Subst)
-            let resultType = ast2.MonoType.TCon("Map", [applySubst(s1, kv.Type), applySubst(s1, vv.Type)])
+            let resultType = ast2.MonoType.TApp(
+              Ref.new(ast2.MonoType.TCon("Map")),
+              [applySubst(s1, kv.Type), applySubst(s1, vv.Type)]
+            )
             inferMapLitTail(sliceDrop(pairs, 1), env, vv.State, s1, resultType, appendPredicates(kv.Predicates, vv.Predicates))
         end
     end
@@ -1843,15 +2192,21 @@ end
 func inferSetLit(items: Slice[ast2.Expr], env: Slice[EnvEntry], s0: InferState) -> Result[InferResult, String]
   if items.Len() == 0 then
     let et = ast2.MonoType.TVar(s0.FreshVarID)
-    Ok(InferResult { Type: ast2.MonoType.TCon("Set", [et]), Predicates: [], Subst: [], State: withFreshID(s0, s0.FreshVarID + 1) })
+    Ok(InferResult {
+      Type: ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Set")), [et]),
+      Predicates: [],
+      Subst: [],
+      State: withFreshID(s0, s0.FreshVarID + 1)
+    })
   else
     let r0 = inferExpr(items.Get(0).UnwrapOr(ast2.EmptyExpr()), env, s0)
     switch r0
       case Err(msg) => Err("set element: " + msg)
-      case Ok(eir0) =>
+      case Ok(eir0) then
         let v0 = eir0.Result
-        let resultType = ast2.MonoType.TCon("Set", [applySubst(v0.Subst, v0.Type)])
+        let resultType = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Set")), [applySubst(v0.Subst, v0.Type)])
         inferSetLitTail(sliceDrop(items, 1), env, v0.State, v0.Subst, resultType, v0.Predicates)
+      end
     end
   end
 end

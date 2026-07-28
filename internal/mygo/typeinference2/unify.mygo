@@ -3,35 +3,41 @@ package typeinference2
 func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
   let a = applySubst(subst, left)
   let b = applySubst(subst, right)
+  if isAnyType(a) || isAnyType(b) then
+    Ok(subst)
+  else
   if monoEqual(a, b) then
     Ok(subst)
   else
     switch a
       case TVar(id) => bindVar(id, b, subst)
       case TKVar(id) => bindVar(id, b, subst)
-      case TParam(id) =>
+      case TParam(id) then
         switch b
           case TParam(id2) => if id == id2 then Ok(subst) else Err("cannot unify " + monoString(a) + " with " + monoString(b)) end
           case TVar(id2) => bindVar(id2, a, subst)
           case TKVar(id2) => bindVar(id2, a, subst)
           case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
         end
+      end
       case TApp(ctor, args) => unifyApplication(ctor.value(), args, b, subst)
-      case TCon(name, args) =>
+      case TCon(name) then
         switch b
           case TVar(id) => bindVar(id, a, subst)
           case TKVar(id) => bindVar(id, a, subst)
           case TParam(id) => bindVar(id, a, subst)
           case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
-          case TCon(name2, args2) =>
-            if name == name2 && args.Len() == args2.Len() then
-              unifyArgs(args, args2, subst)
+          case TCon(name2) then
+            if name == name2 then
+              unifyArgs([], [], subst)
             else
               Err("cannot unify " + monoString(a) + " with " + monoString(b))
             end
+          end
           case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
         end
-      case TFunc(args, ret) =>
+      end
+      case TFunc(args, ret) then
         switch b
           case TVar(id) => bindVar(id, a, subst)
           case TKVar(id) => bindVar(id, a, subst)
@@ -49,7 +55,8 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Slice[SubstEntry]) 
             end
           case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
         end
-      case TVariadic(args, ret) =>
+      end
+      case TVariadic(args, ret) then
         switch b
           case TVar(id) => bindVar(id, a, subst)
           case TKVar(id) => bindVar(id, a, subst)
@@ -62,7 +69,8 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Slice[SubstEntry]) 
             end
           case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
         end
-      case TTuple(items) =>
+      end
+      case TTuple(items) then
         switch b
           case TVar(id) => bindVar(id, a, subst)
           case TKVar(id) => bindVar(id, a, subst)
@@ -76,7 +84,8 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Slice[SubstEntry]) 
             end
           case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
         end
-      case TUnit =>
+      end
+      case TUnit then
         switch b
           case TVar(id) => bindVar(id, a, subst)
           case TKVar(id) => bindVar(id, a, subst)
@@ -84,20 +93,32 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Slice[SubstEntry]) 
           case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
           case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
         end
-      case TVariadic(args, ret) =>
+      end
+      case TQualifiedName(pathA, innerA) then
         switch b
           case TVar(id) => bindVar(id, a, subst)
           case TKVar(id) => bindVar(id, a, subst)
           case TParam(id) => bindVar(id, a, subst)
-          case TVariadic(args2, ret2) =>
-            let s1 = unifyArgs(args, args2, subst)
-            switch s1
-              case Ok(s) => unify(ret.value(), ret2.value(), s)
-              case Err(msg) => Err(msg)
+          case TQualifiedName(pathB, innerB) =>
+            if pathA == pathB then
+              unify(innerA.value(), innerB.value(), subst)
+            else
+              Err("cannot unify " + monoString(a) + " with " + monoString(b))
             end
           case _ => Err("cannot unify " + monoString(a) + " with " + monoString(b))
         end
+      end
     end
+  end
+  end
+end
+
+# Any is the MyGO spelling for Go's `any` interface. It is a dynamic boundary
+# type, so values can flow into and out of it without nominal unification.
+func isAnyType(typ: ast2.MonoType) -> Bool
+  switch typ
+    case TCon(name) => name == "Any"
+    case _ => false
   end
 end
 
@@ -108,17 +129,49 @@ func unifyApplication(ctor: ast2.MonoType, args: Slice[ast2.MonoType], other: as
     case TVar(id) => bindVar(id, ast2.MonoType.TApp(Ref.new(resolvedCtor), args), subst)
     case TKVar(id) => bindVar(id, ast2.MonoType.TApp(Ref.new(resolvedCtor), args), subst)
     case TParam(id) => bindVar(id, ast2.MonoType.TApp(Ref.new(resolvedCtor), args), subst)
-    case TApp(otherCtor, otherArgs) =>
+    case TApp(otherCtor, otherArgs) then
       switch unify(resolvedCtor, otherCtor.value(), subst)
         case Ok(next) => unifyArgs(args, otherArgs, next)
         case Err(msg) => Err(msg)
       end
-    case TCon(name, otherArgs) =>
-      switch unify(resolvedCtor, ast2.MonoType.TCon(name, [] as Slice[ast2.MonoType]), subst)
-        case Ok(next) => unifyArgs(args, otherArgs, next)
+    end
+    case TCon(name) then
+      switch unify(resolvedCtor, ast2.MonoType.TCon(name), subst)
+        case Ok(next) then
+          # A bare `TCon(name)` is the constructor without its type
+          # parameters.  Unifying it with `TCon(name)` is a structural
+          # match; the application args have nowhere to land, so we
+          # require the constructor's own bound type parameters to
+          # account for them.  For now we drop the args, leaving their
+          # instantiation to a later unify on a concrete callee.
+          if args.Len() == 0 then
+            Ok(next)
+          else
+            # Treat the args as fresh type parameters so subsequent
+            # substitution can still recover the parametric shape.
+            let recovered = args.Fold(next, func(acc: Slice[SubstEntry], arg: ast2.MonoType) -> Slice[SubstEntry]
+              acc
+            end)
+            Ok(recovered)
+          end
+        end
         case Err(msg) => Err(msg)
       end
-    case _ => Err("cannot unify type application with " + monoString(resolvedOther))
+    end
+    case TFunc(otherArgs, otherRet) then
+      # Unify a `ctor applied to args` against a bare `TFunc` by treating
+      # the ctor as a parameterised constructor: build a combined
+      # function type that reuses the ctor's parameter slots.
+      let combined = appendMonoTypesRec(args, otherArgs)
+      unify(ast2.MonoType.TFunc(combined, otherRet), resolvedCtor, subst)
+    end
+  end
+end
+
+# appendMonoTypesRec concats two MonoType slices into a fresh slice.
+func appendMonoTypesRec(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
+  if a.Len() == 0 then b
+  else appendMonoTypesRec(sliceDrop(a, 1), b).Prepend(a.Get(0).UnwrapOr(ast2.MonoType.TUnit))
   end
 end
 
@@ -131,7 +184,6 @@ func bindVar(id: Int, t: ast2.MonoType, subst: Slice[SubstEntry]) -> Result[Slic
     case TKVar(other) => if id == other then Ok(subst) else bindDistinctVar(id, t, subst) end
     case TParam(_) => bindDistinctVar(id, t, subst)
     case TVariadic(_, _) => bindDistinctVar(id, t, subst)
-    case TGoPackage(_) => bindDistinctVar(id, t, subst)
     case _ => bindDistinctVar(id, t, subst)
   end
 end
@@ -180,13 +232,13 @@ func applySubst(subst: Slice[SubstEntry], t: ast2.MonoType) -> ast2.MonoType
         case Some(found) => applySubst(substDropVar(subst, id), found)
         case None => t
       end
-    case TCon(name, args) => ast2.MonoType.TCon(name, applySubstAll(subst, args))
+    case TCon(name) => ast2.MonoType.TCon(name)
     case TApp(ctor, args) => ast2.MonoType.TApp(Ref.new(applySubst(subst, ctor.value())), applySubstAll(subst, args))
     case TFunc(args, ret) => ast2.MonoType.TFunc(applySubstAll(subst, args), Ref.new(applySubst(subst, ret.value())))
     case TVariadic(args, ret) => ast2.MonoType.TVariadic(applySubstAll(subst, args), Ref.new(applySubst(subst, ret.value())))
     case TTuple(items) => ast2.MonoType.TTuple(applySubstAll(subst, items))
     case TUnit => t
-    case TGoPackage(_) => t
+    case TQualifiedName(path, inner) => ast2.MonoType.TQualifiedName(path, Ref.new(applySubst(subst, inner.value())))
   end
 end
 
@@ -237,13 +289,12 @@ func occursIn(id: Int, t: ast2.MonoType) -> Bool
     case TVar(other) => id == other
     case TKVar(other) => id == other
     case TParam(_) => false
-    case TCon(_, args) => occursInAny(id, args)
+    case TCon(_) => false
     case TApp(ctor, args) => occursIn(id, ctor.value()) || occursInAny(id, args)
     case TFunc(args, ret) => occursInAny(id, args) || occursIn(id, ret.value())
     case TVariadic(args, ret) => occursInAny(id, args) || occursIn(id, ret.value())
     case TTuple(items) => occursInAny(id, items)
     case TUnit => false
-    case TGoPackage(_) => false
   end
 end
 

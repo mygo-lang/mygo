@@ -72,12 +72,14 @@ struct PkgInfo
 end
 
 # MyGoPackageInfo records the exported surface of an imported MyGO package.
+# Decls holds the raw AST declarations from the imported package.
+# Qualified access like `ast2.SourcePos { ... }` resolves by looking up the
+# package alias in MyGoPackageCache and scanning its Decls for the target
+# type name.
 struct MyGoPackageInfo
   Alias: String
   Path: String
-  Name: String
-  Funcs: Slice[EnvEntry]
-  Types: Slice[String]
+  Decls: Slice[ast2.Decl]
 end
 
 # InferState holds inference state: fresh variable counter, package info for
@@ -300,7 +302,7 @@ end
 func enumVariantSymbols(enumName: String, variants: Slice[ast2.Variant], tps: Slice[String], out: Slice[Symbol]) -> Slice[Symbol]
   if variants.Len() == 0 then out else
     let v = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr] })
-    let enumType = ast2.MonoType.TCon(enumName, typeParamsAsTypes(tps, 1))
+    let enumType = tCon(enumName, typeParamsAsTypes(tps, 1))
     let constructorType = if v.Fields.Len() == 0 then enumType else ast2.MonoType.TFunc(typeArgsFromASTWithParams(v.Fields, tps), Ref.new(enumType)) end
     enumVariantSymbols(enumName, sliceDrop(variants, 1), tps, out.Prepend(Symbol.EnumVariant(enumName, v.Name, constructorType)))
   end
@@ -317,9 +319,13 @@ end
 # InferFile runs type inference on a single file in isolation.
 # This is a convenience wrapper around InferPackage for single-file packages.
 func InferFile(file: ast2.File) -> Result[PackageInfo, String]
-  let env = predeclareImplMethods(file.Decls, predeclareFunctions(file.Decls, initialEnv()))
   let goPkgImports = collectGoPackageImports(file.Decls)
-  let envWithGoPkgs = seedGoPackageEnv(goPkgImports, env)
+  let mygoImports = collectMyGoPackageImports(file.Decls)
+  # Seed Go-FFI and MyGO package types into the env *before* predeclaring
+  # functions.  See InferPackageWithExternal for the full rationale.
+  let envWithGoPkgs = seedGoPackageEnv(goPkgImports, initialEnv())
+  let envWithMyGoPkgs = seedMyGoPackageEnv(mygoImports, [] as Slice[MyGoPackageInfo], envWithGoPkgs)
+  let envWithPredecl = predeclareImplMethods(file.Decls, predeclareFunctions(file.Decls, envWithMyGoPkgs))
   let initialSymbols = buildSymbolTable(goPkgImports, file.Decls)
   let state = InferState {
     FreshVarID: 1,
@@ -332,7 +338,7 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
     NamedImpls: namedImplNames(file.Decls, 0, [] as Slice[String]),
     ResolvedConstraintArgs: {},
   }
-  switch inferDecls(file.Decls, envWithGoPkgs, [], state)
+  switch inferDecls(file.Decls, envWithPredecl, [], state)
     case Ok(info) =>
       let collected = collectInstances(file.Decls)
       let instances = mergeBuiltInInstances(collected)
@@ -358,8 +364,12 @@ end
 
 func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice[GoPackageEntry]) -> Result[PackageInfo, String]
   let allDecls = flattenPkgDecls(files, 0, [] as Slice[ast2.Decl])
-  let predeclEnv = predeclareAllFunctions(allDecls, initialEnv())
-  let envWithGoPkgs = seedGoPackageEnv(goPkgImports, predeclEnv)
+  let mygoImports = collectMyGoPackageImports(allDecls)
+  # Seed Go-FFI and MyGO package types into the env *before* predeclaring
+  # functions.  See InferPackageWithExternal for the full rationale.
+  let envWithGoPkgs = seedGoPackageEnv(goPkgImports, initialEnv())
+  let envWithMyGoPkgs = seedMyGoPackageEnv(mygoImports, [] as Slice[MyGoPackageInfo], envWithGoPkgs)
+  let envWithPredecl = predeclareAllFunctions(allDecls, envWithMyGoPkgs)
   let initialSymbols = buildSymbolTable(goPkgImports, allDecls)
   let state = InferState {
     FreshVarID: 1,
@@ -372,7 +382,7 @@ func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice
     NamedImpls: namedImplNames(allDecls, 0, [] as Slice[String]),
     ResolvedConstraintArgs: {},
   }
-  let result = inferDecls(allDecls, envWithGoPkgs, [], state)
+  let result = inferDecls(allDecls, envWithPredecl, [], state)
   switch result
     case Ok(info) =>
       let collected = collectInstances(allDecls)
@@ -394,15 +404,27 @@ func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice
   end
 end
 
-func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDeclSource], goPkgImports: Slice[GoPackageEntry]) -> Result[PackageInfo, String]
+func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDeclSource], goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo]) -> Result[PackageInfo, String]
   # Merge user and external declarations for inference, then separate results.
   # External decls participate in type inference (so prelude types are visible)
   # but their typed forms go into ExternalTypedDecls instead of TypedDecls.
   let allDecls = flattenPkgDecls(files, 0, [] as Slice[ast2.Decl])
   let extDecls = flattenPkgDecls(external, 0, [] as Slice[ast2.Decl])
   let combined = appendDecls(allDecls, extDecls)
-  let predeclEnv = predeclareAllFunctions(combined, initialEnv())
-  let envWithGoPkgs = seedGoPackageEnv(goPkgImports, predeclEnv)
+  # Collect MyGO imports (non-go:) so each import's top-level type and
+  # function can be registered under `alias.Name` in the environment.  The
+  # env entries wrap each member in TQualifiedName so qualified access such
+  # as `ps.ParseInput(...)` resolves through the normal env lookup path.
+  let mygoAliases = collectMyGoPackageImports(allDecls)
+  # Seed Go-FFI and MyGO package types into the env *before* predeclaring
+  # functions.  This way `Ref[testing.T]` in a function signature sees the
+  # `testing.T` env entry and wraps the inner type in TQualifiedName; without
+  # it, the inner type falls through to a bare TCon("T") and field lookup
+  # `t.Fatal` later fails because receiverQualifiedName cannot recover the
+  # qualified `testing.T` key used by the symbol table.
+  let envWithGoPkgs = seedGoPackageEnv(goPkgImports, initialEnv())
+  let envWithMyGoPkgs = seedMyGoPackageEnv(mygoAliases, myGoPkgImports, envWithGoPkgs)
+  let envWithPredecl = predeclareAllFunctions(combined, envWithMyGoPkgs)
   let userSyms = buildSymbolTable(goPkgImports, allDecls)
   let extSyms = buildSymbolTable([] as Slice[GoPackageEntry], extDecls)
   let initialSymbols = concatSymbols(userSyms, extSyms)
@@ -411,13 +433,13 @@ func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDe
     PkgInfo: None,
     GoPackages: goPkgImports,
     MyGoPackages: [] as Slice[MyGoPackageInfo],
-    MyGoPackageCache: [] as Slice[MyGoPackageInfo],
+    MyGoPackageCache: myGoPkgImports,
     Symbols: initialSymbols,
     ActiveConstraints: [] as Slice[Predicate],
     NamedImpls: namedImplNames(combined, 0, [] as Slice[String]),
     ResolvedConstraintArgs: {},
   }
-  let result = inferDecls(combined, envWithGoPkgs, [], state)
+  let result = inferDecls(combined, envWithPredecl, [], state)
   switch result
     case Ok(info) =>
       let collected = collectInstances(allDecls)
@@ -558,30 +580,233 @@ func withExpressionSourceName(msg: String, source: String) -> String
   if source == "" then msg else strings.ReplaceAll(msg, "<input>:", source + ":") end
 end
 
-# Collect imported package aliases from the declarations.  The bootstrap lane
-# treats both Go packages and compiled MyGO packages as qualified providers;
-# their selected members are inferred on demand in inferField.
+# Collect Go FFI package imports (go: prefix) from the declarations.
+# These are real Go FFI packages whose function signatures are resolved through
+# Go's go/types reflection and populated by bootstrapPopulateGoSignatures.
 func collectGoPackageImports(decls: Slice[ast2.Decl]) -> Slice[GoPackageEntry]
   decls.Fold([] as Slice[GoPackageEntry], func(out: Slice[GoPackageEntry], d: ast2.Decl) -> Slice[GoPackageEntry]
     switch d
-      case ImportDecl(alias, path) =>
-        let existing = out.Fold(false, func(found: Bool, e: GoPackageEntry) -> Bool
-          found || e.Alias == alias
-        end)
-        if existing then out else out.Append(GoPackageEntry { Alias: alias, Path: path, Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] }) end
+      case ImportDecl(alias, path) then
+        if !strings.HasPrefix(path, "go:") then out else
+          let existing = out.Fold(false, func(found: Bool, e: GoPackageEntry) -> Bool
+            found || e.Alias == alias
+          end)
+          if existing then out else out.Append(GoPackageEntry { Alias: alias, Path: path, Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] }) end
+        end
+      end
       case _ => out
     end
   end)
 end
 
-# Seed the environment with Go package alias -> TGoPackage bindings
-# so that field access like `pkg.Ident` resolves `pkg` to a Go package reference.
+# Collect MyGO package imports (non-go:) from the declarations.
+# Returns a list of (alias, path) tuples.
+func collectMyGoPackageImports(decls: Slice[ast2.Decl]) -> Slice[(String, String)]
+  decls.Fold([] as Slice[(String, String)], func(out: Slice[(String, String)], d: ast2.Decl) -> Slice[(String, String)]
+    switch d
+      case ImportDecl(alias, path) then
+        if strings.HasPrefix(path, "go:") then out else
+          let existing = out.Fold(false, func(found: Bool, item: (String, String)) -> Bool
+            let (item0, _) = item
+            found || item0 == alias
+          end)
+          if existing then out else out.Append((alias, path)) end
+        end
+      end
+      case _ => out
+    end
+  end)
+end
+
+# Seed the environment with MyGO package aliases resolved into per-member env
+# entries.  Each top-level type or function from the imported package is
+# registered as `alias.Name` -> a Scheme whose Body is
+# `TQualifiedName(path, Ref.new(<original type>))`.  The inner type preserves
+# the same shape used by `predeclareFunctions` / `predeclareEnum` for the
+# current package, so downstream type equality treats imports the same as
+# local declarations.
+func seedMyGoPackageEnv(imports: Slice[(String, String)], packages: Slice[MyGoPackageInfo], env: Slice[EnvEntry]) -> Slice[EnvEntry]
+  if imports.Len() == 0 then
+    env
+  else
+    let item = imports.Get(0).UnwrapOr(("", ""))
+    let (alias, _) = item
+    let pkg = findMyGoPackage(packages, alias)
+    let envWithMembers = seedMyGoPackageDecls(alias, pkg, 0, env)
+    seedMyGoPackageEnv(sliceDrop(imports, 1), packages, envWithMembers)
+  end
+end
+
+# Look up the MyGoPackageInfo entry for a given alias.  When the alias is not
+# present (bootstrap inference has not loaded the imported package), fall back
+# to a stub whose Path equals the alias so qualified types still resolve.
+func findMyGoPackage(packages: Slice[MyGoPackageInfo], alias: String) -> MyGoPackageInfo
+  if packages.Len() == 0 then
+    MyGoPackageInfo { Alias: alias, Path: alias, Decls: [] as Slice[ast2.Decl] }
+  else
+    let pkg = packages.Get(0).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
+    if pkg.Alias == alias then pkg else findMyGoPackage(sliceDrop(packages, 1), alias) end
+  end
+end
+
+# Walk the Decls of a single imported MyGO package and register each top-level
+# type and function under `alias.Name`.  The body is wrapped in
+# `TQualifiedName(path, Ref.new(<inner>))` where `<inner>` mirrors the
+# predeclared local-declaration shape (TFunc for functions, TCon for
+# struct/enum/interface) so further inference does not need to special-case
+# imported bindings.
+#
+# For function bodies the inner TFunc's parameters and return type are
+# additionally scanned: every TCon (and the constructor of every TApp) whose
+# name matches a top-level type defined in the same package is itself wrapped
+# in TQualifiedName.  This preserves the foreign-package identity through
+# ordinary call-site inference (`ps.ParseInput(fileParser(), input)` must
+# match `ps.Parser` against the parameter type, not the bare local name).
+func seedMyGoPackageDecls(alias: String, pkg: MyGoPackageInfo, index: Int, env: Slice[EnvEntry]) -> Slice[EnvEntry]
+  if index >= pkg.Decls.Len() then
+    env
+  else
+    let decl = pkg.Decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    let typeNames = collectMyGoTypeNames(pkg.Decls, 0, [] as Slice[String])
+    let next = switch decl
+      case FuncDecl(name, tps, params, ret, _, constraints) then
+        let retType = switch ret
+          case Some(t) => wrapPkgTypesInMonoType(typeFromASTWithParams(t, tps), pkg.Path, typeNames)
+          case None => ast2.MonoType.TUnit
+        end
+        let paramTypes = wrapPkgTypesInSlice(paramsToTypesWithParams(params, tps), pkg.Path, typeNames)
+        let inner = ast2.MonoType.TFunc(paramTypes, Ref.new(retType))
+        let body = ast2.MonoType.TQualifiedName(pkg.Path, Ref.new(inner))
+        envPut(env, alias + "." + name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: predicatesFromConstraintsWithParams(constraints, tps), Body: body })
+      end
+      case StructDecl(name, tps, _) then
+        let inner = tCon(name, typeParamsAsTypes(tps, 1))
+        let body = ast2.MonoType.TQualifiedName(pkg.Path, Ref.new(inner))
+        envPut(env, alias + "." + name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: body })
+      end
+      case EnumDecl(name, tps, variants) then
+        let inner = tCon(name, typeParamsAsTypes(tps, 1))
+        let body = ast2.MonoType.TQualifiedName(pkg.Path, Ref.new(inner))
+        let withEnum = envPut(env, alias + "." + name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: body })
+        seedMyGoPackageEnumVariants(pkg, variants, name, tps, typeNames, withEnum)
+      end
+      case InterfaceDecl(name, _, _) then
+        let inner = ast2.MonoType.TCon(name)
+        let body = ast2.MonoType.TQualifiedName(pkg.Path, Ref.new(inner))
+        envPut(env, alias + "." + name, Scheme { Bound: [], Predicates: [], Body: body })
+      end
+      case _ => env
+    end
+    seedMyGoPackageDecls(alias, pkg, index + 1, next)
+  end
+end
+
+# Imported enum constructors are used as bare names in patterns (for example,
+# `case NamedType(name, args)`).  Register them alongside qualified top-level
+# declarations, preserving the imported enum's canonical package identity.
+func seedMyGoPackageEnumVariants(pkg: MyGoPackageInfo, variants: Slice[ast2.Variant], enumName: String, typeParams: Slice[String], typeNames: Slice[String], env: Slice[EnvEntry]) -> Slice[EnvEntry]
+  if variants.Len() == 0 then
+    env
+  else
+    let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr] })
+    let enumInner = tCon(enumName, typeParamsAsTypes(typeParams, 1))
+    let enumType = ast2.MonoType.TQualifiedName(pkg.Path, Ref.new(enumInner))
+    let constructorType = if variant.Fields.Len() == 0 then
+      enumType
+    else
+      let fieldTypes = wrapPkgTypesInSlice(typeArgsFromASTWithParams(variant.Fields, typeParams), pkg.Path, typeNames)
+      ast2.MonoType.TFunc(fieldTypes, Ref.new(enumType))
+    end
+    let next = envPut(env, variant.Name, Scheme { Bound: typeParamIDs(typeParams, 1), Predicates: [], Body: constructorType })
+    seedMyGoPackageEnumVariants(pkg, sliceDrop(variants, 1), enumName, typeParams, typeNames, next)
+  end
+end
+
+# Collect the names of every top-level struct, enum, and interface declared in
+# a MyGO package.  Used by seedMyGoPackageDecls to decide which bare TCon
+# references inside a foreign function signature should be re-qualified with
+# the package's import path.
+func collectMyGoTypeNames(decls: Slice[ast2.Decl], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= decls.Len() then
+    out
+  else
+    let decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    let name = switch decl
+      case StructDecl(n, _, _) => n
+      case EnumDecl(n, _, _) => n
+      case InterfaceDecl(n, _, _) => n
+      case _ => ""
+    end
+    let next = if name == "" then out else
+      let exists = out.Fold(false, func(found: Bool, item: String) -> Bool found || item == name end)
+      if exists then out else out.Append(name) end
+    end
+    collectMyGoTypeNames(decls, index + 1, next)
+  end
+end
+
+# wrapPkgTypesInSlice wraps every TCon / TApp ctor whose name appears in
+# `typeNames` with TQualifiedName(path, ...).  Prelude types (String, Int, etc.)
+# and type-parameter references are left untouched.
+func wrapPkgTypesInSlice(items: Slice[ast2.MonoType], path: String, typeNames: Slice[String]) -> Slice[ast2.MonoType]
+  if items.Len() == 0 then
+    []
+  else
+    wrapPkgTypesInSlice(sliceDrop(items, 1), path, typeNames).Prepend(wrapPkgTypesInMonoType(items.Get(0).UnwrapOr(ast2.MonoType.TUnit), path, typeNames))
+  end
+end
+
+func wrapPkgTypesInMonoType(typ: ast2.MonoType, path: String, typeNames: Slice[String]) -> ast2.MonoType
+  switch typ
+    case TCon(name) then
+      if containsString(typeNames, name) then
+        ast2.MonoType.TQualifiedName(path, Ref.new(typ))
+      else
+        typ
+      end
+    end
+    case TApp(ctor, args) then
+      let wrappedCtor = wrapPkgTypesInMonoType(ctor.value(), path, typeNames)
+      ast2.MonoType.TApp(Ref.new(wrappedCtor), wrapPkgTypesInSlice(args, path, typeNames))
+    end
+    case TFunc(params, ret) then
+      ast2.MonoType.TFunc(wrapPkgTypesInSlice(params, path, typeNames), Ref.new(wrapPkgTypesInMonoType(ret.value(), path, typeNames)))
+    end
+    case TVariadic(params, ret) then
+      ast2.MonoType.TVariadic(wrapPkgTypesInSlice(params, path, typeNames), Ref.new(wrapPkgTypesInMonoType(ret.value(), path, typeNames)))
+    end
+    case TTuple(items) then
+      ast2.MonoType.TTuple(wrapPkgTypesInSlice(items, path, typeNames))
+    end
+    case TQualifiedName(_, inner) => ast2.MonoType.TQualifiedName(path, Ref.new(wrapPkgTypesInMonoType(inner.value(), path, typeNames)))
+    case _ => typ
+  end
+end
+
+func containsString(items: Slice[String], value: String) -> Bool
+  if items.Len() == 0 then false else
+    if items.Get(0).UnwrapOr("") == value then true else containsString(sliceDrop(items, 1), value) end
+  end
+end
+
+# Look up the path for a given alias from the MyGO package info slice.
+func myGoPackagePath(packages: Slice[MyGoPackageInfo], alias: String) -> String
+  if packages.Len() == 0 then alias else
+    let pkg = packages.Get(0).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
+    if pkg.Alias == alias then pkg.Path else myGoPackagePath(sliceDrop(packages, 1), alias) end
+  end
+end
+
+# Seed the environment with Go package member entries.  Each function and type
+# exported by the Go package is registered as `alias.Name` with the original
+# Go-derived MonoType wrapped in `TQualifiedName(path, ...)` so qualified
+# `pkg.Func` / `pkg.Type` access resolves uniformly with MyGO imports.
 func seedGoPackageEnv(goPkgs: Slice[GoPackageEntry], env: Slice[EnvEntry]) -> Slice[EnvEntry]
   if goPkgs.Len() == 0 then
     env
   else
     let pkg = goPkgs.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "", Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] })
-    seedGoPackageEnv(sliceDrop(goPkgs, 1), seedGoPackageMembers(pkg, envPut(env, pkg.Alias, Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TGoPackage(pkg.Path) })))
+    seedGoPackageEnv(sliceDrop(goPkgs, 1), seedGoPackageMembers(pkg, env))
   end
 end
 
@@ -593,7 +818,11 @@ end
 func seedGoPackageFuncs(pkg: GoPackageEntry, funcs: Slice[GoFuncSignature], env: Slice[EnvEntry]) -> Slice[EnvEntry]
   if funcs.Len() == 0 then env else
     let fn = funcs.Get(0).UnwrapOr(GoFuncSignature { Name: "", Params: [] as Slice[String], Results: [] as Slice[String], Variadic: false })
-    seedGoPackageFuncs(pkg, sliceDrop(funcs, 1), envPut(env, goPackageMemberName(pkg.Alias, fn.Name), Scheme { Bound: [], Predicates: [], Body: GoSignatureType(fn) }))
+    # A Go package qualifies the selected function name, not its signature.
+    # Wrapping the complete function type makes primitive results such as
+    # strings.HasPrefix's Bool appear as `go:strings.Bool` after a call.
+    let body = GoSignatureType(fn)
+    seedGoPackageFuncs(pkg, sliceDrop(funcs, 1), envPut(env, goPackageMemberName(pkg.Alias, fn.Name), Scheme { Bound: [], Predicates: [], Body: body }))
   end
 end
 
@@ -610,7 +839,8 @@ func seedGoPackageTypes(pkg: GoPackageEntry, types: Slice[GoTypeSignature], env:
     # and the type parameters are bound fresh so a polymorphic Go type can be
     # instantiated at each use site (rare, but supported symmetrically).
     let bound = typeParamIDs(t.TypeParams, 1)
-    let body = ast2.MonoType.TCon(qualifiedName, typeParamsAsTypes(t.TypeParams, 1))
+    let inner = tCon(t.TypeName, typeParamsAsTypes(t.TypeParams, 1))
+    let body = ast2.MonoType.TQualifiedName(pkg.Path, Ref.new(inner))
     let withType = envPut(env, qualifiedName, Scheme { Bound: bound, Predicates: [], Body: body })
     seedGoPackageTypes(pkg, sliceDrop(types, 1), withType)
   end
@@ -630,14 +860,18 @@ func GoSignatureType(sig: GoFuncSignature) -> ast2.MonoType
       switch second
         case TCon(name, _) =>
           if name == "Bool" then
-            ast2.MonoType.TCon("Option", [first])
+            tCon("Option", [first])
           else
-            ast2.MonoType.TCon("Result", [first, second])
+            tCon("Result", [first, second])
           end
-        case _ => ast2.MonoType.TCon("Result", [first, second])
+        case _ => tCon("Result", [first, second])
       end
     else
-      if results.Len() == 1 then results.Get(0).UnwrapOr(ast2.MonoType.TUnit) else ast2.MonoType.TTuple(results) end
+      if results.Len() == 1 then
+        results.Get(0).UnwrapOr(ast2.MonoType.TUnit)
+      else
+        ast2.MonoType.TTuple(results)
+      end
     end
   end
   if sig.Variadic then
@@ -648,8 +882,11 @@ func GoSignatureType(sig: GoFuncSignature) -> ast2.MonoType
 end
 
 func goSignatureTypes(items: Slice[String]) -> Slice[ast2.MonoType]
-  if items.Len() == 0 then emptyGoTypes() else goSignatureTypes(sliceDrop(items, 1)).Prepend(GoTypeName(items.Get(0).UnwrapOr("any"))) end
-
+  if items.Len() == 0 then
+    emptyGoTypes()
+  else
+    goSignatureTypes(sliceDrop(items, 1)).Prepend(GoTypeName(items.Get(0).UnwrapOr("any")))
+  end
 end
 
 func emptyGoTypes() -> Slice[ast2.MonoType]
@@ -658,21 +895,21 @@ end
 
 func GoTypeName(name: String) -> ast2.MonoType
   switch name
-    case "int" => ast2.MonoType.TCon("Int", emptyGoTypes())
-    case "int8" => ast2.MonoType.TCon("Int8", emptyGoTypes())
-    case "int16" => ast2.MonoType.TCon("Int16", emptyGoTypes())
-    case "int32" => ast2.MonoType.TCon("Int32", emptyGoTypes())
-    case "int64" => ast2.MonoType.TCon("Int64", emptyGoTypes())
-    case "uint" => ast2.MonoType.TCon("UInt", emptyGoTypes())
-    case "uint8" => ast2.MonoType.TCon("UInt8", emptyGoTypes())
-    case "uint16" => ast2.MonoType.TCon("UInt16", emptyGoTypes())
-    case "uint32" => ast2.MonoType.TCon("UInt32", emptyGoTypes())
-    case "uint64" => ast2.MonoType.TCon("UInt64", emptyGoTypes())
-    case "float32" => ast2.MonoType.TCon("Float32", emptyGoTypes())
-    case "float64" => ast2.MonoType.TCon("Float64", emptyGoTypes())
-    case "string" => ast2.MonoType.TCon("String", emptyGoTypes())
-    case "bool" => ast2.MonoType.TCon("Bool", emptyGoTypes())
-    case "error" => ast2.MonoType.TCon("Error", emptyGoTypes())
+    case "int" => ast2.MonoType.TCon("Int")
+    case "int8" => ast2.MonoType.TCon("Int8")
+    case "int16" => ast2.MonoType.TCon("Int16")
+    case "int32" => ast2.MonoType.TCon("Int32")
+    case "int64" => ast2.MonoType.TCon("Int64")
+    case "uint" => ast2.MonoType.TCon("UInt")
+    case "uint8" => ast2.MonoType.TCon("UInt8")
+    case "uint16" => ast2.MonoType.TCon("UInt16")
+    case "uint32" => ast2.MonoType.TCon("UInt32")
+    case "uint64" => ast2.MonoType.TCon("UInt64")
+    case "float32" => ast2.MonoType.TCon("Float32")
+    case "float64" => ast2.MonoType.TCon("Float64")
+    case "string" => ast2.MonoType.TCon("String")
+    case "bool" => ast2.MonoType.TCon("Bool")
+    case "error" => ast2.MonoType.TCon("Error")
     case _ => ast2.MonoType.TVar(0)
   end
 end

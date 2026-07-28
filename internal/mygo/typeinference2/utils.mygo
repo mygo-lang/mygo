@@ -1,72 +1,21 @@
 package typeinference2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import fmt "go:fmt"
 
 func monoEqual(a: ast2.MonoType, b: ast2.MonoType) -> Bool
-  switch a
-    case TVar(id) =>
-      switch b
-        case TVar(id2) => id == id2
-        case _ => false
-      end
-    case TKVar(id) =>
-      switch b
-        case TKVar(id2) => id == id2
-        case _ => false
-      end
-    case TParam(id) =>
-      switch b
-        case TParam(id2) => id == id2
-        case _ => false
-      end
-    case TApp(ctor, args) =>
-      switch b
-        case TApp(ctor2, args2) => monoEqual(ctor.value(), ctor2.value()) && monoListEqual(args, args2)
-        case _ => false
-      end
-    case TCon(name, args) =>
-      switch b
-        case TCon(name2, args2) => name == name2 && monoListEqual(args, args2)
-        case _ => false
-      end
-    case TFunc(args, ret) =>
-      switch b
-        case TFunc(args2, ret2) => monoListEqual(args, args2) && monoEqual(ret.value(), ret2.value())
-        case _ => false
-      end
-    case TVariadic(args, ret) =>
-      switch b
-        case TVariadic(args2, ret2) => monoListEqual(args, args2) && monoEqual(ret.value(), ret2.value())
-        case _ => false
-      end
-    case TTuple(items) =>
-      switch b
-        case TTuple(items2) => monoListEqual(items, items2)
-        case _ => false
-      end
-    case TUnit =>
-      switch b
-        case TUnit => true
-        case _ => false
-      end
-    case TGoPackage(alias) =>
-      switch b
-        case TGoPackage(alias2) => alias == alias2
-        case _ => false
-      end
-  end
+  ast2.MonoEqual(a, b)
 end
 
 func monoListEqual(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType]) -> Bool
-  if a.Len() != b.Len() then
-    false
-  else
-    if a.Len() == 0 then
-      true
-    else
-      monoEqual(a.Get(0).UnwrapOr(ast2.MonoType.TUnit), b.Get(0).UnwrapOr(ast2.MonoType.TUnit)) && monoListEqual(sliceDrop(a, 1), sliceDrop(b, 1))
-    end
-  end
+  ast2.MonoListEqual(a, b)
+end
+
+func panic(msg: String) -> ()
+  go[()] {
+    code: `panic({msg})`
+    in msg=msg
+  }
 end
 
 func monoString(t: ast2.MonoType) -> String
@@ -74,13 +23,17 @@ func monoString(t: ast2.MonoType) -> String
     case TVar(id) => "t" + id.ToString()
     case TKVar(id) => "K" + id.ToString()
     case TParam(id) => "p" + id.ToString()
-    case TCon(name, _) => name
+    case TCon(name) => name
     case TApp(ctor, _) => monoString(ctor.value()) + "[...]"
     case TFunc(_, _) => "func"
     case TVariadic(_, _) => "variadic"
     case TTuple(_) => "tuple"
     case TUnit => "()"
-    case TGoPackage(alias) => "go package " + alias
+    case TQualifiedName(alias, typeRef) => fmt.Sprintf("%s.%s", alias, monoString(typeRef.value()))
+    case _ then
+      panic("unreachable MonoType variant")
+      ""
+    end
   end
 end
 
@@ -89,14 +42,17 @@ func monoStringFull(t: ast2.MonoType) -> String
     case TVar(id) => "t" + id.ToString()
     case TKVar(id) => "K" + id.ToString()
     case TParam(id) => "p" + id.ToString()
-    case TCon(name, args) =>
-      if args.Len() == 0 then name else name + "[" + monoListString(args) + "]" end
+    case TCon(name) => name
     case TApp(ctor, args) => monoStringFull(ctor.value()) + "[" + monoListString(args) + "]"
     case TFunc(args, ret) => "func(" + monoListString(args) + ") -> " + monoStringFull(ret.value())
     case TVariadic(args, ret) => "variadic(" + monoListString(args) + ") -> " + monoStringFull(ret.value())
     case TTuple(items) => "tuple(" + monoListString(items) + ")"
     case TUnit => "()"
-    case TGoPackage(alias) => "go package " + alias
+    case TQualifiedName(alias, typeRef) => fmt.Sprintf("%s.%s", alias, monoStringFull(typeRef.value()))
+    case _ then
+      panic("unreachable MonoType variant")
+      ""
+    end
   end
 end
 
@@ -195,7 +151,7 @@ func isKindVar(t: ast2.MonoType, id: Int) -> Bool
     case TKVar(other) => id == other
     case TParam(_) => false
     case TApp(ctor, args) => isKindVar(ctor.value(), id) || isKindVarAll(args, id)
-    case TCon(_, args) => isKindVarAll(args, id)
+    case TCon(_) => false
     case TFunc(args, ret) => isKindVarAll(args, id) || isKindVar(ret.value(), id)
     case TVariadic(args, ret) => isKindVarAll(args, id) || isKindVar(ret.value(), id)
     case TTuple(items) => isKindVarAll(items, id)
@@ -214,13 +170,13 @@ func nextFreshVarID(t: ast2.MonoType, current: Int) -> Int
     case TVar(id) => if id >= current then id + 1 else current end
     case TKVar(id) => if id >= current then id + 1 else current end
     case TParam(_) => current
-    case TCon(_, args) => nextFreshVarIDInAll(args, current)
+    case TCon(_) => current
     case TApp(ctor, args) => nextFreshVarIDInAll(args, nextFreshVarID(ctor.value(), current))
     case TFunc(args, ret) => nextFreshVarID(ret.value(), nextFreshVarIDInAll(args, current))
     case TVariadic(args, ret) => nextFreshVarID(ret.value(), nextFreshVarIDInAll(args, current))
     case TTuple(items) => nextFreshVarIDInAll(items, current)
     case TUnit => current
-    case TGoPackage(_) => current
+    case TQualifiedName(_, inner) => nextFreshVarID(inner.value(), current)
   end
 end
 
@@ -238,18 +194,22 @@ func freeVars(t: ast2.MonoType, out: Slice[Int]) -> Slice[Int]
     case TVar(id) => if containsInt(out, id) then out else out.Append(id) end
     case TKVar(id) => if containsInt(out, id) then out else out.Append(id) end
     case TParam(_) => out
-    case TCon(_, args) => freeVarsAll(args, out)
+    case TCon(_) => out
     case TApp(ctor, args) => freeVarsAll(args, freeVars(ctor.value(), out))
     case TFunc(args, ret) => freeVarsAll(args, freeVars(ret.value(), out))
     case TVariadic(args, ret) => freeVarsAll(args, freeVars(ret.value(), out))
     case TTuple(items) => freeVarsAll(items, out)
     case TUnit => out
-    case TGoPackage(_) => out
+    case TQualifiedName(_, inner) => freeVars(inner.value(), out)
   end
 end
 
 func freeVarsAll(items: Slice[ast2.MonoType], out: Slice[Int]) -> Slice[Int]
-  if items.Len() == 0 then out else freeVarsAll(sliceDrop(items, 1), freeVars(items.Get(0).UnwrapOr(ast2.MonoType.TUnit), out)) end
+  if items.Len() == 0 then
+    out
+  else
+    freeVarsAll(sliceDrop(items, 1), freeVars(items.Get(0).UnwrapOr(ast2.MonoType.TUnit), out))
+  end
 end
 
 func containsInt(items: Slice[Int], value: Int) -> Bool
@@ -357,5 +317,28 @@ func sliceTailLoop[A](items: Slice[A], index: Int, out: Slice[A]) -> Slice[A]
       case Some(value) => sliceTailLoop(items, index + 1, out.Append(value))
       case None => out
     end
+  end
+end
+
+# Construct generic types
+func tCon(name: String, args: Slice[ast2.MonoType]) -> ast2.MonoType
+  ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon(name)), args)
+end
+
+func getTCon(typ: ast2.MonoType) -> Option[(String, Slice[ast2.MonoType])]
+  switch typ
+    case TCon(name) => Some((name, [] as Slice[ast2.MonoType]))
+    case TApp(typeRef, args) then
+      switch typeRef.value()
+        case TCon(name) => Some((name, args as Slice[ast2.MonoType]))
+        case _ => None
+      end
+    end
+    # Unwrap TQualifiedName so a foreign-package type (e.g. `testing.T`
+    # reached through `Ref[testing.T]`) is treated as the underlying type
+    # name.  The caller is responsible for re-deriving the qualified
+    # `alias.Name` form when the symbol table needs the full key.
+    case TQualifiedName(_, inner) => getTCon(inner.value())
+    case _ => None
   end
 end

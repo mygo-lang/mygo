@@ -105,19 +105,32 @@ func expectedGoType(expected: ast2.MonoType) -> String
 end
 
 func noneTypeArg(expected: ast2.MonoType, ctx: Ref[egCtx]) -> String
-  switch expected
-    case TCon(name, args) =>
-      if name == "Option" && args.Len() == 1 then
-        monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit))
-      else
-        ctx.typeParams.Fold("", func(found: String, item: String) -> String
-          if found != "" || strings.HasSuffix(item, "#hkt") || strings.Index(item, "[") >= 0 then found else item end
-        end)
+  let opt = switch expected
+    case TApp(typeRef, args) then
+      switch typeRef.value()
+        case TCon(name) then
+          if name == "Option" && args.Len() == 1 then
+            Some(args)
+          else
+            None
+          end
+        end
+        case _ => None
       end
-    case _ =>
+    end
+    case _ => None
+  end
+  switch opt
+    case Some(args) => monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit))
+    case _ then
       ctx.typeParams.Fold("", func(found: String, item: String) -> String
-        if found != "" || strings.HasSuffix(item, "#hkt") || strings.Index(item, "[") >= 0 then found else item end
+        if found != "" || strings.HasSuffix(item, "#hkt") || strings.Index(item, "[") >= 0 then
+          found
+        else
+          item
+        end
       end)
+    end
   end
 end
 
@@ -269,9 +282,18 @@ end
 # that element type instead of eagerly falling back to []any.
 func emptySliceTypeFromReturn(typ: ast2.MonoType, typeParams: Slice[String]) -> String
   switch typ
-    case TCon(name, args) =>
-      if name == "Slice" then monoTypeToGoStrWithParams(typ, typeParams) else findSliceTypeInMonos(args, typeParams, 0) end
-    case TApp(_, args) => findSliceTypeInMonos(args, typeParams, 0)
+    case TApp(typeRef, args) then
+      switch typeRef.value()
+        case TCon(name) then
+          if name == "Slice" then
+            monoTypeToGoStrWithParams(typ, typeParams)
+          else
+            findSliceTypeInMonos(args, typeParams, 0)
+          end
+        end
+        case _ => findSliceTypeInMonos(args, typeParams, 0)
+      end
+    end
     case _ => "[]any"
   end
 end
@@ -382,8 +404,16 @@ func translateSwitchSubject(target: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExp
       switch ffiResultSignature(fn, ctx)
         case Some(sig) =>
           let valueType = sig.Results.Get(0).UnwrapOr("")
-          if valueType == "" then Err("Go FFI function has no value return type") else
-            let resultType = ast2.MonoType.TCon("Result", [ast2.MonoType.TCon(valueType, [] as Slice[ast2.MonoType]), ast2.MonoType.TCon("Error", [] as Slice[ast2.MonoType])])
+          if valueType == "" then
+            Err("Go FFI function has no value return type")
+          else
+            let resultType = ast2.MonoType.TApp(
+              Ref.new(ast2.MonoType.TCon("Result")),
+              [
+                ast2.MonoType.TCon(valueType),
+                ast2.MonoType.TCon("Error"),
+              ]
+            )
             translateFFIResultCall(fn, typeArgs, args, ctx, resultType, sig)
           end
         case None => translateExprAst(target, ctx)
@@ -520,13 +550,10 @@ func extractVariantFieldType(targetMono: ast2.MonoType, index: Int, variantName:
     case Some(monos) => resolveVariantFieldMono(monos.Get(index).UnwrapOr(ast2.MonoType.TUnit), targetMono)
     case None =>
       switch targetMono
-        case TCon(_, args) =>
-          let argCount = args.Len()
-          let argIdx = if argCount == 1 then 0 else index end
+        case TApp(ctor, args) then
+          let argIdx = if args.Len() == 1 => 0 else index
           args.Get(argIdx).UnwrapOr(ast2.MonoType.TUnit)
-        case TApp(ctor, args) =>
-          let argIdx = if args.Len() == 1 then 0 else index end
-          args.Get(argIdx).UnwrapOr(ast2.MonoType.TUnit)
+        end
         case _ => ast2.MonoType.TUnit
       end
   end
@@ -538,7 +565,6 @@ end
 # than emitting Result[any, any].
 func resolveVariantFieldMono(fieldMono: ast2.MonoType, targetMono: ast2.MonoType) -> ast2.MonoType
   switch targetMono
-    case TCon(_, args) => typeinference2.ApplySubst(bindTypeArgs(variantTypeParamIDs(args, 1, [] as Slice[Int]), args, 0, [] as Slice[typeinference2.SubstEntry]), fieldMono)
     case TApp(_, args) => typeinference2.ApplySubst(bindTypeArgs(variantTypeParamIDs(args, 1, [] as Slice[Int]), args, 0, [] as Slice[typeinference2.SubstEntry]), fieldMono)
     case _ => fieldMono
   end
@@ -623,33 +649,39 @@ func resolveExprMonoType(expr: ast2.Expr, ctx: Ref[egCtx]) -> Option[ast2.MonoTy
         case IdentExpr(name) =>
           switch ctxGetLocal(ctx, name)
             case Some(t) => Some(t)
-            case None =>
-              if isGoPackageAlias(name, ctx.goPackages) then
-                Some(ast2.MonoType.TGoPackage(name))
-              else
-                None
-              end
+            case None => None
           end
         case FieldExpr(base, field) =>
           switch resolveExprMonoType(base, ctx)
-            case Some(bt) =>
+            case Some(bt) then
               let resolvedBase = switch bt
-                case TCon(name, args) =>
-                  if name == "Ref" && args.Len() == 1 then args.Get(0).UnwrapOr(bt) else bt end
+                case TApp(typeRef, args) then
+                  switch typeRef.value()
+                    case TCon(name) then
+                      if name == "Ref" && args.Len() == 1 then
+                        args.Get(0).UnwrapOr(bt)
+                      else
+                        bt
+                      end
+                    end
+                    case _ => bt
+                  end
+                end
                 case _ => bt
               end
               switch resolvedBase
-                case TGoPackage(alias) =>
-                  switch ffiResultSignatureInPackages(ctx.goPackages, alias, field)
+                case TQualifiedName(path, inner) =>
+                  switch ffiResultSignatureInPackages(ctx.goPackages, path, field)
                     case Some(sig) => Some(goSignatureToMono(sig))
                     case None =>
-                      switch ffiSignatureInPackages(ctx.goPackages, alias, field)
+                      switch ffiSignatureInPackages(ctx.goPackages, path, field)
                         case Some(sig) => Some(goSignatureToMono(sig))
                         case None => lookupFieldInMonoType(resolvedBase, field, ctx)
                       end
                   end
                 case _ => lookupFieldInMonoType(resolvedBase, field, ctx)
               end
+            end
             case None => None
           end
         case CallExpr(fn, typeArgs, args) =>
@@ -952,8 +984,18 @@ end
 # Option constructor, the current function return type supplies the same hint.
 func refInnerExpected(expected: ast2.MonoType, fallback: ast2.MonoType) -> ast2.MonoType
   switch expected
-    case TCon(name, args) =>
-      if name == "Ref" && args.Len() == 1 then args.Get(0).UnwrapOr(ast2.MonoType.TUnit) else fallback end
+    case TApp(typeRef, args) then
+      switch typeRef.value()
+        case TCon(name) then
+          if name == "Ref" && args.Len() == 1 then
+            args.Get(0).UnwrapOr(ast2.MonoType.TUnit)
+          else
+            fallback
+          end
+        end
+        case _ => fallback
+      end
+    end
     case _ => fallback
   end
 end
@@ -1144,60 +1186,10 @@ func matchDictFuncByMono(names: Slice[String], monoTypes: Slice[ast2.MonoType], 
   if index >= names.Len() || index >= monoTypes.Len() then
     None
   else
-    if monoTypeEquals(monoTypes.Get(index).UnwrapOr(ast2.MonoType.TUnit), receiverMono) then
+    if ast2.MonoEqual(monoTypes.Get(index).UnwrapOr(ast2.MonoType.TUnit), receiverMono) then
       names.Get(index)
     else
       matchDictFuncByMono(names, monoTypes, receiverMono, index + 1)
-    end
-  end
-end
-
-func monoTypeEquals(a: ast2.MonoType, b: ast2.MonoType) -> Bool
-  switch a
-    case TVar(_) =>
-      switch b
-        case TParam(_) => monoTypeEquals(b, a)
-        case TVar(id2) =>
-          switch a
-            case TVar(id1) => id1 == id2
-            case _ => false
-          end
-        case _ => false
-      end
-    case TParam(id1) =>
-      switch b
-        case TParam(id2) => id1 == id2
-        case _ => false
-      end
-    case TCon(name1, args1) =>
-      switch b
-        case TCon(name2, args2) => name1 == name2 && monoTypeListEquals(args1, args2)
-        case _ => false
-      end
-    case TUnit =>
-      switch b
-        case TUnit => true
-        case _ => false
-      end
-    case TKVar(_) =>
-      switch b
-        case TKVar(_) => true
-        case _ => false
-      end
-    case _ => false
-  end
-end
-
-func monoTypeListEquals(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType]) -> Bool
-  if a.Len() != b.Len() then false else
-    if a.Len() == 0 then true else
-      let headA = a.Get(0).UnwrapOr(ast2.MonoType.TUnit)
-      let headB = b.Get(0).UnwrapOr(ast2.MonoType.TUnit)
-      if monoTypeEquals(headA, headB) then
-        monoTypeListEquals(sliceDrop(a, 1), sliceDrop(b, 1))
-      else
-        false
-      end
     end
   end
 end
@@ -1309,7 +1301,7 @@ func receiverMonoMatches(pattern: ast2.MonoType, actual: ast2.MonoType) -> Bool
       case Some(actualName) => patternName == actualName
       case None => false
     end
-    case None => monoTypeEquals(pattern, actual)
+    case None => ast2.MonoEqual(pattern, actual)
   end
 end
 
@@ -1317,7 +1309,7 @@ end
 # than TCon("Slice", [A]).  Compare their MonoType constructors directly.
 func monoTypeConstructor(typ: ast2.MonoType) -> Option[String]
   switch typ
-    case TCon(name, _) => Some(name)
+    case TCon(name) => Some(name)
     case TApp(ctor, _) => switch ctor.value()
       case TCon(name, _) => Some(name)
       case _ => None
@@ -1384,14 +1376,22 @@ func inferredConstructorArgsByName(name: String, enumName: Option[String], expec
 end
 
 func enumTypeArgs(enumName: String, expected: ast2.MonoType) -> Slice[String]
-  switch expected
-    case TCon(n, args) =>
-      if n == enumName then
-        args.Map(func(a: ast2.MonoType) -> String monoTypeToGoStr(a) end)
-      else
-        [] as Slice[String]
+  switch expected    
+    case TApp(typeRef, args) then
+      switch typeRef.value()
+        case TCon(n) then
+          if n == enumName then
+            args.Map(func(a: ast2.MonoType) -> String
+              monoTypeToGoStr(a)
+            end)
+          else
+            []
+          end
+        end
+        case _ => []
       end
-    case _ => [] as Slice[String]
+    end
+    case _ => []
   end
 end
 
@@ -1400,16 +1400,25 @@ func inferredBuiltinConstructorArgs(name: String, expected: ast2.MonoType, ctx: 
     [monoTypeToGoStrWithParams(expected, ctx.typeParamNames)]
   else
     switch expected
-      case TCon(n, args) =>
-        if name == "None" && n == "Option" && args.Len() == 1 then
-          [monoTypeToGoStrWithParams(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), ctx.typeParamNames)]
-        else
-          if (name == "Ok" || name == "Err") && n == "Result" && args.Len() == 2 then
-            [monoTypeToGoStrWithParams(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), ctx.typeParamNames), monoTypeToGoStrWithParams(args.Get(1).UnwrapOr(ast2.MonoType.TUnit), ctx.typeParamNames)]
-          else
-            [] as Slice[String]
+      case TApp(typeRef, args) then
+        switch typeRef.value()
+          case TCon(n) then
+            if name == "None" && n == "Option" && args.Len() == 1 then
+              [
+                monoTypeToGoStrWithParams(args.Get(0).UnwrapOr(ast2.MonoType.TUnit),
+                ctx.typeParamNames)
+              ]
+            elsif (name == "Ok" || name == "Err") && n == "Result" && args.Len() == 2 then
+              [
+                monoTypeToGoStrWithParams(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), ctx.typeParamNames),
+                monoTypeToGoStrWithParams(args.Get(1).UnwrapOr(ast2.MonoType.TUnit), ctx.typeParamNames)
+              ]
+            else
+              [] as Slice[String]
+            end
           end
         end
+      end
       case _ => [] as Slice[String]
     end
   end
@@ -1457,8 +1466,18 @@ func translateFFIOptionCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], a
         let okName = ctxFreshExprTemp(ctx)
         let optionName = ctxFreshExprTemp(ctx)
         let inner = switch expected
-          case TCon(n, args) =>
-            if n == "Option" && args.Len() == 1 then monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit)) else "any" end
+          case TApp(typeRef, args) then
+            switch typeRef.value()
+              case TCon(n) then
+                if n == "Option" && args.Len() == 1 then
+                  monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit))
+                else
+                  "any"
+                end
+              end
+              case _ => "any"
+            end
+          end
           case _ => "any"
         end
         let call = goast.GenericCall(cv.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), v.Exprs)
@@ -1517,13 +1536,33 @@ func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], a
         let errorName = ctxFreshExprTemp(ctx)
         let resultName = ctxFreshExprTemp(ctx)
         let inner = switch expected
-          case TCon(n, args) =>
-            if n == "Result" && args.Len() == 2 then monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit)) else "any" end
+          case TApp(typeRef, args) then
+            switch typeRef.value()
+              case TCon(n) then
+                if n == "Result" && args.Len() == 2 then
+                  monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit))
+                else
+                  "any"
+                end
+              end
+              case _ => "any"
+            end
+          end
           case _ => "any"
         end
         let errorGoType = switch expected
-          case TCon(n, args) =>
-            if n == "Result" && args.Len() == 2 then monoTypeToGoStr(args.Get(1).UnwrapOr(ast2.MonoType.TUnit)) else "string" end
+          case TApp(typeRef, args) then
+            switch typeRef.value()
+              case TCon(n) then
+                if n == "Result" && args.Len() == 2 then
+                  monoTypeToGoStr(args.Get(1).UnwrapOr(ast2.MonoType.TUnit))
+                else
+                  "string"
+                end
+              end
+              case _ => "string"
+            end
+          end
           case _ => "string"
         end
         let errorType = if errorGoType == "error" then "error" else "string" end

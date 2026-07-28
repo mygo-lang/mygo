@@ -80,10 +80,10 @@ end
 func builtInEqInstances() -> Slice[Instance]
   let emptyArgs = [] as Slice[ast2.MonoType]
   # Ref[T] uses a TVar with a sentinel ID to match any Ref type.
-  let refType = ast2.MonoType.TCon("Ref", [ast2.MonoType.TVar(999)])
+  let refType = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Ref")), [ast2.MonoType.TVar(999)])
   let primitives = ["Int", "Int8", "Int16", "Int32", "Int64", "UInt8", "UInt16", "UInt32", "UInt64", "Float32", "Float64", "String", "Bool", "Rune", "Byte"] as Slice[String]
   let instances = primitives.Fold([] as Slice[Instance], func(acc: Slice[Instance], name: String) -> Slice[Instance]
-    acc.Append(Instance { ClassName: "Eq", Type: ast2.MonoType.TCon(name, emptyArgs), Predicates: [] as Slice[Predicate] })
+    acc.Append(Instance { ClassName: "Eq", Type: ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon(name)), emptyArgs), Predicates: [] as Slice[Predicate] })
   end)
   instances.Append(Instance { ClassName: "Eq", Type: refType, Predicates: [] as Slice[Predicate] })
 end

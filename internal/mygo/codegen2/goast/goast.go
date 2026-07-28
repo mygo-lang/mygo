@@ -724,6 +724,8 @@ func Return(values []ast.Expr) ast.Stmt { return &ast.ReturnStmt{Results: values
 
 func Continue() ast.Stmt { return &ast.BranchStmt{Tok: token.CONTINUE} }
 
+func Break() ast.Stmt { return &ast.BranchStmt{Tok: token.BREAK} }
+
 func Block(stmts []ast.Stmt) *ast.BlockStmt { return &ast.BlockStmt{List: stmts} }
 
 func If(cond ast.Expr, body []ast.Stmt, elseBody []ast.Stmt) ast.Stmt {

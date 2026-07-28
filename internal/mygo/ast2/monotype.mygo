@@ -1,0 +1,116 @@
+package ast2
+
+enum MonoType
+  TVar(Int)
+  TKVar(Int)
+  TApp(Ref[MonoType], Slice[MonoType])
+  # TCon carries only the type name.  Generic application is encoded
+  # separately as TApp(TCon(name), args), so a non-generic type and
+  # the same type with type parameters are never confused.
+  TCon(String)
+  TFunc(Slice[MonoType], Ref[MonoType])
+  TVariadic(Slice[MonoType], Ref[MonoType])
+  TTuple(Slice[MonoType])
+  TUnit
+  TParam(Int)
+  # TQualifiedName represents a type imported from another MyGO package.
+  # The first String is the import path (e.g.
+  # "github.com/mygo-lang/mygo/internal/mygo/ast2"), and the Ref[MonoType]
+  # holds the package-local type (typically a TCon with the type name).
+  # Using the import path instead of the local alias ensures that the same
+  # type is recognised as equal across files that use different local aliases.
+  TQualifiedName(String, Ref[MonoType])
+end
+
+impl MonoTypeEq: Eq[MonoType]
+  func Equals(a: MonoType, b: MonoType) -> Bool
+    switch a
+      case TVar(id) then
+        switch b
+          case TVar(id2) => id == id2
+          case _ => false
+        end
+      end
+      case TKVar(id) then
+        switch b
+          case TKVar(id2) => id == id2
+          case _ => false
+        end
+      end
+      case TParam(id) then
+        switch b
+          case TParam(id2) => id == id2
+          case _ => false
+        end
+      end
+      case TApp(ctor, args) then
+        switch b
+          case TApp(ctor2, args2) => ctor.value().Equals(ctor2.value()) && args.Equals(args2)
+          case _ => false
+        end
+      end
+      case TCon(name) then
+        switch b
+          case TCon(name2) => name == name2
+          case _ => false
+        end
+      end
+      case TFunc(args, ret) then
+        switch b
+          case TFunc(args2, ret2) => args.Equals(args2) && ret.value().Equals(ret2.value())
+          case _ => false
+        end
+      end
+      case TVariadic(args, ret) then
+        switch b
+          case TVariadic(args2, ret2) => args.Equals(args2) && ret.value().Equals(ret2.value())
+          case _ => false
+        end
+      end
+      case TTuple(items) then
+        switch b
+          case TTuple(items2) => items.Equals(items2)
+          case _ => false
+        end
+      end
+      case TUnit then
+        switch b
+          case TUnit => true
+          case _ => false
+        end
+      end
+      case TQualifiedName(pathA, typeRefA) then
+        switch b
+          case TQualifiedName(pathB, typeRefB) then
+            pathA == pathB && typeRefA.value().Equals(typeRefB.value())
+          end
+          case _ => false
+        end
+      end
+    end
+  end
+end
+
+impl SliceMonoTypeEq: Eq[Slice[MonoType]]
+  func Equals(a: Slice[MonoType], b: Slice[MonoType]) -> Bool
+    if a.Len() != b.Len() then
+      false
+    else
+      if a.Len() == 0 then
+        true
+      else
+        let aHead = a.Get(0).UnwrapOr(MonoType.TUnit)
+        let bHead = b.Get(0).UnwrapOr(MonoType.TUnit)
+        aHead.Equals(bHead) && sliceDrop(a, 1).Equals(sliceDrop(b, 1))
+      end
+    end
+  end
+end
+
+func MonoEqual(a: MonoType, b: MonoType) -> Bool
+  a.Equals(b)
+end
+
+func MonoListEqual(a: Slice[MonoType], b: Slice[MonoType]) -> Bool
+  a.Equals(b)
+end

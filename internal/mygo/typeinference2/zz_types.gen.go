@@ -94,9 +94,7 @@ type PkgInfo struct {
 type MyGoPackageInfo struct {
 	Alias string
 	Path  string
-	Name  string
-	Funcs []EnvEntry
-	Types []string
+	Decls []ast2.Decl
 }
 type InferState struct {
 	FreshVarID             int
@@ -211,702 +209,1079 @@ func withActiveConstraints(state InferState, constraints []Predicate) InferState
 	return InferState{FreshVarID: state.FreshVarID, PkgInfo: state.PkgInfo, GoPackages: state.GoPackages, MyGoPackages: state.MyGoPackages, MyGoPackageCache: state.MyGoPackageCache, Symbols: state.Symbols, ActiveConstraints: constraints, NamedImpls: state.NamedImpls, ResolvedConstraintArgs: state.ResolvedConstraintArgs}
 }
 func goBuiltinSymbols() []Symbol {
-	errorMethod_1202 := GoFuncSignature{Name: "Error", Params: []string([]string{}), Results: []string([]string{"string"}), Variadic: false}
-	return []Symbol([]Symbol{SymbolGoMethodCtor("Error", "Error", errorMethod_1202)})
+	errorMethod_1373 := GoFuncSignature{Name: "Error", Params: []string([]string{}), Results: []string([]string{"string"}), Variadic: false}
+	return []Symbol([]Symbol{SymbolGoMethodCtor("Error", "Error", errorMethod_1373)})
 }
 func goSymbolsFromPackages(packages []GoPackageEntry, out []Symbol) []Symbol {
-	var expr_1205 []Symbol
+	var expr_1376 []Symbol
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(packages) == 0 {
-		expr_1205 = out
+		expr_1376 = out
 	} else {
-		var expr_1204 []Symbol
-		pkg_1203 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0), GoPackageEntry{Alias: "", Path: "", Funcs: []GoFuncSignature([]GoFuncSignature{}), Types: []GoTypeSignature([]GoTypeSignature{})})
-		expr_1204 = goSymbolsFromPackages(sliceDrop[GoPackageEntry](packages, 1), goSymbolsFromTypes(pkg_1203.Alias, pkg_1203.Types, out))
-		expr_1205 = expr_1204
+		var expr_1375 []Symbol
+		pkg_1374 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0), GoPackageEntry{Alias: "", Path: "", Funcs: []GoFuncSignature([]GoFuncSignature{}), Types: []GoTypeSignature([]GoTypeSignature{})})
+		expr_1375 = goSymbolsFromPackages(sliceDrop[GoPackageEntry](packages, 1), goSymbolsFromTypes(pkg_1374.Alias, pkg_1374.Types, out))
+		expr_1376 = expr_1375
 	}
-	return expr_1205
+	return expr_1376
 }
 func goSymbolsFromTypes(alias string, types []GoTypeSignature, out []Symbol) []Symbol {
-	var expr_1208 []Symbol
+	var expr_1379 []Symbol
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(types) == 0 {
-		expr_1208 = out
+		expr_1379 = out
 	} else {
-		var expr_1207 []Symbol
-		t_1206 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, 0), GoTypeSignature{TypeName: "", TypeParams: []string([]string{}), Methods: []GoFuncSignature([]GoFuncSignature{})})
-		expr_1207 = goSymbolsFromTypes(alias, sliceDrop[GoTypeSignature](types, 1), goMethodsFromSigs(goPackageMemberName(alias, t_1206.TypeName), t_1206.Methods, out))
-		expr_1208 = expr_1207
+		var expr_1378 []Symbol
+		t_1377 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, 0), GoTypeSignature{TypeName: "", TypeParams: []string([]string{}), Methods: []GoFuncSignature([]GoFuncSignature{})})
+		expr_1378 = goSymbolsFromTypes(alias, sliceDrop[GoTypeSignature](types, 1), goMethodsFromSigs(goPackageMemberName(alias, t_1377.TypeName), t_1377.Methods, out))
+		expr_1379 = expr_1378
 	}
-	return expr_1208
+	return expr_1379
 }
 func goPackageMemberName(alias string, name string) string {
-	var expr_1209 string
+	var expr_1380 string
 	if alias == "." {
-		expr_1209 = name
+		expr_1380 = name
 	} else {
-		expr_1209 = alias + "." + name
+		expr_1380 = alias + "." + name
 	}
-	return expr_1209
+	return expr_1380
 }
 func goMethodsFromSigs(typeName string, methods []GoFuncSignature, out []Symbol) []Symbol {
-	var expr_1212 []Symbol
+	var expr_1383 []Symbol
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) == 0 {
-		expr_1212 = out
+		expr_1383 = out
 	} else {
-		var expr_1211 []Symbol
-		m_1210 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), GoFuncSignature{Name: "", Params: []string([]string{}), Results: []string([]string{}), Variadic: false})
-		expr_1211 = goMethodsFromSigs(typeName, sliceDrop[GoFuncSignature](methods, 1), MygoIN5SliceM7Prepend(out, SymbolGoMethodCtor(typeName, m_1210.Name, m_1210)))
-		expr_1212 = expr_1211
+		var expr_1382 []Symbol
+		m_1381 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), GoFuncSignature{Name: "", Params: []string([]string{}), Results: []string([]string{}), Variadic: false})
+		expr_1382 = goMethodsFromSigs(typeName, sliceDrop[GoFuncSignature](methods, 1), MygoIN5SliceM7Prepend(out, SymbolGoMethodCtor(typeName, m_1381.Name, m_1381)))
+		expr_1383 = expr_1382
 	}
-	return expr_1212
+	return expr_1383
 }
 func buildSymbolTable(goPkgs []GoPackageEntry, decls []ast2.Decl) []Symbol {
-	builtinSyms_1213 := goBuiltinSymbols()
-	goSyms_1214 := goSymbolsFromPackages(goPkgs, []Symbol([]Symbol{}))
-	declSyms_1215 := collectDeclSymbols(decls, []Symbol([]Symbol{}))
-	return concatSymbols(concatSymbols(builtinSyms_1213, goSyms_1214), declSyms_1215)
+	builtinSyms_1384 := goBuiltinSymbols()
+	goSyms_1385 := goSymbolsFromPackages(goPkgs, []Symbol([]Symbol{}))
+	declSyms_1386 := collectDeclSymbols(decls, []Symbol([]Symbol{}))
+	return concatSymbols(concatSymbols(builtinSyms_1384, goSyms_1385), declSyms_1386)
 }
 func collectDeclSymbols(decls []ast2.Decl, out []Symbol) []Symbol {
-	var expr_1228 []Symbol
+	var expr_1399 []Symbol
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
-		expr_1228 = out
+		expr_1399 = out
 	} else {
-		var expr_1227 []Symbol
-		d_1216 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
-		rest_1217 := collectDeclSymbols(sliceDrop[ast2.Decl](decls, 1), out)
-		var expr_1226 []Symbol
-		if v_430, ok := d_1216.(ast2.DeclStructDecl); ok {
-			var expr_1225 []Symbol
-			syms_1224 := structFieldSymbols(v_430.F0, v_430.F2, v_430.F1, []Symbol([]Symbol{}))
-			expr_1225 = concatSymbols(rest_1217, syms_1224)
-			expr_1226 = expr_1225
+		var expr_1398 []Symbol
+		d_1387 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		rest_1388 := collectDeclSymbols(sliceDrop[ast2.Decl](decls, 1), out)
+		var expr_1397 []Symbol
+		if v_484, ok := d_1387.(ast2.DeclStructDecl); ok {
+			var expr_1396 []Symbol
+			syms_1395 := structFieldSymbols(v_484.F0, v_484.F2, v_484.F1, []Symbol([]Symbol{}))
+			expr_1396 = concatSymbols(rest_1388, syms_1395)
+			expr_1397 = expr_1396
 		} else {
-			if v_429, ok := d_1216.(ast2.DeclEnumDecl); ok {
-				var expr_1223 []Symbol
-				syms_1222 := enumVariantSymbols(v_429.F0, v_429.F2, v_429.F1, []Symbol([]Symbol{}))
-				expr_1223 = concatSymbols(rest_1217, syms_1222)
-				expr_1226 = expr_1223
+			if v_483, ok := d_1387.(ast2.DeclEnumDecl); ok {
+				var expr_1394 []Symbol
+				syms_1393 := enumVariantSymbols(v_483.F0, v_483.F2, v_483.F1, []Symbol([]Symbol{}))
+				expr_1394 = concatSymbols(rest_1388, syms_1393)
+				expr_1397 = expr_1394
 			} else {
-				if v_428, ok := d_1216.(ast2.DeclImplDecl); ok {
-					var expr_1221 []Symbol
-					receiverName_1219 := implReceiverName(v_428.F1, v_428.F2)
-					syms_1220 := implMethodSymbols(receiverName_1219, v_428.F0, v_428.F3, []Symbol([]Symbol{}))
-					expr_1221 = concatSymbols(rest_1217, syms_1220)
-					expr_1226 = expr_1221
+				if v_482, ok := d_1387.(ast2.DeclImplDecl); ok {
+					var expr_1392 []Symbol
+					receiverName_1390 := implReceiverName(v_482.F1, v_482.F2)
+					syms_1391 := implMethodSymbols(receiverName_1390, v_482.F0, v_482.F3, []Symbol([]Symbol{}))
+					expr_1392 = concatSymbols(rest_1388, syms_1391)
+					expr_1397 = expr_1392
 				} else {
 					{
-						var expr_1218 []Symbol
-						expr_1218 = rest_1217
-						expr_1226 = expr_1218
+						var expr_1389 []Symbol
+						expr_1389 = rest_1388
+						expr_1397 = expr_1389
 					}
 				}
 			}
 		}
-		expr_1227 = expr_1226
-		expr_1228 = expr_1227
+		expr_1398 = expr_1397
+		expr_1399 = expr_1398
 	}
-	return expr_1228
+	return expr_1399
 }
 func enumVariantSymbols(enumName string, variants []ast2.Variant, tps []string, out []Symbol) []Symbol {
-	var expr_1234 []Symbol
+	var expr_1405 []Symbol
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(variants) == 0 {
-		expr_1234 = out
+		expr_1405 = out
 	} else {
-		var expr_1233 []Symbol
-		v_1229 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
-		enumType_1230 := ast2.MonoTypeTConCtor(enumName, typeParamsAsTypes(tps, 1))
-		var expr_1231 ast2.MonoType
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_1229.Fields) == 0 {
-			expr_1231 = enumType_1230
+		var expr_1404 []Symbol
+		v_1400 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
+		enumType_1401 := tCon(enumName, typeParamsAsTypes(tps, 1))
+		var expr_1402 ast2.MonoType
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_1400.Fields) == 0 {
+			expr_1402 = enumType_1401
 		} else {
-			expr_1231 = ast2.MonoTypeTFuncCtor(typeArgsFromASTWithParams(v_1229.Fields, tps), &enumType_1230)
+			expr_1402 = ast2.MonoTypeTFuncCtor(typeArgsFromASTWithParams(v_1400.Fields, tps), &enumType_1401)
 		}
-		constructorType_1232 := expr_1231
-		expr_1233 = enumVariantSymbols(enumName, sliceDrop[ast2.Variant](variants, 1), tps, MygoIN5SliceM7Prepend(out, SymbolEnumVariantCtor(enumName, v_1229.Name, constructorType_1232)))
-		expr_1234 = expr_1233
+		constructorType_1403 := expr_1402
+		expr_1404 = enumVariantSymbols(enumName, sliceDrop[ast2.Variant](variants, 1), tps, MygoIN5SliceM7Prepend(out, SymbolEnumVariantCtor(enumName, v_1400.Name, constructorType_1403)))
+		expr_1405 = expr_1404
 	}
-	return expr_1234
+	return expr_1405
 }
 func structFieldSymbols(typeName string, fields []ast2.Field, typeParams []string, out []Symbol) []Symbol {
-	var expr_1238 []Symbol
+	var expr_1409 []Symbol
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) == 0 {
-		expr_1238 = out
+		expr_1409 = out
 	} else {
-		var expr_1237 []Symbol
-		f_1235 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
-		fieldType_1236 := typeFromASTWithParams(f_1235.Type, typeParams)
-		expr_1237 = structFieldSymbols(typeName, sliceDrop[ast2.Field](fields, 1), typeParams, MygoIN5SliceM7Prepend(out, SymbolStructFieldCtor(typeName, f_1235.Name, fieldType_1236)))
-		expr_1238 = expr_1237
+		var expr_1408 []Symbol
+		f_1406 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
+		fieldType_1407 := typeFromASTWithParams(f_1406.Type, typeParams)
+		expr_1408 = structFieldSymbols(typeName, sliceDrop[ast2.Field](fields, 1), typeParams, MygoIN5SliceM7Prepend(out, SymbolStructFieldCtor(typeName, f_1406.Name, fieldType_1407)))
+		expr_1409 = expr_1408
 	}
-	return expr_1238
+	return expr_1409
 }
 func InferFile(file ast2.File) Result[PackageInfo, string] {
-	env_1239 := predeclareImplMethods(file.Decls, predeclareFunctions(file.Decls, initialEnv()))
-	goPkgImports_1240 := collectGoPackageImports(file.Decls)
-	envWithGoPkgs_1241 := seedGoPackageEnv(goPkgImports_1240, env_1239)
-	initialSymbols_1242 := buildSymbolTable(goPkgImports_1240, file.Decls)
-	state_1243 := InferState{FreshVarID: 1, PkgInfo: None[PkgInfo](), GoPackages: goPkgImports_1240, MyGoPackages: []MyGoPackageInfo([]MyGoPackageInfo{}), MyGoPackageCache: []MyGoPackageInfo([]MyGoPackageInfo{}), Symbols: initialSymbols_1242, ActiveConstraints: []Predicate([]Predicate{}), NamedImpls: namedImplNames(file.Decls, 0, []string([]string{})), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
-	var expr_1249 Result[PackageInfo, string]
-	if v_432, ok := inferDecls(file.Decls, envWithGoPkgs_1241, []FieldEntry{}, state_1243).(ResultOk[PackageInfo, string]); ok {
-		var expr_1248 Result[PackageInfo, string]
-		collected_1245 := collectInstances(file.Decls)
-		instances_1246 := mergeBuiltInInstances(collected_1245)
-		solver_1247 := solverFromInstances(instances_1246)
-		expr_1248 = Ok[PackageInfo, string](PackageInfo{Env: resolveEnvironment(solver_1247, v_432.F0.Env), Fields: v_432.F0.Fields, GoPackages: goPkgImports_1240, Instances: instances_1246, Solver: solver_1247, TypedDecls: v_432.F0.TypedDecls, ExternalTypedDecls: []ast2.Decl([]ast2.Decl{}), ResolvedConstraintArgs: v_432.F0.ResolvedConstraintArgs})
-		expr_1249 = expr_1248
+	goPkgImports_1410 := collectGoPackageImports(file.Decls)
+	mygoImports_1411 := collectMyGoPackageImports(file.Decls)
+	envWithGoPkgs_1412 := seedGoPackageEnv(goPkgImports_1410, initialEnv())
+	envWithMyGoPkgs_1413 := seedMyGoPackageEnv(mygoImports_1411, []MyGoPackageInfo([]MyGoPackageInfo{}), envWithGoPkgs_1412)
+	envWithPredecl_1414 := predeclareImplMethods(file.Decls, predeclareFunctions(file.Decls, envWithMyGoPkgs_1413))
+	initialSymbols_1415 := buildSymbolTable(goPkgImports_1410, file.Decls)
+	state_1416 := InferState{FreshVarID: 1, PkgInfo: None[PkgInfo](), GoPackages: goPkgImports_1410, MyGoPackages: []MyGoPackageInfo([]MyGoPackageInfo{}), MyGoPackageCache: []MyGoPackageInfo([]MyGoPackageInfo{}), Symbols: initialSymbols_1415, ActiveConstraints: []Predicate([]Predicate{}), NamedImpls: namedImplNames(file.Decls, 0, []string([]string{})), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
+	var expr_1422 Result[PackageInfo, string]
+	if v_486, ok := inferDecls(file.Decls, envWithPredecl_1414, []FieldEntry{}, state_1416).(ResultOk[PackageInfo, string]); ok {
+		var expr_1421 Result[PackageInfo, string]
+		collected_1418 := collectInstances(file.Decls)
+		instances_1419 := mergeBuiltInInstances(collected_1418)
+		solver_1420 := solverFromInstances(instances_1419)
+		expr_1421 = Ok[PackageInfo, string](PackageInfo{Env: resolveEnvironment(solver_1420, v_486.F0.Env), Fields: v_486.F0.Fields, GoPackages: goPkgImports_1410, Instances: instances_1419, Solver: solver_1420, TypedDecls: v_486.F0.TypedDecls, ExternalTypedDecls: []ast2.Decl([]ast2.Decl{}), ResolvedConstraintArgs: v_486.F0.ResolvedConstraintArgs})
+		expr_1422 = expr_1421
 	} else {
-		if v_431, ok := inferDecls(file.Decls, envWithGoPkgs_1241, []FieldEntry{}, state_1243).(ResultErr[PackageInfo, string]); ok {
-			var expr_1244 Result[PackageInfo, string]
-			expr_1244 = Err[PackageInfo, string](withExpressionSourceName(v_431.F0, file.SourceName))
-			expr_1249 = expr_1244
+		if v_485, ok := inferDecls(file.Decls, envWithPredecl_1414, []FieldEntry{}, state_1416).(ResultErr[PackageInfo, string]); ok {
+			var expr_1417 Result[PackageInfo, string]
+			expr_1417 = Err[PackageInfo, string](withExpressionSourceName(v_485.F0, file.SourceName))
+			expr_1422 = expr_1417
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_1249
+	return expr_1422
 }
 func InferPackage(files []PkgDeclSource) Result[PackageInfo, string] {
 	return InferPackageWithGoPackages(files, collectGoPackageImports(flattenPkgDecls(files, 0, []ast2.Decl([]ast2.Decl{}))))
 }
 func InferPackageWithGoPackages(files []PkgDeclSource, goPkgImports []GoPackageEntry) Result[PackageInfo, string] {
-	allDecls_1250 := flattenPkgDecls(files, 0, []ast2.Decl([]ast2.Decl{}))
-	predeclEnv_1251 := predeclareAllFunctions(allDecls_1250, initialEnv())
-	envWithGoPkgs_1252 := seedGoPackageEnv(goPkgImports, predeclEnv_1251)
-	initialSymbols_1253 := buildSymbolTable(goPkgImports, allDecls_1250)
-	state_1254 := InferState{FreshVarID: 1, PkgInfo: None[PkgInfo](), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo([]MyGoPackageInfo{}), MyGoPackageCache: []MyGoPackageInfo([]MyGoPackageInfo{}), Symbols: initialSymbols_1253, ActiveConstraints: []Predicate([]Predicate{}), NamedImpls: namedImplNames(allDecls_1250, 0, []string([]string{})), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
-	result_1255 := inferDecls(allDecls_1250, envWithGoPkgs_1252, []FieldEntry{}, state_1254)
-	var expr_1262 Result[PackageInfo, string]
-	if v_434, ok := result_1255.(ResultOk[PackageInfo, string]); ok {
-		var expr_1261 Result[PackageInfo, string]
-		collected_1258 := collectInstances(allDecls_1250)
-		instances_1259 := mergeBuiltInInstances(collected_1258)
-		solver_1260 := solverFromInstances(instances_1259)
-		expr_1261 = Ok[PackageInfo, string](PackageInfo{Env: resolveEnvironment(solver_1260, v_434.F0.Env), Fields: v_434.F0.Fields, GoPackages: goPkgImports, Instances: instances_1259, Solver: solver_1260, TypedDecls: v_434.F0.TypedDecls, ExternalTypedDecls: []ast2.Decl([]ast2.Decl{}), ResolvedConstraintArgs: v_434.F0.ResolvedConstraintArgs})
-		expr_1262 = expr_1261
+	allDecls_1423 := flattenPkgDecls(files, 0, []ast2.Decl([]ast2.Decl{}))
+	mygoImports_1424 := collectMyGoPackageImports(allDecls_1423)
+	envWithGoPkgs_1425 := seedGoPackageEnv(goPkgImports, initialEnv())
+	envWithMyGoPkgs_1426 := seedMyGoPackageEnv(mygoImports_1424, []MyGoPackageInfo([]MyGoPackageInfo{}), envWithGoPkgs_1425)
+	envWithPredecl_1427 := predeclareAllFunctions(allDecls_1423, envWithMyGoPkgs_1426)
+	initialSymbols_1428 := buildSymbolTable(goPkgImports, allDecls_1423)
+	state_1429 := InferState{FreshVarID: 1, PkgInfo: None[PkgInfo](), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo([]MyGoPackageInfo{}), MyGoPackageCache: []MyGoPackageInfo([]MyGoPackageInfo{}), Symbols: initialSymbols_1428, ActiveConstraints: []Predicate([]Predicate{}), NamedImpls: namedImplNames(allDecls_1423, 0, []string([]string{})), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
+	result_1430 := inferDecls(allDecls_1423, envWithPredecl_1427, []FieldEntry{}, state_1429)
+	var expr_1437 Result[PackageInfo, string]
+	if v_488, ok := result_1430.(ResultOk[PackageInfo, string]); ok {
+		var expr_1436 Result[PackageInfo, string]
+		collected_1433 := collectInstances(allDecls_1423)
+		instances_1434 := mergeBuiltInInstances(collected_1433)
+		solver_1435 := solverFromInstances(instances_1434)
+		expr_1436 = Ok[PackageInfo, string](PackageInfo{Env: resolveEnvironment(solver_1435, v_488.F0.Env), Fields: v_488.F0.Fields, GoPackages: goPkgImports, Instances: instances_1434, Solver: solver_1435, TypedDecls: v_488.F0.TypedDecls, ExternalTypedDecls: []ast2.Decl([]ast2.Decl{}), ResolvedConstraintArgs: v_488.F0.ResolvedConstraintArgs})
+		expr_1437 = expr_1436
 	} else {
-		if v_433, ok := result_1255.(ResultErr[PackageInfo, string]); ok {
-			var expr_1257 Result[PackageInfo, string]
-			source_1256 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, 0), PkgDeclSource{Path: "<input>", Decls: []ast2.Decl([]ast2.Decl{})}).Path
-			expr_1257 = Err[PackageInfo, string](withExpressionSourceName(v_433.F0, source_1256))
-			expr_1262 = expr_1257
+		if v_487, ok := result_1430.(ResultErr[PackageInfo, string]); ok {
+			var expr_1432 Result[PackageInfo, string]
+			source_1431 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, 0), PkgDeclSource{Path: "<input>", Decls: []ast2.Decl([]ast2.Decl{})}).Path
+			expr_1432 = Err[PackageInfo, string](withExpressionSourceName(v_487.F0, source_1431))
+			expr_1437 = expr_1432
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_1262
+	return expr_1437
 }
-func InferPackageWithExternal(files []PkgDeclSource, external []PkgDeclSource, goPkgImports []GoPackageEntry) Result[PackageInfo, string] {
-	allDecls_1263 := flattenPkgDecls(files, 0, []ast2.Decl([]ast2.Decl{}))
-	extDecls_1264 := flattenPkgDecls(external, 0, []ast2.Decl([]ast2.Decl{}))
-	combined_1265 := appendDecls(allDecls_1263, extDecls_1264)
-	predeclEnv_1266 := predeclareAllFunctions(combined_1265, initialEnv())
-	envWithGoPkgs_1267 := seedGoPackageEnv(goPkgImports, predeclEnv_1266)
-	userSyms_1268 := buildSymbolTable(goPkgImports, allDecls_1263)
-	extSyms_1269 := buildSymbolTable([]GoPackageEntry([]GoPackageEntry{}), extDecls_1264)
-	initialSymbols_1270 := concatSymbols(userSyms_1268, extSyms_1269)
-	state_1271 := InferState{FreshVarID: 1, PkgInfo: None[PkgInfo](), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo([]MyGoPackageInfo{}), MyGoPackageCache: []MyGoPackageInfo([]MyGoPackageInfo{}), Symbols: initialSymbols_1270, ActiveConstraints: []Predicate([]Predicate{}), NamedImpls: namedImplNames(combined_1265, 0, []string([]string{})), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
-	result_1272 := inferDecls(combined_1265, envWithGoPkgs_1267, []FieldEntry{}, state_1271)
-	var expr_1279 Result[PackageInfo, string]
-	if v_436, ok := result_1272.(ResultOk[PackageInfo, string]); ok {
-		var expr_1278 Result[PackageInfo, string]
-		collected_1274 := collectInstances(allDecls_1263)
-		instances_1275 := mergeBuiltInInstances(collected_1274)
-		solver_1276 := solverFromInstances(instances_1275)
-		separated_1277 := separateTypedDecls(v_436.F0.TypedDecls, allDecls_1263, extDecls_1264)
-		expr_1278 = Ok[PackageInfo, string](PackageInfo{Env: resolveEnvironment(solver_1276, v_436.F0.Env), Fields: v_436.F0.Fields, GoPackages: goPkgImports, Instances: instances_1275, Solver: solver_1276, TypedDecls: separated_1277.User, ExternalTypedDecls: separated_1277.External, ResolvedConstraintArgs: v_436.F0.ResolvedConstraintArgs})
-		expr_1279 = expr_1278
+func InferPackageWithExternal(files []PkgDeclSource, external []PkgDeclSource, goPkgImports []GoPackageEntry, myGoPkgImports []MyGoPackageInfo) Result[PackageInfo, string] {
+	allDecls_1438 := flattenPkgDecls(files, 0, []ast2.Decl([]ast2.Decl{}))
+	extDecls_1439 := flattenPkgDecls(external, 0, []ast2.Decl([]ast2.Decl{}))
+	combined_1440 := appendDecls(allDecls_1438, extDecls_1439)
+	mygoAliases_1441 := collectMyGoPackageImports(allDecls_1438)
+	envWithGoPkgs_1442 := seedGoPackageEnv(goPkgImports, initialEnv())
+	envWithMyGoPkgs_1443 := seedMyGoPackageEnv(mygoAliases_1441, myGoPkgImports, envWithGoPkgs_1442)
+	envWithPredecl_1444 := predeclareAllFunctions(combined_1440, envWithMyGoPkgs_1443)
+	userSyms_1445 := buildSymbolTable(goPkgImports, allDecls_1438)
+	extSyms_1446 := buildSymbolTable([]GoPackageEntry([]GoPackageEntry{}), extDecls_1439)
+	initialSymbols_1447 := concatSymbols(userSyms_1445, extSyms_1446)
+	state_1448 := InferState{FreshVarID: 1, PkgInfo: None[PkgInfo](), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo([]MyGoPackageInfo{}), MyGoPackageCache: myGoPkgImports, Symbols: initialSymbols_1447, ActiveConstraints: []Predicate([]Predicate{}), NamedImpls: namedImplNames(combined_1440, 0, []string([]string{})), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
+	result_1449 := inferDecls(combined_1440, envWithPredecl_1444, []FieldEntry{}, state_1448)
+	var expr_1456 Result[PackageInfo, string]
+	if v_490, ok := result_1449.(ResultOk[PackageInfo, string]); ok {
+		var expr_1455 Result[PackageInfo, string]
+		collected_1451 := collectInstances(allDecls_1438)
+		instances_1452 := mergeBuiltInInstances(collected_1451)
+		solver_1453 := solverFromInstances(instances_1452)
+		separated_1454 := separateTypedDecls(v_490.F0.TypedDecls, allDecls_1438, extDecls_1439)
+		expr_1455 = Ok[PackageInfo, string](PackageInfo{Env: resolveEnvironment(solver_1453, v_490.F0.Env), Fields: v_490.F0.Fields, GoPackages: goPkgImports, Instances: instances_1452, Solver: solver_1453, TypedDecls: separated_1454.User, ExternalTypedDecls: separated_1454.External, ResolvedConstraintArgs: v_490.F0.ResolvedConstraintArgs})
+		expr_1456 = expr_1455
 	} else {
-		if v_435, ok := result_1272.(ResultErr[PackageInfo, string]); ok {
-			var expr_1273 Result[PackageInfo, string]
-			expr_1273 = Err[PackageInfo, string](withExpressionSourceName(v_435.F0, "<input>"))
-			expr_1279 = expr_1273
+		if v_489, ok := result_1449.(ResultErr[PackageInfo, string]); ok {
+			var expr_1450 Result[PackageInfo, string]
+			expr_1450 = Err[PackageInfo, string](withExpressionSourceName(v_489.F0, "<input>"))
+			expr_1456 = expr_1450
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_1279
+	return expr_1456
 }
 func separateTypedDecls(all []ast2.Decl, user []ast2.Decl, ext []ast2.Decl) DividedDecls {
 	return DividedDecls{User: filterDeclsAgainst(all, user, 0, []ast2.Decl([]ast2.Decl{})), External: filterDeclsAgainst(all, ext, 0, []ast2.Decl([]ast2.Decl{}))}
 }
 func filterDeclsAgainst(typedDecls []ast2.Decl, sourceDecls []ast2.Decl, index int, out []ast2.Decl) []ast2.Decl {
-	var expr_1283 []ast2.Decl
+	var expr_1460 []ast2.Decl
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(typedDecls) {
-		expr_1283 = out
+		expr_1460 = out
 	} else {
-		var expr_1282 []ast2.Decl
-		decl_1280 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(typedDecls, index), ast2.DeclImportDeclCtor("", ""))
-		var expr_1281 []ast2.Decl
-		if typedDeclInSource(decl_1280, sourceDecls, 0) {
-			expr_1281 = filterDeclsAgainst(typedDecls, sourceDecls, index+1, MygoIN5SliceM6Append(out, decl_1280))
+		var expr_1459 []ast2.Decl
+		decl_1457 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(typedDecls, index), ast2.DeclImportDeclCtor("", ""))
+		var expr_1458 []ast2.Decl
+		if typedDeclInSource(decl_1457, sourceDecls, 0) {
+			expr_1458 = filterDeclsAgainst(typedDecls, sourceDecls, index+1, MygoIN5SliceM6Append(out, decl_1457))
 		} else {
-			expr_1281 = filterDeclsAgainst(typedDecls, sourceDecls, index+1, out)
+			expr_1458 = filterDeclsAgainst(typedDecls, sourceDecls, index+1, out)
 		}
-		expr_1282 = expr_1281
-		expr_1283 = expr_1282
+		expr_1459 = expr_1458
+		expr_1460 = expr_1459
 	}
-	return expr_1283
+	return expr_1460
 }
 func typedDeclInSource(decl ast2.Decl, source []ast2.Decl, index int) bool {
-	var expr_1287 bool
+	var expr_1464 bool
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(source) {
-		expr_1287 = false
+		expr_1464 = false
 	} else {
-		var expr_1286 bool
-		d_1284 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(source, index), ast2.DeclImportDeclCtor("", ""))
-		var expr_1285 bool
-		if typedDeclEq(decl, d_1284) {
-			expr_1285 = true
+		var expr_1463 bool
+		d_1461 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(source, index), ast2.DeclImportDeclCtor("", ""))
+		var expr_1462 bool
+		if typedDeclEq(decl, d_1461) {
+			expr_1462 = true
 		} else {
-			expr_1285 = typedDeclInSource(decl, source, index+1)
+			expr_1462 = typedDeclInSource(decl, source, index+1)
 		}
-		expr_1286 = expr_1285
-		expr_1287 = expr_1286
+		expr_1463 = expr_1462
+		expr_1464 = expr_1463
 	}
-	return expr_1287
+	return expr_1464
 }
 func typedDeclEq(a ast2.Decl, b ast2.Decl) bool {
-	var expr_1309 bool
-	if v_445, ok := a.(ast2.DeclStructDecl); ok {
-		var expr_1308 bool
-		var expr_1307 bool
-		if v_446, ok := b.(ast2.DeclStructDecl); ok {
-			var expr_1306 bool
-			expr_1306 = v_445.F0 == v_446.F0
-			expr_1307 = expr_1306
+	var expr_1486 bool
+	if v_499, ok := a.(ast2.DeclStructDecl); ok {
+		var expr_1485 bool
+		var expr_1484 bool
+		if v_500, ok := b.(ast2.DeclStructDecl); ok {
+			var expr_1483 bool
+			expr_1483 = v_499.F0 == v_500.F0
+			expr_1484 = expr_1483
 		} else {
 			{
-				var expr_1305 bool
-				expr_1305 = false
-				expr_1307 = expr_1305
+				var expr_1482 bool
+				expr_1482 = false
+				expr_1484 = expr_1482
 			}
 		}
-		expr_1308 = expr_1307
-		expr_1309 = expr_1308
+		expr_1485 = expr_1484
+		expr_1486 = expr_1485
 	} else {
-		if v_443, ok := a.(ast2.DeclEnumDecl); ok {
-			var expr_1304 bool
-			var expr_1303 bool
-			if v_444, ok := b.(ast2.DeclEnumDecl); ok {
-				var expr_1302 bool
-				expr_1302 = v_443.F0 == v_444.F0
-				expr_1303 = expr_1302
+		if v_497, ok := a.(ast2.DeclEnumDecl); ok {
+			var expr_1481 bool
+			var expr_1480 bool
+			if v_498, ok := b.(ast2.DeclEnumDecl); ok {
+				var expr_1479 bool
+				expr_1479 = v_497.F0 == v_498.F0
+				expr_1480 = expr_1479
 			} else {
 				{
-					var expr_1301 bool
-					expr_1301 = false
-					expr_1303 = expr_1301
+					var expr_1478 bool
+					expr_1478 = false
+					expr_1480 = expr_1478
 				}
 			}
-			expr_1304 = expr_1303
-			expr_1309 = expr_1304
+			expr_1481 = expr_1480
+			expr_1486 = expr_1481
 		} else {
-			if v_441, ok := a.(ast2.DeclInterfaceDecl); ok {
-				var expr_1300 bool
-				var expr_1299 bool
-				if v_442, ok := b.(ast2.DeclInterfaceDecl); ok {
-					var expr_1298 bool
-					expr_1298 = v_441.F0 == v_442.F0
-					expr_1299 = expr_1298
+			if v_495, ok := a.(ast2.DeclInterfaceDecl); ok {
+				var expr_1477 bool
+				var expr_1476 bool
+				if v_496, ok := b.(ast2.DeclInterfaceDecl); ok {
+					var expr_1475 bool
+					expr_1475 = v_495.F0 == v_496.F0
+					expr_1476 = expr_1475
 				} else {
 					{
-						var expr_1297 bool
-						expr_1297 = false
-						expr_1299 = expr_1297
+						var expr_1474 bool
+						expr_1474 = false
+						expr_1476 = expr_1474
 					}
 				}
-				expr_1300 = expr_1299
-				expr_1309 = expr_1300
+				expr_1477 = expr_1476
+				expr_1486 = expr_1477
 			} else {
-				if v_439, ok := a.(ast2.DeclFuncDecl); ok {
-					var expr_1296 bool
-					var expr_1295 bool
-					if v_440, ok := b.(ast2.DeclFuncDecl); ok {
-						var expr_1294 bool
-						expr_1294 = v_439.F0 == v_440.F0
-						expr_1295 = expr_1294
+				if v_493, ok := a.(ast2.DeclFuncDecl); ok {
+					var expr_1473 bool
+					var expr_1472 bool
+					if v_494, ok := b.(ast2.DeclFuncDecl); ok {
+						var expr_1471 bool
+						expr_1471 = v_493.F0 == v_494.F0
+						expr_1472 = expr_1471
 					} else {
 						{
-							var expr_1293 bool
-							expr_1293 = false
-							expr_1295 = expr_1293
+							var expr_1470 bool
+							expr_1470 = false
+							expr_1472 = expr_1470
 						}
 					}
-					expr_1296 = expr_1295
-					expr_1309 = expr_1296
+					expr_1473 = expr_1472
+					expr_1486 = expr_1473
 				} else {
-					if v_437, ok := a.(ast2.DeclImplDecl); ok {
-						var expr_1292 bool
-						var expr_1291 bool
-						if v_438, ok := b.(ast2.DeclImplDecl); ok {
-							var expr_1290 bool
-							expr_1290 = ast2.TypesEqual(v_437.F1, v_438.F1) && optionTypesEqual(v_437.F2, v_438.F2)
-							expr_1291 = expr_1290
+					if v_491, ok := a.(ast2.DeclImplDecl); ok {
+						var expr_1469 bool
+						var expr_1468 bool
+						if v_492, ok := b.(ast2.DeclImplDecl); ok {
+							var expr_1467 bool
+							expr_1467 = ast2.TypesEqual(v_491.F1, v_492.F1) && optionTypesEqual(v_491.F2, v_492.F2)
+							expr_1468 = expr_1467
 						} else {
 							{
-								var expr_1289 bool
-								expr_1289 = false
-								expr_1291 = expr_1289
+								var expr_1466 bool
+								expr_1466 = false
+								expr_1468 = expr_1466
 							}
 						}
-						expr_1292 = expr_1291
-						expr_1309 = expr_1292
+						expr_1469 = expr_1468
+						expr_1486 = expr_1469
 					} else {
 						{
-							var expr_1288 bool
-							expr_1288 = false
-							expr_1309 = expr_1288
+							var expr_1465 bool
+							expr_1465 = false
+							expr_1486 = expr_1465
 						}
 					}
 				}
 			}
 		}
 	}
-	return expr_1309
+	return expr_1486
 }
 func optionTypesEqual(a Option[ast2.TypeExpr], b Option[ast2.TypeExpr]) bool {
-	var expr_1318 bool
-	if v_449, ok := a.(OptionSome[ast2.TypeExpr]); ok {
-		var expr_1317 bool
-		var expr_1316 bool
-		if v_450, ok := b.(OptionSome[ast2.TypeExpr]); ok {
-			var expr_1315 bool
-			expr_1315 = ast2.TypesEqual(v_449.F0, v_450.F0)
-			expr_1316 = expr_1315
+	var expr_1495 bool
+	if v_503, ok := a.(OptionSome[ast2.TypeExpr]); ok {
+		var expr_1494 bool
+		var expr_1493 bool
+		if v_504, ok := b.(OptionSome[ast2.TypeExpr]); ok {
+			var expr_1492 bool
+			expr_1492 = ast2.TypesEqual(v_503.F0, v_504.F0)
+			expr_1493 = expr_1492
 		} else {
 			{
-				var expr_1314 bool
-				expr_1314 = false
-				expr_1316 = expr_1314
+				var expr_1491 bool
+				expr_1491 = false
+				expr_1493 = expr_1491
 			}
 		}
-		expr_1317 = expr_1316
-		expr_1318 = expr_1317
+		expr_1494 = expr_1493
+		expr_1495 = expr_1494
 	} else {
 		if _, ok := a.(OptionNone[ast2.TypeExpr]); ok {
-			var expr_1313 bool
-			var expr_1312 bool
+			var expr_1490 bool
+			var expr_1489 bool
 			if _, ok := b.(OptionNone[ast2.TypeExpr]); ok {
-				var expr_1311 bool
-				expr_1311 = true
-				expr_1312 = expr_1311
+				var expr_1488 bool
+				expr_1488 = true
+				expr_1489 = expr_1488
 			} else {
 				{
-					var expr_1310 bool
-					expr_1310 = false
-					expr_1312 = expr_1310
+					var expr_1487 bool
+					expr_1487 = false
+					expr_1489 = expr_1487
 				}
 			}
-			expr_1313 = expr_1312
-			expr_1318 = expr_1313
+			expr_1490 = expr_1489
+			expr_1495 = expr_1490
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_1318
+	return expr_1495
 }
 func resolveEnvironment(solver Solver, env []EnvEntry) []EnvEntry {
-	var expr_1326 []EnvEntry
+	var expr_1503 []EnvEntry
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(env) == 0 {
-		expr_1326 = []EnvEntry{}
+		expr_1503 = []EnvEntry{}
 	} else {
-		var expr_1325 []EnvEntry
-		entry_1319 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTUnitCtor()}})
-		resolved_1320 := solverResolve(solver, entry_1319.Scheme.Predicates, []SubstEntry{})
-		var expr_1323 []Predicate
-		if v_452, ok := resolved_1320.(ResultOk[[]Predicate, string]); ok {
-			var expr_1322 []Predicate
-			expr_1322 = v_452.F0
-			expr_1323 = expr_1322
+		var expr_1502 []EnvEntry
+		entry_1496 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTUnitCtor()}})
+		resolved_1497 := solverResolve(solver, entry_1496.Scheme.Predicates, []SubstEntry{})
+		var expr_1500 []Predicate
+		if v_506, ok := resolved_1497.(ResultOk[[]Predicate, string]); ok {
+			var expr_1499 []Predicate
+			expr_1499 = v_506.F0
+			expr_1500 = expr_1499
 		} else {
-			if _, ok := resolved_1320.(ResultErr[[]Predicate, string]); ok {
-				var expr_1321 []Predicate
-				expr_1321 = entry_1319.Scheme.Predicates
-				expr_1323 = expr_1321
+			if _, ok := resolved_1497.(ResultErr[[]Predicate, string]); ok {
+				var expr_1498 []Predicate
+				expr_1498 = entry_1496.Scheme.Predicates
+				expr_1500 = expr_1498
 			} else {
 				panic("unreachable")
 			}
 		}
-		predicates_1324 := expr_1323
-		expr_1325 = MygoIN5SliceM7Prepend(resolveEnvironment(solver, sliceDrop[EnvEntry](env, 1)), EnvEntry{Name: entry_1319.Name, Scheme: Scheme{Bound: entry_1319.Scheme.Bound, Predicates: predicates_1324, Body: entry_1319.Scheme.Body}})
-		expr_1326 = expr_1325
+		predicates_1501 := expr_1500
+		expr_1502 = MygoIN5SliceM7Prepend(resolveEnvironment(solver, sliceDrop[EnvEntry](env, 1)), EnvEntry{Name: entry_1496.Name, Scheme: Scheme{Bound: entry_1496.Scheme.Bound, Predicates: predicates_1501, Body: entry_1496.Scheme.Body}})
+		expr_1503 = expr_1502
 	}
-	return expr_1326
+	return expr_1503
 }
 func collectInstances(decls []ast2.Decl) []Instance {
-	var expr_1339 []Instance
+	var expr_1516 []Instance
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
-		expr_1339 = []Instance([]Instance{})
+		expr_1516 = []Instance([]Instance{})
 	} else {
-		var expr_1338 []Instance
-		decl_1327 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
-		rest_1328 := collectInstances(sliceDrop[ast2.Decl](decls, 1))
-		var expr_1337 []Instance
-		if v_453, ok := decl_1327.(ast2.DeclImplDecl); ok {
-			var expr_1336 []Instance
-			var expr_1335 []Instance
-			if v_455, ok := v_453.F2.(OptionSome[ast2.TypeExpr]); ok {
-				var expr_1334 []Instance
-				var expr_1333 []Instance
-				if v_456, ok := typeFromAST(v_455.F0).(ast2.MonoTypeTCon); ok {
-					var expr_1332 []Instance
-					expr_1332 = MygoIN5SliceM6Append(rest_1328, Instance{ClassName: v_456.F0, Type: typeFromAST(v_453.F1), Predicates: []Predicate([]Predicate{})})
-					expr_1333 = expr_1332
+		var expr_1515 []Instance
+		decl_1504 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		rest_1505 := collectInstances(sliceDrop[ast2.Decl](decls, 1))
+		var expr_1514 []Instance
+		if v_507, ok := decl_1504.(ast2.DeclImplDecl); ok {
+			var expr_1513 []Instance
+			var expr_1512 []Instance
+			if v_509, ok := v_507.F2.(OptionSome[ast2.TypeExpr]); ok {
+				var expr_1511 []Instance
+				var expr_1510 []Instance
+				if v_510, ok := typeFromAST(v_509.F0).(ast2.MonoTypeTCon); ok {
+					var expr_1509 []Instance
+					expr_1509 = MygoIN5SliceM6Append(rest_1505, Instance{ClassName: v_510.F0, Type: typeFromAST(v_507.F1), Predicates: []Predicate([]Predicate{})})
+					expr_1510 = expr_1509
 				} else {
 					{
-						var expr_1331 []Instance
-						expr_1331 = rest_1328
-						expr_1333 = expr_1331
+						var expr_1508 []Instance
+						expr_1508 = rest_1505
+						expr_1510 = expr_1508
 					}
 				}
-				expr_1334 = expr_1333
-				expr_1335 = expr_1334
+				expr_1511 = expr_1510
+				expr_1512 = expr_1511
 			} else {
-				if _, ok := v_453.F2.(OptionNone[ast2.TypeExpr]); ok {
-					var expr_1330 []Instance
-					expr_1330 = rest_1328
-					expr_1335 = expr_1330
+				if _, ok := v_507.F2.(OptionNone[ast2.TypeExpr]); ok {
+					var expr_1507 []Instance
+					expr_1507 = rest_1505
+					expr_1512 = expr_1507
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_1336 = expr_1335
-			expr_1337 = expr_1336
+			expr_1513 = expr_1512
+			expr_1514 = expr_1513
 		} else {
 			{
-				var expr_1329 []Instance
-				expr_1329 = rest_1328
-				expr_1337 = expr_1329
+				var expr_1506 []Instance
+				expr_1506 = rest_1505
+				expr_1514 = expr_1506
 			}
 		}
-		expr_1338 = expr_1337
-		expr_1339 = expr_1338
+		expr_1515 = expr_1514
+		expr_1516 = expr_1515
 	}
-	return expr_1339
+	return expr_1516
 }
 func withExpressionSourceName(msg string, source string) string {
-	var expr_1340 string
+	var expr_1517 string
 	if source == "" {
-		expr_1340 = msg
+		expr_1517 = msg
 	} else {
-		expr_1340 = strings.ReplaceAll(msg, "<input>:", source+":")
+		expr_1517 = strings.ReplaceAll(msg, "<input>:", source+":")
 	}
-	return expr_1340
+	return expr_1517
 }
 func collectGoPackageImports(decls []ast2.Decl) []GoPackageEntry {
 	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(decls, []GoPackageEntry([]GoPackageEntry{}), func(out []GoPackageEntry, d ast2.Decl) []GoPackageEntry {
-		var expr_1345 []GoPackageEntry
-		if v_457, ok := d.(ast2.DeclImportDecl); ok {
-			var expr_1344 []GoPackageEntry
-			existing_1342 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(out, false, func(found bool, e GoPackageEntry) bool {
-				return found || e.Alias == v_457.F0
-			})
-			var expr_1343 []GoPackageEntry
-			if existing_1342 {
-				expr_1343 = out
+		var expr_1524 []GoPackageEntry
+		if v_511, ok := d.(ast2.DeclImportDecl); ok {
+			var expr_1523 []GoPackageEntry
+			var expr_1522 []GoPackageEntry
+			if !strings.HasPrefix(v_511.F1, "go:") {
+				expr_1522 = out
 			} else {
-				expr_1343 = MygoIN5SliceM6Append(out, GoPackageEntry{Alias: v_457.F0, Path: v_457.F1, Funcs: []GoFuncSignature([]GoFuncSignature{}), Types: []GoTypeSignature([]GoTypeSignature{})})
+				var expr_1521 []GoPackageEntry
+				existing_1519 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(out, false, func(found bool, e GoPackageEntry) bool {
+					return found || e.Alias == v_511.F0
+				})
+				var expr_1520 []GoPackageEntry
+				if existing_1519 {
+					expr_1520 = out
+				} else {
+					expr_1520 = MygoIN5SliceM6Append(out, GoPackageEntry{Alias: v_511.F0, Path: v_511.F1, Funcs: []GoFuncSignature([]GoFuncSignature{}), Types: []GoTypeSignature([]GoTypeSignature{})})
+				}
+				expr_1521 = expr_1520
+				expr_1522 = expr_1521
 			}
-			expr_1344 = expr_1343
-			expr_1345 = expr_1344
+			expr_1523 = expr_1522
+			expr_1524 = expr_1523
 		} else {
 			{
-				var expr_1341 []GoPackageEntry
-				expr_1341 = out
-				expr_1345 = expr_1341
+				var expr_1518 []GoPackageEntry
+				expr_1518 = out
+				expr_1524 = expr_1518
 			}
 		}
-		return expr_1345
+		return expr_1524
 	})
 }
-func seedGoPackageEnv(goPkgs []GoPackageEntry, env []EnvEntry) []EnvEntry {
-	var expr_1348 []EnvEntry
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(goPkgs) == 0 {
-		expr_1348 = env
+func collectMyGoPackageImports(decls []ast2.Decl) []struct {
+	F0 string
+	F1 string
+} {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(decls, []struct {
+		F0 string
+		F1 string
+	}([]struct {
+		F0 string
+		F1 string
+	}{}), func(out []struct {
+		F0 string
+		F1 string
+	}, d ast2.Decl) []struct {
+		F0 string
+		F1 string
+	} {
+		var expr_1533 []struct {
+			F0 string
+			F1 string
+		}
+		if v_512, ok := d.(ast2.DeclImportDecl); ok {
+			var expr_1532 []struct {
+				F0 string
+				F1 string
+			}
+			var expr_1531 []struct {
+				F0 string
+				F1 string
+			}
+			if strings.HasPrefix(v_512.F1, "go:") {
+				expr_1531 = out
+			} else {
+				var expr_1530 []struct {
+					F0 string
+					F1 string
+				}
+				existing_1528 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(out, false, func(found bool, item struct {
+					F0 string
+					F1 string
+				}) bool {
+					__tuple_1526 := item
+					item0_1527 := __tuple_1526.F0
+					return found || item0_1527 == v_512.F0
+				})
+				var expr_1529 []struct {
+					F0 string
+					F1 string
+				}
+				if existing_1528 {
+					expr_1529 = out
+				} else {
+					expr_1529 = MygoIN5SliceM6Append(out, struct {
+						F0 string
+						F1 string
+					}{F0: v_512.F0, F1: v_512.F1})
+				}
+				expr_1530 = expr_1529
+				expr_1531 = expr_1530
+			}
+			expr_1532 = expr_1531
+			expr_1533 = expr_1532
+		} else {
+			{
+				var expr_1525 []struct {
+					F0 string
+					F1 string
+				}
+				expr_1525 = out
+				expr_1533 = expr_1525
+			}
+		}
+		return expr_1533
+	})
+}
+func seedMyGoPackageEnv(imports []struct {
+	F0 string
+	F1 string
+}, packages []MyGoPackageInfo, env []EnvEntry) []EnvEntry {
+	var expr_1540 []EnvEntry
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(imports) == 0 {
+		expr_1540 = env
 	} else {
-		var expr_1347 []EnvEntry
-		pkg_1346 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(goPkgs, 0), GoPackageEntry{Alias: "", Path: "", Funcs: []GoFuncSignature([]GoFuncSignature{}), Types: []GoTypeSignature([]GoTypeSignature{})})
-		expr_1347 = seedGoPackageEnv(sliceDrop[GoPackageEntry](goPkgs, 1), seedGoPackageMembers(pkg_1346, envPut(env, pkg_1346.Alias, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTGoPackageCtor(pkg_1346.Path)})))
-		expr_1348 = expr_1347
+		var expr_1539 []EnvEntry
+		item_1534 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(imports, 0), struct {
+			F0 string
+			F1 string
+		}{F0: "", F1: ""})
+		__tuple_1535 := item_1534
+		alias_1536 := __tuple_1535.F0
+		pkg_1537 := findMyGoPackage(packages, alias_1536)
+		envWithMembers_1538 := seedMyGoPackageDecls(alias_1536, pkg_1537, 0, env)
+		expr_1539 = seedMyGoPackageEnv(sliceDrop[struct {
+			F0 string
+			F1 string
+		}](imports, 1), packages, envWithMembers_1538)
+		expr_1540 = expr_1539
 	}
-	return expr_1348
+	return expr_1540
+}
+func findMyGoPackage(packages []MyGoPackageInfo, alias string) MyGoPackageInfo {
+	var expr_1544 MyGoPackageInfo
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(packages) == 0 {
+		expr_1544 = MyGoPackageInfo{Alias: alias, Path: alias, Decls: []ast2.Decl([]ast2.Decl{})}
+	} else {
+		var expr_1543 MyGoPackageInfo
+		pkg_1541 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0), MyGoPackageInfo{Alias: "", Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
+		var expr_1542 MyGoPackageInfo
+		if pkg_1541.Alias == alias {
+			expr_1542 = pkg_1541
+		} else {
+			expr_1542 = findMyGoPackage(sliceDrop[MyGoPackageInfo](packages, 1), alias)
+		}
+		expr_1543 = expr_1542
+		expr_1544 = expr_1543
+	}
+	return expr_1544
+}
+func seedMyGoPackageDecls(alias string, pkg MyGoPackageInfo, index int, env []EnvEntry) []EnvEntry {
+	var expr_1569 []EnvEntry
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pkg.Decls) {
+		expr_1569 = env
+	} else {
+		var expr_1568 []EnvEntry
+		decl_1545 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pkg.Decls, index), ast2.DeclImportDeclCtor("", ""))
+		typeNames_1546 := collectMyGoTypeNames(pkg.Decls, 0, []string([]string{}))
+		var expr_1566 []EnvEntry
+		if v_516, ok := decl_1545.(ast2.DeclFuncDecl); ok {
+			var expr_1565 []EnvEntry
+			var expr_1560 ast2.MonoType
+			if v_518, ok := v_516.F3.(OptionSome[ast2.TypeExpr]); ok {
+				var expr_1559 ast2.MonoType
+				expr_1559 = wrapPkgTypesInMonoType(typeFromASTWithParams(v_518.F0, v_516.F1), pkg.Path, typeNames_1546)
+				expr_1560 = expr_1559
+			} else {
+				if _, ok := v_516.F3.(OptionNone[ast2.TypeExpr]); ok {
+					var expr_1558 ast2.MonoType
+					expr_1558 = ast2.MonoTypeTUnitCtor()
+					expr_1560 = expr_1558
+				} else {
+					panic("unreachable")
+				}
+			}
+			retType_1561 := expr_1560
+			paramTypes_1562 := wrapPkgTypesInSlice(paramsToTypesWithParams(v_516.F2, v_516.F1), pkg.Path, typeNames_1546)
+			inner_1563 := ast2.MonoTypeTFuncCtor(paramTypes_1562, &retType_1561)
+			body_1564 := ast2.MonoTypeTQualifiedNameCtor(pkg.Path, &inner_1563)
+			expr_1565 = envPut(env, alias+"."+v_516.F0, Scheme{Bound: typeParamIDs(v_516.F1, 1), Predicates: predicatesFromConstraintsWithParams(v_516.F5, v_516.F1), Body: body_1564})
+			expr_1566 = expr_1565
+		} else {
+			if v_515, ok := decl_1545.(ast2.DeclStructDecl); ok {
+				var expr_1557 []EnvEntry
+				inner_1555 := tCon(v_515.F0, typeParamsAsTypes(v_515.F1, 1))
+				body_1556 := ast2.MonoTypeTQualifiedNameCtor(pkg.Path, &inner_1555)
+				expr_1557 = envPut(env, alias+"."+v_515.F0, Scheme{Bound: typeParamIDs(v_515.F1, 1), Predicates: []Predicate{}, Body: body_1556})
+				expr_1566 = expr_1557
+			} else {
+				if v_514, ok := decl_1545.(ast2.DeclEnumDecl); ok {
+					var expr_1554 []EnvEntry
+					inner_1551 := tCon(v_514.F0, typeParamsAsTypes(v_514.F1, 1))
+					body_1552 := ast2.MonoTypeTQualifiedNameCtor(pkg.Path, &inner_1551)
+					withEnum_1553 := envPut(env, alias+"."+v_514.F0, Scheme{Bound: typeParamIDs(v_514.F1, 1), Predicates: []Predicate{}, Body: body_1552})
+					expr_1554 = seedMyGoPackageEnumVariants(pkg, v_514.F2, v_514.F0, v_514.F1, typeNames_1546, withEnum_1553)
+					expr_1566 = expr_1554
+				} else {
+					if v_513, ok := decl_1545.(ast2.DeclInterfaceDecl); ok {
+						var expr_1550 []EnvEntry
+						inner_1548 := ast2.MonoTypeTConCtor(v_513.F0)
+						body_1549 := ast2.MonoTypeTQualifiedNameCtor(pkg.Path, &inner_1548)
+						expr_1550 = envPut(env, alias+"."+v_513.F0, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: body_1549})
+						expr_1566 = expr_1550
+					} else {
+						{
+							var expr_1547 []EnvEntry
+							expr_1547 = env
+							expr_1566 = expr_1547
+						}
+					}
+				}
+			}
+		}
+		next_1567 := expr_1566
+		expr_1568 = seedMyGoPackageDecls(alias, pkg, index+1, next_1567)
+		expr_1569 = expr_1568
+	}
+	return expr_1569
+}
+func seedMyGoPackageEnumVariants(pkg MyGoPackageInfo, variants []ast2.Variant, enumName string, typeParams []string, typeNames []string, env []EnvEntry) []EnvEntry {
+	var expr_1579 []EnvEntry
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(variants) == 0 {
+		expr_1579 = env
+	} else {
+		var expr_1578 []EnvEntry
+		variant_1570 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
+		enumInner_1571 := tCon(enumName, typeParamsAsTypes(typeParams, 1))
+		enumType_1572 := ast2.MonoTypeTQualifiedNameCtor(pkg.Path, &enumInner_1571)
+		var expr_1575 ast2.MonoType
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(variant_1570.Fields) == 0 {
+			expr_1575 = enumType_1572
+		} else {
+			var expr_1574 ast2.MonoType
+			fieldTypes_1573 := wrapPkgTypesInSlice(typeArgsFromASTWithParams(variant_1570.Fields, typeParams), pkg.Path, typeNames)
+			expr_1574 = ast2.MonoTypeTFuncCtor(fieldTypes_1573, &enumType_1572)
+			expr_1575 = expr_1574
+		}
+		constructorType_1576 := expr_1575
+		next_1577 := envPut(env, variant_1570.Name, Scheme{Bound: typeParamIDs(typeParams, 1), Predicates: []Predicate{}, Body: constructorType_1576})
+		expr_1578 = seedMyGoPackageEnumVariants(pkg, sliceDrop[ast2.Variant](variants, 1), enumName, typeParams, typeNames, next_1577)
+		expr_1579 = expr_1578
+	}
+	return expr_1579
+}
+func collectMyGoTypeNames(decls []ast2.Decl, index int, out []string) []string {
+	var expr_1593 []string
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) {
+		expr_1593 = out
+	} else {
+		var expr_1592 []string
+		decl_1580 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
+		var expr_1585 string
+		if v_521, ok := decl_1580.(ast2.DeclStructDecl); ok {
+			var expr_1584 string
+			expr_1584 = v_521.F0
+			expr_1585 = expr_1584
+		} else {
+			if v_520, ok := decl_1580.(ast2.DeclEnumDecl); ok {
+				var expr_1583 string
+				expr_1583 = v_520.F0
+				expr_1585 = expr_1583
+			} else {
+				if v_519, ok := decl_1580.(ast2.DeclInterfaceDecl); ok {
+					var expr_1582 string
+					expr_1582 = v_519.F0
+					expr_1585 = expr_1582
+				} else {
+					{
+						var expr_1581 string
+						expr_1581 = ""
+						expr_1585 = expr_1581
+					}
+				}
+			}
+		}
+		name_1586 := expr_1585
+		var expr_1590 []string
+		if name_1586 == "" {
+			expr_1590 = out
+		} else {
+			var expr_1589 []string
+			exists_1587 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(out, false, func(found bool, item string) bool {
+				return found || item == name_1586
+			})
+			var expr_1588 []string
+			if exists_1587 {
+				expr_1588 = out
+			} else {
+				expr_1588 = MygoIN5SliceM6Append(out, name_1586)
+			}
+			expr_1589 = expr_1588
+			expr_1590 = expr_1589
+		}
+		next_1591 := expr_1590
+		expr_1592 = collectMyGoTypeNames(decls, index+1, next_1591)
+		expr_1593 = expr_1592
+	}
+	return expr_1593
+}
+func wrapPkgTypesInSlice(items []ast2.MonoType, path string, typeNames []string) []ast2.MonoType {
+	var expr_1594 []ast2.MonoType
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
+		expr_1594 = []ast2.MonoType{}
+	} else {
+		expr_1594 = MygoIN5SliceM7Prepend(wrapPkgTypesInSlice(sliceDrop[ast2.MonoType](items, 1), path, typeNames), wrapPkgTypesInMonoType(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.MonoTypeTUnitCtor()), path, typeNames))
+	}
+	return expr_1594
+}
+func wrapPkgTypesInMonoType(typ ast2.MonoType, path string, typeNames []string) ast2.MonoType {
+	var expr_1604 ast2.MonoType
+	if v_527, ok := typ.(ast2.MonoTypeTCon); ok {
+		var expr_1603 ast2.MonoType
+		var expr_1602 ast2.MonoType
+		if containsString(typeNames, v_527.F0) {
+			expr_1602 = ast2.MonoTypeTQualifiedNameCtor(path, &typ)
+		} else {
+			expr_1602 = typ
+		}
+		expr_1603 = expr_1602
+		expr_1604 = expr_1603
+	} else {
+		if v_526, ok := typ.(ast2.MonoTypeTApp); ok {
+			var expr_1601 ast2.MonoType
+			wrappedCtor_1600 := wrapPkgTypesInMonoType(*v_526.F0, path, typeNames)
+			expr_1601 = ast2.MonoTypeTAppCtor(&wrappedCtor_1600, wrapPkgTypesInSlice(v_526.F1, path, typeNames))
+			expr_1604 = expr_1601
+		} else {
+			if v_525, ok := typ.(ast2.MonoTypeTFunc); ok {
+				var expr_1599 ast2.MonoType
+				expr_1599 = ast2.MonoTypeTFuncCtor(wrapPkgTypesInSlice(v_525.F0, path, typeNames), &[]ast2.MonoType{wrapPkgTypesInMonoType(*v_525.F1, path, typeNames)}[0])
+				expr_1604 = expr_1599
+			} else {
+				if v_524, ok := typ.(ast2.MonoTypeTVariadic); ok {
+					var expr_1598 ast2.MonoType
+					expr_1598 = ast2.MonoTypeTVariadicCtor(wrapPkgTypesInSlice(v_524.F0, path, typeNames), &[]ast2.MonoType{wrapPkgTypesInMonoType(*v_524.F1, path, typeNames)}[0])
+					expr_1604 = expr_1598
+				} else {
+					if v_523, ok := typ.(ast2.MonoTypeTTuple); ok {
+						var expr_1597 ast2.MonoType
+						expr_1597 = ast2.MonoTypeTTupleCtor(wrapPkgTypesInSlice(v_523.F0, path, typeNames))
+						expr_1604 = expr_1597
+					} else {
+						if v_522, ok := typ.(ast2.MonoTypeTQualifiedName); ok {
+							var expr_1596 ast2.MonoType
+							expr_1596 = ast2.MonoTypeTQualifiedNameCtor(path, &[]ast2.MonoType{wrapPkgTypesInMonoType(*v_522.F1, path, typeNames)}[0])
+							expr_1604 = expr_1596
+						} else {
+							{
+								var expr_1595 ast2.MonoType
+								expr_1595 = typ
+								expr_1604 = expr_1595
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return expr_1604
+}
+func containsString(items []string, value string) bool {
+	var expr_1606 bool
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
+		expr_1606 = false
+	} else {
+		var expr_1605 bool
+		if MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "") == value {
+			expr_1605 = true
+		} else {
+			expr_1605 = containsString(sliceDrop[string](items, 1), value)
+		}
+		expr_1606 = expr_1605
+	}
+	return expr_1606
+}
+func myGoPackagePath(packages []MyGoPackageInfo, alias string) string {
+	var expr_1610 string
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(packages) == 0 {
+		expr_1610 = alias
+	} else {
+		var expr_1609 string
+		pkg_1607 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0), MyGoPackageInfo{Alias: "", Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
+		var expr_1608 string
+		if pkg_1607.Alias == alias {
+			expr_1608 = pkg_1607.Path
+		} else {
+			expr_1608 = myGoPackagePath(sliceDrop[MyGoPackageInfo](packages, 1), alias)
+		}
+		expr_1609 = expr_1608
+		expr_1610 = expr_1609
+	}
+	return expr_1610
+}
+func seedGoPackageEnv(goPkgs []GoPackageEntry, env []EnvEntry) []EnvEntry {
+	var expr_1613 []EnvEntry
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(goPkgs) == 0 {
+		expr_1613 = env
+	} else {
+		var expr_1612 []EnvEntry
+		pkg_1611 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(goPkgs, 0), GoPackageEntry{Alias: "", Path: "", Funcs: []GoFuncSignature([]GoFuncSignature{}), Types: []GoTypeSignature([]GoTypeSignature{})})
+		expr_1612 = seedGoPackageEnv(sliceDrop[GoPackageEntry](goPkgs, 1), seedGoPackageMembers(pkg_1611, env))
+		expr_1613 = expr_1612
+	}
+	return expr_1613
 }
 func seedGoPackageMembers(pkg GoPackageEntry, env []EnvEntry) []EnvEntry {
-	withFuncs_1349 := seedGoPackageFuncs(pkg, pkg.Funcs, env)
-	return seedGoPackageTypes(pkg, pkg.Types, withFuncs_1349)
+	withFuncs_1614 := seedGoPackageFuncs(pkg, pkg.Funcs, env)
+	return seedGoPackageTypes(pkg, pkg.Types, withFuncs_1614)
 }
 func seedGoPackageFuncs(pkg GoPackageEntry, funcs []GoFuncSignature, env []EnvEntry) []EnvEntry {
-	var expr_1352 []EnvEntry
+	var expr_1618 []EnvEntry
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(funcs) == 0 {
-		expr_1352 = env
+		expr_1618 = env
 	} else {
-		var expr_1351 []EnvEntry
-		fn_1350 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(funcs, 0), GoFuncSignature{Name: "", Params: []string([]string{}), Results: []string([]string{}), Variadic: false})
-		expr_1351 = seedGoPackageFuncs(pkg, sliceDrop[GoFuncSignature](funcs, 1), envPut(env, goPackageMemberName(pkg.Alias, fn_1350.Name), Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: GoSignatureType(fn_1350)}))
-		expr_1352 = expr_1351
+		var expr_1617 []EnvEntry
+		fn_1615 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(funcs, 0), GoFuncSignature{Name: "", Params: []string([]string{}), Results: []string([]string{}), Variadic: false})
+		body_1616 := GoSignatureType(fn_1615)
+		expr_1617 = seedGoPackageFuncs(pkg, sliceDrop[GoFuncSignature](funcs, 1), envPut(env, goPackageMemberName(pkg.Alias, fn_1615.Name), Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: body_1616}))
+		expr_1618 = expr_1617
 	}
-	return expr_1352
+	return expr_1618
 }
 func seedGoPackageTypes(pkg GoPackageEntry, types []GoTypeSignature, env []EnvEntry) []EnvEntry {
-	var expr_1359 []EnvEntry
+	var expr_1626 []EnvEntry
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(types) == 0 {
-		expr_1359 = env
+		expr_1626 = env
 	} else {
-		var expr_1358 []EnvEntry
-		t_1353 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, 0), GoTypeSignature{TypeName: "", TypeParams: []string([]string{}), Methods: []GoFuncSignature([]GoFuncSignature{})})
-		qualifiedName_1354 := goPackageMemberName(pkg.Alias, t_1353.TypeName)
-		bound_1355 := typeParamIDs(t_1353.TypeParams, 1)
-		body_1356 := ast2.MonoTypeTConCtor(qualifiedName_1354, typeParamsAsTypes(t_1353.TypeParams, 1))
-		withType_1357 := envPut(env, qualifiedName_1354, Scheme{Bound: bound_1355, Predicates: []Predicate{}, Body: body_1356})
-		expr_1358 = seedGoPackageTypes(pkg, sliceDrop[GoTypeSignature](types, 1), withType_1357)
-		expr_1359 = expr_1358
+		var expr_1625 []EnvEntry
+		t_1619 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, 0), GoTypeSignature{TypeName: "", TypeParams: []string([]string{}), Methods: []GoFuncSignature([]GoFuncSignature{})})
+		qualifiedName_1620 := goPackageMemberName(pkg.Alias, t_1619.TypeName)
+		bound_1621 := typeParamIDs(t_1619.TypeParams, 1)
+		inner_1622 := tCon(t_1619.TypeName, typeParamsAsTypes(t_1619.TypeParams, 1))
+		body_1623 := ast2.MonoTypeTQualifiedNameCtor(pkg.Path, &inner_1622)
+		withType_1624 := envPut(env, qualifiedName_1620, Scheme{Bound: bound_1621, Predicates: []Predicate{}, Body: body_1623})
+		expr_1625 = seedGoPackageTypes(pkg, sliceDrop[GoTypeSignature](types, 1), withType_1624)
+		expr_1626 = expr_1625
 	}
-	return expr_1359
+	return expr_1626
 }
 func GoSignatureType(sig GoFuncSignature) ast2.MonoType {
-	params_1360 := goSignatureTypes(sig.Params)
-	results_1361 := goSignatureTypes(sig.Results)
-	var expr_1371 ast2.MonoType
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(results_1361) == 0 {
-		expr_1371 = ast2.MonoTypeTUnitCtor()
+	params_1627 := goSignatureTypes(sig.Params)
+	results_1628 := goSignatureTypes(sig.Results)
+	var expr_1638 ast2.MonoType
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(results_1628) == 0 {
+		expr_1638 = ast2.MonoTypeTUnitCtor()
 	} else {
-		var expr_1370 ast2.MonoType
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(results_1361) == 2 {
-			var expr_1368 ast2.MonoType
-			first_1362 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results_1361, 0), ast2.MonoTypeTUnitCtor())
-			second_1363 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results_1361, 1), ast2.MonoTypeTUnitCtor())
-			var expr_1367 ast2.MonoType
-			if v_458, ok := second_1363.(ast2.MonoTypeTCon); ok {
-				var expr_1366 ast2.MonoType
-				var expr_1365 ast2.MonoType
-				if v_458.F0 == "Bool" {
-					expr_1365 = ast2.MonoTypeTConCtor("Option", []ast2.MonoType{first_1362})
+		var expr_1637 ast2.MonoType
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(results_1628) == 2 {
+			var expr_1635 ast2.MonoType
+			first_1629 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results_1628, 0), ast2.MonoTypeTUnitCtor())
+			second_1630 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results_1628, 1), ast2.MonoTypeTUnitCtor())
+			var expr_1634 ast2.MonoType
+			if v_528, ok := second_1630.(ast2.MonoTypeTCon); ok {
+				var expr_1633 ast2.MonoType
+				var expr_1632 ast2.MonoType
+				if v_528.F0 == "Bool" {
+					expr_1632 = tCon("Option", []ast2.MonoType{first_1629})
 				} else {
-					expr_1365 = ast2.MonoTypeTConCtor("Result", []ast2.MonoType{first_1362, second_1363})
+					expr_1632 = tCon("Result", []ast2.MonoType{first_1629, second_1630})
 				}
-				expr_1366 = expr_1365
-				expr_1367 = expr_1366
+				expr_1633 = expr_1632
+				expr_1634 = expr_1633
 			} else {
 				{
-					var expr_1364 ast2.MonoType
-					expr_1364 = ast2.MonoTypeTConCtor("Result", []ast2.MonoType{first_1362, second_1363})
-					expr_1367 = expr_1364
+					var expr_1631 ast2.MonoType
+					expr_1631 = tCon("Result", []ast2.MonoType{first_1629, second_1630})
+					expr_1634 = expr_1631
 				}
 			}
-			expr_1368 = expr_1367
-			expr_1370 = expr_1368
+			expr_1635 = expr_1634
+			expr_1637 = expr_1635
 		} else {
-			var expr_1369 ast2.MonoType
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(results_1361) == 1 {
-				expr_1369 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results_1361, 0), ast2.MonoTypeTUnitCtor())
+			var expr_1636 ast2.MonoType
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(results_1628) == 1 {
+				expr_1636 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results_1628, 0), ast2.MonoTypeTUnitCtor())
 			} else {
-				expr_1369 = ast2.MonoTypeTTupleCtor(results_1361)
+				expr_1636 = ast2.MonoTypeTTupleCtor(results_1628)
 			}
-			expr_1370 = expr_1369
+			expr_1637 = expr_1636
 		}
-		expr_1371 = expr_1370
+		expr_1638 = expr_1637
 	}
-	result_1372 := expr_1371
-	var expr_1373 ast2.MonoType
+	result_1639 := expr_1638
+	var expr_1640 ast2.MonoType
 	if sig.Variadic {
-		expr_1373 = ast2.MonoTypeTVariadicCtor(params_1360, &result_1372)
+		expr_1640 = ast2.MonoTypeTVariadicCtor(params_1627, &result_1639)
 	} else {
-		expr_1373 = ast2.MonoTypeTFuncCtor(params_1360, &result_1372)
+		expr_1640 = ast2.MonoTypeTFuncCtor(params_1627, &result_1639)
 	}
-	return expr_1373
+	return expr_1640
 }
 func goSignatureTypes(items []string) []ast2.MonoType {
-	var expr_1374 []ast2.MonoType
+	var expr_1641 []ast2.MonoType
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_1374 = emptyGoTypes()
+		expr_1641 = emptyGoTypes()
 	} else {
-		expr_1374 = MygoIN5SliceM7Prepend(goSignatureTypes(sliceDrop[string](items, 1)), GoTypeName(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "any")))
+		expr_1641 = MygoIN5SliceM7Prepend(goSignatureTypes(sliceDrop[string](items, 1)), GoTypeName(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "any")))
 	}
-	return expr_1374
+	return expr_1641
 }
 func emptyGoTypes() []ast2.MonoType {
 	return []ast2.MonoType([]ast2.MonoType{})
 }
 func GoTypeName(name string) ast2.MonoType {
-	var expr_1391 ast2.MonoType
+	var expr_1658 ast2.MonoType
 	if name == "int" {
-		var expr_1390 ast2.MonoType
-		expr_1390 = ast2.MonoTypeTConCtor("Int", emptyGoTypes())
-		expr_1391 = expr_1390
+		var expr_1657 ast2.MonoType
+		expr_1657 = ast2.MonoTypeTConCtor("Int")
+		expr_1658 = expr_1657
 	} else {
 		if name == "int8" {
-			var expr_1389 ast2.MonoType
-			expr_1389 = ast2.MonoTypeTConCtor("Int8", emptyGoTypes())
-			expr_1391 = expr_1389
+			var expr_1656 ast2.MonoType
+			expr_1656 = ast2.MonoTypeTConCtor("Int8")
+			expr_1658 = expr_1656
 		} else {
 			if name == "int16" {
-				var expr_1388 ast2.MonoType
-				expr_1388 = ast2.MonoTypeTConCtor("Int16", emptyGoTypes())
-				expr_1391 = expr_1388
+				var expr_1655 ast2.MonoType
+				expr_1655 = ast2.MonoTypeTConCtor("Int16")
+				expr_1658 = expr_1655
 			} else {
 				if name == "int32" {
-					var expr_1387 ast2.MonoType
-					expr_1387 = ast2.MonoTypeTConCtor("Int32", emptyGoTypes())
-					expr_1391 = expr_1387
+					var expr_1654 ast2.MonoType
+					expr_1654 = ast2.MonoTypeTConCtor("Int32")
+					expr_1658 = expr_1654
 				} else {
 					if name == "int64" {
-						var expr_1386 ast2.MonoType
-						expr_1386 = ast2.MonoTypeTConCtor("Int64", emptyGoTypes())
-						expr_1391 = expr_1386
+						var expr_1653 ast2.MonoType
+						expr_1653 = ast2.MonoTypeTConCtor("Int64")
+						expr_1658 = expr_1653
 					} else {
 						if name == "uint" {
-							var expr_1385 ast2.MonoType
-							expr_1385 = ast2.MonoTypeTConCtor("UInt", emptyGoTypes())
-							expr_1391 = expr_1385
+							var expr_1652 ast2.MonoType
+							expr_1652 = ast2.MonoTypeTConCtor("UInt")
+							expr_1658 = expr_1652
 						} else {
 							if name == "uint8" {
-								var expr_1384 ast2.MonoType
-								expr_1384 = ast2.MonoTypeTConCtor("UInt8", emptyGoTypes())
-								expr_1391 = expr_1384
+								var expr_1651 ast2.MonoType
+								expr_1651 = ast2.MonoTypeTConCtor("UInt8")
+								expr_1658 = expr_1651
 							} else {
 								if name == "uint16" {
-									var expr_1383 ast2.MonoType
-									expr_1383 = ast2.MonoTypeTConCtor("UInt16", emptyGoTypes())
-									expr_1391 = expr_1383
+									var expr_1650 ast2.MonoType
+									expr_1650 = ast2.MonoTypeTConCtor("UInt16")
+									expr_1658 = expr_1650
 								} else {
 									if name == "uint32" {
-										var expr_1382 ast2.MonoType
-										expr_1382 = ast2.MonoTypeTConCtor("UInt32", emptyGoTypes())
-										expr_1391 = expr_1382
+										var expr_1649 ast2.MonoType
+										expr_1649 = ast2.MonoTypeTConCtor("UInt32")
+										expr_1658 = expr_1649
 									} else {
 										if name == "uint64" {
-											var expr_1381 ast2.MonoType
-											expr_1381 = ast2.MonoTypeTConCtor("UInt64", emptyGoTypes())
-											expr_1391 = expr_1381
+											var expr_1648 ast2.MonoType
+											expr_1648 = ast2.MonoTypeTConCtor("UInt64")
+											expr_1658 = expr_1648
 										} else {
 											if name == "float32" {
-												var expr_1380 ast2.MonoType
-												expr_1380 = ast2.MonoTypeTConCtor("Float32", emptyGoTypes())
-												expr_1391 = expr_1380
+												var expr_1647 ast2.MonoType
+												expr_1647 = ast2.MonoTypeTConCtor("Float32")
+												expr_1658 = expr_1647
 											} else {
 												if name == "float64" {
-													var expr_1379 ast2.MonoType
-													expr_1379 = ast2.MonoTypeTConCtor("Float64", emptyGoTypes())
-													expr_1391 = expr_1379
+													var expr_1646 ast2.MonoType
+													expr_1646 = ast2.MonoTypeTConCtor("Float64")
+													expr_1658 = expr_1646
 												} else {
 													if name == "string" {
-														var expr_1378 ast2.MonoType
-														expr_1378 = ast2.MonoTypeTConCtor("String", emptyGoTypes())
-														expr_1391 = expr_1378
+														var expr_1645 ast2.MonoType
+														expr_1645 = ast2.MonoTypeTConCtor("String")
+														expr_1658 = expr_1645
 													} else {
 														if name == "bool" {
-															var expr_1377 ast2.MonoType
-															expr_1377 = ast2.MonoTypeTConCtor("Bool", emptyGoTypes())
-															expr_1391 = expr_1377
+															var expr_1644 ast2.MonoType
+															expr_1644 = ast2.MonoTypeTConCtor("Bool")
+															expr_1658 = expr_1644
 														} else {
 															if name == "error" {
-																var expr_1376 ast2.MonoType
-																expr_1376 = ast2.MonoTypeTConCtor("Error", emptyGoTypes())
-																expr_1391 = expr_1376
+																var expr_1643 ast2.MonoType
+																expr_1643 = ast2.MonoTypeTConCtor("Error")
+																expr_1658 = expr_1643
 															} else {
 																{
-																	var expr_1375 ast2.MonoType
-																	expr_1375 = ast2.MonoTypeTVarCtor(0)
-																	expr_1391 = expr_1375
+																	var expr_1642 ast2.MonoType
+																	expr_1642 = ast2.MonoTypeTVarCtor(0)
+																	expr_1658 = expr_1642
 																}
 															}
 														}
@@ -923,79 +1298,79 @@ func GoTypeName(name string) ast2.MonoType {
 			}
 		}
 	}
-	return expr_1391
+	return expr_1658
 }
 func flattenPkgDecls(files []PkgDeclSource, index int, out []ast2.Decl) []ast2.Decl {
-	var expr_1394 []ast2.Decl
+	var expr_1661 []ast2.Decl
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(files) {
-		expr_1394 = out
+		expr_1661 = out
 	} else {
-		var expr_1393 []ast2.Decl
-		f_1392 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), PkgDeclSource{Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
-		expr_1393 = flattenPkgDecls(files, index+1, appendDecls(out, f_1392.Decls))
-		expr_1394 = expr_1393
+		var expr_1660 []ast2.Decl
+		f_1659 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), PkgDeclSource{Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
+		expr_1660 = flattenPkgDecls(files, index+1, appendDecls(out, f_1659.Decls))
+		expr_1661 = expr_1660
 	}
-	return expr_1394
+	return expr_1661
 }
 func namedImplNames(decls []ast2.Decl, index int, out []string) []string {
-	var expr_1406 []string
+	var expr_1673 []string
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) {
-		expr_1406 = out
+		expr_1673 = out
 	} else {
-		var expr_1405 []string
-		decl_1395 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
-		var expr_1404 []string
-		if v_459, ok := decl_1395.(ast2.DeclImplDecl); ok {
-			var expr_1403 []string
-			var expr_1402 []string
-			if _, ok := v_459.F2.(OptionSome[ast2.TypeExpr]); ok {
-				var expr_1401 []string
-				var expr_1400 []string
-				if v_462, ok := v_459.F1.(ast2.TypeExprNamedType); ok {
-					var expr_1399 []string
-					expr_1399 = namedImplNames(decls, index+1, MygoIN5SliceM6Append(out, v_462.F0))
-					expr_1400 = expr_1399
+		var expr_1672 []string
+		decl_1662 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
+		var expr_1671 []string
+		if v_529, ok := decl_1662.(ast2.DeclImplDecl); ok {
+			var expr_1670 []string
+			var expr_1669 []string
+			if _, ok := v_529.F2.(OptionSome[ast2.TypeExpr]); ok {
+				var expr_1668 []string
+				var expr_1667 []string
+				if v_532, ok := v_529.F1.(ast2.TypeExprNamedType); ok {
+					var expr_1666 []string
+					expr_1666 = namedImplNames(decls, index+1, MygoIN5SliceM6Append(out, v_532.F0))
+					expr_1667 = expr_1666
 				} else {
 					{
-						var expr_1398 []string
-						expr_1398 = namedImplNames(decls, index+1, out)
-						expr_1400 = expr_1398
+						var expr_1665 []string
+						expr_1665 = namedImplNames(decls, index+1, out)
+						expr_1667 = expr_1665
 					}
 				}
-				expr_1401 = expr_1400
-				expr_1402 = expr_1401
+				expr_1668 = expr_1667
+				expr_1669 = expr_1668
 			} else {
-				if _, ok := v_459.F2.(OptionNone[ast2.TypeExpr]); ok {
-					var expr_1397 []string
-					expr_1397 = namedImplNames(decls, index+1, out)
-					expr_1402 = expr_1397
+				if _, ok := v_529.F2.(OptionNone[ast2.TypeExpr]); ok {
+					var expr_1664 []string
+					expr_1664 = namedImplNames(decls, index+1, out)
+					expr_1669 = expr_1664
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_1403 = expr_1402
-			expr_1404 = expr_1403
+			expr_1670 = expr_1669
+			expr_1671 = expr_1670
 		} else {
 			{
-				var expr_1396 []string
-				expr_1396 = namedImplNames(decls, index+1, out)
-				expr_1404 = expr_1396
+				var expr_1663 []string
+				expr_1663 = namedImplNames(decls, index+1, out)
+				expr_1671 = expr_1663
 			}
 		}
-		expr_1405 = expr_1404
-		expr_1406 = expr_1405
+		expr_1672 = expr_1671
+		expr_1673 = expr_1672
 	}
-	return expr_1406
+	return expr_1673
 }
 func predeclareAllFunctions(decls []ast2.Decl, env []EnvEntry) []EnvEntry {
 	return predeclareImplMethods(decls, predeclareFunctions(decls, env))
 }
 func appendDecls(acc []ast2.Decl, items []ast2.Decl) []ast2.Decl {
-	var expr_1407 []ast2.Decl
+	var expr_1674 []ast2.Decl
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_1407 = acc
+		expr_1674 = acc
 	} else {
-		expr_1407 = appendDecls(MygoIN5SliceM6Append(acc, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.DeclImportDeclCtor("", ""))), sliceDrop[ast2.Decl](items, 1))
+		expr_1674 = appendDecls(MygoIN5SliceM6Append(acc, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.DeclImportDeclCtor("", ""))), sliceDrop[ast2.Decl](items, 1))
 	}
-	return expr_1407
+	return expr_1674
 }
