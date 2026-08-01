@@ -41,6 +41,7 @@ func (g *gen) genFuncDecl(d *FuncDecl) (ast.Decl, error) {
 		retType:          retType,
 		retTypes:         retTypes,
 	}
+	g.addPackageBindings(ctx)
 	for _, p := range d.Params {
 		gt := g.goType(p.Type, typeParamSet(d.TypeParams))
 		ctx.locals[p.Name] = gt

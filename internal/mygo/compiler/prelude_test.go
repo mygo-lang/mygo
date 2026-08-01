@@ -59,6 +59,54 @@ end
 	}
 }
 
+func TestCompileDirSupportsPackageLevelLetAndVar(t *testing.T) {
+	dir := t.TempDir()
+	src := `package sample
+
+func Next() -> Int
+  count = count + 1
+  count + limit
+end
+
+let limit: Int = 10
+var count: Int = 1
+`
+	if err := os.WriteFile(filepath.Join(dir, "main.mygo"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	generated, err := os.ReadFile(written[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(generated)
+	if !strings.Contains(text, "var limit int = 10") || !strings.Contains(text, "var count int = 1") || !strings.Contains(text, "count = count + 1") {
+		t.Fatalf("generated source missing package bindings or their use:\n%s", text)
+	}
+}
+
+func TestCompileDirRejectsAssignmentToPackageLevelLet(t *testing.T) {
+	dir := t.TempDir()
+	src := `package sample
+
+let limit: Int = 10
+
+func Change() -> Int
+  limit = 20
+  limit
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "main.mygo"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompileDir(dir); err == nil || !strings.Contains(err.Error(), "immutable binding \"limit\"") {
+		t.Fatalf("CompileDir() error = %v, want immutable package binding error", err)
+	}
+}
+
 func TestCompileDirSupportsTypeAlias(t *testing.T) {
 	dir := t.TempDir()
 	src := `package sample
