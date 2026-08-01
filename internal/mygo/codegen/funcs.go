@@ -228,7 +228,9 @@ func (g *gen) genFuncDecl(d *FuncDecl) (ast.Decl, error) {
 		bodyStmts = append(bodyStmts, &ast.ReturnStmt{Results: []ast.Expr{translated.Expr}})
 	}
 
-	return astFuncDecl(d.Name, nil, tp, params, results, &ast.BlockStmt{List: bodyStmts}), nil
+	decl := astFuncDecl(d.Name, nil, tp, params, results, &ast.BlockStmt{List: bodyStmts})
+	optimizeClosureTailcalls(decl)
+	return decl, nil
 }
 
 func (g *gen) goTypeStringForTypeclass(t TypeExpr, concreteArgs map[string]TypeExpr, subst map[string]string) string {

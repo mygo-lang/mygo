@@ -82,6 +82,88 @@ end
 	}
 }
 
+func TestGenerateSelfTailcallTrampoline(t *testing.T) {
+	src := `package p
+
+func Countdown(n: Int, total: Int) -> Int
+  if n == 0 => total else Countdown(n - 1, total + n)
+end
+`
+	parsed, err := myparser.ParseFile("self_tail.mygo", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg := &Package{Name: "p", NoPrelude: true, Decls: parsed.Decls, Imports: map[string]struct{}{}, ImportAliases: map[string]string{}, Enums: map[string]*EnumDecl{}, Structs: map[string]*StructDecl{}, Interfaces: map[string]*InterfaceDecl{}, Funcs: map[string]*FuncDecl{}}
+	for _, decl := range parsed.Decls {
+		if fn, ok := decl.(*FuncDecl); ok {
+			pkg.Funcs[fn.Name] = fn
+		}
+	}
+	files, err := GenerateFiles(pkg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var generated string
+	for _, file := range files {
+		generated += file
+	}
+	if !strings.Contains(generated, "func Countdown(n int, total int) int") || !strings.Contains(generated, "func __mygo_mt_p_countdown") {
+		t.Fatalf("self-tail wrapper or trampoline missing:\n%s", generated)
+	}
+	if strings.Contains(generated, "= Countdown(n-1, total+n)") || !strings.Contains(generated, "continue") {
+		t.Fatalf("self tail call was not rewritten to a loop:\n%s", generated)
+	}
+	fset := token.NewFileSet()
+	file, err := goparser.ParseFile(fset, "generated.go", generated, goparser.AllErrors)
+	if err != nil {
+		t.Fatalf("generated Go did not parse: %v\n%s", err, generated)
+	}
+	if _, err := (&types.Config{Importer: importer.Default()}).Check("p", fset, []*ast.File{file}, nil); err != nil {
+		t.Fatalf("generated Go did not type-check: %v\n%s", err, generated)
+	}
+}
+
+func TestParsecPManyUsesClosureContinuationStateMachine(t *testing.T) {
+	pkg := simpleLoadPackage("../../../lib/text/parsec", false)
+	if pkg == nil {
+		t.Fatal("failed to load parsec package")
+	}
+	// simpleLoadPackage intentionally loads every .mygo file. The parsec test
+	// source requires its test-only Go bindings, which are irrelevant here.
+	decls := make([]Decl, 0, len(pkg.Decls))
+	pkg.Funcs = map[string]*FuncDecl{}
+	for _, decl := range pkg.Decls {
+		if fn, ok := decl.(*FuncDecl); ok {
+			if strings.HasSuffix(fn.SourceFile, "_test.mygo") {
+				continue
+			}
+			pkg.Funcs[fn.Name] = fn
+		}
+		decls = append(decls, decl)
+	}
+	pkg.Decls = decls
+	files, err := GenerateFiles(pkg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var generated string
+	for _, file := range files {
+		generated += file
+	}
+	start := strings.Index(generated, "func PMany[")
+	end := strings.Index(generated, "func PMany1[")
+	if start < 0 || end < 0 {
+		t.Fatalf("PMany declarations missing:\n%s", generated)
+	}
+	many := generated[start:end]
+	if !strings.Contains(many, "__mygo_tcmc_stack") || !strings.Contains(many, "continue") {
+		t.Fatalf("PMany was not lowered to a continuation state machine:\n%s", many)
+	}
+	if strings.Contains(many, "PMany(p)(") {
+		t.Fatalf("PMany still recursively invokes its closure:\n%s", many)
+	}
+}
+
 func TestMutualTailcallStagesAllArgumentsBeforeAssignments(t *testing.T) {
 	src := `package p
 
