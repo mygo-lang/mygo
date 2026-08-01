@@ -37,12 +37,10 @@ struct Reply[A]
   Error: Option[ParseError]
 end
 
-struct Parser[A]
-  Run: func(State) -> Reply[A]
-end
+type Parser[A] = func(State) -> Reply[A]
 
 func ParseInput[A](p: Parser[A], input: String) -> Reply[A]
-  p.Run(NewState(input))
+  p(NewState(input))
 end
 
 func NewState(input: String) -> State
@@ -54,83 +52,75 @@ func NewState(input: String) -> State
 end
 
 func PPure[A](value: A) -> Parser[A]
-  Parser[A] {
-    Run: func(state: State) -> Reply[A]
-      Reply[A] {
-        Ok: true,
-        Consumed: false,
-        Value: value,
-        State: state,
-        Error: EmptyError(state.Position),
-      }
-    end
-  }
+  func(state: State) -> Reply[A]
+    Reply[A] {
+      Ok: true,
+      Consumed: false,
+      Value: value,
+      State: state,
+      Error: EmptyError(state.Position),
+    }
+  end
 end
 
 func PFail[A](message: String) -> Parser[A]
-  Parser[A] {
-    Run: func(state: State) -> Reply[A]
-      Reply[A] {
-        Ok: false,
-        Consumed: false,
-        Value: Zero(),
-        State: state,
-        Error: ErrorAt(state.Position, message, EmptyExpected()),
-      }
-    end
-  }
+  func(state: State) -> Reply[A]
+    Reply[A] {
+      Ok: false,
+      Consumed: false,
+      Value: Zero(),
+      State: state,
+      Error: ErrorAt(state.Position, message, EmptyExpected()),
+    }
+  end
 end
 
 func PMap[A, B](p: Parser[A], f: func(A) -> B) -> Parser[B]
-  Parser[B] {
-    Run: func(state: State) -> Reply[B]
-      let r = p.Run(state)
-      if !r.Ok then
-        Reply[B] {
-          Ok: false,
-          Consumed: r.Consumed,
-          Value: Zero(),
-          State: r.State,
-          Error: r.Error,
-        }
-      else
-        Reply[B] {
-          Ok: true,
-          Consumed: r.Consumed,
-          Value: f(r.Value),
-          State: r.State,
-          Error: EmptyError(r.State.Position),
-        }
-      end
+  func(state: State) -> Reply[B]
+    let r = p(state)
+    if !r.Ok then
+      Reply[B] {
+        Ok: false,
+        Consumed: r.Consumed,
+        Value: Zero(),
+        State: r.State,
+        Error: r.Error,
+      }
+    else
+      Reply[B] {
+        Ok: true,
+        Consumed: r.Consumed,
+        Value: f(r.Value),
+        State: r.State,
+        Error: EmptyError(r.State.Position),
+      }
     end
-  }
+  end
 end
 
 func PBind[A, B](p: Parser[A], f: func(A) -> Parser[B]) -> Parser[B]
-  Parser[B] {
-    Run: func(state: State) -> Reply[B]
-      let r = p.Run(state)
-      if !r.Ok then
-        Reply[B] {
-          Ok: false,
-          Consumed: r.Consumed,
-          Value: Zero(),
-          State: r.State,
-          Error: r.Error,
-        }
-      else
-        let next = f(r.Value)
-        let r2 = next.Run(r.State)
-        Reply[B] {
-          Ok: r2.Ok,
-          Consumed: r.Consumed || r2.Consumed,
-          Value: r2.Value,
-          State: r2.State,
-          Error: r2.Error,
-        }
-      end
+  func(state: State) -> Reply[B]
+    let r = p(state)
+    if !r.Ok then
+      Reply[B] {
+        Ok: false,
+        Consumed: r.Consumed,
+        Value: Zero(),
+        State: r.State,
+        Error: r.Error,
+      }
+    else
+      let next = f(r.Value)
+      let r2 = next(r.State)
+      Reply[B] {
+        Ok: r2.Ok,
+        Consumed: r.Consumed || r2.Consumed,
+        Value: r2.Value,
+        State: r2.State,
+        Error: r2.Error,
+      }
     end
-  }
+  end
 end
 
 func PThen[A, B](pa: Parser[A], pb: Parser[B]) -> Parser[B]
@@ -140,18 +130,16 @@ func PThen[A, B](pa: Parser[A], pb: Parser[B]) -> Parser[B]
 end
 
 func POrElse[A](left: Parser[A], right: Parser[A]) -> Parser[A]
-  Parser[A] {
-    Run: func(state: State) -> Reply[A]
-      let r = left.Run(state)
-      if r.Ok then
-        r
-      elsif r.Consumed then
-        r
-      else
-        right.Run(state)
-      end
+  func(state: State) -> Reply[A]
+    let r = left(state)
+    if r.Ok then
+      r
+    elsif r.Consumed then
+      r
+    else
+      right(state)
     end
-  }
+  end
 end
 
 func PChoice[A](parsers: Slice[Parser[A]]) -> Parser[A]
@@ -161,102 +149,94 @@ func PChoice[A](parsers: Slice[Parser[A]]) -> Parser[A]
 end
 
 func PAttempt[A](p: Parser[A]) -> Parser[A]
-  Parser[A] {
-    Run: func(state: State) -> Reply[A]
-      let r = p.Run(state)
-      if r.Ok then
-        r
-      else
-        Reply[A] {
-          Ok: false,
-          Consumed: false,
-          Value: r.Value,
-          State: state,
-          Error: r.Error,
-        }
-      end
-    end
-  }
-end
-
-func PLookAhead[A](p: Parser[A]) -> Parser[A]
-  Parser[A] {
-    Run: func(state: State) -> Reply[A]
-      let r = p.Run(state)
+  func(state: State) -> Reply[A]
+    let r = p(state)
+    if r.Ok then
+      r
+    else
       Reply[A] {
-        Ok: r.Ok,
+        Ok: false,
         Consumed: false,
         Value: r.Value,
         State: state,
         Error: r.Error,
       }
     end
-  }
+  end
+end
+
+func PLookAhead[A](p: Parser[A]) -> Parser[A]
+  func(state: State) -> Reply[A]
+    let r = p(state)
+    Reply[A] {
+      Ok: r.Ok,
+      Consumed: false,
+      Value: r.Value,
+      State: state,
+      Error: r.Error,
+    }
+  end
 end
 
 func PNotFollowedBy[A](p: Parser[A], message: String) -> Parser[()] 
-  Parser[()] {
-    Run: func(state: State) -> Reply[()]
-      let r = p.Run(state)
-      if r.Ok then
-        Reply[()] {
+  func(state: State) -> Reply[()]
+    let r = p(state)
+    if r.Ok then
+      Reply[()] {
+        Ok: false,
+        Consumed: false,
+        Value: (),
+        State: state,
+        Error: ErrorAt(state.Position, message, EmptyExpected()),
+      }
+    else
+      Reply[()] {
+        Ok: true,
+        Consumed: false,
+        Value: (),
+        State: state,
+        Error: EmptyError(state.Position),
+      }
+    end
+  end
+end
+
+func PMany[A](p: Parser[A]) -> Parser[Slice[A]]
+  func(state: State) -> Reply[Slice[A]]
+    let r = p(state)
+    if !r.Ok then
+      if r.Consumed then
+        Reply[Slice[A]] {
           Ok: false,
-          Consumed: false,
-          Value: (),
-          State: state,
-          Error: ErrorAt(state.Position, message, EmptyExpected()),
+          Consumed: true,
+          Value: [],
+          State: r.State,
+          Error: r.Error,
         }
       else
-        Reply[()] {
+        Reply[Slice[A]] {
           Ok: true,
           Consumed: false,
-          Value: (),
+          Value: [],
           State: state,
           Error: EmptyError(state.Position),
         }
       end
-    end
-  }
-end
-
-func PMany[A](p: Parser[A]) -> Parser[Slice[A]]
-  Parser[Slice[A]] {
-    Run: func(state: State) -> Reply[Slice[A]]
-      let r = p.Run(state)
-      if !r.Ok then
-        if r.Consumed then
-          Reply[Slice[A]] {
-            Ok: false,
-            Consumed: true,
-            Value: [],
-            State: r.State,
-            Error: r.Error,
-          }
-        else
-          Reply[Slice[A]] {
-            Ok: true,
-            Consumed: false,
-            Value: [],
-            State: state,
-            Error: EmptyError(state.Position),
-          }
-        end
+    else
+      let tail = PMany(p)(r.State)
+      if !tail.Ok then
+        tail
       else
-        let tail = PMany(p).Run(r.State)
-        if !tail.Ok then
-          tail
-        else
-          Reply[Slice[A]] {
-            Ok: true,
-            Consumed: true,
-            Value: tail.Value.Prepend(r.Value),
-            State: tail.State,
-            Error: tail.Error,
-          }
-        end
+        Reply[Slice[A]] {
+          Ok: true,
+          Consumed: true,
+          Value: tail.Value.Prepend(r.Value),
+          State: tail.State,
+          Error: tail.Error,
+        }
       end
     end
-  }
+  end
 end
 
 func PMany1[A](p: Parser[A]) -> Parser[Slice[A]]
@@ -268,36 +248,34 @@ func PMany1[A](p: Parser[A]) -> Parser[Slice[A]]
 end
 
 func POptional[A](p: Parser[A]) -> Parser[Option[A]]
-  Parser[Option[A]] {
-    Run: func(state: State) -> Reply[Option[A]]
-      let r = p.Run(state)
-      if r.Ok then
-        Reply[Option[A]] {
-          Ok: true,
-          Consumed: r.Consumed,
-          Value: Some(r.Value),
-          State: r.State,
-          Error: EmptyError(r.State.Position),
-        }
-      elsif r.Consumed then
-        Reply[Option[A]] {
-          Ok: false,
-          Consumed: true,
-          Value: None,
-          State: r.State,
-          Error: r.Error,
-        }
-      else
-        Reply[Option[A]] {
-          Ok: true,
-          Consumed: false,
-          Value: None,
-          State: state,
-          Error: EmptyError(state.Position),
-        }
-      end
+  func(state: State) -> Reply[Option[A]]
+    let r = p(state)
+    if r.Ok then
+      Reply[Option[A]] {
+        Ok: true,
+        Consumed: r.Consumed,
+        Value: Some(r.Value),
+        State: r.State,
+        Error: EmptyError(r.State.Position),
+      }
+    elsif r.Consumed then
+      Reply[Option[A]] {
+        Ok: false,
+        Consumed: true,
+        Value: None,
+        State: r.State,
+        Error: r.Error,
+      }
+    else
+      Reply[Option[A]] {
+        Ok: true,
+        Consumed: false,
+        Value: None,
+        State: state,
+        Error: EmptyError(state.Position),
+      }
     end
-  }
+  end
 end
 
 func PBetween[A, L, R](open: Parser[L], body: Parser[A], close: Parser[R]) -> Parser[A]
@@ -309,7 +287,7 @@ func PBetween[A, L, R](open: Parser[L], body: Parser[A], close: Parser[R]) -> Pa
 end
 
 func PSepBy[A, S](item: Parser[A], sep: Parser[S]) -> Parser[Slice[A]]
-  POrElse(PSepBy1(item, sep), PPure([]))
+  POrElse(PSepBy1(item, sep), PPure[Slice[A]]([]))
 end
 
 func PSepBy1[A, S](item: Parser[A], sep: Parser[S]) -> Parser[Slice[A]]
@@ -321,57 +299,53 @@ func PSepBy1[A, S](item: Parser[A], sep: Parser[S]) -> Parser[Slice[A]]
 end
 
 func PLabel[A](p: Parser[A], name: String) -> Parser[A]
-  Parser[A] {
-    Run: func(state: State) -> Reply[A]
-      let r = p.Run(state)
-      if r.Ok then
-        r
-      elsif r.Consumed then
-        r
-      else
-        Reply[A] {
-          Ok: false,
-          Consumed: false,
-          Value: r.Value,
-          State: state,
-          Error: WithExpected(r.Error, name),
-        }
-      end
+  func(state: State) -> Reply[A]
+    let r = p(state)
+    if r.Ok then
+      r
+    elsif r.Consumed then
+      r
+    else
+      Reply[A] {
+        Ok: false,
+        Consumed: false,
+        Value: r.Value,
+        State: state,
+        Error: WithExpected(r.Error, name),
+      }
     end
-  }
+  end
 end
 
 func PSatisfy(pred: func(Rune) -> Bool, expected: String) -> Parser[Rune]
-  Parser[Rune] {
-    Run: func(state: State) -> Reply[Rune]
-      let r = PeekRune(state)
-      if !r.Ok then
-        Reply[Rune] {
-          Ok: false,
-          Consumed: false,
-          Value: Zero(),
-          State: state,
-          Error: ErrorAt(state.Position, expected, EmptyExpected()),
-        }
-      elsif pred(r.Value) then
-        Reply[Rune] {
-          Ok: true,
-          Consumed: true,
-          Value: r.Value,
-          State: AdvanceRune(state),
-          Error: EmptyError(state.Position),
-        }
-      else
-        Reply[Rune] {
-          Ok: false,
-          Consumed: false,
-          Value: r.Value,
-          State: state,
-          Error: ErrorAt(state.Position, expected, EmptyExpected()),
-        }
-      end
+  func(state: State) -> Reply[Rune]
+    let r = PeekRune(state)
+    if !r.Ok then
+      Reply[Rune] {
+        Ok: false,
+        Consumed: false,
+        Value: Zero(),
+        State: state,
+        Error: ErrorAt(state.Position, expected, EmptyExpected()),
+      }
+    elsif pred(r.Value) then
+      Reply[Rune] {
+        Ok: true,
+        Consumed: true,
+        Value: r.Value,
+        State: AdvanceRune(state),
+        Error: EmptyError(state.Position),
+      }
+    else
+      Reply[Rune] {
+        Ok: false,
+        Consumed: false,
+        Value: r.Value,
+        State: state,
+        Error: ErrorAt(state.Position, expected, EmptyExpected()),
+      }
     end
-  }
+  end
 end
 
 func PAnyRune() -> Parser[Rune]
@@ -387,46 +361,42 @@ func PChar(expectedRune: Rune) -> Parser[Rune]
 end
 
 func PString(expected: String) -> Parser[String]
-  Parser[String] {
-    Run: func(state: State) -> Reply[String]
-      let r = MatchString(state, expected)
-      if r.Ok then
-        r
-      else
-        Reply[String] {
-          Ok: false,
-          Consumed: r.Consumed,
-          Value: "",
-          State: r.State,
-          Error: r.Error,
-        }
-      end
+  func(state: State) -> Reply[String]
+    let r = MatchString(state, expected)
+    if r.Ok then
+      r
+    else
+      Reply[String] {
+        Ok: false,
+        Consumed: r.Consumed,
+        Value: "",
+        State: r.State,
+        Error: r.Error,
+      }
     end
-  }
+  end
 end
 
 func PEof() -> Parser[()]
-  Parser[()] {
-    Run: func(state: State) -> Reply[()]
-      if state.Index >= state.Input.Len() then
-        Reply[()] {
-          Ok: true,
-          Consumed: false,
-          Value: (),
-          State: state,
-          Error: EmptyError(state.Position),
-        }
-      else
-        Reply[()] {
-          Ok: false,
-          Consumed: false,
-          Value: (),
-          State: state,
-          Error: ErrorAt(state.Position, "end of input", EmptyExpected()),
-        }
-      end
+  func(state: State) -> Reply[()]
+    if state.Index >= state.Input.Len() then
+      Reply[()] {
+        Ok: true,
+        Consumed: false,
+        Value: (),
+        State: state,
+        Error: EmptyError(state.Position),
+      }
+    else
+      Reply[()] {
+        Ok: false,
+        Consumed: false,
+        Value: (),
+        State: state,
+        Error: ErrorAt(state.Position, "end of input", EmptyExpected()),
+      }
     end
-  }
+  end
 end
 
 func PDigit() -> Parser[Rune]

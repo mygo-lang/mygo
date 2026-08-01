@@ -699,6 +699,9 @@ func (v *validator) validateReturnType(d *FuncDecl, body Expr) error {
 		return nil
 	}
 	expected := typeinference.TypeFromAST(d.Ret)
+	if v.typedInfo != nil {
+		expected = typeinference.ExpandImportedTypeAliases(expected, v.typedInfo.MyGoPackages)
+	}
 	if isUnitType(expected) {
 		return nil
 	}

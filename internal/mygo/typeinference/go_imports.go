@@ -124,14 +124,15 @@ func loadMyGoPackageInfo(workspaceRoot, baseDir, importPath, alias string, cache
 		return nil, err
 	}
 	info := &MyGoPackageInfo{
-		Alias:      alias,
-		Path:       importPath,
-		Funcs:      map[string]*Scheme{},
-		Types:      map[string]struct{}{},
-		Structs:    map[string]*StructDecl{},
-		Enums:      map[string]*EnumDecl{},
-		Interfaces: map[string]*InterfaceDecl{},
-		Impls:      []*ImplDecl{},
+		Alias:       alias,
+		Path:        importPath,
+		Funcs:       map[string]*Scheme{},
+		Types:       map[string]struct{}{},
+		TypeAliases: map[string]*TypeAliasDecl{},
+		Structs:     map[string]*StructDecl{},
+		Enums:       map[string]*EnumDecl{},
+		Interfaces:  map[string]*InterfaceDecl{},
+		Impls:       []*ImplDecl{},
 	}
 	var decls []Decl
 	for _, entry := range entries {
@@ -164,6 +165,15 @@ func loadMyGoPackageInfo(workspaceRoot, baseDir, importPath, alias string, cache
 			if isExportedGoName(d.Name) {
 				info.Types[d.Name] = struct{}{}
 				info.Structs[d.Name] = d
+			}
+		case *TypeAliasDecl:
+			if isExportedGoName(d.Name) {
+				info.Types[d.Name] = struct{}{}
+				info.TypeAliases[d.Name] = d
+			}
+		case *TypeDecl:
+			if isExportedGoName(d.Name) {
+				info.Types[d.Name] = struct{}{}
 			}
 		case *EnumDecl:
 			if isExportedGoName(d.Name) {
@@ -201,10 +211,55 @@ func loadMyGoPackageInfo(workspaceRoot, baseDir, importPath, alias string, cache
 			info.Impls = append(info.Impls, d)
 		}
 	}
+	// Exported function schemes are built while declarations are scanned, so
+	// their types still contain this package's bare aliases. Normalize them
+	// after every alias has been collected; callers can then qualify the
+	// remaining concrete package types with their import alias.
+	for name, sch := range info.Funcs {
+		info.Funcs[name] = &Scheme{
+			Bound: sch.Bound,
+			Body: QualifiedType{
+				Predicates: sch.Body.Predicates,
+				Body:       expandMyGoPackageTypeAliases(info, sch.Body.Body, map[string]bool{}),
+			},
+		}
+	}
 	if cache != nil {
 		cache[cacheKey] = info
 	}
 	return info, nil
+}
+
+// expandMyGoPackageTypeAliases expands aliases in a package's own exported
+// signatures. It intentionally leaves non-alias type names bare; callers add
+// their import qualifier later with qualifyMyGoType.
+func expandMyGoPackageTypeAliases(info *MyGoPackageInfo, t MonoType, visiting map[string]bool) MonoType {
+	switch t := t.(type) {
+	case TCon:
+		args := make([]MonoType, len(t.Args))
+		for i, arg := range t.Args {
+			args[i] = expandMyGoPackageTypeAliases(info, arg, visiting)
+		}
+		if decl := info.TypeAliases[t.Name]; decl != nil && len(decl.TypeParams) == len(args) && !visiting[t.Name] {
+			visiting[t.Name] = true
+			params := make(map[string]MonoType, len(decl.TypeParams))
+			for i, name := range decl.TypeParams {
+				params[name] = args[i]
+			}
+			expanded := typeFromASTWithParams(decl.Type, params)
+			delete(visiting, t.Name)
+			return expandMyGoPackageTypeAliases(info, expanded, visiting)
+		}
+		return TCon{Name: t.Name, Args: args}
+	case TFunc:
+		args := make([]MonoType, len(t.Args))
+		for i, arg := range t.Args {
+			args[i] = expandMyGoPackageTypeAliases(info, arg, visiting)
+		}
+		return TFunc{Args: args, Ret: expandMyGoPackageTypeAliases(info, t.Ret, visiting), Variadic: t.Variadic}
+	default:
+		return t
+	}
 }
 
 func resolveMyGoImportPath(workspaceRoot, baseDir, importPath string) (string, error) {

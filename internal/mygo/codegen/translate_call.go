@@ -473,6 +473,17 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		// For Some/Ok/Err, add type args from expected or retType,
 		// and propagate the inner type as the expected type for the argument.
 		argExpected := g.paramExpectedTypes(fnDecl, retType, ctx)
+		if fnDecl != nil && len(n.TypeArgs) > 0 {
+			subst := map[string]string{}
+			for i, tp := range fnDecl.TypeParams {
+				if i < len(n.TypeArgs) {
+					subst[tp] = g.goType(n.TypeArgs[i], ctx.typeParams)
+				}
+			}
+			for i, p := range fnDecl.Params {
+				argExpected[i] = g.goTypeStringSubst(p.Type, subst)
+			}
+		}
 		useExpected := expected
 		if useExpected == "" {
 			useExpected = ctx.retType
@@ -794,7 +805,25 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 	if err != nil {
 		return nil, "", err
 	}
+	if result := goFuncResultType(ct); result != "" {
+		ct = result
+	}
 	return &ast.CallExpr{Fun: callee, Args: args}, ct, nil
+}
+
+// goFuncResultType extracts the result type of a lowered Go function type.
+// Calling a function-valued expression must propagate its result type, rather
+// than retaining the callee's function type as the type of the call itself.
+func goFuncResultType(typ string) string {
+	typ = strings.TrimSpace(typ)
+	if !strings.HasPrefix(typ, "func(") {
+		return ""
+	}
+	close := matchingParenEnd(typ, len("func"))
+	if close < 0 {
+		return ""
+	}
+	return strings.TrimSpace(typ[close+1:])
 }
 
 func (g *gen) ensureRelationAllowed(n *BinaryExpr, leftType, rightType string) error {
@@ -977,6 +1006,31 @@ func (g *gen) wrapGoErrorResultCall(call ast.Expr, resultType string) ast.Expr {
 
 func mygoSigTypeToGo(typ string) string {
 	typ = strings.TrimSpace(typ)
+	if arrow := topLevelArrow(typ); arrow >= 0 {
+		params := strings.TrimSpace(typ[:arrow])
+		if strings.HasPrefix(params, "(") && strings.HasSuffix(params, ")") {
+			params = strings.TrimSpace(params[1 : len(params)-1])
+		}
+		args := splitTopLevel(params, ',')
+		goArgs := make([]string, len(args))
+		for i, arg := range args {
+			goArgs[i] = mygoSigTypeToGo(arg)
+		}
+		return "func(" + strings.Join(goArgs, ", ") + ") " + mygoSigTypeToGo(typ[arrow+2:])
+	}
+	if strings.HasPrefix(typ, "func(") {
+		if close := matchingParenEnd(typ, len("func")); close >= 0 {
+			args := splitTopLevel(typ[len("func("):close], ',')
+			result := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(typ[close+1:]), "->"))
+			if result != "" {
+				goArgs := make([]string, len(args))
+				for i, arg := range args {
+					goArgs[i] = mygoSigTypeToGo(arg)
+				}
+				return "func(" + strings.Join(goArgs, ", ") + ") " + mygoSigTypeToGo(result)
+			}
+		}
+	}
 	switch typ {
 	case "":
 		return ""
@@ -1054,6 +1108,39 @@ func mygoSigTypeToGo(typ string) string {
 		return base + "[" + strings.Join(goArgs, ", ") + "]"
 	}
 	return typ
+}
+
+func topLevelArrow(typ string) int {
+	depth := 0
+	for i := 0; i+1 < len(typ); i++ {
+		switch typ[i] {
+		case '[', '(':
+			depth++
+		case ']', ')':
+			depth--
+		case '-':
+			if depth == 0 && typ[i+1] == '>' {
+				return i
+			}
+		}
+	}
+	return -1
+}
+
+func matchingParenEnd(typ string, open int) int {
+	depth := 0
+	for i, r := range typ[open:] {
+		switch r {
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth == 0 {
+				return open + i
+			}
+		}
+	}
+	return -1
 }
 
 func normalizeMyGoTypeName(name string) string {
