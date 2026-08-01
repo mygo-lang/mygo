@@ -125,3 +125,57 @@ end
 		t.Fatalf("CompileDir() error = %v, want distinct-type mismatch", err)
 	}
 }
+
+func TestCompileDirSupportsGenericTypeAlias(t *testing.T) {
+	dir := t.TempDir()
+	src := `package sample
+type Items[A] = Slice[A]
+
+func Identity[A](items: Items[A]) -> Items[A]
+  items
+end
+
+func AsSlice(items: Items[Int]) -> Slice[Int]
+  items
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "main.mygo"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	generated, err := os.ReadFile(written[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(generated), "type Items[A any] = []A") {
+		t.Fatalf("generated source missing generic Go type alias:\n%s", generated)
+	}
+}
+
+func TestCompileDirSupportsGenericDistinctTypeDeclaration(t *testing.T) {
+	dir := t.TempDir()
+	src := `package sample
+type Box[A] Slice[A]
+
+func Identity[A](box: Box[A]) -> Box[A]
+  box
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "main.mygo"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	generated, err := os.ReadFile(written[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(generated), "type Box[A any] []A") {
+		t.Fatalf("generated source missing generic distinct type:\n%s", generated)
+	}
+}

@@ -1124,6 +1124,28 @@ func TestParseFileSupportsDistinctTypeDeclaration(t *testing.T) {
 	}
 }
 
+func TestParseFileSupportsGenericDistinctTypeDeclaration(t *testing.T) {
+	file, err := ParseFile("test.mygo", "package main\ntype Box[A] Slice[A]\n")
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	decl := file.Decls[0].(*TypeDecl)
+	if got := decl.TypeParams; len(got) != 1 || got[0] != "A" {
+		t.Errorf("type parameters = %#v, want [A]", got)
+	}
+}
+
+func TestParseFileSupportsGenericTypeAlias(t *testing.T) {
+	file, err := ParseFile("test.mygo", "package main\ntype Items[A] = Slice[A]\n")
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	alias := file.Decls[0].(*TypeAliasDecl)
+	if got := alias.TypeParams; len(got) != 1 || got[0] != "A" {
+		t.Errorf("alias type parameters = %#v, want [A]", got)
+	}
+}
+
 func TestParseFileSupportsInlineGoMixedOperands(t *testing.T) {
 	src := `package main
 func demo(n: Int, s: String) -> Bool

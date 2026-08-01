@@ -242,9 +242,9 @@ func initialTypeEnv(pkg *PkgInfo) TypeEnv {
 				env[name] = predeclaredCurrentPackageType(name, len(iface.TypeParams))
 			}
 		}
-		for name := range pkg.Types {
+		for name, decl := range pkg.Types {
 			if _, exists := env[name]; !exists {
-				env[name] = predeclaredCurrentPackageType(name, 0)
+				env[name] = predeclaredCurrentPackageType(name, len(decl.TypeParams))
 			}
 		}
 		for name := range pkg.DotImportTypes {

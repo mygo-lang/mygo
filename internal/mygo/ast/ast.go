@@ -26,6 +26,7 @@ type TypeAliasDecl struct {
 	Column     int
 	SourceFile string
 	Name       string
+	TypeParams []string
 	Type       TypeExpr
 }
 
@@ -37,6 +38,7 @@ type TypeDecl struct {
 	Column     int
 	SourceFile string
 	Name       string
+	TypeParams []string
 	Type       TypeExpr
 }
 
