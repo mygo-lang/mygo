@@ -565,7 +565,7 @@ end
 # than emitting Result[any, any].
 func resolveVariantFieldMono(fieldMono: ast2.MonoType, targetMono: ast2.MonoType) -> ast2.MonoType
   switch targetMono
-    case TApp(_, args) => typeinference2.ApplySubst(bindTypeArgs(variantTypeParamIDs(args, 1, [] as Slice[Int]), args, 0, [] as Slice[typeinference2.SubstEntry]), fieldMono)
+    case TApp(_, args) => typeinference2.ApplySubst(typeinference2.SubstFromEntries(bindTypeArgs(variantTypeParamIDs(args, 1, [] as Slice[Int]), args, 0, [] as Slice[typeinference2.SubstEntry])), fieldMono)
     case _ => fieldMono
   end
 end

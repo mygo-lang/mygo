@@ -27,7 +27,7 @@ func solverFromInstances(instances: Slice[Instance]) -> Solver
   end
 end
 
-func solverResolve(solver: Solver, predicates: Slice[Predicate], subst: Slice[SubstEntry]) -> Result[Slice[Predicate], String]
+func solverResolve(solver: Solver, predicates: Slice[Predicate], subst: Subst) -> Result[Slice[Predicate], String]
   if predicates.Len() == 0 then Ok(emptyPredicates()) else
     let predicate = predicates.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[ast2.MonoType] })
     let rest = solverResolve(solver, sliceDrop(predicates, 1), subst)
@@ -46,12 +46,12 @@ func emptyPredicates() -> Slice[Predicate]
   [] as Slice[Predicate]
 end
 
-func solverResolveOne(solver: Solver, predicate: Predicate, subst: Slice[SubstEntry]) -> Result[Slice[Predicate], String]
+func solverResolveOne(solver: Solver, predicate: Predicate, subst: Subst) -> Result[Slice[Predicate], String]
   let args = substTypes(predicate.Args, subst)
   solverFindInstance(solver.Instances, Predicate { ClassName: predicate.ClassName, Args: args }, subst)
 end
 
-func solverFindInstance(instances: Slice[Instance], predicate: Predicate, subst: Slice[SubstEntry]) -> Result[Slice[Predicate], String]
+func solverFindInstance(instances: Slice[Instance], predicate: Predicate, subst: Subst) -> Result[Slice[Predicate], String]
   if instances.Len() == 0 then Ok(([predicate] as Slice[Predicate])) else
     let instance = instances.Get(0).UnwrapOr(Instance { ClassName: "", Type: ast2.MonoType.TUnit, Predicates: [] as Slice[Predicate] })
     if instance.ClassName != predicate.ClassName || predicate.Args.Len() == 0 then

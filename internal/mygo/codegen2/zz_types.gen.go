@@ -204,7 +204,7 @@ func lookupFieldInMonoType(base ast2.MonoType, field string, ctx *egCtx) Option[
 					} else {
 						var expr_2717 Option[ast2.MonoType]
 						subst_2716 := bindTypeArgs(bound_2715, v_915.F1, 0, []typeinference2.SubstEntry([]typeinference2.SubstEntry{}))
-						expr_2717 = Some[ast2.MonoType](typeinference2.ApplySubst(subst_2716, v_920.F0.Type))
+						expr_2717 = Some[ast2.MonoType](typeinference2.ApplySubst(typeinference2.SubstFromEntries(subst_2716), v_920.F0.Type))
 						expr_2718 = expr_2717
 					}
 					expr_2719 = expr_2718
@@ -320,19 +320,19 @@ func monoTypeToGoStr(t ast2.MonoType) string {
 					var expr_2754 string
 					var expr_2753 string
 					if v_928.F0 == "Ref" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_927.F1) == 1 {
-						expr_2753 = "*" + monoTypeToGoStr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_927.F1, 0), ast2.MonoTypeTUnitCtor()))
+						expr_2753 = "*" + monoTypeToGoStr(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_927.F1, 0), ast2.MonoTypeTUnitCtor()))
 					} else {
 						var expr_2752 string
 						if v_928.F0 == "Slice" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_927.F1) == 1 {
-							expr_2752 = "[]" + monoTypeToGoStr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_927.F1, 0), ast2.MonoTypeTUnitCtor()))
+							expr_2752 = "[]" + monoTypeToGoStr(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_927.F1, 0), ast2.MonoTypeTUnitCtor()))
 						} else {
 							var expr_2751 string
 							if v_928.F0 == "Map" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_927.F1) == 2 {
-								expr_2751 = "map[" + monoTypeToGoStr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_927.F1, 0), ast2.MonoTypeTUnitCtor())) + "]" + monoTypeToGoStr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_927.F1, 1), ast2.MonoTypeTUnitCtor()))
+								expr_2751 = "map[" + monoTypeToGoStr(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_927.F1, 0), ast2.MonoTypeTUnitCtor())) + "]" + monoTypeToGoStr(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_927.F1, 1), ast2.MonoTypeTUnitCtor()))
 							} else {
 								var expr_2750 string
 								if v_928.F0 == "Set" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_927.F1) == 1 {
-									expr_2750 = "map[" + monoTypeToGoStr(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_927.F1, 0), ast2.MonoTypeTUnitCtor())) + "]struct{}"
+									expr_2750 = "map[" + monoTypeToGoStr(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_927.F1, 0), ast2.MonoTypeTUnitCtor())) + "]struct{}"
 								} else {
 									var expr_2749 string
 									ctorStr_2746 := monoTypeToGoStr(*v_927.F0)
@@ -423,7 +423,7 @@ func monoTypeToGoStrWithParams(t ast2.MonoType, params []string) string {
 	if v_936, ok := t.(ast2.MonoTypeTParam); ok {
 		var expr_2780 string
 		index_2779 := -v_936.F0 - 1
-		expr_2780 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, index_2779), "any")
+		expr_2780 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, index_2779), "any")
 		expr_2781 = expr_2780
 	} else {
 		if v_934, ok := t.(ast2.MonoTypeTApp); ok {
@@ -436,19 +436,19 @@ func monoTypeToGoStrWithParams(t ast2.MonoType, params []string) string {
 				})
 				var expr_2775 string
 				if v_935.F0 == "Ref" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(argStrs_2771) == 1 {
-					expr_2775 = "*" + MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(argStrs_2771, 0), "any")
+					expr_2775 = "*" + MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(argStrs_2771, 0), "any")
 				} else {
 					var expr_2774 string
 					if v_935.F0 == "Slice" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(argStrs_2771) == 1 {
-						expr_2774 = "[]" + MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(argStrs_2771, 0), "any")
+						expr_2774 = "[]" + MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(argStrs_2771, 0), "any")
 					} else {
 						var expr_2773 string
 						if v_935.F0 == "Map" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(argStrs_2771) == 2 {
-							expr_2773 = "map[" + MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(argStrs_2771, 0), "any") + "]" + MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(argStrs_2771, 1), "any")
+							expr_2773 = "map[" + MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(argStrs_2771, 0), "any") + "]" + MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(argStrs_2771, 1), "any")
 						} else {
 							var expr_2772 string
 							if v_935.F0 == "Set" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(argStrs_2771) == 1 {
-								expr_2772 = "map[" + MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(argStrs_2771, 0), "any") + "]struct{}"
+								expr_2772 = "map[" + MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(argStrs_2771, 0), "any") + "]struct{}"
 							} else {
 								expr_2772 = mygoToGoTypeStr(v_935.F0 + "[" + joinStrings(argStrs_2771, ", ") + "]")
 							}
@@ -516,7 +516,7 @@ func tupleMonoElemsToStrings(items []ast2.MonoType, params []string, index int, 
 		expr_2785 = out
 	} else {
 		var expr_2784 []string
-		head_2782 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.MonoTypeTUnitCtor())
+		head_2782 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.MonoTypeTUnitCtor())
 		tail_2783 := tupleMonoElemsToStrings(sliceDrop[ast2.MonoType](items, 1), params, index+1, out)
 		expr_2784 = MygoIN5SliceM7Prepend(tail_2783, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(index)+" "+monoTypeToGoStrWithParams(head_2782, params))
 		expr_2785 = expr_2784
@@ -529,7 +529,7 @@ func tupleMonoElemsToStringsNoParams(items []ast2.MonoType, index int, out []str
 		expr_2789 = out
 	} else {
 		var expr_2788 []string
-		head_2786 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.MonoTypeTUnitCtor())
+		head_2786 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.MonoTypeTUnitCtor())
 		tail_2787 := tupleMonoElemsToStringsNoParams(sliceDrop[ast2.MonoType](items, 1), index+1, out)
 		expr_2788 = MygoIN5SliceM7Prepend(tail_2787, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(index)+" "+monoTypeToGoStr(head_2786))
 		expr_2789 = expr_2788
@@ -545,8 +545,8 @@ func __mygo_mt_codegen2_bindtypeargs(bound []int, args []ast2.MonoType, index in
 				expr_2799 = out
 			} else {
 				var expr_2798 []typeinference2.SubstEntry
-				id_2795 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bound, index), 0)
-				typ_2796 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.MonoTypeTUnitCtor())
+				id_2795 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bound, index), 0)
+				typ_2796 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.MonoTypeTUnitCtor())
 				next_2797 := MygoIN5SliceM7Prepend(out, typeinference2.SubstEntry{ID: id_2795, Type: typ_2796})
 				__mygo_next_0 := bound
 				__mygo_next_1 := args
@@ -575,7 +575,7 @@ func __mygo_mt_codegen2_findfieldinslice(fields []typeinference2.FieldEntry, nam
 				expr_2807 = None[typeinference2.FieldEntry]()
 			} else {
 				var expr_2806 Option[typeinference2.FieldEntry]
-				f_2804 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, index), typeinference2.FieldEntry{TypeName: "", FieldName: "", Type: ast2.MonoTypeTUnitCtor()})
+				f_2804 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, index), typeinference2.FieldEntry{TypeName: "", FieldName: "", Type: ast2.MonoTypeTUnitCtor()})
 				var expr_2805 Option[typeinference2.FieldEntry]
 				if f_2804.FieldName == name {
 					expr_2805 = Some[typeinference2.FieldEntry](f_2804)

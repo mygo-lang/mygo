@@ -86,6 +86,10 @@ type SubstEntry struct {
 	ID   int
 	Type ast2.MonoType
 }
+type Subst struct {
+	Entries []SubstEntry
+	Index   map[int]ast2.MonoType
+}
 type PkgInfo struct {
 	Dir   string
 	Name  string
@@ -110,7 +114,7 @@ type InferState struct {
 type InferResult struct {
 	Type       ast2.MonoType
 	Predicates []Predicate
-	Subst      []SubstEntry
+	Subst      Subst
 	State      InferState
 }
 type MethodConstraintRef interface {
@@ -179,7 +183,7 @@ type ArgsResult struct {
 	Types      []ast2.MonoType
 	Exprs      []ast2.Expr
 	Predicates []Predicate
-	Subst      []SubstEntry
+	Subst      Subst
 	State      InferState
 }
 type BlockInferStep struct {
@@ -242,7 +246,7 @@ func collectDeclSymbols(decls []ast2.Decl, out []Symbol) []Symbol {
 		expr_2111 = out
 	} else {
 		var expr_2110 []Symbol
-		d_2099 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		d_2099 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 		rest_2100 := collectDeclSymbols(sliceDrop[ast2.Decl](decls, 1), out)
 		var expr_2109 []Symbol
 		if v_660, ok := d_2099.(ast2.DeclStructDecl); ok {
@@ -333,7 +337,7 @@ func InferPackageWithGoPackages(files []PkgDeclSource, goPkgImports []GoPackageE
 	} else {
 		if v_663, ok := result_2142.(ResultErr[PackageInfo, string]); ok {
 			var expr_2144 Result[PackageInfo, string]
-			source_2143 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, 0), PkgDeclSource{Path: "<input>", Decls: []ast2.Decl([]ast2.Decl{})}).Path
+			source_2143 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, 0), PkgDeclSource{Path: "<input>", Decls: []ast2.Decl([]ast2.Decl{})}).Path
 			expr_2144 = Err[PackageInfo, string](withExpressionSourceName(v_663.F0, source_2143))
 			expr_2149 = expr_2144
 		} else {
@@ -566,8 +570,8 @@ func resolveEnvironment(solver Solver, env []EnvEntry) []EnvEntry {
 		expr_2223 = []EnvEntry{}
 	} else {
 		var expr_2222 []EnvEntry
-		entry_2216 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTUnitCtor()}})
-		resolved_2217 := solverResolve(solver, entry_2216.Scheme.Predicates, []SubstEntry{})
+		entry_2216 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTUnitCtor()}})
+		resolved_2217 := solverResolve(solver, entry_2216.Scheme.Predicates, emptySubst())
 		var expr_2220 []Predicate
 		if v_686, ok := resolved_2217.(ResultOk[[]Predicate, string]); ok {
 			var expr_2219 []Predicate
@@ -594,7 +598,7 @@ func collectInstances(decls []ast2.Decl) []Instance {
 		expr_2236 = []Instance([]Instance{})
 	} else {
 		var expr_2235 []Instance
-		decl_2224 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		decl_2224 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 		rest_2225 := collectInstances(sliceDrop[ast2.Decl](decls, 1))
 		var expr_2234 []Instance
 		if v_687, ok := decl_2224.(ast2.DeclImplDecl); ok {
@@ -780,7 +784,7 @@ func wrapPkgTypesInSlice(items []ast2.MonoType, path string, typeNames []string)
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		expr_2314 = []ast2.MonoType{}
 	} else {
-		expr_2314 = MygoIN5SliceM7Prepend(wrapPkgTypesInSlice(sliceDrop[ast2.MonoType](items, 1), path, typeNames), wrapPkgTypesInMonoType(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.MonoTypeTUnitCtor()), path, typeNames))
+		expr_2314 = MygoIN5SliceM7Prepend(wrapPkgTypesInSlice(sliceDrop[ast2.MonoType](items, 1), path, typeNames), wrapPkgTypesInMonoType(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.MonoTypeTUnitCtor()), path, typeNames))
 	}
 	return expr_2314
 }
@@ -865,8 +869,8 @@ func GoSignatureType(sig GoFuncSignature) ast2.MonoType {
 		var expr_2357 ast2.MonoType
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(results_2348) == 2 {
 			var expr_2355 ast2.MonoType
-			first_2349 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results_2348, 0), ast2.MonoTypeTUnitCtor())
-			second_2350 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results_2348, 1), ast2.MonoTypeTUnitCtor())
+			first_2349 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results_2348, 0), ast2.MonoTypeTUnitCtor())
+			second_2350 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results_2348, 1), ast2.MonoTypeTUnitCtor())
 			var expr_2354 ast2.MonoType
 			if v_708, ok := second_2350.(ast2.MonoTypeTCon); ok {
 				var expr_2353 ast2.MonoType
@@ -890,7 +894,7 @@ func GoSignatureType(sig GoFuncSignature) ast2.MonoType {
 		} else {
 			var expr_2356 ast2.MonoType
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(results_2348) == 1 {
-				expr_2356 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results_2348, 0), ast2.MonoTypeTUnitCtor())
+				expr_2356 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results_2348, 0), ast2.MonoTypeTUnitCtor())
 			} else {
 				expr_2356 = ast2.MonoTypeTTupleCtor(results_2348)
 			}
@@ -912,7 +916,7 @@ func goSignatureTypes(items []string) []ast2.MonoType {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		expr_2361 = emptyGoTypes()
 	} else {
-		expr_2361 = MygoIN5SliceM7Prepend(goSignatureTypes(sliceDrop[string](items, 1)), GoTypeName(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "any")))
+		expr_2361 = MygoIN5SliceM7Prepend(goSignatureTypes(sliceDrop[string](items, 1)), GoTypeName(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "any")))
 	}
 	return expr_2361
 }
@@ -1038,7 +1042,7 @@ func __mygo_mt_typeinference2_appenddecls(acc []ast2.Decl, items []ast2.Decl, __
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 				expr_2396 = acc
 			} else {
-				__mygo_next_0 := MygoIN5SliceM6Append(acc, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.DeclImportDeclCtor("", "")))
+				__mygo_next_0 := MygoIN5SliceM6Append(acc, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.DeclImportDeclCtor("", "")))
 				__mygo_next_1 := sliceDrop[ast2.Decl](items, 1)
 				acc = __mygo_next_0
 				items = __mygo_next_1
@@ -1060,7 +1064,7 @@ func __mygo_mt_typeinference2_collectmygotypenames(decls []ast2.Decl, index int,
 				expr_2424 = out
 			} else {
 				var expr_2423 []string
-				decl_2411 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
+				decl_2411 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
 				var expr_2416 string
 				if v_718, ok := decl_2411.(ast2.DeclStructDecl); ok {
 					var expr_2415 string
@@ -1129,7 +1133,7 @@ func __mygo_mt_typeinference2_containsstring(items []string, value string, __myg
 				expr_2428 = false
 			} else {
 				var expr_2427 bool
-				if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "") == value {
+				if MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "") == value {
 					expr_2427 = true
 				} else {
 					__mygo_next_0 := sliceDrop[string](items, 1)
@@ -1156,7 +1160,7 @@ func __mygo_mt_typeinference2_enumvariantsymbols(enumName string, variants []ast
 				expr_2440 = out
 			} else {
 				var expr_2439 []Symbol
-				v_2435 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
+				v_2435 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
 				enumType_2436 := tCon(enumName, typeParamsAsTypes(tps, 1))
 				var expr_2437 ast2.MonoType
 				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_2435.Fields) == 0 {
@@ -1192,7 +1196,7 @@ func __mygo_mt_typeinference2_filterdeclsagainst(typedDecls []ast2.Decl, sourceD
 				expr_2448 = out
 			} else {
 				var expr_2447 []ast2.Decl
-				decl_2445 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(typedDecls, index), ast2.DeclImportDeclCtor("", ""))
+				decl_2445 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(typedDecls, index), ast2.DeclImportDeclCtor("", ""))
 				var expr_2446 []ast2.Decl
 				if typedDeclInSource(decl_2445, sourceDecls, 0) {
 					__mygo_next_0 := typedDecls
@@ -1235,7 +1239,7 @@ func __mygo_mt_typeinference2_findmygopackage(packages []MyGoPackageInfo, alias 
 				expr_2456 = MyGoPackageInfo{Alias: alias, Path: alias, Decls: []ast2.Decl([]ast2.Decl{})}
 			} else {
 				var expr_2455 MyGoPackageInfo
-				pkg_2453 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0), MyGoPackageInfo{Alias: "", Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
+				pkg_2453 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0), MyGoPackageInfo{Alias: "", Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
 				var expr_2454 MyGoPackageInfo
 				if pkg_2453.Alias == alias {
 					expr_2454 = pkg_2453
@@ -1265,7 +1269,7 @@ func __mygo_mt_typeinference2_flattenpkgdecls(files []PkgDeclSource, index int, 
 				expr_2462 = out
 			} else {
 				var expr_2461 []ast2.Decl
-				f_2460 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), PkgDeclSource{Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
+				f_2460 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), PkgDeclSource{Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
 				__mygo_next_0 := files
 				__mygo_next_1 := index + 1
 				__mygo_next_2 := appendDecls(out, f_2460.Decls)
@@ -1291,7 +1295,7 @@ func __mygo_mt_typeinference2_gomethodsfromsigs(typeName string, methods []GoFun
 				expr_2468 = out
 			} else {
 				var expr_2467 []Symbol
-				m_2466 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), GoFuncSignature{Name: "", Params: []string([]string{}), Results: []string([]string{}), Variadic: false})
+				m_2466 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), GoFuncSignature{Name: "", Params: []string([]string{}), Results: []string([]string{}), Variadic: false})
 				__mygo_next_0 := typeName
 				__mygo_next_1 := sliceDrop[GoFuncSignature](methods, 1)
 				__mygo_next_2 := MygoIN5SliceM7Prepend(out, SymbolGoMethodCtor(typeName, m_2466.Name, m_2466))
@@ -1317,7 +1321,7 @@ func __mygo_mt_typeinference2_gosymbolsfrompackages(packages []GoPackageEntry, o
 				expr_2474 = out
 			} else {
 				var expr_2473 []Symbol
-				pkg_2472 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0), GoPackageEntry{Alias: "", Path: "", Funcs: []GoFuncSignature([]GoFuncSignature{}), Types: []GoTypeSignature([]GoTypeSignature{})})
+				pkg_2472 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0), GoPackageEntry{Alias: "", Path: "", Funcs: []GoFuncSignature([]GoFuncSignature{}), Types: []GoTypeSignature([]GoTypeSignature{})})
 				__mygo_next_0 := sliceDrop[GoPackageEntry](packages, 1)
 				__mygo_next_1 := goSymbolsFromTypes(pkg_2472.Alias, pkg_2472.Types, out)
 				packages = __mygo_next_0
@@ -1341,7 +1345,7 @@ func __mygo_mt_typeinference2_gosymbolsfromtypes(alias string, types []GoTypeSig
 				expr_2480 = out
 			} else {
 				var expr_2479 []Symbol
-				t_2478 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, 0), GoTypeSignature{TypeName: "", TypeParams: []string([]string{}), Methods: []GoFuncSignature([]GoFuncSignature{})})
+				t_2478 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, 0), GoTypeSignature{TypeName: "", TypeParams: []string([]string{}), Methods: []GoFuncSignature([]GoFuncSignature{})})
 				__mygo_next_0 := alias
 				__mygo_next_1 := sliceDrop[GoTypeSignature](types, 1)
 				__mygo_next_2 := goMethodsFromSigs(goPackageMemberName(alias, t_2478.TypeName), t_2478.Methods, out)
@@ -1367,7 +1371,7 @@ func __mygo_mt_typeinference2_mygopackagepath(packages []MyGoPackageInfo, alias 
 				expr_2488 = alias
 			} else {
 				var expr_2487 string
-				pkg_2485 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0), MyGoPackageInfo{Alias: "", Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
+				pkg_2485 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0), MyGoPackageInfo{Alias: "", Path: "", Decls: []ast2.Decl([]ast2.Decl{})})
 				var expr_2486 string
 				if pkg_2485.Alias == alias {
 					expr_2486 = pkg_2485.Path
@@ -1397,7 +1401,7 @@ func __mygo_mt_typeinference2_namedimplnames(decls []ast2.Decl, index int, out [
 				expr_2512 = out
 			} else {
 				var expr_2511 []string
-				decl_2501 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
+				decl_2501 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
 				var expr_2510 []string
 				if v_723, ok := decl_2501.(ast2.DeclImplDecl); ok {
 					var expr_2509 []string
@@ -1482,7 +1486,7 @@ func __mygo_mt_typeinference2_seedgopackageenv(goPkgs []GoPackageEntry, env []En
 				expr_2518 = env
 			} else {
 				var expr_2517 []EnvEntry
-				pkg_2516 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(goPkgs, 0), GoPackageEntry{Alias: "", Path: "", Funcs: []GoFuncSignature([]GoFuncSignature{}), Types: []GoTypeSignature([]GoTypeSignature{})})
+				pkg_2516 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(goPkgs, 0), GoPackageEntry{Alias: "", Path: "", Funcs: []GoFuncSignature([]GoFuncSignature{}), Types: []GoTypeSignature([]GoTypeSignature{})})
 				__mygo_next_0 := sliceDrop[GoPackageEntry](goPkgs, 1)
 				__mygo_next_1 := seedGoPackageMembers(pkg_2516, env)
 				goPkgs = __mygo_next_0
@@ -1506,7 +1510,7 @@ func __mygo_mt_typeinference2_seedgopackagefuncs(pkg GoPackageEntry, funcs []GoF
 				expr_2526 = env
 			} else {
 				var expr_2525 []EnvEntry
-				fn_2523 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(funcs, 0), GoFuncSignature{Name: "", Params: []string([]string{}), Results: []string([]string{}), Variadic: false})
+				fn_2523 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(funcs, 0), GoFuncSignature{Name: "", Params: []string([]string{}), Results: []string([]string{}), Variadic: false})
 				body_2524 := GoSignatureType(fn_2523)
 				__mygo_next_0 := pkg
 				__mygo_next_1 := sliceDrop[GoFuncSignature](funcs, 1)
@@ -1533,7 +1537,7 @@ func __mygo_mt_typeinference2_seedgopackagetypes(pkg GoPackageEntry, types []GoT
 				expr_2542 = env
 			} else {
 				var expr_2541 []EnvEntry
-				t_2535 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, 0), GoTypeSignature{TypeName: "", TypeParams: []string([]string{}), Methods: []GoFuncSignature([]GoFuncSignature{})})
+				t_2535 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, 0), GoTypeSignature{TypeName: "", TypeParams: []string([]string{}), Methods: []GoFuncSignature([]GoFuncSignature{})})
 				qualifiedName_2536 := goPackageMemberName(pkg.Alias, t_2535.TypeName)
 				bound_2537 := typeParamIDs(t_2535.TypeParams, 1)
 				inner_2538 := tCon(t_2535.TypeName, typeParamsAsTypes(t_2535.TypeParams, 1))
@@ -1564,7 +1568,7 @@ func __mygo_mt_typeinference2_seedmygopackagedecls(alias string, pkg MyGoPackage
 				expr_2592 = env
 			} else {
 				var expr_2591 []EnvEntry
-				decl_2568 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pkg.Decls, index), ast2.DeclImportDeclCtor("", ""))
+				decl_2568 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pkg.Decls, index), ast2.DeclImportDeclCtor("", ""))
 				typeNames_2569 := collectMyGoTypeNames(pkg.Decls, 0, []string([]string{}))
 				var expr_2589 []EnvEntry
 				if v_736, ok := decl_2568.(ast2.DeclFuncDecl); ok {
@@ -1649,7 +1653,7 @@ func __mygo_mt_typeinference2_seedmygopackageenumvariants(pkg MyGoPackageInfo, v
 				expr_2612 = env
 			} else {
 				var expr_2611 []EnvEntry
-				variant_2603 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
+				variant_2603 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
 				enumInner_2604 := tCon(enumName, typeParamsAsTypes(typeParams, 1))
 				enumType_2605 := ast2.MonoTypeTQualifiedNameCtor(pkg.Path, &enumInner_2604)
 				var expr_2608 ast2.MonoType
@@ -1697,7 +1701,7 @@ func __mygo_mt_typeinference2_seedmygopackageenv(imports []struct {
 				expr_2626 = env
 			} else {
 				var expr_2625 []EnvEntry
-				item_2620 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(imports, 0), struct {
+				item_2620 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(imports, 0), struct {
 					F0 string
 					F1 string
 				}{F0: "", F1: ""})
@@ -1733,7 +1737,7 @@ func __mygo_mt_typeinference2_structfieldsymbols(typeName string, fields []ast2.
 				expr_2634 = out
 			} else {
 				var expr_2633 []Symbol
-				f_2631 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
+				f_2631 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
 				fieldType_2632 := typeFromASTWithParams(f_2631.Type, typeParams)
 				__mygo_next_0 := typeName
 				__mygo_next_1 := sliceDrop[ast2.Field](fields, 1)
@@ -1762,7 +1766,7 @@ func __mygo_mt_typeinference2_typeddeclinsource(decl ast2.Decl, source []ast2.De
 				expr_2642 = false
 			} else {
 				var expr_2641 bool
-				d_2639 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(source, index), ast2.DeclImportDeclCtor("", ""))
+				d_2639 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(source, index), ast2.DeclImportDeclCtor("", ""))
 				var expr_2640 bool
 				if typedDeclEq(decl, d_2639) {
 					expr_2640 = true

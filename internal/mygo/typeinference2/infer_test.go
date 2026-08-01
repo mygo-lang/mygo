@@ -243,3 +243,21 @@ func isPackageInfo(value Result[PackageInfo, string]) bool {
 	_, ok := value.(ResultOk[PackageInfo, string])
 	return ok
 }
+
+func TestComposeSubstDefersResolutionAndPreservesPrecedence(t *testing.T) {
+	older := SubstFromEntries([]SubstEntry{{ID: 1, Type: ast2.MonoTypeTVarCtor(2)}})
+	newer := SubstFromEntries([]SubstEntry{{ID: 2, Type: ast2.MonoTypeTConCtor("Int")}})
+	got := applySubst(composeSubst(newer, older), ast2.MonoTypeTVarCtor(1))
+	if !ast2.MonoEqual(got, ast2.MonoTypeTConCtor("Int")) {
+		t.Fatalf("lazy substitution chain resolved to %v, want Int", got)
+	}
+
+	// composeSubst historically gives the accumulated (older) mapping lookup
+	// precedence. Keep that contract while making the composition lazy.
+	older = SubstFromEntries([]SubstEntry{{ID: 1, Type: ast2.MonoTypeTConCtor("String")}})
+	newer = SubstFromEntries([]SubstEntry{{ID: 1, Type: ast2.MonoTypeTConCtor("Int")}})
+	got = applySubst(composeSubst(newer, older), ast2.MonoTypeTVarCtor(1))
+	if !ast2.MonoEqual(got, ast2.MonoTypeTConCtor("String")) {
+		t.Fatalf("composeSubst precedence changed: got %v, want String", got)
+	}
+}

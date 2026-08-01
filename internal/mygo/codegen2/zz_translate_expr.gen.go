@@ -231,7 +231,7 @@ func tupleInnerType(t ast2.MonoType) ast2.MonoType {
 			var expr_2210 ast2.MonoType
 			var expr_2209 ast2.MonoType
 			if v_718.F0 == "Slice" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_717.F1) == 1 {
-				expr_2209 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_717.F1, 0), ast2.MonoTypeTUnitCtor())
+				expr_2209 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_717.F1, 0), ast2.MonoTypeTUnitCtor())
 			} else {
 				expr_2209 = t
 			}
@@ -259,7 +259,7 @@ func tupleElementType(t ast2.MonoType, index int) ast2.MonoType {
 	var expr_2216 ast2.MonoType
 	if v_719, ok := t.(ast2.MonoTypeTTuple); ok {
 		var expr_2215 ast2.MonoType
-		expr_2215 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_719.F0, index), ast2.MonoTypeTUnitCtor())
+		expr_2215 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_719.F0, index), ast2.MonoTypeTUnitCtor())
 		expr_2216 = expr_2215
 	} else {
 		{
@@ -1031,7 +1031,7 @@ func __mygo_mt_codegen2_bindtuplenames(names []string, valueName string, tupleTy
 				expr_2485 = stmts
 			} else {
 				var expr_2484 []goast.Stmt
-				name_2477 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, index), "")
+				name_2477 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, index), "")
 				goName_2478 := ctxFreshBinding(ctx, name_2477)
 				fieldType_2479 := tupleElementType(tupleType, index)
 				goFieldType_2480 := monoTypeToGoStrWithParams(fieldType_2479, ctx.typeParamNames)
@@ -1070,7 +1070,7 @@ func __mygo_mt_codegen2_declareastletrec(bindings []ast2.LetRecBind, ctx *egCtx,
 				expr_2495 = Ok[[]goast.Stmt, string](out)
 			} else {
 				var expr_2494 Result[[]goast.Stmt, string]
-				binding_2491 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, index), ast2.LetRecBind{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Value: ast2.EmptyExpr()})
+				binding_2491 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, index), ast2.LetRecBind{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Value: ast2.EmptyExpr()})
 				name_2492 := ctxFreshBinding(ctx, binding_2491.Name)
 				typ_2493 := goType(binding_2491.Type, ctx.typeParams)
 				ctxSetLocal(ctx, binding_2491.Name, typeinference2.TypeFromAST(binding_2491.Type))
@@ -1102,7 +1102,7 @@ func __mygo_mt_codegen2_initializeastletrec(bindings []ast2.LetRecBind, ctx *egC
 				expr_2513 = Ok[[]goast.Stmt, string](out)
 			} else {
 				var expr_2512 Result[[]goast.Stmt, string]
-				binding_2505 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, index), ast2.LetRecBind{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Value: ast2.EmptyExpr()})
+				binding_2505 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, index), ast2.LetRecBind{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Value: ast2.EmptyExpr()})
 				value_2506 := translateAstBindingValue(binding_2505.Value, Some[ast2.TypeExpr](binding_2505.Type), ctx)
 				var expr_2511 Result[[]goast.Stmt, string]
 				if v_845, ok := value_2506.(ResultErr[AstExprResult, string]); ok {
@@ -1159,7 +1159,7 @@ func __mygo_mt_codegen2_translateastblock(items []ast2.Stmt, ctx *egCtx, index i
 				expr_2547 = expr_2533
 			} else {
 				var expr_2546 Result[[]goast.Stmt, string]
-				var stmt_2534 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
+				var stmt_2534 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
 				var expr_2545 Result[[]goast.Stmt, string]
 				if index == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1 {
 					var expr_2539 Result[[]goast.Stmt, string]
@@ -1227,7 +1227,7 @@ func __mygo_mt_codegen2_translateastblockasstmts(items []ast2.Stmt, ctx *egCtx, 
 				expr_2615 = Ok[[]goast.Stmt, string](out)
 			} else {
 				var expr_2614 Result[[]goast.Stmt, string]
-				var stmt_2582 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
+				var stmt_2582 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
 				var expr_2613 Result[[]goast.Stmt, string]
 				if index == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1 {
 					var expr_2607 Result[[]goast.Stmt, string]
@@ -1380,7 +1380,7 @@ func __mygo_mt_codegen2_translateastloopitems(items []ast2.Stmt, ctx *egCtx, ind
 				expr_2629 = Ok[[]goast.Stmt, string](out)
 			} else {
 				var expr_2628 Result[[]goast.Stmt, string]
-				var stmt_2623 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
+				var stmt_2623 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
 				lowered_2624 := translateAstLoopStmt(stmt_2623, ctx)
 				var expr_2627 Result[[]goast.Stmt, string]
 				if v_887, ok := lowered_2624.(ResultOk[[]goast.Stmt, string]); ok {
@@ -1423,7 +1423,7 @@ func __mygo_mt_codegen2_translateastreturnblock(items []ast2.Stmt, ctx *egCtx, i
 				expr_2673 = Ok[[]goast.Stmt, string](out)
 			} else {
 				var expr_2672 Result[[]goast.Stmt, string]
-				var stmt_2652 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
+				var stmt_2652 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.StmtExprStmtCtor(ast2.EmptyExpr()))
 				var expr_2671 Result[[]goast.Stmt, string]
 				if index == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1 {
 					var expr_2665 Result[[]goast.Stmt, string]
@@ -1526,7 +1526,7 @@ func __mygo_mt_codegen2_translateinlineoperands(values []ast2.GoOperand, types [
 			var expr_2693 Result[AstInlineOperands, string]
 			if index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(values) {
 				var expr_2689 Result[AstInlineOperands, string]
-				operand_2684 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(values, index), ast2.GoOperand{Name: "", Value: ast2.EmptyExpr()})
+				operand_2684 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(values, index), ast2.GoOperand{Name: "", Value: ast2.EmptyExpr()})
 				value_2685 := translateExprAst(operand_2684.Value, ctx)
 				var expr_2688 Result[AstInlineOperands, string]
 				if v_909, ok := value_2685.(ResultErr[AstExprResult, string]); ok {
@@ -1567,7 +1567,7 @@ func __mygo_mt_codegen2_translateinlineoperands(values []ast2.GoOperand, types [
 				var expr_2692 Result[AstInlineOperands, string]
 				if index-MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(values) < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(types) {
 					var expr_2691 Result[AstInlineOperands, string]
-					typeOperand_2690 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, index-MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(values)), ast2.GoTypeOperand{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+					typeOperand_2690 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, index-MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(values)), ast2.GoTypeOperand{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
 					__mygo_next_0 := values
 					__mygo_next_1 := types
 					__mygo_next_2 := ctx

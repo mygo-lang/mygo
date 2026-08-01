@@ -57,6 +57,15 @@ struct SubstEntry
   Type: ast2.MonoType
 end
 
+# Subst keeps insertion order for diagnostics/compatibility while providing
+# constant-time lookup for the inference hot path.  Entries are immutable from
+# the caller's perspective; every constructor rebuilds Index, so sibling
+# inference branches cannot observe each other's bindings through a shared Map.
+struct Subst
+  Entries: Slice[SubstEntry]
+  Index: Map[Int, ast2.MonoType]
+end
+
 # ---------------------------------------------------------------------------
 # Package-level inference context
 # ---------------------------------------------------------------------------
@@ -101,7 +110,7 @@ end
 struct InferResult
   Type: ast2.MonoType
   Predicates: Slice[Predicate]
-  Subst: Slice[SubstEntry]
+  Subst: Subst
   State: InferState
 end
 
@@ -171,7 +180,7 @@ struct ArgsResult
   Types: Slice[ast2.MonoType]
   Exprs: Slice[ast2.Expr]
   Predicates: Slice[Predicate]
-  Subst: Slice[SubstEntry]
+  Subst: Subst
   State: InferState
 end
 
@@ -566,7 +575,7 @@ end
 func resolveEnvironment(solver: Solver, env: Slice[EnvEntry]) -> Slice[EnvEntry]
   if env.Len() == 0 then [] else
     let entry = env.Get(0).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TUnit } })
-    let resolved = solverResolve(solver, entry.Scheme.Predicates, [])
+    let resolved = solverResolve(solver, entry.Scheme.Predicates, emptySubst())
     let predicates = switch resolved
       case Ok(items) => items
       case Err(_) => entry.Scheme.Predicates

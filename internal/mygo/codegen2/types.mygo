@@ -416,7 +416,7 @@ func lookupFieldInMonoType(base: ast2.MonoType, field: String, ctx: Ref[egCtx]) 
                     Some(fieldEntry.Type)
                   else
                     let subst = bindTypeArgs(bound, args, 0, [] as Slice[typeinference2.SubstEntry])
-                    Some(typeinference2.ApplySubst(subst, fieldEntry.Type))
+                    Some(typeinference2.ApplySubst(typeinference2.SubstFromEntries(subst), fieldEntry.Type))
                   end
                 end
                 case None => None

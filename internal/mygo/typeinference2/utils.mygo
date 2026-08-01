@@ -73,19 +73,25 @@ func MonoListString(items: Slice[ast2.MonoType]) -> String
   monoListString(items)
 end
 
-func ApplySubst(subst: Slice[SubstEntry], t: ast2.MonoType) -> ast2.MonoType
+func ApplySubst(subst: Subst, t: ast2.MonoType) -> ast2.MonoType
   applySubst(subst, t)
 end
 
-func substString(subst: Slice[SubstEntry]) -> String
-  if subst.Len() == 0 then "[]" else
+# SubstFromEntries is the compatibility boundary for codegen2, which creates
+# short-lived substitutions from explicit type arguments.
+func SubstFromEntries(entries: Slice[SubstEntry]) -> Subst
+  substFromEntries(entries)
+end
+
+func substString(subst: Subst) -> String
+  if subst.Entries.Len() == 0 then "[]" else
     "[" + substStringLoop(subst, 0) + "]"
   end
 end
 
-func substStringLoop(subst: Slice[SubstEntry], index: Int) -> String
-  if index >= subst.Len() then "" else
-    let entry = subst.Get(index).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })
+func substStringLoop(subst: Subst, index: Int) -> String
+  if index >= subst.Entries.Len() then "" else
+    let entry = subst.Entries.Get(index).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })
     let head = "t" + entry.ID.ToString() + "->" + monoStringFull(entry.Type)
     let tail = substStringLoop(subst, index + 1)
     if tail == "" then head else head + ", " + tail end
@@ -94,31 +100,31 @@ end
 
 # Instantiate a polymorphic binding at each lookup site.
 func instantiate(scheme: Scheme, state: InferState) -> ast2.MonoType
-  instantiateBound(scheme.Bound, scheme.Body, state, [])
+  instantiateBound(scheme.Bound, scheme.Body, state, emptySubst())
 end
 
 func instantiateQualified(scheme: Scheme, state: InferState) -> QualifiedType
-  let subst = instantiateBoundSubstFor(scheme.Bound, scheme.Body, state, [])
+  let subst = instantiateBoundSubstFor(scheme.Bound, scheme.Body, state, emptySubst())
   QualifiedType { Predicates: substPredicates(scheme.Predicates, subst), Body: applySubst(subst, scheme.Body) }
 end
 
-func instantiateBoundSubst(bound: Slice[Int], state: InferState, out: Slice[SubstEntry]) -> Slice[SubstEntry]
+func instantiateBoundSubst(bound: Slice[Int], state: InferState, out: Subst) -> Subst
   if bound.Len() == 0 then out
   else
     let id = bound.Get(0).UnwrapOr(0)
-    instantiateBoundSubst(sliceDrop(bound, 1), withFreshID(state, state.FreshVarID + 1), out.Append(SubstEntry { ID: id, Type: ast2.MonoType.TVar(state.FreshVarID) }))
+    instantiateBoundSubst(sliceDrop(bound, 1), withFreshID(state, state.FreshVarID + 1), substAppend(out, SubstEntry { ID: id, Type: ast2.MonoType.TVar(state.FreshVarID) }))
   end
 end
 
-func instantiateBoundSubstFor(bound: Slice[Int], body: ast2.MonoType, state: InferState, out: Slice[SubstEntry]) -> Slice[SubstEntry]
+func instantiateBoundSubstFor(bound: Slice[Int], body: ast2.MonoType, state: InferState, out: Subst) -> Subst
   if bound.Len() == 0 then out else
     let id = bound.Get(0).UnwrapOr(0)
     let replacement = if isKindVar(body, id) then ast2.MonoType.TKVar(state.FreshVarID) else ast2.MonoType.TVar(state.FreshVarID) end
-    instantiateBoundSubstFor(sliceDrop(bound, 1), body, withFreshID(state, state.FreshVarID + 1), out.Append(SubstEntry { ID: id, Type: replacement }))
+    instantiateBoundSubstFor(sliceDrop(bound, 1), body, withFreshID(state, state.FreshVarID + 1), substAppend(out, SubstEntry { ID: id, Type: replacement }))
   end
 end
 
-func substPredicates(items: Slice[Predicate], subst: Slice[SubstEntry]) -> Slice[Predicate]
+func substPredicates(items: Slice[Predicate], subst: Subst) -> Slice[Predicate]
   if items.Len() == 0 then []
   else
     let p = items.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[ast2.MonoType] })
@@ -126,7 +132,7 @@ func substPredicates(items: Slice[Predicate], subst: Slice[SubstEntry]) -> Slice
   end
 end
 
-func substTypes(items: Slice[ast2.MonoType], subst: Slice[SubstEntry]) -> Slice[ast2.MonoType]
+func substTypes(items: Slice[ast2.MonoType], subst: Subst) -> Slice[ast2.MonoType]
   if items.Len() == 0 then []
   else substTypes(sliceDrop(items, 1), subst).Prepend(applySubst(subst, items.Get(0).UnwrapOr(ast2.MonoType.TUnit))) end
 end
@@ -136,13 +142,13 @@ func appendPredicates(left: Slice[Predicate], right: Slice[Predicate]) -> Slice[
   else appendPredicates(left.Append(right.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[ast2.MonoType] })), sliceDrop(right, 1)) end
 end
 
-func instantiateBound(bound: Slice[Int], body: ast2.MonoType, state: InferState, subst: Slice[SubstEntry]) -> ast2.MonoType
+func instantiateBound(bound: Slice[Int], body: ast2.MonoType, state: InferState, subst: Subst) -> ast2.MonoType
   if bound.Len() == 0 then
     applySubst(subst, body)
   else
     let id = bound.Get(0).UnwrapOr(0)
     let replacement = if isKindVar(body, id) then ast2.MonoType.TKVar(state.FreshVarID) else ast2.MonoType.TVar(state.FreshVarID) end
-    instantiateBound(sliceDrop(bound, 1), body, withFreshID(state, state.FreshVarID + 1), subst.Prepend(SubstEntry { ID: id, Type: replacement }))
+    instantiateBound(sliceDrop(bound, 1), body, withFreshID(state, state.FreshVarID + 1), substPrepend(subst, SubstEntry { ID: id, Type: replacement }))
   end
 end
 

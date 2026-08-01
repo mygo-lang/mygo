@@ -1,6 +1,39 @@
 package typeinference2
 
-func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
+func emptySubst() -> Subst
+  Subst { Entries: [], Index: {} }
+end
+
+func substFromEntries(entries: Slice[SubstEntry]) -> Subst
+  let index: Map[Int, ast2.MonoType] = {}
+  Subst { Entries: entries, Index: substIndexEntries(entries, 0, index) }
+end
+
+# Entries are ordered by lookup priority.  Record only the first occurrence
+# of an ID so the index has exactly the same observable semantics as the
+# former linear substGet scan.
+func substIndexEntries(entries: Slice[SubstEntry], position: Int, index: Map[Int, ast2.MonoType]) -> Map[Int, ast2.MonoType]
+  if position >= entries.Len() then index else
+    let entry = entries.Get(position).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })
+    switch index.Get(entry.ID)
+      case None then
+        index.Set(entry.ID, entry.Type)
+        substIndexEntries(entries, position + 1, index)
+      end
+      case Some(_) => substIndexEntries(entries, position + 1, index)
+    end
+  end
+end
+
+func substPrepend(subst: Subst, entry: SubstEntry) -> Subst
+  substFromEntries(subst.Entries.Prepend(entry))
+end
+
+func substAppend(subst: Subst, entry: SubstEntry) -> Subst
+  substFromEntries(subst.Entries.Append(entry))
+end
+
+func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Subst, String]
   let a = applySubst(subst, left)
   let b = applySubst(subst, right)
   if isAnyType(a) || isAnyType(b) then
@@ -122,7 +155,7 @@ func isAnyType(typ: ast2.MonoType) -> Bool
   end
 end
 
-func unifyApplication(ctor: ast2.MonoType, args: Slice[ast2.MonoType], other: ast2.MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
+func unifyApplication(ctor: ast2.MonoType, args: Slice[ast2.MonoType], other: ast2.MonoType, subst: Subst) -> Result[Subst, String]
   let resolvedCtor = applySubst(subst, ctor)
   let resolvedOther = applySubst(subst, other)
   switch resolvedOther
@@ -149,7 +182,7 @@ func unifyApplication(ctor: ast2.MonoType, args: Slice[ast2.MonoType], other: as
           else
             # Treat the args as fresh type parameters so subsequent
             # substitution can still recover the parametric shape.
-            let recovered = args.Fold(next, func(acc: Slice[SubstEntry], arg: ast2.MonoType) -> Slice[SubstEntry]
+            let recovered = args.Fold(next, func(acc: Subst, arg: ast2.MonoType) -> Subst
               acc
             end)
             Ok(recovered)
@@ -170,12 +203,15 @@ end
 
 # appendMonoTypesRec concats two MonoType slices into a fresh slice.
 func appendMonoTypesRec(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
-  if a.Len() == 0 then b
-  else appendMonoTypesRec(sliceDrop(a, 1), b).Prepend(a.Get(0).UnwrapOr(ast2.MonoType.TUnit))
-  end
+  appendMonoTypesAt(a, b, 0)
 end
 
-func bindVar(id: Int, t: ast2.MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
+func appendMonoTypesAt(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType], index: Int) -> Slice[ast2.MonoType]
+  if index >= a.Len() then b
+  else appendMonoTypesAt(a, b, index + 1).Prepend(a.Get(index).UnwrapOr(ast2.MonoType.TUnit)) end
+end
+
+func bindVar(id: Int, t: ast2.MonoType, subst: Subst) -> Result[Subst, String]
   # Unifying a variable with itself is already solved.  It must be handled
   # before the occurs check, otherwise polymorphic constructor instantiation
   # spuriously reports an infinite type for equations such as t1 ~ t1.
@@ -188,100 +224,127 @@ func bindVar(id: Int, t: ast2.MonoType, subst: Slice[SubstEntry]) -> Result[Slic
   end
 end
 
-func bindDistinctVar(id: Int, t: ast2.MonoType, subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
+func bindDistinctVar(id: Int, t: ast2.MonoType, subst: Subst) -> Result[Subst, String]
   if occursIn(id, t) then
     Err("occurs check failed: t" + id.ToString() + " ~ " + monoStringFull(t))
   else
-    Ok(subst.Prepend(SubstEntry { ID: id, Type: t }))
+    Ok(substPrepend(subst, SubstEntry { ID: id, Type: t }))
   end
 end
 
-func unifyArgs(left: Slice[ast2.MonoType], right: Slice[ast2.MonoType], subst: Slice[SubstEntry]) -> Result[Slice[SubstEntry], String]
-  if left.Len() == 0 then
+func unifyArgs(left: Slice[ast2.MonoType], right: Slice[ast2.MonoType], subst: Subst) -> Result[Subst, String]
+  unifyArgsAt(left, right, subst, 0)
+end
+
+func unifyArgsAt(left: Slice[ast2.MonoType], right: Slice[ast2.MonoType], subst: Subst, index: Int) -> Result[Subst, String]
+  if index >= left.Len() then
     Ok(subst)
   else
-    let s = unify(left.Get(0).UnwrapOr(ast2.MonoType.TUnit), right.Get(0).UnwrapOr(ast2.MonoType.TUnit), subst)
+    let s = unify(left.Get(index).UnwrapOr(ast2.MonoType.TUnit), right.Get(index).UnwrapOr(ast2.MonoType.TUnit), subst)
     switch s
-      case Ok(next) => unifyArgs(sliceDrop(left, 1), sliceDrop(right, 1), next)
+      case Ok(next) => unifyArgsAt(left, right, next, index + 1)
       case Err(msg) => Err(msg)
     end
   end
 end
 
-func applySubst(subst: Slice[SubstEntry], t: ast2.MonoType) -> ast2.MonoType
+func applySubst(subst: Subst, t: ast2.MonoType) -> ast2.MonoType
+  applySubstSeen(subst, t, [])
+end
+
+# The old implementation removed one entry from `subst` at every variable
+# hop to avoid expanding a self reference forever.  That copied the full
+# substitution for every hop.  Keep a small path-local visited set instead;
+# substitutions produced by unification are acyclic, and this also safely
+# handles the deliberately tolerated self-reference special case.
+func applySubstSeen(subst: Subst, t: ast2.MonoType, seen: Slice[Int]) -> ast2.MonoType
   switch t
-    case TVar(id) =>
-      switch substGet(subst, id)
-        # Strip the bound variable's own entry from the substitution before
-        # recursing on its image.  This stops self-referential mappings such
-        # as `[-1 -> Reply[TVar(-1)]]` (produced when a generic struct field
-        # mentions the struct's type parameter and the field type is
-        # specialised to the same outer type, e.g. `Reply[Reply[A]]`'s
-        # `Value: A` field accessed on a `Reply[Reply[A]]` receiver) from
-        # re-expanding `TVar(-1)` forever.
-        case Some(found) => applySubst(substDropVar(subst, id), found)
-        case None => t
+    case TVar(id) then
+      if containsInt(seen, id) then
+        t
+      else
+        let found = substGet(subst, id)
+        switch found
+          case Some(value) => applySubstSeen(subst, value, seen.Append(id))
+          case None => t
+        end
       end
-    case TKVar(id) =>
-      switch substGet(subst, id)
-        case Some(found) => applySubst(substDropVar(subst, id), found)
-        case None => t
-      end
-    case TParam(id) =>
-      switch substGet(subst, id)
-        case Some(found) => applySubst(substDropVar(subst, id), found)
-        case None => t
-      end
-    case TCon(name) => ast2.MonoType.TCon(name)
-    case TApp(ctor, args) => ast2.MonoType.TApp(Ref.new(applySubst(subst, ctor.value())), applySubstAll(subst, args))
-    case TFunc(args, ret) => ast2.MonoType.TFunc(applySubstAll(subst, args), Ref.new(applySubst(subst, ret.value())))
-    case TVariadic(args, ret) => ast2.MonoType.TVariadic(applySubstAll(subst, args), Ref.new(applySubst(subst, ret.value())))
-    case TTuple(items) => ast2.MonoType.TTuple(applySubstAll(subst, items))
-    case TUnit => t
-    case TQualifiedName(path, inner) => ast2.MonoType.TQualifiedName(path, Ref.new(applySubst(subst, inner.value())))
-  end
-end
-
-func substDropVar(subst: Slice[SubstEntry], id: Int) -> Slice[SubstEntry]
-  substDropVarLoop(subst, id, [] as Slice[SubstEntry])
-end
-
-func substDropVarLoop(subst: Slice[SubstEntry], id: Int, out: Slice[SubstEntry]) -> Slice[SubstEntry]
-  if subst.Len() == 0 then out else
-    let head = subst.Get(0).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })
-    let next = if head.ID == id then out else out.Prepend(head) end
-    substDropVarLoop(sliceDrop(subst, 1), id, next)
-  end
-end
-
-func applySubstAll(subst: Slice[SubstEntry], items: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
-  if items.Len() == 0 then
-    []
-  else
-    applySubstAll(subst, sliceDrop(items, 1)).Prepend(applySubst(subst, items.Get(0).UnwrapOr(ast2.MonoType.TUnit)))
-  end
-end
-
-func composeSubst(newer: Slice[SubstEntry], older: Slice[SubstEntry]) -> Slice[SubstEntry]
-  if older.Len() == 0 then
-    newer
-  else
-    let head = older.Get(0).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })
-    composeSubst(newer, sliceDrop(older, 1)).Prepend(SubstEntry { ID: head.ID, Type: applySubst(newer, head.Type) })
-  end
-end
-
-func substGet(subst: Slice[SubstEntry], id: Int) -> Option[ast2.MonoType]
-  if subst.Len() == 0 then
-    None
-  else
-    let head = subst.Get(0).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })
-    if head.ID == id then
-      Some(head.Type)
-    else
-      substGet(sliceDrop(subst, 1), id)
     end
+    case TKVar(id) then
+      if containsInt(seen, id) then
+        t
+      else
+        let found = substGet(subst, id)
+        switch found
+          case Some(value) => applySubstSeen(subst, value, seen.Append(id))
+          case None => t
+        end
+      end
+    end
+    case TParam(id) then
+      if containsInt(seen, id) then
+        t
+      else
+        let found = substGet(subst, id)
+        switch found
+          case Some(value) => applySubstSeen(subst, value, seen.Append(id))
+          case None => t
+        end
+      end
+    end
+    case TCon(name) => ast2.MonoType.TCon(name)
+    case TApp(ctor, args) => ast2.MonoType.TApp(Ref.new(applySubstSeen(subst, ctor.value(), seen)), applySubstAllSeen(subst, args, seen))
+    case TFunc(args, ret) => ast2.MonoType.TFunc(applySubstAllSeen(subst, args, seen), Ref.new(applySubstSeen(subst, ret.value(), seen)))
+    case TVariadic(args, ret) => ast2.MonoType.TVariadic(applySubstAllSeen(subst, args, seen), Ref.new(applySubstSeen(subst, ret.value(), seen)))
+    case TTuple(items) => ast2.MonoType.TTuple(applySubstAllSeen(subst, items, seen))
+    case TUnit => t
+    case TQualifiedName(path, inner) => ast2.MonoType.TQualifiedName(path, Ref.new(applySubstSeen(subst, inner.value(), seen)))
   end
+end
+
+func applySubstAll(subst: Subst, items: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
+  applySubstAllSeen(subst, items, [])
+end
+
+func applySubstAllSeen(subst: Subst, items: Slice[ast2.MonoType], seen: Slice[Int]) -> Slice[ast2.MonoType]
+  applySubstAllAt(subst, items, seen, 0)
+end
+
+func applySubstAllAt(subst: Subst, items: Slice[ast2.MonoType], seen: Slice[Int], index: Int) -> Slice[ast2.MonoType]
+  if index >= items.Len() then []
+  else applySubstAllAt(subst, items, seen, index + 1).Prepend(applySubstSeen(subst, items.Get(index).UnwrapOr(ast2.MonoType.TUnit), seen)) end
+end
+
+func composeSubst(newer: Subst, older: Subst) -> Subst
+  # A substitution is deliberately kept as a lazy chain: resolving an old
+  # image will continue through the newer entries in applySubst.  The former
+  # implementation eagerly applied `newer` to every entry of `older` here.
+  # Since composeSubst is called at nearly every expression boundary, that
+  # repeatedly rewrote the whole accumulated substitution.
+  #
+  # Keep the established lookup precedence (older entries first), but join
+  # the two slices in linear time.  Normalisation is now paid only when a
+  # type is actually queried.
+  substFromEntries(composeSubstOlderAt(older.Entries, newer.Entries, 0, []))
+end
+
+func composeSubstOlderAt(older: Slice[SubstEntry], newer: Slice[SubstEntry], index: Int, out: Slice[SubstEntry]) -> Slice[SubstEntry]
+  if index >= older.Len() then
+    composeSubstNewerAt(newer, 0, out)
+  else
+    composeSubstOlderAt(older, newer, index + 1, out.Append(older.Get(index).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })))
+  end
+end
+
+func composeSubstNewerAt(newer: Slice[SubstEntry], index: Int, out: Slice[SubstEntry]) -> Slice[SubstEntry]
+  if index >= newer.Len() then out
+  else
+    composeSubstNewerAt(newer, index + 1, out.Append(newer.Get(index).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })))
+  end
+end
+
+func substGet(subst: Subst, id: Int) -> Option[ast2.MonoType]
+  subst.Index.Get(id)
 end
 
 func occursIn(id: Int, t: ast2.MonoType) -> Bool
@@ -295,13 +358,18 @@ func occursIn(id: Int, t: ast2.MonoType) -> Bool
     case TVariadic(args, ret) => occursInAny(id, args) || occursIn(id, ret.value())
     case TTuple(items) => occursInAny(id, items)
     case TUnit => false
+    case TQualifiedName(_, inner) => occursIn(id, inner.value())
   end
 end
 
 func occursInAny(id: Int, items: Slice[ast2.MonoType]) -> Bool
-  if items.Len() == 0 then
+  occursInAnyAt(id, items, 0)
+end
+
+func occursInAnyAt(id: Int, items: Slice[ast2.MonoType], index: Int) -> Bool
+  if index >= items.Len() then
     false
   else
-    occursIn(id, items.Get(0).UnwrapOr(ast2.MonoType.TUnit)) || occursInAny(id, sliceDrop(items, 1))
+    occursIn(id, items.Get(index).UnwrapOr(ast2.MonoType.TUnit)) || occursInAnyAt(id, items, index + 1)
   end
 end
