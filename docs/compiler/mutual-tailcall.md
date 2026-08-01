@@ -1,7 +1,7 @@
 # Mutual Tail-Call Optimization
 
-> Status: design proposal.  The first implementation is deliberately limited
-> to top-level functions with an identical lowered calling convention.
+> Status: implemented for eligible top-level functions with an identical
+> lowered calling convention, including self and mutual tail recursion.
 
 ## Goal
 
@@ -71,8 +71,8 @@ per-file Go declarations are rendered.
    construction, argument list, `let`, assignment, or non-final statement is
    not tail.
 3. Find strongly connected components (Tarjan or Kosaraju) in the tail-edge
-   graph.  Optimize an SCC with at least two members.  Self tail recursion can
-   use the same machinery later, but is not required by this feature.
+   graph. Optimize an SCC with at least two members, or a one-member SCC that
+   has a tail edge to itself.
 4. Check the group's ABI eligibility described below.  On failure, leave the
    complete SCC untouched.  Do not optimize only some of its edges: that makes
    performance unpredictable and can still grow the stack through the omitted
@@ -145,6 +145,27 @@ The generated default state panic is defensive only; no source program can
 select it.  It avoids a silently looping corrupted helper and makes compiler
 bugs diagnosable.
 
+## Returned closures: continuation state machines
+
+Parser combinators commonly return a closure that recreates its enclosing
+function before invoking it, for example `F(captured...)(nextState)`. Such a
+call can have source work after it, so it is not a strict tail call and cannot
+join the top-level SCC trampoline. The code generator recognizes a conservative
+closure-local form: a returned, single-argument closure invokes its enclosing
+function with the unchanged captured arguments and one next-state argument.
+
+It lowers that invocation to a loop with an explicit stack of typed
+continuations. The continuation contains the remaining generated statements;
+when a non-recursive path produces the closure result, the loop unwinds those
+continuations in LIFO order. This is independent of library symbols and data
+operations: it does not recognize `PMany`, `Reply`, `Prepend`, or any prelude
+type by name. It preserves the normal captured variables and generated
+typeclass dictionary parameters by using ordinary Go closures for frames.
+
+The initial implementation accepts one recursive call site and one explicit
+final return in the closure. Ambiguous shapes, altered captures, multi-state
+closures, and multiple result values retain ordinary lowering.
+
 ## Integration points
 
 - Add an immutable `mutualTailPlan` to `internal/mygo/codegen`, keyed by
@@ -207,8 +228,7 @@ Add compiler/codegen tests covering:
 
 ## Future extension
 
-After v1 is stable, self tail recursion can reuse the plan with a one-member
-SCC.  Heterogeneous mutual recursion should use a typed, compiler-generated
+Heterogeneous mutual recursion should use a typed, compiler-generated
 frame/continuation representation only after profiling demonstrates that its
-allocation and type-assertion cost is acceptable.  It must still retain the
+allocation and type-assertion cost is acceptable. It must still retain the
 source wrappers, so exported function names remain stable.

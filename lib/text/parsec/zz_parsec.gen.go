@@ -139,29 +139,54 @@ func PNotFollowedBy[A any](p func(State) Reply[A], message string) func(State) R
 }
 func PMany[A any](p func(State) Reply[A]) func(State) Reply[[]A] {
 	return func(state State) Reply[[]A] {
-		r_16 := p(state)
-		var expr_21 Reply[[]A]
-		if !r_16.Ok {
-			var expr_17 Reply[[]A]
-			if r_16.Consumed {
-				expr_17 = Reply[[]A]{Ok: false, Consumed: true, Value: []A{}, State: r_16.State, Error: r_16.Error}
+		__mygo_tcmc_stack := []func(Reply[[]A]) Reply[[]A]{}
+		for {
+			r_16 := p(state)
+			var expr_21 Reply[[]A]
+			if !r_16.Ok {
+				var expr_17 Reply[[]A]
+				if r_16.Consumed {
+					expr_17 = Reply[[]A]{Ok: false, Consumed: true, Value: []A{}, State: r_16.State, Error: r_16.Error}
+				} else {
+					expr_17 = Reply[[]A]{Ok: true, Consumed: false, Value: []A{}, State: state, Error: EmptyError(state.Position)}
+				}
+				expr_21 = expr_17
 			} else {
-				expr_17 = Reply[[]A]{Ok: true, Consumed: false, Value: []A{}, State: state, Error: EmptyError(state.Position)}
+				var expr_20 Reply[[]A]
+				var tail_18 Reply[[]A]
+				__mygo_tcmc_stack = append(__mygo_tcmc_stack, func(__mygo_tcmc_result Reply[[]A]) Reply[[]A] {
+					tail_18 := __mygo_tcmc_result
+					var expr_19 Reply[[]A]
+					if !tail_18.Ok {
+						expr_19 = tail_18
+					} else {
+						expr_19 = Reply[[]A]{Ok: true, Consumed: true, Value: MygoIN5SliceM7Prepend(tail_18.Value, r_16.Value), State: tail_18.State, Error: tail_18.Error}
+					}
+					expr_20 = expr_19
+					expr_21 = expr_20
+					return expr_21
+				})
+				state = r_16.State
+				continue
+				var expr_19 Reply[[]A]
+				if !tail_18.Ok {
+					expr_19 = tail_18
+				} else {
+					expr_19 = Reply[[]A]{Ok: true, Consumed: true, Value: MygoIN5SliceM7Prepend(tail_18.Value, r_16.Value), State: tail_18.State, Error: tail_18.Error}
+				}
+				expr_20 = expr_19
+				expr_21 = expr_20
 			}
-			expr_21 = expr_17
-		} else {
-			var expr_20 Reply[[]A]
-			tail_18 := PMany(p)(r_16.State)
-			var expr_19 Reply[[]A]
-			if !tail_18.Ok {
-				expr_19 = tail_18
-			} else {
-				expr_19 = Reply[[]A]{Ok: true, Consumed: true, Value: MygoIN5SliceM7Prepend(tail_18.Value, r_16.Value), State: tail_18.State, Error: tail_18.Error}
+			{
+				__mygo_tcmc_result := expr_21
+				for len(__mygo_tcmc_stack) > 0 {
+					__mygo_tcmc_last := __mygo_tcmc_stack[len(__mygo_tcmc_stack)-1]
+					__mygo_tcmc_stack = __mygo_tcmc_stack[:len(__mygo_tcmc_stack)-1]
+					__mygo_tcmc_result = __mygo_tcmc_last(__mygo_tcmc_result)
+				}
+				return __mygo_tcmc_result
 			}
-			expr_20 = expr_19
-			expr_21 = expr_20
 		}
-		return expr_21
 	}
 }
 func PMany1[A any](p func(State) Reply[A]) func(State) Reply[[]A] {

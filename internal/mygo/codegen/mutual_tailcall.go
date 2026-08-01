@@ -84,7 +84,13 @@ func (g *gen) buildMutualTailPlans() {
 }
 
 func (g *gen) addMutualTailPlan(members []*FuncDecl, byName map[string]*FuncDecl) {
-	if len(members) < 2 || !mtSameABI(g, members) {
+	// A one-member SCC is eligible only when it has a tail edge to itself.
+	// Tarjan also produces singleton SCCs for non-recursive functions, which
+	// must retain their ordinary direct lowering.
+	if len(members) == 1 && !mtHasTailSelfEdge(members[0], byName) {
+		return
+	}
+	if !mtSameABI(g, members) {
 		return
 	}
 	inGroup := map[*FuncDecl]bool{}
@@ -118,6 +124,16 @@ func (g *gen) addMutualTailPlan(members []*FuncDecl, byName map[string]*FuncDecl
 		p.state[f] = i
 		g.mutualTail[f] = p
 	}
+}
+
+func mtHasTailSelfEdge(f *FuncDecl, funcs map[string]*FuncDecl) bool {
+	found := false
+	mtCollectExpr(f.Body, true, funcs, func(to *FuncDecl) {
+		if to == f {
+			found = true
+		}
+	})
+	return found
 }
 
 func mtCollectDirectCalls(e Expr, tail bool, funcs map[string]*FuncDecl, add func(*FuncDecl, bool)) {
