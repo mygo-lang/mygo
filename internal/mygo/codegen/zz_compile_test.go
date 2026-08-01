@@ -2,6 +2,10 @@ package codegen
 
 import (
 	"go/ast"
+	"go/importer"
+	goparser "go/parser"
+	"go/token"
+	"go/types"
 	"strconv"
 	"strings"
 	"testing"
@@ -11,6 +15,182 @@ import (
 	myparser "github.com/mygo-lang/mygo/internal/mygo/parser"
 	"github.com/mygo-lang/mygo/internal/mygo/typeinference"
 )
+
+func TestGenerateMutualTailcallTrampolinePreservesWrappers(t *testing.T) {
+	src := `package p
+
+func Even(n: Int) -> Bool
+  if n == 0 => true else Odd(n - 1)
+end
+
+func Odd(n: Int) -> Bool
+  if n == 0 => false else Even(n - 1)
+end
+`
+	parsed, err := myparser.ParseFile("mutual.mygo", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg := &Package{
+		Name: "p", NoPrelude: true, Decls: parsed.Decls,
+		Imports: map[string]struct{}{}, ImportAliases: map[string]string{},
+		Enums: map[string]*EnumDecl{}, Structs: map[string]*StructDecl{},
+		Interfaces: map[string]*InterfaceDecl{}, Funcs: map[string]*FuncDecl{},
+	}
+	for _, decl := range parsed.Decls {
+		if fn, ok := decl.(*FuncDecl); ok {
+			pkg.Funcs[fn.Name] = fn
+		}
+	}
+	planGen := newGen(pkg, nil)
+	edgeCount := 0
+	for _, fn := range pkg.Funcs {
+		mtCollectExpr(fn.Body, true, pkg.Funcs, func(*FuncDecl) { edgeCount++ })
+	}
+	if edgeCount != 2 {
+		t.Fatalf("tail edge count = %d, want 2", edgeCount)
+	}
+	planGen.buildMutualTailPlans()
+	if len(planGen.mutualTail) != 2 {
+		t.Fatalf("mutual-tail plan count = %d, want 2", len(planGen.mutualTail))
+	}
+	files, err := GenerateFiles(pkg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var generated string
+	for _, file := range files {
+		generated += file
+	}
+	if !strings.Contains(generated, "func Even(n int) bool") || !strings.Contains(generated, "func Odd(n int) bool") {
+		t.Fatalf("original function wrappers missing:\n%s", generated)
+	}
+	if strings.Count(generated, "func __mygo_mt_p_") != 1 || !strings.Contains(generated, "__mygo_state") {
+		t.Fatalf("mutual trampoline missing:\n%s", generated)
+	}
+	if strings.Contains(generated, "= Odd(n-1)") || strings.Contains(generated, "= Even(n-1)") || !strings.Contains(generated, "continue") {
+		t.Fatalf("tail calls were not rewritten inside the trampoline:\n%s", generated)
+	}
+	fset := token.NewFileSet()
+	file, err := goparser.ParseFile(fset, "generated.go", generated, goparser.AllErrors)
+	if err != nil {
+		t.Fatalf("generated Go did not parse: %v\n%s", err, generated)
+	}
+	conf := types.Config{Importer: importer.Default()}
+	if _, err := conf.Check("p", fset, []*ast.File{file}, nil); err != nil {
+		t.Fatalf("generated Go did not type-check: %v\n%s", err, generated)
+	}
+}
+
+func TestMutualTailcallStagesAllArgumentsBeforeAssignments(t *testing.T) {
+	src := `package p
+
+func Left(a: Int, b: Int) -> Int
+  if a == 0 => b else Right(b, a - 1)
+end
+
+func Right(a: Int, b: Int) -> Int
+  if a == 0 => b else Left(b, a - 1)
+end
+`
+	parsed, err := myparser.ParseFile("staging.mygo", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg := &Package{Name: "p", NoPrelude: true, Decls: parsed.Decls, Imports: map[string]struct{}{}, ImportAliases: map[string]string{}, Enums: map[string]*EnumDecl{}, Structs: map[string]*StructDecl{}, Interfaces: map[string]*InterfaceDecl{}, Funcs: map[string]*FuncDecl{}}
+	for _, decl := range parsed.Decls {
+		if fn, ok := decl.(*FuncDecl); ok {
+			pkg.Funcs[fn.Name] = fn
+		}
+	}
+	files, err := GenerateFiles(pkg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var generated string
+	for _, file := range files {
+		generated += file
+	}
+	firstAssign := strings.Index(generated, "a = __mygo_next_0")
+	secondTemp := strings.Index(generated, "__mygo_next_1 :=")
+	if firstAssign < 0 || secondTemp < 0 || secondTemp > firstAssign {
+		t.Fatalf("tail-call arguments were not fully staged before parameter updates:\n%s", generated)
+	}
+}
+
+func TestGenerateGenericMutualTailcallTrampoline(t *testing.T) {
+	src := `package p
+
+func First[A](n: Int, value: A) -> A
+  if n == 0 => value else Second[A](n - 1, value)
+end
+
+func Second[A](n: Int, value: A) -> A
+  if n == 0 => value else First[A](n - 1, value)
+end
+`
+	parsed, err := myparser.ParseFile("generic_mutual.mygo", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg := &Package{Name: "p", NoPrelude: true, Decls: parsed.Decls, Imports: map[string]struct{}{}, ImportAliases: map[string]string{}, Enums: map[string]*EnumDecl{}, Structs: map[string]*StructDecl{}, Interfaces: map[string]*InterfaceDecl{}, Funcs: map[string]*FuncDecl{}}
+	for _, decl := range parsed.Decls {
+		if fn, ok := decl.(*FuncDecl); ok {
+			pkg.Funcs[fn.Name] = fn
+		}
+	}
+	files, err := GenerateFiles(pkg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var generated string
+	for _, file := range files {
+		generated += file
+	}
+	if !strings.Contains(generated, "func __mygo_mt_p_first_second[A any]") {
+		t.Fatalf("generic mutual trampoline missing:\n%s", generated)
+	}
+	fset := token.NewFileSet()
+	file, err := goparser.ParseFile(fset, "generated.go", generated, goparser.AllErrors)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := (&types.Config{Importer: importer.Default()}).Check("p", fset, []*ast.File{file}, nil); err != nil {
+		t.Fatalf("generic generated Go did not type-check: %v\n%s", err, generated)
+	}
+}
+
+func TestMutualTailcallSkipsNonTailIntraGroupCall(t *testing.T) {
+	src := `package p
+
+func A(n: Int) -> Int
+  if n == 0 => 0 else if n == 1 => B(n - 1) else B(n - 1) + 1
+end
+
+func B(n: Int) -> Int
+  A(n)
+end
+`
+	parsed, err := myparser.ParseFile("non_tail.mygo", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg := &Package{Name: "p", NoPrelude: true, Decls: parsed.Decls, Imports: map[string]struct{}{}, ImportAliases: map[string]string{}, Enums: map[string]*EnumDecl{}, Structs: map[string]*StructDecl{}, Interfaces: map[string]*InterfaceDecl{}, Funcs: map[string]*FuncDecl{}}
+	for _, decl := range parsed.Decls {
+		if fn, ok := decl.(*FuncDecl); ok {
+			pkg.Funcs[fn.Name] = fn
+		}
+	}
+	files, err := GenerateFiles(pkg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range files {
+		if strings.Contains(file, "func __mygo_mt_p_a_b") {
+			t.Fatalf("non-tail intra-group call must retain direct lowering:\n%s", file)
+		}
+	}
+}
 
 func TestGenerateResolvesGenericSliceFoldThroughTypeclass(t *testing.T) {
 	src := `package parsec

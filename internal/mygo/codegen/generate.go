@@ -62,6 +62,7 @@ func GenerateFiles(p *Package, typedInfo *typeinference.TypedInfo) (map[string]s
 		}
 	}
 	g := newGen(p, typedInfo)
+	g.buildMutualTailPlans()
 
 	files := make(map[string][]Decl)
 	for _, decl := range p.Decls {
@@ -104,6 +105,9 @@ func GenerateFiles(p *Package, typedInfo *typeinference.TypedInfo) (map[string]s
 				}
 				sf.AddDeclWithSource(fd, declSource(fn))
 			}
+		}
+		if err := g.addMutualTailTrampolines(sf, ""); err != nil {
+			return nil, err
 		}
 		if g.needsCallAny {
 			sf.AddDecls(g.genHelperDecls())
@@ -166,6 +170,9 @@ func GenerateFiles(p *Package, typedInfo *typeinference.TypedInfo) (map[string]s
 				}
 				sf.AddDeclWithSource(fd, declSource(fn))
 			}
+		}
+		if err := g.addMutualTailTrampolines(sf, sourceFile); err != nil {
+			return nil, err
 		}
 		for _, decl := range decls {
 			if s, ok := decl.(*LetStmt); ok {
@@ -702,13 +709,15 @@ type gen struct {
 		Func        *FuncDecl
 		HasReceiver bool
 	}
-	variantByName      map[string]string
-	emittedImplHelpers map[string]struct{}
-	needsCallAny       bool
-	localSeq           int
-	switchVarSeq       int
-	typedInfo          *typeinference.TypedInfo
-	currentFile        string
+	variantByName        map[string]string
+	emittedImplHelpers   map[string]struct{}
+	needsCallAny         bool
+	localSeq             int
+	switchVarSeq         int
+	typedInfo            *typeinference.TypedInfo
+	currentFile          string
+	mutualTail           map[*FuncDecl]*mutualTailPlan
+	generatingMutualTail bool
 }
 
 func newGen(p *Package, typedInfo *typeinference.TypedInfo) *gen {
@@ -724,6 +733,7 @@ func newGen(p *Package, typedInfo *typeinference.TypedInfo) *gen {
 		variantByName:      map[string]string{},
 		emittedImplHelpers: map[string]struct{}{},
 		typedInfo:          typedInfo,
+		mutualTail:         map[*FuncDecl]*mutualTailPlan{},
 	}
 	for name, iface := range p.Interfaces {
 		for _, m := range iface.Methods {

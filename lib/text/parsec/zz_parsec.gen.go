@@ -169,7 +169,7 @@ func PMany[A any](p Parser[A]) Parser[[]A] {
 }
 func PMany1[A any](p Parser[A]) Parser[[]A] {
 	return PBind(p, func(first A) Parser[[]A] {
-		return PMap(PMany(p), func(rest []A) []A {
+		return PMap(PMany[A](p), func(rest []A) []A {
 			return MygoIN5SliceM7Prepend(rest, first)
 		})
 	})
@@ -200,11 +200,11 @@ func PBetween[A any, L any, R any](open Parser[L], body Parser[A], close Parser[
 	})
 }
 func PSepBy[A any, S any](item Parser[A], sep Parser[S]) Parser[[]A] {
-	return POrElse[[]A](PSepBy1(item, sep), PPure[[]A]([]A{}))
+	return POrElse[[]A](PSepBy1[A, S](item, sep), PPure[[]A]([]A{}))
 }
 func PSepBy1[A any, S any](item Parser[A], sep Parser[S]) Parser[[]A] {
 	return PBind(item, func(first A) Parser[[]A] {
-		return PMap(PMany(PThen(sep, item)), func(rest []A) []A {
+		return PMap(PMany(PThen[S, A](sep, item)), func(rest []A) []A {
 			return MygoIN5SliceM7Prepend(rest, first)
 		})
 	})
@@ -299,7 +299,7 @@ func PAlphaNum() Parser[rune] {
 }
 func PIdentifier() Parser[string] {
 	return PBind(PLetter(), func(first rune) Parser[string] {
-		return PMap(PMany(PAlphaNum()), func(rest []rune) string {
+		return PMap(PMany[rune](PAlphaNum()), func(rest []rune) string {
 			return FromRunes(MygoIN5SliceM7Prepend(rest, first))
 		})
 	})
