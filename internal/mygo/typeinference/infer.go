@@ -29,6 +29,7 @@ type PkgInfo struct {
 	SourceFiles    map[any]string
 	DotImportTypes map[string]struct{}
 	DotImportEnums map[string]*EnumDecl // enums from dot-imported packages
+	DotImportFuncs map[string]*FuncDecl
 }
 
 // TypedInfo holds the results of type inference for an entire package.
@@ -103,7 +104,7 @@ func InferPackage(pkg *PkgInfo, state *InferState) (*TypedInfo, error) {
 	state.TypedInfo = info
 
 	// Build initial type environment with built-in types and prelude
-	env := initialTypeEnv(pkg)
+	env := initialTypeEnv(pkg, state)
 
 	// Function signatures can reference aliases exported by MyGO imports, so
 	// load imports before those signatures are pre-registered.
@@ -243,7 +244,7 @@ func wrapInferenceError(format string, err error, args ...any) error {
 
 // initialTypeEnv creates the initial type environment with built-in types and
 // prelude declarations.
-func initialTypeEnv(pkg *PkgInfo) TypeEnv {
+func initialTypeEnv(pkg *PkgInfo, state *InferState) TypeEnv {
 	env := make(TypeEnv)
 
 	// Built-in named types (primitive type constructors)
@@ -283,6 +284,11 @@ func initialTypeEnv(pkg *PkgInfo) TypeEnv {
 		for name := range pkg.DotImportTypes {
 			if _, exists := env[name]; !exists {
 				env[name] = &Scheme{Body: QualifiedType{Body: TCon{Name: name}}}
+			}
+		}
+		for name, fn := range pkg.DotImportFuncs {
+			if fn != nil {
+				env[name] = funcDeclSignatureScheme(fn, env, state)
 			}
 		}
 	}
