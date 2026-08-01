@@ -497,32 +497,53 @@ end
 
 func typedDeclEq(a: ast2.Decl, b: ast2.Decl) -> Bool
   switch a
-    case StructDecl(nameA, _, _) =>
+    # Aliases and defined types also need to be associated with their source
+    # file after combined user/prelude inference.  Without these cases,
+    # `separateTypedDecls` drops them from both output sets, so codegen2 never
+    # emits package-local aliases such as `type Parser[A] = ...`.
+    case TypeAliasDecl(nameA, _, _) then
+      switch b
+        case TypeAliasDecl(nameB, _, _) => nameA == nameB
+        case _ => false
+      end
+    end
+    case TypeDecl(nameA, _, _) then
+      switch b
+        case TypeDecl(nameB, _, _) => nameA == nameB
+        case _ => false
+      end
+    end
+    case StructDecl(nameA, _, _) then
       switch b
         case StructDecl(nameB, _, _) => nameA == nameB
         case _ => false
       end
-    case EnumDecl(nameA, _, _) =>
+    end
+    case EnumDecl(nameA, _, _) then
       switch b
         case EnumDecl(nameB, _, _) => nameA == nameB
         case _ => false
       end
-    case InterfaceDecl(nameA, _, _) =>
+    end
+    case InterfaceDecl(nameA, _, _) then
       switch b
         case InterfaceDecl(nameB, _, _) => nameA == nameB
         case _ => false
       end
-    case FuncDecl(nameA, _, _, _, _, _) =>
+    end
+    case FuncDecl(nameA, _, _, _, _, _) then
       switch b
         case FuncDecl(nameB, _, _, _, _, _) => nameA == nameB
         case _ => false
       end
-    case ImplDecl(_, targetA, ifaceA, _) =>
+    end
+    case ImplDecl(_, targetA, ifaceA, _) then
       switch b
         case ImplDecl(_, targetB, ifaceB, _) =>
           ast2.TypesEqual(targetA, targetB) && optionTypesEqual(ifaceA, ifaceB)
         case _ => false
       end
+    end
     case _ => false
   end
 end

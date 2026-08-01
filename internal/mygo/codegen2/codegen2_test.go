@@ -89,6 +89,30 @@ end
 	}
 }
 
+func TestGenerateSourceReturnsFunctionLiteralThroughTypeAlias(t *testing.T) {
+	src := `package sample
+
+type Parser[A] = func(Int) -> A
+
+func pure[A](value: A) -> Parser[A]
+  func(state: Int) -> A
+    value
+  end
+end
+`
+	got := GenerateSource(src)
+	result, ok := got.(ResultOk[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	if !strings.Contains(result.F0, "return func(state int) A") {
+		t.Fatalf("generated Go did not return the function literal:\n%s", result.F0)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "function-alias.gen.go", result.F0, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, result.F0)
+	}
+}
+
 func TestGenerateSourceLowersRefBoundaryOperations(t *testing.T) {
 	src := `package sample
 

@@ -193,6 +193,52 @@ end
 	}
 }
 
+func TestInferPackageWithExternalRetainsUserTypeAliasForCodegen(t *testing.T) {
+	user := parser2.ParseFile(`package sample
+
+type Parser[A] = func(Int) -> A
+`)
+	userFile, ok := user.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile user failed: %v", user)
+	}
+	external := parser2.ParseFile(`package prelude
+
+struct External
+  Value: Int
+end
+`)
+	externalFile, ok := external.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile external failed: %v", external)
+	}
+	got := InferPackageWithExternal(
+		[]PkgDeclSource{{Path: "parsec.mygo", Decls: userFile.F0.Decls}},
+		[]PkgDeclSource{{Path: "prelude.mygo", Decls: externalFile.F0.Decls}},
+		[]GoPackageEntry{},
+		[]MyGoPackageInfo{},
+	)
+	info, ok := got.(ResultOk[PackageInfo, string])
+	if !ok {
+		t.Fatalf("InferPackageWithExternal failed: %v", got)
+	}
+	if !declsContainTypeAlias(info.F0.TypedDecls, "Parser") {
+		t.Fatalf("user type alias absent from TypedDecls: %v", info.F0.TypedDecls)
+	}
+	if declsContainTypeAlias(info.F0.ExternalTypedDecls, "Parser") {
+		t.Fatalf("user type alias was classified as external: %v", info.F0.ExternalTypedDecls)
+	}
+}
+
+func declsContainTypeAlias(decls []ast2.Decl, name string) bool {
+	for _, decl := range decls {
+		if alias, ok := decl.(ast2.DeclTypeAliasDecl); ok && alias.F0 == name {
+			return true
+		}
+	}
+	return false
+}
+
 func isPackageInfo(value Result[PackageInfo, string]) bool {
 	_, ok := value.(ResultOk[PackageInfo, string])
 	return ok

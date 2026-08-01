@@ -772,27 +772,44 @@ func typeExprSliceEq(left []TypeExpr, right []TypeExpr) bool {
 	return expr_22
 }
 func typeExprSliceEqElems(left []TypeExpr, right []TypeExpr, index int) bool {
-	var expr_27 bool
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(left) {
-		expr_27 = true
-	} else {
-		var expr_26 bool
-		l_23 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, index), TypeExprUnitTypeCtor())
-		r_24 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, index), TypeExprUnitTypeCtor())
-		var expr_25 bool
-		if MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(l_23, r_24) {
-			expr_25 = typeExprSliceEqElems(left, right, index+1)
-		} else {
-			expr_25 = false
-		}
-		expr_26 = expr_25
-		expr_27 = expr_26
-	}
-	return expr_27
+	return __mygo_mt_ast2_typeexprsliceeqelems(left, right, index, 0)
 }
 func EmptyExpr() Expr {
 	return Expr{ID: 0, Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Kind: ExprKindUnitExprCtor(), Type: None[MonoType]()}
 }
 func TypesEqual(a TypeExpr, b TypeExpr) bool {
 	return MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(a, b)
+}
+func __mygo_mt_ast2_typeexprsliceeqelems(left []TypeExpr, right []TypeExpr, index int, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+			var expr_37 bool
+			if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(left) {
+				expr_37 = true
+			} else {
+				var expr_36 bool
+				l_33 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, index), TypeExprUnitTypeCtor())
+				r_34 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, index), TypeExprUnitTypeCtor())
+				var expr_35 bool
+				if MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(l_33, r_34) {
+					__mygo_next_0 := left
+					__mygo_next_1 := right
+					__mygo_next_2 := index + 1
+					left = __mygo_next_0
+					right = __mygo_next_1
+					index = __mygo_next_2
+					__mygo_state = 0
+					continue
+				} else {
+					expr_35 = false
+				}
+				expr_36 = expr_35
+				expr_37 = expr_36
+			}
+			return expr_37
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
 }

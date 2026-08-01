@@ -147,22 +147,20 @@ func fileParser() -> ps.Parser[ast2.File]
 end
 
 func positionedDecl() -> ps.Parser[(ast2.Decl, ast2.SourcePos)]
-  ps.Parser[(ast2.Decl, ast2.SourcePos)] {
-    Run: func(state: ps.State) -> ps.Reply[(ast2.Decl, ast2.SourcePos)]
-      let r = decl().Run(state)
-      if r.Ok then
-        ps.Reply[(ast2.Decl, ast2.SourcePos)] {
-          Ok: true,
-          Consumed: r.Consumed,
-          Value: (r.Value, ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }),
-          State: r.State,
-          Error: r.Error,
-        }
-      else
-        ps.Reply[(ast2.Decl, ast2.SourcePos)] { Ok: false, Consumed: r.Consumed, Value: (ast2.Decl.ImportDecl("", ""), ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }), State: r.State, Error: r.Error }
-      end
+  func(state: ps.State) -> ps.Reply[(ast2.Decl, ast2.SourcePos)]
+    let r = decl()(state)
+    if r.Ok then
+      ps.Reply[(ast2.Decl, ast2.SourcePos)] {
+        Ok: true,
+        Consumed: r.Consumed,
+        Value: (r.Value, ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }),
+        State: r.State,
+        Error: r.Error,
+      }
+    else
+      ps.Reply[(ast2.Decl, ast2.SourcePos)] { Ok: false, Consumed: r.Consumed, Value: (ast2.Decl.ImportDecl("", ""), ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }), State: r.State, Error: r.Error }
     end
-  }
+  end
 end
 
 func decl() -> ps.Parser[ast2.Decl]
@@ -284,17 +282,15 @@ func implMethod() -> ps.Parser[ast2.ImplMethod]
 end
 
 func funcSig() -> ps.Parser[ast2.FuncSig]
-  ps.Parser[ast2.FuncSig] {
-    Run: func(state: ps.State) -> ps.Reply[ast2.FuncSig]
-      let r = funcSigCore().Run(state)
-      if r.Ok then
-        let sig = r.Value
-        ps.Reply[ast2.FuncSig] { Ok: true, Consumed: r.Consumed, Value: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }, Name: sig.Name, TypeParams: sig.TypeParams, Params: sig.Params, Ret: sig.Ret, Using: sig.Using }, State: r.State, Error: r.Error }
-      else
-        r
-      end
+  func(state: ps.State) -> ps.Reply[ast2.FuncSig]
+    let r = funcSigCore()(state)
+    if r.Ok then
+      let sig = r.Value
+      ps.Reply[ast2.FuncSig] { Ok: true, Consumed: r.Consumed, Value: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }, Name: sig.Name, TypeParams: sig.TypeParams, Params: sig.Params, Ret: sig.Ret, Using: sig.Using }, State: r.State, Error: r.Error }
+    else
+      r
     end
-  }
+  end
 end
 
 func funcSigCore() -> ps.Parser[ast2.FuncSig]
@@ -365,11 +361,9 @@ func typeExpr() -> ps.Parser[ast2.TypeExpr]
 end
 
 func lazyTypeExpr() -> ps.Parser[ast2.TypeExpr]
-  ps.Parser[ast2.TypeExpr] {
-    Run: func(state: ps.State) -> ps.Reply[ast2.TypeExpr]
-      typeExpr().Run(state)
-    end
-  }
+  func(state: ps.State) -> ps.Reply[ast2.TypeExpr]
+    typeExpr()(state)
+  end
 end
 
 func funcType() -> ps.Parser[ast2.TypeExpr]
@@ -454,22 +448,20 @@ func blockUntilEnd() -> ps.Parser[ast2.Expr]
 end
 
 func blockUntil(stopParser: ps.Parser[String]) -> ps.Parser[ast2.Expr]
-  ps.Parser[ast2.Expr] {
-    Run: func(state: ps.State) -> ps.Reply[ast2.Expr]
-      blockItems(stopParser, state, state, [])
-    end
-  }
+  func(state: ps.State) -> ps.Reply[ast2.Expr]
+    blockItems(stopParser, state, state, [])
+  end
 end
 
 func blockItems(stopParser: ps.Parser[String], start: ps.State, cur: ps.State, items: Slice[ast2.Stmt]) -> ps.Reply[ast2.Expr]
-  let stop = ps.PLookAhead(stopParser).Run(cur)
+  let stop = ps.PLookAhead(stopParser)(cur)
   if stop.Ok then
     ps.Reply[ast2.Expr] {
       Ok: true, Consumed: cur.Index != start.Index, Value: exprAt(start, ast2.ExprKind.BlockExpr(items)),
       State: cur, Error: ps.EmptyError(cur.Position)
     }
   else
-    let r = stmt().Run(cur)
+    let r = stmt()(cur)
     if r.Ok then
       blockItems(stopParser, start, r.State, items.Append(r.Value))
     else
@@ -650,11 +642,9 @@ func inlineGoStmt() -> ps.Parser[ast2.Stmt]
 end
 
 func lazyExpr() -> ps.Parser[ast2.Expr]
-  ps.Parser[ast2.Expr] {
-    Run: func(state: ps.State) -> ps.Reply[ast2.Expr]
-      expr().Run(state)
-    end
-  }
+  func(state: ps.State) -> ps.Reply[ast2.Expr]
+    expr()(state)
+  end
 end
 
 # expr 解析纯表达式。
@@ -664,16 +654,14 @@ func expr() -> ps.Parser[ast2.Expr]
 end
 
 func positionedExpr(inner: ps.Parser[ast2.Expr]) -> ps.Parser[ast2.Expr]
-  ps.Parser[ast2.Expr] {
-    Run: func(state: ps.State) -> ps.Reply[ast2.Expr]
-      let r = inner.Run(state)
-      if r.Ok then
-        ps.Reply[ast2.Expr] { Ok: true, Consumed: r.Consumed, Value: exprAt(state, r.Value.Kind), State: r.State, Error: r.Error }
-      else
-        r
-      end
+  func(state: ps.State) -> ps.Reply[ast2.Expr]
+    let r = inner(state)
+    if r.Ok then
+      ps.Reply[ast2.Expr] { Ok: true, Consumed: r.Consumed, Value: exprAt(state, r.Value.Kind), State: r.State, Error: r.Error }
+    else
+      r
     end
-  }
+  end
 end
 
 func exprKind() -> ps.Parser[ast2.Expr]
@@ -733,11 +721,9 @@ func pattern() -> ps.Parser[ast2.Pattern]
 end
 
 func lazyPattern() -> ps.Parser[ast2.Pattern]
-  ps.Parser[ast2.Pattern] {
-    Run: func(state: ps.State) -> ps.Reply[ast2.Pattern]
-      pattern().Run(state)
-    end
-  }
+  func(state: ps.State) -> ps.Reply[ast2.Pattern]
+    pattern()(state)
+  end
 end
 
 func inlineGoExpr() -> ps.Parser[ast2.Expr]
@@ -850,11 +836,9 @@ func ifElseTail() -> ps.Parser[ast2.Expr]
 end
 
 func lazyIfElseTail() -> ps.Parser[ast2.Expr]
-  ps.Parser[ast2.Expr] {
-    Run: func(state: ps.State) -> ps.Reply[ast2.Expr]
-      ifElseTail().Run(state)
-    end
-  }
+  func(state: ps.State) -> ps.Reply[ast2.Expr]
+    ifElseTail()(state)
+  end
 end
 
 func bodyExprFromBlock(body: ast2.Expr) -> ast2.Expr
@@ -914,11 +898,9 @@ func unaryExpr() -> ps.Parser[ast2.Expr]
 end
 
 func lazyUnaryExpr() -> ps.Parser[ast2.Expr]
-  ps.Parser[ast2.Expr] {
-    Run: func(state: ps.State) -> ps.Reply[ast2.Expr]
-      unaryExpr().Run(state)
-    end
-  }
+  func(state: ps.State) -> ps.Reply[ast2.Expr]
+    unaryExpr()(state)
+  end
 end
 
 func makeBinary() -> func(String, ast2.Expr, ast2.Expr) -> ast2.Expr
@@ -928,28 +910,26 @@ func makeBinary() -> func(String, ast2.Expr, ast2.Expr) -> ast2.Expr
 end
 
 func postfixExpr() -> ps.Parser[ast2.Expr]
-  ps.Parser[ast2.Expr] {
-    Run: func(state: ps.State) -> ps.Reply[ast2.Expr]
-      let first = primaryExpr().Run(state)
-      if !first.Ok then
-        first
-      else
-        postfixTail(state, first.State, first.Value)
-      end
+  func(state: ps.State) -> ps.Reply[ast2.Expr]
+    let first = primaryExpr()(state)
+    if !first.Ok then
+      first
+    else
+      postfixTail(state, first.State, first.Value)
     end
-  }
+  end
 end
 
 func postfixTail(start: ps.State, cur: ps.State, acc: ast2.Expr) -> ps.Reply[ast2.Expr]
-  let cast = ps.PThen(kw("as"), typeExpr()).Run(cur)
+  let cast = ps.PThen(kw("as"), typeExpr())(cur)
   if cast.Ok then
     postfixTail(start, cast.State, exprWithPos(acc.Pos, ast2.ExprKind.TypeAsExpr(acc, cast.Value)))
   else
-    let call = callSuffix().Run(cur)
+    let call = callSuffix()(cur)
     if call.Ok then
       postfixTail(start, call.State, exprWithPos(acc.Pos, ast2.ExprKind.CallExpr(acc, call.Value.F0, call.Value.F1)))
     else
-      let fld = ps.PThen(sym("."), identifier()).Run(cur)
+      let fld = ps.PThen(sym("."), identifier())(cur)
       if fld.Ok then
         postfixTail(start, fld.State, exprWithPos(acc.Pos, ast2.ExprKind.FieldExpr(acc, fld.Value)))
       else
@@ -1127,27 +1107,25 @@ func mulOp() -> ps.Parser[String]
 end
 
 func chainLeft[A](item: ps.Parser[A], op: ps.Parser[String], combine: func(String, A, A) -> A) -> ps.Parser[A]
-  ps.Parser[A] {
-    Run: func(state: ps.State) -> ps.Reply[A]
-      let first = item.Run(state)
-      if !first.Ok then
-        first
-      else
-        chainLeftTail(item, op, combine, state, first.State, first.Value)
-      end
+  func(state: ps.State) -> ps.Reply[A]
+    let first = item(state)
+    if !first.Ok then
+      first
+    else
+      chainLeftTail(item, op, combine, state, first.State, first.Value)
     end
-  }
+  end
 end
 
 func chainLeftTail[A](item: ps.Parser[A], op: ps.Parser[String], combine: func(String, A, A) -> A, start: ps.State, cur: ps.State, acc: A) -> ps.Reply[A]
-  let rop = op.Run(cur)
+  let rop = op(cur)
   if !rop.Ok then
     ps.Reply[A] {
       Ok: true, Consumed: cur.Index != start.Index, Value: acc,
       State: cur, Error: ps.EmptyError(cur.Position)
     }
   else
-    let rr = item.Run(rop.State)
+    let rr = item(rop.State)
     if !rr.Ok then
       rr
     else
@@ -1174,17 +1152,15 @@ func identifierRaw() -> ps.Parser[String]
 end
 
 func failIdentifier() -> ps.Parser[String]
-  ps.Parser[String] {
-    Run: func(state: ps.State) -> ps.Reply[String]
-      ps.Reply[String] {
-        Ok: false,
-        Consumed: false,
-        Value: "",
-        State: state,
-        Error: ps.ErrorAt(state.Position, "identifier", ps.EmptyExpected()),
-      }
-    end
-  }
+  func(state: ps.State) -> ps.Reply[String]
+    ps.Reply[String] {
+      Ok: false,
+      Consumed: false,
+      Value: "",
+      State: state,
+      Error: ps.ErrorAt(state.Position, "identifier", ps.EmptyExpected()),
+    }
+  end
 end
 
 func number() -> ps.Parser[String]

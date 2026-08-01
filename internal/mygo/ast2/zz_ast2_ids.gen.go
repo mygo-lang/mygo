@@ -53,139 +53,139 @@ type StmtSliceResult struct {
 }
 
 func AssignExprIDs(decls []Decl) []Decl {
-	result_28 := assignDeclIDs(decls, 1)
-	return result_28.Decls
+	result_38 := assignDeclIDs(decls, 1)
+	return result_38.Decls
 }
 func assignDeclIDs(decls []Decl, nextID int) AssignIDsResult {
-	var expr_38 AssignIDsResult
+	var expr_48 AssignIDsResult
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
-		expr_38 = AssignIDsResult{Decls: []Decl([]Decl{}), NextID: nextID}
+		expr_48 = AssignIDsResult{Decls: []Decl([]Decl{}), NextID: nextID}
 	} else {
-		var expr_37 AssignIDsResult
-		d_29 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), DeclImportDeclCtor("", ""))
-		rest_30 := assignDeclIDs(sliceDrop[Decl](decls, 1), nextID)
-		var expr_36 AssignIDsResult
-		if v_12, ok := d_29.(DeclFuncDecl); ok {
-			var expr_35 AssignIDsResult
-			r_34 := assignExprID(v_12.F4, rest_30.NextID)
-			expr_35 = AssignIDsResult{Decls: MygoIN5SliceM7Prepend(rest_30.Decls, DeclFuncDeclCtor(v_12.F0, v_12.F1, v_12.F2, v_12.F3, r_34.Expr, v_12.F5)), NextID: r_34.NextID}
-			expr_36 = expr_35
+		var expr_47 AssignIDsResult
+		d_39 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), DeclImportDeclCtor("", ""))
+		rest_40 := assignDeclIDs(sliceDrop[Decl](decls, 1), nextID)
+		var expr_46 AssignIDsResult
+		if v_12, ok := d_39.(DeclFuncDecl); ok {
+			var expr_45 AssignIDsResult
+			r_44 := assignExprID(v_12.F4, rest_40.NextID)
+			expr_45 = AssignIDsResult{Decls: MygoIN5SliceM7Prepend(rest_40.Decls, DeclFuncDeclCtor(v_12.F0, v_12.F1, v_12.F2, v_12.F3, r_44.Expr, v_12.F5)), NextID: r_44.NextID}
+			expr_46 = expr_45
 		} else {
-			if v_11, ok := d_29.(DeclImplDecl); ok {
-				var expr_33 AssignIDsResult
-				r_32 := assignImplMethodIDs(v_11.F3, rest_30.NextID)
-				expr_33 = AssignIDsResult{Decls: MygoIN5SliceM7Prepend(rest_30.Decls, DeclImplDeclCtor(v_11.F0, v_11.F1, v_11.F2, r_32.Methods)), NextID: r_32.NextID}
-				expr_36 = expr_33
+			if v_11, ok := d_39.(DeclImplDecl); ok {
+				var expr_43 AssignIDsResult
+				r_42 := assignImplMethodIDs(v_11.F3, rest_40.NextID)
+				expr_43 = AssignIDsResult{Decls: MygoIN5SliceM7Prepend(rest_40.Decls, DeclImplDeclCtor(v_11.F0, v_11.F1, v_11.F2, r_42.Methods)), NextID: r_42.NextID}
+				expr_46 = expr_43
 			} else {
 				{
-					var expr_31 AssignIDsResult
-					expr_31 = AssignIDsResult{Decls: MygoIN5SliceM7Prepend(rest_30.Decls, d_29), NextID: rest_30.NextID}
-					expr_36 = expr_31
+					var expr_41 AssignIDsResult
+					expr_41 = AssignIDsResult{Decls: MygoIN5SliceM7Prepend(rest_40.Decls, d_39), NextID: rest_40.NextID}
+					expr_46 = expr_41
 				}
 			}
 		}
-		expr_37 = expr_36
-		expr_38 = expr_37
+		expr_47 = expr_46
+		expr_48 = expr_47
 	}
-	return expr_38
+	return expr_48
 }
 func assignImplMethodIDs(methods []ImplMethod, nextID int) ImplMethodResult {
-	var expr_43 ImplMethodResult
+	var expr_53 ImplMethodResult
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) == 0 {
-		expr_43 = ImplMethodResult{Methods: []ImplMethod([]ImplMethod{}), NextID: nextID}
+		expr_53 = ImplMethodResult{Methods: []ImplMethod([]ImplMethod{}), NextID: nextID}
 	} else {
-		var expr_42 ImplMethodResult
-		m_39 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), ImplMethod{Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: defaultFuncSig(), Body: EmptyExpr()})
-		r1_40 := assignExprID(m_39.Body, nextID)
-		rest_41 := assignImplMethodIDs(sliceDrop[ImplMethod](methods, 1), r1_40.NextID)
-		expr_42 = ImplMethodResult{Methods: MygoIN5SliceM7Prepend(rest_41.Methods, ImplMethod{Pos: m_39.Pos, Sig: m_39.Sig, Body: r1_40.Expr}), NextID: rest_41.NextID}
-		expr_43 = expr_42
+		var expr_52 ImplMethodResult
+		m_49 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), ImplMethod{Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: defaultFuncSig(), Body: EmptyExpr()})
+		r1_50 := assignExprID(m_49.Body, nextID)
+		rest_51 := assignImplMethodIDs(sliceDrop[ImplMethod](methods, 1), r1_50.NextID)
+		expr_52 = ImplMethodResult{Methods: MygoIN5SliceM7Prepend(rest_51.Methods, ImplMethod{Pos: m_49.Pos, Sig: m_49.Sig, Body: r1_50.Expr}), NextID: rest_51.NextID}
+		expr_53 = expr_52
 	}
-	return expr_43
+	return expr_53
 }
 func defaultFuncSig() FuncSig {
 	return FuncSig{Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string([]string{}), Params: []Param([]Param{}), Ret: None[TypeExpr](), Using: []Constraint([]Constraint{})}
 }
 func assignStmtIDs(stmts []Stmt, nextID int) StmtSliceResult {
-	var expr_48 StmtSliceResult
+	var expr_58 StmtSliceResult
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(stmts) == 0 {
-		expr_48 = StmtSliceResult{Stmts: []Stmt([]Stmt{}), NextID: nextID}
+		expr_58 = StmtSliceResult{Stmts: []Stmt([]Stmt{}), NextID: nextID}
 	} else {
-		var expr_47 StmtSliceResult
-		s_44 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(stmts, 0), StmtExprStmtCtor(EmptyExpr()))
-		r1_45 := assignStmtID(s_44, nextID)
-		rest_46 := assignStmtIDs(sliceDrop[Stmt](stmts, 1), r1_45.NextID)
-		expr_47 = StmtSliceResult{Stmts: MygoIN5SliceM7Prepend(rest_46.Stmts, r1_45.Stmt), NextID: rest_46.NextID}
-		expr_48 = expr_47
+		var expr_57 StmtSliceResult
+		s_54 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(stmts, 0), StmtExprStmtCtor(EmptyExpr()))
+		r1_55 := assignStmtID(s_54, nextID)
+		rest_56 := assignStmtIDs(sliceDrop[Stmt](stmts, 1), r1_55.NextID)
+		expr_57 = StmtSliceResult{Stmts: MygoIN5SliceM7Prepend(rest_56.Stmts, r1_55.Stmt), NextID: rest_56.NextID}
+		expr_58 = expr_57
 	}
-	return expr_48
+	return expr_58
 }
 func assignStmtID(stmt Stmt, nextID int) StmtResult {
-	var expr_70 StmtResult
+	var expr_80 StmtResult
 	if v_23, ok := stmt.(StmtExprStmt); ok {
-		var expr_69 StmtResult
-		r_68 := assignExprID(v_23.F0, nextID)
-		expr_69 = StmtResult{Stmt: StmtExprStmtCtor(r_68.Expr), NextID: r_68.NextID}
-		expr_70 = expr_69
+		var expr_79 StmtResult
+		r_78 := assignExprID(v_23.F0, nextID)
+		expr_79 = StmtResult{Stmt: StmtExprStmtCtor(r_78.Expr), NextID: r_78.NextID}
+		expr_80 = expr_79
 	} else {
 		if v_22, ok := stmt.(StmtLetStmt); ok {
-			var expr_67 StmtResult
-			r_66 := assignExprID(v_22.F0.Value, nextID)
-			expr_67 = StmtResult{Stmt: StmtLetStmtCtor(Bind{Name: v_22.F0.Name, Type: v_22.F0.Type, Value: r_66.Expr}), NextID: r_66.NextID}
-			expr_70 = expr_67
+			var expr_77 StmtResult
+			r_76 := assignExprID(v_22.F0.Value, nextID)
+			expr_77 = StmtResult{Stmt: StmtLetStmtCtor(Bind{Name: v_22.F0.Name, Type: v_22.F0.Type, Value: r_76.Expr}), NextID: r_76.NextID}
+			expr_80 = expr_77
 		} else {
 			if v_21, ok := stmt.(StmtVarStmt); ok {
-				var expr_65 StmtResult
-				r_64 := assignExprID(v_21.F0.Value, nextID)
-				expr_65 = StmtResult{Stmt: StmtVarStmtCtor(Bind{Name: v_21.F0.Name, Type: v_21.F0.Type, Value: r_64.Expr}), NextID: r_64.NextID}
-				expr_70 = expr_65
+				var expr_75 StmtResult
+				r_74 := assignExprID(v_21.F0.Value, nextID)
+				expr_75 = StmtResult{Stmt: StmtVarStmtCtor(Bind{Name: v_21.F0.Name, Type: v_21.F0.Type, Value: r_74.Expr}), NextID: r_74.NextID}
+				expr_80 = expr_75
 			} else {
 				if v_20, ok := stmt.(StmtLetRecStmt); ok {
-					var expr_63 StmtResult
-					r_62 := assignLetRecBindIDs(v_20.F0, nextID)
-					expr_63 = StmtResult{Stmt: StmtLetRecStmtCtor(r_62.Bindings), NextID: r_62.NextID}
-					expr_70 = expr_63
+					var expr_73 StmtResult
+					r_72 := assignLetRecBindIDs(v_20.F0, nextID)
+					expr_73 = StmtResult{Stmt: StmtLetRecStmtCtor(r_72.Bindings), NextID: r_72.NextID}
+					expr_80 = expr_73
 				} else {
 					if v_19, ok := stmt.(StmtTupleLetStmt); ok {
-						var expr_61 StmtResult
-						r_60 := assignExprID(v_19.F1, nextID)
-						expr_61 = StmtResult{Stmt: StmtTupleLetStmtCtor(v_19.F0, r_60.Expr), NextID: r_60.NextID}
-						expr_70 = expr_61
+						var expr_71 StmtResult
+						r_70 := assignExprID(v_19.F1, nextID)
+						expr_71 = StmtResult{Stmt: StmtTupleLetStmtCtor(v_19.F0, r_70.Expr), NextID: r_70.NextID}
+						expr_80 = expr_71
 					} else {
 						if v_18, ok := stmt.(StmtWhileStmt); ok {
-							var expr_59 StmtResult
-							r1_57 := assignExprID(v_18.F0, nextID)
-							r2_58 := assignExprID(v_18.F1, r1_57.NextID)
-							expr_59 = StmtResult{Stmt: StmtWhileStmtCtor(r1_57.Expr, r2_58.Expr), NextID: r2_58.NextID}
-							expr_70 = expr_59
+							var expr_69 StmtResult
+							r1_67 := assignExprID(v_18.F0, nextID)
+							r2_68 := assignExprID(v_18.F1, r1_67.NextID)
+							expr_69 = StmtResult{Stmt: StmtWhileStmtCtor(r1_67.Expr, r2_68.Expr), NextID: r2_68.NextID}
+							expr_80 = expr_69
 						} else {
 							if v_17, ok := stmt.(StmtAssignStmt); ok {
-								var expr_56 StmtResult
-								r1_54 := assignExprID(v_17.F0, nextID)
-								r2_55 := assignExprID(v_17.F1, r1_54.NextID)
-								expr_56 = StmtResult{Stmt: StmtAssignStmtCtor(r1_54.Expr, r2_55.Expr), NextID: r2_55.NextID}
-								expr_70 = expr_56
+								var expr_66 StmtResult
+								r1_64 := assignExprID(v_17.F0, nextID)
+								r2_65 := assignExprID(v_17.F1, r1_64.NextID)
+								expr_66 = StmtResult{Stmt: StmtAssignStmtCtor(r1_64.Expr, r2_65.Expr), NextID: r2_65.NextID}
+								expr_80 = expr_66
 							} else {
 								if v_16, ok := stmt.(StmtReturnWithStmt); ok {
-									var expr_53 StmtResult
-									r_52 := assignExprID(v_16.F0, nextID)
-									expr_53 = StmtResult{Stmt: StmtReturnWithStmtCtor(r_52.Expr), NextID: r_52.NextID}
-									expr_70 = expr_53
+									var expr_63 StmtResult
+									r_62 := assignExprID(v_16.F0, nextID)
+									expr_63 = StmtResult{Stmt: StmtReturnWithStmtCtor(r_62.Expr), NextID: r_62.NextID}
+									expr_80 = expr_63
 								} else {
 									if _, ok := stmt.(StmtReturnStmt); ok {
-										var expr_51 StmtResult
-										expr_51 = StmtResult{Stmt: stmt, NextID: nextID}
-										expr_70 = expr_51
+										var expr_61 StmtResult
+										expr_61 = StmtResult{Stmt: stmt, NextID: nextID}
+										expr_80 = expr_61
 									} else {
 										if _, ok := stmt.(StmtBreakStmt); ok {
-											var expr_50 StmtResult
-											expr_50 = StmtResult{Stmt: stmt, NextID: nextID}
-											expr_70 = expr_50
+											var expr_60 StmtResult
+											expr_60 = StmtResult{Stmt: stmt, NextID: nextID}
+											expr_80 = expr_60
 										} else {
 											if _, ok := stmt.(StmtContinueStmt); ok {
-												var expr_49 StmtResult
-												expr_49 = StmtResult{Stmt: stmt, NextID: nextID}
-												expr_70 = expr_49
+												var expr_59 StmtResult
+												expr_59 = StmtResult{Stmt: stmt, NextID: nextID}
+												expr_80 = expr_59
 											} else {
 												panic("unreachable")
 											}
@@ -199,155 +199,155 @@ func assignStmtID(stmt Stmt, nextID int) StmtResult {
 			}
 		}
 	}
-	return expr_70
+	return expr_80
 }
 func assignLetRecBindIDs(bindings []LetRecBind, nextID int) LetRecBindResult {
-	var expr_75 LetRecBindResult
+	var expr_85 LetRecBindResult
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(bindings) == 0 {
-		expr_75 = LetRecBindResult{Bindings: []LetRecBind([]LetRecBind{}), NextID: nextID}
+		expr_85 = LetRecBindResult{Bindings: []LetRecBind([]LetRecBind{}), NextID: nextID}
 	} else {
-		var expr_74 LetRecBindResult
-		b_71 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, 0), LetRecBind{Name: "", Type: TypeExprUnitTypeCtor(), Value: EmptyExpr()})
-		r_72 := assignExprID(b_71.Value, nextID)
-		rest_73 := assignLetRecBindIDs(sliceDrop[LetRecBind](bindings, 1), r_72.NextID)
-		expr_74 = LetRecBindResult{Bindings: MygoIN5SliceM7Prepend(rest_73.Bindings, LetRecBind{Name: b_71.Name, Type: b_71.Type, Value: r_72.Expr}), NextID: rest_73.NextID}
-		expr_75 = expr_74
+		var expr_84 LetRecBindResult
+		b_81 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, 0), LetRecBind{Name: "", Type: TypeExprUnitTypeCtor(), Value: EmptyExpr()})
+		r_82 := assignExprID(b_81.Value, nextID)
+		rest_83 := assignLetRecBindIDs(sliceDrop[LetRecBind](bindings, 1), r_82.NextID)
+		expr_84 = LetRecBindResult{Bindings: MygoIN5SliceM7Prepend(rest_83.Bindings, LetRecBind{Name: b_81.Name, Type: b_81.Type, Value: r_82.Expr}), NextID: rest_83.NextID}
+		expr_85 = expr_84
 	}
-	return expr_75
+	return expr_85
 }
 func assignExprID(expr Expr, nextID int) ExprResult {
-	newExpr_76 := Expr{ID: nextID, Pos: expr.Pos, Kind: expr.Kind, Type: None[MonoType]()}
-	var expr_120 ExprResult
+	newExpr_86 := Expr{ID: nextID, Pos: expr.Pos, Kind: expr.Kind, Type: None[MonoType]()}
+	var expr_130 ExprResult
 	if _, ok := expr.Kind.(ExprKindIdentExpr); ok {
-		var expr_119 ExprResult
-		expr_119 = ExprResult{Expr: newExpr_76, NextID: nextID + 1}
-		expr_120 = expr_119
+		var expr_129 ExprResult
+		expr_129 = ExprResult{Expr: newExpr_86, NextID: nextID + 1}
+		expr_130 = expr_129
 	} else {
 		if _, ok := expr.Kind.(ExprKindNumberExpr); ok {
-			var expr_118 ExprResult
-			expr_118 = ExprResult{Expr: newExpr_76, NextID: nextID + 1}
-			expr_120 = expr_118
+			var expr_128 ExprResult
+			expr_128 = ExprResult{Expr: newExpr_86, NextID: nextID + 1}
+			expr_130 = expr_128
 		} else {
 			if _, ok := expr.Kind.(ExprKindStringExpr); ok {
-				var expr_117 ExprResult
-				expr_117 = ExprResult{Expr: newExpr_76, NextID: nextID + 1}
-				expr_120 = expr_117
+				var expr_127 ExprResult
+				expr_127 = ExprResult{Expr: newExpr_86, NextID: nextID + 1}
+				expr_130 = expr_127
 			} else {
 				if _, ok := expr.Kind.(ExprKindRuneExpr); ok {
-					var expr_116 ExprResult
-					expr_116 = ExprResult{Expr: newExpr_76, NextID: nextID + 1}
-					expr_120 = expr_116
+					var expr_126 ExprResult
+					expr_126 = ExprResult{Expr: newExpr_86, NextID: nextID + 1}
+					expr_130 = expr_126
 				} else {
 					if _, ok := expr.Kind.(ExprKindBoolExpr); ok {
-						var expr_115 ExprResult
-						expr_115 = ExprResult{Expr: newExpr_76, NextID: nextID + 1}
-						expr_120 = expr_115
+						var expr_125 ExprResult
+						expr_125 = ExprResult{Expr: newExpr_86, NextID: nextID + 1}
+						expr_130 = expr_125
 					} else {
 						if _, ok := expr.Kind.(ExprKindUnitExpr); ok {
-							var expr_114 ExprResult
-							expr_114 = ExprResult{Expr: newExpr_76, NextID: nextID + 1}
-							expr_120 = expr_114
+							var expr_124 ExprResult
+							expr_124 = ExprResult{Expr: newExpr_86, NextID: nextID + 1}
+							expr_130 = expr_124
 						} else {
 							if v_39, ok := expr.Kind.(ExprKindTupleExpr); ok {
-								var expr_113 ExprResult
-								r_112 := assignExprListIDs(v_39.F0, nextID+1)
-								expr_113 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindTupleExprCtor(r_112.Items), Type: None[MonoType]()}, NextID: r_112.NextID}
-								expr_120 = expr_113
+								var expr_123 ExprResult
+								r_122 := assignExprListIDs(v_39.F0, nextID+1)
+								expr_123 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindTupleExprCtor(r_122.Items), Type: None[MonoType]()}, NextID: r_122.NextID}
+								expr_130 = expr_123
 							} else {
 								if v_38, ok := expr.Kind.(ExprKindCallExpr); ok {
-									var expr_111 ExprResult
-									r1_109 := assignExprID(v_38.F0, nextID+1)
-									r2_110 := assignExprListIDs(v_38.F2, r1_109.NextID)
-									expr_111 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindCallExprCtor(r1_109.Expr, v_38.F1, r2_110.Items), Type: None[MonoType]()}, NextID: r2_110.NextID}
-									expr_120 = expr_111
+									var expr_121 ExprResult
+									r1_119 := assignExprID(v_38.F0, nextID+1)
+									r2_120 := assignExprListIDs(v_38.F2, r1_119.NextID)
+									expr_121 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindCallExprCtor(r1_119.Expr, v_38.F1, r2_120.Items), Type: None[MonoType]()}, NextID: r2_120.NextID}
+									expr_130 = expr_121
 								} else {
 									if v_37, ok := expr.Kind.(ExprKindFieldExpr); ok {
-										var expr_108 ExprResult
-										r_107 := assignExprID(v_37.F0, nextID+1)
-										expr_108 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindFieldExprCtor(r_107.Expr, v_37.F1), Type: None[MonoType]()}, NextID: r_107.NextID}
-										expr_120 = expr_108
+										var expr_118 ExprResult
+										r_117 := assignExprID(v_37.F0, nextID+1)
+										expr_118 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindFieldExprCtor(r_117.Expr, v_37.F1), Type: None[MonoType]()}, NextID: r_117.NextID}
+										expr_130 = expr_118
 									} else {
 										if v_36, ok := expr.Kind.(ExprKindUnaryExpr); ok {
-											var expr_106 ExprResult
-											r_105 := assignExprID(v_36.F1, nextID+1)
-											expr_106 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindUnaryExprCtor(v_36.F0, r_105.Expr), Type: None[MonoType]()}, NextID: r_105.NextID}
-											expr_120 = expr_106
+											var expr_116 ExprResult
+											r_115 := assignExprID(v_36.F1, nextID+1)
+											expr_116 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindUnaryExprCtor(v_36.F0, r_115.Expr), Type: None[MonoType]()}, NextID: r_115.NextID}
+											expr_130 = expr_116
 										} else {
 											if v_35, ok := expr.Kind.(ExprKindBinaryExpr); ok {
-												var expr_104 ExprResult
-												r1_102 := assignExprID(v_35.F1, nextID+1)
-												r2_103 := assignExprID(v_35.F2, r1_102.NextID)
-												expr_104 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindBinaryExprCtor(v_35.F0, r1_102.Expr, r2_103.Expr), Type: None[MonoType]()}, NextID: r2_103.NextID}
-												expr_120 = expr_104
+												var expr_114 ExprResult
+												r1_112 := assignExprID(v_35.F1, nextID+1)
+												r2_113 := assignExprID(v_35.F2, r1_112.NextID)
+												expr_114 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindBinaryExprCtor(v_35.F0, r1_112.Expr, r2_113.Expr), Type: None[MonoType]()}, NextID: r2_113.NextID}
+												expr_130 = expr_114
 											} else {
 												if v_34, ok := expr.Kind.(ExprKindIfExpr); ok {
-													var expr_101 ExprResult
-													r1_98 := assignExprID(v_34.F0, nextID+1)
-													r2_99 := assignExprID(v_34.F1, r1_98.NextID)
-													r3_100 := assignExprID(v_34.F2, r2_99.NextID)
-													expr_101 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindIfExprCtor(r1_98.Expr, r2_99.Expr, r3_100.Expr), Type: None[MonoType]()}, NextID: r3_100.NextID}
-													expr_120 = expr_101
+													var expr_111 ExprResult
+													r1_108 := assignExprID(v_34.F0, nextID+1)
+													r2_109 := assignExprID(v_34.F1, r1_108.NextID)
+													r3_110 := assignExprID(v_34.F2, r2_109.NextID)
+													expr_111 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindIfExprCtor(r1_108.Expr, r2_109.Expr, r3_110.Expr), Type: None[MonoType]()}, NextID: r3_110.NextID}
+													expr_130 = expr_111
 												} else {
 													if v_33, ok := expr.Kind.(ExprKindBlockExpr); ok {
-														var expr_97 ExprResult
-														r_96 := assignStmtIDs(v_33.F0, nextID+1)
-														expr_97 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindBlockExprCtor(r_96.Stmts), Type: None[MonoType]()}, NextID: r_96.NextID}
-														expr_120 = expr_97
+														var expr_107 ExprResult
+														r_106 := assignStmtIDs(v_33.F0, nextID+1)
+														expr_107 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindBlockExprCtor(r_106.Stmts), Type: None[MonoType]()}, NextID: r_106.NextID}
+														expr_130 = expr_107
 													} else {
 														if v_32, ok := expr.Kind.(ExprKindSwitchExpr); ok {
-															var expr_95 ExprResult
-															r1_93 := assignExprID(v_32.F0, nextID+1)
-															r2_94 := assignSwitchCaseIDs(v_32.F1, r1_93.NextID)
-															expr_95 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindSwitchExprCtor(r1_93.Expr, r2_94.Cases), Type: None[MonoType]()}, NextID: r2_94.NextID}
-															expr_120 = expr_95
+															var expr_105 ExprResult
+															r1_103 := assignExprID(v_32.F0, nextID+1)
+															r2_104 := assignSwitchCaseIDs(v_32.F1, r1_103.NextID)
+															expr_105 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindSwitchExprCtor(r1_103.Expr, r2_104.Cases), Type: None[MonoType]()}, NextID: r2_104.NextID}
+															expr_130 = expr_105
 														} else {
 															if v_31, ok := expr.Kind.(ExprKindFuncLitExpr); ok {
-																var expr_92 ExprResult
-																r_91 := assignExprID(v_31.F2, nextID+1)
-																expr_92 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindFuncLitExprCtor(v_31.F0, v_31.F1, r_91.Expr), Type: None[MonoType]()}, NextID: r_91.NextID}
-																expr_120 = expr_92
+																var expr_102 ExprResult
+																r_101 := assignExprID(v_31.F2, nextID+1)
+																expr_102 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindFuncLitExprCtor(v_31.F0, v_31.F1, r_101.Expr), Type: None[MonoType]()}, NextID: r_101.NextID}
+																expr_130 = expr_102
 															} else {
 																if v_30, ok := expr.Kind.(ExprKindSliceLitExpr); ok {
-																	var expr_90 ExprResult
-																	r_89 := assignExprListIDs(v_30.F0, nextID+1)
-																	expr_90 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindSliceLitExprCtor(r_89.Items), Type: None[MonoType]()}, NextID: r_89.NextID}
-																	expr_120 = expr_90
+																	var expr_100 ExprResult
+																	r_99 := assignExprListIDs(v_30.F0, nextID+1)
+																	expr_100 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindSliceLitExprCtor(r_99.Items), Type: None[MonoType]()}, NextID: r_99.NextID}
+																	expr_130 = expr_100
 																} else {
 																	if v_29, ok := expr.Kind.(ExprKindTypeAsExpr); ok {
-																		var expr_88 ExprResult
-																		r_87 := assignExprID(v_29.F0, nextID+1)
-																		expr_88 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindTypeAsExprCtor(r_87.Expr, v_29.F1), Type: None[MonoType]()}, NextID: r_87.NextID}
-																		expr_120 = expr_88
+																		var expr_98 ExprResult
+																		r_97 := assignExprID(v_29.F0, nextID+1)
+																		expr_98 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindTypeAsExprCtor(r_97.Expr, v_29.F1), Type: None[MonoType]()}, NextID: r_97.NextID}
+																		expr_130 = expr_98
 																	} else {
 																		if v_28, ok := expr.Kind.(ExprKindStructLitExpr); ok {
-																			var expr_86 ExprResult
-																			r_85 := assignStructLitFieldIDs(v_28.F1, nextID+1)
-																			expr_86 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindStructLitExprCtor(v_28.F0, r_85.Fields), Type: None[MonoType]()}, NextID: r_85.NextID}
-																			expr_120 = expr_86
+																			var expr_96 ExprResult
+																			r_95 := assignStructLitFieldIDs(v_28.F1, nextID+1)
+																			expr_96 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindStructLitExprCtor(v_28.F0, r_95.Fields), Type: None[MonoType]()}, NextID: r_95.NextID}
+																			expr_130 = expr_96
 																		} else {
 																			if v_27, ok := expr.Kind.(ExprKindGenericStructLitExpr); ok {
-																				var expr_84 ExprResult
-																				r_83 := assignStructLitFieldIDs(v_27.F2, nextID+1)
-																				expr_84 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindGenericStructLitExprCtor(v_27.F0, v_27.F1, r_83.Fields), Type: None[MonoType]()}, NextID: r_83.NextID}
-																				expr_120 = expr_84
+																				var expr_94 ExprResult
+																				r_93 := assignStructLitFieldIDs(v_27.F2, nextID+1)
+																				expr_94 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindGenericStructLitExprCtor(v_27.F0, v_27.F1, r_93.Fields), Type: None[MonoType]()}, NextID: r_93.NextID}
+																				expr_130 = expr_94
 																			} else {
 																				if v_26, ok := expr.Kind.(ExprKindInlineGoExpr); ok {
-																					var expr_82 ExprResult
-																					r_81 := assignGoOperandIDs(v_26.F2, nextID+1)
-																					expr_82 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindInlineGoExprCtor(v_26.F0, v_26.F1, r_81.Operands, v_26.F3), Type: None[MonoType]()}, NextID: r_81.NextID}
-																					expr_120 = expr_82
+																					var expr_92 ExprResult
+																					r_91 := assignGoOperandIDs(v_26.F2, nextID+1)
+																					expr_92 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindInlineGoExprCtor(v_26.F0, v_26.F1, r_91.Operands, v_26.F3), Type: None[MonoType]()}, NextID: r_91.NextID}
+																					expr_130 = expr_92
 																				} else {
 																					if v_25, ok := expr.Kind.(ExprKindMapLitExpr); ok {
-																						var expr_80 ExprResult
-																						r_79 := assignMapPairIDs(v_25.F0, nextID+1)
-																						expr_80 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindMapLitExprCtor(r_79.Pairs), Type: None[MonoType]()}, NextID: r_79.NextID}
-																						expr_120 = expr_80
+																						var expr_90 ExprResult
+																						r_89 := assignMapPairIDs(v_25.F0, nextID+1)
+																						expr_90 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindMapLitExprCtor(r_89.Pairs), Type: None[MonoType]()}, NextID: r_89.NextID}
+																						expr_130 = expr_90
 																					} else {
 																						if v_24, ok := expr.Kind.(ExprKindSetLitExpr); ok {
-																							var expr_78 ExprResult
-																							r_77 := assignExprListIDs(v_24.F0, nextID+1)
-																							expr_78 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindSetLitExprCtor(r_77.Items), Type: None[MonoType]()}, NextID: r_77.NextID}
-																							expr_120 = expr_78
+																							var expr_88 ExprResult
+																							r_87 := assignExprListIDs(v_24.F0, nextID+1)
+																							expr_88 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindSetLitExprCtor(r_87.Items), Type: None[MonoType]()}, NextID: r_87.NextID}
+																							expr_130 = expr_88
 																						} else {
 																							panic("unreachable")
 																						}
@@ -372,71 +372,71 @@ func assignExprID(expr Expr, nextID int) ExprResult {
 			}
 		}
 	}
-	return expr_120
-}
-func assignExprListIDs(items []Expr, nextID int) ExprSliceResult {
-	var expr_125 ExprSliceResult
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_125 = ExprSliceResult{Items: []Expr([]Expr{}), NextID: nextID}
-	} else {
-		var expr_124 ExprSliceResult
-		head_121 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), EmptyExpr())
-		r_122 := assignExprID(head_121, nextID)
-		rest_123 := assignExprListIDs(sliceDrop[Expr](items, 1), r_122.NextID)
-		expr_124 = ExprSliceResult{Items: MygoIN5SliceM7Prepend(rest_123.Items, r_122.Expr), NextID: rest_123.NextID}
-		expr_125 = expr_124
-	}
-	return expr_125
-}
-func assignSwitchCaseIDs(cases []SwitchCase, nextID int) SwitchCaseResult {
-	var expr_130 SwitchCaseResult
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) == 0 {
-		expr_130 = SwitchCaseResult{Cases: []SwitchCase([]SwitchCase{}), NextID: nextID}
-	} else {
-		var expr_129 SwitchCaseResult
-		c_126 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), SwitchCase{Pattern: PatternWildcardPatternCtor(), Body: EmptyExpr()})
-		r_127 := assignExprID(c_126.Body, nextID)
-		rest_128 := assignSwitchCaseIDs(sliceDrop[SwitchCase](cases, 1), r_127.NextID)
-		expr_129 = SwitchCaseResult{Cases: MygoIN5SliceM7Prepend(rest_128.Cases, SwitchCase{Pattern: c_126.Pattern, Body: r_127.Expr}), NextID: rest_128.NextID}
-		expr_130 = expr_129
-	}
 	return expr_130
 }
-func assignStructLitFieldIDs(fields []StructLitField, nextID int) StructLitFieldResult {
-	var expr_135 StructLitFieldResult
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) == 0 {
-		expr_135 = StructLitFieldResult{Fields: []StructLitField([]StructLitField{}), NextID: nextID}
+func assignExprListIDs(items []Expr, nextID int) ExprSliceResult {
+	var expr_135 ExprSliceResult
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
+		expr_135 = ExprSliceResult{Items: []Expr([]Expr{}), NextID: nextID}
 	} else {
-		var expr_134 StructLitFieldResult
-		f_131 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), StructLitField{Name: "", Value: EmptyExpr()})
-		r_132 := assignExprID(f_131.Value, nextID)
-		rest_133 := assignStructLitFieldIDs(sliceDrop[StructLitField](fields, 1), r_132.NextID)
-		expr_134 = StructLitFieldResult{Fields: MygoIN5SliceM7Prepend(rest_133.Fields, StructLitField{Name: f_131.Name, Value: r_132.Expr}), NextID: rest_133.NextID}
+		var expr_134 ExprSliceResult
+		head_131 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), EmptyExpr())
+		r_132 := assignExprID(head_131, nextID)
+		rest_133 := assignExprListIDs(sliceDrop[Expr](items, 1), r_132.NextID)
+		expr_134 = ExprSliceResult{Items: MygoIN5SliceM7Prepend(rest_133.Items, r_132.Expr), NextID: rest_133.NextID}
 		expr_135 = expr_134
 	}
 	return expr_135
 }
-func assignGoOperandIDs(operands []GoOperand, nextID int) GoOperandResult {
-	var expr_140 GoOperandResult
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(operands) == 0 {
-		expr_140 = GoOperandResult{Operands: []GoOperand([]GoOperand{}), NextID: nextID}
+func assignSwitchCaseIDs(cases []SwitchCase, nextID int) SwitchCaseResult {
+	var expr_140 SwitchCaseResult
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) == 0 {
+		expr_140 = SwitchCaseResult{Cases: []SwitchCase([]SwitchCase{}), NextID: nextID}
 	} else {
-		var expr_139 GoOperandResult
-		o_136 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0), GoOperand{Name: "", Value: EmptyExpr()})
-		r_137 := assignExprID(o_136.Value, nextID)
-		rest_138 := assignGoOperandIDs(sliceDrop[GoOperand](operands, 1), r_137.NextID)
-		expr_139 = GoOperandResult{Operands: MygoIN5SliceM7Prepend(rest_138.Operands, GoOperand{Name: o_136.Name, Value: r_137.Expr}), NextID: rest_138.NextID}
+		var expr_139 SwitchCaseResult
+		c_136 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), SwitchCase{Pattern: PatternWildcardPatternCtor(), Body: EmptyExpr()})
+		r_137 := assignExprID(c_136.Body, nextID)
+		rest_138 := assignSwitchCaseIDs(sliceDrop[SwitchCase](cases, 1), r_137.NextID)
+		expr_139 = SwitchCaseResult{Cases: MygoIN5SliceM7Prepend(rest_138.Cases, SwitchCase{Pattern: c_136.Pattern, Body: r_137.Expr}), NextID: rest_138.NextID}
 		expr_140 = expr_139
 	}
 	return expr_140
+}
+func assignStructLitFieldIDs(fields []StructLitField, nextID int) StructLitFieldResult {
+	var expr_145 StructLitFieldResult
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) == 0 {
+		expr_145 = StructLitFieldResult{Fields: []StructLitField([]StructLitField{}), NextID: nextID}
+	} else {
+		var expr_144 StructLitFieldResult
+		f_141 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), StructLitField{Name: "", Value: EmptyExpr()})
+		r_142 := assignExprID(f_141.Value, nextID)
+		rest_143 := assignStructLitFieldIDs(sliceDrop[StructLitField](fields, 1), r_142.NextID)
+		expr_144 = StructLitFieldResult{Fields: MygoIN5SliceM7Prepend(rest_143.Fields, StructLitField{Name: f_141.Name, Value: r_142.Expr}), NextID: rest_143.NextID}
+		expr_145 = expr_144
+	}
+	return expr_145
+}
+func assignGoOperandIDs(operands []GoOperand, nextID int) GoOperandResult {
+	var expr_150 GoOperandResult
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(operands) == 0 {
+		expr_150 = GoOperandResult{Operands: []GoOperand([]GoOperand{}), NextID: nextID}
+	} else {
+		var expr_149 GoOperandResult
+		o_146 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0), GoOperand{Name: "", Value: EmptyExpr()})
+		r_147 := assignExprID(o_146.Value, nextID)
+		rest_148 := assignGoOperandIDs(sliceDrop[GoOperand](operands, 1), r_147.NextID)
+		expr_149 = GoOperandResult{Operands: MygoIN5SliceM7Prepend(rest_148.Operands, GoOperand{Name: o_146.Name, Value: r_147.Expr}), NextID: rest_148.NextID}
+		expr_150 = expr_149
+	}
+	return expr_150
 }
 func assignMapPairIDs(pairs []struct {
 	F0 Expr
 	F1 Expr
 }, nextID int) MapPairResult {
-	var expr_148 MapPairResult
+	var expr_158 MapPairResult
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pairs) == 0 {
-		expr_148 = MapPairResult{Pairs: []struct {
+		expr_158 = MapPairResult{Pairs: []struct {
 			F0 Expr
 			F1 Expr
 		}([]struct {
@@ -444,65 +444,97 @@ func assignMapPairIDs(pairs []struct {
 			F1 Expr
 		}{}), NextID: nextID}
 	} else {
-		var expr_147 MapPairResult
-		__tuple_141 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pairs, 0), struct {
+		var expr_157 MapPairResult
+		__tuple_151 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pairs, 0), struct {
 			F0 Expr
 			F1 Expr
 		}{F0: EmptyExpr(), F1: EmptyExpr()})
-		pairItem1_142 := __tuple_141.F0
-		pairItem2_143 := __tuple_141.F1
-		r1_144 := assignExprID(pairItem1_142, nextID)
-		r2_145 := assignExprID(pairItem2_143, r1_144.NextID)
-		rest_146 := assignMapPairIDs(sliceDrop[struct {
+		pairItem1_152 := __tuple_151.F0
+		pairItem2_153 := __tuple_151.F1
+		r1_154 := assignExprID(pairItem1_152, nextID)
+		r2_155 := assignExprID(pairItem2_153, r1_154.NextID)
+		rest_156 := assignMapPairIDs(sliceDrop[struct {
 			F0 Expr
 			F1 Expr
-		}](pairs, 1), r2_145.NextID)
-		expr_147 = MapPairResult{Pairs: MygoIN5SliceM7Prepend(rest_146.Pairs, struct {
+		}](pairs, 1), r2_155.NextID)
+		expr_157 = MapPairResult{Pairs: MygoIN5SliceM7Prepend(rest_156.Pairs, struct {
 			F0 Expr
 			F1 Expr
-		}{F0: r1_144.Expr, F1: r2_145.Expr}), NextID: rest_146.NextID}
-		expr_148 = expr_147
+		}{F0: r1_154.Expr, F1: r2_155.Expr}), NextID: rest_156.NextID}
+		expr_158 = expr_157
 	}
-	return expr_148
+	return expr_158
 }
 func AssignFileExprIDs(file File) File {
 	return File{PackageName: file.PackageName, Decls: AssignExprIDs(file.Decls), SourceName: file.SourceName, Line: file.Line, Column: file.Column, DeclPositions: file.DeclPositions}
 }
 func sliceDrop[A any](items []A, n int) []A {
-	var expr_149 []A
-	if n <= 0 || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_149 = items
-	} else {
-		expr_149 = sliceDrop[A](sliceTail[A](items), n-1)
-	}
-	return expr_149
+	return __mygo_mt_ast2_slicedrop[A](items, n, 0)
 }
 func sliceTail[A any](items []A) []A {
 	return sliceTailLoop[A](items, 1, []A([]A{}))
 }
 func sliceTailLoop[A any](items []A, index int, out []A) []A {
-	var expr_155 []A
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-		expr_155 = out
-	} else {
-		var expr_154 []A
-		item_150 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
-		var expr_153 []A
-		if v_47, ok := item_150.(OptionSome[A]); ok {
-			var expr_152 []A
-			expr_152 = sliceTailLoop[A](items, index+1, MygoIN5SliceM6Append(out, v_47.F0))
-			expr_153 = expr_152
-		} else {
-			if _, ok := item_150.(OptionNone[A]); ok {
-				var expr_151 []A
-				expr_151 = out
-				expr_153 = expr_151
+	return __mygo_mt_ast2_slicetailloop[A](items, index, out, 0)
+}
+func __mygo_mt_ast2_slicedrop[A any](items []A, n int, __mygo_state int) []A {
+	for {
+		switch __mygo_state {
+		case 0:
+			var expr_167 []A
+			if n <= 0 || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
+				expr_167 = items
 			} else {
-				panic("unreachable")
+				__mygo_next_0 := sliceTail[A](items)
+				__mygo_next_1 := n - 1
+				items = __mygo_next_0
+				n = __mygo_next_1
+				__mygo_state = 0
+				continue
 			}
+			return expr_167
+		default:
+			panic("mygo: invalid mutual-tailcall state")
 		}
-		expr_154 = expr_153
-		expr_155 = expr_154
 	}
-	return expr_155
+}
+func __mygo_mt_ast2_slicetailloop[A any](items []A, index int, out []A, __mygo_state int) []A {
+	for {
+		switch __mygo_state {
+		case 0:
+			var expr_179 []A
+			if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+				expr_179 = out
+			} else {
+				var expr_178 []A
+				item_174 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+				var expr_177 []A
+				if v_51, ok := item_174.(OptionSome[A]); ok {
+					var expr_176 []A
+					__mygo_next_0 := items
+					__mygo_next_1 := index + 1
+					__mygo_next_2 := MygoIN5SliceM6Append(out, v_51.F0)
+					items = __mygo_next_0
+					index = __mygo_next_1
+					out = __mygo_next_2
+					__mygo_state = 0
+					continue
+					expr_177 = expr_176
+				} else {
+					if _, ok := item_174.(OptionNone[A]); ok {
+						var expr_175 []A
+						expr_175 = out
+						expr_177 = expr_175
+					} else {
+						panic("unreachable")
+					}
+				}
+				expr_178 = expr_177
+				expr_179 = expr_178
+			}
+			return expr_179
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
 }
