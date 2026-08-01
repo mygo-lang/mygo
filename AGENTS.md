@@ -47,6 +47,8 @@
 - **Per‑file code generation, multiline braces**: [docs/compiler/genfiles.md](docs/compiler/genfiles.md)
   - Per‑`.mygo` file generation to `.gen.go`, HKT type generation
   - Multiline brace NEWLINE support
+- **Mutual tail-call optimization**: [docs/compiler/mutual-tailcall.md](docs/compiler/mutual-tailcall.md)
+  - SCC-based trampoline lowering while retaining exported function names
 
 ## Maintenance Information
 

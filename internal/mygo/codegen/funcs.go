@@ -22,6 +22,9 @@ func isUnitType(t TypeExpr) bool {
 
 // genFuncDecl generates a Go function declaration from a MyGO FuncDecl.
 func (g *gen) genFuncDecl(d *FuncDecl) (ast.Decl, error) {
+	if plan := g.mutualTail[d]; plan != nil && !g.generatingMutualTail {
+		return g.genMutualTailWrapper(d, plan)
+	}
 	retTypes := g.goReturnTypes(d.Ret, typeParamSet(d.TypeParams))
 	retType := ""
 	if len(retTypes) == 1 {
