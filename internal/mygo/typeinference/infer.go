@@ -105,6 +105,19 @@ func InferPackage(pkg *PkgInfo, state *InferState) (*TypedInfo, error) {
 	// Build initial type environment with built-in types and prelude
 	env := initialTypeEnv(pkg)
 
+	// Function signatures can reference aliases exported by MyGO imports, so
+	// load imports before those signatures are pre-registered.
+	for _, decl := range pkg.Decls {
+		if _, ok := decl.(*ImportDecl); !ok {
+			continue
+		}
+		var err error
+		env, err = inferDecl(decl, env, state, info, pkg)
+		if err != nil {
+			return nil, errorAtNode(pkg, decl, err)
+		}
+	}
+
 	// For test packages (name ends with "_test"), auto-import the main package
 	// symbols via dot-import effect. This allows test files to reference
 	// exported symbols without qualification. We register main package
@@ -180,7 +193,7 @@ func funcDeclSignatureScheme(fn *FuncDecl, env TypeEnv, state *InferState) *Sche
 	if fn.Ret != nil {
 		retType = typeFromASTWithParams(fn.Ret, typeParamVars)
 	}
-	return Generalize(env, TFunc{Args: paramTypes, Ret: retType}, nil)
+	return Generalize(env, expandImportedTypeAliases(state, TFunc{Args: paramTypes, Ret: retType}), nil)
 }
 
 func sourceFileFor(pkg *PkgInfo, node any) string {
@@ -503,11 +516,11 @@ func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo,
 
 	paramTypes := make([]MonoType, len(d.Params))
 	for i, p := range d.Params {
-		paramTypes[i] = typeFromASTWithParams(p.Type, tpMapping)
+		paramTypes[i] = expandImportedTypeAliases(state, typeFromASTWithParams(p.Type, tpMapping))
 	}
 	var retType MonoType
 	if d.Ret != nil {
-		retType = typeFromASTWithParams(d.Ret, tpMapping)
+		retType = expandImportedTypeAliases(state, typeFromASTWithParams(d.Ret, tpMapping))
 	} else {
 		retType = TUnit{}
 	}
@@ -574,7 +587,7 @@ func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo,
 		}
 
 		// Apply inferred substitution to the return type
-		inferredRetType := s.ApplyMT(bodyType)
+		inferredRetType := expandImportedTypeAliases(state, s.ApplyMT(bodyType))
 
 		// If the declared return type is Unit, skip unification — the last
 		// expression's value is discarded (void context).  Otherwise unify.
@@ -589,7 +602,7 @@ func inferFuncDecl(d *FuncDecl, env TypeEnv, state *InferState, info *TypedInfo,
 				// Force function return type to TUnit{} (void).
 				funcType = TFunc{Args: paramTypes, Ret: TUnit{}}
 			} else {
-				declaredRetType := s.ApplyMT(retType)
+				declaredRetType := expandImportedTypeAliases(state, s.ApplyMT(retType))
 				if goFFIRefAutoWrapsToOption(d.Body, inferredRetType, declaredRetType) {
 					inferredRetType = declaredRetType
 				} else {
@@ -627,7 +640,7 @@ func inferLetDecl(d *LetStmt, env TypeEnv, state *InferState, info *TypedInfo) (
 
 	// If there's an explicit type annotation, unify with it
 	if d.Type != nil {
-		annotType := typeFromAST(d.Type)
+		annotType := expandImportedTypeAliases(state, typeFromAST(d.Type))
 		var err error
 		s, err = Unify(valType, annotType, s)
 		if err != nil {
@@ -679,7 +692,7 @@ func inferLetRecStmt(d *LetRecStmt, env TypeEnv, state *InferState, info *TypedI
 			return nil, fmt.Errorf("duplicate letrec binding %q", b.Name)
 		}
 		seen[b.Name] = struct{}{}
-		annotType := typeFromAST(b.Type)
+		annotType := expandImportedTypeAliases(state, typeFromAST(b.Type))
 		sch := &Scheme{Body: QualifiedType{Body: annotType}}
 		recEnv = recEnv.Extend(b.Name, sch)
 		if info != nil {
@@ -692,7 +705,7 @@ func inferLetRecStmt(d *LetRecStmt, env TypeEnv, state *InferState, info *TypedI
 			return nil, wrapInferenceError("letrec binding %q: %w", err, b.Name)
 		}
 		valType = s.ApplyMT(valType)
-		annotType := typeFromAST(b.Type)
+		annotType := expandImportedTypeAliases(state, typeFromAST(b.Type))
 		s, err = Unify(valType, annotType, s)
 		if err != nil {
 			return nil, wrapInferenceError("letrec binding %q: type annotation mismatch: %w", err, b.Name)
@@ -944,7 +957,7 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 			if err != nil {
 				return nil, nil, nil, wrapInferenceError("call type mismatch: %w", err)
 			}
-			return argSubst.ApplyMT(retVar), argSubst, allPreds, nil
+			return expandImportedTypeAliases(state, argSubst.ApplyMT(retVar)), argSubst, allPreds, nil
 		}
 		if id, ok := field.Expr.(*IdentExpr); ok && id.Name == "Ref" && field.Field == "new" {
 			return inferRefNew(env, n, state)
@@ -1047,6 +1060,10 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 
 	// Apply accumulated substitution to callee
 	calleeType = argSubst.ApplyMT(calleeType)
+	calleeType = expandImportedTypeAliases(state, calleeType)
+	for i, argType := range argTypes {
+		argTypes[i] = expandImportedTypeAliases(state, argSubst.ApplyMT(argType))
+	}
 
 	if fn, ok := calleeType.(TFunc); ok && fn.Variadic {
 		return inferVariadicCall(fn, argTypes, argSubst, allPreds)
@@ -1066,7 +1083,7 @@ func inferCall(env TypeEnv, n *CallExpr, state *InferState) (MonoType, Subst, []
 
 	// Apply substitution to get actual return type
 	returnType := argSubst.ApplyMT(retVar)
-	return returnType, argSubst, allPreds, nil
+	return expandImportedTypeAliases(state, returnType), argSubst, allPreds, nil
 }
 
 func inferKnownFunctionCall(env TypeEnv, args []Expr, fn TFunc, state *InferState, label string) (MonoType, Subst, []Predicate, error) {
@@ -1092,7 +1109,7 @@ func inferKnownFunctionCall(env TypeEnv, args []Expr, fn TFunc, state *InferStat
 	if err != nil {
 		return nil, nil, nil, wrapInferenceError("call type mismatch: %w", err)
 	}
-	return argSubst.ApplyMT(retVar), argSubst, allPreds, nil
+	return expandImportedTypeAliases(state, argSubst.ApplyMT(retVar)), argSubst, allPreds, nil
 }
 
 func structFunctionFieldType(receiverType MonoType, fieldName string, state *InferState) (TFunc, bool) {
@@ -1384,7 +1401,8 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 			if sch, ok := pkg.Funcs[n.Field]; ok {
 				inst := Instantiate(sch, state)
 				qualified := qualifyMyGoType(id.Name, pkg.Types, inst)
-				return qualified, make(Subst), sch.Body.Predicates, nil
+				expanded := expandImportedTypeAliases(state, qualified)
+				return expanded, make(Subst), sch.Body.Predicates, nil
 			}
 			if _, ok := pkg.Types[n.Field]; ok {
 				return TCon{Name: id.Name + "." + n.Field}, make(Subst), nil, nil
@@ -1816,7 +1834,7 @@ func inferFuncLit(env TypeEnv, n *FuncLitExpr, state *InferState) (MonoType, Sub
 	paramTypes := make([]MonoType, len(n.Params))
 	for i, p := range n.Params {
 		if p.Type != nil {
-			paramTypes[i] = typeFromASTInEnv(p.Type, env, state)
+			paramTypes[i] = expandImportedTypeAliases(state, typeFromASTInEnv(p.Type, env, state))
 		} else {
 			paramTypes[i] = TVar{ID: state.Fresh()}
 		}
@@ -1832,7 +1850,7 @@ func inferFuncLit(env TypeEnv, n *FuncLitExpr, state *InferState) (MonoType, Sub
 
 	// If there's a declared return type, unify with it
 	if n.Ret != nil {
-		retType := typeFromASTInEnv(n.Ret, env, state)
+		retType := expandImportedTypeAliases(state, typeFromASTInEnv(n.Ret, env, state))
 		var err error
 		s, err = Unify(bodyType, retType, s)
 		if err != nil {
@@ -2308,7 +2326,7 @@ func inferSliceLit(env TypeEnv, n *SliceLitExpr, state *InferState) (MonoType, S
 	if len(n.Elems) == 0 {
 		// Empty slice: requires a type from annotation or context
 		if n.Elem != nil {
-			elemType := typeFromAST(n.Elem)
+			elemType := expandImportedTypeAliases(state, typeFromAST(n.Elem))
 			return TCon{Name: "Slice", Args: []MonoType{elemType}}, make(Subst), nil, nil
 		}
 		// Create a fresh element type variable
@@ -2833,6 +2851,67 @@ func qualifyMyGoType(alias string, pkgTypes map[string]struct{}, t MonoType) Mon
 		return t
 	}
 	return t
+}
+
+// expandImportedTypeAliases makes aliases from imported MyGO packages
+// transparent to inference, while code generation retains their public names.
+func expandImportedTypeAliases(state *InferState, t MonoType) MonoType {
+	switch t := t.(type) {
+	case TCon:
+		args := make([]MonoType, len(t.Args))
+		for i, arg := range t.Args {
+			args[i] = expandImportedTypeAliases(state, arg)
+		}
+		if alias, typeName, ok := splitQualifiedName(t.Name); ok && state != nil && state.MyGoPackages != nil {
+			pkg := state.MyGoPackages[alias]
+			if pkg == nil {
+				// Imports normally use their explicit alias as the map key. Fall
+				// back to the package's declared name for metadata loaded through
+				// a dot/default import path.
+				for _, candidate := range state.MyGoPackages {
+					if candidate.Name == alias {
+						pkg = candidate
+						break
+					}
+				}
+			}
+			if pkg == nil || pkg.TypeAliases[typeName] == nil {
+				for _, candidate := range state.MyGoPackages {
+					if candidate.TypeAliases[typeName] != nil {
+						pkg = candidate
+						break
+					}
+				}
+			}
+			if pkg != nil {
+				if decl := pkg.TypeAliases[typeName]; decl != nil && len(decl.TypeParams) == len(args) {
+					params := make(map[string]MonoType, len(decl.TypeParams))
+					for i, param := range decl.TypeParams {
+						params[param] = args[i]
+					}
+					expanded := typeFromASTWithParams(decl.Type, params)
+					expanded = qualifyMyGoType(alias, pkg.Types, expanded)
+					return expandImportedTypeAliases(state, expanded)
+				}
+			}
+		}
+		return TCon{Name: t.Name, Args: args}
+	case TFunc:
+		args := make([]MonoType, len(t.Args))
+		for i, arg := range t.Args {
+			args[i] = expandImportedTypeAliases(state, arg)
+		}
+		return TFunc{Args: args, Ret: expandImportedTypeAliases(state, t.Ret), Variadic: t.Variadic}
+	default:
+		return t
+	}
+}
+
+// ExpandImportedTypeAliases resolves package-qualified aliases in t using the
+// imported package metadata captured during inference. It is exported for
+// validation, which must compare types using the same alias semantics.
+func ExpandImportedTypeAliases(t MonoType, packages map[string]*MyGoPackageInfo) MonoType {
+	return expandImportedTypeAliases(&InferState{MyGoPackages: packages}, t)
 }
 
 func containsDot(s string) bool {

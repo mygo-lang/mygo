@@ -201,15 +201,16 @@ type InferState struct {
 }
 
 type MyGoPackageInfo struct {
-	Alias      string
-	Path       string
-	Name       string
-	Funcs      map[string]*Scheme
-	Types      map[string]struct{}
-	Structs    map[string]*StructDecl // struct name -> declaration
-	Enums      map[string]*EnumDecl
-	Interfaces map[string]*InterfaceDecl
-	Impls      []*ImplDecl
+	Alias       string
+	Path        string
+	Name        string
+	Funcs       map[string]*Scheme
+	Types       map[string]struct{}
+	TypeAliases map[string]*TypeAliasDecl
+	Structs     map[string]*StructDecl // struct name -> declaration
+	Enums       map[string]*EnumDecl
+	Interfaces  map[string]*InterfaceDecl
+	Impls       []*ImplDecl
 }
 
 func NewInferState() *InferState {

@@ -106,37 +106,57 @@ end
 # ----- number -----
 
 func pNumber() -> ps.Parser[JsonValue]
-  ps.Parser[JsonValue] {
-    Run: func(state: ps.State) -> ps.Reply[JsonValue]
-      # Check if we can read at least one char
-      let r1 = ps.PeekRune(state)
-      if !r1.Ok then
+  func(state: ps.State) -> ps.Reply[JsonValue]
+    # Check if we can read at least one char
+    let r1 = ps.PeekRune(state)
+    if !r1.Ok then
+      return ps.Reply[JsonValue] {
+        Ok: false, Consumed: false, Value: Zero(),
+        State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())
+      }
+    end
+
+    var curState = state
+    var runes: Slice[Rune] = []
+
+    # Optional '-'
+    let rSign = ps.PeekRune(curState)
+    if rSign.Ok && rSign.Value == '-' then
+      runes = runes.Append('-')
+      curState = ps.AdvanceRune(curState)
+    end
+
+    # At least one digit
+    let rFirst = ps.PeekRune(curState)
+    if !rFirst.Ok || rFirst.Value < '0' || rFirst.Value > '9' then
+      return ps.Reply[JsonValue] {
+        Ok: false, Consumed: false, Value: Zero(),
+        State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())
+      }
+    end
+
+    # Read integer part
+    while true
+      let rn = ps.PeekRune(curState)
+      if !rn.Ok then break end
+      if rn.Value < '0' || rn.Value > '9' then break end
+      runes = runes.Append(rn.Value)
+      curState = ps.AdvanceRune(curState)
+    end
+
+    # Optional fractional part
+    let rDot = ps.PeekRune(curState)
+    if rDot.Ok && rDot.Value == '.' then
+      runes = runes.Append('.')
+      curState = ps.AdvanceRune(curState)
+      # At least one digit after '.'
+      let rFrac = ps.PeekRune(curState)
+      if !rFrac.Ok || rFrac.Value < '0' || rFrac.Value > '9' then
         return ps.Reply[JsonValue] {
           Ok: false, Consumed: false, Value: Zero(),
           State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())
         }
       end
-
-      var curState = state
-      var runes: Slice[Rune] = []
-
-      # Optional '-'
-      let rSign = ps.PeekRune(curState)
-      if rSign.Ok && rSign.Value == '-' then
-        runes = runes.Append('-')
-        curState = ps.AdvanceRune(curState)
-      end
-
-      # At least one digit
-      let rFirst = ps.PeekRune(curState)
-      if !rFirst.Ok || rFirst.Value < '0' || rFirst.Value > '9' then
-        return ps.Reply[JsonValue] {
-          Ok: false, Consumed: false, Value: Zero(),
-          State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())
-        }
-      end
-
-      # Read integer part
       while true
         let rn = ps.PeekRune(curState)
         if !rn.Ok then break end
@@ -144,75 +164,53 @@ func pNumber() -> ps.Parser[JsonValue]
         runes = runes.Append(rn.Value)
         curState = ps.AdvanceRune(curState)
       end
+    end
 
-      # Optional fractional part
-      let rDot = ps.PeekRune(curState)
-      if rDot.Ok && rDot.Value == '.' then
-        runes = runes.Append('.')
+    # Optional exponent part
+    let rExp = ps.PeekRune(curState)
+    if rExp.Ok && (rExp.Value == 'e' || rExp.Value == 'E') then
+      runes = runes.Append(rExp.Value)
+      curState = ps.AdvanceRune(curState)
+      # Optional sign after e/E
+      let rSign2 = ps.PeekRune(curState)
+      if rSign2.Ok && (rSign2.Value == '+' || rSign2.Value == '-') then
+        runes = runes.Append(rSign2.Value)
         curState = ps.AdvanceRune(curState)
-        # At least one digit after '.'
-        let rFrac = ps.PeekRune(curState)
-        if !rFrac.Ok || rFrac.Value < '0' || rFrac.Value > '9' then
-          return ps.Reply[JsonValue] {
-            Ok: false, Consumed: false, Value: Zero(),
-            State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())
-          }
-        end
-        while true
-          let rn = ps.PeekRune(curState)
-          if !rn.Ok then break end
-          if rn.Value < '0' || rn.Value > '9' then break end
-          runes = runes.Append(rn.Value)
-          curState = ps.AdvanceRune(curState)
-        end
       end
-
-      # Optional exponent part
-      let rExp = ps.PeekRune(curState)
-      if rExp.Ok && (rExp.Value == 'e' || rExp.Value == 'E') then
-        runes = runes.Append(rExp.Value)
+      # At least one digit after e/E
+      let rExpDig = ps.PeekRune(curState)
+      if !rExpDig.Ok || rExpDig.Value < '0' || rExpDig.Value > '9' then
+        return ps.Reply[JsonValue] {
+          Ok: false, Consumed: false, Value: Zero(),
+          State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())
+        }
+      end
+      while true
+        let rn = ps.PeekRune(curState)
+        if !rn.Ok then break end
+        if rn.Value < '0' || rn.Value > '9' then break end
+        runes = runes.Append(rn.Value)
         curState = ps.AdvanceRune(curState)
-        # Optional sign after e/E
-        let rSign2 = ps.PeekRune(curState)
-        if rSign2.Ok && (rSign2.Value == '+' || rSign2.Value == '-') then
-          runes = runes.Append(rSign2.Value)
-          curState = ps.AdvanceRune(curState)
-        end
-        # At least one digit after e/E
-        let rExpDig = ps.PeekRune(curState)
-        if !rExpDig.Ok || rExpDig.Value < '0' || rExpDig.Value > '9' then
-          return ps.Reply[JsonValue] {
-            Ok: false, Consumed: false, Value: Zero(),
-            State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())
-          }
-        end
-        while true
-          let rn = ps.PeekRune(curState)
-          if !rn.Ok then break end
-          if rn.Value < '0' || rn.Value > '9' then break end
-          runes = runes.Append(rn.Value)
-          curState = ps.AdvanceRune(curState)
-        end
-      end
-
-      # Convert collected runes to float
-      let numStr = String.FromRunes(runes)
-      switch strconv.ParseFloat(numStr, 64)
-        case Ok(f) then
-          ps.Reply[JsonValue] {
-            Ok: true, Consumed: true, Value: JsonValue.JNumber(f),
-            State: curState, Error: ps.EmptyError(curState.Position)
-          }
-        end
-        case Err(err) then
-          ps.Reply[JsonValue] {
-            Ok: false, Consumed: true, Value: Zero(),
-            State: curState, Error:  ps.ErrorAt(state.Position, err.Error(), ps.EmptyExpected())
-          }
-        end
       end
     end
-  }
+
+    # Convert collected runes to float
+    let numStr = String.FromRunes(runes)
+    switch strconv.ParseFloat(numStr, 64)
+      case Ok(f) then
+        ps.Reply[JsonValue] {
+          Ok: true, Consumed: true, Value: JsonValue.JNumber(f),
+          State: curState, Error: ps.EmptyError(curState.Position)
+        }
+      end
+      case Err(err) then
+        ps.Reply[JsonValue] {
+          Ok: false, Consumed: true, Value: Zero(),
+          State: curState, Error:  ps.ErrorAt(state.Position, err.Error(), ps.EmptyExpected())
+        }
+      end
+    end
+  end
 end
 
 # ----- string -----
@@ -281,11 +279,9 @@ func ParseJson(input: String) -> Result[JsonValue, String]
   let strP = pString()
 
   letrec
-    valueP: ps.Parser[JsonValue] = ps.Parser[JsonValue] {
-      Run: func(state: ps.State) -> ps.Reply[JsonValue]
-        ws(ps.PChoice([nullP, boolP, numP, strP, arrP, objP])).Run(state)
-      end
-    }
+    valueP: ps.Parser[JsonValue] = func(state: ps.State) -> ps.Reply[JsonValue]
+      ws(ps.PChoice([nullP, boolP, numP, strP, arrP, objP]))(state)
+    end
 
     # ---- array: "[" ws value (ws "," ws value)* ws "]" ----
     arrP: ps.Parser[JsonValue] = ps.PMap(
@@ -297,59 +293,57 @@ func ParseJson(input: String) -> Result[JsonValue, String]
 
     # ---- object: "{" pair ("," pair)* "}" ----
     # pair: string ":" value
-    pairP: ps.Parser[(String, JsonValue)] = ps.Parser[(String, JsonValue)] {
-      Run: func(s: ps.State) -> ps.Reply[(String, JsonValue)]
-        # Parse key (string)
-        let kr = ws(pString()).Run(s)
-        if !kr.Ok then
-          return ps.Reply[(String, JsonValue)] {
-            Ok: kr.Ok,
-            Consumed: kr.Consumed,
-            State: kr.State,
-            Error: kr.Error,
-            Value: ("", JsonValue.JNull)
-          }
-        end
-
-        # Extract string value from JString
-        let keyStr = switch kr.Value
-          case JString(kv) => kv as String
-          case _ => ""
-        end
-        
-        # Parse ":"
-        let cr = ws(ps.PChar(':')).Run(kr.State)
-        if !cr.Ok then
-          return ps.Reply[(String, JsonValue)] {
-            Ok: cr.Ok,
-            Consumed: cr.Consumed,
-            State: cr.State,
-            Error: cr.Error,
-            Value: ("", JsonValue.JNull)
-          }
-        end
-        
-        # Parse value
-        let vr = valueP.Run(cr.State)
-        if !vr.Ok then
-          return ps.Reply[(String, JsonValue)] {
-            Ok: vr.Ok,
-            Consumed: vr.Consumed,
-            State: vr.State,
-            Error: vr.Error,
-            Value: ("", JsonValue.JNull)
-          }
-        end
-        
-        ps.Reply[(String, JsonValue)] {
-          Ok: true,
-          Consumed: true,
-          Value: (keyStr, vr.Value),
-          State: vr.State,
-          Error: ps.EmptyError(vr.State.Position),
+    pairP: ps.Parser[(String, JsonValue)] = func(s: ps.State) -> ps.Reply[(String, JsonValue)]
+      # Parse key (string)
+      let kr = ws(pString())(s)
+      if !kr.Ok then
+        return ps.Reply[(String, JsonValue)] {
+          Ok: kr.Ok,
+          Consumed: kr.Consumed,
+          State: kr.State,
+          Error: kr.Error,
+          Value: ("", JsonValue.JNull)
         }
       end
-    }
+
+      # Extract string value from JString
+      let keyStr = switch kr.Value
+        case JString(kv) => kv as String
+        case _ => ""
+      end
+      
+      # Parse ":"
+      let cr = ws(ps.PChar(':'))(kr.State)
+      if !cr.Ok then
+        return ps.Reply[(String, JsonValue)] {
+          Ok: cr.Ok,
+          Consumed: cr.Consumed,
+          State: cr.State,
+          Error: cr.Error,
+          Value: ("", JsonValue.JNull)
+        }
+      end
+      
+      # Parse value
+      let vr = valueP(cr.State)
+      if !vr.Ok then
+        return ps.Reply[(String, JsonValue)] {
+          Ok: vr.Ok,
+          Consumed: vr.Consumed,
+          State: vr.State,
+          Error: vr.Error,
+          Value: ("", JsonValue.JNull)
+        }
+      end
+      
+      ps.Reply[(String, JsonValue)] {
+        Ok: true,
+        Consumed: true,
+        Value: (keyStr, vr.Value),
+        State: vr.State,
+        Error: ps.EmptyError(vr.State.Position),
+      }
+    end
 
     objP: ps.Parser[JsonValue] = ps.PMap(
       ps.PBetween(ws(ps.PChar('{')), ps.PSepBy(pairP, ws(ps.PChar(','))), ws(ps.PChar('}'))),
