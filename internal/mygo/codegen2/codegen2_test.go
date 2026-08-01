@@ -18,6 +18,78 @@ func TestGenerateSourceBootstrapsAst2(t *testing.T) {
 	assertBootstrapsMyGOFile(t, filepath.Join("..", "ast2", "ast2.mygo"))
 }
 
+func TestSliceDropReturnsSuffixView(t *testing.T) {
+	items := []int{1, 2, 3}
+	got := sliceDrop(items, 1)
+	if len(got) != 2 || got[0] != 2 || got[1] != 3 {
+		t.Fatalf("sliceDrop(items, 1) = %v, want [2 3]", got)
+	}
+	got[0] = 9
+	if items[1] != 9 {
+		t.Fatalf("sliceDrop copied its result: items = %v", items)
+	}
+	if got := sliceDrop(items, -1); len(got) != len(items) {
+		t.Fatalf("sliceDrop(items, -1) length = %d, want %d", len(got), len(items))
+	}
+	if got := sliceDrop(items, len(items)); len(got) != 0 {
+		t.Fatalf("sliceDrop(items, len(items)) = %v, want empty", got)
+	}
+}
+
+func TestPackageIndexCollectsLoweringMetadata(t *testing.T) {
+	src := `package sample
+
+struct User
+  Name: String
+end
+
+enum Flag
+  Ready
+end
+
+interface Pretty[A]
+  func Show(value: A) -> String
+end
+
+impl IntPretty: Pretty[Int]
+  func Show(value: Int) -> String
+    "pretty"
+  end
+end
+
+func render[A](value: A) -> String using Pretty[A]
+  value.Show()
+end
+`
+	parsed := parseSourceAsAst2(src)
+	file, ok := parsed.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
+	}
+	index := newPackageIndex(file.F0.Decls)
+	if len(index.StructFields["User"]) != 1 {
+		t.Fatalf("struct fields = %#v, want User.Name", index.StructFields)
+	}
+	if index.EnumValueConstructors["Flag.Ready"] == "" || index.EnumVariantOwners["Ready"] != "Flag" {
+		t.Fatalf("enum metadata is incomplete: constructors=%#v owners=%#v", index.EnumValueConstructors, index.EnumVariantOwners)
+	}
+	if len(index.InterfaceMethods["Pretty"]) != 1 || len(index.InterfaceTypeParams["Pretty"]) != 1 {
+		t.Fatalf("interface metadata is incomplete: methods=%#v params=%#v", index.InterfaceMethods, index.InterfaceTypeParams)
+	}
+	if !index.NamedImpls["IntPretty"] {
+		t.Fatalf("named impls = %#v, want IntPretty", index.NamedImpls)
+	}
+	if got := index.CallDictionaries["render"]; len(got) != 1 || got[0] != "Show" {
+		t.Fatalf("call dictionaries = %#v, want render: Show", index.CallDictionaries)
+	}
+	if got := index.CallRequirements["render"]; len(got) != 1 || got[0].Interface != "Pretty" || got[0].Method != "Show" {
+		t.Fatalf("call requirements = %#v, want Pretty.Show", index.CallRequirements)
+	}
+	if len(index.PackageCandidates["Pretty.Show"]) != 1 || len(index.TypeclassCandidates) != 1 {
+		t.Fatalf("impl candidates are incomplete: %#v", index.PackageCandidates)
+	}
+}
+
 func TestGenerateSourceBootstrapsPrelude(t *testing.T) {
 	assertBootstrapsMyGOFile(t, filepath.Join("..", "..", "..", "prelude", "prelude.mygo"))
 }
@@ -148,14 +220,14 @@ func TestGenerateSourceAllowsExhaustiveVariantSwitchWithoutWildcard(t *testing.T
 	src := `package sample
 
 enum Maybe[A]
-  Some(A)
-  None
+  Have(A)
+  Nothing
 end
 
 func unwrap(value: Maybe[Int]) -> Int
   switch value
-    case Some(item) => item
-    case None => 0
+    case Have(item) => item
+    case Nothing => 0
   end
 end
 `
@@ -658,14 +730,14 @@ func TestGenerateSourceLowersVariantSwitchWithBinding(t *testing.T) {
 	src := `package sample
 
 enum Maybe
-  Some(Int)
-  None
+  Have(Int)
+  Nothing
 end
 
 func unwrap(value: Maybe) -> Int
   switch value
-    case Some(item) => item
-    case None => 0
+    case Have(item) => item
+    case Nothing => 0
     case _ => 0
   end
 end
@@ -677,7 +749,7 @@ end
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
 	code := ok.F0
-	if !strings.Contains(code, "value.(MaybeSome)") || !strings.Contains(code, ".F0") {
+	if !strings.Contains(code, "value.(MaybeHave)") || !strings.Contains(code, ".F0") {
 		t.Fatalf("generated variant switch is missing assertion or field binding:\n%s", code)
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", code, 0); err != nil {

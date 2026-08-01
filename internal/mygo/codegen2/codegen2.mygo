@@ -36,8 +36,13 @@ func GenerateFiles(files: Slice[SourceFileInput], info: typeinference2.PackageIn
   # from list.mygo resolving to the Option IEnumerable impl in option.mygo)
   # works through seedPackageDictionaries / seedImplCandidates.
   let allDecls = mergeFileDecls(files, 0, [] as Slice[ast2.Decl])
+  let visibleDecls = mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
+  # All emitted files in this package share the same declaration universe, so
+  # build lowering metadata once for the complete GenerateFiles invocation.
+  let packageIndex = newPackageIndex(visibleDecls)
+  let typedByPath = typedDeclSourceMap(info.TypedDeclSources, 0, {})
   let out: Map[String, String] = {}
-  generateFilesLoop(files, info, allDecls, 0, out)
+  generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, 0, out)
 end
 
 func mergeFileDecls(files: Slice[SourceFileInput], index: Int, acc: Slice[ast2.Decl]) -> Slice[ast2.Decl]
@@ -58,16 +63,17 @@ func mergeDeclSlices(dst: Slice[ast2.Decl], src: Slice[ast2.Decl]) -> Slice[ast2
   end
 end
 
-func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], index: Int, out: Map[String, String]) -> Result[Map[String, String], String]
+func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], packageIndex: PackageIndex, typedByPath: Map[String, Slice[ast2.Decl]], index: Int, out: Map[String, String]) -> Result[Map[String, String], String]
   if index >= files.Len() then
     Ok(out)
   else
     let input = files.Get(index).UnwrapOr(SourceFileInput { Path: "main.mygo", File: ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] } })
-    let src = generateOneFile(input.File, info, allDecls, index == 0)
+    let typedDecls = typedDeclsForInput(info.TypedDeclSources, typedByPath, input.Path)
+    let src = generateOneFile(input.File, info, allDecls, packageIndex, typedDecls, index == 0)
     switch src
       case Ok(code) =>
         out.Set(sourceToGenName(input.Path), code)
-        generateFilesLoop(files, info, allDecls, index + 1, out)
+        generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, index + 1, out)
       case Err(msg) => Err(withExpressionSourceName(msg, input.File.SourceName))
     end
   end
@@ -101,14 +107,13 @@ func GenerateSourceAt(sourceName: String, input: String) -> Result[String, Strin
   end
 end
 
-func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], includeHKT: Bool) -> Result[String, String]
+func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], packageIndex: PackageIndex, fileTypedDecls: Slice[ast2.Decl], includeHKT: Bool) -> Result[String, String]
   # Method dispatch must see every impl visible to this package: its complete
   # typed declaration set plus externally supplied declarations (the prelude).
   # `fileTypedDecls` below still limits emitted Go declarations to this file.
   let visibleDecls = mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
-  let g = Ref.new(newGenerator2(file.PackageName, visibleDecls, info.GoPackages, info))
+  let g = Ref.new(newGenerator2(file.PackageName, visibleDecls, info.GoPackages, info, packageIndex))
   let imports = collectImports(file.Decls)
-  let fileTypedDecls = filterTypedDeclsForFile(info.TypedDecls, file.Decls)
   let decls = translateDeclsAst(g, fileTypedDecls, 0, [] as Slice[goast.Decl])
   switch decls
     case Err(msg) => Err(msg)
@@ -386,81 +391,27 @@ func hasHKTTypeParam(tps: Slice[String]) -> Bool
   end
 end
 
-func filterTypedDeclsForFile(typedDecls: Slice[ast2.Decl], fileDecls: Slice[ast2.Decl]) -> Slice[ast2.Decl]
-  filterTypedDeclsLoop(typedDecls, fileDecls, 0, [] as Slice[ast2.Decl])
-end
-
-func filterTypedDeclsLoop(typedDecls: Slice[ast2.Decl], fileDecls: Slice[ast2.Decl], index: Int, out: Slice[ast2.Decl]) -> Slice[ast2.Decl]
-  if index >= typedDecls.Len() then
+func typedDeclSourceMap(sources: Slice[typeinference2.PkgDeclSource], index: Int, out: Map[String, Slice[ast2.Decl]]) -> Map[String, Slice[ast2.Decl]]
+  if index >= sources.Len() then
     out
   else
-    let decl = typedDecls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    if typedDeclMatchesAnyFileDecl(decl, fileDecls, 0) then
-      filterTypedDeclsLoop(typedDecls, fileDecls, index + 1, out.Append(decl))
-    else
-      filterTypedDeclsLoop(typedDecls, fileDecls, index + 1, out)
-    end
+    let source = sources.Get(index).UnwrapOr(typeinference2.PkgDeclSource { Path: "", Decls: [] })
+    out.Set(source.Path, source.Decls)
+    typedDeclSourceMap(sources, index + 1, out)
   end
 end
 
-func typedDeclMatchesAnyFileDecl(decl: ast2.Decl, fileDecls: Slice[ast2.Decl], index: Int) -> Bool
-  if index >= fileDecls.Len() then
-    false
-  else
-    let candidate = fileDecls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    if typedDeclMatchesFileDecl(decl, candidate) then
-      true
-    else
-      typedDeclMatchesAnyFileDecl(decl, fileDecls, index + 1)
-    end
-  end
-end
-
-func typedDeclMatchesFileDecl(typedDecl: ast2.Decl, fileDecl: ast2.Decl) -> Bool
-  switch typedDecl
-    case TypeAliasDecl(name, _, _) =>
-      switch fileDecl
-        case TypeAliasDecl(fileName, _, _) => name == fileName
-        case _ => false
+# GenerateSource uses a synthetic path while InferFile retains its source
+# name.  The single-source fallback preserves that convenience API; package
+# compilation always resolves the exact source path from the map above.
+func typedDeclsForInput(sources: Slice[typeinference2.PkgDeclSource], byPath: Map[String, Slice[ast2.Decl]], path: String) -> Slice[ast2.Decl]
+  switch byPath.Get(path)
+    case Some(decls) => decls
+    case None =>
+      if sources.Len() == 1 then
+        sources.Get(0).UnwrapOr(typeinference2.PkgDeclSource { Path: "", Decls: [] }).Decls
+      else
+        []
       end
-    case TypeDecl(name, _, _) =>
-      switch fileDecl
-        case TypeDecl(fileName, _, _) => name == fileName
-        case _ => false
-      end
-    case StructDecl(name, _, _) =>
-      switch fileDecl
-        case StructDecl(fileName, _, _) => name == fileName
-        case _ => false
-      end
-    case EnumDecl(name, _, _) =>
-      switch fileDecl
-        case EnumDecl(fileName, _, _) => name == fileName
-        case _ => false
-      end
-    case InterfaceDecl(name, _, _) =>
-      switch fileDecl
-        case InterfaceDecl(fileName, _, _) => name == fileName
-        case _ => false
-      end
-    case FuncDecl(name, _, _, _, _, _) =>
-      switch fileDecl
-        case FuncDecl(fileName, _, _, _, _, _) => name == fileName
-        case _ => false
-      end
-    case ImplDecl(_, target, iface, _) =>
-      switch fileDecl
-        case ImplDecl(_, fileTarget, fileIface, _) =>
-          typeString(target) == typeString(fileTarget) && optionTypeExprString(iface) == optionTypeExprString(fileIface)
-        case _ => false
-      end
-    case _ => false
-  end
-end
-
-func optionTypeExprString(opt: Option[ast2.TypeExpr]) -> String
-  switch opt
-    case Some(t) => typeString(t)
-    case None => ""
   end
 end

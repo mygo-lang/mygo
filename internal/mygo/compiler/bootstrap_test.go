@@ -27,14 +27,14 @@ func TestCompileDirBootstrapUsesSelfHostedPipeline(t *testing.T) {
 	source := `package sample
 
 enum Maybe[A]
-  Some(A)
-  None
+  Have(A)
+  Nothing
 end
 
 func unwrap(value: Maybe[Int]) -> Int
   switch value
-    case Some(item) => item
-    case None => 0
+    case Have(item) => item
+    case Nothing => 0
   end
 end
 `
@@ -270,7 +270,7 @@ func TestCompileDirBootstrapDecodesGoValueErrorAsResult(t *testing.T) {
 
 import strconv "go:strconv"
 
-func Parse(value: String) -> Result[Int, String]
+func Parse(value: String) -> Result[Int, Error]
   strconv.Atoi(value)
 end
 `
@@ -285,7 +285,7 @@ end
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"strconv.Atoi", "Ok[int, string]", "Err[int, string]", ".Error()"} {
+	for _, want := range []string{"strconv.Atoi", "Ok[int, error]", "Err[int, error]"} {
 		if !strings.Contains(string(generated), want) {
 			t.Fatalf("generated Go missing %q:\n%s", want, generated)
 		}

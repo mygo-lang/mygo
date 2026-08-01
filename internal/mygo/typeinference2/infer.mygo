@@ -63,7 +63,7 @@ end
 
 func inferDecls(decls: Slice[ast2.Decl], env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[PackageInfo, String]
   if decls.Len() == 0 then
-    Ok(PackageInfo { Env: env, Fields: fields, GoPackages: [] as Slice[GoPackageEntry], Instances: [] as Slice[Instance], Solver: newSolver(), TypedDecls: [] as Slice[ast2.Decl], ExternalTypedDecls: [] as Slice[ast2.Decl], ResolvedConstraintArgs: state.ResolvedConstraintArgs })
+    Ok(PackageInfo { Env: env, Fields: fields, GoPackages: [] as Slice[GoPackageEntry], Instances: [] as Slice[Instance], Solver: newSolver(), TypedDecls: [] as Slice[ast2.Decl], ExternalTypedDecls: [] as Slice[ast2.Decl], TypedDeclSources: [] as Slice[PkgDeclSource], ExternalTypedDeclSources: [] as Slice[PkgDeclSource], ResolvedConstraintArgs: state.ResolvedConstraintArgs })
   else
     let head = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     let tail = sliceDrop(decls, 1)
@@ -77,7 +77,7 @@ func inferDecls(decls: Slice[ast2.Decl], env: Slice[EnvEntry], fields: Slice[Fie
               case Some(d) => info.TypedDecls.Prepend(d)
               case None => info.TypedDecls
             end
-            Ok(PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: info.GoPackages, Instances: info.Instances, Solver: info.Solver, TypedDecls: newDecls, ExternalTypedDecls: info.ExternalTypedDecls, ResolvedConstraintArgs: info.ResolvedConstraintArgs })
+            Ok(PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: info.GoPackages, Instances: info.Instances, Solver: info.Solver, TypedDecls: newDecls, ExternalTypedDecls: info.ExternalTypedDecls, TypedDeclSources: info.TypedDeclSources, ExternalTypedDeclSources: info.ExternalTypedDeclSources, ResolvedConstraintArgs: info.ResolvedConstraintArgs })
           case Err(m) => Err(m)
         end
       case Err(msg) => Err(msg)
@@ -1377,8 +1377,13 @@ func inferOrdinaryCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[Env
                   let subst = composeSubst(argsResult.Subst, cv.Subst)
                   switch applySubst(subst, innerType)
                     case TVariadic(_, retRef) =>
-                      let wrapped = ast2.MonoType.TQualifiedName(path, Ref.new(applySubst(subst, retRef.value())))
-                      let v = InferResult { Type: wrapped, Predicates: appendPredicates(cv.Predicates, argsResult.Predicates), Subst: subst, State: argsResult.State }
+                      # The qualified wrapper identifies the imported
+                      # function binding, not every value it returns.  Types
+                      # from the imported package were already qualified
+                      # while its signature was seeded; wrapping the result
+                      # again turns a primitive `Int` into `../lib.Int`.
+                      let result = applySubst(subst, retRef.value())
+                      let v = InferResult { Type: result, Predicates: appendPredicates(cv.Predicates, argsResult.Predicates), Subst: subst, State: argsResult.State }
                       Ok((ExprInferResult { Expr: typedCallee, Result: v }, argsResult.Exprs))
                     case _ => Err("unreachable variadic inner")
                   end
@@ -1400,8 +1405,9 @@ func inferOrdinaryCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Slice[Env
                   let s2 = unify(applySubst(s1, innerType), expected, s1)
                   switch s2
                     case Ok(s) =>
-                      let wrapped = ast2.MonoType.TQualifiedName(path, Ref.new(ret))
-                      let finalType = applySubst(s, wrapped)
+                      # See the variadic branch above: only types explicitly
+                      # named in the imported signature carry its qualifier.
+                      let finalType = applySubst(s, ret)
                       Ok((ExprInferResult { Expr: applyTypedExprSubst(s, typedCallee), Result: InferResult { Type: finalType, Predicates: appendPredicates(cv.Predicates, argsResult.Predicates), Subst: s, State: nextState } }, applyTypedExprsSubst(s, argsResult.Exprs)))
                     case Err(msg) => if isGoPackageCall(callee, state) then Err("Go function argument count mismatch") else Err(msg) end
                   end
@@ -1731,7 +1737,11 @@ func inferField(base: ast2.Expr, field: String, env: Slice[EnvEntry], state: Inf
           let te = ast2.Expr { ID: base.ID, Pos: base.Pos, Kind: base.Kind, Type: Some(qualified.Body) }
           Ok(ExprInferResult { Expr: te, Result: InferResult { Type: qualified.Body, Predicates: qualified.Predicates, Subst: emptySubst(), State: state } })
         case None =>
-          inferNamedField(base, name, field, env, state)
+          if isGoPackageAlias(name, state.GoPackages) then
+            Err("unknown Go package member " + field)
+          else
+            inferNamedField(base, name, field, env, state)
+          end
       end
     case _ => inferOrdinaryField(base, field, env, state)
   end
@@ -1891,7 +1901,7 @@ func receiverQualifiedName(receiver: ast2.MonoType, innerName: String, goPkgs: S
           pathAlias + "." + memberName
         end
       else
-        alias + "." + memberName
+        if alias == "." then memberName else alias + "." + memberName end
       end
     end
     case _ => innerName

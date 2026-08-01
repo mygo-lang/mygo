@@ -138,6 +138,10 @@ struct PackageInfo
   Solver: Solver
   TypedDecls: Slice[ast2.Decl]
   ExternalTypedDecls: Slice[ast2.Decl]
+  # Typed declarations retain their originating source file so downstream
+  # codegen never has to recover ownership from declaration names or shapes.
+  TypedDeclSources: Slice[PkgDeclSource]
+  ExternalTypedDeclSources: Slice[PkgDeclSource]
   ResolvedConstraintArgs: Map[MethodConstraintKey, Slice[ast2.MonoType]]
 end
 
@@ -360,6 +364,8 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
         Solver: solver,
         TypedDecls: info.TypedDecls,
         ExternalTypedDecls: [] as Slice[ast2.Decl],
+        TypedDeclSources: [PkgDeclSource { Path: file.SourceName, Decls: info.TypedDecls }],
+        ExternalTypedDeclSources: [],
         ResolvedConstraintArgs: info.ResolvedConstraintArgs,
       })
     case Err(msg) => Err(withExpressionSourceName(msg, file.SourceName))
@@ -405,6 +411,8 @@ func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice
         Solver: solver,
         TypedDecls: info.TypedDecls,
         ExternalTypedDecls: [] as Slice[ast2.Decl],
+        TypedDeclSources: buildTypedDeclSources(files, info.TypedDecls, 0).Sources,
+        ExternalTypedDeclSources: [],
         ResolvedConstraintArgs: info.ResolvedConstraintArgs,
       })
     case Err(msg) =>
@@ -454,20 +462,67 @@ func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDe
       let collected = collectInstances(allDecls)
       let instances = mergeBuiltInInstances(collected)
       let solver = solverFromInstances(instances)
-      # Separate typed decls: from allDecls (user) and extDecls (external).
-      let separated = separateTypedDecls(info.TypedDecls, allDecls, extDecls)
+      # Split typed declarations by the original source sequence.  This is
+      # positional, not name-based, so identical impl shapes remain assigned
+      # to the file that supplied them.
+      let userTyped = buildTypedDeclSources(files, info.TypedDecls, 0)
+      let externalTyped = buildTypedDeclSources(external, info.TypedDecls, userTyped.Next)
       Ok(PackageInfo {
         Env: resolveEnvironment(solver, info.Env),
         Fields: info.Fields,
         GoPackages: goPkgImports,
         Instances: instances,
         Solver: solver,
-        TypedDecls: separated.User,
-        ExternalTypedDecls: separated.External,
+        TypedDecls: flattenPkgDecls(userTyped.Sources, 0, [] as Slice[ast2.Decl]),
+        ExternalTypedDecls: flattenPkgDecls(externalTyped.Sources, 0, [] as Slice[ast2.Decl]),
+        TypedDeclSources: userTyped.Sources,
+        ExternalTypedDeclSources: externalTyped.Sources,
         ResolvedConstraintArgs: info.ResolvedConstraintArgs,
       })
     case Err(msg) =>
       Err(withExpressionSourceName(msg, "<input>"))
+  end
+end
+
+struct TypedDeclSourcesBuild
+  Sources: Slice[PkgDeclSource]
+  Next: Int
+end
+
+struct TypedDeclFileBuild
+  Decls: Slice[ast2.Decl]
+  Next: Int
+end
+
+# Associate typed declarations with source paths by consuming the inference
+# output in the exact declaration order used to build the inference input.
+# Imports have no TypedDecl, so they advance only the source cursor.
+func buildTypedDeclSources(files: Slice[PkgDeclSource], typedDecls: Slice[ast2.Decl], start: Int) -> TypedDeclSourcesBuild
+  buildTypedDeclSourcesLoop(files, typedDecls, 0, start, [])
+end
+
+func buildTypedDeclSourcesLoop(files: Slice[PkgDeclSource], typedDecls: Slice[ast2.Decl], fileIndex: Int, typedIndex: Int, out: Slice[PkgDeclSource]) -> TypedDeclSourcesBuild
+  if fileIndex >= files.Len() then
+    TypedDeclSourcesBuild { Sources: out, Next: typedIndex }
+  else
+    let file = files.Get(fileIndex).UnwrapOr(PkgDeclSource { Path: "", Decls: [] })
+    let built = buildTypedDeclFile(file.Decls, typedDecls, 0, typedIndex, [])
+    let source = PkgDeclSource { Path: file.Path, Decls: built.Decls }
+    buildTypedDeclSourcesLoop(files, typedDecls, fileIndex + 1, built.Next, out.Append(source))
+  end
+end
+
+func buildTypedDeclFile(sourceDecls: Slice[ast2.Decl], typedDecls: Slice[ast2.Decl], sourceIndex: Int, typedIndex: Int, out: Slice[ast2.Decl]) -> TypedDeclFileBuild
+  if sourceIndex >= sourceDecls.Len() then
+    TypedDeclFileBuild { Decls: out, Next: typedIndex }
+  else
+    let sourceDecl = sourceDecls.Get(sourceIndex).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    switch sourceDecl
+      case ImportDecl(_, _) => buildTypedDeclFile(sourceDecls, typedDecls, sourceIndex + 1, typedIndex, out)
+      case _ =>
+        let typed = typedDecls.Get(typedIndex).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+        buildTypedDeclFile(sourceDecls, typedDecls, sourceIndex + 1, typedIndex + 1, out.Append(typed))
+    end
   end
 end
 

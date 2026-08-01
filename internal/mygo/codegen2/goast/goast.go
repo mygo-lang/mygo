@@ -20,6 +20,45 @@ type Expr = ast.Expr
 type Stmt = ast.Stmt
 type Decl = ast.Decl
 
+// TypeExpr constructors form the structured type-lowering boundary used by
+// codegen2.  Keeping this here avoids reparsing rendered type strings for
+// every parameter, result, local, and field.
+func TypeName(name string) ast.Expr {
+	parts := strings.Split(name, ".")
+	var out ast.Expr = ast.NewIdent(parts[0])
+	for _, part := range parts[1:] {
+		out = &ast.SelectorExpr{X: out, Sel: ast.NewIdent(part)}
+	}
+	return out
+}
+func EmptyStructType() ast.Expr { return &ast.StructType{Fields: &ast.FieldList{}} }
+func TypePointer(elem ast.Expr) ast.Expr { return &ast.StarExpr{X: elem} }
+func TypeSlice(elem ast.Expr) ast.Expr { return &ast.ArrayType{Elt: elem} }
+func TypeMap(key, value ast.Expr) ast.Expr { return &ast.MapType{Key: key, Value: value} }
+func TypeChan(elem ast.Expr, direction string) ast.Expr {
+	dir := ast.SEND | ast.RECV
+	if direction == "send" { dir = ast.SEND }
+	if direction == "recv" { dir = ast.RECV }
+	return &ast.ChanType{Dir: dir, Value: elem}
+}
+func TypeApply(ctor ast.Expr, args []ast.Expr) ast.Expr {
+	if len(args) == 0 { return ctor }
+	if len(args) == 1 { return &ast.IndexExpr{X: ctor, Index: args[0]} }
+	return &ast.IndexListExpr{X: ctor, Indices: args}
+}
+func TypeFunc(params []ast.Expr, result ast.Expr, hasResult bool) ast.Expr {
+	fields := make([]*ast.Field, 0, len(params))
+	for _, param := range params { fields = append(fields, &ast.Field{Type: param}) }
+	results := &ast.FieldList{}
+	if hasResult { results.List = []*ast.Field{{Type: result}} }
+	return &ast.FuncType{Params: &ast.FieldList{List: fields}, Results: results}
+}
+func TypeTuple(items []ast.Expr) ast.Expr {
+	fields := make([]*ast.Field, 0, len(items))
+	for i, item := range items { fields = append(fields, &ast.Field{Names: []*ast.Ident{ast.NewIdent(fmt.Sprintf("F%d", i))}, Type: item}) }
+	return &ast.StructType{Fields: &ast.FieldList{List: fields}}
+}
+
 // HKTDecls supplies the encoding used by codegen2 for source-level higher
 // kinded parameters. The phantom constructor parameter F is intentionally
 // unconstrained: MyGO typeclasses use these types only as compile-time shape
@@ -98,6 +137,20 @@ func StructDeclFromParts(name string, typeParams, fieldNames, fieldTypes, fieldT
 		fields[i] = StructField{Name: fieldNames[i], Type: fieldTypes[i], Tag: fieldTags[i]}
 	}
 	return StructDecl(name, typeParams, fields)
+}
+
+// StructDeclFromExprParts is the no-parser equivalent of StructDeclFromParts.
+func StructDeclFromExprParts(name string, typeParams, fieldNames []string, fieldTypes []ast.Expr, fieldTags []string) ast.Decl {
+	if len(fieldNames) != len(fieldTypes) || len(fieldNames) != len(fieldTags) { panic("mismatched struct field metadata") }
+	fields := make([]*ast.Field, 0, len(fieldNames))
+	for i, typ := range fieldTypes {
+		field := &ast.Field{Type: typ}
+		if fieldNames[i] != "" { field.Names = []*ast.Ident{ast.NewIdent(fieldNames[i])} }
+		if fieldTags[i] != "" { field.Tag = &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(fieldTags[i])} }
+		fields = append(fields, field)
+	}
+	spec := &ast.TypeSpec{Name: ast.NewIdent(name), Type: &ast.StructType{Fields: &ast.FieldList{List: fields}}, TypeParams: typeParamsFieldList(typeParams)}
+	return &ast.GenDecl{Tok: token.TYPE, Specs: []ast.Spec{spec}}
 }
 
 // InterfaceDeclFromParts builds an interface declaration from method names and
@@ -242,6 +295,20 @@ func MustFuncDeclFromStmtsMultiComparable(name string, typeParams, paramNames, p
 	if loop {
 		block = &ast.BlockStmt{List: []ast.Stmt{&ast.ForStmt{Body: block}}}
 	}
+	return &ast.FuncDecl{Name: ast.NewIdent(name), Type: &ast.FuncType{TypeParams: comparableTypeParamsFieldList(typeParams, compSet), Params: &ast.FieldList{List: params}, Results: results}, Body: block}
+}
+
+// MustFuncDeclFromExprStmtsMultiComparable accepts already-lowered type ASTs.
+func MustFuncDeclFromExprStmtsMultiComparable(name string, typeParams, paramNames []string, paramTypes, returnTypes []ast.Expr, comparableParams []string, body []ast.Stmt, loop bool) ast.Decl {
+	if len(paramNames) != len(paramTypes) { panic("mismatched function parameter metadata") }
+	compSet := make(map[string]bool, len(comparableParams))
+	for _, p := range comparableParams { compSet[p] = true }
+	params := make([]*ast.Field, 0, len(paramNames))
+	for i, typ := range paramTypes { params = append(params, &ast.Field{Names: []*ast.Ident{ast.NewIdent(paramNames[i])}, Type: typ}) }
+	results := &ast.FieldList{}
+	for _, typ := range returnTypes { results.List = append(results.List, &ast.Field{Type: typ}) }
+	block := &ast.BlockStmt{List: body}
+	if loop { block = &ast.BlockStmt{List: []ast.Stmt{&ast.ForStmt{Body: block}}} }
 	return &ast.FuncDecl{Name: ast.NewIdent(name), Type: &ast.FuncType{TypeParams: comparableTypeParamsFieldList(typeParams, compSet), Params: &ast.FieldList{List: params}, Results: results}, Body: block}
 }
 

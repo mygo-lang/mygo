@@ -23,6 +23,7 @@ struct BootstrapState
   Compiling: Map[String, Bool]
   Compiled: Map[String, Slice[String]]
   SourcesCache: Map[String, BootstrapInputs]
+  GenerateImportFiles: Bool
 end
 
 # BootstrapInputs pairs the per-file codegen inputs with the decl sources that
@@ -42,8 +43,8 @@ struct BootstrapImport
   Path: String
 end
 
-func newBootstrapState() -> BootstrapState
-  BootstrapState { Compiling: {}, Compiled: {}, SourcesCache: {} }
+func newBootstrapState(generateImportFiles: Bool) -> BootstrapState
+  BootstrapState { Compiling: {}, Compiled: {}, SourcesCache: {}, GenerateImportFiles: generateImportFiles }
 end
 
 func emptyBootstrapInputs() -> BootstrapInputs
@@ -58,7 +59,9 @@ end
 # state-threaded so imported packages can contribute typed external decls to
 # their importers without falling back to the legacy compiler pipeline.
 func compileDirBootstrapEntry(dir: String) -> Result[Slice[String], Error]
-  compileDirBootstrapWithCodegen(dir, newBootstrapState(), true)
+  # The single-package API must return a usable transitive build, including
+  # generated files for imported MyGO packages.
+  compileDirBootstrapWithCodegen(dir, newBootstrapState(true), true)
 end
 
 # Sharing one BootstrapState across the whole sync run lets prelude (and every
@@ -70,7 +73,7 @@ end
 func syncBootstrapMyGO(root: String) -> Result[Slice[String], Error]
   let dirs = bootstrapMygoDirs(root)
   switch dirs
-    case Ok(items) => syncBootstrapDirs(items, 0, newBootstrapState(), [])
+    case Ok(items) => syncBootstrapDirs(items, 0, newBootstrapState(false), [])
     case Err(err) => Err(err)
   end
 end
@@ -219,7 +222,7 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                                 Err(fmt.Errorf("bootstrap Go FFI %s: %s", dir, err.Error()))
                               end
                               case Ok(_) then
-                                let myGoPkgInfos = bootstrapCollectMyGoPkgInfos(workspaceRoot, bootstrapImportsFromSources(inputs.Sources), 0, state, [] as Slice[typeinference2.MyGoPackageInfo])
+                                let myGoPkgInfos = bootstrapCollectMyGoPkgInfos(workspaceRoot, dir, bootstrapImportsFromSources(inputs.Sources), 0, state, [] as Slice[typeinference2.MyGoPackageInfo])
                                 let inferred = typeinference2.InferPackageWithExternal(inputs.Sources, externalSources, packagesRef.value(), myGoPkgInfos)
                                 switch inferred
                                   case Err(msg) then
@@ -256,7 +259,7 @@ func bootstrapFinishPackage(dir: String, state: BootstrapState, codegen: Bool, i
     state.Compiling.Delete(dir)
     Ok([])
   else
-    let infoWithPackages = typeinference2.PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: packagesRef.value(), Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, ResolvedConstraintArgs: info.ResolvedConstraintArgs }
+    let infoWithPackages = typeinference2.PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: packagesRef.value(), Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, TypedDeclSources: info.TypedDeclSources, ExternalTypedDeclSources: info.ExternalTypedDeclSources, ResolvedConstraintArgs: info.ResolvedConstraintArgs }
     let generated = codegen2.GenerateFiles(inputs.Inputs, infoWithPackages)
     switch generated
       case Err(msg) then
@@ -303,7 +306,12 @@ func bootstrapWalkImports(workspaceRoot: String, fromDir: String, imports: Slice
     switch resolved
       case Err(err) => Err(err)
       case Ok(dependencyDir) then
-        switch compileDirBootstrapMyGO(dependencyDir, state)
+        let dependencyBuild = if state.GenerateImportFiles then
+          compileDirBootstrapWithCodegen(dependencyDir, state, true)
+        else
+          compileDirBootstrapMyGO(dependencyDir, state)
+        end
+        switch dependencyBuild
           case Err(err) => Err(err)
           case Ok(files) then
             let loaded = bootstrapLoadCachedSources(dependencyDir, state)
@@ -326,7 +334,12 @@ func bootstrapParseSource(path: String, sourcePath: String, source: String) -> R
   switch parsed
     case Ok(file) =>
       let typed = ast2.AssignFileExprIDs(file)
-      let input = codegen2.SourceFileInput { Path: path, File: typed }
+      # SourceFileInput and PkgDeclSource must use the same identity.  The
+      # typed-declaration index is keyed by source path; using only `path`'s
+      # basename here made every file in a multi-file package miss its typed
+      # declarations and emit an otherwise-valid but empty Go file.
+      # sourceToGenName still derives the output name from this path's basename.
+      let input = codegen2.SourceFileInput { Path: sourcePath, File: typed }
       let pkg = typeinference2.PkgDeclSource { Path: sourcePath, Decls: typed.Decls }
       Ok(BootstrapInputs { Inputs: [input], Sources: [pkg] })
     case Err(msg) => Err(msg)
@@ -644,20 +657,20 @@ end
 
 # bootstrapCollectMyGoPkgInfos collects MyGO package info (alias + decls) from the
 # bootstrap sources cache so they can be passed to InferPackageWithExternal.
-func bootstrapCollectMyGoPkgInfos(workspaceRoot: String, imports: Slice[BootstrapImport], index: Int, state: BootstrapState, out: Slice[typeinference2.MyGoPackageInfo]) -> Slice[typeinference2.MyGoPackageInfo]
+func bootstrapCollectMyGoPkgInfos(workspaceRoot: String, fromDir: String, imports: Slice[BootstrapImport], index: Int, state: BootstrapState, out: Slice[typeinference2.MyGoPackageInfo]) -> Slice[typeinference2.MyGoPackageInfo]
   if index >= imports.Len() then
     out
   else
     let imp = imports.Get(index).UnwrapOr(BootstrapImport { Alias: "", Path: "" })
-    let resolved = bootstrapResolveImport(workspaceRoot, "", imp.Path)
+    let resolved = bootstrapResolveImport(workspaceRoot, fromDir, imp.Path)
     switch resolved
-      case Err(_) => bootstrapCollectMyGoPkgInfos(workspaceRoot, imports, index + 1, state, out)
+      case Err(_) => bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
       case Ok(depDir) =>
         switch state.SourcesCache.Get(depDir)
           case Some(inputs) =>
             let info = typeinference2.MyGoPackageInfo { Alias: imp.Alias, Path: imp.Path, Decls: bootstrapFlattenSources(inputs.Sources, 0, [] as Slice[ast2.Decl]) }
-            bootstrapCollectMyGoPkgInfos(workspaceRoot, imports, index + 1, state, out.Append(info))
-          case None => bootstrapCollectMyGoPkgInfos(workspaceRoot, imports, index + 1, state, out)
+            bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out.Append(info))
+          case None => bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
         end
     end
   end

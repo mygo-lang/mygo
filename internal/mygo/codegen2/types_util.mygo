@@ -1,6 +1,7 @@
 package codegen2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import strings "go:strings"
 
 # types_util.mygo — Go 类型映射和命名规则工具
@@ -51,6 +52,55 @@ func goType(t: ast2.TypeExpr, typeParams: Set[String]) -> String
       end
     case _ =>
       return "any"
+  end
+end
+
+# goTypeAst directly lowers source type syntax into go/ast, avoiding the
+# render-to-string then parser.ParseExpr round-trip on declaration hot paths.
+func goTypeAst(t: ast2.TypeExpr, typeParams: Set[String]) -> goast.Expr
+  switch t
+    case NamedType(name, args) then
+      if name == "Unit" && args.Len() == 0 then goast.EmptyStructType() else
+        let lowered = args.Map(func(arg: ast2.TypeExpr) -> goast.Expr goTypeAst(arg, typeParams) end)
+        if name == "Ref" && lowered.Len() == 1 then goast.TypePointer(lowered.Get(0).UnwrapOr(goast.TypeName("any")))
+        elsif name == "Slice" && lowered.Len() == 1 then goast.TypeSlice(lowered.Get(0).UnwrapOr(goast.TypeName("any")))
+        elsif name == "Map" && lowered.Len() == 2 then goast.TypeMap(lowered.Get(0).UnwrapOr(goast.TypeName("any")), lowered.Get(1).UnwrapOr(goast.TypeName("any")))
+        elsif name == "Set" && lowered.Len() == 1 then goast.TypeMap(lowered.Get(0).UnwrapOr(goast.TypeName("any")), goast.EmptyStructType())
+        elsif name == "Chan" && lowered.Len() == 1 then goast.TypeChan(lowered.Get(0).UnwrapOr(goast.TypeName("any")), "both")
+        elsif name == "SendChan" && lowered.Len() == 1 then goast.TypeChan(lowered.Get(0).UnwrapOr(goast.TypeName("any")), "send")
+        elsif name == "RecvChan" && lowered.Len() == 1 then goast.TypeChan(lowered.Get(0).UnwrapOr(goast.TypeName("any")), "recv")
+        elsif isHKTConstructor(name, args, typeParams) then goast.TypeApply(goast.TypeName("HKT"), [goast.TypeName(name), hktApplicationAst(args, typeParams)])
+        else goast.TypeApply(goast.TypeName(goPrimitiveType(name).UnwrapOr(name)), lowered)
+        end
+      end
+    end
+    case FuncType(params, ret) => goast.TypeFunc(params.Map(func(param: ast2.TypeExpr) -> goast.Expr goTypeAst(param, typeParams) end), goTypeAst(ret.value(), typeParams), !isUnitType(ret.value()))
+    case TupleType(items) => if items.Len() == 0 then goast.EmptyStructType() else goast.TypeTuple(items.Map(func(item: ast2.TypeExpr) -> goast.Expr goTypeAst(item, typeParams) end)) end
+    case UnitType => goast.EmptyStructType()
+    case InlineGo(inner, _) => goTypeAst(inner.value(), typeParams)
+    case _ => goast.TypeName("any")
+  end
+end
+
+func goReturnTypesAst(t: Option[ast2.TypeExpr], typeParams: Set[String]) -> Slice[goast.Expr]
+  switch t
+    case None => []
+    case Some(typ) then
+      switch typ
+        case TupleType(items) => items.Map(func(item: ast2.TypeExpr) -> goast.Expr
+          goTypeAst(item, typeParams)
+        end)
+        case _ => if isUnitType(typ) then [] else [goTypeAst(typ, typeParams)] end
+      end
+    end
+  end
+end
+
+func hktApplicationAst(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> goast.Expr
+  if args.Len() == 0 then goast.TypeName("any") else
+    if args.Len() == 1 then goTypeAst(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), typeParams) else
+      goast.TypeApply(goast.TypeName("HKT"), [goTypeAst(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), typeParams), hktApplicationAst(sliceDrop(args, 1), typeParams)])
+    end
   end
 end
 
@@ -450,42 +500,21 @@ end
 
 # 辅助函数：字符串列表连接
 func joinStrings(items: Slice[String], sep: String) -> String
-  if items.Len() == 0 then
-    return ""
-  end
-  if items.Len() == 1 then
-    return items.Get(0).UnwrapOr("")
-  end
-  let head = items.Get(0).UnwrapOr("")
-  let tail = joinStrings(sliceDrop(items, 1), sep)
-  return head + sep + tail
+  # Avoid recursively rebuilding progressively longer strings.
+  strings.Join(items, sep)
 end
 
-# 辅助函数：切片截断
+# Return a suffix view instead of rebuilding it element by element.
+# SliceIndexable.Slice lowers to Go's s[start:end], so this is O(1).
 func sliceDrop[A](items: Slice[A], n: Int) -> Slice[A]
   if n <= 0 then
-    return items
-  end
-  if items.Len() == 0 then
-    return items
-  end
-  return sliceDrop(sliceTail(items), n - 1)
-end
-
-# 辅助函数：获取切片尾部
-func sliceTail[A](items: Slice[A]) -> Slice[A]
-  return sliceTailLoop(items, 1, [] as Slice[A])
-end
-
-# 辅助函数：切片尾部循环实现
-func sliceTailLoop[A](items: Slice[A], index: Int, out: Slice[A]) -> Slice[A]
-  if index >= items.Len() then
-    return out
-  end
-  let item = items.Get(index)
-  switch item
-    case Some(value) => sliceTailLoop(items, index + 1, out.Append(value))
-    case None => out
+    items
+  else
+    if n >= items.Len() then
+      []
+    else
+      items.Slice(n, items.Len()).UnwrapOr([])
+    end
   end
 end
 

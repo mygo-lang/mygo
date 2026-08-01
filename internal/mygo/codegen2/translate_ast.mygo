@@ -1006,6 +1006,11 @@ func translateCallAstExpectedNonRef(callee: ast2.Expr, typeArgs: Slice[ast2.Type
     case None =>
       let isOption = switch expected
         case TCon(name, _) => name == "Option"
+        case TApp(typeRef, _) =>
+          switch typeRef.value()
+            case TCon(name, _) => name == "Option"
+            case _ => false
+          end
         case _ => false
       end
       switch ffiOptionSignature(callee, ctx)

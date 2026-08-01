@@ -59,6 +59,29 @@ struct egCtx
   patternTypes: Map[String, ast2.MonoType]
   patternFuncIdx: Map[String, Int]
   variantFieldMonoTypes: Map[String, Slice[ast2.MonoType]]
+  interfaceMethods: Map[String, Slice[ast2.FuncSig]]
+  interfaceTypeParams: Map[String, Slice[String]]
+  namedImpls: Map[String, Bool]
+end
+
+# PackageIndex is immutable lowering metadata shared by every function and
+# impl-method context in a generated file.  It deliberately contains only
+# package facts; lexical bindings and per-expression state remain in egCtx.
+struct PackageIndex
+  StructFields: Map[String, Slice[typeinference2.FieldEntry]]
+  StructTypeParams: Map[String, Slice[Int]]
+  CallDictionaries: Map[String, Slice[String]]
+  PackageDictionaries: Map[String, String]
+  CallRequirements: Map[String, Slice[DictionaryRequirement]]
+  PackageCandidates: Map[String, Slice[ImplDictionaryCandidate]]
+  InherentCandidates: Slice[ImplDictionaryCandidate]
+  TypeclassCandidates: Slice[ImplDictionaryCandidate]
+  EnumValueConstructors: Map[String, String]
+  EnumVariantOwners: Map[String, String]
+  VariantFieldMonoTypes: Map[String, Slice[ast2.MonoType]]
+  InterfaceMethods: Map[String, Slice[ast2.FuncSig]]
+  InterfaceTypeParams: Map[String, Slice[String]]
+  NamedImpls: Map[String, Bool]
 end
 
 struct Generator2
@@ -72,6 +95,7 @@ struct Generator2
   decls: Slice[ast2.Decl]
   goPackages: Slice[typeinference2.GoPackageEntry]
   pkgInfo: Option[typeinference2.PackageInfo]
+  packageIndex: PackageIndex
 end
 
 struct AstExprResult
@@ -156,6 +180,9 @@ func newEgCtx() -> egCtx
     patternTypes: {},
     patternFuncIdx: {},
     variantFieldMonoTypes: {},
+    interfaceMethods: {},
+    interfaceTypeParams: {},
+    namedImpls: {},
   }
 end
 
@@ -195,6 +222,9 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     patternTypes: {},
     patternFuncIdx: {},
     variantFieldMonoTypes: {},
+    interfaceMethods: {},
+    interfaceTypeParams: {},
+    namedImpls: {},
   }
 end
 
@@ -234,10 +264,13 @@ func newFuncEgCtx(params: Slice[String], retType: ast2.MonoType, tailName: Strin
     patternTypes: {},
     patternFuncIdx: {},
     variantFieldMonoTypes: {},
+    interfaceMethods: {},
+    interfaceTypeParams: {},
+    namedImpls: {},
   }
 end
 
-func newGenerator2(pkgName: String, typedDecls: Slice[ast2.Decl], goPackages: Slice[typeinference2.GoPackageEntry], pkgInfo: typeinference2.PackageInfo) -> Generator2
+func newGenerator2(pkgName: String, typedDecls: Slice[ast2.Decl], goPackages: Slice[typeinference2.GoPackageEntry], pkgInfo: typeinference2.PackageInfo, packageIndex: PackageIndex) -> Generator2
   Generator2 {
     pkgName: pkgName,
     importPaths: [],
@@ -249,6 +282,7 @@ func newGenerator2(pkgName: String, typedDecls: Slice[ast2.Decl], goPackages: Sl
     decls: typedDecls,
     goPackages: goPackages,
     pkgInfo: Some(pkgInfo),
+    packageIndex: packageIndex,
   }
 end
 
@@ -288,6 +322,9 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     patternTypes: ctx.patternTypes,
     patternFuncIdx: ctx.patternFuncIdx,
     variantFieldMonoTypes: ctx.variantFieldMonoTypes,
+    interfaceMethods: ctx.interfaceMethods,
+    interfaceTypeParams: ctx.interfaceTypeParams,
+    namedImpls: ctx.namedImpls,
   }
 end
 
@@ -508,6 +545,43 @@ func monoTypeToGoStr(t: ast2.MonoType) -> String
     case TKVar(_) => "any"
     case TParam(_) => "any"
     case TQualifiedName(path, inner) => monoTypeToGoStr(inner.value())
+  end
+end
+
+# monoTypeToGoAstWithParams is the structured counterpart used for typed local
+# declarations.  String rendering remains available for diagnostic/text-only
+# paths, but lowering no longer reparses those rendered types.
+func monoTypeToGoAstWithParams(t: ast2.MonoType, params: Slice[String]) -> goast.Expr
+  switch t
+    case TCon(name) => if name == "Unit" then goast.EmptyStructType() else goast.TypeName(goPrimitiveTypeName(name)) end
+    case TParam(id) => goast.TypeName(params.Get(-id - 1).UnwrapOr("any"))
+    case TApp(ctor, args) then
+      let lowered = args.Map(func(arg: ast2.MonoType) -> goast.Expr monoTypeToGoAstWithParams(arg, params) end)
+      switch ctor.value()
+        case TCon(name) then
+          if name == "Ref" && lowered.Len() == 1 then goast.TypePointer(lowered.Get(0).UnwrapOr(goast.TypeName("any")))
+          elsif name == "Slice" && lowered.Len() == 1 then goast.TypeSlice(lowered.Get(0).UnwrapOr(goast.TypeName("any")))
+          elsif name == "Map" && lowered.Len() == 2 then goast.TypeMap(lowered.Get(0).UnwrapOr(goast.TypeName("any")), lowered.Get(1).UnwrapOr(goast.TypeName("any")))
+          elsif name == "Set" && lowered.Len() == 1 then goast.TypeMap(lowered.Get(0).UnwrapOr(goast.TypeName("any")), goast.EmptyStructType())
+          else goast.TypeApply(goast.TypeName(goPrimitiveTypeName(name)), lowered)
+          end
+        end
+        case _ => goast.TypeApply(monoTypeToGoAstWithParams(ctor.value(), params), lowered)
+      end
+    end
+    case TFunc(items, ret) => goast.TypeFunc(items.Map(func(item: ast2.MonoType) -> goast.Expr monoTypeToGoAstWithParams(item, params) end), monoTypeToGoAstWithParams(ret.value(), params), !monoIsUnit(ret.value()))
+    case TTuple(items) => goast.TypeTuple(items.Map(func(item: ast2.MonoType) -> goast.Expr monoTypeToGoAstWithParams(item, params) end))
+    case TUnit => goast.EmptyStructType()
+    case TQualifiedName(_, inner) => monoTypeToGoAstWithParams(inner.value(), params)
+    case _ => goast.TypeName("any")
+  end
+end
+
+func monoIsUnit(t: ast2.MonoType) -> Bool
+  switch t
+    case TUnit => true
+    case TCon(name) => name == "Unit"
+    case _ => false
   end
 end
 
