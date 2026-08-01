@@ -163,7 +163,10 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (trans
 	if !statementForm {
 		for _, c := range n.Cases {
 			if typ := switchBodyType(c.Body, g, ctx); typ != "" {
-				if expected == "" || !sameSwitchResultType(expected, typ, g) {
+				// A declared return/binding type is contextual information for
+				// empty literals.  Do not replace it with a case's fallback
+				// type (an unannotated [] otherwise lowers as []int).
+				if expected == "" {
 					expected = typ
 				}
 				break
