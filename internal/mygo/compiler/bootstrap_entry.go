@@ -11,10 +11,22 @@ func CompileDirBootstrap(dir string) ([]string, error) {
 	return unwrapBootstrapResult(compileDirBootstrapEntry(dir))
 }
 
+// CompileDirBootstrapWithTiming is CompileDirBootstrap with per-package stage
+// timings written to standard error.
+func CompileDirBootstrapWithTiming(dir string) ([]string, error) {
+	return unwrapBootstrapResult(compileDirBootstrapEntryWithTiming(dir, true))
+}
+
 // SyncBootstrap compiles every MyGO package below root through the self-hosted
 // pipeline and exposes its Result value as a Go error return.
 func SyncBootstrap(root string) ([]string, error) {
 	return unwrapBootstrapResult(syncBootstrapMyGO(root))
+}
+
+// SyncBootstrapWithTiming is SyncBootstrap with parser2, import/FFI,
+// typeinference2, codegen2, write, and total timings written to standard error.
+func SyncBootstrapWithTiming(root string) ([]string, error) {
+	return unwrapBootstrapResult(syncBootstrapMyGOWithTiming(root, true))
 }
 
 func unwrapBootstrapResult(result Result[[]string, error]) ([]string, error) {

@@ -91,6 +91,22 @@ func TestParseFileParsesPrelude(t *testing.T) {
 	}
 }
 
+func TestParseFileParsesPreludeConversion(t *testing.T) {
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("cannot determine parser test path")
+	}
+	sourcePath := filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "prelude", "conversion.mygo")
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("read %s: %v", sourcePath, err)
+	}
+	parsed := ParseFileAt(sourcePath, string(source))
+	if _, ok := parsed.(ResultOk[ast2.File, string]); !ok {
+		t.Fatalf("ParseFileAt(%s) failed: %v", sourcePath, parsed)
+	}
+}
+
 func TestParseFileParsesPreludeMapImpl(t *testing.T) {
 	_, thisFile, _, ok := runtime.Caller(0)
 	if !ok {
@@ -184,6 +200,38 @@ end
 	slice, ok := (cast.F0).Kind.(ast2.ExprKindSliceLitExpr)
 	if !ok || len(slice.F0) != 2 {
 		t.Fatalf("cast value = %T, want two-item ExprSliceLitExpr", cast.F0)
+	}
+}
+
+func TestParseNumericLiteralSyntax(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func values()
+  [18_446_744u64, 3.14f32, 0xff, 0XFFi8, 0o777u, 0B1010u64]
+end
+`)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
+	lit := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindSliceLitExpr)
+	want := []string{"18_446_744u64", "3.14f32", "0xff", "0XFFi8", "0o777u", "0B1010u64"}
+	if len(lit.F0) != len(want) {
+		t.Fatalf("literal count = %d, want %d", len(lit.F0), len(want))
+	}
+	for i, expected := range want {
+		got, ok := lit.F0[i].Kind.(ast2.ExprKindNumberExpr)
+		if !ok || got.F0 != expected {
+			t.Fatalf("literal[%d] = %#v, want number %q", i, lit.F0[i].Kind, expected)
+		}
+	}
+}
+
+func TestRejectInvalidNumericLiteralSyntax(t *testing.T) {
+	for _, literal := range []string{"1.2.3", "1oops", "0x", "0b102", "1_"} {
+		t.Run(literal, func(t *testing.T) {
+			got := ParseFile("package sample\n\nfunc bad()\n  " + literal + "\nend\n")
+			if _, ok := got.(ResultErr[ast2.File, string]); !ok {
+				t.Fatalf("ParseFile(%q) = %v, want parse error", literal, got)
+			}
+		})
 	}
 }
 

@@ -28,6 +28,16 @@ func predeclareFunctionsWithState(decls: Slice[ast2.Decl], env: Slice[EnvEntry],
         envPut(env, name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: typeFromASTInEnvWithParams(target, tps, env, state) })
       case TypeDecl(name, tps, _) =>
         envPut(env, name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: declaredType(name, tps) })
+      case LetDecl(bind) =>
+        switch bind.Type
+          case Some(typ) => envPut(env, bind.Name, Scheme { Bound: [], Predicates: [], Body: typeFromASTInEnvWithParams(typ, [], env, state) })
+          case None => env
+        end
+      case VarDecl(bind) =>
+        switch bind.Type
+          case Some(typ) => envPut(env, bind.Name, Scheme { Bound: [], Predicates: [], Body: typeFromASTInEnvWithParams(typ, [], env, state) })
+          case None => env
+        end
       case FuncDecl(name, tps, params, ret, _, constraints) =>
         let retType = switch ret
           case Some(t) => typeFromASTInEnvWithParams(t, tps, env, state)
@@ -88,6 +98,8 @@ end
 func inferDecl(decl: ast2.Decl, env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[DeclInfer, String]
   switch decl
     case ImportDecl(_, _) => Ok(DeclInfer { Env: env, Fields: fields, State: state, TypedDecl: None})
+    case LetDecl(bind) => inferPackageBinding(bind, false, env, fields, state)
+    case VarDecl(bind) => inferPackageBinding(bind, true, env, fields, state)
     case TypeAliasDecl(_, _, _) => Ok(DeclInfer { Env: env, Fields: fields, State: state, TypedDecl: Some(decl) })
     case TypeDecl(_, _, _) => Ok(DeclInfer { Env: env, Fields: fields, State: state, TypedDecl: Some(decl) })
     case StructDecl(name, tps, structFields) =>
@@ -142,6 +154,20 @@ func inferDecl(decl: ast2.Decl, env: Slice[EnvEntry], fields: Slice[FieldEntry],
       end
     case FuncDecl(name, tps, params, ret, body, constraints) =>
       inferFuncDecl(name, tps, params, ret, body, constraints, env, fields, state)
+  end
+end
+
+func inferPackageBinding(bind: ast2.Bind, mutable: Bool, env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[DeclInfer, String]
+  let inferred = inferBlockBind(bind, mutable, env, state)
+  switch inferred
+    case Err(msg) => Err(msg)
+    case Ok(step) =>
+      let typed = switch step.Stmt
+        case LetStmt(value) => ast2.Decl.LetDecl(value)
+        case VarStmt(value) => ast2.Decl.VarDecl(value)
+        case _ => ast2.Decl.LetDecl(bind)
+      end
+      Ok(DeclInfer { Env: step.Env, Fields: fields, State: step.Result.State, TypedDecl: Some(typed) })
   end
 end
 

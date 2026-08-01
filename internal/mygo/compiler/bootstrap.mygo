@@ -18,12 +18,14 @@ import os "go:os"
 import filepath "go:path/filepath"
 import sort "go:sort"
 import strings "go:strings"
+import time "go:time"
 
 struct BootstrapState
   Compiling: Map[String, Bool]
   Compiled: Map[String, Slice[String]]
   SourcesCache: Map[String, BootstrapInputs]
   GenerateImportFiles: Bool
+  Timing: Bool
 end
 
 # BootstrapInputs pairs the per-file codegen inputs with the decl sources that
@@ -43,8 +45,8 @@ struct BootstrapImport
   Path: String
 end
 
-func newBootstrapState(generateImportFiles: Bool) -> BootstrapState
-  BootstrapState { Compiling: {}, Compiled: {}, SourcesCache: {}, GenerateImportFiles: generateImportFiles }
+func newBootstrapState(generateImportFiles: Bool, timing: Bool) -> BootstrapState
+  BootstrapState { Compiling: {}, Compiled: {}, SourcesCache: {}, GenerateImportFiles: generateImportFiles, Timing: timing }
 end
 
 func emptyBootstrapInputs() -> BootstrapInputs
@@ -55,13 +57,37 @@ func emptyBootstrapGoPackageCollection() -> BootstrapGoPackageCollection
   BootstrapGoPackageCollection { Packages: [], Seen: {} }
 end
 
+func bootstrapTimingStart() -> Int64
+  go[Int64] { code: "time.Now().UnixNano()" in time = time }
+end
+
+func bootstrapTimingLog(state: BootstrapState, stage: String, dir: String, started: Int64) -> ()
+  if state.Timing then
+    go[()] {
+      code: "fmt.Fprintf(os.Stderr, \"[bootstrap] %s %s: %s\\n\", stage, dir, time.Duration(time.Now().UnixNano()-started))"
+      in fmt = fmt
+      in os = os
+      in time = time
+      in stage = stage
+      in dir = dir
+      in started = started
+    }
+  else
+    ()
+  end
+end
+
 # Public bootstrap entry points.  The implementation below is intentionally
 # state-threaded so imported packages can contribute typed external decls to
 # their importers without falling back to the legacy compiler pipeline.
 func compileDirBootstrapEntry(dir: String) -> Result[Slice[String], Error]
+  compileDirBootstrapEntryWithTiming(dir, false)
+end
+
+func compileDirBootstrapEntryWithTiming(dir: String, timing: Bool) -> Result[Slice[String], Error]
   # The single-package API must return a usable transitive build, including
   # generated files for imported MyGO packages.
-  compileDirBootstrapWithCodegen(dir, newBootstrapState(true), true)
+  compileDirBootstrapWithCodegen(dir, newBootstrapState(true, timing), true)
 end
 
 # Sharing one BootstrapState across the whole sync run lets prelude (and every
@@ -71,9 +97,13 @@ end
 # sync target on its own; its .gen.go files are produced when the package
 # itself is later processed by syncBootstrapDirs.
 func syncBootstrapMyGO(root: String) -> Result[Slice[String], Error]
+  syncBootstrapMyGOWithTiming(root, false)
+end
+
+func syncBootstrapMyGOWithTiming(root: String, timing: Bool) -> Result[Slice[String], Error]
   let dirs = bootstrapMygoDirs(root)
   switch dirs
-    case Ok(items) => syncBootstrapDirs(items, 0, newBootstrapState(false), [])
+    case Ok(items) => syncBootstrapDirs(items, 0, newBootstrapState(false, timing), [])
     case Err(err) => Err(err)
   end
 end
@@ -156,6 +186,8 @@ end
 # every package on its own.
 func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bool) -> Result[Slice[String], Error]
   state.Compiling.Set(dir, true)
+  let totalStarted = bootstrapTimingStart()
+  let parserStarted = bootstrapTimingStart()
   let loaded = bootstrapLoadPackageSources(dir)
   switch loaded
     case Err(msg) then
@@ -163,8 +195,10 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
       Err(fmt.Errorf("bootstrap parse %s: %s", dir, msg))
     end
     case Ok(inputs) then
+      bootstrapTimingLog(state, "parser2", dir, parserStarted)
       if inputs.Inputs.Len() == 0 then
         state.Compiling.Delete(dir)
+        bootstrapTimingLog(state, "total", dir, totalStarted)
         Ok([])
       else
         let root = bootstrapWorkspaceRoot(dir)
@@ -201,6 +235,7 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                       packagesRef.value().Append(bootstrapMyGoPackageSignatures(".", "github.com/mygo-lang/mygo/prelude", externalSources))
                       ()
                     end
+                    let ffiStarted = bootstrapTimingStart()
                     let initialPopulated = bootstrapPopulateGoSignatures(packagesRef)
                     switch initialPopulated
                       case Err(err) then
@@ -222,7 +257,9 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                                 Err(fmt.Errorf("bootstrap Go FFI %s: %s", dir, err.Error()))
                               end
                               case Ok(_) then
+                                bootstrapTimingLog(state, "imports+ffi", dir, ffiStarted)
                                 let myGoPkgInfos = bootstrapCollectMyGoPkgInfos(workspaceRoot, dir, bootstrapImportsFromSources(inputs.Sources), 0, state, [] as Slice[typeinference2.MyGoPackageInfo])
+                                let inferenceStarted = bootstrapTimingStart()
                                 let inferred = typeinference2.InferPackageWithExternal(inputs.Sources, externalSources, packagesRef.value(), myGoPkgInfos)
                                 switch inferred
                                   case Err(msg) then
@@ -230,7 +267,8 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                                     Err(fmt.Errorf("bootstrap infer %s: %s", dir, msg))
                                   end
                                   case Ok(info) =>
-                                    bootstrapFinishPackage(dir, state, codegen, inputs, info, packagesRef, preludeWritten, dependencyFiles)
+                                    bootstrapTimingLog(state, "typeinference2", dir, inferenceStarted)
+                                    bootstrapFinishPackage(dir, state, codegen, inputs, info, packagesRef, preludeWritten, dependencyFiles, totalStarted)
                                 end
                               end
                             end
@@ -254,12 +292,14 @@ end
 # release the Compiling flag, leave the parsed sources cached for future
 # re-use, and return an empty file list.  The sync loop will eventually
 # revisit the same dir with codegen == true.
-func bootstrapFinishPackage(dir: String, state: BootstrapState, codegen: Bool, inputs: BootstrapInputs, info: typeinference2.PackageInfo, packagesRef: Ref[Slice[typeinference2.GoPackageEntry]], preludeWritten: Slice[String], dependencyFiles: Slice[String]) -> Result[Slice[String], Error]
+func bootstrapFinishPackage(dir: String, state: BootstrapState, codegen: Bool, inputs: BootstrapInputs, info: typeinference2.PackageInfo, packagesRef: Ref[Slice[typeinference2.GoPackageEntry]], preludeWritten: Slice[String], dependencyFiles: Slice[String], totalStarted: Int64) -> Result[Slice[String], Error]
   if !codegen then
     state.Compiling.Delete(dir)
+    bootstrapTimingLog(state, "total", dir, totalStarted)
     Ok([])
   else
     let infoWithPackages = typeinference2.PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: packagesRef.value(), Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, TypedDeclSources: info.TypedDeclSources, ExternalTypedDeclSources: info.ExternalTypedDeclSources, ResolvedConstraintArgs: info.ResolvedConstraintArgs }
+    let codegenStarted = bootstrapTimingStart()
     let generated = codegen2.GenerateFiles(inputs.Inputs, infoWithPackages)
     switch generated
       case Err(msg) then
@@ -267,6 +307,8 @@ func bootstrapFinishPackage(dir: String, state: BootstrapState, codegen: Bool, i
         Err(fmt.Errorf("bootstrap generate %s: %s", dir, msg))
       end
       case Ok(files) then
+        bootstrapTimingLog(state, "codegen2", dir, codegenStarted)
+        let writeStarted = bootstrapTimingStart()
         let written = bootstrapWriteGenerated(dir, files)
         switch written
           case Err(err) then
@@ -274,9 +316,11 @@ func bootstrapFinishPackage(dir: String, state: BootstrapState, codegen: Bool, i
             Err(fmt.Errorf("bootstrap write %s: %s", dir, err.Error()))
           end
           case Ok(paths) then
+            bootstrapTimingLog(state, "write", dir, writeStarted)
             let allFiles = appendBootstrapStrings(preludeWritten, appendBootstrapStrings(dependencyFiles, paths))
             state.Compiled.Set(dir, allFiles)
             state.Compiling.Delete(dir)
+            bootstrapTimingLog(state, "total", dir, totalStarted)
             Ok(allFiles)
           end
         end

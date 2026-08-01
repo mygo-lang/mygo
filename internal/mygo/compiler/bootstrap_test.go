@@ -21,6 +21,13 @@ func bootstrapTestModule(t *testing.T, dir string) {
 	}
 }
 
+func TestCompileDirBootstrapGeneratesParser2WithoutStaticInitCycles(t *testing.T) {
+	dir := filepath.Join("..", "parser2")
+	if _, err := CompileDirBootstrap(dir); err != nil {
+		t.Fatalf("CompileDirBootstrap(%q) error = %v", dir, err)
+	}
+}
+
 func TestCompileDirBootstrapUsesSelfHostedPipeline(t *testing.T) {
 	dir := t.TempDir()
 	bootstrapTestModule(t, dir)
@@ -54,6 +61,31 @@ end
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), written[0], generated, parser.AllErrors); err != nil {
 		t.Fatalf("bootstrap output is invalid Go: %v\n%s", err, generated)
+	}
+}
+
+func TestSyncBootstrapCompilesRootPackage(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(`package sample
+
+func value() -> Int
+  42
+end
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	written, err := SyncBootstrap(dir)
+	if err != nil {
+		t.Fatalf("SyncBootstrap(%q): %v", dir, err)
+	}
+	want := filepath.Join(dir, "zz_sample.gen.go")
+	if len(written) != 1 || written[0] != want {
+		t.Fatalf("SyncBootstrap() wrote %v, want [%q]", written, want)
+	}
+	if _, err := os.Stat(want); err != nil {
+		t.Fatalf("generated root package file: %v", err)
 	}
 }
 

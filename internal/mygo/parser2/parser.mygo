@@ -15,6 +15,14 @@ struct InlineGoParts
   Types: Slice[ast2.GoTypeOperand]
 end
 
+# Parser combinators are immutable.  Build the hot grammar graphs once at
+# package initialization instead of allocating their closure trees for each
+# file, declaration, type, and expression parsed.
+let fileParserCache: ps.Parser[ast2.File] = buildFileParser()
+let declParserCache: ps.Parser[ast2.Decl] = buildDeclParser()
+let typeExprParserCache: ps.Parser[ast2.TypeExpr] = buildTypeExprParser()
+let exprParserCache: ps.Parser[ast2.Expr] = buildExprParser()
+
 # A MyGO parser written in MyGO, backed by the parsec combinator library.
 #
 # parser2 intentionally owns a compact AST first. That keeps this package
@@ -63,6 +71,8 @@ end
 
 func annotateDeclSource(decl: ast2.Decl, sourceName: String) -> ast2.Decl
   switch decl
+    case LetDecl(bind) => ast2.Decl.LetDecl(ast2.Bind { Name: bind.Name, Type: bind.Type, Value: annotateExprSource(bind.Value, sourceName) })
+    case VarDecl(bind) => ast2.Decl.VarDecl(ast2.Bind { Name: bind.Name, Type: bind.Type, Value: annotateExprSource(bind.Value, sourceName) })
     case FuncDecl(name, tps, params, ret, body, constraints) =>
       ast2.Decl.FuncDecl(name, tps, params, ret, annotateExprSource(body, sourceName), constraints)
     case ImplDecl(tps, target, iface, methods) =>
@@ -135,6 +145,10 @@ func annotateStmtSource(stmt: ast2.Stmt, sourceName: String) -> ast2.Stmt
 end
 
 func fileParser() -> ps.Parser[ast2.File]
+  fileParserCache
+end
+
+func buildFileParser() -> ps.Parser[ast2.File]
   ps.PBind(kw("package"), func(_: String) -> ps.Parser[ast2.File]
     ps.PBind(identifier(), func(pkg: String) -> ps.Parser[ast2.File]
       ps.PBind(ps.PMany(positionedDecl()), func(items: Slice[(ast2.Decl, ast2.SourcePos)]) -> ps.Parser[ast2.File]
@@ -164,8 +178,14 @@ func positionedDecl() -> ps.Parser[(ast2.Decl, ast2.SourcePos)]
 end
 
 func decl() -> ps.Parser[ast2.Decl]
+  declParserCache
+end
+
+func buildDeclParser() -> ps.Parser[ast2.Decl]
   ps.PChoice([
     ps.PAttempt(importDecl()),
+    ps.PAttempt(packageLetDecl()),
+    ps.PAttempt(packageVarDecl()),
     ps.PAttempt(typeDecl()),
     ps.PAttempt(structDecl()),
     ps.PAttempt(enumDecl()),
@@ -173,6 +193,30 @@ func decl() -> ps.Parser[ast2.Decl]
     ps.PAttempt(implDecl()),
     funcDecl(),
   ])
+end
+
+func packageLetDecl() -> ps.Parser[ast2.Decl]
+  ps.PBind(kw("let"), func(_: String) -> ps.Parser[ast2.Decl]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Decl]
+      ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), typeExpr()))), func(typ: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Decl]
+        ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Decl]
+          ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Decl ast2.Decl.LetDecl(ast2.Bind { Name: name, Type: typ, Value: value }) end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func packageVarDecl() -> ps.Parser[ast2.Decl]
+  ps.PBind(kw("var"), func(_: String) -> ps.Parser[ast2.Decl]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Decl]
+      ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), typeExpr()))), func(typ: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Decl]
+        ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Decl]
+          ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Decl ast2.Decl.VarDecl(ast2.Bind { Name: name, Type: typ, Value: value }) end)
+        end)
+      end)
+    end)
+  end)
 end
 
 func typeDecl() -> ps.Parser[ast2.Decl]
@@ -353,6 +397,10 @@ func param() -> ps.Parser[ast2.Param]
 end
 
 func typeExpr() -> ps.Parser[ast2.TypeExpr]
+  typeExprParserCache
+end
+
+func buildTypeExprParser() -> ps.Parser[ast2.TypeExpr]
   ps.PChoice([
     ps.PAttempt(funcType()),
     ps.PAttempt(namedType()),
@@ -638,6 +686,10 @@ end
 # expr 解析纯表达式。
 # 注意：expr 不处理语句变体。要解析包含语句的代码，请使用 stmt()。
 func expr() -> ps.Parser[ast2.Expr]
+  exprParserCache
+end
+
+func buildExprParser() -> ps.Parser[ast2.Expr]
   positionedExpr(exprKind())
 end
 
@@ -1152,13 +1204,91 @@ func failIdentifier() -> ps.Parser[String]
 end
 
 func number() -> ps.Parser[String]
-  lexeme(ps.PBind(ps.PMany1(ps.PSatisfy(func(r: Rune) -> Bool
-    (r >= '0' && r <= '9') || r == '.'
-  end, "number")), func(rs: Slice[Rune]) -> ps.Parser[String]
-    ps.PMap(ps.POptional(identifierRaw()), func(suffix: Option[String]) -> String
-      String.FromRunes(rs) + suffix.UnwrapOr("")
-    end)
+  lexeme(ps.PBind(numberCore(), func(value: String) -> ps.Parser[String]
+    ps.PThen(ps.PNotFollowedBy(ps.PSatisfy(isIdentRest, "number boundary"), "number boundary"), ps.PPure(value))
   end))
+end
+
+# Match the production lexer: decimal digits may use '_' separators and have
+# at most one fraction; prefixed integers and type suffixes are explicit.
+func numberCore() -> ps.Parser[String]
+  ps.PChoice([
+    ps.PAttempt(prefixedNumber(ps.PChoice([ps.PString("0x"), ps.PString("0X")]), hexDigits())),
+    ps.PAttempt(prefixedNumber(ps.PChoice([ps.PString("0o"), ps.PString("0O")]), octalDigits())),
+    ps.PAttempt(prefixedNumber(ps.PChoice([ps.PString("0b"), ps.PString("0B")]), binaryDigits())),
+    decimalNumber(),
+  ])
+end
+
+func prefixedNumber(prefix: ps.Parser[String], digits: ps.Parser[String]) -> ps.Parser[String]
+  ps.PBind(prefix, func(head: String) -> ps.Parser[String]
+    ps.PBind(digits, func(body: String) -> ps.Parser[String]
+      ps.PMap(ps.POptional(integerSuffix()), func(suffix: Option[String]) -> String
+        head + body + suffix.UnwrapOr("")
+      end)
+    end)
+  end)
+end
+
+func decimalNumber() -> ps.Parser[String]
+  ps.PBind(decimalDigits(), func(whole: String) -> ps.Parser[String]
+    ps.PBind(ps.POptional(ps.PAttempt(ps.PBind(ps.PString("."), func(dot: String) -> ps.Parser[String]
+      ps.PMap(decimalDigits(), func(fraction: String) -> String dot + fraction end)
+    end))), func(fraction: Option[String]) -> ps.Parser[String]
+      ps.PMap(ps.POptional(numberSuffix()), func(suffix: Option[String]) -> String
+        whole + fraction.UnwrapOr("") + suffix.UnwrapOr("")
+      end)
+    end)
+  end)
+end
+
+func numberSuffix() -> ps.Parser[String]
+  ps.PChoice([floatSuffix(), integerSuffix()])
+end
+
+func integerSuffix() -> ps.Parser[String]
+  ps.PChoice([ps.PString("i8"), ps.PString("i16"), ps.PString("i32"), ps.PString("i64"), ps.PString("u8"), ps.PString("u16"), ps.PString("u32"), ps.PString("u64"), ps.PString("u")])
+end
+
+func floatSuffix() -> ps.Parser[String]
+  ps.PChoice([ps.PString("f32"), ps.PString("f64")])
+end
+
+func decimalDigits() -> ps.Parser[String]
+  digitSequence(func(r: Rune) -> Bool r >= '0' && r <= '9' end, "decimal digit")
+end
+
+func hexDigits() -> ps.Parser[String]
+  digitSequence(func(r: Rune) -> Bool
+    (r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')
+  end, "hexadecimal digit")
+end
+
+func octalDigits() -> ps.Parser[String]
+  digitSequence(func(r: Rune) -> Bool r >= '0' && r <= '7' end, "octal digit")
+end
+
+func binaryDigits() -> ps.Parser[String]
+  digitSequence(func(r: Rune) -> Bool r == '0' || r == '1' end, "binary digit")
+end
+
+func digitSequence(valid: func(Rune) -> Bool, expected: String) -> ps.Parser[String]
+  ps.PBind(ps.PSatisfy(valid, expected), func(first: Rune) -> ps.Parser[String]
+    ps.PMap(ps.PMany(digitTail(valid, expected)), func(rest: Slice[Rune]) -> String
+      String.FromRunes(rest.Prepend(first))
+    end)
+  end)
+end
+
+# After the first digit, permit ordinary consecutive digits as well as an
+# underscore followed by a digit. The previous form accepted only underscore
+# pairs, so multi-digit literals such as 10 and 64 failed at their second
+# digit.
+func digitTail(valid: func(Rune) -> Bool, expected: String) -> ps.Parser[Rune]
+  ps.PChoice([
+    ps.PSatisfy(valid, expected),
+    ps.PAttempt(ps.PThen(ps.PChar('_'), ps.PSatisfy(valid, expected))),
+  ])
 end
 
 func stringLiteral() -> ps.Parser[String]

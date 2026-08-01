@@ -18,6 +18,7 @@ func main() {
 
 	noPrelude := false
 	bootstrap := false
+	bootstrapTiming := false
 	args := os.Args[1:]
 	for len(args) > 0 {
 		switch args[0] {
@@ -26,6 +27,10 @@ func main() {
 			args = args[1:]
 		case "--bootstrap":
 			bootstrap = true
+			args = args[1:]
+		case "--bootstrap-timing":
+			bootstrap = true
+			bootstrapTiming = true
 			args = args[1:]
 		default:
 			goto parsedFlags
@@ -45,6 +50,11 @@ parsedFlags:
 			root = args[1]
 		}
 		if bootstrap {
+			if bootstrapTiming {
+				_, err := compiler.SyncBootstrapWithTiming(root)
+				must(err)
+				return
+			}
 			_, err := compiler.SyncBootstrap(root)
 			must(err)
 		} else if noPrelude {
@@ -74,7 +84,11 @@ parsedFlags:
 		var written []string
 		var err error
 		if bootstrap {
-			written, err = compiler.SyncBootstrap(root)
+			if bootstrapTiming {
+				written, err = compiler.SyncBootstrapWithTiming(root)
+			} else {
+				written, err = compiler.SyncBootstrap(root)
+			}
 		} else if noPrelude {
 			written, err = compiler.SyncNoPrelude(root)
 		} else {
@@ -95,9 +109,10 @@ parsedFlags:
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: mygo [--bootstrap] [--no-prelude] <sync|build> [path|go build args...]")
+	fmt.Fprintln(os.Stderr, "usage: mygo [--bootstrap] [--bootstrap-timing] [--no-prelude] <sync|build> [path|go build args...]")
 	fmt.Fprintln(os.Stderr, "  --no-prelude  disable prelude auto-import (use when compiling prelude itself)")
 	fmt.Fprintln(os.Stderr, "  --bootstrap   use parser2, typeinference2, and codegen2 (currently no MyGO package import resolution)")
+	fmt.Fprintln(os.Stderr, "  --bootstrap-timing  print bootstrap stage durations to standard error")
 }
 
 func must(err error) {

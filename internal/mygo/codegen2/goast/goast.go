@@ -31,31 +31,45 @@ func TypeName(name string) ast.Expr {
 	}
 	return out
 }
-func EmptyStructType() ast.Expr { return &ast.StructType{Fields: &ast.FieldList{}} }
-func TypePointer(elem ast.Expr) ast.Expr { return &ast.StarExpr{X: elem} }
-func TypeSlice(elem ast.Expr) ast.Expr { return &ast.ArrayType{Elt: elem} }
+func EmptyStructType() ast.Expr            { return &ast.StructType{Fields: &ast.FieldList{}} }
+func TypePointer(elem ast.Expr) ast.Expr   { return &ast.StarExpr{X: elem} }
+func TypeSlice(elem ast.Expr) ast.Expr     { return &ast.ArrayType{Elt: elem} }
 func TypeMap(key, value ast.Expr) ast.Expr { return &ast.MapType{Key: key, Value: value} }
 func TypeChan(elem ast.Expr, direction string) ast.Expr {
 	dir := ast.SEND | ast.RECV
-	if direction == "send" { dir = ast.SEND }
-	if direction == "recv" { dir = ast.RECV }
+	if direction == "send" {
+		dir = ast.SEND
+	}
+	if direction == "recv" {
+		dir = ast.RECV
+	}
 	return &ast.ChanType{Dir: dir, Value: elem}
 }
 func TypeApply(ctor ast.Expr, args []ast.Expr) ast.Expr {
-	if len(args) == 0 { return ctor }
-	if len(args) == 1 { return &ast.IndexExpr{X: ctor, Index: args[0]} }
+	if len(args) == 0 {
+		return ctor
+	}
+	if len(args) == 1 {
+		return &ast.IndexExpr{X: ctor, Index: args[0]}
+	}
 	return &ast.IndexListExpr{X: ctor, Indices: args}
 }
 func TypeFunc(params []ast.Expr, result ast.Expr, hasResult bool) ast.Expr {
 	fields := make([]*ast.Field, 0, len(params))
-	for _, param := range params { fields = append(fields, &ast.Field{Type: param}) }
+	for _, param := range params {
+		fields = append(fields, &ast.Field{Type: param})
+	}
 	results := &ast.FieldList{}
-	if hasResult { results.List = []*ast.Field{{Type: result}} }
+	if hasResult {
+		results.List = []*ast.Field{{Type: result}}
+	}
 	return &ast.FuncType{Params: &ast.FieldList{List: fields}, Results: results}
 }
 func TypeTuple(items []ast.Expr) ast.Expr {
 	fields := make([]*ast.Field, 0, len(items))
-	for i, item := range items { fields = append(fields, &ast.Field{Names: []*ast.Ident{ast.NewIdent(fmt.Sprintf("F%d", i))}, Type: item}) }
+	for i, item := range items {
+		fields = append(fields, &ast.Field{Names: []*ast.Ident{ast.NewIdent(fmt.Sprintf("F%d", i))}, Type: item})
+	}
 	return &ast.StructType{Fields: &ast.FieldList{List: fields}}
 }
 
@@ -141,12 +155,18 @@ func StructDeclFromParts(name string, typeParams, fieldNames, fieldTypes, fieldT
 
 // StructDeclFromExprParts is the no-parser equivalent of StructDeclFromParts.
 func StructDeclFromExprParts(name string, typeParams, fieldNames []string, fieldTypes []ast.Expr, fieldTags []string) ast.Decl {
-	if len(fieldNames) != len(fieldTypes) || len(fieldNames) != len(fieldTags) { panic("mismatched struct field metadata") }
+	if len(fieldNames) != len(fieldTypes) || len(fieldNames) != len(fieldTags) {
+		panic("mismatched struct field metadata")
+	}
 	fields := make([]*ast.Field, 0, len(fieldNames))
 	for i, typ := range fieldTypes {
 		field := &ast.Field{Type: typ}
-		if fieldNames[i] != "" { field.Names = []*ast.Ident{ast.NewIdent(fieldNames[i])} }
-		if fieldTags[i] != "" { field.Tag = &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(fieldTags[i])} }
+		if fieldNames[i] != "" {
+			field.Names = []*ast.Ident{ast.NewIdent(fieldNames[i])}
+		}
+		if fieldTags[i] != "" {
+			field.Tag = &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(fieldTags[i])}
+		}
 		fields = append(fields, field)
 	}
 	spec := &ast.TypeSpec{Name: ast.NewIdent(name), Type: &ast.StructType{Fields: &ast.FieldList{List: fields}}, TypeParams: typeParamsFieldList(typeParams)}
@@ -300,15 +320,25 @@ func MustFuncDeclFromStmtsMultiComparable(name string, typeParams, paramNames, p
 
 // MustFuncDeclFromExprStmtsMultiComparable accepts already-lowered type ASTs.
 func MustFuncDeclFromExprStmtsMultiComparable(name string, typeParams, paramNames []string, paramTypes, returnTypes []ast.Expr, comparableParams []string, body []ast.Stmt, loop bool) ast.Decl {
-	if len(paramNames) != len(paramTypes) { panic("mismatched function parameter metadata") }
+	if len(paramNames) != len(paramTypes) {
+		panic("mismatched function parameter metadata")
+	}
 	compSet := make(map[string]bool, len(comparableParams))
-	for _, p := range comparableParams { compSet[p] = true }
+	for _, p := range comparableParams {
+		compSet[p] = true
+	}
 	params := make([]*ast.Field, 0, len(paramNames))
-	for i, typ := range paramTypes { params = append(params, &ast.Field{Names: []*ast.Ident{ast.NewIdent(paramNames[i])}, Type: typ}) }
+	for i, typ := range paramTypes {
+		params = append(params, &ast.Field{Names: []*ast.Ident{ast.NewIdent(paramNames[i])}, Type: typ})
+	}
 	results := &ast.FieldList{}
-	for _, typ := range returnTypes { results.List = append(results.List, &ast.Field{Type: typ}) }
+	for _, typ := range returnTypes {
+		results.List = append(results.List, &ast.Field{Type: typ})
+	}
 	block := &ast.BlockStmt{List: body}
-	if loop { block = &ast.BlockStmt{List: []ast.Stmt{&ast.ForStmt{Body: block}}} }
+	if loop {
+		block = &ast.BlockStmt{List: []ast.Stmt{&ast.ForStmt{Body: block}}}
+	}
 	return &ast.FuncDecl{Name: ast.NewIdent(name), Type: &ast.FuncType{TypeParams: comparableTypeParamsFieldList(typeParams, compSet), Params: &ast.FieldList{List: params}, Results: results}, Body: block}
 }
 
@@ -897,6 +927,36 @@ func Var(name string, typ, value ast.Expr) ast.Stmt {
 // recursive binding groups, whose initializers must run only after every name
 // has been placed in scope.
 func VarDecl(name string, typ ast.Expr) ast.Stmt { return Var(name, typ, nil) }
+
+// PackageVarDecls creates a package variable and an init function that assigns
+// its value. Keeping the initializer out of the var declaration prevents Go
+// from rejecting recursive MyGO graphs as static initialization cycles.
+func PackageVarDecls(name string, typ, value ast.Expr) []ast.Decl {
+	variable := &ast.GenDecl{Tok: token.VAR, Specs: []ast.Spec{&ast.ValueSpec{
+		Names: []*ast.Ident{ast.NewIdent(name)},
+		Type:  typ,
+	}}}
+	initializer := &ast.FuncDecl{
+		Name: ast.NewIdent("init"),
+		Type: &ast.FuncType{Params: &ast.FieldList{}},
+		Body: &ast.BlockStmt{List: []ast.Stmt{&ast.AssignStmt{
+			Lhs: []ast.Expr{ast.NewIdent(name)},
+			Rhs: []ast.Expr{value},
+			Tok: token.ASSIGN,
+		}}},
+	}
+	return []ast.Decl{variable, initializer}
+}
+
+// PackageVarDecl is retained while the checked-in bootstrap output is being
+// refreshed. New codegen2 output uses PackageVarDecls.
+func PackageVarDecl(name string, typ, value ast.Expr) ast.Decl {
+	return &ast.GenDecl{Tok: token.VAR, Specs: []ast.Spec{&ast.ValueSpec{
+		Names:  []*ast.Ident{ast.NewIdent(name)},
+		Type:   typ,
+		Values: []ast.Expr{value},
+	}}}
+}
 
 func operator(op string) token.Token {
 	if tok, ok := map[string]token.Token{

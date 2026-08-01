@@ -571,6 +571,18 @@ func typedDeclEq(a: ast2.Decl, b: ast2.Decl) -> Bool
         case _ => false
       end
     end
+    case LetDecl(bindA) then
+      switch b
+        case LetDecl(bindB) => bindA.Name == bindB.Name
+        case _ => false
+      end
+    end
+    case VarDecl(bindA) then
+      switch b
+        case VarDecl(bindB) => bindA.Name == bindB.Name
+        case _ => false
+      end
+    end
     case TypeDecl(nameA, _, _) then
       switch b
         case TypeDecl(nameB, _, _) => nameA == nameB

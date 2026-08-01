@@ -44,6 +44,18 @@ func translateDeclsAst(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, 
       # backend, codegen2 emits impl helpers rather than Go interface types.
       case InterfaceDecl(_, _, _) => translateDeclsAst(g, decls, index + 1, out)
       case EnumDecl(name, tps, vars) => translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, translateEnumAstDecls(name, tps, vars)))
+      case LetDecl(bind) =>
+        let result = translatePackageBinding(g, bind, false)
+        switch result
+          case Ok(items) => translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, items))
+          case Err(msg) => Err("package let " + bind.Name + ": " + msg)
+        end
+      case VarDecl(bind) =>
+        let result = translatePackageBinding(g, bind, true)
+        switch result
+          case Ok(items) => translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, items))
+          case Err(msg) => Err("package var " + bind.Name + ": " + msg)
+        end
       case FuncDecl(name, tps, params, ret, body, constraints) =>
         let result = translateFuncAstDecl(g, name, tps, params, ret, body, constraints)
         switch result
@@ -56,6 +68,59 @@ func translateDeclsAst(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, 
         switch result
           case Ok(items) => translateDeclsAst(g, decls, index + 1, goast.AppendDecls(out, items))
           case Err(msg) => Err("impl " + typeString(target) + ": " + msg)
+        end
+    end
+  end
+end
+
+func seedPackageBindings(ctx: Ref[egCtx], decls: Slice[ast2.Decl], index: Int) -> ()
+  if index >= decls.Len() then () else
+    let decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    switch decl
+      case LetDecl(bind) =>
+        ctxSetBinding(ctx, bind.Name, sanitizeIdent(bind.Name))
+        ctxSetMutable(ctx, sanitizeIdent(bind.Name), false)
+        switch bind.Value.Type
+          case Some(typ) => ctxSetLocal(ctx, bind.Name, typ)
+          case None => ()
+        end
+      case VarDecl(bind) =>
+        ctxSetBinding(ctx, bind.Name, sanitizeIdent(bind.Name))
+        ctxSetMutable(ctx, sanitizeIdent(bind.Name), true)
+        switch bind.Value.Type
+          case Some(typ) => ctxSetLocal(ctx, bind.Name, typ)
+          case None => ()
+        end
+      case _ => ()
+    end
+    seedPackageBindings(ctx, decls, index + 1)
+  end
+end
+
+func translatePackageBinding(g: Ref[Generator2], bind: ast2.Bind, mutable: Bool) -> Result[Slice[goast.Decl], String]
+  if bind.Name == "" || bind.Name == "_" then
+    Err("package binding requires a name")
+  else
+    let ctx = Ref.new(newEgCtx())
+    go[()] {
+      code: "{ctx}.goPackages = {g}.goPackages; {ctx}.pkgInfo = {g}.pkgInfo"
+      in ctx = ctx
+      in g = g
+    }
+    ctxUsePackageIndex(ctx, g.packageIndex)
+    seedPackageBindings(ctx, g.decls, 0)
+    let value = translateAstBindingValue(bind.Value, bind.Type, ctx)
+    switch value
+      case Err(msg) => Err(msg)
+      case Ok(v) =>
+        if v.Pre.Len() != 0 then
+          Err("initializer requires statement lowering")
+        else
+          let typ = switch bind.Type
+            case Some(t) => goTypeAst(t, ctx.typeParams)
+            case None => monoTypeToGoAstWithParams(bind.Value.Type.UnwrapOr(ast2.MonoType.TUnit), ctx.typeParamNames)
+          end
+          Ok(goast.PackageVarDecls(sanitizeIdent(bind.Name), typ, v.Expr))
         end
     end
   end
@@ -75,6 +140,7 @@ func translateImplAstDecl(g: Ref[Generator2], tps: Slice[String], target: ast2.T
     in pkgInfo = g.pkgInfo
   }
   ctxUsePackageIndex(ctx, g.packageIndex)
+  seedPackageBindings(ctx, g.decls, 0)
   let stem = implStem(target, iface, ctx.typeParams)
   let receiverName = switch iface
     case Some(ifaceType) =>
@@ -312,6 +378,7 @@ func translateFuncAstDecl(g: Ref[Generator2], name: String, tps: Slice[String], 
     in g = g
   }
   ctxUsePackageIndex(ctx, g.packageIndex)
+  seedPackageBindings(ctx, g.decls, 0)
   var goParams: Slice[String] = []
   var paramNames: Slice[String] = []
   var i: Int = 0

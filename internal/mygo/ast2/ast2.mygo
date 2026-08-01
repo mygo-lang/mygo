@@ -21,6 +21,11 @@ end
 
 enum Decl
   ImportDecl(String, String)
+  # Package bindings use the same Bind payload as local let/var statements.
+  # Keeping mutability in the declaration variant makes it available before
+  # lowering function bodies, where assignments need to be checked.
+  LetDecl(Bind)
+  VarDecl(Bind)
   # `type A = B` preserves B's identity; `type A B` is a distinct nominal type.
   TypeAliasDecl(String, Slice[String], TypeExpr)
   TypeDecl(String, Slice[String], TypeExpr)

@@ -2,11 +2,8 @@
 
 package parsec
 
-import (
-	"unicode/utf8"
-
-	. "github.com/mygo-lang/mygo/prelude"
-)
+import "unicode/utf8"
+import . "github.com/mygo-lang/mygo/prelude"
 
 type Position struct {
 	Offset int
@@ -32,266 +29,260 @@ type Reply[A any] struct {
 }
 type Parser[A any] = func(State) Reply[A]
 
-func ParseInput[A any](p func(State) Reply[A], input string) Reply[A] {
+func ParseInput[A any](p Parser[A], input string) Reply[A] {
 	return p(NewState(input))
 }
 func NewState(input string) State {
 	return State{Input: input, Index: 0, Position: Position{Offset: 0, Line: 1, Column: 1}}
 }
-func PPure[A any](value A) func(State) Reply[A] {
+func PPure[A any](value A) Parser[A] {
 	return func(state State) Reply[A] {
 		return Reply[A]{Ok: true, Consumed: false, Value: value, State: state, Error: EmptyError(state.Position)}
 	}
 }
-func PFail[A any](message string) func(State) Reply[A] {
+func PFail[A any](message string) Parser[A] {
 	return func(state State) Reply[A] {
 		return Reply[A]{Ok: false, Consumed: false, Value: Zero[A](), State: state, Error: ErrorAt(state.Position, message, EmptyExpected())}
 	}
 }
-func PMap[A any, B any](p func(State) Reply[A], f func(A) B) func(State) Reply[B] {
+func PMap[A any, B any](p Parser[A], f func(A) B) Parser[B] {
 	return func(state State) Reply[B] {
-		r_1 := p(state)
-		var expr_2 Reply[B]
-		if !r_1.Ok {
-			expr_2 = Reply[B]{Ok: false, Consumed: r_1.Consumed, Value: Zero[B](), State: r_1.State, Error: r_1.Error}
+		r := p(state)
+		if !r.Ok {
+			return Reply[B]{Ok: false, Consumed: r.Consumed, Value: Zero[B](), State: r.State, Error: r.Error}
 		} else {
-			expr_2 = Reply[B]{Ok: true, Consumed: r_1.Consumed, Value: f(r_1.Value), State: r_1.State, Error: EmptyError(r_1.State.Position)}
+			return Reply[B]{Ok: true, Consumed: r.Consumed, Value: f(r.Value), State: r.State, Error: EmptyError(r.State.Position)}
 		}
-		return expr_2
 	}
 }
-func PBind[A any, B any](p func(State) Reply[A], f func(A) func(State) Reply[B]) func(State) Reply[B] {
+func PBind[A any, B any](p Parser[A], f func(A) Parser[B]) Parser[B] {
 	return func(state State) Reply[B] {
-		r_3 := p(state)
-		var expr_7 Reply[B]
-		if !r_3.Ok {
-			expr_7 = Reply[B]{Ok: false, Consumed: r_3.Consumed, Value: Zero[B](), State: r_3.State, Error: r_3.Error}
+		r := p(state)
+		if !r.Ok {
+			return Reply[B]{Ok: false, Consumed: r.Consumed, Value: Zero[B](), State: r.State, Error: r.Error}
 		} else {
-			var expr_6 Reply[B]
-			next_4 := f(r_3.Value)
-			r2_5 := next_4(r_3.State)
-			expr_6 = Reply[B]{Ok: r2_5.Ok, Consumed: r_3.Consumed || r2_5.Consumed, Value: r2_5.Value, State: r2_5.State, Error: r2_5.Error}
-			expr_7 = expr_6
+			next := f(r.Value)
+			r2 := next(r.State)
+			return Reply[B]{Ok: r2.Ok, Consumed: r.Consumed || r2.Consumed, Value: r2.Value, State: r2.State, Error: r2.Error}
 		}
-		return expr_7
 	}
 }
-func PThen[A any, B any](pa func(State) Reply[A], pb func(State) Reply[B]) func(State) Reply[B] {
-	return PBind(pa, func(_ A) func(State) Reply[B] {
+func PThen[A any, B any](pa Parser[A], pb Parser[B]) Parser[B] {
+	return PBind(pa, func(_ A) Parser[B] {
 		return pb
 	})
 }
-func POrElse[A any](left func(State) Reply[A], right func(State) Reply[A]) func(State) Reply[A] {
+func POrElse[A any](left Parser[A], right Parser[A]) Parser[A] {
 	return func(state State) Reply[A] {
-		r_8 := left(state)
-		var expr_13 Reply[A]
-		if r_8.Ok {
-			expr_13 = r_8
+		r := left(state)
+		if r.Ok {
+			return r
 		} else {
-			var expr_12 Reply[A]
-			if r_8.Consumed {
-				expr_12 = r_8
+			if r.Consumed {
+				return r
 			} else {
-				var expr_11 Reply[A]
-				r2_9 := right(state)
-				var expr_10 Reply[A]
-				if r2_9.Ok {
-					expr_10 = r2_9
+				r2 := right(state)
+				if r2.Ok {
+					return r2
 				} else {
-					expr_10 = Reply[A]{Ok: false, Consumed: r2_9.Consumed, Value: r2_9.Value, State: r2_9.State, Error: MergeErrors(r_8.Error, r2_9.Error)}
+					return Reply[A]{Ok: false, Consumed: r2.Consumed, Value: r2.Value, State: r2.State, Error: MergeErrors(r.Error, r2.Error)}
 				}
-				expr_11 = expr_10
-				expr_12 = expr_11
 			}
-			expr_13 = expr_12
 		}
-		return expr_13
 	}
 }
-func PChoice[A any](parsers []func(State) Reply[A]) func(State) Reply[A] {
-	var expr_14 func(State) Reply[A]
+func PChoice[A any](parsers []Parser[A]) Parser[A] {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parsers) == 0 {
-		expr_14 = PFail[A]("no parser matched")
+		return PFail[A]("no parser matched")
 	} else {
-		expr_14 = PChoiceFrom(parsers, 1, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parsers, 0), PFail[A]("no parser matched")))
+		return PChoiceFrom(parsers, 1, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parsers, 0), PFail[A]("no parser matched")))
 	}
-	return expr_14
 }
-func PChoiceFrom[A any](parsers []func(State) Reply[A], index int, current func(State) Reply[A]) func(State) Reply[A] {
-	return __mygo_mt_parsec_pchoicefrom[A](parsers, index, current, 0)
-}
-func PAttempt[A any](p func(State) Reply[A]) func(State) Reply[A] {
-	return func(state State) Reply[A] {
-		r_16 := p(state)
-		var expr_17 Reply[A]
-		if r_16.Ok {
-			expr_17 = r_16
+func PChoiceFrom[A any](parsers []Parser[A], index int, current Parser[A]) Parser[A] {
+	for {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parsers) {
+			return current
 		} else {
-			expr_17 = Reply[A]{Ok: false, Consumed: false, Value: r_16.Value, State: state, Error: r_16.Error}
+			__tail_0 := parsers
+			__tail_1 := index + 1
+			__tail_2 := POrElse(current, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parsers, index), PFail[A]("no parser matched")))
+			parsers, index, current = __tail_0, __tail_1, __tail_2
+			continue
 		}
-		return expr_17
 	}
 }
-func PLookAhead[A any](p func(State) Reply[A]) func(State) Reply[A] {
+func PAttempt[A any](p Parser[A]) Parser[A] {
 	return func(state State) Reply[A] {
-		r_18 := p(state)
-		return Reply[A]{Ok: r_18.Ok, Consumed: false, Value: r_18.Value, State: state, Error: r_18.Error}
+		r := p(state)
+		if r.Ok {
+			return r
+		} else {
+			return Reply[A]{Ok: false, Consumed: false, Value: r.Value, State: state, Error: r.Error}
+		}
 	}
 }
-func PNotFollowedBy[A any](p func(State) Reply[A], message string) func(State) Reply[struct {
+func PLookAhead[A any](p Parser[A]) Parser[A] {
+	return func(state State) Reply[A] {
+		r := p(state)
+		return Reply[A]{Ok: r.Ok, Consumed: false, Value: r.Value, State: state, Error: r.Error}
+	}
+}
+func PNotFollowedBy[A any](p Parser[A], message string) Parser[struct {
 }] {
 	return func(state State) Reply[struct{}] {
-		r_19 := p(state)
-		var expr_20 Reply[struct{}]
-		if r_19.Ok {
-			expr_20 = Reply[struct{}]{Ok: false, Consumed: false, Value: struct {
+		r := p(state)
+		if r.Ok {
+			return Reply[struct{}]{Ok: false, Consumed: false, Value: struct {
 			}{}, State: state, Error: ErrorAt(state.Position, message, EmptyExpected())}
 		} else {
-			expr_20 = Reply[struct{}]{Ok: true, Consumed: false, Value: struct {
+			return Reply[struct{}]{Ok: true, Consumed: false, Value: struct {
 			}{}, State: state, Error: EmptyError(state.Position)}
 		}
-		return expr_20
 	}
 }
-func PMany[A any](p func(State) Reply[A]) func(State) Reply[[]A] {
+func PMany[A any](p Parser[A]) Parser[[]A] {
 	return func(state State) Reply[[]A] {
-		return PManyLoop[A](p, state, false, []A{})
+		return PManyLoop(p, state, false, []A{})
 	}
 }
-func PManyLoop[A any](p func(State) Reply[A], state State, consumed bool, values []A) Reply[[]A] {
-	return __mygo_mt_parsec_pmanyloop[A](p, state, consumed, values, 0)
+func PManyLoop[A any](p Parser[A], state State, consumed bool, values []A) Reply[[]A] {
+	for {
+		r := p(state)
+		if !r.Ok {
+			if r.Consumed {
+				return Reply[[]A]{Ok: false, Consumed: true, Value: values, State: r.State, Error: r.Error}
+			} else {
+				return Reply[[]A]{Ok: true, Consumed: consumed, Value: values, State: state, Error: EmptyError(state.Position)}
+			}
+		} else {
+			if !r.Consumed {
+				return Reply[[]A]{Ok: false, Consumed: consumed, Value: values, State: state, Error: ErrorAt(state.Position, "PMany parser must consume input", EmptyExpected())}
+			} else {
+				__tail_0 := p
+				__tail_1 := r.State
+				__tail_2 := true
+				__tail_3 := MygoIN5SliceM6Append(values, r.Value)
+				p, state, consumed, values = __tail_0, __tail_1, __tail_2, __tail_3
+				continue
+			}
+		}
+	}
 }
-func PMany1[A any](p func(State) Reply[A]) func(State) Reply[[]A] {
-	return PBind(p, func(first A) func(State) Reply[[]A] {
+func PMany1[A any](p Parser[A]) Parser[[]A] {
+	return PBind(p, func(first A) Parser[[]A] {
 		return PMap(PMany(p), func(rest []A) []A {
 			return MygoIN5SliceM7Prepend(rest, first)
 		})
 	})
 }
-func POptional[A any](p func(State) Reply[A]) func(State) Reply[Option[A]] {
+func POptional[A any](p Parser[A]) Parser[Option[A]] {
 	return func(state State) Reply[Option[A]] {
-		r_25 := p(state)
-		var expr_27 Reply[Option[A]]
-		if r_25.Ok {
-			expr_27 = Reply[Option[A]]{Ok: true, Consumed: r_25.Consumed, Value: Some[A](r_25.Value), State: r_25.State, Error: EmptyError(r_25.State.Position)}
+		r := p(state)
+		if r.Ok {
+			return Reply[Option[A]]{Ok: true, Consumed: r.Consumed, Value: Some[A](r.Value), State: r.State, Error: EmptyError(r.State.Position)}
 		} else {
-			var expr_26 Reply[Option[A]]
-			if r_25.Consumed {
-				expr_26 = Reply[Option[A]]{Ok: false, Consumed: true, Value: None[A](), State: r_25.State, Error: r_25.Error}
+			if r.Consumed {
+				return Reply[Option[A]]{Ok: false, Consumed: true, Value: None[A](), State: r.State, Error: r.Error}
 			} else {
-				expr_26 = Reply[Option[A]]{Ok: true, Consumed: false, Value: None[A](), State: state, Error: EmptyError(state.Position)}
+				return Reply[Option[A]]{Ok: true, Consumed: false, Value: None[A](), State: state, Error: EmptyError(state.Position)}
 			}
-			expr_27 = expr_26
 		}
-		return expr_27
 	}
 }
-func PBetween[A any, L any, R any](open func(State) Reply[L], body func(State) Reply[A], close func(State) Reply[R]) func(State) Reply[A] {
-	return PBind(open, func(_ L) func(State) Reply[A] {
-		return PBind(body, func(value A) func(State) Reply[A] {
-			return PThen(close, PPure[A](value))
+func PBetween[A any, L any, R any](open Parser[L], body Parser[A], close Parser[R]) Parser[A] {
+	return PBind(open, func(_ L) Parser[A] {
+		return PBind(body, func(value A) Parser[A] {
+			return PThen(close, PPure(value))
 		})
 	})
 }
-func PSepBy[A any, S any](item func(State) Reply[A], sep func(State) Reply[S]) func(State) Reply[[]A] {
+func PSepBy[A any, S any](item Parser[A], sep Parser[S]) Parser[[]A] {
 	return POrElse(PSepBy1(item, sep), PPure[[]A]([]A{}))
 }
-func PSepBy1[A any, S any](item func(State) Reply[A], sep func(State) Reply[S]) func(State) Reply[[]A] {
-	return PBind(item, func(first A) func(State) Reply[[]A] {
+func PSepBy1[A any, S any](item Parser[A], sep Parser[S]) Parser[[]A] {
+	return PBind(item, func(first A) Parser[[]A] {
 		return PMap(PMany(PThen(sep, item)), func(rest []A) []A {
 			return MygoIN5SliceM7Prepend(rest, first)
 		})
 	})
 }
-func PLabel[A any](p func(State) Reply[A], name string) func(State) Reply[A] {
+func PLabel[A any](p Parser[A], name string) Parser[A] {
 	return func(state State) Reply[A] {
-		r_28 := p(state)
-		var expr_30 Reply[A]
-		if r_28.Ok {
-			expr_30 = r_28
+		r := p(state)
+		if r.Ok {
+			return r
 		} else {
-			var expr_29 Reply[A]
-			if r_28.Consumed {
-				expr_29 = r_28
+			if r.Consumed {
+				return r
 			} else {
-				expr_29 = Reply[A]{Ok: false, Consumed: false, Value: r_28.Value, State: state, Error: WithExpected(r_28.Error, name)}
+				return Reply[A]{Ok: false, Consumed: false, Value: r.Value, State: state, Error: WithExpected(r.Error, name)}
 			}
-			expr_30 = expr_29
 		}
-		return expr_30
 	}
 }
-func PSatisfy(pred func(rune) bool, expected string) func(State) Reply[rune] {
+func PSatisfy(pred func(rune) bool, expected string) Parser[rune] {
 	return func(state State) Reply[rune] {
-		r_31 := PeekRune(state)
-		var expr_33 Reply[rune]
-		if !r_31.Ok {
-			expr_33 = Reply[rune]{Ok: false, Consumed: false, Value: Zero[rune](), State: state, Error: ErrorAt(state.Position, expected, EmptyExpected())}
+		r := PeekRune(state)
+		if !r.Ok {
+			return Reply[rune]{Ok: false, Consumed: false, Value: Zero[rune](), State: state, Error: ErrorAt(state.Position, expected, EmptyExpected())}
 		} else {
-			var expr_32 Reply[rune]
-			if pred(r_31.Value) {
-				expr_32 = Reply[rune]{Ok: true, Consumed: true, Value: r_31.Value, State: AdvanceRune(state), Error: EmptyError(state.Position)}
+			if pred(r.Value) {
+				return Reply[rune]{Ok: true, Consumed: true, Value: r.Value, State: AdvanceRune(state), Error: EmptyError(state.Position)}
 			} else {
-				expr_32 = Reply[rune]{Ok: false, Consumed: false, Value: r_31.Value, State: state, Error: ErrorAt(state.Position, expected, EmptyExpected())}
+				return Reply[rune]{Ok: false, Consumed: false, Value: r.Value, State: state, Error: ErrorAt(state.Position, expected, EmptyExpected())}
 			}
-			expr_33 = expr_32
 		}
-		return expr_33
 	}
 }
-func PAnyRune() func(State) Reply[rune] {
+func PAnyRune() Parser[rune] {
 	return PSatisfy(func(_ rune) bool {
 		return true
 	}, "any Rune")
 }
-func PChar(expectedRune rune) func(State) Reply[rune] {
+func PChar(expectedRune rune) Parser[rune] {
 	return PSatisfy(func(r rune) bool {
 		return r == expectedRune
 	}, string(expectedRune))
 }
-func PString(expected string) func(State) Reply[string] {
+func PString(expected string) Parser[string] {
 	return func(state State) Reply[string] {
-		r_34 := MatchString(state, expected)
-		var expr_35 Reply[string]
-		if r_34.Ok {
-			expr_35 = r_34
+		r := MatchString(state, expected)
+		if r.Ok {
+			return r
 		} else {
-			expr_35 = Reply[string]{Ok: false, Consumed: r_34.Consumed, Value: "", State: r_34.State, Error: r_34.Error}
+			return Reply[string]{Ok: false, Consumed: r.Consumed, Value: "", State: r.State, Error: r.Error}
 		}
-		return expr_35
 	}
 }
-func PEof() func(State) Reply[struct {
+func PEof() Parser[struct {
 }] {
 	return func(state State) Reply[struct{}] {
-		var expr_36 Reply[struct{}]
 		if state.Index >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(state.Input) {
-			expr_36 = Reply[struct{}]{Ok: true, Consumed: false, Value: struct {
+			return Reply[struct{}]{Ok: true, Consumed: false, Value: struct {
 			}{}, State: state, Error: EmptyError(state.Position)}
 		} else {
-			expr_36 = Reply[struct{}]{Ok: false, Consumed: false, Value: struct {
+			return Reply[struct{}]{Ok: false, Consumed: false, Value: struct {
 			}{}, State: state, Error: ErrorAt(state.Position, "end of input", EmptyExpected())}
 		}
-		return expr_36
 	}
 }
-func PDigit() func(State) Reply[rune] {
+func PDigit() Parser[rune] {
 	return PSatisfy(func(r rune) bool {
 		return r >= '0' && r <= '9'
 	}, "digit")
 }
-func PLetter() func(State) Reply[rune] {
+func PLetter() Parser[rune] {
 	return PSatisfy(func(r rune) bool {
 		return r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z'
 	}, "letter")
 }
-func PAlphaNum() func(State) Reply[rune] {
+func PAlphaNum() Parser[rune] {
 	return PSatisfy(func(r rune) bool {
 		return r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9'
 	}, "alphanumeric")
 }
-func PIdentifier() func(State) Reply[string] {
-	return PBind(PLetter(), func(first rune) func(State) Reply[string] {
+func PIdentifier() Parser[string] {
+	return PBind(PLetter(), func(first rune) Parser[string] {
 		return PMap(PMany(PAlphaNum()), func(rest []rune) string {
 			return FromRunes(MygoIN5SliceM7Prepend(rest, first))
 		})
@@ -349,83 +340,64 @@ func EmptyExpected() []string {
 	return []string{}
 }
 func WithExpected(err Option[ParseError], name string) Option[ParseError] {
-	var expr_39 Option[ParseError]
-	if v_2, ok := err.(OptionSome[ParseError]); ok {
-		var expr_38 Option[ParseError]
-		expr_38 = Some[ParseError](ParseError{Position: v_2.F0.Position, Expected: MygoIN5SliceM6Append(v_2.F0.Expected, name), Message: v_2.F0.Message})
-		expr_39 = expr_38
+	var __mygo_expr_0 Option[ParseError]
+	if __mygo_match___mygo_expr_1, ok := err.(OptionSome[ParseError]); ok {
+		__mygo_expr_0 = Some[ParseError](ParseError{Position: __mygo_match___mygo_expr_1.F0.Position, Expected: MygoIN5SliceM6Append(__mygo_match___mygo_expr_1.F0.Expected, name), Message: __mygo_match___mygo_expr_1.F0.Message})
 	} else {
 		if _, ok := err.(OptionNone[ParseError]); ok {
-			var expr_37 Option[ParseError]
-			expr_37 = None[ParseError]()
-			expr_39 = expr_37
+			__mygo_expr_0 = None[ParseError]()
 		} else {
-			panic("unreachable")
 		}
 	}
-	return expr_39
+	return __mygo_expr_0
 }
 func MergeErrors(left Option[ParseError], right Option[ParseError]) Option[ParseError] {
-	var expr_47 Option[ParseError]
+	var __mygo_expr_0 Option[ParseError]
 	if _, ok := left.(OptionNone[ParseError]); ok {
-		var expr_46 Option[ParseError]
-		expr_46 = right
-		expr_47 = expr_46
+		__mygo_expr_0 = right
 	} else {
-		if v_3, ok := left.(OptionSome[ParseError]); ok {
-			var expr_45 Option[ParseError]
-			var expr_44 Option[ParseError]
+		if __mygo_match___mygo_expr_1, ok := left.(OptionSome[ParseError]); ok {
+			var __mygo_expr_2 Option[ParseError]
 			if _, ok := right.(OptionNone[ParseError]); ok {
-				var expr_43 Option[ParseError]
-				expr_43 = left
-				expr_44 = expr_43
+				__mygo_expr_2 = left
 			} else {
-				if v_4, ok := right.(OptionSome[ParseError]); ok {
-					var expr_42 Option[ParseError]
-					var expr_41 Option[ParseError]
-					if v_3.F0.Position.Offset > v_4.F0.Position.Offset {
-						expr_41 = left
+				if __mygo_match___mygo_expr_3, ok := right.(OptionSome[ParseError]); ok {
+					var __mygo_expr_5 Option[ParseError]
+					if __mygo_match___mygo_expr_1.F0.Position.Offset > __mygo_match___mygo_expr_3.F0.Position.Offset {
+						__mygo_expr_5 = left
 					} else {
-						var expr_40 Option[ParseError]
-						if v_4.F0.Position.Offset > v_3.F0.Position.Offset {
-							expr_40 = right
+						var __mygo_expr_4 Option[ParseError]
+						if __mygo_match___mygo_expr_3.F0.Position.Offset > __mygo_match___mygo_expr_1.F0.Position.Offset {
+							__mygo_expr_4 = right
 						} else {
-							expr_40 = Some[ParseError](ParseError{Position: v_3.F0.Position, Expected: MergeExpected(ErrorExpected(v_3.F0), ErrorExpected(v_4.F0)), Message: ""})
+							__mygo_expr_4 = Some[ParseError](ParseError{Position: __mygo_match___mygo_expr_1.F0.Position, Expected: MergeExpected(ErrorExpected(__mygo_match___mygo_expr_1.F0), ErrorExpected(__mygo_match___mygo_expr_3.F0)), Message: ""})
 						}
-						expr_41 = expr_40
+						__mygo_expr_5 = __mygo_expr_4
 					}
-					expr_42 = expr_41
-					expr_44 = expr_42
+					__mygo_expr_2 = __mygo_expr_5
 				} else {
-					panic("unreachable")
 				}
 			}
-			expr_45 = expr_44
-			expr_47 = expr_45
+			__mygo_expr_0 = __mygo_expr_2
 		} else {
-			panic("unreachable")
 		}
 	}
-	return expr_47
+	return __mygo_expr_0
 }
 func ErrorExpected(err ParseError) []string {
-	var expr_48 []string
 	if err.Message == "" {
-		expr_48 = err.Expected
+		return err.Expected
 	} else {
-		expr_48 = MergeExpected(err.Expected, []string{err.Message})
+		return MergeExpected(err.Expected, []string{err.Message})
 	}
-	return expr_48
 }
 func MergeExpected(left []string, right []string) []string {
 	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(right, left, func(out []string, item string) []string {
-		var expr_49 []string
 		if StringSliceContains(out, item) {
-			expr_49 = out
+			return out
 		} else {
-			expr_49 = MygoIN5SliceM6Append(out, item)
+			return MygoIN5SliceM6Append(out, item)
 		}
-		return expr_49
 	})
 }
 func StringSliceContains(items []string, wanted string) bool {
@@ -435,65 +407,4 @@ func StringSliceContains(items []string, wanted string) bool {
 }
 func FromRunes(rs []rune) string {
 	return MygoIN6StringM9FromRunes(rs)
-}
-func __mygo_mt_parsec_pchoicefrom[A any](parsers []func(State) Reply[A], index int, current func(State) Reply[A], __mygo_state int) func(State) Reply[A] {
-	for {
-		switch __mygo_state {
-		case 0:
-			var expr_51 func(State) Reply[A]
-			if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parsers) {
-				expr_51 = current
-			} else {
-				__mygo_next_0 := parsers
-				__mygo_next_1 := index + 1
-				__mygo_next_2 := POrElse(current, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parsers, index), PFail[A]("no parser matched")))
-				parsers = __mygo_next_0
-				index = __mygo_next_1
-				current = __mygo_next_2
-				__mygo_state = 0
-				continue
-			}
-			return expr_51
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_parsec_pmanyloop[A any](p func(State) Reply[A], state State, consumed bool, values []A, __mygo_state int) Reply[[]A] {
-	for {
-		switch __mygo_state {
-		case 0:
-			r_56 := p(state)
-			var expr_59 Reply[[]A]
-			if !r_56.Ok {
-				var expr_57 Reply[[]A]
-				if r_56.Consumed {
-					expr_57 = Reply[[]A]{Ok: false, Consumed: true, Value: values, State: r_56.State, Error: r_56.Error}
-				} else {
-					expr_57 = Reply[[]A]{Ok: true, Consumed: consumed, Value: values, State: state, Error: EmptyError(state.Position)}
-				}
-				expr_59 = expr_57
-			} else {
-				var expr_58 Reply[[]A]
-				if !r_56.Consumed {
-					expr_58 = Reply[[]A]{Ok: false, Consumed: consumed, Value: values, State: state, Error: ErrorAt(state.Position, "PMany parser must consume input", EmptyExpected())}
-				} else {
-					__mygo_next_0 := p
-					__mygo_next_1 := r_56.State
-					__mygo_next_2 := true
-					__mygo_next_3 := MygoIN5SliceM6Append(values, r_56.Value)
-					p = __mygo_next_0
-					state = __mygo_next_1
-					consumed = __mygo_next_2
-					values = __mygo_next_3
-					__mygo_state = 0
-					continue
-				}
-				expr_59 = expr_58
-			}
-			return expr_59
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
 }

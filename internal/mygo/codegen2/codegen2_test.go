@@ -116,6 +116,36 @@ end
 	}
 }
 
+func TestGenerateSourceLowersPackageLetAndVar(t *testing.T) {
+	src := `package sample
+
+func Read() -> Int
+  fixed + changing
+end
+
+let fixed: Int = 40
+var changing: Int = 2
+
+func Increment() -> Int
+  changing = changing + 1
+  changing
+end
+`
+	got := GenerateSource(src)
+	ok, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	for _, want := range []string{"var fixed int = 40", "var changing int = 2", "func Read() int", "changing = changing + 1"} {
+		if !strings.Contains(ok.F0, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, ok.F0)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", ok.F0, parser.AllErrors); err != nil {
+		t.Fatalf("generated source is invalid Go: %v\n%s", err, ok.F0)
+	}
+}
+
 func TestGenerateSourcePreservesAliasAndDefinedTypeSyntax(t *testing.T) {
 	src := `package sample
 
