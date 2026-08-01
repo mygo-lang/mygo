@@ -88,6 +88,32 @@ var count: Int = 1
 	}
 }
 
+func TestCompileDirPreservesGoFFIPackageSelector(t *testing.T) {
+	dir := t.TempDir()
+	src := `package sample
+
+import fmt "go:fmt"
+
+func Render(value: Int) -> String
+  fmt.Sprint(value)
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "main.mygo"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDirNoPrelude(dir)
+	if err != nil {
+		t.Fatalf("CompileDirNoPrelude() error = %v", err)
+	}
+	generated, err := os.ReadFile(written[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(generated), "fmt.Sprint(value)") {
+		t.Fatalf("generated source lost Go FFI selector:\n%s", generated)
+	}
+}
+
 func TestCompileDirRejectsAssignmentToPackageLevelLet(t *testing.T) {
 	dir := t.TempDir()
 	src := `package sample

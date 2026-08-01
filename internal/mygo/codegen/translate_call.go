@@ -687,7 +687,11 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 							if len(n.Args) < minArgs || (!variadic && len(n.Args) != len(sig.params)) {
 								return nil, "", common.ErrorAtPos(g.currentFile, field.Line, field.Column, "call type mismatch for %s.%s: expected %d args, got %d", id.Name, field.Field, len(sig.params), len(n.Args))
 							}
-							callee := ast.NewIdent(id.Name + "." + field.Field)
+							// A package-qualified Go FFI call must be represented as a
+							// SelectorExpr. ast.NewIdent("pkg.Func") is not a valid
+							// structured selector and can be flattened by later Go-AST
+							// processing during bootstrap regeneration.
+							callee := &ast.SelectorExpr{X: ast.NewIdent(id.Name), Sel: ast.NewIdent(field.Field)}
 							args, err := g.translateCallArgs(n.Args, ctx)
 							if err != nil {
 								return nil, "", err
@@ -707,7 +711,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 						}
 					}
 				}
-				callee := ast.NewIdent(id.Name + "." + field.Field)
+				callee := &ast.SelectorExpr{X: ast.NewIdent(id.Name), Sel: ast.NewIdent(field.Field)}
 				args, err := g.translateCallArgs(n.Args, ctx)
 				if err != nil {
 					return nil, "", err
