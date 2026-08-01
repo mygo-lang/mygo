@@ -557,6 +557,15 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 	}
 	// Field access call: x.method(args) or Enum.Variant(args)
 	if field, ok := n.Callee.(*FieldExpr); ok {
+		// A Go import alias is a package namespace, never a MyGO enum or an
+		// inherent-method receiver. Resolve it before any of those dispatches so
+		// a colliding package alias cannot be flattened into a generated helper
+		// name (for example, goast.VarDecl must remain goast.VarDecl).
+		if id, ok := field.Expr.(*IdentExpr); ok {
+			if path := g.importAliases[id.Name]; strings.HasPrefix(path, "go:") {
+				return g.translateGoImportCall(id.Name, field.Field, n.Args, ctx, expected, field)
+			}
+		}
 		if alias, enumName, _, ok := g.importedQualifiedEnumVariant(field); ok {
 			args, err := g.translateCallArgs(n.Args, ctx)
 			if err != nil {
@@ -666,50 +675,13 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 					return &ast.CallExpr{Fun: fun, Args: args}, retType, nil
 				}
 			}
-			// Imported method call: pkg.Func()
+			// Imported MyGO method call: pkg.Func(). Go package aliases were
+			// handled before enum and inherent-method resolution above.
 			if g.importAliases[id.Name] != "" {
 				path := g.importAliases[id.Name]
 				// For MyGo imports (not prefixed with "go:"), check exported status
 				if !strings.HasPrefix(path, "go:") && !isExportedIdent(field.Field) {
 					return nil, "", common.ErrorAtPos(g.currentFile, field.Line, field.Column, "cannot refer to unexported symbol %s.%s", id.Name, field.Field)
-				}
-				// For Go imports, check function signature arity
-				if strings.HasPrefix(path, "go:") {
-					goPath := importPathForGo(path)
-					sigs, err := loadGoPackageSigs(goPath)
-					if err == nil && sigs != nil && sigs.funcs != nil {
-						if sig, ok := sigs.funcs[field.Field]; ok {
-							minArgs := len(sig.params)
-							variadic := len(sig.params) > 0 && strings.HasPrefix(sig.params[len(sig.params)-1], "...")
-							if variadic {
-								minArgs--
-							}
-							if len(n.Args) < minArgs || (!variadic && len(n.Args) != len(sig.params)) {
-								return nil, "", common.ErrorAtPos(g.currentFile, field.Line, field.Column, "call type mismatch for %s.%s: expected %d args, got %d", id.Name, field.Field, len(sig.params), len(n.Args))
-							}
-							// A package-qualified Go FFI call must be represented as a
-							// SelectorExpr. ast.NewIdent("pkg.Func") is not a valid
-							// structured selector and can be flattened by later Go-AST
-							// processing during bootstrap regeneration.
-							callee := &ast.SelectorExpr{X: ast.NewIdent(id.Name), Sel: ast.NewIdent(field.Field)}
-							args, err := g.translateCallArgs(n.Args, ctx)
-							if err != nil {
-								return nil, "", err
-							}
-							retType := goSigReturnType(sig.ret)
-							if resultType, ok := goSigErrorResultType(sig.ret); ok {
-								retType = resultType
-								if expected != "" {
-									retType = expected
-								}
-								return g.wrapGoErrorResultCall(&ast.CallExpr{Fun: callee, Args: args}, retType), retType, nil
-							}
-							if expected != "" {
-								retType = expected
-							}
-							return &ast.CallExpr{Fun: callee, Args: args}, retType, nil
-						}
-					}
 				}
 				callee := &ast.SelectorExpr{X: ast.NewIdent(id.Name), Sel: ast.NewIdent(field.Field)}
 				args, err := g.translateCallArgs(n.Args, ctx)
@@ -853,6 +825,48 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 		ct = result
 	}
 	return &ast.CallExpr{Fun: callee, Args: args}, ct, nil
+}
+
+// translateGoImportCall lowers a package-qualified Go FFI call. It remains a
+// dedicated helper so its SelectorExpr construction cannot be bypassed by
+// MyGO method, enum, or typeclass dispatch.
+func (g *gen) translateGoImportCall(alias, name string, callArgs []Expr, ctx *egCtx, expected string, node *FieldExpr) (ast.Expr, string, error) {
+	callee := &ast.SelectorExpr{X: ast.NewIdent(alias), Sel: ast.NewIdent(name)}
+	path := g.importAliases[alias]
+	goPath := importPathForGo(path)
+	if sigs, err := loadGoPackageSigs(goPath); err == nil && sigs != nil && sigs.funcs != nil {
+		if sig, ok := sigs.funcs[name]; ok {
+			minArgs := len(sig.params)
+			variadic := len(sig.params) > 0 && strings.HasPrefix(sig.params[len(sig.params)-1], "...")
+			if variadic {
+				minArgs--
+			}
+			if len(callArgs) < minArgs || (!variadic && len(callArgs) != len(sig.params)) {
+				return nil, "", common.ErrorAtPos(g.currentFile, node.Line, node.Column, "call type mismatch for %s.%s: expected %d args, got %d", alias, name, len(sig.params), len(callArgs))
+			}
+			args, err := g.translateCallArgs(callArgs, ctx)
+			if err != nil {
+				return nil, "", err
+			}
+			retType := goSigReturnType(sig.ret)
+			if resultType, ok := goSigErrorResultType(sig.ret); ok {
+				retType = resultType
+				if expected != "" {
+					retType = expected
+				}
+				return g.wrapGoErrorResultCall(&ast.CallExpr{Fun: callee, Args: args}, retType), retType, nil
+			}
+			if expected != "" {
+				retType = expected
+			}
+			return &ast.CallExpr{Fun: callee, Args: args}, retType, nil
+		}
+	}
+	args, err := g.translateCallArgs(callArgs, ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	return &ast.CallExpr{Fun: callee, Args: args}, expected, nil
 }
 
 // goFuncResultType extracts the result type of a lowered Go function type.

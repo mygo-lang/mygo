@@ -74,9 +74,9 @@ var count: Int = 1
 	if err := os.WriteFile(filepath.Join(dir, "main.mygo"), []byte(src), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	written, err := CompileDir(dir)
+	written, err := CompileDirNoPrelude(dir)
 	if err != nil {
-		t.Fatalf("CompileDir() error = %v", err)
+		t.Fatalf("CompileDirNoPrelude() error = %v", err)
 	}
 	generated, err := os.ReadFile(written[0])
 	if err != nil {
@@ -111,6 +111,42 @@ end
 	}
 	if !strings.Contains(string(generated), "fmt.Sprint(value)") {
 		t.Fatalf("generated source lost Go FFI selector:\n%s", generated)
+	}
+}
+
+func TestCompileDirPreservesNestedGoFFIPackageSelector(t *testing.T) {
+	dir := t.TempDir()
+	root, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goMod := "module github.com/mygo-lang/mygo/testfixture\n\ngo 1.26\n\nrequire github.com/mygo-lang/mygo v0.0.0\n\nreplace github.com/mygo-lang/mygo => " + filepath.ToSlash(root) + "\n"
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	src := `package sample
+
+import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+
+func Declare(name: String, typ: goast.Expr) -> goast.Stmt
+  goast.VarDecl(name, typ)
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "main.mygo"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	generated, err := os.ReadFile(written[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"func Declare(name string, typ goast.Expr) goast.Stmt", "goast.VarDecl(name, typ)"} {
+		if !strings.Contains(string(generated), want) {
+			t.Fatalf("generated source lost nested Go FFI selector %q:\n%s", want, generated)
+		}
 	}
 }
 
