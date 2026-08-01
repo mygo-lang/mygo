@@ -14,6 +14,8 @@ type Package struct {
 	ImportDecls    []*ast.ImportDecl
 	ImportAliases  map[string]string
 	Decls          []ast.Decl
+	TypeAliases    map[string]*ast.TypeAliasDecl
+	Types          map[string]*ast.TypeDecl
 	Enums          map[string]*ast.EnumDecl
 	Structs        map[string]*ast.StructDecl
 	Interfaces     map[string]*ast.InterfaceDecl

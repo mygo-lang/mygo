@@ -3,6 +3,7 @@ package compiler
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
@@ -55,5 +56,72 @@ end
 	}
 	if _, err := CompileDir(dir); err != nil {
 		t.Fatalf("CompileDir() error = %v", err)
+	}
+}
+
+func TestCompileDirSupportsTypeAlias(t *testing.T) {
+	dir := t.TempDir()
+	src := `package sample
+type UserID = Int
+
+func Next(id: UserID) -> UserID
+  id + 1
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "main.mygo"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	generated, err := os.ReadFile(written[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(generated), "type UserID = int") {
+		t.Fatalf("generated source missing Go type alias:\n%s", generated)
+	}
+}
+
+func TestCompileDirSupportsDistinctTypeDeclaration(t *testing.T) {
+	dir := t.TempDir()
+	src := `package sample
+type UserID Int
+
+func Identity(id: UserID) -> UserID
+  id
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "main.mygo"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDir(dir)
+	if err != nil {
+		t.Fatalf("CompileDir() error = %v", err)
+	}
+	generated, err := os.ReadFile(written[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(generated), "type UserID int") || strings.Contains(string(generated), "type UserID = int") {
+		t.Fatalf("generated source did not preserve a distinct Go type:\n%s", generated)
+	}
+}
+
+func TestDistinctTypeIsNotInterchangeableWithUnderlyingType(t *testing.T) {
+	dir := t.TempDir()
+	src := `package sample
+type UserID Int
+
+func AsInt(id: UserID) -> Int
+  id
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "main.mygo"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompileDir(dir); err == nil || !strings.Contains(err.Error(), "cannot unify UserID with Int") {
+		t.Fatalf("CompileDir() error = %v, want distinct-type mismatch", err)
 	}
 }

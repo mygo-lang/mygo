@@ -5,6 +5,8 @@ import "github.com/mygo-lang/mygo/internal/mygo/ast"
 type File = ast.File
 type Decl = ast.Decl
 type ImportDecl = ast.ImportDecl
+type TypeAliasDecl = ast.TypeAliasDecl
+type TypeDecl = ast.TypeDecl
 type EnumDecl = ast.EnumDecl
 type EnumVariant = ast.EnumVariant
 type StructDecl = ast.StructDecl

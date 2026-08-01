@@ -19,6 +19,8 @@ type PkgInfo struct {
 	WorkspaceRoot  string
 	Name           string
 	Decls          []Decl
+	TypeAliases    map[string]*TypeAliasDecl
+	Types          map[string]*TypeDecl
 	Enums          map[string]*EnumDecl
 	Structs        map[string]*StructDecl
 	Interfaces     map[string]*InterfaceDecl
@@ -238,6 +240,11 @@ func initialTypeEnv(pkg *PkgInfo) TypeEnv {
 		for name, iface := range pkg.Interfaces {
 			if _, exists := env[name]; !exists {
 				env[name] = predeclaredCurrentPackageType(name, len(iface.TypeParams))
+			}
+		}
+		for name := range pkg.Types {
+			if _, exists := env[name]; !exists {
+				env[name] = predeclaredCurrentPackageType(name, 0)
 			}
 		}
 		for name := range pkg.DotImportTypes {

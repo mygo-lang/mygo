@@ -71,6 +71,8 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 		WorkspaceRoot:  mainPkg.WorkspaceRoot,
 		Name:           mainPkg.Name,
 		Decls:          mainPkg.Decls,
+		TypeAliases:    mainPkg.TypeAliases,
+		Types:          mainPkg.Types,
 		Enums:          mainPkg.Enums,
 		Structs:        mainPkg.Structs,
 		Interfaces:     mainPkg.Interfaces,
@@ -79,6 +81,7 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 		DotImportTypes: mainPkg.DotImportTypes,
 		DotImportEnums: mainDotImportEnums,
 	}
+	expandTypeAliases(mainPkg)
 	infState := typeinference.NewInferState()
 	mainTypedInfo, err := typeinference.InferPackage(mainPkgInfo, infState)
 	if err != nil {
@@ -151,6 +154,8 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 			WorkspaceRoot:  testPkg.WorkspaceRoot,
 			Name:           testPkg.Name,
 			Decls:          testPkg.Decls,
+			TypeAliases:    testPkg.TypeAliases,
+			Types:          testPkg.Types,
 			Enums:          testPkg.Enums,
 			Structs:        testPkg.Structs,
 			Interfaces:     testPkg.Interfaces,
@@ -159,6 +164,7 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 			DotImportTypes: testPkg.DotImportTypes,
 			DotImportEnums: testDotImportEnums,
 		}
+		expandTypeAliases(testPkg)
 		testInfState := typeinference.NewInferState()
 		testTypedInfo, err := typeinference.InferPackage(testPkgInfo, testInfState)
 		if err != nil {
@@ -577,6 +583,10 @@ func setSourceFile(file *parserpkg.File, sourceFile string) {
 		switch d := decl.(type) {
 		case *ImportDecl:
 			d.SourceFile = sourceFile
+		case *TypeAliasDecl:
+			d.SourceFile = sourceFile
+		case *TypeDecl:
+			d.SourceFile = sourceFile
 		case *EnumDecl:
 			d.SourceFile = sourceFile
 		case *StructDecl:
@@ -622,6 +632,8 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, *pkg.Package, error)
 		Imports:        map[string]struct{}{},
 		ImportAliases:  map[string]string{},
 		Enums:          map[string]*EnumDecl{},
+		TypeAliases:    map[string]*TypeAliasDecl{},
+		Types:          map[string]*TypeDecl{},
 		Structs:        map[string]*StructDecl{},
 		Interfaces:     map[string]*InterfaceDecl{},
 		Funcs:          map[string]*FuncDecl{},
@@ -634,6 +646,8 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, *pkg.Package, error)
 		Imports:        map[string]struct{}{},
 		ImportAliases:  map[string]string{},
 		Enums:          map[string]*EnumDecl{},
+		TypeAliases:    map[string]*TypeAliasDecl{},
+		Types:          map[string]*TypeDecl{},
 		Structs:        map[string]*StructDecl{},
 		Interfaces:     map[string]*InterfaceDecl{},
 		Funcs:          map[string]*FuncDecl{},
@@ -702,6 +716,10 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, *pkg.Package, error)
 				return nil, nil, common.ErrorAtPos(d.SourceFile, d.Line, d.Column, "import alias %q conflicts between %q and %q", alias, prev, d.Path)
 			}
 			mainPkg.ImportAliases[alias] = d.Path
+		case *TypeAliasDecl:
+			mainPkg.TypeAliases[d.Name] = d
+		case *TypeDecl:
+			mainPkg.Types[d.Name] = d
 		case *EnumDecl:
 			mainPkg.Enums[d.Name] = d
 		case *StructDecl:
@@ -734,6 +752,10 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, *pkg.Package, error)
 				return nil, nil, common.ErrorAtPos(d.SourceFile, d.Line, d.Column, "import alias %q conflicts between %q and %q", alias, prev, d.Path)
 			}
 			testPkg.ImportAliases[alias] = d.Path
+		case *TypeAliasDecl:
+			testPkg.TypeAliases[d.Name] = d
+		case *TypeDecl:
+			testPkg.Types[d.Name] = d
 		case *EnumDecl:
 			testPkg.Enums[d.Name] = d
 		case *StructDecl:

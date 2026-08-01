@@ -1090,6 +1090,40 @@ end
 	}
 }
 
+func TestParseFileSupportsTypeAlias(t *testing.T) {
+	src := `package main
+type UserID = Int
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	alias, ok := file.Decls[0].(*TypeAliasDecl)
+	if !ok {
+		t.Fatalf("decl type = %T, want *TypeAliasDecl", file.Decls[0])
+	}
+	if alias.Name != "UserID" {
+		t.Errorf("alias name = %q, want UserID", alias.Name)
+	}
+	if target, ok := alias.Type.(*NamedType); !ok || target.Name != "Int" {
+		t.Errorf("alias target = %#v, want Int", alias.Type)
+	}
+}
+
+func TestParseFileSupportsDistinctTypeDeclaration(t *testing.T) {
+	file, err := ParseFile("test.mygo", "package main\ntype UserID Int\n")
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	decl, ok := file.Decls[0].(*TypeDecl)
+	if !ok {
+		t.Fatalf("decl type = %T, want *TypeDecl", file.Decls[0])
+	}
+	if decl.Name != "UserID" {
+		t.Errorf("type name = %q, want UserID", decl.Name)
+	}
+}
+
 func TestParseFileSupportsInlineGoMixedOperands(t *testing.T) {
 	src := `package main
 func demo(n: Int, s: String) -> Bool

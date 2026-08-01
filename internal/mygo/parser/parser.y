@@ -180,6 +180,7 @@ decl_list
 
 decl
 	: import_decl
+	| type_decl
 	| enum_decl
 	| struct_decl
 	| interface_decl
@@ -187,6 +188,28 @@ decl
 	| func_decl
 	| let_decl
 	| var_decl
+	;
+
+type_decl
+	: TYPE qualified_name {
+		p := yylex.(*parser)
+		p.savedDeclName = p.currentName
+	} type_decl_tail
+	;
+
+type_decl_tail
+	: '=' type {
+		p := yylex.(*parser)
+		p.decls = append(p.decls, &ast.TypeAliasDecl{
+			Line: p.currentTypeLine, Column: p.currentTypeCol, Name: p.savedDeclName, Type: p.currentType,
+		})
+	}
+	| type {
+		p := yylex.(*parser)
+		p.decls = append(p.decls, &ast.TypeDecl{
+			Line: p.currentTypeLine, Column: p.currentTypeCol, Name: p.savedDeclName, Type: p.currentType,
+		})
+	}
 	;
 
 import_decl
