@@ -184,6 +184,38 @@ func (g *gen) methodReturnType(method *struct {
 	return ret
 }
 
+// methodParamExpectedTypes derives a method call's argument types from its
+// receiver.  This is necessary for generic inherent methods: for example,
+// the receiver Option[[]A] instantiates Option.UnwrapOr's default parameter
+// A as []A, which gives an empty slice literal its required element type.
+func (g *gen) methodParamExpectedTypes(method *struct {
+	Impl        *ImplDecl
+	Func        *FuncDecl
+	HasReceiver bool
+}, recvType, expected string, ctx *egCtx) []string {
+	if method == nil || method.Func == nil {
+		return nil
+	}
+	fn := method.Func
+	typeParams := append([]string{}, fn.TypeParams...)
+	if method.Impl != nil {
+		typeParams = append(typeParams, method.Impl.TypeParams...)
+	}
+	subst := map[string]string{}
+	// A method's result context is often more precise than the lowered
+	// receiver.  In particular, a typeclass call can lose its generic result
+	// spelling before it becomes the receiver of UnwrapOr.
+	inferExpectedTypeSubst(fn.Ret, expected, subst)
+	if len(fn.Params) > 0 {
+		inferTypeSubst(fn.Params[0].Type, recvType, typeParamSet(typeParams), subst)
+	}
+	out := make([]string, 0, len(fn.Params)-1)
+	for _, param := range fn.Params[1:] {
+		out = append(out, g.goTypeStringSubst(param.Type, subst))
+	}
+	return out
+}
+
 func (g *gen) typeArgExprsFromExpected(expected string) []ast.Expr {
 	_, args := splitTypeArgs(expected)
 	if len(args) == 0 {
@@ -701,6 +733,10 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			if methods, ok := g.inherentMethods[recvTypeName]; ok {
 				if method, ok := methods[field.Field]; ok && method.HasReceiver {
 					fnName := inherentMethodName(recvTypeName, method.Func.Name)
+					args, err = g.translateCallArgsExpected(n.Args, g.methodParamExpectedTypes(method, bt, expected, ctx), ctx)
+					if err != nil {
+						return nil, "", err
+					}
 					allArgs := append([]ast.Expr{base}, args...)
 					callee := ast.NewIdent(fnName)
 					retType := g.inferredType(n)
@@ -717,6 +753,10 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			if methods, ok := g.inherentMethods[mygoName]; ok {
 				if method, exists := methods[field.Field]; exists && method.HasReceiver {
 					fnName := inherentMethodName(mygoName, method.Func.Name)
+					args, err = g.translateCallArgsExpected(n.Args, g.methodParamExpectedTypes(method, bt, expected, ctx), ctx)
+					if err != nil {
+						return nil, "", err
+					}
 					allArgs := append([]ast.Expr{base}, args...)
 					callee := ast.NewIdent(fnName)
 					retType := g.inferredType(n)

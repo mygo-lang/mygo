@@ -29,6 +29,38 @@ end
 	}
 }
 
+func TestGenericMethodPropagatesExpectedTypeToEmptySliceArgument(t *testing.T) {
+	src := `package main
+enum MyOption[A]
+  Some(A)
+  None
+end
+
+impl[A] MyOption[A]
+  func UnwrapOr(opt: MyOption[A], defaultVal: A) -> A
+    switch opt
+      case Some(value) => value
+      case None => defaultVal
+    end
+  end
+end
+
+func unwrapSlice[A](opt: MyOption[Slice[A]]) -> Slice[A]
+  opt.UnwrapOr([])
+end
+`
+	goSrc := compileInlineGoTestPackage(t, src)
+	if strings.Contains(goSrc, "UnwrapOr(opt, []int{})") {
+		t.Fatalf("empty slice default was concretized to []int:\n%s", goSrc)
+	}
+	if !strings.Contains(goSrc, "UnwrapOr(opt, []A{})") {
+		t.Fatalf("generated source missing generic empty slice default:\n%s", goSrc)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "generic_method.go", goSrc, 0); err != nil {
+		t.Fatalf("generated source is not valid Go: %v\n%s", err, goSrc)
+	}
+}
+
 func TestInlineGoGeneratesPrimitiveConversion(t *testing.T) {
 	src := `package main
 func fromRunes(rs: Slice[rune]) -> String
