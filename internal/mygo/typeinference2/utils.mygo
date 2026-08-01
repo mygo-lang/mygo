@@ -11,13 +11,6 @@ func monoListEqual(a: Slice[ast2.MonoType], b: Slice[ast2.MonoType]) -> Bool
   ast2.MonoListEqual(a, b)
 end
 
-func panic(msg: String) -> ()
-  go[()] {
-    code: `panic({msg})`
-    in msg=msg
-  }
-end
-
 func monoString(t: ast2.MonoType) -> String
   switch t
     case TVar(id) => "t" + id.ToString()
@@ -31,7 +24,7 @@ func monoString(t: ast2.MonoType) -> String
     case TUnit => "()"
     case TQualifiedName(alias, typeRef) => fmt.Sprintf("%s.%s", alias, monoString(typeRef.value()))
     case _ then
-      panic("unreachable MonoType variant")
+      Panic("unreachable MonoType variant")
       ""
     end
   end
@@ -50,7 +43,7 @@ func monoStringFull(t: ast2.MonoType) -> String
     case TUnit => "()"
     case TQualifiedName(alias, typeRef) => fmt.Sprintf("%s.%s", alias, monoStringFull(typeRef.value()))
     case _ then
-      panic("unreachable MonoType variant")
+      Panic("unreachable MonoType variant")
       ""
     end
   end
@@ -125,16 +118,23 @@ func instantiateBoundSubstFor(bound: Slice[Int], body: ast2.MonoType, state: Inf
 end
 
 func substPredicates(items: Slice[Predicate], subst: Subst) -> Slice[Predicate]
-  if items.Len() == 0 then []
-  else
-    let p = items.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[ast2.MonoType] })
-    substPredicates(sliceDrop(items, 1), subst).Prepend(Predicate { ClassName: p.ClassName, Args: substTypes(p.Args, subst) })
+  substPredicatesInto(items, subst, 0, [])
+end
+
+func substPredicatesInto(items: Slice[Predicate], subst: Subst, index: Int, out: Slice[Predicate]) -> Slice[Predicate]
+  if index >= items.Len() then out else
+    let p = items.Get(index).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[ast2.MonoType] })
+    substPredicatesInto(items, subst, index + 1, out.Append(Predicate { ClassName: p.ClassName, Args: substTypes(p.Args, subst) }))
   end
 end
 
 func substTypes(items: Slice[ast2.MonoType], subst: Subst) -> Slice[ast2.MonoType]
-  if items.Len() == 0 then []
-  else substTypes(sliceDrop(items, 1), subst).Prepend(applySubst(subst, items.Get(0).UnwrapOr(ast2.MonoType.TUnit))) end
+  substTypesInto(items, subst, 0, [])
+end
+
+func substTypesInto(items: Slice[ast2.MonoType], subst: Subst, index: Int, out: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
+  if index >= items.Len() then out
+  else substTypesInto(items, subst, index + 1, out.Append(applySubst(subst, items.Get(index).UnwrapOr(ast2.MonoType.TUnit)))) end
 end
 
 func appendPredicates(left: Slice[Predicate], right: Slice[Predicate]) -> Slice[Predicate]
@@ -222,10 +222,9 @@ func containsInt(items: Slice[Int], value: Int) -> Bool
   if items.Len() == 0 then false else items.Get(0).UnwrapOr(0) == value || containsInt(sliceDrop(items, 1), value) end
 end
 
-func envFreeVars(env: Slice[EnvEntry], out: Slice[Int]) -> Slice[Int]
-  if env.Len() == 0 then out
-  else
-    let item = env.Get(0).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TUnit } })
+func envFreeVars(env: Env, out: Slice[Int]) -> Slice[Int]
+  switch env.Entry
+    case Some(item) =>
     # Compute this entry's contribution to the environment's free type
     # variables independently: freeVars(body) minus the entry's own Bound.
     # Removing Bound from the running accumulator (as the previous
@@ -238,7 +237,12 @@ func envFreeVars(env: Slice[EnvEntry], out: Slice[Int]) -> Slice[Int]
     # inference falls over with occurs-check failures like t-1 ~ Reply[t-1].
     let bodyFree = removeInts(freeVars(item.Scheme.Body, []), item.Scheme.Bound)
     let entryFree = freeVarsPredicates(item.Scheme.Predicates, bodyFree)
-    envFreeVars(sliceDrop(env, 1), unionInts(out, entryFree))
+      let next = unionInts(out, entryFree)
+      switch env.Parent
+        case Some(parent) => envFreeVars(parent.value(), next)
+        case None => next
+      end
+    case None => out
   end
 end
 
@@ -268,14 +272,14 @@ func removeInts(items: Slice[Int], removed: Slice[Int]) -> Slice[Int]
   end
 end
 
-func generalize(env: Slice[EnvEntry], t: ast2.MonoType) -> Slice[Int]
+func generalize(env: Env, t: ast2.MonoType) -> Slice[Int]
   removeInts(freeVars(t, []), envFreeVars(env, []))
 end
 
 # Generalize a qualified type.  Predicates are part of the type's free
 # variables too: dropping them here makes a let-bound value look
 # unconstrained even though its initializer required a typeclass instance.
-func generalizeQualified(env: Slice[EnvEntry], t: ast2.MonoType, predicates: Slice[Predicate]) -> Slice[Int]
+func generalizeQualified(env: Env, t: ast2.MonoType, predicates: Slice[Predicate]) -> Slice[Int]
   removeInts(freeVarsPredicates(predicates, freeVars(t, [])), envFreeVars(env, []))
 end
 
@@ -306,22 +310,10 @@ func sliceDrop[A](items: Slice[A], n: Int) -> Slice[A]
     if items.Len() == 0 then
       []
     else
-      sliceDrop(sliceTail(items), n - 1)
-    end
-  end
-end
-
-func sliceTail[A](items: Slice[A]) -> Slice[A]
-  sliceTailLoop(items, 1, [] as Slice[A])
-end
-
-func sliceTailLoop[A](items: Slice[A], index: Int, out: Slice[A]) -> Slice[A]
-  if index >= items.Len() then
-    out
-  else
-    switch items.Get(index)
-      case Some(value) => sliceTailLoop(items, index + 1, out.Append(value))
-      case None => out
+      # Slice returns a Go slice view, rather than rebuilding every remaining
+      # element.  This helper is used by most recursive inference walks, so
+      # preserving the backing slice avoids quadratic copying.
+      items.Slice(n, items.Len()).UnwrapOr([])
     end
   end
 end
@@ -337,6 +329,15 @@ func getTCon(typ: ast2.MonoType) -> Option[(String, Slice[ast2.MonoType])]
     case TApp(typeRef, args) then
       switch typeRef.value()
         case TCon(name) => Some((name, args as Slice[ast2.MonoType]))
+        # An imported generic type (`ps.Reply[A]`) arrives as
+        # TApp(TQualifiedName(path, TCon(name)), args).  Unwrap it just like
+        # the bare TQualifiedName case below.
+        case TQualifiedName(_, inner) then
+          switch inner.value()
+            case TCon(name) => Some((name, args as Slice[ast2.MonoType]))
+            case _ => None
+          end
+        end
         case _ => None
       end
     end

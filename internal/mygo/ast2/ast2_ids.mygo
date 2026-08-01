@@ -189,6 +189,10 @@ func assignExprID(expr: Expr, nextID: Int) -> ExprResult
       let r1 = assignExprID(callee, nextID + 1)
       let r2 = assignExprListIDs(args, r1.NextID)
       ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.CallExpr(r1.Expr, typeArgs, r2.Items), Type: None }, NextID: r2.NextID }
+    case DictionaryCallExpr(key, receiver, args) =>
+      let r1 = assignExprID(receiver, nextID + 1)
+      let r2 = assignExprListIDs(args, r1.NextID)
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.DictionaryCallExpr(key, r1.Expr, r2.Items), Type: None }, NextID: r2.NextID }
     case FieldExpr(base, field) =>
       let r = assignExprID(base, nextID + 1)
       ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.FieldExpr(r.Expr, field), Type: None }, NextID: r.NextID }
@@ -207,10 +211,10 @@ func assignExprID(expr: Expr, nextID: Int) -> ExprResult
     case BlockExpr(stmts) =>
       let r = assignStmtIDs(stmts, nextID + 1)
       ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.BlockExpr(r.Stmts), Type: None }, NextID: r.NextID }
-    case SwitchExpr(target, cases) =>
+    case SwitchExpr(target, cases, targetType) =>
       let r1 = assignExprID(target, nextID + 1)
       let r2 = assignSwitchCaseIDs(cases, r1.NextID)
-      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.SwitchExpr(r1.Expr, r2.Cases), Type: None }, NextID: r2.NextID }
+      ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.SwitchExpr(r1.Expr, r2.Cases, targetType), Type: None }, NextID: r2.NextID }
     case FuncLitExpr(params, ret, body) =>
       let r = assignExprID(body, nextID + 1)
       ExprResult { Expr: Expr { ID: nextID, Pos: expr.Pos, Kind: ExprKind.FuncLitExpr(params, ret, r.Expr), Type: None }, NextID: r.NextID }

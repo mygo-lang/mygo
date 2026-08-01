@@ -3,7 +3,6 @@ package json
 import fmt "go:fmt"
 import strconv "go:strconv"
 import strings "go:strings"
-import utf8 "go:unicode/utf8"
 import ps "github.com/mygo-lang/mygo/lib/text/parsec"
 
 # JsonValue — the parsed representation of any JSON value.

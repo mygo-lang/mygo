@@ -192,7 +192,7 @@ func annotateExprSource(expr ast2.Expr, sourceName string) ast2.Expr {
 															var expr_23 ast2.Expr
 															expr_23 = ast2.Expr{ID: 0, Pos: pos_14, Kind: ast2.ExprKindSwitchExprCtor(annotateExprSource(v_13.F0, sourceName), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_13.F1, func(c ast2.SwitchCase) ast2.SwitchCase {
 																return ast2.SwitchCase{Pattern: c.Pattern, Body: annotateExprSource(c.Body, sourceName)}
-															})), Type: None[ast2.MonoType]()}
+															}), v_13.F2), Type: None[ast2.MonoType]()}
 															expr_37 = expr_23
 														} else {
 															if v_12, ok := expr.Kind.(ast2.ExprKindFuncLitExpr); ok {
@@ -930,7 +930,7 @@ func switchExpr() ps.Parser[ast2.Expr] {
 	return ps.PBind(kw("switch"), func(_ string) ps.Parser[ast2.Expr] {
 		return ps.PBind(expr(), func(target ast2.Expr) ps.Parser[ast2.Expr] {
 			return ps.PBind(ps.PMany1(switchCase()), func(cases []ast2.SwitchCase) ps.Parser[ast2.Expr] {
-				return ps.PThen(kw("end"), ps.PPure(exprWithPos(target.Pos, ast2.ExprKindSwitchExprCtor(target, cases))))
+				return ps.PThen(kw("end"), ps.PPure(exprWithPos(target.Pos, ast2.ExprKindSwitchExprCtor(target, cases, ast2.EmptySwitchTargetType()))))
 			})
 		})
 	})
@@ -959,6 +959,8 @@ func pattern() ps.Parser[ast2.Pattern] {
 		return ast2.PatternLiteralPatternCtor("number", value)
 	}), ps.PMap(stringLiteral(), func(value string) ast2.Pattern {
 		return ast2.PatternLiteralPatternCtor("string", value)
+	}), ps.PMap(runeLiteral(), func(value string) ast2.Pattern {
+		return ast2.PatternLiteralPatternCtor("rune", value)
 	}), ps.PBind(identifier(), func(name string) ps.Parser[ast2.Pattern] {
 		return ps.PMap(ps.POptional(paren(ps.PSepBy(lazyPattern(), sym(",")))), func(args Option[[]ast2.Pattern]) ast2.Pattern {
 			var expr_92 ast2.Pattern
@@ -1101,7 +1103,7 @@ func bodyExprFromBlock(body ast2.Expr) ast2.Expr {
 		var expr_102 ast2.Expr
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_52.F0) == 1 {
 			var expr_101 ast2.Expr
-			var first_97 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_52.F0, 0), ast2.StmtExprStmtCtor(emptyExpr()))
+			var first_97 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_52.F0, 0), ast2.StmtExprStmtCtor(emptyExpr()))
 			var expr_100 ast2.Expr
 			if v_53, ok := first_97.(ast2.StmtExprStmt); ok {
 				var expr_99 ast2.Expr
@@ -1316,7 +1318,7 @@ func tupleOrParenExpr() ps.Parser[ast2.Expr] {
 		} else {
 			var expr_118 ps.Parser[ast2.Expr]
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 1 {
-				expr_118 = ps.PPure(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), emptyExpr()))
+				expr_118 = ps.PPure(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), emptyExpr()))
 			} else {
 				expr_118 = ps.PPure(exprKindOnly(ast2.ExprKindTupleExprCtor(items)))
 			}
@@ -1471,58 +1473,50 @@ func multilineStringLiteral() ps.Parser[string] {
 	}))
 }
 func tripleQuoteString() string {
-	return MygoIN6StringM9FromRunes([]rune{doubleQuoteRune(), doubleQuoteRune(), doubleQuoteRune()})
+	return MygoIN6StringM9FromRunes([]rune{'"', '"', '"'})
 }
 func runeLiteral() ps.Parser[string] {
-	return lexeme[string](ps.PBind(ps.PChar(singleQuoteRune()), func(_ rune) ps.Parser[string] {
+	return lexeme[string](ps.PBind(ps.PChar('\''), func(_ rune) ps.Parser[string] {
 		return ps.PBind(runeCharacter(), func(value rune) ps.Parser[string] {
-			return ps.PThen(ps.PChar(singleQuoteRune()), ps.PPure(MygoIN6StringM9FromRunes([]rune{value})))
+			return ps.PThen(ps.PChar('\''), ps.PPure(MygoIN6StringM9FromRunes([]rune{value})))
 		})
 	}))
 }
 func runeCharacter() ps.Parser[rune] {
-	return ps.POrElse(ps.PThen(ps.PChar(backslashRune()), ps.PChoice([]func(ps.State) ps.Reply[rune]{ps.PMap(ps.PChar('n'), func(_ rune) rune {
-		return newlineRune()
+	return ps.POrElse(ps.PThen(ps.PChar('\\'), ps.PChoice([]func(ps.State) ps.Reply[rune]{ps.PMap(ps.PChar('n'), func(_ rune) rune {
+		return '\n'
 	}), ps.PMap(ps.PChar('t'), func(_ rune) rune {
-		return tabRune()
-	}), ps.PMap(ps.PChar(singleQuoteRune()), func(_ rune) rune {
-		return singleQuoteRune()
-	}), ps.PMap(ps.PChar(backslashRune()), func(_ rune) rune {
-		return backslashRune()
+		return '\t'
+	}), ps.PMap(ps.PChar('b'), func(_ rune) rune {
+		return '\b'
+	}), ps.PMap(ps.PChar('f'), func(_ rune) rune {
+		return '\f'
+	}), ps.PMap(ps.PChar('r'), func(_ rune) rune {
+		return '\r'
+	}), ps.PMap(ps.PChar('0'), func(_ rune) rune {
+		return '\x00'
+	}), ps.PMap(ps.PChar('"'), func(_ rune) rune {
+		return '"'
+	}), ps.PMap(ps.PChar('\''), func(_ rune) rune {
+		return '\''
+	}), ps.PMap(ps.PChar('\\'), func(_ rune) rune {
+		return '\\'
 	})})), ps.PSatisfy(func(r rune) bool {
-		return r != singleQuoteRune() && r != backslashRune() && r != newlineRune()
+		return r != '\'' && r != '\\' && r != '\n'
 	}, "rune character"))
 }
-func singleQuoteRune() rune {
-	return rune(39)
-}
-func backslashRune() rune {
-	return rune(92)
-}
-func newlineRune() rune {
-	return rune(10)
-}
-func tabRune() rune {
-	return rune(9)
-}
-func carriageReturnRune() rune {
-	return rune(13)
-}
 func stringChar() ps.Parser[rune] {
-	return ps.POrElse(ps.PThen(ps.PChar(backslashRune()), ps.PChoice([]func(ps.State) ps.Reply[rune]{ps.PMap(ps.PChar('n'), func(_ rune) rune {
-		return newlineRune()
+	return ps.POrElse(ps.PThen(ps.PChar('\\'), ps.PChoice([]func(ps.State) ps.Reply[rune]{ps.PMap(ps.PChar('n'), func(_ rune) rune {
+		return '\n'
 	}), ps.PMap(ps.PChar('t'), func(_ rune) rune {
-		return tabRune()
-	}), ps.PMap(ps.PChar(doubleQuoteRune()), func(_ rune) rune {
-		return doubleQuoteRune()
-	}), ps.PMap(ps.PChar(backslashRune()), func(_ rune) rune {
-		return backslashRune()
+		return '\t'
+	}), ps.PMap(ps.PChar('"'), func(_ rune) rune {
+		return '"'
+	}), ps.PMap(ps.PChar('\\'), func(_ rune) rune {
+		return '\\'
 	})})), ps.PSatisfy(func(r rune) bool {
-		return r != doubleQuoteRune() && r != backslashRune()
+		return r != '"' && r != '\\'
 	}, "string character"))
-}
-func doubleQuoteRune() rune {
-	return rune(34)
 }
 func kw(word string) ps.Parser[string] {
 	return lexeme[string](ps.PAttempt(ps.PBind(ps.PString(word), func(value string) ps.Parser[string] {
@@ -1549,7 +1543,7 @@ func trivia() ps.Parser[struct {
 func spaceUnit() ps.Parser[struct {
 }] {
 	return ps.PThen(ps.PSatisfy(func(r rune) bool {
-		return r == ' ' || r == tabRune() || r == newlineRune() || r == carriageReturnRune()
+		return r == ' ' || r == '\t' || r == '\n' || r == '\r'
 	}, "whitespace"), ps.PPure(struct {
 	}{}))
 }
@@ -1557,7 +1551,7 @@ func lineComment() ps.Parser[struct {
 }] {
 	return ps.PBind(ps.PString("#"), func(_ string) ps.Parser[struct{}] {
 		return ps.PThen(ps.PMany(ps.PSatisfy(func(r rune) bool {
-			return r != newlineRune()
+			return r != '\n'
 		}, "comment character")), ps.PPure(struct {
 		}{}))
 	})
@@ -1769,7 +1763,7 @@ func defaultImportAlias(path string) string {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_162) == 0 {
 		expr_163 = path
 	} else {
-		expr_163 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_162, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_162)-1), path)
+		expr_163 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_162, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_162)-1), path)
 	}
 	return expr_163
 }

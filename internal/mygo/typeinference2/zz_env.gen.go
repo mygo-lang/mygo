@@ -123,211 +123,253 @@ func hktParamID(params []string, name string, args []ast2.TypeExpr, index int) O
 	return __mygo_mt_typeinference2_hktparamid(params, name, args, index, 0)
 }
 func typeExprListString(items []ast2.TypeExpr) string {
-	var expr_29 string
+	var expr_32 string
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_29 = ""
+		expr_32 = ""
 	} else {
-		var expr_28 string
+		var expr_31 string
 		tail_25 := typeExprListString(sliceDrop[ast2.TypeExpr](items, 1))
-		head_26 := typeExprString(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.TypeExprUnitTypeCtor()))
-		var expr_27 string
-		if tail_25 == "" {
-			expr_27 = head_26
+		var expr_30 string
+		if v_16, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0).(OptionSome[ast2.TypeExpr]); ok {
+			var expr_29 string
+			head_27 := typeExprString(v_16.F0)
+			var expr_28 string
+			if tail_25 == "" {
+				expr_28 = head_27
+			} else {
+				expr_28 = head_27 + ", " + tail_25
+			}
+			expr_29 = expr_28
+			expr_30 = expr_29
 		} else {
-			expr_27 = head_26 + ", " + tail_25
+			if _, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0).(OptionNone[ast2.TypeExpr]); ok {
+				var expr_26 string
+				expr_26 = tail_25
+				expr_30 = expr_26
+			} else {
+				panic("unreachable")
+			}
 		}
-		expr_28 = expr_27
-		expr_29 = expr_28
+		expr_31 = expr_30
+		expr_32 = expr_31
 	}
-	return expr_29
+	return expr_32
 }
 func typeExprString(t ast2.TypeExpr) string {
 	return __mygo_mt_typeinference2_typeexprstring(t, 0)
 }
 func typeArgsFromASTWithParams(items []ast2.TypeExpr, params []string) []ast2.MonoType {
-	var expr_37 []ast2.MonoType
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_37 = []ast2.MonoType{}
-	} else {
-		expr_37 = MygoIN5SliceM7Prepend(typeArgsFromASTWithParams(sliceDrop[ast2.TypeExpr](items, 1), params), typeFromASTWithParams(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.TypeExprUnitTypeCtor()), params))
-	}
-	return expr_37
+	return typeArgsFromASTWithParamsInto(items, params, 0, []ast2.MonoType{})
+}
+func typeArgsFromASTWithParamsInto(items []ast2.TypeExpr, params []string, index int, out []ast2.MonoType) []ast2.MonoType {
+	return __mygo_mt_typeinference2_typeargsfromastwithparamsinto(items, params, index, out, 0)
 }
 func typeParamID(params []string, name string, index int) Option[int] {
 	return __mygo_mt_typeinference2_typeparamid(params, name, index, 0)
 }
 func typeParamIDs(params []string, index int) []int {
-	var expr_40 []int
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
-		expr_40 = []int{}
-	} else {
-		expr_40 = MygoIN5SliceM7Prepend(typeParamIDs(sliceDrop[string](params, 1), index+1), -index)
-	}
-	return expr_40
+	return typeParamIDsInto(params, index, 0, []int{})
+}
+func typeParamIDsInto(params []string, nextID int, position int, out []int) []int {
+	return __mygo_mt_typeinference2_typeparamidsinto(params, nextID, position, out, 0)
 }
 func typeArgsFromAST(items []ast2.TypeExpr) []ast2.MonoType {
-	var expr_41 []ast2.MonoType
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_41 = []ast2.MonoType{}
-	} else {
-		expr_41 = MygoIN5SliceM7Prepend(typeArgsFromAST(sliceDrop[ast2.TypeExpr](items, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.TypeExprUnitTypeCtor())))
-	}
-	return expr_41
+	return typeArgsFromASTInto(items, 0, []ast2.MonoType{})
+}
+func typeArgsFromASTInto(items []ast2.TypeExpr, index int, out []ast2.MonoType) []ast2.MonoType {
+	return __mygo_mt_typeinference2_typeargsfromastinto(items, index, out, 0)
 }
 func substring(s string, st int, en int) Option[string] {
 	return MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(s, st, en)
 }
-func typeFromASTInEnv(t ast2.TypeExpr, env []EnvEntry, state InferState) ast2.MonoType {
+func typeFromASTInEnv(t ast2.TypeExpr, env Env, state InferState) ast2.MonoType {
 	return typeFromASTInEnvWithParams(t, []string([]string{}), env, state)
 }
-func typeFromASTInEnvWithParams(t ast2.TypeExpr, typeParams []string, env []EnvEntry, state InferState) ast2.MonoType {
-	var expr_81 ast2.MonoType
-	if v_24, ok := t.(ast2.TypeExprNamedType); ok {
-		var expr_80 ast2.MonoType
-		dotPos_46 := strings.Index(v_24.F0, ".")
-		var expr_79 ast2.MonoType
-		if dotPos_46 > 0 {
-			var expr_58 ast2.MonoType
-			pkgName_47 := MygoIN6OptionM8UnwrapOr(substring(v_24.F0, 0, dotPos_46), "")
-			memberName_48 := MygoIN6OptionM8UnwrapOr(substring(v_24.F0, dotPos_46+1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(v_24.F0)), "")
-			resolvedArgs_49 := typeArgsFromASTInEnvWithParamsList(v_24.F1, typeParams, env, state)
-			var expr_50 ast2.MonoType
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_24.F1) == 0 {
-				expr_50 = ast2.MonoTypeTConCtor(memberName_48)
+func typeFromASTInEnvWithParams(t ast2.TypeExpr, typeParams []string, env Env, state InferState) ast2.MonoType {
+	var expr_101 ast2.MonoType
+	if v_30, ok := t.(ast2.TypeExprNamedType); ok {
+		var expr_100 ast2.MonoType
+		dotPos_55 := strings.Index(v_30.F0, ".")
+		var expr_99 ast2.MonoType
+		if dotPos_55 > 0 {
+			var expr_78 ast2.MonoType
+			pkgName_56 := MygoIN6OptionM8UnwrapOr(substring(v_30.F0, 0, dotPos_55), "")
+			memberName_57 := MygoIN6OptionM8UnwrapOr(substring(v_30.F0, dotPos_55+1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(v_30.F0)), "")
+			resolvedArgs_58 := typeArgsFromASTInEnvWithParamsList(v_30.F1, typeParams, env, state)
+			var expr_59 ast2.MonoType
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_30.F1) == 0 {
+				expr_59 = ast2.MonoTypeTConCtor(memberName_57)
 			} else {
-				expr_50 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor(memberName_48)}[0], resolvedArgs_49)
+				expr_59 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor(memberName_57)}[0], resolvedArgs_58)
 			}
-			inner_51 := expr_50
-			var expr_57 ast2.MonoType
-			if v_26, ok := envGet(env, pkgName_47+"."+memberName_48).(OptionSome[Scheme]); ok {
-				var expr_56 ast2.MonoType
-				q_53 := instantiateQualified(v_26.F0, state)
-				path_54 := qualifiedPath(q_53.Body)
-				var expr_55 ast2.MonoType
-				if path_54 == "" {
-					expr_55 = inner_51
+			inner_60 := expr_59
+			var expr_77 ast2.MonoType
+			if v_32, ok := envGet(env, pkgName_56+"."+memberName_57).(OptionSome[Scheme]); ok {
+				var expr_76 ast2.MonoType
+				q_67 := instantiateQualified(v_32.F0, state)
+				var expr_70 string
+				if v_33, ok := q_67.Body.(ast2.MonoTypeTQualifiedName); ok {
+					var expr_69 string
+					expr_69 = v_33.F0
+					expr_70 = expr_69
 				} else {
-					expr_55 = ast2.MonoTypeTQualifiedNameCtor(path_54, &inner_51)
+					{
+						var expr_68 string
+						expr_68 = ""
+						expr_70 = expr_68
+					}
 				}
-				expr_56 = expr_55
-				expr_57 = expr_56
+				path_71 := expr_70
+				var expr_75 ast2.MonoType
+				if path_71 == "" {
+					expr_75 = applySchemeTypeArgs(v_32.F0, resolvedArgs_58)
+				} else {
+					var expr_74 ast2.MonoType
+					qualifiedCtor_72 := ast2.MonoTypeTQualifiedNameCtor(path_71, &[]ast2.MonoType{ast2.MonoTypeTConCtor(memberName_57)}[0])
+					var expr_73 ast2.MonoType
+					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_30.F1) == 0 {
+						expr_73 = qualifiedCtor_72
+					} else {
+						expr_73 = ast2.MonoTypeTAppCtor(&qualifiedCtor_72, resolvedArgs_58)
+					}
+					expr_74 = expr_73
+					expr_75 = expr_74
+				}
+				expr_76 = expr_75
+				expr_77 = expr_76
 			} else {
-				if _, ok := envGet(env, pkgName_47+"."+memberName_48).(OptionNone[Scheme]); ok {
-					var expr_52 ast2.MonoType
-					expr_52 = inner_51
-					expr_57 = expr_52
+				if _, ok := envGet(env, pkgName_56+"."+memberName_57).(OptionNone[Scheme]); ok {
+					var expr_66 ast2.MonoType
+					cachedPath_61 := myGoPackagePath(state.MyGoPackageCache, pkgName_56)
+					var expr_65 ast2.MonoType
+					if cachedPath_61 == pkgName_56 {
+						expr_65 = inner_60
+					} else {
+						var expr_64 ast2.MonoType
+						qualifiedCtor_62 := ast2.MonoTypeTQualifiedNameCtor(cachedPath_61, &[]ast2.MonoType{ast2.MonoTypeTConCtor(memberName_57)}[0])
+						var expr_63 ast2.MonoType
+						if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_30.F1) == 0 {
+							expr_63 = qualifiedCtor_62
+						} else {
+							expr_63 = ast2.MonoTypeTAppCtor(&qualifiedCtor_62, resolvedArgs_58)
+						}
+						expr_64 = expr_63
+						expr_65 = expr_64
+					}
+					expr_66 = expr_65
+					expr_77 = expr_66
 				} else {
 					panic("unreachable")
 				}
 			}
-			expr_58 = expr_57
-			expr_79 = expr_58
+			expr_78 = expr_77
+			expr_99 = expr_78
 		} else {
-			var expr_78 ast2.MonoType
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_24.F1) == 0 {
-				var expr_69 ast2.MonoType
-				if v_32, ok := hktParamID(typeParams, v_24.F0, v_24.F1, 1).(OptionSome[int]); ok {
-					var expr_68 ast2.MonoType
-					expr_68 = ast2.MonoTypeTKVarCtor(v_32.F0)
-					expr_69 = expr_68
+			var expr_98 ast2.MonoType
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_30.F1) == 0 {
+				var expr_89 ast2.MonoType
+				if v_39, ok := hktParamID(typeParams, v_30.F0, v_30.F1, 1).(OptionSome[int]); ok {
+					var expr_88 ast2.MonoType
+					expr_88 = ast2.MonoTypeTKVarCtor(v_39.F0)
+					expr_89 = expr_88
 				} else {
-					if _, ok := hktParamID(typeParams, v_24.F0, v_24.F1, 1).(OptionNone[int]); ok {
-						var expr_67 ast2.MonoType
-						var expr_66 ast2.MonoType
-						if v_31, ok := typeParamID(typeParams, v_24.F0, 1).(OptionSome[int]); ok {
-							var expr_65 ast2.MonoType
-							expr_65 = ast2.MonoTypeTParamCtor(v_31.F0)
-							expr_66 = expr_65
+					if _, ok := hktParamID(typeParams, v_30.F0, v_30.F1, 1).(OptionNone[int]); ok {
+						var expr_87 ast2.MonoType
+						var expr_86 ast2.MonoType
+						if v_38, ok := typeParamID(typeParams, v_30.F0, 1).(OptionSome[int]); ok {
+							var expr_85 ast2.MonoType
+							expr_85 = ast2.MonoTypeTParamCtor(v_38.F0)
+							expr_86 = expr_85
 						} else {
-							if _, ok := typeParamID(typeParams, v_24.F0, 1).(OptionNone[int]); ok {
-								var expr_64 ast2.MonoType
-								var expr_63 ast2.MonoType
-								if v_30, ok := envGet(env, v_24.F0).(OptionSome[Scheme]); ok {
-									var expr_62 ast2.MonoType
-									q_60 := instantiateQualified(v_30.F0, state)
-									body_61 := q_60.Body
-									expr_62 = body_61
-									expr_63 = expr_62
+							if _, ok := typeParamID(typeParams, v_30.F0, 1).(OptionNone[int]); ok {
+								var expr_84 ast2.MonoType
+								var expr_83 ast2.MonoType
+								if v_37, ok := envGet(env, v_30.F0).(OptionSome[Scheme]); ok {
+									var expr_82 ast2.MonoType
+									q_80 := instantiateQualified(v_37.F0, state)
+									body_81 := q_80.Body
+									expr_82 = body_81
+									expr_83 = expr_82
 								} else {
-									if _, ok := envGet(env, v_24.F0).(OptionNone[Scheme]); ok {
-										var expr_59 ast2.MonoType
-										expr_59 = ast2.MonoTypeTConCtor(v_24.F0)
-										expr_63 = expr_59
+									if _, ok := envGet(env, v_30.F0).(OptionNone[Scheme]); ok {
+										var expr_79 ast2.MonoType
+										expr_79 = ast2.MonoTypeTConCtor(v_30.F0)
+										expr_83 = expr_79
 									} else {
 										panic("unreachable")
 									}
 								}
-								expr_64 = expr_63
-								expr_66 = expr_64
+								expr_84 = expr_83
+								expr_86 = expr_84
 							} else {
 								panic("unreachable")
 							}
 						}
-						expr_67 = expr_66
-						expr_69 = expr_67
+						expr_87 = expr_86
+						expr_89 = expr_87
 					} else {
 						panic("unreachable")
 					}
 				}
-				expr_78 = expr_69
+				expr_98 = expr_89
 			} else {
-				var expr_77 ast2.MonoType
-				resolvedArgs_70 := typeArgsFromASTInEnvWithParamsList(v_24.F1, typeParams, env, state)
-				var expr_76 ast2.MonoType
-				if v_36, ok := hktParamID(typeParams, v_24.F0, v_24.F1, 1).(OptionSome[int]); ok {
-					var expr_75 ast2.MonoType
-					expr_75 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTKVarCtor(v_36.F0)}[0], resolvedArgs_70)
-					expr_76 = expr_75
+				var expr_97 ast2.MonoType
+				resolvedArgs_90 := typeArgsFromASTInEnvWithParamsList(v_30.F1, typeParams, env, state)
+				var expr_96 ast2.MonoType
+				if v_43, ok := hktParamID(typeParams, v_30.F0, v_30.F1, 1).(OptionSome[int]); ok {
+					var expr_95 ast2.MonoType
+					expr_95 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTKVarCtor(v_43.F0)}[0], resolvedArgs_90)
+					expr_96 = expr_95
 				} else {
-					if _, ok := hktParamID(typeParams, v_24.F0, v_24.F1, 1).(OptionNone[int]); ok {
-						var expr_74 ast2.MonoType
-						var expr_73 ast2.MonoType
-						if v_35, ok := envGet(env, v_24.F0).(OptionSome[Scheme]); ok {
-							var expr_72 ast2.MonoType
-							expr_72 = applySchemeTypeArgs(v_35.F0, resolvedArgs_70)
-							expr_73 = expr_72
+					if _, ok := hktParamID(typeParams, v_30.F0, v_30.F1, 1).(OptionNone[int]); ok {
+						var expr_94 ast2.MonoType
+						var expr_93 ast2.MonoType
+						if v_42, ok := envGet(env, v_30.F0).(OptionSome[Scheme]); ok {
+							var expr_92 ast2.MonoType
+							expr_92 = applySchemeTypeArgs(v_42.F0, resolvedArgs_90)
+							expr_93 = expr_92
 						} else {
-							if _, ok := envGet(env, v_24.F0).(OptionNone[Scheme]); ok {
-								var expr_71 ast2.MonoType
-								expr_71 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor(v_24.F0)}[0], resolvedArgs_70)
-								expr_73 = expr_71
+							if _, ok := envGet(env, v_30.F0).(OptionNone[Scheme]); ok {
+								var expr_91 ast2.MonoType
+								expr_91 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor(v_30.F0)}[0], resolvedArgs_90)
+								expr_93 = expr_91
 							} else {
 								panic("unreachable")
 							}
 						}
-						expr_74 = expr_73
-						expr_76 = expr_74
+						expr_94 = expr_93
+						expr_96 = expr_94
 					} else {
 						panic("unreachable")
 					}
 				}
-				expr_77 = expr_76
-				expr_78 = expr_77
+				expr_97 = expr_96
+				expr_98 = expr_97
 			}
-			expr_79 = expr_78
+			expr_99 = expr_98
 		}
-		expr_80 = expr_79
-		expr_81 = expr_80
+		expr_100 = expr_99
+		expr_101 = expr_100
 	} else {
-		if v_23, ok := t.(ast2.TypeExprFuncType); ok {
-			var expr_45 ast2.MonoType
-			expr_45 = ast2.MonoTypeTFuncCtor(typeArgsFromASTInEnvWithParamsList(v_23.F0, typeParams, env, state), &[]ast2.MonoType{typeFromASTInEnvWithParams(*v_23.F1, typeParams, env, state)}[0])
-			expr_81 = expr_45
+		if v_29, ok := t.(ast2.TypeExprFuncType); ok {
+			var expr_54 ast2.MonoType
+			expr_54 = ast2.MonoTypeTFuncCtor(typeArgsFromASTInEnvWithParamsList(v_29.F0, typeParams, env, state), &[]ast2.MonoType{typeFromASTInEnvWithParams(*v_29.F1, typeParams, env, state)}[0])
+			expr_101 = expr_54
 		} else {
-			if v_22, ok := t.(ast2.TypeExprTupleType); ok {
-				var expr_44 ast2.MonoType
-				expr_44 = ast2.MonoTypeTTupleCtor(typeArgsFromASTInEnvWithParamsList(v_22.F0, typeParams, env, state))
-				expr_81 = expr_44
+			if v_28, ok := t.(ast2.TypeExprTupleType); ok {
+				var expr_53 ast2.MonoType
+				expr_53 = ast2.MonoTypeTTupleCtor(typeArgsFromASTInEnvWithParamsList(v_28.F0, typeParams, env, state))
+				expr_101 = expr_53
 			} else {
 				if _, ok := t.(ast2.TypeExprUnitType); ok {
-					var expr_43 ast2.MonoType
-					expr_43 = ast2.MonoTypeTUnitCtor()
-					expr_81 = expr_43
+					var expr_52 ast2.MonoType
+					expr_52 = ast2.MonoTypeTUnitCtor()
+					expr_101 = expr_52
 				} else {
-					if v_20, ok := t.(ast2.TypeExprInlineGo); ok {
-						var expr_42 ast2.MonoType
-						expr_42 = typeFromASTInEnvWithParams(*v_20.F0, typeParams, env, state)
-						expr_81 = expr_42
+					if v_26, ok := t.(ast2.TypeExprInlineGo); ok {
+						var expr_51 ast2.MonoType
+						expr_51 = typeFromASTInEnvWithParams(*v_26.F0, typeParams, env, state)
+						expr_101 = expr_51
 					} else {
 						panic("unreachable")
 					}
@@ -335,205 +377,198 @@ func typeFromASTInEnvWithParams(t ast2.TypeExpr, typeParams []string, env []EnvE
 			}
 		}
 	}
-	return expr_81
+	return expr_101
 }
 func applySchemeTypeArgs(scheme Scheme, args []ast2.MonoType) ast2.MonoType {
-	var expr_82 ast2.MonoType
+	var expr_102 ast2.MonoType
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(scheme.Bound) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) {
-		expr_82 = ast2.MonoTypeTAppCtor(&scheme.Body, args)
+		expr_102 = ast2.MonoTypeTAppCtor(&scheme.Body, args)
 	} else {
-		expr_82 = applySubst(typeArgSubst(scheme.Bound, args, emptySubst()), scheme.Body)
+		expr_102 = applySubst(typeArgSubst(scheme.Bound, args, emptySubst()), scheme.Body)
 	}
-	return expr_82
+	return expr_102
 }
 func typeArgSubst(ids []int, args []ast2.MonoType, out Subst) Subst {
 	return __mygo_mt_typeinference2_typeargsubst(ids, args, out, 0)
 }
 func qualifiedPath(t ast2.MonoType) string {
-	var expr_86 string
-	if v_37, ok := t.(ast2.MonoTypeTQualifiedName); ok {
-		var expr_85 string
-		expr_85 = v_37.F0
-		expr_86 = expr_85
+	var expr_106 string
+	if v_44, ok := t.(ast2.MonoTypeTQualifiedName); ok {
+		var expr_105 string
+		expr_105 = v_44.F0
+		expr_106 = expr_105
 	} else {
 		{
-			var expr_84 string
-			expr_84 = ""
-			expr_86 = expr_84
+			var expr_104 string
+			expr_104 = ""
+			expr_106 = expr_104
 		}
 	}
-	return expr_86
+	return expr_106
 }
-func typeArgsFromASTInEnv(items []ast2.TypeExpr, env []EnvEntry, state InferState) []ast2.MonoType {
+func typeArgsFromASTInEnv(items []ast2.TypeExpr, env Env, state InferState) []ast2.MonoType {
 	return typeArgsFromASTInEnvWithParamsList(items, []string([]string{}), env, state)
 }
-func typeArgsFromASTInEnvWithParamsList(items []ast2.TypeExpr, typeParams []string, env []EnvEntry, state InferState) []ast2.MonoType {
-	var expr_87 []ast2.MonoType
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		expr_87 = []ast2.MonoType{}
-	} else {
-		expr_87 = MygoIN5SliceM7Prepend(typeArgsFromASTInEnvWithParamsList(sliceDrop[ast2.TypeExpr](items, 1), typeParams, env, state), typeFromASTInEnvWithParams(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.TypeExprUnitTypeCtor()), typeParams, env, state))
-	}
-	return expr_87
+func typeArgsFromASTInEnvWithParamsList(items []ast2.TypeExpr, typeParams []string, env Env, state InferState) []ast2.MonoType {
+	return typeArgsFromASTInEnvWithParamsListInto(items, typeParams, env, state, 0, []ast2.MonoType{})
+}
+func typeArgsFromASTInEnvWithParamsListInto(items []ast2.TypeExpr, typeParams []string, env Env, state InferState, index int, out []ast2.MonoType) []ast2.MonoType {
+	return __mygo_mt_typeinference2_typeargsfromastinenvwithparamslistinto(items, typeParams, env, state, index, out, 0)
 }
 func paramsToTypes(params []ast2.Param) []ast2.MonoType {
-	var expr_88 []ast2.MonoType
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
-		expr_88 = []ast2.MonoType{}
-	} else {
-		expr_88 = MygoIN5SliceM7Prepend(paramsToTypes(sliceDrop[ast2.Param](params, 1)), typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()}).Type))
-	}
-	return expr_88
+	return paramsToTypesInto(params, 0, []ast2.MonoType{})
+}
+func paramsToTypesInto(params []ast2.Param, index int, out []ast2.MonoType) []ast2.MonoType {
+	return __mygo_mt_typeinference2_paramstotypesinto(params, index, out, 0)
 }
 func paramsToTypesWithParams(params []ast2.Param, typeParams []string) []ast2.MonoType {
-	var expr_91 []ast2.MonoType
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
-		expr_91 = []ast2.MonoType{}
-	} else {
-		var expr_90 []ast2.MonoType
-		param_89 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
-		expr_90 = MygoIN5SliceM7Prepend(paramsToTypesWithParams(sliceDrop[ast2.Param](params, 1), typeParams), typeFromASTWithParams(param_89.Type, typeParams))
-		expr_91 = expr_90
-	}
-	return expr_91
+	return paramsToTypesWithParamsInto(params, typeParams, 0, []ast2.MonoType{})
 }
-func paramsToTypesInEnv(params []ast2.Param, env []EnvEntry, state InferState) []ast2.MonoType {
-	var expr_94 []ast2.MonoType
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
-		expr_94 = []ast2.MonoType{}
-	} else {
-		var expr_93 []ast2.MonoType
-		param_92 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
-		expr_93 = MygoIN5SliceM7Prepend(paramsToTypesInEnv(sliceDrop[ast2.Param](params, 1), env, state), typeFromASTInEnv(param_92.Type, env, state))
-		expr_94 = expr_93
-	}
-	return expr_94
+func paramsToTypesWithParamsInto(params []ast2.Param, typeParams []string, index int, out []ast2.MonoType) []ast2.MonoType {
+	return __mygo_mt_typeinference2_paramstotypeswithparamsinto(params, typeParams, index, out, 0)
 }
-func paramsToTypesWithParamsInEnv(params []ast2.Param, typeParams []string, env []EnvEntry, state InferState) []ast2.MonoType {
-	var expr_97 []ast2.MonoType
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
-		expr_97 = []ast2.MonoType{}
-	} else {
-		var expr_96 []ast2.MonoType
-		param_95 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
-		expr_96 = MygoIN5SliceM7Prepend(paramsToTypesWithParamsInEnv(sliceDrop[ast2.Param](params, 1), typeParams, env, state), typeFromASTInEnvWithParams(param_95.Type, typeParams, env, state))
-		expr_97 = expr_96
-	}
-	return expr_97
+func paramsToTypesInEnv(params []ast2.Param, env Env, state InferState) []ast2.MonoType {
+	return paramsToTypesInEnvInto(params, env, state, 0, []ast2.MonoType{})
 }
-func envWithParamsAndTypes(env []EnvEntry, params []ast2.Param, types []ast2.MonoType) []EnvEntry {
+func paramsToTypesInEnvInto(params []ast2.Param, env Env, state InferState, index int, out []ast2.MonoType) []ast2.MonoType {
+	return __mygo_mt_typeinference2_paramstotypesinenvinto(params, env, state, index, out, 0)
+}
+func paramsToTypesWithParamsInEnv(params []ast2.Param, typeParams []string, env Env, state InferState) []ast2.MonoType {
+	return paramsToTypesWithParamsInEnvInto(params, typeParams, env, state, 0, []ast2.MonoType{})
+}
+func paramsToTypesWithParamsInEnvInto(params []ast2.Param, typeParams []string, env Env, state InferState, index int, out []ast2.MonoType) []ast2.MonoType {
+	return __mygo_mt_typeinference2_paramstotypeswithparamsinenvinto(params, typeParams, env, state, index, out, 0)
+}
+func envWithParamsAndTypes(env Env, params []ast2.Param, types []ast2.MonoType) Env {
 	return __mygo_mt_typeinference2_envwithparamsandtypes(env, params, types, 0)
 }
-func envWithParams(env []EnvEntry, params []ast2.Param) []EnvEntry {
+func envWithParams(env Env, params []ast2.Param) Env {
 	return __mygo_mt_typeinference2_envwithparams(env, params, 0)
 }
-func envWithTypeParams(env []EnvEntry, typeParams []string) []EnvEntry {
+func envWithTypeParams(env Env, typeParams []string) Env {
 	return envWithTypeParamsLoop(env, typeParams, 1)
 }
-func envWithTypeParamsLoop(env []EnvEntry, typeParams []string, index int) []EnvEntry {
+func envWithTypeParamsLoop(env Env, typeParams []string, index int) Env {
 	return __mygo_mt_typeinference2_envwithtypeparamsloop(env, typeParams, index, 0)
 }
-func initialEnv() []EnvEntry {
-	return []EnvEntry{EnvEntry{Name: "Int", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Int")}}, EnvEntry{Name: "Int8", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Int8")}}, EnvEntry{Name: "UInt8", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("UInt8")}}, EnvEntry{Name: "Int16", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Int16")}}, EnvEntry{Name: "UInt16", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("UInt16")}}, EnvEntry{Name: "Int32", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Int32")}}, EnvEntry{Name: "UInt32", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("UInt32")}}, EnvEntry{Name: "Int64", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Int64")}}, EnvEntry{Name: "UInt", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("UInt")}}, EnvEntry{Name: "UInt64", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("UInt64")}}, EnvEntry{Name: "Float32", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Float32")}}, EnvEntry{Name: "Float64", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Float64")}}, EnvEntry{Name: "Byte", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Byte")}}, EnvEntry{Name: "String", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("String")}}, EnvEntry{Name: "Bool", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Bool")}}, EnvEntry{Name: "Float", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Float")}}, EnvEntry{Name: "Rune", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Rune")}}, EnvEntry{Name: "Unit", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTUnitCtor()}}, EnvEntry{Name: "Ref", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Ref")}}, EnvEntry{Name: "true", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Bool")}}, EnvEntry{Name: "false", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Bool")}}, EnvEntry{Name: "len", Scheme: Scheme{Bound: []int{-1}, Predicates: []Predicate{}, Body: ast2.MonoTypeTFuncCtor([]ast2.MonoType{ast2.MonoTypeTParamCtor(-1)}, &[]ast2.MonoType{ast2.MonoTypeTConCtor("Int")}[0])}}, EnvEntry{Name: "append", Scheme: Scheme{Bound: []int{-1}, Predicates: []Predicate{}, Body: ast2.MonoTypeTFuncCtor([]ast2.MonoType{ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor("Slice")}[0], []ast2.MonoType{ast2.MonoTypeTParamCtor(-1)}), ast2.MonoTypeTParamCtor(-1)}, &[]ast2.MonoType{ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor("Slice")}[0], []ast2.MonoType{ast2.MonoTypeTParamCtor(-1)})}[0])}}, EnvEntry{Name: "Some", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Some")}}, EnvEntry{Name: "Ok", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Ok")}}, EnvEntry{Name: "Err", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Err")}}}
+func initialEnvEntries() []EnvEntry {
+	return []EnvEntry{EnvEntry{Name: "Int", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Int")}}, EnvEntry{Name: "Int8", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Int8")}}, EnvEntry{Name: "UInt8", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("UInt8")}}, EnvEntry{Name: "Int16", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Int16")}}, EnvEntry{Name: "UInt16", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("UInt16")}}, EnvEntry{Name: "Int32", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Int32")}}, EnvEntry{Name: "UInt32", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("UInt32")}}, EnvEntry{Name: "Int64", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Int64")}}, EnvEntry{Name: "UInt", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("UInt")}}, EnvEntry{Name: "UInt64", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("UInt64")}}, EnvEntry{Name: "Float32", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Float32")}}, EnvEntry{Name: "Float64", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Float64")}}, EnvEntry{Name: "Byte", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Byte")}}, EnvEntry{Name: "String", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("String")}}, EnvEntry{Name: "Bool", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Bool")}}, EnvEntry{Name: "Float", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Float")}}, EnvEntry{Name: "Rune", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Rune")}}, EnvEntry{Name: "Unit", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTUnitCtor()}}, EnvEntry{Name: "Ref", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Ref")}}, EnvEntry{Name: "true", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Bool")}}, EnvEntry{Name: "false", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTConCtor("Bool")}}, EnvEntry{Name: "len", Scheme: Scheme{Bound: []int{-1}, Predicates: []Predicate{}, Body: ast2.MonoTypeTFuncCtor([]ast2.MonoType{ast2.MonoTypeTParamCtor(-1)}, &[]ast2.MonoType{ast2.MonoTypeTConCtor("Int")}[0])}}, EnvEntry{Name: "append", Scheme: Scheme{Bound: []int{-1}, Predicates: []Predicate{}, Body: ast2.MonoTypeTFuncCtor([]ast2.MonoType{ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor("Slice")}[0], []ast2.MonoType{ast2.MonoTypeTParamCtor(-1)}), ast2.MonoTypeTParamCtor(-1)}, &[]ast2.MonoType{ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor("Slice")}[0], []ast2.MonoType{ast2.MonoTypeTParamCtor(-1)})}[0])}}, EnvEntry{Name: "Some", Scheme: Scheme{Bound: []int{-1}, Predicates: []Predicate{}, Body: ast2.MonoTypeTFuncCtor([]ast2.MonoType{ast2.MonoTypeTParamCtor(-1)}, &[]ast2.MonoType{ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor("Option")}[0], []ast2.MonoType{ast2.MonoTypeTParamCtor(-1)})}[0])}}, EnvEntry{Name: "Ok", Scheme: Scheme{Bound: []int{-1, -2}, Predicates: []Predicate{}, Body: ast2.MonoTypeTFuncCtor([]ast2.MonoType{ast2.MonoTypeTParamCtor(-1)}, &[]ast2.MonoType{ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor("Result")}[0], []ast2.MonoType{ast2.MonoTypeTParamCtor(-1), ast2.MonoTypeTParamCtor(-2)})}[0])}}, EnvEntry{Name: "Err", Scheme: Scheme{Bound: []int{-1, -2}, Predicates: []Predicate{}, Body: ast2.MonoTypeTFuncCtor([]ast2.MonoType{ast2.MonoTypeTParamCtor(-2)}, &[]ast2.MonoType{ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor("Result")}[0], []ast2.MonoType{ast2.MonoTypeTParamCtor(-1), ast2.MonoTypeTParamCtor(-2)})}[0])}}}
 }
-func envGet(env []EnvEntry, name string) Option[Scheme] {
-	return __mygo_mt_typeinference2_envget(env, name, 0)
+func initialEnv() Env {
+	entries_131 := initialEnvEntries()
+	return envFromEntries(entries_131, 0)
 }
-func envPut(env []EnvEntry, name string, scheme Scheme) []EnvEntry {
-	return MygoIN5SliceM7Prepend(env, EnvEntry{Name: name, Scheme: scheme})
+func envFromEntries(entries []EnvEntry, index int) Env {
+	var expr_135 Env
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(entries) {
+		expr_135 = MygoIN3EnvM3New()
+	} else {
+		var expr_134 Env
+		parent_132 := envFromEntries(entries, index+1)
+		entry_133 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(entries, index), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTUnitCtor()}})
+		expr_134 = MygoIN3EnvM3Put(parent_132, entry_133.Name, entry_133.Scheme)
+		expr_135 = expr_134
+	}
+	return expr_135
 }
-func envWithStructFields(env []EnvEntry, typeName string, typeParams []string, fields []ast2.Field) []EnvEntry {
+func envGet(env Env, name string) Option[Scheme] {
+	return MygoIN3EnvM3Get(env, name)
+}
+func envPut(env Env, name string, scheme Scheme) Env {
+	return MygoIN3EnvM3Put(env, name, scheme)
+}
+func envWithStructFields(env Env, typeName string, typeParams []string, fields []ast2.Field) Env {
 	return env
 }
 func concatSymbols(acc []Symbol, items []Symbol) []Symbol {
 	return __mygo_mt_typeinference2_concatsymbols(acc, items, 0)
 }
-func structSymbols(typeName string, fields []ast2.Field, typeParams []string, out []Symbol) []Symbol {
-	return __mygo_mt_typeinference2_structsymbols(typeName, fields, typeParams, out, 0)
+func structSymbolsInEnv(typeName string, fields []ast2.Field, typeParams []string, env Env, state InferState, out []Symbol) []Symbol {
+	return __mygo_mt_typeinference2_structsymbolsinenv(typeName, fields, typeParams, env, state, out, 0)
 }
-func fieldsForStruct(typeName string, fields []ast2.Field, out []FieldEntry) []FieldEntry {
-	return __mygo_mt_typeinference2_fieldsforstruct(typeName, fields, out, 0)
+func fieldsForStructInEnv(typeName string, fields []ast2.Field, typeParams []string, env Env, state InferState, out []FieldEntry) []FieldEntry {
+	return __mygo_mt_typeinference2_fieldsforstructinenv(typeName, fields, typeParams, env, state, out, 0)
 }
-func predeclareImplMethods(decls []ast2.Decl, env []EnvEntry) []EnvEntry {
+func predeclareImplMethods(decls []ast2.Decl, env Env) Env {
 	return __mygo_mt_typeinference2_predeclareimplmethods(decls, env, 0)
 }
-func registerImplMethods(implTps []string, target ast2.TypeExpr, iface Option[ast2.TypeExpr], methods []ast2.ImplMethod, env []EnvEntry) []EnvEntry {
-	receiverName_129 := implReceiverName(target, iface)
-	var expr_130 []EnvEntry
-	if receiverName_129 == "" || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) == 0 {
-		expr_130 = env
+func registerImplMethods(implTps []string, target ast2.TypeExpr, iface Option[ast2.TypeExpr], methods []ast2.ImplMethod, env Env) Env {
+	receiverName_154 := implReceiverName(target, iface)
+	var expr_155 Env
+	if receiverName_154 == "" || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) == 0 {
+		expr_155 = env
 	} else {
-		expr_130 = registerImplMethodsLoop(implTps, receiverName_129, methods, env)
+		expr_155 = registerImplMethodsLoop(implTps, receiverName_154, methods, env)
 	}
-	return expr_130
+	return expr_155
 }
 func implMethodSymbols(receiverName string, implTps []string, methods []ast2.ImplMethod, out []Symbol) []Symbol {
 	return __mygo_mt_typeinference2_implmethodsymbols(receiverName, implTps, methods, out, 0)
 }
-func registerImplMethodsLoop(implTps []string, receiverName string, methods []ast2.ImplMethod, env []EnvEntry) []EnvEntry {
+func registerImplMethodsLoop(implTps []string, receiverName string, methods []ast2.ImplMethod, env Env) Env {
 	return __mygo_mt_typeinference2_registerimplmethodsloop(implTps, receiverName, methods, env, 0)
 }
 func implReceiverName(target ast2.TypeExpr, iface Option[ast2.TypeExpr]) string {
-	var expr_166 string
-	if v_45, ok := iface.(OptionSome[ast2.TypeExpr]); ok {
-		var expr_165 string
-		var expr_164 string
-		if v_46, ok := v_45.F0.(ast2.TypeExprNamedType); ok {
-			var expr_163 string
-			var expr_162 string
-			if v_47, ok := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_46.F1, 0), ast2.TypeExprUnitTypeCtor()).(ast2.TypeExprNamedType); ok {
-				var expr_161 string
-				expr_161 = v_47.F0
-				expr_162 = expr_161
+	var expr_191 string
+	if v_54, ok := iface.(OptionSome[ast2.TypeExpr]); ok {
+		var expr_190 string
+		var expr_189 string
+		if v_55, ok := v_54.F0.(ast2.TypeExprNamedType); ok {
+			var expr_188 string
+			var expr_187 string
+			if v_56, ok := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_55.F1, 0), ast2.TypeExprUnitTypeCtor()).(ast2.TypeExprNamedType); ok {
+				var expr_186 string
+				expr_186 = v_56.F0
+				expr_187 = expr_186
 			} else {
 				{
-					var expr_160 string
-					expr_160 = ""
-					expr_162 = expr_160
+					var expr_185 string
+					expr_185 = ""
+					expr_187 = expr_185
 				}
 			}
-			expr_163 = expr_162
-			expr_164 = expr_163
+			expr_188 = expr_187
+			expr_189 = expr_188
 		} else {
 			{
-				var expr_159 string
-				expr_159 = ""
-				expr_164 = expr_159
+				var expr_184 string
+				expr_184 = ""
+				expr_189 = expr_184
 			}
 		}
-		expr_165 = expr_164
-		expr_166 = expr_165
+		expr_190 = expr_189
+		expr_191 = expr_190
 	} else {
 		if _, ok := iface.(OptionNone[ast2.TypeExpr]); ok {
-			var expr_158 string
-			var expr_157 string
-			if v_44, ok := target.(ast2.TypeExprNamedType); ok {
-				var expr_156 string
-				expr_156 = v_44.F0
-				expr_157 = expr_156
+			var expr_183 string
+			var expr_182 string
+			if v_53, ok := target.(ast2.TypeExprNamedType); ok {
+				var expr_181 string
+				expr_181 = v_53.F0
+				expr_182 = expr_181
 			} else {
 				{
-					var expr_155 string
-					expr_155 = ""
-					expr_157 = expr_155
+					var expr_180 string
+					expr_180 = ""
+					expr_182 = expr_180
 				}
 			}
-			expr_158 = expr_157
-			expr_166 = expr_158
+			expr_183 = expr_182
+			expr_191 = expr_183
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_166
+	return expr_191
 }
 func appendStringSlice(a []string, b []string) []string {
-	var expr_167 []string
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(a) == 0 {
-		expr_167 = b
-	} else {
-		expr_167 = MygoIN5SliceM7Prepend(appendStringSlice(sliceDrop[string](a, 1), b), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, 0), ""))
-	}
-	return expr_167
+	return appendStringSliceInto(a, b, 0, []string{})
+}
+func appendStringSliceInto(a []string, b []string, index int, out []string) []string {
+	return __mygo_mt_typeinference2_appendstringsliceinto(a, b, index, out, 0)
+}
+func appendStringSliceTail(items []string, index int, out []string) []string {
+	return __mygo_mt_typeinference2_appendstringslicetail(items, index, out, 0)
 }
 func defaultImplMethod() ast2.ImplMethod {
 	return ast2.ImplMethod{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: defaultFuncSig(), Body: ast2.EmptyExpr()}
@@ -541,104 +576,24 @@ func defaultImplMethod() ast2.ImplMethod {
 func defaultFuncSig() ast2.FuncSig {
 	return ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string([]string{}), Params: []ast2.Param([]ast2.Param{}), Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint([]ast2.Constraint{})}
 }
-func __mygo_mt_typeinference2_concatsymbols(acc []Symbol, items []Symbol, __mygo_state int) []Symbol {
+func __mygo_mt_typeinference2_appendstringsliceinto(a []string, b []string, index int, out []string, __mygo_state int) []string {
 	for {
 		switch __mygo_state {
 		case 0:
-			var expr_173 []Symbol
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-				expr_173 = acc
+			var expr_195 []string
+			if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(a) {
+				expr_195 = appendStringSliceTail(b, 0, out)
 			} else {
-				var expr_172 []Symbol
-				head_171 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), SymbolStructFieldCtor("", "", ast2.MonoTypeTUnitCtor()))
-				__mygo_next_0 := MygoIN5SliceM6Append(acc, head_171)
-				__mygo_next_1 := sliceDrop[Symbol](items, 1)
-				acc = __mygo_next_0
-				items = __mygo_next_1
+				__mygo_next_0 := a
+				__mygo_next_1 := b
+				__mygo_next_2 := index + 1
+				__mygo_next_3 := MygoIN5SliceM6Append(out, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, index), ""))
+				a = __mygo_next_0
+				b = __mygo_next_1
+				index = __mygo_next_2
+				out = __mygo_next_3
 				__mygo_state = 0
 				continue
-				expr_173 = expr_172
-			}
-			return expr_173
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_typeinference2_envget(env []EnvEntry, name string, __mygo_state int) Option[Scheme] {
-	for {
-		switch __mygo_state {
-		case 0:
-			var expr_181 Option[Scheme]
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(env) == 0 {
-				expr_181 = None[Scheme]()
-			} else {
-				var expr_180 Option[Scheme]
-				item_178 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(env, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTUnitCtor()}})
-				var expr_179 Option[Scheme]
-				if item_178.Name == name {
-					expr_179 = Some[Scheme](item_178.Scheme)
-				} else {
-					__mygo_next_0 := sliceDrop[EnvEntry](env, 1)
-					__mygo_next_1 := name
-					env = __mygo_next_0
-					name = __mygo_next_1
-					__mygo_state = 0
-					continue
-				}
-				expr_180 = expr_179
-				expr_181 = expr_180
-			}
-			return expr_181
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_typeinference2_envwithparams(env []EnvEntry, params []ast2.Param, __mygo_state int) []EnvEntry {
-	for {
-		switch __mygo_state {
-		case 0:
-			var expr_187 []EnvEntry
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
-				expr_187 = env
-			} else {
-				var expr_186 []EnvEntry
-				p_185 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
-				__mygo_next_0 := envPut(env, p_185.Name, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: typeFromAST(p_185.Type)})
-				__mygo_next_1 := sliceDrop[ast2.Param](params, 1)
-				env = __mygo_next_0
-				params = __mygo_next_1
-				__mygo_state = 0
-				continue
-				expr_187 = expr_186
-			}
-			return expr_187
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_typeinference2_envwithparamsandtypes(env []EnvEntry, params []ast2.Param, types []ast2.MonoType, __mygo_state int) []EnvEntry {
-	for {
-		switch __mygo_state {
-		case 0:
-			var expr_195 []EnvEntry
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
-				expr_195 = env
-			} else {
-				var expr_194 []EnvEntry
-				param_192 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
-				typ_193 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, 0), ast2.MonoTypeTUnitCtor())
-				__mygo_next_0 := envPut(env, param_192.Name, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: typ_193})
-				__mygo_next_1 := sliceDrop[ast2.Param](params, 1)
-				__mygo_next_2 := sliceDrop[ast2.MonoType](types, 1)
-				env = __mygo_next_0
-				params = __mygo_next_1
-				types = __mygo_next_2
-				__mygo_state = 0
-				continue
-				expr_195 = expr_194
 			}
 			return expr_195
 		default:
@@ -646,17 +601,115 @@ func __mygo_mt_typeinference2_envwithparamsandtypes(env []EnvEntry, params []ast
 		}
 	}
 }
-func __mygo_mt_typeinference2_envwithtypeparamsloop(env []EnvEntry, typeParams []string, index int, __mygo_state int) []EnvEntry {
+func __mygo_mt_typeinference2_appendstringslicetail(items []string, index int, out []string, __mygo_state int) []string {
 	for {
 		switch __mygo_state {
 		case 0:
-			var expr_201 []EnvEntry
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(typeParams) == 0 {
-				expr_201 = env
+			var expr_197 []string
+			if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+				expr_197 = out
 			} else {
-				var expr_200 []EnvEntry
-				name_199 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(typeParams, 0), "")
-				__mygo_next_0 := envPut(env, name_199, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTParamCtor(-index)})
+				__mygo_next_0 := items
+				__mygo_next_1 := index + 1
+				__mygo_next_2 := MygoIN5SliceM6Append(out, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ""))
+				items = __mygo_next_0
+				index = __mygo_next_1
+				out = __mygo_next_2
+				__mygo_state = 0
+				continue
+			}
+			return expr_197
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_concatsymbols(acc []Symbol, items []Symbol, __mygo_state int) []Symbol {
+	for {
+		switch __mygo_state {
+		case 0:
+			var expr_203 []Symbol
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
+				expr_203 = acc
+			} else {
+				var expr_202 []Symbol
+				head_201 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), SymbolStructFieldCtor("", "", ast2.MonoTypeTUnitCtor()))
+				__mygo_next_0 := MygoIN5SliceM6Append(acc, head_201)
+				__mygo_next_1 := sliceDrop[Symbol](items, 1)
+				acc = __mygo_next_0
+				items = __mygo_next_1
+				__mygo_state = 0
+				continue
+				expr_203 = expr_202
+			}
+			return expr_203
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_envwithparams(env Env, params []ast2.Param, __mygo_state int) Env {
+	for {
+		switch __mygo_state {
+		case 0:
+			var expr_209 Env
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
+				expr_209 = env
+			} else {
+				var expr_208 Env
+				p_207 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+				__mygo_next_0 := envPut(env, p_207.Name, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: typeFromAST(p_207.Type)})
+				__mygo_next_1 := sliceDrop[ast2.Param](params, 1)
+				env = __mygo_next_0
+				params = __mygo_next_1
+				__mygo_state = 0
+				continue
+				expr_209 = expr_208
+			}
+			return expr_209
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_envwithparamsandtypes(env Env, params []ast2.Param, types []ast2.MonoType, __mygo_state int) Env {
+	for {
+		switch __mygo_state {
+		case 0:
+			var expr_217 Env
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
+				expr_217 = env
+			} else {
+				var expr_216 Env
+				param_214 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+				typ_215 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, 0), ast2.MonoTypeTUnitCtor())
+				__mygo_next_0 := envPut(env, param_214.Name, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: typ_215})
+				__mygo_next_1 := sliceDrop[ast2.Param](params, 1)
+				__mygo_next_2 := sliceDrop[ast2.MonoType](types, 1)
+				env = __mygo_next_0
+				params = __mygo_next_1
+				types = __mygo_next_2
+				__mygo_state = 0
+				continue
+				expr_217 = expr_216
+			}
+			return expr_217
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_envwithtypeparamsloop(env Env, typeParams []string, index int, __mygo_state int) Env {
+	for {
+		switch __mygo_state {
+		case 0:
+			var expr_223 Env
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(typeParams) == 0 {
+				expr_223 = env
+			} else {
+				var expr_222 Env
+				name_221 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(typeParams, 0), "")
+				__mygo_next_0 := envPut(env, name_221, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoTypeTParamCtor(-index)})
 				__mygo_next_1 := sliceDrop[string](typeParams, 1)
 				__mygo_next_2 := index + 1
 				env = __mygo_next_0
@@ -664,35 +717,42 @@ func __mygo_mt_typeinference2_envwithtypeparamsloop(env []EnvEntry, typeParams [
 				index = __mygo_next_2
 				__mygo_state = 0
 				continue
-				expr_201 = expr_200
+				expr_223 = expr_222
 			}
-			return expr_201
+			return expr_223
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }
-func __mygo_mt_typeinference2_fieldsforstruct(typeName string, fields []ast2.Field, out []FieldEntry, __mygo_state int) []FieldEntry {
+func __mygo_mt_typeinference2_fieldsforstructinenv(typeName string, fields []ast2.Field, typeParams []string, env Env, state InferState, out []FieldEntry, __mygo_state int) []FieldEntry {
 	for {
 		switch __mygo_state {
 		case 0:
-			var expr_207 []FieldEntry
+			var expr_231 []FieldEntry
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) == 0 {
-				expr_207 = out
+				expr_231 = out
 			} else {
-				var expr_206 []FieldEntry
-				f_205 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
+				var expr_230 []FieldEntry
+				f_228 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
+				fieldType_229 := typeFromASTInEnvWithParams(f_228.Type, typeParams, env, state)
 				__mygo_next_0 := typeName
 				__mygo_next_1 := sliceDrop[ast2.Field](fields, 1)
-				__mygo_next_2 := MygoIN5SliceM6Append(out, FieldEntry{TypeName: typeName, FieldName: f_205.Name, Type: typeFromAST(f_205.Type)})
+				__mygo_next_2 := typeParams
+				__mygo_next_3 := env
+				__mygo_next_4 := state
+				__mygo_next_5 := MygoIN5SliceM6Append(out, FieldEntry{TypeName: typeName, FieldName: f_228.Name, Type: fieldType_229})
 				typeName = __mygo_next_0
 				fields = __mygo_next_1
-				out = __mygo_next_2
+				typeParams = __mygo_next_2
+				env = __mygo_next_3
+				state = __mygo_next_4
+				out = __mygo_next_5
 				__mygo_state = 0
 				continue
-				expr_207 = expr_206
+				expr_231 = expr_230
 			}
-			return expr_207
+			return expr_231
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
@@ -702,16 +762,16 @@ func __mygo_mt_typeinference2_hktparamid(params []string, name string, args []as
 	for {
 		switch __mygo_state {
 		case 0:
-			var expr_217 Option[int]
+			var expr_241 Option[int]
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
-				expr_217 = None[int]()
+				expr_241 = None[int]()
 			} else {
-				var expr_216 Option[int]
-				current_213 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), "")
-				expected_214 := name + "[" + typeExprListString(args) + "]"
-				var expr_215 Option[int]
-				if strings.Index(current_213, "[") > 0 && current_213 == expected_214 {
-					expr_215 = Some[int](-index)
+				var expr_240 Option[int]
+				current_237 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), "")
+				expected_238 := name + "[" + typeExprListString(args) + "]"
+				var expr_239 Option[int]
+				if strings.Index(current_237, "[") > 0 && current_237 == expected_238 {
+					expr_239 = Some[int](-index)
 				} else {
 					__mygo_next_0 := sliceDrop[string](params, 1)
 					__mygo_next_1 := name
@@ -724,10 +784,10 @@ func __mygo_mt_typeinference2_hktparamid(params []string, name string, args []as
 					__mygo_state = 0
 					continue
 				}
-				expr_216 = expr_215
-				expr_217 = expr_216
+				expr_240 = expr_239
+				expr_241 = expr_240
 			}
-			return expr_217
+			return expr_241
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
@@ -737,125 +797,125 @@ func __mygo_mt_typeinference2_implmethodsymbols(receiverName string, implTps []s
 	for {
 		switch __mygo_state {
 		case 0:
-			var expr_241 []Symbol
+			var expr_265 []Symbol
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) == 0 || receiverName == "" {
-				expr_241 = out
+				expr_265 = out
 			} else {
-				var expr_240 []Symbol
-				m_230 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), defaultImplMethod())
-				combined_231 := appendStringSlice(implTps, m_230.Sig.TypeParams)
-				bound_232 := typeParamIDs(combined_231, 1)
-				paramTypes_233 := paramsToTypesWithParams(m_230.Sig.Params, combined_231)
-				var expr_236 ast2.MonoType
-				if v_51, ok := m_230.Sig.Ret.(OptionSome[ast2.TypeExpr]); ok {
-					var expr_235 ast2.MonoType
-					expr_235 = typeFromASTWithParams(v_51.F0, combined_231)
-					expr_236 = expr_235
+				var expr_264 []Symbol
+				m_254 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), defaultImplMethod())
+				combined_255 := appendStringSlice(implTps, m_254.Sig.TypeParams)
+				bound_256 := typeParamIDs(combined_255, 1)
+				paramTypes_257 := paramsToTypesWithParams(m_254.Sig.Params, combined_255)
+				var expr_260 ast2.MonoType
+				if v_60, ok := m_254.Sig.Ret.(OptionSome[ast2.TypeExpr]); ok {
+					var expr_259 ast2.MonoType
+					expr_259 = typeFromASTWithParams(v_60.F0, combined_255)
+					expr_260 = expr_259
 				} else {
-					if _, ok := m_230.Sig.Ret.(OptionNone[ast2.TypeExpr]); ok {
-						var expr_234 ast2.MonoType
-						expr_234 = ast2.MonoTypeTUnitCtor()
-						expr_236 = expr_234
+					if _, ok := m_254.Sig.Ret.(OptionNone[ast2.TypeExpr]); ok {
+						var expr_258 ast2.MonoType
+						expr_258 = ast2.MonoTypeTUnitCtor()
+						expr_260 = expr_258
 					} else {
 						panic("unreachable")
 					}
 				}
-				retType_237 := expr_236
-				predicates_238 := predicatesFromConstraintsWithParams(m_230.Sig.Using, combined_231)
-				scheme_239 := Scheme{Bound: bound_232, Predicates: predicates_238, Body: ast2.MonoTypeTFuncCtor(paramTypes_233, &retType_237)}
+				retType_261 := expr_260
+				predicates_262 := predicatesFromConstraintsWithParams(m_254.Sig.Using, combined_255)
+				scheme_263 := Scheme{Bound: bound_256, Predicates: predicates_262, Body: ast2.MonoTypeTFuncCtor(paramTypes_257, &retType_261)}
 				__mygo_next_0 := receiverName
 				__mygo_next_1 := implTps
 				__mygo_next_2 := sliceDrop[ast2.ImplMethod](methods, 1)
-				__mygo_next_3 := MygoIN5SliceM7Prepend(out, SymbolImplMethodCtor(receiverName, m_230.Sig.Name, scheme_239))
+				__mygo_next_3 := MygoIN5SliceM7Prepend(out, SymbolImplMethodCtor(receiverName, m_254.Sig.Name, scheme_263))
 				receiverName = __mygo_next_0
 				implTps = __mygo_next_1
 				methods = __mygo_next_2
 				out = __mygo_next_3
 				__mygo_state = 0
 				continue
-				expr_241 = expr_240
+				expr_265 = expr_264
 			}
-			return expr_241
+			return expr_265
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }
-func __mygo_mt_typeinference2_predeclareimplmethods(decls []ast2.Decl, env []EnvEntry, __mygo_state int) []EnvEntry {
+func __mygo_mt_typeinference2_paramstotypesinenvinto(params []ast2.Param, env Env, state InferState, index int, out []ast2.MonoType, __mygo_state int) []ast2.MonoType {
 	for {
 		switch __mygo_state {
 		case 0:
-			var expr_255 []EnvEntry
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
-				expr_255 = env
+			var expr_271 []ast2.MonoType
+			if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
+				expr_271 = out
 			} else {
-				var expr_254 []EnvEntry
-				head_249 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
-				var expr_252 []EnvEntry
-				if v_53, ok := head_249.(ast2.DeclImplDecl); ok {
-					var expr_251 []EnvEntry
-					expr_251 = registerImplMethods(v_53.F0, v_53.F1, v_53.F2, v_53.F3, env)
-					expr_252 = expr_251
-				} else {
-					{
-						var expr_250 []EnvEntry
-						expr_250 = env
-						expr_252 = expr_250
-					}
-				}
-				next_253 := expr_252
-				__mygo_next_0 := sliceDrop[ast2.Decl](decls, 1)
-				__mygo_next_1 := next_253
-				decls = __mygo_next_0
+				var expr_270 []ast2.MonoType
+				param_269 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, index), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+				__mygo_next_0 := params
+				__mygo_next_1 := env
+				__mygo_next_2 := state
+				__mygo_next_3 := index + 1
+				__mygo_next_4 := MygoIN5SliceM6Append(out, typeFromASTInEnv(param_269.Type, env, state))
+				params = __mygo_next_0
 				env = __mygo_next_1
+				state = __mygo_next_2
+				index = __mygo_next_3
+				out = __mygo_next_4
 				__mygo_state = 0
 				continue
-				expr_255 = expr_254
+				expr_271 = expr_270
 			}
-			return expr_255
+			return expr_271
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }
-func __mygo_mt_typeinference2_registerimplmethodsloop(implTps []string, receiverName string, methods []ast2.ImplMethod, env []EnvEntry, __mygo_state int) []EnvEntry {
+func __mygo_mt_typeinference2_paramstotypesinto(params []ast2.Param, index int, out []ast2.MonoType, __mygo_state int) []ast2.MonoType {
 	for {
 		switch __mygo_state {
 		case 0:
-			var expr_279 []EnvEntry
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) == 0 {
-				expr_279 = env
+			var expr_273 []ast2.MonoType
+			if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
+				expr_273 = out
 			} else {
-				var expr_278 []EnvEntry
-				m_268 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), defaultImplMethod())
-				combined_269 := appendStringSlice(implTps, m_268.Sig.TypeParams)
-				bound_270 := typeParamIDs(combined_269, 1)
-				paramTypes_271 := paramsToTypesWithParams(m_268.Sig.Params, combined_269)
-				var expr_274 ast2.MonoType
-				if v_57, ok := m_268.Sig.Ret.(OptionSome[ast2.TypeExpr]); ok {
-					var expr_273 ast2.MonoType
-					expr_273 = typeFromASTWithParams(v_57.F0, combined_269)
-					expr_274 = expr_273
-				} else {
-					if _, ok := m_268.Sig.Ret.(OptionNone[ast2.TypeExpr]); ok {
-						var expr_272 ast2.MonoType
-						expr_272 = ast2.MonoTypeTUnitCtor()
-						expr_274 = expr_272
-					} else {
-						panic("unreachable")
-					}
-				}
-				retType_275 := expr_274
-				predicates_276 := predicatesFromConstraintsWithParams(m_268.Sig.Using, combined_269)
-				scheme_277 := Scheme{Bound: bound_270, Predicates: predicates_276, Body: ast2.MonoTypeTFuncCtor(paramTypes_271, &retType_275)}
-				__mygo_next_0 := implTps
-				__mygo_next_1 := receiverName
-				__mygo_next_2 := sliceDrop[ast2.ImplMethod](methods, 1)
-				__mygo_next_3 := envPut(env, receiverName+"."+m_268.Sig.Name, scheme_277)
-				implTps = __mygo_next_0
-				receiverName = __mygo_next_1
-				methods = __mygo_next_2
-				env = __mygo_next_3
+				__mygo_next_0 := params
+				__mygo_next_1 := index + 1
+				__mygo_next_2 := MygoIN5SliceM6Append(out, typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, index), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()}).Type))
+				params = __mygo_next_0
+				index = __mygo_next_1
+				out = __mygo_next_2
+				__mygo_state = 0
+				continue
+			}
+			return expr_273
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_paramstotypeswithparamsinenvinto(params []ast2.Param, typeParams []string, env Env, state InferState, index int, out []ast2.MonoType, __mygo_state int) []ast2.MonoType {
+	for {
+		switch __mygo_state {
+		case 0:
+			var expr_279 []ast2.MonoType
+			if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
+				expr_279 = out
+			} else {
+				var expr_278 []ast2.MonoType
+				param_277 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, index), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+				__mygo_next_0 := params
+				__mygo_next_1 := typeParams
+				__mygo_next_2 := env
+				__mygo_next_3 := state
+				__mygo_next_4 := index + 1
+				__mygo_next_5 := MygoIN5SliceM6Append(out, typeFromASTInEnvWithParams(param_277.Type, typeParams, env, state))
+				params = __mygo_next_0
+				typeParams = __mygo_next_1
+				env = __mygo_next_2
+				state = __mygo_next_3
+				index = __mygo_next_4
+				out = __mygo_next_5
 				__mygo_state = 0
 				continue
 				expr_279 = expr_278
@@ -866,30 +926,295 @@ func __mygo_mt_typeinference2_registerimplmethodsloop(implTps []string, receiver
 		}
 	}
 }
-func __mygo_mt_typeinference2_structsymbols(typeName string, fields []ast2.Field, typeParams []string, out []Symbol, __mygo_state int) []Symbol {
+func __mygo_mt_typeinference2_paramstotypeswithparamsinto(params []ast2.Param, typeParams []string, index int, out []ast2.MonoType, __mygo_state int) []ast2.MonoType {
 	for {
 		switch __mygo_state {
 		case 0:
-			var expr_287 []Symbol
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) == 0 {
-				expr_287 = out
+			var expr_285 []ast2.MonoType
+			if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
+				expr_285 = out
 			} else {
-				var expr_286 []Symbol
-				f_284 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
-				fieldType_285 := typeFromASTWithParams(f_284.Type, typeParams)
-				__mygo_next_0 := typeName
-				__mygo_next_1 := sliceDrop[ast2.Field](fields, 1)
-				__mygo_next_2 := typeParams
-				__mygo_next_3 := MygoIN5SliceM7Prepend(out, SymbolStructFieldCtor(typeName, f_284.Name, fieldType_285))
-				typeName = __mygo_next_0
-				fields = __mygo_next_1
-				typeParams = __mygo_next_2
+				var expr_284 []ast2.MonoType
+				param_283 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, index), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+				__mygo_next_0 := params
+				__mygo_next_1 := typeParams
+				__mygo_next_2 := index + 1
+				__mygo_next_3 := MygoIN5SliceM6Append(out, typeFromASTWithParams(param_283.Type, typeParams))
+				params = __mygo_next_0
+				typeParams = __mygo_next_1
+				index = __mygo_next_2
 				out = __mygo_next_3
 				__mygo_state = 0
 				continue
-				expr_287 = expr_286
+				expr_285 = expr_284
 			}
-			return expr_287
+			return expr_285
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_predeclareimplmethods(decls []ast2.Decl, env Env, __mygo_state int) Env {
+	for {
+		switch __mygo_state {
+		case 0:
+			var expr_299 Env
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
+				expr_299 = env
+			} else {
+				var expr_298 Env
+				head_293 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+				var expr_296 Env
+				if v_62, ok := head_293.(ast2.DeclImplDecl); ok {
+					var expr_295 Env
+					expr_295 = registerImplMethods(v_62.F0, v_62.F1, v_62.F2, v_62.F3, env)
+					expr_296 = expr_295
+				} else {
+					{
+						var expr_294 Env
+						expr_294 = env
+						expr_296 = expr_294
+					}
+				}
+				next_297 := expr_296
+				__mygo_next_0 := sliceDrop[ast2.Decl](decls, 1)
+				__mygo_next_1 := next_297
+				decls = __mygo_next_0
+				env = __mygo_next_1
+				__mygo_state = 0
+				continue
+				expr_299 = expr_298
+			}
+			return expr_299
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_registerimplmethodsloop(implTps []string, receiverName string, methods []ast2.ImplMethod, env Env, __mygo_state int) Env {
+	for {
+		switch __mygo_state {
+		case 0:
+			var expr_323 Env
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) == 0 {
+				expr_323 = env
+			} else {
+				var expr_322 Env
+				m_312 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), defaultImplMethod())
+				combined_313 := appendStringSlice(implTps, m_312.Sig.TypeParams)
+				bound_314 := typeParamIDs(combined_313, 1)
+				paramTypes_315 := paramsToTypesWithParams(m_312.Sig.Params, combined_313)
+				var expr_318 ast2.MonoType
+				if v_66, ok := m_312.Sig.Ret.(OptionSome[ast2.TypeExpr]); ok {
+					var expr_317 ast2.MonoType
+					expr_317 = typeFromASTWithParams(v_66.F0, combined_313)
+					expr_318 = expr_317
+				} else {
+					if _, ok := m_312.Sig.Ret.(OptionNone[ast2.TypeExpr]); ok {
+						var expr_316 ast2.MonoType
+						expr_316 = ast2.MonoTypeTUnitCtor()
+						expr_318 = expr_316
+					} else {
+						panic("unreachable")
+					}
+				}
+				retType_319 := expr_318
+				predicates_320 := predicatesFromConstraintsWithParams(m_312.Sig.Using, combined_313)
+				scheme_321 := Scheme{Bound: bound_314, Predicates: predicates_320, Body: ast2.MonoTypeTFuncCtor(paramTypes_315, &retType_319)}
+				__mygo_next_0 := implTps
+				__mygo_next_1 := receiverName
+				__mygo_next_2 := sliceDrop[ast2.ImplMethod](methods, 1)
+				__mygo_next_3 := envPut(env, receiverName+"."+m_312.Sig.Name, scheme_321)
+				implTps = __mygo_next_0
+				receiverName = __mygo_next_1
+				methods = __mygo_next_2
+				env = __mygo_next_3
+				__mygo_state = 0
+				continue
+				expr_323 = expr_322
+			}
+			return expr_323
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_structsymbolsinenv(typeName string, fields []ast2.Field, typeParams []string, env Env, state InferState, out []Symbol, __mygo_state int) []Symbol {
+	for {
+		switch __mygo_state {
+		case 0:
+			var expr_331 []Symbol
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) == 0 {
+				expr_331 = out
+			} else {
+				var expr_330 []Symbol
+				f_328 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
+				fieldType_329 := typeFromASTInEnvWithParams(f_328.Type, typeParams, env, state)
+				__mygo_next_0 := typeName
+				__mygo_next_1 := sliceDrop[ast2.Field](fields, 1)
+				__mygo_next_2 := typeParams
+				__mygo_next_3 := env
+				__mygo_next_4 := state
+				__mygo_next_5 := MygoIN5SliceM7Prepend(out, SymbolStructFieldCtor(typeName, f_328.Name, fieldType_329))
+				typeName = __mygo_next_0
+				fields = __mygo_next_1
+				typeParams = __mygo_next_2
+				env = __mygo_next_3
+				state = __mygo_next_4
+				out = __mygo_next_5
+				__mygo_state = 0
+				continue
+				expr_331 = expr_330
+			}
+			return expr_331
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_typeargsfromastinenvwithparamslistinto(items []ast2.TypeExpr, typeParams []string, env Env, state InferState, index int, out []ast2.MonoType, __mygo_state int) []ast2.MonoType {
+	for {
+		switch __mygo_state {
+		case 0:
+			var expr_339 []ast2.MonoType
+			if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+				expr_339 = out
+			} else {
+				var expr_338 []ast2.MonoType
+				if v_70, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionSome[ast2.TypeExpr]); ok {
+					var expr_337 []ast2.MonoType
+					__mygo_next_0 := items
+					__mygo_next_1 := typeParams
+					__mygo_next_2 := env
+					__mygo_next_3 := state
+					__mygo_next_4 := index + 1
+					__mygo_next_5 := MygoIN5SliceM6Append(out, typeFromASTInEnvWithParams(v_70.F0, typeParams, env, state))
+					items = __mygo_next_0
+					typeParams = __mygo_next_1
+					env = __mygo_next_2
+					state = __mygo_next_3
+					index = __mygo_next_4
+					out = __mygo_next_5
+					__mygo_state = 0
+					continue
+					expr_338 = expr_337
+				} else {
+					if _, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionNone[ast2.TypeExpr]); ok {
+						var expr_336 []ast2.MonoType
+						__mygo_next_0 := items
+						__mygo_next_1 := typeParams
+						__mygo_next_2 := env
+						__mygo_next_3 := state
+						__mygo_next_4 := index + 1
+						__mygo_next_5 := out
+						items = __mygo_next_0
+						typeParams = __mygo_next_1
+						env = __mygo_next_2
+						state = __mygo_next_3
+						index = __mygo_next_4
+						out = __mygo_next_5
+						__mygo_state = 0
+						continue
+						expr_338 = expr_336
+					} else {
+						panic("unreachable")
+					}
+				}
+				expr_339 = expr_338
+			}
+			return expr_339
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_typeargsfromastinto(items []ast2.TypeExpr, index int, out []ast2.MonoType, __mygo_state int) []ast2.MonoType {
+	for {
+		switch __mygo_state {
+		case 0:
+			var expr_347 []ast2.MonoType
+			if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+				expr_347 = out
+			} else {
+				var expr_346 []ast2.MonoType
+				if v_74, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionSome[ast2.TypeExpr]); ok {
+					var expr_345 []ast2.MonoType
+					__mygo_next_0 := items
+					__mygo_next_1 := index + 1
+					__mygo_next_2 := MygoIN5SliceM6Append(out, typeFromAST(v_74.F0))
+					items = __mygo_next_0
+					index = __mygo_next_1
+					out = __mygo_next_2
+					__mygo_state = 0
+					continue
+					expr_346 = expr_345
+				} else {
+					if _, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionNone[ast2.TypeExpr]); ok {
+						var expr_344 []ast2.MonoType
+						__mygo_next_0 := items
+						__mygo_next_1 := index + 1
+						__mygo_next_2 := out
+						items = __mygo_next_0
+						index = __mygo_next_1
+						out = __mygo_next_2
+						__mygo_state = 0
+						continue
+						expr_346 = expr_344
+					} else {
+						panic("unreachable")
+					}
+				}
+				expr_347 = expr_346
+			}
+			return expr_347
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_typeargsfromastwithparamsinto(items []ast2.TypeExpr, params []string, index int, out []ast2.MonoType, __mygo_state int) []ast2.MonoType {
+	for {
+		switch __mygo_state {
+		case 0:
+			var expr_355 []ast2.MonoType
+			if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+				expr_355 = out
+			} else {
+				var expr_354 []ast2.MonoType
+				if v_78, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionSome[ast2.TypeExpr]); ok {
+					var expr_353 []ast2.MonoType
+					__mygo_next_0 := items
+					__mygo_next_1 := params
+					__mygo_next_2 := index + 1
+					__mygo_next_3 := MygoIN5SliceM6Append(out, typeFromASTWithParams(v_78.F0, params))
+					items = __mygo_next_0
+					params = __mygo_next_1
+					index = __mygo_next_2
+					out = __mygo_next_3
+					__mygo_state = 0
+					continue
+					expr_354 = expr_353
+				} else {
+					if _, ok := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionNone[ast2.TypeExpr]); ok {
+						var expr_352 []ast2.MonoType
+						__mygo_next_0 := items
+						__mygo_next_1 := params
+						__mygo_next_2 := index + 1
+						__mygo_next_3 := out
+						items = __mygo_next_0
+						params = __mygo_next_1
+						index = __mygo_next_2
+						out = __mygo_next_3
+						__mygo_state = 0
+						continue
+						expr_354 = expr_352
+					} else {
+						panic("unreachable")
+					}
+				}
+				expr_355 = expr_354
+			}
+			return expr_355
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
@@ -899,9 +1224,9 @@ func __mygo_mt_typeinference2_typeargsubst(ids []int, args []ast2.MonoType, out 
 	for {
 		switch __mygo_state {
 		case 0:
-			var expr_289 Subst
+			var expr_357 Subst
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(ids) == 0 {
-				expr_289 = out
+				expr_357 = out
 			} else {
 				__mygo_next_0 := sliceDrop[int](ids, 1)
 				__mygo_next_1 := sliceDrop[ast2.MonoType](args, 1)
@@ -912,7 +1237,7 @@ func __mygo_mt_typeinference2_typeargsubst(ids []int, args []ast2.MonoType, out 
 				__mygo_state = 0
 				continue
 			}
-			return expr_289
+			return expr_357
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
@@ -922,40 +1247,40 @@ func __mygo_mt_typeinference2_typeexprstring(t ast2.TypeExpr, __mygo_state int) 
 	for {
 		switch __mygo_state {
 		case 0:
-			var expr_303 string
-			if v_67, ok := t.(ast2.TypeExprNamedType); ok {
-				var expr_302 string
-				var expr_301 string
-				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_67.F1) == 0 {
-					expr_301 = v_67.F0
+			var expr_371 string
+			if v_88, ok := t.(ast2.TypeExprNamedType); ok {
+				var expr_370 string
+				var expr_369 string
+				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_88.F1) == 0 {
+					expr_369 = v_88.F0
 				} else {
-					expr_301 = v_67.F0 + "[" + typeExprListString(v_67.F1) + "]"
+					expr_369 = v_88.F0 + "[" + typeExprListString(v_88.F1) + "]"
 				}
-				expr_302 = expr_301
-				expr_303 = expr_302
+				expr_370 = expr_369
+				expr_371 = expr_370
 			} else {
 				if _, ok := t.(ast2.TypeExprUnitType); ok {
-					var expr_300 string
-					expr_300 = "()"
-					expr_303 = expr_300
+					var expr_368 string
+					expr_368 = "()"
+					expr_371 = expr_368
 				} else {
 					if _, ok := t.(ast2.TypeExprTupleType); ok {
-						var expr_299 string
-						expr_299 = "tuple"
-						expr_303 = expr_299
+						var expr_367 string
+						expr_367 = "tuple"
+						expr_371 = expr_367
 					} else {
 						if _, ok := t.(ast2.TypeExprFuncType); ok {
-							var expr_298 string
-							expr_298 = "func"
-							expr_303 = expr_298
+							var expr_366 string
+							expr_366 = "func"
+							expr_371 = expr_366
 						} else {
-							if v_63, ok := t.(ast2.TypeExprInlineGo); ok {
-								var expr_297 string
-								__mygo_next_0 := *v_63.F0
+							if v_84, ok := t.(ast2.TypeExprInlineGo); ok {
+								var expr_365 string
+								__mygo_next_0 := *v_84.F0
 								t = __mygo_next_0
 								__mygo_state = 0
 								continue
-								expr_303 = expr_297
+								expr_371 = expr_365
 							} else {
 								panic("unreachable")
 							}
@@ -963,7 +1288,7 @@ func __mygo_mt_typeinference2_typeexprstring(t ast2.TypeExpr, __mygo_state int) 
 					}
 				}
 			}
-			return expr_303
+			return expr_371
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
@@ -973,13 +1298,13 @@ func __mygo_mt_typeinference2_typeparamid(params []string, name string, index in
 	for {
 		switch __mygo_state {
 		case 0:
-			var expr_307 Option[int]
+			var expr_375 Option[int]
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
-				expr_307 = None[int]()
+				expr_375 = None[int]()
 			} else {
-				var expr_306 Option[int]
+				var expr_374 Option[int]
 				if MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), "") == name {
-					expr_306 = Some[int](-index)
+					expr_374 = Some[int](-index)
 				} else {
 					__mygo_next_0 := sliceDrop[string](params, 1)
 					__mygo_next_1 := name
@@ -990,9 +1315,34 @@ func __mygo_mt_typeinference2_typeparamid(params []string, name string, index in
 					__mygo_state = 0
 					continue
 				}
-				expr_307 = expr_306
+				expr_375 = expr_374
 			}
-			return expr_307
+			return expr_375
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_typeparamidsinto(params []string, nextID int, position int, out []int, __mygo_state int) []int {
+	for {
+		switch __mygo_state {
+		case 0:
+			var expr_377 []int
+			if position >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
+				expr_377 = out
+			} else {
+				__mygo_next_0 := params
+				__mygo_next_1 := nextID + 1
+				__mygo_next_2 := position + 1
+				__mygo_next_3 := MygoIN5SliceM6Append(out, -nextID)
+				params = __mygo_next_0
+				nextID = __mygo_next_1
+				position = __mygo_next_2
+				out = __mygo_next_3
+				__mygo_state = 0
+				continue
+			}
+			return expr_377
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}

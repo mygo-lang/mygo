@@ -168,7 +168,7 @@ func demoCollections() -> String
   let scores: Map[String, Int] = {"Alice": 90, "Bob": 85, "Charlie": 95}
 
   # Set
-  let words: Set[String] = {"hello", "world", "hello"}
+  let words: Set[String] = {"hello", "world"}
 
   "Slice len=" + nums.Len().ToString() + ", Map len=" + scores.Len().ToString() + ", Set len=" + words.Len().ToString()
 end

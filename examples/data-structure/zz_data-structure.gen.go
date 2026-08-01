@@ -2,11 +2,8 @@
 
 package main
 
-import (
-	"fmt"
-
-	. "github.com/mygo-lang/mygo/prelude"
-)
+import "fmt"
+import . "github.com/mygo-lang/mygo/prelude"
 
 type Color interface {
 	isColor()
@@ -14,7 +11,7 @@ type Color interface {
 type ColorRed struct {
 }
 
-func (_ ColorRed) isColor() {
+func (ColorRed) isColor() {
 }
 func ColorRedCtor() Color {
 	return ColorRed{}
@@ -23,7 +20,7 @@ func ColorRedCtor() Color {
 type ColorGreen struct {
 }
 
-func (_ ColorGreen) isColor() {
+func (ColorGreen) isColor() {
 }
 func ColorGreenCtor() Color {
 	return ColorGreen{}
@@ -32,7 +29,7 @@ func ColorGreenCtor() Color {
 type ColorBlue struct {
 }
 
-func (_ ColorBlue) isColor() {
+func (ColorBlue) isColor() {
 }
 func ColorBlueCtor() Color {
 	return ColorBlue{}
@@ -44,7 +41,7 @@ type Point2D interface {
 type Point2DEmpty struct {
 }
 
-func (_ Point2DEmpty) isPoint2D() {
+func (Point2DEmpty) isPoint2D() {
 }
 func Point2DEmptyCtor() Point2D {
 	return Point2DEmpty{}
@@ -54,20 +51,20 @@ type Point2DWithX struct {
 	F0 int
 }
 
-func (_ Point2DWithX) isPoint2D() {
+func (Point2DWithX) isPoint2D() {
 }
-func Point2DWithXCtor(a0 int) Point2D {
-	return Point2DWithX{F0: a0}
+func Point2DWithXCtor(v0 int) Point2D {
+	return Point2DWithX{F0: v0}
 }
 
 type Point2DWithY struct {
 	F0 int
 }
 
-func (_ Point2DWithY) isPoint2D() {
+func (Point2DWithY) isPoint2D() {
 }
-func Point2DWithYCtor(a0 int) Point2D {
-	return Point2DWithY{F0: a0}
+func Point2DWithYCtor(v0 int) Point2D {
+	return Point2DWithY{F0: v0}
 }
 
 type Operation interface {
@@ -76,7 +73,7 @@ type Operation interface {
 type OperationAdd struct {
 }
 
-func (_ OperationAdd) isOperation() {
+func (OperationAdd) isOperation() {
 }
 func OperationAddCtor() Operation {
 	return OperationAdd{}
@@ -85,7 +82,7 @@ func OperationAddCtor() Operation {
 type OperationSubtract struct {
 }
 
-func (_ OperationSubtract) isOperation() {
+func (OperationSubtract) isOperation() {
 }
 func OperationSubtractCtor() Operation {
 	return OperationSubtract{}
@@ -94,147 +91,123 @@ func OperationSubtractCtor() Operation {
 type OperationMultiply struct {
 }
 
-func (_ OperationMultiply) isOperation() {
+func (OperationMultiply) isOperation() {
 }
 func OperationMultiplyCtor() Operation {
 	return OperationMultiply{}
 }
 
 type Person struct {
-	name string
-	age  int
+	Name string
+	Age  int
 }
 type Rectangle struct {
-	width  float64
-	height float64
+	Width  float64
+	Height float64
 }
 type Pair[T any] struct {
-	first  T
-	second T
+	First  T
+	Second T
 }
 type ColorTuple struct {
 }
 type Address struct {
-	street string
-	city   string
+	Street string
+	City   string
 }
 type Contact struct {
-	name string
+	Name string
 	Address
 }
 
 func area(rect Rectangle) float64 {
-	return rect.width * rect.height
+	return rect.Width * rect.Height
 }
 func swapPair[T any](p Pair[T]) Pair[T] {
-	return Pair[T]{first: p.second, second: p.first}
+	return Pair[T]{First: p.Second, Second: p.First}
 }
 func describeColor(color Color) string {
-	var expr_4 string
+	var __mygo_expr_0 string
 	if _, ok := color.(ColorRed); ok {
-		var expr_3 string
-		expr_3 = "red"
-		expr_4 = expr_3
+		__mygo_expr_0 = "red"
 	} else {
 		if _, ok := color.(ColorGreen); ok {
-			var expr_2 string
-			expr_2 = "green"
-			expr_4 = expr_2
+			__mygo_expr_0 = "green"
 		} else {
 			if _, ok := color.(ColorBlue); ok {
-				var expr_1 string
-				expr_1 = "blue"
-				expr_4 = expr_1
+				__mygo_expr_0 = "blue"
 			} else {
-				panic("unreachable")
 			}
 		}
 	}
-	return expr_4
+	return __mygo_expr_0
 }
 func maxInt(a int, b int) int {
-	var expr_5 int
 	if a > b {
-		expr_5 = a
+		return a
 	} else {
-		expr_5 = b
+		return b
 	}
-	return expr_5
 }
 func describeOption[A any](value Option[A], ToStringFn func(A) string) string {
-	var expr_8 string
+	var __mygo_expr_0 string
 	if _, ok := value.(OptionNone[A]); ok {
-		var expr_7 string
-		expr_7 = "None"
-		expr_8 = expr_7
+		__mygo_expr_0 = "None"
 	} else {
-		if v_4, ok := value.(OptionSome[A]); ok {
-			var expr_6 string
-			expr_6 = "Some(" + ToStringFn(v_4.F0) + ")"
-			expr_8 = expr_6
+		if __mygo_match___mygo_expr_1, ok := value.(OptionSome[A]); ok {
+			__mygo_expr_0 = "Some(" + ToStringFn(__mygo_match___mygo_expr_1.F0) + ")"
 		} else {
-			panic("unreachable")
 		}
 	}
-	return expr_8
+	return __mygo_expr_0
 }
 func buildList() List[int] {
-	var noneTail_9 Option[List[int]] = None[List[int]]()
-	lastNode_10 := MygoIN4ListM4Cons(3, noneTail_9)
-	middleNode_11 := MygoIN4ListM4Cons(2, Some[List[int]](lastNode_10))
-	return MygoIN4ListM4Cons(1, Some[List[int]](middleNode_11))
+	var noneTail Option[List[int]] = None[List[int]]()
+	lastNode := MygoIN4ListM4Cons(3, noneTail)
+	middleNode := MygoIN4ListM4Cons(2, Some[List[int]](lastNode))
+	return MygoIN4ListM4Cons(1, Some[List[int]](middleNode))
 }
 func sumList(lst List[int]) int {
-	var total_12 int = 0
-	var current_13 List[int] = lst
-	var done_14 bool = false
-	for !done_14 {
-		headVal := MygoIN4ListM4Head(current_13)
-		total_12 = total_12 + headVal
-		if _, ok := MygoIN4ListM4Tail(current_13).(OptionNone[List[int]]); ok {
-			done_14 = true
+	var total int = 0
+	var current List[int] = lst
+	var done bool = false
+	for !done {
+		headVal := MygoIN4ListM4Head(current)
+		total = total + headVal
+		if _, ok := MygoIN4ListM4Tail(current).(OptionNone[List[int]]); ok {
+			done = true
 		} else {
-			if v_6, ok := MygoIN4ListM4Tail(current_13).(OptionSome[List[int]]); ok {
-				current_13 = v_6.F0
+			if __mygo_match___mygo_expr_0, ok := MygoIN4ListM4Tail(current).(OptionSome[List[int]]); ok {
+				current = __mygo_match___mygo_expr_0.F0
+			} else {
 			}
 		}
 	}
-	return total_12
+	return total
 }
 func demo() string {
-	red_15 := ColorRedCtor()
-	point_16 := Point2DWithYCtor(20)
-	op_17 := OperationMultiplyCtor()
-	var empty_18 Option[float64] = None[float64]()
-	var someVal_19 Option[int] = Some[int](42)
-	person_20 := Person{name: "Charlie", age: 25}
-	rect_21 := Rectangle{width: 10.0, height: 5.0}
-	var pair_22 Pair[int] = Pair[int]{first: 1, second: 2}
-	color_23 := ColorTuple{}
-	addr_24 := Address{street: "Main St", city: "NYC"}
-	contact_25 := Contact{name: "Bob"}
-	areaValue_26 := area(rect_21)
-	swapped_27 := swapPair[int](pair_22)
-	bigger_28 := maxInt(3, 5)
-	colorText_29 := describeColor(ColorGreenCtor())
-	lst_30 := buildList()
-	sum_31 := sumList(lst_30)
-	var summary_32 string = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v sum=%v", red_15, point_16, op_17, describeOption(empty_18, MygoIT8ToStringFN7Float64GN7Float64EM8ToString), describeOption(someVal_19, MygoIT8ToStringFN3IntGN3IntEM8ToString), person_20, rect_21, pair_22, color_23, addr_24, contact_25, areaValue_26, swapped_27, bigger_28, colorText_29, sum_31)
-	func() Result[int, error] {
-		__mygo_result_val, __mygo_result_err := fmt.Println(summary_32)
-		if __mygo_result_err != nil {
-			return Err[int, error](__mygo_result_err)
-		}
-		return Ok[int, error](__mygo_result_val)
-	}()
-	return summary_32
+	red := ColorRedCtor()
+	point := Point2DWithYCtor(20)
+	op := OperationMultiplyCtor()
+	var empty Option[float64] = None[float64]()
+	var someVal Option[int] = Some[int](42)
+	person := Person{Name: "Charlie", Age: 25}
+	rect := Rectangle{Width: 10.0, Height: 5.0}
+	pair := Pair[int]{First: 1, Second: 2}
+	color := ColorTuple{}
+	addr := Address{Street: "Main St", City: "NYC"}
+	contact := Contact{Name: "Bob"}
+	areaValue := area(rect)
+	swapped := swapPair(pair)
+	bigger := maxInt(3, 5)
+	colorText := describeColor(ColorGreenCtor())
+	lst := buildList()
+	sum := sumList(lst)
+	var summary string = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v sum=%v", red, point, op, describeOption(empty, MygoIT8ToStringFN4BoolGN4BoolEM8ToString), describeOption(someVal, MygoIT8ToStringFN4BoolGN4BoolEM8ToString), person, rect, pair, color, addr, contact, areaValue, swapped, bigger, colorText, sum)
+	fmt.Println(summary)
+	return summary
 }
 func main() {
-	func() Result[int, error] {
-		__mygo_result_val, __mygo_result_err := fmt.Println(demo())
-		if __mygo_result_err != nil {
-			return Err[int, error](__mygo_result_err)
-		}
-		return Ok[int, error](__mygo_result_val)
-	}()
+	fmt.Println(demo())
+	return
 }

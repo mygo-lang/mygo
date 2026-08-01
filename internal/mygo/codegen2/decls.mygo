@@ -101,9 +101,9 @@ func translatePackageBinding(g: Ref[Generator2], bind: ast2.Bind, mutable: Bool)
   if bind.Name == "" || bind.Name == "_" then
     Err("package binding requires a name")
   else
-    let ctx = Ref.new(newEgCtx())
+    var ctx = Ref.new(newEgCtx())
     go[()] {
-      code: "{ctx}.goPackages = {g}.goPackages; {ctx}.pkgInfo = {g}.pkgInfo"
+      code: "{ctx}.goPackages = {g}.goPackages; {ctx}.pkgInfo = {g}.pkgInfo; {ctx}.pathAliases = {g}.pathAliases"
       in ctx = ctx
       in g = g
     }
@@ -134,10 +134,11 @@ end
 func translateImplAstDecl(g: Ref[Generator2], tps: Slice[String], target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], methods: Slice[ast2.ImplMethod]) -> Result[Slice[goast.Decl], String]
   let ctx = Ref.new(newEgCtxWithTypeParams(tps))
   go[()] {
-    code: "{ctx}.goPackages = {packages}; {ctx}.pkgInfo = {pkgInfo}"
+    code: "{ctx}.goPackages = {packages}; {ctx}.pkgInfo = {pkgInfo}; {ctx}.pathAliases = {aliases}"
     in ctx = ctx
     in packages = g.goPackages
     in pkgInfo = g.pkgInfo
+    in aliases = g.pathAliases
   }
   ctxUsePackageIndex(ctx, g.packageIndex)
   seedPackageBindings(ctx, g.decls, 0)
@@ -219,10 +220,11 @@ func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[as
 
     let ctx = Ref.new(newFuncEgCtx(methodTps, ret, sig.Name, sig.Params.Len()))
     go[()] {
-      code: "{ctx}.goPackages = {packages}; {ctx}.pkgInfo = {pkgInfo}"
+      code: "{ctx}.goPackages = {packages}; {ctx}.pkgInfo = {pkgInfo}; {ctx}.pathAliases = {aliases}"
       in ctx = ctx
       in packages = baseCtx.goPackages
       in pkgInfo = baseCtx.pkgInfo
+      in aliases = baseCtx.pathAliases
     }
     # Package facts are precomputed once by Generator2 and shared read-only
     # by every function and impl-method context.
@@ -373,7 +375,7 @@ func translateFuncAstDecl(g: Ref[Generator2], name: String, tps: Slice[String], 
   let initialRetType = returnMonoType(ret)
   let ctx = Ref.new(newFuncEgCtx(tps, initialRetType, name, params.Len()))
   go[()] {
-    code: "{ctx}.goPackages = {g}.goPackages; {ctx}.pkgInfo = {g}.pkgInfo"
+    code: "{ctx}.goPackages = {g}.goPackages; {ctx}.pkgInfo = {g}.pkgInfo; {ctx}.pathAliases = {g}.pathAliases"
     in ctx = ctx
     in g = g
   }

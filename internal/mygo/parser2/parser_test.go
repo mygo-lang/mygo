@@ -252,6 +252,28 @@ end
 	}
 }
 
+func TestParseRuneLiteralSwitchPatterns(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func escape(r: Rune) -> String
+  switch r
+    case '"' => "quote"
+    case '\\n' => "newline"
+    case '\\0' => "null"
+    case _ => "other"
+  end
+end
+`)
+	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
+	switchExpr := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindSwitchExpr)
+	for index, want := range []string{"\"", "\n", "\x00"} {
+		pattern, ok := switchExpr.F1[index].Pattern.(ast2.PatternLiteralPattern)
+		if !ok || pattern.F0 != "rune" || pattern.F1 != want {
+			t.Fatalf("case %d pattern = %#v, want rune %q", index, switchExpr.F1[index].Pattern, want)
+		}
+	}
+}
+
 func TestParseSwitchVariantAndWildcardPatterns(t *testing.T) {
 	got := ParseFile(`package sample
 

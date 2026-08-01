@@ -107,8 +107,8 @@ func annotateExprSource(expr: ast2.Expr, sourceName: String) -> ast2.Expr
       ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.IfExpr(annotateExprSource(cond, sourceName), annotateExprSource(thenExpr, sourceName), annotateExprSource(elseExpr, sourceName)), Type: None }
     case BlockExpr(stmts) =>
       ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.BlockExpr(stmts.Map(func(s: ast2.Stmt) -> ast2.Stmt annotateStmtSource(s, sourceName) end)), Type: None }
-    case SwitchExpr(target, cases) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.SwitchExpr(annotateExprSource(target, sourceName), cases.Map(func(c: ast2.SwitchCase) -> ast2.SwitchCase ast2.SwitchCase { Pattern: c.Pattern, Body: annotateExprSource(c.Body, sourceName) } end)), Type: None }
+    case SwitchExpr(target, cases, targetType) =>
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.SwitchExpr(annotateExprSource(target, sourceName), cases.Map(func(c: ast2.SwitchCase) -> ast2.SwitchCase ast2.SwitchCase { Pattern: c.Pattern, Body: annotateExprSource(c.Body, sourceName) } end), targetType), Type: None }
     case FuncLitExpr(params, ret, body) =>
       ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.FuncLitExpr(params, ret, annotateExprSource(body, sourceName)), Type: None }
     case SliceLitExpr(items) =>
@@ -716,7 +716,7 @@ func switchExpr() -> ps.Parser[ast2.Expr]
   ps.PBind(kw("switch"), func(_: String) -> ps.Parser[ast2.Expr]
     ps.PBind(expr(), func(target: ast2.Expr) -> ps.Parser[ast2.Expr]
       ps.PBind(ps.PMany1(switchCase()), func(cases: Slice[ast2.SwitchCase]) -> ps.Parser[ast2.Expr]
-        ps.PThen(kw("end"), ps.PPure(exprWithPos(target.Pos, ast2.ExprKind.SwitchExpr(target, cases))))
+        ps.PThen(kw("end"), ps.PPure(exprWithPos(target.Pos, ast2.ExprKind.SwitchExpr(target, cases, ast2.EmptySwitchTargetType()))))
       end)
     end)
   end)
@@ -747,6 +747,7 @@ func pattern() -> ps.Parser[ast2.Pattern]
     ps.PMap(sym("_"), func(_: String) -> ast2.Pattern ast2.Pattern.WildcardPattern end),
     ps.PMap(number(), func(value: String) -> ast2.Pattern ast2.Pattern.LiteralPattern("number", value) end),
     ps.PMap(stringLiteral(), func(value: String) -> ast2.Pattern ast2.Pattern.LiteralPattern("string", value) end),
+    ps.PMap(runeLiteral(), func(value: String) -> ast2.Pattern ast2.Pattern.LiteralPattern("rune", value) end),
     ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Pattern]
       ps.PMap(ps.POptional(paren(ps.PSepBy(lazyPattern(), sym(",")))), func(args: Option[Slice[ast2.Pattern]]) -> ast2.Pattern
         switch args
@@ -1323,67 +1324,48 @@ func multilineStringLiteral() -> ps.Parser[String]
 end
 
 func tripleQuoteString() -> String
-  String.FromRunes([doubleQuoteRune(), doubleQuoteRune(), doubleQuoteRune()])
+  String.FromRunes(['"', '"', '"'])
 end
 
 func runeLiteral() -> ps.Parser[String]
-  lexeme(ps.PBind(ps.PChar(singleQuoteRune()), func(_: Rune) -> ps.Parser[String]
+  lexeme(ps.PBind(ps.PChar('\''), func(_: Rune) -> ps.Parser[String]
     ps.PBind(runeCharacter(), func(value: Rune) -> ps.Parser[String]
-      ps.PThen(ps.PChar(singleQuoteRune()), ps.PPure(String.FromRunes([value])))
+      ps.PThen(ps.PChar('\''), ps.PPure(String.FromRunes([value])))
     end)
   end))
 end
 
 func runeCharacter() -> ps.Parser[Rune]
   ps.POrElse(
-    ps.PThen(ps.PChar(backslashRune()), ps.PChoice([
-      ps.PMap(ps.PChar('n'), func(_: Rune) -> Rune newlineRune() end),
-      ps.PMap(ps.PChar('t'), func(_: Rune) -> Rune tabRune() end),
-      ps.PMap(ps.PChar(singleQuoteRune()), func(_: Rune) -> Rune singleQuoteRune() end),
-      ps.PMap(ps.PChar(backslashRune()), func(_: Rune) -> Rune backslashRune() end),
+    ps.PThen(ps.PChar('\\'), ps.PChoice([
+      ps.PMap(ps.PChar('n'), func(_: Rune) -> Rune '\n' end),
+      ps.PMap(ps.PChar('t'), func(_: Rune) -> Rune '\t' end),
+      ps.PMap(ps.PChar('b'), func(_: Rune) -> Rune '\b' end),
+      ps.PMap(ps.PChar('f'), func(_: Rune) -> Rune '\f' end),
+      ps.PMap(ps.PChar('r'), func(_: Rune) -> Rune '\r' end),
+      ps.PMap(ps.PChar('0'), func(_: Rune) -> Rune '\0' end),
+      ps.PMap(ps.PChar('"'), func(_: Rune) -> Rune '"' end),
+      ps.PMap(ps.PChar('\''), func(_: Rune) -> Rune '\'' end),
+      ps.PMap(ps.PChar('\\'), func(_: Rune) -> Rune '\\' end),
     ])),
     ps.PSatisfy(func(r: Rune) -> Bool
-      r != singleQuoteRune() && r != backslashRune() && r != newlineRune()
+      r != '\'' && r != '\\' && r != '\n'
     end, "rune character")
   )
 end
 
-func singleQuoteRune() -> Rune
-  go[Rune] { code: "rune(39)" }
-end
-
-func backslashRune() -> Rune
-  go[Rune] { code: "rune(92)" }
-end
-
-func newlineRune() -> Rune
-  go[Rune] { code: "rune(10)" }
-end
-
-func tabRune() -> Rune
-  go[Rune] { code: "rune(9)" }
-end
-
-func carriageReturnRune() -> Rune
-  go[Rune] { code: "rune(13)" }
-end
-
 func stringChar() -> ps.Parser[Rune]
   ps.POrElse(
-    ps.PThen(ps.PChar(backslashRune()), ps.PChoice([
-      ps.PMap(ps.PChar('n'), func(_: Rune) -> Rune newlineRune() end),
-      ps.PMap(ps.PChar('t'), func(_: Rune) -> Rune tabRune() end),
-      ps.PMap(ps.PChar(doubleQuoteRune()), func(_: Rune) -> Rune doubleQuoteRune() end),
-      ps.PMap(ps.PChar(backslashRune()), func(_: Rune) -> Rune backslashRune() end),
+    ps.PThen(ps.PChar('\\'), ps.PChoice([
+      ps.PMap(ps.PChar('n'), func(_: Rune) -> Rune '\n' end),
+      ps.PMap(ps.PChar('t'), func(_: Rune) -> Rune '\t' end),
+      ps.PMap(ps.PChar('"'), func(_: Rune) -> Rune '"' end),
+      ps.PMap(ps.PChar('\\'), func(_: Rune) -> Rune '\\' end),
     ])),
     ps.PSatisfy(func(r: Rune) -> Bool
-      r != doubleQuoteRune() && r != backslashRune()
+      r != '"' && r != '\\'
     end, "string character")
   )
-end
-
-func doubleQuoteRune() -> Rune
-  go[Rune] { code: "rune(34)" }
 end
 
 func kw(word: String) -> ps.Parser[String]
@@ -1410,14 +1392,14 @@ end
 
 func spaceUnit() -> ps.Parser[()]
   ps.PThen(ps.PSatisfy(func(r: Rune) -> Bool
-    r == ' ' || r == tabRune() || r == newlineRune() || r == carriageReturnRune()
+    r == ' ' || r == '\t' || r == '\n' || r == '\r'
   end, "whitespace"), ps.PPure(()))
 end
 
 func lineComment() -> ps.Parser[()]
   ps.PBind(ps.PString("#"), func(_: String) -> ps.Parser[()]
     ps.PThen(ps.PMany(ps.PSatisfy(func(r: Rune) -> Bool
-      r != newlineRune()
+      r != '\n'
     end, "comment character")), ps.PPure(()))
   end)
 end

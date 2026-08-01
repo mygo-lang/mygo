@@ -126,7 +126,7 @@ func demo() -> String
 
   let person = Person { name: "Charlie", age: 25 }
   let rect = Rectangle { width: 10.0, height: 5.0 }
-  let pair: Pair[Int] = Pair { first: 1, second: 2 }
+  let pair = Pair { first: 1, second: 2 }
   let color = ColorTuple {}
   let addr = Address { street: "Main St", city: "NYC" }
   let contact = Contact { name: "Bob" }

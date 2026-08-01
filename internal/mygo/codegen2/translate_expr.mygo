@@ -45,10 +45,14 @@ func translateAstLeadingStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[g
       switch expr.Kind
         case InlineGoExpr(typ, body, values, types) => translateInlineGoAst(body, values, types, ctx)
         case IfExpr(cond, thenExpr, elseExpr) => translateAstIfStmt(cond, thenExpr, elseExpr, ctx)
-        case SwitchExpr(target, cases) then
-          # Switch in statement context: emit only the Pre statements, discard
-          # the Expr (which is Unit() for statement-form switches).
-          let value = translateExprAst(expr, ctx)
+        case SwitchExpr(target, cases, targetType) then
+          # Switch in statement context: lower through the statement-form path
+          # (translateSwitchAstWithTargetType with an explicit TUnit expected)
+          # so the discarded switch value does not create an unused temp
+          # variable.  Going through translateExprAst would let
+          # translateExprAstExpected substitute the switch's own inferred type
+          # for TUnit and route into the expression path instead.
+          let value = translateSwitchAstWithTargetType(target, cases, targetType, ctx, ast2.MonoType.TUnit)
           switch value
             case Ok(v) => Ok(v.Pre)
             case Err(msg) => Err(msg)
@@ -105,6 +109,53 @@ end
 # use `let (a, b) = expr.Get(0).UnwrapOr((EmptyExpr(), EmptyExpr()))` in
 # their helper functions.
 func translateAstTupleLetStmt(names: Slice[String], value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+  switch ffiMultiResultSignature(value, ctx)
+    case Some(sig) => translateFFITupleLetStmt(names, value, sig, ctx)
+    case None => translateAstTupleLetStmtOrdinary(names, value, ctx)
+  end
+end
+
+# A tuple binding explicitly preserves Go's native multiple return values.
+# It bypasses Option/Result boundary wrapping and emits `a, b := call()`.
+func translateFFITupleLetStmt(names: Slice[String], value: ast2.Expr, sig: typeinference2.GoFuncSignature, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+  if names.Len() != sig.Results.Len() then
+    Err("tuple binding count does not match Go function result count")
+  else
+    switch value.Kind
+      case CallExpr(callee, typeArgs, args) then
+        let raw = translatePlainCallAstExpectedOrdinary(callee, typeArgs, args, ctx, ast2.MonoType.TUnit)
+        switch raw
+          case Err(msg) => Err(msg)
+          case Ok(call) then
+            let goNames = tupleBindingNames(names, ctx, 0, [] as Slice[goast.Expr])
+            let resultTypes = typeinference2.GoSignatureRawResultType(sig)
+            bindTupleLetTypes(names, resultTypes, ctx, 0)
+            Ok(goast.AppendStmts(call.Pre, astSingleStmt(goast.Assign(goNames, ":=", astSingleExpr(call.Expr)))))
+          end
+        end
+      end
+      case _ => Err("Go multi-return tuple binding requires a call")
+    end
+  end
+end
+
+func tupleBindingNames(names: Slice[String], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
+  if index >= names.Len() then out else
+    let name = names.Get(index).UnwrapOr("_")
+    let goName = if name == "_" then "_" else ctxFreshBinding(ctx, name) end
+    tupleBindingNames(names, ctx, index + 1, out.Append(goast.Ident(goName)))
+  end
+end
+
+func bindTupleLetTypes(names: Slice[String], resultType: ast2.MonoType, ctx: Ref[egCtx], index: Int) -> ()
+  if index < names.Len() then
+    let name = names.Get(index).UnwrapOr("_")
+    if name == "_" then () else ctxSetLocal(ctx, name, tupleElementType(resultType, index)) end
+    bindTupleLetTypes(names, resultType, ctx, index + 1)
+  end
+end
+
+func translateAstTupleLetStmtOrdinary(names: Slice[String], value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
   # `let (a, b) = expr` lowers to a single evaluation of `expr` followed
   # by per-name bindings to the corresponding `F<n>` field on the
   # resulting tuple.  Using one evaluation site guards against repeated
@@ -324,6 +375,14 @@ func translateAstBlockAsStmts(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: I
                 case Ok(v) => Ok(goast.AppendStmts(out, v))
                 case Err(msg) => Err(msg)
               end
+            case SwitchExpr(target, cases, targetType) =>
+              # Statement-context switch: keep the if/else chain only, so the
+              # discarded switch value does not produce an unused temp var.
+              let value = translateSwitchAstWithTargetType(target, cases, targetType, ctx, ast2.MonoType.TUnit)
+              switch value
+                case Ok(v) => Ok(goast.AppendStmts(out, v.Pre))
+                case Err(msg) => Err(msg)
+              end
             case _ =>
               let value = translateExprAst(expr, ctx)
               switch value
@@ -374,18 +433,44 @@ func translateAstBinding(bind: ast2.Bind, ctx: Ref[egCtx]) -> Result[Slice[goast
         case None => ()
       end
       if bind.Name == "_" then
-        Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.ExpressionStmt(v.Expr))))
+        let discarded = translateDiscardBindingValue(bind.Value, ctx)
+        switch discarded
+          case Ok(d) => Ok(goast.AppendStmts(d.Pre, astSingleStmt(goast.ExpressionStmt(d.Expr))))
+          case Err(msg) => Err(msg)
+        end
       else
         let name = ctxFreshBinding(ctx, bind.Name)
         switch bind.Type
-          case Some(t) =>
-            let decl = goast.Var(name, goast.MustTypeExpr(monoTypeToGoStr(typeinference2.TypeFromAST(t))), v.Expr)
+          case Some(t) then
+            let decl = goast.Var(name, goast.MustTypeExpr(monoTypeToGoStrIn(typeinference2.TypeFromAST(t), ctx.pathAliases)), v.Expr)
             Ok(goast.AppendStmts(v.Pre, astSingleStmt(decl)))
-          case None =>
+          end
+          case None then
             let decl = goast.Define(name, v.Expr)
             Ok(goast.AppendStmts(v.Pre, astSingleStmt(decl)))
+          end
         end
       end
+  end
+end
+
+# Go permits a call statement to discard every return value. Do that directly
+# for FFI calls returning `(value, error)` or `(value, bool)`: lowering them
+# through Result/Option first would leave a non-call `Result` expression
+# statement, which Go rejects as an unused value.
+func translateDiscardBindingValue(value: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+  switch value.Kind
+    case CallExpr(callee, typeArgs, args) then
+      switch ffiOptionSignature(callee, ctx)
+        case Some(_) => translatePlainCallAstExpectedOrdinary(callee, typeArgs, args, ctx, ast2.MonoType.TUnit)
+        case None =>
+          switch ffiResultSignature(callee, ctx)
+            case Some(_) => translatePlainCallAstExpectedOrdinary(callee, typeArgs, args, ctx, ast2.MonoType.TUnit)
+            case None => translateExprAst(value, ctx)
+          end
+      end
+    end
+    case _ => translateExprAst(value, ctx)
   end
 end
 
@@ -572,11 +657,12 @@ func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[g
     case TypeAsExpr(_, _) => translateAstReturnSingle(expr, ctx)
     case BoolExpr(_) => translateAstReturnSingle(expr, ctx)
     case CallExpr(_, _, _) => translateAstReturnSingle(expr, ctx)
+    case DictionaryCallExpr(_, _, _) => translateAstReturnSingle(expr, ctx)
     case FieldExpr(_, _) => translateAstReturnSingle(expr, ctx)
     case UnaryExpr(_, _) => translateAstReturnSingle(expr, ctx)
     case BinaryExpr(_, _, _) => translateAstReturnSingle(expr, ctx)
     case IfExpr(_, _, _) => translateAstReturnSingle(expr, ctx)
-    case SwitchExpr(_, _) => translateAstReturnSingle(expr, ctx)
+    case SwitchExpr(_, _, _) => translateAstReturnSingle(expr, ctx)
     case BlockExpr(_) => translateAstReturnSingle(expr, ctx)
     case StructLitExpr(_, _) => translateAstReturnSingle(expr, ctx)
     case GenericStructLitExpr(_, _, _) => translateAstReturnSingle(expr, ctx)

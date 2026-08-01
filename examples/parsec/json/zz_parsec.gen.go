@@ -2,14 +2,11 @@
 
 package json
 
-import (
-	"fmt"
-	"strconv"
-	"strings"
-
-	ps "github.com/mygo-lang/mygo/lib/text/parsec"
-	. "github.com/mygo-lang/mygo/prelude"
-)
+import "fmt"
+import "strconv"
+import "strings"
+import ps "github.com/mygo-lang/mygo/lib/text/parsec"
+import . "github.com/mygo-lang/mygo/prelude"
 
 type JsonValue interface {
 	isJsonValue()
@@ -17,7 +14,7 @@ type JsonValue interface {
 type JsonValueJNull struct {
 }
 
-func (_ JsonValueJNull) isJsonValue() {
+func (JsonValueJNull) isJsonValue() {
 }
 func JsonValueJNullCtor() JsonValue {
 	return JsonValueJNull{}
@@ -27,40 +24,40 @@ type JsonValueJBool struct {
 	F0 bool
 }
 
-func (_ JsonValueJBool) isJsonValue() {
+func (JsonValueJBool) isJsonValue() {
 }
-func JsonValueJBoolCtor(a0 bool) JsonValue {
-	return JsonValueJBool{F0: a0}
+func JsonValueJBoolCtor(v0 bool) JsonValue {
+	return JsonValueJBool{F0: v0}
 }
 
 type JsonValueJNumber struct {
 	F0 float64
 }
 
-func (_ JsonValueJNumber) isJsonValue() {
+func (JsonValueJNumber) isJsonValue() {
 }
-func JsonValueJNumberCtor(a0 float64) JsonValue {
-	return JsonValueJNumber{F0: a0}
+func JsonValueJNumberCtor(v0 float64) JsonValue {
+	return JsonValueJNumber{F0: v0}
 }
 
 type JsonValueJString struct {
 	F0 string
 }
 
-func (_ JsonValueJString) isJsonValue() {
+func (JsonValueJString) isJsonValue() {
 }
-func JsonValueJStringCtor(a0 string) JsonValue {
-	return JsonValueJString{F0: a0}
+func JsonValueJStringCtor(v0 string) JsonValue {
+	return JsonValueJString{F0: v0}
 }
 
 type JsonValueJArray struct {
 	F0 []JsonValue
 }
 
-func (_ JsonValueJArray) isJsonValue() {
+func (JsonValueJArray) isJsonValue() {
 }
-func JsonValueJArrayCtor(a0 []JsonValue) JsonValue {
-	return JsonValueJArray{F0: a0}
+func JsonValueJArrayCtor(v0 []JsonValue) JsonValue {
+	return JsonValueJArray{F0: v0}
 }
 
 type JsonValueJObject struct {
@@ -70,131 +67,104 @@ type JsonValueJObject struct {
 	}
 }
 
-func (_ JsonValueJObject) isJsonValue() {
+func (JsonValueJObject) isJsonValue() {
 }
-func JsonValueJObjectCtor(a0 []struct {
+func JsonValueJObjectCtor(v0 []struct {
 	F0 string
 	F1 JsonValue
 }) JsonValue {
-	return JsonValueJObject{F0: a0}
+	return JsonValueJObject{F0: v0}
 }
 func MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(value JsonValue) string {
-	var expr_13 string
+	var __mygo_expr_0 string
 	if _, ok := value.(JsonValueJNull); ok {
-		var expr_12 string
-		expr_12 = "null"
-		expr_13 = expr_12
+		__mygo_expr_0 = "null"
 	} else {
-		if v_5, ok := value.(JsonValueJBool); ok {
-			var expr_11 string
-			var expr_10 string
-			if v_5.F0 {
-				expr_10 = "true"
+		if __mygo_match___mygo_expr_5, ok := value.(JsonValueJBool); ok {
+			var __mygo_expr_6 string
+			if __mygo_match___mygo_expr_5.F0 {
+				__mygo_expr_6 = "true"
 			} else {
-				expr_10 = "false"
+				__mygo_expr_6 = "false"
 			}
-			expr_11 = expr_10
-			expr_13 = expr_11
+			__mygo_expr_0 = __mygo_expr_6
 		} else {
-			if v_4, ok := value.(JsonValueJNumber); ok {
-				var expr_9 string
-				expr_9 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(v_4.F0)
-				expr_13 = expr_9
+			if __mygo_match___mygo_expr_4, ok := value.(JsonValueJNumber); ok {
+				__mygo_expr_0 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(__mygo_match___mygo_expr_4.F0)
 			} else {
-				if v_3, ok := value.(JsonValueJString); ok {
-					var expr_8 string
-					expr_8 = "\"" + jsonEscape(v_3.F0) + "\""
-					expr_13 = expr_8
+				if __mygo_match___mygo_expr_3, ok := value.(JsonValueJString); ok {
+					__mygo_expr_0 = "\"" + jsonEscape(__mygo_match___mygo_expr_3.F0) + "\""
 				} else {
-					if v_2, ok := value.(JsonValueJArray); ok {
-						var expr_7 string
-						parts_6 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_2.F0, func(v JsonValue) string {
-							return MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(v)
+					if __mygo_match___mygo_expr_2, ok := value.(JsonValueJArray); ok {
+						parts_1 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_2.F0, func(v_1 JsonValue) string {
+							return MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(v_1)
 						})
-						expr_7 = "[" + strings.Join(parts_6, ",") + "]"
-						expr_13 = expr_7
+						__mygo_expr_0 = "[" + strings.Join(parts_1, ",") + "]"
 					} else {
-						if v_1, ok := value.(JsonValueJObject); ok {
-							var expr_5 string
-							parts_4 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_1.F0, func(p struct {
+						if __mygo_match___mygo_expr_1, ok := value.(JsonValueJObject); ok {
+							parts := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_1.F0, func(p struct {
 								F0 string
 								F1 JsonValue
 							}) string {
-								__tuple_1 := p
-								k_2 := __tuple_1.F0
-								v_3 := __tuple_1.F1
-								return "\"" + jsonEscape(k_2) + "\":" + MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(JsonValue(v_3))
+								var __mygo_expr_2 struct {
+									F0 string
+									F1 JsonValue
+								}
+								__mygo_expr_2 = p
+								var k string
+								k = __mygo_expr_2.F0
+								var v JsonValue
+								v = __mygo_expr_2.F1
+								return "\"" + jsonEscape(k) + "\":" + MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(JsonValue(v))
 							})
-							expr_5 = "{" + strings.Join(parts_4, ",") + "}"
-							expr_13 = expr_5
+							__mygo_expr_0 = "{" + strings.Join(parts, ",") + "}"
 						} else {
-							panic("unreachable")
 						}
 					}
 				}
 			}
 		}
 	}
-	return expr_13
+	return __mygo_expr_0
 }
 func jsonEscape(s string) string {
-	parts_33 := MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM4Fold(s, []string([]string{}), func(acc []string, r rune) []string {
-		var expr_31 string
+	var parts []string = MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM4Fold(s, []string{}, func(acc []string, r rune) []string {
+		var __mygo_expr_0 string
 		if r == '"' {
-			var expr_30 string
-			expr_30 = "\\\""
-			expr_31 = expr_30
+			__mygo_expr_0 = "\\\""
 		} else {
 			if r == '\\' {
-				var expr_29 string
-				expr_29 = "\\\\\\\\"
-				expr_31 = expr_29
+				__mygo_expr_0 = "\\\\\\\\"
 			} else {
 				if r == '\b' {
-					var expr_28 string
-					expr_28 = "\\b"
-					expr_31 = expr_28
+					__mygo_expr_0 = "\\b"
 				} else {
 					if r == '\f' {
-						var expr_27 string
-						expr_27 = "\\f"
-						expr_31 = expr_27
+						__mygo_expr_0 = "\\f"
 					} else {
 						if r == '\n' {
-							var expr_26 string
-							expr_26 = "\\n"
-							expr_31 = expr_26
+							__mygo_expr_0 = "\\n"
 						} else {
 							if r == '\r' {
-								var expr_25 string
-								expr_25 = "\\r"
-								expr_31 = expr_25
+								__mygo_expr_0 = "\\r"
 							} else {
 								if r == '\t' {
-									var expr_24 string
-									expr_24 = "\\t"
-									expr_31 = expr_24
+									__mygo_expr_0 = "\\t"
 								} else {
-									{
-										var expr_23 string
-										var expr_22 string
-										if r < ' ' {
-											var expr_21 string
-											v_14 := int(r)
-											var hexChars_15 []rune = []rune{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
-											d0_16 := v_14 / 4096
-											d1_17 := (v_14 - d0_16*4096) / 256
-											d2_18 := (v_14 - d0_16*4096 - d1_17*256) / 16
-											d3_19 := v_14 - d0_16*4096 - d1_17*256 - d2_18*16
-											escapedRunes_20 := []rune{MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_15, d0_16), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_15, d1_17), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_15, d2_18), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars_15, d3_19), '\x00')}
-											expr_21 = "\\\\u" + MygoIN6StringM9FromRunes(escapedRunes_20)
-											expr_22 = expr_21
-										} else {
-											expr_22 = MygoIN6StringM9FromRunes([]rune{r})
-										}
-										expr_23 = expr_22
-										expr_31 = expr_23
+									var __mygo_expr_1 string
+									if r < ' ' {
+										v := int(r)
+										var hexChars []rune = []rune{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
+										d0 := v / 4096
+										d1 := (v - d0*4096) / 256
+										d2 := (v - d0*4096 - d1*256) / 16
+										d3 := v - d0*4096 - d1*256 - d2*16
+										escapedRunes := []rune{MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars, d0), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars, d1), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars, d2), '\x00'), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(hexChars, d3), '\x00')}
+										__mygo_expr_1 = "\\\\u" + MygoIN6StringM9FromRunes(escapedRunes)
+									} else {
+										__mygo_expr_1 = MygoIN6StringM9FromRunes([]rune{r})
 									}
+									__mygo_expr_0 = __mygo_expr_1
 								}
 							}
 						}
@@ -202,16 +172,16 @@ func jsonEscape(s string) string {
 				}
 			}
 		}
-		escaped_32 := expr_31
-		return MygoIN5SliceM6Append(acc, escaped_32)
+		escaped := __mygo_expr_0
+		return MygoIN5SliceM6Append(acc, escaped)
 	})
-	return strings.Join(parts_33, "")
+	return strings.Join(parts, "")
 }
 func ws[A any](p ps.Parser[A]) ps.Parser[A] {
-	sp_34 := ps.PMany(ps.PSatisfy(func(r rune) bool {
+	sp := ps.PMany(ps.PSatisfy(func(r rune) bool {
 		return r == ' ' || r == '\t' || r == '\n' || r == '\r'
 	}, "whitespace"))
-	return ps.PBetween(sp_34, p, sp_34)
+	return ps.PBetween(sp, p, sp)
 }
 func pNull() ps.Parser[JsonValue] {
 	return ps.PMap(ps.PString("null"), func(_ string) JsonValue {
@@ -221,29 +191,32 @@ func pNull() ps.Parser[JsonValue] {
 func pBool() ps.Parser[JsonValue] {
 	return ps.POrElse(ps.PMap(ps.PString("true"), func(_ string) JsonValue {
 		return JsonValueJBoolCtor(true)
-	}), ps.PMap(ps.PString("false"), func(_ string) JsonValue {
+	}), ps.PMap(ps.PString("false"), func(__1 string) JsonValue {
 		return JsonValueJBoolCtor(false)
 	}))
 }
 func pNumber() ps.Parser[JsonValue] {
 	return func(state ps.State) ps.Reply[JsonValue] {
-		r1_35 := ps.PeekRune(state)
-		if !r1_35.Ok {
+		r1 := ps.PeekRune(state)
+		if !r1.Ok {
 			return ps.Reply[JsonValue]{Ok: false, Consumed: false, Value: Zero[JsonValue](), State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())}
+		} else {
 		}
-		curState_36 := state
-		var runes_37 []rune = []rune{}
-		rSign_38 := ps.PeekRune(curState_36)
-		if rSign_38.Ok && rSign_38.Value == '-' {
-			runes_37 = MygoIN5SliceM6Append(runes_37, '-')
-			curState_36 = ps.AdvanceRune(curState_36)
+		curState := state
+		var runes []rune = []rune{}
+		rSign := ps.PeekRune(curState)
+		if rSign.Ok && rSign.Value == '-' {
+			runes = MygoIN5SliceM6Append(runes, '-')
+			curState = ps.AdvanceRune(curState)
+		} else {
 		}
-		rFirst_39 := ps.PeekRune(curState_36)
-		if !rFirst_39.Ok || rFirst_39.Value < '0' || rFirst_39.Value > '9' {
+		rFirst := ps.PeekRune(curState)
+		if !rFirst.Ok || rFirst.Value < '0' || rFirst.Value > '9' {
 			return ps.Reply[JsonValue]{Ok: false, Consumed: false, Value: Zero[JsonValue](), State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())}
+		} else {
 		}
 		for true {
-			rn := ps.PeekRune(curState_36)
+			rn := ps.PeekRune(curState)
 			if !rn.Ok {
 				break
 			} else {
@@ -252,136 +225,126 @@ func pNumber() ps.Parser[JsonValue] {
 				break
 			} else {
 			}
-			runes_37 = MygoIN5SliceM6Append(runes_37, rn.Value)
-			curState_36 = ps.AdvanceRune(curState_36)
+			runes = MygoIN5SliceM6Append(runes, rn.Value)
+			curState = ps.AdvanceRune(curState)
 		}
-		rDot_40 := ps.PeekRune(curState_36)
-		if rDot_40.Ok && rDot_40.Value == '.' {
-			runes_37 = MygoIN5SliceM6Append(runes_37, '.')
-			curState_36 = ps.AdvanceRune(curState_36)
-			rFrac_41 := ps.PeekRune(curState_36)
-			if !rFrac_41.Ok || rFrac_41.Value < '0' || rFrac_41.Value > '9' {
+		rDot := ps.PeekRune(curState)
+		if rDot.Ok && rDot.Value == '.' {
+			runes = MygoIN5SliceM6Append(runes, '.')
+			curState = ps.AdvanceRune(curState)
+			rFrac := ps.PeekRune(curState)
+			if !rFrac.Ok || rFrac.Value < '0' || rFrac.Value > '9' {
 				return ps.Reply[JsonValue]{Ok: false, Consumed: false, Value: Zero[JsonValue](), State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())}
-			}
-			for true {
-				rn := ps.PeekRune(curState_36)
-				if !rn.Ok {
-					break
-				} else {
-				}
-				if rn.Value < '0' || rn.Value > '9' {
-					break
-				} else {
-				}
-				runes_37 = MygoIN5SliceM6Append(runes_37, rn.Value)
-				curState_36 = ps.AdvanceRune(curState_36)
-			}
-		}
-		rExp_42 := ps.PeekRune(curState_36)
-		if rExp_42.Ok && (rExp_42.Value == 'e' || rExp_42.Value == 'E') {
-			runes_37 = MygoIN5SliceM6Append(runes_37, rExp_42.Value)
-			curState_36 = ps.AdvanceRune(curState_36)
-			rSign2_43 := ps.PeekRune(curState_36)
-			if rSign2_43.Ok && (rSign2_43.Value == '+' || rSign2_43.Value == '-') {
-				runes_37 = MygoIN5SliceM6Append(runes_37, rSign2_43.Value)
-				curState_36 = ps.AdvanceRune(curState_36)
-			}
-			rExpDig_44 := ps.PeekRune(curState_36)
-			if !rExpDig_44.Ok || rExpDig_44.Value < '0' || rExpDig_44.Value > '9' {
-				return ps.Reply[JsonValue]{Ok: false, Consumed: false, Value: Zero[JsonValue](), State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())}
-			}
-			for true {
-				rn := ps.PeekRune(curState_36)
-				if !rn.Ok {
-					break
-				} else {
-				}
-				if rn.Value < '0' || rn.Value > '9' {
-					break
-				} else {
-				}
-				runes_37 = MygoIN5SliceM6Append(runes_37, rn.Value)
-				curState_36 = ps.AdvanceRune(curState_36)
-			}
-		}
-		numStr_45 := MygoIN6StringM9FromRunes(runes_37)
-		var expr_48 ps.Reply[JsonValue]
-		if v_8, ok := func() Result[float64, error] {
-			__mygo_result_val, __mygo_result_err := strconv.ParseFloat(numStr_45, 64)
-			if __mygo_result_err != nil {
-				return Err[float64, error](__mygo_result_err)
-			}
-			return Ok[float64, error](__mygo_result_val)
-		}().(ResultOk[float64, error]); ok {
-			var expr_47 ps.Reply[JsonValue]
-			expr_47 = ps.Reply[JsonValue]{Ok: true, Consumed: true, Value: JsonValueJNumberCtor(v_8.F0), State: curState_36, Error: ps.EmptyError(curState_36.Position)}
-			expr_48 = expr_47
-		} else {
-			if v_7, ok := func() Result[float64, error] {
-				__mygo_result_val, __mygo_result_err := strconv.ParseFloat(numStr_45, 64)
-				if __mygo_result_err != nil {
-					return Err[float64, error](__mygo_result_err)
-				}
-				return Ok[float64, error](__mygo_result_val)
-			}().(ResultErr[float64, error]); ok {
-				var expr_46 ps.Reply[JsonValue]
-				expr_46 = ps.Reply[JsonValue]{Ok: false, Consumed: true, Value: Zero[JsonValue](), State: curState_36, Error: ps.ErrorAt(state.Position, v_7.F0.Error(), ps.EmptyExpected())}
-				expr_48 = expr_46
 			} else {
-				panic("unreachable")
+			}
+			for true {
+				rn_1 := ps.PeekRune(curState)
+				if !rn_1.Ok {
+					break
+				} else {
+				}
+				if rn_1.Value < '0' || rn_1.Value > '9' {
+					break
+				} else {
+				}
+				runes = MygoIN5SliceM6Append(runes, rn_1.Value)
+				curState = ps.AdvanceRune(curState)
+			}
+		} else {
+		}
+		rExp := ps.PeekRune(curState)
+		if rExp.Ok && (rExp.Value == 'e' || rExp.Value == 'E') {
+			runes = MygoIN5SliceM6Append(runes, rExp.Value)
+			curState = ps.AdvanceRune(curState)
+			rSign2 := ps.PeekRune(curState)
+			if rSign2.Ok && (rSign2.Value == '+' || rSign2.Value == '-') {
+				runes = MygoIN5SliceM6Append(runes, rSign2.Value)
+				curState = ps.AdvanceRune(curState)
+			} else {
+			}
+			rExpDig := ps.PeekRune(curState)
+			if !rExpDig.Ok || rExpDig.Value < '0' || rExpDig.Value > '9' {
+				return ps.Reply[JsonValue]{Ok: false, Consumed: false, Value: Zero[JsonValue](), State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())}
+			} else {
+			}
+			for true {
+				rn_2 := ps.PeekRune(curState)
+				if !rn_2.Ok {
+					break
+				} else {
+				}
+				if rn_2.Value < '0' || rn_2.Value > '9' {
+					break
+				} else {
+				}
+				runes = MygoIN5SliceM6Append(runes, rn_2.Value)
+				curState = ps.AdvanceRune(curState)
+			}
+		} else {
+		}
+		numStr := MygoIN6StringM9FromRunes(runes)
+		var __mygo_expr_2 Result[float64, error]
+		__mygo_expr_0, __mygo_expr_1 := strconv.ParseFloat(numStr, 64)
+		if __mygo_expr_1 != nil {
+			__mygo_expr_2 = Err[float64, error](__mygo_expr_1)
+		} else {
+			__mygo_expr_2 = Ok[float64, error](__mygo_expr_0)
+		}
+		var __mygo_expr_3 ps.Reply[JsonValue]
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(ResultOk[float64, error]); ok {
+			__mygo_expr_3 = ps.Reply[JsonValue]{Ok: true, Consumed: true, Value: JsonValueJNumberCtor(__mygo_match___mygo_expr_5.F0), State: curState, Error: ps.EmptyError(curState.Position)}
+		} else {
+			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ResultErr[float64, error]); ok {
+				__mygo_expr_3 = ps.Reply[JsonValue]{Ok: false, Consumed: true, Value: Zero[JsonValue](), State: curState, Error: ps.ErrorAt(state.Position, __mygo_match___mygo_expr_4.F0.Error(), ps.EmptyExpected())}
+			} else {
 			}
 		}
-		return expr_48
+		return __mygo_expr_3
 	}
 }
 func pString() ps.Parser[JsonValue] {
-	pEscape_55 := func() ps.Parser[rune] {
-		pHexDigit_49 := ps.PSatisfy(func(r rune) bool {
+	pEscape := func() ps.Parser[rune] {
+		pHexDigit := ps.PSatisfy(func(r rune) bool {
 			return r >= '0' && r <= '9' || r >= 'a' && r <= 'f' || r >= 'A' && r <= 'F'
 		}, "hex digit")
 		return ps.PBind(ps.PChar('\\'), func(_ rune) ps.Parser[rune] {
-			return ps.PChoice([]func(ps.State) ps.Reply[rune]{ps.PMap(ps.PChar('"'), func(_ rune) rune {
+			return ps.PChoice([]func(ps.State) ps.Reply[rune]{ps.PMap(ps.PChar('"'), func(__1 rune) rune {
 				return '"'
-			}), ps.PMap(ps.PChar('\\'), func(_ rune) rune {
+			}), ps.PMap(ps.PChar('\\'), func(__2 rune) rune {
 				return '\\'
-			}), ps.PMap(ps.PChar('/'), func(_ rune) rune {
+			}), ps.PMap(ps.PChar('/'), func(__3 rune) rune {
 				return '/'
-			}), ps.PMap(ps.PChar('b'), func(_ rune) rune {
+			}), ps.PMap(ps.PChar('b'), func(__4 rune) rune {
 				return '\b'
-			}), ps.PMap(ps.PChar('f'), func(_ rune) rune {
+			}), ps.PMap(ps.PChar('f'), func(__5 rune) rune {
 				return '\f'
-			}), ps.PMap(ps.PChar('n'), func(_ rune) rune {
+			}), ps.PMap(ps.PChar('n'), func(__6 rune) rune {
 				return '\n'
-			}), ps.PMap(ps.PChar('r'), func(_ rune) rune {
+			}), ps.PMap(ps.PChar('r'), func(__7 rune) rune {
 				return '\r'
-			}), ps.PMap(ps.PChar('t'), func(_ rune) rune {
+			}), ps.PMap(ps.PChar('t'), func(__8 rune) rune {
 				return '\t'
-			}), ps.PBind(ps.PChar('u'), func(_ rune) ps.Parser[rune] {
-				return ps.PBind(pHexDigit_49, func(d0 rune) ps.Parser[rune] {
-					return ps.PBind(pHexDigit_49, func(d1 rune) ps.Parser[rune] {
-						return ps.PBind(pHexDigit_49, func(d2 rune) ps.Parser[rune] {
-							return ps.PMap(pHexDigit_49, func(d3 rune) rune {
-								hexStr_50 := MygoIN6StringM9FromRunes([]rune{d0, d1, d2, d3})
-								result_51 := func() Result[int64, error] {
-									__mygo_result_val, __mygo_result_err := strconv.ParseInt(hexStr_50, 16, 32)
-									if __mygo_result_err != nil {
-										return Err[int64, error](__mygo_result_err)
-									}
-									return Ok[int64, error](__mygo_result_val)
-								}()
-								var expr_54 rune
-								if v_9, ok := result_51.(ResultOk[int64, error]); ok {
-									var expr_53 rune
-									expr_53 = rune(v_9.F0)
-									expr_54 = expr_53
+			}), ps.PBind(ps.PChar('u'), func(__9 rune) ps.Parser[rune] {
+				return ps.PBind(pHexDigit, func(d0 rune) ps.Parser[rune] {
+					return ps.PBind(pHexDigit, func(d1 rune) ps.Parser[rune] {
+						return ps.PBind(pHexDigit, func(d2 rune) ps.Parser[rune] {
+							return ps.PMap(pHexDigit, func(d3 rune) rune {
+								hexStr := MygoIN6StringM9FromRunes([]rune{d0, d1, d2, d3})
+								var __mygo_expr_2 Result[int64, error]
+								__mygo_expr_0, __mygo_expr_1 := strconv.ParseInt(hexStr, 16, 32)
+								if __mygo_expr_1 != nil {
+									__mygo_expr_2 = Err[int64, error](__mygo_expr_1)
 								} else {
-									{
-										var expr_52 rune
-										expr_52 = rune(0)
-										expr_54 = expr_52
-									}
+									__mygo_expr_2 = Ok[int64, error](__mygo_expr_0)
 								}
-								return expr_54
+								result := __mygo_expr_2
+								var __mygo_expr_3 rune
+								if __mygo_match___mygo_expr_4, ok := result.(ResultOk[int64, error]); ok {
+									__mygo_expr_3 = rune(__mygo_match___mygo_expr_4.F0)
+								} else {
+									__mygo_expr_3 = rune(0)
+								}
+								return __mygo_expr_3
 							})
 						})
 					})
@@ -389,83 +352,80 @@ func pString() ps.Parser[JsonValue] {
 			})})
 		})
 	}
-	pCharContent_56 := func() ps.Parser[rune] {
-		return ps.POrElse(pEscape_55(), ps.PSatisfy(func(r rune) bool {
-			return r != '"' && r != '\\'
+	pCharContent := func() ps.Parser[rune] {
+		return ps.POrElse(pEscape(), ps.PSatisfy(func(r_1 rune) bool {
+			return r_1 != '"' && r_1 != '\\'
 		}, "string character"))
 	}
-	return ps.PBind(ps.PChar('"'), func(_ rune) ps.Parser[JsonValue] {
-		return ps.PBind(ps.PMany(pCharContent_56()), func(chars []rune) ps.Parser[JsonValue] {
-			return ps.PMap(ps.PChar('"'), func(_ rune) JsonValue {
+	return ps.PBind(ps.PChar('"'), func(__10 rune) ps.Parser[JsonValue] {
+		return ps.PBind(ps.PMany(pCharContent()), func(chars []rune) ps.Parser[JsonValue] {
+			return ps.PMap(ps.PChar('"'), func(__11 rune) JsonValue {
 				return JsonValueJStringCtor(MygoIN6StringM9FromRunes(chars))
 			})
 		})
 	})
 }
 func ParseJson(input string) Result[JsonValue, string] {
-	nullP_57 := pNull()
-	boolP_58 := pBool()
-	numP_59 := pNumber()
-	strP_60 := pString()
-	var valueP_61 ps.Parser[JsonValue]
-	var arrP_62 ps.Parser[JsonValue]
-	var pairP_63 ps.Parser[struct {
+	nullP := pNull()
+	boolP := pBool()
+	numP := pNumber()
+	strP := pString()
+	var valueP ps.Parser[JsonValue]
+	var arrP ps.Parser[JsonValue]
+	var pairP ps.Parser[struct {
 		F0 string
 		F1 JsonValue
 	}]
-	var objP_64 ps.Parser[JsonValue]
-	valueP_61 = func(state ps.State) ps.Reply[JsonValue] {
-		return ws(ps.PChoice([]func(ps.State) ps.Reply[JsonValue]{nullP_57, boolP_58, numP_59, strP_60, arrP_62, objP_64}))(state)
+	var objP ps.Parser[JsonValue]
+	valueP = func(state ps.State) ps.Reply[JsonValue] {
+		return ws(ps.PChoice([]func(ps.State) ps.Reply[JsonValue]{nullP, boolP, numP, strP, arrP, objP}))(state)
 	}
-	arrP_62 = ps.PMap(ps.PBetween(ws(ps.PChar('[')), ps.PSepBy(valueP_61, ws(ps.PChar(','))), ws(ps.PChar(']'))), func(items []JsonValue) JsonValue {
+	arrP = ps.PMap(ps.PBetween(ws(ps.PChar('[')), ps.PSepBy(valueP, ws(ps.PChar(','))), ws(ps.PChar(']'))), func(items []JsonValue) JsonValue {
 		return JsonValueJArrayCtor(items)
 	})
-	pairP_63 = func(s ps.State) ps.Reply[struct {
+	pairP = func(s ps.State) ps.Reply[struct {
 		F0 string
 		F1 JsonValue
 	}] {
-		kr_65 := ws(pString())(s)
-		if !kr_65.Ok {
+		kr := ws(pString())(s)
+		if !kr.Ok {
 			return ps.Reply[struct {
 				F0 string
 				F1 JsonValue
-			}]{Ok: kr_65.Ok, Consumed: kr_65.Consumed, State: kr_65.State, Error: kr_65.Error, Value: struct {
+			}]{Ok: kr.Ok, Consumed: kr.Consumed, State: kr.State, Error: kr.Error, Value: struct {
 				F0 string
 				F1 JsonValue
 			}{F0: "", F1: JsonValueJNullCtor()}}
-		}
-		var expr_68 string
-		if v_10, ok := kr_65.Value.(JsonValueJString); ok {
-			var expr_67 string
-			expr_67 = string(v_10.F0)
-			expr_68 = expr_67
 		} else {
-			{
-				var expr_66 string
-				expr_66 = ""
-				expr_68 = expr_66
-			}
 		}
-		keyStr_69 := expr_68
-		cr_70 := ws(ps.PChar(':'))(kr_65.State)
-		if !cr_70.Ok {
+		var __mygo_expr_0 string
+		if __mygo_match___mygo_expr_1, ok := kr.Value.(JsonValueJString); ok {
+			__mygo_expr_0 = string(__mygo_match___mygo_expr_1.F0)
+		} else {
+			__mygo_expr_0 = ""
+		}
+		keyStr := __mygo_expr_0
+		cr := ws(ps.PChar(':'))(kr.State)
+		if !cr.Ok {
 			return ps.Reply[struct {
 				F0 string
 				F1 JsonValue
-			}]{Ok: cr_70.Ok, Consumed: cr_70.Consumed, State: cr_70.State, Error: cr_70.Error, Value: struct {
+			}]{Ok: cr.Ok, Consumed: cr.Consumed, State: cr.State, Error: cr.Error, Value: struct {
 				F0 string
 				F1 JsonValue
 			}{F0: "", F1: JsonValueJNullCtor()}}
+		} else {
 		}
-		vr_71 := valueP_61(cr_70.State)
-		if !vr_71.Ok {
+		vr := valueP(cr.State)
+		if !vr.Ok {
 			return ps.Reply[struct {
 				F0 string
 				F1 JsonValue
-			}]{Ok: vr_71.Ok, Consumed: vr_71.Consumed, State: vr_71.State, Error: vr_71.Error, Value: struct {
+			}]{Ok: vr.Ok, Consumed: vr.Consumed, State: vr.State, Error: vr.Error, Value: struct {
 				F0 string
 				F1 JsonValue
 			}{F0: "", F1: JsonValueJNullCtor()}}
+		} else {
 		}
 		return ps.Reply[struct {
 			F0 string
@@ -473,35 +433,28 @@ func ParseJson(input string) Result[JsonValue, string] {
 		}]{Ok: true, Consumed: true, Value: struct {
 			F0 string
 			F1 JsonValue
-		}{F0: keyStr_69, F1: vr_71.Value}, State: vr_71.State, Error: ps.EmptyError(vr_71.State.Position)}
+		}{F0: keyStr, F1: vr.Value}, State: vr.State, Error: ps.EmptyError(vr.State.Position)}
 	}
-	objP_64 = ps.PMap(ps.PBetween(ws(ps.PChar('{')), ps.PSepBy(pairP_63, ws(ps.PChar(','))), ws(ps.PChar('}'))), func(pairs []struct {
+	objP = ps.PMap(ps.PBetween(ws(ps.PChar('{')), ps.PSepBy(pairP, ws(ps.PChar(','))), ws(ps.PChar('}'))), func(pairs []struct {
 		F0 string
 		F1 JsonValue
 	}) JsonValue {
 		return JsonValueJObjectCtor(pairs)
 	})
-	r_72 := ps.ParseInput(valueP_61, input)
-	var expr_77 Result[JsonValue, string]
-	if !r_72.Ok {
-		var expr_76 Result[JsonValue, string]
-		if v_12, ok := r_72.Error.(OptionSome[ps.ParseError]); ok {
-			var expr_75 Result[JsonValue, string]
-			errMsg_74 := fmt.Sprintf("parse error at line %d, column %d: %s", v_12.F0.Position.Line, v_12.F0.Position.Column, v_12.F0.Message)
-			expr_75 = Err[JsonValue, string](errMsg_74)
-			expr_76 = expr_75
+	r := ps.ParseInput(valueP, input)
+	if !r.Ok {
+		var __mygo_expr_0 Result[JsonValue, string]
+		if __mygo_match___mygo_expr_1, ok := r.Error.(OptionSome[ps.ParseError]); ok {
+			errMsg := fmt.Sprintf("parse error at line %d, column %d: %s", __mygo_match___mygo_expr_1.F0.Position.Line, __mygo_match___mygo_expr_1.F0.Position.Column, __mygo_match___mygo_expr_1.F0.Message)
+			__mygo_expr_0 = Err[JsonValue, string](errMsg)
 		} else {
-			if _, ok := r_72.Error.(OptionNone[ps.ParseError]); ok {
-				var expr_73 Result[JsonValue, string]
-				expr_73 = Err[JsonValue, string]("parse error")
-				expr_76 = expr_73
+			if _, ok := r.Error.(OptionNone[ps.ParseError]); ok {
+				__mygo_expr_0 = Err[JsonValue, string]("parse error")
 			} else {
-				panic("unreachable")
 			}
 		}
-		expr_77 = expr_76
+		return __mygo_expr_0
 	} else {
-		expr_77 = Ok[JsonValue, string](r_72.Value)
+		return Ok[JsonValue, string](r.Value)
 	}
-	return expr_77
 }

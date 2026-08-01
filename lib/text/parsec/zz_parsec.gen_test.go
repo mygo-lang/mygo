@@ -323,9 +323,9 @@ func TestPManyMatchesMultiple(t *testing.T) {
 		t.Fatalf("PMany length = %d, want 3", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result.Value))
 	} else {
 	}
-	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(result.Value, func(v rune) {
-		if v != 'a' {
-			t.Fatalf("PMany element = %d, want %d", v, 'a')
+	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each(result.Value, func(v_1 rune) {
+		if v_1 != 'a' {
+			t.Fatalf("PMany element = %d, want %d", v_1, 'a')
 			return
 		} else {
 			return

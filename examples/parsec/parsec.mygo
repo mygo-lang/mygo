@@ -13,4 +13,5 @@ func main() -> ()
     case Ok(v) => fmt.Println(v)
     case Err(s) => fmt.Println("Error: ", s)
   end
+  ()
 end

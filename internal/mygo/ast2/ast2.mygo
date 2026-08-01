@@ -181,7 +181,9 @@ enum ExprKind
   BinaryExpr(String, Expr, Expr)
   IfExpr(Expr, Expr, Expr)
   BlockExpr(Slice[Stmt])
-  SwitchExpr(Expr, Slice[SwitchCase])
+  # TargetType is populated by type inference. It is distinct from Expr.Type,
+  # which is the type produced by the entire switch expression.
+  SwitchExpr(Expr, Slice[SwitchCase], Option[MonoType])
   FuncLitExpr(Slice[Param], Option[TypeExpr], Expr)
   SliceLitExpr(Slice[Expr])
   TypeAsExpr(Expr, TypeExpr)
@@ -209,6 +211,10 @@ struct Expr
   Pos: SourcePos
   Kind: ExprKind
   Type: Option[MonoType]
+end
+
+func EmptySwitchTargetType() -> Option[MonoType]
+  None
 end
 
 

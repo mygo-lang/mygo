@@ -88,6 +88,7 @@ func translatePackageBinding(g *Generator2, bind ast2.Bind, mutable bool) Result
 		ctx_295 := &[]egCtx{newEgCtx()}[0]
 		ctx_295.goPackages = g.goPackages
 		ctx_295.pkgInfo = g.pkgInfo
+		ctx_295.pathAliases = g.pathAliases
 		ctxUsePackageIndex(ctx_295, g.packageIndex)
 		seedPackageBindings(ctx_295, g.decls, 0)
 		value_296 := translateAstBindingValue(bind.Value, bind.Type, ctx_295)
@@ -141,6 +142,7 @@ func translateImplAstDecl(g *Generator2, tps []string, target ast2.TypeExpr, ifa
 	ctx_309 := &[]egCtx{newEgCtxWithTypeParams(tps)}[0]
 	ctx_309.goPackages = g.goPackages
 	ctx_309.pkgInfo = g.pkgInfo
+	ctx_309.pathAliases = g.pathAliases
 	ctxUsePackageIndex(ctx_309, g.packageIndex)
 	seedPackageBindings(ctx_309, g.decls, 0)
 	stem_310 := implStem(target, iface, ctx_309.typeParams)
@@ -151,7 +153,7 @@ func translateImplAstDecl(g *Generator2, tps []string, target ast2.TypeExpr, ifa
 		if v_115, ok := v_114.F0.(ast2.TypeExprNamedType); ok {
 			var expr_316 string
 			var expr_315 string
-			if v_116, ok := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_115.F1, 0), ast2.TypeExprUnitTypeCtor()).(ast2.TypeExprNamedType); ok {
+			if v_116, ok := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_115.F1, 0), ast2.TypeExprUnitTypeCtor()).(ast2.TypeExprNamedType); ok {
 				var expr_314 string
 				expr_314 = v_116.F0
 				expr_315 = expr_314
@@ -376,13 +378,14 @@ func translateFuncAstDecl(g *Generator2, name string, tps []string, params []ast
 	ctx_373 := &[]egCtx{newFuncEgCtx(tps, initialRetType_372, name, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params))}[0]
 	ctx_373.goPackages = g.goPackages
 	ctx_373.pkgInfo = g.pkgInfo
+	ctx_373.pathAliases = g.pathAliases
 	ctxUsePackageIndex(ctx_373, g.packageIndex)
 	seedPackageBindings(ctx_373, g.decls, 0)
 	var goParams_374 []string = []string{}
 	var paramNames_375 []string = []string{}
 	var i_376 int = 0
 	for i_376 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
-		p := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, i_376), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+		p := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, i_376), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
 		pn := ctxFreshBinding(ctx_373, p.Name)
 		ctxSetLocal(ctx_373, p.Name, typeinference2.TypeFromASTWithParams(p.Type, tps))
 		goParams_374 = MygoIN5SliceM6Append(goParams_374, pn+" "+goType(p.Type, ctx_373.typeParams))
@@ -523,7 +526,7 @@ func requirementsForConstraints(ctx *egCtx, constraints []ast2.Constraint) []Dic
 		expr_406 = []DictionaryRequirement{}
 	} else {
 		var expr_405 []DictionaryRequirement
-		constraint_404 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraints, 0), ast2.Constraint{Name: "", BindName: None[string](), Args: []ast2.TypeExpr([]ast2.TypeExpr{})})
+		constraint_404 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraints, 0), ast2.Constraint{Name: "", BindName: None[string](), Args: []ast2.TypeExpr([]ast2.TypeExpr{})})
 		expr_405 = appendRequirements(requirementsForMethods(constraint_404, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.interfaceMethods, constraint_404.Name), []ast2.FuncSig{})), requirementsForConstraints(ctx, sliceDrop[ast2.Constraint](constraints, 1)))
 		expr_406 = expr_405
 	}
@@ -535,7 +538,7 @@ func requirementsForMethods(constraint ast2.Constraint, methods []ast2.FuncSig) 
 		expr_409 = []DictionaryRequirement{}
 	} else {
 		var expr_408 []DictionaryRequirement
-		method_407 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), defaultImplMethod().Sig)
+		method_407 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), defaultImplMethod().Sig)
 		expr_408 = MygoIN5SliceM7Prepend(requirementsForMethods(constraint, sliceDrop[ast2.FuncSig](methods, 1)), DictionaryRequirement{Interface: constraint.Name, Method: method_407.Name, Args: constraint.Args})
 		expr_409 = expr_408
 	}
@@ -618,7 +621,7 @@ func dictionaryMethodNames(ctx *egCtx, constraints []ast2.Constraint) []string {
 		expr_438 = []string{}
 	} else {
 		var expr_437 []string
-		constraint_435 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraints, 0), ast2.Constraint{Name: "", BindName: None[string](), Args: []ast2.TypeExpr([]ast2.TypeExpr{})})
+		constraint_435 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraints, 0), ast2.Constraint{Name: "", BindName: None[string](), Args: []ast2.TypeExpr([]ast2.TypeExpr{})})
 		names_436 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.interfaceMethods, constraint_435.Name), []ast2.FuncSig{}), func(method ast2.FuncSig) string {
 			return method.Name
 		})
@@ -636,7 +639,7 @@ func addConstraintParams(constraints []ast2.Constraint, ctx *egCtx, names []stri
 		expr_443 = DictionaryParams{Names: names, Types: types}
 	} else {
 		var expr_442 DictionaryParams
-		constraint_440 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraints, 0), ast2.Constraint{Name: "", BindName: None[string](), Args: []ast2.TypeExpr([]ast2.TypeExpr{})})
+		constraint_440 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraints, 0), ast2.Constraint{Name: "", BindName: None[string](), Args: []ast2.TypeExpr([]ast2.TypeExpr{})})
 		ifaceTps_441 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.interfaceTypeParams, constraint_440.Name), []string{})
 		expr_442 = addDictionaryMethods(sliceDrop[ast2.Constraint](constraints, 1), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.interfaceMethods, constraint_440.Name), []ast2.FuncSig{}), ctx, names, types, constraint_440.Name, constraint_440.Args, ifaceTps_441, fnTypeParams, receiverName)
 		expr_443 = expr_442
@@ -649,7 +652,7 @@ func addDictionaryMethods(rest []ast2.Constraint, methods []ast2.FuncSig, ctx *e
 		expr_458 = addConstraintParams(rest, ctx, names, types, fnTypeParams, receiverName)
 	} else {
 		var expr_457 DictionaryParams
-		method_444 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 1, Column: 1}, Name: "", TypeParams: []string([]string{}), Params: []ast2.Param([]ast2.Param{}), Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint([]ast2.Constraint{})})
+		method_444 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 1, Column: 1}, Name: "", TypeParams: []string([]string{}), Params: []ast2.Param([]ast2.Param{}), Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint([]ast2.Constraint{})})
 		baseName_445 := sanitizeIdent(method_444.Name) + "Fn"
 		paramName_446 := ctxFreshBinding(ctx, baseName_445)
 		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.constraintFuncs, method_444.Name, paramName_446)
@@ -657,7 +660,7 @@ func addDictionaryMethods(rest []ast2.Constraint, methods []ast2.FuncSig, ctx *e
 		existingNames_447 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.constraintFuncNames, method_444.Name), []string([]string{}))
 		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.constraintFuncNames, method_444.Name, MygoIN5SliceM6Append(existingNames_447, paramName_446))
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(constraintArgs) > 0 {
-			typeArg_448 := substituteTypeParamsMyGO(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraintArgs, 0), ast2.TypeExprUnitTypeCtor()), ifaceTps, constraintArgs)
+			typeArg_448 := substituteTypeParamsMyGO(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraintArgs, 0), ast2.TypeExprUnitTypeCtor()), ifaceTps, constraintArgs)
 			existingTypes_449 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.constraintFuncArgTypes, method_444.Name), []string([]string{}))
 			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.constraintFuncArgTypes, method_444.Name, MygoIN5SliceM6Append(existingTypes_449, typeArg_448))
 			constraintMono_450 := resolvedConstraintArgFor(ctx, method_444.Name, constraintRefForCtx(ctx, constraintName), constraintArgsKeyForCodegen(constraintArgs, fnTypeParams), receiverName)
@@ -696,7 +699,7 @@ func resolvedConstraintArgFor(ctx *egCtx, methodName string, constraint typeinfe
 		var expr_464 ast2.MonoType
 		if v_151, ok := resolved_461.(OptionSome[[]ast2.MonoType]); ok {
 			var expr_463 ast2.MonoType
-			expr_463 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_151.F0, 0), ast2.MonoTypeTUnitCtor())
+			expr_463 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_151.F0, 0), ast2.MonoTypeTUnitCtor())
 			expr_464 = expr_463
 		} else {
 			if _, ok := resolved_461.(OptionNone[[]ast2.MonoType]); ok {
@@ -763,7 +766,7 @@ func substituteTypeParamsInTypeExpr(typ ast2.TypeExpr, ifaceTps []string, constr
 		var expr_489 string
 		if index_483 >= 0 && index_483 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(constraintArgs) {
 			var expr_485 string
-			replacement_484 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraintArgs, index_483), ast2.TypeExprUnitTypeCtor())
+			replacement_484 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraintArgs, index_483), ast2.TypeExprUnitTypeCtor())
 			expr_485 = goType(replacement_484, typeParams)
 			expr_489 = expr_485
 		} else {
@@ -811,7 +814,7 @@ func substituteTypeParamsMyGO(typ ast2.TypeExpr, ifaceTps []string, constraintAr
 		var expr_501 string
 		if index_495 >= 0 && index_495 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(constraintArgs) {
 			var expr_497 string
-			replacement_496 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraintArgs, index_495), ast2.TypeExprUnitTypeCtor())
+			replacement_496 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraintArgs, index_495), ast2.TypeExprUnitTypeCtor())
 			expr_497 = mygoTypeString(replacement_496)
 			expr_501 = expr_497
 		} else {
@@ -871,7 +874,7 @@ func substituteTypeExpr(typ ast2.TypeExpr, ifaceTps []string, constraintArgs []a
 		index_508 := findStringIndex(ifaceTps, v_158.F0)
 		var expr_510 ast2.TypeExpr
 		if index_508 >= 0 && index_508 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(constraintArgs) {
-			expr_510 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraintArgs, index_508), ast2.TypeExprUnitTypeCtor())
+			expr_510 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraintArgs, index_508), ast2.TypeExprUnitTypeCtor())
 		} else {
 			var expr_509 ast2.TypeExpr
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_158.F1) == 0 {
@@ -900,7 +903,7 @@ func findStringIndex(items []string, target string) int {
 		expr_519 = -1
 	} else {
 		var expr_518 int
-		head_513 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "")
+		head_513 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "")
 		var expr_517 int
 		if head_513 == target {
 			expr_517 = 0
@@ -946,7 +949,7 @@ func __mygo_mt_codegen2_appendrequirements(left []DictionaryRequirement, right [
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(right) == 0 {
 				expr_524 = left
 			} else {
-				__mygo_next_0 := MygoIN5SliceM6Append(left, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), DictionaryRequirement{Interface: "", Method: "", Args: []ast2.TypeExpr([]ast2.TypeExpr{})}))
+				__mygo_next_0 := MygoIN5SliceM6Append(left, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), DictionaryRequirement{Interface: "", Method: "", Args: []ast2.TypeExpr([]ast2.TypeExpr{})}))
 				__mygo_next_1 := sliceDrop[DictionaryRequirement](right, 1)
 				left = __mygo_next_0
 				right = __mygo_next_1
@@ -967,7 +970,7 @@ func __mygo_mt_codegen2_appendstrings(left []string, right []string, __mygo_stat
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(right) == 0 {
 				expr_526 = left
 			} else {
-				__mygo_next_0 := MygoIN5SliceM6Append(left, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), ""))
+				__mygo_next_0 := MygoIN5SliceM6Append(left, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), ""))
 				__mygo_next_1 := sliceDrop[string](right, 1)
 				left = __mygo_next_0
 				right = __mygo_next_1
@@ -989,7 +992,7 @@ func __mygo_mt_codegen2_collectfuncdecls(g *Generator2, decls []ast2.Decl, index
 				expr_546 = Ok[[]goast.Decl, string](out)
 			} else {
 				var expr_545 Result[[]goast.Decl, string]
-				var decl_537 ast2.Decl = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
+				var decl_537 ast2.Decl = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
 				var expr_544 Result[[]goast.Decl, string]
 				if v_164, ok := decl_537.(ast2.DeclFuncDecl); ok {
 					var expr_543 Result[[]goast.Decl, string]
@@ -1053,7 +1056,7 @@ func __mygo_mt_codegen2_constraintmonoargskey(args []ast2.MonoType, index int, o
 				expr_556 = out
 			} else {
 				var expr_555 string
-				item_552 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.MonoTypeTUnitCtor())
+				item_552 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.MonoTypeTUnitCtor())
 				var expr_553 string
 				if out == "" {
 					expr_553 = typeinference2.MonoStringFull(item_552)
@@ -1086,7 +1089,7 @@ func __mygo_mt_codegen2_fieldstofieldentries(typeName string, fields []ast2.Fiel
 				expr_568 = out
 			} else {
 				var expr_567 []typeinference2.FieldEntry
-				f_563 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, index), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
+				f_563 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, index), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
 				fieldName_564 := f_563.Name
 				monoType_565 := typeinference2.TypeFromASTWithParams(f_563.Type, tps)
 				entry_566 := typeinference2.FieldEntry{TypeName: typeName, FieldName: fieldName_564, Type: monoType_565}
@@ -1115,7 +1118,7 @@ func __mygo_mt_codegen2_seedcalldictionaries(decls []ast2.Decl, ctx *egCtx, __my
 		switch __mygo_state {
 		case 0:
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) != 0 {
-				decl_570 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+				decl_570 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 				seedOneCallDictionary(decl_570, ctx)
 				__mygo_next_0 := sliceDrop[ast2.Decl](decls, 1)
 				__mygo_next_1 := ctx
@@ -1135,7 +1138,7 @@ func __mygo_mt_codegen2_seedcallrequirements(decls []ast2.Decl, ctx *egCtx, __my
 		switch __mygo_state {
 		case 0:
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) != 0 {
-				decl_572 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+				decl_572 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 				seedOneCallRequirement(decl_572, ctx)
 				__mygo_next_0 := sliceDrop[ast2.Decl](decls, 1)
 				__mygo_next_1 := ctx
@@ -1155,7 +1158,7 @@ func __mygo_mt_codegen2_seedenumvalueconstructors(decls []ast2.Decl, ctx *egCtx,
 		switch __mygo_state {
 		case 0:
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) != 0 {
-				decl_574 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+				decl_574 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 				seedOneEnumValueConstructor(decl_574, ctx)
 				__mygo_next_0 := sliceDrop[ast2.Decl](decls, 1)
 				__mygo_next_1 := ctx
@@ -1175,7 +1178,7 @@ func __mygo_mt_codegen2_seedenumvariantfieldtypes(enumName string, variantName s
 		switch __mygo_state {
 		case 0:
 			if index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) {
-				fieldType_578 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, index), ast2.TypeExprUnitTypeCtor())
+				fieldType_578 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, index), ast2.TypeExprUnitTypeCtor())
 				fieldMono_579 := typeinference2.TypeFromASTWithParams(fieldType_578, enumTypeParams)
 				existing_580 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.variantFieldMonoTypes, variantName), []ast2.MonoType([]ast2.MonoType{}))
 				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.variantFieldMonoTypes, variantName, MygoIN5SliceM6Append(existing_580, fieldMono_579))
@@ -1205,7 +1208,7 @@ func __mygo_mt_codegen2_seedenumvariantsforvariants(enumName string, enumTypePar
 		switch __mygo_state {
 		case 0:
 			if index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(variants) {
-				variant_582 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, index), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
+				variant_582 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, index), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
 				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.enumVariantOwners, variant_582.Name, enumName)
 				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.enumValueConstructors, enumName+"."+variant_582.Name, enumConstructorGoName(sanitizeIdent(enumName), variant_582.Name))
 				seedEnumVariantFieldTypes(enumName, variant_582.Name, variant_582.Fields, enumTypeParams, ctx, 0)
@@ -1233,9 +1236,9 @@ func __mygo_mt_codegen2_seedimplcandidates(methods []ast2.ImplMethod, stem strin
 		switch __mygo_state {
 		case 0:
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) != 0 {
-				method_587 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), defaultImplMethod())
+				method_587 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), defaultImplMethod())
 				key_588 := interfaceName + "." + method_587.Sig.Name
-				receiver_589 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(interfaceArgs, 0), ast2.TypeExprUnitTypeCtor())
+				receiver_589 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(interfaceArgs, 0), ast2.TypeExprUnitTypeCtor())
 				candidate_590 := ImplDictionaryCandidate{Interface: interfaceName, Method: method_587.Sig.Name, InterfaceArgs: interfaceArgs, Receiver: typeinference2.TypeFromASTWithParams(receiver_589, typeParams), TypeParams: typeParams, Helper: implMethodSymbol(stem, method_587.Sig.Name)}
 				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.packageCandidates, key_588, MygoIN5SliceM6Append(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.packageCandidates, key_588), []ImplDictionaryCandidate([]ImplDictionaryCandidate{})), candidate_590))
 				ctx.typeclassCandidates = MygoIN5SliceM6Append(ctx.typeclassCandidates, candidate_590)
@@ -1265,7 +1268,7 @@ func __mygo_mt_codegen2_seedimplmethoddictionaries(methods []ast2.ImplMethod, st
 		switch __mygo_state {
 		case 0:
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) != 0 {
-				method_592 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), defaultImplMethod())
+				method_592 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), defaultImplMethod())
 				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(ctx.packageDictionaries, interfaceName+"."+method_592.Sig.Name, implMethodSymbol(stem, method_592.Sig.Name))
 				__mygo_next_0 := sliceDrop[ast2.ImplMethod](methods, 1)
 				__mygo_next_1 := stem
@@ -1289,9 +1292,9 @@ func __mygo_mt_codegen2_seedinherentcandidates(methods []ast2.ImplMethod, stem s
 		switch __mygo_state {
 		case 0:
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) != 0 {
-				method_603 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), defaultImplMethod())
+				method_603 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), defaultImplMethod())
 				helper_604 := implMethodSymbol(stem, method_603.Sig.Name)
-				first_605 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(method_603.Sig.Params, 0)
+				first_605 := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(method_603.Sig.Params, 0)
 				var expr_608 bool
 				if v_170, ok := first_605.(OptionSome[ast2.Param]); ok {
 					var expr_607 bool
@@ -1339,7 +1342,7 @@ func __mygo_mt_codegen2_seedinterfacemetadata(decls []ast2.Decl, index int, ctx 
 		switch __mygo_state {
 		case 0:
 			if index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) {
-				decl_614 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
+				decl_614 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
 				seedOneInterfaceMetadata(decl_614, ctx)
 				__mygo_next_0 := decls
 				__mygo_next_1 := index + 1
@@ -1361,7 +1364,7 @@ func __mygo_mt_codegen2_seednamedimpls(decls []ast2.Decl, index int, ctx *egCtx,
 		switch __mygo_state {
 		case 0:
 			if index < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) {
-				decl_616 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
+				decl_616 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
 				seedOneNamedImpl(decl_616, ctx)
 				__mygo_next_0 := decls
 				__mygo_next_1 := index + 1
@@ -1384,7 +1387,7 @@ func __mygo_mt_codegen2_seedpackagebindings(ctx *egCtx, decls []ast2.Decl, index
 		case 0:
 			if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) {
 			} else {
-				decl_618 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
+				decl_618 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
 				if v_180, ok := decl_618.(ast2.DeclLetDecl); ok {
 					ctxSetBinding(ctx, v_180.F0.Name, sanitizeIdent(v_180.F0.Name))
 					ctxSetMutable(ctx, sanitizeIdent(v_180.F0.Name), false)
@@ -1436,7 +1439,7 @@ func __mygo_mt_codegen2_seedpackagedictionaries(decls []ast2.Decl, ctx *egCtx, _
 		switch __mygo_state {
 		case 0:
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) != 0 {
-				decl_620 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+				decl_620 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 				seedOnePackageDictionary(decl_620, ctx)
 				__mygo_next_0 := sliceDrop[ast2.Decl](decls, 1)
 				__mygo_next_1 := ctx
@@ -1456,7 +1459,7 @@ func __mygo_mt_codegen2_seedstructsourcetypes(decls []ast2.Decl, ctx *egCtx, __m
 		switch __mygo_state {
 		case 0:
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) != 0 {
-				decl_622 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+				decl_622 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 				if isStructDecl(decl_622) {
 					seedStructSourceTypesFromDecl(decl_622, ctx)
 				}
@@ -1482,7 +1485,7 @@ func __mygo_mt_codegen2_translatedeclsast(g *Generator2, decls []ast2.Decl, inde
 				expr_682 = Ok[[]goast.Decl, string](out)
 			} else {
 				var expr_681 Result[[]goast.Decl, string]
-				var decl_653 ast2.Decl = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
+				var decl_653 ast2.Decl = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.DeclImportDeclCtor("", ""))
 				var expr_680 Result[[]goast.Decl, string]
 				if v_218, ok := decl_653.(ast2.DeclTypeAliasDecl); ok {
 					var expr_679 Result[[]goast.Decl, string]
@@ -1713,18 +1716,19 @@ func __mygo_mt_codegen2_translateimplastmethods(stem string, tps []string, metho
 				expr_716 = Ok[[]goast.Decl, string](out)
 			} else {
 				var expr_715 Result[[]goast.Decl, string]
-				method_700 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, index), defaultImplMethod())
+				method_700 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, index), defaultImplMethod())
 				sig_701 := method_700.Sig
 				methodTps_702 := appendStrings(tps, sig_701.TypeParams)
 				ret_703 := returnMonoType(sig_701.Ret)
 				ctx_704 := &[]egCtx{newFuncEgCtx(methodTps_702, ret_703, sig_701.Name, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig_701.Params))}[0]
 				ctx_704.goPackages = baseCtx.goPackages
 				ctx_704.pkgInfo = baseCtx.pkgInfo
+				ctx_704.pathAliases = baseCtx.pathAliases
 				ctxUsePackageFacts(ctx_704, baseCtx)
 				var names_705 []string = []string{}
 				var i_706 int = 0
 				for i_706 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig_701.Params) {
-					param := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sig_701.Params, i_706), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+					param := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sig_701.Params, i_706), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
 					goName := ctxFreshBinding(ctx_704, param.Name)
 					ctxSetLocal(ctx_704, param.Name, typeinference2.TypeFromASTWithParams(param.Type, methodTps_702))
 					names_705 = MygoIN5SliceM6Append(names_705, goName)
@@ -1787,7 +1791,7 @@ func __mygo_mt_codegen2_typeargstomonos(args []ast2.TypeExpr, typeParams []strin
 				expr_722 = out
 			} else {
 				var expr_721 []ast2.MonoType
-				item_720 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.TypeExprUnitTypeCtor())
+				item_720 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.TypeExprUnitTypeCtor())
 				__mygo_next_0 := args
 				__mygo_next_1 := typeParams
 				__mygo_next_2 := index + 1

@@ -54,6 +54,9 @@ struct egCtx
   typeclassCandidates: Slice[ImplDictionaryCandidate]
   goPackages: Slice[typeinference2.GoPackageEntry]
   pkgInfo: Option[typeinference2.PackageInfo]
+  # import path → source alias, so TQualifiedName(path, ...) can be rendered
+  # back to `alias.member` in the generated Go code.
+  pathAliases: Map[String, String]
   enumValueConstructors: Map[String, String]
   enumVariantOwners: Map[String, String]
   patternTypes: Map[String, ast2.MonoType]
@@ -95,6 +98,7 @@ struct Generator2
   decls: Slice[ast2.Decl]
   goPackages: Slice[typeinference2.GoPackageEntry]
   pkgInfo: Option[typeinference2.PackageInfo]
+  pathAliases: Map[String, String]
   packageIndex: PackageIndex
 end
 
@@ -175,6 +179,7 @@ func newEgCtx() -> egCtx
     typeclassCandidates: [],
     goPackages: [],
     pkgInfo: None,
+    pathAliases: {},
     enumValueConstructors: {},
     enumVariantOwners: {},
     patternTypes: {},
@@ -217,6 +222,7 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     typeclassCandidates: [],
     goPackages: [],
     pkgInfo: None,
+    pathAliases: {},
     enumValueConstructors: {},
     enumVariantOwners: {},
     patternTypes: {},
@@ -259,6 +265,7 @@ func newFuncEgCtx(params: Slice[String], retType: ast2.MonoType, tailName: Strin
     typeclassCandidates: [],
     goPackages: [],
     pkgInfo: None,
+    pathAliases: {},
     enumValueConstructors: {},
     enumVariantOwners: {},
     patternTypes: {},
@@ -270,7 +277,7 @@ func newFuncEgCtx(params: Slice[String], retType: ast2.MonoType, tailName: Strin
   }
 end
 
-func newGenerator2(pkgName: String, typedDecls: Slice[ast2.Decl], goPackages: Slice[typeinference2.GoPackageEntry], pkgInfo: typeinference2.PackageInfo, packageIndex: PackageIndex) -> Generator2
+func newGenerator2(pkgName: String, typedDecls: Slice[ast2.Decl], imports: Slice[GoImportPart], goPackages: Slice[typeinference2.GoPackageEntry], pkgInfo: typeinference2.PackageInfo, packageIndex: PackageIndex) -> Generator2
   Generator2 {
     pkgName: pkgName,
     importPaths: [],
@@ -282,6 +289,7 @@ func newGenerator2(pkgName: String, typedDecls: Slice[ast2.Decl], goPackages: Sl
     decls: typedDecls,
     goPackages: goPackages,
     pkgInfo: Some(pkgInfo),
+    pathAliases: pathAliasesFromImports(imports),
     packageIndex: packageIndex,
   }
 end
@@ -317,6 +325,7 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     typeclassCandidates: ctx.typeclassCandidates,
     goPackages: ctx.goPackages,
     pkgInfo: ctx.pkgInfo,
+    pathAliases: ctx.pathAliases,
     enumValueConstructors: ctx.enumValueConstructors,
     enumVariantOwners: ctx.enumVariantOwners,
     patternTypes: ctx.patternTypes,
@@ -499,13 +508,45 @@ func bindTypeArgs(bound: Slice[Int], args: Slice[ast2.MonoType], index: Int, out
   end
 end
 
+# pathAliasesFromImports builds an import path → source alias table from the
+# file's Go import parts.  Keys are Go import paths (the `go:` prefix already
+# stripped), matching the TQualifiedName path after importPathForGo.
+func pathAliasesFromImports(imports: Slice[GoImportPart]) -> Map[String, String]
+  pathAliasesFromImportsAt(imports, 0, {})
+end
+
+func pathAliasesFromImportsAt(imports: Slice[GoImportPart], index: Int, out: Map[String, String]) -> Map[String, String]
+  if index >= imports.Len() then out else
+    switch imports.Get(index)
+      case Some(im) =>
+        let existing = out.Get(im.Path).UnwrapOr("")
+        if existing == "" then
+          out.Set(im.Path, im.Alias)
+          pathAliasesFromImportsAt(imports, index + 1, out)
+        else
+          pathAliasesFromImportsAt(imports, index + 1, out)
+        end
+      case None => pathAliasesFromImportsAt(imports, index + 1, out)
+    end
+  end
+end
+
 # monoTypeToGoStr: 将 MonoType 转换为 Go 类型字符串，用于 goast 调用。
+# Entry point without a file context; TQualifiedName cannot be restored to an
+# alias here (equivalent to an empty alias table).
 func monoTypeToGoStr(t: ast2.MonoType) -> String
+  monoTypeToGoStrIn(t, {})
+end
+
+# monoTypeToGoStrIn renders a MonoType as a Go type string, resolving
+# TQualifiedName(path, inner) back to `alias.member` using the current file's
+# import path → alias table (`aliases`).
+func monoTypeToGoStrIn(t: ast2.MonoType, aliases: Map[String, String]) -> String
   switch t
     case TCon(name) => goPrimitiveTypeName(name)
     case TFunc(params, ret) then
-      let paramStrs = params.Map(func(p: ast2.MonoType) -> String monoTypeToGoStr(p) end)
-      let retStr = monoTypeToGoStr(ret.value())
+      let paramStrs = params.Map(func(p: ast2.MonoType) -> String monoTypeToGoStrIn(p, aliases) end)
+      let retStr = monoTypeToGoStrIn(ret.value(), aliases)
       if retStr == "struct{}" then
         "func(" + joinStrings(paramStrs, ", ") + ")"
       else
@@ -519,32 +560,36 @@ func monoTypeToGoStr(t: ast2.MonoType) -> String
         # goType which already handles Ref in source signatures.
         case TCon(name) then
           if name == "Ref" && args.Len() == 1 then
-            "*" + monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit))
+            "*" + monoTypeToGoStrIn(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), aliases)
           elsif name == "Slice" && args.Len() == 1 then
-            "[]" + monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit))
+            "[]" + monoTypeToGoStrIn(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), aliases)
           elsif name == "Map" && args.Len() == 2 then
-            "map[" + monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit)) + "]" + monoTypeToGoStr(args.Get(1).UnwrapOr(ast2.MonoType.TUnit))
+            "map[" + monoTypeToGoStrIn(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), aliases) + "]" + monoTypeToGoStrIn(args.Get(1).UnwrapOr(ast2.MonoType.TUnit), aliases)
           elsif name == "Set" && args.Len() == 1 then
-            "map[" + monoTypeToGoStr(args.Get(0).UnwrapOr(ast2.MonoType.TUnit)) + "]struct{}"
+            "map[" + monoTypeToGoStrIn(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), aliases) + "]struct{}"
           else
-            let ctorStr = monoTypeToGoStr(ctor.value())
-            let argStrs = args.Map(func(a: ast2.MonoType) -> String monoTypeToGoStr(a) end)
+            let ctorStr = monoTypeToGoStrIn(ctor.value(), aliases)
+            let argStrs = args.Map(func(a: ast2.MonoType) -> String monoTypeToGoStrIn(a, aliases) end)
             if argStrs.Len() == 0 then ctorStr else ctorStr + "[" + joinStrings(argStrs, ", ") + "]" end
           end
         end
         case _ =>
-          let ctorStr = monoTypeToGoStr(ctor.value())
-          let argStrs = args.Map(func(a: ast2.MonoType) -> String monoTypeToGoStr(a) end)
+          let ctorStr = monoTypeToGoStrIn(ctor.value(), aliases)
+          let argStrs = args.Map(func(a: ast2.MonoType) -> String monoTypeToGoStrIn(a, aliases) end)
           if argStrs.Len() == 0 then ctorStr else ctorStr + "[" + joinStrings(argStrs, ", ") + "]" end
       end
     end
     case TTuple(items) =>
-      "struct { " + joinStrings(tupleMonoElemsToStringsNoParams(items, 0, [] as Slice[String]), "; ") + " }"
+      "struct { " + joinStrings(tupleMonoElemsToStringsIn(items, [] as Slice[String], aliases, 0, [] as Slice[String]), "; ") + " }"
     case TUnit => "struct{}"
     case TVar(_) => "any"
     case TKVar(_) => "any"
     case TParam(_) => "any"
-    case TQualifiedName(path, inner) => monoTypeToGoStr(inner.value())
+    case TQualifiedName(path, inner) then
+      let member = monoTypeToGoStrIn(inner.value(), aliases)
+      let alias = aliases.Get(importPathForGo(path)).UnwrapOr("")
+      if alias == "" || alias == "." then member else alias + "." + member end
+    end
   end
 end
 
@@ -588,6 +633,12 @@ end
 # monoTypeToGoStrWithParams renders inference TParams using the ordered
 # type-parameter names of the current function/impl context.
 func monoTypeToGoStrWithParams(t: ast2.MonoType, params: Slice[String]) -> String
+  monoTypeToGoStrWithParamsIn(t, params, {})
+end
+
+# monoTypeToGoStrWithParamsIn additionally resolves TQualifiedName back to
+# `alias.member` through the file's import path → alias table.
+func monoTypeToGoStrWithParamsIn(t: ast2.MonoType, params: Slice[String], aliases: Map[String, String]) -> String
   switch t
     case TParam(id) then
       let index = -id - 1
@@ -597,7 +648,7 @@ func monoTypeToGoStrWithParams(t: ast2.MonoType, params: Slice[String]) -> Strin
       switch typeRef.value()
         case TCon(name) then
           let argStrs = args.Map(func(arg: ast2.MonoType) -> String
-            monoTypeToGoStrWithParams(arg, params)
+            monoTypeToGoStrWithParamsIn(arg, params, aliases)
           end)
           if name == "Ref" && argStrs.Len() == 1 then
             "*" + argStrs.Get(0).UnwrapOr("any")
@@ -611,18 +662,18 @@ func monoTypeToGoStrWithParams(t: ast2.MonoType, params: Slice[String]) -> Strin
             mygoToGoTypeStr(name + "[" + joinStrings(argStrs, ", ") + "]")
           end
         end
-        case _ => monoTypeToGoStr(t)
+        case _ => monoTypeToGoStrIn(t, aliases)
       end
     end
     case TCon(name) => goPrimitiveTypeName(name)
     case TFunc(items, ret) then
-      let argStrs = items.Map(func(arg: ast2.MonoType) -> String monoTypeToGoStrWithParams(arg, params) end)
-      let retStr = monoTypeToGoStrWithParams(ret.value(), params)
+      let argStrs = items.Map(func(arg: ast2.MonoType) -> String monoTypeToGoStrWithParamsIn(arg, params, aliases) end)
+      let retStr = monoTypeToGoStrWithParamsIn(ret.value(), params, aliases)
       if retStr == "struct{}" then "func(" + joinStrings(argStrs, ", ") + ")" else "func(" + joinStrings(argStrs, ", ") + ") " + retStr end
     end
     case TTuple(items) =>
-      "struct { " + joinStrings(tupleMonoElemsToStrings(items, params, 0, [] as Slice[String]), "; ") + " }"
-    case _ => monoTypeToGoStr(t)
+      "struct { " + joinStrings(tupleMonoElemsToStringsIn(items, params, aliases, 0, [] as Slice[String]), "; ") + " }"
+    case _ => monoTypeToGoStrIn(t, aliases)
   end
 end
 
@@ -637,17 +688,13 @@ end
 # the mygo type for `items.Map` only exposes the element value, not its
 # index.  This mirrors tupleElemsToStringsLoop in types_util.mygo.
 func tupleMonoElemsToStrings(items: Slice[ast2.MonoType], params: Slice[String], index: Int, out: Slice[String]) -> Slice[String]
-  if items.Len() == 0 then out else
-    let head = items.Get(0).UnwrapOr(ast2.MonoType.TUnit)
-    let tail = tupleMonoElemsToStrings(sliceDrop(items, 1), params, index + 1, out)
-    tail.Prepend("F" + index.ToString() + " " + monoTypeToGoStrWithParams(head, params))
-  end
+  tupleMonoElemsToStringsIn(items, params, {}, index, out)
 end
 
-func tupleMonoElemsToStringsNoParams(items: Slice[ast2.MonoType], index: Int, out: Slice[String]) -> Slice[String]
+func tupleMonoElemsToStringsIn(items: Slice[ast2.MonoType], params: Slice[String], aliases: Map[String, String], index: Int, out: Slice[String]) -> Slice[String]
   if items.Len() == 0 then out else
     let head = items.Get(0).UnwrapOr(ast2.MonoType.TUnit)
-    let tail = tupleMonoElemsToStringsNoParams(sliceDrop(items, 1), index + 1, out)
-    tail.Prepend("F" + index.ToString() + " " + monoTypeToGoStr(head))
+    let tail = tupleMonoElemsToStringsIn(sliceDrop(items, 1), params, aliases, index + 1, out)
+    tail.Prepend("F" + index.ToString() + " " + monoTypeToGoStrWithParamsIn(head, params, aliases))
   end
 end

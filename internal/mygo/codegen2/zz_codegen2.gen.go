@@ -110,9 +110,9 @@ func GenerateSourceAt(sourceName string, input string) Result[string, string] {
 }
 func generateOneFile(file ast2.File, info typeinference2.PackageInfo, allDecls []ast2.Decl, packageIndex PackageIndex, fileTypedDecls []ast2.Decl, includeHKT bool) Result[string, string] {
 	visibleDecls_35 := mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
-	g_36 := &[]Generator2{newGenerator2(file.PackageName, visibleDecls_35, info.GoPackages, info, packageIndex)}[0]
-	imports_37 := collectImports(file.Decls)
-	decls_38 := translateDeclsAst(g_36, fileTypedDecls, 0, []goast.Decl([]goast.Decl{}))
+	imports_36 := collectImports(file.Decls)
+	g_37 := &[]Generator2{newGenerator2(file.PackageName, visibleDecls_35, imports_36, info.GoPackages, info, packageIndex)}[0]
+	decls_38 := translateDeclsAst(g_37, fileTypedDecls, 0, []goast.Decl([]goast.Decl{}))
 	var expr_45 Result[string, string]
 	if v_10, ok := decls_38.(ResultErr[[]goast.Decl, string]); ok {
 		var expr_44 Result[string, string]
@@ -130,9 +130,9 @@ func generateOneFile(file ast2.File, info typeinference2.PackageInfo, allDecls [
 			withHKT_40 := expr_39
 			var expr_41 []GoImportPart
 			if file.PackageName != "prelude" && declsNeedPreludeImport(file.Decls, info.ExternalTypedDecls) {
-				expr_41 = MygoIN5SliceM6Append(imports_37, GoImportPart{Alias: ".", Path: "github.com/mygo-lang/mygo/prelude"})
+				expr_41 = MygoIN5SliceM6Append(imports_36, GoImportPart{Alias: ".", Path: "github.com/mygo-lang/mygo/prelude"})
 			} else {
-				expr_41 = imports_37
+				expr_41 = imports_36
 			}
 			withPrelude_42 := expr_41
 			expr_43 = renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: withPrelude_42, AstDecls: withHKT_40, Decls: []string([]string{})})
@@ -159,7 +159,7 @@ func declsUsePreludeName(decls []ast2.Decl, names []string) bool {
 		expr_62 = false
 	} else {
 		var expr_61 bool
-		decl_60 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		decl_60 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 		expr_61 = declUsesPreludeName(decl_60, names) || declsUsePreludeName(sliceDrop[ast2.Decl](decls, 1), names)
 		expr_62 = expr_61
 	}
@@ -255,7 +255,7 @@ func typeExprsUsePreludeName(types []ast2.TypeExpr, names []string) bool {
 		expr_80 = false
 	} else {
 		var expr_79 bool
-		typ_78 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, 0), ast2.TypeExprUnitTypeCtor())
+		typ_78 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, 0), ast2.TypeExprUnitTypeCtor())
 		expr_79 = typeUsesPreludeName(typ_78, names) || typeExprsUsePreludeName(sliceDrop[ast2.TypeExpr](types, 1), names)
 		expr_80 = expr_79
 	}
@@ -284,7 +284,7 @@ func paramsUsePreludeName(params []ast2.Param, names []string) bool {
 		expr_86 = false
 	} else {
 		var expr_85 bool
-		param_84 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+		param_84 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
 		expr_85 = typeUsesPreludeName(param_84.Type, names) || paramsUsePreludeName(sliceDrop[ast2.Param](params, 1), names)
 		expr_86 = expr_85
 	}
@@ -296,7 +296,7 @@ func fieldsUsePreludeName(fields []ast2.Field, names []string) bool {
 		expr_89 = false
 	} else {
 		var expr_88 bool
-		field_87 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
+		field_87 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
 		expr_88 = typeUsesPreludeName(field_87.Type, names) || fieldsUsePreludeName(sliceDrop[ast2.Field](fields, 1), names)
 		expr_89 = expr_88
 	}
@@ -308,7 +308,7 @@ func variantsUsePreludeName(variants []ast2.Variant, names []string) bool {
 		expr_92 = false
 	} else {
 		var expr_91 bool
-		variant_90 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
+		variant_90 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
 		expr_91 = typeExprsUsePreludeName(variant_90.Fields, names) || variantsUsePreludeName(sliceDrop[ast2.Variant](variants, 1), names)
 		expr_92 = expr_91
 	}
@@ -320,7 +320,7 @@ func constraintsUsePreludeName(constraints []ast2.Constraint, names []string) bo
 		expr_95 = false
 	} else {
 		var expr_94 bool
-		constraint_93 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraints, 0), ast2.Constraint{Name: "", BindName: None[string](), Args: []ast2.TypeExpr([]ast2.TypeExpr{})})
+		constraint_93 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraints, 0), ast2.Constraint{Name: "", BindName: None[string](), Args: []ast2.TypeExpr([]ast2.TypeExpr{})})
 		expr_94 = containsString(names, constraint_93.Name) || typeExprsUsePreludeName(constraint_93.Args, names) || constraintsUsePreludeName(sliceDrop[ast2.Constraint](constraints, 1), names)
 		expr_95 = expr_94
 	}
@@ -332,7 +332,7 @@ func funcSigsUsePreludeName(sigs []ast2.FuncSig, names []string) bool {
 		expr_98 = false
 	} else {
 		var expr_97 bool
-		sig_96 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sigs, 0), ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string([]string{}), Params: []ast2.Param([]ast2.Param{}), Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint([]ast2.Constraint{})})
+		sig_96 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sigs, 0), ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string([]string{}), Params: []ast2.Param([]ast2.Param{}), Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint([]ast2.Constraint{})})
 		expr_97 = paramsUsePreludeName(sig_96.Params, names) || optionTypeUsesPreludeName(sig_96.Ret, names) || constraintsUsePreludeName(sig_96.Using, names) || funcSigsUsePreludeName(sliceDrop[ast2.FuncSig](sigs, 1), names)
 		expr_98 = expr_97
 	}
@@ -344,7 +344,7 @@ func implMethodsUsePreludeName(methods []ast2.ImplMethod, names []string) bool {
 		expr_101 = false
 	} else {
 		var expr_100 bool
-		method_99 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), ast2.ImplMethod{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string([]string{}), Params: []ast2.Param([]ast2.Param{}), Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint([]ast2.Constraint{})}, Body: ast2.EmptyExpr()})
+		method_99 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), ast2.ImplMethod{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string([]string{}), Params: []ast2.Param([]ast2.Param{}), Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint([]ast2.Constraint{})}, Body: ast2.EmptyExpr()})
 		expr_100 = funcSigsUsePreludeName([]ast2.FuncSig{method_99.Sig}, names) || exprUsesPreludeName(method_99.Body, names) || implMethodsUsePreludeName(sliceDrop[ast2.ImplMethod](methods, 1), names)
 		expr_101 = expr_100
 	}
@@ -473,7 +473,7 @@ func exprsUsePreludeName(exprs []ast2.Expr, names []string) bool {
 		expr_124 = false
 	} else {
 		var expr_123 bool
-		expr_122 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(exprs, 0), ast2.EmptyExpr())
+		expr_122 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(exprs, 0), ast2.EmptyExpr())
 		expr_123 = exprUsesPreludeName(expr_122, names) || exprsUsePreludeName(sliceDrop[ast2.Expr](exprs, 1), names)
 		expr_124 = expr_123
 	}
@@ -485,7 +485,7 @@ func structLitFieldsUsePreludeName(fields []ast2.StructLitField, names []string)
 		expr_127 = false
 	} else {
 		var expr_126 bool
-		field_125 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.StructLitField{Name: "", Value: ast2.EmptyExpr()})
+		field_125 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.StructLitField{Name: "", Value: ast2.EmptyExpr()})
 		expr_126 = exprUsesPreludeName(field_125.Value, names) || structLitFieldsUsePreludeName(sliceDrop[ast2.StructLitField](fields, 1), names)
 		expr_127 = expr_126
 	}
@@ -497,7 +497,7 @@ func goOperandsUsePreludeName(operands []ast2.GoOperand, names []string) bool {
 		expr_130 = false
 	} else {
 		var expr_129 bool
-		operand_128 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0), ast2.GoOperand{Name: "", Value: ast2.EmptyExpr()})
+		operand_128 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0), ast2.GoOperand{Name: "", Value: ast2.EmptyExpr()})
 		expr_129 = exprUsesPreludeName(operand_128.Value, names) || goOperandsUsePreludeName(sliceDrop[ast2.GoOperand](operands, 1), names)
 		expr_130 = expr_129
 	}
@@ -509,7 +509,7 @@ func goTypeOperandsUsePreludeName(operands []ast2.GoTypeOperand, names []string)
 		expr_133 = false
 	} else {
 		var expr_132 bool
-		operand_131 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0), ast2.GoTypeOperand{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+		operand_131 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0), ast2.GoTypeOperand{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
 		expr_132 = typeUsesPreludeName(operand_131.Type, names) || goTypeOperandsUsePreludeName(sliceDrop[ast2.GoTypeOperand](operands, 1), names)
 		expr_133 = expr_132
 	}
@@ -524,7 +524,7 @@ func exprPairsUsePreludeName(pairs []struct {
 		expr_139 = false
 	} else {
 		var expr_138 bool
-		pair_134 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pairs, 0), struct {
+		pair_134 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pairs, 0), struct {
 			F0 ast2.Expr
 			F1 ast2.Expr
 		}{F0: ast2.EmptyExpr(), F1: ast2.EmptyExpr()})
@@ -545,7 +545,7 @@ func switchCasesUsePreludeName(cases []ast2.SwitchCase, names []string) bool {
 		expr_142 = false
 	} else {
 		var expr_141 bool
-		item_140 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), ast2.SwitchCase{Pattern: ast2.PatternWildcardPatternCtor(), Body: ast2.EmptyExpr()})
+		item_140 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), ast2.SwitchCase{Pattern: ast2.PatternWildcardPatternCtor(), Body: ast2.EmptyExpr()})
 		expr_141 = patternUsesPreludeName(item_140.Pattern, names) || exprUsesPreludeName(item_140.Body, names) || switchCasesUsePreludeName(sliceDrop[ast2.SwitchCase](cases, 1), names)
 		expr_142 = expr_141
 	}
@@ -578,7 +578,7 @@ func patternsUsePreludeName(patterns []ast2.Pattern, names []string) bool {
 		expr_149 = false
 	} else {
 		var expr_148 bool
-		pattern_147 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(patterns, 0), ast2.PatternWildcardPatternCtor())
+		pattern_147 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(patterns, 0), ast2.PatternWildcardPatternCtor())
 		expr_148 = patternUsesPreludeName(pattern_147, names) || patternsUsePreludeName(sliceDrop[ast2.Pattern](patterns, 1), names)
 		expr_149 = expr_148
 	}
@@ -590,7 +590,7 @@ func stmtsUsePreludeName(stmts []ast2.Stmt, names []string) bool {
 		expr_152 = false
 	} else {
 		var expr_151 bool
-		stmt_150 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(stmts, 0), ast2.StmtReturnStmtCtor())
+		stmt_150 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(stmts, 0), ast2.StmtReturnStmtCtor())
 		expr_151 = stmtUsesPreludeName(stmt_150, names) || stmtsUsePreludeName(sliceDrop[ast2.Stmt](stmts, 1), names)
 		expr_152 = expr_151
 	}
@@ -659,7 +659,7 @@ func letRecBindsUsePreludeName(bindings []ast2.LetRecBind, names []string) bool 
 		expr_165 = false
 	} else {
 		var expr_164 bool
-		bind_163 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, 0), ast2.LetRecBind{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Value: ast2.EmptyExpr()})
+		bind_163 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, 0), ast2.LetRecBind{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Value: ast2.EmptyExpr()})
 		expr_164 = typeUsesPreludeName(bind_163.Type, names) || exprUsesPreludeName(bind_163.Value, names) || letRecBindsUsePreludeName(sliceDrop[ast2.LetRecBind](bindings, 1), names)
 		expr_165 = expr_164
 	}
@@ -671,7 +671,7 @@ func needsHKTDecls(decls []ast2.Decl) bool {
 		expr_178 = false
 	} else {
 		var expr_177 bool
-		head_166 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		head_166 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 		var expr_175 bool
 		if v_62, ok := head_166.(ast2.DeclTypeAliasDecl); ok {
 			var expr_174 bool
@@ -732,7 +732,7 @@ func hasHKTTypeParam(tps []string) bool {
 		expr_181 = false
 	} else {
 		var expr_180 bool
-		current_179 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tps, 0), "")
+		current_179 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tps, 0), "")
 		expr_180 = strings.Index(current_179, "[") >= 0 || hasHKTTypeParam(sliceDrop[string](tps, 1))
 		expr_181 = expr_180
 	}
@@ -752,7 +752,7 @@ func typedDeclsForInput(sources []typeinference2.PkgDeclSource, byPath map[strin
 			var expr_186 []ast2.Decl
 			var expr_185 []ast2.Decl
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sources) == 1 {
-				expr_185 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sources, 0), typeinference2.PkgDeclSource{Path: "", Decls: []ast2.Decl{}}).Decls
+				expr_185 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sources, 0), typeinference2.PkgDeclSource{Path: "", Decls: []ast2.Decl{}}).Decls
 			} else {
 				expr_185 = []ast2.Decl{}
 			}
@@ -773,7 +773,7 @@ func __mygo_mt_codegen2_generatefilesloop(files []SourceFileInput, info typeinfe
 				expr_204 = Ok[map[string]string, string](out)
 			} else {
 				var expr_203 Result[map[string]string, string]
-				input_197 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{}), SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos([]ast2.SourcePos{})}})
+				input_197 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{}), SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos([]ast2.SourcePos{})}})
 				typedDecls_198 := typedDeclsForInput(info.TypedDeclSources, typedByPath, input_197.Path)
 				src_199 := generateOneFile(input_197.File, info, allDecls, packageIndex, typedDecls_198, index == 0)
 				var expr_202 Result[map[string]string, string]
@@ -824,7 +824,7 @@ func __mygo_mt_codegen2_mergedeclslices(dst []ast2.Decl, src []ast2.Decl, __mygo
 				expr_210 = dst
 			} else {
 				var expr_209 []ast2.Decl
-				item_208 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(src, 0), ast2.DeclImportDeclCtor("", ""))
+				item_208 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(src, 0), ast2.DeclImportDeclCtor("", ""))
 				__mygo_next_0 := MygoIN5SliceM6Append(dst, item_208)
 				__mygo_next_1 := sliceDrop[ast2.Decl](src, 1)
 				dst = __mygo_next_0
@@ -848,7 +848,7 @@ func __mygo_mt_codegen2_mergefiledecls(files []SourceFileInput, index int, acc [
 				expr_216 = acc
 			} else {
 				var expr_215 []ast2.Decl
-				input_214 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{}), SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos([]ast2.SourcePos{})}})
+				input_214 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl([]ast2.Decl{}), SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos([]ast2.SourcePos{})}})
 				__mygo_next_0 := files
 				__mygo_next_1 := index + 1
 				__mygo_next_2 := mergeDeclSlices(acc, input_214.File.Decls)
@@ -874,7 +874,7 @@ func __mygo_mt_codegen2_preludeimportnames(decls []ast2.Decl, names []string, __
 				expr_236 = names
 			} else {
 				var expr_235 []string
-				decl_227 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+				decl_227 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
 				var expr_233 []string
 				if v_76, ok := decl_227.(ast2.DeclTypeAliasDecl); ok {
 					var expr_232 []string
@@ -929,7 +929,7 @@ func __mygo_mt_codegen2_typeddeclsourcemap(sources []typeinference2.PkgDeclSourc
 				expr_242 = out
 			} else {
 				var expr_241 map[string][]ast2.Decl
-				source_240 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sources, index), typeinference2.PkgDeclSource{Path: "", Decls: []ast2.Decl{}})
+				source_240 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sources, index), typeinference2.PkgDeclSource{Path: "", Decls: []ast2.Decl{}})
 				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(out, source_240.Path, source_240.Decls)
 				__mygo_next_0 := sources
 				__mygo_next_1 := index + 1
@@ -956,7 +956,7 @@ func __mygo_mt_codegen2_variantimportnames(variants []ast2.Variant, names []stri
 				expr_248 = names
 			} else {
 				var expr_247 []string
-				variant_246 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
+				variant_246 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
 				__mygo_next_0 := sliceDrop[ast2.Variant](variants, 1)
 				__mygo_next_1 := MygoIN5SliceM6Append(names, variant_246.Name)
 				variants = __mygo_next_0

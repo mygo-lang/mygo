@@ -112,8 +112,8 @@ func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo, allDecls
   # typed declaration set plus externally supplied declarations (the prelude).
   # `fileTypedDecls` below still limits emitted Go declarations to this file.
   let visibleDecls = mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
-  let g = Ref.new(newGenerator2(file.PackageName, visibleDecls, info.GoPackages, info, packageIndex))
   let imports = collectImports(file.Decls)
+  let g = Ref.new(newGenerator2(file.PackageName, visibleDecls, imports, info.GoPackages, info, packageIndex))
   let decls = translateDeclsAst(g, fileTypedDecls, 0, [] as Slice[goast.Decl])
   switch decls
     case Err(msg) => Err(msg)
@@ -261,7 +261,7 @@ func exprUsesPreludeName(expr: ast2.Expr, names: Slice[String]) -> Bool
     case BinaryExpr(_, left, right) => exprUsesPreludeName(left, names) || exprUsesPreludeName(right, names)
     case IfExpr(cond, thenBody, elseBody) => exprUsesPreludeName(cond, names) || exprUsesPreludeName(thenBody, names) || exprUsesPreludeName(elseBody, names)
     case BlockExpr(stmts) => stmtsUsePreludeName(stmts, names)
-    case SwitchExpr(target, cases) => exprUsesPreludeName(target, names) || switchCasesUsePreludeName(cases, names)
+    case SwitchExpr(target, cases, _) => exprUsesPreludeName(target, names) || switchCasesUsePreludeName(cases, names)
     case FuncLitExpr(params, ret, body) => paramsUsePreludeName(params, names) || optionTypeUsesPreludeName(ret, names) || exprUsesPreludeName(body, names)
     case SliceLitExpr(items) => exprsUsePreludeName(items, names)
     case TypeAsExpr(value, typ) => exprUsesPreludeName(value, names) || typeUsesPreludeName(typ, names)

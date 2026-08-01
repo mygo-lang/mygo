@@ -1,6 +1,7 @@
 package codegen2
 
 import (
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
+	goast "github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 	"github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 	. "github.com/mygo-lang/mygo/prelude"
 )
@@ -33,6 +35,291 @@ func TestSliceDropReturnsSuffixView(t *testing.T) {
 	}
 	if got := sliceDrop(items, len(items)); len(got) != 0 {
 		t.Fatalf("sliceDrop(items, len(items)) = %v, want empty", got)
+	}
+}
+
+func TestGenerateSourceDispatchesMethodCallInsideAssignment(t *testing.T) {
+	src := `package sample
+
+impl[T] Slice[T]
+  func Append(items: Slice[T], item: T) -> Slice[T]
+    items
+  end
+end
+
+func update() -> Slice[String]
+  var items: Slice[String] = []
+  items = items.Append("first")
+  items
+end
+`
+	generated := GenerateSource(src)
+	code, ok := generated.(ResultOk[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", generated)
+	}
+	if !strings.Contains(code.F0, `items = MygoIN5SliceM6Append(items, "first")`) {
+		t.Fatalf("assignment did not dispatch Append through its impl helper:\n%s", code.F0)
+	}
+	if strings.Contains(code.F0, `items.Append("first")`) {
+		t.Fatalf("assignment retained invalid Go selector call:\n%s", code.F0)
+	}
+}
+
+func TestGenerateSourceDiscardsFFIReturnValuesInUnderscoreBinding(t *testing.T) {
+	src := `package sample
+
+import fmt "go:fmt"
+
+func main() -> ()
+  let _ = fmt.Println("ok")
+end
+`
+	parsed := parseSourceAsAst2(src)
+	file, ok := parsed.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
+	}
+	main := file.F0.Decls[1].(ast2.DeclFuncDecl)
+	block := main.F4.Kind.(ast2.ExprKindBlockExpr)
+	bind := block.F0[0].(ast2.StmtLetStmt).F0
+	ctx := &[]egCtx{newEgCtx()}[0]
+	ctx.goPackages = []typeinference2.GoPackageEntry{{
+		Alias: "fmt",
+		Path:  "fmt",
+		Funcs: []typeinference2.GoFuncSignature{{
+			Name: "Println", Results: []string{"int", "error"}, Variadic: true,
+		}},
+	}}
+	lowered := translateAstBinding(bind, ctx)
+	result, ok := lowered.(ResultOk[[]goast.Stmt, string])
+	if !ok {
+		t.Fatalf("discard lowering failed: %v", lowered)
+	}
+	if len(result.F0) != 1 {
+		t.Fatalf("discard lowering emitted %d statements, want one direct call", len(result.F0))
+	}
+	exprStmt, ok := result.F0[0].(*ast.ExprStmt)
+	if !ok {
+		t.Fatalf("discard lowering produced %T, want expression statement", result.F0[0])
+	}
+	if _, ok := exprStmt.X.(*ast.CallExpr); !ok {
+		t.Fatalf("discard lowering produced %T, want direct Go call", exprStmt.X)
+	}
+}
+
+func TestGenerateFilesKeepsInferredFFIResultTypeForSwitch(t *testing.T) {
+	src := `package sample
+
+import strconv "go:strconv"
+
+enum Result[A, E]
+  Ok(A)
+  Err(E)
+end
+
+func parse() -> Int
+  let result = strconv.ParseInt("ff", 16, 32)
+  switch result
+    case Ok(value) => value as Int
+    case Err(_) => 0
+  end
+end
+`
+	parsed := parseSourceAsAst2(src)
+	file, ok := parsed.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
+	}
+	fileWithIDs := ast2.AssignFileExprIDs(file.F0)
+	path := "ffi-result.mygo"
+	infoResult := typeinference2.InferPackageWithGoPackages(
+		[]typeinference2.PkgDeclSource{{Path: path, Decls: fileWithIDs.Decls}},
+		[]typeinference2.GoPackageEntry{{
+			Alias: "strconv",
+			Path:  "go:strconv",
+			Funcs: []typeinference2.GoFuncSignature{{
+				Name: "ParseInt", Params: []string{"string", "int", "int"}, Results: []string{"int64", "error"},
+			}},
+		}},
+	)
+	info, ok := infoResult.(ResultOk[typeinference2.PackageInfo, string])
+	if !ok {
+		t.Fatalf("InferPackageWithGoPackages failed: %v", infoResult)
+	}
+	generated := GenerateFiles([]SourceFileInput{{Path: path, File: fileWithIDs}}, info.F0)
+	result, ok := generated.(ResultOk[map[string]string, string])
+	if !ok {
+		t.Fatalf("GenerateFiles failed: %v", generated)
+	}
+	code := result.F0[sourceToGenName(path)]
+	if !strings.Contains(code, "result :=") || !strings.Contains(code, "ResultOk[int64, error]") {
+		t.Fatalf("generated switch lost FFI Result type:\n%s", code)
+	}
+}
+
+func TestGenerateFilesKeepsInferredFFIResultTypeInNestedFunction(t *testing.T) {
+	src := `package sample
+
+import strconv "go:strconv"
+
+enum Result[A, E]
+  Ok(A)
+  Err(E)
+end
+
+func parser() -> func() -> Int
+  func() -> Int
+    let result = strconv.ParseInt("ff", 16, 32)
+    switch result
+      case Ok(value) => value as Int
+      case Err(_) => 0
+    end
+  end
+end
+`
+	parsed := parseSourceAsAst2(src)
+	file, ok := parsed.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
+	}
+	fileWithIDs := ast2.AssignFileExprIDs(file.F0)
+	path := "nested-ffi-result.mygo"
+	infoResult := typeinference2.InferPackageWithGoPackages(
+		[]typeinference2.PkgDeclSource{{Path: path, Decls: fileWithIDs.Decls}},
+		[]typeinference2.GoPackageEntry{{
+			Alias: "strconv", Path: "go:strconv",
+			Funcs: []typeinference2.GoFuncSignature{{
+				Name: "ParseInt", Params: []string{"string", "int", "int"}, Results: []string{"int64", "error"},
+			}},
+		}},
+	)
+	info, ok := infoResult.(ResultOk[typeinference2.PackageInfo, string])
+	if !ok {
+		t.Fatalf("InferPackageWithGoPackages failed: %v", infoResult)
+	}
+	generated := GenerateFiles([]SourceFileInput{{Path: path, File: fileWithIDs}}, info.F0)
+	if _, ok := generated.(ResultOk[map[string]string, string]); !ok {
+		t.Fatalf("GenerateFiles failed: %v", generated)
+	}
+}
+
+func TestGenerateFilesKeepsFFIResultTypeWithExternalPrelude(t *testing.T) {
+	mainSource := `package sample
+
+import strconv "go:strconv"
+
+func parse() -> Int
+  let result = strconv.ParseInt("ff", 16, 32)
+  switch result
+    case Ok(value) => value as Int
+    case Err(_) => 0
+  end
+end
+`
+	externalSource := `package prelude
+
+enum Result[A, E]
+  Ok(A)
+  Err(E)
+end
+`
+	mainParsed := parseSourceAsAst2(mainSource)
+	externalParsed := parseSourceAsAst2(externalSource)
+	mainResult, mainOK := mainParsed.(ResultOk[ast2.File, string])
+	externalResult, externalOK := externalParsed.(ResultOk[ast2.File, string])
+	if !mainOK || !externalOK {
+		t.Fatalf("parse failed: main=%v external=%v", mainParsed, externalParsed)
+	}
+	mainFile := ast2.AssignFileExprIDs(mainResult.F0)
+	externalFile := ast2.AssignFileExprIDs(externalResult.F0)
+	path := "external-ffi-result.mygo"
+	infoResult := typeinference2.InferPackageWithExternal(
+		[]typeinference2.PkgDeclSource{{Path: path, Decls: mainFile.Decls}},
+		[]typeinference2.PkgDeclSource{{Path: "prelude.mygo", Decls: externalFile.Decls}},
+		[]typeinference2.GoPackageEntry{{
+			Alias: "strconv", Path: "go:strconv",
+			Funcs: []typeinference2.GoFuncSignature{{
+				Name: "ParseInt", Params: []string{"string", "int", "int"}, Results: []string{"int64", "error"},
+			}},
+		}},
+		[]typeinference2.MyGoPackageInfo{},
+	)
+	info, ok := infoResult.(ResultOk[typeinference2.PackageInfo, string])
+	if !ok {
+		t.Fatalf("InferPackageWithExternal failed: %v", infoResult)
+	}
+	generated := GenerateFiles([]SourceFileInput{{Path: path, File: mainFile}}, info.F0)
+	if _, ok := generated.(ResultOk[map[string]string, string]); !ok {
+		t.Fatalf("GenerateFiles failed: %v", generated)
+	}
+}
+
+func TestGenerateFilesPreservesFFIMultiReturnForTupleLet(t *testing.T) {
+	src := `package sample
+
+import strconv "go:strconv"
+
+func parse() -> Int
+  let (value, _) = strconv.ParseInt("ff", 16, 32)
+  value as Int
+end
+`
+	parsed := parseSourceAsAst2(src)
+	file, ok := parsed.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
+	}
+	fileWithIDs := ast2.AssignFileExprIDs(file.F0)
+	path := "ffi-tuple.mygo"
+	infoResult := typeinference2.InferPackageWithGoPackages(
+		[]typeinference2.PkgDeclSource{{Path: path, Decls: fileWithIDs.Decls}},
+		[]typeinference2.GoPackageEntry{{
+			Alias: "strconv", Path: "go:strconv",
+			Funcs: []typeinference2.GoFuncSignature{{
+				Name: "ParseInt", Params: []string{"string", "int", "int"}, Results: []string{"int64", "error"},
+			}},
+		}},
+	)
+	info, ok := infoResult.(ResultOk[typeinference2.PackageInfo, string])
+	if !ok {
+		t.Fatalf("InferPackageWithGoPackages failed: %v", infoResult)
+	}
+	generated := GenerateFiles([]SourceFileInput{{Path: path, File: fileWithIDs}}, info.F0)
+	result, ok := generated.(ResultOk[map[string]string, string])
+	if !ok {
+		t.Fatalf("GenerateFiles failed: %v", generated)
+	}
+	code := result.F0[sourceToGenName(path)]
+	if !strings.Contains(code, "value, _ := strconv.ParseInt") {
+		t.Fatalf("tuple binding did not preserve Go multi-return call:\n%s", code)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "ffi-tuple.gen.go", code, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
+
+func TestGenerateSourceUsesDictionaryForFunctionUsingConstraint(t *testing.T) {
+	src := `package sample
+
+interface Show[A]
+  func Show(value: A) -> String
+end
+
+func render[A](value: A) -> String using Show[A]
+  value.Show()
+end
+`
+	generated := GenerateSource(src)
+	code, ok := generated.(ResultOk[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", generated)
+	}
+	if !strings.Contains(code.F0, "return ShowFn(value)") {
+		t.Fatalf("using-constrained method call did not use its dictionary:\n%s", code.F0)
+	}
+	if strings.Contains(code.F0, "value.Show()") {
+		t.Fatalf("using-constrained method call remained a Go selector:\n%s", code.F0)
 	}
 }
 
@@ -897,5 +1184,53 @@ end
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", result.F0, 0); err != nil {
 		t.Fatalf("generated Go is invalid: %v\n%s", err, result.F0)
+	}
+}
+
+func TestGenerateSourceInfersOmittedGenericStructLiteralArguments(t *testing.T) {
+	src := `package sample
+
+struct Pair[A]
+  first: A
+  second: A
+end
+
+func makePair() -> Pair[Int]
+  Pair { first: 1, second: 2 }
+end
+`
+	got := GenerateSource(src)
+	result, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	if !strings.Contains(result.F0, "return Pair[int]{First: 1, Second: 2}") {
+		t.Fatalf("generated inferred generic struct literal lost type arguments:\n%s", result.F0)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", result.F0, 0); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, result.F0)
+	}
+}
+
+func TestGenerateSourceInfersGenericStructLiteralArgumentsFromFields(t *testing.T) {
+	src := `package sample
+
+struct Pair[A]
+  first: A
+  second: A
+end
+
+func demo() -> ()
+  let pair = Pair { first: 1, second: 2 }
+  ()
+end
+`
+	got := GenerateSource(src)
+	result, yes := got.(ResultOk[string, string])
+	if !yes {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	if !strings.Contains(result.F0, "pair := Pair[int]{First: 1, Second: 2}") {
+		t.Fatalf("field values did not infer Pair[Int]:\n%s", result.F0)
 	}
 }
