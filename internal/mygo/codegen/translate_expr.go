@@ -437,7 +437,9 @@ func (g *gen) translateExprResult(e Expr, ctx *egCtx, expected string) (translat
 		if !isUnitGoType(expected) {
 			for _, c := range switchExpr.Cases {
 				if typ := switchBodyType(c.Body, g, ctx); typ != "" {
-					if expected == "" || !sameSwitchResultType(expected, typ, g) {
+					// Preserve an enclosing annotation/return type.  It provides
+					// the element type for otherwise ambiguous empty literals.
+					if expected == "" {
 						expected = typ
 					}
 					break

@@ -5,6 +5,7 @@ import (
 	"go/printer"
 	"go/token"
 	"reflect"
+	"strings"
 	"testing"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
@@ -208,4 +209,41 @@ func TestTranslateSwitchUsesIfElse(t *testing.T) {
 			t.Errorf("translateSwitch() type = %q, want empty for statement form", typ)
 		}
 	})
+}
+
+func TestTranslateSwitchPreservesExpectedTypeForEmptySlices(t *testing.T) {
+	g := &gen{typedInfo: &typeinference.TypedInfo{ExprTypes: map[Expr]typeinference.MonoType{}}}
+	ctx := &egCtx{
+		locals:      map[string]string{},
+		bindings:    map[string]string{},
+		mutable:     map[string]bool{},
+		typeParams:  map[string]struct{}{},
+		sourceTypes: map[string]string{},
+	}
+	expected := "[]goast.Expr"
+	switchExpr := &SwitchExpr{
+		Target: &LiteralExpr{Kind: "number", Value: "0"},
+		Cases: []SwitchCase{
+			{Pattern: &LiteralPattern{Kind: "number", Value: "0"}, Body: &SliceLitExpr{}},
+			{Pattern: &WildcardPattern{}, Body: &SliceLitExpr{}},
+		},
+	}
+
+	result, err := g.translateSwitch(switchExpr, ctx, expected)
+	if err != nil {
+		t.Fatalf("translateSwitch() error = %v", err)
+	}
+	if result.Type != expected {
+		t.Fatalf("translateSwitch() type = %q, want %q", result.Type, expected)
+	}
+
+	var buf bytes.Buffer
+	for _, stmt := range result.Stmts {
+		if err := printer.Fprint(&buf, token.NewFileSet(), stmt); err != nil {
+			t.Fatalf("printer.Fprint() error = %v", err)
+		}
+	}
+	if got := buf.String(); got == "" || !strings.Contains(got, "[]goast.Expr{}") {
+		t.Fatalf("generated switch did not preserve empty-slice type %q:\n%s", expected, got)
+	}
 }
