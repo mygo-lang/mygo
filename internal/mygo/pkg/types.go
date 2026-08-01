@@ -22,6 +22,10 @@ type Package struct {
 	Funcs          map[string]*ast.FuncDecl
 	Impls          []*ast.ImplDecl
 	DotImportTypes map[string]struct{}
+	// DotImportFuncs are callable bindings supplied by the automatically
+	// dot-imported prelude. They participate in type inference and validation,
+	// but are not local declarations and therefore must not be emitted again.
+	DotImportFuncs map[string]*ast.FuncDecl
 	Files          map[string][]ast.Decl // source file name -> declarations
 }
 

@@ -285,6 +285,9 @@ func preludeImportNames(p *Package) map[string]struct{} {
 	for name := range p.Interfaces {
 		names[name] = struct{}{}
 	}
+	for name := range p.DotImportFuncs {
+		names[name] = struct{}{}
+	}
 	delete(names, "")
 	return names
 }

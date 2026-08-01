@@ -240,6 +240,7 @@ func InferTyped(p *Package) (*typeinference.TypedInfo, error) {
 		Impls:          p.Impls,
 		DotImportTypes: p.DotImportTypes,
 		DotImportEnums: map[string]*ast.EnumDecl{},
+		DotImportFuncs: p.DotImportFuncs,
 	}
 	state := typeinference.NewInferState()
 	return typeinference.InferPackage(pkgInfo, state)

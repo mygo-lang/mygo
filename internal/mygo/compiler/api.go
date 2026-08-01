@@ -80,6 +80,7 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 		Impls:          mainPkg.Impls,
 		DotImportTypes: mainPkg.DotImportTypes,
 		DotImportEnums: mainDotImportEnums,
+		DotImportFuncs: mainPkg.DotImportFuncs,
 	}
 	expandTypeAliases(mainPkg)
 	infState := typeinference.NewInferState()
@@ -163,6 +164,7 @@ func compileDir(dir, workspaceRoot string, noPrelude bool) ([]string, error) {
 			Impls:          testPkg.Impls,
 			DotImportTypes: testPkg.DotImportTypes,
 			DotImportEnums: testDotImportEnums,
+			DotImportFuncs: testPkg.DotImportFuncs,
 		}
 		expandTypeAliases(testPkg)
 		testInfState := typeinference.NewInferState()
@@ -498,6 +500,20 @@ func mergeImportedDecls(userPkg, importedPkg *pkg.Package, conflictOnExisting bo
 	if userPkg.DotImportTypes == nil {
 		userPkg.DotImportTypes = map[string]struct{}{}
 	}
+	if userPkg.DotImportFuncs == nil {
+		userPkg.DotImportFuncs = map[string]*FuncDecl{}
+	}
+	// The prelude is dot-imported in generated Go. Keep its exported function
+	// signatures available to inference without adding declarations that the
+	// code generator would incorrectly emit in the importing package.
+	if conflictOnExisting {
+		for name, fn := range importedPkg.Funcs {
+			if existing, exists := userPkg.Funcs[name]; exists && existing != fn {
+				return common.ErrorAtPos("", 0, 0, "function %q conflicts with imported package %q", name, importedPkg.Name)
+			}
+			userPkg.DotImportFuncs[name] = fn
+		}
+	}
 	for name, st := range importedPkg.Structs {
 		userPkg.DotImportTypes[name] = struct{}{}
 		if _, exists := userPkg.Structs[name]; !exists {
@@ -638,6 +654,7 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, *pkg.Package, error)
 		Interfaces:     map[string]*InterfaceDecl{},
 		Funcs:          map[string]*FuncDecl{},
 		DotImportTypes: map[string]struct{}{},
+		DotImportFuncs: map[string]*FuncDecl{},
 	}
 	testPkg := &pkg.Package{
 		Dir:            dir,
@@ -652,6 +669,7 @@ func loadPackage(dir string, noPrelude bool) (*pkg.Package, *pkg.Package, error)
 		Interfaces:     map[string]*InterfaceDecl{},
 		Funcs:          map[string]*FuncDecl{},
 		DotImportTypes: map[string]struct{}{},
+		DotImportFuncs: map[string]*FuncDecl{},
 	}
 
 	var mainDecls, testDecls []Decl
