@@ -19,6 +19,8 @@ end
 func collectAstDecls(decls: Slice[ast2.Decl]) -> Slice[goast.Decl]
   decls.Fold([] as Slice[goast.Decl], func(out: Slice[goast.Decl], d: ast2.Decl) -> Slice[goast.Decl]
     switch d
+      case TypeAliasDecl(name, tps, target) => out.Append(translateTypeAstDecl(name, tps, target, true))
+      case TypeDecl(name, tps, target) => out.Append(translateTypeAstDecl(name, tps, target, false))
       case StructDecl(name, tps, fields) => out.Append(translateStructAstDecl(name, tps, fields))
       case InterfaceDecl(name, tps, methods) => out.Append(translateInterfaceAstDecl(name, tps, methods))
       case EnumDecl(name, tps, vars) => goast.AppendDecls(out, translateEnumAstDecls(name, tps, vars))
@@ -35,6 +37,8 @@ func translateDeclsAst(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, 
   else
     let decl: ast2.Decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     switch decl
+      case TypeAliasDecl(name, tps, target) => translateDeclsAst(g, decls, index + 1, out.Append(translateTypeAstDecl(name, tps, target, true)))
+      case TypeDecl(name, tps, target) => translateDeclsAst(g, decls, index + 1, out.Append(translateTypeAstDecl(name, tps, target, false)))
       case StructDecl(name, tps, fields) => translateDeclsAst(g, decls, index + 1, out.Append(translateStructAstDecl(name, tps, fields)))
       # Typeclass interfaces are compile-time declarations. Like the legacy
       # backend, codegen2 emits impl helpers rather than Go interface types.
@@ -55,6 +59,11 @@ func translateDeclsAst(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, 
         end
     end
   end
+end
+
+func translateTypeAstDecl(name: String, tps: Slice[String], target: ast2.TypeExpr, isAlias: Bool) -> goast.Decl
+  let ctx = newEgCtxWithTypeParams(tps)
+  goast.TypeDeclFromParts(sanitizeIdent(name), tps, goType(target, ctx.typeParams), isAlias)
 end
 
 func translateImplAstDecl(g: Ref[Generator2], tps: Slice[String], target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], methods: Slice[ast2.ImplMethod]) -> Result[Slice[goast.Decl], String]

@@ -151,6 +151,48 @@ end
 	}
 }
 
+func TestInferTypeAliasIsInterchangeableButDefinedTypeIsNot(t *testing.T) {
+	alias := parser2.ParseFile(`package sample
+
+type UserID = Int
+
+func accepts(value: UserID) -> Int
+  value
+end
+
+func use() -> Int
+  accepts(1)
+end
+`)
+	aliasFile, ok := alias.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile alias failed: %v", alias)
+	}
+	if got := InferFile(aliasFile.F0); !isPackageInfo(got) {
+		t.Fatalf("type alias did not unify with its target: %v", got)
+	}
+
+	defined := parser2.ParseFile(`package sample
+
+type UserID Int
+
+func accepts(value: UserID) -> Int
+  0
+end
+
+func use() -> Int
+  accepts(1)
+end
+`)
+	definedFile, ok := defined.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile defined type failed: %v", defined)
+	}
+	if _, ok := InferFile(definedFile.F0).(ResultErr[PackageInfo, string]); !ok {
+		t.Fatal("defined type unexpectedly unified with its underlying Int")
+	}
+}
+
 func isPackageInfo(value Result[PackageInfo, string]) bool {
 	_, ok := value.(ResultOk[PackageInfo, string])
 	return ok

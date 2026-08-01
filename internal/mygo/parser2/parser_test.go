@@ -47,6 +47,24 @@ func TestParseFileParsesSelf(t *testing.T) {
 	}
 }
 
+func TestParseTypeAliasAndDefinedType(t *testing.T) {
+	parsed := ParseFile(`package sample
+
+type UserID = Int
+type AccountID Int
+`)
+	file, ok := parsed.(ResultOk[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	if _, ok := file.F0.Decls[0].(ast2.DeclTypeAliasDecl); !ok {
+		t.Fatalf("decl[0] = %T, want DeclTypeAliasDecl", file.F0.Decls[0])
+	}
+	if _, ok := file.F0.Decls[1].(ast2.DeclTypeDecl); !ok {
+		t.Fatalf("decl[1] = %T, want DeclTypeDecl", file.F0.Decls[1])
+	}
+}
+
 func TestParseFileParsesPrelude(t *testing.T) {
 	_, thisFile, _, ok := runtime.Caller(0)
 	if !ok {

@@ -21,6 +21,9 @@ end
 
 enum Decl
   ImportDecl(String, String)
+  # `type A = B` preserves B's identity; `type A B` is a distinct nominal type.
+  TypeAliasDecl(String, Slice[String], TypeExpr)
+  TypeDecl(String, Slice[String], TypeExpr)
   # Keep Body before Using so the established generated Go API retains F4.
   FuncDecl(String, Slice[String], Slice[Param], Option[TypeExpr], Expr, Slice[Constraint])
   StructDecl(String, Slice[String], Slice[Field])

@@ -168,12 +168,26 @@ end
 func decl() -> ps.Parser[ast2.Decl]
   ps.PChoice([
     ps.PAttempt(importDecl()),
+    ps.PAttempt(typeDecl()),
     ps.PAttempt(structDecl()),
     ps.PAttempt(enumDecl()),
     ps.PAttempt(interfaceDecl()),
     ps.PAttempt(implDecl()),
     funcDecl(),
   ])
+end
+
+func typeDecl() -> ps.Parser[ast2.Decl]
+  ps.PBind(kw("type"), func(_: String) -> ps.Parser[ast2.Decl]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Decl]
+      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[ast2.Decl]
+        ps.PChoice([
+          ps.PMap(ps.PThen(sym("="), typeExpr()), func(target: ast2.TypeExpr) -> ast2.Decl ast2.Decl.TypeAliasDecl(name, tps, target) end),
+          ps.PMap(typeExpr(), func(target: ast2.TypeExpr) -> ast2.Decl ast2.Decl.TypeDecl(name, tps, target) end),
+        ])
+      end)
+    end)
+  end)
 end
 
 func importDecl() -> ps.Parser[ast2.Decl]

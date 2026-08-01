@@ -31,6 +31,30 @@ func DeclImportDeclCtor(v0 string, v1 string) Decl {
 	return DeclImportDecl{F0: v0, F1: v1}
 }
 
+type DeclTypeAliasDecl struct {
+	F0 string
+	F1 []string
+	F2 TypeExpr
+}
+
+func (DeclTypeAliasDecl) isDecl() {
+}
+func DeclTypeAliasDeclCtor(v0 string, v1 []string, v2 TypeExpr) Decl {
+	return DeclTypeAliasDecl{F0: v0, F1: v1, F2: v2}
+}
+
+type DeclTypeDecl struct {
+	F0 string
+	F1 []string
+	F2 TypeExpr
+}
+
+func (DeclTypeDecl) isDecl() {
+}
+func DeclTypeDeclCtor(v0 string, v1 []string, v2 TypeExpr) Decl {
+	return DeclTypeDecl{F0: v0, F1: v1, F2: v2}
+}
+
 type DeclFuncDecl struct {
 	F0 string
 	F1 []string

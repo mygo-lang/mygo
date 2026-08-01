@@ -804,6 +804,20 @@ func Type(name string, typ ast.Expr) ast.Decl {
 	return &ast.GenDecl{Tok: token.TYPE, Specs: []ast.Spec{&ast.TypeSpec{Name: ast.NewIdent(name), Type: typ}}}
 }
 
+// TypeDeclFromParts builds either a Go alias (`type A = B`) or a distinct
+// defined type (`type A B`), retaining source generic parameters.
+func TypeDeclFromParts(name string, typeParams []string, sourceType string, alias bool) ast.Decl {
+	typ, err := parser.ParseExpr(sourceType)
+	if err != nil {
+		panic(fmt.Sprintf("invalid generated type %q: %v", sourceType, err))
+	}
+	spec := &ast.TypeSpec{Name: ast.NewIdent(name), Type: typ, TypeParams: typeParamsFieldList(typeParams)}
+	if alias {
+		spec.Assign = token.Pos(1)
+	}
+	return &ast.GenDecl{Tok: token.TYPE, Specs: []ast.Spec{spec}}
+}
+
 func Var(name string, typ, value ast.Expr) ast.Stmt {
 	spec := &ast.ValueSpec{Names: []*ast.Ident{ast.NewIdent(name)}, Type: typ}
 	if value != nil {

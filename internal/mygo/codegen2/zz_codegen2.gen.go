@@ -189,329 +189,353 @@ func declsNeedPreludeImport(decls []ast2.Decl, external []ast2.Decl) bool {
 	return declsUsePreludeName(decls, names_43)
 }
 func preludeImportNames(decls []ast2.Decl, names []string) []string {
-	var expr_51 []string
+	var expr_53 []string
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
-		expr_51 = names
+		expr_53 = names
 	} else {
-		var expr_50 []string
+		var expr_52 []string
 		decl_44 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
-		var expr_48 []string
-		if v_12, ok := decl_44.(ast2.DeclEnumDecl); ok {
-			var expr_47 []string
-			expr_47 = variantImportNames(v_12.F2, MygoIN5SliceM6Append(names, v_12.F0))
-			expr_48 = expr_47
+		var expr_50 []string
+		if v_14, ok := decl_44.(ast2.DeclTypeAliasDecl); ok {
+			var expr_49 []string
+			expr_49 = MygoIN5SliceM6Append(names, v_14.F0)
+			expr_50 = expr_49
 		} else {
-			if v_11, ok := decl_44.(ast2.DeclInterfaceDecl); ok {
-				var expr_46 []string
-				expr_46 = MygoIN5SliceM6Append(names, v_11.F0)
-				expr_48 = expr_46
+			if v_13, ok := decl_44.(ast2.DeclTypeDecl); ok {
+				var expr_48 []string
+				expr_48 = MygoIN5SliceM6Append(names, v_13.F0)
+				expr_50 = expr_48
 			} else {
-				{
-					var expr_45 []string
-					expr_45 = names
-					expr_48 = expr_45
+				if v_12, ok := decl_44.(ast2.DeclEnumDecl); ok {
+					var expr_47 []string
+					expr_47 = variantImportNames(v_12.F2, MygoIN5SliceM6Append(names, v_12.F0))
+					expr_50 = expr_47
+				} else {
+					if v_11, ok := decl_44.(ast2.DeclInterfaceDecl); ok {
+						var expr_46 []string
+						expr_46 = MygoIN5SliceM6Append(names, v_11.F0)
+						expr_50 = expr_46
+					} else {
+						{
+							var expr_45 []string
+							expr_45 = names
+							expr_50 = expr_45
+						}
+					}
 				}
 			}
 		}
-		next_49 := expr_48
-		expr_50 = preludeImportNames(sliceDrop[ast2.Decl](decls, 1), next_49)
-		expr_51 = expr_50
+		next_51 := expr_50
+		expr_52 = preludeImportNames(sliceDrop[ast2.Decl](decls, 1), next_51)
+		expr_53 = expr_52
 	}
-	return expr_51
+	return expr_53
 }
 func variantImportNames(variants []ast2.Variant, names []string) []string {
-	var expr_54 []string
+	var expr_56 []string
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(variants) == 0 {
-		expr_54 = names
+		expr_56 = names
 	} else {
-		var expr_53 []string
-		variant_52 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
-		expr_53 = variantImportNames(sliceDrop[ast2.Variant](variants, 1), MygoIN5SliceM6Append(names, variant_52.Name))
-		expr_54 = expr_53
+		var expr_55 []string
+		variant_54 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
+		expr_55 = variantImportNames(sliceDrop[ast2.Variant](variants, 1), MygoIN5SliceM6Append(names, variant_54.Name))
+		expr_56 = expr_55
 	}
-	return expr_54
+	return expr_56
 }
 func declsUsePreludeName(decls []ast2.Decl, names []string) bool {
-	var expr_57 bool
+	var expr_59 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
-		expr_57 = false
+		expr_59 = false
 	} else {
-		var expr_56 bool
-		decl_55 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
-		expr_56 = declUsesPreludeName(decl_55, names) || declsUsePreludeName(sliceDrop[ast2.Decl](decls, 1), names)
-		expr_57 = expr_56
+		var expr_58 bool
+		decl_57 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		expr_58 = declUsesPreludeName(decl_57, names) || declsUsePreludeName(sliceDrop[ast2.Decl](decls, 1), names)
+		expr_59 = expr_58
 	}
-	return expr_57
+	return expr_59
 }
 func declUsesPreludeName(decl ast2.Decl, names []string) bool {
-	var expr_64 bool
-	if v_17, ok := decl.(ast2.DeclFuncDecl); ok {
-		var expr_63 bool
-		expr_63 = paramsUsePreludeName(v_17.F2, names) || optionTypeUsesPreludeName(v_17.F3, names) || constraintsUsePreludeName(v_17.F5, names) || exprUsesPreludeName(v_17.F4, names)
-		expr_64 = expr_63
+	var expr_68 bool
+	if v_21, ok := decl.(ast2.DeclTypeAliasDecl); ok {
+		var expr_67 bool
+		expr_67 = typeUsesPreludeName(v_21.F2, names)
+		expr_68 = expr_67
 	} else {
-		if v_16, ok := decl.(ast2.DeclStructDecl); ok {
-			var expr_62 bool
-			expr_62 = fieldsUsePreludeName(v_16.F2, names)
-			expr_64 = expr_62
+		if v_20, ok := decl.(ast2.DeclTypeDecl); ok {
+			var expr_66 bool
+			expr_66 = typeUsesPreludeName(v_20.F2, names)
+			expr_68 = expr_66
 		} else {
-			if v_15, ok := decl.(ast2.DeclEnumDecl); ok {
-				var expr_61 bool
-				expr_61 = variantsUsePreludeName(v_15.F2, names)
-				expr_64 = expr_61
+			if v_19, ok := decl.(ast2.DeclFuncDecl); ok {
+				var expr_65 bool
+				expr_65 = paramsUsePreludeName(v_19.F2, names) || optionTypeUsesPreludeName(v_19.F3, names) || constraintsUsePreludeName(v_19.F5, names) || exprUsesPreludeName(v_19.F4, names)
+				expr_68 = expr_65
 			} else {
-				if v_14, ok := decl.(ast2.DeclInterfaceDecl); ok {
-					var expr_60 bool
-					expr_60 = funcSigsUsePreludeName(v_14.F2, names)
-					expr_64 = expr_60
+				if v_18, ok := decl.(ast2.DeclStructDecl); ok {
+					var expr_64 bool
+					expr_64 = fieldsUsePreludeName(v_18.F2, names)
+					expr_68 = expr_64
 				} else {
-					if v_13, ok := decl.(ast2.DeclImplDecl); ok {
-						var expr_59 bool
-						expr_59 = typeUsesPreludeName(v_13.F1, names) || optionTypeUsesPreludeName(v_13.F2, names) || implMethodsUsePreludeName(v_13.F3, names)
-						expr_64 = expr_59
+					if v_17, ok := decl.(ast2.DeclEnumDecl); ok {
+						var expr_63 bool
+						expr_63 = variantsUsePreludeName(v_17.F2, names)
+						expr_68 = expr_63
 					} else {
-						{
-							var expr_58 bool
-							expr_58 = false
-							expr_64 = expr_58
+						if v_16, ok := decl.(ast2.DeclInterfaceDecl); ok {
+							var expr_62 bool
+							expr_62 = funcSigsUsePreludeName(v_16.F2, names)
+							expr_68 = expr_62
+						} else {
+							if v_15, ok := decl.(ast2.DeclImplDecl); ok {
+								var expr_61 bool
+								expr_61 = typeUsesPreludeName(v_15.F1, names) || optionTypeUsesPreludeName(v_15.F2, names) || implMethodsUsePreludeName(v_15.F3, names)
+								expr_68 = expr_61
+							} else {
+								{
+									var expr_60 bool
+									expr_60 = false
+									expr_68 = expr_60
+								}
+							}
 						}
 					}
 				}
 			}
 		}
 	}
-	return expr_64
+	return expr_68
 }
 func typeUsesPreludeName(typ ast2.TypeExpr, names []string) bool {
-	var expr_70 bool
-	if v_21, ok := typ.(ast2.TypeExprNamedType); ok {
-		var expr_69 bool
-		expr_69 = containsString(names, v_21.F0) || typeExprsUsePreludeName(v_21.F1, names)
-		expr_70 = expr_69
+	var expr_74 bool
+	if v_25, ok := typ.(ast2.TypeExprNamedType); ok {
+		var expr_73 bool
+		expr_73 = containsString(names, v_25.F0) || typeExprsUsePreludeName(v_25.F1, names)
+		expr_74 = expr_73
 	} else {
-		if v_20, ok := typ.(ast2.TypeExprFuncType); ok {
-			var expr_68 bool
-			expr_68 = typeExprsUsePreludeName(v_20.F0, names) || typeUsesPreludeName(*v_20.F1, names)
-			expr_70 = expr_68
+		if v_24, ok := typ.(ast2.TypeExprFuncType); ok {
+			var expr_72 bool
+			expr_72 = typeExprsUsePreludeName(v_24.F0, names) || typeUsesPreludeName(*v_24.F1, names)
+			expr_74 = expr_72
 		} else {
-			if v_19, ok := typ.(ast2.TypeExprTupleType); ok {
-				var expr_67 bool
-				expr_67 = typeExprsUsePreludeName(v_19.F0, names)
-				expr_70 = expr_67
+			if v_23, ok := typ.(ast2.TypeExprTupleType); ok {
+				var expr_71 bool
+				expr_71 = typeExprsUsePreludeName(v_23.F0, names)
+				expr_74 = expr_71
 			} else {
-				if v_18, ok := typ.(ast2.TypeExprInlineGo); ok {
-					var expr_66 bool
-					expr_66 = typeUsesPreludeName(*v_18.F0, names)
-					expr_70 = expr_66
+				if v_22, ok := typ.(ast2.TypeExprInlineGo); ok {
+					var expr_70 bool
+					expr_70 = typeUsesPreludeName(*v_22.F0, names)
+					expr_74 = expr_70
 				} else {
 					{
-						var expr_65 bool
-						expr_65 = false
-						expr_70 = expr_65
+						var expr_69 bool
+						expr_69 = false
+						expr_74 = expr_69
 					}
 				}
 			}
 		}
 	}
-	return expr_70
+	return expr_74
 }
 func typeExprsUsePreludeName(types []ast2.TypeExpr, names []string) bool {
-	var expr_73 bool
+	var expr_77 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(types) == 0 {
-		expr_73 = false
+		expr_77 = false
 	} else {
-		var expr_72 bool
-		typ_71 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, 0), ast2.TypeExprUnitTypeCtor())
-		expr_72 = typeUsesPreludeName(typ_71, names) || typeExprsUsePreludeName(sliceDrop[ast2.TypeExpr](types, 1), names)
-		expr_73 = expr_72
+		var expr_76 bool
+		typ_75 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, 0), ast2.TypeExprUnitTypeCtor())
+		expr_76 = typeUsesPreludeName(typ_75, names) || typeExprsUsePreludeName(sliceDrop[ast2.TypeExpr](types, 1), names)
+		expr_77 = expr_76
 	}
-	return expr_73
+	return expr_77
 }
 func optionTypeUsesPreludeName(typ Option[ast2.TypeExpr], names []string) bool {
-	var expr_76 bool
-	if v_23, ok := typ.(OptionSome[ast2.TypeExpr]); ok {
-		var expr_75 bool
-		expr_75 = typeUsesPreludeName(v_23.F0, names)
-		expr_76 = expr_75
+	var expr_80 bool
+	if v_27, ok := typ.(OptionSome[ast2.TypeExpr]); ok {
+		var expr_79 bool
+		expr_79 = typeUsesPreludeName(v_27.F0, names)
+		expr_80 = expr_79
 	} else {
 		if _, ok := typ.(OptionNone[ast2.TypeExpr]); ok {
-			var expr_74 bool
-			expr_74 = false
-			expr_76 = expr_74
+			var expr_78 bool
+			expr_78 = false
+			expr_80 = expr_78
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_76
+	return expr_80
 }
 func paramsUsePreludeName(params []ast2.Param, names []string) bool {
-	var expr_79 bool
+	var expr_83 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
-		expr_79 = false
+		expr_83 = false
 	} else {
-		var expr_78 bool
-		param_77 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
-		expr_78 = typeUsesPreludeName(param_77.Type, names) || paramsUsePreludeName(sliceDrop[ast2.Param](params, 1), names)
-		expr_79 = expr_78
+		var expr_82 bool
+		param_81 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+		expr_82 = typeUsesPreludeName(param_81.Type, names) || paramsUsePreludeName(sliceDrop[ast2.Param](params, 1), names)
+		expr_83 = expr_82
 	}
-	return expr_79
+	return expr_83
 }
 func fieldsUsePreludeName(fields []ast2.Field, names []string) bool {
-	var expr_82 bool
+	var expr_86 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) == 0 {
-		expr_82 = false
+		expr_86 = false
 	} else {
-		var expr_81 bool
-		field_80 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
-		expr_81 = typeUsesPreludeName(field_80.Type, names) || fieldsUsePreludeName(sliceDrop[ast2.Field](fields, 1), names)
-		expr_82 = expr_81
+		var expr_85 bool
+		field_84 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Tag: None[string]()})
+		expr_85 = typeUsesPreludeName(field_84.Type, names) || fieldsUsePreludeName(sliceDrop[ast2.Field](fields, 1), names)
+		expr_86 = expr_85
 	}
-	return expr_82
+	return expr_86
 }
 func variantsUsePreludeName(variants []ast2.Variant, names []string) bool {
-	var expr_85 bool
+	var expr_89 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(variants) == 0 {
-		expr_85 = false
+		expr_89 = false
 	} else {
-		var expr_84 bool
-		variant_83 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
-		expr_84 = typeExprsUsePreludeName(variant_83.Fields, names) || variantsUsePreludeName(sliceDrop[ast2.Variant](variants, 1), names)
-		expr_85 = expr_84
+		var expr_88 bool
+		variant_87 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr([]ast2.TypeExpr{})})
+		expr_88 = typeExprsUsePreludeName(variant_87.Fields, names) || variantsUsePreludeName(sliceDrop[ast2.Variant](variants, 1), names)
+		expr_89 = expr_88
 	}
-	return expr_85
+	return expr_89
 }
 func constraintsUsePreludeName(constraints []ast2.Constraint, names []string) bool {
-	var expr_88 bool
+	var expr_92 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(constraints) == 0 {
-		expr_88 = false
+		expr_92 = false
 	} else {
-		var expr_87 bool
-		constraint_86 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraints, 0), ast2.Constraint{Name: "", BindName: None[string](), Args: []ast2.TypeExpr([]ast2.TypeExpr{})})
-		expr_87 = containsString(names, constraint_86.Name) || typeExprsUsePreludeName(constraint_86.Args, names) || constraintsUsePreludeName(sliceDrop[ast2.Constraint](constraints, 1), names)
-		expr_88 = expr_87
+		var expr_91 bool
+		constraint_90 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraints, 0), ast2.Constraint{Name: "", BindName: None[string](), Args: []ast2.TypeExpr([]ast2.TypeExpr{})})
+		expr_91 = containsString(names, constraint_90.Name) || typeExprsUsePreludeName(constraint_90.Args, names) || constraintsUsePreludeName(sliceDrop[ast2.Constraint](constraints, 1), names)
+		expr_92 = expr_91
 	}
-	return expr_88
+	return expr_92
 }
 func funcSigsUsePreludeName(sigs []ast2.FuncSig, names []string) bool {
-	var expr_91 bool
+	var expr_95 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sigs) == 0 {
-		expr_91 = false
+		expr_95 = false
 	} else {
-		var expr_90 bool
-		sig_89 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sigs, 0), ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string([]string{}), Params: []ast2.Param([]ast2.Param{}), Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint([]ast2.Constraint{})})
-		expr_90 = paramsUsePreludeName(sig_89.Params, names) || optionTypeUsesPreludeName(sig_89.Ret, names) || constraintsUsePreludeName(sig_89.Using, names) || funcSigsUsePreludeName(sliceDrop[ast2.FuncSig](sigs, 1), names)
-		expr_91 = expr_90
+		var expr_94 bool
+		sig_93 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sigs, 0), ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string([]string{}), Params: []ast2.Param([]ast2.Param{}), Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint([]ast2.Constraint{})})
+		expr_94 = paramsUsePreludeName(sig_93.Params, names) || optionTypeUsesPreludeName(sig_93.Ret, names) || constraintsUsePreludeName(sig_93.Using, names) || funcSigsUsePreludeName(sliceDrop[ast2.FuncSig](sigs, 1), names)
+		expr_95 = expr_94
 	}
-	return expr_91
+	return expr_95
 }
 func implMethodsUsePreludeName(methods []ast2.ImplMethod, names []string) bool {
-	var expr_94 bool
+	var expr_98 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) == 0 {
-		expr_94 = false
+		expr_98 = false
 	} else {
-		var expr_93 bool
-		method_92 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), ast2.ImplMethod{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string([]string{}), Params: []ast2.Param([]ast2.Param{}), Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint([]ast2.Constraint{})}, Body: ast2.EmptyExpr()})
-		expr_93 = funcSigsUsePreludeName([]ast2.FuncSig{method_92.Sig}, names) || exprUsesPreludeName(method_92.Body, names) || implMethodsUsePreludeName(sliceDrop[ast2.ImplMethod](methods, 1), names)
-		expr_94 = expr_93
+		var expr_97 bool
+		method_96 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), ast2.ImplMethod{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string([]string{}), Params: []ast2.Param([]ast2.Param{}), Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint([]ast2.Constraint{})}, Body: ast2.EmptyExpr()})
+		expr_97 = funcSigsUsePreludeName([]ast2.FuncSig{method_96.Sig}, names) || exprUsesPreludeName(method_96.Body, names) || implMethodsUsePreludeName(sliceDrop[ast2.ImplMethod](methods, 1), names)
+		expr_98 = expr_97
 	}
-	return expr_94
+	return expr_98
 }
 func exprUsesPreludeName(expr ast2.Expr, names []string) bool {
-	var expr_114 bool
-	if v_41, ok := expr.Kind.(ast2.ExprKindIdentExpr); ok {
-		var expr_113 bool
-		expr_113 = containsString(names, v_41.F0)
-		expr_114 = expr_113
+	var expr_118 bool
+	if v_45, ok := expr.Kind.(ast2.ExprKindIdentExpr); ok {
+		var expr_117 bool
+		expr_117 = containsString(names, v_45.F0)
+		expr_118 = expr_117
 	} else {
-		if v_40, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
-			var expr_112 bool
-			expr_112 = exprUsesPreludeName(v_40.F0, names) || typeExprsUsePreludeName(v_40.F1, names) || exprsUsePreludeName(v_40.F2, names)
-			expr_114 = expr_112
+		if v_44, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
+			var expr_116 bool
+			expr_116 = exprUsesPreludeName(v_44.F0, names) || typeExprsUsePreludeName(v_44.F1, names) || exprsUsePreludeName(v_44.F2, names)
+			expr_118 = expr_116
 		} else {
-			if v_39, ok := expr.Kind.(ast2.ExprKindDictionaryCallExpr); ok {
-				var expr_111 bool
-				expr_111 = exprUsesPreludeName(v_39.F1, names) || exprsUsePreludeName(v_39.F2, names)
-				expr_114 = expr_111
+			if v_43, ok := expr.Kind.(ast2.ExprKindDictionaryCallExpr); ok {
+				var expr_115 bool
+				expr_115 = exprUsesPreludeName(v_43.F1, names) || exprsUsePreludeName(v_43.F2, names)
+				expr_118 = expr_115
 			} else {
-				if v_38, ok := expr.Kind.(ast2.ExprKindFieldExpr); ok {
-					var expr_110 bool
-					expr_110 = exprUsesPreludeName(v_38.F0, names)
-					expr_114 = expr_110
+				if v_42, ok := expr.Kind.(ast2.ExprKindFieldExpr); ok {
+					var expr_114 bool
+					expr_114 = exprUsesPreludeName(v_42.F0, names)
+					expr_118 = expr_114
 				} else {
-					if v_37, ok := expr.Kind.(ast2.ExprKindUnaryExpr); ok {
-						var expr_109 bool
-						expr_109 = exprUsesPreludeName(v_37.F1, names)
-						expr_114 = expr_109
+					if v_41, ok := expr.Kind.(ast2.ExprKindUnaryExpr); ok {
+						var expr_113 bool
+						expr_113 = exprUsesPreludeName(v_41.F1, names)
+						expr_118 = expr_113
 					} else {
-						if v_36, ok := expr.Kind.(ast2.ExprKindBinaryExpr); ok {
-							var expr_108 bool
-							expr_108 = exprUsesPreludeName(v_36.F1, names) || exprUsesPreludeName(v_36.F2, names)
-							expr_114 = expr_108
+						if v_40, ok := expr.Kind.(ast2.ExprKindBinaryExpr); ok {
+							var expr_112 bool
+							expr_112 = exprUsesPreludeName(v_40.F1, names) || exprUsesPreludeName(v_40.F2, names)
+							expr_118 = expr_112
 						} else {
-							if v_35, ok := expr.Kind.(ast2.ExprKindIfExpr); ok {
-								var expr_107 bool
-								expr_107 = exprUsesPreludeName(v_35.F0, names) || exprUsesPreludeName(v_35.F1, names) || exprUsesPreludeName(v_35.F2, names)
-								expr_114 = expr_107
+							if v_39, ok := expr.Kind.(ast2.ExprKindIfExpr); ok {
+								var expr_111 bool
+								expr_111 = exprUsesPreludeName(v_39.F0, names) || exprUsesPreludeName(v_39.F1, names) || exprUsesPreludeName(v_39.F2, names)
+								expr_118 = expr_111
 							} else {
-								if v_34, ok := expr.Kind.(ast2.ExprKindBlockExpr); ok {
-									var expr_106 bool
-									expr_106 = stmtsUsePreludeName(v_34.F0, names)
-									expr_114 = expr_106
+								if v_38, ok := expr.Kind.(ast2.ExprKindBlockExpr); ok {
+									var expr_110 bool
+									expr_110 = stmtsUsePreludeName(v_38.F0, names)
+									expr_118 = expr_110
 								} else {
-									if v_33, ok := expr.Kind.(ast2.ExprKindSwitchExpr); ok {
-										var expr_105 bool
-										expr_105 = exprUsesPreludeName(v_33.F0, names) || switchCasesUsePreludeName(v_33.F1, names)
-										expr_114 = expr_105
+									if v_37, ok := expr.Kind.(ast2.ExprKindSwitchExpr); ok {
+										var expr_109 bool
+										expr_109 = exprUsesPreludeName(v_37.F0, names) || switchCasesUsePreludeName(v_37.F1, names)
+										expr_118 = expr_109
 									} else {
-										if v_32, ok := expr.Kind.(ast2.ExprKindFuncLitExpr); ok {
-											var expr_104 bool
-											expr_104 = paramsUsePreludeName(v_32.F0, names) || optionTypeUsesPreludeName(v_32.F1, names) || exprUsesPreludeName(v_32.F2, names)
-											expr_114 = expr_104
+										if v_36, ok := expr.Kind.(ast2.ExprKindFuncLitExpr); ok {
+											var expr_108 bool
+											expr_108 = paramsUsePreludeName(v_36.F0, names) || optionTypeUsesPreludeName(v_36.F1, names) || exprUsesPreludeName(v_36.F2, names)
+											expr_118 = expr_108
 										} else {
-											if v_31, ok := expr.Kind.(ast2.ExprKindSliceLitExpr); ok {
-												var expr_103 bool
-												expr_103 = exprsUsePreludeName(v_31.F0, names)
-												expr_114 = expr_103
+											if v_35, ok := expr.Kind.(ast2.ExprKindSliceLitExpr); ok {
+												var expr_107 bool
+												expr_107 = exprsUsePreludeName(v_35.F0, names)
+												expr_118 = expr_107
 											} else {
-												if v_30, ok := expr.Kind.(ast2.ExprKindTypeAsExpr); ok {
-													var expr_102 bool
-													expr_102 = exprUsesPreludeName(v_30.F0, names) || typeUsesPreludeName(v_30.F1, names)
-													expr_114 = expr_102
+												if v_34, ok := expr.Kind.(ast2.ExprKindTypeAsExpr); ok {
+													var expr_106 bool
+													expr_106 = exprUsesPreludeName(v_34.F0, names) || typeUsesPreludeName(v_34.F1, names)
+													expr_118 = expr_106
 												} else {
-													if v_29, ok := expr.Kind.(ast2.ExprKindStructLitExpr); ok {
-														var expr_101 bool
-														expr_101 = containsString(names, v_29.F0) || structLitFieldsUsePreludeName(v_29.F1, names)
-														expr_114 = expr_101
+													if v_33, ok := expr.Kind.(ast2.ExprKindStructLitExpr); ok {
+														var expr_105 bool
+														expr_105 = containsString(names, v_33.F0) || structLitFieldsUsePreludeName(v_33.F1, names)
+														expr_118 = expr_105
 													} else {
-														if v_28, ok := expr.Kind.(ast2.ExprKindGenericStructLitExpr); ok {
-															var expr_100 bool
-															expr_100 = containsString(names, v_28.F0) || typeExprsUsePreludeName(v_28.F1, names) || structLitFieldsUsePreludeName(v_28.F2, names)
-															expr_114 = expr_100
+														if v_32, ok := expr.Kind.(ast2.ExprKindGenericStructLitExpr); ok {
+															var expr_104 bool
+															expr_104 = containsString(names, v_32.F0) || typeExprsUsePreludeName(v_32.F1, names) || structLitFieldsUsePreludeName(v_32.F2, names)
+															expr_118 = expr_104
 														} else {
-															if v_27, ok := expr.Kind.(ast2.ExprKindInlineGoExpr); ok {
-																var expr_99 bool
-																expr_99 = typeUsesPreludeName(*v_27.F0, names) || goOperandsUsePreludeName(v_27.F2, names) || goTypeOperandsUsePreludeName(v_27.F3, names)
-																expr_114 = expr_99
+															if v_31, ok := expr.Kind.(ast2.ExprKindInlineGoExpr); ok {
+																var expr_103 bool
+																expr_103 = typeUsesPreludeName(*v_31.F0, names) || goOperandsUsePreludeName(v_31.F2, names) || goTypeOperandsUsePreludeName(v_31.F3, names)
+																expr_118 = expr_103
 															} else {
-																if v_26, ok := expr.Kind.(ast2.ExprKindMapLitExpr); ok {
-																	var expr_98 bool
-																	expr_98 = exprPairsUsePreludeName(v_26.F0, names)
-																	expr_114 = expr_98
+																if v_30, ok := expr.Kind.(ast2.ExprKindMapLitExpr); ok {
+																	var expr_102 bool
+																	expr_102 = exprPairsUsePreludeName(v_30.F0, names)
+																	expr_118 = expr_102
 																} else {
-																	if v_25, ok := expr.Kind.(ast2.ExprKindSetLitExpr); ok {
-																		var expr_97 bool
-																		expr_97 = exprsUsePreludeName(v_25.F0, names)
-																		expr_114 = expr_97
+																	if v_29, ok := expr.Kind.(ast2.ExprKindSetLitExpr); ok {
+																		var expr_101 bool
+																		expr_101 = exprsUsePreludeName(v_29.F0, names)
+																		expr_118 = expr_101
 																	} else {
-																		if v_24, ok := expr.Kind.(ast2.ExprKindTupleExpr); ok {
-																			var expr_96 bool
-																			expr_96 = exprsUsePreludeName(v_24.F0, names)
-																			expr_114 = expr_96
+																		if v_28, ok := expr.Kind.(ast2.ExprKindTupleExpr); ok {
+																			var expr_100 bool
+																			expr_100 = exprsUsePreludeName(v_28.F0, names)
+																			expr_118 = expr_100
 																		} else {
 																			{
-																				var expr_95 bool
-																				expr_95 = false
-																				expr_114 = expr_95
+																				var expr_99 bool
+																				expr_99 = false
+																				expr_118 = expr_99
 																			}
 																		}
 																	}
@@ -531,183 +555,183 @@ func exprUsesPreludeName(expr ast2.Expr, names []string) bool {
 			}
 		}
 	}
-	return expr_114
+	return expr_118
 }
 func exprsUsePreludeName(exprs []ast2.Expr, names []string) bool {
-	var expr_117 bool
+	var expr_121 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(exprs) == 0 {
-		expr_117 = false
+		expr_121 = false
 	} else {
-		var expr_116 bool
-		expr_115 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(exprs, 0), ast2.EmptyExpr())
-		expr_116 = exprUsesPreludeName(expr_115, names) || exprsUsePreludeName(sliceDrop[ast2.Expr](exprs, 1), names)
-		expr_117 = expr_116
+		var expr_120 bool
+		expr_119 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(exprs, 0), ast2.EmptyExpr())
+		expr_120 = exprUsesPreludeName(expr_119, names) || exprsUsePreludeName(sliceDrop[ast2.Expr](exprs, 1), names)
+		expr_121 = expr_120
 	}
-	return expr_117
+	return expr_121
 }
 func structLitFieldsUsePreludeName(fields []ast2.StructLitField, names []string) bool {
-	var expr_120 bool
+	var expr_124 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) == 0 {
-		expr_120 = false
+		expr_124 = false
 	} else {
-		var expr_119 bool
-		field_118 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.StructLitField{Name: "", Value: ast2.EmptyExpr()})
-		expr_119 = exprUsesPreludeName(field_118.Value, names) || structLitFieldsUsePreludeName(sliceDrop[ast2.StructLitField](fields, 1), names)
-		expr_120 = expr_119
+		var expr_123 bool
+		field_122 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.StructLitField{Name: "", Value: ast2.EmptyExpr()})
+		expr_123 = exprUsesPreludeName(field_122.Value, names) || structLitFieldsUsePreludeName(sliceDrop[ast2.StructLitField](fields, 1), names)
+		expr_124 = expr_123
 	}
-	return expr_120
+	return expr_124
 }
 func goOperandsUsePreludeName(operands []ast2.GoOperand, names []string) bool {
-	var expr_123 bool
+	var expr_127 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(operands) == 0 {
-		expr_123 = false
+		expr_127 = false
 	} else {
-		var expr_122 bool
-		operand_121 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0), ast2.GoOperand{Name: "", Value: ast2.EmptyExpr()})
-		expr_122 = exprUsesPreludeName(operand_121.Value, names) || goOperandsUsePreludeName(sliceDrop[ast2.GoOperand](operands, 1), names)
-		expr_123 = expr_122
+		var expr_126 bool
+		operand_125 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0), ast2.GoOperand{Name: "", Value: ast2.EmptyExpr()})
+		expr_126 = exprUsesPreludeName(operand_125.Value, names) || goOperandsUsePreludeName(sliceDrop[ast2.GoOperand](operands, 1), names)
+		expr_127 = expr_126
 	}
-	return expr_123
+	return expr_127
 }
 func goTypeOperandsUsePreludeName(operands []ast2.GoTypeOperand, names []string) bool {
-	var expr_126 bool
+	var expr_130 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(operands) == 0 {
-		expr_126 = false
+		expr_130 = false
 	} else {
-		var expr_125 bool
-		operand_124 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0), ast2.GoTypeOperand{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
-		expr_125 = typeUsesPreludeName(operand_124.Type, names) || goTypeOperandsUsePreludeName(sliceDrop[ast2.GoTypeOperand](operands, 1), names)
-		expr_126 = expr_125
+		var expr_129 bool
+		operand_128 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0), ast2.GoTypeOperand{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
+		expr_129 = typeUsesPreludeName(operand_128.Type, names) || goTypeOperandsUsePreludeName(sliceDrop[ast2.GoTypeOperand](operands, 1), names)
+		expr_130 = expr_129
 	}
-	return expr_126
+	return expr_130
 }
 func exprPairsUsePreludeName(pairs []struct {
 	F0 ast2.Expr
 	F1 ast2.Expr
 }, names []string) bool {
-	var expr_132 bool
+	var expr_136 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pairs) == 0 {
-		expr_132 = false
+		expr_136 = false
 	} else {
-		var expr_131 bool
-		pair_127 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pairs, 0), struct {
+		var expr_135 bool
+		pair_131 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(pairs, 0), struct {
 			F0 ast2.Expr
 			F1 ast2.Expr
 		}{F0: ast2.EmptyExpr(), F1: ast2.EmptyExpr()})
-		__tuple_128 := pair_127
-		key_129 := __tuple_128.F0
-		value_130 := __tuple_128.F1
-		expr_131 = exprUsesPreludeName(key_129, names) || exprUsesPreludeName(value_130, names) || exprPairsUsePreludeName(sliceDrop[struct {
+		__tuple_132 := pair_131
+		key_133 := __tuple_132.F0
+		value_134 := __tuple_132.F1
+		expr_135 = exprUsesPreludeName(key_133, names) || exprUsesPreludeName(value_134, names) || exprPairsUsePreludeName(sliceDrop[struct {
 			F0 ast2.Expr
 			F1 ast2.Expr
 		}](pairs, 1), names)
-		expr_132 = expr_131
+		expr_136 = expr_135
 	}
-	return expr_132
+	return expr_136
 }
 func switchCasesUsePreludeName(cases []ast2.SwitchCase, names []string) bool {
-	var expr_135 bool
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) == 0 {
-		expr_135 = false
-	} else {
-		var expr_134 bool
-		item_133 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), ast2.SwitchCase{Pattern: ast2.PatternWildcardPatternCtor(), Body: ast2.EmptyExpr()})
-		expr_134 = patternUsesPreludeName(item_133.Pattern, names) || exprUsesPreludeName(item_133.Body, names) || switchCasesUsePreludeName(sliceDrop[ast2.SwitchCase](cases, 1), names)
-		expr_135 = expr_134
-	}
-	return expr_135
-}
-func patternUsesPreludeName(pattern ast2.Pattern, names []string) bool {
 	var expr_139 bool
-	if v_43, ok := pattern.(ast2.PatternVariantPattern); ok {
-		var expr_138 bool
-		expr_138 = containsString(names, v_43.F0)
-		expr_139 = expr_138
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) == 0 {
+		expr_139 = false
 	} else {
-		if v_42, ok := pattern.(ast2.PatternTuplePattern); ok {
-			var expr_137 bool
-			expr_137 = patternsUsePreludeName(v_42.F0, names)
-			expr_139 = expr_137
-		} else {
-			{
-				var expr_136 bool
-				expr_136 = false
-				expr_139 = expr_136
-			}
-		}
+		var expr_138 bool
+		item_137 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), ast2.SwitchCase{Pattern: ast2.PatternWildcardPatternCtor(), Body: ast2.EmptyExpr()})
+		expr_138 = patternUsesPreludeName(item_137.Pattern, names) || exprUsesPreludeName(item_137.Body, names) || switchCasesUsePreludeName(sliceDrop[ast2.SwitchCase](cases, 1), names)
+		expr_139 = expr_138
 	}
 	return expr_139
 }
-func patternsUsePreludeName(patterns []ast2.Pattern, names []string) bool {
-	var expr_142 bool
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(patterns) == 0 {
-		expr_142 = false
+func patternUsesPreludeName(pattern ast2.Pattern, names []string) bool {
+	var expr_143 bool
+	if v_47, ok := pattern.(ast2.PatternVariantPattern); ok {
+		var expr_142 bool
+		expr_142 = containsString(names, v_47.F0)
+		expr_143 = expr_142
 	} else {
-		var expr_141 bool
-		pattern_140 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(patterns, 0), ast2.PatternWildcardPatternCtor())
-		expr_141 = patternUsesPreludeName(pattern_140, names) || patternsUsePreludeName(sliceDrop[ast2.Pattern](patterns, 1), names)
-		expr_142 = expr_141
+		if v_46, ok := pattern.(ast2.PatternTuplePattern); ok {
+			var expr_141 bool
+			expr_141 = patternsUsePreludeName(v_46.F0, names)
+			expr_143 = expr_141
+		} else {
+			{
+				var expr_140 bool
+				expr_140 = false
+				expr_143 = expr_140
+			}
+		}
 	}
-	return expr_142
+	return expr_143
+}
+func patternsUsePreludeName(patterns []ast2.Pattern, names []string) bool {
+	var expr_146 bool
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(patterns) == 0 {
+		expr_146 = false
+	} else {
+		var expr_145 bool
+		pattern_144 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(patterns, 0), ast2.PatternWildcardPatternCtor())
+		expr_145 = patternUsesPreludeName(pattern_144, names) || patternsUsePreludeName(sliceDrop[ast2.Pattern](patterns, 1), names)
+		expr_146 = expr_145
+	}
+	return expr_146
 }
 func stmtsUsePreludeName(stmts []ast2.Stmt, names []string) bool {
-	var expr_145 bool
+	var expr_149 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(stmts) == 0 {
-		expr_145 = false
+		expr_149 = false
 	} else {
-		var expr_144 bool
-		stmt_143 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(stmts, 0), ast2.StmtReturnStmtCtor())
-		expr_144 = stmtUsesPreludeName(stmt_143, names) || stmtsUsePreludeName(sliceDrop[ast2.Stmt](stmts, 1), names)
-		expr_145 = expr_144
+		var expr_148 bool
+		stmt_147 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(stmts, 0), ast2.StmtReturnStmtCtor())
+		expr_148 = stmtUsesPreludeName(stmt_147, names) || stmtsUsePreludeName(sliceDrop[ast2.Stmt](stmts, 1), names)
+		expr_149 = expr_148
 	}
-	return expr_145
+	return expr_149
 }
 func stmtUsesPreludeName(stmt ast2.Stmt, names []string) bool {
-	var expr_155 bool
-	if v_51, ok := stmt.(ast2.StmtExprStmt); ok {
-		var expr_154 bool
-		expr_154 = exprUsesPreludeName(v_51.F0, names)
-		expr_155 = expr_154
+	var expr_159 bool
+	if v_55, ok := stmt.(ast2.StmtExprStmt); ok {
+		var expr_158 bool
+		expr_158 = exprUsesPreludeName(v_55.F0, names)
+		expr_159 = expr_158
 	} else {
-		if v_50, ok := stmt.(ast2.StmtLetStmt); ok {
-			var expr_153 bool
-			expr_153 = optionTypeUsesPreludeName(v_50.F0.Type, names) || exprUsesPreludeName(v_50.F0.Value, names)
-			expr_155 = expr_153
+		if v_54, ok := stmt.(ast2.StmtLetStmt); ok {
+			var expr_157 bool
+			expr_157 = optionTypeUsesPreludeName(v_54.F0.Type, names) || exprUsesPreludeName(v_54.F0.Value, names)
+			expr_159 = expr_157
 		} else {
-			if v_49, ok := stmt.(ast2.StmtLetRecStmt); ok {
-				var expr_152 bool
-				expr_152 = letRecBindsUsePreludeName(v_49.F0, names)
-				expr_155 = expr_152
+			if v_53, ok := stmt.(ast2.StmtLetRecStmt); ok {
+				var expr_156 bool
+				expr_156 = letRecBindsUsePreludeName(v_53.F0, names)
+				expr_159 = expr_156
 			} else {
-				if v_48, ok := stmt.(ast2.StmtTupleLetStmt); ok {
-					var expr_151 bool
-					expr_151 = exprUsesPreludeName(v_48.F1, names)
-					expr_155 = expr_151
+				if v_52, ok := stmt.(ast2.StmtTupleLetStmt); ok {
+					var expr_155 bool
+					expr_155 = exprUsesPreludeName(v_52.F1, names)
+					expr_159 = expr_155
 				} else {
-					if v_47, ok := stmt.(ast2.StmtVarStmt); ok {
-						var expr_150 bool
-						expr_150 = optionTypeUsesPreludeName(v_47.F0.Type, names) || exprUsesPreludeName(v_47.F0.Value, names)
-						expr_155 = expr_150
+					if v_51, ok := stmt.(ast2.StmtVarStmt); ok {
+						var expr_154 bool
+						expr_154 = optionTypeUsesPreludeName(v_51.F0.Type, names) || exprUsesPreludeName(v_51.F0.Value, names)
+						expr_159 = expr_154
 					} else {
-						if v_46, ok := stmt.(ast2.StmtWhileStmt); ok {
-							var expr_149 bool
-							expr_149 = exprUsesPreludeName(v_46.F0, names) || exprUsesPreludeName(v_46.F1, names)
-							expr_155 = expr_149
+						if v_50, ok := stmt.(ast2.StmtWhileStmt); ok {
+							var expr_153 bool
+							expr_153 = exprUsesPreludeName(v_50.F0, names) || exprUsesPreludeName(v_50.F1, names)
+							expr_159 = expr_153
 						} else {
-							if v_45, ok := stmt.(ast2.StmtAssignStmt); ok {
-								var expr_148 bool
-								expr_148 = exprUsesPreludeName(v_45.F0, names) || exprUsesPreludeName(v_45.F1, names)
-								expr_155 = expr_148
+							if v_49, ok := stmt.(ast2.StmtAssignStmt); ok {
+								var expr_152 bool
+								expr_152 = exprUsesPreludeName(v_49.F0, names) || exprUsesPreludeName(v_49.F1, names)
+								expr_159 = expr_152
 							} else {
-								if v_44, ok := stmt.(ast2.StmtReturnWithStmt); ok {
-									var expr_147 bool
-									expr_147 = exprUsesPreludeName(v_44.F0, names)
-									expr_155 = expr_147
+								if v_48, ok := stmt.(ast2.StmtReturnWithStmt); ok {
+									var expr_151 bool
+									expr_151 = exprUsesPreludeName(v_48.F0, names)
+									expr_159 = expr_151
 								} else {
 									{
-										var expr_146 bool
-										expr_146 = false
-										expr_155 = expr_146
+										var expr_150 bool
+										expr_150 = false
+										expr_159 = expr_150
 									}
 								}
 							}
@@ -717,233 +741,281 @@ func stmtUsesPreludeName(stmt ast2.Stmt, names []string) bool {
 			}
 		}
 	}
-	return expr_155
+	return expr_159
 }
 func letRecBindsUsePreludeName(bindings []ast2.LetRecBind, names []string) bool {
-	var expr_158 bool
+	var expr_162 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(bindings) == 0 {
-		expr_158 = false
+		expr_162 = false
 	} else {
-		var expr_157 bool
-		bind_156 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, 0), ast2.LetRecBind{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Value: ast2.EmptyExpr()})
-		expr_157 = typeUsesPreludeName(bind_156.Type, names) || exprUsesPreludeName(bind_156.Value, names) || letRecBindsUsePreludeName(sliceDrop[ast2.LetRecBind](bindings, 1), names)
-		expr_158 = expr_157
+		var expr_161 bool
+		bind_160 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, 0), ast2.LetRecBind{Name: "", Type: ast2.TypeExprUnitTypeCtor(), Value: ast2.EmptyExpr()})
+		expr_161 = typeUsesPreludeName(bind_160.Type, names) || exprUsesPreludeName(bind_160.Value, names) || letRecBindsUsePreludeName(sliceDrop[ast2.LetRecBind](bindings, 1), names)
+		expr_162 = expr_161
 	}
-	return expr_158
+	return expr_162
 }
 func needsHKTDecls(decls []ast2.Decl) bool {
-	var expr_169 bool
+	var expr_175 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
-		expr_169 = false
+		expr_175 = false
 	} else {
-		var expr_168 bool
-		head_159 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
-		var expr_166 bool
-		if v_56, ok := head_159.(ast2.DeclInterfaceDecl); ok {
-			var expr_165 bool
-			expr_165 = hasHKTTypeParam(v_56.F1)
-			expr_166 = expr_165
+		var expr_174 bool
+		head_163 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.DeclImportDeclCtor("", ""))
+		var expr_172 bool
+		if v_62, ok := head_163.(ast2.DeclTypeAliasDecl); ok {
+			var expr_171 bool
+			expr_171 = hasHKTTypeParam(v_62.F1)
+			expr_172 = expr_171
 		} else {
-			if v_55, ok := head_159.(ast2.DeclStructDecl); ok {
-				var expr_164 bool
-				expr_164 = hasHKTTypeParam(v_55.F1)
-				expr_166 = expr_164
+			if v_61, ok := head_163.(ast2.DeclTypeDecl); ok {
+				var expr_170 bool
+				expr_170 = hasHKTTypeParam(v_61.F1)
+				expr_172 = expr_170
 			} else {
-				if v_54, ok := head_159.(ast2.DeclEnumDecl); ok {
-					var expr_163 bool
-					expr_163 = hasHKTTypeParam(v_54.F1)
-					expr_166 = expr_163
+				if v_60, ok := head_163.(ast2.DeclInterfaceDecl); ok {
+					var expr_169 bool
+					expr_169 = hasHKTTypeParam(v_60.F1)
+					expr_172 = expr_169
 				} else {
-					if v_53, ok := head_159.(ast2.DeclFuncDecl); ok {
-						var expr_162 bool
-						expr_162 = hasHKTTypeParam(v_53.F1)
-						expr_166 = expr_162
+					if v_59, ok := head_163.(ast2.DeclStructDecl); ok {
+						var expr_168 bool
+						expr_168 = hasHKTTypeParam(v_59.F1)
+						expr_172 = expr_168
 					} else {
-						if v_52, ok := head_159.(ast2.DeclImplDecl); ok {
-							var expr_161 bool
-							expr_161 = hasHKTTypeParam(v_52.F0)
-							expr_166 = expr_161
+						if v_58, ok := head_163.(ast2.DeclEnumDecl); ok {
+							var expr_167 bool
+							expr_167 = hasHKTTypeParam(v_58.F1)
+							expr_172 = expr_167
 						} else {
-							{
-								var expr_160 bool
-								expr_160 = false
-								expr_166 = expr_160
+							if v_57, ok := head_163.(ast2.DeclFuncDecl); ok {
+								var expr_166 bool
+								expr_166 = hasHKTTypeParam(v_57.F1)
+								expr_172 = expr_166
+							} else {
+								if v_56, ok := head_163.(ast2.DeclImplDecl); ok {
+									var expr_165 bool
+									expr_165 = hasHKTTypeParam(v_56.F0)
+									expr_172 = expr_165
+								} else {
+									{
+										var expr_164 bool
+										expr_164 = false
+										expr_172 = expr_164
+									}
+								}
 							}
 						}
 					}
 				}
 			}
 		}
-		here_167 := expr_166
-		expr_168 = here_167 || needsHKTDecls(sliceDrop[ast2.Decl](decls, 1))
-		expr_169 = expr_168
+		here_173 := expr_172
+		expr_174 = here_173 || needsHKTDecls(sliceDrop[ast2.Decl](decls, 1))
+		expr_175 = expr_174
 	}
-	return expr_169
+	return expr_175
 }
 func hasHKTTypeParam(tps []string) bool {
-	var expr_172 bool
+	var expr_178 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tps) == 0 {
-		expr_172 = false
+		expr_178 = false
 	} else {
-		var expr_171 bool
-		current_170 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tps, 0), "")
-		expr_171 = strings.Index(current_170, "[") >= 0 || hasHKTTypeParam(sliceDrop[string](tps, 1))
-		expr_172 = expr_171
+		var expr_177 bool
+		current_176 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tps, 0), "")
+		expr_177 = strings.Index(current_176, "[") >= 0 || hasHKTTypeParam(sliceDrop[string](tps, 1))
+		expr_178 = expr_177
 	}
-	return expr_172
+	return expr_178
 }
 func filterTypedDeclsForFile(typedDecls []ast2.Decl, fileDecls []ast2.Decl) []ast2.Decl {
 	return filterTypedDeclsLoop(typedDecls, fileDecls, 0, []ast2.Decl([]ast2.Decl{}))
 }
 func filterTypedDeclsLoop(typedDecls []ast2.Decl, fileDecls []ast2.Decl, index int, out []ast2.Decl) []ast2.Decl {
-	var expr_176 []ast2.Decl
+	var expr_182 []ast2.Decl
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(typedDecls) {
-		expr_176 = out
+		expr_182 = out
 	} else {
-		var expr_175 []ast2.Decl
-		decl_173 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(typedDecls, index), ast2.DeclImportDeclCtor("", ""))
-		var expr_174 []ast2.Decl
-		if typedDeclMatchesAnyFileDecl(decl_173, fileDecls, 0) {
-			expr_174 = filterTypedDeclsLoop(typedDecls, fileDecls, index+1, MygoIN5SliceM6Append(out, decl_173))
+		var expr_181 []ast2.Decl
+		decl_179 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(typedDecls, index), ast2.DeclImportDeclCtor("", ""))
+		var expr_180 []ast2.Decl
+		if typedDeclMatchesAnyFileDecl(decl_179, fileDecls, 0) {
+			expr_180 = filterTypedDeclsLoop(typedDecls, fileDecls, index+1, MygoIN5SliceM6Append(out, decl_179))
 		} else {
-			expr_174 = filterTypedDeclsLoop(typedDecls, fileDecls, index+1, out)
+			expr_180 = filterTypedDeclsLoop(typedDecls, fileDecls, index+1, out)
 		}
-		expr_175 = expr_174
-		expr_176 = expr_175
+		expr_181 = expr_180
+		expr_182 = expr_181
 	}
-	return expr_176
+	return expr_182
 }
 func typedDeclMatchesAnyFileDecl(decl ast2.Decl, fileDecls []ast2.Decl, index int) bool {
-	var expr_180 bool
+	var expr_186 bool
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fileDecls) {
-		expr_180 = false
+		expr_186 = false
 	} else {
-		var expr_179 bool
-		candidate_177 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fileDecls, index), ast2.DeclImportDeclCtor("", ""))
-		var expr_178 bool
-		if typedDeclMatchesFileDecl(decl, candidate_177) {
-			expr_178 = true
+		var expr_185 bool
+		candidate_183 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fileDecls, index), ast2.DeclImportDeclCtor("", ""))
+		var expr_184 bool
+		if typedDeclMatchesFileDecl(decl, candidate_183) {
+			expr_184 = true
 		} else {
-			expr_178 = typedDeclMatchesAnyFileDecl(decl, fileDecls, index+1)
+			expr_184 = typedDeclMatchesAnyFileDecl(decl, fileDecls, index+1)
 		}
-		expr_179 = expr_178
-		expr_180 = expr_179
+		expr_185 = expr_184
+		expr_186 = expr_185
 	}
-	return expr_180
+	return expr_186
 }
 func typedDeclMatchesFileDecl(typedDecl ast2.Decl, fileDecl ast2.Decl) bool {
-	var expr_202 bool
-	if v_65, ok := typedDecl.(ast2.DeclStructDecl); ok {
-		var expr_201 bool
-		var expr_200 bool
-		if v_66, ok := fileDecl.(ast2.DeclStructDecl); ok {
-			var expr_199 bool
-			expr_199 = v_65.F0 == v_66.F0
-			expr_200 = expr_199
+	var expr_216 bool
+	if v_75, ok := typedDecl.(ast2.DeclTypeAliasDecl); ok {
+		var expr_215 bool
+		var expr_214 bool
+		if v_76, ok := fileDecl.(ast2.DeclTypeAliasDecl); ok {
+			var expr_213 bool
+			expr_213 = v_75.F0 == v_76.F0
+			expr_214 = expr_213
 		} else {
 			{
-				var expr_198 bool
-				expr_198 = false
-				expr_200 = expr_198
+				var expr_212 bool
+				expr_212 = false
+				expr_214 = expr_212
 			}
 		}
-		expr_201 = expr_200
-		expr_202 = expr_201
+		expr_215 = expr_214
+		expr_216 = expr_215
 	} else {
-		if v_63, ok := typedDecl.(ast2.DeclEnumDecl); ok {
-			var expr_197 bool
-			var expr_196 bool
-			if v_64, ok := fileDecl.(ast2.DeclEnumDecl); ok {
-				var expr_195 bool
-				expr_195 = v_63.F0 == v_64.F0
-				expr_196 = expr_195
+		if v_73, ok := typedDecl.(ast2.DeclTypeDecl); ok {
+			var expr_211 bool
+			var expr_210 bool
+			if v_74, ok := fileDecl.(ast2.DeclTypeDecl); ok {
+				var expr_209 bool
+				expr_209 = v_73.F0 == v_74.F0
+				expr_210 = expr_209
 			} else {
 				{
-					var expr_194 bool
-					expr_194 = false
-					expr_196 = expr_194
+					var expr_208 bool
+					expr_208 = false
+					expr_210 = expr_208
 				}
 			}
-			expr_197 = expr_196
-			expr_202 = expr_197
+			expr_211 = expr_210
+			expr_216 = expr_211
 		} else {
-			if v_61, ok := typedDecl.(ast2.DeclInterfaceDecl); ok {
-				var expr_193 bool
-				var expr_192 bool
-				if v_62, ok := fileDecl.(ast2.DeclInterfaceDecl); ok {
-					var expr_191 bool
-					expr_191 = v_61.F0 == v_62.F0
-					expr_192 = expr_191
+			if v_71, ok := typedDecl.(ast2.DeclStructDecl); ok {
+				var expr_207 bool
+				var expr_206 bool
+				if v_72, ok := fileDecl.(ast2.DeclStructDecl); ok {
+					var expr_205 bool
+					expr_205 = v_71.F0 == v_72.F0
+					expr_206 = expr_205
 				} else {
 					{
-						var expr_190 bool
-						expr_190 = false
-						expr_192 = expr_190
+						var expr_204 bool
+						expr_204 = false
+						expr_206 = expr_204
 					}
 				}
-				expr_193 = expr_192
-				expr_202 = expr_193
+				expr_207 = expr_206
+				expr_216 = expr_207
 			} else {
-				if v_59, ok := typedDecl.(ast2.DeclFuncDecl); ok {
-					var expr_189 bool
-					var expr_188 bool
-					if v_60, ok := fileDecl.(ast2.DeclFuncDecl); ok {
-						var expr_187 bool
-						expr_187 = v_59.F0 == v_60.F0
-						expr_188 = expr_187
+				if v_69, ok := typedDecl.(ast2.DeclEnumDecl); ok {
+					var expr_203 bool
+					var expr_202 bool
+					if v_70, ok := fileDecl.(ast2.DeclEnumDecl); ok {
+						var expr_201 bool
+						expr_201 = v_69.F0 == v_70.F0
+						expr_202 = expr_201
 					} else {
 						{
-							var expr_186 bool
-							expr_186 = false
-							expr_188 = expr_186
+							var expr_200 bool
+							expr_200 = false
+							expr_202 = expr_200
 						}
 					}
-					expr_189 = expr_188
-					expr_202 = expr_189
+					expr_203 = expr_202
+					expr_216 = expr_203
 				} else {
-					if v_57, ok := typedDecl.(ast2.DeclImplDecl); ok {
-						var expr_185 bool
-						var expr_184 bool
-						if v_58, ok := fileDecl.(ast2.DeclImplDecl); ok {
-							var expr_183 bool
-							expr_183 = typeString(v_57.F1) == typeString(v_58.F1) && optionTypeExprString(v_57.F2) == optionTypeExprString(v_58.F2)
-							expr_184 = expr_183
+					if v_67, ok := typedDecl.(ast2.DeclInterfaceDecl); ok {
+						var expr_199 bool
+						var expr_198 bool
+						if v_68, ok := fileDecl.(ast2.DeclInterfaceDecl); ok {
+							var expr_197 bool
+							expr_197 = v_67.F0 == v_68.F0
+							expr_198 = expr_197
 						} else {
 							{
-								var expr_182 bool
-								expr_182 = false
-								expr_184 = expr_182
+								var expr_196 bool
+								expr_196 = false
+								expr_198 = expr_196
 							}
 						}
-						expr_185 = expr_184
-						expr_202 = expr_185
+						expr_199 = expr_198
+						expr_216 = expr_199
 					} else {
-						{
-							var expr_181 bool
-							expr_181 = false
-							expr_202 = expr_181
+						if v_65, ok := typedDecl.(ast2.DeclFuncDecl); ok {
+							var expr_195 bool
+							var expr_194 bool
+							if v_66, ok := fileDecl.(ast2.DeclFuncDecl); ok {
+								var expr_193 bool
+								expr_193 = v_65.F0 == v_66.F0
+								expr_194 = expr_193
+							} else {
+								{
+									var expr_192 bool
+									expr_192 = false
+									expr_194 = expr_192
+								}
+							}
+							expr_195 = expr_194
+							expr_216 = expr_195
+						} else {
+							if v_63, ok := typedDecl.(ast2.DeclImplDecl); ok {
+								var expr_191 bool
+								var expr_190 bool
+								if v_64, ok := fileDecl.(ast2.DeclImplDecl); ok {
+									var expr_189 bool
+									expr_189 = typeString(v_63.F1) == typeString(v_64.F1) && optionTypeExprString(v_63.F2) == optionTypeExprString(v_64.F2)
+									expr_190 = expr_189
+								} else {
+									{
+										var expr_188 bool
+										expr_188 = false
+										expr_190 = expr_188
+									}
+								}
+								expr_191 = expr_190
+								expr_216 = expr_191
+							} else {
+								{
+									var expr_187 bool
+									expr_187 = false
+									expr_216 = expr_187
+								}
+							}
 						}
 					}
 				}
 			}
 		}
 	}
-	return expr_202
+	return expr_216
 }
 func optionTypeExprString(opt Option[ast2.TypeExpr]) string {
-	var expr_205 string
-	if v_68, ok := opt.(OptionSome[ast2.TypeExpr]); ok {
-		var expr_204 string
-		expr_204 = typeString(v_68.F0)
-		expr_205 = expr_204
+	var expr_219 string
+	if v_78, ok := opt.(OptionSome[ast2.TypeExpr]); ok {
+		var expr_218 string
+		expr_218 = typeString(v_78.F0)
+		expr_219 = expr_218
 	} else {
 		if _, ok := opt.(OptionNone[ast2.TypeExpr]); ok {
-			var expr_203 string
-			expr_203 = ""
-			expr_205 = expr_203
+			var expr_217 string
+			expr_217 = ""
+			expr_219 = expr_217
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_205
+	return expr_219
 }

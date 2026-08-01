@@ -44,6 +44,51 @@ end
 	}
 }
 
+func TestGenerateSourcePreservesAliasAndDefinedTypeSyntax(t *testing.T) {
+	src := `package sample
+
+type UserID = Int
+type AccountID Int
+
+func use(value: UserID) -> AccountID
+  go[AccountID]{code: "return AccountID(value)"}
+end
+`
+	got := GenerateSource(src)
+	result, ok := got.(ResultOk[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	if !strings.Contains(result.F0, "type UserID = int") || !strings.Contains(result.F0, "type AccountID int") {
+		t.Fatalf("generated Go lost type declaration distinction:\n%s", result.F0)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "types.gen.go", result.F0, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, result.F0)
+	}
+}
+
+func TestGenerateSourceExpandsGenericTypeAliasDuringInference(t *testing.T) {
+	src := `package sample
+
+type Values[A] = Slice[A]
+
+func echo(values: Values[Int]) -> Slice[Int]
+  values
+end
+`
+	got := GenerateSource(src)
+	result, ok := got.(ResultOk[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", got)
+	}
+	if !strings.Contains(result.F0, "type Values[A any] = []A") || !strings.Contains(result.F0, "func echo(values Values[int]) []int") {
+		t.Fatalf("generated Go lost generic alias semantics:\n%s", result.F0)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "generic-types.gen.go", result.F0, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, result.F0)
+	}
+}
+
 func TestGenerateSourceLowersRefBoundaryOperations(t *testing.T) {
 	src := `package sample
 

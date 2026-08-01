@@ -24,6 +24,10 @@ func predeclareFunctionsWithState(decls: Slice[ast2.Decl], env: Slice[EnvEntry],
   else
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     let next = switch decl
+      case TypeAliasDecl(name, tps, target) =>
+        envPut(env, name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: typeFromASTInEnvWithParams(target, tps, env, state) })
+      case TypeDecl(name, tps, _) =>
+        envPut(env, name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: declaredType(name, tps) })
       case FuncDecl(name, tps, params, ret, _, constraints) =>
         let retType = switch ret
           case Some(t) => typeFromASTInEnvWithParams(t, tps, env, state)
@@ -36,6 +40,10 @@ func predeclareFunctionsWithState(decls: Slice[ast2.Decl], env: Slice[EnvEntry],
     end
     predeclareFunctionsWithState(sliceDrop(decls, 1), next, state)
   end
+end
+
+func declaredType(name: String, tps: Slice[String]) -> ast2.MonoType
+  if tps.Len() == 0 then ast2.MonoType.TCon(name) else ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon(name)), typeParamsAsTypes(tps, 1)) end
 end
 
 func predeclareEnum(env: Slice[EnvEntry], name: String, tps: Slice[String], vars: Slice[ast2.Variant]) -> Slice[EnvEntry]
@@ -80,6 +88,8 @@ end
 func inferDecl(decl: ast2.Decl, env: Slice[EnvEntry], fields: Slice[FieldEntry], state: InferState) -> Result[DeclInfer, String]
   switch decl
     case ImportDecl(_, _) => Ok(DeclInfer { Env: env, Fields: fields, State: state, TypedDecl: None})
+    case TypeAliasDecl(_, _, _) => Ok(DeclInfer { Env: env, Fields: fields, State: state, TypedDecl: Some(decl) })
+    case TypeDecl(_, _, _) => Ok(DeclInfer { Env: env, Fields: fields, State: state, TypedDecl: Some(decl) })
     case StructDecl(name, tps, structFields) =>
       let newSymbols = structSymbols(name, structFields, tps, [] as Slice[Symbol])
       let stateWithSymbols = InferState {

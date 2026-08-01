@@ -143,6 +143,8 @@ func preludeImportNames(decls: Slice[ast2.Decl], names: Slice[String]) -> Slice[
   else
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     let next = switch decl
+      case TypeAliasDecl(name, _, _) => names.Append(name)
+      case TypeDecl(name, _, _) => names.Append(name)
       case EnumDecl(name, _, variants) => variantImportNames(variants, names.Append(name))
       case InterfaceDecl(name, _, _) => names.Append(name)
       case _ => names
@@ -167,6 +169,8 @@ end
 
 func declUsesPreludeName(decl: ast2.Decl, names: Slice[String]) -> Bool
   switch decl
+    case TypeAliasDecl(_, _, target) => typeUsesPreludeName(target, names)
+    case TypeDecl(_, _, target) => typeUsesPreludeName(target, names)
     case FuncDecl(_, _, params, ret, body, requirements) => paramsUsePreludeName(params, names) || optionTypeUsesPreludeName(ret, names) || constraintsUsePreludeName(requirements, names) || exprUsesPreludeName(body, names)
     case StructDecl(_, _, fields) => fieldsUsePreludeName(fields, names)
     case EnumDecl(_, _, variants) => variantsUsePreludeName(variants, names)
@@ -360,6 +364,8 @@ func needsHKTDecls(decls: Slice[ast2.Decl]) -> Bool
   else
     let head = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     let here = switch head
+      case TypeAliasDecl(_, tps, _) => hasHKTTypeParam(tps)
+      case TypeDecl(_, tps, _) => hasHKTTypeParam(tps)
       case InterfaceDecl(_, tps, _) => hasHKTTypeParam(tps)
       case StructDecl(_, tps, _) => hasHKTTypeParam(tps)
       case EnumDecl(_, tps, _) => hasHKTTypeParam(tps)
@@ -412,6 +418,16 @@ end
 
 func typedDeclMatchesFileDecl(typedDecl: ast2.Decl, fileDecl: ast2.Decl) -> Bool
   switch typedDecl
+    case TypeAliasDecl(name, _, _) =>
+      switch fileDecl
+        case TypeAliasDecl(fileName, _, _) => name == fileName
+        case _ => false
+      end
+    case TypeDecl(name, _, _) =>
+      switch fileDecl
+        case TypeDecl(fileName, _, _) => name == fileName
+        case _ => false
+      end
     case StructDecl(name, _, _) =>
       switch fileDecl
         case StructDecl(fileName, _, _) => name == fileName
