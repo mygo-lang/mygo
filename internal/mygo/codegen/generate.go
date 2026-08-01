@@ -108,11 +108,13 @@ func GenerateFiles(p *Package, typedInfo *typeinference.TypedInfo) (map[string]s
 		}
 		for _, decl := range preludeDecls {
 			if binding, ok := decl.(*LetStmt); ok {
-				global, err := g.genPackageBinding(binding)
+				globals, err := g.genPackageBinding(binding)
 				if err != nil {
 					return nil, err
 				}
-				sf.AddDeclWithSource(global, declSource(binding))
+				for _, global := range globals {
+					sf.AddDeclWithSource(global, declSource(binding))
+				}
 			}
 		}
 		if err := g.addMutualTailTrampolines(sf, ""); err != nil {
@@ -185,11 +187,13 @@ func GenerateFiles(p *Package, typedInfo *typeinference.TypedInfo) (map[string]s
 		}
 		for _, decl := range decls {
 			if s, ok := decl.(*LetStmt); ok {
-				global, err := g.genPackageBinding(s)
+				globals, err := g.genPackageBinding(s)
 				if err != nil {
 					return nil, common.ErrorAtPos(g.currentFile, s.Line, s.Column, "package binding %s: %v", s.Name, err)
 				}
-				sf.AddDeclWithSource(global, declSource(s))
+				for _, global := range globals {
+					sf.AddDeclWithSource(global, declSource(s))
+				}
 			}
 		}
 		if g.needsCallAny && i == len(sortedSourceFiles)-1 {
@@ -801,7 +805,13 @@ func (g *gen) addPackageBindings(ctx *egCtx) {
 	}
 }
 
-func (g *gen) genPackageBinding(binding *LetStmt) (ast.Decl, error) {
+// genPackageBinding deliberately emits the initializer in init rather than as
+// part of the Go var declaration. A MyGO package binding may initialize a
+// recursive graph through functions (parser combinators are a common case).
+// Go's static initialization dependency analysis rejects that shape as an
+// initialization cycle, even though it is valid once all package variables
+// have been allocated.
+func (g *gen) genPackageBinding(binding *LetStmt) ([]ast.Decl, error) {
 	ctx := &egCtx{
 		locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{},
 		mutable: map[string]bool{}, typeParams: map[string]struct{}{},
@@ -822,11 +832,23 @@ func (g *gen) genPackageBinding(binding *LetStmt) (ast.Decl, error) {
 	if actual == "" || actual == "_" {
 		return nil, fmt.Errorf("package binding requires a non-discard name")
 	}
-	spec := &ast.ValueSpec{Names: []*ast.Ident{ast.NewIdent(actual)}, Values: []ast.Expr{code}}
-	if binding.Type != nil {
-		spec.Type = goastTypeExpr(binding.Type)
+	if expected == "" {
+		return nil, fmt.Errorf("cannot determine Go type for package binding")
 	}
-	return &ast.GenDecl{Tok: token.VAR, Specs: []ast.Spec{spec}}, nil
+	varDecl := &ast.GenDecl{Tok: token.VAR, Specs: []ast.Spec{&ast.ValueSpec{
+		Names: []*ast.Ident{ast.NewIdent(actual)},
+		Type:  g.goTypeExprFromString(expected),
+	}}}
+	initDecl := &ast.FuncDecl{
+		Name: ast.NewIdent("init"),
+		Type: &ast.FuncType{Params: &ast.FieldList{}},
+		Body: &ast.BlockStmt{List: []ast.Stmt{&ast.AssignStmt{
+			Lhs: []ast.Expr{ast.NewIdent(actual)},
+			Rhs: []ast.Expr{code},
+			Tok: token.ASSIGN,
+		}}},
+	}
+	return []ast.Decl{varDecl, initDecl}, nil
 }
 
 // genDecl adds declarations for enum/struct/interface to the source file.

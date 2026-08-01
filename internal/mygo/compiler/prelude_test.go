@@ -83,7 +83,7 @@ var count: Int = 1
 		t.Fatal(err)
 	}
 	text := string(generated)
-	if !strings.Contains(text, "var limit int = 10") || !strings.Contains(text, "var count int = 1") || !strings.Contains(text, "count = count + 1") {
+	if !strings.Contains(text, "var limit int") || !strings.Contains(text, "var count int") || !strings.Contains(text, "limit = 10") || !strings.Contains(text, "count = 1") || !strings.Contains(text, "count = count + 1") {
 		t.Fatalf("generated source missing package bindings or their use:\n%s", text)
 	}
 }
