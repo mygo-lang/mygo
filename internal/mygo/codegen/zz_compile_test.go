@@ -123,6 +123,48 @@ end
 	}
 }
 
+func TestGenerateUnitMutualTailcallTrampoline(t *testing.T) {
+	src := `package p
+
+func Left(n: Int) -> ()
+  if n == 0 => () else Right(n - 1)
+end
+
+func Right(n: Int) -> ()
+  if n == 0 => () else Left(n - 1)
+end
+`
+	parsed, err := myparser.ParseFile("unit_mutual.mygo", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg := &Package{Name: "p", NoPrelude: true, Decls: parsed.Decls, Imports: map[string]struct{}{}, ImportAliases: map[string]string{}, Enums: map[string]*EnumDecl{}, Structs: map[string]*StructDecl{}, Interfaces: map[string]*InterfaceDecl{}, Funcs: map[string]*FuncDecl{}}
+	for _, decl := range parsed.Decls {
+		if fn, ok := decl.(*FuncDecl); ok {
+			pkg.Funcs[fn.Name] = fn
+		}
+	}
+	files, err := GenerateFiles(pkg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var generated string
+	for _, file := range files {
+		generated += file
+	}
+	if !strings.Contains(generated, "func __mygo_mt_p_left_right") {
+		t.Fatalf("unit mutual trampoline missing:\n%s", generated)
+	}
+	fset := token.NewFileSet()
+	file, err := goparser.ParseFile(fset, "generated.go", generated, goparser.AllErrors)
+	if err != nil {
+		t.Fatalf("generated Go did not parse: %v\n%s", err, generated)
+	}
+	if _, err := (&types.Config{Importer: importer.Default()}).Check("p", fset, []*ast.File{file}, nil); err != nil {
+		t.Fatalf("generated Go did not type-check: %v\n%s", err, generated)
+	}
+}
+
 func TestParsecPManyUsesClosureContinuationStateMachine(t *testing.T) {
 	pkg := simpleLoadPackage("../../../lib/text/parsec", false)
 	if pkg == nil {
