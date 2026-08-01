@@ -11,20 +11,20 @@ type MonoTypeTVar struct {
 	F0 int
 }
 
-func (MonoTypeTVar) isMonoType() {
+func (_ MonoTypeTVar) isMonoType() {
 }
-func MonoTypeTVarCtor(v0 int) MonoType {
-	return MonoTypeTVar{F0: v0}
+func MonoTypeTVarCtor(a0 int) MonoType {
+	return MonoTypeTVar{F0: a0}
 }
 
 type MonoTypeTKVar struct {
 	F0 int
 }
 
-func (MonoTypeTKVar) isMonoType() {
+func (_ MonoTypeTKVar) isMonoType() {
 }
-func MonoTypeTKVarCtor(v0 int) MonoType {
-	return MonoTypeTKVar{F0: v0}
+func MonoTypeTKVarCtor(a0 int) MonoType {
+	return MonoTypeTKVar{F0: a0}
 }
 
 type MonoTypeTApp struct {
@@ -32,20 +32,20 @@ type MonoTypeTApp struct {
 	F1 []MonoType
 }
 
-func (MonoTypeTApp) isMonoType() {
+func (_ MonoTypeTApp) isMonoType() {
 }
-func MonoTypeTAppCtor(v0 *MonoType, v1 []MonoType) MonoType {
-	return MonoTypeTApp{F0: v0, F1: v1}
+func MonoTypeTAppCtor(a0 *MonoType, a1 []MonoType) MonoType {
+	return MonoTypeTApp{F0: a0, F1: a1}
 }
 
 type MonoTypeTCon struct {
 	F0 string
 }
 
-func (MonoTypeTCon) isMonoType() {
+func (_ MonoTypeTCon) isMonoType() {
 }
-func MonoTypeTConCtor(v0 string) MonoType {
-	return MonoTypeTCon{F0: v0}
+func MonoTypeTConCtor(a0 string) MonoType {
+	return MonoTypeTCon{F0: a0}
 }
 
 type MonoTypeTFunc struct {
@@ -53,10 +53,10 @@ type MonoTypeTFunc struct {
 	F1 *MonoType
 }
 
-func (MonoTypeTFunc) isMonoType() {
+func (_ MonoTypeTFunc) isMonoType() {
 }
-func MonoTypeTFuncCtor(v0 []MonoType, v1 *MonoType) MonoType {
-	return MonoTypeTFunc{F0: v0, F1: v1}
+func MonoTypeTFuncCtor(a0 []MonoType, a1 *MonoType) MonoType {
+	return MonoTypeTFunc{F0: a0, F1: a1}
 }
 
 type MonoTypeTVariadic struct {
@@ -64,26 +64,26 @@ type MonoTypeTVariadic struct {
 	F1 *MonoType
 }
 
-func (MonoTypeTVariadic) isMonoType() {
+func (_ MonoTypeTVariadic) isMonoType() {
 }
-func MonoTypeTVariadicCtor(v0 []MonoType, v1 *MonoType) MonoType {
-	return MonoTypeTVariadic{F0: v0, F1: v1}
+func MonoTypeTVariadicCtor(a0 []MonoType, a1 *MonoType) MonoType {
+	return MonoTypeTVariadic{F0: a0, F1: a1}
 }
 
 type MonoTypeTTuple struct {
 	F0 []MonoType
 }
 
-func (MonoTypeTTuple) isMonoType() {
+func (_ MonoTypeTTuple) isMonoType() {
 }
-func MonoTypeTTupleCtor(v0 []MonoType) MonoType {
-	return MonoTypeTTuple{F0: v0}
+func MonoTypeTTupleCtor(a0 []MonoType) MonoType {
+	return MonoTypeTTuple{F0: a0}
 }
 
 type MonoTypeTUnit struct {
 }
 
-func (MonoTypeTUnit) isMonoType() {
+func (_ MonoTypeTUnit) isMonoType() {
 }
 func MonoTypeTUnitCtor() MonoType {
 	return MonoTypeTUnit{}
@@ -93,10 +93,10 @@ type MonoTypeTParam struct {
 	F0 int
 }
 
-func (MonoTypeTParam) isMonoType() {
+func (_ MonoTypeTParam) isMonoType() {
 }
-func MonoTypeTParamCtor(v0 int) MonoType {
-	return MonoTypeTParam{F0: v0}
+func MonoTypeTParamCtor(a0 int) MonoType {
+	return MonoTypeTParam{F0: a0}
 }
 
 type MonoTypeTQualifiedName struct {
@@ -104,103 +104,184 @@ type MonoTypeTQualifiedName struct {
 	F1 *MonoType
 }
 
-func (MonoTypeTQualifiedName) isMonoType() {
+func (_ MonoTypeTQualifiedName) isMonoType() {
 }
-func MonoTypeTQualifiedNameCtor(v0 string, v1 *MonoType) MonoType {
-	return MonoTypeTQualifiedName{F0: v0, F1: v1}
+func MonoTypeTQualifiedNameCtor(a0 string, a1 *MonoType) MonoType {
+	return MonoTypeTQualifiedName{F0: a0, F1: a1}
 }
 func MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(a MonoType, b MonoType) bool {
-	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_9, ok := a.(MonoTypeTVar); ok {
-		var __mygo_expr_10 bool
-		if __mygo_match___mygo_expr_11, ok := b.(MonoTypeTVar); ok {
-			__mygo_expr_10 = __mygo_match___mygo_expr_9.F0 == __mygo_match___mygo_expr_11.F0
+	var expr_196 bool
+	if v_66, ok := a.(MonoTypeTVar); ok {
+		var expr_195 bool
+		var expr_194 bool
+		if v_67, ok := b.(MonoTypeTVar); ok {
+			var expr_193 bool
+			expr_193 = v_66.F0 == v_67.F0
+			expr_194 = expr_193
 		} else {
-			__mygo_expr_10 = false
-		}
-		__mygo_expr_0 = __mygo_expr_10
-	} else {
-		if __mygo_match___mygo_expr_8, ok := a.(MonoTypeTKVar); ok {
-			var __mygo_expr_9 bool
-			if __mygo_match___mygo_expr_10, ok := b.(MonoTypeTKVar); ok {
-				__mygo_expr_9 = __mygo_match___mygo_expr_8.F0 == __mygo_match___mygo_expr_10.F0
-			} else {
-				__mygo_expr_9 = false
+			{
+				var expr_192 bool
+				expr_192 = false
+				expr_194 = expr_192
 			}
-			__mygo_expr_0 = __mygo_expr_9
-		} else {
-			if __mygo_match___mygo_expr_7, ok := a.(MonoTypeTParam); ok {
-				var __mygo_expr_8 bool
-				if __mygo_match___mygo_expr_9, ok := b.(MonoTypeTParam); ok {
-					__mygo_expr_8 = __mygo_match___mygo_expr_7.F0 == __mygo_match___mygo_expr_9.F0
-				} else {
-					__mygo_expr_8 = false
-				}
-				__mygo_expr_0 = __mygo_expr_8
+		}
+		expr_195 = expr_194
+		expr_196 = expr_195
+	} else {
+		if v_64, ok := a.(MonoTypeTKVar); ok {
+			var expr_191 bool
+			var expr_190 bool
+			if v_65, ok := b.(MonoTypeTKVar); ok {
+				var expr_189 bool
+				expr_189 = v_64.F0 == v_65.F0
+				expr_190 = expr_189
 			} else {
-				if __mygo_match___mygo_expr_6, ok := a.(MonoTypeTApp); ok {
-					var __mygo_expr_7 bool
-					if __mygo_match___mygo_expr_8, ok := b.(MonoTypeTApp); ok {
-						__mygo_expr_7 = MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_6.F0, *__mygo_match___mygo_expr_8.F0) && MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_6.F1, __mygo_match___mygo_expr_8.F1)
-					} else {
-						__mygo_expr_7 = false
-					}
-					__mygo_expr_0 = __mygo_expr_7
+				{
+					var expr_188 bool
+					expr_188 = false
+					expr_190 = expr_188
+				}
+			}
+			expr_191 = expr_190
+			expr_196 = expr_191
+		} else {
+			if v_62, ok := a.(MonoTypeTParam); ok {
+				var expr_187 bool
+				var expr_186 bool
+				if v_63, ok := b.(MonoTypeTParam); ok {
+					var expr_185 bool
+					expr_185 = v_62.F0 == v_63.F0
+					expr_186 = expr_185
 				} else {
-					if __mygo_match___mygo_expr_5, ok := a.(MonoTypeTCon); ok {
-						var __mygo_expr_6 bool
-						if __mygo_match___mygo_expr_7, ok := b.(MonoTypeTCon); ok {
-							__mygo_expr_6 = __mygo_match___mygo_expr_5.F0 == __mygo_match___mygo_expr_7.F0
-						} else {
-							__mygo_expr_6 = false
-						}
-						__mygo_expr_0 = __mygo_expr_6
+					{
+						var expr_184 bool
+						expr_184 = false
+						expr_186 = expr_184
+					}
+				}
+				expr_187 = expr_186
+				expr_196 = expr_187
+			} else {
+				if v_60, ok := a.(MonoTypeTApp); ok {
+					var expr_183 bool
+					var expr_182 bool
+					if v_61, ok := b.(MonoTypeTApp); ok {
+						var expr_181 bool
+						expr_181 = MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*v_60.F0, *v_61.F0) && MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(v_60.F1, v_61.F1)
+						expr_182 = expr_181
 					} else {
-						if __mygo_match___mygo_expr_4, ok := a.(MonoTypeTFunc); ok {
-							var __mygo_expr_5 bool
-							if __mygo_match___mygo_expr_6, ok := b.(MonoTypeTFunc); ok {
-								__mygo_expr_5 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_6.F0) && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_4.F1, *__mygo_match___mygo_expr_6.F1)
-							} else {
-								__mygo_expr_5 = false
-							}
-							__mygo_expr_0 = __mygo_expr_5
+						{
+							var expr_180 bool
+							expr_180 = false
+							expr_182 = expr_180
+						}
+					}
+					expr_183 = expr_182
+					expr_196 = expr_183
+				} else {
+					if v_58, ok := a.(MonoTypeTCon); ok {
+						var expr_179 bool
+						var expr_178 bool
+						if v_59, ok := b.(MonoTypeTCon); ok {
+							var expr_177 bool
+							expr_177 = v_58.F0 == v_59.F0
+							expr_178 = expr_177
 						} else {
-							if __mygo_match___mygo_expr_3, ok := a.(MonoTypeTVariadic); ok {
-								var __mygo_expr_4 bool
-								if __mygo_match___mygo_expr_5, ok := b.(MonoTypeTVariadic); ok {
-									__mygo_expr_4 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_5.F0) && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_3.F1, *__mygo_match___mygo_expr_5.F1)
-								} else {
-									__mygo_expr_4 = false
-								}
-								__mygo_expr_0 = __mygo_expr_4
+							{
+								var expr_176 bool
+								expr_176 = false
+								expr_178 = expr_176
+							}
+						}
+						expr_179 = expr_178
+						expr_196 = expr_179
+					} else {
+						if v_56, ok := a.(MonoTypeTFunc); ok {
+							var expr_175 bool
+							var expr_174 bool
+							if v_57, ok := b.(MonoTypeTFunc); ok {
+								var expr_173 bool
+								expr_173 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(v_56.F0, v_57.F0) && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*v_56.F1, *v_57.F1)
+								expr_174 = expr_173
 							} else {
-								if __mygo_match___mygo_expr_2, ok := a.(MonoTypeTTuple); ok {
-									var __mygo_expr_3 bool
-									if __mygo_match___mygo_expr_4, ok := b.(MonoTypeTTuple); ok {
-										__mygo_expr_3 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_4.F0)
-									} else {
-										__mygo_expr_3 = false
+								{
+									var expr_172 bool
+									expr_172 = false
+									expr_174 = expr_172
+								}
+							}
+							expr_175 = expr_174
+							expr_196 = expr_175
+						} else {
+							if v_54, ok := a.(MonoTypeTVariadic); ok {
+								var expr_171 bool
+								var expr_170 bool
+								if v_55, ok := b.(MonoTypeTVariadic); ok {
+									var expr_169 bool
+									expr_169 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(v_54.F0, v_55.F0) && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*v_54.F1, *v_55.F1)
+									expr_170 = expr_169
+								} else {
+									{
+										var expr_168 bool
+										expr_168 = false
+										expr_170 = expr_168
 									}
-									__mygo_expr_0 = __mygo_expr_3
+								}
+								expr_171 = expr_170
+								expr_196 = expr_171
+							} else {
+								if v_52, ok := a.(MonoTypeTTuple); ok {
+									var expr_167 bool
+									var expr_166 bool
+									if v_53, ok := b.(MonoTypeTTuple); ok {
+										var expr_165 bool
+										expr_165 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(v_52.F0, v_53.F0)
+										expr_166 = expr_165
+									} else {
+										{
+											var expr_164 bool
+											expr_164 = false
+											expr_166 = expr_164
+										}
+									}
+									expr_167 = expr_166
+									expr_196 = expr_167
 								} else {
 									if _, ok := a.(MonoTypeTUnit); ok {
-										var __mygo_expr_2 bool
+										var expr_163 bool
+										var expr_162 bool
 										if _, ok := b.(MonoTypeTUnit); ok {
-											__mygo_expr_2 = true
+											var expr_161 bool
+											expr_161 = true
+											expr_162 = expr_161
 										} else {
-											__mygo_expr_2 = false
-										}
-										__mygo_expr_0 = __mygo_expr_2
-									} else {
-										if __mygo_match___mygo_expr_1, ok := a.(MonoTypeTQualifiedName); ok {
-											var __mygo_expr_2 bool
-											if __mygo_match___mygo_expr_3, ok := b.(MonoTypeTQualifiedName); ok {
-												__mygo_expr_2 = __mygo_match___mygo_expr_1.F0 == __mygo_match___mygo_expr_3.F0 && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_1.F1, *__mygo_match___mygo_expr_3.F1)
-											} else {
-												__mygo_expr_2 = false
+											{
+												var expr_160 bool
+												expr_160 = false
+												expr_162 = expr_160
 											}
-											__mygo_expr_0 = __mygo_expr_2
+										}
+										expr_163 = expr_162
+										expr_196 = expr_163
+									} else {
+										if v_48, ok := a.(MonoTypeTQualifiedName); ok {
+											var expr_159 bool
+											var expr_158 bool
+											if v_49, ok := b.(MonoTypeTQualifiedName); ok {
+												var expr_157 bool
+												expr_157 = v_48.F0 == v_49.F0 && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*v_48.F1, *v_49.F1)
+												expr_158 = expr_157
+											} else {
+												{
+													var expr_156 bool
+													expr_156 = false
+													expr_158 = expr_156
+												}
+											}
+											expr_159 = expr_158
+											expr_196 = expr_159
 										} else {
+											panic("unreachable")
 										}
 									}
 								}
@@ -211,20 +292,26 @@ func MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(a MonoType, b MonoType) bool {
 			}
 		}
 	}
-	return __mygo_expr_0
+	return expr_196
 }
 func MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(a []MonoType, b []MonoType) bool {
+	var expr_201 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(a) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(b) {
-		return false
+		expr_201 = false
 	} else {
+		var expr_200 bool
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(a) == 0 {
-			return true
+			expr_200 = true
 		} else {
-			aHead := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, 0), MonoTypeTUnitCtor())
-			bHead := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, 0), MonoTypeTUnitCtor())
-			return MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(aHead, bHead) && MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(sliceDrop(a, 1), sliceDrop(b, 1))
+			var expr_199 bool
+			aHead_197 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, 0), MonoTypeTUnitCtor())
+			bHead_198 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, 0), MonoTypeTUnitCtor())
+			expr_199 = MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(aHead_197, bHead_198) && MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(sliceDrop[MonoType](a, 1), sliceDrop[MonoType](b, 1))
+			expr_200 = expr_199
 		}
+		expr_201 = expr_200
 	}
+	return expr_201
 }
 func MonoEqual(a MonoType, b MonoType) bool {
 	return MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(a, b)

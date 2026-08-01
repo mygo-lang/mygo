@@ -403,7 +403,20 @@ func positionedDecl() ps.Parser[struct {
 	}}
 }
 func decl() ps.Parser[ast2.Decl] {
-	return ps.PChoice([]ps.Parser[ast2.Decl]{ps.PAttempt(importDecl()), ps.PAttempt(structDecl()), ps.PAttempt(enumDecl()), ps.PAttempt(interfaceDecl()), ps.PAttempt(implDecl()), funcDecl()})
+	return ps.PChoice([]ps.Parser[ast2.Decl]{ps.PAttempt(importDecl()), ps.PAttempt(typeDecl()), ps.PAttempt(structDecl()), ps.PAttempt(enumDecl()), ps.PAttempt(interfaceDecl()), ps.PAttempt(implDecl()), funcDecl()})
+}
+func typeDecl() ps.Parser[ast2.Decl] {
+	return ps.PBind(kw("type"), func(_ string) ps.Parser[ast2.Decl] {
+		return ps.PBind(identifier(), func(name string) ps.Parser[ast2.Decl] {
+			return ps.PBind(typeParamList(), func(tps []string) ps.Parser[ast2.Decl] {
+				return ps.PChoice([]ps.Parser[ast2.Decl]{ps.PMap(ps.PThen(sym("="), typeExpr()), func(target ast2.TypeExpr) ast2.Decl {
+					return ast2.DeclTypeAliasDeclCtor(name, tps, target)
+				}), ps.PMap(typeExpr(), func(target ast2.TypeExpr) ast2.Decl {
+					return ast2.DeclTypeDeclCtor(name, tps, target)
+				})})
+			})
+		})
+	})
 }
 func importDecl() ps.Parser[ast2.Decl] {
 	return ps.PBind(kw("import"), func(_ string) ps.Parser[ast2.Decl] {
