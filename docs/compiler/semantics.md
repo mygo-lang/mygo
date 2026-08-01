@@ -28,6 +28,7 @@
 - Integer literals support hex (`0xff` / `0XFF`), octal (`0o777` / `0O777`), and binary (`0b1010` / `0B1010`) prefix syntax. These are parsed as `NUMBER` tokens in the lexer — the raw literal string (e.g. `"0xff"`) is stored as `LiteralExpr.Value` with `Kind: "number"`.
 - Supported numeric types: `Int`, `Int8`, `UInt8`, `Int16`, `UInt16`, `Int32`, `UInt32`, `Int64`, `UInt`, `UInt64`, `Float32`, `Float64`. All are represented as `*NamedType` in the AST and lowered to corresponding Go primitives via `goType`, `hmTypeString`, `jenTypeExpr`, and `typeString`. The prelude provides `ToString` and `Eq` impls for all of them.
 - Nested slice types are written explicitly as `Slice[Slice[Int]]`, and empty `[]` is treated as an empty slice literal in expression position.
+- Type aliases use `type A = B` and are interchangeable with their target type. Generic aliases are supported, for example `type Items[A] = Slice[A]`. A declaration without `=` such as `type UserID Int` or `type Box[A] Slice[A]` creates a distinct named type, matching Go's type identity rules.
 - `using` clauses support multiple constraints and constraint type arguments in both function and interface method signatures.
 - `where` has been removed from the main syntax; typeclass requirements now use `using` only. The parser rejects `where` with an explicit migration error.
 - `impl` supports three forms: `impl Type` (inherent methods), `impl Type : Interface[Args]` (named/generic typeclass implementation), and `impl Interface[Args]` (anonymous default instance).

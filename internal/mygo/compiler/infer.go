@@ -12,18 +12,53 @@ func expandTypeAliases(p *Package) {
 	if p == nil || len(p.TypeAliases) == 0 {
 		return
 	}
+	var substitute func(ast.TypeExpr, map[string]ast.TypeExpr) ast.TypeExpr
+	substitute = func(t ast.TypeExpr, params map[string]ast.TypeExpr) ast.TypeExpr {
+		switch n := t.(type) {
+		case *ast.NamedType:
+			if len(n.Args) == 0 {
+				if replacement := params[n.Name]; replacement != nil {
+					return substitute(replacement, nil)
+				}
+			}
+			out := &ast.NamedType{Line: n.Line, Column: n.Column, Name: n.Name, Args: make([]ast.TypeExpr, len(n.Args))}
+			for i, arg := range n.Args {
+				out.Args[i] = substitute(arg, params)
+			}
+			return out
+		case *ast.FuncType:
+			out := &ast.FuncType{Line: n.Line, Column: n.Column, Params: make([]ast.TypeExpr, len(n.Params))}
+			for i, param := range n.Params {
+				out.Params[i] = substitute(param, params)
+			}
+			out.Ret = substitute(n.Ret, params)
+			return out
+		case *ast.TupleType:
+			out := &ast.TupleType{Line: n.Line, Column: n.Column, Elems: make([]ast.TypeExpr, len(n.Elems))}
+			for i, elem := range n.Elems {
+				out.Elems[i] = substitute(elem, params)
+			}
+			return out
+		default:
+			return t
+		}
+	}
 	var expand func(ast.TypeExpr, map[string]bool) ast.TypeExpr
 	expand = func(t ast.TypeExpr, visiting map[string]bool) ast.TypeExpr {
 		switch n := t.(type) {
 		case *ast.NamedType:
-			if alias := p.TypeAliases[n.Name]; alias != nil && len(n.Args) == 0 && !visiting[n.Name] {
-				visiting[n.Name] = true
-				result := expand(alias.Type, visiting)
-				delete(visiting, n.Name)
-				return result
-			}
 			for i, arg := range n.Args {
 				n.Args[i] = expand(arg, visiting)
+			}
+			if alias := p.TypeAliases[n.Name]; alias != nil && len(alias.TypeParams) == len(n.Args) && !visiting[n.Name] {
+				visiting[n.Name] = true
+				params := make(map[string]ast.TypeExpr, len(alias.TypeParams))
+				for i, name := range alias.TypeParams {
+					params[name] = n.Args[i]
+				}
+				result := expand(substitute(alias.Type, params), visiting)
+				delete(visiting, n.Name)
+				return result
 			}
 		case *ast.FuncType:
 			for i, param := range n.Params {
