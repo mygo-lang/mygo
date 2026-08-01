@@ -137,15 +137,36 @@ func POrElse[A](left: Parser[A], right: Parser[A]) -> Parser[A]
     elsif r.Consumed then
       r
     else
-      right(state)
+      let r2 = right(state)
+      if r2.Ok then
+        r2
+      else
+        Reply[A] {
+          Ok: false,
+          Consumed: r2.Consumed,
+          Value: r2.Value,
+          State: r2.State,
+          Error: MergeErrors(r.Error, r2.Error),
+        }
+      end
     end
   end
 end
 
 func PChoice[A](parsers: Slice[Parser[A]]) -> Parser[A]
-  parsers.Fold(PFail[A]("no parser matched"), func(acc: Parser[A], p: Parser[A]) -> Parser[A]
-    POrElse(acc, p)
-  end)
+  if parsers.Len() == 0 then
+    PFail[A]("no parser matched")
+  else
+    PChoiceFrom(parsers, 1, parsers.Get(0).UnwrapOr(PFail[A]("no parser matched")))
+  end
+end
+
+func PChoiceFrom[A](parsers: Slice[Parser[A]], index: Int, current: Parser[A]) -> Parser[A]
+  if index >= parsers.Len() then
+    current
+  else
+    PChoiceFrom(parsers, index + 1, POrElse(current, parsers.Get(index).UnwrapOr(PFail[A]("no parser matched"))))
+  end
 end
 
 func PAttempt[A](p: Parser[A]) -> Parser[A]
@@ -203,39 +224,43 @@ end
 
 func PMany[A](p: Parser[A]) -> Parser[Slice[A]]
   func(state: State) -> Reply[Slice[A]]
-    let r = p(state)
-    if !r.Ok then
-      if r.Consumed then
-        Reply[Slice[A]] {
-          Ok: false,
-          Consumed: true,
-          Value: [],
-          State: r.State,
-          Error: r.Error,
-        }
-      else
-        Reply[Slice[A]] {
-          Ok: true,
-          Consumed: false,
-          Value: [],
-          State: state,
-          Error: EmptyError(state.Position),
-        }
-      end
+    PManyLoop(p, state, false, [])
+  end
+end
+
+# Accumulate in source order with Append. The former implementation rebuilt
+# the slice with Prepend while unwinding its recursion, making n matches O(n²).
+# A successful parser must advance input; otherwise PMany would not terminate.
+func PManyLoop[A](p: Parser[A], state: State, consumed: Bool, values: Slice[A]) -> Reply[Slice[A]]
+  let r = p(state)
+  if !r.Ok then
+    if r.Consumed then
+      Reply[Slice[A]] {
+        Ok: false,
+        Consumed: true,
+        Value: values,
+        State: r.State,
+        Error: r.Error,
+      }
     else
-      let tail = PMany(p)(r.State)
-      if !tail.Ok then
-        tail
-      else
-        Reply[Slice[A]] {
-          Ok: true,
-          Consumed: true,
-          Value: tail.Value.Prepend(r.Value),
-          State: tail.State,
-          Error: tail.Error,
-        }
-      end
+      Reply[Slice[A]] {
+        Ok: true,
+        Consumed: consumed,
+        Value: values,
+        State: state,
+        Error: EmptyError(state.Position),
+      }
     end
+  elsif !r.Consumed then
+    Reply[Slice[A]] {
+      Ok: false,
+      Consumed: consumed,
+      Value: values,
+      State: state,
+      Error: ErrorAt(state.Position, "PMany parser must consume input", EmptyExpected()),
+    }
+  else
+    PManyLoop(p, r.State, true, values.Append(r.Value))
   end
 end
 
@@ -513,6 +538,45 @@ func WithExpected(err: Option[ParseError], name: String) -> Option[ParseError]
       None
     end
   end
+end
+
+# Keep the diagnostic from the alternative that read furthest. At the same
+# position, combine expectations so callers can report every valid next token.
+func MergeErrors(left: Option[ParseError], right: Option[ParseError]) -> Option[ParseError]
+  switch left
+    case None => right
+    case Some(l) => switch right
+      case None => left
+      case Some(r) =>
+        if l.Position.Offset > r.Position.Offset then
+          left
+        elsif r.Position.Offset > l.Position.Offset then
+          right
+        else
+          Some(ParseError {
+            Position: l.Position,
+            Expected: MergeExpected(ErrorExpected(l), ErrorExpected(r)),
+            Message: "",
+          })
+        end
+    end
+  end
+end
+
+func ErrorExpected(err: ParseError) -> Slice[String]
+  if err.Message == "" then err.Expected else MergeExpected(err.Expected, [err.Message]) end
+end
+
+func MergeExpected(left: Slice[String], right: Slice[String]) -> Slice[String]
+  right.Fold(left, func(out: Slice[String], item: String) -> Slice[String]
+    if StringSliceContains(out, item) then out else out.Append(item) end
+  end)
+end
+
+func StringSliceContains(items: Slice[String], wanted: String) -> Bool
+  items.Fold(false, func(found: Bool, item: String) -> Bool
+    found || item == wanted
+  end)
 end
 
 func FromRunes(rs: Slice[Rune]) -> String

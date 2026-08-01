@@ -146,6 +146,23 @@ func TestPOrElseFailsWhenBothFail(t: Ref[testing.T]) -> ()
   end
 end
 
+func TestPOrElseKeepsFurthestAttemptError(t: Ref[testing.T]) -> ()
+  let left = PAttempt(PThen(PString("ab"), PChar('c')))
+  let right = PThen(PChar('a'), PChar('d'))
+  let result = ParseInput(POrElse(left, right), "abx")
+  if result.Ok then
+    t.Fatal("choice should fail")
+  end
+  switch result.Error
+    case Some(err) then
+      if err.Position.Offset != 2 then
+        t.Fatalf("error offset = %d, want 2", err.Position.Offset)
+      end
+    end
+    case None => t.Fatal("choice should retain a parse error")
+  end
+end
+
 func TestPOrElseDoesNotBacktrackOnConsumedFailure(t: Ref[testing.T]) -> ()
   # Left parser consumes 'a' then fails
   let p = PBind(PChar('a'), func(_: Rune) -> Parser[Rune]
@@ -174,6 +191,22 @@ func TestPChoiceSelectsMatchingParser(t: Ref[testing.T]) -> ()
   end
   if result.Value != 'b' then
     t.Fatalf("PChoice = %d, want %d", result.Value, 'b')
+  end
+end
+
+func TestPChoiceMergesExpectedAtSamePosition(t: Ref[testing.T]) -> ()
+  let parsers = [PChar('a'), PChar('b')]
+  let result = ParseInput(PChoice(parsers), "c")
+  if result.Ok then
+    t.Fatal("choice should fail")
+  end
+  switch result.Error
+    case Some(err) then
+      if err.Expected.Len() != 2 then
+        t.Fatalf("expected alternatives = %d, want 2", err.Expected.Len())
+      end
+    end
+    case None => t.Fatal("choice should retain a parse error")
   end
 end
 
@@ -282,6 +315,24 @@ func TestPManyStopsOnNonConsumingFailure(t: Ref[testing.T]) -> ()
   end
   if result.State.Index != 2 then
     t.Fatalf("PMany should stop after consuming 'aa', index=%d, want 2", result.State.Index)
+  end
+end
+
+func TestPManyRejectsZeroWidthSuccess(t: Ref[testing.T]) -> ()
+  let result = ParseInput(PMany(PPure[Int](1)), "")
+  if result.Ok then
+    t.Fatal("PMany must reject a parser that succeeds without consuming input")
+  end
+end
+
+func TestPManyParsesLargeInput(t: Ref[testing.T]) -> ()
+  let input = "abcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd"
+  let result = ParseInput(PMany(PAnyRune()), input)
+  if !result.Ok then
+    t.Fatal("PMany should parse repeated input")
+  end
+  if result.Value.Len() != 64 then
+    t.Fatalf("PMany length = %d, want 64", result.Value.Len())
   end
 end
 

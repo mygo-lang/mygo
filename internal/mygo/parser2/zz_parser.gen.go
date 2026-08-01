@@ -718,7 +718,7 @@ func blockItems(stopParser ps.Parser[string], start ps.State, cur ps.State, item
 	return __mygo_mt_parser2_blockitems(stopParser, start, cur, items, 0)
 }
 func stmt() ps.Parser[ast2.Stmt] {
-	return ps.PChoice([]func(ps.State) ps.Reply[ast2.Stmt]{ps.PAttempt(inlineGoStmt()), ps.PAttempt(returnStmt()), ps.PAttempt(breakStmt()), ps.PAttempt(continueStmt()), ps.PAttempt(varStmt()), ps.PAttempt(whileStmt()), ps.PAttempt(letrecStmt()), ps.PAttempt(letStmt()), ps.PAttempt(ifStmt()), ps.PAttempt(assignStmt()), exprStmt()})
+	return ps.PChoice([]func(ps.State) ps.Reply[ast2.Stmt]{ps.PAttempt(returnStmt()), ps.PAttempt(breakStmt()), ps.PAttempt(continueStmt()), ps.PAttempt(varStmt()), ps.PAttempt(whileStmt()), ps.PAttempt(letrecStmt()), ps.PAttempt(letStmt()), exprStmt()})
 }
 func breakStmt() ps.Parser[ast2.Stmt] {
 	return ps.PMap(kw("break"), func(_ string) ast2.Stmt {
@@ -730,22 +730,25 @@ func continueStmt() ps.Parser[ast2.Stmt] {
 		return ast2.StmtContinueStmtCtor()
 	})
 }
-func ifStmt() ps.Parser[ast2.Stmt] {
-	return ps.PMap(ifExpr(), func(e ast2.Expr) ast2.Stmt {
-		return ast2.StmtExprStmtCtor(e)
-	})
-}
 func exprStmt() ps.Parser[ast2.Stmt] {
-	return ps.PMap(expr(), func(e ast2.Expr) ast2.Stmt {
-		return ast2.StmtExprStmtCtor(e)
-	})
-}
-func assignStmt() ps.Parser[ast2.Stmt] {
-	return ps.PBind(postfixExpr(), func(lhs ast2.Expr) ps.Parser[ast2.Stmt] {
-		return ps.PBind(sym("="), func(_ string) ps.Parser[ast2.Stmt] {
-			return ps.PMap(expr(), func(rhs ast2.Expr) ast2.Stmt {
-				return ast2.StmtAssignStmtCtor(lhs, rhs)
-			})
+	return ps.PBind(expr(), func(left ast2.Expr) ps.Parser[ast2.Stmt] {
+		return ps.PBind(ps.POptional(ps.PThen(sym("="), expr())), func(right Option[ast2.Expr]) ps.Parser[ast2.Stmt] {
+			var expr_84 ast2.Stmt
+			if v_45, ok := right.(OptionSome[ast2.Expr]); ok {
+				var expr_83 ast2.Stmt
+				expr_83 = ast2.StmtAssignStmtCtor(left, v_45.F0)
+				expr_84 = expr_83
+			} else {
+				if _, ok := right.(OptionNone[ast2.Expr]); ok {
+					var expr_82 ast2.Stmt
+					expr_82 = ast2.StmtExprStmtCtor(left)
+					expr_84 = expr_82
+				} else {
+					panic("unreachable")
+				}
+			}
+			stmt_85 := expr_84
+			return ps.PPure(stmt_85)
 		})
 	})
 }
@@ -860,14 +863,14 @@ func expr() ps.Parser[ast2.Expr] {
 }
 func positionedExpr(inner ps.Parser[ast2.Expr]) ps.Parser[ast2.Expr] {
 	return func(state ps.State) ps.Reply[ast2.Expr] {
-		r_82 := inner(state)
-		var expr_83 ps.Reply[ast2.Expr]
-		if r_82.Ok {
-			expr_83 = ps.Reply[ast2.Expr]{Ok: true, Consumed: r_82.Consumed, Value: exprAt(state, r_82.Value.Kind), State: r_82.State, Error: r_82.Error}
+		r_86 := inner(state)
+		var expr_87 ps.Reply[ast2.Expr]
+		if r_86.Ok {
+			expr_87 = ps.Reply[ast2.Expr]{Ok: true, Consumed: r_86.Consumed, Value: exprAt(state, r_86.Value.Kind), State: r_86.State, Error: r_86.Error}
 		} else {
-			expr_83 = r_82
+			expr_87 = r_86
 		}
-		return expr_83
+		return expr_87
 	}
 }
 func exprKind() ps.Parser[ast2.Expr] {
@@ -908,21 +911,21 @@ func pattern() ps.Parser[ast2.Pattern] {
 		return ast2.PatternLiteralPatternCtor("string", value)
 	}), ps.PBind(identifier(), func(name string) ps.Parser[ast2.Pattern] {
 		return ps.PMap(ps.POptional(paren(ps.PSepBy(lazyPattern(), sym(",")))), func(args Option[[]ast2.Pattern]) ast2.Pattern {
-			var expr_86 ast2.Pattern
+			var expr_90 ast2.Pattern
 			if _, ok := args.(OptionNone[[]ast2.Pattern]); ok {
-				var expr_85 ast2.Pattern
-				expr_85 = ast2.PatternBindPatternCtor(name)
-				expr_86 = expr_85
+				var expr_89 ast2.Pattern
+				expr_89 = ast2.PatternBindPatternCtor(name)
+				expr_90 = expr_89
 			} else {
-				if v_44, ok := args.(OptionSome[[]ast2.Pattern]); ok {
-					var expr_84 ast2.Pattern
-					expr_84 = ast2.PatternVariantPatternCtor(name, v_44.F0)
-					expr_86 = expr_84
+				if v_46, ok := args.(OptionSome[[]ast2.Pattern]); ok {
+					var expr_88 ast2.Pattern
+					expr_88 = ast2.PatternVariantPatternCtor(name, v_46.F0)
+					expr_90 = expr_88
 				} else {
 					panic("unreachable")
 				}
 			}
-			return expr_86
+			return expr_90
 		})
 	})})
 }
@@ -952,21 +955,21 @@ func inlineGoBody() ps.Parser[InlineGoParts] {
 			return ps.PBind(stringLiteral(), func(code string) ps.Parser[InlineGoParts] {
 				return ps.PMap(ps.PMany(inlineGoBinding()), func(bindings []InlineGoBinding) InlineGoParts {
 					return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(bindings, InlineGoParts{Code: code, Values: []ast2.GoOperand([]ast2.GoOperand{}), Types: []ast2.GoTypeOperand([]ast2.GoTypeOperand{})}, func(out InlineGoParts, binding InlineGoBinding) InlineGoParts {
-						var expr_89 InlineGoParts
-						if v_47, ok := binding.(InlineGoBindingValueBinding); ok {
-							var expr_88 InlineGoParts
-							expr_88 = InlineGoParts{Code: out.Code, Values: MygoIN5SliceM6Append(out.Values, ast2.GoOperand{Name: v_47.F0, Value: v_47.F1}), Types: out.Types}
-							expr_89 = expr_88
+						var expr_93 InlineGoParts
+						if v_49, ok := binding.(InlineGoBindingValueBinding); ok {
+							var expr_92 InlineGoParts
+							expr_92 = InlineGoParts{Code: out.Code, Values: MygoIN5SliceM6Append(out.Values, ast2.GoOperand{Name: v_49.F0, Value: v_49.F1}), Types: out.Types}
+							expr_93 = expr_92
 						} else {
-							if v_46, ok := binding.(InlineGoBindingTypeBinding); ok {
-								var expr_87 InlineGoParts
-								expr_87 = InlineGoParts{Code: out.Code, Values: out.Values, Types: MygoIN5SliceM6Append(out.Types, ast2.GoTypeOperand{Name: v_46.F0, Type: v_46.F1})}
-								expr_89 = expr_87
+							if v_48, ok := binding.(InlineGoBindingTypeBinding); ok {
+								var expr_91 InlineGoParts
+								expr_91 = InlineGoParts{Code: out.Code, Values: out.Values, Types: MygoIN5SliceM6Append(out.Types, ast2.GoTypeOperand{Name: v_48.F0, Type: v_48.F1})}
+								expr_93 = expr_91
 							} else {
 								panic("unreachable")
 							}
 						}
-						return expr_89
+						return expr_93
 					})
 				})
 			})
@@ -1042,40 +1045,40 @@ func lazyIfElseTail() ps.Parser[ast2.Expr] {
 	}
 }
 func bodyExprFromBlock(body ast2.Expr) ast2.Expr {
-	var expr_98 ast2.Expr
-	if v_48, ok := body.Kind.(ast2.ExprKindBlockExpr); ok {
-		var expr_97 ast2.Expr
-		var expr_96 ast2.Expr
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_48.F0) == 1 {
-			var expr_95 ast2.Expr
-			var first_91 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_48.F0, 0), ast2.StmtExprStmtCtor(emptyExpr()))
-			var expr_94 ast2.Expr
-			if v_49, ok := first_91.(ast2.StmtExprStmt); ok {
-				var expr_93 ast2.Expr
-				expr_93 = v_49.F0
-				expr_94 = expr_93
+	var expr_102 ast2.Expr
+	if v_50, ok := body.Kind.(ast2.ExprKindBlockExpr); ok {
+		var expr_101 ast2.Expr
+		var expr_100 ast2.Expr
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_50.F0) == 1 {
+			var expr_99 ast2.Expr
+			var first_95 ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(v_50.F0, 0), ast2.StmtExprStmtCtor(emptyExpr()))
+			var expr_98 ast2.Expr
+			if v_51, ok := first_95.(ast2.StmtExprStmt); ok {
+				var expr_97 ast2.Expr
+				expr_97 = v_51.F0
+				expr_98 = expr_97
 			} else {
 				{
-					var expr_92 ast2.Expr
-					expr_92 = body
-					expr_94 = expr_92
+					var expr_96 ast2.Expr
+					expr_96 = body
+					expr_98 = expr_96
 				}
 			}
-			expr_95 = expr_94
-			expr_96 = expr_95
+			expr_99 = expr_98
+			expr_100 = expr_99
 		} else {
-			expr_96 = body
+			expr_100 = body
 		}
-		expr_97 = expr_96
-		expr_98 = expr_97
+		expr_101 = expr_100
+		expr_102 = expr_101
 	} else {
 		{
-			var expr_90 ast2.Expr
-			expr_90 = body
-			expr_98 = expr_90
+			var expr_94 ast2.Expr
+			expr_94 = body
+			expr_102 = expr_94
 		}
 	}
-	return expr_98
+	return expr_102
 }
 func binaryExpr() ps.Parser[ast2.Expr] {
 	return pipeExpr()
@@ -1117,14 +1120,14 @@ func makeBinary() func(string, ast2.Expr, ast2.Expr) ast2.Expr {
 }
 func postfixExpr() ps.Parser[ast2.Expr] {
 	return func(state ps.State) ps.Reply[ast2.Expr] {
-		first_99 := primaryExpr()(state)
-		var expr_100 ps.Reply[ast2.Expr]
-		if !first_99.Ok {
-			expr_100 = first_99
+		first_103 := primaryExpr()(state)
+		var expr_104 ps.Reply[ast2.Expr]
+		if !first_103.Ok {
+			expr_104 = first_103
 		} else {
-			expr_100 = postfixTail(state, first_99.State, first_99.Value)
+			expr_104 = postfixTail(state, first_103.State, first_103.Value)
 		}
-		return expr_100
+		return expr_104
 	}
 }
 func postfixTail(start ps.State, cur ps.State, acc ast2.Expr) ps.Reply[ast2.Expr] {
@@ -1152,14 +1155,14 @@ func callSuffix() ps.Parser[struct {
 func structLitFields(head ast2.StructLitHead) ps.Parser[ast2.Expr] {
 	return ps.PBind(sym("{"), func(_ string) ps.Parser[ast2.Expr] {
 		return ps.PBind(sepByEnd(structLitField(), sym(",")), func(fields []ast2.StructLitField) ps.Parser[ast2.Expr] {
-			var expr_109 ast2.Expr
+			var expr_113 ast2.Expr
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(head.TypeArgs) == 0 {
-				expr_109 = exprKindOnly(ast2.ExprKindStructLitExprCtor(head.Name, fields))
+				expr_113 = exprKindOnly(ast2.ExprKindStructLitExprCtor(head.Name, fields))
 			} else {
-				expr_109 = exprKindOnly(ast2.ExprKindGenericStructLitExprCtor(head.Name, head.TypeArgs, fields))
+				expr_113 = exprKindOnly(ast2.ExprKindGenericStructLitExprCtor(head.Name, head.TypeArgs, fields))
 			}
-			value_110 := expr_109
-			return ps.PThen(sym("}"), ps.PPure(value_110))
+			value_114 := expr_113
+			return ps.PThen(sym("}"), ps.PPure(value_114))
 		})
 	})
 }
@@ -1239,8 +1242,8 @@ func setLiteral() ps.Parser[ast2.Expr] {
 	})
 }
 func sepByEnd[A any, S any](item ps.Parser[A], sep ps.Parser[S]) ps.Parser[[]A] {
-	guardedSep_111 := ps.PAttempt(ps.PThen(sep, ps.PLookAhead(item)))
-	return ps.PBind(ps.PSepBy(item, guardedSep_111), func(items []A) ps.Parser[[]A] {
+	guardedSep_115 := ps.PAttempt(ps.PThen(sep, ps.PLookAhead(item)))
+	return ps.PBind(ps.PSepBy(item, guardedSep_115), func(items []A) ps.Parser[[]A] {
 		return ps.PThen(ps.POptional(sep), ps.PPure(items))
 	})
 }
@@ -1257,19 +1260,19 @@ func funcLit() ps.Parser[ast2.Expr] {
 }
 func tupleOrParenExpr() ps.Parser[ast2.Expr] {
 	return ps.PBind(paren(ps.PSepBy(lazyExpr(), sym(","))), func(items []ast2.Expr) ps.Parser[ast2.Expr] {
-		var expr_113 ps.Parser[ast2.Expr]
+		var expr_117 ps.Parser[ast2.Expr]
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-			expr_113 = ps.PPure(emptyExpr())
+			expr_117 = ps.PPure(emptyExpr())
 		} else {
-			var expr_112 ps.Parser[ast2.Expr]
+			var expr_116 ps.Parser[ast2.Expr]
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 1 {
-				expr_112 = ps.PPure(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), emptyExpr()))
+				expr_116 = ps.PPure(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), emptyExpr()))
 			} else {
-				expr_112 = ps.PPure(exprKindOnly(ast2.ExprKindTupleExprCtor(items)))
+				expr_116 = ps.PPure(exprKindOnly(ast2.ExprKindTupleExprCtor(items)))
 			}
-			expr_113 = expr_112
+			expr_117 = expr_116
 		}
-		return expr_113
+		return expr_117
 	})
 }
 func binaryOp() ps.Parser[string] {
@@ -1289,14 +1292,14 @@ func mulOp() ps.Parser[string] {
 }
 func chainLeft[A any](item ps.Parser[A], op ps.Parser[string], combine func(string, A, A) A) ps.Parser[A] {
 	return func(state ps.State) ps.Reply[A] {
-		first_114 := item(state)
-		var expr_115 ps.Reply[A]
-		if !first_114.Ok {
-			expr_115 = first_114
+		first_118 := item(state)
+		var expr_119 ps.Reply[A]
+		if !first_118.Ok {
+			expr_119 = first_118
 		} else {
-			expr_115 = chainLeftTail[A](item, op, combine, state, first_114.State, first_114.Value)
+			expr_119 = chainLeftTail[A](item, op, combine, state, first_118.State, first_118.Value)
 		}
-		return expr_115
+		return expr_119
 	}
 }
 func chainLeftTail[A any](item ps.Parser[A], op ps.Parser[string], combine func(string, A, A) A, start ps.State, cur ps.State, acc A) ps.Reply[A] {
@@ -1308,14 +1311,14 @@ func identifier() ps.Parser[string] {
 func identifierRaw() ps.Parser[string] {
 	return ps.PBind(ps.PSatisfy(isIdentStart, "identifier"), func(first rune) ps.Parser[string] {
 		return ps.PBind(ps.PMany(ps.PSatisfy(isIdentRest, "identifier character")), func(rest []rune) ps.Parser[string] {
-			value_121 := MygoIN6StringM9FromRunes(MygoIN5SliceM7Prepend(rest, first))
-			var expr_122 ps.Parser[string]
-			if isKeyword(value_121) {
-				expr_122 = failIdentifier()
+			value_125 := MygoIN6StringM9FromRunes(MygoIN5SliceM7Prepend(rest, first))
+			var expr_126 ps.Parser[string]
+			if isKeyword(value_125) {
+				expr_126 = failIdentifier()
 			} else {
-				expr_122 = ps.PPure(value_121)
+				expr_126 = ps.PPure(value_125)
 			}
-			return expr_122
+			return expr_126
 		})
 	})
 }
@@ -1350,10 +1353,10 @@ func rawStringLiteral() ps.Parser[string] {
 	}))
 }
 func multilineStringLiteral() ps.Parser[string] {
-	delimiter_123 := tripleQuoteString()
-	return lexeme[string](ps.PBind(ps.PString(delimiter_123), func(_ string) ps.Parser[string] {
-		return ps.PBind(ps.PMany(ps.PThen(ps.PNotFollowedBy(ps.PString(delimiter_123), "triple quote"), ps.PAnyRune())), func(chars []rune) ps.Parser[string] {
-			return ps.PThen(ps.PString(delimiter_123), ps.PPure(MygoIN6StringM9FromRunes(chars)))
+	delimiter_127 := tripleQuoteString()
+	return lexeme[string](ps.PBind(ps.PString(delimiter_127), func(_ string) ps.Parser[string] {
+		return ps.PBind(ps.PMany(ps.PThen(ps.PNotFollowedBy(ps.PString(delimiter_127), "triple quote"), ps.PAnyRune())), func(chars []rune) ps.Parser[string] {
+			return ps.PThen(ps.PString(delimiter_127), ps.PPure(MygoIN6StringM9FromRunes(chars)))
 		})
 	}))
 }
@@ -1462,161 +1465,161 @@ func isIdentRest(r rune) bool {
 	return isIdentStart(r) || r >= '0' && r <= '9'
 }
 func isKeyword(value string) bool {
-	var expr_155 bool
+	var expr_159 bool
 	if value == "package" {
-		var expr_154 bool
-		expr_154 = true
-		expr_155 = expr_154
+		var expr_158 bool
+		expr_158 = true
+		expr_159 = expr_158
 	} else {
 		if value == "import" {
-			var expr_153 bool
-			expr_153 = true
-			expr_155 = expr_153
+			var expr_157 bool
+			expr_157 = true
+			expr_159 = expr_157
 		} else {
 			if value == "enum" {
-				var expr_152 bool
-				expr_152 = true
-				expr_155 = expr_152
+				var expr_156 bool
+				expr_156 = true
+				expr_159 = expr_156
 			} else {
 				if value == "struct" {
-					var expr_151 bool
-					expr_151 = true
-					expr_155 = expr_151
+					var expr_155 bool
+					expr_155 = true
+					expr_159 = expr_155
 				} else {
 					if value == "interface" {
-						var expr_150 bool
-						expr_150 = true
-						expr_155 = expr_150
+						var expr_154 bool
+						expr_154 = true
+						expr_159 = expr_154
 					} else {
 						if value == "impl" {
-							var expr_149 bool
-							expr_149 = true
-							expr_155 = expr_149
+							var expr_153 bool
+							expr_153 = true
+							expr_159 = expr_153
 						} else {
 							if value == "func" {
-								var expr_148 bool
-								expr_148 = true
-								expr_155 = expr_148
+								var expr_152 bool
+								expr_152 = true
+								expr_159 = expr_152
 							} else {
 								if value == "if" {
-									var expr_147 bool
-									expr_147 = true
-									expr_155 = expr_147
+									var expr_151 bool
+									expr_151 = true
+									expr_159 = expr_151
 								} else {
 									if value == "then" {
-										var expr_146 bool
-										expr_146 = true
-										expr_155 = expr_146
+										var expr_150 bool
+										expr_150 = true
+										expr_159 = expr_150
 									} else {
 										if value == "elsif" {
-											var expr_145 bool
-											expr_145 = true
-											expr_155 = expr_145
+											var expr_149 bool
+											expr_149 = true
+											expr_159 = expr_149
 										} else {
 											if value == "else" {
-												var expr_144 bool
-												expr_144 = true
-												expr_155 = expr_144
+												var expr_148 bool
+												expr_148 = true
+												expr_159 = expr_148
 											} else {
 												if value == "switch" {
-													var expr_143 bool
-													expr_143 = true
-													expr_155 = expr_143
+													var expr_147 bool
+													expr_147 = true
+													expr_159 = expr_147
 												} else {
 													if value == "case" {
-														var expr_142 bool
-														expr_142 = true
-														expr_155 = expr_142
+														var expr_146 bool
+														expr_146 = true
+														expr_159 = expr_146
 													} else {
 														if value == "end" {
-															var expr_141 bool
-															expr_141 = true
-															expr_155 = expr_141
+															var expr_145 bool
+															expr_145 = true
+															expr_159 = expr_145
 														} else {
 															if value == "using" {
-																var expr_140 bool
-																expr_140 = true
-																expr_155 = expr_140
+																var expr_144 bool
+																expr_144 = true
+																expr_159 = expr_144
 															} else {
 																if value == "not" {
-																	var expr_139 bool
-																	expr_139 = true
-																	expr_155 = expr_139
+																	var expr_143 bool
+																	expr_143 = true
+																	expr_159 = expr_143
 																} else {
 																	if value == "let" {
-																		var expr_138 bool
-																		expr_138 = true
-																		expr_155 = expr_138
+																		var expr_142 bool
+																		expr_142 = true
+																		expr_159 = expr_142
 																	} else {
 																		if value == "letrec" {
-																			var expr_137 bool
-																			expr_137 = true
-																			expr_155 = expr_137
+																			var expr_141 bool
+																			expr_141 = true
+																			expr_159 = expr_141
 																		} else {
 																			if value == "var" {
-																				var expr_136 bool
-																				expr_136 = true
-																				expr_155 = expr_136
+																				var expr_140 bool
+																				expr_140 = true
+																				expr_159 = expr_140
 																			} else {
 																				if value == "embed" {
-																					var expr_135 bool
-																					expr_135 = true
-																					expr_155 = expr_135
+																					var expr_139 bool
+																					expr_139 = true
+																					expr_159 = expr_139
 																				} else {
 																					if value == "while" {
-																						var expr_134 bool
-																						expr_134 = true
-																						expr_155 = expr_134
+																						var expr_138 bool
+																						expr_138 = true
+																						expr_159 = expr_138
 																					} else {
 																						if value == "break" {
-																							var expr_133 bool
-																							expr_133 = true
-																							expr_155 = expr_133
+																							var expr_137 bool
+																							expr_137 = true
+																							expr_159 = expr_137
 																						} else {
 																							if value == "continue" {
-																								var expr_132 bool
-																								expr_132 = true
-																								expr_155 = expr_132
+																								var expr_136 bool
+																								expr_136 = true
+																								expr_159 = expr_136
 																							} else {
 																								if value == "return" {
-																									var expr_131 bool
-																									expr_131 = true
-																									expr_155 = expr_131
+																									var expr_135 bool
+																									expr_135 = true
+																									expr_159 = expr_135
 																								} else {
 																									if value == "go" {
-																										var expr_130 bool
-																										expr_130 = true
-																										expr_155 = expr_130
+																										var expr_134 bool
+																										expr_134 = true
+																										expr_159 = expr_134
 																									} else {
 																										if value == "in" {
-																											var expr_129 bool
-																											expr_129 = true
-																											expr_155 = expr_129
+																											var expr_133 bool
+																											expr_133 = true
+																											expr_159 = expr_133
 																										} else {
 																											if value == "type" {
-																												var expr_128 bool
-																												expr_128 = true
-																												expr_155 = expr_128
+																												var expr_132 bool
+																												expr_132 = true
+																												expr_159 = expr_132
 																											} else {
 																												if value == "as" {
-																													var expr_127 bool
-																													expr_127 = true
-																													expr_155 = expr_127
+																													var expr_131 bool
+																													expr_131 = true
+																													expr_159 = expr_131
 																												} else {
 																													if value == "true" {
-																														var expr_126 bool
-																														expr_126 = true
-																														expr_155 = expr_126
+																														var expr_130 bool
+																														expr_130 = true
+																														expr_159 = expr_130
 																													} else {
 																														if value == "false" {
-																															var expr_125 bool
-																															expr_125 = true
-																															expr_155 = expr_125
+																															var expr_129 bool
+																															expr_129 = true
+																															expr_159 = expr_129
 																														} else {
 																															{
-																																var expr_124 bool
-																																expr_124 = false
-																																expr_155 = expr_124
+																																var expr_128 bool
+																																expr_128 = false
+																																expr_159 = expr_128
 																															}
 																														}
 																													}
@@ -1648,52 +1651,66 @@ func isKeyword(value string) bool {
 			}
 		}
 	}
-	return expr_155
+	return expr_159
 }
 func defaultImportAlias(path string) string {
-	parts_156 := strings.Split(path, "/")
-	var expr_157 string
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_156) == 0 {
-		expr_157 = path
+	parts_160 := strings.Split(path, "/")
+	var expr_161 string
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_160) == 0 {
+		expr_161 = path
 	} else {
-		expr_157 = MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_156, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_156)-1), path)
+		expr_161 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts_160, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts_160)-1), path)
 	}
-	return expr_157
+	return expr_161
 }
 func formatError(sourceName string, err Option[ps.ParseError], pos ps.Position) string {
-	var expr_160 string
-	if v_51, ok := err.(OptionSome[ps.ParseError]); ok {
-		var expr_159 string
-		expr_159 = sourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_51.F0.Position.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_51.F0.Position.Column) + ": parse error: " + v_51.F0.Message
-		expr_160 = expr_159
+	var expr_168 string
+	if v_53, ok := err.(OptionSome[ps.ParseError]); ok {
+		var expr_167 string
+		var expr_163 []string
+		if v_53.F0.Message == "" {
+			expr_163 = v_53.F0.Expected
+		} else {
+			expr_163 = MygoIN5SliceM6Append(v_53.F0.Expected, v_53.F0.Message)
+		}
+		expected_164 := expr_163
+		var expr_165 string
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(expected_164) == 0 {
+			expr_165 = "parse error"
+		} else {
+			expr_165 = "parse error: expected " + strings.Join(expected_164, " / ")
+		}
+		detail_166 := expr_165
+		expr_167 = sourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_53.F0.Position.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(v_53.F0.Position.Column) + ": " + detail_166
+		expr_168 = expr_167
 	} else {
 		if _, ok := err.(OptionNone[ps.ParseError]); ok {
-			var expr_158 string
-			expr_158 = sourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Column) + ": parse error"
-			expr_160 = expr_158
+			var expr_162 string
+			expr_162 = sourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Column) + ": parse error"
+			expr_168 = expr_162
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_160
+	return expr_168
 }
 func __mygo_mt_parser2_blockitems(stopParser ps.Parser[string], start ps.State, cur ps.State, items []ast2.Stmt, __mygo_state int) ps.Reply[ast2.Expr] {
 	for {
 		switch __mygo_state {
 		case 0:
-			stop_166 := ps.PLookAhead(stopParser)(cur)
-			var expr_170 ps.Reply[ast2.Expr]
-			if stop_166.Ok {
-				expr_170 = ps.Reply[ast2.Expr]{Ok: true, Consumed: cur.Index != start.Index, Value: exprAt(start, ast2.ExprKindBlockExprCtor(items)), State: cur, Error: ps.EmptyError(cur.Position)}
+			stop_174 := ps.PLookAhead(stopParser)(cur)
+			var expr_178 ps.Reply[ast2.Expr]
+			if stop_174.Ok {
+				expr_178 = ps.Reply[ast2.Expr]{Ok: true, Consumed: cur.Index != start.Index, Value: exprAt(start, ast2.ExprKindBlockExprCtor(items)), State: cur, Error: ps.EmptyError(cur.Position)}
 			} else {
-				var expr_169 ps.Reply[ast2.Expr]
-				r_167 := stmt()(cur)
-				var expr_168 ps.Reply[ast2.Expr]
-				if r_167.Ok {
+				var expr_177 ps.Reply[ast2.Expr]
+				r_175 := stmt()(cur)
+				var expr_176 ps.Reply[ast2.Expr]
+				if r_175.Ok {
 					__mygo_next_0 := stopParser
 					__mygo_next_1 := start
-					__mygo_next_2 := r_167.State
-					__mygo_next_3 := MygoIN5SliceM6Append(items, r_167.Value)
+					__mygo_next_2 := r_175.State
+					__mygo_next_3 := MygoIN5SliceM6Append(items, r_175.Value)
 					stopParser = __mygo_next_0
 					start = __mygo_next_1
 					cur = __mygo_next_2
@@ -1701,12 +1718,12 @@ func __mygo_mt_parser2_blockitems(stopParser ps.Parser[string], start ps.State, 
 					__mygo_state = 0
 					continue
 				} else {
-					expr_168 = ps.Reply[ast2.Expr]{Ok: false, Consumed: false, Value: emptyExpr(), State: cur, Error: r_167.Error}
+					expr_176 = ps.Reply[ast2.Expr]{Ok: false, Consumed: false, Value: emptyExpr(), State: cur, Error: r_175.Error}
 				}
-				expr_169 = expr_168
-				expr_170 = expr_169
+				expr_177 = expr_176
+				expr_178 = expr_177
 			}
-			return expr_170
+			return expr_178
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
@@ -1716,23 +1733,23 @@ func __mygo_mt_parser2_chainlefttail[A any](item ps.Parser[A], op ps.Parser[stri
 	for {
 		switch __mygo_state {
 		case 0:
-			rop_176 := op(cur)
-			var expr_180 ps.Reply[A]
-			if !rop_176.Ok {
-				expr_180 = ps.Reply[A]{Ok: true, Consumed: cur.Index != start.Index, Value: acc, State: cur, Error: ps.EmptyError(cur.Position)}
+			rop_184 := op(cur)
+			var expr_188 ps.Reply[A]
+			if !rop_184.Ok {
+				expr_188 = ps.Reply[A]{Ok: true, Consumed: cur.Index != start.Index, Value: acc, State: cur, Error: ps.EmptyError(cur.Position)}
 			} else {
-				var expr_179 ps.Reply[A]
-				rr_177 := item(rop_176.State)
-				var expr_178 ps.Reply[A]
-				if !rr_177.Ok {
-					expr_178 = rr_177
+				var expr_187 ps.Reply[A]
+				rr_185 := item(rop_184.State)
+				var expr_186 ps.Reply[A]
+				if !rr_185.Ok {
+					expr_186 = rr_185
 				} else {
 					__mygo_next_0 := item
 					__mygo_next_1 := op
 					__mygo_next_2 := combine
 					__mygo_next_3 := start
-					__mygo_next_4 := rr_177.State
-					__mygo_next_5 := combine(rop_176.Value, acc, rr_177.Value)
+					__mygo_next_4 := rr_185.State
+					__mygo_next_5 := combine(rop_184.Value, acc, rr_185.Value)
 					item = __mygo_next_0
 					op = __mygo_next_1
 					combine = __mygo_next_2
@@ -1742,10 +1759,10 @@ func __mygo_mt_parser2_chainlefttail[A any](item ps.Parser[A], op ps.Parser[stri
 					__mygo_state = 0
 					continue
 				}
-				expr_179 = expr_178
-				expr_180 = expr_179
+				expr_187 = expr_186
+				expr_188 = expr_187
 			}
-			return expr_180
+			return expr_188
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
@@ -1755,53 +1772,53 @@ func __mygo_mt_parser2_postfixtail(start ps.State, cur ps.State, acc ast2.Expr, 
 	for {
 		switch __mygo_state {
 		case 0:
-			cast_189 := ps.PThen(kw("as"), typeExpr())(cur)
-			var expr_196 ps.Reply[ast2.Expr]
-			if cast_189.Ok {
+			cast_197 := ps.PThen(kw("as"), typeExpr())(cur)
+			var expr_204 ps.Reply[ast2.Expr]
+			if cast_197.Ok {
 				__mygo_next_0 := start
-				__mygo_next_1 := cast_189.State
-				__mygo_next_2 := exprWithPos(acc.Pos, ast2.ExprKindTypeAsExprCtor(acc, cast_189.Value))
+				__mygo_next_1 := cast_197.State
+				__mygo_next_2 := exprWithPos(acc.Pos, ast2.ExprKindTypeAsExprCtor(acc, cast_197.Value))
 				start = __mygo_next_0
 				cur = __mygo_next_1
 				acc = __mygo_next_2
 				__mygo_state = 0
 				continue
 			} else {
-				var expr_195 ps.Reply[ast2.Expr]
-				call_190 := callSuffix()(cur)
-				var expr_194 ps.Reply[ast2.Expr]
-				if call_190.Ok {
+				var expr_203 ps.Reply[ast2.Expr]
+				call_198 := callSuffix()(cur)
+				var expr_202 ps.Reply[ast2.Expr]
+				if call_198.Ok {
 					__mygo_next_0 := start
-					__mygo_next_1 := call_190.State
-					__mygo_next_2 := exprWithPos(acc.Pos, ast2.ExprKindCallExprCtor(acc, call_190.Value.F0, call_190.Value.F1))
+					__mygo_next_1 := call_198.State
+					__mygo_next_2 := exprWithPos(acc.Pos, ast2.ExprKindCallExprCtor(acc, call_198.Value.F0, call_198.Value.F1))
 					start = __mygo_next_0
 					cur = __mygo_next_1
 					acc = __mygo_next_2
 					__mygo_state = 0
 					continue
 				} else {
-					var expr_193 ps.Reply[ast2.Expr]
-					fld_191 := ps.PThen(sym("."), identifier())(cur)
-					var expr_192 ps.Reply[ast2.Expr]
-					if fld_191.Ok {
+					var expr_201 ps.Reply[ast2.Expr]
+					fld_199 := ps.PThen(sym("."), identifier())(cur)
+					var expr_200 ps.Reply[ast2.Expr]
+					if fld_199.Ok {
 						__mygo_next_0 := start
-						__mygo_next_1 := fld_191.State
-						__mygo_next_2 := exprWithPos(acc.Pos, ast2.ExprKindFieldExprCtor(acc, fld_191.Value))
+						__mygo_next_1 := fld_199.State
+						__mygo_next_2 := exprWithPos(acc.Pos, ast2.ExprKindFieldExprCtor(acc, fld_199.Value))
 						start = __mygo_next_0
 						cur = __mygo_next_1
 						acc = __mygo_next_2
 						__mygo_state = 0
 						continue
 					} else {
-						expr_192 = ps.Reply[ast2.Expr]{Ok: true, Consumed: cur.Index != start.Index, Value: acc, State: cur, Error: ps.EmptyError(cur.Position)}
+						expr_200 = ps.Reply[ast2.Expr]{Ok: true, Consumed: cur.Index != start.Index, Value: acc, State: cur, Error: ps.EmptyError(cur.Position)}
 					}
-					expr_193 = expr_192
-					expr_194 = expr_193
+					expr_201 = expr_200
+					expr_202 = expr_201
 				}
-				expr_195 = expr_194
-				expr_196 = expr_195
+				expr_203 = expr_202
+				expr_204 = expr_203
 			}
-			return expr_196
+			return expr_204
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}

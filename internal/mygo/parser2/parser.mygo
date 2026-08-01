@@ -476,7 +476,6 @@ end
 # stmt 解析语句。语句可以包含内嵌的表达式。
 func stmt() -> ps.Parser[ast2.Stmt]
   ps.PChoice([
-    ps.PAttempt(inlineGoStmt()),
     ps.PAttempt(returnStmt()),
     ps.PAttempt(breakStmt()),
     ps.PAttempt(continueStmt()),
@@ -484,8 +483,6 @@ func stmt() -> ps.Parser[ast2.Stmt]
     ps.PAttempt(whileStmt()),
     ps.PAttempt(letrecStmt()),
     ps.PAttempt(letStmt()),
-    ps.PAttempt(ifStmt()),
-    ps.PAttempt(assignStmt()),
     exprStmt(),
   ])
 end
@@ -498,27 +495,18 @@ func continueStmt() -> ps.Parser[ast2.Stmt]
   ps.PMap(kw("continue"), func(_: String) -> ast2.Stmt ast2.Stmt.ContinueStmt end)
 end
 
-# ifStmt 将 if 表达式包装为语句。
-func ifStmt() -> ps.Parser[ast2.Stmt]
-  ps.PMap(ifExpr(), func(e: ast2.Expr) -> ast2.Stmt
-    ast2.Stmt.ExprStmt(e)
-  end)
-end
-
-# exprStmt 将表达式包装为表达式语句
+# Parse an expression once, then interpret an immediately following '=' as an
+# assignment.  Previously stmt first parsed postfixExpr in assignStmt and,
+# for every ordinary expression statement, discarded that result before
+# parsing the whole expression again in exprStmt.
 func exprStmt() -> ps.Parser[ast2.Stmt]
-  ps.PMap(expr(), func(e: ast2.Expr) -> ast2.Stmt
-    ast2.Stmt.ExprStmt(e)
-  end)
-end
-
-# 赋值语句解析: 左值 = 右值
-func assignStmt() -> ps.Parser[ast2.Stmt]
-  ps.PBind(postfixExpr(), func(lhs: ast2.Expr) -> ps.Parser[ast2.Stmt]
-    ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
-      ps.PMap(expr(), func(rhs: ast2.Expr) -> ast2.Stmt
-        ast2.Stmt.AssignStmt(lhs, rhs)
-      end)
+  ps.PBind(expr(), func(left: ast2.Expr) -> ps.Parser[ast2.Stmt]
+    ps.PBind(ps.POptional(ps.PThen(sym("="), expr())), func(right: Option[ast2.Expr]) -> ps.Parser[ast2.Stmt]
+      let stmt = switch right
+        case Some(value) => ast2.Stmt.AssignStmt(left, value)
+        case None => ast2.Stmt.ExprStmt(left)
+      end
+      ps.PPure(stmt)
     end)
   end)
 end
@@ -1367,7 +1355,10 @@ end
 
 func formatError(sourceName: String, err: Option[ps.ParseError], pos: ps.Position) -> String
   switch err
-    case Some(e) => sourceName + ":" + e.Position.Line.ToString() + ":" + e.Position.Column.ToString() + ": parse error: " + e.Message
+    case Some(e) =>
+      let expected = if e.Message == "" then e.Expected else e.Expected.Append(e.Message) end
+      let detail = if expected.Len() == 0 then "parse error" else "parse error: expected " + strings.Join(expected, " / ") end
+      sourceName + ":" + e.Position.Line.ToString() + ":" + e.Position.Column.ToString() + ": " + detail
     case None => sourceName + ":" + pos.Line.ToString() + ":" + pos.Column.ToString() + ": parse error"
   end
 end

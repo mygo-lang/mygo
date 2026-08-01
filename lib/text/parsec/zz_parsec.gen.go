@@ -84,110 +84,82 @@ func PThen[A any, B any](pa func(State) Reply[A], pb func(State) Reply[B]) func(
 func POrElse[A any](left func(State) Reply[A], right func(State) Reply[A]) func(State) Reply[A] {
 	return func(state State) Reply[A] {
 		r_8 := left(state)
-		var expr_10 Reply[A]
+		var expr_13 Reply[A]
 		if r_8.Ok {
-			expr_10 = r_8
+			expr_13 = r_8
 		} else {
-			var expr_9 Reply[A]
+			var expr_12 Reply[A]
 			if r_8.Consumed {
-				expr_9 = r_8
+				expr_12 = r_8
 			} else {
-				expr_9 = right(state)
+				var expr_11 Reply[A]
+				r2_9 := right(state)
+				var expr_10 Reply[A]
+				if r2_9.Ok {
+					expr_10 = r2_9
+				} else {
+					expr_10 = Reply[A]{Ok: false, Consumed: r2_9.Consumed, Value: r2_9.Value, State: r2_9.State, Error: MergeErrors(r_8.Error, r2_9.Error)}
+				}
+				expr_11 = expr_10
+				expr_12 = expr_11
 			}
-			expr_10 = expr_9
+			expr_13 = expr_12
 		}
-		return expr_10
+		return expr_13
 	}
 }
 func PChoice[A any](parsers []func(State) Reply[A]) func(State) Reply[A] {
-	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(parsers, PFail[A]("no parser matched"), func(acc func(State) Reply[A], p func(State) Reply[A]) func(State) Reply[A] {
-		return POrElse(acc, p)
-	})
+	var expr_14 func(State) Reply[A]
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parsers) == 0 {
+		expr_14 = PFail[A]("no parser matched")
+	} else {
+		expr_14 = PChoiceFrom(parsers, 1, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parsers, 0), PFail[A]("no parser matched")))
+	}
+	return expr_14
+}
+func PChoiceFrom[A any](parsers []func(State) Reply[A], index int, current func(State) Reply[A]) func(State) Reply[A] {
+	return __mygo_mt_parsec_pchoicefrom[A](parsers, index, current, 0)
 }
 func PAttempt[A any](p func(State) Reply[A]) func(State) Reply[A] {
 	return func(state State) Reply[A] {
-		r_11 := p(state)
-		var expr_12 Reply[A]
-		if r_11.Ok {
-			expr_12 = r_11
+		r_16 := p(state)
+		var expr_17 Reply[A]
+		if r_16.Ok {
+			expr_17 = r_16
 		} else {
-			expr_12 = Reply[A]{Ok: false, Consumed: false, Value: r_11.Value, State: state, Error: r_11.Error}
+			expr_17 = Reply[A]{Ok: false, Consumed: false, Value: r_16.Value, State: state, Error: r_16.Error}
 		}
-		return expr_12
+		return expr_17
 	}
 }
 func PLookAhead[A any](p func(State) Reply[A]) func(State) Reply[A] {
 	return func(state State) Reply[A] {
-		r_13 := p(state)
-		return Reply[A]{Ok: r_13.Ok, Consumed: false, Value: r_13.Value, State: state, Error: r_13.Error}
+		r_18 := p(state)
+		return Reply[A]{Ok: r_18.Ok, Consumed: false, Value: r_18.Value, State: state, Error: r_18.Error}
 	}
 }
 func PNotFollowedBy[A any](p func(State) Reply[A], message string) func(State) Reply[struct {
 }] {
 	return func(state State) Reply[struct{}] {
-		r_14 := p(state)
-		var expr_15 Reply[struct{}]
-		if r_14.Ok {
-			expr_15 = Reply[struct{}]{Ok: false, Consumed: false, Value: struct {
+		r_19 := p(state)
+		var expr_20 Reply[struct{}]
+		if r_19.Ok {
+			expr_20 = Reply[struct{}]{Ok: false, Consumed: false, Value: struct {
 			}{}, State: state, Error: ErrorAt(state.Position, message, EmptyExpected())}
 		} else {
-			expr_15 = Reply[struct{}]{Ok: true, Consumed: false, Value: struct {
+			expr_20 = Reply[struct{}]{Ok: true, Consumed: false, Value: struct {
 			}{}, State: state, Error: EmptyError(state.Position)}
 		}
-		return expr_15
+		return expr_20
 	}
 }
 func PMany[A any](p func(State) Reply[A]) func(State) Reply[[]A] {
 	return func(state State) Reply[[]A] {
-		__mygo_tcmc_stack := []func(Reply[[]A]) Reply[[]A]{}
-		for {
-			r_16 := p(state)
-			var expr_21 Reply[[]A]
-			if !r_16.Ok {
-				var expr_17 Reply[[]A]
-				if r_16.Consumed {
-					expr_17 = Reply[[]A]{Ok: false, Consumed: true, Value: []A{}, State: r_16.State, Error: r_16.Error}
-				} else {
-					expr_17 = Reply[[]A]{Ok: true, Consumed: false, Value: []A{}, State: state, Error: EmptyError(state.Position)}
-				}
-				expr_21 = expr_17
-			} else {
-				var expr_20 Reply[[]A]
-				var tail_18 Reply[[]A]
-				__mygo_tcmc_stack = append(__mygo_tcmc_stack, func(__mygo_tcmc_result Reply[[]A]) Reply[[]A] {
-					tail_18 := __mygo_tcmc_result
-					var expr_19 Reply[[]A]
-					if !tail_18.Ok {
-						expr_19 = tail_18
-					} else {
-						expr_19 = Reply[[]A]{Ok: true, Consumed: true, Value: MygoIN5SliceM7Prepend(tail_18.Value, r_16.Value), State: tail_18.State, Error: tail_18.Error}
-					}
-					expr_20 = expr_19
-					expr_21 = expr_20
-					return expr_21
-				})
-				state = r_16.State
-				continue
-				var expr_19 Reply[[]A]
-				if !tail_18.Ok {
-					expr_19 = tail_18
-				} else {
-					expr_19 = Reply[[]A]{Ok: true, Consumed: true, Value: MygoIN5SliceM7Prepend(tail_18.Value, r_16.Value), State: tail_18.State, Error: tail_18.Error}
-				}
-				expr_20 = expr_19
-				expr_21 = expr_20
-			}
-			{
-				__mygo_tcmc_result := expr_21
-				for len(__mygo_tcmc_stack) > 0 {
-					__mygo_tcmc_last := __mygo_tcmc_stack[len(__mygo_tcmc_stack)-1]
-					__mygo_tcmc_stack = __mygo_tcmc_stack[:len(__mygo_tcmc_stack)-1]
-					__mygo_tcmc_result = __mygo_tcmc_last(__mygo_tcmc_result)
-				}
-				return __mygo_tcmc_result
-			}
-		}
+		return PManyLoop[A](p, state, false, []A{})
 	}
+}
+func PManyLoop[A any](p func(State) Reply[A], state State, consumed bool, values []A) Reply[[]A] {
+	return __mygo_mt_parsec_pmanyloop[A](p, state, consumed, values, 0)
 }
 func PMany1[A any](p func(State) Reply[A]) func(State) Reply[[]A] {
 	return PBind(p, func(first A) func(State) Reply[[]A] {
@@ -198,20 +170,20 @@ func PMany1[A any](p func(State) Reply[A]) func(State) Reply[[]A] {
 }
 func POptional[A any](p func(State) Reply[A]) func(State) Reply[Option[A]] {
 	return func(state State) Reply[Option[A]] {
-		r_22 := p(state)
-		var expr_24 Reply[Option[A]]
-		if r_22.Ok {
-			expr_24 = Reply[Option[A]]{Ok: true, Consumed: r_22.Consumed, Value: Some[A](r_22.Value), State: r_22.State, Error: EmptyError(r_22.State.Position)}
+		r_25 := p(state)
+		var expr_27 Reply[Option[A]]
+		if r_25.Ok {
+			expr_27 = Reply[Option[A]]{Ok: true, Consumed: r_25.Consumed, Value: Some[A](r_25.Value), State: r_25.State, Error: EmptyError(r_25.State.Position)}
 		} else {
-			var expr_23 Reply[Option[A]]
-			if r_22.Consumed {
-				expr_23 = Reply[Option[A]]{Ok: false, Consumed: true, Value: None[A](), State: r_22.State, Error: r_22.Error}
+			var expr_26 Reply[Option[A]]
+			if r_25.Consumed {
+				expr_26 = Reply[Option[A]]{Ok: false, Consumed: true, Value: None[A](), State: r_25.State, Error: r_25.Error}
 			} else {
-				expr_23 = Reply[Option[A]]{Ok: true, Consumed: false, Value: None[A](), State: state, Error: EmptyError(state.Position)}
+				expr_26 = Reply[Option[A]]{Ok: true, Consumed: false, Value: None[A](), State: state, Error: EmptyError(state.Position)}
 			}
-			expr_24 = expr_23
+			expr_27 = expr_26
 		}
-		return expr_24
+		return expr_27
 	}
 }
 func PBetween[A any, L any, R any](open func(State) Reply[L], body func(State) Reply[A], close func(State) Reply[R]) func(State) Reply[A] {
@@ -233,38 +205,38 @@ func PSepBy1[A any, S any](item func(State) Reply[A], sep func(State) Reply[S]) 
 }
 func PLabel[A any](p func(State) Reply[A], name string) func(State) Reply[A] {
 	return func(state State) Reply[A] {
-		r_25 := p(state)
-		var expr_27 Reply[A]
-		if r_25.Ok {
-			expr_27 = r_25
+		r_28 := p(state)
+		var expr_30 Reply[A]
+		if r_28.Ok {
+			expr_30 = r_28
 		} else {
-			var expr_26 Reply[A]
-			if r_25.Consumed {
-				expr_26 = r_25
+			var expr_29 Reply[A]
+			if r_28.Consumed {
+				expr_29 = r_28
 			} else {
-				expr_26 = Reply[A]{Ok: false, Consumed: false, Value: r_25.Value, State: state, Error: WithExpected(r_25.Error, name)}
-			}
-			expr_27 = expr_26
-		}
-		return expr_27
-	}
-}
-func PSatisfy(pred func(rune) bool, expected string) func(State) Reply[rune] {
-	return func(state State) Reply[rune] {
-		r_28 := PeekRune(state)
-		var expr_30 Reply[rune]
-		if !r_28.Ok {
-			expr_30 = Reply[rune]{Ok: false, Consumed: false, Value: Zero[rune](), State: state, Error: ErrorAt(state.Position, expected, EmptyExpected())}
-		} else {
-			var expr_29 Reply[rune]
-			if pred(r_28.Value) {
-				expr_29 = Reply[rune]{Ok: true, Consumed: true, Value: r_28.Value, State: AdvanceRune(state), Error: EmptyError(state.Position)}
-			} else {
-				expr_29 = Reply[rune]{Ok: false, Consumed: false, Value: r_28.Value, State: state, Error: ErrorAt(state.Position, expected, EmptyExpected())}
+				expr_29 = Reply[A]{Ok: false, Consumed: false, Value: r_28.Value, State: state, Error: WithExpected(r_28.Error, name)}
 			}
 			expr_30 = expr_29
 		}
 		return expr_30
+	}
+}
+func PSatisfy(pred func(rune) bool, expected string) func(State) Reply[rune] {
+	return func(state State) Reply[rune] {
+		r_31 := PeekRune(state)
+		var expr_33 Reply[rune]
+		if !r_31.Ok {
+			expr_33 = Reply[rune]{Ok: false, Consumed: false, Value: Zero[rune](), State: state, Error: ErrorAt(state.Position, expected, EmptyExpected())}
+		} else {
+			var expr_32 Reply[rune]
+			if pred(r_31.Value) {
+				expr_32 = Reply[rune]{Ok: true, Consumed: true, Value: r_31.Value, State: AdvanceRune(state), Error: EmptyError(state.Position)}
+			} else {
+				expr_32 = Reply[rune]{Ok: false, Consumed: false, Value: r_31.Value, State: state, Error: ErrorAt(state.Position, expected, EmptyExpected())}
+			}
+			expr_33 = expr_32
+		}
+		return expr_33
 	}
 }
 func PAnyRune() func(State) Reply[rune] {
@@ -279,28 +251,28 @@ func PChar(expectedRune rune) func(State) Reply[rune] {
 }
 func PString(expected string) func(State) Reply[string] {
 	return func(state State) Reply[string] {
-		r_31 := MatchString(state, expected)
-		var expr_32 Reply[string]
-		if r_31.Ok {
-			expr_32 = r_31
+		r_34 := MatchString(state, expected)
+		var expr_35 Reply[string]
+		if r_34.Ok {
+			expr_35 = r_34
 		} else {
-			expr_32 = Reply[string]{Ok: false, Consumed: r_31.Consumed, Value: "", State: r_31.State, Error: r_31.Error}
+			expr_35 = Reply[string]{Ok: false, Consumed: r_34.Consumed, Value: "", State: r_34.State, Error: r_34.Error}
 		}
-		return expr_32
+		return expr_35
 	}
 }
 func PEof() func(State) Reply[struct {
 }] {
 	return func(state State) Reply[struct{}] {
-		var expr_33 Reply[struct{}]
+		var expr_36 Reply[struct{}]
 		if state.Index >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(state.Input) {
-			expr_33 = Reply[struct{}]{Ok: true, Consumed: false, Value: struct {
+			expr_36 = Reply[struct{}]{Ok: true, Consumed: false, Value: struct {
 			}{}, State: state, Error: EmptyError(state.Position)}
 		} else {
-			expr_33 = Reply[struct{}]{Ok: false, Consumed: false, Value: struct {
+			expr_36 = Reply[struct{}]{Ok: false, Consumed: false, Value: struct {
 			}{}, State: state, Error: ErrorAt(state.Position, "end of input", EmptyExpected())}
 		}
-		return expr_33
+		return expr_36
 	}
 }
 func PDigit() func(State) Reply[rune] {
@@ -377,22 +349,151 @@ func EmptyExpected() []string {
 	return []string{}
 }
 func WithExpected(err Option[ParseError], name string) Option[ParseError] {
-	var expr_36 Option[ParseError]
+	var expr_39 Option[ParseError]
 	if v_2, ok := err.(OptionSome[ParseError]); ok {
-		var expr_35 Option[ParseError]
-		expr_35 = Some[ParseError](ParseError{Position: v_2.F0.Position, Expected: MygoIN5SliceM6Append(v_2.F0.Expected, name), Message: v_2.F0.Message})
-		expr_36 = expr_35
+		var expr_38 Option[ParseError]
+		expr_38 = Some[ParseError](ParseError{Position: v_2.F0.Position, Expected: MygoIN5SliceM6Append(v_2.F0.Expected, name), Message: v_2.F0.Message})
+		expr_39 = expr_38
 	} else {
 		if _, ok := err.(OptionNone[ParseError]); ok {
-			var expr_34 Option[ParseError]
-			expr_34 = None[ParseError]()
-			expr_36 = expr_34
+			var expr_37 Option[ParseError]
+			expr_37 = None[ParseError]()
+			expr_39 = expr_37
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_36
+	return expr_39
+}
+func MergeErrors(left Option[ParseError], right Option[ParseError]) Option[ParseError] {
+	var expr_47 Option[ParseError]
+	if _, ok := left.(OptionNone[ParseError]); ok {
+		var expr_46 Option[ParseError]
+		expr_46 = right
+		expr_47 = expr_46
+	} else {
+		if v_3, ok := left.(OptionSome[ParseError]); ok {
+			var expr_45 Option[ParseError]
+			var expr_44 Option[ParseError]
+			if _, ok := right.(OptionNone[ParseError]); ok {
+				var expr_43 Option[ParseError]
+				expr_43 = left
+				expr_44 = expr_43
+			} else {
+				if v_4, ok := right.(OptionSome[ParseError]); ok {
+					var expr_42 Option[ParseError]
+					var expr_41 Option[ParseError]
+					if v_3.F0.Position.Offset > v_4.F0.Position.Offset {
+						expr_41 = left
+					} else {
+						var expr_40 Option[ParseError]
+						if v_4.F0.Position.Offset > v_3.F0.Position.Offset {
+							expr_40 = right
+						} else {
+							expr_40 = Some[ParseError](ParseError{Position: v_3.F0.Position, Expected: MergeExpected(ErrorExpected(v_3.F0), ErrorExpected(v_4.F0)), Message: ""})
+						}
+						expr_41 = expr_40
+					}
+					expr_42 = expr_41
+					expr_44 = expr_42
+				} else {
+					panic("unreachable")
+				}
+			}
+			expr_45 = expr_44
+			expr_47 = expr_45
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_47
+}
+func ErrorExpected(err ParseError) []string {
+	var expr_48 []string
+	if err.Message == "" {
+		expr_48 = err.Expected
+	} else {
+		expr_48 = MergeExpected(err.Expected, []string{err.Message})
+	}
+	return expr_48
+}
+func MergeExpected(left []string, right []string) []string {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(right, left, func(out []string, item string) []string {
+		var expr_49 []string
+		if StringSliceContains(out, item) {
+			expr_49 = out
+		} else {
+			expr_49 = MygoIN5SliceM6Append(out, item)
+		}
+		return expr_49
+	})
+}
+func StringSliceContains(items []string, wanted string) bool {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(items, false, func(found bool, item string) bool {
+		return found || item == wanted
+	})
 }
 func FromRunes(rs []rune) string {
 	return MygoIN6StringM9FromRunes(rs)
+}
+func __mygo_mt_parsec_pchoicefrom[A any](parsers []func(State) Reply[A], index int, current func(State) Reply[A], __mygo_state int) func(State) Reply[A] {
+	for {
+		switch __mygo_state {
+		case 0:
+			var expr_51 func(State) Reply[A]
+			if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parsers) {
+				expr_51 = current
+			} else {
+				__mygo_next_0 := parsers
+				__mygo_next_1 := index + 1
+				__mygo_next_2 := POrElse(current, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parsers, index), PFail[A]("no parser matched")))
+				parsers = __mygo_next_0
+				index = __mygo_next_1
+				current = __mygo_next_2
+				__mygo_state = 0
+				continue
+			}
+			return expr_51
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parsec_pmanyloop[A any](p func(State) Reply[A], state State, consumed bool, values []A, __mygo_state int) Reply[[]A] {
+	for {
+		switch __mygo_state {
+		case 0:
+			r_56 := p(state)
+			var expr_59 Reply[[]A]
+			if !r_56.Ok {
+				var expr_57 Reply[[]A]
+				if r_56.Consumed {
+					expr_57 = Reply[[]A]{Ok: false, Consumed: true, Value: values, State: r_56.State, Error: r_56.Error}
+				} else {
+					expr_57 = Reply[[]A]{Ok: true, Consumed: consumed, Value: values, State: state, Error: EmptyError(state.Position)}
+				}
+				expr_59 = expr_57
+			} else {
+				var expr_58 Reply[[]A]
+				if !r_56.Consumed {
+					expr_58 = Reply[[]A]{Ok: false, Consumed: consumed, Value: values, State: state, Error: ErrorAt(state.Position, "PMany parser must consume input", EmptyExpected())}
+				} else {
+					__mygo_next_0 := p
+					__mygo_next_1 := r_56.State
+					__mygo_next_2 := true
+					__mygo_next_3 := MygoIN5SliceM6Append(values, r_56.Value)
+					p = __mygo_next_0
+					state = __mygo_next_1
+					consumed = __mygo_next_2
+					values = __mygo_next_3
+					__mygo_state = 0
+					continue
+				}
+				expr_59 = expr_58
+			}
+			return expr_59
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
 }
