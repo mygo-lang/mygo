@@ -390,7 +390,13 @@ func (g *gen) genMutualTailTrampoline(p *mutualTailPlan) (ast.Decl, error) {
 	}
 	clauses = append(clauses, &ast.CaseClause{Body: []ast.Stmt{&ast.ExprStmt{X: &ast.CallExpr{Fun: ast.NewIdent("panic"), Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: "\"mygo: invalid mutual-tailcall state\""}}}}}})
 	loop := &ast.ForStmt{Body: &ast.BlockStmt{List: []ast.Stmt{&ast.SwitchStmt{Tag: ast.NewIdent("__mygo_state"), Body: &ast.BlockStmt{List: clauses}}}}}
-	return astFuncDecl(p.name, nil, proto.Type.TypeParams, params, proto.Type.Results.List, &ast.BlockStmt{List: []ast.Stmt{loop}}), nil
+	// A unit-returning Go function has a nil Results field. Keep it nil when
+	// constructing the trampoline too, rather than dereferencing it here.
+	var results []*ast.Field
+	if proto.Type.Results != nil {
+		results = proto.Type.Results.List
+	}
+	return astFuncDecl(p.name, nil, proto.Type.TypeParams, params, results, &ast.BlockStmt{List: []ast.Stmt{loop}}), nil
 }
 
 func mtRewriteStmts(in []ast.Stmt, p *mutualTailPlan, shared []ast.Expr) []ast.Stmt {
