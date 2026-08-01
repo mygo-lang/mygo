@@ -180,6 +180,8 @@ func simpleLoadPackage(dir string, noPrelude bool) *Package {
 		Imports:       map[string]struct{}{},
 		ImportAliases: map[string]string{},
 		Enums:         map[string]*EnumDecl{},
+		TypeAliases:   map[string]*TypeAliasDecl{},
+		Types:         map[string]*TypeDecl{},
 		Structs:       map[string]*StructDecl{},
 		Interfaces:    map[string]*InterfaceDecl{},
 		Funcs:         map[string]*FuncDecl{},
@@ -223,6 +225,10 @@ func simpleLoadPackage(dir string, noPrelude bool) *Package {
 				alias = importAliasForPath(d.Path)
 			}
 			p.ImportAliases[alias] = d.Path
+		case *TypeAliasDecl:
+			p.TypeAliases[d.Name] = d
+		case *TypeDecl:
+			p.Types[d.Name] = d
 		case *EnumDecl:
 			p.Enums[d.Name] = d
 		case *StructDecl:

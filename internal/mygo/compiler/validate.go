@@ -106,6 +106,10 @@ func (v *validator) validateDecl(decl Decl) error {
 	switch d := decl.(type) {
 	case *ImportDecl:
 		return v.validateImport(d)
+	case *TypeAliasDecl:
+		return v.validateTypeAlias(d)
+	case *TypeDecl:
+		return v.validateTypeDecl(d)
 	case *EnumDecl:
 		return v.validateEnum(d)
 	case *StructDecl:
@@ -118,6 +122,20 @@ func (v *validator) validateDecl(decl Decl) error {
 		return v.validateFunc(d)
 	case *LetStmt:
 		return v.validateLet(d)
+	}
+	return nil
+}
+
+func (v *validator) validateTypeAlias(d *TypeAliasDecl) error {
+	if d.Name == "" || d.Type == nil {
+		return common.ErrorAtNode(d.SourceFile, d, "type alias requires a name and target type")
+	}
+	return nil
+}
+
+func (v *validator) validateTypeDecl(d *TypeDecl) error {
+	if d.Name == "" || d.Type == nil {
+		return common.ErrorAtNode(d.SourceFile, d, "type declaration requires a name and underlying type")
 	}
 	return nil
 }

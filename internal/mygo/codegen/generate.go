@@ -788,6 +788,16 @@ func (g *gen) inferredType(e Expr) string {
 // genDecl adds declarations for enum/struct/interface to the source file.
 func (g *gen) genDecl(sf *goast.SourceFile, decl Decl) {
 	switch d := decl.(type) {
+	case *TypeAliasDecl:
+		if d.Type != nil {
+			spec := &ast.TypeSpec{Name: ast.NewIdent(d.Name), Assign: token.Pos(1), Type: goastTypeExpr(d.Type)}
+			sf.AddDecl(&ast.GenDecl{Tok: token.TYPE, Specs: []ast.Spec{spec}})
+		}
+	case *TypeDecl:
+		if d.Type != nil {
+			spec := &ast.TypeSpec{Name: ast.NewIdent(d.Name), Type: goastTypeExpr(d.Type)}
+			sf.AddDecl(&ast.GenDecl{Tok: token.TYPE, Specs: []ast.Spec{spec}})
+		}
 	case *EnumDecl:
 		g.genEnumDecl(sf, d)
 	case *StructDecl:

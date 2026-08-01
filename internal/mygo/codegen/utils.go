@@ -11,6 +11,10 @@ func sourceFileOf(decl Decl) string {
 	switch d := decl.(type) {
 	case *ImportDecl:
 		return d.SourceFile
+	case *TypeAliasDecl:
+		return d.SourceFile
+	case *TypeDecl:
+		return d.SourceFile
 	case *EnumDecl:
 		return d.SourceFile
 	case *StructDecl:

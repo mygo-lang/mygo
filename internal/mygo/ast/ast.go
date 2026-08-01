@@ -19,6 +19,29 @@ type ImportDecl struct {
 
 func (*ImportDecl) declNode() {}
 
+// TypeAliasDecl declares that Name is an alias for Type. It does not create a
+// distinct type identity.
+type TypeAliasDecl struct {
+	Line       int
+	Column     int
+	SourceFile string
+	Name       string
+	Type       TypeExpr
+}
+
+func (*TypeAliasDecl) declNode() {}
+
+// TypeDecl declares a new, distinct named type with the given underlying type.
+type TypeDecl struct {
+	Line       int
+	Column     int
+	SourceFile string
+	Name       string
+	Type       TypeExpr
+}
+
+func (*TypeDecl) declNode() {}
+
 type EnumDecl struct {
 	Line       int
 	Column     int
