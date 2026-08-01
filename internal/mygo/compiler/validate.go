@@ -31,11 +31,13 @@ type validator struct {
 
 	// letBindings tracks names declared with "let" (immutable) to reject
 	// assignment attempts. "var" declared names are mutable.
-	letBindings map[string]struct{}
+	letBindings       map[string]struct{}
+	globalLetBindings map[string]struct{}
 }
 
 func newValidator(p *pkg.Package, info *typeinference.TypedInfo) *validator {
 	globals := make(map[string]struct{})
+	globalLetBindings := make(map[string]struct{})
 	for name := range p.Funcs {
 		globals[name] = struct{}{}
 	}
@@ -54,6 +56,12 @@ func newValidator(p *pkg.Package, info *typeinference.TypedInfo) *validator {
 	// Register import aliases as globals so import "go:fmt" aliases like
 	// "fmt" are visible during name resolution.
 	for _, decl := range p.Decls {
+		if binding, ok := decl.(*LetStmt); ok && binding.Name != "" && binding.Name != "_" {
+			globals[binding.Name] = struct{}{}
+			if !binding.Mutable {
+				globalLetBindings[binding.Name] = struct{}{}
+			}
+		}
 		imp, ok := decl.(*ImportDecl)
 		if !ok || imp.Alias == "." {
 			continue
@@ -77,12 +85,13 @@ func newValidator(p *pkg.Package, info *typeinference.TypedInfo) *validator {
 	}
 
 	return &validator{
-		pkg:         p,
-		typedInfo:   info,
-		globals:     globals,
-		locals:      make(map[string]struct{}),
-		bindings:    make(map[string]struct{}),
-		letBindings: make(map[string]struct{}),
+		pkg:               p,
+		typedInfo:         info,
+		globals:           globals,
+		locals:            make(map[string]struct{}),
+		bindings:          make(map[string]struct{}),
+		letBindings:       make(map[string]struct{}),
+		globalLetBindings: globalLetBindings,
 	}
 }
 
@@ -853,7 +862,9 @@ func (v *validator) validateAssign(s *AssignStmt) error {
 	// A Ref[T] points at mutable storage. Assigning one of its fields mutates
 	// that storage, not the binding that holds the reference, so it is valid
 	// for let bindings and parameters as well as vars.
-	if _, isLet := v.letBindings[root]; isLet && !v.assignsThroughRef(target) {
+	_, isLet := v.letBindings[root]
+	_, isGlobalLet := v.globalLetBindings[root]
+	if (isLet || isGlobalLet) && !v.assignsThroughRef(target) {
 		return common.ErrorAtNode(s.SourceFile, s,
 			"immutable binding %q cannot be assigned", root)
 	}

@@ -168,8 +168,28 @@ func InferPackage(pkg *PkgInfo, state *InferState) (*TypedInfo, error) {
 		}
 	}
 
+	// Package bindings are visible to every package function, irrespective of
+	// their textual position. Infer them before function bodies so a function
+	// may reference a variable declared later in the file. Function signatures
+	// have already been pre-registered above, allowing initializers to call
+	// package functions as well.
+	for _, decl := range pkg.Decls {
+		binding, ok := decl.(*LetStmt)
+		if !ok {
+			continue
+		}
+		var err error
+		env, err = inferLetDecl(binding, env, state, info)
+		if err != nil {
+			return nil, errorAtNode(pkg, decl, err)
+		}
+	}
+
 	// Process declarations in order
 	for _, decl := range pkg.Decls {
+		if _, ok := decl.(*LetStmt); ok {
+			continue
+		}
 		var err error
 		env, err = inferDecl(decl, env, state, info, pkg)
 		if err != nil {

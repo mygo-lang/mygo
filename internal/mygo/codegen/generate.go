@@ -106,6 +106,15 @@ func GenerateFiles(p *Package, typedInfo *typeinference.TypedInfo) (map[string]s
 				sf.AddDeclWithSource(fd, declSource(fn))
 			}
 		}
+		for _, decl := range preludeDecls {
+			if binding, ok := decl.(*LetStmt); ok {
+				global, err := g.genPackageBinding(binding)
+				if err != nil {
+					return nil, err
+				}
+				sf.AddDeclWithSource(global, declSource(binding))
+			}
+		}
 		if err := g.addMutualTailTrampolines(sf, ""); err != nil {
 			return nil, err
 		}
@@ -176,28 +185,11 @@ func GenerateFiles(p *Package, typedInfo *typeinference.TypedInfo) (map[string]s
 		}
 		for _, decl := range decls {
 			if s, ok := decl.(*LetStmt); ok {
-				ctx := &egCtx{
-					locals:      map[string]string{},
-					bindings:    map[string]string{},
-					sourceTypes: map[string]string{},
-					mutable:     map[string]bool{},
-					typeParams:  map[string]struct{}{},
+				global, err := g.genPackageBinding(s)
+				if err != nil {
+					return nil, common.ErrorAtPos(g.currentFile, s.Line, s.Column, "package binding %s: %v", s.Name, err)
 				}
-				code, _, _ := g.translateExpr(s.Value, ctx, g.goType(s.Type, nil))
-				actual := sanitizeIdent(s.Name)
-				if actual == "" || actual == "_" {
-					actual = "tmp"
-				}
-				decl := &ast.GenDecl{
-					Tok: token.VAR,
-					Specs: []ast.Spec{
-						&ast.ValueSpec{
-							Names:  []*ast.Ident{ast.NewIdent(actual)},
-							Values: []ast.Expr{code},
-						},
-					},
-				}
-				sf.AddDeclWithSource(decl, declSource(s))
+				sf.AddDeclWithSource(global, declSource(s))
 			}
 		}
 		if g.needsCallAny && i == len(sortedSourceFiles)-1 {
@@ -785,6 +777,58 @@ func (g *gen) inferredType(e Expr) string {
 	return ""
 }
 
+// addPackageBindings makes package variables available in every expression
+// context. Go permits package variables to be used by functions declared
+// anywhere in the package, so the lowering context must do the same.
+func (g *gen) addPackageBindings(ctx *egCtx) {
+	if g == nil || g.pkg == nil || ctx == nil {
+		return
+	}
+	for _, decl := range g.pkg.Decls {
+		binding, ok := decl.(*LetStmt)
+		if !ok || binding.Name == "" || binding.Name == "_" {
+			continue
+		}
+		actual := sanitizeIdent(binding.Name)
+		ctx.bindings[binding.Name] = actual
+		typ := g.goType(binding.Type, nil)
+		if typ == "" {
+			typ = g.inferredType(binding.Value)
+		}
+		ctx.locals[binding.Name] = typ
+		ctx.sourceTypes[binding.Name] = typ
+		ctx.mutable[actual] = binding.Mutable
+	}
+}
+
+func (g *gen) genPackageBinding(binding *LetStmt) (ast.Decl, error) {
+	ctx := &egCtx{
+		locals: map[string]string{}, bindings: map[string]string{}, sourceTypes: map[string]string{},
+		mutable: map[string]bool{}, typeParams: map[string]struct{}{},
+	}
+	g.addPackageBindings(ctx)
+	expected := g.goType(binding.Type, nil)
+	if expected == "" {
+		expected = g.inferredType(binding.Value)
+	}
+	code, _, err := g.translateExpr(binding.Value, ctx, expected)
+	if err != nil {
+		return nil, err
+	}
+	if code == nil {
+		return nil, fmt.Errorf("initializer produced no Go expression")
+	}
+	actual := sanitizeIdent(binding.Name)
+	if actual == "" || actual == "_" {
+		return nil, fmt.Errorf("package binding requires a non-discard name")
+	}
+	spec := &ast.ValueSpec{Names: []*ast.Ident{ast.NewIdent(actual)}, Values: []ast.Expr{code}}
+	if binding.Type != nil {
+		spec.Type = goastTypeExpr(binding.Type)
+	}
+	return &ast.GenDecl{Tok: token.VAR, Specs: []ast.Spec{spec}}, nil
+}
+
 // genDecl adds declarations for enum/struct/interface to the source file.
 func (g *gen) genDecl(sf *goast.SourceFile, decl Decl) {
 	switch d := decl.(type) {
@@ -1132,6 +1176,7 @@ func (g *gen) genTypedImpl(d *ImplDecl, ifaceName string) []ast.Decl {
 				implTypeKey:      implSym,
 				implReceiverType: implReceiverType,
 			}
+			g.addPackageBindings(ctx)
 			for _, p := range m.Params {
 				ctx.locals[p.Name] = g.goType(p.Type, combinedTP)
 				ctx.bindings[p.Name] = p.Name
@@ -1238,6 +1283,7 @@ func (g *gen) genInherentDecls(d *ImplDecl) []ast.Decl {
 			retType:     retType,
 			retTypes:    retTypes,
 		}
+		g.addPackageBindings(ctx)
 		for i, p := range m.Params {
 			if i == 0 && hasRecv {
 				ctx.locals[p.Name] = g.goType(p.Type, tpSet)
