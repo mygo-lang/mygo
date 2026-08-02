@@ -70,9 +70,9 @@ func (m *goModuleImporter) importOnce(path string) (*types.Package, error) {
 	}
 	var dir string
 	switch d := bootstrapGoImportDir(m.dir, path).(type) {
-	case OptionSome[string]:
+	case Option__Some[string]:
 		dir = d.F0
-	case OptionNone[string]:
+	case Option__None[string]:
 		return nil, fmt.Errorf("can't find import %q from %q", path, m.dir)
 	}
 	return m.typeCheckDir(dir)

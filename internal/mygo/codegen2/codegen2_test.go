@@ -50,7 +50,7 @@ func update() -> Slice[String]
 end
 `
 	generated := GenerateSource(src)
-	code, ok := generated.(ResultOk[string, string])
+	code, ok := generated.(Result__Ok[string, string])
 	if !ok {
 		t.Fatalf("GenerateSource failed: %v", generated)
 	}
@@ -72,13 +72,13 @@ func main() -> ()
 end
 `
 	parsed := parseSourceAsAst2(src)
-	file, ok := parsed.(ResultOk[ast2.File, string])
+	file, ok := parsed.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
 	}
-	main := file.F0.Decls[1].(ast2.DeclFuncDecl)
-	block := main.F4.Kind.(ast2.ExprKindBlockExpr)
-	bind := block.F0[0].(ast2.StmtLetStmt).F0
+	main := file.F0.Decls[1].(ast2.Decl__FuncDecl)
+	block := main.F4.Kind.(ast2.ExprKind__BlockExpr)
+	bind := block.F0[0].(ast2.Stmt__LetStmt).F0
 	ctx := &[]egCtx{newEgCtx()}[0]
 	ctx.goPackages = []typeinference2.GoPackageEntry{{
 		Alias: "fmt",
@@ -88,7 +88,7 @@ end
 		}},
 	}}
 	lowered := translateAstBinding(bind, ctx)
-	result, ok := lowered.(ResultOk[[]goast.Stmt, string])
+	result, ok := lowered.(Result__Ok[[]goast.Stmt, string])
 	if !ok {
 		t.Fatalf("discard lowering failed: %v", lowered)
 	}
@@ -123,7 +123,7 @@ func parse() -> Int
 end
 `
 	parsed := parseSourceAsAst2(src)
-	file, ok := parsed.(ResultOk[ast2.File, string])
+	file, ok := parsed.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
 	}
@@ -139,17 +139,17 @@ end
 			}},
 		}},
 	)
-	info, ok := infoResult.(ResultOk[typeinference2.PackageInfo, string])
+	info, ok := infoResult.(Result__Ok[typeinference2.PackageInfo, string])
 	if !ok {
 		t.Fatalf("InferPackageWithGoPackages failed: %v", infoResult)
 	}
 	generated := GenerateFiles([]SourceFileInput{{Path: path, File: fileWithIDs}}, info.F0)
-	result, ok := generated.(ResultOk[map[string]string, string])
+	result, ok := generated.(Result__Ok[map[string]string, string])
 	if !ok {
 		t.Fatalf("GenerateFiles failed: %v", generated)
 	}
 	code := result.F0[sourceToGenName(path)]
-	if !strings.Contains(code, "result :=") || !strings.Contains(code, "ResultOk[int64, error]") {
+	if !strings.Contains(code, "result :=") || !strings.Contains(code, "Result__Ok[int64, error]") {
 		t.Fatalf("generated switch lost FFI Result type:\n%s", code)
 	}
 }
@@ -175,7 +175,7 @@ func parser() -> func() -> Int
 end
 `
 	parsed := parseSourceAsAst2(src)
-	file, ok := parsed.(ResultOk[ast2.File, string])
+	file, ok := parsed.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
 	}
@@ -190,12 +190,12 @@ end
 			}},
 		}},
 	)
-	info, ok := infoResult.(ResultOk[typeinference2.PackageInfo, string])
+	info, ok := infoResult.(Result__Ok[typeinference2.PackageInfo, string])
 	if !ok {
 		t.Fatalf("InferPackageWithGoPackages failed: %v", infoResult)
 	}
 	generated := GenerateFiles([]SourceFileInput{{Path: path, File: fileWithIDs}}, info.F0)
-	if _, ok := generated.(ResultOk[map[string]string, string]); !ok {
+	if _, ok := generated.(Result__Ok[map[string]string, string]); !ok {
 		t.Fatalf("GenerateFiles failed: %v", generated)
 	}
 }
@@ -222,8 +222,8 @@ end
 `
 	mainParsed := parseSourceAsAst2(mainSource)
 	externalParsed := parseSourceAsAst2(externalSource)
-	mainResult, mainOK := mainParsed.(ResultOk[ast2.File, string])
-	externalResult, externalOK := externalParsed.(ResultOk[ast2.File, string])
+	mainResult, mainOK := mainParsed.(Result__Ok[ast2.File, string])
+	externalResult, externalOK := externalParsed.(Result__Ok[ast2.File, string])
 	if !mainOK || !externalOK {
 		t.Fatalf("parse failed: main=%v external=%v", mainParsed, externalParsed)
 	}
@@ -241,12 +241,12 @@ end
 		}},
 		[]typeinference2.MyGoPackageInfo{},
 	)
-	info, ok := infoResult.(ResultOk[typeinference2.PackageInfo, string])
+	info, ok := infoResult.(Result__Ok[typeinference2.PackageInfo, string])
 	if !ok {
 		t.Fatalf("InferPackageWithExternal failed: %v", infoResult)
 	}
 	generated := GenerateFiles([]SourceFileInput{{Path: path, File: mainFile}}, info.F0)
-	if _, ok := generated.(ResultOk[map[string]string, string]); !ok {
+	if _, ok := generated.(Result__Ok[map[string]string, string]); !ok {
 		t.Fatalf("GenerateFiles failed: %v", generated)
 	}
 }
@@ -262,7 +262,7 @@ func parse() -> Int
 end
 `
 	parsed := parseSourceAsAst2(src)
-	file, ok := parsed.(ResultOk[ast2.File, string])
+	file, ok := parsed.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
 	}
@@ -277,12 +277,12 @@ end
 			}},
 		}},
 	)
-	info, ok := infoResult.(ResultOk[typeinference2.PackageInfo, string])
+	info, ok := infoResult.(Result__Ok[typeinference2.PackageInfo, string])
 	if !ok {
 		t.Fatalf("InferPackageWithGoPackages failed: %v", infoResult)
 	}
 	generated := GenerateFiles([]SourceFileInput{{Path: path, File: fileWithIDs}}, info.F0)
-	result, ok := generated.(ResultOk[map[string]string, string])
+	result, ok := generated.(Result__Ok[map[string]string, string])
 	if !ok {
 		t.Fatalf("GenerateFiles failed: %v", generated)
 	}
@@ -307,7 +307,7 @@ func render[A](value: A) -> String using Show[A]
 end
 `
 	generated := GenerateSource(src)
-	code, ok := generated.(ResultOk[string, string])
+	code, ok := generated.(Result__Ok[string, string])
 	if !ok {
 		t.Fatalf("GenerateSource failed: %v", generated)
 	}
@@ -345,7 +345,7 @@ func render[A](value: A) -> String using Pretty[A]
 end
 `
 	parsed := parseSourceAsAst2(src)
-	file, ok := parsed.(ResultOk[ast2.File, string])
+	file, ok := parsed.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
 	}
@@ -386,11 +386,11 @@ func ready() -> Flag
 end
 `
 	got := GenerateSource(src)
-	result, ok := got.(ResultOk[string, string])
+	result, ok := got.(Result__Ok[string, string])
 	if !ok {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
-	if !strings.Contains(result.F0, "FlagReadyCtor()") {
+	if !strings.Contains(result.F0, "Flag__Ready__Ctor()") {
 		t.Fatalf("generated Go does not call zero-argument enum ctor:\n%s", result.F0)
 	}
 }
@@ -411,7 +411,7 @@ func Increment() -> Int
 end
 `
 	got := GenerateSource(src)
-	ok, yes := got.(ResultOk[string, string])
+	ok, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -444,7 +444,7 @@ func use(value: UserID) -> AccountID
 end
 `
 	got := GenerateSource(src)
-	result, ok := got.(ResultOk[string, string])
+	result, ok := got.(Result__Ok[string, string])
 	if !ok {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -466,7 +466,7 @@ func echo(values: Values[Int]) -> Slice[Int]
 end
 `
 	got := GenerateSource(src)
-	result, ok := got.(ResultOk[string, string])
+	result, ok := got.(Result__Ok[string, string])
 	if !ok {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -490,7 +490,7 @@ func pure[A](value: A) -> Parser[A]
 end
 `
 	got := GenerateSource(src)
-	result, ok := got.(ResultOk[string, string])
+	result, ok := got.(Result__Ok[string, string])
 	if !ok {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -522,7 +522,7 @@ func address_call() -> Ref[Int]
 end
 `
 	got := GenerateSource(src)
-	result, ok := got.(ResultOk[string, string])
+	result, ok := got.(Result__Ok[string, string])
 	if !ok {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -549,7 +549,7 @@ func unwrap(value: Maybe[Int]) -> Int
 end
 `
 	got := GenerateSource(src)
-	result, ok := got.(ResultOk[string, string])
+	result, ok := got.(Result__Ok[string, string])
 	if !ok {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -560,7 +560,7 @@ end
 
 func TestGenerateSourceAtIncludesSourceLocation(t *testing.T) {
 	got := GenerateSourceAt("broken.mygo", "package sample\n\nfunc")
-	err, ok := got.(ResultErr[string, string])
+	err, ok := got.(Result__Err[string, string])
 	if !ok {
 		t.Fatalf("GenerateSourceAt() = %T, want parse error", got)
 	}
@@ -576,7 +576,7 @@ func broken() -> Int
   missing
 end
 `)
-	err, ok := got.(ResultErr[string, string])
+	err, ok := got.(Result__Err[string, string])
 	if !ok {
 		t.Fatalf("GenerateSource unexpectedly succeeded: %v", got)
 	}
@@ -597,7 +597,7 @@ func assertBootstrapsMyGOFile(t *testing.T, relativePath string) {
 		t.Fatalf("read %s: %v", sourcePath, err)
 	}
 	got := GenerateSourceAt(sourcePath, string(source))
-	result, yes := got.(ResultOk[string, string])
+	result, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource(%s) failed: %v", sourcePath, got)
 	}
@@ -621,32 +621,32 @@ end
 `
 
 	got := parseSourceAsAst2(src)
-	ok, yes := got.(ResultOk[ast2.File, string])
+	ok, yes := got.(Result__Ok[ast2.File, string])
 	if !yes {
 		t.Fatalf("parseSourceAsAst2 failed: %v", got)
 	}
 	if len(ok.F0.Decls) != 2 {
 		t.Fatalf("decl count = %d, want 2", len(ok.F0.Decls))
 	}
-	if _, yes := ok.F0.Decls[0].(ast2.DeclInterfaceDecl); !yes {
-		t.Fatalf("decl[0] = %T, want ast2.DeclInterfaceDecl", ok.F0.Decls[0])
+	if _, yes := ok.F0.Decls[0].(ast2.Decl__InterfaceDecl); !yes {
+		t.Fatalf("decl[0] = %T, want ast2.Decl__InterfaceDecl", ok.F0.Decls[0])
 	}
-	impl, yes := ok.F0.Decls[1].(ast2.DeclImplDecl)
+	impl, yes := ok.F0.Decls[1].(ast2.Decl__ImplDecl)
 	if !yes {
-		t.Fatalf("decl[1] = %T, want ast2.DeclImplDecl", ok.F0.Decls[1])
+		t.Fatalf("decl[1] = %T, want ast2.Decl__ImplDecl", ok.F0.Decls[1])
 	}
 	if len(impl.F3) != 1 {
 		t.Fatalf("impl method count = %d, want 1", len(impl.F3))
 	}
-	bodyExpr, yes := impl.F3[0].Body.Kind.(ast2.ExprKindBlockExpr)
+	bodyExpr, yes := impl.F3[0].Body.Kind.(ast2.ExprKind__BlockExpr)
 	if !yes || len(bodyExpr.F0) != 1 {
 		t.Fatalf("impl method body = %T, want single-item ast2.ExprBlockExpr", impl.F3[0].Body)
 	}
-	first, yes := bodyExpr.F0[0].(ast2.StmtExprStmt)
+	first, yes := bodyExpr.F0[0].(ast2.Stmt__ExprStmt)
 	if !yes {
-		t.Fatalf("impl method body item = %T, want ast2.StmtExprStmt", bodyExpr.F0[0])
+		t.Fatalf("impl method body item = %T, want ast2.Stmt__ExprStmt", bodyExpr.F0[0])
 	}
-	if _, yes := first.F0.Kind.(ast2.ExprKindStringExpr); !yes {
+	if _, yes := first.F0.Kind.(ast2.ExprKind__StringExpr); !yes {
 		t.Fatalf("impl method body expr = %T, want ast2.ExprStringExpr", first.F0)
 	}
 }
@@ -659,7 +659,7 @@ interface Enumerable[C[A], A]
 end
 `
 	got := GenerateSource(src)
-	ok, yes := got.(ResultOk[string, string])
+	ok, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -686,7 +686,7 @@ func Default(value: Option[Int]) -> Option[Int]
 end
 `
 	got := GenerateSource(src)
-	ok, yes := got.(ResultOk[string, string])
+	ok, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -710,7 +710,7 @@ func Empty[A]() -> Reply[Slice[A]]
 end
 `
 	got := GenerateSource(src)
-	ok, yes := got.(ResultOk[string, string])
+	ok, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -734,7 +734,7 @@ end
 `
 
 	got := GenerateSource(src)
-	ok, yes := got.(ResultOk[string, string])
+	ok, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -753,7 +753,7 @@ end
 func TestGenerateFilesUsesGoTestOutputName(t *testing.T) {
 	file := ast2.File{PackageName: "sample", Decls: []ast2.Decl{}}
 	got := GenerateFiles([]SourceFileInput{{Path: "math_test.mygo", File: file}}, typeinference2.PackageInfo{})
-	ok, yes := got.(ResultOk[map[string]string, string])
+	ok, yes := got.(Result__Ok[map[string]string, string])
 	if !yes {
 		t.Fatalf("GenerateFiles failed: %v", got)
 	}
@@ -779,7 +779,7 @@ end
 `
 
 	got := GenerateSource(src)
-	ok, yes := got.(ResultOk[string, string])
+	ok, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -812,7 +812,7 @@ end
 `
 
 	got := GenerateSource(src)
-	ok, yes := got.(ResultOk[string, string])
+	ok, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -838,7 +838,7 @@ end
 `
 
 	got := GenerateSource(src)
-	ok, yes := got.(ResultOk[string, string])
+	ok, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -868,7 +868,7 @@ end
 `
 
 	got := GenerateSource(src)
-	ok, yes := got.(ResultOk[string, string])
+	ok, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -903,7 +903,7 @@ end
 `
 
 	got := GenerateSource(src)
-	ok, yes := got.(ResultOk[string, string])
+	ok, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -930,7 +930,7 @@ end
 `
 
 	got := GenerateSource(src)
-	ok, yes := got.(ResultOk[string, string])
+	ok, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -952,7 +952,7 @@ end
 `
 
 	got := GenerateSource(src)
-	ok, yes := got.(ResultOk[string, string])
+	ok, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -977,7 +977,7 @@ end
 `
 
 	got := GenerateSource(src)
-	ok, yes := got.(ResultOk[string, string])
+	ok, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -1005,7 +1005,7 @@ end
 `
 
 	got := GenerateSource(src)
-	ok, yes := got.(ResultOk[string, string])
+	ok, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -1030,7 +1030,7 @@ end
 `
 
 	got := GenerateSource(src)
-	ok, yes := got.(ResultOk[string, string])
+	ok, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -1061,12 +1061,12 @@ end
 `
 
 	got := GenerateSource(src)
-	ok, yes := got.(ResultOk[string, string])
+	ok, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
 	code := ok.F0
-	if !strings.Contains(code, "value.(MaybeHave)") || !strings.Contains(code, ".F0") {
+	if !strings.Contains(code, "value.(Maybe__Have)") || !strings.Contains(code, ".F0") {
 		t.Fatalf("generated variant switch is missing assertion or field binding:\n%s", code)
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", code, 0); err != nil {
@@ -1091,7 +1091,7 @@ end
 `
 
 	got := GenerateSource(src)
-	result, ok := got.(ResultOk[string, string])
+	result, ok := got.(Result__Ok[string, string])
 	if !ok {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -1117,7 +1117,7 @@ func second() -> Int
 end
 `
 	got := GenerateSource(src)
-	result, yes := got.(ResultOk[string, string])
+	result, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -1134,7 +1134,7 @@ func newline() -> Rune
 end
 `
 	got := GenerateSource(src)
-	result, yes := got.(ResultOk[string, string])
+	result, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -1151,7 +1151,7 @@ func values() -> Slice[Int]
 end
 `
 	got := GenerateSource(src)
-	result, yes := got.(ResultOk[string, string])
+	result, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -1175,7 +1175,7 @@ func makeBox() -> Box[Int]
 end
 `
 	got := GenerateSource(src)
-	result, yes := got.(ResultOk[string, string])
+	result, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -1200,7 +1200,7 @@ func makePair() -> Pair[Int]
 end
 `
 	got := GenerateSource(src)
-	result, yes := got.(ResultOk[string, string])
+	result, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
@@ -1226,7 +1226,7 @@ func demo() -> ()
 end
 `
 	got := GenerateSource(src)
-	result, yes := got.(ResultOk[string, string])
+	result, yes := got.(Result__Ok[string, string])
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}

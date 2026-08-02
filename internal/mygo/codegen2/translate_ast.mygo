@@ -700,10 +700,10 @@ end
 # switchVariantType renders the enum type used by a variant assertion.  For a
 # switch directly on an FFI call returning Result[T, error] the assertion type
 # must come from the Go signature: translateSwitchSubject builds the boundary
-# wrapper from sig.Results[0], so ResultOk[T, error] only matches when T is the
+# wrapper from sig.Results[0], so Result__Ok[T, error] only matches when T is the
 # raw Go type.  The inferred MonoType degrades unrepresentable Go types such as
-# os.Stat's os.FileInfo to `any`, which would make the assertion ResultOk[any,
-# error] and never match the runtime ResultOk[os.FileInfo, error].
+# os.Stat's os.FileInfo to `any`, which would make the assertion Result__Ok[any,
+# error] and never match the runtime Result__Ok[os.FileInfo, error].
 func switchVariantType(target: ast2.Expr, tm: ast2.MonoType, ctx: Ref[egCtx]) -> String
   switch target.Kind
     case CallExpr(fn, _, _) =>
@@ -1354,7 +1354,7 @@ end
 # `alias.Enum.Variant` key (see typeinference2's exportMyGoPackageEnumVariants),
 # so a hit confirms the selector is a variant constructor rather than a Go-FFI
 # package member or an inherent static method.  Returns the fully-qualified Go
-# constructor name (e.g. `ast2.DeclLetDeclCtor`) or None.
+# constructor name (e.g. `ast2.Decl__LetDecl__Ctor`) or None.
 func importedEnumVariantCtor(alias: String, enumName: String, variantName: String, ctx: Ref[egCtx]) -> Option[String]
   switch ctx.pkgInfo
     case Some(pkgInfo) =>

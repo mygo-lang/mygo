@@ -14,11 +14,7 @@ type JsonValue interface {
 type JsonValue__JNull struct {
 }
 
-<<<<<<< HEAD
-func (JsonValueJNull) isJsonValue() {
-=======
-func (_ JsonValue__JNull) isJsonValue() {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+func (JsonValue__JNull) isJsonValue() {
 }
 func JsonValue__JNull__Ctor() JsonValue {
 	return JsonValue__JNull{}
@@ -28,68 +24,40 @@ type JsonValue__JBool struct {
 	F0 bool
 }
 
-<<<<<<< HEAD
-func (JsonValueJBool) isJsonValue() {
+func (JsonValue__JBool) isJsonValue() {
 }
-func JsonValueJBoolCtor(v0 bool) JsonValue {
-	return JsonValueJBool{F0: v0}
-=======
-func (_ JsonValue__JBool) isJsonValue() {
-}
-func JsonValue__JBool__Ctor(a0 bool) JsonValue {
-	return JsonValue__JBool{F0: a0}
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+func JsonValue__JBool__Ctor(v0 bool) JsonValue {
+	return JsonValue__JBool{F0: v0}
 }
 
 type JsonValue__JNumber struct {
 	F0 float64
 }
 
-<<<<<<< HEAD
-func (JsonValueJNumber) isJsonValue() {
+func (JsonValue__JNumber) isJsonValue() {
 }
-func JsonValueJNumberCtor(v0 float64) JsonValue {
-	return JsonValueJNumber{F0: v0}
-=======
-func (_ JsonValue__JNumber) isJsonValue() {
-}
-func JsonValue__JNumber__Ctor(a0 float64) JsonValue {
-	return JsonValue__JNumber{F0: a0}
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+func JsonValue__JNumber__Ctor(v0 float64) JsonValue {
+	return JsonValue__JNumber{F0: v0}
 }
 
 type JsonValue__JString struct {
 	F0 string
 }
 
-<<<<<<< HEAD
-func (JsonValueJString) isJsonValue() {
+func (JsonValue__JString) isJsonValue() {
 }
-func JsonValueJStringCtor(v0 string) JsonValue {
-	return JsonValueJString{F0: v0}
-=======
-func (_ JsonValue__JString) isJsonValue() {
-}
-func JsonValue__JString__Ctor(a0 string) JsonValue {
-	return JsonValue__JString{F0: a0}
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+func JsonValue__JString__Ctor(v0 string) JsonValue {
+	return JsonValue__JString{F0: v0}
 }
 
 type JsonValue__JArray struct {
 	F0 []JsonValue
 }
 
-<<<<<<< HEAD
-func (JsonValueJArray) isJsonValue() {
+func (JsonValue__JArray) isJsonValue() {
 }
-func JsonValueJArrayCtor(v0 []JsonValue) JsonValue {
-	return JsonValueJArray{F0: v0}
-=======
-func (_ JsonValue__JArray) isJsonValue() {
-}
-func JsonValue__JArray__Ctor(a0 []JsonValue) JsonValue {
-	return JsonValue__JArray{F0: a0}
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+func JsonValue__JArray__Ctor(v0 []JsonValue) JsonValue {
+	return JsonValue__JArray{F0: v0}
 }
 
 type JsonValue__JObject struct {
@@ -99,88 +67,42 @@ type JsonValue__JObject struct {
 	}
 }
 
-<<<<<<< HEAD
-func (JsonValueJObject) isJsonValue() {
+func (JsonValue__JObject) isJsonValue() {
 }
-func JsonValueJObjectCtor(v0 []struct {
+func JsonValue__JObject__Ctor(v0 []struct {
 	F0 string
 	F1 JsonValue
 }) JsonValue {
-	return JsonValueJObject{F0: v0}
+	return JsonValue__JObject{F0: v0}
 }
 func MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(value JsonValue) string {
 	var __mygo_expr_0 string
-	if _, ok := value.(JsonValueJNull); ok {
+	if _, ok := value.(JsonValue__JNull); ok {
 		__mygo_expr_0 = "null"
 	} else {
-		if __mygo_match___mygo_expr_5, ok := value.(JsonValueJBool); ok {
+		if __mygo_match___mygo_expr_5, ok := value.(JsonValue__JBool); ok {
 			var __mygo_expr_6 string
 			if __mygo_match___mygo_expr_5.F0 {
 				__mygo_expr_6 = "true"
-=======
-func (_ JsonValue__JObject) isJsonValue() {
-}
-func JsonValue__JObject__Ctor(a0 []struct {
-	F0 string
-	F1 JsonValue
-}) JsonValue {
-	return JsonValue__JObject{F0: a0}
-}
-func MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(value JsonValue) string {
-	var expr_13 string
-	if _, ok := value.(JsonValue__JNull); ok {
-		var expr_12 string
-		expr_12 = "null"
-		expr_13 = expr_12
-	} else {
-		if v_5, ok := value.(JsonValue__JBool); ok {
-			var expr_11 string
-			var expr_10 string
-			if v_5.F0 {
-				expr_10 = "true"
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 			} else {
 				__mygo_expr_6 = "false"
 			}
 			__mygo_expr_0 = __mygo_expr_6
 		} else {
-<<<<<<< HEAD
-			if __mygo_match___mygo_expr_4, ok := value.(JsonValueJNumber); ok {
+			if __mygo_match___mygo_expr_4, ok := value.(JsonValue__JNumber); ok {
 				__mygo_expr_0 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(__mygo_match___mygo_expr_4.F0)
 			} else {
-				if __mygo_match___mygo_expr_3, ok := value.(JsonValueJString); ok {
+				if __mygo_match___mygo_expr_3, ok := value.(JsonValue__JString); ok {
 					__mygo_expr_0 = "\"" + jsonEscape(__mygo_match___mygo_expr_3.F0) + "\""
 				} else {
-					if __mygo_match___mygo_expr_2, ok := value.(JsonValueJArray); ok {
+					if __mygo_match___mygo_expr_2, ok := value.(JsonValue__JArray); ok {
 						parts_1 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_2.F0, func(v_1 JsonValue) string {
 							return MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(v_1)
-=======
-			if v_4, ok := value.(JsonValue__JNumber); ok {
-				var expr_9 string
-				expr_9 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(v_4.F0)
-				expr_13 = expr_9
-			} else {
-				if v_3, ok := value.(JsonValue__JString); ok {
-					var expr_8 string
-					expr_8 = "\"" + jsonEscape(v_3.F0) + "\""
-					expr_13 = expr_8
-				} else {
-					if v_2, ok := value.(JsonValue__JArray); ok {
-						var expr_7 string
-						parts_6 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_2.F0, func(v JsonValue) string {
-							return MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(v)
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 						})
 						__mygo_expr_0 = "[" + strings.Join(parts_1, ",") + "]"
 					} else {
-<<<<<<< HEAD
-						if __mygo_match___mygo_expr_1, ok := value.(JsonValueJObject); ok {
+						if __mygo_match___mygo_expr_1, ok := value.(JsonValue__JObject); ok {
 							parts := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_1.F0, func(p struct {
-=======
-						if v_1, ok := value.(JsonValue__JObject); ok {
-							var expr_5 string
-							parts_4 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_1.F0, func(p struct {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 								F0 string
 								F1 JsonValue
 							}) string {
@@ -268,15 +190,9 @@ func pNull() ps.Parser[JsonValue] {
 }
 func pBool() ps.Parser[JsonValue] {
 	return ps.POrElse(ps.PMap(ps.PString("true"), func(_ string) JsonValue {
-<<<<<<< HEAD
-		return JsonValueJBoolCtor(true)
-	}), ps.PMap(ps.PString("false"), func(__1 string) JsonValue {
-		return JsonValueJBoolCtor(false)
-=======
 		return JsonValue__JBool__Ctor(true)
-	}), ps.PMap(ps.PString("false"), func(_ string) JsonValue {
+	}), ps.PMap(ps.PString("false"), func(__1 string) JsonValue {
 		return JsonValue__JBool__Ctor(false)
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 	}))
 }
 func pNumber() ps.Parser[JsonValue] {
@@ -319,74 +235,6 @@ func pNumber() ps.Parser[JsonValue] {
 			rFrac := ps.PeekRune(curState)
 			if !rFrac.Ok || rFrac.Value < '0' || rFrac.Value > '9' {
 				return ps.Reply[JsonValue]{Ok: false, Consumed: false, Value: Zero[JsonValue](), State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())}
-<<<<<<< HEAD
-=======
-			}
-			for true {
-				rn := ps.PeekRune(curState_36)
-				if !rn.Ok {
-					break
-				} else {
-				}
-				if rn.Value < '0' || rn.Value > '9' {
-					break
-				} else {
-				}
-				runes_37 = MygoIN5SliceM6Append(runes_37, rn.Value)
-				curState_36 = ps.AdvanceRune(curState_36)
-			}
-		}
-		rExp_42 := ps.PeekRune(curState_36)
-		if rExp_42.Ok && (rExp_42.Value == 'e' || rExp_42.Value == 'E') {
-			runes_37 = MygoIN5SliceM6Append(runes_37, rExp_42.Value)
-			curState_36 = ps.AdvanceRune(curState_36)
-			rSign2_43 := ps.PeekRune(curState_36)
-			if rSign2_43.Ok && (rSign2_43.Value == '+' || rSign2_43.Value == '-') {
-				runes_37 = MygoIN5SliceM6Append(runes_37, rSign2_43.Value)
-				curState_36 = ps.AdvanceRune(curState_36)
-			}
-			rExpDig_44 := ps.PeekRune(curState_36)
-			if !rExpDig_44.Ok || rExpDig_44.Value < '0' || rExpDig_44.Value > '9' {
-				return ps.Reply[JsonValue]{Ok: false, Consumed: false, Value: Zero[JsonValue](), State: state, Error: ps.ErrorAt(state.Position, "number", ps.EmptyExpected())}
-			}
-			for true {
-				rn := ps.PeekRune(curState_36)
-				if !rn.Ok {
-					break
-				} else {
-				}
-				if rn.Value < '0' || rn.Value > '9' {
-					break
-				} else {
-				}
-				runes_37 = MygoIN5SliceM6Append(runes_37, rn.Value)
-				curState_36 = ps.AdvanceRune(curState_36)
-			}
-		}
-		numStr_45 := MygoIN6StringM9FromRunes(runes_37)
-		var expr_48 ps.Reply[JsonValue]
-		if v_8, ok := func() Result[float64, error] {
-			__mygo_result_val, __mygo_result_err := strconv.ParseFloat(numStr_45, 64)
-			if __mygo_result_err != nil {
-				return Err[float64, error](__mygo_result_err)
-			}
-			return Ok[float64, error](__mygo_result_val)
-		}().(Result__Ok[float64, error]); ok {
-			var expr_47 ps.Reply[JsonValue]
-			expr_47 = ps.Reply[JsonValue]{Ok: true, Consumed: true, Value: JsonValue__JNumber__Ctor(v_8.F0), State: curState_36, Error: ps.EmptyError(curState_36.Position)}
-			expr_48 = expr_47
-		} else {
-			if v_7, ok := func() Result[float64, error] {
-				__mygo_result_val, __mygo_result_err := strconv.ParseFloat(numStr_45, 64)
-				if __mygo_result_err != nil {
-					return Err[float64, error](__mygo_result_err)
-				}
-				return Ok[float64, error](__mygo_result_val)
-			}().(Result__Err[float64, error]); ok {
-				var expr_46 ps.Reply[JsonValue]
-				expr_46 = ps.Reply[JsonValue]{Ok: false, Consumed: true, Value: Zero[JsonValue](), State: curState_36, Error: ps.ErrorAt(state.Position, v_7.F0.Error(), ps.EmptyExpected())}
-				expr_48 = expr_46
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 			} else {
 			}
 			for true {
@@ -442,16 +290,17 @@ func pNumber() ps.Parser[JsonValue] {
 		} else {
 			__mygo_expr_2 = Ok[float64, error](__mygo_expr_0)
 		}
-		var __mygo_expr_3 ps.Reply[JsonValue]
-		if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(ResultOk[float64, error]); ok {
-			__mygo_expr_3 = ps.Reply[JsonValue]{Ok: true, Consumed: true, Value: JsonValueJNumberCtor(__mygo_match___mygo_expr_5.F0), State: curState, Error: ps.EmptyError(curState.Position)}
+		__mygo_expr_3 := __mygo_expr_2
+		var __mygo_expr_4 ps.Reply[JsonValue]
+		if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[float64, error]); ok {
+			__mygo_expr_4 = ps.Reply[JsonValue]{Ok: true, Consumed: true, Value: JsonValue__JNumber__Ctor(__mygo_match___mygo_expr_6.F0), State: curState, Error: ps.EmptyError(curState.Position)}
 		} else {
-			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ResultErr[float64, error]); ok {
-				__mygo_expr_3 = ps.Reply[JsonValue]{Ok: false, Consumed: true, Value: Zero[JsonValue](), State: curState, Error: ps.ErrorAt(state.Position, __mygo_match___mygo_expr_4.F0.Error(), ps.EmptyExpected())}
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[float64, error]); ok {
+				__mygo_expr_4 = ps.Reply[JsonValue]{Ok: false, Consumed: true, Value: Zero[JsonValue](), State: curState, Error: ps.ErrorAt(state.Position, __mygo_match___mygo_expr_5.F0.Error(), ps.EmptyExpected())}
 			} else {
 			}
 		}
-		return __mygo_expr_3
+		return __mygo_expr_4
 	}
 }
 func pString() ps.Parser[JsonValue] {
@@ -476,7 +325,6 @@ func pString() ps.Parser[JsonValue] {
 				return '\r'
 			}), ps.PMap(ps.PChar('t'), func(__8 rune) rune {
 				return '\t'
-<<<<<<< HEAD
 			}), ps.PBind(ps.PChar('u'), func(__9 rune) ps.Parser[rune] {
 				return ps.PBind(pHexDigit, func(d0 rune) ps.Parser[rune] {
 					return ps.PBind(pHexDigit, func(d1 rune) ps.Parser[rune] {
@@ -487,32 +335,12 @@ func pString() ps.Parser[JsonValue] {
 								__mygo_expr_0, __mygo_expr_1 := strconv.ParseInt(hexStr, 16, 32)
 								if __mygo_expr_1 != nil {
 									__mygo_expr_2 = Err[int64, error](__mygo_expr_1)
-=======
-			}), ps.PBind(ps.PChar('u'), func(_ rune) ps.Parser[rune] {
-				return ps.PBind(pHexDigit_49, func(d0 rune) ps.Parser[rune] {
-					return ps.PBind(pHexDigit_49, func(d1 rune) ps.Parser[rune] {
-						return ps.PBind(pHexDigit_49, func(d2 rune) ps.Parser[rune] {
-							return ps.PMap(pHexDigit_49, func(d3 rune) rune {
-								hexStr_50 := MygoIN6StringM9FromRunes([]rune{d0, d1, d2, d3})
-								result_51 := func() Result[int64, error] {
-									__mygo_result_val, __mygo_result_err := strconv.ParseInt(hexStr_50, 16, 32)
-									if __mygo_result_err != nil {
-										return Err[int64, error](__mygo_result_err)
-									}
-									return Ok[int64, error](__mygo_result_val)
-								}()
-								var expr_54 rune
-								if v_9, ok := result_51.(Result__Ok[int64, error]); ok {
-									var expr_53 rune
-									expr_53 = rune(v_9.F0)
-									expr_54 = expr_53
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 								} else {
 									__mygo_expr_2 = Ok[int64, error](__mygo_expr_0)
 								}
 								result := __mygo_expr_2
 								var __mygo_expr_3 rune
-								if __mygo_match___mygo_expr_4, ok := result.(ResultOk[int64, error]); ok {
+								if __mygo_match___mygo_expr_4, ok := result.(Result__Ok[int64, error]); ok {
 									__mygo_expr_3 = rune(__mygo_match___mygo_expr_4.F0)
 								} else {
 									__mygo_expr_3 = rune(0)
@@ -530,17 +358,10 @@ func pString() ps.Parser[JsonValue] {
 			return r_1 != '"' && r_1 != '\\'
 		}, "string character"))
 	}
-<<<<<<< HEAD
 	return ps.PBind(ps.PChar('"'), func(__10 rune) ps.Parser[JsonValue] {
 		return ps.PBind(ps.PMany(pCharContent()), func(chars []rune) ps.Parser[JsonValue] {
 			return ps.PMap(ps.PChar('"'), func(__11 rune) JsonValue {
-				return JsonValueJStringCtor(MygoIN6StringM9FromRunes(chars))
-=======
-	return ps.PBind(ps.PChar('"'), func(_ rune) ps.Parser[JsonValue] {
-		return ps.PBind(ps.PMany(pCharContent_56()), func(chars []rune) ps.Parser[JsonValue] {
-			return ps.PMap(ps.PChar('"'), func(_ rune) JsonValue {
 				return JsonValue__JString__Ctor(MygoIN6StringM9FromRunes(chars))
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 			})
 		})
 	})
@@ -560,13 +381,8 @@ func ParseJson(input string) Result[JsonValue, string] {
 	valueP = func(state ps.State) ps.Reply[JsonValue] {
 		return ws(ps.PChoice([]func(ps.State) ps.Reply[JsonValue]{nullP, boolP, numP, strP, arrP, objP}))(state)
 	}
-<<<<<<< HEAD
 	arrP = ps.PMap(ps.PBetween(ws(ps.PChar('[')), ps.PSepBy(valueP, ws(ps.PChar(','))), ws(ps.PChar(']'))), func(items []JsonValue) JsonValue {
-		return JsonValueJArrayCtor(items)
-=======
-	arrP_62 = ps.PMap(ps.PBetween(ws(ps.PChar('[')), ps.PSepBy(valueP_61, ws(ps.PChar(','))), ws(ps.PChar(']'))), func(items []JsonValue) JsonValue {
 		return JsonValue__JArray__Ctor(items)
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 	})
 	pairP = func(s ps.State) ps.Reply[struct {
 		F0 string
@@ -580,26 +396,17 @@ func ParseJson(input string) Result[JsonValue, string] {
 			}]{Ok: kr.Ok, Consumed: kr.Consumed, State: kr.State, Error: kr.Error, Value: struct {
 				F0 string
 				F1 JsonValue
-<<<<<<< HEAD
-			}{F0: "", F1: JsonValueJNullCtor()}}
-=======
 			}{F0: "", F1: JsonValue__JNull__Ctor()}}
-		}
-		var expr_68 string
-		if v_10, ok := kr_65.Value.(JsonValue__JString); ok {
-			var expr_67 string
-			expr_67 = string(v_10.F0)
-			expr_68 = expr_67
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 		} else {
 		}
-		var __mygo_expr_0 string
-		if __mygo_match___mygo_expr_1, ok := kr.Value.(JsonValueJString); ok {
-			__mygo_expr_0 = string(__mygo_match___mygo_expr_1.F0)
+		__mygo_expr_0 := kr.Value
+		var __mygo_expr_1 string
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(JsonValue__JString); ok {
+			__mygo_expr_1 = string(__mygo_match___mygo_expr_2.F0)
 		} else {
-			__mygo_expr_0 = ""
+			__mygo_expr_1 = ""
 		}
-		keyStr := __mygo_expr_0
+		keyStr := __mygo_expr_1
 		cr := ws(ps.PChar(':'))(kr.State)
 		if !cr.Ok {
 			return ps.Reply[struct {
@@ -608,12 +415,8 @@ func ParseJson(input string) Result[JsonValue, string] {
 			}]{Ok: cr.Ok, Consumed: cr.Consumed, State: cr.State, Error: cr.Error, Value: struct {
 				F0 string
 				F1 JsonValue
-<<<<<<< HEAD
-			}{F0: "", F1: JsonValueJNullCtor()}}
-		} else {
-=======
 			}{F0: "", F1: JsonValue__JNull__Ctor()}}
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+		} else {
 		}
 		vr := valueP(cr.State)
 		if !vr.Ok {
@@ -623,12 +426,8 @@ func ParseJson(input string) Result[JsonValue, string] {
 			}]{Ok: vr.Ok, Consumed: vr.Consumed, State: vr.State, Error: vr.Error, Value: struct {
 				F0 string
 				F1 JsonValue
-<<<<<<< HEAD
-			}{F0: "", F1: JsonValueJNullCtor()}}
-		} else {
-=======
 			}{F0: "", F1: JsonValue__JNull__Ctor()}}
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+		} else {
 		}
 		return ps.Reply[struct {
 			F0 string
@@ -644,36 +443,20 @@ func ParseJson(input string) Result[JsonValue, string] {
 	}) JsonValue {
 		return JsonValue__JObject__Ctor(pairs)
 	})
-<<<<<<< HEAD
 	r := ps.ParseInput(valueP, input)
 	if !r.Ok {
-		var __mygo_expr_0 Result[JsonValue, string]
-		if __mygo_match___mygo_expr_1, ok := r.Error.(OptionSome[ps.ParseError]); ok {
-			errMsg := fmt.Sprintf("parse error at line %d, column %d: %s", __mygo_match___mygo_expr_1.F0.Position.Line, __mygo_match___mygo_expr_1.F0.Position.Column, __mygo_match___mygo_expr_1.F0.Message)
-			__mygo_expr_0 = Err[JsonValue, string](errMsg)
+		__mygo_expr_0 := r.Error
+		var __mygo_expr_1 Result[JsonValue, string]
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ps.ParseError]); ok {
+			errMsg := fmt.Sprintf("parse error at line %d, column %d: %s", __mygo_match___mygo_expr_2.F0.Position.Line, __mygo_match___mygo_expr_2.F0.Position.Column, __mygo_match___mygo_expr_2.F0.Message)
+			__mygo_expr_1 = Err[JsonValue, string](errMsg)
 		} else {
-			if _, ok := r.Error.(OptionNone[ps.ParseError]); ok {
-				__mygo_expr_0 = Err[JsonValue, string]("parse error")
-=======
-	r_72 := ps.ParseInput(valueP_61, input)
-	var expr_77 Result[JsonValue, string]
-	if !r_72.Ok {
-		var expr_76 Result[JsonValue, string]
-		if v_12, ok := r_72.Error.(Option__Some[ps.ParseError]); ok {
-			var expr_75 Result[JsonValue, string]
-			errMsg_74 := fmt.Sprintf("parse error at line %d, column %d: %s", v_12.F0.Position.Line, v_12.F0.Position.Column, v_12.F0.Message)
-			expr_75 = Err[JsonValue, string](errMsg_74)
-			expr_76 = expr_75
-		} else {
-			if _, ok := r_72.Error.(Option__None[ps.ParseError]); ok {
-				var expr_73 Result[JsonValue, string]
-				expr_73 = Err[JsonValue, string]("parse error")
-				expr_76 = expr_73
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+			if _, ok := __mygo_expr_0.(Option__None[ps.ParseError]); ok {
+				__mygo_expr_1 = Err[JsonValue, string]("parse error")
 			} else {
 			}
 		}
-		return __mygo_expr_0
+		return __mygo_expr_1
 	} else {
 		return Ok[JsonValue, string](r.Value)
 	}

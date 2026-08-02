@@ -34,11 +34,7 @@ type Color interface {
 type Color__Red struct {
 }
 
-<<<<<<< HEAD
-func (ColorRed) isColor() {
-=======
-func (_ Color__Red) isColor() {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+func (Color__Red) isColor() {
 }
 func Color__Red__Ctor() Color {
 	return Color__Red{}
@@ -47,11 +43,7 @@ func Color__Red__Ctor() Color {
 type Color__Green struct {
 }
 
-<<<<<<< HEAD
-func (ColorGreen) isColor() {
-=======
-func (_ Color__Green) isColor() {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+func (Color__Green) isColor() {
 }
 func Color__Green__Ctor() Color {
 	return Color__Green{}
@@ -60,11 +52,7 @@ func Color__Green__Ctor() Color {
 type Color__Blue struct {
 }
 
-<<<<<<< HEAD
-func (ColorBlue) isColor() {
-=======
-func (_ Color__Blue) isColor() {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+func (Color__Blue) isColor() {
 }
 func Color__Blue__Ctor() Color {
 	return Color__Blue{}
@@ -77,17 +65,10 @@ type Shape__Circle struct {
 	F0 float64
 }
 
-<<<<<<< HEAD
-func (ShapeCircle) isShape() {
+func (Shape__Circle) isShape() {
 }
-func ShapeCircleCtor(v0 float64) Shape {
-	return ShapeCircle{F0: v0}
-=======
-func (_ Shape__Circle) isShape() {
-}
-func Shape__Circle__Ctor(a0 float64) Shape {
-	return Shape__Circle{F0: a0}
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+func Shape__Circle__Ctor(v0 float64) Shape {
+	return Shape__Circle{F0: v0}
 }
 
 type Shape__Rectangle struct {
@@ -95,17 +76,10 @@ type Shape__Rectangle struct {
 	F1 float64
 }
 
-<<<<<<< HEAD
-func (ShapeRectangle) isShape() {
+func (Shape__Rectangle) isShape() {
 }
-func ShapeRectangleCtor(v0 float64, v1 float64) Shape {
-	return ShapeRectangle{F0: v0, F1: v1}
-=======
-func (_ Shape__Rectangle) isShape() {
-}
-func Shape__Rectangle__Ctor(a0 float64, a1 float64) Shape {
-	return Shape__Rectangle{F0: a0, F1: a1}
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+func Shape__Rectangle__Ctor(v0 float64, v1 float64) Shape {
+	return Shape__Rectangle{F0: v0, F1: v1}
 }
 
 type Shape__Triangle struct {
@@ -113,17 +87,10 @@ type Shape__Triangle struct {
 	F1 float64
 }
 
-<<<<<<< HEAD
-func (ShapeTriangle) isShape() {
+func (Shape__Triangle) isShape() {
 }
-func ShapeTriangleCtor(v0 float64, v1 float64) Shape {
-	return ShapeTriangle{F0: v0, F1: v1}
-=======
-func (_ Shape__Triangle) isShape() {
-}
-func Shape__Triangle__Ctor(a0 float64, a1 float64) Shape {
-	return Shape__Triangle{F0: a0, F1: a1}
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+func Shape__Triangle__Ctor(v0 float64, v1 float64) Shape {
+	return Shape__Triangle{F0: v0, F1: v1}
 }
 
 type OptionLike[A any] interface {
@@ -133,40 +100,29 @@ type OptionLike__S[A any] struct {
 	F0 A
 }
 
-<<<<<<< HEAD
-func (OptionLikeS[A]) isOptionLike() {
+func (OptionLike__S[A]) isOptionLike() {
 }
-func OptionLikeSCtor[A any](v0 A) OptionLike[A] {
-	return OptionLikeS[A]{F0: v0}
-=======
-func (_ OptionLike__S[A]) isOptionLike() {
-}
-func OptionLike__S__Ctor[A any](a0 A) OptionLike[A] {
-	return OptionLike__S[A]{F0: a0}
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+func OptionLike__S__Ctor[A any](v0 A) OptionLike[A] {
+	return OptionLike__S[A]{F0: v0}
 }
 
 type OptionLike__N[A any] struct {
 }
 
-<<<<<<< HEAD
-func (OptionLikeN[A]) isOptionLike() {
-=======
-func (_ OptionLike__N[A]) isOptionLike() {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+func (OptionLike__N[A]) isOptionLike() {
 }
 func OptionLike__N__Ctor[A any]() OptionLike[A] {
 	return OptionLike__N[A]{}
 }
 func describeColor(c Color) string {
 	var __mygo_expr_0 string
-	if _, ok := c.(ColorRed); ok {
+	if _, ok := c.(Color__Red); ok {
 		__mygo_expr_0 = "red"
 	} else {
-		if _, ok := c.(ColorGreen); ok {
+		if _, ok := c.(Color__Green); ok {
 			__mygo_expr_0 = "green"
 		} else {
-			if _, ok := c.(ColorBlue); ok {
+			if _, ok := c.(Color__Blue); ok {
 				__mygo_expr_0 = "blue"
 			} else {
 			}
@@ -176,13 +132,13 @@ func describeColor(c Color) string {
 }
 func area(s Shape) float64 {
 	var __mygo_expr_0 float64
-	if __mygo_match___mygo_expr_3, ok := s.(ShapeCircle); ok {
+	if __mygo_match___mygo_expr_3, ok := s.(Shape__Circle); ok {
 		__mygo_expr_0 = 3.14159 * __mygo_match___mygo_expr_3.F0 * __mygo_match___mygo_expr_3.F0
 	} else {
-		if __mygo_match___mygo_expr_2, ok := s.(ShapeRectangle); ok {
+		if __mygo_match___mygo_expr_2, ok := s.(Shape__Rectangle); ok {
 			__mygo_expr_0 = __mygo_match___mygo_expr_2.F0 * __mygo_match___mygo_expr_2.F1
 		} else {
-			if __mygo_match___mygo_expr_1, ok := s.(ShapeTriangle); ok {
+			if __mygo_match___mygo_expr_1, ok := s.(Shape__Triangle); ok {
 				__mygo_expr_0 = 0.5 * __mygo_match___mygo_expr_1.F0 * __mygo_match___mygo_expr_1.F1
 			} else {
 			}
@@ -191,9 +147,9 @@ func area(s Shape) float64 {
 	return __mygo_expr_0
 }
 func demoEnums() string {
-	c := ColorGreenCtor()
-	circle := ShapeCircleCtor(5.0)
-	rect := ShapeRectangleCtor(10.0, 20.0)
+	c := Color__Green__Ctor()
+	circle := Shape__Circle__Ctor(5.0)
+	rect := Shape__Rectangle__Ctor(10.0, 20.0)
 	return "Color=" + describeColor(c) + ", CircleArea=" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(area(circle)) + ", RectArea=" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(area(rect))
 }
 
@@ -216,83 +172,6 @@ func MygoIN3BoxM5Value[A any](self Box[A]) A {
 func MygoIN3BoxM3Map[A any, B any](self Box[A], f func(A) B) Box[B] {
 	return Box[B]{value: f(self.value)}
 }
-<<<<<<< HEAD
-=======
-func demoBasicTypes() string {
-	var i8_1 int8 = 42
-	var ui8_2 uint8 = 200
-	var i16_3 int16 = -1000
-	var ui16_4 uint16 = 60000
-	var i32_5 int32 = -100000
-	var ui32_6 uint32 = 3000000000
-	var i64_7 int64 = 9223372036854775807
-	var ui_8 uint = 18_446744073_709_551_615
-	var ui64_9 uint64 = 18_446744073_709_551_615
-	var f32_10 float32 = 3.14
-	var f64_11 float64 = 2.718281828459045
-	var i_12 int = 100
-	var hex_13 int = 0xff
-	var oct_14 int = 0o777
-	var bin_15 int = 0b1010
-	var flag_16 bool = true
-	var greeting_17 string = "Hello, MyGO!"
-	var multiline_18 string = "\n    This is a\n    multiline string\n  "
-	var raw_19 string = "raw string with \\n no escapes"
-	return "Int8=" + MygoIT8ToStringFN4Int8GN4Int8EM8ToString(i8_1) + ", UInt8=" + MygoIT8ToStringFN5UInt8GN5UInt8EM8ToString(ui8_2) + ", Int16=" + MygoIT8ToStringFN5Int16GN5Int16EM8ToString(i16_3) + ", UInt16=" + MygoIT8ToStringFN6UInt16GN6UInt16EM8ToString(ui16_4) + ", Int32=" + MygoIT8ToStringFN5Int32GN5Int32EM8ToString(i32_5) + ", UInt32=" + MygoIT8ToStringFN6UInt32GN6UInt32EM8ToString(ui32_6) + ", Int64=" + MygoIT8ToStringFN5Int64GN5Int64EM8ToString(i64_7) + ", UInt=" + MygoIT8ToStringFN4UIntGN4UIntEM8ToString(ui_8) + ", UInt64=" + MygoIT8ToStringFN6UInt64GN6UInt64EM8ToString(ui64_9) + ", Float32=" + MygoIT8ToStringFN7Float32GN7Float32EM8ToString(f32_10) + ", Float64=" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(f64_11) + ", Int=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(i_12) + ", hex=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(hex_13) + ", oct=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(oct_14) + ", bin=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(bin_15) + ", flag=" + MygoIT8ToStringFN4BoolGN4BoolEM8ToString(flag_16) + ", greeting=" + greeting_17 + ", multiline=" + multiline_18 + ", raw=" + raw_19
-}
-func describeColor(c Color) string {
-	var expr_23 string
-	if _, ok := c.(Color__Red); ok {
-		var expr_22 string
-		expr_22 = "red"
-		expr_23 = expr_22
-	} else {
-		if _, ok := c.(Color__Green); ok {
-			var expr_21 string
-			expr_21 = "green"
-			expr_23 = expr_21
-		} else {
-			if _, ok := c.(Color__Blue); ok {
-				var expr_20 string
-				expr_20 = "blue"
-				expr_23 = expr_20
-			} else {
-				panic("unreachable")
-			}
-		}
-	}
-	return expr_23
-}
-func area(s Shape) float64 {
-	var expr_27 float64
-	if v_6, ok := s.(Shape__Circle); ok {
-		var expr_26 float64
-		expr_26 = 3.14159 * v_6.F0 * v_6.F0
-		expr_27 = expr_26
-	} else {
-		if v_5, ok := s.(Shape__Rectangle); ok {
-			var expr_25 float64
-			expr_25 = v_5.F0 * v_5.F1
-			expr_27 = expr_25
-		} else {
-			if v_4, ok := s.(Shape__Triangle); ok {
-				var expr_24 float64
-				expr_24 = 0.5 * v_4.F0 * v_4.F1
-				expr_27 = expr_24
-			} else {
-				panic("unreachable")
-			}
-		}
-	}
-	return expr_27
-}
-func demoEnums() string {
-	c_28 := Color__Green__Ctor()
-	circle_29 := Shape__Circle__Ctor(5.0)
-	rect_30 := Shape__Rectangle__Ctor(10.0, 20.0)
-	return "Color=" + describeColor(c_28) + ", CircleArea=" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(area(circle_29)) + ", RectArea=" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(area(rect_30))
-}
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 func demoStructs() string {
 	p := Point{x: 3.0, y: 4.0}
 	box := Box[int]{value: 42}
@@ -308,7 +187,6 @@ func safeDivide(a float64, b float64) Result[float64, string] {
 	}
 }
 func demoOptionResult() string {
-<<<<<<< HEAD
 	var some_val Option[int] = Some[int](42)
 	var none_val Option[int] = None[int]()
 	var ok_res Result[int, string] = Ok[int, string](100)
@@ -316,149 +194,61 @@ func demoOptionResult() string {
 	result := safeDivide(10.0, 3.0)
 	div_zero := safeDivide(10.0, 0.0)
 	var __mygo_expr_0 string
-	if __mygo_match___mygo_expr_1, ok := some_val.(OptionSome[int]); ok {
+	if __mygo_match___mygo_expr_1, ok := some_val.(Option__Some[int]); ok {
 		__mygo_expr_0 = MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_1.F0)
 	} else {
-		if _, ok := some_val.(OptionNone[int]); ok {
+		if _, ok := some_val.(Option__None[int]); ok {
 			__mygo_expr_0 = "none"
-=======
-	var some_val_36 Option[int] = Some[int](42)
-	var none_val_37 Option[int] = None[int]()
-	var ok_res_38 Result[int, string] = Ok[int, string](100)
-	var err_res_39 Result[int, string] = Err[int, string]("something went wrong")
-	result_40 := safeDivide(10.0, 3.0)
-	div_zero_41 := safeDivide(10.0, 0.0)
-	var expr_44 string
-	if v_8, ok := some_val_36.(Option__Some[int]); ok {
-		var expr_43 string
-		expr_43 = MygoIT8ToStringFN3IntGN3IntEM8ToString(v_8.F0)
-		expr_44 = expr_43
-	} else {
-		if _, ok := some_val_36.(Option__None[int]); ok {
-			var expr_42 string
-			expr_42 = "none"
-			expr_44 = expr_42
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 		} else {
 		}
 	}
-<<<<<<< HEAD
 	some_text := __mygo_expr_0
 	var __mygo_expr_2 string
-	if __mygo_match___mygo_expr_3, ok := none_val.(OptionSome[int]); ok {
+	if __mygo_match___mygo_expr_3, ok := none_val.(Option__Some[int]); ok {
 		__mygo_expr_2 = MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_3.F0)
 	} else {
-		if _, ok := none_val.(OptionNone[int]); ok {
+		if _, ok := none_val.(Option__None[int]); ok {
 			__mygo_expr_2 = "none"
-=======
-	some_text_45 := expr_44
-	var expr_48 string
-	if v_10, ok := none_val_37.(Option__Some[int]); ok {
-		var expr_47 string
-		expr_47 = MygoIT8ToStringFN3IntGN3IntEM8ToString(v_10.F0)
-		expr_48 = expr_47
-	} else {
-		if _, ok := none_val_37.(Option__None[int]); ok {
-			var expr_46 string
-			expr_46 = "none"
-			expr_48 = expr_46
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 		} else {
 		}
 	}
-<<<<<<< HEAD
 	none_text := __mygo_expr_2
 	var __mygo_expr_4 string
-	if __mygo_match___mygo_expr_6, ok := ok_res.(ResultOk[int, string]); ok {
+	if __mygo_match___mygo_expr_6, ok := ok_res.(Result__Ok[int, string]); ok {
 		__mygo_expr_4 = MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_6.F0)
 	} else {
-		if __mygo_match___mygo_expr_5, ok := ok_res.(ResultErr[int, string]); ok {
+		if __mygo_match___mygo_expr_5, ok := ok_res.(Result__Err[int, string]); ok {
 			__mygo_expr_4 = __mygo_match___mygo_expr_5.F0
-=======
-	none_text_49 := expr_48
-	var expr_52 string
-	if v_12, ok := ok_res_38.(Result__Ok[int, string]); ok {
-		var expr_51 string
-		expr_51 = MygoIT8ToStringFN3IntGN3IntEM8ToString(v_12.F0)
-		expr_52 = expr_51
-	} else {
-		if v_11, ok := ok_res_38.(Result__Err[int, string]); ok {
-			var expr_50 string
-			expr_50 = v_11.F0
-			expr_52 = expr_50
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 		} else {
 		}
 	}
-<<<<<<< HEAD
 	ok_text := __mygo_expr_4
 	var __mygo_expr_7 string
-	if __mygo_match___mygo_expr_9, ok := err_res.(ResultOk[int, string]); ok {
+	if __mygo_match___mygo_expr_9, ok := err_res.(Result__Ok[int, string]); ok {
 		__mygo_expr_7 = MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_9.F0)
 	} else {
-		if __mygo_match___mygo_expr_8, ok := err_res.(ResultErr[int, string]); ok {
+		if __mygo_match___mygo_expr_8, ok := err_res.(Result__Err[int, string]); ok {
 			__mygo_expr_7 = __mygo_match___mygo_expr_8.F0
-=======
-	ok_text_53 := expr_52
-	var expr_56 string
-	if v_14, ok := err_res_39.(Result__Ok[int, string]); ok {
-		var expr_55 string
-		expr_55 = MygoIT8ToStringFN3IntGN3IntEM8ToString(v_14.F0)
-		expr_56 = expr_55
-	} else {
-		if v_13, ok := err_res_39.(Result__Err[int, string]); ok {
-			var expr_54 string
-			expr_54 = v_13.F0
-			expr_56 = expr_54
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 		} else {
 		}
 	}
-<<<<<<< HEAD
 	err_text := __mygo_expr_7
 	var __mygo_expr_10 string
-	if __mygo_match___mygo_expr_12, ok := result.(ResultOk[float64, string]); ok {
+	if __mygo_match___mygo_expr_12, ok := result.(Result__Ok[float64, string]); ok {
 		__mygo_expr_10 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(__mygo_match___mygo_expr_12.F0)
 	} else {
-		if __mygo_match___mygo_expr_11, ok := result.(ResultErr[float64, string]); ok {
+		if __mygo_match___mygo_expr_11, ok := result.(Result__Err[float64, string]); ok {
 			__mygo_expr_10 = __mygo_match___mygo_expr_11.F0
-=======
-	err_text_57 := expr_56
-	var expr_60 string
-	if v_16, ok := result_40.(Result__Ok[float64, string]); ok {
-		var expr_59 string
-		expr_59 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(v_16.F0)
-		expr_60 = expr_59
-	} else {
-		if v_15, ok := result_40.(Result__Err[float64, string]); ok {
-			var expr_58 string
-			expr_58 = v_15.F0
-			expr_60 = expr_58
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 		} else {
 		}
 	}
-<<<<<<< HEAD
 	result_text := __mygo_expr_10
 	var __mygo_expr_13 string
-	if __mygo_match___mygo_expr_15, ok := div_zero.(ResultOk[float64, string]); ok {
+	if __mygo_match___mygo_expr_15, ok := div_zero.(Result__Ok[float64, string]); ok {
 		__mygo_expr_13 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(__mygo_match___mygo_expr_15.F0)
 	} else {
-		if __mygo_match___mygo_expr_14, ok := div_zero.(ResultErr[float64, string]); ok {
+		if __mygo_match___mygo_expr_14, ok := div_zero.(Result__Err[float64, string]); ok {
 			__mygo_expr_13 = __mygo_match___mygo_expr_14.F0
-=======
-	result_text_61 := expr_60
-	var expr_64 string
-	if v_18, ok := div_zero_41.(Result__Ok[float64, string]); ok {
-		var expr_63 string
-		expr_63 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(v_18.F0)
-		expr_64 = expr_63
-	} else {
-		if v_17, ok := div_zero_41.(Result__Err[float64, string]); ok {
-			var expr_62 string
-			expr_62 = v_17.F0
-			expr_64 = expr_62
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 		} else {
 		}
 	}

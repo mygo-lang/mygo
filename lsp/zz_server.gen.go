@@ -322,75 +322,52 @@ func parseDocumentURI(uri string) string {
 	}
 }
 func wordAtPosition(content string, line int, char int) Option[*TextRange] {
-<<<<<<< HEAD
 	lines := strings.Split(content, "\n")
-	var __mygo_expr_0 Option[*TextRange]
-	if __mygo_match___mygo_expr_1, ok := stringAt(lines, line).(OptionSome[string]); ok {
-		length := byteLen(__mygo_match___mygo_expr_1.F0)
-		var __mygo_expr_3 Option[*TextRange]
+	__mygo_expr_0 := stringAt(lines, line)
+	var __mygo_expr_1 Option[*TextRange]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+		length := byteLen(__mygo_match___mygo_expr_2.F0)
+		var __mygo_expr_4 Option[*TextRange]
 		if char > length {
-			__mygo_expr_3 = None[*TextRange]()
-=======
-	lines_7 := strings.Split(content, "\n")
-	var expr_16 Option[*TextRange]
-	if v_1, ok := stringAt(lines_7, line).(Option__Some[string]); ok {
-		var expr_15 Option[*TextRange]
-		length_9 := byteLen(v_1.F0)
-		var expr_14 Option[*TextRange]
-		if char > length_9 {
-			expr_14 = None[*TextRange]()
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+			__mygo_expr_4 = None[*TextRange]()
 		} else {
 			start := char
 			wordEnd := char
-			for start > 0 && isWordChar(charAt(__mygo_match___mygo_expr_1.F0, start-1)) {
+			for start > 0 && isWordChar(charAt(__mygo_match___mygo_expr_2.F0, start-1)) {
 				start = start - 1
 			}
-			for wordEnd < length && isWordChar(charAt(__mygo_match___mygo_expr_1.F0, wordEnd)) {
+			for wordEnd < length && isWordChar(charAt(__mygo_match___mygo_expr_2.F0, wordEnd)) {
 				wordEnd = wordEnd + 1
 			}
-			var __mygo_expr_2 Option[*TextRange]
+			var __mygo_expr_3 Option[*TextRange]
 			if start == wordEnd {
-				__mygo_expr_2 = None[*TextRange]()
+				__mygo_expr_3 = None[*TextRange]()
 			} else {
-				__mygo_expr_2 = Some[*TextRange](&TextRange{StartPos: Position{Line: line, Character: start}, EndPos: Position{Line: line, Character: wordEnd}})
+				__mygo_expr_3 = Some[*TextRange](&TextRange{StartPos: Position{Line: line, Character: start}, EndPos: Position{Line: line, Character: wordEnd}})
 			}
-			__mygo_expr_3 = __mygo_expr_2
+			__mygo_expr_4 = __mygo_expr_3
 		}
-		__mygo_expr_0 = __mygo_expr_3
+		__mygo_expr_1 = __mygo_expr_4
 	} else {
-		__mygo_expr_0 = None[*TextRange]()
+		__mygo_expr_1 = None[*TextRange]()
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
 }
 func handleCompletion(store *DocumentStore, uri string, line int, char int) CompletionList {
-<<<<<<< HEAD
-	var __mygo_expr_0 CompletionList
-	if __mygo_match___mygo_expr_1, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
-		content := __mygo_match___mygo_expr_1.F0.Content
+	__mygo_expr_0 := storeGet(store, uri)
+	var __mygo_expr_1 CompletionList
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
+		content := __mygo_match___mygo_expr_2.F0.Content
 		word := ""
-		if __mygo_match___mygo_expr_2, ok := wordAtPosition(content, line, char).(OptionSome[*TextRange]); ok {
-			lines := strings.Split(__mygo_match___mygo_expr_1.F0.Content, "\n")
+		__mygo_expr_3 := wordAtPosition(content, line, char)
+		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[*TextRange]); ok {
+			lines := strings.Split(__mygo_match___mygo_expr_2.F0.Content, "\n")
 			if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
 				text := MygoIN6OptionM8UnwrapOr(stringAt(lines, line), "")
 				length := byteLen(text)
 				if char <= length {
-					word = substr(text, __mygo_match___mygo_expr_2.F0.StartPos.Character, char)
+					word = substr(text, __mygo_match___mygo_expr_4.F0.StartPos.Character, char)
 				} else {
-=======
-	var expr_26 CompletionList
-	if v_2, ok := storeGet(store, uri).(Option__Some[*Document]); ok {
-		var expr_25 CompletionList
-		content_18 := v_2.F0.Content
-		word_19 := ""
-		if v_3, ok := wordAtPosition(content_18, line, char).(Option__Some[*TextRange]); ok {
-			lines_20 := strings.Split(v_2.F0.Content, "\n")
-			if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_20) {
-				text_21 := MygoIN6OptionM8UnwrapOr(stringAt(lines_20, line), "")
-				length_22 := byteLen(text_21)
-				if char <= length_22 {
-					word_19 = substr(text_21, v_3.F0.StartPos.Character, char)
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 				}
 			} else {
 			}
@@ -399,11 +376,11 @@ func handleCompletion(store *DocumentStore, uri string, line int, char int) Comp
 		}
 		keywords := buildKeywordCompletions()
 		items := appendCompletions(keywords, word)
-		__mygo_expr_0 = CompletionList{IsIncomplete: false, Items: items}
+		__mygo_expr_1 = CompletionList{IsIncomplete: false, Items: items}
 	} else {
-		__mygo_expr_0 = CompletionList{IsIncomplete: false, Items: []CompletionItem{}}
+		__mygo_expr_1 = CompletionList{IsIncomplete: false, Items: []CompletionItem{}}
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
 }
 func buildKeywordCompletions() []CompletionItem {
 	return []CompletionItem{completionItem("func", 14, "function declaration"), completionItem("struct", 14, "struct declaration"), completionItem("enum", 14, "enum declaration"), completionItem("interface", 14, "interface declaration"), completionItem("impl", 14, "impl block"), completionItem("let", 14, "immutable binding"), completionItem("var", 14, "mutable binding"), completionItem("if", 14, "conditional expression"), completionItem("else", 14, "else clause"), completionItem("switch", 14, "switch expression"), completionItem("case", 14, "case clause"), completionItem("while", 14, "while loop"), completionItem("return", 14, "return statement"), completionItem("end", 14, "block end"), completionItem("using", 14, "typeclass constraint"), completionItem("import", 14, "import statement"), completionItem("package", 14, "package declaration"), completionItem("Option", 7, "Option[A] - nullable type"), completionItem("Result", 7, "Result[A, E] - error type"), completionItem("Some", 14, "Some[A] - option variant"), completionItem("None", 14, "None[A] - none variant"), completionItem("Ok", 14, "Ok[A, E] - result variant"), completionItem("Err", 14, "Err[A, E] - error variant"), completionItem("List", 7, "List[A] - linked list"), completionItem("Slice", 7, "Slice[A] - Go slice"), completionItem("Map", 7, "Map[K, V] - Go map"), completionItem("Set", 7, "Set[A] - Go set"), completionItem("Ref", 7, "Ref[T] - non-nil reference")}
@@ -415,25 +392,15 @@ func appendCompletions(items []CompletionItem, word string) []CompletionItem {
 	if word == "" {
 		return items
 	} else {
-<<<<<<< HEAD
 		var filtered []CompletionItem = []CompletionItem{}
 		lowerWord := strings.ToLower(word)
 		i := 0
 		for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-			if __mygo_match___mygo_expr_0, ok := completionAt(items, i).(OptionSome[CompletionItem]); ok {
-				if strings.HasPrefix(strings.ToLower(__mygo_match___mygo_expr_0.F0.Label), lowerWord) {
-					filtered = MygoIN5SliceM6Append(filtered, __mygo_match___mygo_expr_0.F0)
+			__mygo_expr_0 := completionAt(items, i)
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CompletionItem]); ok {
+				if strings.HasPrefix(strings.ToLower(__mygo_match___mygo_expr_1.F0.Label), lowerWord) {
+					filtered = MygoIN5SliceM6Append(filtered, __mygo_match___mygo_expr_1.F0)
 				} else {
-=======
-		var expr_30 []CompletionItem
-		var filtered_27 []CompletionItem = []CompletionItem{}
-		lowerWord_28 := strings.ToLower(word)
-		i_29 := 0
-		for i_29 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-			if v_4, ok := completionAt(items, i_29).(Option__Some[CompletionItem]); ok {
-				if strings.HasPrefix(strings.ToLower(v_4.F0.Label), lowerWord_28) {
-					filtered_27 = MygoIN5SliceM6Append(filtered_27, v_4.F0)
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 				}
 			} else {
 			}
@@ -443,51 +410,33 @@ func appendCompletions(items []CompletionItem, word string) []CompletionItem {
 	}
 }
 func handleHover(store *DocumentStore, uri string, line int, char int) Option[Hover] {
-<<<<<<< HEAD
-	var __mygo_expr_0 Option[Hover]
-	if __mygo_match___mygo_expr_1, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
-		var __mygo_expr_2 Option[Hover]
-		if __mygo_match___mygo_expr_3, ok := wordAtPosition(__mygo_match___mygo_expr_1.F0.Content, line, char).(OptionSome[*TextRange]); ok {
-			lines := strings.Split(__mygo_match___mygo_expr_1.F0.Content, "\n")
-			var __mygo_expr_4 Option[Hover]
+	__mygo_expr_0 := storeGet(store, uri)
+	var __mygo_expr_1 Option[Hover]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
+		__mygo_expr_3 := wordAtPosition(__mygo_match___mygo_expr_2.F0.Content, line, char)
+		var __mygo_expr_4 Option[Hover]
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*TextRange]); ok {
+			lines := strings.Split(__mygo_match___mygo_expr_2.F0.Content, "\n")
+			var __mygo_expr_6 Option[Hover]
 			if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
 				text := MygoIN6OptionM8UnwrapOr(stringAt(lines, line), "")
-				word := substr(text, __mygo_match___mygo_expr_3.F0.StartPos.Character, __mygo_match___mygo_expr_3.F0.EndPos.Character)
+				word := substr(text, __mygo_match___mygo_expr_5.F0.StartPos.Character, __mygo_match___mygo_expr_5.F0.EndPos.Character)
 				docStr := buildHoverDoc(word)
-				var hoverRange Option[TextRange] = Some[TextRange](*__mygo_match___mygo_expr_3.F0)
+				var hoverRange Option[TextRange] = Some[TextRange](*__mygo_match___mygo_expr_5.F0)
 				hover := Hover{Contents: MarkupContent{Kind: "plaintext", Value: docStr}, TextRange: hoverRange}
-				__mygo_expr_4 = Some[Hover](hover)
-=======
-	var expr_45 Option[Hover]
-	if v_5, ok := storeGet(store, uri).(Option__Some[*Document]); ok {
-		var expr_44 Option[Hover]
-		var expr_43 Option[Hover]
-		if v_6, ok := wordAtPosition(v_5.F0.Content, line, char).(Option__Some[*TextRange]); ok {
-			var expr_42 Option[Hover]
-			lines_34 := strings.Split(v_5.F0.Content, "\n")
-			var expr_41 Option[Hover]
-			if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_34) {
-				var expr_40 Option[Hover]
-				text_35 := MygoIN6OptionM8UnwrapOr(stringAt(lines_34, line), "")
-				word_36 := substr(text_35, v_6.F0.StartPos.Character, v_6.F0.EndPos.Character)
-				docStr_37 := buildHoverDoc(word_36)
-				var hoverRange_38 Option[TextRange] = Some[TextRange](*v_6.F0)
-				hover_39 := Hover{Contents: MarkupContent{Kind: "plaintext", Value: docStr_37}, TextRange: hoverRange_38}
-				expr_40 = Some[Hover](hover_39)
-				expr_41 = expr_40
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+				__mygo_expr_6 = Some[Hover](hover)
 			} else {
-				__mygo_expr_4 = None[Hover]()
+				__mygo_expr_6 = None[Hover]()
 			}
-			__mygo_expr_2 = __mygo_expr_4
+			__mygo_expr_4 = __mygo_expr_6
 		} else {
-			__mygo_expr_2 = None[Hover]()
+			__mygo_expr_4 = None[Hover]()
 		}
-		__mygo_expr_0 = __mygo_expr_2
+		__mygo_expr_1 = __mygo_expr_4
 	} else {
-		__mygo_expr_0 = None[Hover]()
+		__mygo_expr_1 = None[Hover]()
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
 }
 func buildHoverDoc(word string) string {
 	var __mygo_expr_0 string
@@ -555,45 +504,27 @@ func buildHoverDoc(word string) string {
 	return __mygo_expr_0
 }
 func handleDiagnostics(store *DocumentStore, uri string) []Diagnostic {
-<<<<<<< HEAD
-	var __mygo_expr_0 []Diagnostic
-	if __mygo_match___mygo_expr_1, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
-		__mygo_expr_0 = runMyGoDiagnostics(__mygo_match___mygo_expr_1.F0.Content)
-=======
-	var expr_65 []Diagnostic
-	if v_7, ok := storeGet(store, uri).(Option__Some[*Document]); ok {
-		var expr_64 []Diagnostic
-		expr_64 = runMyGoDiagnostics(v_7.F0.Content)
-		expr_65 = expr_64
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+	__mygo_expr_0 := storeGet(store, uri)
+	var __mygo_expr_1 []Diagnostic
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
+		__mygo_expr_1 = runMyGoDiagnostics(__mygo_match___mygo_expr_2.F0.Content)
 	} else {
-		__mygo_expr_0 = []Diagnostic{}
+		__mygo_expr_1 = []Diagnostic{}
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
 }
 func runMyGoDiagnostics(content string) []Diagnostic {
-<<<<<<< HEAD
 	var diags []Diagnostic = []Diagnostic{}
 	lines := strings.Split(content, "\n")
 	i := 0
 	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
-		if __mygo_match___mygo_expr_0, ok := stringAt(lines, i).(OptionSome[string]); ok {
-			trimmed := strings.TrimSpace(__mygo_match___mygo_expr_0.F0)
+		__mygo_expr_0 := stringAt(lines, i)
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+			trimmed := strings.TrimSpace(__mygo_match___mygo_expr_1.F0)
 			if strings.Contains(trimmed, "where ") && !strings.HasPrefix(trimmed, "#") {
 				startChar := strings.Index(trimmed, "where")
 				diags = MygoIN5SliceM6Append(diags, Diagnostic{TextRange: TextRange{StartPos: Position{Line: i, Character: startChar}, EndPos: Position{Line: i, Character: startChar + 5}}, Severity: 2, Source: "mygo", Message: "'where' is deprecated, use 'using' instead", Code: "DEPRECATED"})
 			} else {
-=======
-	var diags_66 []Diagnostic = []Diagnostic{}
-	lines_67 := strings.Split(content, "\n")
-	i_68 := 0
-	for i_68 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_67) {
-		if v_8, ok := stringAt(lines_67, i_68).(Option__Some[string]); ok {
-			trimmed_70 := strings.TrimSpace(v_8.F0)
-			if strings.Contains(trimmed_70, "where ") && !strings.HasPrefix(trimmed_70, "#") {
-				startChar_71 := strings.Index(trimmed_70, "where")
-				diags_66 = MygoIN5SliceM6Append(diags_66, Diagnostic{TextRange: TextRange{StartPos: Position{Line: i_68, Character: startChar_71}, EndPos: Position{Line: i_68, Character: startChar_71 + 5}}, Severity: 2, Source: "mygo", Message: "'where' is deprecated, use 'using' instead", Code: "DEPRECATED"})
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 			}
 			if strings.Contains(trimmed, "-> Unit") {
 				startChar_1 := strings.Index(trimmed, "-> Unit")
@@ -607,40 +538,24 @@ func runMyGoDiagnostics(content string) []Diagnostic {
 	return diags
 }
 func handleDocumentSymbols(store *DocumentStore, uri string) []DocumentSymbol {
-<<<<<<< HEAD
-	var __mygo_expr_0 []DocumentSymbol
-	if __mygo_match___mygo_expr_1, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
-		__mygo_expr_0 = parseAndBuildSymbols(__mygo_match___mygo_expr_1.F0.Content)
-=======
-	var expr_75 []DocumentSymbol
-	if v_9, ok := storeGet(store, uri).(Option__Some[*Document]); ok {
-		var expr_74 []DocumentSymbol
-		expr_74 = parseAndBuildSymbols(v_9.F0.Content)
-		expr_75 = expr_74
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+	__mygo_expr_0 := storeGet(store, uri)
+	var __mygo_expr_1 []DocumentSymbol
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
+		__mygo_expr_1 = parseAndBuildSymbols(__mygo_match___mygo_expr_2.F0.Content)
 	} else {
-		__mygo_expr_0 = []DocumentSymbol{}
+		__mygo_expr_1 = []DocumentSymbol{}
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
 }
 func parseAndBuildSymbols(content string) []DocumentSymbol {
-<<<<<<< HEAD
 	var symbols []DocumentSymbol = []DocumentSymbol{}
 	lines := strings.Split(content, "\n")
 	i := 0
 	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
-		if __mygo_match___mygo_expr_0, ok := stringAt(lines, i).(OptionSome[string]); ok {
-			trimmed := strings.TrimSpace(__mygo_match___mygo_expr_0.F0)
+		__mygo_expr_0 := stringAt(lines, i)
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+			trimmed := strings.TrimSpace(__mygo_match___mygo_expr_1.F0)
 			if trimmed == "" || strings.HasPrefix(trimmed, "#") {
-=======
-	var symbols_76 []DocumentSymbol = []DocumentSymbol{}
-	lines_77 := strings.Split(content, "\n")
-	i_78 := 0
-	for i_78 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_77) {
-		if v_10, ok := stringAt(lines_77, i_78).(Option__Some[string]); ok {
-			trimmed_79 := strings.TrimSpace(v_10.F0)
-			if trimmed_79 == "" || strings.HasPrefix(trimmed_79, "#") {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 			} else {
 				if strings.HasPrefix(trimmed, "struct ") {
 					symbols = appendNamedSymbol(symbols, trimmed, i, 23, "struct")
@@ -653,17 +568,11 @@ func parseAndBuildSymbols(content string) []DocumentSymbol {
 							selStart := strings.Index(trimmed, name)
 							symbols = MygoIN5SliceM6Append(symbols, documentSymbol(name, 12, i, selStart, selStart+byteLen(name), "func("+name+")"))
 						} else {
-<<<<<<< HEAD
 							if strings.HasPrefix(trimmed, "impl ") {
 								parts := strings.Fields(trimmed)
-								if __mygo_match___mygo_expr_1, ok := stringAt(parts, 1).(OptionSome[string]); ok {
-									symbols = MygoIN5SliceM6Append(symbols, documentSymbol("impl "+__mygo_match___mygo_expr_1.F0, 5, i, 5, byteLen(trimmed), "impl"))
-=======
-							if strings.HasPrefix(trimmed_79, "impl ") {
-								parts_82 := strings.Fields(trimmed_79)
-								if v_11, ok := stringAt(parts_82, 1).(Option__Some[string]); ok {
-									symbols_76 = MygoIN5SliceM6Append(symbols_76, documentSymbol("impl "+v_11.F0, 5, i_78, 5, byteLen(trimmed_79), "impl"))
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+								__mygo_expr_2 := stringAt(parts, 1)
+								if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
+									symbols = MygoIN5SliceM6Append(symbols, documentSymbol("impl "+__mygo_match___mygo_expr_3.F0, 5, i, 5, byteLen(trimmed), "impl"))
 								} else {
 								}
 							} else {
@@ -693,99 +602,63 @@ func declarationName(raw string) string {
 	}
 }
 func appendNamedSymbol(symbols []DocumentSymbol, trimmed string, line int, kind int, detail string) []DocumentSymbol {
-<<<<<<< HEAD
 	parts := strings.Fields(trimmed)
-	var __mygo_expr_0 []DocumentSymbol
-	if __mygo_match___mygo_expr_1, ok := stringAt(parts, 1).(OptionSome[string]); ok {
-		name := declarationName(__mygo_match___mygo_expr_1.F0)
+	__mygo_expr_0 := stringAt(parts, 1)
+	var __mygo_expr_1 []DocumentSymbol
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+		name := declarationName(__mygo_match___mygo_expr_2.F0)
 		selStart := strings.Index(trimmed, name)
-		__mygo_expr_0 = MygoIN5SliceM6Append(symbols, documentSymbol(name, kind, line, selStart, selStart+byteLen(name), detail))
-=======
-	parts_87 := strings.Fields(trimmed)
-	var expr_92 []DocumentSymbol
-	if v_12, ok := stringAt(parts_87, 1).(Option__Some[string]); ok {
-		var expr_91 []DocumentSymbol
-		name_89 := declarationName(v_12.F0)
-		selStart_90 := strings.Index(trimmed, name_89)
-		expr_91 = MygoIN5SliceM6Append(symbols, documentSymbol(name_89, kind, line, selStart_90, selStart_90+byteLen(name_89), detail))
-		expr_92 = expr_91
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+		__mygo_expr_1 = MygoIN5SliceM6Append(symbols, documentSymbol(name, kind, line, selStart, selStart+byteLen(name), detail))
 	} else {
-		__mygo_expr_0 = symbols
+		__mygo_expr_1 = symbols
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
 }
 func documentSymbol(name string, kind int, line int, selectionStart int, selectionEnd int, detail string) DocumentSymbol {
 	return DocumentSymbol{Name: name, Detail: detail, Kind: kind, TextRange: TextRange{StartPos: Position{Line: line, Character: 0}, EndPos: Position{Line: line, Character: selectionEnd}}, SelectionTextRange: TextRange{StartPos: Position{Line: line, Character: selectionStart}, EndPos: Position{Line: line, Character: selectionEnd}}, Children: []DocumentSymbol{}}
 }
 func handleDefinition(store *DocumentStore, uri string, line int, char int) Option[[]Location] {
-<<<<<<< HEAD
-	var __mygo_expr_0 Option[[]Location]
-	if __mygo_match___mygo_expr_1, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
-		var __mygo_expr_2 Option[[]Location]
-		if __mygo_match___mygo_expr_3, ok := wordAtPosition(__mygo_match___mygo_expr_1.F0.Content, line, char).(OptionSome[*TextRange]); ok {
-			lines := strings.Split(__mygo_match___mygo_expr_1.F0.Content, "\n")
-			var __mygo_expr_5 Option[[]Location]
+	__mygo_expr_0 := storeGet(store, uri)
+	var __mygo_expr_1 Option[[]Location]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
+		__mygo_expr_3 := wordAtPosition(__mygo_match___mygo_expr_2.F0.Content, line, char)
+		var __mygo_expr_4 Option[[]Location]
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*TextRange]); ok {
+			lines := strings.Split(__mygo_match___mygo_expr_2.F0.Content, "\n")
+			var __mygo_expr_7 Option[[]Location]
 			if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
 				text := MygoIN6OptionM8UnwrapOr(stringAt(lines, line), "")
-				word := substr(text, __mygo_match___mygo_expr_3.F0.StartPos.Character, __mygo_match___mygo_expr_3.F0.EndPos.Character)
-				locs := searchDefinitionInDoc(__mygo_match___mygo_expr_1.F0.Content, word, __mygo_match___mygo_expr_1.F0.URI)
-				var __mygo_expr_4 Option[[]Location]
+				word := substr(text, __mygo_match___mygo_expr_5.F0.StartPos.Character, __mygo_match___mygo_expr_5.F0.EndPos.Character)
+				locs := searchDefinitionInDoc(__mygo_match___mygo_expr_2.F0.Content, word, __mygo_match___mygo_expr_2.F0.URI)
+				var __mygo_expr_6 Option[[]Location]
 				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(locs) > 0 {
-					__mygo_expr_4 = Some[[]Location](locs)
-=======
-	var expr_105 Option[[]Location]
-	if v_13, ok := storeGet(store, uri).(Option__Some[*Document]); ok {
-		var expr_104 Option[[]Location]
-		var expr_103 Option[[]Location]
-		if v_14, ok := wordAtPosition(v_13.F0.Content, line, char).(Option__Some[*TextRange]); ok {
-			var expr_102 Option[[]Location]
-			lines_95 := strings.Split(v_13.F0.Content, "\n")
-			var expr_101 Option[[]Location]
-			if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_95) {
-				var expr_100 Option[[]Location]
-				text_96 := MygoIN6OptionM8UnwrapOr(stringAt(lines_95, line), "")
-				word_97 := substr(text_96, v_14.F0.StartPos.Character, v_14.F0.EndPos.Character)
-				locs_98 := searchDefinitionInDoc(v_13.F0.Content, word_97, v_13.F0.URI)
-				var expr_99 Option[[]Location]
-				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(locs_98) > 0 {
-					expr_99 = Some[[]Location](locs_98)
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+					__mygo_expr_6 = Some[[]Location](locs)
 				} else {
-					__mygo_expr_4 = None[[]Location]()
+					__mygo_expr_6 = None[[]Location]()
 				}
-				__mygo_expr_5 = __mygo_expr_4
+				__mygo_expr_7 = __mygo_expr_6
 			} else {
-				__mygo_expr_5 = None[[]Location]()
+				__mygo_expr_7 = None[[]Location]()
 			}
-			__mygo_expr_2 = __mygo_expr_5
+			__mygo_expr_4 = __mygo_expr_7
 		} else {
-			__mygo_expr_2 = None[[]Location]()
+			__mygo_expr_4 = None[[]Location]()
 		}
-		__mygo_expr_0 = __mygo_expr_2
+		__mygo_expr_1 = __mygo_expr_4
 	} else {
-		__mygo_expr_0 = None[[]Location]()
+		__mygo_expr_1 = None[[]Location]()
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
 }
 func searchDefinitionInDoc(content string, word string, uri string) []Location {
-<<<<<<< HEAD
 	var locations []Location = []Location{}
 	lines := strings.Split(content, "\n")
 	i := 0
 	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
-		if __mygo_match___mygo_expr_0, ok := stringAt(lines, i).(OptionSome[string]); ok {
-			trimmed := strings.TrimSpace(__mygo_match___mygo_expr_0.F0)
+		__mygo_expr_0 := stringAt(lines, i)
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+			trimmed := strings.TrimSpace(__mygo_match___mygo_expr_1.F0)
 			if trimmed == "" || strings.HasPrefix(trimmed, "#") {
-=======
-	var locations_106 []Location = []Location{}
-	lines_107 := strings.Split(content, "\n")
-	i_108 := 0
-	for i_108 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_107) {
-		if v_15, ok := stringAt(lines_107, i_108).(Option__Some[string]); ok {
-			trimmed_109 := strings.TrimSpace(v_15.F0)
-			if trimmed_109 == "" || strings.HasPrefix(trimmed_109, "#") {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 			} else {
 				if strings.HasPrefix(trimmed, "func "+word) || strings.HasPrefix(trimmed, "struct "+word) || strings.HasPrefix(trimmed, "enum "+word) {
 					locations = MygoIN5SliceM6Append(locations, lineLocation(uri, i, trimmed))
@@ -799,75 +672,48 @@ func searchDefinitionInDoc(content string, word string, uri string) []Location {
 	return locations
 }
 func handleReferences(store *DocumentStore, uri string, line int, char int) Option[[]Location] {
-<<<<<<< HEAD
-	var __mygo_expr_0 Option[[]Location]
-	if __mygo_match___mygo_expr_1, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
-		var __mygo_expr_2 Option[[]Location]
-		if __mygo_match___mygo_expr_3, ok := wordAtPosition(__mygo_match___mygo_expr_1.F0.Content, line, char).(OptionSome[*TextRange]); ok {
-			lines := strings.Split(__mygo_match___mygo_expr_1.F0.Content, "\n")
-			var __mygo_expr_5 Option[[]Location]
+	__mygo_expr_0 := storeGet(store, uri)
+	var __mygo_expr_1 Option[[]Location]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*Document]); ok {
+		__mygo_expr_3 := wordAtPosition(__mygo_match___mygo_expr_2.F0.Content, line, char)
+		var __mygo_expr_4 Option[[]Location]
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*TextRange]); ok {
+			lines := strings.Split(__mygo_match___mygo_expr_2.F0.Content, "\n")
+			var __mygo_expr_7 Option[[]Location]
 			if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
 				text := MygoIN6OptionM8UnwrapOr(stringAt(lines, line), "")
-				word := substr(text, __mygo_match___mygo_expr_3.F0.StartPos.Character, __mygo_match___mygo_expr_3.F0.EndPos.Character)
-				locs := searchReferencesInDoc(__mygo_match___mygo_expr_1.F0.Content, word, __mygo_match___mygo_expr_1.F0.URI)
-				var __mygo_expr_4 Option[[]Location]
+				word := substr(text, __mygo_match___mygo_expr_5.F0.StartPos.Character, __mygo_match___mygo_expr_5.F0.EndPos.Character)
+				locs := searchReferencesInDoc(__mygo_match___mygo_expr_2.F0.Content, word, __mygo_match___mygo_expr_2.F0.URI)
+				var __mygo_expr_6 Option[[]Location]
 				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(locs) > 0 {
-					__mygo_expr_4 = Some[[]Location](locs)
-=======
-	var expr_122 Option[[]Location]
-	if v_16, ok := storeGet(store, uri).(Option__Some[*Document]); ok {
-		var expr_121 Option[[]Location]
-		var expr_120 Option[[]Location]
-		if v_17, ok := wordAtPosition(v_16.F0.Content, line, char).(Option__Some[*TextRange]); ok {
-			var expr_119 Option[[]Location]
-			lines_112 := strings.Split(v_16.F0.Content, "\n")
-			var expr_118 Option[[]Location]
-			if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_112) {
-				var expr_117 Option[[]Location]
-				text_113 := MygoIN6OptionM8UnwrapOr(stringAt(lines_112, line), "")
-				word_114 := substr(text_113, v_17.F0.StartPos.Character, v_17.F0.EndPos.Character)
-				locs_115 := searchReferencesInDoc(v_16.F0.Content, word_114, v_16.F0.URI)
-				var expr_116 Option[[]Location]
-				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(locs_115) > 0 {
-					expr_116 = Some[[]Location](locs_115)
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+					__mygo_expr_6 = Some[[]Location](locs)
 				} else {
-					__mygo_expr_4 = None[[]Location]()
+					__mygo_expr_6 = None[[]Location]()
 				}
-				__mygo_expr_5 = __mygo_expr_4
+				__mygo_expr_7 = __mygo_expr_6
 			} else {
-				__mygo_expr_5 = None[[]Location]()
+				__mygo_expr_7 = None[[]Location]()
 			}
-			__mygo_expr_2 = __mygo_expr_5
+			__mygo_expr_4 = __mygo_expr_7
 		} else {
-			__mygo_expr_2 = None[[]Location]()
+			__mygo_expr_4 = None[[]Location]()
 		}
-		__mygo_expr_0 = __mygo_expr_2
+		__mygo_expr_1 = __mygo_expr_4
 	} else {
-		__mygo_expr_0 = None[[]Location]()
+		__mygo_expr_1 = None[[]Location]()
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
 }
 func searchReferencesInDoc(content string, word string, uri string) []Location {
-<<<<<<< HEAD
 	var locations []Location = []Location{}
 	lines := strings.Split(content, "\n")
 	i := 0
 	for i < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
-		if __mygo_match___mygo_expr_0, ok := stringAt(lines, i).(OptionSome[string]); ok {
-			trimmed := strings.TrimSpace(__mygo_match___mygo_expr_0.F0)
+		__mygo_expr_0 := stringAt(lines, i)
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+			trimmed := strings.TrimSpace(__mygo_match___mygo_expr_1.F0)
 			startChar := strings.Index(trimmed, word)
 			if trimmed == "" || strings.HasPrefix(trimmed, "#") || startChar < 0 {
-=======
-	var locations_123 []Location = []Location{}
-	lines_124 := strings.Split(content, "\n")
-	i_125 := 0
-	for i_125 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_124) {
-		if v_18, ok := stringAt(lines_124, i_125).(Option__Some[string]); ok {
-			trimmed_126 := strings.TrimSpace(v_18.F0)
-			startChar_127 := strings.Index(trimmed_126, word)
-			if trimmed_126 == "" || strings.HasPrefix(trimmed_126, "#") || startChar_127 < 0 {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 			} else {
 				locations = MygoIN5SliceM6Append(locations, Location{URI: "file://" + uri, TextRange: TextRange{StartPos: Position{Line: i, Character: startChar}, EndPos: Position{Line: i, Character: startChar + byteLen(word)}}})
 			}
@@ -908,243 +754,134 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 		return m
 	}()
 	id := msg.Id
-	var __mygo_expr_0 LSPMessage
-	if msg.Method == "initialize" {
+	__mygo_expr_0 := msg.Method
+	var __mygo_expr_1 LSPMessage
+	if __mygo_expr_0 == "initialize" {
 		result := buildInitializeResponse()
-		__mygo_expr_0 = responseResult(id, result)
+		__mygo_expr_1 = responseResult(id, result)
 	} else {
-		if msg.Method == "initialized" {
-			__mygo_expr_0 = responseEmpty(id)
+		if __mygo_expr_0 == "initialized" {
+			__mygo_expr_1 = responseEmpty(id)
 		} else {
-<<<<<<< HEAD
-			if msg.Method == "textDocument/didOpen" {
-				var __mygo_expr_1 LSPMessage
-				if __mygo_match___mygo_expr_2, ok := msg.Params.(OptionSome[map[string]any]); ok {
-					docItem := decodeDocumentItem(__mygo_match___mygo_expr_2.F0)
+			if __mygo_expr_0 == "textDocument/didOpen" {
+				__mygo_expr_2 := msg.Params
+				var __mygo_expr_3 LSPMessage
+				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[map[string]any]); ok {
+					docItem := decodeDocumentItem(__mygo_match___mygo_expr_4.F0)
 					storePut(store, docItem.URI, docItem.Version, docItem.Content)
 					diags := handleDiagnostics(store, docItem.URI)
-					__mygo_expr_1 = responseResult(id, diags)
-=======
-			if msg_128.Method == "textDocument/didOpen" {
-				var expr_191 LSPMessage
-				var expr_190 LSPMessage
-				if v_27, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
-					var expr_189 LSPMessage
-					docItem_187 := decodeDocumentItem(v_27.F0)
-					storePut(store, docItem_187.URI, docItem_187.Version, docItem_187.Content)
-					diags_188 := handleDiagnostics(store, docItem_187.URI)
-					expr_189 = responseResult(id_129, diags_188)
-					expr_190 = expr_189
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+					__mygo_expr_3 = responseResult(id, diags)
 				} else {
-					__mygo_expr_1 = responseEmpty(id)
+					__mygo_expr_3 = responseEmpty(id)
 				}
-				__mygo_expr_0 = __mygo_expr_1
+				__mygo_expr_1 = __mygo_expr_3
 			} else {
-<<<<<<< HEAD
-				if msg.Method == "textDocument/didChange" {
-					var __mygo_expr_3 LSPMessage
-					if __mygo_match___mygo_expr_4, ok := msg.Params.(OptionSome[map[string]any]); ok {
-						version := requestVersion(__mygo_match___mygo_expr_4.F0)
-						uri := requestURI(__mygo_match___mygo_expr_4.F0)
-						content := firstChangeText(__mygo_match___mygo_expr_4.F0)
+				if __mygo_expr_0 == "textDocument/didChange" {
+					__mygo_expr_5 := msg.Params
+					var __mygo_expr_6 LSPMessage
+					if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[map[string]any]); ok {
+						version := requestVersion(__mygo_match___mygo_expr_7.F0)
+						uri := requestURI(__mygo_match___mygo_expr_7.F0)
+						content := firstChangeText(__mygo_match___mygo_expr_7.F0)
 						storePut(store, uri, version, content)
-						__mygo_expr_3 = responseEmpty(id)
-=======
-				if msg_128.Method == "textDocument/didChange" {
-					var expr_185 LSPMessage
-					var expr_184 LSPMessage
-					if v_26, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
-						var expr_183 LSPMessage
-						version_180 := requestVersion(v_26.F0)
-						uri_181 := requestURI(v_26.F0)
-						content_182 := firstChangeText(v_26.F0)
-						storePut(store, uri_181, version_180, content_182)
-						expr_183 = responseEmpty(id_129)
-						expr_184 = expr_183
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+						__mygo_expr_6 = responseEmpty(id)
 					} else {
 					}
-					__mygo_expr_0 = __mygo_expr_3
+					__mygo_expr_1 = __mygo_expr_6
 				} else {
-<<<<<<< HEAD
-					if msg.Method == "textDocument/didClose" {
-						var __mygo_expr_5 LSPMessage
-						if __mygo_match___mygo_expr_6, ok := msg.Params.(OptionSome[map[string]any]); ok {
-							uri_1 := requestURI(__mygo_match___mygo_expr_6.F0)
+					if __mygo_expr_0 == "textDocument/didClose" {
+						__mygo_expr_8 := msg.Params
+						var __mygo_expr_9 LSPMessage
+						if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Option__Some[map[string]any]); ok {
+							uri_1 := requestURI(__mygo_match___mygo_expr_10.F0)
 							storeDelete(store, uri_1)
-							__mygo_expr_5 = responseEmpty(id)
-=======
-					if msg_128.Method == "textDocument/didClose" {
-						var expr_179 LSPMessage
-						var expr_178 LSPMessage
-						if v_25, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
-							var expr_177 LSPMessage
-							uri_176 := requestURI(v_25.F0)
-							storeDelete(store, uri_176)
-							expr_177 = responseEmpty(id_129)
-							expr_178 = expr_177
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+							__mygo_expr_9 = responseEmpty(id)
 						} else {
-							__mygo_expr_5 = responseEmpty(id)
+							__mygo_expr_9 = responseEmpty(id)
 						}
-						__mygo_expr_0 = __mygo_expr_5
+						__mygo_expr_1 = __mygo_expr_9
 					} else {
-<<<<<<< HEAD
-						if msg.Method == "textDocument/completion" {
-							var __mygo_expr_7 LSPMessage
-							if __mygo_match___mygo_expr_8, ok := msg.Params.(OptionSome[map[string]any]); ok {
-								uri_2 := requestURI(__mygo_match___mygo_expr_8.F0)
-								line := requestLine(__mygo_match___mygo_expr_8.F0)
-								char := requestChar(__mygo_match___mygo_expr_8.F0)
+						if __mygo_expr_0 == "textDocument/completion" {
+							__mygo_expr_11 := msg.Params
+							var __mygo_expr_12 LSPMessage
+							if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Option__Some[map[string]any]); ok {
+								uri_2 := requestURI(__mygo_match___mygo_expr_13.F0)
+								line := requestLine(__mygo_match___mygo_expr_13.F0)
+								char := requestChar(__mygo_match___mygo_expr_13.F0)
 								items := handleCompletion(store, uri_2, line, char)
-								__mygo_expr_7 = responseResult(id, items)
-=======
-						if msg_128.Method == "textDocument/completion" {
-							var expr_174 LSPMessage
-							var expr_173 LSPMessage
-							if v_24, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
-								var expr_172 LSPMessage
-								uri_168 := requestURI(v_24.F0)
-								line_169 := requestLine(v_24.F0)
-								char_170 := requestChar(v_24.F0)
-								items_171 := handleCompletion(store, uri_168, line_169, char_170)
-								expr_172 = responseResult(id_129, items_171)
-								expr_173 = expr_172
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+								__mygo_expr_12 = responseResult(id, items)
 							} else {
-								__mygo_expr_7 = responseEmpty(id)
+								__mygo_expr_12 = responseEmpty(id)
 							}
-							__mygo_expr_0 = __mygo_expr_7
+							__mygo_expr_1 = __mygo_expr_12
 						} else {
-<<<<<<< HEAD
-							if msg.Method == "textDocument/hover" {
-								var __mygo_expr_9 LSPMessage
-								if __mygo_match___mygo_expr_10, ok := msg.Params.(OptionSome[map[string]any]); ok {
-									uri_3 := requestURI(__mygo_match___mygo_expr_10.F0)
-									line_1 := requestLine(__mygo_match___mygo_expr_10.F0)
-									char_1 := requestChar(__mygo_match___mygo_expr_10.F0)
+							if __mygo_expr_0 == "textDocument/hover" {
+								__mygo_expr_14 := msg.Params
+								var __mygo_expr_15 LSPMessage
+								if __mygo_match___mygo_expr_16, ok := __mygo_expr_14.(Option__Some[map[string]any]); ok {
+									uri_3 := requestURI(__mygo_match___mygo_expr_16.F0)
+									line_1 := requestLine(__mygo_match___mygo_expr_16.F0)
+									char_1 := requestChar(__mygo_match___mygo_expr_16.F0)
 									hover := handleHover(store, uri_3, line_1, char_1)
-									__mygo_expr_9 = responseMaybeResult(id, hover)
-=======
-							if msg_128.Method == "textDocument/hover" {
-								var expr_166 LSPMessage
-								var expr_165 LSPMessage
-								if v_23, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
-									var expr_164 LSPMessage
-									uri_160 := requestURI(v_23.F0)
-									line_161 := requestLine(v_23.F0)
-									char_162 := requestChar(v_23.F0)
-									hover_163 := handleHover(store, uri_160, line_161, char_162)
-									expr_164 = responseMaybeResult(id_129, hover_163)
-									expr_165 = expr_164
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+									__mygo_expr_15 = responseMaybeResult(id, hover)
 								} else {
-									__mygo_expr_9 = responseEmpty(id)
+									__mygo_expr_15 = responseEmpty(id)
 								}
-								__mygo_expr_0 = __mygo_expr_9
+								__mygo_expr_1 = __mygo_expr_15
 							} else {
-<<<<<<< HEAD
-								if msg.Method == "textDocument/definition" {
-									var __mygo_expr_11 LSPMessage
-									if __mygo_match___mygo_expr_12, ok := msg.Params.(OptionSome[map[string]any]); ok {
-										uri_4 := requestURI(__mygo_match___mygo_expr_12.F0)
-										line_2 := requestLine(__mygo_match___mygo_expr_12.F0)
-										char_2 := requestChar(__mygo_match___mygo_expr_12.F0)
+								if __mygo_expr_0 == "textDocument/definition" {
+									__mygo_expr_17 := msg.Params
+									var __mygo_expr_18 LSPMessage
+									if __mygo_match___mygo_expr_19, ok := __mygo_expr_17.(Option__Some[map[string]any]); ok {
+										uri_4 := requestURI(__mygo_match___mygo_expr_19.F0)
+										line_2 := requestLine(__mygo_match___mygo_expr_19.F0)
+										char_2 := requestChar(__mygo_match___mygo_expr_19.F0)
 										locs := handleDefinition(store, uri_4, line_2, char_2)
-										__mygo_expr_11 = responseMaybeResult(id, locs)
-=======
-								if msg_128.Method == "textDocument/definition" {
-									var expr_158 LSPMessage
-									var expr_157 LSPMessage
-									if v_22, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
-										var expr_156 LSPMessage
-										uri_152 := requestURI(v_22.F0)
-										line_153 := requestLine(v_22.F0)
-										char_154 := requestChar(v_22.F0)
-										locs_155 := handleDefinition(store, uri_152, line_153, char_154)
-										expr_156 = responseMaybeResult(id_129, locs_155)
-										expr_157 = expr_156
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+										__mygo_expr_18 = responseMaybeResult(id, locs)
 									} else {
-										__mygo_expr_11 = responseEmpty(id)
+										__mygo_expr_18 = responseEmpty(id)
 									}
-									__mygo_expr_0 = __mygo_expr_11
+									__mygo_expr_1 = __mygo_expr_18
 								} else {
-<<<<<<< HEAD
-									if msg.Method == "textDocument/references" {
-										var __mygo_expr_13 LSPMessage
-										if __mygo_match___mygo_expr_14, ok := msg.Params.(OptionSome[map[string]any]); ok {
-											uri_5 := requestURI(__mygo_match___mygo_expr_14.F0)
-											line_3 := requestLine(__mygo_match___mygo_expr_14.F0)
-											char_3 := requestChar(__mygo_match___mygo_expr_14.F0)
+									if __mygo_expr_0 == "textDocument/references" {
+										__mygo_expr_20 := msg.Params
+										var __mygo_expr_21 LSPMessage
+										if __mygo_match___mygo_expr_22, ok := __mygo_expr_20.(Option__Some[map[string]any]); ok {
+											uri_5 := requestURI(__mygo_match___mygo_expr_22.F0)
+											line_3 := requestLine(__mygo_match___mygo_expr_22.F0)
+											char_3 := requestChar(__mygo_match___mygo_expr_22.F0)
 											locs_1 := handleReferences(store, uri_5, line_3, char_3)
-											__mygo_expr_13 = responseMaybeResult(id, locs_1)
-=======
-									if msg_128.Method == "textDocument/references" {
-										var expr_150 LSPMessage
-										var expr_149 LSPMessage
-										if v_21, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
-											var expr_148 LSPMessage
-											uri_144 := requestURI(v_21.F0)
-											line_145 := requestLine(v_21.F0)
-											char_146 := requestChar(v_21.F0)
-											locs_147 := handleReferences(store, uri_144, line_145, char_146)
-											expr_148 = responseMaybeResult(id_129, locs_147)
-											expr_149 = expr_148
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+											__mygo_expr_21 = responseMaybeResult(id, locs_1)
 										} else {
-											__mygo_expr_13 = responseEmpty(id)
+											__mygo_expr_21 = responseEmpty(id)
 										}
-										__mygo_expr_0 = __mygo_expr_13
+										__mygo_expr_1 = __mygo_expr_21
 									} else {
-<<<<<<< HEAD
-										if msg.Method == "textDocument/documentSymbol" {
-											var __mygo_expr_15 LSPMessage
-											if __mygo_match___mygo_expr_16, ok := msg.Params.(OptionSome[map[string]any]); ok {
-												uri_6 := requestURI(__mygo_match___mygo_expr_16.F0)
+										if __mygo_expr_0 == "textDocument/documentSymbol" {
+											__mygo_expr_23 := msg.Params
+											var __mygo_expr_24 LSPMessage
+											if __mygo_match___mygo_expr_25, ok := __mygo_expr_23.(Option__Some[map[string]any]); ok {
+												uri_6 := requestURI(__mygo_match___mygo_expr_25.F0)
 												syms := handleDocumentSymbols(store, uri_6)
-												__mygo_expr_15 = responseResult(id, syms)
-=======
-										if msg_128.Method == "textDocument/documentSymbol" {
-											var expr_142 LSPMessage
-											var expr_141 LSPMessage
-											if v_20, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
-												var expr_140 LSPMessage
-												uri_138 := requestURI(v_20.F0)
-												syms_139 := handleDocumentSymbols(store, uri_138)
-												expr_140 = responseResult(id_129, syms_139)
-												expr_141 = expr_140
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+												__mygo_expr_24 = responseResult(id, syms)
 											} else {
-												__mygo_expr_15 = responseEmpty(id)
+												__mygo_expr_24 = responseEmpty(id)
 											}
-											__mygo_expr_0 = __mygo_expr_15
+											__mygo_expr_1 = __mygo_expr_24
 										} else {
-<<<<<<< HEAD
-											if msg.Method == "workspace/symbol" {
-												var __mygo_expr_17 LSPMessage
-												if __mygo_match___mygo_expr_18, ok := msg.Params.(OptionSome[map[string]any]); ok {
-													query := requestQuery(__mygo_match___mygo_expr_18.F0)
+											if __mygo_expr_0 == "workspace/symbol" {
+												__mygo_expr_26 := msg.Params
+												var __mygo_expr_27 LSPMessage
+												if __mygo_match___mygo_expr_28, ok := __mygo_expr_26.(Option__Some[map[string]any]); ok {
+													query := requestQuery(__mygo_match___mygo_expr_28.F0)
 													syms_1 := handleWorkspaceSymbols(store, query)
-													__mygo_expr_17 = responseResult(id, syms_1)
-=======
-											if msg_128.Method == "workspace/symbol" {
-												var expr_136 LSPMessage
-												var expr_135 LSPMessage
-												if v_19, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
-													var expr_134 LSPMessage
-													query_132 := requestQuery(v_19.F0)
-													syms_133 := handleWorkspaceSymbols(store, query_132)
-													expr_134 = responseResult(id_129, syms_133)
-													expr_135 = expr_134
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+													__mygo_expr_27 = responseResult(id, syms_1)
 												} else {
-													__mygo_expr_17 = responseEmpty(id)
+													__mygo_expr_27 = responseEmpty(id)
 												}
-												__mygo_expr_0 = __mygo_expr_17
+												__mygo_expr_1 = __mygo_expr_27
 											} else {
-												__mygo_expr_0 = responseError(id, -32601, "method not found: "+msg.Method)
+												__mygo_expr_1 = responseError(id, -32601, "method not found: "+msg.Method)
 											}
 										}
 									}
@@ -1156,7 +893,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 			}
 		}
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
 }
 func Main() {
 	fmt.Println("MyGO Language Server v0.1.0")

@@ -340,25 +340,12 @@ func EmptyExpected() []string {
 	return []string{}
 }
 func WithExpected(err Option[ParseError], name string) Option[ParseError] {
-<<<<<<< HEAD
 	var __mygo_expr_0 Option[ParseError]
-	if __mygo_match___mygo_expr_1, ok := err.(OptionSome[ParseError]); ok {
+	if __mygo_match___mygo_expr_1, ok := err.(Option__Some[ParseError]); ok {
 		__mygo_expr_0 = Some[ParseError](ParseError{Position: __mygo_match___mygo_expr_1.F0.Position, Expected: MygoIN5SliceM6Append(__mygo_match___mygo_expr_1.F0.Expected, name), Message: __mygo_match___mygo_expr_1.F0.Message})
 	} else {
-		if _, ok := err.(OptionNone[ParseError]); ok {
-			__mygo_expr_0 = None[ParseError]()
-=======
-	var expr_36 Option[ParseError]
-	if v_2, ok := err.(Option__Some[ParseError]); ok {
-		var expr_35 Option[ParseError]
-		expr_35 = Some[ParseError](ParseError{Position: v_2.F0.Position, Expected: MygoIN5SliceM6Append(v_2.F0.Expected, name), Message: v_2.F0.Message})
-		expr_36 = expr_35
-	} else {
 		if _, ok := err.(Option__None[ParseError]); ok {
-			var expr_34 Option[ParseError]
-			expr_34 = None[ParseError]()
-			expr_36 = expr_34
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+			__mygo_expr_0 = None[ParseError]()
 		} else {
 		}
 	}
@@ -366,15 +353,15 @@ func WithExpected(err Option[ParseError], name string) Option[ParseError] {
 }
 func MergeErrors(left Option[ParseError], right Option[ParseError]) Option[ParseError] {
 	var __mygo_expr_0 Option[ParseError]
-	if _, ok := left.(OptionNone[ParseError]); ok {
+	if _, ok := left.(Option__None[ParseError]); ok {
 		__mygo_expr_0 = right
 	} else {
-		if __mygo_match___mygo_expr_1, ok := left.(OptionSome[ParseError]); ok {
+		if __mygo_match___mygo_expr_1, ok := left.(Option__Some[ParseError]); ok {
 			var __mygo_expr_2 Option[ParseError]
-			if _, ok := right.(OptionNone[ParseError]); ok {
+			if _, ok := right.(Option__None[ParseError]); ok {
 				__mygo_expr_2 = left
 			} else {
-				if __mygo_match___mygo_expr_3, ok := right.(OptionSome[ParseError]); ok {
+				if __mygo_match___mygo_expr_3, ok := right.(Option__Some[ParseError]); ok {
 					var __mygo_expr_5 Option[ParseError]
 					if __mygo_match___mygo_expr_1.F0.Position.Offset > __mygo_match___mygo_expr_3.F0.Position.Offset {
 						__mygo_expr_5 = left

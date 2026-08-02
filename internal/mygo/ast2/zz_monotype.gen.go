@@ -7,194 +7,194 @@ import . "github.com/mygo-lang/mygo/prelude"
 type MonoType interface {
 	isMonoType()
 }
-type MonoTypeTVar struct {
+type MonoType__TVar struct {
 	F0 int
 }
 
-func (MonoTypeTVar) isMonoType() {
+func (MonoType__TVar) isMonoType() {
 }
-func MonoTypeTVarCtor(v0 int) MonoType {
-	return MonoTypeTVar{F0: v0}
+func MonoType__TVar__Ctor(v0 int) MonoType {
+	return MonoType__TVar{F0: v0}
 }
 
-type MonoTypeTKVar struct {
+type MonoType__TKVar struct {
 	F0 int
 }
 
-func (MonoTypeTKVar) isMonoType() {
+func (MonoType__TKVar) isMonoType() {
 }
-func MonoTypeTKVarCtor(v0 int) MonoType {
-	return MonoTypeTKVar{F0: v0}
+func MonoType__TKVar__Ctor(v0 int) MonoType {
+	return MonoType__TKVar{F0: v0}
 }
 
-type MonoTypeTApp struct {
+type MonoType__TApp struct {
 	F0 *MonoType
 	F1 []MonoType
 }
 
-func (MonoTypeTApp) isMonoType() {
+func (MonoType__TApp) isMonoType() {
 }
-func MonoTypeTAppCtor(v0 *MonoType, v1 []MonoType) MonoType {
-	return MonoTypeTApp{F0: v0, F1: v1}
+func MonoType__TApp__Ctor(v0 *MonoType, v1 []MonoType) MonoType {
+	return MonoType__TApp{F0: v0, F1: v1}
 }
 
-type MonoTypeTCon struct {
+type MonoType__TCon struct {
 	F0 string
 }
 
-func (MonoTypeTCon) isMonoType() {
+func (MonoType__TCon) isMonoType() {
 }
-func MonoTypeTConCtor(v0 string) MonoType {
-	return MonoTypeTCon{F0: v0}
+func MonoType__TCon__Ctor(v0 string) MonoType {
+	return MonoType__TCon{F0: v0}
 }
 
-type MonoTypeTFunc struct {
+type MonoType__TFunc struct {
 	F0 []MonoType
 	F1 *MonoType
 }
 
-func (MonoTypeTFunc) isMonoType() {
+func (MonoType__TFunc) isMonoType() {
 }
-func MonoTypeTFuncCtor(v0 []MonoType, v1 *MonoType) MonoType {
-	return MonoTypeTFunc{F0: v0, F1: v1}
+func MonoType__TFunc__Ctor(v0 []MonoType, v1 *MonoType) MonoType {
+	return MonoType__TFunc{F0: v0, F1: v1}
 }
 
-type MonoTypeTVariadic struct {
+type MonoType__TVariadic struct {
 	F0 []MonoType
 	F1 *MonoType
 }
 
-func (MonoTypeTVariadic) isMonoType() {
+func (MonoType__TVariadic) isMonoType() {
 }
-func MonoTypeTVariadicCtor(v0 []MonoType, v1 *MonoType) MonoType {
-	return MonoTypeTVariadic{F0: v0, F1: v1}
+func MonoType__TVariadic__Ctor(v0 []MonoType, v1 *MonoType) MonoType {
+	return MonoType__TVariadic{F0: v0, F1: v1}
 }
 
-type MonoTypeTTuple struct {
+type MonoType__TTuple struct {
 	F0 []MonoType
 }
 
-func (MonoTypeTTuple) isMonoType() {
+func (MonoType__TTuple) isMonoType() {
 }
-func MonoTypeTTupleCtor(v0 []MonoType) MonoType {
-	return MonoTypeTTuple{F0: v0}
-}
-
-type MonoTypeTUnit struct {
+func MonoType__TTuple__Ctor(v0 []MonoType) MonoType {
+	return MonoType__TTuple{F0: v0}
 }
 
-func (MonoTypeTUnit) isMonoType() {
-}
-func MonoTypeTUnitCtor() MonoType {
-	return MonoTypeTUnit{}
+type MonoType__TUnit struct {
 }
 
-type MonoTypeTParam struct {
+func (MonoType__TUnit) isMonoType() {
+}
+func MonoType__TUnit__Ctor() MonoType {
+	return MonoType__TUnit{}
+}
+
+type MonoType__TParam struct {
 	F0 int
 }
 
-func (MonoTypeTParam) isMonoType() {
+func (MonoType__TParam) isMonoType() {
 }
-func MonoTypeTParamCtor(v0 int) MonoType {
-	return MonoTypeTParam{F0: v0}
+func MonoType__TParam__Ctor(v0 int) MonoType {
+	return MonoType__TParam{F0: v0}
 }
 
-type MonoTypeTQualifiedName struct {
+type MonoType__TQualifiedName struct {
 	F0 string
 	F1 *MonoType
 }
 
-func (MonoTypeTQualifiedName) isMonoType() {
+func (MonoType__TQualifiedName) isMonoType() {
 }
-func MonoTypeTQualifiedNameCtor(v0 string, v1 *MonoType) MonoType {
-	return MonoTypeTQualifiedName{F0: v0, F1: v1}
+func MonoType__TQualifiedName__Ctor(v0 string, v1 *MonoType) MonoType {
+	return MonoType__TQualifiedName{F0: v0, F1: v1}
 }
 func MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(a MonoType, b MonoType) bool {
 	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_9, ok := a.(MonoTypeTVar); ok {
+	if __mygo_match___mygo_expr_9, ok := a.(MonoType__TVar); ok {
 		var __mygo_expr_10 bool
-		if __mygo_match___mygo_expr_11, ok := b.(MonoTypeTVar); ok {
+		if __mygo_match___mygo_expr_11, ok := b.(MonoType__TVar); ok {
 			__mygo_expr_10 = __mygo_match___mygo_expr_9.F0 == __mygo_match___mygo_expr_11.F0
 		} else {
 			__mygo_expr_10 = false
 		}
 		__mygo_expr_0 = __mygo_expr_10
 	} else {
-		if __mygo_match___mygo_expr_8, ok := a.(MonoTypeTKVar); ok {
+		if __mygo_match___mygo_expr_8, ok := a.(MonoType__TKVar); ok {
 			var __mygo_expr_9 bool
-			if __mygo_match___mygo_expr_10, ok := b.(MonoTypeTKVar); ok {
+			if __mygo_match___mygo_expr_10, ok := b.(MonoType__TKVar); ok {
 				__mygo_expr_9 = __mygo_match___mygo_expr_8.F0 == __mygo_match___mygo_expr_10.F0
 			} else {
 				__mygo_expr_9 = false
 			}
 			__mygo_expr_0 = __mygo_expr_9
 		} else {
-			if __mygo_match___mygo_expr_7, ok := a.(MonoTypeTParam); ok {
+			if __mygo_match___mygo_expr_7, ok := a.(MonoType__TParam); ok {
 				var __mygo_expr_8 bool
-				if __mygo_match___mygo_expr_9, ok := b.(MonoTypeTParam); ok {
+				if __mygo_match___mygo_expr_9, ok := b.(MonoType__TParam); ok {
 					__mygo_expr_8 = __mygo_match___mygo_expr_7.F0 == __mygo_match___mygo_expr_9.F0
 				} else {
 					__mygo_expr_8 = false
 				}
 				__mygo_expr_0 = __mygo_expr_8
 			} else {
-				if __mygo_match___mygo_expr_6, ok := a.(MonoTypeTApp); ok {
+				if __mygo_match___mygo_expr_6, ok := a.(MonoType__TApp); ok {
 					var __mygo_expr_7 bool
-					if __mygo_match___mygo_expr_8, ok := b.(MonoTypeTApp); ok {
+					if __mygo_match___mygo_expr_8, ok := b.(MonoType__TApp); ok {
 						__mygo_expr_7 = MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_6.F0, *__mygo_match___mygo_expr_8.F0) && MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_6.F1, __mygo_match___mygo_expr_8.F1)
 					} else {
 						__mygo_expr_7 = false
 					}
 					__mygo_expr_0 = __mygo_expr_7
 				} else {
-					if __mygo_match___mygo_expr_5, ok := a.(MonoTypeTCon); ok {
+					if __mygo_match___mygo_expr_5, ok := a.(MonoType__TCon); ok {
 						var __mygo_expr_6 bool
-						if __mygo_match___mygo_expr_7, ok := b.(MonoTypeTCon); ok {
+						if __mygo_match___mygo_expr_7, ok := b.(MonoType__TCon); ok {
 							__mygo_expr_6 = __mygo_match___mygo_expr_5.F0 == __mygo_match___mygo_expr_7.F0
 						} else {
 							__mygo_expr_6 = false
 						}
 						__mygo_expr_0 = __mygo_expr_6
 					} else {
-						if __mygo_match___mygo_expr_4, ok := a.(MonoTypeTFunc); ok {
+						if __mygo_match___mygo_expr_4, ok := a.(MonoType__TFunc); ok {
 							var __mygo_expr_5 bool
-							if __mygo_match___mygo_expr_6, ok := b.(MonoTypeTFunc); ok {
+							if __mygo_match___mygo_expr_6, ok := b.(MonoType__TFunc); ok {
 								__mygo_expr_5 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_6.F0) && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_4.F1, *__mygo_match___mygo_expr_6.F1)
 							} else {
 								__mygo_expr_5 = false
 							}
 							__mygo_expr_0 = __mygo_expr_5
 						} else {
-							if __mygo_match___mygo_expr_3, ok := a.(MonoTypeTVariadic); ok {
+							if __mygo_match___mygo_expr_3, ok := a.(MonoType__TVariadic); ok {
 								var __mygo_expr_4 bool
-								if __mygo_match___mygo_expr_5, ok := b.(MonoTypeTVariadic); ok {
+								if __mygo_match___mygo_expr_5, ok := b.(MonoType__TVariadic); ok {
 									__mygo_expr_4 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_5.F0) && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_3.F1, *__mygo_match___mygo_expr_5.F1)
 								} else {
 									__mygo_expr_4 = false
 								}
 								__mygo_expr_0 = __mygo_expr_4
 							} else {
-								if __mygo_match___mygo_expr_2, ok := a.(MonoTypeTTuple); ok {
+								if __mygo_match___mygo_expr_2, ok := a.(MonoType__TTuple); ok {
 									var __mygo_expr_3 bool
-									if __mygo_match___mygo_expr_4, ok := b.(MonoTypeTTuple); ok {
+									if __mygo_match___mygo_expr_4, ok := b.(MonoType__TTuple); ok {
 										__mygo_expr_3 = MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_4.F0)
 									} else {
 										__mygo_expr_3 = false
 									}
 									__mygo_expr_0 = __mygo_expr_3
 								} else {
-									if _, ok := a.(MonoTypeTUnit); ok {
+									if _, ok := a.(MonoType__TUnit); ok {
 										var __mygo_expr_2 bool
-										if _, ok := b.(MonoTypeTUnit); ok {
+										if _, ok := b.(MonoType__TUnit); ok {
 											__mygo_expr_2 = true
 										} else {
 											__mygo_expr_2 = false
 										}
 										__mygo_expr_0 = __mygo_expr_2
 									} else {
-										if __mygo_match___mygo_expr_1, ok := a.(MonoTypeTQualifiedName); ok {
+										if __mygo_match___mygo_expr_1, ok := a.(MonoType__TQualifiedName); ok {
 											var __mygo_expr_2 bool
-											if __mygo_match___mygo_expr_3, ok := b.(MonoTypeTQualifiedName); ok {
+											if __mygo_match___mygo_expr_3, ok := b.(MonoType__TQualifiedName); ok {
 												__mygo_expr_2 = __mygo_match___mygo_expr_1.F0 == __mygo_match___mygo_expr_3.F0 && MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(*__mygo_match___mygo_expr_1.F1, *__mygo_match___mygo_expr_3.F1)
 											} else {
 												__mygo_expr_2 = false
@@ -220,8 +220,8 @@ func MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(a []MonoType, b [
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(a) == 0 {
 			return true
 		} else {
-			aHead := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, 0), MonoTypeTUnitCtor())
-			bHead := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, 0), MonoTypeTUnitCtor())
+			aHead := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(a, 0), MonoType__TUnit__Ctor())
+			bHead := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, 0), MonoType__TUnit__Ctor())
 			return MygoIT2EqFN10MonoTypeEqGN8MonoTypeEM6Equals(aHead, bHead) && MygoIT2EqFN15SliceMonoTypeEqGN5SliceGN8MonoTypeEEM6Equals(sliceDrop(a, 1), sliceDrop(b, 1))
 		}
 	}

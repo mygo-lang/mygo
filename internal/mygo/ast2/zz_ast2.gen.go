@@ -20,62 +20,62 @@ type File struct {
 type Decl interface {
 	isDecl()
 }
-type DeclImportDecl struct {
+type Decl__ImportDecl struct {
 	F0 string
 	F1 string
 }
 
-func (DeclImportDecl) isDecl() {
+func (Decl__ImportDecl) isDecl() {
 }
-func DeclImportDeclCtor(v0 string, v1 string) Decl {
-	return DeclImportDecl{F0: v0, F1: v1}
+func Decl__ImportDecl__Ctor(v0 string, v1 string) Decl {
+	return Decl__ImportDecl{F0: v0, F1: v1}
 }
 
-type DeclLetDecl struct {
+type Decl__LetDecl struct {
 	F0 Bind
 }
 
-func (DeclLetDecl) isDecl() {
+func (Decl__LetDecl) isDecl() {
 }
-func DeclLetDeclCtor(v0 Bind) Decl {
-	return DeclLetDecl{F0: v0}
+func Decl__LetDecl__Ctor(v0 Bind) Decl {
+	return Decl__LetDecl{F0: v0}
 }
 
-type DeclVarDecl struct {
+type Decl__VarDecl struct {
 	F0 Bind
 }
 
-func (DeclVarDecl) isDecl() {
+func (Decl__VarDecl) isDecl() {
 }
-func DeclVarDeclCtor(v0 Bind) Decl {
-	return DeclVarDecl{F0: v0}
+func Decl__VarDecl__Ctor(v0 Bind) Decl {
+	return Decl__VarDecl{F0: v0}
 }
 
-type DeclTypeAliasDecl struct {
+type Decl__TypeAliasDecl struct {
 	F0 string
 	F1 []string
 	F2 TypeExpr
 }
 
-func (DeclTypeAliasDecl) isDecl() {
+func (Decl__TypeAliasDecl) isDecl() {
 }
-func DeclTypeAliasDeclCtor(v0 string, v1 []string, v2 TypeExpr) Decl {
-	return DeclTypeAliasDecl{F0: v0, F1: v1, F2: v2}
+func Decl__TypeAliasDecl__Ctor(v0 string, v1 []string, v2 TypeExpr) Decl {
+	return Decl__TypeAliasDecl{F0: v0, F1: v1, F2: v2}
 }
 
-type DeclTypeDecl struct {
+type Decl__TypeDecl struct {
 	F0 string
 	F1 []string
 	F2 TypeExpr
 }
 
-func (DeclTypeDecl) isDecl() {
+func (Decl__TypeDecl) isDecl() {
 }
-func DeclTypeDeclCtor(v0 string, v1 []string, v2 TypeExpr) Decl {
-	return DeclTypeDecl{F0: v0, F1: v1, F2: v2}
+func Decl__TypeDecl__Ctor(v0 string, v1 []string, v2 TypeExpr) Decl {
+	return Decl__TypeDecl{F0: v0, F1: v1, F2: v2}
 }
 
-type DeclFuncDecl struct {
+type Decl__FuncDecl struct {
 	F0 string
 	F1 []string
 	F2 []Param
@@ -84,59 +84,59 @@ type DeclFuncDecl struct {
 	F5 []Constraint
 }
 
-func (DeclFuncDecl) isDecl() {
+func (Decl__FuncDecl) isDecl() {
 }
-func DeclFuncDeclCtor(v0 string, v1 []string, v2 []Param, v3 Option[TypeExpr], v4 Expr, v5 []Constraint) Decl {
-	return DeclFuncDecl{F0: v0, F1: v1, F2: v2, F3: v3, F4: v4, F5: v5}
+func Decl__FuncDecl__Ctor(v0 string, v1 []string, v2 []Param, v3 Option[TypeExpr], v4 Expr, v5 []Constraint) Decl {
+	return Decl__FuncDecl{F0: v0, F1: v1, F2: v2, F3: v3, F4: v4, F5: v5}
 }
 
-type DeclStructDecl struct {
+type Decl__StructDecl struct {
 	F0 string
 	F1 []string
 	F2 []Field
 }
 
-func (DeclStructDecl) isDecl() {
+func (Decl__StructDecl) isDecl() {
 }
-func DeclStructDeclCtor(v0 string, v1 []string, v2 []Field) Decl {
-	return DeclStructDecl{F0: v0, F1: v1, F2: v2}
+func Decl__StructDecl__Ctor(v0 string, v1 []string, v2 []Field) Decl {
+	return Decl__StructDecl{F0: v0, F1: v1, F2: v2}
 }
 
-type DeclEnumDecl struct {
+type Decl__EnumDecl struct {
 	F0 string
 	F1 []string
 	F2 []Variant
 }
 
-func (DeclEnumDecl) isDecl() {
+func (Decl__EnumDecl) isDecl() {
 }
-func DeclEnumDeclCtor(v0 string, v1 []string, v2 []Variant) Decl {
-	return DeclEnumDecl{F0: v0, F1: v1, F2: v2}
+func Decl__EnumDecl__Ctor(v0 string, v1 []string, v2 []Variant) Decl {
+	return Decl__EnumDecl{F0: v0, F1: v1, F2: v2}
 }
 
-type DeclInterfaceDecl struct {
+type Decl__InterfaceDecl struct {
 	F0 string
 	F1 []string
 	F2 []FuncSig
 }
 
-func (DeclInterfaceDecl) isDecl() {
+func (Decl__InterfaceDecl) isDecl() {
 }
-func DeclInterfaceDeclCtor(v0 string, v1 []string, v2 []FuncSig) Decl {
-	return DeclInterfaceDecl{F0: v0, F1: v1, F2: v2}
+func Decl__InterfaceDecl__Ctor(v0 string, v1 []string, v2 []FuncSig) Decl {
+	return Decl__InterfaceDecl{F0: v0, F1: v1, F2: v2}
 }
 
-type DeclImplDecl struct {
+type Decl__ImplDecl struct {
 	F0 []string
 	F1 TypeExpr
 	F2 Option[TypeExpr]
 	F3 []ImplMethod
 }
 
-func (DeclImplDecl) isDecl() {
+func (Decl__ImplDecl) isDecl() {
 }
-func DeclImplDeclCtor(v0 []string, v1 TypeExpr, v2 Option[TypeExpr], v3 []ImplMethod) Decl {
-	return DeclImplDecl{F0: v0, F1: v1, F2: v2, F3: v3}
+func Decl__ImplDecl__Ctor(v0 []string, v1 TypeExpr, v2 Option[TypeExpr], v3 []ImplMethod) Decl {
+	return Decl__ImplDecl{F0: v0, F1: v1, F2: v2, F3: v3}
 }
 
 type Param struct {
@@ -185,110 +185,110 @@ type SwitchCase struct {
 type Pattern interface {
 	isPattern()
 }
-type PatternBindPattern struct {
+type Pattern__BindPattern struct {
 	F0 string
 }
 
-func (PatternBindPattern) isPattern() {
+func (Pattern__BindPattern) isPattern() {
 }
-func PatternBindPatternCtor(v0 string) Pattern {
-	return PatternBindPattern{F0: v0}
+func Pattern__BindPattern__Ctor(v0 string) Pattern {
+	return Pattern__BindPattern{F0: v0}
 }
 
-type PatternVariantPattern struct {
+type Pattern__VariantPattern struct {
 	F0 string
 	F1 []Pattern
 }
 
-func (PatternVariantPattern) isPattern() {
+func (Pattern__VariantPattern) isPattern() {
 }
-func PatternVariantPatternCtor(v0 string, v1 []Pattern) Pattern {
-	return PatternVariantPattern{F0: v0, F1: v1}
+func Pattern__VariantPattern__Ctor(v0 string, v1 []Pattern) Pattern {
+	return Pattern__VariantPattern{F0: v0, F1: v1}
 }
 
-type PatternTuplePattern struct {
+type Pattern__TuplePattern struct {
 	F0 []Pattern
 }
 
-func (PatternTuplePattern) isPattern() {
+func (Pattern__TuplePattern) isPattern() {
 }
-func PatternTuplePatternCtor(v0 []Pattern) Pattern {
-	return PatternTuplePattern{F0: v0}
+func Pattern__TuplePattern__Ctor(v0 []Pattern) Pattern {
+	return Pattern__TuplePattern{F0: v0}
 }
 
-type PatternLiteralPattern struct {
+type Pattern__LiteralPattern struct {
 	F0 string
 	F1 string
 }
 
-func (PatternLiteralPattern) isPattern() {
+func (Pattern__LiteralPattern) isPattern() {
 }
-func PatternLiteralPatternCtor(v0 string, v1 string) Pattern {
-	return PatternLiteralPattern{F0: v0, F1: v1}
-}
-
-type PatternWildcardPattern struct {
+func Pattern__LiteralPattern__Ctor(v0 string, v1 string) Pattern {
+	return Pattern__LiteralPattern{F0: v0, F1: v1}
 }
 
-func (PatternWildcardPattern) isPattern() {
+type Pattern__WildcardPattern struct {
 }
-func PatternWildcardPatternCtor() Pattern {
-	return PatternWildcardPattern{}
+
+func (Pattern__WildcardPattern) isPattern() {
+}
+func Pattern__WildcardPattern__Ctor() Pattern {
+	return Pattern__WildcardPattern{}
 }
 
 type TypeExpr interface {
 	isTypeExpr()
 }
-type TypeExprNamedType struct {
+type TypeExpr__NamedType struct {
 	F0 string
 	F1 []TypeExpr
 }
 
-func (TypeExprNamedType) isTypeExpr() {
+func (TypeExpr__NamedType) isTypeExpr() {
 }
-func TypeExprNamedTypeCtor(v0 string, v1 []TypeExpr) TypeExpr {
-	return TypeExprNamedType{F0: v0, F1: v1}
+func TypeExpr__NamedType__Ctor(v0 string, v1 []TypeExpr) TypeExpr {
+	return TypeExpr__NamedType{F0: v0, F1: v1}
 }
 
-type TypeExprFuncType struct {
+type TypeExpr__FuncType struct {
 	F0 []TypeExpr
 	F1 *TypeExpr
 }
 
-func (TypeExprFuncType) isTypeExpr() {
+func (TypeExpr__FuncType) isTypeExpr() {
 }
-func TypeExprFuncTypeCtor(v0 []TypeExpr, v1 *TypeExpr) TypeExpr {
-	return TypeExprFuncType{F0: v0, F1: v1}
+func TypeExpr__FuncType__Ctor(v0 []TypeExpr, v1 *TypeExpr) TypeExpr {
+	return TypeExpr__FuncType{F0: v0, F1: v1}
 }
 
-type TypeExprTupleType struct {
+type TypeExpr__TupleType struct {
 	F0 []TypeExpr
 }
 
-func (TypeExprTupleType) isTypeExpr() {
+func (TypeExpr__TupleType) isTypeExpr() {
 }
-func TypeExprTupleTypeCtor(v0 []TypeExpr) TypeExpr {
-	return TypeExprTupleType{F0: v0}
-}
-
-type TypeExprUnitType struct {
+func TypeExpr__TupleType__Ctor(v0 []TypeExpr) TypeExpr {
+	return TypeExpr__TupleType{F0: v0}
 }
 
-func (TypeExprUnitType) isTypeExpr() {
-}
-func TypeExprUnitTypeCtor() TypeExpr {
-	return TypeExprUnitType{}
+type TypeExpr__UnitType struct {
 }
 
-type TypeExprInlineGo struct {
+func (TypeExpr__UnitType) isTypeExpr() {
+}
+func TypeExpr__UnitType__Ctor() TypeExpr {
+	return TypeExpr__UnitType{}
+}
+
+type TypeExpr__InlineGo struct {
 	F0 *TypeExpr
 	F1 string
 }
 
-func (TypeExprInlineGo) isTypeExpr() {
+func (TypeExpr__InlineGo) isTypeExpr() {
 }
-func TypeExprInlineGoCtor(v0 *TypeExpr, v1 string) TypeExpr {
-	return TypeExprInlineGo{F0: v0, F1: v1}
+func TypeExpr__InlineGo__Ctor(v0 *TypeExpr, v1 string) TypeExpr {
+	return TypeExpr__InlineGo{F0: v0, F1: v1}
 }
 
 type Bind struct {
@@ -312,373 +312,373 @@ type GoTypeOperand struct {
 type Stmt interface {
 	isStmt()
 }
-type StmtExprStmt struct {
+type Stmt__ExprStmt struct {
 	F0 Expr
 }
 
-func (StmtExprStmt) isStmt() {
+func (Stmt__ExprStmt) isStmt() {
 }
-func StmtExprStmtCtor(v0 Expr) Stmt {
-	return StmtExprStmt{F0: v0}
+func Stmt__ExprStmt__Ctor(v0 Expr) Stmt {
+	return Stmt__ExprStmt{F0: v0}
 }
 
-type StmtLetStmt struct {
+type Stmt__LetStmt struct {
 	F0 Bind
 }
 
-func (StmtLetStmt) isStmt() {
+func (Stmt__LetStmt) isStmt() {
 }
-func StmtLetStmtCtor(v0 Bind) Stmt {
-	return StmtLetStmt{F0: v0}
+func Stmt__LetStmt__Ctor(v0 Bind) Stmt {
+	return Stmt__LetStmt{F0: v0}
 }
 
-type StmtLetRecStmt struct {
+type Stmt__LetRecStmt struct {
 	F0 []LetRecBind
 }
 
-func (StmtLetRecStmt) isStmt() {
+func (Stmt__LetRecStmt) isStmt() {
 }
-func StmtLetRecStmtCtor(v0 []LetRecBind) Stmt {
-	return StmtLetRecStmt{F0: v0}
+func Stmt__LetRecStmt__Ctor(v0 []LetRecBind) Stmt {
+	return Stmt__LetRecStmt{F0: v0}
 }
 
-type StmtTupleLetStmt struct {
+type Stmt__TupleLetStmt struct {
 	F0 []string
 	F1 Expr
 }
 
-func (StmtTupleLetStmt) isStmt() {
+func (Stmt__TupleLetStmt) isStmt() {
 }
-func StmtTupleLetStmtCtor(v0 []string, v1 Expr) Stmt {
-	return StmtTupleLetStmt{F0: v0, F1: v1}
+func Stmt__TupleLetStmt__Ctor(v0 []string, v1 Expr) Stmt {
+	return Stmt__TupleLetStmt{F0: v0, F1: v1}
 }
 
-type StmtVarStmt struct {
+type Stmt__VarStmt struct {
 	F0 Bind
 }
 
-func (StmtVarStmt) isStmt() {
+func (Stmt__VarStmt) isStmt() {
 }
-func StmtVarStmtCtor(v0 Bind) Stmt {
-	return StmtVarStmt{F0: v0}
+func Stmt__VarStmt__Ctor(v0 Bind) Stmt {
+	return Stmt__VarStmt{F0: v0}
 }
 
-type StmtWhileStmt struct {
+type Stmt__WhileStmt struct {
 	F0 Expr
 	F1 Expr
 }
 
-func (StmtWhileStmt) isStmt() {
+func (Stmt__WhileStmt) isStmt() {
 }
-func StmtWhileStmtCtor(v0 Expr, v1 Expr) Stmt {
-	return StmtWhileStmt{F0: v0, F1: v1}
+func Stmt__WhileStmt__Ctor(v0 Expr, v1 Expr) Stmt {
+	return Stmt__WhileStmt{F0: v0, F1: v1}
 }
 
-type StmtAssignStmt struct {
+type Stmt__AssignStmt struct {
 	F0 Expr
 	F1 Expr
 }
 
-func (StmtAssignStmt) isStmt() {
+func (Stmt__AssignStmt) isStmt() {
 }
-func StmtAssignStmtCtor(v0 Expr, v1 Expr) Stmt {
-	return StmtAssignStmt{F0: v0, F1: v1}
-}
-
-type StmtReturnStmt struct {
+func Stmt__AssignStmt__Ctor(v0 Expr, v1 Expr) Stmt {
+	return Stmt__AssignStmt{F0: v0, F1: v1}
 }
 
-func (StmtReturnStmt) isStmt() {
-}
-func StmtReturnStmtCtor() Stmt {
-	return StmtReturnStmt{}
+type Stmt__ReturnStmt struct {
 }
 
-type StmtReturnWithStmt struct {
+func (Stmt__ReturnStmt) isStmt() {
+}
+func Stmt__ReturnStmt__Ctor() Stmt {
+	return Stmt__ReturnStmt{}
+}
+
+type Stmt__ReturnWithStmt struct {
 	F0 Expr
 }
 
-func (StmtReturnWithStmt) isStmt() {
+func (Stmt__ReturnWithStmt) isStmt() {
 }
-func StmtReturnWithStmtCtor(v0 Expr) Stmt {
-	return StmtReturnWithStmt{F0: v0}
-}
-
-type StmtBreakStmt struct {
+func Stmt__ReturnWithStmt__Ctor(v0 Expr) Stmt {
+	return Stmt__ReturnWithStmt{F0: v0}
 }
 
-func (StmtBreakStmt) isStmt() {
-}
-func StmtBreakStmtCtor() Stmt {
-	return StmtBreakStmt{}
+type Stmt__BreakStmt struct {
 }
 
-type StmtContinueStmt struct {
+func (Stmt__BreakStmt) isStmt() {
+}
+func Stmt__BreakStmt__Ctor() Stmt {
+	return Stmt__BreakStmt{}
 }
 
-func (StmtContinueStmt) isStmt() {
+type Stmt__ContinueStmt struct {
 }
-func StmtContinueStmtCtor() Stmt {
-	return StmtContinueStmt{}
+
+func (Stmt__ContinueStmt) isStmt() {
+}
+func Stmt__ContinueStmt__Ctor() Stmt {
+	return Stmt__ContinueStmt{}
 }
 
 type ExprKind interface {
 	isExprKind()
 }
-type ExprKindIdentExpr struct {
+type ExprKind__IdentExpr struct {
 	F0 string
 }
 
-func (ExprKindIdentExpr) isExprKind() {
+func (ExprKind__IdentExpr) isExprKind() {
 }
-func ExprKindIdentExprCtor(v0 string) ExprKind {
-	return ExprKindIdentExpr{F0: v0}
+func ExprKind__IdentExpr__Ctor(v0 string) ExprKind {
+	return ExprKind__IdentExpr{F0: v0}
 }
 
-type ExprKindNumberExpr struct {
+type ExprKind__NumberExpr struct {
 	F0 string
 }
 
-func (ExprKindNumberExpr) isExprKind() {
+func (ExprKind__NumberExpr) isExprKind() {
 }
-func ExprKindNumberExprCtor(v0 string) ExprKind {
-	return ExprKindNumberExpr{F0: v0}
+func ExprKind__NumberExpr__Ctor(v0 string) ExprKind {
+	return ExprKind__NumberExpr{F0: v0}
 }
 
-type ExprKindStringExpr struct {
+type ExprKind__StringExpr struct {
 	F0 string
 }
 
-func (ExprKindStringExpr) isExprKind() {
+func (ExprKind__StringExpr) isExprKind() {
 }
-func ExprKindStringExprCtor(v0 string) ExprKind {
-	return ExprKindStringExpr{F0: v0}
+func ExprKind__StringExpr__Ctor(v0 string) ExprKind {
+	return ExprKind__StringExpr{F0: v0}
 }
 
-type ExprKindRuneExpr struct {
+type ExprKind__RuneExpr struct {
 	F0 string
 }
 
-func (ExprKindRuneExpr) isExprKind() {
+func (ExprKind__RuneExpr) isExprKind() {
 }
-func ExprKindRuneExprCtor(v0 string) ExprKind {
-	return ExprKindRuneExpr{F0: v0}
+func ExprKind__RuneExpr__Ctor(v0 string) ExprKind {
+	return ExprKind__RuneExpr{F0: v0}
 }
 
-type ExprKindBoolExpr struct {
+type ExprKind__BoolExpr struct {
 	F0 bool
 }
 
-func (ExprKindBoolExpr) isExprKind() {
+func (ExprKind__BoolExpr) isExprKind() {
 }
-func ExprKindBoolExprCtor(v0 bool) ExprKind {
-	return ExprKindBoolExpr{F0: v0}
-}
-
-type ExprKindUnitExpr struct {
+func ExprKind__BoolExpr__Ctor(v0 bool) ExprKind {
+	return ExprKind__BoolExpr{F0: v0}
 }
 
-func (ExprKindUnitExpr) isExprKind() {
-}
-func ExprKindUnitExprCtor() ExprKind {
-	return ExprKindUnitExpr{}
+type ExprKind__UnitExpr struct {
 }
 
-type ExprKindTupleExpr struct {
+func (ExprKind__UnitExpr) isExprKind() {
+}
+func ExprKind__UnitExpr__Ctor() ExprKind {
+	return ExprKind__UnitExpr{}
+}
+
+type ExprKind__TupleExpr struct {
 	F0 []Expr
 }
 
-func (ExprKindTupleExpr) isExprKind() {
+func (ExprKind__TupleExpr) isExprKind() {
 }
-func ExprKindTupleExprCtor(v0 []Expr) ExprKind {
-	return ExprKindTupleExpr{F0: v0}
+func ExprKind__TupleExpr__Ctor(v0 []Expr) ExprKind {
+	return ExprKind__TupleExpr{F0: v0}
 }
 
-type ExprKindCallExpr struct {
+type ExprKind__CallExpr struct {
 	F0 Expr
 	F1 []TypeExpr
 	F2 []Expr
 }
 
-func (ExprKindCallExpr) isExprKind() {
+func (ExprKind__CallExpr) isExprKind() {
 }
-func ExprKindCallExprCtor(v0 Expr, v1 []TypeExpr, v2 []Expr) ExprKind {
-	return ExprKindCallExpr{F0: v0, F1: v1, F2: v2}
+func ExprKind__CallExpr__Ctor(v0 Expr, v1 []TypeExpr, v2 []Expr) ExprKind {
+	return ExprKind__CallExpr{F0: v0, F1: v1, F2: v2}
 }
 
-type ExprKindDictionaryCallExpr struct {
+type ExprKind__DictionaryCallExpr struct {
 	F0 string
 	F1 Expr
 	F2 []Expr
 }
 
-func (ExprKindDictionaryCallExpr) isExprKind() {
+func (ExprKind__DictionaryCallExpr) isExprKind() {
 }
-func ExprKindDictionaryCallExprCtor(v0 string, v1 Expr, v2 []Expr) ExprKind {
-	return ExprKindDictionaryCallExpr{F0: v0, F1: v1, F2: v2}
+func ExprKind__DictionaryCallExpr__Ctor(v0 string, v1 Expr, v2 []Expr) ExprKind {
+	return ExprKind__DictionaryCallExpr{F0: v0, F1: v1, F2: v2}
 }
 
-type ExprKindFieldExpr struct {
+type ExprKind__FieldExpr struct {
 	F0 Expr
 	F1 string
 }
 
-func (ExprKindFieldExpr) isExprKind() {
+func (ExprKind__FieldExpr) isExprKind() {
 }
-func ExprKindFieldExprCtor(v0 Expr, v1 string) ExprKind {
-	return ExprKindFieldExpr{F0: v0, F1: v1}
+func ExprKind__FieldExpr__Ctor(v0 Expr, v1 string) ExprKind {
+	return ExprKind__FieldExpr{F0: v0, F1: v1}
 }
 
-type ExprKindUnaryExpr struct {
+type ExprKind__UnaryExpr struct {
 	F0 string
 	F1 Expr
 }
 
-func (ExprKindUnaryExpr) isExprKind() {
+func (ExprKind__UnaryExpr) isExprKind() {
 }
-func ExprKindUnaryExprCtor(v0 string, v1 Expr) ExprKind {
-	return ExprKindUnaryExpr{F0: v0, F1: v1}
+func ExprKind__UnaryExpr__Ctor(v0 string, v1 Expr) ExprKind {
+	return ExprKind__UnaryExpr{F0: v0, F1: v1}
 }
 
-type ExprKindBinaryExpr struct {
+type ExprKind__BinaryExpr struct {
 	F0 string
 	F1 Expr
 	F2 Expr
 }
 
-func (ExprKindBinaryExpr) isExprKind() {
+func (ExprKind__BinaryExpr) isExprKind() {
 }
-func ExprKindBinaryExprCtor(v0 string, v1 Expr, v2 Expr) ExprKind {
-	return ExprKindBinaryExpr{F0: v0, F1: v1, F2: v2}
+func ExprKind__BinaryExpr__Ctor(v0 string, v1 Expr, v2 Expr) ExprKind {
+	return ExprKind__BinaryExpr{F0: v0, F1: v1, F2: v2}
 }
 
-type ExprKindIfExpr struct {
+type ExprKind__IfExpr struct {
 	F0 Expr
 	F1 Expr
 	F2 Expr
 }
 
-func (ExprKindIfExpr) isExprKind() {
+func (ExprKind__IfExpr) isExprKind() {
 }
-func ExprKindIfExprCtor(v0 Expr, v1 Expr, v2 Expr) ExprKind {
-	return ExprKindIfExpr{F0: v0, F1: v1, F2: v2}
+func ExprKind__IfExpr__Ctor(v0 Expr, v1 Expr, v2 Expr) ExprKind {
+	return ExprKind__IfExpr{F0: v0, F1: v1, F2: v2}
 }
 
-type ExprKindBlockExpr struct {
+type ExprKind__BlockExpr struct {
 	F0 []Stmt
 }
 
-func (ExprKindBlockExpr) isExprKind() {
+func (ExprKind__BlockExpr) isExprKind() {
 }
-func ExprKindBlockExprCtor(v0 []Stmt) ExprKind {
-	return ExprKindBlockExpr{F0: v0}
+func ExprKind__BlockExpr__Ctor(v0 []Stmt) ExprKind {
+	return ExprKind__BlockExpr{F0: v0}
 }
 
-type ExprKindSwitchExpr struct {
+type ExprKind__SwitchExpr struct {
 	F0 Expr
 	F1 []SwitchCase
 	F2 Option[MonoType]
 }
 
-func (ExprKindSwitchExpr) isExprKind() {
+func (ExprKind__SwitchExpr) isExprKind() {
 }
-func ExprKindSwitchExprCtor(v0 Expr, v1 []SwitchCase, v2 Option[MonoType]) ExprKind {
-	return ExprKindSwitchExpr{F0: v0, F1: v1, F2: v2}
+func ExprKind__SwitchExpr__Ctor(v0 Expr, v1 []SwitchCase, v2 Option[MonoType]) ExprKind {
+	return ExprKind__SwitchExpr{F0: v0, F1: v1, F2: v2}
 }
 
-type ExprKindFuncLitExpr struct {
+type ExprKind__FuncLitExpr struct {
 	F0 []Param
 	F1 Option[TypeExpr]
 	F2 Expr
 }
 
-func (ExprKindFuncLitExpr) isExprKind() {
+func (ExprKind__FuncLitExpr) isExprKind() {
 }
-func ExprKindFuncLitExprCtor(v0 []Param, v1 Option[TypeExpr], v2 Expr) ExprKind {
-	return ExprKindFuncLitExpr{F0: v0, F1: v1, F2: v2}
+func ExprKind__FuncLitExpr__Ctor(v0 []Param, v1 Option[TypeExpr], v2 Expr) ExprKind {
+	return ExprKind__FuncLitExpr{F0: v0, F1: v1, F2: v2}
 }
 
-type ExprKindSliceLitExpr struct {
+type ExprKind__SliceLitExpr struct {
 	F0 []Expr
 }
 
-func (ExprKindSliceLitExpr) isExprKind() {
+func (ExprKind__SliceLitExpr) isExprKind() {
 }
-func ExprKindSliceLitExprCtor(v0 []Expr) ExprKind {
-	return ExprKindSliceLitExpr{F0: v0}
+func ExprKind__SliceLitExpr__Ctor(v0 []Expr) ExprKind {
+	return ExprKind__SliceLitExpr{F0: v0}
 }
 
-type ExprKindTypeAsExpr struct {
+type ExprKind__TypeAsExpr struct {
 	F0 Expr
 	F1 TypeExpr
 }
 
-func (ExprKindTypeAsExpr) isExprKind() {
+func (ExprKind__TypeAsExpr) isExprKind() {
 }
-func ExprKindTypeAsExprCtor(v0 Expr, v1 TypeExpr) ExprKind {
-	return ExprKindTypeAsExpr{F0: v0, F1: v1}
+func ExprKind__TypeAsExpr__Ctor(v0 Expr, v1 TypeExpr) ExprKind {
+	return ExprKind__TypeAsExpr{F0: v0, F1: v1}
 }
 
-type ExprKindStructLitExpr struct {
+type ExprKind__StructLitExpr struct {
 	F0 string
 	F1 []StructLitField
 }
 
-func (ExprKindStructLitExpr) isExprKind() {
+func (ExprKind__StructLitExpr) isExprKind() {
 }
-func ExprKindStructLitExprCtor(v0 string, v1 []StructLitField) ExprKind {
-	return ExprKindStructLitExpr{F0: v0, F1: v1}
+func ExprKind__StructLitExpr__Ctor(v0 string, v1 []StructLitField) ExprKind {
+	return ExprKind__StructLitExpr{F0: v0, F1: v1}
 }
 
-type ExprKindGenericStructLitExpr struct {
+type ExprKind__GenericStructLitExpr struct {
 	F0 string
 	F1 []TypeExpr
 	F2 []StructLitField
 }
 
-func (ExprKindGenericStructLitExpr) isExprKind() {
+func (ExprKind__GenericStructLitExpr) isExprKind() {
 }
-func ExprKindGenericStructLitExprCtor(v0 string, v1 []TypeExpr, v2 []StructLitField) ExprKind {
-	return ExprKindGenericStructLitExpr{F0: v0, F1: v1, F2: v2}
+func ExprKind__GenericStructLitExpr__Ctor(v0 string, v1 []TypeExpr, v2 []StructLitField) ExprKind {
+	return ExprKind__GenericStructLitExpr{F0: v0, F1: v1, F2: v2}
 }
 
-type ExprKindInlineGoExpr struct {
+type ExprKind__InlineGoExpr struct {
 	F0 *TypeExpr
 	F1 string
 	F2 []GoOperand
 	F3 []GoTypeOperand
 }
 
-func (ExprKindInlineGoExpr) isExprKind() {
+func (ExprKind__InlineGoExpr) isExprKind() {
 }
-func ExprKindInlineGoExprCtor(v0 *TypeExpr, v1 string, v2 []GoOperand, v3 []GoTypeOperand) ExprKind {
-	return ExprKindInlineGoExpr{F0: v0, F1: v1, F2: v2, F3: v3}
+func ExprKind__InlineGoExpr__Ctor(v0 *TypeExpr, v1 string, v2 []GoOperand, v3 []GoTypeOperand) ExprKind {
+	return ExprKind__InlineGoExpr{F0: v0, F1: v1, F2: v2, F3: v3}
 }
 
-type ExprKindMapLitExpr struct {
+type ExprKind__MapLitExpr struct {
 	F0 []struct {
 		F0 Expr
 		F1 Expr
 	}
 }
 
-func (ExprKindMapLitExpr) isExprKind() {
+func (ExprKind__MapLitExpr) isExprKind() {
 }
-func ExprKindMapLitExprCtor(v0 []struct {
+func ExprKind__MapLitExpr__Ctor(v0 []struct {
 	F0 Expr
 	F1 Expr
 }) ExprKind {
-	return ExprKindMapLitExpr{F0: v0}
+	return ExprKind__MapLitExpr{F0: v0}
 }
 
-type ExprKindSetLitExpr struct {
+type ExprKind__SetLitExpr struct {
 	F0 []Expr
 }
 
-func (ExprKindSetLitExpr) isExprKind() {
+func (ExprKind__SetLitExpr) isExprKind() {
 }
-func ExprKindSetLitExprCtor(v0 []Expr) ExprKind {
-	return ExprKindSetLitExpr{F0: v0}
+func ExprKind__SetLitExpr__Ctor(v0 []Expr) ExprKind {
+	return ExprKind__SetLitExpr{F0: v0}
 }
 
 type Expr struct {
@@ -700,8 +700,8 @@ func typeExprSliceEqElems(left []TypeExpr, right []TypeExpr, index int) bool {
 		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(left) {
 			return true
 		} else {
-			l := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, index), TypeExprUnitTypeCtor())
-			r := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, index), TypeExprUnitTypeCtor())
+			l := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, index), TypeExpr__UnitType__Ctor())
+			r := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, index), TypeExpr__UnitType__Ctor())
 			if MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(l, r) {
 				__tail_0 := left
 				__tail_1 := right
@@ -715,49 +715,49 @@ func typeExprSliceEqElems(left []TypeExpr, right []TypeExpr, index int) bool {
 	}
 }
 func EmptyExpr() Expr {
-	return Expr{ID: 0, Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Kind: ExprKindUnitExprCtor(), Type: None[MonoType]()}
+	return Expr{ID: 0, Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Kind: ExprKind__UnitExpr__Ctor(), Type: None[MonoType]()}
 }
 func MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(left TypeExpr, right TypeExpr) bool {
 	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_4, ok := left.(TypeExprNamedType); ok {
+	if __mygo_match___mygo_expr_4, ok := left.(TypeExpr__NamedType); ok {
 		var __mygo_expr_5 bool
-		if __mygo_match___mygo_expr_6, ok := right.(TypeExprNamedType); ok {
+		if __mygo_match___mygo_expr_6, ok := right.(TypeExpr__NamedType); ok {
 			__mygo_expr_5 = __mygo_match___mygo_expr_4.F0 == __mygo_match___mygo_expr_6.F0 && typeExprSliceEq(__mygo_match___mygo_expr_4.F1, __mygo_match___mygo_expr_6.F1)
 		} else {
 			__mygo_expr_5 = false
 		}
 		__mygo_expr_0 = __mygo_expr_5
 	} else {
-		if __mygo_match___mygo_expr_3, ok := left.(TypeExprFuncType); ok {
+		if __mygo_match___mygo_expr_3, ok := left.(TypeExpr__FuncType); ok {
 			var __mygo_expr_4 bool
-			if __mygo_match___mygo_expr_5, ok := right.(TypeExprFuncType); ok {
+			if __mygo_match___mygo_expr_5, ok := right.(TypeExpr__FuncType); ok {
 				__mygo_expr_4 = typeExprSliceEq(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_5.F0) && MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(*__mygo_match___mygo_expr_3.F1, *__mygo_match___mygo_expr_5.F1)
 			} else {
 				__mygo_expr_4 = false
 			}
 			__mygo_expr_0 = __mygo_expr_4
 		} else {
-			if __mygo_match___mygo_expr_2, ok := left.(TypeExprTupleType); ok {
+			if __mygo_match___mygo_expr_2, ok := left.(TypeExpr__TupleType); ok {
 				var __mygo_expr_3 bool
-				if __mygo_match___mygo_expr_4, ok := right.(TypeExprTupleType); ok {
+				if __mygo_match___mygo_expr_4, ok := right.(TypeExpr__TupleType); ok {
 					__mygo_expr_3 = typeExprSliceEq(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_4.F0)
 				} else {
 					__mygo_expr_3 = false
 				}
 				__mygo_expr_0 = __mygo_expr_3
 			} else {
-				if _, ok := left.(TypeExprUnitType); ok {
+				if _, ok := left.(TypeExpr__UnitType); ok {
 					var __mygo_expr_2 bool
-					if _, ok := right.(TypeExprUnitType); ok {
+					if _, ok := right.(TypeExpr__UnitType); ok {
 						__mygo_expr_2 = true
 					} else {
 						__mygo_expr_2 = false
 					}
 					__mygo_expr_0 = __mygo_expr_2
 				} else {
-					if __mygo_match___mygo_expr_1, ok := left.(TypeExprInlineGo); ok {
+					if __mygo_match___mygo_expr_1, ok := left.(TypeExpr__InlineGo); ok {
 						var __mygo_expr_2 bool
-						if __mygo_match___mygo_expr_3, ok := right.(TypeExprInlineGo); ok {
+						if __mygo_match___mygo_expr_3, ok := right.(TypeExpr__InlineGo); ok {
 							__mygo_expr_2 = MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(*__mygo_match___mygo_expr_1.F0, *__mygo_match___mygo_expr_3.F0) && __mygo_match___mygo_expr_1.F1 == __mygo_match___mygo_expr_3.F1
 						} else {
 							__mygo_expr_2 = false

@@ -31,9 +31,9 @@ func SyncBootstrapWithTiming(root string) ([]string, error) {
 
 func unwrapBootstrapResult(result Result[[]string, error]) ([]string, error) {
 	switch value := result.(type) {
-	case ResultOk[[]string, error]:
+	case Result__Ok[[]string, error]:
 		return value.F0, nil
-	case ResultErr[[]string, error]:
+	case Result__Err[[]string, error]:
 		return nil, value.F0
 	default:
 		return nil, nil

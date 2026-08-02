@@ -62,8 +62,10 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
   # structural cases below, including when it is nested in TQualifiedName.
   # An empty substitution cannot change either side, so skip the full-tree
   # applySubst rebuilds entirely; a non-empty one is applied below.
-  let a = normalizeEmptyTypeApps(if substIsEmpty(subst) => left else applySubst(subst, left))
-  let b = normalizeEmptyTypeApps(if substIsEmpty(subst) => right else applySubst(subst, right))
+  let aLeft = if substIsEmpty(subst) => left else applySubst(subst, left)
+  let bRight = if substIsEmpty(subst) => right else applySubst(subst, right)
+  let a = normalizeEmptyTypeApps(aLeft)
+  let b = normalizeEmptyTypeApps(bRight)
   if isAnyType(a) || isAnyType(b) then
     Ok(subst)
   else

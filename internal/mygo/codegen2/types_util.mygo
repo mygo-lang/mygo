@@ -323,42 +323,45 @@ func inherentMethodName(receiverName: String, methodName: String) -> String
   return implMethodSymbol(mangleInherentImplSymbol(receiverName), methodName)
 end
 
-# variantGoTypeName: 生成枚举变体 Go 类型名
+# variantGoTypeName: 生成枚举变体 Go 类型名（enum 名与 variant 名用 "__" 连接，如 Color__Green）
 func variantGoTypeName(enumName: String, variant: String) -> String
   if enumName == "" then
-    return variant
+    variant
+  else
+    enumName + "__" + variant
   end
-  return enumName + variant
 end
 
-# enumConstructorGoName: 生成枚举构造函数名
+# enumConstructorGoName: 生成枚举构造函数名（如 Color__Green__Ctor）
 func enumConstructorGoName(enumName: String, variantName: String) -> String
   if (enumName == "Option" || enumName == "Result") && (variantName == "Some" || variantName == "None" || variantName == "Ok" || variantName == "Err") then
-    return variantName
+    variantName
+  else
+    variantNameForEnum(enumName, variantName) + "__Ctor"
   end
-  return variantNameForEnum(enumName, variantName) + "Ctor"
 end
 
-# variantNameForEnum: 生成枚举变体名
+# variantNameForEnum: 生成枚举变体名（enum 名与 variant 名用 "__" 连接，如 Color__Green）
 func variantNameForEnum(enumName: String, variantName: String) -> String
   if enumName == "" then
-    return variantName
+    variantName
+  else
+    enumName + "__" + variantName
   end
-  return enumName + variantName
 end
 
 # helperFuncName: 生成辅助函数名
 func helperFuncName(method: String, typeKey: String) -> String
   let cleaned = strings.TrimPrefix(typeKey, "_")
-  return implMethodSymbol(sanitizeIdent(cleaned), method)
+  implMethodSymbol(sanitizeIdent(cleaned), method)
 end
 
 func implMethodSymbol(implSymbol: String, methodName: String) -> String
-  return sanitizeIdent(implSymbol + "M" + mangleComponent(methodName))
+  sanitizeIdent(implSymbol + "M" + mangleComponent(methodName))
 end
 
 func mangleInherentImplSymbol(receiverName: String) -> String
-  return "MygoIN" + mangleComponent(receiverName)
+  "MygoIN" + mangleComponent(receiverName)
 end
 
 func mangleInterfaceImplSymbol(ifaceName: String, implType: ast2.TypeExpr, args: Slice[ast2.TypeExpr]) -> String

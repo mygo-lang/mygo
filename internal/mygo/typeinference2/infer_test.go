@@ -23,7 +23,7 @@ func TestInferFilePrelude(t *testing.T) {
 		t.Fatalf("read %s: %v", sourcePath, err)
 	}
 	parsed := parser2.ParseFileAt(sourcePath, string(source))
-	file, ok := parsed.(ResultOk[ast2.File, string])
+	file, ok := parsed.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFileAt(%s) failed: %v", sourcePath, parsed)
 	}
@@ -39,12 +39,12 @@ func broken() -> Int
   missing
 end
 `)
-	file, ok := parsed.(ResultOk[ast2.File, string])
+	file, ok := parsed.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFile failed: %v", parsed)
 	}
 	got := InferFile(file.F0)
-	err, ok := got.(ResultErr[PackageInfo, string])
+	err, ok := got.(Result__Err[PackageInfo, string])
 	if !ok {
 		t.Fatalf("InferFile unexpectedly succeeded: %v", got)
 	}
@@ -74,18 +74,18 @@ func TestInferSuffixedNumericLiterals(t *testing.T) {
 	}
 	for _, tt := range tests {
 		parsed := parser2.ParseFile("package sample\n\nlet value = " + tt.literal + "\n")
-		file, ok := parsed.(ResultOk[ast2.File, string])
+		file, ok := parsed.(Result__Ok[ast2.File, string])
 		if !ok {
 			t.Fatalf("ParseFile(%s) failed: %v", tt.literal, parsed)
 		}
 		result := InferFile(file.F0)
-		info, ok := result.(ResultOk[PackageInfo, string])
+		info, ok := result.(Result__Ok[PackageInfo, string])
 		if !ok {
 			t.Fatalf("InferFile(%s) failed: %v", tt.literal, result)
 		}
-		binding := info.F0.TypedDecls[0].(ast2.DeclLetDecl).F0
-		got := binding.Value.Type.(OptionSome[ast2.MonoType]).F0
-		if name, ok := got.(ast2.MonoTypeTCon); !ok || name.F0 != tt.want {
+		binding := info.F0.TypedDecls[0].(ast2.Decl__LetDecl).F0
+		got := binding.Value.Type.(Option__Some[ast2.MonoType]).F0
+		if name, ok := got.(ast2.MonoType__TCon); !ok || name.F0 != tt.want {
 			t.Errorf("%s inferred as %v, want %s", tt.literal, got, tt.want)
 		}
 	}
@@ -98,12 +98,12 @@ func words() -> Set[String]
   {"hello", "world", "hello"}
 end
 `)
-	file, ok := parsed.(ResultOk[ast2.File, string])
+	file, ok := parsed.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFile failed: %v", parsed)
 	}
 	result := InferFile(file.F0)
-	err, ok := result.(ResultErr[PackageInfo, string])
+	err, ok := result.(Result__Err[PackageInfo, string])
 	if !ok {
 		t.Fatalf("InferFile unexpectedly succeeded: %v", result)
 	}
@@ -127,38 +127,38 @@ func update() -> Slice[String]
   items
 end
 `)
-	file, ok := parsed.(ResultOk[ast2.File, string])
+	file, ok := parsed.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFile failed: %v", parsed)
 	}
 	result := InferFile(file.F0)
-	info, ok := result.(ResultOk[PackageInfo, string])
+	info, ok := result.(Result__Ok[PackageInfo, string])
 	if !ok {
 		t.Fatalf("InferFile failed: %v", result)
 	}
 	var body ast2.Expr
 	for _, decl := range info.F0.TypedDecls {
-		if fn, ok := decl.(ast2.DeclFuncDecl); ok && fn.F0 == "update" {
+		if fn, ok := decl.(ast2.Decl__FuncDecl); ok && fn.F0 == "update" {
 			body = fn.F4
 		}
 	}
-	block, ok := body.Kind.(ast2.ExprKindBlockExpr)
+	block, ok := body.Kind.(ast2.ExprKind__BlockExpr)
 	if !ok {
 		t.Fatalf("update body = %#v, want block", body.Kind)
 	}
-	assignment, ok := block.F0[1].(ast2.StmtAssignStmt)
+	assignment, ok := block.F0[1].(ast2.Stmt__AssignStmt)
 	if !ok {
 		t.Fatalf("second statement = %#v, want assignment", block.F0[1])
 	}
-	call, ok := assignment.F1.Kind.(ast2.ExprKindCallExpr)
+	call, ok := assignment.F1.Kind.(ast2.ExprKind__CallExpr)
 	if !ok {
 		t.Fatalf("assignment RHS = %#v, want call", assignment.F1.Kind)
 	}
-	field, ok := call.F0.Kind.(ast2.ExprKindFieldExpr)
+	field, ok := call.F0.Kind.(ast2.ExprKind__FieldExpr)
 	if !ok {
 		t.Fatalf("call callee = %#v, want field", call.F0.Kind)
 	}
-	if _, ok := field.F0.Type.(OptionSome[ast2.MonoType]); !ok {
+	if _, ok := field.F0.Type.(Option__Some[ast2.MonoType]); !ok {
 		t.Fatalf("Append receiver lost its inferred type: %#v", field.F0.Type)
 	}
 }
@@ -174,26 +174,26 @@ func render[A](value: A) -> String using Show[A]
   value.Show()
 end
 `)
-	file, ok := parsed.(ResultOk[ast2.File, string])
+	file, ok := parsed.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFile failed: %v", parsed)
 	}
 	result := InferFile(file.F0)
-	info, ok := result.(ResultOk[PackageInfo, string])
+	info, ok := result.(Result__Ok[PackageInfo, string])
 	if !ok {
 		t.Fatalf("InferFile failed: %v", result)
 	}
 	for _, decl := range info.F0.TypedDecls {
-		if fn, ok := decl.(ast2.DeclFuncDecl); ok && fn.F0 == "render" {
-			block, ok := fn.F4.Kind.(ast2.ExprKindBlockExpr)
+		if fn, ok := decl.(ast2.Decl__FuncDecl); ok && fn.F0 == "render" {
+			block, ok := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
 			if !ok || len(block.F0) != 1 {
 				t.Fatalf("render body = %#v, want single-expression block", fn.F4.Kind)
 			}
-			expr, ok := block.F0[0].(ast2.StmtExprStmt)
+			expr, ok := block.F0[0].(ast2.Stmt__ExprStmt)
 			if !ok {
 				t.Fatalf("render statement = %#v, want expression", block.F0[0])
 			}
-			if _, ok := expr.F0.Kind.(ast2.ExprKindDictionaryCallExpr); !ok {
+			if _, ok := expr.F0.Kind.(ast2.ExprKind__DictionaryCallExpr); !ok {
 				t.Fatalf("render expression = %#v, want DictionaryCallExpr", expr.F0.Kind)
 			}
 			return
@@ -219,12 +219,12 @@ impl[A] BoxEq[A]: Eq[Box[A]]
   end
 end
 `)
-	file, ok := parsed.(ResultOk[ast2.File, string])
+	file, ok := parsed.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFile failed: %v", parsed)
 	}
 	result := InferFile(file.F0)
-	info, ok := result.(ResultOk[PackageInfo, string])
+	info, ok := result.(Result__Ok[PackageInfo, string])
 	if !ok {
 		t.Fatalf("InferFile failed: %v", result)
 	}
@@ -235,7 +235,7 @@ end
 
 func typedDeclsContainDictionaryCall(decls []ast2.Decl) bool {
 	for _, decl := range decls {
-		if impl, ok := decl.(ast2.DeclImplDecl); ok {
+		if impl, ok := decl.(ast2.Decl__ImplDecl); ok {
 			for _, method := range impl.F3 {
 				if typedExprContainsDictionaryCall(method.Body) {
 					return true
@@ -248,9 +248,9 @@ func typedDeclsContainDictionaryCall(decls []ast2.Decl) bool {
 
 func typedExprContainsDictionaryCall(expr ast2.Expr) bool {
 	switch kind := expr.Kind.(type) {
-	case ast2.ExprKindDictionaryCallExpr:
+	case ast2.ExprKind__DictionaryCallExpr:
 		return true
-	case ast2.ExprKindCallExpr:
+	case ast2.ExprKind__CallExpr:
 		if typedExprContainsDictionaryCall(kind.F0) {
 			return true
 		}
@@ -259,9 +259,9 @@ func typedExprContainsDictionaryCall(expr ast2.Expr) bool {
 				return true
 			}
 		}
-	case ast2.ExprKindFieldExpr:
+	case ast2.ExprKind__FieldExpr:
 		return typedExprContainsDictionaryCall(kind.F0)
-	case ast2.ExprKindSwitchExpr:
+	case ast2.ExprKind__SwitchExpr:
 		if typedExprContainsDictionaryCall(kind.F0) {
 			return true
 		}
@@ -270,9 +270,9 @@ func typedExprContainsDictionaryCall(expr ast2.Expr) bool {
 				return true
 			}
 		}
-	case ast2.ExprKindBlockExpr:
+	case ast2.ExprKind__BlockExpr:
 		for _, stmt := range kind.F0 {
-			if exprStmt, ok := stmt.(ast2.StmtExprStmt); ok && typedExprContainsDictionaryCall(exprStmt.F0) {
+			if exprStmt, ok := stmt.(ast2.Stmt__ExprStmt); ok && typedExprContainsDictionaryCall(exprStmt.F0) {
 				return true
 			}
 		}
@@ -291,7 +291,7 @@ func Use() -> Slice[Int]
   Keep([1])
 end
 `)
-	file, ok := parsed.(ResultOk[ast2.File, string])
+	file, ok := parsed.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFile failed: %v", parsed)
 	}
@@ -313,7 +313,7 @@ func use() -> Int
   accepts(1)
 end
 `)
-	aliasFile, ok := alias.(ResultOk[ast2.File, string])
+	aliasFile, ok := alias.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFile alias failed: %v", alias)
 	}
@@ -333,11 +333,11 @@ func use() -> Int
   accepts(1)
 end
 `)
-	definedFile, ok := defined.(ResultOk[ast2.File, string])
+	definedFile, ok := defined.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFile defined type failed: %v", defined)
 	}
-	if _, ok := InferFile(definedFile.F0).(ResultErr[PackageInfo, string]); !ok {
+	if _, ok := InferFile(definedFile.F0).(Result__Err[PackageInfo, string]); !ok {
 		t.Fatal("defined type unexpectedly unified with its underlying Int")
 	}
 }
@@ -347,7 +347,7 @@ func TestInferPackageWithExternalRetainsUserTypeAliasForCodegen(t *testing.T) {
 
 type Parser[A] = func(Int) -> A
 `)
-	userFile, ok := user.(ResultOk[ast2.File, string])
+	userFile, ok := user.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFile user failed: %v", user)
 	}
@@ -357,7 +357,7 @@ struct External
   Value: Int
 end
 `)
-	externalFile, ok := external.(ResultOk[ast2.File, string])
+	externalFile, ok := external.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFile external failed: %v", external)
 	}
@@ -367,7 +367,7 @@ end
 		[]GoPackageEntry{},
 		[]MyGoPackageInfo{},
 	)
-	info, ok := got.(ResultOk[PackageInfo, string])
+	info, ok := got.(Result__Ok[PackageInfo, string])
 	if !ok {
 		t.Fatalf("InferPackageWithExternal failed: %v", got)
 	}
@@ -381,7 +381,7 @@ end
 
 func declsContainTypeAlias(decls []ast2.Decl, name string) bool {
 	for _, decl := range decls {
-		if alias, ok := decl.(ast2.DeclTypeAliasDecl); ok && alias.F0 == name {
+		if alias, ok := decl.(ast2.Decl__TypeAliasDecl); ok && alias.F0 == name {
 			return true
 		}
 	}
@@ -389,24 +389,24 @@ func declsContainTypeAlias(decls []ast2.Decl, name string) bool {
 }
 
 func isPackageInfo(value Result[PackageInfo, string]) bool {
-	_, ok := value.(ResultOk[PackageInfo, string])
+	_, ok := value.(Result__Ok[PackageInfo, string])
 	return ok
 }
 
 func TestComposeSubstDefersResolutionAndPreservesPrecedence(t *testing.T) {
-	older := SubstFromEntries([]SubstEntry{{ID: 1, Type: ast2.MonoTypeTVarCtor(2)}})
-	newer := SubstFromEntries([]SubstEntry{{ID: 2, Type: ast2.MonoTypeTConCtor("Int")}})
-	got := applySubst(composeSubst(newer, older), ast2.MonoTypeTVarCtor(1))
-	if !ast2.MonoEqual(got, ast2.MonoTypeTConCtor("Int")) {
+	older := SubstFromEntries([]SubstEntry{{ID: 1, Type: ast2.MonoType__TVar__Ctor(2)}})
+	newer := SubstFromEntries([]SubstEntry{{ID: 2, Type: ast2.MonoType__TCon__Ctor("Int")}})
+	got := applySubst(composeSubst(newer, older), ast2.MonoType__TVar__Ctor(1))
+	if !ast2.MonoEqual(got, ast2.MonoType__TCon__Ctor("Int")) {
 		t.Fatalf("lazy substitution chain resolved to %v, want Int", got)
 	}
 
 	// composeSubst historically gives the accumulated (older) mapping lookup
 	// precedence. Keep that contract while making the composition lazy.
-	older = SubstFromEntries([]SubstEntry{{ID: 1, Type: ast2.MonoTypeTConCtor("String")}})
-	newer = SubstFromEntries([]SubstEntry{{ID: 1, Type: ast2.MonoTypeTConCtor("Int")}})
-	got = applySubst(composeSubst(newer, older), ast2.MonoTypeTVarCtor(1))
-	if !ast2.MonoEqual(got, ast2.MonoTypeTConCtor("String")) {
+	older = SubstFromEntries([]SubstEntry{{ID: 1, Type: ast2.MonoType__TCon__Ctor("String")}})
+	newer = SubstFromEntries([]SubstEntry{{ID: 1, Type: ast2.MonoType__TCon__Ctor("Int")}})
+	got = applySubst(composeSubst(newer, older), ast2.MonoType__TVar__Ctor(1))
+	if !ast2.MonoEqual(got, ast2.MonoType__TCon__Ctor("String")) {
 		t.Fatalf("composeSubst precedence changed: got %v, want String", got)
 	}
 }
@@ -448,7 +448,7 @@ func emptyParam() -> ast2.Param
   ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType, Tag: None }
 end
 `)
-	file, ok := user.(ResultOk[ast2.File, string])
+	file, ok := user.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFile user failed: %v", user)
 	}
@@ -459,7 +459,7 @@ end
 		Path:  "github.com/mygo-lang/mygo/internal/mygo/ast2",
 		Decls: astDecls,
 	}}, []GoPackageEntry{}, initialEnv())
-	if _, ok := envGet(predeclareAllFunctions(allDecls, seeded), "typeExprListString").(OptionSome[Scheme]); !ok {
+	if _, ok := envGet(predeclareAllFunctions(allDecls, seeded), "typeExprListString").(Option__Some[Scheme]); !ok {
 		t.Fatal("typeExprListString was not predeclared")
 	}
 	got := InferPackageWithExternal(
@@ -472,7 +472,7 @@ end
 			Decls: astDecls,
 		}},
 	)
-	if _, ok := got.(ResultOk[PackageInfo, string]); !ok {
+	if _, ok := got.(Result__Ok[PackageInfo, string]); !ok {
 		t.Fatalf("qualified Slice.Get result did not survive method instantiation: %v", got)
 	}
 }
@@ -484,13 +484,13 @@ func TestQualifiedTypeLookupFallsBackToImportCache(t *testing.T) {
 		Path:  "github.com/mygo-lang/mygo/internal/mygo/ast2",
 	}}
 	got := typeFromASTInEnvWithParams(
-		ast2.TypeExprNamedTypeCtor("ast2.MonoType", []ast2.TypeExpr{}),
+		ast2.TypeExpr__NamedType__Ctor("ast2.MonoType", []ast2.TypeExpr{}),
 		[]string{},
 		initialEnv(),
 		state,
 	)
-	inner := ast2.MonoTypeTConCtor("MonoType")
-	want := ast2.MonoTypeTQualifiedNameCtor(
+	inner := ast2.MonoType__TCon__Ctor("MonoType")
+	want := ast2.MonoType__TQualifiedName__Ctor(
 		"github.com/mygo-lang/mygo/internal/mygo/ast2",
 		&inner,
 	)
@@ -511,14 +511,14 @@ func TestImportedGenericTypeAliasExpandsInFunctionParameters(t *testing.T) {
 		Path:  "github.com/mygo-lang/mygo/lib/text/parsec",
 		Decls: decls,
 	}, 0, initialEnv(), []MyGoPackageInfo{})
-	privateBetween, ok := envGet(privateEnv, "PBetween").(OptionSome[Scheme])
+	privateBetween, ok := envGet(privateEnv, "PBetween").(Option__Some[Scheme])
 	if !ok {
 		t.Fatal("PBetween was not seeded in the package-private environment")
 	}
-	if _, ok := privateBetween.F0.Body.(ast2.MonoTypeTFunc); !ok {
+	if _, ok := privateBetween.F0.Body.(ast2.MonoType__TFunc); !ok {
 		t.Fatalf("private PBetween body = %v, want bare function type", privateBetween.F0.Body)
 	}
-	if _, ok := envGet(privateEnv, "ps.PBetween").(OptionSome[Scheme]); ok {
+	if _, ok := envGet(privateEnv, "ps.PBetween").(Option__Some[Scheme]); ok {
 		t.Fatal("qualified PBetween leaked into package-private environment")
 	}
 	env := seedMyGoPackageEnv(
@@ -527,29 +527,29 @@ func TestImportedGenericTypeAliasExpandsInFunctionParameters(t *testing.T) {
 		[]GoPackageEntry{},
 		initialEnv(),
 	)
-	parser, ok := envGet(env, "ps.Parser").(OptionSome[Scheme])
+	parser, ok := envGet(env, "ps.Parser").(Option__Some[Scheme])
 	if !ok {
 		t.Fatal("ps.Parser was not seeded")
 	}
-	if _, ok := envGet(env, "Parser").(OptionSome[Scheme]); ok {
+	if _, ok := envGet(env, "Parser").(Option__Some[Scheme]); ok {
 		t.Fatal("package-local Parser alias leaked into importing environment")
 	}
-	if _, ok := parser.F0.Body.(ast2.MonoTypeTFunc); !ok {
+	if _, ok := parser.F0.Body.(ast2.MonoType__TFunc); !ok {
 		t.Fatalf("ps.Parser body = %v, want expanded function type", parser.F0.Body)
 	}
-	between, ok := envGet(env, "ps.PBetween").(OptionSome[Scheme])
+	between, ok := envGet(env, "ps.PBetween").(Option__Some[Scheme])
 	if !ok {
 		t.Fatal("ps.PBetween was not seeded")
 	}
-	fn, ok := between.F0.Body.(ast2.MonoTypeTQualifiedName)
+	fn, ok := between.F0.Body.(ast2.MonoType__TQualifiedName)
 	if !ok {
 		t.Fatalf("ps.PBetween body = %v, want qualified function", between.F0.Body)
 	}
-	inner, ok := (*fn.F1).(ast2.MonoTypeTFunc)
+	inner, ok := (*fn.F1).(ast2.MonoType__TFunc)
 	if !ok {
 		t.Fatalf("ps.PBetween inner = %v, want function", fn.F1)
 	}
-	if _, ok := inner.F0[0].(ast2.MonoTypeTFunc); !ok {
+	if _, ok := inner.F0[0].(ast2.MonoType__TFunc); !ok {
 		t.Fatalf("ps.PBetween first parameter = %v, want expanded Parser function", inner.F0[0])
 	}
 }
@@ -572,7 +572,7 @@ func parseMyGoFiles(t *testing.T, paths ...string) []ast2.Decl {
 			t.Fatalf("read %s: %v", path, err)
 		}
 		parsed := parser2.ParseFileAt(path, string(source))
-		file, ok := parsed.(ResultOk[ast2.File, string])
+		file, ok := parsed.(Result__Ok[ast2.File, string])
 		if !ok {
 			t.Fatalf("parse %s: %v", path, parsed)
 		}

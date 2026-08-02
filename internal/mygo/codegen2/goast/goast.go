@@ -858,13 +858,14 @@ func VariantIf(target ast.Expr, variantType, valueName string, body, elseBody []
 }
 
 // VariantTypeForTarget applies the target enum's type arguments to a variant
-// type named by joining its enum base and variant name.
+// type named by joining its enum base and variant name with "__"
+// (e.g. "Option" + "Some" -> "Option__Some").
 func VariantTypeForTarget(targetType, variant string) string {
 	base, args, hasArgs := strings.Cut(targetType, "[")
 	if !hasArgs {
-		return base + variant
+		return base + "__" + variant
 	}
-	return base + variant + "[" + args
+	return base + "__" + variant + "[" + args
 }
 
 func For(cond ast.Expr, body []ast.Stmt) ast.Stmt {

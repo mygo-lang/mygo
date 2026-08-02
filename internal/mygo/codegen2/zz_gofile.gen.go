@@ -23,7 +23,7 @@ func funcSignature(prefix string, tps []string, params []ast2.Param, ret Option[
 func returnTypeString(ret Option[ast2.TypeExpr], tps map[string]struct {
 }) string {
 	var __mygo_expr_0 string
-	if __mygo_match___mygo_expr_1, ok := ret.(OptionSome[ast2.TypeExpr]); ok {
+	if __mygo_match___mygo_expr_1, ok := ret.(Option__Some[ast2.TypeExpr]); ok {
 		r := goReturnType(__mygo_match___mygo_expr_1.F0, tps)
 		var __mygo_expr_2 string
 		if r == "" {
@@ -33,7 +33,7 @@ func returnTypeString(ret Option[ast2.TypeExpr], tps map[string]struct {
 		}
 		__mygo_expr_0 = __mygo_expr_2
 	} else {
-		if _, ok := ret.(OptionNone[ast2.TypeExpr]); ok {
+		if _, ok := ret.(Option__None[ast2.TypeExpr]); ok {
 			__mygo_expr_0 = ""
 		} else {
 		}
@@ -42,11 +42,11 @@ func returnTypeString(ret Option[ast2.TypeExpr], tps map[string]struct {
 }
 func returnMonoType(ret Option[ast2.TypeExpr]) ast2.MonoType {
 	var __mygo_expr_0 ast2.MonoType
-	if __mygo_match___mygo_expr_1, ok := ret.(OptionSome[ast2.TypeExpr]); ok {
+	if __mygo_match___mygo_expr_1, ok := ret.(Option__Some[ast2.TypeExpr]); ok {
 		__mygo_expr_0 = typeinference2.TypeFromAST(__mygo_match___mygo_expr_1.F0)
 	} else {
-		if _, ok := ret.(OptionNone[ast2.TypeExpr]); ok {
-			__mygo_expr_0 = ast2.MonoTypeTUnitCtor()
+		if _, ok := ret.(Option__None[ast2.TypeExpr]); ok {
+			__mygo_expr_0 = ast2.MonoType__TUnit__Ctor()
 		} else {
 		}
 	}

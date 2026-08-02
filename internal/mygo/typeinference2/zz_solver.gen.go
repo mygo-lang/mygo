@@ -24,7 +24,7 @@ func solverFromInstances(instances []Instance) Solver {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(instances) == 0 {
 		return newSolver()
 	} else {
-		return solverRegister(solverFromInstances(sliceDrop(instances, 1)), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(instances, 0), Instance{ClassName: "", Type: ast2.MonoTypeTUnitCtor(), Predicates: []Predicate{}}))
+		return solverRegister(solverFromInstances(sliceDrop(instances, 1)), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(instances, 0), Instance{ClassName: "", Type: ast2.MonoType__TUnit__Ctor(), Predicates: []Predicate{}}))
 	}
 }
 func solverResolve(solver Solver, predicates []Predicate, subst Subst) Result[[]Predicate, string] {
@@ -34,16 +34,16 @@ func solverResolve(solver Solver, predicates []Predicate, subst Subst) Result[[]
 		predicate := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicates, 0), Predicate{ClassName: "", Args: []ast2.MonoType{}})
 		rest := solverResolve(solver, sliceDrop(predicates, 1), subst)
 		var __mygo_expr_0 Result[[]Predicate, string]
-		if __mygo_match___mygo_expr_2, ok := rest.(ResultErr[[]Predicate, string]); ok {
+		if __mygo_match___mygo_expr_2, ok := rest.(Result__Err[[]Predicate, string]); ok {
 			__mygo_expr_0 = Err[[]Predicate, string](__mygo_match___mygo_expr_2.F0)
 		} else {
-			if __mygo_match___mygo_expr_1, ok := rest.(ResultOk[[]Predicate, string]); ok {
+			if __mygo_match___mygo_expr_1, ok := rest.(Result__Ok[[]Predicate, string]); ok {
 				__mygo_expr_2 := solverResolveOne(solver, predicate, subst)
 				var __mygo_expr_3 Result[[]Predicate, string]
-				if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(ResultErr[[]Predicate, string]); ok {
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(Result__Err[[]Predicate, string]); ok {
 					__mygo_expr_3 = Err[[]Predicate, string](__mygo_match___mygo_expr_5.F0)
 				} else {
-					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ResultOk[[]Predicate, string]); ok {
+					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Ok[[]Predicate, string]); ok {
 						__mygo_expr_3 = Ok[[]Predicate, string](appendPredicates(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_1.F0))
 					} else {
 					}
@@ -67,7 +67,7 @@ func solverFindInstance(instances []Instance, predicate Predicate, subst Subst) 
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(instances) == 0 {
 			return Ok[[]Predicate, string]([]Predicate{predicate})
 		} else {
-			instance := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(instances, 0), Instance{ClassName: "", Type: ast2.MonoTypeTUnitCtor(), Predicates: []Predicate{}})
+			instance := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(instances, 0), Instance{ClassName: "", Type: ast2.MonoType__TUnit__Ctor(), Predicates: []Predicate{}})
 			if instance.ClassName != predicate.ClassName || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(predicate.Args) == 0 {
 				__tail_0 := sliceDrop(instances, 1)
 				__tail_1 := predicate
@@ -75,12 +75,12 @@ func solverFindInstance(instances []Instance, predicate Predicate, subst Subst) 
 				instances, predicate, subst = __tail_0, __tail_1, __tail_2
 				continue
 			} else {
-				__mygo_expr_0 := unify(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicate.Args, 0), ast2.MonoTypeTUnitCtor()), instance.Type, subst)
+				__mygo_expr_0 := unify(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicate.Args, 0), ast2.MonoType__TUnit__Ctor()), instance.Type, subst)
 				var __mygo_expr_1 Result[[]Predicate, string]
-				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ResultOk[Subst, string]); ok {
+				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[Subst, string]); ok {
 					__mygo_expr_1 = solverResolve(instanceSolver(instance, instances), instance.Predicates, __mygo_match___mygo_expr_2.F0)
 				} else {
-					if _, ok := __mygo_expr_0.(ResultErr[Subst, string]); ok {
+					if _, ok := __mygo_expr_0.(Result__Err[Subst, string]); ok {
 						__mygo_expr_1 = solverFindInstance(sliceDrop(instances, 1), predicate, subst)
 					} else {
 					}
@@ -95,10 +95,10 @@ func instanceSolver(instance Instance, instances []Instance) Solver {
 }
 func builtInEqInstances() []Instance {
 	emptyArgs := []ast2.MonoType{}
-	refType := ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor("Ref")}[0], []ast2.MonoType{ast2.MonoTypeTVarCtor(999)})
+	refType := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Ref")}[0], []ast2.MonoType{ast2.MonoType__TVar__Ctor(999)})
 	primitives := []string{"Int", "Int8", "Int16", "Int32", "Int64", "UInt8", "UInt16", "UInt32", "UInt64", "Float32", "Float64", "String", "Bool", "Rune", "Byte"}
 	instances := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(primitives, []Instance{}, func(acc []Instance, name string) []Instance {
-		return MygoIN5SliceM6Append(acc, Instance{ClassName: "Eq", Type: ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor(name)}[0], emptyArgs), Predicates: []Predicate{}})
+		return MygoIN5SliceM6Append(acc, Instance{ClassName: "Eq", Type: ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor(name)}[0], emptyArgs), Predicates: []Predicate{}})
 	})
 	return MygoIN5SliceM6Append(instances, Instance{ClassName: "Eq", Type: refType, Predicates: []Predicate{}})
 }
@@ -110,7 +110,7 @@ func appendInstances(left []Instance, right []Instance) []Instance {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(right) == 0 {
 			return left
 		} else {
-			__tail_0 := MygoIN5SliceM6Append(left, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), Instance{ClassName: "", Type: ast2.MonoTypeTUnitCtor(), Predicates: []Predicate{}}))
+			__tail_0 := MygoIN5SliceM6Append(left, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), Instance{ClassName: "", Type: ast2.MonoType__TUnit__Ctor(), Predicates: []Predicate{}}))
 			__tail_1 := sliceDrop(right, 1)
 			left, right = __tail_0, __tail_1
 			continue

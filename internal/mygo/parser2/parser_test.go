@@ -14,7 +14,7 @@ import (
 
 func TestParseFileAtIncludesSourceLocation(t *testing.T) {
 	got := ParseFileAt("broken.mygo", "package sample\n\nfunc")
-	err, ok := got.(ResultErr[ast2.File, string])
+	err, ok := got.(Result__Err[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFileAt() = %T, want parse error", got)
 	}
@@ -38,7 +38,7 @@ func TestParseFileParsesSelf(t *testing.T) {
 		t.Fatalf("ParseInput(%s) failed at %#v: %#v", sourcePath, reply.State.Position, reply.Error)
 	}
 	got := ParseFile(string(source))
-	parsed, ok := got.(ResultOk[ast2.File, string])
+	parsed, ok := got.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFile(%s) failed: %v", sourcePath, got)
 	}
@@ -53,14 +53,14 @@ func TestParseTypeAliasAndDefinedType(t *testing.T) {
 type UserID = Int
 type AccountID Int
 `)
-	file, ok := parsed.(ResultOk[ast2.File, string])
+	file, ok := parsed.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFile failed: %v", parsed)
 	}
-	if _, ok := file.F0.Decls[0].(ast2.DeclTypeAliasDecl); !ok {
+	if _, ok := file.F0.Decls[0].(ast2.Decl__TypeAliasDecl); !ok {
 		t.Fatalf("decl[0] = %T, want DeclTypeAliasDecl", file.F0.Decls[0])
 	}
-	if _, ok := file.F0.Decls[1].(ast2.DeclTypeDecl); !ok {
+	if _, ok := file.F0.Decls[1].(ast2.Decl__TypeDecl); !ok {
 		t.Fatalf("decl[1] = %T, want DeclTypeDecl", file.F0.Decls[1])
 	}
 }
@@ -76,7 +76,7 @@ func TestParseFileParsesPrelude(t *testing.T) {
 		t.Fatalf("read %s: %v", sourcePath, err)
 	}
 	got := ParseFileAt(sourcePath, string(source))
-	parsed, ok := got.(ResultOk[ast2.File, string])
+	parsed, ok := got.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFileAt(%s) failed: %v", sourcePath, got)
 	}
@@ -102,7 +102,7 @@ func TestParseFileParsesPreludeConversion(t *testing.T) {
 		t.Fatalf("read %s: %v", sourcePath, err)
 	}
 	parsed := ParseFileAt(sourcePath, string(source))
-	if _, ok := parsed.(ResultOk[ast2.File, string]); !ok {
+	if _, ok := parsed.(Result__Ok[ast2.File, string]); !ok {
 		t.Fatalf("ParseFileAt(%s) failed: %v", sourcePath, parsed)
 	}
 }
@@ -118,7 +118,7 @@ func TestParseFileParsesPreludeMapImpl(t *testing.T) {
 		t.Fatalf("read %s: %v", sourcePath, err)
 	}
 	parsed := ParseFileAt(sourcePath, string(source))
-	if _, ok := parsed.(ResultOk[ast2.File, string]); !ok {
+	if _, ok := parsed.(Result__Ok[ast2.File, string]); !ok {
 		t.Fatalf("ParseFileAt(%s) failed: %v", sourcePath, parsed)
 	}
 }
@@ -134,7 +134,7 @@ func TestParseFileParsesPreludeStringIndexImpl(t *testing.T) {
 		t.Fatalf("read %s: %v", sourcePath, err)
 	}
 	parsed := ParseFileAt(sourcePath, string(source))
-	if _, ok := parsed.(ResultOk[ast2.File, string]); !ok {
+	if _, ok := parsed.(Result__Ok[ast2.File, string]); !ok {
 		t.Fatalf("ParseFileAt(%s) failed: %v", sourcePath, parsed)
 	}
 }
@@ -150,9 +150,9 @@ func(_: String) -> ps.Parser[ast2.File]
   end
 end
 `)
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
-	got := body.F0[0].(ast2.StmtExprStmt).F0
-	if _, ok := got.Kind.(ast2.ExprKindFuncLitExpr); !ok {
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	got := body.F0[0].(ast2.Stmt__ExprStmt).F0
+	if _, ok := got.Kind.(ast2.ExprKind__FuncLitExpr); !ok {
 		t.Fatalf("body = %T, want ExprFuncLitExpr", got)
 	}
 }
@@ -172,11 +172,11 @@ func parity(n: Int) -> Bool
   even(n)
 end
 `)
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
 	if len(body.F0) != 2 {
 		t.Fatalf("body statement count = %d, want 2", len(body.F0))
 	}
-	rec, ok := body.F0[0].(ast2.StmtLetRecStmt)
+	rec, ok := body.F0[0].(ast2.Stmt__LetRecStmt)
 	if !ok {
 		t.Fatalf("first statement = %T, want StmtLetRecStmt", body.F0[0])
 	}
@@ -192,12 +192,12 @@ func values()
   [1, 2,] as Slice[Int]
 end
 `)
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
-	cast, ok := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindTypeAsExpr)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	cast, ok := body.F0[0].(ast2.Stmt__ExprStmt).F0.Kind.(ast2.ExprKind__TypeAsExpr)
 	if !ok {
-		t.Fatalf("body = %T, want ExprTypeAsExpr", body.F0[0].(ast2.StmtExprStmt).F0)
+		t.Fatalf("body = %T, want ExprTypeAsExpr", body.F0[0].(ast2.Stmt__ExprStmt).F0)
 	}
-	slice, ok := (cast.F0).Kind.(ast2.ExprKindSliceLitExpr)
+	slice, ok := (cast.F0).Kind.(ast2.ExprKind__SliceLitExpr)
 	if !ok || len(slice.F0) != 2 {
 		t.Fatalf("cast value = %T, want two-item ExprSliceLitExpr", cast.F0)
 	}
@@ -210,14 +210,14 @@ func values()
   [18_446_744u64, 3.14f32, 0xff, 0XFFi8, 0o777u, 0B1010u64]
 end
 `)
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
-	lit := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindSliceLitExpr)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	lit := body.F0[0].(ast2.Stmt__ExprStmt).F0.Kind.(ast2.ExprKind__SliceLitExpr)
 	want := []string{"18446744u64", "3.14f32", "0xff", "0XFFi8", "0o777u", "0B1010u64"}
 	if len(lit.F0) != len(want) {
 		t.Fatalf("literal count = %d, want %d", len(lit.F0), len(want))
 	}
 	for i, expected := range want {
-		got, ok := lit.F0[i].Kind.(ast2.ExprKindNumberExpr)
+		got, ok := lit.F0[i].Kind.(ast2.ExprKind__NumberExpr)
 		if !ok || got.F0 != expected {
 			t.Fatalf("literal[%d] = %#v, want number %q", i, lit.F0[i].Kind, expected)
 		}
@@ -228,7 +228,7 @@ func TestRejectInvalidNumericLiteralSyntax(t *testing.T) {
 	for _, literal := range []string{"1.2.3", "1oops", "0x", "0b102", "1_"} {
 		t.Run(literal, func(t *testing.T) {
 			got := ParseFile("package sample\n\nfunc bad()\n  " + literal + "\nend\n")
-			if _, ok := got.(ResultErr[ast2.File, string]); !ok {
+			if _, ok := got.(Result__Err[ast2.File, string]); !ok {
 				t.Fatalf("ParseFile(%q) = %v, want parse error", literal, got)
 			}
 		})
@@ -242,10 +242,10 @@ func newline() -> Rune
   '\n'
 end
 `)
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
-	runeExpr, ok := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindRuneExpr)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	runeExpr, ok := body.F0[0].(ast2.Stmt__ExprStmt).F0.Kind.(ast2.ExprKind__RuneExpr)
 	if !ok {
-		t.Fatalf("body = %T, want ExprRuneExpr", body.F0[0].(ast2.StmtExprStmt).F0)
+		t.Fatalf("body = %T, want ExprRuneExpr", body.F0[0].(ast2.Stmt__ExprStmt).F0)
 	}
 	if runeExpr.F0 != "\n" {
 		t.Fatalf("rune value = %q, want newline", runeExpr.F0)
@@ -264,10 +264,10 @@ func escape(r: Rune) -> String
   end
 end
 `)
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
-	switchExpr := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindSwitchExpr)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	switchExpr := body.F0[0].(ast2.Stmt__ExprStmt).F0.Kind.(ast2.ExprKind__SwitchExpr)
 	for index, want := range []string{"\"", "\n", "\x00"} {
-		pattern, ok := switchExpr.F1[index].Pattern.(ast2.PatternLiteralPattern)
+		pattern, ok := switchExpr.F1[index].Pattern.(ast2.Pattern__LiteralPattern)
 		if !ok || pattern.F0 != "rune" || pattern.F1 != want {
 			t.Fatalf("case %d pattern = %#v, want rune %q", index, switchExpr.F1[index].Pattern, want)
 		}
@@ -290,28 +290,28 @@ func unwrap(value: Maybe[Int]) -> Int
   end
 end
 `)
-	parsed, ok := got.(ResultOk[ast2.File, string])
+	parsed, ok := got.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFile failed: %v", got)
 	}
-	fn, ok := parsed.F0.Decls[1].(ast2.DeclFuncDecl)
+	fn, ok := parsed.F0.Decls[1].(ast2.Decl__FuncDecl)
 	if !ok {
 		t.Fatalf("decl[1] = %T, want DeclFuncDecl", parsed.F0.Decls[1])
 	}
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
-	sw, ok := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindSwitchExpr)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	sw, ok := body.F0[0].(ast2.Stmt__ExprStmt).F0.Kind.(ast2.ExprKind__SwitchExpr)
 	if !ok {
-		t.Fatalf("body = %T, want ExprSwitchExpr", body.F0[0].(ast2.StmtExprStmt).F0)
+		t.Fatalf("body = %T, want ExprSwitchExpr", body.F0[0].(ast2.Stmt__ExprStmt).F0)
 	}
 	if len(sw.F1) != 3 {
 		t.Fatalf("case count = %d, want 3", len(sw.F1))
 	}
-	variant, ok := sw.F1[0].Pattern.(ast2.PatternVariantPattern)
-	item, itemOK := variant.F1[0].(ast2.PatternBindPattern)
+	variant, ok := sw.F1[0].Pattern.(ast2.Pattern__VariantPattern)
+	item, itemOK := variant.F1[0].(ast2.Pattern__BindPattern)
 	if !ok || variant.F0 != "Some" || len(variant.F1) != 1 || !itemOK || item.F0 != "item" {
 		t.Fatalf("first pattern = %#v, want Some(item)", sw.F1[0].Pattern)
 	}
-	if _, ok := sw.F1[2].Pattern.(ast2.PatternWildcardPattern); !ok {
+	if _, ok := sw.F1[2].Pattern.(ast2.Pattern__WildcardPattern); !ok {
 		t.Fatalf("third pattern = %T, want PatternWildcardPattern", sw.F1[2].Pattern)
 	}
 }
@@ -331,21 +331,21 @@ func select(value: Maybe[Int]) -> Int
   end
 end
 `)
-	parsed, ok := got.(ResultOk[ast2.File, string])
+	parsed, ok := got.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFile failed: %v", got)
 	}
-	fn := parsed.F0.Decls[1].(ast2.DeclFuncDecl)
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
-	sw, ok := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindSwitchExpr)
+	fn := parsed.F0.Decls[1].(ast2.Decl__FuncDecl)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	sw, ok := body.F0[0].(ast2.Stmt__ExprStmt).F0.Kind.(ast2.ExprKind__SwitchExpr)
 	if !ok {
-		t.Fatalf("body = %T, want ExprSwitchExpr", body.F0[0].(ast2.StmtExprStmt).F0)
+		t.Fatalf("body = %T, want ExprSwitchExpr", body.F0[0].(ast2.Stmt__ExprStmt).F0)
 	}
-	call, ok := sw.F0.Kind.(ast2.ExprKindCallExpr)
+	call, ok := sw.F0.Kind.(ast2.ExprKind__CallExpr)
 	if !ok {
 		t.Fatalf("switch target = %T, want ExprCallExpr", sw.F0.Kind)
 	}
-	field, ok := call.F0.Kind.(ast2.ExprKindFieldExpr)
+	field, ok := call.F0.Kind.(ast2.ExprKind__FieldExpr)
 	if !ok || field.F1 != "map" {
 		t.Fatalf("switch call callee = %#v, want value.map", call.F0.Kind)
 	}
@@ -368,17 +368,17 @@ func unwrap(value: Maybe[Int]) -> Int
   end
 end
 `)
-	parsed, ok := got.(ResultOk[ast2.File, string])
+	parsed, ok := got.(Result__Ok[ast2.File, string])
 	if !ok {
 		t.Fatalf("ParseFile failed: %v", got)
 	}
-	fn := parsed.F0.Decls[1].(ast2.DeclFuncDecl)
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
-	sw := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindSwitchExpr)
+	fn := parsed.F0.Decls[1].(ast2.Decl__FuncDecl)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	sw := body.F0[0].(ast2.Stmt__ExprStmt).F0.Kind.(ast2.ExprKind__SwitchExpr)
 	if len(sw.F1) != 2 {
 		t.Fatalf("case count = %d, want 2", len(sw.F1))
 	}
-	if _, ok := sw.F1[0].Body.Kind.(ast2.ExprKindIdentExpr); !ok {
+	if _, ok := sw.F1[0].Body.Kind.(ast2.ExprKind__IdentExpr); !ok {
 		t.Fatalf("block case body = %T, want ast2.ExprIdentExpr", sw.F1[0].Body)
 	}
 }
@@ -404,7 +404,7 @@ end
 `
 
 	got := ParseFile(src)
-	ok, yes := got.(ResultOk[ast2.File, string])
+	ok, yes := got.(Result__Ok[ast2.File, string])
 	if !yes {
 		t.Fatalf("ParseFile failed: %v", got)
 	}
@@ -425,20 +425,20 @@ func calc(a: Int, b: Int, c: Int, d: Int) -> Int
 end
 `)
 
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
 	if len(body.F0) != 1 {
 		t.Fatalf("body expr count = %d, want 1", len(body.F0))
 	}
-	first := body.F0[0].(ast2.StmtExprStmt)
-	root := first.F0.Kind.(ast2.ExprKindBinaryExpr)
+	first := body.F0[0].(ast2.Stmt__ExprStmt)
+	root := first.F0.Kind.(ast2.ExprKind__BinaryExpr)
 	if root.F0 != "-" {
 		t.Fatalf("root op = %q, want -", root.F0)
 	}
-	left := (root.F1).Kind.(ast2.ExprKindBinaryExpr)
+	left := (root.F1).Kind.(ast2.ExprKind__BinaryExpr)
 	if left.F0 != "+" {
 		t.Fatalf("left op = %q, want +", left.F0)
 	}
-	rightMul := (left.F2).Kind.(ast2.ExprKindBinaryExpr)
+	rightMul := (left.F2).Kind.(ast2.ExprKind__BinaryExpr)
 	if rightMul.F0 != "*" {
 		t.Fatalf("nested op = %q, want *", rightMul.F0)
 	}
@@ -452,25 +452,25 @@ func ok(a: Bool, b: Bool, c: Bool, n: Int) -> Bool
 end
 `)
 
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
-	first := body.F0[0].(ast2.StmtExprStmt)
-	root := first.F0.Kind.(ast2.ExprKindBinaryExpr)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	first := body.F0[0].(ast2.Stmt__ExprStmt)
+	root := first.F0.Kind.(ast2.ExprKind__BinaryExpr)
 	if root.F0 != "||" {
 		t.Fatalf("root op = %q, want ||", root.F0)
 	}
-	left := (root.F1).Kind.(ast2.ExprKindUnaryExpr)
+	left := (root.F1).Kind.(ast2.ExprKind__UnaryExpr)
 	if left.F0 != "!" {
 		t.Fatalf("left unary op = %q, want !", left.F0)
 	}
-	right := (root.F2).Kind.(ast2.ExprKindBinaryExpr)
+	right := (root.F2).Kind.(ast2.ExprKind__BinaryExpr)
 	if right.F0 != "&&" {
 		t.Fatalf("right op = %q, want &&", right.F0)
 	}
-	cmp := (right.F2).Kind.(ast2.ExprKindBinaryExpr)
+	cmp := (right.F2).Kind.(ast2.ExprKind__BinaryExpr)
 	if cmp.F0 != ">" {
 		t.Fatalf("comparison op = %q, want >", cmp.F0)
 	}
-	neg := (cmp.F1).Kind.(ast2.ExprKindUnaryExpr)
+	neg := (cmp.F1).Kind.(ast2.ExprKind__UnaryExpr)
 	if neg.F0 != "-" {
 		t.Fatalf("comparison left unary op = %q, want -", neg.F0)
 	}
@@ -490,19 +490,19 @@ func choose(a: Int) -> Int
 end
 `)
 
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
-	first := body.F0[0].(ast2.StmtExprStmt)
-	root := first.F0.Kind.(ast2.ExprKindIfExpr)
-	thenExpr := (root.F1).Kind.(ast2.ExprKindNumberExpr)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	first := body.F0[0].(ast2.Stmt__ExprStmt)
+	root := first.F0.Kind.(ast2.ExprKind__IfExpr)
+	thenExpr := (root.F1).Kind.(ast2.ExprKind__NumberExpr)
 	if thenExpr.F0 != "1" {
 		t.Fatalf("then value = %q, want 1", thenExpr.F0)
 	}
-	nested := (root.F2).Kind.(ast2.ExprKindIfExpr)
-	nestedThen := (nested.F1).Kind.(ast2.ExprKindNumberExpr)
+	nested := (root.F2).Kind.(ast2.ExprKind__IfExpr)
+	nestedThen := (nested.F1).Kind.(ast2.ExprKind__NumberExpr)
 	if nestedThen.F0 != "2" {
 		t.Fatalf("elsif value = %q, want 2", nestedThen.F0)
 	}
-	elseExpr := (nested.F2).Kind.(ast2.ExprKindNumberExpr)
+	elseExpr := (nested.F2).Kind.(ast2.ExprKind__NumberExpr)
 	if elseExpr.F0 != "3" {
 		t.Fatalf("else value = %q, want 3", elseExpr.F0)
 	}
@@ -517,11 +517,11 @@ func foo() -> Int
 end
 `)
 
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
 	if len(body.F0) != 2 {
 		t.Fatalf("body expr count = %d, want 2", len(body.F0))
 	}
-	varStmt, ok := body.F0[0].(ast2.StmtVarStmt)
+	varStmt, ok := body.F0[0].(ast2.Stmt__VarStmt)
 	if !ok {
 		t.Fatalf("first stmt = %T, want StmtVarStmt", body.F0[0])
 	}
@@ -541,15 +541,15 @@ func foo(n: Int) -> Int
 end
 `)
 
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
 	if len(body.F0) != 2 {
 		t.Fatalf("body expr count = %d, want 2", len(body.F0))
 	}
-	whileStmt, ok := body.F0[0].(ast2.StmtWhileStmt)
+	whileStmt, ok := body.F0[0].(ast2.Stmt__WhileStmt)
 	if !ok {
 		t.Fatalf("first stmt = %T, want StmtWhileStmt", body.F0[0])
 	}
-	cond := whileStmt.F0.Kind.(ast2.ExprKindBinaryExpr)
+	cond := whileStmt.F0.Kind.(ast2.ExprKind__BinaryExpr)
 	if cond.F0 != ">" {
 		t.Fatalf("while cond op = %q, want >", cond.F0)
 	}
@@ -563,12 +563,12 @@ func foo(n: Int) -> Int
 end
 `)
 
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
-	retStmt, ok := body.F0[0].(ast2.StmtReturnWithStmt)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	retStmt, ok := body.F0[0].(ast2.Stmt__ReturnWithStmt)
 	if !ok {
 		t.Fatalf("stmt = %T, want StmtReturnWithStmt", body.F0[0])
 	}
-	identExpr := retStmt.F0.Kind.(ast2.ExprKindIdentExpr)
+	identExpr := retStmt.F0.Kind.(ast2.ExprKind__IdentExpr)
 	if identExpr.F0 != "n" {
 		t.Fatalf("return ident = %q, want n", identExpr.F0)
 	}
@@ -582,8 +582,8 @@ func foo(n: Int)
 end
 `)
 
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
-	_, ok := body.F0[0].(ast2.StmtReturnStmt)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	_, ok := body.F0[0].(ast2.Stmt__ReturnStmt)
 	if !ok {
 		t.Fatalf("stmt = %T, want StmtReturnStmt", body.F0[0])
 	}
@@ -597,9 +597,9 @@ func foo(n: Int) -> Int
 end
 `)
 
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
-	first := body.F0[0].(ast2.StmtExprStmt)
-	_, ok := first.F0.Kind.(ast2.ExprKindInlineGoExpr)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	first := body.F0[0].(ast2.Stmt__ExprStmt)
+	_, ok := first.F0.Kind.(ast2.ExprKind__InlineGoExpr)
 	if !ok {
 		t.Fatalf("expr = %T, want ExprInlineGoExpr", first.F0)
 	}
@@ -612,8 +612,8 @@ func foo(n: Int) -> String
   go[String]{code: "{T}({v})" in v = n type T = String}
 end
 `)
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
-	expr := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindInlineGoExpr)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	expr := body.F0[0].(ast2.Stmt__ExprStmt).F0.Kind.(ast2.ExprKind__InlineGoExpr)
 	if len(expr.F2) != 1 || expr.F2[0].Name != "v" {
 		t.Fatalf("value operands = %#v, want one v operand", expr.F2)
 	}
@@ -622,18 +622,18 @@ end
 	}
 }
 
-func parseSingleFunc(t *testing.T, src string) ast2.DeclFuncDecl {
+func parseSingleFunc(t *testing.T, src string) ast2.Decl__FuncDecl {
 	t.Helper()
 
 	got := ParseFile(src)
-	ok, yes := got.(ResultOk[ast2.File, string])
+	ok, yes := got.(Result__Ok[ast2.File, string])
 	if !yes {
 		t.Fatalf("ParseFile failed: %v", got)
 	}
 	if len(ok.F0.Decls) != 1 {
 		t.Fatalf("decl count = %d, want 1", len(ok.F0.Decls))
 	}
-	fn, yes := ok.F0.Decls[0].(ast2.DeclFuncDecl)
+	fn, yes := ok.F0.Decls[0].(ast2.Decl__FuncDecl)
 	if !yes {
 		t.Fatalf("decl type = %T, want DeclFuncDecl", ok.F0.Decls[0])
 	}
@@ -650,21 +650,21 @@ func foo() -> Int
 end
 `)
 
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
 	if len(body.F0) != 3 {
 		t.Fatalf("body expr count = %d, want 3", len(body.F0))
 	}
-	assign, ok := body.F0[1].(ast2.StmtAssignStmt)
+	assign, ok := body.F0[1].(ast2.Stmt__AssignStmt)
 	if !ok {
 		t.Fatalf("second stmt = %T, want StmtAssignStmt", body.F0[1])
 	}
 	lhs := assign.F0
 	rhs := assign.F1
-	if lhs.Kind.(ast2.ExprKindIdentExpr).F0 != "x" {
-		t.Fatalf("assign lhs = %q, want x", lhs.Kind.(ast2.ExprKindIdentExpr).F0)
+	if lhs.Kind.(ast2.ExprKind__IdentExpr).F0 != "x" {
+		t.Fatalf("assign lhs = %q, want x", lhs.Kind.(ast2.ExprKind__IdentExpr).F0)
 	}
-	if rhs.Kind.(ast2.ExprKindNumberExpr).F0 != "1" {
-		t.Fatalf("assign rhs = %q, want 1", rhs.Kind.(ast2.ExprKindNumberExpr).F0)
+	if rhs.Kind.(ast2.ExprKind__NumberExpr).F0 != "1" {
+		t.Fatalf("assign rhs = %q, want 1", rhs.Kind.(ast2.ExprKind__NumberExpr).F0)
 	}
 }
 
@@ -677,13 +677,13 @@ func foo()
 end
 `)
 
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
-	assign, ok := body.F0[1].(ast2.StmtAssignStmt)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	assign, ok := body.F0[1].(ast2.Stmt__AssignStmt)
 	if !ok {
 		t.Fatalf("second stmt = %T, want StmtAssignStmt", body.F0[1])
 	}
 	lhs := assign.F0
-	field, ok := lhs.Kind.(ast2.ExprKindFieldExpr)
+	field, ok := lhs.Kind.(ast2.ExprKind__FieldExpr)
 	if !ok {
 		t.Fatalf("assign lhs = %T, want ExprFieldExpr", lhs)
 	}
@@ -691,12 +691,12 @@ end
 		t.Fatalf("assign field name = %q, want x", field.F1)
 	}
 	obj := field.F0
-	if obj.Kind.(ast2.ExprKindIdentExpr).F0 != "p" {
-		t.Fatalf("assign field obj = %q, want p", obj.Kind.(ast2.ExprKindIdentExpr).F0)
+	if obj.Kind.(ast2.ExprKind__IdentExpr).F0 != "p" {
+		t.Fatalf("assign field obj = %q, want p", obj.Kind.(ast2.ExprKind__IdentExpr).F0)
 	}
 	rhs := assign.F1
-	if rhs.Kind.(ast2.ExprKindNumberExpr).F0 != "99" {
-		t.Fatalf("assign rhs = %q, want 99", rhs.Kind.(ast2.ExprKindNumberExpr).F0)
+	if rhs.Kind.(ast2.ExprKind__NumberExpr).F0 != "99" {
+		t.Fatalf("assign rhs = %q, want 99", rhs.Kind.(ast2.ExprKind__NumberExpr).F0)
 	}
 }
 
@@ -708,14 +708,14 @@ func foo()
 end
 `)
 
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
-	assign, ok := body.F0[0].(ast2.StmtAssignStmt)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	assign, ok := body.F0[0].(ast2.Stmt__AssignStmt)
 	if !ok {
 		t.Fatalf("first stmt = %T, want StmtAssignStmt", body.F0[0])
 	}
 	// lhs = cfg.settings.theme
 	lhs := assign.F0
-	themeField, ok := lhs.Kind.(ast2.ExprKindFieldExpr)
+	themeField, ok := lhs.Kind.(ast2.ExprKind__FieldExpr)
 	if !ok {
 		t.Fatalf("assign lhs = %T, want ExprFieldExpr", lhs)
 	}
@@ -724,7 +724,7 @@ end
 	}
 	// cfg.settings
 	inner := themeField.F0
-	settingsField, ok := inner.Kind.(ast2.ExprKindFieldExpr)
+	settingsField, ok := inner.Kind.(ast2.ExprKind__FieldExpr)
 	if !ok {
 		t.Fatalf("inner = %T, want ExprFieldExpr", inner)
 	}
@@ -732,12 +732,12 @@ end
 		t.Fatalf("inner field = %q, want settings", settingsField.F1)
 	}
 	cfg := settingsField.F0
-	if cfg.Kind.(ast2.ExprKindIdentExpr).F0 != "cfg" {
-		t.Fatalf("base ident = %q, want cfg", cfg.Kind.(ast2.ExprKindIdentExpr).F0)
+	if cfg.Kind.(ast2.ExprKind__IdentExpr).F0 != "cfg" {
+		t.Fatalf("base ident = %q, want cfg", cfg.Kind.(ast2.ExprKind__IdentExpr).F0)
 	}
 	rhs := assign.F1
-	if rhs.Kind.(ast2.ExprKindStringExpr).F0 != "dark" {
-		t.Fatalf("assign rhs = %q, want dark", rhs.Kind.(ast2.ExprKindStringExpr).F0)
+	if rhs.Kind.(ast2.ExprKind__StringExpr).F0 != "dark" {
+		t.Fatalf("assign rhs = %q, want dark", rhs.Kind.(ast2.ExprKind__StringExpr).F0)
 	}
 }
 
@@ -752,11 +752,11 @@ func foo() -> Int
 end
 `)
 
-	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
 	if len(body.F0) != 4 {
 		t.Fatalf("body expr count = %d, want 4", len(body.F0))
 	}
-	_, ok := body.F0[2].(ast2.StmtAssignStmt)
+	_, ok := body.F0[2].(ast2.Stmt__AssignStmt)
 	if !ok {
 		t.Fatalf("third stmt = %T, want StmtAssignStmt", body.F0[2])
 	}
@@ -774,11 +774,11 @@ end
 	if body.Pos.Line != 4 || body.Pos.Column != 3 {
 		t.Fatalf("body position = %d:%d, want 4:3", body.Pos.Line, body.Pos.Column)
 	}
-	root := body.Kind.(ast2.ExprKindBlockExpr).F0[0].(ast2.StmtExprStmt).F0
+	root := body.Kind.(ast2.ExprKind__BlockExpr).F0[0].(ast2.Stmt__ExprStmt).F0
 	if root.Pos.Line != 4 || root.Pos.Column != 3 {
 		t.Fatalf("root position = %d:%d, want 4:3", root.Pos.Line, root.Pos.Column)
 	}
-	binary := root.Kind.(ast2.ExprKindBinaryExpr)
+	binary := root.Kind.(ast2.ExprKind__BinaryExpr)
 	if binary.F1.Pos.Line != 4 || binary.F1.Pos.Column != 3 {
 		t.Fatalf("left operand position = %d:%d, want 4:3", binary.F1.Pos.Line, binary.F1.Pos.Column)
 	}

@@ -21,102 +21,60 @@ func MygoIN4ListM4Tail[T any](self List[T]) Option[List[T]] {
 	})
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Each[T any](c List[T], fn func(T)) {
-<<<<<<< HEAD
 	var current *List[T] = &c
 	var done bool = false
 	for !done {
 		fn(current.head)
 		__mygo_expr_0 := current.tail
-		if _, ok := __mygo_expr_0.(OptionNone[*List[T]]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[*List[T]]); ok {
 			done = true
 		} else {
-			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[*List[T]]); ok {
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*List[T]]); ok {
 				current = __mygo_match___mygo_expr_1.F0
 			} else {
-=======
-	var current_10 *List[T] = &c
-	var done_11 bool = false
-	for !done_11 {
-		fn(current_10.head)
-		if _, ok := current_10.tail.(Option__None[*List[T]]); ok {
-			done_11 = true
-		} else {
-			if v_7, ok := current_10.tail.(Option__Some[*List[T]]); ok {
-				current_10 = v_7.F0
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 			}
 		}
 	}
 	return
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Len[T any](c List[T]) int {
-<<<<<<< HEAD
 	var count int = 0
 	var current *List[T] = &c
 	var done bool = false
 	for !done {
 		count = count + 1
 		__mygo_expr_0 := current.tail
-		if _, ok := __mygo_expr_0.(OptionNone[*List[T]]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[*List[T]]); ok {
 			done = true
 		} else {
-			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[*List[T]]); ok {
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*List[T]]); ok {
 				current = __mygo_match___mygo_expr_1.F0
 			} else {
-=======
-	var expr_15 int
-	var count_12 int = 0
-	var current_13 *List[T] = &c
-	var done_14 bool = false
-	for !done_14 {
-		count_12 = count_12 + 1
-		if _, ok := current_13.tail.(Option__None[*List[T]]); ok {
-			done_14 = true
-		} else {
-			if v_9, ok := current_13.tail.(Option__Some[*List[T]]); ok {
-				current_13 = v_9.F0
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 			}
 		}
 	}
 	return count
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Map[T any, B any](c List[T], fn func(T) B) List[B] {
-<<<<<<< HEAD
 	var done bool = false
 	var headVal B = fn(c.head)
 	var result List[B] = List[B]{head: headVal, tail: None[*List[B]]()}
 	var current *List[T] = &c
 	for !done {
 		__mygo_expr_0 := current.tail
-		if _, ok := __mygo_expr_0.(OptionNone[*List[T]]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[*List[T]]); ok {
 			done = true
 		} else {
-			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[*List[T]]); ok {
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*List[T]]); ok {
 				current = __mygo_match___mygo_expr_1.F0
 				result = List[B]{head: fn(current.head), tail: Some[*List[B]](&result)}
 			} else {
-=======
-	var expr_20 List[B]
-	var done_16 bool = false
-	var headVal_17 B = fn(c.head)
-	var result_18 List[B] = List[B]{head: headVal_17, tail: None[*List[B]]()}
-	var current_19 *List[T] = &c
-	for !done_16 {
-		if _, ok := current_19.tail.(Option__None[*List[T]]); ok {
-			done_16 = true
-		} else {
-			if v_11, ok := current_19.tail.(Option__Some[*List[T]]); ok {
-				current_19 = v_11.F0
-				result_18 = List[B]{head: fn(current_19.head), tail: Some[*List[B]](&result_18)}
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 			}
 		}
 	}
 	return result
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM6Filter[T any](c List[T], fn func(T) bool) List[T] {
-<<<<<<< HEAD
 	var done bool = false
 	var current *List[T] = &c
 	var result List[T] = List[T]{head: current.head, tail: None[*List[T]]()}
@@ -126,59 +84,30 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM6Filter[T any](
 		} else {
 		}
 		__mygo_expr_0 := current.tail
-		if _, ok := __mygo_expr_0.(OptionNone[*List[T]]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[*List[T]]); ok {
 			done = true
 		} else {
-			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[*List[T]]); ok {
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*List[T]]); ok {
 				current = __mygo_match___mygo_expr_1.F0
 			} else {
-=======
-	var expr_24 List[T]
-	var done_21 bool = false
-	var current_22 *List[T] = &c
-	var result_23 List[T] = List[T]{head: current_22.head, tail: None[*List[T]]()}
-	for !done_21 {
-		if fn(current_22.head) {
-			result_23 = List[T]{head: current_22.head, tail: Some[*List[T]](&result_23)}
-		}
-		if _, ok := current_22.tail.(Option__None[*List[T]]); ok {
-			done_21 = true
-		} else {
-			if v_13, ok := current_22.tail.(Option__Some[*List[T]]); ok {
-				current_22 = v_13.F0
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 			}
 		}
 	}
 	return result
 }
 func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Fold[T any, B any](c List[T], initial B, fn func(B, T) B) B {
-<<<<<<< HEAD
 	var acc B = initial
 	var done bool = false
 	var current *List[T] = &c
 	for !done {
 		acc = fn(acc, current.head)
 		__mygo_expr_0 := current.tail
-		if _, ok := __mygo_expr_0.(OptionNone[*List[T]]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[*List[T]]); ok {
 			done = true
 		} else {
-			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[*List[T]]); ok {
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*List[T]]); ok {
 				current = __mygo_match___mygo_expr_1.F0
 			} else {
-=======
-	var expr_28 B
-	var acc_25 B = initial
-	var done_26 bool = false
-	var current_27 *List[T] = &c
-	for !done_26 {
-		acc_25 = fn(acc_25, current_27.head)
-		if _, ok := current_27.tail.(Option__None[*List[T]]); ok {
-			done_26 = true
-		} else {
-			if v_15, ok := current_27.tail.(Option__Some[*List[T]]); ok {
-				current_27 = v_15.F0
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 			}
 		}
 	}
@@ -193,21 +122,13 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Find[T any](c 
 			result = Some[*T](&current.head)
 			done = true
 		} else {
-<<<<<<< HEAD
 			__mygo_expr_0 := current.tail
-			if _, ok := __mygo_expr_0.(OptionNone[*List[T]]); ok {
+			if _, ok := __mygo_expr_0.(Option__None[*List[T]]); ok {
 				done = true
 			} else {
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[*List[T]]); ok {
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*List[T]]); ok {
 					current = __mygo_match___mygo_expr_1.F0
 				} else {
-=======
-			if _, ok := current_31.tail.(Option__None[*List[T]]); ok {
-				done_29 = true
-			} else {
-				if v_17, ok := current_31.tail.(Option__Some[*List[T]]); ok {
-					current_31 = v_17.F0
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 				}
 			}
 		}
@@ -223,21 +144,13 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM8Contains[T any
 			result = true
 			done = true
 		} else {
-<<<<<<< HEAD
 			__mygo_expr_0 := current.tail
-			if _, ok := __mygo_expr_0.(OptionNone[*List[T]]); ok {
+			if _, ok := __mygo_expr_0.(Option__None[*List[T]]); ok {
 				done = true
 			} else {
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[*List[T]]); ok {
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*List[T]]); ok {
 					current = __mygo_match___mygo_expr_1.F0
 				} else {
-=======
-			if _, ok := current_35.tail.(Option__None[*List[T]]); ok {
-				done_33 = true
-			} else {
-				if v_19, ok := current_35.tail.(Option__Some[*List[T]]); ok {
-					current_35 = v_19.F0
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 				}
 			}
 		}

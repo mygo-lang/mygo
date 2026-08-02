@@ -170,13 +170,13 @@ func TestPOrElseKeepsFurthestAttemptError(t *testing.T) {
 	} else {
 	}
 	__mygo_expr_0 := result.Error
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[ParseError]); ok {
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ParseError]); ok {
 		if __mygo_match___mygo_expr_1.F0.Position.Offset != 2 {
 			t.Fatalf("error offset = %d, want 2", __mygo_match___mygo_expr_1.F0.Position.Offset)
 		} else {
 		}
 	} else {
-		if _, ok := __mygo_expr_0.(OptionNone[ParseError]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[ParseError]); ok {
 			t.Fatal("choice should retain a parse error")
 		} else {
 		}
@@ -219,13 +219,13 @@ func TestPChoiceMergesExpectedAtSamePosition(t *testing.T) {
 	} else {
 	}
 	__mygo_expr_0 := result.Error
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[ParseError]); ok {
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ParseError]); ok {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Expected) != 2 {
 			t.Fatalf("expected alternatives = %d, want 2", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Expected))
 		} else {
 		}
 	} else {
-		if _, ok := __mygo_expr_0.(OptionNone[ParseError]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[ParseError]); ok {
 			t.Fatal("choice should retain a parse error")
 		} else {
 		}
@@ -405,27 +405,16 @@ func TestPOptionalSucceedsWhenPresent(t *testing.T) {
 	result := ParseInput(p, "ab")
 	if !result.Ok {
 		t.Fatal("POptional should succeed")
-<<<<<<< HEAD
 	} else {
 	}
 	__mygo_expr_0 := result.Value
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[rune]); ok {
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[rune]); ok {
 		if __mygo_match___mygo_expr_1.F0 != 'a' {
 			t.Fatalf("POptional Some value = %d, want %d", __mygo_match___mygo_expr_1.F0, 'a')
 		} else {
 		}
 	} else {
-		if _, ok := __mygo_expr_0.(OptionNone[rune]); ok {
-=======
-	}
-	if v_4, ok := result_81.Value.(Option__Some[rune]); ok {
-		if v_4.F0 != 'a' {
-			t.Fatalf("POptional Some value = %d, want %d", v_4.F0, 'a')
-		}
-		return
-	} else {
-		if _, ok := result_81.Value.(Option__None[rune]); ok {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+		if _, ok := __mygo_expr_0.(Option__None[rune]); ok {
 			t.Fatal("POptional should return Some when parser succeeds")
 		} else {
 		}
@@ -437,20 +426,12 @@ func TestPOptionalReturnsNoneWhenAbsent(t *testing.T) {
 	result := ParseInput(p, "xb")
 	if !result.Ok {
 		t.Fatal("POptional should succeed with None")
-<<<<<<< HEAD
 	} else {
 	}
 	__mygo_expr_0 := result.Value
-	if _, ok := __mygo_expr_0.(OptionNone[rune]); ok {
+	if _, ok := __mygo_expr_0.(Option__None[rune]); ok {
 	} else {
-		if _, ok := __mygo_expr_0.(OptionSome[rune]); ok {
-=======
-	}
-	if _, ok := result_83.Value.(Option__None[rune]); ok {
-		return
-	} else {
-		if _, ok := result_83.Value.(Option__Some[rune]); ok {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+		if _, ok := __mygo_expr_0.(Option__Some[rune]); ok {
 			t.Fatal("POptional should return None when parser fails without consuming")
 		} else {
 		}
@@ -881,7 +862,6 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 	result := ParseInput(words, "hello,world,foo")
 	if !result.Ok {
 		t.Fatal("parse words should succeed")
-<<<<<<< HEAD
 	} else {
 	}
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result.Value) != 3 {
@@ -889,73 +869,37 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 	} else {
 	}
 	w0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result.Value, 0)
-	if __mygo_match___mygo_expr_0, ok := w0.(OptionSome[string]); ok {
+	if __mygo_match___mygo_expr_0, ok := w0.(Option__Some[string]); ok {
 		if __mygo_match___mygo_expr_0.F0 != "hello" {
 			t.Fatalf("words[0] = %q, want %q", __mygo_match___mygo_expr_0.F0, "hello")
 		} else {
 		}
 	} else {
-		if _, ok := w0.(OptionNone[string]); ok {
-=======
-	}
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_154.Value) != 3 {
-		t.Fatalf("words length = %d, want 3", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_154.Value))
-	}
-	w0_155 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_154.Value, 0)
-	if v_8, ok := w0_155.(Option__Some[string]); ok {
-		if v_8.F0 != "hello" {
-			t.Fatalf("words[0] = %q, want %q", v_8.F0, "hello")
-		}
-		return
-	} else {
-		if _, ok := w0_155.(Option__None[string]); ok {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+		if _, ok := w0.(Option__None[string]); ok {
 			t.Fatal("words[0] should be Some")
 		} else {
 		}
 	}
-<<<<<<< HEAD
 	w1 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result.Value, 1)
-	if __mygo_match___mygo_expr_1, ok := w1.(OptionSome[string]); ok {
+	if __mygo_match___mygo_expr_1, ok := w1.(Option__Some[string]); ok {
 		if __mygo_match___mygo_expr_1.F0 != "world" {
 			t.Fatalf("words[1] = %q, want %q", __mygo_match___mygo_expr_1.F0, "world")
 		} else {
-=======
-	w1_156 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_154.Value, 1)
-	if v_10, ok := w1_156.(Option__Some[string]); ok {
-		if v_10.F0 != "world" {
-			t.Fatalf("words[1] = %q, want %q", v_10.F0, "world")
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 		}
 	} else {
-<<<<<<< HEAD
-		if _, ok := w1.(OptionNone[string]); ok {
-=======
-		if _, ok := w1_156.(Option__None[string]); ok {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+		if _, ok := w1.(Option__None[string]); ok {
 			t.Fatal("words[1] should be Some")
 		} else {
 		}
 	}
-<<<<<<< HEAD
 	w2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result.Value, 2)
-	if __mygo_match___mygo_expr_2, ok := w2.(OptionSome[string]); ok {
+	if __mygo_match___mygo_expr_2, ok := w2.(Option__Some[string]); ok {
 		if __mygo_match___mygo_expr_2.F0 != "foo" {
 			t.Fatalf("words[2] = %q, want %q", __mygo_match___mygo_expr_2.F0, "foo")
 		} else {
-=======
-	w2_157 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_154.Value, 2)
-	if v_12, ok := w2_157.(Option__Some[string]); ok {
-		if v_12.F0 != "foo" {
-			t.Fatalf("words[2] = %q, want %q", v_12.F0, "foo")
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 		}
 	} else {
-<<<<<<< HEAD
-		if _, ok := w2.(OptionNone[string]); ok {
-=======
-		if _, ok := w2_157.(Option__None[string]); ok {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+		if _, ok := w2.(Option__None[string]); ok {
 			t.Fatal("words[2] should be Some")
 		} else {
 		}
@@ -1024,27 +968,16 @@ func TestPOptionalWithBetween(t *testing.T) {
 	result1 := ParseInput(group, "(x)y")
 	if !result1.Ok {
 		t.Fatal("optional group with parens should succeed")
-<<<<<<< HEAD
 	} else {
 	}
 	__mygo_expr_0 := result1.Value
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[rune]); ok {
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[rune]); ok {
 		if __mygo_match___mygo_expr_1.F0 != 'x' {
 			t.Fatalf("Some value = %d, want %d", __mygo_match___mygo_expr_1.F0, 'x')
 		} else {
 		}
 	} else {
-		if _, ok := __mygo_expr_0.(OptionNone[rune]); ok {
-=======
-	}
-	if v_14, ok := result1_170.Value.(Option__Some[rune]); ok {
-		if v_14.F0 != 'x' {
-			t.Fatalf("Some value = %d, want %d", v_14.F0, 'x')
-		}
-		return
-	} else {
-		if _, ok := result1_170.Value.(Option__None[rune]); ok {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+		if _, ok := __mygo_expr_0.(Option__None[rune]); ok {
 			t.Fatal("expected Some")
 		} else {
 		}
@@ -1052,20 +985,12 @@ func TestPOptionalWithBetween(t *testing.T) {
 	result2 := ParseInput(group, "xy")
 	if !result2.Ok {
 		t.Fatal("optional group without parens should succeed")
-<<<<<<< HEAD
 	} else {
 	}
 	__mygo_expr_2 := result2.Value
-	if _, ok := __mygo_expr_2.(OptionNone[rune]); ok {
+	if _, ok := __mygo_expr_2.(Option__None[rune]); ok {
 	} else {
-		if _, ok := __mygo_expr_2.(OptionSome[rune]); ok {
-=======
-	}
-	if _, ok := result2_171.Value.(Option__None[rune]); ok {
-		return
-	} else {
-		if _, ok := result2_171.Value.(Option__Some[rune]); ok {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+		if _, ok := __mygo_expr_2.(Option__Some[rune]); ok {
 			t.Fatal("expected None")
 		} else {
 		}
@@ -1139,20 +1064,12 @@ func TestPStringWithUTF8(t *testing.T) {
 	}
 }
 func TestReplyEmptyError(t *testing.T) {
-<<<<<<< HEAD
 	pos := Position{Offset: 10, Line: 2, Column: 5}
 	err := EmptyError(pos)
-	if __mygo_match___mygo_expr_0, ok := err.(OptionSome[ParseError]); ok {
+	if __mygo_match___mygo_expr_0, ok := err.(Option__Some[ParseError]); ok {
 		if __mygo_match___mygo_expr_0.F0.Message != "" {
 			t.Fatalf("EmptyError message = %q, want empty", __mygo_match___mygo_expr_0.F0.Message)
 		} else {
-=======
-	pos_182 := Position{Offset: 10, Line: 2, Column: 5}
-	err_183 := EmptyError(pos_182)
-	if v_18, ok := err_183.(Option__Some[ParseError]); ok {
-		if v_18.F0.Message != "" {
-			t.Fatalf("EmptyError message = %q, want empty", v_18.F0.Message)
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 		}
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_0.F0.Expected) != 0 {
 			t.Fatalf("EmptyError expected length = %d, want 0", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_0.F0.Expected))
@@ -1163,11 +1080,7 @@ func TestReplyEmptyError(t *testing.T) {
 		} else {
 		}
 	} else {
-<<<<<<< HEAD
-		if _, ok := err.(OptionNone[ParseError]); ok {
-=======
-		if _, ok := err_183.(Option__None[ParseError]); ok {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+		if _, ok := err.(Option__None[ParseError]); ok {
 			t.Fatal("EmptyError returned None")
 		} else {
 		}
@@ -1175,33 +1088,20 @@ func TestReplyEmptyError(t *testing.T) {
 	return
 }
 func TestReplyErrorAt(t *testing.T) {
-<<<<<<< HEAD
 	pos := Position{Offset: 0, Line: 1, Column: 1}
 	expected := []string{"digit", "letter"}
 	err := ErrorAt(pos, "expected digit", expected)
-	if __mygo_match___mygo_expr_0, ok := err.(OptionSome[ParseError]); ok {
+	if __mygo_match___mygo_expr_0, ok := err.(Option__Some[ParseError]); ok {
 		if __mygo_match___mygo_expr_0.F0.Message != "expected digit" {
 			t.Fatalf("ErrorAt message = %q, want %q", __mygo_match___mygo_expr_0.F0.Message, "expected digit")
 		} else {
-=======
-	pos_184 := Position{Offset: 0, Line: 1, Column: 1}
-	expected_185 := []string{"digit", "letter"}
-	err_186 := ErrorAt(pos_184, "expected digit", expected_185)
-	if v_20, ok := err_186.(Option__Some[ParseError]); ok {
-		if v_20.F0.Message != "expected digit" {
-			t.Fatalf("ErrorAt message = %q, want %q", v_20.F0.Message, "expected digit")
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 		}
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_0.F0.Expected) != 2 {
 			t.Fatalf("ErrorAt expected length = %d, want 2", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_0.F0.Expected))
 		} else {
 		}
 	} else {
-<<<<<<< HEAD
-		if _, ok := err.(OptionNone[ParseError]); ok {
-=======
-		if _, ok := err_186.(Option__None[ParseError]); ok {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+		if _, ok := err.(Option__None[ParseError]); ok {
 			t.Fatal("ErrorAt returned None")
 		} else {
 		}
@@ -1209,29 +1109,16 @@ func TestReplyErrorAt(t *testing.T) {
 	return
 }
 func TestReplyWithExpected(t *testing.T) {
-<<<<<<< HEAD
 	pos := Position{Offset: 0, Line: 1, Column: 1}
 	err := ErrorAt(pos, "expected", []string{"digit"})
 	err2 := WithExpected(err, "letter")
-	if __mygo_match___mygo_expr_0, ok := err2.(OptionSome[ParseError]); ok {
+	if __mygo_match___mygo_expr_0, ok := err2.(Option__Some[ParseError]); ok {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_0.F0.Expected) != 2 {
 			t.Fatalf("WithExpected expected length = %d, want 2", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_0.F0.Expected))
 		} else {
-=======
-	pos_187 := Position{Offset: 0, Line: 1, Column: 1}
-	err_188 := ErrorAt(pos_187, "expected", []string{"digit"})
-	err2_189 := WithExpected(err_188, "letter")
-	if v_22, ok := err2_189.(Option__Some[ParseError]); ok {
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_22.F0.Expected) != 2 {
-			t.Fatalf("WithExpected expected length = %d, want 2", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(v_22.F0.Expected))
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 		}
 	} else {
-<<<<<<< HEAD
-		if _, ok := err2.(OptionNone[ParseError]); ok {
-=======
-		if _, ok := err2_189.(Option__None[ParseError]); ok {
->>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
+		if _, ok := err2.(Option__None[ParseError]); ok {
 			t.Fatal("WithExpected returned None")
 		} else {
 		}
