@@ -337,6 +337,11 @@ func substituteTypeExpr(t TypeExpr, subst map[string]string) TypeExpr {
 	switch tt := t.(type) {
 	case *NamedType:
 		if subst != nil {
+			// HKT application parameter (e.g. C[K, A]) is bound under its full
+			// canonical spelling; match before recursing into the arguments.
+			if repl, ok := subst[typeString(tt, nil)]; ok {
+				return &NamedType{Name: repl}
+			}
 			if repl, ok := subst[tt.Name]; ok && len(tt.Args) == 0 {
 				return &NamedType{Name: repl}
 			}
