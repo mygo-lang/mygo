@@ -650,6 +650,14 @@ func monoTypeFromGoType(t types.Type) MonoType {
 			name = pkg.Name() + "." + name
 		}
 		return TCon{Name: canonicalTypeName(name)}
+	case *types.TypeParam:
+		// A generic Go function (e.g. maps.Clone[M ~map[K,V]]) is polymorphic
+		// in its type parameters.  Rendering one as a concrete TCon("M") would
+		// force the parameter to equal the argument type and break calls such
+		// as `maps.Clone(src: Map[String, String])`.  Represent it as a type
+		// variable keyed by its index so the same parameter in the parameters
+		// and the result stays connected at every call site.
+		return TVar{ID: t.Index()}
 	}
 	return TCon{Name: canonicalTypeName(goTypeName(t))}
 }
