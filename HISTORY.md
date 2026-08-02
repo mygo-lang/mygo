@@ -1,5 +1,6 @@
 ## Recent Work
 
+- **Enum variant Go identifier separator**: Generated Go identifiers now join the enum name and variant name with `__` instead of plain concatenation: variant types `ColorGreen` → `Color__Green` and constructors `ColorGreenCtor` → `Color__Green__Ctor`. MyGO source syntax is unchanged (`Color.Green` still uses `.`). Implemented in `variantNameForEnum()`, `variantGoTypeName()`, and `enumConstructorGoName()`. The prelude `Option`/`Result` constructors keep their bare `Some`/`None`/`Ok`/`Err` names, but their variant types become `Option__Some`/`Option__None`/`Result__Ok`/`Result__Err`. Regenerated all `*.gen.go` files; updated tests and `docs/compiler/semantics.md`.
 - **Prelude moved to project root**: Moved `lib/prelude/` to project root `prelude/`. Updated all Go import paths from `github.com/mygo-lang/mygo/lib/prelude` to `github.com/mygo-lang/mygo/prelude`, and updated all test relative paths and documentation references accordingly.
 - **Option.UnwrapOr**: Added standalone `UnwrapOr[A](opt: Option[A], defaultVal: A) -> A` function in `prelude/option.mygo`.
 

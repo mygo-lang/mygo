@@ -14,78 +14,78 @@ import (
 type JsonValue interface {
 	isJsonValue()
 }
-type JsonValueJNull struct {
+type JsonValue__JNull struct {
 }
 
-func (_ JsonValueJNull) isJsonValue() {
+func (_ JsonValue__JNull) isJsonValue() {
 }
-func JsonValueJNullCtor() JsonValue {
-	return JsonValueJNull{}
+func JsonValue__JNull__Ctor() JsonValue {
+	return JsonValue__JNull{}
 }
 
-type JsonValueJBool struct {
+type JsonValue__JBool struct {
 	F0 bool
 }
 
-func (_ JsonValueJBool) isJsonValue() {
+func (_ JsonValue__JBool) isJsonValue() {
 }
-func JsonValueJBoolCtor(a0 bool) JsonValue {
-	return JsonValueJBool{F0: a0}
+func JsonValue__JBool__Ctor(a0 bool) JsonValue {
+	return JsonValue__JBool{F0: a0}
 }
 
-type JsonValueJNumber struct {
+type JsonValue__JNumber struct {
 	F0 float64
 }
 
-func (_ JsonValueJNumber) isJsonValue() {
+func (_ JsonValue__JNumber) isJsonValue() {
 }
-func JsonValueJNumberCtor(a0 float64) JsonValue {
-	return JsonValueJNumber{F0: a0}
+func JsonValue__JNumber__Ctor(a0 float64) JsonValue {
+	return JsonValue__JNumber{F0: a0}
 }
 
-type JsonValueJString struct {
+type JsonValue__JString struct {
 	F0 string
 }
 
-func (_ JsonValueJString) isJsonValue() {
+func (_ JsonValue__JString) isJsonValue() {
 }
-func JsonValueJStringCtor(a0 string) JsonValue {
-	return JsonValueJString{F0: a0}
+func JsonValue__JString__Ctor(a0 string) JsonValue {
+	return JsonValue__JString{F0: a0}
 }
 
-type JsonValueJArray struct {
+type JsonValue__JArray struct {
 	F0 []JsonValue
 }
 
-func (_ JsonValueJArray) isJsonValue() {
+func (_ JsonValue__JArray) isJsonValue() {
 }
-func JsonValueJArrayCtor(a0 []JsonValue) JsonValue {
-	return JsonValueJArray{F0: a0}
+func JsonValue__JArray__Ctor(a0 []JsonValue) JsonValue {
+	return JsonValue__JArray{F0: a0}
 }
 
-type JsonValueJObject struct {
+type JsonValue__JObject struct {
 	F0 []struct {
 		F0 string
 		F1 JsonValue
 	}
 }
 
-func (_ JsonValueJObject) isJsonValue() {
+func (_ JsonValue__JObject) isJsonValue() {
 }
-func JsonValueJObjectCtor(a0 []struct {
+func JsonValue__JObject__Ctor(a0 []struct {
 	F0 string
 	F1 JsonValue
 }) JsonValue {
-	return JsonValueJObject{F0: a0}
+	return JsonValue__JObject{F0: a0}
 }
 func MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(value JsonValue) string {
 	var expr_13 string
-	if _, ok := value.(JsonValueJNull); ok {
+	if _, ok := value.(JsonValue__JNull); ok {
 		var expr_12 string
 		expr_12 = "null"
 		expr_13 = expr_12
 	} else {
-		if v_5, ok := value.(JsonValueJBool); ok {
+		if v_5, ok := value.(JsonValue__JBool); ok {
 			var expr_11 string
 			var expr_10 string
 			if v_5.F0 {
@@ -96,17 +96,17 @@ func MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(value JsonValue
 			expr_11 = expr_10
 			expr_13 = expr_11
 		} else {
-			if v_4, ok := value.(JsonValueJNumber); ok {
+			if v_4, ok := value.(JsonValue__JNumber); ok {
 				var expr_9 string
 				expr_9 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(v_4.F0)
 				expr_13 = expr_9
 			} else {
-				if v_3, ok := value.(JsonValueJString); ok {
+				if v_3, ok := value.(JsonValue__JString); ok {
 					var expr_8 string
 					expr_8 = "\"" + jsonEscape(v_3.F0) + "\""
 					expr_13 = expr_8
 				} else {
-					if v_2, ok := value.(JsonValueJArray); ok {
+					if v_2, ok := value.(JsonValue__JArray); ok {
 						var expr_7 string
 						parts_6 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_2.F0, func(v JsonValue) string {
 							return MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(v)
@@ -114,7 +114,7 @@ func MygoIT8ToStringFN17JsonValueToStringGN9JsonValueEM8ToString(value JsonValue
 						expr_7 = "[" + strings.Join(parts_6, ",") + "]"
 						expr_13 = expr_7
 					} else {
-						if v_1, ok := value.(JsonValueJObject); ok {
+						if v_1, ok := value.(JsonValue__JObject); ok {
 							var expr_5 string
 							parts_4 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(v_1.F0, func(p struct {
 								F0 string
@@ -215,14 +215,14 @@ func ws[A any](p ps.Parser[A]) ps.Parser[A] {
 }
 func pNull() ps.Parser[JsonValue] {
 	return ps.PMap(ps.PString("null"), func(_ string) JsonValue {
-		return JsonValueJNullCtor()
+		return JsonValue__JNull__Ctor()
 	})
 }
 func pBool() ps.Parser[JsonValue] {
 	return ps.POrElse(ps.PMap(ps.PString("true"), func(_ string) JsonValue {
-		return JsonValueJBoolCtor(true)
+		return JsonValue__JBool__Ctor(true)
 	}), ps.PMap(ps.PString("false"), func(_ string) JsonValue {
-		return JsonValueJBoolCtor(false)
+		return JsonValue__JBool__Ctor(false)
 	}))
 }
 func pNumber() ps.Parser[JsonValue] {
@@ -312,9 +312,9 @@ func pNumber() ps.Parser[JsonValue] {
 				return Err[float64, error](__mygo_result_err)
 			}
 			return Ok[float64, error](__mygo_result_val)
-		}().(ResultOk[float64, error]); ok {
+		}().(Result__Ok[float64, error]); ok {
 			var expr_47 ps.Reply[JsonValue]
-			expr_47 = ps.Reply[JsonValue]{Ok: true, Consumed: true, Value: JsonValueJNumberCtor(v_8.F0), State: curState_36, Error: ps.EmptyError(curState_36.Position)}
+			expr_47 = ps.Reply[JsonValue]{Ok: true, Consumed: true, Value: JsonValue__JNumber__Ctor(v_8.F0), State: curState_36, Error: ps.EmptyError(curState_36.Position)}
 			expr_48 = expr_47
 		} else {
 			if v_7, ok := func() Result[float64, error] {
@@ -323,7 +323,7 @@ func pNumber() ps.Parser[JsonValue] {
 					return Err[float64, error](__mygo_result_err)
 				}
 				return Ok[float64, error](__mygo_result_val)
-			}().(ResultErr[float64, error]); ok {
+			}().(Result__Err[float64, error]); ok {
 				var expr_46 ps.Reply[JsonValue]
 				expr_46 = ps.Reply[JsonValue]{Ok: false, Consumed: true, Value: Zero[JsonValue](), State: curState_36, Error: ps.ErrorAt(state.Position, v_7.F0.Error(), ps.EmptyExpected())}
 				expr_48 = expr_46
@@ -370,7 +370,7 @@ func pString() ps.Parser[JsonValue] {
 									return Ok[int64, error](__mygo_result_val)
 								}()
 								var expr_54 rune
-								if v_9, ok := result_51.(ResultOk[int64, error]); ok {
+								if v_9, ok := result_51.(Result__Ok[int64, error]); ok {
 									var expr_53 rune
 									expr_53 = rune(v_9.F0)
 									expr_54 = expr_53
@@ -397,7 +397,7 @@ func pString() ps.Parser[JsonValue] {
 	return ps.PBind(ps.PChar('"'), func(_ rune) ps.Parser[JsonValue] {
 		return ps.PBind(ps.PMany(pCharContent_56()), func(chars []rune) ps.Parser[JsonValue] {
 			return ps.PMap(ps.PChar('"'), func(_ rune) JsonValue {
-				return JsonValueJStringCtor(MygoIN6StringM9FromRunes(chars))
+				return JsonValue__JString__Ctor(MygoIN6StringM9FromRunes(chars))
 			})
 		})
 	})
@@ -418,7 +418,7 @@ func ParseJson(input string) Result[JsonValue, string] {
 		return ws(ps.PChoice([]func(ps.State) ps.Reply[JsonValue]{nullP_57, boolP_58, numP_59, strP_60, arrP_62, objP_64}))(state)
 	}
 	arrP_62 = ps.PMap(ps.PBetween(ws(ps.PChar('[')), ps.PSepBy(valueP_61, ws(ps.PChar(','))), ws(ps.PChar(']'))), func(items []JsonValue) JsonValue {
-		return JsonValueJArrayCtor(items)
+		return JsonValue__JArray__Ctor(items)
 	})
 	pairP_63 = func(s ps.State) ps.Reply[struct {
 		F0 string
@@ -432,10 +432,10 @@ func ParseJson(input string) Result[JsonValue, string] {
 			}]{Ok: kr_65.Ok, Consumed: kr_65.Consumed, State: kr_65.State, Error: kr_65.Error, Value: struct {
 				F0 string
 				F1 JsonValue
-			}{F0: "", F1: JsonValueJNullCtor()}}
+			}{F0: "", F1: JsonValue__JNull__Ctor()}}
 		}
 		var expr_68 string
-		if v_10, ok := kr_65.Value.(JsonValueJString); ok {
+		if v_10, ok := kr_65.Value.(JsonValue__JString); ok {
 			var expr_67 string
 			expr_67 = string(v_10.F0)
 			expr_68 = expr_67
@@ -455,7 +455,7 @@ func ParseJson(input string) Result[JsonValue, string] {
 			}]{Ok: cr_70.Ok, Consumed: cr_70.Consumed, State: cr_70.State, Error: cr_70.Error, Value: struct {
 				F0 string
 				F1 JsonValue
-			}{F0: "", F1: JsonValueJNullCtor()}}
+			}{F0: "", F1: JsonValue__JNull__Ctor()}}
 		}
 		vr_71 := valueP_61(cr_70.State)
 		if !vr_71.Ok {
@@ -465,7 +465,7 @@ func ParseJson(input string) Result[JsonValue, string] {
 			}]{Ok: vr_71.Ok, Consumed: vr_71.Consumed, State: vr_71.State, Error: vr_71.Error, Value: struct {
 				F0 string
 				F1 JsonValue
-			}{F0: "", F1: JsonValueJNullCtor()}}
+			}{F0: "", F1: JsonValue__JNull__Ctor()}}
 		}
 		return ps.Reply[struct {
 			F0 string
@@ -479,19 +479,19 @@ func ParseJson(input string) Result[JsonValue, string] {
 		F0 string
 		F1 JsonValue
 	}) JsonValue {
-		return JsonValueJObjectCtor(pairs)
+		return JsonValue__JObject__Ctor(pairs)
 	})
 	r_72 := ps.ParseInput(valueP_61, input)
 	var expr_77 Result[JsonValue, string]
 	if !r_72.Ok {
 		var expr_76 Result[JsonValue, string]
-		if v_12, ok := r_72.Error.(OptionSome[ps.ParseError]); ok {
+		if v_12, ok := r_72.Error.(Option__Some[ps.ParseError]); ok {
 			var expr_75 Result[JsonValue, string]
 			errMsg_74 := fmt.Sprintf("parse error at line %d, column %d: %s", v_12.F0.Position.Line, v_12.F0.Position.Column, v_12.F0.Message)
 			expr_75 = Err[JsonValue, string](errMsg_74)
 			expr_76 = expr_75
 		} else {
-			if _, ok := r_72.Error.(OptionNone[ps.ParseError]); ok {
+			if _, ok := r_72.Error.(Option__None[ps.ParseError]); ok {
 				var expr_73 Result[JsonValue, string]
 				expr_73 = Err[JsonValue, string]("parse error")
 				expr_76 = expr_73

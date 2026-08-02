@@ -42,7 +42,7 @@ func MygoIT4FromFN6StringGN6StringN6ResultGN3IntN6StringEEM4From(value string) R
 			return Err[int, error](__mygo_result_err)
 		}
 		return Ok[int, error](__mygo_result_val)
-	}().(ResultOk[int, error]); ok {
+	}().(Result__Ok[int, error]); ok {
 		var expr_2 Result[int, string]
 		expr_2 = Ok[int, string](v_2.F0)
 		expr_3 = expr_2
@@ -53,7 +53,7 @@ func MygoIT4FromFN6StringGN6StringN6ResultGN3IntN6StringEEM4From(value string) R
 				return Err[int, error](__mygo_result_err)
 			}
 			return Ok[int, error](__mygo_result_val)
-		}().(ResultErr[int, error]); ok {
+		}().(Result__Err[int, error]); ok {
 			var expr_1 Result[int, string]
 			expr_1 = Err[int, string](v_1.F0.Error())
 			expr_3 = expr_1
@@ -71,7 +71,7 @@ func MygoIT4FromFN6StringGN6StringN6ResultGN5Int64N6StringEEM4From(value string)
 			return Err[int64, error](__mygo_result_err)
 		}
 		return Ok[int64, error](__mygo_result_val)
-	}().(ResultOk[int64, error]); ok {
+	}().(Result__Ok[int64, error]); ok {
 		var expr_5 Result[int64, string]
 		expr_5 = Ok[int64, string](v_4.F0)
 		expr_6 = expr_5
@@ -82,7 +82,7 @@ func MygoIT4FromFN6StringGN6StringN6ResultGN5Int64N6StringEEM4From(value string)
 				return Err[int64, error](__mygo_result_err)
 			}
 			return Ok[int64, error](__mygo_result_val)
-		}().(ResultErr[int64, error]); ok {
+		}().(Result__Err[int64, error]); ok {
 			var expr_4 Result[int64, string]
 			expr_4 = Err[int64, string](v_3.F0.Error())
 			expr_6 = expr_4
@@ -100,7 +100,7 @@ func MygoIT4FromFN6StringGN6StringN6ResultGN7Float64N6StringEEM4From(value strin
 			return Err[float64, error](__mygo_result_err)
 		}
 		return Ok[float64, error](__mygo_result_val)
-	}().(ResultOk[float64, error]); ok {
+	}().(Result__Ok[float64, error]); ok {
 		var expr_8 Result[float64, string]
 		expr_8 = Ok[float64, string](v_6.F0)
 		expr_9 = expr_8
@@ -111,7 +111,7 @@ func MygoIT4FromFN6StringGN6StringN6ResultGN7Float64N6StringEEM4From(value strin
 				return Err[float64, error](__mygo_result_err)
 			}
 			return Ok[float64, error](__mygo_result_val)
-		}().(ResultErr[float64, error]); ok {
+		}().(Result__Err[float64, error]); ok {
 			var expr_7 Result[float64, string]
 			expr_7 = Err[float64, string](v_5.F0.Error())
 			expr_9 = expr_7

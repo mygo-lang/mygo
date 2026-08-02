@@ -280,7 +280,7 @@ func TestCompileDirSupportsNestedStringAndOptionSwitches(t *testing.T) {
 		`method_1 := msg.Method`,
 		`if method_1 == "initialize"`,
 		`if method_1 == "initialized"`,
-		`if _, ok := msg.Params.(OptionSome[any]); ok {`,
+		`if _, ok := msg.Params.(Option__Some[any]); ok {`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -580,7 +580,7 @@ func TestCompileDirResolvesImportedMyGoStructAndEnumSymbols(t *testing.T) {
 	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		`api.Box{Value: 40}`,
-		`api.FetchStatusOkCtor(2)`,
+		`api.FetchStatus__Ok__Ctor(2)`,
 		`api.ReadBox(b_1) + api.ReadStatus(r_2)`,
 	} {
 		if !strings.Contains(got, want) {

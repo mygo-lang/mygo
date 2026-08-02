@@ -11,88 +11,88 @@ import (
 type Color interface {
 	isColor()
 }
-type ColorRed struct {
+type Color__Red struct {
 }
 
-func (_ ColorRed) isColor() {
+func (_ Color__Red) isColor() {
 }
-func ColorRedCtor() Color {
-	return ColorRed{}
-}
-
-type ColorGreen struct {
+func Color__Red__Ctor() Color {
+	return Color__Red{}
 }
 
-func (_ ColorGreen) isColor() {
-}
-func ColorGreenCtor() Color {
-	return ColorGreen{}
+type Color__Green struct {
 }
 
-type ColorBlue struct {
+func (_ Color__Green) isColor() {
+}
+func Color__Green__Ctor() Color {
+	return Color__Green{}
 }
 
-func (_ ColorBlue) isColor() {
+type Color__Blue struct {
 }
-func ColorBlueCtor() Color {
-	return ColorBlue{}
+
+func (_ Color__Blue) isColor() {
+}
+func Color__Blue__Ctor() Color {
+	return Color__Blue{}
 }
 
 type Shape interface {
 	isShape()
 }
-type ShapeCircle struct {
+type Shape__Circle struct {
 	F0 float64
 }
 
-func (_ ShapeCircle) isShape() {
+func (_ Shape__Circle) isShape() {
 }
-func ShapeCircleCtor(a0 float64) Shape {
-	return ShapeCircle{F0: a0}
-}
-
-type ShapeRectangle struct {
-	F0 float64
-	F1 float64
+func Shape__Circle__Ctor(a0 float64) Shape {
+	return Shape__Circle{F0: a0}
 }
 
-func (_ ShapeRectangle) isShape() {
-}
-func ShapeRectangleCtor(a0 float64, a1 float64) Shape {
-	return ShapeRectangle{F0: a0, F1: a1}
-}
-
-type ShapeTriangle struct {
+type Shape__Rectangle struct {
 	F0 float64
 	F1 float64
 }
 
-func (_ ShapeTriangle) isShape() {
+func (_ Shape__Rectangle) isShape() {
 }
-func ShapeTriangleCtor(a0 float64, a1 float64) Shape {
-	return ShapeTriangle{F0: a0, F1: a1}
+func Shape__Rectangle__Ctor(a0 float64, a1 float64) Shape {
+	return Shape__Rectangle{F0: a0, F1: a1}
+}
+
+type Shape__Triangle struct {
+	F0 float64
+	F1 float64
+}
+
+func (_ Shape__Triangle) isShape() {
+}
+func Shape__Triangle__Ctor(a0 float64, a1 float64) Shape {
+	return Shape__Triangle{F0: a0, F1: a1}
 }
 
 type OptionLike[A any] interface {
 	isOptionLike()
 }
-type OptionLikeS[A any] struct {
+type OptionLike__S[A any] struct {
 	F0 A
 }
 
-func (_ OptionLikeS[A]) isOptionLike() {
+func (_ OptionLike__S[A]) isOptionLike() {
 }
-func OptionLikeSCtor[A any](a0 A) OptionLike[A] {
-	return OptionLikeS[A]{F0: a0}
-}
-
-type OptionLikeN[A any] struct {
+func OptionLike__S__Ctor[A any](a0 A) OptionLike[A] {
+	return OptionLike__S[A]{F0: a0}
 }
 
-func (_ OptionLikeN[A]) isOptionLike() {
+type OptionLike__N[A any] struct {
 }
-func OptionLikeNCtor[A any]() OptionLike[A] {
-	return OptionLikeN[A]{}
+
+func (_ OptionLike__N[A]) isOptionLike() {
+}
+func OptionLike__N__Ctor[A any]() OptionLike[A] {
+	return OptionLike__N[A]{}
 }
 
 type Point struct {
@@ -138,17 +138,17 @@ func demoBasicTypes() string {
 }
 func describeColor(c Color) string {
 	var expr_23 string
-	if _, ok := c.(ColorRed); ok {
+	if _, ok := c.(Color__Red); ok {
 		var expr_22 string
 		expr_22 = "red"
 		expr_23 = expr_22
 	} else {
-		if _, ok := c.(ColorGreen); ok {
+		if _, ok := c.(Color__Green); ok {
 			var expr_21 string
 			expr_21 = "green"
 			expr_23 = expr_21
 		} else {
-			if _, ok := c.(ColorBlue); ok {
+			if _, ok := c.(Color__Blue); ok {
 				var expr_20 string
 				expr_20 = "blue"
 				expr_23 = expr_20
@@ -161,17 +161,17 @@ func describeColor(c Color) string {
 }
 func area(s Shape) float64 {
 	var expr_27 float64
-	if v_6, ok := s.(ShapeCircle); ok {
+	if v_6, ok := s.(Shape__Circle); ok {
 		var expr_26 float64
 		expr_26 = 3.14159 * v_6.F0 * v_6.F0
 		expr_27 = expr_26
 	} else {
-		if v_5, ok := s.(ShapeRectangle); ok {
+		if v_5, ok := s.(Shape__Rectangle); ok {
 			var expr_25 float64
 			expr_25 = v_5.F0 * v_5.F1
 			expr_27 = expr_25
 		} else {
-			if v_4, ok := s.(ShapeTriangle); ok {
+			if v_4, ok := s.(Shape__Triangle); ok {
 				var expr_24 float64
 				expr_24 = 0.5 * v_4.F0 * v_4.F1
 				expr_27 = expr_24
@@ -183,9 +183,9 @@ func area(s Shape) float64 {
 	return expr_27
 }
 func demoEnums() string {
-	c_28 := ColorGreenCtor()
-	circle_29 := ShapeCircleCtor(5.0)
-	rect_30 := ShapeRectangleCtor(10.0, 20.0)
+	c_28 := Color__Green__Ctor()
+	circle_29 := Shape__Circle__Ctor(5.0)
+	rect_30 := Shape__Rectangle__Ctor(10.0, 20.0)
 	return "Color=" + describeColor(c_28) + ", CircleArea=" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(area(circle_29)) + ", RectArea=" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(area(rect_30))
 }
 func demoStructs() string {
@@ -212,12 +212,12 @@ func demoOptionResult() string {
 	result_40 := safeDivide(10.0, 3.0)
 	div_zero_41 := safeDivide(10.0, 0.0)
 	var expr_44 string
-	if v_8, ok := some_val_36.(OptionSome[int]); ok {
+	if v_8, ok := some_val_36.(Option__Some[int]); ok {
 		var expr_43 string
 		expr_43 = MygoIT8ToStringFN3IntGN3IntEM8ToString(v_8.F0)
 		expr_44 = expr_43
 	} else {
-		if _, ok := some_val_36.(OptionNone[int]); ok {
+		if _, ok := some_val_36.(Option__None[int]); ok {
 			var expr_42 string
 			expr_42 = "none"
 			expr_44 = expr_42
@@ -227,12 +227,12 @@ func demoOptionResult() string {
 	}
 	some_text_45 := expr_44
 	var expr_48 string
-	if v_10, ok := none_val_37.(OptionSome[int]); ok {
+	if v_10, ok := none_val_37.(Option__Some[int]); ok {
 		var expr_47 string
 		expr_47 = MygoIT8ToStringFN3IntGN3IntEM8ToString(v_10.F0)
 		expr_48 = expr_47
 	} else {
-		if _, ok := none_val_37.(OptionNone[int]); ok {
+		if _, ok := none_val_37.(Option__None[int]); ok {
 			var expr_46 string
 			expr_46 = "none"
 			expr_48 = expr_46
@@ -242,12 +242,12 @@ func demoOptionResult() string {
 	}
 	none_text_49 := expr_48
 	var expr_52 string
-	if v_12, ok := ok_res_38.(ResultOk[int, string]); ok {
+	if v_12, ok := ok_res_38.(Result__Ok[int, string]); ok {
 		var expr_51 string
 		expr_51 = MygoIT8ToStringFN3IntGN3IntEM8ToString(v_12.F0)
 		expr_52 = expr_51
 	} else {
-		if v_11, ok := ok_res_38.(ResultErr[int, string]); ok {
+		if v_11, ok := ok_res_38.(Result__Err[int, string]); ok {
 			var expr_50 string
 			expr_50 = v_11.F0
 			expr_52 = expr_50
@@ -257,12 +257,12 @@ func demoOptionResult() string {
 	}
 	ok_text_53 := expr_52
 	var expr_56 string
-	if v_14, ok := err_res_39.(ResultOk[int, string]); ok {
+	if v_14, ok := err_res_39.(Result__Ok[int, string]); ok {
 		var expr_55 string
 		expr_55 = MygoIT8ToStringFN3IntGN3IntEM8ToString(v_14.F0)
 		expr_56 = expr_55
 	} else {
-		if v_13, ok := err_res_39.(ResultErr[int, string]); ok {
+		if v_13, ok := err_res_39.(Result__Err[int, string]); ok {
 			var expr_54 string
 			expr_54 = v_13.F0
 			expr_56 = expr_54
@@ -272,12 +272,12 @@ func demoOptionResult() string {
 	}
 	err_text_57 := expr_56
 	var expr_60 string
-	if v_16, ok := result_40.(ResultOk[float64, string]); ok {
+	if v_16, ok := result_40.(Result__Ok[float64, string]); ok {
 		var expr_59 string
 		expr_59 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(v_16.F0)
 		expr_60 = expr_59
 	} else {
-		if v_15, ok := result_40.(ResultErr[float64, string]); ok {
+		if v_15, ok := result_40.(Result__Err[float64, string]); ok {
 			var expr_58 string
 			expr_58 = v_15.F0
 			expr_60 = expr_58
@@ -287,12 +287,12 @@ func demoOptionResult() string {
 	}
 	result_text_61 := expr_60
 	var expr_64 string
-	if v_18, ok := div_zero_41.(ResultOk[float64, string]); ok {
+	if v_18, ok := div_zero_41.(Result__Ok[float64, string]); ok {
 		var expr_63 string
 		expr_63 = MygoIT8ToStringFN7Float64GN7Float64EM8ToString(v_18.F0)
 		expr_64 = expr_63
 	} else {
-		if v_17, ok := div_zero_41.(ResultErr[float64, string]); ok {
+		if v_17, ok := div_zero_41.(Result__Err[float64, string]); ok {
 			var expr_62 string
 			expr_62 = v_17.F0
 			expr_64 = expr_62

@@ -25,10 +25,10 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Each[T any](c 
 	var done_11 bool = false
 	for !done_11 {
 		fn(current_10.head)
-		if _, ok := current_10.tail.(OptionNone[*List[T]]); ok {
+		if _, ok := current_10.tail.(Option__None[*List[T]]); ok {
 			done_11 = true
 		} else {
-			if v_7, ok := current_10.tail.(OptionSome[*List[T]]); ok {
+			if v_7, ok := current_10.tail.(Option__Some[*List[T]]); ok {
 				current_10 = v_7.F0
 			}
 		}
@@ -43,10 +43,10 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Len[T any](c L
 	var done_14 bool = false
 	for !done_14 {
 		count_12 = count_12 + 1
-		if _, ok := current_13.tail.(OptionNone[*List[T]]); ok {
+		if _, ok := current_13.tail.(Option__None[*List[T]]); ok {
 			done_14 = true
 		} else {
-			if v_9, ok := current_13.tail.(OptionSome[*List[T]]); ok {
+			if v_9, ok := current_13.tail.(Option__Some[*List[T]]); ok {
 				current_13 = v_9.F0
 			}
 		}
@@ -61,10 +61,10 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Map[T any, B a
 	var result_18 List[B] = List[B]{head: headVal_17, tail: None[*List[B]]()}
 	var current_19 *List[T] = &c
 	for !done_16 {
-		if _, ok := current_19.tail.(OptionNone[*List[T]]); ok {
+		if _, ok := current_19.tail.(Option__None[*List[T]]); ok {
 			done_16 = true
 		} else {
-			if v_11, ok := current_19.tail.(OptionSome[*List[T]]); ok {
+			if v_11, ok := current_19.tail.(Option__Some[*List[T]]); ok {
 				current_19 = v_11.F0
 				result_18 = List[B]{head: fn(current_19.head), tail: Some[*List[B]](&result_18)}
 			}
@@ -82,10 +82,10 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM6Filter[T any](
 		if fn(current_22.head) {
 			result_23 = List[T]{head: current_22.head, tail: Some[*List[T]](&result_23)}
 		}
-		if _, ok := current_22.tail.(OptionNone[*List[T]]); ok {
+		if _, ok := current_22.tail.(Option__None[*List[T]]); ok {
 			done_21 = true
 		} else {
-			if v_13, ok := current_22.tail.(OptionSome[*List[T]]); ok {
+			if v_13, ok := current_22.tail.(Option__Some[*List[T]]); ok {
 				current_22 = v_13.F0
 			}
 		}
@@ -100,10 +100,10 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Fold[T any, B 
 	var current_27 *List[T] = &c
 	for !done_26 {
 		acc_25 = fn(acc_25, current_27.head)
-		if _, ok := current_27.tail.(OptionNone[*List[T]]); ok {
+		if _, ok := current_27.tail.(Option__None[*List[T]]); ok {
 			done_26 = true
 		} else {
-			if v_15, ok := current_27.tail.(OptionSome[*List[T]]); ok {
+			if v_15, ok := current_27.tail.(Option__Some[*List[T]]); ok {
 				current_27 = v_15.F0
 			}
 		}
@@ -121,10 +121,10 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Find[T any](c 
 			result_30 = Some[*T](&current_31.head)
 			done_29 = true
 		} else {
-			if _, ok := current_31.tail.(OptionNone[*List[T]]); ok {
+			if _, ok := current_31.tail.(Option__None[*List[T]]); ok {
 				done_29 = true
 			} else {
-				if v_17, ok := current_31.tail.(OptionSome[*List[T]]); ok {
+				if v_17, ok := current_31.tail.(Option__Some[*List[T]]); ok {
 					current_31 = v_17.F0
 				}
 			}
@@ -143,10 +143,10 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM8Contains[T any
 			result_34 = true
 			done_33 = true
 		} else {
-			if _, ok := current_35.tail.(OptionNone[*List[T]]); ok {
+			if _, ok := current_35.tail.(Option__None[*List[T]]); ok {
 				done_33 = true
 			} else {
-				if v_19, ok := current_35.tail.(OptionSome[*List[T]]); ok {
+				if v_19, ok := current_35.tail.(Option__Some[*List[T]]); ok {
 					current_35 = v_19.F0
 				}
 			}

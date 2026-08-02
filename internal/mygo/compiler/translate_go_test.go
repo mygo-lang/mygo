@@ -398,7 +398,7 @@ end
 	goSrc := compileInlineGoTestPackage(t, src)
 	for _, want := range []string{
 		"func parseOrMsg(s string) string",
-		"ResultErr[int, error]",
+		"Result__Err[int, error]",
 		".F0.Error()",
 	} {
 		if !strings.Contains(goSrc, want) {

@@ -44,13 +44,13 @@ func TestSplitTypeArgsHandlesGoMapTypes(t *testing.T) {
 }
 
 func TestGoTypeExprForAssertionHandlesGoMapTypes(t *testing.T) {
-	expr := genericIdent("OptionSome", goTypeExprForAssertion("map[string]any"))
+	expr := genericIdent("Option__Some", goTypeExprForAssertion("map[string]any"))
 
 	var buf bytes.Buffer
 	if err := printer.Fprint(&buf, token.NewFileSet(), expr); err != nil {
 		t.Fatalf("printer.Fprint() error = %v", err)
 	}
-	if got, want := buf.String(), "OptionSome[map[string]any]"; got != want {
+	if got, want := buf.String(), "Option__Some[map[string]any]"; got != want {
 		t.Fatalf("printed assertion type = %q, want %q", got, want)
 	}
 }

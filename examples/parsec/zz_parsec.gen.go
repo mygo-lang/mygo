@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	if v_2, ok := json.ParseJson("\n  {\n    \"abc\": 123,\n    \"hama\": [1, 2, 3]\n  }\n  ").(ResultOk[json.JsonValue, string]); ok {
+	if v_2, ok := json.ParseJson("\n  {\n    \"abc\": 123,\n    \"hama\": [1, 2, 3]\n  }\n  ").(Result__Ok[json.JsonValue, string]); ok {
 		var expr_2 Result[int, error]
 		expr_2 = func() Result[int, error] {
 			__mygo_result_val, __mygo_result_err := fmt.Println(v_2.F0)
@@ -21,7 +21,7 @@ func main() {
 		}()
 		_ = expr_2
 	} else {
-		if v_1, ok := json.ParseJson("\n  {\n    \"abc\": 123,\n    \"hama\": [1, 2, 3]\n  }\n  ").(ResultErr[json.JsonValue, string]); ok {
+		if v_1, ok := json.ParseJson("\n  {\n    \"abc\": 123,\n    \"hama\": [1, 2, 3]\n  }\n  ").(Result__Err[json.JsonValue, string]); ok {
 			var expr_1 Result[int, error]
 			expr_1 = func() Result[int, error] {
 				__mygo_result_val, __mygo_result_err := fmt.Println("Error: ", v_1.F0)

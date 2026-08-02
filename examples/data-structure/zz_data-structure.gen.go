@@ -11,93 +11,93 @@ import (
 type Color interface {
 	isColor()
 }
-type ColorRed struct {
+type Color__Red struct {
 }
 
-func (_ ColorRed) isColor() {
+func (_ Color__Red) isColor() {
 }
-func ColorRedCtor() Color {
-	return ColorRed{}
-}
-
-type ColorGreen struct {
+func Color__Red__Ctor() Color {
+	return Color__Red{}
 }
 
-func (_ ColorGreen) isColor() {
-}
-func ColorGreenCtor() Color {
-	return ColorGreen{}
+type Color__Green struct {
 }
 
-type ColorBlue struct {
+func (_ Color__Green) isColor() {
+}
+func Color__Green__Ctor() Color {
+	return Color__Green{}
 }
 
-func (_ ColorBlue) isColor() {
+type Color__Blue struct {
 }
-func ColorBlueCtor() Color {
-	return ColorBlue{}
+
+func (_ Color__Blue) isColor() {
+}
+func Color__Blue__Ctor() Color {
+	return Color__Blue{}
 }
 
 type Point2D interface {
 	isPoint2D()
 }
-type Point2DEmpty struct {
+type Point2D__Empty struct {
 }
 
-func (_ Point2DEmpty) isPoint2D() {
+func (_ Point2D__Empty) isPoint2D() {
 }
-func Point2DEmptyCtor() Point2D {
-	return Point2DEmpty{}
+func Point2D__Empty__Ctor() Point2D {
+	return Point2D__Empty{}
 }
 
-type Point2DWithX struct {
+type Point2D__WithX struct {
 	F0 int
 }
 
-func (_ Point2DWithX) isPoint2D() {
+func (_ Point2D__WithX) isPoint2D() {
 }
-func Point2DWithXCtor(a0 int) Point2D {
-	return Point2DWithX{F0: a0}
+func Point2D__WithX__Ctor(a0 int) Point2D {
+	return Point2D__WithX{F0: a0}
 }
 
-type Point2DWithY struct {
+type Point2D__WithY struct {
 	F0 int
 }
 
-func (_ Point2DWithY) isPoint2D() {
+func (_ Point2D__WithY) isPoint2D() {
 }
-func Point2DWithYCtor(a0 int) Point2D {
-	return Point2DWithY{F0: a0}
+func Point2D__WithY__Ctor(a0 int) Point2D {
+	return Point2D__WithY{F0: a0}
 }
 
 type Operation interface {
 	isOperation()
 }
-type OperationAdd struct {
+type Operation__Add struct {
 }
 
-func (_ OperationAdd) isOperation() {
+func (_ Operation__Add) isOperation() {
 }
-func OperationAddCtor() Operation {
-	return OperationAdd{}
-}
-
-type OperationSubtract struct {
+func Operation__Add__Ctor() Operation {
+	return Operation__Add{}
 }
 
-func (_ OperationSubtract) isOperation() {
-}
-func OperationSubtractCtor() Operation {
-	return OperationSubtract{}
+type Operation__Subtract struct {
 }
 
-type OperationMultiply struct {
+func (_ Operation__Subtract) isOperation() {
+}
+func Operation__Subtract__Ctor() Operation {
+	return Operation__Subtract{}
 }
 
-func (_ OperationMultiply) isOperation() {
+type Operation__Multiply struct {
 }
-func OperationMultiplyCtor() Operation {
-	return OperationMultiply{}
+
+func (_ Operation__Multiply) isOperation() {
+}
+func Operation__Multiply__Ctor() Operation {
+	return Operation__Multiply{}
 }
 
 type Person struct {
@@ -131,17 +131,17 @@ func swapPair[T any](p Pair[T]) Pair[T] {
 }
 func describeColor(color Color) string {
 	var expr_4 string
-	if _, ok := color.(ColorRed); ok {
+	if _, ok := color.(Color__Red); ok {
 		var expr_3 string
 		expr_3 = "red"
 		expr_4 = expr_3
 	} else {
-		if _, ok := color.(ColorGreen); ok {
+		if _, ok := color.(Color__Green); ok {
 			var expr_2 string
 			expr_2 = "green"
 			expr_4 = expr_2
 		} else {
-			if _, ok := color.(ColorBlue); ok {
+			if _, ok := color.(Color__Blue); ok {
 				var expr_1 string
 				expr_1 = "blue"
 				expr_4 = expr_1
@@ -163,12 +163,12 @@ func maxInt(a int, b int) int {
 }
 func describeOption[A any](value Option[A], ToStringFn func(A) string) string {
 	var expr_8 string
-	if _, ok := value.(OptionNone[A]); ok {
+	if _, ok := value.(Option__None[A]); ok {
 		var expr_7 string
 		expr_7 = "None"
 		expr_8 = expr_7
 	} else {
-		if v_4, ok := value.(OptionSome[A]); ok {
+		if v_4, ok := value.(Option__Some[A]); ok {
 			var expr_6 string
 			expr_6 = "Some(" + ToStringFn(v_4.F0) + ")"
 			expr_8 = expr_6
@@ -191,10 +191,10 @@ func sumList(lst List[int]) int {
 	for !done_14 {
 		headVal := MygoIN4ListM4Head(current_13)
 		total_12 = total_12 + headVal
-		if _, ok := MygoIN4ListM4Tail(current_13).(OptionNone[List[int]]); ok {
+		if _, ok := MygoIN4ListM4Tail(current_13).(Option__None[List[int]]); ok {
 			done_14 = true
 		} else {
-			if v_6, ok := MygoIN4ListM4Tail(current_13).(OptionSome[List[int]]); ok {
+			if v_6, ok := MygoIN4ListM4Tail(current_13).(Option__Some[List[int]]); ok {
 				current_13 = v_6.F0
 			}
 		}
@@ -202,9 +202,9 @@ func sumList(lst List[int]) int {
 	return total_12
 }
 func demo() string {
-	red_15 := ColorRedCtor()
-	point_16 := Point2DWithYCtor(20)
-	op_17 := OperationMultiplyCtor()
+	red_15 := Color__Red__Ctor()
+	point_16 := Point2D__WithY__Ctor(20)
+	op_17 := Operation__Multiply__Ctor()
 	var empty_18 Option[float64] = None[float64]()
 	var someVal_19 Option[int] = Some[int](42)
 	person_20 := Person{name: "Charlie", age: 25}
@@ -216,7 +216,7 @@ func demo() string {
 	areaValue_26 := area(rect_21)
 	swapped_27 := swapPair[int](pair_22)
 	bigger_28 := maxInt(3, 5)
-	colorText_29 := describeColor(ColorGreenCtor())
+	colorText_29 := describeColor(Color__Green__Ctor())
 	lst_30 := buildList()
 	sum_31 := sumList(lst_30)
 	var summary_32 string = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v sum=%v", red_15, point_16, op_17, describeOption(empty_18, MygoIT8ToStringFN7Float64GN7Float64EM8ToString), describeOption(someVal_19, MygoIT8ToStringFN3IntGN3IntEM8ToString), person_20, rect_21, pair_22, color_23, addr_24, contact_25, areaValue_26, swapped_27, bigger_28, colorText_29, sum_31)

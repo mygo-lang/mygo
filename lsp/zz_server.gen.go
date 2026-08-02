@@ -336,7 +336,7 @@ func parseDocumentURI(uri string) string {
 func wordAtPosition(content string, line int, char int) Option[*TextRange] {
 	lines_7 := strings.Split(content, "\n")
 	var expr_16 Option[*TextRange]
-	if v_1, ok := stringAt(lines_7, line).(OptionSome[string]); ok {
+	if v_1, ok := stringAt(lines_7, line).(Option__Some[string]); ok {
 		var expr_15 Option[*TextRange]
 		length_9 := byteLen(v_1.F0)
 		var expr_14 Option[*TextRange]
@@ -374,11 +374,11 @@ func wordAtPosition(content string, line int, char int) Option[*TextRange] {
 }
 func handleCompletion(store *DocumentStore, uri string, line int, char int) CompletionList {
 	var expr_26 CompletionList
-	if v_2, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
+	if v_2, ok := storeGet(store, uri).(Option__Some[*Document]); ok {
 		var expr_25 CompletionList
 		content_18 := v_2.F0.Content
 		word_19 := ""
-		if v_3, ok := wordAtPosition(content_18, line, char).(OptionSome[*TextRange]); ok {
+		if v_3, ok := wordAtPosition(content_18, line, char).(Option__Some[*TextRange]); ok {
 			lines_20 := strings.Split(v_2.F0.Content, "\n")
 			if line < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_20) {
 				text_21 := MygoIN6OptionM8UnwrapOr(stringAt(lines_20, line), "")
@@ -421,7 +421,7 @@ func appendCompletions(items []CompletionItem, word string) []CompletionItem {
 		lowerWord_28 := strings.ToLower(word)
 		i_29 := 0
 		for i_29 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-			if v_4, ok := completionAt(items, i_29).(OptionSome[CompletionItem]); ok {
+			if v_4, ok := completionAt(items, i_29).(Option__Some[CompletionItem]); ok {
 				if strings.HasPrefix(strings.ToLower(v_4.F0.Label), lowerWord_28) {
 					filtered_27 = MygoIN5SliceM6Append(filtered_27, v_4.F0)
 				}
@@ -438,10 +438,10 @@ func appendCompletions(items []CompletionItem, word string) []CompletionItem {
 }
 func handleHover(store *DocumentStore, uri string, line int, char int) Option[Hover] {
 	var expr_45 Option[Hover]
-	if v_5, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
+	if v_5, ok := storeGet(store, uri).(Option__Some[*Document]); ok {
 		var expr_44 Option[Hover]
 		var expr_43 Option[Hover]
-		if v_6, ok := wordAtPosition(v_5.F0.Content, line, char).(OptionSome[*TextRange]); ok {
+		if v_6, ok := wordAtPosition(v_5.F0.Content, line, char).(Option__Some[*TextRange]); ok {
 			var expr_42 Option[Hover]
 			lines_34 := strings.Split(v_5.F0.Content, "\n")
 			var expr_41 Option[Hover]
@@ -578,7 +578,7 @@ func buildHoverDoc(word string) string {
 }
 func handleDiagnostics(store *DocumentStore, uri string) []Diagnostic {
 	var expr_65 []Diagnostic
-	if v_7, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
+	if v_7, ok := storeGet(store, uri).(Option__Some[*Document]); ok {
 		var expr_64 []Diagnostic
 		expr_64 = runMyGoDiagnostics(v_7.F0.Content)
 		expr_65 = expr_64
@@ -596,7 +596,7 @@ func runMyGoDiagnostics(content string) []Diagnostic {
 	lines_67 := strings.Split(content, "\n")
 	i_68 := 0
 	for i_68 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_67) {
-		if v_8, ok := stringAt(lines_67, i_68).(OptionSome[string]); ok {
+		if v_8, ok := stringAt(lines_67, i_68).(Option__Some[string]); ok {
 			trimmed_70 := strings.TrimSpace(v_8.F0)
 			if strings.Contains(trimmed_70, "where ") && !strings.HasPrefix(trimmed_70, "#") {
 				startChar_71 := strings.Index(trimmed_70, "where")
@@ -616,7 +616,7 @@ func runMyGoDiagnostics(content string) []Diagnostic {
 }
 func handleDocumentSymbols(store *DocumentStore, uri string) []DocumentSymbol {
 	var expr_75 []DocumentSymbol
-	if v_9, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
+	if v_9, ok := storeGet(store, uri).(Option__Some[*Document]); ok {
 		var expr_74 []DocumentSymbol
 		expr_74 = parseAndBuildSymbols(v_9.F0.Content)
 		expr_75 = expr_74
@@ -634,7 +634,7 @@ func parseAndBuildSymbols(content string) []DocumentSymbol {
 	lines_77 := strings.Split(content, "\n")
 	i_78 := 0
 	for i_78 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_77) {
-		if v_10, ok := stringAt(lines_77, i_78).(OptionSome[string]); ok {
+		if v_10, ok := stringAt(lines_77, i_78).(Option__Some[string]); ok {
 			trimmed_79 := strings.TrimSpace(v_10.F0)
 			if trimmed_79 == "" || strings.HasPrefix(trimmed_79, "#") {
 			} else {
@@ -651,7 +651,7 @@ func parseAndBuildSymbols(content string) []DocumentSymbol {
 						} else {
 							if strings.HasPrefix(trimmed_79, "impl ") {
 								parts_82 := strings.Fields(trimmed_79)
-								if v_11, ok := stringAt(parts_82, 1).(OptionSome[string]); ok {
+								if v_11, ok := stringAt(parts_82, 1).(Option__Some[string]); ok {
 									symbols_76 = MygoIN5SliceM6Append(symbols_76, documentSymbol("impl "+v_11.F0, 5, i_78, 5, byteLen(trimmed_79), "impl"))
 								} else {
 									{
@@ -688,7 +688,7 @@ func declarationName(raw string) string {
 func appendNamedSymbol(symbols []DocumentSymbol, trimmed string, line int, kind int, detail string) []DocumentSymbol {
 	parts_87 := strings.Fields(trimmed)
 	var expr_92 []DocumentSymbol
-	if v_12, ok := stringAt(parts_87, 1).(OptionSome[string]); ok {
+	if v_12, ok := stringAt(parts_87, 1).(Option__Some[string]); ok {
 		var expr_91 []DocumentSymbol
 		name_89 := declarationName(v_12.F0)
 		selStart_90 := strings.Index(trimmed, name_89)
@@ -708,10 +708,10 @@ func documentSymbol(name string, kind int, line int, selectionStart int, selecti
 }
 func handleDefinition(store *DocumentStore, uri string, line int, char int) Option[[]Location] {
 	var expr_105 Option[[]Location]
-	if v_13, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
+	if v_13, ok := storeGet(store, uri).(Option__Some[*Document]); ok {
 		var expr_104 Option[[]Location]
 		var expr_103 Option[[]Location]
-		if v_14, ok := wordAtPosition(v_13.F0.Content, line, char).(OptionSome[*TextRange]); ok {
+		if v_14, ok := wordAtPosition(v_13.F0.Content, line, char).(Option__Some[*TextRange]); ok {
 			var expr_102 Option[[]Location]
 			lines_95 := strings.Split(v_13.F0.Content, "\n")
 			var expr_101 Option[[]Location]
@@ -756,7 +756,7 @@ func searchDefinitionInDoc(content string, word string, uri string) []Location {
 	lines_107 := strings.Split(content, "\n")
 	i_108 := 0
 	for i_108 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_107) {
-		if v_15, ok := stringAt(lines_107, i_108).(OptionSome[string]); ok {
+		if v_15, ok := stringAt(lines_107, i_108).(Option__Some[string]); ok {
 			trimmed_109 := strings.TrimSpace(v_15.F0)
 			if trimmed_109 == "" || strings.HasPrefix(trimmed_109, "#") {
 			} else {
@@ -774,10 +774,10 @@ func searchDefinitionInDoc(content string, word string, uri string) []Location {
 }
 func handleReferences(store *DocumentStore, uri string, line int, char int) Option[[]Location] {
 	var expr_122 Option[[]Location]
-	if v_16, ok := storeGet(store, uri).(OptionSome[*Document]); ok {
+	if v_16, ok := storeGet(store, uri).(Option__Some[*Document]); ok {
 		var expr_121 Option[[]Location]
 		var expr_120 Option[[]Location]
-		if v_17, ok := wordAtPosition(v_16.F0.Content, line, char).(OptionSome[*TextRange]); ok {
+		if v_17, ok := wordAtPosition(v_16.F0.Content, line, char).(Option__Some[*TextRange]); ok {
 			var expr_119 Option[[]Location]
 			lines_112 := strings.Split(v_16.F0.Content, "\n")
 			var expr_118 Option[[]Location]
@@ -822,7 +822,7 @@ func searchReferencesInDoc(content string, word string, uri string) []Location {
 	lines_124 := strings.Split(content, "\n")
 	i_125 := 0
 	for i_125 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines_124) {
-		if v_18, ok := stringAt(lines_124, i_125).(OptionSome[string]); ok {
+		if v_18, ok := stringAt(lines_124, i_125).(Option__Some[string]); ok {
 			trimmed_126 := strings.TrimSpace(v_18.F0)
 			startChar_127 := strings.Index(trimmed_126, word)
 			if trimmed_126 == "" || strings.HasPrefix(trimmed_126, "#") || startChar_127 < 0 {
@@ -883,7 +883,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 			if msg_128.Method == "textDocument/didOpen" {
 				var expr_191 LSPMessage
 				var expr_190 LSPMessage
-				if v_27, ok := msg_128.Params.(OptionSome[map[string]any]); ok {
+				if v_27, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
 					var expr_189 LSPMessage
 					docItem_187 := decodeDocumentItem(v_27.F0)
 					storePut(store, docItem_187.URI, docItem_187.Version, docItem_187.Content)
@@ -903,7 +903,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 				if msg_128.Method == "textDocument/didChange" {
 					var expr_185 LSPMessage
 					var expr_184 LSPMessage
-					if v_26, ok := msg_128.Params.(OptionSome[map[string]any]); ok {
+					if v_26, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
 						var expr_183 LSPMessage
 						version_180 := requestVersion(v_26.F0)
 						uri_181 := requestURI(v_26.F0)
@@ -920,7 +920,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 					if msg_128.Method == "textDocument/didClose" {
 						var expr_179 LSPMessage
 						var expr_178 LSPMessage
-						if v_25, ok := msg_128.Params.(OptionSome[map[string]any]); ok {
+						if v_25, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
 							var expr_177 LSPMessage
 							uri_176 := requestURI(v_25.F0)
 							storeDelete(store, uri_176)
@@ -939,7 +939,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 						if msg_128.Method == "textDocument/completion" {
 							var expr_174 LSPMessage
 							var expr_173 LSPMessage
-							if v_24, ok := msg_128.Params.(OptionSome[map[string]any]); ok {
+							if v_24, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
 								var expr_172 LSPMessage
 								uri_168 := requestURI(v_24.F0)
 								line_169 := requestLine(v_24.F0)
@@ -960,7 +960,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 							if msg_128.Method == "textDocument/hover" {
 								var expr_166 LSPMessage
 								var expr_165 LSPMessage
-								if v_23, ok := msg_128.Params.(OptionSome[map[string]any]); ok {
+								if v_23, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
 									var expr_164 LSPMessage
 									uri_160 := requestURI(v_23.F0)
 									line_161 := requestLine(v_23.F0)
@@ -981,7 +981,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 								if msg_128.Method == "textDocument/definition" {
 									var expr_158 LSPMessage
 									var expr_157 LSPMessage
-									if v_22, ok := msg_128.Params.(OptionSome[map[string]any]); ok {
+									if v_22, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
 										var expr_156 LSPMessage
 										uri_152 := requestURI(v_22.F0)
 										line_153 := requestLine(v_22.F0)
@@ -1002,7 +1002,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 									if msg_128.Method == "textDocument/references" {
 										var expr_150 LSPMessage
 										var expr_149 LSPMessage
-										if v_21, ok := msg_128.Params.(OptionSome[map[string]any]); ok {
+										if v_21, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
 											var expr_148 LSPMessage
 											uri_144 := requestURI(v_21.F0)
 											line_145 := requestLine(v_21.F0)
@@ -1023,7 +1023,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 										if msg_128.Method == "textDocument/documentSymbol" {
 											var expr_142 LSPMessage
 											var expr_141 LSPMessage
-											if v_20, ok := msg_128.Params.(OptionSome[map[string]any]); ok {
+											if v_20, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
 												var expr_140 LSPMessage
 												uri_138 := requestURI(v_20.F0)
 												syms_139 := handleDocumentSymbols(store, uri_138)
@@ -1042,7 +1042,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 											if msg_128.Method == "workspace/symbol" {
 												var expr_136 LSPMessage
 												var expr_135 LSPMessage
-												if v_19, ok := msg_128.Params.(OptionSome[map[string]any]); ok {
+												if v_19, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
 													var expr_134 LSPMessage
 													query_132 := requestQuery(v_19.F0)
 													syms_133 := handleWorkspaceSymbols(store, query_132)
