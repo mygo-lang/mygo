@@ -1012,7 +1012,7 @@ func enumConstructorGoName(enumName, variantName string) string {
 	if (enumName == "Option" || enumName == "Result") && (variantName == "Some" || variantName == "None" || variantName == "Ok" || variantName == "Err") {
 		return variantName
 	}
-	return variantNameForEnum(enumName, variantName) + "Ctor"
+	return variantNameForEnum(enumName, variantName) + "__Ctor"
 }
 
 func (g *gen) genStructDecl(sf *goast.SourceFile, d *StructDecl) {
@@ -1611,11 +1611,12 @@ func (g *gen) genHelperDecls() []ast.Decl {
 }
 
 // variantNameForEnum constructs the variant type name for an enum.
+// The enum name and variant name are joined with "__" (e.g. Color__Green).
 func variantNameForEnum(enumName, variantName string) string {
 	if enumName == "" {
 		return variantName
 	}
-	return enumName + variantName
+	return enumName + "__" + variantName
 }
 
 // ============================================================
@@ -1940,7 +1941,7 @@ func goTypeString(t TypeExpr, subst map[string]string) string {
 }
 
 func variantGoTypeName(enumName, variant string) string {
-	return enumName + variant
+	return enumName + "__" + variant
 }
 
 func typeParamSet(params []string) map[string]struct{} {

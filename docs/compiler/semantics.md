@@ -215,9 +215,9 @@ Commas between cases are optional (Rust/Scala style).
 ### Go Backend (`compiler/translate_control.go`)
 - `translateSwitch()` emits if-else chains with type assertions instead of Go `switch x.(type)`:
   ```go
-  if v, ok := target.(OptionSome[A]); ok {
+  if v, ok := target.(Option__Some[A]); ok {
       return body_with_v_F0
-  } else if _, ok := target.(OptionNone); ok {
+  } else if _, ok := target.(Option__None); ok {
       return body
   } else {
       panic("unreachable")

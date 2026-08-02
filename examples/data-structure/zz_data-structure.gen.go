@@ -8,93 +8,135 @@ import . "github.com/mygo-lang/mygo/prelude"
 type Color interface {
 	isColor()
 }
-type ColorRed struct {
+type Color__Red struct {
 }
 
+<<<<<<< HEAD
 func (ColorRed) isColor() {
+=======
+func (_ Color__Red) isColor() {
+>>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 }
-func ColorRedCtor() Color {
-	return ColorRed{}
+func Color__Red__Ctor() Color {
+	return Color__Red{}
 }
 
-type ColorGreen struct {
+type Color__Green struct {
 }
 
+<<<<<<< HEAD
 func (ColorGreen) isColor() {
+=======
+func (_ Color__Green) isColor() {
+>>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 }
-func ColorGreenCtor() Color {
-	return ColorGreen{}
+func Color__Green__Ctor() Color {
+	return Color__Green{}
 }
 
-type ColorBlue struct {
+type Color__Blue struct {
 }
 
+<<<<<<< HEAD
 func (ColorBlue) isColor() {
+=======
+func (_ Color__Blue) isColor() {
+>>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 }
-func ColorBlueCtor() Color {
-	return ColorBlue{}
+func Color__Blue__Ctor() Color {
+	return Color__Blue{}
 }
 
 type Point2D interface {
 	isPoint2D()
 }
-type Point2DEmpty struct {
+type Point2D__Empty struct {
 }
 
+<<<<<<< HEAD
 func (Point2DEmpty) isPoint2D() {
+=======
+func (_ Point2D__Empty) isPoint2D() {
+>>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 }
-func Point2DEmptyCtor() Point2D {
-	return Point2DEmpty{}
+func Point2D__Empty__Ctor() Point2D {
+	return Point2D__Empty{}
 }
 
-type Point2DWithX struct {
+type Point2D__WithX struct {
 	F0 int
 }
 
+<<<<<<< HEAD
 func (Point2DWithX) isPoint2D() {
 }
 func Point2DWithXCtor(v0 int) Point2D {
 	return Point2DWithX{F0: v0}
+=======
+func (_ Point2D__WithX) isPoint2D() {
+}
+func Point2D__WithX__Ctor(a0 int) Point2D {
+	return Point2D__WithX{F0: a0}
+>>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 }
 
-type Point2DWithY struct {
+type Point2D__WithY struct {
 	F0 int
 }
 
+<<<<<<< HEAD
 func (Point2DWithY) isPoint2D() {
 }
 func Point2DWithYCtor(v0 int) Point2D {
 	return Point2DWithY{F0: v0}
+=======
+func (_ Point2D__WithY) isPoint2D() {
+}
+func Point2D__WithY__Ctor(a0 int) Point2D {
+	return Point2D__WithY{F0: a0}
+>>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 }
 
 type Operation interface {
 	isOperation()
 }
-type OperationAdd struct {
+type Operation__Add struct {
 }
 
+<<<<<<< HEAD
 func (OperationAdd) isOperation() {
+=======
+func (_ Operation__Add) isOperation() {
+>>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 }
-func OperationAddCtor() Operation {
-	return OperationAdd{}
+func Operation__Add__Ctor() Operation {
+	return Operation__Add{}
 }
 
-type OperationSubtract struct {
+type Operation__Subtract struct {
 }
 
+<<<<<<< HEAD
 func (OperationSubtract) isOperation() {
+=======
+func (_ Operation__Subtract) isOperation() {
+>>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 }
-func OperationSubtractCtor() Operation {
-	return OperationSubtract{}
+func Operation__Subtract__Ctor() Operation {
+	return Operation__Subtract{}
 }
 
-type OperationMultiply struct {
+type Operation__Multiply struct {
 }
 
+<<<<<<< HEAD
 func (OperationMultiply) isOperation() {
+=======
+func (_ Operation__Multiply) isOperation() {
+>>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 }
-func OperationMultiplyCtor() Operation {
-	return OperationMultiply{}
+func Operation__Multiply__Ctor() Operation {
+	return Operation__Multiply{}
 }
 
 type Person struct {
@@ -127,6 +169,7 @@ func swapPair[T any](p Pair[T]) Pair[T] {
 	return Pair[T]{first: p.second, second: p.first}
 }
 func describeColor(color Color) string {
+<<<<<<< HEAD
 	var __mygo_expr_0 string
 	if _, ok := color.(ColorRed); ok {
 		__mygo_expr_0 = "red"
@@ -136,6 +179,23 @@ func describeColor(color Color) string {
 		} else {
 			if _, ok := color.(ColorBlue); ok {
 				__mygo_expr_0 = "blue"
+=======
+	var expr_4 string
+	if _, ok := color.(Color__Red); ok {
+		var expr_3 string
+		expr_3 = "red"
+		expr_4 = expr_3
+	} else {
+		if _, ok := color.(Color__Green); ok {
+			var expr_2 string
+			expr_2 = "green"
+			expr_4 = expr_2
+		} else {
+			if _, ok := color.(Color__Blue); ok {
+				var expr_1 string
+				expr_1 = "blue"
+				expr_4 = expr_1
+>>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 			} else {
 			}
 		}
@@ -150,12 +210,25 @@ func maxInt(a int, b int) int {
 	}
 }
 func describeOption[A any](value Option[A], ToStringFn func(A) string) string {
+<<<<<<< HEAD
 	var __mygo_expr_0 string
 	if _, ok := value.(OptionNone[A]); ok {
 		__mygo_expr_0 = "None"
 	} else {
 		if __mygo_match___mygo_expr_1, ok := value.(OptionSome[A]); ok {
 			__mygo_expr_0 = "Some(" + ToStringFn(__mygo_match___mygo_expr_1.F0) + ")"
+=======
+	var expr_8 string
+	if _, ok := value.(Option__None[A]); ok {
+		var expr_7 string
+		expr_7 = "None"
+		expr_8 = expr_7
+	} else {
+		if v_4, ok := value.(Option__Some[A]); ok {
+			var expr_6 string
+			expr_6 = "Some(" + ToStringFn(v_4.F0) + ")"
+			expr_8 = expr_6
+>>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 		} else {
 		}
 	}
@@ -168,6 +241,7 @@ func buildList() List[int] {
 	return MygoIN4ListM4Cons[int](1, Some[List[int]](middleNode))
 }
 func sumList(lst List[int]) int {
+<<<<<<< HEAD
 	var total int = 0
 	var current List[int] = lst
 	var done bool = false
@@ -180,12 +254,26 @@ func sumList(lst List[int]) int {
 			if __mygo_match___mygo_expr_0, ok := MygoIN4ListM4Tail(current).(OptionSome[List[int]]); ok {
 				current = __mygo_match___mygo_expr_0.F0
 			} else {
+=======
+	var total_12 int = 0
+	var current_13 List[int] = lst
+	var done_14 bool = false
+	for !done_14 {
+		headVal := MygoIN4ListM4Head(current_13)
+		total_12 = total_12 + headVal
+		if _, ok := MygoIN4ListM4Tail(current_13).(Option__None[List[int]]); ok {
+			done_14 = true
+		} else {
+			if v_6, ok := MygoIN4ListM4Tail(current_13).(Option__Some[List[int]]); ok {
+				current_13 = v_6.F0
+>>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 			}
 		}
 	}
 	return total
 }
 func demo() string {
+<<<<<<< HEAD
 	red := ColorRedCtor()
 	point := Point2DWithYCtor(20)
 	op := OperationMultiplyCtor()
@@ -206,6 +294,34 @@ func demo() string {
 	var summary string = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v sum=%v", red, point, op, describeOption(empty, MygoIT8ToStringFN4BoolGN4BoolEM8ToString), describeOption(someVal, MygoIT8ToStringFN4BoolGN4BoolEM8ToString), person, rect, pair, color, addr, contact, areaValue, swapped, bigger, colorText, sum)
 	fmt.Println(summary)
 	return summary
+=======
+	red_15 := Color__Red__Ctor()
+	point_16 := Point2D__WithY__Ctor(20)
+	op_17 := Operation__Multiply__Ctor()
+	var empty_18 Option[float64] = None[float64]()
+	var someVal_19 Option[int] = Some[int](42)
+	person_20 := Person{name: "Charlie", age: 25}
+	rect_21 := Rectangle{width: 10.0, height: 5.0}
+	var pair_22 Pair[int] = Pair[int]{first: 1, second: 2}
+	color_23 := ColorTuple{}
+	addr_24 := Address{street: "Main St", city: "NYC"}
+	contact_25 := Contact{name: "Bob"}
+	areaValue_26 := area(rect_21)
+	swapped_27 := swapPair[int](pair_22)
+	bigger_28 := maxInt(3, 5)
+	colorText_29 := describeColor(Color__Green__Ctor())
+	lst_30 := buildList()
+	sum_31 := sumList(lst_30)
+	var summary_32 string = fmt.Sprintf("red=%v point=%v op=%v empty=%v some=%v person=%v rect=%v pair=%v color=%v addr=%v contact=%v area=%v swapped=%v bigger=%v colorText=%v sum=%v", red_15, point_16, op_17, describeOption(empty_18, MygoIT8ToStringFN7Float64GN7Float64EM8ToString), describeOption(someVal_19, MygoIT8ToStringFN3IntGN3IntEM8ToString), person_20, rect_21, pair_22, color_23, addr_24, contact_25, areaValue_26, swapped_27, bigger_28, colorText_29, sum_31)
+	func() Result[int, error] {
+		__mygo_result_val, __mygo_result_err := fmt.Println(summary_32)
+		if __mygo_result_err != nil {
+			return Err[int, error](__mygo_result_err)
+		}
+		return Ok[int, error](__mygo_result_val)
+	}()
+	return summary_32
+>>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 }
 func main() {
 	fmt.Println(demo())

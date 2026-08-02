@@ -340,12 +340,25 @@ func EmptyExpected() []string {
 	return []string{}
 }
 func WithExpected(err Option[ParseError], name string) Option[ParseError] {
+<<<<<<< HEAD
 	var __mygo_expr_0 Option[ParseError]
 	if __mygo_match___mygo_expr_1, ok := err.(OptionSome[ParseError]); ok {
 		__mygo_expr_0 = Some[ParseError](ParseError{Position: __mygo_match___mygo_expr_1.F0.Position, Expected: MygoIN5SliceM6Append(__mygo_match___mygo_expr_1.F0.Expected, name), Message: __mygo_match___mygo_expr_1.F0.Message})
 	} else {
 		if _, ok := err.(OptionNone[ParseError]); ok {
 			__mygo_expr_0 = None[ParseError]()
+=======
+	var expr_36 Option[ParseError]
+	if v_2, ok := err.(Option__Some[ParseError]); ok {
+		var expr_35 Option[ParseError]
+		expr_35 = Some[ParseError](ParseError{Position: v_2.F0.Position, Expected: MygoIN5SliceM6Append(v_2.F0.Expected, name), Message: v_2.F0.Message})
+		expr_36 = expr_35
+	} else {
+		if _, ok := err.(Option__None[ParseError]); ok {
+			var expr_34 Option[ParseError]
+			expr_34 = None[ParseError]()
+			expr_36 = expr_34
+>>>>>>> a9668c1 (fix(codegen): use Color__Green__Ctor instead of ColorGreenCtor)
 		} else {
 		}
 	}
