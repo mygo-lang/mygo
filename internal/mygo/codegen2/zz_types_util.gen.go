@@ -982,42 +982,11 @@ func collectComparableParams(typ ast2.TypeExpr, typeParams map[string]struct {
 	}
 	return __mygo_expr_0
 }
-func collectComparableParamsFromArgs(args []ast2.TypeExpr, typeParams map[string]struct {
-}, index int, out []string) []string {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) {
-			return out
-		} else {
-			arg := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(args, index), ast2.TypeExpr__UnitType__Ctor())
-			collected := collectComparableParams(arg, typeParams)
-			__tail_0 := args
-			__tail_1 := typeParams
-			__tail_2 := index + 1
-			__tail_3 := mergeStrings(out, collected)
-			args, typeParams, index, out = __tail_0, __tail_1, __tail_2, __tail_3
-			continue
-		}
-	}
+func collectComparableParamsFromArgs(args []ast2.TypeExpr, typeParams map[string]struct{}, index int, out []string) []string {
+	return __mygo_mt_codegen2_collectComparableParamsFromArgs(args, typeParams, index, out, 0)
 }
 func mergeStrings(a []string, b []string) []string {
-	for {
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(b) == 0 {
-			return a
-		} else {
-			head := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(b, 0), "")
-			if containsString(a, head) {
-				__tail_0 := a
-				__tail_1 := sliceDrop(b, 1)
-				a, b = __tail_0, __tail_1
-				continue
-			} else {
-				__tail_0 := MygoIN5SliceM6Append(a, head)
-				__tail_1 := sliceDrop(b, 1)
-				a, b = __tail_0, __tail_1
-				continue
-			}
-		}
-	}
+	return __mygo_mt_codegen2_mergeStrings(a, b, 0)
 }
 func containsString(items []string, target string) bool {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
@@ -1260,4 +1229,53 @@ func goPrimitiveTypeName(name string) string {
 		}
 	}
 	return __mygo_expr_0
+}
+func __mygo_mt_codegen2_collectComparableParamsFromArgs(__mygo_mt_p0 []ast2.TypeExpr, __mygo_mt_p1 map[string]struct{}, __mygo_mt_p2 int, __mygo_mt_p3 []string, __mygo_state int) []string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p3
+			} else {
+				arg := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), ast2.TypeExpr__UnitType__Ctor())
+				collected := collectComparableParams(arg, __mygo_mt_p1)
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2 + 1
+				__tail_3 := mergeStrings(__mygo_mt_p3, collected)
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_mergeStrings(__mygo_mt_p0 []string, __mygo_mt_p1 []string, __mygo_state int) []string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) == 0 {
+				return __mygo_mt_p0
+			} else {
+				head := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), "")
+				if containsString(__mygo_mt_p0, head) {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+					__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+					__mygo_state = 0
+					continue
+				} else {
+					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, head)
+					__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+					__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
 }

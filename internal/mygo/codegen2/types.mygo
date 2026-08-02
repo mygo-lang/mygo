@@ -42,6 +42,10 @@ struct egCtx
   tailRecParamCount: Int
   # 尾递归参数 Go 名
   tailRecParamNames: Slice[String]
+  # 当前正在生成的互递归 trampoline 计划（仅在 trampoline 成员体翻译期间设置）
+  mtPlan: Option[MutualTailPlan]
+  # 互递归 trampoline 的共享参数 Go 名（保留名 + 字典参数名），尾调用改写时使用
+  mtShared: Slice[String]
   constraintFuncs: Map[String, String]
   constraintFuncNames: Map[String, Slice[String]]
   constraintFuncArgTypes: Map[String, Slice[String]]
@@ -103,6 +107,8 @@ struct Generator2
   pkgInfo: Option[typeinference2.PackageInfo]
   pathAliases: Map[String, String]
   packageIndex: PackageIndex
+  # 互递归尾调用计划：ByName 供包装函数查找，All 供 owner 文件发射 trampoline。
+  mutualTail: MutualTailPlans
 end
 
 struct AstExprResult
@@ -170,6 +176,8 @@ func newEgCtx() -> egCtx
     tailRecFuncName: None,
     tailRecParamCount: 0,
     tailRecParamNames: [],
+    mtPlan: None,
+    mtShared: [],
     constraintFuncs: {},
     constraintFuncNames: {},
     constraintFuncArgTypes: {},
@@ -214,6 +222,8 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     tailRecFuncName: None,
     tailRecParamCount: 0,
     tailRecParamNames: [],
+    mtPlan: None,
+    mtShared: [],
     constraintFuncs: {},
     constraintFuncNames: {},
     constraintFuncArgTypes: {},
@@ -258,6 +268,8 @@ func newFuncEgCtx(params: Slice[String], retType: ast2.MonoType, tailName: Strin
     tailRecFuncName: Some(tailName),
     tailRecParamCount: paramCount,
     tailRecParamNames: [],
+    mtPlan: None,
+    mtShared: [],
     constraintFuncs: {},
     constraintFuncNames: {},
     constraintFuncArgTypes: {},
@@ -297,6 +309,7 @@ func newGenerator2(pkgName: String, typedDecls: Slice[ast2.Decl], imports: Slice
     pkgInfo: Some(pkgInfo),
     pathAliases: pathAliasesFromImports(imports),
     packageIndex: packageIndex,
+    mutualTail: MutualTailPlans { ByName: {}, All: [] as Slice[MutualTailPlan] },
   }
 end
 
@@ -319,6 +332,8 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     tailRecFuncName: ctx.tailRecFuncName,
     tailRecParamCount: ctx.tailRecParamCount,
     tailRecParamNames: ctx.tailRecParamNames,
+    mtPlan: ctx.mtPlan,
+    mtShared: ctx.mtShared,
     constraintFuncs: ctx.constraintFuncs,
     constraintFuncNames: ctx.constraintFuncNames,
     constraintFuncArgTypes: ctx.constraintFuncArgTypes,

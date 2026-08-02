@@ -680,24 +680,7 @@ func blockUntil(stopParser ps.Parser[string]) ps.Parser[ast2.Expr] {
 	}
 }
 func blockItems(stopParser ps.Parser[string], start ps.State, cur ps.State, items []ast2.Stmt) ps.Reply[ast2.Expr] {
-	for {
-		stop := ps.PLookAhead(stopParser)(cur)
-		if stop.Ok {
-			return ps.Reply[ast2.Expr]{Ok: true, Consumed: cur.Index != start.Index, Value: exprAt(start, ast2.ExprKind__BlockExpr__Ctor(items)), State: cur, Error: ps.EmptyError(cur.Position)}
-		} else {
-			r := stmt()(cur)
-			if r.Ok {
-				__tail_0 := stopParser
-				__tail_1 := start
-				__tail_2 := r.State
-				__tail_3 := MygoIN5SliceM6Append(items, r.Value)
-				stopParser, start, cur, items = __tail_0, __tail_1, __tail_2, __tail_3
-				continue
-			} else {
-				return ps.Reply[ast2.Expr]{Ok: false, Consumed: false, Value: emptyExpr(), State: cur, Error: r.Error}
-			}
-		}
-	}
+	return __mygo_mt_parser2_blockItems(stopParser, start, cur, items, 0)
 }
 func stmt() ps.Parser[ast2.Stmt] {
 	return ps.PChoice([]func(ps.State) ps.Reply[ast2.Stmt]{ps.PAttempt(returnStmt()), ps.PAttempt(breakStmt()), ps.PAttempt(continueStmt()), ps.PAttempt(varStmt()), ps.PAttempt(whileStmt()), ps.PAttempt(letrecStmt()), ps.PAttempt(letStmt()), exprStmt()})
@@ -1086,51 +1069,7 @@ func postfixExpr() ps.Parser[ast2.Expr] {
 	}
 }
 func postfixTail(start ps.State, cur ps.State, acc ast2.Expr) ps.Reply[ast2.Expr] {
-	for {
-		cast := ps.PThen(kw("as"), typeExpr())(cur)
-		if cast.Ok {
-			__tail_0 := start
-			__tail_1 := cast.State
-			__tail_2 := exprWithPos(acc.Pos, ast2.ExprKind__TypeAsExpr__Ctor(acc, cast.Value))
-			start, cur, acc = __tail_0, __tail_1, __tail_2
-			continue
-		} else {
-			var __mygo_expr_0 ps.Reply[struct {
-				F0 []ast2.TypeExpr
-				F1 []ast2.Expr
-			}]
-			if sameLineSuffix(cur) {
-				__mygo_expr_0 = callSuffix()(cur)
-			} else {
-				__mygo_expr_0 = ps.Reply[struct {
-					F0 []ast2.TypeExpr
-					F1 []ast2.Expr
-				}]{Ok: false, Consumed: false, Value: struct {
-					F0 []ast2.TypeExpr
-					F1 []ast2.Expr
-				}{F0: []ast2.TypeExpr{}, F1: []ast2.Expr{}}, State: cur, Error: ps.EmptyError(cur.Position)}
-			}
-			call := __mygo_expr_0
-			if call.Ok {
-				__tail_0 := start
-				__tail_1 := call.State
-				__tail_2 := exprWithPos(acc.Pos, ast2.ExprKind__CallExpr__Ctor(acc, call.Value.F0, call.Value.F1))
-				start, cur, acc = __tail_0, __tail_1, __tail_2
-				continue
-			} else {
-				fld := ps.PThen(sym("."), identifier())(cur)
-				if fld.Ok {
-					__tail_0 := start
-					__tail_1 := fld.State
-					__tail_2 := exprWithPos(acc.Pos, ast2.ExprKind__FieldExpr__Ctor(acc, fld.Value))
-					start, cur, acc = __tail_0, __tail_1, __tail_2
-					continue
-				} else {
-					return ps.Reply[ast2.Expr]{Ok: true, Consumed: cur.Index != start.Index, Value: acc, State: cur, Error: ps.EmptyError(cur.Position)}
-				}
-			}
-		}
-	}
+	return __mygo_mt_parser2_postfixTail(start, cur, acc, 0)
 }
 func sameLineSuffix(state ps.State) bool {
 	input := state.Input
@@ -1311,26 +1250,7 @@ func chainLeft[A any](item ps.Parser[A], op ps.Parser[string], combine func(stri
 	}
 }
 func chainLeftTail[A any](item ps.Parser[A], op ps.Parser[string], combine func(string, A, A) A, start ps.State, cur ps.State, acc A) ps.Reply[A] {
-	for {
-		rop := op(cur)
-		if !rop.Ok {
-			return ps.Reply[A]{Ok: true, Consumed: cur.Index != start.Index, Value: acc, State: cur, Error: ps.EmptyError(cur.Position)}
-		} else {
-			rr := item(rop.State)
-			if !rr.Ok {
-				return rr
-			} else {
-				__tail_0 := item
-				__tail_1 := op
-				__tail_2 := combine
-				__tail_3 := start
-				__tail_4 := rr.State
-				__tail_5 := combine(rop.Value, acc, rr.Value)
-				item, op, combine, start, cur, acc = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
-				continue
-			}
-		}
-	}
+	return __mygo_mt_parser2_chainLeftTail[A](item, op, combine, start, cur, acc, 0)
 }
 func identifier() ps.Parser[string] {
 	return lexeme(ps.PAttempt(identifierRaw()))
@@ -1707,4 +1627,113 @@ func formatError(sourceName string, err Option[ps.ParseError], pos ps.Position) 
 		}
 	}
 	return __mygo_expr_0
+}
+func __mygo_mt_parser2_blockItems(__mygo_mt_p0 ps.Parser[string], __mygo_mt_p1 ps.State, __mygo_mt_p2 ps.State, __mygo_mt_p3 []ast2.Stmt, __mygo_state int) ps.Reply[ast2.Expr] {
+	for {
+		switch __mygo_state {
+		case 0:
+			stop := ps.PLookAhead(__mygo_mt_p0)(__mygo_mt_p2)
+			if stop.Ok {
+				return ps.Reply[ast2.Expr]{Ok: true, Consumed: __mygo_mt_p2.Index != __mygo_mt_p1.Index, Value: exprAt(__mygo_mt_p1, ast2.ExprKind__BlockExpr__Ctor(__mygo_mt_p3)), State: __mygo_mt_p2, Error: ps.EmptyError(__mygo_mt_p2.Position)}
+			} else {
+				r := stmt()(__mygo_mt_p2)
+				if r.Ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := r.State
+					__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, r.Value)
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				} else {
+					return ps.Reply[ast2.Expr]{Ok: false, Consumed: false, Value: emptyExpr(), State: __mygo_mt_p2, Error: r.Error}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_chainLeftTail[A any](__mygo_mt_p0 ps.Parser[A], __mygo_mt_p1 ps.Parser[string], __mygo_mt_p2 func(string, A, A) A, __mygo_mt_p3 ps.State, __mygo_mt_p4 ps.State, __mygo_mt_p5 A, __mygo_state int) ps.Reply[A] {
+	for {
+		switch __mygo_state {
+		case 0:
+			rop := __mygo_mt_p1(__mygo_mt_p4)
+			if !rop.Ok {
+				return ps.Reply[A]{Ok: true, Consumed: __mygo_mt_p4.Index != __mygo_mt_p3.Index, Value: __mygo_mt_p5, State: __mygo_mt_p4, Error: ps.EmptyError(__mygo_mt_p4.Position)}
+			} else {
+				rr := __mygo_mt_p0(rop.State)
+				if !rr.Ok {
+					return rr
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3
+					__tail_4 := rr.State
+					__tail_5 := __mygo_mt_p2(rop.Value, __mygo_mt_p5, rr.Value)
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_postfixTail(__mygo_mt_p0 ps.State, __mygo_mt_p1 ps.State, __mygo_mt_p2 ast2.Expr, __mygo_state int) ps.Reply[ast2.Expr] {
+	for {
+		switch __mygo_state {
+		case 0:
+			cast := ps.PThen(kw("as"), typeExpr())(__mygo_mt_p1)
+			if cast.Ok {
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := cast.State
+				__tail_2 := exprWithPos(__mygo_mt_p2.Pos, ast2.ExprKind__TypeAsExpr__Ctor(__mygo_mt_p2, cast.Value))
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
+				continue
+			} else {
+				var __mygo_expr_0 ps.Reply[struct {
+					F0 []ast2.TypeExpr
+					F1 []ast2.Expr
+				}]
+				if sameLineSuffix(__mygo_mt_p1) {
+					__mygo_expr_0 = callSuffix()(__mygo_mt_p1)
+				} else {
+					__mygo_expr_0 = ps.Reply[struct {
+						F0 []ast2.TypeExpr
+						F1 []ast2.Expr
+					}]{Ok: false, Consumed: false, Value: struct {
+						F0 []ast2.TypeExpr
+						F1 []ast2.Expr
+					}{F0: []ast2.TypeExpr{}, F1: []ast2.Expr{}}, State: __mygo_mt_p1, Error: ps.EmptyError(__mygo_mt_p1.Position)}
+				}
+				call := __mygo_expr_0
+				if call.Ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := call.State
+					__tail_2 := exprWithPos(__mygo_mt_p2.Pos, ast2.ExprKind__CallExpr__Ctor(__mygo_mt_p2, call.Value.F0, call.Value.F1))
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					fld := ps.PThen(sym("."), identifier())(__mygo_mt_p1)
+					if fld.Ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := fld.State
+						__tail_2 := exprWithPos(__mygo_mt_p2.Pos, ast2.ExprKind__FieldExpr__Ctor(__mygo_mt_p2, fld.Value))
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+						return ps.Reply[ast2.Expr]{Ok: true, Consumed: __mygo_mt_p1.Index != __mygo_mt_p0.Index, Value: __mygo_mt_p2, State: __mygo_mt_p1, Error: ps.EmptyError(__mygo_mt_p1.Position)}
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
 }

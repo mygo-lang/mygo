@@ -872,6 +872,26 @@ func For(cond ast.Expr, body []ast.Stmt) ast.Stmt {
 	return &ast.ForStmt{Cond: cond, Body: Block(body)}
 }
 
+// ForEver builds an infinite for loop. Used by the mutual-tail-call trampoline.
+func ForEver(body []ast.Stmt) ast.Stmt {
+	return &ast.ForStmt{Body: Block(body)}
+}
+
+// Switch builds a tagged switch statement over tag.
+func Switch(tag ast.Expr, cases []ast.Stmt) ast.Stmt {
+	return &ast.SwitchStmt{Tag: tag, Body: &ast.BlockStmt{List: cases}}
+}
+
+// Case builds a case clause. An empty (or nil) values list produces a default
+// clause, which is what go/ast requires for `default:`.
+func Case(values []ast.Expr, body []ast.Stmt) ast.Stmt {
+	clause := &ast.CaseClause{Body: body}
+	if len(values) > 0 {
+		clause.List = values
+	}
+	return clause
+}
+
 func Field(names []string, typ ast.Expr, tag string) *ast.Field {
 	field := &ast.Field{Type: typ}
 	for _, name := range names {

@@ -27,10 +27,10 @@ end
 is conceptually emitted as:
 
 ```go
-func Even(n int) bool { return __mygo_mt_pkg_even_odd(n, 0) }
-func Odd(n int) bool  { return __mygo_mt_pkg_even_odd(n, 1) }
+func Even(n int) bool { return __mygo_mt_pkg_Even_Odd(n, 0) }
+func Odd(n int) bool  { return __mygo_mt_pkg_Even_Odd(n, 1) }
 
-func __mygo_mt_pkg_even_odd(n int, __mygo_state uint8) bool {
+func __mygo_mt_pkg_Even_Odd(n int, __mygo_state uint8) bool {
 	for {
 		switch __mygo_state {
 		case 0: // Even

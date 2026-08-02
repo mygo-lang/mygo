@@ -99,17 +99,7 @@ func PChoice[A any](parsers []Parser[A]) Parser[A] {
 	}
 }
 func PChoiceFrom[A any](parsers []Parser[A], index int, current Parser[A]) Parser[A] {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parsers) {
-			return current
-		} else {
-			__tail_0 := parsers
-			__tail_1 := index + 1
-			__tail_2 := POrElse(current, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parsers, index), PFail[A]("no parser matched")))
-			parsers, index, current = __tail_0, __tail_1, __tail_2
-			continue
-		}
-	}
+	return __mygo_mt_parsec_PChoiceFrom[A](parsers, index, current, 0)
 }
 func PAttempt[A any](p Parser[A]) Parser[A] {
 	return func(state State) Reply[A] {
@@ -146,27 +136,7 @@ func PMany[A any](p Parser[A]) Parser[[]A] {
 	}
 }
 func PManyLoop[A any](p Parser[A], state State, consumed bool, values []A) Reply[[]A] {
-	for {
-		r := p(state)
-		if !r.Ok {
-			if r.Consumed {
-				return Reply[[]A]{Ok: false, Consumed: true, Value: values, State: r.State, Error: r.Error}
-			} else {
-				return Reply[[]A]{Ok: true, Consumed: consumed, Value: values, State: state, Error: EmptyError(state.Position)}
-			}
-		} else {
-			if !r.Consumed {
-				return Reply[[]A]{Ok: false, Consumed: consumed, Value: values, State: state, Error: ErrorAt(state.Position, "PMany parser must consume input", EmptyExpected())}
-			} else {
-				__tail_0 := p
-				__tail_1 := r.State
-				__tail_2 := true
-				__tail_3 := MygoIN5SliceM6Append(values, r.Value)
-				p, state, consumed, values = __tail_0, __tail_1, __tail_2, __tail_3
-				continue
-			}
-		}
-	}
+	return __mygo_mt_parsec_PManyLoop[A](p, state, consumed, values, 0)
 }
 func PMany1[A any](p Parser[A]) Parser[[]A] {
 	return PBind(p, func(first A) Parser[[]A] {
@@ -407,4 +377,52 @@ func StringSliceContains(items []string, wanted string) bool {
 }
 func FromRunes(rs []rune) string {
 	return MygoIN6StringM9FromRunes(rs)
+}
+func __mygo_mt_parsec_PChoiceFrom[A any](__mygo_mt_p0 []Parser[A], __mygo_mt_p1 int, __mygo_mt_p2 Parser[A], __mygo_state int) Parser[A] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1 + 1
+				__tail_2 := POrElse(__mygo_mt_p2, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), PFail[A]("no parser matched")))
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parsec_PManyLoop[A any](__mygo_mt_p0 Parser[A], __mygo_mt_p1 State, __mygo_mt_p2 bool, __mygo_mt_p3 []A, __mygo_state int) Reply[[]A] {
+	for {
+		switch __mygo_state {
+		case 0:
+			r := __mygo_mt_p0(__mygo_mt_p1)
+			if !r.Ok {
+				if r.Consumed {
+					return Reply[[]A]{Ok: false, Consumed: true, Value: __mygo_mt_p3, State: r.State, Error: r.Error}
+				} else {
+					return Reply[[]A]{Ok: true, Consumed: __mygo_mt_p2, Value: __mygo_mt_p3, State: __mygo_mt_p1, Error: EmptyError(__mygo_mt_p1.Position)}
+				}
+			} else {
+				if !r.Consumed {
+					return Reply[[]A]{Ok: false, Consumed: __mygo_mt_p2, Value: __mygo_mt_p3, State: __mygo_mt_p1, Error: ErrorAt(__mygo_mt_p1.Position, "PMany parser must consume input", EmptyExpected())}
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := r.State
+					__tail_2 := true
+					__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, r.Value)
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
 }

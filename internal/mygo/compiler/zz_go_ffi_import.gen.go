@@ -56,105 +56,13 @@ func bootstrapGoImportDir(start string, importPath string) Option[string] {
 	return __mygo_expr_1
 }
 func bootstrapGoImportDirReplaceEntry(root string, content string, importPath string, index int) Option[string] {
-	for {
-		replaces := bootstrapGoModReplaceEntries(content)
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(replaces) {
-			return bootstrapGoImportDirRequireEntry(content, importPath, 0)
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(replaces, index)
-			var __mygo_expr_1 Option[string]
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[BootstrapGoModReplace]); ok {
-				__mygo_expr_3 := bootstrapResolveReplaceRoot(root, __mygo_match___mygo_expr_2.F0.Path)
-				var __mygo_expr_4 Option[string]
-				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[string]); ok {
-					__mygo_expr_6 := bootstrapModuleImportDir(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_2.F0.Module, importPath)
-					var __mygo_expr_7 Option[string]
-					if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[string]); ok {
-						__mygo_expr_7 = Some[string](__mygo_match___mygo_expr_8.F0)
-					} else {
-						if _, ok := __mygo_expr_6.(Option__None[string]); ok {
-							__mygo_expr_7 = bootstrapGoImportDirReplaceEntry(root, content, importPath, index+1)
-						} else {
-						}
-					}
-					__mygo_expr_4 = __mygo_expr_7
-				} else {
-					if _, ok := __mygo_expr_3.(Option__None[string]); ok {
-						__mygo_expr_4 = bootstrapGoImportDirReplaceEntry(root, content, importPath, index+1)
-					} else {
-					}
-				}
-				__mygo_expr_1 = __mygo_expr_4
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[BootstrapGoModReplace]); ok {
-					__mygo_expr_1 = bootstrapGoImportDirReplaceEntry(root, content, importPath, index+1)
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+	return __mygo_mt_compiler_bootstrapGoImportDirReplaceEntry(root, content, importPath, index, 0)
 }
 func bootstrapGoImportDirRequireEntry(content string, importPath string, index int) Option[string] {
-	for {
-		requires := bootstrapGoModRequireEntries(content)
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(requires) {
-			return None[string]()
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(requires, index)
-			var __mygo_expr_1 Option[string]
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[BootstrapGoModRequire]); ok {
-				__mygo_expr_3 := bootstrapModuleImportSuffix(__mygo_match___mygo_expr_2.F0.Module, importPath)
-				var __mygo_expr_4 Option[string]
-				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[string]); ok {
-					__mygo_expr_4 = bootstrapGoImportDirCacheEntry(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0, 0)
-				} else {
-					if _, ok := __mygo_expr_3.(Option__None[string]); ok {
-						__mygo_expr_4 = bootstrapGoImportDirRequireEntry(content, importPath, index+1)
-					} else {
-					}
-				}
-				__mygo_expr_1 = __mygo_expr_4
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[BootstrapGoModRequire]); ok {
-					__mygo_expr_1 = bootstrapGoImportDirRequireEntry(content, importPath, index+1)
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+	return __mygo_mt_compiler_bootstrapGoImportDirRequireEntry(content, importPath, index, 0)
 }
 func bootstrapGoImportDirCacheEntry(req BootstrapGoModRequire, suffix string, index int) Option[string] {
-	for {
-		cacheRoots := bootstrapGoModCacheRoots()
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cacheRoots) {
-			return None[string]()
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cacheRoots, index)
-			var __mygo_expr_1 Option[string]
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
-				modRoot := filepath.Join(__mygo_match___mygo_expr_2.F0, bootstrapModuleCachePath(req.Module, req.Version))
-				__mygo_expr_3 := bootstrapExistingDir(filepath.Join(modRoot, filepath.FromSlash(suffix)))
-				var __mygo_expr_4 Option[string]
-				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[string]); ok {
-					__mygo_expr_4 = Some[string](__mygo_match___mygo_expr_5.F0)
-				} else {
-					if _, ok := __mygo_expr_3.(Option__None[string]); ok {
-						__mygo_expr_4 = bootstrapGoImportDirCacheEntry(req, suffix, index+1)
-					} else {
-					}
-				}
-				__mygo_expr_1 = __mygo_expr_4
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
-					__mygo_expr_1 = bootstrapGoImportDirCacheEntry(req, suffix, index+1)
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+	return __mygo_mt_compiler_bootstrapGoImportDirCacheEntry(req, suffix, index, 0)
 }
 func bootstrapFindGoModuleRoot(start string) Option[string] {
 	var __mygo_expr_2 Result[string, error]
@@ -177,33 +85,7 @@ func bootstrapFindGoModuleRoot(start string) Option[string] {
 	return __mygo_expr_4
 }
 func bootstrapFindGoModuleRootUp(cur string) Option[string] {
-	for {
-		var __mygo_expr_2 Result[os.FileInfo, error]
-		__mygo_expr_0, __mygo_expr_1 := os.Stat(filepath.Join(cur, "go.mod"))
-		if __mygo_expr_1 != nil {
-			__mygo_expr_2 = Err[os.FileInfo, error](__mygo_expr_1)
-		} else {
-			__mygo_expr_2 = Ok[os.FileInfo, error](__mygo_expr_0)
-		}
-		__mygo_expr_3 := __mygo_expr_2
-		var __mygo_expr_4 Option[string]
-		if _, ok := __mygo_expr_3.(Result__Ok[os.FileInfo, error]); ok {
-			__mygo_expr_4 = Some[string](cur)
-		} else {
-			if _, ok := __mygo_expr_3.(Result__Err[os.FileInfo, error]); ok {
-				parent := filepath.Dir(cur)
-				var __mygo_expr_5 Option[string]
-				if parent == cur {
-					__mygo_expr_5 = None[string]()
-				} else {
-					__mygo_expr_5 = bootstrapFindGoModuleRootUp(parent)
-				}
-				__mygo_expr_4 = __mygo_expr_5
-			} else {
-			}
-		}
-		return __mygo_expr_4
-	}
+	return __mygo_mt_compiler_bootstrapFindGoModuleRootUp(cur, 0)
 }
 func bootstrapReadFileString(path string) Option[string] {
 	var __mygo_expr_2 Result[[]byte, error]
@@ -229,30 +111,7 @@ func bootstrapGoModModulePath(content string) string {
 	return bootstrapGoModModulePathIn(MygoIN6StringM5Split(content, "\n"), 0)
 }
 func bootstrapGoModModulePathIn(lines []string, index int) string {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
-			return ""
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, index)
-			var __mygo_expr_1 string
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
-				cleaned := bootstrapCleanGoModLine(__mygo_match___mygo_expr_2.F0)
-				var __mygo_expr_3 string
-				if MygoIN6StringM9HasPrefix(cleaned, "module ") {
-					__mygo_expr_3 = MygoIN6StringM9TrimSpace(MygoIN6StringM10TrimPrefix(cleaned, "module "))
-				} else {
-					__mygo_expr_3 = bootstrapGoModModulePathIn(lines, index+1)
-				}
-				__mygo_expr_1 = __mygo_expr_3
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
-					__mygo_expr_1 = bootstrapGoModModulePathIn(lines, index+1)
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+	return __mygo_mt_compiler_bootstrapGoModModulePathIn(lines, index, 0)
 }
 func bootstrapCleanGoModLine(line string) string {
 	trimmed := MygoIN6StringM9TrimSpace(line)
@@ -277,177 +136,19 @@ func bootstrapGoModReplaceEntries(content string) []BootstrapGoModReplace {
 	return bootstrapGoModReplaceEntriesIn(MygoIN6StringM5Split(content, "\n"), false, 0, []BootstrapGoModReplace{})
 }
 func bootstrapGoModReplaceEntriesIn(lines []string, inBlock bool, index int, out []BootstrapGoModReplace) []BootstrapGoModReplace {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
-			return out
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, index)
-			var __mygo_expr_1 []BootstrapGoModReplace
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
-				line := bootstrapCleanGoModLine(__mygo_match___mygo_expr_2.F0)
-				var __mygo_expr_13 []BootstrapGoModReplace
-				if line == "" {
-					__mygo_expr_13 = bootstrapGoModReplaceEntriesIn(lines, inBlock, index+1, out)
-				} else {
-					var __mygo_expr_12 []BootstrapGoModReplace
-					if line == "replace (" {
-						__mygo_expr_12 = bootstrapGoModReplaceEntriesIn(lines, true, index+1, out)
-					} else {
-						var __mygo_expr_11 []BootstrapGoModReplace
-						if inBlock && line == ")" {
-							__mygo_expr_11 = bootstrapGoModReplaceEntriesIn(lines, false, index+1, out)
-						} else {
-							var __mygo_expr_10 []BootstrapGoModReplace
-							if MygoIN6StringM9HasPrefix(line, "replace ") {
-								entryLine := MygoIN6StringM9TrimSpace(MygoIN6StringM10TrimPrefix(line, "replace "))
-								__mygo_expr_3 := bootstrapGoModReplaceFromFields(MygoIN6StringM6Fields(entryLine))
-								var __mygo_expr_4 []BootstrapGoModReplace
-								if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[BootstrapGoModReplace]); ok {
-									__mygo_expr_4 = bootstrapGoModReplaceEntriesIn(lines, inBlock, index+1, MygoIN5SliceM6Append(out, __mygo_match___mygo_expr_5.F0))
-								} else {
-									if _, ok := __mygo_expr_3.(Option__None[BootstrapGoModReplace]); ok {
-										__mygo_expr_4 = bootstrapGoModReplaceEntriesIn(lines, inBlock, index+1, out)
-									} else {
-									}
-								}
-								__mygo_expr_10 = __mygo_expr_4
-							} else {
-								var __mygo_expr_9 []BootstrapGoModReplace
-								if inBlock {
-									__mygo_expr_6 := bootstrapGoModReplaceFromFields(MygoIN6StringM6Fields(line))
-									var __mygo_expr_7 []BootstrapGoModReplace
-									if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[BootstrapGoModReplace]); ok {
-										__mygo_expr_7 = bootstrapGoModReplaceEntriesIn(lines, inBlock, index+1, MygoIN5SliceM6Append(out, __mygo_match___mygo_expr_8.F0))
-									} else {
-										if _, ok := __mygo_expr_6.(Option__None[BootstrapGoModReplace]); ok {
-											__mygo_expr_7 = bootstrapGoModReplaceEntriesIn(lines, inBlock, index+1, out)
-										} else {
-										}
-									}
-									__mygo_expr_9 = __mygo_expr_7
-								} else {
-									__mygo_expr_9 = bootstrapGoModReplaceEntriesIn(lines, inBlock, index+1, out)
-								}
-								__mygo_expr_10 = __mygo_expr_9
-							}
-							__mygo_expr_11 = __mygo_expr_10
-						}
-						__mygo_expr_12 = __mygo_expr_11
-					}
-					__mygo_expr_13 = __mygo_expr_12
-				}
-				__mygo_expr_1 = __mygo_expr_13
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
-					__mygo_expr_1 = bootstrapGoModReplaceEntriesIn(lines, inBlock, index+1, out)
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+	return __mygo_mt_compiler_bootstrapGoModReplaceEntriesIn(lines, inBlock, index, out, 0)
 }
 func bootstrapGoModReplaceFromFields(fields []string) Option[BootstrapGoModReplace] {
 	return bootstrapGoModReplaceFromFieldsIn(fields, 0)
 }
 func bootstrapGoModReplaceFromFieldsIn(fields []string, index int) Option[BootstrapGoModReplace] {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) {
-			return None[BootstrapGoModReplace]()
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, index)
-			var __mygo_expr_1 Option[BootstrapGoModReplace]
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
-				var __mygo_expr_3 Option[BootstrapGoModReplace]
-				if __mygo_match___mygo_expr_2.F0 == "=>" && index > 0 && index+1 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) {
-					__mygo_expr_3 = Some[BootstrapGoModReplace](BootstrapGoModReplace{Module: MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ""), Path: MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, index+1), "")})
-				} else {
-					__mygo_expr_3 = bootstrapGoModReplaceFromFieldsIn(fields, index+1)
-				}
-				__mygo_expr_1 = __mygo_expr_3
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
-					__mygo_expr_1 = None[BootstrapGoModReplace]()
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+	return __mygo_mt_compiler_bootstrapGoModReplaceFromFieldsIn(fields, index, 0)
 }
 func bootstrapGoModRequireEntries(content string) []BootstrapGoModRequire {
 	return bootstrapGoModRequireEntriesIn(MygoIN6StringM5Split(content, "\n"), false, 0, []BootstrapGoModRequire{})
 }
 func bootstrapGoModRequireEntriesIn(lines []string, inBlock bool, index int, out []BootstrapGoModRequire) []BootstrapGoModRequire {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
-			return out
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, index)
-			var __mygo_expr_1 []BootstrapGoModRequire
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
-				line := bootstrapCleanGoModLine(__mygo_match___mygo_expr_2.F0)
-				var __mygo_expr_13 []BootstrapGoModRequire
-				if line == "" {
-					__mygo_expr_13 = bootstrapGoModRequireEntriesIn(lines, inBlock, index+1, out)
-				} else {
-					var __mygo_expr_12 []BootstrapGoModRequire
-					if line == "require (" {
-						__mygo_expr_12 = bootstrapGoModRequireEntriesIn(lines, true, index+1, out)
-					} else {
-						var __mygo_expr_11 []BootstrapGoModRequire
-						if inBlock && line == ")" {
-							__mygo_expr_11 = bootstrapGoModRequireEntriesIn(lines, false, index+1, out)
-						} else {
-							var __mygo_expr_10 []BootstrapGoModRequire
-							if MygoIN6StringM9HasPrefix(line, "require ") {
-								entryLine := MygoIN6StringM9TrimSpace(MygoIN6StringM10TrimPrefix(line, "require "))
-								__mygo_expr_3 := bootstrapGoModRequireFromFields(MygoIN6StringM6Fields(entryLine))
-								var __mygo_expr_4 []BootstrapGoModRequire
-								if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[BootstrapGoModRequire]); ok {
-									__mygo_expr_4 = bootstrapGoModRequireEntriesIn(lines, inBlock, index+1, MygoIN5SliceM6Append(out, __mygo_match___mygo_expr_5.F0))
-								} else {
-									if _, ok := __mygo_expr_3.(Option__None[BootstrapGoModRequire]); ok {
-										__mygo_expr_4 = bootstrapGoModRequireEntriesIn(lines, inBlock, index+1, out)
-									} else {
-									}
-								}
-								__mygo_expr_10 = __mygo_expr_4
-							} else {
-								var __mygo_expr_9 []BootstrapGoModRequire
-								if inBlock {
-									__mygo_expr_6 := bootstrapGoModRequireFromFields(MygoIN6StringM6Fields(line))
-									var __mygo_expr_7 []BootstrapGoModRequire
-									if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[BootstrapGoModRequire]); ok {
-										__mygo_expr_7 = bootstrapGoModRequireEntriesIn(lines, inBlock, index+1, MygoIN5SliceM6Append(out, __mygo_match___mygo_expr_8.F0))
-									} else {
-										if _, ok := __mygo_expr_6.(Option__None[BootstrapGoModRequire]); ok {
-											__mygo_expr_7 = bootstrapGoModRequireEntriesIn(lines, inBlock, index+1, out)
-										} else {
-										}
-									}
-									__mygo_expr_9 = __mygo_expr_7
-								} else {
-									__mygo_expr_9 = bootstrapGoModRequireEntriesIn(lines, inBlock, index+1, out)
-								}
-								__mygo_expr_10 = __mygo_expr_9
-							}
-							__mygo_expr_11 = __mygo_expr_10
-						}
-						__mygo_expr_12 = __mygo_expr_11
-					}
-					__mygo_expr_13 = __mygo_expr_12
-				}
-				__mygo_expr_1 = __mygo_expr_13
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
-					__mygo_expr_1 = bootstrapGoModRequireEntriesIn(lines, inBlock, index+1, out)
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+	return __mygo_mt_compiler_bootstrapGoModRequireEntriesIn(lines, inBlock, index, out, 0)
 }
 func bootstrapGoModRequireFromFields(fields []string) Option[BootstrapGoModRequire] {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) >= 2 {
@@ -556,83 +257,16 @@ func bootstrapGoModCacheRoots() []string {
 	return bootstrapDedupeStrings(withHome, 0, []string{})
 }
 func bootstrapGoModCacheRootsGopath(parts []string, index int, acc []string) []string {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts) {
-			return acc
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, index)
-			var __mygo_expr_1 []string
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
-				var __mygo_expr_3 []string
-				if __mygo_match___mygo_expr_2.F0 == "" {
-					__mygo_expr_3 = bootstrapGoModCacheRootsGopath(parts, index+1, acc)
-				} else {
-					__mygo_expr_3 = bootstrapGoModCacheRootsGopath(parts, index+1, MygoIN5SliceM6Append(acc, filepath.Join(__mygo_match___mygo_expr_2.F0, "pkg", "mod")))
-				}
-				__mygo_expr_1 = __mygo_expr_3
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
-					__mygo_expr_1 = bootstrapGoModCacheRootsGopath(parts, index+1, acc)
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+	return __mygo_mt_compiler_bootstrapGoModCacheRootsGopath(parts, index, acc, 0)
 }
 func bootstrapDedupeStrings(items []string, index int, out []string) []string {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-			return out
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
-			var __mygo_expr_1 []string
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
-				cleaned := filepath.Clean(__mygo_match___mygo_expr_2.F0)
-				var __mygo_expr_3 []string
-				if bootstrapContainsString(out, cleaned) {
-					__mygo_expr_3 = bootstrapDedupeStrings(items, index+1, out)
-				} else {
-					__mygo_expr_3 = bootstrapDedupeStrings(items, index+1, MygoIN5SliceM6Append(out, cleaned))
-				}
-				__mygo_expr_1 = __mygo_expr_3
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
-					__mygo_expr_1 = bootstrapDedupeStrings(items, index+1, out)
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+	return __mygo_mt_compiler_bootstrapDedupeStrings(items, index, out, 0)
 }
 func bootstrapContainsString(items []string, value string) bool {
 	return bootstrapContainsStringIn(items, value, 0)
 }
 func bootstrapContainsStringIn(items []string, value string, index int) bool {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-			return false
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
-			var __mygo_expr_1 bool
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
-				var __mygo_expr_3 bool
-				if __mygo_match___mygo_expr_2.F0 == value {
-					__mygo_expr_3 = true
-				} else {
-					__mygo_expr_3 = bootstrapContainsStringIn(items, value, index+1)
-				}
-				__mygo_expr_1 = __mygo_expr_3
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[string]); ok {
-					__mygo_expr_1 = bootstrapContainsStringIn(items, value, index+1)
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+	return __mygo_mt_compiler_bootstrapContainsStringIn(items, value, index, 0)
 }
 func bootstrapModuleCachePath(module string, version string) string {
 	parts := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(MygoIN6StringM5Split(module, "/"), func(p string) string {
@@ -662,4 +296,589 @@ func bootstrapLoadGoPackage(workspaceRoot string, path string) Result[BootstrapG
 		}
 		return Ok[BootstrapGoPackageInfo, string](info)
 	}()
+}
+func __mygo_mt_compiler_bootstrapContainsStringIn(__mygo_mt_p0 []string, __mygo_mt_p1 string, __mygo_mt_p2 int, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return false
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+					if __mygo_match___mygo_expr_1.F0 == __mygo_mt_p1 {
+						return true
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapDedupeStrings(__mygo_mt_p0 []string, __mygo_mt_p1 int, __mygo_mt_p2 []string, __mygo_state int) []string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+					cleaned := filepath.Clean(__mygo_match___mygo_expr_1.F0)
+					if bootstrapContainsString(__mygo_mt_p2, cleaned) {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, cleaned)
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapFindGoModuleRootUp(__mygo_mt_p0 string, __mygo_state int) Option[string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			var __mygo_expr_2 Result[os.FileInfo, error]
+			__mygo_expr_0, __mygo_expr_1 := os.Stat(filepath.Join(__mygo_mt_p0, "go.mod"))
+			if __mygo_expr_1 != nil {
+				__mygo_expr_2 = Err[os.FileInfo, error](__mygo_expr_1)
+			} else {
+				__mygo_expr_2 = Ok[os.FileInfo, error](__mygo_expr_0)
+			}
+			__mygo_expr_3 := __mygo_expr_2
+			if _, ok := __mygo_expr_3.(Result__Ok[os.FileInfo, error]); ok {
+				return Some[string](__mygo_mt_p0)
+			} else {
+				if _, ok := __mygo_expr_3.(Result__Err[os.FileInfo, error]); ok {
+					parent := filepath.Dir(__mygo_mt_p0)
+					if parent == __mygo_mt_p0 {
+						return None[string]()
+					} else {
+						__tail_0 := parent
+						__mygo_mt_p0 = __tail_0
+						__mygo_state = 0
+						continue
+					}
+				} else {
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapGoImportDirCacheEntry(__mygo_mt_p0 BootstrapGoModRequire, __mygo_mt_p1 string, __mygo_mt_p2 int, __mygo_state int) Option[string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			cacheRoots := bootstrapGoModCacheRoots()
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cacheRoots) {
+				return None[string]()
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cacheRoots, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+					modRoot := filepath.Join(__mygo_match___mygo_expr_1.F0, bootstrapModuleCachePath(__mygo_mt_p0.Module, __mygo_mt_p0.Version))
+					__mygo_expr_2 := bootstrapExistingDir(filepath.Join(modRoot, filepath.FromSlash(__mygo_mt_p1)))
+					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
+						return Some[string](__mygo_match___mygo_expr_3.F0)
+					} else {
+						if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						} else {
+						}
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapGoImportDirReplaceEntry(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 string, __mygo_mt_p3 int, __mygo_state int) Option[string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			replaces := bootstrapGoModReplaceEntries(__mygo_mt_p1)
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(replaces) {
+				return bootstrapGoImportDirRequireEntry(__mygo_mt_p1, __mygo_mt_p2, 0)
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(replaces, __mygo_mt_p3)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[BootstrapGoModReplace]); ok {
+					__mygo_expr_2 := bootstrapResolveReplaceRoot(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0.Path)
+					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
+						__mygo_expr_4 := bootstrapModuleImportDir(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_1.F0.Module, __mygo_mt_p2)
+						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[string]); ok {
+							return Some[string](__mygo_match___mygo_expr_5.F0)
+						} else {
+							if _, ok := __mygo_expr_4.(Option__None[string]); ok {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := __mygo_mt_p1
+								__tail_2 := __mygo_mt_p2
+								__tail_3 := __mygo_mt_p3 + 1
+								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+								__mygo_state = 0
+								continue
+							} else {
+							}
+						}
+					} else {
+						if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2
+							__tail_3 := __mygo_mt_p3 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+							__mygo_state = 0
+							continue
+						} else {
+						}
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[BootstrapGoModReplace]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := __mygo_mt_p3 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapGoImportDirRequireEntry(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 int, __mygo_state int) Option[string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			requires := bootstrapGoModRequireEntries(__mygo_mt_p0)
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(requires) {
+				return None[string]()
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(requires, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[BootstrapGoModRequire]); ok {
+					__mygo_expr_2 := bootstrapModuleImportSuffix(__mygo_match___mygo_expr_1.F0.Module, __mygo_mt_p1)
+					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
+						return bootstrapGoImportDirCacheEntry(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_3.F0, 0)
+					} else {
+						if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						} else {
+						}
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[BootstrapGoModRequire]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapGoModCacheRootsGopath(__mygo_mt_p0 []string, __mygo_mt_p1 int, __mygo_mt_p2 []string, __mygo_state int) []string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+					if __mygo_match___mygo_expr_1.F0 == "" {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, filepath.Join(__mygo_match___mygo_expr_1.F0, "pkg", "mod"))
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapGoModModulePathIn(__mygo_mt_p0 []string, __mygo_mt_p1 int, __mygo_state int) string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return ""
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+					cleaned := bootstrapCleanGoModLine(__mygo_match___mygo_expr_1.F0)
+					if MygoIN6StringM9HasPrefix(cleaned, "module ") {
+						return MygoIN6StringM9TrimSpace(MygoIN6StringM10TrimPrefix(cleaned, "module "))
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapGoModReplaceEntriesIn(__mygo_mt_p0 []string, __mygo_mt_p1 bool, __mygo_mt_p2 int, __mygo_mt_p3 []BootstrapGoModReplace, __mygo_state int) []BootstrapGoModReplace {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p3
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+					line := bootstrapCleanGoModLine(__mygo_match___mygo_expr_1.F0)
+					if line == "" {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__tail_3 := __mygo_mt_p3
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+						if line == "replace (" {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := true
+							__tail_2 := __mygo_mt_p2 + 1
+							__tail_3 := __mygo_mt_p3
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+							__mygo_state = 0
+							continue
+						} else {
+							if __mygo_mt_p1 && line == ")" {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := false
+								__tail_2 := __mygo_mt_p2 + 1
+								__tail_3 := __mygo_mt_p3
+								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+								__mygo_state = 0
+								continue
+							} else {
+								if MygoIN6StringM9HasPrefix(line, "replace ") {
+									entryLine := MygoIN6StringM9TrimSpace(MygoIN6StringM10TrimPrefix(line, "replace "))
+									__mygo_expr_2 := bootstrapGoModReplaceFromFields(MygoIN6StringM6Fields(entryLine))
+									if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[BootstrapGoModReplace]); ok {
+										__tail_0 := __mygo_mt_p0
+										__tail_1 := __mygo_mt_p1
+										__tail_2 := __mygo_mt_p2 + 1
+										__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, __mygo_match___mygo_expr_3.F0)
+										__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+										__mygo_state = 0
+										continue
+									} else {
+										if _, ok := __mygo_expr_2.(Option__None[BootstrapGoModReplace]); ok {
+											__tail_0 := __mygo_mt_p0
+											__tail_1 := __mygo_mt_p1
+											__tail_2 := __mygo_mt_p2 + 1
+											__tail_3 := __mygo_mt_p3
+											__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+											__mygo_state = 0
+											continue
+										} else {
+										}
+									}
+								} else {
+									if __mygo_mt_p1 {
+										__mygo_expr_4 := bootstrapGoModReplaceFromFields(MygoIN6StringM6Fields(line))
+										if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[BootstrapGoModReplace]); ok {
+											__tail_0 := __mygo_mt_p0
+											__tail_1 := __mygo_mt_p1
+											__tail_2 := __mygo_mt_p2 + 1
+											__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, __mygo_match___mygo_expr_5.F0)
+											__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+											__mygo_state = 0
+											continue
+										} else {
+											if _, ok := __mygo_expr_4.(Option__None[BootstrapGoModReplace]); ok {
+												__tail_0 := __mygo_mt_p0
+												__tail_1 := __mygo_mt_p1
+												__tail_2 := __mygo_mt_p2 + 1
+												__tail_3 := __mygo_mt_p3
+												__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+												__mygo_state = 0
+												continue
+											} else {
+											}
+										}
+									} else {
+										__tail_0 := __mygo_mt_p0
+										__tail_1 := __mygo_mt_p1
+										__tail_2 := __mygo_mt_p2 + 1
+										__tail_3 := __mygo_mt_p3
+										__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+										__mygo_state = 0
+										continue
+									}
+								}
+							}
+						}
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__tail_3 := __mygo_mt_p3
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapGoModReplaceFromFieldsIn(__mygo_mt_p0 []string, __mygo_mt_p1 int, __mygo_state int) Option[BootstrapGoModReplace] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return None[BootstrapGoModReplace]()
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+					if __mygo_match___mygo_expr_1.F0 == "=>" && __mygo_mt_p1 > 0 && __mygo_mt_p1+1 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+						return Some[BootstrapGoModReplace](BootstrapGoModReplace{Module: MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ""), Path: MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1+1), "")})
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+						return None[BootstrapGoModReplace]()
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapGoModRequireEntriesIn(__mygo_mt_p0 []string, __mygo_mt_p1 bool, __mygo_mt_p2 int, __mygo_mt_p3 []BootstrapGoModRequire, __mygo_state int) []BootstrapGoModRequire {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p3
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
+					line := bootstrapCleanGoModLine(__mygo_match___mygo_expr_1.F0)
+					if line == "" {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__tail_3 := __mygo_mt_p3
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+						if line == "require (" {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := true
+							__tail_2 := __mygo_mt_p2 + 1
+							__tail_3 := __mygo_mt_p3
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+							__mygo_state = 0
+							continue
+						} else {
+							if __mygo_mt_p1 && line == ")" {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := false
+								__tail_2 := __mygo_mt_p2 + 1
+								__tail_3 := __mygo_mt_p3
+								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+								__mygo_state = 0
+								continue
+							} else {
+								if MygoIN6StringM9HasPrefix(line, "require ") {
+									entryLine := MygoIN6StringM9TrimSpace(MygoIN6StringM10TrimPrefix(line, "require "))
+									__mygo_expr_2 := bootstrapGoModRequireFromFields(MygoIN6StringM6Fields(entryLine))
+									if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[BootstrapGoModRequire]); ok {
+										__tail_0 := __mygo_mt_p0
+										__tail_1 := __mygo_mt_p1
+										__tail_2 := __mygo_mt_p2 + 1
+										__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, __mygo_match___mygo_expr_3.F0)
+										__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+										__mygo_state = 0
+										continue
+									} else {
+										if _, ok := __mygo_expr_2.(Option__None[BootstrapGoModRequire]); ok {
+											__tail_0 := __mygo_mt_p0
+											__tail_1 := __mygo_mt_p1
+											__tail_2 := __mygo_mt_p2 + 1
+											__tail_3 := __mygo_mt_p3
+											__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+											__mygo_state = 0
+											continue
+										} else {
+										}
+									}
+								} else {
+									if __mygo_mt_p1 {
+										__mygo_expr_4 := bootstrapGoModRequireFromFields(MygoIN6StringM6Fields(line))
+										if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[BootstrapGoModRequire]); ok {
+											__tail_0 := __mygo_mt_p0
+											__tail_1 := __mygo_mt_p1
+											__tail_2 := __mygo_mt_p2 + 1
+											__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, __mygo_match___mygo_expr_5.F0)
+											__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+											__mygo_state = 0
+											continue
+										} else {
+											if _, ok := __mygo_expr_4.(Option__None[BootstrapGoModRequire]); ok {
+												__tail_0 := __mygo_mt_p0
+												__tail_1 := __mygo_mt_p1
+												__tail_2 := __mygo_mt_p2 + 1
+												__tail_3 := __mygo_mt_p3
+												__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+												__mygo_state = 0
+												continue
+											} else {
+											}
+										}
+									} else {
+										__tail_0 := __mygo_mt_p0
+										__tail_1 := __mygo_mt_p1
+										__tail_2 := __mygo_mt_p2 + 1
+										__tail_3 := __mygo_mt_p3
+										__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+										__mygo_state = 0
+										continue
+									}
+								}
+							}
+						}
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__tail_3 := __mygo_mt_p3
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
 }

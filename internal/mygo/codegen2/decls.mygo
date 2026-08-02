@@ -31,7 +31,14 @@ end
 # 等需要翻译函数体的声明能够向上报告 AST 降低错误。
 func translateDeclsAst(g: Ref[Generator2], decls: Slice[ast2.Decl], index: Int, out: Slice[goast.Decl]) -> Result[Slice[goast.Decl], String]
   if index >= decls.Len() then
-    Ok(out)
+    # Emit the mutual tail-call trampolines owned by this file exactly once.
+    # Wrappers in other generated files call these helpers through Go package
+    # scope, so the helper must live in one deterministic file.
+    let trampolines = genMutualTailTrampolines(g)
+    switch trampolines
+      case Ok(items) => Ok(goast.AppendDecls(out, items))
+      case Err(msg) => Err(msg)
+    end
   else
     let decl: ast2.Decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     switch decl
@@ -373,6 +380,17 @@ func implStem(target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], tps: Set[Stri
 end
 
 func translateFuncAstDecl(g: Ref[Generator2], name: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, constraints: Slice[ast2.Constraint]) -> Result[goast.Decl, String]
+  # A member of an eligible mutual tail-call SCC becomes a thin wrapper that
+  # forwards to the shared trampoline; the source body is lowered inside the
+  # trampoline instead.  This preserves the exported name and signature.
+  switch g.mutualTail.ByName.Get(name)
+    case Some(plan) => genMutualTailWrapper(g, name, tps, params, ret, constraints, plan)
+    case None =>
+      translateFuncAstDeclBody(g, name, tps, params, ret, body, constraints)
+  end
+end
+
+func translateFuncAstDeclBody(g: Ref[Generator2], name: String, tps: Slice[String], params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, constraints: Slice[ast2.Constraint]) -> Result[goast.Decl, String]
   let initialRetType = returnMonoType(ret)
   let ctx = Ref.new(newFuncEgCtx(tps, initialRetType, name, params.Len()))
   go[()] {

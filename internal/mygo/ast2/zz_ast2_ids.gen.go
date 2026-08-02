@@ -365,36 +365,56 @@ func AssignFileExprIDs(file File) File {
 	return File{PackageName: file.PackageName, Decls: AssignExprIDs(file.Decls), SourceName: file.SourceName, Line: file.Line, Column: file.Column, DeclPositions: file.DeclPositions}
 }
 func sliceDrop[A any](items []A, n int) []A {
-	for {
-		if n <= 0 || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-			return items
-		} else {
-			__tail_0 := sliceTail(items)
-			__tail_1 := n - 1
-			items, n = __tail_0, __tail_1
-			continue
-		}
-	}
+	return __mygo_mt_ast2_sliceDrop[A](items, n, 0)
 }
 func sliceTail[A any](items []A) []A {
 	return sliceTailLoop(items, 1, []A{})
 }
 func sliceTailLoop[A any](items []A, index int, out []A) []A {
+	return __mygo_mt_ast2_sliceTailLoop[A](items, index, out, 0)
+}
+func __mygo_mt_ast2_sliceDrop[A any](__mygo_mt_p0 []A, __mygo_mt_p1 int, __mygo_state int) []A {
 	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-			return out
-		} else {
-			item := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
-			var __mygo_expr_0 []A
-			if __mygo_match___mygo_expr_1, ok := item.(Option__Some[A]); ok {
-				__mygo_expr_0 = sliceTailLoop(items, index+1, MygoIN5SliceM6Append(out, __mygo_match___mygo_expr_1.F0))
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 <= 0 || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return __mygo_mt_p0
 			} else {
-				if _, ok := item.(Option__None[A]); ok {
-					__mygo_expr_0 = out
+				__tail_0 := sliceTail(__mygo_mt_p0)
+				__tail_1 := __mygo_mt_p1 - 1
+				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_ast2_sliceTailLoop[A any](__mygo_mt_p0 []A, __mygo_mt_p1 int, __mygo_mt_p2 []A, __mygo_state int) []A {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				item := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_0, ok := item.(Option__Some[A]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, __mygo_match___mygo_expr_0.F0)
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
 				} else {
+					if _, ok := item.(Option__None[A]); ok {
+						return __mygo_mt_p2
+					} else {
+					}
 				}
 			}
-			return __mygo_expr_0
+		default:
+			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }

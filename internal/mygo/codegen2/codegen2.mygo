@@ -41,8 +41,14 @@ func GenerateFiles(files: Slice[SourceFileInput], info: typeinference2.PackageIn
   # build lowering metadata once for the complete GenerateFiles invocation.
   let packageIndex = newPackageIndex(visibleDecls)
   let typedByPath = typedDeclSourceMap(info.TypedDeclSources, 0, {})
+  # The mutual tail-call plan spans every source file of the package, so it is
+  # also built once here and threaded through the per-file generator contexts.
+  # The analysis reads the typed declaration bodies (TypedDeclSources) so the
+  # trampoline member lowering sees the inferred type annotations.
+  let pkgName = files.Get(0).UnwrapOr(SourceFileInput { Path: "", File: ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] } }).File.PackageName
+  let mutualTail = buildMutualTailPlans(pkgName, files, info.TypedDeclSources)
   let out: Map[String, String] = {}
-  generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, 0, out)
+  generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, 0, out)
 end
 
 func mergeFileDecls(files: Slice[SourceFileInput], index: Int, acc: Slice[ast2.Decl]) -> Slice[ast2.Decl]
@@ -63,17 +69,17 @@ func mergeDeclSlices(dst: Slice[ast2.Decl], src: Slice[ast2.Decl]) -> Slice[ast2
   end
 end
 
-func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], packageIndex: PackageIndex, typedByPath: Map[String, Slice[ast2.Decl]], index: Int, out: Map[String, String]) -> Result[Map[String, String], String]
+func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], packageIndex: PackageIndex, typedByPath: Map[String, Slice[ast2.Decl]], mutualTail: MutualTailPlans, index: Int, out: Map[String, String]) -> Result[Map[String, String], String]
   if index >= files.Len() then
     Ok(out)
   else
     let input = files.Get(index).UnwrapOr(SourceFileInput { Path: "main.mygo", File: ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] } })
     let typedDecls = typedDeclsForInput(info.TypedDeclSources, typedByPath, input.Path)
-    let src = generateOneFile(input.File, info, allDecls, packageIndex, typedDecls, index == 0)
+    let src = generateOneFile(input.File, input.Path, info, allDecls, packageIndex, typedDecls, mutualTail, index == 0)
     switch src
       case Ok(code) =>
         out.Set(sourceToGenName(input.Path), code)
-        generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, index + 1, out)
+        generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, index + 1, out)
       case Err(msg) => Err(withExpressionSourceName(msg, input.File.SourceName))
     end
   end
@@ -107,13 +113,15 @@ func GenerateSourceAt(sourceName: String, input: String) -> Result[String, Strin
   end
 end
 
-func generateOneFile(file: ast2.File, info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], packageIndex: PackageIndex, fileTypedDecls: Slice[ast2.Decl], includeHKT: Bool) -> Result[String, String]
+func generateOneFile(file: ast2.File, path: String, info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], packageIndex: PackageIndex, fileTypedDecls: Slice[ast2.Decl], mutualTail: MutualTailPlans, includeHKT: Bool) -> Result[String, String]
   # Method dispatch must see every impl visible to this package: its complete
   # typed declaration set plus externally supplied declarations (the prelude).
   # `fileTypedDecls` below still limits emitted Go declarations to this file.
   let visibleDecls = mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
   let imports = collectImports(file.Decls)
   let g = Ref.new(newGenerator2(file.PackageName, visibleDecls, imports, info.GoPackages, info, packageIndex))
+  g.mutualTail = mutualTail
+  g.currentFile = path
   let decls = translateDeclsAst(g, fileTypedDecls, 0, [] as Slice[goast.Decl])
   switch decls
     case Err(msg) => Err(msg)

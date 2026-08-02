@@ -237,6 +237,8 @@ func translateFuncLitAst(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], 
   child.tailRecFuncName = None
   child.tailRecParamCount = 0
   child.tailRecParamNames = []
+  child.mtPlan = None
+  child.mtShared = []
   var retMono = returnMonoType(ret)
   child.retType = retMono
   # A tuple-returning function literal passed as a value (e.g. a PMap

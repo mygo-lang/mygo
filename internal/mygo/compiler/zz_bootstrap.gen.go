@@ -85,25 +85,7 @@ func bootstrapMygoDirs(root string) Result[[]string, Error] {
 	}()
 }
 func syncBootstrapDirs(dirs []string, index int, state BootstrapState, written []string) Result[[]string, Error] {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(dirs) {
-			sort.Strings(written)
-			return Ok[[]string, error](written)
-		} else {
-			dir := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(dirs, index), "")
-			__mygo_expr_0 := compileDirBootstrapWithCodegen(dir, state, true)
-			var __mygo_expr_1 Result[[]string, error]
-			if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
-				__mygo_expr_1 = Err[[]string, error](__mygo_match___mygo_expr_3.F0)
-			} else {
-				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
-					__mygo_expr_1 = syncBootstrapDirs(dirs, index+1, state, appendBootstrapStrings(written, __mygo_match___mygo_expr_2.F0))
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+	return __mygo_mt_compiler_syncBootstrapDirs(dirs, index, state, written, 0)
 }
 func compileDirBootstrapMyGO(dir string, state BootstrapState) Result[[]string, Error] {
 	return compileDirBootstrapWithCodegen(dir, state, false)
@@ -362,64 +344,10 @@ func appendBootstrapStrings(left []string, right []string) []string {
 	return appendBootstrapStringsAt(left, right, 0)
 }
 func appendBootstrapStringsAt(left []string, right []string, index int) []string {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(right) {
-			return left
-		} else {
-			__tail_0 := MygoIN5SliceM6Append(left, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, index), ""))
-			__tail_1 := right
-			__tail_2 := index + 1
-			left, right, index = __tail_0, __tail_1, __tail_2
-			continue
-		}
-	}
+	return __mygo_mt_compiler_appendBootstrapStringsAt(left, right, index, 0)
 }
 func bootstrapWalkImports(workspaceRoot string, fromDir string, imports []BootstrapImport, index int, state BootstrapState, written []string, packages *[]typeinference2.GoPackageEntry) Result[[]string, Error] {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(imports) {
-			return Ok[[]string, error](written)
-		} else {
-			imp := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(imports, index), BootstrapImport{Alias: "", Path: ""})
-			resolved := bootstrapResolveImport(workspaceRoot, fromDir, imp.Path)
-			var __mygo_expr_0 Result[[]string, error]
-			if __mygo_match___mygo_expr_2, ok := resolved.(Result__Err[string, error]); ok {
-				__mygo_expr_0 = Err[[]string, error](__mygo_match___mygo_expr_2.F0)
-			} else {
-				if __mygo_match___mygo_expr_1, ok := resolved.(Result__Ok[string, error]); ok {
-					var __mygo_expr_2 Result[[]string, error]
-					if state.GenerateImportFiles {
-						__mygo_expr_2 = compileDirBootstrapWithCodegen(__mygo_match___mygo_expr_1.F0, state, true)
-					} else {
-						__mygo_expr_2 = compileDirBootstrapMyGO(__mygo_match___mygo_expr_1.F0, state)
-					}
-					dependencyBuild := __mygo_expr_2
-					var __mygo_expr_3 Result[[]string, error]
-					if __mygo_match___mygo_expr_5, ok := dependencyBuild.(Result__Err[[]string, error]); ok {
-						__mygo_expr_3 = Err[[]string, error](__mygo_match___mygo_expr_5.F0)
-					} else {
-						if __mygo_match___mygo_expr_4, ok := dependencyBuild.(Result__Ok[[]string, error]); ok {
-							loaded := bootstrapLoadCachedSources(__mygo_match___mygo_expr_1.F0, state)
-							var __mygo_expr_5 Result[[]string, error]
-							if __mygo_match___mygo_expr_7, ok := loaded.(Result__Err[BootstrapInputs, string]); ok {
-								__mygo_expr_5 = Err[[]string, error](fmt.Errorf("%s", __mygo_match___mygo_expr_7.F0))
-							} else {
-								if __mygo_match___mygo_expr_6, ok := loaded.(Result__Ok[BootstrapInputs, string]); ok {
-									MygoIN5SliceM6Append(*packages, bootstrapMyGoPackageSignatures(imp.Alias, imp.Path, __mygo_match___mygo_expr_6.F0.Sources))
-									__mygo_expr_5 = bootstrapWalkImports(workspaceRoot, fromDir, imports, index+1, state, appendBootstrapStrings(written, __mygo_match___mygo_expr_4.F0), packages)
-								} else {
-								}
-							}
-							__mygo_expr_3 = __mygo_expr_5
-						} else {
-						}
-					}
-					__mygo_expr_0 = __mygo_expr_3
-				} else {
-				}
-			}
-			return __mygo_expr_0
-		}
-	}
+	return __mygo_mt_compiler_bootstrapWalkImports(workspaceRoot, fromDir, imports, index, state, written, packages, 0)
 }
 func bootstrapParseSource(path string, sourcePath string, source string) Result[BootstrapInputs, string] {
 	parsed := parser2.ParseFileAt(sourcePath, source)
@@ -469,23 +397,7 @@ func appendBootstrapSources(left []typeinference2.PkgDeclSource, right []typeinf
 	return appendBootstrapSourcesAt(left, right, 0)
 }
 func appendBootstrapSourcesAt(left []typeinference2.PkgDeclSource, right []typeinference2.PkgDeclSource, index int) []typeinference2.PkgDeclSource {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(right) {
-			return left
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, index)
-			var __mygo_expr_1 []typeinference2.PkgDeclSource
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[typeinference2.PkgDeclSource]); ok {
-				__mygo_expr_1 = appendBootstrapSourcesAt(MygoIN5SliceM6Append(left, __mygo_match___mygo_expr_2.F0), right, index+1)
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[typeinference2.PkgDeclSource]); ok {
-					__mygo_expr_1 = appendBootstrapSourcesAt(left, right, index+1)
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+	return __mygo_mt_compiler_appendBootstrapSourcesAt(left, right, index, 0)
 }
 func bootstrapWorkingDir() Result[string, Error] {
 	return func() Result[string, error] {
@@ -506,100 +418,16 @@ func bootstrapRelativePath(cwd string, path string) Result[string, Error] {
 	}()
 }
 func bootstrapLoadInputs(dir string, cwd string, names []string, index int, out BootstrapInputs) Result[BootstrapInputs, string] {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(names) {
-			return Ok[BootstrapInputs, string](out)
-		} else {
-			name := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, index), "")
-			path := bootstrapJoin(dir, name)
-			relative := bootstrapRelativePath(cwd, path)
-			var __mygo_expr_0 Result[BootstrapInputs, string]
-			if __mygo_match___mygo_expr_2, ok := relative.(Result__Err[string, error]); ok {
-				__mygo_expr_0 = Err[BootstrapInputs, string](__mygo_match___mygo_expr_2.F0.Error())
-			} else {
-				if __mygo_match___mygo_expr_1, ok := relative.(Result__Ok[string, error]); ok {
-					raw := bootstrapReadFile(path)
-					var __mygo_expr_2 Result[BootstrapInputs, string]
-					if __mygo_match___mygo_expr_4, ok := raw.(Result__Err[string, error]); ok {
-						__mygo_expr_2 = Err[BootstrapInputs, string](__mygo_match___mygo_expr_4.F0.Error())
-					} else {
-						if __mygo_match___mygo_expr_3, ok := raw.(Result__Ok[string, error]); ok {
-							parsed := bootstrapParseSource(name, __mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_3.F0)
-							var __mygo_expr_4 Result[BootstrapInputs, string]
-							if __mygo_match___mygo_expr_6, ok := parsed.(Result__Err[BootstrapInputs, string]); ok {
-								__mygo_expr_4 = Err[BootstrapInputs, string](__mygo_match___mygo_expr_6.F0)
-							} else {
-								if __mygo_match___mygo_expr_5, ok := parsed.(Result__Ok[BootstrapInputs, string]); ok {
-									__mygo_expr_6 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_5.F0.Inputs, 0)
-									var __mygo_expr_7 Result[BootstrapInputs, string]
-									if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[codegen2.SourceFileInput]); ok {
-										next := BootstrapInputs{Inputs: MygoIN5SliceM6Append(out.Inputs, __mygo_match___mygo_expr_8.F0), Sources: appendBootstrapSources(out.Sources, __mygo_match___mygo_expr_5.F0.Sources)}
-										__mygo_expr_7 = bootstrapLoadInputs(dir, cwd, names, index+1, next)
-									} else {
-										if _, ok := __mygo_expr_6.(Option__None[codegen2.SourceFileInput]); ok {
-											__mygo_expr_7 = bootstrapLoadInputs(dir, cwd, names, index+1, out)
-										} else {
-										}
-									}
-									__mygo_expr_4 = __mygo_expr_7
-								} else {
-								}
-							}
-							__mygo_expr_2 = __mygo_expr_4
-						} else {
-						}
-					}
-					__mygo_expr_0 = __mygo_expr_2
-				} else {
-				}
-			}
-			return __mygo_expr_0
-		}
-	}
+	return __mygo_mt_compiler_bootstrapLoadInputs(dir, cwd, names, index, out, 0)
 }
 func bootstrapImportsFromSources(sources []typeinference2.PkgDeclSource) []BootstrapImport {
 	return bootstrapImportsFromSourcesAt(sources, 0, []BootstrapImport{})
 }
 func bootstrapImportsFromSourcesAt(sources []typeinference2.PkgDeclSource, index int, out []BootstrapImport) []BootstrapImport {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sources) {
-			return out
-		} else {
-			source := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sources, index), typeinference2.PkgDeclSource{Path: "", Decls: []ast2.Decl{}})
-			__tail_0 := sources
-			__tail_1 := index + 1
-			__tail_2 := bootstrapImportsFromDecls(source.Decls, 0, out)
-			sources, index, out = __tail_0, __tail_1, __tail_2
-			continue
-		}
-	}
+	return __mygo_mt_compiler_bootstrapImportsFromSourcesAt(sources, index, out, 0)
 }
 func bootstrapImportsFromDecls(decls []ast2.Decl, index int, out []BootstrapImport) []BootstrapImport {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) {
-			return out
-		} else {
-			decl := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.Decl__ImportDecl__Ctor("", ""))
-			var __mygo_expr_0 []BootstrapImport
-			if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__ImportDecl); ok {
-				var __mygo_expr_2 []BootstrapImport
-				if strings.HasPrefix(__mygo_match___mygo_expr_1.F1, "go:") {
-					__mygo_expr_2 = out
-				} else {
-					__mygo_expr_2 = MygoIN5SliceM6Append(out, BootstrapImport{Alias: __mygo_match___mygo_expr_1.F0, Path: __mygo_match___mygo_expr_1.F1})
-				}
-				__mygo_expr_0 = __mygo_expr_2
-			} else {
-				__mygo_expr_0 = out
-			}
-			next := __mygo_expr_0
-			__tail_0 := decls
-			__tail_1 := index + 1
-			__tail_2 := next
-			decls, index, out = __tail_0, __tail_1, __tail_2
-			continue
-		}
-	}
+	return __mygo_mt_compiler_bootstrapImportsFromDecls(decls, index, out, 0)
 }
 func bootstrapResolveImport(workspaceRoot string, fromDir string, importPath string) Result[string, Error] {
 	return func() Result[string, error] {
@@ -664,98 +492,17 @@ func bootstrapPopulateGoSignatures(workspaceRoot string, packages *[]typeinferen
 }, Error] {
 	return bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, 0)
 }
-func bootstrapPopulateGoSignaturesAt(workspaceRoot string, packages *[]typeinference2.GoPackageEntry, index int) Result[struct {
-}, Error] {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(*packages) {
-			return Ok[struct{}, error](struct {
-			}{})
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(*packages, index)
-			var __mygo_expr_1 Result[struct{}, error]
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[typeinference2.GoPackageEntry]); ok {
-				var __mygo_expr_7 Result[struct{}, error]
-				if MygoIN6StringM9HasPrefix(__mygo_match___mygo_expr_2.F0.Path, "go:") {
-					trimmed := MygoIN6StringM10TrimPrefix(__mygo_match___mygo_expr_2.F0.Path, "go:")
-					__mygo_expr_3 := bootstrapLoadGoPackage(workspaceRoot, trimmed)
-					var __mygo_expr_4 Result[struct{}, error]
-					if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[BootstrapGoPackageInfo, string]); ok {
-						MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Set(*packages, index, typeinference2.GoPackageEntry{Alias: __mygo_match___mygo_expr_2.F0.Alias, Path: __mygo_match___mygo_expr_2.F0.Path, Funcs: __mygo_match___mygo_expr_6.F0.Funcs, Types: __mygo_match___mygo_expr_6.F0.Types})
-						__mygo_expr_4 = bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, index+1)
-					} else {
-						if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[BootstrapGoPackageInfo, string]); ok {
-							__mygo_expr_4 = Err[struct{}, error](fmt.Errorf("can't find import %q: %s", trimmed, __mygo_match___mygo_expr_5.F0))
-						} else {
-						}
-					}
-					__mygo_expr_7 = __mygo_expr_4
-				} else {
-					__mygo_expr_7 = bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, index+1)
-				}
-				__mygo_expr_1 = __mygo_expr_7
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoPackageEntry]); ok {
-					__mygo_expr_1 = bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, index+1)
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+func bootstrapPopulateGoSignaturesAt(workspaceRoot string, packages *[]typeinference2.GoPackageEntry, index int) Result[struct{}, Error] {
+	return __mygo_mt_compiler_bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, index, 0)
 }
 func bootstrapCollectGoPackages(sources []typeinference2.PkgDeclSource) []typeinference2.GoPackageEntry {
 	return bootstrapCollectGoPackagesAt(sources, 0, emptyBootstrapGoPackageCollection()).Packages
 }
 func bootstrapCollectGoPackagesAt(sources []typeinference2.PkgDeclSource, index int, state BootstrapGoPackageCollection) BootstrapGoPackageCollection {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sources) {
-			return state
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sources, index)
-			var __mygo_expr_1 BootstrapGoPackageCollection
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[typeinference2.PkgDeclSource]); ok {
-				__mygo_expr_1 = bootstrapCollectGoPackagesAt(sources, index+1, bootstrapCollectGoPackagesFromDecls(__mygo_match___mygo_expr_2.F0.Decls, 0, state))
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[typeinference2.PkgDeclSource]); ok {
-					__mygo_expr_1 = bootstrapCollectGoPackagesAt(sources, index+1, state)
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+	return __mygo_mt_compiler_bootstrapCollectGoPackagesAt(sources, index, state, 0)
 }
 func bootstrapCollectGoPackagesFromDecls(decls []ast2.Decl, index int, state BootstrapGoPackageCollection) BootstrapGoPackageCollection {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) {
-			return state
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index)
-			var __mygo_expr_1 BootstrapGoPackageCollection
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
-				var __mygo_expr_3 BootstrapGoPackageCollection
-				if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(ast2.Decl__ImportDecl); ok {
-					var __mygo_expr_5 BootstrapGoPackageCollection
-					if strings.HasPrefix(__mygo_match___mygo_expr_4.F1, "go:") && MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.Seen, __mygo_match___mygo_expr_4.F0), false) == false {
-						MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(state.Seen, __mygo_match___mygo_expr_4.F0, true)
-						__mygo_expr_5 = bootstrapCollectGoPackagesFromDecls(decls, index+1, BootstrapGoPackageCollection{Packages: MygoIN5SliceM6Append(state.Packages, typeinference2.GoPackageEntry{Alias: __mygo_match___mygo_expr_4.F0, Path: __mygo_match___mygo_expr_4.F1, Funcs: []typeinference2.GoFuncSignature{}, Types: []typeinference2.GoTypeSignature{}}), Seen: state.Seen})
-					} else {
-						__mygo_expr_5 = bootstrapCollectGoPackagesFromDecls(decls, index+1, state)
-					}
-					__mygo_expr_3 = __mygo_expr_5
-				} else {
-					__mygo_expr_3 = bootstrapCollectGoPackagesFromDecls(decls, index+1, state)
-				}
-				__mygo_expr_1 = __mygo_expr_3
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
-					__mygo_expr_1 = bootstrapCollectGoPackagesFromDecls(decls, index+1, state)
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+	return __mygo_mt_compiler_bootstrapCollectGoPackagesFromDecls(decls, index, state, 0)
 }
 func bootstrapMyGoPackageSignatures(alias string, path string, sources []typeinference2.PkgDeclSource) typeinference2.GoPackageEntry {
 	return bootstrapMyGoPackageSignaturesAt(alias, path, sources, 0, typeinference2.GoPackageEntry{Alias: alias, Path: path, Funcs: []typeinference2.GoFuncSignature{}, Types: []typeinference2.GoTypeSignature{}})
@@ -780,50 +527,10 @@ func bootstrapMyGoPackageSignaturesAt(alias string, path string, sources []typei
 	}
 }
 func bootstrapMyGoPackageDeclSignatures(alias string, path string, decls []ast2.Decl, index int, entry typeinference2.GoPackageEntry) typeinference2.GoPackageEntry {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) {
-			return entry
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index)
-			var __mygo_expr_1 typeinference2.GoPackageEntry
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
-				var __mygo_expr_3 typeinference2.GoPackageEntry
-				if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_2.F0.(ast2.Decl__FuncDecl); ok {
-					signature := typeinference2.GoFuncSignature{Name: __mygo_match___mygo_expr_4.F0, Params: bootstrapParamTypes(__mygo_match___mygo_expr_4.F2, 0, []string{}), Results: bootstrapResultTypes(__mygo_match___mygo_expr_4.F3), Variadic: false}
-					next := typeinference2.GoPackageEntry{Alias: entry.Alias, Path: entry.Path, Funcs: MygoIN5SliceM6Append(entry.Funcs, signature), Types: entry.Types}
-					__mygo_expr_3 = bootstrapMyGoPackageDeclSignatures(alias, path, decls, index+1, next)
-				} else {
-					__mygo_expr_3 = bootstrapMyGoPackageDeclSignatures(alias, path, decls, index+1, entry)
-				}
-				__mygo_expr_1 = __mygo_expr_3
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
-					__mygo_expr_1 = bootstrapMyGoPackageDeclSignatures(alias, path, decls, index+1, entry)
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+	return __mygo_mt_compiler_bootstrapMyGoPackageDeclSignatures(alias, path, decls, index, entry, 0)
 }
 func bootstrapParamTypes(params []ast2.Param, index int, out []string) []string {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
-			return out
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, index)
-			var __mygo_expr_1 []string
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Param]); ok {
-				__mygo_expr_1 = bootstrapParamTypes(params, index+1, MygoIN5SliceM6Append(out, bootstrapTypeName(__mygo_match___mygo_expr_2.F0.Type)))
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[ast2.Param]); ok {
-					__mygo_expr_1 = bootstrapParamTypes(params, index+1, out)
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
+	return __mygo_mt_compiler_bootstrapParamTypes(params, index, out, 0)
 }
 func bootstrapResultTypes(ret Option[ast2.TypeExpr]) []string {
 	var __mygo_expr_0 []string
@@ -851,52 +558,10 @@ func bootstrapTypeName(typ ast2.TypeExpr) string {
 	return __mygo_expr_0
 }
 func bootstrapCollectMyGoPkgInfos(workspaceRoot string, fromDir string, imports []BootstrapImport, index int, state BootstrapState, out []typeinference2.MyGoPackageInfo) []typeinference2.MyGoPackageInfo {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(imports) {
-			return out
-		} else {
-			imp := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(imports, index), BootstrapImport{Alias: "", Path: ""})
-			resolved := bootstrapResolveImport(workspaceRoot, fromDir, imp.Path)
-			var __mygo_expr_0 []typeinference2.MyGoPackageInfo
-			if _, ok := resolved.(Result__Err[string, error]); ok {
-				__mygo_expr_0 = bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index+1, state, out)
-			} else {
-				if __mygo_match___mygo_expr_1, ok := resolved.(Result__Ok[string, error]); ok {
-					__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.SourcesCache, __mygo_match___mygo_expr_1.F0)
-					var __mygo_expr_3 []typeinference2.MyGoPackageInfo
-					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[BootstrapInputs]); ok {
-						info := typeinference2.MyGoPackageInfo{Alias: imp.Alias, Path: imp.Path, Decls: bootstrapFlattenSources(__mygo_match___mygo_expr_4.F0.Sources, 0, []ast2.Decl{})}
-						__mygo_expr_3 = bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index+1, state, MygoIN5SliceM6Append(out, info))
-					} else {
-						if _, ok := __mygo_expr_2.(Option__None[BootstrapInputs]); ok {
-							__mygo_expr_3 = bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index+1, state, out)
-						} else {
-						}
-					}
-					__mygo_expr_0 = __mygo_expr_3
-				} else {
-				}
-			}
-			return __mygo_expr_0
-		}
-	}
+	return __mygo_mt_compiler_bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index, state, out, 0)
 }
 func bootstrapFlattenSources(sources []typeinference2.PkgDeclSource, index int, out []ast2.Decl) []ast2.Decl {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sources) {
-			return out
-		} else {
-			source := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sources, index), typeinference2.PkgDeclSource{Path: "", Decls: []ast2.Decl{}})
-			next := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(source.Decls, out, func(acc []ast2.Decl, d ast2.Decl) []ast2.Decl {
-				return MygoIN5SliceM6Append(acc, d)
-			})
-			__tail_0 := sources
-			__tail_1 := index + 1
-			__tail_2 := next
-			sources, index, out = __tail_0, __tail_1, __tail_2
-			continue
-		}
-	}
+	return __mygo_mt_compiler_bootstrapFlattenSources(sources, index, out, 0)
 }
 func bootstrapWriteGenerated(dir string, generated map[string]string) Result[[]string, Error] {
 	res := func() Result[[]string, error] {
@@ -917,4 +582,551 @@ func bootstrapWriteGenerated(dir string, generated map[string]string) Result[[]s
 		return Ok[[]string, error](written)
 	}()
 	return res
+}
+func __mygo_mt_compiler_appendBootstrapSourcesAt(__mygo_mt_p0 []typeinference2.PkgDeclSource, __mygo_mt_p1 []typeinference2.PkgDeclSource, __mygo_mt_p2 int, __mygo_state int) []typeinference2.PkgDeclSource {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+				return __mygo_mt_p0
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.PkgDeclSource]); ok {
+					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0)
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[typeinference2.PkgDeclSource]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_appendBootstrapStringsAt(__mygo_mt_p0 []string, __mygo_mt_p1 []string, __mygo_mt_p2 int, __mygo_state int) []string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+				return __mygo_mt_p0
+			} else {
+				__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), ""))
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2 + 1
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapCollectGoPackagesAt(__mygo_mt_p0 []typeinference2.PkgDeclSource, __mygo_mt_p1 int, __mygo_mt_p2 BootstrapGoPackageCollection, __mygo_state int) BootstrapGoPackageCollection {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.PkgDeclSource]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := bootstrapCollectGoPackagesFromDecls(__mygo_match___mygo_expr_1.F0.Decls, 0, __mygo_mt_p2)
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[typeinference2.PkgDeclSource]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapCollectGoPackagesFromDecls(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 int, __mygo_mt_p2 BootstrapGoPackageCollection, __mygo_state int) BootstrapGoPackageCollection {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
+					if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__ImportDecl); ok {
+						if strings.HasPrefix(__mygo_match___mygo_expr_2.F1, "go:") && MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p2.Seen, __mygo_match___mygo_expr_2.F0), false) == false {
+							MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2.Seen, __mygo_match___mygo_expr_2.F0, true)
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__tail_2 := BootstrapGoPackageCollection{Packages: MygoIN5SliceM6Append(__mygo_mt_p2.Packages, typeinference2.GoPackageEntry{Alias: __mygo_match___mygo_expr_2.F0, Path: __mygo_match___mygo_expr_2.F1, Funcs: []typeinference2.GoFuncSignature{}, Types: []typeinference2.GoTypeSignature{}}), Seen: __mygo_mt_p2.Seen}
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__tail_2 := __mygo_mt_p2
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapCollectMyGoPkgInfos(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 []BootstrapImport, __mygo_mt_p3 int, __mygo_mt_p4 BootstrapState, __mygo_mt_p5 []typeinference2.MyGoPackageInfo, __mygo_state int) []typeinference2.MyGoPackageInfo {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
+				return __mygo_mt_p5
+			} else {
+				imp := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3), BootstrapImport{Alias: "", Path: ""})
+				resolved := bootstrapResolveImport(__mygo_mt_p0, __mygo_mt_p1, imp.Path)
+				if _, ok := resolved.(Result__Err[string, error]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3 + 1
+					__tail_4 := __mygo_mt_p4
+					__tail_5 := __mygo_mt_p5
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+					__mygo_state = 0
+					continue
+				} else {
+					if __mygo_match___mygo_expr_0, ok := resolved.(Result__Ok[string, error]); ok {
+						__mygo_expr_1 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p4.SourcesCache, __mygo_match___mygo_expr_0.F0)
+						if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[BootstrapInputs]); ok {
+							info := typeinference2.MyGoPackageInfo{Alias: imp.Alias, Path: imp.Path, Decls: bootstrapFlattenSources(__mygo_match___mygo_expr_2.F0.Sources, 0, []ast2.Decl{})}
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2
+							__tail_3 := __mygo_mt_p3 + 1
+							__tail_4 := __mygo_mt_p4
+							__tail_5 := MygoIN5SliceM6Append(__mygo_mt_p5, info)
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+							__mygo_state = 0
+							continue
+						} else {
+							if _, ok := __mygo_expr_1.(Option__None[BootstrapInputs]); ok {
+								__tail_0 := __mygo_mt_p0
+								__tail_1 := __mygo_mt_p1
+								__tail_2 := __mygo_mt_p2
+								__tail_3 := __mygo_mt_p3 + 1
+								__tail_4 := __mygo_mt_p4
+								__tail_5 := __mygo_mt_p5
+								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+								__mygo_state = 0
+								continue
+							} else {
+							}
+						}
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapFlattenSources(__mygo_mt_p0 []typeinference2.PkgDeclSource, __mygo_mt_p1 int, __mygo_mt_p2 []ast2.Decl, __mygo_state int) []ast2.Decl {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				source := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), typeinference2.PkgDeclSource{Path: "", Decls: []ast2.Decl{}})
+				next := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(source.Decls, __mygo_mt_p2, func(acc []ast2.Decl, d ast2.Decl) []ast2.Decl {
+					return MygoIN5SliceM6Append(acc, d)
+				})
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1 + 1
+				__tail_2 := next
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapImportsFromDecls(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 int, __mygo_mt_p2 []BootstrapImport, __mygo_state int) []BootstrapImport {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				decl := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), ast2.Decl__ImportDecl__Ctor("", ""))
+				var __mygo_expr_0 []BootstrapImport
+				if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__ImportDecl); ok {
+					var __mygo_expr_2 []BootstrapImport
+					if strings.HasPrefix(__mygo_match___mygo_expr_1.F1, "go:") {
+						__mygo_expr_2 = __mygo_mt_p2
+					} else {
+						__mygo_expr_2 = MygoIN5SliceM6Append(__mygo_mt_p2, BootstrapImport{Alias: __mygo_match___mygo_expr_1.F0, Path: __mygo_match___mygo_expr_1.F1})
+					}
+					__mygo_expr_0 = __mygo_expr_2
+				} else {
+					__mygo_expr_0 = __mygo_mt_p2
+				}
+				next := __mygo_expr_0
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1 + 1
+				__tail_2 := next
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapImportsFromSourcesAt(__mygo_mt_p0 []typeinference2.PkgDeclSource, __mygo_mt_p1 int, __mygo_mt_p2 []BootstrapImport, __mygo_state int) []BootstrapImport {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				source := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), typeinference2.PkgDeclSource{Path: "", Decls: []ast2.Decl{}})
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1 + 1
+				__tail_2 := bootstrapImportsFromDecls(source.Decls, 0, __mygo_mt_p2)
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapLoadInputs(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 []string, __mygo_mt_p3 int, __mygo_mt_p4 BootstrapInputs, __mygo_state int) Result[BootstrapInputs, string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
+				return Ok[BootstrapInputs, string](__mygo_mt_p4)
+			} else {
+				name := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3), "")
+				path := bootstrapJoin(__mygo_mt_p0, name)
+				relative := bootstrapRelativePath(__mygo_mt_p1, path)
+				if __mygo_match___mygo_expr_1, ok := relative.(Result__Err[string, error]); ok {
+					return Err[BootstrapInputs, string](__mygo_match___mygo_expr_1.F0.Error())
+				} else {
+					if __mygo_match___mygo_expr_0, ok := relative.(Result__Ok[string, error]); ok {
+						raw := bootstrapReadFile(path)
+						if __mygo_match___mygo_expr_2, ok := raw.(Result__Err[string, error]); ok {
+							return Err[BootstrapInputs, string](__mygo_match___mygo_expr_2.F0.Error())
+						} else {
+							if __mygo_match___mygo_expr_1, ok := raw.(Result__Ok[string, error]); ok {
+								parsed := bootstrapParseSource(name, __mygo_match___mygo_expr_0.F0, __mygo_match___mygo_expr_1.F0)
+								if __mygo_match___mygo_expr_3, ok := parsed.(Result__Err[BootstrapInputs, string]); ok {
+									return Err[BootstrapInputs, string](__mygo_match___mygo_expr_3.F0)
+								} else {
+									if __mygo_match___mygo_expr_2, ok := parsed.(Result__Ok[BootstrapInputs, string]); ok {
+										__mygo_expr_3 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F0.Inputs, 0)
+										if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[codegen2.SourceFileInput]); ok {
+											next := BootstrapInputs{Inputs: MygoIN5SliceM6Append(__mygo_mt_p4.Inputs, __mygo_match___mygo_expr_4.F0), Sources: appendBootstrapSources(__mygo_mt_p4.Sources, __mygo_match___mygo_expr_2.F0.Sources)}
+											__tail_0 := __mygo_mt_p0
+											__tail_1 := __mygo_mt_p1
+											__tail_2 := __mygo_mt_p2
+											__tail_3 := __mygo_mt_p3 + 1
+											__tail_4 := next
+											__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+											__mygo_state = 0
+											continue
+										} else {
+											if _, ok := __mygo_expr_3.(Option__None[codegen2.SourceFileInput]); ok {
+												__tail_0 := __mygo_mt_p0
+												__tail_1 := __mygo_mt_p1
+												__tail_2 := __mygo_mt_p2
+												__tail_3 := __mygo_mt_p3 + 1
+												__tail_4 := __mygo_mt_p4
+												__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+												__mygo_state = 0
+												continue
+											} else {
+											}
+										}
+									} else {
+									}
+								}
+							} else {
+							}
+						}
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapMyGoPackageDeclSignatures(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 []ast2.Decl, __mygo_mt_p3 int, __mygo_mt_p4 typeinference2.GoPackageEntry, __mygo_state int) typeinference2.GoPackageEntry {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
+				return __mygo_mt_p4
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
+					if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__FuncDecl); ok {
+						signature := typeinference2.GoFuncSignature{Name: __mygo_match___mygo_expr_2.F0, Params: bootstrapParamTypes(__mygo_match___mygo_expr_2.F2, 0, []string{}), Results: bootstrapResultTypes(__mygo_match___mygo_expr_2.F3), Variadic: false}
+						next := typeinference2.GoPackageEntry{Alias: __mygo_mt_p4.Alias, Path: __mygo_mt_p4.Path, Funcs: MygoIN5SliceM6Append(__mygo_mt_p4.Funcs, signature), Types: __mygo_mt_p4.Types}
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := __mygo_mt_p3 + 1
+						__tail_4 := next
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+						__mygo_state = 0
+						continue
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := __mygo_mt_p3 + 1
+						__tail_4 := __mygo_mt_p4
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := __mygo_mt_p3 + 1
+						__tail_4 := __mygo_mt_p4
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapParamTypes(__mygo_mt_p0 []ast2.Param, __mygo_mt_p1 int, __mygo_mt_p2 []string, __mygo_state int) []string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Param]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, bootstrapTypeName(__mygo_match___mygo_expr_1.F0.Type))
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ast2.Param]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapPopulateGoSignaturesAt(__mygo_mt_p0 string, __mygo_mt_p1 *[]typeinference2.GoPackageEntry, __mygo_mt_p2 int, __mygo_state int) Result[struct{}, Error] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(*__mygo_mt_p1) {
+				return Ok[struct{}, error](struct {
+				}{})
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(*__mygo_mt_p1, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoPackageEntry]); ok {
+					if MygoIN6StringM9HasPrefix(__mygo_match___mygo_expr_1.F0.Path, "go:") {
+						trimmed := MygoIN6StringM10TrimPrefix(__mygo_match___mygo_expr_1.F0.Path, "go:")
+						__mygo_expr_2 := bootstrapLoadGoPackage(__mygo_mt_p0, trimmed)
+						if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Ok[BootstrapGoPackageInfo, string]); ok {
+							MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Set(*__mygo_mt_p1, __mygo_mt_p2, typeinference2.GoPackageEntry{Alias: __mygo_match___mygo_expr_1.F0.Alias, Path: __mygo_match___mygo_expr_1.F0.Path, Funcs: __mygo_match___mygo_expr_4.F0.Funcs, Types: __mygo_match___mygo_expr_4.F0.Types})
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						} else {
+							if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[BootstrapGoPackageInfo, string]); ok {
+								return Err[struct{}, error](fmt.Errorf("can't find import %q: %s", trimmed, __mygo_match___mygo_expr_3.F0))
+							} else {
+							}
+						}
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoPackageEntry]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_bootstrapWalkImports(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 []BootstrapImport, __mygo_mt_p3 int, __mygo_mt_p4 BootstrapState, __mygo_mt_p5 []string, __mygo_mt_p6 *[]typeinference2.GoPackageEntry, __mygo_state int) Result[[]string, Error] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
+				return Ok[[]string, error](__mygo_mt_p5)
+			} else {
+				imp := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3), BootstrapImport{Alias: "", Path: ""})
+				resolved := bootstrapResolveImport(__mygo_mt_p0, __mygo_mt_p1, imp.Path)
+				if __mygo_match___mygo_expr_1, ok := resolved.(Result__Err[string, error]); ok {
+					return Err[[]string, error](__mygo_match___mygo_expr_1.F0)
+				} else {
+					if __mygo_match___mygo_expr_0, ok := resolved.(Result__Ok[string, error]); ok {
+						var __mygo_expr_1 Result[[]string, error]
+						if __mygo_mt_p4.GenerateImportFiles {
+							__mygo_expr_1 = compileDirBootstrapWithCodegen(__mygo_match___mygo_expr_0.F0, __mygo_mt_p4, true)
+						} else {
+							__mygo_expr_1 = compileDirBootstrapMyGO(__mygo_match___mygo_expr_0.F0, __mygo_mt_p4)
+						}
+						dependencyBuild := __mygo_expr_1
+						if __mygo_match___mygo_expr_3, ok := dependencyBuild.(Result__Err[[]string, error]); ok {
+							return Err[[]string, error](__mygo_match___mygo_expr_3.F0)
+						} else {
+							if __mygo_match___mygo_expr_2, ok := dependencyBuild.(Result__Ok[[]string, error]); ok {
+								loaded := bootstrapLoadCachedSources(__mygo_match___mygo_expr_0.F0, __mygo_mt_p4)
+								if __mygo_match___mygo_expr_4, ok := loaded.(Result__Err[BootstrapInputs, string]); ok {
+									return Err[[]string, error](fmt.Errorf("%s", __mygo_match___mygo_expr_4.F0))
+								} else {
+									if __mygo_match___mygo_expr_3, ok := loaded.(Result__Ok[BootstrapInputs, string]); ok {
+										MygoIN5SliceM6Append(*__mygo_mt_p6, bootstrapMyGoPackageSignatures(imp.Alias, imp.Path, __mygo_match___mygo_expr_3.F0.Sources))
+										__tail_0 := __mygo_mt_p0
+										__tail_1 := __mygo_mt_p1
+										__tail_2 := __mygo_mt_p2
+										__tail_3 := __mygo_mt_p3 + 1
+										__tail_4 := __mygo_mt_p4
+										__tail_5 := appendBootstrapStrings(__mygo_mt_p5, __mygo_match___mygo_expr_2.F0)
+										__tail_6 := __mygo_mt_p6
+										__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6
+										__mygo_state = 0
+										continue
+									} else {
+									}
+								}
+							} else {
+							}
+						}
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_compiler_syncBootstrapDirs(__mygo_mt_p0 []string, __mygo_mt_p1 int, __mygo_mt_p2 BootstrapState, __mygo_mt_p3 []string, __mygo_state int) Result[[]string, Error] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				sort.Strings(__mygo_mt_p3)
+				return Ok[[]string, error](__mygo_mt_p3)
+			} else {
+				dir := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), "")
+				__mygo_expr_0 := compileDirBootstrapWithCodegen(dir, __mygo_mt_p2, true)
+				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
+					return Err[[]string, error](__mygo_match___mygo_expr_2.F0)
+				} else {
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := appendBootstrapStrings(__mygo_mt_p3, __mygo_match___mygo_expr_1.F0)
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
 }

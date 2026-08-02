@@ -559,7 +559,13 @@ func translateAstReturnStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[go
     case ExprStmt(expr) => translateAstReturnExpr(expr, ctx)
     case ReturnStmt => Ok(astSingleStmt(goast.Return([] as Slice[goast.Expr])))
     case ReturnWithStmt(expr) =>
-      translateAstReturnValue(expr, ctx)
+      # An explicit `return F(...)` to a planned member is a tail call: it must
+      # become the state/continue sequence rather than a stack-growing call.
+      if isMtTailCall(expr, ctx) then
+        mtTailCallAst(expr, ctx)
+      else
+        translateAstReturnValue(expr, ctx)
+      end
         case _ =>
           # Statement-only blocks have unit as their implicit final value.
           let stmts = translateAstLeadingStmt(stmt, ctx)
@@ -598,11 +604,28 @@ func translateAstReturnExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[go
       end
     case IfExpr(cond, thenExpr, elseExpr) => translateAstReturnIf(cond, thenExpr, elseExpr, ctx)
     case BlockExpr(items) => translateAstReturnBlock(items, ctx, 0, [] as Slice[goast.Stmt])
+    case SwitchExpr(target, cases, targetType) =>
+      # Inside a mutual tail-call trampoline, a value switch in tail position
+      # lowers through the tail-aware path so every case body can rewrite
+      # member calls into state/continue.  Unit switches keep the existing
+      # statement-form lowering: their case bodies cannot be member calls.
+      switch ctx.mtPlan
+        case Some(_) =>
+          switch ctx.retType
+            case TUnit => translateAstReturnValue(expr, ctx)
+            case _ => translateAstReturnSwitch(target, cases, targetType, ctx)
+          end
+        case None => translateAstReturnValue(expr, ctx)
+      end
     case _ =>
-      if isTailSelfCall(expr, ctx) then
-        tailCallAst(expr, ctx)
+      if isMtTailCall(expr, ctx) then
+        mtTailCallAst(expr, ctx)
       else
-        translateAstReturnValue(expr, ctx)
+        if isTailSelfCall(expr, ctx) then
+          tailCallAst(expr, ctx)
+        else
+          translateAstReturnValue(expr, ctx)
+        end
       end
   end
 end
@@ -622,7 +645,11 @@ func translateAstReturnBlock(items: Slice[ast2.Stmt], ctx: Ref[egCtx], index: In
           end
         case ReturnStmt => Ok(goast.AppendStmts(out, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
         case ReturnWithStmt(value) =>
-          let ret = translateAstReturnValue(value, ctx)
+          let ret = if isMtTailCall(value, ctx) then
+            mtTailCallAst(value, ctx)
+          else
+            translateAstReturnValue(value, ctx)
+          end
           switch ret
             case Ok(v) => Ok(goast.AppendStmts(out, v))
             case Err(msg) => Err(msg)

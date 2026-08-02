@@ -42,57 +42,19 @@ func GenerateFiles(files []SourceFileInput, info typeinference2.PackageInfo) Res
 	visibleDecls := mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
 	packageIndex := newPackageIndex(visibleDecls)
 	typedByPath := typedDeclSourceMap(info.TypedDeclSources, 0, map[string][]ast2.Decl{})
+	pkgName := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, 0), SourceFileInput{Path: "", File: ast2.File{PackageName: "main", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}}}).File.PackageName
+	mutualTail := buildMutualTailPlans(pkgName, files, info.TypedDeclSources)
 	var out map[string]string = map[string]string{}
-	return generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, 0, out)
+	return generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, 0, out)
 }
 func mergeFileDecls(files []SourceFileInput, index int, acc []ast2.Decl) []ast2.Decl {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(files) {
-			return acc
-		} else {
-			input := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}}})
-			__tail_0 := files
-			__tail_1 := index + 1
-			__tail_2 := mergeDeclSlices(acc, input.File.Decls)
-			files, index, acc = __tail_0, __tail_1, __tail_2
-			continue
-		}
-	}
+	return __mygo_mt_codegen2_mergeFileDecls(files, index, acc, 0)
 }
 func mergeDeclSlices(dst []ast2.Decl, src []ast2.Decl) []ast2.Decl {
-	for {
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(src) == 0 {
-			return dst
-		} else {
-			item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(src, 0), ast2.Decl__ImportDecl__Ctor("", ""))
-			__tail_0 := MygoIN5SliceM6Append(dst, item)
-			__tail_1 := sliceDrop(src, 1)
-			dst, src = __tail_0, __tail_1
-			continue
-		}
-	}
+	return __mygo_mt_codegen2_mergeDeclSlices(dst, src, 0)
 }
-func generateFilesLoop(files []SourceFileInput, info typeinference2.PackageInfo, allDecls []ast2.Decl, packageIndex PackageIndex, typedByPath map[string][]ast2.Decl, index int, out map[string]string) Result[map[string]string, string] {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(files) {
-			return Ok[map[string]string, string](out)
-		} else {
-			input := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, index), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}}})
-			typedDecls := typedDeclsForInput(info.TypedDeclSources, typedByPath, input.Path)
-			src := generateOneFile(input.File, info, allDecls, packageIndex, typedDecls, index == 0)
-			var __mygo_expr_0 Result[map[string]string, string]
-			if __mygo_match___mygo_expr_2, ok := src.(Result__Ok[string, string]); ok {
-				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(out, sourceToGenName(input.Path), __mygo_match___mygo_expr_2.F0)
-				__mygo_expr_0 = generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, index+1, out)
-			} else {
-				if __mygo_match___mygo_expr_1, ok := src.(Result__Err[string, string]); ok {
-					__mygo_expr_0 = Err[map[string]string, string](withExpressionSourceName(__mygo_match___mygo_expr_1.F0, input.File.SourceName))
-				} else {
-				}
-			}
-			return __mygo_expr_0
-		}
-	}
+func generateFilesLoop(files []SourceFileInput, info typeinference2.PackageInfo, allDecls []ast2.Decl, packageIndex PackageIndex, typedByPath map[string][]ast2.Decl, mutualTail MutualTailPlans, index int, out map[string]string) Result[map[string]string, string] {
+	return __mygo_mt_codegen2_generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, index, out, 0)
 }
 func withExpressionSourceName(msg string, source string) string {
 	if source == "" {
@@ -128,10 +90,12 @@ func GenerateSourceAt(sourceName string, input string) Result[string, string] {
 	}
 	return __mygo_expr_0
 }
-func generateOneFile(file ast2.File, info typeinference2.PackageInfo, allDecls []ast2.Decl, packageIndex PackageIndex, fileTypedDecls []ast2.Decl, includeHKT bool) Result[string, string] {
+func generateOneFile(file ast2.File, path string, info typeinference2.PackageInfo, allDecls []ast2.Decl, packageIndex PackageIndex, fileTypedDecls []ast2.Decl, mutualTail MutualTailPlans, includeHKT bool) Result[string, string] {
 	visibleDecls := mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
 	imports := collectImports(file.Decls)
 	g := &[]Generator2{newGenerator2(file.PackageName, visibleDecls, imports, info.GoPackages, info, packageIndex)}[0]
+	g.mutualTail = mutualTail
+	g.currentFile = path
 	decls := translateDeclsAst(g, fileTypedDecls, 0, []goast.Decl{})
 	var __mygo_expr_0 Result[string, string]
 	if __mygo_match___mygo_expr_2, ok := decls.(Result__Err[[]goast.Decl, string]); ok {
@@ -163,49 +127,10 @@ func declsNeedPreludeImport(decls []ast2.Decl, external []ast2.Decl) bool {
 	return declsUsePreludeName(decls, names)
 }
 func preludeImportNames(decls []ast2.Decl, names []string) []string {
-	for {
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
-			return names
-		} else {
-			decl := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.Decl__ImportDecl__Ctor("", ""))
-			var __mygo_expr_0 []string
-			if __mygo_match___mygo_expr_4, ok := decl.(ast2.Decl__TypeAliasDecl); ok {
-				__mygo_expr_0 = MygoIN5SliceM6Append(names, __mygo_match___mygo_expr_4.F0)
-			} else {
-				if __mygo_match___mygo_expr_3, ok := decl.(ast2.Decl__TypeDecl); ok {
-					__mygo_expr_0 = MygoIN5SliceM6Append(names, __mygo_match___mygo_expr_3.F0)
-				} else {
-					if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__EnumDecl); ok {
-						__mygo_expr_0 = variantImportNames(__mygo_match___mygo_expr_2.F2, MygoIN5SliceM6Append(names, __mygo_match___mygo_expr_2.F0))
-					} else {
-						if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__InterfaceDecl); ok {
-							__mygo_expr_0 = MygoIN5SliceM6Append(names, __mygo_match___mygo_expr_1.F0)
-						} else {
-							__mygo_expr_0 = names
-						}
-					}
-				}
-			}
-			next := __mygo_expr_0
-			__tail_0 := sliceDrop(decls, 1)
-			__tail_1 := next
-			decls, names = __tail_0, __tail_1
-			continue
-		}
-	}
+	return __mygo_mt_codegen2_preludeImportNames(decls, names, 0)
 }
 func variantImportNames(variants []ast2.Variant, names []string) []string {
-	for {
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(variants) == 0 {
-			return names
-		} else {
-			variant := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr{}})
-			__tail_0 := sliceDrop(variants, 1)
-			__tail_1 := MygoIN5SliceM6Append(names, variant.Name)
-			variants, names = __tail_0, __tail_1
-			continue
-		}
-	}
+	return __mygo_mt_codegen2_variantImportNames(variants, names, 0)
 }
 func declsUsePreludeName(decls []ast2.Decl, names []string) bool {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
@@ -604,19 +529,7 @@ func hasHKTTypeParam(tps []string) bool {
 	}
 }
 func typedDeclSourceMap(sources []typeinference2.PkgDeclSource, index int, out map[string][]ast2.Decl) map[string][]ast2.Decl {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sources) {
-			return out
-		} else {
-			source := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sources, index), typeinference2.PkgDeclSource{Path: "", Decls: []ast2.Decl{}})
-			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(out, source.Path, source.Decls)
-			__tail_0 := sources
-			__tail_1 := index + 1
-			__tail_2 := out
-			sources, index, out = __tail_0, __tail_1, __tail_2
-			continue
-		}
-	}
+	return __mygo_mt_codegen2_typedDeclSourceMap(sources, index, out, 0)
 }
 func typedDeclsForInput(sources []typeinference2.PkgDeclSource, byPath map[string][]ast2.Decl, path string) []ast2.Decl {
 	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(byPath, path)
@@ -636,4 +549,156 @@ func typedDeclsForInput(sources []typeinference2.PkgDeclSource, byPath map[strin
 		}
 	}
 	return __mygo_expr_1
+}
+func __mygo_mt_codegen2_generateFilesLoop(__mygo_mt_p0 []SourceFileInput, __mygo_mt_p1 typeinference2.PackageInfo, __mygo_mt_p2 []ast2.Decl, __mygo_mt_p3 PackageIndex, __mygo_mt_p4 map[string][]ast2.Decl, __mygo_mt_p5 MutualTailPlans, __mygo_mt_p6 int, __mygo_mt_p7 map[string]string, __mygo_state int) Result[map[string]string, string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p6 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return Ok[map[string]string, string](__mygo_mt_p7)
+			} else {
+				input := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p6), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}}})
+				typedDecls := typedDeclsForInput(__mygo_mt_p1.TypedDeclSources, __mygo_mt_p4, input.Path)
+				src := generateOneFile(input.File, input.Path, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, typedDecls, __mygo_mt_p5, __mygo_mt_p6 == 0)
+				if __mygo_match___mygo_expr_1, ok := src.(Result__Ok[string, string]); ok {
+					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p7, sourceToGenName(input.Path), __mygo_match___mygo_expr_1.F0)
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3
+					__tail_4 := __mygo_mt_p4
+					__tail_5 := __mygo_mt_p5
+					__tail_6 := __mygo_mt_p6 + 1
+					__tail_7 := __mygo_mt_p7
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7
+					__mygo_state = 0
+					continue
+				} else {
+					if __mygo_match___mygo_expr_0, ok := src.(Result__Err[string, string]); ok {
+						return Err[map[string]string, string](withExpressionSourceName(__mygo_match___mygo_expr_0.F0, input.File.SourceName))
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_mergeDeclSlices(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 []ast2.Decl, __mygo_state int) []ast2.Decl {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) == 0 {
+				return __mygo_mt_p0
+			} else {
+				item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), ast2.Decl__ImportDecl__Ctor("", ""))
+				__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, item)
+				__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_mergeFileDecls(__mygo_mt_p0 []SourceFileInput, __mygo_mt_p1 int, __mygo_mt_p2 []ast2.Decl, __mygo_state int) []ast2.Decl {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				input := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}}})
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1 + 1
+				__tail_2 := mergeDeclSlices(__mygo_mt_p2, input.File.Decls)
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_preludeImportNames(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 []string, __mygo_state int) []string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return __mygo_mt_p1
+			} else {
+				decl := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.Decl__ImportDecl__Ctor("", ""))
+				var __mygo_expr_0 []string
+				if __mygo_match___mygo_expr_4, ok := decl.(ast2.Decl__TypeAliasDecl); ok {
+					__mygo_expr_0 = MygoIN5SliceM6Append(__mygo_mt_p1, __mygo_match___mygo_expr_4.F0)
+				} else {
+					if __mygo_match___mygo_expr_3, ok := decl.(ast2.Decl__TypeDecl); ok {
+						__mygo_expr_0 = MygoIN5SliceM6Append(__mygo_mt_p1, __mygo_match___mygo_expr_3.F0)
+					} else {
+						if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__EnumDecl); ok {
+							__mygo_expr_0 = variantImportNames(__mygo_match___mygo_expr_2.F2, MygoIN5SliceM6Append(__mygo_mt_p1, __mygo_match___mygo_expr_2.F0))
+						} else {
+							if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__InterfaceDecl); ok {
+								__mygo_expr_0 = MygoIN5SliceM6Append(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0)
+							} else {
+								__mygo_expr_0 = __mygo_mt_p1
+							}
+						}
+					}
+				}
+				next := __mygo_expr_0
+				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_1 := next
+				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_typedDeclSourceMap(__mygo_mt_p0 []typeinference2.PkgDeclSource, __mygo_mt_p1 int, __mygo_mt_p2 map[string][]ast2.Decl, __mygo_state int) map[string][]ast2.Decl {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				source := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), typeinference2.PkgDeclSource{Path: "", Decls: []ast2.Decl{}})
+				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2, source.Path, source.Decls)
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1 + 1
+				__tail_2 := __mygo_mt_p2
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_variantImportNames(__mygo_mt_p0 []ast2.Variant, __mygo_mt_p1 []string, __mygo_state int) []string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return __mygo_mt_p1
+			} else {
+				variant := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr{}})
+				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_1 := MygoIN5SliceM6Append(__mygo_mt_p1, variant.Name)
+				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
 }
