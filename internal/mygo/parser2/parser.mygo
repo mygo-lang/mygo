@@ -716,7 +716,7 @@ func switchExpr() -> ps.Parser[ast2.Expr]
   ps.PBind(kw("switch"), func(_: String) -> ps.Parser[ast2.Expr]
     ps.PBind(expr(), func(target: ast2.Expr) -> ps.Parser[ast2.Expr]
       ps.PBind(ps.PMany1(switchCase()), func(cases: Slice[ast2.SwitchCase]) -> ps.Parser[ast2.Expr]
-        ps.PThen(kw("end"), ps.PPure(exprWithPos(target.Pos, ast2.ExprKind.SwitchExpr(target, cases, ast2.EmptySwitchTargetType()))))
+        ps.PThen(kw("end"), ps.PPure(exprWithPos(target.Pos, ast2.ExprKind.SwitchExpr(target, cases, None))))
       end)
     end)
   end)

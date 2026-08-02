@@ -169,13 +169,14 @@ func TestPOrElseKeepsFurthestAttemptError(t *testing.T) {
 		t.Fatal("choice should fail")
 	} else {
 	}
-	if __mygo_match___mygo_expr_0, ok := result.Error.(OptionSome[ParseError]); ok {
-		if __mygo_match___mygo_expr_0.F0.Position.Offset != 2 {
-			t.Fatalf("error offset = %d, want 2", __mygo_match___mygo_expr_0.F0.Position.Offset)
+	__mygo_expr_0 := result.Error
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[ParseError]); ok {
+		if __mygo_match___mygo_expr_1.F0.Position.Offset != 2 {
+			t.Fatalf("error offset = %d, want 2", __mygo_match___mygo_expr_1.F0.Position.Offset)
 		} else {
 		}
 	} else {
-		if _, ok := result.Error.(OptionNone[ParseError]); ok {
+		if _, ok := __mygo_expr_0.(OptionNone[ParseError]); ok {
 			t.Fatal("choice should retain a parse error")
 		} else {
 		}
@@ -217,13 +218,14 @@ func TestPChoiceMergesExpectedAtSamePosition(t *testing.T) {
 		t.Fatal("choice should fail")
 	} else {
 	}
-	if __mygo_match___mygo_expr_0, ok := result.Error.(OptionSome[ParseError]); ok {
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_0.F0.Expected) != 2 {
-			t.Fatalf("expected alternatives = %d, want 2", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_0.F0.Expected))
+	__mygo_expr_0 := result.Error
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[ParseError]); ok {
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Expected) != 2 {
+			t.Fatalf("expected alternatives = %d, want 2", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Expected))
 		} else {
 		}
 	} else {
-		if _, ok := result.Error.(OptionNone[ParseError]); ok {
+		if _, ok := __mygo_expr_0.(OptionNone[ParseError]); ok {
 			t.Fatal("choice should retain a parse error")
 		} else {
 		}
@@ -405,13 +407,14 @@ func TestPOptionalSucceedsWhenPresent(t *testing.T) {
 		t.Fatal("POptional should succeed")
 	} else {
 	}
-	if __mygo_match___mygo_expr_0, ok := result.Value.(OptionSome[rune]); ok {
-		if __mygo_match___mygo_expr_0.F0 != 'a' {
-			t.Fatalf("POptional Some value = %d, want %d", __mygo_match___mygo_expr_0.F0, 'a')
+	__mygo_expr_0 := result.Value
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[rune]); ok {
+		if __mygo_match___mygo_expr_1.F0 != 'a' {
+			t.Fatalf("POptional Some value = %d, want %d", __mygo_match___mygo_expr_1.F0, 'a')
 		} else {
 		}
 	} else {
-		if _, ok := result.Value.(OptionNone[rune]); ok {
+		if _, ok := __mygo_expr_0.(OptionNone[rune]); ok {
 			t.Fatal("POptional should return Some when parser succeeds")
 		} else {
 		}
@@ -425,9 +428,10 @@ func TestPOptionalReturnsNoneWhenAbsent(t *testing.T) {
 		t.Fatal("POptional should succeed with None")
 	} else {
 	}
-	if _, ok := result.Value.(OptionNone[rune]); ok {
+	__mygo_expr_0 := result.Value
+	if _, ok := __mygo_expr_0.(OptionNone[rune]); ok {
 	} else {
-		if _, ok := result.Value.(OptionSome[rune]); ok {
+		if _, ok := __mygo_expr_0.(OptionSome[rune]); ok {
 			t.Fatal("POptional should return None when parser fails without consuming")
 		} else {
 		}
@@ -966,13 +970,14 @@ func TestPOptionalWithBetween(t *testing.T) {
 		t.Fatal("optional group with parens should succeed")
 	} else {
 	}
-	if __mygo_match___mygo_expr_0, ok := result1.Value.(OptionSome[rune]); ok {
-		if __mygo_match___mygo_expr_0.F0 != 'x' {
-			t.Fatalf("Some value = %d, want %d", __mygo_match___mygo_expr_0.F0, 'x')
+	__mygo_expr_0 := result1.Value
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[rune]); ok {
+		if __mygo_match___mygo_expr_1.F0 != 'x' {
+			t.Fatalf("Some value = %d, want %d", __mygo_match___mygo_expr_1.F0, 'x')
 		} else {
 		}
 	} else {
-		if _, ok := result1.Value.(OptionNone[rune]); ok {
+		if _, ok := __mygo_expr_0.(OptionNone[rune]); ok {
 			t.Fatal("expected Some")
 		} else {
 		}
@@ -982,9 +987,10 @@ func TestPOptionalWithBetween(t *testing.T) {
 		t.Fatal("optional group without parens should succeed")
 	} else {
 	}
-	if _, ok := result2.Value.(OptionNone[rune]); ok {
+	__mygo_expr_2 := result2.Value
+	if _, ok := __mygo_expr_2.(OptionNone[rune]); ok {
 	} else {
-		if _, ok := result2.Value.(OptionSome[rune]); ok {
+		if _, ok := __mygo_expr_2.(OptionSome[rune]); ok {
 			t.Fatal("expected None")
 		} else {
 		}

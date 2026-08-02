@@ -25,11 +25,12 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Each[T any](c 
 	var done bool = false
 	for !done {
 		fn(current.head)
-		if _, ok := current.tail.(OptionNone[*List[T]]); ok {
+		__mygo_expr_0 := current.tail
+		if _, ok := __mygo_expr_0.(OptionNone[*List[T]]); ok {
 			done = true
 		} else {
-			if __mygo_match___mygo_expr_0, ok := current.tail.(OptionSome[*List[T]]); ok {
-				current = __mygo_match___mygo_expr_0.F0
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[*List[T]]); ok {
+				current = __mygo_match___mygo_expr_1.F0
 			} else {
 			}
 		}
@@ -42,11 +43,12 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Len[T any](c L
 	var done bool = false
 	for !done {
 		count = count + 1
-		if _, ok := current.tail.(OptionNone[*List[T]]); ok {
+		__mygo_expr_0 := current.tail
+		if _, ok := __mygo_expr_0.(OptionNone[*List[T]]); ok {
 			done = true
 		} else {
-			if __mygo_match___mygo_expr_0, ok := current.tail.(OptionSome[*List[T]]); ok {
-				current = __mygo_match___mygo_expr_0.F0
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[*List[T]]); ok {
+				current = __mygo_match___mygo_expr_1.F0
 			} else {
 			}
 		}
@@ -59,11 +61,12 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM3Map[T any, B a
 	var result List[B] = List[B]{head: headVal, tail: None[*List[B]]()}
 	var current *List[T] = &c
 	for !done {
-		if _, ok := current.tail.(OptionNone[*List[T]]); ok {
+		__mygo_expr_0 := current.tail
+		if _, ok := __mygo_expr_0.(OptionNone[*List[T]]); ok {
 			done = true
 		} else {
-			if __mygo_match___mygo_expr_0, ok := current.tail.(OptionSome[*List[T]]); ok {
-				current = __mygo_match___mygo_expr_0.F0
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[*List[T]]); ok {
+				current = __mygo_match___mygo_expr_1.F0
 				result = List[B]{head: fn(current.head), tail: Some[*List[B]](&result)}
 			} else {
 			}
@@ -80,11 +83,12 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM6Filter[T any](
 			result = List[T]{head: current.head, tail: Some[*List[T]](&result)}
 		} else {
 		}
-		if _, ok := current.tail.(OptionNone[*List[T]]); ok {
+		__mygo_expr_0 := current.tail
+		if _, ok := __mygo_expr_0.(OptionNone[*List[T]]); ok {
 			done = true
 		} else {
-			if __mygo_match___mygo_expr_0, ok := current.tail.(OptionSome[*List[T]]); ok {
-				current = __mygo_match___mygo_expr_0.F0
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[*List[T]]); ok {
+				current = __mygo_match___mygo_expr_1.F0
 			} else {
 			}
 		}
@@ -97,11 +101,12 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Fold[T any, B 
 	var current *List[T] = &c
 	for !done {
 		acc = fn(acc, current.head)
-		if _, ok := current.tail.(OptionNone[*List[T]]); ok {
+		__mygo_expr_0 := current.tail
+		if _, ok := __mygo_expr_0.(OptionNone[*List[T]]); ok {
 			done = true
 		} else {
-			if __mygo_match___mygo_expr_0, ok := current.tail.(OptionSome[*List[T]]); ok {
-				current = __mygo_match___mygo_expr_0.F0
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[*List[T]]); ok {
+				current = __mygo_match___mygo_expr_1.F0
 			} else {
 			}
 		}
@@ -117,11 +122,12 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM4Find[T any](c 
 			result = Some[*T](&current.head)
 			done = true
 		} else {
-			if _, ok := current.tail.(OptionNone[*List[T]]); ok {
+			__mygo_expr_0 := current.tail
+			if _, ok := __mygo_expr_0.(OptionNone[*List[T]]); ok {
 				done = true
 			} else {
-				if __mygo_match___mygo_expr_0, ok := current.tail.(OptionSome[*List[T]]); ok {
-					current = __mygo_match___mygo_expr_0.F0
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[*List[T]]); ok {
+					current = __mygo_match___mygo_expr_1.F0
 				} else {
 				}
 			}
@@ -138,11 +144,12 @@ func MygoIT11IEnumerableFN15ListIEnumerableGN1TEGN4ListGN1TEN1TEM8Contains[T any
 			result = true
 			done = true
 		} else {
-			if _, ok := current.tail.(OptionNone[*List[T]]); ok {
+			__mygo_expr_0 := current.tail
+			if _, ok := __mygo_expr_0.(OptionNone[*List[T]]); ok {
 				done = true
 			} else {
-				if __mygo_match___mygo_expr_0, ok := current.tail.(OptionSome[*List[T]]); ok {
-					current = __mygo_match___mygo_expr_0.F0
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(OptionSome[*List[T]]); ok {
+					current = __mygo_match___mygo_expr_1.F0
 				} else {
 				}
 			}

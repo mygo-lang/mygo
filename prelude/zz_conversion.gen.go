@@ -45,16 +45,17 @@ func MygoIT4FromFN6StringGN6StringN6ResultGN3IntN6StringEEM4From(value string) R
 	} else {
 		__mygo_expr_2 = Ok[int, error](__mygo_expr_0)
 	}
-	var __mygo_expr_3 Result[int, string]
-	if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(ResultOk[int, error]); ok {
-		__mygo_expr_3 = Ok[int, string](__mygo_match___mygo_expr_5.F0)
+	__mygo_expr_3 := __mygo_expr_2
+	var __mygo_expr_4 Result[int, string]
+	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(ResultOk[int, error]); ok {
+		__mygo_expr_4 = Ok[int, string](__mygo_match___mygo_expr_6.F0)
 	} else {
-		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ResultErr[int, error]); ok {
-			__mygo_expr_3 = Err[int, string](__mygo_match___mygo_expr_4.F0.Error())
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ResultErr[int, error]); ok {
+			__mygo_expr_4 = Err[int, string](__mygo_match___mygo_expr_5.F0.Error())
 		} else {
 		}
 	}
-	return __mygo_expr_3
+	return __mygo_expr_4
 }
 func MygoIT4FromFN6StringGN6StringN6ResultGN5Int64N6StringEEM4From(value string) Result[int64, string] {
 	var __mygo_expr_2 Result[int64, error]
@@ -64,16 +65,17 @@ func MygoIT4FromFN6StringGN6StringN6ResultGN5Int64N6StringEEM4From(value string)
 	} else {
 		__mygo_expr_2 = Ok[int64, error](__mygo_expr_0)
 	}
-	var __mygo_expr_3 Result[int64, string]
-	if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(ResultOk[int64, error]); ok {
-		__mygo_expr_3 = Ok[int64, string](__mygo_match___mygo_expr_5.F0)
+	__mygo_expr_3 := __mygo_expr_2
+	var __mygo_expr_4 Result[int64, string]
+	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(ResultOk[int64, error]); ok {
+		__mygo_expr_4 = Ok[int64, string](__mygo_match___mygo_expr_6.F0)
 	} else {
-		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ResultErr[int64, error]); ok {
-			__mygo_expr_3 = Err[int64, string](__mygo_match___mygo_expr_4.F0.Error())
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ResultErr[int64, error]); ok {
+			__mygo_expr_4 = Err[int64, string](__mygo_match___mygo_expr_5.F0.Error())
 		} else {
 		}
 	}
-	return __mygo_expr_3
+	return __mygo_expr_4
 }
 func MygoIT4FromFN6StringGN6StringN6ResultGN7Float64N6StringEEM4From(value string) Result[float64, string] {
 	var __mygo_expr_2 Result[float64, error]
@@ -83,14 +85,15 @@ func MygoIT4FromFN6StringGN6StringN6ResultGN7Float64N6StringEEM4From(value strin
 	} else {
 		__mygo_expr_2 = Ok[float64, error](__mygo_expr_0)
 	}
-	var __mygo_expr_3 Result[float64, string]
-	if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(ResultOk[float64, error]); ok {
-		__mygo_expr_3 = Ok[float64, string](__mygo_match___mygo_expr_5.F0)
+	__mygo_expr_3 := __mygo_expr_2
+	var __mygo_expr_4 Result[float64, string]
+	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(ResultOk[float64, error]); ok {
+		__mygo_expr_4 = Ok[float64, string](__mygo_match___mygo_expr_6.F0)
 	} else {
-		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ResultErr[float64, error]); ok {
-			__mygo_expr_3 = Err[float64, string](__mygo_match___mygo_expr_4.F0.Error())
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ResultErr[float64, error]); ok {
+			__mygo_expr_4 = Err[float64, string](__mygo_match___mygo_expr_5.F0.Error())
 		} else {
 		}
 	}
-	return __mygo_expr_3
+	return __mygo_expr_4
 }

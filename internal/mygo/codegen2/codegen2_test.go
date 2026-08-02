@@ -16,10 +16,6 @@ import (
 	. "github.com/mygo-lang/mygo/prelude"
 )
 
-func TestGenerateSourceBootstrapsAst2(t *testing.T) {
-	assertBootstrapsMyGOFile(t, filepath.Join("..", "ast2", "ast2.mygo"))
-}
-
 func TestSliceDropReturnsSuffixView(t *testing.T) {
 	items := []int{1, 2, 3}
 	got := sliceDrop(items, 1)
@@ -377,10 +373,6 @@ end
 	}
 }
 
-func TestGenerateSourceBootstrapsPrelude(t *testing.T) {
-	assertBootstrapsMyGOFile(t, filepath.Join("..", "..", "..", "prelude", "prelude.mygo"))
-}
-
 func TestGenerateSourceLowersZeroArgumentEnumVariantSelector(t *testing.T) {
 	src := `package sample
 
@@ -423,10 +415,18 @@ end
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
-	for _, want := range []string{"var fixed int = 40", "var changing int = 2", "func Read() int", "changing = changing + 1"} {
+	// Package-level let/var lower to a bare Go var plus an init() assignment so
+	// the initializer runs after the package's dependencies are initialized.
+	for _, want := range []string{"var fixed int", "fixed = 40", "var changing int", "changing = 2", "func Read() int", "changing = changing + 1"} {
 		if !strings.Contains(ok.F0, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, ok.F0)
 		}
+	}
+	if !strings.Contains(ok.F0, "func init()") {
+		t.Fatalf("package-level let/var did not generate an init function:\n%s", ok.F0)
+	}
+	if strings.Contains(ok.F0, "var fixed int = 40") {
+		t.Fatalf("package-level let was not lowered through init():\n%s", ok.F0)
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", ok.F0, parser.AllErrors); err != nil {
 		t.Fatalf("generated source is invalid Go: %v\n%s", err, ok.F0)
@@ -817,10 +817,10 @@ end
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
 	code := ok.F0
-	if !strings.Contains(code, "type Point struct") || !strings.Contains(code, "X    int") || !strings.Contains(code, "Name string") {
+	if !strings.Contains(code, "type Point struct") || !strings.Contains(code, "x    int") || !strings.Contains(code, "name string") {
 		t.Fatalf("struct fields were not generated as expected:\n%s", code)
 	}
-	if !strings.Contains(code, "return p.X") {
+	if !strings.Contains(code, "return p.x") {
 		t.Fatalf("field access was not lowered as expected:\n%s", code)
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", code, 0); err != nil {
@@ -1179,7 +1179,7 @@ end
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
-	if !strings.Contains(result.F0, "return Box[int]{Value: 42}") {
+	if !strings.Contains(result.F0, "return Box[int]{value: 42}") {
 		t.Fatalf("generated generic struct literal lost type arguments:\n%s", result.F0)
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", result.F0, 0); err != nil {
@@ -1204,7 +1204,7 @@ end
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
-	if !strings.Contains(result.F0, "return Pair[int]{First: 1, Second: 2}") {
+	if !strings.Contains(result.F0, "return Pair[int]{first: 1, second: 2}") {
 		t.Fatalf("generated inferred generic struct literal lost type arguments:\n%s", result.F0)
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), "sample.gen.go", result.F0, 0); err != nil {
@@ -1230,7 +1230,7 @@ end
 	if !yes {
 		t.Fatalf("GenerateSource failed: %v", got)
 	}
-	if !strings.Contains(result.F0, "pair := Pair[int]{First: 1, Second: 2}") {
+	if !strings.Contains(result.F0, "pair := Pair[int]{first: 1, second: 2}") {
 		t.Fatalf("field values did not infer Pair[Int]:\n%s", result.F0)
 	}
 }

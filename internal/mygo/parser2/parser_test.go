@@ -212,7 +212,7 @@ end
 `)
 	body := fn.F4.Kind.(ast2.ExprKindBlockExpr)
 	lit := body.F0[0].(ast2.StmtExprStmt).F0.Kind.(ast2.ExprKindSliceLitExpr)
-	want := []string{"18_446_744u64", "3.14f32", "0xff", "0XFFi8", "0o777u", "0B1010u64"}
+	want := []string{"18446744u64", "3.14f32", "0xff", "0XFFi8", "0o777u", "0B1010u64"}
 	if len(lit.F0) != len(want) {
 		t.Fatalf("literal count = %d, want %d", len(lit.F0), len(want))
 	}
@@ -258,8 +258,8 @@ func TestParseRuneLiteralSwitchPatterns(t *testing.T) {
 func escape(r: Rune) -> String
   switch r
     case '"' => "quote"
-    case '\\n' => "newline"
-    case '\\0' => "null"
+    case '\n' => "newline"
+    case '\0' => "null"
     case _ => "other"
   end
 end

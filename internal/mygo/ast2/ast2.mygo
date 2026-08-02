@@ -213,12 +213,6 @@ struct Expr
   Type: Option[MonoType]
 end
 
-func EmptySwitchTargetType() -> Option[MonoType]
-  None
-end
-
-
-
 func typeExprSliceEq(left: Slice[TypeExpr], right: Slice[TypeExpr]) -> Bool
   if left.Len() != right.Len() then
     false

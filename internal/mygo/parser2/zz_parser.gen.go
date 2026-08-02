@@ -120,85 +120,86 @@ func annotateDeclSource(decl ast2.Decl, sourceName string) ast2.Decl {
 }
 func annotateExprSource(expr ast2.Expr, sourceName string) ast2.Expr {
 	pos := ast2.SourcePos{SourceName: sourceName, Line: expr.Pos.Line, Column: expr.Pos.Column}
-	var __mygo_expr_0 ast2.Expr
-	if _, ok := expr.Kind.(ast2.ExprKindIdentExpr); ok {
-		__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+	__mygo_expr_0 := expr.Kind
+	var __mygo_expr_1 ast2.Expr
+	if _, ok := __mygo_expr_0.(ast2.ExprKindIdentExpr); ok {
+		__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 	} else {
-		if _, ok := expr.Kind.(ast2.ExprKindNumberExpr); ok {
-			__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+		if _, ok := __mygo_expr_0.(ast2.ExprKindNumberExpr); ok {
+			__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 		} else {
-			if _, ok := expr.Kind.(ast2.ExprKindStringExpr); ok {
-				__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+			if _, ok := __mygo_expr_0.(ast2.ExprKindStringExpr); ok {
+				__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 			} else {
-				if _, ok := expr.Kind.(ast2.ExprKindRuneExpr); ok {
-					__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+				if _, ok := __mygo_expr_0.(ast2.ExprKindRuneExpr); ok {
+					__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 				} else {
-					if _, ok := expr.Kind.(ast2.ExprKindBoolExpr); ok {
-						__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+					if _, ok := __mygo_expr_0.(ast2.ExprKindBoolExpr); ok {
+						__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 					} else {
-						if _, ok := expr.Kind.(ast2.ExprKindUnitExpr); ok {
-							__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+						if _, ok := __mygo_expr_0.(ast2.ExprKindUnitExpr); ok {
+							__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 						} else {
-							if __mygo_match___mygo_expr_16, ok := expr.Kind.(ast2.ExprKindTupleExpr); ok {
-								__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindTupleExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_16.F0, func(e_3 ast2.Expr) ast2.Expr {
+							if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ast2.ExprKindTupleExpr); ok {
+								__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindTupleExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_17.F0, func(e_3 ast2.Expr) ast2.Expr {
 									return annotateExprSource(e_3, sourceName)
 								})), Type: None[ast2.MonoType]()}
 							} else {
-								if __mygo_match___mygo_expr_15, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
-									__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindCallExprCtor(annotateExprSource(__mygo_match___mygo_expr_15.F0, sourceName), __mygo_match___mygo_expr_15.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_15.F2, func(e_2 ast2.Expr) ast2.Expr {
+								if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ast2.ExprKindCallExpr); ok {
+									__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindCallExprCtor(annotateExprSource(__mygo_match___mygo_expr_16.F0, sourceName), __mygo_match___mygo_expr_16.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_16.F2, func(e_2 ast2.Expr) ast2.Expr {
 										return annotateExprSource(e_2, sourceName)
 									})), Type: None[ast2.MonoType]()}
 								} else {
-									if __mygo_match___mygo_expr_14, ok := expr.Kind.(ast2.ExprKindFieldExpr); ok {
-										__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindFieldExprCtor(annotateExprSource(__mygo_match___mygo_expr_14.F0, sourceName), __mygo_match___mygo_expr_14.F1), Type: None[ast2.MonoType]()}
+									if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ast2.ExprKindFieldExpr); ok {
+										__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindFieldExprCtor(annotateExprSource(__mygo_match___mygo_expr_15.F0, sourceName), __mygo_match___mygo_expr_15.F1), Type: None[ast2.MonoType]()}
 									} else {
-										if __mygo_match___mygo_expr_13, ok := expr.Kind.(ast2.ExprKindUnaryExpr); ok {
-											__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindUnaryExprCtor(__mygo_match___mygo_expr_13.F0, annotateExprSource(__mygo_match___mygo_expr_13.F1, sourceName)), Type: None[ast2.MonoType]()}
+										if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ast2.ExprKindUnaryExpr); ok {
+											__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindUnaryExprCtor(__mygo_match___mygo_expr_14.F0, annotateExprSource(__mygo_match___mygo_expr_14.F1, sourceName)), Type: None[ast2.MonoType]()}
 										} else {
-											if __mygo_match___mygo_expr_12, ok := expr.Kind.(ast2.ExprKindBinaryExpr); ok {
-												__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindBinaryExprCtor(__mygo_match___mygo_expr_12.F0, annotateExprSource(__mygo_match___mygo_expr_12.F1, sourceName), annotateExprSource(__mygo_match___mygo_expr_12.F2, sourceName)), Type: None[ast2.MonoType]()}
+											if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ast2.ExprKindBinaryExpr); ok {
+												__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindBinaryExprCtor(__mygo_match___mygo_expr_13.F0, annotateExprSource(__mygo_match___mygo_expr_13.F1, sourceName), annotateExprSource(__mygo_match___mygo_expr_13.F2, sourceName)), Type: None[ast2.MonoType]()}
 											} else {
-												if __mygo_match___mygo_expr_11, ok := expr.Kind.(ast2.ExprKindIfExpr); ok {
-													__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindIfExprCtor(annotateExprSource(__mygo_match___mygo_expr_11.F0, sourceName), annotateExprSource(__mygo_match___mygo_expr_11.F1, sourceName), annotateExprSource(__mygo_match___mygo_expr_11.F2, sourceName)), Type: None[ast2.MonoType]()}
+												if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ast2.ExprKindIfExpr); ok {
+													__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindIfExprCtor(annotateExprSource(__mygo_match___mygo_expr_12.F0, sourceName), annotateExprSource(__mygo_match___mygo_expr_12.F1, sourceName), annotateExprSource(__mygo_match___mygo_expr_12.F2, sourceName)), Type: None[ast2.MonoType]()}
 												} else {
-													if __mygo_match___mygo_expr_10, ok := expr.Kind.(ast2.ExprKindBlockExpr); ok {
-														__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindBlockExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_10.F0, func(s ast2.Stmt) ast2.Stmt {
+													if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ast2.ExprKindBlockExpr); ok {
+														__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindBlockExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_11.F0, func(s ast2.Stmt) ast2.Stmt {
 															return annotateStmtSource(s, sourceName)
 														})), Type: None[ast2.MonoType]()}
 													} else {
-														if __mygo_match___mygo_expr_9, ok := expr.Kind.(ast2.ExprKindSwitchExpr); ok {
-															__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindSwitchExprCtor(annotateExprSource(__mygo_match___mygo_expr_9.F0, sourceName), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_9.F1, func(c ast2.SwitchCase) ast2.SwitchCase {
+														if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ast2.ExprKindSwitchExpr); ok {
+															__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindSwitchExprCtor(annotateExprSource(__mygo_match___mygo_expr_10.F0, sourceName), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_10.F1, func(c ast2.SwitchCase) ast2.SwitchCase {
 																return ast2.SwitchCase{Pattern: c.Pattern, Body: annotateExprSource(c.Body, sourceName)}
-															}), __mygo_match___mygo_expr_9.F2), Type: None[ast2.MonoType]()}
+															}), __mygo_match___mygo_expr_10.F2), Type: None[ast2.MonoType]()}
 														} else {
-															if __mygo_match___mygo_expr_8, ok := expr.Kind.(ast2.ExprKindFuncLitExpr); ok {
-																__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindFuncLitExprCtor(__mygo_match___mygo_expr_8.F0, __mygo_match___mygo_expr_8.F1, annotateExprSource(__mygo_match___mygo_expr_8.F2, sourceName)), Type: None[ast2.MonoType]()}
+															if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ast2.ExprKindFuncLitExpr); ok {
+																__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindFuncLitExprCtor(__mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_9.F1, annotateExprSource(__mygo_match___mygo_expr_9.F2, sourceName)), Type: None[ast2.MonoType]()}
 															} else {
-																if __mygo_match___mygo_expr_7, ok := expr.Kind.(ast2.ExprKindSliceLitExpr); ok {
-																	__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindSliceLitExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_7.F0, func(e_1 ast2.Expr) ast2.Expr {
+																if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ast2.ExprKindSliceLitExpr); ok {
+																	__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindSliceLitExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_8.F0, func(e_1 ast2.Expr) ast2.Expr {
 																		return annotateExprSource(e_1, sourceName)
 																	})), Type: None[ast2.MonoType]()}
 																} else {
-																	if __mygo_match___mygo_expr_6, ok := expr.Kind.(ast2.ExprKindTypeAsExpr); ok {
-																		__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindTypeAsExprCtor(annotateExprSource(__mygo_match___mygo_expr_6.F0, sourceName), __mygo_match___mygo_expr_6.F1), Type: None[ast2.MonoType]()}
+																	if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ast2.ExprKindTypeAsExpr); ok {
+																		__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindTypeAsExprCtor(annotateExprSource(__mygo_match___mygo_expr_7.F0, sourceName), __mygo_match___mygo_expr_7.F1), Type: None[ast2.MonoType]()}
 																	} else {
-																		if __mygo_match___mygo_expr_5, ok := expr.Kind.(ast2.ExprKindStructLitExpr); ok {
-																			__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindStructLitExprCtor(__mygo_match___mygo_expr_5.F0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_5.F1, func(f_1 ast2.StructLitField) ast2.StructLitField {
+																		if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ast2.ExprKindStructLitExpr); ok {
+																			__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindStructLitExprCtor(__mygo_match___mygo_expr_6.F0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_6.F1, func(f_1 ast2.StructLitField) ast2.StructLitField {
 																				return ast2.StructLitField{Name: f_1.Name, Value: annotateExprSource(f_1.Value, sourceName)}
 																			})), Type: None[ast2.MonoType]()}
 																		} else {
-																			if __mygo_match___mygo_expr_4, ok := expr.Kind.(ast2.ExprKindGenericStructLitExpr); ok {
-																				__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindGenericStructLitExprCtor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_4.F2, func(f ast2.StructLitField) ast2.StructLitField {
+																			if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.ExprKindGenericStructLitExpr); ok {
+																				__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindGenericStructLitExprCtor(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_5.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_5.F2, func(f ast2.StructLitField) ast2.StructLitField {
 																					return ast2.StructLitField{Name: f.Name, Value: annotateExprSource(f.Value, sourceName)}
 																				})), Type: None[ast2.MonoType]()}
 																			} else {
-																				if __mygo_match___mygo_expr_3, ok := expr.Kind.(ast2.ExprKindInlineGoExpr); ok {
-																					__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindInlineGoExprCtor(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_3.F2, func(o ast2.GoOperand) ast2.GoOperand {
+																				if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.ExprKindInlineGoExpr); ok {
+																					__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindInlineGoExprCtor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_4.F2, func(o ast2.GoOperand) ast2.GoOperand {
 																						return ast2.GoOperand{Name: o.Name, Value: annotateExprSource(o.Value, sourceName)}
-																					}), __mygo_match___mygo_expr_3.F3), Type: None[ast2.MonoType]()}
+																					}), __mygo_match___mygo_expr_4.F3), Type: None[ast2.MonoType]()}
 																				} else {
-																					if __mygo_match___mygo_expr_2, ok := expr.Kind.(ast2.ExprKindMapLitExpr); ok {
-																						__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindMapLitExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_2.F0, func(p struct {
+																					if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.ExprKindMapLitExpr); ok {
+																						__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindMapLitExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_3.F0, func(p struct {
 																							F0 ast2.Expr
 																							F1 ast2.Expr
 																						}) struct {
@@ -211,8 +212,8 @@ func annotateExprSource(expr ast2.Expr, sourceName string) ast2.Expr {
 																							}{F0: annotateExprSource(p.F0, sourceName), F1: annotateExprSource(p.F1, sourceName)}
 																						})), Type: None[ast2.MonoType]()}
 																					} else {
-																						if __mygo_match___mygo_expr_1, ok := expr.Kind.(ast2.ExprKindSetLitExpr); ok {
-																							__mygo_expr_0 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindSetLitExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_1.F0, func(e ast2.Expr) ast2.Expr {
+																						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKindSetLitExpr); ok {
+																							__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKindSetLitExprCtor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_2.F0, func(e ast2.Expr) ast2.Expr {
 																								return annotateExprSource(e, sourceName)
 																							})), Type: None[ast2.MonoType]()}
 																						} else {
@@ -238,7 +239,7 @@ func annotateExprSource(expr ast2.Expr, sourceName string) ast2.Expr {
 			}
 		}
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
 }
 func annotateStmtSource(stmt ast2.Stmt, sourceName string) ast2.Stmt {
 	var __mygo_expr_0 ast2.Stmt
@@ -857,7 +858,7 @@ func switchExpr() ps.Parser[ast2.Expr] {
 	return ps.PBind(kw("switch"), func(_ string) ps.Parser[ast2.Expr] {
 		return ps.PBind(expr(), func(target ast2.Expr) ps.Parser[ast2.Expr] {
 			return ps.PBind(ps.PMany1(switchCase()), func(cases []ast2.SwitchCase) ps.Parser[ast2.Expr] {
-				return ps.PThen(kw("end"), ps.PPure(exprWithPos(target.Pos, ast2.ExprKindSwitchExprCtor(target, cases, ast2.EmptySwitchTargetType()))))
+				return ps.PThen(kw("end"), ps.PPure(exprWithPos(target.Pos, ast2.ExprKindSwitchExprCtor(target, cases, None[ast2.MonoType]()))))
 			})
 		})
 	})
@@ -1014,26 +1015,27 @@ func lazyIfElseTail() ps.Parser[ast2.Expr] {
 	}
 }
 func bodyExprFromBlock(body ast2.Expr) ast2.Expr {
-	var __mygo_expr_0 ast2.Expr
-	if __mygo_match___mygo_expr_1, ok := body.Kind.(ast2.ExprKindBlockExpr); ok {
-		var __mygo_expr_4 ast2.Expr
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0) == 1 {
-			var first ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, 0), ast2.StmtExprStmtCtor(emptyExpr()))
-			var __mygo_expr_2 ast2.Expr
-			if __mygo_match___mygo_expr_3, ok := first.(ast2.StmtExprStmt); ok {
-				__mygo_expr_2 = __mygo_match___mygo_expr_3.F0
+	__mygo_expr_0 := body.Kind
+	var __mygo_expr_1 ast2.Expr
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKindBlockExpr); ok {
+		var __mygo_expr_5 ast2.Expr
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0) == 1 {
+			var first ast2.Stmt = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_2.F0, 0), ast2.StmtExprStmtCtor(emptyExpr()))
+			var __mygo_expr_3 ast2.Expr
+			if __mygo_match___mygo_expr_4, ok := first.(ast2.StmtExprStmt); ok {
+				__mygo_expr_3 = __mygo_match___mygo_expr_4.F0
 			} else {
-				__mygo_expr_2 = body
+				__mygo_expr_3 = body
 			}
-			__mygo_expr_4 = __mygo_expr_2
+			__mygo_expr_5 = __mygo_expr_3
 		} else {
-			__mygo_expr_4 = body
+			__mygo_expr_5 = body
 		}
-		__mygo_expr_0 = __mygo_expr_4
+		__mygo_expr_1 = __mygo_expr_5
 	} else {
-		__mygo_expr_0 = body
+		__mygo_expr_1 = body
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
 }
 func binaryExpr() ps.Parser[ast2.Expr] {
 	return pipeExpr()

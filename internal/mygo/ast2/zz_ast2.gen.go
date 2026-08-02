@@ -688,9 +688,6 @@ type Expr struct {
 	Type Option[MonoType]
 }
 
-func EmptySwitchTargetType() Option[MonoType] {
-	return None[MonoType]()
-}
 func typeExprSliceEq(left []TypeExpr, right []TypeExpr) bool {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(left) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(right) {
 		return false

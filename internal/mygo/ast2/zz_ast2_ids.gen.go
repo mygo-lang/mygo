@@ -171,98 +171,99 @@ func assignLetRecBindIDs(bindings []LetRecBind, nextID int) LetRecBindResult {
 }
 func assignExprID(expr Expr, nextID int) ExprResult {
 	newExpr := Expr{ID: nextID, Pos: expr.Pos, Kind: expr.Kind, Type: None[MonoType]()}
-	var __mygo_expr_0 ExprResult
-	if _, ok := expr.Kind.(ExprKindIdentExpr); ok {
-		__mygo_expr_0 = ExprResult{Expr: newExpr, NextID: nextID + 1}
+	__mygo_expr_0 := expr.Kind
+	var __mygo_expr_1 ExprResult
+	if _, ok := __mygo_expr_0.(ExprKindIdentExpr); ok {
+		__mygo_expr_1 = ExprResult{Expr: newExpr, NextID: nextID + 1}
 	} else {
-		if _, ok := expr.Kind.(ExprKindNumberExpr); ok {
-			__mygo_expr_0 = ExprResult{Expr: newExpr, NextID: nextID + 1}
+		if _, ok := __mygo_expr_0.(ExprKindNumberExpr); ok {
+			__mygo_expr_1 = ExprResult{Expr: newExpr, NextID: nextID + 1}
 		} else {
-			if _, ok := expr.Kind.(ExprKindStringExpr); ok {
-				__mygo_expr_0 = ExprResult{Expr: newExpr, NextID: nextID + 1}
+			if _, ok := __mygo_expr_0.(ExprKindStringExpr); ok {
+				__mygo_expr_1 = ExprResult{Expr: newExpr, NextID: nextID + 1}
 			} else {
-				if _, ok := expr.Kind.(ExprKindRuneExpr); ok {
-					__mygo_expr_0 = ExprResult{Expr: newExpr, NextID: nextID + 1}
+				if _, ok := __mygo_expr_0.(ExprKindRuneExpr); ok {
+					__mygo_expr_1 = ExprResult{Expr: newExpr, NextID: nextID + 1}
 				} else {
-					if _, ok := expr.Kind.(ExprKindBoolExpr); ok {
-						__mygo_expr_0 = ExprResult{Expr: newExpr, NextID: nextID + 1}
+					if _, ok := __mygo_expr_0.(ExprKindBoolExpr); ok {
+						__mygo_expr_1 = ExprResult{Expr: newExpr, NextID: nextID + 1}
 					} else {
-						if _, ok := expr.Kind.(ExprKindUnitExpr); ok {
-							__mygo_expr_0 = ExprResult{Expr: newExpr, NextID: nextID + 1}
+						if _, ok := __mygo_expr_0.(ExprKindUnitExpr); ok {
+							__mygo_expr_1 = ExprResult{Expr: newExpr, NextID: nextID + 1}
 						} else {
-							if __mygo_match___mygo_expr_17, ok := expr.Kind.(ExprKindTupleExpr); ok {
-								r_11 := assignExprListIDs(__mygo_match___mygo_expr_17.F0, nextID+1)
-								__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindTupleExprCtor(r_11.Items), Type: None[MonoType]()}, NextID: r_11.NextID}
+							if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ExprKindTupleExpr); ok {
+								r_11 := assignExprListIDs(__mygo_match___mygo_expr_18.F0, nextID+1)
+								__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindTupleExprCtor(r_11.Items), Type: None[MonoType]()}, NextID: r_11.NextID}
 							} else {
-								if __mygo_match___mygo_expr_16, ok := expr.Kind.(ExprKindCallExpr); ok {
-									r1_4 := assignExprID(__mygo_match___mygo_expr_16.F0, nextID+1)
-									r2_4 := assignExprListIDs(__mygo_match___mygo_expr_16.F2, r1_4.NextID)
-									__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindCallExprCtor(r1_4.Expr, __mygo_match___mygo_expr_16.F1, r2_4.Items), Type: None[MonoType]()}, NextID: r2_4.NextID}
+								if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ExprKindCallExpr); ok {
+									r1_4 := assignExprID(__mygo_match___mygo_expr_17.F0, nextID+1)
+									r2_4 := assignExprListIDs(__mygo_match___mygo_expr_17.F2, r1_4.NextID)
+									__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindCallExprCtor(r1_4.Expr, __mygo_match___mygo_expr_17.F1, r2_4.Items), Type: None[MonoType]()}, NextID: r2_4.NextID}
 								} else {
-									if __mygo_match___mygo_expr_15, ok := expr.Kind.(ExprKindDictionaryCallExpr); ok {
-										r1_3 := assignExprID(__mygo_match___mygo_expr_15.F1, nextID+1)
-										r2_3 := assignExprListIDs(__mygo_match___mygo_expr_15.F2, r1_3.NextID)
-										__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindDictionaryCallExprCtor(__mygo_match___mygo_expr_15.F0, r1_3.Expr, r2_3.Items), Type: None[MonoType]()}, NextID: r2_3.NextID}
+									if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ExprKindDictionaryCallExpr); ok {
+										r1_3 := assignExprID(__mygo_match___mygo_expr_16.F1, nextID+1)
+										r2_3 := assignExprListIDs(__mygo_match___mygo_expr_16.F2, r1_3.NextID)
+										__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindDictionaryCallExprCtor(__mygo_match___mygo_expr_16.F0, r1_3.Expr, r2_3.Items), Type: None[MonoType]()}, NextID: r2_3.NextID}
 									} else {
-										if __mygo_match___mygo_expr_14, ok := expr.Kind.(ExprKindFieldExpr); ok {
-											r_10 := assignExprID(__mygo_match___mygo_expr_14.F0, nextID+1)
-											__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindFieldExprCtor(r_10.Expr, __mygo_match___mygo_expr_14.F1), Type: None[MonoType]()}, NextID: r_10.NextID}
+										if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ExprKindFieldExpr); ok {
+											r_10 := assignExprID(__mygo_match___mygo_expr_15.F0, nextID+1)
+											__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindFieldExprCtor(r_10.Expr, __mygo_match___mygo_expr_15.F1), Type: None[MonoType]()}, NextID: r_10.NextID}
 										} else {
-											if __mygo_match___mygo_expr_13, ok := expr.Kind.(ExprKindUnaryExpr); ok {
-												r_9 := assignExprID(__mygo_match___mygo_expr_13.F1, nextID+1)
-												__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindUnaryExprCtor(__mygo_match___mygo_expr_13.F0, r_9.Expr), Type: None[MonoType]()}, NextID: r_9.NextID}
+											if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ExprKindUnaryExpr); ok {
+												r_9 := assignExprID(__mygo_match___mygo_expr_14.F1, nextID+1)
+												__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindUnaryExprCtor(__mygo_match___mygo_expr_14.F0, r_9.Expr), Type: None[MonoType]()}, NextID: r_9.NextID}
 											} else {
-												if __mygo_match___mygo_expr_12, ok := expr.Kind.(ExprKindBinaryExpr); ok {
-													r1_2 := assignExprID(__mygo_match___mygo_expr_12.F1, nextID+1)
-													r2_2 := assignExprID(__mygo_match___mygo_expr_12.F2, r1_2.NextID)
-													__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindBinaryExprCtor(__mygo_match___mygo_expr_12.F0, r1_2.Expr, r2_2.Expr), Type: None[MonoType]()}, NextID: r2_2.NextID}
+												if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ExprKindBinaryExpr); ok {
+													r1_2 := assignExprID(__mygo_match___mygo_expr_13.F1, nextID+1)
+													r2_2 := assignExprID(__mygo_match___mygo_expr_13.F2, r1_2.NextID)
+													__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindBinaryExprCtor(__mygo_match___mygo_expr_13.F0, r1_2.Expr, r2_2.Expr), Type: None[MonoType]()}, NextID: r2_2.NextID}
 												} else {
-													if __mygo_match___mygo_expr_11, ok := expr.Kind.(ExprKindIfExpr); ok {
-														r1_1 := assignExprID(__mygo_match___mygo_expr_11.F0, nextID+1)
-														r2_1 := assignExprID(__mygo_match___mygo_expr_11.F1, r1_1.NextID)
-														r3 := assignExprID(__mygo_match___mygo_expr_11.F2, r2_1.NextID)
-														__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindIfExprCtor(r1_1.Expr, r2_1.Expr, r3.Expr), Type: None[MonoType]()}, NextID: r3.NextID}
+													if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ExprKindIfExpr); ok {
+														r1_1 := assignExprID(__mygo_match___mygo_expr_12.F0, nextID+1)
+														r2_1 := assignExprID(__mygo_match___mygo_expr_12.F1, r1_1.NextID)
+														r3 := assignExprID(__mygo_match___mygo_expr_12.F2, r2_1.NextID)
+														__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindIfExprCtor(r1_1.Expr, r2_1.Expr, r3.Expr), Type: None[MonoType]()}, NextID: r3.NextID}
 													} else {
-														if __mygo_match___mygo_expr_10, ok := expr.Kind.(ExprKindBlockExpr); ok {
-															r_8 := assignStmtIDs(__mygo_match___mygo_expr_10.F0, nextID+1)
-															__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindBlockExprCtor(r_8.Stmts), Type: None[MonoType]()}, NextID: r_8.NextID}
+														if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ExprKindBlockExpr); ok {
+															r_8 := assignStmtIDs(__mygo_match___mygo_expr_11.F0, nextID+1)
+															__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindBlockExprCtor(r_8.Stmts), Type: None[MonoType]()}, NextID: r_8.NextID}
 														} else {
-															if __mygo_match___mygo_expr_9, ok := expr.Kind.(ExprKindSwitchExpr); ok {
-																r1 := assignExprID(__mygo_match___mygo_expr_9.F0, nextID+1)
-																r2 := assignSwitchCaseIDs(__mygo_match___mygo_expr_9.F1, r1.NextID)
-																__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindSwitchExprCtor(r1.Expr, r2.Cases, __mygo_match___mygo_expr_9.F2), Type: None[MonoType]()}, NextID: r2.NextID}
+															if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ExprKindSwitchExpr); ok {
+																r1 := assignExprID(__mygo_match___mygo_expr_10.F0, nextID+1)
+																r2 := assignSwitchCaseIDs(__mygo_match___mygo_expr_10.F1, r1.NextID)
+																__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindSwitchExprCtor(r1.Expr, r2.Cases, __mygo_match___mygo_expr_10.F2), Type: None[MonoType]()}, NextID: r2.NextID}
 															} else {
-																if __mygo_match___mygo_expr_8, ok := expr.Kind.(ExprKindFuncLitExpr); ok {
-																	r_7 := assignExprID(__mygo_match___mygo_expr_8.F2, nextID+1)
-																	__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindFuncLitExprCtor(__mygo_match___mygo_expr_8.F0, __mygo_match___mygo_expr_8.F1, r_7.Expr), Type: None[MonoType]()}, NextID: r_7.NextID}
+																if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ExprKindFuncLitExpr); ok {
+																	r_7 := assignExprID(__mygo_match___mygo_expr_9.F2, nextID+1)
+																	__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindFuncLitExprCtor(__mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_9.F1, r_7.Expr), Type: None[MonoType]()}, NextID: r_7.NextID}
 																} else {
-																	if __mygo_match___mygo_expr_7, ok := expr.Kind.(ExprKindSliceLitExpr); ok {
-																		r_6 := assignExprListIDs(__mygo_match___mygo_expr_7.F0, nextID+1)
-																		__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindSliceLitExprCtor(r_6.Items), Type: None[MonoType]()}, NextID: r_6.NextID}
+																	if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ExprKindSliceLitExpr); ok {
+																		r_6 := assignExprListIDs(__mygo_match___mygo_expr_8.F0, nextID+1)
+																		__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindSliceLitExprCtor(r_6.Items), Type: None[MonoType]()}, NextID: r_6.NextID}
 																	} else {
-																		if __mygo_match___mygo_expr_6, ok := expr.Kind.(ExprKindTypeAsExpr); ok {
-																			r_5 := assignExprID(__mygo_match___mygo_expr_6.F0, nextID+1)
-																			__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindTypeAsExprCtor(r_5.Expr, __mygo_match___mygo_expr_6.F1), Type: None[MonoType]()}, NextID: r_5.NextID}
+																		if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ExprKindTypeAsExpr); ok {
+																			r_5 := assignExprID(__mygo_match___mygo_expr_7.F0, nextID+1)
+																			__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindTypeAsExprCtor(r_5.Expr, __mygo_match___mygo_expr_7.F1), Type: None[MonoType]()}, NextID: r_5.NextID}
 																		} else {
-																			if __mygo_match___mygo_expr_5, ok := expr.Kind.(ExprKindStructLitExpr); ok {
-																				r_4 := assignStructLitFieldIDs(__mygo_match___mygo_expr_5.F1, nextID+1)
-																				__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindStructLitExprCtor(__mygo_match___mygo_expr_5.F0, r_4.Fields), Type: None[MonoType]()}, NextID: r_4.NextID}
+																			if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ExprKindStructLitExpr); ok {
+																				r_4 := assignStructLitFieldIDs(__mygo_match___mygo_expr_6.F1, nextID+1)
+																				__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindStructLitExprCtor(__mygo_match___mygo_expr_6.F0, r_4.Fields), Type: None[MonoType]()}, NextID: r_4.NextID}
 																			} else {
-																				if __mygo_match___mygo_expr_4, ok := expr.Kind.(ExprKindGenericStructLitExpr); ok {
-																					r_3 := assignStructLitFieldIDs(__mygo_match___mygo_expr_4.F2, nextID+1)
-																					__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindGenericStructLitExprCtor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, r_3.Fields), Type: None[MonoType]()}, NextID: r_3.NextID}
+																				if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ExprKindGenericStructLitExpr); ok {
+																					r_3 := assignStructLitFieldIDs(__mygo_match___mygo_expr_5.F2, nextID+1)
+																					__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindGenericStructLitExprCtor(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_5.F1, r_3.Fields), Type: None[MonoType]()}, NextID: r_3.NextID}
 																				} else {
-																					if __mygo_match___mygo_expr_3, ok := expr.Kind.(ExprKindInlineGoExpr); ok {
-																						r_2 := assignGoOperandIDs(__mygo_match___mygo_expr_3.F2, nextID+1)
-																						__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindInlineGoExprCtor(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1, r_2.Operands, __mygo_match___mygo_expr_3.F3), Type: None[MonoType]()}, NextID: r_2.NextID}
+																					if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ExprKindInlineGoExpr); ok {
+																						r_2 := assignGoOperandIDs(__mygo_match___mygo_expr_4.F2, nextID+1)
+																						__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindInlineGoExprCtor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, r_2.Operands, __mygo_match___mygo_expr_4.F3), Type: None[MonoType]()}, NextID: r_2.NextID}
 																					} else {
-																						if __mygo_match___mygo_expr_2, ok := expr.Kind.(ExprKindMapLitExpr); ok {
-																							r_1 := assignMapPairIDs(__mygo_match___mygo_expr_2.F0, nextID+1)
-																							__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindMapLitExprCtor(r_1.Pairs), Type: None[MonoType]()}, NextID: r_1.NextID}
+																						if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ExprKindMapLitExpr); ok {
+																							r_1 := assignMapPairIDs(__mygo_match___mygo_expr_3.F0, nextID+1)
+																							__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindMapLitExprCtor(r_1.Pairs), Type: None[MonoType]()}, NextID: r_1.NextID}
 																						} else {
-																							if __mygo_match___mygo_expr_1, ok := expr.Kind.(ExprKindSetLitExpr); ok {
-																								r := assignExprListIDs(__mygo_match___mygo_expr_1.F0, nextID+1)
-																								__mygo_expr_0 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindSetLitExprCtor(r.Items), Type: None[MonoType]()}, NextID: r.NextID}
+																							if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ExprKindSetLitExpr); ok {
+																								r := assignExprListIDs(__mygo_match___mygo_expr_2.F0, nextID+1)
+																								__mygo_expr_1 = ExprResult{Expr: Expr{ID: nextID, Pos: expr.Pos, Kind: ExprKindSetLitExprCtor(r.Items), Type: None[MonoType]()}, NextID: r.NextID}
 																							} else {
 																							}
 																						}
@@ -287,7 +288,7 @@ func assignExprID(expr Expr, nextID int) ExprResult {
 			}
 		}
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
 }
 func assignExprListIDs(items []Expr, nextID int) ExprSliceResult {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
