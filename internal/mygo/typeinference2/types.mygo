@@ -1,8 +1,6 @@
 package typeinference2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
-import os "go:os"
-import strconv "go:strconv"
 import strings "go:strings"
 
 # typeinference2 is the self-hosted, parser2-facing inference core.
@@ -764,7 +762,7 @@ func collectInstances(decls: Slice[ast2.Decl]) -> Slice[Instance]
         switch interfaceOpt
           case Some(interfaceType) =>
             switch typeFromAST(interfaceType)
-              case TCon(name, _) => rest.Append(Instance { ClassName: name, Type: typeFromAST(target), Predicates: [] as Slice[Predicate] })
+              case TCon(name) => rest.Append(Instance { ClassName: name, Type: typeFromAST(target), Predicates: [] as Slice[Predicate] })
               case _ => rest
             end
           case None => rest
@@ -896,7 +894,14 @@ func exportMyGoPackageEnumVariants(alias: String, path: String, enumName: String
       ast2.MonoType.TFunc(wrapPkgTypesInSlice(typeArgsFromASTWithParams(variant.Fields, typeParams), path, typeNames), Ref.new(enumType))
     end
     let scheme = Scheme { Bound: typeParamIDs(typeParams, 1), Predicates: [], Body: body }
-    exportMyGoPackageEnumVariants(alias, path, enumName, typeParams, sliceDrop(variants, 1), typeNames, envPut(env, alias + "." + enumName + "." + variant.Name, scheme))
+    # Variant patterns in the importer (`case LetDecl(bind)`) resolve
+    # constructors by their bare spelling via variantSchemeForTarget, so the
+    # bare name must be exported alongside the qualified selector member
+    # `alias.Enum.Variant`.  Both keys share the same qualified scheme; the
+    # switch target type still disambiguates same-named variants from
+    # different packages.
+    let withQualified = envPut(env, alias + "." + enumName + "." + variant.Name, scheme)
+    exportMyGoPackageEnumVariants(alias, path, enumName, typeParams, sliceDrop(variants, 1), typeNames, envPut(withQualified, variant.Name, scheme))
   end
 end
 
@@ -1131,7 +1136,7 @@ func GoSignatureType(sig: GoFuncSignature) -> ast2.MonoType
       let first = results.Get(0).UnwrapOr(ast2.MonoType.TUnit)
       let second = results.Get(1).UnwrapOr(ast2.MonoType.TUnit)
       switch second
-        case TCon(name, _) =>
+        case TCon(name) =>
           if name == "Bool" then
             tCon("Option", [first])
           else
@@ -1148,10 +1153,51 @@ func GoSignatureType(sig: GoFuncSignature) -> ast2.MonoType
     end
   end
   if sig.Variadic then
-    ast2.MonoType.TVariadic(params, Ref.new(result))
+    ast2.MonoType.TVariadic(goVariadicParamTypes(sig.Params), Ref.new(result))
   else
     ast2.MonoType.TFunc(params, Ref.new(result))
   end
+end
+
+# goVariadicParamTypes maps a variadic Go function's parameter strings to the
+# element types MyGO callers unify against.  go/types reports the trailing
+# parameter as the slice type (`...any` -> `[]any`); TVariadic carries the
+# element type so each call argument binds it directly.
+func goVariadicParamTypes(names: Slice[String]) -> Slice[ast2.MonoType]
+  let mapped = goSignatureTypesInto(names, 0, emptyGoTypes())
+  if mapped.Len() == 0 then
+    mapped
+  else
+    let lastIndex = mapped.Len() - 1
+    let element = goVariadicElementType(mapped.Get(lastIndex).UnwrapOr(ast2.MonoType.TVar(0)))
+    replaceGoParamTypes(mapped, lastIndex, element)
+  end
+end
+
+func goVariadicElementType(t: ast2.MonoType) -> ast2.MonoType
+  switch t
+    case TApp(typeRef, args) then
+      switch typeRef.value()
+        case TCon(name) => if name == "Slice" then args.Get(0).UnwrapOr(ast2.MonoType.TVar(0)) else t end
+        case _ => t
+      end
+    end
+    case _ => t
+  end
+end
+
+func replaceGoParamTypes(mapped: Slice[ast2.MonoType], lastIndex: Int, element: ast2.MonoType) -> Slice[ast2.MonoType]
+  var out: Slice[ast2.MonoType] = []
+  var i: Int = 0
+  while i < mapped.Len()
+    if i == lastIndex then
+      out = out.Append(element)
+    else
+      out = out.Append(mapped.Get(i).UnwrapOr(ast2.MonoType.TVar(0)))
+    end
+    i = i + 1
+  end
+  out
 end
 
 # GoSignatureRawResultType preserves the Go boundary's native return shape.
@@ -1183,24 +1229,53 @@ func emptyGoTypes() -> Slice[ast2.MonoType]
   [] as Slice[ast2.MonoType]
 end
 
+# GoTypeName maps a Go signature type string (produced by go/types TypeString)
+# to the MyGO MonoType representation.  Composite shapes are parsed
+# recursively: `[]string` becomes Slice[String], `map[K]V` becomes Map[K, V]
+# and `*T` becomes Ref[T].  Without this a Go FFI result such as
+# `strings.Split`'s `[]string` degenerates to a bare TVar, and typeclass
+# method calls like `parts.Len()` / `parts.Get()` cannot dispatch to the
+# Slice IEnumerable / IIndexable impls.
 func GoTypeName(name: String) -> ast2.MonoType
-  switch name
-    case "int" => ast2.MonoType.TCon("Int")
-    case "int8" => ast2.MonoType.TCon("Int8")
-    case "int16" => ast2.MonoType.TCon("Int16")
-    case "int32" => ast2.MonoType.TCon("Int32")
-    case "int64" => ast2.MonoType.TCon("Int64")
-    case "uint" => ast2.MonoType.TCon("UInt")
-    case "uint8" => ast2.MonoType.TCon("UInt8")
-    case "uint16" => ast2.MonoType.TCon("UInt16")
-    case "uint32" => ast2.MonoType.TCon("UInt32")
-    case "uint64" => ast2.MonoType.TCon("UInt64")
-    case "float32" => ast2.MonoType.TCon("Float32")
-    case "float64" => ast2.MonoType.TCon("Float64")
-    case "string" => ast2.MonoType.TCon("String")
-    case "bool" => ast2.MonoType.TCon("Bool")
-    case "error" => ast2.MonoType.TCon("Error")
-    case _ => ast2.MonoType.TVar(0)
+  let trimmed = strings.TrimSpace(name)
+  if strings.HasPrefix(trimmed, "[]") then
+    ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Slice")), [GoTypeName(strings.TrimPrefix(trimmed, "[]"))])
+  else
+    if strings.HasPrefix(trimmed, "map[") then
+      let close = strings.Index(trimmed, "]")
+      if close >= 0 then
+        let key = substring(trimmed, 4, close).UnwrapOr("")
+        let value = substring(trimmed, close + 1, trimmed.Len()).UnwrapOr("")
+        ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Map")), [GoTypeName(key), GoTypeName(value)])
+      else
+        ast2.MonoType.TVar(0)
+      end
+    else
+      if strings.HasPrefix(trimmed, "*") then
+        ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Ref")), [GoTypeName(strings.TrimPrefix(trimmed, "*"))])
+      else
+        switch trimmed
+          case "int" => ast2.MonoType.TCon("Int")
+          case "int8" => ast2.MonoType.TCon("Int8")
+          case "int16" => ast2.MonoType.TCon("Int16")
+          case "int32" => ast2.MonoType.TCon("Int32")
+          case "int64" => ast2.MonoType.TCon("Int64")
+          case "uint" => ast2.MonoType.TCon("UInt")
+          case "uint8" => ast2.MonoType.TCon("UInt8")
+          case "uint16" => ast2.MonoType.TCon("UInt16")
+          case "uint32" => ast2.MonoType.TCon("UInt32")
+          case "uint64" => ast2.MonoType.TCon("UInt64")
+          case "float32" => ast2.MonoType.TCon("Float32")
+          case "float64" => ast2.MonoType.TCon("Float64")
+          case "string" => ast2.MonoType.TCon("String")
+          case "bool" => ast2.MonoType.TCon("Bool")
+          case "byte" => ast2.MonoType.TCon("Byte")
+          case "rune" => ast2.MonoType.TCon("Rune")
+          case "error" => ast2.MonoType.TCon("Error")
+          case _ => ast2.MonoType.TVar(0)
+        end
+      end
+    end
   end
 end
 

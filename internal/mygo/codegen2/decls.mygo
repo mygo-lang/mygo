@@ -118,7 +118,7 @@ func translatePackageBinding(g: Ref[Generator2], bind: ast2.Bind, mutable: Bool)
         else
           let typ = switch bind.Type
             case Some(t) => goTypeAst(t, ctx.typeParams)
-            case None => monoTypeToGoAstWithParams(bind.Value.Type.UnwrapOr(ast2.MonoType.TUnit), ctx.typeParamNames)
+            case None => monoTypeToGoAstWithParams(bind.Value.Type.UnwrapOr(ast2.MonoType.TUnit), ctx.typeParamNames, ctx.pathAliases)
           end
           Ok(goast.PackageVarDecls(sanitizeIdent(bind.Name), typ, v.Expr))
         end

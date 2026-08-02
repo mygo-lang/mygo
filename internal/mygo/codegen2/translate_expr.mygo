@@ -169,7 +169,7 @@ func translateAstTupleLetStmtOrdinary(names: Slice[String], value: ast2.Expr, ct
     case Err(msg) => Err(msg)
     case Ok(rv) =>
       let tempName = ctxFreshExprTemp(ctx)
-      let tempDecl = astSingleStmt(goast.VarDecl(tempName, monoTypeToGoAstWithParams(tupleMono, ctx.typeParamNames)))
+      let tempDecl = astSingleStmt(goast.VarDecl(tempName, monoTypeToGoAstWithParams(tupleMono, ctx.typeParamNames, ctx.pathAliases)))
       let tempAssign = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(tempName)), "=", astSingleExpr(rv.Expr)))
       let stmts = goast.AppendStmts(goast.AppendStmts(goast.AppendStmts(rv.Pre, tempDecl), tempAssign), [] as Slice[goast.Stmt])
       let bound = bindTupleNames(names, tempName, tupleMono, ctx, stmts, 0)
@@ -186,7 +186,7 @@ func bindTupleNames(names: Slice[String], valueName: String, tupleType: ast2.Mon
     # type so subsequent uses stay typed instead of reverting to
     # `interface{}`.
     let fieldType = tupleElementType(tupleType, index)
-    let decl = astSingleStmt(goast.VarDecl(goName, monoTypeToGoAstWithParams(fieldType, ctx.typeParamNames)))
+    let decl = astSingleStmt(goast.VarDecl(goName, monoTypeToGoAstWithParams(fieldType, ctx.typeParamNames, ctx.pathAliases)))
     let fieldAccess = goast.Selector(goast.Ident(valueName), "F" + index.ToString())
     let assignStmt = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(goName)), "=", astSingleExpr(fieldAccess)))
     ctxSetLocal(ctx, name, fieldType)
@@ -629,13 +629,27 @@ end
 func translateAstReturnValue(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
   switch expr.Kind
     case TupleExpr(items) =>
-      let values = translateAstArgs(items, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], ctx.retTypes)
+      let expectedTypes = switch ctx.retType
+        case TTuple(elems) => elems
+        case _ => ctx.retTypes
+      end
+      let values = translateAstArgs(items, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], expectedTypes)
       switch values
         case Err(msg) => Err(msg)
         case Ok(v) =>
           switch ctx.retType
             case TUnit => Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return([] as Slice[goast.Expr]))))
-            case _ => Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return(v.Exprs))))
+            case _ =>
+              # Function literals passed as values (e.g. a PMap callback) must
+              # return a single anonymous struct for a tuple result instead of
+              # Go multi-values; top-level functions keep the multi-value form.
+              if ctx.tupleReturnStruct then
+                let structType = monoTypeToGoStrWithParamsIn(ctx.retType, ctx.typeParamNames, ctx.pathAliases)
+                let keyed = wrapExprsAsStructFields(v.Exprs, 0, [] as Slice[goast.Expr])
+                Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return(astSingleExpr(goast.Composite(goast.MustTypeExpr(structType), keyed))))))
+              else
+                Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.Return(v.Exprs))))
+              end
           end
       end
     case UnitExpr =>

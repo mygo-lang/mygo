@@ -2,10 +2,8 @@
 
 package typeinference2
 
-import (
-	"github.com/mygo-lang/mygo/internal/mygo/ast2"
-	. "github.com/mygo-lang/mygo/prelude"
-)
+import "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import . "github.com/mygo-lang/mygo/prelude"
 
 type Instance struct {
 	ClassName  string
@@ -17,160 +15,103 @@ type Solver struct {
 }
 
 func newSolver() Solver {
-	return Solver{Instances: []Instance([]Instance{})}
+	return Solver{Instances: []Instance{}}
 }
 func solverRegister(solver Solver, instance Instance) Solver {
 	return Solver{Instances: MygoIN5SliceM6Append(solver.Instances, instance)}
 }
 func solverFromInstances(instances []Instance) Solver {
-	var expr_2477 Solver
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(instances) == 0 {
-		expr_2477 = newSolver()
+		return newSolver()
 	} else {
-		expr_2477 = solverRegister(solverFromInstances(sliceDrop[Instance](instances, 1)), MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(instances, 0), Instance{ClassName: "", Type: ast2.MonoTypeTUnitCtor(), Predicates: []Predicate([]Predicate{})}))
+		return solverRegister(solverFromInstances(sliceDrop(instances, 1)), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(instances, 0), Instance{ClassName: "", Type: ast2.MonoTypeTUnitCtor(), Predicates: []Predicate{}}))
 	}
-	return expr_2477
 }
 func solverResolve(solver Solver, predicates []Predicate, subst Subst) Result[[]Predicate, string] {
-	var expr_2487 Result[[]Predicate, string]
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(predicates) == 0 {
-		expr_2487 = Ok[[]Predicate, string](emptyPredicates())
+		return Ok[[]Predicate, string](emptyPredicates())
 	} else {
-		var expr_2486 Result[[]Predicate, string]
-		predicate_2478 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicates, 0), Predicate{ClassName: "", Args: []ast2.MonoType([]ast2.MonoType{})})
-		rest_2479 := solverResolve(solver, sliceDrop[Predicate](predicates, 1), subst)
-		var expr_2485 Result[[]Predicate, string]
-		if v_777, ok := rest_2479.(ResultErr[[]Predicate, string]); ok {
-			var expr_2484 Result[[]Predicate, string]
-			expr_2484 = Err[[]Predicate, string](v_777.F0)
-			expr_2485 = expr_2484
+		predicate := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicates, 0), Predicate{ClassName: "", Args: []ast2.MonoType{}})
+		rest := solverResolve(solver, sliceDrop(predicates, 1), subst)
+		var __mygo_expr_0 Result[[]Predicate, string]
+		if __mygo_match___mygo_expr_2, ok := rest.(ResultErr[[]Predicate, string]); ok {
+			__mygo_expr_0 = Err[[]Predicate, string](__mygo_match___mygo_expr_2.F0)
 		} else {
-			if v_774, ok := rest_2479.(ResultOk[[]Predicate, string]); ok {
-				var expr_2483 Result[[]Predicate, string]
-				var expr_2482 Result[[]Predicate, string]
-				if v_776, ok := solverResolveOne(solver, predicate_2478, subst).(ResultErr[[]Predicate, string]); ok {
-					var expr_2481 Result[[]Predicate, string]
-					expr_2481 = Err[[]Predicate, string](v_776.F0)
-					expr_2482 = expr_2481
+			if __mygo_match___mygo_expr_1, ok := rest.(ResultOk[[]Predicate, string]); ok {
+				var __mygo_expr_2 Result[[]Predicate, string]
+				if __mygo_match___mygo_expr_4, ok := solverResolveOne(solver, predicate, subst).(ResultErr[[]Predicate, string]); ok {
+					__mygo_expr_2 = Err[[]Predicate, string](__mygo_match___mygo_expr_4.F0)
 				} else {
-					if v_775, ok := solverResolveOne(solver, predicate_2478, subst).(ResultOk[[]Predicate, string]); ok {
-						var expr_2480 Result[[]Predicate, string]
-						expr_2480 = Ok[[]Predicate, string](appendPredicates(v_775.F0, v_774.F0))
-						expr_2482 = expr_2480
+					if __mygo_match___mygo_expr_3, ok := solverResolveOne(solver, predicate, subst).(ResultOk[[]Predicate, string]); ok {
+						__mygo_expr_2 = Ok[[]Predicate, string](appendPredicates(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_1.F0))
 					} else {
-						panic("unreachable")
 					}
 				}
-				expr_2483 = expr_2482
-				expr_2485 = expr_2483
+				__mygo_expr_0 = __mygo_expr_2
 			} else {
-				panic("unreachable")
 			}
 		}
-		expr_2486 = expr_2485
-		expr_2487 = expr_2486
+		return __mygo_expr_0
 	}
-	return expr_2487
 }
 func emptyPredicates() []Predicate {
-	return []Predicate([]Predicate{})
+	return []Predicate{}
 }
 func solverResolveOne(solver Solver, predicate Predicate, subst Subst) Result[[]Predicate, string] {
-	args_2488 := substTypes(predicate.Args, subst)
-	return solverFindInstance(solver.Instances, Predicate{ClassName: predicate.ClassName, Args: args_2488}, subst)
+	args := substTypes(predicate.Args, subst)
+	return solverFindInstance(solver.Instances, Predicate{ClassName: predicate.ClassName, Args: args}, subst)
 }
 func solverFindInstance(instances []Instance, predicate Predicate, subst Subst) Result[[]Predicate, string] {
-	return __mygo_mt_typeinference2_solverfindinstance(instances, predicate, subst, 0)
+	for {
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(instances) == 0 {
+			return Ok[[]Predicate, string]([]Predicate{predicate})
+		} else {
+			instance := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(instances, 0), Instance{ClassName: "", Type: ast2.MonoTypeTUnitCtor(), Predicates: []Predicate{}})
+			if instance.ClassName != predicate.ClassName || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(predicate.Args) == 0 {
+				__tail_0 := sliceDrop(instances, 1)
+				__tail_1 := predicate
+				__tail_2 := subst
+				instances, predicate, subst = __tail_0, __tail_1, __tail_2
+				continue
+			} else {
+				var __mygo_expr_0 Result[[]Predicate, string]
+				if __mygo_match___mygo_expr_1, ok := unify(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicate.Args, 0), ast2.MonoTypeTUnitCtor()), instance.Type, subst).(ResultOk[Subst, string]); ok {
+					__mygo_expr_0 = solverResolve(instanceSolver(instance, instances), instance.Predicates, __mygo_match___mygo_expr_1.F0)
+				} else {
+					if _, ok := unify(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicate.Args, 0), ast2.MonoTypeTUnitCtor()), instance.Type, subst).(ResultErr[Subst, string]); ok {
+						__mygo_expr_0 = solverFindInstance(sliceDrop(instances, 1), predicate, subst)
+					} else {
+					}
+				}
+				return __mygo_expr_0
+			}
+		}
+	}
 }
 func instanceSolver(instance Instance, instances []Instance) Solver {
 	return Solver{Instances: instances}
 }
 func builtInEqInstances() []Instance {
-	emptyArgs_2496 := []ast2.MonoType([]ast2.MonoType{})
-	refType_2497 := ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor("Ref")}[0], []ast2.MonoType{ast2.MonoTypeTVarCtor(999)})
-	primitives_2498 := []string([]string{"Int", "Int8", "Int16", "Int32", "Int64", "UInt8", "UInt16", "UInt32", "UInt64", "Float32", "Float64", "String", "Bool", "Rune", "Byte"})
-	instances_2499 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(primitives_2498, []Instance([]Instance{}), func(acc []Instance, name string) []Instance {
-		return MygoIN5SliceM6Append(acc, Instance{ClassName: "Eq", Type: ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor(name)}[0], emptyArgs_2496), Predicates: []Predicate([]Predicate{})})
+	emptyArgs := []ast2.MonoType{}
+	refType := ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor("Ref")}[0], []ast2.MonoType{ast2.MonoTypeTVarCtor(999)})
+	primitives := []string{"Int", "Int8", "Int16", "Int32", "Int64", "UInt8", "UInt16", "UInt32", "UInt64", "Float32", "Float64", "String", "Bool", "Rune", "Byte"}
+	instances := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(primitives, []Instance{}, func(acc []Instance, name string) []Instance {
+		return MygoIN5SliceM6Append(acc, Instance{ClassName: "Eq", Type: ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor(name)}[0], emptyArgs), Predicates: []Predicate{}})
 	})
-	return MygoIN5SliceM6Append(instances_2499, Instance{ClassName: "Eq", Type: refType_2497, Predicates: []Predicate([]Predicate{})})
+	return MygoIN5SliceM6Append(instances, Instance{ClassName: "Eq", Type: refType, Predicates: []Predicate{}})
 }
 func mergeBuiltInInstances(instances []Instance) []Instance {
 	return appendInstances(builtInEqInstances(), instances)
 }
 func appendInstances(left []Instance, right []Instance) []Instance {
-	return __mygo_mt_typeinference2_appendinstances(left, right, 0)
-}
-func __mygo_mt_typeinference2_appendinstances(left []Instance, right []Instance, __mygo_state int) []Instance {
 	for {
-		switch __mygo_state {
-		case 0:
-			var expr_2502 []Instance
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(right) == 0 {
-				expr_2502 = left
-			} else {
-				__mygo_next_0 := MygoIN5SliceM6Append(left, MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), Instance{ClassName: "", Type: ast2.MonoTypeTUnitCtor(), Predicates: []Predicate([]Predicate{})}))
-				__mygo_next_1 := sliceDrop[Instance](right, 1)
-				left = __mygo_next_0
-				right = __mygo_next_1
-				__mygo_state = 0
-				continue
-			}
-			return expr_2502
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_typeinference2_solverfindinstance(instances []Instance, predicate Predicate, subst Subst, __mygo_state int) Result[[]Predicate, string] {
-	for {
-		switch __mygo_state {
-		case 0:
-			var expr_2516 Result[[]Predicate, string]
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(instances) == 0 {
-				expr_2516 = Ok[[]Predicate, string]([]Predicate([]Predicate{predicate}))
-			} else {
-				var expr_2515 Result[[]Predicate, string]
-				instance_2510 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(instances, 0), Instance{ClassName: "", Type: ast2.MonoTypeTUnitCtor(), Predicates: []Predicate([]Predicate{})})
-				var expr_2514 Result[[]Predicate, string]
-				if instance_2510.ClassName != predicate.ClassName || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(predicate.Args) == 0 {
-					__mygo_next_0 := sliceDrop[Instance](instances, 1)
-					__mygo_next_1 := predicate
-					__mygo_next_2 := subst
-					instances = __mygo_next_0
-					predicate = __mygo_next_1
-					subst = __mygo_next_2
-					__mygo_state = 0
-					continue
-				} else {
-					var expr_2513 Result[[]Predicate, string]
-					if v_783, ok := unify(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicate.Args, 0), ast2.MonoTypeTUnitCtor()), instance_2510.Type, subst).(ResultOk[Subst, string]); ok {
-						var expr_2512 Result[[]Predicate, string]
-						expr_2512 = solverResolve(instanceSolver(instance_2510, instances), instance_2510.Predicates, v_783.F0)
-						expr_2513 = expr_2512
-					} else {
-						if _, ok := unify(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicate.Args, 0), ast2.MonoTypeTUnitCtor()), instance_2510.Type, subst).(ResultErr[Subst, string]); ok {
-							var expr_2511 Result[[]Predicate, string]
-							__mygo_next_0 := sliceDrop[Instance](instances, 1)
-							__mygo_next_1 := predicate
-							__mygo_next_2 := subst
-							instances = __mygo_next_0
-							predicate = __mygo_next_1
-							subst = __mygo_next_2
-							__mygo_state = 0
-							continue
-							expr_2513 = expr_2511
-						} else {
-							panic("unreachable")
-						}
-					}
-					expr_2514 = expr_2513
-				}
-				expr_2515 = expr_2514
-				expr_2516 = expr_2515
-			}
-			return expr_2516
-		default:
-			panic("mygo: invalid mutual-tailcall state")
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(right) == 0 {
+			return left
+		} else {
+			__tail_0 := MygoIN5SliceM6Append(left, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, 0), Instance{ClassName: "", Type: ast2.MonoTypeTUnitCtor(), Predicates: []Predicate{}}))
+			__tail_1 := sliceDrop(right, 1)
+			left, right = __tail_0, __tail_1
+			continue
 		}
 	}
 }

@@ -73,6 +73,18 @@ func translateExprAstExpectedInner(expr: ast2.Expr, ctx: Ref[egCtx], expected: a
             case Some(ctor) => Ok(newAstExprResult(goast.Call(goast.Ident(ctor), [] as Slice[goast.Expr])))
             case None => translateFieldAst(base, field, ctx, expected)
           end
+        # Imported enum constructors are parsed as nested selectors:
+        # `ast2.Decl.ImportDecl` lowers to
+        # FieldExpr(FieldExpr(Ident("ast2"), "Decl"), "ImportDecl").
+        case FieldExpr(pkgBase, enumName) =>
+          switch pkgBase.Kind
+            case IdentExpr(alias) =>
+              switch importedEnumVariantCtor(alias, enumName, field, ctx)
+                case Some(ctor) => Ok(newAstExprResult(goast.Call(goast.Ident(ctor), [] as Slice[goast.Expr])))
+                case None => translateFieldAst(base, field, ctx, expected)
+              end
+            case _ => translateFieldAst(base, field, ctx, expected)
+          end
         case _ => translateFieldAst(base, field, ctx, expected)
       end
     case UnaryExpr(op, inner) =>
@@ -216,12 +228,33 @@ end
 
 func translateFuncLitAst(params: Slice[ast2.Param], ret: Option[ast2.TypeExpr], body: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
   let child = Ref.new(ctxChild(ctx))
-  let returnTypes = goReturnTypesFromOption(ret, child.typeParams)
   let retMono = returnMonoType(ret)
   go[()] {
     code: "{child}.retType = {retMono}"
     in child = child
     in retMono = retMono
+  }
+  # A tuple-returning function literal passed as a value (e.g. a PMap
+  # callback) must expose the tuple as a single anonymous struct type, not as
+  # Go multi-values.  The return statement lowering uses the same flag to wrap
+  # the tuple expression in a matching struct composite.
+  let returnTypes = switch retMono
+    case TTuple(items) =>
+      if items.Len() > 1 then
+        [monoTypeToGoStrWithParamsIn(retMono, child.typeParamNames, child.pathAliases)]
+      else
+        goReturnTypesFromOption(ret, child.typeParams)
+      end
+    case _ => goReturnTypesFromOption(ret, child.typeParams)
+  end
+  let tupleStructReturn = switch retMono
+    case TTuple(items) => items.Len() > 1
+    case _ => false
+  end
+  go[()] {
+    code: "{child}.tupleReturnStruct = {tupleStructReturn}"
+    in child = child
+    in tupleStructReturn = tupleStructReturn
   }
   var names: Slice[String] = []
   var index: Int = 0
@@ -1049,12 +1082,13 @@ func translateCallAstExpectedNonRef(callee: ast2.Expr, typeArgs: Slice[ast2.Type
     case Some(result) => result
     case None =>
       let isOption = switch expected
-        case TCon(name, _) => name == "Option"
-        case TApp(typeRef, _) =>
+        case TCon(name) => name == "Option"
+        case TApp(typeRef, _) then
           switch typeRef.value()
-            case TCon(name, _) => name == "Option"
+            case TCon(name) => name == "Option"
             case _ => false
           end
+        end
         case _ => false
       end
       switch ffiOptionSignature(callee, ctx)
@@ -1087,16 +1121,53 @@ func translateEnumVariantCallAst(callee: ast2.Expr, args: Slice[ast2.Expr], ctx:
         case IdentExpr(name) =>
           switch ctx.enumValueConstructors.Get(name + "." + field)
             case Some(ctor) =>
-              let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
+              let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], callArgExpectedTypes(callee))
               switch values
                 case Ok(v) => Some(Ok(astExprWithPre(goast.Call(goast.Ident(ctor), v.Exprs), v.Pre)))
                 case Err(msg) => Some(Err(msg))
               end
             case None => None
           end
+        # Imported enum constructors are parsed as nested selectors:
+        # `ast2.Decl.LetDecl(bind)` lowers to
+        # FieldExpr(FieldExpr(Ident("ast2"), "Decl"), "LetDecl").  The package
+        # environment confirms the two-dot selector is a variant constructor
+        # (Go-FFI members only register one-dot alias.Type keys).
+        case FieldExpr(pkgBase, enumName) =>
+          switch pkgBase.Kind
+            case IdentExpr(alias) =>
+              switch importedEnumVariantCtor(alias, enumName, field, ctx)
+                case Some(ctor) =>
+                  let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], callArgExpectedTypes(callee))
+                  switch values
+                    case Ok(v) => Some(Ok(astExprWithPre(goast.Call(goast.Ident(ctor), v.Exprs), v.Pre)))
+                    case Err(msg) => Some(Err(msg))
+                  end
+                case None => None
+              end
+            case _ => None
+          end
         case _ => None
       end
     case _ => None
+  end
+end
+
+# importedEnumVariantCtor resolves `alias.Enum.Variant` as a constructor for an
+# enum imported from another MyGO package.  The package environment
+# (PackageInfo.Env) registers qualified enum-variant members under the
+# `alias.Enum.Variant` key (see typeinference2's exportMyGoPackageEnumVariants),
+# so a hit confirms the selector is a variant constructor rather than a Go-FFI
+# package member or an inherent static method.  Returns the fully-qualified Go
+# constructor name (e.g. `ast2.DeclLetDeclCtor`) or None.
+func importedEnumVariantCtor(alias: String, enumName: String, variantName: String, ctx: Ref[egCtx]) -> Option[String]
+  switch ctx.pkgInfo
+    case Some(pkgInfo) =>
+      switch typeinference2.LookupEnvEntries(pkgInfo.Env, alias + "." + enumName + "." + variantName)
+        case Some(_) => Some(alias + "." + enumConstructorGoName(sanitizeIdent(enumName), variantName))
+        case None => None
+      end
+    case None => None
   end
 end
 
@@ -1273,7 +1344,7 @@ func receiverStaticType(receiver: ast2.Expr, ctx: Ref[egCtx]) -> Option[ast2.Mon
         # A bare inference variable is not enough to select an impl helper.
         case Some(t) then
           switch t
-            case TCon(_, _) => Some(t)
+            case TCon(_) => Some(t)
             case _ => receiverStaticTypeFromKind(receiver, ctx)
           end
         end
@@ -1360,7 +1431,7 @@ func monoTypeConstructor(typ: ast2.MonoType) -> Option[String]
   switch typ
     case TCon(name) => Some(name)
     case TApp(ctor, _) => switch ctor.value()
-      case TCon(name, _) => Some(name)
+      case TCon(name) => Some(name)
       case _ => None
     end
     case _ => None
@@ -1771,8 +1842,13 @@ func translateAstArgs(args: Slice[ast2.Expr], ctx: Ref[egCtx], index: Int, out: 
   if index >= args.Len() then
     Ok(AstArgsResult { Exprs: out, Pre: pre })
   else
-    let expected = expectedTypes.Get(index).UnwrapOr(ast2.MonoType.TUnit)
-    let value = translateExprAstExpected(args.Get(index).UnwrapOr(ast2.EmptyExpr()), ctx, expected)
+    let arg = args.Get(index).UnwrapOr(ast2.EmptyExpr())
+    # When no expected type is available (e.g. a typeclass helper call whose
+    # callee lost its annotation), fall back to the argument's own inferred
+    # type so tuple/slice literals keep their element types instead of
+    # degrading to `any`.
+    let expected = expectedTypes.Get(index).UnwrapOr(arg.Type.UnwrapOr(ast2.MonoType.TUnit))
+    let value = translateExprAstExpected(arg, ctx, expected)
     switch value
       case Err(msg) => Err(msg)
       case Ok(v) => translateAstArgs(args, ctx, index + 1, out.Append(v.Expr), goast.AppendStmts(pre, v.Pre), expectedTypes)

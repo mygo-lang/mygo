@@ -1,5 +1,7 @@
 package typeinference2
 
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
 # Constraint solving for the bootstrap inference pipeline.  Instances are
 # deliberately kept separate from the lexical environment: predicates belong
 # to schemes, while instances belong to the package being inferred.

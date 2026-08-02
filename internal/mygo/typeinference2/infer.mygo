@@ -1,7 +1,6 @@
 package typeinference2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
-import fmt "go:fmt"
 import importer "go:go/importer"
 import gotypes "go:go/types"
 import strings "go:strings"
@@ -419,7 +418,12 @@ func inferExprInner(expr: ast2.Expr, env: Env, state: InferState) -> Result[Expr
     case TypeAsExpr(value, typ) then
       let r = inferTypeAs(value, typ, env, state)
       switch r
-        case Ok(v) => Ok(mkTyped(expr, v.Type, v.State, None))
+        case Ok(pair) then
+          let (v, typedValue) = pair
+          let typedKind = ast2.ExprKind.TypeAsExpr(applyTypedExprSubst(v.Subst, typedValue), typ)
+          let result = InferResult { Type: v.Type, Predicates: v.Predicates, Subst: v.Subst, State: v.State }
+          Ok(ExprInferResult { Expr: ast2.Expr { ID: expr.ID, Pos: expr.Pos, Kind: typedKind, Type: Some(result.Type) }, Result: result })
+        end
         case Err(m) => Err(m)
       end
     end
@@ -615,7 +619,7 @@ func inferGenericStructLit(typeName: String, typeArgs: Slice[ast2.TypeExpr], fie
   end
 end
 
-func inferTypeAs(value: ast2.Expr, typ: ast2.TypeExpr, env: Env, state: InferState) -> Result[InferResult, String]
+func inferTypeAs(value: ast2.Expr, typ: ast2.TypeExpr, env: Env, state: InferState) -> Result[(InferResult, ast2.Expr), String]
   let inferred = inferExpr(value, env, state)
   let expected = typeFromASTInEnv(typ, env, state)
   switch inferred
@@ -624,8 +628,8 @@ func inferTypeAs(value: ast2.Expr, typ: ast2.TypeExpr, env: Env, state: InferSta
       let v = eir.Result
       let matched = unify(v.Type, expected, v.Subst)
       switch matched
-        case Ok(s) => Ok(InferResult { Type: applySubst(s, expected), Predicates: v.Predicates, Subst: s, State: v.State })
-        case Err(_) => Ok(InferResult { Type: expected, Predicates: v.Predicates, Subst: v.Subst, State: v.State })
+        case Ok(s) => Ok((InferResult { Type: applySubst(s, expected), Predicates: v.Predicates, Subst: s, State: v.State }, applyTypedExprSubst(s, eir.Expr)))
+        case Err(_) => Ok((InferResult { Type: expected, Predicates: v.Predicates, Subst: v.Subst, State: v.State }, applyTypedExprSubst(v.Subst, eir.Expr)))
       end
     end
   end
@@ -777,6 +781,18 @@ func resolveBareVariantPattern(env: Env, targetType: ast2.MonoType, pattern: ast
             end
             case TApp(typeRef, _) then
               switch typeRef.value()
+                case TCon(enumName) then
+                  if enumName != name => ast2.Pattern.VariantPattern(name, [] as Slice[ast2.Pattern]) else pattern
+                end
+                case _ => pattern
+              end
+            end
+            # Imported enum variants carry TQualifiedName(path, TCon(Enum)).
+            # Unwrap the wrapper so `case WildcardPattern` on an imported
+            # ast2.Pattern resolves to a zero-arity VariantPattern instead of
+            # remaining a bare binding that codegen2 would treat as a fallback.
+            case TQualifiedName(_, inner) then
+              switch inner.value()
                 case TCon(enumName) then
                   if enumName != name => ast2.Pattern.VariantPattern(name, [] as Slice[ast2.Pattern]) else pattern
                 end
@@ -977,13 +993,13 @@ func envWithPattern(env: Env, pattern: ast2.Pattern, targetType: ast2.MonoType) 
               let variantType = variantTypeForTarget(targetType, instantiate(scheme, NewInferState()))
               switch variantType
                 case TFunc(fields, ret) => envWithPatternBindings(env, args, fields, targetType, ret.value())
-                case TCon(enumName) then
+                case TCon(_) then
                   switch unify(targetType, variantType, emptySubst())
                     case Ok(_) => Ok(env)
                     case Err(msg) => Err("pattern does not match switch target: " + msg)
                   end
                 end
-                case TApp(typeRef, _) then
+                case TApp(_, _) then
                   # A zero-field variant is registered as the bare enum type
                   # (TApp(TCon(name), [type params])).  Treat it like a TCon
                   # so case None / case Empty matches without arguments, and
@@ -993,6 +1009,24 @@ func envWithPattern(env: Env, pattern: ast2.Pattern, targetType: ast2.MonoType) 
                     switch unify(targetType, variantType, emptySubst())
                       case Ok(_) => Ok(env)
                       case Err(msg) => Err("pattern does not match switch target: " + msg)
+                    end
+                  else
+                    Err("variant " + name + " does not accept pattern arguments")
+                  end
+                end
+                # Imported zero-field variants are registered with a
+                # TQualifiedName wrapper (TQualifiedName(path, TCon(enum))).
+                # Treat it like the bare enum type so `case UnitExpr` on an
+                # imported ast2.ExprKind matches without arguments.
+                case TQualifiedName(_, inner) then
+                  if args.Len() == 0 then
+                    switch unify(targetType, variantType, emptySubst())
+                      case Ok(_) => Ok(env)
+                      case Err(msg) =>
+                        switch unify(targetType, inner.value(), emptySubst())
+                          case Ok(_) => Ok(env)
+                          case Err(_) => Err("pattern does not match switch target: " + msg)
+                        end
                     end
                   else
                     Err("variant " + name + " does not accept pattern arguments")
@@ -1361,29 +1395,34 @@ end
 
 func inferCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], env: Env, state: InferState) -> Result[ExprInferResult, String]
   switch inferRefCall(callee, args, env, state)
-    case Some(r) =>
+    case Some(r) then
       switch r
-        case Ok(v) =>
-          let callExprKind = ast2.ExprKind.CallExpr(callee, typeArgs, args)
+        case Ok(pair) then
+          let (v, typedArgs) = pair
+          let callExprKind = ast2.ExprKind.CallExpr(callee, typeArgs, typedArgs)
           Ok(ExprInferResult { Expr: ast2.Expr { ID: 0, Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Kind: callExprKind, Type: Some(v.Type) }, Result: v })
+        end
         case Err(m) => Err(m)
       end
-    case None =>
+    end
+    case None then
       switch inferOrdinaryCall(callee, args, env, state)
         case Ok(pair) then
           let (v, typedArgs) = pair
           let callExprKind = switch inferredDictionaryCall(callee, v.Expr, v.Result.State.ActiveConstraints)
-            case Some(key) =>
+            case Some(key) then
               switch v.Expr.Kind
                 case FieldExpr(base, _) => ast2.ExprKind.DictionaryCallExpr(key, base, typedArgs)
                 case _ => ast2.ExprKind.CallExpr(v.Expr, typeArgs, typedArgs)
               end
+            end
             case None => ast2.ExprKind.CallExpr(v.Expr, typeArgs, typedArgs)
           end
           Ok(ExprInferResult { Expr: ast2.Expr { ID: 0, Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Kind: callExprKind, Type: Some(v.Result.Type) }, Result: v.Result })
         end
         case Err(m) => Err(m)
       end
+    end
   end
 end
 
@@ -1412,16 +1451,21 @@ end
 
 # Ref is a compiler boundary type.  Its constructor and dereference operation
 # are not ordinary fields in the lexical environment.
-func inferRefCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Env, state: InferState) -> Option[Result[InferResult, String]]
+func inferRefCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Env, state: InferState) -> Option[Result[(InferResult, Slice[ast2.Expr]), String]]
   switch callee.Kind
     case FieldExpr(base, field) then
       switch base.Kind
         case IdentExpr(name) then
           if name == "Ref" && field == "new" then
-            if args.Len() != 1 then Some(Err("Ref.new expects exactly one argument")) else
+            if args.Len() != 1 then
+              Some(Err("Ref.new expects exactly one argument"))
+            else
               switch inferExpr(args.Get(0).UnwrapOr(ast2.EmptyExpr()), env, state)
-                case Ok(eir) => Some[Result[InferResult, String]](Ok[InferResult, String](InferResult { Type: ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Ref")), [applySubst(eir.Result.Subst, eir.Result.Type)]), Predicates: eir.Result.Predicates, Subst: eir.Result.Subst, State: eir.Result.State }))
-                case Err(msg) => Some[Result[InferResult, String]](Err[InferResult, String](msg))
+                case Ok(eir) =>
+                  let typedArg = applyTypedExprSubst(eir.Result.Subst, eir.Expr)
+                  let result = InferResult { Type: ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Ref")), [applySubst(eir.Result.Subst, eir.Result.Type)]), Predicates: eir.Result.Predicates, Subst: eir.Result.Subst, State: eir.Result.State }
+                  Some[Result[(InferResult, Slice[ast2.Expr]), String]](Ok[(InferResult, Slice[ast2.Expr]), String]((result, [typedArg])))
+                case Err(msg) => Some[Result[(InferResult, Slice[ast2.Expr]), String]](Err[(InferResult, Slice[ast2.Expr]), String](msg))
               end
             end
           else
@@ -1435,7 +1479,7 @@ func inferRefCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Env, state: In
   end
 end
 
-func inferRefValueCall(base: ast2.Expr, field: String, args: Slice[ast2.Expr], env: Env, state: InferState) -> Option[Result[InferResult, String]]
+func inferRefValueCall(base: ast2.Expr, field: String, args: Slice[ast2.Expr], env: Env, state: InferState) -> Option[Result[(InferResult, Slice[ast2.Expr]), String]]
   if field != "value" || args.Len() != 0 then
     None
   else
@@ -1448,7 +1492,7 @@ func inferRefValueCall(base: ast2.Expr, field: String, args: Slice[ast2.Expr], e
             switch typeRef.value()
               case TCon(name) then
                 if name == "Ref" && inner.Len() == 1 then
-                  Some(Ok(InferResult { Type: inner.Get(0).UnwrapOr(ast2.MonoType.TUnit), Predicates: value.Predicates, Subst: value.Subst, State: value.State }))
+                  Some(Ok((InferResult { Type: inner.Get(0).UnwrapOr(ast2.MonoType.TUnit), Predicates: value.Predicates, Subst: value.Subst, State: value.State }, [] as Slice[ast2.Expr])))
                 else
                   Some(Err("value() requires Ref[T]"))
                 end
@@ -2061,7 +2105,7 @@ func inferNamedField(base: ast2.Expr, name: String, field: String, env: Env, sta
           switch scheme.Body
             # Variants with fields are functions; a zero-argument variant has
             # the enum type itself as its scheme body.
-            case TCon(enumName, _) =>
+            case TCon(enumName) =>
               if enumName == name then
                 let qualified = instantiateQualified(scheme, state)
                 let te = ast2.Expr { ID: base.ID, Pos: base.Pos, Kind: base.Kind, Type: Some(qualified.Body) }
@@ -2083,7 +2127,7 @@ func inferOrdinaryField(base: ast2.Expr, field: String, env: Env, state: InferSt
       let typedBase = eir.Expr
       let v = eir.Result
       let resolvedType = switch applySubst(v.Subst, v.Type)
-        case TCon(name) => applySubst(v.Subst, v.Type)
+        case TCon(_) => applySubst(v.Subst, v.Type)
         case TApp(typeRef, args) then
           switch typeRef.value()
             case TCon(name) then
@@ -2261,9 +2305,9 @@ func stripReceiverArg(fieldType: ast2.MonoType, typeName: String, args: Slice[as
       if methodArgs.Len() == 0 then None else
         let first = methodArgs.Get(0).UnwrapOr(ast2.MonoType.TUnit)
         let recvName = switch first
-          case TCon(name, _) => name
+          case TCon(name) => name
           case TApp(ctor, _) => switch ctor.value()
-            case TCon(name, _) => name
+            case TCon(name) => name
             case _ => ""
           end
           case _ => ""
@@ -2364,7 +2408,13 @@ func inferVariants(vars: Slice[ast2.Variant], enumName: String, tps: Slice[Strin
     let constructorType = if v.Fields.Len() == 0 then
       enumType
     else
-      ast2.MonoType.TFunc(typeArgsFromASTWithParams(v.Fields, tps), Ref.new(enumType))
+      # Keep qualified imports (`ast2.Expr`) qualified, mirroring
+      # predeclareEnumVariants.  Using the plain (env-free) conversion here
+      # re-registered constructors with bare TCon field types that shadowed
+      # the qualified predeclared scheme, so pattern bindings and struct
+      # literal fields disagreed on imported type identity.
+      let fieldTypes = typeArgsFromASTInEnvWithParamsList(v.Fields, tps, env, state)
+      ast2.MonoType.TFunc(fieldTypes, Ref.new(enumType))
     end
     inferVariants(sliceDrop(vars, 1), enumName, tps, envPut(env, v.Name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: constructorType }), fields, state)
   end

@@ -113,7 +113,7 @@ func translatePackageBinding(g *Generator2, bind ast2.Bind, mutable bool) Result
 					} else {
 						if _, ok := bind.Type.(OptionNone[ast2.TypeExpr]); ok {
 							var expr_297 goast.Expr
-							expr_297 = monoTypeToGoAstWithParams(MygoIN6OptionM8UnwrapOr(bind.Value.Type, ast2.MonoTypeTUnitCtor()), ctx_295.typeParamNames)
+							expr_297 = monoTypeToGoAstWithParams(MygoIN6OptionM8UnwrapOr(bind.Value.Type, ast2.MonoTypeTUnitCtor()), ctx_295.typeParamNames, ctx_295.pathAliases)
 							expr_299 = expr_297
 						} else {
 							panic("unreachable")

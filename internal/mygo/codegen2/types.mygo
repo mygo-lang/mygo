@@ -3,6 +3,7 @@ package codegen2
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import maps "go:maps"
 
 # egCtx 是表达式/语句翻译的上下文
 struct egCtx
@@ -33,6 +34,8 @@ struct egCtx
   retType: ast2.MonoType
   # 多返回值类型
   retTypes: Slice[ast2.MonoType]
+  # 函数字面量返回元组时，作为匿名结构体返回（而非 Go 多返回值）
+  tupleReturnStruct: Bool
   # 尾递归候选函数名
   tailRecFuncName: Option[String]
   # 参数数量
@@ -163,6 +166,7 @@ func newEgCtx() -> egCtx
     typeParamNames: [],
     retType: ast2.MonoType.TUnit,
     retTypes: [],
+    tupleReturnStruct: false,
     tailRecFuncName: None,
     tailRecParamCount: 0,
     tailRecParamNames: [],
@@ -206,6 +210,7 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     typeParamNames: params,
     retType: ast2.MonoType.TUnit,
     retTypes: [],
+    tupleReturnStruct: false,
     tailRecFuncName: None,
     tailRecParamCount: 0,
     tailRecParamNames: [],
@@ -249,6 +254,7 @@ func newFuncEgCtx(params: Slice[String], retType: ast2.MonoType, tailName: Strin
     typeParamNames: params,
     retType: retType,
     retTypes: [],
+    tupleReturnStruct: false,
     tailRecFuncName: Some(tailName),
     tailRecParamCount: paramCount,
     tailRecParamNames: [],
@@ -297,7 +303,7 @@ end
 func ctxChild(ctx: Ref[egCtx]) -> egCtx
   egCtx {
     locals: ctx.locals,
-    bindings: ctx.bindings,
+    bindings: copyStringBindings(ctx.bindings),
     structFields: ctx.structFields,
     structTypeParams: ctx.structTypeParams,
     mutable: ctx.mutable,
@@ -309,6 +315,7 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     typeParamNames: ctx.typeParamNames,
     retType: ctx.retType,
     retTypes: ctx.retTypes,
+    tupleReturnStruct: ctx.tupleReturnStruct,
     tailRecFuncName: ctx.tailRecFuncName,
     tailRecParamCount: ctx.tailRecParamCount,
     tailRecParamNames: ctx.tailRecParamNames,
@@ -347,6 +354,14 @@ end
 
 func ctxSetBinding(ctx: Ref[egCtx], name: String, goName: String) -> ()
   ctx.bindings.Set(name, goName)
+end
+
+# copyStringBindings clones the Go map backing egCtx.bindings so a switch-case
+# child can install pattern bindings without clobbering outer lexical bindings
+# (e.g. an inner `case Some(typ)` must not overwrite an outer `let typ`).
+# maps.Clone is the Go 1.21+ stdlib shallow-copy primitive for map[string]string.
+func copyStringBindings(src: Map[String, String]) -> Map[String, String]
+  maps.Clone(src)
 end
 
 func ctxFreshBinding(ctx: Ref[egCtx], name: String) -> String
@@ -596,12 +611,12 @@ end
 # monoTypeToGoAstWithParams is the structured counterpart used for typed local
 # declarations.  String rendering remains available for diagnostic/text-only
 # paths, but lowering no longer reparses those rendered types.
-func monoTypeToGoAstWithParams(t: ast2.MonoType, params: Slice[String]) -> goast.Expr
+func monoTypeToGoAstWithParams(t: ast2.MonoType, params: Slice[String], aliases: Map[String, String]) -> goast.Expr
   switch t
     case TCon(name) => if name == "Unit" then goast.EmptyStructType() else goast.TypeName(goPrimitiveTypeName(name)) end
     case TParam(id) => goast.TypeName(params.Get(-id - 1).UnwrapOr("any"))
     case TApp(ctor, args) then
-      let lowered = args.Map(func(arg: ast2.MonoType) -> goast.Expr monoTypeToGoAstWithParams(arg, params) end)
+      let lowered = args.Map(func(arg: ast2.MonoType) -> goast.Expr monoTypeToGoAstWithParams(arg, params, aliases) end)
       switch ctor.value()
         case TCon(name) then
           if name == "Ref" && lowered.Len() == 1 then goast.TypePointer(lowered.Get(0).UnwrapOr(goast.TypeName("any")))
@@ -611,13 +626,23 @@ func monoTypeToGoAstWithParams(t: ast2.MonoType, params: Slice[String]) -> goast
           else goast.TypeApply(goast.TypeName(goPrimitiveTypeName(name)), lowered)
           end
         end
-        case _ => goast.TypeApply(monoTypeToGoAstWithParams(ctor.value(), params), lowered)
+        case _ => goast.TypeApply(monoTypeToGoAstWithParams(ctor.value(), params, aliases), lowered)
       end
     end
-    case TFunc(items, ret) => goast.TypeFunc(items.Map(func(item: ast2.MonoType) -> goast.Expr monoTypeToGoAstWithParams(item, params) end), monoTypeToGoAstWithParams(ret.value(), params), !monoIsUnit(ret.value()))
-    case TTuple(items) => goast.TypeTuple(items.Map(func(item: ast2.MonoType) -> goast.Expr monoTypeToGoAstWithParams(item, params) end))
+    case TFunc(items, ret) => goast.TypeFunc(items.Map(func(item: ast2.MonoType) -> goast.Expr monoTypeToGoAstWithParams(item, params, aliases) end), monoTypeToGoAstWithParams(ret.value(), params, aliases), !monoIsUnit(ret.value()))
+    case TTuple(items) => goast.TypeTuple(items.Map(func(item: ast2.MonoType) -> goast.Expr monoTypeToGoAstWithParams(item, params, aliases) end))
     case TUnit => goast.EmptyStructType()
-    case TQualifiedName(_, inner) => monoTypeToGoAstWithParams(inner.value(), params)
+    case TQualifiedName(path, inner) then
+      # Keep imported types qualified (e.g. `ast2.FuncSig`) in generated locals,
+      # mirroring monoTypeToGoStrWithParamsIn's path → alias resolution.
+      let member = monoTypeToGoStrIn(inner.value(), aliases)
+      let alias = aliases.Get(importPathForGo(path)).UnwrapOr("")
+      if alias == "" || alias == "." then
+        goast.MustTypeExpr(member)
+      else
+        goast.MustTypeExpr(alias + "." + member)
+      end
+    end
     case _ => goast.TypeName("any")
   end
 end
@@ -659,7 +684,15 @@ func monoTypeToGoStrWithParamsIn(t: ast2.MonoType, params: Slice[String], aliase
           elsif name == "Set" && argStrs.Len() == 1 then
             "map[" + argStrs.Get(0).UnwrapOr("any") + "]struct{}"
           else
-            mygoToGoTypeStr(name + "[" + joinStrings(argStrs, ", ") + "]")
+            # Build the Go type string directly.  Round-tripping through
+            # mygoToGoTypeStr re-parsed already-rendered args, so a slice
+            # element like `[]ast2.TypeExpr` was misread as an empty type-arg
+            # list and `Option[[]ast2.TypeExpr]` collapsed to `Option[]`.
+            if argStrs.Len() == 0 then
+              goPrimitiveTypeName(name)
+            else
+              name + "[" + joinStrings(argStrs, ", ") + "]"
+            end
           end
         end
         case _ => monoTypeToGoStrIn(t, aliases)

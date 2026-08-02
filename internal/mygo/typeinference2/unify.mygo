@@ -1,4 +1,5 @@
 package typeinference2
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 
 func emptySubst() -> Subst
   Subst { Entries: [], Index: {}, Fallbacks: [], IndexFirst: true, MaxID: 0 }

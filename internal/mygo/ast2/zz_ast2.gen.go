@@ -25,30 +25,30 @@ type DeclImportDecl struct {
 	F1 string
 }
 
-func (_ DeclImportDecl) isDecl() {
+func (DeclImportDecl) isDecl() {
 }
-func DeclImportDeclCtor(a0 string, a1 string) Decl {
-	return DeclImportDecl{F0: a0, F1: a1}
+func DeclImportDeclCtor(v0 string, v1 string) Decl {
+	return DeclImportDecl{F0: v0, F1: v1}
 }
 
 type DeclLetDecl struct {
 	F0 Bind
 }
 
-func (_ DeclLetDecl) isDecl() {
+func (DeclLetDecl) isDecl() {
 }
-func DeclLetDeclCtor(a0 Bind) Decl {
-	return DeclLetDecl{F0: a0}
+func DeclLetDeclCtor(v0 Bind) Decl {
+	return DeclLetDecl{F0: v0}
 }
 
 type DeclVarDecl struct {
 	F0 Bind
 }
 
-func (_ DeclVarDecl) isDecl() {
+func (DeclVarDecl) isDecl() {
 }
-func DeclVarDeclCtor(a0 Bind) Decl {
-	return DeclVarDecl{F0: a0}
+func DeclVarDeclCtor(v0 Bind) Decl {
+	return DeclVarDecl{F0: v0}
 }
 
 type DeclTypeAliasDecl struct {
@@ -57,10 +57,10 @@ type DeclTypeAliasDecl struct {
 	F2 TypeExpr
 }
 
-func (_ DeclTypeAliasDecl) isDecl() {
+func (DeclTypeAliasDecl) isDecl() {
 }
-func DeclTypeAliasDeclCtor(a0 string, a1 []string, a2 TypeExpr) Decl {
-	return DeclTypeAliasDecl{F0: a0, F1: a1, F2: a2}
+func DeclTypeAliasDeclCtor(v0 string, v1 []string, v2 TypeExpr) Decl {
+	return DeclTypeAliasDecl{F0: v0, F1: v1, F2: v2}
 }
 
 type DeclTypeDecl struct {
@@ -69,10 +69,10 @@ type DeclTypeDecl struct {
 	F2 TypeExpr
 }
 
-func (_ DeclTypeDecl) isDecl() {
+func (DeclTypeDecl) isDecl() {
 }
-func DeclTypeDeclCtor(a0 string, a1 []string, a2 TypeExpr) Decl {
-	return DeclTypeDecl{F0: a0, F1: a1, F2: a2}
+func DeclTypeDeclCtor(v0 string, v1 []string, v2 TypeExpr) Decl {
+	return DeclTypeDecl{F0: v0, F1: v1, F2: v2}
 }
 
 type DeclFuncDecl struct {
@@ -84,10 +84,10 @@ type DeclFuncDecl struct {
 	F5 []Constraint
 }
 
-func (_ DeclFuncDecl) isDecl() {
+func (DeclFuncDecl) isDecl() {
 }
-func DeclFuncDeclCtor(a0 string, a1 []string, a2 []Param, a3 Option[TypeExpr], a4 Expr, a5 []Constraint) Decl {
-	return DeclFuncDecl{F0: a0, F1: a1, F2: a2, F3: a3, F4: a4, F5: a5}
+func DeclFuncDeclCtor(v0 string, v1 []string, v2 []Param, v3 Option[TypeExpr], v4 Expr, v5 []Constraint) Decl {
+	return DeclFuncDecl{F0: v0, F1: v1, F2: v2, F3: v3, F4: v4, F5: v5}
 }
 
 type DeclStructDecl struct {
@@ -96,10 +96,10 @@ type DeclStructDecl struct {
 	F2 []Field
 }
 
-func (_ DeclStructDecl) isDecl() {
+func (DeclStructDecl) isDecl() {
 }
-func DeclStructDeclCtor(a0 string, a1 []string, a2 []Field) Decl {
-	return DeclStructDecl{F0: a0, F1: a1, F2: a2}
+func DeclStructDeclCtor(v0 string, v1 []string, v2 []Field) Decl {
+	return DeclStructDecl{F0: v0, F1: v1, F2: v2}
 }
 
 type DeclEnumDecl struct {
@@ -108,10 +108,10 @@ type DeclEnumDecl struct {
 	F2 []Variant
 }
 
-func (_ DeclEnumDecl) isDecl() {
+func (DeclEnumDecl) isDecl() {
 }
-func DeclEnumDeclCtor(a0 string, a1 []string, a2 []Variant) Decl {
-	return DeclEnumDecl{F0: a0, F1: a1, F2: a2}
+func DeclEnumDeclCtor(v0 string, v1 []string, v2 []Variant) Decl {
+	return DeclEnumDecl{F0: v0, F1: v1, F2: v2}
 }
 
 type DeclInterfaceDecl struct {
@@ -120,10 +120,10 @@ type DeclInterfaceDecl struct {
 	F2 []FuncSig
 }
 
-func (_ DeclInterfaceDecl) isDecl() {
+func (DeclInterfaceDecl) isDecl() {
 }
-func DeclInterfaceDeclCtor(a0 string, a1 []string, a2 []FuncSig) Decl {
-	return DeclInterfaceDecl{F0: a0, F1: a1, F2: a2}
+func DeclInterfaceDeclCtor(v0 string, v1 []string, v2 []FuncSig) Decl {
+	return DeclInterfaceDecl{F0: v0, F1: v1, F2: v2}
 }
 
 type DeclImplDecl struct {
@@ -133,10 +133,10 @@ type DeclImplDecl struct {
 	F3 []ImplMethod
 }
 
-func (_ DeclImplDecl) isDecl() {
+func (DeclImplDecl) isDecl() {
 }
-func DeclImplDeclCtor(a0 []string, a1 TypeExpr, a2 Option[TypeExpr], a3 []ImplMethod) Decl {
-	return DeclImplDecl{F0: a0, F1: a1, F2: a2, F3: a3}
+func DeclImplDeclCtor(v0 []string, v1 TypeExpr, v2 Option[TypeExpr], v3 []ImplMethod) Decl {
+	return DeclImplDecl{F0: v0, F1: v1, F2: v2, F3: v3}
 }
 
 type Param struct {
@@ -189,10 +189,10 @@ type PatternBindPattern struct {
 	F0 string
 }
 
-func (_ PatternBindPattern) isPattern() {
+func (PatternBindPattern) isPattern() {
 }
-func PatternBindPatternCtor(a0 string) Pattern {
-	return PatternBindPattern{F0: a0}
+func PatternBindPatternCtor(v0 string) Pattern {
+	return PatternBindPattern{F0: v0}
 }
 
 type PatternVariantPattern struct {
@@ -200,20 +200,20 @@ type PatternVariantPattern struct {
 	F1 []Pattern
 }
 
-func (_ PatternVariantPattern) isPattern() {
+func (PatternVariantPattern) isPattern() {
 }
-func PatternVariantPatternCtor(a0 string, a1 []Pattern) Pattern {
-	return PatternVariantPattern{F0: a0, F1: a1}
+func PatternVariantPatternCtor(v0 string, v1 []Pattern) Pattern {
+	return PatternVariantPattern{F0: v0, F1: v1}
 }
 
 type PatternTuplePattern struct {
 	F0 []Pattern
 }
 
-func (_ PatternTuplePattern) isPattern() {
+func (PatternTuplePattern) isPattern() {
 }
-func PatternTuplePatternCtor(a0 []Pattern) Pattern {
-	return PatternTuplePattern{F0: a0}
+func PatternTuplePatternCtor(v0 []Pattern) Pattern {
+	return PatternTuplePattern{F0: v0}
 }
 
 type PatternLiteralPattern struct {
@@ -221,16 +221,16 @@ type PatternLiteralPattern struct {
 	F1 string
 }
 
-func (_ PatternLiteralPattern) isPattern() {
+func (PatternLiteralPattern) isPattern() {
 }
-func PatternLiteralPatternCtor(a0 string, a1 string) Pattern {
-	return PatternLiteralPattern{F0: a0, F1: a1}
+func PatternLiteralPatternCtor(v0 string, v1 string) Pattern {
+	return PatternLiteralPattern{F0: v0, F1: v1}
 }
 
 type PatternWildcardPattern struct {
 }
 
-func (_ PatternWildcardPattern) isPattern() {
+func (PatternWildcardPattern) isPattern() {
 }
 func PatternWildcardPatternCtor() Pattern {
 	return PatternWildcardPattern{}
@@ -244,10 +244,10 @@ type TypeExprNamedType struct {
 	F1 []TypeExpr
 }
 
-func (_ TypeExprNamedType) isTypeExpr() {
+func (TypeExprNamedType) isTypeExpr() {
 }
-func TypeExprNamedTypeCtor(a0 string, a1 []TypeExpr) TypeExpr {
-	return TypeExprNamedType{F0: a0, F1: a1}
+func TypeExprNamedTypeCtor(v0 string, v1 []TypeExpr) TypeExpr {
+	return TypeExprNamedType{F0: v0, F1: v1}
 }
 
 type TypeExprFuncType struct {
@@ -255,26 +255,26 @@ type TypeExprFuncType struct {
 	F1 *TypeExpr
 }
 
-func (_ TypeExprFuncType) isTypeExpr() {
+func (TypeExprFuncType) isTypeExpr() {
 }
-func TypeExprFuncTypeCtor(a0 []TypeExpr, a1 *TypeExpr) TypeExpr {
-	return TypeExprFuncType{F0: a0, F1: a1}
+func TypeExprFuncTypeCtor(v0 []TypeExpr, v1 *TypeExpr) TypeExpr {
+	return TypeExprFuncType{F0: v0, F1: v1}
 }
 
 type TypeExprTupleType struct {
 	F0 []TypeExpr
 }
 
-func (_ TypeExprTupleType) isTypeExpr() {
+func (TypeExprTupleType) isTypeExpr() {
 }
-func TypeExprTupleTypeCtor(a0 []TypeExpr) TypeExpr {
-	return TypeExprTupleType{F0: a0}
+func TypeExprTupleTypeCtor(v0 []TypeExpr) TypeExpr {
+	return TypeExprTupleType{F0: v0}
 }
 
 type TypeExprUnitType struct {
 }
 
-func (_ TypeExprUnitType) isTypeExpr() {
+func (TypeExprUnitType) isTypeExpr() {
 }
 func TypeExprUnitTypeCtor() TypeExpr {
 	return TypeExprUnitType{}
@@ -285,10 +285,10 @@ type TypeExprInlineGo struct {
 	F1 string
 }
 
-func (_ TypeExprInlineGo) isTypeExpr() {
+func (TypeExprInlineGo) isTypeExpr() {
 }
-func TypeExprInlineGoCtor(a0 *TypeExpr, a1 string) TypeExpr {
-	return TypeExprInlineGo{F0: a0, F1: a1}
+func TypeExprInlineGoCtor(v0 *TypeExpr, v1 string) TypeExpr {
+	return TypeExprInlineGo{F0: v0, F1: v1}
 }
 
 type Bind struct {
@@ -316,30 +316,30 @@ type StmtExprStmt struct {
 	F0 Expr
 }
 
-func (_ StmtExprStmt) isStmt() {
+func (StmtExprStmt) isStmt() {
 }
-func StmtExprStmtCtor(a0 Expr) Stmt {
-	return StmtExprStmt{F0: a0}
+func StmtExprStmtCtor(v0 Expr) Stmt {
+	return StmtExprStmt{F0: v0}
 }
 
 type StmtLetStmt struct {
 	F0 Bind
 }
 
-func (_ StmtLetStmt) isStmt() {
+func (StmtLetStmt) isStmt() {
 }
-func StmtLetStmtCtor(a0 Bind) Stmt {
-	return StmtLetStmt{F0: a0}
+func StmtLetStmtCtor(v0 Bind) Stmt {
+	return StmtLetStmt{F0: v0}
 }
 
 type StmtLetRecStmt struct {
 	F0 []LetRecBind
 }
 
-func (_ StmtLetRecStmt) isStmt() {
+func (StmtLetRecStmt) isStmt() {
 }
-func StmtLetRecStmtCtor(a0 []LetRecBind) Stmt {
-	return StmtLetRecStmt{F0: a0}
+func StmtLetRecStmtCtor(v0 []LetRecBind) Stmt {
+	return StmtLetRecStmt{F0: v0}
 }
 
 type StmtTupleLetStmt struct {
@@ -347,20 +347,20 @@ type StmtTupleLetStmt struct {
 	F1 Expr
 }
 
-func (_ StmtTupleLetStmt) isStmt() {
+func (StmtTupleLetStmt) isStmt() {
 }
-func StmtTupleLetStmtCtor(a0 []string, a1 Expr) Stmt {
-	return StmtTupleLetStmt{F0: a0, F1: a1}
+func StmtTupleLetStmtCtor(v0 []string, v1 Expr) Stmt {
+	return StmtTupleLetStmt{F0: v0, F1: v1}
 }
 
 type StmtVarStmt struct {
 	F0 Bind
 }
 
-func (_ StmtVarStmt) isStmt() {
+func (StmtVarStmt) isStmt() {
 }
-func StmtVarStmtCtor(a0 Bind) Stmt {
-	return StmtVarStmt{F0: a0}
+func StmtVarStmtCtor(v0 Bind) Stmt {
+	return StmtVarStmt{F0: v0}
 }
 
 type StmtWhileStmt struct {
@@ -368,10 +368,10 @@ type StmtWhileStmt struct {
 	F1 Expr
 }
 
-func (_ StmtWhileStmt) isStmt() {
+func (StmtWhileStmt) isStmt() {
 }
-func StmtWhileStmtCtor(a0 Expr, a1 Expr) Stmt {
-	return StmtWhileStmt{F0: a0, F1: a1}
+func StmtWhileStmtCtor(v0 Expr, v1 Expr) Stmt {
+	return StmtWhileStmt{F0: v0, F1: v1}
 }
 
 type StmtAssignStmt struct {
@@ -379,16 +379,16 @@ type StmtAssignStmt struct {
 	F1 Expr
 }
 
-func (_ StmtAssignStmt) isStmt() {
+func (StmtAssignStmt) isStmt() {
 }
-func StmtAssignStmtCtor(a0 Expr, a1 Expr) Stmt {
-	return StmtAssignStmt{F0: a0, F1: a1}
+func StmtAssignStmtCtor(v0 Expr, v1 Expr) Stmt {
+	return StmtAssignStmt{F0: v0, F1: v1}
 }
 
 type StmtReturnStmt struct {
 }
 
-func (_ StmtReturnStmt) isStmt() {
+func (StmtReturnStmt) isStmt() {
 }
 func StmtReturnStmtCtor() Stmt {
 	return StmtReturnStmt{}
@@ -398,16 +398,16 @@ type StmtReturnWithStmt struct {
 	F0 Expr
 }
 
-func (_ StmtReturnWithStmt) isStmt() {
+func (StmtReturnWithStmt) isStmt() {
 }
-func StmtReturnWithStmtCtor(a0 Expr) Stmt {
-	return StmtReturnWithStmt{F0: a0}
+func StmtReturnWithStmtCtor(v0 Expr) Stmt {
+	return StmtReturnWithStmt{F0: v0}
 }
 
 type StmtBreakStmt struct {
 }
 
-func (_ StmtBreakStmt) isStmt() {
+func (StmtBreakStmt) isStmt() {
 }
 func StmtBreakStmtCtor() Stmt {
 	return StmtBreakStmt{}
@@ -416,7 +416,7 @@ func StmtBreakStmtCtor() Stmt {
 type StmtContinueStmt struct {
 }
 
-func (_ StmtContinueStmt) isStmt() {
+func (StmtContinueStmt) isStmt() {
 }
 func StmtContinueStmtCtor() Stmt {
 	return StmtContinueStmt{}
@@ -429,56 +429,56 @@ type ExprKindIdentExpr struct {
 	F0 string
 }
 
-func (_ ExprKindIdentExpr) isExprKind() {
+func (ExprKindIdentExpr) isExprKind() {
 }
-func ExprKindIdentExprCtor(a0 string) ExprKind {
-	return ExprKindIdentExpr{F0: a0}
+func ExprKindIdentExprCtor(v0 string) ExprKind {
+	return ExprKindIdentExpr{F0: v0}
 }
 
 type ExprKindNumberExpr struct {
 	F0 string
 }
 
-func (_ ExprKindNumberExpr) isExprKind() {
+func (ExprKindNumberExpr) isExprKind() {
 }
-func ExprKindNumberExprCtor(a0 string) ExprKind {
-	return ExprKindNumberExpr{F0: a0}
+func ExprKindNumberExprCtor(v0 string) ExprKind {
+	return ExprKindNumberExpr{F0: v0}
 }
 
 type ExprKindStringExpr struct {
 	F0 string
 }
 
-func (_ ExprKindStringExpr) isExprKind() {
+func (ExprKindStringExpr) isExprKind() {
 }
-func ExprKindStringExprCtor(a0 string) ExprKind {
-	return ExprKindStringExpr{F0: a0}
+func ExprKindStringExprCtor(v0 string) ExprKind {
+	return ExprKindStringExpr{F0: v0}
 }
 
 type ExprKindRuneExpr struct {
 	F0 string
 }
 
-func (_ ExprKindRuneExpr) isExprKind() {
+func (ExprKindRuneExpr) isExprKind() {
 }
-func ExprKindRuneExprCtor(a0 string) ExprKind {
-	return ExprKindRuneExpr{F0: a0}
+func ExprKindRuneExprCtor(v0 string) ExprKind {
+	return ExprKindRuneExpr{F0: v0}
 }
 
 type ExprKindBoolExpr struct {
 	F0 bool
 }
 
-func (_ ExprKindBoolExpr) isExprKind() {
+func (ExprKindBoolExpr) isExprKind() {
 }
-func ExprKindBoolExprCtor(a0 bool) ExprKind {
-	return ExprKindBoolExpr{F0: a0}
+func ExprKindBoolExprCtor(v0 bool) ExprKind {
+	return ExprKindBoolExpr{F0: v0}
 }
 
 type ExprKindUnitExpr struct {
 }
 
-func (_ ExprKindUnitExpr) isExprKind() {
+func (ExprKindUnitExpr) isExprKind() {
 }
 func ExprKindUnitExprCtor() ExprKind {
 	return ExprKindUnitExpr{}
@@ -488,10 +488,10 @@ type ExprKindTupleExpr struct {
 	F0 []Expr
 }
 
-func (_ ExprKindTupleExpr) isExprKind() {
+func (ExprKindTupleExpr) isExprKind() {
 }
-func ExprKindTupleExprCtor(a0 []Expr) ExprKind {
-	return ExprKindTupleExpr{F0: a0}
+func ExprKindTupleExprCtor(v0 []Expr) ExprKind {
+	return ExprKindTupleExpr{F0: v0}
 }
 
 type ExprKindCallExpr struct {
@@ -500,10 +500,10 @@ type ExprKindCallExpr struct {
 	F2 []Expr
 }
 
-func (_ ExprKindCallExpr) isExprKind() {
+func (ExprKindCallExpr) isExprKind() {
 }
-func ExprKindCallExprCtor(a0 Expr, a1 []TypeExpr, a2 []Expr) ExprKind {
-	return ExprKindCallExpr{F0: a0, F1: a1, F2: a2}
+func ExprKindCallExprCtor(v0 Expr, v1 []TypeExpr, v2 []Expr) ExprKind {
+	return ExprKindCallExpr{F0: v0, F1: v1, F2: v2}
 }
 
 type ExprKindDictionaryCallExpr struct {
@@ -512,10 +512,10 @@ type ExprKindDictionaryCallExpr struct {
 	F2 []Expr
 }
 
-func (_ ExprKindDictionaryCallExpr) isExprKind() {
+func (ExprKindDictionaryCallExpr) isExprKind() {
 }
-func ExprKindDictionaryCallExprCtor(a0 string, a1 Expr, a2 []Expr) ExprKind {
-	return ExprKindDictionaryCallExpr{F0: a0, F1: a1, F2: a2}
+func ExprKindDictionaryCallExprCtor(v0 string, v1 Expr, v2 []Expr) ExprKind {
+	return ExprKindDictionaryCallExpr{F0: v0, F1: v1, F2: v2}
 }
 
 type ExprKindFieldExpr struct {
@@ -523,10 +523,10 @@ type ExprKindFieldExpr struct {
 	F1 string
 }
 
-func (_ ExprKindFieldExpr) isExprKind() {
+func (ExprKindFieldExpr) isExprKind() {
 }
-func ExprKindFieldExprCtor(a0 Expr, a1 string) ExprKind {
-	return ExprKindFieldExpr{F0: a0, F1: a1}
+func ExprKindFieldExprCtor(v0 Expr, v1 string) ExprKind {
+	return ExprKindFieldExpr{F0: v0, F1: v1}
 }
 
 type ExprKindUnaryExpr struct {
@@ -534,10 +534,10 @@ type ExprKindUnaryExpr struct {
 	F1 Expr
 }
 
-func (_ ExprKindUnaryExpr) isExprKind() {
+func (ExprKindUnaryExpr) isExprKind() {
 }
-func ExprKindUnaryExprCtor(a0 string, a1 Expr) ExprKind {
-	return ExprKindUnaryExpr{F0: a0, F1: a1}
+func ExprKindUnaryExprCtor(v0 string, v1 Expr) ExprKind {
+	return ExprKindUnaryExpr{F0: v0, F1: v1}
 }
 
 type ExprKindBinaryExpr struct {
@@ -546,10 +546,10 @@ type ExprKindBinaryExpr struct {
 	F2 Expr
 }
 
-func (_ ExprKindBinaryExpr) isExprKind() {
+func (ExprKindBinaryExpr) isExprKind() {
 }
-func ExprKindBinaryExprCtor(a0 string, a1 Expr, a2 Expr) ExprKind {
-	return ExprKindBinaryExpr{F0: a0, F1: a1, F2: a2}
+func ExprKindBinaryExprCtor(v0 string, v1 Expr, v2 Expr) ExprKind {
+	return ExprKindBinaryExpr{F0: v0, F1: v1, F2: v2}
 }
 
 type ExprKindIfExpr struct {
@@ -558,20 +558,20 @@ type ExprKindIfExpr struct {
 	F2 Expr
 }
 
-func (_ ExprKindIfExpr) isExprKind() {
+func (ExprKindIfExpr) isExprKind() {
 }
-func ExprKindIfExprCtor(a0 Expr, a1 Expr, a2 Expr) ExprKind {
-	return ExprKindIfExpr{F0: a0, F1: a1, F2: a2}
+func ExprKindIfExprCtor(v0 Expr, v1 Expr, v2 Expr) ExprKind {
+	return ExprKindIfExpr{F0: v0, F1: v1, F2: v2}
 }
 
 type ExprKindBlockExpr struct {
 	F0 []Stmt
 }
 
-func (_ ExprKindBlockExpr) isExprKind() {
+func (ExprKindBlockExpr) isExprKind() {
 }
-func ExprKindBlockExprCtor(a0 []Stmt) ExprKind {
-	return ExprKindBlockExpr{F0: a0}
+func ExprKindBlockExprCtor(v0 []Stmt) ExprKind {
+	return ExprKindBlockExpr{F0: v0}
 }
 
 type ExprKindSwitchExpr struct {
@@ -580,10 +580,10 @@ type ExprKindSwitchExpr struct {
 	F2 Option[MonoType]
 }
 
-func (_ ExprKindSwitchExpr) isExprKind() {
+func (ExprKindSwitchExpr) isExprKind() {
 }
-func ExprKindSwitchExprCtor(a0 Expr, a1 []SwitchCase, a2 Option[MonoType]) ExprKind {
-	return ExprKindSwitchExpr{F0: a0, F1: a1, F2: a2}
+func ExprKindSwitchExprCtor(v0 Expr, v1 []SwitchCase, v2 Option[MonoType]) ExprKind {
+	return ExprKindSwitchExpr{F0: v0, F1: v1, F2: v2}
 }
 
 type ExprKindFuncLitExpr struct {
@@ -592,20 +592,20 @@ type ExprKindFuncLitExpr struct {
 	F2 Expr
 }
 
-func (_ ExprKindFuncLitExpr) isExprKind() {
+func (ExprKindFuncLitExpr) isExprKind() {
 }
-func ExprKindFuncLitExprCtor(a0 []Param, a1 Option[TypeExpr], a2 Expr) ExprKind {
-	return ExprKindFuncLitExpr{F0: a0, F1: a1, F2: a2}
+func ExprKindFuncLitExprCtor(v0 []Param, v1 Option[TypeExpr], v2 Expr) ExprKind {
+	return ExprKindFuncLitExpr{F0: v0, F1: v1, F2: v2}
 }
 
 type ExprKindSliceLitExpr struct {
 	F0 []Expr
 }
 
-func (_ ExprKindSliceLitExpr) isExprKind() {
+func (ExprKindSliceLitExpr) isExprKind() {
 }
-func ExprKindSliceLitExprCtor(a0 []Expr) ExprKind {
-	return ExprKindSliceLitExpr{F0: a0}
+func ExprKindSliceLitExprCtor(v0 []Expr) ExprKind {
+	return ExprKindSliceLitExpr{F0: v0}
 }
 
 type ExprKindTypeAsExpr struct {
@@ -613,10 +613,10 @@ type ExprKindTypeAsExpr struct {
 	F1 TypeExpr
 }
 
-func (_ ExprKindTypeAsExpr) isExprKind() {
+func (ExprKindTypeAsExpr) isExprKind() {
 }
-func ExprKindTypeAsExprCtor(a0 Expr, a1 TypeExpr) ExprKind {
-	return ExprKindTypeAsExpr{F0: a0, F1: a1}
+func ExprKindTypeAsExprCtor(v0 Expr, v1 TypeExpr) ExprKind {
+	return ExprKindTypeAsExpr{F0: v0, F1: v1}
 }
 
 type ExprKindStructLitExpr struct {
@@ -624,10 +624,10 @@ type ExprKindStructLitExpr struct {
 	F1 []StructLitField
 }
 
-func (_ ExprKindStructLitExpr) isExprKind() {
+func (ExprKindStructLitExpr) isExprKind() {
 }
-func ExprKindStructLitExprCtor(a0 string, a1 []StructLitField) ExprKind {
-	return ExprKindStructLitExpr{F0: a0, F1: a1}
+func ExprKindStructLitExprCtor(v0 string, v1 []StructLitField) ExprKind {
+	return ExprKindStructLitExpr{F0: v0, F1: v1}
 }
 
 type ExprKindGenericStructLitExpr struct {
@@ -636,10 +636,10 @@ type ExprKindGenericStructLitExpr struct {
 	F2 []StructLitField
 }
 
-func (_ ExprKindGenericStructLitExpr) isExprKind() {
+func (ExprKindGenericStructLitExpr) isExprKind() {
 }
-func ExprKindGenericStructLitExprCtor(a0 string, a1 []TypeExpr, a2 []StructLitField) ExprKind {
-	return ExprKindGenericStructLitExpr{F0: a0, F1: a1, F2: a2}
+func ExprKindGenericStructLitExprCtor(v0 string, v1 []TypeExpr, v2 []StructLitField) ExprKind {
+	return ExprKindGenericStructLitExpr{F0: v0, F1: v1, F2: v2}
 }
 
 type ExprKindInlineGoExpr struct {
@@ -649,10 +649,10 @@ type ExprKindInlineGoExpr struct {
 	F3 []GoTypeOperand
 }
 
-func (_ ExprKindInlineGoExpr) isExprKind() {
+func (ExprKindInlineGoExpr) isExprKind() {
 }
-func ExprKindInlineGoExprCtor(a0 *TypeExpr, a1 string, a2 []GoOperand, a3 []GoTypeOperand) ExprKind {
-	return ExprKindInlineGoExpr{F0: a0, F1: a1, F2: a2, F3: a3}
+func ExprKindInlineGoExprCtor(v0 *TypeExpr, v1 string, v2 []GoOperand, v3 []GoTypeOperand) ExprKind {
+	return ExprKindInlineGoExpr{F0: v0, F1: v1, F2: v2, F3: v3}
 }
 
 type ExprKindMapLitExpr struct {
@@ -662,23 +662,23 @@ type ExprKindMapLitExpr struct {
 	}
 }
 
-func (_ ExprKindMapLitExpr) isExprKind() {
+func (ExprKindMapLitExpr) isExprKind() {
 }
-func ExprKindMapLitExprCtor(a0 []struct {
+func ExprKindMapLitExprCtor(v0 []struct {
 	F0 Expr
 	F1 Expr
 }) ExprKind {
-	return ExprKindMapLitExpr{F0: a0}
+	return ExprKindMapLitExpr{F0: v0}
 }
 
 type ExprKindSetLitExpr struct {
 	F0 []Expr
 }
 
-func (_ ExprKindSetLitExpr) isExprKind() {
+func (ExprKindSetLitExpr) isExprKind() {
 }
-func ExprKindSetLitExprCtor(a0 []Expr) ExprKind {
-	return ExprKindSetLitExpr{F0: a0}
+func ExprKindSetLitExprCtor(v0 []Expr) ExprKind {
+	return ExprKindSetLitExpr{F0: v0}
 }
 
 type Expr struct {
@@ -688,152 +688,92 @@ type Expr struct {
 	Type Option[MonoType]
 }
 
-func MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(left TypeExpr, right TypeExpr) bool {
-	var expr_21 bool
-	if v_9, ok := left.(TypeExprNamedType); ok {
-		var expr_20 bool
-		var expr_19 bool
-		if v_10, ok := right.(TypeExprNamedType); ok {
-			var expr_18 bool
-			expr_18 = v_9.F0 == v_10.F0 && typeExprSliceEq(v_9.F1, v_10.F1)
-			expr_19 = expr_18
-		} else {
-			{
-				var expr_17 bool
-				expr_17 = false
-				expr_19 = expr_17
-			}
-		}
-		expr_20 = expr_19
-		expr_21 = expr_20
-	} else {
-		if v_7, ok := left.(TypeExprFuncType); ok {
-			var expr_16 bool
-			var expr_15 bool
-			if v_8, ok := right.(TypeExprFuncType); ok {
-				var expr_14 bool
-				expr_14 = typeExprSliceEq(v_7.F0, v_8.F0) && MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(*v_7.F1, *v_8.F1)
-				expr_15 = expr_14
-			} else {
-				{
-					var expr_13 bool
-					expr_13 = false
-					expr_15 = expr_13
-				}
-			}
-			expr_16 = expr_15
-			expr_21 = expr_16
-		} else {
-			if v_5, ok := left.(TypeExprTupleType); ok {
-				var expr_12 bool
-				var expr_11 bool
-				if v_6, ok := right.(TypeExprTupleType); ok {
-					var expr_10 bool
-					expr_10 = typeExprSliceEq(v_5.F0, v_6.F0)
-					expr_11 = expr_10
-				} else {
-					{
-						var expr_9 bool
-						expr_9 = false
-						expr_11 = expr_9
-					}
-				}
-				expr_12 = expr_11
-				expr_21 = expr_12
-			} else {
-				if _, ok := left.(TypeExprUnitType); ok {
-					var expr_8 bool
-					var expr_7 bool
-					if _, ok := right.(TypeExprUnitType); ok {
-						var expr_6 bool
-						expr_6 = true
-						expr_7 = expr_6
-					} else {
-						{
-							var expr_5 bool
-							expr_5 = false
-							expr_7 = expr_5
-						}
-					}
-					expr_8 = expr_7
-					expr_21 = expr_8
-				} else {
-					if v_1, ok := left.(TypeExprInlineGo); ok {
-						var expr_4 bool
-						var expr_3 bool
-						if v_2, ok := right.(TypeExprInlineGo); ok {
-							var expr_2 bool
-							expr_2 = MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(*v_1.F0, *v_2.F0) && v_1.F1 == v_2.F1
-							expr_3 = expr_2
-						} else {
-							{
-								var expr_1 bool
-								expr_1 = false
-								expr_3 = expr_1
-							}
-						}
-						expr_4 = expr_3
-						expr_21 = expr_4
-					} else {
-						panic("unreachable")
-					}
-				}
-			}
-		}
-	}
-	return expr_21
-}
 func EmptySwitchTargetType() Option[MonoType] {
 	return None[MonoType]()
 }
 func typeExprSliceEq(left []TypeExpr, right []TypeExpr) bool {
-	var expr_22 bool
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(left) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(right) {
-		expr_22 = false
+		return false
 	} else {
-		expr_22 = typeExprSliceEqElems(left, right, 0)
+		return typeExprSliceEqElems(left, right, 0)
 	}
-	return expr_22
 }
 func typeExprSliceEqElems(left []TypeExpr, right []TypeExpr, index int) bool {
-	return __mygo_mt_ast2_typeexprsliceeqelems(left, right, index, 0)
+	for {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(left) {
+			return true
+		} else {
+			l := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, index), TypeExprUnitTypeCtor())
+			r := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, index), TypeExprUnitTypeCtor())
+			if MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(l, r) {
+				__tail_0 := left
+				__tail_1 := right
+				__tail_2 := index + 1
+				left, right, index = __tail_0, __tail_1, __tail_2
+				continue
+			} else {
+				return false
+			}
+		}
+	}
 }
 func EmptyExpr() Expr {
 	return Expr{ID: 0, Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Kind: ExprKindUnitExprCtor(), Type: None[MonoType]()}
 }
-func TypesEqual(a TypeExpr, b TypeExpr) bool {
-	return MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(a, b)
-}
-func __mygo_mt_ast2_typeexprsliceeqelems(left []TypeExpr, right []TypeExpr, index int, __mygo_state int) bool {
-	for {
-		switch __mygo_state {
-		case 0:
-			var expr_37 bool
-			if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(left) {
-				expr_37 = true
+func MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(left TypeExpr, right TypeExpr) bool {
+	var __mygo_expr_0 bool
+	if __mygo_match___mygo_expr_4, ok := left.(TypeExprNamedType); ok {
+		var __mygo_expr_5 bool
+		if __mygo_match___mygo_expr_6, ok := right.(TypeExprNamedType); ok {
+			__mygo_expr_5 = __mygo_match___mygo_expr_4.F0 == __mygo_match___mygo_expr_6.F0 && typeExprSliceEq(__mygo_match___mygo_expr_4.F1, __mygo_match___mygo_expr_6.F1)
+		} else {
+			__mygo_expr_5 = false
+		}
+		__mygo_expr_0 = __mygo_expr_5
+	} else {
+		if __mygo_match___mygo_expr_3, ok := left.(TypeExprFuncType); ok {
+			var __mygo_expr_4 bool
+			if __mygo_match___mygo_expr_5, ok := right.(TypeExprFuncType); ok {
+				__mygo_expr_4 = typeExprSliceEq(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_5.F0) && MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(*__mygo_match___mygo_expr_3.F1, *__mygo_match___mygo_expr_5.F1)
 			} else {
-				var expr_36 bool
-				l_33 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(left, index), TypeExprUnitTypeCtor())
-				r_34 := MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(right, index), TypeExprUnitTypeCtor())
-				var expr_35 bool
-				if MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(l_33, r_34) {
-					__mygo_next_0 := left
-					__mygo_next_1 := right
-					__mygo_next_2 := index + 1
-					left = __mygo_next_0
-					right = __mygo_next_1
-					index = __mygo_next_2
-					__mygo_state = 0
-					continue
-				} else {
-					expr_35 = false
-				}
-				expr_36 = expr_35
-				expr_37 = expr_36
+				__mygo_expr_4 = false
 			}
-			return expr_37
-		default:
-			panic("mygo: invalid mutual-tailcall state")
+			__mygo_expr_0 = __mygo_expr_4
+		} else {
+			if __mygo_match___mygo_expr_2, ok := left.(TypeExprTupleType); ok {
+				var __mygo_expr_3 bool
+				if __mygo_match___mygo_expr_4, ok := right.(TypeExprTupleType); ok {
+					__mygo_expr_3 = typeExprSliceEq(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_4.F0)
+				} else {
+					__mygo_expr_3 = false
+				}
+				__mygo_expr_0 = __mygo_expr_3
+			} else {
+				if _, ok := left.(TypeExprUnitType); ok {
+					var __mygo_expr_2 bool
+					if _, ok := right.(TypeExprUnitType); ok {
+						__mygo_expr_2 = true
+					} else {
+						__mygo_expr_2 = false
+					}
+					__mygo_expr_0 = __mygo_expr_2
+				} else {
+					if __mygo_match___mygo_expr_1, ok := left.(TypeExprInlineGo); ok {
+						var __mygo_expr_2 bool
+						if __mygo_match___mygo_expr_3, ok := right.(TypeExprInlineGo); ok {
+							__mygo_expr_2 = MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(*__mygo_match___mygo_expr_1.F0, *__mygo_match___mygo_expr_3.F0) && __mygo_match___mygo_expr_1.F1 == __mygo_match___mygo_expr_3.F1
+						} else {
+							__mygo_expr_2 = false
+						}
+						__mygo_expr_0 = __mygo_expr_2
+					} else {
+					}
+				}
+			}
 		}
 	}
+	return __mygo_expr_0
+}
+func TypesEqual(a TypeExpr, b TypeExpr) bool {
+	return MygoIT2EqFN8TypeExprGN8TypeExprEM6Equals(a, b)
 }
