@@ -458,7 +458,7 @@ end
 		Alias: "ast2",
 		Path:  "github.com/mygo-lang/mygo/internal/mygo/ast2",
 		Decls: astDecls,
-	}}, initialEnv())
+	}}, []GoPackageEntry{}, initialEnv())
 	if _, ok := envGet(predeclareAllFunctions(allDecls, seeded), "typeExprListString").(OptionSome[Scheme]); !ok {
 		t.Fatal("typeExprListString was not predeclared")
 	}
@@ -524,6 +524,7 @@ func TestImportedGenericTypeAliasExpandsInFunctionParameters(t *testing.T) {
 	env := seedMyGoPackageEnv(
 		[]struct{ F0, F1 string }{{F0: "ps", F1: "github.com/mygo-lang/mygo/lib/text/parsec"}},
 		[]MyGoPackageInfo{{Alias: "ps", Path: "github.com/mygo-lang/mygo/lib/text/parsec", Decls: decls}},
+		[]GoPackageEntry{},
 		initialEnv(),
 	)
 	parser, ok := envGet(env, "ps.Parser").(OptionSome[Scheme])

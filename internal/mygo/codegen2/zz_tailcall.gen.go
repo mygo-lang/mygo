@@ -12,26 +12,27 @@ type TailAstParts struct {
 }
 
 func tailCallAst(expr ast2.Expr, ctx *egCtx) Result[[]goast.Stmt, string] {
-	var __mygo_expr_0 Result[[]goast.Stmt, string]
-	if __mygo_match___mygo_expr_1, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
-		parts := tailCallAstParts(__mygo_match___mygo_expr_1.F2, ctx, 0, TailAstParts{Stmts: []goast.Stmt{}, Values: []goast.Expr{}})
-		var __mygo_expr_2 Result[[]goast.Stmt, string]
-		if __mygo_match___mygo_expr_4, ok := parts.(ResultErr[TailAstParts, string]); ok {
-			__mygo_expr_2 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_4.F0)
+	__mygo_expr_0 := expr.Kind
+	var __mygo_expr_1 Result[[]goast.Stmt, string]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKindCallExpr); ok {
+		parts := tailCallAstParts(__mygo_match___mygo_expr_2.F2, ctx, 0, TailAstParts{Stmts: []goast.Stmt{}, Values: []goast.Expr{}})
+		var __mygo_expr_3 Result[[]goast.Stmt, string]
+		if __mygo_match___mygo_expr_5, ok := parts.(ResultErr[TailAstParts, string]); ok {
+			__mygo_expr_3 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_5.F0)
 		} else {
-			if __mygo_match___mygo_expr_3, ok := parts.(ResultOk[TailAstParts, string]); ok {
+			if __mygo_match___mygo_expr_4, ok := parts.(ResultOk[TailAstParts, string]); ok {
 				lhs := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(ctx.tailRecParamNames, func(name string) goast.Expr {
 					return goast.Ident(name)
 				})
-				__mygo_expr_2 = Ok[[]goast.Stmt, string](goast.AppendStmts(__mygo_match___mygo_expr_3.F0.Stmts, astTwoStmts(goast.Assign(lhs, "=", __mygo_match___mygo_expr_3.F0.Values), goast.Continue())))
+				__mygo_expr_3 = Ok[[]goast.Stmt, string](goast.AppendStmts(__mygo_match___mygo_expr_4.F0.Stmts, astTwoStmts(goast.Assign(lhs, "=", __mygo_match___mygo_expr_4.F0.Values), goast.Continue())))
 			} else {
 			}
 		}
-		__mygo_expr_0 = __mygo_expr_2
+		__mygo_expr_1 = __mygo_expr_3
 	} else {
-		__mygo_expr_0 = Err[[]goast.Stmt, string]("internal tail-call mismatch")
+		__mygo_expr_1 = Err[[]goast.Stmt, string]("internal tail-call mismatch")
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
 }
 func tailCallAstParts(args []ast2.Expr, ctx *egCtx, index int, out TailAstParts) Result[TailAstParts, string] {
 	for {
@@ -55,65 +56,70 @@ func tailCallAstParts(args []ast2.Expr, ctx *egCtx, index int, out TailAstParts)
 	}
 }
 func isTailSelfCall(expr ast2.Expr, ctx *egCtx) bool {
-	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_1, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F2) != ctx.tailRecParamCount {
+	__mygo_expr_0 := expr.Kind
+	var __mygo_expr_1 bool
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKindCallExpr); ok {
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F2) != ctx.tailRecParamCount {
 			return false
 		} else {
 		}
-		var __mygo_expr_2 bool
-		if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.Kind.(ast2.ExprKindIdentExpr); ok {
-			var __mygo_expr_4 bool
-			if __mygo_match___mygo_expr_5, ok := ctx.tailRecFuncName.(OptionSome[string]); ok {
-				__mygo_expr_4 = __mygo_match___mygo_expr_3.F0 == __mygo_match___mygo_expr_5.F0
+		__mygo_expr_3 := __mygo_match___mygo_expr_2.F0.Kind
+		var __mygo_expr_4 bool
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.ExprKindIdentExpr); ok {
+			__mygo_expr_6 := ctx.tailRecFuncName
+			var __mygo_expr_7 bool
+			if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(OptionSome[string]); ok {
+				__mygo_expr_7 = __mygo_match___mygo_expr_5.F0 == __mygo_match___mygo_expr_8.F0
 			} else {
-				if _, ok := ctx.tailRecFuncName.(OptionNone[string]); ok {
-					__mygo_expr_4 = false
+				if _, ok := __mygo_expr_6.(OptionNone[string]); ok {
+					__mygo_expr_7 = false
 				} else {
 				}
 			}
-			__mygo_expr_2 = __mygo_expr_4
+			__mygo_expr_4 = __mygo_expr_7
 		} else {
-			__mygo_expr_2 = false
+			__mygo_expr_4 = false
 		}
-		__mygo_expr_0 = __mygo_expr_2
+		__mygo_expr_1 = __mygo_expr_4
 	} else {
-		__mygo_expr_0 = false
+		__mygo_expr_1 = false
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
 }
 func containsTailCall(expr ast2.Expr, name string) bool {
-	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_4, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
-		var __mygo_expr_5 bool
-		if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_4.F0.Kind.(ast2.ExprKindIdentExpr); ok {
-			__mygo_expr_5 = __mygo_match___mygo_expr_6.F0 == name
+	__mygo_expr_0 := expr.Kind
+	var __mygo_expr_1 bool
+	if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.ExprKindCallExpr); ok {
+		__mygo_expr_6 := __mygo_match___mygo_expr_5.F0.Kind
+		var __mygo_expr_7 bool
+		if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(ast2.ExprKindIdentExpr); ok {
+			__mygo_expr_7 = __mygo_match___mygo_expr_8.F0 == name
 		} else {
-			__mygo_expr_5 = false
+			__mygo_expr_7 = false
 		}
-		__mygo_expr_0 = __mygo_expr_5
+		__mygo_expr_1 = __mygo_expr_7
 	} else {
-		if __mygo_match___mygo_expr_3, ok := expr.Kind.(ast2.ExprKindIfExpr); ok {
-			__mygo_expr_0 = containsTailCall(__mygo_match___mygo_expr_3.F1, name) || containsTailCall(__mygo_match___mygo_expr_3.F2, name)
+		if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.ExprKindIfExpr); ok {
+			__mygo_expr_1 = containsTailCall(__mygo_match___mygo_expr_4.F1, name) || containsTailCall(__mygo_match___mygo_expr_4.F2, name)
 		} else {
-			if __mygo_match___mygo_expr_2, ok := expr.Kind.(ast2.ExprKindBlockExpr); ok {
-				var __mygo_expr_3 bool
-				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0) == 0 {
-					__mygo_expr_3 = false
+			if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.ExprKindBlockExpr); ok {
+				var __mygo_expr_4 bool
+				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0) == 0 {
+					__mygo_expr_4 = false
 				} else {
-					__mygo_expr_3 = containsTailCallBlock(__mygo_match___mygo_expr_2.F0, name)
+					__mygo_expr_4 = containsTailCallBlock(__mygo_match___mygo_expr_3.F0, name)
 				}
-				__mygo_expr_0 = __mygo_expr_3
+				__mygo_expr_1 = __mygo_expr_4
 			} else {
-				if __mygo_match___mygo_expr_1, ok := expr.Kind.(ast2.ExprKindSwitchExpr); ok {
-					__mygo_expr_0 = containsTailCall(__mygo_match___mygo_expr_1.F0, name) || switchCasesContainTailCall(__mygo_match___mygo_expr_1.F1, name)
+				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKindSwitchExpr); ok {
+					__mygo_expr_1 = containsTailCall(__mygo_match___mygo_expr_2.F0, name) || switchCasesContainTailCall(__mygo_match___mygo_expr_2.F1, name)
 				} else {
-					__mygo_expr_0 = false
+					__mygo_expr_1 = false
 				}
 			}
 		}
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
 }
 func switchCasesContainTailCall(cases []ast2.SwitchCase, name string) bool {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) == 0 {

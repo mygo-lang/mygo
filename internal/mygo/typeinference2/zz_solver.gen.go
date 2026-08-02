@@ -38,16 +38,17 @@ func solverResolve(solver Solver, predicates []Predicate, subst Subst) Result[[]
 			__mygo_expr_0 = Err[[]Predicate, string](__mygo_match___mygo_expr_2.F0)
 		} else {
 			if __mygo_match___mygo_expr_1, ok := rest.(ResultOk[[]Predicate, string]); ok {
-				var __mygo_expr_2 Result[[]Predicate, string]
-				if __mygo_match___mygo_expr_4, ok := solverResolveOne(solver, predicate, subst).(ResultErr[[]Predicate, string]); ok {
-					__mygo_expr_2 = Err[[]Predicate, string](__mygo_match___mygo_expr_4.F0)
+				__mygo_expr_2 := solverResolveOne(solver, predicate, subst)
+				var __mygo_expr_3 Result[[]Predicate, string]
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(ResultErr[[]Predicate, string]); ok {
+					__mygo_expr_3 = Err[[]Predicate, string](__mygo_match___mygo_expr_5.F0)
 				} else {
-					if __mygo_match___mygo_expr_3, ok := solverResolveOne(solver, predicate, subst).(ResultOk[[]Predicate, string]); ok {
-						__mygo_expr_2 = Ok[[]Predicate, string](appendPredicates(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_1.F0))
+					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ResultOk[[]Predicate, string]); ok {
+						__mygo_expr_3 = Ok[[]Predicate, string](appendPredicates(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_1.F0))
 					} else {
 					}
 				}
-				__mygo_expr_0 = __mygo_expr_2
+				__mygo_expr_0 = __mygo_expr_3
 			} else {
 			}
 		}
@@ -74,16 +75,17 @@ func solverFindInstance(instances []Instance, predicate Predicate, subst Subst) 
 				instances, predicate, subst = __tail_0, __tail_1, __tail_2
 				continue
 			} else {
-				var __mygo_expr_0 Result[[]Predicate, string]
-				if __mygo_match___mygo_expr_1, ok := unify(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicate.Args, 0), ast2.MonoTypeTUnitCtor()), instance.Type, subst).(ResultOk[Subst, string]); ok {
-					__mygo_expr_0 = solverResolve(instanceSolver(instance, instances), instance.Predicates, __mygo_match___mygo_expr_1.F0)
+				__mygo_expr_0 := unify(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicate.Args, 0), ast2.MonoTypeTUnitCtor()), instance.Type, subst)
+				var __mygo_expr_1 Result[[]Predicate, string]
+				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ResultOk[Subst, string]); ok {
+					__mygo_expr_1 = solverResolve(instanceSolver(instance, instances), instance.Predicates, __mygo_match___mygo_expr_2.F0)
 				} else {
-					if _, ok := unify(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicate.Args, 0), ast2.MonoTypeTUnitCtor()), instance.Type, subst).(ResultErr[Subst, string]); ok {
-						__mygo_expr_0 = solverFindInstance(sliceDrop(instances, 1), predicate, subst)
+					if _, ok := __mygo_expr_0.(ResultErr[Subst, string]); ok {
+						__mygo_expr_1 = solverFindInstance(sliceDrop(instances, 1), predicate, subst)
 					} else {
 					}
 				}
-				return __mygo_expr_0
+				return __mygo_expr_1
 			}
 		}
 	}

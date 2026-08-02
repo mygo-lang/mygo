@@ -110,6 +110,7 @@ func inferDecl(decl: ast2.Decl, env: Env, fields: Slice[FieldEntry], state: Infe
         MyGoPackages: state.MyGoPackages,
         MyGoPackageCache: state.MyGoPackageCache,
         Symbols: concatSymbols(newSymbols, state.Symbols),
+        SymbolIndex: symbolIndexPrepend(state.SymbolIndex, newSymbols),
         ActiveConstraints: state.ActiveConstraints,
         NamedImpls: state.NamedImpls,
         ResolvedConstraintArgs: state.ResolvedConstraintArgs,
@@ -139,6 +140,7 @@ func inferDecl(decl: ast2.Decl, env: Env, fields: Slice[FieldEntry], state: Infe
         MyGoPackages: state.MyGoPackages,
         MyGoPackageCache: state.MyGoPackageCache,
         Symbols: concatSymbols(state.Symbols, implSyms),
+        SymbolIndex: symbolIndexAppend(state.SymbolIndex, implSyms),
         ActiveConstraints: state.ActiveConstraints,
         NamedImpls: state.NamedImpls,
         ResolvedConstraintArgs: state.ResolvedConstraintArgs,
@@ -702,10 +704,16 @@ func inferTypedSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoT
   else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
     let pattern = resolveBareVariantPattern(env, targetType, current.Pattern)
-    switch envWithPattern(env, pattern, targetType)
+    # Bind call scrutinees to locals: the codegen re-evaluates a switch
+    # scrutinee per pattern arm, so switching directly on a call such as
+    # `inferExpr(current.Body, ...)` would re-infer the nested case body
+    # (exponentially for deeply nested switches).
+    let caseEnvResult = envWithPattern(env, pattern, targetType)
+    switch caseEnvResult
       case Err(msg) => Err(msg)
       case Ok(caseEnv) =>
-        switch inferExpr(current.Body, caseEnv, state)
+        let bodyInferred = inferExpr(current.Body, caseEnv, state)
+        switch bodyInferred
           case Err(msg) => Err(msg)
           case Ok(eir) then
             let value = eir.Result
@@ -810,33 +818,49 @@ func variantSchemeForTarget(env: Env, name: String, targetType: ast2.MonoType) -
 end
 
 func variantSchemeForTargetLoop(env: Env, name: String, targetType: ast2.MonoType, found: Option[Scheme]) -> Option[Scheme]
-  switch env.Entry
+  let fromBatch = switch env.Batch
+    case Some(batch) => variantSchemeInBatchEntries(batch.Entries, name, targetType, found)
     case None => found
-    case Some(entry) =>
-    let matches = entry.Name == name && variantMatchesTarget(targetType, variantResultType(entry.Scheme.Body))
-    if matches then
-      switch found
-        case None => variantSchemeForTargetParent(env, name, targetType, Some(entry.Scheme))
-        case Some(existing) =>
-          # The prelude can be present as both input and external declarations.
-          # Identical constructors are one candidate, not an ambiguity.
-          if monoEqual(variantResultType(existing.Body), variantResultType(entry.Scheme.Body)) then
-            variantSchemeForTargetParent(env, name, targetType, found)
-          else
-            # A bare pattern cannot safely pick one of two matching constructors.
-            None
-          end
+  end
+  let fromEntry = switch env.Entry
+    case Some(entry) then
+      if entry.Name == name && variantMatchesTarget(targetType, variantResultType(entry.Scheme.Body)) then
+        mergeVariantCandidates(fromBatch, Some(entry.Scheme))
+      else
+        fromBatch
       end
-    else
-      variantSchemeForTargetParent(env, name, targetType, found)
     end
+    case None => fromBatch
+  end
+  switch env.Parent
+    case Some(parent) => variantSchemeForTargetLoop(parent.value(), name, targetType, fromEntry)
+    case None => fromEntry
   end
 end
 
-func variantSchemeForTargetParent(env: Env, name: String, targetType: ast2.MonoType, found: Option[Scheme]) -> Option[Scheme]
-  switch env.Parent
-    case Some(parent) => variantSchemeForTargetLoop(parent.value(), name, targetType, found)
-    case None => found
+# Scan a batch layer's entries (an imported package's exported variants) for
+# a matching constructor, merging candidates with the same ambiguity rules.
+func variantSchemeInBatchEntries(entries: Slice[EnvEntry], name: String, targetType: ast2.MonoType, found: Option[Scheme]) -> Option[Scheme]
+  if entries.Len() == 0 then found else
+    let entry = entries.Get(0).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TUnit } })
+    let candidate = if entry.Name == name && variantMatchesTarget(targetType, variantResultType(entry.Scheme.Body)) then Some(entry.Scheme) else None end
+    variantSchemeInBatchEntries(sliceDrop(entries, 1), name, targetType, mergeVariantCandidates(found, candidate))
+  end
+end
+
+# The prelude can be present as both input and external declarations.
+# Identical constructors are one candidate, not an ambiguity; a genuinely
+# different constructor with the same name is ambiguous.
+func mergeVariantCandidates(found: Option[Scheme], candidate: Option[Scheme]) -> Option[Scheme]
+  switch found
+    case Some(existing) then
+      switch candidate
+        case Some(next) =>
+          if monoEqual(variantResultType(existing.Body), variantResultType(next.Body)) => found else None
+        case None => found
+      end
+    end
+    case None => candidate
   end
 end
 
@@ -1454,12 +1478,14 @@ func inferRefCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Env, state: In
             if args.Len() != 1 then
               Some(Err("Ref.new expects exactly one argument"))
             else
-              switch inferExpr(args.Get(0).UnwrapOr(ast2.EmptyExpr()), env, state)
-                case Ok(eir) =>
+              let argInferred = inferExpr(args.Get(0).UnwrapOr(ast2.EmptyExpr()), env, state)
+              switch argInferred
+                case Ok(eir) then
                   let typedArg = applyTypedExprSubst(eir.Result.Subst, eir.Expr)
                   let result = InferResult { Type: ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Ref")), [applySubst(eir.Result.Subst, eir.Result.Type)]), Predicates: eir.Result.Predicates, Subst: eir.Result.Subst, State: eir.Result.State }
-                  Some[Result[(InferResult, Slice[ast2.Expr]), String]](Ok[(InferResult, Slice[ast2.Expr]), String]((result, [typedArg])))
-                case Err(msg) => Some[Result[(InferResult, Slice[ast2.Expr]), String]](Err[(InferResult, Slice[ast2.Expr]), String](msg))
+                  Some(Ok((result, [typedArg])))
+                end
+                case Err(msg) => Some(Err(msg))
               end
             end
           else
@@ -1477,7 +1503,8 @@ func inferRefValueCall(base: ast2.Expr, field: String, args: Slice[ast2.Expr], e
   if field != "value" || args.Len() != 0 then
     None
   else
-    switch inferExpr(base, env, state)
+    let baseInferred = inferExpr(base, env, state)
+    switch baseInferred
       case Err(msg) => Some(Err(msg))
       case Ok(eir) then
         let value = eir.Result
@@ -1744,32 +1771,38 @@ func inferBlockStep(stmt: ast2.Stmt, env: Env, state: InferState, isFinal: Bool)
 end
 
 func inferTypedExprStmt(expr: ast2.Expr, env: Env, state: InferState) -> Result[BlockInferStep, String]
-  switch inferExpr(expr, env, state)
+  let inferred = inferExpr(expr, env, state)
+  switch inferred
     case Err(msg) => Err(msg)
     case Ok(eir) => Ok(BlockInferStep { Result: eir.Result, Env: env, Stmt: ast2.Stmt.ExprStmt(eir.Expr) })
   end
 end
 
 func inferTypedReturnWith(value: ast2.Expr, env: Env, state: InferState) -> Result[BlockInferStep, String]
-  switch inferExpr(value, env, state)
+  let inferred = inferExpr(value, env, state)
+  switch inferred
     case Err(msg) => Err(msg)
     case Ok(eir) => Ok(BlockInferStep { Result: eir.Result, Env: env, Stmt: ast2.Stmt.ReturnWithStmt(eir.Expr) })
   end
 end
 
 func inferTypedIfStmt(expr: ast2.Expr, cond: ast2.Expr, thenExpr: ast2.Expr, elseExpr: ast2.Expr, env: Env, state: InferState) -> Result[BlockInferStep, String]
-  switch inferExpr(cond, env, state)
+  let condInferred = inferExpr(cond, env, state)
+  switch condInferred
     case Err(msg) => Err(msg)
     case Ok(ceir) then
       let cv = ceir.Result
-      switch unify(cv.Type, ast2.MonoType.TCon("Bool"), cv.Subst)
+      let condUnified = unify(cv.Type, ast2.MonoType.TCon("Bool"), cv.Subst)
+      switch condUnified
         case Err(msg) => Err(msg)
         case Ok(scond) then
-          switch inferExpr(thenExpr, env, cv.State)
+          let thenInferred = inferExpr(thenExpr, env, cv.State)
+          switch thenInferred
             case Err(msg) => Err(msg)
             case Ok(teir) then
               let tv = teir.Result
-              switch inferExpr(elseExpr, env, tv.State)
+              let elseInferred = inferExpr(elseExpr, env, tv.State)
+              switch elseInferred
                 case Err(msg) => Err(msg)
                 case Ok(eeir) then
                   let ev = eeir.Result
@@ -2161,7 +2194,7 @@ func inferOrdinaryField(base: ast2.Expr, field: String, env: Env, state: InferSt
           # qualified import path back to its alias.  Local receivers
           # leave the bare name untouched.
           let typeName = receiverQualifiedName(applySubst(v.Subst, v.Type), innerName, state.GoPackages, state.MyGoPackageCache, 0)
-          switch findSymbol(typeName, field, state.Symbols)
+          switch findSymbol(typeName, field, state.SymbolIndex)
             case Some(symbol) then
               switch symbol
                 case StructField(_, _, fieldType) then
@@ -2511,7 +2544,7 @@ func structLitFieldType(resultType: ast2.MonoType, fieldName: String, env: Env, 
     case Some(pair) then
       let (typeName, args) = pair
       let key = structLitFieldKey(resultType, typeName, state)
-      switch findSymbol(key, fieldName, state.Symbols)
+      switch findSymbol(key, fieldName, state.SymbolIndex)
         case Some(symbol) then
           switch symbol
             case StructField(_, _, fieldType) => Some(switchFieldTypeArgs(fieldType, key, args, env))
@@ -2569,34 +2602,43 @@ end
 # parent. Codegen consumes this annotation directly; it does not reconstruct
 # receiver types from local scopes or selector syntax.
 func applyTypedExprSubst(subst: Subst, expr: ast2.Expr) -> ast2.Expr
-  let typ = switch expr.Type
-    case Some(t) => Some(applySubst(subst, t))
-    case None => None
-  end
-  let kind = switch expr.Kind
-    case CallExpr(callee, typeArgs, args) => ast2.ExprKind.CallExpr(applyTypedExprSubst(subst, callee), typeArgs, applyTypedExprsSubst(subst, args))
-    case DictionaryCallExpr(key, receiver, args) => ast2.ExprKind.DictionaryCallExpr(key, applyTypedExprSubst(subst, receiver), applyTypedExprsSubst(subst, args))
-    case FieldExpr(base, field) => ast2.ExprKind.FieldExpr(applyTypedExprSubst(subst, base), field)
-    case UnaryExpr(op, inner) => ast2.ExprKind.UnaryExpr(op, applyTypedExprSubst(subst, inner))
-    case BinaryExpr(op, left, right) => ast2.ExprKind.BinaryExpr(op, applyTypedExprSubst(subst, left), applyTypedExprSubst(subst, right))
-    case TupleExpr(items) => ast2.ExprKind.TupleExpr(applyTypedExprsSubst(subst, items))
-    case SliceLitExpr(items) => ast2.ExprKind.SliceLitExpr(applyTypedExprsSubst(subst, items))
-    case TypeAsExpr(value, target) => ast2.ExprKind.TypeAsExpr(applyTypedExprSubst(subst, value), target)
-    case IfExpr(cond, thenExpr, elseExpr) => ast2.ExprKind.IfExpr(applyTypedExprSubst(subst, cond), applyTypedExprSubst(subst, thenExpr), applyTypedExprSubst(subst, elseExpr))
-    case BlockExpr(items) => ast2.ExprKind.BlockExpr(applyTypedStmtsSubst(subst, items))
-    case SwitchExpr(target, cases, targetType) then
-      let resolvedTargetType = switch targetType
-        case Some(typ) => Some(applySubst(subst, typ))
-        case None => None
-      end
-      ast2.ExprKind.SwitchExpr(applyTypedExprSubst(subst, target), applyTypedSwitchCasesSubst(subst, cases), resolvedTargetType)
+  # Fast path: an empty substitution cannot change any annotation, so the
+  # whole typed subtree is returned untouched.  Nested expressions are
+  # re-normalised at every enclosing level, so skipping the rebuild here
+  # keeps the typed-AST reconstruction linear in the nesting depth instead
+  # of quadratic for subtrees that carry no bound variables.
+  if substIsEmpty(subst) then
+    expr
+  else
+    let typ = switch expr.Type
+      case Some(t) => Some(applySubst(subst, t))
+      case None => None
     end
-    case FuncLitExpr(params, ret, body) => ast2.ExprKind.FuncLitExpr(params, ret, applyTypedExprSubst(subst, body))
-    case StructLitExpr(name, fields) => ast2.ExprKind.StructLitExpr(name, applyTypedStructLitFieldsSubst(subst, fields))
-    case GenericStructLitExpr(name, args, fields) => ast2.ExprKind.GenericStructLitExpr(name, args, applyTypedStructLitFieldsSubst(subst, fields))
-    case _ => expr.Kind
+    let kind = switch expr.Kind
+      case CallExpr(callee, typeArgs, args) => ast2.ExprKind.CallExpr(applyTypedExprSubst(subst, callee), typeArgs, applyTypedExprsSubst(subst, args))
+      case DictionaryCallExpr(key, receiver, args) => ast2.ExprKind.DictionaryCallExpr(key, applyTypedExprSubst(subst, receiver), applyTypedExprsSubst(subst, args))
+      case FieldExpr(base, field) => ast2.ExprKind.FieldExpr(applyTypedExprSubst(subst, base), field)
+      case UnaryExpr(op, inner) => ast2.ExprKind.UnaryExpr(op, applyTypedExprSubst(subst, inner))
+      case BinaryExpr(op, left, right) => ast2.ExprKind.BinaryExpr(op, applyTypedExprSubst(subst, left), applyTypedExprSubst(subst, right))
+      case TupleExpr(items) => ast2.ExprKind.TupleExpr(applyTypedExprsSubst(subst, items))
+      case SliceLitExpr(items) => ast2.ExprKind.SliceLitExpr(applyTypedExprsSubst(subst, items))
+      case TypeAsExpr(value, target) => ast2.ExprKind.TypeAsExpr(applyTypedExprSubst(subst, value), target)
+      case IfExpr(cond, thenExpr, elseExpr) => ast2.ExprKind.IfExpr(applyTypedExprSubst(subst, cond), applyTypedExprSubst(subst, thenExpr), applyTypedExprSubst(subst, elseExpr))
+      case BlockExpr(items) => ast2.ExprKind.BlockExpr(applyTypedStmtsSubst(subst, items))
+      case SwitchExpr(target, cases, targetType) then
+        let resolvedTargetType = switch targetType
+          case Some(typ) => Some(applySubst(subst, typ))
+          case None => None
+        end
+        ast2.ExprKind.SwitchExpr(applyTypedExprSubst(subst, target), applyTypedSwitchCasesSubst(subst, cases), resolvedTargetType)
+      end
+      case FuncLitExpr(params, ret, body) => ast2.ExprKind.FuncLitExpr(params, ret, applyTypedExprSubst(subst, body))
+      case StructLitExpr(name, fields) => ast2.ExprKind.StructLitExpr(name, applyTypedStructLitFieldsSubst(subst, fields))
+      case GenericStructLitExpr(name, args, fields) => ast2.ExprKind.GenericStructLitExpr(name, args, applyTypedStructLitFieldsSubst(subst, fields))
+      case _ => expr.Kind
+    end
+    ast2.Expr { ID: expr.ID, Pos: expr.Pos, Kind: kind, Type: typ }
   end
-  ast2.Expr { ID: expr.ID, Pos: expr.Pos, Kind: kind, Type: typ }
 end
 
 func applyTypedExprsSubst(subst: Subst, exprs: Slice[ast2.Expr]) -> Slice[ast2.Expr]
@@ -2785,18 +2827,9 @@ func maxSubstID(subst: Subst) -> Int
   subst.MaxID
 end
 
-func findSymbol(typeName: String, field: String, symbols: Slice[Symbol]) -> Option[Symbol]
-  if symbols.Len() == 0 then None else
-    let s = symbols.Get(0).UnwrapOr(Symbol.StructField("", "", ast2.MonoType.TUnit))
-    switch s
-      case StructField(tn, fn, _) =>
-        if tn == typeName && fn == field then Some(s) else findSymbol(typeName, field, sliceDrop(symbols, 1)) end
-      case GoMethod(tn, mn, _) =>
-        if tn == typeName && mn == field then Some(s) else findSymbol(typeName, field, sliceDrop(symbols, 1)) end
-      case ImplMethod(tn, mn, _) =>
-        if tn == typeName && mn == field then Some(s) else findSymbol(typeName, field, sliceDrop(symbols, 1)) end
-      case EnumVariant(tn, vn, _) =>
-        if tn == typeName && vn == field then Some(s) else findSymbol(typeName, field, sliceDrop(symbols, 1)) end
-    end
-  end
+# findSymbol resolves a `TypeName::Field` selector through the constant-time
+# symbol index carried by InferState, replacing the former linear scan over
+# the whole Symbols slice (O(#symbols) per selector) with a map lookup.
+func findSymbol(typeName: String, field: String, index: Map[String, Symbol]) -> Option[Symbol]
+  index.Get(symbolKey(typeName, field))
 end

@@ -451,28 +451,41 @@ func containsInt(items []int, value int) bool {
 }
 func envFreeVars(env Env, out []int) []int {
 	for {
-		var __mygo_expr_0 []int
-		if __mygo_match___mygo_expr_1, ok := env.Entry.(OptionSome[EnvEntry]); ok {
-			bodyFree := removeInts(freeVars(__mygo_match___mygo_expr_1.F0.Scheme.Body, []int{}), __mygo_match___mygo_expr_1.F0.Scheme.Bound)
-			entryFree := freeVarsPredicates(__mygo_match___mygo_expr_1.F0.Scheme.Predicates, bodyFree)
-			next := unionInts(out, entryFree)
-			var __mygo_expr_2 []int
-			if __mygo_match___mygo_expr_3, ok := env.Parent.(OptionSome[*Env]); ok {
-				__mygo_expr_2 = envFreeVars(*__mygo_match___mygo_expr_3.F0, next)
-			} else {
-				if _, ok := env.Parent.(OptionNone[*Env]); ok {
-					__mygo_expr_2 = next
-				} else {
-				}
-			}
-			__mygo_expr_0 = __mygo_expr_2
+		__mygo_expr_0 := env.Batch
+		var __mygo_expr_1 []int
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(OptionSome[BatchBindings]); ok {
+			__mygo_expr_1 = unionInts(out, __mygo_match___mygo_expr_2.F0.FreeVars)
 		} else {
-			if _, ok := env.Entry.(OptionNone[EnvEntry]); ok {
-				__mygo_expr_0 = out
+			if _, ok := __mygo_expr_0.(OptionNone[BatchBindings]); ok {
+				__mygo_expr_1 = out
 			} else {
 			}
 		}
-		return __mygo_expr_0
+		fromBatch := __mygo_expr_1
+		__mygo_expr_3 := env.Entry
+		var __mygo_expr_4 []int
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(OptionSome[EnvEntry]); ok {
+			bodyFree := removeInts(freeVars(__mygo_match___mygo_expr_5.F0.Scheme.Body, []int{}), __mygo_match___mygo_expr_5.F0.Scheme.Bound)
+			entryFree := freeVarsPredicates(__mygo_match___mygo_expr_5.F0.Scheme.Predicates, bodyFree)
+			next := unionInts(fromBatch, entryFree)
+			__mygo_expr_6 := env.Parent
+			var __mygo_expr_7 []int
+			if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(OptionSome[*Env]); ok {
+				__mygo_expr_7 = envFreeVars(*__mygo_match___mygo_expr_8.F0, next)
+			} else {
+				if _, ok := __mygo_expr_6.(OptionNone[*Env]); ok {
+					__mygo_expr_7 = next
+				} else {
+				}
+			}
+			__mygo_expr_4 = __mygo_expr_7
+		} else {
+			if _, ok := __mygo_expr_3.(OptionNone[EnvEntry]); ok {
+				__mygo_expr_4 = fromBatch
+			} else {
+			}
+		}
+		return __mygo_expr_4
 	}
 }
 func unionInts(left []int, right []int) []int {
@@ -574,47 +587,49 @@ func getTCon(typ ast2.MonoType) Option[struct {
 			}{F0: __mygo_match___mygo_expr_3.F0, F1: []ast2.MonoType{}})
 		} else {
 			if __mygo_match___mygo_expr_2, ok := typ.(ast2.MonoTypeTApp); ok {
-				var __mygo_expr_3 Option[struct {
+				__mygo_expr_3 := *__mygo_match___mygo_expr_2.F0
+				var __mygo_expr_4 Option[struct {
 					F0 string
 					F1 []ast2.MonoType
 				}]
-				if __mygo_match___mygo_expr_5, ok := (*__mygo_match___mygo_expr_2.F0).(ast2.MonoTypeTCon); ok {
-					__mygo_expr_3 = Some[struct {
+				if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(ast2.MonoTypeTCon); ok {
+					__mygo_expr_4 = Some[struct {
 						F0 string
 						F1 []ast2.MonoType
 					}](struct {
 						F0 string
 						F1 []ast2.MonoType
-					}{F0: __mygo_match___mygo_expr_5.F0, F1: []ast2.MonoType(__mygo_match___mygo_expr_2.F1)})
+					}{F0: __mygo_match___mygo_expr_6.F0, F1: []ast2.MonoType(__mygo_match___mygo_expr_2.F1)})
 				} else {
-					if __mygo_match___mygo_expr_4, ok := (*__mygo_match___mygo_expr_2.F0).(ast2.MonoTypeTQualifiedName); ok {
-						var __mygo_expr_5 Option[struct {
+					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.MonoTypeTQualifiedName); ok {
+						__mygo_expr_6 := *__mygo_match___mygo_expr_5.F1
+						var __mygo_expr_7 Option[struct {
 							F0 string
 							F1 []ast2.MonoType
 						}]
-						if __mygo_match___mygo_expr_6, ok := (*__mygo_match___mygo_expr_4.F1).(ast2.MonoTypeTCon); ok {
-							__mygo_expr_5 = Some[struct {
+						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(ast2.MonoTypeTCon); ok {
+							__mygo_expr_7 = Some[struct {
 								F0 string
 								F1 []ast2.MonoType
 							}](struct {
 								F0 string
 								F1 []ast2.MonoType
-							}{F0: __mygo_match___mygo_expr_6.F0, F1: []ast2.MonoType(__mygo_match___mygo_expr_2.F1)})
+							}{F0: __mygo_match___mygo_expr_8.F0, F1: []ast2.MonoType(__mygo_match___mygo_expr_2.F1)})
 						} else {
-							__mygo_expr_5 = None[struct {
+							__mygo_expr_7 = None[struct {
 								F0 string
 								F1 []ast2.MonoType
 							}]()
 						}
-						__mygo_expr_3 = __mygo_expr_5
+						__mygo_expr_4 = __mygo_expr_7
 					} else {
-						__mygo_expr_3 = None[struct {
+						__mygo_expr_4 = None[struct {
 							F0 string
 							F1 []ast2.MonoType
 						}]()
 					}
 				}
-				__mygo_expr_0 = __mygo_expr_3
+				__mygo_expr_0 = __mygo_expr_4
 			} else {
 				if __mygo_match___mygo_expr_1, ok := typ.(ast2.MonoTypeTQualifiedName); ok {
 					__mygo_expr_0 = getTCon(*__mygo_match___mygo_expr_1.F1)

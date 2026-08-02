@@ -2,12 +2,12 @@ package typeinference2
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 
 func emptySubst() -> Subst
-  Subst { Entries: [], Index: {}, Fallbacks: [], IndexFirst: true, MaxID: 0 }
+  Subst { Entries: [], Index: None, Fallbacks: [], IndexFirst: true, MaxID: 0 }
 end
 
 func substFromEntries(entries: Slice[SubstEntry]) -> Subst
   let index: Map[Int, ast2.MonoType] = {}
-  Subst { Entries: entries, Index: substIndexEntries(entries, 0, index), Fallbacks: [], IndexFirst: true, MaxID: maxSubstEntryID(entries, 0) }
+  Subst { Entries: entries, Index: Some(substIndexEntries(entries, 0, index)), Fallbacks: [], IndexFirst: true, MaxID: maxSubstEntryID(entries, 0) }
 end
 
 # Entries are ordered by lookup priority.  Record only the first occurrence
@@ -26,16 +26,21 @@ func substIndexEntries(entries: Slice[SubstEntry], position: Int, index: Map[Int
   end
 end
 
+# Single-entry prepend/append layers carry no Index map.  Scan their Entries
+# (0 or 1 elements) for the requested ID, preserving first-occurrence-wins.
+func substIndexLinear(entries: Slice[SubstEntry], id: Int, index: Int) -> Option[ast2.MonoType]
+  if index >= entries.Len() then None else
+    let entry = entries.Get(index).UnwrapOr(SubstEntry { ID: 0, Type: ast2.MonoType.TUnit })
+    if entry.ID == id then Some(entry.Type) else substIndexLinear(entries, id, index + 1) end
+  end
+end
+
 func substPrepend(subst: Subst, entry: SubstEntry) -> Subst
-  let index: Map[Int, ast2.MonoType] = {}
-  index.Set(entry.ID, entry.Type)
-  Subst { Entries: [entry], Index: index, Fallbacks: [Ref.new(subst)], IndexFirst: true, MaxID: maxSubstIDPair(entry.ID, subst.MaxID) }
+  Subst { Entries: [entry], Index: None, Fallbacks: [Ref.new(subst)], IndexFirst: true, MaxID: maxSubstIDPair(entry.ID, subst.MaxID) }
 end
 
 func substAppend(subst: Subst, entry: SubstEntry) -> Subst
-  let index: Map[Int, ast2.MonoType] = {}
-  index.Set(entry.ID, entry.Type)
-  Subst { Entries: [entry], Index: index, Fallbacks: [Ref.new(subst)], IndexFirst: false, MaxID: maxSubstIDPair(entry.ID, subst.MaxID) }
+  Subst { Entries: [entry], Index: None, Fallbacks: [Ref.new(subst)], IndexFirst: false, MaxID: maxSubstIDPair(entry.ID, subst.MaxID) }
 end
 
 func maxSubstEntryID(entries: Slice[SubstEntry], index: Int) -> Int
@@ -55,115 +60,117 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
   # A non-generic nominal type is accepted in both spellings during bootstrap:
   # TCon(Name) and TApp(TCon(Name), []). Canonicalise the latter before the
   # structural cases below, including when it is nested in TQualifiedName.
-  let a = normalizeEmptyTypeApps(applySubst(subst, left))
-  let b = normalizeEmptyTypeApps(applySubst(subst, right))
+  # An empty substitution cannot change either side, so skip the full-tree
+  # applySubst rebuilds entirely; a non-empty one is applied below.
+  let a = normalizeEmptyTypeApps(if substIsEmpty(subst) => left else applySubst(subst, left))
+  let b = normalizeEmptyTypeApps(if substIsEmpty(subst) => right else applySubst(subst, right))
   if isAnyType(a) || isAnyType(b) then
     Ok(subst)
   else
-  if monoEqual(a, b) then
-    Ok(subst)
-  else
-    switch a
-      case TVar(id) => bindVar(id, b, subst)
-      case TKVar(id) => bindVar(id, b, subst)
-      case TParam(id) then
-        switch b
-          case TParam(id2) => if id == id2 then Ok(subst) else Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b)) end
-          case TVar(id2) => bindVar(id2, a, subst)
-          case TKVar(id2) => bindVar(id2, a, subst)
-          case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
-        end
-      end
-      case TApp(ctor, args) => unifyApplication(ctor.value(), args, b, subst)
-      case TCon(name) then
-        switch b
-          case TVar(id) => bindVar(id, a, subst)
-          case TKVar(id) => bindVar(id, a, subst)
-          case TParam(id) => bindVar(id, a, subst)
-          case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
-          case TCon(name2) then
-            if name == name2 then
-              unifyArgs([], [], subst)
-            else
-              Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
-            end
+    if monoEqual(a, b) then
+      Ok(subst)
+    else
+      switch a
+        case TVar(id) => bindVar(id, b, subst)
+        case TKVar(id) => bindVar(id, b, subst)
+        case TParam(id) then
+          switch b
+            case TParam(id2) => if id == id2 then Ok(subst) else Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b)) end
+            case TVar(id2) => bindVar(id2, a, subst)
+            case TKVar(id2) => bindVar(id2, a, subst)
+            case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
           end
-          case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
         end
-      end
-      case TFunc(args, ret) then
-        switch b
-          case TVar(id) => bindVar(id, a, subst)
-          case TKVar(id) => bindVar(id, a, subst)
-          case TParam(id) => bindVar(id, a, subst)
-          case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
-          case TFunc(args2, ret2) =>
-            if args.Len() == args2.Len() then
+        case TApp(ctor, args) => unifyApplication(ctor.value(), args, b, subst)
+        case TCon(name) then
+          switch b
+            case TVar(id) => bindVar(id, a, subst)
+            case TKVar(id) => bindVar(id, a, subst)
+            case TParam(id) => bindVar(id, a, subst)
+            case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
+            case TCon(name2) then
+              if name == name2 then
+                unifyArgs([], [], subst)
+              else
+                Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+              end
+            end
+            case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+          end
+        end
+        case TFunc(args, ret) then
+          switch b
+            case TVar(id) => bindVar(id, a, subst)
+            case TKVar(id) => bindVar(id, a, subst)
+            case TParam(id) => bindVar(id, a, subst)
+            case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
+            case TFunc(args2, ret2) =>
+              if args.Len() == args2.Len() then
+                let s1 = unifyArgs(args, args2, subst)
+                switch s1
+                  case Ok(s) => unify(ret.value(), ret2.value(), s)
+                  case Err(msg) => Err(msg)
+                end
+              else
+                Err("function arity mismatch")
+              end
+            case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+          end
+        end
+        case TVariadic(args, ret) then
+          switch b
+            case TVar(id) => bindVar(id, a, subst)
+            case TKVar(id) => bindVar(id, a, subst)
+            case TParam(id) => bindVar(id, a, subst)
+            case TVariadic(args2, ret2) =>
               let s1 = unifyArgs(args, args2, subst)
               switch s1
                 case Ok(s) => unify(ret.value(), ret2.value(), s)
                 case Err(msg) => Err(msg)
               end
-            else
-              Err("function arity mismatch")
-            end
-          case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+            case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+          end
         end
-      end
-      case TVariadic(args, ret) then
-        switch b
-          case TVar(id) => bindVar(id, a, subst)
-          case TKVar(id) => bindVar(id, a, subst)
-          case TParam(id) => bindVar(id, a, subst)
-          case TVariadic(args2, ret2) =>
-            let s1 = unifyArgs(args, args2, subst)
-            switch s1
-              case Ok(s) => unify(ret.value(), ret2.value(), s)
-              case Err(msg) => Err(msg)
-            end
-          case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+        case TTuple(items) then
+          switch b
+            case TVar(id) => bindVar(id, a, subst)
+            case TKVar(id) => bindVar(id, a, subst)
+            case TParam(id) => bindVar(id, a, subst)
+            case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
+            case TTuple(items2) =>
+              if items.Len() == items2.Len() then
+                unifyArgs(items, items2, subst)
+              else
+                Err("tuple arity mismatch")
+              end
+            case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+          end
         end
-      end
-      case TTuple(items) then
-        switch b
-          case TVar(id) => bindVar(id, a, subst)
-          case TKVar(id) => bindVar(id, a, subst)
-          case TParam(id) => bindVar(id, a, subst)
-          case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
-          case TTuple(items2) =>
-            if items.Len() == items2.Len() then
-              unifyArgs(items, items2, subst)
-            else
-              Err("tuple arity mismatch")
-            end
-          case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+        case TUnit then
+          switch b
+            case TVar(id) => bindVar(id, a, subst)
+            case TKVar(id) => bindVar(id, a, subst)
+            case TParam(id) => bindVar(id, a, subst)
+            case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
+            case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+          end
         end
-      end
-      case TUnit then
-        switch b
-          case TVar(id) => bindVar(id, a, subst)
-          case TKVar(id) => bindVar(id, a, subst)
-          case TParam(id) => bindVar(id, a, subst)
-          case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
-          case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
-        end
-      end
-      case TQualifiedName(pathA, innerA) then
-        switch b
-          case TVar(id) => bindVar(id, a, subst)
-          case TKVar(id) => bindVar(id, a, subst)
-          case TParam(id) => bindVar(id, a, subst)
-          case TQualifiedName(pathB, innerB) =>
-            if pathA == pathB then
-              unify(innerA.value(), innerB.value(), subst)
-            else
-              Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
-            end
-          case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+        case TQualifiedName(pathA, innerA) then
+          switch b
+            case TVar(id) => bindVar(id, a, subst)
+            case TKVar(id) => bindVar(id, a, subst)
+            case TParam(id) => bindVar(id, a, subst)
+            case TQualifiedName(pathB, innerB) =>
+              if pathA == pathB then
+                unify(innerA.value(), innerB.value(), subst)
+              else
+                Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+              end
+            case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
+          end
         end
       end
     end
-  end
   end
 end
 
@@ -304,7 +311,55 @@ func unifyArgsAt(left: Slice[ast2.MonoType], right: Slice[ast2.MonoType], subst:
 end
 
 func applySubst(subst: Subst, t: ast2.MonoType) -> ast2.MonoType
-  applySubstSeen(subst, t, [])
+  # The overwhelmingly common call sites pass an empty substitution (fresh
+  # literals, initial unification, variant matching).  Skipping the full
+  # tree walk in that case avoids rebuilding types that cannot change.
+  if substIsEmpty(subst) then
+    t
+  # A non-empty substitution still only changes types that mention a bound
+  # variable.  Returning untouched types without rebuilding them keeps the
+  # re-normalisation at nested expression boundaries linear instead of
+  # allocating a fresh copy of every (possibly huge) imported type.
+  elsif !substAffectsType(subst, t) then
+    t
+  else
+    applySubstSeen(subst, t, [])
+  end
+end
+
+# True when the substitution binds at least one type variable occurring in t.
+# applySubst uses this to return unrelated / already-resolved types without
+# an allocation-heavy rebuild at every expression boundary.
+func substAffectsType(subst: Subst, t: ast2.MonoType) -> Bool
+  switch t
+    case TVar(id) => substBindsVar(subst, id)
+    case TKVar(id) => substBindsVar(subst, id)
+    case TParam(id) => substBindsVar(subst, id)
+    case TCon(_) => false
+    case TApp(ctor, args) => substAffectsType(subst, ctor.value()) || substAffectsTypeAll(subst, args)
+    case TFunc(args, ret) => substAffectsTypeAll(subst, args) || substAffectsType(subst, ret.value())
+    case TVariadic(args, ret) => substAffectsTypeAll(subst, args) || substAffectsType(subst, ret.value())
+    case TTuple(items) => substAffectsTypeAll(subst, items)
+    case TUnit => false
+    case TQualifiedName(_, inner) => substAffectsType(subst, inner.value())
+  end
+end
+
+func substAffectsTypeAll(subst: Subst, items: Slice[ast2.MonoType]) -> Bool
+  substAffectsTypeAt(subst, items, 0)
+end
+
+func substAffectsTypeAt(subst: Subst, items: Slice[ast2.MonoType], index: Int) -> Bool
+  if index >= items.Len() then false else
+    substAffectsType(subst, items.Get(index).UnwrapOr(ast2.MonoType.TUnit)) || substAffectsTypeAt(subst, items, index + 1)
+  end
+end
+
+func substBindsVar(subst: Subst, id: Int) -> Bool
+  switch substGet(subst, id)
+    case Some(_) => true
+    case None => false
+  end
 end
 
 # The old implementation removed one entry from `subst` at every variable
@@ -358,7 +413,7 @@ func applySubstSeen(subst: Subst, t: ast2.MonoType, seen: Slice[Int]) -> ast2.Mo
 end
 
 func applySubstAll(subst: Subst, items: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
-  applySubstAllSeen(subst, items, [])
+  if substIsEmpty(subst) then items else applySubstAllSeen(subst, items, []) end
 end
 
 func applySubstAllSeen(subst: Subst, items: Slice[ast2.MonoType], seen: Slice[Int]) -> Slice[ast2.MonoType]
@@ -383,7 +438,17 @@ func composeSubst(newer: Subst, older: Subst) -> Subst
   # Materialise only the ordered bindings, without eagerly applying either
   # substitution to its images.  applySubst still resolves variable chains
   # lazily, while every lookup now has one linear layer rather than a DAG.
-  substFromEntries(appendSubstEntries(substEntriesInLookupOrder(older, []), substEntriesInLookupOrder(newer, [])))
+  #
+  # composeSubst runs once per block statement / call argument / operator.
+  # Most of those call sites pass at least one empty side, so short-circuit
+  # before flattening to keep the common path allocation-free.
+  if substIsEmpty(newer) then
+    older
+  elsif substIsEmpty(older) then
+    newer
+  else
+    substFromEntries(appendSubstEntries(substEntriesInLookupOrder(older, []), substEntriesInLookupOrder(newer, [])))
+  end
 end
 
 # Return bindings in exactly the order substGet would inspect them.  A
@@ -425,18 +490,23 @@ func substIsEmpty(subst: Subst) -> Bool
 end
 
 func substGet(subst: Subst, id: Int) -> Option[ast2.MonoType]
-  let local = subst.Index.Get(id)
+  # Index is None for prepend/append layers (linear scan over their 0/1
+  # entries) and Some for flattened substitutions (eager map lookup).
+  let local = switch subst.Index
+    case Some(index) => index.Get(id)
+    case None => substIndexLinear(subst.Entries, id, 0)
+  end
   if subst.IndexFirst then
     switch local
       case Some(_) => local
       # The common prepend/compose path gives the current layer priority.
-      # Do not traverse its persistent fallback graph when this map already
-      # contains the requested binding.
+      # Do not traverse its persistent fallback graph when this layer
+      # already contains the requested binding.
       case None => substGetFallbacks(subst.Fallbacks, id, 0)
     end
   else
     # Appended entries intentionally give older layers priority, so this is
-    # the only branch that must consult the fallback before the local map.
+    # the only branch that must consult the fallback before the local layer.
     let fallback = substGetFallbacks(subst.Fallbacks, id, 0)
     switch fallback
       case Some(_) => fallback

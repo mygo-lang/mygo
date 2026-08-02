@@ -341,62 +341,63 @@ func implMethodsUsePreludeName(methods []ast2.ImplMethod, names []string) bool {
 }
 func exprUsesPreludeName(expr ast2.Expr, names []string) bool {
 	for {
-		var __mygo_expr_0 bool
-		if __mygo_match___mygo_expr_18, ok := expr.Kind.(ast2.ExprKindIdentExpr); ok {
-			__mygo_expr_0 = containsString(names, __mygo_match___mygo_expr_18.F0)
+		__mygo_expr_0 := expr.Kind
+		var __mygo_expr_1 bool
+		if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ast2.ExprKindIdentExpr); ok {
+			__mygo_expr_1 = containsString(names, __mygo_match___mygo_expr_19.F0)
 		} else {
-			if __mygo_match___mygo_expr_17, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
-				__mygo_expr_0 = exprUsesPreludeName(__mygo_match___mygo_expr_17.F0, names) || typeExprsUsePreludeName(__mygo_match___mygo_expr_17.F1, names) || exprsUsePreludeName(__mygo_match___mygo_expr_17.F2, names)
+			if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ast2.ExprKindCallExpr); ok {
+				__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_18.F0, names) || typeExprsUsePreludeName(__mygo_match___mygo_expr_18.F1, names) || exprsUsePreludeName(__mygo_match___mygo_expr_18.F2, names)
 			} else {
-				if __mygo_match___mygo_expr_16, ok := expr.Kind.(ast2.ExprKindDictionaryCallExpr); ok {
-					__mygo_expr_0 = exprUsesPreludeName(__mygo_match___mygo_expr_16.F1, names) || exprsUsePreludeName(__mygo_match___mygo_expr_16.F2, names)
+				if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ast2.ExprKindDictionaryCallExpr); ok {
+					__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_17.F1, names) || exprsUsePreludeName(__mygo_match___mygo_expr_17.F2, names)
 				} else {
-					if __mygo_match___mygo_expr_15, ok := expr.Kind.(ast2.ExprKindFieldExpr); ok {
-						__mygo_expr_0 = exprUsesPreludeName(__mygo_match___mygo_expr_15.F0, names)
+					if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ast2.ExprKindFieldExpr); ok {
+						__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_16.F0, names)
 					} else {
-						if __mygo_match___mygo_expr_14, ok := expr.Kind.(ast2.ExprKindUnaryExpr); ok {
-							__mygo_expr_0 = exprUsesPreludeName(__mygo_match___mygo_expr_14.F1, names)
+						if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ast2.ExprKindUnaryExpr); ok {
+							__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_15.F1, names)
 						} else {
-							if __mygo_match___mygo_expr_13, ok := expr.Kind.(ast2.ExprKindBinaryExpr); ok {
-								__mygo_expr_0 = exprUsesPreludeName(__mygo_match___mygo_expr_13.F1, names) || exprUsesPreludeName(__mygo_match___mygo_expr_13.F2, names)
+							if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ast2.ExprKindBinaryExpr); ok {
+								__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_14.F1, names) || exprUsesPreludeName(__mygo_match___mygo_expr_14.F2, names)
 							} else {
-								if __mygo_match___mygo_expr_12, ok := expr.Kind.(ast2.ExprKindIfExpr); ok {
-									__mygo_expr_0 = exprUsesPreludeName(__mygo_match___mygo_expr_12.F0, names) || exprUsesPreludeName(__mygo_match___mygo_expr_12.F1, names) || exprUsesPreludeName(__mygo_match___mygo_expr_12.F2, names)
+								if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ast2.ExprKindIfExpr); ok {
+									__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_13.F0, names) || exprUsesPreludeName(__mygo_match___mygo_expr_13.F1, names) || exprUsesPreludeName(__mygo_match___mygo_expr_13.F2, names)
 								} else {
-									if __mygo_match___mygo_expr_11, ok := expr.Kind.(ast2.ExprKindBlockExpr); ok {
-										__mygo_expr_0 = stmtsUsePreludeName(__mygo_match___mygo_expr_11.F0, names)
+									if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ast2.ExprKindBlockExpr); ok {
+										__mygo_expr_1 = stmtsUsePreludeName(__mygo_match___mygo_expr_12.F0, names)
 									} else {
-										if __mygo_match___mygo_expr_10, ok := expr.Kind.(ast2.ExprKindSwitchExpr); ok {
-											__mygo_expr_0 = exprUsesPreludeName(__mygo_match___mygo_expr_10.F0, names) || switchCasesUsePreludeName(__mygo_match___mygo_expr_10.F1, names)
+										if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ast2.ExprKindSwitchExpr); ok {
+											__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_11.F0, names) || switchCasesUsePreludeName(__mygo_match___mygo_expr_11.F1, names)
 										} else {
-											if __mygo_match___mygo_expr_9, ok := expr.Kind.(ast2.ExprKindFuncLitExpr); ok {
-												__mygo_expr_0 = paramsUsePreludeName(__mygo_match___mygo_expr_9.F0, names) || optionTypeUsesPreludeName(__mygo_match___mygo_expr_9.F1, names) || exprUsesPreludeName(__mygo_match___mygo_expr_9.F2, names)
+											if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ast2.ExprKindFuncLitExpr); ok {
+												__mygo_expr_1 = paramsUsePreludeName(__mygo_match___mygo_expr_10.F0, names) || optionTypeUsesPreludeName(__mygo_match___mygo_expr_10.F1, names) || exprUsesPreludeName(__mygo_match___mygo_expr_10.F2, names)
 											} else {
-												if __mygo_match___mygo_expr_8, ok := expr.Kind.(ast2.ExprKindSliceLitExpr); ok {
-													__mygo_expr_0 = exprsUsePreludeName(__mygo_match___mygo_expr_8.F0, names)
+												if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ast2.ExprKindSliceLitExpr); ok {
+													__mygo_expr_1 = exprsUsePreludeName(__mygo_match___mygo_expr_9.F0, names)
 												} else {
-													if __mygo_match___mygo_expr_7, ok := expr.Kind.(ast2.ExprKindTypeAsExpr); ok {
-														__mygo_expr_0 = exprUsesPreludeName(__mygo_match___mygo_expr_7.F0, names) || typeUsesPreludeName(__mygo_match___mygo_expr_7.F1, names)
+													if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ast2.ExprKindTypeAsExpr); ok {
+														__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_8.F0, names) || typeUsesPreludeName(__mygo_match___mygo_expr_8.F1, names)
 													} else {
-														if __mygo_match___mygo_expr_6, ok := expr.Kind.(ast2.ExprKindStructLitExpr); ok {
-															__mygo_expr_0 = containsString(names, __mygo_match___mygo_expr_6.F0) || structLitFieldsUsePreludeName(__mygo_match___mygo_expr_6.F1, names)
+														if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ast2.ExprKindStructLitExpr); ok {
+															__mygo_expr_1 = containsString(names, __mygo_match___mygo_expr_7.F0) || structLitFieldsUsePreludeName(__mygo_match___mygo_expr_7.F1, names)
 														} else {
-															if __mygo_match___mygo_expr_5, ok := expr.Kind.(ast2.ExprKindGenericStructLitExpr); ok {
-																__mygo_expr_0 = containsString(names, __mygo_match___mygo_expr_5.F0) || typeExprsUsePreludeName(__mygo_match___mygo_expr_5.F1, names) || structLitFieldsUsePreludeName(__mygo_match___mygo_expr_5.F2, names)
+															if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ast2.ExprKindGenericStructLitExpr); ok {
+																__mygo_expr_1 = containsString(names, __mygo_match___mygo_expr_6.F0) || typeExprsUsePreludeName(__mygo_match___mygo_expr_6.F1, names) || structLitFieldsUsePreludeName(__mygo_match___mygo_expr_6.F2, names)
 															} else {
-																if __mygo_match___mygo_expr_4, ok := expr.Kind.(ast2.ExprKindInlineGoExpr); ok {
-																	__mygo_expr_0 = typeUsesPreludeName(*__mygo_match___mygo_expr_4.F0, names) || goOperandsUsePreludeName(__mygo_match___mygo_expr_4.F2, names) || goTypeOperandsUsePreludeName(__mygo_match___mygo_expr_4.F3, names)
+																if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.ExprKindInlineGoExpr); ok {
+																	__mygo_expr_1 = typeUsesPreludeName(*__mygo_match___mygo_expr_5.F0, names) || goOperandsUsePreludeName(__mygo_match___mygo_expr_5.F2, names) || goTypeOperandsUsePreludeName(__mygo_match___mygo_expr_5.F3, names)
 																} else {
-																	if __mygo_match___mygo_expr_3, ok := expr.Kind.(ast2.ExprKindMapLitExpr); ok {
-																		__mygo_expr_0 = exprPairsUsePreludeName(__mygo_match___mygo_expr_3.F0, names)
+																	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.ExprKindMapLitExpr); ok {
+																		__mygo_expr_1 = exprPairsUsePreludeName(__mygo_match___mygo_expr_4.F0, names)
 																	} else {
-																		if __mygo_match___mygo_expr_2, ok := expr.Kind.(ast2.ExprKindSetLitExpr); ok {
-																			__mygo_expr_0 = exprsUsePreludeName(__mygo_match___mygo_expr_2.F0, names)
+																		if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.ExprKindSetLitExpr); ok {
+																			__mygo_expr_1 = exprsUsePreludeName(__mygo_match___mygo_expr_3.F0, names)
 																		} else {
-																			if __mygo_match___mygo_expr_1, ok := expr.Kind.(ast2.ExprKindTupleExpr); ok {
-																				__mygo_expr_0 = exprsUsePreludeName(__mygo_match___mygo_expr_1.F0, names)
+																			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKindTupleExpr); ok {
+																				__mygo_expr_1 = exprsUsePreludeName(__mygo_match___mygo_expr_2.F0, names)
 																			} else {
-																				__mygo_expr_0 = false
+																				__mygo_expr_1 = false
 																			}
 																		}
 																	}
@@ -415,7 +416,7 @@ func exprUsesPreludeName(expr ast2.Expr, names []string) bool {
 				}
 			}
 		}
-		return __mygo_expr_0
+		return __mygo_expr_1
 	}
 }
 func exprsUsePreludeName(exprs []ast2.Expr, names []string) bool {
@@ -618,20 +619,21 @@ func typedDeclSourceMap(sources []typeinference2.PkgDeclSource, index int, out m
 	}
 }
 func typedDeclsForInput(sources []typeinference2.PkgDeclSource, byPath map[string][]ast2.Decl, path string) []ast2.Decl {
-	var __mygo_expr_0 []ast2.Decl
-	if __mygo_match___mygo_expr_1, ok := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(byPath, path).(OptionSome[[]ast2.Decl]); ok {
-		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
+	__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(byPath, path)
+	var __mygo_expr_1 []ast2.Decl
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(OptionSome[[]ast2.Decl]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
 	} else {
-		if _, ok := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(byPath, path).(OptionNone[[]ast2.Decl]); ok {
-			var __mygo_expr_1 []ast2.Decl
+		if _, ok := __mygo_expr_0.(OptionNone[[]ast2.Decl]); ok {
+			var __mygo_expr_2 []ast2.Decl
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sources) == 1 {
-				__mygo_expr_1 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sources, 0), typeinference2.PkgDeclSource{Path: "", Decls: []ast2.Decl{}}).Decls
+				__mygo_expr_2 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sources, 0), typeinference2.PkgDeclSource{Path: "", Decls: []ast2.Decl{}}).Decls
 			} else {
-				__mygo_expr_1 = []ast2.Decl{}
+				__mygo_expr_2 = []ast2.Decl{}
 			}
-			__mygo_expr_0 = __mygo_expr_1
+			__mygo_expr_1 = __mygo_expr_2
 		} else {
 		}
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
 }

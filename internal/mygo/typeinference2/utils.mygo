@@ -219,10 +219,21 @@ func freeVarsAll(items: Slice[ast2.MonoType], out: Slice[Int]) -> Slice[Int]
 end
 
 func containsInt(items: Slice[Int], value: Int) -> Bool
-  if items.Len() == 0 then false else items.Get(0).UnwrapOr(0) == value || containsInt(sliceDrop(items, 1), value) end
+  if items.Len() == 0 then
+    false
+  else
+    items.Get(0).UnwrapOr(0) == value || containsInt(sliceDrop(items, 1), value)
+  end
 end
 
 func envFreeVars(env: Env, out: Slice[Int]) -> Slice[Int]
+  # Batch layers contribute their precomputed free-variable union, so a deep
+  # import graph costs O(1) per batch instead of re-walking every imported
+  # member on every generalization.
+  let fromBatch = switch env.Batch
+    case Some(batch) => unionInts(out, batch.FreeVars)
+    case None => out
+  end
   switch env.Entry
     case Some(item) =>
     # Compute this entry's contribution to the environment's free type
@@ -237,12 +248,12 @@ func envFreeVars(env: Env, out: Slice[Int]) -> Slice[Int]
     # inference falls over with occurs-check failures like t-1 ~ Reply[t-1].
     let bodyFree = removeInts(freeVars(item.Scheme.Body, []), item.Scheme.Bound)
     let entryFree = freeVarsPredicates(item.Scheme.Predicates, bodyFree)
-      let next = unionInts(out, entryFree)
+      let next = unionInts(fromBatch, entryFree)
       switch env.Parent
         case Some(parent) => envFreeVars(parent.value(), next)
         case None => next
       end
-    case None => out
+    case None => fromBatch
   end
 end
 

@@ -343,31 +343,52 @@ end
 # the target enum's type arguments are preserved in the asserted variant type.
 # When expected is "" or a unit type, the switch is in statement context and
 # no temp variable is created — the if/else chain stands alone.
+#
+# A non-trivial subject (a call or selector such as `switch inferExpr(...)`) is
+# hoisted into a temp variable before the branch chain.  Each branch lowers to
+# `if v, ok := <subject>.(Variant); ok`, so embedding the raw expression would
+# re-evaluate it once per pattern arm — exponential for deeply nested switches.
 func translateSwitchAst(target: ast2.Expr, cases: Slice[ast2.SwitchCase], targetType: Option[ast2.MonoType], ctx: Ref[egCtx], expected: ast2.MonoType) -> Result[AstExprResult, String]
   let subject = translateSwitchSubject(target, ctx)
   switch subject
     case Err(msg) => Err(msg)
     case Ok(value) =>
+      let hoisted = switch target.Kind
+        case IdentExpr(_) => value
+        case CallExpr(_, _, _) => hoistSwitchSubject(value, cases, ctx)
+        case FieldExpr(_, _) => hoistSwitchSubject(value, cases, ctx)
+        case _ => value
+      end
       let isStmt = switch expected
         case TUnit => true
         case _ => false
       end
       if isStmt then
-        # Statement context: emit only the if/else chain, no temp variable.
-        let branches = translateSwitchBranchesStmt(cases, targetType, target, value.Expr, ctx)
+        # Statement context: emit only the if/else chain, no result temp.
+        let branches = translateSwitchBranchesStmt(cases, targetType, target, hoisted.Expr, ctx)
         switch branches
           case Err(msg) => Err(msg)
-          case Ok(stmts) => Ok(astExprWithPre(goast.Unit(), goast.AppendStmts(value.Pre, stmts)))
+          case Ok(stmts) => Ok(astExprWithPre(goast.Unit(), goast.AppendStmts(hoisted.Pre, stmts)))
         end
       else
         # Expression context: use a temp variable to hold the case result.
         let temp = ctxFreshExprTemp(ctx)
-        let branches = translateSwitchBranches(cases, targetType, target, value.Expr, temp, ctx, expected)
+        let branches = translateSwitchBranches(cases, targetType, target, hoisted.Expr, temp, ctx, expected)
         switch branches
           case Err(msg) => Err(msg)
-          case Ok(stmts) => Ok(astExprWithPre(goast.Ident(temp), goast.AppendStmts(value.Pre, goast.AppendStmts(astSingleStmt(goast.DeclareFromType(temp, monoTypeToGoStrIn(expected, ctx.pathAliases))), stmts))))
+          case Ok(stmts) => Ok(astExprWithPre(goast.Ident(temp), goast.AppendStmts(hoisted.Pre, goast.AppendStmts(astSingleStmt(goast.DeclareFromType(temp, monoTypeToGoStrIn(expected, ctx.pathAliases))), stmts))))
         end
       end
+  end
+end
+
+# Evaluate a non-trivial switch subject once and reference it through a temp.
+# With zero cases the subject is never used by a branch, so no temp is created.
+func hoistSwitchSubject(value: AstExprResult, cases: Slice[ast2.SwitchCase], ctx: Ref[egCtx]) -> AstExprResult
+  if cases.Len() == 0 then value else
+    let tmp = ctxFreshExprTemp(ctx)
+    let decl = astSingleStmt(goast.Assign([goast.Ident(tmp)] as Slice[goast.Expr], ":=", [value.Expr] as Slice[goast.Expr]))
+    AstExprResult { Expr: goast.Ident(tmp), Pre: goast.AppendStmts(value.Pre, decl) }
   end
 end
 
