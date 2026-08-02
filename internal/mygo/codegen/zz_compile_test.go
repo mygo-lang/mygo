@@ -107,7 +107,7 @@ end
 	for _, file := range files {
 		generated += file
 	}
-	if !strings.Contains(generated, "func Countdown(n int, total int) int") || !strings.Contains(generated, "func __mygo_mt_p_countdown") {
+	if !strings.Contains(generated, "func Countdown(n int, total int) int") || !strings.Contains(generated, "func __mygo_mt_p_Countdown") {
 		t.Fatalf("self-tail wrapper or trampoline missing:\n%s", generated)
 	}
 	if strings.Contains(generated, "= Countdown(n-1, total+n)") || !strings.Contains(generated, "continue") {
@@ -152,7 +152,7 @@ end
 	for _, file := range files {
 		generated += file
 	}
-	if !strings.Contains(generated, "func __mygo_mt_p_left_right") {
+	if !strings.Contains(generated, "func __mygo_mt_p_Left_Right") {
 		t.Fatalf("unit mutual trampoline missing:\n%s", generated)
 	}
 	fset := token.NewFileSet()
@@ -271,7 +271,7 @@ end
 	for _, file := range files {
 		generated += file
 	}
-	if !strings.Contains(generated, "func __mygo_mt_p_first_second[A any]") {
+	if !strings.Contains(generated, "func __mygo_mt_p_First_Second[A any]") {
 		t.Fatalf("generic mutual trampoline missing:\n%s", generated)
 	}
 	fset := token.NewFileSet()
@@ -310,7 +310,7 @@ end
 		t.Fatal(err)
 	}
 	for _, file := range files {
-		if strings.Contains(file, "func __mygo_mt_p_a_b") {
+		if strings.Contains(file, "func __mygo_mt_p_A_B") {
 			t.Fatalf("non-tail intra-group call must retain direct lowering:\n%s", file)
 		}
 	}

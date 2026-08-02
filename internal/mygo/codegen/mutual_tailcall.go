@@ -117,7 +117,7 @@ func (g *gen) addMutualTailPlan(members []*FuncDecl, byName map[string]*FuncDecl
 		if sourceFileOf(f) < owner {
 			owner = sourceFileOf(f)
 		}
-		parts[i] = strings.ToLower(sanitizeIdent(f.Name))
+		parts[i] = sanitizeIdent(f.Name)
 	}
 	p := &mutualTailPlan{name: "__mygo_mt_" + sanitizeIdent(g.pkg.Name) + "_" + strings.Join(parts, "_"), owner: owner, members: members, state: map[*FuncDecl]int{}}
 	for i, f := range members {
