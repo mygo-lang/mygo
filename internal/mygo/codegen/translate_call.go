@@ -1620,6 +1620,18 @@ func (g *gen) typeclassSubstForImpl(iface *InterfaceDecl, impl *ImplDecl, recvTy
 	if !inferTypeSubst(pattern, recvType, typeParamSet, subst) {
 		return nil
 	}
+	// The interface's first type parameter may be an HKT application such as
+	// `C[K, A]` (`interface IIndexable[C[K, A], K, A]`).  Its concrete value is
+	// the receiver type; bind the canonical application spelling so method
+	// signatures mentioning `C[K, A]` (e.g. Option[C[K, A]]) resolve to it.
+	// Without this, the typeclass call's result type stays as the bare HKT
+	// parameter and downstream relation/equality checks fail.
+	if len(iface.TypeParams) > 0 {
+		first := strings.TrimSpace(iface.TypeParams[0])
+		if base, hktArgs := splitTypeArgs(first); len(hktArgs) > 0 && base != "" {
+			subst[base+"["+strings.Join(hktArgs, ", ")+"]"] = recvType
+		}
+	}
 	return subst
 }
 
