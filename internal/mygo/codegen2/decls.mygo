@@ -3,8 +3,6 @@ package codegen2
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
-import strings "go:strings"
-import fmt "go:fmt"
 
 func collectImports(decls: Slice[ast2.Decl]) -> Slice[GoImportPart]
   decls.Fold([] as Slice[GoImportPart], func(out: Slice[GoImportPart], d: ast2.Decl) -> Slice[GoImportPart]
@@ -147,7 +145,7 @@ func translateImplAstDecl(g: Ref[Generator2], tps: Slice[String], target: ast2.T
     case Some(ifaceType) =>
       switch ifaceType
         case NamedType(_, args) =>
-          switch args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+          switch args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
             case NamedType(name, _) => name
             case _ => ""
           end
@@ -177,8 +175,11 @@ end
 
 func translateStructAstDecl(name: String, tps: Slice[String], fields: Slice[ast2.Field]) -> goast.Decl
   let ctx = newEgCtxWithTypeParams(tps)
+  # Struct field names keep their declared spelling (Go identifiers are
+  # case-sensitive; inline-Go in this package references lowercase fields such
+  # as `ctx.goPackages`).  No automatic case conversion.
   let names = fields.Map(func(f: ast2.Field) -> String
-    if f.Name == "embed" then "" else exportName(f.Name) end
+    if f.Name == "embed" then "" else sanitizeIdent(f.Name) end
   end)
   let types = fields.Map(func(f: ast2.Field) -> goast.Expr goTypeAst(f.Type, ctx.typeParams) end)
   let tags = fields.Map(func(f: ast2.Field) -> String
@@ -202,7 +203,7 @@ end
 
 func translateInterfaceAstDecl(name: String, tps: Slice[String], methods: Slice[ast2.FuncSig]) -> goast.Decl
   let ctx = newEgCtxWithTypeParams(tps)
-  let names = methods.Map(func(m: ast2.FuncSig) -> String exportName(m.Name) end)
+  let names = methods.Map(func(m: ast2.FuncSig) -> String sanitizeIdent(m.Name) end)
   let sigs = methods.Map(func(m: ast2.FuncSig) -> String
     funcSignature("", m.TypeParams, m.Params, m.Ret, ctx.typeParams)
   end)
@@ -232,7 +233,7 @@ func translateImplAstMethods(stem: String, tps: Slice[String], methods: Slice[as
     var names: Slice[String] = []
     var i: Int = 0
     while i < sig.Params.Len()
-      let param = sig.Params.Get(i).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType() })
+      let param = sig.Params.Get(i).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType })
       let goName = ctxFreshBinding(ctx, param.Name)
       ctxSetLocal(ctx, param.Name, typeinference2.TypeFromASTWithParams(param.Type, methodTps))
       names = names.Append(goName)
@@ -385,7 +386,7 @@ func translateFuncAstDecl(g: Ref[Generator2], name: String, tps: Slice[String], 
   var paramNames: Slice[String] = []
   var i: Int = 0
   while i < params.Len()
-    let p = params.Get(i).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType() })
+    let p = params.Get(i).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType })
     let pn = ctxFreshBinding(ctx, p.Name)
     ctxSetLocal(ctx, p.Name, typeinference2.TypeFromASTWithParams(p.Type, tps))
     goParams = goParams.Append(pn + " " + goType(p.Type, ctx.typeParams))
@@ -460,7 +461,7 @@ end
 
 func fieldsToFieldEntries(typeName: String, fields: Slice[ast2.Field], tps: Slice[String], index: Int, out: Slice[typeinference2.FieldEntry]) -> Slice[typeinference2.FieldEntry]
   if index >= fields.Len() then out else
-    let f = fields.Get(index).UnwrapOr(ast2.Field { Name: "", Type: ast2.TypeExpr.UnitType(), Tag: None })
+    let f = fields.Get(index).UnwrapOr(ast2.Field { Name: "", Type: ast2.TypeExpr.UnitType, Tag: None })
     let fieldName = f.Name
     let monoType = typeinference2.TypeFromASTWithParams(f.Type, tps)
     let entry = typeinference2.FieldEntry { TypeName: typeName, FieldName: fieldName, Type: monoType }
@@ -500,7 +501,7 @@ end
 
 func seedEnumVariantFieldTypes(enumName: String, variantName: String, fields: Slice[ast2.TypeExpr], enumTypeParams: Slice[String], ctx: Ref[egCtx], index: Int) -> ()
   if index < fields.Len() then
-    let fieldType = fields.Get(index).UnwrapOr(ast2.TypeExpr.UnitType())
+    let fieldType = fields.Get(index).UnwrapOr(ast2.TypeExpr.UnitType)
     let fieldMono = typeinference2.TypeFromASTWithParams(fieldType, enumTypeParams)
     let existing = ctx.variantFieldMonoTypes.Get(variantName).UnwrapOr([] as Slice[ast2.MonoType])
     ctx.variantFieldMonoTypes.Set(variantName, existing.Append(fieldMono))
@@ -616,7 +617,7 @@ func seedImplCandidates(methods: Slice[ast2.ImplMethod], stem: String, interface
   if methods.Len() != 0 then
     let method = methods.Get(0).UnwrapOr(defaultImplMethod())
     let key = interfaceName + "." + method.Sig.Name
-    let receiver = interfaceArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+    let receiver = interfaceArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
     let candidate = ImplDictionaryCandidate { Interface: interfaceName, Method: method.Sig.Name, InterfaceArgs: interfaceArgs, Receiver: typeinference2.TypeFromASTWithParams(receiver, typeParams), TypeParams: typeParams, Helper: implMethodSymbol(stem, method.Sig.Name) }
     ctx.packageCandidates.Set(key, ctx.packageCandidates.Get(key).UnwrapOr([] as Slice[ImplDictionaryCandidate]).Append(candidate))
     ctx.typeclassCandidates = ctx.typeclassCandidates.Append(candidate)
@@ -688,7 +689,7 @@ func addDictionaryMethods(rest: Slice[ast2.Constraint], methods: Slice[ast2.Func
     ctx.constraintFuncNames.Set(method.Name, existingNames.Append(paramName))
     if constraintArgs.Len() > 0 then
       # Store MyGO type string for receiver type matching (dictFuncForMethod).
-      let typeArg = substituteTypeParamsMyGO(constraintArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), ifaceTps, constraintArgs)
+      let typeArg = substituteTypeParamsMyGO(constraintArgs.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), ifaceTps, constraintArgs)
       let existingTypes = ctx.constraintFuncArgTypes.Get(method.Name).UnwrapOr([] as Slice[String])
       ctx.constraintFuncArgTypes.Set(method.Name, existingTypes.Append(typeArg))
       # Store MonoType for constraint arg matching (prefer inferred TVars).
@@ -728,7 +729,7 @@ end
 
 func typeArgsToMonos(args: Slice[ast2.TypeExpr], typeParams: Slice[String], index: Int, out: Slice[ast2.MonoType]) -> Slice[ast2.MonoType]
   if index >= args.Len() then out else
-    let item = args.Get(index).UnwrapOr(ast2.TypeExpr.UnitType())
+    let item = args.Get(index).UnwrapOr(ast2.TypeExpr.UnitType)
     typeArgsToMonos(args, typeParams, index + 1, out.Append(typeinference2.TypeFromASTWithParams(item, typeParams)))
   end
 end
@@ -771,7 +772,7 @@ func substituteTypeParamsInTypeExpr(typ: ast2.TypeExpr, ifaceTps: Slice[String],
     case NamedType(name, args) then
       let index = findStringIndex(ifaceTps, name)
       if index >= 0 && index < constraintArgs.Len() then
-        let replacement = constraintArgs.Get(index).UnwrapOr(ast2.TypeExpr.UnitType())
+        let replacement = constraintArgs.Get(index).UnwrapOr(ast2.TypeExpr.UnitType)
         goType(replacement, typeParams)
       else
         if args.Len() == 0 then
@@ -800,7 +801,7 @@ func substituteTypeParamsMyGO(typ: ast2.TypeExpr, ifaceTps: Slice[String], const
     case NamedType(name, args) then
       let index = findStringIndex(ifaceTps, name)
       if index >= 0 && index < constraintArgs.Len() then
-        let replacement = constraintArgs.Get(index).UnwrapOr(ast2.TypeExpr.UnitType())
+        let replacement = constraintArgs.Get(index).UnwrapOr(ast2.TypeExpr.UnitType)
         mygoTypeString(replacement)
       else
         if args.Len() == 0 then
@@ -840,7 +841,7 @@ func substituteTypeExpr(typ: ast2.TypeExpr, ifaceTps: Slice[String], constraintA
     case NamedType(name, args) =>
       let index = findStringIndex(ifaceTps, name)
       if index >= 0 && index < constraintArgs.Len() then
-        constraintArgs.Get(index).UnwrapOr(ast2.TypeExpr.UnitType())
+        constraintArgs.Get(index).UnwrapOr(ast2.TypeExpr.UnitType)
       else
         if args.Len() == 0 then typ else
           ast2.TypeExpr.NamedType(name, args.Map(func(a: ast2.TypeExpr) -> ast2.TypeExpr substituteTypeExpr(a, ifaceTps, constraintArgs) end))

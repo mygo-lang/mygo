@@ -1,0 +1,426 @@
+package compiler
+
+# Go FFI import resolution for the self-hosted bootstrap.
+#
+# importer.Default only finds packages installed under GOROOT and GOPATH, so
+# `go:` imports that live inside the current module (for example
+# github.com/mygo-lang/mygo/internal/mygo/codegen2/goast) or in the module
+# cache cannot be loaded.  This file resolves those imports through the same
+# go.mod rules as MyGO package imports (module path, replace directives,
+# require + module cache) and type-checks the resolved source directory with
+# go/types.
+#
+# Module resolution is plain MyGO; only the go/types interaction needs one
+# inline-Go block (see bootstrapLoadGoPackage), because MyGO FFI cannot
+# construct types.Importer implementations or inspect go/types objects.
+
+import os "go:os"
+import filepath "go:path/filepath"
+import strings "go:strings"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+
+struct BootstrapGoModReplace
+  Module: String
+  Path: String
+end
+
+struct BootstrapGoModRequire
+  Module: String
+  Version: String
+end
+
+# BootstrapGoPackageInfo is the FFI boundary result of loading one Go package:
+# the exported functions and types that MyGO inference and codegen2 consume.
+struct BootstrapGoPackageInfo
+  Funcs: Slice[typeinference2.GoFuncSignature]
+  Types: Slice[typeinference2.GoTypeSignature]
+end
+
+# bootstrapGoImportDir resolves a Go import path to a source directory using
+# the enclosing module's go.mod: the main module path first, then replace
+# directives, then require entries looked up in the module cache.  Returns
+# None when the import cannot be resolved inside the module.
+func bootstrapGoImportDir(start: String, importPath: String) -> Option[String]
+  switch bootstrapFindGoModuleRoot(start)
+    case None => None
+    case Some(root) =>
+      switch bootstrapReadFileString(filepath.Join(root, "go.mod"))
+        case None => None
+        case Some(content) =>
+          let module = bootstrapGoModModulePath(content)
+          switch bootstrapModuleImportDir(root, module, importPath)
+            case Some(dir) => Some(dir)
+            case None => bootstrapGoImportDirReplaceEntry(root, content, importPath, 0)
+          end
+      end
+  end
+end
+
+func bootstrapGoImportDirReplaceEntry(root: String, content: String, importPath: String, index: Int) -> Option[String]
+  let replaces = bootstrapGoModReplaceEntries(content)
+  if index >= replaces.Len() then
+    bootstrapGoImportDirRequireEntry(content, importPath, 0)
+  else
+    switch replaces.Get(index)
+      case Some(repl) =>
+        switch bootstrapResolveReplaceRoot(root, repl.Path)
+          case Some(replRoot) =>
+            switch bootstrapModuleImportDir(replRoot, repl.Module, importPath)
+              case Some(dir) => Some(dir)
+              case None => bootstrapGoImportDirReplaceEntry(root, content, importPath, index + 1)
+            end
+          case None => bootstrapGoImportDirReplaceEntry(root, content, importPath, index + 1)
+        end
+      case None => bootstrapGoImportDirReplaceEntry(root, content, importPath, index + 1)
+    end
+  end
+end
+
+func bootstrapGoImportDirRequireEntry(content: String, importPath: String, index: Int) -> Option[String]
+  let requires = bootstrapGoModRequireEntries(content)
+  if index >= requires.Len() then
+    None
+  else
+    switch requires.Get(index)
+      case Some(req) =>
+        switch bootstrapModuleImportSuffix(req.Module, importPath)
+          case Some(suffix) => bootstrapGoImportDirCacheEntry(req, suffix, 0)
+          case None => bootstrapGoImportDirRequireEntry(content, importPath, index + 1)
+        end
+      case None => bootstrapGoImportDirRequireEntry(content, importPath, index + 1)
+    end
+  end
+end
+
+func bootstrapGoImportDirCacheEntry(req: BootstrapGoModRequire, suffix: String, index: Int) -> Option[String]
+  let cacheRoots = bootstrapGoModCacheRoots()
+  if index >= cacheRoots.Len() then
+    None
+  else
+    switch cacheRoots.Get(index)
+      case Some(cacheRoot) =>
+        let modRoot = filepath.Join(cacheRoot, bootstrapModuleCachePath(req.Module, req.Version))
+        switch bootstrapExistingDir(filepath.Join(modRoot, filepath.FromSlash(suffix)))
+          case Some(dir) => Some(dir)
+          case None => bootstrapGoImportDirCacheEntry(req, suffix, index + 1)
+        end
+      case None => bootstrapGoImportDirCacheEntry(req, suffix, index + 1)
+    end
+  end
+end
+
+func bootstrapFindGoModuleRoot(start: String) -> Option[String]
+  switch filepath.Abs(start)
+    case Err(_) => None
+    case Ok(absStart) => bootstrapFindGoModuleRootUp(absStart)
+  end
+end
+
+func bootstrapFindGoModuleRootUp(cur: String) -> Option[String]
+  switch os.Stat(filepath.Join(cur, "go.mod"))
+    case Ok(_) => Some(cur)
+    case Err(_) =>
+      let parent = filepath.Dir(cur)
+      if parent == cur then None else bootstrapFindGoModuleRootUp(parent) end
+  end
+end
+
+func bootstrapReadFileString(path: String) -> Option[String]
+  switch os.ReadFile(path)
+    case Ok(bytes) => Some(bytes as String)
+    case Err(_) => None
+  end
+end
+
+func bootstrapGoModModulePath(content: String) -> String
+  bootstrapGoModModulePathIn(content.Split("\n"), 0)
+end
+
+func bootstrapGoModModulePathIn(lines: Slice[String], index: Int) -> String
+  if index >= lines.Len() then
+    ""
+  else
+    switch lines.Get(index)
+      case Some(line) =>
+        let cleaned = bootstrapCleanGoModLine(line)
+        if cleaned.HasPrefix("module ") then
+          cleaned.TrimPrefix("module ").TrimSpace()
+        else
+          bootstrapGoModModulePathIn(lines, index + 1)
+        end
+      case None => bootstrapGoModModulePathIn(lines, index + 1)
+    end
+  end
+end
+
+func bootstrapCleanGoModLine(line: String) -> String
+  let trimmed = line.TrimSpace()
+  let idx = trimmed.Index("//")
+  if idx >= 0 then
+    switch trimmed.Slice(0, idx)
+      case Some(part) => part.TrimSpace()
+      case None => trimmed
+    end
+  else
+    trimmed
+  end
+end
+
+func bootstrapGoModReplaceEntries(content: String) -> Slice[BootstrapGoModReplace]
+  bootstrapGoModReplaceEntriesIn(content.Split("\n"), false, 0, [])
+end
+
+func bootstrapGoModReplaceEntriesIn(lines: Slice[String], inBlock: Bool, index: Int, out: Slice[BootstrapGoModReplace]) -> Slice[BootstrapGoModReplace]
+  if index >= lines.Len() then
+    out
+  else
+    switch lines.Get(index)
+      case Some(rawLine) =>
+        let line = bootstrapCleanGoModLine(rawLine)
+        if line == "" then
+          bootstrapGoModReplaceEntriesIn(lines, inBlock, index + 1, out)
+        else
+          if line == "replace (" then
+            bootstrapGoModReplaceEntriesIn(lines, true, index + 1, out)
+          else
+            if inBlock && line == ")" then
+              bootstrapGoModReplaceEntriesIn(lines, false, index + 1, out)
+            else
+              if line.HasPrefix("replace ") then
+                let entryLine = line.TrimPrefix("replace ").TrimSpace()
+                switch bootstrapGoModReplaceFromFields(entryLine.Fields())
+                  case Some(entry) => bootstrapGoModReplaceEntriesIn(lines, inBlock, index + 1, out.Append(entry))
+                  case None => bootstrapGoModReplaceEntriesIn(lines, inBlock, index + 1, out)
+                end
+              else
+                if inBlock then
+                  switch bootstrapGoModReplaceFromFields(line.Fields())
+                    case Some(entry) => bootstrapGoModReplaceEntriesIn(lines, inBlock, index + 1, out.Append(entry))
+                    case None => bootstrapGoModReplaceEntriesIn(lines, inBlock, index + 1, out)
+                  end
+                else
+                  bootstrapGoModReplaceEntriesIn(lines, inBlock, index + 1, out)
+                end
+              end
+            end
+          end
+        end
+      case None => bootstrapGoModReplaceEntriesIn(lines, inBlock, index + 1, out)
+    end
+  end
+end
+
+func bootstrapGoModReplaceFromFields(fields: Slice[String]) -> Option[BootstrapGoModReplace]
+  bootstrapGoModReplaceFromFieldsIn(fields, 0)
+end
+
+func bootstrapGoModReplaceFromFieldsIn(fields: Slice[String], index: Int) -> Option[BootstrapGoModReplace]
+  if index >= fields.Len() then
+    None
+  else
+    switch fields.Get(index)
+      case Some(f) =>
+        if f == "=>" && index > 0 && index + 1 < fields.Len() then
+          Some(BootstrapGoModReplace { Module: fields.Get(0).UnwrapOr(""), Path: fields.Get(index + 1).UnwrapOr("") })
+        else
+          bootstrapGoModReplaceFromFieldsIn(fields, index + 1)
+        end
+      case None => None
+    end
+  end
+end
+
+func bootstrapGoModRequireEntries(content: String) -> Slice[BootstrapGoModRequire]
+  bootstrapGoModRequireEntriesIn(content.Split("\n"), false, 0, [])
+end
+
+func bootstrapGoModRequireEntriesIn(lines: Slice[String], inBlock: Bool, index: Int, out: Slice[BootstrapGoModRequire]) -> Slice[BootstrapGoModRequire]
+  if index >= lines.Len() then
+    out
+  else
+    switch lines.Get(index)
+      case Some(rawLine) =>
+        let line = bootstrapCleanGoModLine(rawLine)
+        if line == "" then
+          bootstrapGoModRequireEntriesIn(lines, inBlock, index + 1, out)
+        else
+          if line == "require (" then
+            bootstrapGoModRequireEntriesIn(lines, true, index + 1, out)
+          else
+            if inBlock && line == ")" then
+              bootstrapGoModRequireEntriesIn(lines, false, index + 1, out)
+            else
+              if line.HasPrefix("require ") then
+                let entryLine = line.TrimPrefix("require ").TrimSpace()
+                switch bootstrapGoModRequireFromFields(entryLine.Fields())
+                  case Some(entry) => bootstrapGoModRequireEntriesIn(lines, inBlock, index + 1, out.Append(entry))
+                  case None => bootstrapGoModRequireEntriesIn(lines, inBlock, index + 1, out)
+                end
+              else
+                if inBlock then
+                  switch bootstrapGoModRequireFromFields(line.Fields())
+                    case Some(entry) => bootstrapGoModRequireEntriesIn(lines, inBlock, index + 1, out.Append(entry))
+                    case None => bootstrapGoModRequireEntriesIn(lines, inBlock, index + 1, out)
+                  end
+                else
+                  bootstrapGoModRequireEntriesIn(lines, inBlock, index + 1, out)
+                end
+              end
+            end
+          end
+        end
+      case None => bootstrapGoModRequireEntriesIn(lines, inBlock, index + 1, out)
+    end
+  end
+end
+
+func bootstrapGoModRequireFromFields(fields: Slice[String]) -> Option[BootstrapGoModRequire]
+  if fields.Len() >= 2 then
+    Some(BootstrapGoModRequire { Module: fields.Get(0).UnwrapOr(""), Version: fields.Get(1).UnwrapOr("") })
+  else
+    None
+  end
+end
+
+func bootstrapModuleImportDir(root: String, module: String, importPath: String) -> Option[String]
+  if root == "" || module == "" then
+    None
+  else
+    switch bootstrapModuleImportSuffix(module, importPath)
+      case None => None
+      case Some(suffix) => bootstrapExistingDir(filepath.Join(root, filepath.FromSlash(suffix)))
+    end
+  end
+end
+
+func bootstrapModuleImportSuffix(module: String, importPath: String) -> Option[String]
+  if importPath == module then
+    Some("")
+  else
+    let prefix = module + "/"
+    if importPath.HasPrefix(prefix) then
+      Some(importPath.TrimPrefix(prefix))
+    else
+      None
+    end
+  end
+end
+
+func bootstrapResolveReplaceRoot(moduleRoot: String, repl: String) -> Option[String]
+  if repl == "" || repl.HasPrefix(".") || filepath.IsAbs(repl) then
+    let resolved = if filepath.IsAbs(repl) then repl else filepath.Join(moduleRoot, repl) end
+    Some(filepath.Clean(resolved))
+  else
+    None
+  end
+end
+
+func bootstrapExistingDir(path: String) -> Option[String]
+  switch os.ReadDir(path)
+    case Ok(_) => Some(filepath.Clean(path))
+    case Err(_) => None
+  end
+end
+
+func bootstrapGoModCacheRoots() -> Slice[String]
+  let gomodcache = os.Getenv("GOMODCACHE")
+  let fromEnv = if gomodcache == "" then [] as Slice[String] else [gomodcache] as Slice[String] end
+  let fromGopath = bootstrapGoModCacheRootsGopath(filepath.SplitList(os.Getenv("GOPATH")), 0, fromEnv)
+  let withHome = switch os.UserHomeDir()
+    case Ok(home) => if home == "" then fromGopath else fromGopath.Append(filepath.Join(home, "go", "pkg", "mod")) end
+    case Err(_) => fromGopath
+  end
+  bootstrapDedupeStrings(withHome, 0, [])
+end
+
+func bootstrapGoModCacheRootsGopath(parts: Slice[String], index: Int, acc: Slice[String]) -> Slice[String]
+  if index >= parts.Len() then
+    acc
+  else
+    switch parts.Get(index)
+      case Some(part) =>
+        if part == "" then
+          bootstrapGoModCacheRootsGopath(parts, index + 1, acc)
+        else
+          bootstrapGoModCacheRootsGopath(parts, index + 1, acc.Append(filepath.Join(part, "pkg", "mod")))
+        end
+      case None => bootstrapGoModCacheRootsGopath(parts, index + 1, acc)
+    end
+  end
+end
+
+func bootstrapDedupeStrings(items: Slice[String], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= items.Len() then
+    out
+  else
+    switch items.Get(index)
+      case Some(item) =>
+        let cleaned = filepath.Clean(item)
+        if bootstrapContainsString(out, cleaned) then
+          bootstrapDedupeStrings(items, index + 1, out)
+        else
+          bootstrapDedupeStrings(items, index + 1, out.Append(cleaned))
+        end
+      case None => bootstrapDedupeStrings(items, index + 1, out)
+    end
+  end
+end
+
+func bootstrapContainsString(items: Slice[String], value: String) -> Bool
+  bootstrapContainsStringIn(items, value, 0)
+end
+
+func bootstrapContainsStringIn(items: Slice[String], value: String, index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(item) => if item == value then true else bootstrapContainsStringIn(items, value, index + 1) end
+      case None => bootstrapContainsStringIn(items, value, index + 1)
+    end
+  end
+end
+
+func bootstrapModuleCachePath(module: String, version: String) -> String
+  let parts = module.Split("/").Map(func(p: String) -> String bootstrapEscapeModulePathElem(p) end)
+  filepath.Join(strings.Join(parts, "/") + "@" + version)
+end
+
+# Module cache paths escape uppercase letters as `!lowercase` (for example
+# github.com/Azure/... becomes github.com/!azure/...).
+func bootstrapEscapeModulePathElem(s: String) -> String
+  let rs = s as Slice[Rune]
+  let out = rs.Fold([] as Slice[Rune], func(acc: Slice[Rune], r: Rune) -> Slice[Rune]
+    let ch = String.FromRunes([r] as Slice[Rune])
+    let upper = ch.ToUpper()
+    let lower = ch.ToLower()
+    if ch == upper && ch != lower then
+      acc.Append('!').Append((lower as Slice[Rune]).Get(0).UnwrapOr(r))
+    else
+      acc.Append(r)
+    end
+  end)
+  String.FromRunes(out)
+end
+
+# bootstrapLoadGoPackage loads a Go package's exported functions and types for
+# FFI signature collection.  Standard-library and installed packages come from
+# the compiled-package importer; module-aware packages (the current module's
+# own source directories and module-cache dependencies) are resolved through
+# bootstrapGoImportDir and type-checked from source, with sub-imports resolved
+# through the same two-step path.  The go/types interaction requires toplevel
+# Go (types.Importer cannot be implemented in MyGO), so it lives in
+# go_ffi_import.go; this wrapper is the only inline Go in this file.
+func bootstrapLoadGoPackage(workspaceRoot: String, path: String) -> Result[BootstrapGoPackageInfo, String]
+  go[Result[BootstrapGoPackageInfo, String]] {
+    code: """
+      func() Result[BootstrapGoPackageInfo, string] {
+        info, err := bootstrapLoadGoPackageGo(workspaceRoot, path)
+        if err != nil { return Err[BootstrapGoPackageInfo, string](err.Error()) }
+        return Ok[BootstrapGoPackageInfo, string](info)
+      }()
+    """
+    in workspaceRoot = workspaceRoot
+    in path = path
+  }
+end

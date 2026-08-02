@@ -7,34 +7,36 @@ import "strings"
 import . "github.com/mygo-lang/mygo/prelude"
 
 func typeFromAST(t ast2.TypeExpr) ast2.MonoType {
-	var __mygo_expr_0 ast2.MonoType
-	if __mygo_match___mygo_expr_4, ok := t.(ast2.TypeExprNamedType); ok {
-		var __mygo_expr_5 ast2.MonoType
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
-			__mygo_expr_5 = ast2.MonoTypeTConCtor(__mygo_match___mygo_expr_4.F0)
-		} else {
-			__mygo_expr_5 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor(__mygo_match___mygo_expr_4.F0)}[0], typeArgsFromAST(__mygo_match___mygo_expr_4.F1))
-		}
-		__mygo_expr_0 = __mygo_expr_5
-	} else {
-		if __mygo_match___mygo_expr_3, ok := t.(ast2.TypeExprFuncType); ok {
-			__mygo_expr_0 = ast2.MonoTypeTFuncCtor(typeArgsFromAST(__mygo_match___mygo_expr_3.F0), &[]ast2.MonoType{typeFromAST(*__mygo_match___mygo_expr_3.F1)}[0])
-		} else {
-			if __mygo_match___mygo_expr_2, ok := t.(ast2.TypeExprTupleType); ok {
-				__mygo_expr_0 = ast2.MonoTypeTTupleCtor(typeArgsFromAST(__mygo_match___mygo_expr_2.F0))
+	for {
+		var __mygo_expr_0 ast2.MonoType
+		if __mygo_match___mygo_expr_4, ok := t.(ast2.TypeExprNamedType); ok {
+			var __mygo_expr_5 ast2.MonoType
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
+				__mygo_expr_5 = ast2.MonoTypeTConCtor(__mygo_match___mygo_expr_4.F0)
 			} else {
-				if _, ok := t.(ast2.TypeExprUnitType); ok {
-					__mygo_expr_0 = ast2.MonoTypeTUnitCtor()
+				__mygo_expr_5 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor(__mygo_match___mygo_expr_4.F0)}[0], typeArgsFromAST(__mygo_match___mygo_expr_4.F1))
+			}
+			__mygo_expr_0 = __mygo_expr_5
+		} else {
+			if __mygo_match___mygo_expr_3, ok := t.(ast2.TypeExprFuncType); ok {
+				__mygo_expr_0 = ast2.MonoTypeTFuncCtor(typeArgsFromAST(__mygo_match___mygo_expr_3.F0), &[]ast2.MonoType{typeFromAST(*__mygo_match___mygo_expr_3.F1)}[0])
+			} else {
+				if __mygo_match___mygo_expr_2, ok := t.(ast2.TypeExprTupleType); ok {
+					__mygo_expr_0 = ast2.MonoTypeTTupleCtor(typeArgsFromAST(__mygo_match___mygo_expr_2.F0))
 				} else {
-					if __mygo_match___mygo_expr_1, ok := t.(ast2.TypeExprInlineGo); ok {
-						__mygo_expr_0 = typeFromAST(*__mygo_match___mygo_expr_1.F0)
+					if _, ok := t.(ast2.TypeExprUnitType); ok {
+						__mygo_expr_0 = ast2.MonoTypeTUnitCtor()
 					} else {
+						if __mygo_match___mygo_expr_1, ok := t.(ast2.TypeExprInlineGo); ok {
+							__mygo_expr_0 = typeFromAST(*__mygo_match___mygo_expr_1.F0)
+						} else {
+						}
 					}
 				}
 			}
 		}
+		return __mygo_expr_0
 	}
-	return __mygo_expr_0
 }
 func TypeFromAST(t ast2.TypeExpr) ast2.MonoType {
 	return typeFromAST(t)
@@ -43,46 +45,48 @@ func TypeFromASTWithParams(t ast2.TypeExpr, params []string) ast2.MonoType {
 	return typeFromASTWithParams(t, params)
 }
 func typeFromASTWithParams(t ast2.TypeExpr, params []string) ast2.MonoType {
-	var __mygo_expr_0 ast2.MonoType
-	if __mygo_match___mygo_expr_4, ok := t.(ast2.TypeExprNamedType); ok {
-		var __mygo_expr_5 ast2.MonoType
-		if __mygo_match___mygo_expr_6, ok := hktParamID(params, __mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, 1).(OptionSome[int]); ok {
-			__mygo_expr_5 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTKVarCtor(__mygo_match___mygo_expr_6.F0)}[0], typeArgsFromASTWithParams(__mygo_match___mygo_expr_4.F1, params))
-		} else {
-			if _, ok := hktParamID(params, __mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, 1).(OptionNone[int]); ok {
-				var __mygo_expr_6 ast2.MonoType
-				if __mygo_match___mygo_expr_7, ok := typeParamID(params, __mygo_match___mygo_expr_4.F0, 1).(OptionSome[int]); ok {
-					__mygo_expr_6 = ast2.MonoTypeTParamCtor(__mygo_match___mygo_expr_7.F0)
-				} else {
-					if _, ok := typeParamID(params, __mygo_match___mygo_expr_4.F0, 1).(OptionNone[int]); ok {
-						__mygo_expr_6 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor(__mygo_match___mygo_expr_4.F0)}[0], typeArgsFromASTWithParams(__mygo_match___mygo_expr_4.F1, params))
-					} else {
-					}
-				}
-				__mygo_expr_5 = __mygo_expr_6
+	for {
+		var __mygo_expr_0 ast2.MonoType
+		if __mygo_match___mygo_expr_4, ok := t.(ast2.TypeExprNamedType); ok {
+			var __mygo_expr_5 ast2.MonoType
+			if __mygo_match___mygo_expr_6, ok := hktParamID(params, __mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, 1).(OptionSome[int]); ok {
+				__mygo_expr_5 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTKVarCtor(__mygo_match___mygo_expr_6.F0)}[0], typeArgsFromASTWithParams(__mygo_match___mygo_expr_4.F1, params))
 			} else {
-			}
-		}
-		__mygo_expr_0 = __mygo_expr_5
-	} else {
-		if __mygo_match___mygo_expr_3, ok := t.(ast2.TypeExprFuncType); ok {
-			__mygo_expr_0 = ast2.MonoTypeTFuncCtor(typeArgsFromASTWithParams(__mygo_match___mygo_expr_3.F0, params), &[]ast2.MonoType{typeFromASTWithParams(*__mygo_match___mygo_expr_3.F1, params)}[0])
-		} else {
-			if __mygo_match___mygo_expr_2, ok := t.(ast2.TypeExprTupleType); ok {
-				__mygo_expr_0 = ast2.MonoTypeTTupleCtor(typeArgsFromASTWithParams(__mygo_match___mygo_expr_2.F0, params))
-			} else {
-				if _, ok := t.(ast2.TypeExprUnitType); ok {
-					__mygo_expr_0 = ast2.MonoTypeTUnitCtor()
-				} else {
-					if __mygo_match___mygo_expr_1, ok := t.(ast2.TypeExprInlineGo); ok {
-						__mygo_expr_0 = typeFromASTWithParams(*__mygo_match___mygo_expr_1.F0, params)
+				if _, ok := hktParamID(params, __mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, 1).(OptionNone[int]); ok {
+					var __mygo_expr_6 ast2.MonoType
+					if __mygo_match___mygo_expr_7, ok := typeParamID(params, __mygo_match___mygo_expr_4.F0, 1).(OptionSome[int]); ok {
+						__mygo_expr_6 = ast2.MonoTypeTParamCtor(__mygo_match___mygo_expr_7.F0)
 					} else {
+						if _, ok := typeParamID(params, __mygo_match___mygo_expr_4.F0, 1).(OptionNone[int]); ok {
+							__mygo_expr_6 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor(__mygo_match___mygo_expr_4.F0)}[0], typeArgsFromASTWithParams(__mygo_match___mygo_expr_4.F1, params))
+						} else {
+						}
 					}
+					__mygo_expr_5 = __mygo_expr_6
+				} else {
 				}
 			}
+			__mygo_expr_0 = __mygo_expr_5
+		} else {
+			if __mygo_match___mygo_expr_3, ok := t.(ast2.TypeExprFuncType); ok {
+				__mygo_expr_0 = ast2.MonoTypeTFuncCtor(typeArgsFromASTWithParams(__mygo_match___mygo_expr_3.F0, params), &[]ast2.MonoType{typeFromASTWithParams(*__mygo_match___mygo_expr_3.F1, params)}[0])
+			} else {
+				if __mygo_match___mygo_expr_2, ok := t.(ast2.TypeExprTupleType); ok {
+					__mygo_expr_0 = ast2.MonoTypeTTupleCtor(typeArgsFromASTWithParams(__mygo_match___mygo_expr_2.F0, params))
+				} else {
+					if _, ok := t.(ast2.TypeExprUnitType); ok {
+						__mygo_expr_0 = ast2.MonoTypeTUnitCtor()
+					} else {
+						if __mygo_match___mygo_expr_1, ok := t.(ast2.TypeExprInlineGo); ok {
+							__mygo_expr_0 = typeFromASTWithParams(*__mygo_match___mygo_expr_1.F0, params)
+						} else {
+						}
+					}
+				}
+			}
 		}
+		return __mygo_expr_0
 	}
-	return __mygo_expr_0
 }
 func hktParamID(params []string, name string, args []ast2.TypeExpr, index int) Option[int] {
 	for {
@@ -129,52 +133,56 @@ func typeExprListString(items []ast2.TypeExpr) string {
 	}
 }
 func typeExprString(t ast2.TypeExpr) string {
-	var __mygo_expr_0 string
-	if __mygo_match___mygo_expr_2, ok := t.(ast2.TypeExprNamedType); ok {
-		var __mygo_expr_3 string
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F1) == 0 {
-			__mygo_expr_3 = __mygo_match___mygo_expr_2.F0
-		} else {
-			__mygo_expr_3 = __mygo_match___mygo_expr_2.F0 + "[" + typeExprListString(__mygo_match___mygo_expr_2.F1) + "]"
-		}
-		__mygo_expr_0 = __mygo_expr_3
-	} else {
-		if _, ok := t.(ast2.TypeExprUnitType); ok {
-			__mygo_expr_0 = "()"
-		} else {
-			if _, ok := t.(ast2.TypeExprTupleType); ok {
-				__mygo_expr_0 = "tuple"
+	for {
+		var __mygo_expr_0 string
+		if __mygo_match___mygo_expr_2, ok := t.(ast2.TypeExprNamedType); ok {
+			var __mygo_expr_3 string
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F1) == 0 {
+				__mygo_expr_3 = __mygo_match___mygo_expr_2.F0
 			} else {
-				if _, ok := t.(ast2.TypeExprFuncType); ok {
-					__mygo_expr_0 = "func"
+				__mygo_expr_3 = __mygo_match___mygo_expr_2.F0 + "[" + typeExprListString(__mygo_match___mygo_expr_2.F1) + "]"
+			}
+			__mygo_expr_0 = __mygo_expr_3
+		} else {
+			if _, ok := t.(ast2.TypeExprUnitType); ok {
+				__mygo_expr_0 = "()"
+			} else {
+				if _, ok := t.(ast2.TypeExprTupleType); ok {
+					__mygo_expr_0 = "tuple"
 				} else {
-					if __mygo_match___mygo_expr_1, ok := t.(ast2.TypeExprInlineGo); ok {
-						__mygo_expr_0 = typeExprString(*__mygo_match___mygo_expr_1.F0)
+					if _, ok := t.(ast2.TypeExprFuncType); ok {
+						__mygo_expr_0 = "func"
 					} else {
+						if __mygo_match___mygo_expr_1, ok := t.(ast2.TypeExprInlineGo); ok {
+							__mygo_expr_0 = typeExprString(*__mygo_match___mygo_expr_1.F0)
+						} else {
+						}
 					}
 				}
 			}
 		}
+		return __mygo_expr_0
 	}
-	return __mygo_expr_0
 }
 func typeArgsFromASTWithParams(items []ast2.TypeExpr, params []string) []ast2.MonoType {
 	return typeArgsFromASTWithParamsInto(items, params, 0, []ast2.MonoType{})
 }
 func typeArgsFromASTWithParamsInto(items []ast2.TypeExpr, params []string, index int, out []ast2.MonoType) []ast2.MonoType {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-		return out
-	} else {
-		var __mygo_expr_0 []ast2.MonoType
-		if __mygo_match___mygo_expr_1, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionSome[ast2.TypeExpr]); ok {
-			__mygo_expr_0 = typeArgsFromASTWithParamsInto(items, params, index+1, MygoIN5SliceM6Append(out, typeFromASTWithParams(__mygo_match___mygo_expr_1.F0, params)))
+	for {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+			return out
 		} else {
-			if _, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionNone[ast2.TypeExpr]); ok {
-				__mygo_expr_0 = typeArgsFromASTWithParamsInto(items, params, index+1, out)
+			var __mygo_expr_0 []ast2.MonoType
+			if __mygo_match___mygo_expr_1, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionSome[ast2.TypeExpr]); ok {
+				__mygo_expr_0 = typeArgsFromASTWithParamsInto(items, params, index+1, MygoIN5SliceM6Append(out, typeFromASTWithParams(__mygo_match___mygo_expr_1.F0, params)))
 			} else {
+				if _, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionNone[ast2.TypeExpr]); ok {
+					__mygo_expr_0 = typeArgsFromASTWithParamsInto(items, params, index+1, out)
+				} else {
+				}
 			}
+			return __mygo_expr_0
 		}
-		return __mygo_expr_0
 	}
 }
 func typeParamID(params []string, name string, index int) Option[int] {
@@ -215,19 +223,21 @@ func typeArgsFromAST(items []ast2.TypeExpr) []ast2.MonoType {
 	return typeArgsFromASTInto(items, 0, []ast2.MonoType{})
 }
 func typeArgsFromASTInto(items []ast2.TypeExpr, index int, out []ast2.MonoType) []ast2.MonoType {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-		return out
-	} else {
-		var __mygo_expr_0 []ast2.MonoType
-		if __mygo_match___mygo_expr_1, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionSome[ast2.TypeExpr]); ok {
-			__mygo_expr_0 = typeArgsFromASTInto(items, index+1, MygoIN5SliceM6Append(out, typeFromAST(__mygo_match___mygo_expr_1.F0)))
+	for {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+			return out
 		} else {
-			if _, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionNone[ast2.TypeExpr]); ok {
-				__mygo_expr_0 = typeArgsFromASTInto(items, index+1, out)
+			var __mygo_expr_0 []ast2.MonoType
+			if __mygo_match___mygo_expr_1, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionSome[ast2.TypeExpr]); ok {
+				__mygo_expr_0 = typeArgsFromASTInto(items, index+1, MygoIN5SliceM6Append(out, typeFromAST(__mygo_match___mygo_expr_1.F0)))
 			} else {
+				if _, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionNone[ast2.TypeExpr]); ok {
+					__mygo_expr_0 = typeArgsFromASTInto(items, index+1, out)
+				} else {
+				}
 			}
+			return __mygo_expr_0
 		}
-		return __mygo_expr_0
 	}
 }
 func substring(s string, st int, en int) Option[string] {
@@ -237,143 +247,145 @@ func typeFromASTInEnv(t ast2.TypeExpr, env Env, state InferState) ast2.MonoType 
 	return typeFromASTInEnvWithParams(t, []string{}, env, state)
 }
 func typeFromASTInEnvWithParams(t ast2.TypeExpr, typeParams []string, env Env, state InferState) ast2.MonoType {
-	var __mygo_expr_0 ast2.MonoType
-	if __mygo_match___mygo_expr_4, ok := t.(ast2.TypeExprNamedType); ok {
-		dotPos := strings.Index(__mygo_match___mygo_expr_4.F0, ".")
-		var __mygo_expr_13 ast2.MonoType
-		if dotPos > 0 {
-			pkgName := MygoIN6OptionM8UnwrapOr(substring(__mygo_match___mygo_expr_4.F0, 0, dotPos), "")
-			memberName := MygoIN6OptionM8UnwrapOr(substring(__mygo_match___mygo_expr_4.F0, dotPos+1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(__mygo_match___mygo_expr_4.F0)), "")
-			resolvedArgs := typeArgsFromASTInEnvWithParamsList(__mygo_match___mygo_expr_4.F1, typeParams, env, state)
-			var __mygo_expr_5 ast2.MonoType
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
-				__mygo_expr_5 = ast2.MonoTypeTConCtor(memberName)
-			} else {
-				__mygo_expr_5 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor(memberName)}[0], resolvedArgs)
-			}
-			inner := __mygo_expr_5
-			var __mygo_expr_6 ast2.MonoType
-			if __mygo_match___mygo_expr_7, ok := envGet(env, pkgName+"."+memberName).(OptionSome[Scheme]); ok {
-				q := instantiateQualified(__mygo_match___mygo_expr_7.F0, state)
-				var __mygo_expr_8 string
-				if __mygo_match___mygo_expr_9, ok := q.Body.(ast2.MonoTypeTQualifiedName); ok {
-					__mygo_expr_8 = __mygo_match___mygo_expr_9.F0
+	for {
+		var __mygo_expr_0 ast2.MonoType
+		if __mygo_match___mygo_expr_4, ok := t.(ast2.TypeExprNamedType); ok {
+			dotPos := strings.Index(__mygo_match___mygo_expr_4.F0, ".")
+			var __mygo_expr_13 ast2.MonoType
+			if dotPos > 0 {
+				pkgName := MygoIN6OptionM8UnwrapOr(substring(__mygo_match___mygo_expr_4.F0, 0, dotPos), "")
+				memberName := MygoIN6OptionM8UnwrapOr(substring(__mygo_match___mygo_expr_4.F0, dotPos+1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(__mygo_match___mygo_expr_4.F0)), "")
+				resolvedArgs := typeArgsFromASTInEnvWithParamsList(__mygo_match___mygo_expr_4.F1, typeParams, env, state)
+				var __mygo_expr_5 ast2.MonoType
+				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
+					__mygo_expr_5 = ast2.MonoTypeTConCtor(memberName)
 				} else {
-					__mygo_expr_8 = ""
+					__mygo_expr_5 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor(memberName)}[0], resolvedArgs)
 				}
-				path := __mygo_expr_8
-				var __mygo_expr_11 ast2.MonoType
-				if path == "" {
-					__mygo_expr_11 = applySchemeTypeArgs(__mygo_match___mygo_expr_7.F0, resolvedArgs)
-				} else {
-					qualifiedCtor_1 := ast2.MonoTypeTQualifiedNameCtor(path, &[]ast2.MonoType{ast2.MonoTypeTConCtor(memberName)}[0])
-					var __mygo_expr_10 ast2.MonoType
-					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
-						__mygo_expr_10 = qualifiedCtor_1
+				inner := __mygo_expr_5
+				var __mygo_expr_6 ast2.MonoType
+				if __mygo_match___mygo_expr_7, ok := envGet(env, pkgName+"."+memberName).(OptionSome[Scheme]); ok {
+					q := instantiateQualified(__mygo_match___mygo_expr_7.F0, state)
+					var __mygo_expr_8 string
+					if __mygo_match___mygo_expr_9, ok := q.Body.(ast2.MonoTypeTQualifiedName); ok {
+						__mygo_expr_8 = __mygo_match___mygo_expr_9.F0
 					} else {
-						__mygo_expr_10 = ast2.MonoTypeTAppCtor(&qualifiedCtor_1, resolvedArgs)
+						__mygo_expr_8 = ""
 					}
-					__mygo_expr_11 = __mygo_expr_10
-				}
-				__mygo_expr_6 = __mygo_expr_11
-			} else {
-				if _, ok := envGet(env, pkgName+"."+memberName).(OptionNone[Scheme]); ok {
-					cachedPath := myGoPackagePath(state.MyGoPackageCache, pkgName)
-					var __mygo_expr_8 ast2.MonoType
-					if cachedPath == pkgName {
-						__mygo_expr_8 = inner
+					path := __mygo_expr_8
+					var __mygo_expr_11 ast2.MonoType
+					if path == "" {
+						__mygo_expr_11 = applySchemeTypeArgs(__mygo_match___mygo_expr_7.F0, resolvedArgs)
 					} else {
-						qualifiedCtor := ast2.MonoTypeTQualifiedNameCtor(cachedPath, &[]ast2.MonoType{ast2.MonoTypeTConCtor(memberName)}[0])
-						var __mygo_expr_7 ast2.MonoType
+						qualifiedCtor_1 := ast2.MonoTypeTQualifiedNameCtor(path, &[]ast2.MonoType{ast2.MonoTypeTConCtor(memberName)}[0])
+						var __mygo_expr_10 ast2.MonoType
 						if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
-							__mygo_expr_7 = qualifiedCtor
+							__mygo_expr_10 = qualifiedCtor_1
 						} else {
-							__mygo_expr_7 = ast2.MonoTypeTAppCtor(&qualifiedCtor, resolvedArgs)
+							__mygo_expr_10 = ast2.MonoTypeTAppCtor(&qualifiedCtor_1, resolvedArgs)
 						}
-						__mygo_expr_8 = __mygo_expr_7
+						__mygo_expr_11 = __mygo_expr_10
 					}
-					__mygo_expr_6 = __mygo_expr_8
+					__mygo_expr_6 = __mygo_expr_11
 				} else {
-				}
-			}
-			__mygo_expr_13 = __mygo_expr_6
-		} else {
-			var __mygo_expr_12 ast2.MonoType
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
-				var __mygo_expr_8 ast2.MonoType
-				if __mygo_match___mygo_expr_9, ok := hktParamID(typeParams, __mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, 1).(OptionSome[int]); ok {
-					__mygo_expr_8 = ast2.MonoTypeTKVarCtor(__mygo_match___mygo_expr_9.F0)
-				} else {
-					if _, ok := hktParamID(typeParams, __mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, 1).(OptionNone[int]); ok {
-						var __mygo_expr_9 ast2.MonoType
-						if __mygo_match___mygo_expr_10, ok := typeParamID(typeParams, __mygo_match___mygo_expr_4.F0, 1).(OptionSome[int]); ok {
-							__mygo_expr_9 = ast2.MonoTypeTParamCtor(__mygo_match___mygo_expr_10.F0)
+					if _, ok := envGet(env, pkgName+"."+memberName).(OptionNone[Scheme]); ok {
+						cachedPath := myGoPackagePath(state.MyGoPackageCache, pkgName)
+						var __mygo_expr_8 ast2.MonoType
+						if cachedPath == pkgName {
+							__mygo_expr_8 = inner
 						} else {
-							if _, ok := typeParamID(typeParams, __mygo_match___mygo_expr_4.F0, 1).(OptionNone[int]); ok {
-								var __mygo_expr_10 ast2.MonoType
-								if __mygo_match___mygo_expr_11, ok := envGet(env, __mygo_match___mygo_expr_4.F0).(OptionSome[Scheme]); ok {
-									q_1 := instantiateQualified(__mygo_match___mygo_expr_11.F0, state)
-									body := q_1.Body
-									__mygo_expr_10 = body
-								} else {
-									if _, ok := envGet(env, __mygo_match___mygo_expr_4.F0).(OptionNone[Scheme]); ok {
-										__mygo_expr_10 = ast2.MonoTypeTConCtor(__mygo_match___mygo_expr_4.F0)
+							qualifiedCtor := ast2.MonoTypeTQualifiedNameCtor(cachedPath, &[]ast2.MonoType{ast2.MonoTypeTConCtor(memberName)}[0])
+							var __mygo_expr_7 ast2.MonoType
+							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
+								__mygo_expr_7 = qualifiedCtor
+							} else {
+								__mygo_expr_7 = ast2.MonoTypeTAppCtor(&qualifiedCtor, resolvedArgs)
+							}
+							__mygo_expr_8 = __mygo_expr_7
+						}
+						__mygo_expr_6 = __mygo_expr_8
+					} else {
+					}
+				}
+				__mygo_expr_13 = __mygo_expr_6
+			} else {
+				var __mygo_expr_12 ast2.MonoType
+				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
+					var __mygo_expr_8 ast2.MonoType
+					if __mygo_match___mygo_expr_9, ok := hktParamID(typeParams, __mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, 1).(OptionSome[int]); ok {
+						__mygo_expr_8 = ast2.MonoTypeTKVarCtor(__mygo_match___mygo_expr_9.F0)
+					} else {
+						if _, ok := hktParamID(typeParams, __mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, 1).(OptionNone[int]); ok {
+							var __mygo_expr_9 ast2.MonoType
+							if __mygo_match___mygo_expr_10, ok := typeParamID(typeParams, __mygo_match___mygo_expr_4.F0, 1).(OptionSome[int]); ok {
+								__mygo_expr_9 = ast2.MonoTypeTParamCtor(__mygo_match___mygo_expr_10.F0)
+							} else {
+								if _, ok := typeParamID(typeParams, __mygo_match___mygo_expr_4.F0, 1).(OptionNone[int]); ok {
+									var __mygo_expr_10 ast2.MonoType
+									if __mygo_match___mygo_expr_11, ok := envGet(env, __mygo_match___mygo_expr_4.F0).(OptionSome[Scheme]); ok {
+										q_1 := instantiateQualified(__mygo_match___mygo_expr_11.F0, state)
+										body := q_1.Body
+										__mygo_expr_10 = body
 									} else {
+										if _, ok := envGet(env, __mygo_match___mygo_expr_4.F0).(OptionNone[Scheme]); ok {
+											__mygo_expr_10 = ast2.MonoTypeTConCtor(__mygo_match___mygo_expr_4.F0)
+										} else {
+										}
 									}
+									__mygo_expr_9 = __mygo_expr_10
+								} else {
 								}
-								__mygo_expr_9 = __mygo_expr_10
-							} else {
 							}
-						}
-						__mygo_expr_8 = __mygo_expr_9
-					} else {
-					}
-				}
-				__mygo_expr_12 = __mygo_expr_8
-			} else {
-				resolvedArgs_1 := typeArgsFromASTInEnvWithParamsList(__mygo_match___mygo_expr_4.F1, typeParams, env, state)
-				var __mygo_expr_10 ast2.MonoType
-				if __mygo_match___mygo_expr_11, ok := hktParamID(typeParams, __mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, 1).(OptionSome[int]); ok {
-					__mygo_expr_10 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTKVarCtor(__mygo_match___mygo_expr_11.F0)}[0], resolvedArgs_1)
-				} else {
-					if _, ok := hktParamID(typeParams, __mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, 1).(OptionNone[int]); ok {
-						var __mygo_expr_11 ast2.MonoType
-						if __mygo_match___mygo_expr_12, ok := envGet(env, __mygo_match___mygo_expr_4.F0).(OptionSome[Scheme]); ok {
-							__mygo_expr_11 = applySchemeTypeArgs(__mygo_match___mygo_expr_12.F0, resolvedArgs_1)
+							__mygo_expr_8 = __mygo_expr_9
 						} else {
-							if _, ok := envGet(env, __mygo_match___mygo_expr_4.F0).(OptionNone[Scheme]); ok {
-								__mygo_expr_11 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor(__mygo_match___mygo_expr_4.F0)}[0], resolvedArgs_1)
-							} else {
-							}
 						}
-						__mygo_expr_10 = __mygo_expr_11
-					} else {
 					}
-				}
-				__mygo_expr_12 = __mygo_expr_10
-			}
-			__mygo_expr_13 = __mygo_expr_12
-		}
-		__mygo_expr_0 = __mygo_expr_13
-	} else {
-		if __mygo_match___mygo_expr_3, ok := t.(ast2.TypeExprFuncType); ok {
-			__mygo_expr_0 = ast2.MonoTypeTFuncCtor(typeArgsFromASTInEnvWithParamsList(__mygo_match___mygo_expr_3.F0, typeParams, env, state), &[]ast2.MonoType{typeFromASTInEnvWithParams(*__mygo_match___mygo_expr_3.F1, typeParams, env, state)}[0])
-		} else {
-			if __mygo_match___mygo_expr_2, ok := t.(ast2.TypeExprTupleType); ok {
-				__mygo_expr_0 = ast2.MonoTypeTTupleCtor(typeArgsFromASTInEnvWithParamsList(__mygo_match___mygo_expr_2.F0, typeParams, env, state))
-			} else {
-				if _, ok := t.(ast2.TypeExprUnitType); ok {
-					__mygo_expr_0 = ast2.MonoTypeTUnitCtor()
+					__mygo_expr_12 = __mygo_expr_8
 				} else {
-					if __mygo_match___mygo_expr_1, ok := t.(ast2.TypeExprInlineGo); ok {
-						__mygo_expr_0 = typeFromASTInEnvWithParams(*__mygo_match___mygo_expr_1.F0, typeParams, env, state)
+					resolvedArgs_1 := typeArgsFromASTInEnvWithParamsList(__mygo_match___mygo_expr_4.F1, typeParams, env, state)
+					var __mygo_expr_10 ast2.MonoType
+					if __mygo_match___mygo_expr_11, ok := hktParamID(typeParams, __mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, 1).(OptionSome[int]); ok {
+						__mygo_expr_10 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTKVarCtor(__mygo_match___mygo_expr_11.F0)}[0], resolvedArgs_1)
 					} else {
+						if _, ok := hktParamID(typeParams, __mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, 1).(OptionNone[int]); ok {
+							var __mygo_expr_11 ast2.MonoType
+							if __mygo_match___mygo_expr_12, ok := envGet(env, __mygo_match___mygo_expr_4.F0).(OptionSome[Scheme]); ok {
+								__mygo_expr_11 = applySchemeTypeArgs(__mygo_match___mygo_expr_12.F0, resolvedArgs_1)
+							} else {
+								if _, ok := envGet(env, __mygo_match___mygo_expr_4.F0).(OptionNone[Scheme]); ok {
+									__mygo_expr_11 = ast2.MonoTypeTAppCtor(&[]ast2.MonoType{ast2.MonoTypeTConCtor(__mygo_match___mygo_expr_4.F0)}[0], resolvedArgs_1)
+								} else {
+								}
+							}
+							__mygo_expr_10 = __mygo_expr_11
+						} else {
+						}
+					}
+					__mygo_expr_12 = __mygo_expr_10
+				}
+				__mygo_expr_13 = __mygo_expr_12
+			}
+			__mygo_expr_0 = __mygo_expr_13
+		} else {
+			if __mygo_match___mygo_expr_3, ok := t.(ast2.TypeExprFuncType); ok {
+				__mygo_expr_0 = ast2.MonoTypeTFuncCtor(typeArgsFromASTInEnvWithParamsList(__mygo_match___mygo_expr_3.F0, typeParams, env, state), &[]ast2.MonoType{typeFromASTInEnvWithParams(*__mygo_match___mygo_expr_3.F1, typeParams, env, state)}[0])
+			} else {
+				if __mygo_match___mygo_expr_2, ok := t.(ast2.TypeExprTupleType); ok {
+					__mygo_expr_0 = ast2.MonoTypeTTupleCtor(typeArgsFromASTInEnvWithParamsList(__mygo_match___mygo_expr_2.F0, typeParams, env, state))
+				} else {
+					if _, ok := t.(ast2.TypeExprUnitType); ok {
+						__mygo_expr_0 = ast2.MonoTypeTUnitCtor()
+					} else {
+						if __mygo_match___mygo_expr_1, ok := t.(ast2.TypeExprInlineGo); ok {
+							__mygo_expr_0 = typeFromASTInEnvWithParams(*__mygo_match___mygo_expr_1.F0, typeParams, env, state)
+						} else {
+						}
 					}
 				}
 			}
 		}
+		return __mygo_expr_0
 	}
-	return __mygo_expr_0
 }
 func applySchemeTypeArgs(scheme Scheme, args []ast2.MonoType) ast2.MonoType {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(scheme.Bound) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args) {
@@ -411,34 +423,20 @@ func typeArgsFromASTInEnvWithParamsList(items []ast2.TypeExpr, typeParams []stri
 	return typeArgsFromASTInEnvWithParamsListInto(items, typeParams, env, state, 0, []ast2.MonoType{})
 }
 func typeArgsFromASTInEnvWithParamsListInto(items []ast2.TypeExpr, typeParams []string, env Env, state InferState, index int, out []ast2.MonoType) []ast2.MonoType {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-		return out
-	} else {
-		var __mygo_expr_0 []ast2.MonoType
-		if __mygo_match___mygo_expr_1, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionSome[ast2.TypeExpr]); ok {
-			__mygo_expr_0 = typeArgsFromASTInEnvWithParamsListInto(items, typeParams, env, state, index+1, MygoIN5SliceM6Append(out, typeFromASTInEnvWithParams(__mygo_match___mygo_expr_1.F0, typeParams, env, state)))
-		} else {
-			if _, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionNone[ast2.TypeExpr]); ok {
-				__mygo_expr_0 = typeArgsFromASTInEnvWithParamsListInto(items, typeParams, env, state, index+1, out)
-			} else {
-			}
-		}
-		return __mygo_expr_0
-	}
-}
-func paramsToTypes(params []ast2.Param) []ast2.MonoType {
-	return paramsToTypesInto(params, 0, []ast2.MonoType{})
-}
-func paramsToTypesInto(params []ast2.Param, index int, out []ast2.MonoType) []ast2.MonoType {
 	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
 			return out
 		} else {
-			__tail_0 := params
-			__tail_1 := index + 1
-			__tail_2 := MygoIN5SliceM6Append(out, typeFromAST(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, index), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()}).Type))
-			params, index, out = __tail_0, __tail_1, __tail_2
-			continue
+			var __mygo_expr_0 []ast2.MonoType
+			if __mygo_match___mygo_expr_1, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionSome[ast2.TypeExpr]); ok {
+				__mygo_expr_0 = typeArgsFromASTInEnvWithParamsListInto(items, typeParams, env, state, index+1, MygoIN5SliceM6Append(out, typeFromASTInEnvWithParams(__mygo_match___mygo_expr_1.F0, typeParams, env, state)))
+			} else {
+				if _, ok := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index).(OptionNone[ast2.TypeExpr]); ok {
+					__mygo_expr_0 = typeArgsFromASTInEnvWithParamsListInto(items, typeParams, env, state, index+1, out)
+				} else {
+				}
+			}
+			return __mygo_expr_0
 		}
 	}
 }
@@ -510,19 +508,6 @@ func envWithParamsAndTypes(env Env, params []ast2.Param, types []ast2.MonoType) 
 			__tail_1 := sliceDrop(params, 1)
 			__tail_2 := sliceDrop(types, 1)
 			env, params, types = __tail_0, __tail_1, __tail_2
-			continue
-		}
-	}
-}
-func envWithParams(env Env, params []ast2.Param) Env {
-	for {
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(params) == 0 {
-			return env
-		} else {
-			p := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExprUnitTypeCtor()})
-			__tail_0 := envPut(env, p.Name, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: typeFromAST(p.Type)})
-			__tail_1 := sliceDrop(params, 1)
-			env, params = __tail_0, __tail_1
 			continue
 		}
 	}
@@ -667,7 +652,7 @@ func registerImplMethods(implTps []string, target ast2.TypeExpr, iface Option[as
 		return registerImplMethodsLoop(implTps, receiverName, methods, env)
 	}
 }
-func implMethodSymbols(receiverName string, implTps []string, methods []ast2.ImplMethod, out []Symbol) []Symbol {
+func implMethodSymbols(receiverName string, implTps []string, methods []ast2.ImplMethod, env Env, out []Symbol) []Symbol {
 	for {
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) == 0 || receiverName == "" {
 			return out
@@ -675,10 +660,10 @@ func implMethodSymbols(receiverName string, implTps []string, methods []ast2.Imp
 			m := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), defaultImplMethod())
 			combined := appendStringSlice(implTps, m.Sig.TypeParams)
 			bound := typeParamIDs(combined, 1)
-			paramTypes := paramsToTypesWithParams(m.Sig.Params, combined)
+			paramTypes := paramsToTypesWithParamsInEnv(m.Sig.Params, combined, env, NewInferState())
 			var __mygo_expr_0 ast2.MonoType
 			if __mygo_match___mygo_expr_1, ok := m.Sig.Ret.(OptionSome[ast2.TypeExpr]); ok {
-				__mygo_expr_0 = typeFromASTWithParams(__mygo_match___mygo_expr_1.F0, combined)
+				__mygo_expr_0 = typeFromASTInEnvWithParams(__mygo_match___mygo_expr_1.F0, combined, env, NewInferState())
 			} else {
 				if _, ok := m.Sig.Ret.(OptionNone[ast2.TypeExpr]); ok {
 					__mygo_expr_0 = ast2.MonoTypeTUnitCtor()
@@ -691,8 +676,9 @@ func implMethodSymbols(receiverName string, implTps []string, methods []ast2.Imp
 			__tail_0 := receiverName
 			__tail_1 := implTps
 			__tail_2 := sliceDrop(methods, 1)
-			__tail_3 := MygoIN5SliceM7Prepend(out, SymbolImplMethodCtor(receiverName, m.Sig.Name, scheme))
-			receiverName, implTps, methods, out = __tail_0, __tail_1, __tail_2, __tail_3
+			__tail_3 := env
+			__tail_4 := MygoIN5SliceM7Prepend(out, SymbolImplMethodCtor(receiverName, m.Sig.Name, scheme))
+			receiverName, implTps, methods, env, out = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 			continue
 		}
 	}
@@ -705,10 +691,10 @@ func registerImplMethodsLoop(implTps []string, receiverName string, methods []as
 			m := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), defaultImplMethod())
 			combined := appendStringSlice(implTps, m.Sig.TypeParams)
 			bound := typeParamIDs(combined, 1)
-			paramTypes := paramsToTypesWithParams(m.Sig.Params, combined)
+			paramTypes := paramsToTypesWithParamsInEnv(m.Sig.Params, combined, env, NewInferState())
 			var __mygo_expr_0 ast2.MonoType
 			if __mygo_match___mygo_expr_1, ok := m.Sig.Ret.(OptionSome[ast2.TypeExpr]); ok {
-				__mygo_expr_0 = typeFromASTWithParams(__mygo_match___mygo_expr_1.F0, combined)
+				__mygo_expr_0 = typeFromASTInEnvWithParams(__mygo_match___mygo_expr_1.F0, combined, env, NewInferState())
 			} else {
 				if _, ok := m.Sig.Ret.(OptionNone[ast2.TypeExpr]); ok {
 					__mygo_expr_0 = ast2.MonoTypeTUnitCtor()

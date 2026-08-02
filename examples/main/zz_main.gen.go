@@ -154,30 +154,30 @@ func demoEnums() string {
 }
 
 type Point struct {
-	X float64
-	Y float64
+	x float64
+	y float64
 }
 type Box[A any] struct {
-	Value A
+	value A
 }
 type Person struct {
-	Name  string
-	Age   int
-	Email string
+	name  string
+	age   int
+	email string
 }
 
 func MygoIN3BoxM5Value[A any](self Box[A]) A {
-	return self.Value
+	return self.value
 }
 func MygoIN3BoxM3Map[A any, B any](self Box[A], f func(A) B) Box[B] {
-	return Box[B]{Value: f(self.Value)}
+	return Box[B]{value: f(self.value)}
 }
 func demoStructs() string {
-	p := Point{X: 3.0, Y: 4.0}
-	box := Box[int]{Value: 42}
-	var box_value int = box.Value
-	person := Person{Name: "Alice", Age: 30, Email: "alice@example.com"}
-	return "Point=(" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(p.X) + "," + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(p.Y) + ")" + ", Box=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(box_value) + ", Person=" + person.Name + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(person.Age)
+	p := Point{x: 3.0, y: 4.0}
+	box := Box[int]{value: 42}
+	var box_value int = box.value
+	person := Person{name: "Alice", age: 30, email: "alice@example.com"}
+	return "Point=(" + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(p.x) + "," + MygoIT8ToStringFN7Float64GN7Float64EM8ToString(p.y) + ")" + ", Box=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(box_value) + ", Person=" + person.name + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(person.age)
 }
 func safeDivide(a float64, b float64) Result[float64, string] {
 	if b == 0.0 {
@@ -343,9 +343,9 @@ func identity[A any](value A) A {
 func demoGenerics() string {
 	int_val := identity[int](100)
 	str_val := identity[string]("hello")
-	boxed_int := Box[int]{Value: 42}
-	boxed_str := Box[string]{Value: "hello"}
-	return "Identity[Int]=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(int_val) + ", Identity[String]=" + str_val + ", BoxedInt=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(boxed_int.Value) + ", BoxedStr=" + MygoIT8ToStringFN6StringGN6StringEM8ToString(boxed_str.Value)
+	boxed_int := Box[int]{value: 42}
+	boxed_str := Box[string]{value: "hello"}
+	return "Identity[Int]=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(int_val) + ", Identity[String]=" + str_val + ", BoxedInt=" + MygoIT8ToStringFN3IntGN3IntEM8ToString(boxed_int.value) + ", BoxedStr=" + MygoIT8ToStringFN6StringGN6StringEM8ToString(boxed_str.value)
 }
 func demo() string {
 	return "=== MyGO Language Demo ===\n\n" + "--- Basic Types ---\n" + demoBasicTypes() + "\n\n" + "--- Enums ---\n" + demoEnums() + "\n\n" + "--- Structs ---\n" + demoStructs() + "\n\n" + "--- Option/Result ---\n" + demoOptionResult() + "\n\n" + "--- Collections ---\n" + demoCollections() + "\n\n" + "--- Functional Programming ---\n" + demoFunctional() + "\n\n" + "--- Control Flow ---\n" + demoControlFlow() + "\n\n" + "--- Mutable Variables ---\n" + demoMutable() + "\n\n" + "--- Generics ---\n" + demoGenerics() + "\n\n" + "=== End of Demo ==="

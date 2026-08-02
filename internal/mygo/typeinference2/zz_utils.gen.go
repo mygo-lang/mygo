@@ -303,49 +303,51 @@ func isKindVarAll(items []ast2.MonoType, id int) bool {
 	}
 }
 func nextFreshVarID(t ast2.MonoType, current int) int {
-	var __mygo_expr_0 int
-	if __mygo_match___mygo_expr_7, ok := t.(ast2.MonoTypeTVar); ok {
-		var __mygo_expr_8 int
-		if __mygo_match___mygo_expr_7.F0 >= current {
-			__mygo_expr_8 = __mygo_match___mygo_expr_7.F0 + 1
-		} else {
-			__mygo_expr_8 = current
-		}
-		__mygo_expr_0 = __mygo_expr_8
-	} else {
-		if __mygo_match___mygo_expr_6, ok := t.(ast2.MonoTypeTKVar); ok {
-			var __mygo_expr_7 int
-			if __mygo_match___mygo_expr_6.F0 >= current {
-				__mygo_expr_7 = __mygo_match___mygo_expr_6.F0 + 1
+	for {
+		var __mygo_expr_0 int
+		if __mygo_match___mygo_expr_7, ok := t.(ast2.MonoTypeTVar); ok {
+			var __mygo_expr_8 int
+			if __mygo_match___mygo_expr_7.F0 >= current {
+				__mygo_expr_8 = __mygo_match___mygo_expr_7.F0 + 1
 			} else {
-				__mygo_expr_7 = current
+				__mygo_expr_8 = current
 			}
-			__mygo_expr_0 = __mygo_expr_7
+			__mygo_expr_0 = __mygo_expr_8
 		} else {
-			if _, ok := t.(ast2.MonoTypeTParam); ok {
-				__mygo_expr_0 = current
+			if __mygo_match___mygo_expr_6, ok := t.(ast2.MonoTypeTKVar); ok {
+				var __mygo_expr_7 int
+				if __mygo_match___mygo_expr_6.F0 >= current {
+					__mygo_expr_7 = __mygo_match___mygo_expr_6.F0 + 1
+				} else {
+					__mygo_expr_7 = current
+				}
+				__mygo_expr_0 = __mygo_expr_7
 			} else {
-				if _, ok := t.(ast2.MonoTypeTCon); ok {
+				if _, ok := t.(ast2.MonoTypeTParam); ok {
 					__mygo_expr_0 = current
 				} else {
-					if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoTypeTApp); ok {
-						__mygo_expr_0 = nextFreshVarIDInAll(__mygo_match___mygo_expr_5.F1, nextFreshVarID(*__mygo_match___mygo_expr_5.F0, current))
+					if _, ok := t.(ast2.MonoTypeTCon); ok {
+						__mygo_expr_0 = current
 					} else {
-						if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoTypeTFunc); ok {
-							__mygo_expr_0 = nextFreshVarID(*__mygo_match___mygo_expr_4.F1, nextFreshVarIDInAll(__mygo_match___mygo_expr_4.F0, current))
+						if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoTypeTApp); ok {
+							__mygo_expr_0 = nextFreshVarIDInAll(__mygo_match___mygo_expr_5.F1, nextFreshVarID(*__mygo_match___mygo_expr_5.F0, current))
 						} else {
-							if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoTypeTVariadic); ok {
-								__mygo_expr_0 = nextFreshVarID(*__mygo_match___mygo_expr_3.F1, nextFreshVarIDInAll(__mygo_match___mygo_expr_3.F0, current))
+							if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoTypeTFunc); ok {
+								__mygo_expr_0 = nextFreshVarID(*__mygo_match___mygo_expr_4.F1, nextFreshVarIDInAll(__mygo_match___mygo_expr_4.F0, current))
 							} else {
-								if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoTypeTTuple); ok {
-									__mygo_expr_0 = nextFreshVarIDInAll(__mygo_match___mygo_expr_2.F0, current)
+								if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoTypeTVariadic); ok {
+									__mygo_expr_0 = nextFreshVarID(*__mygo_match___mygo_expr_3.F1, nextFreshVarIDInAll(__mygo_match___mygo_expr_3.F0, current))
 								} else {
-									if _, ok := t.(ast2.MonoTypeTUnit); ok {
-										__mygo_expr_0 = current
+									if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoTypeTTuple); ok {
+										__mygo_expr_0 = nextFreshVarIDInAll(__mygo_match___mygo_expr_2.F0, current)
 									} else {
-										if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoTypeTQualifiedName); ok {
-											__mygo_expr_0 = nextFreshVarID(*__mygo_match___mygo_expr_1.F1, current)
+										if _, ok := t.(ast2.MonoTypeTUnit); ok {
+											__mygo_expr_0 = current
 										} else {
+											if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoTypeTQualifiedName); ok {
+												__mygo_expr_0 = nextFreshVarID(*__mygo_match___mygo_expr_1.F1, current)
+											} else {
+											}
 										}
 									}
 								}
@@ -355,8 +357,8 @@ func nextFreshVarID(t ast2.MonoType, current int) int {
 				}
 			}
 		}
+		return __mygo_expr_0
 	}
-	return __mygo_expr_0
 }
 func nextFreshVarIDInAll(items []ast2.MonoType, current int) int {
 	for {
@@ -371,49 +373,51 @@ func nextFreshVarIDInAll(items []ast2.MonoType, current int) int {
 	}
 }
 func freeVars(t ast2.MonoType, out []int) []int {
-	var __mygo_expr_0 []int
-	if __mygo_match___mygo_expr_7, ok := t.(ast2.MonoTypeTVar); ok {
-		var __mygo_expr_8 []int
-		if containsInt(out, __mygo_match___mygo_expr_7.F0) {
-			__mygo_expr_8 = out
-		} else {
-			__mygo_expr_8 = MygoIN5SliceM6Append(out, __mygo_match___mygo_expr_7.F0)
-		}
-		__mygo_expr_0 = __mygo_expr_8
-	} else {
-		if __mygo_match___mygo_expr_6, ok := t.(ast2.MonoTypeTKVar); ok {
-			var __mygo_expr_7 []int
-			if containsInt(out, __mygo_match___mygo_expr_6.F0) {
-				__mygo_expr_7 = out
+	for {
+		var __mygo_expr_0 []int
+		if __mygo_match___mygo_expr_7, ok := t.(ast2.MonoTypeTVar); ok {
+			var __mygo_expr_8 []int
+			if containsInt(out, __mygo_match___mygo_expr_7.F0) {
+				__mygo_expr_8 = out
 			} else {
-				__mygo_expr_7 = MygoIN5SliceM6Append(out, __mygo_match___mygo_expr_6.F0)
+				__mygo_expr_8 = MygoIN5SliceM6Append(out, __mygo_match___mygo_expr_7.F0)
 			}
-			__mygo_expr_0 = __mygo_expr_7
+			__mygo_expr_0 = __mygo_expr_8
 		} else {
-			if _, ok := t.(ast2.MonoTypeTParam); ok {
-				__mygo_expr_0 = out
+			if __mygo_match___mygo_expr_6, ok := t.(ast2.MonoTypeTKVar); ok {
+				var __mygo_expr_7 []int
+				if containsInt(out, __mygo_match___mygo_expr_6.F0) {
+					__mygo_expr_7 = out
+				} else {
+					__mygo_expr_7 = MygoIN5SliceM6Append(out, __mygo_match___mygo_expr_6.F0)
+				}
+				__mygo_expr_0 = __mygo_expr_7
 			} else {
-				if _, ok := t.(ast2.MonoTypeTCon); ok {
+				if _, ok := t.(ast2.MonoTypeTParam); ok {
 					__mygo_expr_0 = out
 				} else {
-					if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoTypeTApp); ok {
-						__mygo_expr_0 = freeVarsAll(__mygo_match___mygo_expr_5.F1, freeVars(*__mygo_match___mygo_expr_5.F0, out))
+					if _, ok := t.(ast2.MonoTypeTCon); ok {
+						__mygo_expr_0 = out
 					} else {
-						if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoTypeTFunc); ok {
-							__mygo_expr_0 = freeVarsAll(__mygo_match___mygo_expr_4.F0, freeVars(*__mygo_match___mygo_expr_4.F1, out))
+						if __mygo_match___mygo_expr_5, ok := t.(ast2.MonoTypeTApp); ok {
+							__mygo_expr_0 = freeVarsAll(__mygo_match___mygo_expr_5.F1, freeVars(*__mygo_match___mygo_expr_5.F0, out))
 						} else {
-							if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoTypeTVariadic); ok {
-								__mygo_expr_0 = freeVarsAll(__mygo_match___mygo_expr_3.F0, freeVars(*__mygo_match___mygo_expr_3.F1, out))
+							if __mygo_match___mygo_expr_4, ok := t.(ast2.MonoTypeTFunc); ok {
+								__mygo_expr_0 = freeVarsAll(__mygo_match___mygo_expr_4.F0, freeVars(*__mygo_match___mygo_expr_4.F1, out))
 							} else {
-								if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoTypeTTuple); ok {
-									__mygo_expr_0 = freeVarsAll(__mygo_match___mygo_expr_2.F0, out)
+								if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoTypeTVariadic); ok {
+									__mygo_expr_0 = freeVarsAll(__mygo_match___mygo_expr_3.F0, freeVars(*__mygo_match___mygo_expr_3.F1, out))
 								} else {
-									if _, ok := t.(ast2.MonoTypeTUnit); ok {
-										__mygo_expr_0 = out
+									if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoTypeTTuple); ok {
+										__mygo_expr_0 = freeVarsAll(__mygo_match___mygo_expr_2.F0, out)
 									} else {
-										if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoTypeTQualifiedName); ok {
-											__mygo_expr_0 = freeVars(*__mygo_match___mygo_expr_1.F1, out)
+										if _, ok := t.(ast2.MonoTypeTUnit); ok {
+											__mygo_expr_0 = out
 										} else {
+											if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoTypeTQualifiedName); ok {
+												__mygo_expr_0 = freeVars(*__mygo_match___mygo_expr_1.F1, out)
+											} else {
+											}
 										}
 									}
 								}
@@ -423,8 +427,8 @@ func freeVars(t ast2.MonoType, out []int) []int {
 				}
 			}
 		}
+		return __mygo_expr_0
 	}
-	return __mygo_expr_0
 }
 func freeVarsAll(items []ast2.MonoType, out []int) []int {
 	for {
@@ -446,28 +450,30 @@ func containsInt(items []int, value int) bool {
 	}
 }
 func envFreeVars(env Env, out []int) []int {
-	var __mygo_expr_0 []int
-	if __mygo_match___mygo_expr_1, ok := env.Entry.(OptionSome[EnvEntry]); ok {
-		bodyFree := removeInts(freeVars(__mygo_match___mygo_expr_1.F0.Scheme.Body, []int{}), __mygo_match___mygo_expr_1.F0.Scheme.Bound)
-		entryFree := freeVarsPredicates(__mygo_match___mygo_expr_1.F0.Scheme.Predicates, bodyFree)
-		next := unionInts(out, entryFree)
-		var __mygo_expr_2 []int
-		if __mygo_match___mygo_expr_3, ok := env.Parent.(OptionSome[*Env]); ok {
-			__mygo_expr_2 = envFreeVars(*__mygo_match___mygo_expr_3.F0, next)
+	for {
+		var __mygo_expr_0 []int
+		if __mygo_match___mygo_expr_1, ok := env.Entry.(OptionSome[EnvEntry]); ok {
+			bodyFree := removeInts(freeVars(__mygo_match___mygo_expr_1.F0.Scheme.Body, []int{}), __mygo_match___mygo_expr_1.F0.Scheme.Bound)
+			entryFree := freeVarsPredicates(__mygo_match___mygo_expr_1.F0.Scheme.Predicates, bodyFree)
+			next := unionInts(out, entryFree)
+			var __mygo_expr_2 []int
+			if __mygo_match___mygo_expr_3, ok := env.Parent.(OptionSome[*Env]); ok {
+				__mygo_expr_2 = envFreeVars(*__mygo_match___mygo_expr_3.F0, next)
+			} else {
+				if _, ok := env.Parent.(OptionNone[*Env]); ok {
+					__mygo_expr_2 = next
+				} else {
+				}
+			}
+			__mygo_expr_0 = __mygo_expr_2
 		} else {
-			if _, ok := env.Parent.(OptionNone[*Env]); ok {
-				__mygo_expr_2 = next
+			if _, ok := env.Entry.(OptionNone[EnvEntry]); ok {
+				__mygo_expr_0 = out
 			} else {
 			}
 		}
-		__mygo_expr_0 = __mygo_expr_2
-	} else {
-		if _, ok := env.Entry.(OptionNone[EnvEntry]); ok {
-			__mygo_expr_0 = out
-		} else {
-		}
+		return __mygo_expr_0
 	}
-	return __mygo_expr_0
 }
 func unionInts(left []int, right []int) []int {
 	for {
@@ -553,71 +559,73 @@ func getTCon(typ ast2.MonoType) Option[struct {
 	F0 string
 	F1 []ast2.MonoType
 }] {
-	var __mygo_expr_0 Option[struct {
-		F0 string
-		F1 []ast2.MonoType
-	}]
-	if __mygo_match___mygo_expr_3, ok := typ.(ast2.MonoTypeTCon); ok {
-		__mygo_expr_0 = Some[struct {
+	for {
+		var __mygo_expr_0 Option[struct {
 			F0 string
 			F1 []ast2.MonoType
-		}](struct {
-			F0 string
-			F1 []ast2.MonoType
-		}{F0: __mygo_match___mygo_expr_3.F0, F1: []ast2.MonoType{}})
-	} else {
-		if __mygo_match___mygo_expr_2, ok := typ.(ast2.MonoTypeTApp); ok {
-			var __mygo_expr_3 Option[struct {
+		}]
+		if __mygo_match___mygo_expr_3, ok := typ.(ast2.MonoTypeTCon); ok {
+			__mygo_expr_0 = Some[struct {
 				F0 string
 				F1 []ast2.MonoType
-			}]
-			if __mygo_match___mygo_expr_5, ok := (*__mygo_match___mygo_expr_2.F0).(ast2.MonoTypeTCon); ok {
-				__mygo_expr_3 = Some[struct {
+			}](struct {
+				F0 string
+				F1 []ast2.MonoType
+			}{F0: __mygo_match___mygo_expr_3.F0, F1: []ast2.MonoType{}})
+		} else {
+			if __mygo_match___mygo_expr_2, ok := typ.(ast2.MonoTypeTApp); ok {
+				var __mygo_expr_3 Option[struct {
 					F0 string
 					F1 []ast2.MonoType
-				}](struct {
-					F0 string
-					F1 []ast2.MonoType
-				}{F0: __mygo_match___mygo_expr_5.F0, F1: []ast2.MonoType(__mygo_match___mygo_expr_2.F1)})
-			} else {
-				if __mygo_match___mygo_expr_4, ok := (*__mygo_match___mygo_expr_2.F0).(ast2.MonoTypeTQualifiedName); ok {
-					var __mygo_expr_5 Option[struct {
+				}]
+				if __mygo_match___mygo_expr_5, ok := (*__mygo_match___mygo_expr_2.F0).(ast2.MonoTypeTCon); ok {
+					__mygo_expr_3 = Some[struct {
 						F0 string
 						F1 []ast2.MonoType
-					}]
-					if __mygo_match___mygo_expr_6, ok := (*__mygo_match___mygo_expr_4.F1).(ast2.MonoTypeTCon); ok {
-						__mygo_expr_5 = Some[struct {
+					}](struct {
+						F0 string
+						F1 []ast2.MonoType
+					}{F0: __mygo_match___mygo_expr_5.F0, F1: []ast2.MonoType(__mygo_match___mygo_expr_2.F1)})
+				} else {
+					if __mygo_match___mygo_expr_4, ok := (*__mygo_match___mygo_expr_2.F0).(ast2.MonoTypeTQualifiedName); ok {
+						var __mygo_expr_5 Option[struct {
 							F0 string
 							F1 []ast2.MonoType
-						}](struct {
-							F0 string
-							F1 []ast2.MonoType
-						}{F0: __mygo_match___mygo_expr_6.F0, F1: []ast2.MonoType(__mygo_match___mygo_expr_2.F1)})
+						}]
+						if __mygo_match___mygo_expr_6, ok := (*__mygo_match___mygo_expr_4.F1).(ast2.MonoTypeTCon); ok {
+							__mygo_expr_5 = Some[struct {
+								F0 string
+								F1 []ast2.MonoType
+							}](struct {
+								F0 string
+								F1 []ast2.MonoType
+							}{F0: __mygo_match___mygo_expr_6.F0, F1: []ast2.MonoType(__mygo_match___mygo_expr_2.F1)})
+						} else {
+							__mygo_expr_5 = None[struct {
+								F0 string
+								F1 []ast2.MonoType
+							}]()
+						}
+						__mygo_expr_3 = __mygo_expr_5
 					} else {
-						__mygo_expr_5 = None[struct {
+						__mygo_expr_3 = None[struct {
 							F0 string
 							F1 []ast2.MonoType
 						}]()
 					}
-					__mygo_expr_3 = __mygo_expr_5
+				}
+				__mygo_expr_0 = __mygo_expr_3
+			} else {
+				if __mygo_match___mygo_expr_1, ok := typ.(ast2.MonoTypeTQualifiedName); ok {
+					__mygo_expr_0 = getTCon(*__mygo_match___mygo_expr_1.F1)
 				} else {
-					__mygo_expr_3 = None[struct {
+					__mygo_expr_0 = None[struct {
 						F0 string
 						F1 []ast2.MonoType
 					}]()
 				}
 			}
-			__mygo_expr_0 = __mygo_expr_3
-		} else {
-			if __mygo_match___mygo_expr_1, ok := typ.(ast2.MonoTypeTQualifiedName); ok {
-				__mygo_expr_0 = getTCon(*__mygo_match___mygo_expr_1.F1)
-			} else {
-				__mygo_expr_0 = None[struct {
-					F0 string
-					F1 []ast2.MonoType
-				}]()
-			}
 		}
+		return __mygo_expr_0
 	}
-	return __mygo_expr_0
 }

@@ -510,7 +510,7 @@ func TestImportedGenericTypeAliasExpandsInFunctionParameters(t *testing.T) {
 		Alias: "ps",
 		Path:  "github.com/mygo-lang/mygo/lib/text/parsec",
 		Decls: decls,
-	}, 0, initialEnv())
+	}, 0, initialEnv(), []MyGoPackageInfo{})
 	privateBetween, ok := envGet(privateEnv, "PBetween").(OptionSome[Scheme])
 	if !ok {
 		t.Fatal("PBetween was not seeded in the package-private environment")

@@ -98,33 +98,33 @@ func OperationMultiplyCtor() Operation {
 }
 
 type Person struct {
-	Name string
-	Age  int
+	name string
+	age  int
 }
 type Rectangle struct {
-	Width  float64
-	Height float64
+	width  float64
+	height float64
 }
 type Pair[T any] struct {
-	First  T
-	Second T
+	first  T
+	second T
 }
 type ColorTuple struct {
 }
 type Address struct {
-	Street string
-	City   string
+	street string
+	city   string
 }
 type Contact struct {
-	Name string
+	name string
 	Address
 }
 
 func area(rect Rectangle) float64 {
-	return rect.Width * rect.Height
+	return rect.width * rect.height
 }
 func swapPair[T any](p Pair[T]) Pair[T] {
-	return Pair[T]{First: p.Second, Second: p.First}
+	return Pair[T]{first: p.second, second: p.first}
 }
 func describeColor(color Color) string {
 	var __mygo_expr_0 string
@@ -163,9 +163,9 @@ func describeOption[A any](value Option[A], ToStringFn func(A) string) string {
 }
 func buildList() List[int] {
 	var noneTail Option[List[int]] = None[List[int]]()
-	lastNode := MygoIN4ListM4Cons(3, noneTail)
-	middleNode := MygoIN4ListM4Cons(2, Some[List[int]](lastNode))
-	return MygoIN4ListM4Cons(1, Some[List[int]](middleNode))
+	lastNode := MygoIN4ListM4Cons[int](3, noneTail)
+	middleNode := MygoIN4ListM4Cons[int](2, Some[List[int]](lastNode))
+	return MygoIN4ListM4Cons[int](1, Some[List[int]](middleNode))
 }
 func sumList(lst List[int]) int {
 	var total int = 0
@@ -191,12 +191,12 @@ func demo() string {
 	op := OperationMultiplyCtor()
 	var empty Option[float64] = None[float64]()
 	var someVal Option[int] = Some[int](42)
-	person := Person{Name: "Charlie", Age: 25}
-	rect := Rectangle{Width: 10.0, Height: 5.0}
-	pair := Pair[int]{First: 1, Second: 2}
+	person := Person{name: "Charlie", age: 25}
+	rect := Rectangle{width: 10.0, height: 5.0}
+	pair := Pair[int]{first: 1, second: 2}
 	color := ColorTuple{}
-	addr := Address{Street: "Main St", City: "NYC"}
-	contact := Contact{Name: "Bob"}
+	addr := Address{street: "Main St", city: "NYC"}
+	contact := Contact{name: "Bob"}
 	areaValue := area(rect)
 	swapped := swapPair(pair)
 	bigger := maxInt(3, 5)

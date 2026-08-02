@@ -67,7 +67,21 @@ func containsTailCall(expr: ast2.Expr, name: String) -> Bool
     case IfExpr(_, t, e) => containsTailCall(t, name) || containsTailCall(e, name)
     case BlockExpr(items) =>
       if items.Len() == 0 then false else containsTailCallBlock(items, name) end
+    # Every switch case body sits in tail position of the switch expression,
+    # so a recursive call inside one must trigger the trampoline wrapper too.
+    # Without this the return-site lowering (`isTailSelfCall`) emits a
+    # `continue` while `containsTailCall` — which decides whether the function
+    # body is wrapped in the trampoline `for` loop — reports false, producing
+    # invalid Go ("continue is not in a loop").
+    case SwitchExpr(target, cases, _) => containsTailCall(target, name) || switchCasesContainTailCall(cases, name)
     case _ => false
+  end
+end
+
+func switchCasesContainTailCall(cases: Slice[ast2.SwitchCase], name: String) -> Bool
+  if cases.Len() == 0 then false else
+    let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
+    containsTailCall(current.Body, name) || switchCasesContainTailCall(sliceDrop(cases, 1), name)
   end
 end
 

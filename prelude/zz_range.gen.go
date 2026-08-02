@@ -193,7 +193,7 @@ func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM8Contains(c Range, it
 	var found bool = false
 	if c.Step > 0 {
 		for i < c.End && !found {
-			if EqualsFn(item, i) {
+			if MygoIT2EqFN3IntGN3IntEM6Equals(item, i) {
 				found = true
 			} else {
 			}
@@ -202,7 +202,7 @@ func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM8Contains(c Range, it
 	} else {
 		if c.Step < 0 {
 			for i > c.End && !found {
-				if EqualsFn(item, i) {
+				if MygoIT2EqFN3IntGN3IntEM6Equals(item, i) {
 					found = true
 				} else {
 				}

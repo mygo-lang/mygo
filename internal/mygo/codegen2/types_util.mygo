@@ -2,6 +2,7 @@ package codegen2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import strconv "go:strconv"
 import strings "go:strings"
 
 # types_util.mygo — Go 类型映射和命名规则工具
@@ -36,22 +37,19 @@ func goType(t: ast2.TypeExpr, typeParams: Set[String]) -> String
       else
         "func(" + joinStrings(paramStrs, ", ") + ") " + retStr
       end
+    # Every case below is a plain expression value.  Statement-form `return`
+    # inside a case body would break the self-hosted switch lowering, which
+    # emits both the return and the switch-result assignment.
     case TupleType(elems) =>
       if elems.Len() == 0 then
-        return "struct{}"
-      end
-      let parts = tupleElemsToStrings(elems, typeParams)
-      return "struct { " + joinStrings(parts, "; ") + " }"
-    case UnitType =>
-      return "struct{}"
-    case InlineGo(inner, code) =>
-      if code == "" then
-        return goType(inner.value(), typeParams)
+        "struct{}"
       else
-        return goType(inner.value(), typeParams)
+        let parts = tupleElemsToStrings(elems, typeParams)
+        "struct { " + joinStrings(parts, "; ") + " }"
       end
-    case _ =>
-      return "any"
+    case UnitType => "struct{}"
+    case InlineGo(inner, _) => goType(inner.value(), typeParams)
+    case _ => "any"
   end
 end
 
@@ -98,8 +96,8 @@ end
 
 func hktApplicationAst(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> goast.Expr
   if args.Len() == 0 then goast.TypeName("any") else
-    if args.Len() == 1 then goTypeAst(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), typeParams) else
-      goast.TypeApply(goast.TypeName("HKT"), [goTypeAst(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), typeParams), hktApplicationAst(sliceDrop(args, 1), typeParams)])
+    if args.Len() == 1 then goTypeAst(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams) else
+      goast.TypeApply(goast.TypeName("HKT"), [goTypeAst(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams), hktApplicationAst(sliceDrop(args, 1), typeParams)])
     end
   end
 end
@@ -111,9 +109,9 @@ func hktApplicationArgs(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> 
     "any"
   else
     if args.Len() == 1 then
-      goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), typeParams)
+      goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams)
     else
-      let first = goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), typeParams)
+      let first = goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams)
       "HKT[" + first + ", " + hktApplicationArgs(sliceDrop(args, 1), typeParams) + "]"
     end
   end
@@ -175,7 +173,7 @@ end
 
 func unarySpecialType(args: Slice[ast2.TypeExpr], typeParams: Set[String], prefix: String) -> Option[String]
   if args.Len() == 1 then
-    Some(prefix + goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), typeParams))
+    Some(prefix + goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams))
   else
     None
   end
@@ -183,7 +181,7 @@ end
 
 func mapSpecialType(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> Option[String]
   if args.Len() == 2 then
-    Some("map[" + goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), typeParams) + "]" + goType(args.Get(1).UnwrapOr(ast2.TypeExpr.UnitType()), typeParams))
+    Some("map[" + goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams) + "]" + goType(args.Get(1).UnwrapOr(ast2.TypeExpr.UnitType), typeParams))
   else
     None
   end
@@ -191,7 +189,7 @@ end
 
 func setSpecialType(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> Option[String]
   if args.Len() == 1 then
-    Some("map[" + goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType()), typeParams) + "]struct{}")
+    Some("map[" + goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams) + "]struct{}")
   else
     None
   end
@@ -367,7 +365,7 @@ func mangleInterfaceImplSymbol(ifaceName: String, implType: ast2.TypeExpr, args:
   var out = "MygoIT" + mangleComponent(ifaceName) + "F" + mangleTypeExpr(implType) + "G"
   var i: Int = 0
   while i < args.Len()
-    out = out + mangleTypeExpr(args.Get(i).UnwrapOr(ast2.TypeExpr.UnitType()))
+    out = out + mangleTypeExpr(args.Get(i).UnwrapOr(ast2.TypeExpr.UnitType))
     i = i + 1
   end
   sanitizeIdent(out + "E")
@@ -386,7 +384,7 @@ func mangleTypeExpr(t: ast2.TypeExpr) -> String
         out = out + "G"
         var i: Int = 0
         while i < args.Len()
-          out = out + mangleTypeExpr(args.Get(i).UnwrapOr(ast2.TypeExpr.UnitType()))
+          out = out + mangleTypeExpr(args.Get(i).UnwrapOr(ast2.TypeExpr.UnitType))
           i = i + 1
         end
         out = out + "E"
@@ -396,7 +394,7 @@ func mangleTypeExpr(t: ast2.TypeExpr) -> String
       var out = "F"
       var i: Int = 0
       while i < params.Len()
-        out = out + mangleTypeExpr(params.Get(i).UnwrapOr(ast2.TypeExpr.UnitType()))
+        out = out + mangleTypeExpr(params.Get(i).UnwrapOr(ast2.TypeExpr.UnitType))
         i = i + 1
       end
       out + "R" + mangleTypeExpr(ret.value()) + "E"
@@ -404,7 +402,7 @@ func mangleTypeExpr(t: ast2.TypeExpr) -> String
       var out = "U"
       var i: Int = 0
       while i < items.Len()
-        out = out + mangleTypeExpr(items.Get(i).UnwrapOr(ast2.TypeExpr.UnitType()))
+        out = out + mangleTypeExpr(items.Get(i).UnwrapOr(ast2.TypeExpr.UnitType))
         i = i + 1
       end
       out + "E"
@@ -467,7 +465,7 @@ func typeArgsToStrings(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> S
   if args.Len() == 0 then
     return [] as Slice[String]
   end
-  let head = args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+  let head = args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
   let tail = typeArgsToStrings(sliceDrop(args, 1), typeParams)
   return tail.Prepend(goType(head, typeParams))
 end
@@ -477,7 +475,7 @@ func typeExprsToStrings(items: Slice[ast2.TypeExpr], typeParams: Set[String]) ->
   if items.Len() == 0 then
     return [] as Slice[String]
   end
-  let head = items.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+  let head = items.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
   let tail = typeExprsToStrings(sliceDrop(items, 1), typeParams)
   return tail.Prepend(goType(head, typeParams))
 end
@@ -492,7 +490,7 @@ func tupleElemsToStringsLoop(elems: Slice[ast2.TypeExpr], typeParams: Set[String
   if elems.Len() == 0 then
     [] as Slice[String]
   else
-    let head = elems.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+    let head = elems.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
     let tail = tupleElemsToStringsLoop(sliceDrop(elems, 1), typeParams, index + 1)
     tail.Prepend("F" + index.ToString() + " " + goType(head, typeParams))
   end
@@ -646,7 +644,7 @@ func comparableTypeParamsFromFunc(params: Slice[ast2.Param], ret: Option[ast2.Ty
   var found: Slice[String] = []
   var i: Int = 0
   while i < params.Len()
-    let param = params.Get(i).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType() })
+    let param = params.Get(i).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType })
     let collected = collectComparableParams(param.Type, typeParams)
     found = mergeStrings(found, collected)
     i = i + 1
@@ -664,7 +662,7 @@ func collectComparableParams(typ: ast2.TypeExpr, typeParams: Set[String]) -> Sli
     case NamedType(name, args) =>
       if name == "Map" && args.Len() == 2 then
         # First type arg of Map[K, V] is the key — needs comparable
-        let keyType = args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+        let keyType = args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
         switch keyType
           case NamedType(keyName, keyArgs) =>
             if keyArgs.Len() == 0 && setContainsString(typeParams, keyName) then
@@ -677,7 +675,7 @@ func collectComparableParams(typ: ast2.TypeExpr, typeParams: Set[String]) -> Sli
       else
         if name == "Set" && args.Len() == 1 then
           # Set[A] -> map[A]struct{} requires A to be comparable
-          let elemType = args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+          let elemType = args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
           switch elemType
             case NamedType(elemName, elemArgs) =>
               if elemArgs.Len() == 0 && setContainsString(typeParams, elemName) then
@@ -703,7 +701,7 @@ func collectComparableParamsFromArgs(args: Slice[ast2.TypeExpr], typeParams: Set
   if index >= args.Len() then
     out
   else
-    let arg = args.Get(index).UnwrapOr(ast2.TypeExpr.UnitType())
+    let arg = args.Get(index).UnwrapOr(ast2.TypeExpr.UnitType)
     let collected = collectComparableParams(arg, typeParams)
     collectComparableParamsFromArgs(args, typeParams, index + 1, mergeStrings(out, collected))
   end
@@ -735,21 +733,24 @@ end
 # 辅助函数：类型字符串
 func typeString(t: ast2.TypeExpr) -> String
   switch t
-    case NamedType(name, args) =>
+    case NamedType(name, args) then
       if args.Len() == 0 then
-        return name
+        name
+      else
+        let argStrs = typeArgsToStrings(args, Set.New[String]())
+        name + "[" + joinStrings(argStrs, ", ") + "]"
       end
-      let argStrs = typeArgsToStrings(args, Set.New[String]())
-      return name + "[" + joinStrings(argStrs, ", ") + "]"
-    case FuncType(params, ret) =>
+    end
+    case FuncType(params, ret) then
       let paramStrs = typeExprsToStrings(params, Set.New[String]())
       let retStr = typeString(ret.value())
       if retStr == "" then
-        return "func(" + joinStrings(paramStrs, ", ") + ")"
+        "func(" + joinStrings(paramStrs, ", ") + ")"
+      else
+        "func(" + joinStrings(paramStrs, ", ") + ") " + retStr
       end
-      return "func(" + joinStrings(paramStrs, ", ") + ") " + retStr
-    case _ =>
-      return "any"
+    end
+    case _ => "any"
   end
 end
 
@@ -785,7 +786,7 @@ func mygoTypeExprStrings(items: Slice[ast2.TypeExpr]) -> Slice[String]
   if items.Len() == 0 then
     [] as Slice[String]
   else
-    let head = items.Get(0).UnwrapOr(ast2.TypeExpr.UnitType())
+    let head = items.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
     let tail = mygoTypeExprStrings(sliceDrop(items, 1))
     tail.Prepend(mygoTypeString(head))
   end

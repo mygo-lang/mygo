@@ -379,19 +379,21 @@ func sliceTail[A any](items []A) []A {
 	return sliceTailLoop(items, 1, []A{})
 }
 func sliceTailLoop[A any](items []A, index int, out []A) []A {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-		return out
-	} else {
-		item := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
-		var __mygo_expr_0 []A
-		if __mygo_match___mygo_expr_1, ok := item.(OptionSome[A]); ok {
-			__mygo_expr_0 = sliceTailLoop(items, index+1, MygoIN5SliceM6Append(out, __mygo_match___mygo_expr_1.F0))
+	for {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+			return out
 		} else {
-			if _, ok := item.(OptionNone[A]); ok {
-				__mygo_expr_0 = out
+			item := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+			var __mygo_expr_0 []A
+			if __mygo_match___mygo_expr_1, ok := item.(OptionSome[A]); ok {
+				__mygo_expr_0 = sliceTailLoop(items, index+1, MygoIN5SliceM6Append(out, __mygo_match___mygo_expr_1.F0))
 			} else {
+				if _, ok := item.(OptionNone[A]); ok {
+					__mygo_expr_0 = out
+				} else {
+				}
 			}
+			return __mygo_expr_0
 		}
-		return __mygo_expr_0
 	}
 }

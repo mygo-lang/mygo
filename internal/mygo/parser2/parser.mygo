@@ -966,7 +966,21 @@ func postfixTail(start: ps.State, cur: ps.State, acc: ast2.Expr) -> ps.Reply[ast
   if cast.Ok then
     postfixTail(start, cast.State, exprWithPos(acc.Pos, ast2.ExprKind.TypeAsExpr(acc, cast.Value)))
   else
-    let call = callSuffix()(cur)
+    # A call or type-argument suffix must begin on the same line as the
+    # expression it applies to.  Otherwise a standalone `()` unit statement on
+    # the following line would be swallowed as a postfix call, turning
+    # `recv.Add(x)` followed by `()` into `recv.Add(x)()`.
+    let call = if sameLineSuffix(cur) then
+      callSuffix()(cur)
+    else
+      ps.Reply[(Slice[ast2.TypeExpr], Slice[ast2.Expr])] {
+        Ok: false,
+        Consumed: false,
+        Value: ([] as Slice[ast2.TypeExpr], [] as Slice[ast2.Expr]),
+        State: cur,
+        Error: ps.EmptyError(cur.Position)
+      }
+    end
     if call.Ok then
       postfixTail(start, call.State, exprWithPos(acc.Pos, ast2.ExprKind.CallExpr(acc, call.Value.F0, call.Value.F1)))
     else
@@ -981,6 +995,28 @@ func postfixTail(start: ps.State, cur: ps.State, acc: ast2.Expr) -> ps.Reply[ast
       end
     end
   end
+end
+
+# sameLineSuffix reports whether the next token after `state` begins on the
+# same source line as the token that precedes it.  Every token parser wraps its
+# match in lexeme, whose trailing trivia already consumed any intervening
+# whitespace — including newlines — so scanning backward from state.Index over
+# spaces/tabs reveals a `\n` exactly when the previous token ended on an
+# earlier line.
+func sameLineSuffix(state: ps.State) -> Bool
+  let input = state.Input
+  var result: Bool = true
+  var i: Int = state.Index - 1
+  while i >= 0 && result
+    let ch = input.Slice(i, i + 1).UnwrapOr("")
+    if ch == " " || ch == "\t" then
+      i = i - 1
+    else
+      result = ch != "\n"
+      i = -1
+    end
+  end
+  result
 end
 
 func callSuffix() -> ps.Parser[(Slice[ast2.TypeExpr], Slice[ast2.Expr])]
@@ -1359,7 +1395,12 @@ func stringChar() -> ps.Parser[Rune]
     ps.PThen(ps.PChar('\\'), ps.PChoice([
       ps.PMap(ps.PChar('n'), func(_: Rune) -> Rune '\n' end),
       ps.PMap(ps.PChar('t'), func(_: Rune) -> Rune '\t' end),
+      ps.PMap(ps.PChar('b'), func(_: Rune) -> Rune '\b' end),
+      ps.PMap(ps.PChar('f'), func(_: Rune) -> Rune '\f' end),
+      ps.PMap(ps.PChar('r'), func(_: Rune) -> Rune '\r' end),
+      ps.PMap(ps.PChar('0'), func(_: Rune) -> Rune '\0' end),
       ps.PMap(ps.PChar('"'), func(_: Rune) -> Rune '"' end),
+      ps.PMap(ps.PChar('\''), func(_: Rune) -> Rune '\'' end),
       ps.PMap(ps.PChar('\\'), func(_: Rune) -> Rune '\\' end),
     ])),
     ps.PSatisfy(func(r: Rune) -> Bool

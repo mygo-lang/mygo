@@ -131,7 +131,7 @@ func inferDecl(decl: ast2.Decl, env: Env, fields: Slice[FieldEntry], state: Infe
       Ok(DeclInfer { Env: envPut(env, name, Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TCon(name) }), Fields: fields, State: state, TypedDecl: Some(decl)})
     case ImplDecl(tps, target, iface, methods) =>
       let receiverName = implReceiverName(target, iface)
-      let implSyms = implMethodSymbols(receiverName, tps, methods, [] as Slice[Symbol])
+      let implSyms = implMethodSymbols(receiverName, tps, methods, env, [] as Slice[Symbol])
       let stateWithSyms = InferState {
         FreshVarID: state.FreshVarID,
         PkgInfo: state.PkgInfo,
@@ -212,7 +212,7 @@ func inferFuncDecl(name: String, tps: Slice[String], params: Slice[ast2.Param], 
             TypedDecl: Some(ast2.Decl.FuncDecl(name, tps, params, ret, typedBody, constraints)),
           })
         end
-        case Err(msg) => Err(functionBodyError(body, name, "return type mismatch: " + msg))
+        case Err(msg) => Err(functionBodyError(body, name, "return type mismatch: " + msg + " [inferred=" + MonoStringFull(inferredType) + " ret=" + MonoStringFull(retType) + "]"))
       end
     end
     case Err(msg) => Err(functionBodyError(body, name, msg))
@@ -226,7 +226,7 @@ func inferImplMethods(methods: Slice[ast2.ImplMethod], tps: Slice[String], env: 
     let m = methods.Get(0).UnwrapOr(ast2.ImplMethod { Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: ast2.FuncSig { Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] }, Body: ast2.EmptyExpr() })
     let sig = m.Sig
     let combined = appendStringSlice(tps, sig.TypeParams)
-    let paramTypes = paramsToTypesWithParams(sig.Params, combined)
+    let paramTypes = paramsToTypesWithParamsInEnv(sig.Params, combined, env, state)
     let bodyEnv = envWithTypeParams(envWithParamsAndTypes(env, sig.Params, paramTypes), combined)
     let methodState = withActiveConstraints(state, predicatesFromConstraintsWithParams(sig.Using, combined))
     let inferred = inferExpr(m.Body, bodyEnv, methodState)
@@ -315,17 +315,6 @@ end
 # Convert parser constraints to inference predicates. Resolution is deliberately
 # deferred: a predicate may mention a type parameter and must survive until a
 # call site supplies concrete arguments.
-func predicatesFromConstraints(items: Slice[ast2.Constraint]) -> Slice[Predicate]
-  predicatesFromConstraintsInto(items, 0, [])
-end
-
-func predicatesFromConstraintsInto(items: Slice[ast2.Constraint], index: Int, out: Slice[Predicate]) -> Slice[Predicate]
-  if index >= items.Len() then out else
-    let item = items.Get(index).UnwrapOr(ast2.Constraint { Name: "", BindName: None, Args: [] as Slice[ast2.TypeExpr] })
-    predicatesFromConstraintsInto(items, index + 1, out.Append(Predicate { ClassName: item.Name, Args: typeArgsFromAST(item.Args) }))
-  end
-end
-
 func predicatesFromConstraintsWithParams(items: Slice[ast2.Constraint], params: Slice[String]) -> Slice[Predicate]
   predicatesFromConstraintsWithParamsInto(items, params, 0, [])
 end
@@ -1608,7 +1597,13 @@ func inferOrdinaryCall(callee: ast2.Expr, args: Slice[ast2.Expr], env: Env, stat
               let s2 = unify(applySubst(s1, effective), expected, s1)
               switch s2
                 case Ok(s) => Ok((ExprInferResult { Expr: applyTypedExprSubst(s, typedCallee), Result: InferResult { Type: applySubst(s, ret), Predicates: appendPredicates(cv.Predicates, argsResult.Predicates), Subst: s, State: nextState } }, applyTypedExprsSubst(s, argsResult.Exprs)))
-                case Err(msg) => if isGoPackageCall(callee, state) then Err("Go function argument count mismatch") else Err(msg) end
+                case Err(msg) then
+                  if isGoPackageCall(callee, state) then
+                    Err("Go function argument count mismatch")
+                  else
+                    Err(msg + " [callee=" + MonoStringFull(applySubst(s1, cv.Type)) + " effective=" + MonoStringFull(applySubst(s1, effective)) + " expected=" + MonoStringFull(applySubst(s1, expected)) + "]")
+                  end
+                end
               end
             end
           end

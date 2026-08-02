@@ -2,6 +2,7 @@ package codegen2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import strings "go:strings"
 

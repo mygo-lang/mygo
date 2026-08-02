@@ -12,8 +12,6 @@ import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
 import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 
 import fmt "go:fmt"
-import importer "go:go/importer"
-import gotypes "go:go/types"
 import os "go:os"
 import filepath "go:path/filepath"
 import sort "go:sort"
@@ -144,7 +142,19 @@ func compileDirBootstrapWithCodegen(dir: String, state: BootstrapState, codegen:
 end
 
 func bootstrapAbsolutePath(path: String) -> Result[String, Error]
-  go[Result[String, Error]] { code: "func() Result[string, error] { value, err := filepath.Abs(path); if err != nil { return Err[string, error](err) }; return Ok[string, error](value) }()" in filepath = filepath in path = path }
+  go[Result[String, Error]] {
+    code: """
+      func() Result[string, error] {
+        value, err := filepath.Abs(path)
+        if err != nil {
+          return Err[string, error](err)
+        };
+        return Ok[string, error](value)
+      }()
+    """
+    in filepath = filepath
+    in path = path
+  }
 end
 
 # compileAbsoluteBootstrapDir routes through the cache when the package has
@@ -156,18 +166,31 @@ func compileAbsoluteBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
   if codegen then
     switch state.Compiled.Get(dir)
       case Some(files) => Ok(files)
-      case None =>
+      case None then
         switch state.Compiling.Get(dir)
-          case Some(true) => Err(fmt.Errorf("bootstrap import cycle at %s", dir))
+          case Some(v) then
+            if v then
+              Err(fmt.Errorf("bootstrap import cycle at %s", dir))
+            else
+              compileUncachedBootstrapDir(dir, state, true)
+            end
+          end
           case _ => compileUncachedBootstrapDir(dir, state, true)
         end
+      end
     end
   else
     switch state.SourcesCache.Get(dir)
       case Some(_) => Ok([])
       case None =>
         switch state.Compiling.Get(dir)
-          case Some(true) => Err(fmt.Errorf("bootstrap import cycle at %s", dir))
+          case Some(v) then
+            if v then
+              Err(fmt.Errorf("bootstrap import cycle at %s", dir))
+            else
+              compileUncachedBootstrapDir(dir, state, false)
+            end
+          end
           case _ => compileUncachedBootstrapDir(dir, state, false)
         end
     end
@@ -236,7 +259,7 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                       ()
                     end
                     let ffiStarted = bootstrapTimingStart()
-                    let initialPopulated = bootstrapPopulateGoSignatures(packagesRef)
+                    let initialPopulated = bootstrapPopulateGoSignatures(workspaceRoot, packagesRef)
                     switch initialPopulated
                       case Err(err) then
                         state.Compiling.Delete(dir)
@@ -250,7 +273,7 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                             Err(err)
                           end
                           case Ok(dependencyFiles) then
-                            let finalPopulated = bootstrapPopulateGoSignatures(packagesRef)
+                          let finalPopulated = bootstrapPopulateGoSignatures(workspaceRoot, packagesRef)
                             switch finalPopulated
                               case Err(err) then
                                 state.Compiling.Delete(dir)
@@ -376,7 +399,7 @@ end
 func bootstrapParseSource(path: String, sourcePath: String, source: String) -> Result[BootstrapInputs, String]
   let parsed = parser2.ParseFileAt(sourcePath, source)
   switch parsed
-    case Ok(file) =>
+    case Ok(file) then
       let typed = ast2.AssignFileExprIDs(file)
       # SourceFileInput and PkgDeclSource must use the same identity.  The
       # typed-declaration index is keyed by source path; using only `path`'s
@@ -386,6 +409,7 @@ func bootstrapParseSource(path: String, sourcePath: String, source: String) -> R
       let input = codegen2.SourceFileInput { Path: sourcePath, File: typed }
       let pkg = typeinference2.PkgDeclSource { Path: sourcePath, Decls: typed.Decls }
       Ok(BootstrapInputs { Inputs: [input], Sources: [pkg] })
+    end
     case Err(msg) => Err(msg)
   end
 end
@@ -544,57 +568,34 @@ func bootstrapLoadCachedSources(dir: String, state: BootstrapState) -> Result[Bo
   end
 end
 
-func bootstrapPopulateGoSignatures(packages: Ref[Slice[typeinference2.GoPackageEntry]]) -> Result[(), Error]
-  go[Result[(), Error]] {
-    code: """
-      func() Result[struct{}, error] {
-        goTupleTypes := func(tuple *{gotypes}.Tuple) []string {
-          items := make([]string, tuple.Len())
-          for i := range items {
-            items[i] = {gotypes}.TypeString(tuple.At(i).Type(), func(p *{gotypes}.Package) string { return p.Name() })
-          }
-          return items
-        }
-        for i := range *packages {
-          entry := &(*packages)[i]
-          if !strings.HasPrefix(entry.Path, "go:") { continue }
-          pkg, err := {importer}.Default().Import(strings.TrimPrefix(entry.Path, "go:"))
-          if err != nil { return Err[struct{}, error](err) }
-          scope := pkg.Scope()
-          for _, name := range scope.Names() {
-            switch obj := scope.Lookup(name).(type) {
-            case *{gotypes}.Func:
-              sig, ok := obj.Type().(*{gotypes}.Signature)
-              if !ok { continue }
-              entry.Funcs = append(entry.Funcs, typeinference2.GoFuncSignature{Name: name, Params: goTupleTypes(sig.Params()), Results: goTupleTypes(sig.Results()), Variadic: sig.Variadic()})
-            case *{gotypes}.TypeName:
-              named, ok := obj.Type().(*{gotypes}.Named)
-              if !ok { continue }
-              params := named.TypeParams()
-              paramNames := make([]string, 0, params.Len())
-              for j := 0; j < params.Len(); j++ { paramNames = append(paramNames, params.At(j).Obj().Name()) }
-              methods := []typeinference2.GoFuncSignature{}
-              methodSet := {gotypes}.NewMethodSet({gotypes}.NewPointer(named))
-              for j := 0; j < methodSet.Len(); j++ {
-                fn, ok := methodSet.At(j).Obj().(*{gotypes}.Func)
-                if !ok || !fn.Exported() { continue }
-                sig, ok := fn.Type().(*{gotypes}.Signature)
-                if !ok { continue }
-                methods = append(methods, typeinference2.GoFuncSignature{Name: fn.Name(), Params: goTupleTypes(sig.Params()), Results: goTupleTypes(sig.Results()), Variadic: sig.Variadic()})
-              }
-              entry.Types = append(entry.Types, typeinference2.GoTypeSignature{TypeName: name, TypeParams: paramNames, Methods: methods})
-            }
-          }
-        }
-        return Ok[struct{}, error](struct{}{})
-      }()
-    """
-    in packages = packages
-    in strings = strings
-    in typeinference2 = typeinference2
-    in importer = importer
-    in gotypes = gotypes
-  }
+# Populate go: FFI entries with the exported functions and types of their Go
+# packages.  The heavy lifting lives in bootstrapLoadGoPackage
+# (go_ffi_import.mygo), which falls back to module-aware source loading for
+# packages inside the current module or the module cache.
+func bootstrapPopulateGoSignatures(workspaceRoot: String, packages: Ref[Slice[typeinference2.GoPackageEntry]]) -> Result[(), Error]
+  bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, 0)
+end
+
+func bootstrapPopulateGoSignaturesAt(workspaceRoot: String, packages: Ref[Slice[typeinference2.GoPackageEntry]], index: Int) -> Result[(), Error]
+  if index >= packages.value().Len() then
+    Ok(())
+  else
+    switch packages.value().Get(index)
+      case Some(entry) =>
+        if entry.Path.HasPrefix("go:") then
+          let trimmed = entry.Path.TrimPrefix("go:")
+          switch bootstrapLoadGoPackage(workspaceRoot, trimmed)
+            case Ok(info) =>
+              packages.value().Set(index, typeinference2.GoPackageEntry { Alias: entry.Alias, Path: entry.Path, Funcs: info.Funcs, Types: info.Types })
+              bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, index + 1)
+            case Err(msg) => Err(fmt.Errorf("can't find import %q: %s", trimmed, msg))
+          end
+        else
+          bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, index + 1)
+        end
+      case None => bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, index + 1)
+    end
+  end
 end
 
 func bootstrapCollectGoPackages(sources: Slice[typeinference2.PkgDeclSource]) -> Slice[typeinference2.GoPackageEntry]
