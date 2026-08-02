@@ -566,11 +566,20 @@ func (g *gen) translateExpr(e Expr, ctx *egCtx, expected string) (ast.Expr, stri
 		if bound, ok := ctx.bindings[n.Name]; ok {
 			return ast.NewIdent(bound), ctx.locals[n.Name], nil
 		}
-		// Handle enum variant constructors with no args (e.g., bare `None` as IdentExpr)
+		// Handle enum variant constructors with no args (e.g., bare `None` as
+		// IdentExpr).  None is Option.None: its Go spelling always needs the
+		// element type argument (`None[T]()`).  Prefer the caller-provided
+		// expected type, then the enclosing return type, then the HM-inferred
+		// expression type (mirrors parser2/codegen2's noneTypeArg lookup).
 		if n.Name == "None" {
 			useExpected := expected
 			if useExpected == "" {
 				useExpected = ctx.retType
+			}
+			if base, tas := splitTypeArgs(useExpected); base != "Option" || len(tas) == 0 {
+				if inferred := g.inferredType(n); inferred != "" {
+					useExpected = inferred
+				}
 			}
 			if base, tas := splitTypeArgs(useExpected); base == "Option" && len(tas) > 0 {
 				callee := &ast.IndexExpr{X: ast.NewIdent("None"), Index: g.goTypeExprFromString(tas[0])}

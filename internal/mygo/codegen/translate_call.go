@@ -84,6 +84,176 @@ func (g *gen) importedQualifiedEnumVariant(field *FieldExpr) (string, string, in
 	return "", "", 0, false
 }
 
+// localEnumVariantParamTypes renders the field types of a local enum variant as
+// expected Go type strings for its constructor-call arguments.
+func (g *gen) localEnumVariantParamTypes(field *FieldExpr, enumName string, ctx *egCtx) []string {
+	id, ok := field.Expr.(*IdentExpr)
+	if !ok || g == nil || g.pkg == nil {
+		return nil
+	}
+	enum := g.pkg.Enums[id.Name]
+	if enum == nil {
+		return nil
+	}
+	for _, variant := range enum.Variants {
+		if variant.Name != field.Field {
+			continue
+		}
+		out := make([]string, len(variant.Fields))
+		for i, f := range variant.Fields {
+			out[i] = g.goType(f.Type, ctx.typeParams)
+		}
+		return out
+	}
+	return nil
+}
+
+// importedEnumVariantParamTypes renders the field types of an imported enum
+// variant as expected Go type strings, qualifying bare type names that belong
+// to the imported package with its alias.  This gives `None` arguments their
+// concrete `Option[T]` expected type so they lower to `None[T]()`.
+func (g *gen) importedEnumVariantParamTypes(field *FieldExpr, alias, enumName string, ctx *egCtx) []string {
+	if g == nil || g.typedInfo == nil || g.typedInfo.MyGoPackages == nil {
+		return nil
+	}
+	pkg := g.typedInfo.MyGoPackages[alias]
+	if pkg == nil || pkg.Enums == nil {
+		return nil
+	}
+	enum := pkg.Enums[enumName]
+	if enum == nil {
+		return nil
+	}
+	for _, variant := range enum.Variants {
+		if variant.Name != field.Field {
+			continue
+		}
+		out := make([]string, len(variant.Fields))
+		for i, f := range variant.Fields {
+			out[i] = goTypeStringQualified(f.Type, alias, pkg.Types, ctx.typeParams)
+		}
+		return out
+	}
+	return nil
+}
+
+// goTypeStringQualified renders a TypeExpr as a Go type string, qualifying
+// bare named types that belong to an imported package (pkgTypes) with the
+// package alias.
+func goTypeStringQualified(t TypeExpr, alias string, pkgTypes map[string]struct{}, tp map[string]struct{}) string {
+	switch tt := t.(type) {
+	case *NamedType:
+		if tp != nil {
+			if _, ok := tp[tt.Name]; ok && len(tt.Args) == 0 {
+				return tt.Name
+			}
+		}
+		args := make([]string, len(tt.Args))
+		for i, a := range tt.Args {
+			args[i] = goTypeStringQualified(a, alias, pkgTypes, tp)
+		}
+		switch tt.Name {
+		case "Int":
+			return "int"
+		case "Int8":
+			return "int8"
+		case "Int16":
+			return "int16"
+		case "Int32":
+			return "int32"
+		case "Int64":
+			return "int64"
+		case "UInt":
+			return "uint"
+		case "UInt8":
+			return "uint8"
+		case "UInt16":
+			return "uint16"
+		case "UInt32":
+			return "uint32"
+		case "UInt64":
+			return "uint64"
+		case "Byte":
+			return "byte"
+		case "Rune":
+			return "rune"
+		case "Float32":
+			return "float32"
+		case "Float64":
+			return "float64"
+		case "String":
+			return "string"
+		case "Bool":
+			return "bool"
+		case "Any":
+			return "any"
+		case "Unit":
+			return "struct{}"
+		case "Error":
+			return "error"
+		case "Ref":
+			if len(tt.Args) == 1 {
+				return "*" + args[0]
+			}
+		case "Slice":
+			if len(tt.Args) == 1 {
+				return "[]" + args[0]
+			}
+		case "Map":
+			if len(tt.Args) == 2 {
+				return "map[" + args[0] + "]" + args[1]
+			}
+		case "Set":
+			if len(tt.Args) == 1 {
+				return "map[" + args[0] + "]struct{}"
+			}
+		case "Chan":
+			if len(tt.Args) == 1 {
+				return "chan " + args[0]
+			}
+		case "SendChan":
+			if len(tt.Args) == 1 {
+				return "chan<- " + args[0]
+			}
+		case "RecvChan":
+			if len(tt.Args) == 1 {
+				return "<-chan " + args[0]
+			}
+		}
+		name := tt.Name
+		if !strings.Contains(name, ".") && !isKnownGoOrMyGoType(name) {
+			if _, ok := pkgTypes[name]; ok {
+				name = alias + "." + name
+			}
+		}
+		if len(args) == 0 {
+			return name
+		}
+		return name + "[" + strings.Join(args, ", ") + "]"
+	case *FuncType:
+		params := make([]string, len(tt.Params))
+		for i, p := range tt.Params {
+			params[i] = goTypeStringQualified(p, alias, pkgTypes, tp)
+		}
+		ret := goTypeStringQualified(tt.Ret, alias, pkgTypes, tp)
+		if ret == "" || ret == "struct{}" {
+			return "func(" + strings.Join(params, ", ") + ")"
+		}
+		return "func(" + strings.Join(params, ", ") + ") " + ret
+	case *TupleType:
+		if len(tt.Elems) == 0 {
+			return "struct{}"
+		}
+		parts := make([]string, 0, len(tt.Elems))
+		for i, e := range tt.Elems {
+			parts = append(parts, "F"+strconv.Itoa(i)+" "+goTypeStringQualified(e, alias, pkgTypes, tp))
+		}
+		return "struct { " + strings.Join(parts, "; ") + " }"
+	default:
+		return "any"
+	}
+}
+
 func splitQualifiedName(name string) (string, string, bool) {
 	idx := strings.LastIndexByte(name, '.')
 	if idx <= 0 || idx == len(name)-1 {
@@ -567,7 +737,11 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			}
 		}
 		if alias, enumName, _, ok := g.importedQualifiedEnumVariant(field); ok {
-			args, err := g.translateCallArgs(n.Args, ctx)
+			// Propagate the variant's field types as expected argument types so
+			// polymorphic zero-argument constructors such as `None` lower to
+			// `None[T]()` (Option.None) instead of a bare, uncompilable
+			// identifier.  Mirrors parser2/codegen2's noneTypeArg handling.
+			args, err := g.translateCallArgsExpected(n.Args, g.importedEnumVariantParamTypes(field, alias, enumName, ctx), ctx)
 			if err != nil {
 				return nil, "", err
 			}
@@ -578,7 +752,7 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 			return &ast.CallExpr{Fun: ast.NewIdent(alias + "." + enumConstructorGoName(enumName, field.Field)), Args: args}, typ, nil
 		}
 		if enumName, _, ok := g.qualifiedEnumVariant(field); ok {
-			args, err := g.translateCallArgs(n.Args, ctx)
+			args, err := g.translateCallArgsExpected(n.Args, g.localEnumVariantParamTypes(field, enumName, ctx), ctx)
 			if err != nil {
 				return nil, "", err
 			}
