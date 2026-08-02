@@ -726,6 +726,11 @@ func Selector(x ast.Expr, sel string) ast.Expr {
 	return &ast.SelectorExpr{X: x, Sel: ast.NewIdent(sel)}
 }
 
+// Paren wraps an expression in parentheses.  Used when embedding an inline-Go
+// expression into a multi-value assignment so the whole fragment is treated as
+// a single operand.
+func Paren(expr ast.Expr) ast.Expr { return &ast.ParenExpr{X: expr} }
+
 func Call(fun ast.Expr, args []ast.Expr) ast.Expr {
 	return &ast.CallExpr{Fun: fun, Args: args}
 }

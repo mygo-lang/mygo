@@ -896,7 +896,7 @@ func inferExprInner(expr ast2.Expr, env Env, state InferState) Result[ExprInferR
 																						__mygo_expr_0 = __mygo_expr_3
 																					} else {
 																						if __mygo_match___mygo_expr_1, ok := expr.Kind.(ast2.ExprKindInlineGoExpr); ok {
-																							mono := typeFromASTInEnv(*__mygo_match___mygo_expr_1.F0, env, state)
+																							mono := inlineGoResultMono(typeFromASTInEnv(*__mygo_match___mygo_expr_1.F0, env, state))
 																							__mygo_expr_0 = Ok[ExprInferResult, string](mkTyped(expr, mono, state, None[ast2.ExprKind]()))
 																						} else {
 																						}
@@ -3241,10 +3241,20 @@ func inferBlockTupleLet(names []string, value ast2.Expr, env Env, state InferSta
 }
 func ffiRawTupleResultType(expr ast2.Expr, state InferState) Option[ast2.MonoType] {
 	var __mygo_expr_0 Option[ast2.MonoType]
-	if __mygo_match___mygo_expr_1, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
-		__mygo_expr_0 = ffiRawTupleResultTypeFromCallee(__mygo_match___mygo_expr_1.F0, state.GoPackages)
+	if __mygo_match___mygo_expr_2, ok := expr.Kind.(ast2.ExprKindCallExpr); ok {
+		__mygo_expr_0 = ffiRawTupleResultTypeFromCallee(__mygo_match___mygo_expr_2.F0, state.GoPackages)
 	} else {
-		__mygo_expr_0 = None[ast2.MonoType]()
+		if __mygo_match___mygo_expr_1, ok := expr.Kind.(ast2.ExprKindInlineGoExpr); ok {
+			var __mygo_expr_2 Option[ast2.MonoType]
+			if _, ok := (*__mygo_match___mygo_expr_1.F0).(ast2.TypeExprTupleType); ok {
+				__mygo_expr_2 = Some[ast2.MonoType](typeFromAST(*__mygo_match___mygo_expr_1.F0))
+			} else {
+				__mygo_expr_2 = None[ast2.MonoType]()
+			}
+			__mygo_expr_0 = __mygo_expr_2
+		} else {
+			__mygo_expr_0 = None[ast2.MonoType]()
+		}
 	}
 	return __mygo_expr_0
 }

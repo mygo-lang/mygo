@@ -1465,6 +1465,21 @@ func goSignatureResultShape(results []ast2.MonoType) ast2.MonoType {
 		}
 	}
 }
+func inlineGoResultMono(t ast2.MonoType) ast2.MonoType {
+	var __mygo_expr_0 ast2.MonoType
+	if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoTypeTTuple); ok {
+		var __mygo_expr_2 ast2.MonoType
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0) == 2 {
+			__mygo_expr_2 = goSignatureResultShape(__mygo_match___mygo_expr_1.F0)
+		} else {
+			__mygo_expr_2 = t
+		}
+		__mygo_expr_0 = __mygo_expr_2
+	} else {
+		__mygo_expr_0 = t
+	}
+	return __mygo_expr_0
+}
 func goVariadicParamTypes(names []string) []ast2.MonoType {
 	mapped := goSignatureTypesInto(names, 0, emptyGoTypes())
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(mapped) == 0 {

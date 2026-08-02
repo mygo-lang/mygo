@@ -1257,6 +1257,24 @@ func goSignatureResultShape(results: Slice[ast2.MonoType]) -> ast2.MonoType
   end
 end
 
+# Inline Go blocks declare their native Go result shape (`go[(T, error)]`).
+# Like Go FFI signatures, a 2-tuple result follows the boundary convention:
+# (T, error) -> Result[T, error] and (T, bool) -> Option[T].  This makes a
+# tuple-typed inline Go expression interchangeable with an equivalent Go FFI
+# call at the type level; the raw tuple shape remains available to tuple
+# destructuring via ffiRawTupleResultType.
+func inlineGoResultMono(t: ast2.MonoType) -> ast2.MonoType
+  switch t
+    case TTuple(items) =>
+      if items.Len() == 2 then
+        goSignatureResultShape(items)
+      else
+        t
+      end
+    case _ => t
+  end
+end
+
 # goVariadicParamTypes maps a variadic Go function's parameter strings to the
 # element types MyGO callers unify against.  go/types reports the trailing
 # parameter as the slice type (`...any` -> `[]any`); TVariadic carries the

@@ -94,13 +94,22 @@ func translateExprAstExpectedInner(expr ast2.Expr, ctx *egCtx, expected ast2.Mon
 									__mygo_expr_0 = Ok[AstExprResult, string](newAstExprResult(goast.Unit()))
 								} else {
 									if __mygo_match___mygo_expr_15, ok := expr.Kind.(ast2.ExprKindInlineGoExpr); ok {
-										parts := translateInlineOperands(__mygo_match___mygo_expr_15.F2, __mygo_match___mygo_expr_15.F3, ctx, 0, []string{}, []string{}, []string{}, []string{}, []goast.Stmt{})
 										var __mygo_expr_16 Result[AstExprResult, string]
-										if __mygo_match___mygo_expr_18, ok := parts.(ResultErr[AstInlineOperands, string]); ok {
-											__mygo_expr_16 = Err[AstExprResult, string](__mygo_match___mygo_expr_18.F0)
+										if __mygo_match___mygo_expr_17, ok := inlineGoBoundaryKind(*__mygo_match___mygo_expr_15.F0, expected).(OptionSome[string]); ok {
+											__mygo_expr_16 = translateInlineGoBoundary(__mygo_match___mygo_expr_17.F0, __mygo_match___mygo_expr_15.F1, __mygo_match___mygo_expr_15.F2, __mygo_match___mygo_expr_15.F3, expected, ctx)
 										} else {
-											if __mygo_match___mygo_expr_17, ok := parts.(ResultOk[AstInlineOperands, string]); ok {
-												__mygo_expr_16 = Ok[AstExprResult, string](astExprWithPre(goast.MustInlineGoExprWithOperands(__mygo_match___mygo_expr_15.F1, __mygo_match___mygo_expr_17.F0.ValueNames, __mygo_match___mygo_expr_17.F0.ValueSources, __mygo_match___mygo_expr_17.F0.TypeNames, __mygo_match___mygo_expr_17.F0.TypeSources), __mygo_match___mygo_expr_17.F0.Pre))
+											if _, ok := inlineGoBoundaryKind(*__mygo_match___mygo_expr_15.F0, expected).(OptionNone[string]); ok {
+												parts := translateInlineOperands(__mygo_match___mygo_expr_15.F2, __mygo_match___mygo_expr_15.F3, ctx, 0, []string{}, []string{}, []string{}, []string{}, []goast.Stmt{})
+												var __mygo_expr_17 Result[AstExprResult, string]
+												if __mygo_match___mygo_expr_19, ok := parts.(ResultErr[AstInlineOperands, string]); ok {
+													__mygo_expr_17 = Err[AstExprResult, string](__mygo_match___mygo_expr_19.F0)
+												} else {
+													if __mygo_match___mygo_expr_18, ok := parts.(ResultOk[AstInlineOperands, string]); ok {
+														__mygo_expr_17 = Ok[AstExprResult, string](astExprWithPre(goast.MustInlineGoExprWithOperands(__mygo_match___mygo_expr_15.F1, __mygo_match___mygo_expr_18.F0.ValueNames, __mygo_match___mygo_expr_18.F0.ValueSources, __mygo_match___mygo_expr_18.F0.TypeNames, __mygo_match___mygo_expr_18.F0.TypeSources), __mygo_match___mygo_expr_18.F0.Pre))
+													} else {
+													}
+												}
+												__mygo_expr_16 = __mygo_expr_17
 											} else {
 											}
 										}
@@ -2967,6 +2976,161 @@ func translateFFIResultCall(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []a
 			__mygo_expr_0 = __mygo_expr_2
 		} else {
 		}
+	}
+	return __mygo_expr_0
+}
+func inlineGoBoundaryKind(declared ast2.TypeExpr, expected ast2.MonoType) Option[string] {
+	var __mygo_expr_0 Option[string]
+	if __mygo_match___mygo_expr_1, ok := declared.(ast2.TypeExprTupleType); ok {
+		var __mygo_expr_5 Option[string]
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0) == 2 {
+			second := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0, 1), ast2.TypeExprUnitTypeCtor())
+			var __mygo_expr_4 Option[string]
+			if isBoolTypeExpr(second) {
+				var __mygo_expr_2 Option[string]
+				if expectedKindIs(expected, "Option") {
+					__mygo_expr_2 = Some[string]("Option")
+				} else {
+					__mygo_expr_2 = None[string]()
+				}
+				__mygo_expr_4 = __mygo_expr_2
+			} else {
+				var __mygo_expr_3 Option[string]
+				if expectedKindIs(expected, "Result") {
+					__mygo_expr_3 = Some[string]("Result")
+				} else {
+					__mygo_expr_3 = None[string]()
+				}
+				__mygo_expr_4 = __mygo_expr_3
+			}
+			__mygo_expr_5 = __mygo_expr_4
+		} else {
+			__mygo_expr_5 = None[string]()
+		}
+		__mygo_expr_0 = __mygo_expr_5
+	} else {
+		__mygo_expr_0 = None[string]()
+	}
+	return __mygo_expr_0
+}
+func isBoolTypeExpr(t ast2.TypeExpr) bool {
+	var __mygo_expr_0 bool
+	if __mygo_match___mygo_expr_1, ok := t.(ast2.TypeExprNamedType); ok {
+		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0 == "Bool"
+	} else {
+		__mygo_expr_0 = false
+	}
+	return __mygo_expr_0
+}
+func expectedKindIs(expected ast2.MonoType, kind string) bool {
+	var __mygo_expr_0 bool
+	if __mygo_match___mygo_expr_1, ok := expected.(ast2.MonoTypeTApp); ok {
+		var __mygo_expr_4 bool
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F1) > 0 {
+			var __mygo_expr_2 bool
+			if __mygo_match___mygo_expr_3, ok := (*__mygo_match___mygo_expr_1.F0).(ast2.MonoTypeTCon); ok {
+				__mygo_expr_2 = __mygo_match___mygo_expr_3.F0 == kind
+			} else {
+				__mygo_expr_2 = false
+			}
+			__mygo_expr_4 = __mygo_expr_2
+		} else {
+			__mygo_expr_4 = false
+		}
+		__mygo_expr_0 = __mygo_expr_4
+	} else {
+		__mygo_expr_0 = false
+	}
+	return __mygo_expr_0
+}
+func translateInlineGoBoundary(kind string, body string, values []ast2.GoOperand, types []ast2.GoTypeOperand, expected ast2.MonoType, ctx *egCtx) Result[AstExprResult, string] {
+	parts := translateInlineOperands(values, types, ctx, 0, []string{}, []string{}, []string{}, []string{}, []goast.Stmt{})
+	var __mygo_expr_0 Result[AstExprResult, string]
+	if __mygo_match___mygo_expr_2, ok := parts.(ResultErr[AstInlineOperands, string]); ok {
+		__mygo_expr_0 = Err[AstExprResult, string](__mygo_match___mygo_expr_2.F0)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := parts.(ResultOk[AstInlineOperands, string]); ok {
+			raw := goast.MustInlineGoExprWithOperands(body, __mygo_match___mygo_expr_1.F0.ValueNames, __mygo_match___mygo_expr_1.F0.ValueSources, __mygo_match___mygo_expr_1.F0.TypeNames, __mygo_match___mygo_expr_1.F0.TypeSources)
+			resultName := ctxFreshExprTemp(ctx)
+			var __mygo_expr_2 Result[AstExprResult, string]
+			if kind == "Result" {
+				resultType := monoTypeToGoStrWithParamsIn(expected, ctx.typeParamNames, ctx.pathAliases)
+				inner := resultBoundaryArgs(expected, ctx)
+				valName := ctxFreshExprTemp(ctx)
+				errName := ctxFreshExprTemp(ctx)
+				define := astSingleStmt(goast.Assign([]goast.Expr{goast.Ident(valName), goast.Ident(errName)}, ":=", []goast.Expr{goast.Paren(raw)}))
+				errCall := goast.GenericCall(goast.Ident("Err"), inner, []goast.Expr{goast.Ident(errName)})
+				okCall := goast.GenericCall(goast.Ident("Ok"), inner, []goast.Expr{goast.Ident(valName)})
+				failed := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(errCall)))
+				succeeded := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(okCall)))
+				decl := astSingleStmt(goast.DeclareFromType(resultName, resultType))
+				branch := astSingleStmt(goast.If(goast.Binary(goast.Ident(errName), "!=", goast.Ident("nil")), failed, succeeded))
+				pre := goast.AppendStmts(goast.AppendStmts(decl, define), branch)
+				__mygo_expr_2 = Ok[AstExprResult, string](astExprWithPre(goast.Ident(resultName), goast.AppendStmts(__mygo_match___mygo_expr_1.F0.Pre, pre)))
+			} else {
+				if kind == "Option" {
+					optionType := monoTypeToGoStrWithParamsIn(expected, ctx.typeParamNames, ctx.pathAliases)
+					inner_1 := optionBoundaryArgs(expected, ctx)
+					valName_1 := ctxFreshExprTemp(ctx)
+					okName := ctxFreshExprTemp(ctx)
+					define_1 := astSingleStmt(goast.Assign([]goast.Expr{goast.Ident(valName_1), goast.Ident(okName)}, ":=", []goast.Expr{goast.Paren(raw)}))
+					someCall := goast.GenericCall(goast.Ident("Some"), inner_1, []goast.Expr{goast.Ident(valName_1)})
+					noneCall := goast.GenericCall(goast.Ident("None"), inner_1, []goast.Expr{})
+					failed_1 := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(noneCall)))
+					succeeded_1 := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(someCall)))
+					decl_1 := astSingleStmt(goast.DeclareFromType(resultName, optionType))
+					branch_1 := astSingleStmt(goast.If(goast.Ident(okName), succeeded_1, failed_1))
+					pre_1 := goast.AppendStmts(goast.AppendStmts(decl_1, define_1), branch_1)
+					__mygo_expr_2 = Ok[AstExprResult, string](astExprWithPre(goast.Ident(resultName), goast.AppendStmts(__mygo_match___mygo_expr_1.F0.Pre, pre_1)))
+				} else {
+					__mygo_expr_2 = Ok[AstExprResult, string](astExprWithPre(goast.Unit(), []goast.Stmt{}))
+				}
+			}
+			__mygo_expr_0 = __mygo_expr_2
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func resultBoundaryArgs(expected ast2.MonoType, ctx *egCtx) []string {
+	var __mygo_expr_0 []string
+	if __mygo_match___mygo_expr_1, ok := expected.(ast2.MonoTypeTApp); ok {
+		var __mygo_expr_2 []string
+		if __mygo_match___mygo_expr_3, ok := (*__mygo_match___mygo_expr_1.F0).(ast2.MonoTypeTCon); ok {
+			var __mygo_expr_4 []string
+			if __mygo_match___mygo_expr_3.F0 == "Result" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F1) == 2 {
+				__mygo_expr_4 = []string{monoTypeToGoStrWithParamsIn(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F1, 0), ast2.MonoTypeTUnitCtor()), ctx.typeParamNames, ctx.pathAliases), monoTypeToGoStrWithParamsIn(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F1, 1), ast2.MonoTypeTUnitCtor()), ctx.typeParamNames, ctx.pathAliases)}
+			} else {
+				__mygo_expr_4 = []string{"any", "error"}
+			}
+			__mygo_expr_2 = __mygo_expr_4
+		} else {
+			__mygo_expr_2 = []string{"any", "error"}
+		}
+		__mygo_expr_0 = __mygo_expr_2
+	} else {
+		__mygo_expr_0 = []string{"any", "error"}
+	}
+	return __mygo_expr_0
+}
+func optionBoundaryArgs(expected ast2.MonoType, ctx *egCtx) []string {
+	var __mygo_expr_0 []string
+	if __mygo_match___mygo_expr_1, ok := expected.(ast2.MonoTypeTApp); ok {
+		var __mygo_expr_2 []string
+		if __mygo_match___mygo_expr_3, ok := (*__mygo_match___mygo_expr_1.F0).(ast2.MonoTypeTCon); ok {
+			var __mygo_expr_4 []string
+			if __mygo_match___mygo_expr_3.F0 == "Option" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F1) == 1 {
+				__mygo_expr_4 = []string{monoTypeToGoStrWithParamsIn(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F1, 0), ast2.MonoTypeTUnitCtor()), ctx.typeParamNames, ctx.pathAliases)}
+			} else {
+				__mygo_expr_4 = []string{"any"}
+			}
+			__mygo_expr_2 = __mygo_expr_4
+		} else {
+			__mygo_expr_2 = []string{"any"}
+		}
+		__mygo_expr_0 = __mygo_expr_2
+	} else {
+		__mygo_expr_0 = []string{"any"}
 	}
 	return __mygo_expr_0
 }

@@ -57,18 +57,22 @@ func translateAstLeadingStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[g
             case Err(msg) => Err(msg)
           end
         end
-        case _ then
-          let value = translateExprAst(expr, ctx)
-          switch value
-            case Ok(v) =>
-              if goast.IsUnitExpr(v.Expr) then
-                Ok(v.Pre)
-              else
-                Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.ExpressionStmt(v.Expr))))
+        case CallExpr(fn, typeArgs, args) then
+          # A Go FFI call in statement position discards its Result/Option
+          # decoding entirely: Go permits a call statement to drop every
+          # return value.  Lowering it through translateExprAst would emit a
+          # temp assignment plus a bare identifier statement, which Go rejects
+          # as an unused variable.
+          switch ffiResultSignature(fn, ctx)
+            case Some(_) => translateFFIDiscardStmt(fn, typeArgs, args, ctx)
+            case None =>
+              switch ffiOptionSignature(fn, ctx)
+                case Some(_) => translateFFIDiscardStmt(fn, typeArgs, args, ctx)
+                case None => translateLeadingExprStmt(expr, ctx)
               end
-            case Err(msg) => Err(msg)
           end
         end
+        case _ => translateLeadingExprStmt(expr, ctx)
       end
     end
     case LetStmt(bind) => translateAstBinding(bind, ctx)
@@ -100,6 +104,35 @@ func translateAstLeadingStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[g
   end
 end
 
+# translateLeadingExprStmt lowers an arbitrary expression appearing as a
+# statement: side effects from its pre-statements run, and a non-unit value is
+# discarded with an expression statement.
+func translateLeadingExprStmt(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+  let value = translateExprAst(expr, ctx)
+  switch value
+    case Ok(v) then
+      if goast.IsUnitExpr(v.Expr) then
+        Ok(v.Pre)
+      else
+        Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.ExpressionStmt(v.Expr))))
+      end
+    end
+    case Err(msg) => Err(msg)
+  end
+end
+
+# A Go FFI call in statement position emits the raw call and discards every
+# return value (Go allows call statements to drop results).  This avoids
+# building a Result/Option temp that a bare identifier statement would leave
+# unused.
+func translateFFIDiscardStmt(fn: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+  let raw = translatePlainCallAstExpectedOrdinary(fn, typeArgs, args, ctx, ast2.MonoType.TUnit)
+  switch raw
+    case Err(msg) => Err(msg)
+    case Ok(v) => Ok(goast.AppendStmts(v.Pre, astSingleStmt(goast.ExpressionStmt(v.Expr))))
+  end
+end
+
 # Tuple destructuring lowers to a sequence of individual let-bindings.  The
 # inferred types in TypedInfo do not yet expose tuple element types per
 # source position, so we conservatively introduce each bound name with the
@@ -108,9 +141,34 @@ end
 # use `let (a, b) = expr.Get(0).UnwrapOr((EmptyExpr(), EmptyExpr()))` in
 # their helper functions.
 func translateAstTupleLetStmt(names: Slice[String], value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
-  switch ffiMultiResultSignature(value, ctx)
-    case Some(sig) => translateFFITupleLetStmt(names, value, sig, ctx)
-    case None => translateAstTupleLetStmtOrdinary(names, value, ctx)
+  switch value.Kind
+    # A tuple-typed inline Go block keeps its raw multiple-return form under
+    # tuple destructuring, exactly like a Go FFI multi-result call.
+    case InlineGoExpr(typ, body, values, types) =>
+      switch typ.value()
+        case TupleType(_) => translateInlineGoTupleLet(names, body, values, types, value, ctx)
+        case _ => translateAstTupleLetStmtOrdinary(names, value, ctx)
+      end
+    case _ =>
+      switch ffiMultiResultSignature(value, ctx)
+        case Some(sig) => translateFFITupleLetStmt(names, value, sig, ctx)
+        case None => translateAstTupleLetStmtOrdinary(names, value, ctx)
+      end
+  end
+end
+
+# `let (a, b) = go[(T, error)] {...}` lowers to `a, b := <inline go expr>`,
+# bypassing the Result/Option boundary wrapping.
+func translateInlineGoTupleLet(names: Slice[String], body: String, values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+  let parts = translateInlineOperands(values, types, ctx, 0, [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[goast.Stmt])
+  switch parts
+    case Err(msg) => Err(msg)
+    case Ok(p) =>
+      let raw = goast.MustInlineGoExprWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)
+      let goNames = tupleBindingNames(names, ctx, 0, [] as Slice[goast.Expr])
+      let tupleMono = value.Type.UnwrapOr(ast2.MonoType.TUnit)
+      bindTupleLetTypes(names, tupleMono, ctx, 0)
+      Ok(goast.AppendStmts(p.Pre, astSingleStmt(goast.Assign(goNames, ":=", astSingleExpr(raw)))))
   end
 end
 
@@ -519,16 +577,23 @@ end
 func translateAstReturnExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
   switch expr.Kind
     case InlineGoExpr(typ, body, values, types) =>
-      let parts = translateInlineOperands(values, types, ctx, 0, [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[goast.Stmt])
-      switch parts
-        case Err(msg) => Err(msg)
-        case Ok(p) =>
-          # For unit-returning inline Go expressions, use statement form
-          # (no "return" wrapper) to avoid "no value used as value" errors.
-          if isUnitType(typ.value()) then
-            Ok(goast.AppendStmts(p.Pre, goast.MustInlineGoStatementsWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)))
-          else
-            Ok(goast.AppendStmts(p.Pre, goast.MustInlineGoFinalStatementsWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)))
+      # A tuple-typed inline Go block is decoded into Result/Option at the
+      # boundary (writeOneMessage pattern).  Route it through the value path
+      # so translateInlineGoBoundary emits the Ok/Err or Some/None lowering.
+      switch inlineGoBoundaryKind(typ.value(), ctx.retType)
+        case Some(_) => translateAstReturnValue(expr, ctx)
+        case None =>
+          let parts = translateInlineOperands(values, types, ctx, 0, [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[goast.Stmt])
+          switch parts
+            case Err(msg) => Err(msg)
+            case Ok(p) =>
+              # For unit-returning inline Go expressions, use statement form
+              # (no "return" wrapper) to avoid "no value used as value" errors.
+              if isUnitType(typ.value()) then
+                Ok(goast.AppendStmts(p.Pre, goast.MustInlineGoStatementsWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)))
+              else
+                Ok(goast.AppendStmts(p.Pre, goast.MustInlineGoFinalStatementsWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)))
+              end
           end
       end
     case IfExpr(cond, thenExpr, elseExpr) => translateAstReturnIf(cond, thenExpr, elseExpr, ctx)

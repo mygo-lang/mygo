@@ -538,7 +538,12 @@ func inferExprInner(expr: ast2.Expr, env: Env, state: InferState) -> Result[Expr
       end
     end
     case InlineGoExpr(typ, _, _, _) then
-      let mono = typeFromASTInEnv(typ.value(), env, state)
+      # An inline Go block declares its native Go result shape (for example
+      # `go[((), error)]`).  Like a Go FFI signature, a 2-tuple result follows
+      # the boundary convention: (T, error) -> Result[T, error] and
+      # (T, bool) -> Option[T].  The raw tuple shape remains available through
+      # tuple destructuring (ffiRawTupleResultType).
+      let mono = inlineGoResultMono(typeFromASTInEnv(typ.value(), env, state))
       Ok(mkTyped(expr, mono, state, None))
     end
   end
@@ -1841,6 +1846,14 @@ end
 func ffiRawTupleResultType(expr: ast2.Expr, state: InferState) -> Option[ast2.MonoType]
   switch expr.Kind
     case CallExpr(callee, _, _) => ffiRawTupleResultTypeFromCallee(callee, state.GoPackages)
+    # A tuple-typed inline Go block declares its native Go result shape
+    # (`go[(T, error)]`).  Tuple destructuring is the explicit opt-in to that
+    # raw multiple-return form, exactly like a Go FFI call.
+    case InlineGoExpr(typ, _, _, _) =>
+      switch typ.value()
+        case TupleType(_) => Some(typeFromAST(typ.value()))
+        case _ => None
+      end
     case _ => None
   end
 end

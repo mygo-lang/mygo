@@ -58,11 +58,15 @@ func translateExprAstExpectedInner(expr: ast2.Expr, ctx: Ref[egCtx], expected: a
     case TypeAsExpr(value, typ) => translateTypeAsAst(value, typ, ctx)
     case BoolExpr(v) => if v then Ok(newAstExprResult(goast.Ident("true"))) else Ok(newAstExprResult(goast.Ident("false"))) end
     case UnitExpr => Ok(newAstExprResult(goast.Unit()))
-    case InlineGoExpr(_, body, values, types) =>
-      let parts = translateInlineOperands(values, types, ctx, 0, [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[goast.Stmt])
-      switch parts
-        case Err(msg) => Err(msg)
-        case Ok(p) => Ok(astExprWithPre(goast.MustInlineGoExprWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources), p.Pre))
+    case InlineGoExpr(typ, body, values, types) =>
+      switch inlineGoBoundaryKind(typ.value(), expected)
+        case Some(kind) => translateInlineGoBoundary(kind, body, values, types, expected, ctx)
+        case None =>
+          let parts = translateInlineOperands(values, types, ctx, 0, [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[goast.Stmt])
+          switch parts
+            case Err(msg) => Err(msg)
+            case Ok(p) => Ok(astExprWithPre(goast.MustInlineGoExprWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources), p.Pre))
+          end
       end
     case TupleExpr(items) => translateTupleLitAst(items, ctx, expected)
     case FieldExpr(base, field) =>
@@ -1981,6 +1985,130 @@ func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], a
         let pre = goast.AppendStmts(goast.AppendStmts(cv.Pre, v.Pre), goast.AppendStmts(astTwoStmts(goast.DeclareFromType(resultName, monoTypeToGoStrWithParamsIn(expected, ctx.typeParamNames, ctx.pathAliases)), define), astSingleStmt(goast.If(goast.Binary(goast.Ident(errorName), "!=", goast.Ident("nil")), failed, succeeded))))
         Ok(astExprWithPre(goast.Ident(resultName), pre))
     end
+  end
+end
+
+# A tuple-typed inline Go block (`go[(T, error)]`) declares its native Go
+# result shape.  Following the Go FFI boundary convention it is decoded into
+# Result[T, error] / Option[T] whenever the enclosing context expects that
+# ergonomic form.  Returns Some("Result") / Some("Option") when the wrap
+# applies, None when the raw tuple expression must be emitted as-is.
+func inlineGoBoundaryKind(declared: ast2.TypeExpr, expected: ast2.MonoType) -> Option[String]
+  switch declared
+    case TupleType(elems) =>
+      if elems.Len() == 2 then
+        let second = elems.Get(1).UnwrapOr(ast2.TypeExpr.UnitType)
+        if isBoolTypeExpr(second) then
+          if expectedKindIs(expected, "Option") then Some("Option") else None end
+        else
+          if expectedKindIs(expected, "Result") then Some("Result") else None end
+        end
+      else
+        None
+      end
+    case _ => None
+  end
+end
+
+func isBoolTypeExpr(t: ast2.TypeExpr) -> Bool
+  switch t
+    case NamedType(name, _) => name == "Bool"
+    case _ => false
+  end
+end
+
+func expectedKindIs(expected: ast2.MonoType, kind: String) -> Bool
+  switch expected
+    case TApp(typeRef, args) =>
+      if args.Len() > 0 then
+        switch typeRef.value()
+          case TCon(name) => name == kind
+          case _ => false
+        end
+      else
+        false
+      end
+    case _ => false
+  end
+end
+
+# translateInlineGoBoundary wraps a tuple-returning inline Go expression into
+# Result[T, error] / Option[T] using the same temp-variable lowering as Go FFI
+# call decoding (no IIFE): the raw Go tuple is assigned to a value/error pair,
+# then the boundary constructor is selected with an if/else.
+func translateInlineGoBoundary(kind: String, body: String, values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], expected: ast2.MonoType, ctx: Ref[egCtx]) -> Result[AstExprResult, String]
+  let parts = translateInlineOperands(values, types, ctx, 0, [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[goast.Stmt])
+  switch parts
+    case Err(msg) => Err(msg)
+    case Ok(p) =>
+      let raw = goast.MustInlineGoExprWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)
+      let resultName = ctxFreshExprTemp(ctx)
+      switch kind
+        case "Result" =>
+          let resultType = monoTypeToGoStrWithParamsIn(expected, ctx.typeParamNames, ctx.pathAliases)
+          let inner = resultBoundaryArgs(expected, ctx)
+          let valName = ctxFreshExprTemp(ctx)
+          let errName = ctxFreshExprTemp(ctx)
+          let define = astSingleStmt(goast.Assign([goast.Ident(valName), goast.Ident(errName)], ":=", [goast.Paren(raw)]))
+          let errCall = goast.GenericCall(goast.Ident("Err"), inner, [goast.Ident(errName)])
+          let okCall = goast.GenericCall(goast.Ident("Ok"), inner, [goast.Ident(valName)])
+          let failed = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(errCall)))
+          let succeeded = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(okCall)))
+          let decl = astSingleStmt(goast.DeclareFromType(resultName, resultType))
+          let branch = astSingleStmt(goast.If(goast.Binary(goast.Ident(errName), "!=", goast.Ident("nil")), failed, succeeded))
+          let pre = goast.AppendStmts(goast.AppendStmts(decl, define), branch)
+          Ok(astExprWithPre(goast.Ident(resultName), goast.AppendStmts(p.Pre, pre)))
+        case "Option" =>
+          let optionType = monoTypeToGoStrWithParamsIn(expected, ctx.typeParamNames, ctx.pathAliases)
+          let inner = optionBoundaryArgs(expected, ctx)
+          let valName = ctxFreshExprTemp(ctx)
+          let okName = ctxFreshExprTemp(ctx)
+          let define = astSingleStmt(goast.Assign([goast.Ident(valName), goast.Ident(okName)], ":=", [goast.Paren(raw)]))
+          let someCall = goast.GenericCall(goast.Ident("Some"), inner, [goast.Ident(valName)])
+          let noneCall = goast.GenericCall(goast.Ident("None"), inner, [] as Slice[goast.Expr])
+          let failed = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(noneCall)))
+          let succeeded = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(someCall)))
+          let decl = astSingleStmt(goast.DeclareFromType(resultName, optionType))
+          let branch = astSingleStmt(goast.If(goast.Ident(okName), succeeded, failed))
+          let pre = goast.AppendStmts(goast.AppendStmts(decl, define), branch)
+          Ok(astExprWithPre(goast.Ident(resultName), goast.AppendStmts(p.Pre, pre)))
+        case _ => Ok(astExprWithPre(goast.Unit(), [] as Slice[goast.Stmt]))
+      end
+  end
+end
+
+func resultBoundaryArgs(expected: ast2.MonoType, ctx: Ref[egCtx]) -> Slice[String]
+  switch expected
+    case TApp(typeRef, args) =>
+      switch typeRef.value()
+        case TCon(name) =>
+          if name == "Result" && args.Len() == 2 then
+            [
+              monoTypeToGoStrWithParamsIn(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), ctx.typeParamNames, ctx.pathAliases),
+              monoTypeToGoStrWithParamsIn(args.Get(1).UnwrapOr(ast2.MonoType.TUnit), ctx.typeParamNames, ctx.pathAliases)
+            ]
+          else
+            ["any", "error"]
+          end
+        case _ => ["any", "error"]
+      end
+    case _ => ["any", "error"]
+  end
+end
+
+func optionBoundaryArgs(expected: ast2.MonoType, ctx: Ref[egCtx]) -> Slice[String]
+  switch expected
+    case TApp(typeRef, args) =>
+      switch typeRef.value()
+        case TCon(name) =>
+          if name == "Option" && args.Len() == 1 then
+            [monoTypeToGoStrWithParamsIn(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), ctx.typeParamNames, ctx.pathAliases)]
+          else
+            ["any"]
+          end
+        case _ => ["any"]
+      end
+    case _ => ["any"]
   end
 end
 
