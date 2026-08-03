@@ -111,7 +111,7 @@ parsedFlags:
 func usage() {
 	fmt.Fprintln(os.Stderr, "usage: mygo [--bootstrap] [--bootstrap-timing] [--no-prelude] <sync|build> [path|go build args...]")
 	fmt.Fprintln(os.Stderr, "  --no-prelude  disable prelude auto-import (use when compiling prelude itself)")
-	fmt.Fprintln(os.Stderr, "  --bootstrap   use parser2, typeinference2, and codegen2 (currently no MyGO package import resolution)")
+	fmt.Fprintln(os.Stderr, "  --bootstrap   use parser2, typeinference2, and codegen2")
 	fmt.Fprintln(os.Stderr, "  --bootstrap-timing  print bootstrap stage durations to standard error")
 }
 
