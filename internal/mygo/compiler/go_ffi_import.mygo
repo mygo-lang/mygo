@@ -2,17 +2,9 @@ package compiler
 
 # Go FFI import resolution for the self-hosted bootstrap.
 #
-# importer.Default only finds packages installed under GOROOT and GOPATH, so
-# `go:` imports that live inside the current module (for example
-# github.com/mygo-lang/mygo/internal/mygo/codegen2/goast) or in the module
-# cache cannot be loaded.  This file resolves those imports through the same
-# go.mod rules as MyGO package imports (module path, replace directives,
-# require + module cache) and type-checks the resolved source directory with
-# go/types.
-#
-# Module resolution is plain MyGO; only the go/types interaction needs one
-# inline-Go block (see bootstrapLoadGoPackage), because MyGO FFI cannot
-# construct types.Importer implementations or inspect go/types objects.
+# `go:` imports are delegated to golang.org/x/tools/go/packages (see
+# bootstrapLoadGoPackage below and go_ffi_import.go), so module resolution,
+# build constraints, and cgo preprocessing match the Go command line.
 
 import os "go:os"
 import filepath "go:path/filepath"
@@ -404,13 +396,9 @@ func bootstrapEscapeModulePathElem(s: String) -> String
 end
 
 # bootstrapLoadGoPackage loads a Go package's exported functions and types for
-# FFI signature collection.  Standard-library and installed packages come from
-# the compiled-package importer; module-aware packages (the current module's
-# own source directories and module-cache dependencies) are resolved through
-# bootstrapGoImportDir and type-checked from source, with sub-imports resolved
-# through the same two-step path.  The go/types interaction requires toplevel
-# Go (types.Importer cannot be implemented in MyGO), so it lives in
-# go_ffi_import.go; this wrapper is the only inline Go in this file.
+# FFI signature collection via go/packages (go_ffi_import.go), which honors
+# the enclosing module's go.mod, build tags, and cgo processing the same way
+# the Go toolchain does.
 func bootstrapLoadGoPackage(workspaceRoot: String, path: String) -> Result[BootstrapGoPackageInfo, String]
   go[Result[BootstrapGoPackageInfo, String]] {
     code: """
