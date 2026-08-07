@@ -19,6 +19,23 @@ type GoPackageInfo struct {
 	Path    string
 	Funcs   map[string]TFunc
 	Aliases map[string]string
+	Types   map[string]*GoTypeInfo
+	// RawReturns records the original Go multi-return shape for functions
+	// whose FFI signature was wrapped into a Result[T, error] (or similar).
+	// At call sites that expect a tuple (e.g. `let (a, b) = f(...)` where
+	// f is a Go FFI function returning `(T, error)`), the tuple destructuring
+	// code can recover the unwrapped element types from this map instead of
+	// forcing callers to go through the Result wrapper.
+	RawReturns map[string][]MonoType
+}
+
+// GoTypeInfo records the exported method surface of a named Go type loaded
+// through the FFI. It mirrors the go/types introspection used by the
+// bootstrapped compiler so the hand-written inference can resolve methods
+// like `db.AutoMigrate(...)` on `*gorm.DB`.
+type GoTypeInfo struct {
+	TypeName string
+	Methods  map[string]TFunc
 }
 
 func loadGoPackageInfo(alias, path, dir string) (*GoPackageInfo, error) {
@@ -40,10 +57,12 @@ func loadGoPackageInfo(alias, path, dir string) (*GoPackageInfo, error) {
 		return nil, fmt.Errorf("package %q has no type information", path)
 	}
 	info := &GoPackageInfo{
-		Alias:   alias,
-		Path:    path,
-		Funcs:   map[string]TFunc{},
-		Aliases: map[string]string{},
+		Alias:      alias,
+		Path:       path,
+		Funcs:      map[string]TFunc{},
+		Aliases:    map[string]string{},
+		Types:      map[string]*GoTypeInfo{},
+		RawReturns: map[string][]MonoType{},
 	}
 	scope := pkg.Types.Scope()
 	for _, name := range scope.Names() {
@@ -58,6 +77,34 @@ func loadGoPackageInfo(alias, path, dir string) (*GoPackageInfo, error) {
 			continue
 		}
 		obj := scope.Lookup(name)
+		tn, ok := obj.(*types.TypeName)
+		if !ok {
+			continue
+		}
+		named, ok := tn.Type().(*types.Named)
+		if !ok {
+			continue
+		}
+		typeInfo := &GoTypeInfo{TypeName: name, Methods: map[string]TFunc{}}
+		methodSet := types.NewMethodSet(types.NewPointer(named))
+		for j := 0; j < methodSet.Len(); j++ {
+			fn, ok := methodSet.At(j).Obj().(*types.Func)
+			if !ok || !fn.Exported() {
+				continue
+			}
+			sig, ok := fn.Type().(*types.Signature)
+			if !ok {
+				continue
+			}
+			typeInfo.Methods[fn.Name()] = replaceGoAliases(goSignatureType(sig), info.Aliases).(TFunc)
+		}
+		info.Types[name] = typeInfo
+	}
+	for _, name := range scope.Names() {
+		if !isExportedGoName(name) {
+			continue
+		}
+		obj := scope.Lookup(name)
 		fn, ok := obj.(*types.Func)
 		if !ok {
 			continue
@@ -65,6 +112,16 @@ func loadGoPackageInfo(alias, path, dir string) (*GoPackageInfo, error) {
 		sig, ok := fn.Type().(*types.Signature)
 		if !ok {
 			continue
+		}
+		// Record the raw Go return value types before any MyGO-level wrapping
+		// happens.  The FFI surfaces `(T, error)` as `Result[T, error]` for
+		// pattern matching, but `let (a, b) = ...` needs the original tuple.
+		if sig.Results() != nil && sig.Results().Len() > 0 {
+			raw := make([]MonoType, sig.Results().Len())
+			for i := 0; i < sig.Results().Len(); i++ {
+				raw[i] = replaceGoAliases(monoTypeFromGoType(sig.Results().At(i).Type()), info.Aliases)
+			}
+			info.RawReturns[name] = raw
 		}
 		info.Funcs[name] = replaceGoAliases(goSignatureType(sig), info.Aliases).(TFunc)
 	}
@@ -133,6 +190,7 @@ func loadMyGoPackageInfo(workspaceRoot, baseDir, importPath, alias string, cache
 		Enums:       map[string]*EnumDecl{},
 		Interfaces:  map[string]*InterfaceDecl{},
 		Impls:       []*ImplDecl{},
+		Values:      map[string]*Scheme{},
 	}
 	var decls []Decl
 	for _, entry := range entries {
@@ -207,6 +265,15 @@ func loadMyGoPackageInfo(workspaceRoot, baseDir, importPath, alias string, cache
 				info.Types[d.Name] = struct{}{}
 				info.Interfaces[d.Name] = d
 			}
+		case *LetStmt:
+			// A top-level `let`/`var` binding is exposed to importers as an
+			// exported value (e.g. `let DB: Result[...] = initDB()`).  Only
+			// bindings carrying a type annotation can be surfaced without
+			// running full inference on the imported package.
+			if d.Name == "" || !isExportedGoName(d.Name) || d.Mutable || d.Type == nil {
+				continue
+			}
+			info.Values[d.Name] = Generalize(TypeEnv{}, typeFromAST(d.Type), nil)
 		case *ImplDecl:
 			info.Impls = append(info.Impls, d)
 		}

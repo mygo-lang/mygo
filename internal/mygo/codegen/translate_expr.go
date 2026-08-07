@@ -153,7 +153,16 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 		case *LetStmt:
 			if s.Bind != nil {
 				if bind, ok := s.Bind.(*BindTuplePattern); ok {
-					code, valType, err := g.translateExpr(s.Value, child, "")
+					// For `let (a, b) = goPkg.Func(...)` where Func is a Go FFI
+					// function returning `(T, error)`, the type system exposes
+					// it as `Result[T, error]` so it can be matched by
+					// `case Ok(x)`.  But a direct tuple destructuring wants
+					// the raw Go multi-value call (`a, b := f(...)`), not the
+					// Result wrapper.  Communicate that expectation to
+					// translateGoImportCall by passing a `Tuple[...]` expected
+					// type; the wrapper then leaves the call untouched.
+					expectedType := goFFIResultAsTuple(g.inferredType(s.Value))
+					code, valType, err := g.translateExpr(s.Value, child, expectedType)
 					if err != nil {
 						return stmts, err
 					}
@@ -840,6 +849,18 @@ func (g *gen) fieldListForReturn(expected string) *ast.FieldList {
 		return nil
 	}
 	return &ast.FieldList{List: []*ast.Field{{Type: g.goTypeExprFromString(expected)}}}
+}
+
+// goFFIResultAsTuple converts the MyGO type string of a Go FFI `Result[T, E]`
+// into a sentinel that instructs the FFI code generator to emit the raw Go
+// multi-value call (e.g. `a, b := gorm.Open(...)`).  It returns an empty
+// string for non-Result types so the caller can leave expected unspecified.
+func goFFIResultAsTuple(typ string) string {
+	typ = strings.TrimSpace(typ)
+	if !strings.HasPrefix(typ, "Result[") || !strings.HasSuffix(typ, "]") {
+		return ""
+	}
+	return "__GO_RAW_TUPLE__"
 }
 
 func fieldListIfNonEmptyGoast(fields []*ast.Field) *ast.FieldList {

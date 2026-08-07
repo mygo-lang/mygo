@@ -680,6 +680,22 @@ func inferLetDecl(d *LetStmt, env TypeEnv, state *InferState, info *TypedInfo) (
 	if d.Bind != nil {
 		tuple, ok := valType.(TCon)
 		if !ok || tuple.Name != "Tuple" {
+			// A `let (a, b) = <goFFICall>(...)` where the Go function returns
+			// `(T, error)` is surfaced as `Result[T, error]` for pattern
+			// matching, but users may also destructure it directly as a pair.
+			// Recover the original Go return types here so tuple codegen can
+			// emit the raw call instead of the Result wrapper.
+			if raw := goFFIRawReturnTypes(d.Value, state); raw != nil {
+				rawArgs := make([]MonoType, len(raw))
+				for i, r := range raw {
+					rawArgs[i] = s.ApplyMT(r)
+				}
+				newEnv, err := inferBindPattern(d.Bind, rawArgs, s, env, info)
+				if err != nil {
+					return nil, wrapInferenceError("binding %q: %w", err, d.Name)
+				}
+				return newEnv, nil
+			}
 			return nil, fmt.Errorf("binding %q: tuple destructuring requires a tuple value", d.Name)
 		}
 		newEnv, err := inferBindPattern(d.Bind, tuple.Args, s, env, info)
@@ -702,6 +718,38 @@ func inferLetDecl(d *LetStmt, env TypeEnv, state *InferState, info *TypedInfo) (
 	}
 
 	return env, nil
+}
+
+// goFFIRawReturnTypes returns the original Go return type list for a Go FFI
+// call expression of the form `pkg.Func(...)`.  When the Go function returns
+// multiple values (e.g. `(db *gorm.DB, err error)`), the FFI surface wraps it
+// into `Result[T, error]` for pattern matching.  A `let (a, b) = ...`
+// destructuring may still want the unwrapped `(T, error)` pair; this helper
+// recovers that information from the package's RawReturns table.
+func goFFIRawReturnTypes(expr Expr, state *InferState) []MonoType {
+	call, ok := expr.(*CallExpr)
+	if !ok || state == nil || state.GoPackages == nil {
+		return nil
+	}
+	field, ok := call.Callee.(*FieldExpr)
+	if !ok {
+		return nil
+	}
+	id, ok := field.Expr.(*IdentExpr)
+	if !ok {
+		return nil
+	}
+	pkg := state.GoPackages[id.Name]
+	if pkg == nil || pkg.RawReturns == nil {
+		return nil
+	}
+	raw, ok := pkg.RawReturns[field.Field]
+	if !ok || len(raw) == 0 {
+		return nil
+	}
+	out := make([]MonoType, len(raw))
+	copy(out, raw)
+	return out
 }
 
 func inferLetRecStmt(d *LetRecStmt, env TypeEnv, state *InferState, info *TypedInfo) (TypeEnv, error) {
@@ -1166,6 +1214,19 @@ func structFunctionFieldType(receiverType MonoType, fieldName string, state *Inf
 		st = state.PkgInfo.Structs[con.Name]
 	}
 	if st == nil {
+		// A method on a named Go FFI type (e.g. `db.AutoMigrate` where
+		// `db: *gorm.DB`).  The GoTypeInfo method signatures produced by
+		// loadGoPackageInfo already use sig.Params() (no receiver), matching
+		// how MyGo inherent-impl methods surface through this helper.
+		if alias, bare, goQualified := splitQualifiedName(con.Name); goQualified && state.GoPackages != nil {
+			if gp := state.GoPackages[alias]; gp != nil {
+				if ti := gp.Types[bare]; ti != nil {
+					if fn, ok := ti.Methods[fieldName]; ok {
+						return fn, true
+					}
+				}
+			}
+		}
 		return TFunc{}, false
 	}
 	for _, f := range st.Fields {
@@ -1433,6 +1494,12 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 			if _, ok := pkg.Types[n.Field]; ok {
 				return TCon{Name: id.Name + "." + n.Field}, make(Subst), nil, nil
 			}
+			if sch, ok := pkg.Values[n.Field]; ok {
+				inst := Instantiate(sch, state)
+				qualified := qualifyMyGoType(id.Name, pkg.Types, inst)
+				expanded := expandImportedTypeAliases(state, qualified)
+				return expanded, make(Subst), sch.Body.Predicates, nil
+			}
 			return nil, nil, nil, fmt.Errorf("MyGO package %q has no exported symbol %q", id.Name, n.Field)
 		}
 		if fn, ok := inherentStaticMethodType(id.Name, n.Field, state); ok {
@@ -1464,6 +1531,19 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 	if con, ok := baseType.(TCon); ok && state != nil && state.PkgInfo != nil {
 		if fn, ok := concreteImplMethodType(baseType, n.Field, state, s); ok {
 			return fn, s, preds, nil
+		}
+		// A method on a named Go FFI type (e.g. `db.AutoMigrate` where
+		// `db: *gorm.DB`).  The GoTypeInfo method signatures produced by
+		// loadGoPackageInfo use sig.Params() (no receiver), matching how MyGo
+		// inherent-impl methods surface through inferCall.
+		if alias, bare, goQualified := splitQualifiedName(con.Name); goQualified && state.GoPackages != nil {
+			if gp := state.GoPackages[alias]; gp != nil {
+				if ti := gp.Types[bare]; ti != nil {
+					if fn, ok := ti.Methods[n.Field]; ok {
+						return fn, s, preds, nil
+					}
+				}
+			}
 		}
 		structName := con.Name
 		var pkgAlias string
@@ -1721,6 +1801,17 @@ func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType,
 				env[n.TypeName] = Generalize(env, TCon{Name: n.TypeName, Args: typeArgs}, nil)
 				sch, ok = env[n.TypeName]
 			}
+		}
+	}
+	if !ok && mygoPkgAlias != "" && state != nil && state.GoPackages != nil {
+		if pkg := state.GoPackages[mygoPkgAlias]; pkg != nil {
+			// A named type from a Go FFI package (e.g. `gorm.Config`) is
+			// represented as an opaque TCon whose name matches the Go
+			// type-string convention (`gorm.Config`).  There is no MyGo
+			// StructDecl to validate fields against, so we synthesise a
+			// scheme directly.
+			sch = &Scheme{Body: QualifiedType{Body: TCon{Name: n.TypeName}}}
+			ok = true
 		}
 	}
 	if !ok {

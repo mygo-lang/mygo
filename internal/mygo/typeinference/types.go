@@ -211,6 +211,7 @@ type MyGoPackageInfo struct {
 	Enums       map[string]*EnumDecl
 	Interfaces  map[string]*InterfaceDecl
 	Impls       []*ImplDecl
+	Values      map[string]*Scheme // exported top-level let/var values
 }
 
 func NewInferState() *InferState {
