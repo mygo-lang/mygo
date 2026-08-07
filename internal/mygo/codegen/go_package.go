@@ -1,60 +1,44 @@
 package codegen
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"go/ast"
-	"go/importer"
-	goparser "go/parser"
-	"go/token"
 	gotypes "go/types"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"unicode"
+
+	"golang.org/x/tools/go/packages"
 )
 
 // loadGoPackageSigs loads function/method signatures from a Go package.
+//
+// It uses golang.org/x/tools/go/packages so that dependencies are resolved
+// through the Go module graph (including sub-packages living in the module
+// cache).  Using go/importer.Default plus a hand-built []*ast.File only works
+// for the standard library; third-party modules cannot be type-checked that
+// way, which previously surfaced as un-wrapped (T, error) FFI calls whenever
+// the signature table failed to load.
 func loadGoPackageSigs(path string) (*GoPackageSigs, error) {
-	cmd := exec.Command("go", "list", "-json", path)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("go list %q: %w: %s", path, err, strings.TrimSpace(stderr.String()))
+	cfg := &packages.Config{
+		Mode: packages.NeedName |
+			packages.NeedTypes |
+			packages.NeedTypesInfo |
+			packages.NeedImports |
+			packages.NeedDeps,
 	}
-	var meta struct {
-		Dir     string
-		Name    string
-		GoFiles []string
-	}
-	if err := json.Unmarshal(stdout.Bytes(), &meta); err != nil {
-		return nil, err
-	}
-	if meta.Dir == "" {
-		return nil, fmt.Errorf("go list %q: missing package dir", path)
-	}
-
-	fset := token.NewFileSet()
-	var parsed []*ast.File
-	for _, name := range meta.GoFiles {
-		fpath := filepath.Join(meta.Dir, name)
-		f, err := goparser.ParseFile(fset, fpath, nil, goparser.SkipObjectResolution)
-		if err != nil {
-			continue
-		}
-		parsed = append(parsed, f)
-	}
-	if len(parsed) == 0 {
-		return nil, fmt.Errorf("go package %q: no parsable Go files", path)
-	}
-
-	conf := gotypes.Config{Importer: importer.Default()}
-	checked, err := conf.Check(path, fset, parsed, nil)
+	pkgs, err := packages.Load(cfg, path)
 	if err != nil {
 		return nil, err
+	}
+	if len(pkgs) == 0 {
+		return nil, fmt.Errorf("go package %q: no such package", path)
+	}
+	pkg := pkgs[0]
+	if len(pkg.Errors) > 0 {
+		return nil, fmt.Errorf("load %q: %w", path, pkg.Errors[0])
+	}
+	checked := pkg.Types
+	if checked == nil {
+		return nil, fmt.Errorf("go package %q: no type information", path)
 	}
 
 	funcs := map[string]*GoFuncSig{}
