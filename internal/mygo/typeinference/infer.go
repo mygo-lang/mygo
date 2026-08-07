@@ -1482,6 +1482,9 @@ func inferField(env TypeEnv, n *FieldExpr, state *InferState) (MonoType, Subst, 
 			if fn, ok := pkg.Funcs[n.Field]; ok {
 				return fn, make(Subst), nil, nil
 			}
+			if ct, ok := pkg.Constants[n.Field]; ok {
+				return ct, make(Subst), nil, nil
+			}
 			return nil, nil, nil, fmt.Errorf("Go package %q has no function %q", id.Name, n.Field)
 		}
 		if pkg := state.MyGoPackages[id.Name]; pkg != nil {

@@ -20,6 +20,10 @@ type GoPackageInfo struct {
 	Funcs   map[string]TFunc
 	Aliases map[string]string
 	Types   map[string]*GoTypeInfo
+	// Constants records exported package-level Go constants (e.g.
+	// http.StatusOK). They are surfaced as values of their declared type so
+	// selectors like `http.StatusOK` type-check without going through a funcall.
+	Constants map[string]MonoType
 	// RawReturns records the original Go multi-return shape for functions
 	// whose FFI signature was wrapped into a Result[T, error] (or similar).
 	// At call sites that expect a tuple (e.g. `let (a, b) = f(...)` where
@@ -62,6 +66,7 @@ func loadGoPackageInfo(alias, path, dir string) (*GoPackageInfo, error) {
 		Funcs:      map[string]TFunc{},
 		Aliases:    map[string]string{},
 		Types:      map[string]*GoTypeInfo{},
+		Constants:  map[string]MonoType{},
 		RawReturns: map[string][]MonoType{},
 	}
 	scope := pkg.Types.Scope()
@@ -124,6 +129,20 @@ func loadGoPackageInfo(alias, path, dir string) (*GoPackageInfo, error) {
 			info.RawReturns[name] = raw
 		}
 		info.Funcs[name] = replaceGoAliases(goSignatureType(sig), info.Aliases).(TFunc)
+	}
+	// Surface exported package-level constants (e.g. http.StatusOK) as values of
+	// their declared type so `pkg.CONST` selectors type-check like ordinary
+	// fields instead of failing with "no function".
+	for _, name := range scope.Names() {
+		if !isExportedGoName(name) {
+			continue
+		}
+		obj := scope.Lookup(name)
+		cnst, ok := obj.(*types.Const)
+		if !ok {
+			continue
+		}
+		info.Constants[name] = replaceGoAliases(monoTypeFromGoType(cnst.Type()), info.Aliases)
 	}
 	return info, nil
 }
@@ -652,15 +671,15 @@ func monoTypeFromGoType(t types.Type) MonoType {
 	switch t := t.(type) {
 	case *types.Basic:
 		switch t.Kind() {
-		case types.Bool:
+		case types.Bool, types.UntypedBool:
 			return TCon{Name: "Bool"}
-		case types.Int:
+		case types.Int, types.UntypedInt:
 			return TCon{Name: "Int"}
 		case types.Int8:
 			return TCon{Name: "Int8"}
 		case types.Int16:
 			return TCon{Name: "Int16"}
-		case types.Int32:
+		case types.Int32, types.UntypedRune:
 			return TCon{Name: "Int32"}
 		case types.Int64:
 			return TCon{Name: "Int64"}
@@ -676,9 +695,9 @@ func monoTypeFromGoType(t types.Type) MonoType {
 			return TCon{Name: "UInt64"}
 		case types.Float32:
 			return TCon{Name: "Float32"}
-		case types.Float64:
+		case types.Float64, types.UntypedFloat:
 			return TCon{Name: "Float64"}
-		case types.String:
+		case types.String, types.UntypedString:
 			return TCon{Name: "String"}
 		case types.UntypedNil:
 			return TCon{Name: "Nil"}
