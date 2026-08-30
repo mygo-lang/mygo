@@ -241,7 +241,52 @@ func simpleLoadPackage(dir string, noPrelude bool) *Package {
 			p.Impls = append(p.Impls, d)
 		}
 	}
+	if !noPrelude && p.Name != "prelude" {
+		mergePreludeMetadataForCodegenTest(p)
+	}
 	return p
+}
+
+// simpleLoadPackage is used by codegen tests without the compiler package.
+// Mirror the production compiler's prelude metadata merge so typeclass method
+// resolution sees the same Slice/Map/Option implementations as normal builds.
+func mergePreludeMetadataForCodegenTest(p *Package) {
+	prelude := loadPreludePackageForEnums(p.Dir, p.WorkspaceRoot)
+	if prelude == nil {
+		return
+	}
+	if p.DotImportTypes == nil {
+		p.DotImportTypes = map[string]struct{}{}
+	}
+	if p.DotImportFuncs == nil {
+		p.DotImportFuncs = map[string]*FuncDecl{}
+	}
+	for name, fn := range prelude.Funcs {
+		if _, exists := p.Funcs[name]; !exists {
+			p.DotImportFuncs[name] = fn
+		}
+	}
+	for name, st := range prelude.Structs {
+		p.DotImportTypes[name] = struct{}{}
+		if _, exists := p.Structs[name]; !exists {
+			p.Structs[name] = st
+		}
+	}
+	for name, iface := range prelude.Interfaces {
+		p.DotImportTypes[name] = struct{}{}
+		if _, exists := p.Interfaces[name]; !exists {
+			p.Interfaces[name] = iface
+		}
+	}
+	for name, enum := range prelude.Enums {
+		p.DotImportTypes[name] = struct{}{}
+		if _, exists := p.Enums[name]; !exists {
+			p.Enums[name] = enum
+		}
+	}
+	for _, impl := range prelude.Impls {
+		p.Impls = append(p.Impls, impl)
+	}
 }
 
 // toPackageName sanitizes a string to be a valid Go package name.

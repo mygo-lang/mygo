@@ -51,8 +51,7 @@ func (p *parser) parseWithYacc() error {
 	p.currentIfCond = nil
 	p.currentIfThen = nil
 	p.currentIfElse = nil
-	p.currentWhileCond = nil
-	p.currentWhileBody = nil
+	p.currentWhileCondStack = nil
 	p.currentSwitchTarget = nil
 	p.currentSwitchCases = nil
 	p.currentPattern = nil

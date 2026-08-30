@@ -116,7 +116,7 @@ type ifParts struct {
 }
 
 %token <token> IDENT NUMBER STRING RUNE
-%token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSIF ELSE SWITCH CASE END USING NOT LET LETREC VAR EMBED WHILE RETURN GO IN TYPE AS
+%token <token> PACKAGE IMPORT ENUM STRUCT INTERFACE IMPL FUNC IF THEN ELSIF ELSE SWITCH CASE END USING NOT LET LETREC VAR EMBED WHILE RETURN BREAK CONTINUE GO IN TYPE AS
 %token <token> NEWLINE
 %token <token> ARROW EQEQ NEQ LTE GTE PIPEFWD PIPEBACK ANDAND OROR
 %token <token> COLON COMMA DOT LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE UNDER
@@ -1701,15 +1701,15 @@ if_block_tail
 while_expr
 	: WHILE expr {
 		p := yylex.(*parser)
-		p.currentWhileCond = p.currentExpr
+		p.currentWhileCondStack = append(p.currentWhileCondStack, p.currentExpr)
 	}
 	opt_newlines
 	block_expr opt_newlines END {
 		p := yylex.(*parser)
-		p.currentWhileBody = p.currentExpr
-		p.currentExpr = &ast.WhileExpr{Line: $1.line, Column: $1.col, Cond: p.currentWhileCond, Body: p.currentWhileBody}
-		p.currentWhileCond = nil
-		p.currentWhileBody = nil
+		last := len(p.currentWhileCondStack) - 1
+		cond := p.currentWhileCondStack[last]
+		p.currentWhileCondStack = p.currentWhileCondStack[:last]
+		p.currentExpr = &ast.WhileExpr{Line: $1.line, Column: $1.col, Cond: cond, Body: p.currentExpr}
 	}
 	;
 
@@ -1937,6 +1937,8 @@ stmt
 	: binding_stmt
 	| assign_stmt
 	| return_stmt
+	| break_stmt
+	| continue_stmt
 	| expr_stmt
 	;
 
@@ -2060,6 +2062,22 @@ return_stmt
 	}
 	;
 
+break_stmt
+	: BREAK {
+		p := yylex.(*parser)
+		p.currentStmt = &ast.BreakStmt{Line: $1.line, Column: $1.col}
+		p.currentExpr = &ast.UnitLitExpr{Line: $1.line, Column: $1.col}
+	}
+	;
+
+continue_stmt
+	: CONTINUE {
+		p := yylex.(*parser)
+		p.currentStmt = &ast.ContinueStmt{Line: $1.line, Column: $1.col}
+		p.currentExpr = &ast.UnitLitExpr{Line: $1.line, Column: $1.col}
+	}
+	;
+
 expr_stmt
 	: expr {
 		p := yylex.(*parser)
@@ -2136,6 +2154,10 @@ func (p *parser) Lex(lval *yySymType) int {
 			return int(WHILE)
 		case "return":
 			return int(RETURN)
+		case "break":
+			return int(BREAK)
+		case "continue":
+			return int(CONTINUE)
 		case "go":
 			return int(GO)
 		case "in":

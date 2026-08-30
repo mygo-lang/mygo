@@ -165,7 +165,7 @@ end
 	}
 }
 
-func TestParsecPManyUsesClosureContinuationStateMachine(t *testing.T) {
+func TestParsecPManyUsesTailcallTrampoline(t *testing.T) {
 	pkg := simpleLoadPackage("../../../lib/text/parsec", false)
 	if pkg == nil {
 		t.Fatal("failed to load parsec package")
@@ -198,11 +198,11 @@ func TestParsecPManyUsesClosureContinuationStateMachine(t *testing.T) {
 		t.Fatalf("PMany declarations missing:\n%s", generated)
 	}
 	many := generated[start:end]
-	if !strings.Contains(many, "__mygo_tcmc_stack") || !strings.Contains(many, "continue") {
-		t.Fatalf("PMany was not lowered to a continuation state machine:\n%s", many)
+	if !strings.Contains(many, "__mygo_mt_parsec_PManyLoop") || !strings.Contains(generated, "continue") {
+		t.Fatalf("PManyLoop was not lowered to a tailcall trampoline:\n%s", many)
 	}
-	if strings.Contains(many, "PMany(p)(") {
-		t.Fatalf("PMany still recursively invokes its closure:\n%s", many)
+	if strings.Contains(generated, "PManyLoop[A](p, r.State, true") {
+		t.Fatalf("PManyLoop still directly recurses:\n%s", many)
 	}
 }
 

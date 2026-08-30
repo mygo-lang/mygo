@@ -446,7 +446,25 @@ type ReturnStmt struct {
 }
 
 func (*ReturnStmt) stmtNode() {}
-func (*LetStmt) declNode()    {}
+
+// BreakStmt exits the nearest enclosing while loop.
+type BreakStmt struct {
+	Line       int
+	Column     int
+	SourceFile string
+}
+
+func (*BreakStmt) stmtNode() {}
+
+// ContinueStmt starts the next iteration of the nearest enclosing while loop.
+type ContinueStmt struct {
+	Line       int
+	Column     int
+	SourceFile string
+}
+
+func (*ContinueStmt) stmtNode() {}
+func (*LetStmt) declNode()      {}
 
 type AssignStmt struct {
 	Line       int

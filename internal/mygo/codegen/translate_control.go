@@ -580,7 +580,14 @@ func (g *gen) translateWhile(n *WhileExpr, ctx *egCtx) (translatedExpr, error) {
 }
 
 func (g *gen) translateWhileFor(n *WhileExpr, ctx *egCtx) (*ast.ForStmt, error) {
-	cond, _, _ := g.translateExpr(n.Cond, ctx, "bool")
+	cond, _, err := g.translateExpr(n.Cond, ctx, "bool")
+	if err != nil {
+		return nil, err
+	}
+	if cond == nil {
+		line, col := common.NodePos(n.Cond)
+		return nil, common.ErrorAtPos(g.currentFile, line, col, "while condition produced nil Go AST")
+	}
 	body := &ast.BlockStmt{}
 	switch b := n.Body.(type) {
 	case *BlockExpr:
@@ -604,6 +611,10 @@ func isBreakOrContinue(e Expr) bool {
 
 func (g *gen) translateWhileStmt(stmt Stmt, ctx *egCtx, body *ast.BlockStmt) {
 	switch s := stmt.(type) {
+	case *BreakStmt:
+		body.List = append(body.List, &ast.BranchStmt{Tok: token.BREAK})
+	case *ContinueStmt:
+		body.List = append(body.List, &ast.BranchStmt{Tok: token.CONTINUE})
 	case *ExprStmt:
 		// If this is an if-expression with break/continue branches, handle directly
 		// to avoid wrapping break in an IIFE (which is invalid Go).
