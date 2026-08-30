@@ -150,6 +150,10 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 			} else {
 				stmts = append(stmts, &ast.ReturnStmt{})
 			}
+		case *BreakStmt:
+			stmts = append(stmts, &ast.BranchStmt{Tok: token.BREAK})
+		case *ContinueStmt:
+			stmts = append(stmts, &ast.BranchStmt{Tok: token.CONTINUE})
 		case *LetStmt:
 			if s.Bind != nil {
 				if bind, ok := s.Bind.(*BindTuplePattern); ok {
@@ -165,6 +169,12 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 					code, valType, err := g.translateExpr(s.Value, child, expectedType)
 					if err != nil {
 						return stmts, err
+					}
+					// MyGO tuple-returning functions lower to Go multi-value calls.
+					// Do not treat their inferred tuple type as an anonymous struct
+					// when choosing the destructuring strategy.
+					if g.callReturnsTuple(s.Value) {
+						valType = ""
 					}
 					stmts = g.emitBindDestructure(stmts, child, code, valType, bind)
 					continue
@@ -303,6 +313,23 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 		}
 	}
 	return stmts, nil
+}
+
+func (g *gen) callReturnsTuple(e Expr) bool {
+	call, ok := e.(*CallExpr)
+	if !ok {
+		return false
+	}
+	ident, ok := call.Callee.(*IdentExpr)
+	if !ok || g.pkg == nil {
+		return false
+	}
+	fn := g.pkg.Funcs[ident.Name]
+	if fn == nil {
+		return false
+	}
+	_, ok = fn.Ret.(*TupleType)
+	return ok
 }
 
 func assignmentTargetRoot(target Expr) (string, bool) {

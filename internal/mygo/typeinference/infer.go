@@ -2399,6 +2399,10 @@ func inferBlock(env TypeEnv, n *BlockExpr, state *InferState) (MonoType, Subst, 
 			if isLast {
 				return returnType, s, allPreds, nil
 			}
+		case *BreakStmt, *ContinueStmt:
+			if isLast {
+				return TUnit{}, s, allPreds, nil
+			}
 		}
 	}
 

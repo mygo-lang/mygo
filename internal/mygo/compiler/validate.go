@@ -33,6 +33,7 @@ type validator struct {
 	// assignment attempts. "var" declared names are mutable.
 	letBindings       map[string]struct{}
 	globalLetBindings map[string]struct{}
+	loopDepth         int
 }
 
 func newValidator(p *pkg.Package, info *typeinference.TypedInfo) *validator {
@@ -569,7 +570,10 @@ func (v *validator) validateWhile(x *WhileExpr) error {
 	if err := v.validateExpr(x.Cond); err != nil {
 		return err
 	}
-	return v.validateExpr(x.Body)
+	v.loopDepth++
+	err := v.validateExpr(x.Body)
+	v.loopDepth--
+	return err
 }
 
 func (v *validator) validateFuncLit(x *FuncLitExpr) error {
@@ -581,6 +585,14 @@ func (v *validator) validateFuncLit(x *FuncLitExpr) error {
 		locals[k] = vv
 	}
 	v.locals = locals
+	prevLoopDepth := v.loopDepth
+	// A function literal has its own control-flow context. A loop enclosing the
+	// literal does not make break or continue valid inside the literal body.
+	v.loopDepth = 0
+	defer func() {
+		v.locals = prevLocals
+		v.loopDepth = prevLoopDepth
+	}()
 
 	for _, p := range x.Params {
 		if err := v.validateParam(p); err != nil {
@@ -599,7 +611,6 @@ func (v *validator) validateFuncLit(x *FuncLitExpr) error {
 		}
 	}
 
-	v.locals = prevLocals
 	return nil
 }
 
@@ -812,6 +823,16 @@ func (v *validator) validateStmt(s Stmt) error {
 		return v.validateLetRec(st)
 	case *ReturnStmt:
 		return v.validateReturn(st)
+	case *BreakStmt:
+		if v.loopDepth == 0 {
+			return common.ErrorAtNode(st.SourceFile, st, "break is only valid inside a while loop")
+		}
+		return nil
+	case *ContinueStmt:
+		if v.loopDepth == 0 {
+			return common.ErrorAtNode(st.SourceFile, st, "continue is only valid inside a while loop")
+		}
+		return nil
 	case *AssignStmt:
 		return v.validateAssign(st)
 	}

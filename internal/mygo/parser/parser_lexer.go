@@ -67,7 +67,7 @@ func (l *lexer) nextToken() token {
 		return token{kind: tokNewline, lit: "\n", line: pos.Line, col: pos.Column}
 	case IDENT:
 		lit := string(l.TokenBytes(nil))
-		if lit == "elsif" {
+		if lit == "elsif" || lit == "break" || lit == "continue" {
 			return token{kind: tokKeyword, lit: lit, line: pos.Line, col: pos.Column}
 		}
 		return token{kind: tokIdent, lit: lit, line: pos.Line, col: pos.Column}
@@ -97,7 +97,7 @@ func (l *lexer) nextToken() token {
 			return token{kind: tokRune, lit: raw, line: pos.Line, col: pos.Column}
 		}
 		return token{kind: tokRune, lit: string(lit), line: pos.Line, col: pos.Column}
-	case PACKAGE, IMPORT, ENUM, STRUCT, INTERFACE, IMPL, FUNC, IF, THEN, ELSIF, ELSE, SWITCH, CASE, END, USING, LET, LETREC, VAR, EMBED, WHILE, RETURN, GO, IN, TYPE, AS:
+	case PACKAGE, IMPORT, ENUM, STRUCT, INTERFACE, IMPL, FUNC, IF, THEN, ELSIF, ELSE, SWITCH, CASE, END, USING, LET, LETREC, VAR, EMBED, WHILE, RETURN, BREAK, CONTINUE, GO, IN, TYPE, AS:
 		lit := string(l.TokenBytes(nil))
 		l.trackBlock(lit)
 		l.trackBracedFuncBlock(lit)

@@ -79,6 +79,24 @@ end
 	}
 }
 
+func TestInlineGoPreservesTripleQuotedEscapesVerbatim(t *testing.T) {
+	src := `package main
+func isNewline(r: Rune) -> Bool
+  go[Bool] {
+    code: """{r} == '\n'"""
+    in r = r
+  }
+end
+`
+	goSrc := compileInlineGoTestPackage(t, src)
+	if !strings.Contains(goSrc, "return r == '\\n'") {
+		t.Fatalf("generated source changed the inline Go escape:\n%s", goSrc)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "inline_escape.go", goSrc, parser.AllErrors); err != nil {
+		t.Fatalf("generated source is not valid Go: %v\n%s", err, goSrc)
+	}
+}
+
 func TestInherentStaticMethodCallOnType(t *testing.T) {
 	src := `package main
 import utf8 "go:unicode/utf8"

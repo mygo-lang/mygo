@@ -82,6 +82,10 @@ func setStmtSourceFile(s ast.Stmt, filename string) {
 	case *ast.ReturnStmt:
 		n.SourceFile = filename
 		setExprSourceFile(n.Value, filename)
+	case *ast.BreakStmt:
+		n.SourceFile = filename
+	case *ast.ContinueStmt:
+		n.SourceFile = filename
 	case *ast.AssignStmt:
 		n.SourceFile = filename
 		setExprSourceFile(n.Target, filename)

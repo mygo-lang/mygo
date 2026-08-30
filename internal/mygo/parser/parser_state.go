@@ -66,8 +66,7 @@ type parser struct {
 	currentIfThenStack           []ast.Expr
 	currentIfElseStack           []ast.Expr
 	currentIfPartsStack          []ifParts
-	currentWhileCond             ast.Expr
-	currentWhileBody             ast.Expr
+	currentWhileCondStack        []ast.Expr
 	currentSwitchTarget          ast.Expr
 	currentSwitchTargetStack     []ast.Expr
 	currentSwitchCases           []ast.SwitchCase

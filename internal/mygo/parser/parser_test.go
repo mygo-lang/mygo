@@ -31,6 +31,30 @@ end
 	}
 }
 
+func TestParseFileSupportsLoopControlStatements(t *testing.T) {
+	src := `package sample
+func run() -> ()
+  while true
+    continue
+    break
+  end
+end
+`
+	file, err := ParseFile("loop.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn := file.Decls[0].(*FuncDecl)
+	loop := fn.Body.(*WhileExpr)
+	loopBody := loop.Body.(*BlockExpr)
+	if _, ok := loopBody.Stmts[0].(*ContinueStmt); !ok {
+		t.Fatalf("first loop statement = %T, want *ContinueStmt", loopBody.Stmts[0])
+	}
+	if _, ok := loopBody.Stmts[1].(*BreakStmt); !ok {
+		t.Fatalf("second loop statement = %T, want *BreakStmt", loopBody.Stmts[1])
+	}
+}
+
 func TestParseFileSupportsCollectionLiterals(t *testing.T) {
 	src := `package main
 func demo() -> Int

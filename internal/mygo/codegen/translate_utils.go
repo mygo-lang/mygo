@@ -314,9 +314,9 @@ func (g *gen) emitBindDestructure(stmts []ast.Stmt, ctx *egCtx, rhs ast.Expr, rh
 		stmts = append(stmts, &ast.AssignStmt{Lhs: targets, Rhs: []ast.Expr{rhs}, Tok: token.DEFINE})
 
 		// Now destructure the temp variable for nested patterns
-		for i, elem := range pat.Elems {
+		for _, elem := range pat.Elems {
 			if tuple, ok := elem.(*BindTuplePattern); ok {
-				stmts = g.emitBindDestructureFromField(stmts, ctx, tmpName, i, tuple)
+				stmts = g.emitBindDestructureFromValue(stmts, ctx, tmpName, tuple)
 			}
 		}
 	} else {
@@ -397,9 +397,9 @@ func (g *gen) emitBindDestructureFromField(stmts []ast.Stmt, ctx *egCtx, tmpName
 		}
 		stmts = append(stmts, &ast.AssignStmt{Lhs: targets, Rhs: []ast.Expr{fieldExpr}, Tok: token.DEFINE})
 
-		for i, elem := range pat.Elems {
+		for _, elem := range pat.Elems {
 			if tuple, ok := elem.(*BindTuplePattern); ok {
-				stmts = g.emitBindDestructureFromField(stmts, ctx, innerTmp, i, tuple)
+				stmts = g.emitBindDestructureFromValue(stmts, ctx, innerTmp, tuple)
 			}
 		}
 	} else {
