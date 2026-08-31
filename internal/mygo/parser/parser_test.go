@@ -685,10 +685,10 @@ end
 	} else if pat.Name != "Some" || len(pat.Args) != 1 || pat.Args[0] != "x" {
 		t.Fatalf("Cases[0].Pattern = %#v, want Some(x)", pat)
 	}
-	if pat, ok := sw.Cases[1].Pattern.(*VariantPattern); !ok {
-		t.Fatalf("Cases[1].Pattern type = %T, want *VariantPattern", sw.Cases[1].Pattern)
-	} else if pat.Name != "None" || len(pat.Args) != 0 {
-		t.Fatalf("Cases[1].Pattern = %#v, want None", pat)
+	if pat, ok := sw.Cases[1].Pattern.(*BindNamePattern); !ok {
+		t.Fatalf("Cases[1].Pattern type = %T, want *BindNamePattern", sw.Cases[1].Pattern)
+	} else if pat.Name != "None" {
+		t.Fatalf("Cases[1].Pattern = %#v, want None binding", pat)
 	}
 	if _, ok := sw.Cases[2].Pattern.(*WildcardPattern); !ok {
 		t.Fatalf("Cases[2].Pattern type = %T, want *WildcardPattern", sw.Cases[2].Pattern)
@@ -860,10 +860,10 @@ end
 	} else if pat.Name != "Some" || len(pat.Args) != 1 || pat.Args[0] != "x" {
 		t.Fatalf("Cases[0].Pattern = %#v, want Some(x)", pat)
 	}
-	if pat, ok := sw.Cases[1].Pattern.(*VariantPattern); !ok {
-		t.Fatalf("Cases[1].Pattern type = %T, want *VariantPattern", sw.Cases[1].Pattern)
-	} else if pat.Name != "None" || len(pat.Args) != 0 {
-		t.Fatalf("Cases[1].Pattern = %#v, want None", pat)
+	if pat, ok := sw.Cases[1].Pattern.(*BindNamePattern); !ok {
+		t.Fatalf("Cases[1].Pattern type = %T, want *BindNamePattern", sw.Cases[1].Pattern)
+	} else if pat.Name != "None" {
+		t.Fatalf("Cases[1].Pattern = %#v, want None binding", pat)
 	}
 	if _, ok := sw.Cases[2].Pattern.(*WildcardPattern); !ok {
 		t.Fatalf("Cases[2].Pattern type = %T, want *WildcardPattern", sw.Cases[2].Pattern)

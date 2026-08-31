@@ -501,6 +501,8 @@ type BindNamePattern struct {
 
 func (*BindNamePattern) bindPatternNode() {}
 
+func (*BindNamePattern) patternNode() {}
+
 type BindTuplePattern struct {
 	Line       int
 	Column     int
