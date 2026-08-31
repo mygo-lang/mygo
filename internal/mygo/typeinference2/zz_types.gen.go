@@ -491,6 +491,37 @@ func InferPackageWithExternal(files []PkgDeclSource, external []PkgDeclSource, g
 	}
 	return __mygo_expr_0
 }
+func InferPackageWithExternalInfo(files []PkgDeclSource, externalInfo PackageInfo, goPkgImports []GoPackageEntry, myGoPkgImports []MyGoPackageInfo) Result[PackageInfo, string] {
+	allDecls := flattenPkgDecls(files, 0, []ast2.Decl{})
+	externalDecls := appendDecls(externalInfo.ExternalTypedDecls, externalInfo.TypedDecls)
+	externalSources := appendPkgDeclSources(externalInfo.ExternalTypedDeclSources, externalInfo.TypedDeclSources)
+	mygoAliases := collectMyGoPackageImports(allDecls)
+	envWithGoPkgs := seedGoPackageEnv(goPkgImports, initialEnv())
+	envWithMyGoPkgs := seedMyGoPackageEnv(mygoAliases, myGoPkgImports, goPkgImports, envWithGoPkgs)
+	envWithExternal := envPutBatchLatest(envWithMyGoPkgs, externalInfo.Env)
+	envWithPredecl := predeclareAllFunctions(allDecls, envWithExternal)
+	userSyms := buildSymbolTable(goPkgImports, allDecls, envWithExternal)
+	extSyms := buildSymbolTable([]GoPackageEntry{}, externalDecls, envWithExternal)
+	importedStructSymbols := myGoPackageStructSymbols(myGoPkgImports, goPkgImports, []Symbol{})
+	initialSymbols := concatSymbols(concatSymbols(userSyms, extSyms), importedStructSymbols)
+	named := namedImplNames(externalDecls, 0, namedImplNames(allDecls, 0, []string{}))
+	state := InferState{FreshVarID: 1, PkgInfo: None[PkgInfo](), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo{}, MyGoPackageCache: myGoPkgImports, Symbols: initialSymbols, SymbolIndex: symbolIndexFromSlice(initialSymbols, map[string]Symbol{}), ActiveConstraints: []Predicate{}, NamedImpls: named, ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
+	result := inferDecls(allDecls, envWithPredecl, externalInfo.Fields, state)
+	var __mygo_expr_0 Result[PackageInfo, string]
+	if __mygo_match___mygo_expr_2, ok := result.(Result__Ok[PackageInfo, string]); ok {
+		collected := collectInstances(allDecls)
+		instances := mergeBuiltInInstances(collected)
+		solver := solverFromInstances(instances)
+		userTyped := buildTypedDeclSources(files, __mygo_match___mygo_expr_2.F0.TypedDecls, 0)
+		__mygo_expr_0 = Ok[PackageInfo, string](PackageInfo{Env: resolveEnvironment(solver, __mygo_match___mygo_expr_2.F0.Env), Fields: __mygo_match___mygo_expr_2.F0.Fields, GoPackages: goPkgImports, Instances: instances, Solver: solver, TypedDecls: flattenPkgDecls(userTyped.Sources, 0, []ast2.Decl{}), ExternalTypedDecls: externalDecls, TypedDeclSources: userTyped.Sources, ExternalTypedDeclSources: externalSources, ResolvedConstraintArgs: __mygo_match___mygo_expr_2.F0.ResolvedConstraintArgs})
+	} else {
+		if __mygo_match___mygo_expr_1, ok := result.(Result__Err[PackageInfo, string]); ok {
+			__mygo_expr_0 = Err[PackageInfo, string](withExpressionSourceName(__mygo_match___mygo_expr_1.F0, "<input>"))
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
 
 var importedPackageCache map[string]ImportedPackageCacheEntry
 
@@ -542,8 +573,19 @@ func envPutBatch(env Env, entries []EnvEntry) Env {
 		return Env{Entry: None[EnvEntry](), Batch: Some[BatchBindings](BatchBindings{Index: batchIndexFromEntries(entries, index, 0), Entries: entries, FreeVars: batchFreeVars(entries, []int{}, 0)}), Parent: Some[*Env](&env)}
 	}
 }
+func envPutBatchLatest(env Env, entries []EnvEntry) Env {
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(entries) == 0 {
+		return env
+	} else {
+		var index map[string]Scheme = map[string]Scheme{}
+		return Env{Entry: None[EnvEntry](), Batch: Some[BatchBindings](BatchBindings{Index: batchIndexFromEntriesLatest(entries, index, 0), Entries: entries, FreeVars: batchFreeVars(entries, []int{}, 0)}), Parent: Some[*Env](&env)}
+	}
+}
 func batchIndexFromEntries(entries []EnvEntry, index map[string]Scheme, position int) map[string]Scheme {
 	return __mygo_mt_typeinference2_batchIndexFromEntries(entries, index, position, 0)
+}
+func batchIndexFromEntriesLatest(entries []EnvEntry, index map[string]Scheme, position int) map[string]Scheme {
+	return __mygo_mt_typeinference2_batchIndexFromEntriesLatest(entries, index, position, 0)
 }
 func batchFreeVars(entries []EnvEntry, out []int, index int) []int {
 	return __mygo_mt_typeinference2_batchFreeVars(entries, out, index, 0)
@@ -1232,6 +1274,9 @@ func predeclareAllFunctions(decls []ast2.Decl, env Env) Env {
 func appendDecls(acc []ast2.Decl, items []ast2.Decl) []ast2.Decl {
 	return __mygo_mt_typeinference2_appendDecls(acc, items, 0)
 }
+func appendPkgDeclSources(left []PkgDeclSource, right []PkgDeclSource) []PkgDeclSource {
+	return __mygo_mt_typeinference2_appendPkgDeclSources(left, right, 0)
+}
 func __mygo_mt_typeinference2_appendDecls(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 []ast2.Decl, __mygo_state int) []ast2.Decl {
 	for {
 		switch __mygo_state {
@@ -1258,6 +1303,24 @@ func __mygo_mt_typeinference2_appendEnvEntries(__mygo_mt_p0 []EnvEntry, __mygo_m
 				return __mygo_mt_p0
 			} else {
 				__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TUnit__Ctor()}}))
+				__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_appendPkgDeclSources(__mygo_mt_p0 []PkgDeclSource, __mygo_mt_p1 []PkgDeclSource, __mygo_state int) []PkgDeclSource {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) == 0 {
+				return __mygo_mt_p0
+			} else {
+				__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), PkgDeclSource{Path: "", Decls: []ast2.Decl{}}))
 				__tail_1 := sliceDrop(__mygo_mt_p1, 1)
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
@@ -1298,6 +1361,34 @@ func __mygo_mt_typeinference2_batchIndexFromEntries(__mygo_mt_p0 []EnvEntry, __m
 			} else {
 				entry := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TUnit__Ctor()}})
 				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p1, entry.Name, entry.Scheme)
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2 + 1
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_batchIndexFromEntriesLatest(__mygo_mt_p0 []EnvEntry, __mygo_mt_p1 map[string]Scheme, __mygo_mt_p2 int, __mygo_state int) map[string]Scheme {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p1
+			} else {
+				entry := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), EnvEntry{Name: "", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TUnit__Ctor()}})
+				__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p1, entry.Name)
+				if _, ok := __mygo_expr_0.(Option__None[Scheme]); ok {
+					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p1, entry.Name, entry.Scheme)
+				} else {
+					if _, ok := __mygo_expr_0.(Option__Some[Scheme]); ok {
+					} else {
+					}
+				}
 				__tail_0 := __mygo_mt_p0
 				__tail_1 := __mygo_mt_p1
 				__tail_2 := __mygo_mt_p2 + 1

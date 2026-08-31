@@ -24,6 +24,7 @@ struct BootstrapState
   SourcesCache: Map[String, BootstrapInputs]
   GenerateImportFiles: Bool
   Timing: Bool
+  NoPrelude: Bool
 end
 
 # BootstrapInputs pairs the per-file codegen inputs with the decl sources that
@@ -31,6 +32,14 @@ end
 struct BootstrapInputs
   Inputs: Slice[codegen2.SourceFileInput]
   Sources: Slice[typeinference2.PkgDeclSource]
+end
+
+# A directory can contain an ordinary package plus an external Go test
+# package.  They must be inferred independently even though they produce Go
+# files in the same directory.
+struct BootstrapInputGroups
+  Main: BootstrapInputs
+  ExternalTest: BootstrapInputs
 end
 
 struct BootstrapGoPackageCollection
@@ -43,12 +52,16 @@ struct BootstrapImport
   Path: String
 end
 
-func newBootstrapState(generateImportFiles: Bool, timing: Bool) -> BootstrapState
-  BootstrapState { Compiling: {}, Compiled: {}, SourcesCache: {}, GenerateImportFiles: generateImportFiles, Timing: timing }
+func newBootstrapState(generateImportFiles: Bool, timing: Bool, noPrelude: Bool) -> BootstrapState
+  BootstrapState { Compiling: {}, Compiled: {}, SourcesCache: {}, GenerateImportFiles: generateImportFiles, Timing: timing, NoPrelude: noPrelude }
 end
 
 func emptyBootstrapInputs() -> BootstrapInputs
   BootstrapInputs { Inputs: [], Sources: [] }
+end
+
+func emptyBootstrapInputGroups() -> BootstrapInputGroups
+  BootstrapInputGroups { Main: emptyBootstrapInputs(), ExternalTest: emptyBootstrapInputs() }
 end
 
 func emptyBootstrapGoPackageCollection() -> BootstrapGoPackageCollection
@@ -85,7 +98,7 @@ end
 func compileDirBootstrapEntryWithTiming(dir: String, timing: Bool) -> Result[Slice[String], Error]
   # The single-package API must return a usable transitive build, including
   # generated files for imported MyGO packages.
-  compileDirBootstrapWithCodegen(dir, newBootstrapState(true, timing), true)
+  compileDirBootstrapWithCodegen(dir, newBootstrapState(true, timing, false), true)
 end
 
 # Sharing one BootstrapState across the whole sync run lets prelude (and every
@@ -101,8 +114,76 @@ end
 func syncBootstrapMyGOWithTiming(root: String, timing: Bool) -> Result[Slice[String], Error]
   let dirs = bootstrapMygoDirs(root)
   switch dirs
-    case Ok(items) => syncBootstrapDirs(items, 0, newBootstrapState(false, timing), [])
+    case Ok(items) => syncBootstrapDirs(items, 0, newBootstrapState(false, timing, false), [])
     case Err(err) => Err(err)
+  end
+end
+
+func syncBootstrapMyGONoPrelude(root: String) -> Result[Slice[String], Error]
+  let dirs = bootstrapMygoDirs(root)
+  switch dirs
+    case Ok(items) => syncBootstrapDirs(items, 0, newBootstrapState(false, false, true), [])
+    case Err(err) => Err(err)
+  end
+end
+
+# GenerateSourceAt convenience: parse one source file, then run the same
+# prelude/Go-FFI external-context path used by package compilation.  The
+# prelude is treated as an ordinary auto-imported package; no files are
+# written.
+func bootstrapGenerateSourceAt(sourceName: String, input: String) -> Result[String, Error]
+  let cwd = bootstrapWorkingDir()
+  switch cwd
+    case Err(err) => Err(err)
+    case Ok(dir) =>
+      let root = bootstrapWorkspaceRoot(dir)
+      let workspaceRoot = if root == "" then dir else root end
+      let parsed = bootstrapParseSource("", sourceName, input)
+      switch parsed
+        case Err(msg) => Err(fmt.Errorf("bootstrap parse %s: %s", sourceName, msg))
+        case Ok(parsedInputs) =>
+          let groups = bootstrapSplitTestInputs(parsedInputs)
+          let mainInputs = groups.Main
+          switch mainInputs.Inputs.Get(0)
+            case None => Err(fmt.Errorf("bootstrap source %s: no non-test package", sourceName))
+            case Some(input) =>
+              let isPrelude = input.File.PackageName == "prelude"
+              let preludeResolved = bootstrapResolveImport(workspaceRoot, dir, "github.com/mygo-lang/mygo/prelude")
+              switch preludeResolved
+                case Err(err) => Err(fmt.Errorf("bootstrap resolve prelude %s: %s", dir, err.Error()))
+                case Ok(preludeDir) =>
+                  let state = newBootstrapState(true, false, false)
+                  let preludeLoaded = bootstrapLoadCachedSources(preludeDir, state)
+                  switch preludeLoaded
+                    case Err(msg) => Err(fmt.Errorf("bootstrap prelude %s: %s", sourceName, msg))
+                    case Ok(prelude) =>
+                      let externalSources = if isPrelude then [] as Slice[typeinference2.PkgDeclSource] else prelude.Sources end
+                      let sourceSets = appendBootstrapSources(mainInputs.Sources, externalSources)
+                      let packagesRef = Ref.new(bootstrapCollectGoPackages(sourceSets))
+                      if !isPrelude then
+                        packagesRef.value().Append(bootstrapMyGoPackageSignatures(".", "github.com/mygo-lang/mygo/prelude", externalSources))
+                        ()
+                      end
+                      let populated = bootstrapPopulateGoSignatures(workspaceRoot, packagesRef)
+                      switch populated
+                        case Err(err) => Err(fmt.Errorf("bootstrap Go FFI %s: %s", sourceName, err.Error()))
+                        case Ok(_) =>
+                          let inferred = typeinference2.InferPackageWithExternal(mainInputs.Sources, externalSources, packagesRef.value(), [] as Slice[typeinference2.MyGoPackageInfo])
+                          switch inferred
+                            case Err(msg) => Err(fmt.Errorf("bootstrap infer %s: %s", sourceName, msg))
+                            case Ok(info) =>
+                              let infoWithPackages = typeinference2.PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: packagesRef.value(), Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, TypedDeclSources: info.TypedDeclSources, ExternalTypedDeclSources: info.ExternalTypedDeclSources, ResolvedConstraintArgs: info.ResolvedConstraintArgs }
+                              let generated = codegen2.Generate(input.File, infoWithPackages)
+                              switch generated
+                                case Err(msg) => Err(fmt.Errorf("bootstrap generate %s: %s", sourceName, msg))
+                                case Ok(code) => Ok(code)
+                              end
+                          end
+                      end
+                  end
+              end
+          end
+      end
   end
 end
 
@@ -219,14 +300,16 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
     end
     case Ok(inputs) then
       bootstrapTimingLog(state, "parser2", dir, parserStarted)
-      if inputs.Inputs.Len() == 0 then
+      let groups = bootstrapSplitTestInputs(inputs)
+      let mainInputs = groups.Main
+      if mainInputs.Inputs.Len() == 0 then
         state.Compiling.Delete(dir)
         bootstrapTimingLog(state, "total", dir, totalStarted)
         Ok([])
       else
         let root = bootstrapWorkspaceRoot(dir)
         let workspaceRoot = if root == "" => dir else root
-        let preludeResolved = bootstrapResolveImport(workspaceRoot, dir, "github.com/mygo-lang/mygo/prelude")
+        let preludeResolved = if state.NoPrelude => Ok(dir) else bootstrapResolveImport(workspaceRoot, dir, "github.com/mygo-lang/mygo/prelude")
         switch preludeResolved
           case Err(err) then
             state.Compiling.Delete(dir)
@@ -252,7 +335,10 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                     # to inputs.Sources while their go: imports participate in
                     # FFI signature collection.
                     let externalSources = if dir == preludeDir => [] as Slice[typeinference2.PkgDeclSource] else prelude.Sources
-                    let sourceSets = appendBootstrapSources(inputs.Sources, externalSources)
+                    # Include the external test imports in FFI discovery, but
+                    # infer its declarations only after the main unit below.
+                    let packageSources = appendBootstrapSources(mainInputs.Sources, groups.ExternalTest.Sources)
+                    let sourceSets = appendBootstrapSources(packageSources, externalSources)
                     let packagesRef = Ref.new(bootstrapCollectGoPackages(sourceSets))
                     if dir != preludeDir then
                       packagesRef.value().Append(bootstrapMyGoPackageSignatures(".", "github.com/mygo-lang/mygo/prelude", externalSources))
@@ -266,7 +352,7 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                         Err(fmt.Errorf("bootstrap Go FFI %s: %s", dir, err.Error()))
                       end
                       case Ok(_) then
-                        let walked = bootstrapWalkImports(workspaceRoot, dir, bootstrapImportsFromSources(inputs.Sources), 0, state, [], packagesRef)
+                        let walked = bootstrapWalkImports(workspaceRoot, dir, bootstrapImportsFromSources(packageSources), 0, state, [], packagesRef)
                         switch walked
                           case Err(err) then
                             state.Compiling.Delete(dir)
@@ -281,9 +367,9 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                               end
                               case Ok(_) then
                                 bootstrapTimingLog(state, "imports+ffi", dir, ffiStarted)
-                                let myGoPkgInfos = bootstrapCollectMyGoPkgInfos(workspaceRoot, dir, bootstrapImportsFromSources(inputs.Sources), 0, state, [] as Slice[typeinference2.MyGoPackageInfo])
+                                let myGoPkgInfos = bootstrapCollectMyGoPkgInfos(workspaceRoot, dir, bootstrapImportsFromSources(packageSources), 0, state, [] as Slice[typeinference2.MyGoPackageInfo])
                                 let inferenceStarted = bootstrapTimingStart()
-                                let inferred = typeinference2.InferPackageWithExternal(inputs.Sources, externalSources, packagesRef.value(), myGoPkgInfos)
+                                let inferred = typeinference2.InferPackageWithExternal(mainInputs.Sources, externalSources, packagesRef.value(), myGoPkgInfos)
                                 switch inferred
                                   case Err(msg) then
                                     state.Compiling.Delete(dir)
@@ -291,7 +377,7 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                                   end
                                   case Ok(info) =>
                                     bootstrapTimingLog(state, "typeinference2", dir, inferenceStarted)
-                                    bootstrapFinishPackage(dir, state, codegen, inputs, info, packagesRef, preludeWritten, dependencyFiles, totalStarted)
+                                    bootstrapFinishPackage(dir, state, codegen, mainInputs, groups.ExternalTest, info, packagesRef, preludeWritten, dependencyFiles, totalStarted)
                                 end
                               end
                             end
@@ -315,7 +401,7 @@ end
 # release the Compiling flag, leave the parsed sources cached for future
 # re-use, and return an empty file list.  The sync loop will eventually
 # revisit the same dir with codegen == true.
-func bootstrapFinishPackage(dir: String, state: BootstrapState, codegen: Bool, inputs: BootstrapInputs, info: typeinference2.PackageInfo, packagesRef: Ref[Slice[typeinference2.GoPackageEntry]], preludeWritten: Slice[String], dependencyFiles: Slice[String], totalStarted: Int64) -> Result[Slice[String], Error]
+func bootstrapFinishPackage(dir: String, state: BootstrapState, codegen: Bool, inputs: BootstrapInputs, externalTest: BootstrapInputs, info: typeinference2.PackageInfo, packagesRef: Ref[Slice[typeinference2.GoPackageEntry]], preludeWritten: Slice[String], dependencyFiles: Slice[String], totalStarted: Int64) -> Result[Slice[String], Error]
   if !codegen then
     state.Compiling.Delete(dir)
     bootstrapTimingLog(state, "total", dir, totalStarted)
@@ -339,17 +425,53 @@ func bootstrapFinishPackage(dir: String, state: BootstrapState, codegen: Bool, i
             Err(fmt.Errorf("bootstrap write %s: %s", dir, err.Error()))
           end
           case Ok(paths) then
-            bootstrapTimingLog(state, "write", dir, writeStarted)
-            let allFiles = appendBootstrapStrings(preludeWritten, appendBootstrapStrings(dependencyFiles, paths))
-            state.Compiled.Set(dir, allFiles)
-            state.Compiling.Delete(dir)
-            bootstrapTimingLog(state, "total", dir, totalStarted)
-            Ok(allFiles)
+            bootstrapFinishExternalTestPackage(dir, state, externalTest, info, packagesRef, preludeWritten, dependencyFiles, paths, writeStarted, totalStarted)
           end
         end
       end
     end
   end
+end
+
+# An external `name_test` package gets the already-typed main declarations as
+# external context.  The generated dot import is metadata on its inputs, not
+# a MyGO import, so dependency traversal never treats the package as importing
+# itself.
+func bootstrapFinishExternalTestPackage(dir: String, state: BootstrapState, externalTest: BootstrapInputs, mainInfo: typeinference2.PackageInfo, packagesRef: Ref[Slice[typeinference2.GoPackageEntry]], preludeWritten: Slice[String], dependencyFiles: Slice[String], mainPaths: Slice[String], writeStarted: Int64, totalStarted: Int64) -> Result[Slice[String], Error]
+  if externalTest.Inputs.Len() == 0 then
+    bootstrapCompletePackage(dir, state, preludeWritten, dependencyFiles, mainPaths, writeStarted, totalStarted)
+  else
+    let inferred = typeinference2.InferPackageWithExternalInfo(externalTest.Sources, mainInfo, packagesRef.value(), [] as Slice[typeinference2.MyGoPackageInfo])
+    switch inferred
+      case Err(msg) =>
+        state.Compiling.Delete(dir)
+        Err(fmt.Errorf("bootstrap infer external tests %s: %s", dir, msg))
+      case Ok(info) =>
+        let generated = codegen2.GenerateFiles(externalTest.Inputs, info)
+        switch generated
+          case Err(msg) =>
+            state.Compiling.Delete(dir)
+            Err(fmt.Errorf("bootstrap generate external tests %s: %s", dir, msg))
+          case Ok(files) =>
+            let written = bootstrapWriteGenerated(dir, files)
+            switch written
+              case Err(err) =>
+                state.Compiling.Delete(dir)
+                Err(fmt.Errorf("bootstrap write external tests %s: %s", dir, err.Error()))
+              case Ok(paths) => bootstrapCompletePackage(dir, state, preludeWritten, dependencyFiles, appendBootstrapStrings(mainPaths, paths), writeStarted, totalStarted)
+            end
+        end
+    end
+  end
+end
+
+func bootstrapCompletePackage(dir: String, state: BootstrapState, preludeWritten: Slice[String], dependencyFiles: Slice[String], paths: Slice[String], writeStarted: Int64, totalStarted: Int64) -> Result[Slice[String], Error]
+  bootstrapTimingLog(state, "write", dir, writeStarted)
+  let allFiles = appendBootstrapStrings(preludeWritten, appendBootstrapStrings(dependencyFiles, paths))
+  state.Compiled.Set(dir, allFiles)
+  state.Compiling.Delete(dir)
+  bootstrapTimingLog(state, "total", dir, totalStarted)
+  Ok(allFiles)
 end
 
 func appendBootstrapStrings(left: Slice[String], right: Slice[String]) -> Slice[String]
@@ -403,18 +525,80 @@ func bootstrapParseSource(path: String, sourcePath: String, source: String) -> R
       switch ast2.ValidateLoopControl(file)
         case Err(msg) => Err(msg)
         case Ok(_) =>
-          let typed = ast2.AssignFileExprIDs(file)
+          let assigned = ast2.AssignFileExprIDs(file)
+          let typed = assigned
       # SourceFileInput and PkgDeclSource must use the same identity.  The
       # typed-declaration index is keyed by source path; using only `path`'s
       # basename here made every file in a multi-file package miss its typed
       # declarations and emit an otherwise-valid but empty Go file.
       # sourceToGenName still derives the output name from this path's basename.
-      let input = codegen2.SourceFileInput { Path: sourcePath, File: typed }
+      let input = codegen2.NewSourceFileInput(sourcePath, typed)
       let pkg = typeinference2.PkgDeclSource { Path: sourcePath, Decls: typed.Decls }
           Ok(BootstrapInputs { Inputs: [input], Sources: [pkg] })
       end
     end
     case Err(msg) => Err(msg)
+  end
+end
+
+# The declared package name, not the filename, selects the Go package unit.
+# Only `mainName_test` is external; an internal `*_test.mygo` file declaring
+# `mainName` remains part of the main inference unit.
+func bootstrapSplitTestInputs(inputs: BootstrapInputs) -> BootstrapInputGroups
+  let mainName = bootstrapMainPackageName(inputs.Inputs, 0)
+  bootstrapSplitTestInputsAt(inputs, mainName, 0, emptyBootstrapInputGroups())
+end
+
+func bootstrapMainPackageName(inputs: Slice[codegen2.SourceFileInput], index: Int) -> String
+  if index >= inputs.Len() then "" else
+    switch inputs.Get(index)
+      case Some(input) =>
+        if input.File.PackageName.HasSuffix("_test") then bootstrapMainPackageName(inputs, index + 1) else input.File.PackageName end
+      case None => bootstrapMainPackageName(inputs, index + 1)
+    end
+  end
+end
+
+func bootstrapSplitTestInputsAt(inputs: BootstrapInputs, mainName: String, index: Int, groups: BootstrapInputGroups) -> BootstrapInputGroups
+  if index >= inputs.Inputs.Len() then groups else
+    switch inputs.Inputs.Get(index)
+      case Some(input) =>
+        switch inputs.Sources.Get(index)
+          case Some(source) =>
+            if input.File.PackageName == mainName + "_test" then
+              let externalInput = codegen2.SourceFileInputWithAutomaticImport(input, ".", bootstrapCurrentPackageImport(input.Path))
+              let next = BootstrapInputGroups { Main: groups.Main, ExternalTest: BootstrapInputs { Inputs: groups.ExternalTest.Inputs.Append(externalInput), Sources: groups.ExternalTest.Sources.Append(source) } }
+              bootstrapSplitTestInputsAt(inputs, mainName, index + 1, next)
+            else
+              let next = BootstrapInputGroups { Main: BootstrapInputs { Inputs: groups.Main.Inputs.Append(input), Sources: groups.Main.Sources.Append(source) }, ExternalTest: groups.ExternalTest }
+              bootstrapSplitTestInputsAt(inputs, mainName, index + 1, next)
+            end
+          case None => bootstrapSplitTestInputsAt(inputs, mainName, index + 1, groups)
+        end
+      case None => bootstrapSplitTestInputsAt(inputs, mainName, index + 1, groups)
+    end
+  end
+end
+
+func bootstrapCurrentPackageImport(sourcePath: String) -> String
+  let dir = filepath.Dir(sourcePath)
+  switch bootstrapAbsolutePath(dir)
+    case Err(_) => ""
+    case Ok(absDir) =>
+      let root = bootstrapWorkspaceRoot(absDir)
+      if root == "" then "" else
+        switch bootstrapReadFileString(filepath.Join(root, "go.mod"))
+          case Some(content) =>
+            let module = bootstrapGoModModulePath(content)
+            switch bootstrapRelativePath(root, absDir)
+              case Ok(rel) =>
+                let relSlash = filepath.ToSlash(rel)
+                if relSlash == "." then module else module + "/" + relSlash end
+              case Err(_) => module
+            end
+          case None => ""
+        end
+      end
   end
 end
 
@@ -526,7 +710,7 @@ func bootstrapImportsFromDecls(decls: Slice[ast2.Decl], index: Int, out: Slice[B
     let decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     let next = switch decl
       case ImportDecl(alias, path) =>
-        if strings.HasPrefix(path, "go:") then out else out.Append(BootstrapImport { Alias: alias, Path: path }) end
+        if strings.HasPrefix(path, "go:") || alias == "." then out else out.Append(BootstrapImport { Alias: alias, Path: path }) end
       case _ => out
     end
     bootstrapImportsFromDecls(decls, index + 1, next)

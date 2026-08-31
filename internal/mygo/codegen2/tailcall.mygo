@@ -180,7 +180,7 @@ func mtCollectFuncs(files: Slice[SourceFileInput], typedSources: Slice[typeinfer
   if index >= files.Len() then
     out
   else
-    let input = files.Get(index).UnwrapOr(SourceFileInput { Path: "", File: ast2.File { PackageName: "", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] } })
+    let input = files.Get(index).UnwrapOr(NewSourceFileInput("", ast2.File { PackageName: "", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] }))
     let typed = typedDeclsForInput(typedSources, typedDeclSourceMap(typedSources, 0, {}), input.Path)
     mtCollectFuncs(files, typedSources, index + 1, mtCollectFuncsFromDecls(input.Path, typed, 0, out))
   end
@@ -205,7 +205,7 @@ func mtFuncNames(files: Slice[SourceFileInput], typedSources: Slice[typeinferenc
   if index >= files.Len() then
     out
   else
-    let input = files.Get(index).UnwrapOr(SourceFileInput { Path: "", File: ast2.File { PackageName: "", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] } })
+    let input = files.Get(index).UnwrapOr(NewSourceFileInput("", ast2.File { PackageName: "", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] }))
     let typed = typedDeclsForInput(typedSources, typedDeclSourceMap(typedSources, 0, {}), input.Path)
     mtFuncNames(files, typedSources, index + 1, mtFuncNamesFromDecls(typed, 0, out))
   end

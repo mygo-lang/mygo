@@ -20,11 +20,20 @@ end
 struct SourceFileInput
   Path: String
   File: ast2.File
+  AutomaticImports: Slice[GoImportPart]
+end
+
+func NewSourceFileInput(path: String, file: ast2.File) -> SourceFileInput
+  SourceFileInput { Path: path, File: file, AutomaticImports: [] }
+end
+
+func SourceFileInputWithAutomaticImport(input: SourceFileInput, alias: String, path: String) -> SourceFileInput
+  SourceFileInput { Path: input.Path, File: input.File, AutomaticImports: input.AutomaticImports.Append(GoImportPart { Alias: alias, Path: path }) }
 end
 
 func Generate(file: ast2.File, info: typeinference2.PackageInfo) -> Result[String, String]
   let path = file.PackageName + ".mygo"
-  let files = GenerateFiles([SourceFileInput { Path: path, File: file }], info)
+  let files = GenerateFiles([SourceFileInput { Path: path, File: file, AutomaticImports: [] }], info)
   switch files
     case Ok(out) => Ok(out.Get(sourceToGenName(path)).UnwrapOr(""))
     case Err(msg) => Err(msg)
@@ -45,7 +54,7 @@ func GenerateFiles(files: Slice[SourceFileInput], info: typeinference2.PackageIn
   # also built once here and threaded through the per-file generator contexts.
   # The analysis reads the typed declaration bodies (TypedDeclSources) so the
   # trampoline member lowering sees the inferred type annotations.
-  let pkgName = files.Get(0).UnwrapOr(SourceFileInput { Path: "", File: ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] } }).File.PackageName
+  let pkgName = files.Get(0).UnwrapOr(NewSourceFileInput("", ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] })).File.PackageName
   let mutualTail = buildMutualTailPlans(pkgName, files, info.TypedDeclSources)
   let out: Map[String, String] = {}
   generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, 0, out)
@@ -55,7 +64,7 @@ func mergeFileDecls(files: Slice[SourceFileInput], index: Int, acc: Slice[ast2.D
   if index >= files.Len() then
     acc
   else
-    let input = files.Get(index).UnwrapOr(SourceFileInput { Path: "main.mygo", File: ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] } })
+    let input = files.Get(index).UnwrapOr(NewSourceFileInput("main.mygo", ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] }))
     mergeFileDecls(files, index + 1, mergeDeclSlices(acc, input.File.Decls))
   end
 end
@@ -73,9 +82,9 @@ func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.Packa
   if index >= files.Len() then
     Ok(out)
   else
-    let input = files.Get(index).UnwrapOr(SourceFileInput { Path: "main.mygo", File: ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] } })
+    let input = files.Get(index).UnwrapOr(NewSourceFileInput("main.mygo", ast2.File { PackageName: "main", Decls: [] as Slice[ast2.Decl], SourceName: "", Line: 1, Column: 1, DeclPositions: [] as Slice[ast2.SourcePos] }))
     let typedDecls = typedDeclsForInput(info.TypedDeclSources, typedByPath, input.Path)
-    let src = generateOneFile(input.File, input.Path, info, allDecls, packageIndex, typedDecls, mutualTail, index == 0)
+  let src = generateOneFile(input.File, input.Path, input.AutomaticImports, info, allDecls, packageIndex, typedDecls, mutualTail, index == 0)
     switch src
       case Ok(code) =>
         out.Set(sourceToGenName(input.Path), code)
@@ -113,12 +122,12 @@ func GenerateSourceAt(sourceName: String, input: String) -> Result[String, Strin
   end
 end
 
-func generateOneFile(file: ast2.File, path: String, info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], packageIndex: PackageIndex, fileTypedDecls: Slice[ast2.Decl], mutualTail: MutualTailPlans, includeHKT: Bool) -> Result[String, String]
+func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoImportPart], info: typeinference2.PackageInfo, allDecls: Slice[ast2.Decl], packageIndex: PackageIndex, fileTypedDecls: Slice[ast2.Decl], mutualTail: MutualTailPlans, includeHKT: Bool) -> Result[String, String]
   # Method dispatch must see every impl visible to this package: its complete
   # typed declaration set plus externally supplied declarations (the prelude).
   # `fileTypedDecls` below still limits emitted Go declarations to this file.
   let visibleDecls = mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
-  let imports = collectImports(file.Decls)
+  let imports = mergeGoImports(collectImports(file.Decls), automaticImports)
   let g = Ref.new(newGenerator2(file.PackageName, visibleDecls, imports, info.GoPackages, info, packageIndex))
   g.mutualTail = mutualTail
   g.currentFile = path

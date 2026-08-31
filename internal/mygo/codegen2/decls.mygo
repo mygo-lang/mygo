@@ -14,6 +14,10 @@ func collectImports(decls: Slice[ast2.Decl]) -> Slice[GoImportPart]
   end)
 end
 
+func mergeGoImports(left: Slice[GoImportPart], right: Slice[GoImportPart]) -> Slice[GoImportPart]
+  right.Fold(left, func(out: Slice[GoImportPart], item: GoImportPart) -> Slice[GoImportPart] out.Append(item) end)
+end
+
 func collectAstDecls(decls: Slice[ast2.Decl]) -> Slice[goast.Decl]
   decls.Fold([] as Slice[goast.Decl], func(out: Slice[goast.Decl], d: ast2.Decl) -> Slice[goast.Decl]
     switch d

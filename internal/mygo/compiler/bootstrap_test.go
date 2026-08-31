@@ -207,6 +207,126 @@ func TestResult(t *testing.T) {
 	}
 }
 
+func TestBootstrapNoPreludeSyncDoesNotResolvePrelude(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/no-prelude\n\ngo 1.26\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte("package sample\n\nfunc Value() -> Int\n  42\nend\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	root, err := filepath.Abs("../../..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "run", "./cmd/mygo", "--bootstrap", "--no-prelude", "sync", dir)
+	cmd.Dir = root
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("bootstrap no-prelude sync failed: %v\n%s", err, output)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "zz_sample.gen.go")); err != nil {
+		t.Fatalf("bootstrap no-prelude output: %v", err)
+	}
+}
+
+func TestSyncBootstrapBuildsExternalTestPackage(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte("package sample\n\nfunc Value() -> Int\n  42\nend\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.mygo"), []byte("package sample_test\n\nimport testing \"go:testing\"\n\nfunc TestValue(t: Ref[testing.T]) -> ()\n  if Value() != 42 then t.Fatal(\"Value failed\") end\nend\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SyncBootstrap(dir); err != nil {
+		t.Fatalf("SyncBootstrap() error = %v", err)
+	}
+	cmd := exec.Command("go", "test", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated external test package failed: %v\n%s", err, output)
+	}
+}
+
+func TestSyncBootstrapKeepsInternalTestPackageUnimported(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte("package sample\n\nfunc Value() -> Int\n  42\nend\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.mygo"), []byte("package sample\n\nimport testing \"go:testing\"\n\nfunc TestValue(t: Ref[testing.T]) -> ()\n  if Value() != 42 then t.Fatal(\"Value failed\") end\nend\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := SyncBootstrap(dir)
+	if err != nil {
+		t.Fatalf("SyncBootstrap() error = %v", err)
+	}
+	for _, path := range written {
+		if strings.HasSuffix(path, ".gen_test.go") {
+			generated, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(generated), `import . "example.com/bootstrap-test"`) {
+				t.Fatalf("internal test has a self-import:\n%s", generated)
+			}
+		}
+	}
+	cmd := exec.Command("go", "test", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated internal test package failed: %v\n%s", err, output)
+	}
+}
+
+func TestGenerateSourceLoadsPreludeForOption(t *testing.T) {
+	src := `package sample
+
+func Default(value: Option[Int]) -> Option[Int]
+  value
+end
+`
+	generated, err := GenerateSourceAt("option.mygo", src)
+	if err != nil {
+		t.Fatalf("GenerateSourceAt() error = %v", err)
+	}
+	if !strings.Contains(generated, `. "github.com/mygo-lang/mygo/prelude"`) {
+		t.Fatalf("non-prelude source did not dot-import prelude:\n%s", generated)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "option.gen.go", generated, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, generated)
+	}
+}
+
+func TestGenerateSourceUsesPreludeHKTDeclarations(t *testing.T) {
+	src := `package sample
+
+interface Enumerable[C[A], A]
+  func First(value: C[A]) -> A
+end
+
+func Default(value: Option[Int]) -> Option[Int]
+  value
+end
+`
+	generated, err := GenerateSource(src)
+	if err != nil {
+		t.Fatalf("GenerateSource() error = %v", err)
+	}
+	if strings.Contains(generated, "type HKTType interface{}") {
+		t.Fatalf("non-prelude package redeclared prelude HKT helpers:\n%s", generated)
+	}
+	if !strings.Contains(generated, `. "github.com/mygo-lang/mygo/prelude"`) {
+		t.Fatalf("non-prelude package did not dot-import prelude:\n%s", generated)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "hkt.gen.go", generated, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, generated)
+	}
+}
+
 func TestSyncBootstrapCompilesRootPackage(t *testing.T) {
 	dir := t.TempDir()
 	bootstrapTestModule(t, dir)
@@ -229,6 +349,43 @@ end
 	}
 	if _, err := os.Stat(want); err != nil {
 		t.Fatalf("generated root package file: %v", err)
+	}
+}
+
+func TestSyncBootstrapReportIsDeterministicWithTestFiles(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte("package sample\n\nfunc Value() -> Int\n  42\nend\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.mygo"), []byte("package sample\n\nfunc TestValue() -> Int\n  Value()\nend\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	first, err := SyncBootstrap(dir)
+	if err != nil {
+		t.Fatalf("first SyncBootstrap() error = %v", err)
+	}
+	second, err := SyncBootstrap(dir)
+	if err != nil {
+		t.Fatalf("second SyncBootstrap() error = %v", err)
+	}
+	if len(first) != len(second) {
+		t.Fatalf("SyncBootstrap() lengths differ: first=%v second=%v", first, second)
+	}
+	testFile := false
+	for i := range first {
+		if first[i] != second[i] {
+			t.Fatalf("SyncBootstrap() order differs at %d: first=%v second=%v", i, first, second)
+		}
+		if strings.HasSuffix(first[i], ".gen_test.go") {
+			testFile = true
+		}
+	}
+	if !testFile {
+		t.Fatalf("SyncBootstrap() did not report a Go-recognized test file: %v", first)
+	}
+	if len(first) != 2 {
+		t.Fatalf("SyncBootstrap() wrote %d files, want 2: %v", len(first), first)
 	}
 }
 

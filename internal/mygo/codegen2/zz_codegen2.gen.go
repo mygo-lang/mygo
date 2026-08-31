@@ -19,13 +19,20 @@ type GoImportPart struct {
 	Path  string
 }
 type SourceFileInput struct {
-	Path string
-	File ast2.File
+	Path             string
+	File             ast2.File
+	AutomaticImports []GoImportPart
 }
 
+func NewSourceFileInput(path string, file ast2.File) SourceFileInput {
+	return SourceFileInput{Path: path, File: file, AutomaticImports: []GoImportPart{}}
+}
+func SourceFileInputWithAutomaticImport(input SourceFileInput, alias string, path string) SourceFileInput {
+	return SourceFileInput{Path: input.Path, File: input.File, AutomaticImports: MygoIN5SliceM6Append(input.AutomaticImports, GoImportPart{Alias: alias, Path: path})}
+}
 func Generate(file ast2.File, info typeinference2.PackageInfo) Result[string, string] {
 	path := file.PackageName + ".mygo"
-	files := GenerateFiles([]SourceFileInput{SourceFileInput{Path: path, File: file}}, info)
+	files := GenerateFiles([]SourceFileInput{SourceFileInput{Path: path, File: file, AutomaticImports: []GoImportPart{}}}, info)
 	var __mygo_expr_0 Result[string, string]
 	if __mygo_match___mygo_expr_2, ok := files.(Result__Ok[map[string]string, string]); ok {
 		__mygo_expr_0 = Ok[string, string](MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_match___mygo_expr_2.F0, sourceToGenName(path)), ""))
@@ -42,7 +49,7 @@ func GenerateFiles(files []SourceFileInput, info typeinference2.PackageInfo) Res
 	visibleDecls := mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
 	packageIndex := newPackageIndex(visibleDecls)
 	typedByPath := typedDeclSourceMap(info.TypedDeclSources, 0, map[string][]ast2.Decl{})
-	pkgName := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, 0), SourceFileInput{Path: "", File: ast2.File{PackageName: "main", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}}}).File.PackageName
+	pkgName := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, 0), NewSourceFileInput("", ast2.File{PackageName: "main", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}})).File.PackageName
 	mutualTail := buildMutualTailPlans(pkgName, files, info.TypedDeclSources)
 	var out map[string]string = map[string]string{}
 	return generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, 0, out)
@@ -90,9 +97,9 @@ func GenerateSourceAt(sourceName string, input string) Result[string, string] {
 	}
 	return __mygo_expr_0
 }
-func generateOneFile(file ast2.File, path string, info typeinference2.PackageInfo, allDecls []ast2.Decl, packageIndex PackageIndex, fileTypedDecls []ast2.Decl, mutualTail MutualTailPlans, includeHKT bool) Result[string, string] {
+func generateOneFile(file ast2.File, path string, automaticImports []GoImportPart, info typeinference2.PackageInfo, allDecls []ast2.Decl, packageIndex PackageIndex, fileTypedDecls []ast2.Decl, mutualTail MutualTailPlans, includeHKT bool) Result[string, string] {
 	visibleDecls := mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
-	imports := collectImports(file.Decls)
+	imports := mergeGoImports(collectImports(file.Decls), automaticImports)
 	g := &[]Generator2{newGenerator2(file.PackageName, visibleDecls, imports, info.GoPackages, info, packageIndex)}[0]
 	g.mutualTail = mutualTail
 	g.currentFile = path
@@ -557,9 +564,9 @@ func __mygo_mt_codegen2_generateFilesLoop(__mygo_mt_p0 []SourceFileInput, __mygo
 			if __mygo_mt_p6 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return Ok[map[string]string, string](__mygo_mt_p7)
 			} else {
-				input := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p6), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}}})
+				input := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p6), NewSourceFileInput("main.mygo", ast2.File{PackageName: "main", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}}))
 				typedDecls := typedDeclsForInput(__mygo_mt_p1.TypedDeclSources, __mygo_mt_p4, input.Path)
-				src := generateOneFile(input.File, input.Path, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, typedDecls, __mygo_mt_p5, __mygo_mt_p6 == 0)
+				src := generateOneFile(input.File, input.Path, input.AutomaticImports, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, typedDecls, __mygo_mt_p5, __mygo_mt_p6 == 0)
 				if __mygo_match___mygo_expr_1, ok := src.(Result__Ok[string, string]); ok {
 					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p7, sourceToGenName(input.Path), __mygo_match___mygo_expr_1.F0)
 					__tail_0 := __mygo_mt_p0
@@ -611,7 +618,7 @@ func __mygo_mt_codegen2_mergeFileDecls(__mygo_mt_p0 []SourceFileInput, __mygo_mt
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return __mygo_mt_p2
 			} else {
-				input := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), SourceFileInput{Path: "main.mygo", File: ast2.File{PackageName: "main", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}}})
+				input := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), NewSourceFileInput("main.mygo", ast2.File{PackageName: "main", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}}))
 				__tail_0 := __mygo_mt_p0
 				__tail_1 := __mygo_mt_p1 + 1
 				__tail_2 := mergeDeclSlices(__mygo_mt_p2, input.File.Decls)

@@ -50,6 +50,11 @@ parsedFlags:
 			root = args[1]
 		}
 		if bootstrap {
+			if noPrelude {
+				_, err := compiler.SyncBootstrapNoPrelude(root)
+				must(err)
+				return
+			}
 			if bootstrapTiming {
 				_, err := compiler.SyncBootstrapWithTiming(root)
 				must(err)
@@ -84,7 +89,9 @@ parsedFlags:
 		var written []string
 		var err error
 		if bootstrap {
-			if bootstrapTiming {
+			if noPrelude {
+				written, err = compiler.SyncBootstrapNoPrelude(root)
+			} else if bootstrapTiming {
 				written, err = compiler.SyncBootstrapWithTiming(root)
 			} else {
 				written, err = compiler.SyncBootstrap(root)

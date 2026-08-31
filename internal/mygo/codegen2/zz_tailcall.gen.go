@@ -1153,7 +1153,7 @@ func __mygo_mt_codegen2_mtCollectFuncs(__mygo_mt_p0 []SourceFileInput, __mygo_mt
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return __mygo_mt_p3
 			} else {
-				input := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), SourceFileInput{Path: "", File: ast2.File{PackageName: "", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}}})
+				input := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), NewSourceFileInput("", ast2.File{PackageName: "", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}}))
 				typed := typedDeclsForInput(__mygo_mt_p1, typedDeclSourceMap(__mygo_mt_p1, 0, map[string][]ast2.Decl{}), input.Path)
 				__tail_0 := __mygo_mt_p0
 				__tail_1 := __mygo_mt_p1
@@ -1406,7 +1406,7 @@ func __mygo_mt_codegen2_mtFuncNames(__mygo_mt_p0 []SourceFileInput, __mygo_mt_p1
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return __mygo_mt_p3
 			} else {
-				input := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), SourceFileInput{Path: "", File: ast2.File{PackageName: "", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}}})
+				input := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), NewSourceFileInput("", ast2.File{PackageName: "", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}}))
 				typed := typedDeclsForInput(__mygo_mt_p1, typedDeclSourceMap(__mygo_mt_p1, 0, map[string][]ast2.Decl{}), input.Path)
 				__tail_0 := __mygo_mt_p0
 				__tail_1 := __mygo_mt_p1

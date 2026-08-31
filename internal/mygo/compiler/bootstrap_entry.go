@@ -23,10 +23,39 @@ func SyncBootstrap(root string) ([]string, error) {
 	return unwrapBootstrapResult(syncBootstrapMyGO(root))
 }
 
+// SyncBootstrapNoPrelude compiles with the self-hosted pipeline without
+// resolving or injecting the built-in prelude.
+func SyncBootstrapNoPrelude(root string) ([]string, error) {
+	return unwrapBootstrapResult(syncBootstrapMyGONoPrelude(root))
+}
+
 // SyncBootstrapWithTiming is SyncBootstrap with parser2, import/FFI,
 // typeinference2, codegen2, write, and total timings written to standard error.
 func SyncBootstrapWithTiming(root string) ([]string, error) {
 	return unwrapBootstrapResult(syncBootstrapMyGOWithTiming(root, true))
+}
+
+// GenerateSource compiles one MyGO source string through the self-hosted
+// pipeline with the normal automatic prelude context.
+func GenerateSource(input string) (string, error) {
+	return GenerateSourceAt("<input>", input)
+}
+
+// GenerateSourceAt is GenerateSource with a source name preserved in
+// diagnostics.
+func GenerateSourceAt(sourceName, input string) (string, error) {
+	return unwrapBootstrapStringResult(bootstrapGenerateSourceAt(sourceName, input))
+}
+
+func unwrapBootstrapStringResult(result Result[string, error]) (string, error) {
+	switch value := result.(type) {
+	case Result__Ok[string, error]:
+		return value.F0, nil
+	case Result__Err[string, error]:
+		return "", value.F0
+	default:
+		return "", nil
+	}
 }
 
 func unwrapBootstrapResult(result Result[[]string, error]) ([]string, error) {

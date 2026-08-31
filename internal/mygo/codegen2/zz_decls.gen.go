@@ -18,6 +18,11 @@ func collectImports(decls []ast2.Decl) []GoImportPart {
 		return __mygo_expr_0
 	})
 }
+func mergeGoImports(left []GoImportPart, right []GoImportPart) []GoImportPart {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(right, left, func(out []GoImportPart, item GoImportPart) []GoImportPart {
+		return MygoIN5SliceM6Append(out, item)
+	})
+}
 func collectAstDecls(decls []ast2.Decl) []goast.Decl {
 	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(decls, []goast.Decl{}, func(out []goast.Decl, d ast2.Decl) []goast.Decl {
 		var __mygo_expr_0 []goast.Decl

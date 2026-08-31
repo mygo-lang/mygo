@@ -668,6 +668,63 @@ func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDe
   end
 end
 
+# InferPackageWithExternalInfo infers only `files` while reusing an already
+# inferred package (normally the main unit of an external test package) as
+# external context.  The external declarations are already typed, so their
+# bodies are not inferred again; this avoids re-running prelude inference once
+# per external test unit.
+func InferPackageWithExternalInfo(files: Slice[PkgDeclSource], externalInfo: PackageInfo, goPkgImports: Slice[GoPackageEntry], myGoPkgImports: Slice[MyGoPackageInfo]) -> Result[PackageInfo, String]
+  let allDecls = flattenPkgDecls(files, 0, [] as Slice[ast2.Decl])
+  let externalDecls = appendDecls(externalInfo.ExternalTypedDecls, externalInfo.TypedDecls)
+  let externalSources = appendPkgDeclSources(externalInfo.ExternalTypedDeclSources, externalInfo.TypedDeclSources)
+  let mygoAliases = collectMyGoPackageImports(allDecls)
+  let envWithGoPkgs = seedGoPackageEnv(goPkgImports, initialEnv())
+  let envWithMyGoPkgs = seedMyGoPackageEnv(mygoAliases, myGoPkgImports, goPkgImports, envWithGoPkgs)
+  # externalInfo.Env is newest-first and may repeat the same name (a function
+  # is predeclared and then replaced by its inferred signature).  Batch the
+  # entries with first-match-wins indexing to preserve that resolution order.
+  let envWithExternal = envPutBatchLatest(envWithMyGoPkgs, externalInfo.Env)
+  let envWithPredecl = predeclareAllFunctions(allDecls, envWithExternal)
+  let userSyms = buildSymbolTable(goPkgImports, allDecls, envWithExternal)
+  let extSyms = buildSymbolTable([] as Slice[GoPackageEntry], externalDecls, envWithExternal)
+  let importedStructSymbols = myGoPackageStructSymbols(myGoPkgImports, goPkgImports, [] as Slice[Symbol])
+  let initialSymbols = concatSymbols(concatSymbols(userSyms, extSyms), importedStructSymbols)
+  let named = namedImplNames(externalDecls, 0, namedImplNames(allDecls, 0, [] as Slice[String]))
+  let state = InferState {
+    FreshVarID: 1,
+    PkgInfo: None,
+    GoPackages: goPkgImports,
+    MyGoPackages: [] as Slice[MyGoPackageInfo],
+    MyGoPackageCache: myGoPkgImports,
+    Symbols: initialSymbols,
+    SymbolIndex: symbolIndexFromSlice(initialSymbols, {}),
+    ActiveConstraints: [] as Slice[Predicate],
+    NamedImpls: named,
+    ResolvedConstraintArgs: {},
+  }
+  let result = inferDecls(allDecls, envWithPredecl, externalInfo.Fields, state)
+  switch result
+    case Ok(info) =>
+      let collected = collectInstances(allDecls)
+      let instances = mergeBuiltInInstances(collected)
+      let solver = solverFromInstances(instances)
+      let userTyped = buildTypedDeclSources(files, info.TypedDecls, 0)
+      Ok(PackageInfo {
+        Env: resolveEnvironment(solver, info.Env),
+        Fields: info.Fields,
+        GoPackages: goPkgImports,
+        Instances: instances,
+        Solver: solver,
+        TypedDecls: flattenPkgDecls(userTyped.Sources, 0, [] as Slice[ast2.Decl]),
+        ExternalTypedDecls: externalDecls,
+        TypedDeclSources: userTyped.Sources,
+        ExternalTypedDeclSources: externalSources,
+        ResolvedConstraintArgs: info.ResolvedConstraintArgs,
+      })
+    case Err(msg) => Err(withExpressionSourceName(msg, "<input>"))
+  end
+end
+
 # ---------------------------------------------------------------------------
 # Imported-package inference cache
 # ---------------------------------------------------------------------------
@@ -735,11 +792,32 @@ func envPutBatch(env: Env, entries: Slice[EnvEntry]) -> Env
   end
 end
 
+# Same as envPutBatch, but keeps the first occurrence of a repeated name.
+# PackageInfo.Env is newest-first and a name can legitimately appear more than
+# once, so the index must not let the older duplicate win.
+func envPutBatchLatest(env: Env, entries: Slice[EnvEntry]) -> Env
+  if entries.Len() == 0 then env else
+    let index: Map[String, Scheme] = {}
+    Env { Entry: None, Batch: Some(BatchBindings { Index: batchIndexFromEntriesLatest(entries, index, 0), Entries: entries, FreeVars: batchFreeVars(entries, [], 0) }), Parent: Some(Ref.new(env)) }
+  end
+end
+
 func batchIndexFromEntries(entries: Slice[EnvEntry], index: Map[String, Scheme], position: Int) -> Map[String, Scheme]
   if position >= entries.Len() then index else
     let entry = entries.Get(position).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TUnit } })
     index.Set(entry.Name, entry.Scheme)
     batchIndexFromEntries(entries, index, position + 1)
+  end
+end
+
+func batchIndexFromEntriesLatest(entries: Slice[EnvEntry], index: Map[String, Scheme], position: Int) -> Map[String, Scheme]
+  if position >= entries.Len() then index else
+    let entry = entries.Get(position).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TUnit } })
+    switch index.Get(entry.Name)
+      case None => index.Set(entry.Name, entry.Scheme)
+      case Some(_) => ()
+    end
+    batchIndexFromEntriesLatest(entries, index, position + 1)
   end
 end
 
@@ -1715,3 +1793,10 @@ func appendDecls(acc: Slice[ast2.Decl], items: Slice[ast2.Decl]) -> Slice[ast2.D
   end
 end
 
+func appendPkgDeclSources(left: Slice[PkgDeclSource], right: Slice[PkgDeclSource]) -> Slice[PkgDeclSource]
+  if right.Len() == 0 then
+    left
+  else
+    appendPkgDeclSources(left.Append(right.Get(0).UnwrapOr(PkgDeclSource { Path: "", Decls: [] as Slice[ast2.Decl] })), sliceDrop(right, 1))
+  end
+end
