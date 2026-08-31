@@ -3,6 +3,7 @@ package typeinference2
 import (
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
@@ -10,7 +11,11 @@ import (
 )
 
 func TestStructFieldSymbolProbe(t *testing.T) {
-	root := "/mnt/data-svr1-raid/xyh/code/go/mygo/internal/mygo"
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("cannot determine test path")
+	}
+	root := filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "internal", "mygo")
 	codegen2Files := []string{"codegen2.mygo", "decls.mygo", "translate_ast.mygo", "translate_expr.mygo", "types_util.mygo", "types.mygo", "gofile.mygo", "tailcall.mygo"}
 	ast2Files := []string{"ast2.mygo", "ast2_ids.mygo", "monotype.mygo"}
 	ti2Files := []string{"env.mygo", "infer.mygo", "types.mygo", "utils.mygo", "solver.mygo", "unify.mygo"}
