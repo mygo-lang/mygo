@@ -213,6 +213,55 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (trans
 			}
 			continue
 		}
+		if bp, ok := c.Pattern.(*BindNamePattern); ok {
+			if vp := g.bareBindPatternAsVariant(bp, ttype); vp != nil {
+				c.Pattern = vp
+			} else {
+				child := ctx.child()
+				usesBinding := exprUsesIdent(c.Body, bp.Name)
+				tmp := ""
+				if usesBinding {
+					g.localSeq++
+					tmp = "__bind_" + strconv.Itoa(g.localSeq)
+					child.bindings[bp.Name] = tmp
+				}
+				bodyBlock, code, err := caseBody(c.Body, child)
+				if err != nil {
+					return translatedExpr{}, err
+				}
+				if code != nil {
+					bodyBlock = &ast.BlockStmt{List: []ast.Stmt{stmtForExpr(c.Body, code, expected)}}
+				}
+				if usesBinding {
+					bind := &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(tmp)}, Rhs: []ast.Expr{target}, Tok: token.DEFINE}
+					bodyBlock.List = append([]ast.Stmt{bind}, bodyBlock.List...)
+				}
+				tail = bodyBlock
+				continue
+			}
+		}
+		if tp, ok := c.Pattern.(*TuplePattern); ok {
+			bindTuple, ok := tuplePatternToBindPattern(tp)
+			if !ok {
+				line, col := common.NodePos(c.Pattern)
+				return translatedExpr{}, common.ErrorAtPos(g.currentFile, line, col, "tuple switch pattern contains an unsupported element")
+			}
+			child := ctx.child()
+			g.localSeq++
+			tmp := "__tuple_" + strconv.Itoa(g.localSeq)
+			destructure := []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(tmp)}, Rhs: []ast.Expr{target}, Tok: token.DEFINE}}
+			destructure = g.emitBindDestructureFromValue(destructure, child, tmp, bindTuple)
+			bodyBlock, code, err := caseBody(c.Body, child)
+			if err != nil {
+				return translatedExpr{}, err
+			}
+			if code != nil {
+				bodyBlock = &ast.BlockStmt{List: []ast.Stmt{stmtForExpr(c.Body, code, expected)}}
+			}
+			bodyBlock.List = append(destructure, bodyBlock.List...)
+			tail = bodyBlock
+			continue
+		}
 		if lit, ok := c.Pattern.(*LiteralPattern); ok {
 			patExpr := litToExpr(lit)
 			child := ctx.child()
@@ -345,6 +394,39 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (trans
 			Names: []*ast.Ident{ast.NewIdent(tmp)}, Type: g.goTypeExprFromString(expected),
 		}}}}}, renameIIFEReturns([]ast.Stmt{tail}, tmp)...),
 	}, nil
+}
+
+func (g *gen) bareBindPatternAsVariant(bp *BindNamePattern, ttype string) *VariantPattern {
+	_, ok := g.variantByName[bp.Name]
+	if !ok {
+		return nil
+	}
+	baseName, _ := splitTypeArgs(ttype)
+	if baseName == bp.Name {
+		return nil
+	}
+	return &VariantPattern{Line: bp.Line, Column: bp.Column, SourceFile: bp.SourceFile, Name: bp.Name}
+}
+
+func tuplePatternToBindPattern(p *TuplePattern) (*BindTuplePattern, bool) {
+	elems := make([]BindPattern, 0, len(p.Elems))
+	for _, elem := range p.Elems {
+		switch e := elem.(type) {
+		case *BindNamePattern:
+			elems = append(elems, e)
+		case *WildcardPattern:
+			elems = append(elems, &BindNamePattern{Line: e.Line, Column: e.Column, SourceFile: e.SourceFile, Name: "_"})
+		case *TuplePattern:
+			sub, ok := tuplePatternToBindPattern(e)
+			if !ok {
+				return nil, false
+			}
+			elems = append(elems, sub)
+		default:
+			return nil, false
+		}
+	}
+	return &BindTuplePattern{Elems: elems}, true
 }
 
 func switchBodyType(body Expr, g *gen, ctx *egCtx) string {

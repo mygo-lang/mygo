@@ -539,6 +539,9 @@ func (v *validator) validatePattern(p Pattern, enumDecl *EnumDecl) error {
 		return nil
 	}
 	switch pt := p.(type) {
+	case *BindNamePattern:
+		// A bare identifier is either a binding or a zero-argument enum
+		// variant; both are valid. Type inference resolves enum variants.
 	case *VariantPattern:
 		if enumDecl != nil {
 			found := false
@@ -986,6 +989,11 @@ func (v *validator) collectPatternBindings(p Pattern) {
 		return
 	}
 	switch pt := p.(type) {
+	case *BindNamePattern:
+		if pt.Name == "" || pt.Name == "_" {
+			return
+		}
+		v.locals[pt.Name] = struct{}{}
 	case *VariantPattern:
 		// Variant patterns like Some(node) — register the inner bindings.
 		for _, arg := range pt.Args {

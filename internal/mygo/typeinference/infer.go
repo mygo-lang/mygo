@@ -2163,6 +2163,21 @@ func inferPatternBindings(env TypeEnv, pat Pattern, targetType MonoType, s Subst
 			env = newEnv
 		}
 		return env, nil
+	case *BindNamePattern:
+		if p.Name == "_" {
+			return env, nil
+		}
+		if enumDecl != nil {
+			if variant, ok := findEnumVariant(enumDecl, p.Name); ok && len(variant.Fields) == 0 {
+				return env, nil
+			}
+		}
+		if variantEnum, variant, ok := lookupVariant(state.PkgInfo, p.Name); ok && len(variant.Fields) == 0 {
+			_ = variantEnum
+			return env, nil
+		}
+		env[p.Name] = &Scheme{Body: QualifiedType{Body: targetType}}
+		return env, nil
 	case *VariantPattern:
 		if enumName, enumArgs := resolveEnumType(targetType); enumName == "Option" {
 			if p.Name == "Some" {

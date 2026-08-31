@@ -1789,7 +1789,7 @@ pattern
 		if $1.lit == "_" {
 			p.currentPattern = &ast.WildcardPattern{Line: $1.line, Column: $1.col}
 		} else {
-			p.currentPattern = &ast.VariantPattern{Line: $1.line, Column: $1.col, Name: $1.lit}
+			p.currentPattern = &ast.BindNamePattern{Line: $1.line, Column: $1.col, Name: $1.lit}
 		}
 	}
 	| STRING {
