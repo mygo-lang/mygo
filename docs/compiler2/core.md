@@ -1,5 +1,9 @@
 # compiler2 (bootstrap pipeline)
 
+> See [differences.md](differences.md) for current differences from
+> `docs/spec.md`, known gaps, and reproduction commands. `docs/spec.md` is
+> authoritative for language behavior; bootstrap behavior must not expand it.
+
 `compiler2` is the self-hosted MyGO compiler pipeline. It is implemented in
 MyGO itself and uses the MyGO parser-combinator library under
 `lib/text/parsec` for parsing.
