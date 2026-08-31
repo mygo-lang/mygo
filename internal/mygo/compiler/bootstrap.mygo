@@ -400,7 +400,10 @@ func bootstrapParseSource(path: String, sourcePath: String, source: String) -> R
   let parsed = parser2.ParseFileAt(sourcePath, source)
   switch parsed
     case Ok(file) then
-      let typed = ast2.AssignFileExprIDs(file)
+      switch ast2.ValidateLoopControl(file)
+        case Err(msg) => Err(msg)
+        case Ok(_) =>
+          let typed = ast2.AssignFileExprIDs(file)
       # SourceFileInput and PkgDeclSource must use the same identity.  The
       # typed-declaration index is keyed by source path; using only `path`'s
       # basename here made every file in a multi-file package miss its typed
@@ -408,7 +411,8 @@ func bootstrapParseSource(path: String, sourcePath: String, source: String) -> R
       # sourceToGenName still derives the output name from this path's basename.
       let input = codegen2.SourceFileInput { Path: sourcePath, File: typed }
       let pkg = typeinference2.PkgDeclSource { Path: sourcePath, Decls: typed.Decls }
-      Ok(BootstrapInputs { Inputs: [input], Sources: [pkg] })
+          Ok(BootstrapInputs { Inputs: [input], Sources: [pkg] })
+      end
     end
     case Err(msg) => Err(msg)
   end

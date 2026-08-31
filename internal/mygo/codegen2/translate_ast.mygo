@@ -532,8 +532,29 @@ func translateSwitchBranchesStmt(cases: Slice[ast2.SwitchCase], targetType: Opti
   else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
     switch current.Pattern
+      case BindPattern(name) =>
+        let child = Ref.new(ctxChild(ctx))
+        ctxSetBinding(child, name, goast.MustExprSource(target))
+        translateSwitchCaseBodyStmt(current.Body, child)
       case WildcardPattern =>
         translateSwitchCaseBodyStmt(current.Body, ctx)
+      case TuplePattern(items) =>
+        let child = Ref.new(ctxChild(ctx))
+        bindTuplePattern(child, items, goast.MustExprSource(target), 0)
+        translateSwitchCaseBodyStmt(current.Body, child)
+      case LiteralPattern(kind, literal) =>
+        let body = translateSwitchCaseBodyStmt(current.Body, ctx)
+        let rest = translateSwitchBranchesStmt(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+        switch body
+          case Err(msg) => Err(msg)
+          case Ok(bodyStmts) =>
+            switch rest
+              case Err(msg) => Err(msg)
+              case Ok(next) =>
+                let pattern = if kind == "string" then goast.String(strconv.Quote(literal)) elsif kind == "rune" then goast.Rune(literal) else goast.Number(literal) end
+                Ok(astSingleStmt(goast.If(goast.Binary(target, "==", pattern), bodyStmts, next)))
+            end
+        end
       case VariantPattern(name, args) then
         let rest = translateSwitchBranchesStmt(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
         switch rest
@@ -561,7 +582,6 @@ func translateSwitchBranchesStmt(cases: Slice[ast2.SwitchCase], targetType: Opti
           end
         end
       end
-      case _ => Err("unsupported pattern in statement-context switch")
     end
   end
 end

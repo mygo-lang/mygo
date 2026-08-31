@@ -343,13 +343,13 @@ func Stmt__LetRecStmt__Ctor(v0 []LetRecBind) Stmt {
 }
 
 type Stmt__TupleLetStmt struct {
-	F0 []string
+	F0 Pattern
 	F1 Expr
 }
 
 func (Stmt__TupleLetStmt) isStmt() {
 }
-func Stmt__TupleLetStmt__Ctor(v0 []string, v1 Expr) Stmt {
+func Stmt__TupleLetStmt__Ctor(v0 Pattern, v1 Expr) Stmt {
 	return Stmt__TupleLetStmt{F0: v0, F1: v1}
 }
 
@@ -405,21 +405,23 @@ func Stmt__ReturnWithStmt__Ctor(v0 Expr) Stmt {
 }
 
 type Stmt__BreakStmt struct {
+	F0 SourcePos
 }
 
 func (Stmt__BreakStmt) isStmt() {
 }
-func Stmt__BreakStmt__Ctor() Stmt {
-	return Stmt__BreakStmt{}
+func Stmt__BreakStmt__Ctor(v0 SourcePos) Stmt {
+	return Stmt__BreakStmt{F0: v0}
 }
 
 type Stmt__ContinueStmt struct {
+	F0 SourcePos
 }
 
 func (Stmt__ContinueStmt) isStmt() {
 }
-func Stmt__ContinueStmt__Ctor() Stmt {
-	return Stmt__ContinueStmt{}
+func Stmt__ContinueStmt__Ctor(v0 SourcePos) Stmt {
+	return Stmt__ContinueStmt{F0: v0}
 }
 
 type ExprKind interface {

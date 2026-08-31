@@ -1,8 +1,8 @@
 package ast2
 
 # ast2 is the compact AST used by the self-hosted parser2 pipeline.
-# It mirrors the syntax currently produced by parser2 and intentionally keeps
-# positions out until parser2 starts carrying source spans.
+# It mirrors the syntax currently produced by parser2. Expressions and
+# loop-control statements retain source positions for diagnostics.
 
 struct SourcePos
   SourceName: String
@@ -142,8 +142,9 @@ enum Stmt
   LetStmt(Bind)
   # mutually-recursive immutable bindings
   LetRecStmt(Slice[LetRecBind])
-  # tuple destructuring declaration
-  TupleLetStmt(Slice[String], Expr)
+  # tuple destructuring declaration; the binding pattern supports nested
+  # tuples and wildcard discard slots.
+  TupleLetStmt(Pattern, Expr)
   # var mutable variable declaration
   VarStmt(Bind)
   # while loop
@@ -155,9 +156,9 @@ enum Stmt
   # return statement (with return value)
   ReturnWithStmt(Expr)
   # leave the innermost while loop
-  BreakStmt
+  BreakStmt(SourcePos)
   # begin the next iteration of the innermost while loop
-  ContinueStmt
+  ContinueStmt(SourcePos)
 end
 
 # `ExprKind` is a pure expression shape, containing no statement semantics.

@@ -243,37 +243,37 @@ func annotateExprSource(expr ast2.Expr, sourceName string) ast2.Expr {
 }
 func annotateStmtSource(stmt ast2.Stmt, sourceName string) ast2.Stmt {
 	var __mygo_expr_0 ast2.Stmt
-	if __mygo_match___mygo_expr_8, ok := stmt.(ast2.Stmt__ExprStmt); ok {
-		__mygo_expr_0 = ast2.Stmt__ExprStmt__Ctor(annotateExprSource(__mygo_match___mygo_expr_8.F0, sourceName))
+	if __mygo_match___mygo_expr_10, ok := stmt.(ast2.Stmt__ExprStmt); ok {
+		__mygo_expr_0 = ast2.Stmt__ExprStmt__Ctor(annotateExprSource(__mygo_match___mygo_expr_10.F0, sourceName))
 	} else {
-		if __mygo_match___mygo_expr_7, ok := stmt.(ast2.Stmt__LetStmt); ok {
-			__mygo_expr_0 = ast2.Stmt__LetStmt__Ctor(ast2.Bind{Name: __mygo_match___mygo_expr_7.F0.Name, Type: __mygo_match___mygo_expr_7.F0.Type, Value: annotateExprSource(__mygo_match___mygo_expr_7.F0.Value, sourceName)})
+		if __mygo_match___mygo_expr_9, ok := stmt.(ast2.Stmt__LetStmt); ok {
+			__mygo_expr_0 = ast2.Stmt__LetStmt__Ctor(ast2.Bind{Name: __mygo_match___mygo_expr_9.F0.Name, Type: __mygo_match___mygo_expr_9.F0.Type, Value: annotateExprSource(__mygo_match___mygo_expr_9.F0.Value, sourceName)})
 		} else {
-			if __mygo_match___mygo_expr_6, ok := stmt.(ast2.Stmt__LetRecStmt); ok {
-				__mygo_expr_0 = ast2.Stmt__LetRecStmt__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_6.F0, func(b ast2.LetRecBind) ast2.LetRecBind {
+			if __mygo_match___mygo_expr_8, ok := stmt.(ast2.Stmt__LetRecStmt); ok {
+				__mygo_expr_0 = ast2.Stmt__LetRecStmt__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_8.F0, func(b ast2.LetRecBind) ast2.LetRecBind {
 					return ast2.LetRecBind{Name: b.Name, Type: b.Type, Value: annotateExprSource(b.Value, sourceName)}
 				}))
 			} else {
-				if __mygo_match___mygo_expr_5, ok := stmt.(ast2.Stmt__TupleLetStmt); ok {
-					__mygo_expr_0 = ast2.Stmt__TupleLetStmt__Ctor(__mygo_match___mygo_expr_5.F0, annotateExprSource(__mygo_match___mygo_expr_5.F1, sourceName))
+				if __mygo_match___mygo_expr_7, ok := stmt.(ast2.Stmt__TupleLetStmt); ok {
+					__mygo_expr_0 = ast2.Stmt__TupleLetStmt__Ctor(__mygo_match___mygo_expr_7.F0, annotateExprSource(__mygo_match___mygo_expr_7.F1, sourceName))
 				} else {
-					if __mygo_match___mygo_expr_4, ok := stmt.(ast2.Stmt__VarStmt); ok {
-						__mygo_expr_0 = ast2.Stmt__VarStmt__Ctor(ast2.Bind{Name: __mygo_match___mygo_expr_4.F0.Name, Type: __mygo_match___mygo_expr_4.F0.Type, Value: annotateExprSource(__mygo_match___mygo_expr_4.F0.Value, sourceName)})
+					if __mygo_match___mygo_expr_6, ok := stmt.(ast2.Stmt__VarStmt); ok {
+						__mygo_expr_0 = ast2.Stmt__VarStmt__Ctor(ast2.Bind{Name: __mygo_match___mygo_expr_6.F0.Name, Type: __mygo_match___mygo_expr_6.F0.Type, Value: annotateExprSource(__mygo_match___mygo_expr_6.F0.Value, sourceName)})
 					} else {
-						if __mygo_match___mygo_expr_3, ok := stmt.(ast2.Stmt__WhileStmt); ok {
-							__mygo_expr_0 = ast2.Stmt__WhileStmt__Ctor(annotateExprSource(__mygo_match___mygo_expr_3.F0, sourceName), annotateExprSource(__mygo_match___mygo_expr_3.F1, sourceName))
+						if __mygo_match___mygo_expr_5, ok := stmt.(ast2.Stmt__WhileStmt); ok {
+							__mygo_expr_0 = ast2.Stmt__WhileStmt__Ctor(annotateExprSource(__mygo_match___mygo_expr_5.F0, sourceName), annotateExprSource(__mygo_match___mygo_expr_5.F1, sourceName))
 						} else {
-							if __mygo_match___mygo_expr_2, ok := stmt.(ast2.Stmt__AssignStmt); ok {
-								__mygo_expr_0 = ast2.Stmt__AssignStmt__Ctor(annotateExprSource(__mygo_match___mygo_expr_2.F0, sourceName), annotateExprSource(__mygo_match___mygo_expr_2.F1, sourceName))
+							if __mygo_match___mygo_expr_4, ok := stmt.(ast2.Stmt__AssignStmt); ok {
+								__mygo_expr_0 = ast2.Stmt__AssignStmt__Ctor(annotateExprSource(__mygo_match___mygo_expr_4.F0, sourceName), annotateExprSource(__mygo_match___mygo_expr_4.F1, sourceName))
 							} else {
-								if __mygo_match___mygo_expr_1, ok := stmt.(ast2.Stmt__ReturnWithStmt); ok {
-									__mygo_expr_0 = ast2.Stmt__ReturnWithStmt__Ctor(annotateExprSource(__mygo_match___mygo_expr_1.F0, sourceName))
+								if __mygo_match___mygo_expr_3, ok := stmt.(ast2.Stmt__ReturnWithStmt); ok {
+									__mygo_expr_0 = ast2.Stmt__ReturnWithStmt__Ctor(annotateExprSource(__mygo_match___mygo_expr_3.F0, sourceName))
 								} else {
-									if _, ok := stmt.(ast2.Stmt__BreakStmt); ok {
-										__mygo_expr_0 = stmt
+									if __mygo_match___mygo_expr_2, ok := stmt.(ast2.Stmt__BreakStmt); ok {
+										__mygo_expr_0 = ast2.Stmt__BreakStmt__Ctor(ast2.SourcePos{SourceName: sourceName, Line: __mygo_match___mygo_expr_2.F0.Line, Column: __mygo_match___mygo_expr_2.F0.Column})
 									} else {
-										if _, ok := stmt.(ast2.Stmt__ContinueStmt); ok {
-											__mygo_expr_0 = stmt
+										if __mygo_match___mygo_expr_1, ok := stmt.(ast2.Stmt__ContinueStmt); ok {
+											__mygo_expr_0 = ast2.Stmt__ContinueStmt__Ctor(ast2.SourcePos{SourceName: sourceName, Line: __mygo_match___mygo_expr_1.F0.Line, Column: __mygo_match___mygo_expr_1.F0.Column})
 										} else {
 											if _, ok := stmt.(ast2.Stmt__ReturnStmt); ok {
 												__mygo_expr_0 = stmt
@@ -686,14 +686,24 @@ func stmt() ps.Parser[ast2.Stmt] {
 	return ps.PChoice([]func(ps.State) ps.Reply[ast2.Stmt]{ps.PAttempt(returnStmt()), ps.PAttempt(breakStmt()), ps.PAttempt(continueStmt()), ps.PAttempt(varStmt()), ps.PAttempt(whileStmt()), ps.PAttempt(letrecStmt()), ps.PAttempt(letStmt()), exprStmt()})
 }
 func breakStmt() ps.Parser[ast2.Stmt] {
-	return ps.PMap(kw("break"), func(_ string) ast2.Stmt {
-		return ast2.Stmt__BreakStmt__Ctor()
-	})
+	return func(state ps.State) ps.Reply[ast2.Stmt] {
+		r := kw("break")(state)
+		if r.Ok {
+			return ps.Reply[ast2.Stmt]{Ok: true, Consumed: r.Consumed, Value: ast2.Stmt__BreakStmt__Ctor(sourcePos(state)), State: r.State, Error: r.Error}
+		} else {
+			return ps.Reply[ast2.Stmt]{Ok: false, Consumed: r.Consumed, Value: ast2.Stmt__ReturnStmt__Ctor(), State: r.State, Error: r.Error}
+		}
+	}
 }
 func continueStmt() ps.Parser[ast2.Stmt] {
-	return ps.PMap(kw("continue"), func(_ string) ast2.Stmt {
-		return ast2.Stmt__ContinueStmt__Ctor()
-	})
+	return func(state ps.State) ps.Reply[ast2.Stmt] {
+		r := kw("continue")(state)
+		if r.Ok {
+			return ps.Reply[ast2.Stmt]{Ok: true, Consumed: r.Consumed, Value: ast2.Stmt__ContinueStmt__Ctor(sourcePos(state)), State: r.State, Error: r.Error}
+		} else {
+			return ps.Reply[ast2.Stmt]{Ok: false, Consumed: r.Consumed, Value: ast2.Stmt__ReturnStmt__Ctor(), State: r.State, Error: r.Error}
+		}
+	}
 }
 func exprStmt() ps.Parser[ast2.Stmt] {
 	return ps.PBind(expr(), func(left ast2.Expr) ps.Parser[ast2.Stmt] {
@@ -761,13 +771,27 @@ func namedLetStmt() ps.Parser[ast2.Stmt] {
 	})
 }
 func tupleLetStmt() ps.Parser[ast2.Stmt] {
-	return ps.PBind(paren(ps.PSepBy(identifier(), sym(","))), func(names []string) ps.Parser[ast2.Stmt] {
+	return ps.PBind(paren(ps.PSepBy(lazyBindingPattern(), sym(","))), func(items []ast2.Pattern) ps.Parser[ast2.Stmt] {
 		return ps.PBind(sym("="), func(_ string) ps.Parser[ast2.Stmt] {
 			return ps.PMap(expr(), func(value ast2.Expr) ast2.Stmt {
-				return ast2.Stmt__TupleLetStmt__Ctor(names, value)
+				return ast2.Stmt__TupleLetStmt__Ctor(ast2.Pattern__TuplePattern__Ctor(items), value)
 			})
 		})
 	})
+}
+func bindingPattern() ps.Parser[ast2.Pattern] {
+	return ps.PChoice([]func(ps.State) ps.Reply[ast2.Pattern]{ps.PAttempt(ps.PMap(paren(ps.PSepBy(lazyBindingPattern(), sym(","))), func(items []ast2.Pattern) ast2.Pattern {
+		return ast2.Pattern__TuplePattern__Ctor(items)
+	})), ps.PMap(sym("_"), func(_ string) ast2.Pattern {
+		return ast2.Pattern__WildcardPattern__Ctor()
+	}), ps.PMap(identifier(), func(name string) ast2.Pattern {
+		return ast2.Pattern__BindPattern__Ctor(name)
+	})})
+}
+func lazyBindingPattern() ps.Parser[ast2.Pattern] {
+	return func(state ps.State) ps.Reply[ast2.Pattern] {
+		return bindingPattern()(state)
+	}
 }
 func varStmt() ps.Parser[ast2.Stmt] {
 	return ps.PBind(kw("var"), func(_ string) ps.Parser[ast2.Stmt] {

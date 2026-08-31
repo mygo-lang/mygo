@@ -1164,7 +1164,7 @@ func inferStmt(stmt: ast2.Stmt, env: Env, state: InferState) -> Result[StmtInfer
         case Err(msg) => Err(msg)
       end
     end
-    case TupleLetStmt(names, value) then
+    case TupleLetStmt(_, value) then
       # Tuple destructuring: `let (a, b) = expr`.  Infer the right-hand side as a
       # tuple type, then bind each name to the corresponding element.  The
       # bootstrap pipeline (codegen2) does not need per-element TypedDecls
@@ -1220,8 +1220,8 @@ func inferStmt(stmt: ast2.Stmt, env: Env, state: InferState) -> Result[StmtInfer
       end
     end
     case ReturnStmt => Ok(StmtInferResult { MaybeExpr: None, Result: InferResult { Type: ast2.MonoType.TUnit, Predicates: [], Subst: emptySubst(), State: state } })
-    case BreakStmt => Ok(StmtInferResult { MaybeExpr: None, Result: InferResult { Type: ast2.MonoType.TUnit, Predicates: [], Subst: emptySubst(), State: state } })
-    case ContinueStmt => Ok(StmtInferResult { MaybeExpr: None, Result: InferResult { Type: ast2.MonoType.TUnit, Predicates: [], Subst: emptySubst(), State: state } })
+    case BreakStmt(_) => Ok(StmtInferResult { MaybeExpr: None, Result: InferResult { Type: ast2.MonoType.TUnit, Predicates: [], Subst: emptySubst(), State: state } })
+    case ContinueStmt(_) => Ok(StmtInferResult { MaybeExpr: None, Result: InferResult { Type: ast2.MonoType.TUnit, Predicates: [], Subst: emptySubst(), State: state } })
     case ReturnWithStmt(value) then
       let inferred = inferExpr(value, env, state)
       switch inferred
@@ -1857,7 +1857,7 @@ end
 # exposes them so the rest of the block can reference them, which is all
 # inference needs; codegen2 walks the untyped TupleLetStmt shape directly
 # in its own pipeline.
-func inferBlockTupleLet(names: Slice[String], value: ast2.Expr, env: Env, state: InferState) -> Result[BlockInferStep, String]
+func inferBlockTupleLet(pattern: ast2.Pattern, value: ast2.Expr, env: Env, state: InferState) -> Result[BlockInferStep, String]
   let r = inferExpr(value, env, state)
   switch r
     case Err(msg) => Err(msg)
@@ -1867,10 +1867,10 @@ func inferBlockTupleLet(names: Slice[String], value: ast2.Expr, env: Env, state:
       # as Option[T]/Result[T, E].
       let tupleType = ffiRawTupleResultType(value, eir.Result.State).UnwrapOr(eir.Result.Type)
       let nextState = eir.Result.State
-      let nextEnv = envWithTupleBindings(env, names, tupleType)
+      let nextEnv = envWithTupleLetPattern(env, pattern, tupleType)
       let typedValue = ast2.Expr { ID: eir.Expr.ID, Pos: eir.Expr.Pos, Kind: eir.Expr.Kind, Type: Some(tupleType) }
-      let stepState = withFreshID(nextState, nextState.FreshVarID + names.Len())
-      let newStmt = ast2.Stmt.TupleLetStmt(names, typedValue)
+      let stepState = withFreshID(nextState, nextState.FreshVarID + tuplePatternBindingCount(pattern))
+      let newStmt = ast2.Stmt.TupleLetStmt(pattern, typedValue)
       Ok(BlockInferStep { Result: InferResult { Type: ast2.MonoType.TUnit, Predicates: eir.Result.Predicates, Subst: eir.Result.Subst, State: stepState }, Env: nextEnv, Stmt: newStmt })
     end
   end
@@ -1917,15 +1917,35 @@ func ffiRawTupleResultTypeInFuncs(name: String, funcs: Slice[GoFuncSignature]) -
   end
 end
 
-func envWithTupleBindings(env: Env, names: Slice[String], tupleType: ast2.MonoType) -> Env
-  envWithTupleBindingsAt(env, names, tupleType, 0)
+func envWithTupleLetPattern(env: Env, pattern: ast2.Pattern, typ: ast2.MonoType) -> Env
+  switch pattern
+    case BindPattern(name) => envPut(env, name, Scheme { Bound: [], Predicates: [], Body: typ })
+    case WildcardPattern => env
+    case TuplePattern(items) => envWithTuplePatternItems(env, items, typ, 0)
+    case _ => env
+  end
 end
 
-func envWithTupleBindingsAt(env: Env, names: Slice[String], tupleType: ast2.MonoType, index: Int) -> Env
-  if index >= names.Len() then env else
-    let name = names.Get(index).UnwrapOr("")
-    let typ = tupleElementTypeForBinding(tupleType, index)
-    envWithTupleBindingsAt(envPut(env, name, Scheme { Bound: [], Predicates: [], Body: typ }), names, tupleType, index + 1)
+func envWithTuplePatternItems(env: Env, items: Slice[ast2.Pattern], tupleType: ast2.MonoType, index: Int) -> Env
+  if index >= items.Len() then env else
+    let pattern = items.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern)
+    let nextEnv = envWithTupleLetPattern(env, pattern, tupleElementTypeForBinding(tupleType, index))
+    envWithTuplePatternItems(nextEnv, items, tupleType, index + 1)
+  end
+end
+
+func tuplePatternBindingCount(pattern: ast2.Pattern) -> Int
+  switch pattern
+    case BindPattern(_) => 1
+    case WildcardPattern => 0
+    case TuplePattern(items) => tuplePatternItemsBindingCount(items, 0)
+    case _ => 0
+  end
+end
+
+func tuplePatternItemsBindingCount(items: Slice[ast2.Pattern], index: Int) -> Int
+  if index >= items.Len() then 0 else
+    tuplePatternBindingCount(items.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern)) + tuplePatternItemsBindingCount(items, index + 1)
   end
 end
 

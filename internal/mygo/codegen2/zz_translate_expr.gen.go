@@ -170,34 +170,87 @@ func translateFFIDiscardStmt(fn ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2
 	}
 	return __mygo_expr_0
 }
-func translateAstTupleLetStmt(names []string, value ast2.Expr, ctx *egCtx) Result[[]goast.Stmt, string] {
+func translateAstTupleLetStmt(pattern ast2.Pattern, value ast2.Expr, ctx *egCtx) Result[[]goast.Stmt, string] {
 	__mygo_expr_0 := value.Kind
 	var __mygo_expr_1 Result[[]goast.Stmt, string]
-	if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.ExprKind__InlineGoExpr); ok {
-		__mygo_expr_6 := *__mygo_match___mygo_expr_5.F0
-		var __mygo_expr_7 Result[[]goast.Stmt, string]
-		if _, ok := __mygo_expr_6.(ast2.TypeExpr__TupleType); ok {
-			__mygo_expr_7 = translateInlineGoTupleLet(names, __mygo_match___mygo_expr_5.F1, __mygo_match___mygo_expr_5.F2, __mygo_match___mygo_expr_5.F3, value, ctx)
-		} else {
-			__mygo_expr_7 = translateAstTupleLetStmtOrdinary(names, value, ctx)
-		}
-		__mygo_expr_1 = __mygo_expr_7
-	} else {
-		__mygo_expr_2 := ffiMultiResultSignature(value, ctx)
-		var __mygo_expr_3 Result[[]goast.Stmt, string]
-		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[typeinference2.GoFuncSignature]); ok {
-			__mygo_expr_3 = translateFFITupleLetStmt(names, value, __mygo_match___mygo_expr_4.F0, ctx)
-		} else {
-			if _, ok := __mygo_expr_2.(Option__None[typeinference2.GoFuncSignature]); ok {
-				__mygo_expr_3 = translateAstTupleLetStmtOrdinary(names, value, ctx)
+	if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
+		var __mygo_expr_13 Result[[]goast.Stmt, string]
+		if isTupleReturningLocalCall(__mygo_match___mygo_expr_6.F0, ctx) {
+			raw := translatePlainCallAstExpectedOrdinary(__mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_6.F1, __mygo_match___mygo_expr_6.F2, ctx, ast2.MonoType__TUnit__Ctor())
+			var __mygo_expr_7 Result[[]goast.Stmt, string]
+			if __mygo_match___mygo_expr_9, ok := raw.(Result__Err[AstExprResult, string]); ok {
+				__mygo_expr_7 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_9.F0)
 			} else {
+				if __mygo_match___mygo_expr_8, ok := raw.(Result__Ok[AstExprResult, string]); ok {
+					__mygo_expr_7 = translateRawTupleLet(pattern, MygoIN6OptionM8UnwrapOr(value.Type, ast2.MonoType__TUnit__Ctor()), __mygo_match___mygo_expr_8.F0.Expr, __mygo_match___mygo_expr_8.F0.Pre, ctx)
+				} else {
+				}
 			}
+			__mygo_expr_13 = __mygo_expr_7
+		} else {
+			__mygo_expr_10 := ffiMultiResultSignature(value, ctx)
+			var __mygo_expr_11 Result[[]goast.Stmt, string]
+			if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(Option__Some[typeinference2.GoFuncSignature]); ok {
+				__mygo_expr_11 = translateFFITupleLetStmt(pattern, value, __mygo_match___mygo_expr_12.F0, ctx)
+			} else {
+				if _, ok := __mygo_expr_10.(Option__None[typeinference2.GoFuncSignature]); ok {
+					__mygo_expr_11 = translateAstTupleLetStmtOrdinary(pattern, value, ctx)
+				} else {
+				}
+			}
+			__mygo_expr_13 = __mygo_expr_11
 		}
-		__mygo_expr_1 = __mygo_expr_3
+		__mygo_expr_1 = __mygo_expr_13
+	} else {
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.ExprKind__InlineGoExpr); ok {
+			__mygo_expr_6 := *__mygo_match___mygo_expr_5.F0
+			var __mygo_expr_7 Result[[]goast.Stmt, string]
+			if _, ok := __mygo_expr_6.(ast2.TypeExpr__TupleType); ok {
+				__mygo_expr_7 = translateInlineGoTupleLet(pattern, __mygo_match___mygo_expr_5.F1, __mygo_match___mygo_expr_5.F2, __mygo_match___mygo_expr_5.F3, value, ctx)
+			} else {
+				__mygo_expr_7 = translateAstTupleLetStmtOrdinary(pattern, value, ctx)
+			}
+			__mygo_expr_1 = __mygo_expr_7
+		} else {
+			__mygo_expr_2 := ffiMultiResultSignature(value, ctx)
+			var __mygo_expr_3 Result[[]goast.Stmt, string]
+			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[typeinference2.GoFuncSignature]); ok {
+				__mygo_expr_3 = translateFFITupleLetStmt(pattern, value, __mygo_match___mygo_expr_4.F0, ctx)
+			} else {
+				if _, ok := __mygo_expr_2.(Option__None[typeinference2.GoFuncSignature]); ok {
+					__mygo_expr_3 = translateAstTupleLetStmtOrdinary(pattern, value, ctx)
+				} else {
+				}
+			}
+			__mygo_expr_1 = __mygo_expr_3
+		}
 	}
 	return __mygo_expr_1
 }
-func translateInlineGoTupleLet(names []string, body string, values []ast2.GoOperand, types []ast2.GoTypeOperand, value ast2.Expr, ctx *egCtx) Result[[]goast.Stmt, string] {
+func isTupleReturningLocalCall(callee ast2.Expr, ctx *egCtx) bool {
+	__mygo_expr_0 := callee.Kind
+	var __mygo_expr_1 bool
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__IdentExpr); ok {
+		__mygo_expr_3 := ctx.pkgInfo
+		var __mygo_expr_4 bool
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[typeinference2.PackageInfo]); ok {
+			__mygo_expr_4 = localTupleFunctionReturn(__mygo_match___mygo_expr_5.F0.TypedDecls, __mygo_match___mygo_expr_2.F0, 0)
+		} else {
+			if _, ok := __mygo_expr_3.(Option__None[typeinference2.PackageInfo]); ok {
+				__mygo_expr_4 = false
+			} else {
+			}
+		}
+		__mygo_expr_1 = __mygo_expr_4
+	} else {
+		__mygo_expr_1 = false
+	}
+	return __mygo_expr_1
+}
+func localTupleFunctionReturn(decls []ast2.Decl, name string, index int) bool {
+	return __mygo_mt_codegen2_localTupleFunctionReturn(decls, name, index, 0)
+}
+func translateInlineGoTupleLet(pattern ast2.Pattern, body string, values []ast2.GoOperand, types []ast2.GoTypeOperand, value ast2.Expr, ctx *egCtx) Result[[]goast.Stmt, string] {
 	parts := translateInlineOperands(values, types, ctx, 0, []string{}, []string{}, []string{}, []string{}, []goast.Stmt{})
 	var __mygo_expr_0 Result[[]goast.Stmt, string]
 	if __mygo_match___mygo_expr_2, ok := parts.(Result__Err[AstInlineOperands, string]); ok {
@@ -205,17 +258,15 @@ func translateInlineGoTupleLet(names []string, body string, values []ast2.GoOper
 	} else {
 		if __mygo_match___mygo_expr_1, ok := parts.(Result__Ok[AstInlineOperands, string]); ok {
 			raw := goast.MustInlineGoExprWithOperands(body, __mygo_match___mygo_expr_1.F0.ValueNames, __mygo_match___mygo_expr_1.F0.ValueSources, __mygo_match___mygo_expr_1.F0.TypeNames, __mygo_match___mygo_expr_1.F0.TypeSources)
-			goNames := tupleBindingNames(names, ctx, 0, []goast.Expr{})
 			tupleMono := MygoIN6OptionM8UnwrapOr(value.Type, ast2.MonoType__TUnit__Ctor())
-			bindTupleLetTypes(names, tupleMono, ctx, 0)
-			__mygo_expr_0 = Ok[[]goast.Stmt, string](goast.AppendStmts(__mygo_match___mygo_expr_1.F0.Pre, astSingleStmt(goast.Assign(goNames, ":=", astSingleExpr(raw)))))
+			__mygo_expr_0 = translateRawTupleLet(pattern, tupleMono, raw, __mygo_match___mygo_expr_1.F0.Pre, ctx)
 		} else {
 		}
 	}
 	return __mygo_expr_0
 }
-func translateFFITupleLetStmt(names []string, value ast2.Expr, sig typeinference2.GoFuncSignature, ctx *egCtx) Result[[]goast.Stmt, string] {
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(names) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Results) {
+func translateFFITupleLetStmt(pattern ast2.Pattern, value ast2.Expr, sig typeinference2.GoFuncSignature, ctx *egCtx) Result[[]goast.Stmt, string] {
+	if tuplePatternArity(pattern) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Results) {
 		return Err[[]goast.Stmt, string]("tuple binding count does not match Go function result count")
 	} else {
 		__mygo_expr_0 := value.Kind
@@ -227,10 +278,8 @@ func translateFFITupleLetStmt(names []string, value ast2.Expr, sig typeinference
 				__mygo_expr_3 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_5.F0)
 			} else {
 				if __mygo_match___mygo_expr_4, ok := raw.(Result__Ok[AstExprResult, string]); ok {
-					goNames := tupleBindingNames(names, ctx, 0, []goast.Expr{})
 					resultTypes := typeinference2.GoSignatureRawResultType(sig)
-					bindTupleLetTypes(names, resultTypes, ctx, 0)
-					__mygo_expr_3 = Ok[[]goast.Stmt, string](goast.AppendStmts(__mygo_match___mygo_expr_4.F0.Pre, astSingleStmt(goast.Assign(goNames, ":=", astSingleExpr(__mygo_match___mygo_expr_4.F0.Expr)))))
+					__mygo_expr_3 = translateRawTupleLet(pattern, resultTypes, __mygo_match___mygo_expr_4.F0.Expr, __mygo_match___mygo_expr_4.F0.Pre, ctx)
 				} else {
 				}
 			}
@@ -241,14 +290,7 @@ func translateFFITupleLetStmt(names []string, value ast2.Expr, sig typeinference
 		return __mygo_expr_1
 	}
 }
-func tupleBindingNames(names []string, ctx *egCtx, index int, out []goast.Expr) []goast.Expr {
-	return __mygo_mt_codegen2_tupleBindingNames(names, ctx, index, out, 0)
-}
-func bindTupleLetTypes(names []string, resultType ast2.MonoType, ctx *egCtx, index int) {
-	__mygo_mt_codegen2_bindTupleLetTypes(names, resultType, ctx, index, 0)
-	return
-}
-func translateAstTupleLetStmtOrdinary(names []string, value ast2.Expr, ctx *egCtx) Result[[]goast.Stmt, string] {
+func translateAstTupleLetStmtOrdinary(pattern ast2.Pattern, value ast2.Expr, ctx *egCtx) Result[[]goast.Stmt, string] {
 	monoType := MygoIN6OptionM8UnwrapOr(value.Type, ast2.MonoType__TUnit__Ctor())
 	tupleMono := tupleInnerType(monoType)
 	v := translateExprAst(value, ctx)
@@ -261,15 +303,71 @@ func translateAstTupleLetStmtOrdinary(names []string, value ast2.Expr, ctx *egCt
 			tempDecl := astSingleStmt(goast.VarDecl(tempName, monoTypeToGoAstWithParams(tupleMono, ctx.typeParamNames, ctx.pathAliases)))
 			tempAssign := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(tempName)), "=", astSingleExpr(__mygo_match___mygo_expr_1.F0.Expr)))
 			stmts := goast.AppendStmts(goast.AppendStmts(goast.AppendStmts(__mygo_match___mygo_expr_1.F0.Pre, tempDecl), tempAssign), []goast.Stmt{})
-			bound := bindTupleNames(names, tempName, tupleMono, ctx, stmts, 0)
+			bound := bindTupleLetPattern(pattern, tempName, tupleMono, ctx, stmts)
 			__mygo_expr_0 = Ok[[]goast.Stmt, string](bound)
 		} else {
 		}
 	}
 	return __mygo_expr_0
 }
-func bindTupleNames(names []string, valueName string, tupleType ast2.MonoType, ctx *egCtx, stmts []goast.Stmt, index int) []goast.Stmt {
-	return __mygo_mt_codegen2_bindTupleNames(names, valueName, tupleType, ctx, stmts, index, 0)
+func translateRawTupleLet(pattern ast2.Pattern, tupleType ast2.MonoType, raw goast.Expr, pre []goast.Stmt, ctx *egCtx) Result[[]goast.Stmt, string] {
+	var __mygo_expr_0 Result[[]goast.Stmt, string]
+	if __mygo_match___mygo_expr_1, ok := pattern.(ast2.Pattern__TuplePattern); ok {
+		names := rawTupleBindingNames(__mygo_match___mygo_expr_1.F0, tupleType, ctx, 0, []goast.Expr{})
+		assigned := goast.AppendStmts(pre, astSingleStmt(goast.Assign(names, ":=", astSingleExpr(raw))))
+		__mygo_expr_0 = Ok[[]goast.Stmt, string](bindNestedTuplePatternItems(__mygo_match___mygo_expr_1.F0, tupleType, ctx, assigned, 0))
+	} else {
+		__mygo_expr_0 = Err[[]goast.Stmt, string]("tuple binding requires a tuple pattern")
+	}
+	return __mygo_expr_0
+}
+func rawTupleBindingNames(items []ast2.Pattern, tupleType ast2.MonoType, ctx *egCtx, index int, out []goast.Expr) []goast.Expr {
+	return __mygo_mt_codegen2_rawTupleBindingNames(items, tupleType, ctx, index, out, 0)
+}
+func bindNestedTuplePatternItems(items []ast2.Pattern, tupleType ast2.MonoType, ctx *egCtx, stmts []goast.Stmt, index int) []goast.Stmt {
+	return __mygo_mt_codegen2_bindNestedTuplePatternItems(items, tupleType, ctx, stmts, index, 0)
+}
+func rawTupleTempName(index int) string {
+	return "__mygo_tuple_raw_" + MygoIT8ToStringFN3IntGN3IntEM8ToString(index)
+}
+func tuplePatternArity(pattern ast2.Pattern) int {
+	var __mygo_expr_0 int
+	if __mygo_match___mygo_expr_1, ok := pattern.(ast2.Pattern__TuplePattern); ok {
+		__mygo_expr_0 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0)
+	} else {
+		__mygo_expr_0 = 0
+	}
+	return __mygo_expr_0
+}
+func bindTupleLetPattern(pattern ast2.Pattern, valueName string, tupleType ast2.MonoType, ctx *egCtx, stmts []goast.Stmt) []goast.Stmt {
+	var __mygo_expr_0 []goast.Stmt
+	if __mygo_match___mygo_expr_2, ok := pattern.(ast2.Pattern__TuplePattern); ok {
+		__mygo_expr_0 = bindTupleLetPatternItems(__mygo_match___mygo_expr_2.F0, valueName, tupleType, ctx, stmts, 0)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := pattern.(ast2.Pattern__BindPattern); ok {
+			__mygo_expr_0 = bindTupleLetPatternName(__mygo_match___mygo_expr_1.F0, valueName, tupleType, ctx, stmts)
+		} else {
+			__mygo_expr_0 = stmts
+		}
+	}
+	return __mygo_expr_0
+}
+func bindTupleLetPatternItems(items []ast2.Pattern, valueName string, tupleType ast2.MonoType, ctx *egCtx, stmts []goast.Stmt, index int) []goast.Stmt {
+	return __mygo_mt_codegen2_bindTupleLetPatternItems(items, valueName, tupleType, ctx, stmts, index, 0)
+}
+func bindTupleLetPatternName(name string, valueName string, typ ast2.MonoType, ctx *egCtx, stmts []goast.Stmt) []goast.Stmt {
+	goName := ctxFreshBinding(ctx, name)
+	decl := astSingleStmt(goast.VarDecl(goName, monoTypeToGoAstWithParams(typ, ctx.typeParamNames, ctx.pathAliases)))
+	source := goast.Ident(valueName)
+	ctxSetLocal(ctx, name, typ)
+	return goast.AppendStmts(goast.AppendStmts(stmts, decl), astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(goName)), "=", astSingleExpr(source))))
+}
+func bindTupleLetPatternFieldName(name string, valueName string, fieldName string, typ ast2.MonoType, ctx *egCtx, stmts []goast.Stmt) []goast.Stmt {
+	goName := ctxFreshBinding(ctx, name)
+	decl := astSingleStmt(goast.VarDecl(goName, monoTypeToGoAstWithParams(typ, ctx.typeParamNames, ctx.pathAliases)))
+	source := goast.Selector(goast.Ident(valueName), fieldName)
+	ctxSetLocal(ctx, name, typ)
+	return goast.AppendStmts(goast.AppendStmts(stmts, decl), astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(goName)), "=", astSingleExpr(source))))
 }
 func tupleInnerType(t ast2.MonoType) ast2.MonoType {
 	var __mygo_expr_0 ast2.MonoType
@@ -938,54 +1036,86 @@ func astSingleStmt(stmt goast.Stmt) []goast.Stmt {
 func astTwoStmts(first goast.Stmt, second goast.Stmt) []goast.Stmt {
 	return MygoIN5SliceM6Append(MygoIN5SliceM6Append([]goast.Stmt{}, first), second)
 }
-func __mygo_mt_codegen2_bindTupleLetTypes(__mygo_mt_p0 []string, __mygo_mt_p1 ast2.MonoType, __mygo_mt_p2 *egCtx, __mygo_mt_p3 int, __mygo_state int) {
+func __mygo_mt_codegen2_bindNestedTuplePatternItems(__mygo_mt_p0 []ast2.Pattern, __mygo_mt_p1 ast2.MonoType, __mygo_mt_p2 *egCtx, __mygo_mt_p3 []goast.Stmt, __mygo_mt_p4 int, __mygo_state int) []goast.Stmt {
 	for {
 		switch __mygo_state {
 		case 0:
-			if __mygo_mt_p3 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-				name := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3), "_")
-				if name == "_" {
-				} else {
-					ctxSetLocal(__mygo_mt_p2, name, tupleElementType(__mygo_mt_p1, __mygo_mt_p3))
-				}
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2
-				__tail_3 := __mygo_mt_p3 + 1
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_state = 0
-				continue
+			if __mygo_mt_p4 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p3
 			} else {
-				return
+				pattern := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p4), ast2.Pattern__WildcardPattern__Ctor())
+				if _, ok := pattern.(ast2.Pattern__TuplePattern); ok {
+					tempName := rawTupleTempName(__mygo_mt_p4)
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := bindTupleLetPattern(pattern, tempName, tupleElementType(__mygo_mt_p1, __mygo_mt_p4), __mygo_mt_p2, __mygo_mt_p3)
+					__tail_4 := __mygo_mt_p4 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+					__mygo_state = 0
+					continue
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3
+					__tail_4 := __mygo_mt_p4 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+					__mygo_state = 0
+					continue
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
 	}
 }
-func __mygo_mt_codegen2_bindTupleNames(__mygo_mt_p0 []string, __mygo_mt_p1 string, __mygo_mt_p2 ast2.MonoType, __mygo_mt_p3 *egCtx, __mygo_mt_p4 []goast.Stmt, __mygo_mt_p5 int, __mygo_state int) []goast.Stmt {
+func __mygo_mt_codegen2_bindTupleLetPatternItems(__mygo_mt_p0 []ast2.Pattern, __mygo_mt_p1 string, __mygo_mt_p2 ast2.MonoType, __mygo_mt_p3 *egCtx, __mygo_mt_p4 []goast.Stmt, __mygo_mt_p5 int, __mygo_state int) []goast.Stmt {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p5 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return __mygo_mt_p4
 			} else {
-				name := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p5), "")
-				goName := ctxFreshBinding(__mygo_mt_p3, name)
+				pattern := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p5), ast2.Pattern__WildcardPattern__Ctor())
 				fieldType := tupleElementType(__mygo_mt_p2, __mygo_mt_p5)
-				decl := astSingleStmt(goast.VarDecl(goName, monoTypeToGoAstWithParams(fieldType, __mygo_mt_p3.typeParamNames, __mygo_mt_p3.pathAliases)))
-				fieldAccess := goast.Selector(goast.Ident(__mygo_mt_p1), "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_mt_p5))
-				assignStmt := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(goName)), "=", astSingleExpr(fieldAccess)))
-				ctxSetLocal(__mygo_mt_p3, name, fieldType)
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2
-				__tail_3 := __mygo_mt_p3
-				__tail_4 := goast.AppendStmts(goast.AppendStmts(__mygo_mt_p4, decl), assignStmt)
-				__tail_5 := __mygo_mt_p5 + 1
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
-				__mygo_state = 0
-				continue
+				fieldName := "F" + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_mt_p5)
+				if __mygo_match___mygo_expr_0, ok := pattern.(ast2.Pattern__BindPattern); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3
+					__tail_4 := bindTupleLetPatternFieldName(__mygo_match___mygo_expr_0.F0, __mygo_mt_p1, fieldName, fieldType, __mygo_mt_p3, __mygo_mt_p4)
+					__tail_5 := __mygo_mt_p5 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := pattern.(ast2.Pattern__TuplePattern); ok {
+						tempName := ctxFreshExprTemp(__mygo_mt_p3)
+						decl := astSingleStmt(goast.VarDecl(tempName, monoTypeToGoAstWithParams(fieldType, __mygo_mt_p3.typeParamNames, __mygo_mt_p3.pathAliases)))
+						assignStmt := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(tempName)), "=", astSingleExpr(goast.Selector(goast.Ident(__mygo_mt_p1), fieldName))))
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := __mygo_mt_p3
+						__tail_4 := bindTupleLetPattern(pattern, tempName, fieldType, __mygo_mt_p3, goast.AppendStmts(goast.AppendStmts(__mygo_mt_p4, decl), assignStmt))
+						__tail_5 := __mygo_mt_p5 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+						__mygo_state = 0
+						continue
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := __mygo_mt_p3
+						__tail_4 := __mygo_mt_p4
+						__tail_5 := __mygo_mt_p5 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+						__mygo_state = 0
+						continue
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1039,6 +1169,97 @@ func __mygo_mt_codegen2_initializeAstLetRec(__mygo_mt_p0 []ast2.LetRecBind, __my
 						__mygo_state = 0
 						continue
 					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_localTupleFunctionReturn(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 string, __mygo_mt_p2 int, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return false
+			} else {
+				decl := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), ast2.Decl__LetDecl__Ctor(ast2.Bind{Name: "", Type: None[ast2.TypeExpr](), Value: ast2.EmptyExpr()}))
+				if __mygo_match___mygo_expr_0, ok := decl.(ast2.Decl__FuncDecl); ok {
+					if __mygo_match___mygo_expr_0.F0 == __mygo_mt_p1 {
+						if __mygo_match___mygo_expr_1, ok := __mygo_match___mygo_expr_0.F3.(Option__Some[ast2.TypeExpr]); ok {
+							if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.TypeExpr__TupleType); ok {
+								return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F0) > 1
+							} else {
+								return false
+							}
+						} else {
+							if _, ok := __mygo_match___mygo_expr_0.F3.(Option__None[ast2.TypeExpr]); ok {
+								return false
+							} else {
+							}
+						}
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_rawTupleBindingNames(__mygo_mt_p0 []ast2.Pattern, __mygo_mt_p1 ast2.MonoType, __mygo_mt_p2 *egCtx, __mygo_mt_p3 int, __mygo_mt_p4 []goast.Expr, __mygo_state int) []goast.Expr {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p4
+			} else {
+				pattern := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3), ast2.Pattern__WildcardPattern__Ctor())
+				typ := tupleElementType(__mygo_mt_p1, __mygo_mt_p3)
+				if __mygo_match___mygo_expr_0, ok := pattern.(ast2.Pattern__BindPattern); ok {
+					goName := ctxFreshBinding(__mygo_mt_p2, __mygo_match___mygo_expr_0.F0)
+					ctxSetLocal(__mygo_mt_p2, __mygo_match___mygo_expr_0.F0, typ)
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3 + 1
+					__tail_4 := MygoIN5SliceM6Append(__mygo_mt_p4, goast.Ident(goName))
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := pattern.(ast2.Pattern__WildcardPattern); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := __mygo_mt_p3 + 1
+						__tail_4 := MygoIN5SliceM6Append(__mygo_mt_p4, goast.Ident("_"))
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+						__mygo_state = 0
+						continue
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := __mygo_mt_p3 + 1
+						__tail_4 := MygoIN5SliceM6Append(__mygo_mt_p4, goast.Ident(rawTupleTempName(__mygo_mt_p3)))
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+						__mygo_state = 0
+						continue
 					}
 				}
 			}
@@ -1331,34 +1552,6 @@ func __mygo_mt_codegen2_translateInlineOperands(__mygo_mt_p0 []ast2.GoOperand, _
 				} else {
 					return Ok[AstInlineOperands, string](AstInlineOperands{ValueNames: __mygo_mt_p4, ValueSources: __mygo_mt_p5, TypeNames: __mygo_mt_p6, TypeSources: __mygo_mt_p7, Pre: __mygo_mt_p8})
 				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_codegen2_tupleBindingNames(__mygo_mt_p0 []string, __mygo_mt_p1 *egCtx, __mygo_mt_p2 int, __mygo_mt_p3 []goast.Expr, __mygo_state int) []goast.Expr {
-	for {
-		switch __mygo_state {
-		case 0:
-			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-				return __mygo_mt_p3
-			} else {
-				name := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), "_")
-				var __mygo_expr_0 string
-				if name == "_" {
-					__mygo_expr_0 = "_"
-				} else {
-					__mygo_expr_0 = ctxFreshBinding(__mygo_mt_p1, name)
-				}
-				goName := __mygo_expr_0
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2 + 1
-				__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, goast.Ident(goName))
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_state = 0
-				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")

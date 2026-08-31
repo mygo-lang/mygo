@@ -4,6 +4,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -61,6 +62,148 @@ end
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), written[0], generated, parser.AllErrors); err != nil {
 		t.Fatalf("bootstrap output is invalid Go: %v\n%s", err, generated)
+	}
+}
+
+func TestCompileDirBootstrapLowersNestedTupleLetPattern(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	source := `package sample
+
+func pair() -> (Int, (Int, Int))
+  (1, (2, 3))
+end
+
+func Result() -> Int
+  let (first, (_, last)) = pair()
+  first + last
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompileDirBootstrap(dir); err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
+
+import "testing"
+
+func TestResult(t *testing.T) {
+	if got := Result(); got != 4 {
+		t.Fatalf("Result() = %d, want 4", got)
+	}
+}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "test", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated nested tuple package failed: %v\n%s", err, output)
+	}
+}
+
+func TestCompileDirBootstrapLowersStatementSwitchPatterns(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	source := `package sample
+
+enum Marker
+  Marked(Int)
+  Empty
+end
+
+func Result() -> Int
+  var total: Int = 0
+  switch 1
+    case 1 => total = total + 1
+    case _ => total = 99
+  end
+  switch 2
+    case item => total = total + item
+  end
+  switch (3, 4)
+    case (left, right) => total = total + left + right
+  end
+  switch Marker.Marked(5)
+    case Marked(value) => total = total + value
+    case _ => total = 99
+  end
+  total
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompileDirBootstrap(dir); err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
+
+import "testing"
+
+func TestResult(t *testing.T) {
+	if got := Result(); got != 15 {
+		t.Fatalf("Result() = %d, want 15", got)
+	}
+}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "test", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated statement switch package failed: %v\n%s", err, output)
+	}
+}
+
+func TestCompileDirBootstrapLowersNearestLoopControl(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	source := `package sample
+
+func Result() -> Int
+  var outer: Int = 0
+  var total: Int = 0
+  while outer < 3
+    outer = outer + 1
+    var inner: Int = 0
+    while inner < 3
+      inner = inner + 1
+      if inner == 2 then continue end
+      if outer == 2 then break end
+      total = total + 1
+    end
+  end
+  total
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompileDirBootstrap(dir); err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
+
+import "testing"
+
+func TestResult(t *testing.T) {
+	if got := Result(); got != 4 {
+		t.Fatalf("Result() = %d, want 4", got)
+	}
+}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "test", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated loop-control package failed: %v\n%s", err, output)
 	}
 }
 

@@ -2699,7 +2699,7 @@ func inferTypedAssign(target ast2.Expr, value ast2.Expr, env Env, state InferSta
 	}
 	return __mygo_expr_0
 }
-func inferBlockTupleLet(names []string, value ast2.Expr, env Env, state InferState) Result[BlockInferStep, string] {
+func inferBlockTupleLet(pattern ast2.Pattern, value ast2.Expr, env Env, state InferState) Result[BlockInferStep, string] {
 	r := inferExpr(value, env, state)
 	var __mygo_expr_0 Result[BlockInferStep, string]
 	if __mygo_match___mygo_expr_2, ok := r.(Result__Err[ExprInferResult, string]); ok {
@@ -2708,10 +2708,10 @@ func inferBlockTupleLet(names []string, value ast2.Expr, env Env, state InferSta
 		if __mygo_match___mygo_expr_1, ok := r.(Result__Ok[ExprInferResult, string]); ok {
 			tupleType := MygoIN6OptionM8UnwrapOr(ffiRawTupleResultType(value, __mygo_match___mygo_expr_1.F0.Result.State), __mygo_match___mygo_expr_1.F0.Result.Type)
 			nextState := __mygo_match___mygo_expr_1.F0.Result.State
-			nextEnv := envWithTupleBindings(env, names, tupleType)
+			nextEnv := envWithTupleLetPattern(env, pattern, tupleType)
 			typedValue := ast2.Expr{ID: __mygo_match___mygo_expr_1.F0.Expr.ID, Pos: __mygo_match___mygo_expr_1.F0.Expr.Pos, Kind: __mygo_match___mygo_expr_1.F0.Expr.Kind, Type: Some[ast2.MonoType](tupleType)}
-			stepState := withFreshID(nextState, nextState.FreshVarID+MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(names))
-			newStmt := ast2.Stmt__TupleLetStmt__Ctor(names, typedValue)
+			stepState := withFreshID(nextState, nextState.FreshVarID+tuplePatternBindingCount(pattern))
+			newStmt := ast2.Stmt__TupleLetStmt__Ctor(pattern, typedValue)
 			__mygo_expr_0 = Ok[BlockInferStep, string](BlockInferStep{Result: InferResult{Type: ast2.MonoType__TUnit__Ctor(), Predicates: __mygo_match___mygo_expr_1.F0.Result.Predicates, Subst: __mygo_match___mygo_expr_1.F0.Result.Subst, State: stepState}, Env: nextEnv, Stmt: newStmt})
 		} else {
 		}
@@ -2762,11 +2762,49 @@ func ffiRawTupleResultTypeInPackages(alias string, name string, packages []GoPac
 func ffiRawTupleResultTypeInFuncs(name string, funcs []GoFuncSignature) Option[ast2.MonoType] {
 	return __mygo_mt_typeinference2_ffiRawTupleResultTypeInFuncs(name, funcs, 0)
 }
-func envWithTupleBindings(env Env, names []string, tupleType ast2.MonoType) Env {
-	return envWithTupleBindingsAt(env, names, tupleType, 0)
+func envWithTupleLetPattern(env Env, pattern ast2.Pattern, typ ast2.MonoType) Env {
+	var __mygo_expr_0 Env
+	if __mygo_match___mygo_expr_2, ok := pattern.(ast2.Pattern__BindPattern); ok {
+		__mygo_expr_0 = envPut(env, __mygo_match___mygo_expr_2.F0, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: typ})
+	} else {
+		if _, ok := pattern.(ast2.Pattern__WildcardPattern); ok {
+			__mygo_expr_0 = env
+		} else {
+			if __mygo_match___mygo_expr_1, ok := pattern.(ast2.Pattern__TuplePattern); ok {
+				__mygo_expr_0 = envWithTuplePatternItems(env, __mygo_match___mygo_expr_1.F0, typ, 0)
+			} else {
+				__mygo_expr_0 = env
+			}
+		}
+	}
+	return __mygo_expr_0
 }
-func envWithTupleBindingsAt(env Env, names []string, tupleType ast2.MonoType, index int) Env {
-	return __mygo_mt_typeinference2_envWithTupleBindingsAt(env, names, tupleType, index, 0)
+func envWithTuplePatternItems(env Env, items []ast2.Pattern, tupleType ast2.MonoType, index int) Env {
+	return __mygo_mt_typeinference2_envWithTuplePatternItems(env, items, tupleType, index, 0)
+}
+func tuplePatternBindingCount(pattern ast2.Pattern) int {
+	var __mygo_expr_0 int
+	if _, ok := pattern.(ast2.Pattern__BindPattern); ok {
+		__mygo_expr_0 = 1
+	} else {
+		if _, ok := pattern.(ast2.Pattern__WildcardPattern); ok {
+			__mygo_expr_0 = 0
+		} else {
+			if __mygo_match___mygo_expr_1, ok := pattern.(ast2.Pattern__TuplePattern); ok {
+				__mygo_expr_0 = tuplePatternItemsBindingCount(__mygo_match___mygo_expr_1.F0, 0)
+			} else {
+				__mygo_expr_0 = 0
+			}
+		}
+	}
+	return __mygo_expr_0
+}
+func tuplePatternItemsBindingCount(items []ast2.Pattern, index int) int {
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+		return 0
+	} else {
+		return tuplePatternBindingCount(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.Pattern__WildcardPattern__Ctor())) + tuplePatternItemsBindingCount(items, index+1)
+	}
 }
 func tupleElementTypeForBinding(tupleType ast2.MonoType, index int) ast2.MonoType {
 	var __mygo_expr_0 ast2.MonoType
@@ -3343,8 +3381,6 @@ func inferStructLit(typeName string, fields []ast2.StructLitField, env Env, stat
 		__mygo_expr_3 = __mygo_match___mygo_expr_2.F0
 		var result InferResult
 		result = __mygo_expr_3.F0
-		var _ []ast2.StructLitField
-		_ = __mygo_expr_3.F1
 		__mygo_expr_0 = Ok[InferResult, string](result)
 	} else {
 		if __mygo_match___mygo_expr_1, ok := typed.(Result__Err[struct {
@@ -4200,16 +4236,16 @@ func __mygo_mt_typeinference2_envWithPatternBindingLoop(__mygo_mt_p0 Env, __mygo
 		}
 	}
 }
-func __mygo_mt_typeinference2_envWithTupleBindingsAt(__mygo_mt_p0 Env, __mygo_mt_p1 []string, __mygo_mt_p2 ast2.MonoType, __mygo_mt_p3 int, __mygo_state int) Env {
+func __mygo_mt_typeinference2_envWithTuplePatternItems(__mygo_mt_p0 Env, __mygo_mt_p1 []ast2.Pattern, __mygo_mt_p2 ast2.MonoType, __mygo_mt_p3 int, __mygo_state int) Env {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
 				return __mygo_mt_p0
 			} else {
-				name := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3), "")
-				typ := tupleElementTypeForBinding(__mygo_mt_p2, __mygo_mt_p3)
-				__tail_0 := envPut(__mygo_mt_p0, name, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: typ})
+				pattern := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3), ast2.Pattern__WildcardPattern__Ctor())
+				nextEnv := envWithTupleLetPattern(__mygo_mt_p0, pattern, tupleElementTypeForBinding(__mygo_mt_p2, __mygo_mt_p3))
+				__tail_0 := nextEnv
 				__tail_1 := __mygo_mt_p1
 				__tail_2 := __mygo_mt_p2
 				__tail_3 := __mygo_mt_p3 + 1

@@ -139,9 +139,9 @@ func assignStmtID(stmt: Stmt, nextID: Int) -> StmtResult
     case LetRecStmt(bindings) =>
       let r = assignLetRecBindIDs(bindings, nextID)
       StmtResult { Stmt: Stmt.LetRecStmt(r.Bindings), NextID: r.NextID }
-    case TupleLetStmt(names, expr) =>
+    case TupleLetStmt(pattern, expr) =>
       let r = assignExprID(expr, nextID)
-      StmtResult { Stmt: Stmt.TupleLetStmt(names, r.Expr), NextID: r.NextID }
+      StmtResult { Stmt: Stmt.TupleLetStmt(pattern, r.Expr), NextID: r.NextID }
     case WhileStmt(cond, body) =>
       let r1 = assignExprID(cond, nextID)
       let r2 = assignExprID(body, r1.NextID)
@@ -155,10 +155,10 @@ func assignStmtID(stmt: Stmt, nextID: Int) -> StmtResult
       StmtResult { Stmt: Stmt.ReturnWithStmt(r.Expr), NextID: r.NextID }
     case ReturnStmt =>
       StmtResult { Stmt: stmt, NextID: nextID }
-    case BreakStmt =>
-      StmtResult { Stmt: stmt, NextID: nextID }
-    case ContinueStmt =>
-      StmtResult { Stmt: stmt, NextID: nextID }
+    case BreakStmt(pos) =>
+      StmtResult { Stmt: Stmt.BreakStmt(pos), NextID: nextID }
+    case ContinueStmt(pos) =>
+      StmtResult { Stmt: Stmt.ContinueStmt(pos), NextID: nextID }
   end
 end
 
@@ -307,6 +307,153 @@ func AssignFileExprIDs(file: File) -> File
     Column: file.Column,
     DeclPositions: file.DeclPositions,
   }
+end
+
+# ValidateLoopControl rejects loop-control statements outside a while body.
+# Function literals create a fresh control-flow boundary, exactly as they do
+# in the production validator.
+func ValidateLoopControl(file: File) -> Result[(), String]
+  validateLoopDecls(file.Decls, 0)
+end
+
+func validateLoopDecls(decls: Slice[Decl], depth: Int) -> Result[(), String]
+  if decls.Len() == 0 then Ok(()) else
+    let decl = decls.Get(0).UnwrapOr(Decl.ImportDecl("", ""))
+    let current = switch decl
+      case FuncDecl(_, _, _, _, body, _) => validateLoopExpr(body, depth)
+      case LetDecl(bind) => validateLoopExpr(bind.Value, depth)
+      case VarDecl(bind) => validateLoopExpr(bind.Value, depth)
+      case ImplDecl(_, _, _, methods) => validateLoopMethods(methods, depth)
+      case _ => Ok(())
+    end
+    switch current
+      case Err(msg) => Err(msg)
+      case Ok(_) => validateLoopDecls(sliceDrop(decls, 1), depth)
+    end
+  end
+end
+
+func validateLoopMethods(methods: Slice[ImplMethod], depth: Int) -> Result[(), String]
+  if methods.Len() == 0 then Ok(()) else
+    let method = methods.Get(0).UnwrapOr(ImplMethod { Pos: SourcePos { SourceName: "", Line: 0, Column: 0 }, Sig: FuncSig { Pos: SourcePos { SourceName: "", Line: 0, Column: 0 }, Name: "", TypeParams: [], Params: [], Ret: None, Using: [] }, Body: EmptyExpr() })
+    switch validateLoopExpr(method.Body, depth)
+      case Err(msg) => Err(msg)
+      case Ok(_) => validateLoopMethods(sliceDrop(methods, 1), depth)
+    end
+  end
+end
+
+func validateLoopExpr(expr: Expr, depth: Int) -> Result[(), String]
+  switch expr.Kind
+    case BlockExpr(items) => validateLoopStmts(items, depth)
+    case IfExpr(cond, thenExpr, elseExpr) => validateLoopExprs([cond, thenExpr, elseExpr], depth)
+    case SwitchExpr(target, cases, _) =>
+      switch validateLoopExpr(target, depth)
+        case Err(msg) => Err(msg)
+        case Ok(_) => validateLoopCases(cases, depth)
+      end
+    case FuncLitExpr(_, _, body) => validateLoopExpr(body, 0)
+    case CallExpr(callee, _, args) => validateLoopExprs(args.Prepend(callee), depth)
+    case DictionaryCallExpr(_, callee, args) => validateLoopExprs(args.Prepend(callee), depth)
+    case FieldExpr(base, _) => validateLoopExpr(base, depth)
+    case UnaryExpr(_, value) => validateLoopExpr(value, depth)
+    case BinaryExpr(_, left, right) => validateLoopExprs([left, right], depth)
+    case TupleExpr(items) => validateLoopExprs(items, depth)
+    case SliceLitExpr(items) => validateLoopExprs(items, depth)
+    case SetLitExpr(items) => validateLoopExprs(items, depth)
+    case TypeAsExpr(value, _) => validateLoopExpr(value, depth)
+    case StructLitExpr(_, fields) => validateLoopStructFields(fields, depth)
+    case GenericStructLitExpr(_, _, fields) => validateLoopStructFields(fields, depth)
+    case InlineGoExpr(_, _, operands, _) => validateLoopGoOperands(operands, depth)
+    case MapLitExpr(pairs) => validateLoopMapPairs(pairs, depth)
+    case _ => Ok(())
+  end
+end
+
+func validateLoopCases(cases: Slice[SwitchCase], depth: Int) -> Result[(), String]
+  if cases.Len() == 0 then Ok(()) else
+    let current = cases.Get(0).UnwrapOr(SwitchCase { Pattern: Pattern.WildcardPattern, Body: EmptyExpr() })
+    switch validateLoopExpr(current.Body, depth)
+      case Err(msg) => Err(msg)
+      case Ok(_) => validateLoopCases(sliceDrop(cases, 1), depth)
+    end
+  end
+end
+
+func validateLoopExprs(exprs: Slice[Expr], depth: Int) -> Result[(), String]
+  if exprs.Len() == 0 then Ok(()) else
+    switch validateLoopExpr(exprs.Get(0).UnwrapOr(EmptyExpr()), depth)
+      case Err(msg) => Err(msg)
+      case Ok(_) => validateLoopExprs(sliceDrop(exprs, 1), depth)
+    end
+  end
+end
+
+func validateLoopStructFields(fields: Slice[StructLitField], depth: Int) -> Result[(), String]
+  if fields.Len() == 0 then Ok(()) else
+    let field = fields.Get(0).UnwrapOr(StructLitField { Name: "", Value: EmptyExpr() })
+    switch validateLoopExpr(field.Value, depth)
+      case Err(msg) => Err(msg)
+      case Ok(_) => validateLoopStructFields(sliceDrop(fields, 1), depth)
+    end
+  end
+end
+
+func validateLoopGoOperands(operands: Slice[GoOperand], depth: Int) -> Result[(), String]
+  if operands.Len() == 0 then Ok(()) else
+    let operand = operands.Get(0).UnwrapOr(GoOperand { Name: "", Value: EmptyExpr() })
+    switch validateLoopExpr(operand.Value, depth)
+      case Err(msg) => Err(msg)
+      case Ok(_) => validateLoopGoOperands(sliceDrop(operands, 1), depth)
+    end
+  end
+end
+
+func validateLoopMapPairs(pairs: Slice[(Expr, Expr)], depth: Int) -> Result[(), String]
+  if pairs.Len() == 0 then Ok(()) else
+    let (key, value) = pairs.Get(0).UnwrapOr((EmptyExpr(), EmptyExpr()))
+    switch validateLoopExpr(key, depth)
+      case Err(msg) => Err(msg)
+      case Ok(_) =>
+        switch validateLoopExpr(value, depth)
+          case Err(msg) => Err(msg)
+          case Ok(_) => validateLoopMapPairs(sliceDrop(pairs, 1), depth)
+        end
+    end
+  end
+end
+
+func validateLoopStmts(stmts: Slice[Stmt], depth: Int) -> Result[(), String]
+  if stmts.Len() == 0 then Ok(()) else
+    let stmt = stmts.Get(0).UnwrapOr(Stmt.ReturnStmt)
+    let current = switch stmt
+      case BreakStmt(pos) => if depth == 0 then Err(loopControlError(pos, "break")) else Ok(()) end
+      case ContinueStmt(pos) => if depth == 0 then Err(loopControlError(pos, "continue")) else Ok(()) end
+      case ExprStmt(expr) => validateLoopExpr(expr, depth)
+      case LetStmt(bind) => validateLoopExpr(bind.Value, depth)
+      case VarStmt(bind) => validateLoopExpr(bind.Value, depth)
+      case TupleLetStmt(_, value) => validateLoopExpr(value, depth)
+      case WhileStmt(cond, body) => validateLoopWhile(cond, body, depth)
+      case AssignStmt(target, value) => validateLoopExprs([target, value], depth)
+      case ReturnWithStmt(value) => validateLoopExpr(value, depth)
+      case _ => Ok(())
+    end
+    switch current
+      case Err(msg) => Err(msg)
+      case Ok(_) => validateLoopStmts(sliceDrop(stmts, 1), depth)
+    end
+  end
+end
+
+func validateLoopWhile(cond: Expr, body: Expr, depth: Int) -> Result[(), String]
+  switch validateLoopExpr(cond, depth)
+    case Err(msg) => Err(msg)
+    case Ok(_) => validateLoopExpr(body, depth + 1)
+  end
+end
+
+func loopControlError(pos: SourcePos, keyword: String) -> String
+  pos.SourceName + ":" + pos.Line.ToString() + ":" + pos.Column.ToString() + ": " + keyword + " is only valid inside a while loop"
 end
 
 func sliceDrop[A](items: Slice[A], n: Int) -> Slice[A]

@@ -133,13 +133,13 @@ func annotateStmtSource(stmt: ast2.Stmt, sourceName: String) -> ast2.Stmt
     case ExprStmt(expr) => ast2.Stmt.ExprStmt(annotateExprSource(expr, sourceName))
     case LetStmt(bind) => ast2.Stmt.LetStmt(ast2.Bind { Name: bind.Name, Type: bind.Type, Value: annotateExprSource(bind.Value, sourceName) })
     case LetRecStmt(bindings) => ast2.Stmt.LetRecStmt(bindings.Map(func(b: ast2.LetRecBind) -> ast2.LetRecBind ast2.LetRecBind { Name: b.Name, Type: b.Type, Value: annotateExprSource(b.Value, sourceName) } end))
-    case TupleLetStmt(names, expr) => ast2.Stmt.TupleLetStmt(names, annotateExprSource(expr, sourceName))
+    case TupleLetStmt(pattern, expr) => ast2.Stmt.TupleLetStmt(pattern, annotateExprSource(expr, sourceName))
     case VarStmt(bind) => ast2.Stmt.VarStmt(ast2.Bind { Name: bind.Name, Type: bind.Type, Value: annotateExprSource(bind.Value, sourceName) })
     case WhileStmt(cond, body) => ast2.Stmt.WhileStmt(annotateExprSource(cond, sourceName), annotateExprSource(body, sourceName))
     case AssignStmt(target, value) => ast2.Stmt.AssignStmt(annotateExprSource(target, sourceName), annotateExprSource(value, sourceName))
     case ReturnWithStmt(expr) => ast2.Stmt.ReturnWithStmt(annotateExprSource(expr, sourceName))
-    case BreakStmt => stmt
-    case ContinueStmt => stmt
+    case BreakStmt(pos) => ast2.Stmt.BreakStmt(ast2.SourcePos { SourceName: sourceName, Line: pos.Line, Column: pos.Column })
+    case ContinueStmt(pos) => ast2.Stmt.ContinueStmt(ast2.SourcePos { SourceName: sourceName, Line: pos.Line, Column: pos.Column })
     case ReturnStmt => stmt
   end
 end
@@ -536,11 +536,25 @@ func stmt() -> ps.Parser[ast2.Stmt]
 end
 
 func breakStmt() -> ps.Parser[ast2.Stmt]
-  ps.PMap(kw("break"), func(_: String) -> ast2.Stmt ast2.Stmt.BreakStmt end)
+  func(state: ps.State) -> ps.Reply[ast2.Stmt]
+    let r = kw("break")(state)
+    if r.Ok then
+      ps.Reply[ast2.Stmt] { Ok: true, Consumed: r.Consumed, Value: ast2.Stmt.BreakStmt(sourcePos(state)), State: r.State, Error: r.Error }
+    else
+      ps.Reply[ast2.Stmt] { Ok: false, Consumed: r.Consumed, Value: ast2.Stmt.ReturnStmt, State: r.State, Error: r.Error }
+    end
+  end
 end
 
 func continueStmt() -> ps.Parser[ast2.Stmt]
-  ps.PMap(kw("continue"), func(_: String) -> ast2.Stmt ast2.Stmt.ContinueStmt end)
+  func(state: ps.State) -> ps.Reply[ast2.Stmt]
+    let r = kw("continue")(state)
+    if r.Ok then
+      ps.Reply[ast2.Stmt] { Ok: true, Consumed: r.Consumed, Value: ast2.Stmt.ContinueStmt(sourcePos(state)), State: r.State, Error: r.Error }
+    else
+      ps.Reply[ast2.Stmt] { Ok: false, Consumed: r.Consumed, Value: ast2.Stmt.ReturnStmt, State: r.State, Error: r.Error }
+    end
+  end
 end
 
 # Parse an expression once, then interpret an immediately following '=' as an
@@ -617,13 +631,27 @@ func namedLetStmt() -> ps.Parser[ast2.Stmt]
 end
 
 func tupleLetStmt() -> ps.Parser[ast2.Stmt]
-  ps.PBind(paren(ps.PSepBy(identifier(), sym(","))), func(names: Slice[String]) -> ps.Parser[ast2.Stmt]
+  ps.PBind(paren(ps.PSepBy(lazyBindingPattern(), sym(","))), func(items: Slice[ast2.Pattern]) -> ps.Parser[ast2.Stmt]
     ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
       ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
-        ast2.Stmt.TupleLetStmt(names, value)
+        ast2.Stmt.TupleLetStmt(ast2.Pattern.TuplePattern(items), value)
       end)
     end)
   end)
+end
+
+func bindingPattern() -> ps.Parser[ast2.Pattern]
+  ps.PChoice([
+    ps.PAttempt(ps.PMap(paren(ps.PSepBy(lazyBindingPattern(), sym(","))), func(items: Slice[ast2.Pattern]) -> ast2.Pattern ast2.Pattern.TuplePattern(items) end)),
+    ps.PMap(sym("_"), func(_: String) -> ast2.Pattern ast2.Pattern.WildcardPattern end),
+    ps.PMap(identifier(), func(name: String) -> ast2.Pattern ast2.Pattern.BindPattern(name) end),
+  ])
+end
+
+func lazyBindingPattern() -> ps.Parser[ast2.Pattern]
+  func(state: ps.State) -> ps.Reply[ast2.Pattern]
+    bindingPattern()(state)
+  end
 end
 
 func varStmt() -> ps.Parser[ast2.Stmt]

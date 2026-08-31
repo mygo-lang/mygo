@@ -833,8 +833,6 @@ func collectMyGoPackageImports(decls []ast2.Decl) []struct {
 					__mygo_expr_2 = item
 					var item0 string
 					item0 = __mygo_expr_2.F0
-					var _ string
-					_ = __mygo_expr_2.F1
 					return found || item0 == __mygo_match___mygo_expr_1.F0
 				})
 				var __mygo_expr_2 []struct {
@@ -2295,8 +2293,6 @@ func __mygo_mt_typeinference2_seedMyGoPackageEnv(__mygo_mt_p0 []struct {
 				__mygo_expr_0 = item
 				var alias string
 				alias = __mygo_expr_0.F0
-				var _ string
-				_ = __mygo_expr_0.F1
 				pkg := findMyGoPackage(__mygo_mt_p1, alias)
 				cached := cachedImportedPackage(pkg, alias, __mygo_mt_p1, __mygo_mt_p2)
 				envWithMembers := envPutBatch(__mygo_mt_p3, cached.Exported)

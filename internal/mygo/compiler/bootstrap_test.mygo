@@ -1,0 +1,82 @@
+package compiler
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import testing "go:testing"
+
+func TestBootstrapLoopControlAllowsNestedLoops(t: Ref[testing.T]) -> ()
+  let parsed = parser2.ParseFileAt("nested-loop.mygo", """
+package compiler
+
+func value() -> Int
+  var outer: Int = 0
+  var total: Int = 0
+  while outer < 3
+    outer = outer + 1
+    var inner: Int = 0
+    while inner < 3
+      inner = inner + 1
+      if inner == 2 then continue end
+      if outer == 2 then break end
+      total = total + 1
+    end
+  end
+  total
+end
+""")
+  switch parsed
+    case Err(msg) => t.Fatal(msg)
+    case Ok(file) =>
+      switch ast2.ValidateLoopControl(file)
+        case Err(msg) => t.Fatal(msg)
+        case Ok(_) => ()
+      end
+  end
+end
+
+func TestBootstrapLoopControlReportsStatementPosition(t: Ref[testing.T]) -> ()
+  let parsed = parser2.ParseFileAt("invalid-loop.mygo", """
+package compiler
+
+func value() -> ()
+  break
+end
+""")
+  switch parsed
+    case Err(msg) => t.Fatal(msg)
+    case Ok(file) =>
+      switch ast2.ValidateLoopControl(file)
+        case Ok(_) => t.Fatal("expected break validation error")
+        case Err(msg) =>
+          if msg != "invalid-loop.mygo:5:3: break is only valid inside a while loop" then
+            t.Fatalf("loop-control error = %s", msg)
+          end
+      end
+  end
+end
+
+func TestBootstrapLoopControlResetsFunctionLiteralDepth(t: Ref[testing.T]) -> ()
+  let parsed = parser2.ParseFileAt("nested-function.mygo", """
+package compiler
+
+func value() -> ()
+  while true
+    let f = func() -> ()
+      continue
+    end
+    break
+  end
+end
+""")
+  switch parsed
+    case Err(msg) => t.Fatal(msg)
+    case Ok(file) =>
+      switch ast2.ValidateLoopControl(file)
+        case Ok(_) => t.Fatal("expected continue validation error")
+        case Err(msg) =>
+          if msg != "nested-function.mygo:7:7: continue is only valid inside a while loop" then
+            t.Fatalf("loop-control error = %s", msg)
+          end
+      end
+  end
+end

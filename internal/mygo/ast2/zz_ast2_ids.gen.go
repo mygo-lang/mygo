@@ -103,48 +103,48 @@ func assignStmtIDs(stmts []Stmt, nextID int) StmtSliceResult {
 }
 func assignStmtID(stmt Stmt, nextID int) StmtResult {
 	var __mygo_expr_0 StmtResult
-	if __mygo_match___mygo_expr_8, ok := stmt.(Stmt__ExprStmt); ok {
-		r_5 := assignExprID(__mygo_match___mygo_expr_8.F0, nextID)
+	if __mygo_match___mygo_expr_10, ok := stmt.(Stmt__ExprStmt); ok {
+		r_5 := assignExprID(__mygo_match___mygo_expr_10.F0, nextID)
 		__mygo_expr_0 = StmtResult{Stmt: Stmt__ExprStmt__Ctor(r_5.Expr), NextID: r_5.NextID}
 	} else {
-		if __mygo_match___mygo_expr_7, ok := stmt.(Stmt__LetStmt); ok {
-			r_4 := assignExprID(__mygo_match___mygo_expr_7.F0.Value, nextID)
-			__mygo_expr_0 = StmtResult{Stmt: Stmt__LetStmt__Ctor(Bind{Name: __mygo_match___mygo_expr_7.F0.Name, Type: __mygo_match___mygo_expr_7.F0.Type, Value: r_4.Expr}), NextID: r_4.NextID}
+		if __mygo_match___mygo_expr_9, ok := stmt.(Stmt__LetStmt); ok {
+			r_4 := assignExprID(__mygo_match___mygo_expr_9.F0.Value, nextID)
+			__mygo_expr_0 = StmtResult{Stmt: Stmt__LetStmt__Ctor(Bind{Name: __mygo_match___mygo_expr_9.F0.Name, Type: __mygo_match___mygo_expr_9.F0.Type, Value: r_4.Expr}), NextID: r_4.NextID}
 		} else {
-			if __mygo_match___mygo_expr_6, ok := stmt.(Stmt__VarStmt); ok {
-				r_3 := assignExprID(__mygo_match___mygo_expr_6.F0.Value, nextID)
-				__mygo_expr_0 = StmtResult{Stmt: Stmt__VarStmt__Ctor(Bind{Name: __mygo_match___mygo_expr_6.F0.Name, Type: __mygo_match___mygo_expr_6.F0.Type, Value: r_3.Expr}), NextID: r_3.NextID}
+			if __mygo_match___mygo_expr_8, ok := stmt.(Stmt__VarStmt); ok {
+				r_3 := assignExprID(__mygo_match___mygo_expr_8.F0.Value, nextID)
+				__mygo_expr_0 = StmtResult{Stmt: Stmt__VarStmt__Ctor(Bind{Name: __mygo_match___mygo_expr_8.F0.Name, Type: __mygo_match___mygo_expr_8.F0.Type, Value: r_3.Expr}), NextID: r_3.NextID}
 			} else {
-				if __mygo_match___mygo_expr_5, ok := stmt.(Stmt__LetRecStmt); ok {
-					r_2 := assignLetRecBindIDs(__mygo_match___mygo_expr_5.F0, nextID)
+				if __mygo_match___mygo_expr_7, ok := stmt.(Stmt__LetRecStmt); ok {
+					r_2 := assignLetRecBindIDs(__mygo_match___mygo_expr_7.F0, nextID)
 					__mygo_expr_0 = StmtResult{Stmt: Stmt__LetRecStmt__Ctor(r_2.Bindings), NextID: r_2.NextID}
 				} else {
-					if __mygo_match___mygo_expr_4, ok := stmt.(Stmt__TupleLetStmt); ok {
-						r_1 := assignExprID(__mygo_match___mygo_expr_4.F1, nextID)
-						__mygo_expr_0 = StmtResult{Stmt: Stmt__TupleLetStmt__Ctor(__mygo_match___mygo_expr_4.F0, r_1.Expr), NextID: r_1.NextID}
+					if __mygo_match___mygo_expr_6, ok := stmt.(Stmt__TupleLetStmt); ok {
+						r_1 := assignExprID(__mygo_match___mygo_expr_6.F1, nextID)
+						__mygo_expr_0 = StmtResult{Stmt: Stmt__TupleLetStmt__Ctor(__mygo_match___mygo_expr_6.F0, r_1.Expr), NextID: r_1.NextID}
 					} else {
-						if __mygo_match___mygo_expr_3, ok := stmt.(Stmt__WhileStmt); ok {
-							r1_1 := assignExprID(__mygo_match___mygo_expr_3.F0, nextID)
-							r2_1 := assignExprID(__mygo_match___mygo_expr_3.F1, r1_1.NextID)
+						if __mygo_match___mygo_expr_5, ok := stmt.(Stmt__WhileStmt); ok {
+							r1_1 := assignExprID(__mygo_match___mygo_expr_5.F0, nextID)
+							r2_1 := assignExprID(__mygo_match___mygo_expr_5.F1, r1_1.NextID)
 							__mygo_expr_0 = StmtResult{Stmt: Stmt__WhileStmt__Ctor(r1_1.Expr, r2_1.Expr), NextID: r2_1.NextID}
 						} else {
-							if __mygo_match___mygo_expr_2, ok := stmt.(Stmt__AssignStmt); ok {
-								r1 := assignExprID(__mygo_match___mygo_expr_2.F0, nextID)
-								r2 := assignExprID(__mygo_match___mygo_expr_2.F1, r1.NextID)
+							if __mygo_match___mygo_expr_4, ok := stmt.(Stmt__AssignStmt); ok {
+								r1 := assignExprID(__mygo_match___mygo_expr_4.F0, nextID)
+								r2 := assignExprID(__mygo_match___mygo_expr_4.F1, r1.NextID)
 								__mygo_expr_0 = StmtResult{Stmt: Stmt__AssignStmt__Ctor(r1.Expr, r2.Expr), NextID: r2.NextID}
 							} else {
-								if __mygo_match___mygo_expr_1, ok := stmt.(Stmt__ReturnWithStmt); ok {
-									r := assignExprID(__mygo_match___mygo_expr_1.F0, nextID)
+								if __mygo_match___mygo_expr_3, ok := stmt.(Stmt__ReturnWithStmt); ok {
+									r := assignExprID(__mygo_match___mygo_expr_3.F0, nextID)
 									__mygo_expr_0 = StmtResult{Stmt: Stmt__ReturnWithStmt__Ctor(r.Expr), NextID: r.NextID}
 								} else {
 									if _, ok := stmt.(Stmt__ReturnStmt); ok {
 										__mygo_expr_0 = StmtResult{Stmt: stmt, NextID: nextID}
 									} else {
-										if _, ok := stmt.(Stmt__BreakStmt); ok {
-											__mygo_expr_0 = StmtResult{Stmt: stmt, NextID: nextID}
+										if __mygo_match___mygo_expr_2, ok := stmt.(Stmt__BreakStmt); ok {
+											__mygo_expr_0 = StmtResult{Stmt: Stmt__BreakStmt__Ctor(__mygo_match___mygo_expr_2.F0), NextID: nextID}
 										} else {
-											if _, ok := stmt.(Stmt__ContinueStmt); ok {
-												__mygo_expr_0 = StmtResult{Stmt: stmt, NextID: nextID}
+											if __mygo_match___mygo_expr_1, ok := stmt.(Stmt__ContinueStmt); ok {
+												__mygo_expr_0 = StmtResult{Stmt: Stmt__ContinueStmt__Ctor(__mygo_match___mygo_expr_1.F0), NextID: nextID}
 											} else {
 											}
 										}
@@ -364,6 +364,142 @@ func assignMapPairIDs(pairs []struct {
 func AssignFileExprIDs(file File) File {
 	return File{PackageName: file.PackageName, Decls: AssignExprIDs(file.Decls), SourceName: file.SourceName, Line: file.Line, Column: file.Column, DeclPositions: file.DeclPositions}
 }
+func ValidateLoopControl(file File) Result[struct {
+}, string] {
+	return validateLoopDecls(file.Decls, 0)
+}
+func validateLoopDecls(decls []Decl, depth int) Result[struct{}, string] {
+	return __mygo_mt_ast2_validateLoopDecls(decls, depth, 0)
+}
+func validateLoopMethods(methods []ImplMethod, depth int) Result[struct{}, string] {
+	return __mygo_mt_ast2_validateLoopMethods(methods, depth, 0)
+}
+func validateLoopExpr(expr Expr, depth int) Result[struct {
+}, string] {
+	for {
+		__mygo_expr_0 := expr.Kind
+		var __mygo_expr_1 Result[struct{}, string]
+		if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ExprKind__BlockExpr); ok {
+			__mygo_expr_1 = validateLoopStmts(__mygo_match___mygo_expr_18.F0, depth)
+		} else {
+			if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ExprKind__IfExpr); ok {
+				__mygo_expr_1 = validateLoopExprs([]Expr{__mygo_match___mygo_expr_17.F0, __mygo_match___mygo_expr_17.F1, __mygo_match___mygo_expr_17.F2}, depth)
+			} else {
+				if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ExprKind__SwitchExpr); ok {
+					__mygo_expr_17 := validateLoopExpr(__mygo_match___mygo_expr_16.F0, depth)
+					var __mygo_expr_18 Result[struct{}, string]
+					if __mygo_match___mygo_expr_19, ok := __mygo_expr_17.(Result__Err[struct{}, string]); ok {
+						__mygo_expr_18 = Err[struct{}, string](__mygo_match___mygo_expr_19.F0)
+					} else {
+						if _, ok := __mygo_expr_17.(Result__Ok[struct{}, string]); ok {
+							__mygo_expr_18 = validateLoopCases(__mygo_match___mygo_expr_16.F1, depth)
+						} else {
+						}
+					}
+					__mygo_expr_1 = __mygo_expr_18
+				} else {
+					if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ExprKind__FuncLitExpr); ok {
+						__mygo_expr_1 = validateLoopExpr(__mygo_match___mygo_expr_15.F2, 0)
+					} else {
+						if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ExprKind__CallExpr); ok {
+							__mygo_expr_1 = validateLoopExprs(MygoIN5SliceM7Prepend(__mygo_match___mygo_expr_14.F2, __mygo_match___mygo_expr_14.F0), depth)
+						} else {
+							if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ExprKind__DictionaryCallExpr); ok {
+								__mygo_expr_1 = validateLoopExprs(MygoIN5SliceM7Prepend(__mygo_match___mygo_expr_13.F2, __mygo_match___mygo_expr_13.F1), depth)
+							} else {
+								if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ExprKind__FieldExpr); ok {
+									__mygo_expr_1 = validateLoopExpr(__mygo_match___mygo_expr_12.F0, depth)
+								} else {
+									if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ExprKind__UnaryExpr); ok {
+										__mygo_expr_1 = validateLoopExpr(__mygo_match___mygo_expr_11.F1, depth)
+									} else {
+										if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ExprKind__BinaryExpr); ok {
+											__mygo_expr_1 = validateLoopExprs([]Expr{__mygo_match___mygo_expr_10.F1, __mygo_match___mygo_expr_10.F2}, depth)
+										} else {
+											if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ExprKind__TupleExpr); ok {
+												__mygo_expr_1 = validateLoopExprs(__mygo_match___mygo_expr_9.F0, depth)
+											} else {
+												if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ExprKind__SliceLitExpr); ok {
+													__mygo_expr_1 = validateLoopExprs(__mygo_match___mygo_expr_8.F0, depth)
+												} else {
+													if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ExprKind__SetLitExpr); ok {
+														__mygo_expr_1 = validateLoopExprs(__mygo_match___mygo_expr_7.F0, depth)
+													} else {
+														if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ExprKind__TypeAsExpr); ok {
+															__mygo_expr_1 = validateLoopExpr(__mygo_match___mygo_expr_6.F0, depth)
+														} else {
+															if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ExprKind__StructLitExpr); ok {
+																__mygo_expr_1 = validateLoopStructFields(__mygo_match___mygo_expr_5.F1, depth)
+															} else {
+																if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ExprKind__GenericStructLitExpr); ok {
+																	__mygo_expr_1 = validateLoopStructFields(__mygo_match___mygo_expr_4.F2, depth)
+																} else {
+																	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ExprKind__InlineGoExpr); ok {
+																		__mygo_expr_1 = validateLoopGoOperands(__mygo_match___mygo_expr_3.F2, depth)
+																	} else {
+																		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ExprKind__MapLitExpr); ok {
+																			__mygo_expr_1 = validateLoopMapPairs(__mygo_match___mygo_expr_2.F0, depth)
+																		} else {
+																			__mygo_expr_1 = Ok[struct{}, string](struct {
+																			}{})
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		return __mygo_expr_1
+	}
+}
+func validateLoopCases(cases []SwitchCase, depth int) Result[struct{}, string] {
+	return __mygo_mt_ast2_validateLoopCases(cases, depth, 0)
+}
+func validateLoopExprs(exprs []Expr, depth int) Result[struct{}, string] {
+	return __mygo_mt_ast2_validateLoopExprs(exprs, depth, 0)
+}
+func validateLoopStructFields(fields []StructLitField, depth int) Result[struct{}, string] {
+	return __mygo_mt_ast2_validateLoopStructFields(fields, depth, 0)
+}
+func validateLoopGoOperands(operands []GoOperand, depth int) Result[struct{}, string] {
+	return __mygo_mt_ast2_validateLoopGoOperands(operands, depth, 0)
+}
+func validateLoopMapPairs(pairs []struct {
+	F0 Expr
+	F1 Expr
+}, depth int) Result[struct{}, string] {
+	return __mygo_mt_ast2_validateLoopMapPairs(pairs, depth, 0)
+}
+func validateLoopStmts(stmts []Stmt, depth int) Result[struct{}, string] {
+	return __mygo_mt_ast2_validateLoopStmts(stmts, depth, 0)
+}
+func validateLoopWhile(cond Expr, body Expr, depth int) Result[struct {
+}, string] {
+	__mygo_expr_0 := validateLoopExpr(cond, depth)
+	var __mygo_expr_1 Result[struct{}, string]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[struct{}, string]); ok {
+		__mygo_expr_1 = Err[struct{}, string](__mygo_match___mygo_expr_2.F0)
+	} else {
+		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, string]); ok {
+			__mygo_expr_1 = validateLoopExpr(body, depth+1)
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func loopControlError(pos SourcePos, keyword string) string {
+	return pos.SourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(pos.Column) + ": " + keyword + " is only valid inside a while loop"
+}
 func sliceDrop[A any](items []A, n int) []A {
 	return __mygo_mt_ast2_sliceDrop[A](items, n, 0)
 }
@@ -409,6 +545,323 @@ func __mygo_mt_ast2_sliceTailLoop[A any](__mygo_mt_p0 []A, __mygo_mt_p1 int, __m
 				} else {
 					if _, ok := item.(Option__None[A]); ok {
 						return __mygo_mt_p2
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_ast2_validateLoopCases(__mygo_mt_p0 []SwitchCase, __mygo_mt_p1 int, __mygo_state int) Result[struct{}, string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return Ok[struct{}, string](struct {
+				}{})
+			} else {
+				current := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), SwitchCase{Pattern: Pattern__WildcardPattern__Ctor(), Body: EmptyExpr()})
+				__mygo_expr_0 := validateLoopExpr(current.Body, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, string]); ok {
+					return Err[struct{}, string](__mygo_match___mygo_expr_1.F0)
+				} else {
+					if _, ok := __mygo_expr_0.(Result__Ok[struct{}, string]); ok {
+						__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+						__tail_1 := __mygo_mt_p1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_ast2_validateLoopDecls(__mygo_mt_p0 []Decl, __mygo_mt_p1 int, __mygo_state int) Result[struct{}, string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return Ok[struct{}, string](struct {
+				}{})
+			} else {
+				decl := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), Decl__ImportDecl__Ctor("", ""))
+				var __mygo_expr_0 Result[struct{}, string]
+				if __mygo_match___mygo_expr_4, ok := decl.(Decl__FuncDecl); ok {
+					__mygo_expr_0 = validateLoopExpr(__mygo_match___mygo_expr_4.F4, __mygo_mt_p1)
+				} else {
+					if __mygo_match___mygo_expr_3, ok := decl.(Decl__LetDecl); ok {
+						__mygo_expr_0 = validateLoopExpr(__mygo_match___mygo_expr_3.F0.Value, __mygo_mt_p1)
+					} else {
+						if __mygo_match___mygo_expr_2, ok := decl.(Decl__VarDecl); ok {
+							__mygo_expr_0 = validateLoopExpr(__mygo_match___mygo_expr_2.F0.Value, __mygo_mt_p1)
+						} else {
+							if __mygo_match___mygo_expr_1, ok := decl.(Decl__ImplDecl); ok {
+								__mygo_expr_0 = validateLoopMethods(__mygo_match___mygo_expr_1.F3, __mygo_mt_p1)
+							} else {
+								__mygo_expr_0 = Ok[struct{}, string](struct {
+								}{})
+							}
+						}
+					}
+				}
+				current := __mygo_expr_0
+				if __mygo_match___mygo_expr_5, ok := current.(Result__Err[struct{}, string]); ok {
+					return Err[struct{}, string](__mygo_match___mygo_expr_5.F0)
+				} else {
+					if _, ok := current.(Result__Ok[struct{}, string]); ok {
+						__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+						__tail_1 := __mygo_mt_p1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_ast2_validateLoopExprs(__mygo_mt_p0 []Expr, __mygo_mt_p1 int, __mygo_state int) Result[struct{}, string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return Ok[struct{}, string](struct {
+				}{})
+			} else {
+				__mygo_expr_0 := validateLoopExpr(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), EmptyExpr()), __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, string]); ok {
+					return Err[struct{}, string](__mygo_match___mygo_expr_1.F0)
+				} else {
+					if _, ok := __mygo_expr_0.(Result__Ok[struct{}, string]); ok {
+						__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+						__tail_1 := __mygo_mt_p1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_ast2_validateLoopGoOperands(__mygo_mt_p0 []GoOperand, __mygo_mt_p1 int, __mygo_state int) Result[struct{}, string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return Ok[struct{}, string](struct {
+				}{})
+			} else {
+				operand := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), GoOperand{Name: "", Value: EmptyExpr()})
+				__mygo_expr_0 := validateLoopExpr(operand.Value, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, string]); ok {
+					return Err[struct{}, string](__mygo_match___mygo_expr_1.F0)
+				} else {
+					if _, ok := __mygo_expr_0.(Result__Ok[struct{}, string]); ok {
+						__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+						__tail_1 := __mygo_mt_p1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_ast2_validateLoopMapPairs(__mygo_mt_p0 []struct {
+	F0 Expr
+	F1 Expr
+}, __mygo_mt_p1 int, __mygo_state int) Result[struct{}, string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return Ok[struct{}, string](struct {
+				}{})
+			} else {
+				var __mygo_expr_0 struct {
+					F0 Expr
+					F1 Expr
+				}
+				__mygo_expr_0 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), struct {
+					F0 Expr
+					F1 Expr
+				}{F0: EmptyExpr(), F1: EmptyExpr()})
+				var key Expr
+				key = __mygo_expr_0.F0
+				var value Expr
+				value = __mygo_expr_0.F1
+				__mygo_expr_1 := validateLoopExpr(key, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Result__Err[struct{}, string]); ok {
+					return Err[struct{}, string](__mygo_match___mygo_expr_2.F0)
+				} else {
+					if _, ok := __mygo_expr_1.(Result__Ok[struct{}, string]); ok {
+						__mygo_expr_2 := validateLoopExpr(value, __mygo_mt_p1)
+						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[struct{}, string]); ok {
+							return Err[struct{}, string](__mygo_match___mygo_expr_3.F0)
+						} else {
+							if _, ok := __mygo_expr_2.(Result__Ok[struct{}, string]); ok {
+								__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+								__tail_1 := __mygo_mt_p1
+								__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+								__mygo_state = 0
+								continue
+							} else {
+							}
+						}
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_ast2_validateLoopMethods(__mygo_mt_p0 []ImplMethod, __mygo_mt_p1 int, __mygo_state int) Result[struct{}, string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return Ok[struct{}, string](struct {
+				}{})
+			} else {
+				method := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ImplMethod{Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: FuncSig{Pos: SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string{}, Params: []Param{}, Ret: None[TypeExpr](), Using: []Constraint{}}, Body: EmptyExpr()})
+				__mygo_expr_0 := validateLoopExpr(method.Body, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, string]); ok {
+					return Err[struct{}, string](__mygo_match___mygo_expr_1.F0)
+				} else {
+					if _, ok := __mygo_expr_0.(Result__Ok[struct{}, string]); ok {
+						__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+						__tail_1 := __mygo_mt_p1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_ast2_validateLoopStmts(__mygo_mt_p0 []Stmt, __mygo_mt_p1 int, __mygo_state int) Result[struct{}, string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return Ok[struct{}, string](struct {
+				}{})
+			} else {
+				stmt := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), Stmt__ReturnStmt__Ctor())
+				var __mygo_expr_0 Result[struct{}, string]
+				if __mygo_match___mygo_expr_9, ok := stmt.(Stmt__BreakStmt); ok {
+					var __mygo_expr_10 Result[struct{}, string]
+					if __mygo_mt_p1 == 0 {
+						__mygo_expr_10 = Err[struct{}, string](loopControlError(__mygo_match___mygo_expr_9.F0, "break"))
+					} else {
+						__mygo_expr_10 = Ok[struct{}, string](struct {
+						}{})
+					}
+					__mygo_expr_0 = __mygo_expr_10
+				} else {
+					if __mygo_match___mygo_expr_8, ok := stmt.(Stmt__ContinueStmt); ok {
+						var __mygo_expr_9 Result[struct{}, string]
+						if __mygo_mt_p1 == 0 {
+							__mygo_expr_9 = Err[struct{}, string](loopControlError(__mygo_match___mygo_expr_8.F0, "continue"))
+						} else {
+							__mygo_expr_9 = Ok[struct{}, string](struct {
+							}{})
+						}
+						__mygo_expr_0 = __mygo_expr_9
+					} else {
+						if __mygo_match___mygo_expr_7, ok := stmt.(Stmt__ExprStmt); ok {
+							__mygo_expr_0 = validateLoopExpr(__mygo_match___mygo_expr_7.F0, __mygo_mt_p1)
+						} else {
+							if __mygo_match___mygo_expr_6, ok := stmt.(Stmt__LetStmt); ok {
+								__mygo_expr_0 = validateLoopExpr(__mygo_match___mygo_expr_6.F0.Value, __mygo_mt_p1)
+							} else {
+								if __mygo_match___mygo_expr_5, ok := stmt.(Stmt__VarStmt); ok {
+									__mygo_expr_0 = validateLoopExpr(__mygo_match___mygo_expr_5.F0.Value, __mygo_mt_p1)
+								} else {
+									if __mygo_match___mygo_expr_4, ok := stmt.(Stmt__TupleLetStmt); ok {
+										__mygo_expr_0 = validateLoopExpr(__mygo_match___mygo_expr_4.F1, __mygo_mt_p1)
+									} else {
+										if __mygo_match___mygo_expr_3, ok := stmt.(Stmt__WhileStmt); ok {
+											__mygo_expr_0 = validateLoopWhile(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1, __mygo_mt_p1)
+										} else {
+											if __mygo_match___mygo_expr_2, ok := stmt.(Stmt__AssignStmt); ok {
+												__mygo_expr_0 = validateLoopExprs([]Expr{__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1}, __mygo_mt_p1)
+											} else {
+												if __mygo_match___mygo_expr_1, ok := stmt.(Stmt__ReturnWithStmt); ok {
+													__mygo_expr_0 = validateLoopExpr(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1)
+												} else {
+													__mygo_expr_0 = Ok[struct{}, string](struct {
+													}{})
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				current := __mygo_expr_0
+				if __mygo_match___mygo_expr_10, ok := current.(Result__Err[struct{}, string]); ok {
+					return Err[struct{}, string](__mygo_match___mygo_expr_10.F0)
+				} else {
+					if _, ok := current.(Result__Ok[struct{}, string]); ok {
+						__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+						__tail_1 := __mygo_mt_p1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					} else {
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_ast2_validateLoopStructFields(__mygo_mt_p0 []StructLitField, __mygo_mt_p1 int, __mygo_state int) Result[struct{}, string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return Ok[struct{}, string](struct {
+				}{})
+			} else {
+				field := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), StructLitField{Name: "", Value: EmptyExpr()})
+				__mygo_expr_0 := validateLoopExpr(field.Value, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, string]); ok {
+					return Err[struct{}, string](__mygo_match___mygo_expr_1.F0)
+				} else {
+					if _, ok := __mygo_expr_0.(Result__Ok[struct{}, string]); ok {
+						__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+						__tail_1 := __mygo_mt_p1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
 					} else {
 					}
 				}

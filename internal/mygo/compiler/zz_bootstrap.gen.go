@@ -353,10 +353,20 @@ func bootstrapParseSource(path string, sourcePath string, source string) Result[
 	parsed := parser2.ParseFileAt(sourcePath, source)
 	var __mygo_expr_0 Result[BootstrapInputs, string]
 	if __mygo_match___mygo_expr_2, ok := parsed.(Result__Ok[ast2.File, string]); ok {
-		typed := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_2.F0)
-		input := codegen2.SourceFileInput{Path: sourcePath, File: typed}
-		pkg := typeinference2.PkgDeclSource{Path: sourcePath, Decls: typed.Decls}
-		__mygo_expr_0 = Ok[BootstrapInputs, string](BootstrapInputs{Inputs: []codegen2.SourceFileInput{input}, Sources: []typeinference2.PkgDeclSource{pkg}})
+		__mygo_expr_3 := ast2.ValidateLoopControl(__mygo_match___mygo_expr_2.F0)
+		var __mygo_expr_4 Result[BootstrapInputs, string]
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[struct{}, string]); ok {
+			__mygo_expr_4 = Err[BootstrapInputs, string](__mygo_match___mygo_expr_5.F0)
+		} else {
+			if _, ok := __mygo_expr_3.(Result__Ok[struct{}, string]); ok {
+				typed := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_2.F0)
+				input := codegen2.SourceFileInput{Path: sourcePath, File: typed}
+				pkg := typeinference2.PkgDeclSource{Path: sourcePath, Decls: typed.Decls}
+				__mygo_expr_4 = Ok[BootstrapInputs, string](BootstrapInputs{Inputs: []codegen2.SourceFileInput{input}, Sources: []typeinference2.PkgDeclSource{pkg}})
+			} else {
+			}
+		}
+		__mygo_expr_0 = __mygo_expr_4
 	} else {
 		if __mygo_match___mygo_expr_1, ok := parsed.(Result__Err[ast2.File, string]); ok {
 			__mygo_expr_0 = Err[BootstrapInputs, string](__mygo_match___mygo_expr_1.F0)

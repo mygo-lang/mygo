@@ -95,8 +95,8 @@ func translateAstLeadingStmt(stmt: ast2.Stmt, ctx: Ref[egCtx]) -> Result[Slice[g
       end
     end
     case WhileStmt(cond, body) => translateAstWhileStmt(cond, body, ctx)
-    case BreakStmt => Ok(astSingleStmt(goast.Break()))
-    case ContinueStmt => Ok(astSingleStmt(goast.Continue()))
+    case BreakStmt(_) => Ok(astSingleStmt(goast.Break()))
+    case ContinueStmt(_) => Ok(astSingleStmt(goast.Continue()))
     case ReturnStmt => Ok(astSingleStmt(goast.Return([] as Slice[goast.Expr])))
     case ReturnWithStmt(expr) => translateAstReturnExpr(expr, ctx)
     case TupleLetStmt(names, value) => translateAstTupleLetStmt(names, value, ctx)
@@ -140,42 +140,89 @@ end
 # keeps the bootstrap pipeline compiling packages like ast2_ids.mygo that
 # use `let (a, b) = expr.Get(0).UnwrapOr((EmptyExpr(), EmptyExpr()))` in
 # their helper functions.
-func translateAstTupleLetStmt(names: Slice[String], value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstTupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
   switch value.Kind
+    # Top-level MyGO functions with tuple returns, like Go FFI functions,
+    # expose native multiple return values.  Destructure those values before
+    # falling back to the single tuple-value lowering used for tuple literals.
+    case CallExpr(callee, typeArgs, args) =>
+      if isTupleReturningLocalCall(callee, ctx) then
+        let raw = translatePlainCallAstExpectedOrdinary(callee, typeArgs, args, ctx, ast2.MonoType.TUnit)
+        switch raw
+          case Err(msg) => Err(msg)
+          case Ok(call) => translateRawTupleLet(pattern, value.Type.UnwrapOr(ast2.MonoType.TUnit), call.Expr, call.Pre, ctx)
+        end
+      else
+        switch ffiMultiResultSignature(value, ctx)
+          case Some(sig) => translateFFITupleLetStmt(pattern, value, sig, ctx)
+          case None => translateAstTupleLetStmtOrdinary(pattern, value, ctx)
+        end
+      end
     # A tuple-typed inline Go block keeps its raw multiple-return form under
     # tuple destructuring, exactly like a Go FFI multi-result call.
     case InlineGoExpr(typ, body, values, types) =>
       switch typ.value()
-        case TupleType(_) => translateInlineGoTupleLet(names, body, values, types, value, ctx)
-        case _ => translateAstTupleLetStmtOrdinary(names, value, ctx)
+        case TupleType(_) => translateInlineGoTupleLet(pattern, body, values, types, value, ctx)
+        case _ => translateAstTupleLetStmtOrdinary(pattern, value, ctx)
       end
     case _ =>
       switch ffiMultiResultSignature(value, ctx)
-        case Some(sig) => translateFFITupleLetStmt(names, value, sig, ctx)
-        case None => translateAstTupleLetStmtOrdinary(names, value, ctx)
+        case Some(sig) => translateFFITupleLetStmt(pattern, value, sig, ctx)
+        case None => translateAstTupleLetStmtOrdinary(pattern, value, ctx)
       end
+  end
+end
+
+func isTupleReturningLocalCall(callee: ast2.Expr, ctx: Ref[egCtx]) -> Bool
+  switch callee.Kind
+    case IdentExpr(name) =>
+      switch ctx.pkgInfo
+        case Some(info) => localTupleFunctionReturn(info.TypedDecls, name, 0)
+        case None => false
+      end
+    case _ => false
+  end
+end
+
+func localTupleFunctionReturn(decls: Slice[ast2.Decl], name: String, index: Int) -> Bool
+  if index >= decls.Len() then false else
+    let decl = decls.Get(index).UnwrapOr(ast2.Decl.LetDecl(ast2.Bind { Name: "", Type: None, Value: ast2.EmptyExpr() }))
+    switch decl
+      case FuncDecl(fnName, _, _, ret, _, _) =>
+        if fnName == name then
+          switch ret
+            case Some(retType) =>
+              switch retType
+                case TupleType(items) => items.Len() > 1
+                case _ => false
+              end
+            case None => false
+          end
+        else
+          localTupleFunctionReturn(decls, name, index + 1)
+        end
+      case _ => localTupleFunctionReturn(decls, name, index + 1)
+    end
   end
 end
 
 # `let (a, b) = go[(T, error)] {...}` lowers to `a, b := <inline go expr>`,
 # bypassing the Result/Option boundary wrapping.
-func translateInlineGoTupleLet(names: Slice[String], body: String, values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateInlineGoTupleLet(pattern: ast2.Pattern, body: String, values: Slice[ast2.GoOperand], types: Slice[ast2.GoTypeOperand], value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
   let parts = translateInlineOperands(values, types, ctx, 0, [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[String], [] as Slice[goast.Stmt])
   switch parts
     case Err(msg) => Err(msg)
     case Ok(p) =>
       let raw = goast.MustInlineGoExprWithOperands(body, p.ValueNames, p.ValueSources, p.TypeNames, p.TypeSources)
-      let goNames = tupleBindingNames(names, ctx, 0, [] as Slice[goast.Expr])
       let tupleMono = value.Type.UnwrapOr(ast2.MonoType.TUnit)
-      bindTupleLetTypes(names, tupleMono, ctx, 0)
-      Ok(goast.AppendStmts(p.Pre, astSingleStmt(goast.Assign(goNames, ":=", astSingleExpr(raw)))))
+      translateRawTupleLet(pattern, tupleMono, raw, p.Pre, ctx)
   end
 end
 
 # A tuple binding explicitly preserves Go's native multiple return values.
 # It bypasses Option/Result boundary wrapping and emits `a, b := call()`.
-func translateFFITupleLetStmt(names: Slice[String], value: ast2.Expr, sig: typeinference2.GoFuncSignature, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
-  if names.Len() != sig.Results.Len() then
+func translateFFITupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, sig: typeinference2.GoFuncSignature, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+  if tuplePatternArity(pattern) != sig.Results.Len() then
     Err("tuple binding count does not match Go function result count")
   else
     switch value.Kind
@@ -184,10 +231,8 @@ func translateFFITupleLetStmt(names: Slice[String], value: ast2.Expr, sig: typei
         switch raw
           case Err(msg) => Err(msg)
           case Ok(call) then
-            let goNames = tupleBindingNames(names, ctx, 0, [] as Slice[goast.Expr])
             let resultTypes = typeinference2.GoSignatureRawResultType(sig)
-            bindTupleLetTypes(names, resultTypes, ctx, 0)
-            Ok(goast.AppendStmts(call.Pre, astSingleStmt(goast.Assign(goNames, ":=", astSingleExpr(call.Expr)))))
+            translateRawTupleLet(pattern, resultTypes, call.Expr, call.Pre, ctx)
           end
         end
       end
@@ -196,23 +241,7 @@ func translateFFITupleLetStmt(names: Slice[String], value: ast2.Expr, sig: typei
   end
 end
 
-func tupleBindingNames(names: Slice[String], ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
-  if index >= names.Len() then out else
-    let name = names.Get(index).UnwrapOr("_")
-    let goName = if name == "_" then "_" else ctxFreshBinding(ctx, name) end
-    tupleBindingNames(names, ctx, index + 1, out.Append(goast.Ident(goName)))
-  end
-end
-
-func bindTupleLetTypes(names: Slice[String], resultType: ast2.MonoType, ctx: Ref[egCtx], index: Int) -> ()
-  if index < names.Len() then
-    let name = names.Get(index).UnwrapOr("_")
-    if name == "_" then () else ctxSetLocal(ctx, name, tupleElementType(resultType, index)) end
-    bindTupleLetTypes(names, resultType, ctx, index + 1)
-  end
-end
-
-func translateAstTupleLetStmtOrdinary(names: Slice[String], value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateAstTupleLetStmtOrdinary(pattern: ast2.Pattern, value: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
   # `let (a, b) = expr` lowers to a single evaluation of `expr` followed
   # by per-name bindings to the corresponding `F<n>` field on the
   # resulting tuple.  Using one evaluation site guards against repeated
@@ -229,26 +258,98 @@ func translateAstTupleLetStmtOrdinary(names: Slice[String], value: ast2.Expr, ct
       let tempDecl = astSingleStmt(goast.VarDecl(tempName, monoTypeToGoAstWithParams(tupleMono, ctx.typeParamNames, ctx.pathAliases)))
       let tempAssign = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(tempName)), "=", astSingleExpr(rv.Expr)))
       let stmts = goast.AppendStmts(goast.AppendStmts(goast.AppendStmts(rv.Pre, tempDecl), tempAssign), [] as Slice[goast.Stmt])
-      let bound = bindTupleNames(names, tempName, tupleMono, ctx, stmts, 0)
+      let bound = bindTupleLetPattern(pattern, tempName, tupleMono, ctx, stmts)
       Ok(bound)
   end
 end
 
-func bindTupleNames(names: Slice[String], valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int) -> Slice[goast.Stmt]
-  if index >= names.Len() then stmts else
-    let name = names.Get(index).UnwrapOr("")
-    let goName = ctxFreshBinding(ctx, name)
-    # `let (a, b) = expr` lowers to `a := temp.F0; b := temp.F1`.  The
-    # bound name adopts the corresponding element type from the tuple
-    # type so subsequent uses stay typed instead of reverting to
-    # `interface{}`.
-    let fieldType = tupleElementType(tupleType, index)
-    let decl = astSingleStmt(goast.VarDecl(goName, monoTypeToGoAstWithParams(fieldType, ctx.typeParamNames, ctx.pathAliases)))
-    let fieldAccess = goast.Selector(goast.Ident(valueName), "F" + index.ToString())
-    let assignStmt = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(goName)), "=", astSingleExpr(fieldAccess)))
-    ctxSetLocal(ctx, name, fieldType)
-    bindTupleNames(names, valueName, tupleType, ctx, goast.AppendStmts(goast.AppendStmts(stmts, decl), assignStmt), index + 1)
+func translateRawTupleLet(pattern: ast2.Pattern, tupleType: ast2.MonoType, raw: goast.Expr, pre: Slice[goast.Stmt], ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+  switch pattern
+    case TuplePattern(items) =>
+      let names = rawTupleBindingNames(items, tupleType, ctx, 0, [] as Slice[goast.Expr])
+      let assigned = goast.AppendStmts(pre, astSingleStmt(goast.Assign(names, ":=", astSingleExpr(raw))))
+      Ok(bindNestedTuplePatternItems(items, tupleType, ctx, assigned, 0))
+    case _ => Err("tuple binding requires a tuple pattern")
   end
+end
+
+func rawTupleBindingNames(items: Slice[ast2.Pattern], tupleType: ast2.MonoType, ctx: Ref[egCtx], index: Int, out: Slice[goast.Expr]) -> Slice[goast.Expr]
+  if index >= items.Len() then out else
+    let pattern = items.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern)
+    let typ = tupleElementType(tupleType, index)
+    switch pattern
+      case BindPattern(name) =>
+        let goName = ctxFreshBinding(ctx, name)
+        ctxSetLocal(ctx, name, typ)
+        rawTupleBindingNames(items, tupleType, ctx, index + 1, out.Append(goast.Ident(goName)))
+      case WildcardPattern => rawTupleBindingNames(items, tupleType, ctx, index + 1, out.Append(goast.Ident("_")))
+      case _ => rawTupleBindingNames(items, tupleType, ctx, index + 1, out.Append(goast.Ident(rawTupleTempName(index))))
+    end
+  end
+end
+
+func bindNestedTuplePatternItems(items: Slice[ast2.Pattern], tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int) -> Slice[goast.Stmt]
+  if index >= items.Len() then stmts else
+    let pattern = items.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern)
+    switch pattern
+      case TuplePattern(_) =>
+        let tempName = rawTupleTempName(index)
+        bindNestedTuplePatternItems(items, tupleType, ctx, bindTupleLetPattern(pattern, tempName, tupleElementType(tupleType, index), ctx, stmts), index + 1)
+      case _ => bindNestedTuplePatternItems(items, tupleType, ctx, stmts, index + 1)
+    end
+  end
+end
+
+func rawTupleTempName(index: Int) -> String
+  "__mygo_tuple_raw_" + index.ToString()
+end
+
+func tuplePatternArity(pattern: ast2.Pattern) -> Int
+  switch pattern
+    case TuplePattern(items) => items.Len()
+    case _ => 0
+  end
+end
+
+func bindTupleLetPattern(pattern: ast2.Pattern, valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt]) -> Slice[goast.Stmt]
+  switch pattern
+    case TuplePattern(items) => bindTupleLetPatternItems(items, valueName, tupleType, ctx, stmts, 0)
+    case BindPattern(name) => bindTupleLetPatternName(name, valueName, tupleType, ctx, stmts)
+    case _ => stmts
+  end
+end
+
+func bindTupleLetPatternItems(items: Slice[ast2.Pattern], valueName: String, tupleType: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt], index: Int) -> Slice[goast.Stmt]
+  if index >= items.Len() then stmts else
+    let pattern = items.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern)
+    let fieldType = tupleElementType(tupleType, index)
+    let fieldName = "F" + index.ToString()
+    switch pattern
+      case BindPattern(name) => bindTupleLetPatternItems(items, valueName, tupleType, ctx, bindTupleLetPatternFieldName(name, valueName, fieldName, fieldType, ctx, stmts), index + 1)
+      case TuplePattern(_) =>
+        let tempName = ctxFreshExprTemp(ctx)
+        let decl = astSingleStmt(goast.VarDecl(tempName, monoTypeToGoAstWithParams(fieldType, ctx.typeParamNames, ctx.pathAliases)))
+        let assignStmt = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(tempName)), "=", astSingleExpr(goast.Selector(goast.Ident(valueName), fieldName))))
+        bindTupleLetPatternItems(items, valueName, tupleType, ctx, bindTupleLetPattern(pattern, tempName, fieldType, ctx, goast.AppendStmts(goast.AppendStmts(stmts, decl), assignStmt)), index + 1)
+      case _ => bindTupleLetPatternItems(items, valueName, tupleType, ctx, stmts, index + 1)
+    end
+  end
+end
+
+func bindTupleLetPatternName(name: String, valueName: String, typ: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt]) -> Slice[goast.Stmt]
+  let goName = ctxFreshBinding(ctx, name)
+  let decl = astSingleStmt(goast.VarDecl(goName, monoTypeToGoAstWithParams(typ, ctx.typeParamNames, ctx.pathAliases)))
+  let source = goast.Ident(valueName)
+  ctxSetLocal(ctx, name, typ)
+  goast.AppendStmts(goast.AppendStmts(stmts, decl), astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(goName)), "=", astSingleExpr(source))))
+end
+
+func bindTupleLetPatternFieldName(name: String, valueName: String, fieldName: String, typ: ast2.MonoType, ctx: Ref[egCtx], stmts: Slice[goast.Stmt]) -> Slice[goast.Stmt]
+  let goName = ctxFreshBinding(ctx, name)
+  let decl = astSingleStmt(goast.VarDecl(goName, monoTypeToGoAstWithParams(typ, ctx.typeParamNames, ctx.pathAliases)))
+  let source = goast.Selector(goast.Ident(valueName), fieldName)
+  ctxSetLocal(ctx, name, typ)
+  goast.AppendStmts(goast.AppendStmts(stmts, decl), astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(goName)), "=", astSingleExpr(source))))
 end
 
 # Strip one layer of Slice / TApp(Slice, ...) to recover the tuple type

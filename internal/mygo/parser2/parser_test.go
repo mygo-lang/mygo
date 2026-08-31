@@ -185,6 +185,52 @@ end
 	}
 }
 
+func TestParseNestedTupleLetPattern(t *testing.T) {
+	fn := parseSingleFunc(t, `package sample
+
+func unpack()
+  let (first, (_, last)) = (1, (2, 3))
+end
+`)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	stmt, ok := body.F0[0].(ast2.Stmt__TupleLetStmt)
+	if !ok {
+		t.Fatalf("first statement = %T, want StmtTupleLetStmt", body.F0[0])
+	}
+	pattern, ok := stmt.F0.(ast2.Pattern__TuplePattern)
+	if !ok || len(pattern.F0) != 2 {
+		t.Fatalf("tuple pattern = %#v, want two items", stmt.F0)
+	}
+	if bind, ok := pattern.F0[0].(ast2.Pattern__BindPattern); !ok || bind.F0 != "first" {
+		t.Fatalf("first pattern = %#v, want BindPattern(first)", pattern.F0[0])
+	}
+	nested, ok := pattern.F0[1].(ast2.Pattern__TuplePattern)
+	if !ok || len(nested.F0) != 2 {
+		t.Fatalf("nested pattern = %#v, want (_, last)", pattern.F0[1])
+	}
+	if _, ok := nested.F0[0].(ast2.Pattern__WildcardPattern); !ok {
+		t.Fatalf("nested first pattern = %T, want WildcardPattern", nested.F0[0])
+	}
+	if bind, ok := nested.F0[1].(ast2.Pattern__BindPattern); !ok || bind.F0 != "last" {
+		t.Fatalf("nested second pattern = %#v, want BindPattern(last)", nested.F0[1])
+	}
+}
+
+func TestParseVerbatimTripleQuotedAndRawStrings(t *testing.T) {
+	fn := parseSingleFunc(t, "package sample\n\nfunc strings()\n  let triple = \"\"\"first\\\\n\nsecond\"\"\"\n  let raw = `first\\\\nsecond`\nend\n")
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	for index, want := range []string{"first\\\\n\nsecond", "first\\\\nsecond"} {
+		stmt, ok := body.F0[index].(ast2.Stmt__LetStmt)
+		if !ok {
+			t.Fatalf("statement[%d] = %T, want StmtLetStmt", index, body.F0[index])
+		}
+		literal, ok := stmt.F0.Value.Kind.(ast2.ExprKind__StringExpr)
+		if !ok || literal.F0 != want {
+			t.Fatalf("statement[%d] literal = %#v, want %q", index, stmt.F0.Value.Kind, want)
+		}
+	}
+}
+
 func TestParseSliceLiteralWithTrailingCommaAndTypeAs(t *testing.T) {
 	fn := parseSingleFunc(t, `package sample
 

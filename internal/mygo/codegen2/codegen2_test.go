@@ -674,7 +674,7 @@ end
 	}
 }
 
-func TestGenerateSourceUsesPreludeHKTDeclarations(t *testing.T) {
+func TestGenerateFilesUsesExternalPreludeHKTDeclarations(t *testing.T) {
 	src := `package sample
 
 interface Enumerable[C[A], A]
@@ -685,16 +685,44 @@ func Default(value: Option[Int]) -> Option[Int]
   value
 end
 `
-	got := GenerateSource(src)
-	ok, yes := got.(Result__Ok[string, string])
-	if !yes {
-		t.Fatalf("GenerateSource failed: %v", got)
+	preludeSource := `package prelude
+
+enum Option[A]
+  Some(A)
+  None
+end
+`
+	parsed := parseSourceAsAst2(src)
+	preludeParsed := parseSourceAsAst2(preludeSource)
+	fileResult, fileOK := parsed.(Result__Ok[ast2.File, string])
+	preludeResult, preludeOK := preludeParsed.(Result__Ok[ast2.File, string])
+	if !fileOK || !preludeOK {
+		t.Fatalf("parse failed: source=%v prelude=%v", parsed, preludeParsed)
 	}
-	if strings.Contains(ok.F0, "type HKTType interface{}") {
-		t.Fatalf("non-prelude package redeclared prelude HKT helpers:\n%s", ok.F0)
+	file := ast2.AssignFileExprIDs(fileResult.F0)
+	preludeFile := ast2.AssignFileExprIDs(preludeResult.F0)
+	path := "sample.mygo"
+	inferred := typeinference2.InferPackageWithExternal(
+		[]typeinference2.PkgDeclSource{{Path: path, Decls: file.Decls}},
+		[]typeinference2.PkgDeclSource{{Path: "prelude.mygo", Decls: preludeFile.Decls}},
+		[]typeinference2.GoPackageEntry{},
+		[]typeinference2.MyGoPackageInfo{},
+	)
+	info, infoOK := inferred.(Result__Ok[typeinference2.PackageInfo, string])
+	if !infoOK {
+		t.Fatalf("InferPackageWithExternal failed: %v", inferred)
 	}
-	if !strings.Contains(ok.F0, `. "github.com/mygo-lang/mygo/prelude"`) {
-		t.Fatalf("non-prelude package did not dot-import prelude:\n%s", ok.F0)
+	generated := GenerateFiles([]SourceFileInput{{Path: path, File: file}}, info.F0)
+	generatedResult, generatedOK := generated.(Result__Ok[map[string]string, string])
+	if !generatedOK {
+		t.Fatalf("GenerateFiles failed: %v", generated)
+	}
+	code := generatedResult.F0[sourceToGenName(path)]
+	if strings.Contains(code, "type HKTType interface{}") {
+		t.Fatalf("non-prelude package redeclared prelude HKT helpers:\n%s", code)
+	}
+	if !strings.Contains(code, `. "github.com/mygo-lang/mygo/prelude"`) {
+		t.Fatalf("non-prelude package did not dot-import prelude:\n%s", code)
 	}
 }
 
