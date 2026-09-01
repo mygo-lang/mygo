@@ -954,7 +954,7 @@ func (g *gen) genEnumDecl(sf *goast.SourceFile, d *EnumDecl) {
 		fields := make([]*ast.Field, len(v.Fields))
 		for i, f := range v.Fields {
 			fields[i] = &ast.Field{
-				Names: []*ast.Ident{ast.NewIdent("F" + strconv.Itoa(i))},
+				Names: []*ast.Ident{ast.NewIdent(variantFieldGoName(f, i))},
 				Type:  goastTypeExpr(f.Type),
 			}
 		}
@@ -989,7 +989,7 @@ func (g *gen) genEnumDecl(sf *goast.SourceFile, d *EnumDecl) {
 		elts := make([]ast.Expr, len(v.Fields))
 		for i := range v.Fields {
 			elts[i] = &ast.KeyValueExpr{
-				Key:   ast.NewIdent("F" + strconv.Itoa(i)),
+				Key:   ast.NewIdent(variantFieldGoName(v.Fields[i], i)),
 				Value: ast.NewIdent("a" + strconv.Itoa(i)),
 			}
 		}
@@ -1942,6 +1942,13 @@ func goTypeString(t TypeExpr, subst map[string]string) string {
 
 func variantGoTypeName(enumName, variant string) string {
 	return enumName + "__" + variant
+}
+
+func variantFieldGoName(f Field, idx int) string {
+	if f.Name != "" {
+		return f.Name
+	}
+	return "F" + strconv.Itoa(idx)
 }
 
 func typeParamSet(params []string) map[string]struct{} {

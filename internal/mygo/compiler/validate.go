@@ -166,6 +166,18 @@ func (v *validator) validateEnum(d *EnumDecl) error {
 	if err := v.checkDuplicateTypeParam(d.Name, d.TypeParams); err != nil {
 		return err
 	}
+	for _, variant := range d.Variants {
+		seenFields := make(map[string]struct{}, len(variant.Fields))
+		for _, f := range variant.Fields {
+			if f.Name == "" {
+				continue
+			}
+			if _, ok := seenFields[f.Name]; ok {
+				return common.ErrorAtNode(d.Name, f, "duplicate field %q in enum %s variant %s", f.Name, d.Name, variant.Name)
+			}
+			seenFields[f.Name] = struct{}{}
+		}
+	}
 	return nil
 }
 
@@ -553,6 +565,41 @@ func (v *validator) validatePattern(p Pattern, enumDecl *EnumDecl) error {
 			}
 			if !found {
 				return common.ErrorAtNode(pt.SourceFile, pt, "enum %s has no variant %q", enumDecl.Name, pt.Name)
+			}
+		}
+	case *StructVariantPattern:
+		if enumDecl != nil {
+			var variant *EnumVariant
+			for i := range enumDecl.Variants {
+				if enumDecl.Variants[i].Name == pt.Name {
+					variant = &enumDecl.Variants[i]
+					break
+				}
+			}
+			if variant == nil {
+				return common.ErrorAtNode(pt.SourceFile, pt, "enum %s has no variant %q", enumDecl.Name, pt.Name)
+			}
+			fieldSet := make(map[string]struct{}, len(variant.Fields))
+			for _, f := range variant.Fields {
+				fieldSet[f.Name] = struct{}{}
+			}
+			seenBinds := make(map[string]struct{}, len(pt.Fields))
+			seenFields := make(map[string]struct{}, len(pt.Fields))
+			for _, fp := range pt.Fields {
+				if fp.Field == "_" || fp.Bind == "_" {
+					continue
+				}
+				if _, ok := fieldSet[fp.Field]; !ok {
+					return common.ErrorAtNode(fp.SourceFile, fp, "enum %s variant %s has no field %q", enumDecl.Name, pt.Name, fp.Field)
+				}
+				if _, ok := seenFields[fp.Field]; ok {
+					return common.ErrorAtNode(fp.SourceFile, fp, "enum %s variant %s field %q specified more than once", enumDecl.Name, pt.Name, fp.Field)
+				}
+				seenFields[fp.Field] = struct{}{}
+				if _, ok := seenBinds[fp.Bind]; ok {
+					return common.ErrorAtNode(fp.SourceFile, fp, "pattern binds %q more than once", fp.Bind)
+				}
+				seenBinds[fp.Bind] = struct{}{}
 			}
 		}
 	case *LiteralPattern:
@@ -1007,6 +1054,13 @@ func (v *validator) collectPatternBindings(p Pattern) {
 	case *TuplePattern:
 		for _, elem := range pt.Elems {
 			v.collectPatternBindings(elem)
+		}
+	case *StructVariantPattern:
+		for _, f := range pt.Fields {
+			if f.Bind == "" || f.Bind == "_" {
+				continue
+			}
+			v.locals[f.Bind] = struct{}{}
 		}
 	case *WildcardPattern:
 		// Nothing to register.

@@ -74,6 +74,7 @@ type parser struct {
 	currentPattern               ast.Pattern
 	currentPatternStack          []ast.Pattern
 	currentPatternArgs           []string
+	currentPatternFields          []ast.StructPatternField
 	currentPatternElemsStack     [][]ast.Pattern
 	currentPatternElems          []ast.Pattern
 	currentBindPatternElemsStack [][]ast.BindPattern

@@ -280,23 +280,25 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (trans
 			tail = ifStmt
 			continue
 		}
-		if vp, ok := c.Pattern.(*VariantPattern); ok {
+		if m, isVariant := switchPatternAsVariant(c.Pattern); isVariant {
 			g.switchVarSeq++
 			varName := "v_" + strconv.Itoa(g.switchVarSeq)
+			vpName := m.name
+			vpBindings := m.bindings
 
 			// Construct type assertion name from enum info
-			assertTypeName := vp.Name
-			enumName, found := g.variantByName[vp.Name]
+			assertTypeName := vpName
+			enumName, found := g.variantByName[vpName]
 			if !found {
-				if baseName, _ := splitTypeArgs(ttype); baseName != "" && baseName != vp.Name {
+				if baseName, _ := splitTypeArgs(ttype); baseName != "" && baseName != vpName {
 					enumName = baseName
 					found = true
 				}
 			}
 			if found {
-				assertTypeName = variantNameForEnum(enumName, vp.Name)
+				assertTypeName = variantNameForEnum(enumName, vpName)
 			}
-			if qualifiedName, ok := qualifiedVariantNameFromTargetType(ttype, vp.Name); ok {
+			if qualifiedName, ok := qualifiedVariantNameFromTargetType(ttype, vpName); ok {
 				assertTypeName = qualifiedName
 				found = true
 			}
@@ -312,8 +314,12 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (trans
 				}
 			}
 			// Check if any pattern arg is used in the body
+			args := make([]string, len(vpBindings))
+			for i, b := range vpBindings {
+				args[i] = b.bindName
+			}
 			hasBindings := false
-			for _, arg := range vp.Args {
+			for _, arg := range args {
 				if arg != "_" && exprUsesIdent(c.Body, arg) {
 					hasBindings = true
 					break
@@ -323,35 +329,65 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (trans
 			varNameOrBlank := ast.NewIdent("_")
 			if hasBindings {
 				varNameOrBlank = ast.NewIdent(varName)
-				for i, arg := range vp.Args {
-					if arg != "_" {
-						child.bindings[arg] = fmt.Sprintf("%s.F%d", varName, i)
-						// Compute the Go-level type for each pattern arg from the enum definition.
-						if enumName != "" && found {
-							if enum, ok := g.pkg.Enums[enumName]; ok {
-								for _, variant := range enum.Variants {
-									if variant.Name == vp.Name && i < len(variant.Fields) {
-										_, typeArgs := splitTypeArgs(ttype)
-										subst := map[string]string{}
-										for j, tp := range enum.TypeParams {
-											if j < len(typeArgs) {
-												subst[tp] = typeArgs[j]
-											}
-										}
-										fieldType := substituteTypeExpr(variant.Fields[i].Type, subst)
-										tpSet := map[string]struct{}{}
-										for _, tp := range enum.TypeParams {
-											tpSet[tp] = struct{}{}
-										}
-										child.locals[arg] = g.goType(fieldType, tpSet)
-										break
-									}
-								}
+				// Resolve the matching enum variant declaration once, if possible.
+				var variant *EnumVariant
+				var enum *EnumDecl
+				if enumName != "" && found {
+					if e, ok := g.pkg.Enums[enumName]; ok {
+						enum = e
+						for vi := range e.Variants {
+							if e.Variants[vi].Name == vpName {
+								variant = &e.Variants[vi]
+								break
 							}
 						}
 					}
 				}
-				refinePatternBindingTypesFromBody(child, vp.Args, c.Body)
+				for i, b := range vpBindings {
+					arg := b.bindName
+					if arg == "_" {
+						continue
+					}
+					declIdx := i
+					if m.isStruct {
+						declIdx = -1
+						if variant != nil {
+							for fi := range variant.Fields {
+								if variant.Fields[fi].Name == b.fieldName {
+									declIdx = fi
+									break
+								}
+							}
+						}
+						if declIdx == -1 {
+							continue
+						}
+					} else if variant != nil && declIdx >= len(variant.Fields) {
+						continue
+					}
+					fieldGoName := fmt.Sprintf("F%d", declIdx)
+					if variant != nil && declIdx < len(variant.Fields) {
+						fieldGoName = variantFieldGoName(variant.Fields[declIdx], declIdx)
+					}
+					child.bindings[arg] = fmt.Sprintf("%s.%s", varName, fieldGoName)
+					// Compute the Go-level type for each pattern arg from the enum definition.
+					if variant != nil && declIdx < len(variant.Fields) && enum != nil {
+						_, typeArgs := splitTypeArgs(ttype)
+						subst := map[string]string{}
+						for j, tp := range enum.TypeParams {
+							if j < len(typeArgs) {
+								subst[tp] = typeArgs[j]
+							}
+						}
+						fieldType := substituteTypeExpr(variant.Fields[declIdx].Type, subst)
+						tpSet := map[string]struct{}{}
+						for _, tp := range enum.TypeParams {
+							tpSet[tp] = struct{}{}
+						}
+						child.locals[arg] = g.goType(fieldType, tpSet)
+					}
+				}
+				refinePatternBindingTypesFromBody(child, args, c.Body)
 			}
 			bodyBlock, code, err := caseBody(c.Body, child)
 			if err != nil {
@@ -406,6 +442,39 @@ func (g *gen) bareBindPatternAsVariant(bp *BindNamePattern, ttype string) *Varia
 		return nil
 	}
 	return &VariantPattern{Line: bp.Line, Column: bp.Column, SourceFile: bp.SourceFile, Name: bp.Name}
+}
+
+type switchVariantBinding struct {
+	// fieldName is the declared field name. Empty for positional (tuple) patterns.
+	fieldName string
+	// bindName is the user-supplied binding name. "_" means the field is ignored.
+	bindName string
+}
+
+type switchVariantPattern struct {
+	name     string
+	bindings []switchVariantBinding
+	// isStruct reports whether the pattern carries named fields. When false,
+	// bindings are positional (tuple-style).
+	isStruct bool
+}
+
+func switchPatternAsVariant(p Pattern) (switchVariantPattern, bool) {
+	switch vp := p.(type) {
+	case *VariantPattern:
+		bindings := make([]switchVariantBinding, len(vp.Args))
+		for i := range vp.Args {
+			bindings[i] = switchVariantBinding{bindName: vp.Args[i]}
+		}
+		return switchVariantPattern{name: vp.Name, bindings: bindings}, true
+	case *StructVariantPattern:
+		bindings := make([]switchVariantBinding, len(vp.Fields))
+		for i, f := range vp.Fields {
+			bindings[i] = switchVariantBinding{fieldName: f.Field, bindName: f.Bind}
+		}
+		return switchVariantPattern{name: vp.Name, bindings: bindings, isStruct: true}, true
+	}
+	return switchVariantPattern{}, false
 }
 
 func tuplePatternToBindPattern(p *TuplePattern) (*BindTuplePattern, bool) {
