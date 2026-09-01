@@ -1781,6 +1781,17 @@ func sameTypeExpr(a, b TypeExpr) bool {
 }
 
 func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType, Subst, []Predicate, error) {
+	// Enum variant construction: Enum.Variant { field: expr, ... }
+	// This shadows struct-literal handling for `Enum.Variant` names. It must
+	// be checked before the struct-literal path below because the TypeName
+	// "Shape.Circle" is not a valid struct name.
+	if enumName, variantName, ok := splitQualifiedName(n.TypeName); ok && state != nil {
+		if enumDecl := lookupEnum(state.PkgInfo, enumName); enumDecl != nil {
+			if variant, ok := findEnumVariant(enumDecl, variantName); ok {
+				return inferEnumVariantStructLit(env, n, enumDecl, variant, state)
+			}
+		}
+	}
 	// Resolve package-qualified type name (e.g. "ps.Reply" -> alias="ps", typeName="Reply")
 	var mygoPkgAlias string
 	var bareTypeName string
@@ -1945,6 +1956,47 @@ func inferStructLit(env TypeEnv, n *StructLitExpr, state *InferState) (MonoType,
 	}
 
 	return structType, s, allPreds, nil
+}
+
+func inferEnumVariantStructLit(env TypeEnv, n *StructLitExpr, enumDecl *EnumDecl, variant *EnumVariant, state *InferState) (MonoType, Subst, []Predicate, error) {
+	typeArgs := make([]MonoType, len(enumDecl.TypeParams))
+	typeParamVars := make(map[string]MonoType, len(enumDecl.TypeParams))
+	for i, tp := range enumDecl.TypeParams {
+		v := TVar{ID: state.Fresh()}
+		typeArgs[i] = v
+		typeParamVars[tp] = v
+	}
+	s := make(Subst)
+	var allPreds []Predicate
+
+	declFields := make(map[string]Field, len(variant.Fields))
+	for _, f := range variant.Fields {
+		declFields[f.Name] = f
+	}
+	seen := make(map[string]struct{}, len(n.Fields))
+	for _, nf := range n.Fields {
+		if _, ok := declFields[nf.Name]; !ok {
+			return nil, nil, nil, common.ErrorAtNode(n.SourceFile, n, "enum %s variant %s has no field %q", enumDecl.Name, variant.Name, nf.Name)
+		}
+		if _, ok := seen[nf.Name]; ok {
+			return nil, nil, nil, common.ErrorAtNode(n.SourceFile, n, "enum %s variant %s field %q specified more than once", enumDecl.Name, variant.Name, nf.Name)
+		}
+		seen[nf.Name] = struct{}{}
+		fieldType, fs, preds, err := inferExpr(env, nf.Value, state)
+		if err != nil {
+			return nil, nil, nil, wrapInferenceError("enum %s variant %s field %q: %w", err, enumDecl.Name, variant.Name, nf.Name)
+		}
+		s = Compose(s, fs)
+		allPreds = append(allPreds, preds...)
+		expected := typeFromASTWithParams(declFields[nf.Name].Type, typeParamVars)
+		var unifyErr error
+		s, unifyErr = Unify(s.ApplyMT(fieldType), expected, s)
+		if unifyErr != nil {
+			return nil, nil, nil, wrapInferenceError("enum %s variant %s field %q type mismatch: %w", unifyErr, enumDecl.Name, variant.Name, nf.Name)
+		}
+	}
+
+	return TCon{Name: enumDecl.Name, Args: typeArgs}, s, allPreds, nil
 }
 
 func inferFuncLit(env TypeEnv, n *FuncLitExpr, state *InferState) (MonoType, Subst, []Predicate, error) {
@@ -2265,6 +2317,37 @@ func inferPatternBindings(env TypeEnv, pat Pattern, targetType MonoType, s Subst
 				continue
 			}
 			env[arg] = &Scheme{Body: QualifiedType{Body: TVar{ID: state.Fresh()}}}
+		}
+		return env, nil
+	case *StructVariantPattern:
+		activeEnum := enumDecl
+		variant, ok := findEnumVariant(activeEnum, p.Name)
+		if !ok {
+			activeEnum, variant, ok = lookupVariant(state.PkgInfo, p.Name)
+		}
+		if !ok {
+			return nil, fmt.Errorf("variant pattern %q requires an enum target", p.Name)
+		}
+		fieldByName := make(map[string]Field, len(variant.Fields))
+		for _, sf := range variant.Fields {
+			fieldByName[sf.Name] = sf
+		}
+		for _, fp := range p.Fields {
+			if fp.Field == "_" || fp.Bind == "_" {
+				continue
+			}
+			sf, ok := fieldByName[fp.Field]
+			if !ok {
+				return nil, fmt.Errorf("enum %s variant %s has no field %q", activeEnum.Name, p.Name, fp.Field)
+			}
+			fieldType := typeFromAST(sf.Type)
+			if activeEnum != nil && len(activeEnum.TypeParams) > 0 && len(enumTypeArgs) > 0 {
+				fieldType = substituteTypeParams(fieldType, activeEnum.TypeParams, enumTypeArgs)
+			}
+			if enumAlias != "" && enumPkgTypes != nil {
+				fieldType = qualifyMyGoType(enumAlias, enumPkgTypes, fieldType)
+			}
+			env[fp.Bind] = &Scheme{Body: QualifiedType{Body: fieldType}}
 		}
 		return env, nil
 	case *LiteralPattern:

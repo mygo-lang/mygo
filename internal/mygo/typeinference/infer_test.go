@@ -1943,3 +1943,117 @@ func TestLetPolymorphismUse(t *testing.T) {
 		t.Fatalf("expected String from id(\"hello\"), got %s", typ2)
 	}
 }
+
+func TestInferEnumVariantStructLit(t *testing.T) {
+	state := NewInferState()
+	state.PkgInfo = &PkgInfo{
+		Name: "main",
+		Enums: map[string]*EnumDecl{
+			"Shape": {
+				Name: "Shape",
+				Variants: []EnumVariant{
+					{
+						Name: "Circle",
+						Fields: []Field{
+							{Name: "radius", Type: &NamedType{Name: "Float64"}},
+						},
+					},
+					{
+						Name: "Rectangle",
+						Fields: []Field{
+							{Name: "width", Type: &NamedType{Name: "Float64"}},
+							{Name: "height", Type: &NamedType{Name: "Float64"}},
+						},
+					},
+				},
+			},
+		},
+	}
+	env := TypeEnv{
+		"Float64": &Scheme{Body: QualifiedType{Body: TCon{Name: "Float64"}}},
+	}
+	expr := &StructLitExpr{
+		TypeName: "Shape.Circle",
+		Fields: []StructLitField{
+			{
+				Name:  "radius",
+				Value: &LiteralExpr{Kind: "number", Value: "1.0"},
+			},
+		},
+	}
+	typ, err := inferExprType(env, expr, state)
+	if err != nil {
+		t.Fatalf("inferExprType() error = %v", err)
+	}
+	if con, ok := typ.(TCon); !ok || con.Name != "Shape" {
+		t.Fatalf("expected Shape, got %s", typ)
+	}
+}
+
+func TestInferEnumVariantStructLitUnknownField(t *testing.T) {
+	state := NewInferState()
+	state.PkgInfo = &PkgInfo{
+		Name: "main",
+		Enums: map[string]*EnumDecl{
+			"Shape": {
+				Name: "Shape",
+				Variants: []EnumVariant{
+					{Name: "Circle", Fields: []Field{{Name: "radius", Type: &NamedType{Name: "Float64"}}}},
+				},
+			},
+		},
+	}
+	env := TypeEnv{
+		"Float64": &Scheme{Body: QualifiedType{Body: TCon{Name: "Float64"}}},
+	}
+	expr := &StructLitExpr{
+		TypeName: "Shape.Circle",
+		Fields: []StructLitField{
+			{Name: "unknown", Value: &LiteralExpr{Kind: "number", Value: "1.0"}},
+		},
+	}
+	_, err := inferExprType(env, expr, state)
+	if err == nil {
+		t.Fatal("expected unknown field error")
+	}
+}
+
+func TestInferStructVariantPatternBindings(t *testing.T) {
+	state := NewInferState()
+	state.PkgInfo = &PkgInfo{
+		Name: "main",
+		Enums: map[string]*EnumDecl{
+			"Shape": {
+				Name: "Shape",
+				Variants: []EnumVariant{
+					{
+						Name: "Circle",
+						Fields: []Field{
+							{Name: "radius", Type: &NamedType{Name: "Float64"}},
+						},
+					},
+				},
+			},
+		},
+	}
+	env := TypeEnv{}
+	pat := &StructVariantPattern{
+		Name: "Circle",
+		Fields: []StructPatternField{
+			{Field: "radius", Bind: "r"},
+		},
+	}
+	targetType := TCon{Name: "Shape"}
+	result, err := inferPatternBindings(env, pat, targetType, make(Subst), state, nil, nil, "", nil)
+	if err != nil {
+		t.Fatalf("inferPatternBindings() error = %v", err)
+	}
+	binding, ok := result["r"]
+	if !ok {
+		t.Fatal("missing binding 'r'")
+	}
+	mt, ok := binding.Body.Body.(TCon)
+	if !ok || mt.Name != "Float64" {
+		t.Fatalf("binding 'r' type = %s, want Float64", binding.Body)
+	}
+}

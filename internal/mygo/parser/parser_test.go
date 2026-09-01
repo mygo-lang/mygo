@@ -695,6 +695,128 @@ end
 	}
 }
 
+func TestParseFileSupportsNamedStructEnumVariants(t *testing.T) {
+	src := `package main
+enum Shape
+  Circle { radius: Float64 }
+  Rectangle { width: Float64, height: Float64 }
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	enum, ok := file.Decls[0].(*EnumDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *EnumDecl", file.Decls[0])
+	}
+	if got := len(enum.Variants); got != 2 {
+		t.Fatalf("len(EnumDecl.Variants) = %d, want %d", got, 2)
+	}
+
+	circle := enum.Variants[0]
+	if circle.Name != "Circle" || len(circle.Fields) != 1 {
+		t.Fatalf("Circle variant = %#v, want one field", circle)
+	}
+	if circle.Fields[0].Name != "radius" {
+		t.Fatalf("Circle.Fields[0].Name = %q, want %q", circle.Fields[0].Name, "radius")
+	}
+	nt, ok := circle.Fields[0].Type.(*NamedType)
+	if !ok || nt.Name != "Float64" {
+		t.Fatalf("Circle.Fields[0].Type = %#v, want Float64", circle.Fields[0].Type)
+	}
+
+	rect := enum.Variants[1]
+	if rect.Name != "Rectangle" || len(rect.Fields) != 2 {
+		t.Fatalf("Rectangle variant = %#v, want two fields", rect)
+	}
+	if rect.Fields[0].Name != "width" || rect.Fields[1].Name != "height" {
+		t.Fatalf("Rectangle field names = %s, %s; want width, height",
+			rect.Fields[0].Name, rect.Fields[1].Name)
+	}
+}
+
+func TestParseFileSupportsMixedEnumVariantKinds(t *testing.T) {
+	src := `package main
+enum Shape
+  Circle(Float64)
+  Rectangle { width: Float64, height: Float64 }
+  Point
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+	t.Fatalf("ParseFile() error = %v", err)
+	}
+	enum, ok := file.Decls[0].(*EnumDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *EnumDecl", file.Decls[0])
+	}
+	if got := len(enum.Variants); got != 3 {
+		t.Fatalf("len(EnumDecl.Variants) = %d, want 3", got)
+	}
+	if got := len(enum.Variants[2].Fields); got != 0 {
+		t.Fatalf("Point variant fields = %d, want 0", got)
+	}
+}
+
+func TestParseFileSupportsStructVariantPatterns(t *testing.T) {
+	src := `package main
+func area(shape: Shape) -> Float64
+  switch shape
+  case Circle { radius } => 3.14 * radius * radius
+  case Circle { radius: r } => r * r
+  case Rectangle { width, _ } => width
+  end
+end
+`
+	file, err := ParseFile("test.mygo", src)
+	if err != nil {
+		t.Fatalf("ParseFile() error = %v", err)
+	}
+	fn, ok := file.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[0] type = %T, want *FuncDecl", file.Decls[0])
+	}
+	sw, ok := fn.Body.(*SwitchExpr)
+	if !ok {
+		t.Fatalf("FuncDecl.Body type = %T, want *SwitchExpr", fn.Body)
+	}
+
+	// case Circle { radius }
+	p0, ok := sw.Cases[0].Pattern.(*StructVariantPattern)
+	if !ok {
+		t.Fatalf("Cases[0].Pattern type = %T, want *StructVariantPattern", sw.Cases[0].Pattern)
+	}
+	if p0.Name != "Circle" || len(p0.Fields) != 1 {
+		t.Fatalf("case 0 pattern = %#v, want Circle{radius}", p0)
+	}
+	if p0.Fields[0].Field != "radius" || p0.Fields[0].Bind != "radius" {
+		t.Fatalf("case 0 field = %#v, want radius:radius", p0.Fields[0])
+	}
+
+	// case Circle { radius: r }
+	p1, ok := sw.Cases[1].Pattern.(*StructVariantPattern)
+	if !ok {
+		t.Fatalf("Cases[1].Pattern type = %T, want *StructVariantPattern", sw.Cases[1].Pattern)
+	}
+	if p1.Fields[0].Field != "radius" || p1.Fields[0].Bind != "r" {
+		t.Fatalf("case 1 field = %#v, want radius:r", p1.Fields[0])
+	}
+
+	// case Rectangle { width, _ }
+	p2, ok := sw.Cases[2].Pattern.(*StructVariantPattern)
+	if !ok {
+		t.Fatalf("Cases[2].Pattern type = %T, want *StructVariantPattern", sw.Cases[2].Pattern)
+	}
+	if p2.Name != "Rectangle" || len(p2.Fields) != 2 {
+		t.Fatalf("case 2 pattern = %#v, want Rectangle{width, _}", p2)
+	}
+	if p2.Fields[1].Field != "_" || p2.Fields[1].Bind != "_" {
+		t.Fatalf("case 2 _ field = %#v, want _:_", p2.Fields[1])
+	}
+}
+
 func TestParseFileSupportsIfArrowForm(t *testing.T) {
 	src := `package main
 func demo(n: Int) -> Int

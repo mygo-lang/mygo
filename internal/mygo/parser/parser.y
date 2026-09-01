@@ -286,6 +286,18 @@ enum_variant
 		}
 		p.currentEnumFields = nil
 	}
+	| IDENT LBRACE named_enum_variant_fields RBRACE {
+		p := yylex.(*parser)
+		if p.currentEnum != nil {
+			p.currentEnum.Variants = append(p.currentEnum.Variants, ast.EnumVariant{
+				Line: $1.line,
+				Column: $1.col,
+				Name: $1.lit,
+				Fields: append([]ast.Field(nil), p.currentEnumFields...),
+			})
+		}
+		p.currentEnumFields = nil
+	}
 	;
 
 enum_variant_fields
@@ -307,6 +319,32 @@ enum_variant_fields
 				Line: p.currentTypeLine,
 				Column: p.currentTypeCol,
 				Type: p.currentType,
+			})
+		}
+	}
+	;
+
+named_enum_variant_fields
+	: /* empty */
+	| named_enum_variant_fields COMMA IDENT COLON type {
+		p := yylex.(*parser)
+		if p.currentEnum != nil {
+			p.currentEnumFields = append(p.currentEnumFields, ast.Field{
+				Line:   $3.line,
+				Column: $3.col,
+				Name:   $3.lit,
+				Type:   p.currentType,
+			})
+		}
+	}
+	| IDENT COLON type {
+		p := yylex.(*parser)
+		if p.currentEnum != nil {
+			p.currentEnumFields = append(p.currentEnumFields, ast.Field{
+				Line:   $1.line,
+				Column: $1.col,
+				Name:   $1.lit,
+				Type:   p.currentType,
 			})
 		}
 	}
@@ -1827,6 +1865,12 @@ pattern
 		p.currentPattern = &ast.VariantPattern{Line: $1.line, Column: $1.col, Name: $1.lit, Args: args}
 		p.currentPatternArgs = nil
 	}
+	| IDENT LBRACE struct_pattern_fields RBRACE {
+		p := yylex.(*parser)
+		fields := append([]ast.StructPatternField(nil), p.currentPatternFields...)
+		p.currentPattern = &ast.StructVariantPattern{Line: $1.line, Column: $1.col, Name: $1.lit, Fields: fields}
+		p.currentPatternFields = nil
+	}
 	;
 
 pattern_name_list
@@ -1846,6 +1890,51 @@ pattern_name_list
 	| UNDER {
 		p := yylex.(*parser)
 		p.currentPatternArgs = append(p.currentPatternArgs, "_")
+	}
+	;
+
+struct_pattern_fields
+	: /* empty */
+	| struct_pattern_fields COMMA struct_pattern_field
+	| struct_pattern_field
+	;
+
+struct_pattern_field
+	: IDENT {
+		p := yylex.(*parser)
+		p.currentPatternFields = append(p.currentPatternFields, ast.StructPatternField{
+			Line:  $1.line,
+			Column: $1.col,
+			Field: $1.lit,
+			Bind:  $1.lit,
+		})
+	}
+	| IDENT COLON IDENT {
+		p := yylex.(*parser)
+		p.currentPatternFields = append(p.currentPatternFields, ast.StructPatternField{
+			Line:  $1.line,
+			Column: $1.col,
+			Field: $1.lit,
+			Bind:  $3.lit,
+		})
+	}
+	| IDENT COLON UNDER {
+		p := yylex.(*parser)
+		p.currentPatternFields = append(p.currentPatternFields, ast.StructPatternField{
+			Line:  $1.line,
+			Column: $1.col,
+			Field: $1.lit,
+			Bind:  "_",
+		})
+	}
+	| UNDER {
+		p := yylex.(*parser)
+		p.currentPatternFields = append(p.currentPatternFields, ast.StructPatternField{
+			Line:  $1.line,
+			Column: $1.col,
+			Field: "_",
+			Bind:  "_",
+		})
 	}
 	;
 

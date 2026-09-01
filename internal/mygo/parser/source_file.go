@@ -203,6 +203,11 @@ func setPatternSourceFile(p ast.Pattern, filename string) {
 	switch n := p.(type) {
 	case *ast.VariantPattern:
 		n.SourceFile = filename
+	case *ast.StructVariantPattern:
+		n.SourceFile = filename
+		for i := range n.Fields {
+			n.Fields[i].SourceFile = filename
+		}
 	case *ast.LiteralPattern:
 		n.SourceFile = filename
 	case *ast.TuplePattern:

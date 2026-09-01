@@ -26,6 +26,17 @@ func (g *gen) translateStructLit(n *StructLitExpr, ctx *egCtx, expected string) 
 		st = g.pkg.Structs[structName]
 	}
 	if st == nil {
+		if enumName, variantName, ok := strings.Cut(n.TypeName, "."); ok && enumName != "" && variantName != "" {
+			if enum := g.pkg.Enums[enumName]; enum != nil {
+				for i := range enum.Variants {
+					if enum.Variants[i].Name == variantName {
+						return g.translateEnumVariantStructLit(n, enum, &enum.Variants[i], ctx)
+					}
+				}
+			}
+		}
+	}
+	if st == nil {
 		return ast.NewIdent(typeName), typeName, nil
 	}
 	subst := map[string]string{}
@@ -181,6 +192,45 @@ func elemTypeFromExpected(expected string) string {
 		return strings.TrimSuffix(strings.TrimPrefix(expected, "map["), "]struct{}")
 	}
 	return "any"
+}
+
+func (g *gen) translateEnumVariantStructLit(n *StructLitExpr, enum *EnumDecl, variant *EnumVariant, ctx *egCtx) (ast.Expr, string, error) {
+	declFields := make(map[string]int, len(variant.Fields))
+	for i, f := range variant.Fields {
+		declFields[f.Name] = i
+	}
+	elts := make([]ast.Expr, len(n.Fields))
+	for i, nf := range n.Fields {
+		fieldIdx, ok := declFields[nf.Name]
+		if !ok {
+			line, col := common.NodePos(nf.Value)
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "enum %s variant %s has no field %q", enum.Name, variant.Name, nf.Name)
+		}
+		expectedType := g.goType(variant.Fields[fieldIdx].Type, ctx.typeParams)
+		code, _, err := g.translateExpr(nf.Value, ctx, expectedType)
+		if err != nil {
+			line, col := common.NodePos(nf.Value)
+			return nil, "", common.ErrorAtPos(g.currentFile, line, col, "enum variant field %s: %s", nf.Name, err.Error())
+		}
+		fieldGoName := variantFieldGoName(variant.Fields[fieldIdx], fieldIdx)
+		elts[i] = &ast.KeyValueExpr{
+			Key:   ast.NewIdent(fieldGoName),
+			Value: code,
+		}
+	}
+	var structLit ast.Expr = ast.NewIdent(variantGoTypeName(enum.Name, variant.Name))
+	if len(enum.TypeParams) > 0 {
+		typeArgs := make([]ast.Expr, len(enum.TypeParams))
+		for i, tp := range enum.TypeParams {
+			if _, ok := ctx.typeParams[tp]; ok {
+				typeArgs[i] = ast.NewIdent(tp)
+			} else {
+				typeArgs[i] = ast.NewIdent("any")
+			}
+		}
+		structLit = indexTypeExpr(structLit, typeArgs...)
+	}
+	return &ast.CompositeLit{Type: structLit, Elts: elts}, enum.Name, nil
 }
 
 // translateMapLit handles map literals.

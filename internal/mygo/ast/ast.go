@@ -522,6 +522,24 @@ type VariantPattern struct {
 
 func (*VariantPattern) patternNode() {}
 
+type StructPatternField struct {
+	Line       int
+	Column     int
+	SourceFile string
+	Field      string
+	Bind       string
+}
+
+type StructVariantPattern struct {
+	Line       int
+	Column     int
+	SourceFile string
+	Name       string
+	Fields     []StructPatternField
+}
+
+func (*StructVariantPattern) patternNode() {}
+
 type LiteralPattern struct {
 	Line       int
 	Column     int
