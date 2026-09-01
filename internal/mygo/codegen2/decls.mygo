@@ -208,8 +208,11 @@ func translateEnumAstDecls(name: String, tps: Slice[String], vars: Slice[ast2.Va
   let variantFields = vars.Map(func(v: ast2.Variant) -> Slice[String]
     v.Fields.Map(func(t: ast2.TypeExpr) -> String goType(t, ctx.typeParams) end)
   end)
+  let variantFieldNames = vars.Map(func(v: ast2.Variant) -> Slice[String]
+    if v.Named then v.Names else ([] as Slice[String]) end
+  end)
   let constructors = vars.Map(func(v: ast2.Variant) -> String enumConstructorGoName(sanitizeIdent(name), v.Name) end)
-  goast.EnumDeclsFromParts(sanitizeIdent(name), tps, variantNames, variantFields, constructors)
+  goast.EnumDeclsFromPartsWithFieldNames(sanitizeIdent(name), tps, variantNames, variantFields, variantFieldNames, constructors)
 end
 
 func translateInterfaceAstDecl(name: String, tps: Slice[String], methods: Slice[ast2.FuncSig]) -> goast.Decl
@@ -306,6 +309,7 @@ func newPackageIndex(decls: Slice[ast2.Decl]) -> PackageIndex
     EnumValueConstructors: seed.enumValueConstructors,
     EnumVariantOwners: seed.enumVariantOwners,
     VariantFieldMonoTypes: seed.variantFieldMonoTypes,
+    VariantFieldNames: seed.variantFieldNames,
     InterfaceMethods: seed.interfaceMethods,
     InterfaceTypeParams: seed.interfaceTypeParams,
     NamedImpls: seed.namedImpls,
@@ -357,7 +361,7 @@ end
 
 func ctxUsePackageIndex(ctx: Ref[egCtx], index: PackageIndex) -> ()
   go[()] {
-    code: "{ctx}.structFields = {index}.StructFields; {ctx}.structTypeParams = {index}.StructTypeParams; {ctx}.callDictionaries = {index}.CallDictionaries; {ctx}.packageDictionaries = {index}.PackageDictionaries; {ctx}.callRequirements = {index}.CallRequirements; {ctx}.packageCandidates = {index}.PackageCandidates; {ctx}.inherentCandidates = {index}.InherentCandidates; {ctx}.typeclassCandidates = {index}.TypeclassCandidates; {ctx}.enumValueConstructors = {index}.EnumValueConstructors; {ctx}.enumVariantOwners = {index}.EnumVariantOwners; {ctx}.variantFieldMonoTypes = {index}.VariantFieldMonoTypes; {ctx}.interfaceMethods = {index}.InterfaceMethods; {ctx}.interfaceTypeParams = {index}.InterfaceTypeParams; {ctx}.namedImpls = {index}.NamedImpls"
+    code: "{ctx}.structFields = {index}.StructFields; {ctx}.structTypeParams = {index}.StructTypeParams; {ctx}.callDictionaries = {index}.CallDictionaries; {ctx}.packageDictionaries = {index}.PackageDictionaries; {ctx}.callRequirements = {index}.CallRequirements; {ctx}.packageCandidates = {index}.PackageCandidates; {ctx}.inherentCandidates = {index}.InherentCandidates; {ctx}.typeclassCandidates = {index}.TypeclassCandidates; {ctx}.enumValueConstructors = {index}.EnumValueConstructors; {ctx}.enumVariantOwners = {index}.EnumVariantOwners; {ctx}.variantFieldMonoTypes = {index}.VariantFieldMonoTypes; {ctx}.variantFieldNames = {index}.VariantFieldNames; {ctx}.interfaceMethods = {index}.InterfaceMethods; {ctx}.interfaceTypeParams = {index}.InterfaceTypeParams; {ctx}.namedImpls = {index}.NamedImpls"
     in ctx = ctx
     in index = index
   }
@@ -365,7 +369,7 @@ end
 
 func ctxUsePackageFacts(ctx: Ref[egCtx], source: egCtx) -> ()
   go[()] {
-    code: "{ctx}.structFields = {source}.structFields; {ctx}.structTypeParams = {source}.structTypeParams; {ctx}.callDictionaries = {source}.callDictionaries; {ctx}.packageDictionaries = {source}.packageDictionaries; {ctx}.callRequirements = {source}.callRequirements; {ctx}.packageCandidates = {source}.packageCandidates; {ctx}.inherentCandidates = {source}.inherentCandidates; {ctx}.typeclassCandidates = {source}.typeclassCandidates; {ctx}.enumValueConstructors = {source}.enumValueConstructors; {ctx}.enumVariantOwners = {source}.enumVariantOwners; {ctx}.variantFieldMonoTypes = {source}.variantFieldMonoTypes; {ctx}.interfaceMethods = {source}.interfaceMethods; {ctx}.interfaceTypeParams = {source}.interfaceTypeParams; {ctx}.namedImpls = {source}.namedImpls"
+    code: "{ctx}.structFields = {source}.structFields; {ctx}.structTypeParams = {source}.structTypeParams; {ctx}.callDictionaries = {source}.callDictionaries; {ctx}.packageDictionaries = {source}.packageDictionaries; {ctx}.callRequirements = {source}.callRequirements; {ctx}.packageCandidates = {source}.packageCandidates; {ctx}.inherentCandidates = {source}.inherentCandidates; {ctx}.typeclassCandidates = {source}.typeclassCandidates; {ctx}.enumValueConstructors = {source}.enumValueConstructors; {ctx}.enumVariantOwners = {source}.enumVariantOwners; {ctx}.variantFieldMonoTypes = {source}.variantFieldMonoTypes; {ctx}.variantFieldNames = {source}.variantFieldNames; {ctx}.interfaceMethods = {source}.interfaceMethods; {ctx}.interfaceTypeParams = {source}.interfaceTypeParams; {ctx}.namedImpls = {source}.namedImpls"
     in ctx = ctx
     in source = source
   }
@@ -508,7 +512,7 @@ end
 
 func seedEnumVariantsForVariants(enumName: String, enumTypeParams: Slice[String], variants: Slice[ast2.Variant], ctx: Ref[egCtx], index: Int) -> ()
   if index < variants.Len() then
-    let variant = variants.Get(index).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr] })
+    let variant = variants.Get(index).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr], Named: false, Names: [] as Slice[String] })
     ctx.enumVariantOwners.Set(variant.Name, enumName)
     # Register every variant under its `EnumName.VariantName` key.  Zero-arity
     # variants appear as values (Decl.ImportDecl) and as calls
@@ -517,6 +521,9 @@ func seedEnumVariantsForVariants(enumName: String, enumTypeParams: Slice[String]
     # lowering symmetric without introducing a parallel structure.
     ctx.enumValueConstructors.Set(enumName + "." + variant.Name, enumConstructorGoName(sanitizeIdent(enumName), variant.Name))
     seedEnumVariantFieldTypes(enumName, variant.Name, variant.Fields, enumTypeParams, ctx, 0)
+    if variant.Named then
+      ctx.variantFieldNames.Set(variant.Name, variant.Names)
+    end
     seedEnumVariantsForVariants(enumName, enumTypeParams, variants, ctx, index + 1)
   end
 end
@@ -870,16 +877,6 @@ func substituteTypeExpr(typ: ast2.TypeExpr, ifaceTps: Slice[String], constraintA
         end
       end
     case _ => typ
-  end
-end
-
-func findStringIndex(items: Slice[String], target: String) -> Int
-  if items.Len() == 0 then -1 else
-    let head = items.Get(0).UnwrapOr("")
-    if head == target then 0 else
-      let found = findStringIndex(sliceDrop(items, 1), target)
-      if found < 0 then -1 else found + 1 end
-    end
   end
 end
 

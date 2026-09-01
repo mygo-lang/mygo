@@ -212,12 +212,24 @@ func AppendDecls(dst, more []ast.Decl) []ast.Decl { return append(dst, more...) 
 // EnumDeclsFromParts lowers a MyGO enum to its interface, variant structs,
 // marker methods, and constructors as individual Go AST declarations.
 func EnumDeclsFromParts(enumName string, typeParams, variantNames []string, variantFields [][]string, constructorNames []string) []ast.Decl {
+	return EnumDeclsFromPartsWithFieldNames(enumName, typeParams, variantNames, variantFields, nil, constructorNames)
+}
+
+// EnumDeclsFromPartsWithFieldNames is EnumDeclsFromParts for variants that
+// also provide the MyGO field names.  A nil entry (or an empty inner slice)
+// keeps the legacy F0/F1 naming; a provided name is used verbatim, preserving
+// the declared case.
+func EnumDeclsFromPartsWithFieldNames(enumName string, typeParams, variantNames []string, variantFields [][]string, variantFieldNames [][]string, constructorNames []string) []ast.Decl {
 	if len(variantNames) != len(variantFields) || len(variantNames) != len(constructorNames) {
 		panic("mismatched enum variant metadata")
 	}
 	decls := []ast.Decl{enumInterfaceDecl(enumName, typeParams)}
 	for i, variantName := range variantNames {
-		decls = append(decls, enumVariantDecls(enumName, typeParams, variantName, variantFields[i], constructorNames[i])...)
+		var fieldNames []string
+		if i < len(variantFieldNames) {
+			fieldNames = variantFieldNames[i]
+		}
+		decls = append(decls, enumVariantDeclsWithFieldNames(enumName, typeParams, variantName, variantFields[i], fieldNames, constructorNames[i])...)
 	}
 	return decls
 }
@@ -537,6 +549,10 @@ func enumInterfaceDecl(enumName string, typeParams []string) ast.Decl {
 }
 
 func enumVariantDecls(enumName string, typeParams []string, variantName string, fieldTypes []string, constructorName string) []ast.Decl {
+	return enumVariantDeclsWithFieldNames(enumName, typeParams, variantName, fieldTypes, nil, constructorName)
+}
+
+func enumVariantDeclsWithFieldNames(enumName string, typeParams []string, variantName string, fieldTypes, fieldNames []string, constructorName string) []ast.Decl {
 	fields := make([]*ast.Field, 0, len(fieldTypes))
 	params := make([]*ast.Field, 0, len(fieldTypes))
 	values := make([]ast.Expr, 0, len(fieldTypes))
@@ -546,6 +562,9 @@ func enumVariantDecls(enumName string, typeParams []string, variantName string, 
 			panic(fmt.Sprintf("invalid generated enum field type %q: %v", sourceType, err))
 		}
 		fieldName := fmt.Sprintf("F%d", i)
+		if i < len(fieldNames) && fieldNames[i] != "" {
+			fieldName = fieldNames[i]
+		}
 		paramName := fmt.Sprintf("v%d", i)
 		fields = append(fields, &ast.Field{Names: []*ast.Ident{ast.NewIdent(fieldName)}, Type: typ})
 		params = append(params, &ast.Field{Names: []*ast.Ident{ast.NewIdent(paramName)}, Type: typ})

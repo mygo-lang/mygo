@@ -362,6 +362,39 @@ end
 	}
 }
 
+func TestParseNamedStructEnumVariantsAndPatterns(t *testing.T) {
+	parsed := ParseFile(`package sample
+
+enum Shape
+  Circle { radius: Float64 }
+  Rectangle(Float64, Float64)
+end
+
+func area(shape: Shape) -> Float64
+  switch shape
+    case Circle { radius: r } => r
+    case _ => 0.0
+  end
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	shape := file.F0.Decls[0].(ast2.Decl__EnumDecl)
+	circle := shape.F2[0]
+	if !circle.Named || len(circle.Names) != 1 || circle.Names[0] != "radius" {
+		t.Fatalf("Circle variant = %#v, want named radius field", circle)
+	}
+	fn := file.F0.Decls[1].(ast2.Decl__FuncDecl)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	sw := body.F0[0].(ast2.Stmt__ExprStmt).F0.Kind.(ast2.ExprKind__SwitchExpr)
+	pat, ok := sw.F1[0].Pattern.(ast2.Pattern__StructVariantPattern)
+	if !ok || pat.F0 != "Circle" || len(pat.F1) != 1 || pat.F1[0].Field != "radius" || pat.F1[0].Bind != "r" {
+		t.Fatalf("pattern = %#v, want Circle { radius: r }", sw.F1[0].Pattern)
+	}
+}
+
 func TestParseSwitchExpressionTarget(t *testing.T) {
 	got := ParseFile(`package sample
 

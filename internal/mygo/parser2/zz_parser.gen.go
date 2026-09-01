@@ -559,18 +559,59 @@ func fieldDecl() ps.Parser[ast2.Field] {
 }
 func variantDecl() ps.Parser[ast2.Variant] {
 	return ps.PBind(identifier(), func(name string) ps.Parser[ast2.Variant] {
-		return ps.PMap(ps.POptional(paren(ps.PSepBy(typeExpr(), sym(",")))), func(fields Option[[]ast2.TypeExpr]) ast2.Variant {
+		return ps.PChoice([]func(ps.State) ps.Reply[ast2.Variant]{ps.PBind(sym("{"), func(_ string) ps.Parser[ast2.Variant] {
+			return ps.PBind(sepByEnd(namedVariantField(), sym(",")), func(fields []struct {
+				F0 string
+				F1 ast2.TypeExpr
+			}) ps.Parser[ast2.Variant] {
+				return ps.PThen(sym("}"), ps.PPure(ast2.Variant{Name: name, Fields: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(fields, func(f struct {
+					F0 string
+					F1 ast2.TypeExpr
+				}) ast2.TypeExpr {
+					return f.F1
+				}), Named: true, Names: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(fields, func(f_1 struct {
+					F0 string
+					F1 ast2.TypeExpr
+				}) string {
+					return f_1.F0
+				})}))
+			})
+		}), ps.PMap(ps.POptional(paren(ps.PSepBy(typeExpr(), sym(",")))), func(fields_1 Option[[]ast2.TypeExpr]) ast2.Variant {
 			var __mygo_expr_0 []ast2.TypeExpr
-			if __mygo_match___mygo_expr_1, ok := fields.(Option__Some[[]ast2.TypeExpr]); ok {
+			if __mygo_match___mygo_expr_1, ok := fields_1.(Option__Some[[]ast2.TypeExpr]); ok {
 				__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
 			} else {
-				if _, ok := fields.(Option__None[[]ast2.TypeExpr]); ok {
+				if _, ok := fields_1.(Option__None[[]ast2.TypeExpr]); ok {
 					__mygo_expr_0 = []ast2.TypeExpr{}
 				} else {
 				}
 			}
 			actual := __mygo_expr_0
-			return ast2.Variant{Name: name, Fields: actual}
+			return ast2.Variant{Name: name, Fields: actual, Named: false, Names: []string{}}
+		})})
+	})
+}
+func namedVariantField() ps.Parser[struct {
+	F0 string
+	F1 ast2.TypeExpr
+}] {
+	return ps.PBind(identifier(), func(fname string) ps.Parser[struct {
+		F0 string
+		F1 ast2.TypeExpr
+	}] {
+		return ps.PBind(sym(":"), func(_ string) ps.Parser[struct {
+			F0 string
+			F1 ast2.TypeExpr
+		}] {
+			return ps.PMap(typeExpr(), func(ftype ast2.TypeExpr) struct {
+				F0 string
+				F1 ast2.TypeExpr
+			} {
+				return struct {
+					F0 string
+					F1 ast2.TypeExpr
+				}{F0: fname, F1: ftype}
+			})
 		})
 	})
 }
@@ -896,19 +937,40 @@ func pattern() ps.Parser[ast2.Pattern] {
 		return ast2.Pattern__LiteralPattern__Ctor("string", value_1)
 	}), ps.PMap(runeLiteral(), func(value_2 string) ast2.Pattern {
 		return ast2.Pattern__LiteralPattern__Ctor("rune", value_2)
-	}), ps.PBind(identifier(), func(name string) ps.Parser[ast2.Pattern] {
+	}), ps.PAttempt(ps.PBind(identifier(), func(name string) ps.Parser[ast2.Pattern] {
+		return ps.PBind(sym("{"), func(__1 string) ps.Parser[ast2.Pattern] {
+			return ps.PBind(sepByEnd(structPatternField(), sym(",")), func(fields []ast2.StructPatternField) ps.Parser[ast2.Pattern] {
+				return ps.PMap(sym("}"), func(__2 string) ast2.Pattern {
+					return ast2.Pattern__StructVariantPattern__Ctor(name, fields)
+				})
+			})
+		})
+	})), ps.PBind(identifier(), func(name_1 string) ps.Parser[ast2.Pattern] {
 		return ps.PMap(ps.POptional(paren(ps.PSepBy(lazyPattern(), sym(",")))), func(args Option[[]ast2.Pattern]) ast2.Pattern {
 			var __mygo_expr_0 ast2.Pattern
 			if _, ok := args.(Option__None[[]ast2.Pattern]); ok {
-				__mygo_expr_0 = ast2.Pattern__BindPattern__Ctor(name)
+				__mygo_expr_0 = ast2.Pattern__BindPattern__Ctor(name_1)
 			} else {
 				if __mygo_match___mygo_expr_1, ok := args.(Option__Some[[]ast2.Pattern]); ok {
-					__mygo_expr_0 = ast2.Pattern__VariantPattern__Ctor(name, __mygo_match___mygo_expr_1.F0)
+					__mygo_expr_0 = ast2.Pattern__VariantPattern__Ctor(name_1, __mygo_match___mygo_expr_1.F0)
 				} else {
 				}
 			}
 			return __mygo_expr_0
 		})
+	})})
+}
+func structPatternField() ps.Parser[ast2.StructPatternField] {
+	return ps.PChoice([]func(ps.State) ps.Reply[ast2.StructPatternField]{ps.PAttempt(ps.PBind(identifier(), func(fname string) ps.Parser[ast2.StructPatternField] {
+		return ps.PBind(sym(":"), func(_ string) ps.Parser[ast2.StructPatternField] {
+			return ps.PMap(identifier(), func(bind string) ast2.StructPatternField {
+				return ast2.StructPatternField{Field: fname, Bind: bind}
+			})
+		})
+	})), ps.PMap(sym("_"), func(__1 string) ast2.StructPatternField {
+		return ast2.StructPatternField{Field: "_", Bind: "_"}
+	}), ps.PMap(identifier(), func(fname_1 string) ast2.StructPatternField {
+		return ast2.StructPatternField{Field: fname_1, Bind: fname_1}
 	})})
 }
 func lazyPattern() ps.Parser[ast2.Pattern] {

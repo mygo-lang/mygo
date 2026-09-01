@@ -281,7 +281,7 @@ func translateGenericStructLitAstExpected(typeName: String, typeArgs: Slice[ast2
   switch result
     case Err(msg) => Err(msg)
     case Ok(value) =>
-      let typ = goType(ast2.TypeExpr.NamedType(typeName, typeArgs), ctx.typeParams)
+      let typ = enumVariantStructLitGoType(typeName, typeArgs, expected, ctx).UnwrapOr(goType(ast2.TypeExpr.NamedType(typeName, typeArgs), ctx.typeParams))
       Ok(astExprWithPre(goast.Composite(goast.MustTypeExpr(typ), value.Elts), value.Pre))
   end
 end
@@ -424,6 +424,17 @@ func patternArgsUsedInBodyAt(args: Slice[ast2.Pattern], body: ast2.Expr, index: 
   end
 end
 
+# structPatternFieldsUsedInBody reports whether any name bound by a struct
+# variant pattern is referenced by the case body.
+func structPatternFieldsUsedInBody(fields: Slice[ast2.StructPatternField], body: ast2.Expr) -> Bool
+  if fields.Len() == 0 then
+    false
+  else
+    let f = fields.Get(0).UnwrapOr(ast2.StructPatternField { Field: "", Bind: "" })
+    exprUsesName(body, f.Bind) || structPatternFieldsUsedInBody(sliceDrop(fields, 1), body)
+  end
+end
+
 # patternItemsUsedInBody checks names bound by the items of a TuplePattern.
 func patternItemsUsedInBody(items: Slice[ast2.Pattern], body: ast2.Expr, index: Int) -> Bool
   if index >= items.Len() then false else
@@ -488,21 +499,27 @@ func stmtUsesName(stmt: ast2.Stmt, name: String) -> Bool
 end
 
 func letRecBindingsUseName(bindings: Slice[ast2.LetRecBind], name: String) -> Bool
-  if bindings.Len() == 0 then false else
+  if bindings.Len() == 0 then
+    false
+  else
     let b = bindings.Get(0).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType, Value: ast2.EmptyExpr() })
     exprUsesName(b.Value, name) || letRecBindingsUseName(sliceDrop(bindings, 1), name)
   end
 end
 
 func goOperandsUseName(items: Slice[ast2.GoOperand], name: String) -> Bool
-  if items.Len() == 0 then false else
+  if items.Len() == 0 then
+    false
+  else
     let o = items.Get(0).UnwrapOr(ast2.GoOperand { Name: "", Value: ast2.EmptyExpr() })
     exprUsesName(o.Value, name) || goOperandsUseName(sliceDrop(items, 1), name)
   end
 end
 
 func switchCasesUseName(cases: Slice[ast2.SwitchCase], name: String) -> Bool
-  if cases.Len() == 0 then false else
+  if cases.Len() == 0 then
+    false
+  else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
     exprUsesName(current.Body, name) || switchCasesUseName(sliceDrop(cases, 1), name)
   end
@@ -532,29 +549,39 @@ func translateSwitchBranchesStmt(cases: Slice[ast2.SwitchCase], targetType: Opti
   else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
     switch current.Pattern
-      case BindPattern(name) =>
+      case BindPattern(name) then
         let child = Ref.new(ctxChild(ctx))
         ctxSetBinding(child, name, goast.MustExprSource(target))
         translateSwitchCaseBodyStmt(current.Body, child)
-      case WildcardPattern =>
-        translateSwitchCaseBodyStmt(current.Body, ctx)
-      case TuplePattern(items) =>
+      end
+      case WildcardPattern => translateSwitchCaseBodyStmt(current.Body, ctx)
+      case TuplePattern(items) then
         let child = Ref.new(ctxChild(ctx))
         bindTuplePattern(child, items, goast.MustExprSource(target), 0)
         translateSwitchCaseBodyStmt(current.Body, child)
-      case LiteralPattern(kind, literal) =>
+      end
+      case LiteralPattern(kind, literal) then
         let body = translateSwitchCaseBodyStmt(current.Body, ctx)
         let rest = translateSwitchBranchesStmt(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
         switch body
           case Err(msg) => Err(msg)
-          case Ok(bodyStmts) =>
+          case Ok(bodyStmts) then
             switch rest
               case Err(msg) => Err(msg)
-              case Ok(next) =>
-                let pattern = if kind == "string" then goast.String(strconv.Quote(literal)) elsif kind == "rune" then goast.Rune(literal) else goast.Number(literal) end
+              case Ok(next) then
+                let pattern = if kind == "string" then
+                  goast.String(strconv.Quote(literal))
+                elsif kind == "rune" then
+                  goast.Rune(literal)
+                else
+                  goast.Number(literal)
+                end
                 Ok(astSingleStmt(goast.If(goast.Binary(target, "==", pattern), bodyStmts, next)))
+              end
             end
+          end
         end
+      end
       case VariantPattern(name, args) then
         let rest = translateSwitchBranchesStmt(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
         switch rest
@@ -582,6 +609,33 @@ func translateSwitchBranchesStmt(cases: Slice[ast2.SwitchCase], targetType: Opti
           end
         end
       end
+      case StructVariantPattern(vname, fields) then
+        let rest = translateSwitchBranchesStmt(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+        switch rest
+          case Err(msg) => Err(msg)
+          case Ok(next) then
+            let targetMono = targetType
+            switch targetMono
+              case Some(tm) then
+                let typ = switchVariantType(sourceTarget, tm, ctx)
+                let valueName = if fields.Len() == 0 || !structPatternFieldsUsedInBody(fields, current.Body) then
+                  "_"
+                else
+                  "__mygo_match_" + ctxFreshExprTemp(ctx)
+                end
+                let child = Ref.new(ctxChild(ctx))
+                bindStructPatternFieldsWithTypes(child, fields, valueName, vname, tm, ctx)
+                let body = translateSwitchCaseBodyStmt(current.Body, child)
+                switch body
+                  case Err(msg) => Err(msg)
+                  case Ok(branchStmts) => Ok(astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ, vname), valueName, branchStmts, next)))
+                end
+              end
+              case None => Err("cannot resolve switch target type")
+            end
+          end
+        end
+      end
     end
   end
 end
@@ -590,17 +644,20 @@ end
 # without assigning the result to a temp variable or adding trailing return.
 func translateSwitchCaseBodyStmt(body: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
   switch body.Kind
-    case BlockExpr(items) =>
+    case BlockExpr(items) then
       let stmts = translateAstBlockAsStmts(items, ctx, 0, [] as Slice[goast.Stmt])
       switch stmts
         case Err(msg) => Err(msg)
         case Ok(v) => Ok(v)
       end
-    case UnitExpr =>
+    end
+    case UnitExpr then
       let empty: Slice[goast.Stmt] = []
       Ok(empty)
-    case IfExpr(cond, thenExpr, elseExpr) =>
+    end
+    case IfExpr(cond, thenExpr, elseExpr) then
       translateAstIfStmt(cond, thenExpr, elseExpr, ctx)
+    end
     case _ then
       # Statement-form switch bodies discard their value.  Lowering an FFI
       # call such as fmt.Println(...) through translateExprAst would wrap the
@@ -648,9 +705,15 @@ func normalizeNumberLiteral(value: String) -> String
 end
 
 func normalizeNumberLiteralSuffix(value: String, suffixes: Slice[String]) -> String
-  if suffixes.Len() == 0 then value else
+  if suffixes.Len() == 0 then
+    value
+  else
     let suffix = suffixes.Get(0).UnwrapOr("")
-    if strings.HasSuffix(value, suffix) then strings.TrimSuffix(value, suffix) else normalizeNumberLiteralSuffix(value, sliceDrop(suffixes, 1)) end
+    if strings.HasSuffix(value, suffix) then
+      strings.TrimSuffix(value, suffix)
+    else
+      normalizeNumberLiteralSuffix(value, sliceDrop(suffixes, 1))
+    end
   end
 end
 
@@ -684,13 +747,21 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], targetType: Option[a
         let rest = translateSwitchBranches(sliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
         switch body
           case Err(msg) => Err(msg)
-          case Ok(bodyStmts) =>
+          case Ok(bodyStmts) then
             switch rest
               case Err(msg) => Err(msg)
-              case Ok(next) =>
-                let pattern = if kind == "string" then goast.String(strconv.Quote(literal)) elsif kind == "rune" then goast.Rune(literal) else goast.Number(literal) end
+              case Ok(next) then
+                let pattern = if kind == "string" then
+                  goast.String(strconv.Quote(literal))
+                elsif kind == "rune" then
+                  goast.Rune(literal)
+                else
+                  goast.Number(literal)
+                end
                 Ok(astSingleStmt(goast.If(goast.Binary(target, "==", pattern), bodyStmts, next)))
+              end
             end
+          end
         end
       end
       case VariantPattern(name, args) then
@@ -700,7 +771,7 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], targetType: Option[a
           case Ok(next) then
             let targetMono = targetType
             switch targetMono
-              case Some(tm) =>
+              case Some(tm) then
                 let typ = switchVariantType(sourceTarget, tm, ctx)
                 let valueName = if args.Len() == 0 || allWildcards(args, 0) || !patternArgsUsedInBody(args, current.Body) then "_" else "__mygo_match_" + ctxFreshExprTemp(ctx) end
                 let child = Ref.new(ctxChild(ctx))
@@ -710,7 +781,30 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], targetType: Option[a
                   case Err(msg) => Err(msg)
                   case Ok(branchStmts) => Ok(astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ, name), valueName, branchStmts, next)))
                 end
+              end
               case None => Err("cannot resolve switch target type for variant " + name)
+            end
+          end
+        end
+      end
+      case StructVariantPattern(vname, fields) then
+        let rest = translateSwitchBranches(sliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
+        switch rest
+          case Err(msg) => Err(msg)
+          case Ok(next) then
+            switch targetType
+              case Some(tm) then
+                let typ = switchVariantType(sourceTarget, tm, ctx)
+                let valueName = if fields.Len() == 0 || !structPatternFieldsUsedInBody(fields, current.Body) then "_" else "__mygo_match_" + ctxFreshExprTemp(ctx) end
+                let child = Ref.new(ctxChild(ctx))
+                bindStructPatternFieldsWithTypes(child, fields, valueName, vname, tm, ctx)
+                let body = translateSwitchCaseBody(current.Body, child, expected, temp)
+                switch body
+                  case Err(msg) => Err(msg)
+                  case Ok(branchStmts) => Ok(astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ, vname), valueName, branchStmts, next)))
+                end
+              end
+              case None => Err("cannot resolve switch target type for variant " + vname)
             end
           end
         end
@@ -814,6 +908,37 @@ func bindPatternArgumentsWithTypes(ctx: Ref[egCtx], args: Slice[ast2.Pattern], v
   end
 end
 
+# bindStructPatternFieldsWithTypes binds each named field of a
+# StructVariantPattern to `valueName.<ExportedFieldName>` in the child
+# context, mirroring the field types used by tuple-variant patterns.
+func bindStructPatternFieldsWithTypes(ctx: Ref[egCtx], fields: Slice[ast2.StructPatternField], valueName: String, variantName: String, targetMono: ast2.MonoType, outerCtx: Ref[egCtx]) -> ()
+  if fields.Len() > 0 then
+    let f = fields.Get(0).UnwrapOr(ast2.StructPatternField { Field: "", Bind: "" })
+    if f.Bind != "" && f.Bind != "_" then
+      let fieldType = variantFieldMonoTypeByName(variantName, f.Field, targetMono, ctx)
+      let goField = sanitizeIdent(f.Field)
+      let bindingExpr = valueName + "." + goField
+      ctxSetBinding(ctx, f.Bind, bindingExpr)
+      ctxSetLocal(ctx, f.Bind, fieldType)
+      ctxSetLocal(outerCtx, f.Bind, fieldType)
+      ctx.patternTypes.Set(f.Bind, fieldType)
+    end
+    bindStructPatternFieldsWithTypes(ctx, sliceDrop(fields, 1), valueName, variantName, targetMono, outerCtx)
+  end
+end
+
+func variantFieldMonoTypeByName(variantName: String, fieldName: String, targetMono: ast2.MonoType, ctx: Ref[egCtx]) -> ast2.MonoType
+  # Reuse the per-variant field-type list when available.  This implementation
+  # matches by index (struct patterns must list fields in declaration order).
+  let idx = structPatternFieldIndex(variantName, fieldName, ctx)
+  extractVariantFieldType(targetMono, idx, variantName, ctx)
+end
+
+func structPatternFieldIndex(variantName: String, fieldName: String, ctx: Ref[egCtx]) -> Int
+  let names = ctx.variantFieldNames.Get(variantName).UnwrapOr([] as Slice[String])
+  findStringIndex(names, fieldName)
+end
+
 func extractVariantFieldType(targetMono: ast2.MonoType, index: Int, variantName: String, ctx: Ref[egCtx]) -> ast2.MonoType
   let fieldTypes = ctx.variantFieldMonoTypes.Get(variantName)
   switch fieldTypes
@@ -869,7 +994,20 @@ func bindPattern(ctx: Ref[egCtx], pattern: ast2.Pattern, valueName: String) -> (
     case VariantPattern(name, args) =>
       if args.Len() == 0 then ctxSetBinding(ctx, name, valueName) else bindPatternArguments(ctx, args, valueName, 0) end
     case TuplePattern(items) => bindTuplePattern(ctx, items, valueName, 0)
+    case StructVariantPattern(_, fields) => bindPlainStructPatternFields(ctx, fields, valueName, 0)
     case _ => ()
+  end
+end
+
+# bindPlainStructPatternFields binds each named field to the exported Go field
+# accessor on valueName without type information (used by tuple let patterns).
+func bindPlainStructPatternFields(ctx: Ref[egCtx], fields: Slice[ast2.StructPatternField], valueName: String, index: Int) -> ()
+  if index < fields.Len() then
+    let f = fields.Get(index).UnwrapOr(ast2.StructPatternField { Field: "", Bind: "" })
+    if f.Bind != "" && f.Bind != "_" then
+      ctxSetBinding(ctx, f.Bind, valueName + "." + sanitizeIdent(f.Field))
+    end
+    bindPlainStructPatternFields(ctx, fields, valueName, index + 1)
   end
 end
 
@@ -1144,7 +1282,25 @@ func translateStructLitAstExpected(typeName: String, fields: Slice[ast2.StructLi
     # The source may omit generic arguments (`Pair { ... }`) when its
     # expected/inferred type supplies them. Go requires those arguments on a
     # composite literal, so retain the instantiated expected type here.
-    case Ok(value) => Ok(astExprWithPre(goast.Composite(goast.MustTypeExpr(structLitGoType(typeName, expected, ctx.pathAliases)), value.Elts), value.Pre))
+    case Ok(value) => Ok(astExprWithPre(goast.Composite(goast.MustTypeExpr(enumVariantStructLitGoType(typeName, [] as Slice[ast2.TypeExpr], expected, ctx).UnwrapOr(structLitGoType(typeName, expected, ctx.pathAliases))), value.Elts), value.Pre))
+  end
+end
+
+# Struct literals keep their qualified source spelling. When that spelling is
+# an enum constructor, lower it to the generated variant struct rather than to
+# the enum interface itself.
+func enumVariantStructLitGoType(typeName: String, explicitArgs: Slice[ast2.TypeExpr], expected: ast2.MonoType, ctx: Ref[egCtx]) -> Option[String]
+  let parts = strings.Split(typeName, ".")
+  if parts.Len() != 2 then None else
+    let enumName = parts.Get(0).UnwrapOr("")
+    let variantName = parts.Get(1).UnwrapOr("")
+    switch ctx.enumValueConstructors.Get(enumName + "." + variantName)
+      case None => None
+      case Some(_) =>
+        let base = variantGoTypeName(sanitizeIdent(enumName), variantName)
+        let args = if explicitArgs.Len() > 0 then typeExprsToStrings(explicitArgs, ctx.typeParams) else enumTypeArgs(enumName, expected, ctx.typeParamNames, ctx.pathAliases) end
+        if args.Len() == 0 then Some(base) else Some(base + "[" + strings.Join(args, ", ") + "]") end
+    end
   end
 end
 

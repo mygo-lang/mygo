@@ -53,6 +53,74 @@ end
 	}
 }
 
+func TestInferNamedStructEnumVariantUsesFieldNamesAndGenericArguments(t *testing.T) {
+	parsed := parser2.ParseFile(`package sample
+
+enum Shape[A]
+  Pair { left: A, right: A }
+end
+
+func first(shape: Shape[Int]) -> Int
+  switch shape
+    case Pair { right: r, left: l } => l + r
+  end
+end
+
+func make() -> Shape[Int]
+  Shape.Pair { right: 2, left: 1 }
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	if got := InferFile(file.F0); !isPackageInfo(got) {
+		t.Fatalf("InferFile failed: %v", got)
+	}
+}
+
+func TestInferNamedStructEnumVariantRejectsUnknownOrDuplicatePatternField(t *testing.T) {
+	for _, pattern := range []string{"Circle { missing }", "Circle { radius, radius }"} {
+		t.Run(pattern, func(t *testing.T) {
+			parsed := parser2.ParseFile(`package sample
+
+enum Shape
+  Circle { radius: Float64 }
+end
+
+func area(shape: Shape) -> Float64
+  switch shape
+    case ` + pattern + ` => 0.0
+  end
+end
+`)
+			file, ok := parsed.(Result__Ok[ast2.File, string])
+			if !ok {
+				t.Fatalf("ParseFile failed: %v", parsed)
+			}
+			if got := InferFile(file.F0); isPackageInfo(got) {
+				t.Fatalf("InferFile unexpectedly succeeded")
+			}
+		})
+	}
+}
+
+func TestInferNamedStructEnumVariantRejectsDuplicateDeclarationField(t *testing.T) {
+	parsed := parser2.ParseFile(`package sample
+
+enum Point
+  Origin { x: Int, x: Int }
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	if got := InferFile(file.F0); isPackageInfo(got) {
+		t.Fatalf("InferFile unexpectedly succeeded")
+	}
+}
+
 func TestInferSuffixedNumericLiterals(t *testing.T) {
 	tests := []struct {
 		literal string

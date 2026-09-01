@@ -63,7 +63,7 @@ end
 
 func predeclareEnumVariants(env: Env, vars: Slice[ast2.Variant], name: String, tps: Slice[String], state: InferState) -> Env
   if vars.Len() == 0 then env else
-    let v = vars.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: emptyASTTypeExprs() })
+    let v = vars.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: emptyASTTypeExprs(), Named: false, Names: [] as Slice[String] })
     let enumType = tCon(name, typeParamsAsTypes(tps, 1))
     let constructorType = if v.Fields.Len() == 0 then enumType else ast2.MonoType.TFunc(typeArgsFromASTInEnvWithParamsList(v.Fields, tps, env, state), Ref.new(enumType)) end
     predeclareEnumVariants(envPut(env, v.Name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: constructorType }), sliceDrop(vars, 1), name, tps, state)
@@ -122,10 +122,15 @@ func inferDecl(decl: ast2.Decl, env: Env, fields: Slice[FieldEntry], state: Infe
         TypedDecl: Some(decl),
       })
     case EnumDecl(name, tps, vars) then
-      let res = inferVariants(vars, name, tps, env, fields, state)
-      switch res
-        case Ok(di) => Ok(DeclInfer { Env: di.Env, Fields: di.Fields, State: di.State, TypedDecl: Some(decl)})
-        case Err(m) => Err(m)
+      switch validateEnumVariantFieldNames(vars)
+        case Err(msg) => Err("enum " + name + ": " + msg)
+        case Ok(_) then
+          let res = inferVariants(vars, name, tps, env, fields, state)
+          switch res
+            case Ok(di) => Ok(DeclInfer { Env: di.Env, Fields: di.Fields, State: di.State, TypedDecl: Some(decl)})
+            case Err(m) => Err(m)
+          end
+        end
       end
     end
     case InterfaceDecl(name, _, _) =>
@@ -155,6 +160,27 @@ func inferDecl(decl: ast2.Decl, env: Env, fields: Slice[FieldEntry], state: Infe
       end
     case FuncDecl(name, tps, params, ret, body, constraints) =>
       inferFuncDecl(name, tps, params, ret, body, constraints, env, fields, state)
+  end
+end
+
+func validateEnumVariantFieldNames(vars: Slice[ast2.Variant]) -> Result[(), String]
+  if vars.Len() == 0 then Ok(()) else
+    let variant = vars.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr], Named: false, Names: [] as Slice[String] })
+    if variant.Named then
+      switch duplicateString(variant.Names, [] as Slice[String])
+        case Some(field) => Err("variant " + variant.Name + " declares field " + field + " more than once")
+        case None => validateEnumVariantFieldNames(sliceDrop(vars, 1))
+      end
+    else
+      validateEnumVariantFieldNames(sliceDrop(vars, 1))
+    end
+  end
+end
+
+func duplicateString(items: Slice[String], seen: Slice[String]) -> Option[String]
+  if items.Len() == 0 then None else
+    let item = items.Get(0).UnwrapOr("")
+    if stringSliceContains(seen, item) then Some(item) else duplicateString(sliceDrop(items, 1), seen.Append(item)) end
   end
 end
 
@@ -708,7 +734,7 @@ func inferTypedSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoT
     # scrutinee per pattern arm, so switching directly on a call such as
     # `inferExpr(current.Body, ...)` would re-infer the nested case body
     # (exponentially for deeply nested switches).
-    let caseEnvResult = envWithPattern(env, pattern, targetType)
+    let caseEnvResult = envWithPattern(env, pattern, targetType, state)
     switch caseEnvResult
       case Err(msg) => Err(msg)
       case Ok(caseEnv) =>
@@ -741,7 +767,7 @@ func inferSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoType, 
     end
   else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
-    let caseEnv = envWithPattern(env, resolveBareVariantPattern(env, targetType, current.Pattern), targetType)
+    let caseEnv = envWithPattern(env, resolveBareVariantPattern(env, targetType, current.Pattern), targetType, state)
     switch caseEnv
       case Err(msg) => Err(msg)
       case Ok(nextEnv) then
@@ -960,13 +986,13 @@ func isBareZeroFieldVariant(env: Env, expr: ast2.Expr) -> Bool
   end
 end
 
-func envWithPattern(env: Env, pattern: ast2.Pattern, targetType: ast2.MonoType) -> Result[Env, String]
+func envWithPattern(env: Env, pattern: ast2.Pattern, targetType: ast2.MonoType, state: InferState) -> Result[Env, String]
   # TQualifiedName wraps a foreign-package type.  Unwrap the inner type
   # for pattern matching; the bindings the pattern introduces use the
   # original wrapper as their body so any qualified access from the case
   # body is preserved.
   switch targetType
-    case TQualifiedName(path, inner) =>
+    case TQualifiedName(path, inner) then
       # A variable pattern is the point at which a matched value enters the
       # lexical environment.  Do not unwrap it here: doing so made
       # `Some(item)` bind `item` as bare `TypeExpr` even when the Option
@@ -977,29 +1003,32 @@ func envWithPattern(env: Env, pattern: ast2.Pattern, targetType: ast2.MonoType) 
         case WildcardPattern => Ok(env)
         case _ then
           let innerType = inner.value()
-          let next = envWithPattern(env, pattern, innerType)
+          let next = envWithPattern(env, pattern, innerType, state)
           switch next
             case Ok(env2) => wrapPatternBinds(env2, path, innerType)
             case Err(msg) => Err(msg)
           end
         end
       end
-    case _ =>
+    end
+    case _ then
       switch pattern
         case BindPattern(name) => Ok(envPut(env, name, Scheme { Bound: [], Predicates: [], Body: targetType }))
         case WildcardPattern => Ok(env)
-        case TuplePattern(items) =>
+        case TuplePattern(items) then
           switch targetType
-            case TTuple(types) => envWithTuplePattern(env, items, types)
+            case TTuple(types) => envWithTuplePattern(env, items, types, state)
             case _ => Err("tuple pattern requires tuple target")
           end
-        case LiteralPattern(kind, _) =>
+        end
+        case LiteralPattern(kind, _) then
           let expected = if kind == "string" then ast2.MonoType.TCon("String") elsif kind == "rune" then ast2.MonoType.TCon("Rune") else ast2.MonoType.TCon("Int") end
           switch unify(targetType, expected, emptySubst())
             case Ok(_) => Ok(env)
             case Err(msg) => Err("pattern does not match switch target: " + msg)
           end
-        case VariantPattern(name, args) =>
+        end
+        case VariantPattern(name, args) then
           switch variantSchemeForTarget(env, name, targetType)
             case None =>
               if args.Len() == 0 then
@@ -1053,7 +1082,71 @@ func envWithPattern(env: Env, pattern: ast2.Pattern, targetType: ast2.MonoType) 
                 case _ => Err("pattern " + name + " is not an enum variant")
               end
           end
+        end
+        case StructVariantPattern(vname, fields) then
+          switch variantSchemeForTarget(env, vname, targetType)
+            case None => Err("unknown variant " + vname)
+            case Some(scheme) then
+              let variantType = variantTypeForTarget(targetType, instantiate(scheme, NewInferState()))
+              switch variantType
+                case TFunc(fieldTypes, ret) =>
+                  switch lookupEnumVariantForTarget(state, targetType, vname)
+                    case Some(variant) => bindNamedStructPatternFields(env, fields, variant.Names, fieldTypes, [] as Slice[String], [] as Slice[String])
+                    case None => Err("cannot resolve named fields for variant " + vname)
+                  end
+                case _ => if fields.Len() == 0 then
+                  Ok(env)
+                else
+                  Err("variant " + vname + " does not accept struct pattern fields")
+                end
+              end
+            end
+          end
+        end
       end
+    end
+  end
+end
+
+func bindNamedStructPatternFields(env: Env, fields: Slice[ast2.StructPatternField], names: Slice[String], fieldTypes: Slice[ast2.MonoType], seenFields: Slice[String], seenBinds: Slice[String]) -> Result[Env, String]
+  if fields.Len() == 0 then Ok(env) else
+    let f = fields.Get(0).UnwrapOr(ast2.StructPatternField { Field: "", Bind: "" })
+    if f.Field == "_" || f.Bind == "_" then
+      bindNamedStructPatternFields(env, sliceDrop(fields, 1), names, fieldTypes, seenFields, seenBinds)
+    else
+      if stringSliceContains(seenFields, f.Field) then
+        Err("variant pattern field " + f.Field + " specified more than once")
+      elsif stringSliceContains(seenBinds, f.Bind) then
+        Err("pattern binds " + f.Bind + " more than once")
+      else
+        switch stringIndexOf(names, f.Field)
+          case None => Err("variant has no field " + f.Field)
+          case Some(index) =>
+            let ft = fieldTypes.Get(index).UnwrapOr(ast2.MonoType.TUnit)
+            bindNamedStructPatternFields(envPut(env, f.Bind, Scheme { Bound: [], Predicates: [], Body: ft }), sliceDrop(fields, 1), names, fieldTypes, seenFields.Append(f.Field), seenBinds.Append(f.Bind))
+        end
+      end
+    end
+  end
+end
+
+func lookupEnumVariantForTarget(state: InferState, targetType: ast2.MonoType, variantName: String) -> Option[ast2.Variant]
+  switch enumNameForMonoType(targetType)
+    case Some(enumName) => lookupEnumVariantDecl(state, enumName, variantName)
+    case None => None
+  end
+end
+
+func enumNameForMonoType(typ: ast2.MonoType) -> Option[String]
+  switch typ
+    case TCon(name) => Some(name)
+    case TApp(ctor, _) =>
+      switch ctor.value()
+        case TCon(name) => Some(name)
+        case _ => None
+      end
+    case TQualifiedName(_, inner) => enumNameForMonoType(inner.value())
+    case _ => None
   end
 end
 
@@ -1065,17 +1158,17 @@ func wrapPatternBinds(env: Env, path: String, inner: ast2.MonoType) -> Result[En
   Ok(env)
 end
 
-func envWithTuplePattern(env: Env, patterns: Slice[ast2.Pattern], types: Slice[ast2.MonoType]) -> Result[Env, String]
-  if patterns.Len() != types.Len() then Err("tuple pattern arity mismatch") else envWithTuplePatternLoop(env, patterns, types) end
+func envWithTuplePattern(env: Env, patterns: Slice[ast2.Pattern], types: Slice[ast2.MonoType], state: InferState) -> Result[Env, String]
+  if patterns.Len() != types.Len() then Err("tuple pattern arity mismatch") else envWithTuplePatternLoop(env, patterns, types, state) end
 end
 
-func envWithTuplePatternLoop(env: Env, patterns: Slice[ast2.Pattern], types: Slice[ast2.MonoType]) -> Result[Env, String]
+func envWithTuplePatternLoop(env: Env, patterns: Slice[ast2.Pattern], types: Slice[ast2.MonoType], state: InferState) -> Result[Env, String]
   if patterns.Len() == 0 then Ok(env)
   else
     let p = patterns.Get(0).UnwrapOr(ast2.Pattern.WildcardPattern)
     let t = types.Get(0).UnwrapOr(ast2.MonoType.TUnit)
-    switch envWithPattern(env, p, t)
-      case Ok(next) => envWithTuplePatternLoop(next, sliceDrop(patterns, 1), sliceDrop(types, 1))
+    switch envWithPattern(env, p, t, state)
+      case Ok(next) => envWithTuplePatternLoop(next, sliceDrop(patterns, 1), sliceDrop(types, 1), state)
       case Err(msg) => Err(msg)
     end
   end
@@ -1095,18 +1188,18 @@ func envWithPatternBindings(env: Env, names: Slice[ast2.Pattern], fields: Slice[
     let s = unify(targetType, variantType, emptySubst())
     switch s
       case Err(msg) => Err("pattern does not match switch target: " + msg)
-      case Ok(subst) => envWithPatternBindingLoop(env, names, fields, subst)
+      case Ok(subst) => envWithPatternBindingLoop(env, names, fields, subst, NewInferState())
     end
   end
 end
 
-func envWithPatternBindingLoop(env: Env, names: Slice[ast2.Pattern], fields: Slice[ast2.MonoType], subst: Subst) -> Result[Env, String]
+func envWithPatternBindingLoop(env: Env, names: Slice[ast2.Pattern], fields: Slice[ast2.MonoType], subst: Subst, state: InferState) -> Result[Env, String]
   if names.Len() == 0 then
     Ok(env)
   else
     let field = applySubst(subst, fields.Get(0).UnwrapOr(ast2.MonoType.TUnit))
-    switch envWithPattern(env, names.Get(0).UnwrapOr(ast2.Pattern.WildcardPattern), field)
-      case Ok(next) => envWithPatternBindingLoop(next, sliceDrop(names, 1), sliceDrop(fields, 1), subst)
+    switch envWithPattern(env, names.Get(0).UnwrapOr(ast2.Pattern.WildcardPattern), field, state)
+      case Ok(next) => envWithPatternBindingLoop(next, sliceDrop(names, 1), sliceDrop(fields, 1), subst, state)
       case Err(msg) => Err(msg)
     end
   end
@@ -2464,7 +2557,7 @@ func inferVariants(vars: Slice[ast2.Variant], enumName: String, tps: Slice[Strin
       TypedDecl: None
     })
   else
-    let v = vars.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: emptyASTTypeExprs() })
+    let v = vars.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: emptyASTTypeExprs(), Named: false, Names: [] as Slice[String] })
     let enumType = tCon(enumName, typeParamsAsTypes(tps, 1))
     let constructorType = if v.Fields.Len() == 0 then
       enumType
@@ -2503,11 +2596,122 @@ func inferStructLit(typeName: String, fields: Slice[ast2.StructLitField], env: E
 end
 
 func inferTypedStructLit(typeName: String, fields: Slice[ast2.StructLitField], env: Env, state: InferState) -> Result[(InferResult, Slice[ast2.StructLitField]), String]
-  inferTypedStructLitForType(structLitTypeInEnv(typeName, env, state), fields, env, state)
+  # Enum variant construction: Enum.Variant { field: expr, ... }
+  # This shadows struct-literal handling for `Enum.Variant` names.
+  let nameParts = strings.Split(typeName, ".")
+  if nameParts.Len() == 2 then
+    let enumName = nameParts.Get(0).UnwrapOr("")
+    let variantName = nameParts.Get(1).UnwrapOr("")
+    if enumName.Len() > 0 && variantName.Len() > 0 then
+      switch lookupEnumVariantDecl(state, enumName, variantName)
+        case Some(variant) =>
+          # If the resolved variant is named (has field names), treat this as
+          # enum variant construction.  Otherwise fall through to the regular
+          # struct literal path, which is also used for imported structs with
+          # qualified names.
+          if variant.Named then
+            inferEnumVariantStructLit(enumName, variantName, variant, fields, env, state)
+          else
+            inferTypedStructLitForType(structLitTypeInEnv(typeName, env, state), fields, env, state)
+          end
+        case None => inferTypedStructLitForType(structLitTypeInEnv(typeName, env, state), fields, env, state)
+      end
+    else
+      inferTypedStructLitForType(structLitTypeInEnv(typeName, env, state), fields, env, state)
+    end
+  else
+    inferTypedStructLitForType(structLitTypeInEnv(typeName, env, state), fields, env, state)
+  end
 end
 
 func inferTypedStructLitForType(resultType: ast2.MonoType, fields: Slice[ast2.StructLitField], env: Env, state: InferState) -> Result[(InferResult, Slice[ast2.StructLitField]), String]
   inferTypedStructLitFields(resultType, fields, env, state, emptySubst(), state, [], [] as Slice[ast2.StructLitField])
+end
+
+# lookupEnumVariantDecl finds an EnumDecl whose fully-qualified name is
+# `enumName` and returns the named variant if it exists.
+func lookupEnumVariantDecl(state: InferState, enumName: String, variantName: String) -> Option[ast2.Variant]
+  switch state.PkgInfo
+    case Some(info) => lookupEnumVariantDeclInDecls(info.Decls, enumName, variantName)
+    case None => None
+  end
+end
+
+func lookupEnumVariantDeclInDecls(decls: Slice[ast2.Decl], enumName: String, variantName: String) -> Option[ast2.Variant]
+  if decls.Len() == 0 then None else
+    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    switch decl
+      case EnumDecl(name, _, variants) =>
+        if name == enumName then lookupVariantInList(variants, variantName) else lookupEnumVariantDeclInDecls(sliceDrop(decls, 1), enumName, variantName) end
+      case _ => lookupEnumVariantDeclInDecls(sliceDrop(decls, 1), enumName, variantName)
+    end
+  end
+end
+
+func lookupVariantInList(variants: Slice[ast2.Variant], name: String) -> Option[ast2.Variant]
+  if variants.Len() == 0 then None else
+    let v = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: emptyASTTypeExprs(), Named: false, Names: [] as Slice[String] })
+    if v.Name == name then Some(v) else lookupVariantInList(sliceDrop(variants, 1), name) end
+  end
+end
+
+# inferEnumVariantStructLit types an `Enum.Variant { field: expr, ... }`
+# construction.  It validates that every supplied field is defined on the
+# variant exactly once, unifies each value with the declared field type, and
+# returns the enum type as the expression type.
+func inferEnumVariantStructLit(enumName: String, variantName: String, variant: ast2.Variant, fields: Slice[ast2.StructLitField], env: Env, state: InferState) -> Result[(InferResult, Slice[ast2.StructLitField]), String]
+  switch envGet(env, variantName)
+    case None => Err("unknown variant " + variantName)
+    case Some(scheme) then
+      switch instantiate(scheme, state)
+        case TFunc(fieldTypes, ret) => inferEnumVariantStructLitFields(enumName, variantName, variant, fields, env, state, fieldTypes, ret.value(), 0, [] as Slice[ast2.StructLitField], [] as Slice[String])
+        case _ => Err("variant " + variantName + " does not accept named fields")
+      end
+    end
+  end
+end
+
+func inferEnumVariantStructLitFields(enumName: String, variantName: String, variant: ast2.Variant, fields: Slice[ast2.StructLitField], env: Env, state: InferState, fieldTypes: Slice[ast2.MonoType], enumType: ast2.MonoType, index: Int, out: Slice[ast2.StructLitField], seen: Slice[String]) -> Result[(InferResult, Slice[ast2.StructLitField]), String]
+  if index >= fields.Len() then
+    Ok((InferResult { Type: enumType, Predicates: [] as Slice[Predicate], Subst: emptySubst(), State: state }, out))
+  else
+    let f = fields.Get(index).UnwrapOr(ast2.StructLitField { Name: "", Value: ast2.EmptyExpr() })
+    if stringSliceContains(seen, f.Name) then
+      Err("enum " + enumName + " variant " + variantName + " field \"" + f.Name + "\" specified more than once")
+    else
+      let fieldIdx = stringIndexOf(variant.Names, f.Name)
+      switch fieldIdx
+        case None => Err("enum " + enumName + " variant " + variantName + " has no field \"" + f.Name + "\"")
+        case Some(idx) =>
+          let expected = fieldTypes.Get(idx).UnwrapOr(ast2.MonoType.TUnit)
+          let valueResult = inferExpr(f.Value, env, state)
+          switch valueResult
+            case Err(msg) => Err("enum " + enumName + " variant " + variantName + " field \"" + f.Name + "\": " + msg)
+            case Ok(eir) =>
+              switch unify(expected, eir.Result.Type, eir.Result.Subst)
+                case Err(msg) => Err("enum " + enumName + " variant " + variantName + " field \"" + f.Name + "\" type mismatch: " + msg)
+                case Ok(s2) =>
+                  let typedField = ast2.StructLitField { Name: f.Name, Value: applyTypedExprSubst(s2, eir.Expr) }
+                  inferEnumVariantStructLitFields(enumName, variantName, variant, fields, env, state, fieldTypes, enumType, index + 1, out.Append(typedField), seen.Append(f.Name))
+              end
+          end
+      end
+    end
+  end
+end
+
+
+func stringIndexOf(items: Slice[String], target: String) -> Option[Int]
+  stringIndexOfAt(items, target, 0)
+end
+
+func stringIndexOfAt(items: Slice[String], target: String, index: Int) -> Option[Int]
+  if index >= items.Len() then None else
+    switch items.Get(index)
+      case None => None
+      case Some(item) => if item == target then Some(index) else stringIndexOfAt(items, target, index + 1) end
+    end
+  end
 end
 
 func structLitTypeInEnv(typeName: String, env: Env, state: InferState) -> ast2.MonoType

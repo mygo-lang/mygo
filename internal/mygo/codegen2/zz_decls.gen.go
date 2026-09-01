@@ -174,10 +174,17 @@ func translateEnumAstDecls(name string, tps []string, vars []ast2.Variant) []goa
 			return goType(t, ctx.typeParams)
 		})
 	})
-	constructors := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(vars, func(v_2 ast2.Variant) string {
-		return enumConstructorGoName(sanitizeIdent(name), v_2.Name)
+	variantFieldNames := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(vars, func(v_2 ast2.Variant) []string {
+		if v_2.Named {
+			return v_2.Names
+		} else {
+			return []string{}
+		}
 	})
-	return goast.EnumDeclsFromParts(sanitizeIdent(name), tps, variantNames, variantFields, constructors)
+	constructors := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(vars, func(v_3 ast2.Variant) string {
+		return enumConstructorGoName(sanitizeIdent(name), v_3.Name)
+	})
+	return goast.EnumDeclsFromPartsWithFieldNames(sanitizeIdent(name), tps, variantNames, variantFields, variantFieldNames, constructors)
 }
 func translateInterfaceAstDecl(name string, tps []string, methods []ast2.FuncSig) goast.Decl {
 	ctx := newEgCtxWithTypeParams(tps)
@@ -204,7 +211,7 @@ func newPackageIndex(decls []ast2.Decl) PackageIndex {
 	seedPackageDictionaries(decls, seed)
 	seedStructSourceTypes(decls, seed)
 	seedEnumValueConstructors(decls, seed)
-	return PackageIndex{StructFields: seed.structFields, StructTypeParams: seed.structTypeParams, CallDictionaries: seed.callDictionaries, PackageDictionaries: seed.packageDictionaries, CallRequirements: seed.callRequirements, PackageCandidates: seed.packageCandidates, InherentCandidates: seed.inherentCandidates, TypeclassCandidates: seed.typeclassCandidates, EnumValueConstructors: seed.enumValueConstructors, EnumVariantOwners: seed.enumVariantOwners, VariantFieldMonoTypes: seed.variantFieldMonoTypes, InterfaceMethods: seed.interfaceMethods, InterfaceTypeParams: seed.interfaceTypeParams, NamedImpls: seed.namedImpls}
+	return PackageIndex{StructFields: seed.structFields, StructTypeParams: seed.structTypeParams, CallDictionaries: seed.callDictionaries, PackageDictionaries: seed.packageDictionaries, CallRequirements: seed.callRequirements, PackageCandidates: seed.packageCandidates, InherentCandidates: seed.inherentCandidates, TypeclassCandidates: seed.typeclassCandidates, EnumValueConstructors: seed.enumValueConstructors, EnumVariantOwners: seed.enumVariantOwners, VariantFieldMonoTypes: seed.variantFieldMonoTypes, VariantFieldNames: seed.variantFieldNames, InterfaceMethods: seed.interfaceMethods, InterfaceTypeParams: seed.interfaceTypeParams, NamedImpls: seed.namedImpls}
 }
 func seedInterfaceMetadata(decls []ast2.Decl, index int, ctx *egCtx) {
 	__mygo_mt_codegen2_seedInterfaceMetadata(decls, index, ctx, 0)
@@ -250,6 +257,7 @@ func ctxUsePackageIndex(ctx *egCtx, index PackageIndex) {
 	ctx.enumValueConstructors = index.EnumValueConstructors
 	ctx.enumVariantOwners = index.EnumVariantOwners
 	ctx.variantFieldMonoTypes = index.VariantFieldMonoTypes
+	ctx.variantFieldNames = index.VariantFieldNames
 	ctx.interfaceMethods = index.InterfaceMethods
 	ctx.interfaceTypeParams = index.InterfaceTypeParams
 	ctx.namedImpls = index.NamedImpls
@@ -266,6 +274,7 @@ func ctxUsePackageFacts(ctx *egCtx, source egCtx) {
 	ctx.enumValueConstructors = source.enumValueConstructors
 	ctx.enumVariantOwners = source.enumVariantOwners
 	ctx.variantFieldMonoTypes = source.variantFieldMonoTypes
+	ctx.variantFieldNames = source.variantFieldNames
 	ctx.interfaceMethods = source.interfaceMethods
 	ctx.interfaceTypeParams = source.interfaceTypeParams
 	ctx.namedImpls = source.namedImpls
@@ -729,23 +738,6 @@ func substituteTypeExpr(typ ast2.TypeExpr, ifaceTps []string, constraintArgs []a
 	}
 	return __mygo_expr_0
 }
-func findStringIndex(items []string, target string) int {
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-		return -1
-	} else {
-		head := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), "")
-		if head == target {
-			return 0
-		} else {
-			found := findStringIndex(sliceDrop(items, 1), target)
-			if found < 0 {
-				return -1
-			} else {
-				return found + 1
-			}
-		}
-	}
-}
 func goReturnTypesFromOption(ret Option[ast2.TypeExpr], typeParams map[string]struct {
 }) []string {
 	var __mygo_expr_0 []string
@@ -977,10 +969,14 @@ func __mygo_mt_codegen2_seedEnumVariantsForVariants(__mygo_mt_p0 string, __mygo_
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p4 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
-				variant := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p4), ast2.Variant{Name: "", Fields: []ast2.TypeExpr{}})
+				variant := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p4), ast2.Variant{Name: "", Fields: []ast2.TypeExpr{}, Named: false, Names: []string{}})
 				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p3.enumVariantOwners, variant.Name, __mygo_mt_p0)
 				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p3.enumValueConstructors, __mygo_mt_p0+"."+variant.Name, enumConstructorGoName(sanitizeIdent(__mygo_mt_p0), variant.Name))
 				seedEnumVariantFieldTypes(__mygo_mt_p0, variant.Name, variant.Fields, __mygo_mt_p1, __mygo_mt_p3, 0)
+				if variant.Named {
+					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p3.variantFieldNames, variant.Name, variant.Names)
+				} else {
+				}
 				__tail_0 := __mygo_mt_p0
 				__tail_1 := __mygo_mt_p1
 				__tail_2 := __mygo_mt_p2

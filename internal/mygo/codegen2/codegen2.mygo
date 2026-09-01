@@ -177,7 +177,7 @@ end
 
 func variantImportNames(variants: Slice[ast2.Variant], names: Slice[String]) -> Slice[String]
   if variants.Len() == 0 then names else
-    let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr] })
+    let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr], Named: false, Names: [] as Slice[String] })
     variantImportNames(sliceDrop(variants, 1), names.Append(variant.Name))
   end
 end
@@ -241,8 +241,10 @@ func fieldsUsePreludeName(fields: Slice[ast2.Field], names: Slice[String]) -> Bo
 end
 
 func variantsUsePreludeName(variants: Slice[ast2.Variant], names: Slice[String]) -> Bool
-  if variants.Len() == 0 then false else
-    let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr] })
+  if variants.Len() == 0 then
+    false
+  else
+    let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr], Named: false, Names: [] as Slice[String] })
     typeExprsUsePreludeName(variant.Fields, names) || variantsUsePreludeName(sliceDrop(variants, 1), names)
   end
 end

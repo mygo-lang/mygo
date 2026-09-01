@@ -16,6 +16,58 @@ import (
 	. "github.com/mygo-lang/mygo/prelude"
 )
 
+func TestGenerateSourceLowersNamedStructEnumVariant(t *testing.T) {
+	src := `package sample
+
+enum Shape
+  Circle { radius: Float64 }
+  Rectangle(Float64, Float64)
+end
+
+func area(shape: Shape) -> Float64
+  switch shape
+    case Circle { radius } => 3.14 * radius * radius
+    case Rectangle(width, height) => width * height
+  end
+end
+
+func CombinedArea() -> Float64
+  let circle = Shape.Circle { radius: 2.0 }
+  let rectangle = Shape.Rectangle(3.0, 4.0)
+  area(circle) + area(rectangle)
+end
+`
+	result := GenerateSource(src)
+	code, ok := result.(Result__Ok[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", result)
+	}
+	t.Logf("Generated code:\n%s", code.F0)
+	if !strings.Contains(code.F0, "Shape__Circle{") || !strings.Contains(code.F0, "radius: 2.0") {
+		t.Fatalf("named enum construction was not lowered to Shape__Circle:\n%s", code.F0)
+	}
+}
+
+func TestGenerateSourceLowersGenericNamedStructEnumVariant(t *testing.T) {
+	result := GenerateSource(`package sample
+
+enum Shape[A]
+  Pair { left: A, right: A }
+end
+
+func make() -> Shape[Int]
+  Shape.Pair { right: 2, left: 1 }
+end
+`)
+	code, ok := result.(Result__Ok[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", result)
+	}
+	if !strings.Contains(code.F0, "Shape__Pair[int]{") {
+		t.Fatalf("generic named enum construction was not lowered:\n%s", code.F0)
+	}
+}
+
 func TestSliceDropReturnsSuffixView(t *testing.T) {
 	items := []int{1, 2, 3}
 	got := sliceDrop(items, 1)

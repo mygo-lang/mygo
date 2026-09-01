@@ -69,6 +69,7 @@ struct egCtx
   patternTypes: Map[String, ast2.MonoType]
   patternFuncIdx: Map[String, Int]
   variantFieldMonoTypes: Map[String, Slice[ast2.MonoType]]
+  variantFieldNames: Map[String, Slice[String]]
   interfaceMethods: Map[String, Slice[ast2.FuncSig]]
   interfaceTypeParams: Map[String, Slice[String]]
   namedImpls: Map[String, Bool]
@@ -89,6 +90,7 @@ struct PackageIndex
   EnumValueConstructors: Map[String, String]
   EnumVariantOwners: Map[String, String]
   VariantFieldMonoTypes: Map[String, Slice[ast2.MonoType]]
+  VariantFieldNames: Map[String, Slice[String]]
   InterfaceMethods: Map[String, Slice[ast2.FuncSig]]
   InterfaceTypeParams: Map[String, Slice[String]]
   NamedImpls: Map[String, Bool]
@@ -197,6 +199,7 @@ func newEgCtx() -> egCtx
     patternTypes: {},
     patternFuncIdx: {},
     variantFieldMonoTypes: {},
+    variantFieldNames: {},
     interfaceMethods: {},
     interfaceTypeParams: {},
     namedImpls: {},
@@ -243,6 +246,7 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     patternTypes: {},
     patternFuncIdx: {},
     variantFieldMonoTypes: {},
+    variantFieldNames: {},
     interfaceMethods: {},
     interfaceTypeParams: {},
     namedImpls: {},
@@ -289,6 +293,7 @@ func newFuncEgCtx(params: Slice[String], retType: ast2.MonoType, tailName: Strin
     patternTypes: {},
     patternFuncIdx: {},
     variantFieldMonoTypes: {},
+    variantFieldNames: {},
     interfaceMethods: {},
     interfaceTypeParams: {},
     namedImpls: {},
@@ -353,6 +358,7 @@ func ctxChild(ctx: Ref[egCtx]) -> egCtx
     patternTypes: ctx.patternTypes,
     patternFuncIdx: ctx.patternFuncIdx,
     variantFieldMonoTypes: ctx.variantFieldMonoTypes,
+    variantFieldNames: ctx.variantFieldNames,
     interfaceMethods: ctx.interfaceMethods,
     interfaceTypeParams: ctx.interfaceTypeParams,
     namedImpls: ctx.namedImpls,

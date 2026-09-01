@@ -494,7 +494,7 @@ end
 # via findSymbol.  Mirrors predeclareEnum's constructor-type computation.
 func enumVariantSymbolsInEnv(enumName: String, variants: Slice[ast2.Variant], tps: Slice[String], env: Env, out: Slice[Symbol]) -> Slice[Symbol]
   if variants.Len() == 0 then out else
-    let v = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr] })
+    let v = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr], Named: false, Names: [] as Slice[String] })
     let enumType = tCon(enumName, typeParamsAsTypes(tps, 1))
     let constructorType = if v.Fields.Len() == 0 then enumType else ast2.MonoType.TFunc(typeArgsFromASTInEnvWithParamsList(v.Fields, tps, env, NewInferState()), Ref.new(enumType)) end
     enumVariantSymbolsInEnv(enumName, sliceDrop(variants, 1), tps, env, out.Prepend(Symbol.EnumVariant(enumName, v.Name, constructorType)))
@@ -522,7 +522,7 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
   let initialSymbols = buildSymbolTable(goPkgImports, file.Decls, envWithMyGoPkgs)
   let state = InferState {
     FreshVarID: 1,
-    PkgInfo: None,
+    PkgInfo: Some(PkgInfo { Dir: "", Name: file.PackageName, Decls: file.Decls }),
     GoPackages: goPkgImports,
     MyGoPackages: [] as Slice[MyGoPackageInfo],
     MyGoPackageCache: [] as Slice[MyGoPackageInfo],
@@ -1230,7 +1230,7 @@ func exportMyGoPackageEnumVariantEntries(alias: String, path: String, enumName: 
   if variants.Len() == 0 then
     out
   else
-    let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr] })
+    let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr], Named: false, Names: [] as Slice[String] })
     let enumType = ast2.MonoType.TQualifiedName(path, Ref.new(declaredType(enumName, typeParams)))
     let body = if variant.Fields.Len() == 0 then
       enumType
@@ -1340,7 +1340,7 @@ func seedMyGoPackageEnumVariants(pkg: MyGoPackageInfo, variants: Slice[ast2.Vari
   if variants.Len() == 0 then
     env
   else
-    let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr] })
+    let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr], Named: false, Names: [] as Slice[String] })
     let enumType = declaredType(enumName, typeParams)
     let constructorType = if variant.Fields.Len() == 0 then
       enumType

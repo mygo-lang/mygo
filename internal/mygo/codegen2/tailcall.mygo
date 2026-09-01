@@ -959,6 +959,28 @@ func translateSwitchBranchesTail(cases: Slice[ast2.SwitchCase], targetType: Opti
               case None => Err("cannot resolve switch target type for variant " + name)
             end
         end
+      case StructVariantPattern(vname, fields) then
+        let rest = translateSwitchBranchesTail(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+        switch rest
+          case Err(msg) => Err(msg)
+          case Ok(next) then
+            switch targetType
+              case Some(tm) then
+                let typ = switchVariantType(sourceTarget, tm, ctx)
+                let valueName = if fields.Len() == 0 || !structPatternFieldsUsedInBody(fields, current.Body) then "_" else "__mygo_match_" + ctxFreshExprTemp(ctx) end
+                let child = Ref.new(ctxChild(ctx))
+                bindStructPatternFieldsWithTypes(child, fields, valueName, vname, tm, ctx)
+                let body = translateAstReturnExpr(current.Body, child)
+                switch body
+                  case Err(msg) => Err(msg)
+                  case Ok(branchStmts) => Ok(astSingleStmt(goast.VariantIf(target, goast.VariantTypeForTarget(typ, vname), valueName, branchStmts, next)))
+                end
+              end
+              case None => Err("cannot resolve switch target type for variant " + vname)
+            end
+          end
+        end
+      end
     end
   end
 end

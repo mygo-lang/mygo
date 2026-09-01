@@ -1,0 +1,22 @@
+package codegen2
+
+func findStringIndex(items: Slice[String], target: String) -> Int
+  findStringIndexTail(items, target, 0)
+end
+
+func findStringIndexTail(items: Slice[String], target: String, index: Int) -> Int
+  if index >= items.Len() then
+    -1
+  else
+    switch items.Get(index)
+      case None => -1
+      case Some(name) then
+        if name == target then
+          index
+        else
+          findStringIndexTail(items, target, index + 1)
+        end
+      end
+    end
+  end
+end

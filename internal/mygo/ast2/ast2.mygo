@@ -51,6 +51,10 @@ end
 struct Variant
   Name: String
   Fields: Slice[TypeExpr]
+  # Named is true for `Name { field: Type, ... }` variants.
+  # Tuple variants (`Name(Type, ...)`) keep Fields and leave Names empty.
+  Named: Bool
+  Names: Slice[String]
 end
 
 struct FuncSig
@@ -95,9 +99,16 @@ enum Pattern
   # A binding pattern introduces the matched value under a local name.
   BindPattern(String)
   VariantPattern(String, Slice[Pattern])
+  # StructVariantPattern matches `Variant { field, field: bind, _ }`.
+  StructVariantPattern(String, Slice[StructPatternField])
   TuplePattern(Slice[Pattern])
   LiteralPattern(String, String)
   WildcardPattern
+end
+
+struct StructPatternField
+  Field: String
+  Bind: String
 end
 
 enum TypeExpr

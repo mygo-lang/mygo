@@ -8,13 +8,13 @@
 - [x] 1.6 Update `translate_control.go` to lower `Variant { ... }` switch patterns into type assertion + named field bindings, including `_` discard
 - [x] 1.7 Add validators in `compiler/validate.go` for duplicate/unknown struct-pattern fields and duplicate variant declaration field names
 - [x] 1.8 Add end-to-end tests (parser, type inference, codegen, runtime) exercising the full named-struct variant flow from declaration to switch matching
-- [ ] 1.9 Run `go test ./internal/mygo/...` (or the project's standard test command) and verify all tests pass, then commit with a `feat(compiler):` message
+- [x] 1.9 Run `go test ./internal/mygo/...` (or the project's standard test command) and verify all tests pass, then commit with a `feat(compiler):` message
 
 ## 2. Bootstrap Compiler (commit 2)
 
-- [ ] 2.1 Port parser changes to `parser2` (or `parser2/..` equivalent) for named-struct enum variant declarations and struct patterns
-- [ ] 2.2 Port type-inference changes to `typeinference2` for constructor and pattern typing
-- [ ] 2.3 Port codegen changes to `codegen2` for construction and switch-pattern lowering
-- [ ] 2.4 Port validation logic for duplicate/unknown field names to the bootstrap compiler paths
-- [ ] 2.5 Add or update bootstrap compiler tests covering declaration, construction, and pattern matching
-- [ ] 2.6 Run the full bootstrap compiler test suite and verify parity with the production compiler behavior, then commit with a `feat(compiler2):` message
+- [x] 2.1 Port parser changes to `parser2` (or `parser2/..` equivalent) for named-struct enum variant declarations and struct patterns
+- [x] 2.2 Port type-inference changes to `typeinference2` for constructor and pattern typing
+- [x] 2.3 Port codegen changes to `codegen2` for construction and switch-pattern lowering
+- [x] 2.4 Port validation logic for duplicate/unknown field names to the bootstrap compiler paths
+- [x] 2.5 Add or update bootstrap compiler tests covering declaration, construction, and pattern matching
+- [x] 2.6 Run the full bootstrap compiler test suite and verify parity with the production compiler behavior, then commit with a `feat(compiler2):` message

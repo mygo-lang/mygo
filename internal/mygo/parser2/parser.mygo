@@ -376,12 +376,34 @@ end
 
 func variantDecl() -> ps.Parser[ast2.Variant]
   ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Variant]
-    ps.PMap(ps.POptional(paren(ps.PSepBy(typeExpr(), sym(",")))), func(fields: Option[Slice[ast2.TypeExpr]]) -> ast2.Variant
-      let actual = switch fields
-        case Some(items) => items
-        case None => []
-      end
-      ast2.Variant { Name: name, Fields: actual }
+    ps.PChoice([
+      ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Variant]
+        ps.PBind(sepByEnd(namedVariantField(), sym(",")), func(fields: Slice[(String, ast2.TypeExpr)]) -> ps.Parser[ast2.Variant]
+          ps.PThen(sym("}"), ps.PPure(ast2.Variant {
+            Name: name,
+            Fields: fields.Map(func(f: (String, ast2.TypeExpr)) -> ast2.TypeExpr f.F1 end),
+            Named: true,
+            Names: fields.Map(func(f: (String, ast2.TypeExpr)) -> String f.F0 end),
+          }))
+        end)
+      end),
+      ps.PMap(ps.POptional(paren(ps.PSepBy(typeExpr(), sym(",")))), func(fields: Option[Slice[ast2.TypeExpr]]) -> ast2.Variant
+        let actual = switch fields
+          case Some(items) => items
+          case None => []
+        end
+        ast2.Variant { Name: name, Fields: actual, Named: false, Names: [] as Slice[String] }
+      end),
+    ])
+  end)
+end
+
+func namedVariantField() -> ps.Parser[(String, ast2.TypeExpr)]
+  ps.PBind(identifier(), func(fname: String) -> ps.Parser[(String, ast2.TypeExpr)]
+    ps.PBind(sym(":"), func(_: String) -> ps.Parser[(String, ast2.TypeExpr)]
+      ps.PMap(typeExpr(), func(ftype: ast2.TypeExpr) -> (String, ast2.TypeExpr)
+        (fname, ftype)
+      end)
     end)
   end)
 end
@@ -776,6 +798,13 @@ func pattern() -> ps.Parser[ast2.Pattern]
     ps.PMap(number(), func(value: String) -> ast2.Pattern ast2.Pattern.LiteralPattern("number", value) end),
     ps.PMap(stringLiteral(), func(value: String) -> ast2.Pattern ast2.Pattern.LiteralPattern("string", value) end),
     ps.PMap(runeLiteral(), func(value: String) -> ast2.Pattern ast2.Pattern.LiteralPattern("rune", value) end),
+    ps.PAttempt(ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Pattern]
+      ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Pattern]
+        ps.PBind(sepByEnd(structPatternField(), sym(",")), func(fields: Slice[ast2.StructPatternField]) -> ps.Parser[ast2.Pattern]
+          ps.PMap(sym("}"), func(_: String) -> ast2.Pattern ast2.Pattern.StructVariantPattern(name, fields) end)
+        end)
+      end)
+    end)),
     ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Pattern]
       ps.PMap(ps.POptional(paren(ps.PSepBy(lazyPattern(), sym(",")))), func(args: Option[Slice[ast2.Pattern]]) -> ast2.Pattern
         switch args
@@ -786,6 +815,18 @@ func pattern() -> ps.Parser[ast2.Pattern]
         end
       end)
     end),
+  ])
+end
+
+func structPatternField() -> ps.Parser[ast2.StructPatternField]
+  ps.PChoice([
+    ps.PAttempt(ps.PBind(identifier(), func(fname: String) -> ps.Parser[ast2.StructPatternField]
+      ps.PBind(sym(":"), func(_: String) -> ps.Parser[ast2.StructPatternField]
+        ps.PMap(identifier(), func(bind: String) -> ast2.StructPatternField ast2.StructPatternField { Field: fname, Bind: bind } end)
+      end)
+    end)),
+    ps.PMap(sym("_"), func(_: String) -> ast2.StructPatternField ast2.StructPatternField { Field: "_", Bind: "_" } end),
+    ps.PMap(identifier(), func(fname: String) -> ast2.StructPatternField ast2.StructPatternField { Field: fname, Bind: fname } end),
   ])
 end
 

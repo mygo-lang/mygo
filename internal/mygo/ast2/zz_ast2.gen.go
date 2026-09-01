@@ -151,6 +151,8 @@ type Field struct {
 type Variant struct {
 	Name   string
 	Fields []TypeExpr
+	Named  bool
+	Names  []string
 }
 type FuncSig struct {
 	Pos        SourcePos
@@ -206,6 +208,17 @@ func Pattern__VariantPattern__Ctor(v0 string, v1 []Pattern) Pattern {
 	return Pattern__VariantPattern{F0: v0, F1: v1}
 }
 
+type Pattern__StructVariantPattern struct {
+	F0 string
+	F1 []StructPatternField
+}
+
+func (Pattern__StructVariantPattern) isPattern() {
+}
+func Pattern__StructVariantPattern__Ctor(v0 string, v1 []StructPatternField) Pattern {
+	return Pattern__StructVariantPattern{F0: v0, F1: v1}
+}
+
 type Pattern__TuplePattern struct {
 	F0 []Pattern
 }
@@ -236,6 +249,10 @@ func Pattern__WildcardPattern__Ctor() Pattern {
 	return Pattern__WildcardPattern{}
 }
 
+type StructPatternField struct {
+	Field string
+	Bind  string
+}
 type TypeExpr interface {
 	isTypeExpr()
 }
