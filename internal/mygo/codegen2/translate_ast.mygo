@@ -1291,7 +1291,18 @@ end
 # the enum interface itself.
 func enumVariantStructLitGoType(typeName: String, explicitArgs: Slice[ast2.TypeExpr], expected: ast2.MonoType, ctx: Ref[egCtx]) -> Option[String]
   let parts = strings.Split(typeName, ".")
-  if parts.Len() != 2 then None else
+  if parts.Len() == 3 then
+    let alias = parts.Get(0).UnwrapOr("")
+    let enumName = parts.Get(1).UnwrapOr("")
+    let variantName = parts.Get(2).UnwrapOr("")
+    switch importedEnumVariantCtor(alias, enumName, variantName, ctx)
+      case None => None
+      case Some(_) =>
+        let base = alias + "." + variantGoTypeName(sanitizeIdent(enumName), variantName)
+        let args = if explicitArgs.Len() > 0 then typeExprsToStrings(explicitArgs, ctx.typeParams) else enumTypeArgs(enumName, expected, ctx.typeParamNames, ctx.pathAliases) end
+        if args.Len() == 0 then Some(base) else Some(base + "[" + strings.Join(args, ", ") + "]") end
+    end
+  elsif parts.Len() != 2 then None else
     let enumName = parts.Get(0).UnwrapOr("")
     let variantName = parts.Get(1).UnwrapOr("")
     switch ctx.enumValueConstructors.Get(enumName + "." + variantName)
@@ -1921,6 +1932,7 @@ end
 
 func enumTypeArgs(enumName: String, expected: ast2.MonoType, params: Slice[String], aliases: Map[String, String]) -> Slice[String]
   switch expected
+    case TQualifiedName(_, inner) => enumTypeArgs(enumName, inner.value(), params, aliases)
     case TApp(typeRef, args) then
       switch typeRef.value()
         case TCon(n) then

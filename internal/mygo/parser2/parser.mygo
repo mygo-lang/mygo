@@ -466,12 +466,13 @@ end
 
 func qualifiedIdentifier() -> ps.Parser[String]
   ps.PBind(identifier(), func(first: String) -> ps.Parser[String]
-    ps.PMap(ps.POptional(ps.PAttempt(ps.PThen(sym("."), identifier()))), func(second: Option[String]) -> String
-      switch second
-        case Some(name) => first + "." + name
-        case None => first
-      end
-    end)
+    qualifiedIdentifierTail(first)
+  end)
+end
+
+func qualifiedIdentifierTail(prefix: String) -> ps.Parser[String]
+  ps.PMap(ps.PMany(ps.PAttempt(ps.PThen(sym("."), identifier()))), func(parts: Slice[String]) -> String
+    parts.Fold(prefix, func(name: String, part: String) -> String name + "." + part end)
   end)
 end
 

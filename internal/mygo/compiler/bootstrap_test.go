@@ -648,7 +648,7 @@ end
 	}
 	if err := os.WriteFile(filepath.Join(appDir, "app.mygo"), []byte(`package app
 
-import lib "../lib"
+import lib "example.com/bootstrap-test/lib"
 
 func Run() -> Int
   lib.Add(1, 2)
@@ -671,5 +671,66 @@ end
 		if _, err := parser.ParseFile(token.NewFileSet(), path, generated, parser.AllErrors); err != nil {
 			t.Fatalf("bootstrap output %s is invalid Go: %v\n%s", path, err, generated)
 		}
+	}
+}
+
+func TestCompileDirBootstrapConstructsImportedNamedEnumVariant(t *testing.T) {
+	root := t.TempDir()
+	bootstrapTestModule(t, root)
+	libDir := filepath.Join(root, "lib")
+	appDir := filepath.Join(root, "app")
+	for _, dir := range []string{libDir, appDir} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(libDir, "shape.mygo"), []byte(`package lib
+
+enum Shape
+  Pair { Left: Int, Right: Int }
+end
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(appDir, "app.mygo"), []byte(`package app
+
+import lib "example.com/bootstrap-test/lib"
+
+func Make() -> lib.Shape
+  lib.Shape.Pair { Right: 2, Left: 1 }
+end
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDirBootstrap(appDir)
+	if err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	for _, path := range written {
+		generated, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := parser.ParseFile(token.NewFileSet(), path, generated, parser.AllErrors); err != nil {
+			t.Fatalf("bootstrap output %s is invalid Go: %v\n%s", path, err, generated)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(appDir, "app_test.go"), []byte(`package app
+
+import "testing"
+
+func TestMake(t *testing.T) {
+	if Make() == nil {
+		t.Fatal("Make returned nil")
+	}
+}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "test", "./...")
+	cmd.Dir = root
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated imported enum package failed: %v\n%s", err, output)
 	}
 }

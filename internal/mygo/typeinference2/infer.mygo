@@ -2610,7 +2610,7 @@ func inferTypedStructLit(typeName: String, fields: Slice[ast2.StructLitField], e
           # struct literal path, which is also used for imported structs with
           # qualified names.
           if variant.Named then
-            inferEnumVariantStructLit(enumName, variantName, variant, fields, env, state)
+            inferEnumVariantStructLit(enumName, variantName, typeName, variant, fields, env, state)
           else
             inferTypedStructLitForType(structLitTypeInEnv(typeName, env, state), fields, env, state)
           end
@@ -2618,6 +2618,14 @@ func inferTypedStructLit(typeName: String, fields: Slice[ast2.StructLitField], e
       end
     else
       inferTypedStructLitForType(structLitTypeInEnv(typeName, env, state), fields, env, state)
+    end
+  elsif nameParts.Len() == 3 then
+    let alias = nameParts.Get(0).UnwrapOr("")
+    let enumName = nameParts.Get(1).UnwrapOr("")
+    let variantName = nameParts.Get(2).UnwrapOr("")
+    switch lookupImportedEnumVariantDecl(state, alias, enumName, variantName)
+      case Some(variant) => if variant.Named then inferEnumVariantStructLit(alias + "." + enumName, variantName, typeName, variant, fields, env, state) else inferTypedStructLitForType(structLitTypeInEnv(typeName, env, state), fields, env, state) end
+      case None => inferTypedStructLitForType(structLitTypeInEnv(typeName, env, state), fields, env, state)
     end
   else
     inferTypedStructLitForType(structLitTypeInEnv(typeName, env, state), fields, env, state)
@@ -2634,6 +2642,17 @@ func lookupEnumVariantDecl(state: InferState, enumName: String, variantName: Str
   switch state.PkgInfo
     case Some(info) => lookupEnumVariantDeclInDecls(info.Decls, enumName, variantName)
     case None => None
+  end
+end
+
+func lookupImportedEnumVariantDecl(state: InferState, alias: String, enumName: String, variantName: String) -> Option[ast2.Variant]
+  lookupImportedEnumVariantDeclInPackages(state.MyGoPackageCache, alias, enumName, variantName)
+end
+
+func lookupImportedEnumVariantDeclInPackages(packages: Slice[MyGoPackageInfo], alias: String, enumName: String, variantName: String) -> Option[ast2.Variant]
+  if packages.Len() == 0 then None else
+    let pkg = packages.Get(0).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
+    if pkg.Alias == alias then lookupEnumVariantDeclInDecls(pkg.Decls, enumName, variantName) else lookupImportedEnumVariantDeclInPackages(sliceDrop(packages, 1), alias, enumName, variantName) end
   end
 end
 
@@ -2659,21 +2678,28 @@ end
 # construction.  It validates that every supplied field is defined on the
 # variant exactly once, unifies each value with the declared field type, and
 # returns the enum type as the expression type.
-func inferEnumVariantStructLit(enumName: String, variantName: String, variant: ast2.Variant, fields: Slice[ast2.StructLitField], env: Env, state: InferState) -> Result[(InferResult, Slice[ast2.StructLitField]), String]
-  switch envGet(env, variantName)
+func inferEnumVariantStructLit(enumName: String, variantName: String, constructorName: String, variant: ast2.Variant, fields: Slice[ast2.StructLitField], env: Env, state: InferState) -> Result[(InferResult, Slice[ast2.StructLitField]), String]
+  switch envGet(env, constructorName)
+    case Some(scheme) => inferEnumVariantStructLitWithScheme(enumName, variantName, variant, fields, env, state, Some(scheme))
+    case None => inferEnumVariantStructLitWithScheme(enumName, variantName, variant, fields, env, state, envGet(env, variantName))
+  end
+end
+
+func inferEnumVariantStructLitWithScheme(enumName: String, variantName: String, variant: ast2.Variant, fields: Slice[ast2.StructLitField], env: Env, state: InferState, candidate: Option[Scheme]) -> Result[(InferResult, Slice[ast2.StructLitField]), String]
+  switch candidate
     case None => Err("unknown variant " + variantName)
     case Some(scheme) then
       switch instantiate(scheme, state)
-        case TFunc(fieldTypes, ret) => inferEnumVariantStructLitFields(enumName, variantName, variant, fields, env, state, fieldTypes, ret.value(), 0, [] as Slice[ast2.StructLitField], [] as Slice[String])
+        case TFunc(fieldTypes, ret) => inferEnumVariantStructLitFields(enumName, variantName, variant, fields, env, state, fieldTypes, ret.value(), emptySubst(), 0, [] as Slice[ast2.StructLitField], [] as Slice[String])
         case _ => Err("variant " + variantName + " does not accept named fields")
       end
     end
   end
 end
 
-func inferEnumVariantStructLitFields(enumName: String, variantName: String, variant: ast2.Variant, fields: Slice[ast2.StructLitField], env: Env, state: InferState, fieldTypes: Slice[ast2.MonoType], enumType: ast2.MonoType, index: Int, out: Slice[ast2.StructLitField], seen: Slice[String]) -> Result[(InferResult, Slice[ast2.StructLitField]), String]
+func inferEnumVariantStructLitFields(enumName: String, variantName: String, variant: ast2.Variant, fields: Slice[ast2.StructLitField], env: Env, state: InferState, fieldTypes: Slice[ast2.MonoType], enumType: ast2.MonoType, subst: Subst, index: Int, out: Slice[ast2.StructLitField], seen: Slice[String]) -> Result[(InferResult, Slice[ast2.StructLitField]), String]
   if index >= fields.Len() then
-    Ok((InferResult { Type: enumType, Predicates: [] as Slice[Predicate], Subst: emptySubst(), State: state }, out))
+    Ok((InferResult { Type: applySubst(subst, enumType), Predicates: [] as Slice[Predicate], Subst: subst, State: state }, applyTypedStructLitFieldsSubst(subst, out)))
   else
     let f = fields.Get(index).UnwrapOr(ast2.StructLitField { Name: "", Value: ast2.EmptyExpr() })
     if stringSliceContains(seen, f.Name) then
@@ -2683,16 +2709,16 @@ func inferEnumVariantStructLitFields(enumName: String, variantName: String, vari
       switch fieldIdx
         case None => Err("enum " + enumName + " variant " + variantName + " has no field \"" + f.Name + "\"")
         case Some(idx) =>
-          let expected = fieldTypes.Get(idx).UnwrapOr(ast2.MonoType.TUnit)
+          let expected = applySubst(subst, fieldTypes.Get(idx).UnwrapOr(ast2.MonoType.TUnit))
           let valueResult = inferExpr(f.Value, env, state)
           switch valueResult
             case Err(msg) => Err("enum " + enumName + " variant " + variantName + " field \"" + f.Name + "\": " + msg)
             case Ok(eir) =>
-              switch unify(expected, eir.Result.Type, eir.Result.Subst)
+              switch unify(expected, eir.Result.Type, composeSubst(eir.Result.Subst, subst))
                 case Err(msg) => Err("enum " + enumName + " variant " + variantName + " field \"" + f.Name + "\" type mismatch: " + msg)
                 case Ok(s2) =>
                   let typedField = ast2.StructLitField { Name: f.Name, Value: applyTypedExprSubst(s2, eir.Expr) }
-                  inferEnumVariantStructLitFields(enumName, variantName, variant, fields, env, state, fieldTypes, enumType, index + 1, out.Append(typedField), seen.Append(f.Name))
+                  inferEnumVariantStructLitFields(enumName, variantName, variant, fields, env, state, fieldTypes, enumType, s2, index + 1, out.Append(typedField), seen.Append(f.Name))
               end
           end
       end

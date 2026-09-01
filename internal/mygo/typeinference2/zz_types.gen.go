@@ -473,7 +473,7 @@ func InferPackageWithExternal(files []PkgDeclSource, external []PkgDeclSource, g
 	extSyms := buildSymbolTable([]GoPackageEntry{}, extDecls, envWithMyGoPkgs)
 	importedStructSymbols := myGoPackageStructSymbols(myGoPkgImports, goPkgImports, []Symbol{})
 	initialSymbols := concatSymbols(concatSymbols(userSyms, extSyms), importedStructSymbols)
-	state := InferState{FreshVarID: 1, PkgInfo: None[PkgInfo](), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo{}, MyGoPackageCache: myGoPkgImports, Symbols: initialSymbols, SymbolIndex: symbolIndexFromSlice(initialSymbols, map[string]Symbol{}), ActiveConstraints: []Predicate{}, NamedImpls: namedImplNames(combined, 0, []string{}), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
+	state := InferState{FreshVarID: 1, PkgInfo: None[PkgInfo](), GoPackages: goPkgImports, MyGoPackages: myGoPkgImports, MyGoPackageCache: myGoPkgImports, Symbols: initialSymbols, SymbolIndex: symbolIndexFromSlice(initialSymbols, map[string]Symbol{}), ActiveConstraints: []Predicate{}, NamedImpls: namedImplNames(combined, 0, []string{}), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
 	result := inferDecls(combined, envWithPredecl, []FieldEntry{}, state)
 	var __mygo_expr_0 Result[PackageInfo, string]
 	if __mygo_match___mygo_expr_2, ok := result.(Result__Ok[PackageInfo, string]); ok {
@@ -540,7 +540,7 @@ func cachedImportedPackage(pkg MyGoPackageInfo, alias string, packages []MyGoPac
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(pkg.Decls) == 0 {
 		return ImportedPackageCacheEntry{PrivateEnv: MygoIN3EnvM3New(), Exported: []EnvEntry{}, StructSymbols: []Symbol{}, TypeNames: []string{}}
 	} else {
-		key := pkg.Path + "::" + alias
+		key := pkg.Path + "::" + alias + "::" + importedPackageDeclSignature(pkg.Decls, "")
 		__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(importedPackageCache, key)
 		var __mygo_expr_1 ImportedPackageCacheEntry
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ImportedPackageCacheEntry]); ok {
@@ -555,6 +555,12 @@ func cachedImportedPackage(pkg MyGoPackageInfo, alias string, packages []MyGoPac
 		}
 		return __mygo_expr_1
 	}
+}
+func importedPackageDeclSignature(decls []ast2.Decl, out string) string {
+	return __mygo_mt_typeinference2_importedPackageDeclSignature(decls, out, 0)
+}
+func importedEnumVariantSignature(variants []ast2.Variant, out string) string {
+	return __mygo_mt_typeinference2_importedEnumVariantSignature(variants, out, 0)
 }
 func buildImportedPackageCacheEntry(pkg MyGoPackageInfo, alias string, packages []MyGoPackageInfo, goPkgs []GoPackageEntry) ImportedPackageCacheEntry {
 	typeNames := collectMyGoTypeNames(pkg.Decls, 0, []string{})
@@ -1945,6 +1951,27 @@ func __mygo_mt_typeinference2_goSymbolsFromTypes(__mygo_mt_p0 string, __mygo_mt_
 		}
 	}
 }
+func __mygo_mt_typeinference2_importedEnumVariantSignature(__mygo_mt_p0 []ast2.Variant, __mygo_mt_p1 string, __mygo_state int) string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return __mygo_mt_p1
+			} else {
+				variant := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr{}, Named: false, Names: []string{}})
+				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_1 := __mygo_mt_p1 + "," + variant.Name + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(variant.Fields)) + ":" + MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(variant.Names, "", func(names string, field string) string {
+					return names + "." + field
+				})
+				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_typeinference2_importedGoPackageEntries(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 []GoPackageEntry, __mygo_mt_p2 []GoPackageEntry, __mygo_state int) []GoPackageEntry {
 	for {
 		switch __mygo_state {
@@ -1980,6 +2007,67 @@ func __mygo_mt_typeinference2_importedGoPackageEntries(__mygo_mt_p0 []ast2.Decl,
 				__tail_1 := __mygo_mt_p1
 				__tail_2 := next
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_importedPackageDeclSignature(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 string, __mygo_state int) string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return __mygo_mt_p1
+			} else {
+				decl := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.Decl__ImportDecl__Ctor("", ""))
+				var __mygo_expr_0 string
+				if __mygo_match___mygo_expr_10, ok := decl.(ast2.Decl__FuncDecl); ok {
+					__mygo_expr_0 = "f:" + __mygo_match___mygo_expr_10.F0
+				} else {
+					if __mygo_match___mygo_expr_9, ok := decl.(ast2.Decl__TypeAliasDecl); ok {
+						__mygo_expr_0 = "a:" + __mygo_match___mygo_expr_9.F0
+					} else {
+						if __mygo_match___mygo_expr_8, ok := decl.(ast2.Decl__TypeDecl); ok {
+							__mygo_expr_0 = "t:" + __mygo_match___mygo_expr_8.F0
+						} else {
+							if __mygo_match___mygo_expr_7, ok := decl.(ast2.Decl__StructDecl); ok {
+								__mygo_expr_0 = "s:" + __mygo_match___mygo_expr_7.F0 + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_7.F2))
+							} else {
+								if __mygo_match___mygo_expr_6, ok := decl.(ast2.Decl__InterfaceDecl); ok {
+									__mygo_expr_0 = "i:" + __mygo_match___mygo_expr_6.F0 + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_6.F2))
+								} else {
+									if __mygo_match___mygo_expr_5, ok := decl.(ast2.Decl__EnumDecl); ok {
+										__mygo_expr_0 = "e:" + __mygo_match___mygo_expr_5.F0 + ":" + importedEnumVariantSignature(__mygo_match___mygo_expr_5.F2, "")
+									} else {
+										if __mygo_match___mygo_expr_4, ok := decl.(ast2.Decl__ImplDecl); ok {
+											__mygo_expr_0 = "m:" + MygoIT8ToStringFN3IntGN3IntEM8ToString(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F3))
+										} else {
+											if __mygo_match___mygo_expr_3, ok := decl.(ast2.Decl__LetDecl); ok {
+												__mygo_expr_0 = "l:" + __mygo_match___mygo_expr_3.F0.Name
+											} else {
+												if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__VarDecl); ok {
+													__mygo_expr_0 = "v:" + __mygo_match___mygo_expr_2.F0.Name
+												} else {
+													if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__ImportDecl); ok {
+														__mygo_expr_0 = "p:" + __mygo_match___mygo_expr_1.F0 + ":" + __mygo_match___mygo_expr_1.F1
+													} else {
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				part := __mygo_expr_0
+				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_1 := __mygo_mt_p1 + "|" + part
+				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
 				continue
 			}

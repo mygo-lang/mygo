@@ -632,7 +632,7 @@ func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDe
     FreshVarID: 1,
     PkgInfo: None,
     GoPackages: goPkgImports,
-    MyGoPackages: [] as Slice[MyGoPackageInfo],
+    MyGoPackages: myGoPkgImports,
     MyGoPackageCache: myGoPkgImports,
     Symbols: initialSymbols,
     SymbolIndex: symbolIndexFromSlice(initialSymbols, {}),
@@ -760,7 +760,11 @@ func cachedImportedPackage(pkg: MyGoPackageInfo, alias: String, packages: Slice[
   if pkg.Decls.Len() == 0 then
     ImportedPackageCacheEntry { PrivateEnv: Env.New(), Exported: [] as Slice[EnvEntry], StructSymbols: [] as Slice[Symbol], TypeNames: [] as Slice[String] }
   else
-    let key = pkg.Path + "::" + alias
+    # Relative import paths such as `../lib` are only meaningful in the
+    # importing workspace. Include the declaration surface in the process-wide
+    # cache key so separate bootstrap workspaces cannot reuse stale exports
+    # from another package with the same relative path and alias.
+    let key = pkg.Path + "::" + alias + "::" + importedPackageDeclSignature(pkg.Decls, "")
     switch importedPackageCache.Get(key)
       case Some(entry) => entry
       case None =>
@@ -768,6 +772,32 @@ func cachedImportedPackage(pkg: MyGoPackageInfo, alias: String, packages: Slice[
         importedPackageCache.Set(key, built)
         built
     end
+  end
+end
+
+func importedPackageDeclSignature(decls: Slice[ast2.Decl], out: String) -> String
+  if decls.Len() == 0 then out else
+    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    let part = switch decl
+      case FuncDecl(name, _, _, _, _, _) => "f:" + name
+      case TypeAliasDecl(name, _, _) => "a:" + name
+      case TypeDecl(name, _, _) => "t:" + name
+      case StructDecl(name, _, fields) => "s:" + name + ":" + fields.Len().ToString()
+      case InterfaceDecl(name, _, methods) => "i:" + name + ":" + methods.Len().ToString()
+      case EnumDecl(name, _, variants) => "e:" + name + ":" + importedEnumVariantSignature(variants, "")
+      case ImplDecl(_, _, _, methods) => "m:" + methods.Len().ToString()
+      case LetDecl(bind) => "l:" + bind.Name
+      case VarDecl(bind) => "v:" + bind.Name
+      case ImportDecl(alias, path) => "p:" + alias + ":" + path
+    end
+    importedPackageDeclSignature(sliceDrop(decls, 1), out + "|" + part)
+  end
+end
+
+func importedEnumVariantSignature(variants: Slice[ast2.Variant], out: String) -> String
+  if variants.Len() == 0 then out else
+    let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr], Named: false, Names: [] as Slice[String] })
+    importedEnumVariantSignature(sliceDrop(variants, 1), out + "," + variant.Name + ":" + variant.Fields.Len().ToString() + ":" + variant.Names.Fold("", func(names: String, field: String) -> String names + "." + field end))
   end
 end
 

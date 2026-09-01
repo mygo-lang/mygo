@@ -662,17 +662,13 @@ func namedType() ps.Parser[ast2.TypeExpr] {
 }
 func qualifiedIdentifier() ps.Parser[string] {
 	return ps.PBind(identifier(), func(first string) ps.Parser[string] {
-		return ps.PMap(ps.POptional(ps.PAttempt(ps.PThen(sym("."), identifier()))), func(second Option[string]) string {
-			var __mygo_expr_0 string
-			if __mygo_match___mygo_expr_1, ok := second.(Option__Some[string]); ok {
-				__mygo_expr_0 = first + "." + __mygo_match___mygo_expr_1.F0
-			} else {
-				if _, ok := second.(Option__None[string]); ok {
-					__mygo_expr_0 = first
-				} else {
-				}
-			}
-			return __mygo_expr_0
+		return qualifiedIdentifierTail(first)
+	})
+}
+func qualifiedIdentifierTail(prefix string) ps.Parser[string] {
+	return ps.PMap(ps.PMany(ps.PAttempt(ps.PThen(sym("."), identifier()))), func(parts []string) string {
+		return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(parts, prefix, func(name string, part string) string {
+			return name + "." + part
 		})
 	})
 }

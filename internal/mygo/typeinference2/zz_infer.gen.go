@@ -3485,7 +3485,7 @@ func inferTypedStructLit(typeName string, fields []ast2.StructLitField, env Env,
 					F1 []ast2.StructLitField
 				}, string]
 				if __mygo_match___mygo_expr_2.F0.Named {
-					__mygo_expr_3 = inferEnumVariantStructLit(enumName, variantName, __mygo_match___mygo_expr_2.F0, fields, env, state)
+					__mygo_expr_3 = inferEnumVariantStructLit(enumName, variantName, typeName, __mygo_match___mygo_expr_2.F0, fields, env, state)
 				} else {
 					__mygo_expr_3 = inferTypedStructLitForType(structLitTypeInEnv(typeName, env, state), fields, env, state)
 				}
@@ -3501,7 +3501,36 @@ func inferTypedStructLit(typeName string, fields []ast2.StructLitField, env Env,
 			return inferTypedStructLitForType(structLitTypeInEnv(typeName, env, state), fields, env, state)
 		}
 	} else {
-		return inferTypedStructLitForType(structLitTypeInEnv(typeName, env, state), fields, env, state)
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(nameParts) == 3 {
+			alias := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(nameParts, 0), "")
+			enumName_1 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(nameParts, 1), "")
+			variantName_1 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(nameParts, 2), "")
+			__mygo_expr_3 := lookupImportedEnumVariantDecl(state, alias, enumName_1, variantName_1)
+			var __mygo_expr_4 Result[struct {
+				F0 InferResult
+				F1 []ast2.StructLitField
+			}, string]
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.Variant]); ok {
+				var __mygo_expr_6 Result[struct {
+					F0 InferResult
+					F1 []ast2.StructLitField
+				}, string]
+				if __mygo_match___mygo_expr_5.F0.Named {
+					__mygo_expr_6 = inferEnumVariantStructLit(alias+"."+enumName_1, variantName_1, typeName, __mygo_match___mygo_expr_5.F0, fields, env, state)
+				} else {
+					__mygo_expr_6 = inferTypedStructLitForType(structLitTypeInEnv(typeName, env, state), fields, env, state)
+				}
+				__mygo_expr_4 = __mygo_expr_6
+			} else {
+				if _, ok := __mygo_expr_3.(Option__None[ast2.Variant]); ok {
+					__mygo_expr_4 = inferTypedStructLitForType(structLitTypeInEnv(typeName, env, state), fields, env, state)
+				} else {
+				}
+			}
+			return __mygo_expr_4
+		} else {
+			return inferTypedStructLitForType(structLitTypeInEnv(typeName, env, state), fields, env, state)
+		}
 	}
 }
 func inferTypedStructLitForType(resultType ast2.MonoType, fields []ast2.StructLitField, env Env, state InferState) Result[struct {
@@ -3523,52 +3552,76 @@ func lookupEnumVariantDecl(state InferState, enumName string, variantName string
 	}
 	return __mygo_expr_1
 }
+func lookupImportedEnumVariantDecl(state InferState, alias string, enumName string, variantName string) Option[ast2.Variant] {
+	return lookupImportedEnumVariantDeclInPackages(state.MyGoPackageCache, alias, enumName, variantName)
+}
+func lookupImportedEnumVariantDeclInPackages(packages []MyGoPackageInfo, alias string, enumName string, variantName string) Option[ast2.Variant] {
+	return __mygo_mt_typeinference2_lookupImportedEnumVariantDeclInPackages(packages, alias, enumName, variantName, 0)
+}
 func lookupEnumVariantDeclInDecls(decls []ast2.Decl, enumName string, variantName string) Option[ast2.Variant] {
 	return __mygo_mt_typeinference2_lookupEnumVariantDeclInDecls(decls, enumName, variantName, 0)
 }
 func lookupVariantInList(variants []ast2.Variant, name string) Option[ast2.Variant] {
 	return __mygo_mt_typeinference2_lookupVariantInList(variants, name, 0)
 }
-func inferEnumVariantStructLit(enumName string, variantName string, variant ast2.Variant, fields []ast2.StructLitField, env Env, state InferState) Result[struct {
+func inferEnumVariantStructLit(enumName string, variantName string, constructorName string, variant ast2.Variant, fields []ast2.StructLitField, env Env, state InferState) Result[struct {
 	F0 InferResult
 	F1 []ast2.StructLitField
 }, string] {
-	__mygo_expr_0 := envGet(env, variantName)
+	__mygo_expr_0 := envGet(env, constructorName)
 	var __mygo_expr_1 Result[struct {
 		F0 InferResult
 		F1 []ast2.StructLitField
 	}, string]
-	if _, ok := __mygo_expr_0.(Option__None[Scheme]); ok {
-		__mygo_expr_1 = Err[struct {
-			F0 InferResult
-			F1 []ast2.StructLitField
-		}, string]("unknown variant " + variantName)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[Scheme]); ok {
+		__mygo_expr_1 = inferEnumVariantStructLitWithScheme(enumName, variantName, variant, fields, env, state, Some[Scheme](__mygo_match___mygo_expr_2.F0))
 	} else {
-		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[Scheme]); ok {
-			__mygo_expr_3 := instantiate(__mygo_match___mygo_expr_2.F0, state)
-			var __mygo_expr_4 Result[struct {
-				F0 InferResult
-				F1 []ast2.StructLitField
-			}, string]
-			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.MonoType__TFunc); ok {
-				__mygo_expr_4 = inferEnumVariantStructLitFields(enumName, variantName, variant, fields, env, state, __mygo_match___mygo_expr_5.F0, *__mygo_match___mygo_expr_5.F1, 0, []ast2.StructLitField{}, []string{})
-			} else {
-				__mygo_expr_4 = Err[struct {
-					F0 InferResult
-					F1 []ast2.StructLitField
-				}, string]("variant " + variantName + " does not accept named fields")
-			}
-			__mygo_expr_1 = __mygo_expr_4
+		if _, ok := __mygo_expr_0.(Option__None[Scheme]); ok {
+			__mygo_expr_1 = inferEnumVariantStructLitWithScheme(enumName, variantName, variant, fields, env, state, envGet(env, variantName))
 		} else {
 		}
 	}
 	return __mygo_expr_1
 }
-func inferEnumVariantStructLitFields(enumName string, variantName string, variant ast2.Variant, fields []ast2.StructLitField, env Env, state InferState, fieldTypes []ast2.MonoType, enumType ast2.MonoType, index int, out []ast2.StructLitField, seen []string) Result[struct {
+func inferEnumVariantStructLitWithScheme(enumName string, variantName string, variant ast2.Variant, fields []ast2.StructLitField, env Env, state InferState, candidate Option[Scheme]) Result[struct {
 	F0 InferResult
 	F1 []ast2.StructLitField
 }, string] {
-	return __mygo_mt_typeinference2_inferEnumVariantStructLitFields(enumName, variantName, variant, fields, env, state, fieldTypes, enumType, index, out, seen, 0)
+	var __mygo_expr_0 Result[struct {
+		F0 InferResult
+		F1 []ast2.StructLitField
+	}, string]
+	if _, ok := candidate.(Option__None[Scheme]); ok {
+		__mygo_expr_0 = Err[struct {
+			F0 InferResult
+			F1 []ast2.StructLitField
+		}, string]("unknown variant " + variantName)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := candidate.(Option__Some[Scheme]); ok {
+			__mygo_expr_2 := instantiate(__mygo_match___mygo_expr_1.F0, state)
+			var __mygo_expr_3 Result[struct {
+				F0 InferResult
+				F1 []ast2.StructLitField
+			}, string]
+			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ast2.MonoType__TFunc); ok {
+				__mygo_expr_3 = inferEnumVariantStructLitFields(enumName, variantName, variant, fields, env, state, __mygo_match___mygo_expr_4.F0, *__mygo_match___mygo_expr_4.F1, emptySubst(), 0, []ast2.StructLitField{}, []string{})
+			} else {
+				__mygo_expr_3 = Err[struct {
+					F0 InferResult
+					F1 []ast2.StructLitField
+				}, string]("variant " + variantName + " does not accept named fields")
+			}
+			__mygo_expr_0 = __mygo_expr_3
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func inferEnumVariantStructLitFields(enumName string, variantName string, variant ast2.Variant, fields []ast2.StructLitField, env Env, state InferState, fieldTypes []ast2.MonoType, enumType ast2.MonoType, subst Subst, index int, out []ast2.StructLitField, seen []string) Result[struct {
+	F0 InferResult
+	F1 []ast2.StructLitField
+}, string] {
+	return __mygo_mt_typeinference2_inferEnumVariantStructLitFields(enumName, variantName, variant, fields, env, state, fieldTypes, enumType, subst, index, out, seen, 0)
 }
 func stringIndexOf(items []string, target string) Option[int] {
 	return stringIndexOfAt(items, target, 0)
@@ -4728,24 +4781,24 @@ func __mygo_mt_typeinference2_inferBlockItems(__mygo_mt_p0 []ast2.Stmt, __mygo_m
 		}
 	}
 }
-func __mygo_mt_typeinference2_inferEnumVariantStructLitFields(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 ast2.Variant, __mygo_mt_p3 []ast2.StructLitField, __mygo_mt_p4 Env, __mygo_mt_p5 InferState, __mygo_mt_p6 []ast2.MonoType, __mygo_mt_p7 ast2.MonoType, __mygo_mt_p8 int, __mygo_mt_p9 []ast2.StructLitField, __mygo_mt_p10 []string, __mygo_state int) Result[struct {
+func __mygo_mt_typeinference2_inferEnumVariantStructLitFields(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 ast2.Variant, __mygo_mt_p3 []ast2.StructLitField, __mygo_mt_p4 Env, __mygo_mt_p5 InferState, __mygo_mt_p6 []ast2.MonoType, __mygo_mt_p7 ast2.MonoType, __mygo_mt_p8 Subst, __mygo_mt_p9 int, __mygo_mt_p10 []ast2.StructLitField, __mygo_mt_p11 []string, __mygo_state int) Result[struct {
 	F0 InferResult
 	F1 []ast2.StructLitField
 }, string] {
 	for {
 		switch __mygo_state {
 		case 0:
-			if __mygo_mt_p8 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p3) {
+			if __mygo_mt_p9 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p3) {
 				return Ok[struct {
 					F0 InferResult
 					F1 []ast2.StructLitField
 				}, string](struct {
 					F0 InferResult
 					F1 []ast2.StructLitField
-				}{F0: InferResult{Type: __mygo_mt_p7, Predicates: []Predicate{}, Subst: emptySubst(), State: __mygo_mt_p5}, F1: __mygo_mt_p9})
+				}{F0: InferResult{Type: applySubst(__mygo_mt_p8, __mygo_mt_p7), Predicates: []Predicate{}, Subst: __mygo_mt_p8, State: __mygo_mt_p5}, F1: applyTypedStructLitFieldsSubst(__mygo_mt_p8, __mygo_mt_p10)})
 			} else {
-				f := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p3, __mygo_mt_p8), ast2.StructLitField{Name: "", Value: ast2.EmptyExpr()})
-				if stringSliceContains(__mygo_mt_p10, f.Name) {
+				f := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p3, __mygo_mt_p9), ast2.StructLitField{Name: "", Value: ast2.EmptyExpr()})
+				if stringSliceContains(__mygo_mt_p11, f.Name) {
 					return Err[struct {
 						F0 InferResult
 						F1 []ast2.StructLitField
@@ -4759,7 +4812,7 @@ func __mygo_mt_typeinference2_inferEnumVariantStructLitFields(__mygo_mt_p0 strin
 						}, string]("enum " + __mygo_mt_p0 + " variant " + __mygo_mt_p1 + " has no field \"" + f.Name + "\"")
 					} else {
 						if __mygo_match___mygo_expr_0, ok := fieldIdx.(Option__Some[int]); ok {
-							expected := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p6, __mygo_match___mygo_expr_0.F0), ast2.MonoType__TUnit__Ctor())
+							expected := applySubst(__mygo_mt_p8, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p6, __mygo_match___mygo_expr_0.F0), ast2.MonoType__TUnit__Ctor()))
 							valueResult := inferExpr(f.Value, __mygo_mt_p4, __mygo_mt_p5)
 							if __mygo_match___mygo_expr_2, ok := valueResult.(Result__Err[ExprInferResult, string]); ok {
 								return Err[struct {
@@ -4768,7 +4821,7 @@ func __mygo_mt_typeinference2_inferEnumVariantStructLitFields(__mygo_mt_p0 strin
 								}, string]("enum " + __mygo_mt_p0 + " variant " + __mygo_mt_p1 + " field \"" + f.Name + "\": " + __mygo_match___mygo_expr_2.F0)
 							} else {
 								if __mygo_match___mygo_expr_1, ok := valueResult.(Result__Ok[ExprInferResult, string]); ok {
-									__mygo_expr_2 := unify(expected, __mygo_match___mygo_expr_1.F0.Result.Type, __mygo_match___mygo_expr_1.F0.Result.Subst)
+									__mygo_expr_2 := unify(expected, __mygo_match___mygo_expr_1.F0.Result.Type, composeSubst(__mygo_match___mygo_expr_1.F0.Result.Subst, __mygo_mt_p8))
 									if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[Subst, string]); ok {
 										return Err[struct {
 											F0 InferResult
@@ -4785,10 +4838,11 @@ func __mygo_mt_typeinference2_inferEnumVariantStructLitFields(__mygo_mt_p0 strin
 											__tail_5 := __mygo_mt_p5
 											__tail_6 := __mygo_mt_p6
 											__tail_7 := __mygo_mt_p7
-											__tail_8 := __mygo_mt_p8 + 1
-											__tail_9 := MygoIN5SliceM6Append(__mygo_mt_p9, typedField)
-											__tail_10 := MygoIN5SliceM6Append(__mygo_mt_p10, f.Name)
-											__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7, __mygo_mt_p8, __mygo_mt_p9, __mygo_mt_p10 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7, __tail_8, __tail_9, __tail_10
+											__tail_8 := __mygo_match___mygo_expr_3.F0
+											__tail_9 := __mygo_mt_p9 + 1
+											__tail_10 := MygoIN5SliceM6Append(__mygo_mt_p10, typedField)
+											__tail_11 := MygoIN5SliceM6Append(__mygo_mt_p11, f.Name)
+											__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7, __mygo_mt_p8, __mygo_mt_p9, __mygo_mt_p10, __mygo_mt_p11 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7, __tail_8, __tail_9, __tail_10, __tail_11
 											__mygo_state = 0
 											continue
 										} else {
@@ -5501,6 +5555,31 @@ func __mygo_mt_typeinference2_lookupEnumVariantDeclInDecls(__mygo_mt_p0 []ast2.D
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_lookupImportedEnumVariantDeclInPackages(__mygo_mt_p0 []MyGoPackageInfo, __mygo_mt_p1 string, __mygo_mt_p2 string, __mygo_mt_p3 string, __mygo_state int) Option[ast2.Variant] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
+				return None[ast2.Variant]()
+			} else {
+				pkg := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), MyGoPackageInfo{Alias: "", Path: "", Decls: []ast2.Decl{}})
+				if pkg.Alias == __mygo_mt_p1 {
+					return lookupEnumVariantDeclInDecls(pkg.Decls, __mygo_mt_p2, __mygo_mt_p3)
+				} else {
+					__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 					__mygo_state = 0
 					continue
 				}

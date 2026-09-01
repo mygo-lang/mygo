@@ -1667,18 +1667,17 @@ func translateStructLitAstExpected(typeName string, fields []ast2.StructLitField
 }
 func enumVariantStructLitGoType(typeName string, explicitArgs []ast2.TypeExpr, expected ast2.MonoType, ctx *egCtx) Option[string] {
 	parts := strings.Split(typeName, ".")
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts) != 2 {
-		return None[string]()
-	} else {
-		enumName := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 0), "")
-		variantName := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 1), "")
-		__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.enumValueConstructors, enumName+"."+variantName)
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts) == 3 {
+		alias := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 0), "")
+		enumName := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 1), "")
+		variantName := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 2), "")
+		__mygo_expr_0 := importedEnumVariantCtor(alias, enumName, variantName, ctx)
 		var __mygo_expr_1 Option[string]
 		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 			__mygo_expr_1 = None[string]()
 		} else {
 			if _, ok := __mygo_expr_0.(Option__Some[string]); ok {
-				base := variantGoTypeName(sanitizeIdent(enumName), variantName)
+				base := alias + "." + variantGoTypeName(sanitizeIdent(enumName), variantName)
 				var __mygo_expr_2 []string
 				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(explicitArgs) > 0 {
 					__mygo_expr_2 = typeExprsToStrings(explicitArgs, ctx.typeParams)
@@ -1697,6 +1696,38 @@ func enumVariantStructLitGoType(typeName string, explicitArgs []ast2.TypeExpr, e
 			}
 		}
 		return __mygo_expr_1
+	} else {
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts) != 2 {
+			return None[string]()
+		} else {
+			enumName_1 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 0), "")
+			variantName_1 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 1), "")
+			__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(ctx.enumValueConstructors, enumName_1+"."+variantName_1)
+			var __mygo_expr_3 Option[string]
+			if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+				__mygo_expr_3 = None[string]()
+			} else {
+				if _, ok := __mygo_expr_2.(Option__Some[string]); ok {
+					base_1 := variantGoTypeName(sanitizeIdent(enumName_1), variantName_1)
+					var __mygo_expr_4 []string
+					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(explicitArgs) > 0 {
+						__mygo_expr_4 = typeExprsToStrings(explicitArgs, ctx.typeParams)
+					} else {
+						__mygo_expr_4 = enumTypeArgs(enumName_1, expected, ctx.typeParamNames, ctx.pathAliases)
+					}
+					args_1 := __mygo_expr_4
+					var __mygo_expr_5 Option[string]
+					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(args_1) == 0 {
+						__mygo_expr_5 = Some[string](base_1)
+					} else {
+						__mygo_expr_5 = Some[string](base_1 + "[" + strings.Join(args_1, ", ") + "]")
+					}
+					__mygo_expr_3 = __mygo_expr_5
+				} else {
+				}
+			}
+			return __mygo_expr_3
+		}
 	}
 }
 func structLitGoType(typeName string, expected ast2.MonoType, aliases map[string]string) string {
@@ -2559,28 +2590,7 @@ func inferredConstructorArgsByName(name string, enumName Option[string], expecte
 	return __mygo_expr_0
 }
 func enumTypeArgs(enumName string, expected ast2.MonoType, params []string, aliases map[string]string) []string {
-	var __mygo_expr_0 []string
-	if __mygo_match___mygo_expr_1, ok := expected.(ast2.MonoType__TApp); ok {
-		__mygo_expr_2 := *__mygo_match___mygo_expr_1.F0
-		var __mygo_expr_3 []string
-		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ast2.MonoType__TCon); ok {
-			var __mygo_expr_5 []string
-			if __mygo_match___mygo_expr_4.F0 == enumName {
-				__mygo_expr_5 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_1.F1, func(a ast2.MonoType) string {
-					return monoTypeToGoStrWithParamsIn(a, params, aliases)
-				})
-			} else {
-				__mygo_expr_5 = []string{}
-			}
-			__mygo_expr_3 = __mygo_expr_5
-		} else {
-			__mygo_expr_3 = []string{}
-		}
-		__mygo_expr_0 = __mygo_expr_3
-	} else {
-		__mygo_expr_0 = []string{}
-	}
-	return __mygo_expr_0
+	return __mygo_mt_codegen2_enumTypeArgs(enumName, expected, params, aliases, 0)
 }
 func inferredBuiltinConstructorArgs(name string, expected ast2.MonoType, ctx *egCtx) []string {
 	if name == "Zero" {
@@ -3354,6 +3364,41 @@ func __mygo_mt_codegen2_bindTuplePattern(__mygo_mt_p0 *egCtx, __mygo_mt_p1 []ast
 				continue
 			} else {
 				return
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_enumTypeArgs(__mygo_mt_p0 string, __mygo_mt_p1 ast2.MonoType, __mygo_mt_p2 []string, __mygo_mt_p3 map[string]string, __mygo_state int) []string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_match___mygo_expr_1, ok := __mygo_mt_p1.(ast2.MonoType__TQualifiedName); ok {
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := *__mygo_match___mygo_expr_1.F1
+				__tail_2 := __mygo_mt_p2
+				__tail_3 := __mygo_mt_p3
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+				__mygo_state = 0
+				continue
+			} else {
+				if __mygo_match___mygo_expr_0, ok := __mygo_mt_p1.(ast2.MonoType__TApp); ok {
+					__mygo_expr_1 := *__mygo_match___mygo_expr_0.F0
+					if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(ast2.MonoType__TCon); ok {
+						if __mygo_match___mygo_expr_2.F0 == __mygo_mt_p0 {
+							return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_0.F1, func(a ast2.MonoType) string {
+								return monoTypeToGoStrWithParamsIn(a, __mygo_mt_p2, __mygo_mt_p3)
+							})
+						} else {
+							return []string{}
+						}
+					} else {
+						return []string{}
+					}
+				} else {
+					return []string{}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
