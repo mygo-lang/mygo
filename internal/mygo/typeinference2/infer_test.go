@@ -521,6 +521,63 @@ end
 	}
 }
 
+func TestInferPackageWithExternalExpandsForwardAliasInStructField(t *testing.T) {
+	user := parser2.ParseFile(`package sample
+
+enum Event
+  Started { RunID: RunID }
+end
+
+struct Pending
+  RunID: RunID
+end
+
+func empty() -> Pending
+  Pending { RunID: "" }
+end
+
+func run(event: Event) -> Pending
+  switch event
+    case Started { RunID } => Pending { RunID: RunID }
+  end
+end
+`)
+	userFile, ok := user.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile user failed: %v", user)
+	}
+	aliases := parser2.ParseFile(`package sample
+
+type RunID = String
+`)
+	aliasFile, ok := aliases.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile aliases failed: %v", aliases)
+	}
+	external := parser2.ParseFile(`package prelude
+
+struct External
+  Value: Int
+end
+`)
+	externalFile, ok := external.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile external failed: %v", external)
+	}
+	got := InferPackageWithExternal(
+		[]PkgDeclSource{
+			{Path: "state.mygo", Decls: userFile.F0.Decls},
+			{Path: "types.mygo", Decls: aliasFile.F0.Decls},
+		},
+		[]PkgDeclSource{{Path: "prelude.mygo", Decls: externalFile.F0.Decls}},
+		[]GoPackageEntry{},
+		[]MyGoPackageInfo{},
+	)
+	if !isPackageInfo(got) {
+		t.Fatalf("InferPackageWithExternal failed: %v", got)
+	}
+}
+
 func declsContainTypeAlias(decls []ast2.Decl, name string) bool {
 	for _, decl := range decls {
 		if alias, ok := decl.(ast2.Decl__TypeAliasDecl); ok && alias.F0 == name {

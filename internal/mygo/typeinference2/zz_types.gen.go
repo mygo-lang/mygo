@@ -326,6 +326,23 @@ func buildSymbolTable(goPkgs []GoPackageEntry, decls []ast2.Decl, env Env) []Sym
 	declSyms := collectDeclSymbols(decls, env, []Symbol{})
 	return concatSymbols(concatSymbols(builtinSyms, goSyms), declSyms)
 }
+
+type InferenceSetup struct {
+	Env     Env
+	Symbols []Symbol
+}
+
+func prepareInferenceSetup(decls []ast2.Decl, goPkgs []GoPackageEntry, mygoImports []struct {
+	F0 string
+	F1 string
+}, myGoPkgImports []MyGoPackageInfo, externalEntries []EnvEntry) InferenceSetup {
+	envWithGoPkgs := seedGoPackageEnv(goPkgs, initialEnv())
+	envWithMyGoPkgs := seedMyGoPackageEnv(mygoImports, myGoPkgImports, goPkgs, envWithGoPkgs)
+	base := envPutBatchLatest(envWithMyGoPkgs, externalEntries)
+	predeclared := predeclareAllFunctions(decls, base)
+	symbols := buildSymbolTable(goPkgs, decls, predeclared)
+	return InferenceSetup{Env: predeclared, Symbols: symbols}
+}
 func symbolIndexFromSlice(symbols []Symbol, index map[string]Symbol) map[string]Symbol {
 	return __mygo_mt_typeinference2_symbolIndexFromSlice(symbols, index, 0)
 }
@@ -414,12 +431,9 @@ func structFieldSymbolsInEnv(typeName string, fields []ast2.Field, typeParams []
 func InferFile(file ast2.File) Result[PackageInfo, string] {
 	goPkgImports := collectGoPackageImports(file.Decls)
 	mygoImports := collectMyGoPackageImports(file.Decls)
-	envWithGoPkgs := seedGoPackageEnv(goPkgImports, initialEnv())
-	envWithMyGoPkgs := seedMyGoPackageEnv(mygoImports, []MyGoPackageInfo{}, goPkgImports, envWithGoPkgs)
-	envWithPredecl := predeclareImplMethods(file.Decls, predeclareFunctions(file.Decls, envWithMyGoPkgs))
-	initialSymbols := buildSymbolTable(goPkgImports, file.Decls, envWithMyGoPkgs)
-	state := InferState{FreshVarID: 1, PkgInfo: Some[PkgInfo](PkgInfo{Dir: "", Name: file.PackageName, Decls: file.Decls}), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo{}, MyGoPackageCache: []MyGoPackageInfo{}, Symbols: initialSymbols, SymbolIndex: symbolIndexFromSlice(initialSymbols, map[string]Symbol{}), ActiveConstraints: []Predicate{}, NamedImpls: namedImplNames(file.Decls, 0, []string{}), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
-	__mygo_expr_0 := inferDecls(file.Decls, envWithPredecl, []FieldEntry{}, state)
+	setup := prepareInferenceSetup(file.Decls, goPkgImports, mygoImports, []MyGoPackageInfo{}, []EnvEntry{})
+	state := InferState{FreshVarID: 1, PkgInfo: Some[PkgInfo](PkgInfo{Dir: "", Name: file.PackageName, Decls: file.Decls}), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo{}, MyGoPackageCache: []MyGoPackageInfo{}, Symbols: setup.Symbols, SymbolIndex: symbolIndexFromSlice(setup.Symbols, map[string]Symbol{}), ActiveConstraints: []Predicate{}, NamedImpls: namedImplNames(file.Decls, 0, []string{}), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
+	__mygo_expr_0 := inferDecls(file.Decls, setup.Env, []FieldEntry{}, state)
 	var __mygo_expr_1 Result[PackageInfo, string]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[PackageInfo, string]); ok {
 		collected := collectInstances(file.Decls)
@@ -440,12 +454,9 @@ func InferPackage(files []PkgDeclSource) Result[PackageInfo, string] {
 func InferPackageWithGoPackages(files []PkgDeclSource, goPkgImports []GoPackageEntry) Result[PackageInfo, string] {
 	allDecls := flattenPkgDecls(files, 0, []ast2.Decl{})
 	mygoImports := collectMyGoPackageImports(allDecls)
-	envWithGoPkgs := seedGoPackageEnv(goPkgImports, initialEnv())
-	envWithMyGoPkgs := seedMyGoPackageEnv(mygoImports, []MyGoPackageInfo{}, goPkgImports, envWithGoPkgs)
-	envWithPredecl := predeclareAllFunctions(allDecls, envWithMyGoPkgs)
-	initialSymbols := buildSymbolTable(goPkgImports, allDecls, envWithMyGoPkgs)
-	state := InferState{FreshVarID: 1, PkgInfo: Some[PkgInfo](PkgInfo{Dir: "", Name: "", Decls: allDecls}), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo{}, MyGoPackageCache: []MyGoPackageInfo{}, Symbols: initialSymbols, SymbolIndex: symbolIndexFromSlice(initialSymbols, map[string]Symbol{}), ActiveConstraints: []Predicate{}, NamedImpls: namedImplNames(allDecls, 0, []string{}), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
-	result := inferDecls(allDecls, envWithPredecl, []FieldEntry{}, state)
+	setup := prepareInferenceSetup(allDecls, goPkgImports, mygoImports, []MyGoPackageInfo{}, []EnvEntry{})
+	state := InferState{FreshVarID: 1, PkgInfo: Some[PkgInfo](PkgInfo{Dir: "", Name: "", Decls: allDecls}), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo{}, MyGoPackageCache: []MyGoPackageInfo{}, Symbols: setup.Symbols, SymbolIndex: symbolIndexFromSlice(setup.Symbols, map[string]Symbol{}), ActiveConstraints: []Predicate{}, NamedImpls: namedImplNames(allDecls, 0, []string{}), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
+	result := inferDecls(allDecls, setup.Env, []FieldEntry{}, state)
 	var __mygo_expr_0 Result[PackageInfo, string]
 	if __mygo_match___mygo_expr_2, ok := result.(Result__Ok[PackageInfo, string]); ok {
 		collected := collectInstances(allDecls)
@@ -466,15 +477,11 @@ func InferPackageWithExternal(files []PkgDeclSource, external []PkgDeclSource, g
 	extDecls := flattenPkgDecls(external, 0, []ast2.Decl{})
 	combined := appendDecls(allDecls, extDecls)
 	mygoAliases := collectMyGoPackageImports(allDecls)
-	envWithGoPkgs := seedGoPackageEnv(goPkgImports, initialEnv())
-	envWithMyGoPkgs := seedMyGoPackageEnv(mygoAliases, myGoPkgImports, goPkgImports, envWithGoPkgs)
-	envWithPredecl := predeclareAllFunctions(combined, envWithMyGoPkgs)
-	userSyms := buildSymbolTable(goPkgImports, allDecls, envWithMyGoPkgs)
-	extSyms := buildSymbolTable([]GoPackageEntry{}, extDecls, envWithMyGoPkgs)
+	setup := prepareInferenceSetup(combined, goPkgImports, mygoAliases, myGoPkgImports, []EnvEntry{})
 	importedStructSymbols := myGoPackageStructSymbols(myGoPkgImports, goPkgImports, []Symbol{})
-	initialSymbols := concatSymbols(concatSymbols(userSyms, extSyms), importedStructSymbols)
+	initialSymbols := concatSymbols(setup.Symbols, importedStructSymbols)
 	state := InferState{FreshVarID: 1, PkgInfo: Some[PkgInfo](PkgInfo{Dir: "", Name: "", Decls: combined}), GoPackages: goPkgImports, MyGoPackages: myGoPkgImports, MyGoPackageCache: myGoPkgImports, Symbols: initialSymbols, SymbolIndex: symbolIndexFromSlice(initialSymbols, map[string]Symbol{}), ActiveConstraints: []Predicate{}, NamedImpls: namedImplNames(combined, 0, []string{}), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
-	result := inferDecls(combined, envWithPredecl, []FieldEntry{}, state)
+	result := inferDecls(combined, setup.Env, []FieldEntry{}, state)
 	var __mygo_expr_0 Result[PackageInfo, string]
 	if __mygo_match___mygo_expr_2, ok := result.(Result__Ok[PackageInfo, string]); ok {
 		collected := collectInstances(allDecls)
@@ -496,17 +503,13 @@ func InferPackageWithExternalInfo(files []PkgDeclSource, externalInfo PackageInf
 	externalDecls := appendDecls(externalInfo.ExternalTypedDecls, externalInfo.TypedDecls)
 	externalSources := appendPkgDeclSources(externalInfo.ExternalTypedDeclSources, externalInfo.TypedDeclSources)
 	mygoAliases := collectMyGoPackageImports(allDecls)
-	envWithGoPkgs := seedGoPackageEnv(goPkgImports, initialEnv())
-	envWithMyGoPkgs := seedMyGoPackageEnv(mygoAliases, myGoPkgImports, goPkgImports, envWithGoPkgs)
-	envWithExternal := envPutBatchLatest(envWithMyGoPkgs, externalInfo.Env)
-	envWithPredecl := predeclareAllFunctions(allDecls, envWithExternal)
-	userSyms := buildSymbolTable(goPkgImports, allDecls, envWithExternal)
-	extSyms := buildSymbolTable([]GoPackageEntry{}, externalDecls, envWithExternal)
+	setup := prepareInferenceSetup(allDecls, goPkgImports, mygoAliases, myGoPkgImports, externalInfo.Env)
+	externalSymbols := buildSymbolTable([]GoPackageEntry{}, externalDecls, setup.Env)
 	importedStructSymbols := myGoPackageStructSymbols(myGoPkgImports, goPkgImports, []Symbol{})
-	initialSymbols := concatSymbols(concatSymbols(userSyms, extSyms), importedStructSymbols)
+	initialSymbols := concatSymbols(concatSymbols(setup.Symbols, externalSymbols), importedStructSymbols)
 	named := namedImplNames(externalDecls, 0, namedImplNames(allDecls, 0, []string{}))
 	state := InferState{FreshVarID: 1, PkgInfo: Some[PkgInfo](PkgInfo{Dir: "", Name: "", Decls: allDecls}), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo{}, MyGoPackageCache: myGoPkgImports, Symbols: initialSymbols, SymbolIndex: symbolIndexFromSlice(initialSymbols, map[string]Symbol{}), ActiveConstraints: []Predicate{}, NamedImpls: named, ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
-	result := inferDecls(allDecls, envWithPredecl, externalInfo.Fields, state)
+	result := inferDecls(allDecls, setup.Env, externalInfo.Fields, state)
 	var __mygo_expr_0 Result[PackageInfo, string]
 	if __mygo_match___mygo_expr_2, ok := result.(Result__Ok[PackageInfo, string]); ok {
 		collected := collectInstances(allDecls)
@@ -1275,7 +1278,8 @@ func namedImplNames(decls []ast2.Decl, index int, out []string) []string {
 	return __mygo_mt_typeinference2_namedImplNames(decls, index, out, 0)
 }
 func predeclareAllFunctions(decls []ast2.Decl, env Env) Env {
-	return predeclareImplMethods(decls, predeclareFunctions(decls, env))
+	aliasesVisible := predeclareFunctions(decls, env)
+	return predeclareImplMethods(decls, predeclareFunctions(decls, aliasesVisible))
 }
 func appendDecls(acc []ast2.Decl, items []ast2.Decl) []ast2.Decl {
 	return __mygo_mt_typeinference2_appendDecls(acc, items, 0)

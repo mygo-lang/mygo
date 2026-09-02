@@ -403,6 +403,30 @@ func buildSymbolTable(goPkgs: Slice[GoPackageEntry], decls: Slice[ast2.Decl], en
   concatSymbols(concatSymbols(builtinSyms, goSyms), declSyms)
 end
 
+# InferenceSetup is the common package-level preparation result.  Structural
+# symbols must be derived after aliases, enums, and functions have been
+# predeclared; otherwise a forward alias in another source file remains a bare
+# nominal TCon while literals infer as its target type.
+struct InferenceSetup
+  Env: Env
+  Symbols: Slice[Symbol]
+end
+
+# prepareInferenceSetup keeps the ordering shared by every package inference
+# entry point: seed imports, add any already-inferred external environment, then
+# predeclare the effective declarations before resolving structural symbols.
+# `externalEntries` is newest-first PackageInfo.Env data used only by external
+# test packages; keeping it between imports and local declarations preserves
+# its existing shadowing semantics.
+func prepareInferenceSetup(decls: Slice[ast2.Decl], goPkgs: Slice[GoPackageEntry], mygoImports: Slice[(String, String)], myGoPkgImports: Slice[MyGoPackageInfo], externalEntries: Slice[EnvEntry]) -> InferenceSetup
+  let envWithGoPkgs = seedGoPackageEnv(goPkgs, initialEnv())
+  let envWithMyGoPkgs = seedMyGoPackageEnv(mygoImports, myGoPkgImports, goPkgs, envWithGoPkgs)
+  let base = envPutBatchLatest(envWithMyGoPkgs, externalEntries)
+  let predeclared = predeclareAllFunctions(decls, base)
+  let symbols = buildSymbolTable(goPkgs, decls, predeclared)
+  InferenceSetup { Env: predeclared, Symbols: symbols }
+end
+
 # Build the constant-time symbol index from an ordered symbol list.  The list
 # is scanned in slice order and the first occurrence of each `TypeName::Field`
 # key wins, mirroring the former linear findSymbol scan over Symbols.
@@ -514,25 +538,20 @@ end
 func InferFile(file: ast2.File) -> Result[PackageInfo, String]
   let goPkgImports = collectGoPackageImports(file.Decls)
   let mygoImports = collectMyGoPackageImports(file.Decls)
-  # Seed Go-FFI and MyGO package types into the env *before* predeclaring
-  # functions.  See InferPackageWithExternal for the full rationale.
-  let envWithGoPkgs = seedGoPackageEnv(goPkgImports, initialEnv())
-  let envWithMyGoPkgs = seedMyGoPackageEnv(mygoImports, [] as Slice[MyGoPackageInfo], goPkgImports, envWithGoPkgs)
-  let envWithPredecl = predeclareImplMethods(file.Decls, predeclareFunctions(file.Decls, envWithMyGoPkgs))
-  let initialSymbols = buildSymbolTable(goPkgImports, file.Decls, envWithMyGoPkgs)
+  let setup = prepareInferenceSetup(file.Decls, goPkgImports, mygoImports, [] as Slice[MyGoPackageInfo], [] as Slice[EnvEntry])
   let state = InferState {
     FreshVarID: 1,
     PkgInfo: Some(PkgInfo { Dir: "", Name: file.PackageName, Decls: file.Decls }),
     GoPackages: goPkgImports,
     MyGoPackages: [] as Slice[MyGoPackageInfo],
     MyGoPackageCache: [] as Slice[MyGoPackageInfo],
-    Symbols: initialSymbols,
-    SymbolIndex: symbolIndexFromSlice(initialSymbols, {}),
+    Symbols: setup.Symbols,
+    SymbolIndex: symbolIndexFromSlice(setup.Symbols, {}),
     ActiveConstraints: [] as Slice[Predicate],
     NamedImpls: namedImplNames(file.Decls, 0, [] as Slice[String]),
     ResolvedConstraintArgs: {},
   }
-  switch inferDecls(file.Decls, envWithPredecl, [], state)
+  switch inferDecls(file.Decls, setup.Env, [], state)
     case Ok(info) =>
       let collected = collectInstances(file.Decls)
       let instances = mergeBuiltInInstances(collected)
@@ -561,25 +580,20 @@ end
 func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice[GoPackageEntry]) -> Result[PackageInfo, String]
   let allDecls = flattenPkgDecls(files, 0, [] as Slice[ast2.Decl])
   let mygoImports = collectMyGoPackageImports(allDecls)
-  # Seed Go-FFI and MyGO package types into the env *before* predeclaring
-  # functions.  See InferPackageWithExternal for the full rationale.
-  let envWithGoPkgs = seedGoPackageEnv(goPkgImports, initialEnv())
-  let envWithMyGoPkgs = seedMyGoPackageEnv(mygoImports, [] as Slice[MyGoPackageInfo], goPkgImports, envWithGoPkgs)
-  let envWithPredecl = predeclareAllFunctions(allDecls, envWithMyGoPkgs)
-  let initialSymbols = buildSymbolTable(goPkgImports, allDecls, envWithMyGoPkgs)
+  let setup = prepareInferenceSetup(allDecls, goPkgImports, mygoImports, [] as Slice[MyGoPackageInfo], [] as Slice[EnvEntry])
   let state = InferState {
     FreshVarID: 1,
     PkgInfo: Some(PkgInfo { Dir: "", Name: "", Decls: allDecls }),
     GoPackages: goPkgImports,
     MyGoPackages: [] as Slice[MyGoPackageInfo],
     MyGoPackageCache: [] as Slice[MyGoPackageInfo],
-    Symbols: initialSymbols,
-    SymbolIndex: symbolIndexFromSlice(initialSymbols, {}),
+    Symbols: setup.Symbols,
+    SymbolIndex: symbolIndexFromSlice(setup.Symbols, {}),
     ActiveConstraints: [] as Slice[Predicate],
     NamedImpls: namedImplNames(allDecls, 0, [] as Slice[String]),
     ResolvedConstraintArgs: {},
   }
-  let result = inferDecls(allDecls, envWithPredecl, [], state)
+  let result = inferDecls(allDecls, setup.Env, [], state)
   switch result
     case Ok(info) =>
       let collected = collectInstances(allDecls)
@@ -615,19 +629,9 @@ func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDe
   # env entries wrap each member in TQualifiedName so qualified access such
   # as `ps.ParseInput(...)` resolves through the normal env lookup path.
   let mygoAliases = collectMyGoPackageImports(allDecls)
-  # Seed Go-FFI and MyGO package types into the env *before* predeclaring
-  # functions.  This way `Ref[testing.T]` in a function signature sees the
-  # `testing.T` env entry and wraps the inner type in TQualifiedName; without
-  # it, the inner type falls through to a bare TCon("T") and field lookup
-  # `t.Fatal` later fails because receiverQualifiedName cannot recover the
-  # qualified `testing.T` key used by the symbol table.
-  let envWithGoPkgs = seedGoPackageEnv(goPkgImports, initialEnv())
-  let envWithMyGoPkgs = seedMyGoPackageEnv(mygoAliases, myGoPkgImports, goPkgImports, envWithGoPkgs)
-  let envWithPredecl = predeclareAllFunctions(combined, envWithMyGoPkgs)
-  let userSyms = buildSymbolTable(goPkgImports, allDecls, envWithMyGoPkgs)
-  let extSyms = buildSymbolTable([] as Slice[GoPackageEntry], extDecls, envWithMyGoPkgs)
+  let setup = prepareInferenceSetup(combined, goPkgImports, mygoAliases, myGoPkgImports, [] as Slice[EnvEntry])
   let importedStructSymbols = myGoPackageStructSymbols(myGoPkgImports, goPkgImports, [] as Slice[Symbol])
-  let initialSymbols = concatSymbols(concatSymbols(userSyms, extSyms), importedStructSymbols)
+  let initialSymbols = concatSymbols(setup.Symbols, importedStructSymbols)
   let state = InferState {
     FreshVarID: 1,
     PkgInfo: Some(PkgInfo { Dir: "", Name: "", Decls: combined }),
@@ -640,7 +644,7 @@ func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDe
     NamedImpls: namedImplNames(combined, 0, [] as Slice[String]),
     ResolvedConstraintArgs: {},
   }
-  let result = inferDecls(combined, envWithPredecl, [], state)
+  let result = inferDecls(combined, setup.Env, [], state)
   switch result
     case Ok(info) =>
       let collected = collectInstances(allDecls)
@@ -678,17 +682,13 @@ func InferPackageWithExternalInfo(files: Slice[PkgDeclSource], externalInfo: Pac
   let externalDecls = appendDecls(externalInfo.ExternalTypedDecls, externalInfo.TypedDecls)
   let externalSources = appendPkgDeclSources(externalInfo.ExternalTypedDeclSources, externalInfo.TypedDeclSources)
   let mygoAliases = collectMyGoPackageImports(allDecls)
-  let envWithGoPkgs = seedGoPackageEnv(goPkgImports, initialEnv())
-  let envWithMyGoPkgs = seedMyGoPackageEnv(mygoAliases, myGoPkgImports, goPkgImports, envWithGoPkgs)
   # externalInfo.Env is newest-first and may repeat the same name (a function
   # is predeclared and then replaced by its inferred signature).  Batch the
   # entries with first-match-wins indexing to preserve that resolution order.
-  let envWithExternal = envPutBatchLatest(envWithMyGoPkgs, externalInfo.Env)
-  let envWithPredecl = predeclareAllFunctions(allDecls, envWithExternal)
-  let userSyms = buildSymbolTable(goPkgImports, allDecls, envWithExternal)
-  let extSyms = buildSymbolTable([] as Slice[GoPackageEntry], externalDecls, envWithExternal)
+  let setup = prepareInferenceSetup(allDecls, goPkgImports, mygoAliases, myGoPkgImports, externalInfo.Env)
+  let externalSymbols = buildSymbolTable([] as Slice[GoPackageEntry], externalDecls, setup.Env)
   let importedStructSymbols = myGoPackageStructSymbols(myGoPkgImports, goPkgImports, [] as Slice[Symbol])
-  let initialSymbols = concatSymbols(concatSymbols(userSyms, extSyms), importedStructSymbols)
+  let initialSymbols = concatSymbols(concatSymbols(setup.Symbols, externalSymbols), importedStructSymbols)
   let named = namedImplNames(externalDecls, 0, namedImplNames(allDecls, 0, [] as Slice[String]))
   let state = InferState {
     FreshVarID: 1,
@@ -702,7 +702,7 @@ func InferPackageWithExternalInfo(files: Slice[PkgDeclSource], externalInfo: Pac
     NamedImpls: named,
     ResolvedConstraintArgs: {},
   }
-  let result = inferDecls(allDecls, envWithPredecl, externalInfo.Fields, state)
+  let result = inferDecls(allDecls, setup.Env, externalInfo.Fields, state)
   switch result
     case Ok(info) =>
       let collected = collectInstances(allDecls)
@@ -1812,7 +1812,12 @@ end
 
 # Predeclare all function signatures for forward reference support.
 func predeclareAllFunctions(decls: Slice[ast2.Decl], env: Env) -> Env
-  predeclareImplMethods(decls, predeclareFunctions(decls, env))
+  # Run declaration predeclaration twice so aliases from later source files
+  # are visible while resolving earlier enum fields and function signatures.
+  # The second pass only refreshes equivalent schemes, while aliases remain
+  # transparent at every structural-symbol and pattern-binding boundary.
+  let aliasesVisible = predeclareFunctions(decls, env)
+  predeclareImplMethods(decls, predeclareFunctions(decls, aliasesVisible))
 end
 
 func appendDecls(acc: Slice[ast2.Decl], items: Slice[ast2.Decl]) -> Slice[ast2.Decl]
