@@ -53,6 +53,36 @@ end
 	}
 }
 
+func TestInferSwitchCaseMismatchIncludesBranchTypes(t *testing.T) {
+	parsed := parser2.ParseFile(`package sample
+
+enum Choice
+  First
+  Second
+end
+
+func broken(choice: Choice) -> Int
+  switch choice
+    case First => 1
+    case Second => "wrong"
+  end
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	got := InferFile(file.F0)
+	err, ok := got.(Result__Err[PackageInfo, string])
+	if !ok {
+		t.Fatalf("InferFile unexpectedly succeeded: %v", got)
+	}
+	want := "switch case mismatch [first=<input>:10:19 current=<input>:11:20]: switch case type mismatch: cannot unify Int with String [previous=Int current=String]"
+	if !strings.Contains(err.F0, want) {
+		t.Fatalf("switch mismatch lacks branch types: %q\nwant substring: %q", err.F0, want)
+	}
+}
+
 func TestInferNamedStructEnumVariantUsesFieldNamesAndGenericArguments(t *testing.T) {
 	parsed := parser2.ParseFile(`package sample
 

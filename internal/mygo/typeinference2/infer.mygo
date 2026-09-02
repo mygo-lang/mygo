@@ -708,7 +708,7 @@ func inferSwitch(target: ast2.Expr, cases: Slice[ast2.SwitchCase], env: Env, sta
       # target node; relying on an outer expression copy can otherwise lose
       # the annotation for a local binding inside nested function literals.
       let typedTarget = ast2.Expr { ID: eir.Expr.ID, Pos: eir.Expr.Pos, Kind: eir.Expr.Kind, Type: Some(resolvedTarget) }
-      let next = inferTypedSwitchCases(cases, resolvedTarget, env, value.State, value.Subst, None, value.Predicates, [] as Slice[ast2.SwitchCase])
+      let next = inferTypedSwitchCases(cases, resolvedTarget, env, value.State, value.Subst, None, None, value.Predicates, [] as Slice[ast2.SwitchCase])
       switch next
         case Err(msg) => Err(msg)
         case Ok(pair) then
@@ -723,7 +723,7 @@ end
 
 # Preserve the inferred case bodies in the typed AST.  In particular this
 # carries DictionaryCallExpr annotations out of nested matches to codegen2.
-func inferTypedSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoType, env: Env, state: InferState, subst: Subst, resultType: Option[ast2.MonoType], predicates: Slice[Predicate], out: Slice[ast2.SwitchCase]) -> Result[(InferResult, Slice[ast2.SwitchCase]), String]
+func inferTypedSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoType, env: Env, state: InferState, subst: Subst, resultType: Option[ast2.MonoType], resultOrigin: Option[ast2.SourcePos], predicates: Slice[Predicate], out: Slice[ast2.SwitchCase]) -> Result[(InferResult, Slice[ast2.SwitchCase]), String]
   if cases.Len() == 0 then
     switch resultType
       case Some(t) => Ok((InferResult { Type: applySubst(subst, t), Predicates: predicates, Subst: subst, State: state }, applyTypedSwitchCasesSubst(subst, out)))
@@ -747,12 +747,12 @@ func inferTypedSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoT
             let value = eir.Result
             let typedOut = out.Append(ast2.SwitchCase { Pattern: pattern, Body: eir.Expr })
             switch resultType
-              case None => inferTypedSwitchCases(sliceDrop(cases, 1), targetType, env, value.State, composeSubst(value.Subst, subst), Some(value.Type), appendPredicates(predicates, value.Predicates), typedOut)
+              case None => inferTypedSwitchCases(sliceDrop(cases, 1), targetType, env, value.State, composeSubst(value.Subst, subst), Some(value.Type), Some(current.Body.Pos), appendPredicates(predicates, value.Predicates), typedOut)
               case Some(previous) =>
                 let nextSubst = unifySwitchCaseTypes(env, current.Body, applySubst(value.Subst, previous), applySubst(value.Subst, value.Type), composeSubst(value.Subst, subst))
                 switch nextSubst
-                  case Err(msg) => Err("switch case type mismatch in " + current.Body.Pos.SourceName + ": " + msg)
-                  case Ok(s) => inferTypedSwitchCases(sliceDrop(cases, 1), targetType, env, value.State, s, Some(applySubst(s, previous)), appendPredicates(predicates, value.Predicates), typedOut)
+                  case Err(msg) => Err(switchCaseMismatchLocation(resultOrigin, current.Body.Pos) + ": " + msg)
+                  case Ok(s) => inferTypedSwitchCases(sliceDrop(cases, 1), targetType, env, value.State, s, Some(applySubst(s, previous)), resultOrigin, appendPredicates(predicates, value.Predicates), typedOut)
                 end
             end
           end
@@ -955,15 +955,31 @@ func unifySwitchCaseTypes(env: Env, body: ast2.Expr, previous: ast2.MonoType, cu
   # TCon — the qualifier is restored by inferSwitch.
   switch unify(previous, current, subst)
     case Ok(next) => Ok(next)
-    case Err(_) =>
+    case Err(primaryMsg) =>
       switch current
         case TQualifiedName(_, inner) =>
           switch unify(previous, applySubst(subst, inner.value()), subst)
             case Ok(next) => Ok(next)
-            case Err(msg) => if isBareZeroFieldVariant(env, body) => Ok(subst) else Err(msg)
+            case Err(fallbackMsg) => if isBareZeroFieldVariant(env, body) => Ok(subst) else switchCaseTypeMismatch(primaryMsg, fallbackMsg, previous, current)
           end
-        case _ => if isBareZeroFieldVariant(env, body) => Ok(subst) else Err("switch case type mismatch")
+        case _ => if isBareZeroFieldVariant(env, body) => Ok(subst) else switchCaseTypeMismatch(primaryMsg, primaryMsg, previous, current)
       end
+  end
+end
+
+# Keep the original unification error and both resolved branch types.  This is
+# especially important for tuple-valued switch branches, where a mismatch in
+# one tuple element was previously reduced to the unhelpful generic message.
+func switchCaseTypeMismatch(primaryMsg: String, fallbackMsg: String, previous: ast2.MonoType, current: ast2.MonoType) -> Result[Subst, String]
+  let reason = if fallbackMsg == primaryMsg => primaryMsg else primaryMsg + "; fallback: " + fallbackMsg
+  Err("switch case type mismatch: " + reason + " [previous=" + MonoStringFull(previous) + " current=" + MonoStringFull(current) + "]")
+end
+
+func switchCaseMismatchLocation(previous: Option[ast2.SourcePos], current: ast2.SourcePos) -> String
+  let currentText = current.SourceName + ":" + current.Line.ToString() + ":" + current.Column.ToString()
+  switch previous
+    case Some(pos) => "switch case mismatch [first=" + pos.SourceName + ":" + pos.Line.ToString() + ":" + pos.Column.ToString() + " current=" + currentText + "]"
+    case None => "switch case mismatch [current=" + currentText + "]"
   end
 end
 

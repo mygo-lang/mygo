@@ -978,7 +978,7 @@ func inferSwitch(target ast2.Expr, cases []ast2.SwitchCase, env Env, state Infer
 			value := __mygo_match___mygo_expr_1.F0.Result
 			resolvedTarget := applySubst(value.Subst, value.Type)
 			typedTarget := ast2.Expr{ID: __mygo_match___mygo_expr_1.F0.Expr.ID, Pos: __mygo_match___mygo_expr_1.F0.Expr.Pos, Kind: __mygo_match___mygo_expr_1.F0.Expr.Kind, Type: Some[ast2.MonoType](resolvedTarget)}
-			next := inferTypedSwitchCases(cases, resolvedTarget, env, value.State, value.Subst, None[ast2.MonoType](), value.Predicates, []ast2.SwitchCase{})
+			next := inferTypedSwitchCases(cases, resolvedTarget, env, value.State, value.Subst, None[ast2.MonoType](), None[ast2.SourcePos](), value.Predicates, []ast2.SwitchCase{})
 			var __mygo_expr_2 Result[ExprInferResult, string]
 			if __mygo_match___mygo_expr_4, ok := next.(Result__Err[struct {
 				F0 InferResult
@@ -1010,11 +1010,11 @@ func inferSwitch(target ast2.Expr, cases []ast2.SwitchCase, env Env, state Infer
 	}
 	return __mygo_expr_0
 }
-func inferTypedSwitchCases(cases []ast2.SwitchCase, targetType ast2.MonoType, env Env, state InferState, subst Subst, resultType Option[ast2.MonoType], predicates []Predicate, out []ast2.SwitchCase) Result[struct {
+func inferTypedSwitchCases(cases []ast2.SwitchCase, targetType ast2.MonoType, env Env, state InferState, subst Subst, resultType Option[ast2.MonoType], resultOrigin Option[ast2.SourcePos], predicates []Predicate, out []ast2.SwitchCase) Result[struct {
 	F0 InferResult
 	F1 []ast2.SwitchCase
 }, string] {
-	return __mygo_mt_typeinference2_inferTypedSwitchCases(cases, targetType, env, state, subst, resultType, predicates, out, 0)
+	return __mygo_mt_typeinference2_inferTypedSwitchCases(cases, targetType, env, state, subst, resultType, resultOrigin, predicates, out, 0)
 }
 func inferSwitchCases(cases []ast2.SwitchCase, targetType ast2.MonoType, env Env, state InferState, subst Subst, resultType Option[ast2.MonoType], predicates []Predicate) Result[InferResult, string] {
 	return __mygo_mt_typeinference2_inferSwitchCases(cases, targetType, env, state, subst, resultType, predicates, 0)
@@ -1200,43 +1200,66 @@ func variantResultTypeForTarget(targetType ast2.MonoType, resultType ast2.MonoTy
 func unifySwitchCaseTypes(env Env, body ast2.Expr, previous ast2.MonoType, current ast2.MonoType, subst Subst) Result[Subst, string] {
 	__mygo_expr_0 := unify(previous, current, subst)
 	var __mygo_expr_1 Result[Subst, string]
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[Subst, string]); ok {
-		__mygo_expr_1 = Ok[Subst, string](__mygo_match___mygo_expr_2.F0)
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[Subst, string]); ok {
+		__mygo_expr_1 = Ok[Subst, string](__mygo_match___mygo_expr_3.F0)
 	} else {
-		if _, ok := __mygo_expr_0.(Result__Err[Subst, string]); ok {
-			var __mygo_expr_2 Result[Subst, string]
-			if __mygo_match___mygo_expr_4, ok := current.(ast2.MonoType__TQualifiedName); ok {
-				__mygo_expr_5 := unify(previous, applySubst(subst, *__mygo_match___mygo_expr_4.F1), subst)
-				var __mygo_expr_6 Result[Subst, string]
-				if __mygo_match___mygo_expr_8, ok := __mygo_expr_5.(Result__Ok[Subst, string]); ok {
-					__mygo_expr_6 = Ok[Subst, string](__mygo_match___mygo_expr_8.F0)
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[Subst, string]); ok {
+			var __mygo_expr_3 Result[Subst, string]
+			if __mygo_match___mygo_expr_5, ok := current.(ast2.MonoType__TQualifiedName); ok {
+				__mygo_expr_6 := unify(previous, applySubst(subst, *__mygo_match___mygo_expr_5.F1), subst)
+				var __mygo_expr_7 Result[Subst, string]
+				if __mygo_match___mygo_expr_9, ok := __mygo_expr_6.(Result__Ok[Subst, string]); ok {
+					__mygo_expr_7 = Ok[Subst, string](__mygo_match___mygo_expr_9.F0)
 				} else {
-					if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Err[Subst, string]); ok {
-						var __mygo_expr_8 Result[Subst, string]
+					if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Err[Subst, string]); ok {
+						var __mygo_expr_9 Result[Subst, string]
 						if isBareZeroFieldVariant(env, body) {
-							__mygo_expr_8 = Ok[Subst, string](subst)
+							__mygo_expr_9 = Ok[Subst, string](subst)
 						} else {
-							__mygo_expr_8 = Err[Subst, string](__mygo_match___mygo_expr_7.F0)
+							__mygo_expr_9 = switchCaseTypeMismatch(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_8.F0, previous, current)
 						}
-						__mygo_expr_6 = __mygo_expr_8
+						__mygo_expr_7 = __mygo_expr_9
 					} else {
 					}
 				}
-				__mygo_expr_2 = __mygo_expr_6
+				__mygo_expr_3 = __mygo_expr_7
 			} else {
-				var __mygo_expr_3 Result[Subst, string]
+				var __mygo_expr_4 Result[Subst, string]
 				if isBareZeroFieldVariant(env, body) {
-					__mygo_expr_3 = Ok[Subst, string](subst)
+					__mygo_expr_4 = Ok[Subst, string](subst)
 				} else {
-					__mygo_expr_3 = Err[Subst, string]("switch case type mismatch")
+					__mygo_expr_4 = switchCaseTypeMismatch(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F0, previous, current)
 				}
-				__mygo_expr_2 = __mygo_expr_3
+				__mygo_expr_3 = __mygo_expr_4
 			}
-			__mygo_expr_1 = __mygo_expr_2
+			__mygo_expr_1 = __mygo_expr_3
 		} else {
 		}
 	}
 	return __mygo_expr_1
+}
+func switchCaseTypeMismatch(primaryMsg string, fallbackMsg string, previous ast2.MonoType, current ast2.MonoType) Result[Subst, string] {
+	var __mygo_expr_0 string
+	if fallbackMsg == primaryMsg {
+		__mygo_expr_0 = primaryMsg
+	} else {
+		__mygo_expr_0 = primaryMsg + "; fallback: " + fallbackMsg
+	}
+	reason := __mygo_expr_0
+	return Err[Subst, string]("switch case type mismatch: " + reason + " [previous=" + MonoStringFull(previous) + " current=" + MonoStringFull(current) + "]")
+}
+func switchCaseMismatchLocation(previous Option[ast2.SourcePos], current ast2.SourcePos) string {
+	currentText := current.SourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(current.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(current.Column)
+	var __mygo_expr_0 string
+	if __mygo_match___mygo_expr_1, ok := previous.(Option__Some[ast2.SourcePos]); ok {
+		__mygo_expr_0 = "switch case mismatch [first=" + __mygo_match___mygo_expr_1.F0.SourceName + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_1.F0.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(__mygo_match___mygo_expr_1.F0.Column) + " current=" + currentText + "]"
+	} else {
+		if _, ok := previous.(Option__None[ast2.SourcePos]); ok {
+			__mygo_expr_0 = "switch case mismatch [current=" + currentText + "]"
+		} else {
+		}
+	}
+	return __mygo_expr_0
 }
 func isBareZeroFieldVariant(env Env, expr ast2.Expr) bool {
 	__mygo_expr_0 := expr.Kind
@@ -5382,7 +5405,7 @@ func __mygo_mt_typeinference2_inferTypedStructLitFields(__mygo_mt_p0 ast2.MonoTy
 		}
 	}
 }
-func __mygo_mt_typeinference2_inferTypedSwitchCases(__mygo_mt_p0 []ast2.SwitchCase, __mygo_mt_p1 ast2.MonoType, __mygo_mt_p2 Env, __mygo_mt_p3 InferState, __mygo_mt_p4 Subst, __mygo_mt_p5 Option[ast2.MonoType], __mygo_mt_p6 []Predicate, __mygo_mt_p7 []ast2.SwitchCase, __mygo_state int) Result[struct {
+func __mygo_mt_typeinference2_inferTypedSwitchCases(__mygo_mt_p0 []ast2.SwitchCase, __mygo_mt_p1 ast2.MonoType, __mygo_mt_p2 Env, __mygo_mt_p3 InferState, __mygo_mt_p4 Subst, __mygo_mt_p5 Option[ast2.MonoType], __mygo_mt_p6 Option[ast2.SourcePos], __mygo_mt_p7 []Predicate, __mygo_mt_p8 []ast2.SwitchCase, __mygo_state int) Result[struct {
 	F0 InferResult
 	F1 []ast2.SwitchCase
 }, string] {
@@ -5397,7 +5420,7 @@ func __mygo_mt_typeinference2_inferTypedSwitchCases(__mygo_mt_p0 []ast2.SwitchCa
 					}, string](struct {
 						F0 InferResult
 						F1 []ast2.SwitchCase
-					}{F0: InferResult{Type: applySubst(__mygo_mt_p4, __mygo_match___mygo_expr_0.F0), Predicates: __mygo_mt_p6, Subst: __mygo_mt_p4, State: __mygo_mt_p3}, F1: applyTypedSwitchCasesSubst(__mygo_mt_p4, __mygo_mt_p7)})
+					}{F0: InferResult{Type: applySubst(__mygo_mt_p4, __mygo_match___mygo_expr_0.F0), Predicates: __mygo_mt_p7, Subst: __mygo_mt_p4, State: __mygo_mt_p3}, F1: applyTypedSwitchCasesSubst(__mygo_mt_p4, __mygo_mt_p8)})
 				} else {
 					if _, ok := __mygo_mt_p5.(Option__None[ast2.MonoType]); ok {
 						return Err[struct {
@@ -5427,7 +5450,7 @@ func __mygo_mt_typeinference2_inferTypedSwitchCases(__mygo_mt_p0 []ast2.SwitchCa
 						} else {
 							if __mygo_match___mygo_expr_2, ok := bodyInferred.(Result__Ok[ExprInferResult, string]); ok {
 								value := __mygo_match___mygo_expr_2.F0.Result
-								typedOut := MygoIN5SliceM6Append(__mygo_mt_p7, ast2.SwitchCase{Pattern: pattern, Body: __mygo_match___mygo_expr_2.F0.Expr})
+								typedOut := MygoIN5SliceM6Append(__mygo_mt_p8, ast2.SwitchCase{Pattern: pattern, Body: __mygo_match___mygo_expr_2.F0.Expr})
 								if _, ok := __mygo_mt_p5.(Option__None[ast2.MonoType]); ok {
 									__tail_0 := sliceDrop(__mygo_mt_p0, 1)
 									__tail_1 := __mygo_mt_p1
@@ -5435,9 +5458,10 @@ func __mygo_mt_typeinference2_inferTypedSwitchCases(__mygo_mt_p0 []ast2.SwitchCa
 									__tail_3 := value.State
 									__tail_4 := composeSubst(value.Subst, __mygo_mt_p4)
 									__tail_5 := Some[ast2.MonoType](value.Type)
-									__tail_6 := appendPredicates(__mygo_mt_p6, value.Predicates)
-									__tail_7 := typedOut
-									__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7
+									__tail_6 := Some[ast2.SourcePos](current.Body.Pos)
+									__tail_7 := appendPredicates(__mygo_mt_p7, value.Predicates)
+									__tail_8 := typedOut
+									__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7, __mygo_mt_p8 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7, __tail_8
 									__mygo_state = 0
 									continue
 								} else {
@@ -5447,7 +5471,7 @@ func __mygo_mt_typeinference2_inferTypedSwitchCases(__mygo_mt_p0 []ast2.SwitchCa
 											return Err[struct {
 												F0 InferResult
 												F1 []ast2.SwitchCase
-											}, string]("switch case type mismatch in " + current.Body.Pos.SourceName + ": " + __mygo_match___mygo_expr_5.F0)
+											}, string](switchCaseMismatchLocation(__mygo_mt_p6, current.Body.Pos) + ": " + __mygo_match___mygo_expr_5.F0)
 										} else {
 											if __mygo_match___mygo_expr_4, ok := nextSubst.(Result__Ok[Subst, string]); ok {
 												__tail_0 := sliceDrop(__mygo_mt_p0, 1)
@@ -5456,9 +5480,10 @@ func __mygo_mt_typeinference2_inferTypedSwitchCases(__mygo_mt_p0 []ast2.SwitchCa
 												__tail_3 := value.State
 												__tail_4 := __mygo_match___mygo_expr_4.F0
 												__tail_5 := Some[ast2.MonoType](applySubst(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_3.F0))
-												__tail_6 := appendPredicates(__mygo_mt_p6, value.Predicates)
-												__tail_7 := typedOut
-												__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7
+												__tail_6 := __mygo_mt_p6
+												__tail_7 := appendPredicates(__mygo_mt_p7, value.Predicates)
+												__tail_8 := typedOut
+												__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7, __mygo_mt_p8 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7, __tail_8
 												__mygo_state = 0
 												continue
 											} else {
