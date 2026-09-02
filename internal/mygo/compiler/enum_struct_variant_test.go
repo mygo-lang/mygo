@@ -124,6 +124,60 @@ func TestCombinedArea(t *testing.T) {
 	}
 }
 
+func TestCompileDirNoPreludeLowersTupleStructVariantPatterns(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	source := `package sample
+
+enum AgentEvent
+  Timeout { Where: Int }
+  Started
+end
+
+func timeoutWhere(state: Int, event: AgentEvent) -> Int
+  switch (state, event)
+    case (current, Timeout { Where }) => current + Where
+    case (_, _) => -1
+  end
+end
+
+func matched() -> Int
+  timeoutWhere(3, AgentEvent.Timeout { Where: 4 })
+end
+
+func unmatched() -> Int
+  timeoutWhere(3, AgentEvent.Started)
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompileDirNoPrelude(dir); err != nil {
+		t.Fatalf("CompileDirNoPrelude() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
+
+import "testing"
+
+func TestTupleStructVariant(t *testing.T) {
+	if got := matched(); got != 7 {
+		t.Fatalf("matched() = %d, want 7", got)
+	}
+	if got := unmatched(); got != -1 {
+		t.Fatalf("unmatched() = %d, want -1", got)
+	}
+}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "test", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated tuple struct variant package failed: %v\n%s", err, output)
+	}
+}
+
 func TestCompileDirNoPreludeResolvesQualifiedNamedVariantWithCollidingName(t *testing.T) {
 	dir := t.TempDir()
 	bootstrapTestModule(t, dir)
