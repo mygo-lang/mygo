@@ -569,7 +569,7 @@ func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice
   let initialSymbols = buildSymbolTable(goPkgImports, allDecls, envWithMyGoPkgs)
   let state = InferState {
     FreshVarID: 1,
-    PkgInfo: None,
+    PkgInfo: Some(PkgInfo { Dir: "", Name: "", Decls: allDecls }),
     GoPackages: goPkgImports,
     MyGoPackages: [] as Slice[MyGoPackageInfo],
     MyGoPackageCache: [] as Slice[MyGoPackageInfo],
@@ -630,7 +630,7 @@ func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDe
   let initialSymbols = concatSymbols(concatSymbols(userSyms, extSyms), importedStructSymbols)
   let state = InferState {
     FreshVarID: 1,
-    PkgInfo: None,
+    PkgInfo: Some(PkgInfo { Dir: "", Name: "", Decls: combined }),
     GoPackages: goPkgImports,
     MyGoPackages: myGoPkgImports,
     MyGoPackageCache: myGoPkgImports,
@@ -692,7 +692,7 @@ func InferPackageWithExternalInfo(files: Slice[PkgDeclSource], externalInfo: Pac
   let named = namedImplNames(externalDecls, 0, namedImplNames(allDecls, 0, [] as Slice[String]))
   let state = InferState {
     FreshVarID: 1,
-    PkgInfo: None,
+    PkgInfo: Some(PkgInfo { Dir: "", Name: "", Decls: allDecls }),
     GoPackages: goPkgImports,
     MyGoPackages: [] as Slice[MyGoPackageInfo],
     MyGoPackageCache: myGoPkgImports,

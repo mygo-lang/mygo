@@ -447,6 +447,48 @@ end
 	}
 }
 
+func TestInferPackageWithExternalAcceptsNamedEnumVariantInSliceField(t *testing.T) {
+	user := parser2.ParseFile(`package sample
+
+enum Content
+  Text { Text: String }
+end
+
+struct Message
+  Content: Slice[Content]
+end
+
+func NewText(text: String) -> Message
+  Message {
+    Content: [Content.Text { Text: text }],
+  }
+end
+`)
+	userFile, ok := user.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile user failed: %v", user)
+	}
+	external := parser2.ParseFile(`package prelude
+
+struct External
+  Value: Int
+end
+`)
+	externalFile, ok := external.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile external failed: %v", external)
+	}
+	got := InferPackageWithExternal(
+		[]PkgDeclSource{{Path: "message.mygo", Decls: userFile.F0.Decls}},
+		[]PkgDeclSource{{Path: "prelude.mygo", Decls: externalFile.F0.Decls}},
+		[]GoPackageEntry{},
+		[]MyGoPackageInfo{},
+	)
+	if !isPackageInfo(got) {
+		t.Fatalf("InferPackageWithExternal failed: %v", got)
+	}
+}
+
 func declsContainTypeAlias(decls []ast2.Decl, name string) bool {
 	for _, decl := range decls {
 		if alias, ok := decl.(ast2.Decl__TypeAliasDecl); ok && alias.F0 == name {

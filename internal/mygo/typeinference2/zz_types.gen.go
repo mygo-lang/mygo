@@ -444,7 +444,7 @@ func InferPackageWithGoPackages(files []PkgDeclSource, goPkgImports []GoPackageE
 	envWithMyGoPkgs := seedMyGoPackageEnv(mygoImports, []MyGoPackageInfo{}, goPkgImports, envWithGoPkgs)
 	envWithPredecl := predeclareAllFunctions(allDecls, envWithMyGoPkgs)
 	initialSymbols := buildSymbolTable(goPkgImports, allDecls, envWithMyGoPkgs)
-	state := InferState{FreshVarID: 1, PkgInfo: None[PkgInfo](), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo{}, MyGoPackageCache: []MyGoPackageInfo{}, Symbols: initialSymbols, SymbolIndex: symbolIndexFromSlice(initialSymbols, map[string]Symbol{}), ActiveConstraints: []Predicate{}, NamedImpls: namedImplNames(allDecls, 0, []string{}), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
+	state := InferState{FreshVarID: 1, PkgInfo: Some[PkgInfo](PkgInfo{Dir: "", Name: "", Decls: allDecls}), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo{}, MyGoPackageCache: []MyGoPackageInfo{}, Symbols: initialSymbols, SymbolIndex: symbolIndexFromSlice(initialSymbols, map[string]Symbol{}), ActiveConstraints: []Predicate{}, NamedImpls: namedImplNames(allDecls, 0, []string{}), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
 	result := inferDecls(allDecls, envWithPredecl, []FieldEntry{}, state)
 	var __mygo_expr_0 Result[PackageInfo, string]
 	if __mygo_match___mygo_expr_2, ok := result.(Result__Ok[PackageInfo, string]); ok {
@@ -473,7 +473,7 @@ func InferPackageWithExternal(files []PkgDeclSource, external []PkgDeclSource, g
 	extSyms := buildSymbolTable([]GoPackageEntry{}, extDecls, envWithMyGoPkgs)
 	importedStructSymbols := myGoPackageStructSymbols(myGoPkgImports, goPkgImports, []Symbol{})
 	initialSymbols := concatSymbols(concatSymbols(userSyms, extSyms), importedStructSymbols)
-	state := InferState{FreshVarID: 1, PkgInfo: None[PkgInfo](), GoPackages: goPkgImports, MyGoPackages: myGoPkgImports, MyGoPackageCache: myGoPkgImports, Symbols: initialSymbols, SymbolIndex: symbolIndexFromSlice(initialSymbols, map[string]Symbol{}), ActiveConstraints: []Predicate{}, NamedImpls: namedImplNames(combined, 0, []string{}), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
+	state := InferState{FreshVarID: 1, PkgInfo: Some[PkgInfo](PkgInfo{Dir: "", Name: "", Decls: combined}), GoPackages: goPkgImports, MyGoPackages: myGoPkgImports, MyGoPackageCache: myGoPkgImports, Symbols: initialSymbols, SymbolIndex: symbolIndexFromSlice(initialSymbols, map[string]Symbol{}), ActiveConstraints: []Predicate{}, NamedImpls: namedImplNames(combined, 0, []string{}), ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
 	result := inferDecls(combined, envWithPredecl, []FieldEntry{}, state)
 	var __mygo_expr_0 Result[PackageInfo, string]
 	if __mygo_match___mygo_expr_2, ok := result.(Result__Ok[PackageInfo, string]); ok {
@@ -505,7 +505,7 @@ func InferPackageWithExternalInfo(files []PkgDeclSource, externalInfo PackageInf
 	importedStructSymbols := myGoPackageStructSymbols(myGoPkgImports, goPkgImports, []Symbol{})
 	initialSymbols := concatSymbols(concatSymbols(userSyms, extSyms), importedStructSymbols)
 	named := namedImplNames(externalDecls, 0, namedImplNames(allDecls, 0, []string{}))
-	state := InferState{FreshVarID: 1, PkgInfo: None[PkgInfo](), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo{}, MyGoPackageCache: myGoPkgImports, Symbols: initialSymbols, SymbolIndex: symbolIndexFromSlice(initialSymbols, map[string]Symbol{}), ActiveConstraints: []Predicate{}, NamedImpls: named, ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
+	state := InferState{FreshVarID: 1, PkgInfo: Some[PkgInfo](PkgInfo{Dir: "", Name: "", Decls: allDecls}), GoPackages: goPkgImports, MyGoPackages: []MyGoPackageInfo{}, MyGoPackageCache: myGoPkgImports, Symbols: initialSymbols, SymbolIndex: symbolIndexFromSlice(initialSymbols, map[string]Symbol{}), ActiveConstraints: []Predicate{}, NamedImpls: named, ResolvedConstraintArgs: map[MethodConstraintKey][]ast2.MonoType{}}
 	result := inferDecls(allDecls, envWithPredecl, externalInfo.Fields, state)
 	var __mygo_expr_0 Result[PackageInfo, string]
 	if __mygo_match___mygo_expr_2, ok := result.(Result__Ok[PackageInfo, string]); ok {
