@@ -241,16 +241,41 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (trans
 			}
 		}
 		if tp, ok := c.Pattern.(*TuplePattern); ok {
-			bindTuple, ok := tuplePatternToBindPattern(tp)
-			if !ok {
-				line, col := common.NodePos(c.Pattern)
-				return translatedExpr{}, common.ErrorAtPos(g.currentFile, line, col, "tuple switch pattern contains an unsupported element")
-			}
 			child := ctx.child()
 			g.localSeq++
 			tmp := "__tuple_" + strconv.Itoa(g.localSeq)
-			destructure := []ast.Stmt{&ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(tmp)}, Rhs: []ast.Expr{target}, Tok: token.DEFINE}}
-			destructure = g.emitBindDestructureFromValue(destructure, child, tmp, bindTuple)
+			hasVariant := false
+			for _, elem := range tp.Elems {
+				if _, ok := switchPatternAsVariant(elem); ok {
+					hasVariant = true
+					break
+				}
+			}
+			prefix := []ast.Stmt{}
+			if hasVariant {
+				prefix = append(prefix, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(tmp)}, Rhs: []ast.Expr{target}, Tok: token.DEFINE})
+			}
+			destructure := []ast.Stmt{}
+			for index, elem := range tp.Elems {
+				if _, ok := elem.(*WildcardPattern); ok {
+					continue
+				}
+				if bind, ok := tuplePatternToBindPattern(&TuplePattern{Elems: []Pattern{elem}}); ok {
+					destructure = g.emitBindDestructureFromField(destructure, child, tmp, index, bind)
+					continue
+				}
+				if _, ok := switchPatternAsVariant(elem); !ok {
+					line, col := common.NodePos(elem)
+					return translatedExpr{}, common.ErrorAtPos(g.currentFile, line, col, "tuple switch pattern contains an unsupported element")
+				}
+			}
+			matches := make([]tupleVariantMatch, 0)
+			for index, elem := range tp.Elems {
+				if variant, ok := switchPatternAsVariant(elem); ok {
+					match := g.prepareTupleVariantPattern(variant, tupleElementGoType(ttype, index), &ast.SelectorExpr{X: ast.NewIdent(tmp), Sel: ast.NewIdent("F" + strconv.Itoa(index))}, child, c.Body)
+					matches = append(matches, match)
+				}
+			}
 			bodyBlock, code, err := caseBody(c.Body, child)
 			if err != nil {
 				return translatedExpr{}, err
@@ -259,7 +284,20 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (trans
 				bodyBlock = &ast.BlockStmt{List: []ast.Stmt{stmtForExpr(c.Body, code, expected)}}
 			}
 			bodyBlock.List = append(destructure, bodyBlock.List...)
-			tail = bodyBlock
+			var tupleTail ast.Stmt = bodyBlock
+			for index := len(matches) - 1; index >= 0; index-- {
+				match := matches[index]
+				g.localSeq++
+				okName := "ok_" + strconv.Itoa(g.localSeq)
+				tupleTail = &ast.IfStmt{
+					Init: &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(match.valueName), ast.NewIdent(okName)}, Rhs: []ast.Expr{&ast.TypeAssertExpr{X: match.target, Type: match.assertType}}, Tok: token.DEFINE},
+					Cond: ast.NewIdent(okName),
+					Body: &ast.BlockStmt{List: []ast.Stmt{tupleTail}},
+					Else: &ast.BlockStmt{List: []ast.Stmt{tail}},
+				}
+				tail = tupleTail
+			}
+			tail = &ast.BlockStmt{List: append(prefix, tupleTail)}
 			continue
 		}
 		if lit, ok := c.Pattern.(*LiteralPattern); ok {
@@ -475,6 +513,79 @@ type switchVariantPattern struct {
 	// isStruct reports whether the pattern carries named fields. When false,
 	// bindings are positional (tuple-style).
 	isStruct bool
+}
+
+type tupleVariantMatch struct {
+	target     ast.Expr
+	assertType ast.Expr
+	valueName  string
+}
+
+func tupleElementGoType(tupleType string, index int) string {
+	base, args := splitTypeArgs(tupleType)
+	if base == "Tuple" && index < len(args) {
+		return args[index]
+	}
+	return ""
+}
+
+func (g *gen) prepareTupleVariantPattern(pattern switchVariantPattern, elementType string, target ast.Expr, ctx *egCtx, body Expr) tupleVariantMatch {
+	assertTypeName := pattern.name
+	enumName := g.variantByName[pattern.name]
+	if enumName != "" {
+		assertTypeName = variantNameForEnum(enumName, pattern.name)
+	}
+	assertType := ast.Expr(ast.NewIdent(assertTypeName))
+	if _, args := splitTypeArgs(elementType); len(args) > 0 && enumName != "" {
+		typeArgs := make([]ast.Expr, len(args))
+		for i, arg := range args {
+			typeArgs[i] = g.goTypeExprForAssertion(arg)
+		}
+		assertType = genericIdent(assertTypeName, typeArgs...)
+	}
+	valueName := "_"
+	for _, binding := range pattern.bindings {
+		if binding.bindName != "_" && exprUsesIdent(body, binding.bindName) {
+			g.switchVarSeq++
+			valueName = "v_" + strconv.Itoa(g.switchVarSeq)
+			break
+		}
+	}
+	if valueName != "_" {
+		var variant *EnumVariant
+		if enum := g.pkg.Enums[enumName]; enum != nil {
+			for i := range enum.Variants {
+				if enum.Variants[i].Name == pattern.name {
+					variant = &enum.Variants[i]
+					break
+				}
+			}
+		}
+		for index, binding := range pattern.bindings {
+			if binding.bindName == "_" {
+				continue
+			}
+			fieldIndex := index
+			if pattern.isStruct && variant != nil {
+				fieldIndex = -1
+				for i := range variant.Fields {
+					if variant.Fields[i].Name == binding.fieldName {
+						fieldIndex = i
+						break
+					}
+				}
+			}
+			if fieldIndex < 0 {
+				continue
+			}
+			fieldName := fmt.Sprintf("F%d", fieldIndex)
+			if variant != nil && fieldIndex < len(variant.Fields) {
+				fieldName = variantFieldGoName(variant.Fields[fieldIndex], fieldIndex)
+			}
+			ctx.bindings[binding.bindName] = valueName + "." + fieldName
+		}
+	}
+	return tupleVariantMatch{target: target, assertType: assertType, valueName: valueName}
 }
 
 func switchPatternAsVariant(p Pattern) (switchVariantPattern, bool) {
