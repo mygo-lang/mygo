@@ -80,6 +80,10 @@ func (p *parser) parseWithYacc() error {
 	p.currentInterface = nil
 	p.currentImpl = nil
 	p.currentFunc = nil
+	// Reset package-level yacc diagnostics for every parse. This keeps debug
+	// output opt-in even when a previous parse enabled MYGO_PARSER_DEBUG.
+	yyDebug = 0
+	yyErrorVerbose = false
 	if os.Getenv("MYGO_PARSER_DEBUG") != "" {
 		yyDebug = 4
 		yyErrorVerbose = true
