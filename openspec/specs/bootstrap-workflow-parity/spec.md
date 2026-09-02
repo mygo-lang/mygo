@@ -60,7 +60,9 @@ deterministic returned list of written files. Bootstrap package inference SHALL
 also resolve a package-local type alias before it derives the types of struct
 fields and named enum-variant fields, regardless of the source file that
 declares the alias or whether prelude declarations participate as external
-context.
+context. For valid bootstrap-accepted MyGO source, every generated Go file
+SHALL compile with its generated package output and resolved dependencies;
+per-file automatic imports SHALL be sufficient and free of unused imports.
 
 #### Scenario: A package has ordinary and test MyGO sources
 - **WHEN** bootstrap sync compiles a package containing both source classes
@@ -79,3 +81,10 @@ context.
   external prelude declarations
 - **THEN** the package-local alias SHALL remain transparent while deriving
   struct and named enum-variant field types
+
+#### Scenario: Independently generated application files use and omit Prelude
+- **WHEN** a bootstrap build generates one file that lowers Prelude helper
+  calls and another that contains only erased Prelude-typed interfaces
+- **THEN** both generated files SHALL compile together, with the required
+  Prelude import present only in the file that references emitted Prelude code
+
