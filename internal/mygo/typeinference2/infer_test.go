@@ -83,6 +83,26 @@ end
 	}
 }
 
+func TestInferNamedEnumVariantFieldStateDoesNotReuseEmptySliceTypeVariable(t *testing.T) {
+	parsed := parser2.ParseFile(`package sample
+
+enum Item
+  Value { attachments: Slice[String] }
+end
+
+func build() -> (Item, Slice[Int])
+  (Item.Value { attachments: [] }, [])
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	if got := InferFile(file.F0); !isPackageInfo(got) {
+		t.Fatalf("InferFile failed: %v", got)
+	}
+}
+
 func TestInferNamedStructEnumVariantUsesFieldNamesAndGenericArguments(t *testing.T) {
 	parsed := parser2.ParseFile(`package sample
 

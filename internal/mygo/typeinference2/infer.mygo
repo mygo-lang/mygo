@@ -2736,7 +2736,7 @@ func inferEnumVariantStructLitFields(enumName: String, variantName: String, vari
                 case Err(msg) => Err("enum " + enumName + " variant " + variantName + " field \"" + f.Name + "\" type mismatch: " + msg)
                 case Ok(s2) =>
                   let typedField = ast2.StructLitField { Name: f.Name, Value: applyTypedExprSubst(s2, eir.Expr) }
-                  inferEnumVariantStructLitFields(enumName, variantName, variant, fields, env, state, fieldTypes, enumType, s2, index + 1, out.Append(typedField), seen.Append(f.Name))
+                  inferEnumVariantStructLitFields(enumName, variantName, variant, fields, env, eir.Result.State, fieldTypes, enumType, s2, index + 1, out.Append(typedField), seen.Append(f.Name))
               end
           end
       end

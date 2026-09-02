@@ -4861,7 +4861,7 @@ func __mygo_mt_typeinference2_inferEnumVariantStructLitFields(__mygo_mt_p0 strin
 											__tail_2 := __mygo_mt_p2
 											__tail_3 := __mygo_mt_p3
 											__tail_4 := __mygo_mt_p4
-											__tail_5 := __mygo_mt_p5
+											__tail_5 := __mygo_match___mygo_expr_1.F0.Result.State
 											__tail_6 := __mygo_mt_p6
 											__tail_7 := __mygo_mt_p7
 											__tail_8 := __mygo_match___mygo_expr_3.F0
