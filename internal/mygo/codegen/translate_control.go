@@ -288,12 +288,18 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (trans
 
 			// Construct type assertion name from enum info
 			assertTypeName := vpName
-			enumName, found := g.variantByName[vpName]
-			if !found {
-				if baseName, _ := splitTypeArgs(ttype); baseName != "" && baseName != vpName {
-					enumName = baseName
-					found = true
+			enumName := ""
+			found := false
+			if baseName, _ := splitTypeArgs(ttype); baseName != "" && baseName != vpName {
+				if enum := g.pkg.Enums[baseName]; enum != nil {
+					if enumHasVariant(enum, vpName) {
+						enumName = baseName
+						found = true
+					}
 				}
+			}
+			if !found {
+				enumName, found = g.variantByName[vpName]
 			}
 			if found {
 				assertTypeName = variantNameForEnum(enumName, vpName)
@@ -430,6 +436,18 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (trans
 			Names: []*ast.Ident{ast.NewIdent(tmp)}, Type: g.goTypeExprFromString(expected),
 		}}}}}, renameIIFEReturns([]ast.Stmt{tail}, tmp)...),
 	}, nil
+}
+
+func enumHasVariant(enum *EnumDecl, name string) bool {
+	if enum == nil {
+		return false
+	}
+	for _, variant := range enum.Variants {
+		if variant.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *gen) bareBindPatternAsVariant(bp *BindNamePattern, ttype string) *VariantPattern {

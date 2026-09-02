@@ -2018,6 +2018,49 @@ func TestInferEnumVariantStructLitUnknownField(t *testing.T) {
 	}
 }
 
+func TestInferTupleSwitchPatternUsesEnumTargetForCollidingStructVariant(t *testing.T) {
+	state := NewInferState()
+	state.PkgInfo = &PkgInfo{
+		Name: "main",
+		Enums: map[string]*EnumDecl{
+			"AgentState": {
+				Name: "AgentState",
+				Variants: []EnumVariant{{
+					Name:   "Running",
+					Fields: []Field{{Name: "Loop", Type: &NamedType{Name: "Int"}}},
+				}},
+			},
+			"ToolExecutionStatus": {
+				Name:     "ToolExecutionStatus",
+				Variants: []EnumVariant{{Name: "Running"}},
+			},
+		},
+	}
+	env := TypeEnv{
+		"pair": &Scheme{Body: QualifiedType{Body: TCon{Name: "Tuple", Args: []MonoType{
+			TCon{Name: "AgentState"},
+			TCon{Name: "Int"},
+		}}}},
+	}
+	expr := &SwitchExpr{
+		Target: &IdentExpr{Name: "pair"},
+		Cases: []SwitchCase{{
+			Pattern: &TuplePattern{Elems: []Pattern{
+				&StructVariantPattern{Name: "Running", Fields: []StructPatternField{{Field: "Loop", Bind: "loop"}}},
+				&WildcardPattern{},
+			}},
+			Body: &IdentExpr{Name: "loop"},
+		}},
+	}
+	typ, err := inferExprType(env, expr, state)
+	if err != nil {
+		t.Fatalf("inferExprType() error = %v", err)
+	}
+	if !eqType(typ, TCon{Name: "Int"}) {
+		t.Fatalf("expected Int, got %s", typ)
+	}
+}
+
 func TestInferStructVariantPatternBindings(t *testing.T) {
 	state := NewInferState()
 	state.PkgInfo = &PkgInfo{
