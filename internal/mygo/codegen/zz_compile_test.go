@@ -198,11 +198,11 @@ func TestParsecPManyUsesTailcallTrampoline(t *testing.T) {
 		t.Fatalf("PMany declarations missing:\n%s", generated)
 	}
 	many := generated[start:end]
-	if !strings.Contains(many, "__mygo_mt_parsec_PManyLoop") || !strings.Contains(generated, "continue") {
-		t.Fatalf("PManyLoop was not lowered to a tailcall trampoline:\n%s", many)
+	if !strings.Contains(many, "__mygo_tcmc_stack") || !strings.Contains(many, "continue") {
+		t.Fatalf("PMany was not lowered to a tailcall trampoline:\n%s", many)
 	}
-	if strings.Contains(generated, "PManyLoop[A](p, r.State, true") {
-		t.Fatalf("PManyLoop still directly recurses:\n%s", many)
+	if strings.Contains(many, "PMany(p)(r_16.State)") {
+		t.Fatalf("PMany still directly recurses:\n%s", many)
 	}
 }
 
