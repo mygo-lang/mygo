@@ -116,14 +116,32 @@ func generateOneFile(file ast2.File, path string, automaticImports []GoImportPar
 				__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
 			}
 			withHKT := __mygo_expr_2
-			var __mygo_expr_3 []GoImportPart
-			if file.PackageName != "prelude" && declsNeedPreludeImport(file.Decls, info.ExternalTypedDecls) {
-				__mygo_expr_3 = MygoIN5SliceM6Append(imports, GoImportPart{Alias: ".", Path: "github.com/mygo-lang/mygo/prelude"})
+			sourcePrelude := file.PackageName != "prelude" && declsNeedPreludeImport(file.Decls, info.ExternalTypedDecls)
+			withoutPrelude := renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: imports, AstDecls: withHKT, Decls: []string{}})
+			var __mygo_expr_3 Result[string, string]
+			if __mygo_match___mygo_expr_5, ok := withoutPrelude.(Result__Err[string, string]); ok {
+				__mygo_expr_3 = Err[string, string](__mygo_match___mygo_expr_5.F0)
 			} else {
-				__mygo_expr_3 = imports
+				if __mygo_match___mygo_expr_4, ok := withoutPrelude.(Result__Ok[string, string]); ok {
+					needsPrelude := sourcePrelude || generatedSourceUsesPreludeHelper(__mygo_match___mygo_expr_4.F0, info.ExternalTypedDecls)
+					var __mygo_expr_5 []GoImportPart
+					if needsPrelude {
+						__mygo_expr_5 = MygoIN5SliceM6Append(imports, GoImportPart{Alias: ".", Path: "github.com/mygo-lang/mygo/prelude"})
+					} else {
+						__mygo_expr_5 = imports
+					}
+					withPrelude := __mygo_expr_5
+					var __mygo_expr_6 Result[string, string]
+					if needsPrelude {
+						__mygo_expr_6 = renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: withPrelude, AstDecls: withHKT, Decls: []string{}})
+					} else {
+						__mygo_expr_6 = Ok[string, string](__mygo_match___mygo_expr_4.F0)
+					}
+					__mygo_expr_3 = __mygo_expr_6
+				} else {
+				}
 			}
-			withPrelude := __mygo_expr_3
-			__mygo_expr_0 = renderGoFile(GoFileParts{PackageName: file.PackageName, Imports: withPrelude, AstDecls: withHKT, Decls: []string{}})
+			__mygo_expr_0 = __mygo_expr_3
 		} else {
 		}
 	}
@@ -149,23 +167,23 @@ func declsUsePreludeName(decls []ast2.Decl, names []string) bool {
 }
 func declUsesPreludeName(decl ast2.Decl, names []string) bool {
 	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_7, ok := decl.(ast2.Decl__TypeAliasDecl); ok {
-		__mygo_expr_0 = typeUsesPreludeName(__mygo_match___mygo_expr_7.F2, names)
+	if __mygo_match___mygo_expr_6, ok := decl.(ast2.Decl__TypeAliasDecl); ok {
+		__mygo_expr_0 = typeUsesPreludeName(__mygo_match___mygo_expr_6.F2, names)
 	} else {
-		if __mygo_match___mygo_expr_6, ok := decl.(ast2.Decl__TypeDecl); ok {
-			__mygo_expr_0 = typeUsesPreludeName(__mygo_match___mygo_expr_6.F2, names)
+		if __mygo_match___mygo_expr_5, ok := decl.(ast2.Decl__TypeDecl); ok {
+			__mygo_expr_0 = typeUsesPreludeName(__mygo_match___mygo_expr_5.F2, names)
 		} else {
-			if __mygo_match___mygo_expr_5, ok := decl.(ast2.Decl__FuncDecl); ok {
-				__mygo_expr_0 = paramsUsePreludeName(__mygo_match___mygo_expr_5.F2, names) || optionTypeUsesPreludeName(__mygo_match___mygo_expr_5.F3, names) || constraintsUsePreludeName(__mygo_match___mygo_expr_5.F5, names) || exprUsesPreludeName(__mygo_match___mygo_expr_5.F4, names)
+			if __mygo_match___mygo_expr_4, ok := decl.(ast2.Decl__FuncDecl); ok {
+				__mygo_expr_0 = paramsUsePreludeName(__mygo_match___mygo_expr_4.F2, names) || optionTypeUsesPreludeName(__mygo_match___mygo_expr_4.F3, names) || constraintsUsePreludeName(__mygo_match___mygo_expr_4.F5, names) || exprUsesPreludeName(__mygo_match___mygo_expr_4.F4, names)
 			} else {
-				if __mygo_match___mygo_expr_4, ok := decl.(ast2.Decl__StructDecl); ok {
-					__mygo_expr_0 = fieldsUsePreludeName(__mygo_match___mygo_expr_4.F2, names)
+				if __mygo_match___mygo_expr_3, ok := decl.(ast2.Decl__StructDecl); ok {
+					__mygo_expr_0 = fieldsUsePreludeName(__mygo_match___mygo_expr_3.F2, names)
 				} else {
-					if __mygo_match___mygo_expr_3, ok := decl.(ast2.Decl__EnumDecl); ok {
-						__mygo_expr_0 = variantsUsePreludeName(__mygo_match___mygo_expr_3.F2, names)
+					if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__EnumDecl); ok {
+						__mygo_expr_0 = variantsUsePreludeName(__mygo_match___mygo_expr_2.F2, names)
 					} else {
-						if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__InterfaceDecl); ok {
-							__mygo_expr_0 = funcSigsUsePreludeName(__mygo_match___mygo_expr_2.F2, names)
+						if _, ok := decl.(ast2.Decl__InterfaceDecl); ok {
+							__mygo_expr_0 = false
 						} else {
 							if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__ImplDecl); ok {
 								__mygo_expr_0 = typeUsesPreludeName(__mygo_match___mygo_expr_1.F1, names) || optionTypeUsesPreludeName(__mygo_match___mygo_expr_1.F2, names) || implMethodsUsePreludeName(__mygo_match___mygo_expr_1.F3, names)
@@ -275,14 +293,14 @@ func exprUsesPreludeName(expr ast2.Expr, names []string) bool {
 	for {
 		__mygo_expr_0 := expr.Kind
 		var __mygo_expr_1 bool
-		if __mygo_match___mygo_expr_19, ok := __mygo_expr_0.(ast2.ExprKind__IdentExpr); ok {
-			__mygo_expr_1 = containsString(names, __mygo_match___mygo_expr_19.F0)
+		if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ast2.ExprKind__IdentExpr); ok {
+			__mygo_expr_1 = containsString(names, __mygo_match___mygo_expr_18.F0)
 		} else {
-			if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
-				__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_18.F0, names) || typeExprsUsePreludeName(__mygo_match___mygo_expr_18.F1, names) || exprsUsePreludeName(__mygo_match___mygo_expr_18.F2, names)
+			if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
+				__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_17.F0, names) || typeExprsUsePreludeName(__mygo_match___mygo_expr_17.F1, names) || exprsUsePreludeName(__mygo_match___mygo_expr_17.F2, names)
 			} else {
-				if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ast2.ExprKind__DictionaryCallExpr); ok {
-					__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_17.F1, names) || exprsUsePreludeName(__mygo_match___mygo_expr_17.F2, names)
+				if _, ok := __mygo_expr_0.(ast2.ExprKind__DictionaryCallExpr); ok {
+					__mygo_expr_1 = true
 				} else {
 					if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
 						__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_16.F0, names)
@@ -349,6 +367,29 @@ func exprUsesPreludeName(expr ast2.Expr, names []string) bool {
 			}
 		}
 		return __mygo_expr_1
+	}
+}
+func generatedSourceUsesPreludeHelper(source string, decls []ast2.Decl) bool {
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
+		return false
+	} else {
+		decl := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.Decl__ImportDecl__Ctor("", ""))
+		var __mygo_expr_0 bool
+		if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__ImplDecl); ok {
+			__mygo_expr_0 = generatedSourceUsesImplHelpers(source, implStem(__mygo_match___mygo_expr_1.F1, __mygo_match___mygo_expr_1.F2, typeParamSet(__mygo_match___mygo_expr_1.F0)), __mygo_match___mygo_expr_1.F3)
+		} else {
+			__mygo_expr_0 = false
+		}
+		uses := __mygo_expr_0
+		return uses || generatedSourceUsesPreludeHelper(source, sliceDrop(decls, 1))
+	}
+}
+func generatedSourceUsesImplHelpers(source string, stem string, methods []ast2.ImplMethod) bool {
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) == 0 {
+		return false
+	} else {
+		method := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), ast2.ImplMethod{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string{}, Params: []ast2.Param{}, Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint{}}, Body: ast2.EmptyExpr()})
+		return strings.Contains(source, implMethodSymbol(stem, method.Sig.Name)) || generatedSourceUsesImplHelpers(source, stem, sliceDrop(methods, 1))
 	}
 }
 func exprsUsePreludeName(exprs []ast2.Expr, names []string) bool {

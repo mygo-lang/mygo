@@ -142,12 +142,15 @@ func generateOneFile(file: ast2.File, path: String, automaticImports: Slice[GoIm
       # Decide this from the MyGO declarations, before they are lowered to Go.
       # In particular, typeclass dictionaries become mangled Go identifiers;
       # inspecting those identifiers cannot reliably reveal their origin.
-      let withPrelude = if file.PackageName != "prelude" && declsNeedPreludeImport(file.Decls, info.ExternalTypedDecls) then
-        imports.Append(GoImportPart { Alias: ".", Path: "github.com/mygo-lang/mygo/prelude" })
-      else
-        imports
+      let sourcePrelude = file.PackageName != "prelude" && declsNeedPreludeImport(file.Decls, info.ExternalTypedDecls)
+      let withoutPrelude = renderGoFile(GoFileParts { PackageName: file.PackageName, Imports: imports, AstDecls: withHKT, Decls: [] as Slice[String] })
+      switch withoutPrelude
+        case Err(msg) => Err(msg)
+        case Ok(source) =>
+          let needsPrelude = sourcePrelude || generatedSourceUsesPreludeHelper(source, info.ExternalTypedDecls)
+          let withPrelude = if needsPrelude then imports.Append(GoImportPart { Alias: ".", Path: "github.com/mygo-lang/mygo/prelude" }) else imports end
+          if needsPrelude then renderGoFile(GoFileParts { PackageName: file.PackageName, Imports: withPrelude, AstDecls: withHKT, Decls: [] as Slice[String] }) else Ok(source) end
       end
-      renderGoFile(GoFileParts { PackageName: file.PackageName, Imports: withPrelude, AstDecls: withHKT, Decls: [] as Slice[String] })
   end
 end
 
@@ -196,7 +199,9 @@ func declUsesPreludeName(decl: ast2.Decl, names: Slice[String]) -> Bool
     case FuncDecl(_, _, params, ret, body, requirements) => paramsUsePreludeName(params, names) || optionTypeUsesPreludeName(ret, names) || constraintsUsePreludeName(requirements, names) || exprUsesPreludeName(body, names)
     case StructDecl(_, _, fields) => fieldsUsePreludeName(fields, names)
     case EnumDecl(_, _, variants) => variantsUsePreludeName(variants, names)
-    case InterfaceDecl(_, _, methods) => funcSigsUsePreludeName(methods, names)
+    # Typeclass interfaces are erased by codegen2. Their signatures must not
+    # cause a per-file Go import that has no emitted use.
+    case InterfaceDecl(_, _, _) => false
     case ImplDecl(_, target, iface, methods) => typeUsesPreludeName(target, names) || optionTypeUsesPreludeName(iface, names) || implMethodsUsePreludeName(methods, names)
     case _ => false
   end
@@ -274,7 +279,11 @@ func exprUsesPreludeName(expr: ast2.Expr, names: Slice[String]) -> Bool
   switch expr.Kind
     case IdentExpr(name) => containsString(names, name)
     case CallExpr(callee, typeArgs, args) => exprUsesPreludeName(callee, names) || typeExprsUsePreludeName(typeArgs, names) || exprsUsePreludeName(args, names)
-    case DictionaryCallExpr(_, receiver, args) => exprUsesPreludeName(receiver, names) || exprsUsePreludeName(args, names)
+    # Method dispatch becomes a mangled helper call during lowering. The
+    # receiver and arguments alone do not expose that helper name, so retain
+    # the Prelude import for a generated dictionary call; ordinary source
+    # references are handled by the remaining cases.
+    case DictionaryCallExpr(_, _, _) => true
     case FieldExpr(receiver, _) => exprUsesPreludeName(receiver, names)
     case UnaryExpr(_, value) => exprUsesPreludeName(value, names)
     case BinaryExpr(_, left, right) => exprUsesPreludeName(left, names) || exprUsesPreludeName(right, names)
@@ -291,6 +300,24 @@ func exprUsesPreludeName(expr: ast2.Expr, names: Slice[String]) -> Bool
     case SetLitExpr(items) => exprsUsePreludeName(items, names)
     case TupleExpr(items) => exprsUsePreludeName(items, names)
     case _ => false
+  end
+end
+
+func generatedSourceUsesPreludeHelper(source: String, decls: Slice[ast2.Decl]) -> Bool
+  if decls.Len() == 0 then false else
+    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    let uses = switch decl
+      case ImplDecl(tps, target, iface, methods) => generatedSourceUsesImplHelpers(source, implStem(target, iface, typeParamSet(tps)), methods)
+      case _ => false
+    end
+    uses || generatedSourceUsesPreludeHelper(source, sliceDrop(decls, 1))
+  end
+end
+
+func generatedSourceUsesImplHelpers(source: String, stem: String, methods: Slice[ast2.ImplMethod]) -> Bool
+  if methods.Len() == 0 then false else
+    let method = methods.Get(0).UnwrapOr(ast2.ImplMethod { Pos: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, Sig: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] }, Body: ast2.EmptyExpr() })
+    strings.Contains(source, implMethodSymbol(stem, method.Sig.Name)) || generatedSourceUsesImplHelpers(source, stem, sliceDrop(methods, 1))
   end
 end
 

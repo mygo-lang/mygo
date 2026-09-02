@@ -105,6 +105,113 @@ func TestResult(t *testing.T) {
 	}
 }
 
+func TestCompileDirBootstrapLowersTupleReturningSwitch(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	source := `package sample
+
+enum Signal
+  Continue
+  Stop
+end
+
+func reduce(signal: Signal) -> (Int, Slice[String])
+  switch signal
+    case Continue => (1, ["next"])
+    case _ => (0, [])
+  end
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompileDirBootstrap(dir); err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
+
+import "testing"
+
+func TestReduce(t *testing.T) {
+	value, commands := reduce(Signal__Continue__Ctor())
+	if value != 1 || len(commands) != 1 || commands[0] != "next" {
+		t.Fatalf("reduce(Continue) = (%d, %v)", value, commands)
+	}
+}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "test", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated tuple-switch package failed: %v\n%s", err, output)
+	}
+}
+
+func TestCompileDirBootstrapAddsPreludeImportOnlyForEmittedHelpers(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	interfaceSource := `package sample
+
+interface Store
+  func Save(value: Result[Int, String]) -> Result[(), String]
+end
+`
+	helperSource := `package sample
+
+func Count(items: Slice[String]) -> Int
+  let expanded = items.Append("next")
+  var total = 0
+  expanded.Each(func(value: String) -> ()
+    total = total + value.Len()
+  end)
+  total
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "store.mygo"), []byte(interfaceSource), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "use.mygo"), []byte(helperSource), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompileDirBootstrap(dir); err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	storeGenerated, err := os.ReadFile(filepath.Join(dir, "zz_store.gen.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(storeGenerated), `github.com/mygo-lang/mygo/prelude`) {
+		t.Fatalf("erased interface-only output imported prelude:\n%s", storeGenerated)
+	}
+	useGenerated, err := os.ReadFile(filepath.Join(dir, "zz_use.gen.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(useGenerated), `. "github.com/mygo-lang/mygo/prelude"`) {
+		t.Fatalf("helper-using output did not import prelude:\n%s", useGenerated)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
+
+import "testing"
+
+func TestCount(t *testing.T) {
+	if got := Count([]string{"a"}); got != 5 {
+		t.Fatalf("Count() = %d, want 5", got)
+	}
+}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "test", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated mixed-prelude package failed: %v\n%s", err, output)
+	}
+}
+
 func TestCompileDirBootstrapLowersStatementSwitchPatterns(t *testing.T) {
 	dir := t.TempDir()
 	bootstrapTestModule(t, dir)

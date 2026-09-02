@@ -914,7 +914,10 @@ end
 
 func translateSwitchBranchesTail(cases: Slice[ast2.SwitchCase], targetType: Option[ast2.MonoType], sourceTarget: ast2.Expr, target: goast.Expr, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
   if cases.Len() == 0 then
-    Ok([] as Slice[goast.Stmt])
+    # An unmatched tail-position switch must fail explicitly. Returning zero
+    # values would conceal a non-exhaustive match and is especially unsafe for
+    # tuple-returning state transitions.
+    Ok(goast.MustInlineGoStatements("panic(\"non-exhaustive switch\")"))
   else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
     switch current.Pattern

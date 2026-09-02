@@ -964,7 +964,7 @@ func translateAstReturnSwitchInner(target ast2.Expr, cases []ast2.SwitchCase, ta
 }
 func translateSwitchBranchesTail(cases []ast2.SwitchCase, targetType Option[ast2.MonoType], sourceTarget ast2.Expr, target goast.Expr, ctx *egCtx) Result[[]goast.Stmt, string] {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) == 0 {
-		return Ok[[]goast.Stmt, string]([]goast.Stmt{})
+		return Ok[[]goast.Stmt, string](goast.MustInlineGoStatements("panic(\"non-exhaustive switch\")"))
 	} else {
 		current := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), ast2.SwitchCase{Pattern: ast2.Pattern__WildcardPattern__Ctor(), Body: ast2.EmptyExpr()})
 		__mygo_expr_0 := current.Pattern

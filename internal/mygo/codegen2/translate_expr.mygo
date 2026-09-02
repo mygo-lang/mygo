@@ -706,17 +706,22 @@ func translateAstReturnExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[go
     case IfExpr(cond, thenExpr, elseExpr) => translateAstReturnIf(cond, thenExpr, elseExpr, ctx)
     case BlockExpr(items) => translateAstReturnBlock(items, ctx, 0, [] as Slice[goast.Stmt])
     case SwitchExpr(target, cases, targetType) =>
-      # Inside a mutual tail-call trampoline, a value switch in tail position
-      # lowers through the tail-aware path so every case body can rewrite
-      # member calls into state/continue.  Unit switches keep the existing
-      # statement-form lowering: their case bodies cannot be member calls.
+      # A tuple-returning top-level function needs `return left, right`, not a
+      # return of the anonymous tuple value used by expression-position switch
+      # lowering. Mutual-tail trampolines always use the tail-aware path so
+      # member calls can be rewritten into state transitions.
       switch ctx.mtPlan
         case Some(_) =>
           switch ctx.retType
             case TUnit => translateAstReturnValue(expr, ctx)
             case _ => translateAstReturnSwitch(target, cases, targetType, ctx)
           end
-        case None => translateAstReturnValue(expr, ctx)
+        case None =>
+          if returnsMultipleValues(ctx.retType) then
+            translateAstReturnSwitch(target, cases, targetType, ctx)
+          else
+            translateAstReturnValue(expr, ctx)
+          end
       end
     case _ =>
       if isMtTailCall(expr, ctx) then
@@ -728,6 +733,13 @@ func translateAstReturnExpr(expr: ast2.Expr, ctx: Ref[egCtx]) -> Result[Slice[go
           translateAstReturnValue(expr, ctx)
         end
       end
+  end
+end
+
+func returnsMultipleValues(typ: ast2.MonoType) -> Bool
+  switch typ
+    case TTuple(items) => items.Len() > 1
+    case _ => false
   end
 end
 

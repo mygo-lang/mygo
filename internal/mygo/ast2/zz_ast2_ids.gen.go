@@ -546,6 +546,7 @@ func __mygo_mt_ast2_sliceTailLoop[A any](__mygo_mt_p0 []A, __mygo_mt_p1 int, __m
 					if _, ok := item.(Option__None[A]); ok {
 						return __mygo_mt_p2
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -574,6 +575,7 @@ func __mygo_mt_ast2_validateLoopCases(__mygo_mt_p0 []SwitchCase, __mygo_mt_p1 in
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -621,6 +623,7 @@ func __mygo_mt_ast2_validateLoopDecls(__mygo_mt_p0 []Decl, __mygo_mt_p1 int, __m
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -648,6 +651,7 @@ func __mygo_mt_ast2_validateLoopExprs(__mygo_mt_p0 []Expr, __mygo_mt_p1 int, __m
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -676,6 +680,7 @@ func __mygo_mt_ast2_validateLoopGoOperands(__mygo_mt_p0 []GoOperand, __mygo_mt_p
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -723,9 +728,11 @@ func __mygo_mt_ast2_validateLoopMapPairs(__mygo_mt_p0 []struct {
 								__mygo_state = 0
 								continue
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -754,6 +761,7 @@ func __mygo_mt_ast2_validateLoopMethods(__mygo_mt_p0 []ImplMethod, __mygo_mt_p1 
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -835,6 +843,7 @@ func __mygo_mt_ast2_validateLoopStmts(__mygo_mt_p0 []Stmt, __mygo_mt_p1 int, __m
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -863,6 +872,7 @@ func __mygo_mt_ast2_validateLoopStructFields(__mygo_mt_p0 []StructLitField, __my
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}

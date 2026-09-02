@@ -777,7 +777,13 @@ func translateAstReturnExpr(expr ast2.Expr, ctx *egCtx) Result[[]goast.Stmt, str
 						__mygo_expr_6 = __mygo_expr_8
 					} else {
 						if _, ok := __mygo_expr_5.(Option__None[MutualTailPlan]); ok {
-							__mygo_expr_6 = translateAstReturnValue(expr, ctx)
+							var __mygo_expr_7 Result[[]goast.Stmt, string]
+							if returnsMultipleValues(ctx.retType) {
+								__mygo_expr_7 = translateAstReturnSwitch(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, __mygo_match___mygo_expr_4.F2, ctx)
+							} else {
+								__mygo_expr_7 = translateAstReturnValue(expr, ctx)
+							}
+							__mygo_expr_6 = __mygo_expr_7
 						} else {
 						}
 					}
@@ -801,6 +807,15 @@ func translateAstReturnExpr(expr ast2.Expr, ctx *egCtx) Result[[]goast.Stmt, str
 		}
 	}
 	return __mygo_expr_1
+}
+func returnsMultipleValues(typ ast2.MonoType) bool {
+	var __mygo_expr_0 bool
+	if __mygo_match___mygo_expr_1, ok := typ.(ast2.MonoType__TTuple); ok {
+		__mygo_expr_0 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0) > 1
+	} else {
+		__mygo_expr_0 = false
+	}
+	return __mygo_expr_0
 }
 func translateAstReturnBlock(items []ast2.Stmt, ctx *egCtx, index int, out []goast.Stmt) Result[[]goast.Stmt, string] {
 	return __mygo_mt_codegen2_translateAstReturnBlock(items, ctx, index, out, 0)
