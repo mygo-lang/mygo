@@ -66,7 +66,9 @@ func predeclareEnumVariants(env: Env, vars: Slice[ast2.Variant], name: String, t
     let v = vars.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: emptyASTTypeExprs(), Named: false, Names: [] as Slice[String] })
     let enumType = tCon(name, typeParamsAsTypes(tps, 1))
     let constructorType = if v.Fields.Len() == 0 then enumType else ast2.MonoType.TFunc(typeArgsFromASTInEnvWithParamsList(v.Fields, tps, env, state), Ref.new(enumType)) end
-    predeclareEnumVariants(envPut(env, v.Name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: constructorType }), sliceDrop(vars, 1), name, tps, state)
+    let scheme = Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: constructorType }
+    let withQualified = envPut(env, name + "." + v.Name, scheme)
+    predeclareEnumVariants(envPut(withQualified, v.Name, scheme), sliceDrop(vars, 1), name, tps, state)
   end
 end
 
@@ -2681,7 +2683,7 @@ end
 func inferEnumVariantStructLit(enumName: String, variantName: String, constructorName: String, variant: ast2.Variant, fields: Slice[ast2.StructLitField], env: Env, state: InferState) -> Result[(InferResult, Slice[ast2.StructLitField]), String]
   switch envGet(env, constructorName)
     case Some(scheme) => inferEnumVariantStructLitWithScheme(enumName, variantName, variant, fields, env, state, Some(scheme))
-    case None => inferEnumVariantStructLitWithScheme(enumName, variantName, variant, fields, env, state, envGet(env, variantName))
+    case None => Err("unknown variant " + enumName + "." + variantName)
   end
 end
 

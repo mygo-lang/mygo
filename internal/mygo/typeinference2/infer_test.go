@@ -79,6 +79,38 @@ end
 	}
 }
 
+func TestInferNamedStructEnumVariantUsesQualifiedConstructorWhenNamesCollide(t *testing.T) {
+	parsed := parser2.ParseFile(`package sample
+
+enum AgentState
+  Running { Loop: String }
+end
+
+enum ToolExecutionStatus
+  Running
+end
+
+enum OtherState
+  Running { Label: String }
+end
+
+func makeAgent() -> AgentState
+  AgentState.Running { Loop: "agent" }
+end
+
+func makeOther() -> OtherState
+  OtherState.Running { Label: "other" }
+end
+`)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFile failed: %v", parsed)
+	}
+	if got := InferFile(file.F0); !isPackageInfo(got) {
+		t.Fatalf("InferFile failed: %v", got)
+	}
+}
+
 func TestInferNamedStructEnumVariantRejectsUnknownOrDuplicatePatternField(t *testing.T) {
 	for _, pattern := range []string{"Circle { missing }", "Circle { radius, radius }"} {
 		t.Run(pattern, func(t *testing.T) {

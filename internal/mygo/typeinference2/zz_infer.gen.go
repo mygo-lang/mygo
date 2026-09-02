@@ -3577,7 +3577,10 @@ func inferEnumVariantStructLit(enumName string, variantName string, constructorN
 		__mygo_expr_1 = inferEnumVariantStructLitWithScheme(enumName, variantName, variant, fields, env, state, Some[Scheme](__mygo_match___mygo_expr_2.F0))
 	} else {
 		if _, ok := __mygo_expr_0.(Option__None[Scheme]); ok {
-			__mygo_expr_1 = inferEnumVariantStructLitWithScheme(enumName, variantName, variant, fields, env, state, envGet(env, variantName))
+			__mygo_expr_1 = Err[struct {
+				F0 InferResult
+				F1 []ast2.StructLitField
+			}, string]("unknown variant " + enumName + "." + variantName)
 		} else {
 		}
 	}
@@ -5628,7 +5631,9 @@ func __mygo_mt_typeinference2_predeclareEnumVariants(__mygo_mt_p0 Env, __mygo_mt
 					__mygo_expr_0 = ast2.MonoType__TFunc__Ctor(typeArgsFromASTInEnvWithParamsList(v.Fields, __mygo_mt_p3, __mygo_mt_p0, __mygo_mt_p4), &enumType)
 				}
 				constructorType := __mygo_expr_0
-				__tail_0 := envPut(__mygo_mt_p0, v.Name, Scheme{Bound: typeParamIDs(__mygo_mt_p3, 1), Predicates: []Predicate{}, Body: constructorType})
+				scheme := Scheme{Bound: typeParamIDs(__mygo_mt_p3, 1), Predicates: []Predicate{}, Body: constructorType}
+				withQualified := envPut(__mygo_mt_p0, __mygo_mt_p2+"."+v.Name, scheme)
+				__tail_0 := envPut(withQualified, v.Name, scheme)
 				__tail_1 := sliceDrop(__mygo_mt_p1, 1)
 				__tail_2 := __mygo_mt_p2
 				__tail_3 := __mygo_mt_p3
