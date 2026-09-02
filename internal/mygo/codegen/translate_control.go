@@ -269,6 +269,9 @@ func (g *gen) translateSwitch(n *SwitchExpr, ctx *egCtx, expected string) (trans
 					return translatedExpr{}, common.ErrorAtPos(g.currentFile, line, col, "tuple switch pattern contains an unsupported element")
 				}
 			}
+			if !hasVariant && len(destructure) > 0 {
+				prefix = append(prefix, &ast.AssignStmt{Lhs: []ast.Expr{ast.NewIdent(tmp)}, Rhs: []ast.Expr{target}, Tok: token.DEFINE})
+			}
 			matches := make([]tupleVariantMatch, 0)
 			for index, elem := range tp.Elems {
 				if variant, ok := switchPatternAsVariant(elem); ok {
