@@ -207,9 +207,16 @@ end
 func compileInlineGoTestPackage(t *testing.T, src string) string {
 	t.Helper()
 	dir := writeInlineGoTestPackage(t, src)
-	pkg, _, err := loadPackage(dir, true)
+	pkg, _, err := loadPackage(dir, false)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if preludePkg := loadPreludePackage(dir, filepath.Dir(dir)); preludePkg != nil {
+		if err := mergeImportedDecls(pkg, preludePkg, true); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		t.Fatal("cannot load prelude package")
 	}
 
 	typedInfo, err := InferTyped(pkg)
@@ -369,6 +376,14 @@ end
 func writeInlineGoTestPackage(t *testing.T, src string) string {
 	t.Helper()
 	dir := t.TempDir()
+	root := findGoModuleRoot(".")
+	if root == "" {
+		t.Fatal("cannot locate MyGO module root")
+	}
+	goMod := "module example.com/inline-go-test\n\ngo 1.26\n\nrequire github.com/mygo-lang/mygo v0.0.0\n\nreplace github.com/mygo-lang/mygo => " + filepath.ToSlash(root) + "\n"
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(filepath.Join(dir, "main.mygo"), []byte(src), 0o644); err != nil {
 		t.Fatal(err)
 	}

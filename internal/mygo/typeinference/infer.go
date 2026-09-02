@@ -2257,8 +2257,16 @@ func inferPatternBindings(env TypeEnv, pat Pattern, targetType MonoType, s Subst
 			}
 		}
 		activeEnum := enumDecl
+		activeEnumArgs := enumTypeArgs
+		activeEnumAlias := enumAlias
+		activeEnumPkgTypes := enumPkgTypes
+		if activeEnum == nil {
+			targetEnumName, targetEnumArgs := resolveEnumType(s.ApplyMT(targetType))
+			activeEnum, activeEnumAlias, activeEnumPkgTypes = lookupEnumByType(state, targetEnumName)
+			activeEnumArgs = targetEnumArgs
+		}
 		variant, ok := findEnumVariant(activeEnum, p.Name)
-		if !ok {
+		if !ok && activeEnum == nil {
 			activeEnum, variant, ok = lookupVariant(state.PkgInfo, p.Name)
 		}
 		if !ok {
@@ -2297,11 +2305,11 @@ func inferPatternBindings(env TypeEnv, pat Pattern, targetType MonoType, s Subst
 				bound := false
 				if i < len(variant.Fields) {
 					fieldType := typeFromAST(variant.Fields[i].Type)
-					if activeEnum != nil && len(activeEnum.TypeParams) > 0 && len(enumTypeArgs) > 0 {
-						fieldType = substituteTypeParams(fieldType, activeEnum.TypeParams, enumTypeArgs)
+					if activeEnum != nil && len(activeEnum.TypeParams) > 0 && len(activeEnumArgs) > 0 {
+						fieldType = substituteTypeParams(fieldType, activeEnum.TypeParams, activeEnumArgs)
 					}
-					if enumAlias != "" && enumPkgTypes != nil {
-						fieldType = qualifyMyGoType(enumAlias, enumPkgTypes, fieldType)
+					if activeEnumAlias != "" && activeEnumPkgTypes != nil {
+						fieldType = qualifyMyGoType(activeEnumAlias, activeEnumPkgTypes, fieldType)
 					}
 					env[arg] = &Scheme{Body: QualifiedType{Body: fieldType}}
 					bound = true
@@ -2321,8 +2329,16 @@ func inferPatternBindings(env TypeEnv, pat Pattern, targetType MonoType, s Subst
 		return env, nil
 	case *StructVariantPattern:
 		activeEnum := enumDecl
+		activeEnumArgs := enumTypeArgs
+		activeEnumAlias := enumAlias
+		activeEnumPkgTypes := enumPkgTypes
+		if activeEnum == nil {
+			targetEnumName, targetEnumArgs := resolveEnumType(s.ApplyMT(targetType))
+			activeEnum, activeEnumAlias, activeEnumPkgTypes = lookupEnumByType(state, targetEnumName)
+			activeEnumArgs = targetEnumArgs
+		}
 		variant, ok := findEnumVariant(activeEnum, p.Name)
-		if !ok {
+		if !ok && activeEnum == nil {
 			activeEnum, variant, ok = lookupVariant(state.PkgInfo, p.Name)
 		}
 		if !ok {
@@ -2341,11 +2357,11 @@ func inferPatternBindings(env TypeEnv, pat Pattern, targetType MonoType, s Subst
 				return nil, fmt.Errorf("enum %s variant %s has no field %q", activeEnum.Name, p.Name, fp.Field)
 			}
 			fieldType := typeFromAST(sf.Type)
-			if activeEnum != nil && len(activeEnum.TypeParams) > 0 && len(enumTypeArgs) > 0 {
-				fieldType = substituteTypeParams(fieldType, activeEnum.TypeParams, enumTypeArgs)
+			if activeEnum != nil && len(activeEnum.TypeParams) > 0 && len(activeEnumArgs) > 0 {
+				fieldType = substituteTypeParams(fieldType, activeEnum.TypeParams, activeEnumArgs)
 			}
-			if enumAlias != "" && enumPkgTypes != nil {
-				fieldType = qualifyMyGoType(enumAlias, enumPkgTypes, fieldType)
+			if activeEnumAlias != "" && activeEnumPkgTypes != nil {
+				fieldType = qualifyMyGoType(activeEnumAlias, activeEnumPkgTypes, fieldType)
 			}
 			env[fp.Bind] = &Scheme{Body: QualifiedType{Body: fieldType}}
 		}

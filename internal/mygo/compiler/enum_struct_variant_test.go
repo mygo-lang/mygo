@@ -123,3 +123,67 @@ func TestCombinedArea(t *testing.T) {
 		t.Fatalf("generated named struct variant package failed: %v\n%s", err, output)
 	}
 }
+
+func TestCompileDirNoPreludeResolvesQualifiedNamedVariantWithCollidingName(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	source := `package sample
+
+struct ContextWindow
+  Loop: Int
+end
+
+enum AgentState
+  Running { Loop: ContextWindow }
+end
+
+enum ToolExecutionStatus
+  Running
+end
+
+enum OtherState
+  Running { Label: String }
+end
+
+func MakeAgentState() -> AgentState
+  AgentState.Running { Loop: ContextWindow { Loop: 1 } }
+end
+
+func MakeOtherState() -> OtherState
+  OtherState.Running { Label: "other" }
+end
+
+func LoopOf(state: AgentState) -> Int
+  switch state
+    case Running { Loop } => Loop.Loop
+  end
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompileDirNoPrelude(dir); err != nil {
+		t.Fatalf("CompileDirNoPrelude() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
+
+import "testing"
+
+func TestQualifiedNamedVariant(t *testing.T) {
+	if MakeAgentState() == nil || MakeOtherState() == nil {
+		t.Fatal("qualified enum construction returned nil")
+	}
+	if got := LoopOf(MakeAgentState()); got != 1 {
+		t.Fatalf("LoopOf(MakeAgentState()) = %d, want 1", got)
+	}
+}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "test", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated collision package failed: %v\n%s", err, output)
+	}
+}

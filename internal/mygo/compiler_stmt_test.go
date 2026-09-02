@@ -244,7 +244,16 @@ func TestCompileDirSupportsSwitchOnLetBoundStructField(t *testing.T) {
 }
 
 func TestCompileDirSupportsNestedStringAndOptionSwitches(t *testing.T) {
-	dir := t.TempDir()
+	root := t.TempDir()
+	dir := filepath.Join(root, "app")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	repoRoot, err := filepath.Abs("../..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeMygoFile(t, root, "go.mod", "module example.com/nested-option-switch\n\ngo 1.26\n\nreplace github.com/mygo-lang/mygo => "+filepath.ToSlash(repoRoot)+"\n")
 	writeMygoFile(t, dir, "main.mygo", `package main
 
   struct Message
