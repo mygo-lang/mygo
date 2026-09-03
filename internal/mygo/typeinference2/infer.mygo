@@ -724,6 +724,16 @@ end
 # Preserve the inferred case bodies in the typed AST.  In particular this
 # carries DictionaryCallExpr annotations out of nested matches to codegen2.
 func inferTypedSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoType, env: Env, state: InferState, subst: Subst, resultType: Option[ast2.MonoType], resultOrigin: Option[ast2.SourcePos], predicates: Slice[Predicate], out: Slice[ast2.SwitchCase]) -> Result[(InferResult, Slice[ast2.SwitchCase]), String]
+  if out.Len() == 0 then
+    switch checkSwitchExhaustive(targetType, cases, state)
+      case Err(msg) => Err(msg)
+      case Ok(_) => inferTypedSwitchCasesChecked(cases, targetType, env, state, subst, resultType, resultOrigin, predicates, out)
+    end
+  else inferTypedSwitchCasesChecked(cases, targetType, env, state, subst, resultType, resultOrigin, predicates, out)
+  end
+end
+
+func inferTypedSwitchCasesChecked(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoType, env: Env, state: InferState, subst: Subst, resultType: Option[ast2.MonoType], resultOrigin: Option[ast2.SourcePos], predicates: Slice[Predicate], out: Slice[ast2.SwitchCase]) -> Result[(InferResult, Slice[ast2.SwitchCase]), String]
   if cases.Len() == 0 then
     switch resultType
       case Some(t) => Ok((InferResult { Type: applySubst(subst, t), Predicates: predicates, Subst: subst, State: state }, applyTypedSwitchCasesSubst(subst, out)))
@@ -759,6 +769,149 @@ func inferTypedSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoT
         end
     end
   end
+end
+
+# checkSwitchExhaustive validates enum coverage before switch case bodies are
+# lowered.  Bindings and wildcards intentionally escape checking; tuple
+# patterns recurse into each element so an enum nested in a tuple is checked
+# at its own position.
+func checkSwitchExhaustive(targetType: ast2.MonoType, cases: Slice[ast2.SwitchCase], state: InferState) -> Result[(), String]
+  checkSwitchExhaustivePatterns(targetType, switchCasePatterns(cases), state)
+end
+
+func switchCasePatterns(cases: Slice[ast2.SwitchCase]) -> Slice[ast2.Pattern]
+  if cases.Len() == 0 then [] as Slice[ast2.Pattern] else
+    let c = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
+    switchCasePatterns(sliceDrop(cases, 1)).Prepend(c.Pattern)
+  end
+end
+
+func checkSwitchExhaustivePatterns(targetType: ast2.MonoType, patterns: Slice[ast2.Pattern], state: InferState) -> Result[(), String]
+  if patternsHaveWildcard(patterns) then Ok(()) else
+  switch targetType
+    case TQualifiedName(_, inner) => checkSwitchExhaustivePatterns(inner.value(), patterns, state)
+    case TTuple(types) => checkSwitchExhaustiveTuple(types, patterns, state)
+    case _ =>
+      switch enumNameForMonoType(targetType)
+        case None => Ok(())
+        case Some(enumName) => checkSwitchExhaustiveEnum(enumName, targetType, patterns, state)
+      end
+  end
+  end
+end
+
+func patternsHaveWildcard(patterns: Slice[ast2.Pattern]) -> Bool
+  if patterns.Len() == 0 then false else
+    let p = patterns.Get(0).UnwrapOr(ast2.Pattern.WildcardPattern)
+    switch p
+      case WildcardPattern => true
+      case BindPattern(name) => name == "_"
+      case TuplePattern(items) => patternsHaveWildcard(items) || patternsHaveWildcard(sliceDrop(patterns, 1))
+      case _ => patternsHaveWildcard(sliceDrop(patterns, 1))
+    end
+  end
+end
+
+func checkSwitchExhaustiveTuple(types: Slice[ast2.MonoType], patterns: Slice[ast2.Pattern], state: InferState) -> Result[(), String]
+  if patterns.Len() == 0 then Ok(()) else
+    let first = patterns.Get(0).UnwrapOr(ast2.Pattern.WildcardPattern)
+    switch first
+      case WildcardPattern => Ok(())
+      case BindPattern(_) => Ok(())
+      case TuplePattern(items) =>
+        if items.Len() != types.Len() then Ok(()) else
+          checkSwitchExhaustiveTupleElements(types, patterns, 0, state)
+        end
+      case _ => Ok(())
+    end
+  end
+end
+
+func checkSwitchExhaustiveTupleElements(types: Slice[ast2.MonoType], patterns: Slice[ast2.Pattern], index: Int, state: InferState) -> Result[(), String]
+  if index >= types.Len() then Ok(()) else
+    let nested = tuplePatternsAt(patterns, index, [])
+    switch checkSwitchExhaustivePatterns(types.Get(index).UnwrapOr(ast2.MonoType.TUnit), nested, state)
+      case Err(msg) => Err(msg)
+      case Ok(_) => checkSwitchExhaustiveTupleElements(types, patterns, index + 1, state)
+    end
+  end
+end
+
+func tuplePatternsAt(patterns: Slice[ast2.Pattern], index: Int, out: Slice[ast2.Pattern]) -> Slice[ast2.Pattern]
+  if patterns.Len() == 0 then out else
+    let p = patterns.Get(0).UnwrapOr(ast2.Pattern.WildcardPattern)
+    let next = switch p
+      case TuplePattern(items) => out.Append(items.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern))
+      case _ => out.Append(ast2.Pattern.WildcardPattern)
+    end
+    tuplePatternsAt(sliceDrop(patterns, 1), index, next)
+  end
+end
+
+func checkSwitchExhaustiveEnum(enumName: String, targetType: ast2.MonoType, patterns: Slice[ast2.Pattern], state: InferState) -> Result[(), String]
+  let variants = enumVariantNames(state, enumName, [])
+  if variants.Len() == 0 then Ok(()) else
+    switch enumPatternsCoverage(variants, targetType, patterns, state, [])
+      case Some(missing) => Err("non-exhaustive switch: missing variant(s) " + joinStrings(missing, ", "))
+      case None => Ok(())
+    end
+  end
+end
+
+func enumPatternsCoverage(variants: Slice[String], targetType: ast2.MonoType, patterns: Slice[ast2.Pattern], state: InferState, covered: Slice[String]) -> Option[Slice[String]]
+  if patterns.Len() == 0 then
+    let missing = missingVariantNames(variants, covered, [])
+    if missing.Len() == 0 then None else Some(missing) end
+  else
+    let p = patterns.Get(0).UnwrapOr(ast2.Pattern.WildcardPattern)
+    switch p
+      case WildcardPattern => None
+      case BindPattern(name) =>
+        switch lookupEnumVariantDecl(state, enumNameForMonoType(targetType).UnwrapOr(""), name)
+          case Some(v) => if v.Fields.Len() == 0 then enumPatternsCoverage(variants, targetType, sliceDrop(patterns, 1), state, covered.Append(name)) else None end
+          case None => None
+        end
+      case VariantPattern(name, _) => enumPatternsCoverage(variants, targetType, sliceDrop(patterns, 1), state, covered.Append(name))
+      case StructVariantPattern(name, _) => enumPatternsCoverage(variants, targetType, sliceDrop(patterns, 1), state, covered.Append(name))
+      case _ => enumPatternsCoverage(variants, targetType, sliceDrop(patterns, 1), state, covered)
+    end
+  end
+end
+
+func enumVariantNames(state: InferState, enumName: String, out: Slice[String]) -> Slice[String]
+  switch state.PkgInfo
+    case None => out
+    case Some(info) => enumVariantNamesInDecls(info.Decls, enumName, out)
+  end
+end
+
+func enumVariantNamesInDecls(decls: Slice[ast2.Decl], enumName: String, out: Slice[String]) -> Slice[String]
+  if decls.Len() == 0 then out else
+    let d = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    switch d
+      case EnumDecl(name, _, variants) => if name == enumName then enumVariantNamesInVariants(variants, out) else enumVariantNamesInDecls(sliceDrop(decls, 1), enumName, out) end
+      case _ => enumVariantNamesInDecls(sliceDrop(decls, 1), enumName, out)
+    end
+  end
+end
+
+func enumVariantNamesInVariants(variants: Slice[ast2.Variant], out: Slice[String]) -> Slice[String]
+  if variants.Len() == 0 then out else
+    let v = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: emptyASTTypeExprs(), Named: false, Names: [] as Slice[String] })
+    enumVariantNamesInVariants(sliceDrop(variants, 1), out.Append(v.Name))
+  end
+end
+
+func missingVariantNames(variants: Slice[String], covered: Slice[String], out: Slice[String]) -> Slice[String]
+  if variants.Len() == 0 then out else
+    let name = variants.Get(0).UnwrapOr("")
+    let next = if stringSliceContains(covered, name) then out else out.Append(name) end
+    missingVariantNames(sliceDrop(variants, 1), covered, next)
+  end
+end
+
+func joinStrings(items: Slice[String], sep: String) -> String
+  if items.Len() == 0 then "" elsif items.Len() == 1 then items.Get(0).UnwrapOr("") else items.Get(0).UnwrapOr("") + sep + joinStrings(sliceDrop(items, 1), sep) end
 end
 
 func inferSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoType, env: Env, state: InferState, subst: Subst, resultType: Option[ast2.MonoType], predicates: Slice[Predicate]) -> Result[InferResult, String]

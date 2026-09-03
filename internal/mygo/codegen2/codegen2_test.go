@@ -610,6 +610,52 @@ end
 	}
 }
 
+func TestGenerateSourceRejectsNonExhaustiveVariantSwitch(t *testing.T) {
+	src := `package sample
+
+enum Color
+  Red
+  Green
+  Blue
+end
+
+func describe(value: Color) -> Int
+  switch value
+    case Red => 1
+    case Green => 2
+  end
+end
+`
+	got := GenerateSource(src)
+	err, ok := got.(Result__Err[string, string])
+	if !ok || !strings.Contains(err.F0, "non-exhaustive switch: missing variant(s) Blue") {
+		t.Fatalf("GenerateSource() = %v, want missing Blue error", got)
+	}
+}
+
+func TestGenerateSourceChecksNestedTupleExhaustiveness(t *testing.T) {
+	src := `package sample
+
+enum Color
+  Red
+  Green
+  Blue
+end
+
+func describe(value: (Color, Int)) -> Int
+  switch value
+    case (Red, _) => 1
+    case (Green, _) => 2
+  end
+end
+`
+	got := GenerateSource(src)
+	err, ok := got.(Result__Err[string, string])
+	if !ok || !strings.Contains(err.F0, "non-exhaustive switch: missing variant(s) Blue") {
+		t.Fatalf("GenerateSource() = %v, want nested missing Blue error", got)
+	}
+}
+
 func TestGenerateSourceAtIncludesSourceLocation(t *testing.T) {
 	got := GenerateSourceAt("broken.mygo", "package sample\n\nfunc")
 	err, ok := got.(Result__Err[string, string])

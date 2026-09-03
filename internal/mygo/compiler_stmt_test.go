@@ -265,12 +265,12 @@ func TestCompileDirSupportsNestedStringAndOptionSwitches(t *testing.T) {
     let method = msg.Method
     switch method
       case "initialize" then
-        switch msg.Params
-          case Some(p) then 1
-        end
-      end
-      end
-      case "initialized" then
+	        switch msg.Params
+	          case Some(p) => 1
+	          case _ => 0
+	        end
+	      end
+	      case "initialized" then
         3
       end
       case _ then

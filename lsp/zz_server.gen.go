@@ -786,6 +786,10 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 						storePut(store, uri, version, content)
 						__mygo_expr_6 = responseEmpty(id)
 					} else {
+						if _, ok := __mygo_expr_5.(Option__None[map[string]any]); ok {
+							__mygo_expr_6 = responseEmpty(id)
+						} else {
+						}
 					}
 					__mygo_expr_1 = __mygo_expr_6
 				} else {
@@ -881,7 +885,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 												}
 												__mygo_expr_1 = __mygo_expr_27
 											} else {
-												__mygo_expr_1 = responseError(id, -32601, "method not found: "+msg.Method)
+												__mygo_expr_1 = responseError(id, -32600, "request method is missing")
 											}
 										}
 									}

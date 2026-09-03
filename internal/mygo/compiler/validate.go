@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"fmt"
+	"strings"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
 	"github.com/mygo-lang/mygo/internal/mygo/common"
@@ -511,9 +512,11 @@ func (v *validator) validateSwitch(x *SwitchExpr) error {
 	}
 	// Determine the enum type of the target from typedInfo for variant checking
 	var enumDecl *EnumDecl
+	var targetType typeinference.MonoType
 	if x.Target != nil && v.typedInfo != nil {
 		if mt, ok := v.typedInfo.ExprTypes[x.Target]; ok {
 			enumDecl = v.findEnumForType(mt)
+			targetType = mt
 		}
 	}
 	for _, c := range x.Cases {
@@ -530,6 +533,11 @@ func (v *validator) validateSwitch(x *SwitchExpr) error {
 			}
 		}
 	}
+	if missing, err := v.collectMissingVariants(targetType, x.Cases); err != nil {
+		return err
+	} else if len(missing) > 0 {
+		return common.ErrorAtNode(x.SourceFile, x, "non-exhaustive switch: missing variant(s) %s", strings.Join(missing, ", "))
+	}
 	return nil
 }
 
@@ -543,6 +551,134 @@ func (v *validator) findEnumForType(mt typeinference.MonoType) *EnumDecl {
 		return enum
 	}
 	// Also check imported enums (merged into pkg.Enums via mergeImportedDecls)
+	return nil
+}
+
+// collectMissingVariants returns the names of enum variants that are not
+// covered by the given switch cases. A nil or empty slice means the switch is
+// exhaustive (either all variants are covered, or the target type is not an
+// enum).
+func (v *validator) collectMissingVariants(targetType typeinference.MonoType, cases []SwitchCase) ([]string, error) {
+	return v.collectMissingForPatterns(targetType, casesPatterns(cases)), nil
+}
+
+func casesPatterns(cases []SwitchCase) []Pattern {
+	out := make([]Pattern, len(cases))
+	for i, c := range cases {
+		out[i] = c.Pattern
+	}
+	return out
+}
+
+func (v *validator) collectMissingForPatterns(targetType typeinference.MonoType, patterns []Pattern) []string {
+	if targetType == nil {
+		return nil
+	}
+	// A wildcard or bare binding escapes exhaustiveness (unless the bare
+	// identifier names a zero-field variant, which is handled by the caller).
+	for _, p := range patterns {
+		if p == nil {
+			continue
+		}
+		if _, ok := p.(*WildcardPattern); ok {
+			return nil
+		}
+		if bp, ok := p.(*BindNamePattern); ok && !v.isZeroFieldEnumVariant(targetType, bp.Name) {
+			return nil
+		}
+	}
+
+	// Tuples decompose positionally.
+	if tup, ok := targetType.(typeinference.TCon); ok && tup.Name == "Tuple" {
+		result := v.collectMissingTupleVariants(tup.Args, patterns)
+		return result
+	}
+
+	enumDecl := v.findEnumForType(targetType)
+	if enumDecl == nil || len(enumDecl.Variants) == 0 {
+		return nil
+	}
+	covered := make(map[string]bool, len(enumDecl.Variants))
+	hasConcretePattern := false
+	for _, p := range patterns {
+		if p == nil {
+			continue
+		}
+		switch cp := p.(type) {
+		case *VariantPattern:
+			covered[cp.Name] = true
+			hasConcretePattern = true
+		case *StructVariantPattern:
+			covered[cp.Name] = true
+			hasConcretePattern = true
+		case *BindNamePattern:
+			if enumHasVariant(enumDecl, cp.Name) {
+				covered[cp.Name] = true
+				hasConcretePattern = true
+			}
+		}
+	}
+	if !hasConcretePattern {
+		return nil
+	}
+	var missing []string
+	for _, variant := range enumDecl.Variants {
+		if !covered[variant.Name] {
+			missing = append(missing, variant.Name)
+		}
+	}
+	return missing
+}
+
+func (v *validator) isZeroFieldEnumVariant(targetType typeinference.MonoType, name string) bool {
+	enumDecl := v.findEnumForType(targetType)
+	if enumDecl == nil {
+		return false
+	}
+	for _, variant := range enumDecl.Variants {
+		if variant.Name == name {
+			return len(variant.Fields) == 0
+		}
+	}
+	return false
+}
+
+func enumHasVariant(enum *EnumDecl, name string) bool {
+	for _, variant := range enum.Variants {
+		if variant.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func (v *validator) collectMissingTupleVariants(elemTypes []typeinference.MonoType, patterns []Pattern) []string {
+	if len(elemTypes) == 0 {
+		return nil
+	}
+	// Group each element's patterns positionally for recursive checking.
+	perElement := make([][]Pattern, len(elemTypes))
+	for _, p := range patterns {
+		tp, ok := p.(*TuplePattern)
+		if !ok {
+			// Non-tuple patterns (e.g. a wildcard or literal) are handled by
+			// the top-level exhaustiveness pass; treat as un-analysable here.
+			return nil
+		}
+		if len(tp.Elems) > len(elemTypes) {
+			// Deeper validation reports malformed arity. Keep this check
+			// conservative and skip exhaustiveness analysis.
+			return nil
+		}
+		for i, elem := range tp.Elems {
+			perElement[i] = append(perElement[i], elem)
+		}
+	}
+	for i, elemType := range elemTypes {
+		if missing := v.collectMissingForPatterns(elemType, perElement[i]); len(missing) > 0 {
+			return missing
+		}
+	}
 	return nil
 }
 
