@@ -461,12 +461,14 @@ func __mygo_mt_typeinference2_envFreeVars(__mygo_mt_p0 Env, __mygo_mt_p1 []int, 
 					if _, ok := __mygo_expr_5.(Option__None[*Env]); ok {
 						return next
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			} else {
 				if _, ok := __mygo_expr_3.(Option__None[EnvEntry]); ok {
 					return fromBatch
 				} else {
+					panic("non-exhaustive switch")
 				}
 			}
 		default:

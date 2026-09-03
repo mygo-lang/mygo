@@ -149,6 +149,60 @@ func TestReduce(t *testing.T) {
 	}
 }
 
+func TestCompileDirBootstrapLowersTupleVariantBindingUnderReturnSwitch(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	source := `package sample
+
+enum State
+  Idle
+  Running
+end
+
+enum Command
+  Noop
+end
+
+enum AgentEvent
+  RunStarted { InitialMessage: String }
+  Other
+end
+
+func helper(msg: String) -> Int
+  msg.Len()
+end
+
+func step(state: State, nextState: State, event: AgentEvent) -> (State, Slice[Command])
+  switch (state, event)
+    case (Idle, RunStarted { InitialMessage }) =>
+      let _ = helper(InitialMessage)
+      (nextState, [Command.Noop])
+    case _ => (state, [Command.Noop])
+  end
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompileDirBootstrap(dir); err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
+
+import "testing"
+
+func TestBuilds(t *testing.T) {}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "test", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated tuple variant binding package failed: %v\n%s", err, output)
+	}
+}
+
 func TestCompileDirBootstrapAddsPreludeImportOnlyForEmittedHelpers(t *testing.T) {
 	dir := t.TempDir()
 	bootstrapTestModule(t, dir)

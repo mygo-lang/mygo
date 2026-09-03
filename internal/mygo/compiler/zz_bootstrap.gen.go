@@ -859,6 +859,7 @@ func __mygo_mt_compiler_appendBootstrapSourcesAt(__mygo_mt_p0 []typeinference2.P
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -910,6 +911,7 @@ func __mygo_mt_compiler_bootstrapCollectGoPackagesAt(__mygo_mt_p0 []typeinferenc
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -961,6 +963,7 @@ func __mygo_mt_compiler_bootstrapCollectGoPackagesFromDecls(__mygo_mt_p0 []ast2.
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -1014,9 +1017,11 @@ func __mygo_mt_compiler_bootstrapCollectMyGoPkgInfos(__mygo_mt_p0 string, __mygo
 								__mygo_state = 0
 								continue
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -1147,15 +1152,19 @@ func __mygo_mt_compiler_bootstrapLoadInputs(__mygo_mt_p0 string, __mygo_mt_p1 st
 												__mygo_state = 0
 												continue
 											} else {
+												panic("non-exhaustive switch")
 											}
 										}
 									} else {
+										panic("non-exhaustive switch")
 									}
 								}
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -1190,6 +1199,7 @@ func __mygo_mt_compiler_bootstrapMainPackageName(__mygo_mt_p0 []codegen2.SourceF
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -1239,6 +1249,7 @@ func __mygo_mt_compiler_bootstrapMyGoPackageDeclSignatures(__mygo_mt_p0 string, 
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -1271,6 +1282,7 @@ func __mygo_mt_compiler_bootstrapParamTypes(__mygo_mt_p0 []ast2.Param, __mygo_mt
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -1304,6 +1316,7 @@ func __mygo_mt_compiler_bootstrapPopulateGoSignaturesAt(__mygo_mt_p0 string, __m
 							if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[BootstrapGoPackageInfo, string]); ok {
 								return Err[struct{}, error](fmt.Errorf("can't find import %q: %s", trimmed, __mygo_match___mygo_expr_3.F0))
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
@@ -1323,6 +1336,7 @@ func __mygo_mt_compiler_bootstrapPopulateGoSignaturesAt(__mygo_mt_p0 string, __m
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -1372,6 +1386,7 @@ func __mygo_mt_compiler_bootstrapSplitTestInputsAt(__mygo_mt_p0 BootstrapInputs,
 							__mygo_state = 0
 							continue
 						} else {
+							panic("non-exhaustive switch")
 						}
 					}
 				} else {
@@ -1384,6 +1399,7 @@ func __mygo_mt_compiler_bootstrapSplitTestInputsAt(__mygo_mt_p0 BootstrapInputs,
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -1433,12 +1449,15 @@ func __mygo_mt_compiler_bootstrapWalkImports(__mygo_mt_p0 string, __mygo_mt_p1 s
 										__mygo_state = 0
 										continue
 									} else {
+										panic("non-exhaustive switch")
 									}
 								}
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -1469,6 +1488,7 @@ func __mygo_mt_compiler_syncBootstrapDirs(__mygo_mt_p0 []string, __mygo_mt_p1 in
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}

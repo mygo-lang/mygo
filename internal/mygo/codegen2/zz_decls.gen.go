@@ -809,6 +809,7 @@ func __mygo_mt_codegen2_collectFuncDecls(__mygo_mt_p0 *Generator2, __mygo_mt_p1 
 						if __mygo_match___mygo_expr_1, ok := one.(Result__Err[goast.Decl, string]); ok {
 							return Err[[]goast.Decl, string](__mygo_match___mygo_expr_1.F0)
 						} else {
+							panic("non-exhaustive switch")
 						}
 					}
 				} else {
@@ -1228,6 +1229,7 @@ func __mygo_mt_codegen2_translateDeclsAst(__mygo_mt_p0 *Generator2, __mygo_mt_p1
 					if __mygo_match___mygo_expr_0, ok := trampolines.(Result__Err[[]goast.Decl, string]); ok {
 						return Err[[]goast.Decl, string](__mygo_match___mygo_expr_0.F0)
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			} else {
@@ -1291,6 +1293,7 @@ func __mygo_mt_codegen2_translateDeclsAst(__mygo_mt_p0 *Generator2, __mygo_mt_p1
 											if __mygo_match___mygo_expr_6, ok := result_3.(Result__Err[[]goast.Decl, string]); ok {
 												return Err[[]goast.Decl, string]("package let " + __mygo_match___mygo_expr_5.F0.Name + ": " + __mygo_match___mygo_expr_6.F0)
 											} else {
+												panic("non-exhaustive switch")
 											}
 										}
 									} else {
@@ -1308,6 +1311,7 @@ func __mygo_mt_codegen2_translateDeclsAst(__mygo_mt_p0 *Generator2, __mygo_mt_p1
 												if __mygo_match___mygo_expr_5, ok := result_2.(Result__Err[[]goast.Decl, string]); ok {
 													return Err[[]goast.Decl, string]("package var " + __mygo_match___mygo_expr_4.F0.Name + ": " + __mygo_match___mygo_expr_5.F0)
 												} else {
+													panic("non-exhaustive switch")
 												}
 											}
 										} else {
@@ -1325,6 +1329,7 @@ func __mygo_mt_codegen2_translateDeclsAst(__mygo_mt_p0 *Generator2, __mygo_mt_p1
 													if __mygo_match___mygo_expr_4, ok := result_1.(Result__Err[goast.Decl, string]); ok {
 														return Err[[]goast.Decl, string]("function " + __mygo_match___mygo_expr_3.F0 + ": " + __mygo_match___mygo_expr_4.F0)
 													} else {
+														panic("non-exhaustive switch")
 													}
 												}
 											} else {
@@ -1351,9 +1356,11 @@ func __mygo_mt_codegen2_translateDeclsAst(__mygo_mt_p0 *Generator2, __mygo_mt_p1
 															if __mygo_match___mygo_expr_3, ok := result.(Result__Err[[]goast.Decl, string]); ok {
 																return Err[[]goast.Decl, string]("impl " + typeString(__mygo_match___mygo_expr_2.F1) + ": " + __mygo_match___mygo_expr_3.F0)
 															} else {
+																panic("non-exhaustive switch")
 															}
 														}
 													} else {
+														panic("non-exhaustive switch")
 													}
 												}
 											}
@@ -1419,6 +1426,7 @@ func __mygo_mt_codegen2_translateImplAstMethods(__mygo_mt_p0 string, __mygo_mt_p
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}

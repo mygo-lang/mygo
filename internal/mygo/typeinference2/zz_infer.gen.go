@@ -4366,6 +4366,7 @@ func __mygo_mt_typeinference2_bindNamedStructPatternFields(__mygo_mt_p0 Env, __m
 									__mygo_state = 0
 									continue
 								} else {
+									panic("non-exhaustive switch")
 								}
 							}
 						}
@@ -4477,6 +4478,7 @@ func __mygo_mt_typeinference2_duplicateSetLiteralElement(__mygo_mt_p0 []ast2.Exp
 							continue
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -4584,6 +4586,7 @@ func __mygo_mt_typeinference2_envWithPatternBindingLoop(__mygo_mt_p0 Env, __mygo
 					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[Env, string]); ok {
 						return Err[Env, string](__mygo_match___mygo_expr_1.F0)
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -4636,6 +4639,7 @@ func __mygo_mt_typeinference2_envWithTuplePatternLoop(__mygo_mt_p0 Env, __mygo_m
 					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[Env, string]); ok {
 						return Err[Env, string](__mygo_match___mygo_expr_1.F0)
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -4766,9 +4770,11 @@ func __mygo_mt_typeinference2_inferArgs(__mygo_mt_p0 []ast2.Expr, __mygo_mt_p1 [
 								__mygo_state = 0
 								continue
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -4799,6 +4805,7 @@ func __mygo_mt_typeinference2_inferBlockItems(__mygo_mt_p0 []ast2.Stmt, __mygo_m
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -4872,12 +4879,15 @@ func __mygo_mt_typeinference2_inferEnumVariantStructLitFields(__mygo_mt_p0 strin
 											__mygo_state = 0
 											continue
 										} else {
+											panic("non-exhaustive switch")
 										}
 									}
 								} else {
+									panic("non-exhaustive switch")
 								}
 							}
 						} else {
+							panic("non-exhaustive switch")
 						}
 					}
 				}
@@ -4931,6 +4941,7 @@ func __mygo_mt_typeinference2_inferImplMethods(__mygo_mt_p0 []ast2.ImplMethod, _
 							F1 InferState
 						}, string](__mygo_match___mygo_expr_0.F0)
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -4972,9 +4983,11 @@ func __mygo_mt_typeinference2_inferLetRecValues(__mygo_mt_p0 []ast2.LetRecBind, 
 								__mygo_state = 0
 								continue
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -5063,9 +5076,11 @@ func __mygo_mt_typeinference2_inferMapLitTail(__mygo_mt_p0 []struct {
 								__mygo_state = 0
 								continue
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -5109,6 +5124,7 @@ func __mygo_mt_typeinference2_inferSetLitTail(__mygo_mt_p0 []ast2.Expr, __mygo_m
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -5160,9 +5176,11 @@ func __mygo_mt_typeinference2_inferSliceItems(__mygo_mt_p0 []ast2.Expr, __mygo_m
 								__mygo_state = 0
 								continue
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -5182,6 +5200,7 @@ func __mygo_mt_typeinference2_inferSwitchCases(__mygo_mt_p0 []ast2.SwitchCase, _
 					if _, ok := __mygo_mt_p5.(Option__None[ast2.MonoType]); ok {
 						return Err[InferResult, string]("switch requires at least one case")
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			} else {
@@ -5226,15 +5245,19 @@ func __mygo_mt_typeinference2_inferSwitchCases(__mygo_mt_p0 []ast2.SwitchCase, _
 												__mygo_state = 0
 												continue
 											} else {
+												panic("non-exhaustive switch")
 											}
 										}
 									} else {
+										panic("non-exhaustive switch")
 									}
 								}
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -5277,6 +5300,7 @@ func __mygo_mt_typeinference2_inferTupleItems(__mygo_mt_p0 []ast2.Expr, __mygo_m
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -5320,6 +5344,7 @@ func __mygo_mt_typeinference2_inferTypedBlockItems(__mygo_mt_p0 []ast2.Stmt, __m
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -5391,12 +5416,15 @@ func __mygo_mt_typeinference2_inferTypedStructLitFields(__mygo_mt_p0 ast2.MonoTy
 										__mygo_state = 0
 										continue
 									} else {
+										panic("non-exhaustive switch")
 									}
 								}
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -5428,6 +5456,7 @@ func __mygo_mt_typeinference2_inferTypedSwitchCases(__mygo_mt_p0 []ast2.SwitchCa
 							F1 []ast2.SwitchCase
 						}, string]("switch requires at least one case")
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			} else {
@@ -5487,15 +5516,19 @@ func __mygo_mt_typeinference2_inferTypedSwitchCases(__mygo_mt_p0 []ast2.SwitchCa
 												__mygo_state = 0
 												continue
 											} else {
+												panic("non-exhaustive switch")
 											}
 										}
 									} else {
+										panic("non-exhaustive switch")
 									}
 								}
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -5916,6 +5949,7 @@ func __mygo_mt_typeinference2_stringIndexOfAt(__mygo_mt_p0 []string, __mygo_mt_p
 							continue
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -5986,6 +6020,7 @@ func __mygo_mt_typeinference2_validateEnumVariantFieldNames(__mygo_mt_p0 []ast2.
 							__mygo_state = 0
 							continue
 						} else {
+							panic("non-exhaustive switch")
 						}
 					}
 				} else {
@@ -6045,6 +6080,7 @@ func __mygo_mt_typeinference2_variantSchemeForTargetLoop(__mygo_mt_p0 Env, __myg
 				if _, ok := __mygo_expr_6.(Option__None[*Env]); ok {
 					return fromEntry
 				} else {
+					panic("non-exhaustive switch")
 				}
 			}
 		default:

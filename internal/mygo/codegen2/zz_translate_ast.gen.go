@@ -3383,9 +3383,11 @@ func __mygo_mt_codegen2_appendDictionaryArgs(__mygo_mt_p0 []goast.Expr, __mygo_m
 								__mygo_state = 0
 								continue
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -3439,12 +3441,15 @@ func __mygo_mt_codegen2_appendRequirementArgs(__mygo_mt_p0 []goast.Expr, __mygo_
 										__mygo_state = 0
 										continue
 									} else {
+										panic("non-exhaustive switch")
 									}
 								}
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -3663,6 +3668,7 @@ func __mygo_mt_codegen2_ffiMultiResultSignatureInFuncs(__mygo_mt_p0 string, __my
 					if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoFuncSignature]); ok {
 						return None[typeinference2.GoFuncSignature]()
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -3694,6 +3700,7 @@ func __mygo_mt_codegen2_ffiMultiResultSignatureInPackages(__mygo_mt_p0 string, _
 					if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoPackageEntry]); ok {
 						return None[typeinference2.GoFuncSignature]()
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -3780,6 +3787,7 @@ func __mygo_mt_codegen2_ffiResultSignatureInFuncs(__mygo_mt_p0 []typeinference2.
 					if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoFuncSignature]); ok {
 						return None[typeinference2.GoFuncSignature]()
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -3811,6 +3819,7 @@ func __mygo_mt_codegen2_ffiResultSignatureInPackages(__mygo_mt_p0 []typeinferenc
 					if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoPackageEntry]); ok {
 						return None[typeinference2.GoFuncSignature]()
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -3841,6 +3850,7 @@ func __mygo_mt_codegen2_ffiSignatureInFuncs(__mygo_mt_p0 []typeinference2.GoFunc
 					if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoFuncSignature]); ok {
 						return None[typeinference2.GoFuncSignature]()
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -3872,6 +3882,7 @@ func __mygo_mt_codegen2_ffiSignatureInPackages(__mygo_mt_p0 []typeinference2.GoP
 					if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoPackageEntry]); ok {
 						return None[typeinference2.GoFuncSignature]()
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -4086,6 +4097,7 @@ func __mygo_mt_codegen2_translateAstArgs(__mygo_mt_p0 []ast2.Expr, __mygo_mt_p1 
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -4129,6 +4141,7 @@ func __mygo_mt_codegen2_translateAstCompositeFields(__mygo_mt_p0 []ast2.StructLi
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -4154,6 +4167,7 @@ func __mygo_mt_codegen2_translateBlockExprAst(__mygo_mt_p0 []ast2.Stmt, __mygo_m
 							if __mygo_match___mygo_expr_3, ok := value.(Result__Err[AstExprResult, string]); ok {
 								return Err[AstExprResult, string](__mygo_match___mygo_expr_3.F0)
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
@@ -4164,6 +4178,7 @@ func __mygo_mt_codegen2_translateBlockExprAst(__mygo_mt_p0 []ast2.Stmt, __mygo_m
 							if __mygo_match___mygo_expr_0, ok := stmts.(Result__Ok[[]goast.Stmt, string]); ok {
 								return Ok[AstExprResult, string](astExprWithPre(goast.Unit(), goast.AppendStmts(__mygo_mt_p3, __mygo_match___mygo_expr_0.F0)))
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					}
@@ -4181,6 +4196,7 @@ func __mygo_mt_codegen2_translateBlockExprAst(__mygo_mt_p0 []ast2.Stmt, __mygo_m
 						if __mygo_match___mygo_expr_3, ok := leading.(Result__Err[[]goast.Stmt, string]); ok {
 							return Err[AstExprResult, string](__mygo_match___mygo_expr_3.F0)
 						} else {
+							panic("non-exhaustive switch")
 						}
 					}
 				}
@@ -4207,6 +4223,7 @@ func __mygo_mt_codegen2_translateBlockExprAstExpected(__mygo_mt_p0 []ast2.Stmt, 
 							if __mygo_match___mygo_expr_4, ok := value_1.(Result__Err[AstExprResult, string]); ok {
 								return Err[AstExprResult, string](__mygo_match___mygo_expr_4.F0)
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
@@ -4218,6 +4235,7 @@ func __mygo_mt_codegen2_translateBlockExprAstExpected(__mygo_mt_p0 []ast2.Stmt, 
 								if __mygo_match___mygo_expr_3, ok := value.(Result__Err[AstExprResult, string]); ok {
 									return Err[AstExprResult, string](__mygo_match___mygo_expr_3.F0)
 								} else {
+									panic("non-exhaustive switch")
 								}
 							}
 						} else {
@@ -4228,6 +4246,7 @@ func __mygo_mt_codegen2_translateBlockExprAstExpected(__mygo_mt_p0 []ast2.Stmt, 
 								if __mygo_match___mygo_expr_0, ok := stmts.(Result__Ok[[]goast.Stmt, string]); ok {
 									return Ok[AstExprResult, string](astExprWithPre(goast.Unit(), goast.AppendStmts(__mygo_mt_p3, __mygo_match___mygo_expr_0.F0)))
 								} else {
+									panic("non-exhaustive switch")
 								}
 							}
 						}
@@ -4247,6 +4266,7 @@ func __mygo_mt_codegen2_translateBlockExprAstExpected(__mygo_mt_p0 []ast2.Stmt, 
 						if __mygo_match___mygo_expr_4, ok := leading.(Result__Err[[]goast.Stmt, string]); ok {
 							return Err[AstExprResult, string](__mygo_match___mygo_expr_4.F0)
 						} else {
+							panic("non-exhaustive switch")
 						}
 					}
 				}
@@ -4299,9 +4319,11 @@ func __mygo_mt_codegen2_translateMapLitPairs(__mygo_mt_p0 []struct {
 								__mygo_state = 0
 								continue
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -4334,6 +4356,7 @@ func __mygo_mt_codegen2_translateSetLitItems(__mygo_mt_p0 []ast2.Expr, __mygo_mt
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}

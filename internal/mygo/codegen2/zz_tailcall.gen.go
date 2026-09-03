@@ -979,8 +979,8 @@ func translateSwitchBranchesTail(cases []ast2.SwitchCase, targetType Option[ast2
 			} else {
 				if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.Pattern__TuplePattern); ok {
 					child_2 := &[]egCtx{ctxChild(ctx)}[0]
-					bindTuplePattern(child_2, __mygo_match___mygo_expr_5.F0, goast.MustExprSource(target), 0)
-					__mygo_expr_1 = translateAstReturnExpr(current.Body, child_2)
+					bindTuplePatternNonVariants(child_2, __mygo_match___mygo_expr_5.F0, goast.MustExprSource(target), 0)
+					__mygo_expr_1 = translateTupleVariantSwitchStmtAtTail(__mygo_match___mygo_expr_5.F0, targetType, target, current.Body, child_2, ctx, cases, 0)
 				} else {
 					if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.Pattern__LiteralPattern); ok {
 						body_2 := translateAstReturnExpr(current.Body, ctx)
@@ -1111,6 +1111,105 @@ func translateSwitchBranchesTail(cases []ast2.SwitchCase, targetType Option[ast2
 		return __mygo_expr_1
 	}
 }
+func translateTupleVariantSwitchStmtAtTail(items []ast2.Pattern, targetType Option[ast2.MonoType], target goast.Expr, body ast2.Expr, child *egCtx, outerCtx *egCtx, cases []ast2.SwitchCase, index int) Result[[]goast.Stmt, string] {
+	for {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+			return translateAstReturnExpr(body, child)
+		} else {
+			pattern := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.Pattern__WildcardPattern__Ctor())
+			value := goast.Selector(target, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(index))
+			var __mygo_expr_0 Result[[]goast.Stmt, string]
+			if __mygo_match___mygo_expr_2, ok := pattern.(ast2.Pattern__VariantPattern); ok {
+				rest_1 := translateSwitchBranchesTail(sliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
+				var __mygo_expr_3 Result[[]goast.Stmt, string]
+				if __mygo_match___mygo_expr_5, ok := rest_1.(Result__Err[[]goast.Stmt, string]); ok {
+					__mygo_expr_3 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_5.F0)
+				} else {
+					if __mygo_match___mygo_expr_4, ok := rest_1.(Result__Ok[[]goast.Stmt, string]); ok {
+						var __mygo_expr_5 Result[[]goast.Stmt, string]
+						if __mygo_match___mygo_expr_6, ok := targetType.(Option__Some[ast2.MonoType]); ok {
+							elementMono_1 := tupleElementType(__mygo_match___mygo_expr_6.F0, index)
+							var __mygo_expr_7 string
+							if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F1) == 0 || allWildcards(__mygo_match___mygo_expr_2.F1, 0) || !patternArgsUsedInBody(__mygo_match___mygo_expr_2.F1, body) {
+								__mygo_expr_7 = "_"
+							} else {
+								__mygo_expr_7 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
+							}
+							valueName_1 := __mygo_expr_7
+							variantChild_1 := &[]egCtx{ctxChild(child)}[0]
+							bindPatternArgumentsWithTypes(variantChild_1, __mygo_match___mygo_expr_2.F1, valueName_1, 0, __mygo_match___mygo_expr_2.F0, elementMono_1, outerCtx)
+							nested_1 := translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, variantChild_1, outerCtx, cases, index+1)
+							var __mygo_expr_8 Result[[]goast.Stmt, string]
+							if __mygo_match___mygo_expr_10, ok := nested_1.(Result__Err[[]goast.Stmt, string]); ok {
+								__mygo_expr_8 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_10.F0)
+							} else {
+								if __mygo_match___mygo_expr_9, ok := nested_1.(Result__Ok[[]goast.Stmt, string]); ok {
+									__mygo_expr_8 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(value, goast.VariantTypeForTarget(monoTypeToGoStrIn(elementMono_1, outerCtx.pathAliases), __mygo_match___mygo_expr_2.F0), valueName_1, __mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_4.F0)))
+								} else {
+								}
+							}
+							__mygo_expr_5 = __mygo_expr_8
+						} else {
+							if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
+								__mygo_expr_5 = Err[[]goast.Stmt, string]("cannot resolve tuple switch target type")
+							} else {
+							}
+						}
+						__mygo_expr_3 = __mygo_expr_5
+					} else {
+					}
+				}
+				__mygo_expr_0 = __mygo_expr_3
+			} else {
+				if __mygo_match___mygo_expr_1, ok := pattern.(ast2.Pattern__StructVariantPattern); ok {
+					rest := translateSwitchBranchesTail(sliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
+					var __mygo_expr_2 Result[[]goast.Stmt, string]
+					if __mygo_match___mygo_expr_4, ok := rest.(Result__Err[[]goast.Stmt, string]); ok {
+						__mygo_expr_2 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_4.F0)
+					} else {
+						if __mygo_match___mygo_expr_3, ok := rest.(Result__Ok[[]goast.Stmt, string]); ok {
+							var __mygo_expr_4 Result[[]goast.Stmt, string]
+							if __mygo_match___mygo_expr_5, ok := targetType.(Option__Some[ast2.MonoType]); ok {
+								elementMono := tupleElementType(__mygo_match___mygo_expr_5.F0, index)
+								var __mygo_expr_6 string
+								if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F1) == 0 || !structPatternFieldsUsedInBody(__mygo_match___mygo_expr_1.F1, body) {
+									__mygo_expr_6 = "_"
+								} else {
+									__mygo_expr_6 = "__mygo_match_" + ctxFreshExprTemp(outerCtx)
+								}
+								valueName := __mygo_expr_6
+								variantChild := &[]egCtx{ctxChild(child)}[0]
+								bindStructPatternFieldsWithTypes(variantChild, __mygo_match___mygo_expr_1.F1, valueName, __mygo_match___mygo_expr_1.F0, elementMono, outerCtx)
+								nested := translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, variantChild, outerCtx, cases, index+1)
+								var __mygo_expr_7 Result[[]goast.Stmt, string]
+								if __mygo_match___mygo_expr_9, ok := nested.(Result__Err[[]goast.Stmt, string]); ok {
+									__mygo_expr_7 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_9.F0)
+								} else {
+									if __mygo_match___mygo_expr_8, ok := nested.(Result__Ok[[]goast.Stmt, string]); ok {
+										__mygo_expr_7 = Ok[[]goast.Stmt, string](astSingleStmt(goast.VariantIf(value, goast.VariantTypeForTarget(monoTypeToGoStrIn(elementMono, outerCtx.pathAliases), __mygo_match___mygo_expr_1.F0), valueName, __mygo_match___mygo_expr_8.F0, __mygo_match___mygo_expr_3.F0)))
+									} else {
+									}
+								}
+								__mygo_expr_4 = __mygo_expr_7
+							} else {
+								if _, ok := targetType.(Option__None[ast2.MonoType]); ok {
+									__mygo_expr_4 = Err[[]goast.Stmt, string]("cannot resolve tuple switch target type")
+								} else {
+								}
+							}
+							__mygo_expr_2 = __mygo_expr_4
+						} else {
+						}
+					}
+					__mygo_expr_0 = __mygo_expr_2
+				} else {
+					__mygo_expr_0 = translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, child, outerCtx, cases, index+1)
+				}
+			}
+			return __mygo_expr_0
+		}
+	}
+}
 func astThreeStmts(first goast.Stmt, second goast.Stmt, third goast.Stmt) []goast.Stmt {
 	return MygoIN5SliceM6Append(MygoIN5SliceM6Append(MygoIN5SliceM6Append([]goast.Stmt{}, first), second), third)
 }
@@ -1135,6 +1234,7 @@ func __mygo_mt_codegen2_genMtTrampolinesAt(__mygo_mt_p0 *Generator2, __mygo_mt_p
 							__mygo_state = 0
 							continue
 						} else {
+							panic("non-exhaustive switch")
 						}
 					}
 				} else {
@@ -1181,6 +1281,7 @@ func __mygo_mt_codegen2_mtBuildTrampolineAcc(__mygo_mt_p0 *Generator2, __mygo_mt
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -1767,6 +1868,7 @@ func __mygo_mt_codegen2_tailCallAstParts(__mygo_mt_p0 []ast2.Expr, __mygo_mt_p1 
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}

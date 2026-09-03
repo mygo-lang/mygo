@@ -625,6 +625,7 @@ func __mygo_mt_codegen2_generateFilesLoop(__mygo_mt_p0 []SourceFileInput, __mygo
 					if __mygo_match___mygo_expr_0, ok := src.(Result__Err[string, string]); ok {
 						return Err[map[string]string, string](withExpressionSourceName(__mygo_match___mygo_expr_0.F0, input.File.SourceName))
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}

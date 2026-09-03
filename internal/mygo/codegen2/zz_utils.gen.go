@@ -33,6 +33,7 @@ func __mygo_mt_codegen2_findStringIndexTail(__mygo_mt_p0 []string, __mygo_mt_p1 
 							continue
 						}
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}

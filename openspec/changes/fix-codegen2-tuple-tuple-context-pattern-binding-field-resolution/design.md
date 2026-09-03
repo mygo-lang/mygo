@@ -22,9 +22,15 @@ case body's expected return type is a tuple, and (c) the pattern-bound field
 is referenced in a function-call argument position. A single-element switch or
 a non-tuple return type does not reproduce.
 
-Relevant code paths: `bindPattern` / `bindPlainStructPatternFields` /
-`bindStructPatternFieldsWithTypes` in `internal/mygo/codegen2/translate_ast.mygo`,
-and the anonymous-tuple lowering in `translateTupleLitAst` / `translateSwitchAst`.
+Relevant code paths: the tail-aware switch lowering
+`translateSwitchBranchesTail` in `internal/mygo/codegen2/tailcall.mygo`, which
+handles `TuplePattern` subjects but, unlike the ordinary switch path
+(`translateSwitchBranchesStmt` / `translateTupleVariantSwitchStmtAt` in
+`internal/mygo/codegen2/translate_ast.mygo`), never emits the per-element enum
+variant type assertion. The shared binding helpers `bindPattern` /
+`bindPlainStructPatternFields` / `bindStructPatternFieldsWithTypes` in
+`translate_ast.mygo` play a role, but the missing dispatch lives in the tail
+tuple branch.
 
 ## Goals / Non-Goals
 
@@ -45,31 +51,58 @@ and the anonymous-tuple lowering in `translateTupleLitAst` / `translateSwitchAst
 
 ## Decisions
 
-### 1. Emit the variant type assertion when lowering tuple-subject switch cases
+### 1. Tail tuple switches must emit per-element variant dispatch
 
-The field accessor for an enum variant field must be built as a selector whose
-base is `(<lifted-tuple-elem>).(<Variant>)`, not a bare
-`<lifted-tuple-elem>.<Field>` selector on the enum value. In `bindPattern`
-paths that receive an enum variant (`StructVariantPattern`), the `valueName`
-passed to `bindPlainStructPatternFields` / `bindStructPatternFieldsWithTypes`
-must be `(<tupleElem>).(<Variant>)` so the emitted Go dereferences through the
-variant.
+The root cause is in the tail-aware switch lowering
+`translateSwitchBranchesTail` (`internal/mygo/codegen2/tailcall.mygo`). Its
+`TuplePattern(items)` branch only runs `bindTuplePattern(...)` and then emits
+the case body unconditionally:
 
-- **Why**: matches what the existing `VariantIf`-style lowering does for the
-  non-tuple case (see `translateSwitchBranchesStmt`), which already inserts
-  the type assertion. The tuple path just misses the variant step.
-- **Alternative considered**: hoisting each tuple element into a local `goast`
-  typed variable before binding. Rejected: more invasive than needed and would
-  change generated code shape for all tuple cases, not just the broken path.
+```mygo
+case TuplePattern(items) =>
+  let child = Ref.new(ctxChild(ctx))
+  bindTuplePattern(child, items, goast.MustExprSource(target), 0)
+  translateAstReturnExpr(current.Body, child)
+```
 
-### 2. Prefer fixing in the shared binding helper over the switch emitter
+For a tuple subject containing enum variants (e.g. `(Idle, RunStarted {...})`),
+this never emits the `if v, ok := <elem>.(<Variant>); ok { ... }` guard. The
+bound field therefore resolves to a bare selector on the anonymous tuple
+element (`struct{...}{...}.F1.InitialMessage`) with no type assertion, and the
+switch produces no runtime dispatch at all.
 
-Make the tuple-element binding helper (`bindPlainStructPatternFields` /
-`bindStructPatternFieldsWithTypes`) aware that its `valueName` refers to an
-enum variant and needs a type assertion, rather than special-casing each
-call site in `translateSwitchBranchesStmt`.
+The fix must give the tail tuple branch the same per-element variant handling
+that the ordinary switch path already has: bind non-variant elements with
+`bindTuplePatternNonVariants`, then walk the tuple elements and emit a
+`VariantIf` per enum variant (mirroring `translate_ast.mygo`'s
+`translateTupleVariantSwitchStmtAt`). Each case body is still lowered through
+`translateAstReturnExpr` so mutual tail calls inside it keep being rewritten
+into state transitions.
 
-- **Why**: keeps the fix localized to where the incorrect selector is built.
+- **Why this branch is special**: `translate_expr.mygo` routes a
+  `SwitchExpr` through `translateAstReturnSwitch` (and therefore the tail
+  lowering) whenever the function returns a tuple or is part of a
+  mutual-tail-call plan. The previously-investigated ordinary switch path
+  (`translateSwitchBranchesStmt` / `translateTupleVariantSwitchStmtAt`) is
+  correct and already emits the assertion; it simply is not reached here.
+- **Alternative considered**: threading a "needs variant assertion" flag
+  through `bindPattern` / `bindPlainStructPatternFields` so the bare
+  `struct{...}.F1.InitialMessage` selector becomes type-asserted. Rejected:
+  those helpers lack the tuple element type needed to build the assertion, and
+  patching them would not reintroduce the missing `VariantIf` dispatch that the
+  tail path drops.
+
+### 2. Share the tuple variant dispatch between ordinary and tail switches
+
+Rather than inventing a parallel, tail-specific tuple walker, factor the
+decision "is tuple element `i` an enum variant?" and the resulting
+`VariantIf`-construction so both `translateTupleVariantSwitchStmtAt`
+(ordinary) and the fixed `translateSwitchBranchesTail` `TuplePattern` branch
+(tail) use the same logic, differing only in how a case body is lowered
+(`translateSwitchCaseBodyStmt` vs `translateAstReturnExpr`).
+
+- **Why**: keeps the two lowering paths' semantics in lock-step and prevents
+  this class of divergence from regressing.
 
 ### 3. Regression test mirrors the reducer shape
 

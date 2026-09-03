@@ -861,6 +861,7 @@ func __mygo_mt_typeinference2_substEntriesFromFallbacks(__mygo_mt_p0 []*Subst, _
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -890,12 +891,14 @@ func __mygo_mt_typeinference2_substGetFallbacks(__mygo_mt_p0 []*Subst, __mygo_mt
 							__mygo_state = 0
 							continue
 						} else {
+							panic("non-exhaustive switch")
 						}
 					}
 				} else {
 					if _, ok := __mygo_expr_0.(Option__None[*Subst]); ok {
 						return None[ast2.MonoType]()
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -930,6 +933,7 @@ func __mygo_mt_typeinference2_substIndexEntries(__mygo_mt_p0 []SubstEntry, __myg
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -982,6 +986,7 @@ func __mygo_mt_typeinference2_unifyArgsAt(__mygo_mt_p0 []ast2.MonoType, __mygo_m
 					if __mygo_match___mygo_expr_0, ok := s.(Result__Err[Subst, string]); ok {
 						return Err[Subst, string](__mygo_match___mygo_expr_0.F0)
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}

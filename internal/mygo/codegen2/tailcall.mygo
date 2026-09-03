@@ -928,8 +928,8 @@ func translateSwitchBranchesTail(cases: Slice[ast2.SwitchCase], targetType: Opti
       case WildcardPattern => translateAstReturnExpr(current.Body, ctx)
       case TuplePattern(items) =>
         let child = Ref.new(ctxChild(ctx))
-        bindTuplePattern(child, items, goast.MustExprSource(target), 0)
-        translateAstReturnExpr(current.Body, child)
+        bindTuplePatternNonVariants(child, items, goast.MustExprSource(target), 0)
+        translateTupleVariantSwitchStmtAtTail(items, targetType, target, current.Body, child, ctx, cases, 0)
       case LiteralPattern(kind, literal) =>
         let body = translateAstReturnExpr(current.Body, ctx)
         let rest = translateSwitchBranchesTail(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
@@ -984,6 +984,64 @@ func translateSwitchBranchesTail(cases: Slice[ast2.SwitchCase], targetType: Opti
           end
         end
       end
+    end
+  end
+end
+
+# translateTupleVariantSwitchStmtAtTail is the return-site counterpart of
+# translateTupleVariantSwitchStmtAt: it lowers per-element enum variant guards
+# for a tuple subject, but lowers each case body through the tail-value path so
+# mutual tail calls inside it are still rewritten into state transitions.
+func translateTupleVariantSwitchStmtAtTail(items: Slice[ast2.Pattern], targetType: Option[ast2.MonoType], target: goast.Expr, body: ast2.Expr, child: Ref[egCtx], outerCtx: Ref[egCtx], cases: Slice[ast2.SwitchCase], index: Int) -> Result[Slice[goast.Stmt], String]
+  if index >= items.Len() then
+    translateAstReturnExpr(body, child)
+  else
+    let pattern = items.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern)
+    let value = goast.Selector(target, "F" + index.ToString())
+    switch pattern
+      case VariantPattern(name, args) then
+        let rest = translateSwitchBranchesTail(sliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
+        switch rest
+          case Err(msg) => Err(msg)
+          case Ok(next) =>
+            switch targetType
+              case Some(tupleMono) then
+                let elementMono = tupleElementType(tupleMono, index)
+                let valueName = if args.Len() == 0 || allWildcards(args, 0) || !patternArgsUsedInBody(args, body) then "_" else "__mygo_match_" + ctxFreshExprTemp(outerCtx) end
+                let variantChild = Ref.new(ctxChild(child))
+                bindPatternArgumentsWithTypes(variantChild, args, valueName, 0, name, elementMono, outerCtx)
+                let nested = translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, variantChild, outerCtx, cases, index + 1)
+                switch nested
+                  case Err(msg) => Err(msg)
+                  case Ok(branch) => Ok(astSingleStmt(goast.VariantIf(value, goast.VariantTypeForTarget(monoTypeToGoStrIn(elementMono, outerCtx.pathAliases), name), valueName, branch, next)))
+                end
+              end
+              case None => Err("cannot resolve tuple switch target type")
+            end
+        end
+      end
+      case StructVariantPattern(name, fields) then
+        let rest = translateSwitchBranchesTail(sliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
+        switch rest
+          case Err(msg) => Err(msg)
+          case Ok(next) =>
+            switch targetType
+              case Some(tupleMono) then
+                let elementMono = tupleElementType(tupleMono, index)
+                let valueName = if fields.Len() == 0 || !structPatternFieldsUsedInBody(fields, body) then "_" else "__mygo_match_" + ctxFreshExprTemp(outerCtx) end
+                let variantChild = Ref.new(ctxChild(child))
+                bindStructPatternFieldsWithTypes(variantChild, fields, valueName, name, elementMono, outerCtx)
+                let nested = translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, variantChild, outerCtx, cases, index + 1)
+                switch nested
+                  case Err(msg) => Err(msg)
+                  case Ok(branch) => Ok(astSingleStmt(goast.VariantIf(value, goast.VariantTypeForTarget(monoTypeToGoStrIn(elementMono, outerCtx.pathAliases), name), valueName, branch, next)))
+                end
+              end
+              case None => Err("cannot resolve tuple switch target type")
+            end
+        end
+      end
+      case _ => translateTupleVariantSwitchStmtAtTail(items, targetType, target, body, child, outerCtx, cases, index + 1)
     end
   end
 end

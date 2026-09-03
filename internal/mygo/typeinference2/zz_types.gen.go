@@ -1617,6 +1617,7 @@ func __mygo_mt_typeinference2_envToSliceInto(__mygo_mt_p0 Env, __mygo_mt_p1 []En
 				if _, ok := __mygo_expr_6.(Option__None[*Env]); ok {
 					return withEntry
 				} else {
+					panic("non-exhaustive switch")
 				}
 			}
 		default:
@@ -2242,6 +2243,7 @@ func __mygo_mt_typeinference2_namedImplNames(__mygo_mt_p0 []ast2.Decl, __mygo_mt
 							__mygo_state = 0
 							continue
 						} else {
+							panic("non-exhaustive switch")
 						}
 					}
 				} else {
@@ -2540,6 +2542,7 @@ func __mygo_mt_typeinference2_symbolIndexAppend(__mygo_mt_p0 map[string]Symbol, 
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -2573,6 +2576,7 @@ func __mygo_mt_typeinference2_symbolIndexFromSlice(__mygo_mt_p0 []Symbol, __mygo
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}

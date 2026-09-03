@@ -325,6 +325,7 @@ func __mygo_mt_compiler_bootstrapContainsStringIn(__mygo_mt_p0 []string, __mygo_
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -367,6 +368,7 @@ func __mygo_mt_compiler_bootstrapDedupeStrings(__mygo_mt_p0 []string, __mygo_mt_
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -401,6 +403,7 @@ func __mygo_mt_compiler_bootstrapFindGoModuleRootUp(__mygo_mt_p0 string, __mygo_
 						continue
 					}
 				} else {
+					panic("non-exhaustive switch")
 				}
 			}
 		default:
@@ -431,6 +434,7 @@ func __mygo_mt_compiler_bootstrapGoImportDirCacheEntry(__mygo_mt_p0 BootstrapGoM
 							__mygo_state = 0
 							continue
 						} else {
+							panic("non-exhaustive switch")
 						}
 					}
 				} else {
@@ -442,6 +446,7 @@ func __mygo_mt_compiler_bootstrapGoImportDirCacheEntry(__mygo_mt_p0 BootstrapGoM
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -475,6 +480,7 @@ func __mygo_mt_compiler_bootstrapGoImportDirReplaceEntry(__mygo_mt_p0 string, __
 								__mygo_state = 0
 								continue
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					} else {
@@ -487,6 +493,7 @@ func __mygo_mt_compiler_bootstrapGoImportDirReplaceEntry(__mygo_mt_p0 string, __
 							__mygo_state = 0
 							continue
 						} else {
+							panic("non-exhaustive switch")
 						}
 					}
 				} else {
@@ -499,6 +506,7 @@ func __mygo_mt_compiler_bootstrapGoImportDirReplaceEntry(__mygo_mt_p0 string, __
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -529,6 +537,7 @@ func __mygo_mt_compiler_bootstrapGoImportDirRequireEntry(__mygo_mt_p0 string, __
 							__mygo_state = 0
 							continue
 						} else {
+							panic("non-exhaustive switch")
 						}
 					}
 				} else {
@@ -540,6 +549,7 @@ func __mygo_mt_compiler_bootstrapGoImportDirRequireEntry(__mygo_mt_p0 string, __
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -581,6 +591,7 @@ func __mygo_mt_compiler_bootstrapGoModCacheRootsGopath(__mygo_mt_p0 []string, __
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -616,6 +627,7 @@ func __mygo_mt_compiler_bootstrapGoModModulePathIn(__mygo_mt_p0 []string, __mygo
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -682,6 +694,7 @@ func __mygo_mt_compiler_bootstrapGoModReplaceEntriesIn(__mygo_mt_p0 []string, __
 											__mygo_state = 0
 											continue
 										} else {
+											panic("non-exhaustive switch")
 										}
 									}
 								} else {
@@ -705,6 +718,7 @@ func __mygo_mt_compiler_bootstrapGoModReplaceEntriesIn(__mygo_mt_p0 []string, __
 												__mygo_state = 0
 												continue
 											} else {
+												panic("non-exhaustive switch")
 											}
 										}
 									} else {
@@ -730,6 +744,7 @@ func __mygo_mt_compiler_bootstrapGoModReplaceEntriesIn(__mygo_mt_p0 []string, __
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -760,6 +775,7 @@ func __mygo_mt_compiler_bootstrapGoModReplaceFromFieldsIn(__mygo_mt_p0 []string,
 					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 						return None[BootstrapGoModReplace]()
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -826,6 +842,7 @@ func __mygo_mt_compiler_bootstrapGoModRequireEntriesIn(__mygo_mt_p0 []string, __
 											__mygo_state = 0
 											continue
 										} else {
+											panic("non-exhaustive switch")
 										}
 									}
 								} else {
@@ -849,6 +866,7 @@ func __mygo_mt_compiler_bootstrapGoModRequireEntriesIn(__mygo_mt_p0 []string, __
 												__mygo_state = 0
 												continue
 											} else {
+												panic("non-exhaustive switch")
 											}
 										}
 									} else {
@@ -874,6 +892,7 @@ func __mygo_mt_compiler_bootstrapGoModRequireEntriesIn(__mygo_mt_p0 []string, __
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}

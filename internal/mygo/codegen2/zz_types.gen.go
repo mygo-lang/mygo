@@ -677,6 +677,7 @@ func __mygo_mt_codegen2_pathAliasesFromImportsAt(__mygo_mt_p0 []GoImportPart, __
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}

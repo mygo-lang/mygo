@@ -129,6 +129,7 @@ func __mygo_mt_typeinference2_solverFindInstance(__mygo_mt_p0 []Instance, __mygo
 							__mygo_state = 0
 							continue
 						} else {
+							panic("non-exhaustive switch")
 						}
 					}
 				}

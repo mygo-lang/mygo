@@ -867,6 +867,7 @@ func __mygo_mt_typeinference2_typeArgsFromASTInEnvWithParamsListInto(__mygo_mt_p
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -899,6 +900,7 @@ func __mygo_mt_typeinference2_typeArgsFromASTInto(__mygo_mt_p0 []ast2.TypeExpr, 
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -933,6 +935,7 @@ func __mygo_mt_typeinference2_typeArgsFromASTWithParamsInto(__mygo_mt_p0 []ast2.
 						__mygo_state = 0
 						continue
 					} else {
+						panic("non-exhaustive switch")
 					}
 				}
 			}
@@ -967,6 +970,7 @@ func __mygo_mt_typeinference2_typeExprString(__mygo_mt_p0 ast2.TypeExpr, __mygo_
 								__mygo_state = 0
 								continue
 							} else {
+								panic("non-exhaustive switch")
 							}
 						}
 					}
