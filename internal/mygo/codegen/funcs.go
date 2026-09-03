@@ -214,11 +214,12 @@ func (g *gen) genFuncDecl(d *FuncDecl) (ast.Decl, error) {
 			}
 			bodyStmts = append(bodyStmts, &ast.ReturnStmt{Results: values})
 		} else {
-			code, _, err := g.translateExpr(d.Body, ctx, ctx.retType)
+			translated, err := g.translateExprResult(d.Body, ctx, ctx.retType)
 			if err != nil {
 				return nil, err
 			}
-			bodyStmts = append(bodyStmts, &ast.ReturnStmt{Results: []ast.Expr{code}})
+			bodyStmts = append(bodyStmts, translated.Stmts...)
+			bodyStmts = append(bodyStmts, &ast.ReturnStmt{Results: []ast.Expr{translated.Expr}})
 		}
 	} else {
 		translated, err := g.translateExprResult(d.Body, ctx, ctx.retType)
