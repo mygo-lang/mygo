@@ -227,6 +227,16 @@ Commas between cases are optional (Rust/Scala style).
 - Wildcard `_` patterns become plain `else` branches.
 - Expression form is wrapped in an immediately-invoked function literal `func() T { ... }()`.
 
+### Exhaustiveness
+- A switch over an enum must cover every declared variant, or include a
+  wildcard (`_`) or raw binding. Missing variants are reported as a compile
+  error before code generation.
+- Exhaustiveness is checked recursively for nested tuple patterns; an enum in
+  any tuple position must itself be covered.
+- The same rule applies to statement-form switches, not only tail expressions.
+- Switches over built-in non-enum values such as `Int` and `String` are not
+  subject to enum exhaustiveness checking.
+
 ### HM Type Inference (`internal/mygo/typeinference/`)
 - `InferState` gains `PkgInfo` field for enum variant lookup during pattern inference.
 - `inferSwitch()` extends each case body's environment with pattern bindings from the matched variant's fields.
