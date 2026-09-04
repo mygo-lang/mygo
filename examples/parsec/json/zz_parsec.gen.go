@@ -246,11 +246,9 @@ func pNumber() ps.Parser[JsonValue] {
 			rn := ps.PeekRune(curState_36)
 			if !rn.Ok {
 				break
-			} else {
 			}
 			if rn.Value < '0' || rn.Value > '9' {
 				break
-			} else {
 			}
 			runes_37 = MygoIN5SliceM6Append(runes_37, rn.Value)
 			curState_36 = ps.AdvanceRune(curState_36)
@@ -267,11 +265,9 @@ func pNumber() ps.Parser[JsonValue] {
 				rn := ps.PeekRune(curState_36)
 				if !rn.Ok {
 					break
-				} else {
 				}
 				if rn.Value < '0' || rn.Value > '9' {
 					break
-				} else {
 				}
 				runes_37 = MygoIN5SliceM6Append(runes_37, rn.Value)
 				curState_36 = ps.AdvanceRune(curState_36)
@@ -294,11 +290,9 @@ func pNumber() ps.Parser[JsonValue] {
 				rn := ps.PeekRune(curState_36)
 				if !rn.Ok {
 					break
-				} else {
 				}
 				if rn.Value < '0' || rn.Value > '9' {
 					break
-				} else {
 				}
 				runes_37 = MygoIN5SliceM6Append(runes_37, rn.Value)
 				curState_36 = ps.AdvanceRune(curState_36)

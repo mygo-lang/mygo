@@ -261,6 +261,7 @@ func TestPOptionalSucceedsWhenPresent(t *testing.T) {
 	} else {
 		if _, ok := result_81.Value.(Option__None[rune]); ok {
 			t.Fatal("POptional should return Some when parser succeeds")
+			return
 		}
 	}
 }
@@ -275,6 +276,7 @@ func TestPOptionalReturnsNoneWhenAbsent(t *testing.T) {
 	} else {
 		if _, ok := result_83.Value.(Option__Some[rune]); ok {
 			t.Fatal("POptional should return None when parser fails without consuming")
+			return
 		}
 	}
 }
@@ -590,7 +592,7 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_154.Value) != 3 {
 		t.Fatalf("words length = %d, want 3", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(result_154.Value))
 	}
-	w0_155 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_154.Value, 0)
+	w0_155 := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_154.Value, 0)
 	if v_8, ok := w0_155.(Option__Some[string]); ok {
 		if v_8.F0 != "hello" {
 			t.Fatalf("words[0] = %q, want %q", v_8.F0, "hello")
@@ -599,9 +601,10 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 	} else {
 		if _, ok := w0_155.(Option__None[string]); ok {
 			t.Fatal("words[0] should be Some")
+			return
 		}
 	}
-	w1_156 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_154.Value, 1)
+	w1_156 := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_154.Value, 1)
 	if v_10, ok := w1_156.(Option__Some[string]); ok {
 		if v_10.F0 != "world" {
 			t.Fatalf("words[1] = %q, want %q", v_10.F0, "world")
@@ -610,9 +613,10 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 	} else {
 		if _, ok := w1_156.(Option__None[string]); ok {
 			t.Fatal("words[1] should be Some")
+			return
 		}
 	}
-	w2_157 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_154.Value, 2)
+	w2_157 := MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(result_154.Value, 2)
 	if v_12, ok := w2_157.(Option__Some[string]); ok {
 		if v_12.F0 != "foo" {
 			t.Fatalf("words[2] = %q, want %q", v_12.F0, "foo")
@@ -621,6 +625,7 @@ func TestParseCommaSeparatedWords(t *testing.T) {
 	} else {
 		if _, ok := w2_157.(Option__None[string]); ok {
 			t.Fatal("words[2] should be Some")
+			return
 		}
 	}
 }
@@ -683,6 +688,7 @@ func TestPOptionalWithBetween(t *testing.T) {
 	} else {
 		if _, ok := result1_170.Value.(Option__None[rune]); ok {
 			t.Fatal("expected Some")
+			return
 		}
 	}
 	result2_171 := ParseInput[Option[rune]](group_169, "xy")
@@ -694,6 +700,7 @@ func TestPOptionalWithBetween(t *testing.T) {
 	} else {
 		if _, ok := result2_171.Value.(Option__Some[rune]); ok {
 			t.Fatal("expected None")
+			return
 		}
 	}
 }
@@ -762,6 +769,7 @@ func TestReplyEmptyError(t *testing.T) {
 	} else {
 		if _, ok := err_183.(Option__None[ParseError]); ok {
 			t.Fatal("EmptyError returned None")
+			return
 		}
 	}
 }
@@ -780,6 +788,7 @@ func TestReplyErrorAt(t *testing.T) {
 	} else {
 		if _, ok := err_186.(Option__None[ParseError]); ok {
 			t.Fatal("ErrorAt returned None")
+			return
 		}
 	}
 }
@@ -795,6 +804,7 @@ func TestReplyWithExpected(t *testing.T) {
 	} else {
 		if _, ok := err2_189.(Option__None[ParseError]); ok {
 			t.Fatal("WithExpected returned None")
+			return
 		}
 	}
 }
