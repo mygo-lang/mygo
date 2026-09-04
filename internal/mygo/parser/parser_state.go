@@ -113,6 +113,7 @@ type parser struct {
 	expectStructTypeArgs         bool
 	expectConstraintSuffix       bool
 	parsingImplTypeParams        bool
+	funcLitExprStateStack        []funcLitExprState
 	currentEnum                  *ast.EnumDecl
 	currentStruct                *ast.StructDecl
 	currentInterface             *ast.InterfaceDecl
@@ -125,6 +126,16 @@ type typeNameEntry struct {
 	line int
 	col  int
 	args []TypeExpr
+}
+
+type funcLitExprState struct {
+	currentLeftExpr     ast.Expr
+	currentPipeLeftExpr ast.Expr
+	currentOrSave       ast.Expr
+	currentAndSave      ast.Expr
+	currentCompSave     ast.Expr
+	currentAddSave      ast.Expr
+	currentMulSave      ast.Expr
 }
 
 func parseFiles(srcs map[string]string) ([]*ast.File, error) {

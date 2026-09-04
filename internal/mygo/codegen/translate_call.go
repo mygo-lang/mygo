@@ -314,11 +314,6 @@ func (g *gen) methodReturnType(method *struct {
 	if fn == nil {
 		return fallback
 	}
-	if fn.Name == "Fold" && len(callArgs) > 0 {
-		if typ := g.goTypeFromExpr(callArgs[0], ctx); typ != "" && typ != "any" && !isUnresolvedGoTypeParam(typ) {
-			return typ
-		}
-	}
 	subst := map[string]string{}
 	if len(fn.Params) > 0 {
 		typeParams := append([]string{}, fn.TypeParams...)
