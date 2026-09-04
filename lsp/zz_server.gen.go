@@ -319,10 +319,10 @@ func requestQuery(params map[string]any) string {
 	}()
 }
 func stringAt(items []string, index int) Option[string] {
-	return MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+	return MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 }
 func completionAt(items []CompletionItem, index int) Option[CompletionItem] {
-	return MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+	return MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 }
 func parseDocumentURI(uri string) string {
 	var expr_6 string
@@ -868,54 +868,60 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 		return m
 	}()
 	id_129 := msg_128.Id
-	var expr_195 LSPMessage
+	var expr_196 LSPMessage
 	if msg_128.Method == "initialize" {
-		var expr_194 LSPMessage
-		result_193 := buildInitializeResponse()
-		expr_194 = responseResult(id_129, result_193)
-		expr_195 = expr_194
+		var expr_195 LSPMessage
+		result_194 := buildInitializeResponse()
+		expr_195 = responseResult(id_129, result_194)
+		expr_196 = expr_195
 	} else {
 		if msg_128.Method == "initialized" {
-			var expr_192 LSPMessage
-			expr_192 = responseEmpty(id_129)
-			expr_195 = expr_192
+			var expr_193 LSPMessage
+			expr_193 = responseEmpty(id_129)
+			expr_196 = expr_193
 		} else {
 			if msg_128.Method == "textDocument/didOpen" {
+				var expr_192 LSPMessage
 				var expr_191 LSPMessage
-				var expr_190 LSPMessage
-				if v_27, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
-					var expr_189 LSPMessage
-					docItem_187 := decodeDocumentItem(v_27.F0)
-					storePut(store, docItem_187.URI, docItem_187.Version, docItem_187.Content)
-					diags_188 := handleDiagnostics(store, docItem_187.URI)
-					expr_189 = responseResult(id_129, diags_188)
-					expr_190 = expr_189
+				if v_28, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
+					var expr_190 LSPMessage
+					docItem_188 := decodeDocumentItem(v_28.F0)
+					storePut(store, docItem_188.URI, docItem_188.Version, docItem_188.Content)
+					diags_189 := handleDiagnostics(store, docItem_188.URI)
+					expr_190 = responseResult(id_129, diags_189)
+					expr_191 = expr_190
 				} else {
 					{
-						var expr_186 LSPMessage
-						expr_186 = responseEmpty(id_129)
-						expr_190 = expr_186
+						var expr_187 LSPMessage
+						expr_187 = responseEmpty(id_129)
+						expr_191 = expr_187
 					}
 				}
-				expr_191 = expr_190
-				expr_195 = expr_191
+				expr_192 = expr_191
+				expr_196 = expr_192
 			} else {
 				if msg_128.Method == "textDocument/didChange" {
+					var expr_186 LSPMessage
 					var expr_185 LSPMessage
-					var expr_184 LSPMessage
-					if v_26, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
-						var expr_183 LSPMessage
-						version_180 := requestVersion(v_26.F0)
-						uri_181 := requestURI(v_26.F0)
-						content_182 := firstChangeText(v_26.F0)
-						storePut(store, uri_181, version_180, content_182)
-						expr_183 = responseEmpty(id_129)
-						expr_184 = expr_183
+					if v_27, ok := msg_128.Params.(Option__Some[map[string]any]); ok {
+						var expr_184 LSPMessage
+						version_181 := requestVersion(v_27.F0)
+						uri_182 := requestURI(v_27.F0)
+						content_183 := firstChangeText(v_27.F0)
+						storePut(store, uri_182, version_181, content_183)
+						expr_184 = responseEmpty(id_129)
+						expr_185 = expr_184
 					} else {
-						panic("unreachable")
+						if _, ok := msg_128.Params.(Option__None[map[string]any]); ok {
+							var expr_180 LSPMessage
+							expr_180 = responseEmpty(id_129)
+							expr_185 = expr_180
+						} else {
+							panic("unreachable")
+						}
 					}
-					expr_185 = expr_184
-					expr_195 = expr_185
+					expr_186 = expr_185
+					expr_196 = expr_186
 				} else {
 					if msg_128.Method == "textDocument/didClose" {
 						var expr_179 LSPMessage
@@ -934,7 +940,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 							}
 						}
 						expr_179 = expr_178
-						expr_195 = expr_179
+						expr_196 = expr_179
 					} else {
 						if msg_128.Method == "textDocument/completion" {
 							var expr_174 LSPMessage
@@ -955,7 +961,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 								}
 							}
 							expr_174 = expr_173
-							expr_195 = expr_174
+							expr_196 = expr_174
 						} else {
 							if msg_128.Method == "textDocument/hover" {
 								var expr_166 LSPMessage
@@ -976,7 +982,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 									}
 								}
 								expr_166 = expr_165
-								expr_195 = expr_166
+								expr_196 = expr_166
 							} else {
 								if msg_128.Method == "textDocument/definition" {
 									var expr_158 LSPMessage
@@ -997,7 +1003,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 										}
 									}
 									expr_158 = expr_157
-									expr_195 = expr_158
+									expr_196 = expr_158
 								} else {
 									if msg_128.Method == "textDocument/references" {
 										var expr_150 LSPMessage
@@ -1018,7 +1024,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 											}
 										}
 										expr_150 = expr_149
-										expr_195 = expr_150
+										expr_196 = expr_150
 									} else {
 										if msg_128.Method == "textDocument/documentSymbol" {
 											var expr_142 LSPMessage
@@ -1037,7 +1043,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 												}
 											}
 											expr_142 = expr_141
-											expr_195 = expr_142
+											expr_196 = expr_142
 										} else {
 											if msg_128.Method == "workspace/symbol" {
 												var expr_136 LSPMessage
@@ -1056,12 +1062,12 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 													}
 												}
 												expr_136 = expr_135
-												expr_195 = expr_136
+												expr_196 = expr_136
 											} else {
 												{
 													var expr_130 LSPMessage
 													expr_130 = responseError(id_129, -32601, "method not found: "+msg_128.Method)
-													expr_195 = expr_130
+													expr_196 = expr_130
 												}
 											}
 										}
@@ -1074,7 +1080,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 			}
 		}
 	}
-	return expr_195
+	return expr_196
 }
 func Main() {
 	func() Result[int, error] {
@@ -1091,14 +1097,13 @@ func Main() {
 		}
 		return Ok[int, error](__mygo_result_val)
 	}()
-	store_196 := &[]DocumentStore{newDocumentStore()}[0]
+	store_197 := &[]DocumentStore{newDocumentStore()}[0]
 	for true {
 		raw := readOneMessage()
 		if raw == "" {
 			break
-		} else {
 		}
-		response := handleMessage(store_196, raw)
+		response := handleMessage(store_197, raw)
 		writeOneMessage(response)
 	}
 }

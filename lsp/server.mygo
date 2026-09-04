@@ -1101,9 +1101,6 @@ func handleMessage(
         case _ => responseEmpty(id)
       end
     end
-    case None then
-      responseError(id, -32600, "request method is missing")
-    end
     case _ then
       responseError(id, -32601, "method not found: " + msg.Method)
     end
