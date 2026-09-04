@@ -885,7 +885,7 @@ func handleMessage(store *DocumentStore, raw string) LSPMessage {
 												}
 												__mygo_expr_1 = __mygo_expr_27
 											} else {
-												__mygo_expr_1 = responseError(id, -32600, "request method is missing")
+												__mygo_expr_1 = responseError(id, -32601, "method not found: "+msg.Method)
 											}
 										}
 									}
