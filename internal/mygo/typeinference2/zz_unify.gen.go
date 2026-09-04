@@ -55,8 +55,8 @@ func unify(left ast2.MonoType, right ast2.MonoType, subst Subst) Result[Subst, s
 			__mygo_expr_1 = applySubst(subst, right)
 		}
 		bRight := __mygo_expr_1
-		a := normalizeEmptyTypeApps(aLeft)
-		b := normalizeEmptyTypeApps(bRight)
+		a := normalizeTypeEntry(aLeft)
+		b := normalizeTypeEntry(bRight)
 		if isAnyType(a) || isAnyType(b) {
 			return Ok[Subst, string](subst)
 		} else {
@@ -293,22 +293,36 @@ func unify(left ast2.MonoType, right ast2.MonoType, subst Subst) Result[Subst, s
 		}
 	}
 }
-func normalizeEmptyTypeApps(t ast2.MonoType) ast2.MonoType {
+func normalizeTypeEntry(t ast2.MonoType) ast2.MonoType {
 	for {
 		var __mygo_expr_0 ast2.MonoType
-		if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TApp); ok {
-			var __mygo_expr_3 ast2.MonoType
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_2.F1) == 0 {
-				__mygo_expr_3 = normalizeEmptyTypeApps(*__mygo_match___mygo_expr_2.F0)
+		if __mygo_match___mygo_expr_3, ok := t.(ast2.MonoType__TApp); ok {
+			var __mygo_expr_4 ast2.MonoType
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F1) == 0 {
+				__mygo_expr_4 = normalizeTypeEntry(*__mygo_match___mygo_expr_3.F0)
 			} else {
-				__mygo_expr_3 = t
+				__mygo_expr_4 = t
 			}
-			__mygo_expr_0 = __mygo_expr_3
+			__mygo_expr_0 = __mygo_expr_4
 		} else {
-			if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TQualifiedName); ok {
-				__mygo_expr_0 = ast2.MonoType__TQualifiedName__Ctor(__mygo_match___mygo_expr_1.F0, &[]ast2.MonoType{normalizeEmptyTypeApps(*__mygo_match___mygo_expr_1.F1)}[0])
+			if __mygo_match___mygo_expr_2, ok := t.(ast2.MonoType__TCon); ok {
+				__mygo_expr_3 := PrimitiveMyGoSpelling(__mygo_match___mygo_expr_2.F0)
+				var __mygo_expr_4 ast2.MonoType
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[string]); ok {
+					__mygo_expr_4 = ast2.MonoType__TCon__Ctor(__mygo_match___mygo_expr_5.F0)
+				} else {
+					if _, ok := __mygo_expr_3.(Option__None[string]); ok {
+						__mygo_expr_4 = t
+					} else {
+					}
+				}
+				__mygo_expr_0 = __mygo_expr_4
 			} else {
-				__mygo_expr_0 = t
+				if __mygo_match___mygo_expr_1, ok := t.(ast2.MonoType__TQualifiedName); ok {
+					__mygo_expr_0 = ast2.MonoType__TQualifiedName__Ctor(__mygo_match___mygo_expr_1.F0, &[]ast2.MonoType{normalizeTypeEntry(*__mygo_match___mygo_expr_1.F1)}[0])
+				} else {
+					__mygo_expr_0 = t
+				}
 			}
 		}
 		return __mygo_expr_0

@@ -57,15 +57,21 @@ func maxSubstIDPair(left: Int, right: Int) -> Int
 end
 
 func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Subst, String]
-  # A non-generic nominal type is accepted in both spellings during bootstrap:
-  # TCon(Name) and TApp(TCon(Name), []). Canonicalise the latter before the
-  # structural cases below, including when it is nested in TQualifiedName.
+  # Both sides are canonicalised before any structural comparison:
+  #  * a non-generic nominal type is accepted in both spellings during
+  #    bootstrap: TCon(Name) and TApp(TCon(Name), []), including when nested
+  #    in TQualifiedName;
+  #  * a builtin primitive spelled as Go (`error`) is rewritten to its MyGO
+  #    constructor (`Error`) through the shared primitive spelling table.
+  #    The Go FFI boundary produces `Error` already, declaration lowering
+  #    maps both spellings back to Go `error`, and none of the structural
+  #    cases below compares the two spellings specially.
   # An empty substitution cannot change either side, so skip the full-tree
   # applySubst rebuilds entirely; a non-empty one is applied below.
   let aLeft = if substIsEmpty(subst) => left else applySubst(subst, left)
   let bRight = if substIsEmpty(subst) => right else applySubst(subst, right)
-  let a = normalizeEmptyTypeApps(aLeft)
-  let b = normalizeEmptyTypeApps(bRight)
+  let a = normalizeTypeEntry(aLeft)
+  let b = normalizeTypeEntry(bRight)
   if isAnyType(a) || isAnyType(b) then
     Ok(subst)
   else
@@ -90,13 +96,7 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
             case TKVar(id) => bindVar(id, a, subst)
             case TParam(id) => bindVar(id, a, subst)
             case TApp(ctor, appArgs) => unifyApplication(ctor.value(), appArgs, a, subst)
-            case TCon(name2) then
-              if name == name2 then
-                unifyArgs([], [], subst)
-              else
-                Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
-              end
-            end
+            case TCon(name2) => if name == name2 then unifyArgs([], [], subst) else Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b)) end
             case _ => Err("cannot unify " + monoStringFull(a) + " with " + monoStringFull(b))
           end
         end
@@ -176,16 +176,22 @@ func unify(left: ast2.MonoType, right: ast2.MonoType, subst: Subst) -> Result[Su
   end
 end
 
-func normalizeEmptyTypeApps(t: ast2.MonoType) -> ast2.MonoType
+func normalizeTypeEntry(t: ast2.MonoType) -> ast2.MonoType
   switch t
     case TApp(ctor, args) then
       if args.Len() == 0 then
-        normalizeEmptyTypeApps(ctor.value())
+        normalizeTypeEntry(ctor.value())
       else
         t
       end
     end
-    case TQualifiedName(path, inner) => ast2.MonoType.TQualifiedName(path, Ref.new(normalizeEmptyTypeApps(inner.value())))
+    case TCon(name) then
+      switch PrimitiveMyGoSpelling(name)
+        case Some(canonical) => ast2.MonoType.TCon(canonical)
+        case None => t
+      end
+    end
+    case TQualifiedName(path, inner) => ast2.MonoType.TQualifiedName(path, Ref.new(normalizeTypeEntry(inner.value())))
     case _ => t
   end
 end

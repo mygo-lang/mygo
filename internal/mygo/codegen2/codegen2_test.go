@@ -1360,3 +1360,103 @@ end
 		t.Fatalf("field values did not infer Pair[Int]:\n%s", result.F0)
 	}
 }
+
+// Both source spellings of the Go builtin error interface must lower to Go's
+// `error` in declaration signatures: parameters, results, and tuple result
+// components.
+func TestGenerateFilesLowersErrorBuiltinAliasInSignatures(t *testing.T) {
+	src := `package sample
+
+import g "go:samplego"
+
+func produceError() -> error
+  g.Produce()
+end
+
+func reportFailure(err: Error) -> Error
+  err
+end
+
+func reportLower(err: error) -> error
+  err
+end
+
+func reportPair() -> (Error, Int)
+  (g.Produce(), 1)
+end
+`
+	parsed := parseSourceAsAst2(src)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
+	}
+	fileWithIDs := ast2.AssignFileExprIDs(file.F0)
+	path := "error-alias.mygo"
+	infoResult := typeinference2.InferPackageWithGoPackages(
+		[]typeinference2.PkgDeclSource{{Path: path, Decls: fileWithIDs.Decls}},
+		[]typeinference2.GoPackageEntry{{
+			Alias: "g", Path: "go:samplego",
+			Funcs: []typeinference2.GoFuncSignature{{Name: "Produce", Params: []string{}, Results: []string{"error"}, Variadic: false}},
+		}},
+	)
+	info, ok := infoResult.(Result__Ok[typeinference2.PackageInfo, string])
+	if !ok {
+		t.Fatalf("InferPackageWithGoPackages failed: %v", infoResult)
+	}
+	generated := GenerateFiles([]SourceFileInput{{Path: path, File: fileWithIDs}}, info.F0)
+	result, ok := generated.(Result__Ok[map[string]string, string])
+	if !ok {
+		t.Fatalf("GenerateFiles failed: %v", generated)
+	}
+	code := result.F0[sourceToGenName(path)]
+	for _, want := range []string{
+		"func produceError() error",
+		"func reportFailure(err error) error",
+		"func reportLower(err error) error",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("generated code missing %q:\n%s", want, code)
+		}
+	}
+	// The tuple result must lower its Error component to `error`, not emit a
+	// bare `Error` identifier.
+	if !strings.Contains(code, "reportPair() (error, int)") {
+		t.Fatalf("generated tuple signature did not lower Error to error:\n%s", code)
+	}
+}
+
+// A generic declaration whose type parameter is named `Error` must keep the
+// declared parameter; the builtin alias lowering must not rewrite it to Go's
+// `error` builtin.
+func TestGenerateFilesPreservesTypeParameterNamedError(t *testing.T) {
+	src := `package sample
+
+func Identity[Error](value: Error) -> Error
+  value
+end
+`
+	parsed := parseSourceAsAst2(src)
+	file, ok := parsed.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("parseSourceAsAst2 failed: %v", parsed)
+	}
+	fileWithIDs := ast2.AssignFileExprIDs(file.F0)
+	path := "error-typeparam.mygo"
+	infoResult := typeinference2.InferPackageWithGoPackages(
+		[]typeinference2.PkgDeclSource{{Path: path, Decls: fileWithIDs.Decls}},
+		[]typeinference2.GoPackageEntry{},
+	)
+	info, ok := infoResult.(Result__Ok[typeinference2.PackageInfo, string])
+	if !ok {
+		t.Fatalf("InferPackageWithGoPackages failed: %v", infoResult)
+	}
+	generated := GenerateFiles([]SourceFileInput{{Path: path, File: fileWithIDs}}, info.F0)
+	result, ok := generated.(Result__Ok[map[string]string, string])
+	if !ok {
+		t.Fatalf("GenerateFiles failed: %v", generated)
+	}
+	code := result.F0[sourceToGenName(path)]
+	if !strings.Contains(code, "func Identity[Error any](value Error) Error") {
+		t.Fatalf("generated signature replaced the Error type parameter with the error builtin:\n%s", code)
+	}
+}

@@ -2,6 +2,7 @@ package codegen2
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 import strconv "go:strconv"
 import strings "go:strings"
 
@@ -58,7 +59,12 @@ end
 func goTypeAst(t: ast2.TypeExpr, typeParams: Set[String]) -> goast.Expr
   switch t
     case NamedType(name, args) then
-      if name == "Unit" && args.Len() == 0 then goast.EmptyStructType() else
+      # Explicit type parameters outrank unit/special/HKT/primitive lowering
+      # (mirroring goType), so a generic parameter named `Error` is preserved
+      # instead of being rewritten to Go's `error` builtin.
+      if setContainsString(typeParams, name) && args.Len() == 0 then
+        goast.TypeName(name)
+      elsif name == "Unit" && args.Len() == 0 then goast.EmptyStructType() else
         let lowered = args.Map(func(arg: ast2.TypeExpr) -> goast.Expr goTypeAst(arg, typeParams) end)
         if name == "Ref" && lowered.Len() == 1 then goast.TypePointer(lowered.Get(0).UnwrapOr(goast.TypeName("any")))
         elsif name == "Slice" && lowered.Len() == 1 then goast.TypeSlice(lowered.Get(0).UnwrapOr(goast.TypeName("any")))
@@ -134,28 +140,25 @@ func genericNamedType(name: String, args: Slice[ast2.TypeExpr], typeParams: Set[
   end
 end
 
+# goPrimitiveType lowers a builtin primitive name to the Go name used in
+# declaration signatures.  Either source spelling resolves through
+# typeinference2's shared primitive spelling table (`Error` and `error` both
+# map to `error`); only the MyGO-only shapes (Any, Unit) have local entries.
 func goPrimitiveType(name: String) -> Option[String]
-  switch name
-    case "Int" => Some("int")
-    case "Int8" => Some("int8")
-    case "Int16" => Some("int16")
-    case "Int32" => Some("int32")
-    case "Int64" => Some("int64")
-    case "UInt" => Some("uint")
-    case "UInt8" => Some("uint8")
-    case "UInt16" => Some("uint16")
-    case "UInt32" => Some("uint32")
-    case "UInt64" => Some("uint64")
-    case "Byte" => Some("byte")
-    case "Rune" => Some("rune")
-    case "Float32" => Some("float32")
-    case "Float64" => Some("float64")
-    case "String" => Some("string")
-    case "Bool" => Some("bool")
-    case "Any" => Some("any")
-    case "Unit" => Some("struct{}")
-    case _ => None
+  switch typeinference2.PrimitiveGoSpelling(name)
+    case Some(mapped) => Some(mapped)
+    case None =>
+      if name == "Any" then Some("any")
+      elsif name == "Unit" then Some("struct{}")
+      else None
+      end
   end
+end
+
+# goPrimitiveTypeName returns the mapped Go name, keeping unknown names
+# unchanged.  It derives from goPrimitiveType so the two never drift.
+func goPrimitiveTypeName(name: String) -> String
+  goPrimitiveType(name).UnwrapOr(name)
 end
 
 func goSpecialType(name: String, args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> Option[String]
@@ -831,31 +834,5 @@ func unaryGoTypeStr(args: Slice[String], prefix: String) -> String
     prefix + mygoToGoTypeStr(args.Get(0).UnwrapOr(""))
   else
     prefix + "any"
-  end
-end
-
-# goPrimitiveTypeName: MyGO 基本类型名 → Go 基本类型名
-func goPrimitiveTypeName(name: String) -> String
-  switch name
-    case "Int" => "int"
-    case "Int8" => "int8"
-    case "Int16" => "int16"
-    case "Int32" => "int32"
-    case "Int64" => "int64"
-    case "UInt" => "uint"
-    case "UInt8" => "uint8"
-    case "UInt16" => "uint16"
-    case "UInt32" => "uint32"
-    case "UInt64" => "uint64"
-    case "Byte" => "byte"
-    case "Rune" => "rune"
-    case "Float32" => "float32"
-    case "Float64" => "float64"
-    case "String" => "string"
-    case "Bool" => "bool"
-    case "Any" => "any"
-    case "Error" => "error"
-    case "Unit" => "struct{}"
-    case _ => name
   end
 end

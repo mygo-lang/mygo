@@ -4,6 +4,7 @@ package codegen2
 
 import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import "github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 import "strconv"
 import "strings"
 import . "github.com/mygo-lang/mygo/prelude"
@@ -76,64 +77,70 @@ func goTypeAst(t ast2.TypeExpr, typeParams map[string]struct {
 	for {
 		var __mygo_expr_0 goast.Expr
 		if __mygo_match___mygo_expr_4, ok := t.(ast2.TypeExpr__NamedType); ok {
-			var __mygo_expr_13 goast.Expr
-			if __mygo_match___mygo_expr_4.F0 == "Unit" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
-				__mygo_expr_13 = goast.EmptyStructType()
+			var __mygo_expr_14 goast.Expr
+			if setContainsString(typeParams, __mygo_match___mygo_expr_4.F0) && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
+				__mygo_expr_14 = goast.TypeName(__mygo_match___mygo_expr_4.F0)
 			} else {
-				lowered := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_4.F1, func(arg ast2.TypeExpr) goast.Expr {
-					return goTypeAst(arg, typeParams)
-				})
-				var __mygo_expr_12 goast.Expr
-				if __mygo_match___mygo_expr_4.F0 == "Ref" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
-					__mygo_expr_12 = goast.TypePointer(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lowered, 0), goast.TypeName("any")))
+				var __mygo_expr_13 goast.Expr
+				if __mygo_match___mygo_expr_4.F0 == "Unit" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_4.F1) == 0 {
+					__mygo_expr_13 = goast.EmptyStructType()
 				} else {
-					var __mygo_expr_11 goast.Expr
-					if __mygo_match___mygo_expr_4.F0 == "Slice" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
-						__mygo_expr_11 = goast.TypeSlice(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lowered, 0), goast.TypeName("any")))
+					lowered := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_4.F1, func(arg ast2.TypeExpr) goast.Expr {
+						return goTypeAst(arg, typeParams)
+					})
+					var __mygo_expr_12 goast.Expr
+					if __mygo_match___mygo_expr_4.F0 == "Ref" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
+						__mygo_expr_12 = goast.TypePointer(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lowered, 0), goast.TypeName("any")))
 					} else {
-						var __mygo_expr_10 goast.Expr
-						if __mygo_match___mygo_expr_4.F0 == "Map" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 2 {
-							__mygo_expr_10 = goast.TypeMap(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lowered, 0), goast.TypeName("any")), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lowered, 1), goast.TypeName("any")))
+						var __mygo_expr_11 goast.Expr
+						if __mygo_match___mygo_expr_4.F0 == "Slice" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
+							__mygo_expr_11 = goast.TypeSlice(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lowered, 0), goast.TypeName("any")))
 						} else {
-							var __mygo_expr_9 goast.Expr
-							if __mygo_match___mygo_expr_4.F0 == "Set" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
-								__mygo_expr_9 = goast.TypeMap(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lowered, 0), goast.TypeName("any")), goast.EmptyStructType())
+							var __mygo_expr_10 goast.Expr
+							if __mygo_match___mygo_expr_4.F0 == "Map" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 2 {
+								__mygo_expr_10 = goast.TypeMap(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lowered, 0), goast.TypeName("any")), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lowered, 1), goast.TypeName("any")))
 							} else {
-								var __mygo_expr_8 goast.Expr
-								if __mygo_match___mygo_expr_4.F0 == "Chan" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
-									__mygo_expr_8 = goast.TypeChan(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lowered, 0), goast.TypeName("any")), "both")
+								var __mygo_expr_9 goast.Expr
+								if __mygo_match___mygo_expr_4.F0 == "Set" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
+									__mygo_expr_9 = goast.TypeMap(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lowered, 0), goast.TypeName("any")), goast.EmptyStructType())
 								} else {
-									var __mygo_expr_7 goast.Expr
-									if __mygo_match___mygo_expr_4.F0 == "SendChan" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
-										__mygo_expr_7 = goast.TypeChan(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lowered, 0), goast.TypeName("any")), "send")
+									var __mygo_expr_8 goast.Expr
+									if __mygo_match___mygo_expr_4.F0 == "Chan" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
+										__mygo_expr_8 = goast.TypeChan(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lowered, 0), goast.TypeName("any")), "both")
 									} else {
-										var __mygo_expr_6 goast.Expr
-										if __mygo_match___mygo_expr_4.F0 == "RecvChan" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
-											__mygo_expr_6 = goast.TypeChan(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lowered, 0), goast.TypeName("any")), "recv")
+										var __mygo_expr_7 goast.Expr
+										if __mygo_match___mygo_expr_4.F0 == "SendChan" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
+											__mygo_expr_7 = goast.TypeChan(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lowered, 0), goast.TypeName("any")), "send")
 										} else {
-											var __mygo_expr_5 goast.Expr
-											if isHKTConstructor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, typeParams) {
-												__mygo_expr_5 = goast.TypeApply(goast.TypeName("HKT"), []goast.Expr{goast.TypeName(__mygo_match___mygo_expr_4.F0), hktApplicationAst(__mygo_match___mygo_expr_4.F1, typeParams)})
+											var __mygo_expr_6 goast.Expr
+											if __mygo_match___mygo_expr_4.F0 == "RecvChan" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lowered) == 1 {
+												__mygo_expr_6 = goast.TypeChan(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lowered, 0), goast.TypeName("any")), "recv")
 											} else {
-												__mygo_expr_5 = goast.TypeApply(goast.TypeName(MygoIN6OptionM8UnwrapOr(goPrimitiveType(__mygo_match___mygo_expr_4.F0), __mygo_match___mygo_expr_4.F0)), lowered)
+												var __mygo_expr_5 goast.Expr
+												if isHKTConstructor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, typeParams) {
+													__mygo_expr_5 = goast.TypeApply(goast.TypeName("HKT"), []goast.Expr{goast.TypeName(__mygo_match___mygo_expr_4.F0), hktApplicationAst(__mygo_match___mygo_expr_4.F1, typeParams)})
+												} else {
+													__mygo_expr_5 = goast.TypeApply(goast.TypeName(MygoIN6OptionM8UnwrapOr(goPrimitiveType(__mygo_match___mygo_expr_4.F0), __mygo_match___mygo_expr_4.F0)), lowered)
+												}
+												__mygo_expr_6 = __mygo_expr_5
 											}
-											__mygo_expr_6 = __mygo_expr_5
+											__mygo_expr_7 = __mygo_expr_6
 										}
-										__mygo_expr_7 = __mygo_expr_6
+										__mygo_expr_8 = __mygo_expr_7
 									}
-									__mygo_expr_8 = __mygo_expr_7
+									__mygo_expr_9 = __mygo_expr_8
 								}
-								__mygo_expr_9 = __mygo_expr_8
+								__mygo_expr_10 = __mygo_expr_9
 							}
-							__mygo_expr_10 = __mygo_expr_9
+							__mygo_expr_11 = __mygo_expr_10
 						}
-						__mygo_expr_11 = __mygo_expr_10
+						__mygo_expr_12 = __mygo_expr_11
 					}
-					__mygo_expr_12 = __mygo_expr_11
+					__mygo_expr_13 = __mygo_expr_12
 				}
-				__mygo_expr_13 = __mygo_expr_12
+				__mygo_expr_14 = __mygo_expr_13
 			}
-			__mygo_expr_0 = __mygo_expr_13
+			__mygo_expr_0 = __mygo_expr_14
 		} else {
 			if __mygo_match___mygo_expr_3, ok := t.(ast2.TypeExpr__FuncType); ok {
 				__mygo_expr_0 = goast.TypeFunc(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_3.F0, func(param ast2.TypeExpr) goast.Expr {
@@ -236,81 +243,32 @@ func genericNamedType(name string, args []ast2.TypeExpr, typeParams map[string]s
 	}
 }
 func goPrimitiveType(name string) Option[string] {
-	var __mygo_expr_0 Option[string]
-	if name == "Int" {
-		__mygo_expr_0 = Some[string]("int")
+	__mygo_expr_0 := typeinference2.PrimitiveGoSpelling(name)
+	var __mygo_expr_1 Option[string]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+		__mygo_expr_1 = Some[string](__mygo_match___mygo_expr_2.F0)
 	} else {
-		if name == "Int8" {
-			__mygo_expr_0 = Some[string]("int8")
-		} else {
-			if name == "Int16" {
-				__mygo_expr_0 = Some[string]("int16")
+		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+			var __mygo_expr_3 Option[string]
+			if name == "Any" {
+				__mygo_expr_3 = Some[string]("any")
 			} else {
-				if name == "Int32" {
-					__mygo_expr_0 = Some[string]("int32")
+				var __mygo_expr_2 Option[string]
+				if name == "Unit" {
+					__mygo_expr_2 = Some[string]("struct{}")
 				} else {
-					if name == "Int64" {
-						__mygo_expr_0 = Some[string]("int64")
-					} else {
-						if name == "UInt" {
-							__mygo_expr_0 = Some[string]("uint")
-						} else {
-							if name == "UInt8" {
-								__mygo_expr_0 = Some[string]("uint8")
-							} else {
-								if name == "UInt16" {
-									__mygo_expr_0 = Some[string]("uint16")
-								} else {
-									if name == "UInt32" {
-										__mygo_expr_0 = Some[string]("uint32")
-									} else {
-										if name == "UInt64" {
-											__mygo_expr_0 = Some[string]("uint64")
-										} else {
-											if name == "Byte" {
-												__mygo_expr_0 = Some[string]("byte")
-											} else {
-												if name == "Rune" {
-													__mygo_expr_0 = Some[string]("rune")
-												} else {
-													if name == "Float32" {
-														__mygo_expr_0 = Some[string]("float32")
-													} else {
-														if name == "Float64" {
-															__mygo_expr_0 = Some[string]("float64")
-														} else {
-															if name == "String" {
-																__mygo_expr_0 = Some[string]("string")
-															} else {
-																if name == "Bool" {
-																	__mygo_expr_0 = Some[string]("bool")
-																} else {
-																	if name == "Any" {
-																		__mygo_expr_0 = Some[string]("any")
-																	} else {
-																		if name == "Unit" {
-																			__mygo_expr_0 = Some[string]("struct{}")
-																		} else {
-																			__mygo_expr_0 = None[string]()
-																		}
-																	}
-																}
-															}
-														}
-													}
-												}
-											}
-										}
-									}
-								}
-							}
-						}
-					}
+					__mygo_expr_2 = None[string]()
 				}
+				__mygo_expr_3 = __mygo_expr_2
 			}
+			__mygo_expr_1 = __mygo_expr_3
+		} else {
 		}
 	}
-	return __mygo_expr_0
+	return __mygo_expr_1
+}
+func goPrimitiveTypeName(name string) string {
+	return MygoIN6OptionM8UnwrapOr(goPrimitiveType(name), name)
 }
 func goSpecialType(name string, args []ast2.TypeExpr, typeParams map[string]struct {
 }) Option[string] {
@@ -1148,87 +1106,6 @@ func unaryGoTypeStr(args []string, prefix string) string {
 	} else {
 		return prefix + "any"
 	}
-}
-func goPrimitiveTypeName(name string) string {
-	var __mygo_expr_0 string
-	if name == "Int" {
-		__mygo_expr_0 = "int"
-	} else {
-		if name == "Int8" {
-			__mygo_expr_0 = "int8"
-		} else {
-			if name == "Int16" {
-				__mygo_expr_0 = "int16"
-			} else {
-				if name == "Int32" {
-					__mygo_expr_0 = "int32"
-				} else {
-					if name == "Int64" {
-						__mygo_expr_0 = "int64"
-					} else {
-						if name == "UInt" {
-							__mygo_expr_0 = "uint"
-						} else {
-							if name == "UInt8" {
-								__mygo_expr_0 = "uint8"
-							} else {
-								if name == "UInt16" {
-									__mygo_expr_0 = "uint16"
-								} else {
-									if name == "UInt32" {
-										__mygo_expr_0 = "uint32"
-									} else {
-										if name == "UInt64" {
-											__mygo_expr_0 = "uint64"
-										} else {
-											if name == "Byte" {
-												__mygo_expr_0 = "byte"
-											} else {
-												if name == "Rune" {
-													__mygo_expr_0 = "rune"
-												} else {
-													if name == "Float32" {
-														__mygo_expr_0 = "float32"
-													} else {
-														if name == "Float64" {
-															__mygo_expr_0 = "float64"
-														} else {
-															if name == "String" {
-																__mygo_expr_0 = "string"
-															} else {
-																if name == "Bool" {
-																	__mygo_expr_0 = "bool"
-																} else {
-																	if name == "Any" {
-																		__mygo_expr_0 = "any"
-																	} else {
-																		if name == "Error" {
-																			__mygo_expr_0 = "error"
-																		} else {
-																			if name == "Unit" {
-																				__mygo_expr_0 = "struct{}"
-																			} else {
-																				__mygo_expr_0 = name
-																			}
-																		}
-																	}
-																}
-															}
-														}
-													}
-												}
-											}
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	return __mygo_expr_0
 }
 func __mygo_mt_codegen2_collectComparableParamsFromArgs(__mygo_mt_p0 []ast2.TypeExpr, __mygo_mt_p1 map[string]struct{}, __mygo_mt_p2 int, __mygo_mt_p3 []string, __mygo_state int) []string {
 	for {

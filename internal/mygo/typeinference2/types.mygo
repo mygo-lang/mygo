@@ -1666,6 +1666,73 @@ func emptyGoTypes() -> Slice[ast2.MonoType]
   [] as Slice[ast2.MonoType]
 end
 
+# A builtin primitive type has two spellings: the Go name used by FFI
+# signatures (`error`) and the MyGO constructor name (`Error`).  GoTypeName
+# (Go FFI → MonoType), unify entry normalisation, and codegen declaration
+# lowering all consult this one table, so the error alias needs no special
+# case in any direction: every spelling resolves through the same pair.
+struct GoPrimitivePair
+  GoName: String
+  MyGoName: String
+end
+
+func goPrimitivePairs() -> Slice[GoPrimitivePair]
+  [
+    GoPrimitivePair { GoName: "int", MyGoName: "Int" },
+    GoPrimitivePair { GoName: "int8", MyGoName: "Int8" },
+    GoPrimitivePair { GoName: "int16", MyGoName: "Int16" },
+    GoPrimitivePair { GoName: "int32", MyGoName: "Int32" },
+    GoPrimitivePair { GoName: "int64", MyGoName: "Int64" },
+    GoPrimitivePair { GoName: "uint", MyGoName: "UInt" },
+    GoPrimitivePair { GoName: "uint8", MyGoName: "UInt8" },
+    GoPrimitivePair { GoName: "uint16", MyGoName: "UInt16" },
+    GoPrimitivePair { GoName: "uint32", MyGoName: "UInt32" },
+    GoPrimitivePair { GoName: "uint64", MyGoName: "UInt64" },
+    GoPrimitivePair { GoName: "float32", MyGoName: "Float32" },
+    GoPrimitivePair { GoName: "float64", MyGoName: "Float64" },
+    GoPrimitivePair { GoName: "string", MyGoName: "String" },
+    GoPrimitivePair { GoName: "bool", MyGoName: "Bool" },
+    GoPrimitivePair { GoName: "byte", MyGoName: "Byte" },
+    GoPrimitivePair { GoName: "rune", MyGoName: "Rune" },
+    GoPrimitivePair { GoName: "error", MyGoName: "Error" },
+  ]
+end
+
+func anyPrimitivePair(pairs: Slice[GoPrimitivePair], name: String, index: Int) -> Option[GoPrimitivePair]
+  if index >= pairs.Len() then None else
+    let pair = pairs.Get(index).UnwrapOr(GoPrimitivePair { GoName: "", MyGoName: "" })
+    if pair.GoName == name || pair.MyGoName == name then Some(pair) else anyPrimitivePair(pairs, name, index + 1) end
+  end
+end
+
+func goSpelledPair(pairs: Slice[GoPrimitivePair], name: String, index: Int) -> Option[GoPrimitivePair]
+  if index >= pairs.Len() then None else
+    let pair = pairs.Get(index).UnwrapOr(GoPrimitivePair { GoName: "", MyGoName: "" })
+    if pair.GoName == name then Some(pair) else goSpelledPair(pairs, name, index + 1) end
+  end
+end
+
+# PrimitiveGoSpelling maps either spelling of a builtin primitive to the Go
+# name used in generated code (`Error` and `error` both map to `error`).
+# Codegen consults this so declaration lowering never special-cases aliases.
+func PrimitiveGoSpelling(name: String) -> Option[String]
+  switch anyPrimitivePair(goPrimitivePairs(), name, 0)
+    case Some(pair) => Some(pair.GoName)
+    case None => None
+  end
+end
+
+# PrimitiveMyGoSpelling maps the Go spelling of a builtin primitive to its
+# canonical MyGO constructor name (Go FFI `error` becomes `Error`).  GoTypeName
+# and unify entry normalisation use it; already-canonical names pass through
+# untouched.
+func PrimitiveMyGoSpelling(name: String) -> Option[String]
+  switch goSpelledPair(goPrimitivePairs(), name, 0)
+    case Some(pair) => Some(pair.MyGoName)
+    case None => None
+  end
+end
+
 # GoTypeName maps a Go signature type string (produced by go/types TypeString)
 # to the MyGO MonoType representation.  Composite shapes are parsed
 # recursively: `[]string` becomes Slice[String], `map[K]V` becomes Map[K, V]
@@ -1691,25 +1758,9 @@ func GoTypeName(name: String) -> ast2.MonoType
       if strings.HasPrefix(trimmed, "*") then
         ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Ref")), [GoTypeName(strings.TrimPrefix(trimmed, "*"))])
       else
-        switch trimmed
-          case "int" => ast2.MonoType.TCon("Int")
-          case "int8" => ast2.MonoType.TCon("Int8")
-          case "int16" => ast2.MonoType.TCon("Int16")
-          case "int32" => ast2.MonoType.TCon("Int32")
-          case "int64" => ast2.MonoType.TCon("Int64")
-          case "uint" => ast2.MonoType.TCon("UInt")
-          case "uint8" => ast2.MonoType.TCon("UInt8")
-          case "uint16" => ast2.MonoType.TCon("UInt16")
-          case "uint32" => ast2.MonoType.TCon("UInt32")
-          case "uint64" => ast2.MonoType.TCon("UInt64")
-          case "float32" => ast2.MonoType.TCon("Float32")
-          case "float64" => ast2.MonoType.TCon("Float64")
-          case "string" => ast2.MonoType.TCon("String")
-          case "bool" => ast2.MonoType.TCon("Bool")
-          case "byte" => ast2.MonoType.TCon("Byte")
-          case "rune" => ast2.MonoType.TCon("Rune")
-          case "error" => ast2.MonoType.TCon("Error")
-          case _ => ast2.MonoType.TVar(0)
+        switch PrimitiveMyGoSpelling(trimmed)
+          case Some(canonical) => ast2.MonoType.TCon(canonical)
+          case None => ast2.MonoType.TVar(0)
         end
       end
     end

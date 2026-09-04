@@ -1,0 +1,138 @@
+package typeinference2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import testing "go:testing"
+
+# Go's builtin error interface is spelled `Error` at the MyGO boundary and
+# `error` in Go signatures. Source construction preserves the spelling as
+# written; the unification entry point canonicalises `error` to `Error`, so
+# both spellings unify regardless of which side of a declaration each came
+# from.
+func TestUnifyErrorAndGoErrorAlias(t: Ref[testing.T]) -> ()
+  let upper = ast2.MonoType.TCon("Error")
+  let lower = ast2.MonoType.TCon("error")
+  switch unify(upper, lower, emptySubst())
+    case Ok(_) => ()
+    case Err(msg) => t.Fatalf("unify(Error, error) failed: %s", msg)
+  end
+  switch unify(lower, upper, emptySubst())
+    case Ok(_) => ()
+    case Err(msg) => t.Fatalf("unify(error, Error) failed: %s", msg)
+  end
+  # The empty type-application shape produced for a bare source type by
+  # typeFromASTWithParams must unify with the canonical constructor too.
+  switch unify(upper, ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("error")), [] as Slice[ast2.MonoType]), emptySubst())
+    case Ok(_) => ()
+    case Err(msg) => t.Fatalf("unify(Error, TApp(error, [])) failed: %s", msg)
+  end
+end
+
+# The alias mechanism: source construction keeps the spelling written in the
+# declaration, the Go FFI boundary maps Go `error` to canonical `Error`, and
+# unify's entry normalisation rewrites any remaining `error` constructor to
+# `Error` -- including through the empty type-application shape.
+func TestErrorAliasCanonicalizesAtBoundaries(t: Ref[testing.T]) -> ()
+  let named = ast2.TypeExpr.NamedType("error", [] as Slice[ast2.TypeExpr])
+  # Source construction preserves the spelling as written.
+  if !monoEqual(typeFromAST(named), ast2.MonoType.TCon("error")) then
+    t.Fatalf("typeFromAST(error) = %s, want TCon(error)", monoStringFull(typeFromAST(named)))
+  end
+  let wantApp = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("error")), [] as Slice[ast2.MonoType])
+  if !monoEqual(typeFromASTWithParams(named, [] as Slice[String]), wantApp) then
+    t.Fatalf("typeFromASTWithParams(error) = %s, want TApp(TCon(error), [])", monoStringFull(typeFromASTWithParams(named, [] as Slice[String])))
+  end
+  # An empty env (Env.New(), not the Go zero value) leaves the lookup to fall
+  # back to the constructor.
+  if !monoEqual(typeFromASTInEnv(named, envFromEntries([] as Slice[EnvEntry], 0), NewInferState()), ast2.MonoType.TCon("error")) then
+    t.Fatalf("typeFromASTInEnv(error) = %s, want TCon(error)", monoStringFull(typeFromASTInEnv(named, envFromEntries([] as Slice[EnvEntry], 0), NewInferState())))
+  end
+  # The Go FFI boundary maps Go `error` to the canonical `Error`.
+  if !monoEqual(GoTypeName("error"), ast2.MonoType.TCon("Error")) then
+    t.Fatalf("GoTypeName(error) = %s, want TCon(Error)", monoStringFull(GoTypeName("error")))
+  end
+  # Both boundaries resolve through the shared primitive spelling table:
+  # either spelling lowers to Go `error`, and Go `error` canonicalises to
+  # `Error`.
+  switch PrimitiveGoSpelling("Error")
+    case Some(goName) then
+      if goName != "error" then
+        t.Fatalf("PrimitiveGoSpelling(Error) = %s, want error", goName)
+      end
+    end
+    case None => t.Fatal("PrimitiveGoSpelling(Error) returned None")
+  end
+  switch PrimitiveGoSpelling("error")
+    case Some(goName) then
+      if goName != "error" then
+        t.Fatalf("PrimitiveGoSpelling(error) = %s, want error", goName)
+      end
+    end
+    case None => t.Fatal("PrimitiveGoSpelling(error) returned None")
+  end
+  switch PrimitiveMyGoSpelling("error")
+    case Some(myGoName) then
+      if myGoName != "Error" then
+        t.Fatalf("PrimitiveMyGoSpelling(error) = %s, want Error", myGoName)
+      end
+    end
+    case None => t.Fatal("PrimitiveMyGoSpelling(error) returned None")
+  end
+  # Unify's entry normalisation canonicalises the remaining spellings.
+  if !monoEqual(normalizeTypeEntry(ast2.MonoType.TCon("error")), ast2.MonoType.TCon("Error")) then
+    t.Fatalf("normalizeTypeEntry(TCon(error)) = %s, want TCon(Error)", monoStringFull(normalizeTypeEntry(ast2.MonoType.TCon("error"))))
+  end
+  if !monoEqual(normalizeTypeEntry(wantApp), ast2.MonoType.TCon("Error")) then
+    t.Fatalf("normalizeTypeEntry(TApp(error, [])) = %s, want TCon(Error)", monoStringFull(normalizeTypeEntry(wantApp)))
+  end
+end
+
+func TestTypeFromASTErrorAliasRespectsTypeParametersAndEnv(t: Ref[testing.T]) -> ()
+  let named = ast2.TypeExpr.NamedType("error", [] as Slice[ast2.TypeExpr])
+  # A declared type parameter named `error` wins over the builtin alias.
+  if !monoEqual(typeFromASTWithParams(named, ["error"]), ast2.MonoType.TParam(-1)) then
+    t.Fatalf("typeFromASTWithParams(error, [error]) = %s, want TParam(-1)", monoStringFull(typeFromASTWithParams(named, ["error"])))
+  end
+  # A declaration in scope named `error` shadows the builtin fallback.
+  let env = envPut(Env.New(), "error", Scheme { Bound: [] as Slice[Int], Predicates: [] as Slice[Predicate], Body: ast2.MonoType.TCon("UserError") })
+  if !monoEqual(typeFromASTInEnv(named, env, NewInferState()), ast2.MonoType.TCon("UserError")) then
+    t.Fatalf("typeFromASTInEnv(error) with shadowing env = %s, want TCon(UserError)", monoStringFull(typeFromASTInEnv(named, env, NewInferState())))
+  end
+end
+
+# Values produced at the Go boundary (canonical `Error`) must cross
+# declarations annotated with the lower-case `error` spelling and vice versa.
+func TestInferErrorSpellingsCrossDeclarationBoundary(t: Ref[testing.T]) -> ()
+  let parsed = parser2.ParseFileAt("error-alias.mygo", """
+package sample
+
+import g "go:samplego"
+
+func takeError(err: Error) -> error
+  err
+end
+
+func consumeError(err: error) -> error
+  err
+end
+
+func run() -> error
+  consumeError(g.Produce())
+end
+""")
+  switch parsed
+    case Err(msg) => t.Fatal(msg)
+    case Ok(file) =>
+      let typed = ast2.AssignFileExprIDs(file)
+      let goPkgs = [GoPackageEntry {
+        Alias: "g",
+        Path: "go:samplego",
+        Funcs: [GoFuncSignature { Name: "Produce", Params: [] as Slice[String], Results: ["error"], Variadic: false }],
+        Types: [] as Slice[GoTypeSignature],
+      }]
+      switch InferPackageWithGoPackages([PkgDeclSource { Path: "<input>", Decls: typed.Decls }], goPkgs)
+        case Ok(_) => ()
+        case Err(msg) => t.Fatalf("InferPackageWithGoPackages rejected differently spelled error annotations: %s", msg)
+      end
+  end
+end

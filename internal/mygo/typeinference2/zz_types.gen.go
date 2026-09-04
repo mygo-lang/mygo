@@ -1124,6 +1124,47 @@ func goSignatureTypesForInto(items []string, pkg GoPackageEntry, index int, out 
 func emptyGoTypes() []ast2.MonoType {
 	return []ast2.MonoType{}
 }
+
+type GoPrimitivePair struct {
+	GoName   string
+	MyGoName string
+}
+
+func goPrimitivePairs() []GoPrimitivePair {
+	return []GoPrimitivePair{GoPrimitivePair{GoName: "int", MyGoName: "Int"}, GoPrimitivePair{GoName: "int8", MyGoName: "Int8"}, GoPrimitivePair{GoName: "int16", MyGoName: "Int16"}, GoPrimitivePair{GoName: "int32", MyGoName: "Int32"}, GoPrimitivePair{GoName: "int64", MyGoName: "Int64"}, GoPrimitivePair{GoName: "uint", MyGoName: "UInt"}, GoPrimitivePair{GoName: "uint8", MyGoName: "UInt8"}, GoPrimitivePair{GoName: "uint16", MyGoName: "UInt16"}, GoPrimitivePair{GoName: "uint32", MyGoName: "UInt32"}, GoPrimitivePair{GoName: "uint64", MyGoName: "UInt64"}, GoPrimitivePair{GoName: "float32", MyGoName: "Float32"}, GoPrimitivePair{GoName: "float64", MyGoName: "Float64"}, GoPrimitivePair{GoName: "string", MyGoName: "String"}, GoPrimitivePair{GoName: "bool", MyGoName: "Bool"}, GoPrimitivePair{GoName: "byte", MyGoName: "Byte"}, GoPrimitivePair{GoName: "rune", MyGoName: "Rune"}, GoPrimitivePair{GoName: "error", MyGoName: "Error"}}
+}
+func anyPrimitivePair(pairs []GoPrimitivePair, name string, index int) Option[GoPrimitivePair] {
+	return __mygo_mt_typeinference2_anyPrimitivePair(pairs, name, index, 0)
+}
+func goSpelledPair(pairs []GoPrimitivePair, name string, index int) Option[GoPrimitivePair] {
+	return __mygo_mt_typeinference2_goSpelledPair(pairs, name, index, 0)
+}
+func PrimitiveGoSpelling(name string) Option[string] {
+	__mygo_expr_0 := anyPrimitivePair(goPrimitivePairs(), name, 0)
+	var __mygo_expr_1 Option[string]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[GoPrimitivePair]); ok {
+		__mygo_expr_1 = Some[string](__mygo_match___mygo_expr_2.F0.GoName)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[GoPrimitivePair]); ok {
+			__mygo_expr_1 = None[string]()
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func PrimitiveMyGoSpelling(name string) Option[string] {
+	__mygo_expr_0 := goSpelledPair(goPrimitivePairs(), name, 0)
+	var __mygo_expr_1 Option[string]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[GoPrimitivePair]); ok {
+		__mygo_expr_1 = Some[string](__mygo_match___mygo_expr_2.F0.MyGoName)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[GoPrimitivePair]); ok {
+			__mygo_expr_1 = None[string]()
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
 func GoTypeName(name string) ast2.MonoType {
 	trimmed := strings.TrimSpace(name)
 	if strings.HasPrefix(trimmed, "[]") {
@@ -1142,77 +1183,17 @@ func GoTypeName(name string) ast2.MonoType {
 			if strings.HasPrefix(trimmed, "*") {
 				return ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Ref")}[0], []ast2.MonoType{GoTypeName(strings.TrimPrefix(trimmed, "*"))})
 			} else {
-				var __mygo_expr_0 ast2.MonoType
-				if trimmed == "int" {
-					__mygo_expr_0 = ast2.MonoType__TCon__Ctor("Int")
+				__mygo_expr_0 := PrimitiveMyGoSpelling(trimmed)
+				var __mygo_expr_1 ast2.MonoType
+				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+					__mygo_expr_1 = ast2.MonoType__TCon__Ctor(__mygo_match___mygo_expr_2.F0)
 				} else {
-					if trimmed == "int8" {
-						__mygo_expr_0 = ast2.MonoType__TCon__Ctor("Int8")
+					if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+						__mygo_expr_1 = ast2.MonoType__TVar__Ctor(0)
 					} else {
-						if trimmed == "int16" {
-							__mygo_expr_0 = ast2.MonoType__TCon__Ctor("Int16")
-						} else {
-							if trimmed == "int32" {
-								__mygo_expr_0 = ast2.MonoType__TCon__Ctor("Int32")
-							} else {
-								if trimmed == "int64" {
-									__mygo_expr_0 = ast2.MonoType__TCon__Ctor("Int64")
-								} else {
-									if trimmed == "uint" {
-										__mygo_expr_0 = ast2.MonoType__TCon__Ctor("UInt")
-									} else {
-										if trimmed == "uint8" {
-											__mygo_expr_0 = ast2.MonoType__TCon__Ctor("UInt8")
-										} else {
-											if trimmed == "uint16" {
-												__mygo_expr_0 = ast2.MonoType__TCon__Ctor("UInt16")
-											} else {
-												if trimmed == "uint32" {
-													__mygo_expr_0 = ast2.MonoType__TCon__Ctor("UInt32")
-												} else {
-													if trimmed == "uint64" {
-														__mygo_expr_0 = ast2.MonoType__TCon__Ctor("UInt64")
-													} else {
-														if trimmed == "float32" {
-															__mygo_expr_0 = ast2.MonoType__TCon__Ctor("Float32")
-														} else {
-															if trimmed == "float64" {
-																__mygo_expr_0 = ast2.MonoType__TCon__Ctor("Float64")
-															} else {
-																if trimmed == "string" {
-																	__mygo_expr_0 = ast2.MonoType__TCon__Ctor("String")
-																} else {
-																	if trimmed == "bool" {
-																		__mygo_expr_0 = ast2.MonoType__TCon__Ctor("Bool")
-																	} else {
-																		if trimmed == "byte" {
-																			__mygo_expr_0 = ast2.MonoType__TCon__Ctor("Byte")
-																		} else {
-																			if trimmed == "rune" {
-																				__mygo_expr_0 = ast2.MonoType__TCon__Ctor("Rune")
-																			} else {
-																				if trimmed == "error" {
-																					__mygo_expr_0 = ast2.MonoType__TCon__Ctor("Error")
-																				} else {
-																					__mygo_expr_0 = ast2.MonoType__TVar__Ctor(0)
-																				}
-																			}
-																		}
-																	}
-																}
-															}
-														}
-													}
-												}
-											}
-										}
-									}
-								}
-							}
-						}
 					}
 				}
-				return __mygo_expr_0
+				return __mygo_expr_1
 			}
 		}
 	}
@@ -1286,6 +1267,30 @@ func appendDecls(acc []ast2.Decl, items []ast2.Decl) []ast2.Decl {
 }
 func appendPkgDeclSources(left []PkgDeclSource, right []PkgDeclSource) []PkgDeclSource {
 	return __mygo_mt_typeinference2_appendPkgDeclSources(left, right, 0)
+}
+func __mygo_mt_typeinference2_anyPrimitivePair(__mygo_mt_p0 []GoPrimitivePair, __mygo_mt_p1 string, __mygo_mt_p2 int, __mygo_state int) Option[GoPrimitivePair] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return None[GoPrimitivePair]()
+			} else {
+				pair := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), GoPrimitivePair{GoName: "", MyGoName: ""})
+				if pair.GoName == __mygo_mt_p1 || pair.MyGoName == __mygo_mt_p1 {
+					return Some[GoPrimitivePair](pair)
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
 }
 func __mygo_mt_typeinference2_appendDecls(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 []ast2.Decl, __mygo_state int) []ast2.Decl {
 	for {
@@ -1911,6 +1916,30 @@ func __mygo_mt_typeinference2_goSignatureTypesInto(__mygo_mt_p0 []string, __mygo
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 				__mygo_state = 0
 				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_goSpelledPair(__mygo_mt_p0 []GoPrimitivePair, __mygo_mt_p1 string, __mygo_mt_p2 int, __mygo_state int) Option[GoPrimitivePair] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return None[GoPrimitivePair]()
+			} else {
+				pair := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), GoPrimitivePair{GoName: "", MyGoName: ""})
+				if pair.GoName == __mygo_mt_p1 {
+					return Some[GoPrimitivePair](pair)
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
