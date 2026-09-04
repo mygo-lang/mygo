@@ -255,7 +255,7 @@ const yyEofCode = 1
 const yyErrCode = 2
 const yyInitialStackSize = 16
 
-//line parser.y:2183
+//line parser.y:2211
 
 func (p *parser) Lex(lval *yySymType) int {
 	tok := p.nextRaw()
@@ -3228,10 +3228,26 @@ yydefault:
 		{
 			p := yylex.(*parser)
 			p.currentFuncLitRetStack = append(p.currentFuncLitRetStack, p.currentType)
+			p.funcLitExprStateStack = append(p.funcLitExprStateStack, funcLitExprState{
+				currentLeftExpr:     p.currentLeftExpr,
+				currentPipeLeftExpr: p.currentPipeLeftExpr,
+				currentOrSave:       p.currentOrSave,
+				currentAndSave:      p.currentAndSave,
+				currentCompSave:     p.currentCompSave,
+				currentAddSave:      p.currentAddSave,
+				currentMulSave:      p.currentMulSave,
+			})
+			p.currentLeftExpr = nil
+			p.currentPipeLeftExpr = nil
+			p.currentOrSave = nil
+			p.currentAndSave = nil
+			p.currentCompSave = nil
+			p.currentAddSave = nil
+			p.currentMulSave = nil
 		}
 	case 284:
 		yyDollar = yyS[yypt-14 : yypt+1]
-//line parser.y:1966
+//line parser.y:1982
 		{
 			p := yylex.(*parser)
 			body := bodyExprFromBlock(p.currentExpr)
@@ -3254,11 +3270,23 @@ yydefault:
 				p.currentArgs = p.currentFuncLitArgsStack[idx]
 				p.currentFuncLitArgsStack = p.currentFuncLitArgsStack[:idx]
 			}
+			if len(p.funcLitExprStateStack) > 0 {
+				idx := len(p.funcLitExprStateStack) - 1
+				saved := p.funcLitExprStateStack[idx]
+				p.funcLitExprStateStack = p.funcLitExprStateStack[:idx]
+				p.currentLeftExpr = saved.currentLeftExpr
+				p.currentPipeLeftExpr = saved.currentPipeLeftExpr
+				p.currentOrSave = saved.currentOrSave
+				p.currentAndSave = saved.currentAndSave
+				p.currentCompSave = saved.currentCompSave
+				p.currentAddSave = saved.currentAddSave
+				p.currentMulSave = saved.currentMulSave
+			}
 			p.currentExpr = &ast.FuncLitExpr{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Params: params, Ret: ret, Body: body}
 		}
 	case 285:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line parser.y:1993
+//line parser.y:2021
 		{
 			p := yylex.(*parser)
 			body := p.currentExpr
@@ -3271,7 +3299,7 @@ yydefault:
 		}
 	case 286:
 		yyDollar = yyS[yypt-0 : yypt+1]
-//line parser.y:2006
+//line parser.y:2034
 		{
 			p := yylex.(*parser)
 			p.currentBlockStack = append(p.currentBlockStack, p.currentBlock)
@@ -3279,7 +3307,7 @@ yydefault:
 		}
 	case 287:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.y:2014
+//line parser.y:2042
 		{
 			p := yylex.(*parser)
 			p.currentBlock = append(p.currentBlock, p.currentStmt)
@@ -3287,7 +3315,7 @@ yydefault:
 		}
 	case 288:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line parser.y:2019
+//line parser.y:2047
 		{
 			p := yylex.(*parser)
 			p.currentBlock = append(p.currentBlock, p.currentStmt)
@@ -3295,14 +3323,14 @@ yydefault:
 		}
 	case 289:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line parser.y:2025
+//line parser.y:2053
 		{
 			p := yylex.(*parser)
 			p.currentExpr = &ast.BlockExpr{Stmts: append([]ast.Stmt(nil), p.currentBlock...)}
 		}
 	case 296:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line parser.y:2041
+//line parser.y:2069
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.LetStmt{Name: yyDollar[2].token.lit, Mutable: false, Type: p.currentAnnotType, Value: p.currentExpr}
@@ -3310,7 +3338,7 @@ yydefault:
 		}
 	case 297:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line parser.y:2046
+//line parser.y:2074
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.LetStmt{Bind: p.currentBindPattern, Mutable: false, Type: p.currentAnnotType, Value: p.currentExpr}
@@ -3319,7 +3347,7 @@ yydefault:
 		}
 	case 298:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line parser.y:2052
+//line parser.y:2080
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.LetStmt{Name: yyDollar[2].token.lit, Mutable: true, Type: p.currentAnnotType, Value: p.currentExpr}
@@ -3327,14 +3355,14 @@ yydefault:
 		}
 	case 299:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.y:2057
+//line parser.y:2085
 		{
 			p := yylex.(*parser)
 			p.currentLetRecBindings = nil
 		}
 	case 300:
 		yyDollar = yyS[yypt-6 : yypt+1]
-//line parser.y:2061
+//line parser.y:2089
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.LetRecStmt{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Bindings: append([]ast.LetRecBinding(nil), p.currentLetRecBindings...)}
@@ -3343,7 +3371,7 @@ yydefault:
 		}
 	case 303:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line parser.y:2075
+//line parser.y:2103
 		{
 			p := yylex.(*parser)
 			p.currentLetRecName = yyDollar[1].token.lit
@@ -3353,7 +3381,7 @@ yydefault:
 		}
 	case 304:
 		yyDollar = yyS[yypt-6 : yypt+1]
-//line parser.y:2082
+//line parser.y:2110
 		{
 			p := yylex.(*parser)
 			p.currentLetRecBindings = append(p.currentLetRecBindings, ast.LetRecBinding{
@@ -3369,14 +3397,14 @@ yydefault:
 		}
 	case 305:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.y:2098
+//line parser.y:2126
 		{
 			p := yylex.(*parser)
 			p.currentBindPattern = &ast.BindNamePattern{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col, Name: yyDollar[1].token.lit}
 		}
 	case 306:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.y:2102
+//line parser.y:2130
 		{
 			p := yylex.(*parser)
 			p.currentBindPatternElemsStack = append(p.currentBindPatternElemsStack, p.currentBindPatternElems)
@@ -3384,7 +3412,7 @@ yydefault:
 		}
 	case 307:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line parser.y:2107
+//line parser.y:2135
 		{
 			p := yylex.(*parser)
 			elems := append([]ast.BindPattern(nil), p.currentBindPatternElems...)
@@ -3399,28 +3427,28 @@ yydefault:
 		}
 	case 308:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.y:2122
+//line parser.y:2150
 		{
 			p := yylex.(*parser)
 			p.currentBindPatternElems = append(p.currentBindPatternElems, p.currentBindPattern)
 		}
 	case 309:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line parser.y:2126
+//line parser.y:2154
 		{
 			p := yylex.(*parser)
 			p.currentBindPatternElems = append(p.currentBindPatternElems, p.currentBindPattern)
 		}
 	case 310:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.y:2133
+//line parser.y:2161
 		{
 			p := yylex.(*parser)
 			p.currentAssignTarget = p.currentExpr
 		}
 	case 311:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line parser.y:2137
+//line parser.y:2165
 		{
 			p := yylex.(*parser)
 			line, col := common.NodePos(p.currentAssignTarget)
@@ -3431,7 +3459,7 @@ yydefault:
 		}
 	case 312:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.y:2148
+//line parser.y:2176
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.ReturnStmt{}
@@ -3439,7 +3467,7 @@ yydefault:
 		}
 	case 313:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line parser.y:2153
+//line parser.y:2181
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.ReturnStmt{Value: p.currentExpr}
@@ -3447,7 +3475,7 @@ yydefault:
 		}
 	case 314:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.y:2161
+//line parser.y:2189
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.BreakStmt{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col}
@@ -3455,7 +3483,7 @@ yydefault:
 		}
 	case 315:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.y:2169
+//line parser.y:2197
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.ContinueStmt{Line: yyDollar[1].token.line, Column: yyDollar[1].token.col}
@@ -3463,7 +3491,7 @@ yydefault:
 		}
 	case 316:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.y:2177
+//line parser.y:2205
 		{
 			p := yylex.(*parser)
 			p.currentStmt = &ast.ExprStmt{Expr: p.currentExpr}

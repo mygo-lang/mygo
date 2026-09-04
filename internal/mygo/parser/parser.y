@@ -1960,6 +1960,22 @@ func_lit
 	opt_newlines maybe_param_list RPAREN opt_newlines ARROW type {
 		p := yylex.(*parser)
 		p.currentFuncLitRetStack = append(p.currentFuncLitRetStack, p.currentType)
+		p.funcLitExprStateStack = append(p.funcLitExprStateStack, funcLitExprState{
+			currentLeftExpr:     p.currentLeftExpr,
+			currentPipeLeftExpr: p.currentPipeLeftExpr,
+			currentOrSave:       p.currentOrSave,
+			currentAndSave:      p.currentAndSave,
+			currentCompSave:     p.currentCompSave,
+			currentAddSave:      p.currentAddSave,
+			currentMulSave:      p.currentMulSave,
+		})
+		p.currentLeftExpr = nil
+		p.currentPipeLeftExpr = nil
+		p.currentOrSave = nil
+		p.currentAndSave = nil
+		p.currentCompSave = nil
+		p.currentAddSave = nil
+		p.currentMulSave = nil
 	}
 	opt_newlines block_expr opt_newlines END {
 		p := yylex.(*parser)
@@ -1982,6 +1998,18 @@ func_lit
 			idx := len(p.currentFuncLitArgsStack) - 1
 			p.currentArgs = p.currentFuncLitArgsStack[idx]
 			p.currentFuncLitArgsStack = p.currentFuncLitArgsStack[:idx]
+		}
+		if len(p.funcLitExprStateStack) > 0 {
+			idx := len(p.funcLitExprStateStack) - 1
+			saved := p.funcLitExprStateStack[idx]
+			p.funcLitExprStateStack = p.funcLitExprStateStack[:idx]
+			p.currentLeftExpr = saved.currentLeftExpr
+			p.currentPipeLeftExpr = saved.currentPipeLeftExpr
+			p.currentOrSave = saved.currentOrSave
+			p.currentAndSave = saved.currentAndSave
+			p.currentCompSave = saved.currentCompSave
+			p.currentAddSave = saved.currentAddSave
+			p.currentMulSave = saved.currentMulSave
 		}
 		p.currentExpr = &ast.FuncLitExpr{Line: $1.line, Column: $1.col, Params: params, Ret: ret, Body: body}
 	}

@@ -205,15 +205,6 @@ func (g *gen) translateBlockStmts(n *BlockExpr, ctx *egCtx, returnExpected strin
 					base = "tmp"
 				}
 				lbType := valType
-				if isUnresolvedGoTypeParam(lbType) {
-					if call, ok := s.Value.(*CallExpr); ok {
-						if field, ok := call.Callee.(*FieldExpr); ok && field.Field == "Fold" && len(call.Args) > 0 {
-							if typ := g.goTypeFromExpr(call.Args[0], child); typ != "" && typ != "any" {
-								lbType = typ
-							}
-						}
-					}
-				}
 				if lbType == "" && s.Type != nil {
 					lbType = g.goType(s.Type, child.typeParams)
 				}
