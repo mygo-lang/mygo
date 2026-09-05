@@ -2830,14 +2830,49 @@ func ffiOptionSignature(callee ast2.Expr, ctx *egCtx) Option[typeinference2.GoFu
 	return __mygo_mt_codegen2_ffiOptionSignature(callee, ctx, 0)
 }
 func ffiMultiResultSignature(expr ast2.Expr, ctx *egCtx) Option[typeinference2.GoFuncSignature] {
-	__mygo_expr_0 := expr.Kind
+	__mygo_expr_0 := ffiMultiResultSignatureWithPackage(expr, ctx)
 	var __mygo_expr_1 Option[typeinference2.GoFuncSignature]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[struct {
+		F0 typeinference2.GoFuncSignature
+		F1 typeinference2.GoPackageEntry
+	}]); ok {
+		var __mygo_expr_3 struct {
+			F0 typeinference2.GoFuncSignature
+			F1 typeinference2.GoPackageEntry
+		}
+		__mygo_expr_3 = __mygo_match___mygo_expr_2.F0
+		var sig typeinference2.GoFuncSignature
+		sig = __mygo_expr_3.F0
+		__mygo_expr_1 = Some[typeinference2.GoFuncSignature](sig)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[struct {
+			F0 typeinference2.GoFuncSignature
+			F1 typeinference2.GoPackageEntry
+		}]); ok {
+			__mygo_expr_1 = None[typeinference2.GoFuncSignature]()
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func ffiMultiResultSignatureWithPackage(expr ast2.Expr, ctx *egCtx) Option[struct {
+	F0 typeinference2.GoFuncSignature
+	F1 typeinference2.GoPackageEntry
+}] {
+	__mygo_expr_0 := expr.Kind
+	var __mygo_expr_1 Option[struct {
+		F0 typeinference2.GoFuncSignature
+		F1 typeinference2.GoPackageEntry
+	}]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
-		__mygo_expr_1 = typeinference2.GoSignatureForCallee(__mygo_match___mygo_expr_2.F0, ctx.goPackages, func(sig typeinference2.GoFuncSignature) bool {
+		__mygo_expr_1 = typeinference2.GoSignatureForCalleeWithPackage(__mygo_match___mygo_expr_2.F0, ctx.goPackages, func(sig typeinference2.GoFuncSignature) bool {
 			return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Results) > 1
 		})
 	} else {
-		__mygo_expr_1 = None[typeinference2.GoFuncSignature]()
+		__mygo_expr_1 = None[struct {
+			F0 typeinference2.GoFuncSignature
+			F1 typeinference2.GoPackageEntry
+		}]()
 	}
 	return __mygo_expr_1
 }

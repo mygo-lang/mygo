@@ -2935,22 +2935,37 @@ func ffiRawTupleResultType(expr ast2.Expr, state InferState) Option[ast2.MonoTyp
 	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 Option[ast2.MonoType]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
-		__mygo_expr_4 := GoSignatureForCallee(__mygo_match___mygo_expr_3.F0, state.GoPackages, ffiMultiResultPredicate)
+		__mygo_expr_4 := GoSignatureForCalleeWithPackage(__mygo_match___mygo_expr_3.F0, state.GoPackages, ffiMultiResultPredicate)
 		var __mygo_expr_5 Option[ast2.MonoType]
-		if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[GoFuncSignature]); ok {
-			__mygo_expr_7 := GoSignatureRawResultType(__mygo_match___mygo_expr_6.F0)
-			var __mygo_expr_8 Option[ast2.MonoType]
-			if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Ok[ast2.MonoType, string]); ok {
-				__mygo_expr_8 = Some[ast2.MonoType](__mygo_match___mygo_expr_9.F0)
+		if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[struct {
+			F0 GoFuncSignature
+			F1 GoPackageEntry
+		}]); ok {
+			var __mygo_expr_7 struct {
+				F0 GoFuncSignature
+				F1 GoPackageEntry
+			}
+			__mygo_expr_7 = __mygo_match___mygo_expr_6.F0
+			var sig GoFuncSignature
+			sig = __mygo_expr_7.F0
+			var pkg GoPackageEntry
+			pkg = __mygo_expr_7.F1
+			__mygo_expr_8 := GoSignatureRawResultTypeWithPackage(sig, pkg)
+			var __mygo_expr_9 Option[ast2.MonoType]
+			if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Result__Ok[ast2.MonoType, string]); ok {
+				__mygo_expr_9 = Some[ast2.MonoType](__mygo_match___mygo_expr_10.F0)
 			} else {
-				if _, ok := __mygo_expr_7.(Result__Err[ast2.MonoType, string]); ok {
-					__mygo_expr_8 = None[ast2.MonoType]()
+				if _, ok := __mygo_expr_8.(Result__Err[ast2.MonoType, string]); ok {
+					__mygo_expr_9 = None[ast2.MonoType]()
 				} else {
 				}
 			}
-			__mygo_expr_5 = __mygo_expr_8
+			__mygo_expr_5 = __mygo_expr_9
 		} else {
-			if _, ok := __mygo_expr_4.(Option__None[GoFuncSignature]); ok {
+			if _, ok := __mygo_expr_4.(Option__None[struct {
+				F0 GoFuncSignature
+				F1 GoPackageEntry
+			}]); ok {
 				__mygo_expr_5 = None[ast2.MonoType]()
 			} else {
 			}
@@ -2973,27 +2988,110 @@ func ffiRawTupleResultType(expr ast2.Expr, state InferState) Option[ast2.MonoTyp
 	return __mygo_expr_1
 }
 func GoSignatureForCallee(callee ast2.Expr, packages []GoPackageEntry, predicate func(GoFuncSignature) bool) Option[GoFuncSignature] {
-	__mygo_expr_0 := callee.Kind
+	__mygo_expr_0 := GoSignatureForCalleeWithPackage(callee, packages, predicate)
 	var __mygo_expr_1 Option[GoFuncSignature]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[struct {
+		F0 GoFuncSignature
+		F1 GoPackageEntry
+	}]); ok {
+		var __mygo_expr_3 struct {
+			F0 GoFuncSignature
+			F1 GoPackageEntry
+		}
+		__mygo_expr_3 = __mygo_match___mygo_expr_2.F0
+		var sig GoFuncSignature
+		sig = __mygo_expr_3.F0
+		__mygo_expr_1 = Some[GoFuncSignature](sig)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[struct {
+			F0 GoFuncSignature
+			F1 GoPackageEntry
+		}]); ok {
+			__mygo_expr_1 = None[GoFuncSignature]()
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func GoSignatureForCalleeWithPackage(callee ast2.Expr, packages []GoPackageEntry, predicate func(GoFuncSignature) bool) Option[struct {
+	F0 GoFuncSignature
+	F1 GoPackageEntry
+}] {
+	__mygo_expr_0 := callee.Kind
+	var __mygo_expr_1 Option[struct {
+		F0 GoFuncSignature
+		F1 GoPackageEntry
+	}]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
 		__mygo_expr_3 := __mygo_match___mygo_expr_2.F0.Kind
-		var __mygo_expr_4 Option[GoFuncSignature]
+		var __mygo_expr_4 Option[struct {
+			F0 GoFuncSignature
+			F1 GoPackageEntry
+		}]
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.ExprKind__IdentExpr); ok {
-			__mygo_expr_4 = GoSignatureInPackages(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_2.F1, packages, predicate)
+			__mygo_expr_4 = GoSignatureInPackagesWithPackage(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_2.F1, packages, predicate)
 		} else {
-			__mygo_expr_4 = None[GoFuncSignature]()
+			__mygo_expr_4 = None[struct {
+				F0 GoFuncSignature
+				F1 GoPackageEntry
+			}]()
 		}
 		__mygo_expr_1 = __mygo_expr_4
 	} else {
-		__mygo_expr_1 = None[GoFuncSignature]()
+		__mygo_expr_1 = None[struct {
+			F0 GoFuncSignature
+			F1 GoPackageEntry
+		}]()
 	}
 	return __mygo_expr_1
 }
 func GoSignatureInPackages(alias string, name string, packages []GoPackageEntry, predicate func(GoFuncSignature) bool) Option[GoFuncSignature] {
-	return __mygo_mt_typeinference2_GoSignatureInPackages(alias, name, packages, predicate, 0)
+	__mygo_expr_0 := GoSignatureInPackagesWithPackage(alias, name, packages, predicate)
+	var __mygo_expr_1 Option[GoFuncSignature]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[struct {
+		F0 GoFuncSignature
+		F1 GoPackageEntry
+	}]); ok {
+		var __mygo_expr_3 struct {
+			F0 GoFuncSignature
+			F1 GoPackageEntry
+		}
+		__mygo_expr_3 = __mygo_match___mygo_expr_2.F0
+		var sig GoFuncSignature
+		sig = __mygo_expr_3.F0
+		__mygo_expr_1 = Some[GoFuncSignature](sig)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[struct {
+			F0 GoFuncSignature
+			F1 GoPackageEntry
+		}]); ok {
+			__mygo_expr_1 = None[GoFuncSignature]()
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func GoSignatureInPackagesWithPackage(alias string, name string, packages []GoPackageEntry, predicate func(GoFuncSignature) bool) Option[struct {
+	F0 GoFuncSignature
+	F1 GoPackageEntry
+}] {
+	return __mygo_mt_typeinference2_GoSignatureInPackagesWithPackage(alias, name, packages, predicate, 0)
 }
 func GoSignatureInFuncs(name string, funcs []GoFuncSignature, predicate func(GoFuncSignature) bool) Option[GoFuncSignature] {
 	return __mygo_mt_typeinference2_GoSignatureInFuncs(name, funcs, predicate, 0)
+}
+func goMethodSignatureType(sig GoFuncSignature, typeName string, packages []GoPackageEntry) Result[ast2.MonoType, string] {
+	__mygo_expr_0 := goPackageEntryForType(typeName, packages, 0)
+	var __mygo_expr_1 Result[ast2.MonoType, string]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[GoPackageEntry]); ok {
+		__mygo_expr_1 = GoSignatureTypeWithPackage(sig, __mygo_match___mygo_expr_2.F0)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[GoPackageEntry]); ok {
+			__mygo_expr_1 = GoSignatureType(sig)
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
 func ffiMultiResultPredicate(sig GoFuncSignature) bool {
 	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Results) > 1
@@ -3357,7 +3455,7 @@ func inferOrdinaryField(base ast2.Expr, field string, env Env, state InferState)
 						__mygo_expr_12 = Ok[ExprInferResult, string](ExprInferResult{Expr: typedBase, Result: InferResult{Type: substed_2, Predicates: v.Predicates, Subst: v.Subst, State: instState_3}})
 					} else {
 						if __mygo_match___mygo_expr_15, ok := __mygo_match___mygo_expr_11.F0.(Symbol__GoMethod); ok {
-							__mygo_expr_16 := GoSignatureType(__mygo_match___mygo_expr_15.F2)
+							__mygo_expr_16 := goMethodSignatureType(__mygo_match___mygo_expr_15.F2, typeName, state.GoPackages)
 							var __mygo_expr_17 Result[ExprInferResult, string]
 							if __mygo_match___mygo_expr_19, ok := __mygo_expr_16.(Result__Ok[ast2.MonoType, string]); ok {
 								methodScheme := Scheme{Bound: typeParamIDs(__mygo_match___mygo_expr_15.F2.TypeParams, 1), Predicates: []Predicate{}, Body: __mygo_match___mygo_expr_19.F0}
@@ -4318,16 +4416,40 @@ func __mygo_mt_typeinference2_GoSignatureInFuncs(__mygo_mt_p0 string, __mygo_mt_
 		}
 	}
 }
-func __mygo_mt_typeinference2_GoSignatureInPackages(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 []GoPackageEntry, __mygo_mt_p3 func(GoFuncSignature) bool, __mygo_state int) Option[GoFuncSignature] {
+func __mygo_mt_typeinference2_GoSignatureInPackagesWithPackage(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 []GoPackageEntry, __mygo_mt_p3 func(GoFuncSignature) bool, __mygo_state int) Option[struct {
+	F0 GoFuncSignature
+	F1 GoPackageEntry
+}] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) == 0 {
-				return None[GoFuncSignature]()
+				return None[struct {
+					F0 GoFuncSignature
+					F1 GoPackageEntry
+				}]()
 			} else {
 				pkg := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, 0), GoPackageEntry{Alias: "", Path: "", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{}})
 				if pkg.Alias == __mygo_mt_p0 {
-					return GoSignatureInFuncs(__mygo_mt_p1, pkg.Funcs, __mygo_mt_p3)
+					__mygo_expr_0 := GoSignatureInFuncs(__mygo_mt_p1, pkg.Funcs, __mygo_mt_p3)
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GoFuncSignature]); ok {
+						return Some[struct {
+							F0 GoFuncSignature
+							F1 GoPackageEntry
+						}](struct {
+							F0 GoFuncSignature
+							F1 GoPackageEntry
+						}{F0: __mygo_match___mygo_expr_1.F0, F1: pkg})
+					} else {
+						if _, ok := __mygo_expr_0.(Option__None[GoFuncSignature]); ok {
+							return None[struct {
+								F0 GoFuncSignature
+								F1 GoPackageEntry
+							}]()
+						} else {
+							panic("non-exhaustive switch")
+						}
+					}
 				} else {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1

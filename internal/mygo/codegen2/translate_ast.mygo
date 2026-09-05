@@ -2132,8 +2132,20 @@ func ffiOptionSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinfere
 end
 
 func ffiMultiResultSignature(expr: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
+  switch ffiMultiResultSignatureWithPackage(expr, ctx)
+    case Some(pair) =>
+      let (sig, _) = pair
+      Some(sig)
+    case None => None
+  end
+end
+
+# Package-aware variant of ffiMultiResultSignature: the matched signature and
+# its owning package are both returned so the raw result elements can be
+# resolved against package-local type names (e.g. `context.CancelFunc`).
+func ffiMultiResultSignatureWithPackage(expr: ast2.Expr, ctx: Ref[egCtx]) -> Option[(typeinference2.GoFuncSignature, typeinference2.GoPackageEntry)]
   switch expr.Kind
-    case CallExpr(callee, _, _) => typeinference2.GoSignatureForCallee(callee, ctx.goPackages, func(sig: typeinference2.GoFuncSignature) -> Bool sig.Results.Len() > 1 end)
+    case CallExpr(callee, _, _) => typeinference2.GoSignatureForCalleeWithPackage(callee, ctx.goPackages, func(sig: typeinference2.GoFuncSignature) -> Bool sig.Results.Len() > 1 end)
     case _ => None
   end
 end

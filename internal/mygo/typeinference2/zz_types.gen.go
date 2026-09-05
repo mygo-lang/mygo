@@ -266,6 +266,12 @@ type GoTypeSignature struct {
 	TypeName   string
 	TypeParams []string
 	Methods    []GoFuncSignature
+	Fields     []GoFieldSignature
+	Underlying string
+}
+type GoFieldSignature struct {
+	Name string
+	Type string
 }
 type DeclInfer struct {
 	Env       Env
@@ -309,8 +315,17 @@ func goBuiltinSymbols() []Symbol {
 func goSymbolsFromPackages(packages []GoPackageEntry, out []Symbol) []Symbol {
 	return __mygo_mt_typeinference2_goSymbolsFromPackages(packages, out, 0)
 }
-func goSymbolsFromTypes(alias string, types []GoTypeSignature, out []Symbol) []Symbol {
-	return __mygo_mt_typeinference2_goSymbolsFromTypes(alias, types, out, 0)
+func goSymbolsFromTypes(pkg GoPackageEntry, types []GoTypeSignature, out []Symbol) []Symbol {
+	return __mygo_mt_typeinference2_goSymbolsFromTypes(pkg, types, out, 0)
+}
+func emptyGoTypeSignature() GoTypeSignature {
+	return GoTypeSignature{TypeName: "", TypeParams: []string{}, Methods: []GoFuncSignature{}, Fields: []GoFieldSignature{}, Underlying: ""}
+}
+func goFieldsFromSigs(typeName string, pkg GoPackageEntry, t GoTypeSignature, out []Symbol) []Symbol {
+	return goFieldsFromSigsInto(typeName, pkg, goTypeParamMap(t.TypeParams), t.Fields, 0, out)
+}
+func goFieldsFromSigsInto(typeName string, pkg GoPackageEntry, typeParams map[string]int, fields []GoFieldSignature, index int, out []Symbol) []Symbol {
+	return __mygo_mt_typeinference2_goFieldsFromSigsInto(typeName, pkg, typeParams, fields, index, out, 0)
 }
 func goPackageMemberName(alias string, name string) string {
 	if alias == "." {
@@ -1096,6 +1111,15 @@ func seedGoPackageTypes(pkg GoPackageEntry, types []GoTypeSignature, env Env) En
 func emptyGoPackageEntry() GoPackageEntry {
 	return GoPackageEntry{Alias: "", Path: "", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{}}
 }
+func goPackageEntryForType(typeName string, packages []GoPackageEntry, index int) Option[GoPackageEntry] {
+	return __mygo_mt_typeinference2_goPackageEntryForType(typeName, packages, index, 0)
+}
+func goPackageEntryHasType(pkg GoPackageEntry, typeName string) bool {
+	return goPackageEntryHasTypeInto(pkg.Types, pkg.Alias, typeName, 0)
+}
+func goPackageEntryHasTypeInto(types []GoTypeSignature, alias string, typeName string, index int) bool {
+	return __mygo_mt_typeinference2_goPackageEntryHasTypeInto(types, alias, typeName, index, 0)
+}
 func GoSignatureType(sig GoFuncSignature) Result[ast2.MonoType, string] {
 	return GoSignatureTypeWithPackage(sig, emptyGoPackageEntry())
 }
@@ -1241,7 +1265,10 @@ func replaceGoParamTypes(mapped []ast2.MonoType, lastIndex int, element ast2.Mon
 	return out
 }
 func GoSignatureRawResultType(sig GoFuncSignature) Result[ast2.MonoType, string] {
-	__mygo_expr_0 := goSignatureTypes(sig.Results, goTypeParamMap(sig.TypeParams))
+	return GoSignatureRawResultTypeWithPackage(sig, emptyGoPackageEntry())
+}
+func GoSignatureRawResultTypeWithPackage(sig GoFuncSignature, pkg GoPackageEntry) Result[ast2.MonoType, string] {
+	__mygo_expr_0 := goSignatureTypesWithPackage(sig.Results, pkg, goTypeParamMap(sig.TypeParams))
 	var __mygo_expr_1 Result[ast2.MonoType, string]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[[]ast2.MonoType, string]); ok {
 		var __mygo_expr_5 Result[ast2.MonoType, string]
@@ -1677,21 +1704,75 @@ func goFuncTypeName(name string, pkg Option[GoPackageEntry], typeParams map[stri
 }
 func goPackageTypeForNameWith(name string, pkg GoPackageEntry, typeParams map[string]int) Result[ast2.MonoType, string] {
 	trimmed := strings.TrimSpace(name)
-	if goPackageHasType(pkg, trimmed) {
-		return Ok[ast2.MonoType, string](ast2.MonoType__TQualifiedName__Ctor(pkg.Path, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor(trimmed)}[0]))
-	} else {
-		dot := strings.Index(trimmed, ".")
-		if dot > 0 && dot+1 < MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(trimmed) {
-			qualifier := MygoIN6OptionM8UnwrapOr(substring(trimmed, 0, dot), "")
-			member := MygoIN6OptionM8UnwrapOr(substring(trimmed, dot+1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(trimmed)), "")
-			if qualifier == goPackageOwnName(pkg) && goQualifiedMemberInPackage(pkg, member) {
-				return goQualifiedGoTypeName(qualifier, member, Some[string](pkg.Path), Some[GoPackageEntry](pkg), typeParams)
+	dot := strings.Index(trimmed, ".")
+	if dot > 0 && dot+1 < MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(trimmed) {
+		qualifier := MygoIN6OptionM8UnwrapOr(substring(trimmed, 0, dot), "")
+		member := MygoIN6OptionM8UnwrapOr(substring(trimmed, dot+1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(trimmed)), "")
+		if qualifier == goPackageOwnName(pkg) && goQualifiedMemberInPackage(pkg, member) {
+			__mygo_expr_0 := goPackageOwnMemberType(pkg, member, typeParams)
+			var __mygo_expr_1 Result[ast2.MonoType, string]
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+				__mygo_expr_1 = Ok[ast2.MonoType, string](__mygo_match___mygo_expr_2.F0)
 			} else {
-				return goQualifiedGoTypeName(qualifier, member, None[string](), None[GoPackageEntry](), typeParams)
+				if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+					__mygo_expr_1 = goQualifiedGoTypeName(qualifier, member, Some[string](pkg.Path), Some[GoPackageEntry](pkg), typeParams)
+				} else {
+				}
 			}
+			return __mygo_expr_1
+		} else {
+			return goQualifiedGoTypeName(qualifier, member, None[string](), None[GoPackageEntry](), typeParams)
+		}
+	} else {
+		if goPackageHasType(pkg, trimmed) {
+			__mygo_expr_3 := goPackageOwnMemberType(pkg, trimmed, typeParams)
+			var __mygo_expr_4 Result[ast2.MonoType, string]
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.MonoType]); ok {
+				__mygo_expr_4 = Ok[ast2.MonoType, string](__mygo_match___mygo_expr_5.F0)
+			} else {
+				if _, ok := __mygo_expr_3.(Option__None[ast2.MonoType]); ok {
+					__mygo_expr_4 = Ok[ast2.MonoType, string](ast2.MonoType__TQualifiedName__Ctor(pkg.Path, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor(trimmed)}[0]))
+				} else {
+				}
+			}
+			return __mygo_expr_4
 		} else {
 			return Err[ast2.MonoType, string]("unknown type " + trimmed + " in package " + pkg.Path)
 		}
+	}
+}
+func goPackageOwnMemberType(pkg GoPackageEntry, member string, typeParams map[string]int) Option[ast2.MonoType] {
+	opened := strings.Index(member, "[")
+	if opened >= 0 {
+		return None[ast2.MonoType]()
+	} else {
+		__mygo_expr_0 := goPackageTypeUnderlying(pkg, member)
+		var __mygo_expr_1 Option[ast2.MonoType]
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+			var __mygo_expr_6 Option[ast2.MonoType]
+			if strings.HasPrefix(__mygo_match___mygo_expr_2.F0, "func(") || strings.HasPrefix(__mygo_match___mygo_expr_2.F0, "chan ") || strings.HasPrefix(__mygo_match___mygo_expr_2.F0, "chan<- ") || strings.HasPrefix(__mygo_match___mygo_expr_2.F0, "<-chan ") {
+				__mygo_expr_3 := goTypeNameWith(__mygo_match___mygo_expr_2.F0, Some[GoPackageEntry](pkg), typeParams)
+				var __mygo_expr_4 Option[ast2.MonoType]
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[ast2.MonoType, string]); ok {
+					__mygo_expr_4 = Some[ast2.MonoType](__mygo_match___mygo_expr_5.F0)
+				} else {
+					if _, ok := __mygo_expr_3.(Result__Err[ast2.MonoType, string]); ok {
+						__mygo_expr_4 = None[ast2.MonoType]()
+					} else {
+					}
+				}
+				__mygo_expr_6 = __mygo_expr_4
+			} else {
+				__mygo_expr_6 = None[ast2.MonoType]()
+			}
+			__mygo_expr_1 = __mygo_expr_6
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+				__mygo_expr_1 = None[ast2.MonoType]()
+			} else {
+			}
+		}
+		return __mygo_expr_1
 	}
 }
 func goPackageHasType(pkg GoPackageEntry, name string) bool {
@@ -1699,6 +1780,12 @@ func goPackageHasType(pkg GoPackageEntry, name string) bool {
 }
 func goPackageHasTypeInto(types []GoTypeSignature, name string, index int) bool {
 	return __mygo_mt_typeinference2_goPackageHasTypeInto(types, name, index, 0)
+}
+func goPackageTypeUnderlying(pkg GoPackageEntry, name string) Option[string] {
+	return goPackageTypeUnderlyingInto(pkg.Types, name, 0)
+}
+func goPackageTypeUnderlyingInto(types []GoTypeSignature, name string, index int) Option[string] {
+	return __mygo_mt_typeinference2_goPackageTypeUnderlyingInto(types, name, index, 0)
 }
 func goVariadicParamTypesWithPackage(names []string, pkg GoPackageEntry, typeParams map[string]int) Result[[]ast2.MonoType, string] {
 	__mygo_expr_0 := goSignatureTypesWithPackage(names, pkg, typeParams)
@@ -2337,6 +2424,46 @@ func __mygo_mt_typeinference2_flattenPkgDecls(__mygo_mt_p0 []PkgDeclSource, __my
 		}
 	}
 }
+func __mygo_mt_typeinference2_goFieldsFromSigsInto(__mygo_mt_p0 string, __mygo_mt_p1 GoPackageEntry, __mygo_mt_p2 map[string]int, __mygo_mt_p3 []GoFieldSignature, __mygo_mt_p4 int, __mygo_mt_p5 []Symbol, __mygo_state int) []Symbol {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p4 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p3) {
+				return __mygo_mt_p5
+			} else {
+				f := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p3, __mygo_mt_p4), GoFieldSignature{Name: "", Type: ""})
+				__mygo_expr_0 := goTypeNameWith(f.Type, Some[GoPackageEntry](__mygo_mt_p1), __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.MonoType, string]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3
+					__tail_4 := __mygo_mt_p4 + 1
+					__tail_5 := MygoIN5SliceM7Prepend(__mygo_mt_p5, Symbol__StructField__Ctor(__mygo_mt_p0, f.Name, __mygo_match___mygo_expr_1.F0))
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Result__Err[ast2.MonoType, string]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := __mygo_mt_p3
+						__tail_4 := __mygo_mt_p4 + 1
+						__tail_5 := __mygo_mt_p5
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_typeinference2_goFuncPartTypes(__mygo_mt_p0 []string, __mygo_mt_p1 Option[GoPackageEntry], __mygo_mt_p2 map[string]int, __mygo_mt_p3 int, __mygo_mt_p4 []ast2.MonoType, __mygo_state int) Result[[]ast2.MonoType, string] {
 	for {
 		switch __mygo_state {
@@ -2388,6 +2515,55 @@ func __mygo_mt_typeinference2_goMethodsFromSigs(__mygo_mt_p0 string, __mygo_mt_p
 		}
 	}
 }
+func __mygo_mt_typeinference2_goPackageEntryForType(__mygo_mt_p0 string, __mygo_mt_p1 []GoPackageEntry, __mygo_mt_p2 int, __mygo_state int) Option[GoPackageEntry] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+				return None[GoPackageEntry]()
+			} else {
+				pkg := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), emptyGoPackageEntry())
+				if goPackageEntryHasType(pkg, __mygo_mt_p0) {
+					return Some[GoPackageEntry](pkg)
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_goPackageEntryHasTypeInto(__mygo_mt_p0 []GoTypeSignature, __mygo_mt_p1 string, __mygo_mt_p2 string, __mygo_mt_p3 int, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return false
+			} else {
+				t := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3), emptyGoTypeSignature())
+				if goPackageMemberName(__mygo_mt_p1, t.TypeName) == __mygo_mt_p2 {
+					return true
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_typeinference2_goPackageHasTypeInto(__mygo_mt_p0 []GoTypeSignature, __mygo_mt_p1 string, __mygo_mt_p2 int, __mygo_state int) bool {
 	for {
 		switch __mygo_state {
@@ -2395,9 +2571,37 @@ func __mygo_mt_typeinference2_goPackageHasTypeInto(__mygo_mt_p0 []GoTypeSignatur
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return false
 			} else {
-				t := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), GoTypeSignature{TypeName: "", TypeParams: []string{}, Methods: []GoFuncSignature{}})
+				t := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), emptyGoTypeSignature())
 				if t.TypeName == __mygo_mt_p1 {
 					return true
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_goPackageTypeUnderlyingInto(__mygo_mt_p0 []GoTypeSignature, __mygo_mt_p1 string, __mygo_mt_p2 int, __mygo_state int) Option[string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return None[string]()
+			} else {
+				t := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), emptyGoTypeSignature())
+				if t.TypeName == __mygo_mt_p1 {
+					if t.Underlying == "" {
+						return None[string]()
+					} else {
+						return Some[string](t.Underlying)
+					}
 				} else {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
@@ -2502,9 +2706,9 @@ func __mygo_mt_typeinference2_goSymbolsFromPackages(__mygo_mt_p0 []GoPackageEntr
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
 				return __mygo_mt_p1
 			} else {
-				pkg := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), GoPackageEntry{Alias: "", Path: "", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{}})
+				pkg := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), emptyGoPackageEntry())
 				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
-				__tail_1 := goSymbolsFromTypes(pkg.Alias, pkg.Types, __mygo_mt_p1)
+				__tail_1 := goSymbolsFromTypes(pkg, pkg.Types, __mygo_mt_p1)
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
 				continue
@@ -2514,17 +2718,19 @@ func __mygo_mt_typeinference2_goSymbolsFromPackages(__mygo_mt_p0 []GoPackageEntr
 		}
 	}
 }
-func __mygo_mt_typeinference2_goSymbolsFromTypes(__mygo_mt_p0 string, __mygo_mt_p1 []GoTypeSignature, __mygo_mt_p2 []Symbol, __mygo_state int) []Symbol {
+func __mygo_mt_typeinference2_goSymbolsFromTypes(__mygo_mt_p0 GoPackageEntry, __mygo_mt_p1 []GoTypeSignature, __mygo_mt_p2 []Symbol, __mygo_state int) []Symbol {
 	for {
 		switch __mygo_state {
 		case 0:
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) == 0 {
 				return __mygo_mt_p2
 			} else {
-				t := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), GoTypeSignature{TypeName: "", TypeParams: []string{}, Methods: []GoFuncSignature{}})
+				t := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), emptyGoTypeSignature())
+				typeName := goPackageMemberName(__mygo_mt_p0.Alias, t.TypeName)
+				withMethods := goMethodsFromSigs(typeName, t.Methods, __mygo_mt_p2)
 				__tail_0 := __mygo_mt_p0
 				__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
-				__tail_2 := goMethodsFromSigs(goPackageMemberName(__mygo_mt_p0, t.TypeName), t.Methods, __mygo_mt_p2)
+				__tail_2 := goFieldsFromSigs(typeName, __mygo_mt_p0, t, withMethods)
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 				__mygo_state = 0
 				continue

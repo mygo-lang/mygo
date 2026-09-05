@@ -281,13 +281,28 @@ end
 
 # GoTypeSignature is populated by the bootstrap entry from go/types and carries
 # a Go type alias (alias.TypeName) plus the exported methods on that type
-# (alias.Methods).  This lets the bootstrap type checker resolve qualified
-# `pkg.Type` references and `recv.Method` selectors against real Go packages
-# (e.g. `testing.T.Fatal`) without special-casing.
+# (alias.Methods), the exported struct fields (alias.Fields), and the rendered
+# underlying type string (alias.Underlying).  This lets the bootstrap type
+# checker resolve qualified `pkg.Type` references, `recv.Method` selectors and
+# `recv.Field` accesses against real Go packages (e.g. `testing.T.Fatal`,
+# `http.Request.Header`) without special-casing.  Underlying drives boundary
+# aliasing of nominal types whose underlying shape is callable (a Go named
+# function type such as `context.CancelFunc` becomes a TFunc).
 struct GoTypeSignature
   TypeName: String
   TypeParams: Slice[String]
   Methods: Slice[GoFuncSignature]
+  Fields: Slice[GoFieldSignature]
+  Underlying: String
+end
+
+# GoFieldSignature records one exported field of a Go struct type.  It is
+# populated by the bootstrap entry from go/types and passed unchanged to the
+# symbol table so `recv.Field` type-checks and `recv.Field.Method(...)` chains
+# resolve against the field's own type.
+struct GoFieldSignature
+  Name: String
+  Type: String
 end
 
 struct DeclInfer
@@ -377,15 +392,45 @@ end
 
 func goSymbolsFromPackages(packages: Slice[GoPackageEntry], out: Slice[Symbol]) -> Slice[Symbol]
   if packages.Len() == 0 then out else
-    let pkg = packages.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "", Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] })
-    goSymbolsFromPackages(common2.SliceDrop(packages, 1), goSymbolsFromTypes(pkg.Alias, pkg.Types, out))
+    let pkg = packages.Get(0).UnwrapOr(emptyGoPackageEntry())
+    goSymbolsFromPackages(common2.SliceDrop(packages, 1), goSymbolsFromTypes(pkg, pkg.Types, out))
   end
 end
 
-func goSymbolsFromTypes(alias: String, types: Slice[GoTypeSignature], out: Slice[Symbol]) -> Slice[Symbol]
+# Go FFI types register both their exported methods (GoMethod) and their
+# exported struct fields (StructField) in the same symbol table, so field
+# selectors (`r.Header`) and method chains (`r.Header.Set(...)`) resolve
+# against the imported package's real type surface.  Field type strings are
+# resolved package-aware so same-package references (`http.Header`) collapse
+# onto the same qualified MonoType as the package's own type scheme.
+func goSymbolsFromTypes(pkg: GoPackageEntry, types: Slice[GoTypeSignature], out: Slice[Symbol]) -> Slice[Symbol]
   if types.Len() == 0 then out else
-    let t = types.Get(0).UnwrapOr(GoTypeSignature { TypeName: "", TypeParams: [] as Slice[String], Methods: [] as Slice[GoFuncSignature] })
-    goSymbolsFromTypes(alias, common2.SliceDrop(types, 1), goMethodsFromSigs(goPackageMemberName(alias, t.TypeName), t.Methods, out))
+    let t = types.Get(0).UnwrapOr(emptyGoTypeSignature())
+    let typeName = goPackageMemberName(pkg.Alias, t.TypeName)
+    let withMethods = goMethodsFromSigs(typeName, t.Methods, out)
+    goSymbolsFromTypes(pkg, common2.SliceDrop(types, 1), goFieldsFromSigs(typeName, pkg, t, withMethods))
+  end
+end
+
+func emptyGoTypeSignature() -> GoTypeSignature
+  GoTypeSignature { TypeName: "", TypeParams: [] as Slice[String], Methods: [] as Slice[GoFuncSignature], Fields: [] as Slice[GoFieldSignature], Underlying: "" }
+end
+
+# goFieldsFromSigs registers each exported field as a StructField symbol.  A
+# field whose type string cannot be resolved is skipped: the field then reads
+# as an ordinary `unknown field` inference error at its use site, which is more
+# precise than failing the whole package seed.
+func goFieldsFromSigs(typeName: String, pkg: GoPackageEntry, t: GoTypeSignature, out: Slice[Symbol]) -> Slice[Symbol]
+  goFieldsFromSigsInto(typeName, pkg, goTypeParamMap(t.TypeParams), t.Fields, 0, out)
+end
+
+func goFieldsFromSigsInto(typeName: String, pkg: GoPackageEntry, typeParams: Map[String, Int], fields: Slice[GoFieldSignature], index: Int, out: Slice[Symbol]) -> Slice[Symbol]
+  if index >= fields.Len() then out else
+    let f = fields.Get(index).UnwrapOr(GoFieldSignature { Name: "", Type: "" })
+    switch goTypeNameWith(f.Type, Some(pkg), typeParams)
+      case Ok(mono) => goFieldsFromSigsInto(typeName, pkg, typeParams, fields, index + 1, out.Prepend(Symbol.StructField(typeName, f.Name, mono)))
+      case Err(_) => goFieldsFromSigsInto(typeName, pkg, typeParams, fields, index + 1, out)
+    end
   end
 end
 
@@ -1566,6 +1611,32 @@ func emptyGoPackageEntry() -> GoPackageEntry
   GoPackageEntry { Alias: "", Path: "", Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] }
 end
 
+# goPackageEntryForType finds the GoPackageEntry that owns a fully-qualified
+# type name (`alias.TypeName`).  Method symbols carry only their signature, so
+# package-aware signature resolution locates the owning package back through
+# the type list.  Returns None for local (non-FFI) receiver names.
+func goPackageEntryForType(typeName: String, packages: Slice[GoPackageEntry], index: Int) -> Option[GoPackageEntry]
+  if index >= packages.Len() then None else
+    let pkg = packages.Get(index).UnwrapOr(emptyGoPackageEntry())
+    if goPackageEntryHasType(pkg, typeName) then
+      Some(pkg)
+    else
+      goPackageEntryForType(typeName, packages, index + 1)
+    end
+  end
+end
+
+func goPackageEntryHasType(pkg: GoPackageEntry, typeName: String) -> Bool
+  goPackageEntryHasTypeInto(pkg.Types, pkg.Alias, typeName, 0)
+end
+
+func goPackageEntryHasTypeInto(types: Slice[GoTypeSignature], alias: String, typeName: String, index: Int) -> Bool
+  if index >= types.Len() then false else
+    let t = types.Get(index).UnwrapOr(emptyGoTypeSignature())
+    if goPackageMemberName(alias, t.TypeName) == typeName then true else goPackageEntryHasTypeInto(types, alias, typeName, index + 1) end
+  end
+end
+
 func GoSignatureType(sig: GoFuncSignature) -> Result[ast2.MonoType, String]
   GoSignatureTypeWithPackage(sig, emptyGoPackageEntry())
 end
@@ -1689,7 +1760,17 @@ end
 # Most expressions expose the ergonomic Option/Result form from
 # GoSignatureType; tuple destructuring deliberately requests this raw form.
 func GoSignatureRawResultType(sig: GoFuncSignature) -> Result[ast2.MonoType, String]
-  switch goSignatureTypes(sig.Results, goTypeParamMap(sig.TypeParams))
+  GoSignatureRawResultTypeWithPackage(sig, emptyGoPackageEntry())
+end
+
+# Package-aware variant of GoSignatureRawResultType.  Result strings that name
+# a type defined inside the imported package itself (for example
+# `context.WithTimeout`'s `CancelFunc`) are unresolvable without the owning
+# package context; the plain entry point above therefore falls back to the
+# spare shape only when no package was provided.  Tuple destructuring requests
+# this raw form and always knows the callee's package.
+func GoSignatureRawResultTypeWithPackage(sig: GoFuncSignature, pkg: GoPackageEntry) -> Result[ast2.MonoType, String]
+  switch goSignatureTypesWithPackage(sig.Results, pkg, goTypeParamMap(sig.TypeParams))
     case Ok(results) =>
       if results.Len() == 0 then Ok(ast2.MonoType.TUnit)
       else
@@ -2130,25 +2211,55 @@ end
 
 func goPackageTypeForNameWith(name: String, pkg: GoPackageEntry, typeParams: Map[String, Int]) -> Result[ast2.MonoType, String]
   let trimmed = strings.TrimSpace(name)
-  if goPackageHasType(pkg, trimmed) then
-    Ok(ast2.MonoType.TQualifiedName(pkg.Path, Ref.new(ast2.MonoType.TCon(trimmed))))
+  let dot = strings.Index(trimmed, ".")
+  if dot > 0 && dot + 1 < trimmed.Len() then
+    let qualifier = substring(trimmed, 0, dot).UnwrapOr("")
+    let member = substring(trimmed, dot + 1, trimmed.Len()).UnwrapOr("")
+    if qualifier == goPackageOwnName(pkg) && goQualifiedMemberInPackage(pkg, member) then
+      # The package's own name, rendered qualified by go/types.  Resolve it
+      # against the real `go:` import path so it unifies with `pkg.Type`
+      # annotations and the type constructors registered in seedGoPackageTypes.
+      switch goPackageOwnMemberType(pkg, member, typeParams)
+        case Some(mt) => Ok(mt)
+        case None => goQualifiedGoTypeName(qualifier, member, Some(pkg.Path), Some(pkg), typeParams)
+      end
+    else
+      # A foreign-package type (`io.Writer` in a fmt signature).  Keep the
+      # nominal qualified identity; the qualifier is the Go package name.
+      goQualifiedGoTypeName(qualifier, member, None, None, typeParams)
+    end
   else
-    let dot = strings.Index(trimmed, ".")
-    if dot > 0 && dot + 1 < trimmed.Len() then
-      let qualifier = substring(trimmed, 0, dot).UnwrapOr("")
-      let member = substring(trimmed, dot + 1, trimmed.Len()).UnwrapOr("")
-      if qualifier == goPackageOwnName(pkg) && goQualifiedMemberInPackage(pkg, member) then
-        # The package's own name, rendered qualified by go/types.  Resolve it
-        # against the real `go:` import path so it unifies with `pkg.Type`
-        # annotations and the type constructors registered in seedGoPackageTypes.
-        goQualifiedGoTypeName(qualifier, member, Some(pkg.Path), Some(pkg), typeParams)
-      else
-        # A foreign-package type (`io.Writer` in a fmt signature).  Keep the
-        # nominal qualified identity; the qualifier is the Go package name.
-        goQualifiedGoTypeName(qualifier, member, None, None, typeParams)
+    if goPackageHasType(pkg, trimmed) then
+      switch goPackageOwnMemberType(pkg, trimmed, typeParams)
+        case Some(mt) => Ok(mt)
+        case None => Ok(ast2.MonoType.TQualifiedName(pkg.Path, Ref.new(ast2.MonoType.TCon(trimmed))))
       end
     else
       Err("unknown type " + trimmed + " in package " + pkg.Path)
+    end
+  end
+end
+
+# goPackageOwnMemberType resolves a member of the package's own type surface
+# that has a callable or channel underlying shape: `context.CancelFunc`
+# (underlying `func()`) becomes TFunc so a `cancel` value can be invoked, and
+# a named channel type keeps its Chan shape.  Everything else (structs,
+# primitives, slices, maps) and generic members stay nominal (None) so the
+# caller falls back to the qualified identity handling.
+func goPackageOwnMemberType(pkg: GoPackageEntry, member: String, typeParams: Map[String, Int]) -> Option[ast2.MonoType]
+  let opened = strings.Index(member, "[")
+  if opened >= 0 then None else
+    switch goPackageTypeUnderlying(pkg, member)
+      case Some(underlying) =>
+        if strings.HasPrefix(underlying, "func(") || strings.HasPrefix(underlying, "chan ") || strings.HasPrefix(underlying, "chan<- ") || strings.HasPrefix(underlying, "<-chan ") then
+          switch goTypeNameWith(underlying, Some(pkg), typeParams)
+            case Ok(mt) => Some(mt)
+            case Err(_) => None
+          end
+        else
+          None
+        end
+      case None => None
     end
   end
 end
@@ -2159,8 +2270,28 @@ end
 
 func goPackageHasTypeInto(types: Slice[GoTypeSignature], name: String, index: Int) -> Bool
   if index >= types.Len() then false else
-    let t = types.Get(index).UnwrapOr(GoTypeSignature { TypeName: "", TypeParams: [] as Slice[String], Methods: [] as Slice[GoFuncSignature] })
+    let t = types.Get(index).UnwrapOr(emptyGoTypeSignature())
     if t.TypeName == name then true else goPackageHasTypeInto(types, name, index + 1) end
+  end
+end
+
+# goPackageTypeUnderlying returns the rendered underlying type string of a
+# package-local named type, or None when the type is not present.  The
+# bootstrap loader stores `types.TypeString(named.Underlying())` in
+# GoTypeSignature.Underlying so the boundary resolver can distinguish callable
+# and channel-shaped named types without hard-coding package names.
+func goPackageTypeUnderlying(pkg: GoPackageEntry, name: String) -> Option[String]
+  goPackageTypeUnderlyingInto(pkg.Types, name, 0)
+end
+
+func goPackageTypeUnderlyingInto(types: Slice[GoTypeSignature], name: String, index: Int) -> Option[String]
+  if index >= types.Len() then None else
+    let t = types.Get(index).UnwrapOr(emptyGoTypeSignature())
+    if t.TypeName == name then
+      if t.Underlying == "" then None else Some(t.Underlying) end
+    else
+      goPackageTypeUnderlyingInto(types, name, index + 1)
+    end
   end
 end
 

@@ -75,10 +75,14 @@ func bootstrapGoPackageInfoFromTypes(pkg *types.Package) BootstrapGoPackageInfo 
 		}
 		aliasStrings[typeString(types.Unalias(alias))] = name
 		methods := []typeinference2.GoFuncSignature{}
+		fields := []typeinference2.GoFieldSignature{}
+		underlying := ""
 		if named, ok := types.Unalias(alias).(*types.Named); ok {
 			methods = goTypeMethods(named, goTupleTypes)
+			fields = goTypeFields(named, typeString)
+			underlying = typeString(named.Underlying())
 		}
-		typeSigs = append(typeSigs, typeinference2.GoTypeSignature{TypeName: name, TypeParams: []string{}, Methods: methods})
+		typeSigs = append(typeSigs, typeinference2.GoTypeSignature{TypeName: name, TypeParams: []string{}, Methods: methods, Fields: fields, Underlying: underlying})
 	}
 	for _, name := range scope.Names() {
 		switch obj := scope.Lookup(name).(type) {
@@ -102,10 +106,30 @@ func bootstrapGoPackageInfoFromTypes(pkg *types.Package) BootstrapGoPackageInfo 
 			for j := 0; j < params.Len(); j++ {
 				paramNames = append(paramNames, params.At(j).Obj().Name())
 			}
-			typeSigs = append(typeSigs, typeinference2.GoTypeSignature{TypeName: name, TypeParams: paramNames, Methods: goTypeMethods(named, goTupleTypes)})
+			typeSigs = append(typeSigs, typeinference2.GoTypeSignature{TypeName: name, TypeParams: paramNames, Methods: goTypeMethods(named, goTupleTypes), Fields: goTypeFields(named, typeString), Underlying: typeString(named.Underlying())})
 		}
 	}
 	return BootstrapGoPackageInfo{Funcs: funcs, Types: typeSigs}
+}
+
+// goTypeFields collects the exported struct fields of a named type as FFI
+// field signatures.  Unexported and embedded anonymous fields are skipped;
+// embedded exported fields are included so promoted selectors that the source
+// spells as ordinary field access still type-check.
+func goTypeFields(named *types.Named, typeString func(types.Type) string) []typeinference2.GoFieldSignature {
+	underlying, ok := named.Underlying().(*types.Struct)
+	if !ok {
+		return nil
+	}
+	fields := []typeinference2.GoFieldSignature{}
+	for i := 0; i < underlying.NumFields(); i++ {
+		f := underlying.Field(i)
+		if !f.Exported() {
+			continue
+		}
+		fields = append(fields, typeinference2.GoFieldSignature{Name: f.Name(), Type: typeString(f.Type())})
+	}
+	return fields
 }
 
 // goTypeMethods collects the exported pointer-method set of a named type as FFI

@@ -2131,13 +2131,15 @@ end
 func ffiRawTupleResultType(expr: ast2.Expr, state: InferState) -> Option[ast2.MonoType]
   switch expr.Kind
     case CallExpr(callee, _, _) =>
-      switch GoSignatureForCallee(callee, state.GoPackages, ffiMultiResultPredicate)
-        case Some(sig) =>
+      switch GoSignatureForCalleeWithPackage(callee, state.GoPackages, ffiMultiResultPredicate)
+        case Some(pair) =>
           # The raw shape is a best-effort recovery of Go's native multiple
-          # return values for tuple destructuring.  A signature whose element
-          # types cannot be resolved (no package context here) falls back to
-          # the caller's already-inferred type instead of a degenerate `any`.
-          switch GoSignatureRawResultType(sig)
+          # return values for tuple destructuring.  The owning package context
+          # is kept so a bare package-local result type name (for example
+          # `context.WithTimeout`'s `CancelFunc`) resolves instead of falling
+          # back to the caller's already-inferred type.
+          let (sig, pkg) = pair
+          switch GoSignatureRawResultTypeWithPackage(sig, pkg)
             case Ok(mt) => Some(mt)
             case Err(_) => None
           end
@@ -2169,10 +2171,19 @@ end
 # idiom, and `...FromCallee` has been folded into this walker — the base
 # accessors already operate on a callee expression.
 func GoSignatureForCallee(callee: ast2.Expr, packages: Slice[GoPackageEntry], predicate: func(GoFuncSignature) -> Bool) -> Option[GoFuncSignature]
+  switch GoSignatureForCalleeWithPackage(callee, packages, predicate)
+    case Some(pair) =>
+      let (sig, _) = pair
+      Some(sig)
+    case None => None
+  end
+end
+
+func GoSignatureForCalleeWithPackage(callee: ast2.Expr, packages: Slice[GoPackageEntry], predicate: func(GoFuncSignature) -> Bool) -> Option[(GoFuncSignature, GoPackageEntry)]
   switch callee.Kind
     case FieldExpr(base, field) then
       switch base.Kind
-        case IdentExpr(alias) => GoSignatureInPackages(alias, field, packages, predicate)
+        case IdentExpr(alias) => GoSignatureInPackagesWithPackage(alias, field, packages, predicate)
         case _ => None
       end
     end
@@ -2181,9 +2192,28 @@ func GoSignatureForCallee(callee: ast2.Expr, packages: Slice[GoPackageEntry], pr
 end
 
 func GoSignatureInPackages(alias: String, name: String, packages: Slice[GoPackageEntry], predicate: func(GoFuncSignature) -> Bool) -> Option[GoFuncSignature]
+  switch GoSignatureInPackagesWithPackage(alias, name, packages, predicate)
+    case Some(pair) =>
+      let (sig, _) = pair
+      Some(sig)
+    case None => None
+  end
+end
+
+# Package-aware variant of GoSignatureInPackages: the matched signature is
+# returned together with its owning package so raw result types that name
+# package-local types can be resolved with the right context.
+func GoSignatureInPackagesWithPackage(alias: String, name: String, packages: Slice[GoPackageEntry], predicate: func(GoFuncSignature) -> Bool) -> Option[(GoFuncSignature, GoPackageEntry)]
   if packages.Len() == 0 then None else
     let pkg = packages.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "", Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] })
-    if pkg.Alias == alias then GoSignatureInFuncs(name, pkg.Funcs, predicate) else GoSignatureInPackages(alias, name, common2.SliceDrop(packages, 1), predicate) end
+    if pkg.Alias == alias then
+      switch GoSignatureInFuncs(name, pkg.Funcs, predicate)
+        case Some(sig) => Some((sig, pkg))
+        case None => None
+      end
+    else
+      GoSignatureInPackagesWithPackage(alias, name, common2.SliceDrop(packages, 1), predicate)
+    end
   end
 end
 
@@ -2191,6 +2221,17 @@ func GoSignatureInFuncs(name: String, funcs: Slice[GoFuncSignature], predicate: 
   if funcs.Len() == 0 then None else
     let sig = funcs.Get(0).UnwrapOr(GoFuncSignature { Name: "", Params: [] as Slice[String], Results: [] as Slice[String], Variadic: false, TypeParams: [] as Slice[String] })
     if sig.Name == name && predicate(sig) then Some(sig) else GoSignatureInFuncs(name, common2.SliceDrop(funcs, 1), predicate) end
+  end
+end
+
+# goMethodSignatureType resolves a Go method's signature with package context
+# when the owning type belongs to one of the imported Go packages.  Local
+# receiver names have no owning package and use the plain resolver, matching
+# the previous behavior.
+func goMethodSignatureType(sig: GoFuncSignature, typeName: String, packages: Slice[GoPackageEntry]) -> Result[ast2.MonoType, String]
+  switch goPackageEntryForType(typeName, packages, 0)
+    case Some(pkg) => GoSignatureTypeWithPackage(sig, pkg)
+    case None => GoSignatureType(sig)
   end
 end
 
@@ -2510,7 +2551,10 @@ func inferOrdinaryField(base: ast2.Expr, field: String, env: Env, state: InferSt
                   # parameters bare (`(*List[T]).Set(v T)`); bind them like a
                   # generic function so each selector instantiates fresh
                   # variables instead of leaving unsatisfiable TParams.
-                  switch GoSignatureType(sig)
+                  # The owning package is threaded through so a method
+                  # signature that names a package-local type (for example a
+                  # result of type `CancelFunc`) resolves with package context.
+                  switch goMethodSignatureType(sig, typeName, state.GoPackages)
                     case Ok(methodType) =>
                       let methodScheme = Scheme { Bound: typeParamIDs(sig.TypeParams, 1), Predicates: [], Body: methodType }
                       let q = instantiateQualified(methodScheme, v.State)

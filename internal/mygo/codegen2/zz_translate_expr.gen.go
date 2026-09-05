@@ -188,12 +188,27 @@ func translateAstTupleLetStmt(pattern ast2.Pattern, value ast2.Expr, ctx *egCtx)
 			}
 			__mygo_expr_13 = __mygo_expr_7
 		} else {
-			__mygo_expr_10 := ffiMultiResultSignature(value, ctx)
+			__mygo_expr_10 := ffiMultiResultSignatureWithPackage(value, ctx)
 			var __mygo_expr_11 Result[[]goast.Stmt, string]
-			if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(Option__Some[typeinference2.GoFuncSignature]); ok {
-				__mygo_expr_11 = translateFFITupleLetStmt(pattern, value, __mygo_match___mygo_expr_12.F0, ctx)
+			if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(Option__Some[struct {
+				F0 typeinference2.GoFuncSignature
+				F1 typeinference2.GoPackageEntry
+			}]); ok {
+				var __mygo_expr_13 struct {
+					F0 typeinference2.GoFuncSignature
+					F1 typeinference2.GoPackageEntry
+				}
+				__mygo_expr_13 = __mygo_match___mygo_expr_12.F0
+				var sig_1 typeinference2.GoFuncSignature
+				sig_1 = __mygo_expr_13.F0
+				var pkg_1 typeinference2.GoPackageEntry
+				pkg_1 = __mygo_expr_13.F1
+				__mygo_expr_11 = translateFFITupleLetStmt(pattern, value, sig_1, pkg_1, ctx)
 			} else {
-				if _, ok := __mygo_expr_10.(Option__None[typeinference2.GoFuncSignature]); ok {
+				if _, ok := __mygo_expr_10.(Option__None[struct {
+					F0 typeinference2.GoFuncSignature
+					F1 typeinference2.GoPackageEntry
+				}]); ok {
 					__mygo_expr_11 = translateAstTupleLetStmtOrdinary(pattern, value, ctx)
 				} else {
 				}
@@ -212,12 +227,27 @@ func translateAstTupleLetStmt(pattern ast2.Pattern, value ast2.Expr, ctx *egCtx)
 			}
 			__mygo_expr_1 = __mygo_expr_7
 		} else {
-			__mygo_expr_2 := ffiMultiResultSignature(value, ctx)
+			__mygo_expr_2 := ffiMultiResultSignatureWithPackage(value, ctx)
 			var __mygo_expr_3 Result[[]goast.Stmt, string]
-			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[typeinference2.GoFuncSignature]); ok {
-				__mygo_expr_3 = translateFFITupleLetStmt(pattern, value, __mygo_match___mygo_expr_4.F0, ctx)
+			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[struct {
+				F0 typeinference2.GoFuncSignature
+				F1 typeinference2.GoPackageEntry
+			}]); ok {
+				var __mygo_expr_5 struct {
+					F0 typeinference2.GoFuncSignature
+					F1 typeinference2.GoPackageEntry
+				}
+				__mygo_expr_5 = __mygo_match___mygo_expr_4.F0
+				var sig typeinference2.GoFuncSignature
+				sig = __mygo_expr_5.F0
+				var pkg typeinference2.GoPackageEntry
+				pkg = __mygo_expr_5.F1
+				__mygo_expr_3 = translateFFITupleLetStmt(pattern, value, sig, pkg, ctx)
 			} else {
-				if _, ok := __mygo_expr_2.(Option__None[typeinference2.GoFuncSignature]); ok {
+				if _, ok := __mygo_expr_2.(Option__None[struct {
+					F0 typeinference2.GoFuncSignature
+					F1 typeinference2.GoPackageEntry
+				}]); ok {
 					__mygo_expr_3 = translateAstTupleLetStmtOrdinary(pattern, value, ctx)
 				} else {
 				}
@@ -265,7 +295,7 @@ func translateInlineGoTupleLet(pattern ast2.Pattern, body string, values []ast2.
 	}
 	return __mygo_expr_0
 }
-func translateFFITupleLetStmt(pattern ast2.Pattern, value ast2.Expr, sig typeinference2.GoFuncSignature, ctx *egCtx) Result[[]goast.Stmt, string] {
+func translateFFITupleLetStmt(pattern ast2.Pattern, value ast2.Expr, sig typeinference2.GoFuncSignature, pkg typeinference2.GoPackageEntry, ctx *egCtx) Result[[]goast.Stmt, string] {
 	if tuplePatternArity(pattern) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Results) {
 		return Err[[]goast.Stmt, string]("tuple binding count does not match Go function result count")
 	} else {
@@ -278,7 +308,7 @@ func translateFFITupleLetStmt(pattern ast2.Pattern, value ast2.Expr, sig typeinf
 				__mygo_expr_3 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_5.F0)
 			} else {
 				if __mygo_match___mygo_expr_4, ok := raw.(Result__Ok[AstExprResult, string]); ok {
-					__mygo_expr_5 := typeinference2.GoSignatureRawResultType(sig)
+					__mygo_expr_5 := typeinference2.GoSignatureRawResultTypeWithPackage(sig, pkg)
 					var __mygo_expr_6 Result[[]goast.Stmt, string]
 					if __mygo_match___mygo_expr_8, ok := __mygo_expr_5.(Result__Ok[ast2.MonoType, string]); ok {
 						__mygo_expr_6 = translateRawTupleLet(pattern, __mygo_match___mygo_expr_8.F0, __mygo_match___mygo_expr_4.F0.Expr, __mygo_match___mygo_expr_4.F0.Pre, ctx)

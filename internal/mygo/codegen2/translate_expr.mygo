@@ -153,8 +153,10 @@ func translateAstTupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, ctx: Ref[
           case Ok(call) => translateRawTupleLet(pattern, value.Type.UnwrapOr(ast2.MonoType.TUnit), call.Expr, call.Pre, ctx)
         end
       else
-        switch ffiMultiResultSignature(value, ctx)
-          case Some(sig) => translateFFITupleLetStmt(pattern, value, sig, ctx)
+        switch ffiMultiResultSignatureWithPackage(value, ctx)
+          case Some(pair) =>
+            let (sig, pkg) = pair
+            translateFFITupleLetStmt(pattern, value, sig, pkg, ctx)
           case None => translateAstTupleLetStmtOrdinary(pattern, value, ctx)
         end
       end
@@ -166,8 +168,10 @@ func translateAstTupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, ctx: Ref[
         case _ => translateAstTupleLetStmtOrdinary(pattern, value, ctx)
       end
     case _ =>
-      switch ffiMultiResultSignature(value, ctx)
-        case Some(sig) => translateFFITupleLetStmt(pattern, value, sig, ctx)
+      switch ffiMultiResultSignatureWithPackage(value, ctx)
+        case Some(pair) =>
+          let (sig, pkg) = pair
+          translateFFITupleLetStmt(pattern, value, sig, pkg, ctx)
         case None => translateAstTupleLetStmtOrdinary(pattern, value, ctx)
       end
   end
@@ -221,7 +225,7 @@ end
 
 # A tuple binding explicitly preserves Go's native multiple return values.
 # It bypasses Option/Result boundary wrapping and emits `a, b := call()`.
-func translateFFITupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, sig: typeinference2.GoFuncSignature, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
+func translateFFITupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, sig: typeinference2.GoFuncSignature, pkg: typeinference2.GoPackageEntry, ctx: Ref[egCtx]) -> Result[Slice[goast.Stmt], String]
   if tuplePatternArity(pattern) != sig.Results.Len() then
     Err("tuple binding count does not match Go function result count")
   else
@@ -234,7 +238,7 @@ func translateFFITupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, sig: type
             # The raw multiple-return shape comes straight from the Go
             # signature; an unresolvable element type is a hard error rather
             # than a silent `any`.
-            switch typeinference2.GoSignatureRawResultType(sig)
+            switch typeinference2.GoSignatureRawResultTypeWithPackage(sig, pkg)
               case Ok(resultTypes) => translateRawTupleLet(pattern, resultTypes, call.Expr, call.Pre, ctx)
               case Err(msg) => Err(msg)
             end
