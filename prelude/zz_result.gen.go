@@ -87,6 +87,30 @@ func MygoIN6ResultM6MapErr[A any, E any, E2 any](res Result[A, E], fn func(E) E2
 	}
 	return expr_163
 }
+func MygoIN6ResultM9MapWithOk[A any, E any, B any](res Result[A, E], value B) Result[B, E] {
+	var __mygo_expr_0 Result[B, E]
+	if _, ok := res.(Result__Ok[A, E]); ok {
+		__mygo_expr_0 = Ok[B, E](value)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := res.(Result__Err[A, E]); ok {
+			__mygo_expr_0 = Err[B, E](__mygo_match___mygo_expr_1.F0)
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func MygoIN6ResultM10MapWithErr[A any, E any, F any](res Result[A, E], err F) Result[A, F] {
+	var __mygo_expr_0 Result[A, F]
+	if __mygo_match___mygo_expr_1, ok := res.(Result__Ok[A, E]); ok {
+		__mygo_expr_0 = Ok[A, F](__mygo_match___mygo_expr_1.F0)
+	} else {
+		if _, ok := res.(Result__Err[A, E]); ok {
+			__mygo_expr_0 = Err[A, F](err)
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
 func MygoIN6ResultM7AndThen[A any, E any, B any](res Result[A, E], fn func(A) Result[B, E]) Result[B, E] {
 	var expr_166 Result[B, E]
 	if v_104, ok := res.(Result__Ok[A, E]); ok {

@@ -36,6 +36,24 @@ impl[A, E] Result[A, E]
     end
   end
 
+  # Provide the Ok payload of a `Result[(), E]`, keeping the Err unchanged.
+  # Useful to reshape a lone-error FFI call (e.g. `fmt.Errorf` ->
+  # `Result[(), error]`) into `Result[A, E]` such as `Result[String, Error]`
+  # or `Result[Slice[String], Error]` without writing a mapper closure.
+  func MapWithOk[B](res: Result[A, E], value: B) -> Result[B, E]
+    switch res
+      case Ok(_) => Ok(value)
+      case Err(e) => Err(e)
+    end
+  end
+
+  func MapWithErr[F](res: Result[A, E], err: F) -> Result[A, F]
+    switch res
+      case Ok(value) => Ok(value)
+      case Err(_) => Err(err)
+    end
+  end
+
   func AndThen[B](res: Result[A, E], fn: func(A) -> Result[B, E]) -> Result[B, E]
     switch res
       case Ok(v) => fn(v)
