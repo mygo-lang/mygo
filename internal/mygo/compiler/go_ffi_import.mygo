@@ -26,6 +26,7 @@ end
 struct BootstrapGoPackageInfo
   Funcs: Slice[typeinference2.GoFuncSignature]
   Types: Slice[typeinference2.GoTypeSignature]
+  Constants: Slice[typeinference2.GoConstSignature]
 end
 
 # bootstrapGoImportDir resolves a Go import path to a source directory using

@@ -765,7 +765,7 @@ func bootstrapPopulateGoSignaturesAt(workspaceRoot: String, packages: Ref[Slice[
           let trimmed = entry.Path.TrimPrefix("go:")
           switch bootstrapLoadGoPackage(workspaceRoot, trimmed)
             case Ok(info) =>
-              packages.value().Set(index, typeinference2.GoPackageEntry { Alias: entry.Alias, Path: entry.Path, Funcs: info.Funcs, Types: info.Types })
+              packages.value().Set(index, typeinference2.GoPackageEntry { Alias: entry.Alias, Path: entry.Path, Funcs: info.Funcs, Types: info.Types, Constants: info.Constants })
               bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, index + 1)
             case Err(msg) => Err(fmt.Errorf("can't find import %q: %s", trimmed, msg))
           end

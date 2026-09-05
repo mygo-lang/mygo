@@ -17,8 +17,9 @@ type BootstrapGoModRequire struct {
 	Version string
 }
 type BootstrapGoPackageInfo struct {
-	Funcs []typeinference2.GoFuncSignature
-	Types []typeinference2.GoTypeSignature
+	Funcs     []typeinference2.GoFuncSignature
+	Types     []typeinference2.GoTypeSignature
+	Constants []typeinference2.GoConstSignature
 }
 
 func bootstrapGoImportDir(start string, importPath string) Option[string] {

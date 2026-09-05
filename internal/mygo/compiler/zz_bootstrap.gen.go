@@ -1161,7 +1161,7 @@ func __mygo_mt_compiler_bootstrapPopulateGoSignaturesAt(__mygo_mt_p0 string, __m
 						trimmed := MygoIN6StringM10TrimPrefix(__mygo_match___mygo_expr_1.F0.Path, "go:")
 						__mygo_expr_2 := bootstrapLoadGoPackage(__mygo_mt_p0, trimmed)
 						if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Ok[BootstrapGoPackageInfo, string]); ok {
-							MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Set(*__mygo_mt_p1, __mygo_mt_p2, typeinference2.GoPackageEntry{Alias: __mygo_match___mygo_expr_1.F0.Alias, Path: __mygo_match___mygo_expr_1.F0.Path, Funcs: __mygo_match___mygo_expr_4.F0.Funcs, Types: __mygo_match___mygo_expr_4.F0.Types})
+							MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Set(*__mygo_mt_p1, __mygo_mt_p2, typeinference2.GoPackageEntry{Alias: __mygo_match___mygo_expr_1.F0.Alias, Path: __mygo_match___mygo_expr_1.F0.Path, Funcs: __mygo_match___mygo_expr_4.F0.Funcs, Types: __mygo_match___mygo_expr_4.F0.Types, Constants: __mygo_match___mygo_expr_4.F0.Constants})
 							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
 							__tail_2 := __mygo_mt_p2 + 1

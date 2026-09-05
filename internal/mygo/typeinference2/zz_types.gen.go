@@ -250,10 +250,15 @@ type PackageInfo struct {
 	ResolvedConstraintArgs   map[MethodConstraintKey][]ast2.MonoType
 }
 type GoPackageEntry struct {
-	Alias string
-	Path  string
-	Funcs []GoFuncSignature
-	Types []GoTypeSignature
+	Alias     string
+	Path      string
+	Funcs     []GoFuncSignature
+	Types     []GoTypeSignature
+	Constants []GoConstSignature
+}
+type GoConstSignature struct {
+	Name string
+	Type string
 }
 type GoFuncSignature struct {
 	Name       string
@@ -1093,7 +1098,8 @@ func seedGoPackageMembers(pkg GoPackageEntry, env Env) Result[Env, string] {
 	__mygo_expr_0 := seedGoPackageFuncs(pkg, pkg.Funcs, env)
 	var __mygo_expr_1 Result[Env, string]
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(Result__Ok[Env, string]); ok {
-		__mygo_expr_1 = Ok[Env, string](seedGoPackageTypes(pkg, pkg.Types, __mygo_match___mygo_expr_3.F0))
+		withConsts := seedGoPackageConstants(pkg, pkg.Constants, __mygo_match___mygo_expr_3.F0)
+		__mygo_expr_1 = Ok[Env, string](seedGoPackageTypes(pkg, pkg.Types, withConsts))
 	} else {
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[Env, string]); ok {
 			__mygo_expr_1 = Err[Env, string](__mygo_match___mygo_expr_2.F0)
@@ -1102,6 +1108,9 @@ func seedGoPackageMembers(pkg GoPackageEntry, env Env) Result[Env, string] {
 	}
 	return __mygo_expr_1
 }
+func seedGoPackageConstants(pkg GoPackageEntry, constants []GoConstSignature, env Env) Env {
+	return __mygo_mt_typeinference2_seedGoPackageConstants(pkg, constants, env, 0)
+}
 func seedGoPackageFuncs(pkg GoPackageEntry, funcs []GoFuncSignature, env Env) Result[Env, string] {
 	return __mygo_mt_typeinference2_seedGoPackageFuncs(pkg, funcs, env, 0)
 }
@@ -1109,7 +1118,7 @@ func seedGoPackageTypes(pkg GoPackageEntry, types []GoTypeSignature, env Env) En
 	return __mygo_mt_typeinference2_seedGoPackageTypes(pkg, types, env, 0)
 }
 func emptyGoPackageEntry() GoPackageEntry {
-	return GoPackageEntry{Alias: "", Path: "", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{}}
+	return GoPackageEntry{Alias: "", Path: "", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{}, Constants: []GoConstSignature{}}
 }
 func goPackageEntryForType(typeName string, packages []GoPackageEntry, index int) Option[GoPackageEntry] {
 	return __mygo_mt_typeinference2_goPackageEntryForType(typeName, packages, index, 0)
@@ -3140,6 +3149,40 @@ func __mygo_mt_typeinference2_resolveEnvironmentInto(__mygo_mt_p0 Solver, __mygo
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 				__mygo_state = 0
 				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_seedGoPackageConstants(__mygo_mt_p0 GoPackageEntry, __mygo_mt_p1 []GoConstSignature, __mygo_mt_p2 Env, __mygo_state int) Env {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) == 0 {
+				return __mygo_mt_p2
+			} else {
+				c := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), GoConstSignature{Name: "", Type: ""})
+				__mygo_expr_0 := goTypeNameWith(c.Type, Some[GoPackageEntry](__mygo_mt_p0), map[string]int{})
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.MonoType, string]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
+					__tail_2 := envPut(__mygo_mt_p2, goPackageMemberName(__mygo_mt_p0.Alias, c.Name), Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: __mygo_match___mygo_expr_1.F0})
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Result__Err[ast2.MonoType, string]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
+						__tail_2 := __mygo_mt_p2
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")

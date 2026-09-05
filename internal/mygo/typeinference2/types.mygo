@@ -263,6 +263,17 @@ struct GoPackageEntry
   Path: String
   Funcs: Slice[GoFuncSignature]
   Types: Slice[GoTypeSignature]
+  Constants: Slice[GoConstSignature]
+end
+
+# GoConstSignature records one exported package-level Go constant (e.g.
+# time.Second, http.StatusOK).  The constant's declared type string is carried
+# verbatim and converted to a MonoType through the shared Go type resolver when
+# it is seeded into the environment, so selectors like `time.Second` type-check
+# as values instead of failing with "unknown Go package member".
+struct GoConstSignature
+  Name: String
+  Type: String
 end
 
 # GoFuncSignature is populated by the bootstrap entry from go/types and is
@@ -1564,8 +1575,26 @@ end
 
 func seedGoPackageMembers(pkg: GoPackageEntry, env: Env) -> Result[Env, String]
   switch seedGoPackageFuncs(pkg, pkg.Funcs, env)
-    case Ok(withFuncs) => Ok(seedGoPackageTypes(pkg, pkg.Types, withFuncs))
+    case Ok(withFuncs) =>
+      let withConsts = seedGoPackageConstants(pkg, pkg.Constants, withFuncs)
+      Ok(seedGoPackageTypes(pkg, pkg.Types, withConsts))
     case Err(msg) => Err(msg)
+  end
+end
+
+# Register Go package-level constants as `alias.ConstName` (or bare `ConstName`
+# for a dot-import) so a package selector like `time.Second` resolves to its
+# declared Go type.  Unlike functions (whose whole signature becomes the
+# scheme body) a constant's scheme body is just its type, so the selector is a
+# plain value expression in MyGO.
+func seedGoPackageConstants(pkg: GoPackageEntry, constants: Slice[GoConstSignature], env: Env) -> Env
+  if constants.Len() == 0 then env else
+    let c = constants.Get(0).UnwrapOr(GoConstSignature { Name: "", Type: "" })
+    switch goTypeNameWith(c.Type, Some(pkg), {})
+      case Ok(mono) =>
+        seedGoPackageConstants(pkg, common2.SliceDrop(constants, 1), envPut(env, goPackageMemberName(pkg.Alias, c.Name), Scheme { Bound: [], Predicates: [], Body: mono }))
+      case Err(_) => seedGoPackageConstants(pkg, common2.SliceDrop(constants, 1), env)
+    end
   end
 end
 
@@ -1608,7 +1637,7 @@ func seedGoPackageTypes(pkg: GoPackageEntry, types: Slice[GoTypeSignature], env:
 end
 
 func emptyGoPackageEntry() -> GoPackageEntry
-  GoPackageEntry { Alias: "", Path: "", Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] }
+  GoPackageEntry { Alias: "", Path: "", Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature], Constants: [] as Slice[GoConstSignature] }
 end
 
 # goPackageEntryForType finds the GoPackageEntry that owns a fully-qualified

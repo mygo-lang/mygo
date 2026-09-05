@@ -181,3 +181,65 @@ func TestFetchCookieReturnsErrResult(t *testing.T) {
 		t.Fatalf("method FFI Result wrapping package failed:\n%s", output)
 	}
 }
+
+// TestBootstrapCompilesGoConstants pins importing Go package-level constants
+// through the self-hosted FFI pipeline.  time.Second / time.Millisecond are
+// typed Duration constants and http.StatusOK is an untyped integer constant,
+// so the test exercises both the nominal-type and the untyped-to-default-type
+// constant paths.  CompileDirBootstrap runs the full self-hosted pipeline and
+// `go test` proves each constant selector lowers to a real Go value at runtime.
+func TestBootstrapCompilesGoConstants(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	source := `package sample
+
+import time "go:time"
+import http "go:net/http"
+
+func OneSecond() -> time.Duration
+  time.Second
+end
+
+func OneMillisecond() -> time.Duration
+  time.Millisecond
+end
+
+func StatusOKCode() -> Int
+  http.StatusOK
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CompileDirBootstrap(dir); err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
+
+import (
+	"net/http"
+	"testing"
+	"time"
+)
+
+func TestGoConstants(t *testing.T) {
+	if got := OneSecond(); got != time.Second {
+		t.Fatalf("OneSecond() = %v, want %v", got, time.Second)
+	}
+	if got := OneMillisecond(); got != time.Millisecond {
+		t.Fatalf("OneMillisecond() = %v, want %v", got, time.Millisecond)
+	}
+	if got := StatusOKCode(); got != http.StatusOK {
+		t.Fatalf("StatusOKCode() = %d, want %d", got, http.StatusOK)
+	}
+}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "test", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache", "GOFLAGS=-mod=mod")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("go constants package failed:\n%s", output)
+	}
+}

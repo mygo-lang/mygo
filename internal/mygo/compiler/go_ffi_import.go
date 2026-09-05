@@ -52,6 +52,7 @@ func bootstrapGoPackageInfoFromTypes(pkg *types.Package) BootstrapGoPackageInfo 
 	scope := pkg.Scope()
 	funcs := []typeinference2.GoFuncSignature{}
 	typeSigs := []typeinference2.GoTypeSignature{}
+	consts := []typeinference2.GoConstSignature{}
 	// First pass: exported type aliases (`type Expr = ast.Expr`) are the FFI
 	// surface MyGO names them by.  Register each alias as a type signature and
 	// remember how its unaliased target renders so signature strings that use
@@ -109,7 +110,27 @@ func bootstrapGoPackageInfoFromTypes(pkg *types.Package) BootstrapGoPackageInfo 
 			typeSigs = append(typeSigs, typeinference2.GoTypeSignature{TypeName: name, TypeParams: paramNames, Methods: goTypeMethods(named, goTupleTypes), Fields: goTypeFields(named, typeString), Underlying: typeString(named.Underlying())})
 		}
 	}
-	return BootstrapGoPackageInfo{Funcs: funcs, Types: typeSigs}
+	// Third pass: exported package-level constants (e.g. time.Second,
+	// http.StatusOK).  They are surfaced as values of their declared type so
+	// the self-hosted inference can seed `pkg.CONST` selectors into the env,
+	// mirroring how the hand-written bootstrap compiler imports them.
+	for _, name := range scope.Names() {
+		if !isExportedGoName(name) {
+			continue
+		}
+		obj := scope.Lookup(name)
+		cnst, ok := obj.(*types.Const)
+		if !ok {
+			continue
+		}
+		// Untyped constants (e.g. `const StatusOK = 200`) report their type as
+		// the untyped basic (`untyped int`).  types.Default resolves that to
+		// the constant's default type (`int`) so the constant can be typed as a
+		// value in MyGO.  Typed constants (e.g. time.Second) pass through
+		// unchanged.
+		consts = append(consts, typeinference2.GoConstSignature{Name: name, Type: typeString(types.Default(cnst.Type()))})
+	}
+	return BootstrapGoPackageInfo{Funcs: funcs, Types: typeSigs, Constants: consts}
 }
 
 // goTypeFields collects the exported struct fields of a named type as FFI
