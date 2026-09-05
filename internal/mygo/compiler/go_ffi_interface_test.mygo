@@ -1,0 +1,93 @@
+package compiler
+
+import testing "go:testing"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+
+# The bootstrap Go FFI loader must surface the exported method set of a Go
+# *interface* type (net/http.ResponseWriter), which previously came back empty
+# because the loader always used the pointer-to-interface method set.  Once
+# collected, downstream inference and codegen dispatch these as ordinary Go
+# methods.  An interface stays a nominal value type: methods are present but
+# no struct fields leak through.
+func TestBootstrapGoPackageInfoCollectsInterfaceMethods(t: Ref[testing.T]) -> ()
+  switch bootstrapLoadGoPackage(".", "net/http")
+    case Err(msg) => t.Fatal(msg)
+    case Ok(info) then
+      var found: Bool = false
+      var i: Int = 0
+      while i < info.Types.Len() && !found
+        switch info.Types.Get(i)
+          case None => ()
+          case Some(ty) =>
+            if ty.TypeName == "ResponseWriter" then
+              found = true
+              var hasWrite: Bool = false
+              var hasWriteHeader: Bool = false
+              var hasHeader: Bool = false
+              var j: Int = 0
+              while j < ty.Methods.Len()
+                switch ty.Methods.Get(j)
+                  case None => ()
+                  case Some(m) =>
+                    if m.Name == "Write" then hasWrite = true end
+                    if m.Name == "WriteHeader" then hasWriteHeader = true end
+                    if m.Name == "Header" then hasHeader = true end
+                end
+                j = j + 1
+              end
+              if !hasWrite then t.Fatal("ResponseWriter missing Write method") end
+              if !hasWriteHeader then t.Fatal("ResponseWriter missing WriteHeader method") end
+              if !hasHeader then t.Fatal("ResponseWriter missing Header method") end
+              if ty.Fields.Len() != 0 then t.Fatal("ResponseWriter should expose no fields") end
+            end
+        end
+        i = i + 1
+      end
+      if !found then t.Fatal("net/http exports no ResponseWriter type") end
+    end
+  end
+end
+
+# The interface method-set fix lives inside goTypeMethods, which is also called
+# by the exported-alias first pass.  os.FileInfo is `type FileInfo = fs.FileInfo`
+# (a type alias whose target is an interface), so the alias's Methods must
+# surface the target's methods too -- no separate alias path needed.
+func TestBootstrapGoPackageInfoCollectsAliasedInterfaceMethods(t: Ref[testing.T]) -> ()
+  switch bootstrapLoadGoPackage(".", "os")
+    case Err(msg) => t.Fatal(msg)
+    case Ok(info) then
+      var found: Bool = false
+      var i: Int = 0
+      while i < info.Types.Len() && !found
+        switch info.Types.Get(i)
+          case None => ()
+          case Some(ty) =>
+            if ty.TypeName == "FileInfo" then
+              found = true
+              var hasName: Bool = false
+              var hasSize: Bool = false
+              var hasIsDir: Bool = false
+              var j: Int = 0
+              while j < ty.Methods.Len()
+                switch ty.Methods.Get(j)
+                  case None => ()
+                  case Some(m) =>
+                    if m.Name == "Name" then hasName = true end
+                    if m.Name == "Size" then hasSize = true end
+                    if m.Name == "IsDir" then hasIsDir = true end
+                end
+                j = j + 1
+              end
+              if !hasName then t.Fatal("os.FileInfo alias missing Name method") end
+              if !hasSize then t.Fatal("os.FileInfo alias missing Size method") end
+              if !hasIsDir then t.Fatal("os.FileInfo alias missing IsDir method") end
+            end
+        end
+        i = i + 1
+      end
+      if !found then
+        t.Fatal("os exports no FileInfo alias")
+      end
+    end
+  end
+end

@@ -157,7 +157,14 @@ func goTypeFields(named *types.Named, typeString func(types.Type) string) []type
 // signatures, mirroring the previous inline loop.
 func goTypeMethods(named *types.Named, tupleTypes func(*types.Tuple) []string) []typeinference2.GoFuncSignature {
 	methods := []typeinference2.GoFuncSignature{}
+	// An interface's own method set is only reachable through the interface
+	// type itself; the pointer-to-interface method set is empty.  Concrete
+	// types keep the pointer method set so value + pointer receivers (and
+	// promoted embedded selectors) all surface.
 	methodSet := types.NewMethodSet(types.NewPointer(named))
+	if _, isInterface := named.Underlying().(*types.Interface); isInterface {
+		methodSet = types.NewMethodSet(named)
+	}
 	for j := 0; j < methodSet.Len(); j++ {
 		fn, ok := methodSet.At(j).Obj().(*types.Func)
 		if !ok || !fn.Exported() {

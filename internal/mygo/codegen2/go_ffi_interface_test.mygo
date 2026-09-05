@@ -1,0 +1,74 @@
+package codegen2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import testing "go:testing"
+import strings "go:strings"
+
+# ResponseWriter is a Go interface.  A handler that writes the response
+# through it must infer and lower to direct Go method calls (`w.Header()`,
+# `w.WriteHeader(...)`, `w.Write(...)`) rather than failing with `unknown
+# field` or emitting a struct-field access.
+func TestGenerateFilesInterfaceMethodCallDirect(t: Ref[testing.T]) -> ()
+  let src = """
+package sample
+
+import http "go:net/http"
+
+func handle(w: Ref[http.ResponseWriter], bytes: Slice[Byte]) -> ()
+  w.Header().Set("Content-Type", "text/plain")
+  w.WriteHeader(200)
+  let _ = w.Write(bytes)
+  ()
+end
+"""
+  let parsed = parser2.ParseFileAt("ffi-interface.mygo", src)
+  switch parsed
+    case Err(msg) => t.Fatal(msg)
+    case Ok(file) =>
+      let fileWithIDs = ast2.AssignFileExprIDs(file)
+      let pkg = typeinference2.GoPackageEntry {
+        Alias: "http",
+        Path: "go:net/http",
+        Funcs: [] as Slice[typeinference2.GoFuncSignature],
+        Types: [
+          typeinference2.GoTypeSignature {
+            TypeName: "ResponseWriter",
+            TypeParams: [] as Slice[String],
+            Methods: [
+              typeinference2.GoFuncSignature { Name: "Write", Params: ["[]byte"], Results: ["int", "error"], Variadic: false, TypeParams: [] as Slice[String] },
+              typeinference2.GoFuncSignature { Name: "WriteHeader", Params: ["int"], Results: [] as Slice[String], Variadic: false, TypeParams: [] as Slice[String] },
+              typeinference2.GoFuncSignature { Name: "Header", Params: [], Results: ["http.Header"], Variadic: false, TypeParams: [] as Slice[String] },
+            ],
+            Fields: [] as Slice[typeinference2.GoFieldSignature],
+            Underlying: "interface{Header() http.Header; Write([]byte) (int, error); WriteHeader(int)}",
+          },
+          typeinference2.GoTypeSignature {
+            TypeName: "Header",
+            TypeParams: [] as Slice[String],
+            Methods: [
+              typeinference2.GoFuncSignature { Name: "Set", Params: ["string", "string"], Results: [] as Slice[String], Variadic: false, TypeParams: [] as Slice[String] },
+            ],
+            Fields: [] as Slice[typeinference2.GoFieldSignature],
+            Underlying: "map[string][]string",
+          },
+        ],
+        Constants: [] as Slice[typeinference2.GoConstSignature],
+      }
+      switch typeinference2.InferPackageWithGoPackages(
+        [typeinference2.PkgDeclSource { Path: "ffi-interface.mygo", Decls: fileWithIDs.Decls }],
+        [pkg] as Slice[typeinference2.GoPackageEntry],
+      )
+        case Err(msg) => t.Fatalf("GenerateFiles: inference failed: %s", msg)
+        case Ok(info) =>
+          switch Generate(fileWithIDs, info)
+            case Err(msg) => t.Fatalf("GenerateFiles failed: %s", msg)
+            case Ok(code) =>
+              if !strings.Contains(code, "w.Header().Set(") then t.Fatal("missing direct w.Header() call") end
+              if !strings.Contains(code, "w.WriteHeader(200)") then t.Fatal("missing direct w.WriteHeader(200) call") end
+              if !strings.Contains(code, "w.Write(") then t.Fatal("missing direct w.Write( call") end
+          end
+      end
+  end
+end
