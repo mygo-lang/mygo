@@ -19,6 +19,12 @@ and leaves the boundary type less ergonomic than its `Option` counterpart.
   `Expect`, `MapOr` (Tier 2 adds `UnwrapOrDefault` and `MapOrElse`).
 - Promote the standalone `OptionToResult` helper to method form (`Option.OkOr`); the
   standalone function is kept for compatibility.
+- **Tier 2 deferral**: the `Default`-constrained methods (`UnwrapOrDefault`,
+  `MapOrElse` fallback branch) were dropped during implementation — the gated
+  smoke test (task 4.1) confirmed inherent-impl `using Default[A]` dispatch does
+  not resolve (`unknown identifier Default`).  The spec's "Default-constrained
+  extraction" requirement is marked DEFERRED and the blocker is recorded in
+  `KNOWN_ISSUES.md` for a follow-up change.
 - Remove the duplicate standalone `OptionFilter` function, which is identical to
   `OptionIEnumerable.Filter`.
 - Leave the `Into` interface and the `?` early-return operator out of scope (follow-up

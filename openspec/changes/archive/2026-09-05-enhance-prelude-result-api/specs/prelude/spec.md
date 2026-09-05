@@ -113,7 +113,15 @@ payload. The unwrap variants SHALL panic on the unexpected variant; `Expect` and
 - **WHEN** `Ok(v).UnwrapErr()` is called
 - **THEN** program execution panics
 
-### Requirement: Default-constrained extraction
+### Requirement: Default-constrained extraction (DEFERRED)
+> **Deferred during implementation**: the prelude SHALL NOT ship
+> `UnwrapOrDefault` in this change.  The gated smoke test (task 4.1) recorded
+> that inherent-impl `using Default[A]` dispatch does not resolve
+> (`unknown identifier Default`); the methods were dropped and the blocker was
+> recorded in `KNOWN_ISSUES.md`.  The requirement stays on the books for a
+> follow-up change once the compiler supports zero-arg typeclass members on
+> inherent impls.
+
 The prelude SHALL provide `UnwrapOrDefault` on `Result[A, E]` where `A` implements
 `Default`, returning the payload on `Ok` and `Default[A]()` on `Err`.
 
