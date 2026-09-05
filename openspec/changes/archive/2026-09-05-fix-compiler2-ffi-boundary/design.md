@@ -111,3 +111,12 @@ It already has MyGO syntax structure and can be bootstrapped and compiled).
 
 - Do you need to add a scene level for `http.HandlerFunc` (named function type with parameters/results) 
 Request? The current spec only promises callability itself, and the signature shape is guaranteed by the parser, which can be supplemented after implementation.
+- The Go FFI loader only exports functions and types; package-level constants and
+  variables (`*types.Const` / `*types.Var`) fall through the switch in
+  `bootstrapGoPackageInfoFromTypes` and are dropped silently. The real
+  `time.Second` (a `time.Duration` constant) is therefore not usable from MyGO
+  today. A follow-up enhancement could seed typed constants (or untyped ones
+  after `types.Default`) as env value bindings so
+  `http.Client { Timeout: time.Second }` works directly. The tests in this
+  change use the func form (`time.Second()`) to express the equivalent
+  scenario.
