@@ -46,124 +46,22 @@ func (_ Result__Err[A, E]) isResult() {
 func Err[A any, E any](a0 E) Result[A, E] {
 	return Result__Err[A, E]{F0: a0}
 }
-func MygoIN6ResultM8ToOption[A any, E any](res Result[A, E]) Option[A] {
-	var expr_73 Option[A]
-	if v_44, ok := res.(Result__Ok[A, E]); ok {
-		var expr_72 Option[A]
-		expr_72 = Some[A](v_44.F0)
-		expr_73 = expr_72
-	} else {
-		if _, ok := res.(Result__Err[A, E]); ok {
-			var expr_71 Option[A]
-			expr_71 = None[A]()
-			expr_73 = expr_71
-		} else {
-			panic("unreachable")
-		}
-	}
-	return expr_73
-}
-func MygoIN6ResultM7Flatten[A any, E any](res Result[Result[A, E], E]) Result[A, E] {
-	var expr_76 Result[A, E]
-	if v_46, ok := res.(Result__Ok[Result[A, E], E]); ok {
-		var expr_75 Result[A, E]
-		expr_75 = v_46.F0
-		expr_76 = expr_75
-	} else {
-		if v_45, ok := res.(Result__Err[Result[A, E], E]); ok {
-			var expr_74 Result[A, E]
-			expr_74 = Err[A, E](v_45.F0)
-			expr_76 = expr_74
-		} else {
-			panic("unreachable")
-		}
-	}
-	return expr_76
-}
-func MygoIT2EqFN8ResultEqGN1AN1EEGN6ResultGN1AN1EEEM6Equals[A any, E any](left Result[A, E], right Result[A, E], EqualsFn func(A, A) bool, EqualsFn1 func(E, E) bool) bool {
-	var expr_85 bool
-	if v_50, ok := left.(Result__Ok[A, E]); ok {
-		var expr_84 bool
-		var expr_83 bool
-		if v_52, ok := right.(Result__Ok[A, E]); ok {
-			var expr_82 bool
-			expr_82 = EqualsFn(v_50.F0, v_52.F0)
-			expr_83 = expr_82
-		} else {
-			if _, ok := right.(Result__Err[A, E]); ok {
-				var expr_81 bool
-				expr_81 = false
-				expr_83 = expr_81
-			} else {
-				panic("unreachable")
-			}
-		}
-		expr_84 = expr_83
-		expr_85 = expr_84
-	} else {
-		if v_47, ok := left.(Result__Err[A, E]); ok {
-			var expr_80 bool
-			var expr_79 bool
-			if _, ok := right.(Result__Ok[A, E]); ok {
-				var expr_78 bool
-				expr_78 = false
-				expr_79 = expr_78
-			} else {
-				if v_48, ok := right.(Result__Err[A, E]); ok {
-					var expr_77 bool
-					expr_77 = EqualsFn1(v_47.F0, v_48.F0)
-					expr_79 = expr_77
-				} else {
-					panic("unreachable")
-				}
-			}
-			expr_80 = expr_79
-			expr_85 = expr_80
-		} else {
-			panic("unreachable")
-		}
-	}
-	return expr_85
-}
 func OptionToResult[A any, E any](opt Option[A], errVal E) Result[A, E] {
-	var expr_88 Result[A, E]
-	if v_54, ok := opt.(Option__Some[A]); ok {
-		var expr_87 Result[A, E]
-		expr_87 = Ok[A, E](v_54.F0)
-		expr_88 = expr_87
+	var expr_122 Result[A, E]
+	if v_92, ok := opt.(Option__Some[A]); ok {
+		var expr_121 Result[A, E]
+		expr_121 = Ok[A, E](v_92.F0)
+		expr_122 = expr_121
 	} else {
 		if _, ok := opt.(Option__None[A]); ok {
-			var expr_86 Result[A, E]
-			expr_86 = Err[A, E](errVal)
-			expr_88 = expr_86
+			var expr_120 Result[A, E]
+			expr_120 = Err[A, E](errVal)
+			expr_122 = expr_120
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_88
-}
-func OptionFilter[A any](opt Option[A], fn func(A) bool) Option[A] {
-	var expr_92 Option[A]
-	if v_56, ok := opt.(Option__Some[A]); ok {
-		var expr_91 Option[A]
-		var expr_90 Option[A]
-		if fn(v_56.F0) {
-			expr_90 = opt
-		} else {
-			expr_90 = None[A]()
-		}
-		expr_91 = expr_90
-		expr_92 = expr_91
-	} else {
-		if _, ok := opt.(Option__None[A]); ok {
-			var expr_89 Option[A]
-			expr_89 = None[A]()
-			expr_92 = expr_89
-		} else {
-			panic("unreachable")
-		}
-	}
-	return expr_92
+	return expr_122
 }
 func Panic(msg string) {
 	panic(msg)

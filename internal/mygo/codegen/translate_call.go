@@ -381,6 +381,134 @@ func (g *gen) methodParamExpectedTypes(method *struct {
 	return out
 }
 
+// inherentMethodTypeArgs derives explicit Go type arguments for a generic
+// inherent-method call from its receiver type.  Enum types such as
+// Option[T]/Result[A, E] lower to interfaces whose method sets never mention
+// the type parameter, so Go cannot infer the impl-level type arguments (the
+// leading parameters of the generated function) from an interface-typed
+// receiver.  Method-level type parameters are derived from the remaining
+// arguments and, when available, the expected result type, so the emitted
+// list covers every type parameter of the generated function.  Returns nil
+// when the arguments cannot be determined, in which case the caller emits
+// the call without explicit type arguments.
+func (g *gen) inherentMethodTypeArgs(method *struct {
+	Impl        *ImplDecl
+	Func        *FuncDecl
+	HasReceiver bool
+}, recvType string, callArgs []Expr, expected string, ctx *egCtx) []ast.Expr {
+	if method == nil || method.Func == nil || method.Impl == nil {
+		return nil
+	}
+	fn := method.Func
+	if len(fn.Params) == 0 {
+		return nil
+	}
+	typeParams := append(append([]string{}, method.Impl.TypeParams...), fn.TypeParams...)
+	if len(typeParams) == 0 {
+		return nil
+	}
+	tpSet := typeParamSet(typeParams)
+	subst := map[string]string{}
+	concrete := strings.TrimSpace(recvType)
+	concrete = strings.TrimPrefix(concrete, "*")
+	if !inferTypeSubst(fn.Params[0].Type, concrete, tpSet, subst) {
+		return nil
+	}
+	// Derive method-level type parameters from the remaining arguments
+	// (e.g. And's B from the second Result argument, AndThen's B from the
+	// callback's return type) and from the expected result type.
+	for i, arg := range callArgs {
+		paramIdx := i + 1
+		if paramIdx >= len(fn.Params) {
+			break
+		}
+		argType := g.inferredType(arg)
+		if argType == "" || isUnresolvedGoTypeParam(argType) || containsGeneratedTypeVar(argType) {
+			argType = g.goTypeFromExpr(arg, ctx)
+		}
+		if argType == "" {
+			continue
+		}
+		if !inferTypeSubst(fn.Params[paramIdx].Type, argType, tpSet, subst) {
+			if ft, ok := fn.Params[paramIdx].Type.(*FuncType); ok {
+				funcRetType(argType, ft.Ret, tpSet, subst)
+			}
+		}
+	}
+	if expected != "" {
+		inferExpectedTypeSubst(fn.Ret, expected, subst)
+	}
+	out := make([]ast.Expr, 0, len(typeParams))
+	for _, tp := range typeParams {
+		typ := strings.TrimSpace(subst[tp])
+		if typ == "" || containsGeneratedTypeVar(typ) {
+			return nil
+		}
+		if expr, ok := g.typeParamTypeArgExpr(typ, ctx); ok {
+			out = append(out, expr)
+			continue
+		}
+		if isUnresolvedGoTypeParam(typ) {
+			return nil
+		}
+		out = append(out, g.goTypeExprFromString(typ))
+	}
+	return out
+}
+
+// funcRetType matches a concrete Go function type string's return type
+// against a MyGO function-type result, deriving any type parameters it
+// mentions (e.g. AndThen's B from `func(A) Option[B]` vs `func(int) Option[int]`).
+func funcRetType(concrete string, ret TypeExpr, typeParams map[string]struct{}, subst map[string]string) bool {
+	concrete = strings.TrimSpace(concrete)
+	if !strings.HasPrefix(concrete, "func") {
+		return false
+	}
+	open := strings.IndexByte(concrete, '(')
+	if open < 0 {
+		return false
+	}
+	depth := 0
+	close := -1
+	for i := open; i < len(concrete); i++ {
+		switch concrete[i] {
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth == 0 {
+				close = i
+			}
+		}
+	}
+	if close < 0 {
+		return false
+	}
+	retType := strings.TrimSpace(concrete[close+1:])
+	if retType == "" || ret == nil {
+		return false
+	}
+	return inferTypeSubst(ret, retType, typeParams, subst)
+}
+
+// isEnumReceiver reports whether the named type is an enum, either declared
+// in the package being generated or in the prelude.  Enums lower to
+// interfaces whose method sets never mention their type parameters, so Go
+// cannot infer generic type arguments through an enum-typed value.
+func (g *gen) isEnumReceiver(name string) bool {
+	if g.pkg != nil {
+		if _, ok := g.pkg.Enums[name]; ok {
+			return true
+		}
+		if preludePkg := loadPreludePackageForEnums(g.pkg.Dir, g.pkg.WorkspaceRoot); preludePkg != nil {
+			if _, ok := preludePkg.Enums[name]; ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (g *gen) typeArgExprsFromExpected(expected string) []ast.Expr {
 	_, args := splitTypeArgs(expected)
 	if len(args) == 0 {
@@ -883,7 +1011,17 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 						return nil, "", err
 					}
 					allArgs := append([]ast.Expr{base}, args...)
-					callee := ast.NewIdent(fnName)
+					var callee ast.Expr = ast.NewIdent(fnName)
+					if g.isEnumReceiver(recvTypeName) {
+						// Enum receivers lower to interfaces; Go cannot infer
+						// their impl-level type arguments, so supply the full
+						// type argument list explicitly.
+						if tas := g.inherentMethodTypeArgs(method, bt, n.Args, expected, ctx); len(tas) == 1 {
+							callee = &ast.IndexExpr{X: callee, Index: tas[0]}
+						} else if len(tas) > 1 {
+							callee = &ast.IndexListExpr{X: callee, Indices: tas}
+						}
+					}
 					retType := g.inferredType(n)
 					if retType == "" || isUnresolvedGoTypeParam(retType) || containsGeneratedTypeVar(retType) {
 						retType = g.methodReturnType(method, bt, n.Args, g.goReturnType(method.Func.Ret, ctx.typeParams), ctx)

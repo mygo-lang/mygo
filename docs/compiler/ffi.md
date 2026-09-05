@@ -21,6 +21,46 @@
 
 - `Option` continues to represent absence for nilable Go values and comma-ok style results.
 - `Result` is the dedicated shape for Go `error`-bearing flows and should be used instead of encoding failures as `Option`.
+- The prelude owns both types (`enum Option[A]`, `enum Result[A, E]` in `prelude/prelude.mygo`); use them rather than redeclaring local variants.
+
+### File layout
+
+- `prelude/prelude.mygo` — enums, interfaces, and standalone helpers (`OptionToResult`, `Panic`, `Zero`, ...).
+- `prelude/option.mygo` — all `Option` impls (`OptionIEnumerable`, `impl[A] Option[A]`, `OptionEq`, and the `impl[A, E] Option[Result[A, E]]` transpose impl).
+- `prelude/result.mygo` — all `Result` impls (`impl[A, E] Result[A, E]`, `ResultEq`) and the new combinators.
+
+### `Result[A, E]` methods (`impl[A, E] Result[A, E]`)
+
+Predicates: `IsOk`, `IsErr`.
+
+Transforms: `Map[B](fn: func(A) -> B) -> Result[B, E]`, `MapErr[E2](fn: func(E) -> E2) -> Result[A, E2]`, `MapOr[B](defaultVal: B, fn: func(A) -> B) -> B`.
+
+Chaining: `AndThen[B](fn: func(A) -> Result[B, E]) -> Result[B, E]`, `OrElse[E2](fn: func(E) -> Result[A, E2]) -> Result[A, E2]`, `And[B](other: Result[B, E]) -> Result[B, E]`, `Or[E2](other: Result[A, E2]) -> Result[A, E2]`, `Flatten() -> Result[A, E]`.
+
+Extraction: `Unwrap() -> A`, `UnwrapOr(defaultVal: A) -> A`, `UnwrapOrElse(fn: func(E) -> A) -> A`, `Expect(msg: String) -> A`, `UnwrapErr() -> E`, `ExpectErr(msg: String) -> E`.
+
+Conversion: `ToOption() -> Option[A]` (existing), `ToErr() -> Option[E]`.
+
+### `Option[A]` methods (`impl[A] Option[A]`)
+
+Predicates: `IsSome`, `IsNone`.
+
+Transforms: `MapOr[B](defaultVal: B, fn: func(A) -> B) -> B` (note `Map`/`Filter`/`Fold`/`Find`/`Len`/`Each`/`Contains` come from `OptionIEnumerable`).
+
+Chaining: `AndThen[B](fn: func(A) -> Option[B]) -> Option[B]`, `OrElse(fn: func() -> Option[A]) -> Option[A]`, `Flatten() -> Option[A]`.
+
+Extraction: `Unwrap() -> A`, `UnwrapOr(defaultVal: A) -> A` (existing), `UnwrapOrElse(fn: func() -> A) -> A`, `Expect(msg: String) -> A`.
+
+Conversion: `OkOr[E](errVal: E) -> Result[A, E]`, `OkOrElse[E](fn: func() -> E) -> Result[A, E]`; the standalone `OptionToResult` helper is kept for compatibility.
+
+### `Option[Result[A, E]]` methods (`impl[A, E] Option[Result[A, E]]`)
+
+- `Transpose() -> Result[Option[A], E]` — `Some(Ok(v))` → `Ok(Some(v))`, `Some(Err(e))` → `Err(e)`, `None` → `Ok(None)`.
+
+### Removed / deferred
+
+- The standalone `OptionFilter` was removed (it duplicated `OptionIEnumerable.Filter`); use method form `opt.Filter(fn)`.
+- `UnwrapOrDefault` and `MapOrElse` are deferred: inherent-impl `using Default[A]` dispatch does not resolve yet (`unknown identifier Default`; see `KNOWN_ISSUES.md`).
 
 ## Collection types
 
@@ -39,4 +79,3 @@
 - Concrete instantiations:
   - `Slice[T]: IAssignable[Slice[T], Int, T]` — `K = Int`
   - `Map[K, V]: IAssignable[Map[K, V], K, V]` — `K` is the map's key type
-

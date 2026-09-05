@@ -53,7 +53,7 @@ end
 	if strings.Contains(goSrc, "UnwrapOr(opt, []int{})") {
 		t.Fatalf("empty slice default was concretized to []int:\n%s", goSrc)
 	}
-	if !strings.Contains(goSrc, "UnwrapOr(opt, []A{})") {
+	if !strings.Contains(goSrc, "UnwrapOr[[]A](opt, []A{})") {
 		t.Fatalf("generated source missing generic empty slice default:\n%s", goSrc)
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), "generic_method.go", goSrc, 0); err != nil {

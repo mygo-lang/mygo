@@ -18,28 +18,28 @@ func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(c string) int
 	return len(c)
 }
 func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Map[B any](c string, fn func(rune) B) []B {
-	var expr_122 []B
-	slc_121 := []rune(c)
-	expr_122 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(slc_121, fn)
-	return expr_122
+	var expr_235 []B
+	slc_234 := []rune(c)
+	expr_235 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(slc_234, fn)
+	return expr_235
 }
 func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM6Filter(c string, fn func(rune) bool) []rune {
-	var expr_124 []rune
-	slc_123 := []rune(c)
-	expr_124 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(slc_123, fn)
-	return expr_124
+	var expr_237 []rune
+	slc_236 := []rune(c)
+	expr_237 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(slc_236, fn)
+	return expr_237
 }
 func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM4Fold[B any](c string, initial B, fn func(B, rune) B) B {
-	var expr_126 B
-	slc_125 := []rune(c)
-	expr_126 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(slc_125, initial, fn)
-	return expr_126
+	var expr_239 B
+	slc_238 := []rune(c)
+	expr_239 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(slc_238, initial, fn)
+	return expr_239
 }
 func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM4Find(c string, fn func(rune) bool) Option[*rune] {
-	var expr_128 Option[*rune]
-	slc_127 := []rune(c)
-	expr_128 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(slc_127, fn)
-	return expr_128
+	var expr_241 Option[*rune]
+	slc_240 := []rune(c)
+	expr_241 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(slc_240, fn)
+	return expr_241
 }
 func MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM8Contains(c string, item rune) bool {
 	return strings.ContainsRune(c, item)
@@ -48,13 +48,13 @@ func MygoIN6StringM9FromRunes(rs []rune) string {
 	return string(rs)
 }
 func MygoIN6StringM11MatchString(s string, prefix string) bool {
-	var expr_129 bool
+	var expr_242 bool
 	if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(prefix) {
-		expr_129 = s[:len(prefix)] == prefix
+		expr_242 = s[:len(prefix)] == prefix
 	} else {
-		expr_129 = false
+		expr_242 = false
 	}
-	return expr_129
+	return expr_242
 }
 func MygoIN6StringM9HasPrefix(s string, prefix string) bool {
 	return strings.HasPrefix(s, prefix)

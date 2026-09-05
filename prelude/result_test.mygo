@@ -1,0 +1,227 @@
+package prelude
+
+import testing "go:testing"
+
+func TestResultIsOkIsErr(t: Ref[testing.T]) -> ()
+  let okVal: Result[Int, String] = Ok(42)
+  let errVal: Result[Int, String] = Err("boom")
+  if !okVal.IsOk() then
+    t.Fatal("Ok(42).IsOk() should be true")
+  end
+  if okVal.IsErr() then
+    t.Fatal("Ok(42).IsErr() should be false")
+  end
+  if errVal.IsOk() then
+    t.Fatal("Err(\"boom\").IsOk() should be false")
+  end
+  if !errVal.IsErr() then
+    t.Fatal("Err(\"boom\").IsErr() should be true")
+  end
+  switch okVal
+    case Ok(v) then
+      if v != 42 then
+        t.Fatalf("Ok payload = %d, want 42", v)
+      end
+    end
+    case Err(_) => t.Fatal("expected Ok variant")
+  end
+  switch errVal
+    case Ok(_) => t.Fatal("expected Err variant")
+    case Err(e) then
+      if e != "boom" then
+        t.Fatalf("Err payload = %s, want boom", e)
+      end
+    end
+  end
+end
+
+func TestResultMapAndMapErr(t: Ref[testing.T]) -> ()
+  let okVal: Result[Int, String] = Ok(3)
+  let errVal: Result[Int, String] = Err("boom")
+  switch okVal.Map(func(v: Int) -> Int v * 2 end)
+    case Ok(v) then
+      if v != 6 then
+        t.Fatalf("Ok(3).Map(fn) payload = %d, want 6", v)
+      end
+    end
+    case Err(_) => t.Fatal("Map on Ok should stay Ok")
+  end
+  switch errVal.Map(func(v: Int) -> Int v * 2 end)
+    case Ok(_) => t.Fatal("Map on Err should stay Err")
+    case Err(e) then
+      if e != "boom" then
+        t.Fatalf("Map on Err changed payload to %s, want boom", e)
+      end
+    end
+  end
+  switch errVal.MapErr(func(e: String) -> String e + "!" end)
+    case Ok(_) => t.Fatal("MapErr on Err should stay Err")
+    case Err(e) then
+      if e != "boom!" then
+        t.Fatalf("Err.MapErr payload = %s, want boom!", e)
+      end
+    end
+  end
+  switch okVal.MapErr(func(e: String) -> String e + "!" end)
+    case Ok(v) then
+      if v != 3 then
+        t.Fatalf("MapErr on Ok payload = %d, want 3", v)
+      end
+    end
+    case Err(_) => t.Fatal("MapErr on Ok should stay Ok")
+  end
+end
+
+func TestResultAndThenOrElse(t: Ref[testing.T]) -> ()
+  let okVal: Result[Int, String] = Ok(3)
+  let errVal: Result[Int, String] = Err("boom")
+  switch okVal.AndThen(func(v: Int) -> Result[Int, String] Ok(v + 1) end)
+    case Ok(v) then
+      if v != 4 then
+        t.Fatalf("Ok.AndThen payload = %d, want 4", v)
+      end
+    end
+    case Err(_) => t.Fatal("AndThen on Ok should succeed")
+  end
+  switch errVal.AndThen(func(v: Int) -> Result[Int, String] Ok(v + 1) end)
+    case Ok(_) => t.Fatal("AndThen on Err should stay Err")
+    case Err(e) then
+      if e != "boom" then
+        t.Fatalf("AndThen on Err payload = %s, want boom", e)
+      end
+    end
+  end
+  switch okVal.OrElse(func(e: String) -> Result[Int, String] Err(e + "!") end)
+    case Ok(v) then
+      if v != 3 then
+        t.Fatalf("OrElse on Ok payload = %d, want 3", v)
+      end
+    end
+    case Err(_) => t.Fatal("OrElse on Ok should stay Ok")
+  end
+  switch errVal.OrElse(func(e: String) -> Result[Int, String] Ok(e.Len()) end)
+    case Ok(n) then
+      if n != 4 then
+        t.Fatalf("OrElse on Err result = %d, want 4", n)
+      end
+    end
+    case Err(_) => t.Fatal("OrElse on Err should recover")
+  end
+end
+
+func TestResultAndOr(t: Ref[testing.T]) -> ()
+  let okVal: Result[Int, String] = Ok(3)
+  let errVal: Result[Int, String] = Err("boom")
+  let otherOk: Result[Bool, String] = Ok(true)
+  let intOk: Result[Int, String] = Ok(7)
+  let intErr: Result[Int, String] = Err("other")
+  switch okVal.And(otherOk)
+    case Ok(b) then
+      if !b then
+        t.Fatal("Ok.And(other) should produce Ok(true)")
+      end
+    end
+    case Err(_) => t.Fatal("Ok.And(other) should stay Ok")
+  end
+  switch errVal.And(otherOk)
+    case Ok(_) => t.Fatal("Err.And(other) should stay Err")
+    case Err(e) then
+      if e != "boom" then
+        t.Fatalf("Err.And(other) payload = %s, want boom", e)
+      end
+    end
+  end
+  switch okVal.Or(intErr)
+    case Ok(v) then
+      if v != 3 then
+        t.Fatalf("Ok.Or(other) payload = %d, want 3", v)
+      end
+    end
+    case Err(_) => t.Fatal("Ok.Or(other) should stay Ok")
+  end
+  switch errVal.Or(intOk)
+    case Ok(v) then
+      if v != 7 then
+        t.Fatalf("Err.Or(other) payload = %d, want 7", v)
+      end
+    end
+    case Err(_) => t.Fatal("Err.Or(other) should recover")
+  end
+end
+
+func TestResultUnwrapAndExpect(t: Ref[testing.T]) -> ()
+  let okVal: Result[Int, String] = Ok(42)
+  let errVal: Result[Int, String] = Err("boom")
+  if okVal.Unwrap() != 42 then
+    t.Fatal("Ok.Unwrap() should return 42")
+  end
+  if errVal.UnwrapOr(7) != 7 then
+    t.Fatal("Err.UnwrapOr(7) should return 7")
+  end
+  if errVal.UnwrapOrElse(func(e: String) -> Int e.Len() end) != 4 then
+    t.Fatal("Err.UnwrapOrElse should compute from the error")
+  end
+  if errVal.UnwrapErr() != "boom" then
+    t.Fatal("Err.UnwrapErr() should return boom")
+  end
+  if okVal.Expect("should be ok") != 42 then
+    t.Fatal("Ok.Expect should return 42")
+  end
+  if errVal.ExpectErr("should be err") != "boom" then
+    t.Fatal("Err.ExpectErr should return boom")
+  end
+end
+
+func TestResultMapOr(t: Ref[testing.T]) -> ()
+  let okVal: Result[Int, String] = Ok(3)
+  let errVal: Result[Int, String] = Err("boom")
+  if okVal.MapOr(99, func(v: Int) -> Int v * 2 end) != 6 then
+    t.Fatal("Ok(3).MapOr(99, fn) should be fn(3) = 6")
+  end
+  if errVal.MapOr(99, func(v: Int) -> Int v * 2 end) != 99 then
+    t.Fatal("Err.MapOr(99, fn) should be 99")
+  end
+end
+
+func TestResultToErr(t: Ref[testing.T]) -> ()
+  let okVal: Result[Int, String] = Ok(3)
+  let errVal: Result[Int, String] = Err("boom")
+  switch okVal.ToErr()
+    case Some(_) => t.Fatal("Ok.ToErr() should be None")
+    case None => ()
+  end
+  switch errVal.ToErr()
+    case Some(e) then
+      if e != "boom" then
+        t.Fatalf("Err.ToErr() payload = %s, want boom", e)
+      end
+    end
+    case None => t.Fatal("Err.ToErr() should be Some(e)")
+  end
+end
+
+func TestResultTranspose(t: Ref[testing.T]) -> ()
+  let someOk: Option[Result[Int, String]] = Some(Ok(5))
+  let someErr: Option[Result[Int, String]] = Some(Err("boom"))
+  let noneVal: Option[Result[Int, String]] = None
+  switch someOk.Transpose()
+    case Ok(opt) =>
+      switch opt
+        case Some(v) => if v != 5 then t.Fatalf("transpose inner payload = %d, want 5", v) else () end
+        case None => t.Fatal("transpose Some(Ok) should be Ok(Some(...))")
+      end
+    case Err(_) => t.Fatal("transpose Some(Ok) should be Ok")
+  end
+  switch someErr.Transpose()
+    case Ok(_) => t.Fatal("transpose Some(Err) should be Err")
+    case Err(e) => if e != "boom" then t.Fatalf("transpose Some(Err) payload = %s, want boom", e) else () end
+  end
+  switch noneVal.Transpose()
+    case Ok(opt) =>
+      switch opt
+        case Some(_) => t.Fatal("transpose None should be Ok(None)")
+        case None => ()
+      end
+    case Err(_) => t.Fatal("transpose None should be Ok")
+  end
+end

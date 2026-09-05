@@ -76,22 +76,22 @@ func MygoIN5SliceM7Prepend[T any](items []T, item T) []T {
 	}()
 }
 func MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get[T any](s []T, index int) Option[T] {
-	var expr_119 Option[T]
+	var expr_232 Option[T]
 	if index < 0 || index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(s) {
-		expr_119 = None[T]()
+		expr_232 = None[T]()
 	} else {
-		expr_119 = Some[T](s[index])
+		expr_232 = Some[T](s[index])
 	}
-	return expr_119
+	return expr_232
 }
 func MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice[T any](s []T, startPos int, endPos int) Option[[]T] {
-	var expr_120 Option[[]T]
+	var expr_233 Option[[]T]
 	if startPos < 0 || endPos < startPos || endPos > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(s) {
-		expr_120 = None[[]T]()
+		expr_233 = None[[]T]()
 	} else {
-		expr_120 = Some[[]T](s[startPos:endPos])
+		expr_233 = Some[[]T](s[startPos:endPos])
 	}
-	return expr_120
+	return expr_233
 }
 func MygoIT11IAssignableFN5SliceGN1TEGN5SliceGN1TEN3IntN1TEM3Get[T any](s []T, index int) Option[T] {
 	return func() Option[T] {

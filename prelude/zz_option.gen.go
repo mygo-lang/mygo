@@ -144,48 +144,268 @@ func MygoIN6OptionM8UnwrapOr[A any](opt Option[A], defaultVal A) A {
 	}
 	return expr_61
 }
-func MygoIT2EqFN8OptionEqGN1AEGN6OptionGN1AEEM6Equals[A any](left Option[A], right Option[A], EqualsFn func(A, A) bool) bool {
-	var expr_70 bool
-	if v_40, ok := left.(Option__Some[A]); ok {
-		var expr_69 bool
-		var expr_68 bool
-		if v_42, ok := right.(Option__Some[A]); ok {
-			var expr_67 bool
-			expr_67 = EqualsFn(v_40.F0, v_42.F0)
-			expr_68 = expr_67
+func MygoIN6OptionM6IsSome[A any](opt Option[A]) bool {
+	var expr_64 bool
+	if _, ok := opt.(Option__Some[A]); ok {
+		var expr_63 bool
+		expr_63 = true
+		expr_64 = expr_63
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			var expr_62 bool
+			expr_62 = false
+			expr_64 = expr_62
 		} else {
-			if _, ok := right.(Option__None[A]); ok {
-				var expr_66 bool
-				expr_66 = false
-				expr_68 = expr_66
-			} else {
-				panic("unreachable")
-			}
+			panic("unreachable")
 		}
-		expr_69 = expr_68
+	}
+	return expr_64
+}
+func MygoIN6OptionM6IsNone[A any](opt Option[A]) bool {
+	var expr_67 bool
+	if _, ok := opt.(Option__Some[A]); ok {
+		var expr_66 bool
+		expr_66 = false
+		expr_67 = expr_66
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			var expr_65 bool
+			expr_65 = true
+			expr_67 = expr_65
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_67
+}
+func MygoIN6OptionM4OkOr[A any, E any](opt Option[A], errVal E) Result[A, E] {
+	var expr_70 Result[A, E]
+	if v_42, ok := opt.(Option__Some[A]); ok {
+		var expr_69 Result[A, E]
+		expr_69 = Ok[A, E](v_42.F0)
 		expr_70 = expr_69
 	} else {
-		if _, ok := left.(Option__None[A]); ok {
-			var expr_65 bool
-			var expr_64 bool
-			if _, ok := right.(Option__Some[A]); ok {
-				var expr_63 bool
-				expr_63 = false
-				expr_64 = expr_63
-			} else {
-				if _, ok := right.(Option__None[A]); ok {
-					var expr_62 bool
-					expr_62 = true
-					expr_64 = expr_62
-				} else {
-					panic("unreachable")
-				}
-			}
-			expr_65 = expr_64
-			expr_70 = expr_65
+		if _, ok := opt.(Option__None[A]); ok {
+			var expr_68 Result[A, E]
+			expr_68 = Err[A, E](errVal)
+			expr_70 = expr_68
 		} else {
 			panic("unreachable")
 		}
 	}
 	return expr_70
+}
+func MygoIN6OptionM8OkOrElse[A any, E any](opt Option[A], fn func() E) Result[A, E] {
+	var expr_73 Result[A, E]
+	if v_44, ok := opt.(Option__Some[A]); ok {
+		var expr_72 Result[A, E]
+		expr_72 = Ok[A, E](v_44.F0)
+		expr_73 = expr_72
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			var expr_71 Result[A, E]
+			expr_71 = Err[A, E](fn())
+			expr_73 = expr_71
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_73
+}
+func MygoIN6OptionM7AndThen[A any, B any](opt Option[A], fn func(A) Option[B]) Option[B] {
+	var expr_76 Option[B]
+	if v_46, ok := opt.(Option__Some[A]); ok {
+		var expr_75 Option[B]
+		expr_75 = fn(v_46.F0)
+		expr_76 = expr_75
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			var expr_74 Option[B]
+			expr_74 = None[B]()
+			expr_76 = expr_74
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_76
+}
+func MygoIN6OptionM6OrElse[A any](opt Option[A], fn func() Option[A]) Option[A] {
+	var expr_79 Option[A]
+	if v_48, ok := opt.(Option__Some[A]); ok {
+		var expr_78 Option[A]
+		expr_78 = Some[A](v_48.F0)
+		expr_79 = expr_78
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			var expr_77 Option[A]
+			expr_77 = fn()
+			expr_79 = expr_77
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_79
+}
+func MygoIN6OptionM6Unwrap[A any](opt Option[A]) A {
+	var expr_82 A
+	if v_50, ok := opt.(Option__Some[A]); ok {
+		var expr_81 A
+		expr_81 = v_50.F0
+		expr_82 = expr_81
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			var expr_80 A
+			Panic("called Option.Unwrap on None")
+			expr_80 = Zero[A]()
+			expr_82 = expr_80
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_82
+}
+func MygoIN6OptionM12UnwrapOrElse[A any](opt Option[A], fn func() A) A {
+	var expr_85 A
+	if v_52, ok := opt.(Option__Some[A]); ok {
+		var expr_84 A
+		expr_84 = v_52.F0
+		expr_85 = expr_84
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			var expr_83 A
+			expr_83 = fn()
+			expr_85 = expr_83
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_85
+}
+func MygoIN6OptionM6Expect[A any](opt Option[A], msg string) A {
+	var expr_88 A
+	if v_54, ok := opt.(Option__Some[A]); ok {
+		var expr_87 A
+		expr_87 = v_54.F0
+		expr_88 = expr_87
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			var expr_86 A
+			Panic(msg)
+			expr_86 = Zero[A]()
+			expr_88 = expr_86
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_88
+}
+func MygoIN6OptionM5MapOr[A any, B any](opt Option[A], defaultVal B, fn func(A) B) B {
+	var expr_91 B
+	if v_56, ok := opt.(Option__Some[A]); ok {
+		var expr_90 B
+		expr_90 = fn(v_56.F0)
+		expr_91 = expr_90
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			var expr_89 B
+			expr_89 = defaultVal
+			expr_91 = expr_89
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_91
+}
+func MygoIN6OptionM7Flatten[A any](opt Option[Option[A]]) Option[A] {
+	var expr_94 Option[A]
+	if v_58, ok := opt.(Option__Some[Option[A]]); ok {
+		var expr_93 Option[A]
+		expr_93 = v_58.F0
+		expr_94 = expr_93
+	} else {
+		if _, ok := opt.(Option__None[Option[A]]); ok {
+			var expr_92 Option[A]
+			expr_92 = None[A]()
+			expr_94 = expr_92
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_94
+}
+func MygoIT2EqFN8OptionEqGN1AEGN6OptionGN1AEEM6Equals[A any](left Option[A], right Option[A], EqualsFn func(A, A) bool) bool {
+	var expr_103 bool
+	if v_62, ok := left.(Option__Some[A]); ok {
+		var expr_102 bool
+		var expr_101 bool
+		if v_64, ok := right.(Option__Some[A]); ok {
+			var expr_100 bool
+			expr_100 = EqualsFn(v_62.F0, v_64.F0)
+			expr_101 = expr_100
+		} else {
+			if _, ok := right.(Option__None[A]); ok {
+				var expr_99 bool
+				expr_99 = false
+				expr_101 = expr_99
+			} else {
+				panic("unreachable")
+			}
+		}
+		expr_102 = expr_101
+		expr_103 = expr_102
+	} else {
+		if _, ok := left.(Option__None[A]); ok {
+			var expr_98 bool
+			var expr_97 bool
+			if _, ok := right.(Option__Some[A]); ok {
+				var expr_96 bool
+				expr_96 = false
+				expr_97 = expr_96
+			} else {
+				if _, ok := right.(Option__None[A]); ok {
+					var expr_95 bool
+					expr_95 = true
+					expr_97 = expr_95
+				} else {
+					panic("unreachable")
+				}
+			}
+			expr_98 = expr_97
+			expr_103 = expr_98
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_103
+}
+func MygoIN6OptionM9Transpose[A any, E any](opt Option[Result[A, E]]) Result[Option[A], E] {
+	var expr_109 Result[Option[A], E]
+	if v_68, ok := opt.(Option__Some[Result[A, E]]); ok {
+		var expr_108 Result[Option[A], E]
+		var expr_107 Result[Option[A], E]
+		if v_70, ok := MygoIN6ResultM8ToOption[A, E](v_68.F0).(Option__Some[A]); ok {
+			var expr_106 Result[Option[A], E]
+			expr_106 = Ok[Option[A], E](Some[A](v_70.F0))
+			expr_107 = expr_106
+		} else {
+			if _, ok := MygoIN6ResultM8ToOption[A, E](v_68.F0).(Option__None[A]); ok {
+				var expr_105 Result[Option[A], E]
+				expr_105 = Err[Option[A], E](MygoIN6ResultM9UnwrapErr[A, E](v_68.F0))
+				expr_107 = expr_105
+			} else {
+				panic("unreachable")
+			}
+		}
+		expr_108 = expr_107
+		expr_109 = expr_108
+	} else {
+		if _, ok := opt.(Option__None[Result[A, E]]); ok {
+			var expr_104 Result[Option[A], E]
+			expr_104 = Ok[Option[A], E](None[A]())
+			expr_109 = expr_104
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_109
 }

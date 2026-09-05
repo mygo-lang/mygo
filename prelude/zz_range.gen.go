@@ -15,17 +15,17 @@ func MygoIN5RangeM11NewWithStep(start int, stop int, step int) Range {
 	return Range{Start: start, End: stop, Step: step}
 }
 func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM4Each(c Range, fn func(int)) {
-	var i_93 int = c.Start
+	var i_123 int = c.Start
 	if c.Step > 0 {
-		for i_93 < c.End {
-			fn(i_93)
-			i_93 = i_93 + c.Step
+		for i_123 < c.End {
+			fn(i_123)
+			i_123 = i_123 + c.Step
 		}
 	} else {
 		if c.Step < 0 {
-			for i_93 > c.End {
-				fn(i_93)
-				i_93 = i_93 + c.Step
+			for i_123 > c.End {
+				fn(i_123)
+				i_123 = i_123 + c.Step
 			}
 		}
 	}
@@ -33,179 +33,179 @@ func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM4Each(c Range, fn fun
 	return
 }
 func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM3Len(c Range) int {
-	var expr_96 int
-	var count_94 int = 0
-	var i_95 int = c.Start
+	var expr_126 int
+	var count_124 int = 0
+	var i_125 int = c.Start
 	if c.Step > 0 {
-		for i_95 < c.End {
-			count_94 = count_94 + 1
-			i_95 = i_95 + c.Step
+		for i_125 < c.End {
+			count_124 = count_124 + 1
+			i_125 = i_125 + c.Step
 		}
 	} else {
 		if c.Step < 0 {
-			for i_95 > c.End {
-				count_94 = count_94 + 1
-				i_95 = i_95 + c.Step
+			for i_125 > c.End {
+				count_124 = count_124 + 1
+				i_125 = i_125 + c.Step
 			}
 		}
 	}
-	expr_96 = count_94
-	return expr_96
+	expr_126 = count_124
+	return expr_126
 }
 func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM3Map[B any](c Range, fn func(int) B) []B {
-	var expr_101 []B
-	var count_97 int = 0
-	var i_98 int = c.Start
+	var expr_131 []B
+	var count_127 int = 0
+	var i_128 int = c.Start
 	if c.Step > 0 {
-		for i_98 < c.End {
-			count_97 = count_97 + 1
-			i_98 = i_98 + c.Step
+		for i_128 < c.End {
+			count_127 = count_127 + 1
+			i_128 = i_128 + c.Step
 		}
 	} else {
 		if c.Step < 0 {
-			for i_98 > c.End {
-				count_97 = count_97 + 1
-				i_98 = i_98 + c.Step
+			for i_128 > c.End {
+				count_127 = count_127 + 1
+				i_128 = i_128 + c.Step
 			}
 		}
 	}
-	var result_99 []B = []B{}
-	var j_100 int = 0
-	i_98 = c.Start
+	var result_129 []B = []B{}
+	var j_130 int = 0
+	i_128 = c.Start
 	if c.Step > 0 {
-		for j_100 < count_97 {
-			result_99 = append(result_99, fn(i_98))
-			i_98 = i_98 + c.Step
-			j_100 = j_100 + 1
+		for j_130 < count_127 {
+			result_129 = append(result_129, fn(i_128))
+			i_128 = i_128 + c.Step
+			j_130 = j_130 + 1
 		}
 	} else {
 		if c.Step < 0 {
-			for j_100 < count_97 {
-				result_99 = append(result_99, fn(i_98))
-				i_98 = i_98 + c.Step
-				j_100 = j_100 + 1
+			for j_130 < count_127 {
+				result_129 = append(result_129, fn(i_128))
+				i_128 = i_128 + c.Step
+				j_130 = j_130 + 1
 			}
 		}
 	}
-	expr_101 = result_99
-	return expr_101
+	expr_131 = result_129
+	return expr_131
 }
 func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM6Filter(c Range, fn func(int) bool) []int {
-	var expr_106 []int
-	var count_102 int = 0
-	var i_103 int = c.Start
+	var expr_136 []int
+	var count_132 int = 0
+	var i_133 int = c.Start
 	if c.Step > 0 {
-		for i_103 < c.End {
-			if fn(i_103) {
-				count_102 = count_102 + 1
+		for i_133 < c.End {
+			if fn(i_133) {
+				count_132 = count_132 + 1
 			}
-			i_103 = i_103 + c.Step
+			i_133 = i_133 + c.Step
 		}
 	} else {
 		if c.Step < 0 {
-			for i_103 > c.End {
-				if fn(i_103) {
-					count_102 = count_102 + 1
+			for i_133 > c.End {
+				if fn(i_133) {
+					count_132 = count_132 + 1
 				}
-				i_103 = i_103 + c.Step
+				i_133 = i_133 + c.Step
 			}
 		}
 	}
-	var result_104 []int = []int{}
-	var j_105 int = 0
-	i_103 = c.Start
+	var result_134 []int = []int{}
+	var j_135 int = 0
+	i_133 = c.Start
 	if c.Step > 0 {
-		for i_103 < c.End {
-			if fn(i_103) {
-				result_104 = append(result_104, i_103)
-				j_105 = j_105 + 1
+		for i_133 < c.End {
+			if fn(i_133) {
+				result_134 = append(result_134, i_133)
+				j_135 = j_135 + 1
 			}
-			i_103 = i_103 + c.Step
+			i_133 = i_133 + c.Step
 		}
 	} else {
 		if c.Step < 0 {
-			for i_103 > c.End {
-				if fn(i_103) {
-					result_104 = append(result_104, i_103)
-					j_105 = j_105 + 1
+			for i_133 > c.End {
+				if fn(i_133) {
+					result_134 = append(result_134, i_133)
+					j_135 = j_135 + 1
 				}
-				i_103 = i_103 + c.Step
+				i_133 = i_133 + c.Step
 			}
 		}
 	}
-	expr_106 = result_104
-	return expr_106
+	expr_136 = result_134
+	return expr_136
 }
 func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM4Fold[B any](c Range, initial B, fn func(B, int) B) B {
-	var expr_109 B
-	var acc_107 B = initial
-	var i_108 int = c.Start
+	var expr_139 B
+	var acc_137 B = initial
+	var i_138 int = c.Start
 	if c.Step > 0 {
-		for i_108 < c.End {
-			acc_107 = fn(acc_107, i_108)
-			i_108 = i_108 + c.Step
+		for i_138 < c.End {
+			acc_137 = fn(acc_137, i_138)
+			i_138 = i_138 + c.Step
 		}
 	} else {
 		if c.Step < 0 {
-			for i_108 > c.End {
-				acc_107 = fn(acc_107, i_108)
-				i_108 = i_108 + c.Step
+			for i_138 > c.End {
+				acc_137 = fn(acc_137, i_138)
+				i_138 = i_138 + c.Step
 			}
 		}
 	}
-	expr_109 = acc_107
-	return expr_109
+	expr_139 = acc_137
+	return expr_139
 }
 func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM4Find(c Range, fn func(int) bool) Option[*int] {
-	var expr_115 Option[*int]
-	var i_110 int = c.Start
-	var found_111 Option[*int] = None[*int]()
-	var done_112 bool = false
+	var expr_145 Option[*int]
+	var i_140 int = c.Start
+	var found_141 Option[*int] = None[*int]()
+	var done_142 bool = false
 	if c.Step > 0 {
-		for i_110 < c.End && !done_112 {
-			if fn(i_110) {
-				var current_113 int = i_110
-				found_111 = Some[*int](&current_113)
-				done_112 = true
+		for i_140 < c.End && !done_142 {
+			if fn(i_140) {
+				var current_143 int = i_140
+				found_141 = Some[*int](&current_143)
+				done_142 = true
 			}
-			i_110 = i_110 + c.Step
+			i_140 = i_140 + c.Step
 		}
 	} else {
 		if c.Step < 0 {
-			for i_110 > c.End && !done_112 {
-				if fn(i_110) {
-					var current_114 int = i_110
-					found_111 = Some[*int](&current_114)
-					done_112 = true
+			for i_140 > c.End && !done_142 {
+				if fn(i_140) {
+					var current_144 int = i_140
+					found_141 = Some[*int](&current_144)
+					done_142 = true
 				}
-				i_110 = i_110 + c.Step
+				i_140 = i_140 + c.Step
 			}
 		}
 	}
-	expr_115 = found_111
-	return expr_115
+	expr_145 = found_141
+	return expr_145
 }
 func MygoIT11IEnumerableFN16RangeIEnumerableGN5RangeN3IntEM8Contains(c Range, item int, EqualsFn func(int, int) bool) bool {
-	var expr_118 bool
-	var i_116 int = c.Start
-	var found_117 bool = false
+	var expr_148 bool
+	var i_146 int = c.Start
+	var found_147 bool = false
 	if c.Step > 0 {
-		for i_116 < c.End && !found_117 {
-			if EqualsFn(item, i_116) {
-				found_117 = true
+		for i_146 < c.End && !found_147 {
+			if EqualsFn(item, i_146) {
+				found_147 = true
 			}
-			i_116 = i_116 + c.Step
+			i_146 = i_146 + c.Step
 		}
 	} else {
 		if c.Step < 0 {
-			for i_116 > c.End && !found_117 {
-				if EqualsFn(item, i_116) {
-					found_117 = true
+			for i_146 > c.End && !found_147 {
+				if EqualsFn(item, i_146) {
+					found_147 = true
 				}
-				i_116 = i_116 + c.Step
+				i_146 = i_146 + c.Step
 			}
 		}
 	}
-	expr_118 = found_117
-	return expr_118
+	expr_148 = found_147
+	return expr_148
 }

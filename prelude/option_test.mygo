@@ -1,0 +1,108 @@
+package prelude
+
+import testing "go:testing"
+
+func TestOptionIsSomeIsNone(t: Ref[testing.T]) -> ()
+  let someVal: Option[Int] = Some(1)
+  let noneVal: Option[Int] = None
+  if !someVal.IsSome() then
+    t.Fatal("Some(1).IsSome() should be true")
+  end
+  if someVal.IsNone() then
+    t.Fatal("Some(1).IsNone() should be false")
+  end
+  if noneVal.IsSome() then
+    t.Fatal("None.IsSome() should be false")
+  end
+  if !noneVal.IsNone() then
+    t.Fatal("None.IsNone() should be true")
+  end
+end
+
+func TestOptionOkOrAndOkOrElse(t: Ref[testing.T]) -> ()
+  let someVal: Option[Int] = Some(7)
+  let noneVal: Option[Int] = None
+  switch someVal.OkOr("missing")
+    case Ok(v) then
+      if v != 7 then
+        t.Fatalf("Some.OkOr payload = %d, want 7", v)
+      end
+    end
+    case Err(_) => t.Fatal("Some.OkOr should be Ok")
+  end
+  switch noneVal.OkOr("missing")
+    case Ok(_) => t.Fatal("None.OkOr should be Err")
+    case Err(e) then
+      if e != "missing" then
+        t.Fatalf("None.OkOr error = %s, want missing", e)
+      end
+    end
+  end
+  switch noneVal.OkOrElse(func() -> String "computed" end)
+    case Ok(_) => t.Fatal("None.OkOrElse should be Err")
+    case Err(e) then
+      if e != "computed" then
+        t.Fatalf("None.OkOrElse error = %s, want computed", e)
+      end
+    end
+  end
+  switch someVal.OkOrElse(func() -> String "computed" end)
+    case Ok(v) then
+      if v != 7 then
+        t.Fatalf("Some.OkOrElse payload = %d, want 7", v)
+      end
+    end
+    case Err(_) => t.Fatal("Some.OkOrElse should be Ok")
+  end
+end
+
+func TestOptionChainAndFlatten(t: Ref[testing.T]) -> ()
+  let someVal: Option[Int] = Some(3)
+  let noneVal: Option[Int] = None
+  switch someVal.AndThen(func(v: Int) -> Option[Int] Some(v * 2) end)
+    case Some(v) => if v != 6 then t.Fatalf("Some.AndThen payload = %d, want 6", v) else () end
+    case None => t.Fatal("Some.AndThen should stay Some")
+  end
+  switch noneVal.AndThen(func(v: Int) -> Option[Int] Some(v * 2) end)
+    case Some(_) => t.Fatal("None.AndThen should stay None")
+    case None => ()
+  end
+  switch noneVal.OrElse(func() -> Option[Int] Some(9) end)
+    case Some(v) => if v != 9 then t.Fatalf("None.OrElse payload = %d, want 9", v) else () end
+    case None => t.Fatal("None.OrElse should recover")
+  end
+  switch someVal.OrElse(func() -> Option[Int] Some(9) end)
+    case Some(v) => if v != 3 then t.Fatalf("Some.OrElse must not run fn: payload = %d, want 3", v) else () end
+    case None => t.Fatal("Some.OrElse should stay Some")
+  end
+  let nestedSome: Option[Option[Int]] = Some(Some(5))
+  let nestedNone: Option[Option[Int]] = None
+  switch nestedSome.Flatten()
+    case Some(v) => if v != 5 then t.Fatalf("Flatten payload = %d, want 5", v) else () end
+    case None => t.Fatal("Some(Some(5)).Flatten() should be Some(5)")
+  end
+  switch nestedNone.Flatten()
+    case Some(_) => t.Fatal("None.Flatten() should be None")
+    case None => ()
+  end
+end
+
+func TestOptionExtraction(t: Ref[testing.T]) -> ()
+  let someVal: Option[Int] = Some(42)
+  let noneVal: Option[Int] = None
+  if someVal.Unwrap() != 42 then
+    t.Fatal("Some.Unwrap() should return 42")
+  end
+  if noneVal.UnwrapOrElse(func() -> Int 7 end) != 7 then
+    t.Fatal("None.UnwrapOrElse should compute the fallback")
+  end
+  if someVal.Expect("should be some") != 42 then
+    t.Fatal("Some.Expect should return 42")
+  end
+  if noneVal.MapOr(99, func(v: Int) -> Int v * 2 end) != 99 then
+    t.Fatal("None.MapOr(99, fn) should be 99")
+  end
+  if someVal.MapOr(99, func(v: Int) -> Int v * 2 end) != 84 then
+    t.Fatal("Some(42).MapOr(99, fn) should be fn(42) = 84")
+  end
+end
