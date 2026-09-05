@@ -670,24 +670,33 @@ func translateSwitchSubject(target: ast2.Expr, ctx: Ref[egCtx]) -> Result[AstExp
     case CallExpr(fn, typeArgs, args) then
       switch ffiResultSignature(fn, ctx)
         case Some(sig) then
-          let valueType = sig.Results.Get(0).UnwrapOr("")
-          if valueType == "" then
-            Err("Go FFI function has no value return type")
-          else
-            let resultType = ast2.MonoType.TApp(
-              Ref.new(ast2.MonoType.TCon("Result")),
-              [
-                ast2.MonoType.TCon(valueType),
-                ast2.MonoType.TCon("Error"),
-              ]
-            )
-            translateFFIResultCall(fn, typeArgs, args, ctx, resultType, sig)
+          switch ffiResultInnerType(sig)
+            case None => Err("Go FFI function has no value return type")
+            case Some(innerT) =>
+              let resultType = ast2.MonoType.TApp(
+                Ref.new(ast2.MonoType.TCon("Result")),
+                [innerT, ast2.MonoType.TCon("Error")]
+              )
+              translateFFIResultCall(fn, typeArgs, args, ctx, resultType, sig)
           end
         end
         case None => translateExprAst(target, ctx)
       end
     end
     case _ => translateExprAst(target, ctx)
+  end
+end
+
+# The inner (Ok payload) type of a Go FFI Result boundary.  A lone trailing
+# error (func Foo() error) decodes to Result[(), error], so its payload is the
+# unit type rather than the error itself; the (T, error) shape keeps T.
+func ffiResultInnerType(sig: typeinference2.GoFuncSignature) -> Option[ast2.MonoType]
+  if sig.Results.Len() == 1 then
+    Some(ast2.MonoType.TUnit)
+  elsif sig.Results.Len() >= 2 then
+    Some(ast2.MonoType.TCon(sig.Results.Get(0).UnwrapOr("")))
+  else
+    None
   end
 end
 
@@ -936,11 +945,11 @@ func switchVariantType(target: ast2.Expr, tm: ast2.MonoType, ctx: Ref[egCtx]) ->
     case CallExpr(fn, _, _) =>
       switch ffiResultSignature(fn, ctx)
         case Some(sig) =>
-          let valueType = sig.Results.Get(0).UnwrapOr("")
-          if valueType == "" then
-            monoTypeToGoStrWithParamsIn(tm, ctx.typeParamNames, ctx.pathAliases)
-          else
-            "Result[" + valueType + ", error]"
+          switch ffiResultInnerType(sig)
+            case None => monoTypeToGoStrWithParamsIn(tm, ctx.typeParamNames, ctx.pathAliases)
+            case Some(innerT) =>
+              let inner = monoTypeToGoStrWithParamsIn(innerT, ctx.typeParamNames, ctx.pathAliases)
+              "Result[" + inner + ", error]"
           end
         case None => monoTypeToGoStrWithParamsIn(tm, ctx.typeParamNames, ctx.pathAliases)
       end
@@ -2262,7 +2271,10 @@ func ffiOptionResultPredicate(sig: typeinference2.GoFuncSignature) -> Bool
 end
 
 func ffiResultPredicate(sig: typeinference2.GoFuncSignature) -> Bool
-  sig.Results.Len() == 2 && sig.Results.Get(1).UnwrapOr("") == "error"
+  # Error-bearing at any arity whose last result is `error`: the classic
+  # (T, error) two-result shape and a lone trailing error (func Foo() error).
+  let last = sig.Results.Len() - 1
+  last >= 0 && sig.Results.Get(last).UnwrapOr("") == "error"
 end
 
 func ffiOptionSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
@@ -2377,15 +2389,35 @@ func goFFIMethodSignatureFromType(recv: ast2.MonoType, field: String, ctx: Ref[e
       end
     end
     case TQualifiedName(path, inner) =>
-      switch inner.value()
-        case TCon(member) => typeinference2.GoMethodSignatureInPackages(path, member, field, ctx.goPackages, predicate)
+      # The inner type is the package member: `go:net/http` . Server.  It can
+      # be a bare TCon (param-annotated receivers) or a TApp whose constructor
+      # is the member (some inference paths wrap the struct literal in a
+      # qualified TApp).  Extract the member name from either shape so Go FFI
+      # method calls on a locally-bound struct literal resolve consistently.
+      switch qualifiedMemberName(inner.value())
+        case Some(member) => typeinference2.GoMethodSignatureInPackages(path, member, field, ctx.goPackages, predicate)
+        case None => None
+      end
+    case _ => None
+  end
+end
+
+# qualifiedMemberName extracts the declaring member name from a qualified
+# type's inner monoscheme: `Server` from TCon("Server") or
+# `Server` from TApp(TCon("Server"), args).  Returns None for any other shape.
+func qualifiedMemberName(inner: ast2.MonoType) -> Option[String]
+  switch inner
+    case TCon(member) => Some(member)
+    case TApp(ctor, _) =>
+      switch ctor.value()
+        case TCon(member) => Some(member)
         case _ => None
       end
     case _ => None
   end
 end
 
-func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType, _: typeinference2.GoFuncSignature) -> Result[AstExprResult, String]
+func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], args: Slice[ast2.Expr], ctx: Ref[egCtx], expected: ast2.MonoType, sig: typeinference2.GoFuncSignature) -> Result[AstExprResult, String]
   let c = translateExprAstExpected(callee, ctx, ast2.MonoType.TUnit)
   let values = translateAstArgs(args, ctx, 0, [] as Slice[goast.Expr], [] as Slice[goast.Stmt], [] as Slice[ast2.MonoType])
   switch c
@@ -2428,8 +2460,21 @@ func translateFFIResultCall(callee: ast2.Expr, typeArgs: Slice[ast2.TypeExpr], a
         end
         let errorType = if errorGoType == "error" then "error" else "string" end
         let call = goast.GenericCall(cv.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), v.Exprs)
-        let define = goast.Assign([goast.Ident(valueName), goast.Ident(errorName)], ":=", [call])
-        let ok = goast.GenericCall(goast.Ident("Ok"), [inner, errorType], [goast.Ident(valueName)])
+        # A lone trailing error (func Foo() error) returns a single native
+        # value, so it has no `Ok` payload: bind just the error and construct
+        # the unit payload as `struct{}{}`. The two-result (value, error) shape
+        # binds the value + error pair as before.
+        let single = sig.Results.Len() == 1
+        let define = if single then
+            goast.Assign([goast.Ident(errorName)], ":=", [call])
+          else
+            goast.Assign([goast.Ident(valueName), goast.Ident(errorName)], ":=", [call])
+          end
+        let ok = if single then
+            goast.GenericCall(goast.Ident("Ok"), [inner, errorType], [goast.Unit()])
+          else
+            goast.GenericCall(goast.Ident("Ok"), [inner, errorType], [goast.Ident(valueName)])
+          end
         let message = if errorType == "error" then goast.Ident(errorName) else goast.Call(goast.Selector(goast.Ident(errorName), "Error"), [] as Slice[goast.Expr]) end
         let err = goast.GenericCall(goast.Ident("Err"), [inner, errorType], [message])
         let failed = astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(err)))

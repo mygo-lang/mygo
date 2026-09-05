@@ -1195,7 +1195,20 @@ func goSignatureResultShape(results []ast2.MonoType) ast2.MonoType {
 			return __mygo_expr_0
 		} else {
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(results) == 1 {
-				return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results, 0), ast2.MonoType__TUnit__Ctor())
+				only := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(results, 0), ast2.MonoType__TUnit__Ctor())
+				var __mygo_expr_2 ast2.MonoType
+				if __mygo_match___mygo_expr_3, ok := only.(ast2.MonoType__TCon); ok {
+					var __mygo_expr_4 ast2.MonoType
+					if __mygo_match___mygo_expr_3.F0 == "Error" || __mygo_match___mygo_expr_3.F0 == "error" {
+						__mygo_expr_4 = tCon("Result", []ast2.MonoType{ast2.MonoType__TUnit__Ctor(), only})
+					} else {
+						__mygo_expr_4 = only
+					}
+					__mygo_expr_2 = __mygo_expr_4
+				} else {
+					__mygo_expr_2 = only
+				}
+				return __mygo_expr_2
 			} else {
 				return ast2.MonoType__TTuple__Ctor(results)
 			}

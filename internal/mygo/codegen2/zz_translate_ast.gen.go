@@ -999,15 +999,18 @@ func translateSwitchSubject(target ast2.Expr, ctx *egCtx) Result[AstExprResult, 
 		__mygo_expr_3 := ffiResultSignature(__mygo_match___mygo_expr_2.F0, ctx)
 		var __mygo_expr_4 Result[AstExprResult, string]
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[typeinference2.GoFuncSignature]); ok {
-			valueType := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_5.F0.Results, 0), "")
-			var __mygo_expr_6 Result[AstExprResult, string]
-			if valueType == "" {
-				__mygo_expr_6 = Err[AstExprResult, string]("Go FFI function has no value return type")
+			__mygo_expr_6 := ffiResultInnerType(__mygo_match___mygo_expr_5.F0)
+			var __mygo_expr_7 Result[AstExprResult, string]
+			if _, ok := __mygo_expr_6.(Option__None[ast2.MonoType]); ok {
+				__mygo_expr_7 = Err[AstExprResult, string]("Go FFI function has no value return type")
 			} else {
-				resultType := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Result")}[0], []ast2.MonoType{ast2.MonoType__TCon__Ctor(valueType), ast2.MonoType__TCon__Ctor("Error")})
-				__mygo_expr_6 = translateFFIResultCall(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, __mygo_match___mygo_expr_2.F2, ctx, resultType, __mygo_match___mygo_expr_5.F0)
+				if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[ast2.MonoType]); ok {
+					resultType := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Result")}[0], []ast2.MonoType{__mygo_match___mygo_expr_8.F0, ast2.MonoType__TCon__Ctor("Error")})
+					__mygo_expr_7 = translateFFIResultCall(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, __mygo_match___mygo_expr_2.F2, ctx, resultType, __mygo_match___mygo_expr_5.F0)
+				} else {
+				}
 			}
-			__mygo_expr_4 = __mygo_expr_6
+			__mygo_expr_4 = __mygo_expr_7
 		} else {
 			if _, ok := __mygo_expr_3.(Option__None[typeinference2.GoFuncSignature]); ok {
 				__mygo_expr_4 = translateExprAst(target, ctx)
@@ -1019,6 +1022,17 @@ func translateSwitchSubject(target ast2.Expr, ctx *egCtx) Result[AstExprResult, 
 		__mygo_expr_1 = translateExprAst(target, ctx)
 	}
 	return __mygo_expr_1
+}
+func ffiResultInnerType(sig typeinference2.GoFuncSignature) Option[ast2.MonoType] {
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Results) == 1 {
+		return Some[ast2.MonoType](ast2.MonoType__TUnit__Ctor())
+	} else {
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Results) >= 2 {
+			return Some[ast2.MonoType](ast2.MonoType__TCon__Ctor(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sig.Results, 0), "")))
+		} else {
+			return None[ast2.MonoType]()
+		}
+	}
 }
 func normalizeNumberLiteral(value string) string {
 	suffixes := []string{"i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "u", "f32", "f64"}
@@ -1389,14 +1403,18 @@ func switchVariantType(target ast2.Expr, tm ast2.MonoType, ctx *egCtx) string {
 		__mygo_expr_3 := ffiResultSignature(__mygo_match___mygo_expr_2.F0, ctx)
 		var __mygo_expr_4 string
 		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[typeinference2.GoFuncSignature]); ok {
-			valueType := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_5.F0.Results, 0), "")
-			var __mygo_expr_6 string
-			if valueType == "" {
-				__mygo_expr_6 = monoTypeToGoStrWithParamsIn(tm, ctx.typeParamNames, ctx.pathAliases)
+			__mygo_expr_6 := ffiResultInnerType(__mygo_match___mygo_expr_5.F0)
+			var __mygo_expr_7 string
+			if _, ok := __mygo_expr_6.(Option__None[ast2.MonoType]); ok {
+				__mygo_expr_7 = monoTypeToGoStrWithParamsIn(tm, ctx.typeParamNames, ctx.pathAliases)
 			} else {
-				__mygo_expr_6 = "Result[" + valueType + ", error]"
+				if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[ast2.MonoType]); ok {
+					inner := monoTypeToGoStrWithParamsIn(__mygo_match___mygo_expr_8.F0, ctx.typeParamNames, ctx.pathAliases)
+					__mygo_expr_7 = "Result[" + inner + ", error]"
+				} else {
+				}
 			}
-			__mygo_expr_4 = __mygo_expr_6
+			__mygo_expr_4 = __mygo_expr_7
 		} else {
 			if _, ok := __mygo_expr_3.(Option__None[typeinference2.GoFuncSignature]); ok {
 				__mygo_expr_4 = monoTypeToGoStrWithParamsIn(tm, ctx.typeParamNames, ctx.pathAliases)
@@ -2905,7 +2923,8 @@ func ffiOptionResultPredicate(sig typeinference2.GoFuncSignature) bool {
 	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Results) == 2 && MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sig.Results, 1), "") == "bool"
 }
 func ffiResultPredicate(sig typeinference2.GoFuncSignature) bool {
-	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Results) == 2 && MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sig.Results, 1), "") == "error"
+	last := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Results) - 1
+	return last >= 0 && MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sig.Results, last), "") == "error"
 }
 func ffiOptionSignature(callee ast2.Expr, ctx *egCtx) Option[typeinference2.GoFuncSignature] {
 	return __mygo_mt_codegen2_ffiOptionSignature(callee, ctx, 0)
@@ -3029,7 +3048,27 @@ func goFFIMethodSignature(base ast2.Expr, field string, ctx *egCtx, predicate fu
 func goFFIMethodSignatureFromType(recv ast2.MonoType, field string, ctx *egCtx, predicate func(typeinference2.GoFuncSignature) bool) Option[typeinference2.GoFuncSignature] {
 	return __mygo_mt_codegen2_goFFIMethodSignatureFromType(recv, field, ctx, predicate, 0)
 }
-func translateFFIResultCall(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx, expected ast2.MonoType, _ typeinference2.GoFuncSignature) Result[AstExprResult, string] {
+func qualifiedMemberName(inner ast2.MonoType) Option[string] {
+	var __mygo_expr_0 Option[string]
+	if __mygo_match___mygo_expr_2, ok := inner.(ast2.MonoType__TCon); ok {
+		__mygo_expr_0 = Some[string](__mygo_match___mygo_expr_2.F0)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := inner.(ast2.MonoType__TApp); ok {
+			__mygo_expr_2 := *__mygo_match___mygo_expr_1.F0
+			var __mygo_expr_3 Option[string]
+			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ast2.MonoType__TCon); ok {
+				__mygo_expr_3 = Some[string](__mygo_match___mygo_expr_4.F0)
+			} else {
+				__mygo_expr_3 = None[string]()
+			}
+			__mygo_expr_0 = __mygo_expr_3
+		} else {
+			__mygo_expr_0 = None[string]()
+		}
+	}
+	return __mygo_expr_0
+}
+func translateFFIResultCall(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx, expected ast2.MonoType, sig typeinference2.GoFuncSignature) Result[AstExprResult, string] {
 	c := translateExprAstExpected(callee, ctx, ast2.MonoType__TUnit__Ctor())
 	values := translateAstArgs(args, ctx, 0, []goast.Expr{}, []goast.Stmt{}, []ast2.MonoType{})
 	var __mygo_expr_0 Result[AstExprResult, string]
@@ -3093,15 +3132,28 @@ func translateFFIResultCall(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []a
 					}
 					errorType := __mygo_expr_8
 					call := goast.GenericCall(__mygo_match___mygo_expr_1.F0.Expr, typeExprsToStrings(typeArgs, ctx.typeParams), __mygo_match___mygo_expr_3.F0.Exprs)
-					define := goast.Assign([]goast.Expr{goast.Ident(valueName), goast.Ident(errorName)}, ":=", []goast.Expr{call})
-					ok := goast.GenericCall(goast.Ident("Ok"), []string{inner, errorType}, []goast.Expr{goast.Ident(valueName)})
-					var __mygo_expr_9 goast.Expr
-					if errorType == "error" {
-						__mygo_expr_9 = goast.Ident(errorName)
+					single := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Results) == 1
+					var __mygo_expr_9 goast.Stmt
+					if single {
+						__mygo_expr_9 = goast.Assign([]goast.Expr{goast.Ident(errorName)}, ":=", []goast.Expr{call})
 					} else {
-						__mygo_expr_9 = goast.Call(goast.Selector(goast.Ident(errorName), "Error"), []goast.Expr{})
+						__mygo_expr_9 = goast.Assign([]goast.Expr{goast.Ident(valueName), goast.Ident(errorName)}, ":=", []goast.Expr{call})
 					}
-					message := __mygo_expr_9
+					define := __mygo_expr_9
+					var __mygo_expr_10 goast.Expr
+					if single {
+						__mygo_expr_10 = goast.GenericCall(goast.Ident("Ok"), []string{inner, errorType}, []goast.Expr{goast.Unit()})
+					} else {
+						__mygo_expr_10 = goast.GenericCall(goast.Ident("Ok"), []string{inner, errorType}, []goast.Expr{goast.Ident(valueName)})
+					}
+					ok := __mygo_expr_10
+					var __mygo_expr_11 goast.Expr
+					if errorType == "error" {
+						__mygo_expr_11 = goast.Ident(errorName)
+					} else {
+						__mygo_expr_11 = goast.Call(goast.Selector(goast.Ident(errorName), "Error"), []goast.Expr{})
+					}
+					message := __mygo_expr_11
 					err := goast.GenericCall(goast.Ident("Err"), []string{inner, errorType}, []goast.Expr{message})
 					failed := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(err)))
 					succeeded := astSingleStmt(goast.Assign(astSingleExpr(goast.Ident(resultName)), "=", astSingleExpr(ok)))
@@ -3881,11 +3933,15 @@ func __mygo_mt_codegen2_goFFIMethodSignatureFromType(__mygo_mt_p0 ast2.MonoType,
 				}
 			} else {
 				if __mygo_match___mygo_expr_0, ok := __mygo_mt_p0.(ast2.MonoType__TQualifiedName); ok {
-					__mygo_expr_1 := *__mygo_match___mygo_expr_0.F1
-					if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(ast2.MonoType__TCon); ok {
+					__mygo_expr_1 := qualifiedMemberName(*__mygo_match___mygo_expr_0.F1)
+					if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[string]); ok {
 						return typeinference2.GoMethodSignatureInPackages(__mygo_match___mygo_expr_0.F0, __mygo_match___mygo_expr_2.F0, __mygo_mt_p1, __mygo_mt_p2.goPackages, __mygo_mt_p3)
 					} else {
-						return None[typeinference2.GoFuncSignature]()
+						if _, ok := __mygo_expr_1.(Option__None[string]); ok {
+							return None[typeinference2.GoFuncSignature]()
+						} else {
+							panic("non-exhaustive switch")
+						}
 					}
 				} else {
 					return None[typeinference2.GoFuncSignature]()

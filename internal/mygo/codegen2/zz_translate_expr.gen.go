@@ -5,6 +5,7 @@ package codegen2
 import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 import "github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import "strings"
 import . "github.com/mygo-lang/mygo/prelude"
 
 func translateFuncBodyAst(body ast2.Expr, ctx *egCtx) Result[[]goast.Stmt, string] {
@@ -610,7 +611,7 @@ func translateAstBinding(bind ast2.Bind, ctx *egCtx) Result[[]goast.Stmt, string
 				__mygo_expr_3 = Some[ast2.MonoType](typeinference2.TypeFromAST(__mygo_match___mygo_expr_4.F0))
 			} else {
 				if _, ok := __mygo_expr_2.(Option__None[ast2.TypeExpr]); ok {
-					__mygo_expr_3 = inferredBindingMonoType(bind)
+					__mygo_expr_3 = inferredBindingMonoType(bind, ctx)
 				} else {
 				}
 			}
@@ -687,8 +688,37 @@ func translateDiscardBindingValue(value ast2.Expr, ctx *egCtx) Result[AstExprRes
 	}
 	return __mygo_expr_1
 }
-func inferredBindingMonoType(bind ast2.Bind) Option[ast2.MonoType] {
-	return bind.Value.Type
+func inferredBindingMonoType(bind ast2.Bind, ctx *egCtx) Option[ast2.MonoType] {
+	__mygo_expr_0 := bind.Value.Kind
+	var __mygo_expr_1 Option[ast2.MonoType]
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.ExprKind__StructLitExpr); ok {
+		__mygo_expr_1 = structLitBindingType(__mygo_match___mygo_expr_3.F0, ctx)
+	} else {
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__GenericStructLitExpr); ok {
+			__mygo_expr_1 = structLitBindingType(__mygo_match___mygo_expr_2.F0, ctx)
+		} else {
+			__mygo_expr_1 = bind.Value.Type
+		}
+	}
+	return __mygo_expr_1
+}
+func structLitBindingType(typeName string, ctx *egCtx) Option[ast2.MonoType] {
+	parts := strings.Split(typeName, ".")
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(parts) == 2 {
+		alias := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 0), "")
+		member := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(parts, 1), "")
+		path := goPackagePathForAlias(alias, ctx.goPackages, 0)
+		if path == "" {
+			return None[ast2.MonoType]()
+		} else {
+			return Some[ast2.MonoType](ast2.MonoType__TQualifiedName__Ctor(path, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor(member)}[0]))
+		}
+	} else {
+		return None[ast2.MonoType]()
+	}
+}
+func goPackagePathForAlias(alias string, pkgs []typeinference2.GoPackageEntry, index int) string {
+	return __mygo_mt_codegen2_goPackagePathForAlias(alias, pkgs, index, 0)
 }
 func extractLetBindingType(expr ast2.Expr) Option[ast2.TypeExpr] {
 	__mygo_expr_0 := expr.Kind
@@ -1194,6 +1224,43 @@ func __mygo_mt_codegen2_declareAstLetRec(__mygo_mt_p0 []ast2.LetRecBind, __mygo_
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 				__mygo_state = 0
 				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_goPackagePathForAlias(__mygo_mt_p0 string, __mygo_mt_p1 []typeinference2.GoPackageEntry, __mygo_mt_p2 int, __mygo_state int) string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+				return ""
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoPackageEntry]); ok {
+					if __mygo_match___mygo_expr_1.F0.Alias == __mygo_mt_p0 {
+						return __mygo_match___mygo_expr_1.F0.Path
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoPackageEntry]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")

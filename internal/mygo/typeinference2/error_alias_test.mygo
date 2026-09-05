@@ -135,18 +135,25 @@ func TestInferErrorSpellingsCrossDeclarationBoundary(t: Ref[testing.T]) -> ()
   let parsed = parser2.ParseFileAt("error-alias.mygo", """
 package sample
 
+import errors "go:errors"
 import g "go:samplego"
 
-func takeError(err: Error) -> error
+func takeError(err: Error) -> Error
   err
 end
 
-func consumeError(err: error) -> error
+func consumeError(err: error) -> Error
   err
 end
 
-func run() -> error
-  consumeError(g.Produce())
+func run() -> Error
+  let err = switch g.Produce()
+    case Err(e) => e
+    case _ => go[Error] {
+      code: `errors.New("wrong")`
+    }
+  end
+  consumeError(err)
 end
 """)
   switch parsed
@@ -355,5 +362,34 @@ func TestGoSignatureTypeResolvesGenericParams(t: Ref[testing.T]) -> ()
   switch GoSignatureType(GoFuncSignature { Name: "Missing", Params: ["M"], Results: [] as Slice[String], Variadic: false, TypeParams: [] as Slice[String] })
     case Ok(mt) => t.Fatalf("GoSignatureType(Missing) = %s, want Err", monoStringFull(mt))
     case Err(_) => ()
+  end
+end
+func TestGoSignatureSingleErrorResult(t: Ref[testing.T]) -> ()
+  # A Go FFI signature with a lone trailing error (func Chdir(dir string)
+  # error) maps to Result[(), Error], matching the (T, error) rule with the
+  # payload collapsed to the unit type.
+  switch GoSignatureType(GoFuncSignature { Name: "Chdir", Params: ["string"], Results: ["error"], Variadic: false, TypeParams: [] as Slice[String] })
+    case Ok(mt) =>
+      let want = ast2.MonoType.TFunc(
+        [ast2.MonoType.TCon("String")],
+        Ref.new(ast2.MonoType.TApp(
+          Ref.new(ast2.MonoType.TCon("Result")),
+          [ast2.MonoType.TUnit, ast2.MonoType.TCon("Error")]
+        ))
+      )
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoSignatureType(Chdir) = %s, want Result[(), Error]", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoSignatureType(Chdir) failed: %s", msg)
+  end
+  # A lone result that is not an error stays unwrapped: func Nope() int keeps
+  # its bare Int result instead of being folded into a Result.
+  switch GoSignatureType(GoFuncSignature { Name: "Nope", Params: [] as Slice[String], Results: ["int"], Variadic: false, TypeParams: [] as Slice[String] })
+    case Ok(mt) =>
+      let want = ast2.MonoType.TFunc([], Ref.new(ast2.MonoType.TCon("Int")))
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoSignatureType(Nope) = %s, want TFunc([], Int)", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoSignatureType(Nope) failed: %s", msg)
   end
 end

@@ -1706,17 +1706,30 @@ func goSignatureResultShape(results: Slice[ast2.MonoType]) -> ast2.MonoType
       let first = results.Get(0).UnwrapOr(ast2.MonoType.TUnit)
       let second = results.Get(1).UnwrapOr(ast2.MonoType.TUnit)
       switch second
-        case TCon(name) =>
+        case TCon(name) then
           if name == "Bool" then
             tCon("Option", [first])
           else
             tCon("Result", [first, second])
           end
+        end
         case _ => tCon("Result", [first, second])
       end
     else
       if results.Len() == 1 then
-        results.Get(0).UnwrapOr(ast2.MonoType.TUnit)
+        # Go convention: a lone trailing error (func Foo() error) maps to
+        # Result[(), error], matching the two-result (value, error) rule.
+        let only = results.Get(0).UnwrapOr(ast2.MonoType.TUnit)
+        switch only
+          case TCon(name) then
+            if name == "Error" || name == "error" then
+              tCon("Result", [ast2.MonoType.TUnit, only])
+            else
+              only
+            end
+          end
+          case _ => only
+        end
       else
         ast2.MonoType.TTuple(results)
       end
@@ -1732,12 +1745,13 @@ end
 # destructuring via ffiRawTupleResultType.
 func inlineGoResultMono(t: ast2.MonoType) -> ast2.MonoType
   switch t
-    case TTuple(items) =>
+    case TTuple(items) then
       if items.Len() == 2 then
         goSignatureResultShape(items)
       else
         t
       end
+    end
     case _ => t
   end
 end
@@ -1748,13 +1762,14 @@ end
 # element type so each call argument binds it directly.
 func goVariadicParamTypes(names: Slice[String], typeParams: Map[String, Int]) -> Result[Slice[ast2.MonoType], String]
   switch goSignatureTypes(names, typeParams)
-    case Ok(mapped) =>
+    case Ok(mapped) then
       if mapped.Len() == 0 then Ok(mapped)
       else
         let lastIndex = mapped.Len() - 1
         let element = goVariadicElementType(mapped.Get(lastIndex).UnwrapOr(ast2.MonoType.TVar(0)))
         Ok(replaceGoParamTypes(mapped, lastIndex, element))
       end
+    end
     case Err(msg) => Err(msg)
   end
 end
@@ -1800,8 +1815,9 @@ end
 # this raw form and always knows the callee's package.
 func GoSignatureRawResultTypeWithPackage(sig: GoFuncSignature, pkg: GoPackageEntry) -> Result[ast2.MonoType, String]
   switch goSignatureTypesWithPackage(sig.Results, pkg, goTypeParamMap(sig.TypeParams))
-    case Ok(results) =>
-      if results.Len() == 0 then Ok(ast2.MonoType.TUnit)
+    case Ok(results) then
+      if results.Len() == 0 then
+        Ok(ast2.MonoType.TUnit)
       else
         if results.Len() == 1 then
           Ok(results.Get(0).UnwrapOr(ast2.MonoType.TUnit))
@@ -1809,6 +1825,7 @@ func GoSignatureRawResultTypeWithPackage(sig: GoFuncSignature, pkg: GoPackageEnt
           Ok(ast2.MonoType.TTuple(results))
         end
       end
+    end
     case Err(msg) => Err(msg)
   end
 end
@@ -1818,7 +1835,8 @@ func goSignatureTypes(items: Slice[String], typeParams: Map[String, Int]) -> Res
 end
 
 func goSignatureTypesInto(items: Slice[String], typeParams: Map[String, Int], index: Int, out: Slice[ast2.MonoType]) -> Result[Slice[ast2.MonoType], String]
-  if index >= items.Len() then Ok(out)
+  if index >= items.Len() then
+    Ok(out)
   else
     switch goTypeNameWith(items.Get(index).UnwrapOr(""), None, typeParams)
       case Ok(mt) => goSignatureTypesInto(items, typeParams, index + 1, out.Append(mt))
@@ -1832,7 +1850,8 @@ func goSignatureTypesWithPackage(items: Slice[String], pkg: GoPackageEntry, type
 end
 
 func goSignatureTypesWithPackageInto(items: Slice[String], pkg: GoPackageEntry, typeParams: Map[String, Int], index: Int, out: Slice[ast2.MonoType]) -> Result[Slice[ast2.MonoType], String]
-  if index >= items.Len() then Ok(out)
+  if index >= items.Len() then
+    Ok(out)
   else
     switch goTypeNameWith(items.Get(index).UnwrapOr(""), Some(pkg), typeParams)
       case Ok(mt) => goSignatureTypesWithPackageInto(items, pkg, typeParams, index + 1, out.Append(mt))

@@ -3,6 +3,7 @@ package codegen2
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
+import strings "go:strings"
 
 
 # translateFuncBodyAst is the direct go/ast lowering path for function bodies
@@ -593,7 +594,7 @@ func translateAstBinding(bind: ast2.Bind, ctx: Ref[egCtx]) -> Result[Slice[goast
     case Ok(v) =>
       let monoType = switch bind.Type
         case Some(t) => Some(typeinference2.TypeFromAST(t))
-        case None => inferredBindingMonoType(bind)
+        case None => inferredBindingMonoType(bind, ctx)
       end
       switch monoType
         case Some(t) => ctxSetLocal(ctx, bind.Name, t)
@@ -641,8 +642,54 @@ func translateDiscardBindingValue(value: ast2.Expr, ctx: Ref[egCtx]) -> Result[A
   end
 end
 
-func inferredBindingMonoType(bind: ast2.Bind) -> Option[ast2.MonoType]
-  bind.Value.Type
+# The inferred type of a `let` binding.  Most expressions carry their
+# monotype on the AST node.  A Go-FFI struct literal (`http.Server { ... }`)
+# is synthesized from its dotted source spelling (see structLitBindingType):
+# inference leaves it untyped in some pipelines, and where a monotype is
+# attached it is a bare TCon that method dispatch cannot resolve, so the
+# qualified spelling is always preferred for struct literals.  Non-struct
+# bindings use their AST-carried monotype as before.
+func inferredBindingMonoType(bind: ast2.Bind, ctx: Ref[egCtx]) -> Option[ast2.MonoType]
+  switch bind.Value.Kind
+    case StructLitExpr(typeName, _) => structLitBindingType(typeName, ctx)
+    case GenericStructLitExpr(typeName, _, _) => structLitBindingType(typeName, ctx)
+    case _ => bind.Value.Type
+  end
+end
+
+# A local bound from a Go-FFI struct literal had no recorded MonoType, so
+# method calls on it (for example `srv.ListenAndServe()` where
+# `let srv = http.Server { ... }`) could not resolve against the Go FFI method
+# table and the error-bearing FFI boundary wrap was skipped.  Synthesize a
+# TQualifiedName from the alias and member of the dotted source spelling,
+# keyed by the canonical import path so GoSignatureInPackages and
+# GoMethodSignatureInPackages can find the owning package.  Non-Go aliases
+# (MyGO imports, local types) keep their previous untyped behavior.
+func structLitBindingType(typeName: String, ctx: Ref[egCtx]) -> Option[ast2.MonoType]
+  let parts = strings.Split(typeName, ".")
+  if parts.Len() == 2 then
+    let alias = parts.Get(0).UnwrapOr("")
+    let member = parts.Get(1).UnwrapOr("")
+    let path = goPackagePathForAlias(alias, ctx.goPackages, 0)
+    if path == "" then
+      None
+    else
+      Some(ast2.MonoType.TQualifiedName(path, Ref.new(ast2.MonoType.TCon(member))))
+    end
+  else
+    None
+  end
+end
+
+func goPackagePathForAlias(alias: String, pkgs: Slice[typeinference2.GoPackageEntry], index: Int) -> String
+  if index >= pkgs.Len() then
+    ""
+  else
+    switch pkgs.Get(index)
+      case Some(p) => if p.Alias == alias then p.Path else goPackagePathForAlias(alias, pkgs, index + 1) end
+      case None => goPackagePathForAlias(alias, pkgs, index + 1)
+    end
+  end
 end
 
 func extractLetBindingType(expr: ast2.Expr) -> Option[ast2.TypeExpr]

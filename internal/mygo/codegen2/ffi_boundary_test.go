@@ -225,3 +225,147 @@ end
 		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
 	}
 }
+
+func osFixturePkg() typeinference2.GoPackageEntry {
+	return typeinference2.GoPackageEntry{
+		Alias: "os", Path: "go:os",
+		Funcs: []typeinference2.GoFuncSignature{
+			{Name: "Chdir", Params: []string{"string"}, Results: []string{"error"}, Variadic: false, TypeParams: []string{}},
+		},
+		Types: []typeinference2.GoTypeSignature{},
+	}
+}
+
+// TestGenerateFilesLoneErrorFFIResultWrap pins a Go FFI call whose signature
+// is a lone trailing error (os.Chdir -> error) lowering to Result[(), error]:
+// the generated Go binds a single error, checks it, and produces Err with the
+// error on non-nil or Ok with a struct{}{} unit payload on nil.
+func TestGenerateFilesLoneErrorFFIResultWrap(t *testing.T) {
+	src := `package sample
+
+import os "go:os"
+
+func run() -> Result[(), Error]
+  os.Chdir("/tmp")
+end
+`
+	code := generateWithGoPackages(t, src, []typeinference2.GoPackageEntry{osFixturePkg()})
+	if !strings.Contains(code, `os.Chdir("/tmp")`) {
+		t.Fatalf("lone-error FFI call missing direct call:\n%s", code)
+	}
+	if !strings.Contains(code, `!= nil`) {
+		t.Fatalf("lone-error FFI call missing the error nil check:\n%s", code)
+	}
+	compact := strings.Join(strings.Fields(code), "")
+	if !strings.Contains(compact, "struct{}{}") {
+		t.Fatalf("lone-error FFI Ok arm did not synthesize a struct{}{} unit payload:\n%s", code)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "ffi-boundary.gen.go", code, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
+
+// TestGenerateFilesLoneErrorFFIStatementDiscard pins a lone-error Go FFI call
+// used only for its side effect emitting the raw call as a statement rather
+// than building an unused Result value.
+func TestGenerateFilesLoneErrorFFIStatementDiscard(t *testing.T) {
+	src := `package sample
+
+import os "go:os"
+
+func run() -> ()
+  os.Chdir("/tmp")
+  ()
+end
+`
+	code := generateWithGoPackages(t, src, []typeinference2.GoPackageEntry{osFixturePkg()})
+	if !strings.Contains(code, `os.Chdir("/tmp")`) {
+		t.Fatalf("lone-error FFI statement call missing direct call:\n%s", code)
+	}
+	compact := strings.Join(strings.Fields(code), "")
+	if strings.Contains(compact, "struct{}{}") {
+		t.Fatalf("lone-error FFI statement call was wrapped into a Result instead of discarded:\n%s", code)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "ffi-boundary.gen.go", code, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+}
+
+func serverFixturePkg() typeinference2.GoPackageEntry {
+	return typeinference2.GoPackageEntry{
+		Alias: "http", Path: "go:net/http",
+		Types: []typeinference2.GoTypeSignature{
+			{TypeName: "Server", Methods: []typeinference2.GoFuncSignature{
+				{Name: "ListenAndServe", Params: []string{}, Results: []string{"error"}, Variadic: false, TypeParams: []string{}},
+			}, Fields: []typeinference2.GoFieldSignature{
+				{Name: "Addr", Type: "string"},
+			}, Underlying: "struct{Addr string}"},
+		},
+	}
+}
+
+// TestGenerateFilesLoneErrorMethodOnLocalResult pins a lone-error Go FFI
+// method call on a receiver bound from a local struct literal
+// (`let srv = http.Server { ... }; srv.ListenAndServe()`) lowering to
+// Result[(), error] exactly like a package-level lone-error function.
+func TestGenerateFilesLoneErrorMethodOnLocalResult(t *testing.T) {
+	src := `package sample
+
+import http "go:net/http"
+
+func RunServer(addr: string) -> Result[(), Error]
+  let srv = http.Server { Addr: addr }
+  srv.ListenAndServe()
+end
+`
+	code := generateWithGoPackages(t, src, []typeinference2.GoPackageEntry{serverFixturePkg()})
+	if _, err := parser.ParseFile(token.NewFileSet(), "ffi-boundary.gen.go", code, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+	for _, want := range []string{
+		`:= srv.ListenAndServe()`,
+		`!= nil`,
+		`Ok[struct{}, error]`,
+		`Err[struct{}, error]`,
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("lone-error method on local receiver missing %q:\n%s", want, code)
+		}
+	}
+}
+
+// TestGenerateFilesLoneErrorMethodSwitchScrutinee pins the switch-pattern-match
+// form: `switch srv.ListenAndServe()` (a lone-error method on a local struct
+// literal receiver) must wrap the subject at the Go FFI boundary into
+// Result[(), error] and pattern-match that same Result type, so the generated
+// Go compiles and the Ok/Err arms are reached at runtime.
+func TestGenerateFilesLoneErrorMethodSwitchScrutinee(t *testing.T) {
+	src := `package sample
+
+import http "go:net/http"
+
+func RunServer(addr: string) -> Result[(), String]
+  let srv = http.Server { Addr: addr }
+  switch srv.ListenAndServe()
+    case Ok(_) => Ok(())
+    case Err(e) => Err(e.Error())
+  end
+end
+`
+	code := generateWithGoPackages(t, src, []typeinference2.GoPackageEntry{serverFixturePkg()})
+	if _, err := parser.ParseFile(token.NewFileSet(), "ffi-boundary.gen.go", code, parser.AllErrors); err != nil {
+		t.Fatalf("generated Go is invalid: %v\n%s", err, code)
+	}
+	for _, want := range []string{
+		`:= srv.ListenAndServe()`,
+		`!= nil`,
+		`Ok[struct{}, error]`,
+		`Err[struct{}, error]`,
+		`Result__Ok[struct{}, error]`,
+		`Result__Err[struct{}, error]`,
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("lone-error switch scrutinee missing %q:\n%s", want, code)
+		}
+	}
+}

@@ -1394,10 +1394,8 @@ end
 func TestGenerateFilesLowersErrorBuiltinAliasInSignatures(t *testing.T) {
 	src := `package sample
 
-import g "go:samplego"
-
-func produceError() -> error
-  g.Produce()
+func produceError(err: error) -> error
+  err
 end
 
 func reportFailure(err: Error) -> Error
@@ -1408,8 +1406,8 @@ func reportLower(err: error) -> error
   err
 end
 
-func reportPair() -> (Error, Int)
-  (g.Produce(), 1)
+func reportPair(err: Error) -> (Error, Int)
+  (err, 1)
 end
 `
 	parsed := parseSourceAsAst2(src)
@@ -1421,10 +1419,7 @@ end
 	path := "error-alias.mygo"
 	infoResult := typeinference2.InferPackageWithGoPackages(
 		[]typeinference2.PkgDeclSource{{Path: path, Decls: fileWithIDs.Decls}},
-		[]typeinference2.GoPackageEntry{{
-			Alias: "g", Path: "go:samplego",
-			Funcs: []typeinference2.GoFuncSignature{{Name: "Produce", Params: []string{}, Results: []string{"error"}, Variadic: false}},
-		}},
+		[]typeinference2.GoPackageEntry{},
 	)
 	info, ok := infoResult.(Result__Ok[typeinference2.PackageInfo, string])
 	if !ok {
@@ -1437,7 +1432,7 @@ end
 	}
 	code := result.F0[sourceToGenName(path)]
 	for _, want := range []string{
-		"func produceError() error",
+		"func produceError(err error) error",
 		"func reportFailure(err error) error",
 		"func reportLower(err error) error",
 	} {
@@ -1447,7 +1442,7 @@ end
 	}
 	// The tuple result must lower its Error component to `error`, not emit a
 	// bare `Error` identifier.
-	if !strings.Contains(code, "reportPair() (error, int)") {
+	if !strings.Contains(code, "reportPair(err error) (error, int)") {
 		t.Fatalf("generated tuple signature did not lower Error to error:\n%s", code)
 	}
 }

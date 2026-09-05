@@ -161,7 +161,7 @@ func TestTypeFromASTErrorAliasRespectsTypeParametersAndEnv(t *testing.T) {
 	}
 }
 func TestInferErrorSpellingsCrossDeclarationBoundary(t *testing.T) {
-	parsed := parser2.ParseFileAt("error-alias.mygo", "\npackage sample\n\nimport g \"go:samplego\"\n\nfunc takeError(err: Error) -> error\n  err\nend\n\nfunc consumeError(err: error) -> error\n  err\nend\n\nfunc run() -> error\n  consumeError(g.Produce())\nend\n")
+	parsed := parser2.ParseFileAt("error-alias.mygo", "\npackage sample\n\nimport errors \"go:errors\"\nimport g \"go:samplego\"\n\nfunc takeError(err: Error) -> Error\n  err\nend\n\nfunc consumeError(err: error) -> Error\n  err\nend\n\nfunc run() -> Error\n  let err = switch g.Produce()\n    case Err(e) => e\n    case _ => go[Error] {\n      code: `errors.New(\"wrong\")`\n    }\n  end\n  consumeError(err)\nend\n")
 	if __mygo_match___mygo_expr_1, ok := parsed.(Result__Err[ast2.File, string]); ok {
 		t.Fatal(__mygo_match___mygo_expr_1.F0)
 	} else {
@@ -407,6 +407,35 @@ func TestGoSignatureTypeResolvesGenericParams(t *testing.T) {
 		t.Fatalf("GoSignatureType(Missing) = %s, want Err", monoStringFull(__mygo_match___mygo_expr_7.F0))
 	} else {
 		if _, ok := __mygo_expr_6.(Result__Err[ast2.MonoType, string]); ok {
+		} else {
+		}
+	}
+	return
+}
+func TestGoSignatureSingleErrorResult(t *testing.T) {
+	__mygo_expr_0 := GoSignatureType(GoFuncSignature{Name: "Chdir", Params: []string{"string"}, Results: []string{"error"}, Variadic: false, TypeParams: []string{}})
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[ast2.MonoType, string]); ok {
+		want := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TCon__Ctor("String")}, &[]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Result")}[0], []ast2.MonoType{ast2.MonoType__TUnit__Ctor(), ast2.MonoType__TCon__Ctor("Error")})}[0])
+		if !monoEqual(__mygo_match___mygo_expr_2.F0, want) {
+			t.Fatalf("GoSignatureType(Chdir) = %s, want Result[(), Error]", monoStringFull(__mygo_match___mygo_expr_2.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoSignatureType(Chdir) failed: %s", __mygo_match___mygo_expr_1.F0)
+		} else {
+		}
+	}
+	__mygo_expr_3 := GoSignatureType(GoFuncSignature{Name: "Nope", Params: []string{}, Results: []string{"int"}, Variadic: false, TypeParams: []string{}})
+	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[ast2.MonoType, string]); ok {
+		want_1 := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{}, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")}[0])
+		if !monoEqual(__mygo_match___mygo_expr_5.F0, want_1) {
+			t.Fatalf("GoSignatureType(Nope) = %s, want TFunc([], Int)", monoStringFull(__mygo_match___mygo_expr_5.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoSignatureType(Nope) failed: %s", __mygo_match___mygo_expr_4.F0)
 		} else {
 		}
 	}
