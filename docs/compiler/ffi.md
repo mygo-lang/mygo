@@ -41,6 +41,27 @@ Extraction: `Unwrap() -> A`, `UnwrapOr(defaultVal: A) -> A`, `UnwrapOrElse(fn: f
 
 Conversion: `ToOption() -> Option[A]` (existing), `ToErr() -> Option[E]`.
 
+### Automatic `Result` wrapping for Go FFI calls
+
+- Any Go FFI call whose recorded signature returns `(T, error)` — a
+  package-level function such as `myos.ReadFile(...)` or a method on an
+  imported Go type such as `client.Do(req)` / `req.Cookie(name)` — is lowered
+  at the boundary into `Result[T, error]`. This is the dedicated shape for Go
+  error-bearing flows (see `wrapGoErrorResultCall` in the bootstrap codegen and
+  `translateFFIResultCall` in the self-hosted codegen2).
+
+```mygo
+func DoRequest(client: Ref[http.Client], req: Ref[http.Request]) -> Result[Ref[http.Response], Error]
+  client.Do(req)
+end
+```
+
+generates a `Result[*http.Response, error]`-shaped body that calls
+`client.Do(req)`, checks the returned error, and produces `Ok`/`Err` — instead
+of leaking the raw two-value Go call into the return statement. The receiver's
+type must name an imported Go package type (`Ref[T]` or value form), and the
+method is resolved from the Go method-set table collected for that package.
+
 ### `Option[A]` methods (`impl[A] Option[A]`)
 
 Predicates: `IsSome`, `IsNone`.

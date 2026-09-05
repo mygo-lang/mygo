@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -78,5 +79,105 @@ func TestGatewayEndToEnd(t *testing.T) {
 	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache", "GOFLAGS=-mod=mod")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("gateway-style FFI package failed:\n%s", output)
+	}
+}
+
+// TestBootstrapCompilesMethodFFIResultWrapping pins the user-facing
+// `func f() -> Result[Ref[T], Error]  recv.Method(args)` shape: a Go FFI
+// method that returns (T, error) (http.Client.Do, http.Request.Cookie) must be
+// lowered at the boundary into Result[T, error] instead of leaking the raw
+// two-value Go call into the generated return statement.  CompileDirBootstrap
+// runs the full self-hosted pipeline, and `go test` proves the generated Go
+// compiles and returns an Err result at runtime.
+func TestBootstrapCompilesMethodFFIResultWrapping(t *testing.T) {
+	dir := t.TempDir()
+	bootstrapTestModule(t, dir)
+	source := `package sample
+
+import "go:net/http"
+
+func DoRequest(client: Ref[http.Client], req: Ref[http.Request]) -> Result[Ref[http.Response], Error]
+  client.Do(req)
+end
+
+func FetchCookie(req: Ref[http.Request], name: String) -> Result[Ref[http.Cookie], Error]
+  req.Cookie(name)
+end
+`
+	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDirBootstrap(dir)
+	if err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	for _, w := range written {
+		data, err := os.ReadFile(w)
+		if err != nil {
+			t.Fatal(err)
+		}
+		gen := string(data)
+		for _, want := range []string{
+			"client.Do(req)",
+			"req.Cookie(name)",
+			"Ok[*http.Response, error]",
+			"Err[*http.Response, error]",
+			"Ok[*http.Cookie, error]",
+			"Err[*http.Cookie, error]",
+		} {
+			if !strings.Contains(gen, want) {
+				t.Errorf("generated %s missing %q:\n%s", w, want, gen)
+			}
+		}
+		for _, bad := range []string{"return client.Do(req)", "return req.Cookie(name)"} {
+			if strings.Contains(gen, bad) {
+				t.Errorf("raw two-value method call leaked into generated return (%q):\n%s", bad, gen)
+			}
+		}
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
+
+import (
+	"errors"
+	"net/http"
+	"testing"
+)
+
+type failingTransport struct{}
+
+func (failingTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	return nil, errors.New("boom")
+}
+
+func TestDoRequestReturnsErrResult(t *testing.T) {
+	req, err := http.NewRequest("GET", "http://example.com", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := &http.Client{Transport: failingTransport{}}
+	res := DoRequest(client, req)
+	if res == nil {
+		t.Fatal("DoRequest returned nil Result")
+	}
+}
+
+func TestFetchCookieReturnsErrResult(t *testing.T) {
+	req, err := http.NewRequest("GET", "http://example.com", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res := FetchCookie(req, "missing")
+	if res == nil {
+		t.Fatal("FetchCookie returned nil Result")
+	}
+}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "test", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache", "GOFLAGS=-mod=mod")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("method FFI Result wrapping package failed:\n%s", output)
 	}
 }

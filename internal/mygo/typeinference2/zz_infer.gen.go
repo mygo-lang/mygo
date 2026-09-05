@@ -3080,6 +3080,33 @@ func GoSignatureInPackagesWithPackage(alias string, name string, packages []GoPa
 func GoSignatureInFuncs(name string, funcs []GoFuncSignature, predicate func(GoFuncSignature) bool) Option[GoFuncSignature] {
 	return __mygo_mt_typeinference2_GoSignatureInFuncs(name, funcs, predicate, 0)
 }
+func GoMethodSignatureInPackages(path string, member string, method string, packages []GoPackageEntry, predicate func(GoFuncSignature) bool) Option[GoFuncSignature] {
+	__mygo_expr_0 := goPackageEntryForReceiverPath(path, packages, 0)
+	var __mygo_expr_1 Option[GoFuncSignature]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[GoPackageEntry]); ok {
+		__mygo_expr_1 = goMethodInPackageTypes(__mygo_match___mygo_expr_2.F0, member, method, predicate, 0)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[GoPackageEntry]); ok {
+			__mygo_expr_1 = None[GoFuncSignature]()
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func goPackageEntryForReceiverPath(path string, packages []GoPackageEntry, index int) Option[GoPackageEntry] {
+	return __mygo_mt_typeinference2_goPackageEntryForReceiverPath(path, packages, index, 0)
+}
+func goReceiverPathMatches(pkg GoPackageEntry, path string) bool {
+	trimmed := strings.TrimSpace(path)
+	stripped := strings.TrimPrefix(trimmed, "go:")
+	return pkg.Path == trimmed || pkg.Alias == trimmed || stripped != "" && (pkg.Path == "go:"+stripped || pkg.Path == stripped || pkg.Alias == stripped)
+}
+func goMethodInPackageTypes(pkg GoPackageEntry, member string, method string, predicate func(GoFuncSignature) bool, index int) Option[GoFuncSignature] {
+	return __mygo_mt_typeinference2_goMethodInPackageTypes(pkg, member, method, predicate, index, 0)
+}
+func goMethodInMethods(method string, methods []GoFuncSignature, predicate func(GoFuncSignature) bool) Option[GoFuncSignature] {
+	return __mygo_mt_typeinference2_goMethodInMethods(method, methods, predicate, 0)
+}
 func goMethodSignatureType(sig GoFuncSignature, typeName string, packages []GoPackageEntry) Result[ast2.MonoType, string] {
 	__mygo_expr_0 := goPackageEntryForType(typeName, packages, 0)
 	var __mygo_expr_1 Result[ast2.MonoType, string]
@@ -5169,6 +5196,72 @@ func __mygo_mt_typeinference2_envWithTuplePatternLoop(__mygo_mt_p0 Env, __mygo_m
 		}
 	}
 }
+func __mygo_mt_typeinference2_goMethodInMethods(__mygo_mt_p0 string, __mygo_mt_p1 []GoFuncSignature, __mygo_mt_p2 func(GoFuncSignature) bool, __mygo_state int) Option[GoFuncSignature] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) == 0 {
+				return None[GoFuncSignature]()
+			} else {
+				sig := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), GoFuncSignature{Name: "", Params: []string{}, Results: []string{}, Variadic: false, TypeParams: []string{}})
+				if sig.Name == __mygo_mt_p0 && __mygo_mt_p2(sig) {
+					return Some[GoFuncSignature](sig)
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
+					__tail_2 := __mygo_mt_p2
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_goMethodInPackageTypes(__mygo_mt_p0 GoPackageEntry, __mygo_mt_p1 string, __mygo_mt_p2 string, __mygo_mt_p3 func(GoFuncSignature) bool, __mygo_mt_p4 int, __mygo_state int) Option[GoFuncSignature] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p4 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Types) {
+				return None[GoFuncSignature]()
+			} else {
+				t := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0.Types, __mygo_mt_p4), emptyGoTypeSignature())
+				if t.TypeName == __mygo_mt_p1 {
+					__mygo_expr_0 := goMethodInMethods(__mygo_mt_p2, t.Methods, __mygo_mt_p3)
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GoFuncSignature]); ok {
+						return Some[GoFuncSignature](__mygo_match___mygo_expr_1.F0)
+					} else {
+						if _, ok := __mygo_expr_0.(Option__None[GoFuncSignature]); ok {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2
+							__tail_3 := __mygo_mt_p3
+							__tail_4 := __mygo_mt_p4 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+							__mygo_state = 0
+							continue
+						} else {
+							panic("non-exhaustive switch")
+						}
+					}
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3
+					__tail_4 := __mygo_mt_p4 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_typeinference2_goPackageAliasForPath(__mygo_mt_p0 []GoPackageEntry, __mygo_mt_p1 string, __mygo_mt_p2 int, __mygo_state int) string {
 	for {
 		switch __mygo_state {
@@ -5188,6 +5281,30 @@ func __mygo_mt_typeinference2_goPackageAliasForPath(__mygo_mt_p0 []GoPackageEntr
 						__mygo_state = 0
 						continue
 					}
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_typeinference2_goPackageEntryForReceiverPath(__mygo_mt_p0 string, __mygo_mt_p1 []GoPackageEntry, __mygo_mt_p2 int, __mygo_state int) Option[GoPackageEntry] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+				return None[GoPackageEntry]()
+			} else {
+				pkg := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), emptyGoPackageEntry())
+				if goReceiverPathMatches(pkg, __mygo_mt_p0) {
+					return Some[GoPackageEntry](pkg)
 				} else {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1

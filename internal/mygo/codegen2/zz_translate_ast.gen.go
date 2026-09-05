@@ -3013,6 +3013,22 @@ func translateFFIOptionCall(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []a
 func ffiResultSignature(callee ast2.Expr, ctx *egCtx) Option[typeinference2.GoFuncSignature] {
 	return __mygo_mt_codegen2_ffiResultSignature(callee, ctx, 0)
 }
+func goFFIMethodSignature(base ast2.Expr, field string, ctx *egCtx, predicate func(typeinference2.GoFuncSignature) bool) Option[typeinference2.GoFuncSignature] {
+	__mygo_expr_0 := resolveExprMonoType(base, ctx)
+	var __mygo_expr_1 Option[typeinference2.GoFuncSignature]
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
+		__mygo_expr_1 = goFFIMethodSignatureFromType(__mygo_match___mygo_expr_2.F0, field, ctx, predicate)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
+			__mygo_expr_1 = None[typeinference2.GoFuncSignature]()
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func goFFIMethodSignatureFromType(recv ast2.MonoType, field string, ctx *egCtx, predicate func(typeinference2.GoFuncSignature) bool) Option[typeinference2.GoFuncSignature] {
+	return __mygo_mt_codegen2_goFFIMethodSignatureFromType(recv, field, ctx, predicate, 0)
+}
 func translateFFIResultCall(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx, expected ast2.MonoType, _ typeinference2.GoFuncSignature) Result[AstExprResult, string] {
 	c := translateExprAstExpected(callee, ctx, ast2.MonoType__TUnit__Ctor())
 	values := translateAstArgs(args, ctx, 0, []goast.Expr{}, []goast.Stmt{}, []ast2.MonoType{})
@@ -3758,14 +3774,27 @@ func __mygo_mt_codegen2_ffiOptionSignature(__mygo_mt_p0 ast2.Expr, __mygo_mt_p1 
 		switch __mygo_state {
 		case 0:
 			__mygo_expr_0 := __mygo_mt_p0.Kind
-			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
-				__tail_0 := __mygo_match___mygo_expr_1.F0
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
+				__tail_0 := __mygo_match___mygo_expr_2.F0
 				__tail_1 := __mygo_mt_p1
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
 				continue
 			} else {
-				return typeinference2.GoSignatureForCallee(__mygo_mt_p0, __mygo_mt_p1.goPackages, ffiOptionResultPredicate)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
+					__mygo_expr_2 := typeinference2.GoSignatureForCallee(__mygo_mt_p0, __mygo_mt_p1.goPackages, ffiOptionResultPredicate)
+					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[typeinference2.GoFuncSignature]); ok {
+						return Some[typeinference2.GoFuncSignature](__mygo_match___mygo_expr_3.F0)
+					} else {
+						if _, ok := __mygo_expr_2.(Option__None[typeinference2.GoFuncSignature]); ok {
+							return goFFIMethodSignature(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_1.F1, __mygo_mt_p1, ffiOptionResultPredicate)
+						} else {
+							panic("non-exhaustive switch")
+						}
+					}
+				} else {
+					return typeinference2.GoSignatureForCallee(__mygo_mt_p0, __mygo_mt_p1.goPackages, ffiOptionResultPredicate)
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -3777,14 +3806,27 @@ func __mygo_mt_codegen2_ffiResultSignature(__mygo_mt_p0 ast2.Expr, __mygo_mt_p1 
 		switch __mygo_state {
 		case 0:
 			__mygo_expr_0 := __mygo_mt_p0.Kind
-			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
-				__tail_0 := __mygo_match___mygo_expr_1.F0
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
+				__tail_0 := __mygo_match___mygo_expr_2.F0
 				__tail_1 := __mygo_mt_p1
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
 				continue
 			} else {
-				return typeinference2.GoSignatureForCallee(__mygo_mt_p0, __mygo_mt_p1.goPackages, ffiResultPredicate)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
+					__mygo_expr_2 := typeinference2.GoSignatureForCallee(__mygo_mt_p0, __mygo_mt_p1.goPackages, ffiResultPredicate)
+					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[typeinference2.GoFuncSignature]); ok {
+						return Some[typeinference2.GoFuncSignature](__mygo_match___mygo_expr_3.F0)
+					} else {
+						if _, ok := __mygo_expr_2.(Option__None[typeinference2.GoFuncSignature]); ok {
+							return goFFIMethodSignature(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_1.F1, __mygo_mt_p1, ffiResultPredicate)
+						} else {
+							panic("non-exhaustive switch")
+						}
+					}
+				} else {
+					return typeinference2.GoSignatureForCallee(__mygo_mt_p0, __mygo_mt_p1.goPackages, ffiResultPredicate)
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -3809,6 +3851,44 @@ func __mygo_mt_codegen2_findSliceTypeInMonos(__mygo_mt_p0 []ast2.MonoType, __myg
 					continue
 				} else {
 					return found
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_goFFIMethodSignatureFromType(__mygo_mt_p0 ast2.MonoType, __mygo_mt_p1 string, __mygo_mt_p2 *egCtx, __mygo_mt_p3 func(typeinference2.GoFuncSignature) bool, __mygo_state int) Option[typeinference2.GoFuncSignature] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_match___mygo_expr_1, ok := __mygo_mt_p0.(ast2.MonoType__TApp); ok {
+				__mygo_expr_2 := *__mygo_match___mygo_expr_1.F0
+				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(ast2.MonoType__TCon); ok {
+					if __mygo_match___mygo_expr_3.F0 == "Ref" && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F1) == 1 {
+						__tail_0 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F1, 0), ast2.MonoType__TUnit__Ctor())
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := __mygo_mt_p3
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+						return None[typeinference2.GoFuncSignature]()
+					}
+				} else {
+					return None[typeinference2.GoFuncSignature]()
+				}
+			} else {
+				if __mygo_match___mygo_expr_0, ok := __mygo_mt_p0.(ast2.MonoType__TQualifiedName); ok {
+					__mygo_expr_1 := *__mygo_match___mygo_expr_0.F1
+					if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(ast2.MonoType__TCon); ok {
+						return typeinference2.GoMethodSignatureInPackages(__mygo_match___mygo_expr_0.F0, __mygo_match___mygo_expr_2.F0, __mygo_mt_p1, __mygo_mt_p2.goPackages, __mygo_mt_p3)
+					} else {
+						return None[typeinference2.GoFuncSignature]()
+					}
+				} else {
+					return None[typeinference2.GoFuncSignature]()
 				}
 			}
 		default:

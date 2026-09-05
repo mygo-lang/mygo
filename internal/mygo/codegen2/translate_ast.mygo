@@ -2268,6 +2268,13 @@ end
 func ffiOptionSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
   switch callee.Kind
     case CallExpr(fn, _, _) => ffiOptionSignature(fn, ctx)
+    case FieldExpr(base, field) =>
+      # Package-qualified calls (pkg.Func) are resolved by alias; a local
+      # receiver (client.Do(req)) falls through to Go-FFI method resolution.
+      switch typeinference2.GoSignatureForCallee(callee, ctx.goPackages, ffiOptionResultPredicate)
+        case Some(sig) => Some(sig)
+        case None => goFFIMethodSignature(base, field, ctx, ffiOptionResultPredicate)
+      end
     case _ => typeinference2.GoSignatureForCallee(callee, ctx.goPackages, ffiOptionResultPredicate)
   end
 end
@@ -2334,7 +2341,47 @@ end
 func ffiResultSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
   switch callee.Kind
     case CallExpr(fn, _, _) => ffiResultSignature(fn, ctx)
+    case FieldExpr(base, field) =>
+      switch typeinference2.GoSignatureForCallee(callee, ctx.goPackages, ffiResultPredicate)
+        case Some(sig) => Some(sig)
+        case None => goFFIMethodSignature(base, field, ctx, ffiResultPredicate)
+      end
     case _ => typeinference2.GoSignatureForCallee(callee, ctx.goPackages, ffiResultPredicate)
+  end
+end
+
+# goFFIMethodSignature resolves a method call on a Go FFI receiver (e.g.
+# client.Do(req) where client: Ref[http.Client]).  The receiver's MonoType is
+# resolved from context, Ref wrappers are unwrapped, and the owning Go
+# package's method table is consulted via
+# typeinference2.GoMethodSignatureInPackages.  Non-FFI receivers (MyGO enums,
+# typeclass methods) resolve to None so the existing dispatch keeps working.
+func goFFIMethodSignature(base: ast2.Expr, field: String, ctx: Ref[egCtx], predicate: func(typeinference2.GoFuncSignature) -> Bool) -> Option[typeinference2.GoFuncSignature]
+  switch resolveExprMonoType(base, ctx)
+    case Some(bt) => goFFIMethodSignatureFromType(bt, field, ctx, predicate)
+    case None => None
+  end
+end
+
+func goFFIMethodSignatureFromType(recv: ast2.MonoType, field: String, ctx: Ref[egCtx], predicate: func(typeinference2.GoFuncSignature) -> Bool) -> Option[typeinference2.GoFuncSignature]
+  switch recv
+    case TApp(typeRef, args) then
+      switch typeRef.value()
+        case TCon(name) =>
+          if name == "Ref" && args.Len() == 1 then
+            goFFIMethodSignatureFromType(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), field, ctx, predicate)
+          else
+            None
+          end
+        case _ => None
+      end
+    end
+    case TQualifiedName(path, inner) =>
+      switch inner.value()
+        case TCon(member) => typeinference2.GoMethodSignatureInPackages(path, member, field, ctx.goPackages, predicate)
+        case _ => None
+      end
+    case _ => None
   end
 end
 

@@ -2224,6 +2224,60 @@ func GoSignatureInFuncs(name: String, funcs: Slice[GoFuncSignature], predicate: 
   end
 end
 
+# GoMethodSignatureInPackages resolves the signature of a method call on a Go
+# FFI receiver type such as `http.Client` (recorded as TQualifiedName with the
+# package's import path, e.g. go:net/http, and TCon(Client)).  The owning
+# imported Go package is located from the receiver path, then the method is
+# looked up in that package's GoTypeSignature.Methods table subject to
+# `predicate`.  Returns None when the receiver is not a Go FFI type or no
+# method satisfies the predicate, so the caller can fall back to the plain
+# call lowering.
+func GoMethodSignatureInPackages(path: String, member: String, method: String, packages: Slice[GoPackageEntry], predicate: func(GoFuncSignature) -> Bool) -> Option[GoFuncSignature]
+  switch goPackageEntryForReceiverPath(path, packages, 0)
+    case Some(pkg) => goMethodInPackageTypes(pkg, member, method, predicate, 0)
+    case None => None
+  end
+end
+
+func goPackageEntryForReceiverPath(path: String, packages: Slice[GoPackageEntry], index: Int) -> Option[GoPackageEntry]
+  if index >= packages.Len() then None else
+    let pkg = packages.Get(index).UnwrapOr(emptyGoPackageEntry())
+    if goReceiverPathMatches(pkg, path) then Some(pkg) else goPackageEntryForReceiverPath(path, packages, index + 1) end
+  end
+end
+
+# A receiver's TQualifiedName path is the import path with the go: prefix (e.g.
+# go:net/http).  Match it against the package's import path and alias, with and
+# without the go: prefix.
+func goReceiverPathMatches(pkg: GoPackageEntry, path: String) -> Bool
+  let trimmed = strings.TrimSpace(path)
+  let stripped = strings.TrimPrefix(trimmed, "go:")
+  pkg.Path == trimmed || pkg.Alias == trimmed || (stripped != "" && (pkg.Path == "go:" + stripped || pkg.Path == stripped || pkg.Alias == stripped))
+end
+
+# Scans one package's GoTypeSignature table for `member` and returns the
+# signature of method `method` when it satisfies `predicate`.
+func goMethodInPackageTypes(pkg: GoPackageEntry, member: String, method: String, predicate: func(GoFuncSignature) -> Bool, index: Int) -> Option[GoFuncSignature]
+  if index >= pkg.Types.Len() then None else
+    let t = pkg.Types.Get(index).UnwrapOr(emptyGoTypeSignature())
+    if t.TypeName == member then
+      switch goMethodInMethods(method, t.Methods, predicate)
+        case Some(sig) => Some(sig)
+        case None => goMethodInPackageTypes(pkg, member, method, predicate, index + 1)
+      end
+    else
+      goMethodInPackageTypes(pkg, member, method, predicate, index + 1)
+    end
+  end
+end
+
+func goMethodInMethods(method: String, methods: Slice[GoFuncSignature], predicate: func(GoFuncSignature) -> Bool) -> Option[GoFuncSignature]
+  if methods.Len() == 0 then None else
+    let sig = methods.Get(0).UnwrapOr(GoFuncSignature { Name: "", Params: [] as Slice[String], Results: [] as Slice[String], Variadic: false, TypeParams: [] as Slice[String] })
+    if sig.Name == method && predicate(sig) then Some(sig) else goMethodInMethods(method, common2.SliceDrop(methods, 1), predicate) end
+  end
+end
+
 # goMethodSignatureType resolves a Go method's signature with package context
 # when the owning type belongs to one of the imported Go packages.  Local
 # receiver names have no owning package and use the plain resolver, matching
