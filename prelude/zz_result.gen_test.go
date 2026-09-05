@@ -7,100 +7,100 @@ import (
 )
 
 func TestResultIsOkIsErr(t *testing.T) {
-	var okVal_212 Result[int, string] = Ok[int, string](42)
-	var errVal_213 Result[int, string] = Err[int, string]("boom")
-	if !MygoIN6ResultM4IsOk[int, string](okVal_212) {
+	var okVal_218 Result[int, string] = Ok[int, string](42)
+	var errVal_219 Result[int, string] = Err[int, string]("boom")
+	if !MygoIN6ResultM4IsOk[int, string](okVal_218) {
 		t.Fatal("Ok(42).IsOk() should be true")
 	}
-	if MygoIN6ResultM5IsErr[int, string](okVal_212) {
+	if MygoIN6ResultM5IsErr[int, string](okVal_218) {
 		t.Fatal("Ok(42).IsErr() should be false")
 	}
-	if MygoIN6ResultM4IsOk[int, string](errVal_213) {
+	if MygoIN6ResultM4IsOk[int, string](errVal_219) {
 		t.Fatal("Err(\"boom\").IsOk() should be false")
 	}
-	if !MygoIN6ResultM5IsErr[int, string](errVal_213) {
+	if !MygoIN6ResultM5IsErr[int, string](errVal_219) {
 		t.Fatal("Err(\"boom\").IsErr() should be true")
 	}
-	if v_136, ok := okVal_212.(Result__Ok[int, string]); ok {
-		if v_136.F0 != 42 {
-			t.Fatalf("Ok payload = %d, want 42", v_136.F0)
+	if v_140, ok := okVal_218.(Result__Ok[int, string]); ok {
+		if v_140.F0 != 42 {
+			t.Fatalf("Ok payload = %d, want 42", v_140.F0)
 		}
 		return
 	} else {
-		if _, ok := okVal_212.(Result__Err[int, string]); ok {
+		if _, ok := okVal_218.(Result__Err[int, string]); ok {
 			t.Fatal("expected Ok variant")
 			return
 		}
 	}
-	if _, ok := errVal_213.(Result__Ok[int, string]); ok {
+	if _, ok := errVal_219.(Result__Ok[int, string]); ok {
 		t.Fatal("expected Err variant")
 		return
 	} else {
-		if v_137, ok := errVal_213.(Result__Err[int, string]); ok {
-			if v_137.F0 != "boom" {
-				t.Fatalf("Err payload = %s, want boom", v_137.F0)
+		if v_141, ok := errVal_219.(Result__Err[int, string]); ok {
+			if v_141.F0 != "boom" {
+				t.Fatalf("Err payload = %s, want boom", v_141.F0)
 			}
 			return
 		}
 	}
 }
 func TestResultMapAndMapErr(t *testing.T) {
-	var okVal_214 Result[int, string] = Ok[int, string](3)
-	var errVal_215 Result[int, string] = Err[int, string]("boom")
-	if v_140, ok := MygoIN6ResultM3Map[int, string, int](okVal_214, func(v int) int {
+	var okVal_220 Result[int, string] = Ok[int, string](3)
+	var errVal_221 Result[int, string] = Err[int, string]("boom")
+	if v_144, ok := MygoIN6ResultM3Map[int, string, int](okVal_220, func(v int) int {
 		return v * 2
 	}).(Result__Ok[int, string]); ok {
-		if v_140.F0 != 6 {
-			t.Fatalf("Ok(3).Map(fn) payload = %d, want 6", v_140.F0)
+		if v_144.F0 != 6 {
+			t.Fatalf("Ok(3).Map(fn) payload = %d, want 6", v_144.F0)
 		}
 		return
 	} else {
-		if _, ok := MygoIN6ResultM3Map[int, string, int](okVal_214, func(v int) int {
+		if _, ok := MygoIN6ResultM3Map[int, string, int](okVal_220, func(v int) int {
 			return v * 2
 		}).(Result__Err[int, string]); ok {
 			t.Fatal("Map on Ok should stay Ok")
 			return
 		}
 	}
-	if _, ok := MygoIN6ResultM3Map[int, string, int](errVal_215, func(v int) int {
+	if _, ok := MygoIN6ResultM3Map[int, string, int](errVal_221, func(v int) int {
 		return v * 2
 	}).(Result__Ok[int, string]); ok {
 		t.Fatal("Map on Err should stay Err")
 		return
 	} else {
-		if v_141, ok := MygoIN6ResultM3Map[int, string, int](errVal_215, func(v int) int {
+		if v_145, ok := MygoIN6ResultM3Map[int, string, int](errVal_221, func(v int) int {
 			return v * 2
 		}).(Result__Err[int, string]); ok {
-			if v_141.F0 != "boom" {
-				t.Fatalf("Map on Err changed payload to %s, want boom", v_141.F0)
+			if v_145.F0 != "boom" {
+				t.Fatalf("Map on Err changed payload to %s, want boom", v_145.F0)
 			}
 			return
 		}
 	}
-	if _, ok := MygoIN6ResultM6MapErr[int, string, string](errVal_215, func(e string) string {
+	if _, ok := MygoIN6ResultM6MapErr[int, string, string](errVal_221, func(e string) string {
 		return e + "!"
 	}).(Result__Ok[int, string]); ok {
 		t.Fatal("MapErr on Err should stay Err")
 		return
 	} else {
-		if v_143, ok := MygoIN6ResultM6MapErr[int, string, string](errVal_215, func(e string) string {
+		if v_147, ok := MygoIN6ResultM6MapErr[int, string, string](errVal_221, func(e string) string {
 			return e + "!"
 		}).(Result__Err[int, string]); ok {
-			if v_143.F0 != "boom!" {
-				t.Fatalf("Err.MapErr payload = %s, want boom!", v_143.F0)
+			if v_147.F0 != "boom!" {
+				t.Fatalf("Err.MapErr payload = %s, want boom!", v_147.F0)
 			}
 			return
 		}
 	}
-	if v_146, ok := MygoIN6ResultM6MapErr[int, string, string](okVal_214, func(e string) string {
+	if v_150, ok := MygoIN6ResultM6MapErr[int, string, string](okVal_220, func(e string) string {
 		return e + "!"
 	}).(Result__Ok[int, string]); ok {
-		if v_146.F0 != 3 {
-			t.Fatalf("MapErr on Ok payload = %d, want 3", v_146.F0)
+		if v_150.F0 != 3 {
+			t.Fatalf("MapErr on Ok payload = %d, want 3", v_150.F0)
 		}
 		return
 	} else {
-		if _, ok := MygoIN6ResultM6MapErr[int, string, string](okVal_214, func(e string) string {
+		if _, ok := MygoIN6ResultM6MapErr[int, string, string](okVal_220, func(e string) string {
 			return e + "!"
 		}).(Result__Err[int, string]); ok {
 			t.Fatal("MapErr on Ok should stay Ok")
@@ -109,62 +109,62 @@ func TestResultMapAndMapErr(t *testing.T) {
 	}
 }
 func TestResultAndThenOrElse(t *testing.T) {
-	var okVal_216 Result[int, string] = Ok[int, string](3)
-	var errVal_217 Result[int, string] = Err[int, string]("boom")
-	if v_148, ok := MygoIN6ResultM7AndThen[int, string, int](okVal_216, func(v int) Result[int, string] {
+	var okVal_222 Result[int, string] = Ok[int, string](3)
+	var errVal_223 Result[int, string] = Err[int, string]("boom")
+	if v_152, ok := MygoIN6ResultM7AndThen[int, string, int](okVal_222, func(v int) Result[int, string] {
 		return Ok[int, string](v + 1)
 	}).(Result__Ok[int, string]); ok {
-		if v_148.F0 != 4 {
-			t.Fatalf("Ok.AndThen payload = %d, want 4", v_148.F0)
+		if v_152.F0 != 4 {
+			t.Fatalf("Ok.AndThen payload = %d, want 4", v_152.F0)
 		}
 		return
 	} else {
-		if _, ok := MygoIN6ResultM7AndThen[int, string, int](okVal_216, func(v int) Result[int, string] {
+		if _, ok := MygoIN6ResultM7AndThen[int, string, int](okVal_222, func(v int) Result[int, string] {
 			return Ok[int, string](v + 1)
 		}).(Result__Err[int, string]); ok {
 			t.Fatal("AndThen on Ok should succeed")
 			return
 		}
 	}
-	if _, ok := MygoIN6ResultM7AndThen[int, string, int](errVal_217, func(v int) Result[int, string] {
+	if _, ok := MygoIN6ResultM7AndThen[int, string, int](errVal_223, func(v int) Result[int, string] {
 		return Ok[int, string](v + 1)
 	}).(Result__Ok[int, string]); ok {
 		t.Fatal("AndThen on Err should stay Err")
 		return
 	} else {
-		if v_149, ok := MygoIN6ResultM7AndThen[int, string, int](errVal_217, func(v int) Result[int, string] {
+		if v_153, ok := MygoIN6ResultM7AndThen[int, string, int](errVal_223, func(v int) Result[int, string] {
 			return Ok[int, string](v + 1)
 		}).(Result__Err[int, string]); ok {
-			if v_149.F0 != "boom" {
-				t.Fatalf("AndThen on Err payload = %s, want boom", v_149.F0)
+			if v_153.F0 != "boom" {
+				t.Fatalf("AndThen on Err payload = %s, want boom", v_153.F0)
 			}
 			return
 		}
 	}
-	if v_152, ok := MygoIN6ResultM6OrElse[int, string, string](okVal_216, func(e string) Result[int, string] {
+	if v_156, ok := MygoIN6ResultM6OrElse[int, string, string](okVal_222, func(e string) Result[int, string] {
 		return Err[int, string](e + "!")
 	}).(Result__Ok[int, string]); ok {
-		if v_152.F0 != 3 {
-			t.Fatalf("OrElse on Ok payload = %d, want 3", v_152.F0)
+		if v_156.F0 != 3 {
+			t.Fatalf("OrElse on Ok payload = %d, want 3", v_156.F0)
 		}
 		return
 	} else {
-		if _, ok := MygoIN6ResultM6OrElse[int, string, string](okVal_216, func(e string) Result[int, string] {
+		if _, ok := MygoIN6ResultM6OrElse[int, string, string](okVal_222, func(e string) Result[int, string] {
 			return Err[int, string](e + "!")
 		}).(Result__Err[int, string]); ok {
 			t.Fatal("OrElse on Ok should stay Ok")
 			return
 		}
 	}
-	if v_154, ok := MygoIN6ResultM6OrElse[int, string, string](errVal_217, func(e string) Result[int, string] {
+	if v_158, ok := MygoIN6ResultM6OrElse[int, string, string](errVal_223, func(e string) Result[int, string] {
 		return Ok[int, string](MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(e))
 	}).(Result__Ok[int, string]); ok {
-		if v_154.F0 != 4 {
-			t.Fatalf("OrElse on Err result = %d, want 4", v_154.F0)
+		if v_158.F0 != 4 {
+			t.Fatalf("OrElse on Err result = %d, want 4", v_158.F0)
 		}
 		return
 	} else {
-		if _, ok := MygoIN6ResultM6OrElse[int, string, string](errVal_217, func(e string) Result[int, string] {
+		if _, ok := MygoIN6ResultM6OrElse[int, string, string](errVal_223, func(e string) Result[int, string] {
 			return Ok[int, string](MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(e))
 		}).(Result__Err[int, string]); ok {
 			t.Fatal("OrElse on Err should recover")
@@ -173,163 +173,163 @@ func TestResultAndThenOrElse(t *testing.T) {
 	}
 }
 func TestResultAndOr(t *testing.T) {
-	var okVal_218 Result[int, string] = Ok[int, string](3)
-	var errVal_219 Result[int, string] = Err[int, string]("boom")
-	var otherOk_220 Result[bool, string] = Ok[bool, string](true)
-	var intOk_221 Result[int, string] = Ok[int, string](7)
-	var intErr_222 Result[int, string] = Err[int, string]("other")
-	if v_156, ok := MygoIN6ResultM3And[int, string, bool](okVal_218, otherOk_220).(Result__Ok[bool, string]); ok {
-		if !v_156.F0 {
+	var okVal_224 Result[int, string] = Ok[int, string](3)
+	var errVal_225 Result[int, string] = Err[int, string]("boom")
+	var otherOk_226 Result[bool, string] = Ok[bool, string](true)
+	var intOk_227 Result[int, string] = Ok[int, string](7)
+	var intErr_228 Result[int, string] = Err[int, string]("other")
+	if v_160, ok := MygoIN6ResultM3And[int, string, bool](okVal_224, otherOk_226).(Result__Ok[bool, string]); ok {
+		if !v_160.F0 {
 			t.Fatal("Ok.And(other) should produce Ok(true)")
 		}
 		return
 	} else {
-		if _, ok := MygoIN6ResultM3And[int, string, bool](okVal_218, otherOk_220).(Result__Err[bool, string]); ok {
+		if _, ok := MygoIN6ResultM3And[int, string, bool](okVal_224, otherOk_226).(Result__Err[bool, string]); ok {
 			t.Fatal("Ok.And(other) should stay Ok")
 			return
 		}
 	}
-	if _, ok := MygoIN6ResultM3And[int, string, bool](errVal_219, otherOk_220).(Result__Ok[bool, string]); ok {
+	if _, ok := MygoIN6ResultM3And[int, string, bool](errVal_225, otherOk_226).(Result__Ok[bool, string]); ok {
 		t.Fatal("Err.And(other) should stay Err")
 		return
 	} else {
-		if v_157, ok := MygoIN6ResultM3And[int, string, bool](errVal_219, otherOk_220).(Result__Err[bool, string]); ok {
-			if v_157.F0 != "boom" {
-				t.Fatalf("Err.And(other) payload = %s, want boom", v_157.F0)
+		if v_161, ok := MygoIN6ResultM3And[int, string, bool](errVal_225, otherOk_226).(Result__Err[bool, string]); ok {
+			if v_161.F0 != "boom" {
+				t.Fatalf("Err.And(other) payload = %s, want boom", v_161.F0)
 			}
 			return
 		}
 	}
-	if v_160, ok := MygoIN6ResultM2Or[int, string, string](okVal_218, intErr_222).(Result__Ok[int, string]); ok {
-		if v_160.F0 != 3 {
-			t.Fatalf("Ok.Or(other) payload = %d, want 3", v_160.F0)
+	if v_164, ok := MygoIN6ResultM2Or[int, string, string](okVal_224, intErr_228).(Result__Ok[int, string]); ok {
+		if v_164.F0 != 3 {
+			t.Fatalf("Ok.Or(other) payload = %d, want 3", v_164.F0)
 		}
 		return
 	} else {
-		if _, ok := MygoIN6ResultM2Or[int, string, string](okVal_218, intErr_222).(Result__Err[int, string]); ok {
+		if _, ok := MygoIN6ResultM2Or[int, string, string](okVal_224, intErr_228).(Result__Err[int, string]); ok {
 			t.Fatal("Ok.Or(other) should stay Ok")
 			return
 		}
 	}
-	if v_162, ok := MygoIN6ResultM2Or[int, string, string](errVal_219, intOk_221).(Result__Ok[int, string]); ok {
-		if v_162.F0 != 7 {
-			t.Fatalf("Err.Or(other) payload = %d, want 7", v_162.F0)
+	if v_166, ok := MygoIN6ResultM2Or[int, string, string](errVal_225, intOk_227).(Result__Ok[int, string]); ok {
+		if v_166.F0 != 7 {
+			t.Fatalf("Err.Or(other) payload = %d, want 7", v_166.F0)
 		}
 		return
 	} else {
-		if _, ok := MygoIN6ResultM2Or[int, string, string](errVal_219, intOk_221).(Result__Err[int, string]); ok {
+		if _, ok := MygoIN6ResultM2Or[int, string, string](errVal_225, intOk_227).(Result__Err[int, string]); ok {
 			t.Fatal("Err.Or(other) should recover")
 			return
 		}
 	}
 }
 func TestResultUnwrapAndExpect(t *testing.T) {
-	var okVal_223 Result[int, string] = Ok[int, string](42)
-	var errVal_224 Result[int, string] = Err[int, string]("boom")
-	if MygoIN6ResultM6Unwrap[int, string](okVal_223) != 42 {
+	var okVal_229 Result[int, string] = Ok[int, string](42)
+	var errVal_230 Result[int, string] = Err[int, string]("boom")
+	if MygoIN6ResultM6Unwrap[int, string](okVal_229) != 42 {
 		t.Fatal("Ok.Unwrap() should return 42")
 	}
-	if MygoIN6ResultM8UnwrapOr[int, string](errVal_224, 7) != 7 {
+	if MygoIN6ResultM8UnwrapOr[int, string](errVal_230, 7) != 7 {
 		t.Fatal("Err.UnwrapOr(7) should return 7")
 	}
-	if MygoIN6ResultM12UnwrapOrElse[int, string](errVal_224, func(e string) int {
+	if MygoIN6ResultM12UnwrapOrElse[int, string](errVal_230, func(e string) int {
 		return MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(e)
 	}) != 4 {
 		t.Fatal("Err.UnwrapOrElse should compute from the error")
 	}
-	if MygoIN6ResultM9UnwrapErr[int, string](errVal_224) != "boom" {
+	if MygoIN6ResultM9UnwrapErr[int, string](errVal_230) != "boom" {
 		t.Fatal("Err.UnwrapErr() should return boom")
 	}
-	if MygoIN6ResultM6Expect[int, string](okVal_223, "should be ok") != 42 {
+	if MygoIN6ResultM6Expect[int, string](okVal_229, "should be ok") != 42 {
 		t.Fatal("Ok.Expect should return 42")
 	}
-	if MygoIN6ResultM9ExpectErr[int, string](errVal_224, "should be err") != "boom" {
+	if MygoIN6ResultM9ExpectErr[int, string](errVal_230, "should be err") != "boom" {
 		t.Fatal("Err.ExpectErr should return boom")
 	}
 }
 func TestResultMapOr(t *testing.T) {
-	var okVal_225 Result[int, string] = Ok[int, string](3)
-	var errVal_226 Result[int, string] = Err[int, string]("boom")
-	if MygoIN6ResultM5MapOr[int, string, int](okVal_225, 99, func(v int) int {
+	var okVal_231 Result[int, string] = Ok[int, string](3)
+	var errVal_232 Result[int, string] = Err[int, string]("boom")
+	if MygoIN6ResultM5MapOr[int, string, int](okVal_231, 99, func(v int) int {
 		return v * 2
 	}) != 6 {
 		t.Fatal("Ok(3).MapOr(99, fn) should be fn(3) = 6")
 	}
-	if MygoIN6ResultM5MapOr[int, string, int](errVal_226, 99, func(v int) int {
+	if MygoIN6ResultM5MapOr[int, string, int](errVal_232, 99, func(v int) int {
 		return v * 2
 	}) != 99 {
 		t.Fatal("Err.MapOr(99, fn) should be 99")
 	}
 }
 func TestResultToErr(t *testing.T) {
-	var okVal_227 Result[int, string] = Ok[int, string](3)
-	var errVal_228 Result[int, string] = Err[int, string]("boom")
-	if _, ok := MygoIN6ResultM5ToErr[int, string](okVal_227).(Option__Some[string]); ok {
+	var okVal_233 Result[int, string] = Ok[int, string](3)
+	var errVal_234 Result[int, string] = Err[int, string]("boom")
+	if _, ok := MygoIN6ResultM5ToErr[int, string](okVal_233).(Option__Some[string]); ok {
 		t.Fatal("Ok.ToErr() should be None")
 		return
 	} else {
-		if _, ok := MygoIN6ResultM5ToErr[int, string](okVal_227).(Option__None[string]); ok {
+		if _, ok := MygoIN6ResultM5ToErr[int, string](okVal_233).(Option__None[string]); ok {
 			return
 		}
 	}
-	if v_166, ok := MygoIN6ResultM5ToErr[int, string](errVal_228).(Option__Some[string]); ok {
-		if v_166.F0 != "boom" {
-			t.Fatalf("Err.ToErr() payload = %s, want boom", v_166.F0)
+	if v_170, ok := MygoIN6ResultM5ToErr[int, string](errVal_234).(Option__Some[string]); ok {
+		if v_170.F0 != "boom" {
+			t.Fatalf("Err.ToErr() payload = %s, want boom", v_170.F0)
 		}
 		return
 	} else {
-		if _, ok := MygoIN6ResultM5ToErr[int, string](errVal_228).(Option__None[string]); ok {
+		if _, ok := MygoIN6ResultM5ToErr[int, string](errVal_234).(Option__None[string]); ok {
 			t.Fatal("Err.ToErr() should be Some(e)")
 			return
 		}
 	}
 }
 func TestResultTranspose(t *testing.T) {
-	var someOk_229 Option[Result[int, string]] = Some[Result[int, string]](Ok[int, string](5))
-	var someErr_230 Option[Result[int, string]] = Some[Result[int, string]](Err[int, string]("boom"))
-	var noneVal_231 Option[Result[int, string]] = None[Result[int, string]]()
-	if v_168, ok := MygoIN6OptionM9Transpose[int, string](someOk_229).(Result__Ok[Option[int], string]); ok {
-		if v_170, ok := v_168.F0.(Option__Some[int]); ok {
-			if v_170.F0 != 5 {
-				t.Fatalf("transpose inner payload = %d, want 5", v_170.F0)
+	var someOk_235 Option[Result[int, string]] = Some[Result[int, string]](Ok[int, string](5))
+	var someErr_236 Option[Result[int, string]] = Some[Result[int, string]](Err[int, string]("boom"))
+	var noneVal_237 Option[Result[int, string]] = None[Result[int, string]]()
+	if v_172, ok := MygoIN6OptionM9Transpose[int, string](someOk_235).(Result__Ok[Option[int], string]); ok {
+		if v_174, ok := v_172.F0.(Option__Some[int]); ok {
+			if v_174.F0 != 5 {
+				t.Fatalf("transpose inner payload = %d, want 5", v_174.F0)
 			}
 			return
 		} else {
-			if _, ok := v_168.F0.(Option__None[int]); ok {
+			if _, ok := v_172.F0.(Option__None[int]); ok {
 				t.Fatal("transpose Some(Ok) should be Ok(Some(...))")
 				return
 			}
 		}
 		return
 	} else {
-		if _, ok := MygoIN6OptionM9Transpose[int, string](someOk_229).(Result__Err[Option[int], string]); ok {
+		if _, ok := MygoIN6OptionM9Transpose[int, string](someOk_235).(Result__Err[Option[int], string]); ok {
 			t.Fatal("transpose Some(Ok) should be Ok")
 			return
 		}
 	}
-	if _, ok := MygoIN6OptionM9Transpose[int, string](someErr_230).(Result__Ok[Option[int], string]); ok {
+	if _, ok := MygoIN6OptionM9Transpose[int, string](someErr_236).(Result__Ok[Option[int], string]); ok {
 		t.Fatal("transpose Some(Err) should be Err")
 		return
 	} else {
-		if v_171, ok := MygoIN6OptionM9Transpose[int, string](someErr_230).(Result__Err[Option[int], string]); ok {
-			if v_171.F0 != "boom" {
-				t.Fatalf("transpose Some(Err) payload = %s, want boom", v_171.F0)
+		if v_175, ok := MygoIN6OptionM9Transpose[int, string](someErr_236).(Result__Err[Option[int], string]); ok {
+			if v_175.F0 != "boom" {
+				t.Fatalf("transpose Some(Err) payload = %s, want boom", v_175.F0)
 			}
 			return
 		}
 	}
-	if v_174, ok := MygoIN6OptionM9Transpose[int, string](noneVal_231).(Result__Ok[Option[int], string]); ok {
-		if _, ok := v_174.F0.(Option__Some[int]); ok {
+	if v_178, ok := MygoIN6OptionM9Transpose[int, string](noneVal_237).(Result__Ok[Option[int], string]); ok {
+		if _, ok := v_178.F0.(Option__Some[int]); ok {
 			t.Fatal("transpose None should be Ok(None)")
 			return
 		} else {
-			if _, ok := v_174.F0.(Option__None[int]); ok {
+			if _, ok := v_178.F0.(Option__None[int]); ok {
 				return
 			}
 		}
 		return
 	} else {
-		if _, ok := MygoIN6OptionM9Transpose[int, string](noneVal_231).(Result__Err[Option[int], string]); ok {
+		if _, ok := MygoIN6OptionM9Transpose[int, string](noneVal_237).(Result__Err[Option[int], string]); ok {
 			t.Fatal("transpose None should be Ok")
 			return
 		}

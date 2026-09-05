@@ -3,20 +3,20 @@
 package prelude
 
 func MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM3Get(s string, index int) Option[byte] {
-	var expr_243 Option[byte]
+	var expr_249 Option[byte]
 	if index < 0 || index >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) {
-		expr_243 = None[byte]()
+		expr_249 = None[byte]()
 	} else {
-		expr_243 = Some[byte](s[index])
+		expr_249 = Some[byte](s[index])
 	}
-	return expr_243
+	return expr_249
 }
 func MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(s string, startPos int, endPos int) Option[string] {
-	var expr_244 Option[string]
+	var expr_250 Option[string]
 	if startPos < 0 || endPos < startPos || startPos >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) || endPos > MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(s) {
-		expr_244 = None[string]()
+		expr_250 = None[string]()
 	} else {
-		expr_244 = Some[string](s[startPos:endPos])
+		expr_250 = Some[string](s[startPos:endPos])
 	}
-	return expr_244
+	return expr_250
 }

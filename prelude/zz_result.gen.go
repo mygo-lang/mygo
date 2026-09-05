@@ -88,34 +88,10 @@ func MygoIN6ResultM6MapErr[A any, E any, E2 any](res Result[A, E], fn func(E) E2
 	return expr_163
 }
 func MygoIN6ResultM9MapWithOk[A any, E any, B any](res Result[A, E], value B) Result[B, E] {
-	var __mygo_expr_0 Result[B, E]
-	if _, ok := res.(Result__Ok[A, E]); ok {
-		__mygo_expr_0 = Ok[B, E](value)
-	} else {
-		if __mygo_match___mygo_expr_1, ok := res.(Result__Err[A, E]); ok {
-			__mygo_expr_0 = Err[B, E](__mygo_match___mygo_expr_1.F0)
-		} else {
-		}
-	}
-	return __mygo_expr_0
-}
-func MygoIN6ResultM10MapWithErr[A any, E any, F any](res Result[A, E], err F) Result[A, F] {
-	var __mygo_expr_0 Result[A, F]
-	if __mygo_match___mygo_expr_1, ok := res.(Result__Ok[A, E]); ok {
-		__mygo_expr_0 = Ok[A, F](__mygo_match___mygo_expr_1.F0)
-	} else {
-		if _, ok := res.(Result__Err[A, E]); ok {
-			__mygo_expr_0 = Err[A, F](err)
-		} else {
-		}
-	}
-	return __mygo_expr_0
-}
-func MygoIN6ResultM7AndThen[A any, E any, B any](res Result[A, E], fn func(A) Result[B, E]) Result[B, E] {
 	var expr_166 Result[B, E]
-	if v_104, ok := res.(Result__Ok[A, E]); ok {
+	if _, ok := res.(Result__Ok[A, E]); ok {
 		var expr_165 Result[B, E]
-		expr_165 = fn(v_104.F0)
+		expr_165 = Ok[B, E](value)
 		expr_166 = expr_165
 	} else {
 		if v_103, ok := res.(Result__Err[A, E]); ok {
@@ -128,16 +104,16 @@ func MygoIN6ResultM7AndThen[A any, E any, B any](res Result[A, E], fn func(A) Re
 	}
 	return expr_166
 }
-func MygoIN6ResultM6OrElse[A any, E any, E2 any](res Result[A, E], fn func(E) Result[A, E2]) Result[A, E2] {
-	var expr_169 Result[A, E2]
+func MygoIN6ResultM10MapWithErr[A any, E any, F any](res Result[A, E], err F) Result[A, F] {
+	var expr_169 Result[A, F]
 	if v_106, ok := res.(Result__Ok[A, E]); ok {
-		var expr_168 Result[A, E2]
-		expr_168 = Ok[A, E2](v_106.F0)
+		var expr_168 Result[A, F]
+		expr_168 = Ok[A, F](v_106.F0)
 		expr_169 = expr_168
 	} else {
-		if v_105, ok := res.(Result__Err[A, E]); ok {
-			var expr_167 Result[A, E2]
-			expr_167 = fn(v_105.F0)
+		if _, ok := res.(Result__Err[A, E]); ok {
+			var expr_167 Result[A, F]
+			expr_167 = Err[A, F](err)
 			expr_169 = expr_167
 		} else {
 			panic("unreachable")
@@ -145,11 +121,11 @@ func MygoIN6ResultM6OrElse[A any, E any, E2 any](res Result[A, E], fn func(E) Re
 	}
 	return expr_169
 }
-func MygoIN6ResultM3And[A any, E any, B any](res Result[A, E], other Result[B, E]) Result[B, E] {
+func MygoIN6ResultM7AndThen[A any, E any, B any](res Result[A, E], fn func(A) Result[B, E]) Result[B, E] {
 	var expr_172 Result[B, E]
-	if _, ok := res.(Result__Ok[A, E]); ok {
+	if v_108, ok := res.(Result__Ok[A, E]); ok {
 		var expr_171 Result[B, E]
-		expr_171 = other
+		expr_171 = fn(v_108.F0)
 		expr_172 = expr_171
 	} else {
 		if v_107, ok := res.(Result__Err[A, E]); ok {
@@ -162,16 +138,16 @@ func MygoIN6ResultM3And[A any, E any, B any](res Result[A, E], other Result[B, E
 	}
 	return expr_172
 }
-func MygoIN6ResultM2Or[A any, E any, E2 any](res Result[A, E], other Result[A, E2]) Result[A, E2] {
+func MygoIN6ResultM6OrElse[A any, E any, E2 any](res Result[A, E], fn func(E) Result[A, E2]) Result[A, E2] {
 	var expr_175 Result[A, E2]
 	if v_110, ok := res.(Result__Ok[A, E]); ok {
 		var expr_174 Result[A, E2]
 		expr_174 = Ok[A, E2](v_110.F0)
 		expr_175 = expr_174
 	} else {
-		if _, ok := res.(Result__Err[A, E]); ok {
+		if v_109, ok := res.(Result__Err[A, E]); ok {
 			var expr_173 Result[A, E2]
-			expr_173 = other
+			expr_173 = fn(v_109.F0)
 			expr_175 = expr_173
 		} else {
 			panic("unreachable")
@@ -179,17 +155,16 @@ func MygoIN6ResultM2Or[A any, E any, E2 any](res Result[A, E], other Result[A, E
 	}
 	return expr_175
 }
-func MygoIN6ResultM6Unwrap[A any, E any](res Result[A, E]) A {
-	var expr_178 A
-	if v_112, ok := res.(Result__Ok[A, E]); ok {
-		var expr_177 A
-		expr_177 = v_112.F0
+func MygoIN6ResultM3And[A any, E any, B any](res Result[A, E], other Result[B, E]) Result[B, E] {
+	var expr_178 Result[B, E]
+	if _, ok := res.(Result__Ok[A, E]); ok {
+		var expr_177 Result[B, E]
+		expr_177 = other
 		expr_178 = expr_177
 	} else {
-		if _, ok := res.(Result__Err[A, E]); ok {
-			var expr_176 A
-			Panic("called Result.Unwrap on an Err value")
-			expr_176 = Zero[A]()
+		if v_111, ok := res.(Result__Err[A, E]); ok {
+			var expr_176 Result[B, E]
+			expr_176 = Err[B, E](v_111.F0)
 			expr_178 = expr_176
 		} else {
 			panic("unreachable")
@@ -197,16 +172,16 @@ func MygoIN6ResultM6Unwrap[A any, E any](res Result[A, E]) A {
 	}
 	return expr_178
 }
-func MygoIN6ResultM8UnwrapOr[A any, E any](res Result[A, E], defaultVal A) A {
-	var expr_181 A
+func MygoIN6ResultM2Or[A any, E any, E2 any](res Result[A, E], other Result[A, E2]) Result[A, E2] {
+	var expr_181 Result[A, E2]
 	if v_114, ok := res.(Result__Ok[A, E]); ok {
-		var expr_180 A
-		expr_180 = v_114.F0
+		var expr_180 Result[A, E2]
+		expr_180 = Ok[A, E2](v_114.F0)
 		expr_181 = expr_180
 	} else {
 		if _, ok := res.(Result__Err[A, E]); ok {
-			var expr_179 A
-			expr_179 = defaultVal
+			var expr_179 Result[A, E2]
+			expr_179 = other
 			expr_181 = expr_179
 		} else {
 			panic("unreachable")
@@ -214,16 +189,17 @@ func MygoIN6ResultM8UnwrapOr[A any, E any](res Result[A, E], defaultVal A) A {
 	}
 	return expr_181
 }
-func MygoIN6ResultM12UnwrapOrElse[A any, E any](res Result[A, E], fn func(E) A) A {
+func MygoIN6ResultM6Unwrap[A any, E any](res Result[A, E]) A {
 	var expr_184 A
 	if v_116, ok := res.(Result__Ok[A, E]); ok {
 		var expr_183 A
 		expr_183 = v_116.F0
 		expr_184 = expr_183
 	} else {
-		if v_115, ok := res.(Result__Err[A, E]); ok {
+		if _, ok := res.(Result__Err[A, E]); ok {
 			var expr_182 A
-			expr_182 = fn(v_115.F0)
+			Panic("called Result.Unwrap on an Err value")
+			expr_182 = Zero[A]()
 			expr_184 = expr_182
 		} else {
 			panic("unreachable")
@@ -231,7 +207,7 @@ func MygoIN6ResultM12UnwrapOrElse[A any, E any](res Result[A, E], fn func(E) A) 
 	}
 	return expr_184
 }
-func MygoIN6ResultM6Expect[A any, E any](res Result[A, E], msg string) A {
+func MygoIN6ResultM8UnwrapOr[A any, E any](res Result[A, E], defaultVal A) A {
 	var expr_187 A
 	if v_118, ok := res.(Result__Ok[A, E]); ok {
 		var expr_186 A
@@ -240,8 +216,7 @@ func MygoIN6ResultM6Expect[A any, E any](res Result[A, E], msg string) A {
 	} else {
 		if _, ok := res.(Result__Err[A, E]); ok {
 			var expr_185 A
-			Panic(msg)
-			expr_185 = Zero[A]()
+			expr_185 = defaultVal
 			expr_187 = expr_185
 		} else {
 			panic("unreachable")
@@ -249,17 +224,16 @@ func MygoIN6ResultM6Expect[A any, E any](res Result[A, E], msg string) A {
 	}
 	return expr_187
 }
-func MygoIN6ResultM9UnwrapErr[A any, E any](res Result[A, E]) E {
-	var expr_190 E
-	if _, ok := res.(Result__Ok[A, E]); ok {
-		var expr_189 E
-		Panic("called Result.UnwrapErr on an Ok value")
-		expr_189 = Zero[E]()
+func MygoIN6ResultM12UnwrapOrElse[A any, E any](res Result[A, E], fn func(E) A) A {
+	var expr_190 A
+	if v_120, ok := res.(Result__Ok[A, E]); ok {
+		var expr_189 A
+		expr_189 = v_120.F0
 		expr_190 = expr_189
 	} else {
 		if v_119, ok := res.(Result__Err[A, E]); ok {
-			var expr_188 E
-			expr_188 = v_119.F0
+			var expr_188 A
+			expr_188 = fn(v_119.F0)
 			expr_190 = expr_188
 		} else {
 			panic("unreachable")
@@ -267,17 +241,17 @@ func MygoIN6ResultM9UnwrapErr[A any, E any](res Result[A, E]) E {
 	}
 	return expr_190
 }
-func MygoIN6ResultM9ExpectErr[A any, E any](res Result[A, E], msg string) E {
-	var expr_193 E
-	if _, ok := res.(Result__Ok[A, E]); ok {
-		var expr_192 E
-		Panic(msg)
-		expr_192 = Zero[E]()
+func MygoIN6ResultM6Expect[A any, E any](res Result[A, E], msg string) A {
+	var expr_193 A
+	if v_122, ok := res.(Result__Ok[A, E]); ok {
+		var expr_192 A
+		expr_192 = v_122.F0
 		expr_193 = expr_192
 	} else {
-		if v_121, ok := res.(Result__Err[A, E]); ok {
-			var expr_191 E
-			expr_191 = v_121.F0
+		if _, ok := res.(Result__Err[A, E]); ok {
+			var expr_191 A
+			Panic(msg)
+			expr_191 = Zero[A]()
 			expr_193 = expr_191
 		} else {
 			panic("unreachable")
@@ -285,16 +259,17 @@ func MygoIN6ResultM9ExpectErr[A any, E any](res Result[A, E], msg string) E {
 	}
 	return expr_193
 }
-func MygoIN6ResultM5MapOr[A any, E any, B any](res Result[A, E], defaultVal B, fn func(A) B) B {
-	var expr_196 B
-	if v_124, ok := res.(Result__Ok[A, E]); ok {
-		var expr_195 B
-		expr_195 = fn(v_124.F0)
+func MygoIN6ResultM9UnwrapErr[A any, E any](res Result[A, E]) E {
+	var expr_196 E
+	if _, ok := res.(Result__Ok[A, E]); ok {
+		var expr_195 E
+		Panic("called Result.UnwrapErr on an Ok value")
+		expr_195 = Zero[E]()
 		expr_196 = expr_195
 	} else {
-		if _, ok := res.(Result__Err[A, E]); ok {
-			var expr_194 B
-			expr_194 = defaultVal
+		if v_123, ok := res.(Result__Err[A, E]); ok {
+			var expr_194 E
+			expr_194 = v_123.F0
 			expr_196 = expr_194
 		} else {
 			panic("unreachable")
@@ -302,16 +277,17 @@ func MygoIN6ResultM5MapOr[A any, E any, B any](res Result[A, E], defaultVal B, f
 	}
 	return expr_196
 }
-func MygoIN6ResultM5ToErr[A any, E any](res Result[A, E]) Option[E] {
-	var expr_199 Option[E]
+func MygoIN6ResultM9ExpectErr[A any, E any](res Result[A, E], msg string) E {
+	var expr_199 E
 	if _, ok := res.(Result__Ok[A, E]); ok {
-		var expr_198 Option[E]
-		expr_198 = None[E]()
+		var expr_198 E
+		Panic(msg)
+		expr_198 = Zero[E]()
 		expr_199 = expr_198
 	} else {
 		if v_125, ok := res.(Result__Err[A, E]); ok {
-			var expr_197 Option[E]
-			expr_197 = Some[E](v_125.F0)
+			var expr_197 E
+			expr_197 = v_125.F0
 			expr_199 = expr_197
 		} else {
 			panic("unreachable")
@@ -319,16 +295,16 @@ func MygoIN6ResultM5ToErr[A any, E any](res Result[A, E]) Option[E] {
 	}
 	return expr_199
 }
-func MygoIN6ResultM7Flatten[A any, E any](res Result[Result[A, E], E]) Result[A, E] {
-	var expr_202 Result[A, E]
-	if v_128, ok := res.(Result__Ok[Result[A, E], E]); ok {
-		var expr_201 Result[A, E]
-		expr_201 = v_128.F0
+func MygoIN6ResultM5MapOr[A any, E any, B any](res Result[A, E], defaultVal B, fn func(A) B) B {
+	var expr_202 B
+	if v_128, ok := res.(Result__Ok[A, E]); ok {
+		var expr_201 B
+		expr_201 = fn(v_128.F0)
 		expr_202 = expr_201
 	} else {
-		if v_127, ok := res.(Result__Err[Result[A, E], E]); ok {
-			var expr_200 Result[A, E]
-			expr_200 = Err[A, E](v_127.F0)
+		if _, ok := res.(Result__Err[A, E]); ok {
+			var expr_200 B
+			expr_200 = defaultVal
 			expr_202 = expr_200
 		} else {
 			panic("unreachable")
@@ -336,48 +312,82 @@ func MygoIN6ResultM7Flatten[A any, E any](res Result[Result[A, E], E]) Result[A,
 	}
 	return expr_202
 }
-func MygoIT2EqFN8ResultEqGN1AN1EEGN6ResultGN1AN1EEEM6Equals[A any, E any](left Result[A, E], right Result[A, E], EqualsFn func(A, A) bool, EqualsFn1 func(E, E) bool) bool {
-	var expr_211 bool
-	if v_132, ok := left.(Result__Ok[A, E]); ok {
-		var expr_210 bool
-		var expr_209 bool
-		if v_134, ok := right.(Result__Ok[A, E]); ok {
-			var expr_208 bool
-			expr_208 = EqualsFn(v_132.F0, v_134.F0)
-			expr_209 = expr_208
-		} else {
-			if _, ok := right.(Result__Err[A, E]); ok {
-				var expr_207 bool
-				expr_207 = false
-				expr_209 = expr_207
-			} else {
-				panic("unreachable")
-			}
-		}
-		expr_210 = expr_209
-		expr_211 = expr_210
+func MygoIN6ResultM5ToErr[A any, E any](res Result[A, E]) Option[E] {
+	var expr_205 Option[E]
+	if _, ok := res.(Result__Ok[A, E]); ok {
+		var expr_204 Option[E]
+		expr_204 = None[E]()
+		expr_205 = expr_204
 	} else {
-		if v_129, ok := left.(Result__Err[A, E]); ok {
-			var expr_206 bool
-			var expr_205 bool
-			if _, ok := right.(Result__Ok[A, E]); ok {
-				var expr_204 bool
-				expr_204 = false
-				expr_205 = expr_204
-			} else {
-				if v_130, ok := right.(Result__Err[A, E]); ok {
-					var expr_203 bool
-					expr_203 = EqualsFn1(v_129.F0, v_130.F0)
-					expr_205 = expr_203
-				} else {
-					panic("unreachable")
-				}
-			}
-			expr_206 = expr_205
-			expr_211 = expr_206
+		if v_129, ok := res.(Result__Err[A, E]); ok {
+			var expr_203 Option[E]
+			expr_203 = Some[E](v_129.F0)
+			expr_205 = expr_203
 		} else {
 			panic("unreachable")
 		}
 	}
-	return expr_211
+	return expr_205
+}
+func MygoIN6ResultM7Flatten[A any, E any](res Result[Result[A, E], E]) Result[A, E] {
+	var expr_208 Result[A, E]
+	if v_132, ok := res.(Result__Ok[Result[A, E], E]); ok {
+		var expr_207 Result[A, E]
+		expr_207 = v_132.F0
+		expr_208 = expr_207
+	} else {
+		if v_131, ok := res.(Result__Err[Result[A, E], E]); ok {
+			var expr_206 Result[A, E]
+			expr_206 = Err[A, E](v_131.F0)
+			expr_208 = expr_206
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_208
+}
+func MygoIT2EqFN8ResultEqGN1AN1EEGN6ResultGN1AN1EEEM6Equals[A any, E any](left Result[A, E], right Result[A, E], EqualsFn func(A, A) bool, EqualsFn1 func(E, E) bool) bool {
+	var expr_217 bool
+	if v_136, ok := left.(Result__Ok[A, E]); ok {
+		var expr_216 bool
+		var expr_215 bool
+		if v_138, ok := right.(Result__Ok[A, E]); ok {
+			var expr_214 bool
+			expr_214 = EqualsFn(v_136.F0, v_138.F0)
+			expr_215 = expr_214
+		} else {
+			if _, ok := right.(Result__Err[A, E]); ok {
+				var expr_213 bool
+				expr_213 = false
+				expr_215 = expr_213
+			} else {
+				panic("unreachable")
+			}
+		}
+		expr_216 = expr_215
+		expr_217 = expr_216
+	} else {
+		if v_133, ok := left.(Result__Err[A, E]); ok {
+			var expr_212 bool
+			var expr_211 bool
+			if _, ok := right.(Result__Ok[A, E]); ok {
+				var expr_210 bool
+				expr_210 = false
+				expr_211 = expr_210
+			} else {
+				if v_134, ok := right.(Result__Err[A, E]); ok {
+					var expr_209 bool
+					expr_209 = EqualsFn1(v_133.F0, v_134.F0)
+					expr_211 = expr_209
+				} else {
+					panic("unreachable")
+				}
+			}
+			expr_212 = expr_211
+			expr_217 = expr_212
+		} else {
+			panic("unreachable")
+		}
+	}
+	return expr_217
 }
