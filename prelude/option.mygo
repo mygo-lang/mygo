@@ -3,9 +3,7 @@ package prelude
 impl[A] OptionIEnumerable[A]: IEnumerable[Option[A], A]
   func Each(c: Option[A], fn: func(A) -> ()) -> ()
     switch c
-      case Some(v) then
-        fn(v)
-      end
+      case Some(v) => fn(v)
       case None => ()
     end
   end
@@ -60,6 +58,91 @@ impl[A] Option[A]
       case None => defaultVal
     end
   end
+
+  func IsSome(opt: Option[A]) -> Bool
+    switch opt
+      case Some(_) => true
+      case None => false
+    end
+  end
+
+  func IsNone(opt: Option[A]) -> Bool
+    switch opt
+      case Some(_) => false
+      case None => true
+    end
+  end
+
+  func OkOr[E](opt: Option[A], errVal: E) -> Result[A, E]
+    switch opt
+      case Some(v) => Ok(v)
+      case None => Err(errVal)
+    end
+  end
+
+  func OkOrElse[E](opt: Option[A], fn: func() -> E) -> Result[A, E]
+    switch opt
+      case Some(v) => Ok(v)
+      case None => Err(fn())
+    end
+  end
+
+  func AndThen[B](opt: Option[A], fn: func(A) -> Option[B]) -> Option[B]
+    switch opt
+      case Some(v) => fn(v)
+      case None => None
+    end
+  end
+
+  func OrElse(opt: Option[A], fn: func() -> Option[A]) -> Option[A]
+    switch opt
+      case Some(v) => Some(v)
+      case None => fn()
+    end
+  end
+
+  func Unwrap(opt: Option[A]) -> A
+    switch opt
+      case Some(v) => v
+      case None then
+        Panic("called Option.Unwrap on None")
+        Zero[A]()
+      end
+    end
+  end
+
+  func UnwrapOrElse(opt: Option[A], fn: func() -> A) -> A
+    switch opt
+      case Some(v) => v
+      case None => fn()
+    end
+  end
+
+  func Expect(opt: Option[A], msg: String) -> A
+    switch opt
+      case Some(v) => v
+      case None then
+        Panic(msg)
+        Zero[A]()
+      end
+    end
+  end
+
+  func MapOr[B](opt: Option[A], defaultVal: B, fn: func(A) -> B) -> B
+    switch opt
+      case Some(v) => fn(v)
+      case None => defaultVal
+    end
+  end
+end
+
+impl[A] Option[Option[A]]
+  func Flatten(opt: Option[Option[A]]) -> Option[A]
+    switch opt
+      case Some(inner) => inner
+      case None => None
+    end
+  end
 end
 
 impl[A] OptionEq[A]: Eq[Option[A]]
@@ -77,6 +160,20 @@ impl[A] OptionEq[A]: Eq[Option[A]]
           case None => true
         end
       end
+    end
+  end
+end
+
+impl[A, E] Option[Result[A, E]]
+  func Transpose(opt: Option[Result[A, E]]) -> Result[Option[A], E]
+    switch opt
+      case Some(inner) then
+        switch inner.ToOption()
+          case Some(v) => Ok(Some(v))
+          case None => Err(inner.UnwrapErr())
+        end
+      end
+      case None => Ok(None)
     end
   end
 end

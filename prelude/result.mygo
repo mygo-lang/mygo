@@ -1,0 +1,162 @@
+package prelude
+
+impl[A, E] Result[A, E]
+  func ToOption(res: Result[A, E]) -> Option[A]
+    switch res
+      case Ok(v) => Some(v)
+      case Err(_) => None
+    end
+  end
+
+  func IsOk(res: Result[A, E]) -> Bool
+    switch res
+      case Ok(_) => true
+      case Err(_) => false
+    end
+  end
+
+  func IsErr(res: Result[A, E]) -> Bool
+    switch res
+      case Ok(_) => false
+      case Err(_) => true
+    end
+  end
+
+  func Map[B](res: Result[A, E], fn: func(A) -> B) -> Result[B, E]
+    switch res
+      case Ok(v) => Ok(fn(v))
+      case Err(e) => Err(e)
+    end
+  end
+
+  func MapErr[E2](res: Result[A, E], fn: func(E) -> E2) -> Result[A, E2]
+    switch res
+      case Ok(v) => Ok(v)
+      case Err(e) => Err(fn(e))
+    end
+  end
+
+  func AndThen[B](res: Result[A, E], fn: func(A) -> Result[B, E]) -> Result[B, E]
+    switch res
+      case Ok(v) => fn(v)
+      case Err(e) => Err(e)
+    end
+  end
+
+  func OrElse[E2](res: Result[A, E], fn: func(E) -> Result[A, E2]) -> Result[A, E2]
+    switch res
+      case Ok(v) => Ok(v)
+      case Err(e) => fn(e)
+    end
+  end
+
+  func And[B](res: Result[A, E], other: Result[B, E]) -> Result[B, E]
+    switch res
+      case Ok(_) => other
+      case Err(e) => Err(e)
+    end
+  end
+
+  func Or[E2](res: Result[A, E], other: Result[A, E2]) -> Result[A, E2]
+    switch res
+      case Ok(v) => Ok(v)
+      case Err(_) => other
+    end
+  end
+
+  func Unwrap(res: Result[A, E]) -> A
+    switch res
+      case Ok(v) => v
+      case Err(_) then
+        Panic("called Result.Unwrap on an Err value")
+        Zero[A]()
+      end
+    end
+  end
+
+  func UnwrapOr(res: Result[A, E], defaultVal: A) -> A
+    switch res
+      case Ok(v) => v
+      case Err(_) => defaultVal
+    end
+  end
+
+  func UnwrapOrElse(res: Result[A, E], fn: func(E) -> A) -> A
+    switch res
+      case Ok(v) => v
+      case Err(e) => fn(e)
+    end
+  end
+
+  func Expect(res: Result[A, E], msg: String) -> A
+    switch res
+      case Ok(v) => v
+      case Err(_) then
+        Panic(msg)
+        Zero[A]()
+      end
+    end
+  end
+
+  func UnwrapErr(res: Result[A, E]) -> E
+    switch res
+      case Ok(_) then
+        Panic("called Result.UnwrapErr on an Ok value")
+        Zero[E]()
+      end
+      case Err(e) => e
+    end
+  end
+
+  func ExpectErr(res: Result[A, E], msg: String) -> E
+    switch res
+      case Ok(_) then
+        Panic(msg)
+        Zero[E]()
+      end
+      case Err(e) => e
+    end
+  end
+
+  func MapOr[B](res: Result[A, E], defaultVal: B, fn: func(A) -> B) -> B
+    switch res
+      case Ok(v) => fn(v)
+      case Err(_) => defaultVal
+    end
+  end
+
+  func ToErr(res: Result[A, E]) -> Option[E]
+    switch res
+      case Ok(_) => None
+      case Err(e) => Some(e)
+    end
+  end
+end
+
+impl[A, E] Result[Result[A, E], E]
+  func Flatten(res: Result[Result[A, E], E]) -> Result[A, E]
+    switch res
+      case Ok(inner) => inner
+      case Err(e) => Err(e)
+    end
+  end
+end
+
+impl[A, E] ResultEq[A, E]: Eq[Result[A, E]]
+  func Equals(left: Result[A, E], right: Result[A, E]) -> Bool using Eq[A], Eq[E]
+    switch left
+      case Ok(l) then
+        switch right
+          case Ok(r) => l.Equals(r)
+          case Err(_) => false
+        end
+      end
+      case Err(l) then
+        switch right
+          case Ok(_) => false
+          case Err(r) => l.Equals(r)
+        end
+      end
+    end
+  end
+end

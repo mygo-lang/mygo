@@ -554,6 +554,22 @@ func TestCompilePrelude(t *testing.T) {
 	if pkg == nil {
 		t.Fatal("failed to load prelude package")
 	}
+	// Prelude test sources target the self-hosted bootstrap pipeline
+	// (parser2/typeinference2/codegen2); the legacy compiler below only needs
+	// the prelude's production sources, so drop *_test.mygo declarations the
+	// same way TestParsecPManyUsesTailcallTrampoline does.
+	decls := make([]Decl, 0, len(pkg.Decls))
+	pkg.Funcs = map[string]*FuncDecl{}
+	for _, decl := range pkg.Decls {
+		if fn, ok := decl.(*FuncDecl); ok {
+			if strings.HasSuffix(fn.SourceFile, "_test.mygo") {
+				continue
+			}
+			pkg.Funcs[fn.Name] = fn
+		}
+		decls = append(decls, decl)
+	}
+	pkg.Decls = decls
 
 	// Build SourceFiles mapping for error messages.
 	sourceFiles := make(map[any]string)

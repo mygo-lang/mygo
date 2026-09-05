@@ -66,50 +66,6 @@ func OptionToResult[A, E](opt: Option[A], errVal: E) -> Result[A, E]
 end
 
 
-impl[A, E] Result[A, E]
-  func ToOption(res: Result[A, E]) -> Option[A]
-    switch res
-      case Ok(v) => Some(v)
-      case Err(_) => None
-    end
-  end
-
-  func Flatten(res: Result[Result[A, E], E]) -> Result[A, E]
-    switch res
-      case Ok(inner) => inner
-      case Err(e) => Err(e)
-    end
-  end
-end
-
-func OptionFilter[A](opt: Option[A], fn: func(A) -> Bool) -> Option[A]
-  switch opt
-    case Some(v) then
-      if fn(v) => opt else None
-    end
-    case None => None
-  end
-end
-
-impl[A, E] ResultEq[A, E]: Eq[Result[A, E]]
-  func Equals(left: Result[A, E], right: Result[A, E]) -> Bool using Eq[A], Eq[E]
-    switch left
-      case Ok(l) then
-        switch right
-          case Ok(r) => l.Equals(r)
-          case Err(_) => false
-        end
-      end
-      case Err(l) then
-        switch right
-          case Ok(_) => false
-          case Err(r) => l.Equals(r)
-        end
-      end
-    end
-  end
-end
-
 func Panic(msg: String) -> ()
   go[()] { code: "panic(msg)" }
 end

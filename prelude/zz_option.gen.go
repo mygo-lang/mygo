@@ -108,6 +108,140 @@ func MygoIN6OptionM8UnwrapOr[A any](opt Option[A], defaultVal A) A {
 	}
 	return __mygo_expr_0
 }
+func MygoIN6OptionM6IsSome[A any](opt Option[A]) bool {
+	var __mygo_expr_0 bool
+	if _, ok := opt.(Option__Some[A]); ok {
+		__mygo_expr_0 = true
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			__mygo_expr_0 = false
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func MygoIN6OptionM6IsNone[A any](opt Option[A]) bool {
+	var __mygo_expr_0 bool
+	if _, ok := opt.(Option__Some[A]); ok {
+		__mygo_expr_0 = false
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			__mygo_expr_0 = true
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func MygoIN6OptionM4OkOr[A any, E any](opt Option[A], errVal E) Result[A, E] {
+	var __mygo_expr_0 Result[A, E]
+	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
+		__mygo_expr_0 = Ok[A, E](__mygo_match___mygo_expr_1.F0)
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			__mygo_expr_0 = Err[A, E](errVal)
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func MygoIN6OptionM8OkOrElse[A any, E any](opt Option[A], fn func() E) Result[A, E] {
+	var __mygo_expr_0 Result[A, E]
+	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
+		__mygo_expr_0 = Ok[A, E](__mygo_match___mygo_expr_1.F0)
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			__mygo_expr_0 = Err[A, E](fn())
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func MygoIN6OptionM7AndThen[A any, B any](opt Option[A], fn func(A) Option[B]) Option[B] {
+	var __mygo_expr_0 Option[B]
+	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
+		__mygo_expr_0 = fn(__mygo_match___mygo_expr_1.F0)
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			__mygo_expr_0 = None[B]()
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func MygoIN6OptionM6OrElse[A any](opt Option[A], fn func() Option[A]) Option[A] {
+	var __mygo_expr_0 Option[A]
+	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
+		__mygo_expr_0 = Some[A](__mygo_match___mygo_expr_1.F0)
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			__mygo_expr_0 = fn()
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func MygoIN6OptionM6Unwrap[A any](opt Option[A]) A {
+	var __mygo_expr_0 A
+	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
+		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			Panic("called Option.Unwrap on None")
+			__mygo_expr_0 = Zero[A]()
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func MygoIN6OptionM12UnwrapOrElse[A any](opt Option[A], fn func() A) A {
+	var __mygo_expr_0 A
+	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
+		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			__mygo_expr_0 = fn()
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func MygoIN6OptionM6Expect[A any](opt Option[A], msg string) A {
+	var __mygo_expr_0 A
+	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
+		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			Panic(msg)
+			__mygo_expr_0 = Zero[A]()
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func MygoIN6OptionM5MapOr[A any, B any](opt Option[A], defaultVal B, fn func(A) B) B {
+	var __mygo_expr_0 B
+	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[A]); ok {
+		__mygo_expr_0 = fn(__mygo_match___mygo_expr_1.F0)
+	} else {
+		if _, ok := opt.(Option__None[A]); ok {
+			__mygo_expr_0 = defaultVal
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func MygoIN6OptionM7Flatten[A any](opt Option[Option[A]]) Option[A] {
+	var __mygo_expr_0 Option[A]
+	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[Option[A]]); ok {
+		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
+	} else {
+		if _, ok := opt.(Option__None[Option[A]]); ok {
+			__mygo_expr_0 = None[A]()
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
 func MygoIT2EqFN8OptionEqGN1AEGN6OptionGN1AEEM6Equals[A any](left Option[A], right Option[A], EqualsFn func(A, A) bool) bool {
 	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_1, ok := left.(Option__Some[A]); ok {
@@ -133,6 +267,28 @@ func MygoIT2EqFN8OptionEqGN1AEGN6OptionGN1AEEM6Equals[A any](left Option[A], rig
 				}
 			}
 			__mygo_expr_0 = __mygo_expr_1
+		} else {
+		}
+	}
+	return __mygo_expr_0
+}
+func MygoIN6OptionM9Transpose[A any, E any](opt Option[Result[A, E]]) Result[Option[A], E] {
+	var __mygo_expr_0 Result[Option[A], E]
+	if __mygo_match___mygo_expr_1, ok := opt.(Option__Some[Result[A, E]]); ok {
+		__mygo_expr_2 := MygoIN6ResultM8ToOption[A, E](__mygo_match___mygo_expr_1.F0)
+		var __mygo_expr_3 Result[Option[A], E]
+		if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[A]); ok {
+			__mygo_expr_3 = Ok[Option[A], E](Some[A](__mygo_match___mygo_expr_4.F0))
+		} else {
+			if _, ok := __mygo_expr_2.(Option__None[A]); ok {
+				__mygo_expr_3 = Err[Option[A], E](MygoIN6ResultM9UnwrapErr[A, E](__mygo_match___mygo_expr_1.F0))
+			} else {
+			}
+		}
+		__mygo_expr_0 = __mygo_expr_3
+	} else {
+		if _, ok := opt.(Option__None[Result[A, E]]); ok {
+			__mygo_expr_0 = Ok[Option[A], E](None[A]())
 		} else {
 		}
 	}

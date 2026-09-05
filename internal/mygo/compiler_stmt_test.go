@@ -73,7 +73,7 @@ func TestCompileDirAutoImportsPrelude(t *testing.T) {
 	for _, want := range []string{
 		`. "github.com/mygo-lang/mygo/prelude"`,
 		"var maybe_1 Option[int] = Some[int](41)",
-		"MygoIN6OptionM8UnwrapOr(maybe_1, 0) + 1",
+		"MygoIN6OptionM8UnwrapOr[int](maybe_1, 0) + 1",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
@@ -125,7 +125,7 @@ end
 	got := readFile(t, outFiles[0])
 	for _, want := range []string{
 		`. "github.com/mygo-lang/mygo/prelude"`,
-		"MygoIN6OptionM8UnwrapOr(maybe_1, 0) + 1",
+		"MygoIN6OptionM8UnwrapOr[int](maybe_1, 0) + 1",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated Go missing %q\n--- got ---\n%s", want, got)
