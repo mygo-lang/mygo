@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/mygo-lang/mygo/internal/mygo/ast2"
+	"github.com/mygo-lang/mygo/internal/mygo/common2"
 	goast "github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 	"github.com/mygo-lang/mygo/internal/mygo/typeinference2"
 	. "github.com/mygo-lang/mygo/prelude"
@@ -70,19 +71,45 @@ end
 
 func TestSliceDropReturnsSuffixView(t *testing.T) {
 	items := []int{1, 2, 3}
-	got := sliceDrop(items, 1)
+	got := common2.SliceDrop(items, 1)
 	if len(got) != 2 || got[0] != 2 || got[1] != 3 {
-		t.Fatalf("sliceDrop(items, 1) = %v, want [2 3]", got)
+		t.Fatalf("common2.SliceDrop(items, 1) = %v, want [2 3]", got)
 	}
 	got[0] = 9
 	if items[1] != 9 {
-		t.Fatalf("sliceDrop copied its result: items = %v", items)
+		t.Fatalf("SliceDrop copied its result: items = %v", items)
 	}
-	if got := sliceDrop(items, -1); len(got) != len(items) {
-		t.Fatalf("sliceDrop(items, -1) length = %d, want %d", len(got), len(items))
+	if got := common2.SliceDrop(items, -1); len(got) != len(items) {
+		t.Fatalf("common2.SliceDrop(items, -1) length = %d, want %d", len(got), len(items))
 	}
-	if got := sliceDrop(items, len(items)); len(got) != 0 {
-		t.Fatalf("sliceDrop(items, len(items)) = %v, want empty", got)
+	if got := common2.SliceDrop(items, len(items)); len(got) != 0 {
+		t.Fatalf("common2.SliceDrop(items, len(items)) = %v, want empty", got)
+	}
+}
+
+func TestCanonicalMyGoTypeNameUsesSharedSpellingTable(t *testing.T) {
+	cases := map[string]string{
+		"int":    "Int",
+		"uint8":  "UInt8",
+		"string": "String",
+		"bool":   "Bool",
+		"float64": "Float64",
+		"byte":   "Byte",
+		"rune":   "Rune",
+		"error":  "Error",
+		"any":    "Any",
+	}
+	for in, want := range cases {
+		if got := canonicalMyGoTypeName(in); got != want {
+			t.Fatalf("canonicalMyGoTypeName(%q) = %q, want %q", in, got, want)
+		}
+	}
+	// Already-canonical names pass through untouched, and unknown names stay
+	// unchanged rather than being rewritten by the shared table.
+	for _, in := range []string{"Int", "Byte", "Rune", "Error", "MyType"} {
+		if got := canonicalMyGoTypeName(in); got != in {
+			t.Fatalf("canonicalMyGoTypeName(%q) = %q, want itself", in, got)
+		}
 	}
 }
 

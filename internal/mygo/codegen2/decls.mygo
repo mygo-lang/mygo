@@ -1,4 +1,5 @@
 package codegen2
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
@@ -454,7 +455,7 @@ func seedStructSourceTypes(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
     else
       ()
     end
-    seedStructSourceTypes(sliceDrop(decls, 1), ctx)
+    seedStructSourceTypes(common2.SliceDrop(decls, 1), ctx)
   end
 end
 
@@ -481,7 +482,7 @@ end
 
 func typeParamIDsMono(params: Slice[String], index: Int) -> Slice[Int]
   if params.Len() == 0 then [] as Slice[Int] else
-    typeParamIDsMono(sliceDrop(params, 1), index + 1).Prepend(-index)
+    typeParamIDsMono(common2.SliceDrop(params, 1), index + 1).Prepend(-index)
   end
 end
 
@@ -499,7 +500,7 @@ func seedEnumValueConstructors(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
   if decls.Len() != 0 then
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     seedOneEnumValueConstructor(decl, ctx)
-    seedEnumValueConstructors(sliceDrop(decls, 1), ctx)
+    seedEnumValueConstructors(common2.SliceDrop(decls, 1), ctx)
   end
 end
 
@@ -542,7 +543,7 @@ func seedCallDictionaries(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
   if decls.Len() != 0 then
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     seedOneCallDictionary(decl, ctx)
-    seedCallDictionaries(sliceDrop(decls, 1), ctx)
+    seedCallDictionaries(common2.SliceDrop(decls, 1), ctx)
   end
 end
 
@@ -557,7 +558,7 @@ func seedCallRequirements(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
   if decls.Len() != 0 then
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     seedOneCallRequirement(decl, ctx)
-    seedCallRequirements(sliceDrop(decls, 1), ctx)
+    seedCallRequirements(common2.SliceDrop(decls, 1), ctx)
   end
 end
 
@@ -573,7 +574,7 @@ func requirementsForConstraints(ctx: Ref[egCtx], constraints: Slice[ast2.Constra
     []
   else
     let constraint = constraints.Get(0).UnwrapOr(ast2.Constraint { Name: "", BindName: None, Args: [] as Slice[ast2.TypeExpr] })
-    appendRequirements(requirementsForMethods(constraint, ctx.interfaceMethods.Get(constraint.Name).UnwrapOr([])), requirementsForConstraints(ctx, sliceDrop(constraints, 1)))
+    appendRequirements(requirementsForMethods(constraint, ctx.interfaceMethods.Get(constraint.Name).UnwrapOr([])), requirementsForConstraints(ctx, common2.SliceDrop(constraints, 1)))
   end
 end
 
@@ -582,7 +583,7 @@ func requirementsForMethods(constraint: ast2.Constraint, methods: Slice[ast2.Fun
     []
   else
     let method = methods.Get(0).UnwrapOr(defaultImplMethod().Sig)
-    requirementsForMethods(constraint, sliceDrop(methods, 1)).Prepend(DictionaryRequirement { Interface: constraint.Name, Method: method.Name, Args: constraint.Args })
+    requirementsForMethods(constraint, common2.SliceDrop(methods, 1)).Prepend(DictionaryRequirement { Interface: constraint.Name, Method: method.Name, Args: constraint.Args })
   end
 end
 
@@ -590,7 +591,7 @@ func appendRequirements(left: Slice[DictionaryRequirement], right: Slice[Diction
   if right.Len() == 0 then
     left
   else
-    appendRequirements(left.Append(right.Get(0).UnwrapOr(DictionaryRequirement { Interface: "", Method: "", Args: [] as Slice[ast2.TypeExpr] })), sliceDrop(right, 1))
+    appendRequirements(left.Append(right.Get(0).UnwrapOr(DictionaryRequirement { Interface: "", Method: "", Args: [] as Slice[ast2.TypeExpr] })), common2.SliceDrop(right, 1))
   end
 end
 
@@ -598,7 +599,7 @@ func seedPackageDictionaries(decls: Slice[ast2.Decl], ctx: Ref[egCtx]) -> ()
   if decls.Len() != 0 then
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     seedOnePackageDictionary(decl, ctx)
-    seedPackageDictionaries(sliceDrop(decls, 1), ctx)
+    seedPackageDictionaries(common2.SliceDrop(decls, 1), ctx)
   end
 end
 
@@ -638,7 +639,7 @@ func seedInherentCandidates(methods: Slice[ast2.ImplMethod], stem: String, targe
       let candidate = ImplDictionaryCandidate { Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: [target], Receiver: typeinference2.TypeFromASTWithParams(target, typeParams), TypeParams: typeParams, Helper: helper }
       ctx.packageCandidates.Set(key, ctx.packageCandidates.Get(key).UnwrapOr([] as Slice[ImplDictionaryCandidate]).Append(candidate))
     end
-    seedInherentCandidates(sliceDrop(methods, 1), stem, target, typeParams, ctx)
+    seedInherentCandidates(common2.SliceDrop(methods, 1), stem, target, typeParams, ctx)
   end
 end
 
@@ -650,7 +651,7 @@ func seedImplCandidates(methods: Slice[ast2.ImplMethod], stem: String, interface
     let candidate = ImplDictionaryCandidate { Interface: interfaceName, Method: method.Sig.Name, InterfaceArgs: interfaceArgs, Receiver: typeinference2.TypeFromASTWithParams(receiver, typeParams), TypeParams: typeParams, Helper: implMethodSymbol(stem, method.Sig.Name) }
     ctx.packageCandidates.Set(key, ctx.packageCandidates.Get(key).UnwrapOr([] as Slice[ImplDictionaryCandidate]).Append(candidate))
     ctx.typeclassCandidates = ctx.typeclassCandidates.Append(candidate)
-    seedImplCandidates(sliceDrop(methods, 1), stem, interfaceName, interfaceArgs, typeParams, ctx)
+    seedImplCandidates(common2.SliceDrop(methods, 1), stem, interfaceName, interfaceArgs, typeParams, ctx)
   end
 end
 
@@ -659,7 +660,7 @@ func seedImplMethodDictionaries(methods: Slice[ast2.ImplMethod], stem: String, i
     let method = methods.Get(0).UnwrapOr(defaultImplMethod())
     # Lexical dictionaries still win; this is only a package fallback.
     ctx.packageDictionaries.Set(interfaceName + "." + method.Sig.Name, implMethodSymbol(stem, method.Sig.Name))
-    seedImplMethodDictionaries(sliceDrop(methods, 1), stem, interfaceName, ctx)
+    seedImplMethodDictionaries(common2.SliceDrop(methods, 1), stem, interfaceName, ctx)
   end
 end
 
@@ -681,12 +682,12 @@ func dictionaryMethodNames(ctx: Ref[egCtx], constraints: Slice[ast2.Constraint])
   if constraints.Len() == 0 then [] else
     let constraint = constraints.Get(0).UnwrapOr(ast2.Constraint { Name: "", BindName: None, Args: [] as Slice[ast2.TypeExpr] })
     let names = ctx.interfaceMethods.Get(constraint.Name).UnwrapOr([]).Map(func(method: ast2.FuncSig) -> String method.Name end)
-    appendStrings(names, dictionaryMethodNames(ctx, sliceDrop(constraints, 1)))
+    appendStrings(names, dictionaryMethodNames(ctx, common2.SliceDrop(constraints, 1)))
   end
 end
 
 func appendStrings(left: Slice[String], right: Slice[String]) -> Slice[String]
-  if right.Len() == 0 then left else appendStrings(left.Append(right.Get(0).UnwrapOr("")), sliceDrop(right, 1)) end
+  if right.Len() == 0 then left else appendStrings(left.Append(right.Get(0).UnwrapOr("")), common2.SliceDrop(right, 1)) end
 end
 
 struct DictionaryParams
@@ -700,7 +701,7 @@ func addConstraintParams(constraints: Slice[ast2.Constraint], ctx: Ref[egCtx], n
   else
     let constraint = constraints.Get(0).UnwrapOr(ast2.Constraint { Name: "", BindName: None, Args: [] as Slice[ast2.TypeExpr] })
     let ifaceTps = ctx.interfaceTypeParams.Get(constraint.Name).UnwrapOr([])
-    addDictionaryMethods(sliceDrop(constraints, 1), ctx.interfaceMethods.Get(constraint.Name).UnwrapOr([]), ctx, names, types, constraint.Name, constraint.Args, ifaceTps, fnTypeParams, receiverName)
+    addDictionaryMethods(common2.SliceDrop(constraints, 1), ctx.interfaceMethods.Get(constraint.Name).UnwrapOr([]), ctx, names, types, constraint.Name, constraint.Args, ifaceTps, fnTypeParams, receiverName)
   end
 end
 
@@ -735,7 +736,7 @@ func addDictionaryMethods(rest: Slice[ast2.Constraint], methods: Slice[ast2.Func
       case Some(t) => substituteTypeParamsInTypeExpr(t, ifaceTps, constraintArgs, ctx.typeParams)
       case None => ""
     end
-    addDictionaryMethods(rest, sliceDrop(methods, 1), ctx, names.Append(paramName), types.Append("func(" + joinStrings(argTypes, ", ") + ")" + retStr), constraintName, constraintArgs, ifaceTps, fnTypeParams, receiverName)
+    addDictionaryMethods(rest, common2.SliceDrop(methods, 1), ctx, names.Append(paramName), types.Append("func(" + common2.JoinStrings(argTypes, ", ") + ")" + retStr), constraintName, constraintArgs, ifaceTps, fnTypeParams, receiverName)
   end
 end
 
@@ -778,17 +779,8 @@ func constraintRefForCtx(ctx: Ref[egCtx], name: String) -> typeinference2.Method
   if ctx.namedImpls.Get(name).UnwrapOr(false) then typeinference2.MethodConstraintRef.NamedImpl(name) else typeinference2.MethodConstraintRef.Interface(name) end
 end
 
-# Build a func type string after substituting interface type parameters.
-func funcTypeSubstitutedResult(params: Slice[ast2.TypeExpr], ret: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr], typeParams: Set[String]) -> String
-  let paramStrs = params.Map(func(p: ast2.TypeExpr) -> String
-    substituteTypeParamsInTypeExpr(p, ifaceTps, constraintArgs, typeParams)
-  end)
-  let retStr = substituteTypeParamsInTypeExpr(ret, ifaceTps, constraintArgs, typeParams)
-  funcTypeResultWithRet(paramStrs, retStr)
-end
-
 func funcTypeResultWithRet(paramStrs: Slice[String], retStr: String) -> String
-  let base = "func(" + joinStrings(paramStrs, ", ") + ")"
+  let base = "func(" + common2.JoinStrings(paramStrs, ", ") + ")"
   if retStr == "" then
     base
   else
@@ -796,73 +788,68 @@ func funcTypeResultWithRet(paramStrs: Slice[String], retStr: String) -> String
   end
 end
 
+# One type-expr substitution recursion for both render styles: replace
+# the interface's type parameters with the constraint arguments, then render
+# the result as a Go type string (`mygo = false`) or a MyGO type string
+# (`mygo = true`, e.g. `Slice[T]` instead of `[]T`) — used by the receiver
+# matching in constraintFuncArgTypes.  The four public entry points below are
+# thin wrappers selecting the style.
+func substituteTypeParamsByStyle(typ: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr], typeParams: Set[String], mygo: Bool) -> String
+  switch typ
+    case NamedType(name, args) then
+      let index = findStringIndex(ifaceTps, name)
+      if index >= 0 && index < constraintArgs.Len() then
+        let replacement = constraintArgs.Get(index).UnwrapOr(ast2.TypeExpr.UnitType)
+        if mygo then mygoTypeString(replacement) else goType(replacement, typeParams) end
+      else
+        if args.Len() == 0 then
+          if mygo then mygoTypeString(typ) else goType(typ, typeParams) end
+        else
+          let innerArgs = args.Map(func(a: ast2.TypeExpr) -> ast2.TypeExpr
+            substituteTypeExpr(a, ifaceTps, constraintArgs)
+          end)
+          let replacedArgs = if mygo then mygoTypeExprStrings(innerArgs) else typeExprsToStrings(innerArgs, typeParams) end
+          name + "[" + common2.JoinStrings(replacedArgs, ", ") + "]"
+        end
+      end
+    end
+    case FuncType(params, retRef) => funcTypeSubstitutedResultByStyle(params, retRef.value(), ifaceTps, constraintArgs, typeParams, mygo)
+    case UnitType => if mygo then "()" else "struct{}" end
+    case _ => if mygo then mygoTypeString(typ) else goType(typ, typeParams) end
+  end
+end
+
+# Build a func type string after substituting interface type parameters.
 func substituteTypeParamsInTypeExpr(typ: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr], typeParams: Set[String]) -> String
-  switch typ
-    case NamedType(name, args) then
-      let index = findStringIndex(ifaceTps, name)
-      if index >= 0 && index < constraintArgs.Len() then
-        let replacement = constraintArgs.Get(index).UnwrapOr(ast2.TypeExpr.UnitType)
-        goType(replacement, typeParams)
-      else
-        if args.Len() == 0 then
-          goType(typ, typeParams)
-        else
-          let replacedArgs = typeExprsToStrings(args.Map(func(a: ast2.TypeExpr) -> ast2.TypeExpr
-            substituteTypeExpr(a, ifaceTps, constraintArgs)
-          end), typeParams)
-          name + "[" + joinStrings(replacedArgs, ", ") + "]"
-        end
-      end
-    end
-    case FuncType(params, retRef) then
-      funcTypeSubstitutedResult(params, retRef.value(), ifaceTps, constraintArgs, typeParams)
-    end
-    case UnitType => "struct{}"
-    case _ => goType(typ, typeParams)
-  end
+  substituteTypeParamsByStyle(typ, ifaceTps, constraintArgs, typeParams, false)
 end
 
-# substituteTypeParamsMyGO: 像 substituteTypeParamsInTypeExpr 一样替换接口类型参数，
-# 但返回 MyGO 类型字符串（例如 "Slice[T]"）而非 Go 类型字符串（例如 "[]T"）。
-# 用于 constraintFuncArgTypes 的接收者类型匹配。
 func substituteTypeParamsMyGO(typ: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr]) -> String
-  switch typ
-    case NamedType(name, args) then
-      let index = findStringIndex(ifaceTps, name)
-      if index >= 0 && index < constraintArgs.Len() then
-        let replacement = constraintArgs.Get(index).UnwrapOr(ast2.TypeExpr.UnitType)
-        mygoTypeString(replacement)
-      else
-        if args.Len() == 0 then
-          mygoTypeString(typ)
-        else
-          let replacedArgs = mygoTypeExprStrings(args.Map(func(a: ast2.TypeExpr) -> ast2.TypeExpr
-            substituteTypeExpr(a, ifaceTps, constraintArgs)
-          end))
-          name + "[" + joinStrings(replacedArgs, ", ") + "]"
-        end
-      end
+  substituteTypeParamsByStyle(typ, ifaceTps, constraintArgs, Set.New[String](), true)
+end
+
+func funcTypeSubstitutedResultByStyle(params: Slice[ast2.TypeExpr], ret: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr], typeParams: Set[String], mygo: Bool) -> String
+  let paramStrs = params.Map(func(p: ast2.TypeExpr) -> String
+    substituteTypeParamsByStyle(p, ifaceTps, constraintArgs, typeParams, mygo)
+  end)
+  let retStr = substituteTypeParamsByStyle(ret, ifaceTps, constraintArgs, typeParams, mygo)
+  if mygo then
+    if retStr == "()" then
+      "func(" + common2.JoinStrings(paramStrs, ", ") + ")"
+    else
+      "func(" + common2.JoinStrings(paramStrs, ", ") + ") -> " + retStr
     end
-    case FuncType(params, retRef) then
-      funcTypeSubstitutedResultMyGO(params, retRef.value(), ifaceTps, constraintArgs)
-    end
-    case UnitType => "()"
-    case _ => mygoTypeString(typ)
+  else
+    funcTypeResultWithRet(paramStrs, retStr)
   end
 end
 
-# funcTypeSubstitutedResultMyGO: MyGO 版本的 funcTypeSubstitutedResult，
-# 返回 MyGO 函数类型字符串。
+func funcTypeSubstitutedResult(params: Slice[ast2.TypeExpr], ret: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr], typeParams: Set[String]) -> String
+  funcTypeSubstitutedResultByStyle(params, ret, ifaceTps, constraintArgs, typeParams, false)
+end
+
 func funcTypeSubstitutedResultMyGO(params: Slice[ast2.TypeExpr], ret: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr]) -> String
-  let paramStrs = params.Map(func(p: ast2.TypeExpr) -> String
-    substituteTypeParamsMyGO(p, ifaceTps, constraintArgs)
-  end)
-  let retStr = substituteTypeParamsMyGO(ret, ifaceTps, constraintArgs)
-  if retStr == "()" then
-    "func(" + joinStrings(paramStrs, ", ") + ")"
-  else
-    "func(" + joinStrings(paramStrs, ", ") + ") -> " + retStr
-  end
+  funcTypeSubstitutedResultByStyle(params, ret, ifaceTps, constraintArgs, Set.New[String](), true)
 end
 
 func substituteTypeExpr(typ: ast2.TypeExpr, ifaceTps: Slice[String], constraintArgs: Slice[ast2.TypeExpr]) -> ast2.TypeExpr

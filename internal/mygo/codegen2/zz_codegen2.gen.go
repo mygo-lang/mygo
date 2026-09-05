@@ -2,6 +2,7 @@
 
 package codegen2
 
+import "github.com/mygo-lang/mygo/internal/mygo/common2"
 import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import "github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
@@ -62,13 +63,6 @@ func mergeDeclSlices(dst []ast2.Decl, src []ast2.Decl) []ast2.Decl {
 }
 func generateFilesLoop(files []SourceFileInput, info typeinference2.PackageInfo, allDecls []ast2.Decl, packageIndex PackageIndex, typedByPath map[string][]ast2.Decl, mutualTail MutualTailPlans, index int, out map[string]string) Result[map[string]string, string] {
 	return __mygo_mt_codegen2_generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, index, out, 0)
-}
-func withExpressionSourceName(msg string, source string) string {
-	if source == "" {
-		return msg
-	} else {
-		return strings.ReplaceAll(msg, "<input>:", source+":")
-	}
 }
 func GenerateSource(input string) Result[string, string] {
 	return GenerateSourceAt("<input>", input)
@@ -162,7 +156,7 @@ func declsUsePreludeName(decls []ast2.Decl, names []string) bool {
 		return false
 	} else {
 		decl := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.Decl__ImportDecl__Ctor("", ""))
-		return declUsesPreludeName(decl, names) || declsUsePreludeName(sliceDrop(decls, 1), names)
+		return declUsesPreludeName(decl, names) || declsUsePreludeName(common2.SliceDrop(decls, 1), names)
 	}
 }
 func declUsesPreludeName(decl ast2.Decl, names []string) bool {
@@ -202,7 +196,7 @@ func typeUsesPreludeName(typ ast2.TypeExpr, names []string) bool {
 	for {
 		var __mygo_expr_0 bool
 		if __mygo_match___mygo_expr_4, ok := typ.(ast2.TypeExpr__NamedType); ok {
-			__mygo_expr_0 = containsString(names, __mygo_match___mygo_expr_4.F0) || typeExprsUsePreludeName(__mygo_match___mygo_expr_4.F1, names)
+			__mygo_expr_0 = common2.ContainsString(names, __mygo_match___mygo_expr_4.F0) || typeExprsUsePreludeName(__mygo_match___mygo_expr_4.F1, names)
 		} else {
 			if __mygo_match___mygo_expr_3, ok := typ.(ast2.TypeExpr__FuncType); ok {
 				__mygo_expr_0 = typeExprsUsePreludeName(__mygo_match___mygo_expr_3.F0, names) || typeUsesPreludeName(*__mygo_match___mygo_expr_3.F1, names)
@@ -226,7 +220,7 @@ func typeExprsUsePreludeName(types []ast2.TypeExpr, names []string) bool {
 		return false
 	} else {
 		typ := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, 0), ast2.TypeExpr__UnitType__Ctor())
-		return typeUsesPreludeName(typ, names) || typeExprsUsePreludeName(sliceDrop(types, 1), names)
+		return typeUsesPreludeName(typ, names) || typeExprsUsePreludeName(common2.SliceDrop(types, 1), names)
 	}
 }
 func optionTypeUsesPreludeName(typ Option[ast2.TypeExpr], names []string) bool {
@@ -246,7 +240,7 @@ func paramsUsePreludeName(params []ast2.Param, names []string) bool {
 		return false
 	} else {
 		param := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(params, 0), ast2.Param{Name: "", Type: ast2.TypeExpr__UnitType__Ctor()})
-		return typeUsesPreludeName(param.Type, names) || paramsUsePreludeName(sliceDrop(params, 1), names)
+		return typeUsesPreludeName(param.Type, names) || paramsUsePreludeName(common2.SliceDrop(params, 1), names)
 	}
 }
 func fieldsUsePreludeName(fields []ast2.Field, names []string) bool {
@@ -254,7 +248,7 @@ func fieldsUsePreludeName(fields []ast2.Field, names []string) bool {
 		return false
 	} else {
 		field := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.Field{Name: "", Type: ast2.TypeExpr__UnitType__Ctor(), Tag: None[string]()})
-		return typeUsesPreludeName(field.Type, names) || fieldsUsePreludeName(sliceDrop(fields, 1), names)
+		return typeUsesPreludeName(field.Type, names) || fieldsUsePreludeName(common2.SliceDrop(fields, 1), names)
 	}
 }
 func variantsUsePreludeName(variants []ast2.Variant, names []string) bool {
@@ -262,7 +256,7 @@ func variantsUsePreludeName(variants []ast2.Variant, names []string) bool {
 		return false
 	} else {
 		variant := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(variants, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr{}, Named: false, Names: []string{}})
-		return typeExprsUsePreludeName(variant.Fields, names) || variantsUsePreludeName(sliceDrop(variants, 1), names)
+		return typeExprsUsePreludeName(variant.Fields, names) || variantsUsePreludeName(common2.SliceDrop(variants, 1), names)
 	}
 }
 func constraintsUsePreludeName(constraints []ast2.Constraint, names []string) bool {
@@ -270,7 +264,7 @@ func constraintsUsePreludeName(constraints []ast2.Constraint, names []string) bo
 		return false
 	} else {
 		constraint := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(constraints, 0), ast2.Constraint{Name: "", BindName: None[string](), Args: []ast2.TypeExpr{}})
-		return containsString(names, constraint.Name) || typeExprsUsePreludeName(constraint.Args, names) || constraintsUsePreludeName(sliceDrop(constraints, 1), names)
+		return common2.ContainsString(names, constraint.Name) || typeExprsUsePreludeName(constraint.Args, names) || constraintsUsePreludeName(common2.SliceDrop(constraints, 1), names)
 	}
 }
 func funcSigsUsePreludeName(sigs []ast2.FuncSig, names []string) bool {
@@ -278,7 +272,7 @@ func funcSigsUsePreludeName(sigs []ast2.FuncSig, names []string) bool {
 		return false
 	} else {
 		sig := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sigs, 0), ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string{}, Params: []ast2.Param{}, Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint{}})
-		return paramsUsePreludeName(sig.Params, names) || optionTypeUsesPreludeName(sig.Ret, names) || constraintsUsePreludeName(sig.Using, names) || funcSigsUsePreludeName(sliceDrop(sigs, 1), names)
+		return paramsUsePreludeName(sig.Params, names) || optionTypeUsesPreludeName(sig.Ret, names) || constraintsUsePreludeName(sig.Using, names) || funcSigsUsePreludeName(common2.SliceDrop(sigs, 1), names)
 	}
 }
 func implMethodsUsePreludeName(methods []ast2.ImplMethod, names []string) bool {
@@ -286,7 +280,7 @@ func implMethodsUsePreludeName(methods []ast2.ImplMethod, names []string) bool {
 		return false
 	} else {
 		method := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), ast2.ImplMethod{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string{}, Params: []ast2.Param{}, Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint{}}, Body: ast2.EmptyExpr()})
-		return funcSigsUsePreludeName([]ast2.FuncSig{method.Sig}, names) || exprUsesPreludeName(method.Body, names) || implMethodsUsePreludeName(sliceDrop(methods, 1), names)
+		return funcSigsUsePreludeName([]ast2.FuncSig{method.Sig}, names) || exprUsesPreludeName(method.Body, names) || implMethodsUsePreludeName(common2.SliceDrop(methods, 1), names)
 	}
 }
 func exprUsesPreludeName(expr ast2.Expr, names []string) bool {
@@ -294,7 +288,7 @@ func exprUsesPreludeName(expr ast2.Expr, names []string) bool {
 		__mygo_expr_0 := expr.Kind
 		var __mygo_expr_1 bool
 		if __mygo_match___mygo_expr_18, ok := __mygo_expr_0.(ast2.ExprKind__IdentExpr); ok {
-			__mygo_expr_1 = containsString(names, __mygo_match___mygo_expr_18.F0)
+			__mygo_expr_1 = common2.ContainsString(names, __mygo_match___mygo_expr_18.F0)
 		} else {
 			if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
 				__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_17.F0, names) || typeExprsUsePreludeName(__mygo_match___mygo_expr_17.F1, names) || exprsUsePreludeName(__mygo_match___mygo_expr_17.F2, names)
@@ -330,10 +324,10 @@ func exprUsesPreludeName(expr ast2.Expr, names []string) bool {
 														__mygo_expr_1 = exprUsesPreludeName(__mygo_match___mygo_expr_8.F0, names) || typeUsesPreludeName(__mygo_match___mygo_expr_8.F1, names)
 													} else {
 														if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ast2.ExprKind__StructLitExpr); ok {
-															__mygo_expr_1 = containsString(names, __mygo_match___mygo_expr_7.F0) || structLitFieldsUsePreludeName(__mygo_match___mygo_expr_7.F1, names)
+															__mygo_expr_1 = common2.ContainsString(names, __mygo_match___mygo_expr_7.F0) || structLitFieldsUsePreludeName(__mygo_match___mygo_expr_7.F1, names)
 														} else {
 															if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ast2.ExprKind__GenericStructLitExpr); ok {
-																__mygo_expr_1 = containsString(names, __mygo_match___mygo_expr_6.F0) || typeExprsUsePreludeName(__mygo_match___mygo_expr_6.F1, names) || structLitFieldsUsePreludeName(__mygo_match___mygo_expr_6.F2, names)
+																__mygo_expr_1 = common2.ContainsString(names, __mygo_match___mygo_expr_6.F0) || typeExprsUsePreludeName(__mygo_match___mygo_expr_6.F1, names) || structLitFieldsUsePreludeName(__mygo_match___mygo_expr_6.F2, names)
 															} else {
 																if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.ExprKind__InlineGoExpr); ok {
 																	__mygo_expr_1 = typeUsesPreludeName(*__mygo_match___mygo_expr_5.F0, names) || goOperandsUsePreludeName(__mygo_match___mygo_expr_5.F2, names) || goTypeOperandsUsePreludeName(__mygo_match___mygo_expr_5.F3, names)
@@ -381,7 +375,7 @@ func generatedSourceUsesPreludeHelper(source string, decls []ast2.Decl) bool {
 			__mygo_expr_0 = false
 		}
 		uses := __mygo_expr_0
-		return uses || generatedSourceUsesPreludeHelper(source, sliceDrop(decls, 1))
+		return uses || generatedSourceUsesPreludeHelper(source, common2.SliceDrop(decls, 1))
 	}
 }
 func generatedSourceUsesImplHelpers(source string, stem string, methods []ast2.ImplMethod) bool {
@@ -389,7 +383,7 @@ func generatedSourceUsesImplHelpers(source string, stem string, methods []ast2.I
 		return false
 	} else {
 		method := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, 0), ast2.ImplMethod{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string{}, Params: []ast2.Param{}, Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint{}}, Body: ast2.EmptyExpr()})
-		return strings.Contains(source, implMethodSymbol(stem, method.Sig.Name)) || generatedSourceUsesImplHelpers(source, stem, sliceDrop(methods, 1))
+		return strings.Contains(source, implMethodSymbol(stem, method.Sig.Name)) || generatedSourceUsesImplHelpers(source, stem, common2.SliceDrop(methods, 1))
 	}
 }
 func exprsUsePreludeName(exprs []ast2.Expr, names []string) bool {
@@ -397,7 +391,7 @@ func exprsUsePreludeName(exprs []ast2.Expr, names []string) bool {
 		return false
 	} else {
 		expr := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(exprs, 0), ast2.EmptyExpr())
-		return exprUsesPreludeName(expr, names) || exprsUsePreludeName(sliceDrop(exprs, 1), names)
+		return exprUsesPreludeName(expr, names) || exprsUsePreludeName(common2.SliceDrop(exprs, 1), names)
 	}
 }
 func structLitFieldsUsePreludeName(fields []ast2.StructLitField, names []string) bool {
@@ -405,7 +399,7 @@ func structLitFieldsUsePreludeName(fields []ast2.StructLitField, names []string)
 		return false
 	} else {
 		field := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.StructLitField{Name: "", Value: ast2.EmptyExpr()})
-		return exprUsesPreludeName(field.Value, names) || structLitFieldsUsePreludeName(sliceDrop(fields, 1), names)
+		return exprUsesPreludeName(field.Value, names) || structLitFieldsUsePreludeName(common2.SliceDrop(fields, 1), names)
 	}
 }
 func goOperandsUsePreludeName(operands []ast2.GoOperand, names []string) bool {
@@ -413,7 +407,7 @@ func goOperandsUsePreludeName(operands []ast2.GoOperand, names []string) bool {
 		return false
 	} else {
 		operand := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0), ast2.GoOperand{Name: "", Value: ast2.EmptyExpr()})
-		return exprUsesPreludeName(operand.Value, names) || goOperandsUsePreludeName(sliceDrop(operands, 1), names)
+		return exprUsesPreludeName(operand.Value, names) || goOperandsUsePreludeName(common2.SliceDrop(operands, 1), names)
 	}
 }
 func goTypeOperandsUsePreludeName(operands []ast2.GoTypeOperand, names []string) bool {
@@ -421,7 +415,7 @@ func goTypeOperandsUsePreludeName(operands []ast2.GoTypeOperand, names []string)
 		return false
 	} else {
 		operand := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(operands, 0), ast2.GoTypeOperand{Name: "", Type: ast2.TypeExpr__UnitType__Ctor()})
-		return typeUsesPreludeName(operand.Type, names) || goTypeOperandsUsePreludeName(sliceDrop(operands, 1), names)
+		return typeUsesPreludeName(operand.Type, names) || goTypeOperandsUsePreludeName(common2.SliceDrop(operands, 1), names)
 	}
 }
 func exprPairsUsePreludeName(pairs []struct {
@@ -444,7 +438,7 @@ func exprPairsUsePreludeName(pairs []struct {
 		key = __mygo_expr_0.F0
 		var value ast2.Expr
 		value = __mygo_expr_0.F1
-		return exprUsesPreludeName(key, names) || exprUsesPreludeName(value, names) || exprPairsUsePreludeName(sliceDrop(pairs, 1), names)
+		return exprUsesPreludeName(key, names) || exprUsesPreludeName(value, names) || exprPairsUsePreludeName(common2.SliceDrop(pairs, 1), names)
 	}
 }
 func switchCasesUsePreludeName(cases []ast2.SwitchCase, names []string) bool {
@@ -452,13 +446,13 @@ func switchCasesUsePreludeName(cases []ast2.SwitchCase, names []string) bool {
 		return false
 	} else {
 		item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), ast2.SwitchCase{Pattern: ast2.Pattern__WildcardPattern__Ctor(), Body: ast2.EmptyExpr()})
-		return patternUsesPreludeName(item.Pattern, names) || exprUsesPreludeName(item.Body, names) || switchCasesUsePreludeName(sliceDrop(cases, 1), names)
+		return patternUsesPreludeName(item.Pattern, names) || exprUsesPreludeName(item.Body, names) || switchCasesUsePreludeName(common2.SliceDrop(cases, 1), names)
 	}
 }
 func patternUsesPreludeName(pattern ast2.Pattern, names []string) bool {
 	var __mygo_expr_0 bool
 	if __mygo_match___mygo_expr_2, ok := pattern.(ast2.Pattern__VariantPattern); ok {
-		__mygo_expr_0 = containsString(names, __mygo_match___mygo_expr_2.F0)
+		__mygo_expr_0 = common2.ContainsString(names, __mygo_match___mygo_expr_2.F0)
 	} else {
 		if __mygo_match___mygo_expr_1, ok := pattern.(ast2.Pattern__TuplePattern); ok {
 			__mygo_expr_0 = patternsUsePreludeName(__mygo_match___mygo_expr_1.F0, names)
@@ -473,7 +467,7 @@ func patternsUsePreludeName(patterns []ast2.Pattern, names []string) bool {
 		return false
 	} else {
 		pattern := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(patterns, 0), ast2.Pattern__WildcardPattern__Ctor())
-		return patternUsesPreludeName(pattern, names) || patternsUsePreludeName(sliceDrop(patterns, 1), names)
+		return patternUsesPreludeName(pattern, names) || patternsUsePreludeName(common2.SliceDrop(patterns, 1), names)
 	}
 }
 func stmtsUsePreludeName(stmts []ast2.Stmt, names []string) bool {
@@ -481,7 +475,7 @@ func stmtsUsePreludeName(stmts []ast2.Stmt, names []string) bool {
 		return false
 	} else {
 		stmt := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(stmts, 0), ast2.Stmt__ReturnStmt__Ctor())
-		return stmtUsesPreludeName(stmt, names) || stmtsUsePreludeName(sliceDrop(stmts, 1), names)
+		return stmtUsesPreludeName(stmt, names) || stmtsUsePreludeName(common2.SliceDrop(stmts, 1), names)
 	}
 }
 func stmtUsesPreludeName(stmt ast2.Stmt, names []string) bool {
@@ -526,7 +520,7 @@ func letRecBindsUsePreludeName(bindings []ast2.LetRecBind, names []string) bool 
 		return false
 	} else {
 		bind := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, 0), ast2.LetRecBind{Name: "", Type: ast2.TypeExpr__UnitType__Ctor(), Value: ast2.EmptyExpr()})
-		return typeUsesPreludeName(bind.Type, names) || exprUsesPreludeName(bind.Value, names) || letRecBindsUsePreludeName(sliceDrop(bindings, 1), names)
+		return typeUsesPreludeName(bind.Type, names) || exprUsesPreludeName(bind.Value, names) || letRecBindsUsePreludeName(common2.SliceDrop(bindings, 1), names)
 	}
 }
 func needsHKTDecls(decls []ast2.Decl) bool {
@@ -565,7 +559,7 @@ func needsHKTDecls(decls []ast2.Decl) bool {
 			}
 		}
 		here := __mygo_expr_0
-		return here || needsHKTDecls(sliceDrop(decls, 1))
+		return here || needsHKTDecls(common2.SliceDrop(decls, 1))
 	}
 }
 func hasHKTTypeParam(tps []string) bool {
@@ -573,7 +567,7 @@ func hasHKTTypeParam(tps []string) bool {
 		return false
 	} else {
 		current := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tps, 0), "")
-		return strings.Index(current, "[") >= 0 || hasHKTTypeParam(sliceDrop(tps, 1))
+		return strings.Index(current, "[") >= 0 || hasHKTTypeParam(common2.SliceDrop(tps, 1))
 	}
 }
 func typedDeclSourceMap(sources []typeinference2.PkgDeclSource, index int, out map[string][]ast2.Decl) map[string][]ast2.Decl {
@@ -623,7 +617,7 @@ func __mygo_mt_codegen2_generateFilesLoop(__mygo_mt_p0 []SourceFileInput, __mygo
 					continue
 				} else {
 					if __mygo_match___mygo_expr_0, ok := src.(Result__Err[string, string]); ok {
-						return Err[map[string]string, string](withExpressionSourceName(__mygo_match___mygo_expr_0.F0, input.File.SourceName))
+						return Err[map[string]string, string](common2.WithExpressionSourceName(__mygo_match___mygo_expr_0.F0, input.File.SourceName))
 					} else {
 						panic("non-exhaustive switch")
 					}
@@ -643,7 +637,7 @@ func __mygo_mt_codegen2_mergeDeclSlices(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 [
 			} else {
 				item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), ast2.Decl__ImportDecl__Ctor("", ""))
 				__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, item)
-				__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+				__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
 				continue
@@ -700,7 +694,7 @@ func __mygo_mt_codegen2_preludeImportNames(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p
 					}
 				}
 				next := __mygo_expr_0
-				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 				__tail_1 := next
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
@@ -740,7 +734,7 @@ func __mygo_mt_codegen2_variantImportNames(__mygo_mt_p0 []ast2.Variant, __mygo_m
 				return __mygo_mt_p1
 			} else {
 				variant := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.Variant{Name: "", Fields: []ast2.TypeExpr{}, Named: false, Names: []string{}})
-				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 				__tail_1 := MygoIN5SliceM6Append(__mygo_mt_p1, variant.Name)
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0

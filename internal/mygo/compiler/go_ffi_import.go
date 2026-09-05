@@ -87,7 +87,7 @@ func bootstrapGoPackageInfoFromTypes(pkg *types.Package) BootstrapGoPackageInfo 
 			if !ok {
 				continue
 			}
-			funcs = append(funcs, typeinference2.GoFuncSignature{Name: name, Params: rewriteGoAliasStrings(goTupleTypes(sig.Params()), aliasStrings), Results: rewriteGoAliasStrings(goTupleTypes(sig.Results()), aliasStrings), Variadic: sig.Variadic()})
+			funcs = append(funcs, typeinference2.GoFuncSignature{Name: name, Params: rewriteGoAliasStrings(goTupleTypes(sig.Params()), aliasStrings), Results: rewriteGoAliasStrings(goTupleTypes(sig.Results()), aliasStrings), Variadic: sig.Variadic(), TypeParams: goFuncTypeParams(sig, nil)})
 		case *types.TypeName:
 			if _, isAlias := obj.Type().(*types.Alias); isAlias {
 				// Registered in the first pass above.
@@ -122,9 +122,31 @@ func goTypeMethods(named *types.Named, tupleTypes func(*types.Tuple) []string) [
 		if !ok {
 			continue
 		}
-		methods = append(methods, typeinference2.GoFuncSignature{Name: fn.Name(), Params: tupleTypes(sig.Params()), Results: tupleTypes(sig.Results()), Variadic: sig.Variadic()})
+		methods = append(methods, typeinference2.GoFuncSignature{Name: fn.Name(), Params: tupleTypes(sig.Params()), Results: tupleTypes(sig.Results()), Variadic: sig.Variadic(), TypeParams: goFuncTypeParams(sig, named.TypeParams())})
 	}
 	return methods
+}
+
+// goFuncTypeParams extracts the generic type-parameter names that may appear
+// bare inside a rendered signature, in declaration order.  A package-level
+// generic function contributes its own parameters (`maps.Clone`'s M, K, V);
+// a method on a generic type contributes the receiver type's parameters
+// (`(*List[T]).Set`'s T), since go/types renders those bare in the method
+// signature while the method itself declares no parameters.  The ids these
+// names map to are positional, so declaration order must be preserved.
+func goFuncTypeParams(sig *types.Signature, recvTypeParams *types.TypeParamList) []string {
+	names := []string{}
+	if recvTypeParams != nil {
+		for i := 0; i < recvTypeParams.Len(); i++ {
+			names = append(names, recvTypeParams.At(i).Obj().Name())
+		}
+	}
+	if sig.TypeParams() != nil {
+		for i := 0; i < sig.TypeParams().Len(); i++ {
+			names = append(names, sig.TypeParams().At(i).Obj().Name())
+		}
+	}
+	return names
 }
 
 // rewriteGoAliasStrings replaces each alias target (`ast.Expr`) with the

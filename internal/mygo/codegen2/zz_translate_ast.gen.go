@@ -2,6 +2,7 @@
 
 package codegen2
 
+import "github.com/mygo-lang/mygo/internal/mygo/common2"
 import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import "github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
@@ -36,25 +37,11 @@ func translateExprAstExpected(expr ast2.Expr, ctx *egCtx, expected ast2.MonoType
 		__mygo_expr_1 = Ok[AstExprResult, string](__mygo_match___mygo_expr_3.F0)
 	} else {
 		if __mygo_match___mygo_expr_2, ok := result.(Result__Err[AstExprResult, string]); ok {
-			__mygo_expr_1 = Err[AstExprResult, string](errorAtExpr(expr, __mygo_match___mygo_expr_2.F0))
+			__mygo_expr_1 = Err[AstExprResult, string](common2.ErrorAtExpr(expr, __mygo_match___mygo_expr_2.F0))
 		} else {
 		}
 	}
 	return __mygo_expr_1
-}
-func errorAtExpr(expr ast2.Expr, msg string) string {
-	if strings.Contains(msg, ":") {
-		return msg
-	} else {
-		var __mygo_expr_0 string
-		if expr.Pos.SourceName == "" {
-			__mygo_expr_0 = "<input>"
-		} else {
-			__mygo_expr_0 = expr.Pos.SourceName
-		}
-		source := __mygo_expr_0
-		return source + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(expr.Pos.Line) + ":" + MygoIT8ToStringFN3IntGN3IntEM8ToString(expr.Pos.Column) + ": " + msg
-	}
 }
 func translateExprAstExpectedInner(expr ast2.Expr, ctx *egCtx, expected ast2.MonoType) Result[AstExprResult, string] {
 	__mygo_expr_0 := expr.Kind
@@ -321,7 +308,7 @@ func translateTupleLitAst(items []ast2.Expr, ctx *egCtx, expected ast2.MonoType)
 					fields = MygoIN5SliceM6Append(fields, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(j)+" "+fieldType)
 					j = j + 1
 				}
-				structTypeStr := "struct { " + joinStrings(fields, "; ") + " }"
+				structTypeStr := "struct { " + common2.JoinStrings(fields, "; ") + " }"
 				keyed := wrapExprsAsStructFields(__mygo_match___mygo_expr_1.F0.Exprs, 0, []goast.Expr{})
 				__mygo_expr_0 = Ok[AstExprResult, string](astExprWithPre(goast.Composite(goast.MustTypeExpr(structTypeStr), keyed), __mygo_match___mygo_expr_1.F0.Pre))
 			} else {
@@ -601,7 +588,7 @@ func structPatternFieldsUsedInBody(fields []ast2.StructPatternField, body ast2.E
 		return false
 	} else {
 		f := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.StructPatternField{Field: "", Bind: ""})
-		return exprUsesName(body, f.Bind) || structPatternFieldsUsedInBody(sliceDrop(fields, 1), body)
+		return exprUsesName(body, f.Bind) || structPatternFieldsUsedInBody(common2.SliceDrop(fields, 1), body)
 	}
 }
 func patternItemsUsedInBody(items []ast2.Pattern, body ast2.Expr, index int) bool {
@@ -712,14 +699,14 @@ func exprsUseName(items []ast2.Expr, name string) bool {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		return false
 	} else {
-		return exprUsesName(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.EmptyExpr()), name) || exprsUseName(sliceDrop(items, 1), name)
+		return exprUsesName(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.EmptyExpr()), name) || exprsUseName(common2.SliceDrop(items, 1), name)
 	}
 }
 func stmtsUseName(items []ast2.Stmt, name string) bool {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		return false
 	} else {
-		return stmtUsesName(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.Stmt__ExprStmt__Ctor(ast2.EmptyExpr())), name) || stmtsUseName(sliceDrop(items, 1), name)
+		return stmtUsesName(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.Stmt__ExprStmt__Ctor(ast2.EmptyExpr())), name) || stmtsUseName(common2.SliceDrop(items, 1), name)
 	}
 }
 func stmtUsesName(stmt ast2.Stmt, name string) bool {
@@ -764,7 +751,7 @@ func letRecBindingsUseName(bindings []ast2.LetRecBind, name string) bool {
 		return false
 	} else {
 		b := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(bindings, 0), ast2.LetRecBind{Name: "", Type: ast2.TypeExpr__UnitType__Ctor(), Value: ast2.EmptyExpr()})
-		return exprUsesName(b.Value, name) || letRecBindingsUseName(sliceDrop(bindings, 1), name)
+		return exprUsesName(b.Value, name) || letRecBindingsUseName(common2.SliceDrop(bindings, 1), name)
 	}
 }
 func goOperandsUseName(items []ast2.GoOperand, name string) bool {
@@ -772,7 +759,7 @@ func goOperandsUseName(items []ast2.GoOperand, name string) bool {
 		return false
 	} else {
 		o := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.GoOperand{Name: "", Value: ast2.EmptyExpr()})
-		return exprUsesName(o.Value, name) || goOperandsUseName(sliceDrop(items, 1), name)
+		return exprUsesName(o.Value, name) || goOperandsUseName(common2.SliceDrop(items, 1), name)
 	}
 }
 func switchCasesUseName(cases []ast2.SwitchCase, name string) bool {
@@ -780,7 +767,7 @@ func switchCasesUseName(cases []ast2.SwitchCase, name string) bool {
 		return false
 	} else {
 		current := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), ast2.SwitchCase{Pattern: ast2.Pattern__WildcardPattern__Ctor(), Body: ast2.EmptyExpr()})
-		return exprUsesName(current.Body, name) || switchCasesUseName(sliceDrop(cases, 1), name)
+		return exprUsesName(current.Body, name) || switchCasesUseName(common2.SliceDrop(cases, 1), name)
 	}
 }
 func structLitFieldsUseName(fields []ast2.StructLitField, name string) bool {
@@ -788,7 +775,7 @@ func structLitFieldsUseName(fields []ast2.StructLitField, name string) bool {
 		return false
 	} else {
 		f := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(fields, 0), ast2.StructLitField{Name: "", Value: ast2.EmptyExpr()})
-		return exprUsesName(f.Value, name) || structLitFieldsUseName(sliceDrop(fields, 1), name)
+		return exprUsesName(f.Value, name) || structLitFieldsUseName(common2.SliceDrop(fields, 1), name)
 	}
 }
 func exprPairsUseName(pairs []struct {
@@ -811,7 +798,7 @@ func exprPairsUseName(pairs []struct {
 		k = __mygo_expr_0.F0
 		var v ast2.Expr
 		v = __mygo_expr_0.F1
-		return exprUsesName(k, name) || exprUsesName(v, name) || exprPairsUseName(sliceDrop(pairs, 1), name)
+		return exprUsesName(k, name) || exprUsesName(v, name) || exprPairsUseName(common2.SliceDrop(pairs, 1), name)
 	}
 }
 func translateSwitchBranchesStmt(cases []ast2.SwitchCase, targetType Option[ast2.MonoType], sourceTarget ast2.Expr, target goast.Expr, ctx *egCtx) Result[[]goast.Stmt, string] {
@@ -837,7 +824,7 @@ func translateSwitchBranchesStmt(cases []ast2.SwitchCase, targetType Option[ast2
 				} else {
 					if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.Pattern__LiteralPattern); ok {
 						body_2 := translateSwitchCaseBodyStmt(current.Body, ctx)
-						rest_2 := translateSwitchBranchesStmt(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+						rest_2 := translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
 						var __mygo_expr_5 Result[[]goast.Stmt, string]
 						if __mygo_match___mygo_expr_7, ok := body_2.(Result__Err[[]goast.Stmt, string]); ok {
 							__mygo_expr_5 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_7.F0)
@@ -872,7 +859,7 @@ func translateSwitchBranchesStmt(cases []ast2.SwitchCase, targetType Option[ast2
 						__mygo_expr_1 = __mygo_expr_5
 					} else {
 						if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.Pattern__VariantPattern); ok {
-							rest_1 := translateSwitchBranchesStmt(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+							rest_1 := translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
 							var __mygo_expr_4 Result[[]goast.Stmt, string]
 							if __mygo_match___mygo_expr_6, ok := rest_1.(Result__Err[[]goast.Stmt, string]); ok {
 								__mygo_expr_4 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_6.F0)
@@ -915,7 +902,7 @@ func translateSwitchBranchesStmt(cases []ast2.SwitchCase, targetType Option[ast2
 							__mygo_expr_1 = __mygo_expr_4
 						} else {
 							if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.Pattern__StructVariantPattern); ok {
-								rest := translateSwitchBranchesStmt(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+								rest := translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
 								var __mygo_expr_3 Result[[]goast.Stmt, string]
 								if __mygo_match___mygo_expr_5, ok := rest.(Result__Err[[]goast.Stmt, string]); ok {
 									__mygo_expr_3 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_5.F0)
@@ -1063,7 +1050,7 @@ func translateSwitchBranches(cases []ast2.SwitchCase, targetType Option[ast2.Mon
 				} else {
 					if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.Pattern__LiteralPattern); ok {
 						body_2 := translateSwitchCaseBody(current.Body, ctx, expected, temp)
-						rest_2 := translateSwitchBranches(sliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
+						rest_2 := translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
 						var __mygo_expr_5 Result[[]goast.Stmt, string]
 						if __mygo_match___mygo_expr_7, ok := body_2.(Result__Err[[]goast.Stmt, string]); ok {
 							__mygo_expr_5 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_7.F0)
@@ -1098,7 +1085,7 @@ func translateSwitchBranches(cases []ast2.SwitchCase, targetType Option[ast2.Mon
 						__mygo_expr_1 = __mygo_expr_5
 					} else {
 						if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.Pattern__VariantPattern); ok {
-							rest_1 := translateSwitchBranches(sliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
+							rest_1 := translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
 							var __mygo_expr_4 Result[[]goast.Stmt, string]
 							if __mygo_match___mygo_expr_6, ok := rest_1.(Result__Err[[]goast.Stmt, string]); ok {
 								__mygo_expr_4 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_6.F0)
@@ -1141,7 +1128,7 @@ func translateSwitchBranches(cases []ast2.SwitchCase, targetType Option[ast2.Mon
 							__mygo_expr_1 = __mygo_expr_4
 						} else {
 							if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.Pattern__StructVariantPattern); ok {
-								rest := translateSwitchBranches(sliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
+								rest := translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
 								var __mygo_expr_3 Result[[]goast.Stmt, string]
 								if __mygo_match___mygo_expr_5, ok := rest.(Result__Err[[]goast.Stmt, string]); ok {
 									__mygo_expr_3 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_5.F0)
@@ -1203,7 +1190,7 @@ func translateTupleVariantSwitchAt(items []ast2.Pattern, targetType Option[ast2.
 			value := goast.Selector(target, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(index))
 			var __mygo_expr_0 Result[[]goast.Stmt, string]
 			if __mygo_match___mygo_expr_2, ok := pattern.(ast2.Pattern__VariantPattern); ok {
-				rest_1 := translateSwitchBranches(sliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, temp, outerCtx, expected)
+				rest_1 := translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, temp, outerCtx, expected)
 				var __mygo_expr_3 Result[[]goast.Stmt, string]
 				if __mygo_match___mygo_expr_5, ok := rest_1.(Result__Err[[]goast.Stmt, string]); ok {
 					__mygo_expr_3 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_5.F0)
@@ -1245,7 +1232,7 @@ func translateTupleVariantSwitchAt(items []ast2.Pattern, targetType Option[ast2.
 				__mygo_expr_0 = __mygo_expr_3
 			} else {
 				if __mygo_match___mygo_expr_1, ok := pattern.(ast2.Pattern__StructVariantPattern); ok {
-					rest := translateSwitchBranches(sliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, temp, outerCtx, expected)
+					rest := translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, temp, outerCtx, expected)
 					var __mygo_expr_2 Result[[]goast.Stmt, string]
 					if __mygo_match___mygo_expr_4, ok := rest.(Result__Err[[]goast.Stmt, string]); ok {
 						__mygo_expr_2 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_4.F0)
@@ -1305,7 +1292,7 @@ func translateTupleVariantSwitchStmtAt(items []ast2.Pattern, targetType Option[a
 			value := goast.Selector(target, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(index))
 			var __mygo_expr_0 Result[[]goast.Stmt, string]
 			if __mygo_match___mygo_expr_2, ok := pattern.(ast2.Pattern__VariantPattern); ok {
-				rest_1 := translateSwitchBranchesStmt(sliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
+				rest_1 := translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
 				var __mygo_expr_3 Result[[]goast.Stmt, string]
 				if __mygo_match___mygo_expr_5, ok := rest_1.(Result__Err[[]goast.Stmt, string]); ok {
 					__mygo_expr_3 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_5.F0)
@@ -1347,7 +1334,7 @@ func translateTupleVariantSwitchStmtAt(items []ast2.Pattern, targetType Option[a
 				__mygo_expr_0 = __mygo_expr_3
 			} else {
 				if __mygo_match___mygo_expr_1, ok := pattern.(ast2.Pattern__StructVariantPattern); ok {
-					rest := translateSwitchBranchesStmt(sliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
+					rest := translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
 					var __mygo_expr_2 Result[[]goast.Stmt, string]
 					if __mygo_match___mygo_expr_4, ok := rest.(Result__Err[[]goast.Stmt, string]); ok {
 						__mygo_expr_2 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_4.F0)
@@ -1678,16 +1665,36 @@ func resolveExprMonoType(expr ast2.Expr, ctx *egCtx) Option[ast2.MonoType] {
 							resolvedBase := __mygo_expr_9
 							var __mygo_expr_11 Option[ast2.MonoType]
 							if __mygo_match___mygo_expr_12, ok := resolvedBase.(ast2.MonoType__TQualifiedName); ok {
-								__mygo_expr_13 := ffiResultSignatureInPackages(ctx.goPackages, __mygo_match___mygo_expr_12.F0, __mygo_match___mygo_expr_5.F1)
+								__mygo_expr_13 := typeinference2.GoSignatureInPackages(__mygo_match___mygo_expr_12.F0, __mygo_match___mygo_expr_5.F1, ctx.goPackages, ffiResultPredicate)
 								var __mygo_expr_14 Option[ast2.MonoType]
 								if __mygo_match___mygo_expr_15, ok := __mygo_expr_13.(Option__Some[typeinference2.GoFuncSignature]); ok {
-									__mygo_expr_14 = Some[ast2.MonoType](goSignatureToMono(__mygo_match___mygo_expr_15.F0))
+									__mygo_expr_16 := goSignatureToMono(__mygo_match___mygo_expr_15.F0)
+									var __mygo_expr_17 Option[ast2.MonoType]
+									if __mygo_match___mygo_expr_18, ok := __mygo_expr_16.(Result__Ok[ast2.MonoType, string]); ok {
+										__mygo_expr_17 = Some[ast2.MonoType](__mygo_match___mygo_expr_18.F0)
+									} else {
+										if _, ok := __mygo_expr_16.(Result__Err[ast2.MonoType, string]); ok {
+											__mygo_expr_17 = None[ast2.MonoType]()
+										} else {
+										}
+									}
+									__mygo_expr_14 = __mygo_expr_17
 								} else {
 									if _, ok := __mygo_expr_13.(Option__None[typeinference2.GoFuncSignature]); ok {
-										__mygo_expr_15 := ffiSignatureInPackages(ctx.goPackages, __mygo_match___mygo_expr_12.F0, __mygo_match___mygo_expr_5.F1)
+										__mygo_expr_15 := typeinference2.GoSignatureInPackages(__mygo_match___mygo_expr_12.F0, __mygo_match___mygo_expr_5.F1, ctx.goPackages, ffiOptionResultPredicate)
 										var __mygo_expr_16 Option[ast2.MonoType]
 										if __mygo_match___mygo_expr_17, ok := __mygo_expr_15.(Option__Some[typeinference2.GoFuncSignature]); ok {
-											__mygo_expr_16 = Some[ast2.MonoType](goSignatureToMono(__mygo_match___mygo_expr_17.F0))
+											__mygo_expr_18 := goSignatureToMono(__mygo_match___mygo_expr_17.F0)
+											var __mygo_expr_19 Option[ast2.MonoType]
+											if __mygo_match___mygo_expr_20, ok := __mygo_expr_18.(Result__Ok[ast2.MonoType, string]); ok {
+												__mygo_expr_19 = Some[ast2.MonoType](__mygo_match___mygo_expr_20.F0)
+											} else {
+												if _, ok := __mygo_expr_18.(Result__Err[ast2.MonoType, string]); ok {
+													__mygo_expr_19 = None[ast2.MonoType]()
+												} else {
+												}
+											}
+											__mygo_expr_16 = __mygo_expr_19
 										} else {
 											if _, ok := __mygo_expr_15.(Option__None[typeinference2.GoFuncSignature]); ok {
 												__mygo_expr_16 = lookupFieldInMonoType(resolvedBase, __mygo_match___mygo_expr_5.F1, ctx)
@@ -1745,26 +1752,7 @@ func resolveExprMonoType(expr ast2.Expr, ctx *egCtx) Option[ast2.MonoType] {
 		return __mygo_expr_1
 	}
 }
-func isGoPackageAlias(alias string, packages []typeinference2.GoPackageEntry) bool {
-	for {
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(packages) == 0 {
-			return false
-		} else {
-			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0)
-			var __mygo_expr_1 bool
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[typeinference2.GoPackageEntry]); ok {
-				__mygo_expr_1 = __mygo_match___mygo_expr_2.F0.Alias == alias || isGoPackageAlias(alias, sliceDrop(packages, 1))
-			} else {
-				if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoPackageEntry]); ok {
-					__mygo_expr_1 = isGoPackageAlias(alias, sliceDrop(packages, 1))
-				} else {
-				}
-			}
-			return __mygo_expr_1
-		}
-	}
-}
-func goSignatureToMono(sig typeinference2.GoFuncSignature) ast2.MonoType {
+func goSignatureToMono(sig typeinference2.GoFuncSignature) Result[ast2.MonoType, string] {
 	return typeinference2.GoSignatureType(sig)
 }
 func extractTypeArgs(typ string) []string {
@@ -2832,6 +2820,12 @@ func inferredBuiltinConstructorArgs(name string, expected ast2.MonoType, ctx *eg
 		return __mygo_expr_0
 	}
 }
+func ffiOptionResultPredicate(sig typeinference2.GoFuncSignature) bool {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Results) == 2 && MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sig.Results, 1), "") == "bool"
+}
+func ffiResultPredicate(sig typeinference2.GoFuncSignature) bool {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Results) == 2 && MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(sig.Results, 1), "") == "error"
+}
 func ffiOptionSignature(callee ast2.Expr, ctx *egCtx) Option[typeinference2.GoFuncSignature] {
 	return __mygo_mt_codegen2_ffiOptionSignature(callee, ctx, 0)
 }
@@ -2839,40 +2833,13 @@ func ffiMultiResultSignature(expr ast2.Expr, ctx *egCtx) Option[typeinference2.G
 	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 Option[typeinference2.GoFuncSignature]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
-		__mygo_expr_1 = ffiMultiResultSignatureFromCallee(__mygo_match___mygo_expr_2.F0, ctx.goPackages)
+		__mygo_expr_1 = typeinference2.GoSignatureForCallee(__mygo_match___mygo_expr_2.F0, ctx.goPackages, func(sig typeinference2.GoFuncSignature) bool {
+			return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(sig.Results) > 1
+		})
 	} else {
 		__mygo_expr_1 = None[typeinference2.GoFuncSignature]()
 	}
 	return __mygo_expr_1
-}
-func ffiMultiResultSignatureFromCallee(callee ast2.Expr, packages []typeinference2.GoPackageEntry) Option[typeinference2.GoFuncSignature] {
-	__mygo_expr_0 := callee.Kind
-	var __mygo_expr_1 Option[typeinference2.GoFuncSignature]
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
-		__mygo_expr_3 := __mygo_match___mygo_expr_2.F0.Kind
-		var __mygo_expr_4 Option[typeinference2.GoFuncSignature]
-		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.ExprKind__IdentExpr); ok {
-			__mygo_expr_4 = ffiMultiResultSignatureInPackages(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_2.F1, packages)
-		} else {
-			__mygo_expr_4 = None[typeinference2.GoFuncSignature]()
-		}
-		__mygo_expr_1 = __mygo_expr_4
-	} else {
-		__mygo_expr_1 = None[typeinference2.GoFuncSignature]()
-	}
-	return __mygo_expr_1
-}
-func ffiMultiResultSignatureInPackages(alias string, name string, packages []typeinference2.GoPackageEntry) Option[typeinference2.GoFuncSignature] {
-	return __mygo_mt_codegen2_ffiMultiResultSignatureInPackages(alias, name, packages, 0)
-}
-func ffiMultiResultSignatureInFuncs(name string, funcs []typeinference2.GoFuncSignature) Option[typeinference2.GoFuncSignature] {
-	return __mygo_mt_codegen2_ffiMultiResultSignatureInFuncs(name, funcs, 0)
-}
-func ffiSignatureInPackages(packages []typeinference2.GoPackageEntry, alias string, name string) Option[typeinference2.GoFuncSignature] {
-	return __mygo_mt_codegen2_ffiSignatureInPackages(packages, alias, name, 0)
-}
-func ffiSignatureInFuncs(funcs []typeinference2.GoFuncSignature, name string) Option[typeinference2.GoFuncSignature] {
-	return __mygo_mt_codegen2_ffiSignatureInFuncs(funcs, name, 0)
 }
 func translateFFIOptionCall(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx, expected ast2.MonoType, _ typeinference2.GoFuncSignature) Result[AstExprResult, string] {
 	c := translateExprAstExpected(callee, ctx, ast2.MonoType__TUnit__Ctor())
@@ -2929,12 +2896,6 @@ func translateFFIOptionCall(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []a
 }
 func ffiResultSignature(callee ast2.Expr, ctx *egCtx) Option[typeinference2.GoFuncSignature] {
 	return __mygo_mt_codegen2_ffiResultSignature(callee, ctx, 0)
-}
-func ffiResultSignatureInPackages(packages []typeinference2.GoPackageEntry, alias string, name string) Option[typeinference2.GoFuncSignature] {
-	return __mygo_mt_codegen2_ffiResultSignatureInPackages(packages, alias, name, 0)
-}
-func ffiResultSignatureInFuncs(funcs []typeinference2.GoFuncSignature, name string) Option[typeinference2.GoFuncSignature] {
-	return __mygo_mt_codegen2_ffiResultSignatureInFuncs(funcs, name, 0)
 }
 func translateFFIResultCall(callee ast2.Expr, typeArgs []ast2.TypeExpr, args []ast2.Expr, ctx *egCtx, expected ast2.MonoType, _ typeinference2.GoFuncSignature) Result[AstExprResult, string] {
 	c := translateExprAstExpected(callee, ctx, ast2.MonoType__TUnit__Ctor())
@@ -3205,7 +3166,7 @@ func typeExprListMatches(patterns []ast2.TypeExpr, actuals []ast2.TypeExpr, vari
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(patterns) == 0 {
 			return true
 		} else {
-			return typeExprMatches(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(patterns, 0), ast2.TypeExpr__UnitType__Ctor()), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(actuals, 0), ast2.TypeExpr__UnitType__Ctor()), variables) && typeExprListMatches(sliceDrop(patterns, 1), sliceDrop(actuals, 1), variables)
+			return typeExprMatches(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(patterns, 0), ast2.TypeExpr__UnitType__Ctor()), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(actuals, 0), ast2.TypeExpr__UnitType__Ctor()), variables) && typeExprListMatches(common2.SliceDrop(patterns, 1), common2.SliceDrop(actuals, 1), variables)
 		}
 	}
 }
@@ -3359,7 +3320,7 @@ func __mygo_mt_codegen2_appendDictionaryArgs(__mygo_mt_p0 []goast.Expr, __mygo_m
 				next := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p2.constraintFuncs, method)
 				if __mygo_match___mygo_expr_0, ok := next.(Option__Some[string]); ok {
 					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, goast.Ident(__mygo_match___mygo_expr_0.F0))
-					__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+					__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 					__tail_2 := __mygo_mt_p2
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
@@ -3369,7 +3330,7 @@ func __mygo_mt_codegen2_appendDictionaryArgs(__mygo_mt_p0 []goast.Expr, __mygo_m
 						__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p2.packageDictionaries, method)
 						if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
 							__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, goast.Ident(__mygo_match___mygo_expr_1.F0))
-							__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+							__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 							__tail_2 := __mygo_mt_p2
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
@@ -3377,7 +3338,7 @@ func __mygo_mt_codegen2_appendDictionaryArgs(__mygo_mt_p0 []goast.Expr, __mygo_m
 						} else {
 							if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 								__tail_0 := __mygo_mt_p0
-								__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+								__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 								__tail_2 := __mygo_mt_p2
 								__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 								__mygo_state = 0
@@ -3407,7 +3368,7 @@ func __mygo_mt_codegen2_appendRequirementArgs(__mygo_mt_p0 []goast.Expr, __mygo_
 				__mygo_expr_0 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p2.constraintFuncs, requirement.Method)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
 					__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, goast.Ident(__mygo_match___mygo_expr_1.F0))
-					__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+					__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 					__tail_2 := __mygo_mt_p2
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
@@ -3417,7 +3378,7 @@ func __mygo_mt_codegen2_appendRequirementArgs(__mygo_mt_p0 []goast.Expr, __mygo_
 						__mygo_expr_1 := matchingCandidate(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p2.packageCandidates, requirement.Interface+"."+requirement.Method), []ImplDictionaryCandidate{}), requirement)
 						if __mygo_match___mygo_expr_2, ok := __mygo_expr_1.(Option__Some[ImplDictionaryCandidate]); ok {
 							__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, goast.Ident(__mygo_match___mygo_expr_2.F0.Helper))
-							__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+							__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 							__tail_2 := __mygo_mt_p2
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
@@ -3427,7 +3388,7 @@ func __mygo_mt_codegen2_appendRequirementArgs(__mygo_mt_p0 []goast.Expr, __mygo_
 								__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p2.packageDictionaries, requirement.Interface+"."+requirement.Method)
 								if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
 									__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, goast.Ident(__mygo_match___mygo_expr_3.F0))
-									__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+									__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 									__tail_2 := __mygo_mt_p2
 									__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 									__mygo_state = 0
@@ -3435,7 +3396,7 @@ func __mygo_mt_codegen2_appendRequirementArgs(__mygo_mt_p0 []goast.Expr, __mygo_
 								} else {
 									if _, ok := __mygo_expr_2.(Option__None[string]); ok {
 										__tail_0 := __mygo_mt_p0
-										__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+										__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 										__tail_2 := __mygo_mt_p2
 										__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 										__mygo_state = 0
@@ -3546,7 +3507,7 @@ func __mygo_mt_codegen2_bindStructPatternFieldsWithTypes(__mygo_mt_p0 *egCtx, __
 				} else {
 				}
 				__tail_0 := __mygo_mt_p0
-				__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+				__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 				__tail_2 := __mygo_mt_p2
 				__tail_3 := __mygo_mt_p3
 				__tail_4 := __mygo_mt_p4
@@ -3646,91 +3607,19 @@ func __mygo_mt_codegen2_enumTypeArgs(__mygo_mt_p0 string, __mygo_mt_p1 ast2.Mono
 		}
 	}
 }
-func __mygo_mt_codegen2_ffiMultiResultSignatureInFuncs(__mygo_mt_p0 string, __mygo_mt_p1 []typeinference2.GoFuncSignature, __mygo_state int) Option[typeinference2.GoFuncSignature] {
-	for {
-		switch __mygo_state {
-		case 0:
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) == 0 {
-				return None[typeinference2.GoFuncSignature]()
-			} else {
-				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0)
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoFuncSignature]); ok {
-					if __mygo_match___mygo_expr_1.F0.Name == __mygo_mt_p0 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Results) > 1 {
-						return Some[typeinference2.GoFuncSignature](__mygo_match___mygo_expr_1.F0)
-					} else {
-						__tail_0 := __mygo_mt_p0
-						__tail_1 := sliceDrop(__mygo_mt_p1, 1)
-						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
-						__mygo_state = 0
-						continue
-					}
-				} else {
-					if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoFuncSignature]); ok {
-						return None[typeinference2.GoFuncSignature]()
-					} else {
-						panic("non-exhaustive switch")
-					}
-				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_codegen2_ffiMultiResultSignatureInPackages(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 []typeinference2.GoPackageEntry, __mygo_state int) Option[typeinference2.GoFuncSignature] {
-	for {
-		switch __mygo_state {
-		case 0:
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) == 0 {
-				return None[typeinference2.GoFuncSignature]()
-			} else {
-				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, 0)
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoPackageEntry]); ok {
-					if __mygo_match___mygo_expr_1.F0.Alias == __mygo_mt_p0 {
-						return ffiMultiResultSignatureInFuncs(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0.Funcs)
-					} else {
-						__tail_0 := __mygo_mt_p0
-						__tail_1 := __mygo_mt_p1
-						__tail_2 := sliceDrop(__mygo_mt_p2, 1)
-						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-						__mygo_state = 0
-						continue
-					}
-				} else {
-					if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoPackageEntry]); ok {
-						return None[typeinference2.GoFuncSignature]()
-					} else {
-						panic("non-exhaustive switch")
-					}
-				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
 func __mygo_mt_codegen2_ffiOptionSignature(__mygo_mt_p0 ast2.Expr, __mygo_mt_p1 *egCtx, __mygo_state int) Option[typeinference2.GoFuncSignature] {
 	for {
 		switch __mygo_state {
 		case 0:
 			__mygo_expr_0 := __mygo_mt_p0.Kind
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
-				__tail_0 := __mygo_match___mygo_expr_2.F0
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
+				__tail_0 := __mygo_match___mygo_expr_1.F0
 				__tail_1 := __mygo_mt_p1
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
 				continue
 			} else {
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
-					__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Kind
-					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(ast2.ExprKind__IdentExpr); ok {
-						return ffiSignatureInPackages(__mygo_mt_p1.goPackages, __mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_1.F1)
-					} else {
-						return None[typeinference2.GoFuncSignature]()
-					}
-				} else {
-					return None[typeinference2.GoFuncSignature]()
-				}
+				return typeinference2.GoSignatureForCallee(__mygo_mt_p0, __mygo_mt_p1.goPackages, ffiOptionResultPredicate)
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -3742,149 +3631,14 @@ func __mygo_mt_codegen2_ffiResultSignature(__mygo_mt_p0 ast2.Expr, __mygo_mt_p1 
 		switch __mygo_state {
 		case 0:
 			__mygo_expr_0 := __mygo_mt_p0.Kind
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
-				__tail_0 := __mygo_match___mygo_expr_2.F0
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
+				__tail_0 := __mygo_match___mygo_expr_1.F0
 				__tail_1 := __mygo_mt_p1
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
 				continue
 			} else {
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
-					__mygo_expr_2 := __mygo_match___mygo_expr_1.F0.Kind
-					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(ast2.ExprKind__IdentExpr); ok {
-						return ffiResultSignatureInPackages(__mygo_mt_p1.goPackages, __mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_1.F1)
-					} else {
-						return None[typeinference2.GoFuncSignature]()
-					}
-				} else {
-					return None[typeinference2.GoFuncSignature]()
-				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_codegen2_ffiResultSignatureInFuncs(__mygo_mt_p0 []typeinference2.GoFuncSignature, __mygo_mt_p1 string, __mygo_state int) Option[typeinference2.GoFuncSignature] {
-	for {
-		switch __mygo_state {
-		case 0:
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
-				return None[typeinference2.GoFuncSignature]()
-			} else {
-				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoFuncSignature]); ok {
-					if __mygo_match___mygo_expr_1.F0.Name == __mygo_mt_p1 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Results) == 2 && MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Results, 1), "") == "error" {
-						return Some[typeinference2.GoFuncSignature](__mygo_match___mygo_expr_1.F0)
-					} else {
-						__tail_0 := sliceDrop(__mygo_mt_p0, 1)
-						__tail_1 := __mygo_mt_p1
-						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
-						__mygo_state = 0
-						continue
-					}
-				} else {
-					if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoFuncSignature]); ok {
-						return None[typeinference2.GoFuncSignature]()
-					} else {
-						panic("non-exhaustive switch")
-					}
-				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_codegen2_ffiResultSignatureInPackages(__mygo_mt_p0 []typeinference2.GoPackageEntry, __mygo_mt_p1 string, __mygo_mt_p2 string, __mygo_state int) Option[typeinference2.GoFuncSignature] {
-	for {
-		switch __mygo_state {
-		case 0:
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
-				return None[typeinference2.GoFuncSignature]()
-			} else {
-				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoPackageEntry]); ok {
-					if __mygo_match___mygo_expr_1.F0.Alias == __mygo_mt_p1 {
-						return ffiResultSignatureInFuncs(__mygo_match___mygo_expr_1.F0.Funcs, __mygo_mt_p2)
-					} else {
-						__tail_0 := sliceDrop(__mygo_mt_p0, 1)
-						__tail_1 := __mygo_mt_p1
-						__tail_2 := __mygo_mt_p2
-						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-						__mygo_state = 0
-						continue
-					}
-				} else {
-					if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoPackageEntry]); ok {
-						return None[typeinference2.GoFuncSignature]()
-					} else {
-						panic("non-exhaustive switch")
-					}
-				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_codegen2_ffiSignatureInFuncs(__mygo_mt_p0 []typeinference2.GoFuncSignature, __mygo_mt_p1 string, __mygo_state int) Option[typeinference2.GoFuncSignature] {
-	for {
-		switch __mygo_state {
-		case 0:
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
-				return None[typeinference2.GoFuncSignature]()
-			} else {
-				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoFuncSignature]); ok {
-					if __mygo_match___mygo_expr_1.F0.Name == __mygo_mt_p1 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0.Results) == 2 && MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.Results, 1), "") == "bool" {
-						return Some[typeinference2.GoFuncSignature](__mygo_match___mygo_expr_1.F0)
-					} else {
-						__tail_0 := sliceDrop(__mygo_mt_p0, 1)
-						__tail_1 := __mygo_mt_p1
-						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
-						__mygo_state = 0
-						continue
-					}
-				} else {
-					if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoFuncSignature]); ok {
-						return None[typeinference2.GoFuncSignature]()
-					} else {
-						panic("non-exhaustive switch")
-					}
-				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_codegen2_ffiSignatureInPackages(__mygo_mt_p0 []typeinference2.GoPackageEntry, __mygo_mt_p1 string, __mygo_mt_p2 string, __mygo_state int) Option[typeinference2.GoFuncSignature] {
-	for {
-		switch __mygo_state {
-		case 0:
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
-				return None[typeinference2.GoFuncSignature]()
-			} else {
-				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0)
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[typeinference2.GoPackageEntry]); ok {
-					if __mygo_match___mygo_expr_1.F0.Alias == __mygo_mt_p1 {
-						return ffiSignatureInFuncs(__mygo_match___mygo_expr_1.F0.Funcs, __mygo_mt_p2)
-					} else {
-						__tail_0 := sliceDrop(__mygo_mt_p0, 1)
-						__tail_1 := __mygo_mt_p1
-						__tail_2 := __mygo_mt_p2
-						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-						__mygo_state = 0
-						continue
-					}
-				} else {
-					if _, ok := __mygo_expr_0.(Option__None[typeinference2.GoPackageEntry]); ok {
-						return None[typeinference2.GoFuncSignature]()
-					} else {
-						panic("non-exhaustive switch")
-					}
-				}
+				return typeinference2.GoSignatureForCallee(__mygo_mt_p0, __mygo_mt_p1.goPackages, ffiResultPredicate)
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -3951,7 +3705,7 @@ func __mygo_mt_codegen2_matchingCandidate(__mygo_mt_p0 []ImplDictionaryCandidate
 				if typeExprListMatches(candidate.InterfaceArgs, __mygo_mt_p1.Args, typeParamSet(candidate.TypeParams)) {
 					return Some[ImplDictionaryCandidate](candidate)
 				} else {
-					__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+					__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 					__tail_1 := __mygo_mt_p1
 					__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 					__mygo_state = 0
@@ -3984,7 +3738,7 @@ func __mygo_mt_codegen2_matchingReceiverCandidate(__mygo_mt_p0 []ImplDictionaryC
 				if matched {
 					return Some[ImplDictionaryCandidate](candidate)
 				} else {
-					__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+					__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
@@ -4030,7 +3784,7 @@ func __mygo_mt_codegen2_normalizeNumberLiteralSuffix(__mygo_mt_p0 string, __mygo
 					return strings.TrimSuffix(__mygo_mt_p0, suffix)
 				} else {
 					__tail_0 := __mygo_mt_p0
-					__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+					__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 					__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 					__mygo_state = 0
 					continue

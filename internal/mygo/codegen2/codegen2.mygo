@@ -1,4 +1,5 @@
 package codegen2
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
@@ -74,7 +75,7 @@ func mergeDeclSlices(dst: Slice[ast2.Decl], src: Slice[ast2.Decl]) -> Slice[ast2
     dst
   else
     let item = src.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    mergeDeclSlices(dst.Append(item), sliceDrop(src, 1))
+    mergeDeclSlices(dst.Append(item), common2.SliceDrop(src, 1))
   end
 end
 
@@ -89,13 +90,9 @@ func generateFilesLoop(files: Slice[SourceFileInput], info: typeinference2.Packa
       case Ok(code) =>
         out.Set(sourceToGenName(input.Path), code)
         generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, index + 1, out)
-      case Err(msg) => Err(withExpressionSourceName(msg, input.File.SourceName))
+      case Err(msg) => Err(common2.WithExpressionSourceName(msg, input.File.SourceName))
     end
   end
-end
-
-func withExpressionSourceName(msg: String, source: String) -> String
-  if source == "" then msg else strings.ReplaceAll(msg, "<input>:", source + ":") end
 end
 
 func GenerateSource(input: String) -> Result[String, String]
@@ -174,21 +171,21 @@ func preludeImportNames(decls: Slice[ast2.Decl], names: Slice[String]) -> Slice[
       case InterfaceDecl(name, _, _) => names.Append(name)
       case _ => names
     end
-    preludeImportNames(sliceDrop(decls, 1), next)
+    preludeImportNames(common2.SliceDrop(decls, 1), next)
   end
 end
 
 func variantImportNames(variants: Slice[ast2.Variant], names: Slice[String]) -> Slice[String]
   if variants.Len() == 0 then names else
     let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr], Named: false, Names: [] as Slice[String] })
-    variantImportNames(sliceDrop(variants, 1), names.Append(variant.Name))
+    variantImportNames(common2.SliceDrop(variants, 1), names.Append(variant.Name))
   end
 end
 
 func declsUsePreludeName(decls: Slice[ast2.Decl], names: Slice[String]) -> Bool
   if decls.Len() == 0 then false else
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    declUsesPreludeName(decl, names) || declsUsePreludeName(sliceDrop(decls, 1), names)
+    declUsesPreludeName(decl, names) || declsUsePreludeName(common2.SliceDrop(decls, 1), names)
   end
 end
 
@@ -209,7 +206,7 @@ end
 
 func typeUsesPreludeName(typ: ast2.TypeExpr, names: Slice[String]) -> Bool
   switch typ
-    case NamedType(name, args) => containsString(names, name) || typeExprsUsePreludeName(args, names)
+    case NamedType(name, args) => common2.ContainsString(names, name) || typeExprsUsePreludeName(args, names)
     case FuncType(params, ret) => typeExprsUsePreludeName(params, names) || typeUsesPreludeName(ret.value(), names)
     case TupleType(items) => typeExprsUsePreludeName(items, names)
     case InlineGo(inner, _) => typeUsesPreludeName(inner.value(), names)
@@ -220,7 +217,7 @@ end
 func typeExprsUsePreludeName(types: Slice[ast2.TypeExpr], names: Slice[String]) -> Bool
   if types.Len() == 0 then false else
     let typ = types.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
-    typeUsesPreludeName(typ, names) || typeExprsUsePreludeName(sliceDrop(types, 1), names)
+    typeUsesPreludeName(typ, names) || typeExprsUsePreludeName(common2.SliceDrop(types, 1), names)
   end
 end
 
@@ -234,14 +231,14 @@ end
 func paramsUsePreludeName(params: Slice[ast2.Param], names: Slice[String]) -> Bool
   if params.Len() == 0 then false else
     let param = params.Get(0).UnwrapOr(ast2.Param { Name: "", Type: ast2.TypeExpr.UnitType })
-    typeUsesPreludeName(param.Type, names) || paramsUsePreludeName(sliceDrop(params, 1), names)
+    typeUsesPreludeName(param.Type, names) || paramsUsePreludeName(common2.SliceDrop(params, 1), names)
   end
 end
 
 func fieldsUsePreludeName(fields: Slice[ast2.Field], names: Slice[String]) -> Bool
   if fields.Len() == 0 then false else
     let field = fields.Get(0).UnwrapOr(ast2.Field { Name: "", Type: ast2.TypeExpr.UnitType, Tag: None })
-    typeUsesPreludeName(field.Type, names) || fieldsUsePreludeName(sliceDrop(fields, 1), names)
+    typeUsesPreludeName(field.Type, names) || fieldsUsePreludeName(common2.SliceDrop(fields, 1), names)
   end
 end
 
@@ -250,34 +247,34 @@ func variantsUsePreludeName(variants: Slice[ast2.Variant], names: Slice[String])
     false
   else
     let variant = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: [] as Slice[ast2.TypeExpr], Named: false, Names: [] as Slice[String] })
-    typeExprsUsePreludeName(variant.Fields, names) || variantsUsePreludeName(sliceDrop(variants, 1), names)
+    typeExprsUsePreludeName(variant.Fields, names) || variantsUsePreludeName(common2.SliceDrop(variants, 1), names)
   end
 end
 
 func constraintsUsePreludeName(constraints: Slice[ast2.Constraint], names: Slice[String]) -> Bool
   if constraints.Len() == 0 then false else
     let constraint = constraints.Get(0).UnwrapOr(ast2.Constraint { Name: "", BindName: None, Args: [] as Slice[ast2.TypeExpr] })
-    containsString(names, constraint.Name) || typeExprsUsePreludeName(constraint.Args, names) || constraintsUsePreludeName(sliceDrop(constraints, 1), names)
+    common2.ContainsString(names, constraint.Name) || typeExprsUsePreludeName(constraint.Args, names) || constraintsUsePreludeName(common2.SliceDrop(constraints, 1), names)
   end
 end
 
 func funcSigsUsePreludeName(sigs: Slice[ast2.FuncSig], names: Slice[String]) -> Bool
   if sigs.Len() == 0 then false else
     let sig = sigs.Get(0).UnwrapOr(ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] })
-    paramsUsePreludeName(sig.Params, names) || optionTypeUsesPreludeName(sig.Ret, names) || constraintsUsePreludeName(sig.Using, names) || funcSigsUsePreludeName(sliceDrop(sigs, 1), names)
+    paramsUsePreludeName(sig.Params, names) || optionTypeUsesPreludeName(sig.Ret, names) || constraintsUsePreludeName(sig.Using, names) || funcSigsUsePreludeName(common2.SliceDrop(sigs, 1), names)
   end
 end
 
 func implMethodsUsePreludeName(methods: Slice[ast2.ImplMethod], names: Slice[String]) -> Bool
   if methods.Len() == 0 then false else
     let method = methods.Get(0).UnwrapOr(ast2.ImplMethod { Pos: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, Sig: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] }, Body: ast2.EmptyExpr() })
-    funcSigsUsePreludeName([method.Sig], names) || exprUsesPreludeName(method.Body, names) || implMethodsUsePreludeName(sliceDrop(methods, 1), names)
+    funcSigsUsePreludeName([method.Sig], names) || exprUsesPreludeName(method.Body, names) || implMethodsUsePreludeName(common2.SliceDrop(methods, 1), names)
   end
 end
 
 func exprUsesPreludeName(expr: ast2.Expr, names: Slice[String]) -> Bool
   switch expr.Kind
-    case IdentExpr(name) => containsString(names, name)
+    case IdentExpr(name) => common2.ContainsString(names, name)
     case CallExpr(callee, typeArgs, args) => exprUsesPreludeName(callee, names) || typeExprsUsePreludeName(typeArgs, names) || exprsUsePreludeName(args, names)
     # Method dispatch becomes a mangled helper call during lowering. The
     # receiver and arguments alone do not expose that helper name, so retain
@@ -293,8 +290,8 @@ func exprUsesPreludeName(expr: ast2.Expr, names: Slice[String]) -> Bool
     case FuncLitExpr(params, ret, body) => paramsUsePreludeName(params, names) || optionTypeUsesPreludeName(ret, names) || exprUsesPreludeName(body, names)
     case SliceLitExpr(items) => exprsUsePreludeName(items, names)
     case TypeAsExpr(value, typ) => exprUsesPreludeName(value, names) || typeUsesPreludeName(typ, names)
-    case StructLitExpr(name, fields) => containsString(names, name) || structLitFieldsUsePreludeName(fields, names)
-    case GenericStructLitExpr(name, typeArgs, fields) => containsString(names, name) || typeExprsUsePreludeName(typeArgs, names) || structLitFieldsUsePreludeName(fields, names)
+    case StructLitExpr(name, fields) => common2.ContainsString(names, name) || structLitFieldsUsePreludeName(fields, names)
+    case GenericStructLitExpr(name, typeArgs, fields) => common2.ContainsString(names, name) || typeExprsUsePreludeName(typeArgs, names) || structLitFieldsUsePreludeName(fields, names)
     case InlineGoExpr(typ, _, values, types) => typeUsesPreludeName(typ.value(), names) || goOperandsUsePreludeName(values, names) || goTypeOperandsUsePreludeName(types, names)
     case MapLitExpr(pairs) => exprPairsUsePreludeName(pairs, names)
     case SetLitExpr(items) => exprsUsePreludeName(items, names)
@@ -310,42 +307,42 @@ func generatedSourceUsesPreludeHelper(source: String, decls: Slice[ast2.Decl]) -
       case ImplDecl(tps, target, iface, methods) => generatedSourceUsesImplHelpers(source, implStem(target, iface, typeParamSet(tps)), methods)
       case _ => false
     end
-    uses || generatedSourceUsesPreludeHelper(source, sliceDrop(decls, 1))
+    uses || generatedSourceUsesPreludeHelper(source, common2.SliceDrop(decls, 1))
   end
 end
 
 func generatedSourceUsesImplHelpers(source: String, stem: String, methods: Slice[ast2.ImplMethod]) -> Bool
   if methods.Len() == 0 then false else
     let method = methods.Get(0).UnwrapOr(ast2.ImplMethod { Pos: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, Sig: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, Name: "", TypeParams: [] as Slice[String], Params: [] as Slice[ast2.Param], Ret: None, Using: [] as Slice[ast2.Constraint] }, Body: ast2.EmptyExpr() })
-    strings.Contains(source, implMethodSymbol(stem, method.Sig.Name)) || generatedSourceUsesImplHelpers(source, stem, sliceDrop(methods, 1))
+    strings.Contains(source, implMethodSymbol(stem, method.Sig.Name)) || generatedSourceUsesImplHelpers(source, stem, common2.SliceDrop(methods, 1))
   end
 end
 
 func exprsUsePreludeName(exprs: Slice[ast2.Expr], names: Slice[String]) -> Bool
   if exprs.Len() == 0 then false else
     let expr = exprs.Get(0).UnwrapOr(ast2.EmptyExpr())
-    exprUsesPreludeName(expr, names) || exprsUsePreludeName(sliceDrop(exprs, 1), names)
+    exprUsesPreludeName(expr, names) || exprsUsePreludeName(common2.SliceDrop(exprs, 1), names)
   end
 end
 
 func structLitFieldsUsePreludeName(fields: Slice[ast2.StructLitField], names: Slice[String]) -> Bool
   if fields.Len() == 0 then false else
     let field = fields.Get(0).UnwrapOr(ast2.StructLitField { Name: "", Value: ast2.EmptyExpr() })
-    exprUsesPreludeName(field.Value, names) || structLitFieldsUsePreludeName(sliceDrop(fields, 1), names)
+    exprUsesPreludeName(field.Value, names) || structLitFieldsUsePreludeName(common2.SliceDrop(fields, 1), names)
   end
 end
 
 func goOperandsUsePreludeName(operands: Slice[ast2.GoOperand], names: Slice[String]) -> Bool
   if operands.Len() == 0 then false else
     let operand = operands.Get(0).UnwrapOr(ast2.GoOperand { Name: "", Value: ast2.EmptyExpr() })
-    exprUsesPreludeName(operand.Value, names) || goOperandsUsePreludeName(sliceDrop(operands, 1), names)
+    exprUsesPreludeName(operand.Value, names) || goOperandsUsePreludeName(common2.SliceDrop(operands, 1), names)
   end
 end
 
 func goTypeOperandsUsePreludeName(operands: Slice[ast2.GoTypeOperand], names: Slice[String]) -> Bool
   if operands.Len() == 0 then false else
     let operand = operands.Get(0).UnwrapOr(ast2.GoTypeOperand { Name: "", Type: ast2.TypeExpr.UnitType })
-    typeUsesPreludeName(operand.Type, names) || goTypeOperandsUsePreludeName(sliceDrop(operands, 1), names)
+    typeUsesPreludeName(operand.Type, names) || goTypeOperandsUsePreludeName(common2.SliceDrop(operands, 1), names)
   end
 end
 
@@ -353,20 +350,20 @@ func exprPairsUsePreludeName(pairs: Slice[(ast2.Expr, ast2.Expr)], names: Slice[
   if pairs.Len() == 0 then false else
     let pair = pairs.Get(0).UnwrapOr((ast2.EmptyExpr(), ast2.EmptyExpr()))
     let (key, value) = pair
-    exprUsesPreludeName(key, names) || exprUsesPreludeName(value, names) || exprPairsUsePreludeName(sliceDrop(pairs, 1), names)
+    exprUsesPreludeName(key, names) || exprUsesPreludeName(value, names) || exprPairsUsePreludeName(common2.SliceDrop(pairs, 1), names)
   end
 end
 
 func switchCasesUsePreludeName(cases: Slice[ast2.SwitchCase], names: Slice[String]) -> Bool
   if cases.Len() == 0 then false else
     let item = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
-    patternUsesPreludeName(item.Pattern, names) || exprUsesPreludeName(item.Body, names) || switchCasesUsePreludeName(sliceDrop(cases, 1), names)
+    patternUsesPreludeName(item.Pattern, names) || exprUsesPreludeName(item.Body, names) || switchCasesUsePreludeName(common2.SliceDrop(cases, 1), names)
   end
 end
 
 func patternUsesPreludeName(pattern: ast2.Pattern, names: Slice[String]) -> Bool
   switch pattern
-    case VariantPattern(name, _) => containsString(names, name)
+    case VariantPattern(name, _) => common2.ContainsString(names, name)
     case TuplePattern(items) => patternsUsePreludeName(items, names)
     case _ => false
   end
@@ -375,14 +372,14 @@ end
 func patternsUsePreludeName(patterns: Slice[ast2.Pattern], names: Slice[String]) -> Bool
   if patterns.Len() == 0 then false else
     let pattern = patterns.Get(0).UnwrapOr(ast2.Pattern.WildcardPattern)
-    patternUsesPreludeName(pattern, names) || patternsUsePreludeName(sliceDrop(patterns, 1), names)
+    patternUsesPreludeName(pattern, names) || patternsUsePreludeName(common2.SliceDrop(patterns, 1), names)
   end
 end
 
 func stmtsUsePreludeName(stmts: Slice[ast2.Stmt], names: Slice[String]) -> Bool
   if stmts.Len() == 0 then false else
     let stmt = stmts.Get(0).UnwrapOr(ast2.Stmt.ReturnStmt)
-    stmtUsesPreludeName(stmt, names) || stmtsUsePreludeName(sliceDrop(stmts, 1), names)
+    stmtUsesPreludeName(stmt, names) || stmtsUsePreludeName(common2.SliceDrop(stmts, 1), names)
   end
 end
 
@@ -403,7 +400,7 @@ end
 func letRecBindsUsePreludeName(bindings: Slice[ast2.LetRecBind], names: Slice[String]) -> Bool
   if bindings.Len() == 0 then false else
     let bind = bindings.Get(0).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType, Value: ast2.EmptyExpr() })
-    typeUsesPreludeName(bind.Type, names) || exprUsesPreludeName(bind.Value, names) || letRecBindsUsePreludeName(sliceDrop(bindings, 1), names)
+    typeUsesPreludeName(bind.Type, names) || exprUsesPreludeName(bind.Value, names) || letRecBindsUsePreludeName(common2.SliceDrop(bindings, 1), names)
   end
 end
 
@@ -424,7 +421,7 @@ func needsHKTDecls(decls: Slice[ast2.Decl]) -> Bool
       case ImplDecl(tps, _, _, _) => hasHKTTypeParam(tps)
       case _ => false
     end
-    here || needsHKTDecls(sliceDrop(decls, 1))
+    here || needsHKTDecls(common2.SliceDrop(decls, 1))
   end
 end
 
@@ -433,7 +430,7 @@ func hasHKTTypeParam(tps: Slice[String]) -> Bool
     false
   else
     let current = tps.Get(0).UnwrapOr("")
-    strings.Index(current, "[") >= 0 || hasHKTTypeParam(sliceDrop(tps, 1))
+    strings.Index(current, "[") >= 0 || hasHKTTypeParam(common2.SliceDrop(tps, 1))
   end
 end
 

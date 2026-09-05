@@ -160,10 +160,6 @@ func bootstrapGenerateSourceAt(sourceName: String, input: String) -> Result[Stri
                       let externalSources = if isPrelude then [] as Slice[typeinference2.PkgDeclSource] else prelude.Sources end
                       let sourceSets = appendBootstrapSources(mainInputs.Sources, externalSources)
                       let packagesRef = Ref.new(bootstrapCollectGoPackages(sourceSets))
-                      if !isPrelude then
-                        packagesRef.value().Append(bootstrapMyGoPackageSignatures(".", "github.com/mygo-lang/mygo/prelude", externalSources))
-                        ()
-                      end
                       let populated = bootstrapPopulateGoSignatures(workspaceRoot, packagesRef)
                       switch populated
                         case Err(err) => Err(fmt.Errorf("bootstrap Go FFI %s: %s", sourceName, err.Error()))
@@ -340,10 +336,6 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                     let packageSources = appendBootstrapSources(mainInputs.Sources, groups.ExternalTest.Sources)
                     let sourceSets = appendBootstrapSources(packageSources, externalSources)
                     let packagesRef = Ref.new(bootstrapCollectGoPackages(sourceSets))
-                    if dir != preludeDir then
-                      packagesRef.value().Append(bootstrapMyGoPackageSignatures(".", "github.com/mygo-lang/mygo/prelude", externalSources))
-                      ()
-                    end
                     let ffiStarted = bootstrapTimingStart()
                     let initialPopulated = bootstrapPopulateGoSignatures(workspaceRoot, packagesRef)
                     switch initialPopulated
@@ -352,7 +344,7 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                         Err(fmt.Errorf("bootstrap Go FFI %s: %s", dir, err.Error()))
                       end
                       case Ok(_) then
-                        let walked = bootstrapWalkImports(workspaceRoot, dir, bootstrapImportsFromSources(packageSources), 0, state, [], packagesRef)
+                        let walked = bootstrapWalkImports(workspaceRoot, dir, bootstrapImportsFromSources(packageSources), 0, state, [])
                         switch walked
                           case Err(err) then
                             state.Compiling.Delete(dir)
@@ -486,7 +478,7 @@ end
 # (1) recursively compile the dependency, (2) read its MyGo package signatures
 # from the already-parsed sources, and (3) append the entry to the running
 # goPackages slice.  This mirrors bootstrap.go.bak's per-input import loop.
-func bootstrapWalkImports(workspaceRoot: String, fromDir: String, imports: Slice[BootstrapImport], index: Int, state: BootstrapState, written: Slice[String], packages: Ref[Slice[typeinference2.GoPackageEntry]]) -> Result[Slice[String], Error]
+func bootstrapWalkImports(workspaceRoot: String, fromDir: String, imports: Slice[BootstrapImport], index: Int, state: BootstrapState, written: Slice[String]) -> Result[Slice[String], Error]
   if index >= imports.Len() then
     Ok(written)
   else
@@ -506,9 +498,8 @@ func bootstrapWalkImports(workspaceRoot: String, fromDir: String, imports: Slice
             let loaded = bootstrapLoadCachedSources(dependencyDir, state)
             switch loaded
               case Err(err) => Err(fmt.Errorf("%s", err))
-              case Ok(dependency) =>
-                packages.value().Append(bootstrapMyGoPackageSignatures(imp.Alias, imp.Path, dependency.Sources))
-                bootstrapWalkImports(workspaceRoot, fromDir, imports, index + 1, state, appendBootstrapStrings(written, files), packages)
+              case Ok(_) =>
+                bootstrapWalkImports(workspaceRoot, fromDir, imports, index + 1, state, appendBootstrapStrings(written, files))
             end
           end
         end
@@ -829,62 +820,6 @@ func bootstrapCollectGoPackagesFromDecls(decls: Slice[ast2.Decl], index: Int, st
         end
       case None => bootstrapCollectGoPackagesFromDecls(decls, index + 1, state)
     end
-  end
-end
-
-# Non-Go imports are exposed to inference as qualified packages too.  This
-# mirrors loadMyGoPackageSignatures in bootstrap.go.bak, but derives signatures
-# from the already-parsed dependency sources instead of reading them again.
-func bootstrapMyGoPackageSignatures(alias: String, path: String, sources: Slice[typeinference2.PkgDeclSource]) -> typeinference2.GoPackageEntry
-  bootstrapMyGoPackageSignaturesAt(alias, path, sources, 0, typeinference2.GoPackageEntry { Alias: alias, Path: path, Funcs: [] as Slice[typeinference2.GoFuncSignature], Types: [] as Slice[typeinference2.GoTypeSignature] })
-end
-
-func bootstrapMyGoPackageSignaturesAt(alias: String, path: String, sources: Slice[typeinference2.PkgDeclSource], index: Int, entry: typeinference2.GoPackageEntry) -> typeinference2.GoPackageEntry
-  if index >= sources.Len() then entry else
-    switch sources.Get(index)
-      case Some(source) => bootstrapMyGoPackageDeclSignatures(alias, path, source.Decls, 0, bootstrapMyGoPackageSignaturesAt(alias, path, sources, index + 1, entry))
-      case None => bootstrapMyGoPackageSignaturesAt(alias, path, sources, index + 1, entry)
-    end
-  end
-end
-
-func bootstrapMyGoPackageDeclSignatures(alias: String, path: String, decls: Slice[ast2.Decl], index: Int, entry: typeinference2.GoPackageEntry) -> typeinference2.GoPackageEntry
-  if index >= decls.Len() then entry else
-    switch decls.Get(index)
-      case Some(decl) =>
-        switch decl
-          case FuncDecl(name, _, params, ret, _, _) =>
-            let signature = typeinference2.GoFuncSignature { Name: name, Params: bootstrapParamTypes(params, 0, []), Results: bootstrapResultTypes(ret), Variadic: false }
-            let next = typeinference2.GoPackageEntry { Alias: entry.Alias, Path: entry.Path, Funcs: entry.Funcs.Append(signature), Types: entry.Types }
-            bootstrapMyGoPackageDeclSignatures(alias, path, decls, index + 1, next)
-          case _ => bootstrapMyGoPackageDeclSignatures(alias, path, decls, index + 1, entry)
-        end
-      case None => bootstrapMyGoPackageDeclSignatures(alias, path, decls, index + 1, entry)
-    end
-  end
-end
-
-func bootstrapParamTypes(params: Slice[ast2.Param], index: Int, out: Slice[String]) -> Slice[String]
-  if index >= params.Len() then out else
-    switch params.Get(index)
-      case Some(param) => bootstrapParamTypes(params, index + 1, out.Append(bootstrapTypeName(param.Type)))
-      case None => bootstrapParamTypes(params, index + 1, out)
-    end
-  end
-end
-
-func bootstrapResultTypes(ret: Option[ast2.TypeExpr]) -> Slice[String]
-  switch ret
-    case Some(typ) => [bootstrapTypeName(typ)]
-    case None => []
-  end
-end
-
-func bootstrapTypeName(typ: ast2.TypeExpr) -> String
-  switch typ
-    case NamedType(name, _) => name
-    case UnitType => "()"
-    case _ => "any"
   end
 end
 

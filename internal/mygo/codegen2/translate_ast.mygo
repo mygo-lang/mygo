@@ -1,4 +1,5 @@
 package codegen2
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
@@ -26,16 +27,7 @@ func translateExprAstExpected(expr: ast2.Expr, ctx: Ref[egCtx], expected: ast2.M
   let result = translateExprAstExpectedInner(expr, ctx, effectiveExpected)
   switch result
     case Ok(value) => Ok(value)
-    case Err(msg) => Err(errorAtExpr(expr, msg))
-  end
-end
-
-func errorAtExpr(expr: ast2.Expr, msg: String) -> String
-  if strings.Contains(msg, ":") then
-    msg
-  else
-    let source = if expr.Pos.SourceName == "" then "<input>" else expr.Pos.SourceName end
-    source + ":" + expr.Pos.Line.ToString() + ":" + expr.Pos.Column.ToString() + ": " + msg
+    case Err(msg) => Err(common2.ErrorAtExpr(expr, msg))
   end
 end
 
@@ -188,7 +180,7 @@ func translateTupleLitAst(items: Slice[ast2.Expr], ctx: Ref[egCtx], expected: as
           fields = fields.Append("F" + j.ToString() + " " + fieldType)
           j = j + 1
         end
-        let structTypeStr = "struct { " + joinStrings(fields, "; ") + " }"
+        let structTypeStr = "struct { " + common2.JoinStrings(fields, "; ") + " }"
         # Wrap each positional element in an `F0: x` keyed composite so the
         # generated Go CompositeLit initializes struct fields by name rather
         # than by position.  Position-only literals are valid for arrays and
@@ -431,7 +423,7 @@ func structPatternFieldsUsedInBody(fields: Slice[ast2.StructPatternField], body:
     false
   else
     let f = fields.Get(0).UnwrapOr(ast2.StructPatternField { Field: "", Bind: "" })
-    exprUsesName(body, f.Bind) || structPatternFieldsUsedInBody(sliceDrop(fields, 1), body)
+    exprUsesName(body, f.Bind) || structPatternFieldsUsedInBody(common2.SliceDrop(fields, 1), body)
   end
 end
 
@@ -474,13 +466,13 @@ end
 
 func exprsUseName(items: Slice[ast2.Expr], name: String) -> Bool
   if items.Len() == 0 then false else
-    exprUsesName(items.Get(0).UnwrapOr(ast2.EmptyExpr()), name) || exprsUseName(sliceDrop(items, 1), name)
+    exprUsesName(items.Get(0).UnwrapOr(ast2.EmptyExpr()), name) || exprsUseName(common2.SliceDrop(items, 1), name)
   end
 end
 
 func stmtsUseName(items: Slice[ast2.Stmt], name: String) -> Bool
   if items.Len() == 0 then false else
-    stmtUsesName(items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr())), name) || stmtsUseName(sliceDrop(items, 1), name)
+    stmtUsesName(items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr())), name) || stmtsUseName(common2.SliceDrop(items, 1), name)
   end
 end
 
@@ -503,7 +495,7 @@ func letRecBindingsUseName(bindings: Slice[ast2.LetRecBind], name: String) -> Bo
     false
   else
     let b = bindings.Get(0).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType, Value: ast2.EmptyExpr() })
-    exprUsesName(b.Value, name) || letRecBindingsUseName(sliceDrop(bindings, 1), name)
+    exprUsesName(b.Value, name) || letRecBindingsUseName(common2.SliceDrop(bindings, 1), name)
   end
 end
 
@@ -512,7 +504,7 @@ func goOperandsUseName(items: Slice[ast2.GoOperand], name: String) -> Bool
     false
   else
     let o = items.Get(0).UnwrapOr(ast2.GoOperand { Name: "", Value: ast2.EmptyExpr() })
-    exprUsesName(o.Value, name) || goOperandsUseName(sliceDrop(items, 1), name)
+    exprUsesName(o.Value, name) || goOperandsUseName(common2.SliceDrop(items, 1), name)
   end
 end
 
@@ -521,14 +513,14 @@ func switchCasesUseName(cases: Slice[ast2.SwitchCase], name: String) -> Bool
     false
   else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
-    exprUsesName(current.Body, name) || switchCasesUseName(sliceDrop(cases, 1), name)
+    exprUsesName(current.Body, name) || switchCasesUseName(common2.SliceDrop(cases, 1), name)
   end
 end
 
 func structLitFieldsUseName(fields: Slice[ast2.StructLitField], name: String) -> Bool
   if fields.Len() == 0 then false else
     let f = fields.Get(0).UnwrapOr(ast2.StructLitField { Name: "", Value: ast2.EmptyExpr() })
-    exprUsesName(f.Value, name) || structLitFieldsUseName(sliceDrop(fields, 1), name)
+    exprUsesName(f.Value, name) || structLitFieldsUseName(common2.SliceDrop(fields, 1), name)
   end
 end
 
@@ -536,7 +528,7 @@ func exprPairsUseName(pairs: Slice[(ast2.Expr, ast2.Expr)], name: String) -> Boo
   if pairs.Len() == 0 then false else
     let pair = pairs.Get(0).UnwrapOr((ast2.EmptyExpr(), ast2.EmptyExpr()))
     let (k, v) = pair
-    exprUsesName(k, name) || exprUsesName(v, name) || exprPairsUseName(sliceDrop(pairs, 1), name)
+    exprUsesName(k, name) || exprUsesName(v, name) || exprPairsUseName(common2.SliceDrop(pairs, 1), name)
   end
 end
 
@@ -562,7 +554,7 @@ func translateSwitchBranchesStmt(cases: Slice[ast2.SwitchCase], targetType: Opti
       end
       case LiteralPattern(kind, literal) then
         let body = translateSwitchCaseBodyStmt(current.Body, ctx)
-        let rest = translateSwitchBranchesStmt(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+        let rest = translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
         switch body
           case Err(msg) => Err(msg)
           case Ok(bodyStmts) then
@@ -583,7 +575,7 @@ func translateSwitchBranchesStmt(cases: Slice[ast2.SwitchCase], targetType: Opti
         end
       end
       case VariantPattern(name, args) then
-        let rest = translateSwitchBranchesStmt(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+        let rest = translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
         switch rest
           case Err(msg) => Err(msg)
           case Ok(next) then
@@ -610,7 +602,7 @@ func translateSwitchBranchesStmt(cases: Slice[ast2.SwitchCase], targetType: Opti
         end
       end
       case StructVariantPattern(vname, fields) then
-        let rest = translateSwitchBranchesStmt(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+        let rest = translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
         switch rest
           case Err(msg) => Err(msg)
           case Ok(next) then
@@ -712,7 +704,7 @@ func normalizeNumberLiteralSuffix(value: String, suffixes: Slice[String]) -> Str
     if strings.HasSuffix(value, suffix) then
       strings.TrimSuffix(value, suffix)
     else
-      normalizeNumberLiteralSuffix(value, sliceDrop(suffixes, 1))
+      normalizeNumberLiteralSuffix(value, common2.SliceDrop(suffixes, 1))
     end
   end
 end
@@ -744,7 +736,7 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], targetType: Option[a
       end
       case LiteralPattern(kind, literal) then
         let body = translateSwitchCaseBody(current.Body, ctx, expected, temp)
-        let rest = translateSwitchBranches(sliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
+        let rest = translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
         switch body
           case Err(msg) => Err(msg)
           case Ok(bodyStmts) then
@@ -765,7 +757,7 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], targetType: Option[a
         end
       end
       case VariantPattern(name, args) then
-        let rest = translateSwitchBranches(sliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
+        let rest = translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
         switch rest
           case Err(msg) => Err(msg)
           case Ok(next) then
@@ -788,7 +780,7 @@ func translateSwitchBranches(cases: Slice[ast2.SwitchCase], targetType: Option[a
         end
       end
       case StructVariantPattern(vname, fields) then
-        let rest = translateSwitchBranches(sliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
+        let rest = translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, temp, ctx, expected)
         switch rest
           case Err(msg) => Err(msg)
           case Ok(next) then
@@ -828,7 +820,7 @@ func translateTupleVariantSwitchAt(items: Slice[ast2.Pattern], targetType: Optio
     let value = goast.Selector(target, "F" + index.ToString())
     switch pattern
       case VariantPattern(name, args) then
-        let rest = translateSwitchBranches(sliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, temp, outerCtx, expected)
+        let rest = translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, temp, outerCtx, expected)
         switch rest
           case Err(msg) => Err(msg)
           case Ok(next) =>
@@ -849,7 +841,7 @@ func translateTupleVariantSwitchAt(items: Slice[ast2.Pattern], targetType: Optio
         end
       end
       case StructVariantPattern(name, fields) then
-        let rest = translateSwitchBranches(sliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, temp, outerCtx, expected)
+        let rest = translateSwitchBranches(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, temp, outerCtx, expected)
         switch rest
           case Err(msg) => Err(msg)
           case Ok(next) =>
@@ -886,7 +878,7 @@ func translateTupleVariantSwitchStmtAt(items: Slice[ast2.Pattern], targetType: O
     let value = goast.Selector(target, "F" + index.ToString())
     switch pattern
       case VariantPattern(name, args) then
-        let rest = translateSwitchBranchesStmt(sliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
+        let rest = translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
         switch rest
           case Err(msg) => Err(msg)
           case Ok(next) =>
@@ -907,7 +899,7 @@ func translateTupleVariantSwitchStmtAt(items: Slice[ast2.Pattern], targetType: O
         end
       end
       case StructVariantPattern(name, fields) then
-        let rest = translateSwitchBranchesStmt(sliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
+        let rest = translateSwitchBranchesStmt(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
         switch rest
           case Err(msg) => Err(msg)
           case Ok(next) =>
@@ -1042,7 +1034,7 @@ func bindStructPatternFieldsWithTypes(ctx: Ref[egCtx], fields: Slice[ast2.Struct
       ctxSetLocal(outerCtx, f.Bind, fieldType)
       ctx.patternTypes.Set(f.Bind, fieldType)
     end
-    bindStructPatternFieldsWithTypes(ctx, sliceDrop(fields, 1), valueName, variantName, targetMono, outerCtx)
+    bindStructPatternFieldsWithTypes(ctx, common2.SliceDrop(fields, 1), valueName, variantName, targetMono, outerCtx)
   end
 end
 
@@ -1213,11 +1205,19 @@ func resolveExprMonoType(expr: ast2.Expr, ctx: Ref[egCtx]) -> Option[ast2.MonoTy
               end
               switch resolvedBase
                 case TQualifiedName(path, inner) =>
-                  switch ffiResultSignatureInPackages(ctx.goPackages, path, field)
-                    case Some(sig) => Some(goSignatureToMono(sig))
+                  switch typeinference2.GoSignatureInPackages(path, field, ctx.goPackages, ffiResultPredicate)
+                    case Some(sig) =>
+                      switch goSignatureToMono(sig)
+                        case Ok(mt) => Some(mt)
+                        case Err(_) => None
+                      end
                     case None =>
-                      switch ffiSignatureInPackages(ctx.goPackages, path, field)
-                        case Some(sig) => Some(goSignatureToMono(sig))
+                      switch typeinference2.GoSignatureInPackages(path, field, ctx.goPackages, ffiOptionResultPredicate)
+                        case Some(sig) =>
+                          switch goSignatureToMono(sig)
+                            case Ok(mt) => Some(mt)
+                            case Err(_) => None
+                          end
                         case None => lookupFieldInMonoType(resolvedBase, field, ctx)
                       end
                   end
@@ -1242,16 +1242,7 @@ func resolveExprMonoType(expr: ast2.Expr, ctx: Ref[egCtx]) -> Option[ast2.MonoTy
   end
 end
 
-func isGoPackageAlias(alias: String, packages: Slice[typeinference2.GoPackageEntry]) -> Bool
-  if packages.Len() == 0 then false else
-    switch packages.Get(0)
-      case Some(pkg) => (pkg.Alias == alias) || isGoPackageAlias(alias, sliceDrop(packages, 1))
-      case None => isGoPackageAlias(alias, sliceDrop(packages, 1))
-    end
-  end
-end
-
-func goSignatureToMono(sig: typeinference2.GoFuncSignature) -> ast2.MonoType
+func goSignatureToMono(sig: typeinference2.GoFuncSignature) -> Result[ast2.MonoType, String]
   typeinference2.GoSignatureType(sig)
 end
 
@@ -1980,7 +1971,7 @@ func matchingReceiverCandidate(candidates: Slice[ImplDictionaryCandidate], metho
       case Some(receiver) => candidate.Method == method && receiverMonoMatches(candidate.Receiver, receiver)
       case None => false
     end
-    if matched then Some(candidate) else matchingReceiverCandidate(sliceDrop(candidates, 1), method, receiverType) end
+    if matched then Some(candidate) else matchingReceiverCandidate(common2.SliceDrop(candidates, 1), method, receiverType) end
   end
 end
 
@@ -2115,96 +2106,35 @@ func inferredBuiltinConstructorArgs(name: String, expected: ast2.MonoType, ctx: 
   end
 end
 
+# The Option/Result/Multi FFI boundary lookups share one package/func scan:
+# typeinference2.GoSignatureForCallee.  Each accessor below is a thin
+# selection of the result-shape predicate; the `...FromCallee` input-shape
+# variants have been folded into the shared walker.
+#
+# Suffix policy: `...WithPackage` carries GoPackageEntry context,
+# `...WithParams` carries type-parameter context, `...In`/`...InEnv` carry an
+# environment, `...Into` is the intentional tail-recursion accumulator
+# idiom, and `...FromCallee` has been removed as a suffix — the base
+# accessors already operate on a callee expression.
+func ffiOptionResultPredicate(sig: typeinference2.GoFuncSignature) -> Bool
+  sig.Results.Len() == 2 && sig.Results.Get(1).UnwrapOr("") == "bool"
+end
+
+func ffiResultPredicate(sig: typeinference2.GoFuncSignature) -> Bool
+  sig.Results.Len() == 2 && sig.Results.Get(1).UnwrapOr("") == "error"
+end
+
 func ffiOptionSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
   switch callee.Kind
     case CallExpr(fn, _, _) => ffiOptionSignature(fn, ctx)
-    case FieldExpr(base, field) =>
-      switch base.Kind
-        case IdentExpr(alias) => ffiSignatureInPackages(ctx.goPackages, alias, field)
-        case _ => None
-      end
-    case _ => None
+    case _ => typeinference2.GoSignatureForCallee(callee, ctx.goPackages, ffiOptionResultPredicate)
   end
 end
 
 func ffiMultiResultSignature(expr: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
   switch expr.Kind
-    case CallExpr(callee, _, _) => ffiMultiResultSignatureFromCallee(callee, ctx.goPackages)
+    case CallExpr(callee, _, _) => typeinference2.GoSignatureForCallee(callee, ctx.goPackages, func(sig: typeinference2.GoFuncSignature) -> Bool sig.Results.Len() > 1 end)
     case _ => None
-  end
-end
-
-func ffiMultiResultSignatureFromCallee(callee: ast2.Expr, packages: Slice[typeinference2.GoPackageEntry]) -> Option[typeinference2.GoFuncSignature]
-  switch callee.Kind
-    case FieldExpr(base, field) then
-      switch base.Kind
-        case IdentExpr(alias) => ffiMultiResultSignatureInPackages(alias, field, packages)
-        case _ => None
-      end
-    end
-    case _ => None
-  end
-end
-
-func ffiMultiResultSignatureInPackages(alias: String, name: String, packages: Slice[typeinference2.GoPackageEntry]) -> Option[typeinference2.GoFuncSignature]
-  if packages.Len() == 0 then
-    None
-  else
-    switch packages.Get(0)
-      case Some(pkg) then
-        if pkg.Alias == alias then
-          ffiMultiResultSignatureInFuncs(name, pkg.Funcs)
-        else
-          ffiMultiResultSignatureInPackages(alias, name, sliceDrop(packages, 1))
-        end
-      end
-      case None => None
-    end
-  end
-end
-
-func ffiMultiResultSignatureInFuncs(name: String, funcs: Slice[typeinference2.GoFuncSignature]) -> Option[typeinference2.GoFuncSignature]
-  if funcs.Len() == 0 then
-    None
-  else
-    switch funcs.Get(0)
-      case Some(sig) then
-        if sig.Name == name && sig.Results.Len() > 1 then
-          Some(sig)
-        else
-          ffiMultiResultSignatureInFuncs(name, sliceDrop(funcs, 1))
-        end
-      end
-      case None => None
-    end
-  end
-end
-
-func ffiSignatureInPackages(packages: Slice[typeinference2.GoPackageEntry], alias: String, name: String) -> Option[typeinference2.GoFuncSignature]
-  if packages.Len() == 0 then
-    None
-  else
-    switch packages.Get(0)
-      case Some(pkg) => if pkg.Alias == alias then ffiSignatureInFuncs(pkg.Funcs, name) else ffiSignatureInPackages(sliceDrop(packages, 1), alias, name) end
-      case None => None
-    end
-  end
-end
-
-func ffiSignatureInFuncs(funcs: Slice[typeinference2.GoFuncSignature], name: String) -> Option[typeinference2.GoFuncSignature]
-  if funcs.Len() == 0 then
-    None
-  else
-    switch funcs.Get(0)
-      case Some(sig) then
-        if sig.Name == name && sig.Results.Len() == 2 && sig.Results.Get(1).UnwrapOr("") == "bool" then
-          Some(sig)
-        else
-          ffiSignatureInFuncs(sliceDrop(funcs, 1), name)
-        end
-      end
-      case None => None
-    end
   end
 end
 
@@ -2251,30 +2181,7 @@ end
 func ffiResultSignature(callee: ast2.Expr, ctx: Ref[egCtx]) -> Option[typeinference2.GoFuncSignature]
   switch callee.Kind
     case CallExpr(fn, _, _) => ffiResultSignature(fn, ctx)
-    case FieldExpr(base, field) =>
-      switch base.Kind
-        case IdentExpr(alias) => ffiResultSignatureInPackages(ctx.goPackages, alias, field)
-        case _ => None
-      end
-    case _ => None
-  end
-end
-
-func ffiResultSignatureInPackages(packages: Slice[typeinference2.GoPackageEntry], alias: String, name: String) -> Option[typeinference2.GoFuncSignature]
-  if packages.Len() == 0 then None else
-    switch packages.Get(0)
-      case Some(pkg) => if pkg.Alias == alias then ffiResultSignatureInFuncs(pkg.Funcs, name) else ffiResultSignatureInPackages(sliceDrop(packages, 1), alias, name) end
-      case None => None
-    end
-  end
-end
-
-func ffiResultSignatureInFuncs(funcs: Slice[typeinference2.GoFuncSignature], name: String) -> Option[typeinference2.GoFuncSignature]
-  if funcs.Len() == 0 then None else
-    switch funcs.Get(0)
-      case Some(sig) => if sig.Name == name && sig.Results.Len() == 2 && sig.Results.Get(1).UnwrapOr("") == "error" then Some(sig) else ffiResultSignatureInFuncs(sliceDrop(funcs, 1), name) end
-      case None => None
-    end
+    case _ => typeinference2.GoSignatureForCallee(callee, ctx.goPackages, ffiResultPredicate)
   end
 end
 
@@ -2470,14 +2377,14 @@ func appendRequirementArgs(args: Slice[goast.Expr], requirements: Slice[Dictiona
   else
     let requirement = requirements.Get(0).UnwrapOr(DictionaryRequirement { Interface: "", Method: "", Args: [] as Slice[ast2.TypeExpr] })
     switch ctx.constraintFuncs.Get(requirement.Method)
-      case Some(fn) => appendRequirementArgs(args.Append(goast.Ident(fn)), sliceDrop(requirements, 1), ctx)
+      case Some(fn) => appendRequirementArgs(args.Append(goast.Ident(fn)), common2.SliceDrop(requirements, 1), ctx)
       case None =>
         switch matchingCandidate(ctx.packageCandidates.Get(requirement.Interface + "." + requirement.Method).UnwrapOr([] as Slice[ImplDictionaryCandidate]), requirement)
-          case Some(candidate) => appendRequirementArgs(args.Append(goast.Ident(candidate.Helper)), sliceDrop(requirements, 1), ctx)
+          case Some(candidate) => appendRequirementArgs(args.Append(goast.Ident(candidate.Helper)), common2.SliceDrop(requirements, 1), ctx)
           case None =>
             switch ctx.packageDictionaries.Get(requirement.Interface + "." + requirement.Method)
-              case Some(helper) => appendRequirementArgs(args.Append(goast.Ident(helper)), sliceDrop(requirements, 1), ctx)
-              case None => appendRequirementArgs(args, sliceDrop(requirements, 1), ctx)
+              case Some(helper) => appendRequirementArgs(args.Append(goast.Ident(helper)), common2.SliceDrop(requirements, 1), ctx)
+              case None => appendRequirementArgs(args, common2.SliceDrop(requirements, 1), ctx)
             end
         end
     end
@@ -2489,14 +2396,14 @@ func matchingCandidate(candidates: Slice[ImplDictionaryCandidate], requirement: 
     None
   else
     let candidate = candidates.Get(0).UnwrapOr(ImplDictionaryCandidate { Interface: "", Method: "", InterfaceArgs: [] as Slice[ast2.TypeExpr], Receiver: ast2.MonoType.TUnit, TypeParams: [] as Slice[String], Helper: "" })
-    if typeExprListMatches(candidate.InterfaceArgs, requirement.Args, typeParamSet(candidate.TypeParams)) then Some(candidate) else matchingCandidate(sliceDrop(candidates, 1), requirement) end
+    if typeExprListMatches(candidate.InterfaceArgs, requirement.Args, typeParamSet(candidate.TypeParams)) then Some(candidate) else matchingCandidate(common2.SliceDrop(candidates, 1), requirement) end
   end
 end
 
 func typeExprListMatches(patterns: Slice[ast2.TypeExpr], actuals: Slice[ast2.TypeExpr], variables: Set[String]) -> Bool
   if patterns.Len() != actuals.Len() then false else
     if patterns.Len() == 0 then true else
-      typeExprMatches(patterns.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), actuals.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), variables) && typeExprListMatches(sliceDrop(patterns, 1), sliceDrop(actuals, 1), variables)
+      typeExprMatches(patterns.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), actuals.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), variables) && typeExprListMatches(common2.SliceDrop(patterns, 1), common2.SliceDrop(actuals, 1), variables)
     end
   end
 end
@@ -2522,11 +2429,11 @@ func appendDictionaryArgs(args: Slice[goast.Expr], methods: Slice[String], ctx: 
     let method = methods.Get(0).UnwrapOr("")
     let next = ctx.constraintFuncs.Get(method)
     switch next
-      case Some(fn) => appendDictionaryArgs(args.Append(goast.Ident(fn)), sliceDrop(methods, 1), ctx)
+      case Some(fn) => appendDictionaryArgs(args.Append(goast.Ident(fn)), common2.SliceDrop(methods, 1), ctx)
       case None =>
         switch ctx.packageDictionaries.Get(method)
-          case Some(helper) => appendDictionaryArgs(args.Append(goast.Ident(helper)), sliceDrop(methods, 1), ctx)
-          case None => appendDictionaryArgs(args, sliceDrop(methods, 1), ctx)
+          case Some(helper) => appendDictionaryArgs(args.Append(goast.Ident(helper)), common2.SliceDrop(methods, 1), ctx)
+          case None => appendDictionaryArgs(args, common2.SliceDrop(methods, 1), ctx)
         end
     end
   end

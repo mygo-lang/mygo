@@ -231,8 +231,13 @@ func translateFFITupleLetStmt(pattern: ast2.Pattern, value: ast2.Expr, sig: type
         switch raw
           case Err(msg) => Err(msg)
           case Ok(call) then
-            let resultTypes = typeinference2.GoSignatureRawResultType(sig)
-            translateRawTupleLet(pattern, resultTypes, call.Expr, call.Pre, ctx)
+            # The raw multiple-return shape comes straight from the Go
+            # signature; an unresolvable element type is a hard error rather
+            # than a silent `any`.
+            switch typeinference2.GoSignatureRawResultType(sig)
+              case Ok(resultTypes) => translateRawTupleLet(pattern, resultTypes, call.Expr, call.Pre, ctx)
+              case Err(msg) => Err(msg)
+            end
           end
         end
       end

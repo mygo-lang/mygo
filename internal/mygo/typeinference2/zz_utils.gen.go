@@ -2,6 +2,7 @@
 
 package typeinference2
 
+import "github.com/mygo-lang/mygo/internal/mygo/common2"
 import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import "fmt"
 import . "github.com/mygo-lang/mygo/prelude"
@@ -109,7 +110,7 @@ func monoListString(items []ast2.MonoType) string {
 		return ""
 	} else {
 		head := monoStringFull(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.MonoType__TUnit__Ctor()))
-		tail := monoListString(sliceDrop(items, 1))
+		tail := monoListString(common2.SliceDrop(items, 1))
 		if tail == "" {
 			return head
 		} else {
@@ -218,7 +219,7 @@ func isKindVarAll(items []ast2.MonoType, id int) bool {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		return false
 	} else {
-		return isKindVar(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.MonoType__TUnit__Ctor()), id) || isKindVarAll(sliceDrop(items, 1), id)
+		return isKindVar(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), ast2.MonoType__TUnit__Ctor()), id) || isKindVarAll(common2.SliceDrop(items, 1), id)
 	}
 }
 func nextFreshVarID(t ast2.MonoType, current int) int {
@@ -347,7 +348,7 @@ func containsInt(items []int, value int) bool {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		return false
 	} else {
-		return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), 0) == value || containsInt(sliceDrop(items, 1), value)
+		return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), 0) == value || containsInt(common2.SliceDrop(items, 1), value)
 	}
 }
 func envFreeVars(env Env, out []int) []int {
@@ -363,7 +364,7 @@ func removeInts(items []int, removed []int) []int {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		return []int{}
 	} else {
-		tail := removeInts(sliceDrop(items, 1), removed)
+		tail := removeInts(common2.SliceDrop(items, 1), removed)
 		if containsInt(removed, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0), 0)) {
 			return tail
 		} else {
@@ -392,17 +393,6 @@ func emptyMonoTypes() []ast2.MonoType {
 func emptyASTTypeExprs() []ast2.TypeExpr {
 	return []ast2.TypeExpr{}
 }
-func sliceDrop[A any](items []A, n int) []A {
-	if n <= 0 {
-		return items
-	} else {
-		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
-			return []A{}
-		} else {
-			return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(items, n, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)), []A{})
-		}
-	}
-}
 func tCon(name string, args []ast2.MonoType) ast2.MonoType {
 	return ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor(name)}[0], args)
 }
@@ -420,7 +410,7 @@ func __mygo_mt_typeinference2_appendPredicates(__mygo_mt_p0 []Predicate, __mygo_
 				return __mygo_mt_p0
 			} else {
 				__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), Predicate{ClassName: "", Args: []ast2.MonoType{}}))
-				__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+				__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
 				continue
@@ -483,7 +473,7 @@ func __mygo_mt_typeinference2_freeVarsAll(__mygo_mt_p0 []ast2.MonoType, __mygo_m
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
 				return __mygo_mt_p1
 			} else {
-				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 				__tail_1 := freeVars(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.MonoType__TUnit__Ctor()), __mygo_mt_p1)
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
@@ -502,7 +492,7 @@ func __mygo_mt_typeinference2_freeVarsPredicates(__mygo_mt_p0 []Predicate, __myg
 				return __mygo_mt_p1
 			} else {
 				predicate := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), Predicate{ClassName: "", Args: []ast2.MonoType{}})
-				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 				__tail_1 := freeVarsAll(predicate.Args, __mygo_mt_p1)
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
@@ -597,7 +587,7 @@ func __mygo_mt_typeinference2_instantiateBound(__mygo_mt_p0 []int, __mygo_mt_p1 
 					__mygo_expr_0 = ast2.MonoType__TVar__Ctor(__mygo_mt_p2.FreshVarID)
 				}
 				replacement := __mygo_expr_0
-				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 				__tail_1 := __mygo_mt_p1
 				__tail_2 := withFreshID(__mygo_mt_p2, __mygo_mt_p2.FreshVarID+1)
 				__tail_3 := substPrepend(__mygo_mt_p3, SubstEntry{ID: id, Type: replacement})
@@ -618,7 +608,7 @@ func __mygo_mt_typeinference2_instantiateBoundSubst(__mygo_mt_p0 []int, __mygo_m
 				return __mygo_mt_p2
 			} else {
 				id := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), 0)
-				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 				__tail_1 := withFreshID(__mygo_mt_p1, __mygo_mt_p1.FreshVarID+1)
 				__tail_2 := substAppend(__mygo_mt_p2, SubstEntry{ID: id, Type: ast2.MonoType__TVar__Ctor(__mygo_mt_p1.FreshVarID)})
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
@@ -645,7 +635,7 @@ func __mygo_mt_typeinference2_instantiateBoundSubstFor(__mygo_mt_p0 []int, __myg
 					__mygo_expr_0 = ast2.MonoType__TVar__Ctor(__mygo_mt_p2.FreshVarID)
 				}
 				replacement := __mygo_expr_0
-				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 				__tail_1 := __mygo_mt_p1
 				__tail_2 := withFreshID(__mygo_mt_p2, __mygo_mt_p2.FreshVarID+1)
 				__tail_3 := substAppend(__mygo_mt_p3, SubstEntry{ID: id, Type: replacement})
@@ -665,7 +655,7 @@ func __mygo_mt_typeinference2_nextFreshVarIDInAll(__mygo_mt_p0 []ast2.MonoType, 
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
 				return __mygo_mt_p1
 			} else {
-				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 				__tail_1 := nextFreshVarID(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.MonoType__TUnit__Ctor()), __mygo_mt_p1)
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
@@ -733,7 +723,7 @@ func __mygo_mt_typeinference2_unionInts(__mygo_mt_p0 []int, __mygo_mt_p1 []int, 
 				}
 				next := __mygo_expr_0
 				__tail_0 := next
-				__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+				__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
 				continue

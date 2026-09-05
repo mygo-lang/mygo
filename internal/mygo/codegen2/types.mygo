@@ -1,4 +1,5 @@
 package codegen2
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
@@ -428,7 +429,7 @@ func ctxPushPreStmt(ctx: Ref[egCtx], stmt: String) -> ()
 end
 
 func ctxDrainPreStmts(ctx: Ref[egCtx]) -> String
-  let out = joinStrings(ctx.preStmts, "\n")
+  let out = common2.JoinStrings(ctx.preStmts, "\n")
   go[()] {
     code: "ctx.preStmts = nil"
     in ctx = ctx
@@ -576,57 +577,11 @@ end
 
 # monoTypeToGoStrIn renders a MonoType as a Go type string, resolving
 # TQualifiedName(path, inner) back to `alias.member` using the current file's
-# import path → alias table (`aliases`).
+# import path → alias table (`aliases`).  No type-parameter context is
+# available, so TParams render as `any` (thin wrapper over the shared
+# recursion).
 func monoTypeToGoStrIn(t: ast2.MonoType, aliases: Map[String, String]) -> String
-  switch t
-    case TCon(name) => goPrimitiveTypeName(name)
-    case TFunc(params, ret) then
-      let paramStrs = params.Map(func(p: ast2.MonoType) -> String monoTypeToGoStrIn(p, aliases) end)
-      let retStr = monoTypeToGoStrIn(ret.value(), aliases)
-      if retStr == "struct{}" then
-        "func(" + joinStrings(paramStrs, ", ") + ")"
-      else
-        "func(" + joinStrings(paramStrs, ", ") + ") " + retStr
-      end
-    end
-    case TApp(ctor, args) then
-      switch ctor.value()
-        # Ref is a compiler-recognised boundary type, never a generated Go
-        # generic.  This path is used for typed local declarations, unlike
-        # goType which already handles Ref in source signatures.
-        case TCon(name) then
-          if name == "Ref" && args.Len() == 1 then
-            "*" + monoTypeToGoStrIn(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), aliases)
-          elsif name == "Slice" && args.Len() == 1 then
-            "[]" + monoTypeToGoStrIn(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), aliases)
-          elsif name == "Map" && args.Len() == 2 then
-            "map[" + monoTypeToGoStrIn(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), aliases) + "]" + monoTypeToGoStrIn(args.Get(1).UnwrapOr(ast2.MonoType.TUnit), aliases)
-          elsif name == "Set" && args.Len() == 1 then
-            "map[" + monoTypeToGoStrIn(args.Get(0).UnwrapOr(ast2.MonoType.TUnit), aliases) + "]struct{}"
-          else
-            let ctorStr = monoTypeToGoStrIn(ctor.value(), aliases)
-            let argStrs = args.Map(func(a: ast2.MonoType) -> String monoTypeToGoStrIn(a, aliases) end)
-            if argStrs.Len() == 0 then ctorStr else ctorStr + "[" + joinStrings(argStrs, ", ") + "]" end
-          end
-        end
-        case _ =>
-          let ctorStr = monoTypeToGoStrIn(ctor.value(), aliases)
-          let argStrs = args.Map(func(a: ast2.MonoType) -> String monoTypeToGoStrIn(a, aliases) end)
-          if argStrs.Len() == 0 then ctorStr else ctorStr + "[" + joinStrings(argStrs, ", ") + "]" end
-      end
-    end
-    case TTuple(items) =>
-      "struct { " + joinStrings(tupleMonoElemsToStringsIn(items, [] as Slice[String], aliases, 0, [] as Slice[String]), "; ") + " }"
-    case TUnit => "struct{}"
-    case TVar(_) => "any"
-    case TKVar(_) => "any"
-    case TParam(_) => "any"
-    case TQualifiedName(path, inner) then
-      let member = monoTypeToGoStrIn(inner.value(), aliases)
-      let alias = aliases.Get(importPathForGo(path)).UnwrapOr("")
-      if alias == "" || alias == "." then member else alias + "." + member end
-    end
-  end
+  monoTypeToGoStrWithParamsIn(t, [] as Slice[String], aliases)
 end
 
 # monoTypeToGoAstWithParams is the structured counterpart used for typed local
@@ -634,7 +589,7 @@ end
 # paths, but lowering no longer reparses those rendered types.
 func monoTypeToGoAstWithParams(t: ast2.MonoType, params: Slice[String], aliases: Map[String, String]) -> goast.Expr
   switch t
-    case TCon(name) => if name == "Unit" then goast.EmptyStructType() else goast.TypeName(goPrimitiveTypeName(name)) end
+    case TCon(name) => goast.TypeName(goPrimitiveTypeName(name))
     case TParam(id) => goast.TypeName(params.Get(-id - 1).UnwrapOr("any"))
     case TApp(ctor, args) then
       let lowered = args.Map(func(arg: ast2.MonoType) -> goast.Expr monoTypeToGoAstWithParams(arg, params, aliases) end)
@@ -671,7 +626,6 @@ end
 func monoIsUnit(t: ast2.MonoType) -> Bool
   switch t
     case TUnit => true
-    case TCon(name) => name == "Unit"
     case _ => false
   end
 end
@@ -682,10 +636,15 @@ func monoTypeToGoStrWithParams(t: ast2.MonoType, params: Slice[String]) -> Strin
   monoTypeToGoStrWithParamsIn(t, params, {})
 end
 
-# monoTypeToGoStrWithParamsIn additionally resolves TQualifiedName back to
-# `alias.member` through the file's import path → alias table.
+# monoTypeToGoStrWithParamsIn is the single Go type-string rendering
+# recursion: it renders inference TParams through the ordered
+# type-parameter names of the current function/impl context (`params`, empty
+# when absent) and resolves TQualifiedName back to `alias.member` through the
+# file's import path → alias table (`aliases`, empty when absent).  The
+# public entry points above and below are thin wrappers.
 func monoTypeToGoStrWithParamsIn(t: ast2.MonoType, params: Slice[String], aliases: Map[String, String]) -> String
   switch t
+    case TCon(name) => goPrimitiveTypeName(name)
     case TParam(id) then
       let index = -id - 1
       params.Get(index).UnwrapOr("any")
@@ -712,22 +671,34 @@ func monoTypeToGoStrWithParamsIn(t: ast2.MonoType, params: Slice[String], aliase
             if argStrs.Len() == 0 then
               goPrimitiveTypeName(name)
             else
-              name + "[" + joinStrings(argStrs, ", ") + "]"
+              name + "[" + common2.JoinStrings(argStrs, ", ") + "]"
             end
           end
         end
-        case _ => monoTypeToGoStrIn(t, aliases)
+        case _ =>
+          # A non-shape constructor (package-qualified or generic) renders
+          # through the shared recursion, keeping any embedded TParam/alias
+          # context.
+          let ctorStr = monoTypeToGoStrWithParamsIn(typeRef.value(), params, aliases)
+          let argStrs = args.Map(func(arg: ast2.MonoType) -> String monoTypeToGoStrWithParamsIn(arg, params, aliases) end)
+          if argStrs.Len() == 0 then ctorStr else ctorStr + "[" + common2.JoinStrings(argStrs, ", ") + "]" end
       end
     end
-    case TCon(name) => goPrimitiveTypeName(name)
     case TFunc(items, ret) then
       let argStrs = items.Map(func(arg: ast2.MonoType) -> String monoTypeToGoStrWithParamsIn(arg, params, aliases) end)
       let retStr = monoTypeToGoStrWithParamsIn(ret.value(), params, aliases)
-      if retStr == "struct{}" then "func(" + joinStrings(argStrs, ", ") + ")" else "func(" + joinStrings(argStrs, ", ") + ") " + retStr end
+      if retStr == "struct{}" then "func(" + common2.JoinStrings(argStrs, ", ") + ")" else "func(" + common2.JoinStrings(argStrs, ", ") + ") " + retStr end
     end
     case TTuple(items) =>
-      "struct { " + joinStrings(tupleMonoElemsToStringsIn(items, params, aliases, 0, [] as Slice[String]), "; ") + " }"
-    case _ => monoTypeToGoStrIn(t, aliases)
+      "struct { " + common2.JoinStrings(tupleMonoElemsToStringsIn(items, params, aliases, 0, [] as Slice[String]), "; ") + " }"
+    case TUnit => "struct{}"
+    case TVar(_) => "any"
+    case TKVar(_) => "any"
+    case TQualifiedName(path, inner) then
+      let member = monoTypeToGoStrWithParamsIn(inner.value(), params, aliases)
+      let alias = aliases.Get(importPathForGo(path)).UnwrapOr("")
+      if alias == "" || alias == "." then member else alias + "." + member end
+    end
   end
 end
 
@@ -748,7 +719,7 @@ end
 func tupleMonoElemsToStringsIn(items: Slice[ast2.MonoType], params: Slice[String], aliases: Map[String, String], index: Int, out: Slice[String]) -> Slice[String]
   if items.Len() == 0 then out else
     let head = items.Get(0).UnwrapOr(ast2.MonoType.TUnit)
-    let tail = tupleMonoElemsToStringsIn(sliceDrop(items, 1), params, aliases, index + 1, out)
+    let tail = tupleMonoElemsToStringsIn(common2.SliceDrop(items, 1), params, aliases, index + 1, out)
     tail.Prepend("F" + index.ToString() + " " + monoTypeToGoStrWithParamsIn(head, params, aliases))
   end
 end

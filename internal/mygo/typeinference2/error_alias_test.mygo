@@ -48,8 +48,21 @@ func TestErrorAliasCanonicalizesAtBoundaries(t: Ref[testing.T]) -> ()
     t.Fatalf("typeFromASTInEnv(error) = %s, want TCon(error)", monoStringFull(typeFromASTInEnv(named, envFromEntries([] as Slice[EnvEntry], 0), NewInferState())))
   end
   # The Go FFI boundary maps Go `error` to the canonical `Error`.
-  if !monoEqual(GoTypeName("error"), ast2.MonoType.TCon("Error")) then
-    t.Fatalf("GoTypeName(error) = %s, want TCon(Error)", monoStringFull(GoTypeName("error")))
+  switch GoTypeName("error")
+    case Ok(errorMt) =>
+      if !monoEqual(errorMt, ast2.MonoType.TCon("Error")) then
+        t.Fatalf("GoTypeName(error) = %s, want TCon(Error)", monoStringFull(errorMt))
+      end
+    case Err(msg) => t.Fatalf("GoTypeName(error) failed: %s", msg)
+  end
+  # The shared primitive table also answers `any`: the Go spelling resolves
+  # to the canonical MyGO constructor through the boundary resolver.
+  switch GoTypeName("any")
+    case Ok(anyMt) =>
+      if !monoEqual(anyMt, ast2.MonoType.TCon("Any")) then
+        t.Fatalf("GoTypeName(any) = %s, want TCon(Any)", monoStringFull(anyMt))
+      end
+    case Err(msg) => t.Fatalf("GoTypeName(any) failed: %s", msg)
   end
   # Both boundaries resolve through the shared primitive spelling table:
   # either spelling lowers to Go `error`, and Go `error` canonicalises to
@@ -77,6 +90,22 @@ func TestErrorAliasCanonicalizesAtBoundaries(t: Ref[testing.T]) -> ()
       end
     end
     case None => t.Fatal("PrimitiveMyGoSpelling(error) returned None")
+  end
+  switch PrimitiveGoSpelling("Any")
+    case Some(goName) then
+      if goName != "any" then
+        t.Fatalf("PrimitiveGoSpelling(Any) = %s, want any", goName)
+      end
+    end
+    case None => t.Fatal("PrimitiveGoSpelling(Any) returned None")
+  end
+  switch PrimitiveMyGoSpelling("any")
+    case Some(myGoName) then
+      if myGoName != "Any" then
+        t.Fatalf("PrimitiveMyGoSpelling(any) = %s, want Any", myGoName)
+      end
+    end
+    case None => t.Fatal("PrimitiveMyGoSpelling(any) returned None")
   end
   # Unify's entry normalisation canonicalises the remaining spellings.
   if !monoEqual(normalizeTypeEntry(ast2.MonoType.TCon("error")), ast2.MonoType.TCon("Error")) then
@@ -127,12 +156,204 @@ end
       let goPkgs = [GoPackageEntry {
         Alias: "g",
         Path: "go:samplego",
-        Funcs: [GoFuncSignature { Name: "Produce", Params: [] as Slice[String], Results: ["error"], Variadic: false }],
+        Funcs: [GoFuncSignature { Name: "Produce", Params: [] as Slice[String], Results: ["error"], Variadic: false, TypeParams: [] as Slice[String] }],
         Types: [] as Slice[GoTypeSignature],
       }]
       switch InferPackageWithGoPackages([PkgDeclSource { Path: "<input>", Decls: typed.Decls }], goPkgs)
         case Ok(_) => ()
         case Err(msg) => t.Fatalf("InferPackageWithGoPackages rejected differently spelled error annotations: %s", msg)
       end
+  end
+end
+
+# The FFI boundary resolver never degrades a type to a placeholder.  Every
+# shape go/types TypeString can render resolves to a concrete MonoType: the
+# full predeclared primitive table, empty interface, anonymous function types
+# (with names stripped), directional channel types, and qualifier-qualified
+# names -- both the package's own types (real `go:` path) and foreign
+# packages (nominal `go:<qualifier>` identity).
+func TestGoTypeNameResolvesAllFFIShapes(t: Ref[testing.T]) -> ()
+  # Predeclared types complete the shared primitive table for the FFI
+  # boundary (strconv.FormatComplex's complex128, os funcs' uintptr).
+  switch GoTypeName("complex128")
+    case Ok(mt) =>
+      if !monoEqual(mt, ast2.MonoType.TCon("Complex128")) then
+        t.Fatalf("GoTypeName(complex128) = %s, want TCon(Complex128)", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoTypeName(complex128) failed: %s", msg)
+  end
+  switch GoTypeName("uintptr")
+    case Ok(mt) =>
+      if !monoEqual(mt, ast2.MonoType.TCon("Uintptr")) then
+        t.Fatalf("GoTypeName(uintptr) = %s, want TCon(Uintptr)", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoTypeName(uintptr) failed: %s", msg)
+  end
+  # The empty interface renders as `interface{}` and maps to the canonical Any.
+  switch GoTypeName("interface{}")
+    case Ok(mt) =>
+      if !monoEqual(mt, ast2.MonoType.TCon("Any")) then
+        t.Fatalf("GoTypeName(interface{}) = %s, want TCon(Any)", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoTypeName(interface{}) failed: %s", msg)
+  end
+  # A Go func type with a name-bearing parameter (strings.FieldsFunc), with
+  # the declaration name stripped before the shared resolver recurses.
+  switch GoTypeName("func(rune) bool")
+    case Ok(mt) =>
+      let want = ast2.MonoType.TFunc([ast2.MonoType.TCon("Rune")], Ref.new(ast2.MonoType.TCon("Bool")))
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoTypeName(func(rune) bool) = %s, want TFunc([Rune], Bool)", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoTypeName(func(rune) bool) failed: %s", msg)
+  end
+  switch GoTypeName("func(i int, j int) bool")
+    case Ok(mt) =>
+      let want = ast2.MonoType.TFunc(
+        [ast2.MonoType.TCon("Int"), ast2.MonoType.TCon("Int")],
+        Ref.new(ast2.MonoType.TCon("Bool"))
+      )
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoTypeName(func(i int, j int) bool) = %s, want TFunc([Int, Int], Bool)", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoTypeName(func(i int, j int) bool) failed: %s", msg)
+  end
+  # A directional channel type (time.Tick's `<-chan time.Time`).
+  switch GoTypeName("<-chan time.Time")
+    case Ok(mt) =>
+      let want = ast2.MonoType.TApp(
+        Ref.new(ast2.MonoType.TCon("RecvChan")),
+        [ast2.MonoType.TQualifiedName("go:time", Ref.new(ast2.MonoType.TCon("Time")))]
+      )
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoTypeName(<-chan time.Time) = %s, want RecvChan[go:time.Time]", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoTypeName(<-chan time.Time) failed: %s", msg)
+  end
+  # A Go FFI signature containing a func type resolves end to end.
+  switch GoSignatureType(GoFuncSignature { Name: "FieldsFunc", Params: ["string", "func(rune) bool"], Results: ["[]string"], Variadic: false, TypeParams: [] as Slice[String] })
+    case Ok(mt) =>
+      let inner = ast2.MonoType.TFunc([ast2.MonoType.TCon("Rune")], Ref.new(ast2.MonoType.TCon("Bool")))
+      let want = ast2.MonoType.TFunc(
+        [ast2.MonoType.TCon("String"), inner],
+        Ref.new(ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Slice")), [ast2.MonoType.TCon("String")]))
+      )
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoSignatureType(FieldsFunc) = %s, want TFunc([String, func(rune) bool], []string)", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoSignatureType(FieldsFunc) failed: %s", msg)
+  end
+  # The package-aware resolver: a qualifier naming the package's own type is
+  # resolved against the real `go:` import path (fmt.FormatString's State)...
+  let fmtPkg = GoPackageEntry {
+    Alias: "fmt",
+    Path: "go:fmt",
+    Funcs: [] as Slice[GoFuncSignature],
+    Types: [GoTypeSignature { TypeName: "State", TypeParams: [] as Slice[String], Methods: [] as Slice[GoFuncSignature] }],
+  }
+  switch GoTypeNameWithPackage("fmt.State", fmtPkg)
+    case Ok(mt) =>
+      let want = ast2.MonoType.TQualifiedName("go:fmt", Ref.new(ast2.MonoType.TCon("State")))
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoTypeNameWithPackage(fmt.State) = %s, want go:fmt.State", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoTypeNameWithPackage(fmt.State) failed: %s", msg)
+  end
+  # ... while a foreign qualifier (fmt.Fprintf's io.Writer) keeps its nominal
+  # `go:<qualifier>` identity: never an Err, never a placeholder.
+  switch GoTypeNameWithPackage("io.Writer", fmtPkg)
+    case Ok(mt) =>
+      let want = ast2.MonoType.TQualifiedName("go:io", Ref.new(ast2.MonoType.TCon("Writer")))
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoTypeNameWithPackage(io.Writer) = %s, want go:io.Writer", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoTypeNameWithPackage(io.Writer) failed: %s", msg)
+  end
+  # The unit shape renders as `()` and maps to TUnit (MyGO's erased unit
+  # spelling, shared by values and types).
+  switch GoTypeName("()")
+    case Ok(mt) =>
+      if !monoEqual(mt, ast2.MonoType.TUnit) then
+        t.Fatalf("GoTypeName(()) = %s, want TUnit", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoTypeName(()) failed: %s", msg)
+  end
+  # Every composite shape recurses through the same resolver, so composite
+  # map keys and values keep their shape identity (`map[[]int]string` parses
+  # the key with bracket matching, not a naive first-`]` cut).
+  switch GoTypeName("map[[]int]string")
+    case Ok(mt) =>
+      let key = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Slice")), [ast2.MonoType.TCon("Int")])
+      let want = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Map")), [key, ast2.MonoType.TCon("String")])
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoTypeName(map[[]int]string) = %s, want Map[Slice[Int], String]", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoTypeName(map[[]int]string) failed: %s", msg)
+  end
+  switch GoTypeName("map[string][]byte")
+    case Ok(mt) =>
+      let value = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Slice")), [ast2.MonoType.TCon("Byte")])
+      let want = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Map")), [ast2.MonoType.TCon("String"), value])
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoTypeName(map[string][]byte) = %s, want Map[String, Slice[Byte]]", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoTypeName(map[string][]byte) failed: %s", msg)
+  end
+  # The remaining native shapes map to their MyGO constructors.
+  switch GoTypeName("chan int")
+    case Ok(mt) =>
+      let want = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Chan")), [ast2.MonoType.TCon("Int")])
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoTypeName(chan int) = %s, want Chan[Int]", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoTypeName(chan int) failed: %s", msg)
+  end
+  switch GoTypeName("chan<- int")
+    case Ok(mt) =>
+      let want = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("SendChan")), [ast2.MonoType.TCon("Int")])
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoTypeName(chan<- int) = %s, want SendChan[Int]", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoTypeName(chan<- int) failed: %s", msg)
+  end
+  # A bare unknown name is still an Err (no silent `any` fallback).
+  switch GoTypeName("doesNotExist")
+    case Ok(_) => t.Fatal("GoTypeName(doesNotExist) should have failed")
+    case Err(_) => ()
+  end
+end
+
+# A bare unknown identifier in an FFI signature resolves to the original
+# generic type parameter of the Go declaration (`maps.Clone[M ~map[K]V]`).
+# Each declaration type-param name maps to its TParam id by position, so a
+# parameter `m M` becomes TParam(-1) instead of an Err or a placeholder.
+func TestGoSignatureTypeResolvesGenericParams(t: Ref[testing.T]) -> ()
+  switch GoSignatureType(GoFuncSignature { Name: "Clone", Params: ["M"], Results: ["M"], Variadic: false, TypeParams: ["M", "K", "V"] })
+    case Ok(mt) =>
+      let want = ast2.MonoType.TFunc(
+        [ast2.MonoType.TParam(-1)],
+        Ref.new(ast2.MonoType.TParam(-1))
+      )
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoSignatureType(Clone) = %s, want TFunc([TParam(-1)], TParam(-1))", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoSignatureType(Clone) failed: %s", msg)
+  end
+  # Composite shapes keep the generic identity: `map[K]V` recurses through
+  # the shared resolver with both params bound to their declaration ids.
+  switch GoSignatureType(GoFuncSignature { Name: "CloneMap", Params: ["map[K]V"], Results: ["map[K]V"], Variadic: false, TypeParams: ["K", "V"] })
+    case Ok(mt) =>
+      let mapType = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Map")), [ast2.MonoType.TParam(-1), ast2.MonoType.TParam(-2)])
+      let want = ast2.MonoType.TFunc([mapType], Ref.new(mapType))
+      if !monoEqual(mt, want) then
+        t.Fatalf("GoSignatureType(CloneMap) = %s, want TFunc([Map[TParam(-1), TParam(-2)]], ...)", monoStringFull(mt))
+      end
+    case Err(msg) => t.Fatalf("GoSignatureType(CloneMap) failed: %s", msg)
+  end
+  # A bare unknown identifier with no matching generic param is still an Err,
+  # never a placeholder fallback.
+  switch GoSignatureType(GoFuncSignature { Name: "Missing", Params: ["M"], Results: [] as Slice[String], Variadic: false, TypeParams: [] as Slice[String] })
+    case Ok(mt) => t.Fatalf("GoSignatureType(Missing) = %s, want Err", monoStringFull(mt))
+    case Err(_) => ()
   end
 end

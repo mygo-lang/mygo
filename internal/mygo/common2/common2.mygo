@@ -1,0 +1,53 @@
+package common2
+
+# common2 holds the file-agnostic helpers that the compiler2 family
+# (typeinference2 and codegen2) used to define identically.  It is a leaf
+# package: it imports nothing from the compiler2 family, so either consumer
+# can import it without introducing a cycle.
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import strings "go:strings"
+
+# Return a suffix view instead of rebuilding it element by element.
+# SliceIndexable.Slice lowers to Go's s[start:end], so this is O(1).
+func SliceDrop[A](items: Slice[A], n: Int) -> Slice[A]
+  if n <= 0 then
+    items
+  else
+    if n >= items.Len() then
+      []
+    else
+      items.Slice(n, items.Len()).UnwrapOr([])
+    end
+  end
+end
+
+# Avoid recursively rebuilding progressively longer strings.
+func JoinStrings(items: Slice[String], sep: String) -> String
+  strings.Join(items, sep)
+end
+
+func ContainsString(items: Slice[String], target: String) -> Bool
+  if items.Len() == 0 then false else
+    let head = items.Get(0).UnwrapOr("")
+    head == target || ContainsString(SliceDrop(items, 1), target)
+  end
+end
+
+# Prefix an expression error with its source location unless the message
+# already carries one.  Shared by inference and lowering so diagnostics stay
+# identical across the two passes.
+func ErrorAtExpr(expr: ast2.Expr, msg: String) -> String
+  if strings.Contains(msg, ":") then
+    msg
+  else
+    let source = if expr.Pos.SourceName == "" then "<input>" else expr.Pos.SourceName end
+    source + ":" + expr.Pos.Line.ToString() + ":" + expr.Pos.Column.ToString() + ": " + msg
+  end
+end
+
+# Replace the anonymous `<input>` marker with the real source path, keeping
+# the original message when no source is known.
+func WithExpressionSourceName(msg: String, source: String) -> String
+  if source == "" then msg else strings.ReplaceAll(msg, "<input>:", source + ":") end
+end

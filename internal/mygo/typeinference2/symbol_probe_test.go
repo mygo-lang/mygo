@@ -36,13 +36,23 @@ func TestStructFieldSymbolProbe(t *testing.T) {
 		{Alias: "ast2", Path: "github.com/mygo-lang/mygo/internal/mygo/ast2", Decls: ast2Decls},
 		{Alias: "typeinference2", Path: "github.com/mygo-lang/mygo/internal/mygo/typeinference2", Decls: ti2Decls},
 	}
-	ti2Env := importedPackageEnv(packages[2], packages, []GoPackageEntry{})
+	ti2EnvRes := importedPackageEnv(packages[2], packages, []GoPackageEntry{})
+	ti2EnvOk, ok := ti2EnvRes.(Result__Ok[Env, string])
+	if !ok {
+		t.Fatalf("importedPackageEnv(typeinference2) failed: %v", ti2EnvRes)
+	}
+	ti2Env := ti2EnvOk.F0
 	if s, ok := envGet(ti2Env, "ast2.Decl").(Option__Some[Scheme]); ok {
 		fmt.Printf("ENV ti2 ast2.Decl body=%s\n", MonoStringFull(s.F0.Body))
 	} else {
 		fmt.Printf("ENV ti2 ast2.Decl = NONE\n")
 	}
-	cd2Env := importedPackageEnv(packages[0], packages, []GoPackageEntry{})
+	cd2EnvRes := importedPackageEnv(packages[0], packages, []GoPackageEntry{})
+	cd2EnvOk, ok := cd2EnvRes.(Result__Ok[Env, string])
+	if !ok {
+		t.Fatalf("importedPackageEnv(codegen2) failed: %v", cd2EnvRes)
+	}
+	cd2Env := cd2EnvOk.F0
 	if s, ok := envGet(cd2Env, "ast2.Decl").(Option__Some[Scheme]); ok {
 		fmt.Printf("ENV cd2 ast2.Decl body=%s\n", MonoStringFull(s.F0.Body))
 	} else {
@@ -69,7 +79,12 @@ func TestStructFieldSymbolProbe(t *testing.T) {
 	var loopSyms []Symbol
 	for loopIdx, lpkg := range packages {
 		lpkgTypeNames := collectMyGoTypeNames(lpkg.Decls, 0, []string{})
-		lpkgEnv := importedPackageEnv(lpkg, packages, []GoPackageEntry{})
+		lpkgEnvRes := importedPackageEnv(lpkg, packages, []GoPackageEntry{})
+		lpkgEnvOk, ok := lpkgEnvRes.(Result__Ok[Env, string])
+		if !ok {
+			t.Fatalf("importedPackageEnv(%s) failed: %v", lpkg.Alias, lpkgEnvRes)
+		}
+		lpkgEnv := lpkgEnvOk.F0
 		if lpkg.Alias == "typeinference2" {
 			if s, ok := envGet(lpkgEnv, "ast2.Decl").(Option__Some[Scheme]); ok {
 				fmt.Printf("LOOP[%d] ti2 pkgEnv ast2.Decl = %s\n", loopIdx, MonoStringFull(s.F0.Body))
@@ -85,7 +100,12 @@ func TestStructFieldSymbolProbe(t *testing.T) {
 			fmt.Printf("LOOPSYM %s.Decls = %s\n", ss.F0, MonoStringFull(ss.F2))
 		}
 	}
-	symbols := myGoPackageStructSymbols(packages, []GoPackageEntry{}, []Symbol{})
+	symbolsRes := myGoPackageStructSymbols(packages, []GoPackageEntry{}, []Symbol{})
+	symbolsOk, ok := symbolsRes.(Result__Ok[[]Symbol, string])
+	if !ok {
+		t.Fatalf("myGoPackageStructSymbols failed: %v", symbolsRes)
+	}
+	symbols := symbolsOk.F0
 	found := 0
 	for _, s := range symbols {
 		if ss, ok := s.(Symbol__StructField); ok {

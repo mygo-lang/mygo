@@ -1,4 +1,5 @@
 package typeinference2
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import importer "go:go/importer"
@@ -47,7 +48,7 @@ func predeclareFunctionsWithState(decls: Slice[ast2.Decl], env: Env, state: Infe
         predeclareEnum(env, name, tps, vars)
       case _ => env
     end
-    predeclareFunctionsWithState(sliceDrop(decls, 1), next, state)
+    predeclareFunctionsWithState(common2.SliceDrop(decls, 1), next, state)
   end
 end
 
@@ -68,7 +69,7 @@ func predeclareEnumVariants(env: Env, vars: Slice[ast2.Variant], name: String, t
     let constructorType = if v.Fields.Len() == 0 then enumType else ast2.MonoType.TFunc(typeArgsFromASTInEnvWithParamsList(v.Fields, tps, env, state), Ref.new(enumType)) end
     let scheme = Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: constructorType }
     let withQualified = envPut(env, name + "." + v.Name, scheme)
-    predeclareEnumVariants(envPut(withQualified, v.Name, scheme), sliceDrop(vars, 1), name, tps, state)
+    predeclareEnumVariants(envPut(withQualified, v.Name, scheme), common2.SliceDrop(vars, 1), name, tps, state)
   end
 end
 
@@ -77,7 +78,7 @@ func inferDecls(decls: Slice[ast2.Decl], env: Env, fields: Slice[FieldEntry], st
     Ok(PackageInfo { Env: env.ToSlice(), Fields: fields, GoPackages: [] as Slice[GoPackageEntry], Instances: [] as Slice[Instance], Solver: newSolver(), TypedDecls: [] as Slice[ast2.Decl], ExternalTypedDecls: [] as Slice[ast2.Decl], TypedDeclSources: [] as Slice[PkgDeclSource], ExternalTypedDeclSources: [] as Slice[PkgDeclSource], ResolvedConstraintArgs: state.ResolvedConstraintArgs })
   else
     let head = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
-    let tail = sliceDrop(decls, 1)
+    let tail = common2.SliceDrop(decls, 1)
     let next = inferDecl(head, env, fields, state)
     switch next
       case Ok(pair) =>
@@ -171,10 +172,10 @@ func validateEnumVariantFieldNames(vars: Slice[ast2.Variant]) -> Result[(), Stri
     if variant.Named then
       switch duplicateString(variant.Names, [] as Slice[String])
         case Some(field) => Err("variant " + variant.Name + " declares field " + field + " more than once")
-        case None => validateEnumVariantFieldNames(sliceDrop(vars, 1))
+        case None => validateEnumVariantFieldNames(common2.SliceDrop(vars, 1))
       end
     else
-      validateEnumVariantFieldNames(sliceDrop(vars, 1))
+      validateEnumVariantFieldNames(common2.SliceDrop(vars, 1))
     end
   end
 end
@@ -182,7 +183,7 @@ end
 func duplicateString(items: Slice[String], seen: Slice[String]) -> Option[String]
   if items.Len() == 0 then None else
     let item = items.Get(0).UnwrapOr("")
-    if stringSliceContains(seen, item) then Some(item) else duplicateString(sliceDrop(items, 1), seen.Append(item)) end
+    if stringSliceContains(seen, item) then Some(item) else duplicateString(common2.SliceDrop(items, 1), seen.Append(item)) end
   end
 end
 
@@ -270,7 +271,7 @@ func inferImplMethods(methods: Slice[ast2.ImplMethod], tps: Slice[String], env: 
         # once).  Store the method's declared constraints instead: these
         # retain the declared constraint identity used by codegen dispatch.
         let newState = withActiveConstraints(storeResolvedConstraintArgs(receiverName, sig, combined, eir.Result.State), state.ActiveConstraints)
-        inferImplMethods(sliceDrop(methods, 1), tps, env, fields, newState, out.Append(typedMethod), receiverName)
+        inferImplMethods(common2.SliceDrop(methods, 1), tps, env, fields, newState, out.Append(typedMethod), receiverName)
       end
       case Err(msg) => Err(msg)
     end
@@ -292,7 +293,7 @@ func storeMethodConstraintArgs(receiverName: String, methodName: String, constra
     let args = typeArgsFromASTWithParams(constraint.Args, typeParams)
     let key = MethodConstraintKey { Receiver: receiverName, Constraint: methodConstraintRef(constraint.Name, state.NamedImpls), ArgsKey: constraintArgsKey(args), Method: methodName }
     state.ResolvedConstraintArgs.Set(key, args)
-    storeMethodConstraintArgs(receiverName, methodName, sliceDrop(constraints, 1), typeParams, state)
+    storeMethodConstraintArgs(receiverName, methodName, common2.SliceDrop(constraints, 1), typeParams, state)
   end
 end
 
@@ -314,7 +315,7 @@ end
 
 func stringSliceContains(items: Slice[String], wanted: String) -> Bool
   if items.Len() == 0 then false else
-    if items.Get(0).UnwrapOr("") == wanted then true else stringSliceContains(sliceDrop(items, 1), wanted) end
+    if items.Get(0).UnwrapOr("") == wanted then true else stringSliceContains(common2.SliceDrop(items, 1), wanted) end
   end
 end
 
@@ -367,21 +368,12 @@ func inferExpr(expr: ast2.Expr, env: Env, state: InferState) -> Result[ExprInfer
       let nextState = recordInferredExprType(typedExpr, eir.Result.Type, eir.Result.Predicates, eir.Result.Subst, eir.Result.State)
       Ok(ExprInferResult { Expr: typedExpr, Result: InferResult { Type: eir.Result.Type, Predicates: eir.Result.Predicates, Subst: eir.Result.Subst, State: nextState } })
     end
-    case Err(msg) => Err(errorAtExpr(expr, msg))
+    case Err(msg) => Err(common2.ErrorAtExpr(expr, msg))
   end
 end
 
 func recordInferredExprType(expr: ast2.Expr, typ: ast2.MonoType, preds: Slice[Predicate], subst: Subst, state: InferState) -> InferState
   state
-end
-
-func errorAtExpr(expr: ast2.Expr, msg: String) -> String
-  if strings.Contains(msg, ":") then
-    msg
-  else
-    let source = if expr.Pos.SourceName == "" then "<input>" else expr.Pos.SourceName end
-    source + ":" + expr.Pos.Line.ToString() + ":" + expr.Pos.Column.ToString() + ": " + msg
-  end
 end
 
 # Function-level wrappers used to add `function name:` before the expression
@@ -668,7 +660,7 @@ func inferSlice(items: Slice[ast2.Expr], env: Env, state: InferState) -> Result[
     let first = inferExpr(items.Get(0).UnwrapOr(ast2.EmptyExpr()), env, state)
     switch first
       case Err(msg) => Err(msg)
-      case Ok(eir) => inferSliceItems(sliceDrop(items, 1), eir.Result.Type, env, eir.Result.State, eir.Result.Subst, [eir.Expr])
+      case Ok(eir) => inferSliceItems(common2.SliceDrop(items, 1), eir.Result.Type, env, eir.Result.State, eir.Result.Subst, [eir.Expr])
     end
   end
 end
@@ -685,7 +677,7 @@ func inferSliceItems(items: Slice[ast2.Expr], element: ast2.MonoType, env: Env, 
         let combined = unify(applySubst(value.Subst, element), applySubst(value.Subst, value.Type), composeSubst(value.Subst, subst))
         switch combined
           case Err(msg) => Err("slice element type mismatch: " + msg)
-          case Ok(s) => inferSliceItems(sliceDrop(items, 1), element, env, value.State, s, typed.Append(eir.Expr))
+          case Ok(s) => inferSliceItems(common2.SliceDrop(items, 1), element, env, value.State, s, typed.Append(eir.Expr))
         end
       end
     end
@@ -757,12 +749,12 @@ func inferTypedSwitchCasesChecked(cases: Slice[ast2.SwitchCase], targetType: ast
             let value = eir.Result
             let typedOut = out.Append(ast2.SwitchCase { Pattern: pattern, Body: eir.Expr })
             switch resultType
-              case None => inferTypedSwitchCases(sliceDrop(cases, 1), targetType, env, value.State, composeSubst(value.Subst, subst), Some(value.Type), Some(current.Body.Pos), appendPredicates(predicates, value.Predicates), typedOut)
+              case None => inferTypedSwitchCases(common2.SliceDrop(cases, 1), targetType, env, value.State, composeSubst(value.Subst, subst), Some(value.Type), Some(current.Body.Pos), appendPredicates(predicates, value.Predicates), typedOut)
               case Some(previous) =>
                 let nextSubst = unifySwitchCaseTypes(env, current.Body, applySubst(value.Subst, previous), applySubst(value.Subst, value.Type), composeSubst(value.Subst, subst))
                 switch nextSubst
                   case Err(msg) => Err(switchCaseMismatchLocation(resultOrigin, current.Body.Pos) + ": " + msg)
-                  case Ok(s) => inferTypedSwitchCases(sliceDrop(cases, 1), targetType, env, value.State, s, Some(applySubst(s, previous)), resultOrigin, appendPredicates(predicates, value.Predicates), typedOut)
+                  case Ok(s) => inferTypedSwitchCases(common2.SliceDrop(cases, 1), targetType, env, value.State, s, Some(applySubst(s, previous)), resultOrigin, appendPredicates(predicates, value.Predicates), typedOut)
                 end
             end
           end
@@ -782,7 +774,7 @@ end
 func switchCasePatterns(cases: Slice[ast2.SwitchCase]) -> Slice[ast2.Pattern]
   if cases.Len() == 0 then [] as Slice[ast2.Pattern] else
     let c = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
-    switchCasePatterns(sliceDrop(cases, 1)).Prepend(c.Pattern)
+    switchCasePatterns(common2.SliceDrop(cases, 1)).Prepend(c.Pattern)
   end
 end
 
@@ -806,8 +798,8 @@ func patternsHaveWildcard(patterns: Slice[ast2.Pattern]) -> Bool
     switch p
       case WildcardPattern => true
       case BindPattern(name) => name == "_"
-      case TuplePattern(items) => patternsHaveWildcard(items) || patternsHaveWildcard(sliceDrop(patterns, 1))
-      case _ => patternsHaveWildcard(sliceDrop(patterns, 1))
+      case TuplePattern(items) => patternsHaveWildcard(items) || patternsHaveWildcard(common2.SliceDrop(patterns, 1))
+      case _ => patternsHaveWildcard(common2.SliceDrop(patterns, 1))
     end
   end
 end
@@ -844,7 +836,7 @@ func tuplePatternsAt(patterns: Slice[ast2.Pattern], index: Int, out: Slice[ast2.
       case TuplePattern(items) => out.Append(items.Get(index).UnwrapOr(ast2.Pattern.WildcardPattern))
       case _ => out.Append(ast2.Pattern.WildcardPattern)
     end
-    tuplePatternsAt(sliceDrop(patterns, 1), index, next)
+    tuplePatternsAt(common2.SliceDrop(patterns, 1), index, next)
   end
 end
 
@@ -852,7 +844,7 @@ func checkSwitchExhaustiveEnum(enumName: String, targetType: ast2.MonoType, patt
   let variants = enumVariantNames(state, enumName, [])
   if variants.Len() == 0 then Ok(()) else
     switch enumPatternsCoverage(variants, targetType, patterns, state, [])
-      case Some(missing) => Err("non-exhaustive switch: missing variant(s) " + joinStrings(missing, ", "))
+      case Some(missing) => Err("non-exhaustive switch: missing variant(s) " + common2.JoinStrings(missing, ", "))
       case None => Ok(())
     end
   end
@@ -868,12 +860,12 @@ func enumPatternsCoverage(variants: Slice[String], targetType: ast2.MonoType, pa
       case WildcardPattern => None
       case BindPattern(name) =>
         switch lookupEnumVariantDecl(state, enumNameForMonoType(targetType).UnwrapOr(""), name)
-          case Some(v) => if v.Fields.Len() == 0 then enumPatternsCoverage(variants, targetType, sliceDrop(patterns, 1), state, covered.Append(name)) else None end
+          case Some(v) => if v.Fields.Len() == 0 then enumPatternsCoverage(variants, targetType, common2.SliceDrop(patterns, 1), state, covered.Append(name)) else None end
           case None => None
         end
-      case VariantPattern(name, _) => enumPatternsCoverage(variants, targetType, sliceDrop(patterns, 1), state, covered.Append(name))
-      case StructVariantPattern(name, _) => enumPatternsCoverage(variants, targetType, sliceDrop(patterns, 1), state, covered.Append(name))
-      case _ => enumPatternsCoverage(variants, targetType, sliceDrop(patterns, 1), state, covered)
+      case VariantPattern(name, _) => enumPatternsCoverage(variants, targetType, common2.SliceDrop(patterns, 1), state, covered.Append(name))
+      case StructVariantPattern(name, _) => enumPatternsCoverage(variants, targetType, common2.SliceDrop(patterns, 1), state, covered.Append(name))
+      case _ => enumPatternsCoverage(variants, targetType, common2.SliceDrop(patterns, 1), state, covered)
     end
   end
 end
@@ -889,8 +881,8 @@ func enumVariantNamesInDecls(decls: Slice[ast2.Decl], enumName: String, out: Sli
   if decls.Len() == 0 then out else
     let d = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     switch d
-      case EnumDecl(name, _, variants) => if name == enumName then enumVariantNamesInVariants(variants, out) else enumVariantNamesInDecls(sliceDrop(decls, 1), enumName, out) end
-      case _ => enumVariantNamesInDecls(sliceDrop(decls, 1), enumName, out)
+      case EnumDecl(name, _, variants) => if name == enumName then enumVariantNamesInVariants(variants, out) else enumVariantNamesInDecls(common2.SliceDrop(decls, 1), enumName, out) end
+      case _ => enumVariantNamesInDecls(common2.SliceDrop(decls, 1), enumName, out)
     end
   end
 end
@@ -898,7 +890,7 @@ end
 func enumVariantNamesInVariants(variants: Slice[ast2.Variant], out: Slice[String]) -> Slice[String]
   if variants.Len() == 0 then out else
     let v = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: emptyASTTypeExprs(), Named: false, Names: [] as Slice[String] })
-    enumVariantNamesInVariants(sliceDrop(variants, 1), out.Append(v.Name))
+    enumVariantNamesInVariants(common2.SliceDrop(variants, 1), out.Append(v.Name))
   end
 end
 
@@ -906,12 +898,8 @@ func missingVariantNames(variants: Slice[String], covered: Slice[String], out: S
   if variants.Len() == 0 then out else
     let name = variants.Get(0).UnwrapOr("")
     let next = if stringSliceContains(covered, name) then out else out.Append(name) end
-    missingVariantNames(sliceDrop(variants, 1), covered, next)
+    missingVariantNames(common2.SliceDrop(variants, 1), covered, next)
   end
-end
-
-func joinStrings(items: Slice[String], sep: String) -> String
-  if items.Len() == 0 then "" elsif items.Len() == 1 then items.Get(0).UnwrapOr("") else items.Get(0).UnwrapOr("") + sep + joinStrings(sliceDrop(items, 1), sep) end
 end
 
 func inferSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoType, env: Env, state: InferState, subst: Subst, resultType: Option[ast2.MonoType], predicates: Slice[Predicate]) -> Result[InferResult, String]
@@ -932,12 +920,12 @@ func inferSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoType, 
           case Ok(eir) then
             let value = eir.Result
             switch resultType
-              case None => inferSwitchCases(sliceDrop(cases, 1), targetType, env, value.State, composeSubst(value.Subst, subst), Some(value.Type), appendPredicates(predicates, value.Predicates))
+              case None => inferSwitchCases(common2.SliceDrop(cases, 1), targetType, env, value.State, composeSubst(value.Subst, subst), Some(value.Type), appendPredicates(predicates, value.Predicates))
               case Some(previous) then
                 let nextSubst = unifySwitchCaseTypes(env, current.Body, applySubst(value.Subst, previous), applySubst(value.Subst, value.Type), composeSubst(value.Subst, subst))
                 switch nextSubst
                   case Err(msg) => Err("switch case type mismatch in " + current.Body.Pos.SourceName + ": " + msg)
-                  case Ok(s) => inferSwitchCases(sliceDrop(cases, 1), targetType, env, value.State, s, Some(applySubst(s, previous)), appendPredicates(predicates, value.Predicates))
+                  case Ok(s) => inferSwitchCases(common2.SliceDrop(cases, 1), targetType, env, value.State, s, Some(applySubst(s, previous)), appendPredicates(predicates, value.Predicates))
                 end
               end
             end
@@ -1025,7 +1013,7 @@ func variantSchemeInBatchEntries(entries: Slice[EnvEntry], name: String, targetT
   if entries.Len() == 0 then found else
     let entry = entries.Get(0).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TUnit } })
     let candidate = if entry.Name == name && variantMatchesTarget(targetType, variantResultType(entry.Scheme.Body)) then Some(entry.Scheme) else None end
-    variantSchemeInBatchEntries(sliceDrop(entries, 1), name, targetType, mergeVariantCandidates(found, candidate))
+    variantSchemeInBatchEntries(common2.SliceDrop(entries, 1), name, targetType, mergeVariantCandidates(found, candidate))
   end
 end
 
@@ -1283,7 +1271,7 @@ func bindNamedStructPatternFields(env: Env, fields: Slice[ast2.StructPatternFiel
   if fields.Len() == 0 then Ok(env) else
     let f = fields.Get(0).UnwrapOr(ast2.StructPatternField { Field: "", Bind: "" })
     if f.Field == "_" || f.Bind == "_" then
-      bindNamedStructPatternFields(env, sliceDrop(fields, 1), names, fieldTypes, seenFields, seenBinds)
+      bindNamedStructPatternFields(env, common2.SliceDrop(fields, 1), names, fieldTypes, seenFields, seenBinds)
     else
       if stringSliceContains(seenFields, f.Field) then
         Err("variant pattern field " + f.Field + " specified more than once")
@@ -1294,7 +1282,7 @@ func bindNamedStructPatternFields(env: Env, fields: Slice[ast2.StructPatternFiel
           case None => Err("variant has no field " + f.Field)
           case Some(index) =>
             let ft = fieldTypes.Get(index).UnwrapOr(ast2.MonoType.TUnit)
-            bindNamedStructPatternFields(envPut(env, f.Bind, Scheme { Bound: [], Predicates: [], Body: ft }), sliceDrop(fields, 1), names, fieldTypes, seenFields.Append(f.Field), seenBinds.Append(f.Bind))
+            bindNamedStructPatternFields(envPut(env, f.Bind, Scheme { Bound: [], Predicates: [], Body: ft }), common2.SliceDrop(fields, 1), names, fieldTypes, seenFields.Append(f.Field), seenBinds.Append(f.Bind))
         end
       end
     end
@@ -1339,7 +1327,7 @@ func envWithTuplePatternLoop(env: Env, patterns: Slice[ast2.Pattern], types: Sli
     let p = patterns.Get(0).UnwrapOr(ast2.Pattern.WildcardPattern)
     let t = types.Get(0).UnwrapOr(ast2.MonoType.TUnit)
     switch envWithPattern(env, p, t, state)
-      case Ok(next) => envWithTuplePatternLoop(next, sliceDrop(patterns, 1), sliceDrop(types, 1), state)
+      case Ok(next) => envWithTuplePatternLoop(next, common2.SliceDrop(patterns, 1), common2.SliceDrop(types, 1), state)
       case Err(msg) => Err(msg)
     end
   end
@@ -1370,7 +1358,7 @@ func envWithPatternBindingLoop(env: Env, names: Slice[ast2.Pattern], fields: Sli
   else
     let field = applySubst(subst, fields.Get(0).UnwrapOr(ast2.MonoType.TUnit))
     switch envWithPattern(env, names.Get(0).UnwrapOr(ast2.Pattern.WildcardPattern), field, state)
-      case Ok(next) => envWithPatternBindingLoop(next, sliceDrop(names, 1), sliceDrop(fields, 1), subst, state)
+      case Ok(next) => envWithPatternBindingLoop(next, common2.SliceDrop(names, 1), common2.SliceDrop(fields, 1), subst, state)
       case Err(msg) => Err(msg)
     end
   end
@@ -1387,7 +1375,7 @@ func inferTupleItems(items: Slice[ast2.Expr], env: Env, state: InferState, types
     let r = inferExpr(items.Get(0).UnwrapOr(ast2.EmptyExpr()), env, state)
     switch r
       case Err(msg) => Err(msg)
-      case Ok(eir) => inferTupleItems(sliceDrop(items, 1), env, eir.Result.State, types.Append(eir.Result.Type), composeSubst(eir.Result.Subst, subst), typed.Append(eir.Expr))
+      case Ok(eir) => inferTupleItems(common2.SliceDrop(items, 1), env, eir.Result.State, types.Append(eir.Result.Type), composeSubst(eir.Result.Subst, subst), typed.Append(eir.Expr))
     end
   end
 end
@@ -1515,7 +1503,7 @@ end
 func isGoPackageAlias(alias: String, goPkgs: Slice[GoPackageEntry]) -> Bool
   if goPkgs.Len() == 0 then false else
     let head = goPkgs.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "", Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] })
-    if head.Alias == alias then true else isGoPackageAlias(alias, sliceDrop(goPkgs, 1)) end
+    if head.Alias == alias then true else isGoPackageAlias(alias, common2.SliceDrop(goPkgs, 1)) end
   end
 end
 
@@ -1727,7 +1715,7 @@ func dictionaryCallKeyForReceiver(method: String, receiver: ast2.MonoType, const
   if constraints.Len() == 0 then None else
     let current = constraints.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[ast2.MonoType] })
     let arg = current.Args.Get(0).UnwrapOr(ast2.MonoType.TUnit)
-    if monoEqual(arg, receiver) then Some(current.ClassName + ":" + constraintArgsKey(current.Args) + ":" + method) else dictionaryCallKeyForReceiver(method, receiver, sliceDrop(constraints, 1)) end
+    if monoEqual(arg, receiver) then Some(current.ClassName + ":" + constraintArgsKey(current.Args) + ":" + method) else dictionaryCallKeyForReceiver(method, receiver, common2.SliceDrop(constraints, 1)) end
   end
 end
 
@@ -1958,7 +1946,7 @@ func inferArgs(args: Slice[ast2.Expr], expectedTypes: Slice[ast2.MonoType], env:
           # only the enclosing function's first expression and hides the
           # actual constructor or helper call that produced the mismatch.
           case Err(msg) => Err(callArgumentError(head, msg))
-          case Ok(nextSubst) => inferArgs(sliceDrop(args, 1), sliceDrop(expectedTypes, 1), env, v.State, types.Append(applySubst(nextSubst, v.Type)), exprs.Append(applyTypedExprSubst(nextSubst, eir.Expr)), appendPredicates(predicates, v.Predicates), nextSubst)
+          case Ok(nextSubst) => inferArgs(common2.SliceDrop(args, 1), common2.SliceDrop(expectedTypes, 1), env, v.State, types.Append(applySubst(nextSubst, v.Type)), exprs.Append(applyTypedExprSubst(nextSubst, eir.Expr)), appendPredicates(predicates, v.Predicates), nextSubst)
         end
     end
   end
@@ -1990,7 +1978,7 @@ func inferTypedBlockItems(items: Slice[ast2.Stmt], env: Env, state: InferState, 
     let step = inferBlockStep(items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr())), env, state, items.Len() == 1)
     switch step
       case Err(msg) => Err(msg)
-      case Ok(v) => inferTypedBlockItems(sliceDrop(items, 1), v.Env, v.Result.State, v.Result.Type, composeSubst(v.Result.Subst, subst), appendPredicates(predicates, v.Result.Predicates), out.Append(v.Stmt))
+      case Ok(v) => inferTypedBlockItems(common2.SliceDrop(items, 1), v.Env, v.Result.State, v.Result.Type, composeSubst(v.Result.Subst, subst), appendPredicates(predicates, v.Result.Predicates), out.Append(v.Stmt))
     end
   end
 end
@@ -2002,7 +1990,7 @@ func inferBlockItems(items: Slice[ast2.Stmt], env: Env, state: InferState, lastT
     let step = inferBlockStep(items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr())), env, state, items.Len() == 1)
     switch step
       case Err(msg) => Err(msg)
-      case Ok(v) => inferBlockItems(sliceDrop(items, 1), v.Env, v.Result.State, v.Result.Type, composeSubst(v.Result.Subst, subst), appendPredicates(predicates, v.Result.Predicates))
+      case Ok(v) => inferBlockItems(common2.SliceDrop(items, 1), v.Env, v.Result.State, v.Result.Type, composeSubst(v.Result.Subst, subst), appendPredicates(predicates, v.Result.Predicates))
     end
   end
 end
@@ -2142,7 +2130,19 @@ end
 
 func ffiRawTupleResultType(expr: ast2.Expr, state: InferState) -> Option[ast2.MonoType]
   switch expr.Kind
-    case CallExpr(callee, _, _) => ffiRawTupleResultTypeFromCallee(callee, state.GoPackages)
+    case CallExpr(callee, _, _) =>
+      switch GoSignatureForCallee(callee, state.GoPackages, ffiMultiResultPredicate)
+        case Some(sig) =>
+          # The raw shape is a best-effort recovery of Go's native multiple
+          # return values for tuple destructuring.  A signature whose element
+          # types cannot be resolved (no package context here) falls back to
+          # the caller's already-inferred type instead of a degenerate `any`.
+          switch GoSignatureRawResultType(sig)
+            case Ok(mt) => Some(mt)
+            case Err(_) => None
+          end
+        case None => None
+      end
     # A tuple-typed inline Go block declares its native Go result shape
     # (`go[(T, error)]`).  Tuple destructuring is the explicit opt-in to that
     # raw multiple-return form, exactly like a Go FFI call.
@@ -2155,11 +2155,24 @@ func ffiRawTupleResultType(expr: ast2.Expr, state: InferState) -> Option[ast2.Mo
   end
 end
 
-func ffiRawTupleResultTypeFromCallee(callee: ast2.Expr, packages: Slice[GoPackageEntry]) -> Option[ast2.MonoType]
+# One FFI signature walker shared by codegen2's boundary lowering and by the
+# raw-tuple scan above.  `predicate` selects the result shape a caller
+# is lowering: `Results[1] == "bool"` for the Option boundary, `Results[1] ==
+# "error"` for the Result boundary, and `Results.Len() > 1` for the
+# multi-value / raw-tuple forms.  This is the single package/func scan — the
+# Go FFI entry points in codegen2 and the raw-tuple scan both call it, so
+# the formerly triplicated lookups cannot diverge.
+#
+# Suffix policy: `...WithPackage` carries GoPackageEntry context,
+# `...WithParams` carries type-parameter context, `...In`/`...InEnv` carry an
+# environment, `...Into` is the intentional tail-recursion accumulator
+# idiom, and `...FromCallee` has been folded into this walker — the base
+# accessors already operate on a callee expression.
+func GoSignatureForCallee(callee: ast2.Expr, packages: Slice[GoPackageEntry], predicate: func(GoFuncSignature) -> Bool) -> Option[GoFuncSignature]
   switch callee.Kind
     case FieldExpr(base, field) then
       switch base.Kind
-        case IdentExpr(alias) => ffiRawTupleResultTypeInPackages(alias, field, packages)
+        case IdentExpr(alias) => GoSignatureInPackages(alias, field, packages, predicate)
         case _ => None
       end
     end
@@ -2167,18 +2180,24 @@ func ffiRawTupleResultTypeFromCallee(callee: ast2.Expr, packages: Slice[GoPackag
   end
 end
 
-func ffiRawTupleResultTypeInPackages(alias: String, name: String, packages: Slice[GoPackageEntry]) -> Option[ast2.MonoType]
+func GoSignatureInPackages(alias: String, name: String, packages: Slice[GoPackageEntry], predicate: func(GoFuncSignature) -> Bool) -> Option[GoFuncSignature]
   if packages.Len() == 0 then None else
-    let pkg = packages.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "", Funcs: [], Types: [] })
-    if pkg.Alias == alias then ffiRawTupleResultTypeInFuncs(name, pkg.Funcs) else ffiRawTupleResultTypeInPackages(alias, name, sliceDrop(packages, 1)) end
+    let pkg = packages.Get(0).UnwrapOr(GoPackageEntry { Alias: "", Path: "", Funcs: [] as Slice[GoFuncSignature], Types: [] as Slice[GoTypeSignature] })
+    if pkg.Alias == alias then GoSignatureInFuncs(name, pkg.Funcs, predicate) else GoSignatureInPackages(alias, name, common2.SliceDrop(packages, 1), predicate) end
   end
 end
 
-func ffiRawTupleResultTypeInFuncs(name: String, funcs: Slice[GoFuncSignature]) -> Option[ast2.MonoType]
+func GoSignatureInFuncs(name: String, funcs: Slice[GoFuncSignature], predicate: func(GoFuncSignature) -> Bool) -> Option[GoFuncSignature]
   if funcs.Len() == 0 then None else
-    let sig = funcs.Get(0).UnwrapOr(GoFuncSignature { Name: "", Params: [], Results: [], Variadic: false })
-    if sig.Name == name && sig.Results.Len() > 1 then Some(GoSignatureRawResultType(sig)) else ffiRawTupleResultTypeInFuncs(name, sliceDrop(funcs, 1)) end
+    let sig = funcs.Get(0).UnwrapOr(GoFuncSignature { Name: "", Params: [] as Slice[String], Results: [] as Slice[String], Variadic: false, TypeParams: [] as Slice[String] })
+    if sig.Name == name && predicate(sig) then Some(sig) else GoSignatureInFuncs(name, common2.SliceDrop(funcs, 1), predicate) end
   end
+end
+
+# The multi-value result predicate shared by the raw-tuple scan and the FFI
+# multi-result tuple lowering.
+func ffiMultiResultPredicate(sig: GoFuncSignature) -> Bool
+  sig.Results.Len() > 1
 end
 
 func envWithTupleLetPattern(env: Env, pattern: ast2.Pattern, typ: ast2.MonoType) -> Env
@@ -2226,7 +2245,7 @@ end
 func envWithFreshTupleBindings(env: Env, names: Slice[String], freshBase: Int, subst: Subst) -> Env
   if names.Len() == 0 then env else
     let name = names.Get(0).UnwrapOr("")
-    let rest = sliceDrop(names, 1)
+    let rest = common2.SliceDrop(names, 1)
     let fresh = ast2.MonoType.TVar(freshBase + rest.Len())
     let bound = envPut(env, name, Scheme { Bound: [], Predicates: [], Body: fresh })
     envWithFreshTupleBindings(bound, rest, freshBase, subst)
@@ -2274,7 +2293,7 @@ func predeclareLetRec(bindings: Slice[ast2.LetRecBind], env: Env, state: InferSt
     env
   else
     let binding = bindings.Get(0).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType, Value: ast2.EmptyExpr() })
-    predeclareLetRec(sliceDrop(bindings, 1), envPut(env, binding.Name, Scheme { Bound: [], Predicates: [], Body: typeFromASTInEnv(binding.Type, env, state) }), state)
+    predeclareLetRec(common2.SliceDrop(bindings, 1), envPut(env, binding.Name, Scheme { Bound: [], Predicates: [], Body: typeFromASTInEnv(binding.Type, env, state) }), state)
   end
 end
 
@@ -2309,7 +2328,7 @@ func inferLetRecValues(bindings: Slice[ast2.LetRecBind], recEnv: Env, state: Inf
             let normalisedValue = applyTypedExprSubst(nextSubst, eir.Expr)
             let typedValue = ast2.Expr { ID: normalisedValue.ID, Pos: normalisedValue.Pos, Kind: normalisedValue.Kind, Type: Some(applySubst(nextSubst, declaredType)) }
             let typedBind = ast2.LetRecBind { Name: binding.Name, Type: binding.Type, Value: typedValue }
-            inferLetRecValues(sliceDrop(bindings, 1), recEnv, value.State, nextSubst, out.Append(typedBind))
+            inferLetRecValues(common2.SliceDrop(bindings, 1), recEnv, value.State, nextSubst, out.Append(typedBind))
         end
     end
   end
@@ -2487,9 +2506,18 @@ func inferOrdinaryField(base: ast2.Expr, field: String, env: Env, state: InferSt
                   Ok(ExprInferResult { Expr: typedBase, Result: InferResult { Type: substed, Predicates: v.Predicates, Subst: v.Subst, State: instState } })
                 end
                 case GoMethod(_, _, sig) then
-                  let methodType = GoSignatureType(sig)
-                  let instState = withFreshID(v.State, v.State.FreshVarID + 1)
-                  Ok(ExprInferResult { Expr: typedBase, Result: InferResult { Type: methodType, Predicates: v.Predicates, Subst: v.Subst, State: instState } })
+                  # A method on a generic Go type renders its receiver's type
+                  # parameters bare (`(*List[T]).Set(v T)`); bind them like a
+                  # generic function so each selector instantiates fresh
+                  # variables instead of leaving unsatisfiable TParams.
+                  switch GoSignatureType(sig)
+                    case Ok(methodType) =>
+                      let methodScheme = Scheme { Bound: typeParamIDs(sig.TypeParams, 1), Predicates: [], Body: methodType }
+                      let q = instantiateQualified(methodScheme, v.State)
+                      let instState = withFreshID(v.State, v.State.FreshVarID + methodScheme.Bound.Len())
+                      Ok(ExprInferResult { Expr: typedBase, Result: InferResult { Type: q.Body, Predicates: v.Predicates, Subst: v.Subst, State: instState } })
+                    case Err(msg) => Err(msg)
+                  end
                 end
                 case ImplMethod(_, _, scheme) then
                   let q = instantiateQualified(scheme, v.State)
@@ -2650,7 +2678,7 @@ func stripReceiverArg(fieldType: ast2.MonoType, typeName: String, args: Slice[as
           switch us
             case Err(msg) => Some(Err("method receiver mismatch: " + msg))
             case Ok(s2) then
-              let droppedArgs = sliceDrop(methodArgs, 1)
+              let droppedArgs = common2.SliceDrop(methodArgs, 1)
               let newRet = applySubst(s2, methodRet.value())
               let strippedBody = applySubstMonoList(s2, droppedArgs)
               Some(Ok((ast2.MonoType.TFunc(strippedBody, Ref.new(newRet)), s2)))
@@ -2741,7 +2769,7 @@ func inferVariants(vars: Slice[ast2.Variant], enumName: String, tps: Slice[Strin
       let fieldTypes = typeArgsFromASTInEnvWithParamsList(v.Fields, tps, env, state)
       ast2.MonoType.TFunc(fieldTypes, Ref.new(enumType))
     end
-    inferVariants(sliceDrop(vars, 1), enumName, tps, envPut(env, v.Name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: constructorType }), fields, state)
+    inferVariants(common2.SliceDrop(vars, 1), enumName, tps, envPut(env, v.Name, Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: constructorType }), fields, state)
   end
 end
 
@@ -2823,7 +2851,7 @@ end
 func lookupImportedEnumVariantDeclInPackages(packages: Slice[MyGoPackageInfo], alias: String, enumName: String, variantName: String) -> Option[ast2.Variant]
   if packages.Len() == 0 then None else
     let pkg = packages.Get(0).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
-    if pkg.Alias == alias then lookupEnumVariantDeclInDecls(pkg.Decls, enumName, variantName) else lookupImportedEnumVariantDeclInPackages(sliceDrop(packages, 1), alias, enumName, variantName) end
+    if pkg.Alias == alias then lookupEnumVariantDeclInDecls(pkg.Decls, enumName, variantName) else lookupImportedEnumVariantDeclInPackages(common2.SliceDrop(packages, 1), alias, enumName, variantName) end
   end
 end
 
@@ -2832,8 +2860,8 @@ func lookupEnumVariantDeclInDecls(decls: Slice[ast2.Decl], enumName: String, var
     let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
     switch decl
       case EnumDecl(name, _, variants) =>
-        if name == enumName then lookupVariantInList(variants, variantName) else lookupEnumVariantDeclInDecls(sliceDrop(decls, 1), enumName, variantName) end
-      case _ => lookupEnumVariantDeclInDecls(sliceDrop(decls, 1), enumName, variantName)
+        if name == enumName then lookupVariantInList(variants, variantName) else lookupEnumVariantDeclInDecls(common2.SliceDrop(decls, 1), enumName, variantName) end
+      case _ => lookupEnumVariantDeclInDecls(common2.SliceDrop(decls, 1), enumName, variantName)
     end
   end
 end
@@ -2841,7 +2869,7 @@ end
 func lookupVariantInList(variants: Slice[ast2.Variant], name: String) -> Option[ast2.Variant]
   if variants.Len() == 0 then None else
     let v = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: emptyASTTypeExprs(), Named: false, Names: [] as Slice[String] })
-    if v.Name == name then Some(v) else lookupVariantInList(sliceDrop(variants, 1), name) end
+    if v.Name == name then Some(v) else lookupVariantInList(common2.SliceDrop(variants, 1), name) end
   end
 end
 
@@ -2935,14 +2963,14 @@ func inferTypedStructLitFields(resultType: ast2.MonoType, fields: Slice[ast2.Str
           # structs use the field type to resolve generic arguments.
           case None then
             let typedField = ast2.StructLitField { Name: f.Name, Value: eir.Expr }
-            inferTypedStructLitFields(resultType, sliceDrop(fields, 1), env, v.State, composeSubst(v.Subst, subst), v.State, appendPredicates(predicates, v.Predicates), out.Append(typedField))
+            inferTypedStructLitFields(resultType, common2.SliceDrop(fields, 1), env, v.State, composeSubst(v.Subst, subst), v.State, appendPredicates(predicates, v.Predicates), out.Append(typedField))
           end
           case Some(fieldType) then
             switch unify(applySubst(v.Subst, fieldType), applySubst(v.Subst, v.Type), v.Subst)
               case Err(msg) => Err("struct field " + f.Name + ": " + msg)
               case Ok(s2) then
                 let typedField = ast2.StructLitField { Name: f.Name, Value: applyTypedExprSubst(s2, eir.Expr) }
-                inferTypedStructLitFields(resultType, sliceDrop(fields, 1), env, v.State, composeSubst(s2, subst), v.State, appendPredicates(predicates, v.Predicates), out.Append(typedField))
+                inferTypedStructLitFields(resultType, common2.SliceDrop(fields, 1), env, v.State, composeSubst(s2, subst), v.State, appendPredicates(predicates, v.Predicates), out.Append(typedField))
               end
             end
           end
@@ -3147,7 +3175,7 @@ func inferMapLit(pairs: Slice[(ast2.Expr, ast2.Expr)], env: Env, s0: InferState)
               [applySubst(s1, kv.Type), applySubst(s1, vv.Type)]
             )
             inferMapLitTail(
-              sliceDrop(pairs, 1),
+              common2.SliceDrop(pairs, 1),
               env,
               vv.State,
               s1,
@@ -3174,7 +3202,7 @@ func inferMapLitTail(pairs: Slice[(ast2.Expr, ast2.Expr)], env: Env, s0: InferSt
         let vr = inferExpr(v, env, kv.State)
         switch vr
           case Err(msg) => Err("map value: " + msg)
-          case Ok(eirV) => inferMapLitTail(sliceDrop(pairs, 1), env, eirV.Result.State, composeSubst(eirV.Result.Subst, composeSubst(kv.Subst, subst)), resultType, appendPredicates(predicates, appendPredicates(kv.Predicates, eirV.Result.Predicates)), typed.Append((eirK.Expr, eirV.Expr)))
+          case Ok(eirV) => inferMapLitTail(common2.SliceDrop(pairs, 1), env, eirV.Result.State, composeSubst(eirV.Result.Subst, composeSubst(kv.Subst, subst)), resultType, appendPredicates(predicates, appendPredicates(kv.Predicates, eirV.Result.Predicates)), typed.Append((eirK.Expr, eirV.Expr)))
         end
     end
   end
@@ -3182,7 +3210,7 @@ end
 
 func inferSetLit(items: Slice[ast2.Expr], env: Env, s0: InferState) -> Result[(InferResult, Slice[ast2.Expr]), String]
   switch duplicateSetLiteralElement(items, [])
-    case Some(duplicate) => Err(errorAtExpr(duplicate, "duplicate element in set literal"))
+    case Some(duplicate) => Err(common2.ErrorAtExpr(duplicate, "duplicate element in set literal"))
     case None =>
       if items.Len() == 0 then
         let et = ast2.MonoType.TVar(s0.FreshVarID)
@@ -3200,7 +3228,7 @@ func inferSetLit(items: Slice[ast2.Expr], env: Env, s0: InferState) -> Result[(I
           case Ok(eir0) then
             let v0 = eir0.Result
             let resultType = ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Set")), [applySubst(v0.Subst, v0.Type)])
-            inferSetLitTail(sliceDrop(items, 1), env, v0.State, v0.Subst, resultType, v0.Predicates, [eir0.Expr])
+            inferSetLitTail(common2.SliceDrop(items, 1), env, v0.State, v0.Subst, resultType, v0.Predicates, [eir0.Expr])
           end
         end
       end
@@ -3215,9 +3243,9 @@ func duplicateSetLiteralElement(items: Slice[ast2.Expr], seen: Slice[String]) ->
   if items.Len() == 0 then None else
     let item = items.Get(0).UnwrapOr(ast2.EmptyExpr())
     switch setLiteralElementKey(item)
-      case None => duplicateSetLiteralElement(sliceDrop(items, 1), seen)
+      case None => duplicateSetLiteralElement(common2.SliceDrop(items, 1), seen)
       case Some(key) =>
-        if stringSliceContains(seen, key) then Some(item) else duplicateSetLiteralElement(sliceDrop(items, 1), seen.Append(key)) end
+        if stringSliceContains(seen, key) then Some(item) else duplicateSetLiteralElement(common2.SliceDrop(items, 1), seen.Append(key)) end
     end
   end
 end
@@ -3239,7 +3267,7 @@ func inferSetLitTail(items: Slice[ast2.Expr], env: Env, s0: InferState, subst: S
     let r = inferExpr(items.Get(0).UnwrapOr(ast2.EmptyExpr()), env, s0)
     switch r
       case Err(msg) => Err("set element: " + msg)
-      case Ok(eir) => inferSetLitTail(sliceDrop(items, 1), env, eir.Result.State, composeSubst(eir.Result.Subst, subst), resultType, appendPredicates(predicates, eir.Result.Predicates), typed.Append(eir.Expr))
+      case Ok(eir) => inferSetLitTail(common2.SliceDrop(items, 1), env, eir.Result.State, composeSubst(eir.Result.Subst, subst), resultType, appendPredicates(predicates, eir.Result.Predicates), typed.Append(eir.Expr))
     end
   end
 end

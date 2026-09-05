@@ -1,4 +1,5 @@
 package codegen2
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
@@ -83,7 +84,7 @@ end
 func switchCasesContainTailCall(cases: Slice[ast2.SwitchCase], name: String) -> Bool
   if cases.Len() == 0 then false else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
-    containsTailCall(current.Body, name) || switchCasesContainTailCall(sliceDrop(cases, 1), name)
+    containsTailCall(current.Body, name) || switchCasesContainTailCall(common2.SliceDrop(cases, 1), name)
   end
 end
 
@@ -264,7 +265,7 @@ end
 func mtDirectCallsExprs(exprs: Slice[ast2.Expr], tail: Bool, funcs: Map[String, MtFuncInfo], out: Slice[(String, Bool)]) -> Slice[(String, Bool)]
   if exprs.Len() == 0 then out else
     let e = exprs.Get(0).UnwrapOr(ast2.EmptyExpr())
-    mtDirectCallsExprs(sliceDrop(exprs, 1), tail, funcs, mtDirectCalls(e, tail, funcs, out))
+    mtDirectCallsExprs(common2.SliceDrop(exprs, 1), tail, funcs, mtDirectCalls(e, tail, funcs, out))
   end
 end
 
@@ -299,14 +300,14 @@ end
 func mtDirectCallsCases(cases: Slice[ast2.SwitchCase], tail: Bool, funcs: Map[String, MtFuncInfo], out: Slice[(String, Bool)]) -> Slice[(String, Bool)]
   if cases.Len() == 0 then out else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
-    mtDirectCallsCases(sliceDrop(cases, 1), tail, funcs, mtDirectCalls(current.Body, tail, funcs, out))
+    mtDirectCallsCases(common2.SliceDrop(cases, 1), tail, funcs, mtDirectCalls(current.Body, tail, funcs, out))
   end
 end
 
 func mtDirectCallsLetRec(bindings: Slice[ast2.LetRecBind], funcs: Map[String, MtFuncInfo], out: Slice[(String, Bool)]) -> Slice[(String, Bool)]
   if bindings.Len() == 0 then out else
     let bind = bindings.Get(0).UnwrapOr(ast2.LetRecBind { Name: "", Type: ast2.TypeExpr.UnitType, Value: ast2.EmptyExpr() })
-    mtDirectCallsLetRec(sliceDrop(bindings, 1), funcs, mtDirectCalls(bind.Value, false, funcs, out))
+    mtDirectCallsLetRec(common2.SliceDrop(bindings, 1), funcs, mtDirectCalls(bind.Value, false, funcs, out))
   end
 end
 
@@ -314,21 +315,21 @@ func mtDirectCallsPairs(pairs: Slice[(ast2.Expr, ast2.Expr)], funcs: Map[String,
   if pairs.Len() == 0 then out else
     let pair = pairs.Get(0).UnwrapOr((ast2.EmptyExpr(), ast2.EmptyExpr()))
     let (key, value) = pair
-    mtDirectCallsPairs(sliceDrop(pairs, 1), funcs, mtDirectCalls(value, false, funcs, mtDirectCalls(key, false, funcs, out)))
+    mtDirectCallsPairs(common2.SliceDrop(pairs, 1), funcs, mtDirectCalls(value, false, funcs, mtDirectCalls(key, false, funcs, out)))
   end
 end
 
 func mtDirectCallsStructFields(fields: Slice[ast2.StructLitField], funcs: Map[String, MtFuncInfo], out: Slice[(String, Bool)]) -> Slice[(String, Bool)]
   if fields.Len() == 0 then out else
     let field = fields.Get(0).UnwrapOr(ast2.StructLitField { Name: "", Value: ast2.EmptyExpr() })
-    mtDirectCallsStructFields(sliceDrop(fields, 1), funcs, mtDirectCalls(field.Value, false, funcs, out))
+    mtDirectCallsStructFields(common2.SliceDrop(fields, 1), funcs, mtDirectCalls(field.Value, false, funcs, out))
   end
 end
 
 func mtDirectCallsOperands(operands: Slice[ast2.GoOperand], funcs: Map[String, MtFuncInfo], out: Slice[(String, Bool)]) -> Slice[(String, Bool)]
   if operands.Len() == 0 then out else
     let operand = operands.Get(0).UnwrapOr(ast2.GoOperand { Name: "", Value: ast2.EmptyExpr() })
-    mtDirectCallsOperands(sliceDrop(operands, 1), funcs, mtDirectCalls(operand.Value, false, funcs, out))
+    mtDirectCallsOperands(common2.SliceDrop(operands, 1), funcs, mtDirectCalls(operand.Value, false, funcs, out))
   end
 end
 
@@ -411,7 +412,7 @@ end
 func mtGroupsContain(groups: Slice[Slice[String]], members: Slice[String]) -> Bool
   if groups.Len() == 0 then false else
     let group = groups.Get(0).UnwrapOr([] as Slice[String])
-    mtSameStringSlice(group, members) || mtGroupsContain(sliceDrop(groups, 1), members)
+    mtSameStringSlice(group, members) || mtGroupsContain(common2.SliceDrop(groups, 1), members)
   end
 end
 
@@ -437,7 +438,7 @@ func mtSccEligible(scc: Slice[String], funcs: Map[String, MtFuncInfo], edges: Ma
 end
 
 func mtHasTailSelfEdge(edges: Map[String, Slice[String]], name: String) -> Bool
-  containsString(edges.Get(name).UnwrapOr([] as Slice[String]), name)
+  common2.ContainsString(edges.Get(name).UnwrapOr([] as Slice[String]), name)
 end
 
 # A direct intra-group call must be in tail position; rewriting only part of a
@@ -599,7 +600,7 @@ func mtPlanFor(pkgName: String, scc: Slice[String], funcs: Map[String, MtFuncInf
   end
   let parts = members.Map(func(m: MtFuncInfo) -> String sanitizeIdent(m.Name) end)
   MutualTailPlan {
-    Name: "__mygo_mt_" + sanitizeIdent(pkgName) + "_" + joinStrings(parts, "_"),
+    Name: "__mygo_mt_" + sanitizeIdent(pkgName) + "_" + common2.JoinStrings(parts, "_"),
     Owner: owner,
     Members: members,
     State: state,
@@ -634,7 +635,7 @@ func mtInsertString(sorted: Slice[String], item: String) -> Slice[String]
     if item < head then
       sorted.Prepend(item)
     else
-      mtInsertString(sliceDrop(sorted, 1), item).Prepend(head)
+      mtInsertString(common2.SliceDrop(sorted, 1), item).Prepend(head)
     end
   end
 end
@@ -657,7 +658,7 @@ func mtInsertMember(sorted: Slice[MtFuncInfo], item: MtFuncInfo) -> Slice[MtFunc
     if mtBefore(item, head) then
       sorted.Prepend(item)
     else
-      mtInsertMember(sliceDrop(sorted, 1), item).Prepend(head)
+      mtInsertMember(common2.SliceDrop(sorted, 1), item).Prepend(head)
     end
   end
 end
@@ -932,7 +933,7 @@ func translateSwitchBranchesTail(cases: Slice[ast2.SwitchCase], targetType: Opti
         translateTupleVariantSwitchStmtAtTail(items, targetType, target, current.Body, child, ctx, cases, 0)
       case LiteralPattern(kind, literal) =>
         let body = translateAstReturnExpr(current.Body, ctx)
-        let rest = translateSwitchBranchesTail(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+        let rest = translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
         switch body
           case Err(msg) => Err(msg)
           case Ok(bodyStmts) =>
@@ -944,7 +945,7 @@ func translateSwitchBranchesTail(cases: Slice[ast2.SwitchCase], targetType: Opti
             end
         end
       case VariantPattern(name, args) =>
-        let rest = translateSwitchBranchesTail(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+        let rest = translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
         switch rest
           case Err(msg) => Err(msg)
           case Ok(next) =>
@@ -963,7 +964,7 @@ func translateSwitchBranchesTail(cases: Slice[ast2.SwitchCase], targetType: Opti
             end
         end
       case StructVariantPattern(vname, fields) then
-        let rest = translateSwitchBranchesTail(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+        let rest = translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
         switch rest
           case Err(msg) => Err(msg)
           case Ok(next) then
@@ -1000,7 +1001,7 @@ func translateTupleVariantSwitchStmtAtTail(items: Slice[ast2.Pattern], targetTyp
     let value = goast.Selector(target, "F" + index.ToString())
     switch pattern
       case VariantPattern(name, args) then
-        let rest = translateSwitchBranchesTail(sliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
+        let rest = translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
         switch rest
           case Err(msg) => Err(msg)
           case Ok(next) =>
@@ -1021,7 +1022,7 @@ func translateTupleVariantSwitchStmtAtTail(items: Slice[ast2.Pattern], targetTyp
         end
       end
       case StructVariantPattern(name, fields) then
-        let rest = translateSwitchBranchesTail(sliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
+        let rest = translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
         switch rest
           case Err(msg) => Err(msg)
           case Ok(next) =>

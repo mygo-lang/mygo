@@ -2,6 +2,7 @@
 
 package codegen2
 
+import "github.com/mygo-lang/mygo/internal/mygo/common2"
 import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import "github.com/mygo-lang/mygo/internal/mygo/parser2"
 import "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
@@ -18,7 +19,7 @@ func funcSignature(prefix string, tps []string, params []ast2.Param, ret Option[
 	ps := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(params, func(p ast2.Param) string {
 		return sanitizeIdent(p.Name) + " " + goType(p.Type, allTypes)
 	})
-	return prefix + typeParamDecl(tps) + "(" + joinStrings(ps, ", ") + ")" + returnTypeString(ret, allTypes)
+	return prefix + typeParamDecl(tps) + "(" + common2.JoinStrings(ps, ", ") + ")" + returnTypeString(ret, allTypes)
 }
 func returnTypeString(ret Option[ast2.TypeExpr], tps map[string]struct {
 }) string {
@@ -59,7 +60,7 @@ func typeParamDecl(tps []string) string {
 		parts := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(tps, func(tp string) string {
 			return hktTypeParamName(tp) + " any"
 		})
-		return "[" + joinStrings(parts, ", ") + "]"
+		return "[" + common2.JoinStrings(parts, ", ") + "]"
 	}
 }
 func typeParamUse(tps []string) string {
@@ -69,7 +70,7 @@ func typeParamUse(tps []string) string {
 		parts := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(tps, func(tp string) string {
 			return hktTypeParamName(tp)
 		})
-		return "[" + joinStrings(parts, ", ") + "]"
+		return "[" + common2.JoinStrings(parts, ", ") + "]"
 	}
 }
 func hktTypeParamName(tp string) string {

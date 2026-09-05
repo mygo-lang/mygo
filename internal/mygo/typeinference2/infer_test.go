@@ -703,11 +703,16 @@ end
 	}
 	allDecls := append(append([]ast2.Decl{}, file.F0.Decls...), preludeDecls...)
 	imports := collectMyGoPackageImports(file.F0.Decls)
-	seeded := seedMyGoPackageEnv(imports, []MyGoPackageInfo{{
+	seededRes := seedMyGoPackageEnv(imports, []MyGoPackageInfo{{
 		Alias: "ast2",
 		Path:  "github.com/mygo-lang/mygo/internal/mygo/ast2",
 		Decls: astDecls,
 	}}, []GoPackageEntry{}, initialEnv())
+	seededOk, ok := seededRes.(Result__Ok[Env, string])
+	if !ok {
+		t.Fatalf("seedMyGoPackageEnv failed: %v", seededRes)
+	}
+	seeded := seededOk.F0
 	if _, ok := envGet(predeclareAllFunctions(allDecls, seeded), "typeExprListString").(Option__Some[Scheme]); !ok {
 		t.Fatal("typeExprListString was not predeclared")
 	}
@@ -770,12 +775,17 @@ func TestImportedGenericTypeAliasExpandsInFunctionParameters(t *testing.T) {
 	if _, ok := envGet(privateEnv, "ps.PBetween").(Option__Some[Scheme]); ok {
 		t.Fatal("qualified PBetween leaked into package-private environment")
 	}
-	env := seedMyGoPackageEnv(
+	envRes := seedMyGoPackageEnv(
 		[]struct{ F0, F1 string }{{F0: "ps", F1: "github.com/mygo-lang/mygo/lib/text/parsec"}},
 		[]MyGoPackageInfo{{Alias: "ps", Path: "github.com/mygo-lang/mygo/lib/text/parsec", Decls: decls}},
 		[]GoPackageEntry{},
 		initialEnv(),
 	)
+	envOk, ok := envRes.(Result__Ok[Env, string])
+	if !ok {
+		t.Fatalf("seedMyGoPackageEnv failed: %v", envRes)
+	}
+	env := envOk.F0
 	parser, ok := envGet(env, "ps.Parser").(Option__Some[Scheme])
 	if !ok {
 		t.Fatal("ps.Parser was not seeded")

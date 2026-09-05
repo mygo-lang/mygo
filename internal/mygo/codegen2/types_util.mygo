@@ -1,4 +1,5 @@
 package codegen2
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
@@ -34,9 +35,9 @@ func goType(t: ast2.TypeExpr, typeParams: Set[String]) -> String
       let paramStrs = typeExprsToStrings(params, typeParams)
       let retStr = goType(ret.value(), typeParams)
       if retStr == "" || retStr == "struct{}" then
-        "func(" + joinStrings(paramStrs, ", ") + ")"
+        "func(" + common2.JoinStrings(paramStrs, ", ") + ")"
       else
-        "func(" + joinStrings(paramStrs, ", ") + ") " + retStr
+        "func(" + common2.JoinStrings(paramStrs, ", ") + ") " + retStr
       end
     # Every case below is a plain expression value.  Statement-form `return`
     # inside a case body would break the self-hosted switch lowering, which
@@ -46,7 +47,7 @@ func goType(t: ast2.TypeExpr, typeParams: Set[String]) -> String
         "struct{}"
       else
         let parts = tupleElemsToStrings(elems, typeParams)
-        "struct { " + joinStrings(parts, "; ") + " }"
+        "struct { " + common2.JoinStrings(parts, "; ") + " }"
       end
     case UnitType => "struct{}"
     case InlineGo(inner, _) => goType(inner.value(), typeParams)
@@ -64,7 +65,7 @@ func goTypeAst(t: ast2.TypeExpr, typeParams: Set[String]) -> goast.Expr
       # instead of being rewritten to Go's `error` builtin.
       if setContainsString(typeParams, name) && args.Len() == 0 then
         goast.TypeName(name)
-      elsif name == "Unit" && args.Len() == 0 then goast.EmptyStructType() else
+      else
         let lowered = args.Map(func(arg: ast2.TypeExpr) -> goast.Expr goTypeAst(arg, typeParams) end)
         if name == "Ref" && lowered.Len() == 1 then goast.TypePointer(lowered.Get(0).UnwrapOr(goast.TypeName("any")))
         elsif name == "Slice" && lowered.Len() == 1 then goast.TypeSlice(lowered.Get(0).UnwrapOr(goast.TypeName("any")))
@@ -103,7 +104,7 @@ end
 func hktApplicationAst(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> goast.Expr
   if args.Len() == 0 then goast.TypeName("any") else
     if args.Len() == 1 then goTypeAst(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams) else
-      goast.TypeApply(goast.TypeName("HKT"), [goTypeAst(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams), hktApplicationAst(sliceDrop(args, 1), typeParams)])
+      goast.TypeApply(goast.TypeName("HKT"), [goTypeAst(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams), hktApplicationAst(common2.SliceDrop(args, 1), typeParams)])
     end
   end
 end
@@ -118,7 +119,7 @@ func hktApplicationArgs(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> 
       goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams)
     else
       let first = goType(args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType), typeParams)
-      "HKT[" + first + ", " + hktApplicationArgs(sliceDrop(args, 1), typeParams) + "]"
+      "HKT[" + first + ", " + hktApplicationArgs(common2.SliceDrop(args, 1), typeParams) + "]"
     end
   end
 end
@@ -136,23 +137,18 @@ func genericNamedType(name: String, args: Slice[ast2.TypeExpr], typeParams: Set[
     name
   else
     let argStrs = typeArgsToStrings(args, typeParams)
-    name + "[" + joinStrings(argStrs, ", ") + "]"
+    name + "[" + common2.JoinStrings(argStrs, ", ") + "]"
   end
 end
 
 # goPrimitiveType lowers a builtin primitive name to the Go name used in
-# declaration signatures.  Either source spelling resolves through
-# typeinference2's shared primitive spelling table (`Error` and `error` both
-# map to `error`); only the MyGO-only shapes (Any, Unit) have local entries.
+# declaration signatures, delegating entirely to typeinference2's shared
+# primitive spelling table (`Error`/`error` map to `error`, `Any`/`any` map
+# to `any`).  The unit type has no name spelling: it is written `()` and is
+# handled through TypeExpr.UnitType / MonoType.TUnit, never a bare `Unit`
+# constructor (the old `Unit` spelling is abolished).
 func goPrimitiveType(name: String) -> Option[String]
-  switch typeinference2.PrimitiveGoSpelling(name)
-    case Some(mapped) => Some(mapped)
-    case None =>
-      if name == "Any" then Some("any")
-      elsif name == "Unit" then Some("struct{}")
-      else None
-      end
-  end
+  typeinference2.PrimitiveGoSpelling(name)
 end
 
 # goPrimitiveTypeName returns the mapped Go name, keeping unknown names
@@ -222,7 +218,6 @@ func isUnitType(t: ast2.TypeExpr) -> Bool
   switch t
     case UnitType => true
     case TupleType(elems) => elems.Len() == 0
-    case NamedType(name, args) => name == "Unit" && args.Len() == 0
     case _ => false
   end
 end
@@ -230,7 +225,7 @@ end
 # isUnitGoType: 检查 Go 类型字符串是否是单元类型
 func isUnitGoType(typ: String) -> Bool
   let trimmed = strings.TrimSpace(typ)
-  return trimmed == "Unit" || trimmed == "struct{}" || trimmed == "()"
+  return trimmed == "struct{}" || trimmed == "()"
 end
 
 func setContainsString(items: Set[String], target: String) -> Bool
@@ -416,25 +411,13 @@ func mangleTypeExpr(t: ast2.TypeExpr) -> String
   end
 end
 
+# canonicalMyGoTypeName canonicalizes a Go primitive spelling to its MyGO
+# constructor name, delegating to typeinference2's shared GoPrimitivePair
+# table so codegen never keeps a second copy of the mapping.  The table
+# covers every builtin spelling including the `any` alias (`any` maps to
+# `Any`), so unknown names pass through unchanged.
 func canonicalMyGoTypeName(name: String) -> String
-  switch name
-    case "int" => "Int"
-    case "int8" => "Int8"
-    case "uint8" => "UInt8"
-    case "int16" => "Int16"
-    case "uint16" => "UInt16"
-    case "int32" => "Int32"
-    case "uint32" => "UInt32"
-    case "int64" => "Int64"
-    case "uint" => "UInt"
-    case "uint64" => "UInt64"
-    case "float32" => "Float32"
-    case "float64" => "Float64"
-    case "string" => "String"
-    case "bool" => "Bool"
-    case "any" => "Any"
-    case _ => name
-  end
+  typeinference2.PrimitiveMyGoSpelling(name).UnwrapOr(name)
 end
 
 # typeKeyFromType: 从类型字符串生成类型键
@@ -459,7 +442,7 @@ func typeclassFuncType(paramTypes: Slice[String], retType: String) -> String
     end
     return "func() " + retType
   end
-  var fn: String = "func(" + joinStrings(paramTypes, ", ") + ")"
+  var fn: String = "func(" + common2.JoinStrings(paramTypes, ", ") + ")"
   if retType != "" then
     fn = fn + " " + retType
   end
@@ -472,7 +455,7 @@ func typeArgsToStrings(args: Slice[ast2.TypeExpr], typeParams: Set[String]) -> S
     return [] as Slice[String]
   end
   let head = args.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
-  let tail = typeArgsToStrings(sliceDrop(args, 1), typeParams)
+  let tail = typeArgsToStrings(common2.SliceDrop(args, 1), typeParams)
   return tail.Prepend(goType(head, typeParams))
 end
 
@@ -482,7 +465,7 @@ func typeExprsToStrings(items: Slice[ast2.TypeExpr], typeParams: Set[String]) ->
     return [] as Slice[String]
   end
   let head = items.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
-  let tail = typeExprsToStrings(sliceDrop(items, 1), typeParams)
+  let tail = typeExprsToStrings(common2.SliceDrop(items, 1), typeParams)
   return tail.Prepend(goType(head, typeParams))
 end
 
@@ -497,28 +480,8 @@ func tupleElemsToStringsLoop(elems: Slice[ast2.TypeExpr], typeParams: Set[String
     [] as Slice[String]
   else
     let head = elems.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
-    let tail = tupleElemsToStringsLoop(sliceDrop(elems, 1), typeParams, index + 1)
+    let tail = tupleElemsToStringsLoop(common2.SliceDrop(elems, 1), typeParams, index + 1)
     tail.Prepend("F" + index.ToString() + " " + goType(head, typeParams))
-  end
-end
-
-# 辅助函数：字符串列表连接
-func joinStrings(items: Slice[String], sep: String) -> String
-  # Avoid recursively rebuilding progressively longer strings.
-  strings.Join(items, sep)
-end
-
-# Return a suffix view instead of rebuilding it element by element.
-# SliceIndexable.Slice lowers to Go's s[start:end], so this is O(1).
-func sliceDrop[A](items: Slice[A], n: Int) -> Slice[A]
-  if n <= 0 then
-    items
-  else
-    if n >= items.Len() then
-      []
-    else
-      items.Slice(n, items.Len()).UnwrapOr([])
-    end
   end
 end
 
@@ -716,18 +679,11 @@ end
 func mergeStrings(a: Slice[String], b: Slice[String]) -> Slice[String]
   if b.Len() == 0 then a else
     let head = b.Get(0).UnwrapOr("")
-    if containsString(a, head) then
-      mergeStrings(a, sliceDrop(b, 1))
+    if common2.ContainsString(a, head) then
+      mergeStrings(a, common2.SliceDrop(b, 1))
     else
-      mergeStrings(a.Append(head), sliceDrop(b, 1))
+      mergeStrings(a.Append(head), common2.SliceDrop(b, 1))
     end
-  end
-end
-
-func containsString(items: Slice[String], target: String) -> Bool
-  if items.Len() == 0 then false else
-    let head = items.Get(0).UnwrapOr("")
-    head == target || containsString(sliceDrop(items, 1), target)
   end
 end
 
@@ -744,16 +700,16 @@ func typeString(t: ast2.TypeExpr) -> String
         name
       else
         let argStrs = typeArgsToStrings(args, Set.New[String]())
-        name + "[" + joinStrings(argStrs, ", ") + "]"
+        name + "[" + common2.JoinStrings(argStrs, ", ") + "]"
       end
     end
     case FuncType(params, ret) then
       let paramStrs = typeExprsToStrings(params, Set.New[String]())
       let retStr = typeString(ret.value())
       if retStr == "" then
-        "func(" + joinStrings(paramStrs, ", ") + ")"
+        "func(" + common2.JoinStrings(paramStrs, ", ") + ")"
       else
-        "func(" + joinStrings(paramStrs, ", ") + ") " + retStr
+        "func(" + common2.JoinStrings(paramStrs, ", ") + ") " + retStr
       end
     end
     case _ => "any"
@@ -769,18 +725,18 @@ func mygoTypeString(t: ast2.TypeExpr) -> String
       if args.Len() == 0 then
         name
       else
-        name + "[" + joinStrings(mygoTypeExprStrings(args), ", ") + "]"
+        name + "[" + common2.JoinStrings(mygoTypeExprStrings(args), ", ") + "]"
       end
     case FuncType(params, ret) =>
       let paramStrs = mygoTypeExprStrings(params)
       let retStr = mygoTypeString(ret.value())
       if retStr == "()" then
-        "func(" + joinStrings(paramStrs, ", ") + ")"
+        "func(" + common2.JoinStrings(paramStrs, ", ") + ")"
       else
-        "func(" + joinStrings(paramStrs, ", ") + ") -> " + retStr
+        "func(" + common2.JoinStrings(paramStrs, ", ") + ") -> " + retStr
       end
     case TupleType(elems) =>
-      "(" + joinStrings(mygoTypeExprStrings(elems), ", ") + ")"
+      "(" + common2.JoinStrings(mygoTypeExprStrings(elems), ", ") + ")"
     case UnitType => "()"
     case InlineGo(inner, _) => mygoTypeString(inner.value())
     case _ => "any"
@@ -793,7 +749,7 @@ func mygoTypeExprStrings(items: Slice[ast2.TypeExpr]) -> Slice[String]
     [] as Slice[String]
   else
     let head = items.Get(0).UnwrapOr(ast2.TypeExpr.UnitType)
-    let tail = mygoTypeExprStrings(sliceDrop(items, 1))
+    let tail = mygoTypeExprStrings(common2.SliceDrop(items, 1))
     tail.Prepend(mygoTypeString(head))
   end
 end
@@ -823,7 +779,7 @@ func mygoToGoTypeStr(typ: String) -> String
       if args.Len() == 0 then
         goPrimitiveTypeName(name)
       else
-        name + "[" + joinStrings(args.Map(func(a: String) -> String mygoToGoTypeStr(a) end), ", ") + "]"
+        name + "[" + common2.JoinStrings(args.Map(func(a: String) -> String mygoToGoTypeStr(a) end), ", ") + "]"
       end
   end
 end

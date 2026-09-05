@@ -278,8 +278,17 @@ func translateFFITupleLetStmt(pattern ast2.Pattern, value ast2.Expr, sig typeinf
 				__mygo_expr_3 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_5.F0)
 			} else {
 				if __mygo_match___mygo_expr_4, ok := raw.(Result__Ok[AstExprResult, string]); ok {
-					resultTypes := typeinference2.GoSignatureRawResultType(sig)
-					__mygo_expr_3 = translateRawTupleLet(pattern, resultTypes, __mygo_match___mygo_expr_4.F0.Expr, __mygo_match___mygo_expr_4.F0.Pre, ctx)
+					__mygo_expr_5 := typeinference2.GoSignatureRawResultType(sig)
+					var __mygo_expr_6 Result[[]goast.Stmt, string]
+					if __mygo_match___mygo_expr_8, ok := __mygo_expr_5.(Result__Ok[ast2.MonoType, string]); ok {
+						__mygo_expr_6 = translateRawTupleLet(pattern, __mygo_match___mygo_expr_8.F0, __mygo_match___mygo_expr_4.F0.Expr, __mygo_match___mygo_expr_4.F0.Pre, ctx)
+					} else {
+						if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Result__Err[ast2.MonoType, string]); ok {
+							__mygo_expr_6 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_7.F0)
+						} else {
+						}
+					}
+					__mygo_expr_3 = __mygo_expr_6
 				} else {
 				}
 			}

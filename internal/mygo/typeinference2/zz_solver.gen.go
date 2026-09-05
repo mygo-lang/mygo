@@ -2,6 +2,7 @@
 
 package typeinference2
 
+import "github.com/mygo-lang/mygo/internal/mygo/common2"
 import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import . "github.com/mygo-lang/mygo/prelude"
 
@@ -24,7 +25,7 @@ func solverFromInstances(instances []Instance) Solver {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(instances) == 0 {
 		return newSolver()
 	} else {
-		return solverRegister(solverFromInstances(sliceDrop(instances, 1)), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(instances, 0), Instance{ClassName: "", Type: ast2.MonoType__TUnit__Ctor(), Predicates: []Predicate{}}))
+		return solverRegister(solverFromInstances(common2.SliceDrop(instances, 1)), MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(instances, 0), Instance{ClassName: "", Type: ast2.MonoType__TUnit__Ctor(), Predicates: []Predicate{}}))
 	}
 }
 func solverResolve(solver Solver, predicates []Predicate, subst Subst) Result[[]Predicate, string] {
@@ -32,7 +33,7 @@ func solverResolve(solver Solver, predicates []Predicate, subst Subst) Result[[]
 		return Ok[[]Predicate, string](emptyPredicates())
 	} else {
 		predicate := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(predicates, 0), Predicate{ClassName: "", Args: []ast2.MonoType{}})
-		rest := solverResolve(solver, sliceDrop(predicates, 1), subst)
+		rest := solverResolve(solver, common2.SliceDrop(predicates, 1), subst)
 		var __mygo_expr_0 Result[[]Predicate, string]
 		if __mygo_match___mygo_expr_2, ok := rest.(Result__Err[[]Predicate, string]); ok {
 			__mygo_expr_0 = Err[[]Predicate, string](__mygo_match___mygo_expr_2.F0)
@@ -91,7 +92,7 @@ func __mygo_mt_typeinference2_appendInstances(__mygo_mt_p0 []Instance, __mygo_mt
 				return __mygo_mt_p0
 			} else {
 				__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), Instance{ClassName: "", Type: ast2.MonoType__TUnit__Ctor(), Predicates: []Predicate{}}))
-				__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+				__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
 				continue
@@ -110,7 +111,7 @@ func __mygo_mt_typeinference2_solverFindInstance(__mygo_mt_p0 []Instance, __mygo
 			} else {
 				instance := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), Instance{ClassName: "", Type: ast2.MonoType__TUnit__Ctor(), Predicates: []Predicate{}})
 				if instance.ClassName != __mygo_mt_p1.ClassName || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1.Args) == 0 {
-					__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+					__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
@@ -122,7 +123,7 @@ func __mygo_mt_typeinference2_solverFindInstance(__mygo_mt_p0 []Instance, __mygo
 						return solverResolve(instanceSolver(instance, __mygo_mt_p0), instance.Predicates, __mygo_match___mygo_expr_1.F0)
 					} else {
 						if _, ok := __mygo_expr_0.(Result__Err[Subst, string]); ok {
-							__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+							__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 							__tail_1 := __mygo_mt_p1
 							__tail_2 := __mygo_mt_p2
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2

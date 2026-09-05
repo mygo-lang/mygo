@@ -1,4 +1,5 @@
 package codegen2
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
@@ -12,7 +13,7 @@ func funcSignature(prefix: String, tps: Slice[String], params: Slice[ast2.Param]
   let ps = params.Map(func(p: ast2.Param) -> String
     sanitizeIdent(p.Name) + " " + goType(p.Type, allTypes)
   end)
-  prefix + typeParamDecl(tps) + "(" + joinStrings(ps, ", ") + ")" + returnTypeString(ret, allTypes)
+  prefix + typeParamDecl(tps) + "(" + common2.JoinStrings(ps, ", ") + ")" + returnTypeString(ret, allTypes)
 end
 
 func returnTypeString(ret: Option[ast2.TypeExpr], tps: Set[String]) -> String
@@ -37,7 +38,7 @@ func typeParamDecl(tps: Slice[String]) -> String
     ""
   else
     let parts = tps.Map(func(tp: String) -> String hktTypeParamName(tp) + " any" end)
-    "[" + joinStrings(parts, ", ") + "]"
+    "[" + common2.JoinStrings(parts, ", ") + "]"
   end
 end
 
@@ -46,7 +47,7 @@ func typeParamUse(tps: Slice[String]) -> String
     ""
   else
     let parts = tps.Map(func(tp: String) -> String hktTypeParamName(tp) end)
-    "[" + joinStrings(parts, ", ") + "]"
+    "[" + common2.JoinStrings(parts, ", ") + "]"
   end
 end
 

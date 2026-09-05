@@ -1,4 +1,5 @@
 package typeinference2
+import common2 "github.com/mygo-lang/mygo/internal/mygo/common2"
 
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import fmt "go:fmt"
@@ -52,7 +53,7 @@ end
 func monoListString(items: Slice[ast2.MonoType]) -> String
   if items.Len() == 0 then "" else
     let head = monoStringFull(items.Get(0).UnwrapOr(ast2.MonoType.TUnit))
-    let tail = monoListString(sliceDrop(items, 1))
+    let tail = monoListString(common2.SliceDrop(items, 1))
     if tail == "" then head else head + ", " + tail end
   end
 end
@@ -105,7 +106,7 @@ func instantiateBoundSubst(bound: Slice[Int], state: InferState, out: Subst) -> 
   if bound.Len() == 0 then out
   else
     let id = bound.Get(0).UnwrapOr(0)
-    instantiateBoundSubst(sliceDrop(bound, 1), withFreshID(state, state.FreshVarID + 1), substAppend(out, SubstEntry { ID: id, Type: ast2.MonoType.TVar(state.FreshVarID) }))
+    instantiateBoundSubst(common2.SliceDrop(bound, 1), withFreshID(state, state.FreshVarID + 1), substAppend(out, SubstEntry { ID: id, Type: ast2.MonoType.TVar(state.FreshVarID) }))
   end
 end
 
@@ -113,7 +114,7 @@ func instantiateBoundSubstFor(bound: Slice[Int], body: ast2.MonoType, state: Inf
   if bound.Len() == 0 then out else
     let id = bound.Get(0).UnwrapOr(0)
     let replacement = if isKindVar(body, id) then ast2.MonoType.TKVar(state.FreshVarID) else ast2.MonoType.TVar(state.FreshVarID) end
-    instantiateBoundSubstFor(sliceDrop(bound, 1), body, withFreshID(state, state.FreshVarID + 1), substAppend(out, SubstEntry { ID: id, Type: replacement }))
+    instantiateBoundSubstFor(common2.SliceDrop(bound, 1), body, withFreshID(state, state.FreshVarID + 1), substAppend(out, SubstEntry { ID: id, Type: replacement }))
   end
 end
 
@@ -139,7 +140,7 @@ end
 
 func appendPredicates(left: Slice[Predicate], right: Slice[Predicate]) -> Slice[Predicate]
   if right.Len() == 0 then left
-  else appendPredicates(left.Append(right.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[ast2.MonoType] })), sliceDrop(right, 1)) end
+  else appendPredicates(left.Append(right.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[ast2.MonoType] })), common2.SliceDrop(right, 1)) end
 end
 
 func instantiateBound(bound: Slice[Int], body: ast2.MonoType, state: InferState, subst: Subst) -> ast2.MonoType
@@ -148,7 +149,7 @@ func instantiateBound(bound: Slice[Int], body: ast2.MonoType, state: InferState,
   else
     let id = bound.Get(0).UnwrapOr(0)
     let replacement = if isKindVar(body, id) then ast2.MonoType.TKVar(state.FreshVarID) else ast2.MonoType.TVar(state.FreshVarID) end
-    instantiateBound(sliceDrop(bound, 1), body, withFreshID(state, state.FreshVarID + 1), substPrepend(subst, SubstEntry { ID: id, Type: replacement }))
+    instantiateBound(common2.SliceDrop(bound, 1), body, withFreshID(state, state.FreshVarID + 1), substPrepend(subst, SubstEntry { ID: id, Type: replacement }))
   end
 end
 
@@ -166,7 +167,7 @@ func isKindVar(t: ast2.MonoType, id: Int) -> Bool
 end
 
 func isKindVarAll(items: Slice[ast2.MonoType], id: Int) -> Bool
-  if items.Len() == 0 then false else isKindVar(items.Get(0).UnwrapOr(ast2.MonoType.TUnit), id) || isKindVarAll(sliceDrop(items, 1), id) end
+  if items.Len() == 0 then false else isKindVar(items.Get(0).UnwrapOr(ast2.MonoType.TUnit), id) || isKindVarAll(common2.SliceDrop(items, 1), id) end
 end
 
 # Instantiation currently returns only a type, so callers must select result
@@ -190,7 +191,7 @@ func nextFreshVarIDInAll(items: Slice[ast2.MonoType], current: Int) -> Int
   if items.Len() == 0 then
     current
   else
-    nextFreshVarIDInAll(sliceDrop(items, 1), nextFreshVarID(items.Get(0).UnwrapOr(ast2.MonoType.TUnit), current))
+    nextFreshVarIDInAll(common2.SliceDrop(items, 1), nextFreshVarID(items.Get(0).UnwrapOr(ast2.MonoType.TUnit), current))
   end
 end
 
@@ -214,7 +215,7 @@ func freeVarsAll(items: Slice[ast2.MonoType], out: Slice[Int]) -> Slice[Int]
   if items.Len() == 0 then
     out
   else
-    freeVarsAll(sliceDrop(items, 1), freeVars(items.Get(0).UnwrapOr(ast2.MonoType.TUnit), out))
+    freeVarsAll(common2.SliceDrop(items, 1), freeVars(items.Get(0).UnwrapOr(ast2.MonoType.TUnit), out))
   end
 end
 
@@ -222,7 +223,7 @@ func containsInt(items: Slice[Int], value: Int) -> Bool
   if items.Len() == 0 then
     false
   else
-    items.Get(0).UnwrapOr(0) == value || containsInt(sliceDrop(items, 1), value)
+    items.Get(0).UnwrapOr(0) == value || containsInt(common2.SliceDrop(items, 1), value)
   end
 end
 
@@ -263,7 +264,7 @@ func unionInts(left: Slice[Int], right: Slice[Int]) -> Slice[Int]
   else
     let head = right.Get(0).UnwrapOr(0)
     let next = if containsInt(left, head) then left else left.Append(head) end
-    unionInts(next, sliceDrop(right, 1))
+    unionInts(next, common2.SliceDrop(right, 1))
   end
 end
 
@@ -272,13 +273,13 @@ func freeVarsPredicates(items: Slice[Predicate], out: Slice[Int]) -> Slice[Int]
     out
   else
     let predicate = items.Get(0).UnwrapOr(Predicate { ClassName: "", Args: [] as Slice[ast2.MonoType] })
-    freeVarsPredicates(sliceDrop(items, 1), freeVarsAll(predicate.Args, out))
+    freeVarsPredicates(common2.SliceDrop(items, 1), freeVarsAll(predicate.Args, out))
   end
 end
 
 func removeInts(items: Slice[Int], removed: Slice[Int]) -> Slice[Int]
   if items.Len() == 0 then [] else
-    let tail = removeInts(sliceDrop(items, 1), removed)
+    let tail = removeInts(common2.SliceDrop(items, 1), removed)
     if containsInt(removed, items.Get(0).UnwrapOr(0)) then tail else tail.Prepend(items.Get(0).UnwrapOr(0)) end
   end
 end
@@ -312,21 +313,6 @@ end
 
 func emptyASTTypeExprs() -> Slice[ast2.TypeExpr]
   []
-end
-
-func sliceDrop[A](items: Slice[A], n: Int) -> Slice[A]
-  if n <= 0 then
-    items
-  else
-    if items.Len() == 0 then
-      []
-    else
-      # Slice returns a Go slice view, rather than rebuilding every remaining
-      # element.  This helper is used by most recursive inference walks, so
-      # preserving the backing slice avoids quadratic copying.
-      items.Slice(n, items.Len()).UnwrapOr([])
-    end
-  end
 end
 
 # Construct generic types

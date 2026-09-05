@@ -2,6 +2,7 @@
 
 package codegen2
 
+import "github.com/mygo-lang/mygo/internal/mygo/common2"
 import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import "github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
@@ -110,7 +111,7 @@ func switchCasesContainTailCall(cases []ast2.SwitchCase, name string) bool {
 		return false
 	} else {
 		current := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), ast2.SwitchCase{Pattern: ast2.Pattern__WildcardPattern__Ctor(), Body: ast2.EmptyExpr()})
-		return containsTailCall(current.Body, name) || switchCasesContainTailCall(sliceDrop(cases, 1), name)
+		return containsTailCall(current.Body, name) || switchCasesContainTailCall(common2.SliceDrop(cases, 1), name)
 	}
 }
 func containsTailCallBlock(items []ast2.Stmt, name string) bool {
@@ -491,7 +492,7 @@ func mtGroupsContain(groups [][]string, members []string) bool {
 		return false
 	} else {
 		group := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(groups, 0), []string{})
-		return mtSameStringSlice(group, members) || mtGroupsContain(sliceDrop(groups, 1), members)
+		return mtSameStringSlice(group, members) || mtGroupsContain(common2.SliceDrop(groups, 1), members)
 	}
 }
 func mtSameStringSlice(a []string, b []string) bool {
@@ -517,7 +518,7 @@ func mtSccEligible(scc []string, funcs map[string]MtFuncInfo, edges map[string][
 	}
 }
 func mtHasTailSelfEdge(edges map[string][]string, name string) bool {
-	return containsString(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(edges, name), []string{}), name)
+	return common2.ContainsString(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(edges, name), []string{}), name)
 }
 func mtAllIntraGroupTail(scc []string, funcs map[string]MtFuncInfo) bool {
 	var inGroup map[string]bool = map[string]bool{}
@@ -641,7 +642,7 @@ func mtPlanFor(pkgName string, scc []string, funcs map[string]MtFuncInfo) Mutual
 	parts := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(members, func(m MtFuncInfo) string {
 		return sanitizeIdent(m.Name)
 	})
-	return MutualTailPlan{Name: "__mygo_mt_" + sanitizeIdent(pkgName) + "_" + joinStrings(parts, "_"), Owner: owner, Members: members, State: state}
+	return MutualTailPlan{Name: "__mygo_mt_" + sanitizeIdent(pkgName) + "_" + common2.JoinStrings(parts, "_"), Owner: owner, Members: members, State: state}
 }
 func mtBefore(a MtFuncInfo, b MtFuncInfo) bool {
 	if a.Path != b.Path {
@@ -675,7 +676,7 @@ func mtInsertString(sorted []string, item string) []string {
 		if item < head {
 			return MygoIN5SliceM7Prepend(sorted, item)
 		} else {
-			return MygoIN5SliceM7Prepend(mtInsertString(sliceDrop(sorted, 1), item), head)
+			return MygoIN5SliceM7Prepend(mtInsertString(common2.SliceDrop(sorted, 1), item), head)
 		}
 	}
 }
@@ -696,7 +697,7 @@ func mtInsertMember(sorted []MtFuncInfo, item MtFuncInfo) []MtFuncInfo {
 		if mtBefore(item, head) {
 			return MygoIN5SliceM7Prepend(sorted, item)
 		} else {
-			return MygoIN5SliceM7Prepend(mtInsertMember(sliceDrop(sorted, 1), item), head)
+			return MygoIN5SliceM7Prepend(mtInsertMember(common2.SliceDrop(sorted, 1), item), head)
 		}
 	}
 }
@@ -984,7 +985,7 @@ func translateSwitchBranchesTail(cases []ast2.SwitchCase, targetType Option[ast2
 				} else {
 					if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.Pattern__LiteralPattern); ok {
 						body_2 := translateAstReturnExpr(current.Body, ctx)
-						rest_2 := translateSwitchBranchesTail(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+						rest_2 := translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
 						var __mygo_expr_5 Result[[]goast.Stmt, string]
 						if __mygo_match___mygo_expr_7, ok := body_2.(Result__Err[[]goast.Stmt, string]); ok {
 							__mygo_expr_5 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_7.F0)
@@ -1019,7 +1020,7 @@ func translateSwitchBranchesTail(cases []ast2.SwitchCase, targetType Option[ast2
 						__mygo_expr_1 = __mygo_expr_5
 					} else {
 						if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.Pattern__VariantPattern); ok {
-							rest_1 := translateSwitchBranchesTail(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+							rest_1 := translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
 							var __mygo_expr_4 Result[[]goast.Stmt, string]
 							if __mygo_match___mygo_expr_6, ok := rest_1.(Result__Err[[]goast.Stmt, string]); ok {
 								__mygo_expr_4 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_6.F0)
@@ -1061,7 +1062,7 @@ func translateSwitchBranchesTail(cases []ast2.SwitchCase, targetType Option[ast2
 							__mygo_expr_1 = __mygo_expr_4
 						} else {
 							if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.Pattern__StructVariantPattern); ok {
-								rest := translateSwitchBranchesTail(sliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
+								rest := translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, sourceTarget, target, ctx)
 								var __mygo_expr_3 Result[[]goast.Stmt, string]
 								if __mygo_match___mygo_expr_5, ok := rest.(Result__Err[[]goast.Stmt, string]); ok {
 									__mygo_expr_3 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_5.F0)
@@ -1120,7 +1121,7 @@ func translateTupleVariantSwitchStmtAtTail(items []ast2.Pattern, targetType Opti
 			value := goast.Selector(target, "F"+MygoIT8ToStringFN3IntGN3IntEM8ToString(index))
 			var __mygo_expr_0 Result[[]goast.Stmt, string]
 			if __mygo_match___mygo_expr_2, ok := pattern.(ast2.Pattern__VariantPattern); ok {
-				rest_1 := translateSwitchBranchesTail(sliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
+				rest_1 := translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
 				var __mygo_expr_3 Result[[]goast.Stmt, string]
 				if __mygo_match___mygo_expr_5, ok := rest_1.(Result__Err[[]goast.Stmt, string]); ok {
 					__mygo_expr_3 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_5.F0)
@@ -1162,7 +1163,7 @@ func translateTupleVariantSwitchStmtAtTail(items []ast2.Pattern, targetType Opti
 				__mygo_expr_0 = __mygo_expr_3
 			} else {
 				if __mygo_match___mygo_expr_1, ok := pattern.(ast2.Pattern__StructVariantPattern); ok {
-					rest := translateSwitchBranchesTail(sliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
+					rest := translateSwitchBranchesTail(common2.SliceDrop(cases, 1), targetType, ast2.EmptyExpr(), target, outerCtx)
 					var __mygo_expr_2 Result[[]goast.Stmt, string]
 					if __mygo_match___mygo_expr_4, ok := rest.(Result__Err[[]goast.Stmt, string]); ok {
 						__mygo_expr_2 = Err[[]goast.Stmt, string](__mygo_match___mygo_expr_4.F0)
@@ -1355,7 +1356,7 @@ func __mygo_mt_codegen2_mtDirectCallsCases(__mygo_mt_p0 []ast2.SwitchCase, __myg
 				return __mygo_mt_p3
 			} else {
 				current := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.SwitchCase{Pattern: ast2.Pattern__WildcardPattern__Ctor(), Body: ast2.EmptyExpr()})
-				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 				__tail_1 := __mygo_mt_p1
 				__tail_2 := __mygo_mt_p2
 				__tail_3 := mtDirectCalls(current.Body, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3)
@@ -1382,7 +1383,7 @@ func __mygo_mt_codegen2_mtDirectCallsExprs(__mygo_mt_p0 []ast2.Expr, __mygo_mt_p
 				return __mygo_mt_p3
 			} else {
 				e := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.EmptyExpr())
-				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 				__tail_1 := __mygo_mt_p1
 				__tail_2 := __mygo_mt_p2
 				__tail_3 := mtDirectCalls(e, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3)
@@ -1409,7 +1410,7 @@ func __mygo_mt_codegen2_mtDirectCallsLetRec(__mygo_mt_p0 []ast2.LetRecBind, __my
 				return __mygo_mt_p2
 			} else {
 				bind := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.LetRecBind{Name: "", Type: ast2.TypeExpr__UnitType__Ctor(), Value: ast2.EmptyExpr()})
-				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 				__tail_1 := __mygo_mt_p1
 				__tail_2 := mtDirectCalls(bind.Value, false, __mygo_mt_p1, __mygo_mt_p2)
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
@@ -1435,7 +1436,7 @@ func __mygo_mt_codegen2_mtDirectCallsOperands(__mygo_mt_p0 []ast2.GoOperand, __m
 				return __mygo_mt_p2
 			} else {
 				operand := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.GoOperand{Name: "", Value: ast2.EmptyExpr()})
-				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 				__tail_1 := __mygo_mt_p1
 				__tail_2 := mtDirectCalls(operand.Value, false, __mygo_mt_p1, __mygo_mt_p2)
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
@@ -1476,7 +1477,7 @@ func __mygo_mt_codegen2_mtDirectCallsPairs(__mygo_mt_p0 []struct {
 				key = __mygo_expr_0.F0
 				var value ast2.Expr
 				value = __mygo_expr_0.F1
-				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 				__tail_1 := __mygo_mt_p1
 				__tail_2 := mtDirectCalls(value, false, __mygo_mt_p1, mtDirectCalls(key, false, __mygo_mt_p1, __mygo_mt_p2))
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
@@ -1531,7 +1532,7 @@ func __mygo_mt_codegen2_mtDirectCallsStructFields(__mygo_mt_p0 []ast2.StructLitF
 				return __mygo_mt_p2
 			} else {
 				field := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.StructLitField{Name: "", Value: ast2.EmptyExpr()})
-				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 				__tail_1 := __mygo_mt_p1
 				__tail_2 := mtDirectCalls(field.Value, false, __mygo_mt_p1, __mygo_mt_p2)
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2

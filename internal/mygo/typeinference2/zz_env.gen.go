@@ -2,6 +2,7 @@
 
 package typeinference2
 
+import "github.com/mygo-lang/mygo/internal/mygo/common2"
 import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import "strings"
 import . "github.com/mygo-lang/mygo/prelude"
@@ -97,7 +98,7 @@ func typeExprListString(items []ast2.TypeExpr) string {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) == 0 {
 		return ""
 	} else {
-		tail := typeExprListString(sliceDrop(items, 1))
+		tail := typeExprListString(common2.SliceDrop(items, 1))
 		__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0)
 		var __mygo_expr_1 string
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.TypeExpr]); ok {
@@ -352,7 +353,7 @@ func envWithTypeParamsLoop(env Env, typeParams []string, index int) Env {
 	return __mygo_mt_typeinference2_envWithTypeParamsLoop(env, typeParams, index, 0)
 }
 func initialEnvEntries() []EnvEntry {
-	return []EnvEntry{EnvEntry{Name: "Int", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Int")}}, EnvEntry{Name: "Int8", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Int8")}}, EnvEntry{Name: "UInt8", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("UInt8")}}, EnvEntry{Name: "Int16", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Int16")}}, EnvEntry{Name: "UInt16", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("UInt16")}}, EnvEntry{Name: "Int32", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Int32")}}, EnvEntry{Name: "UInt32", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("UInt32")}}, EnvEntry{Name: "Int64", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Int64")}}, EnvEntry{Name: "UInt", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("UInt")}}, EnvEntry{Name: "UInt64", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("UInt64")}}, EnvEntry{Name: "Float32", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Float32")}}, EnvEntry{Name: "Float64", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Float64")}}, EnvEntry{Name: "Byte", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Byte")}}, EnvEntry{Name: "String", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("String")}}, EnvEntry{Name: "Bool", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Bool")}}, EnvEntry{Name: "Float", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Float")}}, EnvEntry{Name: "Rune", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Rune")}}, EnvEntry{Name: "Unit", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TUnit__Ctor()}}, EnvEntry{Name: "Ref", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Ref")}}, EnvEntry{Name: "true", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Bool")}}, EnvEntry{Name: "false", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Bool")}}, EnvEntry{Name: "len", Scheme: Scheme{Bound: []int{-1}, Predicates: []Predicate{}, Body: ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TParam__Ctor(-1)}, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")}[0])}}, EnvEntry{Name: "append", Scheme: Scheme{Bound: []int{-1}, Predicates: []Predicate{}, Body: ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Slice")}[0], []ast2.MonoType{ast2.MonoType__TParam__Ctor(-1)}), ast2.MonoType__TParam__Ctor(-1)}, &[]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Slice")}[0], []ast2.MonoType{ast2.MonoType__TParam__Ctor(-1)})}[0])}}, EnvEntry{Name: "Some", Scheme: Scheme{Bound: []int{-1}, Predicates: []Predicate{}, Body: ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TParam__Ctor(-1)}, &[]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Option")}[0], []ast2.MonoType{ast2.MonoType__TParam__Ctor(-1)})}[0])}}, EnvEntry{Name: "None", Scheme: Scheme{Bound: []int{-1}, Predicates: []Predicate{}, Body: ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Option")}[0], []ast2.MonoType{ast2.MonoType__TParam__Ctor(-1)})}}, EnvEntry{Name: "Ok", Scheme: Scheme{Bound: []int{-1, -2}, Predicates: []Predicate{}, Body: ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TParam__Ctor(-1)}, &[]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Result")}[0], []ast2.MonoType{ast2.MonoType__TParam__Ctor(-1), ast2.MonoType__TParam__Ctor(-2)})}[0])}}, EnvEntry{Name: "Err", Scheme: Scheme{Bound: []int{-1, -2}, Predicates: []Predicate{}, Body: ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TParam__Ctor(-2)}, &[]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Result")}[0], []ast2.MonoType{ast2.MonoType__TParam__Ctor(-1), ast2.MonoType__TParam__Ctor(-2)})}[0])}}}
+	return []EnvEntry{EnvEntry{Name: "Int", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Int")}}, EnvEntry{Name: "Int8", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Int8")}}, EnvEntry{Name: "UInt8", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("UInt8")}}, EnvEntry{Name: "Int16", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Int16")}}, EnvEntry{Name: "UInt16", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("UInt16")}}, EnvEntry{Name: "Int32", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Int32")}}, EnvEntry{Name: "UInt32", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("UInt32")}}, EnvEntry{Name: "Int64", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Int64")}}, EnvEntry{Name: "UInt", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("UInt")}}, EnvEntry{Name: "UInt64", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("UInt64")}}, EnvEntry{Name: "Float32", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Float32")}}, EnvEntry{Name: "Float64", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Float64")}}, EnvEntry{Name: "Byte", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Byte")}}, EnvEntry{Name: "String", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("String")}}, EnvEntry{Name: "Bool", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Bool")}}, EnvEntry{Name: "Float", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Float")}}, EnvEntry{Name: "Rune", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Rune")}}, EnvEntry{Name: "Ref", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Ref")}}, EnvEntry{Name: "true", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Bool")}}, EnvEntry{Name: "false", Scheme: Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Bool")}}, EnvEntry{Name: "len", Scheme: Scheme{Bound: []int{-1}, Predicates: []Predicate{}, Body: ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TParam__Ctor(-1)}, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")}[0])}}, EnvEntry{Name: "append", Scheme: Scheme{Bound: []int{-1}, Predicates: []Predicate{}, Body: ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Slice")}[0], []ast2.MonoType{ast2.MonoType__TParam__Ctor(-1)}), ast2.MonoType__TParam__Ctor(-1)}, &[]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Slice")}[0], []ast2.MonoType{ast2.MonoType__TParam__Ctor(-1)})}[0])}}, EnvEntry{Name: "Some", Scheme: Scheme{Bound: []int{-1}, Predicates: []Predicate{}, Body: ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TParam__Ctor(-1)}, &[]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Option")}[0], []ast2.MonoType{ast2.MonoType__TParam__Ctor(-1)})}[0])}}, EnvEntry{Name: "None", Scheme: Scheme{Bound: []int{-1}, Predicates: []Predicate{}, Body: ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Option")}[0], []ast2.MonoType{ast2.MonoType__TParam__Ctor(-1)})}}, EnvEntry{Name: "Ok", Scheme: Scheme{Bound: []int{-1, -2}, Predicates: []Predicate{}, Body: ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TParam__Ctor(-1)}, &[]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Result")}[0], []ast2.MonoType{ast2.MonoType__TParam__Ctor(-1), ast2.MonoType__TParam__Ctor(-2)})}[0])}}, EnvEntry{Name: "Err", Scheme: Scheme{Bound: []int{-1, -2}, Predicates: []Predicate{}, Body: ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TParam__Ctor(-2)}, &[]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Result")}[0], []ast2.MonoType{ast2.MonoType__TParam__Ctor(-1), ast2.MonoType__TParam__Ctor(-2)})}[0])}}}
 }
 func initialEnv() Env {
 	entries := initialEnvEntries()
@@ -502,7 +503,7 @@ func __mygo_mt_typeinference2_concatSymbols(__mygo_mt_p0 []Symbol, __mygo_mt_p1 
 			} else {
 				head := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), Symbol__StructField__Ctor("", "", ast2.MonoType__TUnit__Ctor()))
 				__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, head)
-				__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+				__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
 				continue
@@ -522,8 +523,8 @@ func __mygo_mt_typeinference2_envWithParamsAndTypes(__mygo_mt_p0 Env, __mygo_mt_
 				param := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), ast2.Param{Name: "", Type: ast2.TypeExpr__UnitType__Ctor()})
 				typ := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, 0), ast2.MonoType__TUnit__Ctor())
 				__tail_0 := envPut(__mygo_mt_p0, param.Name, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: typ})
-				__tail_1 := sliceDrop(__mygo_mt_p1, 1)
-				__tail_2 := sliceDrop(__mygo_mt_p2, 1)
+				__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
+				__tail_2 := common2.SliceDrop(__mygo_mt_p2, 1)
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 				__mygo_state = 0
 				continue
@@ -542,7 +543,7 @@ func __mygo_mt_typeinference2_envWithTypeParamsLoop(__mygo_mt_p0 Env, __mygo_mt_
 			} else {
 				name := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), "")
 				__tail_0 := envPut(__mygo_mt_p0, name, Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TParam__Ctor(-__mygo_mt_p2)})
-				__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+				__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 				__tail_2 := __mygo_mt_p2 + 1
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 				__mygo_state = 0
@@ -563,7 +564,7 @@ func __mygo_mt_typeinference2_fieldsForStructInEnv(__mygo_mt_p0 string, __mygo_m
 				f := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), ast2.Field{Name: "", Type: ast2.TypeExpr__UnitType__Ctor(), Tag: None[string]()})
 				fieldType := typeFromASTInEnvWithParams(f.Type, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4)
 				__tail_0 := __mygo_mt_p0
-				__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+				__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 				__tail_2 := __mygo_mt_p2
 				__tail_3 := __mygo_mt_p3
 				__tail_4 := __mygo_mt_p4
@@ -589,7 +590,7 @@ func __mygo_mt_typeinference2_hktParamID(__mygo_mt_p0 []string, __mygo_mt_p1 str
 				if strings.Index(current, "[") > 0 && current == expected {
 					return Some[int](-__mygo_mt_p3)
 				} else {
-					__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+					__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2
 					__tail_3 := __mygo_mt_p3 + 1
@@ -629,7 +630,7 @@ func __mygo_mt_typeinference2_implMethodSymbols(__mygo_mt_p0 string, __mygo_mt_p
 				scheme := Scheme{Bound: bound, Predicates: predicates, Body: ast2.MonoType__TFunc__Ctor(paramTypes, &retType)}
 				__tail_0 := __mygo_mt_p0
 				__tail_1 := __mygo_mt_p1
-				__tail_2 := sliceDrop(__mygo_mt_p2, 1)
+				__tail_2 := common2.SliceDrop(__mygo_mt_p2, 1)
 				__tail_3 := __mygo_mt_p3
 				__tail_4 := MygoIN5SliceM7Prepend(__mygo_mt_p4, Symbol__ImplMethod__Ctor(__mygo_mt_p0, m.Sig.Name, scheme))
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
@@ -746,7 +747,7 @@ func __mygo_mt_typeinference2_predeclareImplMethods(__mygo_mt_p0 []ast2.Decl, __
 					__mygo_expr_0 = __mygo_mt_p1
 				}
 				next := __mygo_expr_0
-				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 				__tail_1 := next
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
@@ -783,7 +784,7 @@ func __mygo_mt_typeinference2_registerImplMethodsLoop(__mygo_mt_p0 []string, __m
 				scheme := Scheme{Bound: bound, Predicates: predicates, Body: ast2.MonoType__TFunc__Ctor(paramTypes, &retType)}
 				__tail_0 := __mygo_mt_p0
 				__tail_1 := __mygo_mt_p1
-				__tail_2 := sliceDrop(__mygo_mt_p2, 1)
+				__tail_2 := common2.SliceDrop(__mygo_mt_p2, 1)
 				__tail_3 := envPut(__mygo_mt_p3, __mygo_mt_p1+"."+m.Sig.Name, scheme)
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 				__mygo_state = 0
@@ -804,7 +805,7 @@ func __mygo_mt_typeinference2_structSymbolsInEnv(__mygo_mt_p0 string, __mygo_mt_
 				f := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), ast2.Field{Name: "", Type: ast2.TypeExpr__UnitType__Ctor(), Tag: None[string]()})
 				fieldType := typeFromASTInEnvWithParams(f.Type, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4)
 				__tail_0 := __mygo_mt_p0
-				__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+				__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 				__tail_2 := __mygo_mt_p2
 				__tail_3 := __mygo_mt_p3
 				__tail_4 := __mygo_mt_p4
@@ -825,8 +826,8 @@ func __mygo_mt_typeinference2_typeArgSubst(__mygo_mt_p0 []int, __mygo_mt_p1 []as
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) == 0 {
 				return __mygo_mt_p2
 			} else {
-				__tail_0 := sliceDrop(__mygo_mt_p0, 1)
-				__tail_1 := sliceDrop(__mygo_mt_p1, 1)
+				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
+				__tail_1 := common2.SliceDrop(__mygo_mt_p1, 1)
 				__tail_2 := substAppend(__mygo_mt_p2, SubstEntry{ID: MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), 0), Type: MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), ast2.MonoType__TUnit__Ctor())})
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 				__mygo_state = 0
@@ -991,7 +992,7 @@ func __mygo_mt_typeinference2_typeParamID(__mygo_mt_p0 []string, __mygo_mt_p1 st
 				if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), "") == __mygo_mt_p1 {
 					return Some[int](-__mygo_mt_p2)
 				} else {
-					__tail_0 := sliceDrop(__mygo_mt_p0, 1)
+					__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2 + 1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2

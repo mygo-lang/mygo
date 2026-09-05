@@ -51,43 +51,87 @@ func TestErrorAliasCanonicalizesAtBoundaries(t *testing.T) {
 		t.Fatalf("typeFromASTInEnv(error) = %s, want TCon(error)", monoStringFull(typeFromASTInEnv(named, envFromEntries([]EnvEntry{}, 0), NewInferState())))
 	} else {
 	}
-	if !monoEqual(GoTypeName("error"), ast2.MonoType__TCon__Ctor("Error")) {
-		t.Fatalf("GoTypeName(error) = %s, want TCon(Error)", monoStringFull(GoTypeName("error")))
-	} else {
-	}
-	__mygo_expr_0 := PrimitiveGoSpelling("Error")
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
-		if __mygo_match___mygo_expr_1.F0 != "error" {
-			t.Fatalf("PrimitiveGoSpelling(Error) = %s, want error", __mygo_match___mygo_expr_1.F0)
+	__mygo_expr_0 := GoTypeName("error")
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[ast2.MonoType, string]); ok {
+		if !monoEqual(__mygo_match___mygo_expr_2.F0, ast2.MonoType__TCon__Ctor("Error")) {
+			t.Fatalf("GoTypeName(error) = %s, want TCon(Error)", monoStringFull(__mygo_match___mygo_expr_2.F0))
 		} else {
 		}
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[string]); ok {
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoTypeName(error) failed: %s", __mygo_match___mygo_expr_1.F0)
+		} else {
+		}
+	}
+	__mygo_expr_3 := GoTypeName("any")
+	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[ast2.MonoType, string]); ok {
+		if !monoEqual(__mygo_match___mygo_expr_5.F0, ast2.MonoType__TCon__Ctor("Any")) {
+			t.Fatalf("GoTypeName(any) = %s, want TCon(Any)", monoStringFull(__mygo_match___mygo_expr_5.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoTypeName(any) failed: %s", __mygo_match___mygo_expr_4.F0)
+		} else {
+		}
+	}
+	__mygo_expr_6 := PrimitiveGoSpelling("Error")
+	if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[string]); ok {
+		if __mygo_match___mygo_expr_7.F0 != "error" {
+			t.Fatalf("PrimitiveGoSpelling(Error) = %s, want error", __mygo_match___mygo_expr_7.F0)
+		} else {
+		}
+	} else {
+		if _, ok := __mygo_expr_6.(Option__None[string]); ok {
 			t.Fatal("PrimitiveGoSpelling(Error) returned None")
 		} else {
 		}
 	}
-	__mygo_expr_2 := PrimitiveGoSpelling("error")
-	if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
-		if __mygo_match___mygo_expr_3.F0 != "error" {
-			t.Fatalf("PrimitiveGoSpelling(error) = %s, want error", __mygo_match___mygo_expr_3.F0)
+	__mygo_expr_8 := PrimitiveGoSpelling("error")
+	if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Option__Some[string]); ok {
+		if __mygo_match___mygo_expr_9.F0 != "error" {
+			t.Fatalf("PrimitiveGoSpelling(error) = %s, want error", __mygo_match___mygo_expr_9.F0)
 		} else {
 		}
 	} else {
-		if _, ok := __mygo_expr_2.(Option__None[string]); ok {
+		if _, ok := __mygo_expr_8.(Option__None[string]); ok {
 			t.Fatal("PrimitiveGoSpelling(error) returned None")
 		} else {
 		}
 	}
-	__mygo_expr_4 := PrimitiveMyGoSpelling("error")
-	if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[string]); ok {
-		if __mygo_match___mygo_expr_5.F0 != "Error" {
-			t.Fatalf("PrimitiveMyGoSpelling(error) = %s, want Error", __mygo_match___mygo_expr_5.F0)
+	__mygo_expr_10 := PrimitiveMyGoSpelling("error")
+	if __mygo_match___mygo_expr_11, ok := __mygo_expr_10.(Option__Some[string]); ok {
+		if __mygo_match___mygo_expr_11.F0 != "Error" {
+			t.Fatalf("PrimitiveMyGoSpelling(error) = %s, want Error", __mygo_match___mygo_expr_11.F0)
 		} else {
 		}
 	} else {
-		if _, ok := __mygo_expr_4.(Option__None[string]); ok {
+		if _, ok := __mygo_expr_10.(Option__None[string]); ok {
 			t.Fatal("PrimitiveMyGoSpelling(error) returned None")
+		} else {
+		}
+	}
+	__mygo_expr_12 := PrimitiveGoSpelling("Any")
+	if __mygo_match___mygo_expr_13, ok := __mygo_expr_12.(Option__Some[string]); ok {
+		if __mygo_match___mygo_expr_13.F0 != "any" {
+			t.Fatalf("PrimitiveGoSpelling(Any) = %s, want any", __mygo_match___mygo_expr_13.F0)
+		} else {
+		}
+	} else {
+		if _, ok := __mygo_expr_12.(Option__None[string]); ok {
+			t.Fatal("PrimitiveGoSpelling(Any) returned None")
+		} else {
+		}
+	}
+	__mygo_expr_14 := PrimitiveMyGoSpelling("any")
+	if __mygo_match___mygo_expr_15, ok := __mygo_expr_14.(Option__Some[string]); ok {
+		if __mygo_match___mygo_expr_15.F0 != "Any" {
+			t.Fatalf("PrimitiveMyGoSpelling(any) = %s, want Any", __mygo_match___mygo_expr_15.F0)
+		} else {
+		}
+	} else {
+		if _, ok := __mygo_expr_14.(Option__None[string]); ok {
+			t.Fatal("PrimitiveMyGoSpelling(any) returned None")
 		} else {
 		}
 	}
@@ -123,7 +167,7 @@ func TestInferErrorSpellingsCrossDeclarationBoundary(t *testing.T) {
 	} else {
 		if __mygo_match___mygo_expr_0, ok := parsed.(Result__Ok[ast2.File, string]); ok {
 			typed := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_0.F0)
-			goPkgs := []GoPackageEntry{GoPackageEntry{Alias: "g", Path: "go:samplego", Funcs: []GoFuncSignature{GoFuncSignature{Name: "Produce", Params: []string{}, Results: []string{"error"}, Variadic: false}}, Types: []GoTypeSignature{}}}
+			goPkgs := []GoPackageEntry{GoPackageEntry{Alias: "g", Path: "go:samplego", Funcs: []GoFuncSignature{GoFuncSignature{Name: "Produce", Params: []string{}, Results: []string{"error"}, Variadic: false, TypeParams: []string{}}}, Types: []GoTypeSignature{}}}
 			__mygo_expr_1 := InferPackageWithGoPackages([]PkgDeclSource{PkgDeclSource{Path: "<input>", Decls: typed.Decls}}, goPkgs)
 			if _, ok := __mygo_expr_1.(Result__Ok[PackageInfo, string]); ok {
 			} else {
@@ -132,6 +176,237 @@ func TestInferErrorSpellingsCrossDeclarationBoundary(t *testing.T) {
 				} else {
 				}
 			}
+		} else {
+		}
+	}
+	return
+}
+func TestGoTypeNameResolvesAllFFIShapes(t *testing.T) {
+	__mygo_expr_0 := GoTypeName("complex128")
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[ast2.MonoType, string]); ok {
+		if !monoEqual(__mygo_match___mygo_expr_2.F0, ast2.MonoType__TCon__Ctor("Complex128")) {
+			t.Fatalf("GoTypeName(complex128) = %s, want TCon(Complex128)", monoStringFull(__mygo_match___mygo_expr_2.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoTypeName(complex128) failed: %s", __mygo_match___mygo_expr_1.F0)
+		} else {
+		}
+	}
+	__mygo_expr_3 := GoTypeName("uintptr")
+	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[ast2.MonoType, string]); ok {
+		if !monoEqual(__mygo_match___mygo_expr_5.F0, ast2.MonoType__TCon__Ctor("Uintptr")) {
+			t.Fatalf("GoTypeName(uintptr) = %s, want TCon(Uintptr)", monoStringFull(__mygo_match___mygo_expr_5.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoTypeName(uintptr) failed: %s", __mygo_match___mygo_expr_4.F0)
+		} else {
+		}
+	}
+	__mygo_expr_6 := GoTypeName("interface{}")
+	if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Result__Ok[ast2.MonoType, string]); ok {
+		if !monoEqual(__mygo_match___mygo_expr_8.F0, ast2.MonoType__TCon__Ctor("Any")) {
+			t.Fatalf("GoTypeName(interface{}) = %s, want TCon(Any)", monoStringFull(__mygo_match___mygo_expr_8.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoTypeName(interface{}) failed: %s", __mygo_match___mygo_expr_7.F0)
+		} else {
+		}
+	}
+	__mygo_expr_9 := GoTypeName("func(rune) bool")
+	if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Result__Ok[ast2.MonoType, string]); ok {
+		want := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TCon__Ctor("Rune")}, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Bool")}[0])
+		if !monoEqual(__mygo_match___mygo_expr_11.F0, want) {
+			t.Fatalf("GoTypeName(func(rune) bool) = %s, want TFunc([Rune], Bool)", monoStringFull(__mygo_match___mygo_expr_11.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_10, ok := __mygo_expr_9.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoTypeName(func(rune) bool) failed: %s", __mygo_match___mygo_expr_10.F0)
+		} else {
+		}
+	}
+	__mygo_expr_12 := GoTypeName("func(i int, j int) bool")
+	if __mygo_match___mygo_expr_14, ok := __mygo_expr_12.(Result__Ok[ast2.MonoType, string]); ok {
+		want_1 := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TCon__Ctor("Int"), ast2.MonoType__TCon__Ctor("Int")}, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Bool")}[0])
+		if !monoEqual(__mygo_match___mygo_expr_14.F0, want_1) {
+			t.Fatalf("GoTypeName(func(i int, j int) bool) = %s, want TFunc([Int, Int], Bool)", monoStringFull(__mygo_match___mygo_expr_14.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_13, ok := __mygo_expr_12.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoTypeName(func(i int, j int) bool) failed: %s", __mygo_match___mygo_expr_13.F0)
+		} else {
+		}
+	}
+	__mygo_expr_15 := GoTypeName("<-chan time.Time")
+	if __mygo_match___mygo_expr_17, ok := __mygo_expr_15.(Result__Ok[ast2.MonoType, string]); ok {
+		want_2 := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("RecvChan")}[0], []ast2.MonoType{ast2.MonoType__TQualifiedName__Ctor("go:time", &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Time")}[0])})
+		if !monoEqual(__mygo_match___mygo_expr_17.F0, want_2) {
+			t.Fatalf("GoTypeName(<-chan time.Time) = %s, want RecvChan[go:time.Time]", monoStringFull(__mygo_match___mygo_expr_17.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_16, ok := __mygo_expr_15.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoTypeName(<-chan time.Time) failed: %s", __mygo_match___mygo_expr_16.F0)
+		} else {
+		}
+	}
+	__mygo_expr_18 := GoSignatureType(GoFuncSignature{Name: "FieldsFunc", Params: []string{"string", "func(rune) bool"}, Results: []string{"[]string"}, Variadic: false, TypeParams: []string{}})
+	if __mygo_match___mygo_expr_20, ok := __mygo_expr_18.(Result__Ok[ast2.MonoType, string]); ok {
+		inner := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TCon__Ctor("Rune")}, &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Bool")}[0])
+		want_3 := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TCon__Ctor("String"), inner}, &[]ast2.MonoType{ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Slice")}[0], []ast2.MonoType{ast2.MonoType__TCon__Ctor("String")})}[0])
+		if !monoEqual(__mygo_match___mygo_expr_20.F0, want_3) {
+			t.Fatalf("GoSignatureType(FieldsFunc) = %s, want TFunc([String, func(rune) bool], []string)", monoStringFull(__mygo_match___mygo_expr_20.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_19, ok := __mygo_expr_18.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoSignatureType(FieldsFunc) failed: %s", __mygo_match___mygo_expr_19.F0)
+		} else {
+		}
+	}
+	fmtPkg := GoPackageEntry{Alias: "fmt", Path: "go:fmt", Funcs: []GoFuncSignature{}, Types: []GoTypeSignature{GoTypeSignature{TypeName: "State", TypeParams: []string{}, Methods: []GoFuncSignature{}}}}
+	__mygo_expr_21 := GoTypeNameWithPackage("fmt.State", fmtPkg)
+	if __mygo_match___mygo_expr_23, ok := __mygo_expr_21.(Result__Ok[ast2.MonoType, string]); ok {
+		want_4 := ast2.MonoType__TQualifiedName__Ctor("go:fmt", &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("State")}[0])
+		if !monoEqual(__mygo_match___mygo_expr_23.F0, want_4) {
+			t.Fatalf("GoTypeNameWithPackage(fmt.State) = %s, want go:fmt.State", monoStringFull(__mygo_match___mygo_expr_23.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_22, ok := __mygo_expr_21.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoTypeNameWithPackage(fmt.State) failed: %s", __mygo_match___mygo_expr_22.F0)
+		} else {
+		}
+	}
+	__mygo_expr_24 := GoTypeNameWithPackage("io.Writer", fmtPkg)
+	if __mygo_match___mygo_expr_26, ok := __mygo_expr_24.(Result__Ok[ast2.MonoType, string]); ok {
+		want_5 := ast2.MonoType__TQualifiedName__Ctor("go:io", &[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Writer")}[0])
+		if !monoEqual(__mygo_match___mygo_expr_26.F0, want_5) {
+			t.Fatalf("GoTypeNameWithPackage(io.Writer) = %s, want go:io.Writer", monoStringFull(__mygo_match___mygo_expr_26.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_25, ok := __mygo_expr_24.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoTypeNameWithPackage(io.Writer) failed: %s", __mygo_match___mygo_expr_25.F0)
+		} else {
+		}
+	}
+	__mygo_expr_27 := GoTypeName("()")
+	if __mygo_match___mygo_expr_29, ok := __mygo_expr_27.(Result__Ok[ast2.MonoType, string]); ok {
+		if !monoEqual(__mygo_match___mygo_expr_29.F0, ast2.MonoType__TUnit__Ctor()) {
+			t.Fatalf("GoTypeName(()) = %s, want TUnit", monoStringFull(__mygo_match___mygo_expr_29.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_28, ok := __mygo_expr_27.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoTypeName(()) failed: %s", __mygo_match___mygo_expr_28.F0)
+		} else {
+		}
+	}
+	__mygo_expr_30 := GoTypeName("map[[]int]string")
+	if __mygo_match___mygo_expr_32, ok := __mygo_expr_30.(Result__Ok[ast2.MonoType, string]); ok {
+		key := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Slice")}[0], []ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")})
+		want_6 := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Map")}[0], []ast2.MonoType{key, ast2.MonoType__TCon__Ctor("String")})
+		if !monoEqual(__mygo_match___mygo_expr_32.F0, want_6) {
+			t.Fatalf("GoTypeName(map[[]int]string) = %s, want Map[Slice[Int], String]", monoStringFull(__mygo_match___mygo_expr_32.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_31, ok := __mygo_expr_30.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoTypeName(map[[]int]string) failed: %s", __mygo_match___mygo_expr_31.F0)
+		} else {
+		}
+	}
+	__mygo_expr_33 := GoTypeName("map[string][]byte")
+	if __mygo_match___mygo_expr_35, ok := __mygo_expr_33.(Result__Ok[ast2.MonoType, string]); ok {
+		value := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Slice")}[0], []ast2.MonoType{ast2.MonoType__TCon__Ctor("Byte")})
+		want_7 := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Map")}[0], []ast2.MonoType{ast2.MonoType__TCon__Ctor("String"), value})
+		if !monoEqual(__mygo_match___mygo_expr_35.F0, want_7) {
+			t.Fatalf("GoTypeName(map[string][]byte) = %s, want Map[String, Slice[Byte]]", monoStringFull(__mygo_match___mygo_expr_35.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_34, ok := __mygo_expr_33.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoTypeName(map[string][]byte) failed: %s", __mygo_match___mygo_expr_34.F0)
+		} else {
+		}
+	}
+	__mygo_expr_36 := GoTypeName("chan int")
+	if __mygo_match___mygo_expr_38, ok := __mygo_expr_36.(Result__Ok[ast2.MonoType, string]); ok {
+		want_8 := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Chan")}[0], []ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")})
+		if !monoEqual(__mygo_match___mygo_expr_38.F0, want_8) {
+			t.Fatalf("GoTypeName(chan int) = %s, want Chan[Int]", monoStringFull(__mygo_match___mygo_expr_38.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_37, ok := __mygo_expr_36.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoTypeName(chan int) failed: %s", __mygo_match___mygo_expr_37.F0)
+		} else {
+		}
+	}
+	__mygo_expr_39 := GoTypeName("chan<- int")
+	if __mygo_match___mygo_expr_41, ok := __mygo_expr_39.(Result__Ok[ast2.MonoType, string]); ok {
+		want_9 := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("SendChan")}[0], []ast2.MonoType{ast2.MonoType__TCon__Ctor("Int")})
+		if !monoEqual(__mygo_match___mygo_expr_41.F0, want_9) {
+			t.Fatalf("GoTypeName(chan<- int) = %s, want SendChan[Int]", monoStringFull(__mygo_match___mygo_expr_41.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_40, ok := __mygo_expr_39.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoTypeName(chan<- int) failed: %s", __mygo_match___mygo_expr_40.F0)
+		} else {
+		}
+	}
+	__mygo_expr_42 := GoTypeName("doesNotExist")
+	if _, ok := __mygo_expr_42.(Result__Ok[ast2.MonoType, string]); ok {
+		t.Fatal("GoTypeName(doesNotExist) should have failed")
+	} else {
+		if _, ok := __mygo_expr_42.(Result__Err[ast2.MonoType, string]); ok {
+		} else {
+		}
+	}
+	return
+}
+func TestGoSignatureTypeResolvesGenericParams(t *testing.T) {
+	__mygo_expr_0 := GoSignatureType(GoFuncSignature{Name: "Clone", Params: []string{"M"}, Results: []string{"M"}, Variadic: false, TypeParams: []string{"M", "K", "V"}})
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[ast2.MonoType, string]); ok {
+		want := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{ast2.MonoType__TParam__Ctor(-1)}, &[]ast2.MonoType{ast2.MonoType__TParam__Ctor(-1)}[0])
+		if !monoEqual(__mygo_match___mygo_expr_2.F0, want) {
+			t.Fatalf("GoSignatureType(Clone) = %s, want TFunc([TParam(-1)], TParam(-1))", monoStringFull(__mygo_match___mygo_expr_2.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoSignatureType(Clone) failed: %s", __mygo_match___mygo_expr_1.F0)
+		} else {
+		}
+	}
+	__mygo_expr_3 := GoSignatureType(GoFuncSignature{Name: "CloneMap", Params: []string{"map[K]V"}, Results: []string{"map[K]V"}, Variadic: false, TypeParams: []string{"K", "V"}})
+	if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[ast2.MonoType, string]); ok {
+		mapType := ast2.MonoType__TApp__Ctor(&[]ast2.MonoType{ast2.MonoType__TCon__Ctor("Map")}[0], []ast2.MonoType{ast2.MonoType__TParam__Ctor(-1), ast2.MonoType__TParam__Ctor(-2)})
+		want_1 := ast2.MonoType__TFunc__Ctor([]ast2.MonoType{mapType}, &mapType)
+		if !monoEqual(__mygo_match___mygo_expr_5.F0, want_1) {
+			t.Fatalf("GoSignatureType(CloneMap) = %s, want TFunc([Map[TParam(-1), TParam(-2)]], ...)", monoStringFull(__mygo_match___mygo_expr_5.F0))
+		} else {
+		}
+	} else {
+		if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[ast2.MonoType, string]); ok {
+			t.Fatalf("GoSignatureType(CloneMap) failed: %s", __mygo_match___mygo_expr_4.F0)
+		} else {
+		}
+	}
+	__mygo_expr_6 := GoSignatureType(GoFuncSignature{Name: "Missing", Params: []string{"M"}, Results: []string{}, Variadic: false, TypeParams: []string{}})
+	if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Ok[ast2.MonoType, string]); ok {
+		t.Fatalf("GoSignatureType(Missing) = %s, want Err", monoStringFull(__mygo_match___mygo_expr_7.F0))
+	} else {
+		if _, ok := __mygo_expr_6.(Result__Err[ast2.MonoType, string]); ok {
 		} else {
 		}
 	}
