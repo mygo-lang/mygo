@@ -1110,6 +1110,32 @@ func (g *gen) translateCall(n *CallExpr, ctx *egCtx, expected string) (ast.Expr,
 				}, ret, nil
 			}
 		}
+		// Go FFI method call on an imported Go type (e.g. client.Do(req)).
+		// Resolve the method's recorded signature so a (T, error) method wraps
+		// into Result[T, error] (the shape expected for Go error-bearing
+		// flows), and single-value methods propagate their true return type
+		// instead of the receiver type.
+		if sigPath, qualAlias, sig, ok := g.goMethodSig(bt, field.Field); ok && sig != nil {
+			call := &ast.CallExpr{Fun: &ast.SelectorExpr{X: base, Sel: ast.NewIdent(field.Field)}, Args: args}
+			minArgs := len(sig.params)
+			variadic := len(sig.params) > 0 && strings.HasPrefix(sig.params[len(sig.params)-1], "...")
+			if variadic {
+				minArgs--
+			}
+			if len(n.Args) < minArgs || (!variadic && len(n.Args) != len(sig.params)) {
+				return nil, "", common.ErrorAtPos(g.currentFile, field.Line, field.Column, "call type mismatch for method %s: expected %d args, got %d", field.Field, len(sig.params), len(n.Args))
+			}
+			if resultType, isErrResult := goSigErrorResultType(sig.ret); isErrResult {
+				if expected != "" {
+					resultType = expected
+				}
+				resultType = qualifyGoTypeAlias(resultType, sigPath, qualAlias)
+				return g.wrapGoErrorResultCall(call, resultType), resultType, nil
+			}
+			if ret := goSigReturnType(sig.ret); ret != "" {
+				return call, qualifyGoTypeAlias(ret, sigPath, qualAlias), nil
+			}
+		}
 		return &ast.CallExpr{
 			Fun:  &ast.SelectorExpr{X: base, Sel: ast.NewIdent(field.Field)},
 			Args: args,
@@ -1157,12 +1183,13 @@ func (g *gen) translateGoImportCall(alias, name string, callArgs []Expr, ctx *eg
 			}
 			retType := goSigReturnType(sig.ret)
 			if resultType, ok := goSigErrorResultType(sig.ret); ok {
-				retType = resultType
+				retType = qualifyGoTypeAlias(resultType, goPath, alias)
 				if expected != "" {
 					retType = expected
 				}
 				return g.wrapGoErrorResultCall(&ast.CallExpr{Fun: callee, Args: args}, retType), retType, nil
 			}
+			retType = qualifyGoTypeAlias(retType, goPath, alias)
 			if expected != "" {
 				retType = expected
 			}
@@ -1174,6 +1201,83 @@ func (g *gen) translateGoImportCall(alias, name string, callArgs []Expr, ctx *eg
 		return nil, "", err
 	}
 	return &ast.CallExpr{Fun: callee, Args: args}, expected, nil
+}
+
+// goSigs returns the cached Go signature table for a package path, loading it
+// on first use. The cache lives on the generator so repeated method/function
+// lookups within one generation run do not re-type-check the same package.
+func (g *gen) goSigs(path string) (*GoPackageSigs, error) {
+	if g.goSigCache == nil {
+		g.goSigCache = map[string]*GoPackageSigs{}
+	}
+	if sigs, ok := g.goSigCache[path]; ok {
+		return sigs, nil
+	}
+	sigs, err := loadGoPackageSigs(path)
+	if err != nil {
+		return nil, err
+	}
+	g.goSigCache[path] = sigs
+	return sigs, nil
+}
+
+// goMethodSig resolves the Go signature of a method call on a Go FFI receiver
+// type such as *http.Client or http.Client (as lowered from Ref[http.Client]).
+// The leading qualifier is mapped through the file's import aliases to a
+// "go:..." import path; the method table recorded by loadGoPackageSigs is then
+// consulted. It reports the resolved import path and alias alongside the
+// signature so callers can qualify derived types with the alias actually used
+// in MyGO source.
+func (g *gen) goMethodSig(recvType, method string) (sigPath, alias string, sig *GoFuncSig, ok bool) {
+	recvType = strings.TrimSpace(recvType)
+	for strings.HasPrefix(recvType, "*") {
+		recvType = strings.TrimSpace(strings.TrimPrefix(recvType, "*"))
+	}
+	if recvType == "" {
+		return "", "", nil, false
+	}
+	baseName, _ := splitTypeArgs(recvType)
+	qualAlias, bareName, qualified := splitQualifiedName(baseName)
+	if !qualified {
+		return "", "", nil, false
+	}
+	entry := g.importAliases[qualAlias]
+	if !strings.HasPrefix(entry, "go:") {
+		return "", "", nil, false
+	}
+	sigPath = importPathForGo(entry)
+	sigs, err := g.goSigs(sigPath)
+	if err != nil || sigs == nil || sigs.methods == nil {
+		return "", "", nil, false
+	}
+	// go/types renders receiver keys with the full package path (e.g.
+	// *net/http.Client); also try the alias spelling in case the package name
+	// differs from the path suffix or the table was built differently.
+	candidates := []string{
+		"*" + sigPath + "." + bareName,
+		sigPath + "." + bareName,
+		"*" + qualAlias + "." + bareName,
+		qualAlias + "." + bareName,
+	}
+	for _, key := range candidates {
+		if m, hit := sigs.methods[key]; hit {
+			if s, hit := m[method]; hit {
+				return sigPath, qualAlias, s, true
+			}
+		}
+	}
+	return "", "", nil, false
+}
+
+// qualifyGoTypeAlias rewrites fully-qualified package paths embedded in a
+// lowered Go type string (e.g. *net/http.Response) to the import alias the
+// enclosing MyGO file uses (http), so generated code references the actual
+// import alias instead of an unimportable slash-qualified path.
+func qualifyGoTypeAlias(typ, sigPath, alias string) string {
+	if typ == "" || sigPath == "" || alias == "" {
+		return typ
+	}
+	return strings.ReplaceAll(typ, sigPath+".", alias+".")
 }
 
 // goFuncResultType extracts the result type of a lowered Go function type.

@@ -58,24 +58,87 @@ func loadGoPackageSigs(path string) (*GoPackageSigs, error) {
 		if !ok {
 			continue
 		}
-		if sig.Recv() == nil {
-			funcs[name] = &GoFuncSig{
-				params: goSignatureParams(sig),
-				ret:    goSignatureResults(sig),
+		funcs[name] = &GoFuncSig{
+			params: goSignatureParams(sig),
+			ret:    goSignatureResults(sig),
+		}
+	}
+	// Package scope only exposes functions and type names; methods live on the
+	// types themselves. Walk every exported named/interface type and record its
+	// method set (both value and pointer receiver forms) so FFI method calls
+	// like client.Do(req) can be looked up by receiver type string.
+	for _, name := range scope.Names() {
+		if !isExportedGoIdent(name) {
+			continue
+		}
+		obj := scope.Lookup(name)
+		tn, ok := obj.(*gotypes.TypeName)
+		if !ok {
+			continue
+		}
+		registerTypeMethods(tn, methods)
+	}
+
+	return &GoPackageSigs{funcs: funcs, methods: methods, pkg: checked}, nil
+}
+
+func registerTypeMethods(tn *gotypes.TypeName, methods map[string]map[string]*GoFuncSig) {
+	under := tn.Type()
+	// Resolve type aliases (e.g. `type Header = ...`) to their underlying named
+	// or interface type so their method sets can be collected.
+	for {
+		if alias, ok := under.(*gotypes.Alias); ok {
+			under = alias.Underlying()
+			continue
+		}
+		break
+	}
+	recvTypes := make([]gotypes.Type, 0, 2)
+	switch t := under.(type) {
+	case *gotypes.Named:
+		recvTypes = append(recvTypes, t, gotypes.NewPointer(t))
+	case *gotypes.Interface:
+		recvTypes = append(recvTypes, t, gotypes.NewPointer(t))
+	default:
+		return
+	}
+	for _, recvType := range recvTypes {
+		key := recvType.String()
+		if methods[key] == nil {
+			methods[key] = map[string]*GoFuncSig{}
+		}
+		if iface, ok := recvType.(*gotypes.Interface); ok {
+			for i := 0; i < iface.NumMethods(); i++ {
+				fn := iface.Method(i)
+				if fn == nil || !isExportedGoIdent(fn.Name()) {
+					continue
+				}
+				if sig, ok := fn.Type().(*gotypes.Signature); ok {
+					methods[key][fn.Name()] = &GoFuncSig{
+						params: goSignatureParams(sig),
+						ret:    goSignatureResults(sig),
+					}
+				}
 			}
-		} else {
-			recv := sig.Recv().Type().String()
-			if methods[recv] == nil {
-				methods[recv] = map[string]*GoFuncSig{}
+			continue
+		}
+		mset := gotypes.NewMethodSet(recvType)
+		for i := 0; i < mset.Len(); i++ {
+			sel := mset.At(i)
+			fn, ok := sel.Obj().(*gotypes.Func)
+			if !ok || !isExportedGoIdent(fn.Name()) {
+				continue
 			}
-			methods[recv][name] = &GoFuncSig{
+			sig, ok := fn.Type().(*gotypes.Signature)
+			if !ok {
+				continue
+			}
+			methods[key][fn.Name()] = &GoFuncSig{
 				params: goSignatureParams(sig),
 				ret:    goSignatureResults(sig),
 			}
 		}
 	}
-
-	return &GoPackageSigs{funcs: funcs, methods: methods, pkg: checked}, nil
 }
 
 func goSignatureParams(sig *gotypes.Signature) []string {

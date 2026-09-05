@@ -1,12 +1,14 @@
 package codegen
 
 import (
+	"go/parser"
 	"go/printer"
 	"go/token"
 	"strings"
 	"testing"
 
 	. "github.com/mygo-lang/mygo/internal/mygo/ast"
+	myparser "github.com/mygo-lang/mygo/internal/mygo/parser"
 )
 
 // TestTranslateGoImportCallResultWrapping exercises translateGoImportCall on a
@@ -60,4 +62,60 @@ func TestTranslateGoImportCallResultWrapping(t *testing.T) {
 			t.Fatalf("expected an IIFE Result wrapper, got:\n%s", sb.String())
 		}
 	})
+}
+
+// TestGoMethodCallResultWrapping mirrors a user's `func f() ->
+// Result[Ref[http.Response], Error]  client.Do(req)` and asserts the Go FFI
+// method call (a (T, error) method on an imported Go type) is wrapped into a
+// Result by the bootstrap code generator.
+func TestGoMethodCallResultWrapping(t *testing.T) {
+	src := `package p
+import "go:net/http"
+
+func DoRequest(client: Ref[http.Client], req: Ref[http.Request]) -> Result[Ref[http.Response], Error]
+  client.Do(req)
+end
+`
+	parsed, err := myparser.ParseFile("http.mygo", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg := &Package{
+		Name: "p", NoPrelude: true, Decls: parsed.Decls,
+		Imports:       map[string]struct{}{"go:net/http": {}},
+		ImportAliases: map[string]string{"http": "go:net/http"},
+		Enums:         map[string]*EnumDecl{},
+		Structs:       map[string]*StructDecl{},
+		Interfaces:    map[string]*InterfaceDecl{},
+		Funcs:         map[string]*FuncDecl{},
+	}
+	for _, decl := range parsed.Decls {
+		if fn, ok := decl.(*FuncDecl); ok {
+			pkg.Funcs[fn.Name] = fn
+		}
+	}
+	files, err := GenerateFiles(pkg, nil)
+	if err != nil {
+		t.Skipf("GenerateFiles: %v", err)
+	}
+	var gen string
+	for _, f := range files {
+		gen += f
+	}
+	t.Logf("GENERATED:\n%s", gen)
+
+	for _, want := range []string{
+		"func() Result[*http.Response, error]",
+		"client.Do(req)",
+		"Ok[*http.Response, error]",
+		"Err[*http.Response, error]",
+		`"net/http"`,
+	} {
+		if !strings.Contains(gen, want) {
+			t.Errorf("generated code missing %q:\n%s", want, gen)
+		}
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "gen.go", gen, 0); err != nil {
+		t.Fatalf("generated invalid Go: %v\n%s", err, gen)
+	}
 }

@@ -717,6 +717,7 @@ type gen struct {
 	currentFile          string
 	mutualTail           map[*FuncDecl]*mutualTailPlan
 	generatingMutualTail bool
+	goSigCache           map[string]*GoPackageSigs
 }
 
 func newGen(p *Package, typedInfo *typeinference.TypedInfo) *gen {
@@ -733,6 +734,7 @@ func newGen(p *Package, typedInfo *typeinference.TypedInfo) *gen {
 		emittedImplHelpers: map[string]struct{}{},
 		typedInfo:          typedInfo,
 		mutualTail:         map[*FuncDecl]*mutualTailPlan{},
+		goSigCache:         map[string]*GoPackageSigs{},
 	}
 	for name, iface := range p.Interfaces {
 		for _, m := range iface.Methods {
