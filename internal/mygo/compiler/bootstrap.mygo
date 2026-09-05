@@ -140,42 +140,43 @@ func bootstrapGenerateSourceAt(sourceName: String, input: String) -> Result[Stri
       let workspaceRoot = if root == "" then dir else root end
       let parsed = bootstrapParseSource("", sourceName, input)
       switch parsed
-        case Err(msg) => Err(fmt.Errorf("bootstrap parse %s: %s", sourceName, msg))
+        case Err(msg) => fmt.Errorf("bootstrap parse %s: %s", sourceName, msg).MapWithOk("")
         case Ok(parsedInputs) =>
           let groups = bootstrapSplitTestInputs(parsedInputs)
           let mainInputs = groups.Main
           switch mainInputs.Inputs.Get(0)
-            case None => Err(fmt.Errorf("bootstrap source %s: no non-test package", sourceName))
+            case None => fmt.Errorf("bootstrap source %s: no non-test package", sourceName).MapWithOk("")
             case Some(input) =>
               let isPrelude = input.File.PackageName == "prelude"
               let preludeResolved = bootstrapResolveImport(workspaceRoot, dir, "github.com/mygo-lang/mygo/prelude")
               switch preludeResolved
-                case Err(err) => Err(fmt.Errorf("bootstrap resolve prelude %s: %s", dir, err.Error()))
+                case Err(err) => fmt.Errorf("bootstrap resolve prelude %s: %s", dir, err.Error()).MapWithOk("")
                 case Ok(preludeDir) =>
                   let state = newBootstrapState(true, false, false)
                   let preludeLoaded = bootstrapLoadCachedSources(preludeDir, state)
                   switch preludeLoaded
-                    case Err(msg) => Err(fmt.Errorf("bootstrap prelude %s: %s", sourceName, msg))
-                    case Ok(prelude) =>
+                    case Err(msg) => fmt.Errorf("bootstrap prelude %s: %s", sourceName, msg).MapWithOk("")
+                    case Ok(prelude) then
                       let externalSources = if isPrelude then [] as Slice[typeinference2.PkgDeclSource] else prelude.Sources end
                       let sourceSets = appendBootstrapSources(mainInputs.Sources, externalSources)
                       let packagesRef = Ref.new(bootstrapCollectGoPackages(sourceSets))
                       let populated = bootstrapPopulateGoSignatures(workspaceRoot, packagesRef)
                       switch populated
-                        case Err(err) => Err(fmt.Errorf("bootstrap Go FFI %s: %s", sourceName, err.Error()))
+                        case Err(err) => fmt.Errorf("bootstrap Go FFI %s: %s", sourceName, err.Error()).MapWithOk("")
                         case Ok(_) =>
                           let inferred = typeinference2.InferPackageWithExternal(mainInputs.Sources, externalSources, packagesRef.value(), [] as Slice[typeinference2.MyGoPackageInfo])
                           switch inferred
-                            case Err(msg) => Err(fmt.Errorf("bootstrap infer %s: %s", sourceName, msg))
+                            case Err(msg) => fmt.Errorf("bootstrap infer %s: %s", sourceName, msg).MapWithOk("")
                             case Ok(info) =>
                               let infoWithPackages = typeinference2.PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: packagesRef.value(), Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, TypedDeclSources: info.TypedDeclSources, ExternalTypedDeclSources: info.ExternalTypedDeclSources, ResolvedConstraintArgs: info.ResolvedConstraintArgs }
                               let generated = codegen2.Generate(input.File, infoWithPackages)
                               switch generated
-                                case Err(msg) => Err(fmt.Errorf("bootstrap generate %s: %s", sourceName, msg))
+                                case Err(msg) => fmt.Errorf("bootstrap generate %s: %s", sourceName, msg).MapWithOk("")
                                 case Ok(code) => Ok(code)
                               end
                           end
                       end
+                    end
                   end
               end
           end
@@ -247,7 +248,7 @@ func compileAbsoluteBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
         switch state.Compiling.Get(dir)
           case Some(v) then
             if v then
-              Err(fmt.Errorf("bootstrap import cycle at %s", dir))
+              fmt.Errorf("bootstrap import cycle at %s", dir).MapWithOk([])
             else
               compileUncachedBootstrapDir(dir, state, true)
             end
@@ -263,7 +264,7 @@ func compileAbsoluteBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
         switch state.Compiling.Get(dir)
           case Some(v) then
             if v then
-              Err(fmt.Errorf("bootstrap import cycle at %s", dir))
+              fmt.Errorf("bootstrap import cycle at %s", dir).MapWithOk([])
             else
               compileUncachedBootstrapDir(dir, state, false)
             end
@@ -292,7 +293,7 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
   switch loaded
     case Err(msg) then
       state.Compiling.Delete(dir)
-      Err(fmt.Errorf("bootstrap parse %s: %s", dir, msg))
+      fmt.Errorf("bootstrap parse %s: %s", dir, msg).MapWithOk([])
     end
     case Ok(inputs) then
       bootstrapTimingLog(state, "parser2", dir, parserStarted)
@@ -309,7 +310,7 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
         switch preludeResolved
           case Err(err) then
             state.Compiling.Delete(dir)
-            Err(fmt.Errorf("bootstrap resolve prelude %s: %s", dir, err.Error()))
+            fmt.Errorf("bootstrap resolve prelude %s: %s", dir, err.Error()).MapWithOk([])
           end
           case Ok(preludeDir) then
             let preludeFiles = if dir == preludeDir => Ok([] as Slice[String]) else compileDirBootstrapMyGO(preludeDir, state)
@@ -323,7 +324,7 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                 switch preludeLoaded
                   case Err(msg) then
                     state.Compiling.Delete(dir)
-                    Err(fmt.Errorf("bootstrap prelude %s: %s", dir, msg))
+                    fmt.Errorf("bootstrap prelude %s: %s", dir, msg).MapWithOk([])
                   end
                   case Ok(prelude) then
                     # The prelude itself has no external prelude dependency.
@@ -341,7 +342,7 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                     switch initialPopulated
                       case Err(err) then
                         state.Compiling.Delete(dir)
-                        Err(fmt.Errorf("bootstrap Go FFI %s: %s", dir, err.Error()))
+                        fmt.Errorf("bootstrap Go FFI %s: %s", dir, err.Error()).MapWithOk([])
                       end
                       case Ok(_) then
                         let walked = bootstrapWalkImports(workspaceRoot, dir, bootstrapImportsFromSources(packageSources), 0, state, [])
@@ -355,7 +356,7 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                             switch finalPopulated
                               case Err(err) then
                                 state.Compiling.Delete(dir)
-                                Err(fmt.Errorf("bootstrap Go FFI %s: %s", dir, err.Error()))
+                                fmt.Errorf("bootstrap Go FFI %s: %s", dir, err.Error()).MapWithOk([])
                               end
                               case Ok(_) then
                                 bootstrapTimingLog(state, "imports+ffi", dir, ffiStarted)
@@ -365,7 +366,7 @@ func compileUncachedBootstrapDir(dir: String, state: BootstrapState, codegen: Bo
                                 switch inferred
                                   case Err(msg) then
                                     state.Compiling.Delete(dir)
-                                    Err(fmt.Errorf("bootstrap infer %s: %s", dir, msg))
+                                    fmt.Errorf("bootstrap infer %s: %s", dir, msg).MapWithOk([])
                                   end
                                   case Ok(info) =>
                                     bootstrapTimingLog(state, "typeinference2", dir, inferenceStarted)
@@ -405,7 +406,7 @@ func bootstrapFinishPackage(dir: String, state: BootstrapState, codegen: Bool, i
     switch generated
       case Err(msg) then
         state.Compiling.Delete(dir)
-        Err(fmt.Errorf("bootstrap generate %s: %s", dir, msg))
+        fmt.Errorf("bootstrap generate %s: %s", dir, msg).MapWithOk([])
       end
       case Ok(files) then
         bootstrapTimingLog(state, "codegen2", dir, codegenStarted)
@@ -414,7 +415,7 @@ func bootstrapFinishPackage(dir: String, state: BootstrapState, codegen: Bool, i
         switch written
           case Err(err) then
             state.Compiling.Delete(dir)
-            Err(fmt.Errorf("bootstrap write %s: %s", dir, err.Error()))
+            fmt.Errorf("bootstrap write %s: %s", dir, err.Error()).MapWithOk([])
           end
           case Ok(paths) then
             bootstrapFinishExternalTestPackage(dir, state, externalTest, info, packagesRef, preludeWritten, dependencyFiles, paths, writeStarted, totalStarted)
@@ -437,19 +438,19 @@ func bootstrapFinishExternalTestPackage(dir: String, state: BootstrapState, exte
     switch inferred
       case Err(msg) =>
         state.Compiling.Delete(dir)
-        Err(fmt.Errorf("bootstrap infer external tests %s: %s", dir, msg))
+        fmt.Errorf("bootstrap infer external tests %s: %s", dir, msg).MapWithOk([])
       case Ok(info) =>
         let generated = codegen2.GenerateFiles(externalTest.Inputs, info)
         switch generated
           case Err(msg) =>
             state.Compiling.Delete(dir)
-            Err(fmt.Errorf("bootstrap generate external tests %s: %s", dir, msg))
+            fmt.Errorf("bootstrap generate external tests %s: %s", dir, msg).MapWithOk([])
           case Ok(files) =>
             let written = bootstrapWriteGenerated(dir, files)
             switch written
               case Err(err) =>
                 state.Compiling.Delete(dir)
-                Err(fmt.Errorf("bootstrap write external tests %s: %s", dir, err.Error()))
+                fmt.Errorf("bootstrap write external tests %s: %s", dir, err.Error()).MapWithOk([])
               case Ok(paths) => bootstrapCompletePackage(dir, state, preludeWritten, dependencyFiles, appendBootstrapStrings(mainPaths, paths), writeStarted, totalStarted)
             end
         end
@@ -497,9 +498,10 @@ func bootstrapWalkImports(workspaceRoot: String, fromDir: String, imports: Slice
           case Ok(files) then
             let loaded = bootstrapLoadCachedSources(dependencyDir, state)
             switch loaded
-              case Err(err) => Err(fmt.Errorf("%s", err))
-              case Ok(_) =>
+              case Err(err) => fmt.Errorf("%s", err).MapWithOk([])
+              case Ok(_) then
                 bootstrapWalkImports(workspaceRoot, fromDir, imports, index + 1, state, appendBootstrapStrings(written, files))
+              end
             end
           end
         end
@@ -648,7 +650,7 @@ func appendBootstrapSourcesAt(left: Slice[typeinference2.PkgDeclSource], right: 
 end
 
 func bootstrapWorkingDir() -> Result[String, Error]
-  go[Result[String, Error]] { code: "func() Result[string, error] { value, err := os.Getwd(); if err != nil { return Err[string, error](err) }; return Ok[string, error](value) }()" in os = os }
+  os.Getwd()
 end
 
 func bootstrapRelativePath(cwd: String, path: String) -> Result[String, Error]
@@ -767,7 +769,7 @@ func bootstrapPopulateGoSignaturesAt(workspaceRoot: String, packages: Ref[Slice[
             case Ok(info) =>
               packages.value().Set(index, typeinference2.GoPackageEntry { Alias: entry.Alias, Path: entry.Path, Funcs: info.Funcs, Types: info.Types, Constants: info.Constants })
               bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, index + 1)
-            case Err(msg) => Err(fmt.Errorf("can't find import %q: %s", trimmed, msg))
+            case Err(msg) => fmt.Errorf("can't find import %q: %s", trimmed, msg)
           end
         else
           bootstrapPopulateGoSignaturesAt(workspaceRoot, packages, index + 1)

@@ -114,7 +114,15 @@ func bootstrapGenerateSourceAt(sourceName string, input string) Result[string, e
 			parsed := bootstrapParseSource("", sourceName, input)
 			var __mygo_expr_3 Result[string, error]
 			if __mygo_match___mygo_expr_5, ok := parsed.(Result__Err[BootstrapInputs, string]); ok {
-				__mygo_expr_3 = Err[string, error](fmt.Errorf("bootstrap parse %s: %s", sourceName, __mygo_match___mygo_expr_5.F0))
+				var __mygo_expr_8 Result[struct{}, error]
+				__mygo_expr_7 := fmt.Errorf("bootstrap parse %s: %s", sourceName, __mygo_match___mygo_expr_5.F0)
+				if __mygo_expr_7 != nil {
+					__mygo_expr_8 = Err[struct{}, error](__mygo_expr_7)
+				} else {
+					__mygo_expr_8 = Ok[struct{}, error](struct {
+					}{})
+				}
+				__mygo_expr_3 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_8, "")
 			} else {
 				if __mygo_match___mygo_expr_4, ok := parsed.(Result__Ok[BootstrapInputs, string]); ok {
 					groups := bootstrapSplitTestInputs(__mygo_match___mygo_expr_4.F0)
@@ -122,21 +130,45 @@ func bootstrapGenerateSourceAt(sourceName string, input string) Result[string, e
 					__mygo_expr_5 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(mainInputs.Inputs, 0)
 					var __mygo_expr_6 Result[string, error]
 					if _, ok := __mygo_expr_5.(Option__None[codegen2.SourceFileInput]); ok {
-						__mygo_expr_6 = Err[string, error](fmt.Errorf("bootstrap source %s: no non-test package", sourceName))
+						var __mygo_expr_10 Result[struct{}, error]
+						__mygo_expr_9 := fmt.Errorf("bootstrap source %s: no non-test package", sourceName)
+						if __mygo_expr_9 != nil {
+							__mygo_expr_10 = Err[struct{}, error](__mygo_expr_9)
+						} else {
+							__mygo_expr_10 = Ok[struct{}, error](struct {
+							}{})
+						}
+						__mygo_expr_6 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_10, "")
 					} else {
 						if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[codegen2.SourceFileInput]); ok {
 							isPrelude := __mygo_match___mygo_expr_7.F0.File.PackageName == "prelude"
 							preludeResolved := bootstrapResolveImport(workspaceRoot, __mygo_match___mygo_expr_1.F0, "github.com/mygo-lang/mygo/prelude")
 							var __mygo_expr_8 Result[string, error]
 							if __mygo_match___mygo_expr_10, ok := preludeResolved.(Result__Err[string, error]); ok {
-								__mygo_expr_8 = Err[string, error](fmt.Errorf("bootstrap resolve prelude %s: %s", __mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_10.F0.Error()))
+								var __mygo_expr_13 Result[struct{}, error]
+								__mygo_expr_12 := fmt.Errorf("bootstrap resolve prelude %s: %s", __mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_10.F0.Error())
+								if __mygo_expr_12 != nil {
+									__mygo_expr_13 = Err[struct{}, error](__mygo_expr_12)
+								} else {
+									__mygo_expr_13 = Ok[struct{}, error](struct {
+									}{})
+								}
+								__mygo_expr_8 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_13, "")
 							} else {
 								if __mygo_match___mygo_expr_9, ok := preludeResolved.(Result__Ok[string, error]); ok {
 									state := newBootstrapState(true, false, false)
 									preludeLoaded := bootstrapLoadCachedSources(__mygo_match___mygo_expr_9.F0, state)
 									var __mygo_expr_10 Result[string, error]
 									if __mygo_match___mygo_expr_12, ok := preludeLoaded.(Result__Err[BootstrapInputs, string]); ok {
-										__mygo_expr_10 = Err[string, error](fmt.Errorf("bootstrap prelude %s: %s", sourceName, __mygo_match___mygo_expr_12.F0))
+										var __mygo_expr_15 Result[struct{}, error]
+										__mygo_expr_14 := fmt.Errorf("bootstrap prelude %s: %s", sourceName, __mygo_match___mygo_expr_12.F0)
+										if __mygo_expr_14 != nil {
+											__mygo_expr_15 = Err[struct{}, error](__mygo_expr_14)
+										} else {
+											__mygo_expr_15 = Ok[struct{}, error](struct {
+											}{})
+										}
+										__mygo_expr_10 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_15, "")
 									} else {
 										if __mygo_match___mygo_expr_11, ok := preludeLoaded.(Result__Ok[BootstrapInputs, string]); ok {
 											var __mygo_expr_12 []typeinference2.PkgDeclSource
@@ -151,20 +183,44 @@ func bootstrapGenerateSourceAt(sourceName string, input string) Result[string, e
 											populated := bootstrapPopulateGoSignatures(workspaceRoot, packagesRef)
 											var __mygo_expr_13 Result[string, error]
 											if __mygo_match___mygo_expr_14, ok := populated.(Result__Err[struct{}, error]); ok {
-												__mygo_expr_13 = Err[string, error](fmt.Errorf("bootstrap Go FFI %s: %s", sourceName, __mygo_match___mygo_expr_14.F0.Error()))
+												var __mygo_expr_17 Result[struct{}, error]
+												__mygo_expr_16 := fmt.Errorf("bootstrap Go FFI %s: %s", sourceName, __mygo_match___mygo_expr_14.F0.Error())
+												if __mygo_expr_16 != nil {
+													__mygo_expr_17 = Err[struct{}, error](__mygo_expr_16)
+												} else {
+													__mygo_expr_17 = Ok[struct{}, error](struct {
+													}{})
+												}
+												__mygo_expr_13 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_17, "")
 											} else {
 												if _, ok := populated.(Result__Ok[struct{}, error]); ok {
 													inferred := typeinference2.InferPackageWithExternal(mainInputs.Sources, externalSources, *packagesRef, []typeinference2.MyGoPackageInfo{})
 													var __mygo_expr_14 Result[string, error]
 													if __mygo_match___mygo_expr_16, ok := inferred.(Result__Err[typeinference2.PackageInfo, string]); ok {
-														__mygo_expr_14 = Err[string, error](fmt.Errorf("bootstrap infer %s: %s", sourceName, __mygo_match___mygo_expr_16.F0))
+														var __mygo_expr_19 Result[struct{}, error]
+														__mygo_expr_18 := fmt.Errorf("bootstrap infer %s: %s", sourceName, __mygo_match___mygo_expr_16.F0)
+														if __mygo_expr_18 != nil {
+															__mygo_expr_19 = Err[struct{}, error](__mygo_expr_18)
+														} else {
+															__mygo_expr_19 = Ok[struct{}, error](struct {
+															}{})
+														}
+														__mygo_expr_14 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_19, "")
 													} else {
 														if __mygo_match___mygo_expr_15, ok := inferred.(Result__Ok[typeinference2.PackageInfo, string]); ok {
 															infoWithPackages := typeinference2.PackageInfo{Env: __mygo_match___mygo_expr_15.F0.Env, Fields: __mygo_match___mygo_expr_15.F0.Fields, GoPackages: *packagesRef, Instances: __mygo_match___mygo_expr_15.F0.Instances, Solver: __mygo_match___mygo_expr_15.F0.Solver, TypedDecls: __mygo_match___mygo_expr_15.F0.TypedDecls, ExternalTypedDecls: __mygo_match___mygo_expr_15.F0.ExternalTypedDecls, TypedDeclSources: __mygo_match___mygo_expr_15.F0.TypedDeclSources, ExternalTypedDeclSources: __mygo_match___mygo_expr_15.F0.ExternalTypedDeclSources, ResolvedConstraintArgs: __mygo_match___mygo_expr_15.F0.ResolvedConstraintArgs}
 															generated := codegen2.Generate(__mygo_match___mygo_expr_7.F0.File, infoWithPackages)
 															var __mygo_expr_16 Result[string, error]
 															if __mygo_match___mygo_expr_18, ok := generated.(Result__Err[string, string]); ok {
-																__mygo_expr_16 = Err[string, error](fmt.Errorf("bootstrap generate %s: %s", sourceName, __mygo_match___mygo_expr_18.F0))
+																var __mygo_expr_21 Result[struct{}, error]
+																__mygo_expr_20 := fmt.Errorf("bootstrap generate %s: %s", sourceName, __mygo_match___mygo_expr_18.F0)
+																if __mygo_expr_20 != nil {
+																	__mygo_expr_21 = Err[struct{}, error](__mygo_expr_20)
+																} else {
+																	__mygo_expr_21 = Ok[struct{}, error](struct {
+																	}{})
+																}
+																__mygo_expr_16 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_21, "")
 															} else {
 																if __mygo_match___mygo_expr_17, ok := generated.(Result__Ok[string, string]); ok {
 																	__mygo_expr_16 = Ok[string, error](__mygo_match___mygo_expr_17.F0)
@@ -249,13 +305,21 @@ func compileAbsoluteBootstrapDir(dir string, state BootstrapState, codegen bool)
 				__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.Compiling, dir)
 				var __mygo_expr_3 Result[[]string, error]
 				if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[bool]); ok {
-					var __mygo_expr_5 Result[[]string, error]
+					var __mygo_expr_8 Result[[]string, error]
 					if __mygo_match___mygo_expr_4.F0 {
-						__mygo_expr_5 = Err[[]string, error](fmt.Errorf("bootstrap import cycle at %s", dir))
+						var __mygo_expr_7 Result[struct{}, error]
+						__mygo_expr_6 := fmt.Errorf("bootstrap import cycle at %s", dir)
+						if __mygo_expr_6 != nil {
+							__mygo_expr_7 = Err[struct{}, error](__mygo_expr_6)
+						} else {
+							__mygo_expr_7 = Ok[struct{}, error](struct {
+							}{})
+						}
+						__mygo_expr_8 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_7, []string{})
 					} else {
-						__mygo_expr_5 = compileUncachedBootstrapDir(dir, state, true)
+						__mygo_expr_8 = compileUncachedBootstrapDir(dir, state, true)
 					}
-					__mygo_expr_3 = __mygo_expr_5
+					__mygo_expr_3 = __mygo_expr_8
 				} else {
 					__mygo_expr_3 = compileUncachedBootstrapDir(dir, state, true)
 				}
@@ -274,13 +338,21 @@ func compileAbsoluteBootstrapDir(dir string, state BootstrapState, codegen bool)
 				__mygo_expr_5 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.Compiling, dir)
 				var __mygo_expr_6 Result[[]string, error]
 				if __mygo_match___mygo_expr_7, ok := __mygo_expr_5.(Option__Some[bool]); ok {
-					var __mygo_expr_8 Result[[]string, error]
+					var __mygo_expr_11 Result[[]string, error]
 					if __mygo_match___mygo_expr_7.F0 {
-						__mygo_expr_8 = Err[[]string, error](fmt.Errorf("bootstrap import cycle at %s", dir))
+						var __mygo_expr_10 Result[struct{}, error]
+						__mygo_expr_9 := fmt.Errorf("bootstrap import cycle at %s", dir)
+						if __mygo_expr_9 != nil {
+							__mygo_expr_10 = Err[struct{}, error](__mygo_expr_9)
+						} else {
+							__mygo_expr_10 = Ok[struct{}, error](struct {
+							}{})
+						}
+						__mygo_expr_11 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_10, []string{})
 					} else {
-						__mygo_expr_8 = compileUncachedBootstrapDir(dir, state, false)
+						__mygo_expr_11 = compileUncachedBootstrapDir(dir, state, false)
 					}
-					__mygo_expr_6 = __mygo_expr_8
+					__mygo_expr_6 = __mygo_expr_11
 				} else {
 					__mygo_expr_6 = compileUncachedBootstrapDir(dir, state, false)
 				}
@@ -299,7 +371,15 @@ func compileUncachedBootstrapDir(dir string, state BootstrapState, codegen bool)
 	var __mygo_expr_0 Result[[]string, error]
 	if __mygo_match___mygo_expr_2, ok := loaded.(Result__Err[BootstrapInputs, string]); ok {
 		MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
-		__mygo_expr_0 = Err[[]string, error](fmt.Errorf("bootstrap parse %s: %s", dir, __mygo_match___mygo_expr_2.F0))
+		var __mygo_expr_5 Result[struct{}, error]
+		__mygo_expr_4 := fmt.Errorf("bootstrap parse %s: %s", dir, __mygo_match___mygo_expr_2.F0)
+		if __mygo_expr_4 != nil {
+			__mygo_expr_5 = Err[struct{}, error](__mygo_expr_4)
+		} else {
+			__mygo_expr_5 = Ok[struct{}, error](struct {
+			}{})
+		}
+		__mygo_expr_0 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_5, []string{})
 	} else {
 		if __mygo_match___mygo_expr_1, ok := loaded.(Result__Ok[BootstrapInputs, string]); ok {
 			bootstrapTimingLog(state, "parser2", dir, parserStarted)
@@ -329,7 +409,15 @@ func compileUncachedBootstrapDir(dir string, state BootstrapState, codegen bool)
 				var __mygo_expr_4 Result[[]string, error]
 				if __mygo_match___mygo_expr_6, ok := preludeResolved.(Result__Err[string, error]); ok {
 					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
-					__mygo_expr_4 = Err[[]string, error](fmt.Errorf("bootstrap resolve prelude %s: %s", dir, __mygo_match___mygo_expr_6.F0.Error()))
+					var __mygo_expr_9 Result[struct{}, error]
+					__mygo_expr_8 := fmt.Errorf("bootstrap resolve prelude %s: %s", dir, __mygo_match___mygo_expr_6.F0.Error())
+					if __mygo_expr_8 != nil {
+						__mygo_expr_9 = Err[struct{}, error](__mygo_expr_8)
+					} else {
+						__mygo_expr_9 = Ok[struct{}, error](struct {
+						}{})
+					}
+					__mygo_expr_4 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_9, []string{})
 				} else {
 					if __mygo_match___mygo_expr_5, ok := preludeResolved.(Result__Ok[string, error]); ok {
 						var __mygo_expr_6 Result[[]string, error]
@@ -349,7 +437,15 @@ func compileUncachedBootstrapDir(dir string, state BootstrapState, codegen bool)
 								var __mygo_expr_9 Result[[]string, error]
 								if __mygo_match___mygo_expr_11, ok := preludeLoaded.(Result__Err[BootstrapInputs, string]); ok {
 									MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
-									__mygo_expr_9 = Err[[]string, error](fmt.Errorf("bootstrap prelude %s: %s", dir, __mygo_match___mygo_expr_11.F0))
+									var __mygo_expr_14 Result[struct{}, error]
+									__mygo_expr_13 := fmt.Errorf("bootstrap prelude %s: %s", dir, __mygo_match___mygo_expr_11.F0)
+									if __mygo_expr_13 != nil {
+										__mygo_expr_14 = Err[struct{}, error](__mygo_expr_13)
+									} else {
+										__mygo_expr_14 = Ok[struct{}, error](struct {
+										}{})
+									}
+									__mygo_expr_9 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_14, []string{})
 								} else {
 									if __mygo_match___mygo_expr_10, ok := preludeLoaded.(Result__Ok[BootstrapInputs, string]); ok {
 										var __mygo_expr_11 []typeinference2.PkgDeclSource
@@ -367,7 +463,15 @@ func compileUncachedBootstrapDir(dir string, state BootstrapState, codegen bool)
 										var __mygo_expr_12 Result[[]string, error]
 										if __mygo_match___mygo_expr_13, ok := initialPopulated.(Result__Err[struct{}, error]); ok {
 											MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
-											__mygo_expr_12 = Err[[]string, error](fmt.Errorf("bootstrap Go FFI %s: %s", dir, __mygo_match___mygo_expr_13.F0.Error()))
+											var __mygo_expr_16 Result[struct{}, error]
+											__mygo_expr_15 := fmt.Errorf("bootstrap Go FFI %s: %s", dir, __mygo_match___mygo_expr_13.F0.Error())
+											if __mygo_expr_15 != nil {
+												__mygo_expr_16 = Err[struct{}, error](__mygo_expr_15)
+											} else {
+												__mygo_expr_16 = Ok[struct{}, error](struct {
+												}{})
+											}
+											__mygo_expr_12 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_16, []string{})
 										} else {
 											if _, ok := initialPopulated.(Result__Ok[struct{}, error]); ok {
 												walked := bootstrapWalkImports(workspaceRoot, dir, bootstrapImportsFromSources(packageSources), 0, state, []string{})
@@ -381,7 +485,15 @@ func compileUncachedBootstrapDir(dir string, state BootstrapState, codegen bool)
 														var __mygo_expr_15 Result[[]string, error]
 														if __mygo_match___mygo_expr_16, ok := finalPopulated.(Result__Err[struct{}, error]); ok {
 															MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
-															__mygo_expr_15 = Err[[]string, error](fmt.Errorf("bootstrap Go FFI %s: %s", dir, __mygo_match___mygo_expr_16.F0.Error()))
+															var __mygo_expr_19 Result[struct{}, error]
+															__mygo_expr_18 := fmt.Errorf("bootstrap Go FFI %s: %s", dir, __mygo_match___mygo_expr_16.F0.Error())
+															if __mygo_expr_18 != nil {
+																__mygo_expr_19 = Err[struct{}, error](__mygo_expr_18)
+															} else {
+																__mygo_expr_19 = Ok[struct{}, error](struct {
+																}{})
+															}
+															__mygo_expr_15 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_19, []string{})
 														} else {
 															if _, ok := finalPopulated.(Result__Ok[struct{}, error]); ok {
 																bootstrapTimingLog(state, "imports+ffi", dir, ffiStarted)
@@ -391,7 +503,15 @@ func compileUncachedBootstrapDir(dir string, state BootstrapState, codegen bool)
 																var __mygo_expr_16 Result[[]string, error]
 																if __mygo_match___mygo_expr_18, ok := inferred.(Result__Err[typeinference2.PackageInfo, string]); ok {
 																	MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
-																	__mygo_expr_16 = Err[[]string, error](fmt.Errorf("bootstrap infer %s: %s", dir, __mygo_match___mygo_expr_18.F0))
+																	var __mygo_expr_21 Result[struct{}, error]
+																	__mygo_expr_20 := fmt.Errorf("bootstrap infer %s: %s", dir, __mygo_match___mygo_expr_18.F0)
+																	if __mygo_expr_20 != nil {
+																		__mygo_expr_21 = Err[struct{}, error](__mygo_expr_20)
+																	} else {
+																		__mygo_expr_21 = Ok[struct{}, error](struct {
+																		}{})
+																	}
+																	__mygo_expr_16 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_21, []string{})
 																} else {
 																	if __mygo_match___mygo_expr_17, ok := inferred.(Result__Ok[typeinference2.PackageInfo, string]); ok {
 																		bootstrapTimingLog(state, "typeinference2", dir, inferenceStarted)
@@ -443,7 +563,15 @@ func bootstrapFinishPackage(dir string, state BootstrapState, codegen bool, inpu
 		var __mygo_expr_0 Result[[]string, error]
 		if __mygo_match___mygo_expr_2, ok := generated.(Result__Err[map[string]string, string]); ok {
 			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
-			__mygo_expr_0 = Err[[]string, error](fmt.Errorf("bootstrap generate %s: %s", dir, __mygo_match___mygo_expr_2.F0))
+			var __mygo_expr_5 Result[struct{}, error]
+			__mygo_expr_4 := fmt.Errorf("bootstrap generate %s: %s", dir, __mygo_match___mygo_expr_2.F0)
+			if __mygo_expr_4 != nil {
+				__mygo_expr_5 = Err[struct{}, error](__mygo_expr_4)
+			} else {
+				__mygo_expr_5 = Ok[struct{}, error](struct {
+				}{})
+			}
+			__mygo_expr_0 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_5, []string{})
 		} else {
 			if __mygo_match___mygo_expr_1, ok := generated.(Result__Ok[map[string]string, string]); ok {
 				bootstrapTimingLog(state, "codegen2", dir, codegenStarted)
@@ -452,7 +580,15 @@ func bootstrapFinishPackage(dir string, state BootstrapState, codegen bool, inpu
 				var __mygo_expr_2 Result[[]string, error]
 				if __mygo_match___mygo_expr_4, ok := written.(Result__Err[[]string, error]); ok {
 					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
-					__mygo_expr_2 = Err[[]string, error](fmt.Errorf("bootstrap write %s: %s", dir, __mygo_match___mygo_expr_4.F0.Error()))
+					var __mygo_expr_7 Result[struct{}, error]
+					__mygo_expr_6 := fmt.Errorf("bootstrap write %s: %s", dir, __mygo_match___mygo_expr_4.F0.Error())
+					if __mygo_expr_6 != nil {
+						__mygo_expr_7 = Err[struct{}, error](__mygo_expr_6)
+					} else {
+						__mygo_expr_7 = Ok[struct{}, error](struct {
+						}{})
+					}
+					__mygo_expr_2 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_7, []string{})
 				} else {
 					if __mygo_match___mygo_expr_3, ok := written.(Result__Ok[[]string, error]); ok {
 						__mygo_expr_2 = bootstrapFinishExternalTestPackage(dir, state, externalTest, info, packagesRef, preludeWritten, dependencyFiles, __mygo_match___mygo_expr_3.F0, writeStarted, totalStarted)
@@ -474,21 +610,45 @@ func bootstrapFinishExternalTestPackage(dir string, state BootstrapState, extern
 		var __mygo_expr_0 Result[[]string, error]
 		if __mygo_match___mygo_expr_2, ok := inferred.(Result__Err[typeinference2.PackageInfo, string]); ok {
 			MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
-			__mygo_expr_0 = Err[[]string, error](fmt.Errorf("bootstrap infer external tests %s: %s", dir, __mygo_match___mygo_expr_2.F0))
+			var __mygo_expr_5 Result[struct{}, error]
+			__mygo_expr_4 := fmt.Errorf("bootstrap infer external tests %s: %s", dir, __mygo_match___mygo_expr_2.F0)
+			if __mygo_expr_4 != nil {
+				__mygo_expr_5 = Err[struct{}, error](__mygo_expr_4)
+			} else {
+				__mygo_expr_5 = Ok[struct{}, error](struct {
+				}{})
+			}
+			__mygo_expr_0 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_5, []string{})
 		} else {
 			if __mygo_match___mygo_expr_1, ok := inferred.(Result__Ok[typeinference2.PackageInfo, string]); ok {
 				generated := codegen2.GenerateFiles(externalTest.Inputs, __mygo_match___mygo_expr_1.F0)
 				var __mygo_expr_2 Result[[]string, error]
 				if __mygo_match___mygo_expr_4, ok := generated.(Result__Err[map[string]string, string]); ok {
 					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
-					__mygo_expr_2 = Err[[]string, error](fmt.Errorf("bootstrap generate external tests %s: %s", dir, __mygo_match___mygo_expr_4.F0))
+					var __mygo_expr_7 Result[struct{}, error]
+					__mygo_expr_6 := fmt.Errorf("bootstrap generate external tests %s: %s", dir, __mygo_match___mygo_expr_4.F0)
+					if __mygo_expr_6 != nil {
+						__mygo_expr_7 = Err[struct{}, error](__mygo_expr_6)
+					} else {
+						__mygo_expr_7 = Ok[struct{}, error](struct {
+						}{})
+					}
+					__mygo_expr_2 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_7, []string{})
 				} else {
 					if __mygo_match___mygo_expr_3, ok := generated.(Result__Ok[map[string]string, string]); ok {
 						written := bootstrapWriteGenerated(dir, __mygo_match___mygo_expr_3.F0)
 						var __mygo_expr_4 Result[[]string, error]
 						if __mygo_match___mygo_expr_6, ok := written.(Result__Err[[]string, error]); ok {
 							MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM6Delete(state.Compiling, dir)
-							__mygo_expr_4 = Err[[]string, error](fmt.Errorf("bootstrap write external tests %s: %s", dir, __mygo_match___mygo_expr_6.F0.Error()))
+							var __mygo_expr_9 Result[struct{}, error]
+							__mygo_expr_8 := fmt.Errorf("bootstrap write external tests %s: %s", dir, __mygo_match___mygo_expr_6.F0.Error())
+							if __mygo_expr_8 != nil {
+								__mygo_expr_9 = Err[struct{}, error](__mygo_expr_8)
+							} else {
+								__mygo_expr_9 = Ok[struct{}, error](struct {
+								}{})
+							}
+							__mygo_expr_4 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_9, []string{})
 						} else {
 							if __mygo_match___mygo_expr_5, ok := written.(Result__Ok[[]string, error]); ok {
 								__mygo_expr_4 = bootstrapCompletePackage(dir, state, preludeWritten, dependencyFiles, appendBootstrapStrings(mainPaths, __mygo_match___mygo_expr_5.F0), writeStarted, totalStarted)
@@ -644,13 +804,14 @@ func appendBootstrapSourcesAt(left []typeinference2.PkgDeclSource, right []typei
 	return __mygo_mt_compiler_appendBootstrapSourcesAt(left, right, index, 0)
 }
 func bootstrapWorkingDir() Result[string, error] {
-	return func() Result[string, error] {
-		value, err := os.Getwd()
-		if err != nil {
-			return Err[string, error](err)
-		}
-		return Ok[string, error](value)
-	}()
+	var __mygo_expr_2 Result[string, error]
+	__mygo_expr_0, __mygo_expr_1 := os.Getwd()
+	if __mygo_expr_1 != nil {
+		__mygo_expr_2 = Err[string, error](__mygo_expr_1)
+	} else {
+		__mygo_expr_2 = Ok[string, error](__mygo_expr_0)
+	}
+	return __mygo_expr_2
 }
 func bootstrapRelativePath(cwd string, path string) Result[string, error] {
 	return func() Result[string, error] {
@@ -1170,7 +1331,15 @@ func __mygo_mt_compiler_bootstrapPopulateGoSignaturesAt(__mygo_mt_p0 string, __m
 							continue
 						} else {
 							if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[BootstrapGoPackageInfo, string]); ok {
-								return Err[struct{}, error](fmt.Errorf("can't find import %q: %s", trimmed, __mygo_match___mygo_expr_3.F0))
+								var __mygo_expr_6 Result[struct{}, error]
+								__mygo_expr_5 := fmt.Errorf("can't find import %q: %s", trimmed, __mygo_match___mygo_expr_3.F0)
+								if __mygo_expr_5 != nil {
+									__mygo_expr_6 = Err[struct{}, error](__mygo_expr_5)
+								} else {
+									__mygo_expr_6 = Ok[struct{}, error](struct {
+									}{})
+								}
+								return __mygo_expr_6
 							} else {
 								panic("non-exhaustive switch")
 							}
@@ -1290,7 +1459,15 @@ func __mygo_mt_compiler_bootstrapWalkImports(__mygo_mt_p0 string, __mygo_mt_p1 s
 							if __mygo_match___mygo_expr_2, ok := dependencyBuild.(Result__Ok[[]string, error]); ok {
 								loaded := bootstrapLoadCachedSources(__mygo_match___mygo_expr_0.F0, __mygo_mt_p4)
 								if __mygo_match___mygo_expr_3, ok := loaded.(Result__Err[BootstrapInputs, string]); ok {
-									return Err[[]string, error](fmt.Errorf("%s", __mygo_match___mygo_expr_3.F0))
+									var __mygo_expr_6 Result[struct{}, error]
+									__mygo_expr_5 := fmt.Errorf("%s", __mygo_match___mygo_expr_3.F0)
+									if __mygo_expr_5 != nil {
+										__mygo_expr_6 = Err[struct{}, error](__mygo_expr_5)
+									} else {
+										__mygo_expr_6 = Ok[struct{}, error](struct {
+										}{})
+									}
+									return MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_6, []string{})
 								} else {
 									if _, ok := loaded.(Result__Ok[BootstrapInputs, string]); ok {
 										__tail_0 := __mygo_mt_p0
