@@ -62,6 +62,18 @@ of leaking the raw two-value Go call into the return statement. The receiver's
 type must name an imported Go package type (`Ref[T]` or value form), and the
 method is resolved from the Go method-set table collected for that package.
 
+- A Go FFI call whose signature is a lone trailing `error` (`func Foo() error`,
+  e.g. `os.Chdir`, an `io.Writer.Flush`-style method) also lowers to a `Result`
+  value: `Result[(), error]`, generated as `Result[struct{}, error]`. The unit
+  payload collapses the Go side's "no value, only error" convention, so the
+  MyGO caller pattern-matches `case Ok(_)` / `case Err(e)` exactly like a
+  `(T, error)` call. `goSignatureResultShape`/`GoSignatureType` widen the
+  two-result `(T, error)` rule to the arity-1 case, and
+  `translateFFIResultCall` binds just the single error and synthesizes a
+  `struct{}{}` unit payload for the `Ok` arm. In statement position (result
+  discarded) the call is emitted as the raw Go call instead of an unused
+  `Result`.
+
 ### `Option[A]` methods (`impl[A] Option[A]`)
 
 Predicates: `IsSome`, `IsNone`.

@@ -1429,7 +1429,19 @@ func goSigReturnType(results []string) string {
 }
 
 func goSigErrorResultType(results []string) (string, bool) {
-	if len(results) != 2 || strings.TrimSpace(results[1]) != "error" {
+	if len(results) < 1 {
+		return "", false
+	}
+	last := strings.TrimSpace(results[len(results)-1])
+	if last != "error" && last != "Error" {
+		return "", false
+	}
+	// A lone trailing error (func Foo() error) collapses the value side to the
+	// unit shape, matching the (T, error) rule with a struct{}{} payload.
+	if len(results) == 1 {
+		return "Result[struct{}, error]", true
+	}
+	if len(results) != 2 {
 		return "", false
 	}
 	return "Result[" + mygoSigTypeToGo(results[0]) + ", error]", true
@@ -1440,11 +1452,27 @@ func (g *gen) wrapGoErrorResultCall(call ast.Expr, resultType string) ast.Expr {
 	if base != "Result" || len(args) != 2 {
 		return call
 	}
+	// A lone trailing error (func Foo() error) collapses the value side to the
+	// unit shape: bind only the error and synthesize a struct{}{} unit payload
+	// for the Ok arm instead of a value temp.
+	unit := strings.TrimSpace(args[0]) == "struct{}"
 	okType := g.goTypeExprFromString(args[0])
 	errType := g.goTypeExprFromString(args[1])
 	resultTypeExpr := &ast.IndexListExpr{X: ast.NewIdent("Result"), Indices: []ast.Expr{okType, errType}}
 	okCall := &ast.IndexListExpr{X: ast.NewIdent("Ok"), Indices: []ast.Expr{okType, errType}}
 	errCall := &ast.IndexListExpr{X: ast.NewIdent("Err"), Indices: []ast.Expr{okType, errType}}
+	var setupLhs []ast.Expr
+	if unit {
+		setupLhs = []ast.Expr{ast.NewIdent("__mygo_result_err")}
+	} else {
+		setupLhs = []ast.Expr{ast.NewIdent("__mygo_result_val"), ast.NewIdent("__mygo_result_err")}
+	}
+	var okArg ast.Expr
+	if unit {
+		okArg = &ast.CompositeLit{Type: &ast.StructType{Fields: &ast.FieldList{}}}
+	} else {
+		okArg = ast.NewIdent("__mygo_result_val")
+	}
 	return &ast.CallExpr{
 		Fun: &ast.FuncLit{
 			Type: &ast.FuncType{
@@ -1453,7 +1481,7 @@ func (g *gen) wrapGoErrorResultCall(call ast.Expr, resultType string) ast.Expr {
 			},
 			Body: &ast.BlockStmt{List: []ast.Stmt{
 				&ast.AssignStmt{
-					Lhs: []ast.Expr{ast.NewIdent("__mygo_result_val"), ast.NewIdent("__mygo_result_err")},
+					Lhs: setupLhs,
 					Rhs: []ast.Expr{call},
 					Tok: token.DEFINE,
 				},
@@ -1466,7 +1494,7 @@ func (g *gen) wrapGoErrorResultCall(call ast.Expr, resultType string) ast.Expr {
 					}},
 				},
 				&ast.ReturnStmt{Results: []ast.Expr{
-					&ast.CallExpr{Fun: okCall, Args: []ast.Expr{ast.NewIdent("__mygo_result_val")}},
+					&ast.CallExpr{Fun: okCall, Args: []ast.Expr{okArg}},
 				}},
 			}},
 		},

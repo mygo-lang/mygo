@@ -643,6 +643,12 @@ func goSignatureType(sig *types.Signature) TFunc {
 			ret = TUnit{}
 		case 1:
 			ret = monoTypeFromGoType(results.At(0).Type())
+			// Parity with the self-hosted typeinference2 boundary: a lone
+			// trailing error (func Foo() error) surfaces as Result[(), error],
+			// matching the (T, error) rule with the payload collapsed to unit.
+			if isErrorType(ret) {
+				ret = TCon{Name: "Result", Args: []MonoType{TUnit{}, ret}}
+			}
 		default:
 			retArgs := make([]MonoType, results.Len())
 			for i := 0; i < results.Len(); i++ {
