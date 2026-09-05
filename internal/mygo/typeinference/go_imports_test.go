@@ -20,8 +20,12 @@ func TestGoSignatureCanonicalizesError(t *testing.T) {
 
 	got := goSignatureType(sig)
 	result, ok := got.Ret.(TCon)
-	if !ok || result.Name != "Error" {
-		t.Fatalf("Go error return type = %s, want Error", got.Ret)
+	if !ok || result.Name != "Result" || len(result.Args) != 2 {
+		t.Fatalf("Go error return type = %s, want Result[(), Error]", got.Ret)
+	}
+	errCon, ok := result.Args[1].(TCon)
+	if !ok || errCon.Name != "Error" {
+		t.Fatalf("Go error return type = %s, want Result[(), Error]", got.Ret)
 	}
 }
 
