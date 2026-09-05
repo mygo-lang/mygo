@@ -14,8 +14,10 @@ compatibility entry points carry inconsistent names (`ffiSignature*` vs the
 
 ## What Changes
 
-Consolidate the compiler2 family onto shared single-source logic. No
-language-level compiler behavior changes; all output shape is preserved.
+Consolidate the compiler2 family onto shared single-source logic. Output
+shape is preserved except for one deliberate boundary change (see A2): Go FFI
+signature types that cannot be resolved now fail with an error instead of
+silently degenerating to `any`.
 
 - **A1 — one primitive spelling table**: delete codegen2's local
   `canonicalMyGoTypeName` switch and route it through the shared
@@ -26,7 +28,16 @@ language-level compiler behavior changes; all output shape is preserved.
   `GoTypeNameWithPackage`, `goSignatureTypes*` / `goSignatureTypesWithPackage*`,
   `GoSignatureType` / `GoSignatureTypeWithPackage`, and
   `goVariadicParamTypes` / `goVariadicParamTypesWithPackage` into one
-  parameterized resolver (optional package entry) with thin wrappers.
+  parameterized resolver (optional package entry) with thin wrappers. The
+  resolver returns `Result` and **errors on unresolvable boundary types**
+  instead of falling back to `TVar`/`any`; the error propagates through the
+  env-seeding chain to the `Infer*` entry points. `any`↔`Any` joins
+  `GoPrimitivePair` so a declared `any` still resolves. The resolver also
+  carries the declaration's generic type-parameter map (`GoFuncSignature`'s
+  new `TypeParams` field, populated from go/types), so bare names like
+  `maps.Clone`'s `M` or `maps.All`'s
+  `Map` resolve to their bounded `TParam` ids, and Go `map[K]V` maps to
+  MyGO's `Map`, instead of failing at the boundary.
 - **A3/B1 — one FFI signature lookup**: merge the triplicated
   `ffiOptionSignature` / `ffiResultSignature` / `ffiMultiResultSignature`
   scans plus the parallel `ffiRawTupleResultType*` scan into one walker

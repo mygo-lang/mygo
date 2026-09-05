@@ -38,21 +38,21 @@ edit to a self-hosted package so its generator output stays in step.
 
 codegen2's `canonicalMyGoTypeName` currently re-implements the whole
 Go→MyGO primitive switch and has drifted (missing `byte`/`rune`/`error`,
-which the shared table already carries; extra local `any`). Replace its body
-with a lookup through `typeinference2.PrimitiveMyGoSpelling` plus a tiny
-`any → Any` fallback:
+which the shared table already carries; extra local `any`). Add the missing
+`any`↔`Any` pair to the shared `GoPrimitivePair` table (per the "no silent
+`any` fallback" decision below, `any` becomes a first-class pair rather than a
+wildcard), and replace codegen2's body with a pure lookup:
 
 ```text
 canonicalMyGoTypeName(name) =
-    PrimitiveMyGoSpelling(name).UnwrapOr( if name == "any" then "Any" else name )
+    PrimitiveMyGoSpelling(name).UnwrapOr(name)
 ```
 
-This fixes `byte`/`rune`/`error` for free and keeps `Any`/`Unit` policy
-unchanged (the error-alias table deliberately excludes general aliases such
-as `any`, so the single-line fallback is the minimal local supplement).
-Alternative considered: add `any` to `GoPrimitivePair`. Rejected because it
-contradicts the error-alias non-goal of not introducing general type aliases
-into that table.
+This fixes `byte`/`rune`/`error` for free. `goPrimitiveType`'s local `Any`
+entry becomes redundant (the table now answers `Any`→`any`) and is removed;
+`Unit` stays local. Alternative considered: keep `any` out of the table and
+preserve a local `any`→`Any` fallback. Rejected because the boundary no
+longer treats `any` as a wildcard — it must be a real, declared pair.
 
 ### D2 — package-aware Go type resolution (A2): one parameterized resolver
 
@@ -60,13 +60,73 @@ Collapse `GoTypeName`/`GoTypeNameWithPackage`, `goSignatureTypes*` +
 `goSignatureTypesWithPackage*`, `GoSignatureType`/`GoSignatureTypeWithPackage`,
 and `goVariadicParamTypes`/`goVariadicParamTypesWithPackage` onto a single
 internal resolver that takes `Option[GoPackageEntry]` (or a leaf-resolver
-callback). The exported base names become thin wrappers passing
-`None`/`Some(pkg)`, so `go_ffi_import` and tests keep working unchanged
-(renamed to the `...WithPackage` convention per D6). The composite parsing
-(`[]`, `map[`, `*`) recurses through the one resolver instead of being
-copy-pasted. Alternative considered: keep both and have `WithPackage` call
-the base for composites; rejected because the only differing site is the leaf,
-so a shared walker is strictly less code and cannot diverge.
+callback). Per the confirmed boundary decision, the resolver **returns
+`Result[MonoType, String]`**: an unknown bare name, a malformed `map[`
+(missing `]`), or an unknown package leaf name is an `Err`, never a silent
+`TVar(0)`/`any` fallback. The exported entry points become thin wrappers
+passing `None`/`Some(pkg)` (renamed to the `...WithPackage` convention per
+D6). The composite parsing (`[]`, `map[`, `*`) recurses through the one
+resolver instead of being copy-pasted.
+
+The `Result` propagates through the signature builders
+(`goSignatureTypes*`, `goVariadicParamTypes*`, `GoSignatureType*`) into the
+env-seeding chain (`seedGoPackageFuncs` → `seedGoPackageMembers` →
+`seedGoPackageEnv` → `seedMyGoPackageEnv` → `cachedImportedPackage` →
+`buildImportedPackageCacheEntry` → `importedPackageEnv` →
+`prepareInferenceSetup`). The five exported `Infer*` entry points already
+return `Result[PackageInfo, String]`, so the error surfaces to the compiler
+instead of silently lowering an unbound type to `any`.
+
+**Behavior change (intentional):** Go FFI signature types that cannot be
+resolved (unknown type name at the boundary) previously degenerated to
+`TVar(0)`/`any`; they now fail compilation with an explicit error. Declared
+`any` still resolves through the new `any`↔`Any` table pair. This is the one
+deliberate external behavior change in an otherwise behavior-preserving
+refactor.
+
+**Generic FFI type parameters (D2 extension):** go/types renders a generic
+declaration's own parameters bare inside its signature (`maps.Clone`'s `m M`,
+`maps.All`'s `m Map` — the maps package names its map-shaped type parameter
+`Map`). The shared resolver therefore carries a parameter map
+(`typeParams: Map[String, Int]`) built from the declaration's type-parameter
+list in order (`goTypeParamMap`: position `i` → `TParam(-(i+1))`). A bare leaf
+that names one of these parameters resolves to the TParam before any package
+resolution; a bare leaf with no matching parameter is still an `Err`, never a
+placeholder. `GoFuncSignature` gains a `TypeParams: Slice[String]` field so
+the resolver is reachable end to end:
+
+- `go_ffi_import.go` extracts the names from go/types
+  (`goFuncTypeParams`; for methods on generic types the receiver type's
+  parameters are the ones rendered bare, so they are prepended).
+- The self-hosted `bootstrap.mygo` path needs no such extraction: the
+  Go-package signature strings it used to derive for MyGO dependencies
+  (`bootstrapMyGoPackageSignatures` / `bootstrapTypeName`) were removed as
+  dead code — their `packagesRef.value().Append(...)` calls discarded the
+  result (`Ref[Slice[T]]` lowers to Go `*[]T`, so the appended entries never
+  reached `seedGoPackageEnv`). MyGO dependencies already typecheck through the
+  real-declaration path (`MyGoPackageInfo` → `seedMyGoPackageEnv`), so the
+  string-signature duplicate was both lossy and redundant. All shape
+  conversion now lives in the one shared resolver: `[]T`→`Slice[T]`,
+  `map[K]V`→`Map[K, V]` (with bracket-matched keys, so composite keys such as
+  `map[[]int]string` parse), `*T`→`Ref[T]`, `func(...)`→`TFunc`, chan
+  variants, and `()`→`TUnit`.
+- `seedGoPackageFuncs` binds them (`typeParamIDs(fn.TypeParams, 1)`) so each
+  call instantiates fresh variables, and the `GoMethod` selector path binds +
+  instantiates the method's parameters the same way.
+- `map[K]V` and other composite shapes recurse through the same parameter map,
+  so `maps.Collect`'s `map[K]V` result becomes `TApp(Map, [TParam(-1),
+  TParam(-2)])` — the Go `map` keyword maps to MyGO's `Map` constructor, and a
+  bare type parameter such as `maps.All`'s `Map` resolves to its `TParam`
+  before any package lookup.
+
+Alternative considered: keep both and have `WithPackage` call the base for
+composites; rejected because the only differing site is the leaf, so a shared
+walker is strictly less code and cannot diverge.
+
+Alternative considered: keep the resolver returning `MonoType` and report
+errors at a single call site. Rejected because the unknown type is only
+detectable at the leaf inside the recursion, so any "report later" scheme
+would need to smuggle the error out through the type value anyway.
 
 ### D3 — FFI signature lookup (A3/B1): one walker + predicate
 
