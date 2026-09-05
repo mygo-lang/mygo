@@ -1034,7 +1034,7 @@ func __mygo_mt_compiler_bootstrapCollectGoPackagesFromDecls(__mygo_mt_p0 []ast2.
 							MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p2.Seen, __mygo_match___mygo_expr_2.F0, true)
 							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1 + 1
-							__tail_2 := BootstrapGoPackageCollection{Packages: MygoIN5SliceM6Append(__mygo_mt_p2.Packages, typeinference2.GoPackageEntry{Alias: __mygo_match___mygo_expr_2.F0, Path: __mygo_match___mygo_expr_2.F1, Funcs: []typeinference2.GoFuncSignature{}, Types: []typeinference2.GoTypeSignature{}}), Seen: __mygo_mt_p2.Seen}
+							__tail_2 := BootstrapGoPackageCollection{Packages: MygoIN5SliceM6Append(__mygo_mt_p2.Packages, typeinference2.GoPackageEntry{Alias: __mygo_match___mygo_expr_2.F0, Path: __mygo_match___mygo_expr_2.F1, Funcs: []typeinference2.GoFuncSignature{}, Types: []typeinference2.GoTypeSignature{}, Constants: []typeinference2.GoConstSignature{}}), Seen: __mygo_mt_p2.Seen}
 							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 							__mygo_state = 0
 							continue

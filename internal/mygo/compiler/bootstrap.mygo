@@ -810,6 +810,7 @@ func bootstrapCollectGoPackagesFromDecls(decls: Slice[ast2.Decl], index: Int, st
                       Path: path,
                       Funcs: [] as Slice[typeinference2.GoFuncSignature],
                       Types: [] as Slice[typeinference2.GoTypeSignature],
+                      Constants: [] as Slice[typeinference2.GoConstSignature],
                     }
                   ),
                   Seen: state.Seen
