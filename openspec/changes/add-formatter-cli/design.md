@@ -28,21 +28,29 @@ The alternatives are placing the logic directly in `cmd/mygo` or `lsp`; the form
 
 Formatter traversal, rendering rules, and formatter-specific tests should be written in MyGO where the project toolchain supports them. Generated Go is a build artifact and must not become the hand-maintained source of formatter behavior. Small Go code is permitted only for the public bridge, CLI integration, filesystem operations, and generated-code plumbing.
 
-### 2. Use protected-token layout instead of AST reconstruction
+### 2. Extend parsec with lossless positioned parsing
+
+parsec remains the parser-combinator foundation. Its `State` already tracks input, byte index, and line/column position, so the parser2 lexer layer will expose token boundaries and trivia instead of discarding them in `trivia()`. The parse result will carry raw tokens/trivia and parser2 will attach complete source spans to AST nodes. Existing AST-only parse APIs remain available as compatibility wrappers over the richer result.
+
+The token model will retain raw slices and start/end offsets, while line/column positions are derived and retained for diagnostics. Trivia includes whitespace, newlines, and comments. Protected literals and inline Go are represented as opaque token spans.
+
+### 3. Use AST-driven layout with source-span emission
 
 The formatting pipeline combines parser2/ast2 structure with positioned tokens and trivia. AST supplies abstract structure and layout decisions; positioned tokens/trivia preserve comments, strings, inline Go, delimiters, whitespace, and source locations. Protected spans are emitted without interpreting their internal text as MyGO formatting syntax. AST reconstruction alone is never the sole source for whole-file output.
 
-Token-level layout preserves unknown syntax and source trivia more reliably than rebuilding from the compact ast2 representation. Nested structure handling combines AST boundaries, syntax delimiters, and parser2 validation.
+Token-level layout preserves unknown syntax and source trivia more reliably than rebuilding from the compact ast2 representation. AST traversal decides indentation, compact versus multiline forms, and control-flow layout. When rendering a protected node, the printer copies the original source span from the input/token stream. No formatter rule may inspect a function name, call name, or body text to select a special implementation.
 
-### 3. Use safe file writeback
+The formatter core remains authored in MyGO. The parser2/parsec source-model extension is a syntax-layer change and may be implemented in MyGO source with generated Go output; only the stable bridge and I/O remain hand-written Go.
+
+### 4. Use safe file writeback
 
 The default mode parses and formats completely before writing. Any file failure results in a failing command. `--check` only compares the original and formatted content and never writes. Multi-file processing retains each file's path in diagnostics.
 
-### 4. Start with whole-file formatting
+### 5. Start with whole-file formatting
 
 The first version defines only whole-file formatting. Range formatting must handle parent nodes outside the selection, indentation baselines, and comments crossing boundaries, so it is deferred to a later design.
 
-### 5. Choose conditional syntax from rendered shape
+### 6. Choose conditional syntax from rendered shape
 
 The printer will decide whether an `if` or `case` is single-line or multiline based on the rendered body shape. Single-line `if` uses `if cond => xxx else yyy`; multiline `if` uses parser2-compatible `if cond then` block syntax with `else` and `end` on their own lines. Single-line cases use `case XXX => xxx`; multiline cases use `case XXX then`, one body statement per line, and `end` on its own line.
 
@@ -54,10 +62,10 @@ The initial preferred line width is 100 columns. The printer renders a candidate
 
 ## Risks / Trade-offs
 
-- [Comment positions may not be fully recoverable from the existing AST] -> Inspect parser/AST comment retention; use positioned tokens if needed and lock behavior with golden tests.
+- [Comment positions may not be fully recoverable from the existing AST] -> Preserve them in parsec/parser2 trivia and associate them with AST spans before implementing the printer.
 - [Parser and formatter may use different AST versions] -> Explicitly choose the current primary parser/AST and isolate parser adaptation at the formatter boundary.
 - [Formatting rules may change frequently] -> Establish a minimal rule set with golden fixtures and idempotence tests; record later rule changes separately.
-- [A body may be difficult to classify as single-line before rendering] -> Render into a temporary representation first, then choose compact or block syntax using explicit line-count and statement-count rules.
+- [A body may be difficult to classify as single-line before rendering] -> Render generic AST nodes into a temporary representation first, then choose compact or block syntax using explicit line-count and statement-count rules.
 - [Atomic writeback may leave temporary files after failure] -> Use same-directory temporary files, clean them up after successful replacement, and preserve the original on write failure.
 
 ## Migration Plan

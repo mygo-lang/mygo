@@ -18,6 +18,22 @@ The formatter SHALL combine parser2/ast2 structure with positioned tokens and tr
 - **WHEN** valid source contains comments or protected literal content around nested syntax
 - **THEN** formatting may change layout outside those spans while preserving the protected spans exactly
 
+### Requirement: Lossless parser source model
+
+parser2 SHALL expose a positioned token/trivia stream while retaining its parsec parser-combinator foundation. Tokens and trivia SHALL retain raw source text plus start and end positions. AST nodes SHALL retain complete source spans sufficient to associate structural nodes with the token stream.
+
+#### Scenario: Parser preserves source ranges
+- **WHEN** parser2 parses valid source containing comments, strings, inline Go, and nested expressions
+- **THEN** the parse result contains the AST, positioned tokens/trivia, and source spans without reconstructing protected text from AST values
+
+### Requirement: Generic AST-driven formatting
+
+The formatter SHALL select layout from AST node kinds, child structure, rendered width, and source spans. It SHALL use the same traversal rules for all functions, function literals, calls, and expressions, without matching specific function names, method names, or body text.
+
+#### Scenario: Arbitrary function literals
+- **WHEN** two function literals have different names, parameters, return types, or body expressions
+- **THEN** both are formatted by the same generic AST traversal and protected spans remain exact
+
 ## ADDED Requirements
 
 ### Requirement: Deterministic source formatting
