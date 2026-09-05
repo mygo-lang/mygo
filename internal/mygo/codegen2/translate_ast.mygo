@@ -1818,7 +1818,7 @@ func translateReceiverImplMethodCall(base: ast2.Expr, method: String, args: Slic
                 case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
                 case Ok(rv) => switch values
                   case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
-                  case Ok(v) => Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(goast.Call(goast.Ident(candidate.Helper), v.Exprs.Prepend(rv.Expr)), goast.AppendStmts(rv.Pre, v.Pre))))
+                  case Ok(v) => Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(implMethodCallExpr(candidate, receiverType, args, rv.Expr, v.Exprs, ctx), goast.AppendStmts(rv.Pre, v.Pre))))
                 end
               end
             case None =>
@@ -1832,7 +1832,7 @@ func translateReceiverImplMethodCall(base: ast2.Expr, method: String, args: Slic
                     case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
                     case Ok(rv) => switch values
                       case Err(msg) => Some[Result[AstExprResult, String]](Err[AstExprResult, String](msg))
-                      case Ok(v) => Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(goast.Call(goast.Ident(candidate.Helper), v.Exprs.Prepend(rv.Expr)), goast.AppendStmts(rv.Pre, v.Pre))))
+                      case Ok(v) => Some[Result[AstExprResult, String]](Ok[AstExprResult, String](astExprWithPre(implMethodCallExpr(candidate, receiverType, args, rv.Expr, v.Exprs, ctx), goast.AppendStmts(rv.Pre, v.Pre))))
                     end
                   end
                 case None => None
@@ -1840,6 +1840,147 @@ func translateReceiverImplMethodCall(base: ast2.Expr, method: String, args: Slic
           end
       end
   end
+
+# Receiver impl-method calls lower to the generic mangled helper.  Go cannot
+# infer type arguments that appear only inside a defined container type
+# (e.g. `Result[A, E]`, which lowers to a Go interface), so whenever the
+# seed-time analysis judges a helper to need them (`SpellCount > 0`) the call
+# site matches the receiver annotation and the argument types against the
+# impl patterns and spells out the type-argument prefix explicitly.  Any
+# remaining tail parameters are left to Go's partial inference (Go >= 1.21).
+# Non-generic helpers and helpers whose parameters all expose inferable
+# positions are emitted as plain calls.
+func implMethodCallExpr(candidate: ImplDictionaryCandidate, receiverType: Option[ast2.MonoType], srcArgs: Slice[ast2.Expr], recv: goast.Expr, args: Slice[goast.Expr], ctx: Ref[egCtx]) -> goast.Expr
+  if candidate.RequiresExplicitTypeArgs then
+    let inferred = receiverImplCallTypeArgs(candidate, receiverType, srcArgs, ctx)
+    if inferred.Len() == candidate.SpellCount then
+      goast.GenericCall(goast.Ident(candidate.Helper), inferred, args.Prepend(recv))
+    else
+      goast.Call(goast.Ident(candidate.Helper), args.Prepend(recv))
+    end
+  else
+    goast.Call(goast.Ident(candidate.Helper), args.Prepend(recv))
+  end
+end
+
+func receiverImplCallTypeArgs(candidate: ImplDictionaryCandidate, receiverType: Option[ast2.MonoType], args: Slice[ast2.Expr], ctx: Ref[egCtx]) -> Slice[String]
+  switch receiverType
+    case None => [] as Slice[String]
+    case Some(actual) =>
+      let resolved = matchReceiverTypeArgs(candidate.Receiver, actual, ctx, {} as Map[Int, String])
+      let withArgs = resolveCallArgsTypeParams(candidate, args, ctx, resolved)
+      let combinedNames = appendStrings(candidate.TypeParams, candidate.MethodTypeParams)
+      combinedTypeArgsInPrefix(combinedNames, withArgs, candidate.SpellCount, 1, [] as Slice[String])
+  end
+end
+
+# resolveCallArgsTypeParams matches each non-receiver parameter pattern
+# against the actual argument's inferred type so method-level type
+# parameters hidden inside containers (e.g. `B` in `other: Result[B, E]`)
+# can be resolved at the call site.
+func resolveCallArgsTypeParams(candidate: ImplDictionaryCandidate, args: Slice[ast2.Expr], ctx: Ref[egCtx], resolved: Map[Int, String]) -> Map[Int, String]
+  resolveCallArgsTypeParamsInto(candidate, args, ctx, resolved, 1)
+end
+
+func resolveCallArgsTypeParamsInto(candidate: ImplDictionaryCandidate, args: Slice[ast2.Expr], ctx: Ref[egCtx], resolved: Map[Int, String], paramIndex: Int) -> Map[Int, String]
+  if paramIndex >= candidate.MethodParamMonos.Len() then
+    resolved
+  else
+    switch args.Get(paramIndex - 1)
+      case Some(argExpr) =>
+        switch argExpr.Type
+          case Some(argType) =>
+            resolveCallArgsTypeParamsInto(candidate, args, ctx, matchReceiverTypeArgs(candidate.MethodParamMonos.Get(paramIndex).UnwrapOr(ast2.MonoType.TUnit), argType, ctx, resolved), paramIndex + 1)
+          case None => resolveCallArgsTypeParamsInto(candidate, args, ctx, resolved, paramIndex + 1)
+        end
+      case None => resolveCallArgsTypeParamsInto(candidate, args, ctx, resolved, paramIndex + 1)
+    end
+  end
+end
+
+func combinedTypeArgsInPrefix(combinedNames: Slice[String], resolved: Map[Int, String], count: Int, id: Int, out: Slice[String]) -> Slice[String]
+  if count == 0 then
+    out
+  else
+    switch resolved.Get(-id)
+      case Some(value) => combinedTypeArgsInPrefix(common2.SliceDrop(combinedNames, 1), resolved, count - 1, id + 1, out.Append(value))
+      case None => [] as Slice[String]
+    end
+  end
+end
+
+# matchReceiverTypeArgs walks the impl target pattern and the actual receiver
+# type in parallel, recording the Go type string for every TParam in the
+# pattern that can be instantiated.  Result is keyed by TParam id.
+func matchReceiverTypeArgs(pattern: ast2.MonoType, actual: ast2.MonoType, ctx: Ref[egCtx], acc: Map[Int, String]) -> Map[Int, String]
+  switch pattern
+    case TParam(id) => resolvePatternParam(acc, id, actual, ctx)
+    case TApp(ctor, patternArgs) =>
+      switch ctor.value()
+        case TCon(name) =>
+          switch actual
+            case TApp(actualCtor, actualArgs) =>
+              switch actualCtor.value()
+                case TCon(actualName) => if name == actualName then matchReceiverTypeArgsList(patternArgs, actualArgs, ctx, acc) else acc end
+                case _ => acc
+              end
+            case _ => acc
+          end
+        case _ => acc
+      end
+    case TFunc(patternItems, patternRet) =>
+      switch actual
+        case TFunc(actualItems, actualRet) =>
+          let withItems = matchReceiverTypeArgsList(patternItems, actualItems, ctx, acc)
+          matchReceiverTypeArgs(patternRet.value(), actualRet.value(), ctx, withItems)
+        case _ => acc
+      end
+    case TTuple(patternItems) =>
+      switch actual
+        case TTuple(actualItems) => matchReceiverTypeArgsList(patternItems, actualItems, ctx, acc)
+        case _ => acc
+      end
+    case _ => acc
+  end
+end
+
+func resolvePatternParam(acc: Map[Int, String], id: Int, actual: ast2.MonoType, ctx: Ref[egCtx]) -> Map[Int, String]
+  if !monoContainsFreeVar(actual) then
+    acc.Set(id, monoTypeToGoStrWithParamsIn(actual, ctx.typeParamNames, ctx.pathAliases))
+  end
+  acc
+end
+
+func matchReceiverTypeArgsList(patternArgs: Slice[ast2.MonoType], actualArgs: Slice[ast2.MonoType], ctx: Ref[egCtx], acc: Map[Int, String]) -> Map[Int, String]
+  if patternArgs.Len() == 0 || actualArgs.Len() == 0 then
+    acc
+  else
+    let head = matchReceiverTypeArgs(patternArgs.Get(0).UnwrapOr(ast2.MonoType.TUnit), actualArgs.Get(0).UnwrapOr(ast2.MonoType.TUnit), ctx, acc)
+    matchReceiverTypeArgsList(common2.SliceDrop(patternArgs, 1), common2.SliceDrop(actualArgs, 1), ctx, head)
+  end
+end
+
+# monoContainsFreeVar reports whether a MonoType still mentions an unresolved
+# inference variable.  Such a type cannot be rendered as a Go type argument,
+# so explicit-argument lowering falls back in that case.
+func monoContainsFreeVar(t: ast2.MonoType) -> Bool
+  switch t
+    case TVar(_) => true
+    case TKVar(_) => true
+    case TApp(_, args) => monoTypesContainFreeVar(args)
+    case TFunc(items, ret) => monoTypesContainFreeVar(items) || monoContainsFreeVar(ret.value())
+    case TTuple(items) => monoTypesContainFreeVar(items)
+    case _ => false
+  end
+end
+
+func monoTypesContainFreeVar(items: Slice[ast2.MonoType]) -> Bool
+  if items.Len() == 0 then
+    false
+  else
+    monoContainsFreeVar(items.Get(0).UnwrapOr(ast2.MonoType.TUnit)) || monoTypesContainFreeVar(common2.SliceDrop(items, 1))
+  end
+end
 
 # dictFuncForMethod looks up the correct dictionary function for a method
 # call originating from a `using` constraint.  When multiple constraints of
@@ -1966,7 +2107,7 @@ end
 
 func matchingReceiverCandidate(candidates: Slice[ImplDictionaryCandidate], method: String, receiverType: Option[ast2.MonoType]) -> Option[ImplDictionaryCandidate]
   if candidates.Len() == 0 then None else
-    let candidate = candidates.Get(0).UnwrapOr(ImplDictionaryCandidate { Interface: "", Method: "", InterfaceArgs: [] as Slice[ast2.TypeExpr], Receiver: ast2.MonoType.TUnit, TypeParams: [] as Slice[String], Helper: "" })
+    let candidate = candidates.Get(0).UnwrapOr(ImplDictionaryCandidate { Interface: "", Method: "", InterfaceArgs: [] as Slice[ast2.TypeExpr], Receiver: ast2.MonoType.TUnit, TypeParams: [] as Slice[String], Helper: "", RequiresExplicitTypeArgs: false, MethodTypeParams: [] as Slice[String], MethodParamMonos: [] as Slice[ast2.MonoType], SpellCount: 0 })
     let matched = switch receiverType
       case Some(receiver) => candidate.Method == method && receiverMonoMatches(candidate.Receiver, receiver)
       case None => false
@@ -2407,7 +2548,7 @@ func matchingCandidate(candidates: Slice[ImplDictionaryCandidate], requirement: 
   if candidates.Len() == 0 then
     None
   else
-    let candidate = candidates.Get(0).UnwrapOr(ImplDictionaryCandidate { Interface: "", Method: "", InterfaceArgs: [] as Slice[ast2.TypeExpr], Receiver: ast2.MonoType.TUnit, TypeParams: [] as Slice[String], Helper: "" })
+    let candidate = candidates.Get(0).UnwrapOr(ImplDictionaryCandidate { Interface: "", Method: "", InterfaceArgs: [] as Slice[ast2.TypeExpr], Receiver: ast2.MonoType.TUnit, TypeParams: [] as Slice[String], Helper: "", RequiresExplicitTypeArgs: false, MethodTypeParams: [] as Slice[String], MethodParamMonos: [] as Slice[ast2.MonoType], SpellCount: 0 })
     if typeExprListMatches(candidate.InterfaceArgs, requirement.Args, typeParamSet(candidate.TypeParams)) then Some(candidate) else matchingCandidate(common2.SliceDrop(candidates, 1), requirement) end
   end
 end

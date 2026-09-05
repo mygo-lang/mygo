@@ -111,12 +111,16 @@ type DictionaryRequirement struct {
 	Args      []ast2.TypeExpr
 }
 type ImplDictionaryCandidate struct {
-	Interface     string
-	Method        string
-	InterfaceArgs []ast2.TypeExpr
-	Receiver      ast2.MonoType
-	TypeParams    []string
-	Helper        string
+	Interface                string
+	Method                   string
+	InterfaceArgs            []ast2.TypeExpr
+	Receiver                 ast2.MonoType
+	TypeParams               []string
+	Helper                   string
+	RequiresExplicitTypeArgs bool
+	MethodTypeParams         []string
+	MethodParamMonos         []ast2.MonoType
+	SpellCount               int
 }
 
 func newAstExprResult(expr goast.Expr) AstExprResult {

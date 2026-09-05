@@ -12,6 +12,10 @@
 
 - **Typeclass impl with multiple type parameters** (`prelude/prelude.mygo`): The `impl[A, E] ResultEq[A, E]: Eq[Result[A, E]]` pattern (and similar multi-parameter impls like `impl[K, V] MapIEnumerable[K, V]`) may not compile or generate correct Go code. The compiler's typeclass dispatch (`matchTypeclassHelper`) uses the first type argument's type string for receiver matching, which can cause ambiguity or missed matches when multiple type parameters are involved. Workaround: use single-parameter impls where possible, or implement via inline Go blocks.
 
+### Inherent Impl `using` Constraint Dispatch — zero-arg members
+
+- **`using Default[A]` on an inherent impl method does not resolve** (`prelude`): A constraint-annotated inherent method such as `Result.UnwrapOrDefault` / `Option.UnwrapOrDefault` cannot invoke the constrained member (`Default[A]()` fails with `unknown identifier Default`). The `Default`-constrained extraction methods were dropped from the prelude combinator surface (see `openspec/changes/enhance-prelude-result-api`, tasks 4.1/4.2) and re-scoped as a follow-up once the inherent-impl `using` dispatch path supports zero-arg typeclass members.
+
 ### Type Ergonomics
 
 - **`sumList` parameter ergonomics** (`examples/data-structure/data-structure.mygo`): The function accepts `List[Int]` by value, creates a traversal ref with `Ref.new(lst)`, and walks `tail: Option[Ref[List[Int]]]`. While functional, this design takes the address of a local parameter copy. A future design may prefer accepting `Option[Ref[List[Int]]]` or `Ref[ListInt]]` directly to avoid the extra indirection.

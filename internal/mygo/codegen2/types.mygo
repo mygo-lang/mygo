@@ -150,6 +150,10 @@ struct ImplDictionaryCandidate
   Receiver: ast2.MonoType
   TypeParams: Slice[String]
   Helper: String
+  RequiresExplicitTypeArgs: Bool
+  MethodTypeParams: Slice[String]
+  MethodParamMonos: Slice[ast2.MonoType]
+  SpellCount: Int
 end
 
 func newAstExprResult(expr: goast.Expr) -> AstExprResult
