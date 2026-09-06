@@ -60,6 +60,14 @@ The parser's ability to accept `case XXX => xxx` in a multiline form does not af
 
 The initial preferred line width is 100 columns. The printer renders a candidate compact form first; if it exceeds the width, it selects the corresponding multiline form. Protected strings and inline Go bodies are never split internally.
 
+### 8. Preserve AST compatibility with `Spanned[T]`
+
+Parser combinators for expressions, types, and patterns will return an internal generic `Spanned[T] { Value, Span }`. Existing AST construction unwraps `Value`, so current enum constructors and AST-only callers remain stable. `ParseFileLossless` flattens nested spans into `NodeSpan { Path, Kind, Span }` metadata. Paths identify declaration, statement, expression, type, and pattern nesting without requiring span fields on every existing enum variant.
+
+### 9. Emit parser-owned layout events and token anchors
+
+The lossless parser will derive a layout event stream from AST spans. Events include nested enter/exit pairs, structural paths, depth, node spans, and anchors for syntax headers whose layout boundaries are not represented by the compact AST alone, including `case` and `else`. The formatter consumes these events together with positioned tokens and original source ranges. Source-line text may be copied as protected content, but it is not used to infer block ownership or branch boundaries.
+
 ## Risks / Trade-offs
 
 - [Comment positions may not be fully recoverable from the existing AST] -> Preserve them in parsec/parser2 trivia and associate them with AST spans before implementing the printer.

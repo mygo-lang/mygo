@@ -1,6 +1,10 @@
+# formatter-cli Specification
+
 ## Purpose
 
 Provide consistent, automatable, editor-independent formatting for MyGO source so developers, scripts, and continuous integration can share the same formatting rules.
+
+## Requirements
 
 ### Requirement: MyGO-authored formatter core
 
@@ -22,9 +26,15 @@ The formatter SHALL combine parser2/ast2 structure with positioned tokens and tr
 
 parser2 SHALL expose a positioned token/trivia stream while retaining its parsec parser-combinator foundation. Tokens and trivia SHALL retain raw source text plus start and end positions. AST nodes SHALL retain complete source spans sufficient to associate structural nodes with the token stream.
 
+The parser MAY preserve compatibility with existing AST enum constructors by returning internal `Spanned[T]` values and flattening their paths, kinds, and spans into the lossless parse result. The AST-only parse API SHALL remain unchanged.
+
 #### Scenario: Parser preserves source ranges
 - **WHEN** parser2 parses valid source containing comments, strings, inline Go, and nested expressions
 - **THEN** the parse result contains the AST, positioned tokens/trivia, and source spans without reconstructing protected text from AST values
+
+#### Scenario: Nested type and pattern spans
+- **WHEN** parser2 parses nested generic types, tuple patterns, or variant patterns
+- **THEN** the lossless result contains a span entry for each nested syntax node and its structural path
 
 ### Requirement: Generic AST-driven formatting
 
@@ -34,7 +44,12 @@ The formatter SHALL select layout from AST node kinds, child structure, rendered
 - **WHEN** two function literals have different names, parameters, return types, or body expressions
 - **THEN** both are formatted by the same generic AST traversal and protected spans remain exact
 
-## ADDED Requirements
+### Requirement: Parser-owned layout events
+The lossless parser SHALL expose nested layout events derived from AST spans. Events SHALL retain structural paths, nesting depth, node spans, and positioned-token anchors for branch headers such as `case` and `else`. The formatter SHALL use these events for block and branch boundaries instead of inferring structure from source-line string matching.
+
+#### Scenario: Anchored branch layout
+- **WHEN** source contains nested `if/else` or `switch/case` constructs
+- **THEN** the lossless result contains enter/exit events and header token anchors that allow the formatter to place branch boundaries deterministically
 
 ### Requirement: Deterministic source formatting
 The formatter SHALL accept valid MyGO source text and produce deterministic formatted source text without changing program semantics.

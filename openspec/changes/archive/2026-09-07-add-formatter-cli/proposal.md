@@ -10,6 +10,8 @@ MyGO currently lacks a unified source-formatting capability, so developers canno
 - Add a check mode so CI can detect unformatted files without modifying them.
 - Preserve the exact source content of comments, strings, inline Go, delimiters, and other trivia while formatting structure; report errors and avoid writing incomplete output when parsing fails.
 - Make formatting rules generic over AST node kinds. Do not special-case function names, function bodies, APIs, or particular call expressions.
+- Represent parser spans internally with generic `Spanned[T]` values and expose flattened `NodeSpan` metadata in the lossless parse result, preserving existing AST enum constructors and AST-only APIs.
+- Expose parser-owned layout events with nested enter/exit structure and positioned token anchors for `case`/`else` boundaries, so formatter layout does not infer block structure from source lines.
 - Do not add LSP protocol handling in this change; integrate LSP later as another caller of the formatter core.
 
 ## Capabilities
