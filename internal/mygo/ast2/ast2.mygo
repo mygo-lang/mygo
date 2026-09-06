@@ -10,6 +10,11 @@ struct SourcePos
   Column: Int
 end
 
+struct SourceSpan
+  Start: SourcePos
+  End: SourcePos
+end
+
 struct File
   PackageName: String
   Decls: Slice[Decl]
@@ -17,6 +22,7 @@ struct File
   Line: Int
   Column: Int
   DeclPositions: Slice[SourcePos]
+  Span: SourceSpan
 end
 
 enum Decl
@@ -40,21 +46,27 @@ end
 struct Param
   Name: String
   Type: TypeExpr
+  TypeSpan: SourceSpan
+  Span: SourceSpan
 end
 
 struct Field
   Name: String
   Type: TypeExpr
+  TypeSpan: SourceSpan
   Tag: Option[String]
+  Span: SourceSpan
 end
 
 struct Variant
   Name: String
   Fields: Slice[TypeExpr]
+  FieldSpans: Slice[SourceSpan]
   # Named is true for `Name { field: Type, ... }` variants.
   # Tuple variants (`Name(Type, ...)`) keep Fields and leave Names empty.
   Named: Bool
   Names: Slice[String]
+  Span: SourceSpan
 end
 
 struct FuncSig
@@ -63,6 +75,7 @@ struct FuncSig
   TypeParams: Slice[String]
   Params: Slice[Param]
   Ret: Option[TypeExpr]
+  RetSpan: SourceSpan
   Using: Slice[Constraint]
 end
 
@@ -92,7 +105,10 @@ end
 
 struct SwitchCase
   Pattern: Pattern
+  PatternSpan: SourceSpan
   Body: Expr
+  BodySpan: SourceSpan
+  Span: SourceSpan
 end
 
 enum Pattern
@@ -123,7 +139,9 @@ end
 struct Bind
   Name: String
   Type: Option[TypeExpr]
+  TypeSpan: SourceSpan
   Value: Expr
+  Span: SourceSpan
 end
 
 # A letrec binding is always annotated.  The annotation lets the entire group
@@ -131,6 +149,7 @@ end
 struct LetRecBind
   Name: String
   Type: TypeExpr
+  TypeSpan: SourceSpan
   Value: Expr
 end
 
@@ -221,6 +240,7 @@ end
 struct Expr
   ID: Int
   Pos: SourcePos
+  Span: SourceSpan
   Kind: ExprKind
   Type: Option[MonoType]
 end

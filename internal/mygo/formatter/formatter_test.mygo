@@ -1,0 +1,208 @@
+package formatter
+
+import testing "go:testing"
+import strings "go:strings"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+
+func TestFormatterLayoutIsIdempotent(t: Ref[testing.T]) -> ()
+  let src = "package sample\n\nfunc f() -> Int\n    1\nend\n"
+  let first = formattedOrFail(t, FormatSource("sample.mygo", src))
+  let second = formattedOrFail(t, FormatSource("sample.mygo", first))
+  if first != second then
+    t.Fatalf("formatter is not idempotent: %s", first)
+  end
+end
+
+func formattedOrFail(t: Ref[testing.T], result: Result[String, String]) -> String
+  switch result
+    case Ok(value) => value
+    case Err(message) then
+      t.Fatalf("format failed: %s", message)
+      ""
+    end
+  end
+end
+
+func TestFormatterPreservesProtectedLines(t: Ref[testing.T]) -> ()
+  let src = "package sample\n# keep   comment\nfunc f() -> String\n  \"hello   world\"\nend\n"
+  let got = formatLayout(src)
+  if !strings.Contains(got, "hello   world") || !strings.Contains(got, "keep   comment") then
+    t.Fatal("formatted output unexpectedly lost protected content")
+  end
+end
+
+func TestFormatterPreservesInlineGoLine(t: Ref[testing.T]) -> ()
+  let src = "package sample\nfunc f() -> String\n  go[String]{code: `strings.TrimSpace(x)` in x = \" value \"}\nend\n"
+  let got = formatLayout(src)
+  if !strings.Contains(got, "strings.TrimSpace(x)") then
+    t.Fatal("formatted output unexpectedly changed inline Go")
+  end
+end
+
+func TestFormatterPreservesMultilineTripleString(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc f() -> String\n  \"\"\"first   line\n  second   line\n  \"\"\"\nend\n"
+  let got = formatLayout(source)
+  if !strings.Contains(got, "  second   line") then
+    t.Fatal("multiline string contents changed")
+  end
+end
+
+func TestFormatterReportsParser2Location(t: Ref[testing.T]) -> ()
+  switch FormatSource("broken.mygo", "package sample\n\nfunc")
+    case Ok(_) => t.Fatal("invalid source unexpectedly formatted")
+    case Err(message) =>
+      if !strings.Contains(message, "broken.mygo") then
+        t.Fatalf("error lacks source name: %s", message)
+      end
+  end
+end
+
+func TestFormatterRepresentativeGolden(t: Ref[testing.T]) -> ()
+  let src = "package sample\nstruct  Point\n  value: Int\nend\nfunc f() -> Int\n  let xs = [1,  2,  3]\n  xs.Len()\nend\n"
+  let want = "package sample\nstruct Point\n  value: Int\nend\nfunc f() -> Int\n  let xs = [1, 2, 3]\n  xs.Len()\nend\n"
+  if formatLayout(src) != want then
+    t.Fatalf("representative golden mismatch: %s", formatLayout(src))
+  end
+end
+
+func TestFormatterIfAndCaseGolden(t: Ref[testing.T]) -> ()
+  let src = "package sample\nfunc f(x: Bool) -> Int\n if   x => 1 else 2\nend\nfunc g(x: Int) -> Int\n switch x\n  case 1 => 10\n  case _ then\n   0\n  end\n end\nend\n"
+  let want = "package sample\nfunc f(x: Bool) -> Int\n  if x => 1 else 2\nend\nfunc g(x: Int) -> Int\n  switch x\n    case 1 => 10\n    case _ then\n      0\n    end\n  end\nend\n"
+  if formatLayout(src) != want then
+    t.Fatalf("if/case golden mismatch: %s", formatLayout(src))
+  end
+end
+
+func TestFormatterUsesBranchEventLines(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc f(value: Bool) -> Int\n  if value then\n    1\n  else\n    2\n  end\nend\n"
+  let got = formattedOrFail(t, FormatSource("events.mygo", source))
+  if !strings.Contains(got, "  if value then") || !strings.Contains(got, "    1") || !strings.Contains(got, "    2") then
+    t.Fatalf("branch event lines were not applied: %s", got)
+  end
+end
+
+func TestFormatterCollectsExpectedBlockEventLines(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc f(value: Bool) -> Int\n  if value then\n    1\n  else\n    2\n  end\nend\n"
+  switch parser2.ParseFileLossless("events.mygo", source)
+    case Err(message) => t.Fatalf("lossless parse failed: %s", message)
+    case Ok(parsed) =>
+      if !hasLayoutEvent(parsed.LayoutEvents, "enter:decl:func", 2) || !hasLayoutEvent(parsed.LayoutEvents, "enter:if-then", 3) || !hasLayoutEvent(parsed.LayoutEvents, "enter:if-else", 5) then
+        t.Fatal("missing parser-owned block anchors")
+      end
+  end
+end
+
+func TestFormatterDoesNotTreatScalarBodyAsBlock(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc f() -> Int\n  1\nend\n"
+  switch parser2.ParseFileLossless("scalar.mygo", source)
+    case Err(message) => t.Fatalf("lossless parse failed: %s", message)
+    case Ok(parsed) =>
+      if hasLayoutEvent(parsed.LayoutEvents, "enter:expr", 3) then
+        t.Fatal("scalar expression was incorrectly classified as a block")
+      end
+  end
+end
+
+func hasLayoutEvent(events: Slice[parser2.LayoutEvent], kind: String, line: Int) -> Bool
+  events.Filter(func(item: parser2.LayoutEvent) -> Bool item.Kind == kind && item.Anchor.Start.Line == line end).Len() > 0
+end
+
+func TestFormatterExpandsSingleLineFunctionBody(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc f() -> Int 1 end\n"
+  let got = formattedOrFail(t, FormatSource("single-line.mygo", source))
+  let want = "package sample\nfunc f() -> Int\n  1\nend\n"
+  if got != want then
+    t.Fatalf("single-line function body was not expanded: %s", got)
+  end
+end
+
+func TestFormatterExpandsInlineIfExpression(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc f(value: Bool) -> Int\n  let rendered = if value then 1 else 2 end\n  rendered\nend\n"
+  let got = formattedOrFail(t, FormatSource("inline-if.mygo", source))
+  if !strings.Contains(got, "let rendered = if value then\n") || !strings.Contains(got, "else\n") || !strings.Contains(got, "end\n") then
+    t.Fatalf("inline if expression was not expanded: %s", got)
+  end
+end
+
+
+func TestFormatterWrapsLongCommaLists(t: Ref[testing.T]) -> ()
+  let src = "package sample\nfunc f() -> Int\n  let values = [1111111111, 2222222222, 3333333333, 4444444444, 5555555555, 6666666666, 7777777777, 8888888888, 9999999999]\n  0\nend\n"
+  let got = formatLayout(src)
+  if !strings.Contains(got, ",\n  ") then
+    t.Fatal("long comma list was not wrapped")
+  end
+end
+
+func TestFormatterOutputRemainsParser2Valid(t: Ref[testing.T]) -> ()
+  let source = "package sample\nenum Color\n  Red\n  Blue\nend\nfunc f(c: Color) -> Int\n  switch c\n    case Red => 1\n    case Blue => 2\n  end\nend\n"
+  let formatted = formattedOrFail(t, FormatSource("sample.mygo", source))
+  switch FormatSource("formatted.mygo", formatted)
+    case Ok(_) => ()
+    case Err(message) => t.Fatalf("formatted source failed parser2: %s", message)
+  end
+end
+
+func TestFormatterPatternAndMultilineGolden(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc f(value: Option[Int]) -> Int\n  switch value\n    case Some(x) then\n      let y = x + 1\n      y\n    end\n    case None => 0\n  end\nend\n"
+  let want = "package sample\nfunc f(value: Option[Int]) -> Int\n  switch value\n    case Some(x) then\n      let y = x + 1\n      y\n    end\n    case None => 0\n  end\nend\n"
+  if formatLayout(source) != want then
+    t.Fatalf("pattern/multiline golden mismatch: %s", formatLayout(source))
+  end
+end
+
+func TestFormatterWideControlUsesBlocks(t: Ref[testing.T]) -> ()
+  let condition = "veryLongConditionNameThatKeepsGoingAndGoingAndGoing"
+  let branch = "veryLongBranchExpressionNameThatKeepsGoingAndGoingAndGoing"
+  let ifLine = "if " + condition + " => " + branch + " else " + branch
+  let caseLine = "case " + condition + " => " + branch
+  let ifOutput = formatLayout("package sample\nfunc f() -> Int\n  " + ifLine + "\nend\n")
+  let caseOutput = formatLayout("package sample\nfunc f(x: Int) -> Int\n  switch x\n    " + caseLine + "\n  end\nend\n")
+  if !strings.Contains(ifOutput, "else\n") || !strings.Contains(ifOutput, "end\n") then
+    t.Fatal("wide if was not converted to a block")
+  end
+  if !strings.Contains(caseOutput, " then\n") || !strings.Contains(caseOutput, "end\n") then
+    t.Fatal("wide case was not converted to a block")
+  end
+end
+
+func TestFormatterWideControlRemainsValidMyGO(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc f(veryLongConditionNameThatKeepsGoingAndGoingAndGoing: Bool) -> Int\n  if veryLongConditionNameThatKeepsGoingAndGoingAndGoing => veryLongBranchExpressionNameThatKeepsGoingAndGoingAndGoing else 0\nend\n"
+  let result = FormatSource("wide.mygo", source)
+  switch result
+    case Err(message) => t.Fatalf("wide source rejected before formatting: %s", message)
+    case Ok(formatted) =>
+      switch FormatSource("wide-formatted.mygo", formatted)
+        case Ok(_) => ()
+        case Err(message) => t.Fatalf("wide formatted source is invalid: %s\nOUTPUT:\n%s", message, formatted)
+      end
+  end
+end
+
+func TestFormatterFunctionLiteralRemainsGeneric(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc outer() -> Int\n  let f = func(x: Int) -> Int\n  x + 1\n  end\n  f(1)\nend\n"
+  let first = formattedOrFail(t, FormatSource("literal.mygo", source))
+  let second = formattedOrFail(t, FormatSource("literal.mygo", first))
+  if first != second || !strings.Contains(first, "func(x: Int) -> Int") then
+    t.Fatalf("generic function literal handling mismatch: %s", first)
+  end
+end
+
+func TestFormatterPreservesNestedFunctionLiteral(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc f(source: String) -> String\n  let state = source.Apply(\"value\", func(value: String) -> String transform(value) end)\n  state\nend\n"
+  let got = formatLayout(source)
+  if !strings.Contains(got, "source.Apply(\"value\", func(value: String) -> String transform(value) end)") then
+    t.Fatalf("nested function literal was changed: %s", got)
+  end
+end
+
+func TestFormatterGenericNestedLayoutIsIdempotent(t: Ref[testing.T]) -> ()
+  let source = "package sample\n# retain   spacing\nfunc outer(value: String) -> String\n  let apply = func(item: String) -> String item end\n  value.Apply(\"  literal  \", apply).Apply(\"next\", func(item: String) -> String item end)\nend\n"
+  let first = formattedOrFail(t, FormatSource("nested.mygo", source))
+  let second = formattedOrFail(t, FormatSource("nested.mygo", first))
+  if first != second then
+    t.Fatalf("generic nested layout is not idempotent: %s", first)
+  end
+  if !strings.Contains(first, "literal") || !strings.Contains(first, "retain   spacing") then
+    t.Fatalf("generic protected content changed: %s", first)
+  end
+end

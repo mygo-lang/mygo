@@ -9,6 +9,10 @@ type SourcePos struct {
 	Line       int
 	Column     int
 }
+type SourceSpan struct {
+	Start SourcePos
+	End   SourcePos
+}
 type File struct {
 	PackageName   string
 	Decls         []Decl
@@ -16,6 +20,7 @@ type File struct {
 	Line          int
 	Column        int
 	DeclPositions []SourcePos
+	Span          SourceSpan
 }
 type Decl interface {
 	isDecl()
@@ -140,19 +145,25 @@ func Decl__ImplDecl__Ctor(v0 []string, v1 TypeExpr, v2 Option[TypeExpr], v3 []Im
 }
 
 type Param struct {
-	Name string
-	Type TypeExpr
+	Name     string
+	Type     TypeExpr
+	TypeSpan SourceSpan
+	Span     SourceSpan
 }
 type Field struct {
-	Name string
-	Type TypeExpr
-	Tag  Option[string]
+	Name     string
+	Type     TypeExpr
+	TypeSpan SourceSpan
+	Tag      Option[string]
+	Span     SourceSpan
 }
 type Variant struct {
-	Name   string
-	Fields []TypeExpr
-	Named  bool
-	Names  []string
+	Name       string
+	Fields     []TypeExpr
+	FieldSpans []SourceSpan
+	Named      bool
+	Names      []string
+	Span       SourceSpan
 }
 type FuncSig struct {
 	Pos        SourcePos
@@ -160,6 +171,7 @@ type FuncSig struct {
 	TypeParams []string
 	Params     []Param
 	Ret        Option[TypeExpr]
+	RetSpan    SourceSpan
 	Using      []Constraint
 }
 type Constraint struct {
@@ -181,8 +193,11 @@ type StructLitHead struct {
 	TypeArgs []TypeExpr
 }
 type SwitchCase struct {
-	Pattern Pattern
-	Body    Expr
+	Pattern     Pattern
+	PatternSpan SourceSpan
+	Body        Expr
+	BodySpan    SourceSpan
+	Span        SourceSpan
 }
 type Pattern interface {
 	isPattern()
@@ -309,14 +324,17 @@ func TypeExpr__InlineGo__Ctor(v0 *TypeExpr, v1 string) TypeExpr {
 }
 
 type Bind struct {
-	Name  string
-	Type  Option[TypeExpr]
-	Value Expr
+	Name     string
+	Type     Option[TypeExpr]
+	TypeSpan SourceSpan
+	Value    Expr
+	Span     SourceSpan
 }
 type LetRecBind struct {
-	Name  string
-	Type  TypeExpr
-	Value Expr
+	Name     string
+	Type     TypeExpr
+	TypeSpan SourceSpan
+	Value    Expr
 }
 type GoOperand struct {
 	Name  string
@@ -703,6 +721,7 @@ func ExprKind__SetLitExpr__Ctor(v0 []Expr) ExprKind {
 type Expr struct {
 	ID   int
 	Pos  SourcePos
+	Span SourceSpan
 	Kind ExprKind
 	Type Option[MonoType]
 }

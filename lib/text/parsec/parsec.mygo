@@ -29,6 +29,26 @@ struct ParseError
   Message: String
 end
 
+# Lossless syntax metadata shared by parser2 and source-preserving tools.
+# Raw keeps the exact input spelling; offsets make spans safe for slicing while
+# line/column positions keep diagnostics and editor integrations inexpensive.
+struct SourceSpan
+  Start: Position
+  End: Position
+end
+
+struct PositionedToken
+  Kind: String
+  Raw: String
+  Span: SourceSpan
+end
+
+struct PositionedTrivia
+  Kind: String
+  Raw: String
+  Span: SourceSpan
+end
+
 struct Reply[A]
   Ok: Bool
   Consumed: Bool

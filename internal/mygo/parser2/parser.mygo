@@ -4,6 +4,18 @@ import strings "go:strings"
 import ps "github.com/mygo-lang/mygo/lib/text/parsec"
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 
+func emptySpan() -> ast2.SourceSpan
+  ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }
+end
+
+func unwrapTypeOption(value: Option[Spanned[ast2.TypeExpr]]) -> Option[ast2.TypeExpr]
+  value.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr item.Value end)
+end
+
+func typeOptionSpan(value: Option[Spanned[ast2.TypeExpr]]) -> ast2.SourceSpan
+  value.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan item.Span end).UnwrapOr(emptySpan())
+end
+
 enum InlineGoBinding
   ValueBinding(String, ast2.Expr)
   TypeBinding(String, ast2.TypeExpr)
@@ -58,7 +70,7 @@ func emptyExpr() -> ast2.Expr
 end
 
 func exprWithPos(pos: ast2.SourcePos, kind: ast2.ExprKind) -> ast2.Expr
-  ast2.Expr { ID: 0, Pos: pos, Kind: kind, Type: None}
+  ast2.Expr { ID: 0, Pos: pos, Span: ast2.SourceSpan { Start: pos, End: pos }, Kind: kind, Type: None}
 end
 
 func exprAt(state: ps.State, kind: ast2.ExprKind) -> ast2.Expr
@@ -87,12 +99,12 @@ end
 func annotateExprSource(expr: ast2.Expr, sourceName: String) -> ast2.Expr
   let pos = ast2.SourcePos { SourceName: sourceName, Line: expr.Pos.Line, Column: expr.Pos.Column }
   switch expr.Kind
-    case IdentExpr(_) => ast2.Expr { ID: 0, Pos: pos, Kind: expr.Kind, Type: None }
-    case NumberExpr(_) => ast2.Expr { ID: 0, Pos: pos, Kind: expr.Kind, Type: None }
-    case StringExpr(_) => ast2.Expr { ID: 0, Pos: pos, Kind: expr.Kind, Type: None }
-    case RuneExpr(_) => ast2.Expr { ID: 0, Pos: pos, Kind: expr.Kind, Type: None }
-    case BoolExpr(_) => ast2.Expr { ID: 0, Pos: pos, Kind: expr.Kind, Type: None }
-    case UnitExpr => ast2.Expr { ID: 0, Pos: pos, Kind: expr.Kind, Type: None }
+    case IdentExpr(_) => ast2.Expr { ID: 0, Pos: pos, Span: ast2.SourceSpan { Start: pos, End: pos }, Kind: expr.Kind, Type: None }
+    case NumberExpr(_) => ast2.Expr { ID: 0, Pos: pos, Span: ast2.SourceSpan { Start: pos, End: pos }, Kind: expr.Kind, Type: None }
+    case StringExpr(_) => ast2.Expr { ID: 0, Pos: pos, Span: ast2.SourceSpan { Start: pos, End: pos }, Kind: expr.Kind, Type: None }
+    case RuneExpr(_) => ast2.Expr { ID: 0, Pos: pos, Span: ast2.SourceSpan { Start: pos, End: pos }, Kind: expr.Kind, Type: None }
+    case BoolExpr(_) => ast2.Expr { ID: 0, Pos: pos, Span: ast2.SourceSpan { Start: pos, End: pos }, Kind: expr.Kind, Type: None }
+    case UnitExpr => ast2.Expr { ID: 0, Pos: pos, Span: ast2.SourceSpan { Start: pos, End: pos }, Kind: expr.Kind, Type: None }
     case TupleExpr(items) =>
       ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.TupleExpr(items.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: None }
     case CallExpr(callee, typeArgs, args) =>
@@ -108,7 +120,7 @@ func annotateExprSource(expr: ast2.Expr, sourceName: String) -> ast2.Expr
     case BlockExpr(stmts) =>
       ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.BlockExpr(stmts.Map(func(s: ast2.Stmt) -> ast2.Stmt annotateStmtSource(s, sourceName) end)), Type: None }
     case SwitchExpr(target, cases, targetType) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.SwitchExpr(annotateExprSource(target, sourceName), cases.Map(func(c: ast2.SwitchCase) -> ast2.SwitchCase ast2.SwitchCase { Pattern: c.Pattern, Body: annotateExprSource(c.Body, sourceName) } end), targetType), Type: None }
+      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.SwitchExpr(annotateExprSource(target, sourceName), cases.Map(func(c: ast2.SwitchCase) -> ast2.SwitchCase ast2.SwitchCase { Pattern: c.Pattern, PatternSpan: c.PatternSpan, Body: annotateExprSource(c.Body, sourceName), BodySpan: c.BodySpan, Span: c.Span } end), targetType), Type: None }
     case FuncLitExpr(params, ret, body) =>
       ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.FuncLitExpr(params, ret, annotateExprSource(body, sourceName)), Type: None }
     case SliceLitExpr(items) =>
@@ -198,9 +210,9 @@ end
 func packageLetDecl() -> ps.Parser[ast2.Decl]
   ps.PBind(kw("let"), func(_: String) -> ps.Parser[ast2.Decl]
     ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Decl]
-      ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), typeExpr()))), func(typ: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Decl]
+      ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ: Option[Spanned[ast2.TypeExpr]]) -> ps.Parser[ast2.Decl]
         ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Decl]
-          ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Decl ast2.Decl.LetDecl(ast2.Bind { Name: name, Type: typ, Value: value }) end)
+          ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Decl ast2.Decl.LetDecl(ast2.Bind { Name: name, Type: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr item.Value end), TypeSpan: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan item.Span end).UnwrapOr(emptySpan()), Value: value }) end)
         end)
       end)
     end)
@@ -210,9 +222,9 @@ end
 func packageVarDecl() -> ps.Parser[ast2.Decl]
   ps.PBind(kw("var"), func(_: String) -> ps.Parser[ast2.Decl]
     ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Decl]
-      ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), typeExpr()))), func(typ: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Decl]
+      ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ: Option[Spanned[ast2.TypeExpr]]) -> ps.Parser[ast2.Decl]
         ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Decl]
-          ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Decl ast2.Decl.VarDecl(ast2.Bind { Name: name, Type: typ, Value: value }) end)
+          ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Decl ast2.Decl.VarDecl(ast2.Bind { Name: name, Type: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr item.Value end), TypeSpan: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan item.Span end).UnwrapOr(emptySpan()), Value: value }) end)
         end)
       end)
     end)
@@ -330,7 +342,7 @@ func funcSig() -> ps.Parser[ast2.FuncSig]
     let r = funcSigCore()(state)
     if r.Ok then
       let sig = r.Value
-      ps.Reply[ast2.FuncSig] { Ok: true, Consumed: r.Consumed, Value: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }, Name: sig.Name, TypeParams: sig.TypeParams, Params: sig.Params, Ret: sig.Ret, Using: sig.Using }, State: r.State, Error: r.Error }
+      ps.Reply[ast2.FuncSig] { Ok: true, Consumed: r.Consumed, Value: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }, Name: sig.Name, TypeParams: sig.TypeParams, Params: sig.Params, Ret: sig.Ret, RetSpan: sig.RetSpan, Using: sig.Using }, State: r.State, Error: r.Error }
     else
       r
     end
@@ -342,9 +354,9 @@ func funcSigCore() -> ps.Parser[ast2.FuncSig]
     ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.FuncSig]
       ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[ast2.FuncSig]
         ps.PBind(paren(ps.PSepBy(param(), sym(","))), func(params: Slice[ast2.Param]) -> ps.Parser[ast2.FuncSig]
-          ps.PBind(ps.POptional(ps.PThen(sym("->"), typeExpr())), func(ret: Option[ast2.TypeExpr]) -> ps.Parser[ast2.FuncSig]
+          ps.PBind(ps.POptional(ps.PThen(sym("->"), spannedTypeExpr())), func(ret: Option[Spanned[ast2.TypeExpr]]) -> ps.Parser[ast2.FuncSig]
             ps.PMap(usingClause(), func(constraints: Slice[ast2.Constraint]) -> ast2.FuncSig
-              ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, Name: name, TypeParams: tps, Params: params, Ret: ret, Using: constraints }
+              ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, Name: name, TypeParams: tps, Params: params, Ret: ret.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr item.Value end), RetSpan: ret.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan item.Span end).UnwrapOr(ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }), Using: constraints }
             end)
           end)
         end)
@@ -354,19 +366,31 @@ func funcSigCore() -> ps.Parser[ast2.FuncSig]
 end
 
 func fieldDecl() -> ps.Parser[ast2.Field]
+  func(state: ps.State) -> ps.Reply[ast2.Field]
+    let reply = fieldDeclCore()(state)
+    if reply.Ok then
+      let value = reply.Value
+      ps.Reply[ast2.Field] { Ok: true, Consumed: reply.Consumed, Value: ast2.Field { Name: value.Name, Type: value.Type, TypeSpan: value.TypeSpan, Tag: value.Tag, Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }, End: ast2.SourcePos { SourceName: "", Line: reply.State.Position.Line, Column: reply.State.Position.Column } } }, State: reply.State, Error: reply.Error }
+    else
+      reply
+    end
+  end
+end
+
+func fieldDeclCore() -> ps.Parser[ast2.Field]
   ps.PChoice([
     ps.PAttempt(ps.PBind(kw("embed"), func(_: String) -> ps.Parser[ast2.Field]
-      ps.PBind(typeExpr(), func(typ: ast2.TypeExpr) -> ps.Parser[ast2.Field]
+      ps.PBind(spannedTypeExpr(), func(typ: Spanned[ast2.TypeExpr]) -> ps.Parser[ast2.Field]
         ps.PMap(ps.POptional(stringLiteral()), func(tag: Option[String]) -> ast2.Field
-          ast2.Field { Name: "embed", Type: typ, Tag: tag }
+          ast2.Field { Name: "embed", Type: typ.Value, TypeSpan: typ.Span, Tag: tag }
         end)
       end)
     end)),
     ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Field]
     ps.PBind(sym(":"), func(_: String) -> ps.Parser[ast2.Field]
-      ps.PBind(typeExpr(), func(typ: ast2.TypeExpr) -> ps.Parser[ast2.Field]
+      ps.PBind(spannedTypeExpr(), func(typ: Spanned[ast2.TypeExpr]) -> ps.Parser[ast2.Field]
         ps.PMap(ps.POptional(stringLiteral()), func(tag: Option[String]) -> ast2.Field
-          ast2.Field { Name: name, Type: typ, Tag: tag }
+          ast2.Field { Name: name, Type: typ.Value, TypeSpan: typ.Span, Tag: tag }
         end)
       end)
     end)
@@ -375,33 +399,46 @@ func fieldDecl() -> ps.Parser[ast2.Field]
 end
 
 func variantDecl() -> ps.Parser[ast2.Variant]
+  func(state: ps.State) -> ps.Reply[ast2.Variant]
+    let reply = variantDeclCore()(state)
+    if reply.Ok then
+      let value = reply.Value
+      ps.Reply[ast2.Variant] { Ok: true, Consumed: reply.Consumed, Value: ast2.Variant { Name: value.Name, Fields: value.Fields, FieldSpans: value.FieldSpans, Named: value.Named, Names: value.Names, Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }, End: ast2.SourcePos { SourceName: "", Line: reply.State.Position.Line, Column: reply.State.Position.Column } } }, State: reply.State, Error: reply.Error }
+    else
+      reply
+    end
+  end
+end
+
+func variantDeclCore() -> ps.Parser[ast2.Variant]
   ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Variant]
     ps.PChoice([
       ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Variant]
-        ps.PBind(sepByEnd(namedVariantField(), sym(",")), func(fields: Slice[(String, ast2.TypeExpr)]) -> ps.Parser[ast2.Variant]
+        ps.PBind(sepByEnd(namedVariantField(), sym(",")), func(fields: Slice[(String, Spanned[ast2.TypeExpr])]) -> ps.Parser[ast2.Variant]
           ps.PThen(sym("}"), ps.PPure(ast2.Variant {
             Name: name,
-            Fields: fields.Map(func(f: (String, ast2.TypeExpr)) -> ast2.TypeExpr f.F1 end),
+            Fields: fields.Map(func(f: (String, Spanned[ast2.TypeExpr])) -> ast2.TypeExpr f.F1.Value end),
+            FieldSpans: fields.Map(func(f: (String, Spanned[ast2.TypeExpr])) -> ast2.SourceSpan f.F1.Span end),
             Named: true,
-            Names: fields.Map(func(f: (String, ast2.TypeExpr)) -> String f.F0 end),
+            Names: fields.Map(func(f: (String, Spanned[ast2.TypeExpr])) -> String f.F0 end),
           }))
         end)
       end),
-      ps.PMap(ps.POptional(paren(ps.PSepBy(typeExpr(), sym(",")))), func(fields: Option[Slice[ast2.TypeExpr]]) -> ast2.Variant
+      ps.PMap(ps.POptional(paren(ps.PSepBy(spannedTypeExpr(), sym(",")))), func(fields: Option[Slice[Spanned[ast2.TypeExpr]]]) -> ast2.Variant
         let actual = switch fields
-          case Some(items) => items
+          case Some(items) => items.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr item.Value end)
           case None => []
         end
-        ast2.Variant { Name: name, Fields: actual, Named: false, Names: [] as Slice[String] }
+        ast2.Variant { Name: name, Fields: actual, FieldSpans: switch fields case Some(items) => items.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan item.Span end) case None => [] end, Named: false, Names: [] as Slice[String] }
       end),
     ])
   end)
 end
 
-func namedVariantField() -> ps.Parser[(String, ast2.TypeExpr)]
-  ps.PBind(identifier(), func(fname: String) -> ps.Parser[(String, ast2.TypeExpr)]
-    ps.PBind(sym(":"), func(_: String) -> ps.Parser[(String, ast2.TypeExpr)]
-      ps.PMap(typeExpr(), func(ftype: ast2.TypeExpr) -> (String, ast2.TypeExpr)
+func namedVariantField() -> ps.Parser[(String, Spanned[ast2.TypeExpr])]
+  ps.PBind(identifier(), func(fname: String) -> ps.Parser[(String, Spanned[ast2.TypeExpr])]
+    ps.PBind(sym(":"), func(_: String) -> ps.Parser[(String, Spanned[ast2.TypeExpr])]
+      ps.PMap(spannedTypeExpr(), func(ftype: Spanned[ast2.TypeExpr]) -> (String, Spanned[ast2.TypeExpr])
         (fname, ftype)
       end)
     end)
@@ -409,10 +446,22 @@ func namedVariantField() -> ps.Parser[(String, ast2.TypeExpr)]
 end
 
 func param() -> ps.Parser[ast2.Param]
+  func(state: ps.State) -> ps.Reply[ast2.Param]
+    let reply = paramCore()(state)
+    if reply.Ok then
+      let value = reply.Value
+      ps.Reply[ast2.Param] { Ok: true, Consumed: reply.Consumed, Value: ast2.Param { Name: value.Name, Type: value.Type, TypeSpan: value.TypeSpan, Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }, End: ast2.SourcePos { SourceName: "", Line: reply.State.Position.Line, Column: reply.State.Position.Column } } }, State: reply.State, Error: reply.Error }
+    else
+      reply
+    end
+  end
+end
+
+func paramCore() -> ps.Parser[ast2.Param]
   ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Param]
     ps.PBind(sym(":"), func(_: String) -> ps.Parser[ast2.Param]
-      ps.PMap(typeExpr(), func(typ: ast2.TypeExpr) -> ast2.Param
-        ast2.Param { Name: name, Type: typ }
+      ps.PMap(spannedTypeExpr(), func(typ: Spanned[ast2.TypeExpr]) -> ast2.Param
+        ast2.Param { Name: name, Type: typ.Value, TypeSpan: typ.Span }
       end)
     end)
   end)
@@ -527,8 +576,10 @@ end
 func blockItems(stopParser: ps.Parser[String], start: ps.State, cur: ps.State, items: Slice[ast2.Stmt]) -> ps.Reply[ast2.Expr]
   let stop = ps.PLookAhead(stopParser)(cur)
   if stop.Ok then
+    let block = exprAt(start, ast2.ExprKind.BlockExpr(items))
+    let blockSpan = ast2.SourceSpan { Start: block.Span.Start, End: ast2.SourcePos { SourceName: "", Line: cur.Position.Line, Column: cur.Position.Column } }
     ps.Reply[ast2.Expr] {
-      Ok: true, Consumed: cur.Index != start.Index, Value: exprAt(start, ast2.ExprKind.BlockExpr(items)),
+      Ok: true, Consumed: cur.Index != start.Index, Value: ast2.Expr { ID: block.ID, Pos: block.Pos, Span: blockSpan, Kind: block.Kind, Type: block.Type },
       State: cur, Error: ps.EmptyError(cur.Position)
     }
   else
@@ -610,10 +661,10 @@ end
 func letrecBinding() -> ps.Parser[ast2.LetRecBind]
   ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.LetRecBind]
     ps.PBind(sym(":"), func(_: String) -> ps.Parser[ast2.LetRecBind]
-      ps.PBind(typeExpr(), func(typ: ast2.TypeExpr) -> ps.Parser[ast2.LetRecBind]
+      ps.PBind(spannedTypeExpr(), func(typ: Spanned[ast2.TypeExpr]) -> ps.Parser[ast2.LetRecBind]
         ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.LetRecBind]
           ps.PMap(expr(), func(value: ast2.Expr) -> ast2.LetRecBind
-            ast2.LetRecBind { Name: name, Type: typ, Value: value }
+            ast2.LetRecBind { Name: name, Type: typ.Value, TypeSpan: typ.Span, Value: value }
           end)
         end)
       end)
@@ -643,10 +694,10 @@ end
 
 func namedLetStmt() -> ps.Parser[ast2.Stmt]
   ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Stmt]
-          ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), typeExpr()))), func(typ: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Stmt]
+          ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ: Option[Spanned[ast2.TypeExpr]]) -> ps.Parser[ast2.Stmt]
       ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
         ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
-          ast2.Stmt.LetStmt(ast2.Bind { Name: name, Type: typ, Value: value })
+          ast2.Stmt.LetStmt(ast2.Bind { Name: name, Type: unwrapTypeOption(typ), TypeSpan: typeOptionSpan(typ), Value: value })
         end)
       end)
     end)
@@ -680,10 +731,10 @@ end
 func varStmt() -> ps.Parser[ast2.Stmt]
   ps.PBind(kw("var"), func(_: String) -> ps.Parser[ast2.Stmt]
     ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Stmt]
-      ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), typeExpr()))), func(typ: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Stmt]
+      ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ: Option[Spanned[ast2.TypeExpr]]) -> ps.Parser[ast2.Stmt]
         ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
           ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
-            ast2.Stmt.VarStmt(ast2.Bind { Name: name, Type: typ, Value: value })
+            ast2.Stmt.VarStmt(ast2.Bind { Name: name, Type: unwrapTypeOption(typ), TypeSpan: typeOptionSpan(typ), Value: value })
           end)
         end)
       end)
@@ -774,17 +825,31 @@ func switchExpr() -> ps.Parser[ast2.Expr]
 end
 
 func switchCase() -> ps.Parser[ast2.SwitchCase]
+  func(state: ps.State) -> ps.Reply[ast2.SwitchCase]
+    let reply = switchCaseCore()(state)
+    if reply.Ok then
+      let value = reply.Value
+      ps.Reply[ast2.SwitchCase] { Ok: true, Consumed: reply.Consumed, Value: ast2.SwitchCase { Pattern: value.Pattern, PatternSpan: value.PatternSpan, Body: value.Body, BodySpan: value.BodySpan, Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }, End: ast2.SourcePos { SourceName: "", Line: reply.State.Position.Line, Column: reply.State.Position.Column } } }, State: reply.State, Error: reply.Error }
+    else
+      reply
+    end
+  end
+end
+
+func switchCaseCore() -> ps.Parser[ast2.SwitchCase]
   ps.PBind(kw("case"), func(_: String) -> ps.Parser[ast2.SwitchCase]
-    ps.PBind(pattern(), func(pat: ast2.Pattern) -> ps.Parser[ast2.SwitchCase]
+    ps.PBind(spannedPattern(), func(pat: Spanned[ast2.Pattern]) -> ps.Parser[ast2.SwitchCase]
       ps.PChoice([
         ps.PBind(sym("=>"), func(_: String) -> ps.Parser[ast2.SwitchCase]
           ps.PMap(blockUntil(ps.PChoice([kw("case"), kw("end")])), func(body: ast2.Expr) -> ast2.SwitchCase
-            ast2.SwitchCase { Pattern: pat, Body: bodyExprFromBlock(body) }
+            let bodyExpr = bodyExprFromBlock(body)
+            ast2.SwitchCase { Pattern: pat.Value, PatternSpan: pat.Span, Body: bodyExpr, BodySpan: bodyExpr.Span, Span: emptySpan() }
           end)
         end),
         ps.PBind(kw("then"), func(_: String) -> ps.Parser[ast2.SwitchCase]
           ps.PBind(blockUntil(kw("end")), func(body: ast2.Expr) -> ps.Parser[ast2.SwitchCase]
-            ps.PThen(kw("end"), ps.PPure(ast2.SwitchCase { Pattern: pat, Body: bodyExprFromBlock(body) }))
+            let bodyExpr = bodyExprFromBlock(body)
+            ps.PThen(kw("end"), ps.PPure(ast2.SwitchCase { Pattern: pat.Value, PatternSpan: pat.Span, Body: bodyExpr, BodySpan: bodyExpr.Span, Span: emptySpan() }))
           end)
         end),
       ])

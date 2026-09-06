@@ -20,6 +20,20 @@ type ParseError struct {
 	Expected []string
 	Message  string
 }
+type SourceSpan struct {
+	Start Position
+	End   Position
+}
+type PositionedToken struct {
+	Kind string
+	Raw  string
+	Span SourceSpan
+}
+type PositionedTrivia struct {
+	Kind string
+	Raw  string
+	Span SourceSpan
+}
 type Reply[A any] struct {
 	Ok       bool
 	Consumed bool

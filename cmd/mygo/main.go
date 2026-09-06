@@ -1,13 +1,16 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/mygo-lang/mygo/internal/mygo/compiler"
+	"github.com/mygo-lang/mygo/internal/mygo/formatter"
 )
 
 func main() {
@@ -44,6 +47,11 @@ parsedFlags:
 	}
 
 	switch args[0] {
+	case "fmt":
+		if err := runFmt(args[1:]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	case "sync":
 		root := "."
 		if len(args) > 1 {
@@ -116,10 +124,96 @@ parsedFlags:
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: mygo [--bootstrap] [--bootstrap-timing] [--no-prelude] <sync|build> [path|go build args...]")
+	fmt.Fprintln(os.Stderr, "usage: mygo [--bootstrap] [--bootstrap-timing] [--no-prelude] <sync|build|fmt> [path|go build args...]")
 	fmt.Fprintln(os.Stderr, "  --no-prelude  disable prelude auto-import (use when compiling prelude itself)")
 	fmt.Fprintln(os.Stderr, "  --bootstrap   use parser2, typeinference2, and codegen2")
 	fmt.Fprintln(os.Stderr, "  --bootstrap-timing  print bootstrap stage durations to standard error")
+}
+
+func runFmt(args []string) error {
+	check := false
+	var paths []string
+	for _, arg := range args {
+		if arg == "--check" {
+			check = true
+		} else {
+			paths = append(paths, arg)
+		}
+	}
+	if len(paths) == 0 {
+		data, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			return err
+		}
+		formatted, err := formatter.Format("<stdin>", string(data))
+		if err != nil {
+			return err
+		}
+		_, err = os.Stdout.WriteString(formatted)
+		return err
+	}
+	changed := false
+	var failures []error
+	for _, path := range paths {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			failures = append(failures, fmt.Errorf("%s: %w", path, err))
+			continue
+		}
+		formatted, err := formatter.Format(path, string(data))
+		if err != nil {
+			failures = append(failures, err)
+			continue
+		}
+		if string(data) == formatted {
+			continue
+		}
+		changed = true
+		if check {
+			fmt.Fprintln(os.Stdout, path)
+			continue
+		}
+		if err := writeFormattedFile(path, []byte(formatted)); err != nil {
+			failures = append(failures, fmt.Errorf("%s: %w", path, err))
+			continue
+		}
+	}
+	if len(failures) > 0 {
+		return errors.Join(failures...)
+	}
+	if check && changed {
+		return fmt.Errorf("files are not formatted")
+	}
+	return nil
+}
+
+func writeFormattedFile(path string, data []byte) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".mygo-fmt-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if err := tmp.Chmod(info.Mode().Perm()); err != nil {
+		tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
 }
 
 func must(err error) {

@@ -732,7 +732,7 @@ func inferTypedSwitchCasesChecked(cases: Slice[ast2.SwitchCase], targetType: ast
       case None => Err("switch requires at least one case")
     end
   else
-    let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
+    let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, PatternSpan: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }, Body: ast2.EmptyExpr(), BodySpan: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }, Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } } })
     let pattern = resolveBareVariantPattern(env, targetType, current.Pattern)
     # Bind call scrutinees to locals: the codegen re-evaluates a switch
     # scrutinee per pattern arm, so switching directly on a call such as
@@ -747,7 +747,7 @@ func inferTypedSwitchCasesChecked(cases: Slice[ast2.SwitchCase], targetType: ast
           case Err(msg) => Err(msg)
           case Ok(eir) then
             let value = eir.Result
-            let typedOut = out.Append(ast2.SwitchCase { Pattern: pattern, Body: eir.Expr })
+      let typedOut = out.Append(ast2.SwitchCase { Pattern: pattern, PatternSpan: current.PatternSpan, Body: eir.Expr, BodySpan: current.BodySpan, Span: current.Span })
             switch resultType
               case None => inferTypedSwitchCases(common2.SliceDrop(cases, 1), targetType, env, value.State, composeSubst(value.Subst, subst), Some(value.Type), Some(current.Body.Pos), appendPredicates(predicates, value.Predicates), typedOut)
               case Some(previous) =>

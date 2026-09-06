@@ -7,6 +7,20 @@ import ps "github.com/mygo-lang/mygo/lib/text/parsec"
 import "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import . "github.com/mygo-lang/mygo/prelude"
 
+func emptySpan() ast2.SourceSpan {
+	return ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}
+}
+func unwrapTypeOption(value Option[Spanned[ast2.TypeExpr]]) Option[ast2.TypeExpr] {
+	return MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(value, func(item Spanned[ast2.TypeExpr]) ast2.TypeExpr {
+		return item.Value
+	})
+}
+func typeOptionSpan(value Option[Spanned[ast2.TypeExpr]]) ast2.SourceSpan {
+	return MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(value, func(item Spanned[ast2.TypeExpr]) ast2.SourceSpan {
+		return item.Span
+	}), emptySpan())
+}
+
 type InlineGoBinding interface {
 	isInlineGoBinding()
 }
@@ -86,7 +100,7 @@ func emptyExpr() ast2.Expr {
 	return ast2.EmptyExpr()
 }
 func exprWithPos(pos ast2.SourcePos, kind ast2.ExprKind) ast2.Expr {
-	return ast2.Expr{ID: 0, Pos: pos, Kind: kind, Type: None[ast2.MonoType]()}
+	return ast2.Expr{ID: 0, Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}, Kind: kind, Type: None[ast2.MonoType]()}
 }
 func exprAt(state ps.State, kind ast2.ExprKind) ast2.Expr {
 	return exprWithPos(sourcePos(state), kind)
@@ -123,22 +137,22 @@ func annotateExprSource(expr ast2.Expr, sourceName string) ast2.Expr {
 	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 ast2.Expr
 	if _, ok := __mygo_expr_0.(ast2.ExprKind__IdentExpr); ok {
-		__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+		__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 	} else {
 		if _, ok := __mygo_expr_0.(ast2.ExprKind__NumberExpr); ok {
-			__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+			__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 		} else {
 			if _, ok := __mygo_expr_0.(ast2.ExprKind__StringExpr); ok {
-				__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+				__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 			} else {
 				if _, ok := __mygo_expr_0.(ast2.ExprKind__RuneExpr); ok {
-					__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+					__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 				} else {
 					if _, ok := __mygo_expr_0.(ast2.ExprKind__BoolExpr); ok {
-						__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+						__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 					} else {
 						if _, ok := __mygo_expr_0.(ast2.ExprKind__UnitExpr); ok {
-							__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+							__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}, Kind: expr.Kind, Type: None[ast2.MonoType]()}
 						} else {
 							if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ast2.ExprKind__TupleExpr); ok {
 								__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__TupleExpr__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_17.F0, func(e_3 ast2.Expr) ast2.Expr {
@@ -169,7 +183,7 @@ func annotateExprSource(expr ast2.Expr, sourceName string) ast2.Expr {
 													} else {
 														if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ast2.ExprKind__SwitchExpr); ok {
 															__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__SwitchExpr__Ctor(annotateExprSource(__mygo_match___mygo_expr_10.F0, sourceName), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_10.F1, func(c ast2.SwitchCase) ast2.SwitchCase {
-																return ast2.SwitchCase{Pattern: c.Pattern, Body: annotateExprSource(c.Body, sourceName)}
+																return ast2.SwitchCase{Pattern: c.Pattern, PatternSpan: c.PatternSpan, Body: annotateExprSource(c.Body, sourceName), BodySpan: c.BodySpan, Span: c.Span}
 															}), __mygo_match___mygo_expr_10.F2), Type: None[ast2.MonoType]()}
 														} else {
 															if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ast2.ExprKind__FuncLitExpr); ok {
@@ -355,10 +369,14 @@ func buildDeclParser() ps.Parser[ast2.Decl] {
 func packageLetDecl() ps.Parser[ast2.Decl] {
 	return ps.PBind(kw("let"), func(_ string) ps.Parser[ast2.Decl] {
 		return ps.PBind(identifier(), func(name string) ps.Parser[ast2.Decl] {
-			return ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), typeExpr()))), func(typ Option[ast2.TypeExpr]) ps.Parser[ast2.Decl] {
+			return ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ Option[Spanned[ast2.TypeExpr]]) ps.Parser[ast2.Decl] {
 				return ps.PBind(sym("="), func(__1 string) ps.Parser[ast2.Decl] {
 					return ps.PMap(expr(), func(value ast2.Expr) ast2.Decl {
-						return ast2.Decl__LetDecl__Ctor(ast2.Bind{Name: name, Type: typ, Value: value})
+						return ast2.Decl__LetDecl__Ctor(ast2.Bind{Name: name, Type: MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(typ, func(item Spanned[ast2.TypeExpr]) ast2.TypeExpr {
+							return item.Value
+						}), TypeSpan: MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(typ, func(item_1 Spanned[ast2.TypeExpr]) ast2.SourceSpan {
+							return item_1.Span
+						}), emptySpan()), Value: value})
 					})
 				})
 			})
@@ -368,10 +386,14 @@ func packageLetDecl() ps.Parser[ast2.Decl] {
 func packageVarDecl() ps.Parser[ast2.Decl] {
 	return ps.PBind(kw("var"), func(_ string) ps.Parser[ast2.Decl] {
 		return ps.PBind(identifier(), func(name string) ps.Parser[ast2.Decl] {
-			return ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), typeExpr()))), func(typ Option[ast2.TypeExpr]) ps.Parser[ast2.Decl] {
+			return ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ Option[Spanned[ast2.TypeExpr]]) ps.Parser[ast2.Decl] {
 				return ps.PBind(sym("="), func(__1 string) ps.Parser[ast2.Decl] {
 					return ps.PMap(expr(), func(value ast2.Expr) ast2.Decl {
-						return ast2.Decl__VarDecl__Ctor(ast2.Bind{Name: name, Type: typ, Value: value})
+						return ast2.Decl__VarDecl__Ctor(ast2.Bind{Name: name, Type: MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(typ, func(item Spanned[ast2.TypeExpr]) ast2.TypeExpr {
+							return item.Value
+						}), TypeSpan: MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(typ, func(item_1 Spanned[ast2.TypeExpr]) ast2.SourceSpan {
+							return item_1.Span
+						}), emptySpan()), Value: value})
 					})
 				})
 			})
@@ -519,7 +541,7 @@ func funcSig() ps.Parser[ast2.FuncSig] {
 		r := funcSigCore()(state)
 		if r.Ok {
 			sig := r.Value
-			return ps.Reply[ast2.FuncSig]{Ok: true, Consumed: r.Consumed, Value: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: state.Position.Line, Column: state.Position.Column}, Name: sig.Name, TypeParams: sig.TypeParams, Params: sig.Params, Ret: sig.Ret, Using: sig.Using}, State: r.State, Error: r.Error}
+			return ps.Reply[ast2.FuncSig]{Ok: true, Consumed: r.Consumed, Value: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: state.Position.Line, Column: state.Position.Column}, Name: sig.Name, TypeParams: sig.TypeParams, Params: sig.Params, Ret: sig.Ret, RetSpan: sig.RetSpan, Using: sig.Using}, State: r.State, Error: r.Error}
 		} else {
 			return r
 		}
@@ -530,9 +552,13 @@ func funcSigCore() ps.Parser[ast2.FuncSig] {
 		return ps.PBind(identifier(), func(name string) ps.Parser[ast2.FuncSig] {
 			return ps.PBind(typeParamList(), func(tps []string) ps.Parser[ast2.FuncSig] {
 				return ps.PBind(paren(ps.PSepBy(param(), sym(","))), func(params []ast2.Param) ps.Parser[ast2.FuncSig] {
-					return ps.PBind(ps.POptional(ps.PThen(sym("->"), typeExpr())), func(ret Option[ast2.TypeExpr]) ps.Parser[ast2.FuncSig] {
+					return ps.PBind(ps.POptional(ps.PThen(sym("->"), spannedTypeExpr())), func(ret Option[Spanned[ast2.TypeExpr]]) ps.Parser[ast2.FuncSig] {
 						return ps.PMap(usingClause(), func(constraints []ast2.Constraint) ast2.FuncSig {
-							return ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 1, Column: 1}, Name: name, TypeParams: tps, Params: params, Ret: ret, Using: constraints}
+							return ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 1, Column: 1}, Name: name, TypeParams: tps, Params: params, Ret: MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(ret, func(item Spanned[ast2.TypeExpr]) ast2.TypeExpr {
+								return item.Value
+							}), RetSpan: MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(ret, func(item_1 Spanned[ast2.TypeExpr]) ast2.SourceSpan {
+								return item_1.Span
+							}), ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}), Using: constraints}
 						})
 					})
 				})
@@ -541,85 +567,136 @@ func funcSigCore() ps.Parser[ast2.FuncSig] {
 	})
 }
 func fieldDecl() ps.Parser[ast2.Field] {
+	return func(state ps.State) ps.Reply[ast2.Field] {
+		reply := fieldDeclCore()(state)
+		if reply.Ok {
+			value := reply.Value
+			return ps.Reply[ast2.Field]{Ok: true, Consumed: reply.Consumed, Value: ast2.Field{Name: value.Name, Type: value.Type, TypeSpan: value.TypeSpan, Tag: value.Tag, Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: state.Position.Line, Column: state.Position.Column}, End: ast2.SourcePos{SourceName: "", Line: reply.State.Position.Line, Column: reply.State.Position.Column}}}, State: reply.State, Error: reply.Error}
+		} else {
+			return reply
+		}
+	}
+}
+func fieldDeclCore() ps.Parser[ast2.Field] {
 	return ps.PChoice([]func(ps.State) ps.Reply[ast2.Field]{ps.PAttempt(ps.PBind(kw("embed"), func(_ string) ps.Parser[ast2.Field] {
-		return ps.PBind(typeExpr(), func(typ ast2.TypeExpr) ps.Parser[ast2.Field] {
+		return ps.PBind(spannedTypeExpr(), func(typ Spanned[ast2.TypeExpr]) ps.Parser[ast2.Field] {
 			return ps.PMap(ps.POptional(stringLiteral()), func(tag Option[string]) ast2.Field {
-				return ast2.Field{Name: "embed", Type: typ, Tag: tag}
+				return ast2.Field{Name: "embed", Type: typ.Value, TypeSpan: typ.Span, Tag: tag}
 			})
 		})
 	})), ps.PBind(identifier(), func(name string) ps.Parser[ast2.Field] {
 		return ps.PBind(sym(":"), func(__1 string) ps.Parser[ast2.Field] {
-			return ps.PBind(typeExpr(), func(typ_1 ast2.TypeExpr) ps.Parser[ast2.Field] {
+			return ps.PBind(spannedTypeExpr(), func(typ_1 Spanned[ast2.TypeExpr]) ps.Parser[ast2.Field] {
 				return ps.PMap(ps.POptional(stringLiteral()), func(tag_1 Option[string]) ast2.Field {
-					return ast2.Field{Name: name, Type: typ_1, Tag: tag_1}
+					return ast2.Field{Name: name, Type: typ_1.Value, TypeSpan: typ_1.Span, Tag: tag_1}
 				})
 			})
 		})
 	})})
 }
 func variantDecl() ps.Parser[ast2.Variant] {
+	return func(state ps.State) ps.Reply[ast2.Variant] {
+		reply := variantDeclCore()(state)
+		if reply.Ok {
+			value := reply.Value
+			return ps.Reply[ast2.Variant]{Ok: true, Consumed: reply.Consumed, Value: ast2.Variant{Name: value.Name, Fields: value.Fields, FieldSpans: value.FieldSpans, Named: value.Named, Names: value.Names, Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: state.Position.Line, Column: state.Position.Column}, End: ast2.SourcePos{SourceName: "", Line: reply.State.Position.Line, Column: reply.State.Position.Column}}}, State: reply.State, Error: reply.Error}
+		} else {
+			return reply
+		}
+	}
+}
+func variantDeclCore() ps.Parser[ast2.Variant] {
 	return ps.PBind(identifier(), func(name string) ps.Parser[ast2.Variant] {
 		return ps.PChoice([]func(ps.State) ps.Reply[ast2.Variant]{ps.PBind(sym("{"), func(_ string) ps.Parser[ast2.Variant] {
 			return ps.PBind(sepByEnd(namedVariantField(), sym(",")), func(fields []struct {
 				F0 string
-				F1 ast2.TypeExpr
+				F1 Spanned[ast2.TypeExpr]
 			}) ps.Parser[ast2.Variant] {
 				return ps.PThen(sym("}"), ps.PPure(ast2.Variant{Name: name, Fields: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(fields, func(f struct {
 					F0 string
-					F1 ast2.TypeExpr
+					F1 Spanned[ast2.TypeExpr]
 				}) ast2.TypeExpr {
-					return f.F1
-				}), Named: true, Names: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(fields, func(f_1 struct {
+					return f.F1.Value
+				}), FieldSpans: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(fields, func(f_1 struct {
 					F0 string
-					F1 ast2.TypeExpr
+					F1 Spanned[ast2.TypeExpr]
+				}) ast2.SourceSpan {
+					return f_1.F1.Span
+				}), Named: true, Names: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(fields, func(f_2 struct {
+					F0 string
+					F1 Spanned[ast2.TypeExpr]
 				}) string {
-					return f_1.F0
+					return f_2.F0
 				})}))
 			})
-		}), ps.PMap(ps.POptional(paren(ps.PSepBy(typeExpr(), sym(",")))), func(fields_1 Option[[]ast2.TypeExpr]) ast2.Variant {
+		}), ps.PMap(ps.POptional(paren(ps.PSepBy(spannedTypeExpr(), sym(",")))), func(fields_1 Option[[]Spanned[ast2.TypeExpr]]) ast2.Variant {
 			var __mygo_expr_0 []ast2.TypeExpr
-			if __mygo_match___mygo_expr_1, ok := fields_1.(Option__Some[[]ast2.TypeExpr]); ok {
-				__mygo_expr_0 = __mygo_match___mygo_expr_1.F0
+			if __mygo_match___mygo_expr_1, ok := fields_1.(Option__Some[[]Spanned[ast2.TypeExpr]]); ok {
+				__mygo_expr_0 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_1.F0, func(item Spanned[ast2.TypeExpr]) ast2.TypeExpr {
+					return item.Value
+				})
 			} else {
-				if _, ok := fields_1.(Option__None[[]ast2.TypeExpr]); ok {
+				if _, ok := fields_1.(Option__None[[]Spanned[ast2.TypeExpr]]); ok {
 					__mygo_expr_0 = []ast2.TypeExpr{}
 				} else {
 				}
 			}
 			actual := __mygo_expr_0
-			return ast2.Variant{Name: name, Fields: actual, Named: false, Names: []string{}}
+			var __mygo_expr_2 []ast2.SourceSpan
+			if __mygo_match___mygo_expr_3, ok := fields_1.(Option__Some[[]Spanned[ast2.TypeExpr]]); ok {
+				__mygo_expr_2 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_3.F0, func(item_1 Spanned[ast2.TypeExpr]) ast2.SourceSpan {
+					return item_1.Span
+				})
+			} else {
+				if _, ok := fields_1.(Option__None[[]Spanned[ast2.TypeExpr]]); ok {
+					__mygo_expr_2 = []ast2.SourceSpan{}
+				} else {
+				}
+			}
+			return ast2.Variant{Name: name, Fields: actual, FieldSpans: __mygo_expr_2, Named: false, Names: []string{}}
 		})})
 	})
 }
 func namedVariantField() ps.Parser[struct {
 	F0 string
-	F1 ast2.TypeExpr
+	F1 Spanned[ast2.TypeExpr]
 }] {
 	return ps.PBind(identifier(), func(fname string) ps.Parser[struct {
 		F0 string
-		F1 ast2.TypeExpr
+		F1 Spanned[ast2.TypeExpr]
 	}] {
 		return ps.PBind(sym(":"), func(_ string) ps.Parser[struct {
 			F0 string
-			F1 ast2.TypeExpr
+			F1 Spanned[ast2.TypeExpr]
 		}] {
-			return ps.PMap(typeExpr(), func(ftype ast2.TypeExpr) struct {
+			return ps.PMap(spannedTypeExpr(), func(ftype Spanned[ast2.TypeExpr]) struct {
 				F0 string
-				F1 ast2.TypeExpr
+				F1 Spanned[ast2.TypeExpr]
 			} {
 				return struct {
 					F0 string
-					F1 ast2.TypeExpr
+					F1 Spanned[ast2.TypeExpr]
 				}{F0: fname, F1: ftype}
 			})
 		})
 	})
 }
 func param() ps.Parser[ast2.Param] {
+	return func(state ps.State) ps.Reply[ast2.Param] {
+		reply := paramCore()(state)
+		if reply.Ok {
+			value := reply.Value
+			return ps.Reply[ast2.Param]{Ok: true, Consumed: reply.Consumed, Value: ast2.Param{Name: value.Name, Type: value.Type, TypeSpan: value.TypeSpan, Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: state.Position.Line, Column: state.Position.Column}, End: ast2.SourcePos{SourceName: "", Line: reply.State.Position.Line, Column: reply.State.Position.Column}}}, State: reply.State, Error: reply.Error}
+		} else {
+			return reply
+		}
+	}
+}
+func paramCore() ps.Parser[ast2.Param] {
 	return ps.PBind(identifier(), func(name string) ps.Parser[ast2.Param] {
 		return ps.PBind(sym(":"), func(_ string) ps.Parser[ast2.Param] {
-			return ps.PMap(typeExpr(), func(typ ast2.TypeExpr) ast2.Param {
-				return ast2.Param{Name: name, Type: typ}
+			return ps.PMap(spannedTypeExpr(), func(typ Spanned[ast2.TypeExpr]) ast2.Param {
+				return ast2.Param{Name: name, Type: typ.Value, TypeSpan: typ.Span}
 			})
 		})
 	})
@@ -769,10 +846,10 @@ func letrecStmt() ps.Parser[ast2.Stmt] {
 func letrecBinding() ps.Parser[ast2.LetRecBind] {
 	return ps.PBind(identifier(), func(name string) ps.Parser[ast2.LetRecBind] {
 		return ps.PBind(sym(":"), func(_ string) ps.Parser[ast2.LetRecBind] {
-			return ps.PBind(typeExpr(), func(typ ast2.TypeExpr) ps.Parser[ast2.LetRecBind] {
+			return ps.PBind(spannedTypeExpr(), func(typ Spanned[ast2.TypeExpr]) ps.Parser[ast2.LetRecBind] {
 				return ps.PBind(sym("="), func(__1 string) ps.Parser[ast2.LetRecBind] {
 					return ps.PMap(expr(), func(value ast2.Expr) ast2.LetRecBind {
-						return ast2.LetRecBind{Name: name, Type: typ, Value: value}
+						return ast2.LetRecBind{Name: name, Type: typ.Value, TypeSpan: typ.Span, Value: value}
 					})
 				})
 			})
@@ -798,10 +875,10 @@ func letStmt() ps.Parser[ast2.Stmt] {
 }
 func namedLetStmt() ps.Parser[ast2.Stmt] {
 	return ps.PBind(identifier(), func(name string) ps.Parser[ast2.Stmt] {
-		return ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), typeExpr()))), func(typ Option[ast2.TypeExpr]) ps.Parser[ast2.Stmt] {
+		return ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ Option[Spanned[ast2.TypeExpr]]) ps.Parser[ast2.Stmt] {
 			return ps.PBind(sym("="), func(_ string) ps.Parser[ast2.Stmt] {
 				return ps.PMap(expr(), func(value ast2.Expr) ast2.Stmt {
-					return ast2.Stmt__LetStmt__Ctor(ast2.Bind{Name: name, Type: typ, Value: value})
+					return ast2.Stmt__LetStmt__Ctor(ast2.Bind{Name: name, Type: unwrapTypeOption(typ), TypeSpan: typeOptionSpan(typ), Value: value})
 				})
 			})
 		})
@@ -833,10 +910,10 @@ func lazyBindingPattern() ps.Parser[ast2.Pattern] {
 func varStmt() ps.Parser[ast2.Stmt] {
 	return ps.PBind(kw("var"), func(_ string) ps.Parser[ast2.Stmt] {
 		return ps.PBind(identifier(), func(name string) ps.Parser[ast2.Stmt] {
-			return ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), typeExpr()))), func(typ Option[ast2.TypeExpr]) ps.Parser[ast2.Stmt] {
+			return ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ Option[Spanned[ast2.TypeExpr]]) ps.Parser[ast2.Stmt] {
 				return ps.PBind(sym("="), func(__1 string) ps.Parser[ast2.Stmt] {
 					return ps.PMap(expr(), func(value ast2.Expr) ast2.Stmt {
-						return ast2.Stmt__VarStmt__Ctor(ast2.Bind{Name: name, Type: typ, Value: value})
+						return ast2.Stmt__VarStmt__Ctor(ast2.Bind{Name: name, Type: unwrapTypeOption(typ), TypeSpan: typeOptionSpan(typ), Value: value})
 					})
 				})
 			})
@@ -908,15 +985,28 @@ func switchExpr() ps.Parser[ast2.Expr] {
 	})
 }
 func switchCase() ps.Parser[ast2.SwitchCase] {
+	return func(state ps.State) ps.Reply[ast2.SwitchCase] {
+		reply := switchCaseCore()(state)
+		if reply.Ok {
+			value := reply.Value
+			return ps.Reply[ast2.SwitchCase]{Ok: true, Consumed: reply.Consumed, Value: ast2.SwitchCase{Pattern: value.Pattern, PatternSpan: value.PatternSpan, Body: value.Body, BodySpan: value.BodySpan, Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: state.Position.Line, Column: state.Position.Column}, End: ast2.SourcePos{SourceName: "", Line: reply.State.Position.Line, Column: reply.State.Position.Column}}}, State: reply.State, Error: reply.Error}
+		} else {
+			return reply
+		}
+	}
+}
+func switchCaseCore() ps.Parser[ast2.SwitchCase] {
 	return ps.PBind(kw("case"), func(_ string) ps.Parser[ast2.SwitchCase] {
-		return ps.PBind(pattern(), func(pat ast2.Pattern) ps.Parser[ast2.SwitchCase] {
+		return ps.PBind(spannedPattern(), func(pat Spanned[ast2.Pattern]) ps.Parser[ast2.SwitchCase] {
 			return ps.PChoice([]func(ps.State) ps.Reply[ast2.SwitchCase]{ps.PBind(sym("=>"), func(__1 string) ps.Parser[ast2.SwitchCase] {
 				return ps.PMap(blockUntil(ps.PChoice([]func(ps.State) ps.Reply[string]{kw("case"), kw("end")})), func(body ast2.Expr) ast2.SwitchCase {
-					return ast2.SwitchCase{Pattern: pat, Body: bodyExprFromBlock(body)}
+					bodyExpr := bodyExprFromBlock(body)
+					return ast2.SwitchCase{Pattern: pat.Value, PatternSpan: pat.Span, Body: bodyExpr, BodySpan: bodyExpr.Span, Span: emptySpan()}
 				})
 			}), ps.PBind(kw("then"), func(__2 string) ps.Parser[ast2.SwitchCase] {
 				return ps.PBind(blockUntil(kw("end")), func(body_1 ast2.Expr) ps.Parser[ast2.SwitchCase] {
-					return ps.PThen(kw("end"), ps.PPure(ast2.SwitchCase{Pattern: pat, Body: bodyExprFromBlock(body_1)}))
+					bodyExpr_1 := bodyExprFromBlock(body_1)
+					return ps.PThen(kw("end"), ps.PPure(ast2.SwitchCase{Pattern: pat.Value, PatternSpan: pat.Span, Body: bodyExpr_1, BodySpan: bodyExpr_1.Span, Span: emptySpan()}))
 				})
 			})})
 		})
@@ -1716,7 +1806,9 @@ func __mygo_mt_parser2_blockItems(__mygo_mt_p0 ps.Parser[string], __mygo_mt_p1 p
 		case 0:
 			stop := ps.PLookAhead(__mygo_mt_p0)(__mygo_mt_p2)
 			if stop.Ok {
-				return ps.Reply[ast2.Expr]{Ok: true, Consumed: __mygo_mt_p2.Index != __mygo_mt_p1.Index, Value: exprAt(__mygo_mt_p1, ast2.ExprKind__BlockExpr__Ctor(__mygo_mt_p3)), State: __mygo_mt_p2, Error: ps.EmptyError(__mygo_mt_p2.Position)}
+				block := exprAt(__mygo_mt_p1, ast2.ExprKind__BlockExpr__Ctor(__mygo_mt_p3))
+				blockSpan := ast2.SourceSpan{Start: block.Span.Start, End: ast2.SourcePos{SourceName: "", Line: __mygo_mt_p2.Position.Line, Column: __mygo_mt_p2.Position.Column}}
+				return ps.Reply[ast2.Expr]{Ok: true, Consumed: __mygo_mt_p2.Index != __mygo_mt_p1.Index, Value: ast2.Expr{ID: block.ID, Pos: block.Pos, Span: blockSpan, Kind: block.Kind, Type: block.Type}, State: __mygo_mt_p2, Error: ps.EmptyError(__mygo_mt_p2.Position)}
 			} else {
 				r := stmt()(__mygo_mt_p2)
 				if r.Ok {

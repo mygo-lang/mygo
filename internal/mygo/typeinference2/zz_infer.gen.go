@@ -6091,7 +6091,7 @@ func __mygo_mt_typeinference2_inferTypedSwitchCases_inferTypedSwitchCasesChecked
 					}
 				}
 			} else {
-				current := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.SwitchCase{Pattern: ast2.Pattern__WildcardPattern__Ctor(), Body: ast2.EmptyExpr()})
+				current := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, 0), ast2.SwitchCase{Pattern: ast2.Pattern__WildcardPattern__Ctor(), PatternSpan: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Body: ast2.EmptyExpr(), BodySpan: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}})
 				pattern := resolveBareVariantPattern(__mygo_mt_p2, __mygo_mt_p1, current.Pattern)
 				caseEnvResult := envWithPattern(__mygo_mt_p2, pattern, __mygo_mt_p1, __mygo_mt_p3)
 				if __mygo_match___mygo_expr_2, ok := caseEnvResult.(Result__Err[Env, string]); ok {
@@ -6110,7 +6110,7 @@ func __mygo_mt_typeinference2_inferTypedSwitchCases_inferTypedSwitchCasesChecked
 						} else {
 							if __mygo_match___mygo_expr_2, ok := bodyInferred.(Result__Ok[ExprInferResult, string]); ok {
 								value := __mygo_match___mygo_expr_2.F0.Result
-								typedOut := MygoIN5SliceM6Append(__mygo_mt_p8, ast2.SwitchCase{Pattern: pattern, Body: __mygo_match___mygo_expr_2.F0.Expr})
+								typedOut := MygoIN5SliceM6Append(__mygo_mt_p8, ast2.SwitchCase{Pattern: pattern, PatternSpan: current.PatternSpan, Body: __mygo_match___mygo_expr_2.F0.Expr, BodySpan: current.BodySpan, Span: current.Span})
 								if _, ok := __mygo_mt_p5.(Option__None[ast2.MonoType]); ok {
 									__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
 									__tail_1 := __mygo_mt_p1

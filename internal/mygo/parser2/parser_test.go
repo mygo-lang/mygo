@@ -23,6 +23,335 @@ func TestParseFileAtIncludesSourceLocation(t *testing.T) {
 	}
 }
 
+func TestParseFileLosslessRetainsTokensAndTrivia(t *testing.T) {
+	source := "package sample\n# keep   this\nfunc f() -> String\n  \"hello   world\"\nend\n"
+	got := ParseFileLossless("sample.mygo", source)
+	result, ok := got.(Result__Ok[LosslessFile, string])
+	if !ok {
+		t.Fatalf("ParseFileLossless() failed: %v", got)
+	}
+	if len(result.F0.Tokens) == 0 || len(result.F0.Trivia) == 0 {
+		t.Fatalf("lossless result omitted tokens or trivia: %#v", result.F0)
+	}
+	commentFound := false
+	for _, item := range result.F0.Trivia {
+		if item.Kind == "comment" && item.Raw == "# keep   this" {
+			commentFound = true
+		}
+	}
+	if !commentFound {
+		t.Fatalf("comment spelling was not retained: %#v", result.F0.Trivia)
+	}
+	if result.F0.Tokens[len(result.F0.Tokens)-1].Raw != "end" {
+		t.Fatalf("last token = %q, want end", result.F0.Tokens[len(result.F0.Tokens)-1].Raw)
+	}
+	if len(result.F0.NodeSpans) < len(result.F0.Tokens) {
+		t.Fatalf("node span count = %d, want at least %d", len(result.F0.NodeSpans), len(result.F0.Tokens))
+	}
+	if result.F0.NodeSpans[0].Span.Start.Line != result.F0.Tokens[0].Span.Start.Line {
+		t.Fatalf("node span start = %#v, token start = %#v", result.F0.NodeSpans[0].Span.Start, result.F0.Tokens[0].Span.Start)
+	}
+	if len(result.F0.LayoutEvents) == 0 || !strings.HasPrefix(result.F0.LayoutEvents[0].Kind, "enter:") {
+		t.Fatalf("layout event stream = %#v", result.F0.LayoutEvents)
+	}
+}
+
+func TestExpressionsCarrySourceSpans(t *testing.T) {
+	got := ParseFileAt("span.mygo", "package sample\nfunc f() -> Int\n  1\nend\n")
+	parsed, ok := got.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFileAt() failed: %v", got)
+	}
+	fn := parsed.F0.Decls[0].(ast2.Decl__FuncDecl)
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	value := body.F0[0].(ast2.Stmt__ExprStmt).F0
+	if value.Span.Start.SourceName != "span.mygo" || value.Span.Start.Line == 0 {
+		t.Fatalf("expression span = %#v", value.Span)
+	}
+}
+
+func TestParametersCarrySourceSpans(t *testing.T) {
+	got := ParseFileAt("param-span.mygo", "package sample\nfunc f(value: Option[Int]) -> Int\n  1\nend\n")
+	parsed, ok := got.(Result__Ok[ast2.File, string])
+	if !ok {
+		t.Fatalf("ParseFileAt() failed: %v", got)
+	}
+	fn := parsed.F0.Decls[0].(ast2.Decl__FuncDecl)
+	if len(fn.F2) != 1 || fn.F2[0].Span.Start.Line == 0 || fn.F2[0].Span.End.Column <= fn.F2[0].Span.Start.Column {
+		t.Fatalf("parameter span = %#v", fn.F2[0].Span)
+	}
+}
+
+func TestSwitchCaseParserSpan(t *testing.T) {
+	reply := ps.ParseInput(switchCase(), "case 1 => 10\nend")
+	if !reply.Ok {
+		t.Fatalf("switch case parser failed: state=%#v error=%#v", reply.State, reply.Error)
+	}
+	if reply.Value.Span.Start.Line == 0 || reply.Value.Span.End.Line < reply.Value.Span.Start.Line {
+		t.Fatalf("switch case parser span = %#v", reply.Value.Span)
+	}
+}
+
+func TestLosslessNodeSpansCarryDeclarationAndStatementPaths(t *testing.T) {
+	got := ParseFileLossless("paths.mygo", "package sample\nfunc f() -> Int\n  1\nend\n")
+	parsed, ok := got.(Result__Ok[LosslessFile, string])
+	if !ok {
+		t.Fatalf("ParseFileLossless() failed: %v", got)
+	}
+	found := false
+	statementFound := false
+	for _, item := range parsed.F0.NodeSpans {
+		if (item.Kind == "expr" || item.Kind == "literal") && len(item.Path) == 2 && item.Path[0] == 0 && item.Path[1] == 0 {
+			found = true
+		}
+		if item.Kind == "stmt:expr" && len(item.Path) == 2 && item.Path[0] == 0 && item.Path[1] == 0 {
+			statementFound = true
+		}
+	}
+	if !found {
+		t.Fatalf("node spans do not contain declaration/statement path: %#v", parsed.F0.NodeSpans)
+	}
+	if !statementFound {
+		t.Fatalf("node spans do not contain statement span: %#v", parsed.F0.NodeSpans)
+	}
+}
+
+func TestLayoutEventsCarryBranchTokenAnchors(t *testing.T) {
+	source := "package sample\nfunc f(x: Bool) -> Int\n  if x then\n    1\n  else\n    2\n  end\nend\n"
+	got := ParseFileLossless("anchors.mygo", source)
+	parsed, ok := got.(Result__Ok[LosslessFile, string])
+	if !ok {
+		t.Fatalf("ParseFileLossless() failed: %v", got)
+	}
+	elseFound := false
+	for _, event := range parsed.F0.LayoutEvents {
+		if event.Kind == "enter:if-else" {
+			// The branch exit points at the enclosing if's shared `end`,
+			// which lies past the else-branch body span.
+			elseFound = event.Anchor.Start.Line > 0 && event.HeaderLine == event.Anchor.Start.Line && event.BodyLine == event.Span.Start.Line && event.ExitLine > event.Span.End.Line
+		}
+	}
+	if !elseFound {
+		t.Fatalf("layout events do not contain an else anchor: %#v", parsed.F0.LayoutEvents)
+	}
+}
+
+func TestLayoutEventsCarryInlineIfBoundaryAnchors(t *testing.T) {
+	source := "package sample\nfunc f(value: Bool) -> Int\n  let rendered = if value then 1 else 2 end\n  rendered\nend\n"
+	got := ParseFileLossless("inline-anchors.mygo", source)
+	parsed, ok := got.(Result__Ok[LosslessFile, string])
+	if !ok {
+		t.Fatalf("ParseFileLossless() failed: %v", got)
+	}
+	var ifEvent, thenEvent, elseEvent *LayoutEvent
+	for index := range parsed.F0.LayoutEvents {
+		event := &parsed.F0.LayoutEvents[index]
+		switch event.Kind {
+		case "enter:if":
+			ifEvent = event
+		case "enter:if-then":
+			thenEvent = event
+		case "enter:if-else":
+			elseEvent = event
+		}
+	}
+	if ifEvent == nil || thenEvent == nil || elseEvent == nil {
+		t.Fatalf("missing inline branch events: %#v", parsed.F0.LayoutEvents)
+	}
+	if ifEvent.ExitAnchor.Start.Line != 3 || ifEvent.ExitAnchor.Start.Column <= elseEvent.Anchor.End.Column {
+		t.Fatalf("inline if exit anchor = %#v, else anchor = %#v", ifEvent.ExitAnchor, elseEvent.Anchor)
+	}
+	if len(thenEvent.Path) != len(ifEvent.Path)+1 || len(elseEvent.Path) != len(ifEvent.Path)+1 {
+		t.Fatalf("inline branch paths do not descend from if: if=%v then=%v else=%v", ifEvent.Path, thenEvent.Path, elseEvent.Path)
+	}
+}
+
+func TestLayoutEventsCarryCaseBodyBoundaryAnchors(t *testing.T) {
+	source := "package sample\nfunc f(x: Int) -> Int\n  switch x\n    case VeryLongPattern => veryLongCaseBody\n  end\nend\n"
+	got := ParseFileLossless("case-anchors.mygo", source)
+	parsed, ok := got.(Result__Ok[LosslessFile, string])
+	if !ok {
+		t.Fatalf("ParseFileLossless() failed: %v", got)
+	}
+	for _, event := range parsed.F0.LayoutEvents {
+		if event.Kind == "enter:case" && event.SeparatorAnchor.Start.Line == 4 && event.SeparatorAnchor.End.Column <= event.BodyAnchor.Start.Column {
+			return
+		}
+	}
+	t.Fatalf("case event lacks separator anchor: %#v", parsed.F0.LayoutEvents)
+}
+
+func TestLosslessCarriesTopLevelDelimitedSeparators(t *testing.T) {
+	got := ParseFileLossless("delimited.mygo", "package sample\nfunc f() -> Int\n  let values = [1, call(2, 3), 4]\n  0\nend\n")
+	parsed, ok := got.(Result__Ok[LosslessFile, string])
+	if !ok {
+		t.Fatalf("ParseFileLossless() failed: %v", got)
+	}
+	for _, item := range parsed.F0.Delimited {
+		if item.Kind == "delimited:slice" && len(item.Items) == 3 && len(item.Separators) == 2 {
+			return
+		}
+	}
+	t.Fatalf("missing top-level delimited anchors: %#v", parsed.F0.Delimited)
+}
+
+func TestLosslessProtectedLinesIncludeCommentsAndLiterals(t *testing.T) {
+	got := ParseFileLossless("protected.mygo", "package sample\n# keep   comment\nfunc f() -> String\n  \"hello   world\"\nend\n")
+	parsed, ok := got.(Result__Ok[LosslessFile, string])
+	if !ok {
+		t.Fatalf("ParseFileLossless() failed: %v", got)
+	}
+	lines := LosslessProtectedLines(parsed.F0)
+	foundComment, foundLiteral := false, false
+	for _, line := range lines {
+		foundComment = foundComment || line == 2
+		foundLiteral = foundLiteral || line == 4
+	}
+	if !foundComment || !foundLiteral {
+		t.Fatalf("protected lines = %#v", lines)
+	}
+}
+
+func TestLosslessProtectedLinesCoverTripleQuotedLiteralSpan(t *testing.T) {
+	got := ParseFileLossless("triple-protected.mygo", "package sample\nfunc f() -> String\n  \"\"\"first   line\n  second   line\n  \"\"\"\nend\n")
+	parsed, ok := got.(Result__Ok[LosslessFile, string])
+	if !ok {
+		t.Fatalf("ParseFileLossless() failed: %v", got)
+	}
+	lines := LosslessProtectedLines(parsed.F0)
+	foundStart, foundContent, foundEnd := false, false, false
+	for _, line := range lines {
+		foundStart = foundStart || line == 3
+		foundContent = foundContent || line == 4
+		foundEnd = foundEnd || line == 5
+	}
+	if !foundStart || !foundContent || !foundEnd {
+		t.Fatalf("triple-quoted literal lines were not protected: %#v", lines)
+	}
+}
+
+func TestLosslessProtectedLinesCoverRawLiteralSpan(t *testing.T) {
+	got := ParseFileLossless("raw-protected.mygo", "package sample\nfunc f() -> String\n  `first   line\n  second   line`\nend\n")
+	parsed, ok := got.(Result__Ok[LosslessFile, string])
+	if !ok {
+		t.Fatalf("ParseFileLossless() failed: %v", got)
+	}
+	lines := LosslessProtectedLines(parsed.F0)
+	foundStart, foundEnd := false, false
+	for _, line := range lines {
+		foundStart = foundStart || line == 3
+		foundEnd = foundEnd || line == 4
+	}
+	if !foundStart || !foundEnd {
+		t.Fatalf("raw literal lines were not protected: %#v", lines)
+	}
+}
+
+
+func TestSpannedTypeAndPatternParsersCaptureStateRanges(t *testing.T) {
+	exprReply := ps.ParseInput(spannedExpr(), "value.Apply(1)")
+	if !exprReply.Ok || exprReply.Value.Span.Start.Column != 1 || exprReply.Value.Span.End.Column <= exprReply.Value.Span.Start.Column {
+		t.Fatalf("expression span = %#v", exprReply.Value.Span)
+	}
+	typeReply := ps.ParseInput(spannedTypeExpr(), "Box[Int]")
+	if !typeReply.Ok || typeReply.Value.Span.Start.Column != 1 || typeReply.Value.Span.End.Column <= typeReply.Value.Span.Start.Column {
+		t.Fatalf("type span = %#v", typeReply.Value.Span)
+	}
+	patternReply := ps.ParseInput(spannedPattern(), "Some(value)")
+	if !patternReply.Ok || patternReply.Value.Span.Start.Column != 1 || patternReply.Value.Span.End.Column <= patternReply.Value.Span.Start.Column {
+		t.Fatalf("pattern span = %#v", patternReply.Value.Span)
+	}
+	nestedTypeReply := ps.ParseInput(spannedTypeExpr(), "Result[Map[String, List[Int]]]")
+	if !nestedTypeReply.Ok || nestedTypeReply.Value.Span.End.Column <= nestedTypeReply.Value.Span.Start.Column {
+		t.Fatalf("nested type span = %#v", nestedTypeReply.Value.Span)
+	}
+	nestedPatternReply := ps.ParseInput(spannedPattern(), "Some((left, Right(value)))")
+	if !nestedPatternReply.Ok || nestedPatternReply.Value.Span.End.Column <= nestedPatternReply.Value.Span.Start.Column {
+		t.Fatalf("nested pattern span = %#v", nestedPatternReply.Value.Span)
+	}
+	literalReply := ps.ParseInput(spannedLiteral(), "\"literal\"")
+	if !literalReply.Ok || literalReply.Value.Span.Start.Column != 1 || literalReply.Value.Span.End.Column <= literalReply.Value.Span.Start.Column {
+		t.Fatalf("literal span = %#v", literalReply.Value.Span)
+	}
+}
+
+func TestLosslessFlattensNestedTypeAndPatternPaths(t *testing.T) {
+	source := "package sample\nfunc f(value: Result[Map[String, List[Int]]]) -> Int\n  switch value\n    case Some((left, Right(1))) => 1\n  end\nend\n"
+	got := ParseFileLossless("nested-spans.mygo", source)
+	parsed, ok := got.(Result__Ok[LosslessFile, string])
+	if !ok {
+		t.Fatalf("ParseFileLossless() failed: %v", got)
+	}
+	nestedType := false
+	nestedPattern := false
+	patternLiteral := false
+	for _, item := range parsed.F0.NodeSpans {
+		if item.Kind == "type" && len(item.Path) >= 5 {
+			nestedType = true
+		}
+		if item.Kind == "pattern" && len(item.Path) >= 2 {
+			nestedPattern = true
+		}
+		if item.Kind == "pattern-literal" {
+			patternLiteral = true
+		}
+	}
+	if !nestedType || !nestedPattern || !patternLiteral {
+		t.Fatalf("missing flattened nested spans: %#v", parsed.F0.NodeSpans)
+	}
+}
+
+func TestLosslessFlattensTypeDeclarationAndFunctionReturnSpans(t *testing.T) {
+	source := "package sample\ntype Alias = Result[Map[String, Int]]\nfunc f() -> Result[List[Int]]\n  1\nend\n"
+	got := ParseFileLossless("type-roots.mygo", source)
+	parsed, ok := got.(Result__Ok[LosslessFile, string])
+	if !ok {
+		t.Fatalf("ParseFileLossless() failed: %v", got)
+	}
+	aliasRoot := false
+	returnRoot := false
+	for _, item := range parsed.F0.NodeSpans {
+		if item.Kind != "type" {
+			continue
+		}
+		if len(item.Path) == 2 && item.Path[0] == 0 && item.Path[1] == 0 && item.Span.Start.Line == 2 {
+			aliasRoot = true
+		}
+		if len(item.Path) == 2 && item.Path[0] == 1 && item.Path[1] == -1 && item.Span.Start.Line == 3 {
+			returnRoot = true
+		}
+	}
+	if !aliasRoot || !returnRoot {
+		t.Fatalf("missing declaration type roots: %#v", parsed.F0.NodeSpans)
+	}
+}
+
+func TestLayoutEventsExposeParserOwnedIndentEffect(t *testing.T) {
+	got := ParseFileLossless("indent-events.mygo", "package sample\nstruct Point\n  value: Int\nend\nfunc f() -> Int\n  1\nend\n")
+	parsed, ok := got.(Result__Ok[LosslessFile, string])
+	if !ok {
+		t.Fatalf("ParseFileLossless() failed: %v", got)
+	}
+	foundStruct, foundFunc, foundStructExit, foundFuncExit := false, false, false, false
+	for _, item := range parsed.F0.LayoutEvents {
+		if item.Kind == "enter:decl:struct" {
+			foundStruct = item.AffectsIndent
+		}
+		if item.Kind == "enter:decl:func" {
+			foundFunc = item.AffectsIndent
+		}
+		if item.Kind == "exit:decl:struct" {
+			foundStructExit = item.AffectsIndent
+		}
+		if item.Kind == "exit:decl:func" {
+			foundFuncExit = item.AffectsIndent
+		}
+	}
+	if !foundStruct || !foundFunc || !foundStructExit || !foundFuncExit {
+		t.Fatalf("parser omitted indentation semantics: %#v", parsed.F0.LayoutEvents)
+	}
+}
+
 func TestParseFileParsesSelf(t *testing.T) {
 	_, thisFile, _, ok := runtime.Caller(0)
 	if !ok {
