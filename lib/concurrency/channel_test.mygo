@@ -1,0 +1,87 @@
+package concurrency_test
+
+import testing "go:testing"
+
+# ===== Constructors: MakeChan / MakeChanUnbuffered =====
+
+func TestMakeChanLenAndCap(t: Ref[testing.T]) -> ()
+  let ch = MakeChan[Int](4)
+  if ch.Cap() != 4 then
+    t.Fatalf("MakeChan[Int](4).Cap() = %d, want 4", ch.Cap())
+  end
+  if ch.Len() != 0 then
+    t.Fatalf("fresh channel Len() = %d, want 0", ch.Len())
+  end
+end
+
+func TestMakeChanUnbufferedHasZeroCap(t: Ref[testing.T]) -> ()
+  let ch = MakeChanUnbuffered[Int]()
+  if ch.Cap() != 0 then
+    t.Fatalf("unbuffered Cap() = %d, want 0", ch.Cap())
+  end
+  if ch.Len() != 0 then
+    t.Fatalf("unbuffered Len() = %d, want 0", ch.Len())
+  end
+end
+
+# ===== Send / Receive round-trip =====
+
+func TestSendThenReceiveReturnsSome(t: Ref[testing.T]) -> ()
+  let ch = MakeChan[Int](2)
+  ch.Send(7)
+  if ch.Len() != 1 then
+    t.Fatalf("after send Len() = %d, want 1", ch.Len())
+  end
+  switch ch.Receive()
+    case Some(v) then
+      if v != 7 then
+        t.Fatalf("Receive() payload = %d, want 7", v)
+      end
+    end
+    case None => t.Fatal("Receive() on buffered value should be Some")
+  end
+end
+
+# ===== TryReceive on empty channel =====
+
+func TestTryReceiveEmptyReturnsNone(t: Ref[testing.T]) -> ()
+  let ch = MakeChan[Int](2)
+  switch ch.TryReceive()
+    case Some(_) => t.Fatal("TryReceive on empty channel should be None")
+    case None => ()
+  end
+end
+
+# ===== Receive after Close =====
+
+func TestReceiveAfterCloseReturnsNone(t: Ref[testing.T]) -> ()
+  let ch = MakeChan[Int](2)
+  ch.Close()
+  switch ch.Receive()
+    case Some(_) => t.Fatal("Receive after Close should be None")
+    case None => ()
+  end
+end
+
+# ===== Directional wrappers: AsSend / AsRecv =====
+
+func TestAsSendAndAsRecvRoundTrip(t: Ref[testing.T]) -> ()
+  let ch = MakeChan[Int](2)
+  let writer = AsSend[Int](ch)
+  let reader = AsRecv[Int](ch)
+  writer.Send(42)
+  if writer.Len() != 1 then
+    t.Fatalf("writer.Len() = %d, want 1", writer.Len())
+  end
+  if writer.Cap() != 2 then
+    t.Fatalf("writer.Cap() = %d, want 2", writer.Cap())
+  end
+  switch reader.Receive()
+    case Some(v) then
+      if v != 42 then
+        t.Fatalf("reader.Receive() payload = %d, want 42", v)
+      end
+    end
+    case None => t.Fatal("reader.Receive() after send should be Some")
+  end
+end

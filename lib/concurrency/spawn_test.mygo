@@ -1,0 +1,23 @@
+package concurrency_test
+
+import testing "go:testing"
+
+# Spawn a goroutine that sends one value into a buffered channel; the test
+# performs a single bounded blocking receive. Buffer >= 1 keeps the send from
+# blocking, so this cannot deadlock under the Go memory model.
+
+func TestSpawnSendsValue(t: Ref[testing.T]) -> ()
+  let ch = MakeChan[Int](1)
+  let expected = 1234
+  Spawn(func() -> ()
+    ch.Send(expected)
+  end)
+  switch ch.Receive()
+    case Some(v) then
+      if v != expected then
+        t.Fatalf("Spawn send payload = %d, want %d", v, expected)
+      end
+    end
+    case None => t.Fatal("Receive after Spawn should be Some")
+  end
+end
