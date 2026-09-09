@@ -21,8 +21,10 @@ confirmed by tracing the bootstrap pipeline and reproducing the failure in a
   imported package is ever placed in the importer's `SymbolIndex`.
 - **The call-site lookup is a bare symbol-index probe.**
   `inferField` computes the receiver key with `receiverQualifiedName` (which
-  correctly rebuilds the `alias.Name` spelling for an imported generic
-  receiver such as `concurrency.Chan`) and then calls
+  rebuilds the `alias.Name` spelling for an imported package-declared receiver
+  such as `concurrency.IChannel`, but leaves a compiler-builtin receiver such
+  as `Chan` bare, because a builtin arrives at the call site as a `TCon`)
+  and then calls
   `findSymbol(typeName, field, state.SymbolIndex)`. With no projected
   `ImplMethod` entry, that probe returns `None` and inference reports
   `unknown field Chan.Send`. This is the exact diagnostic observed.
@@ -32,8 +34,9 @@ confirmed by tracing the bootstrap pipeline and reproducing the failure in a
   against the package's *private* env and register it under
   `receiverName.method` with `implReceiverName(target, iface)` as the receiver
   key. The cross-package projection must produce an equivalent symbol whose
-  `typeName` is the `alias.Name` spelling, so the call-site probe keyed by
-  `receiverQualifiedName` matches.
+  `typeName` is the spelling `receiverQualifiedName` rebuilds at the call site
+  (bare for a builtin receiver, `alias.Name` for a package-declared receiver),
+  so the call-site probe keyed by `receiverQualifiedName` matches.
 - **Symbol-table assembly.** `InferPackageWithExternal` and
   `InferPackageWithExternalInfo` build the initial `Symbols` as
   `concatSymbols(setup.Symbols, importedStructSymbols)` and derive
@@ -79,16 +82,46 @@ Mirror the local `implMethodSymbols` logic into the cross-package projection in
 `Scheme` against the package's *private* env (the same spelling its own source
 uses, so receiver/param/return types resolve locally), wrap any
 package-local type names with `TQualifiedName(path, ...)` via the existing
-`wrapPkgTypesInMonoType`, and emit a `Symbol.ImplMethod` whose `typeName` is
-`alias + "." + implReceiverName(target, iface)` and whose `field` is the method
-name. This is the exact key `receiverQualifiedName` produces at the call site
-for an imported generic receiver, so the `findSymbol` probe will match.
+`wrapPkgTypesInMonoType`, and emit a `Symbol.ImplMethod` whose `field` is the
+method name and whose `typeName` (the receiver key) is chosen to match exactly
+what `receiverQualifiedName` rebuilds at the call site:
+- if the receiver name `implReceiverName(target, iface)` is a type *declared*
+  by the imported package (i.e. it is in the package's `collectMyGoTypeNames`,
+  so the receiver arrives at the call site as `TQualifiedName(path, name)`),
+  the key is `alias + "." + name` (e.g. `concurrency.IChannel`);
+- otherwise (the receiver is a compiler builtin such as `Chan` / `SendChan` /
+  `RecvChan`, which arrives at the call site as a bare `TCon` and so is
+  unqualified by `receiverQualifiedName`), the key is the bare `name` (e.g.
+  `Chan`).
+This mirrors the local `implMethodSymbols` key convention plus the import
+alias rule, so the `findSymbol` probe in `inferField` matches.
 
 **Why this shape:** the local path already proves the `receiverName.method`
-key convention and the private-env scheme construction work; the only
-difference is that the receiver name must carry the import alias (e.g.
-`concurrency.Chan`) rather than the bare `Chan`. Reusing `implReceiverName` +
-`alias` keeps both spellings consistent.
+key convention and the private-env scheme construction work. The only
+cross-package difference is that a *package-declared* receiver must carry the
+import alias (e.g. `concurrency.IChannel`) to match the `TQualifiedName`
+spelling `receiverQualifiedName` rebuilds, whereas a *builtin* receiver
+(e.g. `Chan`) is unqualified at the call site and so keeps its bare name.
+Reusing `implReceiverName` plus the declared-vs-builtin test keeps both
+spellings consistent with the call site.
+
+**Receiver-stripping constraint.** After `findSymbol` returns the projected
+`ImplMethod`, `inferField` calls `stripReceiverArg(substed, typeName, args,
+...)` to drop the receiver from the method type. `stripReceiverArg` only
+recognizes a *bare* `TCon(name)` / `TApp(TCon(name), _)` receiver whose `name`
+equals the `typeName` key, and returns `None` otherwise. This has two
+consequences for the projected scheme:
+- For a *builtin* receiver (`Chan` / `SendChan` / `RecvChan`) the key is the
+  bare name and `wrapPkgTypesInMonoType` leaves the receiver as a bare `TCon`,
+  so `recvName == typeName` and the receiver is stripped and unified
+  correctly. This is the channel case the motivating scenario exercises.
+- For a *package-declared* struct receiver (the inherent-impl-on-exported-
+  struct scenario), the projected receiver is wrapped to a `TQualifiedName`, so
+  `stripReceiverArg` returns `None` and the receiver is not stripped. That
+  path therefore needs `stripReceiverArg` (or the projection's receiver
+  spelling) adjusted so a package-qualified receiver still strips and unifies
+  against `alias.Name`. This is in scope for tasks 2.2/2.3 and is covered by
+  the inherent-impl verification rather than left implicit.
 
 **Alternatives considered:**
 - *Register the method in the importer's env under `alias.Name.method` only
@@ -145,10 +178,12 @@ table and would not exercise the projection, which is the bug).
   exported functions (`wrapPkgTypesInMonoType`) and the existing
   `myGoPackageStructSymbols` wrapping, and assert unification in the test.
 - [Receiver-key drift] The projected `typeName` must exactly match what
-  `receiverQualifiedName` rebuilds (`alias.Name` for `TQualifiedName` receivers,
-  including the `Ref[...]` unwrap). Mitigation: build the key from the same
-  `implReceiverName` + `alias` the local path uses; cover a `Ref`-wrapped and a
-  generic receiver in the test.
+  `receiverQualifiedName` rebuilds: bare `Name` for a builtin `TCon` receiver
+  (e.g. `Chan`), `alias.Name` for a package-declared `TQualifiedName` receiver
+  (e.g. `concurrency.IChannel`), including the `Ref[...]` unwrap. Mitigation:
+  build the key from the same `implReceiverName` plus the declared-vs-builtin
+  test the call site uses; cover a builtin (`Chan`), a package-declared
+  interface receiver, a `Ref`-wrapped, and a generic receiver in the test.
 - [Name collisions] Two imported packages with the same interface method
   receiver name. Mitigation: the symbol key is `alias.Name.method`, so distinct
   aliases do not collide; a same-alias re-import is already an error today.
@@ -175,11 +210,35 @@ or public-API migration steps.
 
 ## Open Questions
 
-- **codegen2 cross-package status (D2).** To be answered by the re-probe task:
-  does codegen2 already seed dispatch candidates from imported packages' impls
-  and qualify the emitted helper with the alias? This is the only unknown that
-  could enlarge the change, and it is gated behind an explicit task rather than
-  guessed.
+- **codegen2 cross-package status (D2) — answered by the 3.1 re-probe.**
+  After the inference fix, a cross-module `replace` consumer that imports
+  `concurrency` and calls `ch.Send(7)` /`ch.Receive()` etc. now *infers*
+  cleanly, but codegen2 emits the method call as a **bare Go method call**
+  (`ch.Send(7)`, `ch.Receive()`) rather than the mangled helper, so
+  `go build` fails with `type chan int has no field or method Send`.
+  Root cause, confirmed:
+  - Candidate seeding (`newPackageIndex` → `seedPackageDictionaries`) only
+    sees the local package's visible decls (`ExternalTypedDecls` +
+    `TypedDecls`). For a cross-module consumer the imported package
+    (`concurrency`) is *not* among those, so no `ImplDictionaryCandidate`
+    exists for `Chan`/`SendChan`/`RecvChan` receivers and
+    `matchingReceiverCandidate` returns `None`, falling through to an
+    ordinary (method) call.
+  - The emitted helper name (`implMethodSymbol`) is **not alias-qualified**.
+    A same-module external test works only because it imports the sibling
+    package with a *dot import* (`import . ".../concurrency"`), so the bare
+    mangled helper resolves in scope. A cross-module consumer uses a *named*
+    import (`import concurrency "..."`), so the helper must be emitted as
+    `concurrency.<helper>` (a `goast.Selector`), mirroring how the free
+    function `concurrency.MakeChan[int](4)` is already qualified.
+  - `PackageInfo` does not carry the imported packages'
+    (`MyGoPackageInfo`) decls, so codegen2 currently has no access to them;
+    completing D2 requires threading the imported decls (plus alias/path) into
+    `GenerateFiles`/`newPackageIndex`, seeding candidates from the imported
+    impls (keyed by the same receiver name the inference projection uses), and
+    alias-qualifying the emitted helper.
+  This is a real, non-trivial enlargement of the change beyond the inference
+  fix. It is the remaining work for tasks 3.2/3.3.
 - **Legacy pipeline gap (out of scope, separate change).** The legacy (default)
   pipeline, for the same cross-module consumer, emits a *bare* typeclass
   helper (`_M4Send(ch_1, 7)` / `_M7Receive`) that is `undefined` in the consumer
