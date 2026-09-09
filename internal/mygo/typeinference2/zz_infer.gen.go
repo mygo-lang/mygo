@@ -32,7 +32,7 @@ func predeclareEnumVariants(env Env, vars []ast2.Variant, name string, tps []str
 }
 func inferDecls(decls []ast2.Decl, env Env, fields []FieldEntry, state InferState) Result[PackageInfo, string] {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(decls) == 0 {
-		return Ok[PackageInfo, string](PackageInfo{Env: MygoIN3EnvM7ToSlice(env), Fields: fields, GoPackages: []GoPackageEntry{}, Instances: []Instance{}, Solver: newSolver(), TypedDecls: []ast2.Decl{}, ExternalTypedDecls: []ast2.Decl{}, TypedDeclSources: []PkgDeclSource{}, ExternalTypedDeclSources: []PkgDeclSource{}, ResolvedConstraintArgs: state.ResolvedConstraintArgs})
+		return Ok[PackageInfo, string](PackageInfo{Env: MygoIN3EnvM7ToSlice(env), Fields: fields, GoPackages: []GoPackageEntry{}, MyGoPackages: state.MyGoPackages, Instances: []Instance{}, Solver: newSolver(), TypedDecls: []ast2.Decl{}, ExternalTypedDecls: []ast2.Decl{}, TypedDeclSources: []PkgDeclSource{}, ExternalTypedDeclSources: []PkgDeclSource{}, ResolvedConstraintArgs: state.ResolvedConstraintArgs})
 	} else {
 		head := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, 0), ast2.Decl__ImportDecl__Ctor("", ""))
 		tail := common2.SliceDrop(decls, 1)
@@ -53,7 +53,7 @@ func inferDecls(decls []ast2.Decl, env Env, fields []FieldEntry, state InferStat
 					}
 				}
 				newDecls := __mygo_expr_7
-				__mygo_expr_3 = Ok[PackageInfo, string](PackageInfo{Env: __mygo_match___mygo_expr_5.F0.Env, Fields: __mygo_match___mygo_expr_5.F0.Fields, GoPackages: __mygo_match___mygo_expr_5.F0.GoPackages, Instances: __mygo_match___mygo_expr_5.F0.Instances, Solver: __mygo_match___mygo_expr_5.F0.Solver, TypedDecls: newDecls, ExternalTypedDecls: __mygo_match___mygo_expr_5.F0.ExternalTypedDecls, TypedDeclSources: __mygo_match___mygo_expr_5.F0.TypedDeclSources, ExternalTypedDeclSources: __mygo_match___mygo_expr_5.F0.ExternalTypedDeclSources, ResolvedConstraintArgs: __mygo_match___mygo_expr_5.F0.ResolvedConstraintArgs})
+				__mygo_expr_3 = Ok[PackageInfo, string](PackageInfo{Env: __mygo_match___mygo_expr_5.F0.Env, Fields: __mygo_match___mygo_expr_5.F0.Fields, GoPackages: __mygo_match___mygo_expr_5.F0.GoPackages, MyGoPackages: __mygo_match___mygo_expr_5.F0.MyGoPackages, Instances: __mygo_match___mygo_expr_5.F0.Instances, Solver: __mygo_match___mygo_expr_5.F0.Solver, TypedDecls: newDecls, ExternalTypedDecls: __mygo_match___mygo_expr_5.F0.ExternalTypedDecls, TypedDeclSources: __mygo_match___mygo_expr_5.F0.TypedDeclSources, ExternalTypedDeclSources: __mygo_match___mygo_expr_5.F0.ExternalTypedDeclSources, ResolvedConstraintArgs: __mygo_match___mygo_expr_5.F0.ResolvedConstraintArgs})
 			} else {
 				if __mygo_match___mygo_expr_4, ok := rest.(Result__Err[PackageInfo, string]); ok {
 					__mygo_expr_3 = Err[PackageInfo, string](__mygo_match___mygo_expr_4.F0)
@@ -3591,12 +3591,12 @@ func stripReceiverArg(fieldType ast2.MonoType, typeName string, args []ast2.Mono
 		F1 Subst
 	}, string]]
 	if __mygo_match___mygo_expr_1, ok := fieldType.(ast2.MonoType__TFunc); ok {
-		var __mygo_expr_9 Option[Result[struct {
+		var __mygo_expr_15 Option[Result[struct {
 			F0 ast2.MonoType
 			F1 Subst
 		}, string]]
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_1.F0) == 0 {
-			__mygo_expr_9 = None[Result[struct {
+			__mygo_expr_15 = None[Result[struct {
 				F0 ast2.MonoType
 				F1 Subst
 			}, string]]()
@@ -3612,44 +3612,53 @@ func stripReceiverArg(fieldType ast2.MonoType, typeName string, args []ast2.Mono
 					if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(ast2.MonoType__TCon); ok {
 						__mygo_expr_5 = __mygo_match___mygo_expr_6.F0
 					} else {
-						__mygo_expr_5 = ""
+						if _, ok := __mygo_expr_4.(ast2.MonoType__TQualifiedName); ok {
+							__mygo_expr_5 = typeName + "\x00"
+						} else {
+							__mygo_expr_5 = ""
+						}
 					}
 					__mygo_expr_2 = __mygo_expr_5
 				} else {
-					__mygo_expr_2 = ""
+					if _, ok := first.(ast2.MonoType__TQualifiedName); ok {
+						__mygo_expr_2 = typeName + "\x00"
+					} else {
+						__mygo_expr_2 = ""
+					}
 				}
 			}
 			recvName := __mygo_expr_2
-			var __mygo_expr_8 Option[Result[struct {
+			var __mygo_expr_14 Option[Result[struct {
 				F0 ast2.MonoType
 				F1 Subst
 			}, string]]
-			if recvName != typeName {
-				__mygo_expr_8 = None[Result[struct {
-					F0 ast2.MonoType
-					F1 Subst
-				}, string]]()
-			} else {
-				receiverType := tCon(typeName, args)
+			if recvName == typeName+"\x00" {
+				var __mygo_expr_5 ast2.MonoType
+				if __mygo_match___mygo_expr_6, ok := first.(ast2.MonoType__TApp); ok {
+					__mygo_expr_5 = ast2.MonoType__TApp__Ctor(__mygo_match___mygo_expr_6.F0, args)
+				} else {
+					__mygo_expr_5 = first
+				}
+				receiverType := __mygo_expr_5
 				us := unify(first, receiverType, subst)
-				var __mygo_expr_5 Option[Result[struct {
+				var __mygo_expr_7 Option[Result[struct {
 					F0 ast2.MonoType
 					F1 Subst
 				}, string]]
-				if __mygo_match___mygo_expr_7, ok := us.(Result__Err[Subst, string]); ok {
-					__mygo_expr_5 = Some[Result[struct {
+				if __mygo_match___mygo_expr_9, ok := us.(Result__Err[Subst, string]); ok {
+					__mygo_expr_7 = Some[Result[struct {
 						F0 ast2.MonoType
 						F1 Subst
 					}, string]](Err[struct {
 						F0 ast2.MonoType
 						F1 Subst
-					}, string]("method receiver mismatch: " + __mygo_match___mygo_expr_7.F0))
+					}, string]("method receiver mismatch: " + __mygo_match___mygo_expr_9.F0))
 				} else {
-					if __mygo_match___mygo_expr_6, ok := us.(Result__Ok[Subst, string]); ok {
+					if __mygo_match___mygo_expr_8, ok := us.(Result__Ok[Subst, string]); ok {
 						droppedArgs := common2.SliceDrop(__mygo_match___mygo_expr_1.F0, 1)
-						newRet := applySubst(__mygo_match___mygo_expr_6.F0, *__mygo_match___mygo_expr_1.F1)
-						strippedBody := applySubstMonoList(__mygo_match___mygo_expr_6.F0, droppedArgs)
-						__mygo_expr_5 = Some[Result[struct {
+						newRet := applySubst(__mygo_match___mygo_expr_8.F0, *__mygo_match___mygo_expr_1.F1)
+						strippedBody := applySubstMonoList(__mygo_match___mygo_expr_8.F0, droppedArgs)
+						__mygo_expr_7 = Some[Result[struct {
 							F0 ast2.MonoType
 							F1 Subst
 						}, string]](Ok[struct {
@@ -3658,15 +3667,61 @@ func stripReceiverArg(fieldType ast2.MonoType, typeName string, args []ast2.Mono
 						}, string](struct {
 							F0 ast2.MonoType
 							F1 Subst
-						}{F0: ast2.MonoType__TFunc__Ctor(strippedBody, &newRet), F1: __mygo_match___mygo_expr_6.F0}))
+						}{F0: ast2.MonoType__TFunc__Ctor(strippedBody, &newRet), F1: __mygo_match___mygo_expr_8.F0}))
 					} else {
 					}
 				}
-				__mygo_expr_8 = __mygo_expr_5
+				__mygo_expr_14 = __mygo_expr_7
+			} else {
+				var __mygo_expr_13 Option[Result[struct {
+					F0 ast2.MonoType
+					F1 Subst
+				}, string]]
+				if recvName != typeName {
+					__mygo_expr_13 = None[Result[struct {
+						F0 ast2.MonoType
+						F1 Subst
+					}, string]]()
+				} else {
+					receiverType_1 := tCon(typeName, args)
+					us_1 := unify(first, receiverType_1, subst)
+					var __mygo_expr_10 Option[Result[struct {
+						F0 ast2.MonoType
+						F1 Subst
+					}, string]]
+					if __mygo_match___mygo_expr_12, ok := us_1.(Result__Err[Subst, string]); ok {
+						__mygo_expr_10 = Some[Result[struct {
+							F0 ast2.MonoType
+							F1 Subst
+						}, string]](Err[struct {
+							F0 ast2.MonoType
+							F1 Subst
+						}, string]("method receiver mismatch: " + __mygo_match___mygo_expr_12.F0))
+					} else {
+						if __mygo_match___mygo_expr_11, ok := us_1.(Result__Ok[Subst, string]); ok {
+							droppedArgs_1 := common2.SliceDrop(__mygo_match___mygo_expr_1.F0, 1)
+							newRet_1 := applySubst(__mygo_match___mygo_expr_11.F0, *__mygo_match___mygo_expr_1.F1)
+							strippedBody_1 := applySubstMonoList(__mygo_match___mygo_expr_11.F0, droppedArgs_1)
+							__mygo_expr_10 = Some[Result[struct {
+								F0 ast2.MonoType
+								F1 Subst
+							}, string]](Ok[struct {
+								F0 ast2.MonoType
+								F1 Subst
+							}, string](struct {
+								F0 ast2.MonoType
+								F1 Subst
+							}{F0: ast2.MonoType__TFunc__Ctor(strippedBody_1, &newRet_1), F1: __mygo_match___mygo_expr_11.F0}))
+						} else {
+						}
+					}
+					__mygo_expr_13 = __mygo_expr_10
+				}
+				__mygo_expr_14 = __mygo_expr_13
 			}
-			__mygo_expr_9 = __mygo_expr_8
+			__mygo_expr_15 = __mygo_expr_14
 		}
-		__mygo_expr_0 = __mygo_expr_9
+		__mygo_expr_0 = __mygo_expr_15
 	} else {
 		__mygo_expr_0 = None[Result[struct {
 			F0 ast2.MonoType

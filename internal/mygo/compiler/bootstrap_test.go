@@ -889,6 +889,83 @@ end
 	}
 }
 
+func TestCompileDirBootstrapCompilesImportedTypeclassMethod(t *testing.T) {
+	root := t.TempDir()
+	bootstrapTestModule(t, root)
+	libDir := filepath.Join(root, "lib")
+	appDir := filepath.Join(root, "app")
+	for _, dir := range []string{libDir, appDir} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(libDir, "lib.mygo"), []byte(`package lib
+
+interface Measure[A]
+  func Measure(value: A) -> Int
+end
+
+struct Box[A]
+  Value: A
+end
+
+impl[A] BoxMeasure[A]: Measure[Box[A]]
+  func Measure(value: Box[A]) -> Int
+    42
+  end
+end
+
+func NewBox[A](value: A) -> Box[A]
+  Box[A] { Value: value }
+end
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(appDir, "app.mygo"), []byte(`package app
+
+import lib "example.com/bootstrap-test/lib"
+
+func Run() -> Int
+  lib.NewBox[Int](1).Measure()
+end
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	written, err := CompileDirBootstrap(appDir)
+	if err != nil {
+		t.Fatalf("CompileDirBootstrap() error = %v", err)
+	}
+	appGenerated := filepath.Join(appDir, "zz_app.gen.go")
+	generated, err := os.ReadFile(appGenerated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(generated), "lib.MygoIT") || !strings.Contains(string(generated), "M7Measure") {
+		t.Fatalf("generated imported typeclass call is not alias-qualified:\n%s", generated)
+	}
+	if len(written) != 2 {
+		t.Fatalf("CompileDirBootstrap() wrote %d files, want app and dependency", len(written))
+	}
+	if err := os.WriteFile(filepath.Join(appDir, "app_test.go"), []byte(`package app
+
+import "testing"
+
+func TestRun(t *testing.T) {
+	if got := Run(); got != 42 {
+		t.Fatalf("Run() = %d, want 42", got)
+	}
+}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("go", "test", "./...")
+	cmd.Dir = root
+	cmd.Env = append(os.Environ(), "GOCACHE=/tmp/mygo-bootstrap-gocache")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generated imported typeclass package failed: %v\n%s", err, output)
+	}
+}
+
 func TestCompileDirBootstrapConstructsImportedNamedEnumVariant(t *testing.T) {
 	root := t.TempDir()
 	bootstrapTestModule(t, root)

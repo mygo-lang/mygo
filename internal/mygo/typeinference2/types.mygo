@@ -246,6 +246,7 @@ struct PackageInfo
   Env: Slice[EnvEntry]
   Fields: Slice[FieldEntry]
   GoPackages: Slice[GoPackageEntry]
+  MyGoPackages: Slice[MyGoPackageInfo]
   Instances: Slice[Instance]
   Solver: Solver
   TypedDecls: Slice[ast2.Decl]
@@ -629,6 +630,7 @@ func InferFile(file: ast2.File) -> Result[PackageInfo, String]
             Env: resolveEnvironment(solver, info.Env),
             Fields: info.Fields,
             GoPackages: goPkgImports,
+            MyGoPackages: [] as Slice[MyGoPackageInfo],
             Instances: instances,
             Solver: solver,
             TypedDecls: info.TypedDecls,
@@ -675,6 +677,7 @@ func InferPackageWithGoPackages(files: Slice[PkgDeclSource], goPkgImports: Slice
             Env: resolveEnvironment(solver, info.Env),
             Fields: info.Fields,
             GoPackages: goPkgImports,
+            MyGoPackages: [] as Slice[MyGoPackageInfo],
             Instances: instances,
             Solver: solver,
             TypedDecls: info.TypedDecls,
@@ -735,6 +738,7 @@ func InferPackageWithExternal(files: Slice[PkgDeclSource], external: Slice[PkgDe
                 Env: resolveEnvironment(solver, info.Env),
                 Fields: info.Fields,
                 GoPackages: goPkgImports,
+                MyGoPackages: myGoPkgImports,
                 Instances: instances,
                 Solver: solver,
                 TypedDecls: flattenPkgDecls(userTyped.Sources, 0, [] as Slice[ast2.Decl]),
@@ -795,6 +799,7 @@ func InferPackageWithExternalInfo(files: Slice[PkgDeclSource], externalInfo: Pac
                 Env: resolveEnvironment(solver, info.Env),
                 Fields: info.Fields,
                 GoPackages: goPkgImports,
+                MyGoPackages: myGoPkgImports,
                 Instances: instances,
                 Solver: solver,
                 TypedDecls: flattenPkgDecls(userTyped.Sources, 0, [] as Slice[ast2.Decl]),
@@ -835,6 +840,12 @@ struct ImportedPackageCacheEntry
   # Struct fields registered as symbols under `alias.TypeName`, in the same
   # order myGoPackageStructDeclSymbols produces.
   StructSymbols: Slice[Symbol]
+  # Impl methods registered as symbols so a caller can dispatch a method on an
+  # imported receiver type. The receiver key matches what
+  # receiverQualifiedName rebuilds at the call site: a bare name for a
+  # compiler-builtin receiver (e.g. Chan) and `alias.Name` for a
+  # package-declared receiver (e.g. concurrency.IChannel).
+  ImplMethodSymbols: Slice[Symbol]
   # Cached collectMyGoTypeNames result.
   TypeNames: Slice[String]
 end
@@ -844,7 +855,7 @@ end
 # nothing and are never cached.
 func cachedImportedPackage(pkg: MyGoPackageInfo, alias: String, packages: Slice[MyGoPackageInfo], goPkgs: Slice[GoPackageEntry]) -> Result[ImportedPackageCacheEntry, String]
   if pkg.Decls.Len() == 0 then
-    Ok(ImportedPackageCacheEntry { PrivateEnv: Env.New(), Exported: [] as Slice[EnvEntry], StructSymbols: [] as Slice[Symbol], TypeNames: [] as Slice[String] })
+    Ok(ImportedPackageCacheEntry { PrivateEnv: Env.New(), Exported: [] as Slice[EnvEntry], StructSymbols: [] as Slice[Symbol], ImplMethodSymbols: [] as Slice[Symbol], TypeNames: [] as Slice[String] })
   else
     # Relative import paths such as `../lib` are only meaningful in the
     # importing workspace. Include the declaration surface in the process-wide
@@ -898,7 +909,8 @@ func buildImportedPackageCacheEntry(pkg: MyGoPackageInfo, alias: String, package
       let exported = exportMyGoPackageEntries(pkg.Decls, privateEnv, [] as Slice[EnvEntry], alias, pkg.Path, typeNames)
       let state = InferState { FreshVarID: 1, PkgInfo: None, GoPackages: goPkgs, MyGoPackages: packages, MyGoPackageCache: packages, Symbols: [], SymbolIndex: {}, ActiveConstraints: [], NamedImpls: [], ResolvedConstraintArgs: {} }
       let structSymbols = myGoPackageStructDeclSymbols(pkg.Decls, alias, pkg.Path, typeNames, pkgEnv, state, [] as Slice[Symbol])
-      Ok(ImportedPackageCacheEntry { PrivateEnv: privateEnv, Exported: exported, StructSymbols: structSymbols, TypeNames: typeNames })
+      let implMethodSymbols = myGoPackageImplMethodDeclSymbols(pkg.Decls, alias, pkg.Path, typeNames, privateEnv, [] as Slice[Symbol])
+      Ok(ImportedPackageCacheEntry { PrivateEnv: privateEnv, Exported: exported, StructSymbols: structSymbols, ImplMethodSymbols: implMethodSymbols, TypeNames: typeNames })
     case Err(msg) => Err(msg)
   end
 end
@@ -975,7 +987,7 @@ func myGoPackageStructSymbolsLoop(allPackages: Slice[MyGoPackageInfo], packages:
     let pkg = packages.Get(0).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
     switch cachedImportedPackage(pkg, pkg.Alias, allPackages, goPkgs)
       case Ok(cached) =>
-        let next = concatSymbols(out, cached.StructSymbols)
+        let next = concatSymbols(concatSymbols(out, cached.StructSymbols), cached.ImplMethodSymbols)
         myGoPackageStructSymbolsLoop(allPackages, common2.SliceDrop(packages, 1), goPkgs, next)
       case Err(msg) => Err(msg)
     end
@@ -990,6 +1002,57 @@ func myGoPackageStructDeclSymbols(decls: Slice[ast2.Decl], alias: String, path: 
       case _ => out
     end
     myGoPackageStructDeclSymbols(common2.SliceDrop(decls, 1), alias, path, typeNames, env, state, next)
+  end
+end
+
+# Project every imported package ImplDecl's methods into symbols a caller can
+# use to dispatch a method on an imported receiver type. Each method's Scheme
+# is built against the package's private env (so the receiver, parameters, and
+# return resolve with the package's own spelling) and package-local type names
+# are wrapped with TQualifiedName via the same path/typeNames pair used for the
+# struct-field projection. The receiver key mirrors receiverQualifiedName at
+# the call site: a compiler-builtin receiver (Chan, SendChan, RecvChan, ...)
+# is not declared by the package and so stays bare; a package-declared receiver
+# is qualified with the import alias.
+func myGoPackageImplMethodDeclSymbols(decls: Slice[ast2.Decl], alias: String, path: String, typeNames: Slice[String], env: Env, out: Slice[Symbol]) -> Slice[Symbol]
+  if decls.Len() == 0 then out else
+    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    let next = switch decl
+      case ImplDecl(tps, target, iface, methods) => myGoImplMethodSymbols(tps, target, iface, methods, alias, path, typeNames, env, out)
+      case _ => out
+    end
+    myGoPackageImplMethodDeclSymbols(common2.SliceDrop(decls, 1), alias, path, typeNames, env, next)
+  end
+end
+
+func myGoImplMethodSymbols(implTps: Slice[String], target: ast2.TypeExpr, iface: Option[ast2.TypeExpr], methods: Slice[ast2.ImplMethod], alias: String, path: String, typeNames: Slice[String], env: Env, out: Slice[Symbol]) -> Slice[Symbol]
+  let receiverName = implReceiverName(target, iface)
+  if receiverName == "" || methods.Len() == 0 then
+    out
+  else
+    let declared = typeNames.Fold(false, func(found: Bool, name: String) -> Bool found || name == receiverName end)
+    let key = if declared => alias + "." + receiverName else receiverName
+    myGoImplMethodSymbolsLoop(implTps, methods, key, path, typeNames, env, out)
+  end
+end
+
+func myGoImplMethodSymbolsLoop(implTps: Slice[String], methods: Slice[ast2.ImplMethod], key: String, path: String, typeNames: Slice[String], env: Env, out: Slice[Symbol]) -> Slice[Symbol]
+  if methods.Len() == 0 then
+    out
+  else
+    let m = methods.Get(0).UnwrapOr(defaultImplMethod())
+    let combined = appendStringSlice(implTps, m.Sig.TypeParams)
+    let bound = typeParamIDs(combined, 1)
+    let paramTypes = paramsToTypesWithParamsInEnv(m.Sig.Params, combined, env, NewInferState())
+    let retType = switch m.Sig.Ret
+      case Some(t) => typeFromASTInEnvWithParams(t, combined, env, NewInferState())
+      case None => ast2.MonoType.TUnit
+    end
+    let predicates = predicatesFromConstraintsWithParams(m.Sig.Using, combined)
+    let body = ast2.MonoType.TFunc(paramTypes, Ref.new(retType))
+    let wrappedBody = wrapPkgTypesInMonoType(body, path, typeNames)
+    let scheme = Scheme { Bound: bound, Predicates: predicates, Body: wrappedBody }
+    myGoImplMethodSymbolsLoop(implTps, common2.SliceDrop(methods, 1), key, path, typeNames, env, out.Prepend(Symbol.ImplMethod(key, m.Sig.Name, scheme)))
   end
 end
 

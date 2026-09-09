@@ -168,7 +168,7 @@ func bootstrapGenerateSourceAt(sourceName: String, input: String) -> Result[Stri
                           switch inferred
                             case Err(msg) => fmt.Errorf("bootstrap infer %s: %s", sourceName, msg).MapWithOk("")
                             case Ok(info) =>
-                              let infoWithPackages = typeinference2.PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: packagesRef.value(), Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, TypedDeclSources: info.TypedDeclSources, ExternalTypedDeclSources: info.ExternalTypedDeclSources, ResolvedConstraintArgs: info.ResolvedConstraintArgs }
+                              let infoWithPackages = typeinference2.PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: packagesRef.value(), MyGoPackages: info.MyGoPackages, Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, TypedDeclSources: info.TypedDeclSources, ExternalTypedDeclSources: info.ExternalTypedDeclSources, ResolvedConstraintArgs: info.ResolvedConstraintArgs }
                               let generated = codegen2.Generate(input.File, infoWithPackages)
                               switch generated
                                 case Err(msg) => fmt.Errorf("bootstrap generate %s: %s", sourceName, msg).MapWithOk("")
@@ -400,7 +400,7 @@ func bootstrapFinishPackage(dir: String, state: BootstrapState, codegen: Bool, i
     bootstrapTimingLog(state, "total", dir, totalStarted)
     Ok([])
   else
-    let infoWithPackages = typeinference2.PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: packagesRef.value(), Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, TypedDeclSources: info.TypedDeclSources, ExternalTypedDeclSources: info.ExternalTypedDeclSources, ResolvedConstraintArgs: info.ResolvedConstraintArgs }
+    let infoWithPackages = typeinference2.PackageInfo { Env: info.Env, Fields: info.Fields, GoPackages: packagesRef.value(), MyGoPackages: info.MyGoPackages, Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, TypedDeclSources: info.TypedDeclSources, ExternalTypedDeclSources: info.ExternalTypedDeclSources, ResolvedConstraintArgs: info.ResolvedConstraintArgs }
     let codegenStarted = bootstrapTimingStart()
     let generated = codegen2.GenerateFiles(inputs.Inputs, infoWithPackages)
     switch generated

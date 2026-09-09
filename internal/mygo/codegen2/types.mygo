@@ -60,6 +60,8 @@ struct egCtx
   # differ in how they are selected. Keep their candidate pools distinct.
   inherentCandidates: Slice[ImplDictionaryCandidate]
   typeclassCandidates: Slice[ImplDictionaryCandidate]
+  # Alias used while seeding imported-package candidates.
+  candidateOwnerAlias: String
   goPackages: Slice[typeinference2.GoPackageEntry]
   pkgInfo: Option[typeinference2.PackageInfo]
   # import path → source alias, so TQualifiedName(path, ...) can be rendered
@@ -150,6 +152,8 @@ struct ImplDictionaryCandidate
   Receiver: ast2.MonoType
   TypeParams: Slice[String]
   Helper: String
+  # Owning import alias; empty means the current package.
+  OwnerAlias: String
   RequiresExplicitTypeArgs: Bool
   MethodTypeParams: Slice[String]
   MethodParamMonos: Slice[ast2.MonoType]
@@ -196,6 +200,7 @@ func newEgCtx() -> egCtx
     packageCandidates: {},
     inherentCandidates: [],
     typeclassCandidates: [],
+    candidateOwnerAlias: "",
     goPackages: [],
     pkgInfo: None,
     pathAliases: {},
@@ -243,6 +248,7 @@ func newEgCtxWithTypeParams(params: Slice[String]) -> egCtx
     packageCandidates: {},
     inherentCandidates: [],
     typeclassCandidates: [],
+    candidateOwnerAlias: "",
     goPackages: [],
     pkgInfo: None,
     pathAliases: {},

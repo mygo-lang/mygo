@@ -49,7 +49,7 @@ func GenerateFiles(files: Slice[SourceFileInput], info: typeinference2.PackageIn
   let visibleDecls = mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
   # All emitted files in this package share the same declaration universe, so
   # build lowering metadata once for the complete GenerateFiles invocation.
-  let packageIndex = newPackageIndex(visibleDecls)
+  let packageIndex = newPackageIndexWithImports(visibleDecls, info.MyGoPackages)
   let typedByPath = typedDeclSourceMap(info.TypedDeclSources, 0, {})
   # The mutual tail-call plan spans every source file of the package, so it is
   # also built once here and threaded through the per-file generator contexts.
@@ -59,6 +59,13 @@ func GenerateFiles(files: Slice[SourceFileInput], info: typeinference2.PackageIn
   let mutualTail = buildMutualTailPlans(pkgName, files, info.TypedDeclSources)
   let out: Map[String, String] = {}
   generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, 0, out)
+end
+
+func importedMyGoDecls(packages: Slice[typeinference2.MyGoPackageInfo], index: Int, out: Slice[ast2.Decl]) -> Slice[ast2.Decl]
+  if index >= packages.Len() then out else
+    let pkg = packages.Get(index).UnwrapOr(typeinference2.MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
+    importedMyGoDecls(packages, index + 1, mergeDeclSlices(out, pkg.Decls))
+  end
 end
 
 func mergeFileDecls(files: Slice[SourceFileInput], index: Int, acc: Slice[ast2.Decl]) -> Slice[ast2.Decl]

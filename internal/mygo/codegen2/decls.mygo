@@ -317,6 +317,28 @@ func newPackageIndex(decls: Slice[ast2.Decl]) -> PackageIndex
   }
 end
 
+func newPackageIndexWithImports(localDecls: Slice[ast2.Decl], imports: Slice[typeinference2.MyGoPackageInfo]) -> PackageIndex
+  let seed = Ref.new(newEgCtx())
+  seedInterfaceMetadata(localDecls, 0, seed)
+  seedNamedImpls(localDecls, 0, seed)
+  seedCallDictionaries(localDecls, seed)
+  seedCallRequirements(localDecls, seed)
+  seedStructSourceTypes(localDecls, seed)
+  seedPackageDictionaries(localDecls, seed)
+  seedImportedPackageDictionaries(imports, 0, seed)
+  seedEnumValueConstructors(localDecls, seed)
+  PackageIndex { StructFields: seed.structFields, StructTypeParams: seed.structTypeParams, CallDictionaries: seed.callDictionaries, PackageDictionaries: seed.packageDictionaries, CallRequirements: seed.callRequirements, PackageCandidates: seed.packageCandidates, InherentCandidates: seed.inherentCandidates, TypeclassCandidates: seed.typeclassCandidates, EnumValueConstructors: seed.enumValueConstructors, EnumVariantOwners: seed.enumVariantOwners, VariantFieldMonoTypes: seed.variantFieldMonoTypes, VariantFieldNames: seed.variantFieldNames, InterfaceMethods: seed.interfaceMethods, InterfaceTypeParams: seed.interfaceTypeParams, NamedImpls: seed.namedImpls }
+end
+
+func seedImportedPackageDictionaries(packages: Slice[typeinference2.MyGoPackageInfo], index: Int, ctx: Ref[egCtx]) -> ()
+  if index < packages.Len() then
+    let pkg = packages.Get(index).UnwrapOr(typeinference2.MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
+    ctx.candidateOwnerAlias = pkg.Alias
+    seedPackageDictionaries(pkg.Decls, ctx)
+    seedImportedPackageDictionaries(packages, index + 1, ctx)
+  end
+end
+
 func seedInterfaceMetadata(decls: Slice[ast2.Decl], index: Int, ctx: Ref[egCtx]) -> ()
   if index < decls.Len() then
     let decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
@@ -635,11 +657,11 @@ func seedInherentCandidates(methods: Slice[ast2.ImplMethod], stem: String, targe
     let methodMonos = methodAllParamMonos(method.Sig.Params, combined)
     let spellCount = if isInstance then methodSpellCount(method, typeParams, ctx) else 0 end
     if isInstance then
-      let candidate = ImplDictionaryCandidate { Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: [target], Receiver: typeinference2.TypeFromASTWithParams(target, typeParams), TypeParams: typeParams, Helper: helper, RequiresExplicitTypeArgs: spellCount > 0, MethodTypeParams: method.Sig.TypeParams, MethodParamMonos: methodMonos, SpellCount: spellCount }
+      let candidate = ImplDictionaryCandidate { Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: [target], Receiver: typeinference2.TypeFromASTWithParams(target, typeParams), TypeParams: typeParams, Helper: helper, OwnerAlias: ctx.candidateOwnerAlias, RequiresExplicitTypeArgs: spellCount > 0, MethodTypeParams: method.Sig.TypeParams, MethodParamMonos: methodMonos, SpellCount: spellCount }
       ctx.inherentCandidates = ctx.inherentCandidates.Append(candidate)
     else
       let key = "$static$" + inherentReceiverName(target) + "." + method.Sig.Name
-      let candidate = ImplDictionaryCandidate { Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: [target], Receiver: typeinference2.TypeFromASTWithParams(target, typeParams), TypeParams: typeParams, Helper: helper, RequiresExplicitTypeArgs: false, MethodTypeParams: [] as Slice[String], MethodParamMonos: [] as Slice[ast2.MonoType], SpellCount: 0 }
+      let candidate = ImplDictionaryCandidate { Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: [target], Receiver: typeinference2.TypeFromASTWithParams(target, typeParams), TypeParams: typeParams, Helper: helper, OwnerAlias: ctx.candidateOwnerAlias, RequiresExplicitTypeArgs: false, MethodTypeParams: [] as Slice[String], MethodParamMonos: [] as Slice[ast2.MonoType], SpellCount: 0 }
       ctx.packageCandidates.Set(key, ctx.packageCandidates.Get(key).UnwrapOr([] as Slice[ImplDictionaryCandidate]).Append(candidate))
     end
     seedInherentCandidates(common2.SliceDrop(methods, 1), stem, target, typeParams, ctx)
@@ -670,7 +692,7 @@ func seedImplCandidates(methods: Slice[ast2.ImplMethod], stem: String, interface
     let combined = appendStrings(typeParams, method.Sig.TypeParams)
     let methodMonos = methodAllParamMonos(method.Sig.Params, combined)
     let spellCount = methodSpellCount(method, typeParams, ctx)
-    let candidate = ImplDictionaryCandidate { Interface: interfaceName, Method: method.Sig.Name, InterfaceArgs: interfaceArgs, Receiver: typeinference2.TypeFromASTWithParams(receiver, typeParams), TypeParams: typeParams, Helper: implMethodSymbol(stem, method.Sig.Name), RequiresExplicitTypeArgs: spellCount > 0, MethodTypeParams: method.Sig.TypeParams, MethodParamMonos: methodMonos, SpellCount: spellCount }
+    let candidate = ImplDictionaryCandidate { Interface: interfaceName, Method: method.Sig.Name, InterfaceArgs: interfaceArgs, Receiver: typeinference2.TypeFromASTWithParams(receiver, typeParams), TypeParams: typeParams, Helper: implMethodSymbol(stem, method.Sig.Name), OwnerAlias: ctx.candidateOwnerAlias, RequiresExplicitTypeArgs: spellCount > 0, MethodTypeParams: method.Sig.TypeParams, MethodParamMonos: methodMonos, SpellCount: spellCount }
     ctx.packageCandidates.Set(key, ctx.packageCandidates.Get(key).UnwrapOr([] as Slice[ImplDictionaryCandidate]).Append(candidate))
     ctx.typeclassCandidates = ctx.typeclassCandidates.Append(candidate)
     seedImplCandidates(common2.SliceDrop(methods, 1), stem, interfaceName, interfaceArgs, typeParams, ctx)

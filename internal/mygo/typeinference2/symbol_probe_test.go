@@ -107,7 +107,11 @@ func TestStructFieldSymbolProbe(t *testing.T) {
 	}
 	symbols := symbolsOk.F0
 	found := 0
+	implFound := 0
 	for _, s := range symbols {
+		if _, ok := s.(Symbol__ImplMethod); ok {
+			implFound++
+		}
 		if ss, ok := s.(Symbol__StructField); ok {
 			if ss.F0 == "codegen2.SourceFileInput" && ss.F1 == "File" {
 				fmt.Printf("SYM codegen2.SourceFileInput.File type=%s\n", MonoStringFull(ss.F2))
@@ -125,5 +129,8 @@ func TestStructFieldSymbolProbe(t *testing.T) {
 	}
 	if found == 0 {
 		t.Fatal("no relevant symbols found")
+	}
+	if implFound == 0 {
+		t.Fatal("no imported impl-method symbols found")
 	}
 }

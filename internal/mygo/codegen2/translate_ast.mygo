@@ -1860,15 +1860,16 @@ func translateReceiverImplMethodCall(base: ast2.Expr, method: String, args: Slic
 # Non-generic helpers and helpers whose parameters all expose inferable
 # positions are emitted as plain calls.
 func implMethodCallExpr(candidate: ImplDictionaryCandidate, receiverType: Option[ast2.MonoType], srcArgs: Slice[ast2.Expr], recv: goast.Expr, args: Slice[goast.Expr], ctx: Ref[egCtx]) -> goast.Expr
+  let helper = if candidate.OwnerAlias == "" then goast.Ident(candidate.Helper) else goast.Selector(goast.Ident(candidate.OwnerAlias), candidate.Helper) end
   if candidate.RequiresExplicitTypeArgs then
     let inferred = receiverImplCallTypeArgs(candidate, receiverType, srcArgs, ctx)
     if inferred.Len() == candidate.SpellCount then
-      goast.GenericCall(goast.Ident(candidate.Helper), inferred, args.Prepend(recv))
+      goast.GenericCall(helper, inferred, args.Prepend(recv))
     else
-      goast.Call(goast.Ident(candidate.Helper), args.Prepend(recv))
+      goast.Call(helper, args.Prepend(recv))
     end
   else
-    goast.Call(goast.Ident(candidate.Helper), args.Prepend(recv))
+    goast.Call(helper, args.Prepend(recv))
   end
 end
 
@@ -2142,8 +2143,10 @@ func monoTypeConstructor(typ: ast2.MonoType) -> Option[String]
     case TCon(name) => Some(name)
     case TApp(ctor, _) => switch ctor.value()
       case TCon(name) => Some(name)
+      case TQualifiedName(_, inner) => monoTypeConstructor(inner.value())
       case _ => None
     end
+    case TQualifiedName(_, inner) => monoTypeConstructor(inner.value())
     case _ => None
   end
 end

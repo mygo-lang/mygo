@@ -208,7 +208,7 @@ func bootstrapGenerateSourceAt(sourceName string, input string) Result[string, e
 														__mygo_expr_14 = MygoIN6ResultM9MapWithOk[struct{}, error](__mygo_expr_19, "")
 													} else {
 														if __mygo_match___mygo_expr_15, ok := inferred.(Result__Ok[typeinference2.PackageInfo, string]); ok {
-															infoWithPackages := typeinference2.PackageInfo{Env: __mygo_match___mygo_expr_15.F0.Env, Fields: __mygo_match___mygo_expr_15.F0.Fields, GoPackages: *packagesRef, Instances: __mygo_match___mygo_expr_15.F0.Instances, Solver: __mygo_match___mygo_expr_15.F0.Solver, TypedDecls: __mygo_match___mygo_expr_15.F0.TypedDecls, ExternalTypedDecls: __mygo_match___mygo_expr_15.F0.ExternalTypedDecls, TypedDeclSources: __mygo_match___mygo_expr_15.F0.TypedDeclSources, ExternalTypedDeclSources: __mygo_match___mygo_expr_15.F0.ExternalTypedDeclSources, ResolvedConstraintArgs: __mygo_match___mygo_expr_15.F0.ResolvedConstraintArgs}
+															infoWithPackages := typeinference2.PackageInfo{Env: __mygo_match___mygo_expr_15.F0.Env, Fields: __mygo_match___mygo_expr_15.F0.Fields, GoPackages: *packagesRef, MyGoPackages: __mygo_match___mygo_expr_15.F0.MyGoPackages, Instances: __mygo_match___mygo_expr_15.F0.Instances, Solver: __mygo_match___mygo_expr_15.F0.Solver, TypedDecls: __mygo_match___mygo_expr_15.F0.TypedDecls, ExternalTypedDecls: __mygo_match___mygo_expr_15.F0.ExternalTypedDecls, TypedDeclSources: __mygo_match___mygo_expr_15.F0.TypedDeclSources, ExternalTypedDeclSources: __mygo_match___mygo_expr_15.F0.ExternalTypedDeclSources, ResolvedConstraintArgs: __mygo_match___mygo_expr_15.F0.ResolvedConstraintArgs}
 															generated := codegen2.Generate(__mygo_match___mygo_expr_7.F0.File, infoWithPackages)
 															var __mygo_expr_16 Result[string, error]
 															if __mygo_match___mygo_expr_18, ok := generated.(Result__Err[string, string]); ok {
@@ -557,7 +557,7 @@ func bootstrapFinishPackage(dir string, state BootstrapState, codegen bool, inpu
 		bootstrapTimingLog(state, "total", dir, totalStarted)
 		return Ok[[]string, error]([]string{})
 	} else {
-		infoWithPackages := typeinference2.PackageInfo{Env: info.Env, Fields: info.Fields, GoPackages: *packagesRef, Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, TypedDeclSources: info.TypedDeclSources, ExternalTypedDeclSources: info.ExternalTypedDeclSources, ResolvedConstraintArgs: info.ResolvedConstraintArgs}
+		infoWithPackages := typeinference2.PackageInfo{Env: info.Env, Fields: info.Fields, GoPackages: *packagesRef, MyGoPackages: info.MyGoPackages, Instances: info.Instances, Solver: info.Solver, TypedDecls: info.TypedDecls, ExternalTypedDecls: info.ExternalTypedDecls, TypedDeclSources: info.TypedDeclSources, ExternalTypedDeclSources: info.ExternalTypedDeclSources, ResolvedConstraintArgs: info.ResolvedConstraintArgs}
 		codegenStarted := bootstrapTimingStart()
 		generated := codegen2.GenerateFiles(inputs.Inputs, infoWithPackages)
 		var __mygo_expr_0 Result[[]string, error]

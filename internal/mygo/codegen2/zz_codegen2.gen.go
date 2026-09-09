@@ -48,12 +48,15 @@ func Generate(file ast2.File, info typeinference2.PackageInfo) Result[string, st
 func GenerateFiles(files []SourceFileInput, info typeinference2.PackageInfo) Result[map[string]string, string] {
 	allDecls := mergeFileDecls(files, 0, []ast2.Decl{})
 	visibleDecls := mergeDeclSlices(info.ExternalTypedDecls, info.TypedDecls)
-	packageIndex := newPackageIndex(visibleDecls)
+	packageIndex := newPackageIndexWithImports(visibleDecls, info.MyGoPackages)
 	typedByPath := typedDeclSourceMap(info.TypedDeclSources, 0, map[string][]ast2.Decl{})
 	pkgName := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(files, 0), NewSourceFileInput("", ast2.File{PackageName: "main", Decls: []ast2.Decl{}, SourceName: "", Line: 1, Column: 1, DeclPositions: []ast2.SourcePos{}})).File.PackageName
 	mutualTail := buildMutualTailPlans(pkgName, files, info.TypedDeclSources)
 	var out map[string]string = map[string]string{}
 	return generateFilesLoop(files, info, allDecls, packageIndex, typedByPath, mutualTail, 0, out)
+}
+func importedMyGoDecls(packages []typeinference2.MyGoPackageInfo, index int, out []ast2.Decl) []ast2.Decl {
+	return __mygo_mt_codegen2_importedMyGoDecls(packages, index, out, 0)
 }
 func mergeFileDecls(files []SourceFileInput, index int, acc []ast2.Decl) []ast2.Decl {
 	return __mygo_mt_codegen2_mergeFileDecls(files, index, acc, 0)
@@ -622,6 +625,26 @@ func __mygo_mt_codegen2_generateFilesLoop(__mygo_mt_p0 []SourceFileInput, __mygo
 						panic("non-exhaustive switch")
 					}
 				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_importedMyGoDecls(__mygo_mt_p0 []typeinference2.MyGoPackageInfo, __mygo_mt_p1 int, __mygo_mt_p2 []ast2.Decl, __mygo_state int) []ast2.Decl {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				pkg := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), typeinference2.MyGoPackageInfo{Alias: "", Path: "", Decls: []ast2.Decl{}})
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1 + 1
+				__tail_2 := mergeDeclSlices(__mygo_mt_p2, pkg.Decls)
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
+				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")

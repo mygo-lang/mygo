@@ -214,6 +214,22 @@ func newPackageIndex(decls []ast2.Decl) PackageIndex {
 	seedEnumValueConstructors(decls, seed)
 	return PackageIndex{StructFields: seed.structFields, StructTypeParams: seed.structTypeParams, CallDictionaries: seed.callDictionaries, PackageDictionaries: seed.packageDictionaries, CallRequirements: seed.callRequirements, PackageCandidates: seed.packageCandidates, InherentCandidates: seed.inherentCandidates, TypeclassCandidates: seed.typeclassCandidates, EnumValueConstructors: seed.enumValueConstructors, EnumVariantOwners: seed.enumVariantOwners, VariantFieldMonoTypes: seed.variantFieldMonoTypes, VariantFieldNames: seed.variantFieldNames, InterfaceMethods: seed.interfaceMethods, InterfaceTypeParams: seed.interfaceTypeParams, NamedImpls: seed.namedImpls}
 }
+func newPackageIndexWithImports(localDecls []ast2.Decl, imports []typeinference2.MyGoPackageInfo) PackageIndex {
+	seed := &[]egCtx{newEgCtx()}[0]
+	seedInterfaceMetadata(localDecls, 0, seed)
+	seedNamedImpls(localDecls, 0, seed)
+	seedCallDictionaries(localDecls, seed)
+	seedCallRequirements(localDecls, seed)
+	seedStructSourceTypes(localDecls, seed)
+	seedPackageDictionaries(localDecls, seed)
+	seedImportedPackageDictionaries(imports, 0, seed)
+	seedEnumValueConstructors(localDecls, seed)
+	return PackageIndex{StructFields: seed.structFields, StructTypeParams: seed.structTypeParams, CallDictionaries: seed.callDictionaries, PackageDictionaries: seed.packageDictionaries, CallRequirements: seed.callRequirements, PackageCandidates: seed.packageCandidates, InherentCandidates: seed.inherentCandidates, TypeclassCandidates: seed.typeclassCandidates, EnumValueConstructors: seed.enumValueConstructors, EnumVariantOwners: seed.enumVariantOwners, VariantFieldMonoTypes: seed.variantFieldMonoTypes, VariantFieldNames: seed.variantFieldNames, InterfaceMethods: seed.interfaceMethods, InterfaceTypeParams: seed.interfaceTypeParams, NamedImpls: seed.namedImpls}
+}
+func seedImportedPackageDictionaries(packages []typeinference2.MyGoPackageInfo, index int, ctx *egCtx) {
+	__mygo_mt_codegen2_seedImportedPackageDictionaries(packages, index, ctx, 0)
+	return
+}
 func seedInterfaceMetadata(decls []ast2.Decl, index int, ctx *egCtx) {
 	__mygo_mt_codegen2_seedInterfaceMetadata(decls, index, ctx, 0)
 	return
@@ -1148,7 +1164,7 @@ func __mygo_mt_codegen2_seedImplCandidates(__mygo_mt_p0 []ast2.ImplMethod, __myg
 				combined := appendStrings(__mygo_mt_p4, method.Sig.TypeParams)
 				methodMonos := methodAllParamMonos(method.Sig.Params, combined)
 				spellCount := methodSpellCount(method, __mygo_mt_p4, __mygo_mt_p5)
-				candidate := ImplDictionaryCandidate{Interface: __mygo_mt_p2, Method: method.Sig.Name, InterfaceArgs: __mygo_mt_p3, Receiver: typeinference2.TypeFromASTWithParams(receiver, __mygo_mt_p4), TypeParams: __mygo_mt_p4, Helper: implMethodSymbol(__mygo_mt_p1, method.Sig.Name), RequiresExplicitTypeArgs: spellCount > 0, MethodTypeParams: method.Sig.TypeParams, MethodParamMonos: methodMonos, SpellCount: spellCount}
+				candidate := ImplDictionaryCandidate{Interface: __mygo_mt_p2, Method: method.Sig.Name, InterfaceArgs: __mygo_mt_p3, Receiver: typeinference2.TypeFromASTWithParams(receiver, __mygo_mt_p4), TypeParams: __mygo_mt_p4, Helper: implMethodSymbol(__mygo_mt_p1, method.Sig.Name), OwnerAlias: __mygo_mt_p5.candidateOwnerAlias, RequiresExplicitTypeArgs: spellCount > 0, MethodTypeParams: method.Sig.TypeParams, MethodParamMonos: methodMonos, SpellCount: spellCount}
 				MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p5.packageCandidates, key, MygoIN5SliceM6Append(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p5.packageCandidates, key), []ImplDictionaryCandidate{}), candidate))
 				__mygo_mt_p5.typeclassCandidates = MygoIN5SliceM6Append(__mygo_mt_p5.typeclassCandidates, candidate)
 				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)
@@ -1190,6 +1206,28 @@ func __mygo_mt_codegen2_seedImplMethodDictionaries(__mygo_mt_p0 []ast2.ImplMetho
 		}
 	}
 }
+func __mygo_mt_codegen2_seedImportedPackageDictionaries(__mygo_mt_p0 []typeinference2.MyGoPackageInfo, __mygo_mt_p1 int, __mygo_mt_p2 *egCtx, __mygo_state int) {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 < MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				pkg := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), typeinference2.MyGoPackageInfo{Alias: "", Path: "", Decls: []ast2.Decl{}})
+				__mygo_mt_p2.candidateOwnerAlias = pkg.Alias
+				seedPackageDictionaries(pkg.Decls, __mygo_mt_p2)
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1 + 1
+				__tail_2 := __mygo_mt_p2
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
+				continue
+			} else {
+				return
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_codegen2_seedInherentCandidates(__mygo_mt_p0 []ast2.ImplMethod, __mygo_mt_p1 string, __mygo_mt_p2 ast2.TypeExpr, __mygo_mt_p3 []string, __mygo_mt_p4 *egCtx, __mygo_state int) {
 	for {
 		switch __mygo_state {
@@ -1218,11 +1256,11 @@ func __mygo_mt_codegen2_seedInherentCandidates(__mygo_mt_p0 []ast2.ImplMethod, _
 				}
 				spellCount := __mygo_expr_2
 				if isInstance {
-					candidate := ImplDictionaryCandidate{Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: []ast2.TypeExpr{__mygo_mt_p2}, Receiver: typeinference2.TypeFromASTWithParams(__mygo_mt_p2, __mygo_mt_p3), TypeParams: __mygo_mt_p3, Helper: helper, RequiresExplicitTypeArgs: spellCount > 0, MethodTypeParams: method.Sig.TypeParams, MethodParamMonos: methodMonos, SpellCount: spellCount}
+					candidate := ImplDictionaryCandidate{Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: []ast2.TypeExpr{__mygo_mt_p2}, Receiver: typeinference2.TypeFromASTWithParams(__mygo_mt_p2, __mygo_mt_p3), TypeParams: __mygo_mt_p3, Helper: helper, OwnerAlias: __mygo_mt_p4.candidateOwnerAlias, RequiresExplicitTypeArgs: spellCount > 0, MethodTypeParams: method.Sig.TypeParams, MethodParamMonos: methodMonos, SpellCount: spellCount}
 					__mygo_mt_p4.inherentCandidates = MygoIN5SliceM6Append(__mygo_mt_p4.inherentCandidates, candidate)
 				} else {
 					key := "$static$" + inherentReceiverName(__mygo_mt_p2) + "." + method.Sig.Name
-					candidate_1 := ImplDictionaryCandidate{Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: []ast2.TypeExpr{__mygo_mt_p2}, Receiver: typeinference2.TypeFromASTWithParams(__mygo_mt_p2, __mygo_mt_p3), TypeParams: __mygo_mt_p3, Helper: helper, RequiresExplicitTypeArgs: false, MethodTypeParams: []string{}, MethodParamMonos: []ast2.MonoType{}, SpellCount: 0}
+					candidate_1 := ImplDictionaryCandidate{Interface: "$inherent$", Method: method.Sig.Name, InterfaceArgs: []ast2.TypeExpr{__mygo_mt_p2}, Receiver: typeinference2.TypeFromASTWithParams(__mygo_mt_p2, __mygo_mt_p3), TypeParams: __mygo_mt_p3, Helper: helper, OwnerAlias: __mygo_mt_p4.candidateOwnerAlias, RequiresExplicitTypeArgs: false, MethodTypeParams: []string{}, MethodParamMonos: []ast2.MonoType{}, SpellCount: 0}
 					MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Set(__mygo_mt_p4.packageCandidates, key, MygoIN5SliceM6Append(MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_mt_p4.packageCandidates, key), []ImplDictionaryCandidate{}), candidate_1))
 				}
 				__tail_0 := common2.SliceDrop(__mygo_mt_p0, 1)

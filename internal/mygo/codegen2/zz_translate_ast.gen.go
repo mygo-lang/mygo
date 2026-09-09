@@ -2517,15 +2517,22 @@ func translateReceiverImplMethodCall(base ast2.Expr, method string, args []ast2.
 	return __mygo_expr_0
 }
 func implMethodCallExpr(candidate ImplDictionaryCandidate, receiverType Option[ast2.MonoType], srcArgs []ast2.Expr, recv goast.Expr, args []goast.Expr, ctx *egCtx) goast.Expr {
+	var __mygo_expr_0 goast.Expr
+	if candidate.OwnerAlias == "" {
+		__mygo_expr_0 = goast.Ident(candidate.Helper)
+	} else {
+		__mygo_expr_0 = goast.Selector(goast.Ident(candidate.OwnerAlias), candidate.Helper)
+	}
+	helper := __mygo_expr_0
 	if candidate.RequiresExplicitTypeArgs {
 		inferred := receiverImplCallTypeArgs(candidate, receiverType, srcArgs, ctx)
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(inferred) == candidate.SpellCount {
-			return goast.GenericCall(goast.Ident(candidate.Helper), inferred, MygoIN5SliceM7Prepend(args, recv))
+			return goast.GenericCall(helper, inferred, MygoIN5SliceM7Prepend(args, recv))
 		} else {
-			return goast.Call(goast.Ident(candidate.Helper), MygoIN5SliceM7Prepend(args, recv))
+			return goast.Call(helper, MygoIN5SliceM7Prepend(args, recv))
 		}
 	} else {
-		return goast.Call(goast.Ident(candidate.Helper), MygoIN5SliceM7Prepend(args, recv))
+		return goast.Call(helper, MygoIN5SliceM7Prepend(args, recv))
 	}
 }
 func receiverImplCallTypeArgs(candidate ImplDictionaryCandidate, receiverType Option[ast2.MonoType], args []ast2.Expr, ctx *egCtx) []string {
@@ -2777,24 +2784,7 @@ func receiverMonoMatches(pattern ast2.MonoType, actual ast2.MonoType) bool {
 	return __mygo_expr_1
 }
 func monoTypeConstructor(typ ast2.MonoType) Option[string] {
-	var __mygo_expr_0 Option[string]
-	if __mygo_match___mygo_expr_2, ok := typ.(ast2.MonoType__TCon); ok {
-		__mygo_expr_0 = Some[string](__mygo_match___mygo_expr_2.F0)
-	} else {
-		if __mygo_match___mygo_expr_1, ok := typ.(ast2.MonoType__TApp); ok {
-			__mygo_expr_2 := *__mygo_match___mygo_expr_1.F0
-			var __mygo_expr_3 Option[string]
-			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ast2.MonoType__TCon); ok {
-				__mygo_expr_3 = Some[string](__mygo_match___mygo_expr_4.F0)
-			} else {
-				__mygo_expr_3 = None[string]()
-			}
-			__mygo_expr_0 = __mygo_expr_3
-		} else {
-			__mygo_expr_0 = None[string]()
-		}
-	}
-	return __mygo_expr_0
+	return __mygo_mt_codegen2_monoTypeConstructor(typ, 0)
 }
 func typeConstructor(typ string) string {
 	bracket := strings.Index(typ, "[")
@@ -4106,6 +4096,43 @@ func __mygo_mt_codegen2_matchingReceiverCandidate(__mygo_mt_p0 []ImplDictionaryC
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen2_monoTypeConstructor(__mygo_mt_p0 ast2.MonoType, __mygo_state int) Option[string] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_match___mygo_expr_2, ok := __mygo_mt_p0.(ast2.MonoType__TCon); ok {
+				return Some[string](__mygo_match___mygo_expr_2.F0)
+			} else {
+				if __mygo_match___mygo_expr_1, ok := __mygo_mt_p0.(ast2.MonoType__TApp); ok {
+					__mygo_expr_2 := *__mygo_match___mygo_expr_1.F0
+					if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(ast2.MonoType__TCon); ok {
+						return Some[string](__mygo_match___mygo_expr_4.F0)
+					} else {
+						if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(ast2.MonoType__TQualifiedName); ok {
+							__tail_0 := *__mygo_match___mygo_expr_3.F1
+							__mygo_mt_p0 = __tail_0
+							__mygo_state = 0
+							continue
+						} else {
+							return None[string]()
+						}
+					}
+				} else {
+					if __mygo_match___mygo_expr_0, ok := __mygo_mt_p0.(ast2.MonoType__TQualifiedName); ok {
+						__tail_0 := *__mygo_match___mygo_expr_0.F1
+						__mygo_mt_p0 = __tail_0
+						__mygo_state = 0
+						continue
+					} else {
+						return None[string]()
+					}
 				}
 			}
 		default:
