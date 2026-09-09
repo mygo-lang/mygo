@@ -788,6 +788,13 @@ func typeArgList() ps.Parser[[]ast2.TypeExpr] {
 func blockUntilEnd() ps.Parser[ast2.Expr] {
 	return blockUntil(kw("end"))
 }
+func blockUntilAndConsumeEnd() ps.Parser[ast2.Expr] {
+	return ps.PBind(blockUntil(kw("end")), func(body ast2.Expr) ps.Parser[ast2.Expr] {
+		return ps.PMap(kw("end"), func(_ string) ast2.Expr {
+			return body
+		})
+	})
+}
 func blockUntil(stopParser ps.Parser[string]) ps.Parser[ast2.Expr] {
 	return func(state ps.State) ps.Reply[ast2.Expr] {
 		return blockItems(stopParser, state, state, []ast2.Stmt{})
@@ -923,8 +930,8 @@ func varStmt() ps.Parser[ast2.Stmt] {
 func whileStmt() ps.Parser[ast2.Stmt] {
 	return ps.PBind(kw("while"), func(_ string) ps.Parser[ast2.Stmt] {
 		return ps.PBind(expr(), func(cond ast2.Expr) ps.Parser[ast2.Stmt] {
-			return ps.PBind(blockUntil(kw("end")), func(body ast2.Expr) ps.Parser[ast2.Stmt] {
-				return ps.PThen(kw("end"), ps.PPure(ast2.Stmt__WhileStmt__Ctor(cond, body)))
+			return ps.PBind(blockUntilAndConsumeEnd(), func(body ast2.Expr) ps.Parser[ast2.Stmt] {
+				return ps.PPure(ast2.Stmt__WhileStmt__Ctor(cond, body))
 			})
 		})
 	})
@@ -1004,9 +1011,9 @@ func switchCaseCore() ps.Parser[ast2.SwitchCase] {
 					return ast2.SwitchCase{Pattern: pat.Value, PatternSpan: pat.Span, Body: bodyExpr, BodySpan: bodyExpr.Span, Span: emptySpan()}
 				})
 			}), ps.PBind(kw("then"), func(__2 string) ps.Parser[ast2.SwitchCase] {
-				return ps.PBind(blockUntil(kw("end")), func(body_1 ast2.Expr) ps.Parser[ast2.SwitchCase] {
+				return ps.PBind(blockUntilAndConsumeEnd(), func(body_1 ast2.Expr) ps.Parser[ast2.SwitchCase] {
 					bodyExpr_1 := bodyExprFromBlock(body_1)
-					return ps.PThen(kw("end"), ps.PPure(ast2.SwitchCase{Pattern: pat.Value, PatternSpan: pat.Span, Body: bodyExpr_1, BodySpan: bodyExpr_1.Span, Span: emptySpan()}))
+					return ps.PPure(ast2.SwitchCase{Pattern: pat.Value, PatternSpan: pat.Span, Body: bodyExpr_1, BodySpan: bodyExpr_1.Span, Span: emptySpan()})
 				})
 			})})
 		})
@@ -1571,7 +1578,7 @@ func runeCharacter() ps.Parser[rune] {
 	}, "rune character"))
 }
 func stringChar() ps.Parser[rune] {
-	return ps.POrElse(ps.PThen(ps.PChar('\\'), ps.PChoice([]func(ps.State) ps.Reply[rune]{ps.PMap(ps.PChar('n'), func(_ rune) rune {
+	return ps.POrElse(ps.PThen(ps.PChar('\\'), ps.PChoice([]func(ps.State) ps.Reply[rune]{unicodeEscape(), ps.PMap(ps.PChar('n'), func(_ rune) rune {
 		return '\n'
 	}), ps.PMap(ps.PChar('t'), func(__1 rune) rune {
 		return '\t'
@@ -1592,6 +1599,40 @@ func stringChar() ps.Parser[rune] {
 	})})), ps.PSatisfy(func(r rune) bool {
 		return r != '"' && r != '\\'
 	}, "string character"))
+}
+func unicodeEscape() ps.Parser[rune] {
+	return ps.PBind(ps.PChar('u'), func(_ rune) ps.Parser[rune] {
+		return ps.PBind(unicodeHexDigit(), func(d0 rune) ps.Parser[rune] {
+			return ps.PBind(unicodeHexDigit(), func(d1 rune) ps.Parser[rune] {
+				return ps.PBind(unicodeHexDigit(), func(d2 rune) ps.Parser[rune] {
+					return ps.PBind(unicodeHexDigit(), func(d3 rune) ps.Parser[rune] {
+						value := unicodeHexValue(d0)*4096 + unicodeHexValue(d1)*256 + unicodeHexValue(d2)*16 + unicodeHexValue(d3)
+						if value >= 55296 && value <= 57343 {
+							return ps.PFail[rune]("Unicode escape must not be a surrogate")
+						} else {
+							return ps.PPure(rune(value))
+						}
+					})
+				})
+			})
+		})
+	})
+}
+func unicodeHexDigit() ps.Parser[rune] {
+	return ps.PSatisfy(func(r rune) bool {
+		return r >= '0' && r <= '9' || r >= 'a' && r <= 'f' || r >= 'A' && r <= 'F'
+	}, "Unicode escape hexadecimal digit")
+}
+func unicodeHexValue(value rune) int {
+	if value >= '0' && value <= '9' {
+		return int(value) - int('0')
+	} else {
+		if value >= 'a' && value <= 'f' {
+			return int(value) - int('a') + 10
+		} else {
+			return int(value) - int('A') + 10
+		}
+	}
 }
 func kw(word string) ps.Parser[string] {
 	return lexeme(ps.PAttempt(ps.PBind(ps.PString(word), func(value string) ps.Parser[string] {

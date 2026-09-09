@@ -567,6 +567,12 @@ func blockUntilEnd() -> ps.Parser[ast2.Expr]
   blockUntil(kw("end"))
 end
 
+func blockUntilAndConsumeEnd() -> ps.Parser[ast2.Expr]
+  ps.PBind(blockUntil(kw("end")), func(body: ast2.Expr) -> ps.Parser[ast2.Expr]
+    ps.PMap(kw("end"), func(_: String) -> ast2.Expr body end)
+  end)
+end
+
 func blockUntil(stopParser: ps.Parser[String]) -> ps.Parser[ast2.Expr]
   func(state: ps.State) -> ps.Reply[ast2.Expr]
     blockItems(stopParser, state, state, [])
@@ -745,8 +751,8 @@ end
 func whileStmt() -> ps.Parser[ast2.Stmt]
   ps.PBind(kw("while"), func(_: String) -> ps.Parser[ast2.Stmt]
     ps.PBind(expr(), func(cond: ast2.Expr) -> ps.Parser[ast2.Stmt]
-      ps.PBind(blockUntil(kw("end")), func(body: ast2.Expr) -> ps.Parser[ast2.Stmt]
-        ps.PThen(kw("end"), ps.PPure(ast2.Stmt.WhileStmt(cond, body)))
+      ps.PBind(blockUntilAndConsumeEnd(), func(body: ast2.Expr) -> ps.Parser[ast2.Stmt]
+        ps.PPure(ast2.Stmt.WhileStmt(cond, body))
       end)
     end)
   end)
@@ -847,9 +853,9 @@ func switchCaseCore() -> ps.Parser[ast2.SwitchCase]
           end)
         end),
         ps.PBind(kw("then"), func(_: String) -> ps.Parser[ast2.SwitchCase]
-          ps.PBind(blockUntil(kw("end")), func(body: ast2.Expr) -> ps.Parser[ast2.SwitchCase]
+          ps.PBind(blockUntilAndConsumeEnd(), func(body: ast2.Expr) -> ps.Parser[ast2.SwitchCase]
             let bodyExpr = bodyExprFromBlock(body)
-            ps.PThen(kw("end"), ps.PPure(ast2.SwitchCase { Pattern: pat.Value, PatternSpan: pat.Span, Body: bodyExpr, BodySpan: bodyExpr.Span, Span: emptySpan() }))
+            ps.PPure(ast2.SwitchCase { Pattern: pat.Value, PatternSpan: pat.Span, Body: bodyExpr, BodySpan: bodyExpr.Span, Span: emptySpan() })
           end)
         end),
       ])
@@ -1528,6 +1534,7 @@ end
 func stringChar() -> ps.Parser[Rune]
   ps.POrElse(
     ps.PThen(ps.PChar('\\'), ps.PChoice([
+      unicodeEscape(),
       ps.PMap(ps.PChar('n'), func(_: Rune) -> Rune '\n' end),
       ps.PMap(ps.PChar('t'), func(_: Rune) -> Rune '\t' end),
       ps.PMap(ps.PChar('b'), func(_: Rune) -> Rune '\b' end),
@@ -1542,6 +1549,41 @@ func stringChar() -> ps.Parser[Rune]
       r != '"' && r != '\\'
     end, "string character")
   )
+end
+
+func unicodeEscape() -> ps.Parser[Rune]
+  ps.PBind(ps.PChar('u'), func(_: Rune) -> ps.Parser[Rune]
+    ps.PBind(unicodeHexDigit(), func(d0: Rune) -> ps.Parser[Rune]
+      ps.PBind(unicodeHexDigit(), func(d1: Rune) -> ps.Parser[Rune]
+        ps.PBind(unicodeHexDigit(), func(d2: Rune) -> ps.Parser[Rune]
+          ps.PBind(unicodeHexDigit(), func(d3: Rune) -> ps.Parser[Rune]
+            let value = unicodeHexValue(d0) * 4096 + unicodeHexValue(d1) * 256 + unicodeHexValue(d2) * 16 + unicodeHexValue(d3)
+            if value >= 55296 && value <= 57343 then
+              ps.PFail[Rune]("Unicode escape must not be a surrogate")
+            else
+              ps.PPure(value as Rune)
+            end
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func unicodeHexDigit() -> ps.Parser[Rune]
+  ps.PSatisfy(func(r: Rune) -> Bool
+    (r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')
+  end, "Unicode escape hexadecimal digit")
+end
+
+func unicodeHexValue(value: Rune) -> Int
+  if value >= '0' && value <= '9' then
+    (value as Int) - ('0' as Int)
+  elsif value >= 'a' && value <= 'f' then
+    (value as Int) - ('a' as Int) + 10
+  else
+    (value as Int) - ('A' as Int) + 10
+  end
 end
 
 func kw(word: String) -> ps.Parser[String]

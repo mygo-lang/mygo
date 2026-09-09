@@ -92,6 +92,103 @@ func TestSwitchCaseParserSpan(t *testing.T) {
 	}
 }
 
+func TestNestedBlocksInThenCase(t *testing.T) {
+	source := "package sample\nfunc f(value: Int) -> Int\n  switch value\n    case 1 then\n      switch value\n        case 1 => 10\n      end\n    end\n  end\nend\n"
+	got := ParseFileAt("nested-blocks.mygo", source)
+	if _, ok := got.(Result__Ok[ast2.File, string]); !ok {
+		t.Fatalf("nested switch in case then failed: %v", got)
+	}
+}
+
+func TestNestedIfAndWhileInThenCase(t *testing.T) {
+	source := "package sample\nfunc f(value: Int) -> Int\n  switch value\n    case 1 then\n      if value == 1 then\n        while value == 1\n          1\n        end\n      end\n    end\n  end\nend\n"
+	got := ParseFileAt("nested-if-while.mygo", source)
+	if _, ok := got.(Result__Ok[ast2.File, string]); !ok {
+		t.Fatalf("nested if/while in case then failed: %v", got)
+	}
+}
+
+func TestNestedBlockMissingEndReportsError(t *testing.T) {
+	source := "package sample\nfunc f(value: Int) -> Int\n  switch value\n    case 1 then\n      switch value\n        case 1 => 10\n    end\nend\n"
+	got := ParseFileAt("missing-nested-end.mygo", source)
+	if _, ok := got.(Result__Err[ast2.File, string]); !ok {
+		t.Fatalf("missing nested end unexpectedly parsed: %v", got)
+	}
+}
+
+func TestMixedArrowAndThenNestedSwitchCases(t *testing.T) {
+	source := "package sample\nfunc f(value: Int) -> Int\n  let result = switch value\n    case 1 => 1\n    case 2 then\n      switch value\n        case 2 => 2\n      end\n    end\n    case 3 => 3\n  end\n  result\nend\n"
+	got := ParseFileAt("mixed-case-nested-switch.mygo", source)
+	if _, ok := got.(Result__Ok[ast2.File, string]); !ok {
+		t.Fatalf("mixed arrow/then nested switch failed: %v", got)
+	}
+}
+
+func TestNestedTypePatternSwitchShape(t *testing.T) {
+	source := "package sample\nfunc f(value: Int) -> String\n  switch value\n    case TFunc(methodArgs, methodRet) then\n      let first = methodArgs\n      let recvName = switch first\n        case TCon(name) => name\n        case TApp(ctor, _) then\n          switch ctor.value()\n            case TCon(name) => name\n            case _ => \"\"\n          end\n        end\n        case TQualifiedName(_, _) => \"qualified\"\n        case _ => \"\"\n      end\n      recvName\n    end\n  end\nend\n"
+	got := ParseFileAt("nested-type-pattern.mygo", source)
+	if _, ok := got.(Result__Ok[ast2.File, string]); !ok {
+		t.Fatalf("nested type-pattern switch failed: %v", got)
+	}
+}
+
+func TestIfThenElseExpressionInsideThenCase(t *testing.T) {
+	source := "package sample\nfunc f(value: Int) -> Int\n  switch value\n    case 1 then\n      let result = if value == 1 then 0 else 1 end\n      result\n    end\n  end\nend\n"
+	got := ParseFileAt("if-expression-in-case.mygo", source)
+	if _, ok := got.(Result__Ok[ast2.File, string]); !ok {
+		t.Fatalf("if then/else expression in case failed: %v", got)
+	}
+}
+
+func TestIfMethodLenThenElseInsideThenCase(t *testing.T) {
+	source := "package sample\nfunc f(methodArgs: Slice[Int]) -> Int\n  switch methodArgs\n    case 1 then\n      let result = if methodArgs.Len() == 0 then 0 else 1 end\n      result\n    end\n  end\nend\n"
+	got := ParseFileAt("if-method-len-in-case.mygo", source)
+	if _, ok := got.(Result__Ok[ast2.File, string]); !ok {
+		t.Fatalf("if method len expression in case failed: %v", got)
+	}
+}
+
+func TestIfElseAfterTFuncCase(t *testing.T) {
+	source := "package sample\nfunc f(value: Int) -> Int\n  switch value\n    case TFunc(methodArgs, methodRet) then\n      if methodArgs.Len() == 0 then\n        0\n      else\n        1\n      end\n    end\n  end\nend\n"
+	got := ParseFileAt("if-after-tfunc.mygo", source)
+	if _, ok := got.(Result__Ok[ast2.File, string]); !ok {
+		t.Fatalf("if else after TFunc case failed: %v", got)
+	}
+}
+
+func TestStripReceiverPrefixShape(t *testing.T) {
+	source := "package sample\nfunc f(methodArgs: Slice[Int]) -> Int\n  switch methodArgs\n    case TFunc(methodArgs, methodRet) then\n      if methodArgs.Len() == 0 then\n        None\n      else\n        let first = methodArgs.Get(0).UnwrapOr(ast2.MonoType.TUnit)\n        let recvName = switch first\n          case TCon(name) => name\n          case TApp(ctor, _) then\n            switch ctor.value()\n              case TCon(name) => name\n              case _ => \"\"\n            end\n          end\n          case TQualifiedName(_, _) => \"qualified\"\n          case _ => \"\"\n        end\n        0\n      end\n    end\n  end\nend\n"
+	got := ParseFileAt("strip-prefix.mygo", source)
+	if _, ok := got.(Result__Ok[ast2.File, string]); !ok {
+		t.Fatalf("strip receiver prefix failed: %v", got)
+	}
+}
+
+func TestThenCaseFollowedByArrowCase(t *testing.T) {
+	source := "package sample\nfunc f(value: Int) -> Int\n  switch value\n    case TFunc(methodArgs, methodRet) then\n      if methodArgs.Len() == 0 then\n        None\n      else\n        let first = methodArgs.Get(0).UnwrapOr(ast2.MonoType.TUnit)\n        let recvName = switch first\n          case TCon(name) => name\n          case TApp(ctor, _) then\n            switch ctor.value()\n              case TCon(name) => name\n              case _ => \"\"\n            end\n          end\n          case TQualifiedName(_, _) => \"qualified\"\n          case _ => \"\"\n        end\n        1\n      end\n    end\n    case _ => 0\n  end\nend\n"
+	got := ParseFileAt("then-followed-arrow.mygo", source)
+	if _, ok := got.(Result__Ok[ast2.File, string]); !ok {
+		t.Fatalf("then case followed by arrow case failed: %v", got)
+	}
+}
+
+func TestStripReceiverExactSignatureIncrement(t *testing.T) {
+	source := "package sample\nfunc stripReceiverArg(fieldType: ast2.MonoType, typeName: String, args: Slice[ast2.MonoType], subst: Subst) -> Option[Result[(ast2.MonoType, Subst), String]]\n  switch fieldType\n    case TFunc(methodArgs, methodRet) then\n      if methodArgs.Len() == 0 then\n        None\n      else\n        let first = methodArgs.Get(0).UnwrapOr(ast2.MonoType.TUnit)\n        let recvName = switch first\n          case TCon(name) => name\n          case TApp(ctor, _) then\n            switch ctor.value()\n              case TCon(name) => name\n              case _ => \"\"\n            end\n          end\n          case TQualifiedName(_, _) => typeName + \"\\0\"\n          case _ => \"\"\n        end\n        if recvName == typeName + \"\\0\" then\n          None\n        elsif recvName != typeName then\n          None\n        else\n          let receiverType = tCon(typeName, args)\n          let us = unify(first, receiverType, subst)\n          switch us\n            case Err(msg) => Some(Err(\"method receiver mismatch: \" + msg))\n            case Ok(s2) then\n              let droppedArgs = common2.SliceDrop(methodArgs, 1)\n              let newRet = applySubst(s2, methodRet.value())\n              let strippedBody = applySubstMonoList(s2, droppedArgs)\n              Some(Ok((ast2.MonoType.TFunc(strippedBody, Ref.new(newRet)), s2)))\n            end\n          end\n        end\n      end\n    end\n    case _ => None\n  end\nend\n"
+	source = strings.ReplaceAll(source, "\\0", "\\u0000")
+	got := ParseFileAt("strip-exact-signature.mygo", source)
+	if _, ok := got.(Result__Ok[ast2.File, string]); !ok {
+		t.Fatalf("exact signature increment failed: %v", got)
+	}
+}
+
+func TestStripReceiverReturnAndUnifyShape(t *testing.T) {
+	source := "package sample\nfunc f(first: ast2.MonoType, receiverType: ast2.MonoType, methodArgs: Slice[ast2.MonoType], methodRet: Ref[ast2.MonoType], subst: Subst) -> Option[Result[(ast2.MonoType, Subst), String]]\n  let us = unify(first, receiverType, subst)\n  switch us\n    case Err(msg) => Some(Err(\"method receiver mismatch: \" + msg))\n    case Ok(s2) then\n      let droppedArgs = common2.SliceDrop(methodArgs, 1)\n      let newRet = applySubst(subst, methodRet.value())\n      let strippedBody = applySubstMonoList(s2, droppedArgs)\n      Some(Ok((ast2.MonoType.TFunc(strippedBody, Ref.new(newRet)), s2)))\n    end\n  end\nend\n"
+	got := ParseFileAt("strip-return-unify.mygo", source)
+	if _, ok := got.(Result__Ok[ast2.File, string]); !ok {
+		t.Fatalf("return/unify shape failed: %v", got)
+	}
+}
+
 func TestLosslessNodeSpansCarryDeclarationAndStatementPaths(t *testing.T) {
 	got := ParseFileLossless("paths.mygo", "package sample\nfunc f() -> Int\n  1\nend\n")
 	parsed, ok := got.(Result__Ok[LosslessFile, string])
@@ -557,6 +654,37 @@ func TestParseVerbatimTripleQuotedAndRawStrings(t *testing.T) {
 		if !ok || literal.F0 != want {
 			t.Fatalf("statement[%d] literal = %#v, want %q", index, stmt.F0.Value.Kind, want)
 		}
+	}
+}
+
+func TestParseUnicodeEscapesInOrdinaryStrings(t *testing.T) {
+	fn := parseSingleFunc(t, "package sample\n\nfunc strings()\n  let ascii = \"\\u0041\"\n  let nonASCII = \"\\u4E2D\"\n  let nul = \"\\0\"\n  let raw = `\\u4E2D`\n  let multiline = \"\"\"\\u4E2D\"\"\"\nend\n")
+	body := fn.F4.Kind.(ast2.ExprKind__BlockExpr)
+	for index, want := range []string{"A", "中", "\x00", "\\u4E2D", "\\u4E2D"} {
+		stmt, ok := body.F0[index].(ast2.Stmt__LetStmt)
+		if !ok {
+			t.Fatalf("statement[%d] = %T, want StmtLetStmt", index, body.F0[index])
+		}
+		literal, ok := stmt.F0.Value.Kind.(ast2.ExprKind__StringExpr)
+		if !ok || literal.F0 != want {
+			t.Fatalf("statement[%d] literal = %#v, want %q", index, stmt.F0.Value.Kind, want)
+		}
+	}
+}
+
+func TestRejectInvalidUnicodeEscapes(t *testing.T) {
+	for name, literal := range map[string]string{
+		"incomplete":      "\\u12",
+		"non-hexadecimal": "\\u12G4",
+		"surrogate":       "\\uD800",
+	} {
+		t.Run(name, func(t *testing.T) {
+			source := "package sample\nfunc f() -> String\n  \"" + literal + "\"\nend\n"
+			got := ParseFileAt("invalid-unicode-"+name+".mygo", source)
+			if _, ok := got.(Result__Err[ast2.File, string]); !ok {
+				t.Fatalf("ParseFileAt() = %T, want parse error: %v", got, got)
+			}
+		})
 	}
 }
 
