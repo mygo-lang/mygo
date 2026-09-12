@@ -13,6 +13,7 @@ struct LayoutState
   Indent: Int
   Protected: Bool
   ProtectedLines: Slice[Int]
+  VerbatimLines: Slice[Int]
   BlockLines: Slice[Int]
   DedentLines: Slice[Int]
   TargetIndents: Slice[Int]
@@ -191,34 +192,56 @@ func renderASTSpans(file: ast2.File, spans: Slice[parser2.NodeSpan], delimited: 
   # layer relies on.
   let blockResult = renderBlockSpans(source, spans)
   let blockEdits = blockResult.Edits
+  # The recursive reflow pass runs before the flat branch/case/delimited passes
+  # so it can take whole ownership of the multi-construct source lines.  The
+  # lines it replaces become "owned": the later passes are guarded to skip them,
+  # and their rendered rows are verbatim-locked at the end so the reflowed block
+  # is reproduced byte-for-byte rather than re-indented a second time.
+  let reflowRender = reflowPass(blockResult.Text, events, delimited, blockEdits)
+  let reflowText = reflowRender.Text
+  let reflowEdits = reflowRender.Edits
+  let ownedLines = ownedSourceLines(reflowEdits, 0, [])
+  let preEdits = joinEdits(blockEdits, reflowEdits)
+  # `reflowLines` is every source line the recursive reflow pass has authority
+  # over (any line hosting an arrow `case`), whether it broke the line into a
+  # block or deliberately kept it inline.  The flat branch/delimited passes are
+  # guarded against these lines so they can never re-wrap a construct the reflow
+  # pass already canonicalized -- the delimited pass measures physical line width
+  # (>100) while reflow measures construct width, and letting both act on the same
+  # line breaks idempotence (e.g. re-wrapping an intentionally inline nested
+  # `case ... => call(...)`).  `ownedLines` (a subset) still drives verbatim-locking
+  # and the case pass, which only re-touch lines reflow left as a single row.
+  let reflowLines = arrowCaseSourceLines(events, 0, [])
   let thenEvents = events.Filter(func(item: parser2.LayoutEvent) -> Bool item.Kind == "enter:if-then" end)
-  let branchRender = renderBranchSpanAt(blockResult.Text, thenEvents, events, delimited, blockEdits, 0)
+  let branchRender = renderBranchSpanAt(reflowText, thenEvents, events, delimited, preEdits, 0, reflowLines)
   let ifText = branchRender.Text
   let branchEdits = branchRender.Edits
   let caseEvents = events.Filter(func(item: parser2.LayoutEvent) -> Bool item.Kind == "enter:case" && item.SeparatorAnchor.Start.Line > 0 end)
-  let caseRender = renderCaseSpanAt(ifText, caseEvents, delimited, joinEdits(blockEdits, branchEdits), 0)
+  let caseRender = renderCaseSpanAt(ifText, caseEvents, events, delimited, joinEdits(preEdits, branchEdits), 0, ownedLines)
   let caseText = caseRender.Text
   let caseEdits = caseRender.Edits
-  let delimitedRender = renderDelimitedPass(caseText, delimited, events, joinEdits(joinEdits(blockEdits, branchEdits), caseEdits))
+  let delimitedRender = renderDelimitedPass(caseText, delimited, events, joinEdits(joinEdits(preEdits, branchEdits), caseEdits), reflowLines)
   let delimitedText = delimitedRender.Text
   let delimEdits = delimitedRender.Edits
+  let reflowCount = sumPassAdded(reflowEdits, 0)
   let ifCount = sumPassAdded(branchEdits, 0)
   let caseCount = sumPassAdded(caseEdits, 0)
   let delimCount = sumPassAdded(delimEdits, 0)
-  let goal = blockResult.Lines.Len() + ifCount + caseCount + delimCount
-  let composedLines = composePassLines(blockResult.Lines, joinEdits(joinEdits(branchEdits, caseEdits), delimEdits), goal, 0)
+  let goal = blockResult.Lines.Len() + reflowCount + ifCount + caseCount + delimCount
+  let composedLines = composePassLines(blockResult.Lines, joinEdits(joinEdits(reflowEdits, joinEdits(branchEdits, caseEdits)), delimEdits), goal, 0)
+  let verbatimLines = projectOwnedRows(ownedLines, composedLines, 0)
   # Specific AST expansion segments must win over the generic pass-through
   # segments.  Otherwise segmentForRenderedLine observes the source-wide
   # segment first and loses the synthetic function-body boundary.
   let sourceFallback = ExpansionSegment { SourceStart: 1, SourceEnd: goal, RenderedStart: 1, RenderedEnd: goal, Kind: "source" }
-  let composedSegments = joinSegments(joinSegments(joinSegments(joinSegments(blockResult.Segments, editSegments(branchEdits)), editSegments(caseEdits)), editSegments(delimEdits)), [sourceFallback])
+  let composedSegments = joinSegments(joinSegments(joinSegments(joinSegments(joinSegments(blockResult.Segments, editSegments(reflowEdits)), editSegments(branchEdits)), editSegments(caseEdits)), editSegments(delimEdits)), [sourceFallback])
   # The delimited pass already re-rendered every value-position `if` that lived
   # on a single source line inside a wrapped literal into the inline `=>` form,
   # so it no longer introduces an expansion row.  Its layout events still carry
   # `AffectsIndent`/`ExpandsAfter`, which would add a phantom indent level to the
   # block, so drop exactly those events from the indent projection while keeping
   # them in the full `events` list that the arrowize pass reads.
-  let layoutEvents = renderLayoutEvents(events, delimited, 0, [])
+  let layoutEvents = renderLayoutEvents(events, delimited, 0, [], ownedLines)
   let renderedEvents = remapLayoutEvents(layoutEvents, composedLines, composedSegments, 0, [])
   # Block and dedent targets are projected from semantic event boundaries.
   # A source line may expand to several rendered lines, so remapping the old
@@ -231,7 +254,7 @@ func renderASTSpans(file: ast2.File, spans: Slice[parser2.NodeSpan], delimited: 
   # maps every protected source line onto its expansion rows.  Joining the
   # raw source-line keys back in would protect unrelated rendered rows once
   # an earlier pass (for example a wrapped list) shifts line numbers.
-  renderRenderedLayoutPlan(delimitedText, projectProtectedLines(protectedLines, composedLines, 0), composedSegments, layoutEvents, [], delimiterPlan)
+  renderRenderedLayoutPlan(delimitedText, projectProtectedLines(protectedLines, composedLines, 0), verbatimLines, composedSegments, layoutEvents, [], delimiterPlan)
 end
 
 # Project the event stream that drives the indent engine by removing the
@@ -240,14 +263,22 @@ end
 # `ExpandsAfter` yet sits entirely on one source line inside a same-line
 # delimited literal.  Those events must not add an expansion-driven indent
 # level because the corresponding text no longer expands into its own rows.
-func renderLayoutEvents(events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], index: Int, acc: Slice[parser2.LayoutEvent]) -> Slice[parser2.LayoutEvent]
+#
+# Additionally, every construct that lives on an owned (reflowed) source line is
+# dropped: the reflow pass bakes that construct's internal indentation into its
+# verbatim output, so its enter/exit events must contribute no indent to the
+# surrounding rows.  Dropping them keeps a reflowed `case ... end` block
+# depth-transparent, so its following sibling cases keep the enclosing switch's
+# indent instead of inheriting a phantom branch depth.
+func renderLayoutEvents(events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], index: Int, acc: Slice[parser2.LayoutEvent], ownedLines: Slice[Int]) -> Slice[parser2.LayoutEvent]
   if index >= events.Len() then acc
   else
     let ev = events.Get(index).UnwrapOr(emptyLayoutEvent())
     let isIfBranch = ev.Kind == "enter:if-then" || ev.Kind == "exit:if-then" || ev.Kind == "enter:if-else" || ev.Kind == "exit:if-else"
     let onOneLine = ev.Anchor.Start.Line > 0 && ev.Anchor.Start.Line == ev.Anchor.End.Line
-    let flatten = isIfBranch && ev.AffectsIndent && ev.ExpandsAfter && onOneLine && insideSameLineDelimited(delimited, ev.Anchor.Start.Line, ev.Anchor.Start.Column)
-    renderLayoutEvents(events, delimited, index + 1, if flatten then acc else acc.Append(ev) end)
+    let onOwned = (ev.Anchor.Start.Line > 0 && containsInt(ownedLines, ev.Anchor.Start.Line)) || (ev.Span.Start.Line > 0 && containsInt(ownedLines, ev.Span.Start.Line))
+    let flatten = onOwned || (isIfBranch && ev.AffectsIndent && ev.ExpandsAfter && onOneLine && insideSameLineDelimited(delimited, ev.Anchor.Start.Line, ev.Anchor.Start.Column))
+    renderLayoutEvents(events, delimited, index + 1, if flatten then acc else acc.Append(ev) end, ownedLines)
   end
 end
 
@@ -381,8 +412,8 @@ func makeRenderedLayoutPlan(lines: Slice[LineMapping], events: Slice[RenderedLay
   RenderedLayoutPlan { Lines: lines, Events: events, Targets: projectRenderedEventTargets(events, lines, 0, 0) }
 end
 
-func renderRenderedLayoutPlan(source: String, protectedLines: Slice[Int], segments: Slice[ExpansionSegment], layoutEvents: Slice[parser2.LayoutEvent], syntheticEvents: Slice[SyntheticLayoutEvent], plan: RenderedLayoutPlan) -> String
-  renderSourceLinesWithTargets(source, protectedLines, [], [], plan.Targets, plan.Lines, segments, layoutEvents, syntheticEvents, plan.Events)
+func renderRenderedLayoutPlan(source: String, protectedLines: Slice[Int], verbatimLines: Slice[Int], segments: Slice[ExpansionSegment], layoutEvents: Slice[parser2.LayoutEvent], syntheticEvents: Slice[SyntheticLayoutEvent], plan: RenderedLayoutPlan) -> String
+  renderSourceLinesWithTargets(source, protectedLines, verbatimLines, [], [], plan.Targets, plan.Lines, segments, layoutEvents, syntheticEvents, plan.Events)
 end
 
 func firstSpanOfKind(spans: Slice[parser2.NodeSpan], kind: String, index: Int) -> ast2.SourceSpan
@@ -492,8 +523,8 @@ end
 # of every earlier pass (block/branch/case); a span's original line is shifted
 # by `lineShift` before it reads its anchor from the already-grown text.  When
 # nothing was wrapped the edit list is empty.
-func renderDelimitedPass(source: String, spans: Slice[parser2.DelimitedSpan], events: Slice[parser2.LayoutEvent], priorEdits: Slice[PassEdit]) -> DelimitedRender
-  let text = renderDelimitedSpanAt(source, spans, spans, events, priorEdits, 0)
+func renderDelimitedPass(source: String, spans: Slice[parser2.DelimitedSpan], events: Slice[parser2.LayoutEvent], priorEdits: Slice[PassEdit], ownedLines: Slice[Int]) -> DelimitedRender
+  let text = renderDelimitedSpanAt(source, spans, spans, events, priorEdits, 0, ownedLines)
   let added = text.Split("\n").Len() - source.Split("\n").Len()
   if added == 0 then DelimitedRender { Text: text, Edits: [] }
   else
@@ -502,7 +533,7 @@ func renderDelimitedPass(source: String, spans: Slice[parser2.DelimitedSpan], ev
     # first span) mis-maps every later expansion: composePassRows matches an
     # edit by SourceLine, so a second literal on another source line would get
     # no edit and its synthetic rows would drift onto unrelated source lines.
-    DelimitedRender { Text: text, Edits: renderDelimitedEdits(source.Split("\n"), spans, spans, events, priorEdits, 0, []) }
+    DelimitedRender { Text: text, Edits: renderDelimitedEdits(source.Split("\n"), spans, spans, events, priorEdits, 0, [], ownedLines) }
   end
 end
 
@@ -510,15 +541,15 @@ end
 # the per-span line delta, reading each anchor line at the same `lineShift`
 # row the text pass uses so the computed Added (blockLines - 1) equals what the
 # text pass actually emitted.
-func renderDelimitedEdits(sourceLines: Slice[String], allSpans: Slice[parser2.DelimitedSpan], spans: Slice[parser2.DelimitedSpan], events: Slice[parser2.LayoutEvent], priorEdits: Slice[PassEdit], index: Int, acc: Slice[PassEdit]) -> Slice[PassEdit]
+func renderDelimitedEdits(sourceLines: Slice[String], allSpans: Slice[parser2.DelimitedSpan], spans: Slice[parser2.DelimitedSpan], events: Slice[parser2.LayoutEvent], priorEdits: Slice[PassEdit], index: Int, acc: Slice[PassEdit], ownedLines: Slice[Int]) -> Slice[PassEdit]
   if index >= spans.Len() then acc
   else
     let item = spans.Get(index).UnwrapOr(parser2.DelimitedSpan { Kind: "", Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }, Items: [], Separators: [] })
     let line = item.Span.Start.Line
     let raw = sourceLines.Get(line + lineShift(priorEdits, line) - 1).UnwrapOr("")
-    if raw.Len() > 100 && item.Separators.Len() > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(allSpans, item.Span, 0) then
-      renderDelimitedEdits(sourceLines, allSpans, spans, events, priorEdits, index + 1, acc.Append(PassEdit { Anchor: line - 1, SourceLine: line, Added: renderDelimitedBlockBody(raw, item, events).Split("\n").Len() - 1, SourceStart: line, SourceEnd: item.Span.End.Line, Kind: "delimited", Depths: [] }))
-    else renderDelimitedEdits(sourceLines, allSpans, spans, events, priorEdits, index + 1, acc) end
+    if raw.Len() > 100 && item.Separators.Len() > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(allSpans, item.Span, 0) && !containsInt(ownedLines, line) then
+      renderDelimitedEdits(sourceLines, allSpans, spans, events, priorEdits, index + 1, acc.Append(PassEdit { Anchor: line - 1, SourceLine: line, Added: renderDelimitedBlockBody(raw, item, events).Split("\n").Len() - 1, SourceStart: line, SourceEnd: item.Span.End.Line, Kind: "delimited", Depths: [] }), ownedLines)
+    else renderDelimitedEdits(sourceLines, allSpans, spans, events, priorEdits, index + 1, acc, ownedLines) end
   end
 end
 
@@ -540,18 +571,18 @@ func containedInSameLineSpan(spans: Slice[parser2.DelimitedSpan], span: ast2.Sou
   end
 end
 
-func renderDelimitedSpanAt(source: String, allSpans: Slice[parser2.DelimitedSpan], spans: Slice[parser2.DelimitedSpan], events: Slice[parser2.LayoutEvent], priorEdits: Slice[PassEdit], index: Int) -> String
+func renderDelimitedSpanAt(source: String, allSpans: Slice[parser2.DelimitedSpan], spans: Slice[parser2.DelimitedSpan], events: Slice[parser2.LayoutEvent], priorEdits: Slice[PassEdit], index: Int, ownedLines: Slice[Int]) -> String
   if index >= spans.Len() then source
   else
     let item = spans.Get(index).UnwrapOr(parser2.DelimitedSpan { Kind: "", Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }, Items: [], Separators: [] })
-    let rendered = renderDelimitedSpanAt(source, allSpans, spans, events, priorEdits, index + 1)
+    let rendered = renderDelimitedSpanAt(source, allSpans, spans, events, priorEdits, index + 1, ownedLines)
     let line = item.Span.Start.Line
     # Descending order means same-pass expansions already applied sit on rows
     # below this anchor, so only prior-pass insertions shift the target row.
     let target = line + lineShift(priorEdits, line)
     let lines = rendered.Split("\n")
     let raw = lines.Get(target - 1).UnwrapOr("")
-    if raw.Len() > 100 && item.Separators.Len() > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(allSpans, item.Span, 0) then replaceSourceLine(lines, target - 1, raw.Slice(0, item.Span.Start.Column - 1).UnwrapOr("") + renderDelimitedBlockBody(raw, item, events)) else rendered end
+    if raw.Len() > 100 && item.Separators.Len() > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(allSpans, item.Span, 0) && !containsInt(ownedLines, line) then replaceSourceLine(lines, target - 1, raw.Slice(0, item.Span.Start.Column - 1).UnwrapOr("") + renderDelimitedBlockBody(raw, item, events)) else rendered end
   end
 end
 
@@ -639,16 +670,370 @@ func joinDelimitedItemLines(items: Slice[String], tail: String, index: Int) -> S
   end
 end
 
-func renderCaseSpanAt(source: String, cases: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], priorEdits: Slice[PassEdit], index: Int) -> DelimitedRender
-  if index >= cases.Len() then DelimitedRender { Text: source, Edits: [] }
+# ---- Recursive single-owner reflow (M2) -------------------------------------
+# The line-replacement passes cannot share a single physical source line among
+# several expandable constructs: a `case ... => body` whose body nests a wide
+# delimited call, a value `switch`, or a keyword `if`.  Whichever pass rewrites
+# that line first moves the others' columns, dropping callee names and
+# scrambling indentation.  `reflowRegion` renders one such region to canonical
+# *relative*-indented lines (the first line carries no leading indent; the
+# caller prepends the base indent), deciding inline `=>` versus block
+# `then`/`end` and recursing into nested constructs.  A `case` source line is
+# owned by this reflow only when its body reflows to more than one line;
+# single-line cases are left to the layout engine untouched.
+
+func sl(lineText: String, c0: Int, c1: Int) -> String
+  let hi = if c1 > lineText.Len() then lineText.Len() else c1 end
+  if c0 - 1 >= hi then "" else lineText.Slice(c0 - 1, hi).UnwrapOr("") end
+end
+
+func charAt(lineText: String, c: Int) -> String
+  if c < 1 || c > lineText.Len() then "" else lineText.Slice(c - 1, c).UnwrapOr("") end
+end
+
+func trimStartCol(lineText: String, c: Int) -> Int
+  if charAt(lineText, c) == " " || charAt(lineText, c) == "\t" then trimStartCol(lineText, c + 1) else c end
+end
+
+func trimEndCol(lineText: String, c: Int) -> Int
+  if c > 0 && (charAt(lineText, c) == " " || charAt(lineText, c) == "\t") then trimEndCol(lineText, c - 1) else c end
+end
+
+func firstOpenCol(lineText: String, c: Int, c1: Int) -> Int
+  if c > c1 then -1
+  else
+    let ch = charAt(lineText, c)
+    if ch == "(" || ch == "{" || ch == "[" then c else firstOpenCol(lineText, c + 1, c1) end
+  end
+end
+
+func shiftLines(lines: Slice[String], depth: Int) -> Slice[String]
+  lines.Fold([] as Slice[String], func(acc: Slice[String], line: String) -> Slice[String]
+    acc.Append(if line == "" then line else strings.Repeat("  ", depth) + line end)
+  end)
+end
+
+func appendLastLine(lines: Slice[String], suffix: String, index: Int) -> Slice[String]
+  if index >= lines.Len() then []
+  else
+    let line = lines.Get(index).UnwrapOr("")
+    let out = if index + 1 == lines.Len() then line + suffix else line end
+    joinStrings([out], appendLastLine(lines, suffix, index + 1))
+  end
+end
+
+func lookupSwitchAt(events: Slice[parser2.LayoutEvent], line: Int, col: Int, index: Int) -> Option[parser2.LayoutEvent]
+  if index >= events.Len() then None
+  else
+    let e = events.Get(index).UnwrapOr(emptyLayoutEvent())
+    if e.Kind == "enter:switch" && e.Anchor.Start.Line == line && e.Anchor.Start.Column == col then Some(e) else lookupSwitchAt(events, line, col, index + 1) end
+  end
+end
+
+func lookupIfAt(events: Slice[parser2.LayoutEvent], line: Int, col: Int, index: Int) -> Option[parser2.LayoutEvent]
+  if index >= events.Len() then None
+  else
+    let e = events.Get(index).UnwrapOr(emptyLayoutEvent())
+    if e.Kind == "enter:if" && e.Span.Start.Line == line && e.Span.Start.Column == col then Some(e) else lookupIfAt(events, line, col, index + 1) end
+  end
+end
+
+func lookupDelimAt(spans: Slice[parser2.DelimitedSpan], line: Int, col: Int, index: Int) -> Option[parser2.DelimitedSpan]
+  if index >= spans.Len() then None
+  else
+    let d = spans.Get(index).UnwrapOr(parser2.DelimitedSpan { Kind: "", Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }, Items: [], Separators: [] })
+    if d.Span.Start.Line == line && d.Span.Start.Column == col then Some(d) else lookupDelimAt(spans, line, col, index + 1) end
+  end
+end
+
+func thenOfLine(events: Slice[parser2.LayoutEvent], line: Int, afterCol: Int, index: Int, best: parser2.LayoutEvent) -> parser2.LayoutEvent
+  if index >= events.Len() then best
+  else
+    let e = events.Get(index).UnwrapOr(emptyLayoutEvent())
+    let hit = e.Kind == "enter:if-then" && e.Anchor.Start.Line == line && e.Anchor.Start.Column > afterCol
+    let better = hit && (best.Anchor.Start.Column == 0 || e.Anchor.Start.Column < best.Anchor.Start.Column)
+    thenOfLine(events, line, afterCol, index + 1, if better then e else best end)
+  end
+end
+
+func elseOfLine(events: Slice[parser2.LayoutEvent], line: Int, afterCol: Int, index: Int, best: parser2.LayoutEvent) -> parser2.LayoutEvent
+  if index >= events.Len() then best
+  else
+    let e = events.Get(index).UnwrapOr(emptyLayoutEvent())
+    let hit = e.Kind == "enter:if-else" && e.Anchor.Start.Line == line && e.Anchor.Start.Column > afterCol
+    let better = hit && (best.Anchor.Start.Column == 0 || e.Anchor.Start.Column < best.Anchor.Start.Column)
+    elseOfLine(events, line, afterCol, index + 1, if better then e else best end)
+  end
+end
+
+func arrowCaseOnLine(events: Slice[parser2.LayoutEvent], line: Int, index: Int) -> Option[parser2.LayoutEvent]
+  if index >= events.Len() then None
+  else
+    let e = events.Get(index).UnwrapOr(emptyLayoutEvent())
+    if e.Kind == "enter:case" && e.Anchor.Start.Line == line && e.SeparatorAnchor.Start.Line == line then Some(e)
+    else arrowCaseOnLine(events, line, index + 1) end
+  end
+end
+
+func reflowRegion(lineText: String, events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], line: Int, c0: Int, c1: Int, inDelim: Bool) -> Slice[String]
+  let cs = trimStartCol(lineText, c0)
+  let ce = trimEndCol(lineText, c1)
+  let text = strings.TrimSpace(sl(lineText, cs, ce))
+  switch lookupSwitchAt(events, line, cs, 0)
+    case Some(_) => reflowSwitchLines(lineText, events, line, cs, ce)
+    case None =>
+      switch lookupIfAt(events, line, cs, 0)
+        case Some(ife) => reflowIfLines(lineText, events, delimited, line, cs, ce, ife, inDelim)
+        case None => reflowCallLines(lineText, events, delimited, line, cs, ce, text)
+      end
+  end
+end
+
+func reflowCallLines(lineText: String, events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], line: Int, cs: Int, ce: Int, text: String) -> Slice[String]
+  let open = firstOpenCol(lineText, cs, ce)
+  if open < 0 then [text]
+  else
+    let callee = strings.TrimRight(sl(lineText, cs, open - 1), " \t")
+    if text.Len() <= 100 then [callee + sl(lineText, open, ce)]
+    else
+      switch lookupDelimAt(delimited, line, open, 0)
+        case Some(d) => reflowDelimLines(lineText, events, delimited, line, d, callee)
+        case None => [text]
+      end
+    end
+  end
+end
+
+func reflowDelimLines(lineText: String, events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], line: Int, d: parser2.DelimitedSpan, callee: String) -> Slice[String]
+  let openChar = sl(lineText, d.Span.Start.Column, d.Span.Start.Column)
+  let closeChar = sl(lineText, d.Span.End.Column - 1, d.Span.End.Column - 1)
+  let tail = if d.Kind == "delimited:tuple" then "" else "," end
+  let items = delimItemLoop(lineText, events, delimited, line, d, d.Span.Start.Column + 1, 0, tail, [])
+  joinStrings([callee + openChar], joinStrings(items, [closeChar]))
+end
+
+# The last item's content must stop BEFORE the closing delimiter.  `closeChar`
+# sits at `End.Column - 1`, so the item body ends at `End.Column - 2`; using
+# `End.Column - 1` let the final item swallow the closing `)`/`]`/`}`, which
+# reflowCallLines then echoed verbatim (a bare `call(...)` last item rendered as
+# `call(...))`).  Items reconstructed from a `switch` hid this because
+# reflowSwitchLines rebuilds its text from the case events.
+func delimItemLoop(lineText: String, events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], line: Int, d: parser2.DelimitedSpan, start: Int, index: Int, tail: String, acc: Slice[String]) -> Slice[String]
+  let seps = d.Separators
+  let stop = if index >= seps.Len() then d.Span.End.Column - 2 else seps.Get(index).UnwrapOr(d.Span).Start.Column - 1 end
+  let sub = reflowRegion(lineText, events, delimited, line, start, stop, true)
+  let next = joinStrings(acc, appendLastLine(shiftLines(sub, 1), tail, 0))
+  if index >= seps.Len() then next
+  else
+    let sep = seps.Get(index).UnwrapOr(d.Span)
+    delimItemLoop(lineText, events, delimited, line, d, sep.End.Column, index + 1, tail, next)
+  end
+end
+
+func casesInRegion(events: Slice[parser2.LayoutEvent], line: Int, cs: Int, ce: Int, index: Int, acc: Slice[parser2.LayoutEvent]) -> Slice[parser2.LayoutEvent]
+  if index >= events.Len() then acc
+  else
+    let e = events.Get(index).UnwrapOr(emptyLayoutEvent())
+    let hit = e.Kind == "enter:case" && e.Anchor.Start.Line == line && e.Anchor.Start.Column > cs && e.Span.End.Column - 1 <= ce
+    casesInRegion(events, line, cs, ce, index + 1, if hit then acc.Append(e) else acc end)
+  end
+end
+
+func switchCaseLines(lineText: String, cases: Slice[parser2.LayoutEvent], index: Int, acc: Slice[String]) -> Slice[String]
+  if index >= cases.Len() then acc
+  else
+    let c = cases.Get(index).UnwrapOr(emptyLayoutEvent())
+    let caseText = strings.TrimSpace(sl(lineText, c.Anchor.Start.Column, c.Span.End.Column - 1))
+    switchCaseLines(lineText, cases, index + 1, acc.Append("  " + caseText))
+  end
+end
+
+func reflowSwitchLines(lineText: String, events: Slice[parser2.LayoutEvent], line: Int, cs: Int, ce: Int) -> Slice[String]
+  let cases = casesInRegion(events, line, cs, ce, 0, [])
+  if cases.Len() == 0 then [strings.TrimSpace(sl(lineText, cs, ce))]
+  else
+    let firstAnchor = cases.Get(0).UnwrapOr(emptyLayoutEvent()).Anchor.Start.Column
+    let header = strings.TrimRight(sl(lineText, cs, firstAnchor - 1), " \t")
+    let body = switchCaseLines(lineText, cases, 0, [])
+    joinStrings([header], joinStrings(body, ["end"]))
+  end
+end
+
+func reflowIfLines(lineText: String, events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], line: Int, cs: Int, ce: Int, ife: parser2.LayoutEvent, inDelim: Bool) -> Slice[String]
+  let thenE = thenOfLine(events, line, ife.Anchor.End.Column, 0, emptyLayoutEvent())
+  let elseE = elseOfLine(events, line, thenE.Anchor.Start.Column, 0, emptyLayoutEvent())
+  let endCol = thenE.ExitAnchor.Start.Column
+  let cond = strings.TrimSpace(sl(lineText, ife.Anchor.End.Column, thenE.Anchor.Start.Column - 1))
+  let thenB0 = thenE.Anchor.End.Column
+  let thenB1 = elseE.Anchor.Start.Column - 1
+  let elseB0 = elseE.Anchor.End.Column
+  let elseB1 = endCol - 1
+  let inlineLen = ce - cs + 1
+  if inDelim && inlineLen <= 100 then
+    ["if " + cond + " => " + strings.TrimSpace(sl(lineText, thenB0, thenB1)) + " else " + strings.TrimSpace(sl(lineText, elseB0, elseB1))]
+  else
+    let tb = reflowRegion(lineText, events, delimited, line, thenB0, thenB1, false)
+    let eb = reflowRegion(lineText, events, delimited, line, elseB0, elseB1, false)
+    joinStrings(["if " + cond + " then"], joinStrings(joinStrings(shiftLines(tb, 1), ["else"]), joinStrings(shiftLines(eb, 1), ["end"])))
+  end
+end
+
+func caseReflowLines(lineText: String, events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], line: Int) -> Slice[String]
+  switch arrowCaseOnLine(events, line, 0)
+    case Some(c) =>
+      let pat = strings.TrimSpace(sl(lineText, c.Anchor.End.Column, c.SeparatorAnchor.Start.Column - 1))
+      let b0 = trimStartCol(lineText, c.SeparatorAnchor.End.Column)
+      let b1 = trimEndCol(lineText, c.Span.End.Column - 1)
+      let body = reflowRegion(lineText, events, delimited, line, b0, b1, false)
+      if body.Len() <= 1 then []
+      else joinStrings(["case " + pat + " then"], joinStrings(shiftLines(body, 1), ["end"]))
+      end
+    case None => []
+  end
+end
+
+# The recursive reflow pass owns the physical source lines of an arrow `case`
+# whose body (a call, a value `switch`, or a value `if`) must expand to more
+# than one rendered row.  Those lines carry several constructs on a single
+# source row, which the flat per-line branch/case/delimited passes cannot
+# reflow without slicing the same row twice and dropping the callee / field
+# label between delimiters.  This pass replaces each such source line with a
+# pre-indented canonical block (base = the line's own leading whitespace) and
+# records one `case-reflow` PassEdit so the composition layer reserves the
+# produced rows.  The emitted rows are then verbatim-locked in the render step.
+func reflowPass(source: String, events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], priorEdits: Slice[PassEdit]) -> DelimitedRender
+  let candidateLines = arrowCaseSourceLines(events, 0, [])
+  let edits = reflowPassEdits(source.Split("\n"), events, delimited, priorEdits, candidateLines, 0, [])
+  if edits.Len() == 0 then DelimitedRender { Text: source, Edits: [] }
+  else DelimitedRender { Text: reflowPassText(source, events, delimited, priorEdits, candidateLines, 0), Edits: edits } end
+end
+
+# Distinct source lines that host an arrow `case` (its `=>` separator sits on
+# the case's own anchor line), collected in ascending source order so the text
+# pass can apply replacements highest-line-first.
+func arrowCaseSourceLines(events: Slice[parser2.LayoutEvent], index: Int, acc: Slice[Int]) -> Slice[Int]
+  if index >= events.Len() then acc
+  else
+    let e = events.Get(index).UnwrapOr(emptyLayoutEvent())
+    let isArrow = e.Kind == "enter:case" && e.Anchor.Start.Line > 0 && e.Anchor.Start.Line == e.SeparatorAnchor.Start.Line
+    let line = e.Anchor.Start.Line
+    let next = if isArrow && !containsInt(acc, line) then acc.Append(line) else acc end
+    arrowCaseSourceLines(events, index + 1, next)
+  end
+end
+
+# Descending-index application: a replacement on a lower (higher-numbered)
+# source line only grows rows beneath it, so an upper line's target row is
+# still `line + lineShift(priorEdits, line)` when it is rewritten.
+func reflowPassText(source: String, events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], priorEdits: Slice[PassEdit], lines: Slice[Int], index: Int) -> String
+  if index >= lines.Len() then source
+  else
+    let rendered = reflowPassText(source, events, delimited, priorEdits, lines, index + 1)
+    let line = lines.Get(index).UnwrapOr(0)
+    let target = line + lineShift(priorEdits, line)
+    let srcLines = rendered.Split("\n")
+    let raw = srcLines.Get(target - 1).UnwrapOr("")
+    let refl = caseReflowLines(raw, events, delimited, line)
+    if refl.Len() <= 1 then rendered else replaceSourceLine(srcLines, target - 1, reflowBlock(raw, refl, 0, "")) end
+  end
+end
+
+func reflowPassEdits(sourceLines: Slice[String], events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], priorEdits: Slice[PassEdit], lines: Slice[Int], index: Int, acc: Slice[PassEdit]) -> Slice[PassEdit]
+  if index >= lines.Len() then acc
+  else
+    let line = lines.Get(index).UnwrapOr(0)
+    let raw = sourceLines.Get(line + lineShift(priorEdits, line) - 1).UnwrapOr("")
+    let refl = caseReflowLines(raw, events, delimited, line)
+    let next = if refl.Len() <= 1 then acc
+      else
+        switch arrowCaseOnLine(events, line, 0)
+          case Some(c) => acc.Append(PassEdit { Anchor: line - 1, SourceLine: line, Added: refl.Len() - 1, SourceStart: c.Span.Start.Line, SourceEnd: c.Span.End.Line, Kind: "case-reflow", Depths: [] })
+          case None => acc
+        end
+      end
+    reflowPassEdits(sourceLines, events, delimited, priorEdits, lines, index + 1, next)
+  end
+end
+
+# Prepend the source line's own leading whitespace to every reflowed row so the
+# block lands at the indentation the source line already carried (input is
+# canonical/idempotent, so that indentation is already the correct final one).
+func reflowBlock(raw: String, refl: Slice[String], index: Int, acc: String) -> String
+  if index >= refl.Len() then acc
+  else
+    let piece = indentPrefix(raw) + refl.Get(index).UnwrapOr("")
+    let next = if index == 0 then piece else acc + "\n" + piece end
+    reflowBlock(raw, refl, index + 1, next)
+  end
+end
+
+func indentPrefix(raw: String) -> String
+  sl(raw, 1, indentWidth(raw, 1))
+end
+
+func indentWidth(raw: String, c: Int) -> Int
+  if charAt(raw, c) == " " || charAt(raw, c) == "\t" then indentWidth(raw, c + 1) else c - 1 end
+end
+
+func ownedSourceLines(edits: Slice[PassEdit], index: Int, acc: Slice[Int]) -> Slice[Int]
+  if index >= edits.Len() then acc
+  else
+    let e = edits.Get(index).UnwrapOr(PassEdit { Anchor: 0, SourceLine: 1, Added: 0, SourceStart: 1, SourceEnd: 1, Kind: "", Depths: [] })
+    ownedSourceLines(edits, index + 1, acc.Append(e.SourceLine))
+  end
+end
+
+# Map the owned (reflowed) source lines onto the rendered rows their expansion
+# produced.  `composePassRows` stamps both the identity head row and every
+# synthetic body/after row with `SourceLine = edit.SourceLine`, so filtering the
+# composed mapping by owned source lines yields exactly the rows to lock.
+func projectOwnedRows(owned: Slice[Int], mappings: Slice[LineMapping], index: Int) -> Slice[Int]
+  if index >= mappings.Len() then []
+  else
+    let m = mappings.Get(index).UnwrapOr(LineMapping { SourceLine: 0, RenderedLine: 0, Delta: 0, Synthetic: false, AnchorSourceLine: 0, Boundary: "", Depth: 0 })
+    let current = if containsInt(owned, m.SourceLine) then [m.RenderedLine] else [] end
+    joinInts(current, projectOwnedRows(owned, mappings, index + 1))
+  end
+end
+
+# A same-line arrow `case` needs the flat force-block only when its body is a
+# bare expression (no `switch`/`if` at the body start and no opening delimiter,
+# so nothing recursive can split it) whose physical line still overflows 100
+# columns.  Any construct body belongs to the recursive reflow pass instead.
+func caseBodyNeedsFlatBlock(raw: String, events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], line: Int, item: parser2.LayoutEvent) -> Bool
+  let b0 = trimStartCol(raw, item.SeparatorAnchor.End.Column)
+  let b1 = trimEndCol(raw, item.Span.End.Column - 1)
+  let bare = switch lookupSwitchAt(events, line, b0, 0)
+    case Some(_) => false
+    case None =>
+      switch lookupIfAt(events, line, b0, 0)
+        case Some(_) => false
+        case None => firstOpenCol(raw, b0, b1) < 0
+      end
+    end
+  bare && raw.Len() > 100
+end
+
+func renderCaseSpanAt(source: String, cases: Slice[parser2.LayoutEvent], events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], priorEdits: Slice[PassEdit], index: Int, ownedLines: Slice[Int]) -> DelimitedRender
+  if index >= cases.Len() then
+    DelimitedRender { Text: source, Edits: [] }
   else
     let item = cases.Get(index).UnwrapOr(emptyLayoutEvent())
-    let rendered = renderCaseSpanAt(source, cases, delimited, priorEdits, index + 1)
+    let rendered = renderCaseSpanAt(source, cases, events, delimited, priorEdits, index + 1, ownedLines)
     let line = item.Anchor.Start.Line
     let target = line + lineShift(priorEdits, line)
     let lines = rendered.Text.Split("\n")
     let raw = lines.Get(target - 1).UnwrapOr("")
-    if item.ExpandsAfter && item.Anchor.Start.Line > 0 && item.BodyAnchor.Start.Line > 0 && item.Anchor.Start.Line == item.SeparatorAnchor.Start.Line && item.SeparatorAnchor.Start.Line == item.BodyAnchor.Start.Line && item.SeparatorAnchor.End.Column <= item.BodyAnchor.Start.Column && !insideSameLineDelimited(delimited, line, item.Anchor.Start.Column) then
+    # A same-line arrow `case` is force-blocked by this flat pass ONLY when its
+    # body is a bare expression (no call/`switch`/`if` construct the recursive
+    # reflow pass would own) that still cannot fit within 100 columns.  When the
+    # body IS such a construct, the reflow pass owns the inline-vs-block decision
+    # -- either it reflowed the line (owned, already skipped above) or it kept
+    # the construct inline -- so re-running this pass on the canonical output
+    # would re-split an intentionally inline body and drop the callee (the
+    # BodyAnchor sits on the opening delimiter).  Keeping this pass to bare
+    # bodies makes it agree with the reflow pass, which is what idempotence needs.
+    if item.ExpandsAfter && item.Anchor.Start.Line > 0 && item.BodyAnchor.Start.Line > 0 && item.Anchor.Start.Line == item.SeparatorAnchor.Start.Line && item.SeparatorAnchor.Start.Line == item.BodyAnchor.Start.Line && item.SeparatorAnchor.End.Column <= item.BodyAnchor.Start.Column && !insideSameLineDelimited(delimited, line, item.Anchor.Start.Column) && !containsInt(ownedLines, line) && caseBodyNeedsFlatBlock(raw, events, delimited, line, item) then
       let replacement = expandCaseSourceLine(raw, item)
       let edit = PassEdit { Anchor: line - 1, SourceLine: line, Added: replacement.Split("\n").Len() - 1, SourceStart: item.Span.Start.Line, SourceEnd: item.Span.End.Line, Kind: "case-branch", Depths: [] }
       DelimitedRender { Text: replaceSourceLine(lines, target - 1, replacement), Edits: joinEdits(rendered.Edits, [edit]) }
@@ -663,12 +1048,12 @@ func expandCaseSourceLine(raw: String, item: parser2.LayoutEvent) -> String
   prefix + " then\n  " + body + "\nend"
 end
 
-func renderBranchSpanAt(source: String, thenEvents: Slice[parser2.LayoutEvent], events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], priorEdits: Slice[PassEdit], index: Int) -> DelimitedRender
+func renderBranchSpanAt(source: String, thenEvents: Slice[parser2.LayoutEvent], events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], priorEdits: Slice[PassEdit], index: Int, ownedLines: Slice[Int]) -> DelimitedRender
   if index >= thenEvents.Len() then DelimitedRender { Text: source, Edits: [] }
   else
     let thenEvent = thenEvents.Get(index).UnwrapOr(emptyLayoutEvent())
     let elseEvents = events.Filter(func(item: parser2.LayoutEvent) -> Bool item.Kind == "enter:if-else" && sameBranchParent(item.Path, thenEvent.Path, 0) end)
-    let rendered = renderBranchSpanAt(source, thenEvents, events, delimited, priorEdits, index + 1)
+    let rendered = renderBranchSpanAt(source, thenEvents, events, delimited, priorEdits, index + 1, ownedLines)
     if elseEvents.Len() == 0 then rendered
     else
       let elseEvent = elseEvents.Get(0).UnwrapOr(thenEvent)
@@ -677,7 +1062,7 @@ func renderBranchSpanAt(source: String, thenEvents: Slice[parser2.LayoutEvent], 
       let target = line + lineShift(priorEdits, line)
       let lines = rendered.Text.Split("\n")
       let raw = lines.Get(target - 1).UnwrapOr("")
-      if shouldExpandBranch(raw, thenEvent, elseEvent, exit) && !insideSameLineDelimited(delimited, line, thenEvent.Anchor.Start.Column) then
+      if shouldExpandBranch(raw, thenEvent, elseEvent, exit) && !insideSameLineDelimited(delimited, line, thenEvent.Anchor.Start.Column) && !containsInt(ownedLines, line) then
         let replacement = expandBranchSourceLine(raw, thenEvent, elseEvent, exit)
         let edit = PassEdit { Anchor: line - 1, SourceLine: line, Added: replacement.Split("\n").Len() - 1, SourceStart: line, SourceEnd: if thenEvent.Span.End.Line > 0 then thenEvent.Span.End.Line else line end, Kind: "if-branch", Depths: [] }
         DelimitedRender { Text: replaceSourceLine(lines, target - 1, replacement), Edits: joinEdits(rendered.Edits, [edit]) }
@@ -760,10 +1145,10 @@ func expandBranchSourceLine(raw: String, thenEvent: parser2.LayoutEvent, elseEve
   prefix + " then\n  " + thenBody + "\nelse\n  " + elseBody + "\nend"
 end
 
-func renderSourceLinesWithTargets(source: String, protectedLines: Slice[Int], blockLines: Slice[Int], dedentLines: Slice[Int], targets: Slice[Int], lineMap: Slice[LineMapping], segments: Slice[ExpansionSegment], layoutEvents: Slice[parser2.LayoutEvent], syntheticEvents: Slice[SyntheticLayoutEvent], renderedEvents: Slice[RenderedLayoutEvent]) -> String
+func renderSourceLinesWithTargets(source: String, protectedLines: Slice[Int], verbatimLines: Slice[Int], blockLines: Slice[Int], dedentLines: Slice[Int], targets: Slice[Int], lineMap: Slice[LineMapping], segments: Slice[ExpansionSegment], layoutEvents: Slice[parser2.LayoutEvent], syntheticEvents: Slice[SyntheticLayoutEvent], renderedEvents: Slice[RenderedLayoutEvent]) -> String
   let normalized = strings.ReplaceAll(source, "\r\n", "\n")
   let projectedTargets = targets
-  let initial = LayoutState { Lines: [], SourceLine: 1, LineMap: lineMap, Segments: segments, SyntheticEvents: syntheticEvents, Indent: 0, Protected: false, ProtectedLines: protectedLines, BlockLines: blockLines, DedentLines: dedentLines, TargetIndents: projectedTargets, EventDriven: true }
+  let initial = LayoutState { Lines: [], SourceLine: 1, LineMap: lineMap, Segments: segments, SyntheticEvents: syntheticEvents, Indent: 0, Protected: false, ProtectedLines: protectedLines, VerbatimLines: verbatimLines, BlockLines: blockLines, DedentLines: dedentLines, TargetIndents: projectedTargets, EventDriven: true }
   let state = normalized.Split("\n").Fold(initial, func(state: LayoutState, raw: String) -> LayoutState foldLine(state, raw) end)
   strings.TrimRight(strings.Join(state.Lines, "\n"), "\n") + "\n"
 end
@@ -869,7 +1254,18 @@ func formatLayout(source: String) -> String
 end
 
 func foldLine(state: LayoutState, raw: String) -> LayoutState
-  if state.Protected || containsInt(state.ProtectedLines, state.SourceLine) => protectedLine(state, raw) else normalLine(state, raw)
+  if containsInt(state.VerbatimLines, state.SourceLine) then verbatimLine(state, raw)
+  elsif state.Protected || containsInt(state.ProtectedLines, state.SourceLine) then protectedLine(state, raw)
+  else normalLine(state, raw) end
+end
+
+# Verbatim rows are the output of the recursive reflow pass: they already carry
+# their final indentation (baked by the reflow engine, whose base was the source
+# line's own leading whitespace).  Reproduce them byte-for-byte and skip the
+# event-depth indent engine entirely, so nested switches/ifs/delimited bodies are
+# never re-indented a second time.
+func verbatimLine(state: LayoutState, raw: String) -> LayoutState
+  advanceLayoutState(state, state.Lines.Append(raw), currentTargetIndent(state), false)
 end
 
 func containsInt(values: Slice[Int], target: Int) -> Bool
@@ -895,7 +1291,7 @@ func protectedLine(state: LayoutState, raw: String) -> LayoutState
 end
 
 func advanceLayoutState(state: LayoutState, lines: Slice[String], indent: Int, protected: Bool) -> LayoutState
-  LayoutState { Lines: lines, SourceLine: state.SourceLine + 1, LineMap: state.LineMap, Segments: state.Segments, SyntheticEvents: state.SyntheticEvents, Indent: indent, Protected: protected, ProtectedLines: state.ProtectedLines, BlockLines: state.BlockLines, DedentLines: state.DedentLines, TargetIndents: state.TargetIndents, EventDriven: state.EventDriven }
+  LayoutState { Lines: lines, SourceLine: state.SourceLine + 1, LineMap: state.LineMap, Segments: state.Segments, SyntheticEvents: state.SyntheticEvents, Indent: indent, Protected: protected, ProtectedLines: state.ProtectedLines, VerbatimLines: state.VerbatimLines, BlockLines: state.BlockLines, DedentLines: state.DedentLines, TargetIndents: state.TargetIndents, EventDriven: state.EventDriven }
 end
 
 func normalLine(state: LayoutState, raw: String) -> LayoutState

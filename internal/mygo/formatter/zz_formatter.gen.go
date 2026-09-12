@@ -16,6 +16,7 @@ type LayoutState struct {
 	Indent          int
 	Protected       bool
 	ProtectedLines  []int
+	VerbatimLines   []int
 	BlockLines      []int
 	DedentLines     []int
 	TargetIndents   []int
@@ -141,37 +142,45 @@ func formatLossless(parsed parser2.LosslessFile, source string) string {
 func renderASTSpans(file ast2.File, spans []parser2.NodeSpan, delimited []parser2.DelimitedSpan, events []parser2.LayoutEvent, protectedLines []int, source string) string {
 	blockResult := renderBlockSpans(source, spans)
 	blockEdits := blockResult.Edits
+	reflowRender := reflowPass(blockResult.Text, events, delimited, blockEdits)
+	reflowText := reflowRender.Text
+	reflowEdits := reflowRender.Edits
+	ownedLines := ownedSourceLines(reflowEdits, 0, []int{})
+	preEdits := joinEdits(blockEdits, reflowEdits)
+	reflowLines := arrowCaseSourceLines(events, 0, []int{})
 	thenEvents := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(events, func(item parser2.LayoutEvent) bool {
 		return item.Kind == "enter:if-then"
 	})
-	branchRender := renderBranchSpanAt(blockResult.Text, thenEvents, events, delimited, blockEdits, 0)
+	branchRender := renderBranchSpanAt(reflowText, thenEvents, events, delimited, preEdits, 0, reflowLines)
 	ifText := branchRender.Text
 	branchEdits := branchRender.Edits
 	caseEvents := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(events, func(item_1 parser2.LayoutEvent) bool {
 		return item_1.Kind == "enter:case" && item_1.SeparatorAnchor.Start.Line > 0
 	})
-	caseRender := renderCaseSpanAt(ifText, caseEvents, delimited, joinEdits(blockEdits, branchEdits), 0)
+	caseRender := renderCaseSpanAt(ifText, caseEvents, events, delimited, joinEdits(preEdits, branchEdits), 0, ownedLines)
 	caseText := caseRender.Text
 	caseEdits := caseRender.Edits
-	delimitedRender := renderDelimitedPass(caseText, delimited, events, joinEdits(joinEdits(blockEdits, branchEdits), caseEdits))
+	delimitedRender := renderDelimitedPass(caseText, delimited, events, joinEdits(joinEdits(preEdits, branchEdits), caseEdits), reflowLines)
 	delimitedText := delimitedRender.Text
 	delimEdits := delimitedRender.Edits
+	reflowCount := sumPassAdded(reflowEdits, 0)
 	ifCount := sumPassAdded(branchEdits, 0)
 	caseCount := sumPassAdded(caseEdits, 0)
 	delimCount := sumPassAdded(delimEdits, 0)
-	goal := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(blockResult.Lines) + ifCount + caseCount + delimCount
-	composedLines := composePassLines(blockResult.Lines, joinEdits(joinEdits(branchEdits, caseEdits), delimEdits), goal, 0)
+	goal := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(blockResult.Lines) + reflowCount + ifCount + caseCount + delimCount
+	composedLines := composePassLines(blockResult.Lines, joinEdits(joinEdits(reflowEdits, joinEdits(branchEdits, caseEdits)), delimEdits), goal, 0)
+	verbatimLines := projectOwnedRows(ownedLines, composedLines, 0)
 	sourceFallback := ExpansionSegment{SourceStart: 1, SourceEnd: goal, RenderedStart: 1, RenderedEnd: goal, Kind: "source"}
-	composedSegments := joinSegments(joinSegments(joinSegments(joinSegments(blockResult.Segments, editSegments(branchEdits)), editSegments(caseEdits)), editSegments(delimEdits)), []ExpansionSegment{sourceFallback})
-	layoutEvents := renderLayoutEvents(events, delimited, 0, []parser2.LayoutEvent{})
+	composedSegments := joinSegments(joinSegments(joinSegments(joinSegments(joinSegments(blockResult.Segments, editSegments(reflowEdits)), editSegments(branchEdits)), editSegments(caseEdits)), editSegments(delimEdits)), []ExpansionSegment{sourceFallback})
+	layoutEvents := renderLayoutEvents(events, delimited, 0, []parser2.LayoutEvent{}, ownedLines)
 	renderedEvents := remapLayoutEvents(layoutEvents, composedLines, composedSegments, 0, []RenderedLayoutEvent{})
 	renderedPlan := makeRenderedLayoutPlan(composedLines, renderedEvents)
 	delimiterTargets := projectDelimitedTargets(renderedPlan.Targets, composedLines, delimited, 0)
 	delimiterPlan := RenderedLayoutPlan{Lines: renderedPlan.Lines, Events: renderedPlan.Events, Targets: delimiterTargets}
-	return renderRenderedLayoutPlan(delimitedText, projectProtectedLines(protectedLines, composedLines, 0), composedSegments, layoutEvents, []SyntheticLayoutEvent{}, delimiterPlan)
+	return renderRenderedLayoutPlan(delimitedText, projectProtectedLines(protectedLines, composedLines, 0), verbatimLines, composedSegments, layoutEvents, []SyntheticLayoutEvent{}, delimiterPlan)
 }
-func renderLayoutEvents(events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, index int, acc []parser2.LayoutEvent) []parser2.LayoutEvent {
-	return __mygo_mt_formatter_renderLayoutEvents(events, delimited, index, acc, 0)
+func renderLayoutEvents(events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, index int, acc []parser2.LayoutEvent, ownedLines []int) []parser2.LayoutEvent {
+	return __mygo_mt_formatter_renderLayoutEvents(events, delimited, index, acc, ownedLines, 0)
 }
 func projectDelimitedTargets(targets []int, mappings []LineMapping, spans []parser2.DelimitedSpan, index int) []int {
 	return __mygo_mt_formatter_projectDelimitedTargets(targets, mappings, spans, index, 0)
@@ -296,8 +305,8 @@ func projectProtectedLines(sourceLines []int, mappings []LineMapping, index int)
 func makeRenderedLayoutPlan(lines []LineMapping, events []RenderedLayoutEvent) RenderedLayoutPlan {
 	return RenderedLayoutPlan{Lines: lines, Events: events, Targets: projectRenderedEventTargets(events, lines, 0, 0)}
 }
-func renderRenderedLayoutPlan(source string, protectedLines []int, segments []ExpansionSegment, layoutEvents []parser2.LayoutEvent, syntheticEvents []SyntheticLayoutEvent, plan RenderedLayoutPlan) string {
-	return renderSourceLinesWithTargets(source, protectedLines, []int{}, []int{}, plan.Targets, plan.Lines, segments, layoutEvents, syntheticEvents, plan.Events)
+func renderRenderedLayoutPlan(source string, protectedLines []int, verbatimLines []int, segments []ExpansionSegment, layoutEvents []parser2.LayoutEvent, syntheticEvents []SyntheticLayoutEvent, plan RenderedLayoutPlan) string {
+	return renderSourceLinesWithTargets(source, protectedLines, verbatimLines, []int{}, []int{}, plan.Targets, plan.Lines, segments, layoutEvents, syntheticEvents, plan.Events)
 }
 func firstSpanOfKind(spans []parser2.NodeSpan, kind string, index int) ast2.SourceSpan {
 	return __mygo_mt_formatter_firstSpanOfKind(spans, kind, index, 0)
@@ -410,32 +419,32 @@ func expandBlockSourceLine(raw string, bodyStartColumn int, bodyEndColumn int) s
 	header := strings.TrimRight(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, 0, bodyStart), raw), " \t")
 	return header + "\n  " + body + "\nend"
 }
-func renderDelimitedPass(source string, spans []parser2.DelimitedSpan, events []parser2.LayoutEvent, priorEdits []PassEdit) DelimitedRender {
-	text := renderDelimitedSpanAt(source, spans, spans, events, priorEdits, 0)
+func renderDelimitedPass(source string, spans []parser2.DelimitedSpan, events []parser2.LayoutEvent, priorEdits []PassEdit, ownedLines []int) DelimitedRender {
+	text := renderDelimitedSpanAt(source, spans, spans, events, priorEdits, 0, ownedLines)
 	added := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(text, "\n")) - MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(source, "\n"))
 	if added == 0 {
 		return DelimitedRender{Text: text, Edits: []PassEdit{}}
 	} else {
-		return DelimitedRender{Text: text, Edits: renderDelimitedEdits(MygoIN6StringM5Split(source, "\n"), spans, spans, events, priorEdits, 0, []PassEdit{})}
+		return DelimitedRender{Text: text, Edits: renderDelimitedEdits(MygoIN6StringM5Split(source, "\n"), spans, spans, events, priorEdits, 0, []PassEdit{}, ownedLines)}
 	}
 }
-func renderDelimitedEdits(sourceLines []string, allSpans []parser2.DelimitedSpan, spans []parser2.DelimitedSpan, events []parser2.LayoutEvent, priorEdits []PassEdit, index int, acc []PassEdit) []PassEdit {
-	return __mygo_mt_formatter_renderDelimitedEdits(sourceLines, allSpans, spans, events, priorEdits, index, acc, 0)
+func renderDelimitedEdits(sourceLines []string, allSpans []parser2.DelimitedSpan, spans []parser2.DelimitedSpan, events []parser2.LayoutEvent, priorEdits []PassEdit, index int, acc []PassEdit, ownedLines []int) []PassEdit {
+	return __mygo_mt_formatter_renderDelimitedEdits(sourceLines, allSpans, spans, events, priorEdits, index, acc, ownedLines, 0)
 }
 func containedInSameLineSpan(spans []parser2.DelimitedSpan, span ast2.SourceSpan, index int) bool {
 	return __mygo_mt_formatter_containedInSameLineSpan(spans, span, index, 0)
 }
-func renderDelimitedSpanAt(source string, allSpans []parser2.DelimitedSpan, spans []parser2.DelimitedSpan, events []parser2.LayoutEvent, priorEdits []PassEdit, index int) string {
+func renderDelimitedSpanAt(source string, allSpans []parser2.DelimitedSpan, spans []parser2.DelimitedSpan, events []parser2.LayoutEvent, priorEdits []PassEdit, index int, ownedLines []int) string {
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(spans) {
 		return source
 	} else {
 		item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(spans, index), parser2.DelimitedSpan{Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Items: []ast2.SourceSpan{}, Separators: []ast2.SourceSpan{}})
-		rendered := renderDelimitedSpanAt(source, allSpans, spans, events, priorEdits, index+1)
+		rendered := renderDelimitedSpanAt(source, allSpans, spans, events, priorEdits, index+1, ownedLines)
 		line := item.Span.Start.Line
 		target := line + lineShift(priorEdits, line)
 		lines := MygoIN6StringM5Split(rendered, "\n")
 		raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, target-1), "")
-		if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw) > 100 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Separators) > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(allSpans, item.Span, 0) {
+		if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw) > 100 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Separators) > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(allSpans, item.Span, 0) && !containsInt(ownedLines, line) {
 			return replaceSourceLine(lines, target-1, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, 0, item.Span.Start.Column-1), "")+renderDelimitedBlockBody(raw, item, events))
 		} else {
 			return rendered
@@ -494,17 +503,299 @@ func joinDelimitedItemLines(items []string, tail string, index int) string {
 		return "\n  " + text + comma + joinDelimitedItemLines(items, tail, index+1)
 	}
 }
-func renderCaseSpanAt(source string, cases []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, priorEdits []PassEdit, index int) DelimitedRender {
+func sl(lineText string, c0 int, c1 int) string {
+	var __mygo_expr_0 int
+	if c1 > MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(lineText) {
+		__mygo_expr_0 = MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(lineText)
+	} else {
+		__mygo_expr_0 = c1
+	}
+	hi := __mygo_expr_0
+	if c0-1 >= hi {
+		return ""
+	} else {
+		return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(lineText, c0-1, hi), "")
+	}
+}
+func charAt(lineText string, c int) string {
+	if c < 1 || c > MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(lineText) {
+		return ""
+	} else {
+		return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(lineText, c-1, c), "")
+	}
+}
+func trimStartCol(lineText string, c int) int {
+	return __mygo_mt_formatter_trimStartCol(lineText, c, 0)
+}
+func trimEndCol(lineText string, c int) int {
+	return __mygo_mt_formatter_trimEndCol(lineText, c, 0)
+}
+func firstOpenCol(lineText string, c int, c1 int) int {
+	return __mygo_mt_formatter_firstOpenCol(lineText, c, c1, 0)
+}
+func shiftLines(lines []string, depth int) []string {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(lines, []string{}, func(acc []string, line string) []string {
+		var __mygo_expr_0 string
+		if line == "" {
+			__mygo_expr_0 = line
+		} else {
+			__mygo_expr_0 = strings.Repeat("  ", depth) + line
+		}
+		return MygoIN5SliceM6Append(acc, __mygo_expr_0)
+	})
+}
+func appendLastLine(lines []string, suffix string, index int) []string {
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
+		return []string{}
+	} else {
+		line := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, index), "")
+		var __mygo_expr_0 string
+		if index+1 == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
+			__mygo_expr_0 = line + suffix
+		} else {
+			__mygo_expr_0 = line
+		}
+		out := __mygo_expr_0
+		return joinStrings([]string{out}, appendLastLine(lines, suffix, index+1))
+	}
+}
+func lookupSwitchAt(events []parser2.LayoutEvent, line int, col int, index int) Option[parser2.LayoutEvent] {
+	return __mygo_mt_formatter_lookupSwitchAt(events, line, col, index, 0)
+}
+func lookupIfAt(events []parser2.LayoutEvent, line int, col int, index int) Option[parser2.LayoutEvent] {
+	return __mygo_mt_formatter_lookupIfAt(events, line, col, index, 0)
+}
+func lookupDelimAt(spans []parser2.DelimitedSpan, line int, col int, index int) Option[parser2.DelimitedSpan] {
+	return __mygo_mt_formatter_lookupDelimAt(spans, line, col, index, 0)
+}
+func thenOfLine(events []parser2.LayoutEvent, line int, afterCol int, index int, best parser2.LayoutEvent) parser2.LayoutEvent {
+	return __mygo_mt_formatter_thenOfLine(events, line, afterCol, index, best, 0)
+}
+func elseOfLine(events []parser2.LayoutEvent, line int, afterCol int, index int, best parser2.LayoutEvent) parser2.LayoutEvent {
+	return __mygo_mt_formatter_elseOfLine(events, line, afterCol, index, best, 0)
+}
+func arrowCaseOnLine(events []parser2.LayoutEvent, line int, index int) Option[parser2.LayoutEvent] {
+	return __mygo_mt_formatter_arrowCaseOnLine(events, line, index, 0)
+}
+func reflowRegion(lineText string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, line int, c0 int, c1 int, inDelim bool) []string {
+	cs := trimStartCol(lineText, c0)
+	ce := trimEndCol(lineText, c1)
+	text := strings.TrimSpace(sl(lineText, cs, ce))
+	__mygo_expr_0 := lookupSwitchAt(events, line, cs, 0)
+	var __mygo_expr_1 []string
+	if _, ok := __mygo_expr_0.(Option__Some[parser2.LayoutEvent]); ok {
+		__mygo_expr_1 = reflowSwitchLines(lineText, events, line, cs, ce)
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[parser2.LayoutEvent]); ok {
+			__mygo_expr_2 := lookupIfAt(events, line, cs, 0)
+			var __mygo_expr_3 []string
+			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Option__Some[parser2.LayoutEvent]); ok {
+				__mygo_expr_3 = reflowIfLines(lineText, events, delimited, line, cs, ce, __mygo_match___mygo_expr_4.F0, inDelim)
+			} else {
+				if _, ok := __mygo_expr_2.(Option__None[parser2.LayoutEvent]); ok {
+					__mygo_expr_3 = reflowCallLines(lineText, events, delimited, line, cs, ce, text)
+				} else {
+				}
+			}
+			__mygo_expr_1 = __mygo_expr_3
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func reflowCallLines(lineText string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, line int, cs int, ce int, text string) []string {
+	open := firstOpenCol(lineText, cs, ce)
+	if open < 0 {
+		return []string{text}
+	} else {
+		callee := strings.TrimRight(sl(lineText, cs, open-1), " \t")
+		if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(text) <= 100 {
+			return []string{callee + sl(lineText, open, ce)}
+		} else {
+			__mygo_expr_0 := lookupDelimAt(delimited, line, open, 0)
+			var __mygo_expr_1 []string
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.DelimitedSpan]); ok {
+				__mygo_expr_1 = reflowDelimLines(lineText, events, delimited, line, __mygo_match___mygo_expr_2.F0, callee)
+			} else {
+				if _, ok := __mygo_expr_0.(Option__None[parser2.DelimitedSpan]); ok {
+					__mygo_expr_1 = []string{text}
+				} else {
+				}
+			}
+			return __mygo_expr_1
+		}
+	}
+}
+func reflowDelimLines(lineText string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, line int, d parser2.DelimitedSpan, callee string) []string {
+	openChar := sl(lineText, d.Span.Start.Column, d.Span.Start.Column)
+	closeChar := sl(lineText, d.Span.End.Column-1, d.Span.End.Column-1)
+	var __mygo_expr_0 string
+	if d.Kind == "delimited:tuple" {
+		__mygo_expr_0 = ""
+	} else {
+		__mygo_expr_0 = ","
+	}
+	tail := __mygo_expr_0
+	items := delimItemLoop(lineText, events, delimited, line, d, d.Span.Start.Column+1, 0, tail, []string{})
+	return joinStrings([]string{callee + openChar}, joinStrings(items, []string{closeChar}))
+}
+func delimItemLoop(lineText string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, line int, d parser2.DelimitedSpan, start int, index int, tail string, acc []string) []string {
+	return __mygo_mt_formatter_delimItemLoop(lineText, events, delimited, line, d, start, index, tail, acc, 0)
+}
+func casesInRegion(events []parser2.LayoutEvent, line int, cs int, ce int, index int, acc []parser2.LayoutEvent) []parser2.LayoutEvent {
+	return __mygo_mt_formatter_casesInRegion(events, line, cs, ce, index, acc, 0)
+}
+func switchCaseLines(lineText string, cases []parser2.LayoutEvent, index int, acc []string) []string {
+	return __mygo_mt_formatter_switchCaseLines(lineText, cases, index, acc, 0)
+}
+func reflowSwitchLines(lineText string, events []parser2.LayoutEvent, line int, cs int, ce int) []string {
+	cases := casesInRegion(events, line, cs, ce, 0, []parser2.LayoutEvent{})
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) == 0 {
+		return []string{strings.TrimSpace(sl(lineText, cs, ce))}
+	} else {
+		firstAnchor := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, 0), emptyLayoutEvent()).Anchor.Start.Column
+		header := strings.TrimRight(sl(lineText, cs, firstAnchor-1), " \t")
+		body := switchCaseLines(lineText, cases, 0, []string{})
+		return joinStrings([]string{header}, joinStrings(body, []string{"end"}))
+	}
+}
+func reflowIfLines(lineText string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, line int, cs int, ce int, ife parser2.LayoutEvent, inDelim bool) []string {
+	thenE := thenOfLine(events, line, ife.Anchor.End.Column, 0, emptyLayoutEvent())
+	elseE := elseOfLine(events, line, thenE.Anchor.Start.Column, 0, emptyLayoutEvent())
+	endCol := thenE.ExitAnchor.Start.Column
+	cond := strings.TrimSpace(sl(lineText, ife.Anchor.End.Column, thenE.Anchor.Start.Column-1))
+	thenB0 := thenE.Anchor.End.Column
+	thenB1 := elseE.Anchor.Start.Column - 1
+	elseB0 := elseE.Anchor.End.Column
+	elseB1 := endCol - 1
+	inlineLen := ce - cs + 1
+	if inDelim && inlineLen <= 100 {
+		return []string{"if " + cond + " => " + strings.TrimSpace(sl(lineText, thenB0, thenB1)) + " else " + strings.TrimSpace(sl(lineText, elseB0, elseB1))}
+	} else {
+		tb := reflowRegion(lineText, events, delimited, line, thenB0, thenB1, false)
+		eb := reflowRegion(lineText, events, delimited, line, elseB0, elseB1, false)
+		return joinStrings([]string{"if " + cond + " then"}, joinStrings(joinStrings(shiftLines(tb, 1), []string{"else"}), joinStrings(shiftLines(eb, 1), []string{"end"})))
+	}
+}
+func caseReflowLines(lineText string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, line int) []string {
+	__mygo_expr_0 := arrowCaseOnLine(events, line, 0)
+	var __mygo_expr_1 []string
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.LayoutEvent]); ok {
+		pat := strings.TrimSpace(sl(lineText, __mygo_match___mygo_expr_2.F0.Anchor.End.Column, __mygo_match___mygo_expr_2.F0.SeparatorAnchor.Start.Column-1))
+		b0 := trimStartCol(lineText, __mygo_match___mygo_expr_2.F0.SeparatorAnchor.End.Column)
+		b1 := trimEndCol(lineText, __mygo_match___mygo_expr_2.F0.Span.End.Column-1)
+		body := reflowRegion(lineText, events, delimited, line, b0, b1, false)
+		var __mygo_expr_3 []string
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(body) <= 1 {
+			__mygo_expr_3 = []string{}
+		} else {
+			__mygo_expr_3 = joinStrings([]string{"case " + pat + " then"}, joinStrings(shiftLines(body, 1), []string{"end"}))
+		}
+		__mygo_expr_1 = __mygo_expr_3
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[parser2.LayoutEvent]); ok {
+			__mygo_expr_1 = []string{}
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func reflowPass(source string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, priorEdits []PassEdit) DelimitedRender {
+	candidateLines := arrowCaseSourceLines(events, 0, []int{})
+	edits := reflowPassEdits(MygoIN6StringM5Split(source, "\n"), events, delimited, priorEdits, candidateLines, 0, []PassEdit{})
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(edits) == 0 {
+		return DelimitedRender{Text: source, Edits: []PassEdit{}}
+	} else {
+		return DelimitedRender{Text: reflowPassText(source, events, delimited, priorEdits, candidateLines, 0), Edits: edits}
+	}
+}
+func arrowCaseSourceLines(events []parser2.LayoutEvent, index int, acc []int) []int {
+	return __mygo_mt_formatter_arrowCaseSourceLines(events, index, acc, 0)
+}
+func reflowPassText(source string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, priorEdits []PassEdit, lines []int, index int) string {
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(lines) {
+		return source
+	} else {
+		rendered := reflowPassText(source, events, delimited, priorEdits, lines, index+1)
+		line := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, index), 0)
+		target := line + lineShift(priorEdits, line)
+		srcLines := MygoIN6StringM5Split(rendered, "\n")
+		raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(srcLines, target-1), "")
+		refl := caseReflowLines(raw, events, delimited, line)
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(refl) <= 1 {
+			return rendered
+		} else {
+			return replaceSourceLine(srcLines, target-1, reflowBlock(raw, refl, 0, ""))
+		}
+	}
+}
+func reflowPassEdits(sourceLines []string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, priorEdits []PassEdit, lines []int, index int, acc []PassEdit) []PassEdit {
+	return __mygo_mt_formatter_reflowPassEdits(sourceLines, events, delimited, priorEdits, lines, index, acc, 0)
+}
+func reflowBlock(raw string, refl []string, index int, acc string) string {
+	return __mygo_mt_formatter_reflowBlock(raw, refl, index, acc, 0)
+}
+func indentPrefix(raw string) string {
+	return sl(raw, 1, indentWidth(raw, 1))
+}
+func indentWidth(raw string, c int) int {
+	return __mygo_mt_formatter_indentWidth(raw, c, 0)
+}
+func ownedSourceLines(edits []PassEdit, index int, acc []int) []int {
+	return __mygo_mt_formatter_ownedSourceLines(edits, index, acc, 0)
+}
+func projectOwnedRows(owned []int, mappings []LineMapping, index int) []int {
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(mappings) {
+		return []int{}
+	} else {
+		m := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(mappings, index), LineMapping{SourceLine: 0, RenderedLine: 0, Delta: 0, Synthetic: false, AnchorSourceLine: 0, Boundary: "", Depth: 0})
+		var __mygo_expr_0 []int
+		if containsInt(owned, m.SourceLine) {
+			__mygo_expr_0 = []int{m.RenderedLine}
+		} else {
+			__mygo_expr_0 = []int{}
+		}
+		current := __mygo_expr_0
+		return joinInts(current, projectOwnedRows(owned, mappings, index+1))
+	}
+}
+func caseBodyNeedsFlatBlock(raw string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, line int, item parser2.LayoutEvent) bool {
+	b0 := trimStartCol(raw, item.SeparatorAnchor.End.Column)
+	b1 := trimEndCol(raw, item.Span.End.Column-1)
+	__mygo_expr_0 := lookupSwitchAt(events, line, b0, 0)
+	var __mygo_expr_1 bool
+	if _, ok := __mygo_expr_0.(Option__Some[parser2.LayoutEvent]); ok {
+		__mygo_expr_1 = false
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[parser2.LayoutEvent]); ok {
+			__mygo_expr_2 := lookupIfAt(events, line, b0, 0)
+			var __mygo_expr_3 bool
+			if _, ok := __mygo_expr_2.(Option__Some[parser2.LayoutEvent]); ok {
+				__mygo_expr_3 = false
+			} else {
+				if _, ok := __mygo_expr_2.(Option__None[parser2.LayoutEvent]); ok {
+					__mygo_expr_3 = firstOpenCol(raw, b0, b1) < 0
+				} else {
+				}
+			}
+			__mygo_expr_1 = __mygo_expr_3
+		} else {
+		}
+	}
+	bare := __mygo_expr_1
+	return bare && MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw) > 100
+}
+func renderCaseSpanAt(source string, cases []parser2.LayoutEvent, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, priorEdits []PassEdit, index int, ownedLines []int) DelimitedRender {
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) {
 		return DelimitedRender{Text: source, Edits: []PassEdit{}}
 	} else {
 		item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, index), emptyLayoutEvent())
-		rendered := renderCaseSpanAt(source, cases, delimited, priorEdits, index+1)
+		rendered := renderCaseSpanAt(source, cases, events, delimited, priorEdits, index+1, ownedLines)
 		line := item.Anchor.Start.Line
 		target := line + lineShift(priorEdits, line)
 		lines := MygoIN6StringM5Split(rendered.Text, "\n")
 		raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, target-1), "")
-		if item.ExpandsAfter && item.Anchor.Start.Line > 0 && item.BodyAnchor.Start.Line > 0 && item.Anchor.Start.Line == item.SeparatorAnchor.Start.Line && item.SeparatorAnchor.Start.Line == item.BodyAnchor.Start.Line && item.SeparatorAnchor.End.Column <= item.BodyAnchor.Start.Column && !insideSameLineDelimited(delimited, line, item.Anchor.Start.Column) {
+		if item.ExpandsAfter && item.Anchor.Start.Line > 0 && item.BodyAnchor.Start.Line > 0 && item.Anchor.Start.Line == item.SeparatorAnchor.Start.Line && item.SeparatorAnchor.Start.Line == item.BodyAnchor.Start.Line && item.SeparatorAnchor.End.Column <= item.BodyAnchor.Start.Column && !insideSameLineDelimited(delimited, line, item.Anchor.Start.Column) && !containsInt(ownedLines, line) && caseBodyNeedsFlatBlock(raw, events, delimited, line, item) {
 			replacement := expandCaseSourceLine(raw, item)
 			edit := PassEdit{Anchor: line - 1, SourceLine: line, Added: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(replacement, "\n")) - 1, SourceStart: item.Span.Start.Line, SourceEnd: item.Span.End.Line, Kind: "case-branch", Depths: []int{}}
 			return DelimitedRender{Text: replaceSourceLine(lines, target-1, replacement), Edits: joinEdits(rendered.Edits, []PassEdit{edit})}
@@ -519,7 +810,7 @@ func expandCaseSourceLine(raw string, item parser2.LayoutEvent) string {
 	body := strings.TrimSpace(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, item.BodyAnchor.Start.Column-1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw)), ""))
 	return prefix + " then\n  " + body + "\nend"
 }
-func renderBranchSpanAt(source string, thenEvents []parser2.LayoutEvent, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, priorEdits []PassEdit, index int) DelimitedRender {
+func renderBranchSpanAt(source string, thenEvents []parser2.LayoutEvent, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, priorEdits []PassEdit, index int, ownedLines []int) DelimitedRender {
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(thenEvents) {
 		return DelimitedRender{Text: source, Edits: []PassEdit{}}
 	} else {
@@ -527,7 +818,7 @@ func renderBranchSpanAt(source string, thenEvents []parser2.LayoutEvent, events 
 		elseEvents := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(events, func(item parser2.LayoutEvent) bool {
 			return item.Kind == "enter:if-else" && sameBranchParent(item.Path, thenEvent.Path, 0)
 		})
-		rendered := renderBranchSpanAt(source, thenEvents, events, delimited, priorEdits, index+1)
+		rendered := renderBranchSpanAt(source, thenEvents, events, delimited, priorEdits, index+1, ownedLines)
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(elseEvents) == 0 {
 			return rendered
 		} else {
@@ -537,7 +828,7 @@ func renderBranchSpanAt(source string, thenEvents []parser2.LayoutEvent, events 
 			target := line + lineShift(priorEdits, line)
 			lines := MygoIN6StringM5Split(rendered.Text, "\n")
 			raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, target-1), "")
-			if shouldExpandBranch(raw, thenEvent, elseEvent, exit) && !insideSameLineDelimited(delimited, line, thenEvent.Anchor.Start.Column) {
+			if shouldExpandBranch(raw, thenEvent, elseEvent, exit) && !insideSameLineDelimited(delimited, line, thenEvent.Anchor.Start.Column) && !containsInt(ownedLines, line) {
 				replacement := expandBranchSourceLine(raw, thenEvent, elseEvent, exit)
 				var __mygo_expr_0 int
 				if thenEvent.Span.End.Line > 0 {
@@ -610,10 +901,10 @@ func expandBranchSourceLine(raw string, thenEvent parser2.LayoutEvent, elseEvent
 	elseBody := strings.TrimSpace(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, alternativeEnd, elseEnd), ""))
 	return prefix + " then\n  " + thenBody + "\nelse\n  " + elseBody + "\nend"
 }
-func renderSourceLinesWithTargets(source string, protectedLines []int, blockLines []int, dedentLines []int, targets []int, lineMap []LineMapping, segments []ExpansionSegment, layoutEvents []parser2.LayoutEvent, syntheticEvents []SyntheticLayoutEvent, renderedEvents []RenderedLayoutEvent) string {
+func renderSourceLinesWithTargets(source string, protectedLines []int, verbatimLines []int, blockLines []int, dedentLines []int, targets []int, lineMap []LineMapping, segments []ExpansionSegment, layoutEvents []parser2.LayoutEvent, syntheticEvents []SyntheticLayoutEvent, renderedEvents []RenderedLayoutEvent) string {
 	normalized := strings.ReplaceAll(source, "\r\n", "\n")
 	projectedTargets := targets
-	initial := LayoutState{Lines: []string{}, SourceLine: 1, LineMap: lineMap, Segments: segments, SyntheticEvents: syntheticEvents, Indent: 0, Protected: false, ProtectedLines: protectedLines, BlockLines: blockLines, DedentLines: dedentLines, TargetIndents: projectedTargets, EventDriven: true}
+	initial := LayoutState{Lines: []string{}, SourceLine: 1, LineMap: lineMap, Segments: segments, SyntheticEvents: syntheticEvents, Indent: 0, Protected: false, ProtectedLines: protectedLines, VerbatimLines: verbatimLines, BlockLines: blockLines, DedentLines: dedentLines, TargetIndents: projectedTargets, EventDriven: true}
 	state_1 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(MygoIN6StringM5Split(normalized, "\n"), initial, func(state LayoutState, raw string) LayoutState {
 		return foldLine(state, raw)
 	})
@@ -744,11 +1035,18 @@ func formatLayout(source string) string {
 	return __mygo_expr_1
 }
 func foldLine(state LayoutState, raw string) LayoutState {
-	if state.Protected || containsInt(state.ProtectedLines, state.SourceLine) {
-		return protectedLine(state, raw)
+	if containsInt(state.VerbatimLines, state.SourceLine) {
+		return verbatimLine(state, raw)
 	} else {
-		return normalLine(state, raw)
+		if state.Protected || containsInt(state.ProtectedLines, state.SourceLine) {
+			return protectedLine(state, raw)
+		} else {
+			return normalLine(state, raw)
+		}
 	}
+}
+func verbatimLine(state LayoutState, raw string) LayoutState {
+	return advanceLayoutState(state, MygoIN5SliceM6Append(state.Lines, raw), currentTargetIndent(state), false)
 }
 func containsInt(values []int, target int) bool {
 	return containsIntAt(values, target, 0)
@@ -768,7 +1066,7 @@ func protectedLine(state LayoutState, raw string) LayoutState {
 	return advanceLayoutState(state, MygoIN5SliceM6Append(state.Lines, rendered), indent, containsInt(state.ProtectedLines, state.SourceLine+1))
 }
 func advanceLayoutState(state LayoutState, lines []string, indent int, protected bool) LayoutState {
-	return LayoutState{Lines: lines, SourceLine: state.SourceLine + 1, LineMap: state.LineMap, Segments: state.Segments, SyntheticEvents: state.SyntheticEvents, Indent: indent, Protected: protected, ProtectedLines: state.ProtectedLines, BlockLines: state.BlockLines, DedentLines: state.DedentLines, TargetIndents: state.TargetIndents, EventDriven: state.EventDriven}
+	return LayoutState{Lines: lines, SourceLine: state.SourceLine + 1, LineMap: state.LineMap, Segments: state.Segments, SyntheticEvents: state.SyntheticEvents, Indent: indent, Protected: protected, ProtectedLines: state.ProtectedLines, VerbatimLines: state.VerbatimLines, BlockLines: state.BlockLines, DedentLines: state.DedentLines, TargetIndents: state.TargetIndents, EventDriven: state.EventDriven}
 }
 func normalLine(state LayoutState, raw string) LayoutState {
 	line := strings.TrimSpace(raw)
@@ -1054,6 +1352,59 @@ func __mygo_mt_formatter_addDelimitedIndent(__mygo_mt_p0 []int, __mygo_mt_p1 []L
 		}
 	}
 }
+func __mygo_mt_formatter_arrowCaseOnLine(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) Option[parser2.LayoutEvent] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return None[parser2.LayoutEvent]()
+			} else {
+				e := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), emptyLayoutEvent())
+				if e.Kind == "enter:case" && e.Anchor.Start.Line == __mygo_mt_p1 && e.SeparatorAnchor.Start.Line == __mygo_mt_p1 {
+					return Some[parser2.LayoutEvent](e)
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_arrowCaseSourceLines(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 int, __mygo_mt_p2 []int, __mygo_state int) []int {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				e := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), emptyLayoutEvent())
+				isArrow := e.Kind == "enter:case" && e.Anchor.Start.Line > 0 && e.Anchor.Start.Line == e.SeparatorAnchor.Start.Line
+				line := e.Anchor.Start.Line
+				var __mygo_expr_0 []int
+				if isArrow && !containsInt(__mygo_mt_p2, line) {
+					__mygo_expr_0 = MygoIN5SliceM6Append(__mygo_mt_p2, line)
+				} else {
+					__mygo_expr_0 = __mygo_mt_p2
+				}
+				next := __mygo_expr_0
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1 + 1
+				__tail_2 := next
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_formatter_arrowIfForThen(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 parser2.LayoutEvent, __mygo_mt_p2 int, __mygo_state int) Option[ArrowIf] {
 	for {
 		switch __mygo_state {
@@ -1138,6 +1489,36 @@ func __mygo_mt_formatter_branchExitAnchor(__mygo_mt_p0 []parser2.LayoutEvent, __
 					__mygo_state = 0
 					continue
 				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_casesInRegion(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_mt_p4 int, __mygo_mt_p5 []parser2.LayoutEvent, __mygo_state int) []parser2.LayoutEvent {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p4 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p5
+			} else {
+				e := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p4), emptyLayoutEvent())
+				hit := e.Kind == "enter:case" && e.Anchor.Start.Line == __mygo_mt_p1 && e.Anchor.Start.Column > __mygo_mt_p2 && e.Span.End.Column-1 <= __mygo_mt_p3
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2
+				__tail_3 := __mygo_mt_p3
+				__tail_4 := __mygo_mt_p4 + 1
+				var __mygo_expr_0 []parser2.LayoutEvent
+				if hit {
+					__mygo_expr_0 = MygoIN5SliceM6Append(__mygo_mt_p5, e)
+				} else {
+					__mygo_expr_0 = __mygo_mt_p5
+				}
+				__tail_5 := __mygo_expr_0
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+				__mygo_state = 0
+				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1249,6 +1630,42 @@ func __mygo_mt_formatter_containsIntAt(__mygo_mt_p0 []int, __mygo_mt_p1 int, __m
 		}
 	}
 }
+func __mygo_mt_formatter_delimItemLoop(__mygo_mt_p0 string, __mygo_mt_p1 []parser2.LayoutEvent, __mygo_mt_p2 []parser2.DelimitedSpan, __mygo_mt_p3 int, __mygo_mt_p4 parser2.DelimitedSpan, __mygo_mt_p5 int, __mygo_mt_p6 int, __mygo_mt_p7 string, __mygo_mt_p8 []string, __mygo_state int) []string {
+	for {
+		switch __mygo_state {
+		case 0:
+			seps := __mygo_mt_p4.Separators
+			var __mygo_expr_0 int
+			if __mygo_mt_p6 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(seps) {
+				__mygo_expr_0 = __mygo_mt_p4.Span.End.Column - 2
+			} else {
+				__mygo_expr_0 = MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(seps, __mygo_mt_p6), __mygo_mt_p4.Span).Start.Column - 1
+			}
+			stop := __mygo_expr_0
+			sub := reflowRegion(__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p5, stop, true)
+			next := joinStrings(__mygo_mt_p8, appendLastLine(shiftLines(sub, 1), __mygo_mt_p7, 0))
+			if __mygo_mt_p6 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(seps) {
+				return next
+			} else {
+				sep := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(seps, __mygo_mt_p6), __mygo_mt_p4.Span)
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2
+				__tail_3 := __mygo_mt_p3
+				__tail_4 := __mygo_mt_p4
+				__tail_5 := sep.End.Column
+				__tail_6 := __mygo_mt_p6 + 1
+				__tail_7 := __mygo_mt_p7
+				__tail_8 := next
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7, __mygo_mt_p8 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7, __tail_8
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_formatter_editForSourceLine(__mygo_mt_p0 []PassEdit, __mygo_mt_p1 LineMapping, __mygo_mt_p2 int, __mygo_state int) Option[PassEdit] {
 	for {
 		switch __mygo_state {
@@ -1271,6 +1688,36 @@ func __mygo_mt_formatter_editForSourceLine(__mygo_mt_p0 []PassEdit, __mygo_mt_p1
 						continue
 					}
 				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_elseOfLine(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_mt_p4 parser2.LayoutEvent, __mygo_state int) parser2.LayoutEvent {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p4
+			} else {
+				e := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3), emptyLayoutEvent())
+				hit := e.Kind == "enter:if-else" && e.Anchor.Start.Line == __mygo_mt_p1 && e.Anchor.Start.Column > __mygo_mt_p2
+				better := hit && (__mygo_mt_p4.Anchor.Start.Column == 0 || e.Anchor.Start.Column < __mygo_mt_p4.Anchor.Start.Column)
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2
+				__tail_3 := __mygo_mt_p3 + 1
+				var __mygo_expr_0 parser2.LayoutEvent
+				if better {
+					__mygo_expr_0 = e
+				} else {
+					__mygo_expr_0 = __mygo_mt_p4
+				}
+				__tail_4 := __mygo_expr_0
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+				__mygo_state = 0
+				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1306,6 +1753,30 @@ func __mygo_mt_formatter_expandedLineMapFrom(__mygo_mt_p0 int, __mygo_mt_p1 int,
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 				__mygo_state = 0
 				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_firstOpenCol(__mygo_mt_p0 string, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) int {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 > __mygo_mt_p2 {
+				return -1
+			} else {
+				ch := charAt(__mygo_mt_p0, __mygo_mt_p1)
+				if ch == "(" || ch == "{" || ch == "[" {
+					return __mygo_mt_p1
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 1
+					__tail_2 := __mygo_mt_p2
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1354,6 +1825,24 @@ func __mygo_mt_formatter_hasSameLineParent(__mygo_mt_p0 []parser2.NodeSpan, __my
 					__mygo_state = 0
 					continue
 				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_indentWidth(__mygo_mt_p0 string, __mygo_mt_p1 int, __mygo_state int) int {
+	for {
+		switch __mygo_state {
+		case 0:
+			if charAt(__mygo_mt_p0, __mygo_mt_p1) == " " || charAt(__mygo_mt_p0, __mygo_mt_p1) == "\t" {
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1 + 1
+				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+				__mygo_state = 0
+				continue
+			} else {
+				return __mygo_mt_p1 - 1
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1586,6 +2075,81 @@ func __mygo_mt_formatter_literalTail(__mygo_mt_p0 string, __mygo_mt_p1 int, __my
 		}
 	}
 }
+func __mygo_mt_formatter_lookupDelimAt(__mygo_mt_p0 []parser2.DelimitedSpan, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_state int) Option[parser2.DelimitedSpan] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return None[parser2.DelimitedSpan]()
+			} else {
+				d := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3), parser2.DelimitedSpan{Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Items: []ast2.SourceSpan{}, Separators: []ast2.SourceSpan{}})
+				if d.Span.Start.Line == __mygo_mt_p1 && d.Span.Start.Column == __mygo_mt_p2 {
+					return Some[parser2.DelimitedSpan](d)
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_lookupIfAt(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_state int) Option[parser2.LayoutEvent] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return None[parser2.LayoutEvent]()
+			} else {
+				e := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3), emptyLayoutEvent())
+				if e.Kind == "enter:if" && e.Span.Start.Line == __mygo_mt_p1 && e.Span.Start.Column == __mygo_mt_p2 {
+					return Some[parser2.LayoutEvent](e)
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_lookupSwitchAt(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_state int) Option[parser2.LayoutEvent] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return None[parser2.LayoutEvent]()
+			} else {
+				e := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3), emptyLayoutEvent())
+				if e.Kind == "enter:switch" && e.Anchor.Start.Line == __mygo_mt_p1 && e.Anchor.Start.Column == __mygo_mt_p2 {
+					return Some[parser2.LayoutEvent](e)
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_formatter_normalizeStep(__mygo_mt_p0 NormState, __mygo_mt_p1 string, __mygo_state int) string {
 	for {
 		switch __mygo_state {
@@ -1615,6 +2179,26 @@ func __mygo_mt_formatter_normalizeStep(__mygo_mt_p0 NormState, __mygo_mt_p1 stri
 						continue
 					}
 				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_ownedSourceLines(__mygo_mt_p0 []PassEdit, __mygo_mt_p1 int, __mygo_mt_p2 []int, __mygo_state int) []int {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				e := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), PassEdit{Anchor: 0, SourceLine: 1, Added: 0, SourceStart: 1, SourceEnd: 1, Kind: "", Depths: []int{}})
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1 + 1
+				__tail_2 := MygoIN5SliceM6Append(__mygo_mt_p2, e.SourceLine)
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+				__mygo_state = 0
+				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1681,6 +2265,77 @@ func __mygo_mt_formatter_projectRenderedEventTargetsAcc(__mygo_mt_p0 []RenderedL
 				__tail_4 := target + enters
 				__tail_5 := MygoIN5SliceM6Append(__mygo_mt_p5, target)
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_reflowBlock(__mygo_mt_p0 string, __mygo_mt_p1 []string, __mygo_mt_p2 int, __mygo_mt_p3 string, __mygo_state int) string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+				return __mygo_mt_p3
+			} else {
+				piece := indentPrefix(__mygo_mt_p0) + MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), "")
+				var __mygo_expr_0 string
+				if __mygo_mt_p2 == 0 {
+					__mygo_expr_0 = piece
+				} else {
+					__mygo_expr_0 = __mygo_mt_p3 + "\n" + piece
+				}
+				next := __mygo_expr_0
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2 + 1
+				__tail_3 := next
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_reflowPassEdits(__mygo_mt_p0 []string, __mygo_mt_p1 []parser2.LayoutEvent, __mygo_mt_p2 []parser2.DelimitedSpan, __mygo_mt_p3 []PassEdit, __mygo_mt_p4 []int, __mygo_mt_p5 int, __mygo_mt_p6 []PassEdit, __mygo_state int) []PassEdit {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p5 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p4) {
+				return __mygo_mt_p6
+			} else {
+				line := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p4, __mygo_mt_p5), 0)
+				raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, line+lineShift(__mygo_mt_p3, line)-1), "")
+				refl := caseReflowLines(raw, __mygo_mt_p1, __mygo_mt_p2, line)
+				var __mygo_expr_3 []PassEdit
+				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(refl) <= 1 {
+					__mygo_expr_3 = __mygo_mt_p6
+				} else {
+					__mygo_expr_0 := arrowCaseOnLine(__mygo_mt_p1, line, 0)
+					var __mygo_expr_1 []PassEdit
+					if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.LayoutEvent]); ok {
+						__mygo_expr_1 = MygoIN5SliceM6Append(__mygo_mt_p6, PassEdit{Anchor: line - 1, SourceLine: line, Added: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(refl) - 1, SourceStart: __mygo_match___mygo_expr_2.F0.Span.Start.Line, SourceEnd: __mygo_match___mygo_expr_2.F0.Span.End.Line, Kind: "case-reflow", Depths: []int{}})
+					} else {
+						if _, ok := __mygo_expr_0.(Option__None[parser2.LayoutEvent]); ok {
+							__mygo_expr_1 = __mygo_mt_p6
+						} else {
+						}
+					}
+					__mygo_expr_3 = __mygo_expr_1
+				}
+				next := __mygo_expr_3
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2
+				__tail_3 := __mygo_mt_p3
+				__tail_4 := __mygo_mt_p4
+				__tail_5 := __mygo_mt_p5 + 1
+				__tail_6 := next
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6
 				__mygo_state = 0
 				continue
 			}
@@ -1780,7 +2435,7 @@ func __mygo_mt_formatter_remapOneEventLine(__mygo_mt_p0 int, __mygo_mt_p1 []Line
 		}
 	}
 }
-func __mygo_mt_formatter_renderDelimitedEdits(__mygo_mt_p0 []string, __mygo_mt_p1 []parser2.DelimitedSpan, __mygo_mt_p2 []parser2.DelimitedSpan, __mygo_mt_p3 []parser2.LayoutEvent, __mygo_mt_p4 []PassEdit, __mygo_mt_p5 int, __mygo_mt_p6 []PassEdit, __mygo_state int) []PassEdit {
+func __mygo_mt_formatter_renderDelimitedEdits(__mygo_mt_p0 []string, __mygo_mt_p1 []parser2.DelimitedSpan, __mygo_mt_p2 []parser2.DelimitedSpan, __mygo_mt_p3 []parser2.LayoutEvent, __mygo_mt_p4 []PassEdit, __mygo_mt_p5 int, __mygo_mt_p6 []PassEdit, __mygo_mt_p7 []int, __mygo_state int) []PassEdit {
 	for {
 		switch __mygo_state {
 		case 0:
@@ -1790,7 +2445,7 @@ func __mygo_mt_formatter_renderDelimitedEdits(__mygo_mt_p0 []string, __mygo_mt_p
 				item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p5), parser2.DelimitedSpan{Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Items: []ast2.SourceSpan{}, Separators: []ast2.SourceSpan{}})
 				line := item.Span.Start.Line
 				raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, line+lineShift(__mygo_mt_p4, line)-1), "")
-				if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw) > 100 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Separators) > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(__mygo_mt_p1, item.Span, 0) {
+				if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw) > 100 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Separators) > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(__mygo_mt_p1, item.Span, 0) && !containsInt(__mygo_mt_p7, line) {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2
@@ -1798,7 +2453,8 @@ func __mygo_mt_formatter_renderDelimitedEdits(__mygo_mt_p0 []string, __mygo_mt_p
 					__tail_4 := __mygo_mt_p4
 					__tail_5 := __mygo_mt_p5 + 1
 					__tail_6 := MygoIN5SliceM6Append(__mygo_mt_p6, PassEdit{Anchor: line - 1, SourceLine: line, Added: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(renderDelimitedBlockBody(raw, item, __mygo_mt_p3), "\n")) - 1, SourceStart: line, SourceEnd: item.Span.End.Line, Kind: "delimited", Depths: []int{}})
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6
+					__tail_7 := __mygo_mt_p7
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7
 					__mygo_state = 0
 					continue
 				} else {
@@ -1809,7 +2465,8 @@ func __mygo_mt_formatter_renderDelimitedEdits(__mygo_mt_p0 []string, __mygo_mt_p
 					__tail_4 := __mygo_mt_p4
 					__tail_5 := __mygo_mt_p5 + 1
 					__tail_6 := __mygo_mt_p6
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6
+					__tail_7 := __mygo_mt_p7
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7
 					__mygo_state = 0
 					continue
 				}
@@ -1819,7 +2476,7 @@ func __mygo_mt_formatter_renderDelimitedEdits(__mygo_mt_p0 []string, __mygo_mt_p
 		}
 	}
 }
-func __mygo_mt_formatter_renderLayoutEvents(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 []parser2.DelimitedSpan, __mygo_mt_p2 int, __mygo_mt_p3 []parser2.LayoutEvent, __mygo_state int) []parser2.LayoutEvent {
+func __mygo_mt_formatter_renderLayoutEvents(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 []parser2.DelimitedSpan, __mygo_mt_p2 int, __mygo_mt_p3 []parser2.LayoutEvent, __mygo_mt_p4 []int, __mygo_state int) []parser2.LayoutEvent {
 	for {
 		switch __mygo_state {
 		case 0:
@@ -1829,7 +2486,8 @@ func __mygo_mt_formatter_renderLayoutEvents(__mygo_mt_p0 []parser2.LayoutEvent, 
 				ev := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), emptyLayoutEvent())
 				isIfBranch := ev.Kind == "enter:if-then" || ev.Kind == "exit:if-then" || ev.Kind == "enter:if-else" || ev.Kind == "exit:if-else"
 				onOneLine := ev.Anchor.Start.Line > 0 && ev.Anchor.Start.Line == ev.Anchor.End.Line
-				flatten := isIfBranch && ev.AffectsIndent && ev.ExpandsAfter && onOneLine && insideSameLineDelimited(__mygo_mt_p1, ev.Anchor.Start.Line, ev.Anchor.Start.Column)
+				onOwned := ev.Anchor.Start.Line > 0 && containsInt(__mygo_mt_p4, ev.Anchor.Start.Line) || ev.Span.Start.Line > 0 && containsInt(__mygo_mt_p4, ev.Span.Start.Line)
+				flatten := onOwned || isIfBranch && ev.AffectsIndent && ev.ExpandsAfter && onOneLine && insideSameLineDelimited(__mygo_mt_p1, ev.Anchor.Start.Line, ev.Anchor.Start.Column)
 				__tail_0 := __mygo_mt_p0
 				__tail_1 := __mygo_mt_p1
 				__tail_2 := __mygo_mt_p2 + 1
@@ -1840,7 +2498,8 @@ func __mygo_mt_formatter_renderLayoutEvents(__mygo_mt_p0 []parser2.LayoutEvent, 
 					__mygo_expr_0 = MygoIN5SliceM6Append(__mygo_mt_p3, ev)
 				}
 				__tail_3 := __mygo_expr_0
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+				__tail_4 := __mygo_mt_p4
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 				__mygo_state = 0
 				continue
 			}
@@ -1964,6 +2623,28 @@ func __mygo_mt_formatter_siblingElseLine(__mygo_mt_p0 []parser2.LayoutEvent, __m
 		}
 	}
 }
+func __mygo_mt_formatter_switchCaseLines(__mygo_mt_p0 string, __mygo_mt_p1 []parser2.LayoutEvent, __mygo_mt_p2 int, __mygo_mt_p3 []string, __mygo_state int) []string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+				return __mygo_mt_p3
+			} else {
+				c := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), emptyLayoutEvent())
+				caseText := strings.TrimSpace(sl(__mygo_mt_p0, c.Anchor.Start.Column, c.Span.End.Column-1))
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2 + 1
+				__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, "  "+caseText)
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_formatter_syntheticEndLine(__mygo_mt_p0 []ExpansionSegment, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) Option[int] {
 	for {
 		switch __mygo_state {
@@ -1999,6 +2680,72 @@ func __mygo_mt_formatter_syntheticEndLine(__mygo_mt_p0 []ExpansionSegment, __myg
 						panic("non-exhaustive switch")
 					}
 				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_thenOfLine(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_mt_p4 parser2.LayoutEvent, __mygo_state int) parser2.LayoutEvent {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p4
+			} else {
+				e := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3), emptyLayoutEvent())
+				hit := e.Kind == "enter:if-then" && e.Anchor.Start.Line == __mygo_mt_p1 && e.Anchor.Start.Column > __mygo_mt_p2
+				better := hit && (__mygo_mt_p4.Anchor.Start.Column == 0 || e.Anchor.Start.Column < __mygo_mt_p4.Anchor.Start.Column)
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2
+				__tail_3 := __mygo_mt_p3 + 1
+				var __mygo_expr_0 parser2.LayoutEvent
+				if better {
+					__mygo_expr_0 = e
+				} else {
+					__mygo_expr_0 = __mygo_mt_p4
+				}
+				__tail_4 := __mygo_expr_0
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_trimEndCol(__mygo_mt_p0 string, __mygo_mt_p1 int, __mygo_state int) int {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 > 0 && (charAt(__mygo_mt_p0, __mygo_mt_p1) == " " || charAt(__mygo_mt_p0, __mygo_mt_p1) == "\t") {
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1 - 1
+				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+				__mygo_state = 0
+				continue
+			} else {
+				return __mygo_mt_p1
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_trimStartCol(__mygo_mt_p0 string, __mygo_mt_p1 int, __mygo_state int) int {
+	for {
+		switch __mygo_state {
+		case 0:
+			if charAt(__mygo_mt_p0, __mygo_mt_p1) == " " || charAt(__mygo_mt_p0, __mygo_mt_p1) == "\t" {
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1 + 1
+				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+				__mygo_state = 0
+				continue
+			} else {
+				return __mygo_mt_p1
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
