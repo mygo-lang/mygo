@@ -52,7 +52,7 @@ func LosslessDeclarationCount(file LosslessFile) int {
 	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(file.AST.Decls)
 }
 func LosslessProtectedLines(file LosslessFile) []int {
-	return joinProtectedLines(joinProtectedLines(joinProtectedLines(protectedNodeLines(file.NodeSpans, file.Tokens, 0), protectedTriviaLines(file.Trivia, 0)), tripleQuotedLines(file.Tokens, 0)), pairedQuotedLines(file.Tokens, "`", 0))
+	return joinProtectedLines(joinProtectedLines(protectedTriviaLines(file.Trivia, 0), tripleQuotedLines(file.Tokens, 0)), pairedQuotedLines(file.Tokens, "`", 0))
 }
 func tripleQuotedLines(tokens []ps.PositionedToken, index int) []int {
 	for {
@@ -66,7 +66,14 @@ func tripleQuotedLines(tokens []ps.PositionedToken, index int) []int {
 				} else {
 					start := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tokens, index), emptyPositionedToken())
 					finishToken := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tokens, finish+2), start)
-					return joinProtectedLines(spanLines(start.Span.Start.Line, finishToken.Span.End.Line), tripleQuotedLines(tokens, finish+3))
+					var __mygo_expr_0 []int
+					if start.Span.Start.Line == finishToken.Span.End.Line {
+						__mygo_expr_0 = []int{}
+					} else {
+						__mygo_expr_0 = spanLines(start.Span.Start.Line, finishToken.Span.End.Line)
+					}
+					protected := __mygo_expr_0
+					return joinProtectedLines(protected, tripleQuotedLines(tokens, finish+3))
 				}
 			} else {
 				__tail_0 := tokens
@@ -100,7 +107,14 @@ func pairedQuotedLines(tokens []ps.PositionedToken, quote string, index int) []i
 		} else {
 			startToken := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tokens, start), emptyPositionedToken())
 			finishToken := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tokens, finish), startToken)
-			return joinProtectedLines(spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line), pairedQuotedLines(tokens, quote, finish+1))
+			var __mygo_expr_0 []int
+			if startToken.Span.Start.Line == finishToken.Span.End.Line {
+				__mygo_expr_0 = []int{}
+			} else {
+				__mygo_expr_0 = spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line)
+			}
+			protected := __mygo_expr_0
+			return joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish+1))
 		}
 	}
 }
@@ -109,24 +123,6 @@ func nextRawToken(tokens []ps.PositionedToken, raw string, index int) int {
 }
 func emptyPositionedToken() ps.PositionedToken {
 	return ps.PositionedToken{Kind: "", Raw: "", Span: ps.SourceSpan{Start: ps.Position{Offset: 0, Line: 0, Column: 0}, End: ps.Position{Offset: 0, Line: 0, Column: 0}}}
-}
-func protectedNodeLines(items []NodeSpan, tokens []ps.PositionedToken, index int) []int {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-		return []int{}
-	} else {
-		item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), NodeSpan{Path: []int{}, Kind: "", Span: emptySpan()})
-		var __mygo_expr_0 []int
-		if item.Kind == "literal" && spanStartsProtectedLiteral(tokens, item.Span, 0) {
-			__mygo_expr_0 = spanLines(item.Span.Start.Line, item.Span.End.Line)
-		} else {
-			__mygo_expr_0 = []int{}
-		}
-		current := __mygo_expr_0
-		return joinProtectedLines(current, protectedNodeLines(items, tokens, index+1))
-	}
-}
-func spanStartsProtectedLiteral(tokens []ps.PositionedToken, span ast2.SourceSpan, index int) bool {
-	return __mygo_mt_parser2_spanStartsProtectedLiteral(tokens, span, index, 0)
 }
 func protectedTriviaLines(items []ps.PositionedTrivia, index int) []int {
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
@@ -3258,30 +3254,6 @@ func __mygo_mt_parser2_spanStartsLiteral(__mygo_mt_p0 []ps.PositionedToken, __my
 				token := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), ps.PositionedToken{Kind: "", Raw: "", Span: ps.SourceSpan{Start: ps.Position{Offset: 0, Line: 0, Column: 0}, End: ps.Position{Offset: 0, Line: 0, Column: 0}}})
 				if tokenStartsInSpan(token, __mygo_mt_p1) {
 					return token.Raw == "\"" || token.Raw == "'" || token.Raw >= "0" && token.Raw <= "9"
-				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
-				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_parser2_spanStartsProtectedLiteral(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt_p1 ast2.SourceSpan, __mygo_mt_p2 int, __mygo_state int) bool {
-	for {
-		switch __mygo_state {
-		case 0:
-			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-				return false
-			} else {
-				token := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), ps.PositionedToken{Kind: "", Raw: "", Span: ps.SourceSpan{Start: ps.Position{Offset: 0, Line: 0, Column: 0}, End: ps.Position{Offset: 0, Line: 0, Column: 0}}})
-				if tokenStartsInSpan(token, __mygo_mt_p1) {
-					return token.Raw == "\"" || token.Raw == "`" || token.Raw == "'"
 				} else {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1

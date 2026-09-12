@@ -54,6 +54,20 @@ struct DelimitedBlock
   Depths: Slice[Int]
 end
 
+# ArrowIf records the absolute 1-based column span of one inline keyword
+# `if ... then ... else ... end` found inside a delimited item.  The columns
+# point at the `then` separator, the `else` separator, and the closing `end` so
+# the item text can be rewritten to the compact arrow form
+# (`if <cond> => <then> else <else>`).
+struct ArrowIf
+  ThenStart: Int
+  ThenEnd: Int
+  ElseStart: Int
+  ElseEnd: Int
+  EndStart: Int
+  EndEnd: Int
+end
+
 struct SyntheticLayoutEvent
   Kind: String
   RenderedLine: Int
@@ -185,7 +199,7 @@ func renderASTSpans(file: ast2.File, spans: Slice[parser2.NodeSpan], delimited: 
   let caseRender = renderCaseSpanAt(ifText, caseEvents, delimited, joinEdits(blockEdits, branchEdits), 0)
   let caseText = caseRender.Text
   let caseEdits = caseRender.Edits
-  let delimitedRender = renderDelimitedPass(caseText, delimited, joinEdits(joinEdits(blockEdits, branchEdits), caseEdits))
+  let delimitedRender = renderDelimitedPass(caseText, delimited, events, joinEdits(joinEdits(blockEdits, branchEdits), caseEdits))
   let delimitedText = delimitedRender.Text
   let delimEdits = delimitedRender.Edits
   let ifCount = sumPassAdded(branchEdits, 0)
@@ -198,7 +212,14 @@ func renderASTSpans(file: ast2.File, spans: Slice[parser2.NodeSpan], delimited: 
   # segment first and loses the synthetic function-body boundary.
   let sourceFallback = ExpansionSegment { SourceStart: 1, SourceEnd: goal, RenderedStart: 1, RenderedEnd: goal, Kind: "source" }
   let composedSegments = joinSegments(joinSegments(joinSegments(joinSegments(blockResult.Segments, editSegments(branchEdits)), editSegments(caseEdits)), editSegments(delimEdits)), [sourceFallback])
-  let renderedEvents = remapLayoutEvents(events, composedLines, composedSegments, 0, [])
+  # The delimited pass already re-rendered every value-position `if` that lived
+  # on a single source line inside a wrapped literal into the inline `=>` form,
+  # so it no longer introduces an expansion row.  Its layout events still carry
+  # `AffectsIndent`/`ExpandsAfter`, which would add a phantom indent level to the
+  # block, so drop exactly those events from the indent projection while keeping
+  # them in the full `events` list that the arrowize pass reads.
+  let layoutEvents = renderLayoutEvents(events, delimited, 0, [])
+  let renderedEvents = remapLayoutEvents(layoutEvents, composedLines, composedSegments, 0, [])
   # Block and dedent targets are projected from semantic event boundaries.
   # A source line may expand to several rendered lines, so remapping the old
   # line-only collections would incorrectly apply both operations to every
@@ -210,7 +231,24 @@ func renderASTSpans(file: ast2.File, spans: Slice[parser2.NodeSpan], delimited: 
   # maps every protected source line onto its expansion rows.  Joining the
   # raw source-line keys back in would protect unrelated rendered rows once
   # an earlier pass (for example a wrapped list) shifts line numbers.
-  renderRenderedLayoutPlan(delimitedText, projectProtectedLines(protectedLines, composedLines, 0), composedSegments, events, [], delimiterPlan)
+  renderRenderedLayoutPlan(delimitedText, projectProtectedLines(protectedLines, composedLines, 0), composedSegments, layoutEvents, [], delimiterPlan)
+end
+
+# Project the event stream that drives the indent engine by removing the
+# `if-then`/`if-else` branch events the delimited pass already flattened to the
+# inline `=>` form: a keyword/`if-else` branch that is marked `AffectsIndent` +
+# `ExpandsAfter` yet sits entirely on one source line inside a same-line
+# delimited literal.  Those events must not add an expansion-driven indent
+# level because the corresponding text no longer expands into its own rows.
+func renderLayoutEvents(events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], index: Int, acc: Slice[parser2.LayoutEvent]) -> Slice[parser2.LayoutEvent]
+  if index >= events.Len() then acc
+  else
+    let ev = events.Get(index).UnwrapOr(emptyLayoutEvent())
+    let isIfBranch = ev.Kind == "enter:if-then" || ev.Kind == "exit:if-then" || ev.Kind == "enter:if-else" || ev.Kind == "exit:if-else"
+    let onOneLine = ev.Anchor.Start.Line > 0 && ev.Anchor.Start.Line == ev.Anchor.End.Line
+    let flatten = isIfBranch && ev.AffectsIndent && ev.ExpandsAfter && onOneLine && insideSameLineDelimited(delimited, ev.Anchor.Start.Line, ev.Anchor.Start.Column)
+    renderLayoutEvents(events, delimited, index + 1, if flatten then acc else acc.Append(ev) end)
+  end
 end
 
 func projectDelimitedTargets(targets: Slice[Int], mappings: Slice[LineMapping], spans: Slice[parser2.DelimitedSpan], index: Int) -> Slice[Int]
@@ -454,8 +492,8 @@ end
 # of every earlier pass (block/branch/case); a span's original line is shifted
 # by `lineShift` before it reads its anchor from the already-grown text.  When
 # nothing was wrapped the edit list is empty.
-func renderDelimitedPass(source: String, spans: Slice[parser2.DelimitedSpan], priorEdits: Slice[PassEdit]) -> DelimitedRender
-  let text = renderDelimitedSpanAt(source, spans, spans, priorEdits, 0)
+func renderDelimitedPass(source: String, spans: Slice[parser2.DelimitedSpan], events: Slice[parser2.LayoutEvent], priorEdits: Slice[PassEdit]) -> DelimitedRender
+  let text = renderDelimitedSpanAt(source, spans, spans, events, priorEdits, 0)
   let added = text.Split("\n").Len() - source.Split("\n").Len()
   if added == 0 then DelimitedRender { Text: text, Edits: [] }
   else
@@ -464,7 +502,7 @@ func renderDelimitedPass(source: String, spans: Slice[parser2.DelimitedSpan], pr
     # first span) mis-maps every later expansion: composePassRows matches an
     # edit by SourceLine, so a second literal on another source line would get
     # no edit and its synthetic rows would drift onto unrelated source lines.
-    DelimitedRender { Text: text, Edits: renderDelimitedEdits(source.Split("\n"), spans, spans, priorEdits, 0, []) }
+    DelimitedRender { Text: text, Edits: renderDelimitedEdits(source.Split("\n"), spans, spans, events, priorEdits, 0, []) }
   end
 end
 
@@ -472,15 +510,15 @@ end
 # the per-span line delta, reading each anchor line at the same `lineShift`
 # row the text pass uses so the computed Added (blockLines - 1) equals what the
 # text pass actually emitted.
-func renderDelimitedEdits(sourceLines: Slice[String], allSpans: Slice[parser2.DelimitedSpan], spans: Slice[parser2.DelimitedSpan], priorEdits: Slice[PassEdit], index: Int, acc: Slice[PassEdit]) -> Slice[PassEdit]
+func renderDelimitedEdits(sourceLines: Slice[String], allSpans: Slice[parser2.DelimitedSpan], spans: Slice[parser2.DelimitedSpan], events: Slice[parser2.LayoutEvent], priorEdits: Slice[PassEdit], index: Int, acc: Slice[PassEdit]) -> Slice[PassEdit]
   if index >= spans.Len() then acc
   else
     let item = spans.Get(index).UnwrapOr(parser2.DelimitedSpan { Kind: "", Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }, Items: [], Separators: [] })
     let line = item.Span.Start.Line
     let raw = sourceLines.Get(line + lineShift(priorEdits, line) - 1).UnwrapOr("")
     if raw.Len() > 100 && item.Separators.Len() > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(allSpans, item.Span, 0) then
-      renderDelimitedEdits(sourceLines, allSpans, spans, priorEdits, index + 1, acc.Append(PassEdit { Anchor: line - 1, SourceLine: line, Added: renderDelimitedBlockBody(raw, item).Split("\n").Len() - 1, SourceStart: line, SourceEnd: item.Span.End.Line, Kind: "delimited", Depths: [] }))
-    else renderDelimitedEdits(sourceLines, allSpans, spans, priorEdits, index + 1, acc) end
+      renderDelimitedEdits(sourceLines, allSpans, spans, events, priorEdits, index + 1, acc.Append(PassEdit { Anchor: line - 1, SourceLine: line, Added: renderDelimitedBlockBody(raw, item, events).Split("\n").Len() - 1, SourceStart: line, SourceEnd: item.Span.End.Line, Kind: "delimited", Depths: [] }))
+    else renderDelimitedEdits(sourceLines, allSpans, spans, events, priorEdits, index + 1, acc) end
   end
 end
 
@@ -502,18 +540,18 @@ func containedInSameLineSpan(spans: Slice[parser2.DelimitedSpan], span: ast2.Sou
   end
 end
 
-func renderDelimitedSpanAt(source: String, allSpans: Slice[parser2.DelimitedSpan], spans: Slice[parser2.DelimitedSpan], priorEdits: Slice[PassEdit], index: Int) -> String
+func renderDelimitedSpanAt(source: String, allSpans: Slice[parser2.DelimitedSpan], spans: Slice[parser2.DelimitedSpan], events: Slice[parser2.LayoutEvent], priorEdits: Slice[PassEdit], index: Int) -> String
   if index >= spans.Len() then source
   else
     let item = spans.Get(index).UnwrapOr(parser2.DelimitedSpan { Kind: "", Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }, Items: [], Separators: [] })
-    let rendered = renderDelimitedSpanAt(source, allSpans, spans, priorEdits, index + 1)
+    let rendered = renderDelimitedSpanAt(source, allSpans, spans, events, priorEdits, index + 1)
     let line = item.Span.Start.Line
     # Descending order means same-pass expansions already applied sit on rows
     # below this anchor, so only prior-pass insertions shift the target row.
     let target = line + lineShift(priorEdits, line)
     let lines = rendered.Split("\n")
     let raw = lines.Get(target - 1).UnwrapOr("")
-    if raw.Len() > 100 && item.Separators.Len() > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(allSpans, item.Span, 0) then replaceSourceLine(lines, target - 1, raw.Slice(0, item.Span.Start.Column - 1).UnwrapOr("") + renderDelimitedBlockBody(raw, item)) else rendered end
+    if raw.Len() > 100 && item.Separators.Len() > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(allSpans, item.Span, 0) then replaceSourceLine(lines, target - 1, raw.Slice(0, item.Span.Start.Column - 1).UnwrapOr("") + renderDelimitedBlockBody(raw, item, events)) else rendered end
   end
 end
 
@@ -521,21 +559,74 @@ end
 # item occupies its own line one indent level deeper, the final item carries a
 # trailing comma where the grammar allows one (tuples do not), and the closing
 # delimiter sits alone on the last line at the anchor indent.
-func renderDelimitedBlockBody(raw: String, item: parser2.DelimitedSpan) -> String
+func renderDelimitedBlockBody(raw: String, item: parser2.DelimitedSpan, events: Slice[parser2.LayoutEvent]) -> String
   let open = raw.Slice(item.Span.Start.Column - 1, item.Span.Start.Column).UnwrapOr("")
-  let items = delimitedBlockItems(raw, item, 0, item.Span.Start.Column)
+  let items = delimitedBlockItems(raw, item, 0, item.Span.Start.Column, collectArrowIfs(events, item.Span.Start.Line, 0, []))
   let tail = if item.Kind == "delimited:tuple" then "" else "," end
   open + joinDelimitedItemLines(items, tail, 0) + "\n" + raw.Slice(item.Span.End.Column - 2, raw.Len()).UnwrapOr("")
 end
 
-func delimitedBlockItems(raw: String, item: parser2.DelimitedSpan, index: Int, cursor: Int) -> Slice[String]
+# Collect every inline keyword `if ... then ... else ... end` on `line`.  A
+# keyword `if` (HeaderForm "then") in value position reflows to the compact
+# arrow form when it stays inside a wrapped delimited item; a value `if` always
+# carries an `else`, so the sibling `if-else` branch must be present.
+func collectArrowIfs(events: Slice[parser2.LayoutEvent], line: Int, index: Int, acc: Slice[ArrowIf]) -> Slice[ArrowIf]
+  if index >= events.Len() then acc
+  else
+    let ev = events.Get(index).UnwrapOr(emptyLayoutEvent())
+    let isInlineKeywordIf = ev.Kind == "enter:if-then" && ev.BodyLayout == "inline" && ev.HeaderForm == "then" && ev.Anchor.Start.Line == line && ev.Anchor.End.Line == line && ev.ExitAnchor.Start.Line == line && ev.ExitAnchor.End.Line == line
+    let region = if isInlineKeywordIf then arrowIfForThen(events, ev, 0) else None end
+    switch region
+      case Some(found) => collectArrowIfs(events, line, index + 1, acc.Append(found))
+      case None => collectArrowIfs(events, line, index + 1, acc)
+    end
+  end
+end
+
+func arrowIfForThen(events: Slice[parser2.LayoutEvent], thenEvent: parser2.LayoutEvent, index: Int) -> Option[ArrowIf]
+  if index >= events.Len() then None
+  else
+    let ev = events.Get(index).UnwrapOr(emptyLayoutEvent())
+    let isElse = ev.Kind == "enter:if-else" && ev.Anchor.Start.Line == thenEvent.Anchor.Start.Line && sameBranchParent(ev.Path, thenEvent.Path, 0)
+    if isElse then
+      Some(ArrowIf { ThenStart: thenEvent.Anchor.Start.Column, ThenEnd: thenEvent.Anchor.End.Column, ElseStart: ev.Anchor.Start.Column, ElseEnd: ev.Anchor.End.Column, EndStart: thenEvent.ExitAnchor.Start.Column, EndEnd: thenEvent.ExitAnchor.End.Column })
+    else arrowIfForThen(events, thenEvent, index + 1) end
+  end
+end
+
+# Rewrite the arrow regions that fall inside this item's absolute column window
+# `[cursor + 1, windowHigh]`, highest-first so edits never disturb a lower
+# (left-ward) region's columns.  `prefix` keeps the field label + `if <cond>`,
+# the `then`/`end` keywords are dropped, and `then` becomes `=>`.
+func arrowizeItemText(text: String, cursor: Int, windowHigh: Int, regions: Slice[ArrowIf], index: Int) -> String
+  if index < 0 then text
+  else
+    let r = regions.Get(index).UnwrapOr(ArrowIf { ThenStart: 0, ThenEnd: 0, ElseStart: 0, ElseEnd: 0, EndStart: 0, EndEnd: 0 })
+    let inWindow = r.ThenStart >= cursor + 1 && r.EndEnd <= windowHigh
+    if !inWindow then arrowizeItemText(text, cursor, windowHigh, regions, index - 1)
+    else
+      let t0 = r.ThenStart - 1 - cursor
+      let t1 = r.ThenEnd - 1 - cursor
+      let e0 = r.ElseStart - 1 - cursor
+      let e1 = r.ElseEnd - 1 - cursor
+      let x0 = r.EndStart - 1 - cursor
+      let x1 = r.EndEnd - 1 - cursor
+      let next = text.Slice(0, t0).UnwrapOr("") + "=>" + text.Slice(t1, e0).UnwrapOr("") + "else" + text.Slice(e1, x0).UnwrapOr("") + text.Slice(x1, text.Len()).UnwrapOr("")
+      arrowizeItemText(next, cursor, windowHigh, regions, index - 1)
+    end
+  end
+end
+
+func delimitedBlockItems(raw: String, item: parser2.DelimitedSpan, index: Int, cursor: Int, regions: Slice[ArrowIf]) -> Slice[String]
   if index >= item.Separators.Len() then
-    let last = strings.TrimSpace(raw.Slice(cursor, item.Span.End.Column - 2).UnwrapOr(""))
+    let endByte = item.Span.End.Column - 2
+    let last = strings.TrimSpace(arrowizeItemText(raw.Slice(cursor, endByte).UnwrapOr(""), cursor, endByte + 1, regions, regions.Len() - 1))
     if last == "" then [] else [last] end
   else
       let separator = item.Separators.Get(index).UnwrapOr(item.Span)
-      let text = strings.TrimSpace(raw.Slice(cursor, separator.Start.Column - 1).UnwrapOr(""))
-      joinStrings([text], delimitedBlockItems(raw, item, index + 1, separator.End.Column - 1))
+      let endByte = separator.Start.Column - 1
+      let text = strings.TrimSpace(arrowizeItemText(raw.Slice(cursor, endByte).UnwrapOr(""), cursor, endByte + 1, regions, regions.Len() - 1))
+      joinStrings([text], delimitedBlockItems(raw, item, index + 1, separator.End.Column - 1, regions))
     end
 end
 
@@ -962,6 +1053,60 @@ func syntheticEndLine(segments: Slice[ExpansionSegment], sourceLine: Int, index:
   end
 end
 
+struct NormState
+  Out: String
+  Index: Int
+  Started: Bool
+  Spacing: Bool
+end
+
+# Collapse runs of whitespace outside literals to a single space (dropping any
+# leading whitespace) while reproducing every `"…"`, `'…'`, and raw-backtick
+# literal byte-for-byte.  The renderer calls this on each physical line, so a
+# wrapped or reflowed code line normalizes its spacing without ever corrupting
+# a string literal's interior - which is why such literals no longer need their
+# whole source line protected.
 func normalizeLine(line: String) -> String
-  strings.Join(strings.Fields(line), " ")
+  normalizeStep(NormState { Out: "", Index: 0, Started: false, Spacing: false }, line)
+end
+
+func separator(state: NormState) -> String
+  if state.Started && state.Spacing then " " else "" end
+end
+
+func normalizeStep(state: NormState, line: String) -> String
+  if state.Index >= line.Len() then state.Out
+  else
+    let c = line.Slice(state.Index, state.Index + 1).UnwrapOr("")
+    if c == " " || c == "\t" || c == "\r" then
+      normalizeStep(NormState { Out: state.Out, Index: state.Index + 1, Started: state.Started, Spacing: state.Started }, line)
+    elsif c == "\"" || c == "'" || c == "`" then
+      normalizeStep(scanLiteral(line, NormState { Out: state.Out + separator(state), Index: state.Index, Started: true, Spacing: false }), line)
+    else
+      normalizeStep(NormState { Out: state.Out + separator(state) + c, Index: state.Index + 1, Started: true, Spacing: false }, line)
+    end
+  end
+end
+
+# Copy a literal from `state.Index` (the opening quote) through its closing
+# delimiter verbatim.  Backslash escapes are honored inside `"…"`/`'…'`; raw
+# backtick literals carry no escapes.
+func scanLiteral(line: String, state: NormState) -> NormState
+  let quote = line.Slice(state.Index, state.Index + 1).UnwrapOr("")
+  literalTail(line, state.Index + 1, NormState { Out: state.Out + quote, Index: state.Index + 1, Started: true, Spacing: false }, quote)
+end
+
+func literalTail(line: String, index: Int, state: NormState, quote: String) -> NormState
+  if index >= line.Len() then state
+  else
+    let c = line.Slice(index, index + 1).UnwrapOr("")
+    if quote != "`" && c == "\\" then
+      let nxt = line.Slice(index + 1, index + 2).UnwrapOr("")
+      literalTail(line, index + 2, NormState { Out: state.Out + c + nxt, Index: index + 2, Started: true, Spacing: false }, quote)
+    elsif c == quote then
+      NormState { Out: state.Out + c, Index: index + 1, Started: true, Spacing: false }
+    else
+      literalTail(line, index + 1, NormState { Out: state.Out + c, Index: index + 1, Started: true, Spacing: false }, quote)
+    end
+  end
 end

@@ -47,6 +47,14 @@ type DelimitedBlock struct {
 	Text   string
 	Depths []int
 }
+type ArrowIf struct {
+	ThenStart int
+	ThenEnd   int
+	ElseStart int
+	ElseEnd   int
+	EndStart  int
+	EndEnd    int
+}
 type SyntheticLayoutEvent struct {
 	Kind         string
 	RenderedLine int
@@ -145,7 +153,7 @@ func renderASTSpans(file ast2.File, spans []parser2.NodeSpan, delimited []parser
 	caseRender := renderCaseSpanAt(ifText, caseEvents, delimited, joinEdits(blockEdits, branchEdits), 0)
 	caseText := caseRender.Text
 	caseEdits := caseRender.Edits
-	delimitedRender := renderDelimitedPass(caseText, delimited, joinEdits(joinEdits(blockEdits, branchEdits), caseEdits))
+	delimitedRender := renderDelimitedPass(caseText, delimited, events, joinEdits(joinEdits(blockEdits, branchEdits), caseEdits))
 	delimitedText := delimitedRender.Text
 	delimEdits := delimitedRender.Edits
 	ifCount := sumPassAdded(branchEdits, 0)
@@ -155,11 +163,15 @@ func renderASTSpans(file ast2.File, spans []parser2.NodeSpan, delimited []parser
 	composedLines := composePassLines(blockResult.Lines, joinEdits(joinEdits(branchEdits, caseEdits), delimEdits), goal, 0)
 	sourceFallback := ExpansionSegment{SourceStart: 1, SourceEnd: goal, RenderedStart: 1, RenderedEnd: goal, Kind: "source"}
 	composedSegments := joinSegments(joinSegments(joinSegments(joinSegments(blockResult.Segments, editSegments(branchEdits)), editSegments(caseEdits)), editSegments(delimEdits)), []ExpansionSegment{sourceFallback})
-	renderedEvents := remapLayoutEvents(events, composedLines, composedSegments, 0, []RenderedLayoutEvent{})
+	layoutEvents := renderLayoutEvents(events, delimited, 0, []parser2.LayoutEvent{})
+	renderedEvents := remapLayoutEvents(layoutEvents, composedLines, composedSegments, 0, []RenderedLayoutEvent{})
 	renderedPlan := makeRenderedLayoutPlan(composedLines, renderedEvents)
 	delimiterTargets := projectDelimitedTargets(renderedPlan.Targets, composedLines, delimited, 0)
 	delimiterPlan := RenderedLayoutPlan{Lines: renderedPlan.Lines, Events: renderedPlan.Events, Targets: delimiterTargets}
-	return renderRenderedLayoutPlan(delimitedText, projectProtectedLines(protectedLines, composedLines, 0), composedSegments, events, []SyntheticLayoutEvent{}, delimiterPlan)
+	return renderRenderedLayoutPlan(delimitedText, projectProtectedLines(protectedLines, composedLines, 0), composedSegments, layoutEvents, []SyntheticLayoutEvent{}, delimiterPlan)
+}
+func renderLayoutEvents(events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, index int, acc []parser2.LayoutEvent) []parser2.LayoutEvent {
+	return __mygo_mt_formatter_renderLayoutEvents(events, delimited, index, acc, 0)
 }
 func projectDelimitedTargets(targets []int, mappings []LineMapping, spans []parser2.DelimitedSpan, index int) []int {
 	return __mygo_mt_formatter_projectDelimitedTargets(targets, mappings, spans, index, 0)
@@ -398,41 +410,41 @@ func expandBlockSourceLine(raw string, bodyStartColumn int, bodyEndColumn int) s
 	header := strings.TrimRight(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, 0, bodyStart), raw), " \t")
 	return header + "\n  " + body + "\nend"
 }
-func renderDelimitedPass(source string, spans []parser2.DelimitedSpan, priorEdits []PassEdit) DelimitedRender {
-	text := renderDelimitedSpanAt(source, spans, spans, priorEdits, 0)
+func renderDelimitedPass(source string, spans []parser2.DelimitedSpan, events []parser2.LayoutEvent, priorEdits []PassEdit) DelimitedRender {
+	text := renderDelimitedSpanAt(source, spans, spans, events, priorEdits, 0)
 	added := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(text, "\n")) - MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(source, "\n"))
 	if added == 0 {
 		return DelimitedRender{Text: text, Edits: []PassEdit{}}
 	} else {
-		return DelimitedRender{Text: text, Edits: renderDelimitedEdits(MygoIN6StringM5Split(source, "\n"), spans, spans, priorEdits, 0, []PassEdit{})}
+		return DelimitedRender{Text: text, Edits: renderDelimitedEdits(MygoIN6StringM5Split(source, "\n"), spans, spans, events, priorEdits, 0, []PassEdit{})}
 	}
 }
-func renderDelimitedEdits(sourceLines []string, allSpans []parser2.DelimitedSpan, spans []parser2.DelimitedSpan, priorEdits []PassEdit, index int, acc []PassEdit) []PassEdit {
-	return __mygo_mt_formatter_renderDelimitedEdits(sourceLines, allSpans, spans, priorEdits, index, acc, 0)
+func renderDelimitedEdits(sourceLines []string, allSpans []parser2.DelimitedSpan, spans []parser2.DelimitedSpan, events []parser2.LayoutEvent, priorEdits []PassEdit, index int, acc []PassEdit) []PassEdit {
+	return __mygo_mt_formatter_renderDelimitedEdits(sourceLines, allSpans, spans, events, priorEdits, index, acc, 0)
 }
 func containedInSameLineSpan(spans []parser2.DelimitedSpan, span ast2.SourceSpan, index int) bool {
 	return __mygo_mt_formatter_containedInSameLineSpan(spans, span, index, 0)
 }
-func renderDelimitedSpanAt(source string, allSpans []parser2.DelimitedSpan, spans []parser2.DelimitedSpan, priorEdits []PassEdit, index int) string {
+func renderDelimitedSpanAt(source string, allSpans []parser2.DelimitedSpan, spans []parser2.DelimitedSpan, events []parser2.LayoutEvent, priorEdits []PassEdit, index int) string {
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(spans) {
 		return source
 	} else {
 		item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(spans, index), parser2.DelimitedSpan{Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Items: []ast2.SourceSpan{}, Separators: []ast2.SourceSpan{}})
-		rendered := renderDelimitedSpanAt(source, allSpans, spans, priorEdits, index+1)
+		rendered := renderDelimitedSpanAt(source, allSpans, spans, events, priorEdits, index+1)
 		line := item.Span.Start.Line
 		target := line + lineShift(priorEdits, line)
 		lines := MygoIN6StringM5Split(rendered, "\n")
 		raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, target-1), "")
 		if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw) > 100 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Separators) > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(allSpans, item.Span, 0) {
-			return replaceSourceLine(lines, target-1, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, 0, item.Span.Start.Column-1), "")+renderDelimitedBlockBody(raw, item))
+			return replaceSourceLine(lines, target-1, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, 0, item.Span.Start.Column-1), "")+renderDelimitedBlockBody(raw, item, events))
 		} else {
 			return rendered
 		}
 	}
 }
-func renderDelimitedBlockBody(raw string, item parser2.DelimitedSpan) string {
+func renderDelimitedBlockBody(raw string, item parser2.DelimitedSpan, events []parser2.LayoutEvent) string {
 	open := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, item.Span.Start.Column-1, item.Span.Start.Column), "")
-	items := delimitedBlockItems(raw, item, 0, item.Span.Start.Column)
+	items := delimitedBlockItems(raw, item, 0, item.Span.Start.Column, collectArrowIfs(events, item.Span.Start.Line, 0, []ArrowIf{}))
 	var __mygo_expr_0 string
 	if item.Kind == "delimited:tuple" {
 		__mygo_expr_0 = ""
@@ -442,9 +454,19 @@ func renderDelimitedBlockBody(raw string, item parser2.DelimitedSpan) string {
 	tail := __mygo_expr_0
 	return open + joinDelimitedItemLines(items, tail, 0) + "\n" + MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, item.Span.End.Column-2, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw)), "")
 }
-func delimitedBlockItems(raw string, item parser2.DelimitedSpan, index int, cursor int) []string {
+func collectArrowIfs(events []parser2.LayoutEvent, line int, index int, acc []ArrowIf) []ArrowIf {
+	return __mygo_mt_formatter_collectArrowIfs(events, line, index, acc, 0)
+}
+func arrowIfForThen(events []parser2.LayoutEvent, thenEvent parser2.LayoutEvent, index int) Option[ArrowIf] {
+	return __mygo_mt_formatter_arrowIfForThen(events, thenEvent, index, 0)
+}
+func arrowizeItemText(text string, cursor int, windowHigh int, regions []ArrowIf, index int) string {
+	return __mygo_mt_formatter_arrowizeItemText(text, cursor, windowHigh, regions, index, 0)
+}
+func delimitedBlockItems(raw string, item parser2.DelimitedSpan, index int, cursor int, regions []ArrowIf) []string {
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Separators) {
-		last := strings.TrimSpace(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, cursor, item.Span.End.Column-2), ""))
+		endByte := item.Span.End.Column - 2
+		last := strings.TrimSpace(arrowizeItemText(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, cursor, endByte), ""), cursor, endByte+1, regions, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(regions)-1))
 		if last == "" {
 			return []string{}
 		} else {
@@ -452,8 +474,9 @@ func delimitedBlockItems(raw string, item parser2.DelimitedSpan, index int, curs
 		}
 	} else {
 		separator := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(item.Separators, index), item.Span)
-		text := strings.TrimSpace(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, cursor, separator.Start.Column-1), ""))
-		return joinStrings([]string{text}, delimitedBlockItems(raw, item, index+1, separator.End.Column-1))
+		endByte_1 := separator.Start.Column - 1
+		text := strings.TrimSpace(arrowizeItemText(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, cursor, endByte_1), ""), cursor, endByte_1+1, regions, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(regions)-1))
+		return joinStrings([]string{text}, delimitedBlockItems(raw, item, index+1, separator.End.Column-1, regions))
 	}
 }
 func joinDelimitedItemLines(items []string, tail string, index int) string {
@@ -971,8 +994,33 @@ func remapOneEventLineRegular(sourceLine int, mappings []LineMapping, segments [
 func syntheticEndLine(segments []ExpansionSegment, sourceLine int, index int) Option[int] {
 	return __mygo_mt_formatter_syntheticEndLine(segments, sourceLine, index, 0)
 }
+
+type NormState struct {
+	Out     string
+	Index   int
+	Started bool
+	Spacing bool
+}
+
 func normalizeLine(line string) string {
-	return strings.Join(strings.Fields(line), " ")
+	return normalizeStep(NormState{Out: "", Index: 0, Started: false, Spacing: false}, line)
+}
+func separator(state NormState) string {
+	if state.Started && state.Spacing {
+		return " "
+	} else {
+		return ""
+	}
+}
+func normalizeStep(state NormState, line string) string {
+	return __mygo_mt_formatter_normalizeStep(state, line, 0)
+}
+func scanLiteral(line string, state NormState) NormState {
+	quote := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(line, state.Index, state.Index+1), "")
+	return literalTail(line, state.Index+1, NormState{Out: state.Out + quote, Index: state.Index + 1, Started: true, Spacing: false}, quote)
+}
+func literalTail(line string, index int, state NormState, quote string) NormState {
+	return __mygo_mt_formatter_literalTail(line, index, state, quote, 0)
 }
 func __mygo_mt_formatter_addDelimitedIndent(__mygo_mt_p0 []int, __mygo_mt_p1 []LineMapping, __mygo_mt_p2 ast2.SourceSpan, __mygo_mt_p3 int, __mygo_mt_p4 []int, __mygo_state int) []int {
 	for {
@@ -1006,6 +1054,72 @@ func __mygo_mt_formatter_addDelimitedIndent(__mygo_mt_p0 []int, __mygo_mt_p1 []L
 		}
 	}
 }
+func __mygo_mt_formatter_arrowIfForThen(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 parser2.LayoutEvent, __mygo_mt_p2 int, __mygo_state int) Option[ArrowIf] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return None[ArrowIf]()
+			} else {
+				ev := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), emptyLayoutEvent())
+				isElse := ev.Kind == "enter:if-else" && ev.Anchor.Start.Line == __mygo_mt_p1.Anchor.Start.Line && sameBranchParent(ev.Path, __mygo_mt_p1.Path, 0)
+				if isElse {
+					return Some[ArrowIf](ArrowIf{ThenStart: __mygo_mt_p1.Anchor.Start.Column, ThenEnd: __mygo_mt_p1.Anchor.End.Column, ElseStart: ev.Anchor.Start.Column, ElseEnd: ev.Anchor.End.Column, EndStart: __mygo_mt_p1.ExitAnchor.Start.Column, EndEnd: __mygo_mt_p1.ExitAnchor.End.Column})
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_arrowizeItemText(__mygo_mt_p0 string, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 []ArrowIf, __mygo_mt_p4 int, __mygo_state int) string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p4 < 0 {
+				return __mygo_mt_p0
+			} else {
+				r := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p3, __mygo_mt_p4), ArrowIf{ThenStart: 0, ThenEnd: 0, ElseStart: 0, ElseEnd: 0, EndStart: 0, EndEnd: 0})
+				inWindow := r.ThenStart >= __mygo_mt_p1+1 && r.EndEnd <= __mygo_mt_p2
+				if !inWindow {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3
+					__tail_4 := __mygo_mt_p4 - 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+					__mygo_state = 0
+					continue
+				} else {
+					t0 := r.ThenStart - 1 - __mygo_mt_p1
+					t1 := r.ThenEnd - 1 - __mygo_mt_p1
+					e0 := r.ElseStart - 1 - __mygo_mt_p1
+					e1 := r.ElseEnd - 1 - __mygo_mt_p1
+					x0 := r.EndStart - 1 - __mygo_mt_p1
+					x1 := r.EndEnd - 1 - __mygo_mt_p1
+					next := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(__mygo_mt_p0, 0, t0), "") + "=>" + MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(__mygo_mt_p0, t1, e0), "") + "else" + MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(__mygo_mt_p0, e1, x0), "") + MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(__mygo_mt_p0, x1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(__mygo_mt_p0)), "")
+					__tail_0 := next
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3
+					__tail_4 := __mygo_mt_p4 - 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_formatter_branchExitAnchor(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 []int, __mygo_mt_p2 int, __mygo_state int) ast2.SourceSpan {
 	for {
 		switch __mygo_state {
@@ -1023,6 +1137,49 @@ func __mygo_mt_formatter_branchExitAnchor(__mygo_mt_p0 []parser2.LayoutEvent, __
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_collectArrowIfs(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 []ArrowIf, __mygo_state int) []ArrowIf {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p3
+			} else {
+				ev := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), emptyLayoutEvent())
+				isInlineKeywordIf := ev.Kind == "enter:if-then" && ev.BodyLayout == "inline" && ev.HeaderForm == "then" && ev.Anchor.Start.Line == __mygo_mt_p1 && ev.Anchor.End.Line == __mygo_mt_p1 && ev.ExitAnchor.Start.Line == __mygo_mt_p1 && ev.ExitAnchor.End.Line == __mygo_mt_p1
+				var __mygo_expr_0 Option[ArrowIf]
+				if isInlineKeywordIf {
+					__mygo_expr_0 = arrowIfForThen(__mygo_mt_p0, ev, 0)
+				} else {
+					__mygo_expr_0 = None[ArrowIf]()
+				}
+				region := __mygo_expr_0
+				if __mygo_match___mygo_expr_1, ok := region.(Option__Some[ArrowIf]); ok {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, __mygo_match___mygo_expr_1.F0)
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := region.(Option__None[ArrowIf]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__tail_3 := __mygo_mt_p3
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -1393,6 +1550,77 @@ func __mygo_mt_formatter_lastRenderedLine(__mygo_mt_p0 []int, __mygo_mt_p1 int, 
 		}
 	}
 }
+func __mygo_mt_formatter_literalTail(__mygo_mt_p0 string, __mygo_mt_p1 int, __mygo_mt_p2 NormState, __mygo_mt_p3 string, __mygo_state int) NormState {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p2
+			} else {
+				c := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p1+1), "")
+				if __mygo_mt_p3 != "`" && c == "\\" {
+					nxt := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(__mygo_mt_p0, __mygo_mt_p1+1, __mygo_mt_p1+2), "")
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1 + 2
+					__tail_2 := NormState{Out: __mygo_mt_p2.Out + c + nxt, Index: __mygo_mt_p1 + 2, Started: true, Spacing: false}
+					__tail_3 := __mygo_mt_p3
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				} else {
+					if c == __mygo_mt_p3 {
+						return NormState{Out: __mygo_mt_p2.Out + c, Index: __mygo_mt_p1 + 1, Started: true, Spacing: false}
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := NormState{Out: __mygo_mt_p2.Out + c, Index: __mygo_mt_p1 + 1, Started: true, Spacing: false}
+						__tail_3 := __mygo_mt_p3
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_normalizeStep(__mygo_mt_p0 NormState, __mygo_mt_p1 string, __mygo_state int) string {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p0.Index >= MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(__mygo_mt_p1) {
+				return __mygo_mt_p0.Out
+			} else {
+				c := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(__mygo_mt_p1, __mygo_mt_p0.Index, __mygo_mt_p0.Index+1), "")
+				if c == " " || c == "\t" || c == "\r" {
+					__tail_0 := NormState{Out: __mygo_mt_p0.Out, Index: __mygo_mt_p0.Index + 1, Started: __mygo_mt_p0.Started, Spacing: __mygo_mt_p0.Started}
+					__tail_1 := __mygo_mt_p1
+					__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+					__mygo_state = 0
+					continue
+				} else {
+					if c == "\"" || c == "'" || c == "`" {
+						__tail_0 := scanLiteral(__mygo_mt_p1, NormState{Out: __mygo_mt_p0.Out + separator(__mygo_mt_p0), Index: __mygo_mt_p0.Index, Started: true, Spacing: false})
+						__tail_1 := __mygo_mt_p1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					} else {
+						__tail_0 := NormState{Out: __mygo_mt_p0.Out + separator(__mygo_mt_p0) + c, Index: __mygo_mt_p0.Index + 1, Started: true, Spacing: false}
+						__tail_1 := __mygo_mt_p1
+						__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
+						__mygo_state = 0
+						continue
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_formatter_projectDelimitedTargets(__mygo_mt_p0 []int, __mygo_mt_p1 []LineMapping, __mygo_mt_p2 []parser2.DelimitedSpan, __mygo_mt_p3 int, __mygo_state int) []int {
 	for {
 		switch __mygo_state {
@@ -1552,24 +1780,25 @@ func __mygo_mt_formatter_remapOneEventLine(__mygo_mt_p0 int, __mygo_mt_p1 []Line
 		}
 	}
 }
-func __mygo_mt_formatter_renderDelimitedEdits(__mygo_mt_p0 []string, __mygo_mt_p1 []parser2.DelimitedSpan, __mygo_mt_p2 []parser2.DelimitedSpan, __mygo_mt_p3 []PassEdit, __mygo_mt_p4 int, __mygo_mt_p5 []PassEdit, __mygo_state int) []PassEdit {
+func __mygo_mt_formatter_renderDelimitedEdits(__mygo_mt_p0 []string, __mygo_mt_p1 []parser2.DelimitedSpan, __mygo_mt_p2 []parser2.DelimitedSpan, __mygo_mt_p3 []parser2.LayoutEvent, __mygo_mt_p4 []PassEdit, __mygo_mt_p5 int, __mygo_mt_p6 []PassEdit, __mygo_state int) []PassEdit {
 	for {
 		switch __mygo_state {
 		case 0:
-			if __mygo_mt_p4 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
-				return __mygo_mt_p5
+			if __mygo_mt_p5 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
+				return __mygo_mt_p6
 			} else {
-				item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p4), parser2.DelimitedSpan{Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Items: []ast2.SourceSpan{}, Separators: []ast2.SourceSpan{}})
+				item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p5), parser2.DelimitedSpan{Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Items: []ast2.SourceSpan{}, Separators: []ast2.SourceSpan{}})
 				line := item.Span.Start.Line
-				raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, line+lineShift(__mygo_mt_p3, line)-1), "")
+				raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, line+lineShift(__mygo_mt_p4, line)-1), "")
 				if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw) > 100 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Separators) > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(__mygo_mt_p1, item.Span, 0) {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2
 					__tail_3 := __mygo_mt_p3
-					__tail_4 := __mygo_mt_p4 + 1
-					__tail_5 := MygoIN5SliceM6Append(__mygo_mt_p5, PassEdit{Anchor: line - 1, SourceLine: line, Added: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(renderDelimitedBlockBody(raw, item), "\n")) - 1, SourceStart: line, SourceEnd: item.Span.End.Line, Kind: "delimited", Depths: []int{}})
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+					__tail_4 := __mygo_mt_p4
+					__tail_5 := __mygo_mt_p5 + 1
+					__tail_6 := MygoIN5SliceM6Append(__mygo_mt_p6, PassEdit{Anchor: line - 1, SourceLine: line, Added: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(renderDelimitedBlockBody(raw, item, __mygo_mt_p3), "\n")) - 1, SourceStart: line, SourceEnd: item.Span.End.Line, Kind: "delimited", Depths: []int{}})
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6
 					__mygo_state = 0
 					continue
 				} else {
@@ -1577,12 +1806,43 @@ func __mygo_mt_formatter_renderDelimitedEdits(__mygo_mt_p0 []string, __mygo_mt_p
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2
 					__tail_3 := __mygo_mt_p3
-					__tail_4 := __mygo_mt_p4 + 1
-					__tail_5 := __mygo_mt_p5
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+					__tail_4 := __mygo_mt_p4
+					__tail_5 := __mygo_mt_p5 + 1
+					__tail_6 := __mygo_mt_p6
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6
 					__mygo_state = 0
 					continue
 				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_renderLayoutEvents(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 []parser2.DelimitedSpan, __mygo_mt_p2 int, __mygo_mt_p3 []parser2.LayoutEvent, __mygo_state int) []parser2.LayoutEvent {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p3
+			} else {
+				ev := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), emptyLayoutEvent())
+				isIfBranch := ev.Kind == "enter:if-then" || ev.Kind == "exit:if-then" || ev.Kind == "enter:if-else" || ev.Kind == "exit:if-else"
+				onOneLine := ev.Anchor.Start.Line > 0 && ev.Anchor.Start.Line == ev.Anchor.End.Line
+				flatten := isIfBranch && ev.AffectsIndent && ev.ExpandsAfter && onOneLine && insideSameLineDelimited(__mygo_mt_p1, ev.Anchor.Start.Line, ev.Anchor.Start.Column)
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2 + 1
+				var __mygo_expr_0 []parser2.LayoutEvent
+				if flatten {
+					__mygo_expr_0 = __mygo_mt_p3
+				} else {
+					__mygo_expr_0 = MygoIN5SliceM6Append(__mygo_mt_p3, ev)
+				}
+				__tail_3 := __mygo_expr_0
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+				__mygo_state = 0
+				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")

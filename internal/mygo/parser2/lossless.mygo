@@ -54,7 +54,13 @@ func LosslessDeclarationCount(file: LosslessFile) -> Int
 end
 
 func LosslessProtectedLines(file: LosslessFile) -> Slice[Int]
-  joinProtectedLines(joinProtectedLines(joinProtectedLines(protectedNodeLines(file.NodeSpans, file.Tokens, 0), protectedTriviaLines(file.Trivia, 0)), tripleQuotedLines(file.Tokens, 0)), pairedQuotedLines(file.Tokens, "`", 0))
+  # Only whole constructs that must stay byte-verbatim are protected by line:
+  # comments, triple-quoted strings, and backtick raw strings.  An ordinary
+  # single-line `"…"`/`'…'` literal is NOT protected here - protecting its whole
+  # line would freeze a row the formatter is free to reflow (for example a long
+  # struct literal that wraps), and it is unnecessary: the renderer protects the
+  # literal's interior while normalizing the surrounding code.
+  joinProtectedLines(joinProtectedLines(protectedTriviaLines(file.Trivia, 0), tripleQuotedLines(file.Tokens, 0)), pairedQuotedLines(file.Tokens, "`", 0))
 end
 
 func tripleQuotedLines(tokens: Slice[ps.PositionedToken], index: Int) -> Slice[Int]
@@ -63,9 +69,13 @@ func tripleQuotedLines(tokens: Slice[ps.PositionedToken], index: Int) -> Slice[I
     let finish = nextQuoteTriple(tokens, index + 3)
     if finish < 0 then []
     else
-      let start = tokens.Get(index).UnwrapOr(emptyPositionedToken())
-      let finishToken = tokens.Get(finish + 2).UnwrapOr(start)
-      joinProtectedLines(spanLines(start.Span.Start.Line, finishToken.Span.End.Line), tripleQuotedLines(tokens, finish + 3))
+    let start = tokens.Get(index).UnwrapOr(emptyPositionedToken())
+    let finishToken = tokens.Get(finish + 2).UnwrapOr(start)
+    # A triple-quoted literal that stays on one line is preserved verbatim by
+    # the renderer's literal-aware line normalizer, so it needs no line lock;
+    # only the interior rows of a multi-line literal must be reproduced raw.
+    let protected = if start.Span.Start.Line == finishToken.Span.End.Line then [] else spanLines(start.Span.Start.Line, finishToken.Span.End.Line) end
+    joinProtectedLines(protected, tripleQuotedLines(tokens, finish + 3))
     end
   else tripleQuotedLines(tokens, index + 1) end
 end
@@ -91,9 +101,12 @@ func pairedQuotedLines(tokens: Slice[ps.PositionedToken], quote: String, index: 
     let finish = nextRawToken(tokens, quote, start + 1)
     if finish < 0 then []
     else
-      let startToken = tokens.Get(start).UnwrapOr(emptyPositionedToken())
-      let finishToken = tokens.Get(finish).UnwrapOr(startToken)
-      joinProtectedLines(spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line), pairedQuotedLines(tokens, quote, finish + 1))
+    let startToken = tokens.Get(start).UnwrapOr(emptyPositionedToken())
+    let finishToken = tokens.Get(finish).UnwrapOr(startToken)
+    # Only a raw literal that spans multiple lines needs a line lock; a
+    # single-line raw literal is preserved by the literal-aware normalizer.
+    let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then [] else spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line) end
+    joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish + 1))
     end
   end
 end
@@ -108,22 +121,6 @@ func emptyPositionedToken() -> ps.PositionedToken
   ps.PositionedToken { Kind: "", Raw: "", Span: ps.SourceSpan { Start: ps.Position { Offset: 0, Line: 0, Column: 0 }, End: ps.Position { Offset: 0, Line: 0, Column: 0 } } }
 end
 
-func protectedNodeLines(items: Slice[NodeSpan], tokens: Slice[ps.PositionedToken], index: Int) -> Slice[Int]
-  if index >= items.Len() then []
-  else
-    let item = items.Get(index).UnwrapOr(NodeSpan { Path: [], Kind: "", Span: emptySpan() })
-    let current = if item.Kind == "literal" && spanStartsProtectedLiteral(tokens, item.Span, 0) then spanLines(item.Span.Start.Line, item.Span.End.Line) else [] end
-    joinProtectedLines(current, protectedNodeLines(items, tokens, index + 1))
-  end
-end
-
-func spanStartsProtectedLiteral(tokens: Slice[ps.PositionedToken], span: ast2.SourceSpan, index: Int) -> Bool
-  if index >= tokens.Len() then false
-  else
-    let token = tokens.Get(index).UnwrapOr(ps.PositionedToken { Kind: "", Raw: "", Span: ps.SourceSpan { Start: ps.Position { Offset: 0, Line: 0, Column: 0 }, End: ps.Position { Offset: 0, Line: 0, Column: 0 } } })
-    if tokenStartsInSpan(token, span) then token.Raw == "\"" || token.Raw == "`" || token.Raw == "'" else spanStartsProtectedLiteral(tokens, span, index + 1) end
-  end
-end
 
 func protectedTriviaLines(items: Slice[ps.PositionedTrivia], index: Int) -> Slice[Int]
   if index >= items.Len() then []

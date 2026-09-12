@@ -337,7 +337,13 @@ func TestLosslessCarriesTopLevelDelimitedSeparators(t *testing.T) {
 	t.Fatalf("missing top-level delimited anchors: %#v", parsed.F0.Delimited)
 }
 
-func TestLosslessProtectedLinesIncludeCommentsAndLiterals(t *testing.T) {
+// Comments stay line-protected (their interior spacing must survive verbatim),
+// but a single-line `"…"` literal no longer locks its whole source line: that
+// would freeze a row the formatter is free to reflow (e.g. a wrapping struct
+// literal).  The renderer protects the literal's interior during line
+// normalization instead, so the line stays reflowable.  Multi-line raw spans
+// are covered by the dedicated span tests below.
+func TestLosslessProtectedLinesIncludeCommentsNotInlineLiterals(t *testing.T) {
 	got := ParseFileLossless("protected.mygo", "package sample\n# keep   comment\nfunc f() -> String\n  \"hello   world\"\nend\n")
 	parsed, ok := got.(Result__Ok[LosslessFile, string])
 	if !ok {
@@ -349,8 +355,11 @@ func TestLosslessProtectedLinesIncludeCommentsAndLiterals(t *testing.T) {
 		foundComment = foundComment || line == 2
 		foundLiteral = foundLiteral || line == 4
 	}
-	if !foundComment || !foundLiteral {
-		t.Fatalf("protected lines = %#v", lines)
+	if !foundComment {
+		t.Fatalf("comment line was not protected: %#v", lines)
+	}
+	if foundLiteral {
+		t.Fatalf("single-line literal must not lock its whole line: %#v", lines)
 	}
 }
 
