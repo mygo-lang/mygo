@@ -28,6 +28,7 @@ type LineMapping struct {
 	Synthetic        bool
 	AnchorSourceLine int
 	Boundary         string
+	Depth            int
 }
 type PassEdit struct {
 	Anchor      int
@@ -36,6 +37,15 @@ type PassEdit struct {
 	SourceStart int
 	SourceEnd   int
 	Kind        string
+	Depths      []int
+}
+type DelimitedRender struct {
+	Text  string
+	Edits []PassEdit
+}
+type DelimitedBlock struct {
+	Text   string
+	Depths []int
 }
 type SyntheticLayoutEvent struct {
 	Kind         string
@@ -52,6 +62,7 @@ type ExpansionSegment struct {
 }
 type RenderedLayoutEvent struct {
 	Kind           string
+	Path           []int
 	SourceLine     int
 	ExitSourceLine int
 	RenderedLine   int
@@ -87,28 +98,10 @@ func joinSyntheticEvents(left []SyntheticLayoutEvent, right []SyntheticLayoutEve
 	return __mygo_mt_formatter_joinSyntheticEvents(left, right, 0)
 }
 func expandedLineMap(source string, rendered string, line int) []LineMapping {
-	sourceLines := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(source, "\n"))
-	renderedLines := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(rendered, "\n"))
-	if line > renderedLines {
-		return []LineMapping{}
-	} else {
-		synthetic := line > sourceLines
-		var __mygo_expr_0 int
-		if synthetic {
-			__mygo_expr_0 = sourceLines
-		} else {
-			__mygo_expr_0 = line
-		}
-		sourceLine := __mygo_expr_0
-		var __mygo_expr_1 string
-		if synthetic {
-			__mygo_expr_1 = "after"
-		} else {
-			__mygo_expr_1 = ""
-		}
-		boundary := __mygo_expr_1
-		return joinLineMappings([]LineMapping{LineMapping{SourceLine: sourceLine, RenderedLine: line, Delta: line - sourceLine, Synthetic: synthetic, AnchorSourceLine: sourceLine, Boundary: boundary}}, expandedLineMap(source, rendered, line+1))
-	}
+	return expandedLineMapFrom(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(source, "\n")), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(rendered, "\n")), line, []LineMapping{})
+}
+func expandedLineMapFrom(sourceLines int, renderedLines int, line int, acc []LineMapping) []LineMapping {
+	return __mygo_mt_formatter_expandedLineMapFrom(sourceLines, renderedLines, line, acc, 0)
 }
 func joinLineMappings(left []LineMapping, right []LineMapping) []LineMapping {
 	return __mygo_mt_formatter_joinLineMappings(left, right, 0)
@@ -145,18 +138,27 @@ func renderASTSpans(file ast2.File, spans []parser2.NodeSpan, delimited []parser
 		return item_1.Kind == "enter:case" && item_1.SeparatorAnchor.Start.Line > 0
 	}), 0)
 	caseCount := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(caseText, "\n")) - MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(ifText, "\n"))
-	delimitedText := renderDelimitedSpanAt(caseText, delimited, 0)
-	delimCount := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(delimitedText, "\n")) - MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(caseText, "\n"))
+	delimitedRender := renderDelimitedPass(caseText, delimited)
+	delimitedText := delimitedRender.Text
+	delimEdits := delimitedRender.Edits
+	delimCount := sumPassAdded(delimEdits, 0)
 	branchEdits := branchPassEdits(events, ifCount)
 	caseEdits := casePassEdits(events, caseCount)
-	delimEdits := delimPassEdits(delimited, delimCount)
 	goal := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(blockResult.Lines) + ifCount + caseCount + delimCount
 	composedLines := composePassLines(blockResult.Lines, joinEdits(joinEdits(branchEdits, caseEdits), delimEdits), goal, 0)
 	sourceFallback := ExpansionSegment{SourceStart: 1, SourceEnd: goal, RenderedStart: 1, RenderedEnd: goal, Kind: "source"}
 	composedSegments := joinSegments(joinSegments(joinSegments(joinSegments(blockResult.Segments, editSegments(branchEdits)), editSegments(caseEdits)), editSegments(delimEdits)), []ExpansionSegment{sourceFallback})
-	renderedEvents := remapLayoutEvents(events, composedLines, composedSegments, 0)
+	renderedEvents := remapLayoutEvents(events, composedLines, composedSegments, 0, []RenderedLayoutEvent{})
 	renderedPlan := makeRenderedLayoutPlan(composedLines, renderedEvents)
-	return renderRenderedLayoutPlan(delimitedText, joinInts(protectedLines, projectProtectedLines(protectedLines, composedLines, 0)), composedSegments, events, []SyntheticLayoutEvent{}, renderedPlan)
+	delimiterTargets := projectDelimitedTargets(renderedPlan.Targets, composedLines, delimited, 0)
+	delimiterPlan := RenderedLayoutPlan{Lines: renderedPlan.Lines, Events: renderedPlan.Events, Targets: delimiterTargets}
+	return renderRenderedLayoutPlan(delimitedText, projectProtectedLines(protectedLines, composedLines, 0), composedSegments, events, []SyntheticLayoutEvent{}, delimiterPlan)
+}
+func projectDelimitedTargets(targets []int, mappings []LineMapping, spans []parser2.DelimitedSpan, index int) []int {
+	return __mygo_mt_formatter_projectDelimitedTargets(targets, mappings, spans, index, 0)
+}
+func addDelimitedIndent(targets []int, mappings []LineMapping, span ast2.SourceSpan, index int, acc []int) []int {
+	return __mygo_mt_formatter_addDelimitedIndent(targets, mappings, span, index, acc, 0)
 }
 func branchPassEdits(events []parser2.LayoutEvent, count int) []PassEdit {
 	if count == 0 {
@@ -172,7 +174,7 @@ func branchPassEdits(events []parser2.LayoutEvent, count int) []PassEdit {
 		} else {
 			__mygo_expr_0 = span.Start.Line
 		}
-		return []PassEdit{PassEdit{Anchor: span.Start.Line - 1, SourceLine: span.Start.Line, Added: count, SourceStart: span.Start.Line, SourceEnd: __mygo_expr_0, Kind: "if-branch"}}
+		return []PassEdit{PassEdit{Anchor: span.Start.Line - 1, SourceLine: span.Start.Line, Added: count, SourceStart: span.Start.Line, SourceEnd: __mygo_expr_0, Kind: "if-branch", Depths: []int{}}}
 	}
 }
 func firstExpandableBranch(thenEvents []parser2.LayoutEvent, events []parser2.LayoutEvent, index int) parser2.LayoutEvent {
@@ -183,28 +185,39 @@ func casePassEdits(events []parser2.LayoutEvent, count int) []PassEdit {
 		return []PassEdit{}
 	} else {
 		caseEvent := firstExpandableCase(events, 0)
-		return []PassEdit{PassEdit{Anchor: caseEvent.Span.Start.Line - 1, SourceLine: caseEvent.Span.Start.Line, Added: count, SourceStart: caseEvent.Span.Start.Line, SourceEnd: caseEvent.Span.End.Line, Kind: "case-branch"}}
+		return []PassEdit{PassEdit{Anchor: caseEvent.Span.Start.Line - 1, SourceLine: caseEvent.Span.Start.Line, Added: count, SourceStart: caseEvent.Span.Start.Line, SourceEnd: caseEvent.Span.End.Line, Kind: "case-branch", Depths: []int{}}}
 	}
 }
 func firstExpandableCase(events []parser2.LayoutEvent, index int) parser2.LayoutEvent {
 	return __mygo_mt_formatter_firstExpandableCase(events, index, 0)
 }
-func delimPassEdits(spans []parser2.DelimitedSpan, count int) []PassEdit {
-	if count == 0 {
-		return []PassEdit{}
-	} else {
-		span := firstExpandableDelimited(spans, 0)
-		return []PassEdit{PassEdit{Anchor: span.Start.Line - 1, SourceLine: span.Start.Line, Added: count, SourceStart: span.Start.Line, SourceEnd: span.End.Line, Kind: "delimited"}}
-	}
-}
 func firstExpandableDelimited(spans []parser2.DelimitedSpan, index int) ast2.SourceSpan {
 	return __mygo_mt_formatter_firstExpandableDelimited(spans, index, 0)
 }
 func composePassLines(base []LineMapping, edits []PassEdit, goal int, index int) []LineMapping {
-	return __mygo_mt_formatter_composePassLines(base, edits, goal, index, 0)
+	return composePassRows(base, edits, 1, 0)
 }
-func applyPassEdit(base []LineMapping, edit PassEdit, index int, out []LineMapping) []LineMapping {
-	return __mygo_mt_formatter_applyPassEdit(base, edit, index, out, 0)
+func composePassRows(base []LineMapping, edits []PassEdit, row int, index int) []LineMapping {
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(base) {
+		return []LineMapping{}
+	} else {
+		src := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(base, index), LineMapping{SourceLine: index + 1, RenderedLine: index + 1, Delta: 0, Synthetic: false, AnchorSourceLine: index + 1, Boundary: "", Depth: 0})
+		head := LineMapping{SourceLine: src.SourceLine, RenderedLine: row, Delta: row - src.SourceLine, Synthetic: src.Synthetic, AnchorSourceLine: src.AnchorSourceLine, Boundary: src.Boundary, Depth: src.Depth}
+		__mygo_expr_0 := editForSourceLine(edits, src, 0)
+		var __mygo_expr_1 []LineMapping
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[PassEdit]); ok {
+			__mygo_expr_1 = joinLineMappings([]LineMapping{head}, joinLineMappings(expandedPassRows(__mygo_match___mygo_expr_2.F0, row+1, __mygo_match___mygo_expr_2.F0.Added), composePassRows(base, edits, row+1+__mygo_match___mygo_expr_2.F0.Added, index+1)))
+		} else {
+			if _, ok := __mygo_expr_0.(Option__None[PassEdit]); ok {
+				__mygo_expr_1 = joinLineMappings([]LineMapping{head}, composePassRows(base, edits, row+1, index+1))
+			} else {
+			}
+		}
+		return __mygo_expr_1
+	}
+}
+func editForSourceLine(edits []PassEdit, mapping LineMapping, index int) Option[PassEdit] {
+	return __mygo_mt_formatter_editForSourceLine(edits, mapping, index, 0)
 }
 func expandedPassRows(edit PassEdit, row int, remaining int) []LineMapping {
 	if remaining <= 0 {
@@ -223,7 +236,23 @@ func expandedPassRows(edit PassEdit, row int, remaining int) []LineMapping {
 			__mygo_expr_1 = __mygo_expr_0
 		}
 		boundary := __mygo_expr_1
-		return joinLineMappings([]LineMapping{LineMapping{SourceLine: edit.SourceLine, RenderedLine: row, Delta: row - edit.SourceLine, Synthetic: true, AnchorSourceLine: edit.SourceLine, Boundary: boundary}}, expandedPassRows(edit, row+1, remaining-1))
+		depth := editDepthsAt(edit.Depths, edit.Added-remaining, 0)
+		return joinLineMappings([]LineMapping{LineMapping{SourceLine: edit.SourceLine, RenderedLine: row, Delta: row - edit.SourceLine, Synthetic: true, AnchorSourceLine: edit.SourceLine, Boundary: boundary, Depth: depth}}, expandedPassRows(edit, row+1, remaining-1))
+	}
+}
+func editDepthsAt(depths []int, index int, fallback int) int {
+	if index < 0 || index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(depths) {
+		return fallback
+	} else {
+		return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(depths, index), fallback)
+	}
+}
+func sumPassAdded(edits []PassEdit, index int) int {
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(edits) {
+		return 0
+	} else {
+		edit := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(edits, index), PassEdit{Anchor: 0, SourceLine: 1, Added: 0, SourceStart: 1, SourceEnd: 1, Kind: "", Depths: []int{}})
+		return edit.Added + sumPassAdded(edits, index+1)
 	}
 }
 func truncateMappings(mappings []LineMapping, goal int, index int) []LineMapping {
@@ -239,7 +268,7 @@ func editSegments(edits []PassEdit) []ExpansionSegment {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(edits) == 0 {
 		return []ExpansionSegment{}
 	} else {
-		edit := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(edits, 0), PassEdit{Anchor: 0, SourceLine: 1, Added: 0, SourceStart: 1, SourceEnd: 1, Kind: ""})
+		edit := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(edits, 0), PassEdit{Anchor: 0, SourceLine: 1, Added: 0, SourceStart: 1, SourceEnd: 1, Kind: "", Depths: []int{}})
 		main := ExpansionSegment{SourceStart: edit.SourceStart, SourceEnd: edit.SourceEnd, RenderedStart: edit.SourceStart, RenderedEnd: edit.SourceStart + edit.Added, Kind: edit.Kind}
 		endSegment := ExpansionSegment{SourceStart: edit.SourceStart, SourceEnd: edit.SourceStart, RenderedStart: edit.SourceStart + edit.Added, RenderedEnd: edit.SourceStart + edit.Added, Kind: edit.Kind + "-end"}
 		return joinSegments([]ExpansionSegment{main}, []ExpansionSegment{endSegment})
@@ -279,13 +308,8 @@ func renderRenderedLayoutPlan(source string, protectedLines []int, segments []Ex
 func firstSpanOfKind(spans []parser2.NodeSpan, kind string, index int) ast2.SourceSpan {
 	return __mygo_mt_formatter_firstSpanOfKind(spans, kind, index, 0)
 }
-func remapLayoutEvents(events []parser2.LayoutEvent, mappings []LineMapping, segments []ExpansionSegment, index int) []RenderedLayoutEvent {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(events) {
-		return []RenderedLayoutEvent{}
-	} else {
-		item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(events, index), emptyLayoutEvent())
-		return joinRenderedLayoutEvents(remapLayoutEvent(item, events, mappings, segments), remapLayoutEvents(events, mappings, segments, index+1))
-	}
+func remapLayoutEvents(events []parser2.LayoutEvent, mappings []LineMapping, segments []ExpansionSegment, index int, acc []RenderedLayoutEvent) []RenderedLayoutEvent {
+	return __mygo_mt_formatter_remapLayoutEvents(events, mappings, segments, index, acc, 0)
 }
 func renderBlockSpans(source string, spans []parser2.NodeSpan) ExpandedBlocks {
 	blocks := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(spans, func(item parser2.NodeSpan) bool {
@@ -384,20 +408,91 @@ func expandBlockSourceLine(raw string, bodyStartColumn int, bodyEndColumn int) s
 	header := strings.TrimRight(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, 0, bodyStart), raw), " \t")
 	return header + "\n  " + body + "\nend"
 }
-func renderDelimitedSpanAt(source string, spans []parser2.DelimitedSpan, index int) string {
-	return __mygo_mt_formatter_renderDelimitedSpanAt(source, spans, index, 0)
+func renderDelimitedPass(source string, spans []parser2.DelimitedSpan) DelimitedRender {
+	text := renderDelimitedSpanAt(source, spans, spans, 0)
+	added := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(text, "\n")) - MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(source, "\n"))
+	if added == 0 {
+		return DelimitedRender{Text: text, Edits: []PassEdit{}}
+	} else {
+		span := firstExpandableDelimited(spans, 0)
+		return DelimitedRender{Text: text, Edits: []PassEdit{PassEdit{Anchor: span.Start.Line - 1, SourceLine: span.Start.Line, Added: added, SourceStart: span.Start.Line, SourceEnd: span.End.Line, Kind: "delimited", Depths: []int{}}}}
+	}
 }
-func expandDelimitedSourceLine(raw string, item parser2.DelimitedSpan, index int, cursor int) string {
+func containedInSameLineSpan(spans []parser2.DelimitedSpan, span ast2.SourceSpan, index int) bool {
+	return __mygo_mt_formatter_containedInSameLineSpan(spans, span, index, 0)
+}
+func renderDelimitedSpanAt(source string, allSpans []parser2.DelimitedSpan, spans []parser2.DelimitedSpan, index int) string {
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(spans) {
+		return source
+	} else {
+		item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(spans, index), parser2.DelimitedSpan{Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Items: []ast2.SourceSpan{}, Separators: []ast2.SourceSpan{}})
+		rendered := renderDelimitedSpanAt(source, allSpans, spans, index+1)
+		line := item.Span.Start.Line
+		lines := MygoIN6StringM5Split(rendered, "\n")
+		raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, line-1), "")
+		if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw) > 100 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Separators) > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(allSpans, item.Span, 0) {
+			return replaceSourceLine(lines, line-1, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, 0, item.Span.Start.Column-1), "")+renderDelimitedBlockBody(raw, item))
+		} else {
+			return rendered
+		}
+	}
+}
+func renderDelimitedBlockBody(raw string, item parser2.DelimitedSpan) string {
+	open := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, item.Span.Start.Column-1, item.Span.Start.Column), "")
+	items := delimitedBlockItems(raw, item, 0, item.Span.Start.Column)
+	var __mygo_expr_0 string
+	if item.Kind == "delimited:tuple" {
+		__mygo_expr_0 = ""
+	} else {
+		__mygo_expr_0 = ","
+	}
+	tail := __mygo_expr_0
+	return open + joinDelimitedItemLines(items, tail, 0) + "\n" + MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, item.Span.End.Column-2, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw)), "")
+}
+func delimitedBlockItems(raw string, item parser2.DelimitedSpan, index int, cursor int) []string {
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Separators) {
-		return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, cursor, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw)), "")
+		last := strings.TrimSpace(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, cursor, item.Span.End.Column-2), ""))
+		if last == "" {
+			return []string{}
+		} else {
+			return []string{last}
+		}
 	} else {
 		separator := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(item.Separators, index), item.Span)
-		before := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, cursor, separator.End.Column-1), "")
-		return before + "\n  " + expandDelimitedSourceLine(raw, item, index+1, separator.End.Column-1)
+		text := strings.TrimSpace(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, cursor, separator.Start.Column-1), ""))
+		return joinStrings([]string{text}, delimitedBlockItems(raw, item, index+1, separator.End.Column-1))
+	}
+}
+func joinDelimitedItemLines(items []string, tail string, index int) string {
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+		return ""
+	} else {
+		text := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), "")
+		var __mygo_expr_0 string
+		if index+1 == MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+			__mygo_expr_0 = tail
+		} else {
+			__mygo_expr_0 = ","
+		}
+		comma := __mygo_expr_0
+		return "\n  " + text + comma + joinDelimitedItemLines(items, tail, index+1)
 	}
 }
 func renderCaseSpanAt(source string, cases []parser2.LayoutEvent, index int) string {
-	return __mygo_mt_formatter_renderCaseSpanAt(source, cases, index, 0)
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) {
+		return source
+	} else {
+		item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, index), emptyLayoutEvent())
+		rendered := renderCaseSpanAt(source, cases, index+1)
+		line := item.Anchor.Start.Line
+		lines := MygoIN6StringM5Split(rendered, "\n")
+		raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, line-1), "")
+		if item.ExpandsAfter && item.Anchor.Start.Line > 0 && item.BodyAnchor.Start.Line > 0 && item.Anchor.Start.Line == item.SeparatorAnchor.Start.Line && item.SeparatorAnchor.Start.Line == item.BodyAnchor.Start.Line && item.SeparatorAnchor.End.Column <= item.BodyAnchor.Start.Column {
+			return replaceSourceLine(lines, line-1, expandCaseSourceLine(raw, item))
+		} else {
+			return rendered
+		}
+	}
 }
 func expandCaseSourceLine(raw string, item parser2.LayoutEvent) string {
 	separator := item.SeparatorAnchor
@@ -406,7 +501,29 @@ func expandCaseSourceLine(raw string, item parser2.LayoutEvent) string {
 	return prefix + " then\n  " + body + "\nend"
 }
 func renderBranchSpanAt(source string, thenEvents []parser2.LayoutEvent, events []parser2.LayoutEvent, index int) string {
-	return __mygo_mt_formatter_renderBranchSpanAt(source, thenEvents, events, index, 0)
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(thenEvents) {
+		return source
+	} else {
+		thenEvent := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(thenEvents, index), emptyLayoutEvent())
+		elseEvents := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(events, func(item parser2.LayoutEvent) bool {
+			return item.Kind == "enter:if-else" && sameBranchParent(item.Path, thenEvent.Path, 0)
+		})
+		rendered := renderBranchSpanAt(source, thenEvents, events, index+1)
+		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(elseEvents) == 0 {
+			return rendered
+		} else {
+			elseEvent := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(elseEvents, 0), thenEvent)
+			exit := branchExitAnchor(events, thenEvent.Path, 0)
+			line := thenEvent.Anchor.Start.Line
+			lines := MygoIN6StringM5Split(rendered, "\n")
+			raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, line-1), "")
+			if shouldExpandBranch(raw, thenEvent, elseEvent, exit) {
+				return replaceSourceLine(lines, line-1, expandBranchSourceLine(raw, thenEvent, elseEvent, exit))
+			} else {
+				return rendered
+			}
+		}
+	}
 }
 func emptyLayoutEvent() parser2.LayoutEvent {
 	return parser2.LayoutEvent{Kind: "", Path: []int{}, Depth: 0, Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Anchor: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, BodyAnchor: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, BlockBodyAnchor: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, BodyLayout: "inline", AffectsIndent: false, ExpandsAfter: false, HeaderForm: "", SeparatorAnchor: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, ExitAnchor: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, HeaderLine: 0, BodyLine: 0, ExitLine: 0}
@@ -421,7 +538,7 @@ func isBranchParent(parent []int, branch []int, index int) bool {
 	return __mygo_mt_formatter_isBranchParent(parent, branch, index, 0)
 }
 func shouldExpandBranch(raw string, thenEvent parser2.LayoutEvent, elseEvent parser2.LayoutEvent, exit ast2.SourceSpan) bool {
-	return thenEvent.ExpandsAfter && thenEvent.Anchor.Start.Line == elseEvent.Anchor.Start.Line
+	return thenEvent.ExpandsAfter && thenEvent.Anchor.Start.Line > 0 && thenEvent.BodyAnchor.Start.Line > 0 && thenEvent.Anchor.Start.Line == thenEvent.BodyAnchor.Start.Line && thenEvent.Anchor.Start.Line == elseEvent.Anchor.Start.Line
 }
 func branchThenSpansShareLine(thenEvent parser2.LayoutEvent, elseEvent parser2.LayoutEvent, exit ast2.SourceSpan) bool {
 	return thenEvent.Anchor.Start.Line > 0 && thenEvent.Anchor.Start.Line == elseEvent.Anchor.Start.Line && elseEvent.Anchor.Start.Line == exit.Start.Line && thenEvent.Anchor.End.Column <= elseEvent.Anchor.Start.Column && elseEvent.Anchor.End.Column <= exit.Start.Column
@@ -466,28 +583,26 @@ func renderSourceLinesWithTargets(source string, protectedLines []int, blockLine
 	return strings.TrimRight(strings.Join(state_1.Lines, "\n"), "\n") + "\n"
 }
 func projectRenderedEventTargets(events []RenderedLayoutEvent, mappings []LineMapping, index int, depth int) []int {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(mappings) {
-		return []int{}
-	} else {
-		mapping := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(mappings, index), LineMapping{SourceLine: index + 1, RenderedLine: index + 1, Delta: 0, Synthetic: false, AnchorSourceLine: index + 1, Boundary: ""})
-		exits := renderedEventCount(events, mapping, "exit", 0)
-		var __mygo_expr_0 int
-		if depth > exits {
-			__mygo_expr_0 = depth - exits
-		} else {
-			__mygo_expr_0 = 0
-		}
-		current := __mygo_expr_0
-		enters := renderedEventCount(events, mapping, "enter", 0)
-		return joinInts([]int{current}, projectRenderedEventTargets(events, mappings, index+1, current+enters))
-	}
+	return projectRenderedEventTargetsWith(events, elsifTransitionPaths(events), mappings, 0, 0)
 }
-func renderedEventCount(events []RenderedLayoutEvent, mapping LineMapping, phase string, index int) int {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(events) {
-		return 0
-	} else {
-		item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(events, index), RenderedLayoutEvent{Kind: "", SourceLine: 0, ExitSourceLine: 0, RenderedLine: 0, RenderedStart: 0, RenderedEnd: 0, BodyLine: 0, BodyLayout: "inline", AffectsIndent: false, ExpandsAfter: false, Depth: 0, Delta: 0, Boundary: ""})
-		structural := item.AffectsIndent
+func projectRenderedEventTargetsWith(events []RenderedLayoutEvent, elsifPaths [][]int, mappings []LineMapping, index int, depth int) []int {
+	return projectRenderedEventTargetsAcc(events, elsifPaths, mappings, index, depth, []int{})
+}
+func projectRenderedEventTargetsAcc(events []RenderedLayoutEvent, elsifPaths [][]int, mappings []LineMapping, index int, depth int, acc []int) []int {
+	return __mygo_mt_formatter_projectRenderedEventTargetsAcc(events, elsifPaths, mappings, index, depth, acc, 0)
+}
+func renderedTransitionCount(events []RenderedLayoutEvent, mapping LineMapping) int {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(events, 0, func(count int, item RenderedLayoutEvent) int {
+		if item.Kind == "transition:if-elsif" && !mapping.Synthetic && mapping.SourceLine == item.SourceLine {
+			return count + 1
+		} else {
+			return count
+		}
+	})
+}
+func renderedEventCount(events []RenderedLayoutEvent, elsifPaths [][]int, mapping LineMapping, phase string) int {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(events, 0, func(count int, item RenderedLayoutEvent) int {
+		structural := item.AffectsIndent && !(phase == "exit" && item.Kind == "exit:if-then" && memberIntPath(elsifPaths, item.Path))
 		var __mygo_expr_0 bool
 		if phase == "enter" {
 			__mygo_expr_0 = item.Boundary == "enter-header"
@@ -528,15 +643,29 @@ func renderedEventCount(events []RenderedLayoutEvent, mapping LineMapping, phase
 			__mygo_expr_5 = !mapping.Synthetic && mapping.SourceLine == keyLine
 		}
 		row := __mygo_expr_5
-		var __mygo_expr_6 int
 		if structural && matches && row {
-			__mygo_expr_6 = 1
+			return count + 1
 		} else {
-			__mygo_expr_6 = 0
+			return count
 		}
-		count := __mygo_expr_6
-		return count + renderedEventCount(events, mapping, phase, index+1)
-	}
+	})
+}
+func elsifTransitionPaths(events []RenderedLayoutEvent) [][]int {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(events, [][]int{}, func(acc [][]int, item RenderedLayoutEvent) [][]int {
+		if item.Kind == "transition:if-elsif" {
+			return MygoIN5SliceM6Append(acc, item.Path)
+		} else {
+			return acc
+		}
+	})
+}
+func memberIntPath(paths [][]int, target []int) bool {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(paths, false, func(found bool, p []int) bool {
+		return found || sameIntPath(p, target, 0)
+	})
+}
+func sameIntPath(left []int, right []int, index int) bool {
+	return __mygo_mt_formatter_sameIntPath(left, right, index, 0)
 }
 func joinInts(left []int, right []int) []int {
 	return __mygo_mt_formatter_joinInts(left, right, 0)
@@ -599,7 +728,7 @@ func protectedLine(state LayoutState, raw string) LayoutState {
 		__mygo_expr_0 = strings.Repeat("  ", indent) + strings.TrimLeft(raw, " \t")
 	}
 	rendered := __mygo_expr_0
-	return advanceLayoutState(state, MygoIN5SliceM6Append(state.Lines, rendered), indent, false)
+	return advanceLayoutState(state, MygoIN5SliceM6Append(state.Lines, rendered), indent, containsInt(state.ProtectedLines, state.SourceLine+1))
 }
 func advanceLayoutState(state LayoutState, lines []string, indent int, protected bool) LayoutState {
 	return LayoutState{Lines: lines, SourceLine: state.SourceLine + 1, LineMap: state.LineMap, Segments: state.Segments, SyntheticEvents: state.SyntheticEvents, Indent: indent, Protected: protected, ProtectedLines: state.ProtectedLines, BlockLines: state.BlockLines, DedentLines: state.DedentLines, TargetIndents: state.TargetIndents, EventDriven: state.EventDriven}
@@ -753,7 +882,7 @@ func remapLayoutEvent(item parser2.LayoutEvent, events []parser2.LayoutEvent, ma
 		__mygo_expr_11 = __mygo_expr_10
 	}
 	boundary := __mygo_expr_11
-	return []RenderedLayoutEvent{RenderedLayoutEvent{Kind: item.Kind, SourceLine: sourceLine, ExitSourceLine: exitKey, RenderedLine: renderedStart, RenderedStart: renderedStart, RenderedEnd: renderedEnd, BodyLine: bodyLine, BodyLayout: bodyLayout, AffectsIndent: item.AffectsIndent, ExpandsAfter: item.ExpandsAfter, Depth: item.Depth, Delta: 0, Boundary: boundary}}
+	return []RenderedLayoutEvent{RenderedLayoutEvent{Kind: item.Kind, Path: item.Path, SourceLine: sourceLine, ExitSourceLine: exitKey, RenderedLine: renderedStart, RenderedStart: renderedStart, RenderedEnd: renderedEnd, BodyLine: bodyLine, BodyLayout: bodyLayout, AffectsIndent: item.AffectsIndent, ExpandsAfter: item.ExpandsAfter, Depth: item.Depth, Delta: 0, Boundary: boundary}}
 }
 func siblingElseLine(events []parser2.LayoutEvent, item parser2.LayoutEvent, index int) int {
 	return __mygo_mt_formatter_siblingElseLine(events, item, index, 0)
@@ -786,9 +915,6 @@ func remapEventSourceLine(item parser2.LayoutEvent) int {
 			}
 		}
 	}
-}
-func joinRenderedLayoutEvents(left []RenderedLayoutEvent, right []RenderedLayoutEvent) []RenderedLayoutEvent {
-	return __mygo_mt_formatter_joinRenderedLayoutEvents(left, right, 0)
 }
 func remapOneEventLine(sourceLine int, mappings []LineMapping, segments []ExpansionSegment, index int) []int {
 	return __mygo_mt_formatter_remapOneEventLine(sourceLine, mappings, segments, index, 0)
@@ -834,32 +960,32 @@ func syntheticEndLine(segments []ExpansionSegment, sourceLine int, index int) Op
 func normalizeLine(line string) string {
 	return strings.Join(strings.Fields(line), " ")
 }
-func __mygo_mt_formatter_applyPassEdit(__mygo_mt_p0 []LineMapping, __mygo_mt_p1 PassEdit, __mygo_mt_p2 int, __mygo_mt_p3 []LineMapping, __mygo_state int) []LineMapping {
+func __mygo_mt_formatter_addDelimitedIndent(__mygo_mt_p0 []int, __mygo_mt_p1 []LineMapping, __mygo_mt_p2 ast2.SourceSpan, __mygo_mt_p3 int, __mygo_mt_p4 []int, __mygo_state int) []int {
 	for {
 		switch __mygo_state {
 		case 0:
-			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-				return __mygo_mt_p3
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p4
 			} else {
-				if __mygo_mt_p2 == __mygo_mt_p1.Anchor {
-					head := LineMapping{SourceLine: __mygo_mt_p1.SourceLine, RenderedLine: __mygo_mt_p2 + 1, Delta: __mygo_mt_p2 + 1 - __mygo_mt_p1.SourceLine, Synthetic: false, AnchorSourceLine: __mygo_mt_p1.SourceLine, Boundary: ""}
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__tail_3 := joinLineMappings(MygoIN5SliceM6Append(__mygo_mt_p3, head), expandedPassRows(__mygo_mt_p1, __mygo_mt_p2+2, __mygo_mt_p1.Added))
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-					__mygo_state = 0
-					continue
+				target := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3), 0)
+				mapping := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3), LineMapping{SourceLine: 0, RenderedLine: 0, Delta: 0, Synthetic: false, AnchorSourceLine: 0, Boundary: ""})
+				handWritten := !mapping.Synthetic && mapping.SourceLine > __mygo_mt_p2.Start.Line && mapping.SourceLine < __mygo_mt_p2.End.Line
+				expandedBody := mapping.Synthetic && mapping.AnchorSourceLine == __mygo_mt_p2.Start.Line && mapping.Boundary == "body"
+				var __mygo_expr_0 int
+				if handWritten || expandedBody {
+					__mygo_expr_0 = target + 1
 				} else {
-					item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), LineMapping{SourceLine: __mygo_mt_p2 + 1, RenderedLine: __mygo_mt_p2 + 1, Delta: 0, Synthetic: false, AnchorSourceLine: __mygo_mt_p2 + 1, Boundary: ""})
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, item)
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-					__mygo_state = 0
-					continue
+					__mygo_expr_0 = target
 				}
+				current := __mygo_expr_0
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2
+				__tail_3 := __mygo_mt_p3 + 1
+				__tail_4 := MygoIN5SliceM6Append(__mygo_mt_p4, current)
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+				__mygo_state = 0
+				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -890,21 +1016,39 @@ func __mygo_mt_formatter_branchExitAnchor(__mygo_mt_p0 []parser2.LayoutEvent, __
 		}
 	}
 }
-func __mygo_mt_formatter_composePassLines(__mygo_mt_p0 []LineMapping, __mygo_mt_p1 []PassEdit, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_state int) []LineMapping {
+func __mygo_mt_formatter_containedInSameLineSpan(__mygo_mt_p0 []parser2.DelimitedSpan, __mygo_mt_p1 ast2.SourceSpan, __mygo_mt_p2 int, __mygo_state int) bool {
 	for {
 		switch __mygo_state {
 		case 0:
-			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
-				return truncateMappings(__mygo_mt_p0, __mygo_mt_p2, 0)
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return false
 			} else {
-				edit := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3), PassEdit{Anchor: 0, SourceLine: 1, Added: 0, SourceStart: 1, SourceEnd: 1, Kind: ""})
-				__tail_0 := applyPassEdit(__mygo_mt_p0, edit, 0, []LineMapping{})
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2
-				__tail_3 := __mygo_mt_p3 + 1
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_state = 0
-				continue
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.DelimitedSpan]); ok {
+					contains := __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1.Start.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column <= __mygo_mt_p1.Start.Column && (__mygo_match___mygo_expr_1.F0.Span.End.Line > __mygo_mt_p1.End.Line || __mygo_match___mygo_expr_1.F0.Span.End.Line == __mygo_mt_p1.End.Line && __mygo_match___mygo_expr_1.F0.Span.End.Column >= __mygo_mt_p1.End.Column)
+					strictlyLarger := __mygo_match___mygo_expr_1.F0.Span.Start.Line < __mygo_mt_p1.Start.Line || __mygo_match___mygo_expr_1.F0.Span.Start.Column < __mygo_mt_p1.Start.Column || __mygo_match___mygo_expr_1.F0.Span.End.Column > __mygo_mt_p1.End.Column
+					if contains && strictlyLarger {
+						return true
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[parser2.DelimitedSpan]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -928,6 +1072,69 @@ func __mygo_mt_formatter_containsIntAt(__mygo_mt_p0 []int, __mygo_mt_p1 int, __m
 					__mygo_state = 0
 					continue
 				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_editForSourceLine(__mygo_mt_p0 []PassEdit, __mygo_mt_p1 LineMapping, __mygo_mt_p2 int, __mygo_state int) Option[PassEdit] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1.Synthetic {
+				return None[PassEdit]()
+			} else {
+				if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+					return None[PassEdit]()
+				} else {
+					edit := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), PassEdit{Anchor: 0, SourceLine: -1, Added: 0, SourceStart: 1, SourceEnd: 1, Kind: "", Depths: []int{}})
+					if edit.SourceLine == __mygo_mt_p1.SourceLine {
+						return Some[PassEdit](edit)
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_expandedLineMapFrom(__mygo_mt_p0 int, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 []LineMapping, __mygo_state int) []LineMapping {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 > __mygo_mt_p1 {
+				return __mygo_mt_p3
+			} else {
+				synthetic := __mygo_mt_p2 > __mygo_mt_p0
+				var __mygo_expr_0 int
+				if synthetic {
+					__mygo_expr_0 = __mygo_mt_p0
+				} else {
+					__mygo_expr_0 = __mygo_mt_p2
+				}
+				sourceLine := __mygo_expr_0
+				var __mygo_expr_1 string
+				if synthetic {
+					__mygo_expr_1 = "after"
+				} else {
+					__mygo_expr_1 = ""
+				}
+				boundary := __mygo_expr_1
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2 + 1
+				__tail_3 := MygoIN5SliceM6Append(__mygo_mt_p3, LineMapping{SourceLine: sourceLine, RenderedLine: __mygo_mt_p2, Delta: __mygo_mt_p2 - sourceLine, Synthetic: synthetic, AnchorSourceLine: sourceLine, Boundary: boundary, Depth: 0})
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+				__mygo_state = 0
+				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1116,7 +1323,7 @@ func __mygo_mt_formatter_joinEdits(__mygo_mt_p0 []PassEdit, __mygo_mt_p1 []PassE
 			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) == 0 {
 				return __mygo_mt_p0
 			} else {
-				__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), PassEdit{Anchor: 0, SourceLine: 1, Added: 0, SourceStart: 1, SourceEnd: 1, Kind: ""}))
+				__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), PassEdit{Anchor: 0, SourceLine: 1, Added: 0, SourceStart: 1, SourceEnd: 1, Kind: "", Depths: []int{}}))
 				__tail_1 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(__mygo_mt_p1, 1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1)), []PassEdit{})
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
@@ -1166,24 +1373,6 @@ func __mygo_mt_formatter_joinLineMappings(__mygo_mt_p0 []LineMapping, __mygo_mt_
 						panic("non-exhaustive switch")
 					}
 				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_formatter_joinRenderedLayoutEvents(__mygo_mt_p0 []RenderedLayoutEvent, __mygo_mt_p1 []RenderedLayoutEvent, __mygo_state int) []RenderedLayoutEvent {
-	for {
-		switch __mygo_state {
-		case 0:
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) == 0 {
-				return __mygo_mt_p0
-			} else {
-				__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), RenderedLayoutEvent{Kind: "", SourceLine: 0, ExitSourceLine: 0, RenderedLine: 0, RenderedStart: 0, RenderedEnd: 0, BodyLine: 0, BodyLayout: "inline", AffectsIndent: false, ExpandsAfter: false, Depth: 0, Delta: 0, Boundary: ""}))
-				__tail_1 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(__mygo_mt_p1, 1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1)), []RenderedLayoutEvent{})
-				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
-				__mygo_state = 0
-				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1263,6 +1452,98 @@ func __mygo_mt_formatter_lastRenderedLine(__mygo_mt_p0 []int, __mygo_mt_p1 int, 
 		}
 	}
 }
+func __mygo_mt_formatter_projectDelimitedTargets(__mygo_mt_p0 []int, __mygo_mt_p1 []LineMapping, __mygo_mt_p2 []parser2.DelimitedSpan, __mygo_mt_p3 int, __mygo_state int) []int {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
+				return __mygo_mt_p0
+			} else {
+				span := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3), parser2.DelimitedSpan{Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Items: []ast2.SourceSpan{}, Separators: []ast2.SourceSpan{}})
+				var __mygo_expr_0 []int
+				if containedInSameLineSpan(__mygo_mt_p2, span.Span, 0) {
+					__mygo_expr_0 = __mygo_mt_p0
+				} else {
+					__mygo_expr_0 = addDelimitedIndent(__mygo_mt_p0, __mygo_mt_p1, span.Span, 0, []int{})
+				}
+				next := __mygo_expr_0
+				__tail_0 := next
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2
+				__tail_3 := __mygo_mt_p3 + 1
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_projectRenderedEventTargetsAcc(__mygo_mt_p0 []RenderedLayoutEvent, __mygo_mt_p1 [][]int, __mygo_mt_p2 []LineMapping, __mygo_mt_p3 int, __mygo_mt_p4 int, __mygo_mt_p5 []int, __mygo_state int) []int {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
+				return __mygo_mt_p5
+			} else {
+				mapping := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3), LineMapping{SourceLine: __mygo_mt_p3 + 1, RenderedLine: __mygo_mt_p3 + 1, Delta: 0, Synthetic: false, AnchorSourceLine: __mygo_mt_p3 + 1, Boundary: ""})
+				exits := renderedEventCount(__mygo_mt_p0, __mygo_mt_p1, mapping, "exit")
+				var __mygo_expr_0 int
+				if __mygo_mt_p4 > exits {
+					__mygo_expr_0 = __mygo_mt_p4 - exits
+				} else {
+					__mygo_expr_0 = 0
+				}
+				current := __mygo_expr_0
+				transitions := renderedTransitionCount(__mygo_mt_p0, mapping)
+				var __mygo_expr_1 int
+				if current > transitions {
+					__mygo_expr_1 = current - transitions
+				} else {
+					__mygo_expr_1 = 0
+				}
+				target := __mygo_expr_1
+				enters := renderedEventCount(__mygo_mt_p0, __mygo_mt_p1, mapping, "enter")
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2
+				__tail_3 := __mygo_mt_p3 + 1
+				__tail_4 := target + enters
+				__tail_5 := MygoIN5SliceM6Append(__mygo_mt_p5, target)
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_remapLayoutEvents(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 []LineMapping, __mygo_mt_p2 []ExpansionSegment, __mygo_mt_p3 int, __mygo_mt_p4 []RenderedLayoutEvent, __mygo_state int) []RenderedLayoutEvent {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p4
+			} else {
+				item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3), emptyLayoutEvent())
+				__tail_0 := __mygo_mt_p0
+				__tail_1 := __mygo_mt_p1
+				__tail_2 := __mygo_mt_p2
+				__tail_3 := __mygo_mt_p3 + 1
+				__tail_4 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(remapLayoutEvent(item, __mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2), __mygo_mt_p4, func(a []RenderedLayoutEvent, e RenderedLayoutEvent) []RenderedLayoutEvent {
+					return MygoIN5SliceM6Append(a, e)
+				})
+				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+				__mygo_state = 0
+				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_formatter_remapOneEventLine(__mygo_mt_p0 int, __mygo_mt_p1 []LineMapping, __mygo_mt_p2 []ExpansionSegment, __mygo_mt_p3 int, __mygo_state int) []int {
 	for {
 		switch __mygo_state {
@@ -1330,112 +1611,6 @@ func __mygo_mt_formatter_remapOneEventLine(__mygo_mt_p0 int, __mygo_mt_p1 []Line
 		}
 	}
 }
-func __mygo_mt_formatter_renderBranchSpanAt(__mygo_mt_p0 string, __mygo_mt_p1 []parser2.LayoutEvent, __mygo_mt_p2 []parser2.LayoutEvent, __mygo_mt_p3 int, __mygo_state int) string {
-	for {
-		switch __mygo_state {
-		case 0:
-			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
-				return __mygo_mt_p0
-			} else {
-				thenEvent := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p3), emptyLayoutEvent())
-				elseEvents := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(__mygo_mt_p2, func(item parser2.LayoutEvent) bool {
-					return item.Kind == "enter:if-else" && sameBranchParent(item.Path, thenEvent.Path, 0)
-				})
-				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(elseEvents) == 0 {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2
-					__tail_3 := __mygo_mt_p3 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-					__mygo_state = 0
-					continue
-				} else {
-					elseEvent := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(elseEvents, 0), thenEvent)
-					exit := branchExitAnchor(__mygo_mt_p2, thenEvent.Path, 0)
-					line := thenEvent.Anchor.Start.Line
-					lines := MygoIN6StringM5Split(__mygo_mt_p0, "\n")
-					raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, line-1), "")
-					var __mygo_expr_0 string
-					if shouldExpandBranch(raw, thenEvent, elseEvent, exit) {
-						__mygo_expr_0 = replaceSourceLine(lines, line-1, expandBranchSourceLine(raw, thenEvent, elseEvent, exit))
-					} else {
-						__mygo_expr_0 = __mygo_mt_p0
-					}
-					expanded := __mygo_expr_0
-					__tail_0 := expanded
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2
-					__tail_3 := __mygo_mt_p3 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-					__mygo_state = 0
-					continue
-				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_formatter_renderCaseSpanAt(__mygo_mt_p0 string, __mygo_mt_p1 []parser2.LayoutEvent, __mygo_mt_p2 int, __mygo_state int) string {
-	for {
-		switch __mygo_state {
-		case 0:
-			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
-				return __mygo_mt_p0
-			} else {
-				item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), emptyLayoutEvent())
-				line := item.Anchor.Start.Line
-				lines := MygoIN6StringM5Split(__mygo_mt_p0, "\n")
-				raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, line-1), "")
-				var __mygo_expr_0 string
-				if item.ExpandsAfter && item.Anchor.Start.Line == item.SeparatorAnchor.Start.Line && item.SeparatorAnchor.End.Column <= item.BodyAnchor.Start.Column {
-					__mygo_expr_0 = replaceSourceLine(lines, line-1, expandCaseSourceLine(raw, item))
-				} else {
-					__mygo_expr_0 = __mygo_mt_p0
-				}
-				expanded := __mygo_expr_0
-				__tail_0 := expanded
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2 + 1
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_state = 0
-				continue
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_formatter_renderDelimitedSpanAt(__mygo_mt_p0 string, __mygo_mt_p1 []parser2.DelimitedSpan, __mygo_mt_p2 int, __mygo_state int) string {
-	for {
-		switch __mygo_state {
-		case 0:
-			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
-				return __mygo_mt_p0
-			} else {
-				item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), parser2.DelimitedSpan{Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Items: []ast2.SourceSpan{}, Separators: []ast2.SourceSpan{}})
-				line := item.Span.Start.Line
-				lines := MygoIN6StringM5Split(__mygo_mt_p0, "\n")
-				raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, line-1), "")
-				var __mygo_expr_0 string
-				if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw) > 100 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Separators) > 0 && item.Span.Start.Line == item.Span.End.Line {
-					__mygo_expr_0 = replaceSourceLine(lines, line-1, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, 0, item.Span.Start.Column-1), "")+expandDelimitedSourceLine(raw, item, 0, item.Span.Start.Column-1))
-				} else {
-					__mygo_expr_0 = __mygo_mt_p0
-				}
-				expanded := __mygo_expr_0
-				__tail_0 := expanded
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2 + 1
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-				__mygo_state = 0
-				continue
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
 func __mygo_mt_formatter_sameBranchParent(__mygo_mt_p0 []int, __mygo_mt_p1 []int, __mygo_mt_p2 int, __mygo_state int) bool {
 	for {
 		switch __mygo_state {
@@ -1445,6 +1620,33 @@ func __mygo_mt_formatter_sameBranchParent(__mygo_mt_p0 []int, __mygo_mt_p1 []int
 			} else {
 				if __mygo_mt_p2+1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 					return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), -1) == 2 && MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), -2) == 1
+				} else {
+					if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), -1) != MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), -2) {
+						return false
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_sameIntPath(__mygo_mt_p0 []int, __mygo_mt_p1 []int, __mygo_mt_p2 int, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
+				return false
+			} else {
+				if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+					return true
 				} else {
 					if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), -1) != MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), -2) {
 						return false

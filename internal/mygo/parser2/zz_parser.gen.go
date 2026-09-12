@@ -88,7 +88,7 @@ func ParseFileAt(sourceName string, input string) Result[ast2.File, string] {
 		decls := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(file.Decls, func(decl ast2.Decl) ast2.Decl {
 			return annotateDeclSource(decl, sourceName)
 		})
-		return Ok[ast2.File, string](ast2.File{PackageName: file.PackageName, Decls: decls, SourceName: sourceName, Line: 1, Column: 1, DeclPositions: positions})
+		return Ok[ast2.File, string](ast2.File{PackageName: file.PackageName, Decls: decls, SourceName: sourceName, Line: 1, Column: 1, DeclPositions: positions, Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: sourceName, Line: 1, Column: 1}, End: sourcePos(r.State)}})
 	} else {
 		return Err[ast2.File, string](formatError(sourceName, r.Error, r.State.Position))
 	}
@@ -111,10 +111,10 @@ func exprKindOnly(kind ast2.ExprKind) ast2.Expr {
 func annotateDeclSource(decl ast2.Decl, sourceName string) ast2.Decl {
 	var __mygo_expr_0 ast2.Decl
 	if __mygo_match___mygo_expr_4, ok := decl.(ast2.Decl__LetDecl); ok {
-		__mygo_expr_0 = ast2.Decl__LetDecl__Ctor(ast2.Bind{Name: __mygo_match___mygo_expr_4.F0.Name, Type: __mygo_match___mygo_expr_4.F0.Type, Value: annotateExprSource(__mygo_match___mygo_expr_4.F0.Value, sourceName)})
+		__mygo_expr_0 = ast2.Decl__LetDecl__Ctor(ast2.Bind{Name: __mygo_match___mygo_expr_4.F0.Name, Type: __mygo_match___mygo_expr_4.F0.Type, TypeSpan: __mygo_match___mygo_expr_4.F0.TypeSpan, Value: annotateExprSource(__mygo_match___mygo_expr_4.F0.Value, sourceName), Span: __mygo_match___mygo_expr_4.F0.Span})
 	} else {
 		if __mygo_match___mygo_expr_3, ok := decl.(ast2.Decl__VarDecl); ok {
-			__mygo_expr_0 = ast2.Decl__VarDecl__Ctor(ast2.Bind{Name: __mygo_match___mygo_expr_3.F0.Name, Type: __mygo_match___mygo_expr_3.F0.Type, Value: annotateExprSource(__mygo_match___mygo_expr_3.F0.Value, sourceName)})
+			__mygo_expr_0 = ast2.Decl__VarDecl__Ctor(ast2.Bind{Name: __mygo_match___mygo_expr_3.F0.Name, Type: __mygo_match___mygo_expr_3.F0.Type, TypeSpan: __mygo_match___mygo_expr_3.F0.TypeSpan, Value: annotateExprSource(__mygo_match___mygo_expr_3.F0.Value, sourceName), Span: __mygo_match___mygo_expr_3.F0.Span})
 		} else {
 			if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__FuncDecl); ok {
 				__mygo_expr_0 = ast2.Decl__FuncDecl__Ctor(__mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_2.F1, __mygo_match___mygo_expr_2.F2, __mygo_match___mygo_expr_2.F3, annotateExprSource(__mygo_match___mygo_expr_2.F4, sourceName), __mygo_match___mygo_expr_2.F5)
@@ -122,7 +122,7 @@ func annotateDeclSource(decl ast2.Decl, sourceName string) ast2.Decl {
 				if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__ImplDecl); ok {
 					__mygo_expr_0 = ast2.Decl__ImplDecl__Ctor(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_1.F1, __mygo_match___mygo_expr_1.F2, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_1.F3, func(method ast2.ImplMethod) ast2.ImplMethod {
 						sig := method.Sig
-						return ast2.ImplMethod{Pos: ast2.SourcePos{SourceName: sourceName, Line: method.Pos.Line, Column: method.Pos.Column}, Sig: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: sourceName, Line: sig.Pos.Line, Column: sig.Pos.Column}, Name: sig.Name, TypeParams: sig.TypeParams, Params: sig.Params, Ret: sig.Ret, Using: sig.Using}, Body: annotateExprSource(method.Body, sourceName)}
+						return ast2.ImplMethod{Pos: ast2.SourcePos{SourceName: sourceName, Line: method.Pos.Line, Column: method.Pos.Column}, Sig: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: sourceName, Line: sig.Pos.Line, Column: sig.Pos.Column}, Name: sig.Name, TypeParams: sig.TypeParams, Params: sig.Params, Ret: sig.Ret, RetSpan: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: sourceName, Line: sig.RetSpan.Start.Line, Column: sig.RetSpan.Start.Column}, End: ast2.SourcePos{SourceName: sourceName, Line: sig.RetSpan.End.Line, Column: sig.RetSpan.End.Column}}, Using: sig.Using}, Body: annotateExprSource(method.Body, sourceName)}
 					}))
 				} else {
 					__mygo_expr_0 = decl
@@ -134,86 +134,87 @@ func annotateDeclSource(decl ast2.Decl, sourceName string) ast2.Decl {
 }
 func annotateExprSource(expr ast2.Expr, sourceName string) ast2.Expr {
 	pos := ast2.SourcePos{SourceName: sourceName, Line: expr.Pos.Line, Column: expr.Pos.Column}
+	span := ast2.SourceSpan{Start: ast2.SourcePos{SourceName: sourceName, Line: expr.Span.Start.Line, Column: expr.Span.Start.Column}, End: ast2.SourcePos{SourceName: sourceName, Line: expr.Span.End.Line, Column: expr.Span.End.Column}}
 	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 ast2.Expr
 	if _, ok := __mygo_expr_0.(ast2.ExprKind__IdentExpr); ok {
-		__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+		__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type}
 	} else {
 		if _, ok := __mygo_expr_0.(ast2.ExprKind__NumberExpr); ok {
-			__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+			__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type}
 		} else {
 			if _, ok := __mygo_expr_0.(ast2.ExprKind__StringExpr); ok {
-				__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+				__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type}
 			} else {
 				if _, ok := __mygo_expr_0.(ast2.ExprKind__RuneExpr); ok {
-					__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+					__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type}
 				} else {
 					if _, ok := __mygo_expr_0.(ast2.ExprKind__BoolExpr); ok {
-						__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+						__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type}
 					} else {
 						if _, ok := __mygo_expr_0.(ast2.ExprKind__UnitExpr); ok {
-							__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Span: ast2.SourceSpan{Start: pos, End: pos}, Kind: expr.Kind, Type: None[ast2.MonoType]()}
+							__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type}
 						} else {
 							if __mygo_match___mygo_expr_17, ok := __mygo_expr_0.(ast2.ExprKind__TupleExpr); ok {
-								__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__TupleExpr__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_17.F0, func(e_3 ast2.Expr) ast2.Expr {
+								__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__TupleExpr__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_17.F0, func(e_3 ast2.Expr) ast2.Expr {
 									return annotateExprSource(e_3, sourceName)
-								})), Type: None[ast2.MonoType]()}
+								})), Type: expr.Type}
 							} else {
 								if __mygo_match___mygo_expr_16, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
-									__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__CallExpr__Ctor(annotateExprSource(__mygo_match___mygo_expr_16.F0, sourceName), __mygo_match___mygo_expr_16.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_16.F2, func(e_2 ast2.Expr) ast2.Expr {
+									__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__CallExpr__Ctor(annotateExprSource(__mygo_match___mygo_expr_16.F0, sourceName), __mygo_match___mygo_expr_16.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_16.F2, func(e_2 ast2.Expr) ast2.Expr {
 										return annotateExprSource(e_2, sourceName)
-									})), Type: None[ast2.MonoType]()}
+									})), Type: expr.Type}
 								} else {
 									if __mygo_match___mygo_expr_15, ok := __mygo_expr_0.(ast2.ExprKind__FieldExpr); ok {
-										__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__FieldExpr__Ctor(annotateExprSource(__mygo_match___mygo_expr_15.F0, sourceName), __mygo_match___mygo_expr_15.F1), Type: None[ast2.MonoType]()}
+										__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__FieldExpr__Ctor(annotateExprSource(__mygo_match___mygo_expr_15.F0, sourceName), __mygo_match___mygo_expr_15.F1), Type: expr.Type}
 									} else {
 										if __mygo_match___mygo_expr_14, ok := __mygo_expr_0.(ast2.ExprKind__UnaryExpr); ok {
-											__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__UnaryExpr__Ctor(__mygo_match___mygo_expr_14.F0, annotateExprSource(__mygo_match___mygo_expr_14.F1, sourceName)), Type: None[ast2.MonoType]()}
+											__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__UnaryExpr__Ctor(__mygo_match___mygo_expr_14.F0, annotateExprSource(__mygo_match___mygo_expr_14.F1, sourceName)), Type: expr.Type}
 										} else {
 											if __mygo_match___mygo_expr_13, ok := __mygo_expr_0.(ast2.ExprKind__BinaryExpr); ok {
-												__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__BinaryExpr__Ctor(__mygo_match___mygo_expr_13.F0, annotateExprSource(__mygo_match___mygo_expr_13.F1, sourceName), annotateExprSource(__mygo_match___mygo_expr_13.F2, sourceName)), Type: None[ast2.MonoType]()}
+												__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__BinaryExpr__Ctor(__mygo_match___mygo_expr_13.F0, annotateExprSource(__mygo_match___mygo_expr_13.F1, sourceName), annotateExprSource(__mygo_match___mygo_expr_13.F2, sourceName)), Type: expr.Type}
 											} else {
 												if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(ast2.ExprKind__IfExpr); ok {
-													__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__IfExpr__Ctor(annotateExprSource(__mygo_match___mygo_expr_12.F0, sourceName), annotateExprSource(__mygo_match___mygo_expr_12.F1, sourceName), annotateExprSource(__mygo_match___mygo_expr_12.F2, sourceName)), Type: None[ast2.MonoType]()}
+													__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__IfExpr__Ctor(annotateExprSource(__mygo_match___mygo_expr_12.F0, sourceName), annotateExprSource(__mygo_match___mygo_expr_12.F1, sourceName), annotateExprSource(__mygo_match___mygo_expr_12.F2, sourceName)), Type: expr.Type}
 												} else {
 													if __mygo_match___mygo_expr_11, ok := __mygo_expr_0.(ast2.ExprKind__BlockExpr); ok {
-														__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__BlockExpr__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_11.F0, func(s ast2.Stmt) ast2.Stmt {
+														__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__BlockExpr__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_11.F0, func(s ast2.Stmt) ast2.Stmt {
 															return annotateStmtSource(s, sourceName)
-														})), Type: None[ast2.MonoType]()}
+														})), Type: expr.Type}
 													} else {
 														if __mygo_match___mygo_expr_10, ok := __mygo_expr_0.(ast2.ExprKind__SwitchExpr); ok {
-															__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__SwitchExpr__Ctor(annotateExprSource(__mygo_match___mygo_expr_10.F0, sourceName), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_10.F1, func(c ast2.SwitchCase) ast2.SwitchCase {
+															__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__SwitchExpr__Ctor(annotateExprSource(__mygo_match___mygo_expr_10.F0, sourceName), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_10.F1, func(c ast2.SwitchCase) ast2.SwitchCase {
 																return ast2.SwitchCase{Pattern: c.Pattern, PatternSpan: c.PatternSpan, Body: annotateExprSource(c.Body, sourceName), BodySpan: c.BodySpan, Span: c.Span}
-															}), __mygo_match___mygo_expr_10.F2), Type: None[ast2.MonoType]()}
+															}), __mygo_match___mygo_expr_10.F2), Type: expr.Type}
 														} else {
 															if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(ast2.ExprKind__FuncLitExpr); ok {
-																__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__FuncLitExpr__Ctor(__mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_9.F1, annotateExprSource(__mygo_match___mygo_expr_9.F2, sourceName)), Type: None[ast2.MonoType]()}
+																__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__FuncLitExpr__Ctor(__mygo_match___mygo_expr_9.F0, __mygo_match___mygo_expr_9.F1, annotateExprSource(__mygo_match___mygo_expr_9.F2, sourceName)), Type: expr.Type}
 															} else {
 																if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ast2.ExprKind__SliceLitExpr); ok {
-																	__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__SliceLitExpr__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_8.F0, func(e_1 ast2.Expr) ast2.Expr {
+																	__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__SliceLitExpr__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_8.F0, func(e_1 ast2.Expr) ast2.Expr {
 																		return annotateExprSource(e_1, sourceName)
-																	})), Type: None[ast2.MonoType]()}
+																	})), Type: expr.Type}
 																} else {
 																	if __mygo_match___mygo_expr_7, ok := __mygo_expr_0.(ast2.ExprKind__TypeAsExpr); ok {
-																		__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__TypeAsExpr__Ctor(annotateExprSource(__mygo_match___mygo_expr_7.F0, sourceName), __mygo_match___mygo_expr_7.F1), Type: None[ast2.MonoType]()}
+																		__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__TypeAsExpr__Ctor(annotateExprSource(__mygo_match___mygo_expr_7.F0, sourceName), __mygo_match___mygo_expr_7.F1), Type: expr.Type}
 																	} else {
 																		if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(ast2.ExprKind__StructLitExpr); ok {
-																			__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__StructLitExpr__Ctor(__mygo_match___mygo_expr_6.F0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_6.F1, func(f_1 ast2.StructLitField) ast2.StructLitField {
+																			__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__StructLitExpr__Ctor(__mygo_match___mygo_expr_6.F0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_6.F1, func(f_1 ast2.StructLitField) ast2.StructLitField {
 																				return ast2.StructLitField{Name: f_1.Name, Value: annotateExprSource(f_1.Value, sourceName)}
-																			})), Type: None[ast2.MonoType]()}
+																			})), Type: expr.Type}
 																		} else {
 																			if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(ast2.ExprKind__GenericStructLitExpr); ok {
-																				__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__GenericStructLitExpr__Ctor(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_5.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_5.F2, func(f ast2.StructLitField) ast2.StructLitField {
+																				__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__GenericStructLitExpr__Ctor(__mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_5.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_5.F2, func(f ast2.StructLitField) ast2.StructLitField {
 																					return ast2.StructLitField{Name: f.Name, Value: annotateExprSource(f.Value, sourceName)}
-																				})), Type: None[ast2.MonoType]()}
+																				})), Type: expr.Type}
 																			} else {
 																				if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.ExprKind__InlineGoExpr); ok {
-																					__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__InlineGoExpr__Ctor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_4.F2, func(o ast2.GoOperand) ast2.GoOperand {
+																					__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__InlineGoExpr__Ctor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_4.F2, func(o ast2.GoOperand) ast2.GoOperand {
 																						return ast2.GoOperand{Name: o.Name, Value: annotateExprSource(o.Value, sourceName)}
-																					}), __mygo_match___mygo_expr_4.F3), Type: None[ast2.MonoType]()}
+																					}), __mygo_match___mygo_expr_4.F3), Type: expr.Type}
 																				} else {
 																					if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.ExprKind__MapLitExpr); ok {
-																						__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__MapLitExpr__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_3.F0, func(p struct {
+																						__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__MapLitExpr__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_3.F0, func(p struct {
 																							F0 ast2.Expr
 																							F1 ast2.Expr
 																						}) struct {
@@ -224,12 +225,12 @@ func annotateExprSource(expr ast2.Expr, sourceName string) ast2.Expr {
 																								F0 ast2.Expr
 																								F1 ast2.Expr
 																							}{F0: annotateExprSource(p.F0, sourceName), F1: annotateExprSource(p.F1, sourceName)}
-																						})), Type: None[ast2.MonoType]()}
+																						})), Type: expr.Type}
 																					} else {
 																						if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__SetLitExpr); ok {
-																							__mygo_expr_1 = ast2.Expr{ID: 0, Pos: pos, Kind: ast2.ExprKind__SetLitExpr__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_2.F0, func(e ast2.Expr) ast2.Expr {
+																							__mygo_expr_1 = ast2.Expr{ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind__SetLitExpr__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_2.F0, func(e ast2.Expr) ast2.Expr {
 																								return annotateExprSource(e, sourceName)
-																							})), Type: None[ast2.MonoType]()}
+																							})), Type: expr.Type}
 																						} else {
 																						}
 																					}
@@ -261,18 +262,18 @@ func annotateStmtSource(stmt ast2.Stmt, sourceName string) ast2.Stmt {
 		__mygo_expr_0 = ast2.Stmt__ExprStmt__Ctor(annotateExprSource(__mygo_match___mygo_expr_10.F0, sourceName))
 	} else {
 		if __mygo_match___mygo_expr_9, ok := stmt.(ast2.Stmt__LetStmt); ok {
-			__mygo_expr_0 = ast2.Stmt__LetStmt__Ctor(ast2.Bind{Name: __mygo_match___mygo_expr_9.F0.Name, Type: __mygo_match___mygo_expr_9.F0.Type, Value: annotateExprSource(__mygo_match___mygo_expr_9.F0.Value, sourceName)})
+			__mygo_expr_0 = ast2.Stmt__LetStmt__Ctor(ast2.Bind{Name: __mygo_match___mygo_expr_9.F0.Name, Type: __mygo_match___mygo_expr_9.F0.Type, TypeSpan: __mygo_match___mygo_expr_9.F0.TypeSpan, Value: annotateExprSource(__mygo_match___mygo_expr_9.F0.Value, sourceName), Span: __mygo_match___mygo_expr_9.F0.Span})
 		} else {
 			if __mygo_match___mygo_expr_8, ok := stmt.(ast2.Stmt__LetRecStmt); ok {
 				__mygo_expr_0 = ast2.Stmt__LetRecStmt__Ctor(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_8.F0, func(b ast2.LetRecBind) ast2.LetRecBind {
-					return ast2.LetRecBind{Name: b.Name, Type: b.Type, Value: annotateExprSource(b.Value, sourceName)}
+					return ast2.LetRecBind{Name: b.Name, Type: b.Type, TypeSpan: b.TypeSpan, Value: annotateExprSource(b.Value, sourceName)}
 				}))
 			} else {
 				if __mygo_match___mygo_expr_7, ok := stmt.(ast2.Stmt__TupleLetStmt); ok {
 					__mygo_expr_0 = ast2.Stmt__TupleLetStmt__Ctor(__mygo_match___mygo_expr_7.F0, annotateExprSource(__mygo_match___mygo_expr_7.F1, sourceName))
 				} else {
 					if __mygo_match___mygo_expr_6, ok := stmt.(ast2.Stmt__VarStmt); ok {
-						__mygo_expr_0 = ast2.Stmt__VarStmt__Ctor(ast2.Bind{Name: __mygo_match___mygo_expr_6.F0.Name, Type: __mygo_match___mygo_expr_6.F0.Type, Value: annotateExprSource(__mygo_match___mygo_expr_6.F0.Value, sourceName)})
+						__mygo_expr_0 = ast2.Stmt__VarStmt__Ctor(ast2.Bind{Name: __mygo_match___mygo_expr_6.F0.Name, Type: __mygo_match___mygo_expr_6.F0.Type, TypeSpan: __mygo_match___mygo_expr_6.F0.TypeSpan, Value: annotateExprSource(__mygo_match___mygo_expr_6.F0.Value, sourceName), Span: __mygo_match___mygo_expr_6.F0.Span})
 					} else {
 						if __mygo_match___mygo_expr_5, ok := stmt.(ast2.Stmt__WhileStmt); ok {
 							__mygo_expr_0 = ast2.Stmt__WhileStmt__Ctor(annotateExprSource(__mygo_match___mygo_expr_5.F0, sourceName), annotateExprSource(__mygo_match___mygo_expr_5.F1, sourceName))
@@ -306,7 +307,16 @@ func annotateStmtSource(stmt ast2.Stmt, sourceName string) ast2.Stmt {
 	return __mygo_expr_0
 }
 func fileParser() ps.Parser[ast2.File] {
-	return fileParserCache
+	return func(state ps.State) ps.Reply[ast2.File] {
+		reply := fileParserCache(state)
+		if reply.Ok {
+			value := reply.Value
+			span := ast2.SourceSpan{Start: sourcePos(state), End: sourcePos(reply.State)}
+			return ps.Reply[ast2.File]{Ok: true, Consumed: reply.Consumed, Value: ast2.File{PackageName: value.PackageName, Decls: value.Decls, SourceName: value.SourceName, Line: value.Line, Column: value.Column, DeclPositions: value.DeclPositions, Span: span}, State: reply.State, Error: reply.Error}
+		} else {
+			return reply
+		}
+	}
 }
 func buildFileParser() ps.Parser[ast2.File] {
 	return ps.PBind(kw("package"), func(_ string) ps.Parser[ast2.File] {
@@ -327,7 +337,7 @@ func buildFileParser() ps.Parser[ast2.File] {
 				}) ast2.SourcePos {
 					return item_1.F1
 				})
-				return ps.PThen(trivia(), ps.PThen(ps.PEof(), ps.PPure(ast2.File{PackageName: pkg, Decls: decls, SourceName: "", Line: 1, Column: 1, DeclPositions: positions})))
+				return ps.PThen(trivia(), ps.PThen(ps.PEof(), ps.PPure(ast2.File{PackageName: pkg, Decls: decls, SourceName: "", Line: 1, Column: 1, DeclPositions: positions, Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 1, Column: 1}, End: ast2.SourcePos{SourceName: "", Line: 1, Column: 1}}})))
 			})
 		})
 	})
@@ -376,7 +386,7 @@ func packageLetDecl() ps.Parser[ast2.Decl] {
 							return item.Value
 						}), TypeSpan: MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(typ, func(item_1 Spanned[ast2.TypeExpr]) ast2.SourceSpan {
 							return item_1.Span
-						}), emptySpan()), Value: value})
+						}), emptySpan()), Value: value, Span: value.Span})
 					})
 				})
 			})
@@ -393,7 +403,7 @@ func packageVarDecl() ps.Parser[ast2.Decl] {
 							return item.Value
 						}), TypeSpan: MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(typ, func(item_1 Spanned[ast2.TypeExpr]) ast2.SourceSpan {
 							return item_1.Span
-						}), emptySpan()), Value: value})
+						}), emptySpan()), Value: value, Span: value.Span})
 					})
 				})
 			})
@@ -581,14 +591,14 @@ func fieldDeclCore() ps.Parser[ast2.Field] {
 	return ps.PChoice([]func(ps.State) ps.Reply[ast2.Field]{ps.PAttempt(ps.PBind(kw("embed"), func(_ string) ps.Parser[ast2.Field] {
 		return ps.PBind(spannedTypeExpr(), func(typ Spanned[ast2.TypeExpr]) ps.Parser[ast2.Field] {
 			return ps.PMap(ps.POptional(stringLiteral()), func(tag Option[string]) ast2.Field {
-				return ast2.Field{Name: "embed", Type: typ.Value, TypeSpan: typ.Span, Tag: tag}
+				return ast2.Field{Name: "embed", Type: typ.Value, TypeSpan: typ.Span, Tag: tag, Span: typ.Span}
 			})
 		})
 	})), ps.PBind(identifier(), func(name string) ps.Parser[ast2.Field] {
 		return ps.PBind(sym(":"), func(__1 string) ps.Parser[ast2.Field] {
 			return ps.PBind(spannedTypeExpr(), func(typ_1 Spanned[ast2.TypeExpr]) ps.Parser[ast2.Field] {
 				return ps.PMap(ps.POptional(stringLiteral()), func(tag_1 Option[string]) ast2.Field {
-					return ast2.Field{Name: name, Type: typ_1.Value, TypeSpan: typ_1.Span, Tag: tag_1}
+					return ast2.Field{Name: name, Type: typ_1.Value, TypeSpan: typ_1.Span, Tag: tag_1, Span: typ_1.Span}
 				})
 			})
 		})
@@ -627,7 +637,7 @@ func variantDeclCore() ps.Parser[ast2.Variant] {
 					F1 Spanned[ast2.TypeExpr]
 				}) string {
 					return f_2.F0
-				})}))
+				}), Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 1, Column: 1}, End: ast2.SourcePos{SourceName: "", Line: 1, Column: 1}}}))
 			})
 		}), ps.PMap(ps.POptional(paren(ps.PSepBy(spannedTypeExpr(), sym(",")))), func(fields_1 Option[[]Spanned[ast2.TypeExpr]]) ast2.Variant {
 			var __mygo_expr_0 []ast2.TypeExpr
@@ -653,7 +663,7 @@ func variantDeclCore() ps.Parser[ast2.Variant] {
 				} else {
 				}
 			}
-			return ast2.Variant{Name: name, Fields: actual, FieldSpans: __mygo_expr_2, Named: false, Names: []string{}}
+			return ast2.Variant{Name: name, Fields: actual, FieldSpans: __mygo_expr_2, Named: false, Names: []string{}, Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 1, Column: 1}, End: ast2.SourcePos{SourceName: "", Line: 1, Column: 1}}}
 		})})
 	})
 }
@@ -696,7 +706,7 @@ func paramCore() ps.Parser[ast2.Param] {
 	return ps.PBind(identifier(), func(name string) ps.Parser[ast2.Param] {
 		return ps.PBind(sym(":"), func(_ string) ps.Parser[ast2.Param] {
 			return ps.PMap(spannedTypeExpr(), func(typ Spanned[ast2.TypeExpr]) ast2.Param {
-				return ast2.Param{Name: name, Type: typ.Value, TypeSpan: typ.Span}
+				return ast2.Param{Name: name, Type: typ.Value, TypeSpan: typ.Span, Span: typ.Span}
 			})
 		})
 	})
@@ -885,7 +895,7 @@ func namedLetStmt() ps.Parser[ast2.Stmt] {
 		return ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ Option[Spanned[ast2.TypeExpr]]) ps.Parser[ast2.Stmt] {
 			return ps.PBind(sym("="), func(_ string) ps.Parser[ast2.Stmt] {
 				return ps.PMap(expr(), func(value ast2.Expr) ast2.Stmt {
-					return ast2.Stmt__LetStmt__Ctor(ast2.Bind{Name: name, Type: unwrapTypeOption(typ), TypeSpan: typeOptionSpan(typ), Value: value})
+					return ast2.Stmt__LetStmt__Ctor(ast2.Bind{Name: name, Type: unwrapTypeOption(typ), TypeSpan: typeOptionSpan(typ), Value: value, Span: value.Span})
 				})
 			})
 		})
@@ -920,7 +930,7 @@ func varStmt() ps.Parser[ast2.Stmt] {
 			return ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ Option[Spanned[ast2.TypeExpr]]) ps.Parser[ast2.Stmt] {
 				return ps.PBind(sym("="), func(__1 string) ps.Parser[ast2.Stmt] {
 					return ps.PMap(expr(), func(value ast2.Expr) ast2.Stmt {
-						return ast2.Stmt__VarStmt__Ctor(ast2.Bind{Name: name, Type: unwrapTypeOption(typ), TypeSpan: typeOptionSpan(typ), Value: value})
+						return ast2.Stmt__VarStmt__Ctor(ast2.Bind{Name: name, Type: unwrapTypeOption(typ), TypeSpan: typeOptionSpan(typ), Value: value, Span: value.Span})
 					})
 				})
 			})
@@ -973,7 +983,9 @@ func positionedExpr(inner ps.Parser[ast2.Expr]) ps.Parser[ast2.Expr] {
 	return func(state ps.State) ps.Reply[ast2.Expr] {
 		r := inner(state)
 		if r.Ok {
-			return ps.Reply[ast2.Expr]{Ok: true, Consumed: r.Consumed, Value: exprAt(state, r.Value.Kind), State: r.State, Error: r.Error}
+			pos := sourcePos(state)
+			span := ast2.SourceSpan{Start: pos, End: sourcePos(r.State)}
+			return ps.Reply[ast2.Expr]{Ok: true, Consumed: r.Consumed, Value: ast2.Expr{ID: r.Value.ID, Pos: pos, Span: span, Kind: r.Value.Kind, Type: r.Value.Type}, State: r.State, Error: r.Error}
 		} else {
 			return r
 		}
@@ -1153,18 +1165,18 @@ func ifBlockTail(cond ast2.Expr) ps.Parser[ast2.Expr] {
 	return ps.PBind(kw("then"), func(_ string) ps.Parser[ast2.Expr] {
 		return ps.PBind(blockUntil(ps.PChoice([]func(ps.State) ps.Reply[string]{kw("elsif"), kw("else"), kw("end")})), func(thenBlock ast2.Expr) ps.Parser[ast2.Expr] {
 			return ps.PBind(ifElseTail(), func(elseExpr ast2.Expr) ps.Parser[ast2.Expr] {
-				return ps.PThen(kw("end"), ps.PPure(exprWithPos(cond.Pos, ast2.ExprKind__IfExpr__Ctor(cond, bodyExprFromBlock(thenBlock), elseExpr))))
+				return ps.PThen(kw("end"), ps.PPure(exprWithPos(cond.Pos, ast2.ExprKind__IfExpr__Ctor(cond, bodyExprWithBlockSpan(thenBlock), elseExpr))))
 			})
 		})
 	})
 }
 func ifElseTail() ps.Parser[ast2.Expr] {
-	return ps.PChoice([]func(ps.State) ps.Reply[ast2.Expr]{ps.PAttempt(ps.PThen(kw("else"), ps.PMap(blockUntil(kw("end")), bodyExprFromBlock))), ps.PAttempt(ps.PBind(kw("elsif"), func(_ string) ps.Parser[ast2.Expr] {
+	return ps.PChoice([]func(ps.State) ps.Reply[ast2.Expr]{ps.PAttempt(ps.PThen(kw("else"), ps.PMap(blockUntil(kw("end")), bodyExprWithBlockSpan))), ps.PAttempt(ps.PBind(kw("elsif"), func(_ string) ps.Parser[ast2.Expr] {
 		return ps.PBind(expr(), func(cond ast2.Expr) ps.Parser[ast2.Expr] {
 			return ps.PBind(kw("then"), func(__1 string) ps.Parser[ast2.Expr] {
 				return ps.PBind(blockUntil(ps.PChoice([]func(ps.State) ps.Reply[string]{kw("elsif"), kw("else"), kw("end")})), func(thenBlock ast2.Expr) ps.Parser[ast2.Expr] {
 					return ps.PMap(lazyIfElseTail(), func(elseExpr ast2.Expr) ast2.Expr {
-						return exprWithPos(cond.Pos, ast2.ExprKind__IfExpr__Ctor(cond, bodyExprFromBlock(thenBlock), elseExpr))
+						return exprWithPos(cond.Pos, ast2.ExprKind__IfExpr__Ctor(cond, bodyExprWithBlockSpan(thenBlock), elseExpr))
 					})
 				})
 			})
@@ -1198,6 +1210,10 @@ func bodyExprFromBlock(body ast2.Expr) ast2.Expr {
 		__mygo_expr_1 = body
 	}
 	return __mygo_expr_1
+}
+func bodyExprWithBlockSpan(body ast2.Expr) ast2.Expr {
+	value := bodyExprFromBlock(body)
+	return ast2.Expr{ID: value.ID, Pos: value.Pos, Span: body.Span, Kind: value.Kind, Type: value.Type}
 }
 func binaryExpr() ps.Parser[ast2.Expr] {
 	return pipeExpr()

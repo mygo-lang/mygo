@@ -218,7 +218,7 @@ func spannedFuncSig() ps.Parser[Spanned[ast2.FuncSig]] {
 		if reply.Ok {
 			return ps.Reply[Spanned[ast2.FuncSig]]{Ok: true, Consumed: reply.Consumed, Value: Spanned[ast2.FuncSig]{Value: reply.Value, Span: stateSpan(state, reply.State)}, State: reply.State, Error: reply.Error}
 		} else {
-			return ps.Reply[Spanned[ast2.FuncSig]]{Ok: false, Consumed: reply.Consumed, Value: Spanned[ast2.FuncSig]{Value: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string{}, Params: []ast2.Param{}, Ret: None[ast2.TypeExpr](), Using: []ast2.Constraint{}}, Span: stateSpan(state, reply.State)}, State: reply.State, Error: reply.Error}
+			return ps.Reply[Spanned[ast2.FuncSig]]{Ok: false, Consumed: reply.Consumed, Value: Spanned[ast2.FuncSig]{Value: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: state.Position.Line, Column: state.Position.Column}, Name: "", TypeParams: []string{}, Params: []ast2.Param{}, Ret: None[ast2.TypeExpr](), RetSpan: stateSpan(state, reply.State), Using: []ast2.Constraint{}}, Span: stateSpan(state, reply.State)}, State: reply.State, Error: reply.Error}
 		}
 	}
 }
@@ -249,7 +249,7 @@ func ParseFileLossless(sourceName string, input string) Result[LosslessFile, str
 			metadataSpans := collectDeclMetadataSpans(finished.Decls, declarationSpans, scanned.Tokens, 0)
 			baseSpans := joinSpans(joinSpans(joinSpans(tokenSpans, declarationSpans), collectFileExprSpans(finished)), metadataSpans)
 			nodeSpans := joinSpans(baseSpans, collectNestedPatternSpans(baseSpans, scanned.Tokens, 0))
-			__mygo_expr_1 = Ok[LosslessFile, string](LosslessFile{AST: finished, Tokens: scanned.Tokens, Trivia: scanned.Trivia, NodeSpans: nodeSpans, Delimited: collectDelimitedSpans(nodeSpans, scanned.Tokens, 0), LayoutEvents: collectLayoutEvents(nodeSpans, scanned.Tokens, 0)})
+			__mygo_expr_1 = Ok[LosslessFile, string](LosslessFile{AST: finished, Tokens: scanned.Tokens, Trivia: scanned.Trivia, NodeSpans: nodeSpans, Delimited: collectDelimitedSpans(nodeSpans, scanned.Tokens, 0), LayoutEvents: collectLayoutEvents(nodeSpans, scanned.Tokens, 0, []LayoutEvent{})})
 		} else {
 		}
 	}
@@ -332,7 +332,7 @@ func functionReturnSpan(tokens []ps.PositionedToken, declSpan ast2.SourceSpan) a
 func typeDeclarationTargetSpan(tokens []ps.PositionedToken, declSpan ast2.SourceSpan, alias bool) ast2.SourceSpan {
 	var __mygo_expr_0 int
 	if alias {
-		__mygo_expr_0 = firstTokenInSpan(tokens, declSpan, "=", 0) + 1
+		__mygo_expr_0 = firstTokenInSpan(tokens, declSpan, "=") + 1
 	} else {
 		__mygo_expr_0 = typeDeclarationTargetStart(tokens, declSpan, 0, 0)
 	}
@@ -404,6 +404,18 @@ func functionTypeEnd(tokens []ps.PositionedToken, index int) int {
 		}
 	}
 }
+func positionBefore(left ast2.SourcePos, right ast2.SourcePos) bool {
+	return left.Line < right.Line || left.Line == right.Line && left.Column < right.Column
+}
+func lowerBoundStart(tokens []ps.PositionedToken, pos ast2.SourcePos, low int, high int) int {
+	return __mygo_mt_parser2_lowerBoundStart(tokens, pos, low, high, 0)
+}
+func lowerBoundLine(tokens []ps.PositionedToken, line int, low int, high int) int {
+	return __mygo_mt_parser2_lowerBoundLine(tokens, line, low, high, 0)
+}
+func tokenBeforeSpanStart(token ps.PositionedToken, span ast2.SourceSpan) bool {
+	return token.Span.Start.Line < span.Start.Line || token.Span.Start.Line == span.Start.Line && token.Span.Start.Column <= span.Start.Column
+}
 func firstRawToken(tokens []ps.PositionedToken, raw string, index int) int {
 	return __mygo_mt_parser2_firstRawToken(tokens, raw, index, 0)
 }
@@ -414,38 +426,87 @@ func firstArrowToken(tokens []ps.PositionedToken, index int) int {
 	return __mygo_mt_parser2_firstArrowToken(tokens, index, 0)
 }
 func collectParamSpans(items []ast2.Param, tokens []ps.PositionedToken, index int) []NodeSpan {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-		return []NodeSpan{}
-	} else {
-		item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.Param{Name: "", Type: ast2.TypeExpr__UnitType__Ctor(), Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}})
-		typeNodes := withPath(collectTypeSpans(item.Type, item.TypeSpan, tokens), []int{index, 0})
-		return joinSpans(joinSpans([]NodeSpan{NodeSpan{Path: []int{index}, Kind: "param", Span: item.Span}}, typeNodes), collectParamSpans(items, tokens, index+1))
+	for {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+			return []NodeSpan{}
+		} else {
+			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+			var __mygo_expr_1 []NodeSpan
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Param]); ok {
+				typeNodes := withPath(collectTypeSpans(__mygo_match___mygo_expr_2.F0.Type, __mygo_match___mygo_expr_2.F0.TypeSpan, tokens), []int{index, 0})
+				__mygo_expr_1 = joinSpans(joinSpans([]NodeSpan{NodeSpan{Path: []int{index}, Kind: "param", Span: __mygo_match___mygo_expr_2.F0.Span}}, typeNodes), collectParamSpans(items, tokens, index+1))
+			} else {
+				if _, ok := __mygo_expr_0.(Option__None[ast2.Param]); ok {
+					__mygo_expr_1 = collectParamSpans(items, tokens, index+1)
+				} else {
+				}
+			}
+			return __mygo_expr_1
+		}
 	}
 }
 func collectFieldSpans(items []ast2.Field, tokens []ps.PositionedToken, index int) []NodeSpan {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-		return []NodeSpan{}
-	} else {
-		item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.Field{Name: "", Type: ast2.TypeExpr__UnitType__Ctor(), Tag: None[string](), Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}})
-		return joinSpans(joinSpans([]NodeSpan{NodeSpan{Path: []int{index}, Kind: "field", Span: item.Span}}, withPath(collectTypeSpans(item.Type, item.TypeSpan, tokens), []int{index, 0})), collectFieldSpans(items, tokens, index+1))
+	for {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+			return []NodeSpan{}
+		} else {
+			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+			var __mygo_expr_1 []NodeSpan
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Field]); ok {
+				__mygo_expr_1 = joinSpans(joinSpans([]NodeSpan{NodeSpan{Path: []int{index}, Kind: "field", Span: __mygo_match___mygo_expr_2.F0.Span}}, withPath(collectTypeSpans(__mygo_match___mygo_expr_2.F0.Type, __mygo_match___mygo_expr_2.F0.TypeSpan, tokens), []int{index, 0})), collectFieldSpans(items, tokens, index+1))
+			} else {
+				if _, ok := __mygo_expr_0.(Option__None[ast2.Field]); ok {
+					__mygo_expr_1 = collectFieldSpans(items, tokens, index+1)
+				} else {
+				}
+			}
+			return __mygo_expr_1
+		}
 	}
 }
 func collectVariantSpans(items []ast2.Variant, tokens []ps.PositionedToken, index int) []NodeSpan {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-		return []NodeSpan{}
-	} else {
-		item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.Variant{Name: "", Fields: []ast2.TypeExpr{}, Named: false, Names: []string{}, Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}})
-		fields := collectVariantTypeSpans(item.Fields, item.FieldSpans, tokens, 0)
-		return joinSpans(joinSpans([]NodeSpan{NodeSpan{Path: []int{index}, Kind: "variant", Span: item.Span}}, withPath(fields, []int{index})), collectVariantSpans(items, tokens, index+1))
+	for {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+			return []NodeSpan{}
+		} else {
+			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+			var __mygo_expr_1 []NodeSpan
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.Variant]); ok {
+				fields := collectVariantTypeSpans(__mygo_match___mygo_expr_2.F0.Fields, __mygo_match___mygo_expr_2.F0.FieldSpans, tokens, 0)
+				__mygo_expr_1 = joinSpans(joinSpans([]NodeSpan{NodeSpan{Path: []int{index}, Kind: "variant", Span: __mygo_match___mygo_expr_2.F0.Span}}, withPath(fields, []int{index})), collectVariantSpans(items, tokens, index+1))
+			} else {
+				if _, ok := __mygo_expr_0.(Option__None[ast2.Variant]); ok {
+					__mygo_expr_1 = collectVariantSpans(items, tokens, index+1)
+				} else {
+				}
+			}
+			return __mygo_expr_1
+		}
 	}
 }
 func collectVariantTypeSpans(types []ast2.TypeExpr, spans []ast2.SourceSpan, tokens []ps.PositionedToken, index int) []NodeSpan {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(types) {
-		return []NodeSpan{}
-	} else {
-		typ := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, index), ast2.TypeExpr__UnitType__Ctor())
-		span := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(spans, index), emptySpan())
-		return joinSpans(withPath(collectTypeSpans(typ, span, tokens), []int{index}), collectVariantTypeSpans(types, spans, tokens, index+1))
+	for {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(types) {
+			return []NodeSpan{}
+		} else {
+			var __mygo_expr_0 []NodeSpan
+			if __mygo_match___mygo_expr_1, ok := struct {
+				F0 Option[ast2.TypeExpr]
+				F1 Option[ast2.SourceSpan]
+			}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, index), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(spans, index)}.F0.(Option__Some[ast2.TypeExpr]); ok {
+				if __mygo_match___mygo_expr_2, ok := struct {
+					F0 Option[ast2.TypeExpr]
+					F1 Option[ast2.SourceSpan]
+				}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(types, index), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(spans, index)}.F1.(Option__Some[ast2.SourceSpan]); ok {
+					__mygo_expr_0 = joinSpans(withPath(collectTypeSpans(__mygo_match___mygo_expr_1.F0, __mygo_match___mygo_expr_2.F0, tokens), []int{index}), collectVariantTypeSpans(types, spans, tokens, index+1))
+				} else {
+					__mygo_expr_0 = collectVariantTypeSpans(types, spans, tokens, index+1)
+				}
+			} else {
+				__mygo_expr_0 = collectVariantTypeSpans(types, spans, tokens, index+1)
+			}
+			return __mygo_expr_0
+		}
 	}
 }
 func collectTypeSpans(typ ast2.TypeExpr, span ast2.SourceSpan, tokens []ps.PositionedToken) []NodeSpan {
@@ -591,7 +652,7 @@ func delimitedChildSpan(tokens []ps.PositionedToken, span ast2.SourceSpan, open 
 	return MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(delimitedChildSpans(tokens, span, open, close), 0), emptySpan())
 }
 func delimitedChildSpans(tokens []ps.PositionedToken, span ast2.SourceSpan, open string, close string) []ast2.SourceSpan {
-	start := firstTokenInSpan(tokens, span, open, 0)
+	start := firstTokenInSpan(tokens, span, open)
 	if start < 0 {
 		return []ast2.SourceSpan{}
 	} else {
@@ -604,31 +665,24 @@ func delimitedChildSpans(tokens []ps.PositionedToken, span ast2.SourceSpan, open
 	}
 }
 func trailingSpan(tokens []ps.PositionedToken, span ast2.SourceSpan, marker string) ast2.SourceSpan {
-	markerIndex := firstTokenInSpan(tokens, span, marker, 0)
+	markerIndex := firstTokenInSpan(tokens, span, marker)
 	if markerIndex < 0 {
 		return emptySpan()
 	} else {
-		return tokenRangeSpan(tokens, markerIndex+1, lastTokenInSpan(tokens, span, 0))
+		return tokenRangeSpan(tokens, markerIndex+1, lastTokenInSpan(tokens, span))
 	}
 }
-func firstTokenInSpan(tokens []ps.PositionedToken, span ast2.SourceSpan, raw string, index int) int {
-	return __mygo_mt_parser2_firstTokenInSpan(tokens, span, raw, index, 0)
+func firstTokenInSpan(tokens []ps.PositionedToken, span ast2.SourceSpan, raw string) int {
+	return firstTokenInSpanFrom(tokens, span, raw, lowerBoundStart(tokens, span.Start, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tokens)))
 }
-func lastTokenInSpan(tokens []ps.PositionedToken, span ast2.SourceSpan, index int) int {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tokens) {
-		return -1
-	} else {
-		rest := lastTokenInSpan(tokens, span, index+1)
-		if rest >= 0 {
-			return rest
-		} else {
-			if tokenStartsInSpan(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tokens, index), ps.PositionedToken{Kind: "", Raw: "", Span: ps.SourceSpan{Start: ps.Position{Offset: 0, Line: 0, Column: 0}, End: ps.Position{Offset: 0, Line: 0, Column: 0}}}), span) {
-				return index
-			} else {
-				return -1
-			}
-		}
-	}
+func firstTokenInSpanFrom(tokens []ps.PositionedToken, span ast2.SourceSpan, raw string, index int) int {
+	return __mygo_mt_parser2_firstTokenInSpanFrom(tokens, span, raw, index, 0)
+}
+func lastTokenInSpan(tokens []ps.PositionedToken, span ast2.SourceSpan) int {
+	return lastTokenInSpanFrom(tokens, span, lowerBoundStart(tokens, span.Start, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tokens)), -1)
+}
+func lastTokenInSpanFrom(tokens []ps.PositionedToken, span ast2.SourceSpan, index int, best int) int {
+	return __mygo_mt_parser2_lastTokenInSpanFrom(tokens, span, index, best, 0)
 }
 func matchingDelimiter(tokens []ps.PositionedToken, index int, open string, close string, depth int) int {
 	return __mygo_mt_parser2_matchingDelimiter(tokens, index, open, close, depth, 0)
@@ -648,108 +702,23 @@ func tokenRangeSpan(tokens []ps.PositionedToken, start int, finish int) ast2.Sou
 func tokenStartsInSpan(token ps.PositionedToken, span ast2.SourceSpan) bool {
 	return (token.Span.Start.Line > span.Start.Line || token.Span.Start.Line == span.Start.Line && token.Span.Start.Column >= span.Start.Column) && (token.Span.Start.Line < span.End.Line || token.Span.Start.Line == span.End.Line && token.Span.Start.Column < span.End.Column)
 }
-func collectLayoutEvents(items []NodeSpan, tokens []ps.PositionedToken, index int) []LayoutEvent {
-	for {
-		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-			return []LayoutEvent{}
-		} else {
-			item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), NodeSpan{Path: []int{}, Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}})
-			if item.Kind == "" || item.Kind == "symbol" || item.Kind == "literal" || item.Kind == "block-body" {
-				__tail_0 := items
-				__tail_1 := tokens
-				__tail_2 := index + 1
-				items, tokens, index = __tail_0, __tail_1, __tail_2
-				continue
-			} else {
-				var __mygo_expr_0 ast2.SourceSpan
-				if item.Kind == "case-body" {
-					__mygo_expr_0 = MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index-1), func(header NodeSpan) ast2.SourceSpan {
-						return header.Span
-					}), item.Span)
-				} else {
-					__mygo_expr_0 = layoutEventAnchor(items, item, tokens)
-				}
-				anchor := __mygo_expr_0
-				var __mygo_expr_1 ast2.SourceSpan
-				if item.Kind == "case" {
-					__mygo_expr_1 = caseBodyAnchor(items, item, 0)
-				} else {
-					__mygo_expr_1 = item.Span
-				}
-				bodyAnchor := __mygo_expr_1
-				blockBodyAnchor := nestedBodyAnchor(items, item, 0)
-				var __mygo_expr_2 string
-				if bodyAnchor.Start.Line > anchor.Start.Line || item.Span.End.Line > anchor.Start.Line {
-					__mygo_expr_2 = "block"
-				} else {
-					__mygo_expr_2 = "inline"
-				}
-				bodyLayout := __mygo_expr_2
-				headerForm := layoutHeaderForm(item.Kind, anchor)
-				var __mygo_expr_3 string
-				if item.Kind == "if-else" {
-					__mygo_expr_3 = siblingThenForm(items, item, tokens, "")
-				} else {
-					__mygo_expr_3 = headerForm
-				}
-				branchForm := __mygo_expr_3
-				separatorAnchor := layoutSeparatorAnchor(item.Kind, bodyAnchor, tokens, 0)
-				var __mygo_expr_5 ast2.SourceSpan
-				if item.Kind == "if-then" || item.Kind == "if-else" {
-					__mygo_expr_5 = branchEndAnchor(items, item, tokens, item.Span)
-				} else {
-					var __mygo_expr_4 ast2.SourceSpan
-					if bodyLayout == "block" || item.Kind == "if" {
-						__mygo_expr_4 = matchingEndAnchor(tokens, anchor, 0, 0, false, item.Span)
-					} else {
-						__mygo_expr_4 = item.Span
-					}
-					__mygo_expr_5 = __mygo_expr_4
-				}
-				exitAnchor := __mygo_expr_5
-				sameLineEnd := item.Span.Start.Line == item.Span.End.Line && hasEndTokenOnLine(tokens, item.Span.Start.Line, 0) && item.Kind != "case"
-				blockLike := bodyLayout == "block" || sameLineEnd && hasUsableSpan(blockBodyAnchor) || item.Kind == "if-else" && sameLineEnd || item.Kind == "if-then" && sameLineEnd && layoutHeaderForm(item.Kind, anchor) == "then"
-				affectsIndent := structuralBlockKind(item.Kind) && blockLike
-				wideLine := item.Span.Start.Line == item.Span.End.Line && lineIsWide(tokens, item.Span.End.Line, 0)
-				var __mygo_expr_7 bool
-				if item.Kind == "case" {
-					__mygo_expr_7 = bodyLayout == "inline" && wideLine
-				} else {
-					var __mygo_expr_6 bool
-					if item.Kind == "if-then" || item.Kind == "if-else" {
-						__mygo_expr_6 = bodyLayout == "inline" && (wideLine || branchForm == "then")
-					} else {
-						__mygo_expr_6 = affectsIndent && bodyLayout == "inline"
-					}
-					__mygo_expr_7 = __mygo_expr_6
-				}
-				expandsAfter := __mygo_expr_7
-				var __mygo_expr_9 int
-				if item.Kind == "if-then" && item.Span.Start.Line > 1 {
-					__mygo_expr_9 = item.Span.Start.Line - 1
-				} else {
-					var __mygo_expr_8 int
-					if anchor.Start.Line > 0 {
-						__mygo_expr_8 = anchor.Start.Line
-					} else {
-						__mygo_expr_8 = item.Span.Start.Line
-					}
-					__mygo_expr_9 = __mygo_expr_8
-				}
-				headerLine := __mygo_expr_9
-				var __mygo_expr_10 int
-				if item.Kind == "case" {
-					__mygo_expr_10 = MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index+1), func(body NodeSpan) int {
-						return body.Span.Start.Line
-					}), item.Span.Start.Line)
-				} else {
-					__mygo_expr_10 = item.Span.Start.Line
-				}
-				bodyLine := __mygo_expr_10
-				return joinEvents([]LayoutEvent{LayoutEvent{Kind: "enter:" + item.Kind, Path: item.Path, Depth: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Path), Span: item.Span, Anchor: anchor, BodyAnchor: bodyAnchor, BlockBodyAnchor: blockBodyAnchor, BodyLayout: bodyLayout, AffectsIndent: affectsIndent, ExpandsAfter: expandsAfter, HeaderForm: headerForm, SeparatorAnchor: separatorAnchor, ExitAnchor: exitAnchor, HeaderLine: headerLine, BodyLine: bodyLine, ExitLine: exitAnchor.Start.Line}, LayoutEvent{Kind: "exit:" + item.Kind, Path: item.Path, Depth: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Path), Span: item.Span, Anchor: anchor, BodyAnchor: bodyAnchor, BlockBodyAnchor: blockBodyAnchor, BodyLayout: bodyLayout, AffectsIndent: affectsIndent, ExpandsAfter: expandsAfter, HeaderForm: headerForm, SeparatorAnchor: separatorAnchor, ExitAnchor: exitAnchor, HeaderLine: headerLine, BodyLine: bodyLine, ExitLine: exitAnchor.Start.Line}}, collectLayoutEvents(items, tokens, index+1))
-			}
-		}
-	}
+func collectLayoutEvents(items []NodeSpan, tokens []ps.PositionedToken, index int, acc []LayoutEvent) []LayoutEvent {
+	return __mygo_mt_parser2_collectLayoutEvents(items, tokens, index, acc, 0)
+}
+func verifiedLayoutAnchor(kind string, anchor ast2.SourceSpan, tokens []ps.PositionedToken) bool {
+	return verifiedLayoutAnchorFrom(kind, anchor, tokens, lowerBoundStart(tokens, ast2.SourcePos{SourceName: "", Line: anchor.Start.Line, Column: anchor.Start.Column}, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tokens)))
+}
+func verifiedLayoutAnchorFrom(kind string, anchor ast2.SourceSpan, tokens []ps.PositionedToken, index int) bool {
+	return __mygo_mt_parser2_verifiedLayoutAnchorFrom(kind, anchor, tokens, index, 0)
+}
+func elsifTransitions(items []NodeSpan, branch NodeSpan, tokens []ps.PositionedToken, index int) []LayoutEvent {
+	return __mygo_mt_parser2_elsifTransitions(items, branch, tokens, index, 0)
+}
+func elsifHeaderAnchor(tokens []ps.PositionedToken, line int) Option[ast2.SourceSpan] {
+	return elsifHeaderAnchorFrom(tokens, line, lowerBoundLine(tokens, line, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tokens)))
+}
+func elsifHeaderAnchorFrom(tokens []ps.PositionedToken, line int, index int) Option[ast2.SourceSpan] {
+	return __mygo_mt_parser2_elsifHeaderAnchorFrom(tokens, line, index, 0)
 }
 func branchEndAnchor(items []NodeSpan, branch NodeSpan, tokens []ps.PositionedToken, fallback ast2.SourceSpan) ast2.SourceSpan {
 	__mygo_expr_0 := parentIfNode(items, branch, 0)
@@ -768,7 +737,53 @@ func parentIfNode(items []NodeSpan, branch NodeSpan, index int) Option[NodeSpan]
 	return __mygo_mt_parser2_parentIfNode(items, branch, index, 0)
 }
 func structuralBlockKind(kind string) bool {
-	return MygoIN6StringM9HasPrefix(kind, "decl:") || kind == "if-then" || kind == "if-else" || kind == "switch" || kind == "case" || kind == "while" || kind == "for"
+	return MygoIN6StringM9HasPrefix(kind, "decl:") || kind == "impl-method" || kind == "inline-go" || kind == "if-then" || kind == "if-else" || kind == "switch" || kind == "case" || kind == "while" || kind == "for"
+}
+func isAnchorKind(kind string) bool {
+	return kind == "case" || kind == "if" || kind == "if-else" || kind == "if-then" || kind == "switch" || kind == "while"
+}
+func canOwnBlockBody(kind string) bool {
+	return structuralBlockKind(kind) || kind == "if" || kind == "func-body" || kind == "block"
+}
+func declarationEndAnchor(tokens []ps.PositionedToken, span ast2.SourceSpan) ast2.SourceSpan {
+	index := lastTokenInSpan(tokens, span)
+	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tokens, index)
+	var __mygo_expr_1 ast2.SourceSpan
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+		var __mygo_expr_3 ast2.SourceSpan
+		if __mygo_match___mygo_expr_2.F0.Raw == "end" {
+			__mygo_expr_3 = tokenRangeSpan(tokens, index, index)
+		} else {
+			__mygo_expr_3 = span
+		}
+		__mygo_expr_1 = __mygo_expr_3
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+			__mygo_expr_1 = span
+		} else {
+		}
+	}
+	return __mygo_expr_1
+}
+func inlineGoExitAnchor(tokens []ps.PositionedToken, span ast2.SourceSpan) ast2.SourceSpan {
+	index := lastTokenInSpan(tokens, span)
+	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tokens, index)
+	var __mygo_expr_1 ast2.SourceSpan
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+		var __mygo_expr_3 ast2.SourceSpan
+		if __mygo_match___mygo_expr_2.F0.Raw == "}" {
+			__mygo_expr_3 = tokenRangeSpan(tokens, index, index)
+		} else {
+			__mygo_expr_3 = span
+		}
+		__mygo_expr_1 = __mygo_expr_3
+	} else {
+		if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+			__mygo_expr_1 = span
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
 func layoutEventAnchor(items []NodeSpan, item NodeSpan, tokens []ps.PositionedToken) ast2.SourceSpan {
 	var __mygo_expr_0 ast2.SourceSpan
@@ -779,9 +794,9 @@ func layoutEventAnchor(items []NodeSpan, item NodeSpan, tokens []ps.PositionedTo
 	}
 	bound := __mygo_expr_0
 	if item.Kind == "if-then" {
-		return branchHeaderAnchor(bound, tokens, 0, bound)
+		return branchHeaderAnchor(bound, tokens)
 	} else {
-		return layoutAnchorForSpan(item.Kind, bound, tokens, 0, bound)
+		return layoutAnchorForSpan(item.Kind, bound, tokens)
 	}
 }
 func layoutHeaderForm(kind string, anchor ast2.SourceSpan) string {
@@ -822,14 +837,20 @@ func layoutSeparatorAnchor(kind string, body ast2.SourceSpan, tokens []ps.Positi
 	if kind != "case" {
 		return ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}
 	} else {
-		return separatorAnchorAt(body, tokens, index)
+		return separatorAnchorAt(body, tokens)
 	}
 }
-func separatorAnchorAt(body ast2.SourceSpan, tokens []ps.PositionedToken, index int) ast2.SourceSpan {
-	return __mygo_mt_parser2_separatorAnchorAt(body, tokens, index, 0)
+func separatorAnchorAt(body ast2.SourceSpan, tokens []ps.PositionedToken) ast2.SourceSpan {
+	return separatorAnchorAtFrom(body, tokens, 0)
 }
-func branchHeaderAnchor(span ast2.SourceSpan, tokens []ps.PositionedToken, index int, nearest ast2.SourceSpan) ast2.SourceSpan {
-	return __mygo_mt_parser2_branchHeaderAnchor(span, tokens, index, nearest, 0)
+func separatorAnchorAtFrom(body ast2.SourceSpan, tokens []ps.PositionedToken, index int) ast2.SourceSpan {
+	return __mygo_mt_parser2_separatorAnchorAtFrom(body, tokens, index, 0)
+}
+func branchHeaderAnchor(span ast2.SourceSpan, tokens []ps.PositionedToken) ast2.SourceSpan {
+	return branchHeaderAnchorFrom(span, tokens, 0, span)
+}
+func branchHeaderAnchorFrom(span ast2.SourceSpan, tokens []ps.PositionedToken, index int, nearest ast2.SourceSpan) ast2.SourceSpan {
+	return __mygo_mt_parser2_branchHeaderAnchorFrom(span, tokens, index, nearest, 0)
 }
 func arrowTail(tokens []ps.PositionedToken, index int) bool {
 	return MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tokens, index), func(token ps.PositionedToken) bool {
@@ -846,7 +867,7 @@ func firstDirectChildSpan(items []NodeSpan, parentPath []int, index int) ast2.So
 	return __mygo_mt_parser2_firstDirectChildSpan(items, parentPath, index, 0)
 }
 func layoutExitAnchor(item NodeSpan, tokens []ps.PositionedToken, index int) ast2.SourceSpan {
-	return matchingEndAnchor(tokens, layoutAnchor(item, tokens, 0), index, 0, false, item.Span)
+	return matchingEndAnchor(tokens, layoutAnchor(item, tokens), 0, 0, false, item.Span)
 }
 func matchingEndAnchor(tokens []ps.PositionedToken, start ast2.SourceSpan, index int, depth int, started bool, fallback ast2.SourceSpan) ast2.SourceSpan {
 	return __mygo_mt_parser2_matchingEndAnchor(tokens, start, index, depth, started, fallback, 0)
@@ -857,14 +878,20 @@ func isBlockOpenToken(raw string) bool {
 func isEndTokenAnchor(tokens []ps.PositionedToken, anchor ast2.SourceSpan, index int) bool {
 	return __mygo_mt_parser2_isEndTokenAnchor(tokens, anchor, index, 0)
 }
-func hasEndTokenOnLine(tokens []ps.PositionedToken, line int, index int) bool {
-	return __mygo_mt_parser2_hasEndTokenOnLine(tokens, line, index, 0)
+func hasEndTokenOnLine(tokens []ps.PositionedToken, line int) bool {
+	return hasEndTokenOnLineFrom(tokens, line, lowerBoundLine(tokens, line, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tokens)))
 }
-func lineIsWide(tokens []ps.PositionedToken, line int, index int) bool {
-	return lineEndColumn(tokens, line, index, 0) > 101
+func hasEndTokenOnLineFrom(tokens []ps.PositionedToken, line int, index int) bool {
+	return __mygo_mt_parser2_hasEndTokenOnLineFrom(tokens, line, index, 0)
 }
-func lineEndColumn(tokens []ps.PositionedToken, line int, index int, farthest int) int {
-	return __mygo_mt_parser2_lineEndColumn(tokens, line, index, farthest, 0)
+func lineIsWide(tokens []ps.PositionedToken, line int) bool {
+	return lineEndColumn(tokens, line) > 101
+}
+func lineEndColumn(tokens []ps.PositionedToken, line int) int {
+	return lineEndColumnFrom(tokens, line, lowerBoundLine(tokens, line, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tokens)), 0)
+}
+func lineEndColumnFrom(tokens []ps.PositionedToken, line int, index int, farthest int) int {
+	return __mygo_mt_parser2_lineEndColumnFrom(tokens, line, index, farthest, 0)
 }
 func caseBodyAnchor(items []NodeSpan, caseItem NodeSpan, index int) ast2.SourceSpan {
 	return __mygo_mt_parser2_caseBodyAnchor(items, caseItem, index, 0)
@@ -878,17 +905,21 @@ func isDirectChildPath(child []int, parent []int, index int) bool {
 func matchesCaseBodyPath(bodyPath []int, casePath []int, index int) bool {
 	return __mygo_mt_parser2_matchesCaseBodyPath(bodyPath, casePath, index, 0)
 }
-func layoutAnchor(item NodeSpan, tokens []ps.PositionedToken, index int) ast2.SourceSpan {
-	return layoutAnchorForSpan(item.Kind, item.Span, tokens, index, item.Span)
+func layoutAnchor(item NodeSpan, tokens []ps.PositionedToken) ast2.SourceSpan {
+	return layoutAnchorForSpan(item.Kind, item.Span, tokens)
 }
-func layoutAnchorForSpan(kind string, span ast2.SourceSpan, tokens []ps.PositionedToken, index int, nearest ast2.SourceSpan) ast2.SourceSpan {
-	return __mygo_mt_parser2_layoutAnchorForSpan(kind, span, tokens, index, nearest, 0)
+func layoutAnchorForSpan(kind string, span ast2.SourceSpan, tokens []ps.PositionedToken) ast2.SourceSpan {
+	if isAnchorKind(kind) {
+		return layoutAnchorForSpanFrom(kind, span, tokens, 0, span)
+	} else {
+		return span
+	}
+}
+func layoutAnchorForSpanFrom(kind string, span ast2.SourceSpan, tokens []ps.PositionedToken, index int, nearest ast2.SourceSpan) ast2.SourceSpan {
+	return __mygo_mt_parser2_layoutAnchorForSpanFrom(kind, span, tokens, index, nearest, 0)
 }
 func isAnchorToken(kind string, raw string) bool {
-	return kind == "case" && raw == "case" || kind == "if" && raw == "if" || kind == "if-else" && raw == "else" || kind == "if-then" && (raw == "then" || raw == "=>") || kind == "switch" && raw == "switch"
-}
-func joinEvents(left []LayoutEvent, right []LayoutEvent) []LayoutEvent {
-	return __mygo_mt_parser2_joinEvents(left, right, 0)
+	return kind == "case" && raw == "case" || kind == "if" && raw == "if" || kind == "if-else" && raw == "else" || kind == "if-then" && (raw == "then" || raw == "=>") || kind == "switch" && raw == "switch" || kind == "while" && raw == "while"
 }
 func collectNodeSpans(tokens []ps.PositionedToken) []NodeSpan {
 	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(tokens, func(token ps.PositionedToken) NodeSpan {
@@ -910,21 +941,39 @@ func collectDeclSpans(decls []ast2.Decl, positions []ast2.SourcePos, tokens []ps
 		endPos := __mygo_expr_0
 		decl := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(decls, index), ast2.Decl__ImportDecl__Ctor("", ""))
 		item := NodeSpan{Path: []int{index}, Kind: "decl:" + declKind(decl), Span: ast2.SourceSpan{Start: pos, End: endPos}}
-		return itemList(item, joinSpans(matchDeclBodySpan(decl, index), collectDeclSpans(decls, positions, tokens, index+1)))
+		return itemList(item, joinSpans(matchDeclBodySpan(decl, index, item.Span, tokens), collectDeclSpans(decls, positions, tokens, index+1)))
 	}
 }
 func tokenEndBefore(limit ast2.SourcePos, tokens []ps.PositionedToken, index int, fallback ast2.SourcePos) ast2.SourcePos {
 	return __mygo_mt_parser2_tokenEndBefore(limit, tokens, index, fallback, 0)
 }
-func matchDeclBodySpan(decl ast2.Decl, index int) []NodeSpan {
+func matchDeclBodySpan(decl ast2.Decl, index int, declSpan ast2.SourceSpan, tokens []ps.PositionedToken) []NodeSpan {
 	var __mygo_expr_0 []NodeSpan
-	if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__FuncDecl); ok {
-		span := functionBodySpan(__mygo_match___mygo_expr_1.F4)
+	if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__FuncDecl); ok {
+		span := functionBodySpan(__mygo_match___mygo_expr_2.F4)
 		__mygo_expr_0 = []NodeSpan{NodeSpan{Path: []int{index, 0}, Kind: "func-body", Span: span}, NodeSpan{Path: []int{index, 0}, Kind: "block-body", Span: span}}
 	} else {
-		__mygo_expr_0 = []NodeSpan{}
+		if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__ImplDecl); ok {
+			__mygo_expr_0 = collectImplMethodSpans(__mygo_match___mygo_expr_1.F3, index, declarationEndAnchor(tokens, declSpan).Start, tokens, 0)
+		} else {
+			__mygo_expr_0 = []NodeSpan{}
+		}
 	}
 	return __mygo_expr_0
+}
+func collectImplMethodSpans(methods []ast2.ImplMethod, declaration int, implEnd ast2.SourcePos, tokens []ps.PositionedToken, index int) []NodeSpan {
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) {
+		return []NodeSpan{}
+	} else {
+		method := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, index), ast2.ImplMethod{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string{}, Params: []ast2.Param{}, Ret: None[ast2.TypeExpr](), RetSpan: emptySpan(), Using: []ast2.Constraint{}}, Body: ast2.EmptyExpr()})
+		next := MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, index+1), func(item ast2.ImplMethod) ast2.SourcePos {
+			return item.Pos
+		}), implEnd)
+		endPos := tokenEndBefore(next, tokens, 0, method.Pos)
+		span := ast2.SourceSpan{Start: method.Pos, End: endPos}
+		path := []int{declaration, -2, index}
+		return joinSpans([]NodeSpan{NodeSpan{Path: path, Kind: "impl-method", Span: span}, NodeSpan{Path: MygoIN5SliceM6Append(path, 0), Kind: "block-body", Span: functionBodySpan(method.Body)}}, collectImplMethodSpans(methods, declaration, implEnd, tokens, index+1))
+	}
 }
 func functionBodySpan(body ast2.Expr) ast2.SourceSpan {
 	if body.Span.Start.Line > 0 {
@@ -1003,20 +1052,32 @@ func collectDeclExprSpans(decls []ast2.Decl, index int) []NodeSpan {
 }
 func collectDeclExpr(decl ast2.Decl) []NodeSpan {
 	var __mygo_expr_0 []NodeSpan
-	if __mygo_match___mygo_expr_3, ok := decl.(ast2.Decl__FuncDecl); ok {
-		__mygo_expr_0 = collectExprSpans(__mygo_match___mygo_expr_3.F4)
+	if __mygo_match___mygo_expr_4, ok := decl.(ast2.Decl__FuncDecl); ok {
+		__mygo_expr_0 = collectExprSpans(__mygo_match___mygo_expr_4.F4)
 	} else {
-		if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__LetDecl); ok {
-			__mygo_expr_0 = collectExprSpans(__mygo_match___mygo_expr_2.F0.Value)
+		if __mygo_match___mygo_expr_3, ok := decl.(ast2.Decl__ImplDecl); ok {
+			__mygo_expr_0 = collectImplMethodExprSpans(__mygo_match___mygo_expr_3.F3, 0)
 		} else {
-			if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__VarDecl); ok {
-				__mygo_expr_0 = collectExprSpans(__mygo_match___mygo_expr_1.F0.Value)
+			if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__LetDecl); ok {
+				__mygo_expr_0 = collectExprSpans(__mygo_match___mygo_expr_2.F0.Value)
 			} else {
-				__mygo_expr_0 = []NodeSpan{}
+				if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__VarDecl); ok {
+					__mygo_expr_0 = collectExprSpans(__mygo_match___mygo_expr_1.F0.Value)
+				} else {
+					__mygo_expr_0 = []NodeSpan{}
+				}
 			}
 		}
 	}
 	return __mygo_expr_0
+}
+func collectImplMethodExprSpans(methods []ast2.ImplMethod, index int) []NodeSpan {
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(methods) {
+		return []NodeSpan{}
+	} else {
+		method := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(methods, index), ast2.ImplMethod{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Sig: ast2.FuncSig{Pos: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, Name: "", TypeParams: []string{}, Params: []ast2.Param{}, Ret: None[ast2.TypeExpr](), RetSpan: emptySpan(), Using: []ast2.Constraint{}}, Body: ast2.EmptyExpr()})
+		return joinSpans(withPath(collectExprSpans(method.Body), []int{-2, index}), collectImplMethodExprSpans(methods, index+1))
+	}
 }
 func withPath(items []NodeSpan, path []int) []NodeSpan {
 	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(items, func(item NodeSpan) NodeSpan {
@@ -1107,7 +1168,19 @@ func exprSpanKind(kind ast2.ExprKind) string {
 										if _, ok := kind.(ast2.ExprKind__CallExpr); ok {
 											__mygo_expr_0 = "delimited:call"
 										} else {
-											__mygo_expr_0 = "expr"
+											if _, ok := kind.(ast2.ExprKind__StructLitExpr); ok {
+												__mygo_expr_0 = "delimited:struct"
+											} else {
+												if _, ok := kind.(ast2.ExprKind__GenericStructLitExpr); ok {
+													__mygo_expr_0 = "delimited:struct"
+												} else {
+													if _, ok := kind.(ast2.ExprKind__InlineGoExpr); ok {
+														__mygo_expr_0 = "inline-go"
+													} else {
+														__mygo_expr_0 = "expr"
+													}
+												}
+											}
 										}
 									}
 								}
@@ -1187,15 +1260,25 @@ func delimiterPair(kind string) Option[struct {
 				F1 string
 			}{F0: "(", F1: ")"})
 		} else {
-			return None[struct {
-				F0 string
-				F1 string
-			}]()
+			if kind == "delimited:struct" {
+				return Some[struct {
+					F0 string
+					F1 string
+				}](struct {
+					F0 string
+					F1 string
+				}{F0: "{", F1: "}"})
+			} else {
+				return None[struct {
+					F0 string
+					F1 string
+				}]()
+			}
 		}
 	}
 }
 func topLevelSeparators(tokens []ps.PositionedToken, span ast2.SourceSpan, open string, close string, index int) []ast2.SourceSpan {
-	start := firstTokenInSpan(tokens, span, open, 0)
+	start := firstTokenInSpan(tokens, span, open)
 	if start < 0 {
 		return []ast2.SourceSpan{}
 	} else {
@@ -1259,7 +1342,25 @@ func collectKindSpans(kind ast2.ExprKind) []NodeSpan {
 						__mygo_expr_0 = joinSpans(withPath(collectExprSpans(__mygo_match___mygo_expr_13.F1), []int{0}), withPath(collectExprSpans(__mygo_match___mygo_expr_13.F2), []int{1}))
 					} else {
 						if __mygo_match___mygo_expr_12, ok := kind.(ast2.ExprKind__IfExpr); ok {
-							__mygo_expr_0 = joinSpans(joinSpans(withPath(collectExprSpans(__mygo_match___mygo_expr_12.F0), []int{0}), collectBranchSpans(__mygo_match___mygo_expr_12.F1, __mygo_match___mygo_expr_12.F2)), withPath(collectExprSpans(__mygo_match___mygo_expr_12.F2), []int{2}))
+							__mygo_expr_13 := optionalElseExpr(__mygo_match___mygo_expr_12.F2)
+							var __mygo_expr_14 []NodeSpan
+							if __mygo_match___mygo_expr_15, ok := __mygo_expr_13.(Option__Some[ast2.Expr]); ok {
+								__mygo_expr_16 := __mygo_match___mygo_expr_15.F0.Kind
+								var __mygo_expr_17 Option[ast2.Expr]
+								if _, ok := __mygo_expr_16.(ast2.ExprKind__IfExpr); ok {
+									__mygo_expr_17 = None[ast2.Expr]()
+								} else {
+									__mygo_expr_17 = Some[ast2.Expr](__mygo_match___mygo_expr_15.F0)
+								}
+								elseBranch := __mygo_expr_17
+								__mygo_expr_14 = joinSpans(joinSpans(withPath(collectExprSpans(__mygo_match___mygo_expr_12.F0), []int{0}), collectBranchSpans(__mygo_match___mygo_expr_12.F1, elseBranch)), withPath(collectExprSpans(__mygo_match___mygo_expr_15.F0), []int{2}))
+							} else {
+								if _, ok := __mygo_expr_13.(Option__None[ast2.Expr]); ok {
+									__mygo_expr_14 = joinSpans(withPath(collectExprSpans(__mygo_match___mygo_expr_12.F0), []int{0}), collectBranchSpans(__mygo_match___mygo_expr_12.F1, None[ast2.Expr]()))
+								} else {
+								}
+							}
+							__mygo_expr_0 = __mygo_expr_14
 						} else {
 							if __mygo_match___mygo_expr_11, ok := kind.(ast2.ExprKind__BlockExpr); ok {
 								__mygo_expr_0 = collectStmtSpans(__mygo_match___mygo_expr_11.F0, 0)
@@ -1322,10 +1423,35 @@ func collectOperandExprSpans(items []ast2.GoOperand, index int) []NodeSpan {
 		return joinSpans(withPath(collectExprSpans(item.Value), []int{index}), collectOperandExprSpans(items, index+1))
 	}
 }
-func collectBranchSpans(yes ast2.Expr, no ast2.Expr) []NodeSpan {
-	thenSpan := NodeSpan{Path: []int{1}, Kind: "if-then", Span: ast2.SourceSpan{Start: yes.Span.Start, End: yes.Span.End}}
-	elseSpan := NodeSpan{Path: []int{2}, Kind: "if-else", Span: ast2.SourceSpan{Start: no.Span.Start, End: no.Span.End}}
-	return joinSpans(joinSpans([]NodeSpan{thenSpan}, withPath(collectExprSpans(yes), []int{1})), []NodeSpan{elseSpan})
+func optionalElseExpr(expr ast2.Expr) Option[ast2.Expr] {
+	__mygo_expr_0 := expr.Kind
+	var __mygo_expr_1 Option[ast2.Expr]
+	if _, ok := __mygo_expr_0.(ast2.ExprKind__UnitExpr); ok {
+		var __mygo_expr_2 Option[ast2.Expr]
+		if expr.Pos.Line <= 0 {
+			__mygo_expr_2 = None[ast2.Expr]()
+		} else {
+			__mygo_expr_2 = Some[ast2.Expr](expr)
+		}
+		__mygo_expr_1 = __mygo_expr_2
+	} else {
+		__mygo_expr_1 = Some[ast2.Expr](expr)
+	}
+	return __mygo_expr_1
+}
+func collectBranchSpans(yes ast2.Expr, no Option[ast2.Expr]) []NodeSpan {
+	thenSpan := NodeSpan{Path: []int{1}, Kind: "if-then", Span: effectiveExprSpan(yes)}
+	thenItems := joinSpans([]NodeSpan{thenSpan}, withPath(collectExprSpans(yes), []int{1}))
+	var __mygo_expr_0 []NodeSpan
+	if __mygo_match___mygo_expr_1, ok := no.(Option__Some[ast2.Expr]); ok {
+		__mygo_expr_0 = joinSpans(thenItems, []NodeSpan{NodeSpan{Path: []int{2}, Kind: "if-else", Span: effectiveExprSpan(__mygo_match___mygo_expr_1.F0)}})
+	} else {
+		if _, ok := no.(Option__None[ast2.Expr]); ok {
+			__mygo_expr_0 = thenItems
+		} else {
+		}
+	}
+	return __mygo_expr_0
 }
 func collectCaseSpans(items []ast2.SwitchCase, index int) []NodeSpan {
 	for {
@@ -1339,7 +1465,7 @@ func collectCaseSpans(items []ast2.SwitchCase, index int) []NodeSpan {
 			} else {
 				if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.SwitchCase]); ok {
 					bodySpans := withPath(collectExprSpans(__mygo_match___mygo_expr_2.F0.Body), []int{index})
-					bodySpan := NodeSpan{Path: []int{index, -1}, Kind: "case-body", Span: __mygo_match___mygo_expr_2.F0.BodySpan}
+					bodySpan := NodeSpan{Path: []int{index, -1}, Kind: "case-body", Span: effectiveExprSpan(__mygo_match___mygo_expr_2.F0.Body)}
 					patternSpans := withPath(collectPatternSpans(__mygo_match___mygo_expr_2.F0.Pattern, __mygo_match___mygo_expr_2.F0.PatternSpan, []ps.PositionedToken{}), []int{index, 0})
 					var __mygo_expr_3 ast2.SourcePos
 					if __mygo_match___mygo_expr_2.F0.PatternSpan.Start.Line > 0 {
@@ -1348,7 +1474,7 @@ func collectCaseSpans(items []ast2.SwitchCase, index int) []NodeSpan {
 						__mygo_expr_3 = __mygo_match___mygo_expr_2.F0.Span.Start
 					}
 					caseStart := __mygo_expr_3
-					caseSpan := NodeSpan{Path: []int{index}, Kind: "case", Span: ast2.SourceSpan{Start: caseStart, End: __mygo_match___mygo_expr_2.F0.BodySpan.End}}
+					caseSpan := NodeSpan{Path: []int{index}, Kind: "case", Span: ast2.SourceSpan{Start: caseStart, End: effectiveExprSpan(__mygo_match___mygo_expr_2.F0.Body).End}}
 					__mygo_expr_1 = joinSpans(joinSpans(joinSpans([]NodeSpan{caseSpan}, []NodeSpan{bodySpan}), patternSpans), joinSpans(bodySpans, collectCaseSpans(items, index+1)))
 				} else {
 				}
@@ -1405,7 +1531,8 @@ func collectStmtSpans(items []ast2.Stmt, index int) []NodeSpan {
 					__mygo_expr_0 = joinSpans([]NodeSpan{stmtSpan("var", __mygo_match___mygo_expr_6.F0.Value)}, collectExprSpans(__mygo_match___mygo_expr_6.F0.Value))
 				} else {
 					if __mygo_match___mygo_expr_5, ok := stmt.(ast2.Stmt__WhileStmt); ok {
-						__mygo_expr_0 = joinSpans(joinSpans([]NodeSpan{stmtSpan("while", __mygo_match___mygo_expr_5.F0)}, collectExprSpans(__mygo_match___mygo_expr_5.F0)), collectExprSpans(__mygo_match___mygo_expr_5.F1))
+						span := ast2.SourceSpan{Start: effectiveExprSpan(__mygo_match___mygo_expr_5.F0).Start, End: effectiveExprSpan(__mygo_match___mygo_expr_5.F1).End}
+						__mygo_expr_0 = joinSpans(joinSpans([]NodeSpan{NodeSpan{Path: []int{}, Kind: "while", Span: span}}, withPath(collectExprSpans(__mygo_match___mygo_expr_5.F0), []int{0})), withPath(collectExprSpans(__mygo_match___mygo_expr_5.F1), []int{1}))
 					} else {
 						if __mygo_match___mygo_expr_4, ok := stmt.(ast2.Stmt__AssignStmt); ok {
 							__mygo_expr_0 = joinSpans(joinSpans([]NodeSpan{stmtSpan("assign", __mygo_match___mygo_expr_4.F0)}, collectExprSpans(__mygo_match___mygo_expr_4.F0)), collectExprSpans(__mygo_match___mygo_expr_4.F1))
@@ -1433,15 +1560,26 @@ func collectStmtSpans(items []ast2.Stmt, index int) []NodeSpan {
 	}
 }
 func stmtSpan(kind string, expr ast2.Expr) NodeSpan {
-	return NodeSpan{Path: []int{}, Kind: "stmt:" + kind, Span: ast2.SourceSpan{Start: expr.Span.Start, End: expr.Span.End}}
+	return NodeSpan{Path: []int{}, Kind: "stmt:" + kind, Span: effectiveExprSpan(expr)}
 }
 func collectLetRecSpans(items []ast2.LetRecBind, index int) []NodeSpan {
-	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
-		return []NodeSpan{}
-	} else {
-		item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index), ast2.LetRecBind{Name: "", Type: ast2.TypeExpr__UnitType__Ctor(), Value: ast2.EmptyExpr()})
-		typeNode := NodeSpan{Path: []int{index, 0}, Kind: "type", Span: item.TypeSpan}
-		return joinSpans(joinSpans([]NodeSpan{typeNode}, withPath(collectExprSpans(item.Value), []int{index})), collectLetRecSpans(items, index+1))
+	for {
+		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
+			return []NodeSpan{}
+		} else {
+			__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
+			var __mygo_expr_1 []NodeSpan
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[ast2.LetRecBind]); ok {
+				typeNode := NodeSpan{Path: []int{index, 0}, Kind: "type", Span: __mygo_match___mygo_expr_2.F0.TypeSpan}
+				__mygo_expr_1 = joinSpans(joinSpans([]NodeSpan{typeNode}, withPath(collectExprSpans(__mygo_match___mygo_expr_2.F0.Value), []int{index})), collectLetRecSpans(items, index+1))
+			} else {
+				if _, ok := __mygo_expr_0.(Option__None[ast2.LetRecBind]); ok {
+					__mygo_expr_1 = collectLetRecSpans(items, index+1)
+				} else {
+				}
+			}
+			return __mygo_expr_1
+		}
 	}
 }
 func finishFile(file ast2.File, tokens []ps.PositionedToken) ast2.File {
@@ -1451,16 +1589,22 @@ func finishFile(file ast2.File, tokens []ps.PositionedToken) ast2.File {
 }
 func finishDecl(decl ast2.Decl, tokens []ps.PositionedToken) ast2.Decl {
 	var __mygo_expr_0 ast2.Decl
-	if __mygo_match___mygo_expr_3, ok := decl.(ast2.Decl__FuncDecl); ok {
-		__mygo_expr_0 = ast2.Decl__FuncDecl__Ctor(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1, __mygo_match___mygo_expr_3.F2, __mygo_match___mygo_expr_3.F3, finishExpr(__mygo_match___mygo_expr_3.F4, tokens), __mygo_match___mygo_expr_3.F5)
+	if __mygo_match___mygo_expr_4, ok := decl.(ast2.Decl__FuncDecl); ok {
+		__mygo_expr_0 = ast2.Decl__FuncDecl__Ctor(__mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_4.F1, __mygo_match___mygo_expr_4.F2, __mygo_match___mygo_expr_4.F3, finishExpr(__mygo_match___mygo_expr_4.F4, tokens), __mygo_match___mygo_expr_4.F5)
 	} else {
-		if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__LetDecl); ok {
-			__mygo_expr_0 = ast2.Decl__LetDecl__Ctor(finishBind(__mygo_match___mygo_expr_2.F0, tokens))
+		if __mygo_match___mygo_expr_3, ok := decl.(ast2.Decl__ImplDecl); ok {
+			__mygo_expr_0 = ast2.Decl__ImplDecl__Ctor(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1, __mygo_match___mygo_expr_3.F2, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_3.F3, func(method ast2.ImplMethod) ast2.ImplMethod {
+				return ast2.ImplMethod{Pos: method.Pos, Sig: method.Sig, Body: finishExpr(method.Body, tokens)}
+			}))
 		} else {
-			if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__VarDecl); ok {
-				__mygo_expr_0 = ast2.Decl__VarDecl__Ctor(finishBind(__mygo_match___mygo_expr_1.F0, tokens))
+			if __mygo_match___mygo_expr_2, ok := decl.(ast2.Decl__LetDecl); ok {
+				__mygo_expr_0 = ast2.Decl__LetDecl__Ctor(finishBind(__mygo_match___mygo_expr_2.F0, tokens))
 			} else {
-				__mygo_expr_0 = decl
+				if __mygo_match___mygo_expr_1, ok := decl.(ast2.Decl__VarDecl); ok {
+					__mygo_expr_0 = ast2.Decl__VarDecl__Ctor(finishBind(__mygo_match___mygo_expr_1.F0, tokens))
+				} else {
+					__mygo_expr_0 = decl
+				}
 			}
 		}
 	}
@@ -1468,12 +1612,12 @@ func finishDecl(decl ast2.Decl, tokens []ps.PositionedToken) ast2.Decl {
 }
 func finishBind(bind ast2.Bind, tokens []ps.PositionedToken) ast2.Bind {
 	value := finishExpr(bind.Value, tokens)
-	return ast2.Bind{Name: bind.Name, Type: bind.Type, Value: value, Span: value.Span}
+	return ast2.Bind{Name: bind.Name, Type: bind.Type, TypeSpan: bind.TypeSpan, Value: value, Span: value.Span}
 }
 func finishExpr(expr ast2.Expr, tokens []ps.PositionedToken) ast2.Expr {
-	startPos := finishExprStart(expr, tokens)
-	endPos := finishExprEnd(ast2.Expr{ID: expr.ID, Pos: expr.Pos, Span: ast2.SourceSpan{Start: startPos, End: expr.Span.End}, Kind: expr.Kind, Type: expr.Type}, tokens)
 	kind := finishKind(expr.Kind, tokens)
+	startPos := finishExprStart(expr, tokens)
+	endPos := finishExprEnd(ast2.Expr{ID: expr.ID, Pos: expr.Pos, Span: ast2.SourceSpan{Start: startPos, End: expr.Span.End}, Kind: kind, Type: expr.Type}, tokens)
 	return ast2.Expr{ID: expr.ID, Pos: expr.Pos, Span: ast2.SourceSpan{Start: startPos, End: endPos}, Kind: kind, Type: expr.Type}
 }
 func finishExprStart(expr ast2.Expr, tokens []ps.PositionedToken) ast2.SourcePos {
@@ -1491,7 +1635,19 @@ func finishExprStart(expr ast2.Expr, tokens []ps.PositionedToken) ast2.SourcePos
 				if _, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
 					__mygo_expr_1 = delimiterStart(expr.Span.Start, tokens, "(", 0)
 				} else {
-					__mygo_expr_1 = expr.Span.Start
+					if _, ok := __mygo_expr_0.(ast2.ExprKind__StructLitExpr); ok {
+						__mygo_expr_1 = delimiterStart(expr.Span.Start, tokens, "{", 0)
+					} else {
+						if _, ok := __mygo_expr_0.(ast2.ExprKind__GenericStructLitExpr); ok {
+							__mygo_expr_1 = delimiterStart(expr.Span.Start, tokens, "{", 0)
+						} else {
+							if _, ok := __mygo_expr_0.(ast2.ExprKind__InlineGoExpr); ok {
+								__mygo_expr_1 = expr.Pos
+							} else {
+								__mygo_expr_1 = expr.Span.Start
+							}
+						}
+					}
 				}
 			}
 		}
@@ -1511,24 +1667,119 @@ func delimiterStart(start ast2.SourcePos, tokens []ps.PositionedToken, raw strin
 func finishExprEnd(expr ast2.Expr, tokens []ps.PositionedToken) ast2.SourcePos {
 	__mygo_expr_0 := expr.Kind
 	var __mygo_expr_1 ast2.SourcePos
-	if _, ok := __mygo_expr_0.(ast2.ExprKind__SliceLitExpr); ok {
-		__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "[", "]", 0)
+	if __mygo_match___mygo_expr_4, ok := __mygo_expr_0.(ast2.ExprKind__BlockExpr); ok {
+		__mygo_expr_1 = blockExprEnd(__mygo_match___mygo_expr_4.F0, expr.Span.End, 0)
 	} else {
-		if _, ok := __mygo_expr_0.(ast2.ExprKind__SetLitExpr); ok {
-			__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "{", "}", 0)
+		if _, ok := __mygo_expr_0.(ast2.ExprKind__SliceLitExpr); ok {
+			__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "[", "]", 0)
 		} else {
-			if _, ok := __mygo_expr_0.(ast2.ExprKind__TupleExpr); ok {
-				__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "(", ")", 0)
+			if _, ok := __mygo_expr_0.(ast2.ExprKind__SetLitExpr); ok {
+				__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "{", "}", 0)
 			} else {
-				if _, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
+				if _, ok := __mygo_expr_0.(ast2.ExprKind__TupleExpr); ok {
 					__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "(", ")", 0)
 				} else {
-					__mygo_expr_1 = tokenEnd(expr.Span.Start, tokens)
+					if _, ok := __mygo_expr_0.(ast2.ExprKind__CallExpr); ok {
+						__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "(", ")", 0)
+					} else {
+						if _, ok := __mygo_expr_0.(ast2.ExprKind__StructLitExpr); ok {
+							__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "{", "}", 0)
+						} else {
+							if _, ok := __mygo_expr_0.(ast2.ExprKind__GenericStructLitExpr); ok {
+								__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "{", "}", 0)
+							} else {
+								if _, ok := __mygo_expr_0.(ast2.ExprKind__InlineGoExpr); ok {
+									__mygo_expr_1 = closingDelimiterEnd(expr.Span.Start, tokens, "{", "}", 0)
+								} else {
+									if __mygo_match___mygo_expr_3, ok := __mygo_expr_0.(ast2.ExprKind__SwitchExpr); ok {
+										__mygo_expr_1 = switchExprSpan(__mygo_match___mygo_expr_3.F0, __mygo_match___mygo_expr_3.F1).End
+									} else {
+										if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ast2.ExprKind__IfExpr); ok {
+											__mygo_expr_1 = branchExprEnd(__mygo_match___mygo_expr_2.F1, __mygo_match___mygo_expr_2.F2, expr.Span.End, tokens)
+										} else {
+											__mygo_expr_1 = tokenEnd(expr.Span.Start, tokens)
+										}
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		}
 	}
 	return __mygo_expr_1
+}
+func branchExprEnd(yes ast2.Expr, no ast2.Expr, fallback ast2.SourcePos, tokens []ps.PositionedToken) ast2.SourcePos {
+	yesEnd := effectiveExprSpan(yes).End
+	noEnd := effectiveExprSpan(no).End
+	if noEnd.Line > 0 && (noEnd.Line > yesEnd.Line || noEnd.Line == yesEnd.Line && noEnd.Column > yesEnd.Column) {
+		return noEnd
+	} else {
+		if yesEnd.Line > 0 {
+			return yesEnd
+		} else {
+			if fallback.Line > 0 {
+				return fallback
+			} else {
+				return tokenEnd(exprStartForEnd(yes, tokens), tokens)
+			}
+		}
+	}
+}
+func exprStartForEnd(expr ast2.Expr, tokens []ps.PositionedToken) ast2.SourcePos {
+	if expr.Span.Start.Line > 0 {
+		return expr.Span.Start
+	} else {
+		return expr.Pos
+	}
+}
+func blockExprEnd(stmts []ast2.Stmt, fallback ast2.SourcePos, index int) ast2.SourcePos {
+	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(stmts) {
+		return fallback
+	} else {
+		item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(stmts, index), ast2.Stmt__ReturnStmt__Ctor())
+		next := blockExprEnd(stmts, fallback, index+1)
+		span := stmtFinishedSpan(item)
+		if next.Line > 0 {
+			return next
+		} else {
+			return span.End
+		}
+	}
+}
+func stmtFinishedSpan(stmt ast2.Stmt) ast2.SourceSpan {
+	var __mygo_expr_0 ast2.SourceSpan
+	if __mygo_match___mygo_expr_7, ok := stmt.(ast2.Stmt__ExprStmt); ok {
+		__mygo_expr_0 = __mygo_match___mygo_expr_7.F0.Span
+	} else {
+		if __mygo_match___mygo_expr_6, ok := stmt.(ast2.Stmt__LetStmt); ok {
+			__mygo_expr_0 = __mygo_match___mygo_expr_6.F0.Span
+		} else {
+			if __mygo_match___mygo_expr_5, ok := stmt.(ast2.Stmt__VarStmt); ok {
+				__mygo_expr_0 = __mygo_match___mygo_expr_5.F0.Span
+			} else {
+				if __mygo_match___mygo_expr_4, ok := stmt.(ast2.Stmt__WhileStmt); ok {
+					__mygo_expr_0 = ast2.SourceSpan{Start: effectiveExprSpan(__mygo_match___mygo_expr_4.F0).Start, End: effectiveExprSpan(__mygo_match___mygo_expr_4.F1).End}
+				} else {
+					if __mygo_match___mygo_expr_3, ok := stmt.(ast2.Stmt__AssignStmt); ok {
+						__mygo_expr_0 = __mygo_match___mygo_expr_3.F1.Span
+					} else {
+						if __mygo_match___mygo_expr_2, ok := stmt.(ast2.Stmt__ReturnWithStmt); ok {
+							__mygo_expr_0 = __mygo_match___mygo_expr_2.F0.Span
+						} else {
+							if __mygo_match___mygo_expr_1, ok := stmt.(ast2.Stmt__TupleLetStmt); ok {
+								__mygo_expr_0 = __mygo_match___mygo_expr_1.F1.Span
+							} else {
+								__mygo_expr_0 = emptySpan()
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return __mygo_expr_0
 }
 func closingDelimiterEnd(start ast2.SourcePos, tokens []ps.PositionedToken, open string, close string, index int) ast2.SourcePos {
 	opener := delimiterTokenAt(start, tokens, open, index)
@@ -1586,7 +1837,7 @@ func finishKind(kind ast2.ExprKind, tokens []ps.PositionedToken) ast2.ExprKind {
 									} else {
 										if __mygo_match___mygo_expr_6, ok := kind.(ast2.ExprKind__SwitchExpr); ok {
 											__mygo_expr_0 = ast2.ExprKind__SwitchExpr__Ctor(finishExpr(__mygo_match___mygo_expr_6.F0, tokens), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(__mygo_match___mygo_expr_6.F1, func(item_5 ast2.SwitchCase) ast2.SwitchCase {
-												return ast2.SwitchCase{Pattern: item_5.Pattern, PatternSpan: item_5.PatternSpan, Body: finishExpr(item_5.Body, tokens), BodySpan: item_5.BodySpan, Span: item_5.Span}
+												return finishSwitchCase(item_5, tokens)
 											}), __mygo_match___mygo_expr_6.F2)
 										} else {
 											if __mygo_match___mygo_expr_5, ok := kind.(ast2.ExprKind__StructLitExpr); ok {
@@ -1640,6 +1891,18 @@ func finishKind(kind ast2.ExprKind, tokens []ps.PositionedToken) ast2.ExprKind {
 		}
 	}
 	return __mygo_expr_0
+}
+func finishSwitchCase(item ast2.SwitchCase, tokens []ps.PositionedToken) ast2.SwitchCase {
+	body := finishExpr(item.Body, tokens)
+	var __mygo_expr_0 ast2.SourcePos
+	if item.PatternSpan.Start.Line > 0 {
+		__mygo_expr_0 = item.PatternSpan.Start
+	} else {
+		__mygo_expr_0 = item.Span.Start
+	}
+	start := __mygo_expr_0
+	span := ast2.SourceSpan{Start: start, End: body.Span.End}
+	return ast2.SwitchCase{Pattern: item.Pattern, PatternSpan: item.PatternSpan, Body: body, BodySpan: body.Span, Span: span}
 }
 func finishStmt(stmt ast2.Stmt, tokens []ps.PositionedToken) ast2.Stmt {
 	var __mygo_expr_0 ast2.Stmt
@@ -1766,36 +2029,44 @@ func emitToken(state ScanState, start ps.Position, raw string) LosslessScan {
 	item := ps.PositionedToken{Kind: kind, Raw: raw, Span: ps.SourceSpan{Start: start, End: ps.Position{Offset: state.Offset, Line: state.Line, Column: state.Column}}}
 	return scanStep(ScanState{Input: state.Input, Index: state.Index, Offset: state.Offset, Line: state.Line, Column: state.Column, Tokens: MygoIN5SliceM6Append(state.Tokens, item), Trivia: state.Trivia})
 }
-func __mygo_mt_parser2_branchHeaderAnchor(__mygo_mt_p0 ast2.SourceSpan, __mygo_mt_p1 []ps.PositionedToken, __mygo_mt_p2 int, __mygo_mt_p3 ast2.SourceSpan, __mygo_state int) ast2.SourceSpan {
+func __mygo_mt_parser2_branchHeaderAnchorFrom(__mygo_mt_p0 ast2.SourceSpan, __mygo_mt_p1 []ps.PositionedToken, __mygo_mt_p2 int, __mygo_mt_p3 ast2.SourceSpan, __mygo_state int) ast2.SourceSpan {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
 				return __mygo_mt_p3
 			} else {
-				token := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), ps.PositionedToken{Kind: "", Raw: "", Span: ps.SourceSpan{Start: ps.Position{Offset: 0, Line: 0, Column: 0}, End: ps.Position{Offset: 0, Line: 0, Column: 0}}})
-				beforeSpan := token.Span.Start.Line < __mygo_mt_p0.Start.Line || token.Span.Start.Line == __mygo_mt_p0.Start.Line && token.Span.Start.Column <= __mygo_mt_p0.Start.Column
-				arrow := token.Raw == "=" && arrowTail(__mygo_mt_p1, __mygo_mt_p2+1)
-				var __mygo_expr_1 ast2.SourceSpan
-				if beforeSpan && token.Raw == "then" {
-					__mygo_expr_1 = ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: token.Span.Start.Line, Column: token.Span.Start.Column}, End: ast2.SourcePos{SourceName: "", Line: token.Span.End.Line, Column: token.Span.End.Column}}
-				} else {
-					var __mygo_expr_0 ast2.SourceSpan
-					if beforeSpan && arrow {
-						__mygo_expr_0 = arrowAnchor(token, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2+1), token))
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+					beforeSpan := __mygo_match___mygo_expr_1.F0.Span.Start.Line < __mygo_mt_p0.Start.Line || __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p0.Start.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column <= __mygo_mt_p0.Start.Column
+					arrow := __mygo_match___mygo_expr_1.F0.Raw == "=" && arrowTail(__mygo_mt_p1, __mygo_mt_p2+1)
+					var __mygo_expr_3 ast2.SourceSpan
+					if beforeSpan && __mygo_match___mygo_expr_1.F0.Raw == "then" {
+						__mygo_expr_3 = ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: __mygo_match___mygo_expr_1.F0.Span.Start.Line, Column: __mygo_match___mygo_expr_1.F0.Span.Start.Column}, End: ast2.SourcePos{SourceName: "", Line: __mygo_match___mygo_expr_1.F0.Span.End.Line, Column: __mygo_match___mygo_expr_1.F0.Span.End.Column}}
 					} else {
-						__mygo_expr_0 = __mygo_mt_p3
+						var __mygo_expr_2 ast2.SourceSpan
+						if beforeSpan && arrow {
+							__mygo_expr_2 = arrowAnchor(__mygo_match___mygo_expr_1.F0, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2+1), __mygo_match___mygo_expr_1.F0))
+						} else {
+							__mygo_expr_2 = __mygo_mt_p3
+						}
+						__mygo_expr_3 = __mygo_expr_2
 					}
-					__mygo_expr_1 = __mygo_expr_0
+					next := __mygo_expr_3
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__tail_3 := next
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+						return __mygo_mt_p3
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
-				next := __mygo_expr_1
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2 + 1
-				__tail_3 := next
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_state = 0
-				continue
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -1809,14 +2080,180 @@ func __mygo_mt_parser2_caseBodyAnchor(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 Node
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return __mygo_mt_p1.Span
 			} else {
-				candidate := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), __mygo_mt_p1)
-				if candidate.Kind == "case-body" && matchesCaseBodyPath(candidate.Path, __mygo_mt_p1.Path, 0) {
-					return candidate.Span
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
+					if __mygo_match___mygo_expr_1.F0.Kind == "case-body" && matchesCaseBodyPath(__mygo_match___mygo_expr_1.F0.Path, __mygo_mt_p1.Path, 0) {
+						return __mygo_match___mygo_expr_1.F0.Span
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
 				} else {
+					if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
+						return __mygo_mt_p1.Span
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_collectLayoutEvents(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 []ps.PositionedToken, __mygo_mt_p2 int, __mygo_mt_p3 []LayoutEvent, __mygo_state int) []LayoutEvent {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p3
+			} else {
+				item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), NodeSpan{Path: []int{}, Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}})
+				if item.Kind == "" || item.Kind == "symbol" || item.Kind == "literal" || item.Kind == "block-body" {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__tail_3 := __mygo_mt_p3
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				} else {
+					var __mygo_expr_0 ast2.SourceSpan
+					if item.Kind == "case-body" {
+						__mygo_expr_0 = MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2-1), func(header NodeSpan) ast2.SourceSpan {
+							return header.Span
+						}), item.Span)
+					} else {
+						__mygo_expr_0 = layoutEventAnchor(__mygo_mt_p0, item, __mygo_mt_p1)
+					}
+					anchor := __mygo_expr_0
+					var __mygo_expr_2 ast2.SourceSpan
+					if hasUsableSpan(anchor) && verifiedLayoutAnchor(item.Kind, anchor, __mygo_mt_p1) {
+						__mygo_expr_2 = anchor
+					} else {
+						var __mygo_expr_1 ast2.SourceSpan
+						if hasUsableSpan(item.Span) {
+							__mygo_expr_1 = item.Span
+						} else {
+							__mygo_expr_1 = anchor
+						}
+						__mygo_expr_2 = __mygo_expr_1
+					}
+					anchor_1 := __mygo_expr_2
+					var __mygo_expr_3 ast2.SourceSpan
+					if item.Kind == "case" {
+						__mygo_expr_3 = caseBodyAnchor(__mygo_mt_p0, item, 0)
+					} else {
+						__mygo_expr_3 = item.Span
+					}
+					bodyAnchor := __mygo_expr_3
+					var __mygo_expr_4 ast2.SourceSpan
+					if canOwnBlockBody(item.Kind) {
+						__mygo_expr_4 = nestedBodyAnchor(__mygo_mt_p0, item, 0)
+					} else {
+						__mygo_expr_4 = item.Span
+					}
+					blockBodyAnchor := __mygo_expr_4
+					var __mygo_expr_5 string
+					if bodyAnchor.Start.Line > anchor_1.Start.Line || item.Span.End.Line > anchor_1.Start.Line {
+						__mygo_expr_5 = "block"
+					} else {
+						__mygo_expr_5 = "inline"
+					}
+					bodyLayout := __mygo_expr_5
+					headerForm := layoutHeaderForm(item.Kind, anchor_1)
+					var __mygo_expr_6 string
+					if item.Kind == "if-else" {
+						__mygo_expr_6 = siblingThenForm(__mygo_mt_p0, item, __mygo_mt_p1, "")
+					} else {
+						__mygo_expr_6 = headerForm
+					}
+					branchForm := __mygo_expr_6
+					separatorAnchor := layoutSeparatorAnchor(item.Kind, bodyAnchor, __mygo_mt_p1, 0)
+					var __mygo_expr_10 ast2.SourceSpan
+					if MygoIN6StringM9HasPrefix(item.Kind, "decl:") || item.Kind == "impl-method" {
+						__mygo_expr_10 = declarationEndAnchor(__mygo_mt_p1, item.Span)
+					} else {
+						var __mygo_expr_9 ast2.SourceSpan
+						if item.Kind == "inline-go" {
+							__mygo_expr_9 = inlineGoExitAnchor(__mygo_mt_p1, item.Span)
+						} else {
+							var __mygo_expr_8 ast2.SourceSpan
+							if item.Kind == "if-then" || item.Kind == "if-else" {
+								__mygo_expr_8 = branchEndAnchor(__mygo_mt_p0, item, __mygo_mt_p1, item.Span)
+							} else {
+								var __mygo_expr_7 ast2.SourceSpan
+								if bodyLayout == "block" || item.Kind == "if" {
+									__mygo_expr_7 = matchingEndAnchor(__mygo_mt_p1, anchor_1, 0, 0, false, item.Span)
+								} else {
+									__mygo_expr_7 = item.Span
+								}
+								__mygo_expr_8 = __mygo_expr_7
+							}
+							__mygo_expr_9 = __mygo_expr_8
+						}
+						__mygo_expr_10 = __mygo_expr_9
+					}
+					exitAnchor := __mygo_expr_10
+					sameLineEnd := item.Span.Start.Line == item.Span.End.Line && hasEndTokenOnLine(__mygo_mt_p1, item.Span.Start.Line) && item.Kind != "case"
+					blockLike := bodyLayout == "block" || sameLineEnd && hasUsableSpan(blockBodyAnchor) || item.Kind == "if-else" && sameLineEnd || item.Kind == "if-then" && sameLineEnd && layoutHeaderForm(item.Kind, anchor_1) == "then"
+					affectsIndent := structuralBlockKind(item.Kind) && blockLike
+					wideLine := item.Span.Start.Line == item.Span.End.Line && lineIsWide(__mygo_mt_p1, item.Span.End.Line)
+					var __mygo_expr_13 bool
+					if bodyAnchor.Start.Line <= 0 {
+						__mygo_expr_13 = false
+					} else {
+						var __mygo_expr_12 bool
+						if item.Kind == "case" {
+							__mygo_expr_12 = bodyLayout == "inline" && wideLine
+						} else {
+							var __mygo_expr_11 bool
+							if item.Kind == "if-then" || item.Kind == "if-else" {
+								__mygo_expr_11 = bodyLayout == "inline" && (wideLine || branchForm == "then")
+							} else {
+								__mygo_expr_11 = affectsIndent && bodyLayout == "inline"
+							}
+							__mygo_expr_12 = __mygo_expr_11
+						}
+						__mygo_expr_13 = __mygo_expr_12
+					}
+					expandsAfter := __mygo_expr_13
+					var __mygo_expr_15 int
+					if item.Kind == "if-then" && item.Span.Start.Line > 1 {
+						__mygo_expr_15 = item.Span.Start.Line - 1
+					} else {
+						var __mygo_expr_14 int
+						if anchor_1.Start.Line > 0 {
+							__mygo_expr_14 = anchor_1.Start.Line
+						} else {
+							__mygo_expr_14 = item.Span.Start.Line
+						}
+						__mygo_expr_15 = __mygo_expr_14
+					}
+					headerLine := __mygo_expr_15
+					var __mygo_expr_16 int
+					if item.Kind == "case" {
+						__mygo_expr_16 = MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2+1), func(body NodeSpan) int {
+							return body.Span.Start.Line
+						}), item.Span.Start.Line)
+					} else {
+						__mygo_expr_16 = item.Span.Start.Line
+					}
+					bodyLine := __mygo_expr_16
+					normal := []LayoutEvent{LayoutEvent{Kind: "enter:" + item.Kind, Path: item.Path, Depth: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Path), Span: item.Span, Anchor: anchor_1, BodyAnchor: bodyAnchor, BlockBodyAnchor: blockBodyAnchor, BodyLayout: bodyLayout, AffectsIndent: affectsIndent, ExpandsAfter: expandsAfter, HeaderForm: headerForm, SeparatorAnchor: separatorAnchor, ExitAnchor: exitAnchor, HeaderLine: headerLine, BodyLine: bodyLine, ExitLine: exitAnchor.Start.Line}, LayoutEvent{Kind: "exit:" + item.Kind, Path: item.Path, Depth: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Path), Span: item.Span, Anchor: anchor_1, BodyAnchor: bodyAnchor, BlockBodyAnchor: blockBodyAnchor, BodyLayout: bodyLayout, AffectsIndent: affectsIndent, ExpandsAfter: expandsAfter, HeaderForm: headerForm, SeparatorAnchor: separatorAnchor, ExitAnchor: exitAnchor, HeaderLine: headerLine, BodyLine: bodyLine, ExitLine: exitAnchor.Start.Line}}
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__tail_3 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(elsifTransitions(__mygo_mt_p0, item, __mygo_mt_p1, 0), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(normal, __mygo_mt_p3, func(a []LayoutEvent, e LayoutEvent) []LayoutEvent {
+						return MygoIN5SliceM6Append(a, e)
+					}), func(a_1 []LayoutEvent, e_1 LayoutEvent) []LayoutEvent {
+						return MygoIN5SliceM6Append(a_1, e_1)
+					})
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
 					__mygo_state = 0
 					continue
 				}
@@ -1861,6 +2298,72 @@ func __mygo_mt_parser2_delimiterTokenAt(__mygo_mt_p0 ast2.SourcePos, __mygo_mt_p
 				afterStart := token.Span.Start.Line > __mygo_mt_p0.Line || token.Span.Start.Line == __mygo_mt_p0.Line && token.Span.Start.Column >= __mygo_mt_p0.Column
 				if token.Raw == __mygo_mt_p2 && afterStart {
 					return __mygo_mt_p3
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_elsifHeaderAnchorFrom(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) Option[ast2.SourceSpan] {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return None[ast2.SourceSpan]()
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+					if __mygo_match___mygo_expr_1.F0.Raw == "elsif" && __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1 {
+						return Some[ast2.SourceSpan](tokenRangeSpan(__mygo_mt_p0, __mygo_mt_p2, __mygo_mt_p2))
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+						return None[ast2.SourceSpan]()
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_elsifTransitions(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 NodeSpan, __mygo_mt_p2 []ps.PositionedToken, __mygo_mt_p3 int, __mygo_state int) []LayoutEvent {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1.Kind != "if-then" || __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return []LayoutEvent{}
+			} else {
+				candidate := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3), NodeSpan{Path: []int{}, Kind: "", Span: emptySpan()})
+				if candidate.Kind == "if" && isSiblingBranchPath(candidate.Path, __mygo_mt_p1.Path, 0) {
+					__mygo_expr_0 := elsifHeaderAnchor(__mygo_mt_p2, candidate.Span.Start.Line)
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.SourceSpan]); ok {
+						return []LayoutEvent{LayoutEvent{Kind: "transition:if-elsif", Path: __mygo_mt_p1.Path, Depth: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1.Path), Span: candidate.Span, Anchor: __mygo_match___mygo_expr_1.F0, BodyAnchor: __mygo_match___mygo_expr_1.F0, BlockBodyAnchor: __mygo_match___mygo_expr_1.F0, BodyLayout: "block", AffectsIndent: false, ExpandsAfter: false, HeaderForm: "", SeparatorAnchor: emptySpan(), ExitAnchor: __mygo_match___mygo_expr_1.F0, HeaderLine: __mygo_match___mygo_expr_1.F0.Start.Line, BodyLine: __mygo_match___mygo_expr_1.F0.Start.Line, ExitLine: __mygo_match___mygo_expr_1.F0.Start.Line}}
+					} else {
+						if _, ok := __mygo_expr_0.(Option__None[ast2.SourceSpan]); ok {
+							return []LayoutEvent{}
+						} else {
+							panic("non-exhaustive switch")
+						}
+					}
 				} else {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
@@ -1932,16 +2435,24 @@ func __mygo_mt_parser2_firstDirectChildSpan(__mygo_mt_p0 []NodeSpan, __mygo_mt_p
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}
 			} else {
-				candidate := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), NodeSpan{Path: []int{}, Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}})
-				if isDirectChildPath(candidate.Path, __mygo_mt_p1, 0) && hasUsableSpan(candidate.Span) {
-					return candidate.Span
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
+					if isDirectChildPath(__mygo_match___mygo_expr_1.F0.Path, __mygo_mt_p1, 0) && hasUsableSpan(__mygo_match___mygo_expr_1.F0.Span) {
+						return __mygo_match___mygo_expr_1.F0.Span
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
 				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
+					if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
+						return ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -1996,24 +2507,36 @@ func __mygo_mt_parser2_firstRawToken(__mygo_mt_p0 []ps.PositionedToken, __mygo_m
 		}
 	}
 }
-func __mygo_mt_parser2_firstTokenInSpan(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt_p1 ast2.SourceSpan, __mygo_mt_p2 string, __mygo_mt_p3 int, __mygo_state int) int {
+func __mygo_mt_parser2_firstTokenInSpanFrom(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt_p1 ast2.SourceSpan, __mygo_mt_p2 string, __mygo_mt_p3 int, __mygo_state int) int {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return -1
 			} else {
-				token := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3), ps.PositionedToken{Kind: "", Raw: "", Span: ps.SourceSpan{Start: ps.Position{Offset: 0, Line: 0, Column: 0}, End: ps.Position{Offset: 0, Line: 0, Column: 0}}})
-				if tokenStartsInSpan(token, __mygo_mt_p1) && token.Raw == __mygo_mt_p2 {
-					return __mygo_mt_p3
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+					if !tokenBeforeSpanStart(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1) && (__mygo_match___mygo_expr_1.F0.Span.Start.Line > __mygo_mt_p1.End.Line || __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1.End.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column >= __mygo_mt_p1.End.Column) {
+						return -1
+					} else {
+						if tokenStartsInSpan(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1) && __mygo_match___mygo_expr_1.F0.Raw == __mygo_mt_p2 {
+							return __mygo_mt_p3
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2
+							__tail_3 := __mygo_mt_p3 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+							__mygo_state = 0
+							continue
+						}
+					}
 				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2
-					__tail_3 := __mygo_mt_p3 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-					__mygo_state = 0
-					continue
+					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+						return -1
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -2021,23 +2544,31 @@ func __mygo_mt_parser2_firstTokenInSpan(__mygo_mt_p0 []ps.PositionedToken, __myg
 		}
 	}
 }
-func __mygo_mt_parser2_hasEndTokenOnLine(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) bool {
+func __mygo_mt_parser2_hasEndTokenOnLineFrom(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) bool {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return false
 			} else {
-				token := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), emptyPositionedToken())
-				if token.Raw == "end" && token.Span.Start.Line == __mygo_mt_p1 {
-					return true
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+					if __mygo_match___mygo_expr_1.F0.Raw == "end" && __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1 {
+						return true
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
 				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
+					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+						return false
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -2079,16 +2610,24 @@ func __mygo_mt_parser2_isEndTokenAnchor(__mygo_mt_p0 []ps.PositionedToken, __myg
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return false
 			} else {
-				token := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), emptyPositionedToken())
-				if token.Raw == "end" && token.Span.Start.Line == __mygo_mt_p1.Start.Line && token.Span.Start.Column == __mygo_mt_p1.Start.Column {
-					return true
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+					if __mygo_match___mygo_expr_1.F0.Raw == "end" && __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1.Start.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column == __mygo_mt_p1.Start.Column {
+						return true
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
 				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
+					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+						return false
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -2132,24 +2671,6 @@ func __mygo_mt_parser2_joinDelimited(__mygo_mt_p0 []DelimitedSpan, __mygo_mt_p1 
 			} else {
 				__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), DelimitedSpan{Kind: "", Span: emptySpan(), Items: []ast2.SourceSpan{}, Separators: []ast2.SourceSpan{}}))
 				__tail_1 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(__mygo_mt_p1, 1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1)), []DelimitedSpan{})
-				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
-				__mygo_state = 0
-				continue
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_parser2_joinEvents(__mygo_mt_p0 []LayoutEvent, __mygo_mt_p1 []LayoutEvent, __mygo_state int) []LayoutEvent {
-	for {
-		switch __mygo_state {
-		case 0:
-			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) == 0 {
-				return __mygo_mt_p0
-			} else {
-				__tail_0 := MygoIN5SliceM6Append(__mygo_mt_p0, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, 0), LayoutEvent{Kind: "", Path: []int{}, Depth: 0, Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Anchor: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, BodyAnchor: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, BlockBodyAnchor: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, BodyLayout: "inline", AffectsIndent: false, ExpandsAfter: false, HeaderForm: "", SeparatorAnchor: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, ExitAnchor: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, HeaderLine: 0, BodyLine: 0, ExitLine: 0}))
-				__tail_1 := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(__mygo_mt_p1, 1, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1)), []LayoutEvent{})
 				__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
 				__mygo_state = 0
 				continue
@@ -2231,58 +2752,194 @@ func __mygo_mt_parser2_joinSpans(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 []NodeSpa
 		}
 	}
 }
-func __mygo_mt_parser2_layoutAnchorForSpan(__mygo_mt_p0 string, __mygo_mt_p1 ast2.SourceSpan, __mygo_mt_p2 []ps.PositionedToken, __mygo_mt_p3 int, __mygo_mt_p4 ast2.SourceSpan, __mygo_state int) ast2.SourceSpan {
-	for {
-		switch __mygo_state {
-		case 0:
-			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
-				return __mygo_mt_p4
-			} else {
-				token := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3), ps.PositionedToken{Kind: "", Raw: "", Span: ps.SourceSpan{Start: ps.Position{Offset: 0, Line: 0, Column: 0}, End: ps.Position{Offset: 0, Line: 0, Column: 0}}})
-				beforeItem := token.Span.Start.Line < __mygo_mt_p1.Start.Line || token.Span.Start.Line == __mygo_mt_p1.Start.Line && token.Span.Start.Column <= __mygo_mt_p1.Start.Column
-				var __mygo_expr_0 ast2.SourceSpan
-				if isAnchorToken(__mygo_mt_p0, token.Raw) && beforeItem {
-					__mygo_expr_0 = ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: token.Span.Start.Line, Column: token.Span.Start.Column}, End: ast2.SourcePos{SourceName: "", Line: token.Span.End.Line, Column: token.Span.End.Column}}
-				} else {
-					__mygo_expr_0 = __mygo_mt_p4
-				}
-				next := __mygo_expr_0
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2
-				__tail_3 := __mygo_mt_p3 + 1
-				__tail_4 := next
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
-				__mygo_state = 0
-				continue
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_parser2_lineEndColumn(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_state int) int {
+func __mygo_mt_parser2_lastTokenInSpanFrom(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt_p1 ast2.SourceSpan, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_state int) int {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return __mygo_mt_p3
 			} else {
-				token := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), emptyPositionedToken())
-				var __mygo_expr_0 int
-				if token.Span.End.Line == __mygo_mt_p1 && token.Span.End.Column > __mygo_mt_p3 {
-					__mygo_expr_0 = token.Span.End.Column
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+					if !tokenBeforeSpanStart(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1) && (__mygo_match___mygo_expr_1.F0.Span.Start.Line > __mygo_mt_p1.End.Line || __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1.End.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column >= __mygo_mt_p1.End.Column) {
+						return __mygo_mt_p3
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						var __mygo_expr_2 int
+						if tokenStartsInSpan(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1) {
+							__mygo_expr_2 = __mygo_mt_p2
+						} else {
+							__mygo_expr_2 = __mygo_mt_p3
+						}
+						__tail_3 := __mygo_expr_2
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					}
 				} else {
-					__mygo_expr_0 = __mygo_mt_p3
+					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+						return __mygo_mt_p3
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
-				endColumn := __mygo_expr_0
-				__tail_0 := __mygo_mt_p0
-				__tail_1 := __mygo_mt_p1
-				__tail_2 := __mygo_mt_p2 + 1
-				__tail_3 := endColumn
-				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
-				__mygo_state = 0
-				continue
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_layoutAnchorForSpanFrom(__mygo_mt_p0 string, __mygo_mt_p1 ast2.SourceSpan, __mygo_mt_p2 []ps.PositionedToken, __mygo_mt_p3 int, __mygo_mt_p4 ast2.SourceSpan, __mygo_state int) ast2.SourceSpan {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
+				return __mygo_mt_p4
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+					beforeItem := __mygo_match___mygo_expr_1.F0.Span.Start.Line < __mygo_mt_p1.Start.Line || __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1.Start.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column <= __mygo_mt_p1.Start.Column
+					var __mygo_expr_2 ast2.SourceSpan
+					if isAnchorToken(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0.Raw) && beforeItem {
+						__mygo_expr_2 = ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: __mygo_match___mygo_expr_1.F0.Span.Start.Line, Column: __mygo_match___mygo_expr_1.F0.Span.Start.Column}, End: ast2.SourcePos{SourceName: "", Line: __mygo_match___mygo_expr_1.F0.Span.End.Line, Column: __mygo_match___mygo_expr_1.F0.Span.End.Column}}
+					} else {
+						__mygo_expr_2 = __mygo_mt_p4
+					}
+					next := __mygo_expr_2
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3 + 1
+					__tail_4 := next
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+						return __mygo_mt_p4
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_lineEndColumnFrom(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_state int) int {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p3
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+					var __mygo_expr_2 int
+					if __mygo_match___mygo_expr_1.F0.Span.End.Line == __mygo_mt_p1 && __mygo_match___mygo_expr_1.F0.Span.End.Column > __mygo_mt_p3 {
+						__mygo_expr_2 = __mygo_match___mygo_expr_1.F0.Span.End.Column
+					} else {
+						__mygo_expr_2 = __mygo_mt_p3
+					}
+					endColumn := __mygo_expr_2
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__tail_3 := endColumn
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+					__mygo_state = 0
+					continue
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+						return __mygo_mt_p3
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_lowerBoundLine(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_state int) int {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= __mygo_mt_p3 {
+				return __mygo_mt_p2
+			} else {
+				mid := __mygo_mt_p2 + (__mygo_mt_p3-__mygo_mt_p2)/2
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, mid)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+					if __mygo_match___mygo_expr_1.F0.Span.Start.Line < __mygo_mt_p1 {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := mid + 1
+						__tail_3 := __mygo_mt_p3
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := mid
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+						return __mygo_mt_p2
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_lowerBoundStart(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt_p1 ast2.SourcePos, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_state int) int {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= __mygo_mt_p3 {
+				return __mygo_mt_p2
+			} else {
+				mid := __mygo_mt_p2 + (__mygo_mt_p3-__mygo_mt_p2)/2
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, mid)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+					start := ast2.SourcePos{SourceName: "", Line: __mygo_match___mygo_expr_1.F0.Span.Start.Line, Column: __mygo_match___mygo_expr_1.F0.Span.Start.Column}
+					if positionBefore(start, __mygo_mt_p1) {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := mid + 1
+						__tail_3 := __mygo_mt_p3
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := mid
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+						return __mygo_mt_p2
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
 			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
@@ -2323,31 +2980,39 @@ func __mygo_mt_parser2_matchingDelimiter(__mygo_mt_p0 []ps.PositionedToken, __my
 			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return -1
 			} else {
-				token := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), ps.PositionedToken{Kind: "", Raw: "", Span: ps.SourceSpan{Start: ps.Position{Offset: 0, Line: 0, Column: 0}, End: ps.Position{Offset: 0, Line: 0, Column: 0}}})
-				var __mygo_expr_1 int
-				if token.Raw == __mygo_mt_p2 {
-					__mygo_expr_1 = __mygo_mt_p4 + 1
-				} else {
-					var __mygo_expr_0 int
-					if token.Raw == __mygo_mt_p3 {
-						__mygo_expr_0 = __mygo_mt_p4 - 1
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+					var __mygo_expr_3 int
+					if __mygo_match___mygo_expr_1.F0.Raw == __mygo_mt_p2 {
+						__mygo_expr_3 = __mygo_mt_p4 + 1
 					} else {
-						__mygo_expr_0 = __mygo_mt_p4
+						var __mygo_expr_2 int
+						if __mygo_match___mygo_expr_1.F0.Raw == __mygo_mt_p3 {
+							__mygo_expr_2 = __mygo_mt_p4 - 1
+						} else {
+							__mygo_expr_2 = __mygo_mt_p4
+						}
+						__mygo_expr_3 = __mygo_expr_2
 					}
-					__mygo_expr_1 = __mygo_expr_0
-				}
-				nextDepth := __mygo_expr_1
-				if token.Raw == __mygo_mt_p3 && nextDepth == 0 {
-					return __mygo_mt_p1
+					nextDepth := __mygo_expr_3
+					if __mygo_match___mygo_expr_1.F0.Raw == __mygo_mt_p3 && nextDepth == 0 {
+						return __mygo_mt_p1
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__tail_3 := __mygo_mt_p3
+						__tail_4 := nextDepth
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+						__mygo_state = 0
+						continue
+					}
 				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1 + 1
-					__tail_2 := __mygo_mt_p2
-					__tail_3 := __mygo_mt_p3
-					__tail_4 := nextDepth
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
-					__mygo_state = 0
-					continue
+					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+						return -1
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -2362,35 +3027,44 @@ func __mygo_mt_parser2_matchingEndAnchor(__mygo_mt_p0 []ps.PositionedToken, __my
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return __mygo_mt_p5
 			} else {
-				token := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), ps.PositionedToken{Kind: "", Raw: "", Span: ps.SourceSpan{Start: ps.Position{Offset: 0, Line: 0, Column: 0}, End: ps.Position{Offset: 0, Line: 0, Column: 0}}})
-				afterStart := token.Span.Start.Line > __mygo_mt_p1.Start.Line || token.Span.Start.Line == __mygo_mt_p1.Start.Line && token.Span.Start.Column >= __mygo_mt_p1.Start.Column
-				opens := isBlockOpenToken(token.Raw)
-				var __mygo_expr_1 int
-				if afterStart && opens {
-					__mygo_expr_1 = __mygo_mt_p3 + 1
-				} else {
-					var __mygo_expr_0 int
-					if afterStart && token.Raw == "end" && __mygo_mt_p3 > 0 {
-						__mygo_expr_0 = __mygo_mt_p3 - 1
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+					afterStart := __mygo_match___mygo_expr_1.F0.Span.Start.Line > __mygo_mt_p1.Start.Line || __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1.Start.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column >= __mygo_mt_p1.Start.Column
+					opens := isBlockOpenToken(__mygo_match___mygo_expr_1.F0.Raw)
+					nets := __mygo_match___mygo_expr_1.F0.Raw == "elsif" || __mygo_match___mygo_expr_1.F0.Raw == "end"
+					var __mygo_expr_3 int
+					if afterStart && opens {
+						__mygo_expr_3 = __mygo_mt_p3 + 1
 					} else {
-						__mygo_expr_0 = __mygo_mt_p3
+						var __mygo_expr_2 int
+						if afterStart && nets && __mygo_mt_p3 > 0 {
+							__mygo_expr_2 = __mygo_mt_p3 - 1
+						} else {
+							__mygo_expr_2 = __mygo_mt_p3
+						}
+						__mygo_expr_3 = __mygo_expr_2
 					}
-					__mygo_expr_1 = __mygo_expr_0
-				}
-				nextDepth := __mygo_expr_1
-				nextStarted := __mygo_mt_p4 || afterStart && opens
-				if afterStart && token.Raw == "end" && nextStarted && nextDepth == 0 {
-					return ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: token.Span.Start.Line, Column: token.Span.Start.Column}, End: ast2.SourcePos{SourceName: "", Line: token.Span.End.Line, Column: token.Span.End.Column}}
+					nextDepth := __mygo_expr_3
+					nextStarted := __mygo_mt_p4 || afterStart && opens
+					if afterStart && __mygo_match___mygo_expr_1.F0.Raw == "end" && nextStarted && nextDepth == 0 {
+						return ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: __mygo_match___mygo_expr_1.F0.Span.Start.Line, Column: __mygo_match___mygo_expr_1.F0.Span.Start.Column}, End: ast2.SourcePos{SourceName: "", Line: __mygo_match___mygo_expr_1.F0.Span.End.Line, Column: __mygo_match___mygo_expr_1.F0.Span.End.Column}}
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__tail_3 := nextDepth
+						__tail_4 := nextStarted
+						__tail_5 := __mygo_mt_p5
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+						__mygo_state = 0
+						continue
+					}
 				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__tail_3 := nextDepth
-					__tail_4 := nextStarted
-					__tail_5 := __mygo_mt_p5
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
-					__mygo_state = 0
-					continue
+					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+						return __mygo_mt_p5
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -2405,16 +3079,24 @@ func __mygo_mt_parser2_nestedBodyAnchor(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 No
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return __mygo_mt_p1.Span
 			} else {
-				candidate := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), __mygo_mt_p1)
-				if candidate.Kind == "block-body" && isDirectChildPath(candidate.Path, __mygo_mt_p1.Path, 0) {
-					return candidate.Span
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
+					if __mygo_match___mygo_expr_1.F0.Kind == "block-body" && isDirectChildPath(__mygo_match___mygo_expr_1.F0.Path, __mygo_mt_p1.Path, 0) {
+						return __mygo_match___mygo_expr_1.F0.Span
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
 				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
+					if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
+						return __mygo_mt_p1.Span
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -2476,16 +3158,24 @@ func __mygo_mt_parser2_parentIfNode(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 NodeSp
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return None[NodeSpan]()
 			} else {
-				candidate := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), NodeSpan{Path: []int{}, Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}})
-				if candidate.Kind == "if" && isDirectChildPath(__mygo_mt_p1.Path, candidate.Path, 0) {
-					return Some[NodeSpan](candidate)
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
+					if __mygo_match___mygo_expr_1.F0.Kind == "if" && isDirectChildPath(__mygo_mt_p1.Path, __mygo_match___mygo_expr_1.F0.Path, 0) {
+						return Some[NodeSpan](__mygo_match___mygo_expr_1.F0)
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
 				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
+					if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
+						return None[NodeSpan]()
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -2493,24 +3183,32 @@ func __mygo_mt_parser2_parentIfNode(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 NodeSp
 		}
 	}
 }
-func __mygo_mt_parser2_separatorAnchorAt(__mygo_mt_p0 ast2.SourceSpan, __mygo_mt_p1 []ps.PositionedToken, __mygo_mt_p2 int, __mygo_state int) ast2.SourceSpan {
+func __mygo_mt_parser2_separatorAnchorAtFrom(__mygo_mt_p0 ast2.SourceSpan, __mygo_mt_p1 []ps.PositionedToken, __mygo_mt_p2 int, __mygo_state int) ast2.SourceSpan {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p2+1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p1) {
 				return ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}
 			} else {
-				head := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2), ps.PositionedToken{Kind: "", Raw: "", Span: ps.SourceSpan{Start: ps.Position{Offset: 0, Line: 0, Column: 0}, End: ps.Position{Offset: 0, Line: 0, Column: 0}}})
-				tail := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2+1), head)
-				if head.Raw == "=" && tail.Raw == ">" && tail.Span.End.Line == __mygo_mt_p0.Start.Line && tail.Span.End.Column <= __mygo_mt_p0.Start.Column {
-					return arrowAnchor(head, tail)
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+					tail := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p1, __mygo_mt_p2+1), __mygo_match___mygo_expr_1.F0)
+					if __mygo_match___mygo_expr_1.F0.Raw == "=" && tail.Raw == ">" && tail.Span.End.Line == __mygo_mt_p0.Start.Line && tail.Span.End.Column <= __mygo_mt_p0.Start.Column {
+						return arrowAnchor(__mygo_match___mygo_expr_1.F0, tail)
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
 				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
+					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+						return ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -2525,16 +3223,24 @@ func __mygo_mt_parser2_siblingThenNode(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 Nod
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
 				return None[NodeSpan]()
 			} else {
-				candidate := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), NodeSpan{Path: []int{}, Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}})
-				if candidate.Kind == "if-then" && isSiblingBranchPath(candidate.Path, __mygo_mt_p1.Path, 0) {
-					return Some[NodeSpan](candidate)
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NodeSpan]); ok {
+					if __mygo_match___mygo_expr_1.F0.Kind == "if-then" && isSiblingBranchPath(__mygo_match___mygo_expr_1.F0.Path, __mygo_mt_p1.Path, 0) {
+						return Some[NodeSpan](__mygo_match___mygo_expr_1.F0)
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
 				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
+					if _, ok := __mygo_expr_0.(Option__None[NodeSpan]); ok {
+						return None[NodeSpan]()
+					} else {
+						panic("non-exhaustive switch")
+					}
 				}
 			}
 		default:
@@ -2758,6 +3464,45 @@ func __mygo_mt_parser2_typeDeclarationTargetStart(__mygo_mt_p0 []ps.PositionedTo
 							}
 						} else {
 							return __mygo_mt_p2
+						}
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_parser2_verifiedLayoutAnchorFrom(__mygo_mt_p0 string, __mygo_mt_p1 ast2.SourceSpan, __mygo_mt_p2 []ps.PositionedToken, __mygo_mt_p3 int, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p0 != "if-then" && __mygo_mt_p0 != "if-else" {
+				return true
+			} else {
+				if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
+					return false
+				} else {
+					__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p3)
+					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+						onAnchor := __mygo_match___mygo_expr_1.F0.Span.Start.Line == __mygo_mt_p1.Start.Line && __mygo_match___mygo_expr_1.F0.Span.Start.Column == __mygo_mt_p1.Start.Column
+						matches := onAnchor && (isAnchorToken(__mygo_mt_p0, __mygo_match___mygo_expr_1.F0.Raw) || __mygo_mt_p0 == "if-then" && __mygo_match___mygo_expr_1.F0.Raw == "=" && arrowTail(__mygo_mt_p2, __mygo_mt_p3+1))
+						if matches {
+							return true
+						} else {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2
+							__tail_3 := __mygo_mt_p3 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+							__mygo_state = 0
+							continue
+						}
+					} else {
+						if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+							return false
+						} else {
+							panic("non-exhaustive switch")
 						}
 					}
 				}

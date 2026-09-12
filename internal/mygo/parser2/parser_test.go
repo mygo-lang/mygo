@@ -56,6 +56,51 @@ func TestParseFileLosslessRetainsTokensAndTrivia(t *testing.T) {
 	}
 }
 
+func TestParseFileLosslessCarriesInlineGoLayoutEvent(t *testing.T) {
+	source := "package sample\nfunc f() -> Int\n  go[Int] {\n    code: \"1\"\n  }\nend\n"
+	got := ParseFileLossless("inline-go.mygo", source)
+	parsed, ok := got.(Result__Ok[LosslessFile, string])
+	if !ok {
+		 t.Fatalf("ParseFileLossless() failed: %v", got)
+	}
+	for _, event := range parsed.F0.LayoutEvents {
+		if event.Kind == "enter:inline-go" {
+			if !event.AffectsIndent || event.Anchor.Start.Line != 3 || event.ExitAnchor.Start.Line != 5 {
+				t.Fatalf("inline Go layout event = %#v", event)
+			}
+			return
+		}
+	}
+	t.Fatalf("missing inline Go layout event: %#v", parsed.F0.LayoutEvents)
+}
+
+func TestParseFileLosslessKeepsRangeBranchesBlockStructured(t *testing.T) {
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	path := filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "prelude", "range.mygo")
+	source, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := ParseFileLossless(path, string(source))
+	parsed, ok := got.(Result__Ok[LosslessFile, string])
+	if !ok {
+		t.Fatalf("ParseFileLossless() failed: %v", got)
+	}
+	for _, event := range parsed.F0.LayoutEvents {
+		if event.Kind == "enter:if-then" || event.Kind == "enter:if-else" {
+			if event.ExpandsAfter {
+				t.Fatalf("block branch was marked expandable: %#v", event)
+			}
+			if !event.AffectsIndent {
+				t.Fatalf("block branch did not affect indentation: %#v", event)
+			}
+		}
+	}
+}
+
 func TestExpressionsCarrySourceSpans(t *testing.T) {
 	got := ParseFileAt("span.mygo", "package sample\nfunc f() -> Int\n  1\nend\n")
 	parsed, ok := got.(Result__Ok[ast2.File, string])
@@ -1320,5 +1365,62 @@ end
 	}
 	if binary.F2.Pos.Line != 4 || binary.F2.Pos.Column != 7 {
 		t.Fatalf("right operand position = %d:%d, want 4:7", binary.F2.Pos.Line, binary.F2.Pos.Column)
+	}
+}
+
+func TestLayoutEventsKeepSwitchBlockStructure(t *testing.T) {
+	source := "package sample\nfunc g(x: Int) -> Int\n  switch x\n    case 1 => 10\n    case _ then\n      0\n    end\n  end\nend\n"
+	got := ParseFileLossless("case-then.mygo", source)
+	parsed, ok := got.(Result__Ok[LosslessFile, string])
+	if !ok {
+		t.Fatalf("ParseFileLossless() failed: %v", got)
+	}
+	var switchEvent *LayoutEvent
+	var thenCaseEvent *LayoutEvent
+	for index := range parsed.F0.LayoutEvents {
+		event := &parsed.F0.LayoutEvents[index]
+		if event.Kind == "enter:switch" {
+			switchEvent = event
+		}
+		if event.Kind == "enter:case" && event.BodyLine > event.HeaderLine {
+			thenCaseEvent = event
+		}
+	}
+	if switchEvent == nil {
+		t.Fatalf("missing switch event: %#v", parsed.F0.LayoutEvents)
+	}
+	if !switchEvent.AffectsIndent || switchEvent.ExitLine != 8 {
+		t.Fatalf("switch event lost its block structure: %#v", *switchEvent)
+	}
+	if thenCaseEvent == nil || !thenCaseEvent.AffectsIndent || thenCaseEvent.ExitLine != 7 {
+		t.Fatalf("then-style case body did not anchor its own end: %#v", parsed.F0.LayoutEvents)
+	}
+}
+
+func TestLayoutEventsKeepWideIfBranchExpansion(t *testing.T) {
+	source := "package sample\nfunc f() -> Int\n  if veryLongConditionNameThatKeepsGoingAndGoingAndGoing => veryLongBranchExpressionNameThatKeepsGoingAndGoingAndGoing else veryLongBranchExpressionNameThatKeepsGoingAndGoingAndGoing\nend\n"
+	got := ParseFileLossless("wide-if.mygo", source)
+	parsed, ok := got.(Result__Ok[LosslessFile, string])
+	if !ok {
+		t.Fatalf("ParseFileLossless() failed: %v", got)
+	}
+	var thenEvent, elseEvent *LayoutEvent
+	for index := range parsed.F0.LayoutEvents {
+		event := &parsed.F0.LayoutEvents[index]
+		if event.Kind == "enter:if-then" {
+			thenEvent = event
+		}
+		if event.Kind == "enter:if-else" {
+			elseEvent = event
+		}
+	}
+	if thenEvent == nil || elseEvent == nil {
+		t.Fatalf("wide single-line conditional lost branch events: %#v", parsed.F0.LayoutEvents)
+	}
+	if thenEvent.Anchor.Start.Line != 3 || thenEvent.Anchor.End.Column > thenEvent.Span.Start.Column || !thenEvent.ExpandsAfter {
+		t.Fatalf("then branch anchor/expansion = %#v", *thenEvent)
+	}
+	if elseEvent.Anchor.Start.Line != 3 || elseEvent.Anchor.End.Column > elseEvent.Span.Start.Column || !elseEvent.ExpandsAfter {
+		t.Fatalf("else branch anchor/expansion = %#v", *elseEvent)
 	}
 }

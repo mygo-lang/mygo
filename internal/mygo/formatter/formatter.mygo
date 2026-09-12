@@ -26,6 +26,7 @@ struct LineMapping
   Synthetic: Bool
   AnchorSourceLine: Int
   Boundary: String
+  Depth: Int
 end
 
 struct PassEdit
@@ -35,6 +36,22 @@ struct PassEdit
   SourceStart: Int
   SourceEnd: Int
   Kind: String
+  Depths: Slice[Int]
+end
+
+# DelimitedRender carries the rewritten text plus one PassEdit per expanded
+# source line.  Each edit owns the exact per-row indentation depths its
+# expansion produced, so unrelated source lines keep their identity mapping.
+struct DelimitedRender
+  Text: String
+  Edits: Slice[PassEdit]
+end
+
+# DelimitedBlock is one recursive fragment of a wrapped delimited literal:
+# its rendered rows plus the indentation depth of every produced line.
+struct DelimitedBlock
+  Text: String
+  Depths: Slice[Int]
 end
 
 struct SyntheticLayoutEvent
@@ -54,6 +71,7 @@ end
 
 struct RenderedLayoutEvent
   Kind: String
+  Path: Slice[Int]
   SourceLine: Int
   ExitSourceLine: Int
   RenderedLine: Int
@@ -94,14 +112,20 @@ func joinSyntheticEvents(left: Slice[SyntheticLayoutEvent], right: Slice[Synthet
 end
 
 func expandedLineMap(source: String, rendered: String, line: Int) -> Slice[LineMapping]
-  let sourceLines = source.Split("\n").Len()
-  let renderedLines = rendered.Split("\n").Len()
-  if line > renderedLines then []
+  expandedLineMapFrom(source.Split("\n").Len(), rendered.Split("\n").Len(), line, [])
+end
+
+# The source/rendered line counts are computed once by the wrapper above; the
+# walk only appends each row (amortized O(1)) instead of rebuilding the whole
+# downstream mapping list at every line.
+func expandedLineMapFrom(sourceLines: Int, renderedLines: Int, line: Int, acc: Slice[LineMapping]) -> Slice[LineMapping]
+  if line > renderedLines then acc
   else
     let synthetic = line > sourceLines
     let sourceLine = if synthetic then sourceLines else line end
     let boundary = if synthetic then "after" else "" end
-    joinLineMappings([LineMapping { SourceLine: sourceLine, RenderedLine: line, Delta: line - sourceLine, Synthetic: synthetic, AnchorSourceLine: sourceLine, Boundary: boundary }], expandedLineMap(source, rendered, line + 1))
+    expandedLineMapFrom(sourceLines, renderedLines, line + 1,
+      acc.Append(LineMapping { SourceLine: sourceLine, RenderedLine: line, Delta: line - sourceLine, Synthetic: synthetic, AnchorSourceLine: sourceLine, Boundary: boundary, Depth: 0 }))
   end
 end
 
@@ -145,27 +169,63 @@ func renderASTSpans(file: ast2.File, spans: Slice[parser2.NodeSpan], delimited: 
   let blockResult = renderBlockSpans(source, spans)
   let ifText = renderBranchSpanAt(blockResult.Text, events.Filter(func(item: parser2.LayoutEvent) -> Bool item.Kind == "enter:if-then" end), events, 0)
   let ifCount = ifText.Split("\n").Len() - blockResult.Text.Split("\n").Len()
-  let caseText = renderCaseSpanAt(ifText, events.Filter(func(item: parser2.LayoutEvent) -> Bool item.Kind == "enter:case" && item.SeparatorAnchor.Start.Line > 0 end), 0)
-  let caseCount = caseText.Split("\n").Len() - ifText.Split("\n").Len()
-  let delimitedText = renderDelimitedSpanAt(caseText, delimited, 0)
-  let delimCount = delimitedText.Split("\n").Len() - caseText.Split("\n").Len()
-  let branchEdits = branchPassEdits(events, ifCount)
-  let caseEdits = casePassEdits(events, caseCount)
-  let delimEdits = delimPassEdits(delimited, delimCount)
-  let goal = blockResult.Lines.Len() + ifCount + caseCount + delimCount
+    let caseText = renderCaseSpanAt(ifText, events.Filter(func(item: parser2.LayoutEvent) -> Bool item.Kind == "enter:case" && item.SeparatorAnchor.Start.Line > 0 end), 0)
+    let caseCount = caseText.Split("\n").Len() - ifText.Split("\n").Len()
+    let delimitedRender = renderDelimitedPass(caseText, delimited)
+    let delimitedText = delimitedRender.Text
+    let delimEdits = delimitedRender.Edits
+    let delimCount = sumPassAdded(delimEdits, 0)
+    let branchEdits = branchPassEdits(events, ifCount)
+    let caseEdits = casePassEdits(events, caseCount)
+    let goal = blockResult.Lines.Len() + ifCount + caseCount + delimCount
   let composedLines = composePassLines(blockResult.Lines, joinEdits(joinEdits(branchEdits, caseEdits), delimEdits), goal, 0)
   # Specific AST expansion segments must win over the generic pass-through
   # segments.  Otherwise segmentForRenderedLine observes the source-wide
   # segment first and loses the synthetic function-body boundary.
   let sourceFallback = ExpansionSegment { SourceStart: 1, SourceEnd: goal, RenderedStart: 1, RenderedEnd: goal, Kind: "source" }
   let composedSegments = joinSegments(joinSegments(joinSegments(joinSegments(blockResult.Segments, editSegments(branchEdits)), editSegments(caseEdits)), editSegments(delimEdits)), [sourceFallback])
-  let renderedEvents = remapLayoutEvents(events, composedLines, composedSegments, 0)
+  let renderedEvents = remapLayoutEvents(events, composedLines, composedSegments, 0, [])
   # Block and dedent targets are projected from semantic event boundaries.
   # A source line may expand to several rendered lines, so remapping the old
   # line-only collections would incorrectly apply both operations to every
   # expansion fragment.
   let renderedPlan = makeRenderedLayoutPlan(composedLines, renderedEvents)
-  renderRenderedLayoutPlan(delimitedText, joinInts(protectedLines, projectProtectedLines(protectedLines, composedLines, 0)), composedSegments, events, [], renderedPlan)
+  let delimiterTargets = projectDelimitedTargets(renderedPlan.Targets, composedLines, delimited, 0)
+  let delimiterPlan = RenderedLayoutPlan { Lines: renderedPlan.Lines, Events: renderedPlan.Events, Targets: delimiterTargets }
+  # Protected rows are keyed by rendered line: the projection above already
+  # maps every protected source line onto its expansion rows.  Joining the
+  # raw source-line keys back in would protect unrelated rendered rows once
+  # an earlier pass (for example a wrapped list) shifts line numbers.
+  renderRenderedLayoutPlan(delimitedText, projectProtectedLines(protectedLines, composedLines, 0), composedSegments, events, [], delimiterPlan)
+end
+
+func projectDelimitedTargets(targets: Slice[Int], mappings: Slice[LineMapping], spans: Slice[parser2.DelimitedSpan], index: Int) -> Slice[Int]
+  if index >= spans.Len() then targets
+  else
+    let span = spans.Get(index).UnwrapOr(parser2.DelimitedSpan { Kind: "", Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }, Items: [], Separators: [] })
+    # Only the wrapped (outermost) spans produce expansion rows to indent; a
+    # nested span stays verbatim inside its enclosing item and must not add an
+    # extra indent level to those rows (which would break idempotence).
+    let next = if containedInSameLineSpan(spans, span.Span, 0) then targets else addDelimitedIndent(targets, mappings, span.Span, 0, []) end
+    projectDelimitedTargets(next, mappings, spans, index + 1)
+  end
+end
+
+func addDelimitedIndent(targets: Slice[Int], mappings: Slice[LineMapping], span: ast2.SourceSpan, index: Int, acc: Slice[Int]) -> Slice[Int]
+  if index >= targets.Len() then acc
+  else
+    let target = targets.Get(index).UnwrapOr(0)
+    let mapping = mappings.Get(index).UnwrapOr(LineMapping { SourceLine: 0, RenderedLine: 0, Delta: 0, Synthetic: false, AnchorSourceLine: 0, Boundary: "" })
+    # Two shapes receive the item-level indent bump: rows strictly between
+    # the delimiters of a hand-written multiline literal, and the body rows a
+    # single-line literal expansion produced.  The expansion's closing row
+    # (boundary after) stays at the anchor indent, matching the canonical
+    # block form where the delimiter aligns with the declaration.
+    let handWritten = !mapping.Synthetic && mapping.SourceLine > span.Start.Line && mapping.SourceLine < span.End.Line
+    let expandedBody = mapping.Synthetic && mapping.AnchorSourceLine == span.Start.Line && mapping.Boundary == "body"
+    let current = if handWritten || expandedBody then target + 1 else target end
+    addDelimitedIndent(targets, mappings, span, index + 1, acc.Append(current))
+  end
 end
 
 func branchPassEdits(events: Slice[parser2.LayoutEvent], count: Int) -> Slice[PassEdit]
@@ -173,7 +233,7 @@ func branchPassEdits(events: Slice[parser2.LayoutEvent], count: Int) -> Slice[Pa
   else
     let thenEvent = firstExpandableBranch(events.Filter(func(item: parser2.LayoutEvent) -> Bool item.Kind == "enter:if-then" end), events, 0)
     let span = thenEvent.Anchor
-    [PassEdit { Anchor: span.Start.Line - 1, SourceLine: span.Start.Line, Added: count, SourceStart: span.Start.Line, SourceEnd: if thenEvent.Span.End.Line > 0 then thenEvent.Span.End.Line else span.Start.Line end, Kind: "if-branch" }]
+    [PassEdit { Anchor: span.Start.Line - 1, SourceLine: span.Start.Line, Added: count, SourceStart: span.Start.Line, SourceEnd: if thenEvent.Span.End.Line > 0 then thenEvent.Span.End.Line else span.Start.Line end, Kind: "if-branch", Depths: [] }]
   end
 end
 
@@ -191,7 +251,7 @@ func casePassEdits(events: Slice[parser2.LayoutEvent], count: Int) -> Slice[Pass
   if count == 0 then []
   else
     let caseEvent = firstExpandableCase(events, 0)
-    [PassEdit { Anchor: caseEvent.Span.Start.Line - 1, SourceLine: caseEvent.Span.Start.Line, Added: count, SourceStart: caseEvent.Span.Start.Line, SourceEnd: caseEvent.Span.End.Line, Kind: "case-branch" }]
+    [PassEdit { Anchor: caseEvent.Span.Start.Line - 1, SourceLine: caseEvent.Span.Start.Line, Added: count, SourceStart: caseEvent.Span.Start.Line, SourceEnd: caseEvent.Span.End.Line, Kind: "case-branch", Depths: [] }]
   end
 end
 
@@ -201,14 +261,6 @@ func firstExpandableCase(events: Slice[parser2.LayoutEvent], index: Int) -> pars
     let item = events.Get(index).UnwrapOr(emptyLayoutEvent())
     if item.Kind == "enter:case" && item.ExpandsAfter && item.Anchor.Start.Line == item.SeparatorAnchor.Start.Line && item.SeparatorAnchor.End.Column <= item.BodyAnchor.Start.Column then item
     else firstExpandableCase(events, index + 1) end
-  end
-end
-
-func delimPassEdits(spans: Slice[parser2.DelimitedSpan], count: Int) -> Slice[PassEdit]
-  if count == 0 then []
-  else
-    let span = firstExpandableDelimited(spans, 0)
-    [PassEdit { Anchor: span.Start.Line - 1, SourceLine: span.Start.Line, Added: count, SourceStart: span.Start.Line, SourceEnd: span.End.Line, Kind: "delimited" }]
   end
 end
 
@@ -223,23 +275,30 @@ func firstExpandableDelimited(spans: Slice[parser2.DelimitedSpan], index: Int) -
 end
 
 func composePassLines(base: Slice[LineMapping], edits: Slice[PassEdit], goal: Int, index: Int) -> Slice[LineMapping]
-  if index >= edits.Len() then
-    truncateMappings(base, goal, 0)
+  composePassRows(base, edits, 1, 0)
+end
+
+# A single merge walk places every pass edit at its own source line.  Each
+# edit owns the exact rows its expansion produced, so later source lines
+# keep their identity mapping and are renumbered instead of drifting.
+func composePassRows(base: Slice[LineMapping], edits: Slice[PassEdit], row: Int, index: Int) -> Slice[LineMapping]
+  if index >= base.Len() then []
   else
-    let edit = edits.Get(index).UnwrapOr(PassEdit { Anchor: 0, SourceLine: 1, Added: 0, SourceStart: 1, SourceEnd: 1, Kind: "" })
-    composePassLines(applyPassEdit(base, edit, 0, []), edits, goal, index + 1)
+    let src = base.Get(index).UnwrapOr(LineMapping { SourceLine: index + 1, RenderedLine: index + 1, Delta: 0, Synthetic: false, AnchorSourceLine: index + 1, Boundary: "", Depth: 0 })
+    let head = LineMapping { SourceLine: src.SourceLine, RenderedLine: row, Delta: row - src.SourceLine, Synthetic: src.Synthetic, AnchorSourceLine: src.AnchorSourceLine, Boundary: src.Boundary, Depth: src.Depth }
+    switch editForSourceLine(edits, src, 0)
+      case Some(edit) => joinLineMappings([head], joinLineMappings(expandedPassRows(edit, row + 1, edit.Added), composePassRows(base, edits, row + 1 + edit.Added, index + 1)))
+      case None => joinLineMappings([head], composePassRows(base, edits, row + 1, index + 1))
+    end
   end
 end
 
-func applyPassEdit(base: Slice[LineMapping], edit: PassEdit, index: Int, out: Slice[LineMapping]) -> Slice[LineMapping]
-  if index >= base.Len() then
-    out
-  elsif index == edit.Anchor then
-    let head = LineMapping { SourceLine: edit.SourceLine, RenderedLine: index + 1, Delta: index + 1 - edit.SourceLine, Synthetic: false, AnchorSourceLine: edit.SourceLine, Boundary: "" }
-    applyPassEdit(base, edit, index + 1, joinLineMappings(out.Append(head), expandedPassRows(edit, index + 2, edit.Added)))
+func editForSourceLine(edits: Slice[PassEdit], mapping: LineMapping, index: Int) -> Option[PassEdit]
+  if mapping.Synthetic then None
+  elsif index >= edits.Len() then None
   else
-    let item = base.Get(index).UnwrapOr(LineMapping { SourceLine: index + 1, RenderedLine: index + 1, Delta: 0, Synthetic: false, AnchorSourceLine: index + 1, Boundary: "" })
-    applyPassEdit(base, edit, index + 1, out.Append(item))
+    let edit = edits.Get(index).UnwrapOr(PassEdit { Anchor: 0, SourceLine: -1, Added: 0, SourceStart: 1, SourceEnd: 1, Kind: "", Depths: [] })
+    if edit.SourceLine == mapping.SourceLine then Some(edit) else editForSourceLine(edits, mapping, index + 1) end
   end
 end
 
@@ -248,7 +307,21 @@ func expandedPassRows(edit: PassEdit, row: Int, remaining: Int) -> Slice[LineMap
     []
   else
     let boundary = if remaining == 1 then "after" elsif edit.Kind == "if-branch" && remaining == 3 then "else" else "body" end
-    joinLineMappings([LineMapping { SourceLine: edit.SourceLine, RenderedLine: row, Delta: row - edit.SourceLine, Synthetic: true, AnchorSourceLine: edit.SourceLine, Boundary: boundary }], expandedPassRows(edit, row + 1, remaining - 1))
+    let depth = editDepthsAt(edit.Depths, edit.Added - remaining, 0)
+    joinLineMappings([LineMapping { SourceLine: edit.SourceLine, RenderedLine: row, Delta: row - edit.SourceLine, Synthetic: true, AnchorSourceLine: edit.SourceLine, Boundary: boundary, Depth: depth }], expandedPassRows(edit, row + 1, remaining - 1))
+  end
+end
+
+func editDepthsAt(depths: Slice[Int], index: Int, fallback: Int) -> Int
+  if index < 0 || index >= depths.Len() then fallback
+  else depths.Get(index).UnwrapOr(fallback) end
+end
+
+func sumPassAdded(edits: Slice[PassEdit], index: Int) -> Int
+  if index >= edits.Len() then 0
+  else
+    let edit = edits.Get(index).UnwrapOr(PassEdit { Anchor: 0, SourceLine: 1, Added: 0, SourceStart: 1, SourceEnd: 1, Kind: "", Depths: [] })
+    edit.Added + sumPassAdded(edits, index + 1)
   end
 end
 
@@ -266,7 +339,7 @@ func editSegments(edits: Slice[PassEdit]) -> Slice[ExpansionSegment]
   if edits.Len() == 0 then
     []
   else
-    let edit = edits.Get(0).UnwrapOr(PassEdit { Anchor: 0, SourceLine: 1, Added: 0, SourceStart: 1, SourceEnd: 1, Kind: "" })
+    let edit = edits.Get(0).UnwrapOr(PassEdit { Anchor: 0, SourceLine: 1, Added: 0, SourceStart: 1, SourceEnd: 1, Kind: "", Depths: [] })
     let main = ExpansionSegment { SourceStart: edit.SourceStart, SourceEnd: edit.SourceEnd, RenderedStart: edit.SourceStart, RenderedEnd: edit.SourceStart + edit.Added, Kind: edit.Kind }
     let endSegment = ExpansionSegment { SourceStart: edit.SourceStart, SourceEnd: edit.SourceStart, RenderedStart: edit.SourceStart + edit.Added, RenderedEnd: edit.SourceStart + edit.Added, Kind: edit.Kind + "-end" }
     joinSegments([main], [endSegment])
@@ -275,7 +348,7 @@ end
 
 func joinEdits(left: Slice[PassEdit], right: Slice[PassEdit]) -> Slice[PassEdit]
   if right.Len() == 0 then left
-  else joinEdits(left.Append(right.Get(0).UnwrapOr(PassEdit { Anchor: 0, SourceLine: 1, Added: 0, SourceStart: 1, SourceEnd: 1, Kind: "" })), right.Slice(1, right.Len()).UnwrapOr([])) end
+  else joinEdits(left.Append(right.Get(0).UnwrapOr(PassEdit { Anchor: 0, SourceLine: 1, Added: 0, SourceStart: 1, SourceEnd: 1, Kind: "", Depths: [] })), right.Slice(1, right.Len()).UnwrapOr([])) end
 end
 
 func projectProtectedLines(sourceLines: Slice[Int], mappings: Slice[LineMapping], index: Int) -> Slice[Int]
@@ -304,11 +377,12 @@ func firstSpanOfKind(spans: Slice[parser2.NodeSpan], kind: String, index: Int) -
   end
 end
 
-func remapLayoutEvents(events: Slice[parser2.LayoutEvent], mappings: Slice[LineMapping], segments: Slice[ExpansionSegment], index: Int) -> Slice[RenderedLayoutEvent]
-  if index >= events.Len() then []
+func remapLayoutEvents(events: Slice[parser2.LayoutEvent], mappings: Slice[LineMapping], segments: Slice[ExpansionSegment], index: Int, acc: Slice[RenderedLayoutEvent]) -> Slice[RenderedLayoutEvent]
+  if index >= events.Len() then acc
   else
     let item = events.Get(index).UnwrapOr(emptyLayoutEvent())
-    joinRenderedLayoutEvents(remapLayoutEvent(item, events, mappings, segments), remapLayoutEvents(events, mappings, segments, index + 1))
+    remapLayoutEvents(events, mappings, segments, index + 1,
+      remapLayoutEvent(item, events, mappings, segments).Fold(acc, func(a: Slice[RenderedLayoutEvent], e: RenderedLayoutEvent) -> Slice[RenderedLayoutEvent] a.Append(e) end))
   end
 end
 
@@ -394,24 +468,77 @@ func expandBlockSourceLine(raw: String, bodyStartColumn: Int, bodyEndColumn: Int
 end
 
 
-func renderDelimitedSpanAt(source: String, spans: Slice[parser2.DelimitedSpan], index: Int) -> String
-  if index >= spans.Len() then source
+# Entry point for the delimited-expansion pass. It returns the wrapped text and
+# the single PassEdit that the line-composition layer needs, mirroring the
+# branch/case passes. When nothing was wrapped the edit list is empty.
+func renderDelimitedPass(source: String, spans: Slice[parser2.DelimitedSpan]) -> DelimitedRender
+  let text = renderDelimitedSpanAt(source, spans, spans, 0)
+  let added = text.Split("\n").Len() - source.Split("\n").Len()
+  if added == 0 then DelimitedRender { Text: text, Edits: [] }
   else
-    let item = spans.Get(index).UnwrapOr(parser2.DelimitedSpan { Kind: "", Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }, Items: [], Separators: [] })
-    let line = item.Span.Start.Line
-    let lines = source.Split("\n")
-    let raw = lines.Get(line - 1).UnwrapOr("")
-    let expanded = if raw.Len() > 100 && item.Separators.Len() > 0 && item.Span.Start.Line == item.Span.End.Line then replaceSourceLine(lines, line - 1, raw.Slice(0, item.Span.Start.Column - 1).UnwrapOr("") + expandDelimitedSourceLine(raw, item, 0, item.Span.Start.Column - 1)) else source end
-    renderDelimitedSpanAt(expanded, spans, index + 1)
+    let span = firstExpandableDelimited(spans, 0)
+    DelimitedRender { Text: text, Edits: [PassEdit { Anchor: span.Start.Line - 1, SourceLine: span.Start.Line, Added: added, SourceStart: span.Start.Line, SourceEnd: span.End.Line, Kind: "delimited", Depths: [] }] }
   end
 end
 
-func expandDelimitedSourceLine(raw: String, item: parser2.DelimitedSpan, index: Int, cursor: Int) -> String
-  if index >= item.Separators.Len() then raw.Slice(cursor, raw.Len()).UnwrapOr("")
+# A nested delimited construct must never be wrapped on its own: rewriting an
+# inner span re-slices its anchor line and drops the field label / callee name
+# that sit between the enclosing item's start and the inner opening delimiter
+# (`Span:`, `stateSpan(`). Only outermost same-line spans are expanded; nested
+# constructs are reproduced verbatim inside their enclosing item's text.
+func containedInSameLineSpan(spans: Slice[parser2.DelimitedSpan], span: ast2.SourceSpan, index: Int) -> Bool
+  if index >= spans.Len() then false
   else
-    let separator = item.Separators.Get(index).UnwrapOr(item.Span)
-    let before = raw.Slice(cursor, separator.End.Column - 1).UnwrapOr("")
-    before + "\n  " + expandDelimitedSourceLine(raw, item, index + 1, separator.End.Column - 1)
+    switch spans.Get(index)
+      case Some(other) =>
+        let contains = other.Span.Start.Line == span.Start.Line && other.Span.Start.Column <= span.Start.Column && (other.Span.End.Line > span.End.Line || (other.Span.End.Line == span.End.Line && other.Span.End.Column >= span.End.Column))
+        let strictlyLarger = other.Span.Start.Line < span.Start.Line || other.Span.Start.Column < span.Start.Column || other.Span.End.Column > span.End.Column
+        if contains && strictlyLarger then true else containedInSameLineSpan(spans, span, index + 1) end
+      case None => containedInSameLineSpan(spans, span, index + 1)
+    end
+  end
+end
+
+func renderDelimitedSpanAt(source: String, allSpans: Slice[parser2.DelimitedSpan], spans: Slice[parser2.DelimitedSpan], index: Int) -> String
+  if index >= spans.Len() then source
+  else
+    let item = spans.Get(index).UnwrapOr(parser2.DelimitedSpan { Kind: "", Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }, Items: [], Separators: [] })
+    let rendered = renderDelimitedSpanAt(source, allSpans, spans, index + 1)
+    let line = item.Span.Start.Line
+    let lines = rendered.Split("\n")
+    let raw = lines.Get(line - 1).UnwrapOr("")
+    if raw.Len() > 100 && item.Separators.Len() > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(allSpans, item.Span, 0) then replaceSourceLine(lines, line - 1, raw.Slice(0, item.Span.Start.Column - 1).UnwrapOr("") + renderDelimitedBlockBody(raw, item)) else rendered end
+  end
+end
+
+# Canonical block form: the opening delimiter stays on the anchor line, every
+# item occupies its own line one indent level deeper, the final item carries a
+# trailing comma where the grammar allows one (tuples do not), and the closing
+# delimiter sits alone on the last line at the anchor indent.
+func renderDelimitedBlockBody(raw: String, item: parser2.DelimitedSpan) -> String
+  let open = raw.Slice(item.Span.Start.Column - 1, item.Span.Start.Column).UnwrapOr("")
+  let items = delimitedBlockItems(raw, item, 0, item.Span.Start.Column)
+  let tail = if item.Kind == "delimited:tuple" then "" else "," end
+  open + joinDelimitedItemLines(items, tail, 0) + "\n" + raw.Slice(item.Span.End.Column - 2, raw.Len()).UnwrapOr("")
+end
+
+func delimitedBlockItems(raw: String, item: parser2.DelimitedSpan, index: Int, cursor: Int) -> Slice[String]
+  if index >= item.Separators.Len() then
+    let last = strings.TrimSpace(raw.Slice(cursor, item.Span.End.Column - 2).UnwrapOr(""))
+    if last == "" then [] else [last] end
+  else
+      let separator = item.Separators.Get(index).UnwrapOr(item.Span)
+      let text = strings.TrimSpace(raw.Slice(cursor, separator.Start.Column - 1).UnwrapOr(""))
+      joinStrings([text], delimitedBlockItems(raw, item, index + 1, separator.End.Column - 1))
+    end
+end
+
+func joinDelimitedItemLines(items: Slice[String], tail: String, index: Int) -> String
+  if index >= items.Len() then ""
+  else
+    let text = items.Get(index).UnwrapOr("")
+    let comma = if index + 1 == items.Len() then tail else "," end
+    "\n  " + text + comma + joinDelimitedItemLines(items, tail, index + 1)
   end
 end
 
@@ -419,13 +546,13 @@ func renderCaseSpanAt(source: String, cases: Slice[parser2.LayoutEvent], index: 
   if index >= cases.Len() then source
   else
     let item = cases.Get(index).UnwrapOr(emptyLayoutEvent())
+    let rendered = renderCaseSpanAt(source, cases, index + 1)
     let line = item.Anchor.Start.Line
-    let lines = source.Split("\n")
+    let lines = rendered.Split("\n")
     let raw = lines.Get(line - 1).UnwrapOr("")
-    let expanded = if item.ExpandsAfter && item.Anchor.Start.Line == item.SeparatorAnchor.Start.Line && item.SeparatorAnchor.End.Column <= item.BodyAnchor.Start.Column then
+    if item.ExpandsAfter && item.Anchor.Start.Line > 0 && item.BodyAnchor.Start.Line > 0 && item.Anchor.Start.Line == item.SeparatorAnchor.Start.Line && item.SeparatorAnchor.Start.Line == item.BodyAnchor.Start.Line && item.SeparatorAnchor.End.Column <= item.BodyAnchor.Start.Column then
       replaceSourceLine(lines, line - 1, expandCaseSourceLine(raw, item))
-    else source end
-    renderCaseSpanAt(expanded, cases, index + 1)
+    else rendered end
   end
 end
 
@@ -441,17 +568,17 @@ func renderBranchSpanAt(source: String, thenEvents: Slice[parser2.LayoutEvent], 
   else
     let thenEvent = thenEvents.Get(index).UnwrapOr(emptyLayoutEvent())
     let elseEvents = events.Filter(func(item: parser2.LayoutEvent) -> Bool item.Kind == "enter:if-else" && sameBranchParent(item.Path, thenEvent.Path, 0) end)
-    if elseEvents.Len() == 0 then renderBranchSpanAt(source, thenEvents, events, index + 1)
+    let rendered = renderBranchSpanAt(source, thenEvents, events, index + 1)
+    if elseEvents.Len() == 0 then rendered
     else
       let elseEvent = elseEvents.Get(0).UnwrapOr(thenEvent)
       let exit = branchExitAnchor(events, thenEvent.Path, 0)
       let line = thenEvent.Anchor.Start.Line
-      let lines = source.Split("\n")
+      let lines = rendered.Split("\n")
       let raw = lines.Get(line - 1).UnwrapOr("")
-      let expanded = if shouldExpandBranch(raw, thenEvent, elseEvent, exit) then
+      if shouldExpandBranch(raw, thenEvent, elseEvent, exit) then
         replaceSourceLine(lines, line - 1, expandBranchSourceLine(raw, thenEvent, elseEvent, exit))
-      else source end
-      renderBranchSpanAt(expanded, thenEvents, events, index + 1)
+      else rendered end
     end
   end
 end
@@ -483,7 +610,7 @@ func isBranchParent(parent: Slice[Int], branch: Slice[Int], index: Int) -> Bool
 end
 
 func shouldExpandBranch(raw: String, thenEvent: parser2.LayoutEvent, elseEvent: parser2.LayoutEvent, exit: ast2.SourceSpan) -> Bool
-  thenEvent.ExpandsAfter && thenEvent.Anchor.Start.Line == elseEvent.Anchor.Start.Line
+  thenEvent.ExpandsAfter && thenEvent.Anchor.Start.Line > 0 && thenEvent.BodyAnchor.Start.Line > 0 && thenEvent.Anchor.Start.Line == thenEvent.BodyAnchor.Start.Line && thenEvent.Anchor.Start.Line == elseEvent.Anchor.Start.Line
 end
 
 func branchThenSpansShareLine(thenEvent: parser2.LayoutEvent, elseEvent: parser2.LayoutEvent, exit: ast2.SourceSpan) -> Bool
@@ -534,21 +661,38 @@ end
 # blocks) or at the "after" row that closes its expansion.  The target list is
 # sized to the final rendered text, so the renderer never needs a fallback.
 func projectRenderedEventTargets(events: Slice[RenderedLayoutEvent], mappings: Slice[LineMapping], index: Int, depth: Int) -> Slice[Int]
-  if index >= mappings.Len() then []
+  projectRenderedEventTargetsWith(events, elsifTransitionPaths(events), mappings, 0, 0)
+end
+
+func projectRenderedEventTargetsWith(events: Slice[RenderedLayoutEvent], elsifPaths: Slice[Slice[Int]], mappings: Slice[LineMapping], index: Int, depth: Int) -> Slice[Int]
+  projectRenderedEventTargetsAcc(events, elsifPaths, mappings, index, depth, [])
+end
+
+# The target list is built left-to-right with an accumulator so each rendered
+# row appends a single element (amortized O(1)) instead of rebuilding the whole
+# downstream list at every level.  Values and ordering are unchanged.
+func projectRenderedEventTargetsAcc(events: Slice[RenderedLayoutEvent], elsifPaths: Slice[Slice[Int]], mappings: Slice[LineMapping], index: Int, depth: Int, acc: Slice[Int]) -> Slice[Int]
+  if index >= mappings.Len() then acc
   else
     let mapping = mappings.Get(index).UnwrapOr(LineMapping { SourceLine: index + 1, RenderedLine: index + 1, Delta: 0, Synthetic: false, AnchorSourceLine: index + 1, Boundary: "" })
-    let exits = renderedEventCount(events, mapping, "exit", 0)
+    let exits = renderedEventCount(events, elsifPaths, mapping, "exit")
     let current = if depth > exits then depth - exits else 0 end
-    let enters = renderedEventCount(events, mapping, "enter", 0)
-    joinInts([current], projectRenderedEventTargets(events, mappings, index + 1, current + enters))
+    let transitions = renderedTransitionCount(events, mapping)
+    let target = if current > transitions then current - transitions else 0 end
+    let enters = renderedEventCount(events, elsifPaths, mapping, "enter")
+    projectRenderedEventTargetsAcc(events, elsifPaths, mappings, index + 1, target + enters, acc.Append(target))
   end
 end
 
-func renderedEventCount(events: Slice[RenderedLayoutEvent], mapping: LineMapping, phase: String, index: Int) -> Int
-  if index >= events.Len() then 0
-  else
-    let item = events.Get(index).UnwrapOr(RenderedLayoutEvent { Kind: "", SourceLine: 0, ExitSourceLine: 0, RenderedLine: 0, RenderedStart: 0, RenderedEnd: 0, BodyLine: 0, BodyLayout: "inline", AffectsIndent: false, ExpandsAfter: false, Depth: 0, Delta: 0, Boundary: "" })
-    let structural = item.AffectsIndent
+func renderedTransitionCount(events: Slice[RenderedLayoutEvent], mapping: LineMapping) -> Int
+  events.Fold(0, func(count: Int, item: RenderedLayoutEvent) -> Int
+    if item.Kind == "transition:if-elsif" && !mapping.Synthetic && mapping.SourceLine == item.SourceLine then count + 1 else count end
+  end)
+end
+
+func renderedEventCount(events: Slice[RenderedLayoutEvent], elsifPaths: Slice[Slice[Int]], mapping: LineMapping, phase: String) -> Int
+  events.Fold(0, func(count: Int, item: RenderedLayoutEvent) -> Int
+    let structural = item.AffectsIndent && !(phase == "exit" && item.Kind == "exit:if-then" && memberIntPath(elsifPaths, item.Path))
     let matches = if phase == "enter" then item.Boundary == "enter-header" else item.Boundary == "exit-anchor" || item.Boundary == "body-end" || item.Boundary == "block-end" end
     let isEnter = phase == "enter"
     let keyLine = if isEnter then item.SourceLine else item.ExitSourceLine end
@@ -561,9 +705,28 @@ func renderedEventCount(events: Slice[RenderedLayoutEvent], mapping: LineMapping
           else mapping.Synthetic && mapping.Boundary == "after" && mapping.SourceLine == keyLine end
         end
       else !mapping.Synthetic && mapping.SourceLine == keyLine end
-    let count = if structural && matches && row then 1 else 0 end
-    count + renderedEventCount(events, mapping, phase, index + 1)
-  end
+    if structural && matches && row then count + 1 else count end
+  end)
+end
+
+# Precompute the set of branch paths that carry an `if-elsif` transition so the
+# per-line projection can test membership in O(#transitions) instead of rescanning
+# the whole event list for every exit event.
+func elsifTransitionPaths(events: Slice[RenderedLayoutEvent]) -> Slice[Slice[Int]]
+  events.Fold([] as Slice[Slice[Int]], func(acc: Slice[Slice[Int]], item: RenderedLayoutEvent) -> Slice[Slice[Int]]
+    if item.Kind == "transition:if-elsif" then acc.Append(item.Path) else acc end
+  end)
+end
+
+func memberIntPath(paths: Slice[Slice[Int]], target: Slice[Int]) -> Bool
+  paths.Fold(false, func(found: Bool, p: Slice[Int]) -> Bool found || sameIntPath(p, target, 0) end)
+end
+
+func sameIntPath(left: Slice[Int], right: Slice[Int], index: Int) -> Bool
+  if left.Len() != right.Len() then false
+  elsif index >= left.Len() then true
+  elsif left.Get(index).UnwrapOr(-1) != right.Get(index).UnwrapOr(-2) then false
+  else sameIntPath(left, right, index + 1) end
 end
 
 
@@ -612,7 +775,9 @@ end
 func protectedLine(state: LayoutState, raw: String) -> LayoutState
   let indent = currentTargetIndent(state)
   let rendered = if state.Protected then raw else strings.Repeat("  ", indent) + strings.TrimLeft(raw, " \t") end
-  advanceLayoutState(state, state.Lines.Append(rendered), indent, false)
+  # Continuation lines of a multiline protected literal reproduce the source
+  # line byte-for-byte: no trim, no re-indent, closing delimiter included.
+  advanceLayoutState(state, state.Lines.Append(rendered), indent, containsInt(state.ProtectedLines, state.SourceLine + 1))
 end
 
 func advanceLayoutState(state: LayoutState, lines: Slice[String], indent: Int, protected: Bool) -> LayoutState
@@ -695,7 +860,7 @@ func remapLayoutEvent(item: parser2.LayoutEvent, events: Slice[parser2.LayoutEve
   let bodyLayout = if renderedEnd > renderedStart then "block" else item.BodyLayout end
   let explicitExit = item.ExitAnchor.Start.Line > item.Span.End.Line
   let boundary = if strings.HasPrefix(item.Kind, "enter:") then "enter-header" elsif explicitExit then "exit-anchor" elsif strings.Contains(item.Kind, "exit:case") then "body-end" else "block-end" end
-  [RenderedLayoutEvent { Kind: item.Kind, SourceLine: sourceLine, ExitSourceLine: exitKey, RenderedLine: renderedStart, RenderedStart: renderedStart, RenderedEnd: renderedEnd, BodyLine: bodyLine, BodyLayout: bodyLayout, AffectsIndent: item.AffectsIndent, ExpandsAfter: item.ExpandsAfter, Depth: item.Depth, Delta: 0, Boundary: boundary }]
+  [RenderedLayoutEvent { Kind: item.Kind, Path: item.Path, SourceLine: sourceLine, ExitSourceLine: exitKey, RenderedLine: renderedStart, RenderedStart: renderedStart, RenderedEnd: renderedEnd, BodyLine: bodyLine, BodyLayout: bodyLayout, AffectsIndent: item.AffectsIndent, ExpandsAfter: item.ExpandsAfter, Depth: item.Depth, Delta: 0, Boundary: boundary }]
 end
 
 func siblingElseLine(events: Slice[parser2.LayoutEvent], item: parser2.LayoutEvent, index: Int) -> Int
@@ -722,11 +887,6 @@ func remapEventSourceLine(item: parser2.LayoutEvent) -> Int
     if item.BodyAnchor.Start.Line > 0 then item.BodyAnchor.Start.Line else layoutEventLine(item) end
   elsif item.Anchor.Start.Line > 0 then item.Anchor.Start.Line
   else layoutEventLine(item) end
-end
-
-func joinRenderedLayoutEvents(left: Slice[RenderedLayoutEvent], right: Slice[RenderedLayoutEvent]) -> Slice[RenderedLayoutEvent]
-  if right.Len() == 0 then left
-  else joinRenderedLayoutEvents(left.Append(right.Get(0).UnwrapOr(RenderedLayoutEvent { Kind: "", SourceLine: 0, ExitSourceLine: 0, RenderedLine: 0, RenderedStart: 0, RenderedEnd: 0, BodyLine: 0, BodyLayout: "inline", AffectsIndent: false, ExpandsAfter: false, Depth: 0, Delta: 0, Boundary: "" })), right.Slice(1, right.Len()).UnwrapOr([])) end
 end
 
 func remapOneEventLine(sourceLine: Int, mappings: Slice[LineMapping], segments: Slice[ExpansionSegment], index: Int) -> Slice[Int]

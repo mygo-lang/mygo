@@ -51,6 +51,17 @@ func TestFormatterPreservesInlineGoLine(t *testing.T) {
 		return
 	}
 }
+func TestFormatterKeepsDeclarationsAfterInterfaceTopLevel(t *testing.T) {
+	src := "package sample\ninterface IThing[A]\n  func Len(value: A) -> Int\nend\n\nfunc outside() -> Int\n  go[Int] {\n    code: \"1\"\n  }\nend\n"
+	want := "package sample\ninterface IThing[A]\n  func Len(value: A) -> Int\nend\n\nfunc outside() -> Int\n  go[Int] {\n    code: \"1\"\n  }\nend\n"
+	got := formattedOrFail(t, FormatSource("interface.mygo", src))
+	if got != want {
+		t.Fatalf("declarations after interface were not kept top-level: %s", got)
+		return
+	} else {
+		return
+	}
+}
 func TestFormatterPreservesMultilineTripleString(t *testing.T) {
 	source := "package sample\nfunc f() -> String\n  \"\"\"first   line\n  second   line\n  \"\"\"\nend\n"
 	got := formatLayout(source)
@@ -270,4 +281,82 @@ func TestFormatterGenericNestedLayoutIsIdempotent(t *testing.T) {
 	} else {
 		return
 	}
+}
+func TestFormatterCaseThenBodyKeepsIndent(t *testing.T) {
+	src := "package sample\nfunc g(x: Int) -> Int\n  switch x\n    case 1 => 10\n    case _ then\n      0\n    end\n  end\nend\n"
+	got := formatLayout(src)
+	if got != src {
+		t.Fatalf("then-style case body layout changed: %s", got)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterIfElsifElseBlockLayout(t *testing.T) {
+	src := "package sample\nfunc f(x: Int) -> Int\n  if x == 1 then\n    1\n  elsif x == 2 then\n    2\n  else\n    3\n  end\nend\n"
+	got := formatLayout(src)
+	if got != src {
+		t.Fatalf("if/elsif/else block layout changed: %s", got)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterRawStringLinesVerbatim(t *testing.T) {
+	src := "package sample\nfunc f() -> Int\n  go[Int] {\n    code: \"\"\"\n      func() int {\n        return 1\n      }()\n    \"\"\"\n  }\n  0\nend\n"
+	got := formatLayout(src)
+	if !strings.Contains(got, "\n        return 1\n") {
+		t.Fatalf("raw string interior lines were re-indented: %s", got)
+	} else {
+	}
+	if got != src {
+		t.Fatalf("inline Go raw string layout changed: %s", got)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterWrappedListAdjacentToRawString(t *testing.T) {
+	src := "package sample\nfunc f() -> Int\n  let values = [1111111111, 2222222222, 3333333333, 4444444444, 5555555555, 6666666666, 7777777777, 8888888888, 9999999999]\n  go[Int] {\n    code: \"\"\"\n      func() int {\n        return 1\n      }()\n    \"\"\"\n  }\n  0\nend\n"
+	got := formatLayout(src)
+	if !strings.Contains(got, "let values = [\n    1111111111,\n    2222222222,") {
+		t.Fatalf("long list next to a raw string lost its wrap: %s", got)
+	} else {
+	}
+	if !strings.Contains(got, "\n        return 1\n") {
+		t.Fatalf("raw string after a wrapped list lost verbatim lines: %s", got)
+	} else {
+	}
+	if formatLayout(got) != got {
+		t.Fatalf("wrapped list plus raw string is not idempotent: %s", formatLayout(got))
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterWrappedDelimitedPreservesContent(t *testing.T) {
+	src := "package sample\nfunc f() -> Int\n  if reply.Ok then\n    ps.ReplyX { Ok: true, Consumed: reply.Consumed, Value: SpannedX { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }\n  else\n    0\n  end\nend\n"
+	got := formatLayout(src)
+	flat := collapseWhitespace(got)
+	if !strings.Contains(flat, "stateSpan(state,reply.State)") {
+		t.Fatalf("wrapped delimited dropped callee name: %s", got)
+	} else {
+	}
+	if !strings.Contains(flat, "Span:") || !strings.Contains(flat, "Value:") || !strings.Contains(flat, "State:") || !strings.Contains(flat, "Error:") {
+		t.Fatalf("wrapped delimited dropped a field label: %s", got)
+	} else {
+	}
+	if !strings.Contains(flat, "ps.ReplyX") {
+		t.Fatalf("wrapped delimited dropped the outer callee: %s", got)
+	} else {
+	}
+	if formatLayout(got) != got {
+		t.Fatalf("wrapped delimited is not idempotent: %s", formatLayout(got))
+		return
+	} else {
+		return
+	}
+}
+func collapseWhitespace(text string) string {
+	return strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(text, " ", ""), "\t", ""), "\n", "")
 }

@@ -39,6 +39,15 @@ func TestFormatterPreservesInlineGoLine(t: Ref[testing.T]) -> ()
   end
 end
 
+func TestFormatterKeepsDeclarationsAfterInterfaceTopLevel(t: Ref[testing.T]) -> ()
+  let src = "package sample\ninterface IThing[A]\n  func Len(value: A) -> Int\nend\n\nfunc outside() -> Int\n  go[Int] {\n    code: \"1\"\n  }\nend\n"
+  let want = "package sample\ninterface IThing[A]\n  func Len(value: A) -> Int\nend\n\nfunc outside() -> Int\n  go[Int] {\n    code: \"1\"\n  }\nend\n"
+  let got = formattedOrFail(t, FormatSource("interface.mygo", src))
+  if got != want then
+    t.Fatalf("declarations after interface were not kept top-level: %s", got)
+  end
+end
+
 func TestFormatterPreservesMultilineTripleString(t: Ref[testing.T]) -> ()
   let source = "package sample\nfunc f() -> String\n  \"\"\"first   line\n  second   line\n  \"\"\"\nend\n"
   let got = formatLayout(source)
@@ -205,4 +214,67 @@ func TestFormatterGenericNestedLayoutIsIdempotent(t: Ref[testing.T]) -> ()
   if !strings.Contains(first, "literal") || !strings.Contains(first, "retain   spacing") then
     t.Fatalf("generic protected content changed: %s", first)
   end
+end
+
+func TestFormatterCaseThenBodyKeepsIndent(t: Ref[testing.T]) -> ()
+  let src = "package sample\nfunc g(x: Int) -> Int\n  switch x\n    case 1 => 10\n    case _ then\n      0\n    end\n  end\nend\n"
+  let got = formatLayout(src)
+  if got != src then
+    t.Fatalf("then-style case body layout changed: %s", got)
+  end
+end
+
+func TestFormatterIfElsifElseBlockLayout(t: Ref[testing.T]) -> ()
+  let src = "package sample\nfunc f(x: Int) -> Int\n  if x == 1 then\n    1\n  elsif x == 2 then\n    2\n  else\n    3\n  end\nend\n"
+  let got = formatLayout(src)
+  if got != src then
+    t.Fatalf("if/elsif/else block layout changed: %s", got)
+  end
+end
+
+func TestFormatterRawStringLinesVerbatim(t: Ref[testing.T]) -> ()
+  let src = "package sample\nfunc f() -> Int\n  go[Int] {\n    code: \"\"\"\n      func() int {\n        return 1\n      }()\n    \"\"\"\n  }\n  0\nend\n"
+  let got = formatLayout(src)
+  if !strings.Contains(got, "\n        return 1\n") then
+    t.Fatalf("raw string interior lines were re-indented: %s", got)
+  end
+  if got != src then
+    t.Fatalf("inline Go raw string layout changed: %s", got)
+  end
+end
+
+func TestFormatterWrappedListAdjacentToRawString(t: Ref[testing.T]) -> ()
+  let src = "package sample\nfunc f() -> Int\n  let values = [1111111111, 2222222222, 3333333333, 4444444444, 5555555555, 6666666666, 7777777777, 8888888888, 9999999999]\n  go[Int] {\n    code: \"\"\"\n      func() int {\n        return 1\n      }()\n    \"\"\"\n  }\n  0\nend\n"
+  let got = formatLayout(src)
+  if !strings.Contains(got, "let values = [\n    1111111111,\n    2222222222,") then
+    t.Fatalf("long list next to a raw string lost its wrap: %s", got)
+  end
+  if !strings.Contains(got, "\n        return 1\n") then
+    t.Fatalf("raw string after a wrapped list lost verbatim lines: %s", got)
+  end
+  if formatLayout(got) != got then
+    t.Fatalf("wrapped list plus raw string is not idempotent: %s", formatLayout(got))
+  end
+end
+
+func TestFormatterWrappedDelimitedPreservesContent(t: Ref[testing.T]) -> ()
+  let src = "package sample\nfunc f() -> Int\n  if reply.Ok then\n    ps.ReplyX { Ok: true, Consumed: reply.Consumed, Value: SpannedX { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }\n  else\n    0\n  end\nend\n"
+  let got = formatLayout(src)
+  let flat = collapseWhitespace(got)
+  if !strings.Contains(flat, "stateSpan(state,reply.State)") then
+    t.Fatalf("wrapped delimited dropped callee name: %s", got)
+  end
+  if !strings.Contains(flat, "Span:") || !strings.Contains(flat, "Value:") || !strings.Contains(flat, "State:") || !strings.Contains(flat, "Error:") then
+    t.Fatalf("wrapped delimited dropped a field label: %s", got)
+  end
+  if !strings.Contains(flat, "ps.ReplyX") then
+    t.Fatalf("wrapped delimited dropped the outer callee: %s", got)
+  end
+  if formatLayout(got) != got then
+    t.Fatalf("wrapped delimited is not idempotent: %s", formatLayout(got))
+  end
+end
+
+func collapseWhitespace(text: String) -> String
+  strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(text, " ", ""), "\t", ""), "\n", "")
 end

@@ -55,7 +55,7 @@ func ParseFileAt(sourceName: String, input: String) -> Result[ast2.File, String]
       ast2.SourcePos { SourceName: sourceName, Line: pos.Line, Column: pos.Column }
     end)
     let decls = file.Decls.Map(func(decl: ast2.Decl) -> ast2.Decl annotateDeclSource(decl, sourceName) end)
-    Ok(ast2.File { PackageName: file.PackageName, Decls: decls, SourceName: sourceName, Line: 1, Column: 1, DeclPositions: positions })
+    Ok(ast2.File { PackageName: file.PackageName, Decls: decls, SourceName: sourceName, Line: 1, Column: 1, DeclPositions: positions, Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: sourceName, Line: 1, Column: 1 }, End: sourcePos(r.State) } })
   else
     Err(formatError(sourceName, r.Error, r.State.Position))
   end
@@ -83,14 +83,14 @@ end
 
 func annotateDeclSource(decl: ast2.Decl, sourceName: String) -> ast2.Decl
   switch decl
-    case LetDecl(bind) => ast2.Decl.LetDecl(ast2.Bind { Name: bind.Name, Type: bind.Type, Value: annotateExprSource(bind.Value, sourceName) })
-    case VarDecl(bind) => ast2.Decl.VarDecl(ast2.Bind { Name: bind.Name, Type: bind.Type, Value: annotateExprSource(bind.Value, sourceName) })
+    case LetDecl(bind) => ast2.Decl.LetDecl(ast2.Bind { Name: bind.Name, Type: bind.Type, TypeSpan: bind.TypeSpan, Value: annotateExprSource(bind.Value, sourceName), Span: bind.Span })
+    case VarDecl(bind) => ast2.Decl.VarDecl(ast2.Bind { Name: bind.Name, Type: bind.Type, TypeSpan: bind.TypeSpan, Value: annotateExprSource(bind.Value, sourceName), Span: bind.Span })
     case FuncDecl(name, tps, params, ret, body, constraints) =>
       ast2.Decl.FuncDecl(name, tps, params, ret, annotateExprSource(body, sourceName), constraints)
     case ImplDecl(tps, target, iface, methods) =>
       ast2.Decl.ImplDecl(tps, target, iface, methods.Map(func(method: ast2.ImplMethod) -> ast2.ImplMethod
         let sig = method.Sig
-        ast2.ImplMethod { Pos: ast2.SourcePos { SourceName: sourceName, Line: method.Pos.Line, Column: method.Pos.Column }, Sig: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: sourceName, Line: sig.Pos.Line, Column: sig.Pos.Column }, Name: sig.Name, TypeParams: sig.TypeParams, Params: sig.Params, Ret: sig.Ret, Using: sig.Using }, Body: annotateExprSource(method.Body, sourceName) }
+        ast2.ImplMethod { Pos: ast2.SourcePos { SourceName: sourceName, Line: method.Pos.Line, Column: method.Pos.Column }, Sig: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: sourceName, Line: sig.Pos.Line, Column: sig.Pos.Column }, Name: sig.Name, TypeParams: sig.TypeParams, Params: sig.Params, Ret: sig.Ret, RetSpan: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: sourceName, Line: sig.RetSpan.Start.Line, Column: sig.RetSpan.Start.Column }, End: ast2.SourcePos { SourceName: sourceName, Line: sig.RetSpan.End.Line, Column: sig.RetSpan.End.Column } }, Using: sig.Using }, Body: annotateExprSource(method.Body, sourceName) }
       end))
     case _ => decl
   end
@@ -98,55 +98,59 @@ end
 
 func annotateExprSource(expr: ast2.Expr, sourceName: String) -> ast2.Expr
   let pos = ast2.SourcePos { SourceName: sourceName, Line: expr.Pos.Line, Column: expr.Pos.Column }
+  let span = ast2.SourceSpan {
+    Start: ast2.SourcePos { SourceName: sourceName, Line: expr.Span.Start.Line, Column: expr.Span.Start.Column },
+    End: ast2.SourcePos { SourceName: sourceName, Line: expr.Span.End.Line, Column: expr.Span.End.Column },
+  }
   switch expr.Kind
-    case IdentExpr(_) => ast2.Expr { ID: 0, Pos: pos, Span: ast2.SourceSpan { Start: pos, End: pos }, Kind: expr.Kind, Type: None }
-    case NumberExpr(_) => ast2.Expr { ID: 0, Pos: pos, Span: ast2.SourceSpan { Start: pos, End: pos }, Kind: expr.Kind, Type: None }
-    case StringExpr(_) => ast2.Expr { ID: 0, Pos: pos, Span: ast2.SourceSpan { Start: pos, End: pos }, Kind: expr.Kind, Type: None }
-    case RuneExpr(_) => ast2.Expr { ID: 0, Pos: pos, Span: ast2.SourceSpan { Start: pos, End: pos }, Kind: expr.Kind, Type: None }
-    case BoolExpr(_) => ast2.Expr { ID: 0, Pos: pos, Span: ast2.SourceSpan { Start: pos, End: pos }, Kind: expr.Kind, Type: None }
-    case UnitExpr => ast2.Expr { ID: 0, Pos: pos, Span: ast2.SourceSpan { Start: pos, End: pos }, Kind: expr.Kind, Type: None }
+    case IdentExpr(_) => ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type }
+    case NumberExpr(_) => ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type }
+    case StringExpr(_) => ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type }
+    case RuneExpr(_) => ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type }
+    case BoolExpr(_) => ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type }
+    case UnitExpr => ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type }
     case TupleExpr(items) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.TupleExpr(items.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: None }
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.TupleExpr(items.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: expr.Type }
     case CallExpr(callee, typeArgs, args) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.CallExpr(annotateExprSource(callee, sourceName), typeArgs, args.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: None }
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.CallExpr(annotateExprSource(callee, sourceName), typeArgs, args.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: expr.Type }
     case FieldExpr(base, field) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.FieldExpr(annotateExprSource(base, sourceName), field), Type: None }
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.FieldExpr(annotateExprSource(base, sourceName), field), Type: expr.Type }
     case UnaryExpr(op, inner) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.UnaryExpr(op, annotateExprSource(inner, sourceName)), Type: None }
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.UnaryExpr(op, annotateExprSource(inner, sourceName)), Type: expr.Type }
     case BinaryExpr(op, left, right) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.BinaryExpr(op, annotateExprSource(left, sourceName), annotateExprSource(right, sourceName)), Type: None }
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.BinaryExpr(op, annotateExprSource(left, sourceName), annotateExprSource(right, sourceName)), Type: expr.Type }
     case IfExpr(cond, thenExpr, elseExpr) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.IfExpr(annotateExprSource(cond, sourceName), annotateExprSource(thenExpr, sourceName), annotateExprSource(elseExpr, sourceName)), Type: None }
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.IfExpr(annotateExprSource(cond, sourceName), annotateExprSource(thenExpr, sourceName), annotateExprSource(elseExpr, sourceName)), Type: expr.Type }
     case BlockExpr(stmts) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.BlockExpr(stmts.Map(func(s: ast2.Stmt) -> ast2.Stmt annotateStmtSource(s, sourceName) end)), Type: None }
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.BlockExpr(stmts.Map(func(s: ast2.Stmt) -> ast2.Stmt annotateStmtSource(s, sourceName) end)), Type: expr.Type }
     case SwitchExpr(target, cases, targetType) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.SwitchExpr(annotateExprSource(target, sourceName), cases.Map(func(c: ast2.SwitchCase) -> ast2.SwitchCase ast2.SwitchCase { Pattern: c.Pattern, PatternSpan: c.PatternSpan, Body: annotateExprSource(c.Body, sourceName), BodySpan: c.BodySpan, Span: c.Span } end), targetType), Type: None }
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.SwitchExpr(annotateExprSource(target, sourceName), cases.Map(func(c: ast2.SwitchCase) -> ast2.SwitchCase ast2.SwitchCase { Pattern: c.Pattern, PatternSpan: c.PatternSpan, Body: annotateExprSource(c.Body, sourceName), BodySpan: c.BodySpan, Span: c.Span } end), targetType), Type: expr.Type }
     case FuncLitExpr(params, ret, body) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.FuncLitExpr(params, ret, annotateExprSource(body, sourceName)), Type: None }
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.FuncLitExpr(params, ret, annotateExprSource(body, sourceName)), Type: expr.Type }
     case SliceLitExpr(items) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.SliceLitExpr(items.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: None }
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.SliceLitExpr(items.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: expr.Type }
     case TypeAsExpr(value, typ) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.TypeAsExpr(annotateExprSource(value, sourceName), typ), Type: None }
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.TypeAsExpr(annotateExprSource(value, sourceName), typ), Type: expr.Type }
     case StructLitExpr(typeName, fields) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.StructLitExpr(typeName, fields.Map(func(f: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: f.Name, Value: annotateExprSource(f.Value, sourceName) } end)), Type: None }
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.StructLitExpr(typeName, fields.Map(func(f: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: f.Name, Value: annotateExprSource(f.Value, sourceName) } end)), Type: expr.Type }
     case GenericStructLitExpr(typeName, typeArgs, fields) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.GenericStructLitExpr(typeName, typeArgs, fields.Map(func(f: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: f.Name, Value: annotateExprSource(f.Value, sourceName) } end)), Type: None }
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.GenericStructLitExpr(typeName, typeArgs, fields.Map(func(f: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: f.Name, Value: annotateExprSource(f.Value, sourceName) } end)), Type: expr.Type }
     case InlineGoExpr(typ, code, operands, typeOperands) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.InlineGoExpr(typ, code, operands.Map(func(o: ast2.GoOperand) -> ast2.GoOperand ast2.GoOperand { Name: o.Name, Value: annotateExprSource(o.Value, sourceName) } end), typeOperands), Type: None }
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.InlineGoExpr(typ, code, operands.Map(func(o: ast2.GoOperand) -> ast2.GoOperand ast2.GoOperand { Name: o.Name, Value: annotateExprSource(o.Value, sourceName) } end), typeOperands), Type: expr.Type }
     case MapLitExpr(pairs) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.MapLitExpr(pairs.Map(func(p: (ast2.Expr, ast2.Expr)) -> (ast2.Expr, ast2.Expr) (annotateExprSource(p.F0, sourceName), annotateExprSource(p.F1, sourceName)) end)), Type: None }
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.MapLitExpr(pairs.Map(func(p: (ast2.Expr, ast2.Expr)) -> (ast2.Expr, ast2.Expr) (annotateExprSource(p.F0, sourceName), annotateExprSource(p.F1, sourceName)) end)), Type: expr.Type }
     case SetLitExpr(items) =>
-      ast2.Expr { ID: 0, Pos: pos, Kind: ast2.ExprKind.SetLitExpr(items.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: None }
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.SetLitExpr(items.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: expr.Type }
   end
 end
 
 func annotateStmtSource(stmt: ast2.Stmt, sourceName: String) -> ast2.Stmt
   switch stmt
     case ExprStmt(expr) => ast2.Stmt.ExprStmt(annotateExprSource(expr, sourceName))
-    case LetStmt(bind) => ast2.Stmt.LetStmt(ast2.Bind { Name: bind.Name, Type: bind.Type, Value: annotateExprSource(bind.Value, sourceName) })
-    case LetRecStmt(bindings) => ast2.Stmt.LetRecStmt(bindings.Map(func(b: ast2.LetRecBind) -> ast2.LetRecBind ast2.LetRecBind { Name: b.Name, Type: b.Type, Value: annotateExprSource(b.Value, sourceName) } end))
+    case LetStmt(bind) => ast2.Stmt.LetStmt(ast2.Bind { Name: bind.Name, Type: bind.Type, TypeSpan: bind.TypeSpan, Value: annotateExprSource(bind.Value, sourceName), Span: bind.Span })
+    case LetRecStmt(bindings) => ast2.Stmt.LetRecStmt(bindings.Map(func(b: ast2.LetRecBind) -> ast2.LetRecBind ast2.LetRecBind { Name: b.Name, Type: b.Type, TypeSpan: b.TypeSpan, Value: annotateExprSource(b.Value, sourceName) } end))
     case TupleLetStmt(pattern, expr) => ast2.Stmt.TupleLetStmt(pattern, annotateExprSource(expr, sourceName))
-    case VarStmt(bind) => ast2.Stmt.VarStmt(ast2.Bind { Name: bind.Name, Type: bind.Type, Value: annotateExprSource(bind.Value, sourceName) })
+    case VarStmt(bind) => ast2.Stmt.VarStmt(ast2.Bind { Name: bind.Name, Type: bind.Type, TypeSpan: bind.TypeSpan, Value: annotateExprSource(bind.Value, sourceName), Span: bind.Span })
     case WhileStmt(cond, body) => ast2.Stmt.WhileStmt(annotateExprSource(cond, sourceName), annotateExprSource(body, sourceName))
     case AssignStmt(target, value) => ast2.Stmt.AssignStmt(annotateExprSource(target, sourceName), annotateExprSource(value, sourceName))
     case ReturnWithStmt(expr) => ast2.Stmt.ReturnWithStmt(annotateExprSource(expr, sourceName))
@@ -157,7 +161,15 @@ func annotateStmtSource(stmt: ast2.Stmt, sourceName: String) -> ast2.Stmt
 end
 
 func fileParser() -> ps.Parser[ast2.File]
-  fileParserCache
+  func(state: ps.State) -> ps.Reply[ast2.File]
+    let reply = fileParserCache(state)
+    if reply.Ok then
+      let value = reply.Value
+      let span = ast2.SourceSpan { Start: sourcePos(state), End: sourcePos(reply.State) }
+      ps.Reply[ast2.File] { Ok: true, Consumed: reply.Consumed, Value: ast2.File { PackageName: value.PackageName, Decls: value.Decls, SourceName: value.SourceName, Line: value.Line, Column: value.Column, DeclPositions: value.DeclPositions, Span: span }, State: reply.State, Error: reply.Error }
+    else reply
+    end
+  end
 end
 
 func buildFileParser() -> ps.Parser[ast2.File]
@@ -166,7 +178,7 @@ func buildFileParser() -> ps.Parser[ast2.File]
       ps.PBind(ps.PMany(positionedDecl()), func(items: Slice[(ast2.Decl, ast2.SourcePos)]) -> ps.Parser[ast2.File]
         let decls = items.Map(func(item: (ast2.Decl, ast2.SourcePos)) -> ast2.Decl item.F0 end)
         let positions = items.Map(func(item: (ast2.Decl, ast2.SourcePos)) -> ast2.SourcePos item.F1 end)
-        ps.PThen(trivia(), ps.PThen(ps.PEof(), ps.PPure(ast2.File { PackageName: pkg, Decls: decls, SourceName: "", Line: 1, Column: 1, DeclPositions: positions })))
+        ps.PThen(trivia(), ps.PThen(ps.PEof(), ps.PPure(ast2.File { PackageName: pkg, Decls: decls, SourceName: "", Line: 1, Column: 1, DeclPositions: positions, Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, End: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 } } })))
       end)
     end)
   end)
@@ -212,7 +224,7 @@ func packageLetDecl() -> ps.Parser[ast2.Decl]
     ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Decl]
       ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ: Option[Spanned[ast2.TypeExpr]]) -> ps.Parser[ast2.Decl]
         ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Decl]
-          ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Decl ast2.Decl.LetDecl(ast2.Bind { Name: name, Type: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr item.Value end), TypeSpan: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan item.Span end).UnwrapOr(emptySpan()), Value: value }) end)
+          ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Decl ast2.Decl.LetDecl(ast2.Bind { Name: name, Type: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr item.Value end), TypeSpan: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan item.Span end).UnwrapOr(emptySpan()), Value: value, Span: value.Span }) end)
         end)
       end)
     end)
@@ -224,7 +236,7 @@ func packageVarDecl() -> ps.Parser[ast2.Decl]
     ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Decl]
       ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ: Option[Spanned[ast2.TypeExpr]]) -> ps.Parser[ast2.Decl]
         ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Decl]
-          ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Decl ast2.Decl.VarDecl(ast2.Bind { Name: name, Type: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr item.Value end), TypeSpan: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan item.Span end).UnwrapOr(emptySpan()), Value: value }) end)
+          ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Decl ast2.Decl.VarDecl(ast2.Bind { Name: name, Type: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr item.Value end), TypeSpan: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan item.Span end).UnwrapOr(emptySpan()), Value: value, Span: value.Span }) end)
         end)
       end)
     end)
@@ -382,7 +394,7 @@ func fieldDeclCore() -> ps.Parser[ast2.Field]
     ps.PAttempt(ps.PBind(kw("embed"), func(_: String) -> ps.Parser[ast2.Field]
       ps.PBind(spannedTypeExpr(), func(typ: Spanned[ast2.TypeExpr]) -> ps.Parser[ast2.Field]
         ps.PMap(ps.POptional(stringLiteral()), func(tag: Option[String]) -> ast2.Field
-          ast2.Field { Name: "embed", Type: typ.Value, TypeSpan: typ.Span, Tag: tag }
+          ast2.Field { Name: "embed", Type: typ.Value, TypeSpan: typ.Span, Tag: tag, Span: typ.Span }
         end)
       end)
     end)),
@@ -390,7 +402,7 @@ func fieldDeclCore() -> ps.Parser[ast2.Field]
     ps.PBind(sym(":"), func(_: String) -> ps.Parser[ast2.Field]
       ps.PBind(spannedTypeExpr(), func(typ: Spanned[ast2.TypeExpr]) -> ps.Parser[ast2.Field]
         ps.PMap(ps.POptional(stringLiteral()), func(tag: Option[String]) -> ast2.Field
-          ast2.Field { Name: name, Type: typ.Value, TypeSpan: typ.Span, Tag: tag }
+          ast2.Field { Name: name, Type: typ.Value, TypeSpan: typ.Span, Tag: tag, Span: typ.Span }
         end)
       end)
     end)
@@ -421,6 +433,7 @@ func variantDeclCore() -> ps.Parser[ast2.Variant]
             FieldSpans: fields.Map(func(f: (String, Spanned[ast2.TypeExpr])) -> ast2.SourceSpan f.F1.Span end),
             Named: true,
             Names: fields.Map(func(f: (String, Spanned[ast2.TypeExpr])) -> String f.F0 end),
+            Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, End: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 } },
           }))
         end)
       end),
@@ -429,7 +442,7 @@ func variantDeclCore() -> ps.Parser[ast2.Variant]
           case Some(items) => items.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr item.Value end)
           case None => []
         end
-        ast2.Variant { Name: name, Fields: actual, FieldSpans: switch fields case Some(items) => items.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan item.Span end) case None => [] end, Named: false, Names: [] as Slice[String] }
+        ast2.Variant { Name: name, Fields: actual, FieldSpans: switch fields case Some(items) => items.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan item.Span end) case None => [] end, Named: false, Names: [] as Slice[String], Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, End: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 } } }
       end),
     ])
   end)
@@ -461,7 +474,7 @@ func paramCore() -> ps.Parser[ast2.Param]
   ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Param]
     ps.PBind(sym(":"), func(_: String) -> ps.Parser[ast2.Param]
       ps.PMap(spannedTypeExpr(), func(typ: Spanned[ast2.TypeExpr]) -> ast2.Param
-        ast2.Param { Name: name, Type: typ.Value, TypeSpan: typ.Span }
+        ast2.Param { Name: name, Type: typ.Value, TypeSpan: typ.Span, Span: typ.Span }
       end)
     end)
   end)
@@ -703,7 +716,7 @@ func namedLetStmt() -> ps.Parser[ast2.Stmt]
           ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ: Option[Spanned[ast2.TypeExpr]]) -> ps.Parser[ast2.Stmt]
       ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
         ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
-          ast2.Stmt.LetStmt(ast2.Bind { Name: name, Type: unwrapTypeOption(typ), TypeSpan: typeOptionSpan(typ), Value: value })
+          ast2.Stmt.LetStmt(ast2.Bind { Name: name, Type: unwrapTypeOption(typ), TypeSpan: typeOptionSpan(typ), Value: value, Span: value.Span })
         end)
       end)
     end)
@@ -740,7 +753,7 @@ func varStmt() -> ps.Parser[ast2.Stmt]
       ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ: Option[Spanned[ast2.TypeExpr]]) -> ps.Parser[ast2.Stmt]
         ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
           ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
-            ast2.Stmt.VarStmt(ast2.Bind { Name: name, Type: unwrapTypeOption(typ), TypeSpan: typeOptionSpan(typ), Value: value })
+            ast2.Stmt.VarStmt(ast2.Bind { Name: name, Type: unwrapTypeOption(typ), TypeSpan: typeOptionSpan(typ), Value: value, Span: value.Span })
           end)
         end)
       end)
@@ -805,7 +818,9 @@ func positionedExpr(inner: ps.Parser[ast2.Expr]) -> ps.Parser[ast2.Expr]
   func(state: ps.State) -> ps.Reply[ast2.Expr]
     let r = inner(state)
     if r.Ok then
-      ps.Reply[ast2.Expr] { Ok: true, Consumed: r.Consumed, Value: exprAt(state, r.Value.Kind), State: r.State, Error: r.Error }
+      let pos = sourcePos(state)
+      let span = ast2.SourceSpan { Start: pos, End: sourcePos(r.State) }
+      ps.Reply[ast2.Expr] { Ok: true, Consumed: r.Consumed, Value: ast2.Expr { ID: r.Value.ID, Pos: pos, Span: span, Kind: r.Value.Kind, Type: r.Value.Type }, State: r.State, Error: r.Error }
     else
       r
     end
@@ -993,7 +1008,7 @@ func ifBlockTail(cond: ast2.Expr) -> ps.Parser[ast2.Expr]
   ps.PBind(kw("then"), func(_: String) -> ps.Parser[ast2.Expr]
     ps.PBind(blockUntil(ps.PChoice([kw("elsif"), kw("else"), kw("end")])), func(thenBlock: ast2.Expr) -> ps.Parser[ast2.Expr]
       ps.PBind(ifElseTail(), func(elseExpr: ast2.Expr) -> ps.Parser[ast2.Expr]
-        ps.PThen(kw("end"), ps.PPure(exprWithPos(cond.Pos, ast2.ExprKind.IfExpr(cond, bodyExprFromBlock(thenBlock), elseExpr))))
+        ps.PThen(kw("end"), ps.PPure(exprWithPos(cond.Pos, ast2.ExprKind.IfExpr(cond, bodyExprWithBlockSpan(thenBlock), elseExpr))))
       end)
     end)
   end)
@@ -1001,13 +1016,13 @@ end
 
 func ifElseTail() -> ps.Parser[ast2.Expr]
   ps.PChoice([
-    ps.PAttempt(ps.PThen(kw("else"), ps.PMap(blockUntil(kw("end")), bodyExprFromBlock))),
+    ps.PAttempt(ps.PThen(kw("else"), ps.PMap(blockUntil(kw("end")), bodyExprWithBlockSpan))),
     ps.PAttempt(ps.PBind(kw("elsif"), func(_: String) -> ps.Parser[ast2.Expr]
       ps.PBind(expr(), func(cond: ast2.Expr) -> ps.Parser[ast2.Expr]
         ps.PBind(kw("then"), func(_: String) -> ps.Parser[ast2.Expr]
           ps.PBind(blockUntil(ps.PChoice([kw("elsif"), kw("else"), kw("end")])), func(thenBlock: ast2.Expr) -> ps.Parser[ast2.Expr]
             ps.PMap(lazyIfElseTail(), func(elseExpr: ast2.Expr) -> ast2.Expr
-              exprWithPos(cond.Pos, ast2.ExprKind.IfExpr(cond, bodyExprFromBlock(thenBlock), elseExpr))
+              exprWithPos(cond.Pos, ast2.ExprKind.IfExpr(cond, bodyExprWithBlockSpan(thenBlock), elseExpr))
             end)
           end)
         end)
@@ -1037,6 +1052,11 @@ func bodyExprFromBlock(body: ast2.Expr) -> ast2.Expr
       end
     case _ => body
   end
+end
+
+func bodyExprWithBlockSpan(body: ast2.Expr) -> ast2.Expr
+  let value = bodyExprFromBlock(body)
+  ast2.Expr { ID: value.ID, Pos: value.Pos, Span: body.Span, Kind: value.Kind, Type: value.Type }
 end
 
 func binaryExpr() -> ps.Parser[ast2.Expr]
