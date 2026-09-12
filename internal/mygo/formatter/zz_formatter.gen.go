@@ -87,11 +87,13 @@ type ExpandedBlocks struct {
 	Segment    ExpansionSegment
 	Segments   []ExpansionSegment
 	Lines      []LineMapping
+	Edits      []PassEdit
 }
 type BlockRenderResult struct {
 	Text     string
 	Segments []ExpansionSegment
 	Lines    []LineMapping
+	Edits    []PassEdit
 }
 
 func joinSyntheticEvents(left []SyntheticLayoutEvent, right []SyntheticLayoutEvent) []SyntheticLayoutEvent {
@@ -130,20 +132,25 @@ func formatLossless(parsed parser2.LosslessFile, source string) string {
 }
 func renderASTSpans(file ast2.File, spans []parser2.NodeSpan, delimited []parser2.DelimitedSpan, events []parser2.LayoutEvent, protectedLines []int, source string) string {
 	blockResult := renderBlockSpans(source, spans)
-	ifText := renderBranchSpanAt(blockResult.Text, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(events, func(item parser2.LayoutEvent) bool {
+	blockEdits := blockResult.Edits
+	thenEvents := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(events, func(item parser2.LayoutEvent) bool {
 		return item.Kind == "enter:if-then"
-	}), events, 0)
-	ifCount := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(ifText, "\n")) - MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(blockResult.Text, "\n"))
-	caseText := renderCaseSpanAt(ifText, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(events, func(item_1 parser2.LayoutEvent) bool {
+	})
+	branchRender := renderBranchSpanAt(blockResult.Text, thenEvents, events, delimited, blockEdits, 0)
+	ifText := branchRender.Text
+	branchEdits := branchRender.Edits
+	caseEvents := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(events, func(item_1 parser2.LayoutEvent) bool {
 		return item_1.Kind == "enter:case" && item_1.SeparatorAnchor.Start.Line > 0
-	}), 0)
-	caseCount := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(caseText, "\n")) - MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(ifText, "\n"))
-	delimitedRender := renderDelimitedPass(caseText, delimited)
+	})
+	caseRender := renderCaseSpanAt(ifText, caseEvents, delimited, joinEdits(blockEdits, branchEdits), 0)
+	caseText := caseRender.Text
+	caseEdits := caseRender.Edits
+	delimitedRender := renderDelimitedPass(caseText, delimited, joinEdits(joinEdits(blockEdits, branchEdits), caseEdits))
 	delimitedText := delimitedRender.Text
 	delimEdits := delimitedRender.Edits
+	ifCount := sumPassAdded(branchEdits, 0)
+	caseCount := sumPassAdded(caseEdits, 0)
 	delimCount := sumPassAdded(delimEdits, 0)
-	branchEdits := branchPassEdits(events, ifCount)
-	caseEdits := casePassEdits(events, caseCount)
 	goal := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(blockResult.Lines) + ifCount + caseCount + delimCount
 	composedLines := composePassLines(blockResult.Lines, joinEdits(joinEdits(branchEdits, caseEdits), delimEdits), goal, 0)
 	sourceFallback := ExpansionSegment{SourceStart: 1, SourceEnd: goal, RenderedStart: 1, RenderedEnd: goal, Kind: "source"}
@@ -160,39 +167,14 @@ func projectDelimitedTargets(targets []int, mappings []LineMapping, spans []pars
 func addDelimitedIndent(targets []int, mappings []LineMapping, span ast2.SourceSpan, index int, acc []int) []int {
 	return __mygo_mt_formatter_addDelimitedIndent(targets, mappings, span, index, acc, 0)
 }
-func branchPassEdits(events []parser2.LayoutEvent, count int) []PassEdit {
-	if count == 0 {
-		return []PassEdit{}
-	} else {
-		thenEvent := firstExpandableBranch(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(events, func(item parser2.LayoutEvent) bool {
-			return item.Kind == "enter:if-then"
-		}), events, 0)
-		span := thenEvent.Anchor
-		var __mygo_expr_0 int
-		if thenEvent.Span.End.Line > 0 {
-			__mygo_expr_0 = thenEvent.Span.End.Line
+func lineShift(edits []PassEdit, sourceLine int) int {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(edits, 0, func(total int, edit PassEdit) int {
+		if edit.SourceLine < sourceLine {
+			return total + edit.Added
 		} else {
-			__mygo_expr_0 = span.Start.Line
+			return total
 		}
-		return []PassEdit{PassEdit{Anchor: span.Start.Line - 1, SourceLine: span.Start.Line, Added: count, SourceStart: span.Start.Line, SourceEnd: __mygo_expr_0, Kind: "if-branch", Depths: []int{}}}
-	}
-}
-func firstExpandableBranch(thenEvents []parser2.LayoutEvent, events []parser2.LayoutEvent, index int) parser2.LayoutEvent {
-	return __mygo_mt_formatter_firstExpandableBranch(thenEvents, events, index, 0)
-}
-func casePassEdits(events []parser2.LayoutEvent, count int) []PassEdit {
-	if count == 0 {
-		return []PassEdit{}
-	} else {
-		caseEvent := firstExpandableCase(events, 0)
-		return []PassEdit{PassEdit{Anchor: caseEvent.Span.Start.Line - 1, SourceLine: caseEvent.Span.Start.Line, Added: count, SourceStart: caseEvent.Span.Start.Line, SourceEnd: caseEvent.Span.End.Line, Kind: "case-branch", Depths: []int{}}}
-	}
-}
-func firstExpandableCase(events []parser2.LayoutEvent, index int) parser2.LayoutEvent {
-	return __mygo_mt_formatter_firstExpandableCase(events, index, 0)
-}
-func firstExpandableDelimited(spans []parser2.DelimitedSpan, index int) ast2.SourceSpan {
-	return __mygo_mt_formatter_firstExpandableDelimited(spans, index, 0)
+	})
 }
 func composePassLines(base []LineMapping, edits []PassEdit, goal int, index int) []LineMapping {
 	return composePassRows(base, edits, 1, 0)
@@ -327,14 +309,14 @@ func renderBlockSpans(source string, spans []parser2.NodeSpan) ExpandedBlocks {
 	}
 	renderedEnd := __mygo_expr_0
 	fallbackSegment := ExpansionSegment{SourceStart: sourceSpan.Start.Line, SourceEnd: sourceSpan.End.Line, RenderedStart: renderedStart, RenderedEnd: renderedEnd, Kind: "block-body"}
-	return ExpandedBlocks{Text: rendered, SourceSpan: sourceSpan, Segment: fallbackSegment, Segments: renderedResult.Segments, Lines: renderedResult.Lines}
+	return ExpandedBlocks{Text: rendered, SourceSpan: sourceSpan, Segment: fallbackSegment, Segments: renderedResult.Segments, Lines: renderedResult.Lines, Edits: renderedResult.Edits}
 }
 func renderBlockResult(source string, blocks []parser2.NodeSpan, index int) BlockRenderResult {
 	return renderBlockResultAt(source, blocks, index, 0, expandedLineMap(source, source, 1))
 }
 func renderBlockResultAt(source string, blocks []parser2.NodeSpan, index int, lineDelta int, mappings []LineMapping) BlockRenderResult {
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(blocks) {
-		return BlockRenderResult{Text: source, Segments: []ExpansionSegment{}, Lines: mappings}
+		return BlockRenderResult{Text: source, Segments: []ExpansionSegment{}, Lines: mappings, Edits: []PassEdit{}}
 	} else {
 		bodySpan := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(blocks, index), parser2.NodeSpan{Path: []int{}, Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}})
 		sourceLine := bodySpan.Span.Start.Line
@@ -365,7 +347,15 @@ func renderBlockResultAt(source string, blocks []parser2.NodeSpan, index int, li
 		}
 		nextMappings := __mygo_expr_2
 		rest := renderBlockResultAt(expanded, blocks, index+1, lineDelta+lineChange, nextMappings)
-		return BlockRenderResult{Text: rest.Text, Segments: joinSegments([]ExpansionSegment{current}, rest.Segments), Lines: rest.Lines}
+		blockEdit := PassEdit{Anchor: sourceLine - 1, SourceLine: sourceLine, Added: lineChange, SourceStart: sourceLine, SourceEnd: bodySpan.Span.End.Line, Kind: "block-body", Depths: []int{}}
+		var __mygo_expr_3 []PassEdit
+		if expands {
+			__mygo_expr_3 = joinEdits([]PassEdit{blockEdit}, rest.Edits)
+		} else {
+			__mygo_expr_3 = rest.Edits
+		}
+		nextEdits := __mygo_expr_3
+		return BlockRenderResult{Text: rest.Text, Segments: joinSegments([]ExpansionSegment{current}, rest.Segments), Lines: rest.Lines, Edits: nextEdits}
 	}
 }
 func expandBlockMappings(mappings []LineMapping, lineIndex int, sourceLine int, index int) []LineMapping {
@@ -408,30 +398,33 @@ func expandBlockSourceLine(raw string, bodyStartColumn int, bodyEndColumn int) s
 	header := strings.TrimRight(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, 0, bodyStart), raw), " \t")
 	return header + "\n  " + body + "\nend"
 }
-func renderDelimitedPass(source string, spans []parser2.DelimitedSpan) DelimitedRender {
-	text := renderDelimitedSpanAt(source, spans, spans, 0)
+func renderDelimitedPass(source string, spans []parser2.DelimitedSpan, priorEdits []PassEdit) DelimitedRender {
+	text := renderDelimitedSpanAt(source, spans, spans, priorEdits, 0)
 	added := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(text, "\n")) - MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(source, "\n"))
 	if added == 0 {
 		return DelimitedRender{Text: text, Edits: []PassEdit{}}
 	} else {
-		span := firstExpandableDelimited(spans, 0)
-		return DelimitedRender{Text: text, Edits: []PassEdit{PassEdit{Anchor: span.Start.Line - 1, SourceLine: span.Start.Line, Added: added, SourceStart: span.Start.Line, SourceEnd: span.End.Line, Kind: "delimited", Depths: []int{}}}}
+		return DelimitedRender{Text: text, Edits: renderDelimitedEdits(MygoIN6StringM5Split(source, "\n"), spans, spans, priorEdits, 0, []PassEdit{})}
 	}
+}
+func renderDelimitedEdits(sourceLines []string, allSpans []parser2.DelimitedSpan, spans []parser2.DelimitedSpan, priorEdits []PassEdit, index int, acc []PassEdit) []PassEdit {
+	return __mygo_mt_formatter_renderDelimitedEdits(sourceLines, allSpans, spans, priorEdits, index, acc, 0)
 }
 func containedInSameLineSpan(spans []parser2.DelimitedSpan, span ast2.SourceSpan, index int) bool {
 	return __mygo_mt_formatter_containedInSameLineSpan(spans, span, index, 0)
 }
-func renderDelimitedSpanAt(source string, allSpans []parser2.DelimitedSpan, spans []parser2.DelimitedSpan, index int) string {
+func renderDelimitedSpanAt(source string, allSpans []parser2.DelimitedSpan, spans []parser2.DelimitedSpan, priorEdits []PassEdit, index int) string {
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(spans) {
 		return source
 	} else {
 		item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(spans, index), parser2.DelimitedSpan{Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Items: []ast2.SourceSpan{}, Separators: []ast2.SourceSpan{}})
-		rendered := renderDelimitedSpanAt(source, allSpans, spans, index+1)
+		rendered := renderDelimitedSpanAt(source, allSpans, spans, priorEdits, index+1)
 		line := item.Span.Start.Line
+		target := line + lineShift(priorEdits, line)
 		lines := MygoIN6StringM5Split(rendered, "\n")
-		raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, line-1), "")
+		raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, target-1), "")
 		if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw) > 100 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Separators) > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(allSpans, item.Span, 0) {
-			return replaceSourceLine(lines, line-1, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, 0, item.Span.Start.Column-1), "")+renderDelimitedBlockBody(raw, item))
+			return replaceSourceLine(lines, target-1, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, 0, item.Span.Start.Column-1), "")+renderDelimitedBlockBody(raw, item))
 		} else {
 			return rendered
 		}
@@ -478,17 +471,20 @@ func joinDelimitedItemLines(items []string, tail string, index int) string {
 		return "\n  " + text + comma + joinDelimitedItemLines(items, tail, index+1)
 	}
 }
-func renderCaseSpanAt(source string, cases []parser2.LayoutEvent, index int) string {
+func renderCaseSpanAt(source string, cases []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, priorEdits []PassEdit, index int) DelimitedRender {
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(cases) {
-		return source
+		return DelimitedRender{Text: source, Edits: []PassEdit{}}
 	} else {
 		item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cases, index), emptyLayoutEvent())
-		rendered := renderCaseSpanAt(source, cases, index+1)
+		rendered := renderCaseSpanAt(source, cases, delimited, priorEdits, index+1)
 		line := item.Anchor.Start.Line
-		lines := MygoIN6StringM5Split(rendered, "\n")
-		raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, line-1), "")
-		if item.ExpandsAfter && item.Anchor.Start.Line > 0 && item.BodyAnchor.Start.Line > 0 && item.Anchor.Start.Line == item.SeparatorAnchor.Start.Line && item.SeparatorAnchor.Start.Line == item.BodyAnchor.Start.Line && item.SeparatorAnchor.End.Column <= item.BodyAnchor.Start.Column {
-			return replaceSourceLine(lines, line-1, expandCaseSourceLine(raw, item))
+		target := line + lineShift(priorEdits, line)
+		lines := MygoIN6StringM5Split(rendered.Text, "\n")
+		raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, target-1), "")
+		if item.ExpandsAfter && item.Anchor.Start.Line > 0 && item.BodyAnchor.Start.Line > 0 && item.Anchor.Start.Line == item.SeparatorAnchor.Start.Line && item.SeparatorAnchor.Start.Line == item.BodyAnchor.Start.Line && item.SeparatorAnchor.End.Column <= item.BodyAnchor.Start.Column && !insideSameLineDelimited(delimited, line, item.Anchor.Start.Column) {
+			replacement := expandCaseSourceLine(raw, item)
+			edit := PassEdit{Anchor: line - 1, SourceLine: line, Added: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(replacement, "\n")) - 1, SourceStart: item.Span.Start.Line, SourceEnd: item.Span.End.Line, Kind: "case-branch", Depths: []int{}}
+			return DelimitedRender{Text: replaceSourceLine(lines, target-1, replacement), Edits: joinEdits(rendered.Edits, []PassEdit{edit})}
 		} else {
 			return rendered
 		}
@@ -500,30 +496,48 @@ func expandCaseSourceLine(raw string, item parser2.LayoutEvent) string {
 	body := strings.TrimSpace(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN15StringByteIndexGN6StringN3IntN4ByteEM5Slice(raw, item.BodyAnchor.Start.Column-1, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw)), ""))
 	return prefix + " then\n  " + body + "\nend"
 }
-func renderBranchSpanAt(source string, thenEvents []parser2.LayoutEvent, events []parser2.LayoutEvent, index int) string {
+func renderBranchSpanAt(source string, thenEvents []parser2.LayoutEvent, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, priorEdits []PassEdit, index int) DelimitedRender {
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(thenEvents) {
-		return source
+		return DelimitedRender{Text: source, Edits: []PassEdit{}}
 	} else {
 		thenEvent := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(thenEvents, index), emptyLayoutEvent())
 		elseEvents := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(events, func(item parser2.LayoutEvent) bool {
 			return item.Kind == "enter:if-else" && sameBranchParent(item.Path, thenEvent.Path, 0)
 		})
-		rendered := renderBranchSpanAt(source, thenEvents, events, index+1)
+		rendered := renderBranchSpanAt(source, thenEvents, events, delimited, priorEdits, index+1)
 		if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(elseEvents) == 0 {
 			return rendered
 		} else {
 			elseEvent := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(elseEvents, 0), thenEvent)
 			exit := branchExitAnchor(events, thenEvent.Path, 0)
 			line := thenEvent.Anchor.Start.Line
-			lines := MygoIN6StringM5Split(rendered, "\n")
-			raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, line-1), "")
-			if shouldExpandBranch(raw, thenEvent, elseEvent, exit) {
-				return replaceSourceLine(lines, line-1, expandBranchSourceLine(raw, thenEvent, elseEvent, exit))
+			target := line + lineShift(priorEdits, line)
+			lines := MygoIN6StringM5Split(rendered.Text, "\n")
+			raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, target-1), "")
+			if shouldExpandBranch(raw, thenEvent, elseEvent, exit) && !insideSameLineDelimited(delimited, line, thenEvent.Anchor.Start.Column) {
+				replacement := expandBranchSourceLine(raw, thenEvent, elseEvent, exit)
+				var __mygo_expr_0 int
+				if thenEvent.Span.End.Line > 0 {
+					__mygo_expr_0 = thenEvent.Span.End.Line
+				} else {
+					__mygo_expr_0 = line
+				}
+				edit := PassEdit{Anchor: line - 1, SourceLine: line, Added: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(replacement, "\n")) - 1, SourceStart: line, SourceEnd: __mygo_expr_0, Kind: "if-branch", Depths: []int{}}
+				return DelimitedRender{Text: replaceSourceLine(lines, target-1, replacement), Edits: joinEdits(rendered.Edits, []PassEdit{edit})}
 			} else {
 				return rendered
 			}
 		}
 	}
+}
+func insideSameLineDelimited(spans []parser2.DelimitedSpan, line int, column int) bool {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(spans, false, func(found bool, item parser2.DelimitedSpan) bool {
+		if found {
+			return true
+		} else {
+			return item.Span.Start.Line == line && item.Span.End.Line == line && item.Span.Start.Column <= column && column <= item.Span.End.Column
+		}
+	})
 }
 func emptyLayoutEvent() parser2.LayoutEvent {
 	return parser2.LayoutEvent{Kind: "", Path: []int{}, Depth: 0, Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Anchor: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, BodyAnchor: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, BlockBodyAnchor: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, BodyLayout: "inline", AffectsIndent: false, ExpandsAfter: false, HeaderForm: "", SeparatorAnchor: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, ExitAnchor: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, HeaderLine: 0, BodyLine: 0, ExitLine: 0}
@@ -1141,79 +1155,6 @@ func __mygo_mt_formatter_expandedLineMapFrom(__mygo_mt_p0 int, __mygo_mt_p1 int,
 		}
 	}
 }
-func __mygo_mt_formatter_firstExpandableBranch(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 []parser2.LayoutEvent, __mygo_mt_p2 int, __mygo_state int) parser2.LayoutEvent {
-	for {
-		switch __mygo_state {
-		case 0:
-			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-				return emptyLayoutEvent()
-			} else {
-				thenEvent := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2), emptyLayoutEvent())
-				elseEvents := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(__mygo_mt_p1, func(item parser2.LayoutEvent) bool {
-					return item.Kind == "enter:if-else" && sameBranchParent(item.Path, thenEvent.Path, 0)
-				})
-				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(elseEvents) > 0 && shouldExpandBranch("", thenEvent, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(elseEvents, 0), thenEvent), branchExitAnchor(__mygo_mt_p1, thenEvent.Path, 0)) {
-					return thenEvent
-				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1
-					__tail_2 := __mygo_mt_p2 + 1
-					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
-					__mygo_state = 0
-					continue
-				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_formatter_firstExpandableCase(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 int, __mygo_state int) parser2.LayoutEvent {
-	for {
-		switch __mygo_state {
-		case 0:
-			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-				return emptyLayoutEvent()
-			} else {
-				item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), emptyLayoutEvent())
-				if item.Kind == "enter:case" && item.ExpandsAfter && item.Anchor.Start.Line == item.SeparatorAnchor.Start.Line && item.SeparatorAnchor.End.Column <= item.BodyAnchor.Start.Column {
-					return item
-				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1 + 1
-					__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
-					__mygo_state = 0
-					continue
-				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
-func __mygo_mt_formatter_firstExpandableDelimited(__mygo_mt_p0 []parser2.DelimitedSpan, __mygo_mt_p1 int, __mygo_state int) ast2.SourceSpan {
-	for {
-		switch __mygo_state {
-		case 0:
-			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
-				return ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 1, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 1, Column: 0}}
-			} else {
-				item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1), parser2.DelimitedSpan{Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Items: []ast2.SourceSpan{}, Separators: []ast2.SourceSpan{}})
-				if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Separators) > 0 && item.Span.Start.Line == item.Span.End.Line {
-					return item.Span
-				} else {
-					__tail_0 := __mygo_mt_p0
-					__tail_1 := __mygo_mt_p1 + 1
-					__mygo_mt_p0, __mygo_mt_p1 = __tail_0, __tail_1
-					__mygo_state = 0
-					continue
-				}
-			}
-		default:
-			panic("mygo: invalid mutual-tailcall state")
-		}
-	}
-}
 func __mygo_mt_formatter_firstSpanOfKind(__mygo_mt_p0 []parser2.NodeSpan, __mygo_mt_p1 string, __mygo_mt_p2 int, __mygo_state int) ast2.SourceSpan {
 	for {
 		switch __mygo_state {
@@ -1604,6 +1545,43 @@ func __mygo_mt_formatter_remapOneEventLine(__mygo_mt_p0 int, __mygo_mt_p1 []Line
 							panic("non-exhaustive switch")
 						}
 					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_renderDelimitedEdits(__mygo_mt_p0 []string, __mygo_mt_p1 []parser2.DelimitedSpan, __mygo_mt_p2 []parser2.DelimitedSpan, __mygo_mt_p3 []PassEdit, __mygo_mt_p4 int, __mygo_mt_p5 []PassEdit, __mygo_state int) []PassEdit {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p4 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
+				return __mygo_mt_p5
+			} else {
+				item := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p4), parser2.DelimitedSpan{Kind: "", Span: ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}, End: ast2.SourcePos{SourceName: "", Line: 0, Column: 0}}, Items: []ast2.SourceSpan{}, Separators: []ast2.SourceSpan{}})
+				line := item.Span.Start.Line
+				raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, line+lineShift(__mygo_mt_p3, line)-1), "")
+				if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw) > 100 && MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Separators) > 0 && item.Span.Start.Line == item.Span.End.Line && !containedInSameLineSpan(__mygo_mt_p1, item.Span, 0) {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3
+					__tail_4 := __mygo_mt_p4 + 1
+					__tail_5 := MygoIN5SliceM6Append(__mygo_mt_p5, PassEdit{Anchor: line - 1, SourceLine: line, Added: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIN6StringM5Split(renderDelimitedBlockBody(raw, item), "\n")) - 1, SourceStart: line, SourceEnd: item.Span.End.Line, Kind: "delimited", Depths: []int{}})
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+					__mygo_state = 0
+					continue
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2
+					__tail_3 := __mygo_mt_p3
+					__tail_4 := __mygo_mt_p4 + 1
+					__tail_5 := __mygo_mt_p5
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
+					__mygo_state = 0
+					continue
 				}
 			}
 		default:
