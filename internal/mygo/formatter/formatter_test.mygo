@@ -547,3 +547,60 @@ end
     t.Fatalf("single-line elsif chain is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
   end
 end
+
+# D11 body recursion: a nested statement `if` whose source block is RAGGED (the
+# body sits at or left of the closing `end` column) inside an owned block body.
+# Before the body recursion the nested `if finish < 0 then []` was copied
+# verbatim (glued `then` value) and its ragged `else` body froze at the source
+# indentation, which cascaded once a later pass re-expanded the value-`if` at a
+# conflicting depth.  The owned body now renders recursively: every construct is
+# block-expanded and re-indented from the layout events, and the ragged closing
+# `end` lands back at its construct's depth.  Regression for `pairedQuotedLines`.
+func TestFormatterRaggedNestedIfInOwnedBodyRendersCanonical(t: Ref[testing.T]) -> ()
+  let src = """package sample
+func pairedQuotedLines(tokens: Slice[ps.PositionedToken], quote: String, index: Int) -> Slice[Int]
+  let start = nextRawToken(tokens, quote, index)
+  if start < 0 then []
+  else
+    let finish = nextRawToken(tokens, quote, start + 1)
+    if finish < 0 then []
+    else
+    let startToken = tokens.Get(start).UnwrapOr(emptyPositionedToken())
+    let finishToken = tokens.Get(finish).UnwrapOr(startToken)
+    let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then [] else spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line) end
+    joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish + 1))
+    end
+  end
+end
+"""
+  let want = """package sample
+func pairedQuotedLines(tokens: Slice[ps.PositionedToken], quote: String, index: Int) -> Slice[Int]
+  let start = nextRawToken(tokens, quote, index)
+  if start < 0 then
+    []
+  else
+    let finish = nextRawToken(tokens, quote, start + 1)
+    if finish < 0 then
+      []
+    else
+      let startToken = tokens.Get(start).UnwrapOr(emptyPositionedToken())
+      let finishToken = tokens.Get(finish).UnwrapOr(startToken)
+      let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then
+        []
+      else
+        spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line)
+      end
+      joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish + 1))
+    end
+  end
+end
+"""
+  let first = formattedOrFail(t, FormatSource("pq.mygo", src))
+  if first != want then
+    t.Fatalf("ragged nested if did not render the canonical block chain:\nGOT:\n%s\nWANT:\n%s", first, want)
+  end
+  let second = formattedOrFail(t, FormatSource("pq.mygo", first))
+  if second != first then
+    t.Fatalf("ragged nested if is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+  end
+end

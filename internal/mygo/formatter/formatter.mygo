@@ -74,6 +74,14 @@ struct ReflowEdit
   Edit: PassEdit
 end
 
+# NestedBlock pairs the canonical rows a nested block construct rendered inside
+# an owned block body with the ORIGINAL source line of the construct's closing
+# `end`, so the body loop can resume directly below the recursive expansion.
+struct NestedBlock
+  Rows: Slice[ReflowRow]
+  ExitLine: Int
+end
+
 # ArrowIf records the absolute 1-based column span of one inline keyword
 # `if ... then ... else ... end` found inside a delimited item.  The columns
 # point at the `then` separator, the `else` separator, and the closing `end` so
@@ -1812,17 +1820,17 @@ func spanSingleRow(raw: String, from: Int, to: Int, depth: Int, origin: Int) -> 
   end
 end
 
-func spanThenRows(lines: Slice[String], events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], shift: Int, base: Int, thenEv: parser2.LayoutEvent, elseEv: parser2.LayoutEvent, depth: Int) -> Option[Slice[ReflowRow]]
+func spanThenRows(lines: Slice[String], events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], shift: Int, base: Int, thenEv: parser2.LayoutEvent, elseEv: parser2.LayoutEvent, depth: Int, ragged: Bool) -> Option[Slice[ReflowRow]]
   let line = thenEv.Anchor.Start.Line
   let raw = lines.Get(line + shift - 1).UnwrapOr("")
   let from = trimStartCol(raw, thenEv.Anchor.End.Column)
   if from > raw.Len() || strings.TrimSpace(sl(raw, from, raw.Len())).Len() == 0 then
     # Nothing follows the `then` keyword: the body is a MULTI-ROW block that
     # starts on the next source row and runs up to the terminator's row.
-    spanBodyRows(lines, shift, base, depth, line + 1, elseEv.Anchor.Start.Line, elseEv.Anchor.Start.Column, false, -1, [])
+    spanBodyRows(lines, events, delimited, shift, base, depth, line + 1, elseEv.Anchor.Start.Line, elseEv.Anchor.Start.Column, false, -1, ragged, [])
   else
     switch lookupIfAt(events, thenEv.BodyAnchor.Start.Line, thenEv.BodyAnchor.Start.Column, 0)
-      case Some(innerIf) => spanIfRows(lines, events, delimited, shift, base, innerIf, depth)
+      case Some(innerIf) => spanIfRows(lines, events, delimited, shift, base, innerIf, depth, true)
       case None then
         let to = if elseEv.Anchor.Start.Line == line then
           elseEv.Anchor.Start.Column - 1
@@ -1846,7 +1854,43 @@ end
 # trailing text there would be dropped by the ownership boundary.  Returns
 # `None` on any shape the verbatim copy cannot reproduce, dropping ownership of
 # the whole enclosing `if`.
-func spanBodyRows(lines: Slice[String], shift: Int, base: Int, depth: Int, loLine: Int, termLine: Int, termCol: Int, requireAlone: Bool, relMin: Int, acc: Slice[ReflowRow]) -> Option[Slice[ReflowRow]]
+# D11 body recursion: render a nested statement `if` that starts a body row with
+# the whole-span renderer instead of copying it verbatim.  The verbatim path
+# preserves the SOURCE shape, so a glued `if COND then VALUE` inside an owned
+# block body would freeze non-canonically and cascade once a later pass
+# re-expands it at a conflicting depth.  The nested construct must terminate
+# strictly ABOVE the enclosing terminator row (`termLine`) and pass the same
+# eligibility gate the top-level candidates use; otherwise fall back to the
+# verbatim copy.
+func spanNestedBodyIf(
+  lines: Slice[String],
+  events: Slice[parser2.LayoutEvent],
+  delimited: Slice[parser2.DelimitedSpan],
+  shift: Int,
+  base: Int,
+  depth: Int,
+  loLine: Int,
+  termLine: Int
+) -> Option[NestedBlock]
+  let raw = lines.Get(loLine + shift - 1).UnwrapOr("")
+  let col = trimStartCol(raw, 1)
+  switch lookupIfAt(events, loLine, col, 0)
+    case None => None
+    case Some(inner) then
+      let exitLine = inner.ExitAnchor.Start.Line
+      if exitLine >= termLine || !spanIfEligible(lines, events, delimited, inner, shift) then
+        None
+      else
+        switch spanIfRows(lines, events, delimited, shift, base, inner, depth, true)
+          case None => None
+          case Some(rows) => Some(NestedBlock { Rows: rows, ExitLine: exitLine })
+        end
+      end
+    end
+  end
+end
+
+func spanBodyRows(lines: Slice[String], events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], shift: Int, base: Int, depth: Int, loLine: Int, termLine: Int, termCol: Int, requireAlone: Bool, relMin: Int, ragged: Bool, acc: Slice[ReflowRow]) -> Option[Slice[ReflowRow]]
   if loLine > termLine then
     None
   else
@@ -1860,6 +1904,8 @@ func spanBodyRows(lines: Slice[String], shift: Int, base: Int, depth: Int, loLin
     elsif strings.TrimSpace(raw).Len() == 0 then
       spanBodyRows(
         lines,
+        events,
+        delimited,
         shift,
         base,
         depth,
@@ -1868,26 +1914,60 @@ func spanBodyRows(lines: Slice[String], shift: Int, base: Int, depth: Int, loLin
         termCol,
         requireAlone,
         relMin,
+        ragged,
         acc.Append(ReflowRow { Text: "", Depth: depth, Origin: loLine }),
       )
     else
-      let width = indentWidth(raw, 1)
-      let rel = if relMin < 0 => width else relMin
-      if width <= termCol || width < rel then
-        None
-      else
-        spanBodyRows(
-          lines,
-          shift,
-          base,
-          depth,
-          loLine + 1,
-          termLine,
-          termCol,
-          requireAlone,
-          rel,
-          acc.Append(ReflowRow { Text: strings.TrimSpace(raw), Depth: depth + (width - rel) / 2, Origin: loLine }),
-        )
+      switch spanNestedBodyIf(lines, events, delimited, shift, base, depth, loLine, termLine)
+        case Some(nested) then
+          spanBodyRows(
+            lines,
+            events,
+            delimited,
+            shift,
+            base,
+            depth,
+            nested.ExitLine + 1,
+            termLine,
+            termCol,
+            requireAlone,
+            relMin,
+            ragged,
+            joinRows(acc, nested.Rows),
+          )
+        end
+        case None then
+          let width = indentWidth(raw, 1)
+          let rel = if relMin < 0 => width else relMin
+          # In RAGGED mode (a construct reached through the D11 body recursion)
+          # the layout events already bound the body rows [loLine, termLine)
+          # exactly, so a body row may sit at or left of the terminator keyword
+          # column - ragged source routinely writes a block body shallower than
+          # its closing `end`.  The remaining `width < rel` bound still guards
+          # the relative-depth model, which measures depth from the first body
+          # row.  Non-ragged (top-level candidate) mode keeps the strict
+          # terminator-column bound so its ownership never absorbs a dedented
+          # sibling row of an outer construct.
+          if (!ragged && width <= termCol) || width < rel then
+            None
+          else
+            spanBodyRows(
+              lines,
+              events,
+              delimited,
+              shift,
+              base,
+              depth,
+              loLine + 1,
+              termLine,
+              termCol,
+              requireAlone,
+              rel,
+              ragged,
+              acc.Append(ReflowRow { Text: strings.TrimSpace(raw), Depth: depth + (width - rel) / 2, Origin: loLine }),
+            )
+          end
+        end
       end
     end
   end
@@ -1901,7 +1981,8 @@ func spanElseRows(
   base: Int,
   elseEv: parser2.LayoutEvent,
   ifExit: ast2.SourceSpan,
-  depth: Int
+  depth: Int,
+  ragged: Bool
 ) -> Option[Slice[ReflowRow]]
   let line = elseEv.Anchor.Start.Line
   let raw = lines.Get(line + shift - 1).UnwrapOr("")
@@ -1909,10 +1990,10 @@ func spanElseRows(
   if from > raw.Len() || strings.TrimSpace(sl(raw, from, raw.Len())).Len() == 0 then
     # The `else` keyword stands alone on its row: MULTI-ROW block body running
     # to the enclosing construct's shared `end` row.
-    spanBodyRows(lines, shift, base, depth, line + 1, ifExit.Start.Line, ifExit.Start.Column, true, -1, [])
+    spanBodyRows(lines, events, delimited, shift, base, depth, line + 1, ifExit.Start.Line, ifExit.Start.Column, true, -1, ragged, [])
   else
     switch lookupIfAt(events, elseEv.BodyAnchor.Start.Line, elseEv.BodyAnchor.Start.Column, 0)
-      case Some(innerIf) => spanIfRows(lines, events, delimited, shift, base, innerIf, depth)
+      case Some(innerIf) => spanIfRows(lines, events, delimited, shift, base, innerIf, depth, true)
       case None then
         if ifExit.Start.Line != line then
           None
@@ -1931,7 +2012,8 @@ func spanIfRows(
   shift: Int,
   base: Int,
   ifEv: parser2.LayoutEvent,
-  depth: Int
+  depth: Int,
+  ragged: Bool
 ) -> Option[Slice[ReflowRow]]
   let p = ifEv.Path
   switch childOfKind(events, p, 1, "enter:if-then", 0)
@@ -1958,10 +2040,10 @@ func spanIfRows(
               switch transitionForPath(events, pathWithIdx(p, 1), 0)
                 case None => None
                 case Some(trans) then
-                  switch spanThenRows(lines, events, delimited, shift, base, thenEv, trans, depth + 1)
+                  switch spanThenRows(lines, events, delimited, shift, base, thenEv, trans, depth + 1, ragged)
                     case None => None
                     case Some(tb) then
-                      switch spanElsifRows(lines, events, delimited, shift, base, nestedIf, depth)
+                      switch spanElsifRows(lines, events, delimited, shift, base, nestedIf, depth, ragged)
                         case None => None
                         case Some(er) => Some(joinRows(joinRows([header], tb), er))
                       end
@@ -1975,10 +2057,10 @@ func spanIfRows(
         case Some(elseEv) then
           let elseRow = ReflowRow { Text: "else", Depth: depth, Origin: elseEv.Anchor.Start.Line }
           let endRow = ReflowRow { Text: "end", Depth: depth, Origin: ifEv.ExitAnchor.Start.Line }
-          switch spanThenRows(lines, events, delimited, shift, base, thenEv, elseEv, depth + 1)
+          switch spanThenRows(lines, events, delimited, shift, base, thenEv, elseEv, depth + 1, ragged)
             case None => None
             case Some(tb) then
-              switch spanElseRows(lines, events, delimited, shift, base, elseEv, ifEv.ExitAnchor, depth + 1)
+              switch spanElseRows(lines, events, delimited, shift, base, elseEv, ifEv.ExitAnchor, depth + 1, ragged)
                 case None => None
                 case Some(eb) => Some(joinRows(joinRows([header], tb), joinRows(joinRows([elseRow], eb), [endRow])))
               end
@@ -2030,7 +2112,7 @@ end
 # then` + then-body at `depth + 1` - and, when the chain terminates, the single
 # `else` (if present) and the ONE shared `end`, both at `depth`.  Deeper links
 # recurse at the SAME depth (a flat chain, not nesting).
-func spanElsifRows(lines: Slice[String], events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], shift: Int, base: Int, elsifIf: parser2.LayoutEvent, depth: Int) -> Option[Slice[ReflowRow]]
+func spanElsifRows(lines: Slice[String], events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], shift: Int, base: Int, elsifIf: parser2.LayoutEvent, depth: Int, ragged: Bool) -> Option[Slice[ReflowRow]]
   let q = elsifIf.Path
   switch childOfKind(events, q, 1, "enter:if-then", 0)
     case None => None
@@ -2044,10 +2126,10 @@ func spanElsifRows(lines: Slice[String], events: Slice[parser2.LayoutEvent], del
             case Some(elseEv) then
               let elseRow = ReflowRow { Text: "else", Depth: depth, Origin: elseEv.Anchor.Start.Line }
               let endRow = ReflowRow { Text: "end", Depth: depth, Origin: elsifIf.ExitAnchor.Start.Line }
-              switch spanThenRows(lines, events, delimited, shift, base, te, elseEv, depth + 1)
+              switch spanThenRows(lines, events, delimited, shift, base, te, elseEv, depth + 1, ragged)
                 case None => None
                 case Some(tb) then
-                  switch spanElseRows(lines, events, delimited, shift, base, elseEv, elsifIf.ExitAnchor, depth + 1)
+                  switch spanElseRows(lines, events, delimited, shift, base, elseEv, elsifIf.ExitAnchor, depth + 1, ragged)
                     case None => None
                     case Some(eb) => Some(joinRows(joinRows([header], tb), joinRows(joinRows([elseRow], eb), [endRow])))
                   end
@@ -2060,10 +2142,10 @@ func spanElsifRows(lines: Slice[String], events: Slice[parser2.LayoutEvent], del
                   switch transitionForPath(events, pathWithIdx(q, 1), 0)
                     case None => None
                     case Some(deeperTrans) then
-                      switch spanThenRows(lines, events, delimited, shift, base, te, deeperTrans, depth + 1)
+                      switch spanThenRows(lines, events, delimited, shift, base, te, deeperTrans, depth + 1, ragged)
                         case None => None
                         case Some(tb) then
-                          switch spanElsifRows(lines, events, delimited, shift, base, deeper, depth)
+                          switch spanElsifRows(lines, events, delimited, shift, base, deeper, depth, ragged)
                             case None => None
                             case Some(er) => Some(joinRows(joinRows([header], tb), er))
                           end
@@ -2129,7 +2211,7 @@ func spanIfCandidateEdits(
   cand: parser2.LayoutEvent
 ) -> Slice[ReflowEdit]
   let base = indentWidth(lines.Get(cand.Anchor.Start.Line + shift - 1).UnwrapOr(""), 1)
-  switch spanIfRows(lines, events, delimited, shift, base, cand, 0)
+  switch spanIfRows(lines, events, delimited, shift, base, cand, 0, false)
     case None => []
     case Some(rows) => groupRows(rows, base, cand.Anchor.Start.Line, cand.ExitAnchor.Start.Line, 0, 0, "", [])
   end

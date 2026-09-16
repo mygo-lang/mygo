@@ -277,7 +277,6 @@ func TestLayoutEventsCarryBranchTokenAnchors(t *testing.T) {
 		t.Fatalf("layout events do not contain an else anchor: %#v", parsed.F0.LayoutEvents)
 	}
 }
-
 func TestLayoutEventsCarryInlineIfBoundaryAnchors(t *testing.T) {
 	source := "package sample\nfunc f(value: Bool) -> Int\n  let rendered = if value then 1 else 2 end\n  rendered\nend\n"
 	got := ParseFileLossless("inline-anchors.mygo", source)

@@ -546,3 +546,19 @@ func TestFormatterSingleLineElsifChainRendersFlatBlockChain(t *testing.T) {
 		return
 	}
 }
+func TestFormatterRaggedNestedIfInOwnedBodyRendersCanonical(t *testing.T) {
+	src := "package sample\nfunc pairedQuotedLines(tokens: Slice[ps.PositionedToken], quote: String, index: Int) -> Slice[Int]\n  let start = nextRawToken(tokens, quote, index)\n  if start < 0 then []\n  else\n    let finish = nextRawToken(tokens, quote, start + 1)\n    if finish < 0 then []\n    else\n    let startToken = tokens.Get(start).UnwrapOr(emptyPositionedToken())\n    let finishToken = tokens.Get(finish).UnwrapOr(startToken)\n    let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then [] else spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line) end\n    joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish + 1))\n    end\n  end\nend\n"
+	want := "package sample\nfunc pairedQuotedLines(tokens: Slice[ps.PositionedToken], quote: String, index: Int) -> Slice[Int]\n  let start = nextRawToken(tokens, quote, index)\n  if start < 0 then\n    []\n  else\n    let finish = nextRawToken(tokens, quote, start + 1)\n    if finish < 0 then\n      []\n    else\n      let startToken = tokens.Get(start).UnwrapOr(emptyPositionedToken())\n      let finishToken = tokens.Get(finish).UnwrapOr(startToken)\n      let protected = if startToken.Span.Start.Line == finishToken.Span.End.Line then\n        []\n      else\n        spanLines(startToken.Span.Start.Line, finishToken.Span.End.Line)\n      end\n      joinProtectedLines(protected, pairedQuotedLines(tokens, quote, finish + 1))\n    end\n  end\nend\n"
+	first := formattedOrFail(t, FormatSource("pq.mygo", src))
+	if first != want {
+		t.Fatalf("ragged nested if did not render the canonical block chain:\nGOT:\n%s\nWANT:\n%s", first, want)
+	} else {
+	}
+	second := formattedOrFail(t, FormatSource("pq.mygo", first))
+	if second != first {
+		t.Fatalf("ragged nested if is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+		return
+	} else {
+		return
+	}
+}

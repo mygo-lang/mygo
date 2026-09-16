@@ -58,6 +58,10 @@ type ReflowEdit struct {
 	Text   string
 	Edit   PassEdit
 }
+type NestedBlock struct {
+	Rows     []ReflowRow
+	ExitLine int
+}
 type ArrowIf struct {
 	ThenStart int
 	ThenEnd   int
@@ -1231,17 +1235,17 @@ func spanSingleRow(raw string, from int, to int, depth int, origin int) Option[[
 		}
 	}
 }
-func spanThenRows(lines []string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, shift int, base int, thenEv parser2.LayoutEvent, elseEv parser2.LayoutEvent, depth int) Option[[]ReflowRow] {
+func spanThenRows(lines []string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, shift int, base int, thenEv parser2.LayoutEvent, elseEv parser2.LayoutEvent, depth int, ragged bool) Option[[]ReflowRow] {
 	line := thenEv.Anchor.Start.Line
 	raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, line+shift-1), "")
 	from := trimStartCol(raw, thenEv.Anchor.End.Column)
 	if from > MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw) || MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(strings.TrimSpace(sl(raw, from, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw)))) == 0 {
-		return spanBodyRows(lines, shift, base, depth, line+1, elseEv.Anchor.Start.Line, elseEv.Anchor.Start.Column, false, -1, []ReflowRow{})
+		return spanBodyRows(lines, events, delimited, shift, base, depth, line+1, elseEv.Anchor.Start.Line, elseEv.Anchor.Start.Column, false, -1, ragged, []ReflowRow{})
 	} else {
 		__mygo_expr_0 := lookupIfAt(events, thenEv.BodyAnchor.Start.Line, thenEv.BodyAnchor.Start.Column, 0)
 		var __mygo_expr_1 Option[[]ReflowRow]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.LayoutEvent]); ok {
-			__mygo_expr_1 = spanIfRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_2.F0, depth)
+			__mygo_expr_1 = spanIfRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_2.F0, depth, true)
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[parser2.LayoutEvent]); ok {
 				var __mygo_expr_2 int
@@ -1258,20 +1262,52 @@ func spanThenRows(lines []string, events []parser2.LayoutEvent, delimited []pars
 		return __mygo_expr_1
 	}
 }
-func spanBodyRows(lines []string, shift int, base int, depth int, loLine int, termLine int, termCol int, requireAlone bool, relMin int, acc []ReflowRow) Option[[]ReflowRow] {
-	return __mygo_mt_formatter_spanBodyRows(lines, shift, base, depth, loLine, termLine, termCol, requireAlone, relMin, acc, 0)
+func spanNestedBodyIf(lines []string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, shift int, base int, depth int, loLine int, termLine int) Option[NestedBlock] {
+	raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, loLine+shift-1), "")
+	col := trimStartCol(raw, 1)
+	__mygo_expr_0 := lookupIfAt(events, loLine, col, 0)
+	var __mygo_expr_1 Option[NestedBlock]
+	if _, ok := __mygo_expr_0.(Option__None[parser2.LayoutEvent]); ok {
+		__mygo_expr_1 = None[NestedBlock]()
+	} else {
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.LayoutEvent]); ok {
+			exitLine := __mygo_match___mygo_expr_2.F0.ExitAnchor.Start.Line
+			var __mygo_expr_6 Option[NestedBlock]
+			if exitLine >= termLine || !spanIfEligible(lines, events, delimited, __mygo_match___mygo_expr_2.F0, shift) {
+				__mygo_expr_6 = None[NestedBlock]()
+			} else {
+				__mygo_expr_3 := spanIfRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_2.F0, depth, true)
+				var __mygo_expr_4 Option[NestedBlock]
+				if _, ok := __mygo_expr_3.(Option__None[[]ReflowRow]); ok {
+					__mygo_expr_4 = None[NestedBlock]()
+				} else {
+					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[[]ReflowRow]); ok {
+						__mygo_expr_4 = Some[NestedBlock](NestedBlock{Rows: __mygo_match___mygo_expr_5.F0, ExitLine: exitLine})
+					} else {
+					}
+				}
+				__mygo_expr_6 = __mygo_expr_4
+			}
+			__mygo_expr_1 = __mygo_expr_6
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
-func spanElseRows(lines []string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, shift int, base int, elseEv parser2.LayoutEvent, ifExit ast2.SourceSpan, depth int) Option[[]ReflowRow] {
+func spanBodyRows(lines []string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, shift int, base int, depth int, loLine int, termLine int, termCol int, requireAlone bool, relMin int, ragged bool, acc []ReflowRow) Option[[]ReflowRow] {
+	return __mygo_mt_formatter_spanBodyRows(lines, events, delimited, shift, base, depth, loLine, termLine, termCol, requireAlone, relMin, ragged, acc, 0)
+}
+func spanElseRows(lines []string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, shift int, base int, elseEv parser2.LayoutEvent, ifExit ast2.SourceSpan, depth int, ragged bool) Option[[]ReflowRow] {
 	line := elseEv.Anchor.Start.Line
 	raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, line+shift-1), "")
 	from := trimStartCol(raw, elseEv.Anchor.End.Column)
 	if from > MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw) || MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(strings.TrimSpace(sl(raw, from, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw)))) == 0 {
-		return spanBodyRows(lines, shift, base, depth, line+1, ifExit.Start.Line, ifExit.Start.Column, true, -1, []ReflowRow{})
+		return spanBodyRows(lines, events, delimited, shift, base, depth, line+1, ifExit.Start.Line, ifExit.Start.Column, true, -1, ragged, []ReflowRow{})
 	} else {
 		__mygo_expr_0 := lookupIfAt(events, elseEv.BodyAnchor.Start.Line, elseEv.BodyAnchor.Start.Column, 0)
 		var __mygo_expr_1 Option[[]ReflowRow]
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.LayoutEvent]); ok {
-			__mygo_expr_1 = spanIfRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_2.F0, depth)
+			__mygo_expr_1 = spanIfRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_2.F0, depth, true)
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[parser2.LayoutEvent]); ok {
 				var __mygo_expr_2 Option[[]ReflowRow]
@@ -1287,7 +1323,7 @@ func spanElseRows(lines []string, events []parser2.LayoutEvent, delimited []pars
 		return __mygo_expr_1
 	}
 }
-func spanIfRows(lines []string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, shift int, base int, ifEv parser2.LayoutEvent, depth int) Option[[]ReflowRow] {
+func spanIfRows(lines []string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, shift int, base int, ifEv parser2.LayoutEvent, depth int, ragged bool) Option[[]ReflowRow] {
 	p := ifEv.Path
 	__mygo_expr_0 := childOfKind(events, p, 1, "enter:if-then", 0)
 	var __mygo_expr_1 Option[[]ReflowRow]
@@ -1311,13 +1347,13 @@ func spanIfRows(lines []string, events []parser2.LayoutEvent, delimited []parser
 							__mygo_expr_10 = None[[]ReflowRow]()
 						} else {
 							if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Option__Some[parser2.LayoutEvent]); ok {
-								__mygo_expr_12 := spanThenRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_11.F0, depth+1)
+								__mygo_expr_12 := spanThenRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_11.F0, depth+1, ragged)
 								var __mygo_expr_13 Option[[]ReflowRow]
 								if _, ok := __mygo_expr_12.(Option__None[[]ReflowRow]); ok {
 									__mygo_expr_13 = None[[]ReflowRow]()
 								} else {
 									if __mygo_match___mygo_expr_14, ok := __mygo_expr_12.(Option__Some[[]ReflowRow]); ok {
-										__mygo_expr_15 := spanElsifRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_8.F0, depth)
+										__mygo_expr_15 := spanElsifRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_8.F0, depth, ragged)
 										var __mygo_expr_16 Option[[]ReflowRow]
 										if _, ok := __mygo_expr_15.(Option__None[[]ReflowRow]); ok {
 											__mygo_expr_16 = None[[]ReflowRow]()
@@ -1344,13 +1380,13 @@ func spanIfRows(lines []string, events []parser2.LayoutEvent, delimited []parser
 				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[parser2.LayoutEvent]); ok {
 					elseRow := ReflowRow{Text: "else", Depth: depth, Origin: __mygo_match___mygo_expr_5.F0.Anchor.Start.Line}
 					endRow := ReflowRow{Text: "end", Depth: depth, Origin: ifEv.ExitAnchor.Start.Line}
-					__mygo_expr_6 := spanThenRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0, depth+1)
+					__mygo_expr_6 := spanThenRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_5.F0, depth+1, ragged)
 					var __mygo_expr_7 Option[[]ReflowRow]
 					if _, ok := __mygo_expr_6.(Option__None[[]ReflowRow]); ok {
 						__mygo_expr_7 = None[[]ReflowRow]()
 					} else {
 						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[[]ReflowRow]); ok {
-							__mygo_expr_9 := spanElseRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_5.F0, ifEv.ExitAnchor, depth+1)
+							__mygo_expr_9 := spanElseRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_5.F0, ifEv.ExitAnchor, depth+1, ragged)
 							var __mygo_expr_10 Option[[]ReflowRow]
 							if _, ok := __mygo_expr_9.(Option__None[[]ReflowRow]); ok {
 								__mygo_expr_10 = None[[]ReflowRow]()
@@ -1386,7 +1422,7 @@ func spanElsifCond(lines []string, shift int, trans parser2.LayoutEvent, thenEv 
 	raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, trans.Anchor.Start.Line+shift-1), "")
 	return strings.TrimSpace(sl(raw, trans.Anchor.End.Column, thenEv.Anchor.Start.Column-1))
 }
-func spanElsifRows(lines []string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, shift int, base int, elsifIf parser2.LayoutEvent, depth int) Option[[]ReflowRow] {
+func spanElsifRows(lines []string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, shift int, base int, elsifIf parser2.LayoutEvent, depth int, ragged bool) Option[[]ReflowRow] {
 	for {
 		q := elsifIf.Path
 		__mygo_expr_0 := childOfKind(events, q, 1, "enter:if-then", 0)
@@ -1408,13 +1444,13 @@ func spanElsifRows(lines []string, events []parser2.LayoutEvent, delimited []par
 						if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(Option__Some[parser2.LayoutEvent]); ok {
 							elseRow := ReflowRow{Text: "else", Depth: depth, Origin: __mygo_match___mygo_expr_8.F0.Anchor.Start.Line}
 							endRow := ReflowRow{Text: "end", Depth: depth, Origin: elsifIf.ExitAnchor.Start.Line}
-							__mygo_expr_9 := spanThenRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_8.F0, depth+1)
+							__mygo_expr_9 := spanThenRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_8.F0, depth+1, ragged)
 							var __mygo_expr_10 Option[[]ReflowRow]
 							if _, ok := __mygo_expr_9.(Option__None[[]ReflowRow]); ok {
 								__mygo_expr_10 = None[[]ReflowRow]()
 							} else {
 								if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Option__Some[[]ReflowRow]); ok {
-									__mygo_expr_12 := spanElseRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_8.F0, elsifIf.ExitAnchor, depth+1)
+									__mygo_expr_12 := spanElseRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_8.F0, elsifIf.ExitAnchor, depth+1, ragged)
 									var __mygo_expr_13 Option[[]ReflowRow]
 									if _, ok := __mygo_expr_12.(Option__None[[]ReflowRow]); ok {
 										__mygo_expr_13 = None[[]ReflowRow]()
@@ -1440,13 +1476,13 @@ func spanElsifRows(lines []string, events []parser2.LayoutEvent, delimited []par
 										__mygo_expr_12 = None[[]ReflowRow]()
 									} else {
 										if __mygo_match___mygo_expr_13, ok := __mygo_expr_11.(Option__Some[parser2.LayoutEvent]); ok {
-											__mygo_expr_14 := spanThenRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_13.F0, depth+1)
+											__mygo_expr_14 := spanThenRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_2.F0, __mygo_match___mygo_expr_13.F0, depth+1, ragged)
 											var __mygo_expr_15 Option[[]ReflowRow]
 											if _, ok := __mygo_expr_14.(Option__None[[]ReflowRow]); ok {
 												__mygo_expr_15 = None[[]ReflowRow]()
 											} else {
 												if __mygo_match___mygo_expr_16, ok := __mygo_expr_14.(Option__Some[[]ReflowRow]); ok {
-													__mygo_expr_17 := spanElsifRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_10.F0, depth)
+													__mygo_expr_17 := spanElsifRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_10.F0, depth, ragged)
 													var __mygo_expr_18 Option[[]ReflowRow]
 													if _, ok := __mygo_expr_17.(Option__None[[]ReflowRow]); ok {
 														__mygo_expr_18 = None[[]ReflowRow]()
@@ -1494,7 +1530,7 @@ func groupRows(rows []ReflowRow, base int, srcStart int, srcEnd int, index int, 
 }
 func spanIfCandidateEdits(lines []string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, shift int, cand parser2.LayoutEvent) []ReflowEdit {
 	base := indentWidth(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, cand.Anchor.Start.Line+shift-1), ""), 1)
-	__mygo_expr_0 := spanIfRows(lines, events, delimited, shift, base, cand, 0)
+	__mygo_expr_0 := spanIfRows(lines, events, delimited, shift, base, cand, 0, false)
 	var __mygo_expr_1 []ReflowEdit
 	if _, ok := __mygo_expr_0.(Option__None[[]ReflowRow]); ok {
 		__mygo_expr_1 = []ReflowEdit{}
@@ -4589,17 +4625,17 @@ func __mygo_mt_formatter_signatureWrap(__mygo_mt_p0 []string, __mygo_mt_p1 int, 
 		}
 	}
 }
-func __mygo_mt_formatter_spanBodyRows(__mygo_mt_p0 []string, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_mt_p4 int, __mygo_mt_p5 int, __mygo_mt_p6 int, __mygo_mt_p7 bool, __mygo_mt_p8 int, __mygo_mt_p9 []ReflowRow, __mygo_state int) Option[[]ReflowRow] {
+func __mygo_mt_formatter_spanBodyRows(__mygo_mt_p0 []string, __mygo_mt_p1 []parser2.LayoutEvent, __mygo_mt_p2 []parser2.DelimitedSpan, __mygo_mt_p3 int, __mygo_mt_p4 int, __mygo_mt_p5 int, __mygo_mt_p6 int, __mygo_mt_p7 int, __mygo_mt_p8 int, __mygo_mt_p9 bool, __mygo_mt_p10 int, __mygo_mt_p11 bool, __mygo_mt_p12 []ReflowRow, __mygo_state int) Option[[]ReflowRow] {
 	for {
 		switch __mygo_state {
 		case 0:
-			if __mygo_mt_p4 > __mygo_mt_p5 {
+			if __mygo_mt_p6 > __mygo_mt_p7 {
 				return None[[]ReflowRow]()
 			} else {
-				raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p4+__mygo_mt_p1-1), "")
-				if __mygo_mt_p4 == __mygo_mt_p5 {
-					if !__mygo_mt_p7 || strings.TrimSpace(sl(raw, 1, __mygo_mt_p6-1)) == "" {
-						return Some[[]ReflowRow](__mygo_mt_p9)
+				raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p6+__mygo_mt_p3-1), "")
+				if __mygo_mt_p6 == __mygo_mt_p7 {
+					if !__mygo_mt_p9 || strings.TrimSpace(sl(raw, 1, __mygo_mt_p8-1)) == "" {
+						return Some[[]ReflowRow](__mygo_mt_p12)
 					} else {
 						return None[[]ReflowRow]()
 					}
@@ -4609,40 +4645,70 @@ func __mygo_mt_formatter_spanBodyRows(__mygo_mt_p0 []string, __mygo_mt_p1 int, _
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p3
-						__tail_4 := __mygo_mt_p4 + 1
+						__tail_4 := __mygo_mt_p4
 						__tail_5 := __mygo_mt_p5
-						__tail_6 := __mygo_mt_p6
+						__tail_6 := __mygo_mt_p6 + 1
 						__tail_7 := __mygo_mt_p7
 						__tail_8 := __mygo_mt_p8
-						__tail_9 := MygoIN5SliceM6Append(__mygo_mt_p9, ReflowRow{Text: "", Depth: __mygo_mt_p3, Origin: __mygo_mt_p4})
-						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7, __mygo_mt_p8, __mygo_mt_p9 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7, __tail_8, __tail_9
+						__tail_9 := __mygo_mt_p9
+						__tail_10 := __mygo_mt_p10
+						__tail_11 := __mygo_mt_p11
+						__tail_12 := MygoIN5SliceM6Append(__mygo_mt_p12, ReflowRow{Text: "", Depth: __mygo_mt_p5, Origin: __mygo_mt_p6})
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7, __mygo_mt_p8, __mygo_mt_p9, __mygo_mt_p10, __mygo_mt_p11, __mygo_mt_p12 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7, __tail_8, __tail_9, __tail_10, __tail_11, __tail_12
 						__mygo_state = 0
 						continue
 					} else {
-						width := indentWidth(raw, 1)
-						var __mygo_expr_0 int
-						if __mygo_mt_p8 < 0 {
-							__mygo_expr_0 = width
-						} else {
-							__mygo_expr_0 = __mygo_mt_p8
-						}
-						rel := __mygo_expr_0
-						if width <= __mygo_mt_p6 || width < rel {
-							return None[[]ReflowRow]()
-						} else {
+						__mygo_expr_0 := spanNestedBodyIf(__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7)
+						if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[NestedBlock]); ok {
 							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
 							__tail_2 := __mygo_mt_p2
 							__tail_3 := __mygo_mt_p3
-							__tail_4 := __mygo_mt_p4 + 1
+							__tail_4 := __mygo_mt_p4
 							__tail_5 := __mygo_mt_p5
-							__tail_6 := __mygo_mt_p6
+							__tail_6 := __mygo_match___mygo_expr_1.F0.ExitLine + 1
 							__tail_7 := __mygo_mt_p7
-							__tail_8 := rel
-							__tail_9 := MygoIN5SliceM6Append(__mygo_mt_p9, ReflowRow{Text: strings.TrimSpace(raw), Depth: __mygo_mt_p3 + (width-rel)/2, Origin: __mygo_mt_p4})
-							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7, __mygo_mt_p8, __mygo_mt_p9 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7, __tail_8, __tail_9
+							__tail_8 := __mygo_mt_p8
+							__tail_9 := __mygo_mt_p9
+							__tail_10 := __mygo_mt_p10
+							__tail_11 := __mygo_mt_p11
+							__tail_12 := joinRows(__mygo_mt_p12, __mygo_match___mygo_expr_1.F0.Rows)
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7, __mygo_mt_p8, __mygo_mt_p9, __mygo_mt_p10, __mygo_mt_p11, __mygo_mt_p12 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7, __tail_8, __tail_9, __tail_10, __tail_11, __tail_12
 							__mygo_state = 0
 							continue
+						} else {
+							if _, ok := __mygo_expr_0.(Option__None[NestedBlock]); ok {
+								width := indentWidth(raw, 1)
+								var __mygo_expr_1 int
+								if __mygo_mt_p10 < 0 {
+									__mygo_expr_1 = width
+								} else {
+									__mygo_expr_1 = __mygo_mt_p10
+								}
+								rel := __mygo_expr_1
+								if !__mygo_mt_p11 && width <= __mygo_mt_p8 || width < rel {
+									return None[[]ReflowRow]()
+								} else {
+									__tail_0 := __mygo_mt_p0
+									__tail_1 := __mygo_mt_p1
+									__tail_2 := __mygo_mt_p2
+									__tail_3 := __mygo_mt_p3
+									__tail_4 := __mygo_mt_p4
+									__tail_5 := __mygo_mt_p5
+									__tail_6 := __mygo_mt_p6 + 1
+									__tail_7 := __mygo_mt_p7
+									__tail_8 := __mygo_mt_p8
+									__tail_9 := __mygo_mt_p9
+									__tail_10 := rel
+									__tail_11 := __mygo_mt_p11
+									__tail_12 := MygoIN5SliceM6Append(__mygo_mt_p12, ReflowRow{Text: strings.TrimSpace(raw), Depth: __mygo_mt_p5 + (width-rel)/2, Origin: __mygo_mt_p6})
+									__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5, __mygo_mt_p6, __mygo_mt_p7, __mygo_mt_p8, __mygo_mt_p9, __mygo_mt_p10, __mygo_mt_p11, __mygo_mt_p12 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5, __tail_6, __tail_7, __tail_8, __tail_9, __tail_10, __tail_11, __tail_12
+									__mygo_state = 0
+									continue
+								}
+							} else {
+								panic("non-exhaustive switch")
+							}
 						}
 					}
 				}
