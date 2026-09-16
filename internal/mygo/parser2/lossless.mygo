@@ -235,7 +235,8 @@ func ParseFileLossless(sourceName: String, input: String) -> Result[LosslessFile
       let metadataSpans = collectDeclMetadataSpans(finished.Decls, declarationSpans, scanned.Tokens, 0)
       let baseSpans = joinSpans(joinSpans(joinSpans(tokenSpans, declarationSpans), collectFileExprSpans(finished)), metadataSpans)
       let nodeSpans = joinSpans(baseSpans, collectNestedPatternSpans(baseSpans, scanned.Tokens, 0))
-      Ok(LosslessFile { AST: finished, Tokens: scanned.Tokens, Trivia: scanned.Trivia, NodeSpans: nodeSpans, Delimited: collectDelimitedSpans(nodeSpans, scanned.Tokens, 0), LayoutEvents: collectLayoutEvents(nodeSpans, scanned.Tokens, 0, []) })
+      let blockIfs = blockIfStarts(nodeSpans, scanned.Tokens, 0, None, [])
+      Ok(LosslessFile { AST: finished, Tokens: scanned.Tokens, Trivia: scanned.Trivia, NodeSpans: nodeSpans, Delimited: collectDelimitedSpans(nodeSpans, scanned.Tokens, 0), LayoutEvents: collectLayoutEvents(nodeSpans, scanned.Tokens, blockIfs, 0, []) })
     end
   end
 end
@@ -699,20 +700,30 @@ func tokenStartsInSpan(token: ps.PositionedToken, span: ast2.SourceSpan) -> Bool
   (token.Span.Start.Line > span.Start.Line || (token.Span.Start.Line == span.Start.Line && token.Span.Start.Column >= span.Start.Column)) && (token.Span.Start.Line < span.End.Line || (token.Span.Start.Line == span.End.Line && token.Span.Start.Column < span.End.Column))
 end
 
-func collectLayoutEvents(items: Slice[NodeSpan], tokens: Slice[ps.PositionedToken], index: Int, acc: Slice[LayoutEvent]) -> Slice[LayoutEvent]
+func collectLayoutEvents(items: Slice[NodeSpan], tokens: Slice[ps.PositionedToken], blockIfs: Slice[ast2.SourcePos], index: Int, acc: Slice[LayoutEvent]) -> Slice[LayoutEvent]
   if index >= items.Len() then
     acc
   else
     let item = items.Get(index).UnwrapOr(NodeSpan { Path: [], Kind: "", Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } } })
     if item.Kind == "" || item.Kind == "symbol" || item.Kind == "literal" || item.Kind == "block-body" then
-      collectLayoutEvents(items, tokens, index + 1, acc)
+      collectLayoutEvents(items, tokens, blockIfs, index + 1, acc)
     else
       let anchor = if item.Kind == "case-body" then
         items.Get(index - 1).Map(func(header: NodeSpan) -> ast2.SourceSpan header.Span end).UnwrapOr(item.Span)
       else layoutEventAnchor(items, item, tokens) end
+      # An `elsif` link is an IfExpr in the else slot with no `else` keyword, so its
+      # `if-else` node cannot be anchored on a real `else` token. Drop that event pair so
+      # the chain keeps being driven solely by the `transition:if-elsif` events; a
+      # genuine `else`-block branch verifies and is kept (see `suppressedElsif` below).
+      # Verification must also place an `if-else` anchor INSIDE the parent `if` span:
+      # a backward keyword scan can otherwise borrow an `else` from an unrelated earlier
+      # construct (a cross-function phantom `enter:if-else`), which the formatter's
+      # depth projection then counts as a real branch and mis-indents the donor span.
+      let anchorTokenVerified = anchorIsVerified(item.Kind, anchor, tokens)
+      let anchorVerified = anchorTokenVerified && elseAnchorInsideParent(items, item, anchor)
       # Event existence is the parser contract: a failed token verification only
       # falls back to the parser-owned span anchor, it never drops the event pair.
-      let anchor = if hasUsableSpan(anchor) && verifiedLayoutAnchor(item.Kind, anchor, tokens) then anchor
+      let anchor = if anchorVerified then anchor
         elsif hasUsableSpan(item.Span) then item.Span
         else anchor end
         let bodyAnchor = if item.Kind == "case" then caseBodyAnchor(items, item, 0) else item.Span end
@@ -723,24 +734,33 @@ func collectLayoutEvents(items: Slice[NodeSpan], tokens: Slice[ps.PositionedToke
         let separatorAnchor = layoutSeparatorAnchor(item.Kind, bodyAnchor, tokens, 0)
         let exitAnchor = if item.Kind.HasPrefix("decl:") || item.Kind == "impl-method" then declarationEndAnchor(tokens, item.Span)
           elsif item.Kind == "inline-go" then inlineGoExitAnchor(tokens, item.Span)
-          elsif item.Kind == "if-then" || item.Kind == "if-else" then branchEndAnchor(items, item, tokens, item.Span)
-          elsif bodyLayout == "block" || item.Kind == "if" then matchingEndAnchor(tokens, anchor, 0, 0, false, item.Span)
+          elsif item.Kind == "if-then" || item.Kind == "if-else" then branchEndAnchor(items, item, tokens, blockIfs, item.Span)
+          elsif item.Kind == "if" then ifEndAnchor(tokens, anchor, blockIfs, item.Span)
+          elsif item.Kind == "func-lit" then funcLitEndAnchor(tokens, item.Span, blockIfs, item.Span)
+          elsif bodyLayout == "block" then matchingEndAnchor(tokens, anchor, 0, 0, false, item.Span)
           else item.Span end
         let sameLineEnd = item.Span.Start.Line == item.Span.End.Line && hasEndTokenOnLine(tokens, item.Span.Start.Line) && item.Kind != "case"
         let blockLike = bodyLayout == "block" || (sameLineEnd && hasUsableSpan(blockBodyAnchor)) || (item.Kind == "if-else" && sameLineEnd) || (item.Kind == "if-then" && sameLineEnd && layoutHeaderForm(item.Kind, anchor) == "then")
-        let affectsIndent = structuralBlockKind(item.Kind) && blockLike
+        # A func literal bumps depth only for a multi-row body (see `funcLitBumpsIndent`);
+        # every other kind keeps the structural-block rule.
+        let funcLitIndent = funcLitBumpsIndent(exitAnchor, anchor)
+        let structuralIndent = structuralBlockKind(item.Kind) && blockLike
+        let affectsIndent = if item.Kind == "func-lit" then funcLitIndent else structuralIndent end
         let wideLine = item.Span.Start.Line == item.Span.End.Line && lineIsWide(tokens, item.Span.End.Line)
         let expandsAfter = if bodyAnchor.Start.Line <= 0 then false
           elsif item.Kind == "case" then bodyLayout == "inline" && wideLine
           elsif item.Kind == "if-then" || item.Kind == "if-else" then bodyLayout == "inline" && (wideLine || branchForm == "then")
+          elsif item.Kind == "func-lit" then false
           else affectsIndent && bodyLayout == "inline" end
         let headerLine = if item.Kind == "if-then" && item.Span.Start.Line > 1 then item.Span.Start.Line - 1 elsif anchor.Start.Line > 0 then anchor.Start.Line else item.Span.Start.Line end
         let bodyLine = if item.Kind == "case" then items.Get(index + 1).Map(func(body: NodeSpan) -> Int body.Span.Start.Line end).UnwrapOr(item.Span.Start.Line) else item.Span.Start.Line end
         let normal = [LayoutEvent { Kind: "enter:" + item.Kind, Path: item.Path, Depth: item.Path.Len(), Span: item.Span, Anchor: anchor, BodyAnchor: bodyAnchor, BlockBodyAnchor: blockBodyAnchor, BodyLayout: bodyLayout, AffectsIndent: affectsIndent, ExpandsAfter: expandsAfter, HeaderForm: headerForm, SeparatorAnchor: separatorAnchor, ExitAnchor: exitAnchor, HeaderLine: headerLine, BodyLine: bodyLine, ExitLine: exitAnchor.Start.Line }, LayoutEvent { Kind: "exit:" + item.Kind, Path: item.Path, Depth: item.Path.Len(), Span: item.Span, Anchor: anchor, BodyAnchor: bodyAnchor, BlockBodyAnchor: blockBodyAnchor, BodyLayout: bodyLayout, AffectsIndent: affectsIndent, ExpandsAfter: expandsAfter, HeaderForm: headerForm, SeparatorAnchor: separatorAnchor, ExitAnchor: exitAnchor, HeaderLine: headerLine, BodyLine: bodyLine, ExitLine: exitAnchor.Start.Line }]
-        collectLayoutEvents(items, tokens, index + 1,
-          elsifTransitions(items, item, tokens, 0).Fold(
+        let suppressed = item.Kind == "if-else" && !anchorVerified
+        collectLayoutEvents(items, tokens, blockIfs, index + 1,
+          if suppressed then acc
+          else elsifTransitions(items, item, tokens, 0).Fold(
             normal.Fold(acc, func(a: Slice[LayoutEvent], e: LayoutEvent) -> Slice[LayoutEvent] a.Append(e) end),
-            func(a: Slice[LayoutEvent], e: LayoutEvent) -> Slice[LayoutEvent] a.Append(e) end))
+            func(a: Slice[LayoutEvent], e: LayoutEvent) -> Slice[LayoutEvent] a.Append(e) end) end)
     end
   end
 end
@@ -807,9 +827,9 @@ end
 # if's header anchor is structural: the parser owns the boundary.  An `elsif
 # ... then` branch continues its enclosing if and is tracked separately by the
 # transition event, so it keeps the innermost parent lookup above.
-func branchEndAnchor(items: Slice[NodeSpan], branch: NodeSpan, tokens: Slice[ps.PositionedToken], fallback: ast2.SourceSpan) -> ast2.SourceSpan
+func branchEndAnchor(items: Slice[NodeSpan], branch: NodeSpan, tokens: Slice[ps.PositionedToken], blockIfs: Slice[ast2.SourcePos], fallback: ast2.SourceSpan) -> ast2.SourceSpan
   switch parentIfNode(items, branch, 0)
-    case Some(ifItem) => matchingEndAnchor(tokens, layoutEventAnchor(items, ifItem, tokens), 0, 0, false, fallback)
+    case Some(ifItem) => ifEndAnchor(tokens, layoutEventAnchor(items, ifItem, tokens), blockIfs, fallback)
     case None => fallback
   end
 end
@@ -1010,6 +1030,204 @@ end
 
 func layoutExitAnchor(item: NodeSpan, tokens: Slice[ps.PositionedToken], index: Int) -> ast2.SourceSpan
   matchingEndAnchor(tokens, layoutAnchor(item, tokens), 0, 0, false, item.Span)
+end
+
+# Locate the `end` that terminates a keyword `if` block.  The generic
+# `matchingEndAnchor` treats `func`/`switch`/... as block openers but NOT the `if`
+# keyword, so when an `if`'s condition contains a self-contained `end`-terminated
+# construct that opens and closes BEFORE the `if`'s own `then` - a function
+# literal (`func ... end`), a nested value `switch`/`if`/`while` ... - the scan
+# binds that inner construct's `end` as the `if`'s exit anchor: its transient open
+# nets the shared depth back to zero and satisfies the terminator predicate.
+# This matcher seeds the enclosing `if` itself so nested openers each net against
+# their own `end`, and the `if`'s single shared `end` is the one returning depth to
+# zero.  Only BLOCK ifs count as openers: an arrow `if c => a else b` carries no
+# `end`, so `blockIfs` (the keyword-start positions of every block-form `if`, i.e.
+# one whose then-branch header is `then` rather than `=>`) gates the `if` opener
+# and also gates the anchor itself.  `then`/`else`/`elsif` are net-neutral for an
+# `if` (its branches share one terminator); a `then` that belongs to a `case`
+# (block case form) opens a block closed by its own `end`, so it is counted only
+# while the nearest preceding branch keyword is `case`.
+func ifEndAnchor(tokens: Slice[ps.PositionedToken], start: ast2.SourceSpan, blockIfs: Slice[ast2.SourcePos], fallback: ast2.SourceSpan) -> ast2.SourceSpan
+  if !containsSourcePos(blockIfs, start.Start) then
+    fallback
+  else
+    ifEndAnchorFrom(
+      tokens,
+      lowerBoundStart(tokens, start.Start, 0, tokens.Len()),
+      0,
+      false,
+      blockIfs,
+      fallback
+    )
+  end
+end
+
+# A func literal is `func ... end`-delimited like a block `if`, so its terminator is
+# the `end` that nets the shared depth back to zero. Reuse the group-10 net scan
+# (`ifEndAnchorFrom`, which counts `func`/nested block-`if`/block-`case` openers against
+# their own `end`) seeded at the func-literal's own span start. Inline func literals get
+# the same net result but only bump depth when the body is a block (see `affectsIndent`).
+func anchorIsVerified(kind: String, anchor: ast2.SourceSpan, tokens: Slice[ps.PositionedToken]) -> Bool
+  hasUsableSpan(anchor) && verifiedLayoutAnchor(kind, anchor, tokens)
+end
+
+# True when an `if-else` branch anchor falls within its parent `if` span.  A genuine
+# `else` keyword always does.  For an `elsif` link (which has no `else` keyword of its
+# own) the backward keyword scan may land on an unrelated earlier `else` - possibly in
+# a different function entirely - and this containment check rejects that phantom so
+# the event pair is suppressed and the chain stays driven by `transition:if-elsif`.
+# Any kind other than `if-else`, or a branch without a resolvable parent `if`, is
+# accepted unchanged.
+func elseAnchorInsideParent(items: Slice[NodeSpan], item: NodeSpan, anchor: ast2.SourceSpan) -> Bool
+  if item.Kind != "if-else" then true
+  else
+    switch parentIfNode(items, item, 0)
+      case Some(ifItem) =>
+        let afterOpen = anchor.Start.Line > ifItem.Span.Start.Line || (anchor.Start.Line == ifItem.Span.Start.Line && anchor.Start.Column >= ifItem.Span.Start.Column)
+        let beforeClose = anchor.End.Line < ifItem.Span.End.Line || (anchor.End.Line == ifItem.Span.End.Line && anchor.End.Column <= ifItem.Span.End.Column)
+        afterOpen && beforeClose
+      case None => true
+    end
+  end
+end
+
+# A func literal bumps depth only when its body spans multiple rows. The AST func-literal
+# span is unreliable (it may cover only the return type), so the multi-line test uses the
+# token-scanned `end` exit anchor. An inline func literal stays depth-transparent so
+# existing inline call chains (`.Map(func(x: X) -> Bool y end).U(false)`) are byte-identical.
+func funcLitBumpsIndent(exitAnchor: ast2.SourceSpan, anchor: ast2.SourceSpan) -> Bool
+  exitAnchor.Start.Line > anchor.Start.Line
+end
+
+func funcLitEndAnchor(
+  tokens: Slice[ps.PositionedToken],
+  start: ast2.SourceSpan,
+  blockIfs: Slice[ast2.SourcePos],
+  fallback: ast2.SourceSpan
+) -> ast2.SourceSpan
+  let index = lowerBoundStart(tokens, start.Start, 0, tokens.Len())
+  ifEndAnchorFrom(tokens, index, 0, false, blockIfs, fallback)
+end
+
+# The lossless lexer splits a double-quoted string into `"` / content / `"` tokens with
+# no string context, so a block keyword word that merely appears inside a string (e.g.
+# the `func` in a "func(" literal) is a standalone symbol token and must NOT count as a
+# depth opener -- same precedent as the backward `nearestBranchIsCaseFrom`. The scan
+# tracks double-quote parity: a `"` flips the state and stays depth-neutral, a backslash
+# inside a quoted region skips the escaped token (so `\"` does not flip parity), and
+# every other in-string token is depth-neutral.
+func ifEndAnchorFrom(
+  tokens: Slice[ps.PositionedToken],
+  index: Int,
+  depth: Int,
+  inString: Bool,
+  blockIfs: Slice[ast2.SourcePos],
+  fallback: ast2.SourceSpan
+) -> ast2.SourceSpan
+  if index >= tokens.Len() then
+    fallback
+  else
+    switch tokens.Get(index)
+      case Some(token) then
+        if token.Raw == "\"" then
+          ifEndAnchorFrom(tokens, index + 1, depth, !inString, blockIfs, fallback)
+        elsif inString && token.Raw == "\\" then
+          ifEndAnchorFrom(tokens, index + 2, depth, inString, blockIfs, fallback)
+        elsif inString then
+          ifEndAnchorFrom(tokens, index + 1, depth, inString, blockIfs, fallback)
+        else
+          let nextDepth = depth + ifTokenDelta(tokens, index, blockIfs)
+          if depth > 0 && token.Raw == "end" && nextDepth == 0 then
+            tokenRangeSpan(tokens, index, index)
+          else
+            ifEndAnchorFrom(tokens, index + 1, nextDepth, false, blockIfs, fallback)
+          end
+        end
+      end
+      case None => fallback
+    end
+  end
+end
+
+func ifTokenDelta(tokens: Slice[ps.PositionedToken], index: Int, blockIfs: Slice[ast2.SourcePos]) -> Int
+  switch tokens.Get(index)
+    case Some(token) then
+      let raw = token.Raw
+      if raw == "end" then
+        -1
+      elsif raw == "if" && containsSourcePos(blockIfs, ast2.SourcePos { SourceName: "", Line: token.Span.Start.Line, Column: token.Span.Start.Column }) then
+        1
+      elsif raw == "func" || raw == "struct" || raw == "enum" || raw == "interface" || raw == "impl" || raw == "switch" || raw == "while" then
+        1
+      elsif raw == "then" && nearestBranchIsCase(tokens, index - 1) then
+        1
+      else
+        0
+      end
+    end
+    case None => 0
+  end
+end
+
+# Scan backward from `index` for the nearest branch-introducing keyword.  A `then`
+# opened by a `case` (block case form) carries its own `end`; a `then` opened by an
+# `if`/`elsif` shares the `if`'s single terminator and must not add depth.  String
+# literals are lexed into `"` / content / `"` tokens, so a keyword word that merely
+# appears inside a string (e.g. the `case` in `== "case"`) must NOT be mistaken for a
+# block-case opener — the backward scan tracks double-quote parity and ignores every
+# token inside a quoted region.
+func nearestBranchIsCase(tokens: Slice[ps.PositionedToken], index: Int) -> Bool
+  nearestBranchIsCaseFrom(tokens, index, false)
+end
+
+func nearestBranchIsCaseFrom(tokens: Slice[ps.PositionedToken], index: Int, inString: Bool) -> Bool
+  if index < 0 then false
+  else
+    switch tokens.Get(index)
+      case Some(token) =>
+        let raw = token.Raw
+        if raw == "\"" then nearestBranchIsCaseFrom(tokens, index - 1, !inString)
+        elsif inString then nearestBranchIsCaseFrom(tokens, index - 1, inString)
+        elsif raw == "case" then true
+        elsif raw == "if" || raw == "elsif" || raw == "else" || raw == "switch" then false
+        else nearestBranchIsCaseFrom(tokens, index - 1, inString) end
+      case None => false
+    end
+  end
+end
+
+# Collect the keyword-start positions of every BLOCK-form `if`.  In DFS node order
+# a block/arrow `if` is immediately followed by its `if-then` child, whose header
+# anchor is `then` (block) or `=>` (arrow); the `if` keyword start equals the `if`
+# node's span start, so no token scan is needed for the position.  Arrow ifs are
+# excluded because they carry no `end`.
+func blockIfStarts(items: Slice[NodeSpan], tokens: Slice[ps.PositionedToken], index: Int, pending: Option[NodeSpan], acc: Slice[ast2.SourcePos]) -> Slice[ast2.SourcePos]
+  if index >= items.Len() then acc
+  else
+    switch items.Get(index)
+      case Some(item) =>
+        let nextPending = if item.Kind == "if" then Some(item) else pending end
+        let nextAcc = if item.Kind == "if-then" then
+          switch pending
+            case Some(parent) =>
+              if isDirectChildPath(item.Path, parent.Path, 0) then
+                let header = layoutEventAnchor(items, item, tokens)
+                if header.End.Column - header.Start.Column != 2 then acc.Append(ast2.SourcePos { SourceName: "", Line: parent.Span.Start.Line, Column: parent.Span.Start.Column }) else acc end
+              else acc end
+            case None => acc
+          end
+        else acc end
+        blockIfStarts(items, tokens, index + 1, nextPending, nextAcc)
+      case None => acc
+    end
+  end
+end
+
+func containsSourcePos(positions: Slice[ast2.SourcePos], pos: ast2.SourcePos) -> Bool
+  positions.Fold(false, func(found: Bool, p: ast2.SourcePos) -> Bool
+    if found then true else p.Line == pos.Line && p.Column == pos.Column end
+  end)
 end
 
 func matchingEndAnchor(tokens: Slice[ps.PositionedToken], start: ast2.SourceSpan, index: Int, depth: Int, started: Bool, fallback: ast2.SourceSpan) -> ast2.SourceSpan
@@ -1368,6 +1586,7 @@ func exprSpanKind(kind: ast2.ExprKind) -> String
     case RuneExpr(_) => "literal"
     case SwitchExpr(_, _, _) => "switch"
     case IfExpr(_, _, _) => "if"
+    case FuncLitExpr(_, _, _) => "func-lit"
     case BlockExpr(_) => "block"
     case SliceLitExpr(_) => "delimited:slice"
     case SetLitExpr(_) => "delimited:set"
@@ -1448,11 +1667,12 @@ func collectKindSpans(kind: ast2.ExprKind) -> Slice[NodeSpan]
     case IfExpr(cond, yes, no) =>
       switch optionalElseExpr(no)
         case Some(elseExpr) =>
-          let elseBranch = switch elseExpr.Kind
-            case IfExpr(_, _, _) => None
-            case _ => Some(elseExpr)
-          end
-          joinSpans(joinSpans(withPath(collectExprSpans(cond), [0]), collectBranchSpans(yes, elseBranch)), withPath(collectExprSpans(elseExpr), [2]))
+          # Always emit the `if-else` node span (path `[2]`) so the formatter can close
+          # the then-branch at the `else` row (via `siblingElseLine`), even when the
+          # else-branch is itself a block `if`. An `elsif` link shares this AST shape but
+          # has no `else` keyword; `collectLayoutEvents` drops its `if-else` event pair so
+          # the `transition:if-elsif` machinery keeps driving the chain unchanged.
+          joinSpans(joinSpans(withPath(collectExprSpans(cond), [0]), collectBranchSpans(yes, Some(elseExpr))), withPath(collectExprSpans(elseExpr), [2]))
         case None => joinSpans(withPath(collectExprSpans(cond), [0]), collectBranchSpans(yes, None))
       end
     case BlockExpr(stmts) => collectStmtSpans(stmts, 0)

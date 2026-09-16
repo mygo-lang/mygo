@@ -302,6 +302,21 @@ func TestFormatterIfElsifElseBlockLayout(t *testing.T) {
 		return
 	}
 }
+func TestFormatterElseWithBlockBodyIndents(t *testing.T) {
+	src := "package sample\nfunc f(x: Int) -> Int\n  if x > 0 then\n    1\n      else\n        if x == 0 then\n      2\n      else\n      3\n        end\n      end\nend\n"
+	want := "package sample\nfunc f(x: Int) -> Int\n  if x > 0 then\n    1\n  else\n    if x == 0 then\n      2\n    else\n      3\n    end\n  end\nend\n"
+	got := formatLayout(src)
+	if got != want {
+		t.Fatalf("else-block branch indent wrong:\nGOT:\n%s\nWANT:\n%s", got, want)
+	} else {
+	}
+	if formatLayout(got) != got {
+		t.Fatalf("else-block branch is not idempotent: %s", formatLayout(got))
+		return
+	} else {
+		return
+	}
+}
 func TestFormatterRawStringLinesVerbatim(t *testing.T) {
 	src := "package sample\nfunc f() -> Int\n  go[Int] {\n    code: \"\"\"\n      func() int {\n        return 1\n      }()\n    \"\"\"\n  }\n  0\nend\n"
 	got := formatLayout(src)
@@ -311,6 +326,55 @@ func TestFormatterRawStringLinesVerbatim(t *testing.T) {
 	}
 	if got != src {
 		t.Fatalf("inline Go raw string layout changed: %s", got)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterValueIfWithKeywordInStringKeepsBranches(t *testing.T) {
+	src := "package sample\nfunc f(item: Node, items: Slice[Node]) -> Int\n  let bodyAnchor = if item.Kind == \"case\" then caseBodyAnchor(items, item, 0) else item.Span end\n  bodyAnchor\nend\n"
+	got := formattedOrFail(t, FormatSource("vif.mygo", src))
+	if !strings.Contains(got, "caseBodyAnchor(items, item, 0)") || !strings.Contains(got, "item.Span") {
+		t.Fatalf("value-if with a string keyword dropped a branch value:\n%s", got)
+	} else {
+	}
+	if !strings.Contains(formattedOrFail(t, FormatSource("vif.mygo", got)), "item.Span") {
+		t.Fatalf("value-if reformat lost the else-branch value (output does not re-parse):\n%s", got)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterValueIfElsifChainKeepsBranches(t *testing.T) {
+	src := "package sample\nfunc f(kind: String) -> Int\n  let x = if kind.HasPrefix(\"d\") then p(a) elsif kind == \"i\" then q(a) else item.Span end\n  x\nend\n"
+	got := formattedOrFail(t, FormatSource("elsif.mygo", src))
+	if !strings.Contains(got, "p(a)") || !strings.Contains(got, "q(a)") || !strings.Contains(got, "item.Span") {
+		t.Fatalf("value-if elsif chain dropped a branch value:\n%s", got)
+	} else {
+	}
+	reparsed := formattedOrFail(t, FormatSource("elsif.mygo", got))
+	if !strings.Contains(reparsed, "p(a)") || !strings.Contains(reparsed, "item.Span") {
+		t.Fatalf("value-if elsif chain does not re-parse cleanly:\n%s", reparsed)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterFuncLitBlockBodyIndents(t *testing.T) {
+	blockSrc := "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool\n  token.Raw == raw\n  end).UnwrapOr(false)\nend\n"
+	want := "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool\n    token.Raw == raw\n  end).UnwrapOr(false)\nend\n"
+	got := formatLayout(blockSrc)
+	if got != want {
+		t.Fatalf("func-lit block body indent wrong:\nGOT:\n%s\nWANT:\n%s", got, want)
+	} else {
+	}
+	if formatLayout(got) != got {
+		t.Fatalf("func-lit block body is not idempotent: %s", formatLayout(got))
+	} else {
+	}
+	inlineSrc := "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool token.Raw == raw end).UnwrapOr(false)\nend\n"
+	if formatLayout(inlineSrc) != inlineSrc {
+		t.Fatalf("inline func-lit call chain changed: %s", formatLayout(inlineSrc))
 		return
 	} else {
 		return
@@ -359,4 +423,126 @@ func TestFormatterWrappedDelimitedPreservesContent(t *testing.T) {
 }
 func collapseWhitespace(text string) string {
 	return strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(text, " ", ""), "\t", ""), "\n", "")
+}
+func TestFormatterWrapsNestedOverLongLiteral(t *testing.T) {
+	src := "package sample\n\nfunc build(state: ScanState, reply: Reply) -> Int\n  Result { Ok: true, Consumed: reply.Consumed, Value: SpannedX { Value: reply.Value, Span: ps.SourceSpan { Filename: state.Filename, Offset: state.Offset, Line: state.Line, Column: state.Column } }, Error: none }\n  0\nend\n"
+	want := "package sample\n\nfunc build(state: ScanState, reply: Reply) -> Int\n  Result {\n    Ok: true,\n    Consumed: reply.Consumed,\n    Value: SpannedX {\n      Value: reply.Value,\n      Span: ps.SourceSpan {\n        Filename: state.Filename,\n        Offset: state.Offset,\n        Line: state.Line,\n        Column: state.Column,\n      },\n    },\n    Error: none,\n  }\n  0\nend\n"
+	got := formattedOrFail(t, FormatSource("nested.mygo", src))
+	if got != want {
+		t.Fatalf("nested over-long literal not wrapped in one pass:\nGOT:\n%s\nWANT:\n%s", got, want)
+	} else {
+	}
+	second := formattedOrFail(t, FormatSource("nested.mygo", got))
+	if second != got {
+		t.Fatalf("nested over-long literal is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", got, second)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterWrapsNestedOverLongReachesDeepestField(t *testing.T) {
+	src := "package sample\n\nfunc build(state: ScanState, reply: Reply) -> Int\n  Result { Ok: true, Consumed: reply.Consumed, Value: SpannedX { Value: reply.Value, Span: ps.SourceSpan { Filename: state.Filename, Offset: state.Offset, Line: state.Line, Column: state.Column } }, Error: none }\n  0\nend\n"
+	got := formatLayout(src)
+	if !strings.Contains(got, "\n        Filename: state.Filename,\n") {
+		t.Fatalf("innermost over-long field did not wrap two levels deep: %s", got)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterMultiLineStatementIfBecomesBlock(t *testing.T) {
+	src := "package sample\nfunc f(a: Int) -> Int\n  if a >= 10 then -1\n  else if a >= 0 then a else f(a - 1) end end\nend\n"
+	want := "package sample\nfunc f(a: Int) -> Int\n  if a >= 10 then\n    -1\n  else\n    if a >= 0 then\n      a\n    else\n      f(a - 1)\n    end\n  end\nend\n"
+	got := formatLayout(src)
+	if got != want {
+		t.Fatalf("multi-line statement-if did not render canonical block form:\nGOT:\n%s\nWANT:\n%s", got, want)
+	} else {
+	}
+	if formatLayout(got) != got {
+		t.Fatalf("multi-line statement-if block form is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", got, formatLayout(got))
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterWrappedDelimitedCloseKeepsAnchorIndent(t *testing.T) {
+	src := "package sample\n\nfunc collectProtectedLines(file: LosslessFile) -> Slice[Int]\n  joinProtectedLines(joinProtectedLines(protectedTriviaLines(file.Trivia, 0), tripleQuotedLines(file.Tokens, 0)), pairedQuotedLines(file.Tokens, \"`\", 0))\nend\n\nfunc classify(raw: String) -> Bool\n  raw == \"`\"\nend\n"
+	first := formattedOrFail(t, FormatSource("goldb.mygo", src))
+	if !strings.Contains(first, "\n  )\nend\n") {
+		t.Fatalf("wrapped delimited close did not keep the anchor indent:\n%s", first)
+	} else {
+	}
+	if strings.Contains(first, "\n)\nend\n") {
+		t.Fatalf("wrapped delimited close fell to column 0:\n%s", first)
+	} else {
+	}
+	second := formattedOrFail(t, FormatSource("goldb.mygo", first))
+	if second != first {
+		t.Fatalf("wrapped delimited close indent is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterWideArrowIfKeepsElseBranch(t *testing.T) {
+	src := "package sample\nfunc f(noPrelude: Bool, workspaceRoot: String, dir: String) -> String\n  let resolved = if noPrelude => Ok(dir) else resolveBootstrapImport(workspaceRoot, dir, \"github.com/mygo-lang/mygo/prelude\")\n  resolved\nend\n"
+	first := formattedOrFail(t, FormatSource("arrow-else.mygo", src))
+	if !strings.Contains(first, "else\n    resolveBootstrapImport(workspaceRoot, dir, \"github.com/mygo-lang/mygo/prelude\")\n  end") {
+		t.Fatalf("wide arrow if lost its else branch:\n%s", first)
+	} else {
+	}
+	second := formattedOrFail(t, FormatSource("arrow-else.mygo", first))
+	if second != first {
+		t.Fatalf("wide arrow if is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterArrowIfWithTrailingPostfixStaysInline(t *testing.T) {
+	src := "package sample\nfunc f(dir: String, preludeDir: String) -> Int\n  let externalSources = if dir == preludeDir => [] as Slice[bootstrapPkgDeclSource] else prelude.Sources\n  externalSources.Len()\nend\n"
+	first := formattedOrFail(t, FormatSource("arrow-postfix.mygo", src))
+	if strings.Contains(first, "end.") {
+		t.Fatalf("arrow if postfix was pasted after the synthesized end:\n%s", first)
+	} else {
+	}
+	second := formattedOrFail(t, FormatSource("arrow-postfix.mygo", first))
+	if second != first {
+		t.Fatalf("arrow if with trailing postfix is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterStatementElsifChainRendersFlatBlockChain(t *testing.T) {
+	src := "package sample\n\nfunc tripleQuotedLines(tokens: Slice[Int], index: Int) -> Slice[Int]\n  if index + 2 >= tokens.Len() then []\n  elsif quoteTripleAt(tokens, index) then\n    let finish = nextQuoteTriple(tokens, index + 3)\n    if finish < 0 then []\n    else\n      let start = tokens.Get(index).UnwrapOr(0)\n      let finishToken = tokens.Get(finish + 2).UnwrapOr(start)\n      let protected = if start == finishToken then [] else spanLines(start, finishToken) end\n      joinProtectedLines(protected, tripleQuotedLines(tokens, finish + 3))\n    end\n  else tripleQuotedLines(tokens, index + 1) end\nend"
+	want := "package sample\n\nfunc tripleQuotedLines(tokens: Slice[Int], index: Int) -> Slice[Int]\n  if index + 2 >= tokens.Len() then\n    []\n  elsif quoteTripleAt(tokens, index) then\n    let finish = nextQuoteTriple(tokens, index + 3)\n    if finish < 0 then\n      []\n    else\n      let start = tokens.Get(index).UnwrapOr(0)\n      let finishToken = tokens.Get(finish + 2).UnwrapOr(start)\n      let protected = if start == finishToken then\n        []\n      else\n        spanLines(start, finishToken)\n      end\n      joinProtectedLines(protected, tripleQuotedLines(tokens, finish + 3))\n    end\n  else\n    tripleQuotedLines(tokens, index + 1)\n  end\nend\n"
+	first := formattedOrFail(t, FormatSource("golda.mygo", src))
+	if first != want {
+		t.Fatalf("statement elsif chain did not render the flat block chain:\nGOT:\n%s\nWANT:\n%s", first, want)
+	} else {
+	}
+	second := formattedOrFail(t, FormatSource("golda.mygo", first))
+	if second != first {
+		t.Fatalf("statement elsif chain is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterSingleLineElsifChainRendersFlatBlockChain(t *testing.T) {
+	src := "package sample\nfunc nextQuoteTriple(tokens: Slice[ps.PositionedToken], index: Int) -> Int\n  if index + 2 >= tokens.Len() then -1 elsif quoteTripleAt(tokens, index) then index else nextQuoteTriple(tokens, index + 1) end\nend\n"
+	want := "package sample\nfunc nextQuoteTriple(tokens: Slice[ps.PositionedToken], index: Int) -> Int\n  if index + 2 >= tokens.Len() then\n    -1\n  elsif quoteTripleAt(tokens, index) then\n    index\n  else\n    nextQuoteTriple(tokens, index + 1)\n  end\nend\n"
+	first := formattedOrFail(t, FormatSource("nq.mygo", src))
+	if first != want {
+		t.Fatalf("single-line elsif chain did not render the flat block chain:\nGOT:\n%s\nWANT:\n%s", first, want)
+	} else {
+	}
+	second := formattedOrFail(t, FormatSource("nq.mygo", first))
+	if second != first {
+		t.Fatalf("single-line elsif chain is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+		return
+	} else {
+		return
+	}
 }

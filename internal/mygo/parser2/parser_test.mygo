@@ -1,0 +1,198 @@
+package parser2
+
+import testing "go:testing"
+
+# Task 12 (GOAL A): when an `if`'s else-branch is itself a block `if`, the parser must
+# still emit an `enter:if-else` event anchored on the outer `else` keyword, so the
+# formatter can close the then-branch at that row (instead of the shared `end`).
+func TestLayoutEventsEmitElseForBlockElseIfBranch(t: Ref[testing.T]) -> ()
+  let source = """package sample
+func f(x: Int) -> Int
+  if x > 0 then
+    1
+  else
+    if x == 0 then
+      2
+    else
+      3
+    end
+  end
+end
+"""
+  switch ParseFileLossless("else-if.mygo", source)
+    case Err(message) => t.Fatalf("lossless parse failed: %s", message)
+    case Ok(parsed) then
+      let outerElse = parsed.LayoutEvents.Find(func(item: LayoutEvent) -> Bool
+        item.Kind == "enter:if-else" && item.Anchor.Start.Line == 5
+      end).IsSome()
+      let nestedIf = parsed.LayoutEvents.Find(func(item: LayoutEvent) -> Bool
+        item.Kind == "enter:if" && item.Span.Start.Line == 6
+      end).IsSome()
+      if !outerElse then
+        t.Fatal("missing outer else-anchor for a block else-if branch")
+      end
+      if !nestedIf then
+        t.Fatal("nested else-branch if event missing")
+      end
+    end
+  end
+end
+
+# Task 12 (GOAL A guard): an `elsif` link is an IfExpr in the else slot with no `else`
+# keyword, so the parser must NOT emit an `enter:if-else` anchored on the `elsif` row;
+# only the trailing real `else` produces one. This preserves the `transition:if-elsif` chain.
+func TestLayoutEventsSuppressElseForElsifLink(t: Ref[testing.T]) -> ()
+  let source = """package sample
+func f(x: Int) -> Int
+  if x == 1 then
+    1
+  elsif x == 2 then
+    2
+  else
+    3
+  end
+end
+"""
+  switch ParseFileLossless("elsif.mygo", source)
+    case Err(message) => t.Fatalf("lossless parse failed: %s", message)
+    case Ok(parsed) then
+      if parsed.LayoutEvents.Find(func(item: LayoutEvent) -> Bool
+          item.Kind == "enter:if-else" && item.Anchor.Start.Line == 5
+        end).IsSome() then
+        t.Fatal("elsif link must not emit an if-else event")
+      end
+    end
+  end
+end
+
+# Task 13 (GOAL B): a func literal whose body spans multiple rows must emit an
+# enter:func-lit/exit:func-lit pair that bumps depth (AffectsIndent) and whose exit is
+# the func literal's own `end`; an inline func literal (body on one row) stays
+# depth-transparent (AffectsIndent false) so inline call chains are byte-identical.
+func TestLayoutEventsFuncLitDepthOnlyForBlockBody(t: Ref[testing.T]) -> ()
+  let blockSrc = """package sample
+func f(tokens: Slice[Token], index: Int, raw: String) -> Bool
+  tokens.Get(index).Map(func(token: Token) -> Bool
+    token.Raw == raw
+  end).UnwrapOr(false)
+end
+"""
+  switch ParseFileLossless("lit-block.mygo", blockSrc)
+    case Err(message) => t.Fatalf("block-lit lossless parse failed: %s", message)
+    case Ok(parsed) then
+      let indenting = parsed.LayoutEvents.Find(func(item: LayoutEvent) -> Bool
+        item.Kind == "enter:func-lit" && item.AffectsIndent && item.ExitAnchor.Start.Line == 5
+      end).IsSome()
+      if !indenting then
+        t.Fatal("multi-line func literal did not emit an indenting func-lit event")
+      end
+    end
+  end
+  let inlineSrc = """package sample
+func f(tokens: Slice[Token], index: Int, raw: String) -> Bool
+  tokens.Get(index).Map(func(token: Token) -> Bool token.Raw == raw end).UnwrapOr(false)
+end
+"""
+  switch ParseFileLossless("lit-inline.mygo", inlineSrc)
+    case Err(message) => t.Fatalf("inline-lit lossless parse failed: %s", message)
+    case Ok(parsed) =>
+      if parsed.LayoutEvents.Find(func(item: LayoutEvent) -> Bool
+          item.Kind == "enter:func-lit" && item.AffectsIndent
+        end).IsSome() then
+        t.Fatal("inline func literal must stay depth-transparent")
+      end
+  end
+end
+
+# The lossless lexer splits a double-quoted string into `"` / content / `"` tokens, so a
+# keyword word that merely appears inside a string must not be mistaken for a block
+# opener. Backward scan: the `case` in a `== "case"` comparison must not gate the
+# following `then` as a block-case opener; otherwise the enclosing value-`if` exit
+# anchor is stolen by the next real `end` (the enclosing `func`).
+func TestLayoutEventsIfExitNotStolenByStringKeyword(t: Ref[testing.T]) -> ()
+  let source = """package sample
+func f(item: Node) -> Int
+  let x = if item.Kind == "case" then 1 else 2 end
+  x
+end
+"""
+  switch ParseFileLossless("string-case.mygo", source)
+    case Err(message) => t.Fatalf("lossless parse failed: %s", message)
+    case Ok(parsed) =>
+      switch parsed.LayoutEvents.Find(func(item: LayoutEvent) -> Bool item.Kind == "enter:if" end)
+        case None => t.Fatal("no enter:if event produced")
+        case Some(ifEvent) =>
+          if ifEvent.ExitAnchor.Start.Line != 3 then
+            t.Fatal("value-if exit anchored away from the if's own end (line 3)")
+          end
+      end
+  end
+end
+
+# Forward scan: the block-form `if`'s `end` search counts `func`/`struct`/`switch`/...
+# openers against their own `end`; a keyword word inside a string (e.g. the `func`
+# inside a "func(" literal) used to count as a +1 opener, so the if's own `end`
+# netted depth +1 and the exit anchor fell back to the (truncated) parser span,
+# corrupting the branch reflow into an `endfunc(` glue on reparse. The forward scan
+# must track double-quote parity, mirroring `nearestBranchIsCaseFrom`.
+func TestLayoutEventsBlockIfExitNotStolenByStringKeyword(t: Ref[testing.T]) -> ()
+  let source = """package sample
+func f(x: Int) -> String
+  if x == 1 then "func(" + "a" else "func(" + "b" end
+  "tail"
+end
+"""
+  switch ParseFileLossless("string-func.mygo", source)
+    case Err(message) => t.Fatalf("lossless parse failed: %s", message)
+    case Ok(parsed) =>
+      # The exit anchor must be the if's own `end` token on line 3: a fallback (the
+      # parser's truncated if span) also *starts* on line 3, so require the exact
+      # token width (an `end` spans 3 columns) to reject the fallback.
+      switch parsed.LayoutEvents.Find(func(item: LayoutEvent) -> Bool item.Kind == "enter:if" end)
+        case None => t.Fatal("no enter:if event produced")
+        case Some(ifEvent) =>
+          let exit = ifEvent.ExitAnchor
+          if exit.Start.Line != 3 || exit.End.Line != 3 || exit.End.Column - exit.Start.Column != 3 then
+            t.Fatal("block-if exit anchor is not the if's own end token on line 3")
+          end
+      end
+  end
+end
+
+# Cross-function phantom anchor: a later function's `elsif` link has no `else` keyword,
+# so the backward keyword scan used to borrow an EARLIER function's `else` token as its
+# anchor. That phantom `enter:if-else` (anchor in function A, exit in function B) made
+# the formatter's depth projection mis-indent function A's else body. Anchor
+# verification must reject an `if-else` anchor outside its parent `if` span.
+func TestLayoutEventsElsifLinkDoesNotBorrowEarlierElseAnchor(t: Ref[testing.T]) -> ()
+  let source = """package sample
+func a(p: Int) -> Int
+  if p > 0 then
+    1
+  else
+    2
+  end
+end
+
+func b(x: Int) -> Int
+  if x == 1 then
+    1
+  elsif x == 2 then
+    2
+  end
+end
+"""
+  switch ParseFileLossless("borrow.mygo", source)
+    case Err(message) => t.Fatalf("lossless parse failed: %s", message)
+    case Ok(parsed) then
+      # Function A's own else (anchor line 5, exit line 7) is fine; the phantom would
+      # ALSO anchor on line 5 while exiting at or beyond function B's shared end.
+      let phantom = parsed.LayoutEvents.Find(func(item: LayoutEvent) -> Bool
+        item.Kind == "enter:if-else" && item.Anchor.Start.Line == 5 && item.ExitAnchor.Start.Line >= 13
+      end).IsSome()
+      if phantom then
+        t.Fatal("elsif link borrowed an earlier function's else anchor")
+      end
+    end
+  end
+end

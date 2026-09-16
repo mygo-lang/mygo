@@ -232,6 +232,22 @@ func TestFormatterIfElsifElseBlockLayout(t: Ref[testing.T]) -> ()
   end
 end
 
+# Task 12 (GOAL A): when an `if`'s else-branch is itself a block `if`, the
+# enclosing `else` keyword must render at the `if` indent level (not +1).  A
+# mis-indented source exercises the target-depth engine: it closes the
+# then-branch at the `else` row via the emitted `if-else` event.
+func TestFormatterElseWithBlockBodyIndents(t: Ref[testing.T]) -> ()
+  let src = "package sample\nfunc f(x: Int) -> Int\n  if x > 0 then\n    1\n      else\n        if x == 0 then\n      2\n      else\n      3\n        end\n      end\nend\n"
+  let want = "package sample\nfunc f(x: Int) -> Int\n  if x > 0 then\n    1\n  else\n    if x == 0 then\n      2\n    else\n      3\n    end\n  end\nend\n"
+  let got = formatLayout(src)
+  if got != want then
+    t.Fatalf("else-block branch indent wrong:\nGOT:\n%s\nWANT:\n%s", got, want)
+  end
+  if formatLayout(got) != got then
+    t.Fatalf("else-block branch is not idempotent: %s", formatLayout(got))
+  end
+end
+
 func TestFormatterRawStringLinesVerbatim(t: Ref[testing.T]) -> ()
   let src = "package sample\nfunc f() -> Int\n  go[Int] {\n    code: \"\"\"\n      func() int {\n        return 1\n      }()\n    \"\"\"\n  }\n  0\nend\n"
   let got = formatLayout(src)
@@ -240,6 +256,58 @@ func TestFormatterRawStringLinesVerbatim(t: Ref[testing.T]) -> ()
   end
   if got != src then
     t.Fatalf("inline Go raw string layout changed: %s", got)
+  end
+end
+
+# Group 14: a keyword `if` in a value position whose CONDITION contains a branch
+# keyword word inside a string literal (`== "case"`) must expand without dropping the
+# then/else VALUES. The lexer splits `"case"` into `" case "` tokens, so a naive
+# backward scan mis-counted the `then` and mis-bound the `if` exit anchor, which made
+# the branch reflow render an EMPTY else branch (invalid). Re-parsing the output proves
+# both branch values survived.
+func TestFormatterValueIfWithKeywordInStringKeepsBranches(t: Ref[testing.T]) -> ()
+  let src = "package sample\nfunc f(item: Node, items: Slice[Node]) -> Int\n  let bodyAnchor = if item.Kind == \"case\" then caseBodyAnchor(items, item, 0) else item.Span end\n  bodyAnchor\nend\n"
+  let got = formattedOrFail(t, FormatSource("vif.mygo", src))
+  if !strings.Contains(got, "caseBodyAnchor(items, item, 0)") || !strings.Contains(got, "item.Span") then
+    t.Fatalf("value-if with a string keyword dropped a branch value:\n%s", got)
+  end
+  if !strings.Contains(formattedOrFail(t, FormatSource("vif.mygo", got)), "item.Span") then
+    t.Fatalf("value-if reformat lost the else-branch value (output does not re-parse):\n%s", got)
+  end
+end
+
+# Group 14: a value-position `if/elsif/else/end` chain on one source row is left inline
+# (the single-pair branch reflow cannot own an `elsif` chain) and must keep every branch
+# value. Before the guard the branch pass sliced the pair and dropped intermediate
+# `elsif` values, emitting invalid output.
+func TestFormatterValueIfElsifChainKeepsBranches(t: Ref[testing.T]) -> ()
+  let src = "package sample\nfunc f(kind: String) -> Int\n  let x = if kind.HasPrefix(\"d\") then p(a) elsif kind == \"i\" then q(a) else item.Span end\n  x\nend\n"
+  let got = formattedOrFail(t, FormatSource("elsif.mygo", src))
+  if !strings.Contains(got, "p(a)") || !strings.Contains(got, "q(a)") || !strings.Contains(got, "item.Span") then
+    t.Fatalf("value-if elsif chain dropped a branch value:\n%s", got)
+  end
+  let reparsed = formattedOrFail(t, FormatSource("elsif.mygo", got))
+  if !strings.Contains(reparsed, "p(a)") || !strings.Contains(reparsed, "item.Span") then
+    t.Fatalf("value-if elsif chain does not re-parse cleanly:\n%s", reparsed)
+  end
+end
+
+# Task 13 (GOAL B): a func literal whose body is on its own row is indented one level
+# under the func header, and the trailing `end` returns to the base indent.  An inline
+# func literal (body on one row) is left byte-identical (depth-transparent).
+func TestFormatterFuncLitBlockBodyIndents(t: Ref[testing.T]) -> ()
+  let blockSrc = "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool\n  token.Raw == raw\n  end).UnwrapOr(false)\nend\n"
+  let want = "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool\n    token.Raw == raw\n  end).UnwrapOr(false)\nend\n"
+  let got = formatLayout(blockSrc)
+  if got != want then
+    t.Fatalf("func-lit block body indent wrong:\nGOT:\n%s\nWANT:\n%s", got, want)
+  end
+  if formatLayout(got) != got then
+    t.Fatalf("func-lit block body is not idempotent: %s", formatLayout(got))
+  end
+  let inlineSrc = "package sample\nfunc f(tokens: Slice[Token], index: Int, raw: String) -> Bool\n  tokens.Get(index).Map(func(token: Token) -> Bool token.Raw == raw end).UnwrapOr(false)\nend\n"
+  if formatLayout(inlineSrc) != inlineSrc then
+    t.Fatalf("inline func-lit call chain changed: %s", formatLayout(inlineSrc))
   end
 end
 
@@ -277,4 +345,205 @@ end
 
 func collapseWhitespace(text: String) -> String
   strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(text, " ", ""), "\t", ""), "\n", "")
+end
+
+# Task 9.1/9.3a: an over-long delimited literal whose nested construct is itself
+# over-long must wrap BOTH levels in a SINGLE pass, with final indentation baked
+# (base + 2 spaces per nesting level), a comma after every multiline item, and be
+# byte-identical on a second pass (idempotent).  This is the (A) regression: the
+# flat path wrapped only the outer level and re-wrapped the inner on pass 2.
+func TestFormatterWrapsNestedOverLongLiteral(t: Ref[testing.T]) -> ()
+  let src = "package sample\n\nfunc build(state: ScanState, reply: Reply) -> Int\n  Result { Ok: true, Consumed: reply.Consumed, Value: SpannedX { Value: reply.Value, Span: ps.SourceSpan { Filename: state.Filename, Offset: state.Offset, Line: state.Line, Column: state.Column } }, Error: none }\n  0\nend\n"
+  let want = "package sample\n\nfunc build(state: ScanState, reply: Reply) -> Int\n  Result {\n    Ok: true,\n    Consumed: reply.Consumed,\n    Value: SpannedX {\n      Value: reply.Value,\n      Span: ps.SourceSpan {\n        Filename: state.Filename,\n        Offset: state.Offset,\n        Line: state.Line,\n        Column: state.Column,\n      },\n    },\n    Error: none,\n  }\n  0\nend\n"
+  let got = formattedOrFail(t, FormatSource("nested.mygo", src))
+  if got != want then
+    t.Fatalf("nested over-long literal not wrapped in one pass:\nGOT:\n%s\nWANT:\n%s", got, want)
+  end
+  let second = formattedOrFail(t, FormatSource("nested.mygo", got))
+  if second != got then
+    t.Fatalf("nested over-long literal is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", got, second)
+  end
+end
+
+# Task 9.3b: the deep field `Filename:` must land on its own line two levels
+# inside the outer literal (8 spaces), proving the recursion reached the innermost
+# over-long span rather than leaving `ps.SourceSpan { ... }` inline.
+func TestFormatterWrapsNestedOverLongReachesDeepestField(t: Ref[testing.T]) -> ()
+  let src = "package sample\n\nfunc build(state: ScanState, reply: Reply) -> Int\n  Result { Ok: true, Consumed: reply.Consumed, Value: SpannedX { Value: reply.Value, Span: ps.SourceSpan { Filename: state.Filename, Offset: state.Offset, Line: state.Line, Column: state.Column } }, Error: none }\n  0\nend\n"
+  let got = formatLayout(src)
+  if !strings.Contains(got, "\n        Filename: state.Filename,\n") then
+    t.Fatalf("innermost over-long field did not wrap two levels deep: %s", got)
+  end
+end
+
+# Task 14.1 (GOAL C): a keyword `if` whose `then` value sits on the `then` row
+# while the whole construct spans several source rows cannot be expanded by the
+# single-line branch pass (it can add rows to one line but cannot consume a
+# multi-line span).  The whole-span reflow takes ownership and renders the
+# canonical block form (`then`/`else`/`end` on their own rows, branches indented
+# one level, the nested `else if` recursed), and the result is idempotent.
+func TestFormatterMultiLineStatementIfBecomesBlock(t: Ref[testing.T]) -> ()
+  let src = "package sample\nfunc f(a: Int) -> Int\n  if a >= 10 then -1\n  else if a >= 0 then a else f(a - 1) end end\nend\n"
+  let want = "package sample\nfunc f(a: Int) -> Int\n  if a >= 10 then\n    -1\n  else\n    if a >= 0 then\n      a\n    else\n      f(a - 1)\n    end\n  end\nend\n"
+  let got = formatLayout(src)
+  if got != want then
+    t.Fatalf("multi-line statement-if did not render canonical block form:\nGOT:\n%s\nWANT:\n%s", got, want)
+  end
+  if formatLayout(got) != got then
+    t.Fatalf("multi-line statement-if block form is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", got, formatLayout(got))
+  end
+end
+
+# Task 16.4 (golden b / GOAL C): an over-long call whose argument-anchor line also
+# holds a double-quoted string containing a backtick (like "`") has that backtick
+# mis-paired with a later string-literal backtick by the lossless raw-string line
+# protection, which used to verbatim-freeze the wrapped call body and drop its closing
+# `)` to column 0. The depth engine now lays out the synthetic wrap rows, so the close
+# sits at the argument-anchor base indent (2). Formatting round-trips (a re-format
+# re-parses) and is byte-identical (idempotent).
+func TestFormatterWrappedDelimitedCloseKeepsAnchorIndent(t: Ref[testing.T]) -> ()
+  let src = "package sample\n\nfunc collectProtectedLines(file: LosslessFile) -> Slice[Int]\n  joinProtectedLines(joinProtectedLines(protectedTriviaLines(file.Trivia, 0), tripleQuotedLines(file.Tokens, 0)), pairedQuotedLines(file.Tokens, \"`\", 0))\nend\n\nfunc classify(raw: String) -> Bool\n  raw == \"`\"\nend\n"
+  let first = formattedOrFail(t, FormatSource("goldb.mygo", src))
+  if !strings.Contains(first, "\n  )\nend\n") then
+    t.Fatalf("wrapped delimited close did not keep the anchor indent:\n%s", first)
+  end
+  if strings.Contains(first, "\n)\nend\n") then
+    t.Fatalf("wrapped delimited close fell to column 0:\n%s", first)
+  end
+  let second = formattedOrFail(t, FormatSource("goldb.mygo", first))
+  if second != first then
+    t.Fatalf("wrapped delimited close indent is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+  end
+end
+
+# An over-long single-line arrow `if cond => then else value` in value position
+# reflows to the keyword block form.  The arrow form carries no `end` token, so
+# the then-branch ExitAnchor names the then VALUE rather than a closing token;
+# the else body must therefore be bounded by the else branch's own ExitAnchor,
+# otherwise the whole else value is silently dropped during the reflow.
+func TestFormatterWideArrowIfKeepsElseBranch(t: Ref[testing.T]) -> ()
+  let src = """package sample
+func f(noPrelude: Bool, workspaceRoot: String, dir: String) -> String
+  let resolved = if noPrelude => Ok(dir) else resolveBootstrapImport(workspaceRoot, dir, "github.com/mygo-lang/mygo/prelude")
+  resolved
+end
+"""
+  let first = formattedOrFail(t, FormatSource("arrow-else.mygo", src))
+  if !strings.Contains(first, "else\n    resolveBootstrapImport(workspaceRoot, dir, \"github.com/mygo-lang/mygo/prelude\")\n  end") then
+    t.Fatalf("wide arrow if lost its else branch:\n%s", first)
+  end
+  let second = formattedOrFail(t, FormatSource("arrow-else.mygo", first))
+  if second != first then
+    t.Fatalf("wide arrow if is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+  end
+end
+
+# An over-long arrow `if` in value position may be followed by a postfix that
+# belongs to the ENCLOSING expression: the if itself ends before `.Sources`
+# below.  Expanding that shape would paste the dangling suffix right after the
+# synthesized `end` (`end.Sources` does not re-parse), so the formatter keeps
+# the line inline; the inline arrow form stays valid, stable and lossless.
+func TestFormatterArrowIfWithTrailingPostfixStaysInline(t: Ref[testing.T]) -> ()
+  let src = """package sample
+func f(dir: String, preludeDir: String) -> Int
+  let externalSources = if dir == preludeDir => [] as Slice[bootstrapPkgDeclSource] else prelude.Sources
+  externalSources.Len()
+end
+"""
+  let first = formattedOrFail(t, FormatSource("arrow-postfix.mygo", src))
+  if strings.Contains(first, "end.") then
+    t.Fatalf("arrow if postfix was pasted after the synthesized end:\n%s", first)
+  end
+  let second = formattedOrFail(t, FormatSource("arrow-postfix.mygo", first))
+  if second != first then
+    t.Fatalf("arrow if with trailing postfix is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+  end
+end
+# Task 16.1a (golden a / GOAL C, D12): a statement-position `if ... elsif ... else`
+# chain renders as a FLAT keyword chain at the source base indent: `if COND then`,
+# `elsif COND then`, `else` and ONE shared `end` all at the `if`'s indent, every
+# branch body one level deeper.  A multi-row branch body keeps its interior
+# structure; formatting round-trips and is a fixpoint.
+func TestFormatterStatementElsifChainRendersFlatBlockChain(t: Ref[testing.T]) -> ()
+  let src = """package sample
+
+func tripleQuotedLines(tokens: Slice[Int], index: Int) -> Slice[Int]
+  if index + 2 >= tokens.Len() then []
+  elsif quoteTripleAt(tokens, index) then
+    let finish = nextQuoteTriple(tokens, index + 3)
+    if finish < 0 then []
+    else
+      let start = tokens.Get(index).UnwrapOr(0)
+      let finishToken = tokens.Get(finish + 2).UnwrapOr(start)
+      let protected = if start == finishToken then [] else spanLines(start, finishToken) end
+      joinProtectedLines(protected, tripleQuotedLines(tokens, finish + 3))
+    end
+  else tripleQuotedLines(tokens, index + 1) end
+end"""
+  let want = """package sample
+
+func tripleQuotedLines(tokens: Slice[Int], index: Int) -> Slice[Int]
+  if index + 2 >= tokens.Len() then
+    []
+  elsif quoteTripleAt(tokens, index) then
+    let finish = nextQuoteTriple(tokens, index + 3)
+    if finish < 0 then
+      []
+    else
+      let start = tokens.Get(index).UnwrapOr(0)
+      let finishToken = tokens.Get(finish + 2).UnwrapOr(start)
+      let protected = if start == finishToken then
+        []
+      else
+        spanLines(start, finishToken)
+      end
+      joinProtectedLines(protected, tripleQuotedLines(tokens, finish + 3))
+    end
+  else
+    tripleQuotedLines(tokens, index + 1)
+  end
+end
+"""
+  let first = formattedOrFail(t, FormatSource("golda.mygo", src))
+  if first != want then
+    t.Fatalf("statement elsif chain did not render the flat block chain:\nGOT:\n%s\nWANT:\n%s", first, want)
+  end
+  let second = formattedOrFail(t, FormatSource("golda.mygo", first))
+  if second != first then
+    t.Fatalf("statement elsif chain is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+  end
+end
+
+# Task 16.1a follow-up: a statement `if ... elsif ...` chain written on ONE
+# physical line where the `elsif` condition is an inline delimited call
+# (`elsif quoteTripleAt(tokens, index) then`).  The whole-span renderer owns it
+# and renders the same flat block chain, keeping the inline call as the header
+# condition (it never splits a single-row `elsif COND` condition), and the
+# result is idempotent.  Regression for the `nextQuoteTriple` mis-format where
+# a wrapped elsif condition was empty-sliced into an invalid `elsif  then`.
+func TestFormatterSingleLineElsifChainRendersFlatBlockChain(t: Ref[testing.T]) -> ()
+  let src = """package sample
+func nextQuoteTriple(tokens: Slice[ps.PositionedToken], index: Int) -> Int
+  if index + 2 >= tokens.Len() then -1 elsif quoteTripleAt(tokens, index) then index else nextQuoteTriple(tokens, index + 1) end
+end
+"""
+  let want = """package sample
+func nextQuoteTriple(tokens: Slice[ps.PositionedToken], index: Int) -> Int
+  if index + 2 >= tokens.Len() then
+    -1
+  elsif quoteTripleAt(tokens, index) then
+    index
+  else
+    nextQuoteTriple(tokens, index + 1)
+  end
+end
+"""
+  let first = formattedOrFail(t, FormatSource("nq.mygo", src))
+  if first != want then
+    t.Fatalf("single-line elsif chain did not render the flat block chain:\nGOT:\n%s\nWANT:\n%s", first, want)
+  end
+  let second = formattedOrFail(t, FormatSource("nq.mygo", first))
+  if second != first then
+    t.Fatalf("single-line elsif chain is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+  end
 end
