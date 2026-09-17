@@ -280,6 +280,18 @@ func renderASTSpans(file ast2.File, spans []parser2.NodeSpan, delimited []parser
 func renderLayoutEvents(events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, ownedLines []int, inlineChainLines []int, index int, acc []parser2.LayoutEvent) []parser2.LayoutEvent {
 	return __mygo_mt_formatter_renderLayoutEvents(events, delimited, ownedLines, inlineChainLines, index, acc, 0)
 }
+func funcLitHangsOnDelimitedStart(spans []parser2.DelimitedSpan, ev parser2.LayoutEvent) bool {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(spans, false, func(found bool, item parser2.DelimitedSpan) bool {
+		if found {
+			return true
+		} else {
+			spansLines := item.Span.Start.Line < item.Span.End.Line
+			opensHere := item.Span.Start.Line == ev.Anchor.Start.Line && ev.Anchor.Start.Column > item.Span.Start.Column
+			contained := ev.Span.End.Line <= item.Span.End.Line
+			return spansLines && opensHere && contained
+		}
+	})
+}
 func valueIfChainLines(events []parser2.LayoutEvent, lines []string, index int, acc []int) []int {
 	return __mygo_mt_formatter_valueIfChainLines(events, lines, index, acc, 0)
 }
@@ -1890,6 +1902,7 @@ func renderedEventCount(events []RenderedLayoutEvent, elsifPaths [][]int, mappin
 			__mygo_expr_1 = item.ExitSourceLine
 		}
 		keyLine := __mygo_expr_1
+		phantom := item.ExpandsAfter && item.RenderedEnd <= item.RenderedStart
 		var __mygo_expr_5 bool
 		if item.ExpandsAfter {
 			var __mygo_expr_4 bool
@@ -1915,7 +1928,7 @@ func renderedEventCount(events []RenderedLayoutEvent, elsifPaths [][]int, mappin
 			__mygo_expr_5 = !mapping.Synthetic && mapping.SourceLine == keyLine
 		}
 		row := __mygo_expr_5
-		if structural && matches && row {
+		if structural && !phantom && matches && row {
 			return count + 1
 		} else {
 			return count
@@ -4339,7 +4352,8 @@ func __mygo_mt_formatter_renderLayoutEvents(__mygo_mt_p0 []parser2.LayoutEvent, 
 						branchPhantom := isIfBranch && __mygo_match___mygo_expr_1.F0.AffectsIndent && __mygo_match___mygo_expr_1.F0.ExpandsAfter && onOneLine
 						onInlineChainLine := __mygo_match___mygo_expr_1.F0.Span.Start.Line > 0 && containsInt(__mygo_mt_p3, __mygo_match___mygo_expr_1.F0.Span.Start.Line)
 						onInlineChain := onInlineChainLine && (branchPhantom || isElsifTransition)
-						flatten := onOwned || onInlineChain || branchPhantom && insideSameLineDelimited(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0.Anchor.Start.Line, __mygo_match___mygo_expr_1.F0.Anchor.Start.Column)
+						funcLitHanging := (__mygo_match___mygo_expr_1.F0.Kind == "enter:func-lit" || __mygo_match___mygo_expr_1.F0.Kind == "exit:func-lit") && funcLitHangsOnDelimitedStart(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0)
+						flatten := onOwned || onInlineChain || branchPhantom && insideSameLineDelimited(__mygo_mt_p1, __mygo_match___mygo_expr_1.F0.Anchor.Start.Line, __mygo_match___mygo_expr_1.F0.Anchor.Start.Column) || funcLitHanging
 						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2

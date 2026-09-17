@@ -540,11 +540,34 @@ func renderLayoutEvents(events: Slice[parser2.LayoutEvent], delimited: Slice[par
         let branchPhantom = isIfBranch && ev.AffectsIndent && ev.ExpandsAfter && onOneLine
         let onInlineChainLine = ev.Span.Start.Line > 0 && containsInt(inlineChainLines, ev.Span.Start.Line)
         let onInlineChain = onInlineChainLine && (branchPhantom || isElsifTransition)
-        let flatten = onOwned || onInlineChain || (branchPhantom && insideSameLineDelimited(delimited, ev.Anchor.Start.Line, ev.Anchor.Start.Column))
+        let funcLitHanging = (ev.Kind == "enter:func-lit" || ev.Kind == "exit:func-lit") && funcLitHangsOnDelimitedStart(delimited, ev)
+        let flatten = onOwned || onInlineChain || (branchPhantom && insideSameLineDelimited(delimited, ev.Anchor.Start.Line, ev.Anchor.Start.Column)) || funcLitHanging
         renderLayoutEvents(events, delimited, ownedLines, inlineChainLines, index + 1, if flatten then acc else acc.Append(ev) end)
       end
     end
   end
+end
+
+# A func literal that opens on the same physical line as the opening delimiter
+# of an enclosing MULTI-LINE delimited literal (`f(a, func(x) -> R` ... `end)`) is
+# a hanging item: its header row IS the literal's anchor row, so the literal's
+# own item-level indent - added by `addDelimitedIndent` to every interior row -
+# already supplies exactly the one extra level the body needs.  Keeping the
+# func-lit's own indent event would add a SECOND level to the body rows alone,
+# and because its exit is anchored on the literal's closing row (not on the
+# body's last row) that phantom level both over-indents the body by one and
+# leaks past the literal's `end`, re-anchoring every following statement.  Drop
+# the pair and let the delimited projection own the hanging body indent.
+func funcLitHangsOnDelimitedStart(spans: Slice[parser2.DelimitedSpan], ev: parser2.LayoutEvent) -> Bool
+  spans.Fold(false, func(found: Bool, item: parser2.DelimitedSpan) -> Bool
+    if found then true
+    else
+      let spansLines = item.Span.Start.Line < item.Span.End.Line
+      let opensHere = item.Span.Start.Line == ev.Anchor.Start.Line && ev.Anchor.Start.Column > item.Span.Start.Column
+      let contained = ev.Span.End.Line <= item.Span.End.Line
+      spansLines && opensHere && contained
+    end
+  end)
 end
 
 # A single-line `if … elsif … else … end` chain in VALUE position (its `if`
@@ -2729,6 +2752,16 @@ func renderedEventCount(events: Slice[RenderedLayoutEvent], elsifPaths: Slice[Sl
     let matches = if phase == "enter" then item.Boundary == "enter-header" else item.Boundary == "exit-anchor" || item.Boundary == "body-end" || item.Boundary == "block-end" end
     let isEnter = phase == "enter"
     let keyLine = if isEnter then item.SourceLine else item.ExitSourceLine end
+    # The parser marks every one-line body ExpandsAfter because some pass is
+    # expected to break it into block form, but a short construct no pass owns
+    # (for example a value-position switch that keeps its arrow cases inline)
+    # never earns a synthetic closing row.  Counting its enter without a
+    # matching exit leaks a phantom indent level onto every following row until
+    # the enclosing block merely re-anchors it.  RenderedEnd reaches past
+    # RenderedStart exactly when the projection produced those extra rows, so a
+    # construct that stayed on one rendered row contributes no indent at all:
+    # neither boundary counts and the pair cancels where it stands.
+    let phantom = item.ExpandsAfter && item.RenderedEnd <= item.RenderedStart
     let row = if item.ExpandsAfter then
         if isEnter then
           if strings.Contains(item.Kind, "enter:if-else") then mapping.Synthetic && mapping.Boundary == "else" && mapping.SourceLine == keyLine
@@ -2738,7 +2771,7 @@ func renderedEventCount(events: Slice[RenderedLayoutEvent], elsifPaths: Slice[Sl
           else mapping.Synthetic && mapping.Boundary == "after" && mapping.SourceLine == keyLine end
         end
       else !mapping.Synthetic && mapping.SourceLine == keyLine end
-    if structural && matches && row then count + 1 else count end
+    if structural && !phantom && matches && row then count + 1 else count end
   end)
 end
 
