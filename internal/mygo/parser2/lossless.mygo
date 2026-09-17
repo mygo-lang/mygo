@@ -732,11 +732,13 @@ func collectLayoutEvents(items: Slice[NodeSpan], tokens: Slice[ps.PositionedToke
         let headerForm = layoutHeaderForm(item.Kind, anchor)
         let branchForm = if item.Kind == "if-else" then siblingThenForm(items, item, tokens, "") else headerForm end
         let separatorAnchor = layoutSeparatorAnchor(item.Kind, bodyAnchor, tokens, 0)
+        let blockCase = item.Kind == "case" && bodyLayout == "block"
         let exitAnchor = if item.Kind.HasPrefix("decl:") || item.Kind == "impl-method" then declarationEndAnchor(tokens, item.Span)
           elsif item.Kind == "inline-go" then inlineGoExitAnchor(tokens, item.Span)
           elsif item.Kind == "if-then" || item.Kind == "if-else" then branchEndAnchor(items, item, tokens, blockIfs, item.Span)
           elsif item.Kind == "if" then ifEndAnchor(tokens, anchor, blockIfs, item.Span)
           elsif item.Kind == "func-lit" then funcLitEndAnchor(tokens, item.Span, blockIfs, item.Span)
+          elsif blockCase then caseBlockExitAnchor(tokens, bodyAnchor, item.Span)
           elsif bodyLayout == "block" then matchingEndAnchor(tokens, anchor, 0, 0, false, item.Span)
           else item.Span end
         let sameLineEnd = item.Span.Start.Line == item.Span.End.Line && hasEndTokenOnLine(tokens, item.Span.Start.Line) && item.Kind != "case"
@@ -1274,6 +1276,35 @@ func isEndTokenAnchor(tokens: Slice[ps.PositionedToken], anchor: ast2.SourceSpan
       case None => false
     end
   end
+end
+
+# The exit of a block-bodied case is the token terminating its arm: the end of a
+# then block, or - for an arrow arm (case pat => body), which has no keyword -
+# the next case arm or the enclosing switch end.  Anchoring the exit on the case
+# header instead (matchingEndAnchor's fallback when the body holds no opener)
+# would cancel the indent bump the case contributes to its block body.
+func caseBlockExitAnchor(tokens: Slice[ps.PositionedToken], body: ast2.SourceSpan, fallback: ast2.SourceSpan) -> ast2.SourceSpan
+  caseBlockExitAnchorFrom(tokens, body, 0, fallback)
+end
+
+func caseBlockExitAnchorFrom(tokens: Slice[ps.PositionedToken], body: ast2.SourceSpan, index: Int, fallback: ast2.SourceSpan) -> ast2.SourceSpan
+  if index >= tokens.Len() then
+    fallback
+  else
+    switch tokens.Get(index)
+      case Some(token) =>
+        if tokenStartsAtOrAfterPos(token, body.End) && (token.Raw == "case" || token.Raw == "end") then
+          ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: token.Span.Start.Line, Column: token.Span.Start.Column }, End: ast2.SourcePos { SourceName: "", Line: token.Span.End.Line, Column: token.Span.End.Column } }
+        else
+          caseBlockExitAnchorFrom(tokens, body, index + 1, fallback)
+        end
+      case None => fallback
+    end
+  end
+end
+
+func tokenStartsAtOrAfterPos(token: ps.PositionedToken, pos: ast2.SourcePos) -> Bool
+  token.Span.Start.Line > pos.Line || (token.Span.Start.Line == pos.Line && token.Span.Start.Column >= pos.Column)
 end
 
 func hasEndTokenOnLine(tokens: Slice[ps.PositionedToken], line: Int) -> Bool

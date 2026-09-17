@@ -196,3 +196,30 @@ end
     end
   end
 end
+
+# An arrow case with a block body has no keyword terminator, so its exit anchor
+# must name the following arm (or the enclosing switch end) rather than the case
+# header.  Anchoring on the header would cancel the case's indent contribution.
+func TestLayoutEventsArrowCaseExitAnchorsNextArm(t: Ref[testing.T]) -> ()
+  let source = """package sample
+func f(x: Int) -> Int
+  switch x
+    case Some(t) =>
+      let a = one(t)
+      two(a)
+    case None => 0
+  end
+end
+"""
+  switch ParseFileLossless("arrow-case.mygo", source)
+    case Err(message) => t.Fatalf("lossless parse failed: %s", message)
+    case Ok(parsed) then
+      let anchored = parsed.LayoutEvents.Find(func(item: LayoutEvent) -> Bool
+        item.Kind == "exit:case" && item.Anchor.Start.Line == 4 && item.ExitAnchor.Start.Line == 7
+      end).IsSome()
+      if !anchored then
+        t.Fatal("arrow case exit did not anchor on the following arm")
+      end
+    end
+  end
+end

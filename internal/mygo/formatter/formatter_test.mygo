@@ -3,6 +3,7 @@ package formatter
 import testing "go:testing"
 import strings "go:strings"
 import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import os "go:os"
 
 func TestFormatterLayoutIsIdempotent(t: Ref[testing.T]) -> ()
   let src = "package sample\n\nfunc f() -> Int\n    1\nend\n"
@@ -224,6 +225,34 @@ func TestFormatterCaseThenBodyKeepsIndent(t: Ref[testing.T]) -> ()
   end
 end
 
+# An arrow case with a BLOCK body (multi-row statements after the arrow, no
+# then) has no keyword terminator.  The case exit must anchor on the next arm or
+# the enclosing switch end, not on the case header: anchoring on the header
+# cancels the indent bump the case contributes, under-indenting the whole body
+# and swallowing the following arm into it.  Formatting round-trips and is a
+# fixpoint.
+func TestFormatterArrowCaseBlockBodyIndents(t: Ref[testing.T]) -> ()
+  let src = """package sample
+func scan(tokens: Slice[Int], index: Int) -> Int
+  switch tokens.Get(index)
+    case Some(token) =>
+      let first = one(token)
+      let second = two(token)
+      three(first, second)
+    case None => fallback
+  end
+end
+"""
+  let first = formattedOrFail(t, FormatSource("arrow-case.mygo", src))
+  if first != src then
+    t.Fatalf("arrow case block body did not keep its indent:\nGOT:\n%s\nWANT:\n%s", first, src)
+  end
+  let second = formattedOrFail(t, FormatSource("arrow-case.mygo", first))
+  if second != first then
+    t.Fatalf("arrow case block body is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+  end
+end
+
 func TestFormatterIfElsifElseBlockLayout(t: Ref[testing.T]) -> ()
   let src = "package sample\nfunc f(x: Int) -> Int\n  if x == 1 then\n    1\n  elsif x == 2 then\n    2\n  else\n    3\n  end\nend\n"
   let got = formatLayout(src)
@@ -289,6 +318,30 @@ func TestFormatterValueIfElsifChainKeepsBranches(t: Ref[testing.T]) -> ()
   let reparsed = formattedOrFail(t, FormatSource("elsif.mygo", got))
   if !strings.Contains(reparsed, "p(a)") || !strings.Contains(reparsed, "item.Span") then
     t.Fatalf("value-if elsif chain does not re-parse cleanly:\n%s", reparsed)
+  end
+end
+
+# Group 16: the same value-position single-line `if/elsif/else/end` chain is kept
+# inline, but its `if-then`/`if-else` layout events still claimed an expansion the
+# flat branch pass never performed.  The depth projection counted that phantom
+# branch level (and its `elsif` transition), sinking the host row to column 0 and
+# lifting its following siblings.  The chain must stay inline and every row must
+# keep the enclosing block's indent.
+func TestFormatterInlineValueIfElsifChainKeepsIndent(t: Ref[testing.T]) -> ()
+  let src = """package sample
+
+func m() -> Int
+  let a = 1
+  let x = if a then b elsif c then d else e end
+  let dd = 4
+end
+"""
+  let got = formattedOrFail(t, FormatSource("inlineif.mygo", src))
+  if got != src then
+    t.Fatalf("inline value-if elsif chain lost its indent:\nGOT:\n%s\nWANT:\n%s", got, src)
+  end
+  if formattedOrFail(t, FormatSource("inlineif.mygo", got)) != got then
+    t.Fatalf("inline value-if elsif chain is not idempotent:\n%s", got)
   end
 end
 
@@ -602,5 +655,87 @@ end
   let second = formattedOrFail(t, FormatSource("pq.mygo", first))
   if second != first then
     t.Fatalf("ragged nested if is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+  end
+end
+
+# Real-corpus regression: `internal/mygo/parser2/lossless.mygo` carries a glued
+# (single-line) value `if ... then [] else spanLines(...) end` inside a nested
+# owned `if` body, preceded in the file by constructs the earlier passes expand.
+# The branch pass reflows that glued line through the recursive engine (baking
+# its canonical base and `+1` bodies), but a prior pass line shift used to keep
+# the expanded rows OUT of the verbatim-lock set, so the depth engine re-indented
+# them a second time: the `then`/`else` bodies landed two levels below the `let`
+# continuation instead of one.  The branch pass owned lines now join the lock
+# set, so the baked rows are reproduced byte-for-byte.
+func TestFormatterGluedValueIfInRealFileExpandsAtCanonicalDepth(t: Ref[testing.T]) -> ()
+  let path = "../parser2/lossless.mygo"
+  let src = switch os.ReadFile(path)
+    case Ok(bytes) => bytes as String
+    case Err(err) then
+      t.Fatalf("read %s: %v", path, err)
+      ""
+    end
+  end
+  let anchor = "let protected = if start.Span.Start.Line == finishToken.Span.End.Line then"
+  if !strings.Contains(src, anchor + " [] else") then
+    t.Fatalf("%s no longer carries the glued value-if anchor; update this golden", path)
+  end
+  let first = formattedOrFail(t, FormatSource("lossless.mygo", src))
+  let wantBlock = """
+      let protected = if start.Span.Start.Line == finishToken.Span.End.Line then
+        []
+      else
+        spanLines(start.Span.Start.Line, finishToken.Span.End.Line)
+      end
+"""
+  if !strings.Contains(first, wantBlock) then
+    t.Fatalf("glued value-if did not expand at canonical depth (+2 bodies):\n%s", first)
+  end
+  let second = formattedOrFail(t, FormatSource("lossless.mygo", first))
+  if second != first then
+    t.Fatalf("glued value-if expansion is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+  end
+end
+
+# Real-corpus regression: `internal/mygo/parser2/lossless.mygo` carries a block
+# `if ... then / else / end` whose then-body struct stays on one source row but
+# whose else-body struct holds a WIDER nested literal that the delimited pass
+# expands onto its own rows.  The nested expansion owns the else-body source row,
+# so keying a branch event on its body span dropped `enter:if-else` while keeping
+# `enter:if-then`; the unpaired `if-then` then held its `+1` until the shared
+# `end` and the `else` keyword leaked one level.  Branch events are now measured
+# by their keyword anchor, so the pair survives and `else` closes the then-branch
+# at its construct depth.  Regression for `spannedPattern`.
+func TestFormatterRealFileBlockElseRendersCanonicalDepth(t: Ref[testing.T]) -> ()
+  let path = "../parser2/lossless.mygo"
+  let src = switch os.ReadFile(path)
+    case Ok(bytes) => bytes as String
+    case Err(err) then
+      t.Fatalf("read %s: %v", path, err)
+      ""
+    end
+  end
+  let thenBody = """      ps.Reply[Spanned[ast2.Pattern]] { Ok: true, Consumed: reply.Consumed, Value: Spanned[ast2.Pattern] { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
+"""
+  if !strings.Contains(src, thenBody) then
+    t.Fatalf("%s no longer carries the wide then-body anchor; update this golden", path)
+  end
+  let first = formattedOrFail(t, FormatSource("lossless.mygo", src))
+  let wantBlock = """      }
+    else
+      ps.Reply[Spanned[ast2.Pattern]] {
+        Ok: false,
+        Consumed: reply.Consumed,
+        Value: Spanned[ast2.Pattern] {
+          Value: ast2.Pattern.WildcardPattern,
+          Span: stateSpan(state, reply.State),
+        },
+        State: reply.State,
+        Error: reply.Error,
+      }
+    end
+"""
+  if !strings.Contains(first, wantBlock) then
+    t.Fatalf("block else did not close the then-branch at its own depth:\n%s", first)
   end
 end

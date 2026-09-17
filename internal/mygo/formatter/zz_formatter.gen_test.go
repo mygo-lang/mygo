@@ -5,6 +5,7 @@ package formatter
 import "testing"
 import "strings"
 import "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import "os"
 import . "github.com/mygo-lang/mygo/prelude"
 
 func TestFormatterLayoutIsIdempotent(t *testing.T) {
@@ -292,6 +293,21 @@ func TestFormatterCaseThenBodyKeepsIndent(t *testing.T) {
 		return
 	}
 }
+func TestFormatterArrowCaseBlockBodyIndents(t *testing.T) {
+	src := "package sample\nfunc scan(tokens: Slice[Int], index: Int) -> Int\n  switch tokens.Get(index)\n    case Some(token) =>\n      let first = one(token)\n      let second = two(token)\n      three(first, second)\n    case None => fallback\n  end\nend\n"
+	first := formattedOrFail(t, FormatSource("arrow-case.mygo", src))
+	if first != src {
+		t.Fatalf("arrow case block body did not keep its indent:\nGOT:\n%s\nWANT:\n%s", first, src)
+	} else {
+	}
+	second := formattedOrFail(t, FormatSource("arrow-case.mygo", first))
+	if second != first {
+		t.Fatalf("arrow case block body is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+		return
+	} else {
+		return
+	}
+}
 func TestFormatterIfElsifElseBlockLayout(t *testing.T) {
 	src := "package sample\nfunc f(x: Int) -> Int\n  if x == 1 then\n    1\n  elsif x == 2 then\n    2\n  else\n    3\n  end\nend\n"
 	got := formatLayout(src)
@@ -355,6 +371,20 @@ func TestFormatterValueIfElsifChainKeepsBranches(t *testing.T) {
 	reparsed := formattedOrFail(t, FormatSource("elsif.mygo", got))
 	if !strings.Contains(reparsed, "p(a)") || !strings.Contains(reparsed, "item.Span") {
 		t.Fatalf("value-if elsif chain does not re-parse cleanly:\n%s", reparsed)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterInlineValueIfElsifChainKeepsIndent(t *testing.T) {
+	src := "package sample\n\nfunc m() -> Int\n  let a = 1\n  let x = if a then b elsif c then d else e end\n  let dd = 4\nend\n"
+	got := formattedOrFail(t, FormatSource("inlineif.mygo", src))
+	if got != src {
+		t.Fatalf("inline value-if elsif chain lost its indent:\nGOT:\n%s\nWANT:\n%s", got, src)
+	} else {
+	}
+	if formattedOrFail(t, FormatSource("inlineif.mygo", got)) != got {
+		t.Fatalf("inline value-if elsif chain is not idempotent:\n%s", got)
 		return
 	} else {
 		return
@@ -557,6 +587,81 @@ func TestFormatterRaggedNestedIfInOwnedBodyRendersCanonical(t *testing.T) {
 	second := formattedOrFail(t, FormatSource("pq.mygo", first))
 	if second != first {
 		t.Fatalf("ragged nested if is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterGluedValueIfInRealFileExpandsAtCanonicalDepth(t *testing.T) {
+	path := "../parser2/lossless.mygo"
+	var __mygo_expr_2 Result[[]byte, error]
+	__mygo_expr_0, __mygo_expr_1 := os.ReadFile(path)
+	if __mygo_expr_1 != nil {
+		__mygo_expr_2 = Err[[]byte, error](__mygo_expr_1)
+	} else {
+		__mygo_expr_2 = Ok[[]byte, error](__mygo_expr_0)
+	}
+	__mygo_expr_3 := __mygo_expr_2
+	var __mygo_expr_4 string
+	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
+		__mygo_expr_4 = string(__mygo_match___mygo_expr_6.F0)
+	} else {
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
+			t.Fatalf("read %s: %v", path, __mygo_match___mygo_expr_5.F0)
+			__mygo_expr_4 = ""
+		} else {
+		}
+	}
+	src := __mygo_expr_4
+	anchor := "let protected = if start.Span.Start.Line == finishToken.Span.End.Line then"
+	if !strings.Contains(src, anchor+" [] else") {
+		t.Fatalf("%s no longer carries the glued value-if anchor; update this golden", path)
+	} else {
+	}
+	first := formattedOrFail(t, FormatSource("lossless.mygo", src))
+	wantBlock := "\n      let protected = if start.Span.Start.Line == finishToken.Span.End.Line then\n        []\n      else\n        spanLines(start.Span.Start.Line, finishToken.Span.End.Line)\n      end\n"
+	if !strings.Contains(first, wantBlock) {
+		t.Fatalf("glued value-if did not expand at canonical depth (+2 bodies):\n%s", first)
+	} else {
+	}
+	second := formattedOrFail(t, FormatSource("lossless.mygo", first))
+	if second != first {
+		t.Fatalf("glued value-if expansion is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterRealFileBlockElseRendersCanonicalDepth(t *testing.T) {
+	path := "../parser2/lossless.mygo"
+	var __mygo_expr_2 Result[[]byte, error]
+	__mygo_expr_0, __mygo_expr_1 := os.ReadFile(path)
+	if __mygo_expr_1 != nil {
+		__mygo_expr_2 = Err[[]byte, error](__mygo_expr_1)
+	} else {
+		__mygo_expr_2 = Ok[[]byte, error](__mygo_expr_0)
+	}
+	__mygo_expr_3 := __mygo_expr_2
+	var __mygo_expr_4 string
+	if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Ok[[]byte, error]); ok {
+		__mygo_expr_4 = string(__mygo_match___mygo_expr_6.F0)
+	} else {
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Err[[]byte, error]); ok {
+			t.Fatalf("read %s: %v", path, __mygo_match___mygo_expr_5.F0)
+			__mygo_expr_4 = ""
+		} else {
+		}
+	}
+	src := __mygo_expr_4
+	thenBody := "      ps.Reply[Spanned[ast2.Pattern]] { Ok: true, Consumed: reply.Consumed, Value: Spanned[ast2.Pattern] { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }\n"
+	if !strings.Contains(src, thenBody) {
+		t.Fatalf("%s no longer carries the wide then-body anchor; update this golden", path)
+	} else {
+	}
+	first := formattedOrFail(t, FormatSource("lossless.mygo", src))
+	wantBlock := "      }\n    else\n      ps.Reply[Spanned[ast2.Pattern]] {\n        Ok: false,\n        Consumed: reply.Consumed,\n        Value: Spanned[ast2.Pattern] {\n          Value: ast2.Pattern.WildcardPattern,\n          Span: stateSpan(state, reply.State),\n        },\n        State: reply.State,\n        Error: reply.Error,\n      }\n    end\n"
+	if !strings.Contains(first, wantBlock) {
+		t.Fatalf("block else did not close the then-branch at its own depth:\n%s", first)
 		return
 	} else {
 		return

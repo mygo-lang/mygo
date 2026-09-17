@@ -970,6 +970,15 @@ func isBlockOpenToken(raw string) bool {
 func isEndTokenAnchor(tokens []ps.PositionedToken, anchor ast2.SourceSpan, index int) bool {
 	return __mygo_mt_parser2_isEndTokenAnchor(tokens, anchor, index, 0)
 }
+func caseBlockExitAnchor(tokens []ps.PositionedToken, body ast2.SourceSpan, fallback ast2.SourceSpan) ast2.SourceSpan {
+	return caseBlockExitAnchorFrom(tokens, body, 0, fallback)
+}
+func caseBlockExitAnchorFrom(tokens []ps.PositionedToken, body ast2.SourceSpan, index int, fallback ast2.SourceSpan) ast2.SourceSpan {
+	return __mygo_mt_parser2_caseBlockExitAnchorFrom(tokens, body, index, fallback, 0)
+}
+func tokenStartsAtOrAfterPos(token ps.PositionedToken, pos ast2.SourcePos) bool {
+	return token.Span.Start.Line > pos.Line || token.Span.Start.Line == pos.Line && token.Span.Start.Column >= pos.Column
+}
 func hasEndTokenOnLine(tokens []ps.PositionedToken, line int) bool {
 	return hasEndTokenOnLineFrom(tokens, line, lowerBoundLine(tokens, line, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tokens)))
 }
@@ -2227,6 +2236,39 @@ func __mygo_mt_parser2_branchHeaderAnchorFrom(__mygo_mt_p0 ast2.SourceSpan, __my
 		}
 	}
 }
+func __mygo_mt_parser2_caseBlockExitAnchorFrom(__mygo_mt_p0 []ps.PositionedToken, __mygo_mt_p1 ast2.SourceSpan, __mygo_mt_p2 int, __mygo_mt_p3 ast2.SourceSpan, __mygo_state int) ast2.SourceSpan {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+				return __mygo_mt_p3
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ps.PositionedToken]); ok {
+					if tokenStartsAtOrAfterPos(__mygo_match___mygo_expr_1.F0, __mygo_mt_p1.End) && (__mygo_match___mygo_expr_1.F0.Raw == "case" || __mygo_match___mygo_expr_1.F0.Raw == "end") {
+						return ast2.SourceSpan{Start: ast2.SourcePos{SourceName: "", Line: __mygo_match___mygo_expr_1.F0.Span.Start.Line, Column: __mygo_match___mygo_expr_1.F0.Span.Start.Column}, End: ast2.SourcePos{SourceName: "", Line: __mygo_match___mygo_expr_1.F0.Span.End.Line, Column: __mygo_match___mygo_expr_1.F0.Span.End.Column}}
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__tail_3 := __mygo_mt_p3
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[ps.PositionedToken]); ok {
+						return __mygo_mt_p3
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
 func __mygo_mt_parser2_caseBodyAnchor(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1 NodeSpan, __mygo_mt_p2 int, __mygo_state int) ast2.SourceSpan {
 	for {
 		switch __mygo_state {
@@ -2331,119 +2373,126 @@ func __mygo_mt_parser2_collectLayoutEvents(__mygo_mt_p0 []NodeSpan, __mygo_mt_p1
 					}
 					branchForm := __mygo_expr_6
 					separatorAnchor := layoutSeparatorAnchor(item.Kind, bodyAnchor, __mygo_mt_p1, 0)
-					var __mygo_expr_12 ast2.SourceSpan
+					blockCase := item.Kind == "case" && bodyLayout == "block"
+					var __mygo_expr_13 ast2.SourceSpan
 					if MygoIN6StringM9HasPrefix(item.Kind, "decl:") || item.Kind == "impl-method" {
-						__mygo_expr_12 = declarationEndAnchor(__mygo_mt_p1, item.Span)
+						__mygo_expr_13 = declarationEndAnchor(__mygo_mt_p1, item.Span)
 					} else {
-						var __mygo_expr_11 ast2.SourceSpan
+						var __mygo_expr_12 ast2.SourceSpan
 						if item.Kind == "inline-go" {
-							__mygo_expr_11 = inlineGoExitAnchor(__mygo_mt_p1, item.Span)
+							__mygo_expr_12 = inlineGoExitAnchor(__mygo_mt_p1, item.Span)
 						} else {
-							var __mygo_expr_10 ast2.SourceSpan
+							var __mygo_expr_11 ast2.SourceSpan
 							if item.Kind == "if-then" || item.Kind == "if-else" {
-								__mygo_expr_10 = branchEndAnchor(__mygo_mt_p0, item, __mygo_mt_p1, __mygo_mt_p2, item.Span)
+								__mygo_expr_11 = branchEndAnchor(__mygo_mt_p0, item, __mygo_mt_p1, __mygo_mt_p2, item.Span)
 							} else {
-								var __mygo_expr_9 ast2.SourceSpan
+								var __mygo_expr_10 ast2.SourceSpan
 								if item.Kind == "if" {
-									__mygo_expr_9 = ifEndAnchor(__mygo_mt_p1, anchor_1, __mygo_mt_p2, item.Span)
+									__mygo_expr_10 = ifEndAnchor(__mygo_mt_p1, anchor_1, __mygo_mt_p2, item.Span)
 								} else {
-									var __mygo_expr_8 ast2.SourceSpan
+									var __mygo_expr_9 ast2.SourceSpan
 									if item.Kind == "func-lit" {
-										__mygo_expr_8 = funcLitEndAnchor(__mygo_mt_p1, item.Span, __mygo_mt_p2, item.Span)
+										__mygo_expr_9 = funcLitEndAnchor(__mygo_mt_p1, item.Span, __mygo_mt_p2, item.Span)
 									} else {
-										var __mygo_expr_7 ast2.SourceSpan
-										if bodyLayout == "block" {
-											__mygo_expr_7 = matchingEndAnchor(__mygo_mt_p1, anchor_1, 0, 0, false, item.Span)
+										var __mygo_expr_8 ast2.SourceSpan
+										if blockCase {
+											__mygo_expr_8 = caseBlockExitAnchor(__mygo_mt_p1, bodyAnchor, item.Span)
 										} else {
-											__mygo_expr_7 = item.Span
+											var __mygo_expr_7 ast2.SourceSpan
+											if bodyLayout == "block" {
+												__mygo_expr_7 = matchingEndAnchor(__mygo_mt_p1, anchor_1, 0, 0, false, item.Span)
+											} else {
+												__mygo_expr_7 = item.Span
+											}
+											__mygo_expr_8 = __mygo_expr_7
 										}
-										__mygo_expr_8 = __mygo_expr_7
+										__mygo_expr_9 = __mygo_expr_8
 									}
-									__mygo_expr_9 = __mygo_expr_8
+									__mygo_expr_10 = __mygo_expr_9
 								}
-								__mygo_expr_10 = __mygo_expr_9
+								__mygo_expr_11 = __mygo_expr_10
 							}
-							__mygo_expr_11 = __mygo_expr_10
+							__mygo_expr_12 = __mygo_expr_11
 						}
-						__mygo_expr_12 = __mygo_expr_11
+						__mygo_expr_13 = __mygo_expr_12
 					}
-					exitAnchor := __mygo_expr_12
+					exitAnchor := __mygo_expr_13
 					sameLineEnd := item.Span.Start.Line == item.Span.End.Line && hasEndTokenOnLine(__mygo_mt_p1, item.Span.Start.Line) && item.Kind != "case"
 					blockLike := bodyLayout == "block" || sameLineEnd && hasUsableSpan(blockBodyAnchor) || item.Kind == "if-else" && sameLineEnd || item.Kind == "if-then" && sameLineEnd && layoutHeaderForm(item.Kind, anchor_1) == "then"
 					funcLitIndent := funcLitBumpsIndent(exitAnchor, anchor_1)
 					structuralIndent := structuralBlockKind(item.Kind) && blockLike
-					var __mygo_expr_13 bool
+					var __mygo_expr_14 bool
 					if item.Kind == "func-lit" {
-						__mygo_expr_13 = funcLitIndent
+						__mygo_expr_14 = funcLitIndent
 					} else {
-						__mygo_expr_13 = structuralIndent
+						__mygo_expr_14 = structuralIndent
 					}
-					affectsIndent := __mygo_expr_13
+					affectsIndent := __mygo_expr_14
 					wideLine := item.Span.Start.Line == item.Span.End.Line && lineIsWide(__mygo_mt_p1, item.Span.End.Line)
-					var __mygo_expr_17 bool
+					var __mygo_expr_18 bool
 					if bodyAnchor.Start.Line <= 0 {
-						__mygo_expr_17 = false
+						__mygo_expr_18 = false
 					} else {
-						var __mygo_expr_16 bool
+						var __mygo_expr_17 bool
 						if item.Kind == "case" {
-							__mygo_expr_16 = bodyLayout == "inline" && wideLine
+							__mygo_expr_17 = bodyLayout == "inline" && wideLine
 						} else {
-							var __mygo_expr_15 bool
+							var __mygo_expr_16 bool
 							if item.Kind == "if-then" || item.Kind == "if-else" {
-								__mygo_expr_15 = bodyLayout == "inline" && (wideLine || branchForm == "then")
+								__mygo_expr_16 = bodyLayout == "inline" && (wideLine || branchForm == "then")
 							} else {
-								var __mygo_expr_14 bool
+								var __mygo_expr_15 bool
 								if item.Kind == "func-lit" {
-									__mygo_expr_14 = false
+									__mygo_expr_15 = false
 								} else {
-									__mygo_expr_14 = affectsIndent && bodyLayout == "inline"
+									__mygo_expr_15 = affectsIndent && bodyLayout == "inline"
 								}
-								__mygo_expr_15 = __mygo_expr_14
+								__mygo_expr_16 = __mygo_expr_15
 							}
-							__mygo_expr_16 = __mygo_expr_15
+							__mygo_expr_17 = __mygo_expr_16
 						}
-						__mygo_expr_17 = __mygo_expr_16
+						__mygo_expr_18 = __mygo_expr_17
 					}
-					expandsAfter := __mygo_expr_17
-					var __mygo_expr_19 int
-					if item.Kind == "if-then" && item.Span.Start.Line > 1 {
-						__mygo_expr_19 = item.Span.Start.Line - 1
-					} else {
-						var __mygo_expr_18 int
-						if anchor_1.Start.Line > 0 {
-							__mygo_expr_18 = anchor_1.Start.Line
-						} else {
-							__mygo_expr_18 = item.Span.Start.Line
-						}
-						__mygo_expr_19 = __mygo_expr_18
-					}
-					headerLine := __mygo_expr_19
+					expandsAfter := __mygo_expr_18
 					var __mygo_expr_20 int
+					if item.Kind == "if-then" && item.Span.Start.Line > 1 {
+						__mygo_expr_20 = item.Span.Start.Line - 1
+					} else {
+						var __mygo_expr_19 int
+						if anchor_1.Start.Line > 0 {
+							__mygo_expr_19 = anchor_1.Start.Line
+						} else {
+							__mygo_expr_19 = item.Span.Start.Line
+						}
+						__mygo_expr_20 = __mygo_expr_19
+					}
+					headerLine := __mygo_expr_20
+					var __mygo_expr_21 int
 					if item.Kind == "case" {
-						__mygo_expr_20 = MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3+1), func(body NodeSpan) int {
+						__mygo_expr_21 = MygoIN6OptionM8UnwrapOr(MygoIT11IEnumerableFN17OptionIEnumerableGN1AEGN6OptionGN1AEN1AEM3Map(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p3+1), func(body NodeSpan) int {
 							return body.Span.Start.Line
 						}), item.Span.Start.Line)
 					} else {
-						__mygo_expr_20 = item.Span.Start.Line
+						__mygo_expr_21 = item.Span.Start.Line
 					}
-					bodyLine := __mygo_expr_20
+					bodyLine := __mygo_expr_21
 					normal := []LayoutEvent{LayoutEvent{Kind: "enter:" + item.Kind, Path: item.Path, Depth: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Path), Span: item.Span, Anchor: anchor_1, BodyAnchor: bodyAnchor, BlockBodyAnchor: blockBodyAnchor, BodyLayout: bodyLayout, AffectsIndent: affectsIndent, ExpandsAfter: expandsAfter, HeaderForm: headerForm, SeparatorAnchor: separatorAnchor, ExitAnchor: exitAnchor, HeaderLine: headerLine, BodyLine: bodyLine, ExitLine: exitAnchor.Start.Line}, LayoutEvent{Kind: "exit:" + item.Kind, Path: item.Path, Depth: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(item.Path), Span: item.Span, Anchor: anchor_1, BodyAnchor: bodyAnchor, BlockBodyAnchor: blockBodyAnchor, BodyLayout: bodyLayout, AffectsIndent: affectsIndent, ExpandsAfter: expandsAfter, HeaderForm: headerForm, SeparatorAnchor: separatorAnchor, ExitAnchor: exitAnchor, HeaderLine: headerLine, BodyLine: bodyLine, ExitLine: exitAnchor.Start.Line}}
 					suppressed := item.Kind == "if-else" && !anchorVerified
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1
 					__tail_2 := __mygo_mt_p2
 					__tail_3 := __mygo_mt_p3 + 1
-					var __mygo_expr_21 []LayoutEvent
+					var __mygo_expr_22 []LayoutEvent
 					if suppressed {
-						__mygo_expr_21 = __mygo_mt_p4
+						__mygo_expr_22 = __mygo_mt_p4
 					} else {
-						__mygo_expr_21 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(elsifTransitions(__mygo_mt_p0, item, __mygo_mt_p1, 0), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(normal, __mygo_mt_p4, func(a []LayoutEvent, e LayoutEvent) []LayoutEvent {
+						__mygo_expr_22 = MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(elsifTransitions(__mygo_mt_p0, item, __mygo_mt_p1, 0), MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(normal, __mygo_mt_p4, func(a []LayoutEvent, e LayoutEvent) []LayoutEvent {
 							return MygoIN5SliceM6Append(a, e)
 						}), func(a_1 []LayoutEvent, e_1 LayoutEvent) []LayoutEvent {
 							return MygoIN5SliceM6Append(a_1, e_1)
 						})
 					}
-					__tail_4 := __mygo_expr_21
+					__tail_4 := __mygo_expr_22
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
 					__mygo_state = 0
 					continue

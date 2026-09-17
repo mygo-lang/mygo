@@ -155,3 +155,22 @@ func TestLayoutEventsElsifLinkDoesNotBorrowEarlierElseAnchor(t *testing.T) {
 	}
 	return
 }
+func TestLayoutEventsArrowCaseExitAnchorsNextArm(t *testing.T) {
+	source := "package sample\nfunc f(x: Int) -> Int\n  switch x\n    case Some(t) =>\n      let a = one(t)\n      two(a)\n    case None => 0\n  end\nend\n"
+	__mygo_expr_0 := ParseFileLossless("arrow-case.mygo", source)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[LosslessFile, string]); ok {
+		t.Fatalf("lossless parse failed: %s", __mygo_match___mygo_expr_2.F0)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[LosslessFile, string]); ok {
+			anchored := MygoIN6OptionM6IsSome[*LayoutEvent](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(__mygo_match___mygo_expr_1.F0.LayoutEvents, func(item LayoutEvent) bool {
+				return item.Kind == "exit:case" && item.Anchor.Start.Line == 4 && item.ExitAnchor.Start.Line == 7
+			}))
+			if !anchored {
+				t.Fatal("arrow case exit did not anchor on the following arm")
+			} else {
+			}
+		} else {
+		}
+	}
+	return
+}

@@ -459,7 +459,15 @@ func renderASTSpans(file: ast2.File, spans: Slice[parser2.NodeSpan], delimited: 
   # and never re-indents them through the target-depth engine (which applies a
   # single uniform level and cannot express nested literal depth).
   let nestedDelimLines = nestedDelimitedSourceLines(delimEdits, 0, [])
-  let verbatimOwned = joinInts(ownedLines, nestedDelimLines)
+  # The flat branch pass reflows a glued single-line value `if` through the
+  # SAME recursive engine (`branchReflowText` -> `reflowRegion`), which bakes
+  # the anchor line's own leading whitespace as the block's base indent and
+  # emits canonical +1-relative body rows.  Those lines must join the
+  # verbatim-lock set (like the nested-delimited rows above): otherwise the
+  # depth engine re-indents the already-canonical rows through the value-if's
+  # own layout events and over-indents the bodies by one extra level.
+  let branchOwnedLines = ownedSourceLines(branchEdits, 0, [])
+  let verbatimOwned = joinInts(joinInts(ownedLines, branchOwnedLines), nestedDelimLines)
   let verbatimLines = projectOwnedRows(verbatimOwned, composedLines, 0)
   # Specific AST expansion segments must win over the generic pass-through
   # segments.  Otherwise segmentForRenderedLine observes the source-wide
@@ -472,7 +480,12 @@ func renderASTSpans(file: ast2.File, spans: Slice[parser2.NodeSpan], delimited: 
   # `AffectsIndent`/`ExpandsAfter`, which would add a phantom indent level to the
   # block, so drop exactly those events from the indent projection while keeping
   # them in the full `events` list that the arrowize pass reads.
-  let layoutEvents = renderLayoutEvents(events, delimited, 0, [], verbatimOwned)
+  # A single-line value-position `if/elsif/else/end` chain is deliberately kept
+  # inline (the flat branch pass cannot slice an elsif chain), yet its branch
+  # events still claim an expansion the pass never performed.  Collect the host
+  # lines of those kept-inline chains so `renderLayoutEvents` drops them too.
+  let valueIfLines = valueIfChainLines(events, source.Split("\n"), 0, [])
+  let layoutEvents = renderLayoutEvents(events, delimited, verbatimOwned, valueIfLines, 0, [])
   let renderedEvents = remapLayoutEvents(layoutEvents, composedLines, composedSegments, 0, [])
   # Block and dedent targets are projected from semantic event boundaries.
   # A source line may expand to several rendered lines, so remapping the old
@@ -501,19 +514,71 @@ end
 # surrounding rows.  Dropping them keeps a reflowed `case ... end` block
 # depth-transparent, so its following sibling cases keep the enclosing switch's
 # indent instead of inheriting a phantom branch depth.
-func renderLayoutEvents(events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], index: Int, acc: Slice[parser2.LayoutEvent], ownedLines: Slice[Int]) -> Slice[parser2.LayoutEvent]
+#
+# `inlineChainLines` (see `valueIfChainLines`) names the source lines that host
+# a single-line value-position `if/elsif` chain kept inline: the flat branch pass
+# never expanded them, so their `if-then`/`if-else` events are phantom too and
+# must be dropped from the projection or they sink the host line's indent.
+#
+# A branch event is measured by its keyword anchor line, never by its body span:
+# `if-then` spans the then-body and `if-else` spans the else-body, and a nested
+# pass may own one body's row while leaving the other untouched.  Testing the
+# span would then drop only one half of the branch pair, and since the survivor's
+# matching row is resolved through its sibling, the depth would leak until the
+# shared `end`.  An `if` whose header line is owned is still dropped whole.
+func renderLayoutEvents(events: Slice[parser2.LayoutEvent], delimited: Slice[parser2.DelimitedSpan], ownedLines: Slice[Int], inlineChainLines: Slice[Int], index: Int, acc: Slice[parser2.LayoutEvent]) -> Slice[parser2.LayoutEvent]
   if index >= events.Len() then acc
   else
     switch events.Get(index)
-      case None => renderLayoutEvents(events, delimited, index + 1, acc, ownedLines)
+      case None => renderLayoutEvents(events, delimited, ownedLines, inlineChainLines, index + 1, acc)
       case Some(ev) then
         let isIfBranch = ev.Kind == "enter:if-then" || ev.Kind == "exit:if-then" || ev.Kind == "enter:if-else" || ev.Kind == "exit:if-else"
+        let isElsifTransition = ev.Kind == "transition:if-elsif"
         let onOneLine = ev.Anchor.Start.Line > 0 && ev.Anchor.Start.Line == ev.Anchor.End.Line
-        let onOwned = (ev.Anchor.Start.Line > 0 && containsInt(ownedLines, ev.Anchor.Start.Line)) || (ev.Span.Start.Line > 0 && containsInt(ownedLines, ev.Span.Start.Line))
-        let flatten = onOwned || (isIfBranch && ev.AffectsIndent && ev.ExpandsAfter && onOneLine && insideSameLineDelimited(delimited, ev.Anchor.Start.Line, ev.Anchor.Start.Column))
-        renderLayoutEvents(events, delimited, index + 1, if flatten then acc else acc.Append(ev) end, ownedLines)
+        let onOwned = if isIfBranch then ev.Anchor.Start.Line > 0 && containsInt(ownedLines, ev.Anchor.Start.Line)
+          else (ev.Anchor.Start.Line > 0 && containsInt(ownedLines, ev.Anchor.Start.Line)) || (ev.Span.Start.Line > 0 && containsInt(ownedLines, ev.Span.Start.Line)) end
+        let branchPhantom = isIfBranch && ev.AffectsIndent && ev.ExpandsAfter && onOneLine
+        let onInlineChainLine = ev.Span.Start.Line > 0 && containsInt(inlineChainLines, ev.Span.Start.Line)
+        let onInlineChain = onInlineChainLine && (branchPhantom || isElsifTransition)
+        let flatten = onOwned || onInlineChain || (branchPhantom && insideSameLineDelimited(delimited, ev.Anchor.Start.Line, ev.Anchor.Start.Column))
+        renderLayoutEvents(events, delimited, ownedLines, inlineChainLines, index + 1, if flatten then acc else acc.Append(ev) end)
       end
     end
+  end
+end
+
+# A single-line `if … elsif … else … end` chain in VALUE position (its `if`
+# keyword is not the first token on the source line) is kept inline by the flat
+# branch pass, which refuses to slice an elsif chain.  The parser still marks its
+# `if-then`/`if-else` events `AffectsIndent` + `ExpandsAfter`, so without this
+# set the depth projection counts a phantom branch level and sinks the host line
+# while lifting its following siblings.  Collect one entry (the source line) per
+# such chain so `renderLayoutEvents` can drop the phantom events.
+func valueIfChainLines(events: Slice[parser2.LayoutEvent], lines: Slice[String], index: Int, acc: Slice[Int]) -> Slice[Int]
+  if index >= events.Len() then acc
+  else
+    switch events.Get(index)
+      case None => valueIfChainLines(events, lines, index + 1, acc)
+      case Some(ev) then
+        let line = ev.Span.Start.Line
+        let singleLineChain = ev.Kind == "enter:if" && line > 0 && line == ev.Span.End.Line
+        if singleLineChain && !containsInt(acc, line) && isValueIfLine(ev, lines) then
+          valueIfChainLines(events, lines, index + 1, acc.Append(line))
+        else
+          valueIfChainLines(events, lines, index + 1, acc)
+        end
+      end
+    end
+  end
+end
+
+# True when the whole-span `if` event's keyword sits after the first token of
+# its source line, i.e. the construct is in value position (`let x = if …`)
+# rather than opening the line as a statement.
+func isValueIfLine(ev: parser2.LayoutEvent, lines: Slice[String]) -> Bool
+  switch lines.Get(ev.Span.Start.Line - 1)
+    case None => false
+    case Some(raw) => ev.Anchor.Start.Column > trimStartCol(raw, 1)
   end
 end
 
