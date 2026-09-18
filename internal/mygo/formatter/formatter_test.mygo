@@ -321,13 +321,13 @@ func TestFormatterValueIfElsifChainKeepsBranches(t: Ref[testing.T]) -> ()
   end
 end
 
-# Group 16: the same value-position single-line `if/elsif/else/end` chain is kept
-# inline, but its `if-then`/`if-else` layout events still claimed an expansion the
-# flat branch pass never performed.  The depth projection counted that phantom
-# branch level (and its `elsif` transition), sinking the host row to column 0 and
-# lifting its following siblings.  The chain must stay inline and every row must
-# keep the enclosing block's indent.
-func TestFormatterInlineValueIfElsifChainKeepsIndent(t: Ref[testing.T]) -> ()
+# Group 16: a single-line VALUE-position `if/elsif/else/end` chain glues each body
+# to its keyword header (`if a then b elsif c then d else e end`).  A glued body is
+# non-canonical wherever it sits, so the whole-span pass owns the chain and expands
+# EVERY branch to block form, re-attaching the enclosing `let x = ` prefix on the
+# header row and any text after the shared `end` on the closing row.  The expanded
+# block must re-parse and be a fixpoint.
+func TestFormatterSingleLineValueIfElsifChainExpands(t: Ref[testing.T]) -> ()
   let src = """package sample
 
 func m() -> Int
@@ -336,12 +336,26 @@ func m() -> Int
   let dd = 4
 end
 """
+  let want = """package sample
+
+func m() -> Int
+  let a = 1
+  let x = if a then
+    b
+  elsif c then
+    d
+  else
+    e
+  end
+  let dd = 4
+end
+"""
   let got = formattedOrFail(t, FormatSource("inlineif.mygo", src))
-  if got != src then
-    t.Fatalf("inline value-if elsif chain lost its indent:\nGOT:\n%s\nWANT:\n%s", got, src)
+  if got != want then
+    t.Fatalf("single-line value-if elsif chain did not expand to a block:\nGOT:\n%s\nWANT:\n%s", got, want)
   end
   if formattedOrFail(t, FormatSource("inlineif.mygo", got)) != got then
-    t.Fatalf("inline value-if elsif chain is not idempotent:\n%s", got)
+    t.Fatalf("expanded value-if elsif chain is not idempotent:\n%s", got)
   end
 end
 
@@ -598,6 +612,40 @@ end
   let second = formattedOrFail(t, FormatSource("nq.mygo", first))
   if second != first then
     t.Fatalf("single-line elsif chain is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+  end
+end
+
+# A statement `if`/`else` whose `then` and `else` bodies are glued to their
+# keyword rows (`if x then aaa` / `else bbb` / `end`) is non-canonical: the
+# whole-span pass owns the chain and expands both bodies to block form at the
+# branch indent.  The result re-parses and is a fixpoint.  Regression for the
+# user-reported glued keyword-header shape.
+func TestFormatterGluedBranchBodiesExpandToBlock(t: Ref[testing.T]) -> ()
+  let src = """package sample
+
+func f(x: Int) -> Int
+  if x == 1 then aaa
+  else bbb
+  end
+end
+"""
+  let want = """package sample
+
+func f(x: Int) -> Int
+  if x == 1 then
+    aaa
+  else
+    bbb
+  end
+end
+"""
+  let first = formattedOrFail(t, FormatSource("glued-else.mygo", src))
+  if first != want then
+    t.Fatalf("glued branch bodies did not expand to a block:\nGOT:\n%s\nWANT:\n%s", first, want)
+  end
+  let second = formattedOrFail(t, FormatSource("glued-else.mygo", first))
+  if second != first then
+    t.Fatalf("glued branch expansion is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
   end
 end
 

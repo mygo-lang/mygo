@@ -1243,6 +1243,27 @@ func joinReflowEdits(left []ReflowEdit, right []ReflowEdit) []ReflowEdit {
 		return MygoIN5SliceM6Append(acc, r)
 	})
 }
+func wrapFirstLast(rows []ReflowRow, prefix string, suffix string) []ReflowRow {
+	last := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(rows) - 1
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(rows, []ReflowRow{}, func(acc []ReflowRow, r ReflowRow) []ReflowRow {
+		i := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(acc)
+		var __mygo_expr_0 string
+		if i == 0 {
+			__mygo_expr_0 = prefix
+		} else {
+			__mygo_expr_0 = ""
+		}
+		lead := __mygo_expr_0
+		var __mygo_expr_1 string
+		if i == last {
+			__mygo_expr_1 = suffix
+		} else {
+			__mygo_expr_1 = ""
+		}
+		trail := __mygo_expr_1
+		return MygoIN5SliceM6Append(acc, ReflowRow{Text: lead + r.Text + trail, Depth: r.Depth, Origin: r.Origin})
+	})
+}
 func childOfKind(events []parser2.LayoutEvent, parent []int, idx int, kind string, index int) Option[parser2.LayoutEvent] {
 	return __mygo_mt_formatter_childOfKind(events, parent, idx, kind, index, 0)
 }
@@ -1340,18 +1361,27 @@ func spanElseRows(lines []string, events []parser2.LayoutEvent, delimited []pars
 			__mygo_expr_1 = spanIfRows(lines, events, delimited, shift, base, __mygo_match___mygo_expr_2.F0, depth, true)
 		} else {
 			if _, ok := __mygo_expr_0.(Option__None[parser2.LayoutEvent]); ok {
-				var __mygo_expr_2 Option[[]ReflowRow]
-				if ifExit.Start.Line != line {
-					__mygo_expr_2 = None[[]ReflowRow]()
+				var __mygo_expr_3 Option[[]ReflowRow]
+				if ifExit.Start.Line == line {
+					__mygo_expr_3 = spanSingleRow(raw, from, ifExit.Start.Column-1, depth, line)
 				} else {
-					__mygo_expr_2 = spanSingleRow(raw, from, ifExit.Start.Column-1, depth, line)
+					var __mygo_expr_2 Option[[]ReflowRow]
+					if elseBodySpills(lines, shift, line, ifExit.Start.Line, ifExit.Start.Column) {
+						__mygo_expr_2 = None[[]ReflowRow]()
+					} else {
+						__mygo_expr_2 = spanSingleRow(raw, from, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(raw), depth, line)
+					}
+					__mygo_expr_3 = __mygo_expr_2
 				}
-				__mygo_expr_1 = __mygo_expr_2
+				__mygo_expr_1 = __mygo_expr_3
 			} else {
 			}
 		}
 		return __mygo_expr_1
 	}
+}
+func elseBodySpills(lines []string, shift int, line int, endLine int, endCol int) bool {
+	return __mygo_mt_formatter_elseBodySpills(lines, shift, line, endLine, endCol, 0)
 }
 func spanIfRows(lines []string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, shift int, base int, ifEv parser2.LayoutEvent, depth int, ragged bool) Option[[]ReflowRow] {
 	p := ifEv.Path
@@ -1559,14 +1589,18 @@ func groupRows(rows []ReflowRow, base int, srcStart int, srcEnd int, index int, 
 	return __mygo_mt_formatter_groupRows(rows, base, srcStart, srcEnd, index, curOrigin, curText, acc, 0)
 }
 func spanIfCandidateEdits(lines []string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, shift int, cand parser2.LayoutEvent) []ReflowEdit {
-	base := indentWidth(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, cand.Anchor.Start.Line+shift-1), ""), 1)
+	anchorRaw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, cand.Anchor.Start.Line+shift-1), "")
+	base := indentWidth(anchorRaw, 1)
 	__mygo_expr_0 := spanIfRows(lines, events, delimited, shift, base, cand, 0, false)
 	var __mygo_expr_1 []ReflowEdit
 	if _, ok := __mygo_expr_0.(Option__None[[]ReflowRow]); ok {
 		__mygo_expr_1 = []ReflowEdit{}
 	} else {
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[[]ReflowRow]); ok {
-			__mygo_expr_1 = groupRows(__mygo_match___mygo_expr_2.F0, base, cand.Anchor.Start.Line, cand.ExitAnchor.Start.Line, 0, 0, "", []ReflowEdit{})
+			exitRaw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, cand.ExitAnchor.Start.Line+shift-1), "")
+			prefix := sl(anchorRaw, indentWidth(anchorRaw, 1)+1, cand.Anchor.Start.Column-1)
+			suffix := sl(exitRaw, cand.ExitAnchor.End.Column, MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(exitRaw))
+			__mygo_expr_1 = groupRows(wrapFirstLast(__mygo_match___mygo_expr_2.F0, prefix, suffix), base, cand.Anchor.Start.Line, cand.ExitAnchor.Start.Line, 0, 0, "", []ReflowEdit{})
 		} else {
 		}
 	}
@@ -1583,20 +1617,10 @@ func uniformShift(priorEdits []PassEdit, lo int, hi int) bool {
 func spanIfEligible(lines []string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, cand parser2.LayoutEvent, shift int) bool {
 	s := cand.Anchor.Start.Line
 	e := cand.ExitAnchor.Start.Line
-	raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(lines, s+shift-1), "")
-	stmtStart := trimStartCol(raw, 1) == cand.Anchor.Start.Column
-	__mygo_expr_0 := childOfKind(events, cand.Path, 1, "enter:if-then", 0)
-	var __mygo_expr_1 bool
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[parser2.LayoutEvent]); ok {
-		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0.BodyAnchor.Start.Line == __mygo_match___mygo_expr_2.F0.Anchor.Start.Line && __mygo_match___mygo_expr_2.F0.Anchor.Start.Line == s
-	} else {
-		if _, ok := __mygo_expr_0.(Option__None[parser2.LayoutEvent]); ok {
-			__mygo_expr_1 = false
-		} else {
-		}
-	}
-	nonCanon := __mygo_expr_1
-	return e >= s && cand.Kind == "enter:if" && cand.Span.Start.Line == s && stmtStart && nonCanon && !insideSameLineDelimited(delimited, s, cand.Anchor.Start.Column) && spanElsifCondsInline(events, cand.Path)
+	return e >= s && cand.Kind == "enter:if" && cand.Span.Start.Line == s && spanIfChainGlued(events, cand.Path, s) && !insideSameLineDelimited(delimited, s, cand.Anchor.Start.Column) && spanElsifCondsInline(events, cand.Path)
+}
+func spanIfChainGlued(events []parser2.LayoutEvent, path []int, line int) bool {
+	return __mygo_mt_formatter_spanIfChainGlued(events, path, line, 0)
 }
 func spanIfCandidates(lines []string, events []parser2.LayoutEvent, delimited []parser2.DelimitedSpan, priorEdits []PassEdit, skipLines []int, index int, lastEnd int, acc []parser2.LayoutEvent) []parser2.LayoutEvent {
 	return __mygo_mt_formatter_spanIfCandidates(lines, events, delimited, priorEdits, skipLines, index, lastEnd, acc, 0)
@@ -2997,6 +3021,36 @@ func __mygo_mt_formatter_editForSourceLine(__mygo_mt_p0 []PassEdit, __mygo_mt_p1
 						} else {
 							panic("non-exhaustive switch")
 						}
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_elseBodySpills(__mygo_mt_p0 []string, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_mt_p4 int, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p3 <= __mygo_mt_p2 {
+				return false
+			} else {
+				if __mygo_mt_p2+1 == __mygo_mt_p3 {
+					return MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(strings.TrimSpace(sl(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2+__mygo_mt_p1), ""), 1, __mygo_mt_p4-1))) > 0
+				} else {
+					raw := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p2+__mygo_mt_p1), "")
+					if MygoIT11IEnumerableFN17StringIEnumerableGN6StringN4RuneEM3Len(strings.TrimSpace(raw)) > 0 {
+						return true
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1
+						__tail_2 := __mygo_mt_p2 + 1
+						__tail_3 := __mygo_mt_p3
+						__tail_4 := __mygo_mt_p4
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4
+						__mygo_state = 0
+						continue
 					}
 				}
 			}
@@ -4898,6 +4952,69 @@ func __mygo_mt_formatter_spanIfCandidates(__mygo_mt_p0 []string, __mygo_mt_p1 []
 					} else {
 						panic("non-exhaustive switch")
 					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_spanIfChainGlued(__mygo_mt_p0 []parser2.LayoutEvent, __mygo_mt_p1 []int, __mygo_mt_p2 int, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+			__mygo_expr_0 := childOfKind(__mygo_mt_p0, __mygo_mt_p1, 1, "enter:if-then", 0)
+			if _, ok := __mygo_expr_0.(Option__None[parser2.LayoutEvent]); ok {
+				return false
+			} else {
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.LayoutEvent]); ok {
+					if __mygo_match___mygo_expr_1.F0.HeaderForm == "arrow" {
+						return false
+					} else {
+						if __mygo_match___mygo_expr_1.F0.Anchor.Start.Line != __mygo_mt_p2 {
+							return false
+						} else {
+							if __mygo_match___mygo_expr_1.F0.BodyAnchor.Start.Line == __mygo_match___mygo_expr_1.F0.Anchor.Start.Line {
+								return true
+							} else {
+								__mygo_expr_2 := childOfKind(__mygo_mt_p0, __mygo_mt_p1, 2, "enter:if-else", 0)
+								if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[parser2.LayoutEvent]); ok {
+									return __mygo_match___mygo_expr_3.F0.BodyAnchor.Start.Line == __mygo_match___mygo_expr_3.F0.Anchor.Start.Line
+								} else {
+									if _, ok := __mygo_expr_2.(Option__None[parser2.LayoutEvent]); ok {
+										__mygo_expr_3 := childOfKind(__mygo_mt_p0, __mygo_mt_p1, 2, "enter:if", 0)
+										if _, ok := __mygo_expr_3.(Option__None[parser2.LayoutEvent]); ok {
+											return false
+										} else {
+											if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Option__Some[parser2.LayoutEvent]); ok {
+												__mygo_expr_5 := transitionForPath(__mygo_mt_p0, pathWithIdx(__mygo_mt_p1, 1), 0)
+												if _, ok := __mygo_expr_5.(Option__None[parser2.LayoutEvent]); ok {
+													return false
+												} else {
+													if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Option__Some[parser2.LayoutEvent]); ok {
+														__tail_0 := __mygo_mt_p0
+														__tail_1 := __mygo_match___mygo_expr_4.F0.Path
+														__tail_2 := __mygo_match___mygo_expr_6.F0.Anchor.Start.Line
+														__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+														__mygo_state = 0
+														continue
+													} else {
+														panic("non-exhaustive switch")
+													}
+												}
+											} else {
+												panic("non-exhaustive switch")
+											}
+										}
+									} else {
+										panic("non-exhaustive switch")
+									}
+								}
+							}
+						}
+					}
+				} else {
+					panic("non-exhaustive switch")
 				}
 			}
 		default:

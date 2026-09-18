@@ -376,15 +376,16 @@ func TestFormatterValueIfElsifChainKeepsBranches(t *testing.T) {
 		return
 	}
 }
-func TestFormatterInlineValueIfElsifChainKeepsIndent(t *testing.T) {
+func TestFormatterSingleLineValueIfElsifChainExpands(t *testing.T) {
 	src := "package sample\n\nfunc m() -> Int\n  let a = 1\n  let x = if a then b elsif c then d else e end\n  let dd = 4\nend\n"
+	want := "package sample\n\nfunc m() -> Int\n  let a = 1\n  let x = if a then\n    b\n  elsif c then\n    d\n  else\n    e\n  end\n  let dd = 4\nend\n"
 	got := formattedOrFail(t, FormatSource("inlineif.mygo", src))
-	if got != src {
-		t.Fatalf("inline value-if elsif chain lost its indent:\nGOT:\n%s\nWANT:\n%s", got, src)
+	if got != want {
+		t.Fatalf("single-line value-if elsif chain did not expand to a block:\nGOT:\n%s\nWANT:\n%s", got, want)
 	} else {
 	}
 	if formattedOrFail(t, FormatSource("inlineif.mygo", got)) != got {
-		t.Fatalf("inline value-if elsif chain is not idempotent:\n%s", got)
+		t.Fatalf("expanded value-if elsif chain is not idempotent:\n%s", got)
 		return
 	} else {
 		return
@@ -571,6 +572,22 @@ func TestFormatterSingleLineElsifChainRendersFlatBlockChain(t *testing.T) {
 	second := formattedOrFail(t, FormatSource("nq.mygo", first))
 	if second != first {
 		t.Fatalf("single-line elsif chain is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterGluedBranchBodiesExpandToBlock(t *testing.T) {
+	src := "package sample\n\nfunc f(x: Int) -> Int\n  if x == 1 then aaa\n  else bbb\n  end\nend\n"
+	want := "package sample\n\nfunc f(x: Int) -> Int\n  if x == 1 then\n    aaa\n  else\n    bbb\n  end\nend\n"
+	first := formattedOrFail(t, FormatSource("glued-else.mygo", src))
+	if first != want {
+		t.Fatalf("glued branch bodies did not expand to a block:\nGOT:\n%s\nWANT:\n%s", first, want)
+	} else {
+	}
+	second := formattedOrFail(t, FormatSource("glued-else.mygo", first))
+	if second != first {
+		t.Fatalf("glued branch expansion is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
 		return
 	} else {
 		return

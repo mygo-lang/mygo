@@ -152,6 +152,7 @@ struct ScanState
   Column: Int
   Tokens: Slice[ps.PositionedToken]
   Trivia: Slice[ps.PositionedTrivia]
+  Literal: LiteralScan
 end
 
 func spannedTypeExpr() -> ps.Parser[Spanned[ast2.TypeExpr]]
@@ -590,7 +591,7 @@ func delimitedChildSpans(tokens: Slice[ps.PositionedToken], span: ast2.SourceSpa
     []
   else
     let finish = matchingDelimiter(tokens, start, open, close, 0)
-    if finish < 0 then [] else splitDelimitedTokens(tokens, start + 1, finish, 0, start + 1, []) end
+    if finish < 0 then [] else splitDelimitedTokens(tokens, start + 1, finish, 0, start + 1, startLiteralScan(), []) end
   end
 end
 
@@ -644,24 +645,80 @@ func lastTokenInSpanFrom(tokens: Slice[ps.PositionedToken], span: ast2.SourceSpa
   end
 end
 
+# The lossless scanner emits each quote as its own one-character token, so the
+# interior of a rune, string, or backtick literal reaches the token stream as
+# ordinary tokens: the `[` of a `"map["` literal arrives as a symbol token, and a
+# `#` inside a literal would otherwise open a line comment that swallows the
+# literal's closing quote.  Both the scanner and the delimiter scans therefore
+# carry the open literal plus its escape state so literal interiors stay opaque -
+# the scanner to decide whether `#` starts a comment, the delimiter scans to skip
+# brackets that would unbalance their depth count, such as a rune `'('` or a
+# string `"("` that would otherwise swallow the rest of the enclosing construct.
+struct LiteralScan
+  Quote: String
+  Escaped: Bool
+end
+
+func startLiteralScan() -> LiteralScan
+  LiteralScan { Quote: "", Escaped: false }
+end
+
+func advanceLiteralScan(scan: LiteralScan, token: ps.PositionedToken) -> LiteralScan
+  advanceLiteralState(scan, token.Kind, token.Raw)
+end
+
+# advanceLiteralState folds one token into the literal state: a quote opens a
+# literal, an unescaped matching quote closes it, `\` escapes the following
+# token, and any other token leaves the state alone.  Backtick literals are raw,
+# so a backslash inside one stays ordinary and never escapes its closing quote.
+func advanceLiteralState(scan: LiteralScan, kind: String, raw: String) -> LiteralScan
+  if scan.Quote != "" then
+    if scan.Escaped then
+      LiteralScan { Quote: scan.Quote, Escaped: false }
+    elsif raw == "\\" && scan.Quote != "`" then
+      LiteralScan { Quote: scan.Quote, Escaped: true }
+    elsif raw == scan.Quote then
+      LiteralScan { Quote: "", Escaped: false }
+    else
+      LiteralScan { Quote: scan.Quote, Escaped: false }
+    end
+  elsif kind == "literal" then
+    LiteralScan { Quote: raw, Escaped: false }
+  else
+    LiteralScan { Quote: "", Escaped: false }
+  end
+end
+
+# True when the token folded between the two states is a bare symbol: a token
+# outside any literal whose bracket or comma meaning the caller may use.
+func literalTokenIsBare(before: LiteralScan, after: LiteralScan) -> Bool
+  before.Quote == "" && after.Quote == ""
+end
+
 func matchingDelimiter(tokens: Slice[ps.PositionedToken], index: Int, open: String, close: String, depth: Int) -> Int
+  matchingDelimiterFrom(tokens, index, open, close, depth, startLiteralScan())
+end
+
+func matchingDelimiterFrom(tokens: Slice[ps.PositionedToken], index: Int, open: String, close: String, depth: Int, scan: LiteralScan) -> Int
   if index >= tokens.Len() then
     -1
   else
     switch tokens.Get(index)
       case Some(token) =>
-        let nextDepth = if token.Raw == open then depth + 1 elsif token.Raw == close then depth - 1 else depth end
-        if token.Raw == close && nextDepth == 0 then
+        let nextScan = advanceLiteralScan(scan, token)
+        let bare = literalTokenIsBare(scan, nextScan)
+        let nextDepth = if bare && token.Raw == open then depth + 1 elsif bare && token.Raw == close then depth - 1 else depth end
+        if bare && token.Raw == close && nextDepth == 0 then
           index
         else
-          matchingDelimiter(tokens, index + 1, open, close, nextDepth)
+          matchingDelimiterFrom(tokens, index + 1, open, close, nextDepth, nextScan)
         end
       case None => -1
     end
   end
 end
 
-func splitDelimitedTokens(tokens: Slice[ps.PositionedToken], index: Int, finish: Int, depth: Int, start: Int, out: Slice[ast2.SourceSpan]) -> Slice[ast2.SourceSpan]
+func splitDelimitedTokens(tokens: Slice[ps.PositionedToken], index: Int, finish: Int, depth: Int, start: Int, scan: LiteralScan, out: Slice[ast2.SourceSpan]) -> Slice[ast2.SourceSpan]
   if index >= finish then
     if start >= finish then
       out
@@ -670,18 +727,21 @@ func splitDelimitedTokens(tokens: Slice[ps.PositionedToken], index: Int, finish:
     end
   else
     let token = tokens.Get(index).UnwrapOr(ps.PositionedToken { Kind: "", Raw: "", Span: ps.SourceSpan { Start: ps.Position { Offset: 0, Line: 0, Column: 0 }, End: ps.Position { Offset: 0, Line: 0, Column: 0 } } })
-    let nextDepth = if token.Raw == "[" || token.Raw == "(" || token.Raw == "{" then depth + 1 elsif token.Raw == "]" || token.Raw == ")" || token.Raw == "}" then depth - 1 else depth end
-    if token.Raw == "," && depth == 0 then
+    let nextScan = advanceLiteralScan(scan, token)
+    let bare = literalTokenIsBare(scan, nextScan)
+    let nextDepth = if bare && (token.Raw == "[" || token.Raw == "(" || token.Raw == "{") then depth + 1 elsif bare && (token.Raw == "]" || token.Raw == ")" || token.Raw == "}") then depth - 1 else depth end
+    if bare && token.Raw == "," && depth == 0 then
       splitDelimitedTokens(
         tokens,
         index + 1,
         finish,
         nextDepth,
         index + 1,
+        nextScan,
         if start >= index => out else out.Append(tokenRangeSpan(tokens, start, index - 1)),
       )
     else
-      splitDelimitedTokens(tokens, index + 1, finish, nextDepth, start, out)
+      splitDelimitedTokens(tokens, index + 1, finish, nextDepth, start, nextScan, out)
     end
   end
 end
@@ -736,7 +796,7 @@ func collectLayoutEvents(items: Slice[NodeSpan], tokens: Slice[ps.PositionedToke
         let exitAnchor = if item.Kind.HasPrefix("decl:") || item.Kind == "impl-method" then declarationEndAnchor(tokens, item.Span)
           elsif item.Kind == "inline-go" then inlineGoExitAnchor(tokens, item.Span)
           elsif item.Kind == "if-then" || item.Kind == "if-else" then branchEndAnchor(items, item, tokens, blockIfs, item.Span)
-          elsif item.Kind == "if" then ifEndAnchor(tokens, anchor, blockIfs, item.Span)
+          elsif item.Kind == "if" then ifExitAnchor(items, item, tokens, blockIfs, item.Span)
           elsif item.Kind == "func-lit" then funcLitEndAnchor(tokens, item.Span, blockIfs, item.Span)
           elsif blockCase then caseBlockExitAnchor(tokens, bodyAnchor, item.Span)
           elsif bodyLayout == "block" then matchingEndAnchor(tokens, anchor, 0, 0, false, item.Span)
@@ -831,7 +891,7 @@ end
 # transition event, so it keeps the innermost parent lookup above.
 func branchEndAnchor(items: Slice[NodeSpan], branch: NodeSpan, tokens: Slice[ps.PositionedToken], blockIfs: Slice[ast2.SourcePos], fallback: ast2.SourceSpan) -> ast2.SourceSpan
   switch parentIfNode(items, branch, 0)
-    case Some(ifItem) => ifEndAnchor(tokens, layoutEventAnchor(items, ifItem, tokens), blockIfs, fallback)
+    case Some(ifItem) => ifExitAnchor(items, ifItem, tokens, blockIfs, fallback)
     case None => fallback
   end
 end
@@ -1034,6 +1094,54 @@ func layoutExitAnchor(item: NodeSpan, tokens: Slice[ps.PositionedToken], index: 
   matchingEndAnchor(tokens, layoutAnchor(item, tokens), 0, 0, false, item.Span)
 end
 
+# The `end` that terminates an `if`.  A plain `if` scans forward from its own
+# keyword (see `ifEndAnchor`).  An `elsif` link is not a fresh block, though: the
+# parser lowers `if ... elsif ... else ... end` to a nested `IfExpr` tree whose
+# every link is the ELSE slot of the previous one, so all links share the ONE
+# `end` owned by the outermost `if`.  A forward scan from the `elsif` keyword
+# cannot find that terminator - the link's own branch body may hold balanced
+# `if ... end` constructs (a nested value `if`, for instance) whose closes net the
+# shared depth back to zero first.  Delegate to the enclosing `if`'s exit instead.
+func ifExitAnchor(
+  items: Slice[NodeSpan],
+  item: NodeSpan,
+  tokens: Slice[ps.PositionedToken],
+  blockIfs: Slice[ast2.SourcePos],
+  fallback: ast2.SourceSpan
+) -> ast2.SourceSpan
+  let anchor = layoutEventAnchor(items, item, tokens)
+  if anchorIsElsif(anchor, tokens) then
+    switch parentIfNode(items, item, 0)
+      case Some(parent) => ifExitAnchor(items, parent, tokens, blockIfs, fallback)
+      case None => ifEndAnchor(tokens, anchor, blockIfs, fallback)
+    end
+  else
+    ifEndAnchor(tokens, anchor, blockIfs, fallback)
+  end
+end
+
+# True when `anchor` points at an `elsif` keyword - the node is an `elsif` link
+# rather than a block-opening `if`.
+func anchorIsElsif(anchor: ast2.SourceSpan, tokens: Slice[ps.PositionedToken]) -> Bool
+  anchorRawAt(tokens, anchor.Start, 0) == "elsif"
+end
+
+func anchorRawAt(tokens: Slice[ps.PositionedToken], pos: ast2.SourcePos, index: Int) -> String
+  if index >= tokens.Len() then
+    ""
+  else
+    switch tokens.Get(index)
+      case Some(token) =>
+        if token.Span.Start.Line == pos.Line && token.Span.Start.Column == pos.Column then
+          token.Raw
+        else
+          anchorRawAt(tokens, pos, index + 1)
+        end
+      case None => ""
+    end
+  end
+end
+
 # Locate the `end` that terminates a keyword `if` block.  The generic
 # `matchingEndAnchor` treats `func`/`switch`/... as block openers but NOT the `if`
 # keyword, so when an `if`'s condition contains a self-contained `end`-terminated
@@ -1088,9 +1196,25 @@ func elseAnchorInsideParent(items: Slice[NodeSpan], item: NodeSpan, anchor: ast2
       case Some(ifItem) =>
         let afterOpen = anchor.Start.Line > ifItem.Span.Start.Line || (anchor.Start.Line == ifItem.Span.Start.Line && anchor.Start.Column >= ifItem.Span.Start.Column)
         let beforeClose = anchor.End.Line < ifItem.Span.End.Line || (anchor.End.Line == ifItem.Span.End.Line && anchor.End.Column <= ifItem.Span.End.Column)
-        afterOpen && beforeClose
+        afterOpen && beforeClose && elseAfterThenBranch(items, item, anchor)
       case None => true
     end
+  end
+end
+
+# A genuine `else` keyword sits AFTER its then-branch body.  An `elsif` link has no
+# `else` keyword of its own (its ELSE slot is the NEXT `elsif`), so its phantom
+# `if-else` node can still borrow an `else` that passes the span containment test
+# above - an `else` belonging to a nested construct in the PRECEDING branch and so
+# still inside the parent `if` span.  Requiring the anchor to start at or after the
+# sibling then-branch's end rejects that borrow while accepting every genuine
+# `else`.
+func elseAfterThenBranch(items: Slice[NodeSpan], branch: NodeSpan, anchor: ast2.SourceSpan) -> Bool
+  switch siblingThenNode(items, branch, 0)
+    case None => true
+    case Some(thenNode) =>
+      let finish = thenNode.Span.End
+      anchor.Start.Line > finish.Line || (anchor.Start.Line == finish.Line && anchor.Start.Column >= finish.Column)
   end
 end
 
@@ -1648,10 +1772,23 @@ func delimitedSpanForNode(item: NodeSpan, tokens: Slice[ps.PositionedToken]) -> 
   switch pair
     case Some(delimiters) =>
       let children = delimitedChildSpans(tokens, item.Span, delimiters.F0, delimiters.F1)
-      if children.Len() < 2 then None
+      if !delimitedSpanWorthReporting(item.Span, children) then None
       else Some(DelimitedSpan { Kind: item.Kind, Span: item.Span, Items: children, Separators: topLevelSeparators(tokens, item.Span, delimiters.F0, delimiters.F1, 0) }) end
     case None => None
   end
+end
+
+# A delimited span is reported when it has something the formatter can act on:
+# either several top-level items (the wrap pass splits those) or a line break
+# between its delimiters.  The interior rows of a hand-written multiline literal
+# are lifted one level by the formatter's item indent, and that projection only
+# sees spans the parser reports, so a multiline literal holding a single item (a
+# one-argument call such as `ps.PChoice([` ... `])`, a one-element list) must be
+# reported too - otherwise its anchor row stays at the enclosing indent and the
+# whole literal reads one level shallow.  A same-line span with a single item has
+# no interior rows to lift and is dropped, keeping the wrap pass scans small.
+func delimitedSpanWorthReporting(span: ast2.SourceSpan, children: Slice[ast2.SourceSpan]) -> Bool
+  children.Len() >= 1 && (children.Len() >= 2 || span.Start.Line < span.End.Line)
 end
 
 func delimiterPair(kind: String) -> Option[(String, String)]
@@ -1666,17 +1803,19 @@ func topLevelSeparators(tokens: Slice[ps.PositionedToken], span: ast2.SourceSpan
   if start < 0 then []
   else
     let finish = matchingDelimiter(tokens, start, open, close, 0)
-    if finish < 0 then [] else separatorTokens(tokens, start + 1, finish, 0, index) end
+    if finish < 0 then [] else separatorTokens(tokens, start + 1, finish, 0, index, startLiteralScan()) end
   end
 end
 
-func separatorTokens(tokens: Slice[ps.PositionedToken], index: Int, finish: Int, depth: Int, origin: Int) -> Slice[ast2.SourceSpan]
+func separatorTokens(tokens: Slice[ps.PositionedToken], index: Int, finish: Int, depth: Int, origin: Int, scan: LiteralScan) -> Slice[ast2.SourceSpan]
   if index >= finish then []
   else
     let token = tokens.Get(index).UnwrapOr(ps.PositionedToken { Kind: "", Raw: "", Span: ps.SourceSpan { Start: ps.Position { Offset: 0, Line: 0, Column: 0 }, End: ps.Position { Offset: 0, Line: 0, Column: 0 } } })
-    let nextDepth = if token.Raw == "[" || token.Raw == "(" || token.Raw == "{" then depth + 1 elsif token.Raw == "]" || token.Raw == ")" || token.Raw == "}" then depth - 1 else depth end
-    let current = if token.Raw == "," && depth == 0 then [tokenRangeSpan(tokens, index, index)] else [] end
-    joinSpanList(current, separatorTokens(tokens, index + 1, finish, nextDepth, origin))
+    let nextScan = advanceLiteralScan(scan, token)
+    let bare = literalTokenIsBare(scan, nextScan)
+    let nextDepth = if bare && (token.Raw == "[" || token.Raw == "(" || token.Raw == "{") then depth + 1 elsif bare && (token.Raw == "]" || token.Raw == ")" || token.Raw == "}") then depth - 1 else depth end
+    let current = if bare && token.Raw == "," && depth == 0 then [tokenRangeSpan(tokens, index, index)] else [] end
+    joinSpanList(current, separatorTokens(tokens, index + 1, finish, nextDepth, origin, nextScan))
   end
 end
 
@@ -2023,7 +2162,7 @@ func tokenEndAt(pos: ast2.SourcePos, tokens: Slice[ps.PositionedToken], index: I
 end
 
 func scanLossless(input: String) -> LosslessScan
-  scanStep(ScanState { Input: input, Index: 0, Offset: 0, Line: 1, Column: 1, Tokens: [], Trivia: [] })
+  scanStep(ScanState { Input: input, Index: 0, Offset: 0, Line: 1, Column: 1, Tokens: [], Trivia: [], Literal: startLiteralScan() })
 end
 
 func scanStep(state: ScanState) -> LosslessScan using StringRuneIndex
@@ -2034,7 +2173,7 @@ func scanStep(state: ScanState) -> LosslessScan using StringRuneIndex
     let width = (raw as Slice[Byte]).Len()
     let start = ps.Position { Offset: state.Offset, Line: state.Line, Column: state.Column }
     let next = advanceScan(state, raw, width)
-    if raw == "#" then
+    if raw == "#" && state.Literal.Quote == "" then
       scanComment(next, start, "#")
     elsif isSpace(raw) then
       emitTrivia(next, start, "whitespace", raw)
@@ -2055,12 +2194,12 @@ func isWordChar(raw: String) -> Bool
 end
 
 func advanceScan(state: ScanState, raw: String, width: Int) -> ScanState
-  ScanState { Input: state.Input, Index: state.Index + 1, Offset: state.Offset + width, Line: if raw == "\n" then state.Line + 1 else state.Line end, Column: if raw == "\n" then 1 else state.Column + 1 end, Tokens: state.Tokens, Trivia: state.Trivia }
+  ScanState { Input: state.Input, Index: state.Index + 1, Offset: state.Offset + width, Line: if raw == "\n" then state.Line + 1 else state.Line end, Column: if raw == "\n" then 1 else state.Column + 1 end, Tokens: state.Tokens, Trivia: state.Trivia, Literal: state.Literal }
 end
 
 func emitTrivia(state: ScanState, start: ps.Position, kind: String, raw: String) -> LosslessScan
   let item = ps.PositionedTrivia { Kind: kind, Raw: raw, Span: ps.SourceSpan { Start: start, End: ps.Position { Offset: state.Offset, Line: state.Line, Column: state.Column } } }
-  scanStep(ScanState { Input: state.Input, Index: state.Index, Offset: state.Offset, Line: state.Line, Column: state.Column, Tokens: state.Tokens, Trivia: state.Trivia.Append(item) })
+  scanStep(ScanState { Input: state.Input, Index: state.Index, Offset: state.Offset, Line: state.Line, Column: state.Column, Tokens: state.Tokens, Trivia: state.Trivia.Append(item), Literal: state.Literal })
 end
 
 func scanComment(state: ScanState, start: ps.Position, raw: String) -> LosslessScan using StringRuneIndex
@@ -2102,6 +2241,7 @@ func emitToken(state: ScanState, start: ps.Position, raw: String) -> LosslessSca
     Line: state.Line,
     Column: state.Column,
     Tokens: state.Tokens.Append(item),
-    Trivia: state.Trivia
+    Trivia: state.Trivia,
+    Literal: advanceLiteralScan(state.Literal, item)
   })
 end

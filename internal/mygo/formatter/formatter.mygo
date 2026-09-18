@@ -1832,6 +1832,20 @@ func joinReflowEdits(left: Slice[ReflowEdit], right: Slice[ReflowEdit]) -> Slice
   right.Fold(left, func(acc: Slice[ReflowEdit], r: ReflowEdit) -> Slice[ReflowEdit] acc.Append(r) end)
 end
 
+# Re-attach the enclosing text a value-position `if` shares its row with: the
+# first row (the `if`/`elsif` header or a lone `if`) gains `prefix` and the last
+# row (the shared `end`) gains `suffix`.  Both are empty for a statement `if`,
+# leaving the rows unchanged.
+func wrapFirstLast(rows: Slice[ReflowRow], prefix: String, suffix: String) -> Slice[ReflowRow]
+  let last = rows.Len() - 1
+  rows.Fold([], func(acc: Slice[ReflowRow], r: ReflowRow) -> Slice[ReflowRow]
+    let i = acc.Len()
+    let lead = if i == 0 then prefix else "" end
+    let trail = if i == last then suffix else "" end
+    acc.Append(ReflowRow { Text: lead + r.Text + trail, Depth: r.Depth, Origin: r.Origin })
+  end)
+end
+
 func childOfKind(
   events: Slice[parser2.LayoutEvent],
   parent: Slice[Int],
@@ -2083,12 +2097,46 @@ func spanElseRows(
     switch lookupIfAt(events, elseEv.BodyAnchor.Start.Line, elseEv.BodyAnchor.Start.Column, 0)
       case Some(innerIf) => spanIfRows(lines, events, delimited, shift, base, innerIf, depth, true)
       case None then
-        if ifExit.Start.Line != line then
+        # Two inline shapes carry the body on the `else` keyword's own row, and
+        # the closing `end` decides which one it is: with `end` sharing the row
+        # (`else VALUE end`) the value stops before the `end` keyword, while with
+        # `end` on a later row (`else VALUE` / `end`) the value runs to the end of
+        # THIS row.  Both are single-row bodies.  A body that spills onto a later
+        # source row, however, has no single-row slice: the `if-else` span only
+        # covers the leading sub-expression of a multi-row body (e.g. the inner
+        # call of a wrapped method chain), so `elseEv.Span.End` is NOT a reliable
+        # witness.  Probe the real body boundary instead (see `elseBodySpills`):
+        # a spilling body drops ownership so the whole enclosing `if` is left to
+        # the verbatim path rather than emitting a body row that would truncate
+        # the tail and unbalance its delimiters.
+        if ifExit.Start.Line == line then
+          spanSingleRow(raw, from, ifExit.Start.Column - 1, depth, line)
+        elsif elseBodySpills(lines, shift, line, ifExit.Start.Line, ifExit.Start.Column) then
           None
         else
-          spanSingleRow(raw, from, ifExit.Start.Column - 1, depth, line)
+          spanSingleRow(raw, from, raw.Len(), depth, line)
         end
       end
+    end
+  end
+end
+
+# True when the `else` body spills past its own row - the body runs from the
+# `else` keyword to the enclosing `if`'s shared `end`, so any body content on a
+# later source row (or ahead of the `end` token on its own row) means there is no
+# single-row slice.  A single-row body leaves every row between the `else` row
+# and the `end` blank and nothing before the `end` on its row.
+func elseBodySpills(lines: Slice[String], shift: Int, line: Int, endLine: Int, endCol: Int) -> Bool
+  if endLine <= line then
+    false
+  elsif line + 1 == endLine then
+    strings.TrimSpace(sl(lines.Get(line + shift).UnwrapOr(""), 1, endCol - 1)).Len() > 0
+  else
+    let raw = lines.Get(line + shift).UnwrapOr("")
+    if strings.TrimSpace(raw).Len() > 0 then
+      true
+    else
+      elseBodySpills(lines, shift, line + 1, endLine, endCol)
     end
   end
 end
@@ -2298,10 +2346,22 @@ func spanIfCandidateEdits(
   shift: Int,
   cand: parser2.LayoutEvent
 ) -> Slice[ReflowEdit]
-  let base = indentWidth(lines.Get(cand.Anchor.Start.Line + shift - 1).UnwrapOr(""), 1)
+  let anchorRaw = lines.Get(cand.Anchor.Start.Line + shift - 1).UnwrapOr("")
+  let base = indentWidth(anchorRaw, 1)
   switch spanIfRows(lines, events, delimited, shift, base, cand, 0, false)
     case None => []
-    case Some(rows) => groupRows(rows, base, cand.Anchor.Start.Line, cand.ExitAnchor.Start.Line, 0, 0, "", [])
+    case Some(rows) then
+      # A value-position `if` (`let name = if COND then` / ... / `end`) leaves
+      # the `if` keyword mid-row, so the enclosing text before it and any text
+      # after the closing `end` must be re-attached to the reflowed block or the
+      # row would silently lose `let name = ` and a trailing `name`.  Both
+      # slices are empty for a statement-position `if`, whose anchor starts the
+      # row and whose `end` is the row's last token.
+      let exitRaw = lines.Get(cand.ExitAnchor.Start.Line + shift - 1).UnwrapOr("")
+      let prefix = sl(anchorRaw, indentWidth(anchorRaw, 1) + 1, cand.Anchor.Start.Column - 1)
+      let suffix = sl(exitRaw, cand.ExitAnchor.End.Column, exitRaw.Len())
+      groupRows(wrapFirstLast(rows, prefix, suffix), base, cand.Anchor.Start.Line, cand.ExitAnchor.Start.Line, 0, 0, "", [])
+    end
   end
 end
 
@@ -2322,13 +2382,59 @@ func spanIfEligible(
 ) -> Bool
   let s = cand.Anchor.Start.Line
   let e = cand.ExitAnchor.Start.Line
-  let raw = lines.Get(s + shift - 1).UnwrapOr("")
-  let stmtStart = trimStartCol(raw, 1) == cand.Anchor.Start.Column
-  let nonCanon = switch childOfKind(events, cand.Path, 1, "enter:if-then", 0)
-    case Some(te) => te.BodyAnchor.Start.Line == te.Anchor.Start.Line && te.Anchor.Start.Line == s
+  e >= s && cand.Kind == "enter:if" && cand.Span.Start.Line == s && spanIfChainGlued(events, cand.Path, s) && !insideSameLineDelimited(delimited, s, cand.Anchor.Start.Column) && spanElsifCondsInline(events, cand.Path)
+end
+
+# True when ANY branch of the whole `if` chain at `path` glues a body to its
+# KEYWORD header row - the non-canonical `if COND then VALUE` / `elsif COND then
+# VALUE` / `else VALUE` shapes.  Such a body is non-canonical wherever it sits,
+# so the whole-span pass owns the chain and expands EVERY glued branch; a chain
+# whose branches already put each body on its own row is left to the generic
+# passes.  `line` is the lead `if` keyword's row; an `elsif` link's header row is
+# its own `transition:if-elsif` keyword row.  The walk follows the `elsif` links
+# (each a nested `enter:if` in the previous link's else slot, reached through an
+# `transition:if-elsif`) down to the terminal `else`.  An ARROW header (`if COND
+# => VALUE`) has no `end` keyword and is a deliberately inline form owned by the
+# flat branch pass, so a chain that opens with one is never claimed here.  A
+# header whose condition wraps past its keyword row is likewise never claimed:
+# the whole-span renderer slices each branch condition from a single anchor row
+# (`spanCond`), so it cannot own a multi-row condition and would drop it.  Value
+# position is allowed too: opening mid-row (`let name = if COND then VALUE`) the
+# chain expands in place, with the enclosing text re-attached around the new
+# header and closing `end` rows (see `spanIfCandidateEdits`).
+func spanIfChainGlued(events: Slice[parser2.LayoutEvent], path: Slice[Int], line: Int) -> Bool
+  switch childOfKind(events, path, 1, "enter:if-then", 0)
     case None => false
+    case Some(te) then
+      if te.HeaderForm == "arrow" then
+        false
+      elsif te.Anchor.Start.Line != line then
+        # The condition after `if`/`elsif` wraps onto further rows, so the
+        # `then` keyword does not sit on the chain keyword's row.  The whole-span
+        # renderer slices a branch condition from the ONE anchor row (see
+        # `spanCond`), so it cannot own such a header and would drop the
+        # condition; leave the chain to the verbatim / generic passes.
+        false
+      elsif te.BodyAnchor.Start.Line == te.Anchor.Start.Line then
+        true
+      else
+        switch childOfKind(events, path, 2, "enter:if-else", 0)
+          case Some(elseEv) => elseEv.BodyAnchor.Start.Line == elseEv.Anchor.Start.Line
+          case None then
+            switch childOfKind(events, path, 2, "enter:if", 0)
+              case None => false
+              case Some(nested) then
+                switch transitionForPath(events, pathWithIdx(path, 1), 0)
+                  case None => false
+                  case Some(trans) => spanIfChainGlued(events, nested.Path, trans.Anchor.Start.Line)
+                end
+              end
+            end
+          end
+        end
+      end
+    end
   end
-  e >= s && cand.Kind == "enter:if" && cand.Span.Start.Line == s && stmtStart && nonCanon && !insideSameLineDelimited(delimited, s, cand.Anchor.Start.Column) && spanElsifCondsInline(events, cand.Path)
 end
 
 func spanIfCandidates(
