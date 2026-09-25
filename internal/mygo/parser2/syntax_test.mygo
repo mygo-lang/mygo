@@ -1,0 +1,2593 @@
+package parser2
+
+import ps "github.com/mygo-lang/mygo/lib/text/parsec"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import testing "go:testing"
+
+func syntaxSpan(start: Int, finish: Int) -> ps.SourceSpan
+  ps.SourceSpan {
+    Start: ps.Position { Offset: start, Line: 1, Column: start + 1 },
+    End: ps.Position { Offset: finish, Line: 1, Column: finish + 1 },
+  }
+end
+
+func TestGreenSyntaxModelKeepsChildRanges(t: Ref[testing.T]) -> ()
+  let name = GreenToken { Kind: GreenTokenKind.Identifier, Raw: "value", Span: syntaxSpan(0, 5) }
+  let gap = GreenTrivia { Kind: GreenTriviaKind.Whitespace, Raw: " ", Span: syntaxSpan(5, 6) }
+  let child = GreenNode {
+    Kind: GreenNodeKind.Expression,
+    Span: syntaxSpan(0, 5),
+    Children: [GreenElement.TokenElement(name)],
+    HasError: false,
+  }
+  let root = GreenNode {
+    Kind: GreenNodeKind.File,
+    Span: syntaxSpan(0, 6),
+    Children: [GreenElement.NodeElement(Ref.new(child)), GreenElement.TriviaElement(gap)],
+    HasError: false,
+  }
+  if !greenNodeChildrenFit(root) then
+    t.Fatal("green node children must fit inside their parent range")
+  end
+  let tree = SyntaxTree {
+    SourceName: "model.mygo",
+    Source: "value ",
+    Root: Ref.new(root),
+    Diagnostics: [],
+  }
+  let view = SyntaxNode { Root: tree.Root, Node: Ref.new(child), Path: [0] }
+  let token = SyntaxToken { Root: tree.Root, ParentPath: view.Path, ChildIndex: 0, Token: name }
+  switch token.ParentPath.Get(0)
+    case Some(index) then
+      if token.Token.Span.End.Offset != 5 || index != 0 then
+        t.Fatal("red token view must retain its green token range and path")
+      end
+    end
+    case None => t.Fatal("red token view must retain its parent path")
+  end
+end
+
+func TestSyntaxNavigationTraversesPathAndSiblings(t: Ref[testing.T]) -> ()
+  let leftToken = GreenToken { Kind: GreenTokenKind.Identifier, Raw: "left", Span: syntaxSpan(0, 4) }
+  let rightToken = GreenToken { Kind: GreenTokenKind.Identifier, Raw: "right", Span: syntaxSpan(5, 10) }
+  let left = Ref.new(GreenNode {
+    Kind: GreenNodeKind.Expression,
+    Span: syntaxSpan(0, 4),
+    Children: [GreenElement.TokenElement(leftToken)],
+    HasError: false,
+  })
+  let gap = GreenTrivia { Kind: GreenTriviaKind.Whitespace, Raw: " ", Span: syntaxSpan(4, 5) }
+  let right = Ref.new(GreenNode {
+    Kind: GreenNodeKind.Pattern,
+    Span: syntaxSpan(5, 10),
+    Children: [GreenElement.TokenElement(rightToken)],
+    HasError: false,
+  })
+  let root = Ref.new(GreenNode {
+    Kind: GreenNodeKind.File,
+    Span: syntaxSpan(0, 10),
+    Children: [GreenElement.NodeElement(left), GreenElement.TriviaElement(gap), GreenElement.NodeElement(right)],
+    HasError: false,
+  })
+  switch syntaxNodeAtPath(root, [0], 0)
+    case Some(leftView) then
+      switch (syntaxNodeParent(leftView), syntaxNodeNextSibling(leftView), syntaxNodeToken(leftView, 0))
+        case (Some(parent), Some(sibling), Some(token)) then
+          if syntaxNodeKind(parent) != GreenNodeKind.File || syntaxNodeKind(sibling) != GreenNodeKind.Pattern || syntaxTokenRaw(token) != "left" || syntaxTokenSpan(token).End.Offset != 4 then
+            t.Fatal("syntax traversal must preserve parent, sibling, token, and source range")
+          end
+        end
+        case _ => t.Fatal("syntax traversal must find parent, sibling, and token")
+      end
+    end
+    case None => t.Fatal("syntax path traversal must find nested child")
+  end
+end
+
+func TestGreenSyntaxModelRejectsOutOfRangeChild(t: Ref[testing.T]) -> ()
+  let outside = GreenToken { Kind: GreenTokenKind.Identifier, Raw: "x", Span: syntaxSpan(3, 4) }
+  let root = GreenNode {
+    Kind: GreenNodeKind.File,
+    Span: syntaxSpan(0, 3),
+    Children: [GreenElement.TokenElement(outside)],
+    HasError: true,
+  }
+  if greenNodeChildrenFit(root) then
+    t.Fatal("green node must reject a child outside its source range")
+  end
+end
+
+func TestLexSourcePreservesAllLiteralAndTriviaBytes(t: Ref[testing.T]) -> ()
+  let source = "# keep\nlet value = \"a`#\\n\" + `raw # ()` + \"\"\"triple\n# text\"\"\" + 'x'\n"
+  let lexed = LexSource(source)
+  if lexedSourceText(lexed.Elements) != source then
+    t.Fatal("lossless lexer must replay every input byte exactly once")
+  end
+  let literals = lexed.Tokens.Filter(func(item: GreenToken) -> Bool
+    item.Kind == GreenTokenKind.StringLiteral || item.Kind == GreenTokenKind.RawStringLiteral || item.Kind == GreenTokenKind.TripleStringLiteral || item.Kind == GreenTokenKind.RuneLiteral
+  end)
+  if literals.Len() != 4 || lexed.Trivia.Find(func(item: GreenTrivia) -> Bool item.Kind == GreenTriviaKind.Comment end).IsNone() then
+    t.Fatal("lossless lexer did not recognize comment and literal modes")
+  end
+end
+
+func TestDelimitedSyntaxOwnsNestedSourceExactlyOnce(t: Ref[testing.T]) -> ()
+  let source = "func f(x: (Int, Slice[String])) => { x }\n"
+  let tree = buildDelimitedSyntax("nested.mygo", source)
+  let root = tree.Root.value()
+  if !greenNodeChildrenFit(root) || greenNodeText(root) != source then
+    t.Fatal("CST delimiter nesting must retain every source byte exactly once")
+  end
+  let groups = root.Children.Filter(func(item: GreenElement) -> Bool
+    switch item case NodeElement(_) => true case _ => false end
+  end)
+  if groups.Len() == 0 then
+    t.Fatal("CST must represent paired delimiters as structural green nodes")
+  end
+end
+
+func TestDelimitedSyntaxOwnsNestedKeywordBlocks(t: Ref[testing.T]) -> ()
+  let source = "if ready then\n  switch value\n    case Some(x) then\n      x\n    end\n  end\nelse\n  none\nend\n"
+  let tree = buildDelimitedSyntax("blocks.mygo", source)
+  let root = tree.Root.value()
+  if greenNodeText(root) != source then
+    t.Fatal("keyword blocks must retain every source byte")
+  end
+  let blocks = root.Children.Filter(func(item: GreenElement) -> Bool
+    switch item
+      case NodeElement(node) => node.value().Kind == GreenNodeKind.IfBlock
+      case _ => false
+    end
+  end)
+  if blocks.Len() != 1 then
+    t.Fatal("if/end must be represented by one direct CST block node")
+  end
+end
+
+func TestDelimitedSyntaxGroupsTopLevelDeclarations(t: Ref[testing.T]) -> ()
+  let source = "package p\n\nfunc f() => 1\n\nlet value = f()\n"
+  let tree = buildDelimitedSyntax("decls.mygo", source)
+  let declarations = tree.Root.value().Children.Filter(func(item: GreenElement) -> Bool
+    switch item
+      case NodeElement(node) => greenNodeIsDeclaration(node.value())
+      case _ => false
+    end
+  end)
+  if declarations.Len() != 3 then
+    t.Fatal("file CST must create one node per top-level declaration")
+  elsif greenNodeText(tree.Root.value()) != source then
+    t.Fatal("file CST must retain declaration trivia byte-for-byte")
+  end
+end
+
+func TestGroupedTypeAndPatternRetainNestedSource(t: Ref[testing.T]) -> ()
+  let typeSource = "(Slice[Result])"
+  let patternSource = "(Some(value), None)"
+  let typeTree = buildDelimitedSyntax("type.mygo", typeSource)
+  let patternTree = buildDelimitedSyntax("pattern.mygo", patternSource)
+  let typeResult = parseType(SyntaxCursor { Elements: typeTree.Root.value().Children, Index: 0 })
+  let patternResult = parsePattern(SyntaxCursor { Elements: patternTree.Root.value().Children, Index: 0 })
+  if syntaxResultKind(typeResult) != GreenNodeKind.TupleType || syntaxResultKind(patternResult) != GreenNodeKind.TuplePattern then
+    t.Fatal("grouped type and pattern must retain their tuple CST alternatives")
+  end
+end
+
+func TestGenericTypeRetainsTypeArguments(t: Ref[testing.T]) -> ()
+  let source = "Slice[Result[String]]"
+  let tree = buildDelimitedSyntax("generic.mygo", source)
+  let result = parseType(SyntaxCursor { Elements: tree.Root.value().Children, Index: 0 })
+  if syntaxResultKind(result) != GreenNodeKind.GenericType then
+    t.Fatal("generic types must own their bracketed type arguments")
+  end
+end
+
+func TestExpressionGroupKinds(t: Ref[testing.T]) -> ()
+  let callTree = buildDelimitedSyntax("call.mygo", "fn(x)")
+  let parenTree = buildDelimitedSyntax("paren.mygo", "(x)")
+  let unitTree = buildDelimitedSyntax("unit.mygo", "()")
+  let tupleTree = buildDelimitedSyntax("tuple.mygo", "(x, y)")
+  let structTree = buildDelimitedSyntax("struct.mygo", "Point { x: 1 }")
+  let mapTree = buildDelimitedSyntax("map.mygo", "{\"x\": 1}")
+  let setTree = buildDelimitedSyntax("set.mygo", "{1, 2}")
+  let call = parseExpr(SyntaxCursor { Elements: callTree.Root.value().Children, Index: 1 })
+  let paren = parseExpr(SyntaxCursor { Elements: parenTree.Root.value().Children, Index: 0 })
+  let unit = parseExpr(SyntaxCursor { Elements: unitTree.Root.value().Children, Index: 0 })
+  let tuple = parseExpr(SyntaxCursor { Elements: tupleTree.Root.value().Children, Index: 0 })
+  let structLiteral = parseExpr(SyntaxCursor { Elements: structTree.Root.value().Children, Index: 2 })
+  let map = parseExpr(SyntaxCursor { Elements: mapTree.Root.value().Children, Index: 0 })
+  let set = parseExpr(SyntaxCursor { Elements: setTree.Root.value().Children, Index: 0 })
+  if syntaxResultKind(call) != GreenNodeKind.Call || syntaxResultKind(paren) != GreenNodeKind.ParenExpr || syntaxResultKind(unit) != GreenNodeKind.UnitExpr || syntaxResultKind(tuple) != GreenNodeKind.TupleExpr || syntaxResultKind(structLiteral) != GreenNodeKind.StructLiteral || syntaxResultKind(map) != GreenNodeKind.MapLiteral || syntaxResultKind(set) != GreenNodeKind.SetLiteral then
+    t.Fatal("expression groups must preserve their specific CST kinds")
+  end
+end
+
+func syntaxResultKind(result: SyntaxParseResult) -> GreenNodeKind
+  switch result.Node
+    case Some(node) => node.value().Kind
+    case None => GreenNodeKind.Error
+  end
+end
+
+func syntaxResultText(result: SyntaxParseResult) -> String
+  switch result.Node
+    case Some(node) => greenNodeText(node.value())
+    case None => ""
+  end
+end
+
+func TestRecursiveTypeCstPreservesStructure(t: Ref[testing.T]) -> ()
+  let tuple = typeSyntaxOf("type T = (Int, String)\n")
+  let unit = typeSyntaxOf("type T = ()\n")
+  let generic = typeSyntaxOf("type T = Slice[Map[String, Slice[Int]]]\n")
+  let funcType = typeSyntaxOf("type T = func(Int, String) -> Slice[Bool]\n")
+  if syntaxResultKind(tuple) != GreenNodeKind.TupleType || syntaxResultKind(unit) != GreenNodeKind.UnitType || syntaxResultKind(generic) != GreenNodeKind.GenericType || syntaxResultKind(funcType) != GreenNodeKind.FuncType then
+    t.Fatal("recursive type CST must distinguish tuple, unit, generic, and function types")
+  end
+  if syntaxResultText(tuple) != "(Int, String)" || syntaxResultText(unit) != "()" || syntaxResultText(generic) != "Slice[Map[String, Slice[Int]]]" || syntaxResultText(funcType) != "func(Int, String) -> Slice[Bool]" then
+    t.Fatal("recursive type CST must retain every source byte")
+  end
+end
+
+# typeSyntaxOf parses a whole `type T = <type>` declaration and returns the type
+# node from inside its TypeAnnotation.  Parsing at file level keeps `func(...)`
+# in type position instead of being read as a function declaration.
+func typeSyntaxOf(source: String) -> SyntaxParseResult
+  let tree = ParseSyntaxAt("type-decl.mygo", source)
+  switch tree.Root.value().Children.Get(0)
+    case Some(item) then
+      switch greenElementNode(item)
+        case Some(decl) => typeAnnotationResult(decl.value())
+        case None => emptySyntaxResult()
+      end
+    end
+    case None => emptySyntaxResult()
+  end
+end
+
+func typeAnnotationResult(node: GreenNode) -> SyntaxParseResult
+  switch greenNodeFindChild(node, GreenNodeKind.TypeAnnotation, 0)
+    case Some(annotation) then
+      switch greenNodeFindTypeChild(annotation.value(), 0)
+        case Some(typ) => SyntaxParseResult { Node: Some(typ), Cursor: SyntaxCursor { Elements: [], Index: 0 } }
+        case None => emptySyntaxResult()
+      end
+    end
+    case None => emptySyntaxResult()
+  end
+end
+
+func emptySyntaxResult() -> SyntaxParseResult
+  SyntaxParseResult { Node: None, Cursor: SyntaxCursor { Elements: [], Index: 0 } }
+end
+
+func TestNestedGenericTypeRetainsTypeArguments(t: Ref[testing.T]) -> ()
+  let result = typeSyntaxOf("type T = Slice[Map[String, Slice[Int]]]\n")
+  switch result.Node
+    case Some(node) then
+      if !greenNodeHasKind(node.value(), GreenNodeKind.TypeArguments) || !greenNodeTypeArgumentsNested(node.value()) then
+        t.Fatal("nested generic arguments must own nested TypeArguments nodes")
+      end
+    end
+    case None => t.Fatal("nested generic type must parse")
+  end
+end
+
+# greenNodeTypeArgumentsNested reports whether the type node has a bracketed
+# TypeArguments child that itself contains a further nested TypeArguments node,
+# i.e. generic arguments nest rather than flattening into a single list.
+func greenNodeTypeArgumentsNested(node: GreenNode) -> Bool
+  switch greenNodeFindChild(node, GreenNodeKind.TypeArguments, 0)
+    case Some(arguments) => greenNodeContainsTypeArguments(arguments.value())
+    case None => false
+  end
+end
+
+func greenNodeContainsTypeArguments(node: GreenNode) -> Bool
+  node.Children.Find(func(item: GreenElement) -> Bool
+    switch greenElementNode(item)
+      case Some(child) => child.value().Kind == GreenNodeKind.TypeArguments || greenNodeContainsTypeArguments(child.value())
+      case None => false
+    end
+  end).IsSome()
+end
+
+func TestLowerSyntaxLowersRecursiveTypes(t: Ref[testing.T]) -> ()
+  let source = "package sample\ntype T1 = (Int, String)\ntype T2 = ()\ntype T3 = Slice[Map[String, Slice[Int]]]\ntype T4 = func(Int, String) -> Slice[Bool]\nlet v: (Int, Bool) = pair\nfunc f(g: func(Int) -> Bool) -> Bool => g\n"
+  let tree = ParseSyntaxAt("recursive-types.mygo", source)
+  let lowered = LowerSyntax(tree)
+  if !syntaxLowerIsOk(lowered) || syntaxLowerDeclCount(lowered) != 6 then
+    t.Fatal("diagnostic-free recursive type CST must lower without the legacy parser")
+  end
+  switch lowered
+    case Ok(file) then
+      if !loweredTypesMatch(file) then
+        t.Fatal("lowered types must preserve tuple, unit, nested generic, and function structure")
+      end
+    end
+    case Err(_) => ()
+  end
+end
+
+# loweredTypesMatch checks that the recursive type declarations lower to the
+# matching ast2.TypeExpr alternatives, so tuple, unit, nested generic, and
+# function structure survive the CST-to-ast2 path.
+func loweredTypesMatch(file: ast2.File) -> Bool
+  typeAliasTargetIs(file, 0, TypeExprIsTuple) && typeAliasTargetIs(file, 1, TypeExprIsUnit) && typeAliasTargetIs(file, 3, TypeExprIsFunc)
+end
+
+func typeAliasTargetIs(file: ast2.File, index: Int, matches: func(ast2.TypeExpr) -> Bool) -> Bool
+  switch file.Decls.Get(index)
+    case Some(decl) then
+      switch decl
+        case TypeAliasDecl(_, _, target) => matches(target)
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func TypeExprIsTuple(typ: ast2.TypeExpr) -> Bool
+  switch typ
+    case TupleType(_) => true
+    case _ => false
+  end
+end
+
+func TypeExprIsUnit(typ: ast2.TypeExpr) -> Bool
+  switch typ
+    case UnitType => true
+    case _ => false
+  end
+end
+
+func TypeExprIsFunc(typ: ast2.TypeExpr) -> Bool
+  switch typ
+    case FuncType(_, _) => true
+    case _ => false
+  end
+end
+
+func TestFunctionDeclarationOwnsUsingConstraints(t: Ref[testing.T]) -> ()
+  let source = "func render(x: Int) -> String using Local: ToString[Int], Show => x\n"
+  let tree = buildDelimitedSyntax("using.mygo", source)
+  let root = tree.Root.value()
+  if !greenNodeHasKind(root, GreenNodeKind.Constraints) || !greenNodeHasKind(root, GreenNodeKind.Constraint) || greenNodeText(root) != source then
+    t.Fatal("function declarations must own a structured using clause without losing source")
+  end
+end
+
+func TestLowerSyntaxLowersUsingConstraints(t: Ref[testing.T]) -> ()
+  let source = "func render(x: Int) -> String using Local: ToString[Int], Show => x\n"
+  let tree = ParseSyntaxAt("using.mygo", source)
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("diagnostic-free using CST must lower: %s", message)
+    case Ok(file) then
+      if !loweredConstraintsMatch(file) then
+        t.Fatal("lowered constraints must preserve name, bind name, and type arguments")
+      end
+    end
+  end
+end
+
+func loweredConstraintsMatch(file: ast2.File) -> Bool
+  switch file.Decls.Get(0)
+    case Some(decl) => declUsingConstraints(decl)
+    case None => false
+  end
+end
+
+func declUsingConstraints(decl: ast2.Decl) -> Bool
+  switch decl
+    case FuncDecl(_, _, _, _, _, constraints) => constraints.Len() == 2 && constraintIs(constraints, 0, "ToString", "Local", 1) && constraintIs(constraints, 1, "Show", "", 0)
+    case _ => false
+  end
+end
+
+func constraintIs(constraints: Slice[ast2.Constraint], index: Int, name: String, bind: String, args: Int) -> Bool
+  switch constraints.Get(index)
+    case Some(constraint) => constraint.Name == name && constraintBindName(constraint) == bind && constraint.Args.Len() == args
+    case None => false
+  end
+end
+
+func constraintBindName(constraint: ast2.Constraint) -> String
+  switch constraint.BindName
+    case Some(name) => name
+    case None => ""
+  end
+end
+
+func TestDeclarationsOwnExpressionChildren(t: Ref[testing.T]) -> ()
+  let source = "let result: Int = fn(x)\nfunc f() => { x }\n"
+  let tree = buildDelimitedSyntax("decl-expr.mygo", source)
+  if !greenNodeHasExpression(tree.Root.value()) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.BindPattern) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.TypeAnnotation) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.ValueInitializer) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.NamedType) || greenNodeText(tree.Root.value()) != source then
+    t.Fatal("declarations must own named typed initializer children without losing source")
+  end
+end
+
+func TestFunctionDeclarationOwnsParameterPatterns(t: Ref[testing.T]) -> ()
+  let tree = buildDelimitedSyntax("params.mygo", "func f(value: Int, other: String) -> Bool => value\n")
+  if !greenNodeHasKind(tree.Root.value(), GreenNodeKind.FunctionParameters) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.FunctionReturnType) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.BindPattern) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.TypeAnnotation) || greenNodeText(tree.Root.value()) != tree.Source then
+    t.Fatal("function declarations must own parameter and return type ranges")
+  end
+end
+
+func TestTypeDeclarationOwnsTypeRightHandSide(t: Ref[testing.T]) -> ()
+  let tree = buildDelimitedSyntax("type-decl.mygo", "type Count = Int\n")
+  if !greenNodeHasKind(tree.Root.value(), GreenNodeKind.TypeDeclaration) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.TypeAnnotation) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.NamedType) || greenNodeText(tree.Root.value()) != tree.Source then
+    t.Fatal("type declarations must own a structured type right hand side")
+  end
+end
+
+func TestKeywordBlocksOwnNestedBranches(t: Ref[testing.T]) -> ()
+  let source = "if ready then\n  switch value\n    case Some(x) then\n      x\n    end\n    case None then\n      0\n    end\n  end\nelsif later then\n  1\nelse\n  2\nend\n"
+  let tree = buildDelimitedSyntax("branches.mygo", source)
+  let root = tree.Root.value()
+  if !greenNodeHasKind(root, GreenNodeKind.ElsifBranch) || !greenNodeHasKind(root, GreenNodeKind.ElseBranch) || !greenNodeHasKind(root, GreenNodeKind.CaseBranch) || greenNodeText(root) != source then
+    t.Fatal("keyword blocks must own nested branch ranges without losing source")
+  end
+end
+
+func TestSyntaxRecoveryRetainsFollowingDeclarations(t: Ref[testing.T]) -> ()
+  let source = "let first = 1\n)\nelse\nlet second = 2\nlet third = 3\n"
+  let tree = buildDelimitedSyntax("recovery.mygo", source)
+  let declarations = tree.Root.value().Children.Filter(func(item: GreenElement) -> Bool
+    switch item
+      case NodeElement(node) => greenNodeIsDeclaration(node.value())
+      case _ => false
+    end
+  end)
+  let hasDelimiterRecovery = tree.Diagnostics.Find(func(diagnostic: SyntaxDiagnostic) -> Bool
+    diagnostic.Recovery == "delimiter"
+  end).IsSome()
+  let hasBranchRecovery = tree.Diagnostics.Find(func(diagnostic: SyntaxDiagnostic) -> Bool
+    diagnostic.Recovery == "branch/end"
+  end).IsSome()
+  if declarations.Len() != 3 || !hasDelimiterRecovery || !hasBranchRecovery || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.Error) || greenNodeText(tree.Root.value()) != source then
+    t.Fatal("recovery must retain error nodes and later declarations in source order")
+  end
+end
+
+func TestSyntaxRecoverySynchronizesAtTopLevelDeclaration(t: Ref[testing.T]) -> ()
+  let source = "unexpected\nlet recovered = 1\n"
+  let tree = buildDelimitedSyntax("top-level-recovery.mygo", source)
+  let topLevel = tree.Diagnostics.Find(func(diagnostic: SyntaxDiagnostic) -> Bool
+    diagnostic.Recovery == "top-level declaration"
+  end).IsSome()
+  let declarations = tree.Root.value().Children.Filter(func(item: GreenElement) -> Bool
+    switch item
+      case NodeElement(node) => greenNodeIsDeclaration(node.value())
+      case _ => false
+    end
+  end)
+  if !topLevel || declarations.Len() != 1 || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.Error) || greenNodeText(tree.Root.value()) != source then
+    t.Fatal("top-level recovery must retain the following declaration and source bytes")
+  end
+end
+
+func TestSyntaxRecoveryMarksUnclosedDelimiterAndBlock(t: Ref[testing.T]) -> ()
+  let source = "let first = (\nif ready then\nlet recovered = 1\n"
+  let tree = buildDelimitedSyntax("unclosed.mygo", source)
+  let delimiter = tree.Diagnostics.Find(func(diagnostic: SyntaxDiagnostic) -> Bool
+    diagnostic.Message == "unclosed delimiter" && diagnostic.Recovery == "delimiter"
+  end).IsSome()
+  let block = tree.Diagnostics.Find(func(diagnostic: SyntaxDiagnostic) -> Bool
+    diagnostic.Message == "unclosed keyword block" && diagnostic.Recovery == "branch/end"
+  end).IsSome()
+  if !delimiter || !block || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.Error) || greenNodeText(tree.Root.value()) != source then
+    t.Fatal("unclosed structures must become recoverable error nodes without losing bytes")
+  end
+end
+
+func TestSyntaxRecoveryPreservesMalformedLiteralBytes(t: Ref[testing.T]) -> ()
+  let ordinary = buildDelimitedSyntax("ordinary.mygo", "let value = \"unterminated")
+  let raw = buildDelimitedSyntax("raw.mygo", "let value = `unterminated")
+  let triple = buildDelimitedSyntax("triple.mygo", "let value = \"\"\"unterminated")
+  if !syntaxTreeHasLiteralDiagnostic(ordinary) || !syntaxTreeHasLiteralDiagnostic(raw) || !syntaxTreeHasLiteralDiagnostic(triple) || greenNodeText(ordinary.Root.value()) != ordinary.Source || greenNodeText(raw.Root.value()) != raw.Source || greenNodeText(triple.Root.value()) != triple.Source then
+    t.Fatal("malformed literals must retain original bytes in recovered error nodes")
+  end
+end
+
+func TestParseSyntaxRecoversWhileAstParsingRemainsStrict(t: Ref[testing.T]) -> ()
+  let source = "package sample\nlet broken = (\nlet recovered = 1\n"
+  let syntax = ParseSyntaxAt("recoverable.mygo", source)
+  let ast = ParseFileAt("recoverable.mygo", source)
+  if syntax.SourceName != "recoverable.mygo" || syntax.Diagnostics.Len() == 0 || !greenNodeHasKind(syntax.Root.value(), GreenNodeKind.Error) || !syntaxAstParseIsErr(ast) then
+    t.Fatal("syntax parsing must recover while AST parsing remains strict")
+  end
+end
+
+func TestLowerSyntaxUsesCstRangesForBindings(t: Ref[testing.T]) -> ()
+  let tree = ParseSyntaxAt("lower.mygo", "package sample\ntype Count = Int\ntype Box = Slice[Int]\nlet value: Int = 1\nvar next = true\nlet label = \"ready\"\nlet mark = 'x'\nfunc f(flag: Slice[Int]) -> Slice[Int] => flag\n")
+  let lowered = LowerSyntax(tree)
+  if !syntaxLowerIsOk(lowered) || syntaxLowerDeclCount(lowered) != 7 then
+    t.Fatal("diagnostic-free declaration CST must lower without the legacy parser")
+  end
+end
+
+func TestSyntaxLoweringContractUsesTypedSemanticChildren(t: Ref[testing.T]) -> ()
+  let tree = ParseSyntaxAt("contract.mygo", "let value: Slice[Int] = 1\nfunc f(item: Int) -> Bool => true\n")
+  let root = syntaxTreeRoot(tree)
+  switch (syntaxNodeFirstChildOfKind(root, GreenNodeKind.LetDeclaration), syntaxNodeFirstChildOfKind(root, GreenNodeKind.FuncDeclaration))
+    case (Some(binding), Some(function)) then
+      if !syntaxOptionalNodeHasKind(syntaxDeclarationPattern(binding), GreenNodeKind.BindPattern) || !syntaxOptionalNodeHasKind(syntaxDeclarationTypeAnnotation(binding), GreenNodeKind.TypeAnnotation) || !syntaxOptionalNodeHasKind(syntaxDeclarationInitializer(binding), GreenNodeKind.ValueInitializer) || !syntaxOptionalNodeHasKind(syntaxFunctionParameters(function), GreenNodeKind.FunctionParameters) || !syntaxOptionalNodeHasKind(syntaxFunctionReturnType(function), GreenNodeKind.FunctionReturnType) || !syntaxOptionalNodeHasKind(syntaxDeclarationInitializer(function), GreenNodeKind.ValueInitializer) then
+        t.Fatal("typed syntax accessors must expose declaration slots")
+      end
+      if !syntaxOptionalNodeHasKind(syntaxTypeAnnotationValueFromOption(syntaxDeclarationTypeAnnotation(binding)), GreenNodeKind.GenericType) || !syntaxOptionalNodeHasKind(syntaxInitializerExpressionFromOption(syntaxDeclarationInitializer(binding)), GreenNodeKind.NumberExpr) || !syntaxOptionalNodeHasKind(syntaxInitializerExpressionFromOption(syntaxDeclarationInitializer(function)), GreenNodeKind.BoolExpr) then
+        t.Fatal("typed syntax accessors must expose type and expression children")
+      end
+    end
+    case _ => t.Fatal("contract fixture must contain both declarations")
+  end
+end
+
+func syntaxOptionalNodeHasKind(node: Option[SyntaxNode], kind: GreenNodeKind) -> Bool
+  switch node
+    case Some(value) => syntaxNodeKind(value) == kind
+    case None => false
+  end
+end
+
+func syntaxTypeAnnotationValueFromOption(node: Option[SyntaxNode]) -> Option[SyntaxNode]
+  switch node
+    case Some(value) => syntaxTypeAnnotationValue(value)
+    case None => None
+  end
+end
+
+func syntaxInitializerExpressionFromOption(node: Option[SyntaxNode]) -> Option[SyntaxNode]
+  switch node
+    case Some(value) => syntaxInitializerExpression(value)
+    case None => None
+  end
+end
+
+func TestLowerSyntaxRejectsDiagnosticFreeUnsupportedNode(t: Ref[testing.T]) -> ()
+  let unsupported = Ref.new(GreenNode {
+    Kind: GreenNodeKind.ParenGroup,
+    Span: syntaxSpan(0, 2),
+    Children: [],
+    HasError: false,
+  })
+  let tree = SyntaxTree {
+    SourceName: "unsupported.mygo",
+    Source: "()",
+    Root: Ref.new(GreenNode {
+      Kind: GreenNodeKind.File,
+      Span: syntaxSpan(0, 2),
+      Children: [GreenElement.NodeElement(unsupported)],
+      HasError: false,
+    }),
+    Diagnostics: [],
+  }
+  if !syntaxAstParseIsErr(LowerSyntax(tree)) then
+    t.Fatal("diagnostic-free unsupported CST nodes must not lower partially")
+  end
+end
+
+func TestSyntaxLoweringSupportFrontierIsExplicit(t: Ref[testing.T]) -> ()
+  if !syntaxLoweringSupportsNodeKind(GreenNodeKind.LetDeclaration) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.GenericType) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.TupleType) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.UnitType) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.FuncType) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.StructDeclaration) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.EnumDeclaration) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.InterfaceDeclaration) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.ImplDeclaration) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.ImportDeclaration) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.WildcardPattern) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.LiteralPattern) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.TuplePattern) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.VariantPattern) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.StructVariantPattern) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.Call) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.UnaryExpr) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.BinaryExpr) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.FieldExpr) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.TypeAsExpr) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.SliceLiteral) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.MapLiteral) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.SetLiteral) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.StructLiteral) then
+    t.Fatal("lowering support frontier must distinguish implemented and deferred CST kinds")
+  end
+end
+
+func TestRecursivePatternCstPreservesStructure(t: Ref[testing.T]) -> ()
+  let source = "let (first, _) = pair\nlet (Some(x), None) = item\nswitch value\n  case 1 => a\n  case \"two\" => b\n  case _ => c\nend\n"
+  let tree = buildDelimitedSyntax("patterns.mygo", source)
+  let root = tree.Root.value()
+  if !greenNodeHasKind(root, GreenNodeKind.TuplePattern) || !greenNodeHasKind(root, GreenNodeKind.WildcardPattern) || !greenNodeHasKind(root, GreenNodeKind.LiteralPattern) || !greenNodeHasKind(root, GreenNodeKind.VariantPattern) || !greenNodeHasKind(root, GreenNodeKind.BindPattern) || greenNodeText(root) != source then
+    t.Fatal("recursive pattern CST must record tuple, wildcard, literal, variant, and bind alternatives without losing source")
+  end
+end
+
+func TestRecursivePatternCstOwnsBranchPatterns(t: Ref[testing.T]) -> ()
+  let source = "switch value\n  case Some(x) => x\n  case (1, 2) => y\n  case _ => 0\nend\n"
+  let tree = ParseSyntaxAt("branch-patterns.mygo", source)
+  let root = tree.Root.value()
+  if !greenNodeHasKind(root, GreenNodeKind.CaseBranch) || !greenNodeHasKind(root, GreenNodeKind.VariantPattern) || !greenNodeHasKind(root, GreenNodeKind.TuplePattern) || !greenNodeHasKind(root, GreenNodeKind.WildcardPattern) || !greenNodeHasKind(root, GreenNodeKind.LiteralPattern) || greenNodeText(root) != source then
+    t.Fatal("switch branches must own their recursive pattern nodes without losing source")
+  end
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("arrow-form switch branches must parse without spurious diagnostics")
+  end
+end
+
+# patternSyntaxOf parses one standalone pattern and returns its concrete CST
+# node, so pattern lowering can be checked without a surrounding declaration.
+func patternSyntaxOf(source: String) -> Option[Ref[GreenNode]]
+  let tree = buildDelimitedSyntax("pattern.mygo", source)
+  let result = parsePattern(SyntaxCursor { Elements: tree.Root.value().Children, Index: 0 })
+  result.Node
+end
+
+func loweredPatternOf(source: String) -> Result[ast2.Pattern, String]
+  switch patternSyntaxOf(source)
+    case Some(node) => lowerSyntaxPatternNode(node.value())
+    case None => Err("pattern fixture did not parse")
+  end
+end
+
+func TestLowerSyntaxLowersRecursivePatterns(t: Ref[testing.T]) -> ()
+  if !loweredPatternIsBind(loweredPatternOf("value"), "value") then
+    t.Fatal("a bare identifier pattern must lower to BindPattern")
+  elsif !loweredPatternIsWildcard(loweredPatternOf("_")) then
+    t.Fatal("a wildcard pattern must lower to WildcardPattern")
+  elsif !loweredPatternIsLiteral(loweredPatternOf("42"), "number", "42") then
+    t.Fatal("a numeric pattern must lower to a number LiteralPattern")
+  elsif !loweredPatternIsLiteral(loweredPatternOf("\"ready\""), "string", "ready") then
+    t.Fatal("a string pattern must lower to a decoded string LiteralPattern")
+  elsif !loweredPatternIsLiteral(loweredPatternOf("'x'"), "rune", "x") then
+    t.Fatal("a rune pattern must lower to a decoded rune LiteralPattern")
+  elsif !loweredTuplePatternMatches(loweredPatternOf("(a, _)")) then
+    t.Fatal("a tuple pattern must lower to a nested TuplePattern")
+  elsif !loweredVariantPatternMatches(loweredPatternOf("Some((a, _))")) then
+    t.Fatal("a variant pattern must lower to a VariantPattern with nested payload")
+  elsif !loweredStructVariantPatternMatches(loweredPatternOf("Point { x, y: z, _ }")) then
+    t.Fatal("a struct variant pattern must lower field, bind, and wildcard slots")
+  end
+end
+
+func loweredPatternIsBind(result: Result[ast2.Pattern, String], name: String) -> Bool
+  switch result
+    case Ok(pattern) then
+      switch pattern
+        case BindPattern(actual) => actual == name
+        case _ => false
+      end
+    end
+    case Err(_) => false
+  end
+end
+
+func loweredPatternIsWildcard(result: Result[ast2.Pattern, String]) -> Bool
+  switch result
+    case Ok(pattern) then
+      switch pattern
+        case WildcardPattern => true
+        case _ => false
+      end
+    end
+    case Err(_) => false
+  end
+end
+
+func loweredPatternIsLiteral(result: Result[ast2.Pattern, String], kind: String, value: String) -> Bool
+  switch result
+    case Ok(pattern) then
+      switch pattern
+        case LiteralPattern(actualKind, actualValue) => actualKind == kind && actualValue == value
+        case _ => false
+      end
+    end
+    case Err(_) => false
+  end
+end
+
+func loweredTuplePatternMatches(result: Result[ast2.Pattern, String]) -> Bool
+  switch result
+    case Ok(pattern) then
+      switch pattern
+        case TuplePattern(items) then
+          if items.Len() != 2 then
+            false
+          else
+            patternItemIsBind(items, 0, "a") && patternItemIsWildcard(items, 1)
+          end
+        end
+        case _ => false
+      end
+    end
+    case Err(_) => false
+  end
+end
+
+func loweredVariantPatternMatches(result: Result[ast2.Pattern, String]) -> Bool
+  switch result
+    case Ok(pattern) then
+      switch pattern
+        case VariantPattern(name, items) then
+          if name != "Some" || items.Len() != 1 then
+            false
+          else
+            patternItemIsTuple(items, 0)
+          end
+        end
+        case _ => false
+      end
+    end
+    case Err(_) => false
+  end
+end
+
+func loweredStructVariantPatternMatches(result: Result[ast2.Pattern, String]) -> Bool
+  switch result
+    case Ok(pattern) then
+      switch pattern
+        case StructVariantPattern(name, fields) then
+          name == "Point" && fields.Len() == 3 && structFieldIs(fields, 0, "x", "x") && structFieldIs(fields, 1, "y", "z") && structFieldIs(fields, 2, "_", "_")
+        end
+        case _ => false
+      end
+    end
+    case Err(_) => false
+  end
+end
+
+func patternItemIsBind(items: Slice[ast2.Pattern], index: Int, name: String) -> Bool
+  switch items.Get(index)
+    case Some(item) then
+      switch item
+        case BindPattern(actual) => actual == name
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func patternItemIsWildcard(items: Slice[ast2.Pattern], index: Int) -> Bool
+  switch items.Get(index)
+    case Some(item) then
+      switch item
+        case WildcardPattern => true
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func patternItemIsTuple(items: Slice[ast2.Pattern], index: Int) -> Bool
+  switch items.Get(index)
+    case Some(item) then
+      switch item
+        case TuplePattern(subItems) => subItems.Len() == 2 && patternItemIsBind(subItems, 0, "a") && patternItemIsWildcard(subItems, 1)
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func structFieldIs(fields: Slice[ast2.StructPatternField], index: Int, field: String, bind: String) -> Bool
+  switch fields.Get(index)
+    case Some(actual) => actual.Field == field && actual.Bind == bind
+    case None => false
+  end
+end
+
+func TestImportDeclarationLowersAliasAndDefault(t: Ref[testing.T]) -> ()
+  let tree = ParseSyntaxAt("imports.mygo", "import f \"a/b/fmt\"\nimport . \"strings\"\nimport \"os\"\n")
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("diagnostic-free import CST must lower: %s", message)
+    case Ok(file) then
+      if file.Decls.Len() != 3 || !importDeclIs(file, 0, "f", "a/b/fmt") || !importDeclIs(file, 1, ".", "strings") || !importDeclIs(file, 2, "os", "os") then
+        t.Fatal("import lowering must preserve explicit alias, dot alias, and default alias")
+      end
+    end
+  end
+end
+
+func importDeclIs(file: ast2.File, index: Int, alias: String, path: String) -> Bool
+  switch file.Decls.Get(index)
+    case Some(decl) then
+      switch decl
+        case ImportDecl(actualAlias, actualPath) => actualAlias == alias && actualPath == path
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func TestStructDeclarationOwnsFieldSlots(t: Ref[testing.T]) -> ()
+  let source = "struct List[A]\n  head: A\n  tail: Int `tag\"v\"`\n  embed T\nend\n"
+  let tree = ParseSyntaxAt("struct.mygo", source)
+  if !greenNodeHasKind(tree.Root.value(), GreenNodeKind.TypeParameters) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.StructField) || greenNodeText(tree.Root.value()) != source then
+    t.Fatal("struct declarations must own type parameters and typed fields")
+  end
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("diagnostic-free struct CST must lower: %s", message)
+    case Ok(file) then
+      if !structDeclMatches(file, "List", 3) || !structFieldMatches(file, 0, "head") || !structFieldMatches(file, 1, "tail") || !structFieldMatches(file, 2, "embed") then
+        t.Fatal("struct lowering must preserve name, type parameters, field names, and the embed marker")
+      end
+      if !structFieldTagIs(file, 1, "tag\"v\"") || !structFieldTagIs(file, 0, "") then
+        t.Fatal("struct lowering must preserve an optional field tag")
+      end
+    end
+  end
+end
+
+func structDeclMatches(file: ast2.File, name: String, fields: Int) -> Bool
+  switch file.Decls.Get(0)
+    case Some(decl) then
+      switch decl
+        case StructDecl(actualName, typeParams, actualFields) then
+          actualName == name && typeParams.Len() == 1 && actualFields.Len() == fields
+        end
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func structFieldMatches(file: ast2.File, index: Int, name: String) -> Bool
+  switch file.Decls.Get(0)
+    case Some(decl) then
+      switch decl
+        case StructDecl(_, _, fields) then
+          switch fields.Get(index)
+            case Some(field) => field.Name == name
+            case None => false
+          end
+        end
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func structFieldTagIs(file: ast2.File, index: Int, tag: String) -> Bool
+  switch file.Decls.Get(0)
+    case Some(decl) then
+      switch decl
+        case StructDecl(_, _, fields) then
+          switch fields.Get(index)
+            case Some(field) then
+              switch field.Tag
+                case Some(actual) => actual == tag
+                case None => tag == ""
+              end
+            end
+            case None => false
+          end
+        end
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func TestEnumDeclarationOwnsVariantSlots(t: Ref[testing.T]) -> ()
+  let source = "enum Shape[A]\n  Circle(Int)\n  Rect { w: A, h: A }\nend\n"
+  let tree = ParseSyntaxAt("enum.mygo", source)
+  if !greenNodeHasKind(tree.Root.value(), GreenNodeKind.EnumVariant) || greenNodeText(tree.Root.value()) != source then
+    t.Fatal("enum declarations must own variant nodes")
+  end
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("diagnostic-free enum CST must lower: %s", message)
+    case Ok(file) then
+      if !enumDeclMatches(file, "Shape", 2) || !tupleVariantMatches(file, 0, "Circle", 1) || !namedVariantMatches(file, 1, "Rect", 2) then
+        t.Fatal("enum lowering must preserve tuple and named variant structure")
+      end
+    end
+  end
+end
+
+func enumDeclMatches(file: ast2.File, name: String, variants: Int) -> Bool
+  switch file.Decls.Get(0)
+    case Some(decl) then
+      switch decl
+        case EnumDecl(actualName, typeParams, actualVariants) => actualName == name && typeParams.Len() == 1 && actualVariants.Len() == variants
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func tupleVariantMatches(file: ast2.File, index: Int, name: String, fields: Int) -> Bool
+  switch file.Decls.Get(0)
+    case Some(decl) then
+      switch decl
+        case EnumDecl(_, _, variants) then
+          switch variants.Get(index)
+            case Some(variant) => variant.Name == name && !variant.Named && variant.Fields.Len() == fields && variant.Names.Len() == 0
+            case None => false
+          end
+        end
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func namedVariantMatches(file: ast2.File, index: Int, name: String, fields: Int) -> Bool
+  switch file.Decls.Get(0)
+    case Some(decl) then
+      switch decl
+        case EnumDecl(_, _, variants) then
+          switch variants.Get(index)
+            case Some(variant) => variant.Name == name && variant.Named && variant.Fields.Len() == fields && variant.Names.Len() == fields
+            case None => false
+          end
+        end
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func TestInterfaceDeclarationOwnsMethodSignatures(t: Ref[testing.T]) -> ()
+  let source = "interface Show\n  func show(x: Int) -> String\n  func other() -> ()\nend\n"
+  let tree = ParseSyntaxAt("interface.mygo", source)
+  if !greenNodeHasKind(tree.Root.value(), GreenNodeKind.FuncSignature) || greenNodeText(tree.Root.value()) != source then
+    t.Fatal("interface declarations must own function signature nodes")
+  end
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("diagnostic-free interface CST must lower: %s", message)
+    case Ok(file) then
+      if !interfaceDeclMatches(file, "Show", 2) || !interfaceMethodMatches(file, 0, "show", 1) || !interfaceMethodMatches(file, 1, "other", 0) then
+        t.Fatal("interface lowering must preserve method names, parameters, and result slots")
+      end
+    end
+  end
+end
+
+func interfaceDeclMatches(file: ast2.File, name: String, methods: Int) -> Bool
+  switch file.Decls.Get(0)
+    case Some(decl) then
+      switch decl
+        case InterfaceDecl(actualName, _, actualMethods) => actualName == name && actualMethods.Len() == methods
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func interfaceMethodMatches(file: ast2.File, index: Int, name: String, params: Int) -> Bool
+  switch file.Decls.Get(0)
+    case Some(decl) then
+      switch decl
+        case InterfaceDecl(_, _, methods) then
+          switch methods.Get(index)
+            case Some(method) => method.Name == name && method.Params.Len() == params
+            case None => false
+          end
+        end
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func TestImplDeclarationOwnsHeaderAndTarget(t: Ref[testing.T]) -> ()
+  let source = "impl[T] List[T]: Show\n  func g() -> T\n  end\nend\n"
+  let tree = ParseSyntaxAt("impl.mygo", source)
+  if !greenNodeHasKind(tree.Root.value(), GreenNodeKind.TypeParameters) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.TypeAnnotation) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.ImplMethod) || greenNodeText(tree.Root.value()) != source then
+    t.Fatal("impl declarations must own type parameters, an interface annotation, and method nodes")
+  end
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("diagnostic-free impl header CST must lower: %s", message)
+    case Ok(file) then
+      if !implDeclMatches(file, 1, 1) then
+        t.Fatal("impl lowering must preserve type parameters, target, interface, and methods")
+      end
+    end
+  end
+end
+
+func implDeclMatches(file: ast2.File, methods: Int, typeParams: Int) -> Bool
+  switch file.Decls.Get(0)
+    case Some(decl) then
+      switch decl
+        case ImplDecl(params, target, iface, actualMethods) then
+          params.Len() == typeParams && actualMethods.Len() == methods && implTargetIsList(target) && implInterfaceIsShow(iface)
+        end
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func implTargetIsList(target: ast2.TypeExpr) -> Bool
+  switch target
+    case NamedType(name, args) => name == "List" && args.Len() == 1
+    case _ => false
+  end
+end
+
+func implInterfaceIsShow(iface: Option[ast2.TypeExpr]) -> Bool
+  switch iface
+    case Some(typ)then
+      switch typ
+        case NamedType(name, _) => name == "Show"
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func TestTypeAliasAndNominalDeclarationsDiffer(t: Ref[testing.T]) -> ()
+  let tree = ParseSyntaxAt("type-decl.mygo", "type Count = Int\ntype Nominal Int\n")
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("diagnostic-free type CST must lower: %s", message)
+    case Ok(file) then
+      if !typeDeclIsAlias(file, 0) || !typeDeclIsNominal(file, 1) then
+        t.Fatal("type lowering must distinguish `type A = B` from `type A B`")
+      end
+    end
+  end
+end
+
+func typeDeclIsAlias(file: ast2.File, index: Int) -> Bool
+  switch file.Decls.Get(index)
+    case Some(decl) then
+      switch decl
+        case TypeAliasDecl(_, _, _) => true
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func typeDeclIsNominal(file: ast2.File, index: Int) -> Bool
+  switch file.Decls.Get(index)
+    case Some(decl) then
+      switch decl
+        case TypeDecl(_, _, _) => true
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func syntaxTreeHasLiteralDiagnostic(tree: SyntaxTree) -> Bool
+  tree.Diagnostics.Find(func(diagnostic: SyntaxDiagnostic) -> Bool
+    diagnostic.Message == "unterminated literal" && diagnostic.Recovery == "literal" && diagnostic.Span.Start.Offset > 0
+  end).IsSome() && greenNodeHasKind(tree.Root.value(), GreenNodeKind.Error)
+end
+
+func greenNodeHasKind(node: GreenNode, kind: GreenNodeKind) -> Bool
+  node.Kind == kind || node.Children.Find(func(item: GreenElement) -> Bool
+    switch item
+      case NodeElement(child) => greenNodeHasKind(child.value(), kind)
+      case _ => false
+    end
+  end).IsSome()
+end
+
+func greenNodeIsDeclaration(node: GreenNode) -> Bool
+  node.Kind == GreenNodeKind.Declaration || node.Kind == GreenNodeKind.PackageDeclaration || node.Kind == GreenNodeKind.ImportDeclaration || node.Kind == GreenNodeKind.LetDeclaration || node.Kind == GreenNodeKind.VarDeclaration || node.Kind == GreenNodeKind.FuncDeclaration || node.Kind == GreenNodeKind.TypeDeclaration || node.Kind == GreenNodeKind.StructDeclaration || node.Kind == GreenNodeKind.EnumDeclaration || node.Kind == GreenNodeKind.InterfaceDeclaration || node.Kind == GreenNodeKind.ImplDeclaration
+end
+
+func greenNodeHasExpression(node: GreenNode) -> Bool
+  node.Kind == GreenNodeKind.Expression || node.Kind == GreenNodeKind.IdentifierExpr || node.Kind == GreenNodeKind.NumberExpr || node.Kind == GreenNodeKind.StringExpr || node.Kind == GreenNodeKind.RuneExpr || node.Kind == GreenNodeKind.Call || node.Kind == GreenNodeKind.UnaryExpr || node.Kind == GreenNodeKind.BinaryExpr || node.Kind == GreenNodeKind.FieldExpr || node.Kind == GreenNodeKind.TypeAsExpr || node.Kind == GreenNodeKind.SliceLiteral || node.Kind == GreenNodeKind.MapLiteral || node.Kind == GreenNodeKind.SetLiteral || node.Kind == GreenNodeKind.StructLiteral || node.Children.Find(func(item: GreenElement) -> Bool
+    switch item
+      case NodeElement(child) => greenNodeHasExpression(child.value())
+      case _ => false
+    end
+  end).IsSome()
+end
+
+# The atom fixture keeps one declaration per expression shape so the CST and
+# lowering assertions can address each alternative by index without ambiguity.
+func atomExpressionSource() -> String
+  "let n = 42\nlet b = true\nlet s = \"hi\\n\"\nlet raw = `a\\nb`\nlet tri = \"\"\"a\\nb\"\"\"\nlet q = 'x'\nlet u = ()\nlet p = (value)\nlet pair = (1, 2)\nfunc f() => go[Int] { code: `x`; in y = 1; type T = Int }\n"
+end
+
+func TestExpressionAtomCstOwnsLiteralTokens(t: Ref[testing.T]) -> ()
+  let source = atomExpressionSource()
+  let tree = ParseSyntaxAt("atoms.mygo", source)
+  let root = tree.Root.value()
+  if !greenNodeHasKind(root, GreenNodeKind.NumberExpr) || !greenNodeHasKind(root, GreenNodeKind.BoolExpr) || !greenNodeHasKind(root, GreenNodeKind.StringExpr) || !greenNodeHasKind(root, GreenNodeKind.RuneExpr) || !greenNodeHasKind(root, GreenNodeKind.UnitExpr) || !greenNodeHasKind(root, GreenNodeKind.ParenExpr) || !greenNodeHasKind(root, GreenNodeKind.TupleExpr) || !greenNodeHasKind(root, GreenNodeKind.InlineGoExpr) || !greenNodeHasKind(root, GreenNodeKind.InlineGoCode) || !greenNodeHasKind(root, GreenNodeKind.InlineGoValueBinding) || !greenNodeHasKind(root, GreenNodeKind.InlineGoTypeBinding) || greenNodeText(root) != source then
+    t.Fatal("expression atoms must each own a distinct CST kind without losing source")
+  end
+  if !greenNodeHasTokenKind(root, GreenTokenKind.StringLiteral) || !greenNodeHasTokenKind(root, GreenTokenKind.RawStringLiteral) || !greenNodeHasTokenKind(root, GreenTokenKind.TripleStringLiteral) || !greenNodeHasTokenKind(root, GreenTokenKind.RuneLiteral) then
+    t.Fatal("string, raw, triple, and rune atoms must retain their literal token kinds")
+  end
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("well-formed expression atoms must parse without diagnostics")
+  end
+end
+
+func greenNodeHasTokenKind(node: GreenNode, kind: GreenTokenKind) -> Bool
+  node.Children.Find(func(item: GreenElement) -> Bool
+    switch item
+      case TokenElement(token) => token.Kind == kind
+      case NodeElement(child) => greenNodeHasTokenKind(child.value(), kind)
+      case _ => false
+    end
+  end).IsSome()
+end
+
+func TestLowerSyntaxLowersExpressionAtoms(t: Ref[testing.T]) -> ()
+  let source = atomExpressionSource()
+  if !loweredExprIsNumber(loweredAtomExpr(source, 0), "42") then
+    t.Fatal("a numeric atom must lower to NumberExpr with its raw value")
+  elsif !loweredExprIsBool(loweredAtomExpr(source, 1), true) then
+    t.Fatal("a boolean atom must lower to BoolExpr with its decoded value")
+  elsif !loweredExprIsString(loweredAtomExpr(source, 2), "hi\n") then
+    t.Fatal("a quoted atom must decode its escapes into the StringExpr value")
+  elsif !loweredExprIsString(loweredAtomExpr(source, 3), "a\\nb") then
+    t.Fatal("a raw atom must keep its bytes verbatim")
+  elsif !loweredExprIsString(loweredAtomExpr(source, 4), "a\\nb") then
+    t.Fatal("a triple-quoted atom must keep its bytes verbatim")
+  elsif !loweredExprIsRune(loweredAtomExpr(source, 5), "x") then
+    t.Fatal("a rune atom must lower to RuneExpr with its decoded character")
+  elsif !loweredExprIsUnit(loweredAtomExpr(source, 6)) then
+    t.Fatal("an empty group must lower to UnitExpr")
+  elsif !loweredExprIsIdent(loweredAtomExpr(source, 7), "value") then
+    t.Fatal("a parenthesized atom must lower to its single inner expression")
+  elsif !loweredExprIsTuple(loweredAtomExpr(source, 8)) then
+    t.Fatal("a comma-separated group must lower to a nested TupleExpr")
+  elsif !loweredExprIsInlineGo(loweredAtomExpr(source, 9), "x", "y", "T") then
+    t.Fatal("an inline-Go atom must lower its code, value binding, and type binding")
+  end
+end
+
+func TestLowerSyntaxKeepsExpressionAtomSpans(t: Ref[testing.T]) -> ()
+  let source = atomExpressionSource()
+  if !loweredExprSpanIs(loweredAtomExpr(source, 2), 3, 9, 3, 15) then
+    t.Fatal("a quoted atom must span its whole source range")
+  elsif !loweredExprSpanIs(loweredAtomExpr(source, 4), 5, 11, 5, 21) then
+    t.Fatal("a triple-quoted atom must span its whole source range")
+  elsif !loweredExprSpanIs(loweredAtomExpr(source, 7), 8, 9, 8, 16) then
+    t.Fatal("a parenthesized atom must keep the parentheses in its span")
+  end
+end
+
+# loweredAtomExpr lowers the file-level atom fixture and returns the value of the
+# declaration at index.  Function bodies are read through the same accessor so
+# the inline-Go atom can be addressed like a binding initializer.
+func loweredAtomExpr(source: String, index: Int) -> Option[ast2.Expr]
+  switch LowerSyntax(ParseSyntaxAt("atoms.mygo", source))
+    case Ok(file) then
+      switch file.Decls.Get(index)
+        case Some(decl) then
+          switch decl
+            case LetDecl(bind) => Some(bind.Value)
+            case VarDecl(bind) => Some(bind.Value)
+            case FuncDecl(_, _, _, _, body, _) => Some(body)
+            case _ => None
+          end
+        end
+        case None => None
+      end
+    end
+    case Err(_) => None
+  end
+end
+
+func loweredExprIsNumber(expr: Option[ast2.Expr], value: String) -> Bool
+  switch expr
+    case Some(item) then
+      switch item.Kind
+        case NumberExpr(actual) => actual == value
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredExprIsBool(expr: Option[ast2.Expr], value: Bool) -> Bool
+  switch expr
+    case Some(item) then
+      switch item.Kind
+        case BoolExpr(actual) => actual == value
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredExprIsString(expr: Option[ast2.Expr], value: String) -> Bool
+  switch expr
+    case Some(item) then
+      switch item.Kind
+        case StringExpr(actual) => actual == value
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredExprIsRune(expr: Option[ast2.Expr], value: String) -> Bool
+  switch expr
+    case Some(item) then
+      switch item.Kind
+        case RuneExpr(actual) => actual == value
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredExprIsIdent(expr: Option[ast2.Expr], name: String) -> Bool
+  switch expr
+    case Some(item) then
+      switch item.Kind
+        case IdentExpr(actual) => actual == name
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredExprIsUnit(expr: Option[ast2.Expr]) -> Bool
+  switch expr
+    case Some(item) then
+      switch item.Kind
+        case UnitExpr => true
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredExprIsTuple(expr: Option[ast2.Expr]) -> Bool
+  switch expr
+    case Some(item) then
+      switch item.Kind
+        case TupleExpr(items) => items.Len() == 2 && loweredTupleItemIsNumber(items, 0, "1") && loweredTupleItemIsNumber(items, 1, "2")
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredTupleItemIsNumber(items: Slice[ast2.Expr], index: Int, value: String) -> Bool
+  switch items.Get(index)
+    case Some(item) then
+      switch item.Kind
+        case NumberExpr(actual) => actual == value
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredExprIsInlineGo(expr: Option[ast2.Expr], code: String, valueName: String, typeName: String) -> Bool
+  switch expr
+    case Some(item) then
+      switch item.Kind
+        case InlineGoExpr(_, actualCode, values, types) => actualCode == code && values.Len() == 1 && goOperandNameIs(values.Get(0), valueName) && types.Len() == 1 && goTypeOperandNameIs(types.Get(0), typeName)
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func goOperandNameIs(operand: Option[ast2.GoOperand], name: String) -> Bool
+  switch operand
+    case Some(item) => item.Name == name
+    case None => false
+  end
+end
+
+func goTypeOperandNameIs(operand: Option[ast2.GoTypeOperand], name: String) -> Bool
+  switch operand
+    case Some(item) => item.Name == name
+    case None => false
+  end
+end
+
+func loweredExprSpanIs(expr: Option[ast2.Expr], startLine: Int, startColumn: Int, endLine: Int, endColumn: Int) -> Bool
+  switch expr
+    case Some(item) => item.Span.Start.Line == startLine && item.Span.Start.Column == startColumn && item.Span.End.Line == endLine && item.Span.End.Column == endColumn
+    case None => false
+  end
+end
+
+# operatorExpressionSource pairs each operator/postfix family with a distinct
+# declaration so the CST and lowering assertions can address each alternative by
+# index without ambiguity.
+func operatorExpressionSource() -> String
+  "let sum = 1 + 2 * 3\nlet both = flag && other\nlet chain = recv.Add(x).Len()\nlet generic = f[Int](x)\nlet cast = value as Int\nlet piped = a |> g |> h\nlet negated = -x\nlet inverted = !ok\n"
+end
+
+func TestOperatorAndPostfixCstOwnsNodes(t: Ref[testing.T]) -> ()
+  let source = operatorExpressionSource()
+  let tree = ParseSyntaxAt("operators.mygo", source)
+  let root = tree.Root.value()
+  if !greenNodeHasKind(root, GreenNodeKind.BinaryExpr) || !greenNodeHasKind(root, GreenNodeKind.UnaryExpr) || !greenNodeHasKind(root, GreenNodeKind.FieldExpr) || !greenNodeHasKind(root, GreenNodeKind.TypeAsExpr) || !greenNodeHasKind(root, GreenNodeKind.Call) || !greenNodeHasKind(root, GreenNodeKind.TypeArguments) || greenNodeText(root) != source then
+    t.Fatal("operator and postfix expressions must own distinct CST kinds without losing source")
+  end
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("well-formed operator expressions must parse without diagnostics")
+  end
+end
+
+func TestLowerSyntaxLowersOperatorPrecedence(t: Ref[testing.T]) -> ()
+  let source = operatorExpressionSource()
+  let sum = loweredAtomExpr(source, 0)
+  if loweredBinaryOp(sum) != "+" then
+    t.Fatal("an additive expression must lower to a top-level + operator")
+  elsif !loweredExprIsNumber(loweredBinaryLeft(sum), "1") then
+    t.Fatal("the additive left operand must be the leading number")
+  elsif loweredBinaryOp(loweredBinaryRight(sum)) != "*" then
+    t.Fatal("multiplication must bind tighter than addition")
+  end
+  let both = loweredAtomExpr(source, 1)
+  if loweredBinaryOp(both) != "&&" || !loweredExprIsIdent(loweredBinaryLeft(both), "flag") || !loweredExprIsIdent(loweredBinaryRight(both), "other") then
+    t.Fatal("a logical expression must lower with its operator and both identifiers")
+  end
+  let piped = loweredAtomExpr(source, 5)
+  if loweredBinaryOp(piped) != "|>" || loweredBinaryOp(loweredBinaryLeft(piped)) != "|>" || !loweredExprIsIdent(loweredBinaryLeft(loweredBinaryLeft(piped)), "a") || !loweredExprIsIdent(loweredBinaryRight(loweredBinaryLeft(piped)), "g") || !loweredExprIsIdent(loweredBinaryRight(piped), "h") then
+    t.Fatal("pipe operators must lower left-associatively into nested BinaryExpr")
+  end
+end
+
+func TestLowerSyntaxLowersNestedPostfix(t: Ref[testing.T]) -> ()
+  let source = operatorExpressionSource()
+  let chain = loweredAtomExpr(source, 2)
+  if loweredCallArgCount(chain) != 0 || loweredFieldName(loweredCallCallee(chain)) != "Len" then
+    t.Fatal("a chained postfix must end in a call of the final field")
+  elsif loweredCallArgCount(loweredFieldReceiver(loweredCallCallee(chain))) != 1 then
+    t.Fatal("the Len receiver must be a call with one argument")
+  elsif loweredFieldName(loweredCallCallee(loweredFieldReceiver(loweredCallCallee(chain)))) != "Add" then
+    t.Fatal("the inner call callee must be the Add field")
+  elsif !loweredExprIsIdent(loweredFieldReceiver(loweredCallCallee(loweredFieldReceiver(loweredCallCallee(chain)))), "recv") then
+    t.Fatal("the innermost receiver must be the base identifier")
+  end
+  let generic = loweredAtomExpr(source, 3)
+  if !loweredExprIsIdent(loweredCallCallee(generic), "f") || loweredCallTypeArgCount(generic) != 1 || loweredCallArgCount(generic) != 1 then
+    t.Fatal("a generic call must lower its callee, type arguments, and value arguments")
+  end
+  let cast = loweredAtomExpr(source, 4)
+  if !loweredExprIsIdent(loweredTypeAsValue(cast), "value") || loweredTypeAsTargetName(cast) != "Int" then
+    t.Fatal("an as-expression must lower its operand and target type")
+  end
+  if loweredUnaryOp(loweredAtomExpr(source, 6)) != "-" || !loweredExprIsIdent(loweredUnaryOperand(loweredAtomExpr(source, 6)), "x") then
+    t.Fatal("a negated expression must lower to a unary - operator")
+  end
+  if loweredUnaryOp(loweredAtomExpr(source, 7)) != "!" || !loweredExprIsIdent(loweredUnaryOperand(loweredAtomExpr(source, 7)), "ok") then
+    t.Fatal("a logical-not expression must lower to a unary ! operator")
+  end
+end
+
+func TestLowerSyntaxKeepsOperatorSpans(t: Ref[testing.T]) -> ()
+  let source = "let a = 1 + 2 * 3\n"
+  if !loweredExprSpanIs(loweredAtomExpr(source, 0), 1, 9, 1, 18) then
+    t.Fatal("an operator expression span must cover its whole source range")
+  end
+end
+
+func loweredBinaryOp(expr: Option[ast2.Expr]) -> String
+  switch expr
+    case Some(item) then
+      switch item.Kind
+        case BinaryExpr(op, _, _) => op
+        case _ => ""
+      end
+    end
+    case None => ""
+  end
+end
+
+func loweredBinaryLeft(expr: Option[ast2.Expr]) -> Option[ast2.Expr]
+  switch expr
+    case Some(item) then
+      switch item.Kind
+        case BinaryExpr(_, left, _) => Some(left)
+        case _ => None
+      end
+    end
+    case None => None
+  end
+end
+
+func loweredBinaryRight(expr: Option[ast2.Expr]) -> Option[ast2.Expr]
+  switch expr
+    case Some(item) then
+      switch item.Kind
+        case BinaryExpr(_, _, right) => Some(right)
+        case _ => None
+      end
+    end
+    case None => None
+  end
+end
+
+func loweredFieldName(expr: Option[ast2.Expr]) -> String
+  switch expr
+    case Some(item) then
+      switch item.Kind
+        case FieldExpr(_, name) => name
+        case _ => ""
+      end
+    end
+    case None => ""
+  end
+end
+
+func loweredFieldReceiver(expr: Option[ast2.Expr]) -> Option[ast2.Expr]
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case FieldExpr(receiver, _) => Some(receiver)
+        case _ => None
+      end
+    case None => None
+  end
+end
+
+func loweredCallCallee(expr: Option[ast2.Expr]) -> Option[ast2.Expr]
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case CallExpr(callee, _, _) => Some(callee)
+        case _ => None
+      end
+    case None => None
+  end
+end
+
+func loweredCallArgCount(expr: Option[ast2.Expr]) -> Int
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case CallExpr(_, _, args) => args.Len()
+        case _ => -1
+      end
+    case None => -1
+  end
+end
+
+func loweredCallTypeArgCount(expr: Option[ast2.Expr]) -> Int
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case CallExpr(_, typeArgs, _) => typeArgs.Len()
+        case _ => -1
+      end
+    case None => -1
+  end
+end
+
+func loweredUnaryOp(expr: Option[ast2.Expr]) -> String
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case UnaryExpr(op, _) => op
+        case _ => ""
+      end
+    case None => ""
+  end
+end
+
+func loweredUnaryOperand(expr: Option[ast2.Expr]) -> Option[ast2.Expr]
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case UnaryExpr(_, operand) => Some(operand)
+        case _ => None
+      end
+    case None => None
+  end
+end
+
+func loweredTypeAsValue(expr: Option[ast2.Expr]) -> Option[ast2.Expr]
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case TypeAsExpr(value, _) => Some(value)
+        case _ => None
+      end
+    case None => None
+  end
+end
+
+func loweredTypeAsTargetName(expr: Option[ast2.Expr]) -> String
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case TypeAsExpr(_, target) => typeExprName(target)
+        case _ => ""
+      end
+    case None => ""
+  end
+end
+
+func typeExprName(target: ast2.TypeExpr) -> String
+  switch target
+    case NamedType(name, _) => name
+    case _ => ""
+  end
+end
+
+# delimitedExpressionSource keeps one declaration per delimited literal family
+# so the CST and lowering assertions can address each alternative by index
+# without ambiguity: slice, map, set, struct, generic struct, empty struct, and
+# a nested map whose value is itself a slice.
+func delimitedExpressionSource() -> String
+  "let xs = [1, 2, 3]\nlet m = {\"a\": 1, \"b\": 2}\nlet s = {1, 2, 3}\nlet p = Point { x: 1, y: 2 }\nlet g = Pair[Int] { fst: 1 }\nlet e = Point {}\nlet n = {\"nums\": [4, 5]}\n"
+end
+
+func TestDelimitedExpressionCstOwnsNodes(t: Ref[testing.T]) -> ()
+  let source = delimitedExpressionSource()
+  let tree = ParseSyntaxAt("delimited.mygo", source)
+  let root = tree.Root.value()
+  if !greenNodeHasKind(root, GreenNodeKind.SliceLiteral) || !greenNodeHasKind(root, GreenNodeKind.MapLiteral) || !greenNodeHasKind(root, GreenNodeKind.SetLiteral) || !greenNodeHasKind(root, GreenNodeKind.StructLiteral) || !greenNodeHasKind(root, GreenNodeKind.MapEntry) || !greenNodeHasKind(root, GreenNodeKind.StructLitField) || !greenNodeHasKind(root, GreenNodeKind.TypeArguments) || greenNodeText(root) != source then
+    t.Fatal("delimited literals must each own a distinct CST kind without losing source")
+  end
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("well-formed delimited literals must parse without diagnostics")
+  end
+end
+
+func TestLowerSyntaxLowersDelimitedExpressions(t: Ref[testing.T]) -> ()
+  let source = delimitedExpressionSource()
+  let xs = loweredAtomExpr(source, 0)
+  if loweredSliceItemCount(xs) != 3 || !loweredCollectionItemIs(xs, 0, "1") || !loweredCollectionItemIs(xs, 2, "3") then
+    t.Fatal("a slice literal must lower one NumberExpr per item")
+  end
+  let m = loweredAtomExpr(source, 1)
+  if loweredMapPairCount(m) != 2 || !loweredMapPairIs(m, 0, "a", "1") || !loweredMapPairIs(m, 1, "b", "2") then
+    t.Fatal("a map literal must lower one key/value pair per entry")
+  end
+  let s = loweredAtomExpr(source, 2)
+  if loweredSetItemCount(s) != 3 || !loweredCollectionItemIs(s, 1, "2") then
+    t.Fatal("a set literal must lower one NumberExpr per item")
+  end
+  let p = loweredAtomExpr(source, 3)
+  if loweredStructName(p) != "Point" || loweredStructFieldCount(p) != 2 || !loweredStructFieldIs(p, 0, "x", "1") || !loweredStructFieldIs(p, 1, "y", "2") then
+    t.Fatal("a struct literal must lower its type name and fields in order")
+  end
+  let g = loweredAtomExpr(source, 4)
+  if loweredStructName(g) != "Pair" || loweredStructTypeArgCount(g) != 1 || loweredStructTypeArgName(g, 0) != "Int" || loweredStructFieldCount(g) != 1 || !loweredStructFieldIs(g, 0, "fst", "1") then
+    t.Fatal("a generic struct literal must lower its name, type arguments, and fields")
+  end
+  let e = loweredAtomExpr(source, 5)
+  if loweredStructName(e) != "Point" || loweredStructFieldCount(e) != 0 then
+    t.Fatal("an empty struct literal must lower to zero fields")
+  end
+  let n = loweredAtomExpr(source, 6)
+  let nums = loweredMapValueAt(n, 0)
+  if loweredMapPairCount(n) != 1 || !loweredExprIsString(loweredMapKeyAt(n, 0), "nums") || loweredSliceItemCount(nums) != 2 || !loweredCollectionItemIs(nums, 0, "4") || !loweredCollectionItemIs(nums, 1, "5") then
+    t.Fatal("a nested map value must lower recursively into a slice literal")
+  end
+end
+
+func TestLowerSyntaxKeepsDelimitedSpans(t: Ref[testing.T]) -> ()
+  let source = delimitedExpressionSource()
+  if !loweredExprSpanIs(loweredAtomExpr(source, 0), 1, 10, 1, 19) then
+    t.Fatal("a slice literal span must cover its whole source range")
+  end
+  if !loweredExprSpanIs(loweredAtomExpr(source, 3), 4, 9, 4, 29) then
+    t.Fatal("a struct literal span must cover its name, type arguments, and field group")
+  end
+  if !loweredExprSpanIs(loweredAtomExpr(source, 6), 7, 9, 7, 25) then
+    t.Fatal("a nested map literal span must cover its whole source range")
+  end
+end
+
+func loweredSliceItemCount(expr: Option[ast2.Expr]) -> Int
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case SliceLitExpr(items) => items.Len()
+        case _ => -1
+      end
+    case None => -1
+  end
+end
+
+func loweredSetItemCount(expr: Option[ast2.Expr]) -> Int
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case SetLitExpr(items) => items.Len()
+        case _ => -1
+      end
+    case None => -1
+  end
+end
+
+func loweredCollectionItemIs(expr: Option[ast2.Expr], index: Int, value: String) -> Bool
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case SliceLitExpr(items) => loweredNumberItemIs(items, index, value)
+        case SetLitExpr(items) => loweredNumberItemIs(items, index, value)
+        case _ => false
+      end
+    case None => false
+  end
+end
+
+func loweredNumberItemIs(items: Slice[ast2.Expr], index: Int, value: String) -> Bool
+  switch items.Get(index)
+    case Some(item) =>
+      switch item.Kind
+        case NumberExpr(actual) => actual == value
+        case _ => false
+      end
+    case None => false
+  end
+end
+
+func loweredMapPairCount(expr: Option[ast2.Expr]) -> Int
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case MapLitExpr(pairs) => pairs.Len()
+        case _ => -1
+      end
+    case None => -1
+  end
+end
+
+func loweredMapPairIs(expr: Option[ast2.Expr], index: Int, keyValue: String, itemValue: String) -> Bool
+  loweredExprIsString(loweredMapKeyAt(expr, index), keyValue) && loweredExprIsNumber(loweredMapValueAt(expr, index), itemValue)
+end
+
+func loweredMapKeyAt(expr: Option[ast2.Expr], index: Int) -> Option[ast2.Expr]
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case MapLitExpr(pairs) => loweredMapPairKey(pairs, index)
+        case _ => None
+      end
+    case None => None
+  end
+end
+
+func loweredMapValueAt(expr: Option[ast2.Expr], index: Int) -> Option[ast2.Expr]
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case MapLitExpr(pairs) => loweredMapPairValue(pairs, index)
+        case _ => None
+      end
+    case None => None
+  end
+end
+
+func loweredMapPairKey(pairs: Slice[(ast2.Expr, ast2.Expr)], index: Int) -> Option[ast2.Expr]
+  switch pairs.Get(index)
+    case Some(pair) =>
+      let (key, _) = pair
+      Some(key)
+    case None => None
+  end
+end
+
+func loweredMapPairValue(pairs: Slice[(ast2.Expr, ast2.Expr)], index: Int) -> Option[ast2.Expr]
+  switch pairs.Get(index)
+    case Some(pair) =>
+      let (_, value) = pair
+      Some(value)
+    case None => None
+  end
+end
+
+func loweredStructName(expr: Option[ast2.Expr]) -> String
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case StructLitExpr(name, _) => name
+        case GenericStructLitExpr(name, _, _) => name
+        case _ => ""
+      end
+    case None => ""
+  end
+end
+
+func loweredStructFieldCount(expr: Option[ast2.Expr]) -> Int
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case StructLitExpr(_, fields) => fields.Len()
+        case GenericStructLitExpr(_, _, fields) => fields.Len()
+        case _ => -1
+      end
+    case None => -1
+  end
+end
+
+func loweredStructFieldIs(expr: Option[ast2.Expr], index: Int, name: String, value: String) -> Bool
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case StructLitExpr(_, fields) => loweredStructFieldMatches(fields, index, name, value)
+        case GenericStructLitExpr(_, _, fields) => loweredStructFieldMatches(fields, index, name, value)
+        case _ => false
+      end
+    case None => false
+  end
+end
+
+func loweredStructFieldMatches(fields: Slice[ast2.StructLitField], index: Int, name: String, value: String) -> Bool
+  switch fields.Get(index)
+    case Some(field) => field.Name == name && loweredFieldValueIsNumber(field.Value, value)
+    case None => false
+  end
+end
+
+func loweredFieldValueIsNumber(value: ast2.Expr, expected: String) -> Bool
+  switch value.Kind
+    case NumberExpr(actual) => actual == expected
+    case _ => false
+  end
+end
+
+func loweredStructTypeArgCount(expr: Option[ast2.Expr]) -> Int
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case GenericStructLitExpr(_, typeArgs, _) => typeArgs.Len()
+        case StructLitExpr(_, _) => 0
+        case _ => -1
+      end
+    case None => -1
+  end
+end
+
+func loweredStructTypeArgName(expr: Option[ast2.Expr], index: Int) -> String
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case GenericStructLitExpr(_, typeArgs, _) => loweredTypeArgNameAt(typeArgs, index)
+        case _ => ""
+      end
+    case None => ""
+  end
+end
+
+func loweredTypeArgNameAt(typeArgs: Slice[ast2.TypeExpr], index: Int) -> String
+  switch typeArgs.Get(index)
+    case Some(target) => typeExprName(target)
+    case None => ""
+  end
+end
+
+# blockExpressionSource is the shared nested-control fixture for task 3.8.  It
+# keeps one declaration per block family so the CST and lowering assertions can
+# address each alternative by index: a multi-line if/elsif/else, a then-form
+# switch with two branches, an arrow-form if, a while loop, and a nested
+# if/switch whose then branch is itself a switch expression.
+func blockExpressionSource() -> String
+  "let x = if ready then\n  a\nelsif later then\n  b\nelse\n  c\nend\nfunc f()\n  switch value\n    case 1 then\n      a\n    end\n    case _ then\n      b\n    end\n  end\nend\nfunc g() -> Int\n  if a => b else c\nend\nfunc h()\n  while cond\n    step()\n  end\nend\nfunc n()\n  if p then\n    switch v\n      case 1 => a\n      case _ => b\n    end\n  elsif q then\n    c\n  else\n    d\n  end\nend\n"
+end
+
+func TestBlockExpressionCstOwnsNodes(t: Ref[testing.T]) -> ()
+  let source = blockExpressionSource()
+  let tree = buildDelimitedSyntax("blocks.mygo", source)
+  let root = tree.Root.value()
+  if !greenNodeHasKind(root, GreenNodeKind.IfBlock) || !greenNodeHasKind(root, GreenNodeKind.SwitchBlock) || !greenNodeHasKind(root, GreenNodeKind.WhileBlock) || !greenNodeHasKind(root, GreenNodeKind.Block) || !greenNodeHasKind(root, GreenNodeKind.ExprStatement) || !greenNodeHasKind(root, GreenNodeKind.ElsifBranch) || !greenNodeHasKind(root, GreenNodeKind.ElseBranch) || !greenNodeHasKind(root, GreenNodeKind.CaseBranch) || greenNodeText(root) != source then
+    t.Fatal("block expressions must own if/switch/while/branch statement nodes without losing source")
+  end
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("well-formed multi-line block expressions must parse without diagnostics")
+  end
+end
+
+# TestBlockExpressionBranchesOwnHeadersAndBodies checks that a branch node's own
+# range covers its keyword, header, body, and the trivia between them, and that
+# each then-form case owns a typed pattern node for its header.
+func TestBlockExpressionBranchesOwnHeadersAndBodies(t: Ref[testing.T]) -> ()
+  let source = "switch value\n  case 1 then\n    a\n  end\n  case _ then\n    b\n  end\nend\n"
+  let tree = buildDelimitedSyntax("branch-headers.mygo", source)
+  let root = tree.Root.value()
+  if !greenNodeHasKind(root, GreenNodeKind.LiteralPattern) || !greenNodeHasKind(root, GreenNodeKind.WildcardPattern) then
+    t.Fatal("a then-form case must type its header pattern instead of leaving raw expression leaves")
+  end
+  let branches = greenNodeChildrenOfKind(greenNodeChildrenOfKind(root, GreenNodeKind.SwitchBlock).Get(0).UnwrapOr(root), GreenNodeKind.CaseBranch)
+  if branches.Len() != 2 then
+    t.Fatal("a switch with two then-form arms must own exactly two branch nodes")
+  end
+  let first = branches.Get(0).UnwrapOr(root)
+  let second = branches.Get(1).UnwrapOr(root)
+  if first.Span.Start.Offset != 15 || first.Span.End.Offset != 38 || second.Span.Start.Offset != 41 || second.Span.End.Offset != 64 then
+    t.Fatal("each case branch span must cover its keyword, header, body, and closing end")
+  end
+  if greenNodeText(root) != source then
+    t.Fatal("branch splitting must retain every source byte")
+  end
+end
+
+func greenNodeChildrenOfKind(node: GreenNode, kind: GreenNodeKind) -> Slice[GreenNode]
+  greenNodeChildrenOfKindFrom(node, kind, 0, [])
+end
+
+func greenNodeChildrenOfKindFrom(node: GreenNode, kind: GreenNodeKind, index: Int, output: Slice[GreenNode]) -> Slice[GreenNode]
+  if index >= node.Children.Len() then
+    output
+  else
+    switch greenElementNode(greenElementAt(node.Children, index))
+      case Some(child) then
+        if child.value().Kind == kind then
+          greenNodeChildrenOfKindFrom(node, kind, index + 1, output.Append(child.value()))
+        else
+          greenNodeChildrenOfKindFrom(node, kind, index + 1, output)
+        end
+      end
+      case None => greenNodeChildrenOfKindFrom(node, kind, index + 1, output)
+    end
+  end
+end
+
+# TestLowerSyntaxLowersBlockExpressions checks that the nested-control fixture
+# lowers every declaration: the if/elsif/else, the then-form switch, the
+# arrow-form if, the while loop, and the nested if/switch.
+func TestLowerSyntaxLowersBlockExpressions(t: Ref[testing.T]) -> ()
+  let source = blockExpressionSource()
+  let result = LowerSyntax(buildDelimitedSyntax("blocks.mygo", source))
+  if !syntaxLowerIsOk(result) then
+    t.Fatal("multi-line block expressions must lower without an error")
+  end
+  if syntaxLowerDeclCount(result) != 5 then
+    t.Fatal("the block fixture must lower one declaration per alternative")
+  end
+end
+
+# TestLowerSyntaxLowersIfBranches checks the branch shape of a multi-line
+# if/elsif/else: the then body is an identifier, the elsif becomes a nested
+# IfExpr, and the final else body is the last identifier.
+func TestLowerSyntaxLowersIfBranches(t: Ref[testing.T]) -> ()
+  let source = "let x = if ready then\n  a\nelsif later then\n  b\nelse\n  c\nend\n"
+  let expr = loweredAtomExpr(source, 0)
+  if !loweredIfMatches(expr, "ready", "a", "later", "b", "c") then
+    t.Fatal("an if/elsif/else must lower its condition, then body, nested elsif, and final else")
+  end
+end
+
+func loweredIfMatches(expr: Option[ast2.Expr], condName: String, thenName: String, elsifCondName: String, elsifThenName: String, elseName: String) -> Bool
+  switch expr
+    case Some(item) =>
+      switch item.Kind
+        case IfExpr(cond, thenBody, elseBody) => loweredExprIsIdent(Some(cond), condName) && loweredExprIsIdent(Some(thenBody), thenName) && loweredNestedIfMatches(elseBody, elsifCondName, elsifThenName, elseName)
+        case _ => false
+      end
+    case None => false
+  end
+end
+
+func loweredNestedIfMatches(elseBody: ast2.Expr, condName: String, thenName: String, elseName: String) -> Bool
+  switch elseBody.Kind
+    case IfExpr(cond, thenBody, finalElse) => loweredExprIsIdent(Some(cond), condName) && loweredExprIsIdent(Some(thenBody), thenName) && loweredExprIsIdent(Some(finalElse), elseName)
+    case _ => false
+  end
+end
+
+# TestLowerSyntaxLowersSwitchCases checks that a then-form switch lowers one
+# ast2 case per branch with the pattern, body, and spans drawn from the CST.
+func TestLowerSyntaxLowersSwitchCases(t: Ref[testing.T]) -> ()
+  let source = "func f()\n  switch value\n    case 1 then\n      a\n    end\n    case _ then\n      b\n    end\n  end\nend\n"
+  let result = LowerSyntax(buildDelimitedSyntax("switch.mygo", source))
+  if !syntaxLowerIsOk(result) || syntaxLowerDeclCount(result) != 1 then
+    t.Fatal("a then-form switch function must lower")
+  end
+  if !loweredFunctionHasSwitchBody(result, 2) then
+    t.Fatal("a then-form switch must lower one case per branch")
+  end
+end
+
+# TestLowerSyntaxKeepsBlockSpans pins the branch and body spans of the nested
+# if/switch fixture so the CST-owned ranges stay stable.
+func TestLowerSyntaxKeepsBlockSpans(t: Ref[testing.T]) -> ()
+  let source = blockExpressionSource()
+  let result = LowerSyntax(buildDelimitedSyntax("blocks.mygo", source))
+  switch result
+    case Ok(file) then
+      if !loweredDeclBodySpanIs(file, 1, 9, 3, 17, 1) then
+        t.Fatal("a switch function body span must cover its statements")
+      end
+      if !loweredDeclBodySpanIs(file, 3, 22, 3, 25, 1) then
+        t.Fatal("a while function body span must cover its loop statement")
+      end
+      if !loweredDeclBodySpanIs(file, 4, 27, 3, 37, 1) then
+        t.Fatal("a nested if function body span must cover its statements")
+      end
+      if !loweredExprSpanIs(loweredAtomExpr(source, 0), 1, 9, 7, 4) then
+        t.Fatal("an if/elsif/else binding span must cover the whole block")
+      end
+    end
+    case Err(_) => t.Fatal("the block fixture must lower before spans are checked")
+  end
+end
+
+func loweredFunctionHasSwitchBody(result: Result[ast2.File, String], caseCount: Int) -> Bool
+  switch result
+    case Ok(file) then
+      switch file.Decls.Get(0)
+        case Some(decl) then
+          switch decl
+            case FuncDecl(_, _, _, _, body, _) => loweredBlockHasSwitchWithCases(body, caseCount)
+            case _ => false
+          end
+        end
+        case None => false
+      end
+    end
+    case Err(_) => false
+  end
+end
+
+func loweredBlockHasSwitchWithCases(body: ast2.Expr, caseCount: Int) -> Bool
+  switch body.Kind
+    case BlockExpr(statements) then
+      switch statements.Get(0)
+        case Some(statement) then
+          switch statement
+            case ExprStmt(inner) then
+              switch inner.Kind
+                case SwitchExpr(_, cases, _) => cases.Len() == caseCount
+                case _ => false
+              end
+            end
+            case _ => false
+          end
+        end
+        case None => false
+      end
+    end
+    case _ => false
+  end
+end
+
+func loweredDeclBodySpanIs(file: ast2.File, index: Int, startLine: Int, startColumn: Int, endLine: Int, endColumn: Int) -> Bool
+  switch file.Decls.Get(index)
+    case Some(decl) then
+      switch decl
+        case FuncDecl(_, _, _, _, body, _) => body.Span.Start.Line == startLine && body.Span.Start.Column == startColumn && body.Span.End.Line == endLine && body.Span.End.Column == endColumn
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+# statementSource is the shared declaration-body fixture for task 3.9.  It keeps
+# one function whose body owns one statement per non-expression alternative, a
+# bare-return function, and a letrec function so the CST and lowering assertions
+# can address each form by declaration and statement index.
+func statementSource() -> String
+  "func f()\n  let a = 1\n  var b = 2\n  let (c, d) = pair\n  a = 3\n  return 4\n  break\n  continue\nend\nfunc g()\n  return\nend\nfunc h()\n  letrec\n    g: Int = 1\n  end\n  g\nend\n"
+end
+
+func TestStatementCstOwnsTypedNodes(t: Ref[testing.T]) -> ()
+  let source = statementSource()
+  let tree = ParseSyntaxAt("statements.mygo", source)
+  let root = tree.Root.value()
+  if !greenNodeHasKind(root, GreenNodeKind.LetStatement) || !greenNodeHasKind(root, GreenNodeKind.VarStatement) || !greenNodeHasKind(root, GreenNodeKind.TupleLetStatement) || !greenNodeHasKind(root, GreenNodeKind.AssignStatement) || !greenNodeHasKind(root, GreenNodeKind.ReturnStatement) || !greenNodeHasKind(root, GreenNodeKind.BreakStatement) || !greenNodeHasKind(root, GreenNodeKind.ContinueStatement) || !greenNodeHasKind(root, GreenNodeKind.LetRecStatement) || !greenNodeHasKind(root, GreenNodeKind.LetRecBinding) then
+    t.Fatal("declaration bodies must type let/var/tuple-let/assign/return/break/continue/letrec statements")
+  end
+  if greenNodeText(root) != source then
+    t.Fatal("statement splitting must retain every source byte")
+  end
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("well-formed declaration bodies must parse without diagnostics")
+  end
+end
+
+func TestStatementCstKeepsRanges(t: Ref[testing.T]) -> ()
+  let tree = ParseSyntaxAt("statements.mygo", statementSource())
+  let root = tree.Root.value()
+  switch greenNodeFindKind(root, GreenNodeKind.AssignStatement)
+    case Some(assign) => if greenNodeText(assign) != "a = 3" then
+      t.Fatal("an assignment statement node must cover exactly its own source range")
+    end
+    case None => t.Fatal("the statement fixture must own an assignment node")
+  end
+  switch greenNodeFindKind(root, GreenNodeKind.LetRecBinding)
+    case Some(binding) => if greenNodeText(binding) != "g: Int = 1" then
+      t.Fatal("a letrec binding node must cover exactly its own source range")
+    end
+    case None => t.Fatal("the statement fixture must own a letrec binding node")
+  end
+end
+
+func greenNodeFindKind(node: GreenNode, kind: GreenNodeKind) -> Option[GreenNode]
+  if node.Kind == kind then
+    Some(node)
+  else
+    greenNodeFindKindIn(node, kind, 0)
+  end
+end
+
+func greenNodeFindKindIn(node: GreenNode, kind: GreenNodeKind, index: Int) -> Option[GreenNode]
+  if index >= node.Children.Len() then None else
+    switch greenElementNode(greenElementAt(node.Children, index))
+      case Some(child) then
+        switch greenNodeFindKind(child.value(), kind)
+          case Some(found) => Some(found)
+          case None => greenNodeFindKindIn(node, kind, index + 1)
+        end
+      end
+      case None => greenNodeFindKindIn(node, kind, index + 1)
+    end
+  end
+end
+
+# TestLowerSyntaxLowersStatementForms checks that every statement alternative a
+# declaration body can own lowers through the same Syntax Tree path.
+func TestLowerSyntaxLowersStatementForms(t: Ref[testing.T]) -> ()
+  let result = LowerSyntax(ParseSyntaxAt("statements.mygo", statementSource()))
+  switch result
+    case Err(message) => t.Fatalf("declaration-body statements must lower: %s", message)
+    case Ok(file) then
+      if !loweredStatementsAre(file, 0, "LetStmt,VarStmt,TupleLetStmt,AssignStmt,ReturnWithStmt,BreakStmt,ContinueStmt") then
+        t.Fatal("a function body must lower one ast2 statement per source statement")
+      end
+      if !loweredStatementsAre(file, 1, "ReturnStmt") then
+        t.Fatal("a bare return must lower to ReturnStmt without a value")
+      end
+      if !loweredStatementsAre(file, 2, "LetRecStmt,ExprStmt") then
+        t.Fatal("a letrec block must lower to LetRecStmt followed by its trailing statement")
+      end
+    end
+  end
+end
+
+# TestLowerSyntaxKeepsStatementOperands pins the lowered operands of each
+# statement form: binding names and values, tuple pattern slots, assignment
+# target/value, return value, and the letrec binding name.
+func TestLowerSyntaxKeepsStatementOperands(t: Ref[testing.T]) -> ()
+  let result = LowerSyntax(ParseSyntaxAt("statements.mygo", statementSource()))
+  switch result
+    case Err(message) => t.Fatalf("statement operands must lower: %s", message)
+    case Ok(file) then
+      if !loweredLetBindingIs(loweredStmtAt(file, 0, 0), "a", "1") then
+        t.Fatal("a let statement must keep its binding name and value")
+      end
+      if !loweredVarBindingIs(loweredStmtAt(file, 0, 1), "b", "2") then
+        t.Fatal("a var statement must keep its binding name and value")
+      end
+      if !loweredTupleLetIs(loweredStmtAt(file, 0, 2), "c", "d") then
+        t.Fatal("a tuple binding statement must keep both destructured names")
+      end
+      if !loweredAssignIs(loweredStmtAt(file, 0, 3), "a", "3") then
+        t.Fatal("an assignment statement must keep its target and value")
+      end
+      if !loweredReturnValueIs(loweredStmtAt(file, 0, 4), "4") then
+        t.Fatal("a valued return must keep its expression")
+      end
+      if !loweredLetRecIs(loweredStmtAt(file, 2, 0), "g") then
+        t.Fatal("a letrec statement must keep its binding name")
+      end
+    end
+  end
+end
+
+# TestLowerSyntaxLowersImplMethodBody checks that an implementation member body
+# lowers its statements through the same path as a free function body.
+func TestLowerSyntaxLowersImplMethodBody(t: Ref[testing.T]) -> ()
+  let source = "struct S\n  x: Int\nend\nimpl S\n  func m()\n    a\n    return 2\n  end\nend\n"
+  let result = LowerSyntax(ParseSyntaxAt("impl-body.mygo", source))
+  switch result
+    case Err(message) => t.Fatalf("diagnostic-free impl method bodies must lower: %s", message)
+    case Ok(file) then
+      if !implMethodBodyStatementsAre(file, 1, 0, "ExprStmt,ReturnWithStmt") then
+        t.Fatal("an impl method body must lower its statements through the same Syntax Tree path")
+      end
+    end
+  end
+end
+
+# TestLowerSyntaxLowersGenericBodyAndConstraints checks that generic parameters,
+# a using clause, and the function body all lower from the same declaration.
+func TestLowerSyntaxLowersGenericBodyAndConstraints(t: Ref[testing.T]) -> ()
+  let source = "func id[T](x: T) -> T using Show => x\n"
+  let result = LowerSyntax(ParseSyntaxAt("generic-body.mygo", source))
+  switch result
+    case Err(message) => t.Fatalf("generic declarations with constraints must lower: %s", message)
+    case Ok(file) then
+      if syntaxLowerDeclCount(result) != 1 then
+        t.Fatal("the generic fixture must lower exactly one declaration")
+      end
+      if !genericDeclHasBodyAndConstraint(file, "id", 1, 1) then
+        t.Fatal("a generic declaration must keep its type parameters, constraint, and body")
+      end
+    end
+  end
+end
+
+func genericDeclHasBodyAndConstraint(file: ast2.File, name: String, typeParams: Int, constraints: Int) -> Bool
+  switch file.Decls.Get(0)
+    case Some(decl) then
+      switch decl
+        case FuncDecl(actualName, actualParams, _, _, body, actualConstraints) => actualName == name && actualParams.Len() == typeParams && actualConstraints.Len() == constraints && loweredExprIsIdent(Some(body), "x")
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredFuncStatements(file: ast2.File, index: Int) -> Option[Slice[ast2.Stmt]]
+  switch file.Decls.Get(index)
+    case Some(decl) then
+      switch decl
+        case FuncDecl(_, _, _, _, body, _) => loweredBlockStatements(body)
+        case _ => None
+      end
+    end
+    case None => None
+  end
+end
+
+func loweredBlockStatements(body: ast2.Expr) -> Option[Slice[ast2.Stmt]]
+  switch body.Kind
+    case BlockExpr(statements) => Some(statements)
+    case _ => None
+  end
+end
+
+func loweredStatementsAre(file: ast2.File, index: Int, expected: String) -> Bool
+  switch loweredFuncStatements(file, index)
+    case Some(statements) => loweredStmtNames(statements, 0, "") == expected
+    case None => false
+  end
+end
+
+func loweredStmtNames(statements: Slice[ast2.Stmt], index: Int, out: String) -> String
+  if index >= statements.Len() then
+    out
+  else
+    loweredStmtNamesStep(statements, index, out, statements.Get(index))
+  end
+end
+
+func loweredStmtNamesStep(statements: Slice[ast2.Stmt], index: Int, out: String, item: Option[ast2.Stmt]) -> String
+  switch item
+    case Some(statement) => loweredStmtNames(statements, index + 1, loweredStmtNameJoin(out, loweredStmtName(statement), index))
+    case None => out
+  end
+end
+
+func loweredStmtNameJoin(out: String, name: String, index: Int) -> String
+  if index == 0 then
+    out + name
+  else
+    out + "," + name
+  end
+end
+
+func loweredStmtName(statement: ast2.Stmt) -> String
+  switch statement
+    case ExprStmt(_) => "ExprStmt"
+    case LetStmt(_) => "LetStmt"
+    case LetRecStmt(_) => "LetRecStmt"
+    case TupleLetStmt(_, _) => "TupleLetStmt"
+    case VarStmt(_) => "VarStmt"
+    case WhileStmt(_, _) => "WhileStmt"
+    case AssignStmt(_, _) => "AssignStmt"
+    case ReturnStmt => "ReturnStmt"
+    case ReturnWithStmt(_) => "ReturnWithStmt"
+    case BreakStmt(_) => "BreakStmt"
+    case ContinueStmt(_) => "ContinueStmt"
+  end
+end
+
+func loweredStmtAt(file: ast2.File, decl: Int, index: Int) -> Option[ast2.Stmt]
+  switch loweredFuncStatements(file, decl)
+    case Some(statements) => statements.Get(index)
+    case None => None
+  end
+end
+
+func loweredLetBindingIs(statement: Option[ast2.Stmt], name: String, value: String) -> Bool
+  switch statement
+    case Some(item) then
+      switch item
+        case LetStmt(bind) => bind.Name == name && loweredExprIsNumber(Some(bind.Value), value)
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredVarBindingIs(statement: Option[ast2.Stmt], name: String, value: String) -> Bool
+  switch statement
+    case Some(item) then
+      switch item
+        case VarStmt(bind) => bind.Name == name && loweredExprIsNumber(Some(bind.Value), value)
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredTupleLetIs(statement: Option[ast2.Stmt], left: String, right: String) -> Bool
+  switch statement
+    case Some(item) then
+      switch item
+        case TupleLetStmt(pattern, _) => tuplePatternNamesAre(pattern, left, right)
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func tuplePatternNamesAre(pattern: ast2.Pattern, left: String, right: String) -> Bool
+  switch pattern
+    case TuplePattern(items) => patternBindNameAt(items, 0, left) && patternBindNameAt(items, 1, right)
+    case _ => false
+  end
+end
+
+func patternBindNameAt(items: Slice[ast2.Pattern], index: Int, name: String) -> Bool
+  switch items.Get(index)
+    case Some(pattern) then
+      switch pattern
+        case BindPattern(actual) => actual == name
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredAssignIs(statement: Option[ast2.Stmt], target: String, value: String) -> Bool
+  switch statement
+    case Some(item) then
+      switch item
+        case AssignStmt(left, right) => loweredExprIsIdent(Some(left), target) && loweredExprIsNumber(Some(right), value)
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredReturnValueIs(statement: Option[ast2.Stmt], value: String) -> Bool
+  switch statement
+    case Some(item) then
+      switch item
+        case ReturnWithStmt(inner) => loweredExprIsNumber(Some(inner), value)
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredLetRecIs(statement: Option[ast2.Stmt], name: String) -> Bool
+  switch statement
+    case Some(item) then
+      switch item
+        case LetRecStmt(bindings) => letRecBindNameAt(bindings, 0, name)
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func letRecBindNameAt(bindings: Slice[ast2.LetRecBind], index: Int, name: String) -> Bool
+  switch bindings.Get(index)
+    case Some(binding) => binding.Name == name
+    case None => false
+  end
+end
+
+func implMethodBodyStatementsAre(file: ast2.File, declIndex: Int, methodIndex: Int, expected: String) -> Bool
+  switch file.Decls.Get(declIndex)
+    case Some(decl) then
+      switch decl
+        case ImplDecl(_, _, _, methods) => implMethodStatementsAre(methods, methodIndex, expected)
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func implMethodStatementsAre(methods: Slice[ast2.ImplMethod], methodIndex: Int, expected: String) -> Bool
+  switch methods.Get(methodIndex)
+    case Some(method) then
+      switch loweredBlockStatements(method.Body)
+        case Some(statements) => loweredStmtNames(statements, 0, "") == expected
+        case None => false
+      end
+    end
+    case None => false
+  end
+end
+
+# TestSupportedFixturesLowerThroughSyntaxPath runs every supported declaration,
+# expression, type, and pattern fixture through the same CST-to-ast2 path and
+# requires each one to lower without an error or a legacy fallback.
+func TestSupportedFixturesLowerThroughSyntaxPath(t: Ref[testing.T]) -> ()
+  let declarations = "package sample\nimport f \"a/b/fmt\"\nlet n = 1\nvar m = 2\ntype Alias = Int\ntype Nominal Int\nstruct S\n  x: Int\nend\nenum E\n  A\n  B(Int)\nend\ninterface I\n  func g() -> Int\nend\nimpl S\n  func h()\n    a\n  end\nend\n"
+  fixtureLowers("declarations", declarations, t)
+  fixtureLowers("atoms", atomExpressionSource(), t)
+  fixtureLowers("operators", operatorExpressionSource(), t)
+  fixtureLowers("delimited", delimitedExpressionSource(), t)
+  fixtureLowers("blocks", blockExpressionSource(), t)
+  fixtureLowers("statements", statementSource(), t)
+  fixtureLowers("types", "package sample\ntype T1 = (Int, String)\ntype T2 = ()\ntype T3 = Slice[Map[String, Slice[Int]]]\ntype T4 = func(Int, String) -> Slice[Bool]\nfunc f(g: func(Int) -> Bool) -> Bool => g\n", t)
+  fixtureLowers("patterns", "func f()\n  let (first, _) = pair\n  switch item\n    case Some(x) => x\n    case _ => 0\n  end\nend\n", t)
+end
+
+func fixtureLowers(name: String, source: String, t: Ref[testing.T]) -> ()
+  let tree = ParseSyntaxAt(name + ".mygo", source)
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatalf("fixture %s must parse without diagnostics", name)
+  end
+  switch LowerSyntax(tree)
+    case Ok(file) then
+      if file.Decls.Len() == 0 then
+        t.Fatalf("fixture %s must lower at least one declaration", name)
+      end
+    end
+    case Err(message) => t.Fatalf("fixture %s must lower: %s", name, message)
+  end
+end
+
+# TestBranchBodyAssignmentsLowerAsAssignments checks the root-cause-B fix: an
+# assignment nested inside a then/else/loop body is still raw `=` leaves when
+# the body wrapper runs, so the block pass must synthesize an AssignStatement
+# from the top-level `=` rather than leaving the run as raw leaves.
+func TestBranchBodyAssignmentsLowerAsAssignments(t: Ref[testing.T]) -> ()
+  let source = "func f(state: State) -> Bool\n  var i: Int = state.Index\n  while i >= 0\n    if ready then\n      i = i - 1\n    else\n      i = -1\n    end\n  end\n  i > 0\nend\n"
+  let tree = buildDelimitedSyntax("branch-assign.mygo", source)
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("a well-formed branch body must parse without diagnostics")
+  end
+  if greenNodeText(tree.Root.value()) != source then
+    t.Fatal("synthesizing a branch-body assignment must retain every source byte")
+  end
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("branch-body assignments must lower: %s", message)
+    case Ok(file) then
+      if !loweredNestedAssignmentsAre(file) then
+        t.Fatal("assignments inside then/else bodies must lower to AssignStmt nodes")
+      end
+    end
+  end
+end
+
+# loweredNestedAssignmentsAre walks the while loop and both if branches of the
+# branch-assignment fixture and requires an assignment statement in each.
+func loweredNestedAssignmentsAre(file: ast2.File) -> Bool
+  switch loweredFuncStatements(file, 0)
+    case Some(statements) then
+      switch statements.Get(1)
+        case Some(loop) then
+          switch loop
+            case WhileStmt(_, body) => loweredBlockHasIfAssignments(body)
+            case _ => false
+          end
+        end
+        case None => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredBlockHasIfAssignments(body: ast2.Expr) -> Bool
+  switch body.Kind
+    case BlockExpr(statements) then
+      switch statements.Get(0)
+        case Some(statement) then
+          switch statement
+            case ExprStmt(inner) => loweredIfBranchesAssign(inner)
+            case _ => false
+          end
+        end
+        case None => false
+      end
+    end
+    case _ => false
+  end
+end
+
+func loweredIfBranchesAssign(expr: ast2.Expr) -> Bool
+  switch expr.Kind
+    case IfExpr(_, thenBody, elseBody) => loweredBlockIsAssign(thenBody) && loweredBlockIsAssign(elseBody)
+    case _ => false
+  end
+end
+
+func loweredBlockIsAssign(expr: ast2.Expr) -> Bool
+  switch expr.Kind
+    case BlockExpr(statements) then
+      switch statements.Get(0)
+        case Some(first) then
+          switch first
+            case AssignStmt(_, _) => true
+            case _ => false
+          end
+        end
+        case None => false
+      end
+    end
+    case _ => false
+  end
+end
+
+# TestMultiLineBinaryContinuationLowersAsOneStatement checks the root-cause-E
+# fix: a bare body expression whose operator ends a line continues onto the
+# next line instead of being split into two statements at the newline.
+func TestMultiLineBinaryContinuationLowersAsOneStatement(t: Ref[testing.T]) -> ()
+  let source = "func f(a: Bool, b: Bool) -> Bool\n  a &&\n    b\nend\n"
+  let tree = buildDelimitedSyntax("continuation.mygo", source)
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("a continued binary expression must parse without diagnostics")
+  end
+  if greenNodeText(tree.Root.value()) != source then
+    t.Fatal("joining a continued statement must retain every source byte")
+  end
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("a continued binary expression must lower: %s", message)
+    case Ok(file) then
+      if !loweredStatementsAre(file, 0, "ExprStmt") then
+        t.Fatal("a continued `a &&\n b` body must lower as a single expression statement")
+      end
+      if !loweredFuncBodyIsBinaryAnd(file, 0) then
+        t.Fatal("the continued statement must keep its && operator")
+      end
+    end
+  end
+end
+
+func loweredFuncBodyIsBinaryAnd(file: ast2.File, index: Int) -> Bool
+  switch loweredFuncStatements(file, index)
+    case Some(statements) then
+      switch statements.Get(0)
+        case Some(statement) then
+          switch statement
+            case ExprStmt(inner) then
+              switch inner.Kind
+                case BinaryExpr(op, _, _) => op == "&&"
+                case _ => false
+              end
+            end
+            case _ => false
+          end
+        end
+        case None => false
+      end
+    end
+    case None => false
+  end
+end
+
+# TestNestedKeywordBlockInCallArgumentLowersDirectly checks that a keyword
+# block used as a call argument is passed through with its concrete kind rather
+# than being wrapped in a generic Expression node that lowering skips.
+func TestNestedKeywordBlockInCallArgumentLowersDirectly(t: Ref[testing.T]) -> ()
+  let source = "func f(flag: Int) -> Int\n  g(1, switch flag case 9 => 2 case _ => 3 end)\nend\n"
+  let tree = buildDelimitedSyntax("nested-switch-arg.mygo", source)
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("a nested switch argument must parse without diagnostics")
+  end
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("a nested switch argument must lower: %s", message)
+    case Ok(file) then
+      if !loweredCallHasSwitchArgument(file) then
+        t.Fatal("a switch used as a call argument must survive as a SwitchExpr")
+      end
+    end
+  end
+end
+
+func loweredCallHasSwitchArgument(file: ast2.File) -> Bool
+  switch loweredFuncStatements(file, 0)
+    case Some(statements) then
+      switch statements.Get(0)
+        case Some(statement) then
+          switch statement
+            case ExprStmt(inner) => loweredCallArgsContainSwitch(inner)
+            case _ => false
+          end
+        end
+        case None => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredCallArgsContainSwitch(expr: ast2.Expr) -> Bool
+  switch expr.Kind
+    case CallExpr(_, _, args) => loweredAnyArgIsSwitch(args, 0)
+    case _ => false
+  end
+end
+
+func loweredAnyArgIsSwitch(args: Slice[ast2.Expr], index: Int) -> Bool
+  if index >= args.Len() then
+    false
+  else
+    switch args.Get(index)
+      case Some(argument) then
+        switch argument.Kind
+          case SwitchExpr(_, _, _) => true
+          case _ => loweredAnyArgIsSwitch(args, index + 1)
+        end
+      end
+      case None => false
+    end
+  end
+end
+
+# TestEscapedRuneLiteralPatternDecodes checks the root-cause-C fix: a rune
+# pattern with a backslash escape lowers to the character it denotes rather
+# than reporting an unsupported pattern.
+func TestEscapedRuneLiteralPatternDecodes(t: Ref[testing.T]) -> ()
+  let source = "func f(r: Rune) -> Int\n  switch r\n    case '\\n' => 1\n    case '\\\\' => 2\n    case _ => 0\n  end\nend\n"
+  let tree = buildDelimitedSyntax("rune-pattern.mygo", source)
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("escaped rune patterns must parse without diagnostics")
+  end
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("escaped rune literal patterns must lower: %s", message)
+    case Ok(file) then
+      if !loweredSwitchRunePatternsAre(file) then
+        t.Fatal("escaped rune patterns must decode to their control and backslash runes")
+      end
+    end
+  end
+end
+
+func loweredSwitchRunePatternsAre(file: ast2.File) -> Bool
+  switch file.Decls.Get(0)
+    case Some(decl) then
+      switch decl
+        case FuncDecl(_, _, _, _, body, _) => loweredBlockSwitchPatternsAre(body)
+        case _ => false
+      end
+    end
+    case None => false
+  end
+end
+
+func loweredBlockSwitchPatternsAre(body: ast2.Expr) -> Bool
+  switch body.Kind
+    case BlockExpr(statements) then
+      switch statements.Get(0)
+        case Some(statement) then
+          switch statement
+            case ExprStmt(inner) then
+              switch inner.Kind
+                case SwitchExpr(_, cases, _) => switchCaseRunePatternsAre(cases, 0)
+                case _ => false
+              end
+            end
+            case _ => false
+          end
+        end
+        case None => false
+      end
+    end
+    case _ => false
+  end
+end
+
+func switchCaseRunePatternsAre(cases: Slice[ast2.SwitchCase], index: Int) -> Bool
+  if index >= cases.Len() then
+    true
+  else
+    switch cases.Get(index)
+      case Some(item) then
+        switch item.Pattern
+          case LiteralPattern("rune", "\n") => switchCaseRunePatternsAre(cases, index + 1)
+          case LiteralPattern("rune", "\\") => switchCaseRunePatternsAre(cases, index + 1)
+          case WildcardPattern => switchCaseRunePatternsAre(cases, index + 1)
+          case _ => false
+        end
+      end
+      case None => false
+    end
+  end
+end

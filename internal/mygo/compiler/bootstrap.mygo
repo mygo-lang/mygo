@@ -837,13 +837,25 @@ func bootstrapCollectMyGoPkgInfos(workspaceRoot: String, fromDir: String, import
     switch resolved
       case Err(_) => bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
       case Ok(depDir) =>
-        switch state.SourcesCache.Get(depDir)
-          case Some(inputs) =>
-            let info = typeinference2.MyGoPackageInfo { Alias: imp.Alias, Path: imp.Path, Decls: bootstrapFlattenSources(inputs.Sources, 0, [] as Slice[ast2.Decl]) }
-            bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out.Append(info))
-          case None => bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
+        if bootstrapHasMyGoPackagePath(out, imp.Path, 0) then
+          bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
+        else
+          switch state.SourcesCache.Get(depDir)
+            case Some(inputs) =>
+              let info = typeinference2.MyGoPackageInfo { Alias: imp.Alias, Path: imp.Path, Decls: bootstrapFlattenSources(inputs.Sources, 0, [] as Slice[ast2.Decl]) }
+              let withDependencies = bootstrapCollectMyGoPkgInfos(workspaceRoot, depDir, bootstrapImportsFromSources(inputs.Sources), 0, state, out.Append(info))
+              bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, withDependencies)
+            case None => bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
+          end
         end
     end
+  end
+end
+
+func bootstrapHasMyGoPackagePath(packages: Slice[typeinference2.MyGoPackageInfo], path: String, index: Int) -> Bool
+  if index >= packages.Len() then false else
+    let pkg = packages.Get(index).UnwrapOr(typeinference2.MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
+    pkg.Path == path || bootstrapHasMyGoPackagePath(packages, path, index + 1)
   end
 end
 

@@ -1063,6 +1063,58 @@ func myGoPackageAliasForPath(packages: Slice[MyGoPackageInfo], path: String, ind
   end
 end
 
+# A field type in an imported MyGO package may refer to a dependency imported
+# by that package rather than by the current package. Recover the source alias
+# from the package declarations so selectors use the same key as the projected
+# struct-field symbols.
+func myGoPackageGoAliasForPath(packages: Slice[MyGoPackageInfo], path: String, index: Int) -> String
+  if index >= packages.Len() then "" else
+    let pkg = packages.Get(index).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
+    let alias = myGoPackageGoAliasInDecls(pkg.Decls, path, 0)
+    if alias != "" then alias else myGoPackageGoAliasForPath(packages, path, index + 1) end
+  end
+end
+
+func myGoPackageGoAliasInDecls(decls: Slice[ast2.Decl], path: String, index: Int) -> String
+  if index >= decls.Len() then
+    ""
+  else
+    let decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    switch decl
+      case ImportDecl(alias, importedPath) then
+        if importedPath == path => alias else myGoPackageGoAliasInDecls(decls, path, index + 1)
+      end
+      case _ => myGoPackageGoAliasInDecls(decls, path, index + 1)
+    end
+  end
+end
+
+func myGoPackageImportPathForAlias(packages: Slice[MyGoPackageInfo], alias: String, index: Int) -> String
+  if index >= packages.Len() then "" else
+    let pkg = packages.Get(index).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
+    let path = myGoPackageImportPathInDecls(pkg.Decls, alias, 0)
+    if path != "" then path else myGoPackageImportPathForAlias(packages, alias, index + 1) end
+  end
+end
+
+func myGoPackageImportPathInDecls(decls: Slice[ast2.Decl], alias: String, index: Int) -> String
+  if index >= decls.Len() then
+    ""
+  else
+    let decl = decls.Get(index).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    switch decl
+      case ImportDecl(importAlias, path) then
+        if importAlias == alias && !strings.HasPrefix(path, "go:") then
+          path
+        else
+          myGoPackageImportPathInDecls(decls, alias, index + 1)
+        end
+      end
+      case _ => myGoPackageImportPathInDecls(decls, alias, index + 1)
+    end
+  end
+end
+
 func myGoStructFieldSymbols(typeName: String, fields: Slice[ast2.Field], typeParams: Slice[String], path: String, typeNames: Slice[String], env: Env, state: InferState, out: Slice[Symbol]) -> Slice[Symbol]
   if fields.Len() == 0 then out else
     let field = fields.Get(0).UnwrapOr(ast2.Field { Name: "", Type: ast2.TypeExpr.UnitType, Tag: None })
@@ -1429,14 +1481,11 @@ func exportMyGoPackageEnumVariantEntries(alias: String, path: String, enumName: 
       ast2.MonoType.TFunc(wrapPkgTypesInSlice(typeArgsFromASTInEnvWithParamsList(variant.Fields, typeParams, localEnv, NewInferState()), path, typeNames), Ref.new(enumType))
     end
     let scheme = Scheme { Bound: typeParamIDs(typeParams, 1), Predicates: [], Body: body }
-    # Variant patterns in the importer (`case LetDecl(bind)`) resolve
-    # constructors by their bare spelling via variantSchemeForTarget, so the
-    # bare name must be exported alongside the qualified selector member
-    # `alias.Enum.Variant`.  Both keys share the same qualified scheme; the
-    # switch target type still disambiguates same-named variants from
-    # different packages.
+    # Export only the qualified selector member. Registering the bare variant
+    # name would pollute the importer's shared environment and could shadow a
+    # type or constructor from another package (for example Error).
     let withQualified = out.Append(EnvEntry { Name: alias + "." + enumName + "." + variant.Name, Scheme: scheme })
-    exportMyGoPackageEnumVariantEntries(alias, path, enumName, typeParams, common2.SliceDrop(variants, 1), typeNames, localEnv, withQualified.Append(EnvEntry { Name: variant.Name, Scheme: scheme }))
+    exportMyGoPackageEnumVariantEntries(alias, path, enumName, typeParams, common2.SliceDrop(variants, 1), typeNames, localEnv, withQualified)
   end
 end
 
@@ -1521,9 +1570,7 @@ func seedMyGoPackageDecls(pkg: MyGoPackageInfo, index: Int, env: Env, packages: 
   end
 end
 
-# Imported enum constructors are used as bare names in patterns (for example,
-# `case NamedType(name, args)`).  Register them alongside qualified top-level
-# declarations, preserving the imported enum's canonical package identity.
+# Imported enum constructors are registered only as qualified selectors.
 func seedMyGoPackageEnumVariants(pkg: MyGoPackageInfo, variants: Slice[ast2.Variant], enumName: String, typeParams: Slice[String], env: Env) -> Env
   if variants.Len() == 0 then
     env
@@ -1537,7 +1584,8 @@ func seedMyGoPackageEnumVariants(pkg: MyGoPackageInfo, variants: Slice[ast2.Vari
       ast2.MonoType.TFunc(fieldTypes, Ref.new(enumType))
     end
     let scheme = Scheme { Bound: typeParamIDs(typeParams, 1), Predicates: [], Body: constructorType }
-    seedMyGoPackageEnumVariants(pkg, common2.SliceDrop(variants, 1), enumName, typeParams, envPut(env, variant.Name, scheme))
+    let qualifiedName = pkg.Alias + "." + enumName + "." + variant.Name
+    seedMyGoPackageEnumVariants(pkg, common2.SliceDrop(variants, 1), enumName, typeParams, envPut(env, qualifiedName, scheme))
   end
 end
 

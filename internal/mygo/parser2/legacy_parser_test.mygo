@@ -1,0 +1,1781 @@
+package parser2
+
+import strings "go:strings"
+import ps "github.com/mygo-lang/mygo/lib/text/parsec"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+# Legacy semantic-parser oracle (task 3.12).
+#
+# Everything below is the pre-cutover parsec combinator grammar.  It is
+# retained ONLY as the differential-test oracle for valid sources
+# (differential_test.go) and for the focused combinator regressions in
+# parser_test.go; no production parse path calls into it.  This is a
+# `_test.mygo` source, so its generated Go is a `_test.go` file and the legacy
+# grammar is excluded from the production parser2 build.  It can be deleted
+# once the formatter migration (section 4) removes the last oracle consumer.
+#
+# The production entry points `ParseFile`/`ParseFileAt`, plus the shared
+# `emptySpan`, `isKeyword`, `defaultImportAlias`, and `syntaxDiagnosticError`
+# helpers, live in parser.mygo.
+
+struct Spanned[A]
+  Value: A
+  Span: ast2.SourceSpan
+end
+# Legacy spanned combinators (task 3.12)
+#
+# These wrap the legacy grammar entry points (typeExpr/expr/pattern/funcSig/
+# switchCase) in a Span derived from the parser state.  They are used only by
+# the parser_test.go combinator regressions; move them here so the production
+# build no longer carries them.
+func spannedTypeExpr() -> ps.Parser[Spanned[ast2.TypeExpr]]
+  func(state: ps.State) -> ps.Reply[Spanned[ast2.TypeExpr]]
+    let reply = typeExpr()(state)
+    if reply.Ok then
+      ps.Reply[Spanned[ast2.TypeExpr]] { Ok: true, Consumed: reply.Consumed, Value: Spanned[ast2.TypeExpr] { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
+    else
+      ps.Reply[Spanned[ast2.TypeExpr]] { Ok: false, Consumed: reply.Consumed, Value: Spanned[ast2.TypeExpr] { Value: ast2.TypeExpr.UnitType, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
+    end
+  end
+end
+
+func spannedExpr() -> ps.Parser[Spanned[ast2.Expr]]
+  func(state: ps.State) -> ps.Reply[Spanned[ast2.Expr]]
+    let reply = expr()(state)
+    if reply.Ok then
+      ps.Reply[Spanned[ast2.Expr]] { Ok: true, Consumed: reply.Consumed, Value: Spanned[ast2.Expr] { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
+    else
+      ps.Reply[Spanned[ast2.Expr]] { Ok: false, Consumed: reply.Consumed, Value: Spanned[ast2.Expr] { Value: ast2.EmptyExpr(), Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
+    end
+  end
+end
+
+func spannedLiteral() -> ps.Parser[Spanned[String]]
+  func(state: ps.State) -> ps.Reply[Spanned[String]]
+    let reply = ps.PChoice([number(), stringLiteral(), runeLiteral()])(state)
+    if reply.Ok then
+      ps.Reply[Spanned[String]] { Ok: true, Consumed: reply.Consumed, Value: Spanned[String] { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
+    else
+      ps.Reply[Spanned[String]] { Ok: false, Consumed: reply.Consumed, Value: Spanned[String] { Value: "", Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
+    end
+  end
+end
+
+func spannedPattern() -> ps.Parser[Spanned[ast2.Pattern]]
+  func(state: ps.State) -> ps.Reply[Spanned[ast2.Pattern]]
+    let reply = pattern()(state)
+    if reply.Ok then
+      ps.Reply[Spanned[ast2.Pattern]] { Ok: true, Consumed: reply.Consumed, Value: Spanned[ast2.Pattern] { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
+    else
+      ps.Reply[Spanned[ast2.Pattern]] { Ok: false, Consumed: reply.Consumed, Value: Spanned[ast2.Pattern] { Value: ast2.Pattern.WildcardPattern, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
+    end
+  end
+end
+
+func spannedFuncSig() -> ps.Parser[Spanned[ast2.FuncSig]]
+  func(state: ps.State) -> ps.Reply[Spanned[ast2.FuncSig]]
+    let reply = funcSig()(state)
+    if reply.Ok then
+      ps.Reply[Spanned[ast2.FuncSig]] { Ok: true, Consumed: reply.Consumed, Value: Spanned[ast2.FuncSig] { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
+    else
+      ps.Reply[Spanned[ast2.FuncSig]] { Ok: false, Consumed: reply.Consumed, Value: Spanned[ast2.FuncSig] { Value: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }, Name: "", TypeParams: [], Params: [], Ret: None, RetSpan: stateSpan(state, reply.State), Using: [] }, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
+    end
+  end
+end
+
+func spannedSwitchCase() -> ps.Parser[Spanned[ast2.SwitchCase]]
+  func(state: ps.State) -> ps.Reply[Spanned[ast2.SwitchCase]]
+    let reply = switchCase()(state)
+    if reply.Ok then
+      ps.Reply[Spanned[ast2.SwitchCase]] { Ok: true, Consumed: reply.Consumed, Value: Spanned[ast2.SwitchCase] { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
+    else
+      ps.Reply[Spanned[ast2.SwitchCase]] { Ok: false, Consumed: reply.Consumed, Value: Spanned[ast2.SwitchCase] { Value: ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, PatternSpan: stateSpan(state, reply.State), Body: ast2.EmptyExpr(), BodySpan: stateSpan(state, reply.State), Span: stateSpan(state, reply.State) }, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
+    end
+  end
+end
+
+func stateSpan(start: ps.State, finish: ps.State) -> ast2.SourceSpan
+  ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: start.Position.Line, Column: start.Position.Column }, End: ast2.SourcePos { SourceName: "", Line: finish.Position.Line, Column: finish.Position.Column } }
+end
+
+
+func unwrapTypeOption(value: Option[Spanned[ast2.TypeExpr]]) -> Option[ast2.TypeExpr]
+  value.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr item.Value end)
+end
+
+func typeOptionSpan(value: Option[Spanned[ast2.TypeExpr]]) -> ast2.SourceSpan
+  value.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan item.Span end).UnwrapOr(emptySpan())
+end
+
+enum InlineGoBinding
+  ValueBinding(String, ast2.Expr)
+  TypeBinding(String, ast2.TypeExpr)
+end
+
+struct InlineGoParts
+  Code: String
+  Values: Slice[ast2.GoOperand]
+  Types: Slice[ast2.GoTypeOperand]
+end
+
+# Parser combinators are immutable.  Build the hot grammar graphs once at
+# package initialization instead of allocating their closure trees for each
+# file, declaration, type, and expression parsed.
+let fileParserCache: ps.Parser[ast2.File] = buildFileParser()
+let declParserCache: ps.Parser[ast2.Decl] = buildDeclParser()
+let typeExprParserCache: ps.Parser[ast2.TypeExpr] = buildTypeExprParser()
+let exprParserCache: ps.Parser[ast2.Expr] = buildExprParser()
+# parseFileLegacyAt is the pre-cutover combinator parser.  It is kept only as
+# the differential-test oracle for valid sources and is no longer called from
+# any production parse path.
+func parseFileLegacyAt(sourceName: String, input: String) -> Result[ast2.File, String]
+  let r = ps.ParseInput(fileParser(), input)
+  if r.Ok then
+    let file = r.Value
+    let positions = file.DeclPositions.Map(func(pos: ast2.SourcePos) -> ast2.SourcePos
+      ast2.SourcePos { SourceName: sourceName, Line: pos.Line, Column: pos.Column }
+    end)
+    let decls = file.Decls.Map(func(decl: ast2.Decl) -> ast2.Decl annotateDeclSource(decl, sourceName) end)
+    Ok(ast2.File { PackageName: file.PackageName, Decls: decls, SourceName: sourceName, Line: 1, Column: 1, DeclPositions: positions, Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: sourceName, Line: 1, Column: 1 }, End: sourcePos(r.State) } })
+  else
+    Err(formatError(sourceName, r.Error, r.State.Position))
+  end
+end
+
+func sourcePos(state: ps.State) -> ast2.SourcePos
+  ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }
+end
+
+func emptyExpr() -> ast2.Expr
+  ast2.EmptyExpr()
+end
+
+func exprWithPos(pos: ast2.SourcePos, kind: ast2.ExprKind) -> ast2.Expr
+  ast2.Expr { ID: 0, Pos: pos, Span: ast2.SourceSpan { Start: pos, End: pos }, Kind: kind, Type: None}
+end
+
+func exprAt(state: ps.State, kind: ast2.ExprKind) -> ast2.Expr
+  exprWithPos(sourcePos(state), kind)
+end
+
+func exprKindOnly(kind: ast2.ExprKind) -> ast2.Expr
+  exprWithPos(ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, kind)
+end
+
+func annotateDeclSource(decl: ast2.Decl, sourceName: String) -> ast2.Decl
+  switch decl
+    case LetDecl(bind) => ast2.Decl.LetDecl(ast2.Bind { Name: bind.Name, Type: bind.Type, TypeSpan: bind.TypeSpan, Value: annotateExprSource(bind.Value, sourceName), Span: bind.Span })
+    case VarDecl(bind) => ast2.Decl.VarDecl(ast2.Bind { Name: bind.Name, Type: bind.Type, TypeSpan: bind.TypeSpan, Value: annotateExprSource(bind.Value, sourceName), Span: bind.Span })
+    case FuncDecl(name, tps, params, ret, body, constraints) =>
+      ast2.Decl.FuncDecl(name, tps, params, ret, annotateExprSource(body, sourceName), constraints)
+    case ImplDecl(tps, target, iface, methods) =>
+      ast2.Decl.ImplDecl(tps, target, iface, methods.Map(func(method: ast2.ImplMethod) -> ast2.ImplMethod
+        let sig = method.Sig
+        ast2.ImplMethod { Pos: ast2.SourcePos { SourceName: sourceName, Line: method.Pos.Line, Column: method.Pos.Column }, Sig: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: sourceName, Line: sig.Pos.Line, Column: sig.Pos.Column }, Name: sig.Name, TypeParams: sig.TypeParams, Params: sig.Params, Ret: sig.Ret, RetSpan: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: sourceName, Line: sig.RetSpan.Start.Line, Column: sig.RetSpan.Start.Column }, End: ast2.SourcePos { SourceName: sourceName, Line: sig.RetSpan.End.Line, Column: sig.RetSpan.End.Column } }, Using: sig.Using }, Body: annotateExprSource(method.Body, sourceName) }
+      end))
+    case _ => decl
+  end
+end
+
+func annotateExprSource(expr: ast2.Expr, sourceName: String) -> ast2.Expr
+  let pos = ast2.SourcePos { SourceName: sourceName, Line: expr.Pos.Line, Column: expr.Pos.Column }
+  let span = ast2.SourceSpan {
+    Start: ast2.SourcePos { SourceName: sourceName, Line: expr.Span.Start.Line, Column: expr.Span.Start.Column },
+    End: ast2.SourcePos { SourceName: sourceName, Line: expr.Span.End.Line, Column: expr.Span.End.Column },
+  }
+  switch expr.Kind
+    case IdentExpr(_) => ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type }
+    case NumberExpr(_) => ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type }
+    case StringExpr(_) => ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type }
+    case RuneExpr(_) => ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type }
+    case BoolExpr(_) => ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type }
+    case UnitExpr => ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: expr.Kind, Type: expr.Type }
+    case TupleExpr(items) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.TupleExpr(items.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: expr.Type }
+    case CallExpr(callee, typeArgs, args) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.CallExpr(annotateExprSource(callee, sourceName), typeArgs, args.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: expr.Type }
+    case FieldExpr(base, field) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.FieldExpr(annotateExprSource(base, sourceName), field), Type: expr.Type }
+    case UnaryExpr(op, inner) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.UnaryExpr(op, annotateExprSource(inner, sourceName)), Type: expr.Type }
+    case BinaryExpr(op, left, right) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.BinaryExpr(op, annotateExprSource(left, sourceName), annotateExprSource(right, sourceName)), Type: expr.Type }
+    case IfExpr(cond, thenExpr, elseExpr) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.IfExpr(annotateExprSource(cond, sourceName), annotateExprSource(thenExpr, sourceName), annotateExprSource(elseExpr, sourceName)), Type: expr.Type }
+    case BlockExpr(stmts) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.BlockExpr(stmts.Map(func(s: ast2.Stmt) -> ast2.Stmt annotateStmtSource(s, sourceName) end)), Type: expr.Type }
+    case SwitchExpr(target, cases, targetType) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.SwitchExpr(annotateExprSource(target, sourceName), cases.Map(func(c: ast2.SwitchCase) -> ast2.SwitchCase ast2.SwitchCase { Pattern: c.Pattern, PatternSpan: c.PatternSpan, Body: annotateExprSource(c.Body, sourceName), BodySpan: c.BodySpan, Span: c.Span } end), targetType), Type: expr.Type }
+    case FuncLitExpr(params, ret, body) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.FuncLitExpr(params, ret, annotateExprSource(body, sourceName)), Type: expr.Type }
+    case SliceLitExpr(items) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.SliceLitExpr(items.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: expr.Type }
+    case TypeAsExpr(value, typ) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.TypeAsExpr(annotateExprSource(value, sourceName), typ), Type: expr.Type }
+    case StructLitExpr(typeName, fields) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.StructLitExpr(typeName, fields.Map(func(f: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: f.Name, Value: annotateExprSource(f.Value, sourceName) } end)), Type: expr.Type }
+    case GenericStructLitExpr(typeName, typeArgs, fields) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.GenericStructLitExpr(typeName, typeArgs, fields.Map(func(f: ast2.StructLitField) -> ast2.StructLitField ast2.StructLitField { Name: f.Name, Value: annotateExprSource(f.Value, sourceName) } end)), Type: expr.Type }
+    case InlineGoExpr(typ, code, operands, typeOperands) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.InlineGoExpr(typ, code, operands.Map(func(o: ast2.GoOperand) -> ast2.GoOperand ast2.GoOperand { Name: o.Name, Value: annotateExprSource(o.Value, sourceName) } end), typeOperands), Type: expr.Type }
+    case MapLitExpr(pairs) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.MapLitExpr(pairs.Map(func(p: (ast2.Expr, ast2.Expr)) -> (ast2.Expr, ast2.Expr) (annotateExprSource(p.F0, sourceName), annotateExprSource(p.F1, sourceName)) end)), Type: expr.Type }
+    case SetLitExpr(items) =>
+      ast2.Expr { ID: expr.ID, Pos: pos, Span: span, Kind: ast2.ExprKind.SetLitExpr(items.Map(func(e: ast2.Expr) -> ast2.Expr annotateExprSource(e, sourceName) end)), Type: expr.Type }
+  end
+end
+
+func annotateStmtSource(stmt: ast2.Stmt, sourceName: String) -> ast2.Stmt
+  switch stmt
+    case ExprStmt(expr) => ast2.Stmt.ExprStmt(annotateExprSource(expr, sourceName))
+    case LetStmt(bind) => ast2.Stmt.LetStmt(ast2.Bind { Name: bind.Name, Type: bind.Type, TypeSpan: bind.TypeSpan, Value: annotateExprSource(bind.Value, sourceName), Span: bind.Span })
+    case LetRecStmt(bindings) => ast2.Stmt.LetRecStmt(bindings.Map(func(b: ast2.LetRecBind) -> ast2.LetRecBind ast2.LetRecBind { Name: b.Name, Type: b.Type, TypeSpan: b.TypeSpan, Value: annotateExprSource(b.Value, sourceName) } end))
+    case TupleLetStmt(pattern, expr) => ast2.Stmt.TupleLetStmt(pattern, annotateExprSource(expr, sourceName))
+    case VarStmt(bind) => ast2.Stmt.VarStmt(ast2.Bind { Name: bind.Name, Type: bind.Type, TypeSpan: bind.TypeSpan, Value: annotateExprSource(bind.Value, sourceName), Span: bind.Span })
+    case WhileStmt(cond, body) => ast2.Stmt.WhileStmt(annotateExprSource(cond, sourceName), annotateExprSource(body, sourceName))
+    case AssignStmt(target, value) => ast2.Stmt.AssignStmt(annotateExprSource(target, sourceName), annotateExprSource(value, sourceName))
+    case ReturnWithStmt(expr) => ast2.Stmt.ReturnWithStmt(annotateExprSource(expr, sourceName))
+    case BreakStmt(pos) => ast2.Stmt.BreakStmt(ast2.SourcePos { SourceName: sourceName, Line: pos.Line, Column: pos.Column })
+    case ContinueStmt(pos) => ast2.Stmt.ContinueStmt(ast2.SourcePos { SourceName: sourceName, Line: pos.Line, Column: pos.Column })
+    case ReturnStmt => stmt
+  end
+end
+
+func fileParser() -> ps.Parser[ast2.File]
+  func(state: ps.State) -> ps.Reply[ast2.File]
+    let reply = fileParserCache(state)
+    if reply.Ok then
+      let value = reply.Value
+      let span = ast2.SourceSpan { Start: sourcePos(state), End: sourcePos(reply.State) }
+      ps.Reply[ast2.File] { Ok: true, Consumed: reply.Consumed, Value: ast2.File { PackageName: value.PackageName, Decls: value.Decls, SourceName: value.SourceName, Line: value.Line, Column: value.Column, DeclPositions: value.DeclPositions, Span: span }, State: reply.State, Error: reply.Error }
+    else reply
+    end
+  end
+end
+
+func buildFileParser() -> ps.Parser[ast2.File]
+  ps.PBind(kw("package"), func(_: String) -> ps.Parser[ast2.File]
+    ps.PBind(identifier(), func(pkg: String) -> ps.Parser[ast2.File]
+      ps.PBind(ps.PMany(positionedDecl()), func(items: Slice[(ast2.Decl, ast2.SourcePos)]) -> ps.Parser[ast2.File]
+        let decls = items.Map(func(item: (ast2.Decl, ast2.SourcePos)) -> ast2.Decl item.F0 end)
+        let positions = items.Map(func(item: (ast2.Decl, ast2.SourcePos)) -> ast2.SourcePos item.F1 end)
+        ps.PThen(trivia(), ps.PThen(ps.PEof(), ps.PPure(ast2.File { PackageName: pkg, Decls: decls, SourceName: "", Line: 1, Column: 1, DeclPositions: positions, Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, End: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 } } })))
+      end)
+    end)
+  end)
+end
+
+func positionedDecl() -> ps.Parser[(ast2.Decl, ast2.SourcePos)]
+  func(state: ps.State) -> ps.Reply[(ast2.Decl, ast2.SourcePos)]
+    let r = decl()(state)
+    if r.Ok then
+      ps.Reply[(ast2.Decl, ast2.SourcePos)] {
+        Ok: true,
+        Consumed: r.Consumed,
+        Value: (r.Value, ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }),
+        State: r.State,
+        Error: r.Error,
+      }
+    else
+      ps.Reply[(ast2.Decl, ast2.SourcePos)] { Ok: false, Consumed: r.Consumed, Value: (ast2.Decl.ImportDecl("", ""), ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }), State: r.State, Error: r.Error }
+    end
+  end
+end
+
+func decl() -> ps.Parser[ast2.Decl]
+  declParserCache
+end
+
+func buildDeclParser() -> ps.Parser[ast2.Decl]
+  ps.PChoice([
+    ps.PAttempt(importDecl()),
+    ps.PAttempt(packageLetDecl()),
+    ps.PAttempt(packageVarDecl()),
+    ps.PAttempt(typeDecl()),
+    ps.PAttempt(structDecl()),
+    ps.PAttempt(enumDecl()),
+    ps.PAttempt(interfaceDecl()),
+    ps.PAttempt(implDecl()),
+    funcDecl(),
+  ])
+end
+
+func packageLetDecl() -> ps.Parser[ast2.Decl]
+  ps.PBind(kw("let"), func(_: String) -> ps.Parser[ast2.Decl]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Decl]
+      ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ: Option[Spanned[ast2.TypeExpr]]) -> ps.Parser[ast2.Decl]
+        ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Decl]
+          ps.PMap(
+            expr(),
+            func(value: ast2.Expr) -> ast2.Decl
+              ast2.Decl.LetDecl(
+                ast2.Bind {
+                  Name: name,
+                  Type: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr
+                    item.Value
+                  end),
+                  TypeSpan: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan
+                    item.Span
+                  end).UnwrapOr(emptySpan()),
+                  Value: value,
+                  Span: value.Span
+                })
+            end,
+          )
+        end)
+      end)
+    end)
+  end)
+end
+
+func packageVarDecl() -> ps.Parser[ast2.Decl]
+  ps.PBind(kw("var"), func(_: String) -> ps.Parser[ast2.Decl]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Decl]
+      ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ: Option[Spanned[ast2.TypeExpr]]) -> ps.Parser[ast2.Decl]
+        ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Decl]
+          ps.PMap(
+            expr(),
+            func(value: ast2.Expr) -> ast2.Decl
+              ast2.Decl.VarDecl(ast2.Bind {
+                Name: name,
+                Type: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr
+                  item.Value
+                end),
+                TypeSpan: typ.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan
+                  item.Span
+                end).UnwrapOr(emptySpan()),
+                Value: value,
+                Span: value.Span,
+              })
+            end,
+          )
+        end)
+      end)
+    end)
+  end)
+end
+
+func typeDecl() -> ps.Parser[ast2.Decl]
+  ps.PBind(kw("type"), func(_: String) -> ps.Parser[ast2.Decl]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Decl]
+      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[ast2.Decl]
+        ps.PChoice([
+          ps.PMap(ps.PThen(sym("="), typeExpr()), func(target: ast2.TypeExpr) -> ast2.Decl ast2.Decl.TypeAliasDecl(name, tps, target) end),
+          ps.PMap(typeExpr(), func(target: ast2.TypeExpr) -> ast2.Decl ast2.Decl.TypeDecl(name, tps, target) end),
+        ])
+      end)
+    end)
+  end)
+end
+
+func importDecl() -> ps.Parser[ast2.Decl]
+  ps.PBind(kw("import"), func(_: String) -> ps.Parser[ast2.Decl]
+    ps.PBind(ps.POptional(importAlias()), func(alias: Option[String]) -> ps.Parser[ast2.Decl]
+      ps.PMap(stringLiteral(), func(path: String) -> ast2.Decl
+        let realAlias = switch alias
+          case Some(a) => a
+          case None => defaultImportAlias(path)
+        end
+        ast2.Decl.ImportDecl(realAlias, path)
+      end)
+    end)
+  end)
+end
+
+func importAlias() -> ps.Parser[String]
+  ps.PChoice([
+    ps.PMap(sym("."), func(_: String) -> String "." end),
+    identifierRaw(),
+  ])
+end
+
+func structDecl() -> ps.Parser[ast2.Decl]
+  ps.PBind(kw("struct"), func(_: String) -> ps.Parser[ast2.Decl]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Decl]
+      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[ast2.Decl]
+        ps.PBind(ps.PMany(fieldDecl()), func(fields: Slice[ast2.Field]) -> ps.Parser[ast2.Decl]
+          ps.PThen(kw("end"), ps.PPure(ast2.Decl.StructDecl(name, tps, fields)))
+        end)
+      end)
+    end)
+  end)
+end
+
+func enumDecl() -> ps.Parser[ast2.Decl]
+  ps.PBind(kw("enum"), func(_: String) -> ps.Parser[ast2.Decl]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Decl]
+      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[ast2.Decl]
+        ps.PBind(ps.PMany(variantDecl()), func(vars: Slice[ast2.Variant]) -> ps.Parser[ast2.Decl]
+          ps.PThen(kw("end"), ps.PPure(ast2.Decl.EnumDecl(name, tps, vars)))
+        end)
+      end)
+    end)
+  end)
+end
+
+func interfaceDecl() -> ps.Parser[ast2.Decl]
+  ps.PBind(kw("interface"), func(_: String) -> ps.Parser[ast2.Decl]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Decl]
+      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[ast2.Decl]
+        ps.PBind(ps.PMany(funcSig()), func(methods: Slice[ast2.FuncSig]) -> ps.Parser[ast2.Decl]
+          ps.PThen(kw("end"), ps.PPure(ast2.Decl.InterfaceDecl(name, tps, methods)))
+        end)
+      end)
+    end)
+  end)
+end
+
+func implDecl() -> ps.Parser[ast2.Decl]
+  ps.PBind(kw("impl"), func(_: String) -> ps.Parser[ast2.Decl]
+    ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[ast2.Decl]
+      ps.PBind(typeExpr(), func(target: ast2.TypeExpr) -> ps.Parser[ast2.Decl]
+        ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), typeExpr()))), func(iface: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Decl]
+          ps.PBind(ps.PMany(implMethod()), func(methods: Slice[ast2.ImplMethod]) -> ps.Parser[ast2.Decl]
+            ps.PThen(kw("end"), ps.PPure(ast2.Decl.ImplDecl(tps, target, iface, methods)))
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func funcDecl() -> ps.Parser[ast2.Decl]
+  ps.PMap(funcSigAndBody(), func(pair: (ast2.FuncSig, ast2.Expr)) -> ast2.Decl
+    let (sig, body) = pair
+    ast2.Decl.FuncDecl(sig.Name, sig.TypeParams, sig.Params, sig.Ret, body, sig.Using)
+  end)
+end
+
+func funcSigAndBody() -> ps.Parser[(ast2.FuncSig, ast2.Expr)]
+  ps.PBind(funcSig(), func(sig: ast2.FuncSig) -> ps.Parser[(ast2.FuncSig, ast2.Expr)]
+    ps.PBind(blockUntilEnd(), func(body: ast2.Expr) -> ps.Parser[(ast2.FuncSig, ast2.Expr)]
+      ps.PThen(kw("end"), ps.PPure((sig, body)))
+    end)
+  end)
+end
+
+func implMethod() -> ps.Parser[ast2.ImplMethod]
+  ps.PMap(funcSigAndBody(), func(pair: (ast2.FuncSig, ast2.Expr)) -> ast2.ImplMethod
+    let (sig, body) = pair
+    ast2.ImplMethod { Pos: sig.Pos, Sig: sig, Body: body }
+  end)
+end
+
+func funcSig() -> ps.Parser[ast2.FuncSig]
+  func(state: ps.State) -> ps.Reply[ast2.FuncSig]
+    let r = funcSigCore()(state)
+    if r.Ok then
+      let sig = r.Value
+      ps.Reply[ast2.FuncSig] { Ok: true, Consumed: r.Consumed, Value: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }, Name: sig.Name, TypeParams: sig.TypeParams, Params: sig.Params, Ret: sig.Ret, RetSpan: sig.RetSpan, Using: sig.Using }, State: r.State, Error: r.Error }
+    else
+      r
+    end
+  end
+end
+
+func funcSigCore() -> ps.Parser[ast2.FuncSig]
+  ps.PBind(kw("func"), func(_: String) -> ps.Parser[ast2.FuncSig]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.FuncSig]
+      ps.PBind(typeParamList(), func(tps: Slice[String]) -> ps.Parser[ast2.FuncSig]
+        ps.PBind(paren(ps.PSepBy(param(), sym(","))), func(params: Slice[ast2.Param]) -> ps.Parser[ast2.FuncSig]
+          ps.PBind(ps.POptional(ps.PThen(sym("->"), spannedTypeExpr())), func(ret: Option[Spanned[ast2.TypeExpr]]) -> ps.Parser[ast2.FuncSig]
+            ps.PMap(usingClause(), func(constraints: Slice[ast2.Constraint]) -> ast2.FuncSig
+              ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, Name: name, TypeParams: tps, Params: params, Ret: ret.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr item.Value end), RetSpan: ret.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan item.Span end).UnwrapOr(ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }), Using: constraints }
+            end)
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func fieldDecl() -> ps.Parser[ast2.Field]
+  func(state: ps.State) -> ps.Reply[ast2.Field]
+    let reply = fieldDeclCore()(state)
+    if reply.Ok then
+      let value = reply.Value
+      ps.Reply[ast2.Field] { Ok: true, Consumed: reply.Consumed, Value: ast2.Field { Name: value.Name, Type: value.Type, TypeSpan: value.TypeSpan, Tag: value.Tag, Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }, End: ast2.SourcePos { SourceName: "", Line: reply.State.Position.Line, Column: reply.State.Position.Column } } }, State: reply.State, Error: reply.Error }
+    else
+      reply
+    end
+  end
+end
+
+func fieldDeclCore() -> ps.Parser[ast2.Field]
+  ps.PChoice([
+    ps.PAttempt(ps.PBind(kw("embed"), func(_: String) -> ps.Parser[ast2.Field]
+      ps.PBind(spannedTypeExpr(), func(typ: Spanned[ast2.TypeExpr]) -> ps.Parser[ast2.Field]
+        ps.PMap(ps.POptional(stringLiteral()), func(tag: Option[String]) -> ast2.Field
+          ast2.Field { Name: "embed", Type: typ.Value, TypeSpan: typ.Span, Tag: tag, Span: typ.Span }
+        end)
+      end)
+    end)),
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Field]
+    ps.PBind(sym(":"), func(_: String) -> ps.Parser[ast2.Field]
+      ps.PBind(spannedTypeExpr(), func(typ: Spanned[ast2.TypeExpr]) -> ps.Parser[ast2.Field]
+        ps.PMap(ps.POptional(stringLiteral()), func(tag: Option[String]) -> ast2.Field
+          ast2.Field { Name: name, Type: typ.Value, TypeSpan: typ.Span, Tag: tag, Span: typ.Span }
+        end)
+      end)
+    end)
+    end)
+  ])
+end
+
+func variantDecl() -> ps.Parser[ast2.Variant]
+  func(state: ps.State) -> ps.Reply[ast2.Variant]
+    let reply = variantDeclCore()(state)
+    if reply.Ok then
+      let value = reply.Value
+      ps.Reply[ast2.Variant] { Ok: true, Consumed: reply.Consumed, Value: ast2.Variant { Name: value.Name, Fields: value.Fields, FieldSpans: value.FieldSpans, Named: value.Named, Names: value.Names, Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }, End: ast2.SourcePos { SourceName: "", Line: reply.State.Position.Line, Column: reply.State.Position.Column } } }, State: reply.State, Error: reply.Error }
+    else
+      reply
+    end
+  end
+end
+
+func variantDeclCore() -> ps.Parser[ast2.Variant]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Variant]
+    ps.PChoice([
+      ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Variant]
+        ps.PBind(sepByEnd(namedVariantField(), sym(",")), func(fields: Slice[(String, Spanned[ast2.TypeExpr])]) -> ps.Parser[ast2.Variant]
+          ps.PThen(sym("}"), ps.PPure(ast2.Variant {
+            Name: name,
+            Fields: fields.Map(func(f: (String, Spanned[ast2.TypeExpr])) -> ast2.TypeExpr f.F1.Value end),
+            FieldSpans: fields.Map(func(f: (String, Spanned[ast2.TypeExpr])) -> ast2.SourceSpan f.F1.Span end),
+            Named: true,
+            Names: fields.Map(func(f: (String, Spanned[ast2.TypeExpr])) -> String f.F0 end),
+            Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, End: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 } },
+          }))
+        end)
+      end),
+      ps.PMap(ps.POptional(paren(ps.PSepBy(spannedTypeExpr(), sym(",")))), func(fields: Option[Slice[Spanned[ast2.TypeExpr]]]) -> ast2.Variant
+        let actual = switch fields
+          case Some(items) => items.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.TypeExpr item.Value end)
+          case None => []
+        end
+        ast2.Variant { Name: name, Fields: actual, FieldSpans: switch fields case Some(items) => items.Map(func(item: Spanned[ast2.TypeExpr]) -> ast2.SourceSpan item.Span end) case None => [] end, Named: false, Names: [] as Slice[String], Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 }, End: ast2.SourcePos { SourceName: "", Line: 1, Column: 1 } } }
+      end),
+    ])
+  end)
+end
+
+func namedVariantField() -> ps.Parser[(String, Spanned[ast2.TypeExpr])]
+  ps.PBind(identifier(), func(fname: String) -> ps.Parser[(String, Spanned[ast2.TypeExpr])]
+    ps.PBind(sym(":"), func(_: String) -> ps.Parser[(String, Spanned[ast2.TypeExpr])]
+      ps.PMap(spannedTypeExpr(), func(ftype: Spanned[ast2.TypeExpr]) -> (String, Spanned[ast2.TypeExpr])
+        (fname, ftype)
+      end)
+    end)
+  end)
+end
+
+func param() -> ps.Parser[ast2.Param]
+  func(state: ps.State) -> ps.Reply[ast2.Param]
+    let reply = paramCore()(state)
+    if reply.Ok then
+      let value = reply.Value
+      ps.Reply[ast2.Param] { Ok: true, Consumed: reply.Consumed, Value: ast2.Param { Name: value.Name, Type: value.Type, TypeSpan: value.TypeSpan, Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }, End: ast2.SourcePos { SourceName: "", Line: reply.State.Position.Line, Column: reply.State.Position.Column } } }, State: reply.State, Error: reply.Error }
+    else
+      reply
+    end
+  end
+end
+
+func paramCore() -> ps.Parser[ast2.Param]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Param]
+    ps.PBind(sym(":"), func(_: String) -> ps.Parser[ast2.Param]
+      ps.PMap(spannedTypeExpr(), func(typ: Spanned[ast2.TypeExpr]) -> ast2.Param
+        ast2.Param { Name: name, Type: typ.Value, TypeSpan: typ.Span, Span: typ.Span }
+      end)
+    end)
+  end)
+end
+
+func typeExpr() -> ps.Parser[ast2.TypeExpr]
+  typeExprParserCache
+end
+
+func buildTypeExprParser() -> ps.Parser[ast2.TypeExpr]
+  ps.PChoice([
+    ps.PAttempt(funcType()),
+    ps.PAttempt(namedType()),
+    tupleType(),
+  ])
+end
+
+func lazyTypeExpr() -> ps.Parser[ast2.TypeExpr]
+  func(state: ps.State) -> ps.Reply[ast2.TypeExpr]
+    typeExpr()(state)
+  end
+end
+
+func funcType() -> ps.Parser[ast2.TypeExpr]
+  ps.PBind(kw("func"), func(_: String) -> ps.Parser[ast2.TypeExpr]
+    ps.PBind(paren(ps.PSepBy(lazyTypeExpr(), sym(","))), func(params: Slice[ast2.TypeExpr]) -> ps.Parser[ast2.TypeExpr]
+      ps.PMap(ps.PThen(sym("->"), lazyTypeExpr()), func(ret: ast2.TypeExpr) -> ast2.TypeExpr
+        ast2.TypeExpr.FuncType(params, Ref.new(ret))
+      end)
+    end)
+  end)
+end
+
+func tupleType() -> ps.Parser[ast2.TypeExpr]
+  ps.PBind(paren(ps.PSepBy(lazyTypeExpr(), sym(","))), func(items: Slice[ast2.TypeExpr]) -> ps.Parser[ast2.TypeExpr]
+    if items.Len() == 0 then
+      ps.PPure(ast2.TypeExpr.UnitType)
+    else
+      ps.PPure(ast2.TypeExpr.TupleType(items))
+    end
+  end)
+end
+
+func namedType() -> ps.Parser[ast2.TypeExpr]
+  ps.PBind(qualifiedIdentifier(), func(name: String) -> ps.Parser[ast2.TypeExpr]
+    ps.PMap(typeArgList(), func(args: Slice[ast2.TypeExpr]) -> ast2.TypeExpr
+      ast2.TypeExpr.NamedType(name, args)
+    end)
+  end)
+end
+
+func qualifiedIdentifier() -> ps.Parser[String]
+  ps.PBind(identifier(), func(first: String) -> ps.Parser[String]
+    qualifiedIdentifierTail(first)
+  end)
+end
+
+func qualifiedIdentifierTail(prefix: String) -> ps.Parser[String]
+  ps.PMap(ps.PMany(ps.PAttempt(ps.PThen(sym("."), identifier()))), func(parts: Slice[String]) -> String
+    parts.Fold(prefix, func(name: String, part: String) -> String name + "." + part end)
+  end)
+end
+
+func typeParamList() -> ps.Parser[Slice[String]]
+  ps.POrElse(ps.PAttempt(brackets(ps.PSepBy(typeParam(), sym(",")))), ps.PPure([] as Slice[String]))
+end
+
+# HKT parameters are represented in the compact AST using their source shape,
+# e.g. C[A] or C[K, A]. This keeps the existing type-parameter representation
+# stable while preserving kind information for inference and lowering.
+func typeParam() -> ps.Parser[String]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[String]
+    ps.PMap(ps.POptional(brackets(ps.PSepBy(typeParam(), sym(",")))), func(args: Option[Slice[String]]) -> String
+      switch args
+        case Some(items) => name + "[" + strings.Join(items, ", ") + "]"
+        case None => name
+      end
+    end)
+  end)
+end
+
+func usingClause() -> ps.Parser[Slice[ast2.Constraint]]
+  ps.POrElse(ps.PThen(kw("using"), ps.PSepBy1(constraint(), sym(","))), ps.PPure([] as Slice[ast2.Constraint]))
+end
+
+func constraint() -> ps.Parser[ast2.Constraint]
+  ps.PBind(ps.POptional(ps.PAttempt(ps.PBind(identifier(), func(bind: String) -> ps.Parser[String]
+    ps.PThen(sym(":"), ps.PPure(bind))
+  end))), func(bind: Option[String]) -> ps.Parser[ast2.Constraint]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Constraint]
+      ps.PMap(typeArgList(), func(args: Slice[ast2.TypeExpr]) -> ast2.Constraint
+        ast2.Constraint { Name: name, BindName: bind, Args: args }
+      end)
+    end)
+  end)
+end
+
+func typeArgList() -> ps.Parser[Slice[ast2.TypeExpr]]
+  ps.POrElse(ps.PAttempt(brackets(ps.PSepBy(lazyTypeExpr(), sym(",")))), ps.PPure([] as Slice[ast2.TypeExpr]))
+end
+
+func blockUntilEnd() -> ps.Parser[ast2.Expr]
+  blockUntil(kw("end"))
+end
+
+func blockUntilAndConsumeEnd() -> ps.Parser[ast2.Expr]
+  ps.PBind(blockUntil(kw("end")), func(body: ast2.Expr) -> ps.Parser[ast2.Expr]
+    ps.PMap(kw("end"), func(_: String) -> ast2.Expr body end)
+  end)
+end
+
+func blockUntil(stopParser: ps.Parser[String]) -> ps.Parser[ast2.Expr]
+  func(state: ps.State) -> ps.Reply[ast2.Expr]
+    blockItems(stopParser, state, state, [])
+  end
+end
+
+func blockItems(stopParser: ps.Parser[String], start: ps.State, cur: ps.State, items: Slice[ast2.Stmt]) -> ps.Reply[ast2.Expr]
+  let stop = ps.PLookAhead(stopParser)(cur)
+  if stop.Ok then
+    let block = exprAt(start, ast2.ExprKind.BlockExpr(items))
+    let blockSpan = ast2.SourceSpan { Start: block.Span.Start, End: ast2.SourcePos { SourceName: "", Line: cur.Position.Line, Column: cur.Position.Column } }
+    ps.Reply[ast2.Expr] {
+      Ok: true, Consumed: cur.Index != start.Index, Value: ast2.Expr { ID: block.ID, Pos: block.Pos, Span: blockSpan, Kind: block.Kind, Type: block.Type },
+      State: cur, Error: ps.EmptyError(cur.Position)
+    }
+  else
+    let r = stmt()(cur)
+    if r.Ok then
+      blockItems(stopParser, start, r.State, items.Append(r.Value))
+    else
+      ps.Reply[ast2.Expr] {
+        Ok: false, Consumed: false, Value: emptyExpr(),
+        State: cur, Error: r.Error
+      }
+    end
+  end
+end
+
+# stmt 解析语句。语句可以包含内嵌的表达式。
+func stmt() -> ps.Parser[ast2.Stmt]
+  ps.PChoice([
+    ps.PAttempt(returnStmt()),
+    ps.PAttempt(breakStmt()),
+    ps.PAttempt(continueStmt()),
+    ps.PAttempt(varStmt()),
+    ps.PAttempt(whileStmt()),
+    ps.PAttempt(letrecStmt()),
+    ps.PAttempt(letStmt()),
+    exprStmt(),
+  ])
+end
+
+func breakStmt() -> ps.Parser[ast2.Stmt]
+  func(state: ps.State) -> ps.Reply[ast2.Stmt]
+    let r = kw("break")(state)
+    if r.Ok then
+      ps.Reply[ast2.Stmt] { Ok: true, Consumed: r.Consumed, Value: ast2.Stmt.BreakStmt(sourcePos(state)), State: r.State, Error: r.Error }
+    else
+      ps.Reply[ast2.Stmt] { Ok: false, Consumed: r.Consumed, Value: ast2.Stmt.ReturnStmt, State: r.State, Error: r.Error }
+    end
+  end
+end
+
+func continueStmt() -> ps.Parser[ast2.Stmt]
+  func(state: ps.State) -> ps.Reply[ast2.Stmt]
+    let r = kw("continue")(state)
+    if r.Ok then
+      ps.Reply[ast2.Stmt] { Ok: true, Consumed: r.Consumed, Value: ast2.Stmt.ContinueStmt(sourcePos(state)), State: r.State, Error: r.Error }
+    else
+      ps.Reply[ast2.Stmt] { Ok: false, Consumed: r.Consumed, Value: ast2.Stmt.ReturnStmt, State: r.State, Error: r.Error }
+    end
+  end
+end
+
+# Parse an expression once, then interpret an immediately following '=' as an
+# assignment.  Previously stmt first parsed postfixExpr in assignStmt and,
+# for every ordinary expression statement, discarded that result before
+# parsing the whole expression again in exprStmt.
+func exprStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(expr(), func(left: ast2.Expr) -> ps.Parser[ast2.Stmt]
+    ps.PBind(ps.POptional(ps.PThen(sym("="), expr())), func(right: Option[ast2.Expr]) -> ps.Parser[ast2.Stmt]
+      let stmt = switch right
+        case Some(value) => ast2.Stmt.AssignStmt(left, value)
+        case None => ast2.Stmt.ExprStmt(left)
+      end
+      ps.PPure(stmt)
+    end)
+  end)
+end
+
+# letrec introduces a group of explicitly typed bindings.  Parse all
+# declarations before the closing end so function literals in an initializer
+# may consume their own end independently.
+func letrecStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(kw("letrec"), func(_: String) -> ps.Parser[ast2.Stmt]
+    ps.PBind(letrecBindings(), func(bindings: Slice[ast2.LetRecBind]) -> ps.Parser[ast2.Stmt]
+      ps.PThen(kw("end"), ps.PPure(ast2.Stmt.LetRecStmt(bindings)))
+    end)
+  end)
+end
+
+func letrecBinding() -> ps.Parser[ast2.LetRecBind]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.LetRecBind]
+    ps.PBind(sym(":"), func(_: String) -> ps.Parser[ast2.LetRecBind]
+      ps.PBind(spannedTypeExpr(), func(typ: Spanned[ast2.TypeExpr]) -> ps.Parser[ast2.LetRecBind]
+        ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.LetRecBind]
+          ps.PMap(expr(), func(value: ast2.Expr) -> ast2.LetRecBind
+            ast2.LetRecBind { Name: name, Type: typ.Value, TypeSpan: typ.Span, Value: value }
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func prependLetRecBinding(first: ast2.LetRecBind, rest: Slice[ast2.LetRecBind]) -> Slice[ast2.LetRecBind]
+  rest.Fold([first], func(out: Slice[ast2.LetRecBind], next: ast2.LetRecBind) -> Slice[ast2.LetRecBind]
+    out.Append(next)
+  end)
+end
+
+func letrecBindings() -> ps.Parser[Slice[ast2.LetRecBind]]
+  ps.PBind(letrecBinding(), func(first: ast2.LetRecBind) -> ps.Parser[Slice[ast2.LetRecBind]]
+    ps.PMap(ps.PMany(letrecBinding()), func(rest: Slice[ast2.LetRecBind]) -> Slice[ast2.LetRecBind]
+      prependLetRecBinding(first, rest)
+    end)
+  end)
+end
+
+func letStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(kw("let"), func(_: String) -> ps.Parser[ast2.Stmt]
+    ps.PChoice([tupleLetStmt(), namedLetStmt()])
+  end)
+end
+
+func namedLetStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Stmt]
+          ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ: Option[Spanned[ast2.TypeExpr]]) -> ps.Parser[ast2.Stmt]
+      ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
+        ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
+          ast2.Stmt.LetStmt(ast2.Bind { Name: name, Type: unwrapTypeOption(typ), TypeSpan: typeOptionSpan(typ), Value: value, Span: value.Span })
+        end)
+      end)
+    end)
+  end)
+end
+
+func tupleLetStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(paren(ps.PSepBy(lazyBindingPattern(), sym(","))), func(items: Slice[ast2.Pattern]) -> ps.Parser[ast2.Stmt]
+    ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
+      ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
+        ast2.Stmt.TupleLetStmt(ast2.Pattern.TuplePattern(items), value)
+      end)
+    end)
+  end)
+end
+
+func bindingPattern() -> ps.Parser[ast2.Pattern]
+  ps.PChoice([
+    ps.PAttempt(ps.PMap(paren(ps.PSepBy(lazyBindingPattern(), sym(","))), func(items: Slice[ast2.Pattern]) -> ast2.Pattern ast2.Pattern.TuplePattern(items) end)),
+    ps.PMap(sym("_"), func(_: String) -> ast2.Pattern ast2.Pattern.WildcardPattern end),
+    ps.PMap(identifier(), func(name: String) -> ast2.Pattern ast2.Pattern.BindPattern(name) end),
+  ])
+end
+
+func lazyBindingPattern() -> ps.Parser[ast2.Pattern]
+  func(state: ps.State) -> ps.Reply[ast2.Pattern]
+    bindingPattern()(state)
+  end
+end
+
+func varStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(kw("var"), func(_: String) -> ps.Parser[ast2.Stmt]
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Stmt]
+      ps.PBind(ps.POptional(ps.PAttempt(ps.PThen(sym(":"), spannedTypeExpr()))), func(typ: Option[Spanned[ast2.TypeExpr]]) -> ps.Parser[ast2.Stmt]
+        ps.PBind(sym("="), func(_: String) -> ps.Parser[ast2.Stmt]
+          ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
+            ast2.Stmt.VarStmt(ast2.Bind { Name: name, Type: unwrapTypeOption(typ), TypeSpan: typeOptionSpan(typ), Value: value, Span: value.Span })
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func whileStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(kw("while"), func(_: String) -> ps.Parser[ast2.Stmt]
+    ps.PBind(expr(), func(cond: ast2.Expr) -> ps.Parser[ast2.Stmt]
+      ps.PBind(blockUntilAndConsumeEnd(), func(body: ast2.Expr) -> ps.Parser[ast2.Stmt]
+        ps.PPure(ast2.Stmt.WhileStmt(cond, body))
+      end)
+    end)
+  end)
+end
+
+func returnStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(kw("return"), func(_: String) -> ps.Parser[ast2.Stmt]
+    ps.PChoice([
+      ps.PAttempt(ps.PMap(expr(), func(value: ast2.Expr) -> ast2.Stmt
+        ast2.Stmt.ReturnWithStmt(value)
+      end)),
+      ps.PPure(ast2.Stmt.ReturnStmt),
+    ])
+  end)
+end
+
+func inlineGoStmt() -> ps.Parser[ast2.Stmt]
+  ps.PBind(kw("go"), func(_: String) -> ps.Parser[ast2.Stmt]
+    ps.PBind(sym("["), func(_: String) -> ps.Parser[ast2.Stmt]
+      ps.PBind(typeExpr(), func(typ: ast2.TypeExpr) -> ps.Parser[ast2.Stmt]
+        ps.PBind(sym("]"), func(_: String) -> ps.Parser[ast2.Stmt]
+          ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Stmt]
+            ps.PBind(inlineGoBody(), func(parts: InlineGoParts) -> ps.Parser[ast2.Stmt]
+              ps.PThen(sym("}"), ps.PPure(ast2.Stmt.ExprStmt(exprKindOnly(ast2.ExprKind.InlineGoExpr(Ref.new(typ), parts.Code, parts.Values, parts.Types)))))
+            end)
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func lazyExpr() -> ps.Parser[ast2.Expr]
+  func(state: ps.State) -> ps.Reply[ast2.Expr]
+    expr()(state)
+  end
+end
+
+# expr 解析纯表达式。
+# 注意：expr 不处理语句变体。要解析包含语句的代码，请使用 stmt()。
+func expr() -> ps.Parser[ast2.Expr]
+  exprParserCache
+end
+
+func buildExprParser() -> ps.Parser[ast2.Expr]
+  positionedExpr(exprKind())
+end
+
+func positionedExpr(inner: ps.Parser[ast2.Expr]) -> ps.Parser[ast2.Expr]
+  func(state: ps.State) -> ps.Reply[ast2.Expr]
+    let r = inner(state)
+    if r.Ok then
+      let pos = sourcePos(state)
+      let span = ast2.SourceSpan { Start: pos, End: sourcePos(r.State) }
+      ps.Reply[ast2.Expr] { Ok: true, Consumed: r.Consumed, Value: ast2.Expr { ID: r.Value.ID, Pos: pos, Span: span, Kind: r.Value.Kind, Type: r.Value.Type }, State: r.State, Error: r.Error }
+    else
+      r
+    end
+  end
+end
+
+func exprKind() -> ps.Parser[ast2.Expr]
+  ps.PChoice([
+    ps.PAttempt(ifExpr()),
+    ps.PAttempt(switchExpr()),
+    binaryExpr(),
+  ])
+end
+
+func switchExpr() -> ps.Parser[ast2.Expr]
+  ps.PBind(kw("switch"), func(_: String) -> ps.Parser[ast2.Expr]
+    ps.PBind(expr(), func(target: ast2.Expr) -> ps.Parser[ast2.Expr]
+      ps.PBind(ps.PMany1(switchCase()), func(cases: Slice[ast2.SwitchCase]) -> ps.Parser[ast2.Expr]
+        ps.PThen(kw("end"), ps.PPure(exprWithPos(target.Pos, ast2.ExprKind.SwitchExpr(target, cases, None))))
+      end)
+    end)
+  end)
+end
+
+func switchCase() -> ps.Parser[ast2.SwitchCase]
+  func(state: ps.State) -> ps.Reply[ast2.SwitchCase]
+    let reply = switchCaseCore()(state)
+    if reply.Ok then
+      let value = reply.Value
+      ps.Reply[ast2.SwitchCase] { Ok: true, Consumed: reply.Consumed, Value: ast2.SwitchCase { Pattern: value.Pattern, PatternSpan: value.PatternSpan, Body: value.Body, BodySpan: value.BodySpan, Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }, End: ast2.SourcePos { SourceName: "", Line: reply.State.Position.Line, Column: reply.State.Position.Column } } }, State: reply.State, Error: reply.Error }
+    else
+      reply
+    end
+  end
+end
+
+func switchCaseCore() -> ps.Parser[ast2.SwitchCase]
+  ps.PBind(kw("case"), func(_: String) -> ps.Parser[ast2.SwitchCase]
+    ps.PBind(spannedPattern(), func(pat: Spanned[ast2.Pattern]) -> ps.Parser[ast2.SwitchCase]
+      ps.PChoice([
+        ps.PBind(sym("=>"), func(_: String) -> ps.Parser[ast2.SwitchCase]
+          ps.PMap(blockUntil(ps.PChoice([kw("case"), kw("end")])), func(body: ast2.Expr) -> ast2.SwitchCase
+            let bodyExpr = bodyExprFromBlock(body)
+            ast2.SwitchCase { Pattern: pat.Value, PatternSpan: pat.Span, Body: bodyExpr, BodySpan: bodyExpr.Span, Span: emptySpan() }
+          end)
+        end),
+        ps.PBind(kw("then"), func(_: String) -> ps.Parser[ast2.SwitchCase]
+          ps.PBind(blockUntilAndConsumeEnd(), func(body: ast2.Expr) -> ps.Parser[ast2.SwitchCase]
+            let bodyExpr = bodyExprFromBlock(body)
+            ps.PPure(ast2.SwitchCase { Pattern: pat.Value, PatternSpan: pat.Span, Body: bodyExpr, BodySpan: bodyExpr.Span, Span: emptySpan() })
+          end)
+        end),
+      ])
+    end)
+  end)
+end
+
+func pattern() -> ps.Parser[ast2.Pattern]
+  ps.PChoice([
+    ps.PAttempt(ps.PMap(paren(ps.PSepBy(lazyPattern(), sym(","))), func(items: Slice[ast2.Pattern]) -> ast2.Pattern ast2.Pattern.TuplePattern(items) end)),
+    ps.PMap(sym("_"), func(_: String) -> ast2.Pattern ast2.Pattern.WildcardPattern end),
+    ps.PMap(number(), func(value: String) -> ast2.Pattern ast2.Pattern.LiteralPattern("number", value) end),
+    ps.PMap(stringLiteral(), func(value: String) -> ast2.Pattern ast2.Pattern.LiteralPattern("string", value) end),
+    ps.PMap(runeLiteral(), func(value: String) -> ast2.Pattern ast2.Pattern.LiteralPattern("rune", value) end),
+    ps.PAttempt(ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Pattern]
+      ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Pattern]
+        ps.PBind(sepByEnd(structPatternField(), sym(",")), func(fields: Slice[ast2.StructPatternField]) -> ps.Parser[ast2.Pattern]
+          ps.PMap(sym("}"), func(_: String) -> ast2.Pattern ast2.Pattern.StructVariantPattern(name, fields) end)
+        end)
+      end)
+    end)),
+    ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.Pattern]
+      ps.PMap(ps.POptional(paren(ps.PSepBy(lazyPattern(), sym(",")))), func(args: Option[Slice[ast2.Pattern]]) -> ast2.Pattern
+        switch args
+          # A bare identifier is syntactically a binding. Type inference later
+          # resolves names in the enum environment to zero-field variants.
+          case None => ast2.Pattern.BindPattern(name)
+          case Some(items) => ast2.Pattern.VariantPattern(name, items)
+        end
+      end)
+    end),
+  ])
+end
+
+func structPatternField() -> ps.Parser[ast2.StructPatternField]
+  ps.PChoice([
+    ps.PAttempt(ps.PBind(identifier(), func(fname: String) -> ps.Parser[ast2.StructPatternField]
+      ps.PBind(sym(":"), func(_: String) -> ps.Parser[ast2.StructPatternField]
+        ps.PMap(identifier(), func(bind: String) -> ast2.StructPatternField ast2.StructPatternField { Field: fname, Bind: bind } end)
+      end)
+    end)),
+    ps.PMap(sym("_"), func(_: String) -> ast2.StructPatternField ast2.StructPatternField { Field: "_", Bind: "_" } end),
+    ps.PMap(identifier(), func(fname: String) -> ast2.StructPatternField ast2.StructPatternField { Field: fname, Bind: fname } end),
+  ])
+end
+
+func lazyPattern() -> ps.Parser[ast2.Pattern]
+  func(state: ps.State) -> ps.Reply[ast2.Pattern]
+    pattern()(state)
+  end
+end
+
+func inlineGoExpr() -> ps.Parser[ast2.Expr]
+  ps.PBind(kw("go"), func(_: String) -> ps.Parser[ast2.Expr]
+    ps.PBind(sym("["), func(_: String) -> ps.Parser[ast2.Expr]
+      ps.PBind(typeExpr(), func(typ: ast2.TypeExpr) -> ps.Parser[ast2.Expr]
+        ps.PBind(sym("]"), func(_: String) -> ps.Parser[ast2.Expr]
+          ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Expr]
+            ps.PBind(inlineGoBody(), func(parts: InlineGoParts) -> ps.Parser[ast2.Expr]
+              ps.PThen(sym("}"), ps.PPure(exprKindOnly(ast2.ExprKind.InlineGoExpr(Ref.new(typ), parts.Code, parts.Values, parts.Types))))
+            end)
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func inlineGoBody() -> ps.Parser[InlineGoParts]
+  ps.PBind(kw("code"), func(_: String) -> ps.Parser[InlineGoParts]
+    ps.PBind(sym(":"), func(_: String) -> ps.Parser[InlineGoParts]
+      ps.PBind(stringLiteral(), func(code: String) -> ps.Parser[InlineGoParts]
+        ps.PMap(ps.PMany(inlineGoBinding()), func(bindings: Slice[InlineGoBinding]) -> InlineGoParts
+          bindings.Fold(InlineGoParts { Code: code, Values: [] as Slice[ast2.GoOperand], Types: [] as Slice[ast2.GoTypeOperand] }, func(out: InlineGoParts, binding: InlineGoBinding) -> InlineGoParts
+            switch binding
+              case ValueBinding(name, value) => InlineGoParts { Code: out.Code, Values: out.Values.Append(ast2.GoOperand { Name: name, Value: value }), Types: out.Types }
+              case TypeBinding(name, typ) => InlineGoParts { Code: out.Code, Values: out.Values, Types: out.Types.Append(ast2.GoTypeOperand { Name: name, Type: typ }) }
+            end
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func inlineGoBinding() -> ps.Parser[InlineGoBinding]
+  ps.PChoice([
+    ps.PAttempt(ps.PBind(kw("in"), func(_: String) -> ps.Parser[InlineGoBinding]
+      ps.PBind(identifier(), func(name: String) -> ps.Parser[InlineGoBinding]
+        ps.PMap(ps.PThen(sym("="), expr()), func(value: ast2.Expr) -> InlineGoBinding InlineGoBinding.ValueBinding(name, value) end)
+      end)
+    end)),
+    ps.PAttempt(ps.PBind(kw("type"), func(_: String) -> ps.Parser[InlineGoBinding]
+      ps.PBind(identifier(), func(name: String) -> ps.Parser[InlineGoBinding]
+        ps.PMap(ps.PThen(sym("="), typeExpr()), func(typ: ast2.TypeExpr) -> InlineGoBinding InlineGoBinding.TypeBinding(name, typ) end)
+      end)
+    end)),
+  ])
+end
+
+func rawGoBody() -> ps.Parser[String]
+  ps.PBind(ps.PMany(rawGoBodyChar()), func(chars: Slice[Rune]) -> ps.Parser[String]
+    ps.PPure(String.FromRunes(chars))
+  end)
+end
+
+func rawGoBodyChar() -> ps.Parser[Rune]
+  ps.PSatisfy(func(r: Rune) -> Bool
+    r != '}'
+  end, "go body character")
+end
+
+func ifExpr() -> ps.Parser[ast2.Expr]
+  ps.PBind(kw("if"), func(_: String) -> ps.Parser[ast2.Expr]
+    ps.PBind(expr(), func(cond: ast2.Expr) -> ps.Parser[ast2.Expr]
+      ps.PChoice([
+        ifArrowTail(cond),
+        ifBlockTail(cond),
+      ])
+    end)
+  end)
+end
+
+func ifArrowTail(cond: ast2.Expr) -> ps.Parser[ast2.Expr]
+  ps.PBind(sym("=>"), func(_: String) -> ps.Parser[ast2.Expr]
+    ps.PBind(expr(), func(thenExpr: ast2.Expr) -> ps.Parser[ast2.Expr]
+      ps.PMap(ps.PThen(kw("else"), expr()), func(elseExpr: ast2.Expr) -> ast2.Expr
+        exprWithPos(cond.Pos, ast2.ExprKind.IfExpr(cond, thenExpr, elseExpr))
+      end)
+    end)
+  end)
+end
+
+func ifBlockTail(cond: ast2.Expr) -> ps.Parser[ast2.Expr]
+  ps.PBind(kw("then"), func(_: String) -> ps.Parser[ast2.Expr]
+    ps.PBind(blockUntil(ps.PChoice([kw("elsif"), kw("else"), kw("end")])), func(thenBlock: ast2.Expr) -> ps.Parser[ast2.Expr]
+      ps.PBind(ifElseTail(), func(elseExpr: ast2.Expr) -> ps.Parser[ast2.Expr]
+        ps.PThen(kw("end"), ps.PPure(exprWithPos(cond.Pos, ast2.ExprKind.IfExpr(cond, bodyExprWithBlockSpan(thenBlock), elseExpr))))
+      end)
+    end)
+  end)
+end
+
+func ifElseTail() -> ps.Parser[ast2.Expr]
+  ps.PChoice([
+    ps.PAttempt(ps.PThen(kw("else"), ps.PMap(blockUntil(kw("end")), bodyExprWithBlockSpan))),
+    ps.PAttempt(ps.PBind(kw("elsif"), func(_: String) -> ps.Parser[ast2.Expr]
+      ps.PBind(expr(), func(cond: ast2.Expr) -> ps.Parser[ast2.Expr]
+        ps.PBind(kw("then"), func(_: String) -> ps.Parser[ast2.Expr]
+          ps.PBind(blockUntil(ps.PChoice([kw("elsif"), kw("else"), kw("end")])), func(thenBlock: ast2.Expr) -> ps.Parser[ast2.Expr]
+            ps.PMap(lazyIfElseTail(), func(elseExpr: ast2.Expr) -> ast2.Expr
+              exprWithPos(cond.Pos, ast2.ExprKind.IfExpr(cond, bodyExprWithBlockSpan(thenBlock), elseExpr))
+            end)
+          end)
+        end)
+      end)
+    end)),
+    ps.PPure(emptyExpr()),
+  ])
+end
+
+func lazyIfElseTail() -> ps.Parser[ast2.Expr]
+  func(state: ps.State) -> ps.Reply[ast2.Expr]
+    ifElseTail()(state)
+  end
+end
+
+func bodyExprFromBlock(body: ast2.Expr) -> ast2.Expr
+  switch body.Kind
+    case BlockExpr(items) =>
+      if items.Len() == 1 then
+        let first: ast2.Stmt = items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(emptyExpr()))
+        switch first
+          case ExprStmt(e) => e
+          case _ => body
+        end
+      else
+        body
+      end
+    case _ => body
+  end
+end
+
+func bodyExprWithBlockSpan(body: ast2.Expr) -> ast2.Expr
+  let value = bodyExprFromBlock(body)
+  ast2.Expr { ID: value.ID, Pos: value.Pos, Span: body.Span, Kind: value.Kind, Type: value.Type }
+end
+
+func binaryExpr() -> ps.Parser[ast2.Expr]
+  pipeExpr()
+end
+
+func pipeExpr() -> ps.Parser[ast2.Expr]
+  chainLeft(orExpr(), pipeOp(), makeBinary())
+end
+
+func orExpr() -> ps.Parser[ast2.Expr]
+  chainLeft(andExpr(), sym("||"), makeBinary())
+end
+
+func andExpr() -> ps.Parser[ast2.Expr]
+  chainLeft(compareExpr(), sym("&&"), makeBinary())
+end
+
+func compareExpr() -> ps.Parser[ast2.Expr]
+  chainLeft(addExpr(), compareOp(), makeBinary())
+end
+
+func addExpr() -> ps.Parser[ast2.Expr]
+  chainLeft(mulExpr(), addOp(), makeBinary())
+end
+
+func mulExpr() -> ps.Parser[ast2.Expr]
+  chainLeft(unaryExpr(), mulOp(), makeBinary())
+end
+
+func unaryExpr() -> ps.Parser[ast2.Expr]
+  ps.PChoice([
+    ps.PAttempt(ps.PMap(ps.PThen(sym("!"), lazyUnaryExpr()), func(e: ast2.Expr) -> ast2.Expr
+      exprWithPos(e.Pos, ast2.ExprKind.UnaryExpr("!", e))
+    end)),
+    ps.PAttempt(ps.PMap(ps.PThen(sym("-"), lazyUnaryExpr()), func(e: ast2.Expr) -> ast2.Expr
+      exprWithPos(e.Pos, ast2.ExprKind.UnaryExpr("-", e))
+    end)),
+    postfixExpr(),
+  ])
+end
+
+func lazyUnaryExpr() -> ps.Parser[ast2.Expr]
+  func(state: ps.State) -> ps.Reply[ast2.Expr]
+    unaryExpr()(state)
+  end
+end
+
+func makeBinary() -> func(String, ast2.Expr, ast2.Expr) -> ast2.Expr
+  func(op: String, left: ast2.Expr, right: ast2.Expr) -> ast2.Expr
+    exprWithPos(left.Pos, ast2.ExprKind.BinaryExpr(op, left, right))
+  end
+end
+
+func postfixExpr() -> ps.Parser[ast2.Expr]
+  func(state: ps.State) -> ps.Reply[ast2.Expr]
+    let first = primaryExpr()(state)
+    if !first.Ok then
+      first
+    else
+      postfixTail(state, first.State, first.Value)
+    end
+  end
+end
+
+func postfixTail(start: ps.State, cur: ps.State, acc: ast2.Expr) -> ps.Reply[ast2.Expr]
+  let cast = ps.PThen(kw("as"), typeExpr())(cur)
+  if cast.Ok then
+    postfixTail(start, cast.State, exprWithPos(acc.Pos, ast2.ExprKind.TypeAsExpr(acc, cast.Value)))
+  else
+    # A call or type-argument suffix must begin on the same line as the
+    # expression it applies to.  Otherwise a standalone `()` unit statement on
+    # the following line would be swallowed as a postfix call, turning
+    # `recv.Add(x)` followed by `()` into `recv.Add(x)()`.
+    let call = if sameLineSuffix(cur) then
+      callSuffix()(cur)
+    else
+      ps.Reply[(Slice[ast2.TypeExpr], Slice[ast2.Expr])] {
+        Ok: false,
+        Consumed: false,
+        Value: ([] as Slice[ast2.TypeExpr], [] as Slice[ast2.Expr]),
+        State: cur,
+        Error: ps.EmptyError(cur.Position)
+      }
+    end
+    if call.Ok then
+      postfixTail(start, call.State, exprWithPos(acc.Pos, ast2.ExprKind.CallExpr(acc, call.Value.F0, call.Value.F1)))
+    else
+      let fld = ps.PThen(sym("."), identifier())(cur)
+      if fld.Ok then
+        postfixTail(start, fld.State, exprWithPos(acc.Pos, ast2.ExprKind.FieldExpr(acc, fld.Value)))
+      else
+        ps.Reply[ast2.Expr] {
+          Ok: true, Consumed: cur.Index != start.Index, Value: acc,
+          State: cur, Error: ps.EmptyError(cur.Position)
+        }
+      end
+    end
+  end
+end
+
+# sameLineSuffix reports whether the next token after `state` begins on the
+# same source line as the token that precedes it.  Every token parser wraps its
+# match in lexeme, whose trailing trivia already consumed any intervening
+# whitespace — including newlines — so scanning backward from state.Index over
+# spaces/tabs reveals a `\n` exactly when the previous token ended on an
+# earlier line.
+func sameLineSuffix(state: ps.State) -> Bool
+  let input = state.Input
+  var result: Bool = true
+  var i: Int = state.Index - 1
+  while i >= 0 && result
+    let ch = input.Slice(i, i + 1).UnwrapOr("")
+    if ch == " " || ch == "\t" then
+      i = i - 1
+    else
+      result = ch != "\n"
+      i = -1
+    end
+  end
+  result
+end
+
+func callSuffix() -> ps.Parser[(Slice[ast2.TypeExpr], Slice[ast2.Expr])]
+  ps.PBind(ps.POrElse(typeArgList(), ps.PPure([] as Slice[ast2.TypeExpr])), func(typeArgs: Slice[ast2.TypeExpr]) -> ps.Parser[(Slice[ast2.TypeExpr], Slice[ast2.Expr])]
+    ps.PMap(paren(sepByEnd(lazyExpr(), sym(","))), func(args: Slice[ast2.Expr]) -> (Slice[ast2.TypeExpr], Slice[ast2.Expr])
+      (typeArgs, args)
+    end)
+  end)
+end
+
+# 结构体字段列表解析器: { field1: ast2.Expr1, field2: ast2.Expr2, ... }
+func structLitFields(head: ast2.StructLitHead) -> ps.Parser[ast2.Expr]
+  ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Expr]
+    ps.PBind(sepByEnd(structLitField(), sym(",")), func(fields: Slice[ast2.StructLitField]) -> ps.Parser[ast2.Expr]
+      let value = if head.TypeArgs.Len() == 0 then exprKindOnly(ast2.ExprKind.StructLitExpr(head.Name, fields)) else exprKindOnly(ast2.ExprKind.GenericStructLitExpr(head.Name, head.TypeArgs, fields)) end
+      ps.PThen(sym("}"), ps.PPure(value))
+    end)
+  end)
+end
+
+# 结构体字面量中的单个字段: field: ast2.Expr
+func structLitField() -> ps.Parser[ast2.StructLitField]
+  ps.PBind(identifier(), func(name: String) -> ps.Parser[ast2.StructLitField]
+    ps.PBind(sym(":"), func(_: String) -> ps.Parser[ast2.StructLitField]
+      ps.PMap(expr(), func(value: ast2.Expr) -> ast2.StructLitField
+        ast2.StructLitField { Name: name, Value: value }
+      end)
+    end)
+  end)
+end
+
+func primaryExpr() -> ps.Parser[ast2.Expr]
+  positionedExpr(primaryExprKind())
+end
+
+func primaryExprKind() -> ps.Parser[ast2.Expr]
+  ps.PChoice([
+    ps.PAttempt(inlineGoExpr()),
+    ps.PMap(number(), func(v: String) -> ast2.Expr
+      exprKindOnly(ast2.ExprKind.NumberExpr(v))
+    end),
+    ps.PMap(stringLiteral(), func(v: String) -> ast2.Expr
+      exprKindOnly(ast2.ExprKind.StringExpr(v))
+    end),
+    ps.PMap(runeLiteral(), func(v: String) -> ast2.Expr
+      exprKindOnly(ast2.ExprKind.RuneExpr(v))
+    end),
+    ps.PMap(kw("true"), func(_: String) -> ast2.Expr
+      exprKindOnly(ast2.ExprKind.BoolExpr(true))
+    end),
+    ps.PMap(kw("false"), func(_: String) -> ast2.Expr
+      exprKindOnly(ast2.ExprKind.BoolExpr(false))
+    end),
+    funcLit(),
+    sliceLiteral(),
+    # Map literal: {"a": 1, "b": 2} — attempt first so set literal is fallback
+    ps.PAttempt(mapLiteral()),
+    # Set literal: {"a", "b", ...}
+    ps.PAttempt(setLiteral()),
+    tupleOrParenExpr(),
+    # 结构体字面量支持导入类型名，例如 ast2.File { ... }。
+    ps.PAttempt(ps.PBind(structLitTypeName(), func(head: ast2.StructLitHead) -> ps.Parser[ast2.Expr]
+      structLitFields(head)
+    end)),
+    ps.PMap(identifier(), func(v: String) -> ast2.Expr
+      exprKindOnly(ast2.ExprKind.IdentExpr(v))
+    end),
+  ])
+end
+
+func structLitTypeName() -> ps.Parser[ast2.StructLitHead]
+  ps.PBind(qualifiedIdentifier(), func(name: String) -> ps.Parser[ast2.StructLitHead]
+    ps.PMap(typeArgList(), func(args: Slice[ast2.TypeExpr]) -> ast2.StructLitHead ast2.StructLitHead { Name: name, TypeArgs: args } end)
+  end)
+end
+
+func sliceLiteral() -> ps.Parser[ast2.Expr]
+  ps.PMap(brackets(sepByEnd(lazyExpr(), sym(","))), func(items: Slice[ast2.Expr]) -> ast2.Expr
+    exprKindOnly(ast2.ExprKind.SliceLitExpr(items))
+  end)
+end
+
+# mapLiteral parses { key1: val1, key2: val2, ... }
+func mapLiteral() -> ps.Parser[ast2.Expr]
+  ps.PBind(sym("{"), func(_: String) -> ps.Parser[ast2.Expr]
+    ps.PBind(sepByEnd(mapEntry(), sym(",")), func(pairs: Slice[(ast2.Expr, ast2.Expr)]) -> ps.Parser[ast2.Expr]
+      ps.PThen(sym("}"), ps.PPure(exprKindOnly(ast2.ExprKind.MapLitExpr(pairs))))
+    end)
+  end)
+end
+
+# mapEntry parses key_expr : value_expr and returns a (key, value) pair.
+func mapEntry() -> ps.Parser[(ast2.Expr, ast2.Expr)]
+  ps.PBind(lazyExpr(), func(key: ast2.Expr) -> ps.Parser[(ast2.Expr, ast2.Expr)]
+    ps.PThen(sym(":"), ps.PMap(lazyExpr(), func(value: ast2.Expr) -> (ast2.Expr, ast2.Expr)
+      (key, value)
+    end))
+  end)
+end
+
+# setLiteral parses { elem1, elem2, ... }
+func setLiteral() -> ps.Parser[ast2.Expr]
+  ps.PMap(ps.PBetween(sym("{"), sepByEnd(lazyExpr(), sym(",")), sym("}")), func(items: Slice[ast2.Expr]) -> ast2.Expr
+    exprKindOnly(ast2.ExprKind.SetLitExpr(items))
+  end)
+end
+
+
+# sepByEnd accepts an optional trailing separator without allowing a consumed
+# separator to make PSepBy fail before the closing delimiter.
+func sepByEnd[A, S](item: ps.Parser[A], sep: ps.Parser[S]) -> ps.Parser[Slice[A]]
+  let guardedSep = ps.PAttempt(ps.PThen(sep, ps.PLookAhead(item)))
+  ps.PBind(ps.PSepBy(item, guardedSep), func(items: Slice[A]) -> ps.Parser[Slice[A]]
+    ps.PThen(ps.POptional(sep), ps.PPure(items))
+  end)
+end
+
+func funcLit() -> ps.Parser[ast2.Expr]
+  ps.PBind(kw("func"), func(_: String) -> ps.Parser[ast2.Expr]
+    ps.PBind(paren(ps.PSepBy(param(), sym(","))), func(params: Slice[ast2.Param]) -> ps.Parser[ast2.Expr]
+      ps.PBind(ps.POptional(ps.PThen(sym("->"), typeExpr())), func(ret: Option[ast2.TypeExpr]) -> ps.Parser[ast2.Expr]
+        ps.PBind(blockUntilEnd(), func(body: ast2.Expr) -> ps.Parser[ast2.Expr]
+          ps.PThen(kw("end"), ps.PPure(exprWithPos(body.Pos, ast2.ExprKind.FuncLitExpr(params, ret, body))))
+        end)
+      end)
+    end)
+  end)
+end
+
+func tupleOrParenExpr() -> ps.Parser[ast2.Expr]
+  ps.PBind(paren(ps.PSepBy(lazyExpr(), sym(","))), func(items: Slice[ast2.Expr]) -> ps.Parser[ast2.Expr]
+    if items.Len() == 0 then
+      ps.PPure(emptyExpr())
+    else if items.Len() == 1 then
+      ps.PPure(items.Get(0).UnwrapOr(emptyExpr()))
+    else
+      ps.PPure(exprKindOnly(ast2.ExprKind.TupleExpr(items)))
+    end end
+  end)
+end
+
+func binaryOp() -> ps.Parser[String]
+  ps.PChoice([
+    sym("=="), sym("!="), sym("<="), sym(">="),
+    sym("<|"), sym("|>"),
+    sym("+"), sym("-"), sym("*"), sym("/"),
+    sym("<"), sym(">"),
+  ])
+end
+
+func pipeOp() -> ps.Parser[String]
+  ps.PChoice([sym("|>"), sym("<|")])
+end
+
+func compareOp() -> ps.Parser[String]
+  ps.PChoice([sym("=="), sym("!="), sym("<="), sym(">="), sym("<"), sym(">")])
+end
+
+func addOp() -> ps.Parser[String]
+  ps.PChoice([sym("+"), sym("-")])
+end
+
+func mulOp() -> ps.Parser[String]
+  ps.PChoice([sym("*"), sym("/")])
+end
+
+func chainLeft[A](item: ps.Parser[A], op: ps.Parser[String], combine: func(String, A, A) -> A) -> ps.Parser[A]
+  func(state: ps.State) -> ps.Reply[A]
+    let first = item(state)
+    if !first.Ok then
+      first
+    else
+      chainLeftTail(item, op, combine, state, first.State, first.Value)
+    end
+  end
+end
+
+func chainLeftTail[A](item: ps.Parser[A], op: ps.Parser[String], combine: func(String, A, A) -> A, start: ps.State, cur: ps.State, acc: A) -> ps.Reply[A]
+  let rop = op(cur)
+  if !rop.Ok then
+    ps.Reply[A] {
+      Ok: true, Consumed: cur.Index != start.Index, Value: acc,
+      State: cur, Error: ps.EmptyError(cur.Position)
+    }
+  else
+    let rr = item(rop.State)
+    if !rr.Ok then
+      rr
+    else
+      chainLeftTail(item, op, combine, start, rr.State, combine(rop.Value, acc, rr.Value))
+    end
+  end
+end
+
+func identifier() -> ps.Parser[String]
+  lexeme(ps.PAttempt(identifierRaw()))
+end
+
+func identifierRaw() -> ps.Parser[String]
+  ps.PBind(ps.PSatisfy(isIdentStart, "identifier"), func(first: Rune) -> ps.Parser[String]
+    ps.PBind(ps.PMany(ps.PSatisfy(isIdentRest, "identifier character")), func(rest: Slice[Rune]) -> ps.Parser[String]
+      let value = String.FromRunes(rest.Prepend(first))
+      if isKeyword(value) then
+        failIdentifier()
+      else
+        ps.PPure(value)
+      end
+    end)
+  end)
+end
+
+func failIdentifier() -> ps.Parser[String]
+  func(state: ps.State) -> ps.Reply[String]
+    ps.Reply[String] {
+      Ok: false,
+      Consumed: false,
+      Value: "",
+      State: state,
+      Error: ps.ErrorAt(state.Position, "identifier", ps.EmptyExpected()),
+    }
+  end
+end
+
+func number() -> ps.Parser[String]
+  lexeme(ps.PBind(numberCore(), func(value: String) -> ps.Parser[String]
+    ps.PThen(ps.PNotFollowedBy(ps.PSatisfy(isIdentRest, "number boundary"), "number boundary"), ps.PPure(value))
+  end))
+end
+
+# Match the production lexer: decimal digits may use '_' separators and have
+# at most one fraction; prefixed integers and type suffixes are explicit.
+func numberCore() -> ps.Parser[String]
+  ps.PChoice([
+    ps.PAttempt(prefixedNumber(ps.PChoice([ps.PString("0x"), ps.PString("0X")]), hexDigits())),
+    ps.PAttempt(prefixedNumber(ps.PChoice([ps.PString("0o"), ps.PString("0O")]), octalDigits())),
+    ps.PAttempt(prefixedNumber(ps.PChoice([ps.PString("0b"), ps.PString("0B")]), binaryDigits())),
+    decimalNumber(),
+  ])
+end
+
+func prefixedNumber(prefix: ps.Parser[String], digits: ps.Parser[String]) -> ps.Parser[String]
+  ps.PBind(prefix, func(head: String) -> ps.Parser[String]
+    ps.PBind(digits, func(body: String) -> ps.Parser[String]
+      ps.PMap(ps.POptional(integerSuffix()), func(suffix: Option[String]) -> String
+        head + body + suffix.UnwrapOr("")
+      end)
+    end)
+  end)
+end
+
+func decimalNumber() -> ps.Parser[String]
+  ps.PBind(decimalDigits(), func(whole: String) -> ps.Parser[String]
+    ps.PBind(ps.POptional(ps.PAttempt(ps.PBind(ps.PString("."), func(dot: String) -> ps.Parser[String]
+      ps.PMap(decimalDigits(), func(fraction: String) -> String dot + fraction end)
+    end))), func(fraction: Option[String]) -> ps.Parser[String]
+      ps.PMap(ps.POptional(numberSuffix()), func(suffix: Option[String]) -> String
+        whole + fraction.UnwrapOr("") + suffix.UnwrapOr("")
+      end)
+    end)
+  end)
+end
+
+func numberSuffix() -> ps.Parser[String]
+  ps.PChoice([floatSuffix(), integerSuffix()])
+end
+
+func integerSuffix() -> ps.Parser[String]
+  ps.PChoice([ps.PString("i8"), ps.PString("i16"), ps.PString("i32"), ps.PString("i64"), ps.PString("u8"), ps.PString("u16"), ps.PString("u32"), ps.PString("u64"), ps.PString("u")])
+end
+
+func floatSuffix() -> ps.Parser[String]
+  ps.PChoice([ps.PString("f32"), ps.PString("f64")])
+end
+
+func decimalDigits() -> ps.Parser[String]
+  digitSequence(func(r: Rune) -> Bool r >= '0' && r <= '9' end, "decimal digit")
+end
+
+func hexDigits() -> ps.Parser[String]
+  digitSequence(func(r: Rune) -> Bool
+    (r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')
+  end, "hexadecimal digit")
+end
+
+func octalDigits() -> ps.Parser[String]
+  digitSequence(func(r: Rune) -> Bool r >= '0' && r <= '7' end, "octal digit")
+end
+
+func binaryDigits() -> ps.Parser[String]
+  digitSequence(func(r: Rune) -> Bool r == '0' || r == '1' end, "binary digit")
+end
+
+func digitSequence(valid: func(Rune) -> Bool, expected: String) -> ps.Parser[String]
+  ps.PBind(ps.PSatisfy(valid, expected), func(first: Rune) -> ps.Parser[String]
+    ps.PMap(ps.PMany(digitTail(valid, expected)), func(rest: Slice[Rune]) -> String
+      String.FromRunes(rest.Prepend(first))
+    end)
+  end)
+end
+
+# After the first digit, permit ordinary consecutive digits as well as an
+# underscore followed by a digit. The previous form accepted only underscore
+# pairs, so multi-digit literals such as 10 and 64 failed at their second
+# digit.
+func digitTail(valid: func(Rune) -> Bool, expected: String) -> ps.Parser[Rune]
+  ps.PChoice([
+    ps.PSatisfy(valid, expected),
+    ps.PAttempt(ps.PThen(ps.PChar('_'), ps.PSatisfy(valid, expected))),
+  ])
+end
+
+func stringLiteral() -> ps.Parser[String]
+  ps.PChoice([
+    ps.PAttempt(multilineStringLiteral()),
+    ps.PAttempt(rawStringLiteral()),
+    lexeme(ps.PBind(ps.PChar('"'), func(_: Rune) -> ps.Parser[String]
+      ps.PBind(ps.PMany(stringChar()), func(chars: Slice[Rune]) -> ps.Parser[String]
+        ps.PThen(ps.PChar('"'), ps.PPure(String.FromRunes(chars)))
+      end)
+    end)),
+  ])
+end
+
+func rawStringLiteral() -> ps.Parser[String]
+  lexeme(ps.PBind(ps.PChar('`'), func(_: Rune) -> ps.Parser[String]
+    ps.PBind(ps.PMany(ps.PSatisfy(func(r: Rune) -> Bool
+      r != '`'
+    end, "raw string character")), func(chars: Slice[Rune]) -> ps.Parser[String]
+      ps.PThen(ps.PChar('`'), ps.PPure(String.FromRunes(chars)))
+    end)
+  end))
+end
+
+func multilineStringLiteral() -> ps.Parser[String]
+  let delimiter = tripleQuoteString()
+  lexeme(ps.PBind(ps.PString(delimiter), func(_: String) -> ps.Parser[String]
+    ps.PBind(ps.PMany(ps.PThen(ps.PNotFollowedBy(ps.PString(delimiter), "triple quote"), ps.PAnyRune())), func(chars: Slice[Rune]) -> ps.Parser[String]
+      ps.PThen(ps.PString(delimiter), ps.PPure(String.FromRunes(chars)))
+    end)
+  end))
+end
+
+func tripleQuoteString() -> String
+  String.FromRunes(['"', '"', '"'])
+end
+
+func runeLiteral() -> ps.Parser[String]
+  lexeme(ps.PBind(ps.PChar('\''), func(_: Rune) -> ps.Parser[String]
+    ps.PBind(runeCharacter(), func(value: Rune) -> ps.Parser[String]
+      ps.PThen(ps.PChar('\''), ps.PPure(String.FromRunes([value])))
+    end)
+  end))
+end
+
+func runeCharacter() -> ps.Parser[Rune]
+  ps.POrElse(
+    ps.PThen(ps.PChar('\\'), ps.PChoice([
+      ps.PMap(ps.PChar('n'), func(_: Rune) -> Rune '\n' end),
+      ps.PMap(ps.PChar('t'), func(_: Rune) -> Rune '\t' end),
+      ps.PMap(ps.PChar('b'), func(_: Rune) -> Rune '\b' end),
+      ps.PMap(ps.PChar('f'), func(_: Rune) -> Rune '\f' end),
+      ps.PMap(ps.PChar('r'), func(_: Rune) -> Rune '\r' end),
+      ps.PMap(ps.PChar('0'), func(_: Rune) -> Rune '\0' end),
+      ps.PMap(ps.PChar('"'), func(_: Rune) -> Rune '"' end),
+      ps.PMap(ps.PChar('\''), func(_: Rune) -> Rune '\'' end),
+      ps.PMap(ps.PChar('\\'), func(_: Rune) -> Rune '\\' end),
+    ])),
+    ps.PSatisfy(func(r: Rune) -> Bool
+      r != '\'' && r != '\\' && r != '\n'
+    end, "rune character")
+  )
+end
+
+func stringChar() -> ps.Parser[Rune]
+  ps.POrElse(
+    ps.PThen(ps.PChar('\\'), ps.PChoice([
+      unicodeEscape(),
+      ps.PMap(ps.PChar('n'), func(_: Rune) -> Rune '\n' end),
+      ps.PMap(ps.PChar('t'), func(_: Rune) -> Rune '\t' end),
+      ps.PMap(ps.PChar('b'), func(_: Rune) -> Rune '\b' end),
+      ps.PMap(ps.PChar('f'), func(_: Rune) -> Rune '\f' end),
+      ps.PMap(ps.PChar('r'), func(_: Rune) -> Rune '\r' end),
+      ps.PMap(ps.PChar('0'), func(_: Rune) -> Rune '\0' end),
+      ps.PMap(ps.PChar('"'), func(_: Rune) -> Rune '"' end),
+      ps.PMap(ps.PChar('\''), func(_: Rune) -> Rune '\'' end),
+      ps.PMap(ps.PChar('\\'), func(_: Rune) -> Rune '\\' end),
+    ])),
+    ps.PSatisfy(func(r: Rune) -> Bool
+      r != '"' && r != '\\'
+    end, "string character")
+  )
+end
+
+func unicodeEscape() -> ps.Parser[Rune]
+  ps.PBind(ps.PChar('u'), func(_: Rune) -> ps.Parser[Rune]
+    ps.PBind(unicodeHexDigit(), func(d0: Rune) -> ps.Parser[Rune]
+      ps.PBind(unicodeHexDigit(), func(d1: Rune) -> ps.Parser[Rune]
+        ps.PBind(unicodeHexDigit(), func(d2: Rune) -> ps.Parser[Rune]
+          ps.PBind(unicodeHexDigit(), func(d3: Rune) -> ps.Parser[Rune]
+            let value = unicodeHexValue(d0) * 4096 + unicodeHexValue(d1) * 256 + unicodeHexValue(d2) * 16 + unicodeHexValue(d3)
+            if value >= 55296 && value <= 57343 then
+              ps.PFail[Rune]("Unicode escape must not be a surrogate")
+            else
+              ps.PPure(value as Rune)
+            end
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+func unicodeHexDigit() -> ps.Parser[Rune]
+  ps.PSatisfy(func(r: Rune) -> Bool
+    (r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')
+  end, "Unicode escape hexadecimal digit")
+end
+
+func unicodeHexValue(value: Rune) -> Int
+  if value >= '0' && value <= '9' then
+    (value as Int) - ('0' as Int)
+  elsif value >= 'a' && value <= 'f' then
+    (value as Int) - ('a' as Int) + 10
+  else
+    (value as Int) - ('A' as Int) + 10
+  end
+end
+
+func kw(word: String) -> ps.Parser[String]
+  lexeme(ps.PAttempt(ps.PBind(ps.PString(word), func(value: String) -> ps.Parser[String]
+    ps.PThen(ps.PNotFollowedBy(ps.PSatisfy(isIdentRest, "identifier character"), "keyword boundary"), ps.PPure(value))
+  end)))
+end
+
+func sym(value: String) -> ps.Parser[String]
+  lexeme(ps.PString(value))
+end
+
+func lexeme[A](p: ps.Parser[A]) -> ps.Parser[A]
+  ps.PBind(trivia(), func(_: ()) -> ps.Parser[A]
+    ps.PBind(p, func(value: A) -> ps.Parser[A]
+      ps.PThen(trivia(), ps.PPure(value))
+    end)
+  end)
+end
+
+func trivia() -> ps.Parser[()]
+  ps.PThen(ps.PMany(ps.PChoice([spaceUnit(), lineComment()])), ps.PPure(()))
+end
+
+func spaceUnit() -> ps.Parser[()]
+  ps.PThen(ps.PSatisfy(func(r: Rune) -> Bool
+    r == ' ' || r == '\t' || r == '\n' || r == '\r'
+  end, "whitespace"), ps.PPure(()))
+end
+
+func lineComment() -> ps.Parser[()]
+  ps.PBind(ps.PString("#"), func(_: String) -> ps.Parser[()]
+    ps.PThen(ps.PMany(ps.PSatisfy(func(r: Rune) -> Bool
+      r != '\n'
+    end, "comment character")), ps.PPure(()))
+  end)
+end
+
+func paren[A](p: ps.Parser[A]) -> ps.Parser[A]
+  ps.PBetween(sym("("), p, sym(")"))
+end
+
+func brackets[A](p: ps.Parser[A]) -> ps.Parser[A]
+  ps.PBetween(sym("["), p, sym("]"))
+end
+
+func isIdentStart(r: Rune) -> Bool
+  (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_'
+end
+
+func isIdentRest(r: Rune) -> Bool
+  isIdentStart(r) || (r >= '0' && r <= '9')
+end
+
+func formatError(sourceName: String, err: Option[ps.ParseError], pos: ps.Position) -> String
+  switch err
+    case Some(e) =>
+      let expected = if e.Message == "" then e.Expected else e.Expected.Append(e.Message) end
+      let detail = if expected.Len() == 0 then "parse error" else "parse error: expected " + strings.Join(expected, " / ") end
+      sourceName + ":" + e.Position.Line.ToString() + ":" + e.Position.Column.ToString() + ": " + detail
+    case None => sourceName + ":" + pos.Line.ToString() + ":" + pos.Column.ToString() + ": parse error"
+  end
+end

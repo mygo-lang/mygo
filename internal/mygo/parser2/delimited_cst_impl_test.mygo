@@ -1,0 +1,209 @@
+package parser2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import ps "github.com/mygo-lang/mygo/lib/text/parsec"
+
+# Task 4.3: delimiter layout is owned by the lossless CST.
+#
+# `collectDelimitedSpansFromCst` walks the green tree and reports the same
+# `DelimitedSpan` shape the formatter already consumes, so the formatter
+# contract is unchanged while its delimiter authority moves from the
+# reconstructed ast2 token scan to the CST.  The CST already encodes grouping -
+# nested delimiters are nested nodes rather than raw tokens - so a top-level
+# separator is exactly a direct `,` leaf of the group node, and string/rune
+# interiors never appear as delimiter leaves.  The reconstruction in
+# `lossless.mygo` counted raw delimiter tokens and re-scanned literals to reach
+# the same conclusion; reading it from the tree removes that second authority.
+#
+# The reported kinds deliberately match the legacy `exprSpanKind` frontier: a
+# call, tuple, slice, set, or struct literal is reported, while a parenthesized
+# expression (`(x)`), the unit value (`()`), and map literals stay on the plain
+# expression route.  A set literal keeps the legacy `[`/`]` pair and so reports
+# nothing (its group is braced); this preserves the exact formatter output the
+# migration must not change.
+
+struct DelimitedNodeInfo
+  Kind: String
+  Group: GreenNodeKind
+end
+
+func collectDelimitedSpansFromCst(root: GreenNode) -> Slice[DelimitedSpan]
+  collectDelimitedInChildren(root.Children, 0, [])
+end
+
+func collectDelimitedInChildren(items: Slice[GreenElement], index: Int, acc: Slice[DelimitedSpan]) -> Slice[DelimitedSpan]
+  if index >= items.Len() then
+    acc
+  else
+    let item = greenElementAt(items, index)
+    switch greenElementNode(item)
+      case Some(child) then
+        let emitted = switch delimitedSpanFromNode(child.value())
+          case Some(value) => acc.Append(value)
+          case None => acc
+        end
+        collectDelimitedInChildren(items, index + 1, collectDelimitedInChildren(child.value().Children, 0, emitted))
+      end
+      case None => collectDelimitedInChildren(items, index + 1, acc)
+    end
+  end
+end
+
+func delimitedSpanFromNode(node: GreenNode) -> Option[DelimitedSpan]
+  switch delimitedNodeInfo(node.Kind)
+    case Some(info) then
+      switch greenNodeFindChild(node, info.Group, 0)
+        case Some(group) => delimitedSpanFromGroup(info, group.value())
+        case None => None
+      end
+    end
+    case None => None
+  end
+end
+
+func delimitedSpanFromGroup(info: DelimitedNodeInfo, group: GreenNode) -> Option[DelimitedSpan]
+  let scan = delimitedGroupScan(group.Children)
+  let span = cstElementSpanOfGroup(group.Children)
+  if !delimitedSpanWorthReporting(span, scan.Items) then
+    None
+  else
+    Some(DelimitedSpan { Kind: info.Kind, Span: span, Items: scan.Items, Separators: scan.Separators })
+  end
+end
+
+# delimitedNodeInfo maps a CST expression kind to the canonical delimited kind
+# the formatter keys on and the delimiter group node that owns its interior.
+func delimitedNodeInfo(kind: GreenNodeKind) -> Option[DelimitedNodeInfo]
+  if kind == GreenNodeKind.Call then
+    Some(DelimitedNodeInfo { Kind: "delimited:call", Group: GreenNodeKind.ParenGroup })
+  elsif kind == GreenNodeKind.TupleExpr then
+    Some(DelimitedNodeInfo { Kind: "delimited:tuple", Group: GreenNodeKind.ParenGroup })
+  elsif kind == GreenNodeKind.SliceLiteral then
+    Some(DelimitedNodeInfo { Kind: "delimited:slice", Group: GreenNodeKind.BracketGroup })
+  elsif kind == GreenNodeKind.SetLiteral then
+    Some(DelimitedNodeInfo { Kind: "delimited:set", Group: GreenNodeKind.BracketGroup })
+  elsif kind == GreenNodeKind.StructLiteral then
+    Some(DelimitedNodeInfo { Kind: "delimited:struct", Group: GreenNodeKind.BraceGroup })
+  else
+    None
+  end
+end
+
+# cstElementSpanOfGroup is the source range of a group node read from its own
+# children: the opening leaf's start through the closing leaf's end.  A group is
+# never empty, so the fallback only guards an already-diagnosed tree.
+func cstElementSpanOfGroup(items: Slice[GreenElement]) -> ast2.SourceSpan
+  let start = cstFirstTokenIndex(items, 0, items.Len())
+  if start < 0 then
+    cstAstSpan(syntaxRootSpan([]))
+  else
+    let finish = cstLastTokenIndex(items, items.Len() - 1, 0)
+    if finish < 0 then
+      cstAstSpan(syntaxRootSpan([]))
+    else
+      ast2.SourceSpan {
+        Start: cstAstPos(greenElementSpan(greenElementAt(items, start)).Start),
+        End: cstAstPos(greenElementSpan(greenElementAt(items, finish)).End),
+      }
+    end
+  end
+end
+
+struct DelimitedGroupScan
+  Items: Slice[ast2.SourceSpan]
+  Separators: Slice[ast2.SourceSpan]
+end
+
+# delimitedGroupScan splits a group's interior at its direct `,` leaves and
+# records each separator span, mirroring the legacy token scan's top-level
+# split.  Trivia is skipped for region bounds so an item span starts at its
+# first token and ends at its last, exactly as `tokenRangeSpan` did.
+func delimitedGroupScan(items: Slice[GreenElement]) -> DelimitedGroupScan
+  let open = cstFirstTokenIndex(items, 0, items.Len())
+  let close = cstLastTokenIndex(items, items.Len() - 1, 0)
+  if open < 0 || close <= open then
+    DelimitedGroupScan { Items: [], Separators: [] }
+  else
+    delimitedGroupRegions(items, open + 1, close, open + 1, [], [])
+  end
+end
+
+func delimitedGroupRegions(items: Slice[GreenElement], index: Int, finish: Int, regionStart: Int, acc: Slice[ast2.SourceSpan], seps: Slice[ast2.SourceSpan]) -> DelimitedGroupScan
+  if index >= finish then
+    DelimitedGroupScan {
+      Items: appendRegionSpan(acc, cstRegionSpan(items, regionStart, finish)),
+      Separators: seps,
+    }
+  else
+    let item = greenElementAt(items, index)
+    let raw = greenElementRaw(item)
+    if greenElementIsTrivia(item) then
+      delimitedGroupRegions(items, index + 1, finish, regionStart, acc, seps)
+    elsif raw == "," && greenElementNode(item).IsNone() then
+      delimitedGroupRegions(
+        items,
+        index + 1,
+        finish,
+        index + 1,
+        appendRegionSpan(acc, cstRegionSpan(items, regionStart, index)),
+        seps.Append(cstAstSpan(greenElementSpan(item))),
+      )
+    else
+      delimitedGroupRegions(items, index + 1, finish, regionStart, acc, seps)
+    end
+  end
+end
+
+func appendRegionSpan(acc: Slice[ast2.SourceSpan], region: Option[ast2.SourceSpan]) -> Slice[ast2.SourceSpan]
+  switch region
+    case Some(span) => acc.Append(span)
+    case None => acc
+  end
+end
+
+# cstRegionSpan is the token range between two child indices, skipping boundary
+# trivia.  An empty region (a trailing comma, or `f(,)`) reports nothing, which
+# matches the legacy splitter dropping zero-width slices.
+func cstRegionSpan(items: Slice[GreenElement], from: Int, to: Int) -> Option[ast2.SourceSpan]
+  let first = cstFirstTokenIndex(items, from, to)
+  if first < 0 then None
+  else
+    let last = cstLastTokenIndex(items, to - 1, from)
+    if last < 0 then
+      None
+    else
+      Some(ast2.SourceSpan {
+        Start: cstAstPos(greenElementSpan(greenElementAt(items, first)).Start),
+        End: cstAstPos(greenElementSpan(greenElementAt(items, last)).End),
+      })
+    end
+  end
+end
+
+func cstFirstTokenIndex(items: Slice[GreenElement], index: Int, finish: Int) -> Int
+  if index >= finish then
+    -1
+  elsif greenElementIsTrivia(greenElementAt(items, index)) then
+    cstFirstTokenIndex(items, index + 1, finish)
+  else
+    index
+  end
+end
+
+func cstLastTokenIndex(items: Slice[GreenElement], index: Int, floor: Int) -> Int
+  if index < floor then
+    -1
+  elsif greenElementIsTrivia(greenElementAt(items, index)) then
+    cstLastTokenIndex(items, index - 1, floor)
+  else
+    index
+  end
+end
+
+func cstAstPos(position: ps.Position) -> ast2.SourcePos
+  ast2.SourcePos { SourceName: "", Line: position.Line, Column: position.Column }
+end
+
+func cstAstSpan(span: ps.SourceSpan) -> ast2.SourceSpan
+  ast2.SourceSpan { Start: cstAstPos(span.Start), End: cstAstPos(span.End) }
+end

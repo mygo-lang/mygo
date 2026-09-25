@@ -489,7 +489,11 @@ func translateSwitchAst(target ast2.Expr, cases []ast2.SwitchCase, targetType Op
 					if _, ok := __mygo_expr_2.(ast2.ExprKind__FieldExpr); ok {
 						__mygo_expr_3 = hoistSwitchSubject(__mygo_match___mygo_expr_1.F0, cases, ctx)
 					} else {
-						__mygo_expr_3 = __mygo_match___mygo_expr_1.F0
+						if _, ok := __mygo_expr_2.(ast2.ExprKind__TupleExpr); ok {
+							__mygo_expr_3 = hoistSwitchSubject(__mygo_match___mygo_expr_1.F0, cases, ctx)
+						} else {
+							__mygo_expr_3 = __mygo_match___mygo_expr_1.F0
+						}
 					}
 				}
 			}

@@ -1,0 +1,151 @@
+package parser2
+
+import strings "go:strings"
+import testing "go:testing"
+
+# formatterOpaqueSource exercises every opaque lexical family the formatter must
+# re-emit verbatim: a comment, an ordinary string with escapes, a raw string, a
+# triple-quoted string, a rune literal, and an inline-Go range.
+func formatterOpaqueSource() -> String
+  "# leading comment\nlet s = \"a\\nb\"\nlet raw = `c#d`\nlet tri = \"\"\"e\nf\"\"\"\nlet q = 'z'\nfunc g() => go[Int] { code: `x`; in y = 1 }\n"
+end
+
+# formatterOpaqueElements collects every opaque element in source order.  It
+# stops at an opaque element rather than descending into it, so a nested opaque
+# range (for example the `InlineGoCode` inside an `InlineGoExpr`) is not
+# re-reported as if it were a separate top-level range.
+func formatterOpaqueElements(items: Slice[GreenElement], index: Int, output: Slice[GreenElement]) -> Slice[GreenElement]
+  if index >= items.Len() then
+    output
+  else
+    let item = greenElementAt(items, index)
+    if greenElementIsOpaqueSource(item) then
+      formatterOpaqueElements(items, index + 1, output.Append(item))
+    else
+      switch item
+        case NodeElement(node) => formatterOpaqueElements(items, index + 1, formatterOpaqueElements(node.value().Children, 0, output))
+        case _ => formatterOpaqueElements(items, index + 1, output)
+      end
+    end
+  end
+end
+
+# formatterOpaqueGoldenMatches asserts that the raw source the formatter would
+# replay for each opaque element is byte-identical to the exact slice of the
+# original source at that element's span, and that the element is genuinely
+# classified opaque.
+func formatterOpaqueGoldenMatches(items: Slice[GreenElement], index: Int, source: String) -> Bool
+  if index >= items.Len() then
+    true
+  else
+    let item = greenElementAt(items, index)
+    let span = greenElementSpan(item)
+    switch FormatterOpaqueSourceRaw(item)
+      case Some(raw) => raw == sourceSliceOrEOF(source, span.Start.Offset, span.End.Offset) && formatterOpaqueGoldenMatches(items, index + 1, source)
+      case None => false
+    end
+  end
+end
+
+func TestFormatterOpaqueSourceIsBytePreserving(t: Ref[testing.T]) -> ()
+  let source = formatterOpaqueSource()
+  let tree = ParseSyntaxAt("opaque.mygo", source)
+  if tree.Diagnostics.Len() != 0 || greenNodeText(tree.Root.value()) != source then
+    t.Fatal("opaque fixtures must parse losslessly before their bytes can be checked")
+  end
+  let opaque = formatterOpaqueElements(tree.Root.value().Children, 0, [])
+  if opaque.Len() == 0 then
+    t.Fatal("the fixture must contain opaque lexical forms")
+  end
+  if !formatterOpaqueGoldenMatches(opaque, 0, source) then
+    t.Fatal("every opaque range must replay its exact original bytes")
+  end
+end
+
+func TestFormatterOpaqueSourceCoversEveryLexicalForm(t: Ref[testing.T]) -> ()
+  let source = formatterOpaqueSource()
+  let opaque = formatterOpaqueElements(ParseSyntaxAt("opaque.mygo", source).Root.value().Children, 0, [])
+  # One comment plus four distinct literal spellings must each be present.
+  let comment = opaque.Filter(func(item: GreenElement) -> Bool
+    switch item case TriviaElement(trivia) => trivia.Kind == GreenTriviaKind.Comment case _ => false end
+  end).Len()
+  if comment < 1 then
+    t.Fatal("comments must be opaque source")
+  end
+  if !formatterOpaqueHasLiteralKind(opaque, GreenTokenKind.StringLiteral) || !formatterOpaqueHasLiteralKind(opaque, GreenTokenKind.RawStringLiteral) || !formatterOpaqueHasLiteralKind(opaque, GreenTokenKind.TripleStringLiteral) || !formatterOpaqueHasLiteralKind(opaque, GreenTokenKind.RuneLiteral) then
+    t.Fatal("ordinary, raw, triple-quoted, and rune literals must all be opaque")
+  end
+  let inlineGo = opaque.Filter(func(item: GreenElement) -> Bool
+    switch greenElementNode(item)
+      case Some(node) => node.value().Kind == GreenNodeKind.InlineGoExpr
+      case None => false
+    end
+  end).Len()
+  if inlineGo != 1 then
+    t.Fatal("the inline-Go range must be opaque exactly once")
+  end
+end
+
+func formatterOpaqueHasLiteralKind(items: Slice[GreenElement], kind: GreenTokenKind) -> Bool
+  items.Find(func(item: GreenElement) -> Bool
+    switch item
+      case TokenElement(token) => token.Kind == kind
+      case _ => false
+    end
+  end).IsSome()
+end
+
+func TestFormatterOpaqueSourceLeavesFormatableTriviaAndSyntaxAlone(t: Ref[testing.T]) -> ()
+  # Whitespace is the only normalization gap; an identifier token and a plain
+  # structural node are ordinary syntax the formatter traverses, not opaque.
+  let tree = ParseSyntaxAt("plain.mygo", "let  value = 1\n")
+  let elements = tree.Root.value().Children
+  if !formatterOpaqueNoneForWhitespace(elements) then
+    t.Fatal("formatable whitespace must not be opaque source")
+  end
+  if !formatterOpaqueNoneForSyntax(elements) then
+    t.Fatal("ordinary tokens and structural nodes must not be opaque source")
+  end
+end
+
+func formatterOpaqueNoneForWhitespace(items: Slice[GreenElement]) -> Bool
+  items.Fold(true, func(valid: Bool, item: GreenElement) -> Bool
+    if greenElementIsFormatableTrivia(item) then valid && FormatterOpaqueSourceRaw(item).IsNone() else valid end
+  end)
+end
+
+func formatterOpaqueNoneForSyntax(items: Slice[GreenElement]) -> Bool
+  items.Fold(true, func(valid: Bool, item: GreenElement) -> Bool
+    switch item
+      case TokenElement(_) => valid && FormatterOpaqueSourceRaw(item).IsNone()
+      case NodeElement(node) => valid && !greenElementIsInlineGoRange(item) && FormatterOpaqueSourceRaw(item).IsNone() && formatterOpaqueNoneForSyntax(node.value().Children)
+      case TriviaElement(_) => valid
+    end
+  end)
+end
+
+func TestFormatterOpaqueInlineGoRangeReplaysWholePayload(t: Ref[testing.T]) -> ()
+  let source = "func g() => go[Int] { code: `x`; in y = 1 }\n"
+  let tree = ParseSyntaxAt("inline.mygo", source)
+  let opaque = formatterOpaqueElements(tree.Root.value().Children, 0, [])
+  let ranges = opaque.Filter(func(item: GreenElement) -> Bool
+    switch greenElementNode(item)
+      case Some(node) => node.value().Kind == GreenNodeKind.InlineGoExpr
+      case None => false
+    end
+  end)
+  if ranges.Len() != 1 then
+    t.Fatal("the inline-Go expression must be one opaque range")
+  end
+  switch ranges.Get(0)
+    case Some(item) =>
+      switch FormatterOpaqueSourceRaw(item)
+        case Some(raw) =>
+          if !strings.Contains(raw, "code:") || !strings.Contains(raw, "`x`") || !strings.Contains(raw, "in y = 1") then
+            t.Fatal("the opaque inline-Go range must replay its whole embedded payload")
+          end
+        case None => t.Fatal("the inline-Go range must be opaque source")
+      end
+    case None => t.Fatal("the inline-Go range lookup must find the opaque node")
+  end
+end

@@ -1,0 +1,124 @@
+package parser2
+
+import strings "go:strings"
+import testing "go:testing"
+
+# formatterCursorSource lexes a small file and wraps its ordered green elements
+# in the formatter cursor, so the tests exercise the real lexer output instead
+# of a hand-built element list.
+func formatterCursorSource(source: String) -> FormatterCursor
+  NewFormatterCursor(LexSource(source).Elements)
+end
+
+# formatterCursorReplay walks every element through the cursor and concatenates
+# its raw source, proving the cursor's element range still owns every input byte.
+func formatterCursorReplay(cursor: FormatterCursor) -> String
+  switch FormatterCursorPeek(cursor)
+    case Some(item) => greenElementRaw(item) + formatterCursorReplay(FormatterCursorAdvance(cursor))
+    case None => ""
+  end
+end
+
+func TestFormatterCursorWalksOrderedGreenElements(t: Ref[testing.T]) -> ()
+  let source = "let value = 1 # trailing\n"
+  let cursor = formatterCursorSource(source)
+  if FormatterCursorIsDone(cursor) then
+    t.Fatal("formatter cursor must start before the first element")
+  end
+  if formatterCursorReplay(cursor) != source then
+    t.Fatal("formatter cursor elements must replay the source byte-for-byte")
+  end
+  # Skipping trivia must land exactly on the first significant token.
+  switch FormatterCursorNextContent(cursor)
+    case Some(item) =>
+      if greenElementIsTrivia(item) || greenElementRaw(item) != "let" then
+        t.Fatal("skip-trivia must land on the first significant token")
+      end
+    case None => t.Fatal("skip-trivia must find the first token")
+  end
+end
+
+func TestFormatterCursorUsesExplicitTriviaPredicate(t: Ref[testing.T]) -> ()
+  let cursor = formatterCursorSource("a  b # c\nd")
+  if !formatterCursorTriviaAgrees(cursor, 0) then
+    t.Fatal("formatter cursor trivia view must match greenElementIsTrivia")
+  end
+end
+
+# CursorIsTrivia must agree with the shared predicate at every ordered position,
+# so the cursor introduces no private notion of trivia.
+func formatterCursorTriviaAgrees(walk: FormatterCursor, index: Int) -> Bool
+  if FormatterCursorIsDone(walk) then
+    true
+  else
+    FormatterCursorIsTrivia(walk) == formatterCursorElementIsTrivia(walk.Elements, index) &&
+      formatterCursorTriviaAgrees(FormatterCursorAdvance(walk), index + 1)
+  end
+end
+
+func formatterCursorElementIsTrivia(items: Slice[GreenElement], index: Int) -> Bool
+  switch items.Get(index)
+    case Some(item) => greenElementIsTrivia(item)
+    case None => false
+  end
+end
+
+func TestFormatterCursorSkipsOnlyFormatableTrivia(t: Ref[testing.T]) -> ()
+  # A comment is opaque trivia, not a formatable gap, so the formatable-skip
+  # mode must stop on it rather than normalize it away.
+  let cursor = FormatterCursorSkipTrivia(formatterCursorSource("1   # keep me\n2"))
+  # The first content token is the number `1`; then a formatable whitespace run
+  # precedes the opaque comment.
+  let afterNumber = FormatterCursorSkipFormatableTrivia(FormatterCursorAdvance(cursor))
+  if !formatterCursorStopsOnOpaqueComment(afterNumber, "keep me") then
+    t.Fatal("formatable skip must stop on the opaque comment instead of normalizing it")
+  end
+end
+
+func formatterCursorStopsOnOpaqueComment(cursor: FormatterCursor, needle: String) -> Bool
+  switch FormatterCursorPeek(cursor)
+    case Some(item) => formatterOpaqueTriviaMatches(item, needle)
+    case None => false
+  end
+end
+
+func formatterOpaqueTriviaMatches(item: GreenElement, needle: String) -> Bool
+  switch FormatterOpaqueTriviaRaw(item)
+    case Some(raw) => strings.Contains(raw, needle)
+    case None => false
+  end
+end
+
+func TestFormatterCursorWhitespaceIsFormatable(t: Ref[testing.T]) -> ()
+  let lexed = LexSource("  x")
+  if formatterCursorWhitespaceIsFormatable(lexed.Elements) == false then
+    t.Fatal("whitespace must be formatable trivia with no opaque raw")
+  end
+end
+
+func formatterCursorWhitespaceIsFormatable(items: Slice[GreenElement]) -> Bool
+  switch items.Get(0)
+    case Some(item) => greenElementIsFormatableTrivia(item) && FormatterOpaqueTriviaRaw(item).IsNone()
+    case None => false
+  end
+end
+
+func TestFormatterCursorRecursivelySkipsTriviaRun(t: Ref[testing.T]) -> ()
+  # A multi-element leading trivia run must be fully consumed before the first
+  # token, however many trivia elements there are.
+  let cursor = formatterCursorSource("\n\n  \nlet x = 1")
+  switch FormatterCursorNextContent(cursor)
+    case Some(item) then
+      if greenElementRaw(item) != "let" then
+        t.Fatal("recursive trivia skip must reach the declaration keyword")
+      end
+    end
+    case None => t.Fatal("recursive trivia skip lost the first token")
+  end
+  # Running the skipping mode twice must be stable; it must not pass a token.
+  let once = FormatterCursorSkipTrivia(cursor)
+  let twice = FormatterCursorSkipTrivia(once)
+  if once.Index != twice.Index then
+    t.Fatal("trivia skipping must be idempotent at a token boundary")
+  end
+end

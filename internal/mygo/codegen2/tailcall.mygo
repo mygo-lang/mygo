@@ -903,6 +903,7 @@ func translateAstReturnSwitchInner(target: ast2.Expr, cases: Slice[ast2.SwitchCa
         case IdentExpr(_) => value
         case CallExpr(_, _, _) => hoistSwitchSubject(value, cases, ctx)
         case FieldExpr(_, _) => hoistSwitchSubject(value, cases, ctx)
+        case TupleExpr(_) => hoistSwitchSubject(value, cases, ctx)
         case _ => value
       end
       let branches = translateSwitchBranchesTail(cases, targetType, target, hoisted.Expr, ctx)

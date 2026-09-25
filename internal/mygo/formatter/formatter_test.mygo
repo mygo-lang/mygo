@@ -14,6 +14,31 @@ func TestFormatterLayoutIsIdempotent(t: Ref[testing.T]) -> ()
   end
 end
 
+func TestFormatterProtectedSourceIsDeterministicAndIdempotent(t: Ref[testing.T]) -> ()
+  let sourceTemplate = """package sample
+# retain   exact spacing
+func f(value: String) -> String
+  let raw = `raw   spacing`
+  let multi = TRIPLE
+    first   line
+      second   line
+  TRIPLE
+  let embedded = go[String]{code: `strings.TrimSpace(x)` in x = value}
+  value
+end
+"""
+  let source = strings.ReplaceAll(sourceTemplate, "TRIPLE", "\"\"\"")
+  let first = formattedOrFail(t, FormatSource("protected.mygo", source))
+  let repeated = formattedOrFail(t, FormatSource("protected.mygo", source))
+  let second = formattedOrFail(t, FormatSource("protected.mygo", first))
+  if first != repeated || first != second then
+    t.Fatal("protected-source formatting was nondeterministic or not idempotent")
+  end
+  if !strings.Contains(first, "# retain   exact spacing") || !strings.Contains(first, "`raw   spacing`") || !strings.Contains(first, "    first   line\n      second   line\n  \"\"\"") || !strings.Contains(first, "strings.TrimSpace(x)") then
+    t.Fatalf("protected source changed during formatting: %s", first)
+  end
+end
+
 func formattedOrFail(t: Ref[testing.T], result: Result[String, String]) -> String
   switch result
     case Ok(value) => value
@@ -21,6 +46,13 @@ func formattedOrFail(t: Ref[testing.T], result: Result[String, String]) -> Strin
       t.Fatalf("format failed: %s", message)
       ""
     end
+  end
+end
+
+func formatLayout(source: String) -> String
+  switch FormatSource("layout.mygo", source)
+    case Ok(formatted) => formatted
+    case Err(_) => source
   end
 end
 
@@ -37,6 +69,49 @@ func TestFormatterPreservesInlineGoLine(t: Ref[testing.T]) -> ()
   let got = formatLayout(src)
   if !strings.Contains(got, "strings.TrimSpace(x)") then
     t.Fatal("formatted output unexpectedly changed inline Go")
+  end
+end
+
+func TestFormatterKeepsLineCommentBoundaryInDeclarationTrivia(t: Ref[testing.T]) -> ()
+  let source = """package sample
+import ps "github.com/mygo-lang/mygo/lib/text/parsec"
+# keep this comment on its own line
+struct Box
+  value: Int
+end
+"""
+  let got = formattedOrFail(t, FormatSource("comment-boundary.mygo", source))
+  if !strings.Contains(got, "parsec\"\n# keep this comment on its own line\n") then
+    t.Fatalf("line comment was joined to the preceding declaration: %s", got)
+  end
+end
+
+func TestFormatterPreservesCommentsAroundDeclarationMembers(t: Ref[testing.T]) -> ()
+  let source = """package sample
+enum E
+  A
+end
+
+# before struct
+struct GreenToken
+  # before field
+  Kind: Int
+end
+"""
+  let want = """package sample
+enum E
+  A
+end
+
+# before struct
+struct GreenToken
+  # before field
+  Kind: Int
+end
+"""
+  let got = formattedOrFail(t, FormatSource("declaration-comments.mygo", source))
+  if got != want then
+    t.Fatalf("declaration comments were lost or misindented: got=%q want=%q", got, want)
   end
 end
 
@@ -58,10 +133,10 @@ func TestFormatterPreservesMultilineTripleString(t: Ref[testing.T]) -> ()
 end
 
 func TestFormatterReportsParser2Location(t: Ref[testing.T]) -> ()
-  switch FormatSource("broken.mygo", "package sample\n\nfunc")
+  switch FormatSource("broken.mygo", "unexpected\nlet recovered = 1\n")
     case Ok(_) => t.Fatal("invalid source unexpectedly formatted")
     case Err(message) =>
-      if !strings.Contains(message, "broken.mygo") then
+      if !strings.Contains(message, "broken.mygo:1:") then
         t.Fatalf("error lacks source name: %s", message)
       end
   end
@@ -91,30 +166,47 @@ func TestFormatterUsesBranchEventLines(t: Ref[testing.T]) -> ()
   end
 end
 
-func TestFormatterCollectsExpectedBlockEventLines(t: Ref[testing.T]) -> ()
-  let source = "package sample\nfunc f(value: Bool) -> Int\n  if value then\n    1\n  else\n    2\n  end\nend\n"
-  switch parser2.ParseFileLossless("events.mygo", source)
-    case Err(message) => t.Fatalf("lossless parse failed: %s", message)
-    case Ok(parsed) =>
-      if !hasLayoutEvent(parsed.LayoutEvents, "enter:decl:func", 2) || !hasLayoutEvent(parsed.LayoutEvents, "enter:if-then", 3) || !hasLayoutEvent(parsed.LayoutEvents, "enter:if-else", 5) then
-        t.Fatal("missing parser-owned block anchors")
-      end
+func TestFormatterKeepsCommentsIndentedInConditionalBranches(t: Ref[testing.T]) -> ()
+  let source = """package sample
+func choose(value: Int) -> Int
+  if value == 0 then
+    # then comment
+    0
+  elsif value == 1 then
+    # elsif comment
+    1
+  else
+    # else comment
+    2
+  end
+end
+"""
+  let got = formattedOrFail(t, FormatSource("branch-comments.mygo", source))
+  let want = """package sample
+func choose(value: Int) -> Int
+  if value == 0 then
+    # then comment
+    0
+  elsif value == 1 then
+    # elsif comment
+    1
+  else
+    # else comment
+    2
+  end
+end
+"""
+  if got != want then
+    t.Fatalf("comments lost their branch-body indentation:\n%s", got)
   end
 end
 
-func TestFormatterDoesNotTreatScalarBodyAsBlock(t: Ref[testing.T]) -> ()
+func TestFormatterKeepsScalarBodyAsExpression(t: Ref[testing.T]) -> ()
   let source = "package sample\nfunc f() -> Int\n  1\nend\n"
-  switch parser2.ParseFileLossless("scalar.mygo", source)
-    case Err(message) => t.Fatalf("lossless parse failed: %s", message)
-    case Ok(parsed) =>
-      if hasLayoutEvent(parsed.LayoutEvents, "enter:expr", 3) then
-        t.Fatal("scalar expression was incorrectly classified as a block")
-      end
+  let got = formattedOrFail(t, FormatSource("scalar.mygo", source))
+  if got != source then
+    t.Fatalf("scalar body changed during Syntax Tree rendering: %s", got)
   end
-end
-
-func hasLayoutEvent(events: Slice[parser2.LayoutEvent], kind: String, line: Int) -> Bool
-  events.Filter(func(item: parser2.LayoutEvent) -> Bool item.Kind == kind && item.Anchor.Start.Line == line end).Len() > 0
 end
 
 func TestFormatterExpandsSingleLineFunctionBody(t: Ref[testing.T]) -> ()
@@ -716,7 +808,7 @@ end
 # continuation instead of one.  The branch pass owned lines now join the lock
 # set, so the baked rows are reproduced byte-for-byte.
 func TestFormatterGluedValueIfInRealFileExpandsAtCanonicalDepth(t: Ref[testing.T]) -> ()
-  let path = "../parser2/lossless.mygo"
+  let path = "../parser2/lossless_test.mygo"
   let src = switch os.ReadFile(path)
     case Ok(bytes) => bytes as String
     case Err(err) then
@@ -741,11 +833,31 @@ func TestFormatterGluedValueIfInRealFileExpandsAtCanonicalDepth(t: Ref[testing.T
   end
   let second = formattedOrFail(t, FormatSource("lossless.mygo", first))
   if second != first then
-    t.Fatalf("glued value-if expansion is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+    let difference = firstDifferentLine(first, second, 1)
+    let firstLines = first.Split("\n")
+    let secondLines = second.Split("\n")
+    let start = if difference > 2 => difference - 3 else 0
+    let finish = difference + 2
+    let firstContext = strings.Join(firstLines.Slice(start, finish).UnwrapOr([]), "\n")
+    let secondContext = strings.Join(secondLines.Slice(start, finish).UnwrapOr([]), "\n")
+    t.Fatalf("formatter output is not idempotent at line %d:\nPASS1:\n%s\nPASS2:\n%s", difference, firstContext, secondContext)
   end
 end
 
-# Real-corpus regression: `internal/mygo/parser2/lossless.mygo` carries a block
+func firstDifferentLine(first: String, second: String, line: Int) -> Int
+  let firstLines = first.Split("\n")
+  let secondLines = second.Split("\n")
+  if line > firstLines.Len() && line > secondLines.Len() then
+    line
+  elsif firstLines.Get(line - 1).UnwrapOr("<end>") != secondLines.Get(line - 1).UnwrapOr("<end>") then
+    line
+  else
+    firstDifferentLine(first, second, line + 1)
+  end
+end
+
+# Real-corpus regression: `internal/mygo/parser2/legacy_parser_test.mygo` carries
+# the legacy `spannedPattern` block
 # `if ... then / else / end` whose then-body struct stays on one source row but
 # whose else-body struct holds a WIDER nested literal that the delimited pass
 # expands onto its own rows.  The nested expansion owns the else-body source row,
@@ -755,7 +867,7 @@ end
 # by their keyword anchor, so the pair survives and `else` closes the then-branch
 # at its construct depth.  Regression for `spannedPattern`.
 func TestFormatterRealFileBlockElseRendersCanonicalDepth(t: Ref[testing.T]) -> ()
-  let path = "../parser2/lossless.mygo"
+  let path = "../parser2/legacy_parser_test.mygo"
   let src = switch os.ReadFile(path)
     case Ok(bytes) => bytes as String
     case Err(err) then
@@ -785,5 +897,60 @@ func TestFormatterRealFileBlockElseRendersCanonicalDepth(t: Ref[testing.T]) -> (
 """
   if !strings.Contains(first, wantBlock) then
     t.Fatalf("block else did not close the then-branch at its own depth:\n%s", first)
+  end
+end
+
+func TestSyntaxBlockRendererUsesNestedCstOwnership(t: Ref[testing.T]) -> ()
+  let source = """func n() -> ()
+ if p then
+  switch v
+   case 1 => a
+   case _ then
+    b
+   end
+  end
+ elsif q then
+  c
+  # retain   comment
+  d
+ else
+  e
+ end
+end
+func loop() -> ()
+ while ready
+  tick()
+ end
+end
+"""
+  let want = """func n() -> ()
+  if p then
+    switch v
+      case 1 => a
+      case _ then
+        b
+      end
+    end
+  elsif q then
+    c
+    # retain   comment
+    d
+  else
+    e
+  end
+end
+func loop() -> ()
+  while ready
+    tick()
+  end
+end
+"""
+  let tree = parser2.ParseSyntaxAt("nested-blocks.mygo", source)
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("nested block fixture must parse without syntax diagnostics")
+  end
+  let got = FormatSyntaxBlocks(tree)
+  if got != want then
+    t.Fatalf("CST-owned nested block output mismatch:\nGOT:\n%s\nWANT:\n%s", got, want)
   end
 end

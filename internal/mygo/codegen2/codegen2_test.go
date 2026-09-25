@@ -1482,3 +1482,42 @@ end
 		t.Fatalf("generated signature replaced the Error type parameter with the error builtin:\n%s", code)
 	}
 }
+
+// TestGenerateSourceHoistsTupleSwitchSubjectOnce checks that a switch whose
+// subject is a tuple literal evaluates that subject once into a temp and lets
+// every branch reference it, instead of re-evaluating (or losing) branches that
+// assert on a tuple field.
+func TestGenerateSourceHoistsTupleSwitchSubjectOnce(t *testing.T) {
+	src := `package sample
+
+enum AgentEvent
+  Timeout { Where: Int }
+  Started
+end
+
+func classify(state: Int, event: AgentEvent) -> Int
+  switch (state, event)
+    case (current, Timeout { Where }) => current + Where
+    case (_, Started) => -1
+    case (_, _) => -2
+  end
+end
+`
+	result := GenerateSource(src)
+	code, ok := result.(Result__Ok[string, string])
+	if !ok {
+		t.Fatalf("GenerateSource failed: %v", result)
+	}
+	if !strings.Contains(code.F0, "__mygo_expr_0 := struct {") {
+		t.Fatalf("tuple switch subject was not hoisted into a single temp:\n%s", code.F0)
+	}
+	if strings.Count(code.F0, "F0: state, F1: event") != 1 {
+		t.Fatalf("tuple switch subject was re-evaluated per branch (want exactly one literal):\n%s", code.F0)
+	}
+	if !strings.Contains(code.F0, "__mygo_expr_0.F1.(AgentEvent__Timeout)") {
+		t.Fatalf("variant branch did not assert on the hoisted tuple field:\n%s", code.F0)
+	}
+	if !strings.Contains(code.F0, "__mygo_expr_0.F0 + __mygo_match") {
+		t.Fatalf("the first variant branch was lost from the chain:\n%s", code.F0)
+	}
+}

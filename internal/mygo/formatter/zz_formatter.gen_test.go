@@ -19,6 +19,23 @@ func TestFormatterLayoutIsIdempotent(t *testing.T) {
 		return
 	}
 }
+func TestFormatterProtectedSourceIsDeterministicAndIdempotent(t *testing.T) {
+	sourceTemplate := "package sample\n# retain   exact spacing\nfunc f(value: String) -> String\n  let raw = `raw   spacing`\n  let multi = TRIPLE\n    first   line\n      second   line\n  TRIPLE\n  let embedded = go[String]{code: `strings.TrimSpace(x)` in x = value}\n  value\nend\n"
+	source := strings.ReplaceAll(sourceTemplate, "TRIPLE", "\"\"\"")
+	first := formattedOrFail(t, FormatSource("protected.mygo", source))
+	repeated := formattedOrFail(t, FormatSource("protected.mygo", source))
+	second := formattedOrFail(t, FormatSource("protected.mygo", first))
+	if first != repeated || first != second {
+		t.Fatal("protected-source formatting was nondeterministic or not idempotent")
+	} else {
+	}
+	if !strings.Contains(first, "# retain   exact spacing") || !strings.Contains(first, "`raw   spacing`") || !strings.Contains(first, "    first   line\n      second   line\n  \"\"\"") || !strings.Contains(first, "strings.TrimSpace(x)") {
+		t.Fatalf("protected source changed during formatting: %s", first)
+		return
+	} else {
+		return
+	}
+}
 func formattedOrFail(t *testing.T, result Result[string, string]) string {
 	var __mygo_expr_0 string
 	if __mygo_match___mygo_expr_2, ok := result.(Result__Ok[string, string]); ok {
@@ -31,6 +48,19 @@ func formattedOrFail(t *testing.T, result Result[string, string]) string {
 		}
 	}
 	return __mygo_expr_0
+}
+func formatLayout(source string) string {
+	__mygo_expr_0 := FormatSource("layout.mygo", source)
+	var __mygo_expr_1 string
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[string, string]); ok {
+		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0
+	} else {
+		if _, ok := __mygo_expr_0.(Result__Err[string, string]); ok {
+			__mygo_expr_1 = source
+		} else {
+		}
+	}
+	return __mygo_expr_1
 }
 func TestFormatterPreservesProtectedLines(t *testing.T) {
 	src := "package sample\n# keep   comment\nfunc f() -> String\n  \"hello   world\"\nend\n"
@@ -47,6 +77,27 @@ func TestFormatterPreservesInlineGoLine(t *testing.T) {
 	got := formatLayout(src)
 	if !strings.Contains(got, "strings.TrimSpace(x)") {
 		t.Fatal("formatted output unexpectedly changed inline Go")
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterKeepsLineCommentBoundaryInDeclarationTrivia(t *testing.T) {
+	source := "package sample\nimport ps \"github.com/mygo-lang/mygo/lib/text/parsec\"\n# keep this comment on its own line\nstruct Box\n  value: Int\nend\n"
+	got := formattedOrFail(t, FormatSource("comment-boundary.mygo", source))
+	if !strings.Contains(got, "parsec\"\n# keep this comment on its own line\n") {
+		t.Fatalf("line comment was joined to the preceding declaration: %s", got)
+		return
+	} else {
+		return
+	}
+}
+func TestFormatterPreservesCommentsAroundDeclarationMembers(t *testing.T) {
+	source := "package sample\nenum E\n  A\nend\n\n# before struct\nstruct GreenToken\n  # before field\n  Kind: Int\nend\n"
+	want := "package sample\nenum E\n  A\nend\n\n# before struct\nstruct GreenToken\n  # before field\n  Kind: Int\nend\n"
+	got := formattedOrFail(t, FormatSource("declaration-comments.mygo", source))
+	if got != want {
+		t.Fatalf("declaration comments were lost or misindented: got=%q want=%q", got, want)
 		return
 	} else {
 		return
@@ -74,12 +125,12 @@ func TestFormatterPreservesMultilineTripleString(t *testing.T) {
 	}
 }
 func TestFormatterReportsParser2Location(t *testing.T) {
-	__mygo_expr_0 := FormatSource("broken.mygo", "package sample\n\nfunc")
+	__mygo_expr_0 := FormatSource("broken.mygo", "unexpected\nlet recovered = 1\n")
 	if _, ok := __mygo_expr_0.(Result__Ok[string, string]); ok {
 		t.Fatal("invalid source unexpectedly formatted")
 	} else {
 		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[string, string]); ok {
-			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "broken.mygo") {
+			if !strings.Contains(__mygo_match___mygo_expr_1.F0, "broken.mygo:1:") {
 				t.Fatalf("error lacks source name: %s", __mygo_match___mygo_expr_1.F0)
 			} else {
 			}
@@ -118,42 +169,26 @@ func TestFormatterUsesBranchEventLines(t *testing.T) {
 		return
 	}
 }
-func TestFormatterCollectsExpectedBlockEventLines(t *testing.T) {
-	source := "package sample\nfunc f(value: Bool) -> Int\n  if value then\n    1\n  else\n    2\n  end\nend\n"
-	__mygo_expr_0 := parser2.ParseFileLossless("events.mygo", source)
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[parser2.LosslessFile, string]); ok {
-		t.Fatalf("lossless parse failed: %s", __mygo_match___mygo_expr_2.F0)
+func TestFormatterKeepsCommentsIndentedInConditionalBranches(t *testing.T) {
+	source := "package sample\nfunc choose(value: Int) -> Int\n  if value == 0 then\n    # then comment\n    0\n  elsif value == 1 then\n    # elsif comment\n    1\n  else\n    # else comment\n    2\n  end\nend\n"
+	got := formattedOrFail(t, FormatSource("branch-comments.mygo", source))
+	want := "package sample\nfunc choose(value: Int) -> Int\n  if value == 0 then\n    # then comment\n    0\n  elsif value == 1 then\n    # elsif comment\n    1\n  else\n    # else comment\n    2\n  end\nend\n"
+	if got != want {
+		t.Fatalf("comments lost their branch-body indentation:\n%s", got)
+		return
 	} else {
-		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[parser2.LosslessFile, string]); ok {
-			if !hasLayoutEvent(__mygo_match___mygo_expr_1.F0.LayoutEvents, "enter:decl:func", 2) || !hasLayoutEvent(__mygo_match___mygo_expr_1.F0.LayoutEvents, "enter:if-then", 3) || !hasLayoutEvent(__mygo_match___mygo_expr_1.F0.LayoutEvents, "enter:if-else", 5) {
-				t.Fatal("missing parser-owned block anchors")
-			} else {
-			}
-		} else {
-		}
+		return
 	}
-	return
 }
-func TestFormatterDoesNotTreatScalarBodyAsBlock(t *testing.T) {
+func TestFormatterKeepsScalarBodyAsExpression(t *testing.T) {
 	source := "package sample\nfunc f() -> Int\n  1\nend\n"
-	__mygo_expr_0 := parser2.ParseFileLossless("scalar.mygo", source)
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[parser2.LosslessFile, string]); ok {
-		t.Fatalf("lossless parse failed: %s", __mygo_match___mygo_expr_2.F0)
+	got := formattedOrFail(t, FormatSource("scalar.mygo", source))
+	if got != source {
+		t.Fatalf("scalar body changed during Syntax Tree rendering: %s", got)
+		return
 	} else {
-		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[parser2.LosslessFile, string]); ok {
-			if hasLayoutEvent(__mygo_match___mygo_expr_1.F0.LayoutEvents, "enter:expr", 3) {
-				t.Fatal("scalar expression was incorrectly classified as a block")
-			} else {
-			}
-		} else {
-		}
+		return
 	}
-	return
-}
-func hasLayoutEvent(events []parser2.LayoutEvent, kind string, line int) bool {
-	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(events, func(item parser2.LayoutEvent) bool {
-		return item.Kind == kind && item.Anchor.Start.Line == line
-	})) > 0
 }
 func TestFormatterExpandsSingleLineFunctionBody(t *testing.T) {
 	source := "package sample\nfunc f() -> Int 1 end\n"
@@ -610,7 +645,7 @@ func TestFormatterRaggedNestedIfInOwnedBodyRendersCanonical(t *testing.T) {
 	}
 }
 func TestFormatterGluedValueIfInRealFileExpandsAtCanonicalDepth(t *testing.T) {
-	path := "../parser2/lossless.mygo"
+	path := "../parser2/lossless_test.mygo"
 	var __mygo_expr_2 Result[[]byte, error]
 	__mygo_expr_0, __mygo_expr_1 := os.ReadFile(path)
 	if __mygo_expr_1 != nil {
@@ -643,14 +678,30 @@ func TestFormatterGluedValueIfInRealFileExpandsAtCanonicalDepth(t *testing.T) {
 	}
 	second := formattedOrFail(t, FormatSource("lossless.mygo", first))
 	if second != first {
-		t.Fatalf("glued value-if expansion is not idempotent:\nPASS1:\n%s\nPASS2:\n%s", first, second)
+		difference := firstDifferentLine(first, second, 1)
+		firstLines := MygoIN6StringM5Split(first, "\n")
+		secondLines := MygoIN6StringM5Split(second, "\n")
+		var __mygo_expr_7 int
+		if difference > 2 {
+			__mygo_expr_7 = difference - 3
+		} else {
+			__mygo_expr_7 = 0
+		}
+		start := __mygo_expr_7
+		finish := difference + 2
+		firstContext := strings.Join(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(firstLines, start, finish), []string{}), "\n")
+		secondContext := strings.Join(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM5Slice(secondLines, start, finish), []string{}), "\n")
+		t.Fatalf("formatter output is not idempotent at line %d:\nPASS1:\n%s\nPASS2:\n%s", difference, firstContext, secondContext)
 		return
 	} else {
 		return
 	}
 }
+func firstDifferentLine(first string, second string, line int) int {
+	return __mygo_mt_formatter_firstDifferentLine(first, second, line, 0)
+}
 func TestFormatterRealFileBlockElseRendersCanonicalDepth(t *testing.T) {
-	path := "../parser2/lossless.mygo"
+	path := "../parser2/legacy_parser_test.mygo"
 	var __mygo_expr_2 Result[[]byte, error]
 	__mygo_expr_0, __mygo_expr_1 := os.ReadFile(path)
 	if __mygo_expr_1 != nil {
@@ -682,5 +733,46 @@ func TestFormatterRealFileBlockElseRendersCanonicalDepth(t *testing.T) {
 		return
 	} else {
 		return
+	}
+}
+func TestSyntaxBlockRendererUsesNestedCstOwnership(t *testing.T) {
+	source := "func n() -> ()\n if p then\n  switch v\n   case 1 => a\n   case _ then\n    b\n   end\n  end\n elsif q then\n  c\n  # retain   comment\n  d\n else\n  e\n end\nend\nfunc loop() -> ()\n while ready\n  tick()\n end\nend\n"
+	want := "func n() -> ()\n  if p then\n    switch v\n      case 1 => a\n      case _ then\n        b\n      end\n    end\n  elsif q then\n    c\n    # retain   comment\n    d\n  else\n    e\n  end\nend\nfunc loop() -> ()\n  while ready\n    tick()\n  end\nend\n"
+	tree := parser2.ParseSyntaxAt("nested-blocks.mygo", source)
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
+		t.Fatal("nested block fixture must parse without syntax diagnostics")
+	} else {
+	}
+	got := FormatSyntaxBlocks(tree)
+	if got != want {
+		t.Fatalf("CST-owned nested block output mismatch:\nGOT:\n%s\nWANT:\n%s", got, want)
+		return
+	} else {
+		return
+	}
+}
+func __mygo_mt_formatter_firstDifferentLine(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 int, __mygo_state int) int {
+	for {
+		switch __mygo_state {
+		case 0:
+			firstLines := MygoIN6StringM5Split(__mygo_mt_p0, "\n")
+			secondLines := MygoIN6StringM5Split(__mygo_mt_p1, "\n")
+			if __mygo_mt_p2 > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(firstLines) && __mygo_mt_p2 > MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(secondLines) {
+				return __mygo_mt_p2
+			} else {
+				if MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(firstLines, __mygo_mt_p2-1), "<end>") != MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(secondLines, __mygo_mt_p2-1), "<end>") {
+					return __mygo_mt_p2
+				} else {
+					__tail_0 := __mygo_mt_p0
+					__tail_1 := __mygo_mt_p1
+					__tail_2 := __mygo_mt_p2 + 1
+					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+					__mygo_state = 0
+					continue
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
 	}
 }

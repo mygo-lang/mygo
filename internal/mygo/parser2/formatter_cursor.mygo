@@ -1,0 +1,182 @@
+package parser2
+
+
+# FormatterCursor is the Syntax Tree formatter's ordered traversal over green
+# elements (task 4.1).  It walks one ordered `Slice[GreenElement]` exactly once,
+# so the formatter can consume tokens, nested nodes, and trivia in source order
+# without re-deriving structure or positions from text.
+#
+# Trivia is classified through the single explicit `greenElementIsTrivia`
+# predicate so every consumer agrees on what a trivia gap is.  Two skipping
+# modes are distinguished:
+#
+#   - `FormatterCursorSkipTrivia` skips every trivia item; grammar decisions
+#     that must look past comments and whitespace use this mode.
+#   - `FormatterCursorSkipFormatableTrivia` skips only FORMATABLE trivia
+#     (whitespace) and stops at opaque trivia (comments).  Only a formatable
+#     gap may be normalized away and re-emitted as canonical layout; opaque
+#     trivia must be replayed byte-for-byte.
+#
+# The cursor never drops source: skipping only advances `Index`; the caller can
+# still slice the original element range for protected spans.
+struct FormatterCursor
+  Elements: Slice[GreenElement]
+  Index: Int
+end
+
+func NewFormatterCursor(elements: Slice[GreenElement]) -> FormatterCursor
+  FormatterCursor { Elements: elements, Index: 0 }
+end
+
+func FormatterCursorPeek(cursor: FormatterCursor) -> Option[GreenElement]
+  cursor.Elements.Get(cursor.Index)
+end
+
+func FormatterCursorIsDone(cursor: FormatterCursor) -> Bool
+  cursor.Index >= cursor.Elements.Len()
+end
+
+func FormatterCursorAdvance(cursor: FormatterCursor) -> FormatterCursor
+  FormatterCursor { Elements: cursor.Elements, Index: cursor.Index + 1 }
+end
+
+# FormatterCursorIsTrivia routes every trivia decision through the one explicit
+# `greenElementIsTrivia(item)` predicate rather than matching TriviaElement in
+# each traversal.  An exhausted cursor is never trivia.
+func FormatterCursorIsTrivia(cursor: FormatterCursor) -> Bool
+  switch FormatterCursorPeek(cursor)
+    case Some(item) => greenElementIsTrivia(item)
+    case None => false
+  end
+end
+
+# FormatterCursorSkipTrivia recursively skips every trivia element so a grammar
+# decision can reach the next token or node, regardless of comments.
+func FormatterCursorSkipTrivia(cursor: FormatterCursor) -> FormatterCursor
+  if FormatterCursorIsTrivia(cursor) then
+    FormatterCursorSkipTrivia(FormatterCursorAdvance(cursor))
+  else
+    cursor
+  end
+end
+
+# FormatterCursorSkipFormatableTrivia recursively skips only formatable trivia
+# (whitespace) gaps.  It stops at the first token, nested node, or opaque trivia
+# (a comment), so opaque source is never silently removed by normalization.
+func FormatterCursorSkipFormatableTrivia(cursor: FormatterCursor) -> FormatterCursor
+  switch FormatterCursorPeek(cursor)
+    case Some(item) =>
+      if greenElementIsFormatableTrivia(item) then
+        FormatterCursorSkipFormatableTrivia(FormatterCursorAdvance(cursor))
+      else
+        cursor
+      end
+    case None => cursor
+  end
+end
+
+# FormatterCursorNextContent returns the next significant element, skipping all
+# trivia.  It is the read-only companion to `FormatterCursorSkipTrivia`.
+func FormatterCursorNextContent(cursor: FormatterCursor) -> Option[GreenElement]
+  FormatterCursorPeek(FormatterCursorSkipTrivia(cursor))
+end
+
+# greenElementIsFormatableTrivia is the normalization boundary: a formatable gap
+# is whitespace trivia the formatter may discard and re-emit as canonical layout.
+# Every other element (tokens, nodes, comments, and any other trivia kind) is not
+# formatable and must be replayed from source.
+func greenElementIsFormatableTrivia(item: GreenElement) -> Bool
+  if greenElementIsTrivia(item) then
+    switch item
+      case TriviaElement(trivia) => formatterTriviaIsFormatable(trivia)
+      case _ => false
+    end
+  else
+    false
+  end
+end
+
+func formatterTriviaIsFormatable(trivia: GreenTrivia) -> Bool
+  trivia.Kind == GreenTriviaKind.Whitespace
+end
+
+# FormatterOpaqueTriviaRaw returns the raw source of the trivia the formatter must
+# replay verbatim.  Formatable whitespace returns None because it is normalized
+# away; a comment (or any future opaque trivia kind) returns Some(raw).  A token
+# or node is not trivia and also returns None.
+func FormatterOpaqueTriviaRaw(item: GreenElement) -> Option[String]
+  if greenElementIsFormatableTrivia(item) then
+    None
+  else
+    switch item
+      case TriviaElement(trivia) => Some(trivia.Raw)
+      case _ => None
+    end
+  end
+end
+
+# Task 4.2 widens "opaque source" from opaque trivia to every lexical form the
+# formatter must re-emit verbatim.  Three families are opaque:
+#
+#   - opaque trivia (comments), owned by `GreenTrivia` and never a normalization
+#     gap;
+#   - literal tokens whose exact spelling carries meaning (`"..."`, `` `...` ``,
+#     triple-quoted strings, and `'x'` runes) - decoding and re-encoding them is
+#     lossy, so the delimiter and escapes must survive byte-for-byte;
+#   - inline-Go ranges, whose embedded Go payload is not MyGO syntax at all and
+#     therefore can never be regenerated from AST values.
+#
+# `greenElementIsOpaqueSource` is the single union predicate every consumer uses,
+# so the later delimiter/block migrations cannot disagree about what may be
+# normalized and what must be replayed.
+
+# greenElementIsOpaqueLiteral recognizes the literal token kinds the formatter
+# must re-emit verbatim, including delimiters and escape sequences.
+func greenElementIsOpaqueLiteral(item: GreenElement) -> Bool
+  switch item
+    case TokenElement(token) =>
+      token.Kind == GreenTokenKind.StringLiteral || token.Kind == GreenTokenKind.RawStringLiteral || token.Kind == GreenTokenKind.TripleStringLiteral || token.Kind == GreenTokenKind.RuneLiteral
+    case _ => false
+  end
+end
+
+# greenElementIsInlineGoRange recognizes the inline-Go structural range.  The
+# whole expression, body, and embedded `code:` literal are opaque: their Go
+# payload is replayed from source, never rebuilt from decoded values.  The value
+# and type bindings are deliberately excluded, because their MyGO operands are
+# ordinary syntax the formatter owns.
+func greenElementIsInlineGoRange(item: GreenElement) -> Bool
+  switch greenElementNode(item)
+    case Some(node) then
+      node.value().Kind == GreenNodeKind.InlineGoExpr || node.value().Kind == GreenNodeKind.InlineGoBody || node.value().Kind == GreenNodeKind.InlineGoCode
+    end
+    case None => false
+  end
+end
+
+# greenElementIsOpaqueSource is the union predicate: formatable whitespace is the
+# only element the formatter may discard and re-emit canonically.  Every other
+# element is either opaque source (replayed verbatim) or ordinary syntax the
+# formatter traverses.
+func greenElementIsOpaqueSource(item: GreenElement) -> Bool
+  if greenElementIsTrivia(item) then
+    !greenElementIsFormatableTrivia(item)
+  else
+    greenElementIsOpaqueLiteral(item) || greenElementIsInlineGoRange(item)
+  end
+end
+
+# FormatterOpaqueSourceRaw returns the exact source the formatter must replay for
+# an opaque element, or None when the element is not opaque.  Formatable
+# whitespace and ordinary tokens/nodes return None.
+func FormatterOpaqueSourceRaw(item: GreenElement) -> Option[String]
+  if greenElementIsOpaqueSource(item) then
+    switch item
+      case TriviaElement(trivia) => Some(trivia.Raw)
+      case TokenElement(token) => Some(token.Raw)
+      case NodeElement(node) => Some(greenNodeText(node.value()))
+    end
+  else
+    None
+  end
+end

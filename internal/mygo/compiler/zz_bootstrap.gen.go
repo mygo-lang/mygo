@@ -910,7 +910,36 @@ func bootstrapCollectGoPackagesFromDecls(decls []ast2.Decl, index int, state Boo
 	return __mygo_mt_compiler_bootstrapCollectGoPackagesFromDecls(decls, index, state, 0)
 }
 func bootstrapCollectMyGoPkgInfos(workspaceRoot string, fromDir string, imports []BootstrapImport, index int, state BootstrapState, out []typeinference2.MyGoPackageInfo) []typeinference2.MyGoPackageInfo {
-	return __mygo_mt_compiler_bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index, state, out, 0)
+	return bootstrapCollectMyGoPkgInfosRecursive(workspaceRoot, fromDir, imports, index, state, out)
+}
+
+func bootstrapCollectMyGoPkgInfosRecursive(workspaceRoot string, fromDir string, imports []BootstrapImport, index int, state BootstrapState, out []typeinference2.MyGoPackageInfo) []typeinference2.MyGoPackageInfo {
+	for ; index < len(imports); index++ {
+		imp := MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(imports, index), BootstrapImport{Alias: "", Path: ""})
+		resolved := bootstrapResolveImport(workspaceRoot, fromDir, imp.Path)
+		resolvedPackage, ok := resolved.(Result__Ok[string, error])
+		if !ok || bootstrapHasMyGoPackagePath(out, imp.Path, 0) {
+			continue
+		}
+		inputs, ok := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.SourcesCache, resolvedPackage.F0).(Option__Some[BootstrapInputs])
+		if !ok {
+			continue
+		}
+		info := typeinference2.MyGoPackageInfo{Alias: imp.Alias, Path: imp.Path, Decls: bootstrapFlattenSources(inputs.F0.Sources, 0, []ast2.Decl{})}
+		out = append(out, info)
+		out = bootstrapCollectMyGoPkgInfosRecursive(workspaceRoot, resolvedPackage.F0, bootstrapImportsFromSources(inputs.F0.Sources), 0, state, out)
+	}
+	return out
+}
+
+func bootstrapHasMyGoPackagePath(packages []typeinference2.MyGoPackageInfo, path string, index int) bool {
+	for ; index < len(packages); index++ {
+		pkg := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, index)
+		if item, ok := pkg.(Option__Some[typeinference2.MyGoPackageInfo]); ok && item.F0.Path == path {
+			return true
+		}
+	}
+	return false
 }
 func bootstrapFlattenSources(sources []typeinference2.PkgDeclSource, index int, out []ast2.Decl) []ast2.Decl {
 	return __mygo_mt_compiler_bootstrapFlattenSources(sources, index, out, 0)

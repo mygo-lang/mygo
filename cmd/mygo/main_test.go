@@ -46,9 +46,15 @@ func TestRunFmtStdin(t *testing.T) {
 }
 
 func TestRunFmtStdinRejectsInvalidInput(t *testing.T) {
-	_, err := captureFmtStdin(t, "package sample\nfunc")
+	got, err := captureFmtStdin(t, "unexpected\nlet recovered = 1\n")
 	if err == nil {
 		t.Fatal("expected parse error")
+	}
+	if got != "" {
+		t.Fatalf("invalid stdin produced formatted output: %q", got)
+	}
+	if !strings.Contains(err.Error(), "<stdin>:1:") {
+		t.Fatalf("parse error lacks diagnostic location: %v", err)
 	}
 }
 

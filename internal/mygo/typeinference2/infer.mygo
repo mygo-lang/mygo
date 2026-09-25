@@ -91,7 +91,7 @@ func predeclareEnumVariants(env: Env, vars: Slice[ast2.Variant], name: String, t
     end
     let scheme = Scheme { Bound: typeParamIDs(tps, 1), Predicates: [], Body: constructorType }
     let withQualified = envPut(env, name + "." + v.Name, scheme)
-    predeclareEnumVariants(envPut(withQualified, v.Name, scheme), common2.SliceDrop(vars, 1), name, tps, state)
+    predeclareEnumVariants(withQualified, common2.SliceDrop(vars, 1), name, tps, state)
   end
 end
 
@@ -771,13 +771,15 @@ func inferSwitch(target: ast2.Expr, cases: Slice[ast2.SwitchCase], env: Env, sta
       # substitutions.  Otherwise `Some(e)` receives a fresh type variable
       # instead of `ParseError`, and selectors such as `e.Expected` lose their
       # Expr.Type before code generation.
-      let resolvedTarget = applySubst(value.Subst, value.Type)
+      let inferredTarget = applySubst(value.Subst, value.Type)
+      let (targetSubst, targetState) = inferBuiltinSwitchTarget(cases, inferredTarget, value.State)
+      let resolvedTarget = applySubst(targetSubst, inferredTarget)
       # The switch target is consumed by codegen after this inference scope
       # has gone away. Persist its fully substituted type directly on the
       # target node; relying on an outer expression copy can otherwise lose
       # the annotation for a local binding inside nested function literals.
       let typedTarget = ast2.Expr { ID: eir.Expr.ID, Pos: eir.Expr.Pos, Kind: eir.Expr.Kind, Type: Some(resolvedTarget) }
-      let next = inferTypedSwitchCases(cases, resolvedTarget, env, value.State, value.Subst, None, None, value.Predicates, [] as Slice[ast2.SwitchCase])
+      let next = inferTypedSwitchCases(cases, resolvedTarget, env, targetState, composeSubst(targetSubst, value.Subst), None, None, value.Predicates, [] as Slice[ast2.SwitchCase])
       switch next
         case Err(msg) => Err(msg)
         case Ok(pair) then
@@ -787,6 +789,41 @@ func inferSwitch(target: ast2.Expr, cases: Slice[ast2.SwitchCase], env: Env, sta
         end
       end
     end
+  end
+end
+
+func inferBuiltinSwitchTarget(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoType, state: InferState) -> (Subst, InferState)
+  if cases.Len() == 0 then
+    (emptySubst(), state)
+  else
+    let pattern = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() }).Pattern
+    let variantName = switch pattern
+      case VariantPattern(name, _) => name
+      case BindPattern(name) => name
+      case _ => ""
+    end
+    if !isBuiltinVariantName(variantName) || enumNameForMonoType(targetType).IsSome() then
+      (emptySubst(), state)
+    else
+      switch envGet(initialEnv(), variantName)
+        case Some(scheme) then
+          let variantType = instantiate(scheme, state)
+          let resultType = variantConstructorResultType(variantType)
+          switch unify(targetType, resultType, emptySubst())
+            case Ok(subst) => (subst, withFreshID(state, nextFreshVarID(variantType, state.FreshVarID)))
+            case Err(_) => (emptySubst(), state)
+          end
+        end
+        case None => (emptySubst(), state)
+      end
+    end
+  end
+end
+
+func variantConstructorResultType(typ: ast2.MonoType) -> ast2.MonoType
+  switch typ
+    case TFunc(_, ret) => ret.value()
+    case _ => typ
   end
 end
 
@@ -831,7 +868,7 @@ func inferTypedSwitchCasesChecked(
     end
   else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, PatternSpan: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }, Body: ast2.EmptyExpr(), BodySpan: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }, Span: ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } } })
-    let pattern = resolveBareVariantPattern(env, targetType, current.Pattern)
+    let pattern = resolveBareVariantPattern(env, state, targetType, current.Pattern)
     # Bind call scrutinees to locals: the codegen re-evaluates a switch
     # scrutinee per pattern arm, so switching directly on a call such as
     # `inferExpr(current.Body, ...)` would re-infer the nested case body
@@ -953,7 +990,7 @@ func tuplePatternsAt(patterns: Slice[ast2.Pattern], index: Int, out: Slice[ast2.
 end
 
 func checkSwitchExhaustiveEnum(enumName: String, targetType: ast2.MonoType, patterns: Slice[ast2.Pattern], state: InferState) -> Result[(), String]
-  let variants = enumVariantNames(state, enumName, [])
+  let variants = enumVariantNamesForTarget(state, targetType, enumName, [])
   if variants.Len() == 0 then Ok(()) else
     switch enumPatternsCoverage(variants, targetType, patterns, state, [])
       case Some(missing) => Err("non-exhaustive switch: missing variant(s) " + common2.JoinStrings(missing, ", "))
@@ -971,7 +1008,7 @@ func enumPatternsCoverage(variants: Slice[String], targetType: ast2.MonoType, pa
     switch p
       case WildcardPattern => None
       case BindPattern(name) then
-        switch lookupEnumVariantDecl(state, enumNameForMonoType(targetType).UnwrapOr(""), name)
+        switch lookupEnumVariantForTarget(state, targetType, name)
           case Some(v) then
             if v.Fields.Len() == 0 then
               enumPatternsCoverage(variants, targetType, common2.SliceDrop(patterns, 1), state, covered.Append(name))
@@ -996,6 +1033,20 @@ func enumVariantNames(state: InferState, enumName: String, out: Slice[String]) -
   end
 end
 
+func enumVariantNamesForTarget(state: InferState, targetType: ast2.MonoType, enumName: String, out: Slice[String]) -> Slice[String]
+  switch monoTypeQualifiedPath(targetType)
+    case Some(path) => enumVariantNamesInPackagesByPath(state.MyGoPackageCache, path, enumName, out)
+    case None => enumVariantNames(state, enumName, out)
+  end
+end
+
+func enumVariantNamesInPackagesByPath(packages: Slice[MyGoPackageInfo], path: String, enumName: String, out: Slice[String]) -> Slice[String]
+  if packages.Len() == 0 then out else
+    let pkg = packages.Get(0).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] as Slice[ast2.Decl] })
+    if pkg.Path == path then enumVariantNamesInDecls(pkg.Decls, enumName, out) else enumVariantNamesInPackagesByPath(common2.SliceDrop(packages, 1), path, enumName, out) end
+  end
+end
+
 func enumVariantNamesInDecls(decls: Slice[ast2.Decl], enumName: String, out: Slice[String]) -> Slice[String]
   if decls.Len() == 0 then
     out
@@ -1015,16 +1066,20 @@ func enumVariantNamesInDecls(decls: Slice[ast2.Decl], enumName: String, out: Sli
 end
 
 func enumVariantNamesInVariants(variants: Slice[ast2.Variant], out: Slice[String]) -> Slice[String]
-  if variants.Len() == 0 then out else
+  if variants.Len() == 0 then
+    out
+  else
     let v = variants.Get(0).UnwrapOr(ast2.Variant { Name: "", Fields: emptyASTTypeExprs(), Named: false, Names: [] as Slice[String] })
     enumVariantNamesInVariants(common2.SliceDrop(variants, 1), out.Append(v.Name))
   end
 end
 
 func missingVariantNames(variants: Slice[String], covered: Slice[String], out: Slice[String]) -> Slice[String]
-  if variants.Len() == 0 then out else
+  if variants.Len() == 0 then
+    out
+  else
     let name = variants.Get(0).UnwrapOr("")
-    let next = if stringSliceContains(covered, name) then out else out.Append(name) end
+    let next = if stringSliceContains(covered, name) => out else out.Append(name)
     missingVariantNames(common2.SliceDrop(variants, 1), covered, next)
   end
 end
@@ -1037,7 +1092,7 @@ func inferSwitchCases(cases: Slice[ast2.SwitchCase], targetType: ast2.MonoType, 
     end
   else
     let current = cases.Get(0).UnwrapOr(ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, Body: ast2.EmptyExpr() })
-    let caseEnv = envWithPattern(env, resolveBareVariantPattern(env, targetType, current.Pattern), targetType, state)
+    let caseEnv = envWithPattern(env, resolveBareVariantPattern(env, state, targetType, current.Pattern), targetType, state)
     switch caseEnv
       case Err(msg) => Err(msg)
       case Ok(nextEnv) then
@@ -1065,160 +1120,21 @@ end
 
 # Parser2 deliberately preserves a bare identifier as BindPattern.  A
 # zero-field enum constructor is also written as a bare identifier, so resolve
-# that ambiguity here from the predeclared environment.  Constructors have an
-# enum return type whose name differs from the constructor name; ordinary local
-# bindings retain BindPattern.
-func resolveBareVariantPattern(env: Env, targetType: ast2.MonoType, pattern: ast2.Pattern) -> ast2.Pattern
+# that ambiguity from the switch target enum declaration.
+func resolveBareVariantPattern(env: Env, state: InferState, targetType: ast2.MonoType, pattern: ast2.Pattern) -> ast2.Pattern
   switch pattern
     case BindPattern(name) then
-      switch variantSchemeForTarget(env, name, targetType)
-        case Some(scheme) then
-          switch scheme.Body
-            case TCon(enumName) then
-              if enumName != name => ast2.Pattern.VariantPattern(name, [] as Slice[ast2.Pattern]) else pattern
-            end
-            case TApp(typeRef, _) then
-              switch typeRef.value()
-                case TCon(enumName) then
-                  if enumName != name => ast2.Pattern.VariantPattern(name, [] as Slice[ast2.Pattern]) else pattern
-                end
-                case _ => pattern
-              end
-            end
-            # Imported enum variants carry TQualifiedName(path, TCon(Enum)).
-            # Unwrap the wrapper so `case WildcardPattern` on an imported
-            # ast2.Pattern resolves to a zero-arity VariantPattern instead of
-            # remaining a bare binding that codegen2 would treat as a fallback.
-            case TQualifiedName(_, inner) then
-              switch inner.value()
-                case TCon(enumName) then
-                  if enumName != name => ast2.Pattern.VariantPattern(name, [] as Slice[ast2.Pattern]) else pattern
-                end
-                case _ => pattern
-              end
-            end
-            case _ => pattern
+      switch variantConstructorTypeForTarget(env, state, name, targetType)
+        case Some(variantType) then
+          switch variantType
+            case TFunc(_, _) => pattern
+            case _ => ast2.Pattern.VariantPattern(name, [])
           end
         end
         case None => pattern
       end
     end
     case _ => pattern
-  end
-end
-
-# Select a constructor by both its spelling and the switch target type. This
-# prevents equal variant names from separate imported packages colliding.
-func variantSchemeForTarget(env: Env, name: String, targetType: ast2.MonoType) -> Option[Scheme]
-  variantSchemeForTargetLoop(env, name, targetType, None)
-end
-
-func variantSchemeForTargetLoop(env: Env, name: String, targetType: ast2.MonoType, found: Option[Scheme]) -> Option[Scheme]
-  let fromBatch = switch env.Batch
-    case Some(batch) => variantSchemeInBatchEntries(batch.Entries, name, targetType, found)
-    case None => found
-  end
-  let fromEntry = switch env.Entry
-    case Some(entry) then
-      if entry.Name == name && variantMatchesTarget(targetType, variantResultType(entry.Scheme.Body)) then
-        mergeVariantCandidates(fromBatch, Some(entry.Scheme))
-      else
-        fromBatch
-      end
-    end
-    case None => fromBatch
-  end
-  switch env.Parent
-    case Some(parent) => variantSchemeForTargetLoop(parent.value(), name, targetType, fromEntry)
-    case None => fromEntry
-  end
-end
-
-# Scan a batch layer's entries (an imported package's exported variants) for
-# a matching constructor, merging candidates with the same ambiguity rules.
-func variantSchemeInBatchEntries(entries: Slice[EnvEntry], name: String, targetType: ast2.MonoType, found: Option[Scheme]) -> Option[Scheme]
-  if entries.Len() == 0 then
-    found
-  else
-    let entry = entries.Get(0).UnwrapOr(EnvEntry { Name: "", Scheme: Scheme { Bound: [], Predicates: [], Body: ast2.MonoType.TUnit } })
-    let candidate = if entry.Name == name && variantMatchesTarget(targetType, variantResultType(entry.Scheme.Body)) then
-      Some(entry.Scheme)
-    else
-      None
-    end
-    variantSchemeInBatchEntries(common2.SliceDrop(entries, 1), name, targetType, mergeVariantCandidates(found, candidate))
-  end
-end
-
-# The prelude can be present as both input and external declarations.
-# Identical constructors are one candidate, not an ambiguity; a genuinely
-# different constructor with the same name is ambiguous.
-func mergeVariantCandidates(found: Option[Scheme], candidate: Option[Scheme]) -> Option[Scheme]
-  switch found
-    case Some(existing) then
-      switch candidate
-        case Some(next) then
-          if monoEqual(variantResultType(existing.Body), variantResultType(next.Body)) => found else None
-        end
-        case None => found
-      end
-    end
-    case None => candidate
-  end
-end
-
-func variantResultType(typ: ast2.MonoType) -> ast2.MonoType
-  switch typ
-    case TFunc(_, ret) => ret.value()
-    case _ => typ
-  end
-end
-
-func variantMatchesTarget(targetType: ast2.MonoType, candidate: ast2.MonoType) -> Bool
-  switch unify(targetType, candidate, emptySubst())
-    case Ok(_) => true
-    case Err(_) then
-      # During bootstrap an imported parameter type can temporarily arrive as
-      # its package-local inner type.  Accept that form only for this pattern
-      # lookup; variantSchemeForTarget still rejects candidates from different
-      # package paths as ambiguous.
-      switch candidate
-        case TQualifiedName(_, inner) then
-          switch unify(targetType, inner.value(), emptySubst())
-            case Ok(_) => true
-            case Err(_) => false
-          end
-        end
-        case _ => false
-      end
-    end
-  end
-end
-
-# After a constructor has been selected, retain the target's temporary bare
-# representation at this bootstrap boundary. Qualification remains intact in
-# the environment and in all ordinary unification paths.
-func variantTypeForTarget(targetType: ast2.MonoType, variantType: ast2.MonoType) -> ast2.MonoType
-  switch variantType
-    case TFunc(fields, ret) => ast2.MonoType.TFunc(fields, Ref.new(variantResultTypeForTarget(targetType, ret.value())))
-    case _ => variantResultTypeForTarget(targetType, variantType)
-  end
-end
-
-func variantResultTypeForTarget(targetType: ast2.MonoType, resultType: ast2.MonoType) -> ast2.MonoType
-  switch resultType
-    case TQualifiedName(_, inner) then
-      switch unify(targetType, resultType, emptySubst())
-        case Ok(_) => resultType
-        case Err(_) then
-          switch unify(targetType, inner.value(), emptySubst())
-            case Ok(_) => inner.value()
-            case Err(_) => resultType
-          end
-        end
-      end
-    end
-    case _ => resultType
   end
 end
 
@@ -1286,6 +1202,10 @@ func isBareZeroFieldVariant(env: Env, expr: ast2.Expr) -> Bool
 end
 
 func envWithPattern(env: Env, pattern: ast2.Pattern, targetType: ast2.MonoType, state: InferState) -> Result[Env, String]
+  envWithPatternTarget(env, pattern, targetType, targetType, state)
+end
+
+func envWithPatternTarget(env: Env, pattern: ast2.Pattern, targetType: ast2.MonoType, variantTargetType: ast2.MonoType, state: InferState) -> Result[Env, String]
   # TQualifiedName wraps a foreign-package type.  Unwrap the inner type
   # for pattern matching; the bindings the pattern introduces use the
   # original wrapper as their body so any qualified access from the case
@@ -1302,7 +1222,7 @@ func envWithPattern(env: Env, pattern: ast2.Pattern, targetType: ast2.MonoType, 
         case WildcardPattern => Ok(env)
         case _ then
           let innerType = inner.value()
-          let next = envWithPattern(env, pattern, innerType, state)
+          let next = envWithPatternTarget(env, pattern, innerType, variantTargetType, state)
           switch next
             case Ok(env2) => wrapPatternBinds(env2, path, innerType)
             case Err(msg) => Err(msg)
@@ -1328,17 +1248,11 @@ func envWithPattern(env: Env, pattern: ast2.Pattern, targetType: ast2.MonoType, 
           end
         end
         case VariantPattern(name, args) then
-          switch variantSchemeForTarget(env, name, targetType)
-            case None =>
-              if args.Len() == 0 then
-                Ok(envPut(env, name, Scheme { Bound: [], Predicates: [], Body: targetType }))
-              else
-                Err("unknown variant " + name)
-              end
-            case Some(scheme) =>
-              let variantType = variantTypeForTarget(targetType, instantiate(scheme, NewInferState()))
+          switch variantConstructorTypeForTarget(env, state, name, variantTargetType)
+            case None => Err("unknown variant " + name + " for switch target " + MonoStringFull(variantTargetType) + " from package " + monoTypeQualifiedPathString(variantTargetType))
+            case Some(variantType) =>
               switch variantType
-                case TFunc(fields, ret) => envWithPatternBindings(env, args, fields, targetType, ret.value())
+                case TFunc(fields, ret) => envWithPatternBindings(env, args, fields, variantTargetType, ret.value())
                 case TCon(_) then
                   switch unify(targetType, variantType, emptySubst())
                     case Ok(_) => Ok(env)
@@ -1383,13 +1297,12 @@ func envWithPattern(env: Env, pattern: ast2.Pattern, targetType: ast2.MonoType, 
           end
         end
         case StructVariantPattern(vname, fields) then
-          switch variantSchemeForTarget(env, vname, targetType)
+          switch variantConstructorTypeForTarget(env, state, vname, variantTargetType)
             case None => Err("unknown variant " + vname)
-            case Some(scheme) then
-              let variantType = variantTypeForTarget(targetType, instantiate(scheme, NewInferState()))
+            case Some(variantType) then
               switch variantType
                 case TFunc(fieldTypes, ret) =>
-                  switch lookupEnumVariantForTarget(state, targetType, vname)
+                  switch lookupEnumVariantForTarget(state, variantTargetType, vname)
                     case Some(variant) => bindNamedStructPatternFields(env, fields, variant.Names, fieldTypes, [] as Slice[String], [] as Slice[String])
                     case None => Err("cannot resolve named fields for variant " + vname)
                   end
@@ -1431,19 +1344,216 @@ end
 
 func lookupEnumVariantForTarget(state: InferState, targetType: ast2.MonoType, variantName: String) -> Option[ast2.Variant]
   switch enumNameForMonoType(targetType)
-    case Some(enumName) => lookupEnumVariantDecl(state, enumName, variantName)
+    case Some(enumName) => lookupEnumVariantDeclForTarget(state, targetType, enumName, variantName)
     case None => None
+  end
+end
+
+func lookupEnumVariantDeclForTarget(state: InferState, targetType: ast2.MonoType, enumName: String, variantName: String) -> Option[ast2.Variant]
+  switch monoTypeQualifiedPath(targetType)
+    case Some(path) => lookupEnumVariantDeclInPackagesByPath(state.MyGoPackageCache, path, enumName, variantName)
+    case None => lookupEnumVariantDecl(state, enumName, variantName)
+  end
+end
+
+func monoTypeQualifiedPath(typ: ast2.MonoType) -> Option[String]
+  switch typ
+    case TQualifiedName(path, _) => Some(path)
+    case TApp(ctor, _) => monoTypeQualifiedPath(ctor.value())
+    case _ => None
+  end
+end
+
+func monoTypeQualifiedPathString(typ: ast2.MonoType) -> String
+  switch monoTypeQualifiedPath(typ)
+    case Some(path) => path
+    case None => ""
+  end
+end
+
+func lookupEnumVariantDeclInPackagesByPath(packages: Slice[MyGoPackageInfo], path: String, enumName: String, variantName: String) -> Option[ast2.Variant]
+  if packages.Len() == 0 then None else
+    let pkg = packages.Get(0).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: []})
+    if pkg.Path == path then lookupEnumVariantDeclInDecls(pkg.Decls, enumName, variantName) else lookupEnumVariantDeclInPackagesByPath(common2.SliceDrop(packages, 1), path, enumName, variantName) end
+  end
+end
+
+func variantConstructorTypeForTarget(env: Env, state: InferState, variantName: String, targetType: ast2.MonoType) -> Option[ast2.MonoType]
+  switch enumNameForMonoType(targetType)
+    case Some(enumName) then
+      switch lookupEnumVariantDeclForTarget(state, targetType, enumName, variantName)
+        case Some(variant) then
+          let typeParams = enumTypeParamsForTarget(state, targetType, enumName)
+          let variantEnv = envForEnumTarget(env, state, targetType)
+          let genericFields = typeArgsFromASTInEnvWithParamsList(variant.Fields, typeParams, variantEnv, state)
+          let qualifiedFields = qualifyEnumFieldsForTarget(genericFields, state.MyGoPackageCache, targetType)
+          let parameterSubst = enumTypeParameterSubst(typeParams, enumTypeArgsForTarget(targetType), 0, [])
+          let fields = substTypes(qualifiedFields, SubstFromEntries(parameterSubst))
+          if fields.Len() == 0 then
+            Some(targetType)
+          else
+            Some(ast2.MonoType.TFunc(fields, Ref.new(targetType)))
+          end
+        end
+        case None => builtinVariantTypeForTarget(env, state, enumName, variantName, targetType)
+      end
+    end
+    case None => builtinVariantTypeForTarget(env, state, "", variantName, targetType)
+  end
+end
+
+func envForEnumTarget(env: Env, state: InferState, targetType: ast2.MonoType) -> Env
+  switch monoTypeQualifiedPath(targetType)
+    case Some(path) =>
+      switch findMyGoPackageByPath(state.MyGoPackageCache, path)
+        case Some(pkg) =>
+          switch importedPackageEnv(pkg, state.MyGoPackageCache, state.GoPackages)
+            case Ok(packageEnv) => packageEnv
+            case Err(_) => env
+          end
+        case None => env
+      end
+    case None => env
+  end
+end
+
+func findMyGoPackageByPath(packages: Slice[MyGoPackageInfo], path: String) -> Option[MyGoPackageInfo]
+  if packages.Len() == 0 then None else
+    let pkg = packages.Get(0).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] })
+    if pkg.Path == path then Some(pkg) else findMyGoPackageByPath(common2.SliceDrop(packages, 1), path) end
+  end
+end
+
+func qualifyEnumFieldsForTarget(fields: Slice[ast2.MonoType], packages: Slice[MyGoPackageInfo], targetType: ast2.MonoType) -> Slice[ast2.MonoType]
+  switch monoTypeQualifiedPath(targetType)
+    case Some(path) => wrapPkgTypesInSlice(fields, path, myGoPackageTypeNamesForPath(packages, path))
+    case None => fields
+  end
+end
+
+func myGoPackageTypeNamesForPath(packages: Slice[MyGoPackageInfo], path: String) -> Slice[String]
+  if packages.Len() == 0 then [] else
+    let pkg = packages.Get(0).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: [] })
+    if pkg.Path == path then collectMyGoTypeNames(pkg.Decls, 0, []) else myGoPackageTypeNamesForPath(common2.SliceDrop(packages, 1), path) end
+  end
+end
+
+func builtinVariantTypeForTarget(env: Env, state: InferState, enumName: String, variantName: String, targetType: ast2.MonoType) -> Option[ast2.MonoType]
+  if !isBuiltinVariantForEnum(enumName, variantName) && !(enumName == "" && isBuiltinVariantName(variantName)) then
+    None
+  else
+    switch envGet(initialEnv(), variantName)
+      case Some(scheme) => builtinVariantTypeAgainstTarget(instantiate(scheme, state), targetType)
+      case None => None
+    end
+  end
+end
+
+func isBuiltinVariantForEnum(enumName: String, variantName: String) -> Bool
+  (enumName == "Option" && (variantName == "Some" || variantName == "None")) ||
+    (enumName == "Result" && (variantName == "Ok" || variantName == "Err"))
+end
+
+func isBuiltinVariantName(variantName: String) -> Bool
+  variantName == "Some" || variantName == "None" || variantName == "Ok" || variantName == "Err"
+end
+
+func builtinVariantTypeAgainstTarget(variantType: ast2.MonoType, targetType: ast2.MonoType) -> Option[ast2.MonoType]
+  switch variantType
+    case TFunc(fields, ret) then
+      switch unify(targetType, ret.value(), emptySubst())
+        case Ok(subst) => Some(ast2.MonoType.TFunc(substTypes(fields, subst), Ref.new(applySubst(subst, ret.value()))))
+        case Err(_) => None
+      end
+    end
+    case _ then
+      switch unify(targetType, variantType, emptySubst())
+        case Ok(subst) => Some(applySubst(subst, variantType))
+        case Err(_) => None
+      end
+    end
+  end
+end
+
+func enumTypeArgsForTarget(targetType: ast2.MonoType) -> Slice[ast2.MonoType]
+  switch targetType
+    case TApp(_, args) => args
+    case TQualifiedName(_, inner) => enumTypeArgsForTarget(inner.value())
+    case _ => []
+  end
+end
+
+func enumTypeParameterSubst(typeParams: Slice[String], typeArgs: Slice[ast2.MonoType], index: Int, out: Slice[SubstEntry]) -> Slice[SubstEntry]
+  if index >= typeParams.Len() || index >= typeArgs.Len() then
+    out
+  else
+    let arg = typeArgs.Get(index).UnwrapOr(ast2.MonoType.TUnit)
+    enumTypeParameterSubst(typeParams, typeArgs, index + 1, out.Append(SubstEntry { ID: -(index + 1), Type: arg }))
+  end
+end
+
+func enumTypeParamsForTarget(state: InferState, targetType: ast2.MonoType, enumName: String) -> Slice[String]
+  switch targetType
+    case TApp(_, args) => enumTypeParamsForTargetFromArgs(state, targetType, enumName, args.Len())
+    case TQualifiedName(_, inner) => enumTypeParamsForTarget(state, inner.value(), enumName)
+    case _ => []
+  end
+end
+
+func enumTypeParamsForTargetFromArgs(state: InferState, targetType: ast2.MonoType, enumName: String, argCount: Int) -> Slice[String]
+  switch lookupEnumDeclForTarget(state, targetType, enumName)
+    case Some(tps) => takeTypeParams(tps, argCount, [])
+    case None => []
+  end
+end
+
+func takeTypeParams(params: Slice[String], count: Int, out: Slice[String]) -> Slice[String]
+  if count <= 0 || params.Len() == 0 then out else
+    takeTypeParams(common2.SliceDrop(params, 1), count - 1, out.Append(params.Get(0).UnwrapOr("")))
+  end
+end
+
+func lookupEnumDeclForTarget(state: InferState, targetType: ast2.MonoType, enumName: String) -> Option[Slice[String]]
+  switch monoTypeQualifiedPath(targetType)
+    case Some(path) => lookupEnumTypeParamsInPackagesByPath(state.MyGoPackageCache, path, enumName)
+    case None => lookupEnumTypeParamsInDecls(state.PkgInfo, enumName)
+  end
+end
+
+func lookupEnumTypeParamsInPackagesByPath(packages: Slice[MyGoPackageInfo], path: String, enumName: String) -> Option[Slice[String]]
+  if packages.Len() == 0 then
+    None
+  else
+    let pkg = packages.Get(0).UnwrapOr(MyGoPackageInfo { Alias: "", Path: "", Decls: []})
+    if pkg.Path == path then
+      lookupEnumTypeParamsInDeclList(pkg.Decls, enumName)
+    else
+      lookupEnumTypeParamsInPackagesByPath(common2.SliceDrop(packages, 1), path, enumName)
+    end
+  end
+end
+
+func lookupEnumTypeParamsInDecls(info: Option[PkgInfo], enumName: String) -> Option[Slice[String]]
+  switch info
+    case Some(pkg) => lookupEnumTypeParamsInDeclList(pkg.Decls, enumName)
+    case None => None
+  end
+end
+
+func lookupEnumTypeParamsInDeclList(decls: Slice[ast2.Decl], enumName: String) -> Option[Slice[String]]
+  if decls.Len() == 0 then None else
+    let decl = decls.Get(0).UnwrapOr(ast2.Decl.ImportDecl("", ""))
+    switch decl
+      case EnumDecl(name, tps, _) => if name == enumName then Some(tps) else lookupEnumTypeParamsInDeclList(common2.SliceDrop(decls, 1), enumName) end
+      case _ => lookupEnumTypeParamsInDeclList(common2.SliceDrop(decls, 1), enumName)
+    end
   end
 end
 
 func enumNameForMonoType(typ: ast2.MonoType) -> Option[String]
   switch typ
     case TCon(name) => Some(name)
-    case TApp(ctor, _) =>
-      switch ctor.value()
-        case TCon(name) => Some(name)
-        case _ => None
-      end
+    case TApp(ctor, _) => enumNameForMonoType(ctor.value())
     case TQualifiedName(_, inner) => enumNameForMonoType(inner.value())
     case _ => None
   end
@@ -2085,7 +2195,7 @@ func inferArgs(args: Slice[ast2.Expr], expectedTypes: Slice[ast2.MonoType], env:
           # nested in a switch/function body; without this, bootstrap reports
           # only the enclosing function's first expression and hides the
           # actual constructor or helper call that produced the mismatch.
-          case Err(msg) => Err(callArgumentError(head, msg))
+          case Err(msg) => Err(callArgumentError(head, msg + " [actual argument type: " + MonoStringFull(v.Type) + "]"))
           case Ok(nextSubst) => inferArgs(common2.SliceDrop(args, 1), common2.SliceDrop(expectedTypes, 1), env, v.State, types.Append(applySubst(nextSubst, v.Type)), exprs.Append(applyTypedExprSubst(nextSubst, eir.Expr)), appendPredicates(predicates, v.Predicates), nextSubst)
         end
     end
@@ -2909,7 +3019,8 @@ func receiverQualifiedName(
       end
       let alias = goPackageAliasForPath(goPkgs, path, 0)
       if alias == "" then
-        let myGoAlias = myGoPackageAliasForPath(myGoPkgs, path, 0)
+        let transitiveGoAlias = myGoPackageGoAliasForPath(myGoPkgs, path, 0)
+        let myGoAlias = if transitiveGoAlias == "" => myGoPackageAliasForPath(myGoPkgs, path, 0) else transitiveGoAlias
         if myGoAlias != "" then
           myGoAlias + "." + memberName
         else
@@ -3374,7 +3485,9 @@ func qualifiedStructMember(path: String, inner: ast2.MonoType, fallback: String,
     case _ => fallback
   end
   let goAlias = goPackageAliasForPath(state.GoPackages, path, 0)
-  let alias = if goAlias == "" then myGoPackageAliasForPath(state.MyGoPackageCache, path, 0) else goAlias end
+  let transitiveGoAlias = myGoPackageGoAliasForPath(state.MyGoPackageCache, path, 0)
+  let myGoAlias = if transitiveGoAlias == "" => myGoPackageAliasForPath(state.MyGoPackageCache, path, 0) else transitiveGoAlias
+  let alias = if goAlias == "" then myGoAlias else goAlias end
   if alias == "" then fallback elsif alias == "." then member else alias + "." + member end
 end
 

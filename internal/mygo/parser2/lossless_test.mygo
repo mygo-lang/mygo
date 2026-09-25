@@ -3,6 +3,18 @@ package parser2
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import ps "github.com/mygo-lang/mygo/lib/text/parsec"
 
+# Transitional lossless metadata adapter (task 3.13).
+#
+# `ParseFile`/`ParseFileAt` no longer depend on this file: they lower the
+# lossless CST directly.  What remains here is the post-parse scanning the
+# syntax-tree formatter migration has not yet replaced - reconstructed node
+# spans, delimited spans, and layout events derived from ast2 shape plus token
+# ranges.  `ParseFileLossless` is the only production entry point, and the
+# formatter is its only production consumer; the section-4 formatter migration
+# retires this file family by family and this whole adapter goes away with the
+# last layout consumer.  Until then it stays quarantined here so no parse path
+# can reach it again by accident.
+
 struct LosslessFile
   AST: ast2.File
   Tokens: Slice[ps.PositionedToken]
@@ -18,12 +30,6 @@ struct DelimitedSpan
   Items: Slice[ast2.SourceSpan]
   Separators: Slice[ast2.SourceSpan]
 end
-
-struct Spanned[A]
-  Value: A
-  Span: ast2.SourceSpan
-end
-
 struct NodeSpan
   Path: Slice[Int]
   Kind: String
@@ -47,10 +53,6 @@ struct LayoutEvent
   HeaderLine: Int
   BodyLine: Int
   ExitLine: Int
-end
-
-func LosslessDeclarationCount(file: LosslessFile) -> Int
-  file.AST.Decls.Len()
 end
 
 func LosslessProtectedLines(file: LosslessFile) -> Slice[Int]
@@ -144,100 +146,33 @@ struct LosslessScan
   Trivia: Slice[ps.PositionedTrivia]
 end
 
-struct ScanState
-  Input: String
+struct LegacyTokenFinish
   Index: Int
-  Offset: Int
-  Line: Int
-  Column: Int
-  Tokens: Slice[ps.PositionedToken]
-  Trivia: Slice[ps.PositionedTrivia]
-  Literal: LiteralScan
-end
-
-func spannedTypeExpr() -> ps.Parser[Spanned[ast2.TypeExpr]]
-  func(state: ps.State) -> ps.Reply[Spanned[ast2.TypeExpr]]
-    let reply = typeExpr()(state)
-    if reply.Ok then
-      ps.Reply[Spanned[ast2.TypeExpr]] { Ok: true, Consumed: reply.Consumed, Value: Spanned[ast2.TypeExpr] { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
-    else
-      ps.Reply[Spanned[ast2.TypeExpr]] { Ok: false, Consumed: reply.Consumed, Value: Spanned[ast2.TypeExpr] { Value: ast2.TypeExpr.UnitType, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
-    end
-  end
-end
-
-func spannedExpr() -> ps.Parser[Spanned[ast2.Expr]]
-  func(state: ps.State) -> ps.Reply[Spanned[ast2.Expr]]
-    let reply = expr()(state)
-    if reply.Ok then
-      ps.Reply[Spanned[ast2.Expr]] { Ok: true, Consumed: reply.Consumed, Value: Spanned[ast2.Expr] { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
-    else
-      ps.Reply[Spanned[ast2.Expr]] { Ok: false, Consumed: reply.Consumed, Value: Spanned[ast2.Expr] { Value: ast2.EmptyExpr(), Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
-    end
-  end
-end
-
-func spannedLiteral() -> ps.Parser[Spanned[String]]
-  func(state: ps.State) -> ps.Reply[Spanned[String]]
-    let reply = ps.PChoice([number(), stringLiteral(), runeLiteral()])(state)
-    if reply.Ok then
-      ps.Reply[Spanned[String]] { Ok: true, Consumed: reply.Consumed, Value: Spanned[String] { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
-    else
-      ps.Reply[Spanned[String]] { Ok: false, Consumed: reply.Consumed, Value: Spanned[String] { Value: "", Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
-    end
-  end
-end
-
-func spannedPattern() -> ps.Parser[Spanned[ast2.Pattern]]
-  func(state: ps.State) -> ps.Reply[Spanned[ast2.Pattern]]
-    let reply = pattern()(state)
-    if reply.Ok then
-      ps.Reply[Spanned[ast2.Pattern]] { Ok: true, Consumed: reply.Consumed, Value: Spanned[ast2.Pattern] { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
-    else
-      ps.Reply[Spanned[ast2.Pattern]] { Ok: false, Consumed: reply.Consumed, Value: Spanned[ast2.Pattern] { Value: ast2.Pattern.WildcardPattern, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
-    end
-  end
-end
-
-func spannedFuncSig() -> ps.Parser[Spanned[ast2.FuncSig]]
-  func(state: ps.State) -> ps.Reply[Spanned[ast2.FuncSig]]
-    let reply = funcSig()(state)
-    if reply.Ok then
-      ps.Reply[Spanned[ast2.FuncSig]] { Ok: true, Consumed: reply.Consumed, Value: Spanned[ast2.FuncSig] { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
-    else
-      ps.Reply[Spanned[ast2.FuncSig]] { Ok: false, Consumed: reply.Consumed, Value: Spanned[ast2.FuncSig] { Value: ast2.FuncSig { Pos: ast2.SourcePos { SourceName: "", Line: state.Position.Line, Column: state.Position.Column }, Name: "", TypeParams: [], Params: [], Ret: None, RetSpan: stateSpan(state, reply.State), Using: [] }, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
-    end
-  end
-end
-
-func spannedSwitchCase() -> ps.Parser[Spanned[ast2.SwitchCase]]
-  func(state: ps.State) -> ps.Reply[Spanned[ast2.SwitchCase]]
-    let reply = switchCase()(state)
-    if reply.Ok then
-      ps.Reply[Spanned[ast2.SwitchCase]] { Ok: true, Consumed: reply.Consumed, Value: Spanned[ast2.SwitchCase] { Value: reply.Value, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
-    else
-      ps.Reply[Spanned[ast2.SwitchCase]] { Ok: false, Consumed: reply.Consumed, Value: Spanned[ast2.SwitchCase] { Value: ast2.SwitchCase { Pattern: ast2.Pattern.WildcardPattern, PatternSpan: stateSpan(state, reply.State), Body: ast2.EmptyExpr(), BodySpan: stateSpan(state, reply.State), Span: stateSpan(state, reply.State) }, Span: stateSpan(state, reply.State) }, State: reply.State, Error: reply.Error }
-    end
-  end
-end
-
-func stateSpan(start: ps.State, finish: ps.State) -> ast2.SourceSpan
-  ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: start.Position.Line, Column: start.Position.Column }, End: ast2.SourcePos { SourceName: "", Line: finish.Position.Line, Column: finish.Position.Column } }
+  Start: ps.Position
+  End: ps.Position
 end
 
 func ParseFileLossless(sourceName: String, input: String) -> Result[LosslessFile, String]
-  switch ParseFileAt(sourceName, input)
-    case Err(message) => Err(message)
-    case Ok(file) then
-      let scanned = scanLossless(input)
-      let finished = finishFile(file, scanned.Tokens)
-      let tokenSpans = collectNodeSpans(scanned.Tokens)
-      let declarationSpans = collectDeclSpans(finished.Decls, finished.DeclPositions, scanned.Tokens, 0)
-      let metadataSpans = collectDeclMetadataSpans(finished.Decls, declarationSpans, scanned.Tokens, 0)
-      let baseSpans = joinSpans(joinSpans(joinSpans(tokenSpans, declarationSpans), collectFileExprSpans(finished)), metadataSpans)
-      let nodeSpans = joinSpans(baseSpans, collectNestedPatternSpans(baseSpans, scanned.Tokens, 0))
-      let blockIfs = blockIfStarts(nodeSpans, scanned.Tokens, 0, None, [])
-      Ok(LosslessFile { AST: finished, Tokens: scanned.Tokens, Trivia: scanned.Trivia, NodeSpans: nodeSpans, Delimited: collectDelimitedSpans(nodeSpans, scanned.Tokens, 0), LayoutEvents: collectLayoutEvents(nodeSpans, scanned.Tokens, blockIfs, 0, []) })
+  # The delimiter layout now comes from the lossless CST (task 4.3), so this
+  # entry point keeps the syntax tree it lowered from rather than re-deriving
+  # grouping from ast2 shape plus a raw token scan.  The reconstructed node-span
+  # and layout-event streams still feed the not-yet-migrated block layout.
+  let tree = ParseSyntaxAt(sourceName, input)
+  if tree.Diagnostics.Len() != 0 then
+    Err(syntaxDiagnosticError(sourceName, tree.Diagnostics.Get(0).UnwrapOr(SyntaxDiagnostic { Message: "parse error", Span: syntaxRootSpan([]), Expected: [], Recovery: "" })))
+  else
+    switch LowerSyntax(tree)
+      case Err(message) => Err(message)
+      case Ok(file) =>
+        let scanned = scanLossless(input)
+        let finished = finishFile(file, scanned.Tokens)
+        let tokenSpans = collectNodeSpans(scanned.Tokens)
+        let declarationSpans = collectDeclSpans(finished.Decls, finished.DeclPositions, scanned.Tokens, 0)
+        let metadataSpans = collectDeclMetadataSpans(finished.Decls, declarationSpans, scanned.Tokens, 0)
+        let baseSpans = joinSpans(joinSpans(joinSpans(tokenSpans, declarationSpans), collectFileExprSpans(finished)), metadataSpans)
+        let nodeSpans = joinSpans(baseSpans, collectNestedPatternSpans(baseSpans, scanned.Tokens, 0))
+        let blockIfs = blockIfStarts(nodeSpans, scanned.Tokens, 0, None, [])
+        Ok(LosslessFile { AST: finished, Tokens: scanned.Tokens, Trivia: scanned.Trivia, NodeSpans: nodeSpans, Delimited: collectDelimitedSpansFromCst(tree.Root.value()), LayoutEvents: collectLayoutEvents(nodeSpans, scanned.Tokens, blockIfs, 0, []) })
     end
   end
 end
@@ -1079,19 +1014,16 @@ func firstDirectChildSpan(items: Slice[NodeSpan], parentPath: Slice[Int], index:
     ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }
   else
     switch items.Get(index)
-      case Some(candidate) =>
+      case Some(candidate) then
         if isDirectChildPath(candidate.Path, parentPath, 0) && hasUsableSpan(candidate.Span) then
           candidate.Span
         else
           firstDirectChildSpan(items, parentPath, index + 1)
         end
+      end
       case None => ast2.SourceSpan { Start: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }, End: ast2.SourcePos { SourceName: "", Line: 0, Column: 0 } }
     end
   end
-end
-
-func layoutExitAnchor(item: NodeSpan, tokens: Slice[ps.PositionedToken], index: Int) -> ast2.SourceSpan
-  matchingEndAnchor(tokens, layoutAnchor(item, tokens), 0, 0, false, item.Span)
 end
 
 # The `end` that terminates an `if`.  A plain `if` scans forward from its own
@@ -1524,10 +1456,6 @@ func matchesCaseBodyPath(bodyPath: Slice[Int], casePath: Slice[Int], index: Int)
   elsif index >= casePath.Len() then bodyPath.Get(index).UnwrapOr(0) == -1
   elsif bodyPath.Get(index).UnwrapOr(-1) != casePath.Get(index).UnwrapOr(-2) then false
   else matchesCaseBodyPath(bodyPath, casePath, index + 1) end
-end
-
-func layoutAnchor(item: NodeSpan, tokens: Slice[ps.PositionedToken]) -> ast2.SourceSpan
-  layoutAnchorForSpan(item.Kind, item.Span, tokens)
 end
 
 func layoutAnchorForSpan(kind: String, span: ast2.SourceSpan, tokens: Slice[ps.PositionedToken]) -> ast2.SourceSpan
@@ -2162,86 +2090,63 @@ func tokenEndAt(pos: ast2.SourcePos, tokens: Slice[ps.PositionedToken], index: I
 end
 
 func scanLossless(input: String) -> LosslessScan
-  scanStep(ScanState { Input: input, Index: 0, Offset: 0, Line: 1, Column: 1, Tokens: [], Trivia: [], Literal: startLiteralScan() })
+  let lexed = LexSource(input)
+  LosslessScan {
+    Tokens: legacyTokensFromLexed(lexed.Tokens, 0, []),
+    Trivia: lexed.Trivia.Map(func(item: GreenTrivia) -> ps.PositionedTrivia
+      ps.PositionedTrivia { Kind: greenTriviaKindText(item.Kind), Raw: item.Raw, Span: item.Span }
+    end),
+  }
 end
 
-func scanStep(state: ScanState) -> LosslessScan using StringRuneIndex
-  let raw = state.Input.Slice(state.Index, state.Index + 1).UnwrapOr("")
-  if raw == "" then
-    LosslessScan { Tokens: state.Tokens, Trivia: state.Trivia }
+# The existing formatter adapter still consumes the historical character-level
+# token view.  Derive that view from GreenToken leaves rather than rescanning
+# source input: the CST lexer remains the sole lexical authority while the old
+# layout-event path is migrated in later tasks.
+func legacyTokensFromLexed(items: Slice[GreenToken], index: Int, acc: Slice[ps.PositionedToken]) -> Slice[ps.PositionedToken]
+  if index >= items.Len() then acc
   else
-    let width = (raw as Slice[Byte]).Len()
-    let start = ps.Position { Offset: state.Offset, Line: state.Line, Column: state.Column }
-    let next = advanceScan(state, raw, width)
-    if raw == "#" && state.Literal.Quote == "" then
-      scanComment(next, start, "#")
-    elsif isSpace(raw) then
-      emitTrivia(next, start, "whitespace", raw)
-    elsif isWordChar(raw) then
-      scanWord(next, start, raw)
-    else
-      emitToken(next, start, raw)
+    switch items.Get(index)
+      case Some(item) => legacyTokensFromLexed(items, index + 1, legacyTokenPieces(item.Raw, item.Span.Start, 0, [] as Slice[ps.PositionedToken]).Fold(acc, func(out: Slice[ps.PositionedToken], token: ps.PositionedToken) -> Slice[ps.PositionedToken] out.Append(token) end))
+      case None => acc
     end
   end
 end
 
-func isSpace(raw: String) -> Bool
-  raw == " " || raw == "\t" || raw == "\r" || raw == "\n"
-end
-
-func isWordChar(raw: String) -> Bool
-  (raw >= "a" && raw <= "z") || (raw >= "A" && raw <= "Z") || (raw >= "0" && raw <= "9") || raw == "_"
-end
-
-func advanceScan(state: ScanState, raw: String, width: Int) -> ScanState
-  ScanState { Input: state.Input, Index: state.Index + 1, Offset: state.Offset + width, Line: if raw == "\n" then state.Line + 1 else state.Line end, Column: if raw == "\n" then 1 else state.Column + 1 end, Tokens: state.Tokens, Trivia: state.Trivia, Literal: state.Literal }
-end
-
-func emitTrivia(state: ScanState, start: ps.Position, kind: String, raw: String) -> LosslessScan
-  let item = ps.PositionedTrivia { Kind: kind, Raw: raw, Span: ps.SourceSpan { Start: start, End: ps.Position { Offset: state.Offset, Line: state.Line, Column: state.Column } } }
-  scanStep(ScanState { Input: state.Input, Index: state.Index, Offset: state.Offset, Line: state.Line, Column: state.Column, Tokens: state.Tokens, Trivia: state.Trivia.Append(item), Literal: state.Literal })
-end
-
-func scanComment(state: ScanState, start: ps.Position, raw: String) -> LosslessScan using StringRuneIndex
-  let next = state.Input.Slice(state.Index, state.Index + 1).UnwrapOr("")
-  if next == "" || next == "\n" then
-    emitTrivia(state, start, "comment", raw)
+func legacyTokenPieces(raw: String, start: ps.Position, index: Int, acc: Slice[ps.PositionedToken]) -> Slice[ps.PositionedToken] using StringRuneIndex
+  let next = raw.Slice(index, index + 1).UnwrapOr("")
+  if next == "" then acc
   else
-    scanComment(advanceScan(state, next, (next as Slice[Byte]).Len()), start, raw + next)
+    let finish = legacyTokenFinish(raw, index, start)
+    let piece = raw.Slice(index, finish.Index).UnwrapOr("")
+    let kind = if piece == "\"" || piece == "`" || piece == "'" then "literal" else "symbol" end
+    let token = ps.PositionedToken { Kind: kind, Raw: piece, Span: ps.SourceSpan { Start: finish.Start, End: finish.End } }
+    legacyTokenPieces(raw, start, finish.Index, acc.Append(token))
   end
 end
 
-func scanWord(state: ScanState, start: ps.Position, raw: String) -> LosslessScan using StringRuneIndex
-  let next = state.Input.Slice(state.Index, state.Index + 1).UnwrapOr("")
-  if next == "" || !isWordChar(next) then
-    emitToken(state, start, raw)
-  else
-    scanWord(advanceScan(state, next, (next as Slice[Byte]).Len()), start, raw + next)
-  end
+func legacyTokenFinish(raw: String, index: Int, start: ps.Position) -> LegacyTokenFinish using StringRuneIndex
+  let prefix = raw.Slice(0, index).UnwrapOr("")
+  let before = legacyAdvanceString(prefix, start, 0)
+  let first = raw.Slice(index, index + 1).UnwrapOr("")
+  let finish = if isWordChar(first) then legacyWordFinish(raw, index + 1) else index + 1 end
+  let piece = raw.Slice(index, finish).UnwrapOr("")
+  LegacyTokenFinish { Index: finish, Start: before, End: legacyAdvanceString(piece, before, 0) }
 end
 
-func emitToken(state: ScanState, start: ps.Position, raw: String) -> LosslessScan
-  let kind = if raw == "\"" || raw == "`" || raw == "'" => "literal" else "symbol"
-  let item = ps.PositionedToken {
-    Kind: kind,
-    Raw: raw,
-    Span: ps.SourceSpan {
-      Start: start,
-      End: ps.Position {
-        Offset: state.Offset,
-        Line: state.Line,
-        Column: state.Column
-      }
-    }
-  }
-  scanStep(ScanState {
-    Input: state.Input,
-    Index: state.Index,
-    Offset: state.Offset,
-    Line: state.Line,
-    Column: state.Column,
-    Tokens: state.Tokens.Append(item),
-    Trivia: state.Trivia,
-    Literal: advanceLiteralScan(state.Literal, item)
-  })
+func legacyWordFinish(raw: String, index: Int) -> Int using StringRuneIndex
+  let next = raw.Slice(index, index + 1).UnwrapOr("")
+  if next == "" || !isWordChar(next) then index else legacyWordFinish(raw, index + 1) end
+end
+
+func legacyAdvanceString(raw: String, position: ps.Position, index: Int) -> ps.Position using StringRuneIndex
+  let next = raw.Slice(index, index + 1).UnwrapOr("")
+  if next == "" then position
+  else
+    legacyAdvanceString(raw, ps.Position {
+      Offset: position.Offset + (next as Slice[Byte]).Len(),
+      Line: if next == "\n" then position.Line + 1 else position.Line end,
+      Column: if next == "\n" then 1 else position.Column + 1 end,
+    }, index + 1)
+  end
 end

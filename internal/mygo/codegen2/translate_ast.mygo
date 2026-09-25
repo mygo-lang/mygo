@@ -351,6 +351,7 @@ func translateSwitchAst(target: ast2.Expr, cases: Slice[ast2.SwitchCase], target
         case IdentExpr(_) => value
         case CallExpr(_, _, _) => hoistSwitchSubject(value, cases, ctx)
         case FieldExpr(_, _) => hoistSwitchSubject(value, cases, ctx)
+        case TupleExpr(_) => hoistSwitchSubject(value, cases, ctx)
         case _ => value
       end
       let isStmt = switch expected

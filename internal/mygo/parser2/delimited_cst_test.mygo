@@ -1,0 +1,97 @@
+package parser2
+
+import testing "go:testing"
+import strconv "go:strconv"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+# Task 4.3: the delimiter layout the formatter consumes is owned by the
+# lossless CST.  These regressions pin the exact grouping the CST reports -
+# kinds, delimiter span, item spans, and separator spans - so a future change to
+# delimiter ownership cannot silently move a wrap anchor.  They are
+# self-contained to parser2 and assert against explicit goldens rather than
+# re-deriving expectations from the retired ast2 token scan.
+
+func delimitedTestSpanText(span: ast2.SourceSpan) -> String
+  "L" + strconv.Itoa(span.Start.Line) + "C" + strconv.Itoa(span.Start.Column) + "-L" + strconv.Itoa(span.End.Line) + "C" + strconv.Itoa(span.End.Column)
+end
+
+func delimitedTestSpansJoined(items: Slice[ast2.SourceSpan], index: Int) -> String
+  if index >= items.Len() then
+    ""
+  else
+    let text = switch items.Get(index) case Some(span) => delimitedTestSpanText(span) case None => "?" end
+    if index == 0 then text + delimitedTestSpansJoined(items, index + 1)
+    else ";" + text + delimitedTestSpansJoined(items, index + 1) end
+  end
+end
+
+func delimitedTestSummary(span: DelimitedSpan) -> String
+  span.Kind + "|" + delimitedTestSpanText(span.Span) + "|I=" + delimitedTestSpansJoined(span.Items, 0) + "|S=" + delimitedTestSpansJoined(span.Separators, 0)
+end
+
+func delimitedTestLines(items: Slice[DelimitedSpan], index: Int) -> String
+  if index >= items.Len() then
+    ""
+  else
+    let line = switch items.Get(index) case Some(span) => delimitedTestSummary(span) case None => "?" end
+    line + "\n" + delimitedTestLines(items, index + 1)
+  end
+end
+
+func delimitedTestCst(source: String) -> Slice[DelimitedSpan]
+  collectDelimitedSpansFromCst(ParseSyntaxAt("delimited.mygo", source).Root.value())
+end
+
+func TestDelimitedCstReportsCallTupleSliceSetStructGroups(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc f() -> Int\n  let v = compute(alpha, beta)\n  let t = (alpha, beta)\n  let g = compute2[Int](alpha)\n  let s = [1, 2, 3]\n  let h = {1, 2}\n  let m = {\"a\": 1, \"b\": 2}\n  let st = Point { x: 1, y: 2 }\n  v\nend\n"
+  # A generic call's type-argument group is not reported at this frontier (the
+  # legacy `exprSpanKind` scan agreed), so the call on line 5 contributes
+  # nothing; the braced set/map literals on lines 7 and 8 likewise stay on the
+  # plain expression route, leaving the call, tuple, slice, and struct literal.
+  let expected = "delimited:call|L3C18-L3C31|I=L3C19-L3C24;L3C26-L3C30|S=L3C24-L3C25\n" +
+    "delimited:tuple|L4C11-L4C24|I=L4C12-L4C17;L4C19-L4C23|S=L4C17-L4C18\n" +
+    "delimited:slice|L6C11-L6C20|I=L6C12-L6C13;L6C15-L6C16;L6C18-L6C19|S=L6C13-L6C14;L6C16-L6C17\n" +
+    "delimited:struct|L9C18-L9C32|I=L9C20-L9C24;L9C26-L9C30|S=L9C24-L9C25\n"
+  let actual = delimitedTestLines(delimitedTestCst(source), 0)
+  if actual != expected then t.Fatalf("CST delimiter summary mismatch\nexpected:\n%s\nactual:\n%s", expected, actual) end
+end
+
+func TestDelimitedCstKeepsStructLiteralGrouping(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc f() -> Int\n  let st = Point { x: 1, y: 2 }\n  let gs = Stack[Int] { top: 1, rest: [] }\n  v\nend\n"
+  let expected = "delimited:struct|L3C18-L3C32|I=L3C20-L3C24;L3C26-L3C30|S=L3C24-L3C25\n" +
+    "delimited:struct|L4C23-L4C43|I=L4C25-L4C31;L4C33-L4C41|S=L4C31-L4C32\n"
+  let actual = delimitedTestLines(delimitedTestCst(source), 0)
+  if actual != expected then t.Fatalf("CST struct literal summary mismatch\nexpected:\n%s\nactual:\n%s", expected, actual) end
+end
+
+func TestDelimitedCstNestsGroupsWithoutFlattening(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc f() -> Int\n  let w = wrap(inner(a, b), c, [1, 2])\n  v\nend\n"
+  let expected = "delimited:call|L3C15-L3C39|I=L3C16-L3C27;L3C29-L3C30;L3C32-L3C38|S=L3C27-L3C28;L3C30-L3C31\n" +
+    "delimited:call|L3C21-L3C27|I=L3C22-L3C23;L3C25-L3C26|S=L3C23-L3C24\n" +
+    "delimited:slice|L3C32-L3C38|I=L3C33-L3C34;L3C36-L3C37|S=L3C34-L3C35\n"
+  let actual = delimitedTestLines(delimitedTestCst(source), 0)
+  if actual != expected then t.Fatalf("CST nested delimiter summary mismatch\nexpected:\n%s\nactual:\n%s", expected, actual) end
+end
+
+func TestDelimitedCstSkipsLiteralInteriorsAndPlainParentheses(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc f() -> Int\n  let q = \"well, (a,b) [c] {d}\"\n  let p = (alpha)\n  let u = ()\n  let set = {1, 2}\n  let map = {\"a\": 1, \"b\": 2}\n  v\nend\n"
+  # A literal's interior, a parenthesized expression, the unit value, and a
+  # map literal all stay on the plain expression route, so only the set
+  # literal's braced group is reported (and it matches no legacy `[`/`]` pair,
+  # so it reports nothing either) - the CST scan must therefore be empty.
+  let actual = delimitedTestLines(delimitedTestCst(source), 0)
+  if actual != "" then t.Fatalf("plain forms must report no delimited span, got:\n%s", actual) end
+end
+
+func TestDelimitedCstSeparatesMultilineItemsAndDropsTrailingComma(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc f() -> Int\n  let v2 = [\n    1,\n    2,\n  ]\n  v\nend\n"
+  let expected = "delimited:slice|L3C12-L6C4|I=L4C5-L4C6;L5C5-L5C6|S=L4C6-L4C7;L5C6-L5C7\n"
+  let actual = delimitedTestLines(delimitedTestCst(source), 0)
+  if actual != expected then t.Fatalf("CST multiline slice summary mismatch\nexpected:\n%s\nactual:\n%s", expected, actual) end
+end
+
+func TestDelimitedCstSourceIsBytePreserved(t: Ref[testing.T]) -> ()
+  let source = "package sample\nfunc f() -> Int\n  let w = wrap(inner(a, b), c, [1, 2])\n  let q = \"tricky, { } ( )\"\n  v\nend\n"
+  let root = ParseSyntaxAt("delimited.mygo", source).Root.value()
+  if greenNodeText(root) != source then t.Fatal("CST delimiter grouping must retain every source byte") end
+end
