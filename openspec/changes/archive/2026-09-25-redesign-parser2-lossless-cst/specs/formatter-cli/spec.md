@@ -40,11 +40,36 @@ rendered width, and source spans. It SHALL use the same traversal rules for all
 functions, function literals, calls, and expressions, without matching
 specific function names, method names, or body text.
 
+The Syntax Tree renderer SHALL handle declarations and statement bodies,
+function literals, nested expressions and control-flow blocks, and delimited
+groups through CST ownership. Delimited layout SHALL measure the rendered
+construct recursively, wrap separators and nested fields deterministically,
+and keep closing delimiters aligned with their owning construct. The renderer
+SHALL preserve comments and opaque source ranges byte-for-byte while
+normalizing only formatable trivia. The legacy multi-pass renderer and its
+reconstructed span, event, and line-mapping inputs SHALL be removed only after
+the Syntax Tree renderer passes the existing formatter golden corpus and
+byte-identity/idempotence checks.
+
 #### Scenario: Arbitrary function literals
 - **WHEN** two function literals have different names, parameters, return
   types, or body expressions
 - **THEN** both are formatted by the same generic Syntax Tree traversal and
   protected spans remain exact
+
+#### Scenario: Nested wide delimited constructs
+- **WHEN** valid source contains nested calls, collections, or struct literals
+  whose rendered width exceeds the formatter limit
+- **THEN** the formatter wraps the owned delimiter groups recursively, keeps
+  nested indentation and closing delimiters canonical, and produces the same
+  result on a second formatting pass
+
+#### Scenario: Existing canonical layouts remain stable
+- **WHEN** the Syntax Tree renderer formats the supported formatter fixture
+  corpus
+- **THEN** declaration spacing, inline and block conditionals, function
+  literals, long signatures, and delimited wrapping match their canonical
+  goldens before the legacy renderer is removed
 
 ### Requirement: Syntax-owned layout structure
 
