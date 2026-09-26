@@ -6,7 +6,7 @@ import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 # A MyGO parser written in MyGO.
 #
 # The production parse path is the lossless CST: ParseSyntaxAt lexes and parses
-# every input into a green tree with recovery diagnostics, and LowerSyntax turns
+# every input into a CST tree with recovery diagnostics, and LowerSyntax turns
 # a diagnostic-free tree into ast2.  This file owns only that cutover surface
 # plus the handful of small helpers the production CST/lowering and lossless
 # metadata paths share.  The pre-cutover parsec combinators live in

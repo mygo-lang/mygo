@@ -1,0 +1,958 @@
+package parser2
+
+import ps "github.com/mygo-lang/mygo/lib/text/parsec"
+import strings "go:strings"
+
+func cstTokenOf(item: CstElement) -> CstToken
+  switch item
+    case TokenElement(token) => token
+    case TriviaElement(trivia) => CstToken { Kind: CstTokenKind.Symbol, Raw: trivia.Raw, Span: trivia.Span }
+    case NodeElement(_) => CstToken { Kind: CstTokenKind.Symbol, Raw: "", Span: syntaxRootSpan([]) }
+  end
+end
+
+func parseType(cursor: SyntaxCursor) -> SyntaxParseResult
+  parseTypeApplication(parseTypeAtom(syntaxCursorSkipTrivia(cursor)))
+end
+
+# A type atom is a function type, a parenthesized tuple/unit type, or a named
+# (possibly qualified) type.  Bracketed suffixes are applied afterwards so that
+# nested generic applications stay right-recursive without re-parsing source.
+func parseTypeAtom(cursor: SyntaxCursor) -> SyntaxParseResult
+  switch syntaxCursorPeek(cursor)
+    case None => SyntaxParseResult { Node: None, Cursor: cursor }
+    case Some(item) then
+      switch cstElementNode(item)
+        case Some(node) then
+          if node.value().Kind == CstNodeKind.ParenGroup then
+            parseTupleType(cursor, node.value())
+          else
+            SyntaxParseResult { Node: None, Cursor: cursor }
+          end
+        end
+        case None then
+          if cstElementRaw(item) == "func" then
+            parseFuncType(cursor)
+          else
+            parseNamedType(cursor)
+          end
+        end
+      end
+    end
+  end
+end
+
+func parseNamedType(cursor: SyntaxCursor) -> SyntaxParseResult
+  switch syntaxCursorPeek(cursor)
+    case Some(item) then
+      if syntaxElementNameToken(item) then
+        let finish = collectQualifiedTypeName(cursor.Elements, cursor.Index)
+        switch cursor.Elements.Slice(cursor.Index, finish)
+          case Some(children) then
+            switch (children.Get(0), children.Get(children.Len() - 1))
+              case (Some(first), Some(last)) => SyntaxParseResult {
+                Node: Some(Ref.new(CstNode {
+                  Kind: CstNodeKind.NamedType,
+                  Span: ps.SourceSpan { Start: cstElementSpan(first).Start, End: cstElementSpan(last).End },
+                  Children: children,
+                  HasError: false,
+                })),
+                Cursor: SyntaxCursor { Elements: cursor.Elements, Index: finish },
+              }
+              case _ => SyntaxParseResult { Node: None, Cursor: cursor }
+            end
+          end
+          case None => SyntaxParseResult { Node: None, Cursor: cursor }
+        end
+      else
+        SyntaxParseResult { Node: None, Cursor: cursor }
+      end
+    end
+    case None => SyntaxParseResult { Node: None, Cursor: cursor }
+  end
+end
+
+# Qualified names keep their '.' tokens so the CST still replays the source.
+# Only an identifier on both sides of the dot is consumed.
+func collectQualifiedTypeName(items: Slice[CstElement], index: Int) -> Int
+  let afterName = index + 1
+  let dot = syntaxNextTokenIndex(items, afterName)
+  if dot < 0 then
+    afterName
+  else
+    switch items.Get(dot)
+      case Some(item) then
+        if cstElementRaw(item) == "." then
+          let tail = syntaxNextTokenIndex(items, dot + 1)
+          if tail >= 0 then
+            switch items.Get(tail)
+              case Some(next) then
+                if syntaxElementNameToken(next) then
+                  collectQualifiedTypeName(items, tail)
+                else
+                  afterName
+                end
+              end
+              case None => afterName
+            end
+          else
+            afterName
+          end
+        else
+          afterName
+        end
+      end
+      case None => afterName
+    end
+  end
+end
+
+func parseTupleType(cursor: SyntaxCursor, group: CstNode) -> SyntaxParseResult
+  let children = parseTypeItems(group.Children, 0, [])
+  let kind = if cstElementsHaveTypeNode(children, 0) => CstNodeKind.TupleType else CstNodeKind.UnitType
+  SyntaxParseResult {
+    Node: Some(Ref.new(CstNode {
+      Kind: kind,
+      Span: group.Span,
+      Children: children,
+      HasError: group.HasError,
+    })),
+    Cursor: syntaxCursorAdvance(cursor),
+  }
+end
+
+func parseFuncType(cursor: SyntaxCursor) -> SyntaxParseResult
+  let afterFunc = syntaxCursorSkipTrivia(syntaxCursorAdvance(cursor))
+  switch syntaxCursorPeek(afterFunc)
+    case Some(item) then
+      switch cstElementNode(item)
+        case Some(group) then
+          if group.value().Kind == CstNodeKind.ParenGroup then
+            let parameters = CstElement.NodeElement(Ref.new(CstNode {
+              Kind: CstNodeKind.FunctionTypeParameters,
+              Span: group.value().Span,
+              Children: parseTypeItems(group.value().Children, 0, []),
+              HasError: group.value().HasError,
+            }))
+            parseFuncTypeReturn(cursor, afterFunc, parameters)
+          else
+            SyntaxParseResult { Node: None, Cursor: cursor }
+          end
+        end
+        case None => SyntaxParseResult { Node: None, Cursor: cursor }
+      end
+    end
+    case None => SyntaxParseResult { Node: None, Cursor: cursor }
+  end
+end
+
+func parseFuncTypeReturn(start: SyntaxCursor, afterFunc: SyntaxCursor, parameters: CstElement) -> SyntaxParseResult
+  let arrow = syntaxCursorSkipTrivia(syntaxCursorAdvance(afterFunc))
+  if cstElementRaw(cstElementAt(arrow.Elements, arrow.Index)) != "->" then
+    SyntaxParseResult { Node: None, Cursor: start }
+  else
+    let returnStart = syntaxCursorSkipTrivia(syntaxCursorAdvance(arrow))
+    let parsed = parseType(returnStart)
+    switch parsed.Node
+      case Some(returned) => SyntaxParseResult {
+        Node: Some(Ref.new(CstNode {
+          Kind: CstNodeKind.FuncType,
+          Span: ps.SourceSpan {
+            Start: cstElementSpan(cstElementAt(start.Elements, start.Index)).Start,
+            End: returned.value().Span.End,
+          },
+          Children: joinCstElements(
+            joinCstElements(
+              cstElementSliceOrEmpty(start.Elements, start.Index, afterFunc.Index),
+              [parameters]
+            ),
+            joinCstElements(
+              joinCstElements(
+                cstElementSliceOrEmpty(start.Elements, afterFunc.Index + 1, arrow.Index),
+                [cstElementAt(arrow.Elements, arrow.Index)]
+              ),
+              joinCstElements(
+                cstElementSliceOrEmpty(start.Elements, arrow.Index + 1, returnStart.Index),
+                [CstElement.NodeElement(returned)]
+              )
+            )
+          ),
+          HasError: returned.value().HasError,
+        })),
+        Cursor: parsed.Cursor,
+      }
+      case None => SyntaxParseResult { Node: None, Cursor: start }
+    end
+  end
+end
+
+func parseTypeApplication(base: SyntaxParseResult) -> SyntaxParseResult
+  switch base.Node
+    case Some(node) then
+      # A generic argument list must sit on the same line as the base type.  A
+      # bracket group after a newline starts a new construct (for example a
+      # function body list literal), never a type argument suffix.
+      let next = syntaxCursorSkipTriviaSameLine(base.Cursor)
+      switch syntaxCursorPeek(next)
+        case Some(item) then
+          switch cstElementNode(item)
+            case Some(group) then
+              if (node.value().Kind == CstNodeKind.NamedType || node.value().Kind == CstNodeKind.GenericType) && group.value().Kind == CstNodeKind.BracketGroup && !cstElementsContainNewline(base.Cursor.Elements, base.Cursor.Index, next.Index) then
+                let arguments = CstElement.NodeElement(Ref.new(CstNode {
+                  Kind: CstNodeKind.TypeArguments,
+                  Span: group.value().Span,
+                  Children: parseTypeItems(group.value().Children, 0, []),
+                  HasError: group.value().HasError,
+                }))
+                parseTypeApplication(SyntaxParseResult {
+                  Node: Some(Ref.new(CstNode {
+                    Kind: CstNodeKind.GenericType,
+                    Span: ps.SourceSpan { Start: node.value().Span.Start, End: group.value().Span.End },
+                    Children: [CstElement.NodeElement(node), arguments],
+                    HasError: node.value().HasError || group.value().HasError,
+                  })),
+                  Cursor: syntaxCursorAdvance(next),
+                })
+              else
+                base
+              end
+            end
+            case None => base
+          end
+        end
+        case None => base
+      end
+    end
+    case None => base
+  end
+end
+
+# parseTypeItems re-parses the direct children of a delimiter or type-argument
+# range.  Tokens and trivia pass through unchanged so every source byte is still
+# owned exactly once; only actual type atoms become nested type nodes.
+func parseTypeItems(items: Slice[CstElement], index: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    let cursor = SyntaxCursor { Elements: items, Index: index }
+    let start = syntaxCursorSkipTrivia(cursor)
+    let prefix = joinCstElements(output, cstElementSliceOrEmpty(items, index, start.Index))
+    if start.Index >= items.Len() then
+      prefix
+    else
+      let parsed = parseType(start)
+      if parsed.Cursor.Index > start.Index then
+        switch parsed.Node
+          case Some(node) => parseTypeItems(items, parsed.Cursor.Index, prefix.Append(CstElement.NodeElement(node)))
+          case None => parseTypeItems(items, start.Index + 1, prefix.Append(cstElementAt(items, start.Index)))
+        end
+      else
+        parseTypeItems(items, start.Index + 1, prefix.Append(cstElementAt(items, start.Index)))
+      end
+    end
+  end
+end
+
+func cstElementAt(items: Slice[CstElement], index: Int) -> CstElement
+  items.Get(index).UnwrapOr(CstElement.TokenElement(CstToken { Kind: CstTokenKind.Symbol, Raw: "", Span: syntaxRootSpan([]) }))
+end
+
+func cstElementsHaveTypeNode(items: Slice[CstElement], index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch cstElementNode(cstElementAt(items, index))
+      case Some(node) => if cstNodeIsTypeKind(node.value().Kind) then true else cstElementsHaveTypeNode(items, index + 1) end
+      case None => cstElementsHaveTypeNode(items, index + 1)
+    end
+  end
+end
+
+func syntaxElementNameToken(item: CstElement) -> Bool
+  switch item
+    case TokenElement(token) => token.Kind == CstTokenKind.Identifier
+    case _ => false
+  end
+end
+
+func syntaxNextTokenIndex(items: Slice[CstElement], index: Int) -> Int
+  if index >= items.Len() then
+    -1
+  else
+    if cstElementIsTrivia(cstElementAt(items, index)) then syntaxNextTokenIndex(items, index + 1) else index end
+  end
+end
+
+func syntaxNextTokenRaw(items: Slice[CstElement], index: Int) -> String
+  let next = syntaxNextTokenIndex(items, index + 1)
+  if next < 0 then "" else cstElementRaw(cstElementAt(items, next)) end
+end
+
+# syntaxBlockCloseAt reports the keyword that ends a block opened by the token
+# at index, or "" when the token does not open one.  MyGO closes func, struct,
+# enum, interface, impl, while, letrec, if-then and case-then bodies with
+# `end`; `if`/`case` only open a block in their `then` form, and a `func` inside
+# an interface is a bare signature rather than a body.
+# syntaxBlockCloseAt reports the keyword that ends a block opened by the token
+# at index, or "" when the token does not open one.  MyGO closes func, struct,
+# enum, interface, impl, while, letrec and `switch` bodies with `end`; `if`
+# opens either a `then` block closed by `end` or a single-line `=>` form closed
+# by `else`; a `case` header closes its body with `end`; and a `func` inside an
+# interface, or in a type position, is a bare signature rather than a body.
+func syntaxBlockCloseAt(items: Slice[CstElement], index: Int, blocks: Slice[SyntaxBlock]) -> String
+  let raw = cstElementRaw(cstElementAt(items, index))
+  if raw == "func" then
+    if syntaxInInterfaceBlock(blocks) || syntaxFuncIsType(items, index) || !syntaxFuncOpensBlock(items, index) then
+      ""
+    else
+      "end"
+    end
+  elsif raw == "struct" || raw == "enum" || raw == "interface" || raw == "impl" || raw == "while" || raw == "letrec" || raw == "switch" then
+    "end"
+  elsif raw == "if" then
+    if syntaxHeaderKeyword(items, index, "=>") then "else" else "end" end
+  elsif raw == "case" then
+    # A `case pat then` arm owns an `end`; a `case pat =>` arm has no
+    # terminator of its own -- its body runs until the next `case` or the
+    # enclosing `switch`'s `end` -- so it opens no block.
+    if syntaxHeaderKeyword(items, index, "=>") then "" else "end" end
+  else
+    ""
+  end
+end
+
+# syntaxInInterfaceBlock reports whether the innermost open block is an
+# interface.  Interface members are bare signatures with no body, so a `func`
+# there never opens a block.
+func syntaxInInterfaceBlock(blocks: Slice[SyntaxBlock]) -> Bool
+  switch syntaxRecoveryLastBlock(blocks)
+    case Some(open) => open.Keyword == "interface"
+    case None => false
+  end
+end
+
+# syntaxFuncIsType reports whether the `func` at index is a func type used in a
+# type position.  A func type follows `:`, `->`, `as`, or `[` (parameter, field,
+# result, cast, or type-argument position).  A func declaration or literal
+# instead starts a line, follows `=`, or appears after `(`/`,` as an argument;
+# those own an `end` body and are left to `syntaxFuncOpensBlock`.
+func syntaxFuncIsType(items: Slice[CstElement], index: Int) -> Bool
+  let previous = syntaxPreviousTokenRaw(items, index - 1)
+  if previous == ":" || previous == "->" || previous == "[" || previous == "as" then
+    true
+  elsif previous == "=" then
+    # `type T = func(...) -> R` is a func type; `let f = func(...) ... end`
+    # is a func literal.  Only the `type` declaration opens a type position.
+    syntaxLineStartsWith(items, index, "type")
+  else
+    false
+  end
+end
+
+# syntaxLineStartsWith reports whether the first non-trivia token on the logical
+# line containing index is the requested keyword.
+func syntaxLineStartsWith(items: Slice[CstElement], index: Int, keyword: String) -> Bool
+  let lineStart = syntaxLineStartIndex(items, index)
+  let first = syntaxNextTokenIndex(items, lineStart)
+  if first < 0 then false else cstElementRaw(cstElementAt(items, first)) == keyword end
+end
+
+# syntaxLineStartIndex returns the index of the first element on the logical
+# line containing index: the element right after the preceding newline trivia.
+func syntaxLineStartIndex(items: Slice[CstElement], index: Int) -> Int
+  if index <= 0 then
+    0
+  else
+    if cstElementIsTrivia(cstElementAt(items, index - 1)) && strings.Contains(cstElementRaw(cstElementAt(items, index - 1)), "\n") then
+      index
+    else
+      syntaxLineStartIndex(items, index - 1)
+    end
+  end
+end
+
+func syntaxPreviousTokenRaw(items: Slice[CstElement], index: Int) -> String
+  if index < 0 then
+    ""
+  else
+    if cstElementIsTrivia(cstElementAt(items, index)) then syntaxPreviousTokenRaw(items, index - 1) else cstElementRaw(cstElementAt(items, index)) end
+  end
+end
+
+# syntaxHeaderKeyword scans the header of an `if`/`case` at index for the first
+# depth-zero keyword among `then` and `=>`.  It reports whether that keyword is
+# the requested one; a header terminated by a newline reports neither.
+func syntaxHeaderKeyword(items: Slice[CstElement], index: Int, want: String) -> Bool
+  syntaxHeaderScan(items, index + 1, 0, want)
+end
+
+func syntaxHeaderScan(items: Slice[CstElement], index: Int, depth: Int, want: String) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    let item = cstElementAt(items, index)
+    if cstElementIsTrivia(item) then
+      if depth == 0 && strings.Contains(cstElementRaw(item), "\n") then false else syntaxHeaderScan(items, index + 1, depth, want) end
+    else
+      let raw = cstElementRaw(item)
+      if raw == "(" || raw == "[" || raw == "{" then
+        syntaxHeaderScan(items, index + 1, depth + 1, want)
+      elsif raw == ")" || raw == "]" || raw == "}" then
+        if depth == 0 then false else syntaxHeaderScan(items, index + 1, depth - 1, want) end
+      elsif depth == 0 && raw == "then" then
+        want == "then"
+      elsif depth == 0 && raw == "=>" then
+        want == "=>"
+      else
+        syntaxHeaderScan(items, index + 1, depth, want)
+      end
+    end
+  end
+end
+
+# syntaxFuncOpensBlock distinguishes a func declaration/literal that owns an
+# `end` from a func type used in a type position.  Scanning the signature at
+# depth zero: an arrow body (`=>`) or a closing delimiter that ends the
+# enclosing construct means no block; an `end`, or a header terminated by a
+# newline, means the func owns a block.  Interface signatures are excluded by
+# the caller because they have no body.
+func syntaxFuncOpensBlock(items: Slice[CstElement], index: Int) -> Bool
+  syntaxFuncBodyScan(items, index + 1, 0)
+end
+
+func syntaxFuncBodyScan(items: Slice[CstElement], index: Int, depth: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    let item = cstElementAt(items, index)
+    if cstElementIsTrivia(item) then
+      if depth == 0 && strings.Contains(cstElementRaw(item), "\n") then true else syntaxFuncBodyScan(items, index + 1, depth) end
+    else
+      let raw = cstElementRaw(item)
+      if raw == "(" || raw == "[" || raw == "{" then
+        syntaxFuncBodyScan(items, index + 1, depth + 1)
+      elsif raw == ")" || raw == "]" || raw == "}" then
+        if depth == 0 then false else syntaxFuncBodyScan(items, index + 1, depth - 1) end
+      elsif depth == 0 && raw == "=>" then
+        false
+      elsif depth == 0 && raw == "end" then
+        true
+      else
+        syntaxFuncBodyScan(items, index + 1, depth)
+      end
+    end
+  end
+end
+
+func cstNodeIsTypeKind(kind: CstNodeKind) -> Bool
+  kind == CstNodeKind.NamedType || kind == CstNodeKind.GenericType || kind == CstNodeKind.TupleType || kind == CstNodeKind.UnitType || kind == CstNodeKind.FuncType
+end
+
+func cstNodeIsPatternKind(kind: CstNodeKind) -> Bool
+  kind == CstNodeKind.Pattern || kind == CstNodeKind.BindPattern || kind == CstNodeKind.WildcardPattern || kind == CstNodeKind.LiteralPattern || kind == CstNodeKind.TuplePattern || kind == CstNodeKind.VariantPattern || kind == CstNodeKind.StructVariantPattern
+end
+
+func cstNodeTypeChildren(node: CstNode, index: Int, output: Slice[Ref[CstNode]]) -> Slice[Ref[CstNode]]
+  if index >= node.Children.Len() then
+    output
+  else
+    switch cstElementNode(cstElementAt(node.Children, index))
+      case Some(child) => if cstNodeIsTypeKind(child.value().Kind) then cstNodeTypeChildren(node, index + 1, output.Append(child)) else cstNodeTypeChildren(node, index + 1, output) end
+      case None => cstNodeTypeChildren(node, index + 1, output)
+    end
+  end
+end
+
+# parsePattern implements the recursive pattern grammar of frontier 2.  The
+# delimiter pass has already grouped `( ... )` into a ParenGroup, so a tuple
+# pattern is that group and a variant payload is the ParenGroup that follows a
+# variant name.  Literal patterns keep their raw token so lowering can decode
+# the value from the CST range without re-reading the source text.
+func parsePattern(cursor: SyntaxCursor) -> SyntaxParseResult
+  let start = syntaxCursorSkipTrivia(cursor)
+  switch syntaxCursorPeek(start)
+    case Some(item) then
+      switch cstElementNode(item)
+        case Some(group) then
+          if group.value().Kind == CstNodeKind.ParenGroup then
+            parseTuplePatternNode(start, group.value())
+          else
+            SyntaxParseResult { Node: None, Cursor: cursor }
+          end
+        end
+        case None => parsePatternLeaf(start, item)
+      end
+    end
+    case _ => SyntaxParseResult { Node: None, Cursor: cursor }
+  end
+end
+
+func parsePatternLeaf(cursor: SyntaxCursor, item: CstElement) -> SyntaxParseResult
+  if cstElementRaw(item) == "_" then
+    syntaxLeafNodeResult(CstNodeKind.WildcardPattern, item, syntaxCursorAdvance(cursor))
+  elsif cstElementPatternLiteralKind(item) != "" then
+    syntaxLeafNodeResult(CstNodeKind.LiteralPattern, item, syntaxCursorAdvance(cursor))
+  elsif syntaxElementNameToken(item) then
+    parsePatternIdentifier(cursor, item)
+  else
+    SyntaxParseResult { Node: None, Cursor: cursor }
+  end
+end
+
+func syntaxLeafNodeResult(kind: CstNodeKind, item: CstElement, next: SyntaxCursor) -> SyntaxParseResult
+  SyntaxParseResult {
+    Node: Some(Ref.new(CstNode { Kind: kind, Span: cstElementSpan(item), Children: [item], HasError: false })),
+    Cursor: next,
+  }
+end
+
+# cstElementPatternLiteralKind classifies a literal token for the pattern
+# grammar.  The kind name matches ast2.Pattern.LiteralPattern's first field.
+func cstElementPatternLiteralKind(item: CstElement) -> String
+  switch item
+    case TokenElement(token) then
+      if token.Kind == CstTokenKind.Number then
+        "number"
+      elsif token.Kind == CstTokenKind.StringLiteral || token.Kind == CstTokenKind.RawStringLiteral || token.Kind == CstTokenKind.TripleStringLiteral then
+        "string"
+      elsif token.Kind == CstTokenKind.RuneLiteral then
+        "rune"
+      else
+        ""
+      end
+    end
+    case _ => ""
+  end
+end
+
+# A bare identifier is a bind pattern unless a payload group follows it, in
+# which case it is a variant (`Some(x)`) or struct-variant (`Point { x }`)
+# pattern.  The payload group stays a sibling of the name so every source byte
+# is owned exactly once.
+func parsePatternIdentifier(cursor: SyntaxCursor, item: CstElement) -> SyntaxParseResult
+  let afterName = syntaxCursorSkipTrivia(syntaxCursorAdvance(cursor))
+  switch syntaxCursorPeek(afterName)
+    case Some(peek) then
+      switch cstElementNode(peek)
+        case Some(group) then
+          if group.value().Kind == CstNodeKind.ParenGroup then
+            parseVariantPatternNode(cursor, item, afterName, group.value())
+          elsif group.value().Kind == CstNodeKind.BraceGroup then
+            parseStructVariantPatternNode(cursor, item, afterName, group.value())
+          else
+            syntaxLeafNodeResult(CstNodeKind.BindPattern, item, syntaxCursorAdvance(cursor))
+          end
+        end
+        case None => syntaxLeafNodeResult(CstNodeKind.BindPattern, item, syntaxCursorAdvance(cursor))
+      end
+    end
+    case _ => syntaxLeafNodeResult(CstNodeKind.BindPattern, item, syntaxCursorAdvance(cursor))
+  end
+end
+
+func parseTuplePatternNode(start: SyntaxCursor, group: CstNode) -> SyntaxParseResult
+  let items = parseGroupItems(CstNodeKind.Pattern, group.Children, 0, [])
+  SyntaxParseResult {
+    Node: Some(Ref.new(CstNode {
+      Kind: CstNodeKind.TuplePattern,
+      Span: group.Span,
+      Children: [CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.ParenGroup, Span: group.Span, Children: items, HasError: group.HasError }))],
+      HasError: group.HasError,
+    })),
+    Cursor: syntaxCursorAdvance(start),
+  }
+end
+
+func parseVariantPatternNode(cursor: SyntaxCursor, name: CstElement, afterName: SyntaxCursor, group: CstNode) -> SyntaxParseResult
+  let items = parseGroupItems(CstNodeKind.Pattern, group.Children, 0, [])
+  let gap = cstElementSliceOrEmpty(cursor.Elements, cursor.Index + 1, afterName.Index)
+  SyntaxParseResult {
+    Node: Some(Ref.new(CstNode {
+      Kind: CstNodeKind.VariantPattern,
+      Span: ps.SourceSpan { Start: cstElementSpan(name).Start, End: group.Span.End },
+      Children: joinCstElements(
+        joinCstElements(
+          [CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.IdentifierExpr, Span: cstElementSpan(name), Children: [name], HasError: false }))],
+          gap
+        ),
+        [CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.ParenGroup, Span: group.Span, Children: items, HasError: group.HasError }))]
+      ),
+      HasError: group.HasError,
+    })),
+    Cursor: syntaxCursorAdvance(afterName),
+  }
+end
+
+func parseStructVariantPatternNode(cursor: SyntaxCursor, name: CstElement, afterName: SyntaxCursor, group: CstNode) -> SyntaxParseResult
+  let fields = parseStructPatternFieldItems(group.Children, 0, [])
+  let gap = cstElementSliceOrEmpty(cursor.Elements, cursor.Index + 1, afterName.Index)
+  SyntaxParseResult {
+    Node: Some(Ref.new(CstNode {
+      Kind: CstNodeKind.StructVariantPattern,
+      Span: ps.SourceSpan { Start: cstElementSpan(name).Start, End: group.Span.End },
+      Children: joinCstElements(
+        joinCstElements(
+          [CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.IdentifierExpr, Span: cstElementSpan(name), Children: [name], HasError: false }))],
+          gap
+        ),
+        [CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.BraceGroup, Span: group.Span, Children: fields, HasError: group.HasError }))]
+      ),
+      HasError: group.HasError,
+    })),
+    Cursor: syntaxCursorAdvance(afterName),
+  }
+end
+
+# parseStructPatternFieldItems groups the flat leaves of a `{ ... }` pattern
+# payload into StructPatternField nodes: `field: bind`, `_`, or `field`.
+func parseStructPatternFieldItems(items: Slice[CstElement], index: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    let item = cstElementAt(items, index)
+    let raw = cstElementRaw(item)
+    if cstElementIsTrivia(item) || raw == "{" || raw == "}" || raw == "," then
+      parseStructPatternFieldItems(items, index + 1, output.Append(item))
+    elsif raw == "_" then
+      parseStructPatternFieldItems(items, index + 1, output.Append(syntaxStructPatternField([item])))
+    elsif syntaxElementNameToken(item) then
+      let colon = syntaxNextTokenIndex(items, index + 1)
+      if colon >= 0 && cstElementRaw(cstElementAt(items, colon)) == ":" then
+        let bind = syntaxNextTokenIndex(items, colon + 1)
+        if bind >= 0 && syntaxElementNameToken(cstElementAt(items, bind)) then
+          parseStructPatternFieldItems(items, bind + 1, output.Append(syntaxStructPatternField(cstElementSliceOrEmpty(items, index, bind + 1))))
+        else
+          parseStructPatternFieldItems(items, index + 1, output.Append(syntaxStructPatternField([item])))
+        end
+      else
+        parseStructPatternFieldItems(items, index + 1, output.Append(syntaxStructPatternField([item])))
+      end
+    else
+      parseStructPatternFieldItems(items, index + 1, output.Append(item))
+    end
+  end
+end
+
+func syntaxStructPatternField(children: Slice[CstElement]) -> CstElement
+  CstElement.NodeElement(Ref.new(CstNode {
+    Kind: CstNodeKind.StructPatternField,
+    Span: cstElementSliceSpan(children, 0, children.Len()),
+    Children: children,
+    HasError: false,
+  }))
+end
+
+func parseGroupedSyntax(kind: CstNodeKind, cursor: SyntaxCursor) -> SyntaxParseResult
+  switch syntaxCursorPeek(cursor)
+    case Some(item) then
+      switch cstElementNode(item)
+        case Some(node) then
+          let value = node.value()
+          if value.Kind == CstNodeKind.ParenGroup || value.Kind == CstNodeKind.BracketGroup || value.Kind == CstNodeKind.BraceGroup then
+            let nodeKind = expressionGroupKind(kind, value, syntaxCursorPreviousRaw(cursor, cursor.Index - 1), syntaxSameLineSuffix(cursor))
+            let children = syntaxGroupChildren(nodeKind, kind, value.Children)
+            SyntaxParseResult {
+              Node: Some(Ref.new(CstNode {
+                Kind: nodeKind,
+                Span: value.Span,
+                Children: [CstElement.NodeElement(Ref.new(CstNode {
+                  Kind: value.Kind,
+                  Span: value.Span,
+                  Children: children,
+                  HasError: value.HasError,
+                }))],
+                HasError: false
+              })),
+              Cursor: syntaxCursorAdvance(cursor),
+            }
+          else
+            parseAtomicSyntax(kind, cursor)
+          end
+        end
+        case None => parseAtomicSyntax(kind, cursor)
+      end
+    end
+    case _ => parseAtomicSyntax(kind, cursor)
+  end
+end
+
+func expressionGroupKind(fallback: CstNodeKind, group: CstNode, previous: String, sameLine: Bool) -> CstNodeKind
+  if fallback == CstNodeKind.Type && group.Kind == CstNodeKind.ParenGroup then
+    CstNodeKind.TupleType
+  elsif fallback == CstNodeKind.Pattern && group.Kind == CstNodeKind.ParenGroup then
+    CstNodeKind.TuplePattern
+  elsif fallback != CstNodeKind.Expression then
+    fallback
+  elsif group.Kind == CstNodeKind.ParenGroup && syntaxPreviousStartsCall(previous) && sameLine then
+    CstNodeKind.Call
+  elsif group.Kind == CstNodeKind.ParenGroup then
+    parenExpressionKind(group)
+  elsif group.Kind == CstNodeKind.BracketGroup then
+    CstNodeKind.SliceLiteral
+  elsif group.Kind == CstNodeKind.BraceGroup && syntaxPreviousStartsCall(previous) && sameLine then
+    CstNodeKind.StructLiteral
+  elsif group.Kind == CstNodeKind.BraceGroup && cstElementsContainRaw(group.Children, ":", 0) then
+    CstNodeKind.MapLiteral
+  elsif group.Kind == CstNodeKind.BraceGroup && !cstElementsHaveInnerContent(group.Children, 0) then
+    # An empty `{}` is the empty map literal, matching the legacy parser.
+    CstNodeKind.MapLiteral
+  elsif group.Kind == CstNodeKind.BraceGroup then
+    CstNodeKind.SetLiteral
+  else
+    fallback
+  end
+end
+
+# cstElementsHaveInnerContent reports whether a delimiter group owns any
+# element besides its own `{`/`}` (or `(`/`)`, `[`/`]`) tokens and trivia.  An
+# empty brace group is the empty map literal, matching the legacy parser.
+func cstElementsHaveInnerContent(items: Slice[CstElement], index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    let item = cstElementAt(items, index)
+    let raw = cstElementRaw(item)
+    if cstElementIsTrivia(item) || raw == "{" || raw == "}" || raw == "(" || raw == ")" || raw == "[" || raw == "]" then
+      cstElementsHaveInnerContent(items, index + 1)
+    else
+      true
+    end
+  end
+end
+
+# parenExpressionKind distinguishes `()`, `(x)`, and `(x, y)`.  A group with no
+# tokens is the unit value; a top-level comma makes it a tuple; otherwise the
+# parentheses only group a single expression.
+func parenExpressionKind(group: CstNode) -> CstNodeKind
+  if !cstElementsHaveInnerToken(group.Children, 0) then
+    CstNodeKind.UnitExpr
+  elsif cstElementsContainRaw(group.Children, ",", 0) then
+    CstNodeKind.TupleExpr
+  else
+    CstNodeKind.ParenExpr
+  end
+end
+
+# cstElementsHaveInnerToken reports whether a delimiter group holds any token
+# besides its own opening and closing delimiters.  `()` has none, while `(x)`
+# and `((x))` both do; the nested group is a node element and counts as content.
+func cstElementsHaveInnerToken(items: Slice[CstElement], index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    let item = cstElementAt(items, index)
+    if cstElementIsTrivia(item) then
+      cstElementsHaveInnerToken(items, index + 1)
+    else
+      switch item
+        case TokenElement(token) => if token.Raw == "(" || token.Raw == ")" then cstElementsHaveInnerToken(items, index + 1) else true end
+        case _ => true
+      end
+    end
+  end
+end
+
+# syntaxPreviousStartsCall reports whether the token before a delimiter group can
+# be the callee of a call or the type name of a struct literal.  Operators such
+# as `=`, `=>`, `,`, and `(` leave the group as a parenthesized/tuple value.
+func syntaxPreviousStartsCall(previous: String) -> Bool
+  if previous == "" then
+    false
+  elsif previous == ")" || previous == "]" || previous == "}" then
+    true
+  else
+    isWordChar(sourceSliceOrEOF(previous, 0, 1)) && !isKeyword(previous)
+  end
+end
+
+func cstElementsContainRaw(items: Slice[CstElement], raw: String, index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(item) => if cstElementRaw(item) == raw => true else cstElementsContainRaw(items, raw, index + 1)
+      case None => false
+    end
+  end
+end
+
+# syntaxGroupChildren chooses how to fill a delimiter group's typed children.
+# Slice and set literals own expression items; map literals own MapEntry nodes;
+# struct literals own StructLitField nodes; every other group re-parses its
+# items with the context kind.
+func syntaxGroupChildren(nodeKind: CstNodeKind, fallback: CstNodeKind, items: Slice[CstElement]) -> Slice[CstElement]
+  if nodeKind == CstNodeKind.MapLiteral then
+    parseMapEntryItems(items, 0, [], 0)
+  elsif nodeKind == CstNodeKind.StructLiteral then
+    parseStructLitFieldItems(items, 0, [])
+  elsif nodeKind == CstNodeKind.SliceLiteral || nodeKind == CstNodeKind.SetLiteral then
+    parseGroupItems(CstNodeKind.Expression, items, 0, [])
+  else
+    parseGroupItems(fallback, items, 0, [])
+  end
+end
+
+# parseMapEntryItems groups a map body into MapEntry nodes.  A MapEntry owns the
+# trivia before its key, the key expression, the `:`, its value expression, and
+# the trivia between them; the braces and comma separators stay owned between
+# entries.  `pending` is the start of the current entry region, i.e. the element
+# right after the last `{` or `,`.
+func parseMapEntryItems(items: Slice[CstElement], index: Int, output: Slice[CstElement], pending: Int) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    let item = cstElementAt(items, index)
+    let raw = cstElementRaw(item)
+    if cstElementIsTrivia(item) then
+      parseMapEntryItems(items, index + 1, output, pending)
+    elsif raw == "{" || raw == "," then
+      parseMapEntryItems(items, index + 1, output.Append(item), index + 1)
+    elsif raw == "}" then
+      parseMapEntryItems(items, index + 1, output.Append(item), pending)
+    else
+      let start = syntaxCursorSkipTrivia(SyntaxCursor { Elements: items, Index: index })
+      let parsedKey = parseExpr(start)
+      switch parsedKey.Node
+        case Some(keyNode) => parseMapEntryValue(items, parsedKey.Cursor, output, pending, keyNode, index)
+        case None => parseMapEntryItems(items, index + 1, output.Append(item), pending)
+      end
+    end
+  end
+end
+
+func parseMapEntryValue(items: Slice[CstElement], afterKey: SyntaxCursor, output: Slice[CstElement], pending: Int, keyNode: Ref[CstNode], keyStart: Int) -> Slice[CstElement]
+  let colonIndex = syntaxNextTokenIndex(items, afterKey.Index)
+  if colonIndex < 0 || cstElementRaw(cstElementAt(items, colonIndex)) != ":" then
+    parseMapEntryItems(items, afterKey.Index, output.Append(CstElement.NodeElement(keyNode)), pending)
+  else
+    let valueStart = syntaxCursorSkipTrivia(SyntaxCursor { Elements: items, Index: colonIndex + 1 })
+    let parsedValue = parseExpr(valueStart)
+    switch parsedValue.Node
+      case Some(valueNode) then
+        let entry = syntaxMapEntryElement(
+          cstElementSliceOrEmpty(items, pending, keyStart),
+          cstElementSliceOrEmpty(items, afterKey.Index, valueStart.Index),
+          keyNode,
+          valueNode,
+        )
+        parseMapEntryItems(items, parsedValue.Cursor.Index, output.Append(entry), parsedValue.Cursor.Index)
+      end
+      case None then
+        parseMapEntryItems(items, colonIndex + 1, output.Append(CstElement.NodeElement(keyNode)), pending)
+      end
+    end
+  end
+end
+
+func syntaxMapEntryElement(lead: Slice[CstElement], middle: Slice[CstElement], keyNode: Ref[CstNode], valueNode: Ref[CstNode]) -> CstElement
+  CstElement.NodeElement(Ref.new(CstNode {
+    Kind: CstNodeKind.MapEntry,
+    Span: ps.SourceSpan { Start: keyNode.value().Span.Start, End: valueNode.value().Span.End },
+    Children: joinCstElements(
+      joinCstElements(joinCstElements(lead, [CstElement.NodeElement(keyNode)]), middle),
+      [CstElement.NodeElement(valueNode)]
+    ),
+    HasError: keyNode.value().HasError || valueNode.value().HasError,
+  }))
+end
+
+func parseGroupItems(kind: CstNodeKind, items: Slice[CstElement], index: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    let cursor = SyntaxCursor { Elements: items, Index: index }
+    let start = syntaxCursorSkipTrivia(cursor)
+    let parsed = if kind == CstNodeKind.Type then
+      parseType(start)
+    elsif kind == CstNodeKind.Expression then
+      parseExpr(start)
+    else
+      parsePattern(start)
+    end
+    let prefix = joinCstElements(output, cstElementSliceOrEmpty(items, index, start.Index))
+    if parsed.Cursor.Index > index then
+      switch parsed.Node
+        case Some(node) then
+          parseGroupItems(kind, items, parsed.Cursor.Index, prefix.Append(CstElement.NodeElement(node)))
+        end
+        case None => parseGroupItems(kind, items, parsed.Cursor.Index, prefix)
+      end
+    else
+      switch items.Get(index)
+        case Some(item) => parseGroupItems(kind, items, index + 1, output.Append(item))
+        case None => output
+      end
+    end
+  end
+end
+
+func cstElementNode(item: CstElement) -> Option[Ref[CstNode]]
+  switch item
+    case NodeElement(node) => Some(node)
+    case _ => None
+  end
+end
+
+func parseAtomicSyntax(kind: CstNodeKind, cursor: SyntaxCursor) -> SyntaxParseResult
+  switch syntaxCursorPeek(cursor)
+    case None => SyntaxParseResult { Node: None, Cursor: cursor }
+    case Some(item) then
+      if syntaxElementStartsAtom(item) then
+        parseAtomicElement(kind, cursor, item)
+      else
+        SyntaxParseResult { Node: None, Cursor: cursor }
+      end
+    end
+  end
+end
+
+# parseAtomicElement freezes one atom.  An element that is already a frozen
+# node (a nested keyword block or a typed group) is returned directly so its
+# concrete kind survives, letting lowering see a SwitchBlock/IfBlock rather
+# than a generic expression wrapper; a raw token becomes its atom node.
+func parseAtomicElement(kind: CstNodeKind, cursor: SyntaxCursor, item: CstElement) -> SyntaxParseResult
+  switch cstElementNode(item)
+    case Some(node) => SyntaxParseResult { Node: Some(node), Cursor: syntaxCursorAdvance(cursor) }
+    case None => SyntaxParseResult {
+      Node: Some(Ref.new(CstNode { Kind: atomicSyntaxKind(kind, item), Span: cstElementSpan(item), Children: [item], HasError: false })),
+      Cursor: syntaxCursorAdvance(cursor),
+    }
+  end
+end
+
+func atomicSyntaxKind(context: CstNodeKind, item: CstElement) -> CstNodeKind
+  if context == CstNodeKind.Type then
+    CstNodeKind.NamedType
+  elsif context == CstNodeKind.Pattern then
+    CstNodeKind.BindPattern
+  else
+    switch item
+      case TokenElement(token) then
+        if token.Raw == "true" || token.Raw == "false" then CstNodeKind.BoolExpr
+        elsif token.Kind == CstTokenKind.Number then CstNodeKind.NumberExpr
+        elsif token.Kind == CstTokenKind.StringLiteral || token.Kind == CstTokenKind.RawStringLiteral || token.Kind == CstTokenKind.TripleStringLiteral then CstNodeKind.StringExpr
+        elsif token.Kind == CstTokenKind.RuneLiteral then CstNodeKind.RuneExpr
+        else CstNodeKind.IdentifierExpr
+        end
+      end
+      case _ => context
+    end
+  end
+end
+
+func syntaxElementStartsAtom(item: CstElement) -> Bool
+  switch item
+    case TokenElement(token) => token.Raw != "" && !syntaxTokenIsStructuralSeparator(token.Raw)
+    case NodeElement(_) => true
+    case TriviaElement(_) => false
+  end
+end
+
+# syntaxTokenIsStructuralSeparator reports whether a raw token only separates or
+# delimits other syntax.  These leaves stay unwrapped inside a group so a
+# parenthesized expression keeps its commas and parens as trivia-like tokens
+# rather than becoming spurious identifier atoms.
+func syntaxTokenIsStructuralSeparator(raw: String) -> Bool
+  raw == "(" || raw == ")" || raw == "[" || raw == "]" || raw == "{" || raw == "}" || raw == "," || raw == ":" || raw == ";"
+end
+

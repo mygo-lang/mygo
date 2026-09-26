@@ -93,8 +93,8 @@ func TestFormatterKeepsLineCommentBoundaryInDeclarationTrivia(t *testing.T) {
 	}
 }
 func TestFormatterPreservesCommentsAroundDeclarationMembers(t *testing.T) {
-	source := "package sample\nenum E\n  A\nend\n\n# before struct\nstruct GreenToken\n  # before field\n  Kind: Int\nend\n"
-	want := "package sample\nenum E\n  A\nend\n\n# before struct\nstruct GreenToken\n  # before field\n  Kind: Int\nend\n"
+	source := "package sample\nenum E\n  A\nend\n\n# before struct\nstruct CstToken\n  # before field\n  Kind: Int\nend\n"
+	want := "package sample\nenum E\n  A\nend\n\n# before struct\nstruct CstToken\n  # before field\n  Kind: Int\nend\n"
 	got := formattedOrFail(t, FormatSource("declaration-comments.mygo", source))
 	if got != want {
 		t.Fatalf("declaration comments were lost or misindented: got=%q want=%q", got, want)

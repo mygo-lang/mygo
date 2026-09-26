@@ -9,21 +9,21 @@ import . "github.com/mygo-lang/mygo/prelude"
 func formatterOpaqueSource() string {
 	return "# leading comment\nlet s = \"a\\nb\"\nlet raw = `c#d`\nlet tri = \"\"\"e\nf\"\"\"\nlet q = 'z'\nfunc g() => go[Int] { code: `x`; in y = 1 }\n"
 }
-func formatterOpaqueElements(items []GreenElement, index int, output []GreenElement) []GreenElement {
+func formatterOpaqueElements(items []CstElement, index int, output []CstElement) []CstElement {
 	for {
 		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
 			return output
 		} else {
-			item := greenElementAt(items, index)
-			if greenElementIsOpaqueSource(item) {
+			item := cstElementAt(items, index)
+			if cstElementIsOpaqueSource(item) {
 				__tail_0 := items
 				__tail_1 := index + 1
 				__tail_2 := MygoIN5SliceM6Append(output, item)
 				items, index, output = __tail_0, __tail_1, __tail_2
 				continue
 			} else {
-				var __mygo_expr_0 []GreenElement
-				if __mygo_match___mygo_expr_1, ok := item.(GreenElement__NodeElement); ok {
+				var __mygo_expr_0 []CstElement
+				if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
 					__mygo_expr_0 = formatterOpaqueElements(items, index+1, formatterOpaqueElements((*__mygo_match___mygo_expr_1.F0).Children, 0, output))
 				} else {
 					__mygo_expr_0 = formatterOpaqueElements(items, index+1, output)
@@ -33,12 +33,12 @@ func formatterOpaqueElements(items []GreenElement, index int, output []GreenElem
 		}
 	}
 }
-func formatterOpaqueGoldenMatches(items []GreenElement, index int, source string) bool {
+func formatterOpaqueGoldenMatches(items []CstElement, index int, source string) bool {
 	if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
 		return true
 	} else {
-		item := greenElementAt(items, index)
-		span := greenElementSpan(item)
+		item := cstElementAt(items, index)
+		span := cstElementSpan(item)
 		__mygo_expr_0 := FormatterOpaqueSourceRaw(item)
 		var __mygo_expr_1 bool
 		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
@@ -55,11 +55,11 @@ func formatterOpaqueGoldenMatches(items []GreenElement, index int, source string
 func TestFormatterOpaqueSourceIsBytePreserving(t *testing.T) {
 	source := formatterOpaqueSource()
 	tree := ParseSyntaxAt("opaque.mygo", source)
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 || greenNodeText(*tree.Root) != source {
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 || cstNodeText(*tree.Root) != source {
 		t.Fatal("opaque fixtures must parse losslessly before their bytes can be checked")
 	} else {
 	}
-	opaque := formatterOpaqueElements((*tree.Root).Children, 0, []GreenElement{})
+	opaque := formatterOpaqueElements((*tree.Root).Children, 0, []CstElement{})
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(opaque) == 0 {
 		t.Fatal("the fixture must contain opaque lexical forms")
 	} else {
@@ -73,11 +73,11 @@ func TestFormatterOpaqueSourceIsBytePreserving(t *testing.T) {
 }
 func TestFormatterOpaqueSourceCoversEveryLexicalForm(t *testing.T) {
 	source := formatterOpaqueSource()
-	opaque := formatterOpaqueElements((*ParseSyntaxAt("opaque.mygo", source).Root).Children, 0, []GreenElement{})
-	comment := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(opaque, func(item GreenElement) bool {
+	opaque := formatterOpaqueElements((*ParseSyntaxAt("opaque.mygo", source).Root).Children, 0, []CstElement{})
+	comment := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(opaque, func(item CstElement) bool {
 		var __mygo_expr_0 bool
-		if __mygo_match___mygo_expr_1, ok := item.(GreenElement__TriviaElement); ok {
-			__mygo_expr_0 = __mygo_match___mygo_expr_1.F0.Kind == GreenTriviaKind__Comment__Ctor()
+		if __mygo_match___mygo_expr_1, ok := item.(CstElement__TriviaElement); ok {
+			__mygo_expr_0 = __mygo_match___mygo_expr_1.F0.Kind == CstTriviaKind__Comment__Ctor()
 		} else {
 			__mygo_expr_0 = false
 		}
@@ -87,17 +87,17 @@ func TestFormatterOpaqueSourceCoversEveryLexicalForm(t *testing.T) {
 		t.Fatal("comments must be opaque source")
 	} else {
 	}
-	if !formatterOpaqueHasLiteralKind(opaque, GreenTokenKind__StringLiteral__Ctor()) || !formatterOpaqueHasLiteralKind(opaque, GreenTokenKind__RawStringLiteral__Ctor()) || !formatterOpaqueHasLiteralKind(opaque, GreenTokenKind__TripleStringLiteral__Ctor()) || !formatterOpaqueHasLiteralKind(opaque, GreenTokenKind__RuneLiteral__Ctor()) {
+	if !formatterOpaqueHasLiteralKind(opaque, CstTokenKind__StringLiteral__Ctor()) || !formatterOpaqueHasLiteralKind(opaque, CstTokenKind__RawStringLiteral__Ctor()) || !formatterOpaqueHasLiteralKind(opaque, CstTokenKind__TripleStringLiteral__Ctor()) || !formatterOpaqueHasLiteralKind(opaque, CstTokenKind__RuneLiteral__Ctor()) {
 		t.Fatal("ordinary, raw, triple-quoted, and rune literals must all be opaque")
 	} else {
 	}
-	inlineGo := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(opaque, func(item_1 GreenElement) bool {
-		__mygo_expr_0 := greenElementNode(item_1)
+	inlineGo := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(opaque, func(item_1 CstElement) bool {
+		__mygo_expr_0 := cstElementNode(item_1)
 		var __mygo_expr_1 bool
-		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*GreenNode]); ok {
-			__mygo_expr_1 = (*__mygo_match___mygo_expr_2.F0).Kind == GreenNodeKind__InlineGoExpr__Ctor()
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
+			__mygo_expr_1 = (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__InlineGoExpr__Ctor()
 		} else {
-			if _, ok := __mygo_expr_0.(Option__None[*GreenNode]); ok {
+			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = false
 			} else {
 			}
@@ -111,10 +111,10 @@ func TestFormatterOpaqueSourceCoversEveryLexicalForm(t *testing.T) {
 		return
 	}
 }
-func formatterOpaqueHasLiteralKind(items []GreenElement, kind GreenTokenKind) bool {
-	return MygoIN6OptionM6IsSome[*GreenElement](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(items, func(item GreenElement) bool {
+func formatterOpaqueHasLiteralKind(items []CstElement, kind CstTokenKind) bool {
+	return MygoIN6OptionM6IsSome[*CstElement](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(items, func(item CstElement) bool {
 		var __mygo_expr_0 bool
-		if __mygo_match___mygo_expr_1, ok := item.(GreenElement__TokenElement); ok {
+		if __mygo_match___mygo_expr_1, ok := item.(CstElement__TokenElement); ok {
 			__mygo_expr_0 = __mygo_match___mygo_expr_1.F0.Kind == kind
 		} else {
 			__mygo_expr_0 = false
@@ -136,25 +136,25 @@ func TestFormatterOpaqueSourceLeavesFormatableTriviaAndSyntaxAlone(t *testing.T)
 		return
 	}
 }
-func formatterOpaqueNoneForWhitespace(items []GreenElement) bool {
-	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(items, true, func(valid bool, item GreenElement) bool {
-		if greenElementIsFormatableTrivia(item) {
+func formatterOpaqueNoneForWhitespace(items []CstElement) bool {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(items, true, func(valid bool, item CstElement) bool {
+		if cstElementIsFormatableTrivia(item) {
 			return valid && MygoIN6OptionM6IsNone[string](FormatterOpaqueSourceRaw(item))
 		} else {
 			return valid
 		}
 	})
 }
-func formatterOpaqueNoneForSyntax(items []GreenElement) bool {
-	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(items, true, func(valid bool, item GreenElement) bool {
+func formatterOpaqueNoneForSyntax(items []CstElement) bool {
+	return MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(items, true, func(valid bool, item CstElement) bool {
 		var __mygo_expr_0 bool
-		if _, ok := item.(GreenElement__TokenElement); ok {
+		if _, ok := item.(CstElement__TokenElement); ok {
 			__mygo_expr_0 = valid && MygoIN6OptionM6IsNone[string](FormatterOpaqueSourceRaw(item))
 		} else {
-			if __mygo_match___mygo_expr_1, ok := item.(GreenElement__NodeElement); ok {
-				__mygo_expr_0 = valid && !greenElementIsInlineGoRange(item) && MygoIN6OptionM6IsNone[string](FormatterOpaqueSourceRaw(item)) && formatterOpaqueNoneForSyntax((*__mygo_match___mygo_expr_1.F0).Children)
+			if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
+				__mygo_expr_0 = valid && !cstElementIsInlineGoRange(item) && MygoIN6OptionM6IsNone[string](FormatterOpaqueSourceRaw(item)) && formatterOpaqueNoneForSyntax((*__mygo_match___mygo_expr_1.F0).Children)
 			} else {
-				if _, ok := item.(GreenElement__TriviaElement); ok {
+				if _, ok := item.(CstElement__TriviaElement); ok {
 					__mygo_expr_0 = valid
 				} else {
 				}
@@ -166,14 +166,14 @@ func formatterOpaqueNoneForSyntax(items []GreenElement) bool {
 func TestFormatterOpaqueInlineGoRangeReplaysWholePayload(t *testing.T) {
 	source := "func g() => go[Int] { code: `x`; in y = 1 }\n"
 	tree := ParseSyntaxAt("inline.mygo", source)
-	opaque := formatterOpaqueElements((*tree.Root).Children, 0, []GreenElement{})
-	ranges := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(opaque, func(item GreenElement) bool {
-		__mygo_expr_0 := greenElementNode(item)
+	opaque := formatterOpaqueElements((*tree.Root).Children, 0, []CstElement{})
+	ranges := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(opaque, func(item CstElement) bool {
+		__mygo_expr_0 := cstElementNode(item)
 		var __mygo_expr_1 bool
-		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*GreenNode]); ok {
-			__mygo_expr_1 = (*__mygo_match___mygo_expr_2.F0).Kind == GreenNodeKind__InlineGoExpr__Ctor()
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
+			__mygo_expr_1 = (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__InlineGoExpr__Ctor()
 		} else {
-			if _, ok := __mygo_expr_0.(Option__None[*GreenNode]); ok {
+			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = false
 			} else {
 			}
@@ -185,7 +185,7 @@ func TestFormatterOpaqueInlineGoRangeReplaysWholePayload(t *testing.T) {
 	} else {
 	}
 	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(ranges, 0)
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GreenElement]); ok {
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
 		__mygo_expr_2 := FormatterOpaqueSourceRaw(__mygo_match___mygo_expr_1.F0)
 		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[string]); ok {
 			if !strings.Contains(__mygo_match___mygo_expr_3.F0, "code:") || !strings.Contains(__mygo_match___mygo_expr_3.F0, "`x`") || !strings.Contains(__mygo_match___mygo_expr_3.F0, "in y = 1") {
@@ -199,7 +199,7 @@ func TestFormatterOpaqueInlineGoRangeReplaysWholePayload(t *testing.T) {
 			}
 		}
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[GreenElement]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 			t.Fatal("the inline-Go range lookup must find the opaque node")
 		} else {
 		}

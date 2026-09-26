@@ -1,0 +1,667 @@
+package parser2
+
+import ps "github.com/mygo-lang/mygo/lib/text/parsec"
+import strings "go:strings"
+
+func buildDelimitedSyntax(sourceName: String, input: String) -> SyntaxTree
+  let lexed = LexSource(input)
+  let built = buildDelimitedChildren(lexed.Elements, 0, "")
+  let declarations = parseFileDeclarations(SyntaxCursor { Elements: cstListToSlice(built.Children), Index: 0 }, [])
+  let recovery = finishSyntaxRecovery(recoverSyntaxItems(lexed.Elements, 0, SyntaxRecoveryState {
+    Delimiters: [],
+    Blocks: [],
+    Diagnostics: [],
+  }))
+  let topLevelDiagnostics = recoverTopLevelPrefix(lexed.Elements, 0, recovery.Diagnostics)
+  let literalDiagnostics = recoverLiteralDiagnostics(lexed.Elements, 0, topLevelDiagnostics)
+  let numericDiagnostics = recoverNumericLiteralDiagnostics(lexed.Elements, 0, literalDiagnostics)
+  let diagnostics = recoverDeclarationHeaderDiagnostics(declarations, 0, numericDiagnostics)
+  let recoveredDeclarations = recoverCstElements(declarations, diagnostics)
+  SyntaxTree {
+    SourceName: sourceName,
+    Source: input,
+    Root: Ref.new(CstNode {
+      Kind: CstNodeKind.File,
+      Span: syntaxRootSpan(lexed.Elements),
+      Children: recoveredDeclarations,
+      HasError: diagnostics.Len() != 0,
+    }),
+    Diagnostics: diagnostics,
+  }
+end
+
+func recoverLiteralDiagnostics(items: Slice[CstElement], index: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+  if index >= items.Len() then
+    diagnostics
+  else
+    switch items.Get(index)
+      case Some(item) then
+        let next = if cstElementHasMalformedLiteral(item) then
+          diagnostics.Append(SyntaxDiagnostic {
+            Message: "unterminated literal",
+            Span: cstElementSpan(item),
+            Expected: [literalClosingDelimiter(item)],
+            Recovery: "literal",
+          })
+        else
+          diagnostics
+        end
+        recoverLiteralDiagnostics(items, index + 1, next)
+      end
+      case None => diagnostics
+    end
+  end
+end
+
+func cstElementHasMalformedLiteral(item: CstElement) -> Bool
+  switch item
+    case TokenElement(token) => !cstLiteralIsClosed(token)
+    case _ => false
+  end
+end
+
+func cstLiteralIsClosed(token: CstToken) -> Bool
+  if token.Kind == CstTokenKind.StringLiteral then
+    token.Raw.Len() >= 2 && strings.HasSuffix(token.Raw, "\"")
+  elsif token.Kind == CstTokenKind.RawStringLiteral then
+    token.Raw.Len() >= 2 && strings.HasSuffix(token.Raw, "`")
+  elsif token.Kind == CstTokenKind.TripleStringLiteral then
+    token.Raw.Len() >= 6 && strings.HasSuffix(token.Raw, "\"\"\"")
+  elsif token.Kind == CstTokenKind.RuneLiteral then
+    token.Raw.Len() >= 2 && strings.HasSuffix(token.Raw, "'")
+  else
+    true
+  end
+end
+
+func literalClosingDelimiter(item: CstElement) -> String
+  switch item
+    case TokenElement(token) then
+      if token.Kind == CstTokenKind.TripleStringLiteral then
+        "\"\"\""
+      elsif token.Kind == CstTokenKind.RawStringLiteral then
+        "`"
+      elsif token.Kind == CstTokenKind.RuneLiteral then
+        "'"
+      else
+        "\""
+      end
+    end
+    case _ => ""
+  end
+end
+
+# Number tokens are lexed greedily so that `1.2` and `3.14f32` stay one leaf,
+# but that also lets malformed text such as `1.2.3`, `1oops`, `0x`, `0b102`,
+# `1_`, and `0x_1` reach the tree.  The lexer has no way to reject them without
+# a second pass, so the recovery scan validates each number leaf against the
+# legacy grammar (`digits(.digits)?suffix`, or a prefixed digit run with an
+# integer suffix) and records a location-bearing diagnostic for the failures.
+func recoverNumericLiteralDiagnostics(items: Slice[CstElement], index: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+  if index >= items.Len() then
+    diagnostics
+  else
+    switch items.Get(index)
+      case Some(item) then
+        let next = if cstElementHasInvalidNumber(item) then
+          diagnostics.Append(SyntaxDiagnostic {
+            Message: "invalid numeric literal",
+            Span: cstElementSpan(item),
+            Expected: ["number literal"],
+            Recovery: "number literal",
+          })
+        else
+          diagnostics
+        end
+        recoverNumericLiteralDiagnostics(items, index + 1, next)
+      end
+      case None => diagnostics
+    end
+  end
+end
+
+func cstElementHasInvalidNumber(item: CstElement) -> Bool
+  switch item
+    case TokenElement(token) => token.Kind == CstTokenKind.Number && !cstNumberIsValid(token.Raw)
+    case _ => false
+  end
+end
+
+func cstNumberIsValid(raw: String) -> Bool
+  let runes = raw as Slice[Rune]
+  switch (runes.Get(0), runes.Get(1))
+    case (Some(first), Some(second)) then
+      if first == '0' && (second == 'x' || second == 'X') then
+        numberPrefixedIsValid(runes, 2, numberIsHexDigit)
+      elsif first == '0' && (second == 'o' || second == 'O') then
+        numberPrefixedIsValid(runes, 2, numberIsOctalDigit)
+      elsif first == '0' && (second == 'b' || second == 'B') then
+        numberPrefixedIsValid(runes, 2, numberIsBinaryDigit)
+      else
+        numberDecimalIsValid(runes)
+      end
+    end
+    case _ => numberDecimalIsValid(runes)
+  end
+end
+
+func numberDecimalIsValid(runes: Slice[Rune]) -> Bool
+  let afterWhole = numberDigitRunEnd(runes, 0, numberIsDecimalDigit)
+  if afterWhole == 0 then
+    false
+  else
+    switch runes.Get(afterWhole)
+      case Some(raw) then
+        if raw == '.' then
+          let afterFraction = numberDigitRunEnd(runes, afterWhole + 1, numberIsDecimalDigit)
+          if afterFraction == afterWhole + 1 then
+            false
+          else
+            numberSuffixText(runes, afterFraction, true)
+          end
+        else
+          numberSuffixText(runes, afterWhole, true)
+        end
+      end
+      case None => true
+    end
+  end
+end
+
+func numberPrefixedIsValid(runes: Slice[Rune], start: Int, valid: func(Rune) -> Bool) -> Bool
+  let afterDigits = numberDigitRunEnd(runes, start, valid)
+  if afterDigits == start then
+    false
+  else
+    numberSuffixText(runes, afterDigits, false)
+  end
+end
+
+# numberDigitRunEnd consumes `digit (_? digit)*` starting at index.  A run that
+# ends on a bare underscore (`1_`) stops before it so the caller sees the
+# trailing underscore and rejects the leaf.
+func numberDigitRunEnd(runes: Slice[Rune], index: Int, valid: func(Rune) -> Bool) -> Int
+  switch runes.Get(index)
+    case Some(raw) => if valid(raw) => numberDigitRunTail(runes, index + 1, valid) else index
+    case None => index
+  end
+end
+
+func numberDigitRunTail(runes: Slice[Rune], index: Int, valid: func(Rune) -> Bool) -> Int
+  switch runes.Get(index)
+    case Some(raw) then
+      if valid(raw) then
+        numberDigitRunTail(runes, index + 1, valid)
+      elsif raw == '_' then
+        switch runes.Get(index + 1)
+          case Some(next) => if valid(next) => numberDigitRunTail(runes, index + 2, valid) else index
+          case None => index
+        end
+      else
+        index
+      end
+    end
+    case None => index
+  end
+end
+
+# numberSuffixText accepts an empty tail (no suffix), an integer suffix, or a
+# float suffix when the literal already carried a fraction.  Prefixed literals
+# pass allowFloat=false because the legacy grammar only suffixes them with an
+# integer type.
+func numberSuffixText(runes: Slice[Rune], index: Int, allowFloat: Bool) -> Bool
+  switch runes.Slice(index, runes.Len())
+    case Some(tail) then
+      let text = String.FromRunes(tail)
+      if text == "" then
+        true
+      elsif numberIntegerSuffix(text) then
+        true
+      elsif allowFloat && numberFloatSuffix(text) then
+        true
+      else
+        false
+      end
+    end
+    case None => index >= runes.Len()
+  end
+end
+
+func numberIntegerSuffix(raw: String) -> Bool
+  raw == "i8" || raw == "i16" || raw == "i32" || raw == "i64" || raw == "u8" || raw == "u16" || raw == "u32" || raw == "u64" || raw == "u"
+end
+
+func numberFloatSuffix(raw: String) -> Bool
+  raw == "f32" || raw == "f64"
+end
+
+func numberIsDecimalDigit(raw: Rune) -> Bool
+  raw >= '0' && raw <= '9'
+end
+
+func numberIsHexDigit(raw: Rune) -> Bool
+  numberIsDecimalDigit(raw) || (raw >= 'a' && raw <= 'f') || (raw >= 'A' && raw <= 'F')
+end
+
+func numberIsOctalDigit(raw: Rune) -> Bool
+  raw >= '0' && raw <= '7'
+end
+
+func numberIsBinaryDigit(raw: Rune) -> Bool
+  raw == '0' || raw == '1'
+end
+
+# A truncated declaration header leaves the semantic children without the name
+# or parameter group the lowering step needs, so it would only fail later with
+# an unlocated message.  This pass records the missing header boundary as a
+# location-bearing diagnostic instead, matching the legacy parser's
+# `expected identifier` / `expected (` errors at the first missing token.
+func recoverDeclarationHeaderDiagnostics(items: Slice[CstElement], index: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+  if index >= items.Len() then
+    diagnostics
+  else
+    switch items.Get(index)
+      case Some(item) then
+        recoverDeclarationHeaderDiagnostics(items, index + 1, recoverDeclarationHeaderDiagnostic(item, diagnostics))
+      end
+      case None => diagnostics
+    end
+  end
+end
+
+func recoverDeclarationHeaderDiagnostic(item: CstElement, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+  switch cstElementNode(item)
+    case Some(node) then
+      if node.value().Kind == CstNodeKind.FuncDeclaration then
+        recoverFunctionHeaderDiagnostic(node.value(), diagnostics)
+      else
+        diagnostics
+      end
+    end
+    case None => diagnostics
+  end
+end
+
+func recoverFunctionHeaderDiagnostic(node: CstNode, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+  if cstNodeHasError(node) then
+    diagnostics
+  else
+    recoverFunctionHeaderBoundary(node, diagnostics)
+  end
+end
+
+func recoverFunctionHeaderBoundary(node: CstNode, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+  let keywordIndex = syntaxNextTokenIndex(node.Children, 0)
+  if keywordIndex < 0 then
+    diagnostics
+  else
+    let nameIndex = syntaxNextTokenIndex(node.Children, keywordIndex + 1)
+    if nameIndex < 0 then
+      diagnostics.Append(
+        declarationHeaderDiagnostic(
+          "expected identifier",
+          ["identifier"],
+          cstElementSpan(cstElementAt(node.Children, keywordIndex)).End,
+        ),
+      )
+    elsif !cstElementIsPlainIdentifier(cstElementAt(node.Children, nameIndex)) then
+      diagnostics.Append(
+        declarationHeaderDiagnostic(
+          "expected identifier",
+          ["identifier"],
+          cstElementSpan(cstElementAt(node.Children, nameIndex)).Start,
+        ),
+      )
+    elsif cstNodeFindChild(node, CstNodeKind.FunctionParameters, 0).IsNone() then
+      diagnostics.Append(
+        declarationHeaderDiagnostic(
+          "expected (",
+          ["("],
+          cstElementSpan(cstElementAt(node.Children, nameIndex)).End,
+        ),
+      )
+    else
+      diagnostics
+    end
+  end
+end
+
+func declarationHeaderDiagnostic(message: String, expected: Slice[String], position: ps.Position) -> SyntaxDiagnostic
+  SyntaxDiagnostic {
+    Message: message,
+    Span: ps.SourceSpan { Start: position, End: position },
+    Expected: expected,
+    Recovery: "declaration header",
+  }
+end
+
+# cstElementIsPlainIdentifier accepts a bare identifier token or a name node
+# that textually spells an identifier.  A parenthesized group such as `()` is
+# wrapped as a name node by declarationChildrenWithName but is not a name.
+func cstElementIsPlainIdentifier(item: CstElement) -> Bool
+  switch item
+    case TokenElement(token) => token.Kind == CstTokenKind.Identifier
+    case NodeElement(node) then
+      node.value().Kind == CstNodeKind.IdentifierExpr && syntaxTextIsIdentifier(cstNodeText(node.value()))
+    end
+    case _ => false
+  end
+end
+
+func syntaxTextIsIdentifier(text: String) -> Bool
+  if text == "" then
+    false
+  else
+    syntaxIdentifierRunes(text as Slice[Rune], 0)
+  end
+end
+
+func syntaxIdentifierRunes(runes: Slice[Rune], index: Int) -> Bool
+  if index >= runes.Len() then
+    true
+  else
+    switch runes.Get(index)
+      case Some(raw) => isWordChar(String.FromRunes([raw])) && syntaxIdentifierRunes(runes, index + 1)
+      case None => true
+    end
+  end
+end
+
+# A declaration start is the top-level synchronization boundary. Only the
+# prefix before the first declaration is considered here; declaration bodies
+# are intentionally left to their own grammar contexts.
+func recoverTopLevelPrefix(items: Slice[CstElement], index: Int, diagnostics: Slice[SyntaxDiagnostic]) -> Slice[SyntaxDiagnostic]
+  if index >= items.Len() then
+    diagnostics
+  else
+    switch items.Get(index)
+      case Some(item) then
+        if cstElementIsTrivia(item) || cstElementStartsDeclaration(item) || isRecoveryStructuralToken(cstElementRaw(item)) then
+          if cstElementStartsDeclaration(item) then
+            diagnostics
+          else
+            recoverTopLevelPrefix(items, index + 1, diagnostics)
+          end
+        elsif topLevelDeclarationAfterLine(items, index + 1, false) then
+          recoverTopLevelPrefix(items, index + 1, diagnostics.Append(SyntaxDiagnostic {
+            Message: "expected top-level declaration",
+            Span: cstElementSpan(item),
+            Expected: ["declaration"],
+            Recovery: "top-level declaration",
+          }))
+        else
+          recoverTopLevelPrefix(items, index + 1, diagnostics)
+        end
+      end
+      case None => diagnostics
+    end
+  end
+end
+
+func topLevelDeclarationAfterLine(items: Slice[CstElement], index: Int, sawLine: Bool) -> Bool
+  if index >= items.Len() then
+    false
+  else
+    switch items.Get(index)
+      case Some(item) then
+        if cstElementStartsDeclaration(item) then
+          sawLine
+        else
+          topLevelDeclarationAfterLine(items, index + 1, sawLine || (cstElementIsTrivia(item) && strings.Contains(cstElementRaw(item), "\n")))
+        end
+      end
+      case None => false
+    end
+  end
+end
+
+func isRecoveryStructuralToken(raw: String) -> Bool
+  structuralClose(raw) != "" || isDelimiterClose(raw) || raw == "end" || raw == "elsif" || raw == "else" || raw == "case"
+end
+
+func recoverSyntaxItems(items: Slice[CstElement], index: Int, state: SyntaxRecoveryState) -> SyntaxRecoveryState
+  if index >= items.Len() then
+    state
+  else
+    switch items.Get(index)
+      case Some(item) => recoverSyntaxItems(items, index + 1, recoverSyntaxItem(items, index, state))
+      case None => state
+    end
+  end
+end
+
+func recoverSyntaxItem(items: Slice[CstElement], index: Int, state: SyntaxRecoveryState) -> SyntaxRecoveryState
+  let item = cstElementAt(items, index)
+  if cstElementIsTrivia(item) then
+    state
+  else
+    let raw = cstElementRaw(item)
+    let close = delimiterClose(raw)
+    if close != "" then
+      SyntaxRecoveryState {
+        Delimiters: state.Delimiters.Append(item),
+        Blocks: state.Blocks,
+        Diagnostics: state.Diagnostics,
+      }
+    elsif isDelimiterClose(raw) then
+      recoverDelimiterClose(item, state)
+    elsif syntaxBlockCloseAt(items, index, state.Blocks) != "" then
+      SyntaxRecoveryState {
+        Delimiters: state.Delimiters,
+        Blocks: state.Blocks.Append(SyntaxBlock { Keyword: raw, Close: syntaxBlockCloseAt(items, index, state.Blocks), Span: cstElementSpan(item) }),
+        Diagnostics: state.Diagnostics,
+      }
+    elsif raw == "end" then
+      recoverBlockEnd(item, state)
+    elsif raw == "elsif" || raw == "else" then
+      recoverIfBranch(item, raw, state)
+    elsif raw == "case" then
+      recoverCaseBranch(item, state)
+    else
+      state
+    end
+  end
+end
+
+func recoverDelimiterClose(item: CstElement, state: SyntaxRecoveryState) -> SyntaxRecoveryState
+  switch syntaxRecoveryLast(state.Delimiters)
+    case Some(open) then
+      if delimiterClose(cstElementRaw(open)) == cstElementRaw(item) then
+        SyntaxRecoveryState {
+          Delimiters: syntaxRecoveryDropLast(state.Delimiters),
+          Blocks: state.Blocks,
+          Diagnostics: state.Diagnostics,
+        }
+      else
+        syntaxRecoveryError(state, item, "unexpected closing delimiter", [delimiterClose(cstElementRaw(open))], "delimiter")
+      end
+    end
+    case None => syntaxRecoveryError(state, item, "unexpected closing delimiter", [], "delimiter")
+  end
+end
+
+func recoverBlockEnd(item: CstElement, state: SyntaxRecoveryState) -> SyntaxRecoveryState
+  switch syntaxRecoveryLastBlock(state.Blocks)
+    case Some(open) then
+      if open.Close == "end" then
+        SyntaxRecoveryState {
+          Delimiters: state.Delimiters,
+          Blocks: syntaxRecoveryDropLastBlock(state.Blocks),
+          Diagnostics: state.Diagnostics,
+        }
+      else
+        syntaxRecoveryError(state, item, "unexpected end", [open.Close], "branch/end")
+      end
+    end
+    case None then
+      syntaxRecoveryError(state, item, "unexpected end", ["if", "switch", "while"], "branch/end")
+    end
+  end
+end
+
+func recoverIfBranch(item: CstElement, raw: String, state: SyntaxRecoveryState) -> SyntaxRecoveryState
+  switch syntaxRecoveryLastBlock(state.Blocks)
+    case Some(block) then
+      if block.Keyword != "if" then
+        syntaxRecoveryError(state, item, "branch outside if block", ["end"], "branch/end")
+      elsif block.Close == "else" then
+        # A single-line arrow-if is closed by its `else`; the branch keyword
+        # itself terminates the block.
+        SyntaxRecoveryState {
+          Delimiters: state.Delimiters,
+          Blocks: syntaxRecoveryDropLastBlock(state.Blocks),
+          Diagnostics: state.Diagnostics,
+        }
+      else
+        state
+      end
+    end
+    case None => syntaxRecoveryError(state, item, "branch outside if block", ["if"], "branch/end")
+  end
+end
+
+func recoverCaseBranch(item: CstElement, state: SyntaxRecoveryState) -> SyntaxRecoveryState
+  switch syntaxRecoveryLastBlock(state.Blocks)
+    case Some(block) then
+      if block.Keyword == "switch" then
+        state
+      elsif block.Keyword == "case" && block.Close == "else" then
+        SyntaxRecoveryState {
+          Delimiters: state.Delimiters,
+          Blocks: syntaxRecoveryDropLastBlock(state.Blocks),
+          Diagnostics: state.Diagnostics,
+        }
+      else
+        syntaxRecoveryError(state, item, "case outside switch block", ["end"], "branch/end")
+      end
+    end
+    case None then
+      syntaxRecoveryError(state, item, "case outside switch block", ["switch"], "branch/end")
+    end
+  end
+end
+
+func finishSyntaxRecovery(state: SyntaxRecoveryState) -> SyntaxRecoveryState
+  let delimiters = finishUnclosedDelimiters(state.Delimiters, state)
+  finishUnclosedBlocks(state.Blocks, delimiters)
+end
+
+func finishUnclosedDelimiters(items: Slice[CstElement], state: SyntaxRecoveryState) -> SyntaxRecoveryState
+  switch syntaxRecoveryLast(items)
+    case Some(open) => finishUnclosedDelimiters(syntaxRecoveryDropLast(items), syntaxRecoveryError(state, open, "unclosed delimiter", [delimiterClose(cstElementRaw(open))], "delimiter"))
+    case None => state
+  end
+end
+
+func finishUnclosedBlocks(items: Slice[SyntaxBlock], state: SyntaxRecoveryState) -> SyntaxRecoveryState
+  switch syntaxRecoveryLastBlock(items)
+    case Some(open) => finishUnclosedBlocks(syntaxRecoveryDropLastBlock(items), syntaxRecoveryStateAddBlock(state, open))
+    case None => state
+  end
+end
+
+func syntaxRecoveryStateAddBlock(state: SyntaxRecoveryState, open: SyntaxBlock) -> SyntaxRecoveryState
+  SyntaxRecoveryState {
+    Delimiters: state.Delimiters,
+    Blocks: state.Blocks,
+    Diagnostics: state.Diagnostics.Append(SyntaxDiagnostic {
+      Message: "unclosed keyword block",
+      Span: open.Span,
+      Expected: [open.Close],
+      Recovery: "branch/end",
+    }),
+  }
+end
+
+func syntaxRecoveryError(state: SyntaxRecoveryState, item: CstElement, message: String, expected: Slice[String], recovery: String) -> SyntaxRecoveryState
+  SyntaxRecoveryState {
+    Delimiters: state.Delimiters,
+    Blocks: state.Blocks,
+    Diagnostics: state.Diagnostics.Append(SyntaxDiagnostic {
+      Message: message,
+      Span: cstElementSpan(item),
+      Expected: expected,
+      Recovery: recovery,
+    }),
+  }
+end
+
+func syntaxRecoveryLast(items: Slice[CstElement]) -> Option[CstElement]
+  if items.Len() == 0 => None else items.Get(items.Len() - 1)
+end
+
+func syntaxRecoveryDropLast(items: Slice[CstElement]) -> Slice[CstElement]
+  if items.Len() == 0 => [] else cstElementSliceOrEmpty(items, 0, items.Len() - 1)
+end
+
+func syntaxRecoveryLastBlock(items: Slice[SyntaxBlock]) -> Option[SyntaxBlock]
+  if items.Len() == 0 => None else items.Get(items.Len() - 1)
+end
+
+func syntaxRecoveryDropLastBlock(items: Slice[SyntaxBlock]) -> Slice[SyntaxBlock]
+  if items.Len() == 0 => [] else syntaxBlockSliceOrEmpty(items, 0, items.Len() - 1)
+end
+
+func syntaxBlockSliceOrEmpty(items: Slice[SyntaxBlock], start: Int, finish: Int) -> Slice[SyntaxBlock]
+  switch items.Slice(start, finish)
+    case Some(slice) => slice
+    case None => []
+  end
+end
+
+func isDelimiterClose(raw: String) -> Bool
+  raw == ")" || raw == "]" || raw == "}"
+end
+
+func recoverCstElements(items: Slice[CstElement], diagnostics: Slice[SyntaxDiagnostic]) -> Slice[CstElement]
+  recoverCstElementsFrom(items, diagnostics, 0, [])
+end
+
+func recoverCstElementsFrom(items: Slice[CstElement], diagnostics: Slice[SyntaxDiagnostic], index: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    switch items.Get(index)
+      case Some(item) then
+        recoverCstElementsFrom(
+          items,
+          diagnostics,
+          index + 1,
+          output.Append(recoverCstElement(item, diagnostics)),
+        )
+      end
+      case None => output
+    end
+  end
+end
+
+func recoverCstElement(item: CstElement, diagnostics: Slice[SyntaxDiagnostic]) -> CstElement
+  switch item
+    case NodeElement(node) then
+      let value = node.value()
+      CstElement.NodeElement(Ref.new(CstNode {
+        Kind: value.Kind,
+        Span: value.Span,
+        Children: recoverCstElements(value.Children, diagnostics),
+        HasError: value.HasError || cstElementHasDiagnostic(item, diagnostics),
+      }))
+    end
+    case _ => if cstElementHasDiagnostic(item, diagnostics) then
+      CstElement.NodeElement(Ref.new(CstNode {
+        Kind: CstNodeKind.Error,
+        Span: cstElementSpan(item),
+        Children: [item],
+        HasError: true,
+      }))
+    else
+      item
+    end
+  end
+end
+
+func cstElementHasDiagnostic(item: CstElement, diagnostics: Slice[SyntaxDiagnostic]) -> Bool
+  diagnostics.Find(func(diagnostic: SyntaxDiagnostic) -> Bool
+    diagnostic.Span.Start.Offset == cstElementSpan(item).Start.Offset
+  end).IsSome()
+end
+

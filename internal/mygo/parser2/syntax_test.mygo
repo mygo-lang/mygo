@@ -12,22 +12,22 @@ func syntaxSpan(start: Int, finish: Int) -> ps.SourceSpan
 end
 
 func TestGreenSyntaxModelKeepsChildRanges(t: Ref[testing.T]) -> ()
-  let name = GreenToken { Kind: GreenTokenKind.Identifier, Raw: "value", Span: syntaxSpan(0, 5) }
-  let gap = GreenTrivia { Kind: GreenTriviaKind.Whitespace, Raw: " ", Span: syntaxSpan(5, 6) }
-  let child = GreenNode {
-    Kind: GreenNodeKind.Expression,
+  let name = CstToken { Kind: CstTokenKind.Identifier, Raw: "value", Span: syntaxSpan(0, 5) }
+  let gap = CstTrivia { Kind: CstTriviaKind.Whitespace, Raw: " ", Span: syntaxSpan(5, 6) }
+  let child = CstNode {
+    Kind: CstNodeKind.Expression,
     Span: syntaxSpan(0, 5),
-    Children: [GreenElement.TokenElement(name)],
+    Children: [CstElement.TokenElement(name)],
     HasError: false,
   }
-  let root = GreenNode {
-    Kind: GreenNodeKind.File,
+  let root = CstNode {
+    Kind: CstNodeKind.File,
     Span: syntaxSpan(0, 6),
-    Children: [GreenElement.NodeElement(Ref.new(child)), GreenElement.TriviaElement(gap)],
+    Children: [CstElement.NodeElement(Ref.new(child)), CstElement.TriviaElement(gap)],
     HasError: false,
   }
-  if !greenNodeChildrenFit(root) then
-    t.Fatal("green node children must fit inside their parent range")
+  if !cstNodeChildrenFit(root) then
+    t.Fatal("CST node children must fit inside their parent range")
   end
   let tree = SyntaxTree {
     SourceName: "model.mygo",
@@ -35,12 +35,12 @@ func TestGreenSyntaxModelKeepsChildRanges(t: Ref[testing.T]) -> ()
     Root: Ref.new(root),
     Diagnostics: [],
   }
-  let view = SyntaxNode { Root: tree.Root, Node: Ref.new(child), Path: [0] }
+  let view = SyntaxNodeView { Root: tree.Root, Node: Ref.new(child), Path: [0] }
   let token = SyntaxToken { Root: tree.Root, ParentPath: view.Path, ChildIndex: 0, Token: name }
   switch token.ParentPath.Get(0)
     case Some(index) then
       if token.Token.Span.End.Offset != 5 || index != 0 then
-        t.Fatal("red token view must retain its green token range and path")
+        t.Fatal("red token view must retain its CST token range and path")
       end
     end
     case None => t.Fatal("red token view must retain its parent path")
@@ -48,32 +48,32 @@ func TestGreenSyntaxModelKeepsChildRanges(t: Ref[testing.T]) -> ()
 end
 
 func TestSyntaxNavigationTraversesPathAndSiblings(t: Ref[testing.T]) -> ()
-  let leftToken = GreenToken { Kind: GreenTokenKind.Identifier, Raw: "left", Span: syntaxSpan(0, 4) }
-  let rightToken = GreenToken { Kind: GreenTokenKind.Identifier, Raw: "right", Span: syntaxSpan(5, 10) }
-  let left = Ref.new(GreenNode {
-    Kind: GreenNodeKind.Expression,
+  let leftToken = CstToken { Kind: CstTokenKind.Identifier, Raw: "left", Span: syntaxSpan(0, 4) }
+  let rightToken = CstToken { Kind: CstTokenKind.Identifier, Raw: "right", Span: syntaxSpan(5, 10) }
+  let left = Ref.new(CstNode {
+    Kind: CstNodeKind.Expression,
     Span: syntaxSpan(0, 4),
-    Children: [GreenElement.TokenElement(leftToken)],
+    Children: [CstElement.TokenElement(leftToken)],
     HasError: false,
   })
-  let gap = GreenTrivia { Kind: GreenTriviaKind.Whitespace, Raw: " ", Span: syntaxSpan(4, 5) }
-  let right = Ref.new(GreenNode {
-    Kind: GreenNodeKind.Pattern,
+  let gap = CstTrivia { Kind: CstTriviaKind.Whitespace, Raw: " ", Span: syntaxSpan(4, 5) }
+  let right = Ref.new(CstNode {
+    Kind: CstNodeKind.Pattern,
     Span: syntaxSpan(5, 10),
-    Children: [GreenElement.TokenElement(rightToken)],
+    Children: [CstElement.TokenElement(rightToken)],
     HasError: false,
   })
-  let root = Ref.new(GreenNode {
-    Kind: GreenNodeKind.File,
+  let root = Ref.new(CstNode {
+    Kind: CstNodeKind.File,
     Span: syntaxSpan(0, 10),
-    Children: [GreenElement.NodeElement(left), GreenElement.TriviaElement(gap), GreenElement.NodeElement(right)],
+    Children: [CstElement.NodeElement(left), CstElement.TriviaElement(gap), CstElement.NodeElement(right)],
     HasError: false,
   })
   switch syntaxNodeAtPath(root, [0], 0)
     case Some(leftView) then
-      switch (syntaxNodeParent(leftView), syntaxNodeNextSibling(leftView), syntaxNodeToken(leftView, 0))
+      switch (leftView.Parent(), leftView.NextSibling(), leftView.Token(0))
         case (Some(parent), Some(sibling), Some(token)) then
-          if syntaxNodeKind(parent) != GreenNodeKind.File || syntaxNodeKind(sibling) != GreenNodeKind.Pattern || syntaxTokenRaw(token) != "left" || syntaxTokenSpan(token).End.Offset != 4 then
+          if parent.Kind() != CstNodeKind.File || sibling.Kind() != CstNodeKind.Pattern || token.Raw() != "left" || token.Span().End.Offset != 4 then
             t.Fatal("syntax traversal must preserve parent, sibling, token, and source range")
           end
         end
@@ -85,15 +85,15 @@ func TestSyntaxNavigationTraversesPathAndSiblings(t: Ref[testing.T]) -> ()
 end
 
 func TestGreenSyntaxModelRejectsOutOfRangeChild(t: Ref[testing.T]) -> ()
-  let outside = GreenToken { Kind: GreenTokenKind.Identifier, Raw: "x", Span: syntaxSpan(3, 4) }
-  let root = GreenNode {
-    Kind: GreenNodeKind.File,
+  let outside = CstToken { Kind: CstTokenKind.Identifier, Raw: "x", Span: syntaxSpan(3, 4) }
+  let root = CstNode {
+    Kind: CstNodeKind.File,
     Span: syntaxSpan(0, 3),
-    Children: [GreenElement.TokenElement(outside)],
+    Children: [CstElement.TokenElement(outside)],
     HasError: true,
   }
-  if greenNodeChildrenFit(root) then
-    t.Fatal("green node must reject a child outside its source range")
+  if cstNodeChildrenFit(root) then
+    t.Fatal("CST node must reject a child outside its source range")
   end
 end
 
@@ -103,10 +103,10 @@ func TestLexSourcePreservesAllLiteralAndTriviaBytes(t: Ref[testing.T]) -> ()
   if lexedSourceText(lexed.Elements) != source then
     t.Fatal("lossless lexer must replay every input byte exactly once")
   end
-  let literals = lexed.Tokens.Filter(func(item: GreenToken) -> Bool
-    item.Kind == GreenTokenKind.StringLiteral || item.Kind == GreenTokenKind.RawStringLiteral || item.Kind == GreenTokenKind.TripleStringLiteral || item.Kind == GreenTokenKind.RuneLiteral
+  let literals = lexed.Tokens.Filter(func(item: CstToken) -> Bool
+    item.Kind == CstTokenKind.StringLiteral || item.Kind == CstTokenKind.RawStringLiteral || item.Kind == CstTokenKind.TripleStringLiteral || item.Kind == CstTokenKind.RuneLiteral
   end)
-  if literals.Len() != 4 || lexed.Trivia.Find(func(item: GreenTrivia) -> Bool item.Kind == GreenTriviaKind.Comment end).IsNone() then
+  if literals.Len() != 4 || lexed.Trivia.Find(func(item: CstTrivia) -> Bool item.Kind == CstTriviaKind.Comment end).IsNone() then
     t.Fatal("lossless lexer did not recognize comment and literal modes")
   end
 end
@@ -115,14 +115,14 @@ func TestDelimitedSyntaxOwnsNestedSourceExactlyOnce(t: Ref[testing.T]) -> ()
   let source = "func f(x: (Int, Slice[String])) => { x }\n"
   let tree = buildDelimitedSyntax("nested.mygo", source)
   let root = tree.Root.value()
-  if !greenNodeChildrenFit(root) || greenNodeText(root) != source then
+  if !cstNodeChildrenFit(root) || cstNodeText(root) != source then
     t.Fatal("CST delimiter nesting must retain every source byte exactly once")
   end
-  let groups = root.Children.Filter(func(item: GreenElement) -> Bool
+  let groups = root.Children.Filter(func(item: CstElement) -> Bool
     switch item case NodeElement(_) => true case _ => false end
   end)
   if groups.Len() == 0 then
-    t.Fatal("CST must represent paired delimiters as structural green nodes")
+    t.Fatal("CST must represent paired delimiters as structural CST nodes")
   end
 end
 
@@ -130,12 +130,12 @@ func TestDelimitedSyntaxOwnsNestedKeywordBlocks(t: Ref[testing.T]) -> ()
   let source = "if ready then\n  switch value\n    case Some(x) then\n      x\n    end\n  end\nelse\n  none\nend\n"
   let tree = buildDelimitedSyntax("blocks.mygo", source)
   let root = tree.Root.value()
-  if greenNodeText(root) != source then
+  if cstNodeText(root) != source then
     t.Fatal("keyword blocks must retain every source byte")
   end
-  let blocks = root.Children.Filter(func(item: GreenElement) -> Bool
+  let blocks = root.Children.Filter(func(item: CstElement) -> Bool
     switch item
-      case NodeElement(node) => node.value().Kind == GreenNodeKind.IfBlock
+      case NodeElement(node) => node.value().Kind == CstNodeKind.IfBlock
       case _ => false
     end
   end)
@@ -147,15 +147,15 @@ end
 func TestDelimitedSyntaxGroupsTopLevelDeclarations(t: Ref[testing.T]) -> ()
   let source = "package p\n\nfunc f() => 1\n\nlet value = f()\n"
   let tree = buildDelimitedSyntax("decls.mygo", source)
-  let declarations = tree.Root.value().Children.Filter(func(item: GreenElement) -> Bool
+  let declarations = tree.Root.value().Children.Filter(func(item: CstElement) -> Bool
     switch item
-      case NodeElement(node) => greenNodeIsDeclaration(node.value())
+      case NodeElement(node) => cstNodeIsDeclaration(node.value())
       case _ => false
     end
   end)
   if declarations.Len() != 3 then
     t.Fatal("file CST must create one node per top-level declaration")
-  elsif greenNodeText(tree.Root.value()) != source then
+  elsif cstNodeText(tree.Root.value()) != source then
     t.Fatal("file CST must retain declaration trivia byte-for-byte")
   end
 end
@@ -167,7 +167,7 @@ func TestGroupedTypeAndPatternRetainNestedSource(t: Ref[testing.T]) -> ()
   let patternTree = buildDelimitedSyntax("pattern.mygo", patternSource)
   let typeResult = parseType(SyntaxCursor { Elements: typeTree.Root.value().Children, Index: 0 })
   let patternResult = parsePattern(SyntaxCursor { Elements: patternTree.Root.value().Children, Index: 0 })
-  if syntaxResultKind(typeResult) != GreenNodeKind.TupleType || syntaxResultKind(patternResult) != GreenNodeKind.TuplePattern then
+  if syntaxResultKind(typeResult) != CstNodeKind.TupleType || syntaxResultKind(patternResult) != CstNodeKind.TuplePattern then
     t.Fatal("grouped type and pattern must retain their tuple CST alternatives")
   end
 end
@@ -176,7 +176,7 @@ func TestGenericTypeRetainsTypeArguments(t: Ref[testing.T]) -> ()
   let source = "Slice[Result[String]]"
   let tree = buildDelimitedSyntax("generic.mygo", source)
   let result = parseType(SyntaxCursor { Elements: tree.Root.value().Children, Index: 0 })
-  if syntaxResultKind(result) != GreenNodeKind.GenericType then
+  if syntaxResultKind(result) != CstNodeKind.GenericType then
     t.Fatal("generic types must own their bracketed type arguments")
   end
 end
@@ -196,21 +196,21 @@ func TestExpressionGroupKinds(t: Ref[testing.T]) -> ()
   let structLiteral = parseExpr(SyntaxCursor { Elements: structTree.Root.value().Children, Index: 2 })
   let map = parseExpr(SyntaxCursor { Elements: mapTree.Root.value().Children, Index: 0 })
   let set = parseExpr(SyntaxCursor { Elements: setTree.Root.value().Children, Index: 0 })
-  if syntaxResultKind(call) != GreenNodeKind.Call || syntaxResultKind(paren) != GreenNodeKind.ParenExpr || syntaxResultKind(unit) != GreenNodeKind.UnitExpr || syntaxResultKind(tuple) != GreenNodeKind.TupleExpr || syntaxResultKind(structLiteral) != GreenNodeKind.StructLiteral || syntaxResultKind(map) != GreenNodeKind.MapLiteral || syntaxResultKind(set) != GreenNodeKind.SetLiteral then
+  if syntaxResultKind(call) != CstNodeKind.Call || syntaxResultKind(paren) != CstNodeKind.ParenExpr || syntaxResultKind(unit) != CstNodeKind.UnitExpr || syntaxResultKind(tuple) != CstNodeKind.TupleExpr || syntaxResultKind(structLiteral) != CstNodeKind.StructLiteral || syntaxResultKind(map) != CstNodeKind.MapLiteral || syntaxResultKind(set) != CstNodeKind.SetLiteral then
     t.Fatal("expression groups must preserve their specific CST kinds")
   end
 end
 
-func syntaxResultKind(result: SyntaxParseResult) -> GreenNodeKind
+func syntaxResultKind(result: SyntaxParseResult) -> CstNodeKind
   switch result.Node
     case Some(node) => node.value().Kind
-    case None => GreenNodeKind.Error
+    case None => CstNodeKind.Error
   end
 end
 
 func syntaxResultText(result: SyntaxParseResult) -> String
   switch result.Node
-    case Some(node) => greenNodeText(node.value())
+    case Some(node) => cstNodeText(node.value())
     case None => ""
   end
 end
@@ -220,7 +220,7 @@ func TestRecursiveTypeCstPreservesStructure(t: Ref[testing.T]) -> ()
   let unit = typeSyntaxOf("type T = ()\n")
   let generic = typeSyntaxOf("type T = Slice[Map[String, Slice[Int]]]\n")
   let funcType = typeSyntaxOf("type T = func(Int, String) -> Slice[Bool]\n")
-  if syntaxResultKind(tuple) != GreenNodeKind.TupleType || syntaxResultKind(unit) != GreenNodeKind.UnitType || syntaxResultKind(generic) != GreenNodeKind.GenericType || syntaxResultKind(funcType) != GreenNodeKind.FuncType then
+  if syntaxResultKind(tuple) != CstNodeKind.TupleType || syntaxResultKind(unit) != CstNodeKind.UnitType || syntaxResultKind(generic) != CstNodeKind.GenericType || syntaxResultKind(funcType) != CstNodeKind.FuncType then
     t.Fatal("recursive type CST must distinguish tuple, unit, generic, and function types")
   end
   if syntaxResultText(tuple) != "(Int, String)" || syntaxResultText(unit) != "()" || syntaxResultText(generic) != "Slice[Map[String, Slice[Int]]]" || syntaxResultText(funcType) != "func(Int, String) -> Slice[Bool]" then
@@ -235,7 +235,7 @@ func typeSyntaxOf(source: String) -> SyntaxParseResult
   let tree = ParseSyntaxAt("type-decl.mygo", source)
   switch tree.Root.value().Children.Get(0)
     case Some(item) then
-      switch greenElementNode(item)
+      switch cstElementNode(item)
         case Some(decl) => typeAnnotationResult(decl.value())
         case None => emptySyntaxResult()
       end
@@ -244,10 +244,10 @@ func typeSyntaxOf(source: String) -> SyntaxParseResult
   end
 end
 
-func typeAnnotationResult(node: GreenNode) -> SyntaxParseResult
-  switch greenNodeFindChild(node, GreenNodeKind.TypeAnnotation, 0)
+func typeAnnotationResult(node: CstNode) -> SyntaxParseResult
+  switch cstNodeFindChild(node, CstNodeKind.TypeAnnotation, 0)
     case Some(annotation) then
-      switch greenNodeFindTypeChild(annotation.value(), 0)
+      switch cstNodeFindTypeChild(annotation.value(), 0)
         case Some(typ) => SyntaxParseResult { Node: Some(typ), Cursor: SyntaxCursor { Elements: [], Index: 0 } }
         case None => emptySyntaxResult()
       end
@@ -264,7 +264,7 @@ func TestNestedGenericTypeRetainsTypeArguments(t: Ref[testing.T]) -> ()
   let result = typeSyntaxOf("type T = Slice[Map[String, Slice[Int]]]\n")
   switch result.Node
     case Some(node) then
-      if !greenNodeHasKind(node.value(), GreenNodeKind.TypeArguments) || !greenNodeTypeArgumentsNested(node.value()) then
+      if !cstNodeHasKind(node.value(), CstNodeKind.TypeArguments) || !cstNodeTypeArgumentsNested(node.value()) then
         t.Fatal("nested generic arguments must own nested TypeArguments nodes")
       end
     end
@@ -272,20 +272,20 @@ func TestNestedGenericTypeRetainsTypeArguments(t: Ref[testing.T]) -> ()
   end
 end
 
-# greenNodeTypeArgumentsNested reports whether the type node has a bracketed
+# cstNodeTypeArgumentsNested reports whether the type node has a bracketed
 # TypeArguments child that itself contains a further nested TypeArguments node,
 # i.e. generic arguments nest rather than flattening into a single list.
-func greenNodeTypeArgumentsNested(node: GreenNode) -> Bool
-  switch greenNodeFindChild(node, GreenNodeKind.TypeArguments, 0)
-    case Some(arguments) => greenNodeContainsTypeArguments(arguments.value())
+func cstNodeTypeArgumentsNested(node: CstNode) -> Bool
+  switch cstNodeFindChild(node, CstNodeKind.TypeArguments, 0)
+    case Some(arguments) => cstNodeContainsTypeArguments(arguments.value())
     case None => false
   end
 end
 
-func greenNodeContainsTypeArguments(node: GreenNode) -> Bool
-  node.Children.Find(func(item: GreenElement) -> Bool
-    switch greenElementNode(item)
-      case Some(child) => child.value().Kind == GreenNodeKind.TypeArguments || greenNodeContainsTypeArguments(child.value())
+func cstNodeContainsTypeArguments(node: CstNode) -> Bool
+  node.Children.Find(func(item: CstElement) -> Bool
+    switch cstElementNode(item)
+      case Some(child) => child.value().Kind == CstNodeKind.TypeArguments || cstNodeContainsTypeArguments(child.value())
       case None => false
     end
   end).IsSome()
@@ -352,7 +352,7 @@ func TestFunctionDeclarationOwnsUsingConstraints(t: Ref[testing.T]) -> ()
   let source = "func render(x: Int) -> String using Local: ToString[Int], Show => x\n"
   let tree = buildDelimitedSyntax("using.mygo", source)
   let root = tree.Root.value()
-  if !greenNodeHasKind(root, GreenNodeKind.Constraints) || !greenNodeHasKind(root, GreenNodeKind.Constraint) || greenNodeText(root) != source then
+  if !cstNodeHasKind(root, CstNodeKind.Constraints) || !cstNodeHasKind(root, CstNodeKind.Constraint) || cstNodeText(root) != source then
     t.Fatal("function declarations must own a structured using clause without losing source")
   end
 end
@@ -401,21 +401,21 @@ end
 func TestDeclarationsOwnExpressionChildren(t: Ref[testing.T]) -> ()
   let source = "let result: Int = fn(x)\nfunc f() => { x }\n"
   let tree = buildDelimitedSyntax("decl-expr.mygo", source)
-  if !greenNodeHasExpression(tree.Root.value()) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.BindPattern) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.TypeAnnotation) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.ValueInitializer) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.NamedType) || greenNodeText(tree.Root.value()) != source then
+  if !cstNodeHasExpression(tree.Root.value()) || !cstNodeHasKind(tree.Root.value(), CstNodeKind.BindPattern) || !cstNodeHasKind(tree.Root.value(), CstNodeKind.TypeAnnotation) || !cstNodeHasKind(tree.Root.value(), CstNodeKind.ValueInitializer) || !cstNodeHasKind(tree.Root.value(), CstNodeKind.NamedType) || cstNodeText(tree.Root.value()) != source then
     t.Fatal("declarations must own named typed initializer children without losing source")
   end
 end
 
 func TestFunctionDeclarationOwnsParameterPatterns(t: Ref[testing.T]) -> ()
   let tree = buildDelimitedSyntax("params.mygo", "func f(value: Int, other: String) -> Bool => value\n")
-  if !greenNodeHasKind(tree.Root.value(), GreenNodeKind.FunctionParameters) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.FunctionReturnType) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.BindPattern) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.TypeAnnotation) || greenNodeText(tree.Root.value()) != tree.Source then
+  if !cstNodeHasKind(tree.Root.value(), CstNodeKind.FunctionParameters) || !cstNodeHasKind(tree.Root.value(), CstNodeKind.FunctionReturnType) || !cstNodeHasKind(tree.Root.value(), CstNodeKind.BindPattern) || !cstNodeHasKind(tree.Root.value(), CstNodeKind.TypeAnnotation) || cstNodeText(tree.Root.value()) != tree.Source then
     t.Fatal("function declarations must own parameter and return type ranges")
   end
 end
 
 func TestTypeDeclarationOwnsTypeRightHandSide(t: Ref[testing.T]) -> ()
   let tree = buildDelimitedSyntax("type-decl.mygo", "type Count = Int\n")
-  if !greenNodeHasKind(tree.Root.value(), GreenNodeKind.TypeDeclaration) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.TypeAnnotation) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.NamedType) || greenNodeText(tree.Root.value()) != tree.Source then
+  if !cstNodeHasKind(tree.Root.value(), CstNodeKind.TypeDeclaration) || !cstNodeHasKind(tree.Root.value(), CstNodeKind.TypeAnnotation) || !cstNodeHasKind(tree.Root.value(), CstNodeKind.NamedType) || cstNodeText(tree.Root.value()) != tree.Source then
     t.Fatal("type declarations must own a structured type right hand side")
   end
 end
@@ -424,7 +424,7 @@ func TestKeywordBlocksOwnNestedBranches(t: Ref[testing.T]) -> ()
   let source = "if ready then\n  switch value\n    case Some(x) then\n      x\n    end\n    case None then\n      0\n    end\n  end\nelsif later then\n  1\nelse\n  2\nend\n"
   let tree = buildDelimitedSyntax("branches.mygo", source)
   let root = tree.Root.value()
-  if !greenNodeHasKind(root, GreenNodeKind.ElsifBranch) || !greenNodeHasKind(root, GreenNodeKind.ElseBranch) || !greenNodeHasKind(root, GreenNodeKind.CaseBranch) || greenNodeText(root) != source then
+  if !cstNodeHasKind(root, CstNodeKind.ElsifBranch) || !cstNodeHasKind(root, CstNodeKind.ElseBranch) || !cstNodeHasKind(root, CstNodeKind.CaseBranch) || cstNodeText(root) != source then
     t.Fatal("keyword blocks must own nested branch ranges without losing source")
   end
 end
@@ -432,9 +432,9 @@ end
 func TestSyntaxRecoveryRetainsFollowingDeclarations(t: Ref[testing.T]) -> ()
   let source = "let first = 1\n)\nelse\nlet second = 2\nlet third = 3\n"
   let tree = buildDelimitedSyntax("recovery.mygo", source)
-  let declarations = tree.Root.value().Children.Filter(func(item: GreenElement) -> Bool
+  let declarations = tree.Root.value().Children.Filter(func(item: CstElement) -> Bool
     switch item
-      case NodeElement(node) => greenNodeIsDeclaration(node.value())
+      case NodeElement(node) => cstNodeIsDeclaration(node.value())
       case _ => false
     end
   end)
@@ -444,7 +444,7 @@ func TestSyntaxRecoveryRetainsFollowingDeclarations(t: Ref[testing.T]) -> ()
   let hasBranchRecovery = tree.Diagnostics.Find(func(diagnostic: SyntaxDiagnostic) -> Bool
     diagnostic.Recovery == "branch/end"
   end).IsSome()
-  if declarations.Len() != 3 || !hasDelimiterRecovery || !hasBranchRecovery || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.Error) || greenNodeText(tree.Root.value()) != source then
+  if declarations.Len() != 3 || !hasDelimiterRecovery || !hasBranchRecovery || !cstNodeHasKind(tree.Root.value(), CstNodeKind.Error) || cstNodeText(tree.Root.value()) != source then
     t.Fatal("recovery must retain error nodes and later declarations in source order")
   end
 end
@@ -455,13 +455,13 @@ func TestSyntaxRecoverySynchronizesAtTopLevelDeclaration(t: Ref[testing.T]) -> (
   let topLevel = tree.Diagnostics.Find(func(diagnostic: SyntaxDiagnostic) -> Bool
     diagnostic.Recovery == "top-level declaration"
   end).IsSome()
-  let declarations = tree.Root.value().Children.Filter(func(item: GreenElement) -> Bool
+  let declarations = tree.Root.value().Children.Filter(func(item: CstElement) -> Bool
     switch item
-      case NodeElement(node) => greenNodeIsDeclaration(node.value())
+      case NodeElement(node) => cstNodeIsDeclaration(node.value())
       case _ => false
     end
   end)
-  if !topLevel || declarations.Len() != 1 || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.Error) || greenNodeText(tree.Root.value()) != source then
+  if !topLevel || declarations.Len() != 1 || !cstNodeHasKind(tree.Root.value(), CstNodeKind.Error) || cstNodeText(tree.Root.value()) != source then
     t.Fatal("top-level recovery must retain the following declaration and source bytes")
   end
 end
@@ -475,7 +475,7 @@ func TestSyntaxRecoveryMarksUnclosedDelimiterAndBlock(t: Ref[testing.T]) -> ()
   let block = tree.Diagnostics.Find(func(diagnostic: SyntaxDiagnostic) -> Bool
     diagnostic.Message == "unclosed keyword block" && diagnostic.Recovery == "branch/end"
   end).IsSome()
-  if !delimiter || !block || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.Error) || greenNodeText(tree.Root.value()) != source then
+  if !delimiter || !block || !cstNodeHasKind(tree.Root.value(), CstNodeKind.Error) || cstNodeText(tree.Root.value()) != source then
     t.Fatal("unclosed structures must become recoverable error nodes without losing bytes")
   end
 end
@@ -484,7 +484,7 @@ func TestSyntaxRecoveryPreservesMalformedLiteralBytes(t: Ref[testing.T]) -> ()
   let ordinary = buildDelimitedSyntax("ordinary.mygo", "let value = \"unterminated")
   let raw = buildDelimitedSyntax("raw.mygo", "let value = `unterminated")
   let triple = buildDelimitedSyntax("triple.mygo", "let value = \"\"\"unterminated")
-  if !syntaxTreeHasLiteralDiagnostic(ordinary) || !syntaxTreeHasLiteralDiagnostic(raw) || !syntaxTreeHasLiteralDiagnostic(triple) || greenNodeText(ordinary.Root.value()) != ordinary.Source || greenNodeText(raw.Root.value()) != raw.Source || greenNodeText(triple.Root.value()) != triple.Source then
+  if !syntaxTreeHasLiteralDiagnostic(ordinary) || !syntaxTreeHasLiteralDiagnostic(raw) || !syntaxTreeHasLiteralDiagnostic(triple) || cstNodeText(ordinary.Root.value()) != ordinary.Source || cstNodeText(raw.Root.value()) != raw.Source || cstNodeText(triple.Root.value()) != triple.Source then
     t.Fatal("malformed literals must retain original bytes in recovered error nodes")
   end
 end
@@ -493,7 +493,7 @@ func TestParseSyntaxRecoversWhileAstParsingRemainsStrict(t: Ref[testing.T]) -> (
   let source = "package sample\nlet broken = (\nlet recovered = 1\n"
   let syntax = ParseSyntaxAt("recoverable.mygo", source)
   let ast = ParseFileAt("recoverable.mygo", source)
-  if syntax.SourceName != "recoverable.mygo" || syntax.Diagnostics.Len() == 0 || !greenNodeHasKind(syntax.Root.value(), GreenNodeKind.Error) || !syntaxAstParseIsErr(ast) then
+  if syntax.SourceName != "recoverable.mygo" || syntax.Diagnostics.Len() == 0 || !cstNodeHasKind(syntax.Root.value(), CstNodeKind.Error) || !syntaxAstParseIsErr(ast) then
     t.Fatal("syntax parsing must recover while AST parsing remains strict")
   end
 end
@@ -509,12 +509,12 @@ end
 func TestSyntaxLoweringContractUsesTypedSemanticChildren(t: Ref[testing.T]) -> ()
   let tree = ParseSyntaxAt("contract.mygo", "let value: Slice[Int] = 1\nfunc f(item: Int) -> Bool => true\n")
   let root = syntaxTreeRoot(tree)
-  switch (syntaxNodeFirstChildOfKind(root, GreenNodeKind.LetDeclaration), syntaxNodeFirstChildOfKind(root, GreenNodeKind.FuncDeclaration))
+  switch (root.FirstChildOfKind(CstNodeKind.LetDeclaration), root.FirstChildOfKind(CstNodeKind.FuncDeclaration))
     case (Some(binding), Some(function)) then
-      if !syntaxOptionalNodeHasKind(syntaxDeclarationPattern(binding), GreenNodeKind.BindPattern) || !syntaxOptionalNodeHasKind(syntaxDeclarationTypeAnnotation(binding), GreenNodeKind.TypeAnnotation) || !syntaxOptionalNodeHasKind(syntaxDeclarationInitializer(binding), GreenNodeKind.ValueInitializer) || !syntaxOptionalNodeHasKind(syntaxFunctionParameters(function), GreenNodeKind.FunctionParameters) || !syntaxOptionalNodeHasKind(syntaxFunctionReturnType(function), GreenNodeKind.FunctionReturnType) || !syntaxOptionalNodeHasKind(syntaxDeclarationInitializer(function), GreenNodeKind.ValueInitializer) then
+      if !syntaxOptionalNodeHasKind(syntaxDeclarationPattern(binding), CstNodeKind.BindPattern) || !syntaxOptionalNodeHasKind(syntaxDeclarationTypeAnnotation(binding), CstNodeKind.TypeAnnotation) || !syntaxOptionalNodeHasKind(syntaxDeclarationInitializer(binding), CstNodeKind.ValueInitializer) || !syntaxOptionalNodeHasKind(syntaxFunctionParameters(function), CstNodeKind.FunctionParameters) || !syntaxOptionalNodeHasKind(syntaxFunctionReturnType(function), CstNodeKind.FunctionReturnType) || !syntaxOptionalNodeHasKind(syntaxDeclarationInitializer(function), CstNodeKind.ValueInitializer) then
         t.Fatal("typed syntax accessors must expose declaration slots")
       end
-      if !syntaxOptionalNodeHasKind(syntaxTypeAnnotationValueFromOption(syntaxDeclarationTypeAnnotation(binding)), GreenNodeKind.GenericType) || !syntaxOptionalNodeHasKind(syntaxInitializerExpressionFromOption(syntaxDeclarationInitializer(binding)), GreenNodeKind.NumberExpr) || !syntaxOptionalNodeHasKind(syntaxInitializerExpressionFromOption(syntaxDeclarationInitializer(function)), GreenNodeKind.BoolExpr) then
+      if !syntaxOptionalNodeHasKind(syntaxTypeAnnotationValueFromOption(syntaxDeclarationTypeAnnotation(binding)), CstNodeKind.GenericType) || !syntaxOptionalNodeHasKind(syntaxInitializerExpressionFromOption(syntaxDeclarationInitializer(binding)), CstNodeKind.NumberExpr) || !syntaxOptionalNodeHasKind(syntaxInitializerExpressionFromOption(syntaxDeclarationInitializer(function)), CstNodeKind.BoolExpr) then
         t.Fatal("typed syntax accessors must expose type and expression children")
       end
     end
@@ -522,21 +522,21 @@ func TestSyntaxLoweringContractUsesTypedSemanticChildren(t: Ref[testing.T]) -> (
   end
 end
 
-func syntaxOptionalNodeHasKind(node: Option[SyntaxNode], kind: GreenNodeKind) -> Bool
+func syntaxOptionalNodeHasKind(node: Option[SyntaxNodeView], kind: CstNodeKind) -> Bool
   switch node
-    case Some(value) => syntaxNodeKind(value) == kind
+    case Some(value) => value.Kind() == kind
     case None => false
   end
 end
 
-func syntaxTypeAnnotationValueFromOption(node: Option[SyntaxNode]) -> Option[SyntaxNode]
+func syntaxTypeAnnotationValueFromOption(node: Option[SyntaxNodeView]) -> Option[SyntaxNodeView]
   switch node
     case Some(value) => syntaxTypeAnnotationValue(value)
     case None => None
   end
 end
 
-func syntaxInitializerExpressionFromOption(node: Option[SyntaxNode]) -> Option[SyntaxNode]
+func syntaxInitializerExpressionFromOption(node: Option[SyntaxNodeView]) -> Option[SyntaxNodeView]
   switch node
     case Some(value) => syntaxInitializerExpression(value)
     case None => None
@@ -544,8 +544,8 @@ func syntaxInitializerExpressionFromOption(node: Option[SyntaxNode]) -> Option[S
 end
 
 func TestLowerSyntaxRejectsDiagnosticFreeUnsupportedNode(t: Ref[testing.T]) -> ()
-  let unsupported = Ref.new(GreenNode {
-    Kind: GreenNodeKind.ParenGroup,
+  let unsupported = Ref.new(CstNode {
+    Kind: CstNodeKind.ParenGroup,
     Span: syntaxSpan(0, 2),
     Children: [],
     HasError: false,
@@ -553,10 +553,10 @@ func TestLowerSyntaxRejectsDiagnosticFreeUnsupportedNode(t: Ref[testing.T]) -> (
   let tree = SyntaxTree {
     SourceName: "unsupported.mygo",
     Source: "()",
-    Root: Ref.new(GreenNode {
-      Kind: GreenNodeKind.File,
+    Root: Ref.new(CstNode {
+      Kind: CstNodeKind.File,
       Span: syntaxSpan(0, 2),
-      Children: [GreenElement.NodeElement(unsupported)],
+      Children: [CstElement.NodeElement(unsupported)],
       HasError: false,
     }),
     Diagnostics: [],
@@ -567,7 +567,7 @@ func TestLowerSyntaxRejectsDiagnosticFreeUnsupportedNode(t: Ref[testing.T]) -> (
 end
 
 func TestSyntaxLoweringSupportFrontierIsExplicit(t: Ref[testing.T]) -> ()
-  if !syntaxLoweringSupportsNodeKind(GreenNodeKind.LetDeclaration) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.GenericType) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.TupleType) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.UnitType) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.FuncType) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.StructDeclaration) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.EnumDeclaration) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.InterfaceDeclaration) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.ImplDeclaration) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.ImportDeclaration) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.WildcardPattern) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.LiteralPattern) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.TuplePattern) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.VariantPattern) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.StructVariantPattern) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.Call) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.UnaryExpr) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.BinaryExpr) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.FieldExpr) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.TypeAsExpr) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.SliceLiteral) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.MapLiteral) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.SetLiteral) || !syntaxLoweringSupportsNodeKind(GreenNodeKind.StructLiteral) then
+  if !syntaxLoweringSupportsNodeKind(CstNodeKind.LetDeclaration) || !syntaxLoweringSupportsNodeKind(CstNodeKind.GenericType) || !syntaxLoweringSupportsNodeKind(CstNodeKind.TupleType) || !syntaxLoweringSupportsNodeKind(CstNodeKind.UnitType) || !syntaxLoweringSupportsNodeKind(CstNodeKind.FuncType) || !syntaxLoweringSupportsNodeKind(CstNodeKind.StructDeclaration) || !syntaxLoweringSupportsNodeKind(CstNodeKind.EnumDeclaration) || !syntaxLoweringSupportsNodeKind(CstNodeKind.InterfaceDeclaration) || !syntaxLoweringSupportsNodeKind(CstNodeKind.ImplDeclaration) || !syntaxLoweringSupportsNodeKind(CstNodeKind.ImportDeclaration) || !syntaxLoweringSupportsNodeKind(CstNodeKind.WildcardPattern) || !syntaxLoweringSupportsNodeKind(CstNodeKind.LiteralPattern) || !syntaxLoweringSupportsNodeKind(CstNodeKind.TuplePattern) || !syntaxLoweringSupportsNodeKind(CstNodeKind.VariantPattern) || !syntaxLoweringSupportsNodeKind(CstNodeKind.StructVariantPattern) || !syntaxLoweringSupportsNodeKind(CstNodeKind.Call) || !syntaxLoweringSupportsNodeKind(CstNodeKind.UnaryExpr) || !syntaxLoweringSupportsNodeKind(CstNodeKind.BinaryExpr) || !syntaxLoweringSupportsNodeKind(CstNodeKind.FieldExpr) || !syntaxLoweringSupportsNodeKind(CstNodeKind.TypeAsExpr) || !syntaxLoweringSupportsNodeKind(CstNodeKind.SliceLiteral) || !syntaxLoweringSupportsNodeKind(CstNodeKind.MapLiteral) || !syntaxLoweringSupportsNodeKind(CstNodeKind.SetLiteral) || !syntaxLoweringSupportsNodeKind(CstNodeKind.StructLiteral) then
     t.Fatal("lowering support frontier must distinguish implemented and deferred CST kinds")
   end
 end
@@ -576,7 +576,7 @@ func TestRecursivePatternCstPreservesStructure(t: Ref[testing.T]) -> ()
   let source = "let (first, _) = pair\nlet (Some(x), None) = item\nswitch value\n  case 1 => a\n  case \"two\" => b\n  case _ => c\nend\n"
   let tree = buildDelimitedSyntax("patterns.mygo", source)
   let root = tree.Root.value()
-  if !greenNodeHasKind(root, GreenNodeKind.TuplePattern) || !greenNodeHasKind(root, GreenNodeKind.WildcardPattern) || !greenNodeHasKind(root, GreenNodeKind.LiteralPattern) || !greenNodeHasKind(root, GreenNodeKind.VariantPattern) || !greenNodeHasKind(root, GreenNodeKind.BindPattern) || greenNodeText(root) != source then
+  if !cstNodeHasKind(root, CstNodeKind.TuplePattern) || !cstNodeHasKind(root, CstNodeKind.WildcardPattern) || !cstNodeHasKind(root, CstNodeKind.LiteralPattern) || !cstNodeHasKind(root, CstNodeKind.VariantPattern) || !cstNodeHasKind(root, CstNodeKind.BindPattern) || cstNodeText(root) != source then
     t.Fatal("recursive pattern CST must record tuple, wildcard, literal, variant, and bind alternatives without losing source")
   end
 end
@@ -585,7 +585,7 @@ func TestRecursivePatternCstOwnsBranchPatterns(t: Ref[testing.T]) -> ()
   let source = "switch value\n  case Some(x) => x\n  case (1, 2) => y\n  case _ => 0\nend\n"
   let tree = ParseSyntaxAt("branch-patterns.mygo", source)
   let root = tree.Root.value()
-  if !greenNodeHasKind(root, GreenNodeKind.CaseBranch) || !greenNodeHasKind(root, GreenNodeKind.VariantPattern) || !greenNodeHasKind(root, GreenNodeKind.TuplePattern) || !greenNodeHasKind(root, GreenNodeKind.WildcardPattern) || !greenNodeHasKind(root, GreenNodeKind.LiteralPattern) || greenNodeText(root) != source then
+  if !cstNodeHasKind(root, CstNodeKind.CaseBranch) || !cstNodeHasKind(root, CstNodeKind.VariantPattern) || !cstNodeHasKind(root, CstNodeKind.TuplePattern) || !cstNodeHasKind(root, CstNodeKind.WildcardPattern) || !cstNodeHasKind(root, CstNodeKind.LiteralPattern) || cstNodeText(root) != source then
     t.Fatal("switch branches must own their recursive pattern nodes without losing source")
   end
   if tree.Diagnostics.Len() != 0 then
@@ -595,7 +595,7 @@ end
 
 # patternSyntaxOf parses one standalone pattern and returns its concrete CST
 # node, so pattern lowering can be checked without a surrounding declaration.
-func patternSyntaxOf(source: String) -> Option[Ref[GreenNode]]
+func patternSyntaxOf(source: String) -> Option[Ref[CstNode]]
   let tree = buildDelimitedSyntax("pattern.mygo", source)
   let result = parsePattern(SyntaxCursor { Elements: tree.Root.value().Children, Index: 0 })
   result.Node
@@ -784,7 +784,7 @@ end
 func TestStructDeclarationOwnsFieldSlots(t: Ref[testing.T]) -> ()
   let source = "struct List[A]\n  head: A\n  tail: Int `tag\"v\"`\n  embed T\nend\n"
   let tree = ParseSyntaxAt("struct.mygo", source)
-  if !greenNodeHasKind(tree.Root.value(), GreenNodeKind.TypeParameters) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.StructField) || greenNodeText(tree.Root.value()) != source then
+  if !cstNodeHasKind(tree.Root.value(), CstNodeKind.TypeParameters) || !cstNodeHasKind(tree.Root.value(), CstNodeKind.StructField) || cstNodeText(tree.Root.value()) != source then
     t.Fatal("struct declarations must own type parameters and typed fields")
   end
   switch LowerSyntax(tree)
@@ -856,7 +856,7 @@ end
 func TestEnumDeclarationOwnsVariantSlots(t: Ref[testing.T]) -> ()
   let source = "enum Shape[A]\n  Circle(Int)\n  Rect { w: A, h: A }\nend\n"
   let tree = ParseSyntaxAt("enum.mygo", source)
-  if !greenNodeHasKind(tree.Root.value(), GreenNodeKind.EnumVariant) || greenNodeText(tree.Root.value()) != source then
+  if !cstNodeHasKind(tree.Root.value(), CstNodeKind.EnumVariant) || cstNodeText(tree.Root.value()) != source then
     t.Fatal("enum declarations must own variant nodes")
   end
   switch LowerSyntax(tree)
@@ -918,7 +918,7 @@ end
 func TestInterfaceDeclarationOwnsMethodSignatures(t: Ref[testing.T]) -> ()
   let source = "interface Show\n  func show(x: Int) -> String\n  func other() -> ()\nend\n"
   let tree = ParseSyntaxAt("interface.mygo", source)
-  if !greenNodeHasKind(tree.Root.value(), GreenNodeKind.FuncSignature) || greenNodeText(tree.Root.value()) != source then
+  if !cstNodeHasKind(tree.Root.value(), CstNodeKind.FuncSignature) || cstNodeText(tree.Root.value()) != source then
     t.Fatal("interface declarations must own function signature nodes")
   end
   switch LowerSyntax(tree)
@@ -963,7 +963,7 @@ end
 func TestImplDeclarationOwnsHeaderAndTarget(t: Ref[testing.T]) -> ()
   let source = "impl[T] List[T]: Show\n  func g() -> T\n  end\nend\n"
   let tree = ParseSyntaxAt("impl.mygo", source)
-  if !greenNodeHasKind(tree.Root.value(), GreenNodeKind.TypeParameters) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.TypeAnnotation) || !greenNodeHasKind(tree.Root.value(), GreenNodeKind.ImplMethod) || greenNodeText(tree.Root.value()) != source then
+  if !cstNodeHasKind(tree.Root.value(), CstNodeKind.TypeParameters) || !cstNodeHasKind(tree.Root.value(), CstNodeKind.TypeAnnotation) || !cstNodeHasKind(tree.Root.value(), CstNodeKind.ImplMethod) || cstNodeText(tree.Root.value()) != source then
     t.Fatal("impl declarations must own type parameters, an interface annotation, and method nodes")
   end
   switch LowerSyntax(tree)
@@ -1048,26 +1048,26 @@ end
 func syntaxTreeHasLiteralDiagnostic(tree: SyntaxTree) -> Bool
   tree.Diagnostics.Find(func(diagnostic: SyntaxDiagnostic) -> Bool
     diagnostic.Message == "unterminated literal" && diagnostic.Recovery == "literal" && diagnostic.Span.Start.Offset > 0
-  end).IsSome() && greenNodeHasKind(tree.Root.value(), GreenNodeKind.Error)
+  end).IsSome() && cstNodeHasKind(tree.Root.value(), CstNodeKind.Error)
 end
 
-func greenNodeHasKind(node: GreenNode, kind: GreenNodeKind) -> Bool
-  node.Kind == kind || node.Children.Find(func(item: GreenElement) -> Bool
+func cstNodeHasKind(node: CstNode, kind: CstNodeKind) -> Bool
+  node.Kind == kind || node.Children.Find(func(item: CstElement) -> Bool
     switch item
-      case NodeElement(child) => greenNodeHasKind(child.value(), kind)
+      case NodeElement(child) => cstNodeHasKind(child.value(), kind)
       case _ => false
     end
   end).IsSome()
 end
 
-func greenNodeIsDeclaration(node: GreenNode) -> Bool
-  node.Kind == GreenNodeKind.Declaration || node.Kind == GreenNodeKind.PackageDeclaration || node.Kind == GreenNodeKind.ImportDeclaration || node.Kind == GreenNodeKind.LetDeclaration || node.Kind == GreenNodeKind.VarDeclaration || node.Kind == GreenNodeKind.FuncDeclaration || node.Kind == GreenNodeKind.TypeDeclaration || node.Kind == GreenNodeKind.StructDeclaration || node.Kind == GreenNodeKind.EnumDeclaration || node.Kind == GreenNodeKind.InterfaceDeclaration || node.Kind == GreenNodeKind.ImplDeclaration
+func cstNodeIsDeclaration(node: CstNode) -> Bool
+  node.Kind == CstNodeKind.Declaration || node.Kind == CstNodeKind.PackageDeclaration || node.Kind == CstNodeKind.ImportDeclaration || node.Kind == CstNodeKind.LetDeclaration || node.Kind == CstNodeKind.VarDeclaration || node.Kind == CstNodeKind.FuncDeclaration || node.Kind == CstNodeKind.TypeDeclaration || node.Kind == CstNodeKind.StructDeclaration || node.Kind == CstNodeKind.EnumDeclaration || node.Kind == CstNodeKind.InterfaceDeclaration || node.Kind == CstNodeKind.ImplDeclaration
 end
 
-func greenNodeHasExpression(node: GreenNode) -> Bool
-  node.Kind == GreenNodeKind.Expression || node.Kind == GreenNodeKind.IdentifierExpr || node.Kind == GreenNodeKind.NumberExpr || node.Kind == GreenNodeKind.StringExpr || node.Kind == GreenNodeKind.RuneExpr || node.Kind == GreenNodeKind.Call || node.Kind == GreenNodeKind.UnaryExpr || node.Kind == GreenNodeKind.BinaryExpr || node.Kind == GreenNodeKind.FieldExpr || node.Kind == GreenNodeKind.TypeAsExpr || node.Kind == GreenNodeKind.SliceLiteral || node.Kind == GreenNodeKind.MapLiteral || node.Kind == GreenNodeKind.SetLiteral || node.Kind == GreenNodeKind.StructLiteral || node.Children.Find(func(item: GreenElement) -> Bool
+func cstNodeHasExpression(node: CstNode) -> Bool
+  node.Kind == CstNodeKind.Expression || node.Kind == CstNodeKind.IdentifierExpr || node.Kind == CstNodeKind.NumberExpr || node.Kind == CstNodeKind.StringExpr || node.Kind == CstNodeKind.RuneExpr || node.Kind == CstNodeKind.Call || node.Kind == CstNodeKind.UnaryExpr || node.Kind == CstNodeKind.BinaryExpr || node.Kind == CstNodeKind.FieldExpr || node.Kind == CstNodeKind.TypeAsExpr || node.Kind == CstNodeKind.SliceLiteral || node.Kind == CstNodeKind.MapLiteral || node.Kind == CstNodeKind.SetLiteral || node.Kind == CstNodeKind.StructLiteral || node.Children.Find(func(item: CstElement) -> Bool
     switch item
-      case NodeElement(child) => greenNodeHasExpression(child.value())
+      case NodeElement(child) => cstNodeHasExpression(child.value())
       case _ => false
     end
   end).IsSome()
@@ -1083,10 +1083,10 @@ func TestExpressionAtomCstOwnsLiteralTokens(t: Ref[testing.T]) -> ()
   let source = atomExpressionSource()
   let tree = ParseSyntaxAt("atoms.mygo", source)
   let root = tree.Root.value()
-  if !greenNodeHasKind(root, GreenNodeKind.NumberExpr) || !greenNodeHasKind(root, GreenNodeKind.BoolExpr) || !greenNodeHasKind(root, GreenNodeKind.StringExpr) || !greenNodeHasKind(root, GreenNodeKind.RuneExpr) || !greenNodeHasKind(root, GreenNodeKind.UnitExpr) || !greenNodeHasKind(root, GreenNodeKind.ParenExpr) || !greenNodeHasKind(root, GreenNodeKind.TupleExpr) || !greenNodeHasKind(root, GreenNodeKind.InlineGoExpr) || !greenNodeHasKind(root, GreenNodeKind.InlineGoCode) || !greenNodeHasKind(root, GreenNodeKind.InlineGoValueBinding) || !greenNodeHasKind(root, GreenNodeKind.InlineGoTypeBinding) || greenNodeText(root) != source then
+  if !cstNodeHasKind(root, CstNodeKind.NumberExpr) || !cstNodeHasKind(root, CstNodeKind.BoolExpr) || !cstNodeHasKind(root, CstNodeKind.StringExpr) || !cstNodeHasKind(root, CstNodeKind.RuneExpr) || !cstNodeHasKind(root, CstNodeKind.UnitExpr) || !cstNodeHasKind(root, CstNodeKind.ParenExpr) || !cstNodeHasKind(root, CstNodeKind.TupleExpr) || !cstNodeHasKind(root, CstNodeKind.InlineGoExpr) || !cstNodeHasKind(root, CstNodeKind.InlineGoCode) || !cstNodeHasKind(root, CstNodeKind.InlineGoValueBinding) || !cstNodeHasKind(root, CstNodeKind.InlineGoTypeBinding) || cstNodeText(root) != source then
     t.Fatal("expression atoms must each own a distinct CST kind without losing source")
   end
-  if !greenNodeHasTokenKind(root, GreenTokenKind.StringLiteral) || !greenNodeHasTokenKind(root, GreenTokenKind.RawStringLiteral) || !greenNodeHasTokenKind(root, GreenTokenKind.TripleStringLiteral) || !greenNodeHasTokenKind(root, GreenTokenKind.RuneLiteral) then
+  if !cstNodeHasTokenKind(root, CstTokenKind.StringLiteral) || !cstNodeHasTokenKind(root, CstTokenKind.RawStringLiteral) || !cstNodeHasTokenKind(root, CstTokenKind.TripleStringLiteral) || !cstNodeHasTokenKind(root, CstTokenKind.RuneLiteral) then
     t.Fatal("string, raw, triple, and rune atoms must retain their literal token kinds")
   end
   if tree.Diagnostics.Len() != 0 then
@@ -1094,11 +1094,11 @@ func TestExpressionAtomCstOwnsLiteralTokens(t: Ref[testing.T]) -> ()
   end
 end
 
-func greenNodeHasTokenKind(node: GreenNode, kind: GreenTokenKind) -> Bool
-  node.Children.Find(func(item: GreenElement) -> Bool
+func cstNodeHasTokenKind(node: CstNode, kind: CstTokenKind) -> Bool
+  node.Children.Find(func(item: CstElement) -> Bool
     switch item
       case TokenElement(token) => token.Kind == kind
-      case NodeElement(child) => greenNodeHasTokenKind(child.value(), kind)
+      case NodeElement(child) => cstNodeHasTokenKind(child.value(), kind)
       case _ => false
     end
   end).IsSome()
@@ -1302,7 +1302,7 @@ func TestOperatorAndPostfixCstOwnsNodes(t: Ref[testing.T]) -> ()
   let source = operatorExpressionSource()
   let tree = ParseSyntaxAt("operators.mygo", source)
   let root = tree.Root.value()
-  if !greenNodeHasKind(root, GreenNodeKind.BinaryExpr) || !greenNodeHasKind(root, GreenNodeKind.UnaryExpr) || !greenNodeHasKind(root, GreenNodeKind.FieldExpr) || !greenNodeHasKind(root, GreenNodeKind.TypeAsExpr) || !greenNodeHasKind(root, GreenNodeKind.Call) || !greenNodeHasKind(root, GreenNodeKind.TypeArguments) || greenNodeText(root) != source then
+  if !cstNodeHasKind(root, CstNodeKind.BinaryExpr) || !cstNodeHasKind(root, CstNodeKind.UnaryExpr) || !cstNodeHasKind(root, CstNodeKind.FieldExpr) || !cstNodeHasKind(root, CstNodeKind.TypeAsExpr) || !cstNodeHasKind(root, CstNodeKind.Call) || !cstNodeHasKind(root, CstNodeKind.TypeArguments) || cstNodeText(root) != source then
     t.Fatal("operator and postfix expressions must own distinct CST kinds without losing source")
   end
   if tree.Diagnostics.Len() != 0 then
@@ -1520,7 +1520,7 @@ func TestDelimitedExpressionCstOwnsNodes(t: Ref[testing.T]) -> ()
   let source = delimitedExpressionSource()
   let tree = ParseSyntaxAt("delimited.mygo", source)
   let root = tree.Root.value()
-  if !greenNodeHasKind(root, GreenNodeKind.SliceLiteral) || !greenNodeHasKind(root, GreenNodeKind.MapLiteral) || !greenNodeHasKind(root, GreenNodeKind.SetLiteral) || !greenNodeHasKind(root, GreenNodeKind.StructLiteral) || !greenNodeHasKind(root, GreenNodeKind.MapEntry) || !greenNodeHasKind(root, GreenNodeKind.StructLitField) || !greenNodeHasKind(root, GreenNodeKind.TypeArguments) || greenNodeText(root) != source then
+  if !cstNodeHasKind(root, CstNodeKind.SliceLiteral) || !cstNodeHasKind(root, CstNodeKind.MapLiteral) || !cstNodeHasKind(root, CstNodeKind.SetLiteral) || !cstNodeHasKind(root, CstNodeKind.StructLiteral) || !cstNodeHasKind(root, CstNodeKind.MapEntry) || !cstNodeHasKind(root, CstNodeKind.StructLitField) || !cstNodeHasKind(root, CstNodeKind.TypeArguments) || cstNodeText(root) != source then
     t.Fatal("delimited literals must each own a distinct CST kind without losing source")
   end
   if tree.Diagnostics.Len() != 0 then
@@ -1767,7 +1767,7 @@ func TestBlockExpressionCstOwnsNodes(t: Ref[testing.T]) -> ()
   let source = blockExpressionSource()
   let tree = buildDelimitedSyntax("blocks.mygo", source)
   let root = tree.Root.value()
-  if !greenNodeHasKind(root, GreenNodeKind.IfBlock) || !greenNodeHasKind(root, GreenNodeKind.SwitchBlock) || !greenNodeHasKind(root, GreenNodeKind.WhileBlock) || !greenNodeHasKind(root, GreenNodeKind.Block) || !greenNodeHasKind(root, GreenNodeKind.ExprStatement) || !greenNodeHasKind(root, GreenNodeKind.ElsifBranch) || !greenNodeHasKind(root, GreenNodeKind.ElseBranch) || !greenNodeHasKind(root, GreenNodeKind.CaseBranch) || greenNodeText(root) != source then
+  if !cstNodeHasKind(root, CstNodeKind.IfBlock) || !cstNodeHasKind(root, CstNodeKind.SwitchBlock) || !cstNodeHasKind(root, CstNodeKind.WhileBlock) || !cstNodeHasKind(root, CstNodeKind.Block) || !cstNodeHasKind(root, CstNodeKind.ExprStatement) || !cstNodeHasKind(root, CstNodeKind.ElsifBranch) || !cstNodeHasKind(root, CstNodeKind.ElseBranch) || !cstNodeHasKind(root, CstNodeKind.CaseBranch) || cstNodeText(root) != source then
     t.Fatal("block expressions must own if/switch/while/branch statement nodes without losing source")
   end
   if tree.Diagnostics.Len() != 0 then
@@ -1782,10 +1782,10 @@ func TestBlockExpressionBranchesOwnHeadersAndBodies(t: Ref[testing.T]) -> ()
   let source = "switch value\n  case 1 then\n    a\n  end\n  case _ then\n    b\n  end\nend\n"
   let tree = buildDelimitedSyntax("branch-headers.mygo", source)
   let root = tree.Root.value()
-  if !greenNodeHasKind(root, GreenNodeKind.LiteralPattern) || !greenNodeHasKind(root, GreenNodeKind.WildcardPattern) then
+  if !cstNodeHasKind(root, CstNodeKind.LiteralPattern) || !cstNodeHasKind(root, CstNodeKind.WildcardPattern) then
     t.Fatal("a then-form case must type its header pattern instead of leaving raw expression leaves")
   end
-  let branches = greenNodeChildrenOfKind(greenNodeChildrenOfKind(root, GreenNodeKind.SwitchBlock).Get(0).UnwrapOr(root), GreenNodeKind.CaseBranch)
+  let branches = cstNodeChildrenOfKind(cstNodeChildrenOfKind(root, CstNodeKind.SwitchBlock).Get(0).UnwrapOr(root), CstNodeKind.CaseBranch)
   if branches.Len() != 2 then
     t.Fatal("a switch with two then-form arms must own exactly two branch nodes")
   end
@@ -1794,28 +1794,28 @@ func TestBlockExpressionBranchesOwnHeadersAndBodies(t: Ref[testing.T]) -> ()
   if first.Span.Start.Offset != 15 || first.Span.End.Offset != 38 || second.Span.Start.Offset != 41 || second.Span.End.Offset != 64 then
     t.Fatal("each case branch span must cover its keyword, header, body, and closing end")
   end
-  if greenNodeText(root) != source then
+  if cstNodeText(root) != source then
     t.Fatal("branch splitting must retain every source byte")
   end
 end
 
-func greenNodeChildrenOfKind(node: GreenNode, kind: GreenNodeKind) -> Slice[GreenNode]
-  greenNodeChildrenOfKindFrom(node, kind, 0, [])
+func cstNodeChildrenOfKind(node: CstNode, kind: CstNodeKind) -> Slice[CstNode]
+  cstNodeChildrenOfKindFrom(node, kind, 0, [])
 end
 
-func greenNodeChildrenOfKindFrom(node: GreenNode, kind: GreenNodeKind, index: Int, output: Slice[GreenNode]) -> Slice[GreenNode]
+func cstNodeChildrenOfKindFrom(node: CstNode, kind: CstNodeKind, index: Int, output: Slice[CstNode]) -> Slice[CstNode]
   if index >= node.Children.Len() then
     output
   else
-    switch greenElementNode(greenElementAt(node.Children, index))
+    switch cstElementNode(cstElementAt(node.Children, index))
       case Some(child) then
         if child.value().Kind == kind then
-          greenNodeChildrenOfKindFrom(node, kind, index + 1, output.Append(child.value()))
+          cstNodeChildrenOfKindFrom(node, kind, index + 1, output.Append(child.value()))
         else
-          greenNodeChildrenOfKindFrom(node, kind, index + 1, output)
+          cstNodeChildrenOfKindFrom(node, kind, index + 1, output)
         end
       end
-      case None => greenNodeChildrenOfKindFrom(node, kind, index + 1, output)
+      case None => cstNodeChildrenOfKindFrom(node, kind, index + 1, output)
     end
   end
 end
@@ -1963,10 +1963,10 @@ func TestStatementCstOwnsTypedNodes(t: Ref[testing.T]) -> ()
   let source = statementSource()
   let tree = ParseSyntaxAt("statements.mygo", source)
   let root = tree.Root.value()
-  if !greenNodeHasKind(root, GreenNodeKind.LetStatement) || !greenNodeHasKind(root, GreenNodeKind.VarStatement) || !greenNodeHasKind(root, GreenNodeKind.TupleLetStatement) || !greenNodeHasKind(root, GreenNodeKind.AssignStatement) || !greenNodeHasKind(root, GreenNodeKind.ReturnStatement) || !greenNodeHasKind(root, GreenNodeKind.BreakStatement) || !greenNodeHasKind(root, GreenNodeKind.ContinueStatement) || !greenNodeHasKind(root, GreenNodeKind.LetRecStatement) || !greenNodeHasKind(root, GreenNodeKind.LetRecBinding) then
+  if !cstNodeHasKind(root, CstNodeKind.LetStatement) || !cstNodeHasKind(root, CstNodeKind.VarStatement) || !cstNodeHasKind(root, CstNodeKind.TupleLetStatement) || !cstNodeHasKind(root, CstNodeKind.AssignStatement) || !cstNodeHasKind(root, CstNodeKind.ReturnStatement) || !cstNodeHasKind(root, CstNodeKind.BreakStatement) || !cstNodeHasKind(root, CstNodeKind.ContinueStatement) || !cstNodeHasKind(root, CstNodeKind.LetRecStatement) || !cstNodeHasKind(root, CstNodeKind.LetRecBinding) then
     t.Fatal("declaration bodies must type let/var/tuple-let/assign/return/break/continue/letrec statements")
   end
-  if greenNodeText(root) != source then
+  if cstNodeText(root) != source then
     t.Fatal("statement splitting must retain every source byte")
   end
   if tree.Diagnostics.Len() != 0 then
@@ -1977,38 +1977,38 @@ end
 func TestStatementCstKeepsRanges(t: Ref[testing.T]) -> ()
   let tree = ParseSyntaxAt("statements.mygo", statementSource())
   let root = tree.Root.value()
-  switch greenNodeFindKind(root, GreenNodeKind.AssignStatement)
-    case Some(assign) => if greenNodeText(assign) != "a = 3" then
+  switch cstNodeFindKind(root, CstNodeKind.AssignStatement)
+    case Some(assign) => if cstNodeText(assign) != "a = 3" then
       t.Fatal("an assignment statement node must cover exactly its own source range")
     end
     case None => t.Fatal("the statement fixture must own an assignment node")
   end
-  switch greenNodeFindKind(root, GreenNodeKind.LetRecBinding)
-    case Some(binding) => if greenNodeText(binding) != "g: Int = 1" then
+  switch cstNodeFindKind(root, CstNodeKind.LetRecBinding)
+    case Some(binding) => if cstNodeText(binding) != "g: Int = 1" then
       t.Fatal("a letrec binding node must cover exactly its own source range")
     end
     case None => t.Fatal("the statement fixture must own a letrec binding node")
   end
 end
 
-func greenNodeFindKind(node: GreenNode, kind: GreenNodeKind) -> Option[GreenNode]
+func cstNodeFindKind(node: CstNode, kind: CstNodeKind) -> Option[CstNode]
   if node.Kind == kind then
     Some(node)
   else
-    greenNodeFindKindIn(node, kind, 0)
+    cstNodeFindKindIn(node, kind, 0)
   end
 end
 
-func greenNodeFindKindIn(node: GreenNode, kind: GreenNodeKind, index: Int) -> Option[GreenNode]
+func cstNodeFindKindIn(node: CstNode, kind: CstNodeKind, index: Int) -> Option[CstNode]
   if index >= node.Children.Len() then None else
-    switch greenElementNode(greenElementAt(node.Children, index))
+    switch cstElementNode(cstElementAt(node.Children, index))
       case Some(child) then
-        switch greenNodeFindKind(child.value(), kind)
+        switch cstNodeFindKind(child.value(), kind)
           case Some(found) => Some(found)
-          case None => greenNodeFindKindIn(node, kind, index + 1)
+          case None => cstNodeFindKindIn(node, kind, index + 1)
         end
       end
-      case None => greenNodeFindKindIn(node, kind, index + 1)
+      case None => cstNodeFindKindIn(node, kind, index + 1)
     end
   end
 end
@@ -2342,7 +2342,7 @@ func TestBranchBodyAssignmentsLowerAsAssignments(t: Ref[testing.T]) -> ()
   if tree.Diagnostics.Len() != 0 then
     t.Fatal("a well-formed branch body must parse without diagnostics")
   end
-  if greenNodeText(tree.Root.value()) != source then
+  if cstNodeText(tree.Root.value()) != source then
     t.Fatal("synthesizing a branch-body assignment must retain every source byte")
   end
   switch LowerSyntax(tree)
@@ -2424,7 +2424,7 @@ func TestMultiLineBinaryContinuationLowersAsOneStatement(t: Ref[testing.T]) -> (
   if tree.Diagnostics.Len() != 0 then
     t.Fatal("a continued binary expression must parse without diagnostics")
   end
-  if greenNodeText(tree.Root.value()) != source then
+  if cstNodeText(tree.Root.value()) != source then
     t.Fatal("joining a continued statement must retain every source byte")
   end
   switch LowerSyntax(tree)

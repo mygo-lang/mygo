@@ -21,7 +21,7 @@ func ParseFile(input string) Result[ast2.File, string] {
 func ParseFileAt(sourceName string, input string) Result[ast2.File, string] {
 	tree := ParseSyntaxAt(sourceName, input)
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
-		return Err[ast2.File, string](syntaxDiagnosticError(sourceName, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tree.Diagnostics, 0), SyntaxDiagnostic{Message: "parse error", Span: syntaxRootSpan([]GreenElement{}), Expected: []string{}, Recovery: ""})))
+		return Err[ast2.File, string](syntaxDiagnosticError(sourceName, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tree.Diagnostics, 0), SyntaxDiagnostic{Message: "parse error", Span: syntaxRootSpan([]CstElement{}), Expected: []string{}, Recovery: ""})))
 	} else {
 		return LowerSyntax(tree)
 	}

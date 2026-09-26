@@ -8,21 +8,21 @@ import . "github.com/mygo-lang/mygo/prelude"
 
 type DelimitedNodeInfo struct {
 	Kind  string
-	Group GreenNodeKind
+	Group CstNodeKind
 }
 
-func collectDelimitedSpansFromCst(root GreenNode) []DelimitedSpan {
+func collectDelimitedSpansFromCst(root CstNode) []DelimitedSpan {
 	return collectDelimitedInChildren(root.Children, 0, []DelimitedSpan{})
 }
-func collectDelimitedInChildren(items []GreenElement, index int, acc []DelimitedSpan) []DelimitedSpan {
+func collectDelimitedInChildren(items []CstElement, index int, acc []DelimitedSpan) []DelimitedSpan {
 	for {
 		if index >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items) {
 			return acc
 		} else {
-			item := greenElementAt(items, index)
-			__mygo_expr_0 := greenElementNode(item)
+			item := cstElementAt(items, index)
+			__mygo_expr_0 := cstElementNode(item)
 			var __mygo_expr_1 []DelimitedSpan
-			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*GreenNode]); ok {
+			if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 				__mygo_expr_3 := delimitedSpanFromNode(*__mygo_match___mygo_expr_2.F0)
 				var __mygo_expr_4 []DelimitedSpan
 				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[DelimitedSpan]); ok {
@@ -36,7 +36,7 @@ func collectDelimitedInChildren(items []GreenElement, index int, acc []Delimited
 				emitted := __mygo_expr_4
 				__mygo_expr_1 = collectDelimitedInChildren(items, index+1, collectDelimitedInChildren((*__mygo_match___mygo_expr_2.F0).Children, 0, emitted))
 			} else {
-				if _, ok := __mygo_expr_0.(Option__None[*GreenNode]); ok {
+				if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 					__mygo_expr_1 = collectDelimitedInChildren(items, index+1, acc)
 				} else {
 				}
@@ -45,16 +45,16 @@ func collectDelimitedInChildren(items []GreenElement, index int, acc []Delimited
 		}
 	}
 }
-func delimitedSpanFromNode(node GreenNode) Option[DelimitedSpan] {
+func delimitedSpanFromNode(node CstNode) Option[DelimitedSpan] {
 	__mygo_expr_0 := delimitedNodeInfo(node.Kind)
 	var __mygo_expr_1 Option[DelimitedSpan]
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[DelimitedNodeInfo]); ok {
-		__mygo_expr_3 := greenNodeFindChild(node, __mygo_match___mygo_expr_2.F0.Group, 0)
+		__mygo_expr_3 := cstNodeFindChild(node, __mygo_match___mygo_expr_2.F0.Group, 0)
 		var __mygo_expr_4 Option[DelimitedSpan]
-		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*GreenNode]); ok {
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
 			__mygo_expr_4 = delimitedSpanFromGroup(__mygo_match___mygo_expr_2.F0, *__mygo_match___mygo_expr_5.F0)
 		} else {
-			if _, ok := __mygo_expr_3.(Option__None[*GreenNode]); ok {
+			if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
 				__mygo_expr_4 = None[DelimitedSpan]()
 			} else {
 			}
@@ -68,7 +68,7 @@ func delimitedSpanFromNode(node GreenNode) Option[DelimitedSpan] {
 	}
 	return __mygo_expr_1
 }
-func delimitedSpanFromGroup(info DelimitedNodeInfo, group GreenNode) Option[DelimitedSpan] {
+func delimitedSpanFromGroup(info DelimitedNodeInfo, group CstNode) Option[DelimitedSpan] {
 	scan := delimitedGroupScan(group.Children)
 	span := cstElementSpanOfGroup(group.Children)
 	if !delimitedSpanWorthReporting(span, scan.Items) {
@@ -77,21 +77,21 @@ func delimitedSpanFromGroup(info DelimitedNodeInfo, group GreenNode) Option[Deli
 		return Some[DelimitedSpan](DelimitedSpan{Kind: info.Kind, Span: span, Items: scan.Items, Separators: scan.Separators})
 	}
 }
-func delimitedNodeInfo(kind GreenNodeKind) Option[DelimitedNodeInfo] {
-	if kind == GreenNodeKind__Call__Ctor() {
-		return Some[DelimitedNodeInfo](DelimitedNodeInfo{Kind: "delimited:call", Group: GreenNodeKind__ParenGroup__Ctor()})
+func delimitedNodeInfo(kind CstNodeKind) Option[DelimitedNodeInfo] {
+	if kind == CstNodeKind__Call__Ctor() {
+		return Some[DelimitedNodeInfo](DelimitedNodeInfo{Kind: "delimited:call", Group: CstNodeKind__ParenGroup__Ctor()})
 	} else {
-		if kind == GreenNodeKind__TupleExpr__Ctor() {
-			return Some[DelimitedNodeInfo](DelimitedNodeInfo{Kind: "delimited:tuple", Group: GreenNodeKind__ParenGroup__Ctor()})
+		if kind == CstNodeKind__TupleExpr__Ctor() {
+			return Some[DelimitedNodeInfo](DelimitedNodeInfo{Kind: "delimited:tuple", Group: CstNodeKind__ParenGroup__Ctor()})
 		} else {
-			if kind == GreenNodeKind__SliceLiteral__Ctor() {
-				return Some[DelimitedNodeInfo](DelimitedNodeInfo{Kind: "delimited:slice", Group: GreenNodeKind__BracketGroup__Ctor()})
+			if kind == CstNodeKind__SliceLiteral__Ctor() {
+				return Some[DelimitedNodeInfo](DelimitedNodeInfo{Kind: "delimited:slice", Group: CstNodeKind__BracketGroup__Ctor()})
 			} else {
-				if kind == GreenNodeKind__SetLiteral__Ctor() {
-					return Some[DelimitedNodeInfo](DelimitedNodeInfo{Kind: "delimited:set", Group: GreenNodeKind__BracketGroup__Ctor()})
+				if kind == CstNodeKind__SetLiteral__Ctor() {
+					return Some[DelimitedNodeInfo](DelimitedNodeInfo{Kind: "delimited:set", Group: CstNodeKind__BracketGroup__Ctor()})
 				} else {
-					if kind == GreenNodeKind__StructLiteral__Ctor() {
-						return Some[DelimitedNodeInfo](DelimitedNodeInfo{Kind: "delimited:struct", Group: GreenNodeKind__BraceGroup__Ctor()})
+					if kind == CstNodeKind__StructLiteral__Ctor() {
+						return Some[DelimitedNodeInfo](DelimitedNodeInfo{Kind: "delimited:struct", Group: CstNodeKind__BraceGroup__Ctor()})
 					} else {
 						return None[DelimitedNodeInfo]()
 					}
@@ -100,16 +100,16 @@ func delimitedNodeInfo(kind GreenNodeKind) Option[DelimitedNodeInfo] {
 		}
 	}
 }
-func cstElementSpanOfGroup(items []GreenElement) ast2.SourceSpan {
+func cstElementSpanOfGroup(items []CstElement) ast2.SourceSpan {
 	start := cstFirstTokenIndex(items, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items))
 	if start < 0 {
-		return cstAstSpan(syntaxRootSpan([]GreenElement{}))
+		return cstAstSpan(syntaxRootSpan([]CstElement{}))
 	} else {
 		finish := cstLastTokenIndex(items, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1, 0)
 		if finish < 0 {
-			return cstAstSpan(syntaxRootSpan([]GreenElement{}))
+			return cstAstSpan(syntaxRootSpan([]CstElement{}))
 		} else {
-			return ast2.SourceSpan{Start: cstAstPos(greenElementSpan(greenElementAt(items, start)).Start), End: cstAstPos(greenElementSpan(greenElementAt(items, finish)).End)}
+			return ast2.SourceSpan{Start: cstAstPos(cstElementSpan(cstElementAt(items, start)).Start), End: cstAstPos(cstElementSpan(cstElementAt(items, finish)).End)}
 		}
 	}
 }
@@ -119,7 +119,7 @@ type DelimitedGroupScan struct {
 	Separators []ast2.SourceSpan
 }
 
-func delimitedGroupScan(items []GreenElement) DelimitedGroupScan {
+func delimitedGroupScan(items []CstElement) DelimitedGroupScan {
 	open := cstFirstTokenIndex(items, 0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items))
 	close := cstLastTokenIndex(items, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(items)-1, 0)
 	if open < 0 || close <= open {
@@ -128,7 +128,7 @@ func delimitedGroupScan(items []GreenElement) DelimitedGroupScan {
 		return delimitedGroupRegions(items, open+1, close, open+1, []ast2.SourceSpan{}, []ast2.SourceSpan{})
 	}
 }
-func delimitedGroupRegions(items []GreenElement, index int, finish int, regionStart int, acc []ast2.SourceSpan, seps []ast2.SourceSpan) DelimitedGroupScan {
+func delimitedGroupRegions(items []CstElement, index int, finish int, regionStart int, acc []ast2.SourceSpan, seps []ast2.SourceSpan) DelimitedGroupScan {
 	return __mygo_mt_parser2_delimitedGroupRegions(items, index, finish, regionStart, acc, seps, 0)
 }
 func appendRegionSpan(acc []ast2.SourceSpan, region Option[ast2.SourceSpan]) []ast2.SourceSpan {
@@ -143,7 +143,7 @@ func appendRegionSpan(acc []ast2.SourceSpan, region Option[ast2.SourceSpan]) []a
 	}
 	return __mygo_expr_0
 }
-func cstRegionSpan(items []GreenElement, from int, to int) Option[ast2.SourceSpan] {
+func cstRegionSpan(items []CstElement, from int, to int) Option[ast2.SourceSpan] {
 	first := cstFirstTokenIndex(items, from, to)
 	if first < 0 {
 		return None[ast2.SourceSpan]()
@@ -152,14 +152,14 @@ func cstRegionSpan(items []GreenElement, from int, to int) Option[ast2.SourceSpa
 		if last < 0 {
 			return None[ast2.SourceSpan]()
 		} else {
-			return Some[ast2.SourceSpan](ast2.SourceSpan{Start: cstAstPos(greenElementSpan(greenElementAt(items, first)).Start), End: cstAstPos(greenElementSpan(greenElementAt(items, last)).End)})
+			return Some[ast2.SourceSpan](ast2.SourceSpan{Start: cstAstPos(cstElementSpan(cstElementAt(items, first)).Start), End: cstAstPos(cstElementSpan(cstElementAt(items, last)).End)})
 		}
 	}
 }
-func cstFirstTokenIndex(items []GreenElement, index int, finish int) int {
+func cstFirstTokenIndex(items []CstElement, index int, finish int) int {
 	return __mygo_mt_parser2_cstFirstTokenIndex(items, index, finish, 0)
 }
-func cstLastTokenIndex(items []GreenElement, index int, floor int) int {
+func cstLastTokenIndex(items []CstElement, index int, floor int) int {
 	return __mygo_mt_parser2_cstLastTokenIndex(items, index, floor, 0)
 }
 func cstAstPos(position ps.Position) ast2.SourcePos {
@@ -168,14 +168,14 @@ func cstAstPos(position ps.Position) ast2.SourcePos {
 func cstAstSpan(span ps.SourceSpan) ast2.SourceSpan {
 	return ast2.SourceSpan{Start: cstAstPos(span.Start), End: cstAstPos(span.End)}
 }
-func __mygo_mt_parser2_cstFirstTokenIndex(__mygo_mt_p0 []GreenElement, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) int {
+func __mygo_mt_parser2_cstFirstTokenIndex(__mygo_mt_p0 []CstElement, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) int {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p1 >= __mygo_mt_p2 {
 				return -1
 			} else {
-				if greenElementIsTrivia(greenElementAt(__mygo_mt_p0, __mygo_mt_p1)) {
+				if cstElementIsTrivia(cstElementAt(__mygo_mt_p0, __mygo_mt_p1)) {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := __mygo_mt_p2
@@ -191,14 +191,14 @@ func __mygo_mt_parser2_cstFirstTokenIndex(__mygo_mt_p0 []GreenElement, __mygo_mt
 		}
 	}
 }
-func __mygo_mt_parser2_cstLastTokenIndex(__mygo_mt_p0 []GreenElement, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) int {
+func __mygo_mt_parser2_cstLastTokenIndex(__mygo_mt_p0 []CstElement, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) int {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p1 < __mygo_mt_p2 {
 				return -1
 			} else {
-				if greenElementIsTrivia(greenElementAt(__mygo_mt_p0, __mygo_mt_p1)) {
+				if cstElementIsTrivia(cstElementAt(__mygo_mt_p0, __mygo_mt_p1)) {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 - 1
 					__tail_2 := __mygo_mt_p2
@@ -214,16 +214,16 @@ func __mygo_mt_parser2_cstLastTokenIndex(__mygo_mt_p0 []GreenElement, __mygo_mt_
 		}
 	}
 }
-func __mygo_mt_parser2_delimitedGroupRegions(__mygo_mt_p0 []GreenElement, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_mt_p4 []ast2.SourceSpan, __mygo_mt_p5 []ast2.SourceSpan, __mygo_state int) DelimitedGroupScan {
+func __mygo_mt_parser2_delimitedGroupRegions(__mygo_mt_p0 []CstElement, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_mt_p3 int, __mygo_mt_p4 []ast2.SourceSpan, __mygo_mt_p5 []ast2.SourceSpan, __mygo_state int) DelimitedGroupScan {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p1 >= __mygo_mt_p2 {
 				return DelimitedGroupScan{Items: appendRegionSpan(__mygo_mt_p4, cstRegionSpan(__mygo_mt_p0, __mygo_mt_p3, __mygo_mt_p2)), Separators: __mygo_mt_p5}
 			} else {
-				item := greenElementAt(__mygo_mt_p0, __mygo_mt_p1)
-				raw := greenElementRaw(item)
-				if greenElementIsTrivia(item) {
+				item := cstElementAt(__mygo_mt_p0, __mygo_mt_p1)
+				raw := cstElementRaw(item)
+				if cstElementIsTrivia(item) {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := __mygo_mt_p2
@@ -234,13 +234,13 @@ func __mygo_mt_parser2_delimitedGroupRegions(__mygo_mt_p0 []GreenElement, __mygo
 					__mygo_state = 0
 					continue
 				} else {
-					if raw == "," && MygoIN6OptionM6IsNone[*GreenNode](greenElementNode(item)) {
+					if raw == "," && MygoIN6OptionM6IsNone[*CstNode](cstElementNode(item)) {
 						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__tail_3 := __mygo_mt_p1 + 1
 						__tail_4 := appendRegionSpan(__mygo_mt_p4, cstRegionSpan(__mygo_mt_p0, __mygo_mt_p3, __mygo_mt_p1))
-						__tail_5 := MygoIN5SliceM6Append(__mygo_mt_p5, cstAstSpan(greenElementSpan(item)))
+						__tail_5 := MygoIN5SliceM6Append(__mygo_mt_p5, cstAstSpan(cstElementSpan(item)))
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
 						__mygo_state = 0
 						continue

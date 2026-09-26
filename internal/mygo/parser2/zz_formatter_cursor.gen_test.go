@@ -12,17 +12,17 @@ func formatterCursorSource(source string) FormatterCursor {
 func formatterCursorReplay(cursor FormatterCursor) string {
 	__mygo_expr_0 := FormatterCursorPeek(cursor)
 	var __mygo_expr_1 string
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[GreenElement]); ok {
-		__mygo_expr_1 = greenElementRaw(__mygo_match___mygo_expr_2.F0) + formatterCursorReplay(FormatterCursorAdvance(cursor))
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+		__mygo_expr_1 = cstElementRaw(__mygo_match___mygo_expr_2.F0) + formatterCursorReplay(FormatterCursorAdvance(cursor))
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[GreenElement]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 			__mygo_expr_1 = ""
 		} else {
 		}
 	}
 	return __mygo_expr_1
 }
-func TestFormatterCursorWalksOrderedGreenElements(t *testing.T) {
+func TestFormatterCursorWalksOrderedCstElements(t *testing.T) {
 	source := "let value = 1 # trailing\n"
 	cursor := formatterCursorSource(source)
 	if FormatterCursorIsDone(cursor) {
@@ -34,13 +34,13 @@ func TestFormatterCursorWalksOrderedGreenElements(t *testing.T) {
 	} else {
 	}
 	__mygo_expr_0 := FormatterCursorNextContent(cursor)
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GreenElement]); ok {
-		if greenElementIsTrivia(__mygo_match___mygo_expr_1.F0) || greenElementRaw(__mygo_match___mygo_expr_1.F0) != "let" {
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+		if cstElementIsTrivia(__mygo_match___mygo_expr_1.F0) || cstElementRaw(__mygo_match___mygo_expr_1.F0) != "let" {
 			t.Fatal("skip-trivia must land on the first significant token")
 		} else {
 		}
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[GreenElement]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 			t.Fatal("skip-trivia must find the first token")
 		} else {
 		}
@@ -50,7 +50,7 @@ func TestFormatterCursorWalksOrderedGreenElements(t *testing.T) {
 func TestFormatterCursorUsesExplicitTriviaPredicate(t *testing.T) {
 	cursor := formatterCursorSource("a  b # c\nd")
 	if !formatterCursorTriviaAgrees(cursor, 0) {
-		t.Fatal("formatter cursor trivia view must match greenElementIsTrivia")
+		t.Fatal("formatter cursor trivia view must match cstElementIsTrivia")
 		return
 	} else {
 		return
@@ -63,13 +63,13 @@ func formatterCursorTriviaAgrees(walk FormatterCursor, index int) bool {
 		return FormatterCursorIsTrivia(walk) == formatterCursorElementIsTrivia(walk.Elements, index) && formatterCursorTriviaAgrees(FormatterCursorAdvance(walk), index+1)
 	}
 }
-func formatterCursorElementIsTrivia(items []GreenElement, index int) bool {
+func formatterCursorElementIsTrivia(items []CstElement, index int) bool {
 	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, index)
 	var __mygo_expr_1 bool
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[GreenElement]); ok {
-		__mygo_expr_1 = greenElementIsTrivia(__mygo_match___mygo_expr_2.F0)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+		__mygo_expr_1 = cstElementIsTrivia(__mygo_match___mygo_expr_2.F0)
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[GreenElement]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 			__mygo_expr_1 = false
 		} else {
 		}
@@ -89,17 +89,17 @@ func TestFormatterCursorSkipsOnlyFormatableTrivia(t *testing.T) {
 func formatterCursorStopsOnOpaqueComment(cursor FormatterCursor, needle string) bool {
 	__mygo_expr_0 := FormatterCursorPeek(cursor)
 	var __mygo_expr_1 bool
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[GreenElement]); ok {
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
 		__mygo_expr_1 = formatterOpaqueTriviaMatches(__mygo_match___mygo_expr_2.F0, needle)
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[GreenElement]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 			__mygo_expr_1 = false
 		} else {
 		}
 	}
 	return __mygo_expr_1
 }
-func formatterOpaqueTriviaMatches(item GreenElement, needle string) bool {
+func formatterOpaqueTriviaMatches(item CstElement, needle string) bool {
 	__mygo_expr_0 := FormatterOpaqueTriviaRaw(item)
 	var __mygo_expr_1 bool
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
@@ -121,13 +121,13 @@ func TestFormatterCursorWhitespaceIsFormatable(t *testing.T) {
 		return
 	}
 }
-func formatterCursorWhitespaceIsFormatable(items []GreenElement) bool {
+func formatterCursorWhitespaceIsFormatable(items []CstElement) bool {
 	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(items, 0)
 	var __mygo_expr_1 bool
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[GreenElement]); ok {
-		__mygo_expr_1 = greenElementIsFormatableTrivia(__mygo_match___mygo_expr_2.F0) && MygoIN6OptionM6IsNone[string](FormatterOpaqueTriviaRaw(__mygo_match___mygo_expr_2.F0))
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+		__mygo_expr_1 = cstElementIsFormatableTrivia(__mygo_match___mygo_expr_2.F0) && MygoIN6OptionM6IsNone[string](FormatterOpaqueTriviaRaw(__mygo_match___mygo_expr_2.F0))
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[GreenElement]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 			__mygo_expr_1 = false
 		} else {
 		}
@@ -137,13 +137,13 @@ func formatterCursorWhitespaceIsFormatable(items []GreenElement) bool {
 func TestFormatterCursorRecursivelySkipsTriviaRun(t *testing.T) {
 	cursor := formatterCursorSource("\n\n  \nlet x = 1")
 	__mygo_expr_0 := FormatterCursorNextContent(cursor)
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GreenElement]); ok {
-		if greenElementRaw(__mygo_match___mygo_expr_1.F0) != "let" {
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+		if cstElementRaw(__mygo_match___mygo_expr_1.F0) != "let" {
 			t.Fatal("recursive trivia skip must reach the declaration keyword")
 		} else {
 		}
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[GreenElement]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 			t.Fatal("recursive trivia skip lost the first token")
 		} else {
 		}

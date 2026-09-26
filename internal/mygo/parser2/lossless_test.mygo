@@ -2093,17 +2093,17 @@ func scanLossless(input: String) -> LosslessScan
   let lexed = LexSource(input)
   LosslessScan {
     Tokens: legacyTokensFromLexed(lexed.Tokens, 0, []),
-    Trivia: lexed.Trivia.Map(func(item: GreenTrivia) -> ps.PositionedTrivia
-      ps.PositionedTrivia { Kind: greenTriviaKindText(item.Kind), Raw: item.Raw, Span: item.Span }
+    Trivia: lexed.Trivia.Map(func(item: CstTrivia) -> ps.PositionedTrivia
+      ps.PositionedTrivia { Kind: cstTriviaKindText(item.Kind), Raw: item.Raw, Span: item.Span }
     end),
   }
 end
 
 # The existing formatter adapter still consumes the historical character-level
-# token view.  Derive that view from GreenToken leaves rather than rescanning
+# token view.  Derive that view from CstToken leaves rather than rescanning
 # source input: the CST lexer remains the sole lexical authority while the old
 # layout-event path is migrated in later tasks.
-func legacyTokensFromLexed(items: Slice[GreenToken], index: Int, acc: Slice[ps.PositionedToken]) -> Slice[ps.PositionedToken]
+func legacyTokensFromLexed(items: Slice[CstToken], index: Int, acc: Slice[ps.PositionedToken]) -> Slice[ps.PositionedToken]
   if index >= items.Len() then acc
   else
     switch items.Get(index)

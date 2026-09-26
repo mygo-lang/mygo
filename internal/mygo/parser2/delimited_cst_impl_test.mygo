@@ -5,7 +5,7 @@ import ps "github.com/mygo-lang/mygo/lib/text/parsec"
 
 # Task 4.3: delimiter layout is owned by the lossless CST.
 #
-# `collectDelimitedSpansFromCst` walks the green tree and reports the same
+# `collectDelimitedSpansFromCst` walks the CST tree and reports the same
 # `DelimitedSpan` shape the formatter already consumes, so the formatter
 # contract is unchanged while its delimiter authority moves from the
 # reconstructed ast2 token scan to the CST.  The CST already encodes grouping -
@@ -24,19 +24,19 @@ import ps "github.com/mygo-lang/mygo/lib/text/parsec"
 
 struct DelimitedNodeInfo
   Kind: String
-  Group: GreenNodeKind
+  Group: CstNodeKind
 end
 
-func collectDelimitedSpansFromCst(root: GreenNode) -> Slice[DelimitedSpan]
+func collectDelimitedSpansFromCst(root: CstNode) -> Slice[DelimitedSpan]
   collectDelimitedInChildren(root.Children, 0, [])
 end
 
-func collectDelimitedInChildren(items: Slice[GreenElement], index: Int, acc: Slice[DelimitedSpan]) -> Slice[DelimitedSpan]
+func collectDelimitedInChildren(items: Slice[CstElement], index: Int, acc: Slice[DelimitedSpan]) -> Slice[DelimitedSpan]
   if index >= items.Len() then
     acc
   else
-    let item = greenElementAt(items, index)
-    switch greenElementNode(item)
+    let item = cstElementAt(items, index)
+    switch cstElementNode(item)
       case Some(child) then
         let emitted = switch delimitedSpanFromNode(child.value())
           case Some(value) => acc.Append(value)
@@ -49,10 +49,10 @@ func collectDelimitedInChildren(items: Slice[GreenElement], index: Int, acc: Sli
   end
 end
 
-func delimitedSpanFromNode(node: GreenNode) -> Option[DelimitedSpan]
+func delimitedSpanFromNode(node: CstNode) -> Option[DelimitedSpan]
   switch delimitedNodeInfo(node.Kind)
     case Some(info) then
-      switch greenNodeFindChild(node, info.Group, 0)
+      switch cstNodeFindChild(node, info.Group, 0)
         case Some(group) => delimitedSpanFromGroup(info, group.value())
         case None => None
       end
@@ -61,7 +61,7 @@ func delimitedSpanFromNode(node: GreenNode) -> Option[DelimitedSpan]
   end
 end
 
-func delimitedSpanFromGroup(info: DelimitedNodeInfo, group: GreenNode) -> Option[DelimitedSpan]
+func delimitedSpanFromGroup(info: DelimitedNodeInfo, group: CstNode) -> Option[DelimitedSpan]
   let scan = delimitedGroupScan(group.Children)
   let span = cstElementSpanOfGroup(group.Children)
   if !delimitedSpanWorthReporting(span, scan.Items) then
@@ -73,17 +73,17 @@ end
 
 # delimitedNodeInfo maps a CST expression kind to the canonical delimited kind
 # the formatter keys on and the delimiter group node that owns its interior.
-func delimitedNodeInfo(kind: GreenNodeKind) -> Option[DelimitedNodeInfo]
-  if kind == GreenNodeKind.Call then
-    Some(DelimitedNodeInfo { Kind: "delimited:call", Group: GreenNodeKind.ParenGroup })
-  elsif kind == GreenNodeKind.TupleExpr then
-    Some(DelimitedNodeInfo { Kind: "delimited:tuple", Group: GreenNodeKind.ParenGroup })
-  elsif kind == GreenNodeKind.SliceLiteral then
-    Some(DelimitedNodeInfo { Kind: "delimited:slice", Group: GreenNodeKind.BracketGroup })
-  elsif kind == GreenNodeKind.SetLiteral then
-    Some(DelimitedNodeInfo { Kind: "delimited:set", Group: GreenNodeKind.BracketGroup })
-  elsif kind == GreenNodeKind.StructLiteral then
-    Some(DelimitedNodeInfo { Kind: "delimited:struct", Group: GreenNodeKind.BraceGroup })
+func delimitedNodeInfo(kind: CstNodeKind) -> Option[DelimitedNodeInfo]
+  if kind == CstNodeKind.Call then
+    Some(DelimitedNodeInfo { Kind: "delimited:call", Group: CstNodeKind.ParenGroup })
+  elsif kind == CstNodeKind.TupleExpr then
+    Some(DelimitedNodeInfo { Kind: "delimited:tuple", Group: CstNodeKind.ParenGroup })
+  elsif kind == CstNodeKind.SliceLiteral then
+    Some(DelimitedNodeInfo { Kind: "delimited:slice", Group: CstNodeKind.BracketGroup })
+  elsif kind == CstNodeKind.SetLiteral then
+    Some(DelimitedNodeInfo { Kind: "delimited:set", Group: CstNodeKind.BracketGroup })
+  elsif kind == CstNodeKind.StructLiteral then
+    Some(DelimitedNodeInfo { Kind: "delimited:struct", Group: CstNodeKind.BraceGroup })
   else
     None
   end
@@ -92,7 +92,7 @@ end
 # cstElementSpanOfGroup is the source range of a group node read from its own
 # children: the opening leaf's start through the closing leaf's end.  A group is
 # never empty, so the fallback only guards an already-diagnosed tree.
-func cstElementSpanOfGroup(items: Slice[GreenElement]) -> ast2.SourceSpan
+func cstElementSpanOfGroup(items: Slice[CstElement]) -> ast2.SourceSpan
   let start = cstFirstTokenIndex(items, 0, items.Len())
   if start < 0 then
     cstAstSpan(syntaxRootSpan([]))
@@ -102,8 +102,8 @@ func cstElementSpanOfGroup(items: Slice[GreenElement]) -> ast2.SourceSpan
       cstAstSpan(syntaxRootSpan([]))
     else
       ast2.SourceSpan {
-        Start: cstAstPos(greenElementSpan(greenElementAt(items, start)).Start),
-        End: cstAstPos(greenElementSpan(greenElementAt(items, finish)).End),
+        Start: cstAstPos(cstElementSpan(cstElementAt(items, start)).Start),
+        End: cstAstPos(cstElementSpan(cstElementAt(items, finish)).End),
       }
     end
   end
@@ -118,7 +118,7 @@ end
 # records each separator span, mirroring the legacy token scan's top-level
 # split.  Trivia is skipped for region bounds so an item span starts at its
 # first token and ends at its last, exactly as `tokenRangeSpan` did.
-func delimitedGroupScan(items: Slice[GreenElement]) -> DelimitedGroupScan
+func delimitedGroupScan(items: Slice[CstElement]) -> DelimitedGroupScan
   let open = cstFirstTokenIndex(items, 0, items.Len())
   let close = cstLastTokenIndex(items, items.Len() - 1, 0)
   if open < 0 || close <= open then
@@ -128,25 +128,25 @@ func delimitedGroupScan(items: Slice[GreenElement]) -> DelimitedGroupScan
   end
 end
 
-func delimitedGroupRegions(items: Slice[GreenElement], index: Int, finish: Int, regionStart: Int, acc: Slice[ast2.SourceSpan], seps: Slice[ast2.SourceSpan]) -> DelimitedGroupScan
+func delimitedGroupRegions(items: Slice[CstElement], index: Int, finish: Int, regionStart: Int, acc: Slice[ast2.SourceSpan], seps: Slice[ast2.SourceSpan]) -> DelimitedGroupScan
   if index >= finish then
     DelimitedGroupScan {
       Items: appendRegionSpan(acc, cstRegionSpan(items, regionStart, finish)),
       Separators: seps,
     }
   else
-    let item = greenElementAt(items, index)
-    let raw = greenElementRaw(item)
-    if greenElementIsTrivia(item) then
+    let item = cstElementAt(items, index)
+    let raw = cstElementRaw(item)
+    if cstElementIsTrivia(item) then
       delimitedGroupRegions(items, index + 1, finish, regionStart, acc, seps)
-    elsif raw == "," && greenElementNode(item).IsNone() then
+    elsif raw == "," && cstElementNode(item).IsNone() then
       delimitedGroupRegions(
         items,
         index + 1,
         finish,
         index + 1,
         appendRegionSpan(acc, cstRegionSpan(items, regionStart, index)),
-        seps.Append(cstAstSpan(greenElementSpan(item))),
+        seps.Append(cstAstSpan(cstElementSpan(item))),
       )
     else
       delimitedGroupRegions(items, index + 1, finish, regionStart, acc, seps)
@@ -164,7 +164,7 @@ end
 # cstRegionSpan is the token range between two child indices, skipping boundary
 # trivia.  An empty region (a trailing comma, or `f(,)`) reports nothing, which
 # matches the legacy splitter dropping zero-width slices.
-func cstRegionSpan(items: Slice[GreenElement], from: Int, to: Int) -> Option[ast2.SourceSpan]
+func cstRegionSpan(items: Slice[CstElement], from: Int, to: Int) -> Option[ast2.SourceSpan]
   let first = cstFirstTokenIndex(items, from, to)
   if first < 0 then None
   else
@@ -173,27 +173,27 @@ func cstRegionSpan(items: Slice[GreenElement], from: Int, to: Int) -> Option[ast
       None
     else
       Some(ast2.SourceSpan {
-        Start: cstAstPos(greenElementSpan(greenElementAt(items, first)).Start),
-        End: cstAstPos(greenElementSpan(greenElementAt(items, last)).End),
+        Start: cstAstPos(cstElementSpan(cstElementAt(items, first)).Start),
+        End: cstAstPos(cstElementSpan(cstElementAt(items, last)).End),
       })
     end
   end
 end
 
-func cstFirstTokenIndex(items: Slice[GreenElement], index: Int, finish: Int) -> Int
+func cstFirstTokenIndex(items: Slice[CstElement], index: Int, finish: Int) -> Int
   if index >= finish then
     -1
-  elsif greenElementIsTrivia(greenElementAt(items, index)) then
+  elsif cstElementIsTrivia(cstElementAt(items, index)) then
     cstFirstTokenIndex(items, index + 1, finish)
   else
     index
   end
 end
 
-func cstLastTokenIndex(items: Slice[GreenElement], index: Int, floor: Int) -> Int
+func cstLastTokenIndex(items: Slice[CstElement], index: Int, floor: Int) -> Int
   if index < floor then
     -1
-  elsif greenElementIsTrivia(greenElementAt(items, index)) then
+  elsif cstElementIsTrivia(cstElementAt(items, index)) then
     cstLastTokenIndex(items, index - 1, floor)
   else
     index

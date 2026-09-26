@@ -85,16 +85,16 @@ func probeKindName(k interface{}) string {
 	return n
 }
 
-func probeDumpNode(node GreenNode, depth int, b *strings.Builder) {
+func probeDumpNode(node CstNode, depth int, b *strings.Builder) {
 	indent := strings.Repeat("  ", depth)
 	fmt.Fprintf(b, "%s%s [%d:%d-%d:%d]\n", indent, probeKindName(node.Kind), node.Span.Start.Line, node.Span.Start.Column, node.Span.End.Line, node.Span.End.Column)
 	for i := 0; i < len(node.Children); i++ {
-		item := greenElementAt(node.Children, i)
-		switch v := greenElementNode(item).(type) {
-		case Option__Some[*GreenNode]:
+		item := cstElementAt(node.Children, i)
+		switch v := cstElementNode(item).(type) {
+		case Option__Some[*CstNode]:
 			probeDumpNode(*v.F0, depth+1, b)
-		case Option__None[*GreenNode]:
-			raw := greenElementRaw(item)
+		case Option__None[*CstNode]:
+			raw := cstElementRaw(item)
 			if raw != "" {
 				fmt.Fprintf(b, "%s  leaf %q\n", indent, raw)
 			} else {

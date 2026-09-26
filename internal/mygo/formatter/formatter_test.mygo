@@ -93,7 +93,7 @@ enum E
 end
 
 # before struct
-struct GreenToken
+struct CstToken
   # before field
   Kind: Int
 end
@@ -104,7 +104,7 @@ enum E
 end
 
 # before struct
-struct GreenToken
+struct CstToken
   # before field
   Kind: Int
 end

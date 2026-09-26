@@ -1,0 +1,1403 @@
+package parser2
+
+import strings "go:strings"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func lowerSyntaxExpr(tree: SyntaxTree, wrapper: Ref[CstNode]) -> Result[ast2.Expr, String]
+  switch cstNodeFindExpression(wrapper.value(), 0)
+    case Some(node) then
+      lowerSyntaxExpressionNode(tree, node.value())
+    end
+    case None => Err("initializer CST lacks expression")
+  end
+end
+
+# lowerSyntaxExpressionNode maps one concrete CST expression node onto ast2.
+# Ranges come from the CST node span; values are decoded from the CST leaves.
+func lowerSyntaxExpressionNode(tree: SyntaxTree, node: CstNode) -> Result[ast2.Expr, String]
+  let span = syntaxAstSpan(tree.SourceName, node.Span)
+  if !syntaxLoweringSupportsNodeKind(node.Kind) then
+    Err("CST expression kind is not lowered yet")
+  elsif node.Kind == CstNodeKind.IdentifierExpr then
+    Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.IdentExpr(cstNodeText(node)), Type: None })
+  elsif node.Kind == CstNodeKind.NumberExpr then
+    Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.NumberExpr(strings.ReplaceAll(cstNodeText(node), "_", "")), Type: None })
+  elsif node.Kind == CstNodeKind.BoolExpr then
+    Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.BoolExpr(cstNodeText(node) == "true"), Type: None })
+  elsif node.Kind == CstNodeKind.StringExpr then
+    lowerSyntaxStringExpr(span, cstNodeText(node))
+  elsif node.Kind == CstNodeKind.RuneExpr then
+    lowerSyntaxRuneExpr(span, cstNodeText(node))
+  elsif node.Kind == CstNodeKind.UnitExpr then
+    Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.UnitExpr, Type: None })
+  elsif node.Kind == CstNodeKind.ParenExpr then
+    lowerSyntaxParenExpr(tree, node, span)
+  elsif node.Kind == CstNodeKind.TupleExpr then
+    switch lowerSyntaxTupleExpr(tree, node)
+      case Ok(items) => Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.TupleExpr(items), Type: None })
+      case Err(message) => Err(message)
+    end
+  elsif node.Kind == CstNodeKind.InlineGoExpr then
+    lowerSyntaxInlineGoExpr(tree, node, span)
+  elsif node.Kind == CstNodeKind.FuncLitExpr then
+    lowerSyntaxFuncLitExpr(tree, node, span)
+  elsif node.Kind == CstNodeKind.Call then
+    lowerSyntaxCallExpr(tree, node, span)
+  elsif node.Kind == CstNodeKind.UnaryExpr then
+    lowerSyntaxUnaryExpr(tree, node, span)
+  elsif node.Kind == CstNodeKind.BinaryExpr then
+    lowerSyntaxBinaryExpr(tree, node, span)
+  elsif node.Kind == CstNodeKind.FieldExpr then
+    lowerSyntaxFieldExpr(tree, node, span)
+  elsif node.Kind == CstNodeKind.TypeAsExpr then
+    lowerSyntaxTypeAsExpr(tree, node, span)
+  elsif node.Kind == CstNodeKind.SliceLiteral then
+    lowerSyntaxCollectionLiteral(tree, node, span, CstNodeKind.BracketGroup)
+  elsif node.Kind == CstNodeKind.SetLiteral then
+    lowerSyntaxCollectionLiteral(tree, node, span, CstNodeKind.BraceGroup)
+  elsif node.Kind == CstNodeKind.MapLiteral then
+    lowerSyntaxMapLiteral(tree, node, span)
+  elsif node.Kind == CstNodeKind.StructLiteral then
+    lowerSyntaxStructLiteral(tree, node, span)
+  elsif node.Kind == CstNodeKind.IfBlock then
+    lowerSyntaxIfBlock(tree, node, span)
+  elsif node.Kind == CstNodeKind.SwitchBlock then
+    lowerSyntaxSwitchBlock(tree, node, span)
+  elsif node.Kind == CstNodeKind.WhileBlock then
+    Err("while CST is a statement, not a lowerable expression")
+  elsif node.Kind == CstNodeKind.Block then
+    lowerSyntaxBlockExpr(tree, node, span)
+  else
+    Err("CST expression kind is not lowered yet")
+  end
+end
+
+# lowerSyntaxIfBlock lowers the then form and the arrow form of an if
+# expression.  The condition is the first expression child; the then body is
+# the first expression after the header keyword, and the else body comes from
+# the ElseBranch child.  A missing else lowers to the unit value, matching the
+# legacy parser's empty else slot.
+func lowerSyntaxIfBlock(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  switch lowerSyntaxIfCond(tree, node)
+    case Ok(cond) then
+      switch lowerSyntaxIfThenBody(tree, node)
+        case Ok(thenBody) then
+          switch lowerSyntaxIfElseBody(tree, node, span)
+            case Ok(elseBody) => Ok(ast2.Expr { ID: 0, Pos: cond.Pos, Span: span, Kind: ast2.ExprKind.IfExpr(cond, thenBody, elseBody), Type: None })
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case Err(message) => Err(message)
+  end
+end
+
+func lowerSyntaxIfCond(tree: SyntaxTree, node: CstNode) -> Result[ast2.Expr, String]
+  switch cstNodeFindExpression(node, 0)
+    case Some(child) => lowerSyntaxExpressionNode(tree, child.value())
+    case None => Err("if CST lacks its condition expression")
+  end
+end
+
+# lowerSyntaxIfThenBody picks the then body: the expression after the header
+# keyword, stopping before the first ElsifBranch/ElseBranch child.  Arrow and
+# then forms both place their body there, so the same rule covers both.
+func lowerSyntaxIfThenBody(tree: SyntaxTree, node: CstNode) -> Result[ast2.Expr, String]
+  let headerEnd = lowerSyntaxIfHeaderEnd(node, 0)
+  switch lowerSyntaxFirstExpression(tree, node, headerEnd)
+    case Ok(body) => Ok(lowerSyntaxBlockBody(body))
+    case Err(message) => Err(message)
+  end
+end
+
+# lowerSyntaxIfHeaderEnd finds the token index just after the then or arrow
+# leaf so the then body search starts inside the header's body region.
+func lowerSyntaxIfHeaderEnd(node: CstNode, index: Int) -> Int
+  if index >= node.Children.Len() then
+    index
+  elsif lowerSyntaxIsHeaderKeyword(cstElementRaw(cstElementAt(node.Children, index))) then
+    index + 1
+  else
+    lowerSyntaxIfHeaderEnd(node, index + 1)
+  end
+end
+
+func lowerSyntaxIsHeaderKeyword(raw: String) -> Bool
+  raw == "then" || raw == "=>"
+end
+
+# lowerSyntaxFirstExpression returns the first expression child at or after
+# index, so a nested ElsifBranch/ElseBranch child never shadows the then body.
+# Branch nodes are not expression children, so the scan is safe.
+func lowerSyntaxFirstExpression(tree: SyntaxTree, node: CstNode, index: Int) -> Result[ast2.Expr, String]
+  if index >= node.Children.Len() then
+    Err("if CST lacks a then body expression")
+  else
+    switch cstElementNode(cstElementAt(node.Children, index))
+      case Some(child) then
+        if cstNodeIsExpressionKind(child.value().Kind) then
+          lowerSyntaxExpressionNode(tree, child.value())
+        else
+          lowerSyntaxFirstExpression(tree, node, index + 1)
+        end
+      end
+      case None => lowerSyntaxFirstExpression(tree, node, index + 1)
+    end
+  end
+end
+
+func lowerSyntaxIfElseBody(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  if syntaxHeaderKeyword(node.Children, 0, "=>") then
+    # An arrow-form if keeps its `else` inside the expression stream instead of
+    # building an ElseBranch child, so the else body is the first expression
+    # after the `else` keyword.
+    lowerSyntaxArrowIfElseBody(tree, node, 0, span)
+  else
+    lowerSyntaxIfElseBodyFrom(tree, node, 0, span)
+  end
+end
+
+func lowerSyntaxArrowIfElseBody(tree: SyntaxTree, node: CstNode, index: Int, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  if index >= node.Children.Len() then
+    Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.UnitExpr, Type: None })
+  elsif cstElementRaw(cstElementAt(node.Children, index)) == "else" then
+    lowerSyntaxFirstExpression(tree, node, index + 1)
+  else
+    lowerSyntaxArrowIfElseBody(tree, node, index + 1, span)
+  end
+end
+
+# lowerSyntaxIfElseBodyFrom walks the branch children after an if/elsif header in
+# source order.  The first ElsifBranch becomes a nested IfExpr whose else slot is
+# the remaining branches, and an ElseBranch contributes its own body.  When no
+# branch follows, the else slot is the unit value, matching the legacy parser's
+# empty-else slot.
+func lowerSyntaxIfElseBodyFrom(tree: SyntaxTree, node: CstNode, index: Int, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  if index >= node.Children.Len() then
+    Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.UnitExpr, Type: None })
+  else
+    switch cstElementNode(cstElementAt(node.Children, index))
+      case Some(child) then
+        if child.value().Kind == CstNodeKind.ElsifBranch then
+          lowerSyntaxElsifBranch(tree, node, index, child.value(), span)
+        elsif child.value().Kind == CstNodeKind.ElseBranch then
+          lowerSyntaxElseBranchBody(tree, child.value())
+        else
+          lowerSyntaxIfElseBodyFrom(tree, node, index + 1, span)
+        end
+      end
+      case None => lowerSyntaxIfElseBodyFrom(tree, node, index + 1, span)
+    end
+  end
+end
+
+# lowerSyntaxElsifBranch turns one `elsif cond then body` branch into a nested
+# IfExpr.  Its condition and then body come from the branch children; its else
+# slot continues with the following branches in the enclosing if block.  The
+# nested span runs from the `elsif` keyword to the end of the enclosing block so
+# every ast2 range still derives from a CST range.
+func lowerSyntaxElsifBranch(tree: SyntaxTree, node: CstNode, index: Int, branch: CstNode, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  switch lowerSyntaxIfCond(tree, branch)
+    case Ok(cond) then
+      switch lowerSyntaxIfThenBody(tree, branch)
+        case Ok(thenBody) then
+          let elsifSpan = ast2.SourceSpan { Start: lowerSyntaxIfHeaderStart(cond, syntaxAstPos(tree.SourceName, branch.Span.Start)), End: syntaxAstPos(tree.SourceName, node.Span.End) }
+          switch lowerSyntaxIfElseBodyFrom(tree, node, index + 1, elsifSpan)
+            case Ok(elseBody) => Ok(ast2.Expr { ID: 0, Pos: cond.Pos, Span: elsifSpan, Kind: ast2.ExprKind.IfExpr(cond, thenBody, elseBody), Type: None })
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case Err(message) => Err(message)
+  end
+end
+
+# lowerSyntaxIfHeaderStart picks the source position an if expression starts at.
+# A then-form if starts at its `if` keyword (the CST node start); an elsif
+# branch is an IfExpr in the else slot and starts at its lowered condition,
+# matching the legacy parser's exprWithPos(cond.Pos, ...).  The condition's own
+# span is preferred so the start stays a real source range; the branch node start
+# is the fallback when the condition carries no position.
+func lowerSyntaxIfHeaderStart(cond: ast2.Expr, fallback: ast2.SourcePos) -> ast2.SourcePos
+  if cond.Span.Start.Line > 0 then
+    cond.Span.Start
+  elsif cond.Pos.Line > 0 then
+    cond.Pos
+  else
+    fallback
+  end
+end
+
+func lowerSyntaxElseBranchBody(tree: SyntaxTree, branch: CstNode) -> Result[ast2.Expr, String]
+  switch cstNodeFindExpression(branch, 0)
+    case Some(child) then
+      switch lowerSyntaxExpressionNode(tree, child.value())
+        case Ok(value) => Ok(lowerSyntaxBlockBody(value))
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("else branch CST lacks its body expression")
+  end
+end
+
+# lowerSyntaxBlockBody unwraps a single-expression block to the expression
+# itself, mirroring the legacy bodyExprWithBlockSpan helper.  The block's
+# start offset sits immediately after the header keyword, while the legacy
+# grammar starts the block at the first non-trivia token; adopting the inner
+# expression's start keeps the unwrapped span aligned with the legacy parser.
+# A bare expression is returned unchanged.
+func lowerSyntaxBlockBody(value: ast2.Expr) -> ast2.Expr
+  switch value.Kind
+    case BlockExpr(items) then
+      if items.Len() == 1 then
+        let first = items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
+        switch first
+          case ExprStmt(inner) => ast2.Expr { ID: inner.ID, Pos: inner.Pos, Span: ast2.SourceSpan { Start: lowerSyntaxBlockInnerStart(inner, value.Span.Start), End: value.Span.End }, Kind: inner.Kind, Type: inner.Type }
+          case _ => value
+        end
+      else
+        value
+      end
+    end
+    case _ => value
+  end
+end
+
+# lowerSyntaxBlockInnerStart prefers the inner expression's own start, falling
+# back to the block start when the inner node carries no source position.
+func lowerSyntaxBlockInnerStart(inner: ast2.Expr, fallback: ast2.SourcePos) -> ast2.SourcePos
+  if inner.Span.Start.Line > 0 then
+    inner.Span.Start
+  elsif inner.Pos.Line > 0 then
+    inner.Pos
+  else
+    fallback
+  end
+end
+
+# lowerSyntaxBlockInner unwraps a single-expression block to the inner
+# expression unchanged, keeping the inner node's own span.  This mirrors the
+# legacy bodyExprFromBlock helper used for case arms, whose body span is the
+# expression itself rather than the enclosing block.
+func lowerSyntaxBlockInner(value: ast2.Expr) -> ast2.Expr
+  switch value.Kind
+    case BlockExpr(items) then
+      if items.Len() == 1 then
+        let first = items.Get(0).UnwrapOr(ast2.Stmt.ExprStmt(ast2.EmptyExpr()))
+        switch first
+          case ExprStmt(inner) => inner
+          case _ => value
+        end
+      else
+        value
+      end
+    end
+    case _ => value
+  end
+end
+
+# lowerSyntaxSwitchBlock lowers a switch expression.  The target is the first
+# expression child; every CaseBranch child contributes one ast2 switch case
+# with its own pattern, body, and span.
+func lowerSyntaxSwitchBlock(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  switch cstNodeFindExpression(node, 0)
+    case Some(target) then
+      switch lowerSyntaxExpressionNode(tree, target.value())
+        case Ok(value) then
+          switch lowerSyntaxSwitchCases(tree, node, 0, [])
+            case Ok(cases) then
+              Ok(ast2.Expr {
+                ID: 0,
+                Pos: value.Pos,
+                Span: span,
+                Kind: ast2.ExprKind.SwitchExpr(value, cases, None),
+                Type: None,
+              })
+            end
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("switch CST lacks its target expression")
+  end
+end
+
+func lowerSyntaxSwitchCases(tree: SyntaxTree, node: CstNode, index: Int, output: Slice[ast2.SwitchCase]) -> Result[Slice[ast2.SwitchCase], String]
+  if index >= node.Children.Len() then
+    Ok(output)
+  else
+    switch cstElementNode(cstElementAt(node.Children, index))
+      case Some(child) then
+        if child.value().Kind == CstNodeKind.CaseBranch then
+          switch lowerSyntaxSwitchCase(tree, child.value())
+            case Ok(value) => lowerSyntaxSwitchCases(tree, node, index + 1, output.Append(value))
+            case Err(message) => Err(message)
+          end
+        else
+          lowerSyntaxSwitchCases(tree, node, index + 1, output)
+        end
+      end
+      case None => lowerSyntaxSwitchCases(tree, node, index + 1, output)
+    end
+  end
+end
+
+func lowerSyntaxSwitchCase(tree: SyntaxTree, node: CstNode) -> Result[ast2.SwitchCase, String]
+  switch cstNodeFindPatternChild(node, 0)
+    case Some(pattern) then
+      switch lowerSyntaxPatternNode(pattern.value())
+        case Ok(lowered) then
+          switch lowerSyntaxCaseBody(tree, node)
+            case Ok(body) then
+              Ok(ast2.SwitchCase {
+                Pattern: lowered,
+                PatternSpan: syntaxAstSpan(tree.SourceName, pattern.value().Span),
+                Body: body,
+                BodySpan: body.Span,
+                Span: syntaxAstSpan(tree.SourceName, node.Span),
+              })
+            end
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("case branch CST lacks its pattern")
+  end
+end
+
+# lowerSyntaxCaseBody returns the case's body expression: the first expression
+# child after the pattern, unwrapped from a single-statement block.
+func lowerSyntaxCaseBody(tree: SyntaxTree, node: CstNode) -> Result[ast2.Expr, String]
+  switch lowerSyntaxCaseBodyFrom(tree, node, 0, false)
+    case Ok(body) => Ok(lowerSyntaxBlockInner(body))
+    case Err(message) => Err(message)
+  end
+end
+
+func lowerSyntaxCaseBodyFrom(tree: SyntaxTree, node: CstNode, index: Int, seenPattern: Bool) -> Result[ast2.Expr, String]
+  if index >= node.Children.Len() then
+    Err("case branch CST lacks its body expression")
+  else
+    switch cstElementNode(cstElementAt(node.Children, index))
+      case Some(child) then
+        if cstNodeIsPatternKind(child.value().Kind) then
+          lowerSyntaxCaseBodyFrom(tree, node, index + 1, true)
+        elsif seenPattern && cstNodeIsExpressionKind(child.value().Kind) then
+          lowerSyntaxExpressionNode(tree, child.value())
+        else
+          lowerSyntaxCaseBodyFrom(tree, node, index + 1, seenPattern)
+        end
+      end
+      case None => lowerSyntaxCaseBodyFrom(tree, node, index + 1, seenPattern)
+    end
+  end
+end
+
+# lowerSyntaxBlockExpr lowers a statement block into an ast2 BlockExpr.  Each
+# ExprStatement child becomes one ExprStmt so the block keeps statement
+# semantics; a block that owns no statement children is the unit value.
+func lowerSyntaxBlockExpr(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  switch lowerSyntaxBlockStatements(tree, node, 0, [])
+    case Ok(statements) => Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.BlockExpr(statements), Type: None })
+    case Err(message) => Err(message)
+  end
+end
+
+func lowerSyntaxBlockStatements(tree: SyntaxTree, node: CstNode, index: Int, output: Slice[ast2.Stmt]) -> Result[Slice[ast2.Stmt], String]
+  if index >= node.Children.Len() then
+    Ok(output)
+  else
+    switch cstElementNode(cstElementAt(node.Children, index))
+      case Some(child) then
+        if cstNodeIsStatementKind(child.value().Kind) then
+          switch lowerSyntaxStatementNode(tree, child.value())
+            case Ok(statement) => lowerSyntaxBlockStatements(tree, node, index + 1, output.Append(statement))
+            case Err(message) => Err(message)
+          end
+        else
+          lowerSyntaxBlockStatements(tree, node, index + 1, output)
+        end
+      end
+      case None => lowerSyntaxBlockStatements(tree, node, index + 1, output)
+    end
+  end
+end
+
+# cstNodeIsStatementKind lists the CST statement nodes a block can own.
+func cstNodeIsStatementKind(kind: CstNodeKind) -> Bool
+  kind == CstNodeKind.ExprStatement || kind == CstNodeKind.LetStatement || kind == CstNodeKind.VarStatement || kind == CstNodeKind.TupleLetStatement || kind == CstNodeKind.AssignStatement || kind == CstNodeKind.ReturnStatement || kind == CstNodeKind.BreakStatement || kind == CstNodeKind.ContinueStatement || kind == CstNodeKind.LetRecStatement
+end
+
+# lowerSyntaxStatementNode dispatches one CST statement node onto its ast2.Stmt
+# alternative.  Every range comes from the frozen CST node span.
+func lowerSyntaxStatementNode(tree: SyntaxTree, node: CstNode) -> Result[ast2.Stmt, String]
+  if node.Kind == CstNodeKind.ExprStatement then
+    lowerSyntaxExprStatement(tree, node, syntaxAstSpan(tree.SourceName, node.Span))
+  elsif node.Kind == CstNodeKind.LetStatement then
+    lowerSyntaxBindingStatement(tree, node, true)
+  elsif node.Kind == CstNodeKind.VarStatement then
+    lowerSyntaxBindingStatement(tree, node, false)
+  elsif node.Kind == CstNodeKind.TupleLetStatement then
+    lowerSyntaxTupleLetStatement(tree, node)
+  elsif node.Kind == CstNodeKind.AssignStatement then
+    lowerSyntaxAssignStatement(tree, node)
+  elsif node.Kind == CstNodeKind.ReturnStatement then
+    lowerSyntaxReturnStatement(tree, node)
+  elsif node.Kind == CstNodeKind.BreakStatement then
+    Ok(ast2.Stmt.BreakStmt(syntaxAstPos(tree.SourceName, node.Span.Start)))
+  elsif node.Kind == CstNodeKind.ContinueStatement then
+    Ok(ast2.Stmt.ContinueStmt(syntaxAstPos(tree.SourceName, node.Span.Start)))
+  elsif node.Kind == CstNodeKind.LetRecStatement then
+    lowerSyntaxLetRecStatement(tree, node)
+  else
+    Err("CST statement kind is not lowered yet")
+  end
+end
+
+# lowerSyntaxBindingStatement lowers a let/var statement.  The value and span
+# follow the legacy Bind shape: the value expression carries its own span and
+# the binding span covers the whole statement.
+func lowerSyntaxBindingStatement(tree: SyntaxTree, node: CstNode, immutable: Bool) -> Result[ast2.Stmt, String]
+  switch (cstNodeFindPatternChild(node, 0), cstNodeFindChild(node, CstNodeKind.ValueInitializer, 0))
+    case (Some(pattern), Some(initializer)) then
+      switch lowerSyntaxExpr(tree, initializer)
+        case Ok(value) then
+          let bind = ast2.Bind { Name: cstNodeText(pattern.value()), Type: lowerSyntaxOptionalType(tree, node), TypeSpan: syntaxOptionalTypeSpan(tree, node), Value: value, Span: syntaxAstSpan(tree.SourceName, node.Span) }
+          if immutable then
+            Ok(ast2.Stmt.LetStmt(bind))
+          else
+            Ok(ast2.Stmt.VarStmt(bind))
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case _ => Err("binding statement CST lacks name or initializer")
+  end
+end
+
+# lowerSyntaxTupleLetStatement lowers a destructuring binding.  The pattern is
+# the typed TuplePattern child and the value is the initializer expression.
+func lowerSyntaxTupleLetStatement(tree: SyntaxTree, node: CstNode) -> Result[ast2.Stmt, String]
+  switch (cstNodeFindPatternChild(node, 0), cstNodeFindChild(node, CstNodeKind.ValueInitializer, 0))
+    case (Some(pattern), Some(initializer)) then
+      let patternResult = lowerSyntaxPatternNode(pattern.value())
+      let valueResult = lowerSyntaxExpr(tree, initializer)
+      switch (patternResult, valueResult)
+        case (Ok(pat), Ok(value)) => Ok(ast2.Stmt.TupleLetStmt(pat, value))
+        case (Err(message), _) => Err(message)
+        case (_, Err(message)) => Err(message)
+      end
+    end
+    case _ => Err("tuple binding statement CST lacks pattern or initializer")
+  end
+end
+
+# lowerSyntaxAssignStatement lowers an assignment.  Both operands are typed
+# expression children in source order; the left one is the assignment target.
+func lowerSyntaxAssignStatement(tree: SyntaxTree, node: CstNode) -> Result[ast2.Stmt, String]
+  switch cstNodeFindExpression(node, 0)
+    case Some(target) then
+      switch lowerSyntaxExpressionNode(tree, target.value())
+        case Ok(left) then
+          switch cstNodeFindChild(node, CstNodeKind.ValueInitializer, 0)
+            case Some(initializer) then
+              switch lowerSyntaxExpr(tree, initializer)
+                case Ok(right) => Ok(ast2.Stmt.AssignStmt(left, right))
+                case Err(message) => Err(message)
+              end
+            end
+            case None => Err("assignment CST lacks its value initializer")
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("assignment CST lacks its target expression")
+  end
+end
+
+# lowerSyntaxReturnStatement lowers a bare or valued return.  A bare return owns
+# no expression child, so it becomes ReturnStmt; otherwise ReturnWithStmt.
+func lowerSyntaxReturnStatement(tree: SyntaxTree, node: CstNode) -> Result[ast2.Stmt, String]
+  switch cstNodeFindExpression(node, 0)
+    case Some(child) then
+      switch lowerSyntaxExpressionNode(tree, child.value())
+        case Ok(value) => Ok(ast2.Stmt.ReturnWithStmt(value))
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Ok(ast2.Stmt.ReturnStmt)
+  end
+end
+
+func lowerSyntaxLetRecStatement(tree: SyntaxTree, node: CstNode) -> Result[ast2.Stmt, String]
+  switch lowerSyntaxLetRecBindings(tree, node, 0, [])
+    case Ok(bindings) => Ok(ast2.Stmt.LetRecStmt(bindings))
+    case Err(message) => Err(message)
+  end
+end
+
+func lowerSyntaxLetRecBindings(tree: SyntaxTree, node: CstNode, index: Int, output: Slice[ast2.LetRecBind]) -> Result[Slice[ast2.LetRecBind], String]
+  if index >= node.Children.Len() then
+    Ok(output)
+  else
+    switch cstElementNode(cstElementAt(node.Children, index))
+      case Some(child) then
+        if child.value().Kind == CstNodeKind.LetRecBinding then
+          switch lowerSyntaxLetRecBinding(tree, child.value())
+            case Ok(binding) => lowerSyntaxLetRecBindings(tree, node, index + 1, output.Append(binding))
+            case Err(message) => Err(message)
+          end
+        else
+          lowerSyntaxLetRecBindings(tree, node, index + 1, output)
+        end
+      end
+      case None => lowerSyntaxLetRecBindings(tree, node, index + 1, output)
+    end
+  end
+end
+
+func lowerSyntaxLetRecBinding(tree: SyntaxTree, node: CstNode) -> Result[ast2.LetRecBind, String]
+  switch (cstNodeFindPatternChild(node, 0), cstNodeFindChild(node, CstNodeKind.TypeAnnotation, 0), cstNodeFindChild(node, CstNodeKind.ValueInitializer, 0))
+    case (Some(pattern), Some(annotation), Some(initializer)) => lowerSyntaxLetRecBindingParts(tree, pattern.value(), annotation.value(), initializer)
+    case _ => Err("letrec binding CST lacks name, annotation, or initializer")
+  end
+end
+
+func lowerSyntaxLetRecBindingParts(tree: SyntaxTree, pattern: CstNode, annotation: CstNode, initializer: Ref[CstNode]) -> Result[ast2.LetRecBind, String]
+  switch lowerSyntaxTypeOption(annotation)
+    case Some(typ) then
+      switch lowerSyntaxExpr(tree, initializer)
+        case Ok(value) => Ok(ast2.LetRecBind { Name: cstNodeText(pattern), Type: typ, TypeSpan: syntaxAstSpan(tree.SourceName, annotation.Span), Value: value })
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("letrec binding annotation is not lowered yet")
+  end
+end
+func lowerSyntaxExprStatement(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan) -> Result[ast2.Stmt, String]
+  switch cstNodeFindChild(node, CstNodeKind.WhileBlock, 0)
+    case Some(loop) => lowerSyntaxWhileStatement(tree, loop.value())
+    case None then
+      switch cstNodeFindExpression(node, 0)
+        case Some(child) then
+          switch lowerSyntaxExpressionNode(tree, child.value())
+            case Ok(value) => Ok(ast2.Stmt.ExprStmt(value))
+            case Err(message) => Err(message)
+          end
+        end
+        case None => Err("expression statement CST lacks its expression")
+      end
+    end
+  end
+end
+
+# lowerSyntaxWhileStatement lowers a while loop.  The condition is the first
+# expression child after the while keyword; the body is the remaining region up
+# to the closing end, wrapped into a Block so its statements keep statement
+# semantics, matching the legacy blockUntilAndConsumeEnd body shape.
+func lowerSyntaxWhileStatement(tree: SyntaxTree, node: CstNode) -> Result[ast2.Stmt, String]
+  switch lowerSyntaxWhileCondIndex(node, 0)
+    case Some(condIndex) then
+      switch lowerSyntaxChildExpression(tree, node, condIndex)
+        case Ok(cond) then
+          let endIndex = syntaxLastTokenIndex(node.Children, node.Children.Len() - 1)
+          let bodyStart = condIndex + 1
+          let bodyFinish = if endIndex < 0 => node.Children.Len() else endIndex
+          let block = syntaxBlockNode(cstElementSliceOrEmpty(node.Children, bodyStart, bodyFinish))
+          switch lowerSyntaxBlockExpr(tree, block, syntaxAstSpan(tree.SourceName, block.Span))
+            case Ok(body) => Ok(ast2.Stmt.WhileStmt(cond, body))
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("while CST lacks its condition expression")
+  end
+end
+
+# lowerSyntaxWhileCondIndex returns the index of the first expression child,
+# which is the loop condition; the body expressions that follow stay separate.
+func lowerSyntaxWhileCondIndex(node: CstNode, index: Int) -> Option[Int]
+  if index >= node.Children.Len() then
+    None
+  else
+    switch cstElementNode(cstElementAt(node.Children, index))
+      case Some(child) then
+        if cstNodeIsExpressionKind(child.value().Kind) then
+          Some(index)
+        else
+          lowerSyntaxWhileCondIndex(node, index + 1)
+        end
+      end
+      case None => lowerSyntaxWhileCondIndex(node, index + 1)
+    end
+  end
+end
+
+func lowerSyntaxChildExpression(tree: SyntaxTree, node: CstNode, index: Int) -> Result[ast2.Expr, String]
+  switch cstElementNode(cstElementAt(node.Children, index))
+    case Some(child) => lowerSyntaxExpressionNode(tree, child.value())
+    case None => Err("CST child is not an expression node")
+  end
+end
+
+# syntaxBlockNode freezes a region of leaves into one Block node whose children
+# are ExprStatement nodes.  Both a function body and a while body use it, so the
+# block's span and statement ownership stay identical in both lowerings.
+func syntaxBlockNode(items: Slice[CstElement]) -> CstNode
+  CstNode {
+    Kind: CstNodeKind.Block,
+    Span: cstElementSliceSpan(items, 0, items.Len()),
+    Children: functionBodyStatements(items),
+    HasError: false,
+  }
+end
+
+# lowerSyntaxCollectionLiteral lowers a slice or set literal.  The items are the
+# expression children of the single delimiter group, in source order; the
+# delimiters and separators stay owned by the group but carry no ast2 node.
+func lowerSyntaxCollectionLiteral(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan, groupKind: CstNodeKind) -> Result[ast2.Expr, String]
+  switch cstNodeFindChild(node, groupKind, 0)
+    case Some(group) then
+      switch lowerSyntaxExpressionChildren(tree, group.value(), 0, [])
+        case Ok(items) then
+          if node.Kind == CstNodeKind.SliceLiteral then
+            Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.SliceLitExpr(items), Type: None })
+          else
+            Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.SetLitExpr(items), Type: None })
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("collection literal CST lacks its delimiter group")
+  end
+end
+
+# lowerSyntaxMapLiteral lowers a map literal.  Each MapEntry child owns a key
+# and a value expression child that combine into one ast2 pair.
+func lowerSyntaxMapLiteral(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  switch cstNodeFindChild(node, CstNodeKind.BraceGroup, 0)
+    case Some(group) then
+      switch lowerSyntaxMapEntries(tree, group.value(), 0, [])
+        case Ok(pairs) => Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.MapLitExpr(pairs), Type: None })
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("map literal CST lacks its brace group")
+  end
+end
+
+func lowerSyntaxMapEntries(tree: SyntaxTree, node: CstNode, index: Int, output: Slice[(ast2.Expr, ast2.Expr)]) -> Result[Slice[(ast2.Expr, ast2.Expr)], String]
+  if index >= node.Children.Len() then
+    Ok(output)
+  else
+    let item = cstElementAt(node.Children, index)
+    switch cstElementNode(item)
+      case Some(child) then
+        if child.value().Kind == CstNodeKind.MapEntry then
+          switch lowerSyntaxMapEntry(tree, child.value())
+            case Ok(pair) => lowerSyntaxMapEntries(tree, node, index + 1, output.Append(pair))
+            case Err(message) => Err(message)
+          end
+        else
+          lowerSyntaxMapEntries(tree, node, index + 1, output)
+        end
+      end
+      case None => lowerSyntaxMapEntries(tree, node, index + 1, output)
+    end
+  end
+end
+
+func lowerSyntaxMapEntry(tree: SyntaxTree, node: CstNode) -> Result[(ast2.Expr, ast2.Expr), String]
+  let expressions = cstNodeDirectExpressionChildren(node, 0, [])
+  if expressions.Len() != 2 then
+    Err("map entry CST must own exactly a key and a value expression")
+  else
+    switch (expressions.Get(0), expressions.Get(1))
+      case (Some(keyRef), Some(valueRef)) then
+        let keyResult = lowerSyntaxExpressionNode(tree, keyRef.value())
+        let valueResult = lowerSyntaxExpressionNode(tree, valueRef.value())
+        switch (keyResult, valueResult)
+          case (Ok(key), Ok(value)) => Ok((key, value))
+          case (Err(message), _) => Err(message)
+          case (_, Err(message)) => Err(message)
+        end
+      end
+      case _ => Err("map entry CST lacks its key or value")
+    end
+  end
+end
+
+# lowerSyntaxStructLiteral lowers `TypeName { field: value }` and its generic
+# form.  The head expression supplies the qualified name; the TypeArguments
+# child supplies explicit type arguments; each StructLitField child owns the
+# field name token and its value expression.
+func lowerSyntaxStructLiteral(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  switch cstNodeFindExpression(node, 0)
+    case Some(head) then
+      let name = syntaxStructLitHeadName(head.value())
+      if name == "" then
+        Err("struct literal CST lacks a type name head")
+      else
+        switch cstNodeFindChild(node, CstNodeKind.BraceGroup, 0)
+          case Some(group) then
+            switch lowerSyntaxStructLitFields(tree, group.value(), 0, [])
+              case Ok(fields) then
+                let typeArgs = syntaxCallTypeArgs(node)
+                if typeArgs.Len() == 0 then
+                  Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.StructLitExpr(name, fields), Type: None })
+                else
+                  Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.GenericStructLitExpr(name, typeArgs, fields), Type: None })
+                end
+              end
+              case Err(message) => Err(message)
+            end
+          end
+          case None => Err("struct literal CST lacks its field group")
+        end
+      end
+    end
+    case None => Err("struct literal CST lacks its type name head")
+  end
+end
+
+func lowerSyntaxStructLitFields(tree: SyntaxTree, node: CstNode, index: Int, output: Slice[ast2.StructLitField]) -> Result[Slice[ast2.StructLitField], String]
+  if index >= node.Children.Len() then
+    Ok(output)
+  else
+    switch cstElementNode(cstElementAt(node.Children, index))
+      case Some(child) then
+        if child.value().Kind == CstNodeKind.StructLitField then
+          switch lowerSyntaxStructLitField(tree, child.value())
+            case Ok(field) => lowerSyntaxStructLitFields(tree, node, index + 1, output.Append(field))
+            case Err(message) => Err(message)
+          end
+        else
+          lowerSyntaxStructLitFields(tree, node, index + 1, output)
+        end
+      end
+      case None => lowerSyntaxStructLitFields(tree, node, index + 1, output)
+    end
+  end
+end
+
+func lowerSyntaxStructLitField(tree: SyntaxTree, node: CstNode) -> Result[ast2.StructLitField, String]
+  switch cstNodeFindExpression(node, 0)
+    case Some(value) then
+      switch lowerSyntaxExpressionNode(tree, value.value())
+        case Ok(expr) => Ok(ast2.StructLitField { Name: syntaxStructLitFieldName(node), Value: expr })
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("struct literal field CST lacks its value expression")
+  end
+end
+
+# syntaxStructLitFieldName returns the field name token preceding a struct
+# literal field's value expression.
+func syntaxStructLitFieldName(node: CstNode) -> String
+  syntaxStructLitFieldNameScan(node, 0, "")
+end
+
+func syntaxStructLitFieldNameScan(node: CstNode, index: Int, found: String) -> String
+  if index >= node.Children.Len() || found != "" then
+    found
+  else
+    switch cstElementAt(node.Children, index)
+      case TokenElement(token) then
+        if token.Kind == CstTokenKind.Identifier then
+          token.Raw
+        else
+          syntaxStructLitFieldNameScan(node, index + 1, found)
+        end
+      end
+      case _ => syntaxStructLitFieldNameScan(node, index + 1, found)
+    end
+  end
+end
+
+# lowerSyntaxUnaryExpr lowers a prefix operator.  The operator is the leading
+# non-trivia token and the operand is the recursive expression child; both live
+# inside the same CST range, so no source text is re-read.
+func lowerSyntaxUnaryExpr(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  let op = syntaxLeadingTokenRaw(node, 0, "")
+  switch cstNodeFindExpression(node, 0)
+    case Some(operand) then
+      switch lowerSyntaxExpressionNode(tree, operand.value())
+        case Ok(value) => Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.UnaryExpr(op, value), Type: None })
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("unary expression CST lacks an operand")
+  end
+end
+
+# lowerSyntaxBinaryExpr lowers a left-associative operator chain.  Its direct
+# expression children are the left and right operands in source order; the
+# operator is the token between them.
+func lowerSyntaxBinaryExpr(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  let operands = cstNodeDirectExpressionChildren(node, 0, [])
+  if operands.Len() != 2 then
+    Err("binary expression CST must own exactly two operands")
+  else
+    let op = syntaxTokenBetweenExpressions(node)
+    # Bind each operand lowering to a local before matching.  A tuple switch
+    # lowers to a scrutinee struct that the compiler re-evaluates once per case
+    # arm, so an inline recursive call here would blow up exponentially down a
+    # chain of binary operators.
+    switch operands.Get(0)
+      case Some(leftRef) then
+        switch operands.Get(1)
+          case Some(rightRef) then
+            let left = lowerSyntaxExpressionNode(tree, leftRef.value())
+            let right = lowerSyntaxExpressionNode(tree, rightRef.value())
+            switch (left, right)
+              case (Ok(leftExpr), Ok(rightExpr)) then
+                Ok(ast2.Expr {
+                  ID: 0,
+                  Pos: span.Start,
+                  Span: span,
+                  Kind: ast2.ExprKind.BinaryExpr(op, leftExpr, rightExpr),
+                  Type: None,
+                })
+              end
+              case (Err(message), _) => Err(message)
+              case (_, Err(message)) => Err(message)
+            end
+          end
+          case None => Err("binary expression CST lacks its operands")
+        end
+      end
+      case None => Err("binary expression CST lacks its operands")
+    end
+  end
+end
+
+# lowerSyntaxFieldExpr lowers a member-access expression.  The base is the
+# expression child and the field name is the identifier token that follows it.
+func lowerSyntaxFieldExpr(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  switch cstNodeFindExpression(node, 0)
+    case Some(receiver) then
+      switch lowerSyntaxExpressionNode(tree, receiver.value())
+        case Ok(value) => Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.FieldExpr(value, syntaxFieldName(node)), Type: None })
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("field expression CST lacks its receiver")
+  end
+end
+
+# lowerSyntaxTypeAsExpr lowers an as-cast expression.  The base is the
+# expression child and the target is the nested type node.
+func lowerSyntaxTypeAsExpr(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  switch (cstNodeFindExpression(node, 0), cstNodeFindTypeChild(node, 0))
+    case (Some(baseExpr), Some(target)) then
+      switch (lowerSyntaxExpressionNode(tree, baseExpr.value()), lowerSyntaxTypeNode(target.value()))
+        case (Ok(value), Some(targetType)) => Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.TypeAsExpr(value, targetType), Type: None })
+        case (Err(message), _) => Err(message)
+        case (_, None) => Err("as-expression CST target type is not lowered yet")
+      end
+    end
+    case _ => Err("as-expression CST lacks its operand or target type")
+  end
+end
+
+# lowerSyntaxCallExpr lowers a call with optional explicit type arguments.  The
+# callee is the expression child, the arguments are the expression children of
+# the argument group, and type arguments come from the TypeArguments child.
+func lowerSyntaxCallExpr(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  switch cstNodeFindExpression(node, 0)
+    case Some(callee) then
+      switch lowerSyntaxExpressionNode(tree, callee.value())
+        case Ok(value) => lowerSyntaxCallWithCallee(tree, node, span, value)
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("call expression CST lacks its callee")
+  end
+end
+
+func lowerSyntaxCallWithCallee(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan, callee: ast2.Expr) -> Result[ast2.Expr, String]
+  switch cstNodeFindChild(node, CstNodeKind.ParenGroup, 0)
+    case Some(arguments) then
+      switch lowerSyntaxExpressionChildren(tree, arguments.value(), 0, [])
+        case Ok(args) => Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.CallExpr(callee, syntaxCallTypeArgs(node), args), Type: None })
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("call expression CST lacks its argument group")
+  end
+end
+
+func syntaxCallTypeArgs(node: CstNode) -> Slice[ast2.TypeExpr]
+  switch cstNodeFindChild(node, CstNodeKind.TypeArguments, 0)
+    case Some(group) => lowerSyntaxTypeChildren(group.value(), 0, [])
+    case None => []
+  end
+end
+
+# cstNodeDirectExpressionChildren collects the direct expression children in
+# source order.  It does not recurse, so a call's argument group is never
+# mistaken for the callee.
+func cstNodeDirectExpressionChildren(node: CstNode, index: Int, output: Slice[Ref[CstNode]]) -> Slice[Ref[CstNode]]
+  if index >= node.Children.Len() then
+    output
+  else
+    switch cstElementNode(cstElementAt(node.Children, index))
+      case Some(child) then
+        if cstNodeIsExpressionKind(child.value().Kind) then
+          cstNodeDirectExpressionChildren(node, index + 1, output.Append(child))
+        else
+          cstNodeDirectExpressionChildren(node, index + 1, output)
+        end
+      end
+      case None => cstNodeDirectExpressionChildren(node, index + 1, output)
+    end
+  end
+end
+
+# syntaxLeadingTokenRaw returns the first non-trivia token raw in the node, or
+# the fallback when the node owns no token.
+func syntaxLeadingTokenRaw(node: CstNode, index: Int, fallback: String) -> String
+  if index >= node.Children.Len() then
+    fallback
+  else
+    let item = cstElementAt(node.Children, index)
+    if cstElementIsTrivia(item) then
+      syntaxLeadingTokenRaw(node, index + 1, fallback)
+    else
+      switch item
+        case TokenElement(token) => token.Raw
+        case _ => syntaxLeadingTokenRaw(node, index + 1, fallback)
+      end
+    end
+  end
+end
+
+# syntaxTokenBetweenExpressions returns the first token raw that appears after
+# the first expression child and before the second, which is the binary
+# operator for a left-associative chain.
+func syntaxTokenBetweenExpressions(node: CstNode) -> String
+  syntaxOperatorToken(node, 0, 0, "")
+end
+
+func syntaxOperatorToken(node: CstNode, index: Int, expressionsSeen: Int, found: String) -> String
+  if index >= node.Children.Len() || found != "" then
+    found
+  else
+    let item = cstElementAt(node.Children, index)
+    switch item
+      case NodeElement(child) then
+        if cstNodeIsExpressionKind(child.value().Kind) then
+          syntaxOperatorToken(node, index + 1, expressionsSeen + 1, found)
+        else
+          syntaxOperatorToken(node, index + 1, expressionsSeen, found)
+        end
+      end
+      case TokenElement(token) then
+        if expressionsSeen == 1 then
+          token.Raw
+        else
+          syntaxOperatorToken(node, index + 1, expressionsSeen, found)
+        end
+      end
+      case _ => syntaxOperatorToken(node, index + 1, expressionsSeen, found)
+    end
+  end
+end
+
+# syntaxFieldName returns the identifier that follows the receiver in a field
+# expression.  The receiver is the first expression child; the name is the first
+# identifier token after it.
+func syntaxFieldName(node: CstNode) -> String
+  syntaxFieldNameScan(node, 0, false, "")
+end
+
+func syntaxFieldNameScan(node: CstNode, index: Int, seenReceiver: Bool, found: String) -> String
+  if index >= node.Children.Len() || found != "" then
+    found
+  else
+    let item = cstElementAt(node.Children, index)
+    switch item
+      case NodeElement(child) then
+        if !seenReceiver && cstNodeIsExpressionKind(child.value().Kind) then
+          syntaxFieldNameScan(node, index + 1, true, found)
+        else
+          syntaxFieldNameScan(node, index + 1, seenReceiver, found)
+        end
+      end
+      case TokenElement(token) then
+        if seenReceiver && token.Kind == CstTokenKind.Identifier then
+          token.Raw
+        else
+          syntaxFieldNameScan(node, index + 1, seenReceiver, found)
+        end
+      end
+      case _ => syntaxFieldNameScan(node, index + 1, seenReceiver, found)
+    end
+  end
+end
+
+# lowerSyntaxParenExpr unwraps a single parenthesized expression.  The inner
+# group owns the expression child; the parens themselves carry no ast2 node.
+func lowerSyntaxParenExpr(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  switch cstNodeFindExpression(node, 0)
+    case Some(inner) then
+      switch lowerSyntaxExpressionNode(tree, inner.value())
+        case Ok(value) => Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: value.Kind, Type: None })
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("parenthesized expression CST lacks an inner expression")
+  end
+end
+
+func lowerSyntaxTupleExpr(tree: SyntaxTree, node: CstNode) -> Result[Slice[ast2.Expr], String]
+  switch cstNodeFindChild(node, CstNodeKind.ParenGroup, 0)
+    case Some(group) => lowerSyntaxExpressionChildren(tree, group.value(), 0, [])
+    case None => Err("tuple expression CST lacks its parenthesized group")
+  end
+end
+
+func lowerSyntaxExpressionChildren(tree: SyntaxTree, node: CstNode, index: Int, output: Slice[ast2.Expr]) -> Result[Slice[ast2.Expr], String]
+  if index >= node.Children.Len() then
+    Ok(output)
+  else
+    switch cstElementNode(cstElementAt(node.Children, index))
+      case Some(child) then
+        if cstNodeIsExpressionKind(child.value().Kind) then
+          switch lowerSyntaxExpressionNode(tree, child.value())
+            case Ok(value) => lowerSyntaxExpressionChildren(tree, node, index + 1, output.Append(value))
+            case Err(message) => Err(message)
+          end
+        else
+          lowerSyntaxExpressionChildren(tree, node, index + 1, output)
+        end
+      end
+      case None => lowerSyntaxExpressionChildren(tree, node, index + 1, output)
+    end
+  end
+end
+
+# lowerSyntaxInlineGoExpr lowers `go[Type] { code: ...; in x = e; type T = T }`.
+# The bracket group holds the result type; the body holds the decoded code
+# string plus typed value and type bindings, each read from its own CST child.
+func lowerSyntaxInlineGoExpr(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  switch cstNodeFindChild(node, CstNodeKind.BracketGroup, 0)
+    case Some(brackets) => lowerSyntaxInlineGoWithType(tree, node, span, brackets.value())
+    case None => Err("inline-Go CST lacks its type argument group")
+  end
+end
+
+# lowerSyntaxFuncLitExpr lowers a `func` literal.  The parameters come from the
+# FunctionParameters child, the optional result type from the FunctionReturnType
+# child, and the body from the Block child, so every field derives from a frozen
+# CST range rather than re-reading source text.
+func lowerSyntaxFuncLitExpr(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan) -> Result[ast2.Expr, String]
+  switch cstNodeFindChild(node, CstNodeKind.FunctionParameters, 0)
+    case Some(parameters) then
+      switch (lowerSyntaxParameters(tree, parameters.value().Children, 0, None, []), lowerSyntaxFuncLitBody(tree, node))
+        case (Ok(params), Ok(body)) => Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.FuncLitExpr(params, lowerSyntaxFunctionReturn(tree, node), body), Type: None })
+        case (Err(message), _) => Err(message)
+        case (_, Err(message)) => Err(message)
+      end
+    end
+    case None => Err("func literal CST lacks its parameter group")
+  end
+end
+
+func lowerSyntaxFuncLitBody(tree: SyntaxTree, node: CstNode) -> Result[ast2.Expr, String]
+  switch cstNodeFindChild(node, CstNodeKind.Block, 0)
+    case Some(block) => lowerSyntaxExpressionNode(tree, block.value())
+    case None => Err("func literal CST lacks its body block")
+  end
+end
+
+func lowerSyntaxInlineGoWithType(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan, brackets: CstNode) -> Result[ast2.Expr, String]
+  switch lowerSyntaxInlineGoType(brackets)
+    case Some(typ) => lowerSyntaxInlineGoWithCode(tree, node, span, typ)
+    case None => Err("inline-Go CST result type is not lowered yet")
+  end
+end
+
+func lowerSyntaxInlineGoWithCode(tree: SyntaxTree, node: CstNode, span: ast2.SourceSpan, typ: ast2.TypeExpr) -> Result[ast2.Expr, String]
+  switch cstNodeFindChild(node, CstNodeKind.BraceGroup, 0)
+    case Some(body) then
+      switch cstNodeFindChild(body.value(), CstNodeKind.InlineGoCode, 0)
+        case Some(codeNode) => lowerSyntaxInlineGoCode(tree, span, typ, codeNode.value(), body.value())
+        case None => Err("inline-Go CST lacks its code or body")
+      end
+    end
+    case None => Err("inline-Go CST lacks its code or body")
+  end
+end
+
+func lowerSyntaxInlineGoCode(tree: SyntaxTree, span: ast2.SourceSpan, typ: ast2.TypeExpr, codeNode: CstNode, body: CstNode) -> Result[ast2.Expr, String]
+  switch syntaxStringLeafRaw(codeNode, 0)
+    case Some(codeRaw) then
+      switch syntaxDecodeStringRaw(codeRaw)
+        case Ok(code) then
+          switch lowerSyntaxInlineGoBindings(tree, body)
+            case Ok(bindings) => Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.InlineGoExpr(Ref.new(typ), code, bindings.Values, bindings.Types), Type: None })
+            case Err(message) => Err(message)
+          end
+        end
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("inline-Go code CST lacks a string literal")
+  end
+end
+
+func lowerSyntaxInlineGoType(brackets: CstNode) -> Option[ast2.TypeExpr]
+  switch cstNodeFindTypeChild(brackets, 0)
+    case Some(typ) => lowerSyntaxTypeNode(typ.value())
+    case None => None
+  end
+end
+
+struct InlineGoBindings
+  Values: Slice[ast2.GoOperand]
+  Types: Slice[ast2.GoTypeOperand]
+end
+
+func lowerSyntaxInlineGoBindings(tree: SyntaxTree, body: CstNode) -> Result[InlineGoBindings, String]
+  lowerSyntaxInlineGoBindingsFrom(tree, body, 0, InlineGoBindings { Values: [], Types: [] })
+end
+
+func lowerSyntaxInlineGoBindingsFrom(tree: SyntaxTree, body: CstNode, index: Int, output: InlineGoBindings) -> Result[InlineGoBindings, String]
+  if index >= body.Children.Len() then
+    Ok(output)
+  else
+    switch cstElementNode(cstElementAt(body.Children, index))
+      case Some(child) then
+        if child.value().Kind == CstNodeKind.InlineGoValueBinding then
+          switch lowerSyntaxInlineGoValueBinding(tree, child.value())
+            case Ok(operand) => lowerSyntaxInlineGoBindingsFrom(tree, body, index + 1, InlineGoBindings { Values: output.Values.Append(operand), Types: output.Types })
+            case Err(message) => Err(message)
+          end
+        elsif child.value().Kind == CstNodeKind.InlineGoTypeBinding then
+          switch lowerSyntaxInlineGoTypeBinding(child.value())
+            case Ok(operand) => lowerSyntaxInlineGoBindingsFrom(tree, body, index + 1, InlineGoBindings { Values: output.Values, Types: output.Types.Append(operand) })
+            case Err(message) => Err(message)
+          end
+        else
+          lowerSyntaxInlineGoBindingsFrom(tree, body, index + 1, output)
+        end
+      end
+      case None => lowerSyntaxInlineGoBindingsFrom(tree, body, index + 1, output)
+    end
+  end
+end
+
+func lowerSyntaxInlineGoValueBinding(tree: SyntaxTree, node: CstNode) -> Result[ast2.GoOperand, String]
+  switch cstNodeFindExpression(node, 0)
+    case Some(value) then
+      switch lowerSyntaxExpressionNode(tree, value.value())
+        case Ok(expr) => Ok(ast2.GoOperand { Name: syntaxInlineGoBindingName(node), Value: expr })
+        case Err(message) => Err(message)
+      end
+    end
+    case None => Err("inline-Go value binding lacks its expression")
+  end
+end
+
+func lowerSyntaxInlineGoTypeBinding(node: CstNode) -> Result[ast2.GoTypeOperand, String]
+  switch cstNodeFindTypeChild(node, 0)
+    case Some(typ) then
+      switch lowerSyntaxTypeNode(typ.value())
+        case Some(lowered) => Ok(ast2.GoTypeOperand { Name: syntaxInlineGoBindingName(node), Type: lowered })
+        case None => Err("inline-Go type binding is not lowered yet")
+      end
+    end
+    case None => Err("inline-Go type binding lacks its type")
+  end
+end
+
+func lowerSyntaxRuneExpr(span: ast2.SourceSpan, raw: String) -> Result[ast2.Expr, String]
+  switch syntaxDecodeRuneRaw(raw)
+    case Ok(value) => Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.RuneExpr(value), Type: None })
+    case Err(message) => Err(message)
+  end
+end
+
+func lowerSyntaxStringExpr(span: ast2.SourceSpan, raw: String) -> Result[ast2.Expr, String]
+  switch syntaxDecodeStringRaw(raw)
+    case Ok(value) => Ok(ast2.Expr { ID: 0, Pos: span.Start, Span: span, Kind: ast2.ExprKind.StringExpr(value), Type: None })
+    case Err(message) => Err(message)
+  end
+end
+
+# syntaxDecodeStringRaw decodes a string literal's semantic value from its raw
+# source slice.  Raw and triple-quoted literals keep their bytes verbatim;
+# ordinary literals decode backslash escapes so the ast2 value matches the
+# legacy parser's literal value.
+func syntaxDecodeStringRaw(raw: String) -> Result[String, String]
+  switch syntaxStringContent(raw)
+    case Some(content) then
+      if strings.HasPrefix(raw, "\"") && !strings.HasPrefix(raw, "\"\"\"") then
+        syntaxDecodeEscapes(content, 0, "")
+      else
+        Ok(content)
+      end
+    end
+    case None => Err("malformed string CST cannot lower")
+  end
+end
+
+# syntaxDecodeRuneRaw decodes a rune literal's single character, applying the
+# same escape set as the legacy parser.
+func syntaxDecodeRuneRaw(raw: String) -> Result[String, String]
+  switch raw.Slice(1, raw.Len() - 1)
+    case Some(content) then
+      if strings.Contains(content, "\\") then
+        syntaxDecodeEscapes(content, 0, "")
+      else
+        Ok(content)
+      end
+    end
+    case None => Err("malformed rune CST cannot lower")
+  end
+end
+
+struct SyntaxDecodeResult
+  Text: String
+  Next: Int
+end
+
+func syntaxDecodeEscapes(text: String, index: Int, output: String) -> Result[String, String]
+  syntaxDecodeEscapesAt(text as Slice[Rune], index, output)
+end
+
+func syntaxDecodeEscapesAt(runes: Slice[Rune], index: Int, output: String) -> Result[String, String]
+  if index >= runes.Len() then
+    Ok(output)
+  else
+    switch runes.Get(index)
+      case Some(r) then
+        if r == '\\' then
+          switch syntaxDecodeEscapeAt(runes, index + 1)
+            case Ok(decoded) => syntaxDecodeEscapesAt(runes, decoded.Next, output + decoded.Text)
+            case Err(message) => Err(message)
+          end
+        else
+          syntaxDecodeEscapesAt(runes, index + 1, output + String.FromRunes([r]))
+        end
+      end
+      case None => Ok(output)
+    end
+  end
+end
+
+func syntaxDecodeEscapeAt(runes: Slice[Rune], index: Int) -> Result[SyntaxDecodeResult, String]
+  switch runes.Get(index)
+    case Some(r) then
+      if r == 'u' then
+        syntaxDecodeUnicodeEscape(runes, index + 1)
+      elsif r == 'n' then
+        Ok(SyntaxDecodeResult { Text: "\n", Next: index + 1 })
+      elsif r == 't' then
+        Ok(SyntaxDecodeResult { Text: "\t", Next: index + 1 })
+      elsif r == 'b' then
+        Ok(SyntaxDecodeResult { Text: "\b", Next: index + 1 })
+      elsif r == 'f' then
+        Ok(SyntaxDecodeResult { Text: "\f", Next: index + 1 })
+      elsif r == 'r' then
+        Ok(SyntaxDecodeResult { Text: "\r", Next: index + 1 })
+      elsif r == '0' then
+        Ok(SyntaxDecodeResult { Text: "\0", Next: index + 1 })
+      elsif r == '"' then
+        Ok(SyntaxDecodeResult { Text: "\"", Next: index + 1 })
+      elsif r == '\'' then
+        Ok(SyntaxDecodeResult { Text: "'", Next: index + 1 })
+      elsif r == '\\' then
+        Ok(SyntaxDecodeResult { Text: "\\", Next: index + 1 })
+      else
+        Err("unsupported escape in string CST")
+      end
+    end
+    case None => Err("trailing escape in string CST")
+  end
+end
+
+func syntaxDecodeUnicodeEscape(runes: Slice[Rune], index: Int) -> Result[SyntaxDecodeResult, String]
+  switch (syntaxHexRune(runes, index), syntaxHexRune(runes, index + 1), syntaxHexRune(runes, index + 2), syntaxHexRune(runes, index + 3))
+    case (Some(d0), Some(d1), Some(d2), Some(d3)) then
+      let value = d0 * 4096 + d1 * 256 + d2 * 16 + d3
+      if value >= 55296 && value <= 57343 then
+        Err("Unicode escape must not be a surrogate")
+      else
+        Ok(SyntaxDecodeResult { Text: String.FromRunes([value as Rune]), Next: index + 4 })
+      end
+    end
+    case _ => Err("malformed Unicode escape in string CST")
+  end
+end
+
+func syntaxHexRune(runes: Slice[Rune], index: Int) -> Option[Int]
+  switch runes.Get(index)
+    case Some(r) then
+      if r >= '0' && r <= '9' then
+        Some((r as Int) - ('0' as Int))
+      elsif r >= 'a' && r <= 'f' then
+        Some((r as Int) - ('a' as Int) + 10)
+      elsif r >= 'A' && r <= 'F' then
+        Some((r as Int) - ('A' as Int) + 10)
+      else
+        None
+      end
+    end
+    case None => None
+  end
+end
+
+# syntaxInlineGoBindingName reads the identifier leaf of an `in x = ...` or
+# `type T = ...` binding; the name is a raw token, not a nested expression.
+func syntaxInlineGoBindingName(node: CstNode) -> String
+  syntaxFirstIdentifierRaw(node.Children, 0)
+end
+
+func syntaxFirstIdentifierRaw(items: Slice[CstElement], index: Int) -> String
+  if index >= items.Len() then
+    ""
+  else
+    switch items.Get(index)
+      case Some(item) then
+        switch item
+          case TokenElement(token) then
+            if token.Kind == CstTokenKind.Identifier then
+              token.Raw
+            else
+              syntaxFirstIdentifierRaw(items, index + 1)
+            end
+          end
+          case _ => syntaxFirstIdentifierRaw(items, index + 1)
+        end
+      end
+      case None => ""
+    end
+  end
+end
+
+func syntaxStringContent(raw: String) -> Option[String]
+  if strings.HasPrefix(raw, "\"\"\"") && strings.HasSuffix(raw, "\"\"\"") then
+    raw.Slice(3, raw.Len() - 3)
+  elsif (strings.HasPrefix(raw, "\"") && strings.HasSuffix(raw, "\"")) || (strings.HasPrefix(raw, "`") && strings.HasSuffix(raw, "`")) then
+    raw.Slice(1, raw.Len() - 1)
+  else
+    None
+  end
+end
+

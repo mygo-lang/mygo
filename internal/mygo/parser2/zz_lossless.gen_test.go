@@ -160,7 +160,7 @@ type LegacyTokenFinish struct {
 func ParseFileLossless(sourceName string, input string) Result[LosslessFile, string] {
 	tree := ParseSyntaxAt(sourceName, input)
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
-		return Err[LosslessFile, string](syntaxDiagnosticError(sourceName, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tree.Diagnostics, 0), SyntaxDiagnostic{Message: "parse error", Span: syntaxRootSpan([]GreenElement{}), Expected: []string{}, Recovery: ""})))
+		return Err[LosslessFile, string](syntaxDiagnosticError(sourceName, MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(tree.Diagnostics, 0), SyntaxDiagnostic{Message: "parse error", Span: syntaxRootSpan([]CstElement{}), Expected: []string{}, Recovery: ""})))
 	} else {
 		__mygo_expr_0 := LowerSyntax(tree)
 		var __mygo_expr_1 Result[LosslessFile, string]
@@ -2030,11 +2030,11 @@ func tokenEndAt(pos ast2.SourcePos, tokens []ps.PositionedToken, index int) ast2
 }
 func scanLossless(input string) LosslessScan {
 	lexed := LexSource(input)
-	return LosslessScan{Tokens: legacyTokensFromLexed(lexed.Tokens, 0, []ps.PositionedToken{}), Trivia: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(lexed.Trivia, func(item GreenTrivia) ps.PositionedTrivia {
-		return ps.PositionedTrivia{Kind: greenTriviaKindText(item.Kind), Raw: item.Raw, Span: item.Span}
+	return LosslessScan{Tokens: legacyTokensFromLexed(lexed.Tokens, 0, []ps.PositionedToken{}), Trivia: MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Map(lexed.Trivia, func(item CstTrivia) ps.PositionedTrivia {
+		return ps.PositionedTrivia{Kind: cstTriviaKindText(item.Kind), Raw: item.Raw, Span: item.Span}
 	})}
 }
-func legacyTokensFromLexed(items []GreenToken, index int, acc []ps.PositionedToken) []ps.PositionedToken {
+func legacyTokensFromLexed(items []CstToken, index int, acc []ps.PositionedToken) []ps.PositionedToken {
 	return __mygo_mt_parser2_legacyTokensFromLexed(items, index, acc, 0)
 }
 func legacyTokenPieces(raw string, start ps.Position, index int, acc []ps.PositionedToken) []ps.PositionedToken {
@@ -3201,7 +3201,7 @@ func __mygo_mt_parser2_legacyTokenPieces(__mygo_mt_p0 string, __mygo_mt_p1 ps.Po
 		}
 	}
 }
-func __mygo_mt_parser2_legacyTokensFromLexed(__mygo_mt_p0 []GreenToken, __mygo_mt_p1 int, __mygo_mt_p2 []ps.PositionedToken, __mygo_state int) []ps.PositionedToken {
+func __mygo_mt_parser2_legacyTokensFromLexed(__mygo_mt_p0 []CstToken, __mygo_mt_p1 int, __mygo_mt_p2 []ps.PositionedToken, __mygo_state int) []ps.PositionedToken {
 	for {
 		switch __mygo_state {
 		case 0:
@@ -3209,7 +3209,7 @@ func __mygo_mt_parser2_legacyTokensFromLexed(__mygo_mt_p0 []GreenToken, __mygo_m
 				return __mygo_mt_p2
 			} else {
 				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GreenToken]); ok {
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstToken]); ok {
 					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Fold(legacyTokenPieces(__mygo_match___mygo_expr_1.F0.Raw, __mygo_match___mygo_expr_1.F0.Span.Start, 0, []ps.PositionedToken{}), __mygo_mt_p2, func(out []ps.PositionedToken, token ps.PositionedToken) []ps.PositionedToken {
@@ -3219,7 +3219,7 @@ func __mygo_mt_parser2_legacyTokensFromLexed(__mygo_mt_p0 []GreenToken, __mygo_m
 					__mygo_state = 0
 					continue
 				} else {
-					if _, ok := __mygo_expr_0.(Option__None[GreenToken]); ok {
+					if _, ok := __mygo_expr_0.(Option__None[CstToken]); ok {
 						return __mygo_mt_p2
 					} else {
 						panic("non-exhaustive switch")

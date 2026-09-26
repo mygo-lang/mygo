@@ -113,7 +113,7 @@ func TestDelimitedCstSeparatesMultilineItemsAndDropsTrailingComma(t *testing.T) 
 func TestDelimitedCstSourceIsBytePreserved(t *testing.T) {
 	source := "package sample\nfunc f() -> Int\n  let w = wrap(inner(a, b), c, [1, 2])\n  let q = \"tricky, { } ( )\"\n  v\nend\n"
 	root := *ParseSyntaxAt("delimited.mygo", source).Root
-	if greenNodeText(root) != source {
+	if cstNodeText(root) != source {
 		t.Fatal("CST delimiter grouping must retain every source byte")
 		return
 	} else {

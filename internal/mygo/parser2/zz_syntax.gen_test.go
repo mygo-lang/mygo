@@ -11,21 +11,21 @@ func syntaxSpan(start int, finish int) ps.SourceSpan {
 	return ps.SourceSpan{Start: ps.Position{Offset: start, Line: 1, Column: start + 1}, End: ps.Position{Offset: finish, Line: 1, Column: finish + 1}}
 }
 func TestGreenSyntaxModelKeepsChildRanges(t *testing.T) {
-	name := GreenToken{Kind: GreenTokenKind__Identifier__Ctor(), Raw: "value", Span: syntaxSpan(0, 5)}
-	gap := GreenTrivia{Kind: GreenTriviaKind__Whitespace__Ctor(), Raw: " ", Span: syntaxSpan(5, 6)}
-	child := GreenNode{Kind: GreenNodeKind__Expression__Ctor(), Span: syntaxSpan(0, 5), Children: []GreenElement{GreenElement__TokenElement__Ctor(name)}, HasError: false}
-	root := GreenNode{Kind: GreenNodeKind__File__Ctor(), Span: syntaxSpan(0, 6), Children: []GreenElement{GreenElement__NodeElement__Ctor(&child), GreenElement__TriviaElement__Ctor(gap)}, HasError: false}
-	if !greenNodeChildrenFit(root) {
-		t.Fatal("green node children must fit inside their parent range")
+	name := CstToken{Kind: CstTokenKind__Identifier__Ctor(), Raw: "value", Span: syntaxSpan(0, 5)}
+	gap := CstTrivia{Kind: CstTriviaKind__Whitespace__Ctor(), Raw: " ", Span: syntaxSpan(5, 6)}
+	child := CstNode{Kind: CstNodeKind__Expression__Ctor(), Span: syntaxSpan(0, 5), Children: []CstElement{CstElement__TokenElement__Ctor(name)}, HasError: false}
+	root := CstNode{Kind: CstNodeKind__File__Ctor(), Span: syntaxSpan(0, 6), Children: []CstElement{CstElement__NodeElement__Ctor(&child), CstElement__TriviaElement__Ctor(gap)}, HasError: false}
+	if !cstNodeChildrenFit(root) {
+		t.Fatal("CST node children must fit inside their parent range")
 	} else {
 	}
 	tree := SyntaxTree{SourceName: "model.mygo", Source: "value ", Root: &root, Diagnostics: []SyntaxDiagnostic{}}
-	view := SyntaxNode{Root: tree.Root, Node: &child, Path: []int{0}}
+	view := SyntaxNodeView{Root: tree.Root, Node: &child, Path: []int{0}}
 	token := SyntaxToken{Root: tree.Root, ParentPath: view.Path, ChildIndex: 0, Token: name}
 	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(token.ParentPath, 0)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[int]); ok {
 		if token.Token.Span.End.Offset != 5 || __mygo_match___mygo_expr_1.F0 != 0 {
-			t.Fatal("red token view must retain its green token range and path")
+			t.Fatal("red token view must retain its CST token range and path")
 		} else {
 		}
 	} else {
@@ -37,23 +37,23 @@ func TestGreenSyntaxModelKeepsChildRanges(t *testing.T) {
 	return
 }
 func TestSyntaxNavigationTraversesPathAndSiblings(t *testing.T) {
-	leftToken := GreenToken{Kind: GreenTokenKind__Identifier__Ctor(), Raw: "left", Span: syntaxSpan(0, 4)}
-	rightToken := GreenToken{Kind: GreenTokenKind__Identifier__Ctor(), Raw: "right", Span: syntaxSpan(5, 10)}
-	left := &GreenNode{Kind: GreenNodeKind__Expression__Ctor(), Span: syntaxSpan(0, 4), Children: []GreenElement{GreenElement__TokenElement__Ctor(leftToken)}, HasError: false}
-	gap := GreenTrivia{Kind: GreenTriviaKind__Whitespace__Ctor(), Raw: " ", Span: syntaxSpan(4, 5)}
-	right := &GreenNode{Kind: GreenNodeKind__Pattern__Ctor(), Span: syntaxSpan(5, 10), Children: []GreenElement{GreenElement__TokenElement__Ctor(rightToken)}, HasError: false}
-	root := &GreenNode{Kind: GreenNodeKind__File__Ctor(), Span: syntaxSpan(0, 10), Children: []GreenElement{GreenElement__NodeElement__Ctor(left), GreenElement__TriviaElement__Ctor(gap), GreenElement__NodeElement__Ctor(right)}, HasError: false}
+	leftToken := CstToken{Kind: CstTokenKind__Identifier__Ctor(), Raw: "left", Span: syntaxSpan(0, 4)}
+	rightToken := CstToken{Kind: CstTokenKind__Identifier__Ctor(), Raw: "right", Span: syntaxSpan(5, 10)}
+	left := &CstNode{Kind: CstNodeKind__Expression__Ctor(), Span: syntaxSpan(0, 4), Children: []CstElement{CstElement__TokenElement__Ctor(leftToken)}, HasError: false}
+	gap := CstTrivia{Kind: CstTriviaKind__Whitespace__Ctor(), Raw: " ", Span: syntaxSpan(4, 5)}
+	right := &CstNode{Kind: CstNodeKind__Pattern__Ctor(), Span: syntaxSpan(5, 10), Children: []CstElement{CstElement__TokenElement__Ctor(rightToken)}, HasError: false}
+	root := &CstNode{Kind: CstNodeKind__File__Ctor(), Span: syntaxSpan(0, 10), Children: []CstElement{CstElement__NodeElement__Ctor(left), CstElement__TriviaElement__Ctor(gap), CstElement__NodeElement__Ctor(right)}, HasError: false}
 	__mygo_expr_0 := syntaxNodeAtPath(root, []int{0}, 0)
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SyntaxNode]); ok {
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[SyntaxNodeView]); ok {
 		__mygo_expr_2 := struct {
-			F0 Option[SyntaxNode]
-			F1 Option[SyntaxNode]
+			F0 Option[SyntaxNodeView]
+			F1 Option[SyntaxNodeView]
 			F2 Option[SyntaxToken]
-		}{F0: syntaxNodeParent(__mygo_match___mygo_expr_1.F0), F1: syntaxNodeNextSibling(__mygo_match___mygo_expr_1.F0), F2: syntaxNodeToken(__mygo_match___mygo_expr_1.F0, 0)}
-		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.F0.(Option__Some[SyntaxNode]); ok {
-			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.F1.(Option__Some[SyntaxNode]); ok {
+		}{F0: MygoIN14SyntaxNodeViewM6Parent(__mygo_match___mygo_expr_1.F0), F1: MygoIN14SyntaxNodeViewM11NextSibling(__mygo_match___mygo_expr_1.F0), F2: MygoIN14SyntaxNodeViewM5Token(__mygo_match___mygo_expr_1.F0, 0)}
+		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.F0.(Option__Some[SyntaxNodeView]); ok {
+			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.F1.(Option__Some[SyntaxNodeView]); ok {
 				if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.F2.(Option__Some[SyntaxToken]); ok {
-					if syntaxNodeKind(__mygo_match___mygo_expr_3.F0) != GreenNodeKind__File__Ctor() || syntaxNodeKind(__mygo_match___mygo_expr_4.F0) != GreenNodeKind__Pattern__Ctor() || syntaxTokenRaw(__mygo_match___mygo_expr_5.F0) != "left" || syntaxTokenSpan(__mygo_match___mygo_expr_5.F0).End.Offset != 4 {
+					if MygoIN14SyntaxNodeViewM4Kind(__mygo_match___mygo_expr_3.F0) != CstNodeKind__File__Ctor() || MygoIN14SyntaxNodeViewM4Kind(__mygo_match___mygo_expr_4.F0) != CstNodeKind__Pattern__Ctor() || MygoIN11SyntaxTokenM3Raw(__mygo_match___mygo_expr_5.F0) != "left" || MygoIN11SyntaxTokenM4Span(__mygo_match___mygo_expr_5.F0).End.Offset != 4 {
 						t.Fatal("syntax traversal must preserve parent, sibling, token, and source range")
 					} else {
 					}
@@ -67,7 +67,7 @@ func TestSyntaxNavigationTraversesPathAndSiblings(t *testing.T) {
 			t.Fatal("syntax traversal must find parent, sibling, and token")
 		}
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[SyntaxNode]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[SyntaxNodeView]); ok {
 			t.Fatal("syntax path traversal must find nested child")
 		} else {
 		}
@@ -75,10 +75,10 @@ func TestSyntaxNavigationTraversesPathAndSiblings(t *testing.T) {
 	return
 }
 func TestGreenSyntaxModelRejectsOutOfRangeChild(t *testing.T) {
-	outside := GreenToken{Kind: GreenTokenKind__Identifier__Ctor(), Raw: "x", Span: syntaxSpan(3, 4)}
-	root := GreenNode{Kind: GreenNodeKind__File__Ctor(), Span: syntaxSpan(0, 3), Children: []GreenElement{GreenElement__TokenElement__Ctor(outside)}, HasError: true}
-	if greenNodeChildrenFit(root) {
-		t.Fatal("green node must reject a child outside its source range")
+	outside := CstToken{Kind: CstTokenKind__Identifier__Ctor(), Raw: "x", Span: syntaxSpan(3, 4)}
+	root := CstNode{Kind: CstNodeKind__File__Ctor(), Span: syntaxSpan(0, 3), Children: []CstElement{CstElement__TokenElement__Ctor(outside)}, HasError: true}
+	if cstNodeChildrenFit(root) {
+		t.Fatal("CST node must reject a child outside its source range")
 		return
 	} else {
 		return
@@ -91,11 +91,11 @@ func TestLexSourcePreservesAllLiteralAndTriviaBytes(t *testing.T) {
 		t.Fatal("lossless lexer must replay every input byte exactly once")
 	} else {
 	}
-	literals := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(lexed.Tokens, func(item GreenToken) bool {
-		return item.Kind == GreenTokenKind__StringLiteral__Ctor() || item.Kind == GreenTokenKind__RawStringLiteral__Ctor() || item.Kind == GreenTokenKind__TripleStringLiteral__Ctor() || item.Kind == GreenTokenKind__RuneLiteral__Ctor()
+	literals := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(lexed.Tokens, func(item CstToken) bool {
+		return item.Kind == CstTokenKind__StringLiteral__Ctor() || item.Kind == CstTokenKind__RawStringLiteral__Ctor() || item.Kind == CstTokenKind__TripleStringLiteral__Ctor() || item.Kind == CstTokenKind__RuneLiteral__Ctor()
 	})
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(literals) != 4 || MygoIN6OptionM6IsNone[*GreenTrivia](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(lexed.Trivia, func(item_1 GreenTrivia) bool {
-		return item_1.Kind == GreenTriviaKind__Comment__Ctor()
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(literals) != 4 || MygoIN6OptionM6IsNone[*CstTrivia](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(lexed.Trivia, func(item_1 CstTrivia) bool {
+		return item_1.Kind == CstTriviaKind__Comment__Ctor()
 	})) {
 		t.Fatal("lossless lexer did not recognize comment and literal modes")
 		return
@@ -107,13 +107,13 @@ func TestDelimitedSyntaxOwnsNestedSourceExactlyOnce(t *testing.T) {
 	source := "func f(x: (Int, Slice[String])) => { x }\n"
 	tree := buildDelimitedSyntax("nested.mygo", source)
 	root := *tree.Root
-	if !greenNodeChildrenFit(root) || greenNodeText(root) != source {
+	if !cstNodeChildrenFit(root) || cstNodeText(root) != source {
 		t.Fatal("CST delimiter nesting must retain every source byte exactly once")
 	} else {
 	}
-	groups := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(root.Children, func(item GreenElement) bool {
+	groups := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(root.Children, func(item CstElement) bool {
 		var __mygo_expr_0 bool
-		if _, ok := item.(GreenElement__NodeElement); ok {
+		if _, ok := item.(CstElement__NodeElement); ok {
 			__mygo_expr_0 = true
 		} else {
 			__mygo_expr_0 = false
@@ -121,7 +121,7 @@ func TestDelimitedSyntaxOwnsNestedSourceExactlyOnce(t *testing.T) {
 		return __mygo_expr_0
 	})
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(groups) == 0 {
-		t.Fatal("CST must represent paired delimiters as structural green nodes")
+		t.Fatal("CST must represent paired delimiters as structural CST nodes")
 		return
 	} else {
 		return
@@ -131,14 +131,14 @@ func TestDelimitedSyntaxOwnsNestedKeywordBlocks(t *testing.T) {
 	source := "if ready then\n  switch value\n    case Some(x) then\n      x\n    end\n  end\nelse\n  none\nend\n"
 	tree := buildDelimitedSyntax("blocks.mygo", source)
 	root := *tree.Root
-	if greenNodeText(root) != source {
+	if cstNodeText(root) != source {
 		t.Fatal("keyword blocks must retain every source byte")
 	} else {
 	}
-	blocks := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(root.Children, func(item GreenElement) bool {
+	blocks := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter(root.Children, func(item CstElement) bool {
 		var __mygo_expr_0 bool
-		if __mygo_match___mygo_expr_1, ok := item.(GreenElement__NodeElement); ok {
-			__mygo_expr_0 = (*__mygo_match___mygo_expr_1.F0).Kind == GreenNodeKind__IfBlock__Ctor()
+		if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
+			__mygo_expr_0 = (*__mygo_match___mygo_expr_1.F0).Kind == CstNodeKind__IfBlock__Ctor()
 		} else {
 			__mygo_expr_0 = false
 		}
@@ -154,10 +154,10 @@ func TestDelimitedSyntaxOwnsNestedKeywordBlocks(t *testing.T) {
 func TestDelimitedSyntaxGroupsTopLevelDeclarations(t *testing.T) {
 	source := "package p\n\nfunc f() => 1\n\nlet value = f()\n"
 	tree := buildDelimitedSyntax("decls.mygo", source)
-	declarations := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter((*tree.Root).Children, func(item GreenElement) bool {
+	declarations := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter((*tree.Root).Children, func(item CstElement) bool {
 		var __mygo_expr_0 bool
-		if __mygo_match___mygo_expr_1, ok := item.(GreenElement__NodeElement); ok {
-			__mygo_expr_0 = greenNodeIsDeclaration(*__mygo_match___mygo_expr_1.F0)
+		if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
+			__mygo_expr_0 = cstNodeIsDeclaration(*__mygo_match___mygo_expr_1.F0)
 		} else {
 			__mygo_expr_0 = false
 		}
@@ -167,7 +167,7 @@ func TestDelimitedSyntaxGroupsTopLevelDeclarations(t *testing.T) {
 		t.Fatal("file CST must create one node per top-level declaration")
 		return
 	} else {
-		if greenNodeText(*tree.Root) != source {
+		if cstNodeText(*tree.Root) != source {
 			t.Fatal("file CST must retain declaration trivia byte-for-byte")
 			return
 		} else {
@@ -182,7 +182,7 @@ func TestGroupedTypeAndPatternRetainNestedSource(t *testing.T) {
 	patternTree := buildDelimitedSyntax("pattern.mygo", patternSource)
 	typeResult := parseType(SyntaxCursor{Elements: (*typeTree.Root).Children, Index: 0})
 	patternResult := parsePattern(SyntaxCursor{Elements: (*patternTree.Root).Children, Index: 0})
-	if syntaxResultKind(typeResult) != GreenNodeKind__TupleType__Ctor() || syntaxResultKind(patternResult) != GreenNodeKind__TuplePattern__Ctor() {
+	if syntaxResultKind(typeResult) != CstNodeKind__TupleType__Ctor() || syntaxResultKind(patternResult) != CstNodeKind__TuplePattern__Ctor() {
 		t.Fatal("grouped type and pattern must retain their tuple CST alternatives")
 		return
 	} else {
@@ -193,7 +193,7 @@ func TestGenericTypeRetainsTypeArguments(t *testing.T) {
 	source := "Slice[Result[String]]"
 	tree := buildDelimitedSyntax("generic.mygo", source)
 	result := parseType(SyntaxCursor{Elements: (*tree.Root).Children, Index: 0})
-	if syntaxResultKind(result) != GreenNodeKind__GenericType__Ctor() {
+	if syntaxResultKind(result) != CstNodeKind__GenericType__Ctor() {
 		t.Fatal("generic types must own their bracketed type arguments")
 		return
 	} else {
@@ -215,21 +215,21 @@ func TestExpressionGroupKinds(t *testing.T) {
 	structLiteral := parseExpr(SyntaxCursor{Elements: (*structTree.Root).Children, Index: 2})
 	map_ := parseExpr(SyntaxCursor{Elements: (*mapTree.Root).Children, Index: 0})
 	set := parseExpr(SyntaxCursor{Elements: (*setTree.Root).Children, Index: 0})
-	if syntaxResultKind(call) != GreenNodeKind__Call__Ctor() || syntaxResultKind(paren) != GreenNodeKind__ParenExpr__Ctor() || syntaxResultKind(unit) != GreenNodeKind__UnitExpr__Ctor() || syntaxResultKind(tuple) != GreenNodeKind__TupleExpr__Ctor() || syntaxResultKind(structLiteral) != GreenNodeKind__StructLiteral__Ctor() || syntaxResultKind(map_) != GreenNodeKind__MapLiteral__Ctor() || syntaxResultKind(set) != GreenNodeKind__SetLiteral__Ctor() {
+	if syntaxResultKind(call) != CstNodeKind__Call__Ctor() || syntaxResultKind(paren) != CstNodeKind__ParenExpr__Ctor() || syntaxResultKind(unit) != CstNodeKind__UnitExpr__Ctor() || syntaxResultKind(tuple) != CstNodeKind__TupleExpr__Ctor() || syntaxResultKind(structLiteral) != CstNodeKind__StructLiteral__Ctor() || syntaxResultKind(map_) != CstNodeKind__MapLiteral__Ctor() || syntaxResultKind(set) != CstNodeKind__SetLiteral__Ctor() {
 		t.Fatal("expression groups must preserve their specific CST kinds")
 		return
 	} else {
 		return
 	}
 }
-func syntaxResultKind(result SyntaxParseResult) GreenNodeKind {
+func syntaxResultKind(result SyntaxParseResult) CstNodeKind {
 	__mygo_expr_0 := result.Node
-	var __mygo_expr_1 GreenNodeKind
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*GreenNode]); ok {
+	var __mygo_expr_1 CstNodeKind
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 		__mygo_expr_1 = (*__mygo_match___mygo_expr_2.F0).Kind
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[*GreenNode]); ok {
-			__mygo_expr_1 = GreenNodeKind__Error__Ctor()
+		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
+			__mygo_expr_1 = CstNodeKind__Error__Ctor()
 		} else {
 		}
 	}
@@ -238,10 +238,10 @@ func syntaxResultKind(result SyntaxParseResult) GreenNodeKind {
 func syntaxResultText(result SyntaxParseResult) string {
 	__mygo_expr_0 := result.Node
 	var __mygo_expr_1 string
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*GreenNode]); ok {
-		__mygo_expr_1 = greenNodeText(*__mygo_match___mygo_expr_2.F0)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
+		__mygo_expr_1 = cstNodeText(*__mygo_match___mygo_expr_2.F0)
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[*GreenNode]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = ""
 		} else {
 		}
@@ -253,7 +253,7 @@ func TestRecursiveTypeCstPreservesStructure(t *testing.T) {
 	unit := typeSyntaxOf("type T = ()\n")
 	generic := typeSyntaxOf("type T = Slice[Map[String, Slice[Int]]]\n")
 	funcType := typeSyntaxOf("type T = func(Int, String) -> Slice[Bool]\n")
-	if syntaxResultKind(tuple) != GreenNodeKind__TupleType__Ctor() || syntaxResultKind(unit) != GreenNodeKind__UnitType__Ctor() || syntaxResultKind(generic) != GreenNodeKind__GenericType__Ctor() || syntaxResultKind(funcType) != GreenNodeKind__FuncType__Ctor() {
+	if syntaxResultKind(tuple) != CstNodeKind__TupleType__Ctor() || syntaxResultKind(unit) != CstNodeKind__UnitType__Ctor() || syntaxResultKind(generic) != CstNodeKind__GenericType__Ctor() || syntaxResultKind(funcType) != CstNodeKind__FuncType__Ctor() {
 		t.Fatal("recursive type CST must distinguish tuple, unit, generic, and function types")
 	} else {
 	}
@@ -268,43 +268,43 @@ func typeSyntaxOf(source string) SyntaxParseResult {
 	tree := ParseSyntaxAt("type-decl.mygo", source)
 	__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get((*tree.Root).Children, 0)
 	var __mygo_expr_1 SyntaxParseResult
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[GreenElement]); ok {
-		__mygo_expr_3 := greenElementNode(__mygo_match___mygo_expr_2.F0)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+		__mygo_expr_3 := cstElementNode(__mygo_match___mygo_expr_2.F0)
 		var __mygo_expr_4 SyntaxParseResult
-		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*GreenNode]); ok {
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
 			__mygo_expr_4 = typeAnnotationResult(*__mygo_match___mygo_expr_5.F0)
 		} else {
-			if _, ok := __mygo_expr_3.(Option__None[*GreenNode]); ok {
+			if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
 				__mygo_expr_4 = emptySyntaxResult()
 			} else {
 			}
 		}
 		__mygo_expr_1 = __mygo_expr_4
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[GreenElement]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 			__mygo_expr_1 = emptySyntaxResult()
 		} else {
 		}
 	}
 	return __mygo_expr_1
 }
-func typeAnnotationResult(node GreenNode) SyntaxParseResult {
-	__mygo_expr_0 := greenNodeFindChild(node, GreenNodeKind__TypeAnnotation__Ctor(), 0)
+func typeAnnotationResult(node CstNode) SyntaxParseResult {
+	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__TypeAnnotation__Ctor(), 0)
 	var __mygo_expr_1 SyntaxParseResult
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*GreenNode]); ok {
-		__mygo_expr_3 := greenNodeFindTypeChild(*__mygo_match___mygo_expr_2.F0, 0)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
+		__mygo_expr_3 := cstNodeFindTypeChild(*__mygo_match___mygo_expr_2.F0, 0)
 		var __mygo_expr_4 SyntaxParseResult
-		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*GreenNode]); ok {
-			__mygo_expr_4 = SyntaxParseResult{Node: Some[*GreenNode](__mygo_match___mygo_expr_5.F0), Cursor: SyntaxCursor{Elements: []GreenElement{}, Index: 0}}
+		if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[*CstNode]); ok {
+			__mygo_expr_4 = SyntaxParseResult{Node: Some[*CstNode](__mygo_match___mygo_expr_5.F0), Cursor: SyntaxCursor{Elements: []CstElement{}, Index: 0}}
 		} else {
-			if _, ok := __mygo_expr_3.(Option__None[*GreenNode]); ok {
+			if _, ok := __mygo_expr_3.(Option__None[*CstNode]); ok {
 				__mygo_expr_4 = emptySyntaxResult()
 			} else {
 			}
 		}
 		__mygo_expr_1 = __mygo_expr_4
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[*GreenNode]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = emptySyntaxResult()
 		} else {
 		}
@@ -312,45 +312,45 @@ func typeAnnotationResult(node GreenNode) SyntaxParseResult {
 	return __mygo_expr_1
 }
 func emptySyntaxResult() SyntaxParseResult {
-	return SyntaxParseResult{Node: None[*GreenNode](), Cursor: SyntaxCursor{Elements: []GreenElement{}, Index: 0}}
+	return SyntaxParseResult{Node: None[*CstNode](), Cursor: SyntaxCursor{Elements: []CstElement{}, Index: 0}}
 }
 func TestNestedGenericTypeRetainsTypeArguments(t *testing.T) {
 	result := typeSyntaxOf("type T = Slice[Map[String, Slice[Int]]]\n")
 	__mygo_expr_0 := result.Node
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*GreenNode]); ok {
-		if !greenNodeHasKind(*__mygo_match___mygo_expr_1.F0, GreenNodeKind__TypeArguments__Ctor()) || !greenNodeTypeArgumentsNested(*__mygo_match___mygo_expr_1.F0) {
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
+		if !cstNodeHasKind(*__mygo_match___mygo_expr_1.F0, CstNodeKind__TypeArguments__Ctor()) || !cstNodeTypeArgumentsNested(*__mygo_match___mygo_expr_1.F0) {
 			t.Fatal("nested generic arguments must own nested TypeArguments nodes")
 		} else {
 		}
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[*GreenNode]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			t.Fatal("nested generic type must parse")
 		} else {
 		}
 	}
 	return
 }
-func greenNodeTypeArgumentsNested(node GreenNode) bool {
-	__mygo_expr_0 := greenNodeFindChild(node, GreenNodeKind__TypeArguments__Ctor(), 0)
+func cstNodeTypeArgumentsNested(node CstNode) bool {
+	__mygo_expr_0 := cstNodeFindChild(node, CstNodeKind__TypeArguments__Ctor(), 0)
 	var __mygo_expr_1 bool
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*GreenNode]); ok {
-		__mygo_expr_1 = greenNodeContainsTypeArguments(*__mygo_match___mygo_expr_2.F0)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
+		__mygo_expr_1 = cstNodeContainsTypeArguments(*__mygo_match___mygo_expr_2.F0)
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[*GreenNode]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = false
 		} else {
 		}
 	}
 	return __mygo_expr_1
 }
-func greenNodeContainsTypeArguments(node GreenNode) bool {
-	return MygoIN6OptionM6IsSome[*GreenElement](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(node.Children, func(item GreenElement) bool {
-		__mygo_expr_0 := greenElementNode(item)
+func cstNodeContainsTypeArguments(node CstNode) bool {
+	return MygoIN6OptionM6IsSome[*CstElement](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(node.Children, func(item CstElement) bool {
+		__mygo_expr_0 := cstElementNode(item)
 		var __mygo_expr_1 bool
-		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*GreenNode]); ok {
-			__mygo_expr_1 = (*__mygo_match___mygo_expr_2.F0).Kind == GreenNodeKind__TypeArguments__Ctor() || greenNodeContainsTypeArguments(*__mygo_match___mygo_expr_2.F0)
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
+			__mygo_expr_1 = (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__TypeArguments__Ctor() || cstNodeContainsTypeArguments(*__mygo_match___mygo_expr_2.F0)
 		} else {
-			if _, ok := __mygo_expr_0.(Option__None[*GreenNode]); ok {
+			if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 				__mygo_expr_1 = false
 			} else {
 			}
@@ -431,7 +431,7 @@ func TestFunctionDeclarationOwnsUsingConstraints(t *testing.T) {
 	source := "func render(x: Int) -> String using Local: ToString[Int], Show => x\n"
 	tree := buildDelimitedSyntax("using.mygo", source)
 	root := *tree.Root
-	if !greenNodeHasKind(root, GreenNodeKind__Constraints__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__Constraint__Ctor()) || greenNodeText(root) != source {
+	if !cstNodeHasKind(root, CstNodeKind__Constraints__Ctor()) || !cstNodeHasKind(root, CstNodeKind__Constraint__Ctor()) || cstNodeText(root) != source {
 		t.Fatal("function declarations must own a structured using clause without losing source")
 		return
 	} else {
@@ -506,7 +506,7 @@ func constraintBindName(constraint ast2.Constraint) string {
 func TestDeclarationsOwnExpressionChildren(t *testing.T) {
 	source := "let result: Int = fn(x)\nfunc f() => { x }\n"
 	tree := buildDelimitedSyntax("decl-expr.mygo", source)
-	if !greenNodeHasExpression(*tree.Root) || !greenNodeHasKind(*tree.Root, GreenNodeKind__BindPattern__Ctor()) || !greenNodeHasKind(*tree.Root, GreenNodeKind__TypeAnnotation__Ctor()) || !greenNodeHasKind(*tree.Root, GreenNodeKind__ValueInitializer__Ctor()) || !greenNodeHasKind(*tree.Root, GreenNodeKind__NamedType__Ctor()) || greenNodeText(*tree.Root) != source {
+	if !cstNodeHasExpression(*tree.Root) || !cstNodeHasKind(*tree.Root, CstNodeKind__BindPattern__Ctor()) || !cstNodeHasKind(*tree.Root, CstNodeKind__TypeAnnotation__Ctor()) || !cstNodeHasKind(*tree.Root, CstNodeKind__ValueInitializer__Ctor()) || !cstNodeHasKind(*tree.Root, CstNodeKind__NamedType__Ctor()) || cstNodeText(*tree.Root) != source {
 		t.Fatal("declarations must own named typed initializer children without losing source")
 		return
 	} else {
@@ -515,7 +515,7 @@ func TestDeclarationsOwnExpressionChildren(t *testing.T) {
 }
 func TestFunctionDeclarationOwnsParameterPatterns(t *testing.T) {
 	tree := buildDelimitedSyntax("params.mygo", "func f(value: Int, other: String) -> Bool => value\n")
-	if !greenNodeHasKind(*tree.Root, GreenNodeKind__FunctionParameters__Ctor()) || !greenNodeHasKind(*tree.Root, GreenNodeKind__FunctionReturnType__Ctor()) || !greenNodeHasKind(*tree.Root, GreenNodeKind__BindPattern__Ctor()) || !greenNodeHasKind(*tree.Root, GreenNodeKind__TypeAnnotation__Ctor()) || greenNodeText(*tree.Root) != tree.Source {
+	if !cstNodeHasKind(*tree.Root, CstNodeKind__FunctionParameters__Ctor()) || !cstNodeHasKind(*tree.Root, CstNodeKind__FunctionReturnType__Ctor()) || !cstNodeHasKind(*tree.Root, CstNodeKind__BindPattern__Ctor()) || !cstNodeHasKind(*tree.Root, CstNodeKind__TypeAnnotation__Ctor()) || cstNodeText(*tree.Root) != tree.Source {
 		t.Fatal("function declarations must own parameter and return type ranges")
 		return
 	} else {
@@ -524,7 +524,7 @@ func TestFunctionDeclarationOwnsParameterPatterns(t *testing.T) {
 }
 func TestTypeDeclarationOwnsTypeRightHandSide(t *testing.T) {
 	tree := buildDelimitedSyntax("type-decl.mygo", "type Count = Int\n")
-	if !greenNodeHasKind(*tree.Root, GreenNodeKind__TypeDeclaration__Ctor()) || !greenNodeHasKind(*tree.Root, GreenNodeKind__TypeAnnotation__Ctor()) || !greenNodeHasKind(*tree.Root, GreenNodeKind__NamedType__Ctor()) || greenNodeText(*tree.Root) != tree.Source {
+	if !cstNodeHasKind(*tree.Root, CstNodeKind__TypeDeclaration__Ctor()) || !cstNodeHasKind(*tree.Root, CstNodeKind__TypeAnnotation__Ctor()) || !cstNodeHasKind(*tree.Root, CstNodeKind__NamedType__Ctor()) || cstNodeText(*tree.Root) != tree.Source {
 		t.Fatal("type declarations must own a structured type right hand side")
 		return
 	} else {
@@ -535,7 +535,7 @@ func TestKeywordBlocksOwnNestedBranches(t *testing.T) {
 	source := "if ready then\n  switch value\n    case Some(x) then\n      x\n    end\n    case None then\n      0\n    end\n  end\nelsif later then\n  1\nelse\n  2\nend\n"
 	tree := buildDelimitedSyntax("branches.mygo", source)
 	root := *tree.Root
-	if !greenNodeHasKind(root, GreenNodeKind__ElsifBranch__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__ElseBranch__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__CaseBranch__Ctor()) || greenNodeText(root) != source {
+	if !cstNodeHasKind(root, CstNodeKind__ElsifBranch__Ctor()) || !cstNodeHasKind(root, CstNodeKind__ElseBranch__Ctor()) || !cstNodeHasKind(root, CstNodeKind__CaseBranch__Ctor()) || cstNodeText(root) != source {
 		t.Fatal("keyword blocks must own nested branch ranges without losing source")
 		return
 	} else {
@@ -545,10 +545,10 @@ func TestKeywordBlocksOwnNestedBranches(t *testing.T) {
 func TestSyntaxRecoveryRetainsFollowingDeclarations(t *testing.T) {
 	source := "let first = 1\n)\nelse\nlet second = 2\nlet third = 3\n"
 	tree := buildDelimitedSyntax("recovery.mygo", source)
-	declarations := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter((*tree.Root).Children, func(item GreenElement) bool {
+	declarations := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter((*tree.Root).Children, func(item CstElement) bool {
 		var __mygo_expr_0 bool
-		if __mygo_match___mygo_expr_1, ok := item.(GreenElement__NodeElement); ok {
-			__mygo_expr_0 = greenNodeIsDeclaration(*__mygo_match___mygo_expr_1.F0)
+		if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
+			__mygo_expr_0 = cstNodeIsDeclaration(*__mygo_match___mygo_expr_1.F0)
 		} else {
 			__mygo_expr_0 = false
 		}
@@ -560,7 +560,7 @@ func TestSyntaxRecoveryRetainsFollowingDeclarations(t *testing.T) {
 	hasBranchRecovery := MygoIN6OptionM6IsSome[*SyntaxDiagnostic](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(tree.Diagnostics, func(diagnostic_1 SyntaxDiagnostic) bool {
 		return diagnostic_1.Recovery == "branch/end"
 	}))
-	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(declarations) != 3 || !hasDelimiterRecovery || !hasBranchRecovery || !greenNodeHasKind(*tree.Root, GreenNodeKind__Error__Ctor()) || greenNodeText(*tree.Root) != source {
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(declarations) != 3 || !hasDelimiterRecovery || !hasBranchRecovery || !cstNodeHasKind(*tree.Root, CstNodeKind__Error__Ctor()) || cstNodeText(*tree.Root) != source {
 		t.Fatal("recovery must retain error nodes and later declarations in source order")
 		return
 	} else {
@@ -573,16 +573,16 @@ func TestSyntaxRecoverySynchronizesAtTopLevelDeclaration(t *testing.T) {
 	topLevel := MygoIN6OptionM6IsSome[*SyntaxDiagnostic](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(tree.Diagnostics, func(diagnostic SyntaxDiagnostic) bool {
 		return diagnostic.Recovery == "top-level declaration"
 	}))
-	declarations := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter((*tree.Root).Children, func(item GreenElement) bool {
+	declarations := MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM6Filter((*tree.Root).Children, func(item CstElement) bool {
 		var __mygo_expr_0 bool
-		if __mygo_match___mygo_expr_1, ok := item.(GreenElement__NodeElement); ok {
-			__mygo_expr_0 = greenNodeIsDeclaration(*__mygo_match___mygo_expr_1.F0)
+		if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
+			__mygo_expr_0 = cstNodeIsDeclaration(*__mygo_match___mygo_expr_1.F0)
 		} else {
 			__mygo_expr_0 = false
 		}
 		return __mygo_expr_0
 	})
-	if !topLevel || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(declarations) != 1 || !greenNodeHasKind(*tree.Root, GreenNodeKind__Error__Ctor()) || greenNodeText(*tree.Root) != source {
+	if !topLevel || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(declarations) != 1 || !cstNodeHasKind(*tree.Root, CstNodeKind__Error__Ctor()) || cstNodeText(*tree.Root) != source {
 		t.Fatal("top-level recovery must retain the following declaration and source bytes")
 		return
 	} else {
@@ -598,7 +598,7 @@ func TestSyntaxRecoveryMarksUnclosedDelimiterAndBlock(t *testing.T) {
 	block := MygoIN6OptionM6IsSome[*SyntaxDiagnostic](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(tree.Diagnostics, func(diagnostic_1 SyntaxDiagnostic) bool {
 		return diagnostic_1.Message == "unclosed keyword block" && diagnostic_1.Recovery == "branch/end"
 	}))
-	if !delimiter || !block || !greenNodeHasKind(*tree.Root, GreenNodeKind__Error__Ctor()) || greenNodeText(*tree.Root) != source {
+	if !delimiter || !block || !cstNodeHasKind(*tree.Root, CstNodeKind__Error__Ctor()) || cstNodeText(*tree.Root) != source {
 		t.Fatal("unclosed structures must become recoverable error nodes without losing bytes")
 		return
 	} else {
@@ -609,7 +609,7 @@ func TestSyntaxRecoveryPreservesMalformedLiteralBytes(t *testing.T) {
 	ordinary := buildDelimitedSyntax("ordinary.mygo", "let value = \"unterminated")
 	raw := buildDelimitedSyntax("raw.mygo", "let value = `unterminated")
 	triple := buildDelimitedSyntax("triple.mygo", "let value = \"\"\"unterminated")
-	if !syntaxTreeHasLiteralDiagnostic(ordinary) || !syntaxTreeHasLiteralDiagnostic(raw) || !syntaxTreeHasLiteralDiagnostic(triple) || greenNodeText(*ordinary.Root) != ordinary.Source || greenNodeText(*raw.Root) != raw.Source || greenNodeText(*triple.Root) != triple.Source {
+	if !syntaxTreeHasLiteralDiagnostic(ordinary) || !syntaxTreeHasLiteralDiagnostic(raw) || !syntaxTreeHasLiteralDiagnostic(triple) || cstNodeText(*ordinary.Root) != ordinary.Source || cstNodeText(*raw.Root) != raw.Source || cstNodeText(*triple.Root) != triple.Source {
 		t.Fatal("malformed literals must retain original bytes in recovered error nodes")
 		return
 	} else {
@@ -620,7 +620,7 @@ func TestParseSyntaxRecoversWhileAstParsingRemainsStrict(t *testing.T) {
 	source := "package sample\nlet broken = (\nlet recovered = 1\n"
 	syntax := ParseSyntaxAt("recoverable.mygo", source)
 	ast := ParseFileAt("recoverable.mygo", source)
-	if syntax.SourceName != "recoverable.mygo" || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(syntax.Diagnostics) == 0 || !greenNodeHasKind(*syntax.Root, GreenNodeKind__Error__Ctor()) || !syntaxAstParseIsErr(ast) {
+	if syntax.SourceName != "recoverable.mygo" || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(syntax.Diagnostics) == 0 || !cstNodeHasKind(*syntax.Root, CstNodeKind__Error__Ctor()) || !syntaxAstParseIsErr(ast) {
 		t.Fatal("syntax parsing must recover while AST parsing remains strict")
 		return
 	} else {
@@ -641,16 +641,16 @@ func TestSyntaxLoweringContractUsesTypedSemanticChildren(t *testing.T) {
 	tree := ParseSyntaxAt("contract.mygo", "let value: Slice[Int] = 1\nfunc f(item: Int) -> Bool => true\n")
 	root := syntaxTreeRoot(tree)
 	__mygo_expr_0 := struct {
-		F0 Option[SyntaxNode]
-		F1 Option[SyntaxNode]
-	}{F0: syntaxNodeFirstChildOfKind(root, GreenNodeKind__LetDeclaration__Ctor()), F1: syntaxNodeFirstChildOfKind(root, GreenNodeKind__FuncDeclaration__Ctor())}
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.F0.(Option__Some[SyntaxNode]); ok {
-		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F1.(Option__Some[SyntaxNode]); ok {
-			if !syntaxOptionalNodeHasKind(syntaxDeclarationPattern(__mygo_match___mygo_expr_1.F0), GreenNodeKind__BindPattern__Ctor()) || !syntaxOptionalNodeHasKind(syntaxDeclarationTypeAnnotation(__mygo_match___mygo_expr_1.F0), GreenNodeKind__TypeAnnotation__Ctor()) || !syntaxOptionalNodeHasKind(syntaxDeclarationInitializer(__mygo_match___mygo_expr_1.F0), GreenNodeKind__ValueInitializer__Ctor()) || !syntaxOptionalNodeHasKind(syntaxFunctionParameters(__mygo_match___mygo_expr_2.F0), GreenNodeKind__FunctionParameters__Ctor()) || !syntaxOptionalNodeHasKind(syntaxFunctionReturnType(__mygo_match___mygo_expr_2.F0), GreenNodeKind__FunctionReturnType__Ctor()) || !syntaxOptionalNodeHasKind(syntaxDeclarationInitializer(__mygo_match___mygo_expr_2.F0), GreenNodeKind__ValueInitializer__Ctor()) {
+		F0 Option[SyntaxNodeView]
+		F1 Option[SyntaxNodeView]
+	}{F0: MygoIN14SyntaxNodeViewM16FirstChildOfKind(root, CstNodeKind__LetDeclaration__Ctor()), F1: MygoIN14SyntaxNodeViewM16FirstChildOfKind(root, CstNodeKind__FuncDeclaration__Ctor())}
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.F0.(Option__Some[SyntaxNodeView]); ok {
+		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.F1.(Option__Some[SyntaxNodeView]); ok {
+			if !syntaxOptionalNodeHasKind(syntaxDeclarationPattern(__mygo_match___mygo_expr_1.F0), CstNodeKind__BindPattern__Ctor()) || !syntaxOptionalNodeHasKind(syntaxDeclarationTypeAnnotation(__mygo_match___mygo_expr_1.F0), CstNodeKind__TypeAnnotation__Ctor()) || !syntaxOptionalNodeHasKind(syntaxDeclarationInitializer(__mygo_match___mygo_expr_1.F0), CstNodeKind__ValueInitializer__Ctor()) || !syntaxOptionalNodeHasKind(syntaxFunctionParameters(__mygo_match___mygo_expr_2.F0), CstNodeKind__FunctionParameters__Ctor()) || !syntaxOptionalNodeHasKind(syntaxFunctionReturnType(__mygo_match___mygo_expr_2.F0), CstNodeKind__FunctionReturnType__Ctor()) || !syntaxOptionalNodeHasKind(syntaxDeclarationInitializer(__mygo_match___mygo_expr_2.F0), CstNodeKind__ValueInitializer__Ctor()) {
 				t.Fatal("typed syntax accessors must expose declaration slots")
 			} else {
 			}
-			if !syntaxOptionalNodeHasKind(syntaxTypeAnnotationValueFromOption(syntaxDeclarationTypeAnnotation(__mygo_match___mygo_expr_1.F0)), GreenNodeKind__GenericType__Ctor()) || !syntaxOptionalNodeHasKind(syntaxInitializerExpressionFromOption(syntaxDeclarationInitializer(__mygo_match___mygo_expr_1.F0)), GreenNodeKind__NumberExpr__Ctor()) || !syntaxOptionalNodeHasKind(syntaxInitializerExpressionFromOption(syntaxDeclarationInitializer(__mygo_match___mygo_expr_2.F0)), GreenNodeKind__BoolExpr__Ctor()) {
+			if !syntaxOptionalNodeHasKind(syntaxTypeAnnotationValueFromOption(syntaxDeclarationTypeAnnotation(__mygo_match___mygo_expr_1.F0)), CstNodeKind__GenericType__Ctor()) || !syntaxOptionalNodeHasKind(syntaxInitializerExpressionFromOption(syntaxDeclarationInitializer(__mygo_match___mygo_expr_1.F0)), CstNodeKind__NumberExpr__Ctor()) || !syntaxOptionalNodeHasKind(syntaxInitializerExpressionFromOption(syntaxDeclarationInitializer(__mygo_match___mygo_expr_2.F0)), CstNodeKind__BoolExpr__Ctor()) {
 				t.Fatal("typed syntax accessors must expose type and expression children")
 			} else {
 			}
@@ -662,45 +662,45 @@ func TestSyntaxLoweringContractUsesTypedSemanticChildren(t *testing.T) {
 	}
 	return
 }
-func syntaxOptionalNodeHasKind(node Option[SyntaxNode], kind GreenNodeKind) bool {
+func syntaxOptionalNodeHasKind(node Option[SyntaxNodeView], kind CstNodeKind) bool {
 	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_1, ok := node.(Option__Some[SyntaxNode]); ok {
-		__mygo_expr_0 = syntaxNodeKind(__mygo_match___mygo_expr_1.F0) == kind
+	if __mygo_match___mygo_expr_1, ok := node.(Option__Some[SyntaxNodeView]); ok {
+		__mygo_expr_0 = MygoIN14SyntaxNodeViewM4Kind(__mygo_match___mygo_expr_1.F0) == kind
 	} else {
-		if _, ok := node.(Option__None[SyntaxNode]); ok {
+		if _, ok := node.(Option__None[SyntaxNodeView]); ok {
 			__mygo_expr_0 = false
 		} else {
 		}
 	}
 	return __mygo_expr_0
 }
-func syntaxTypeAnnotationValueFromOption(node Option[SyntaxNode]) Option[SyntaxNode] {
-	var __mygo_expr_0 Option[SyntaxNode]
-	if __mygo_match___mygo_expr_1, ok := node.(Option__Some[SyntaxNode]); ok {
+func syntaxTypeAnnotationValueFromOption(node Option[SyntaxNodeView]) Option[SyntaxNodeView] {
+	var __mygo_expr_0 Option[SyntaxNodeView]
+	if __mygo_match___mygo_expr_1, ok := node.(Option__Some[SyntaxNodeView]); ok {
 		__mygo_expr_0 = syntaxTypeAnnotationValue(__mygo_match___mygo_expr_1.F0)
 	} else {
-		if _, ok := node.(Option__None[SyntaxNode]); ok {
-			__mygo_expr_0 = None[SyntaxNode]()
+		if _, ok := node.(Option__None[SyntaxNodeView]); ok {
+			__mygo_expr_0 = None[SyntaxNodeView]()
 		} else {
 		}
 	}
 	return __mygo_expr_0
 }
-func syntaxInitializerExpressionFromOption(node Option[SyntaxNode]) Option[SyntaxNode] {
-	var __mygo_expr_0 Option[SyntaxNode]
-	if __mygo_match___mygo_expr_1, ok := node.(Option__Some[SyntaxNode]); ok {
+func syntaxInitializerExpressionFromOption(node Option[SyntaxNodeView]) Option[SyntaxNodeView] {
+	var __mygo_expr_0 Option[SyntaxNodeView]
+	if __mygo_match___mygo_expr_1, ok := node.(Option__Some[SyntaxNodeView]); ok {
 		__mygo_expr_0 = syntaxInitializerExpression(__mygo_match___mygo_expr_1.F0)
 	} else {
-		if _, ok := node.(Option__None[SyntaxNode]); ok {
-			__mygo_expr_0 = None[SyntaxNode]()
+		if _, ok := node.(Option__None[SyntaxNodeView]); ok {
+			__mygo_expr_0 = None[SyntaxNodeView]()
 		} else {
 		}
 	}
 	return __mygo_expr_0
 }
 func TestLowerSyntaxRejectsDiagnosticFreeUnsupportedNode(t *testing.T) {
-	unsupported := &GreenNode{Kind: GreenNodeKind__ParenGroup__Ctor(), Span: syntaxSpan(0, 2), Children: []GreenElement{}, HasError: false}
-	tree := SyntaxTree{SourceName: "unsupported.mygo", Source: "()", Root: &GreenNode{Kind: GreenNodeKind__File__Ctor(), Span: syntaxSpan(0, 2), Children: []GreenElement{GreenElement__NodeElement__Ctor(unsupported)}, HasError: false}, Diagnostics: []SyntaxDiagnostic{}}
+	unsupported := &CstNode{Kind: CstNodeKind__ParenGroup__Ctor(), Span: syntaxSpan(0, 2), Children: []CstElement{}, HasError: false}
+	tree := SyntaxTree{SourceName: "unsupported.mygo", Source: "()", Root: &CstNode{Kind: CstNodeKind__File__Ctor(), Span: syntaxSpan(0, 2), Children: []CstElement{CstElement__NodeElement__Ctor(unsupported)}, HasError: false}, Diagnostics: []SyntaxDiagnostic{}}
 	if !syntaxAstParseIsErr(LowerSyntax(tree)) {
 		t.Fatal("diagnostic-free unsupported CST nodes must not lower partially")
 		return
@@ -709,7 +709,7 @@ func TestLowerSyntaxRejectsDiagnosticFreeUnsupportedNode(t *testing.T) {
 	}
 }
 func TestSyntaxLoweringSupportFrontierIsExplicit(t *testing.T) {
-	if !syntaxLoweringSupportsNodeKind(GreenNodeKind__LetDeclaration__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__GenericType__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__TupleType__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__UnitType__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__FuncType__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__StructDeclaration__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__EnumDeclaration__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__InterfaceDeclaration__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__ImplDeclaration__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__ImportDeclaration__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__WildcardPattern__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__LiteralPattern__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__TuplePattern__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__VariantPattern__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__StructVariantPattern__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__Call__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__UnaryExpr__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__BinaryExpr__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__FieldExpr__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__TypeAsExpr__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__SliceLiteral__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__MapLiteral__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__SetLiteral__Ctor()) || !syntaxLoweringSupportsNodeKind(GreenNodeKind__StructLiteral__Ctor()) {
+	if !syntaxLoweringSupportsNodeKind(CstNodeKind__LetDeclaration__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__GenericType__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__TupleType__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__UnitType__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__FuncType__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__StructDeclaration__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__EnumDeclaration__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__InterfaceDeclaration__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__ImplDeclaration__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__ImportDeclaration__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__WildcardPattern__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__LiteralPattern__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__TuplePattern__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__VariantPattern__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__StructVariantPattern__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__Call__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__UnaryExpr__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__BinaryExpr__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__FieldExpr__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__TypeAsExpr__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__SliceLiteral__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__MapLiteral__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__SetLiteral__Ctor()) || !syntaxLoweringSupportsNodeKind(CstNodeKind__StructLiteral__Ctor()) {
 		t.Fatal("lowering support frontier must distinguish implemented and deferred CST kinds")
 		return
 	} else {
@@ -720,7 +720,7 @@ func TestRecursivePatternCstPreservesStructure(t *testing.T) {
 	source := "let (first, _) = pair\nlet (Some(x), None) = item\nswitch value\n  case 1 => a\n  case \"two\" => b\n  case _ => c\nend\n"
 	tree := buildDelimitedSyntax("patterns.mygo", source)
 	root := *tree.Root
-	if !greenNodeHasKind(root, GreenNodeKind__TuplePattern__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__WildcardPattern__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__LiteralPattern__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__VariantPattern__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__BindPattern__Ctor()) || greenNodeText(root) != source {
+	if !cstNodeHasKind(root, CstNodeKind__TuplePattern__Ctor()) || !cstNodeHasKind(root, CstNodeKind__WildcardPattern__Ctor()) || !cstNodeHasKind(root, CstNodeKind__LiteralPattern__Ctor()) || !cstNodeHasKind(root, CstNodeKind__VariantPattern__Ctor()) || !cstNodeHasKind(root, CstNodeKind__BindPattern__Ctor()) || cstNodeText(root) != source {
 		t.Fatal("recursive pattern CST must record tuple, wildcard, literal, variant, and bind alternatives without losing source")
 		return
 	} else {
@@ -731,7 +731,7 @@ func TestRecursivePatternCstOwnsBranchPatterns(t *testing.T) {
 	source := "switch value\n  case Some(x) => x\n  case (1, 2) => y\n  case _ => 0\nend\n"
 	tree := ParseSyntaxAt("branch-patterns.mygo", source)
 	root := *tree.Root
-	if !greenNodeHasKind(root, GreenNodeKind__CaseBranch__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__VariantPattern__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__TuplePattern__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__WildcardPattern__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__LiteralPattern__Ctor()) || greenNodeText(root) != source {
+	if !cstNodeHasKind(root, CstNodeKind__CaseBranch__Ctor()) || !cstNodeHasKind(root, CstNodeKind__VariantPattern__Ctor()) || !cstNodeHasKind(root, CstNodeKind__TuplePattern__Ctor()) || !cstNodeHasKind(root, CstNodeKind__WildcardPattern__Ctor()) || !cstNodeHasKind(root, CstNodeKind__LiteralPattern__Ctor()) || cstNodeText(root) != source {
 		t.Fatal("switch branches must own their recursive pattern nodes without losing source")
 	} else {
 	}
@@ -742,7 +742,7 @@ func TestRecursivePatternCstOwnsBranchPatterns(t *testing.T) {
 		return
 	}
 }
-func patternSyntaxOf(source string) Option[*GreenNode] {
+func patternSyntaxOf(source string) Option[*CstNode] {
 	tree := buildDelimitedSyntax("pattern.mygo", source)
 	result := parsePattern(SyntaxCursor{Elements: (*tree.Root).Children, Index: 0})
 	return result.Node
@@ -750,10 +750,10 @@ func patternSyntaxOf(source string) Option[*GreenNode] {
 func loweredPatternOf(source string) Result[ast2.Pattern, string] {
 	__mygo_expr_0 := patternSyntaxOf(source)
 	var __mygo_expr_1 Result[ast2.Pattern, string]
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*GreenNode]); ok {
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 		__mygo_expr_1 = lowerSyntaxPatternNode(*__mygo_match___mygo_expr_2.F0)
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[*GreenNode]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = Err[ast2.Pattern, string]("pattern fixture did not parse")
 		} else {
 		}
@@ -1031,7 +1031,7 @@ func importDeclIs(file ast2.File, index int, alias string, path string) bool {
 func TestStructDeclarationOwnsFieldSlots(t *testing.T) {
 	source := "struct List[A]\n  head: A\n  tail: Int `tag\"v\"`\n  embed T\nend\n"
 	tree := ParseSyntaxAt("struct.mygo", source)
-	if !greenNodeHasKind(*tree.Root, GreenNodeKind__TypeParameters__Ctor()) || !greenNodeHasKind(*tree.Root, GreenNodeKind__StructField__Ctor()) || greenNodeText(*tree.Root) != source {
+	if !cstNodeHasKind(*tree.Root, CstNodeKind__TypeParameters__Ctor()) || !cstNodeHasKind(*tree.Root, CstNodeKind__StructField__Ctor()) || cstNodeText(*tree.Root) != source {
 		t.Fatal("struct declarations must own type parameters and typed fields")
 	} else {
 	}
@@ -1143,7 +1143,7 @@ func structFieldTagIs(file ast2.File, index int, tag string) bool {
 func TestEnumDeclarationOwnsVariantSlots(t *testing.T) {
 	source := "enum Shape[A]\n  Circle(Int)\n  Rect { w: A, h: A }\nend\n"
 	tree := ParseSyntaxAt("enum.mygo", source)
-	if !greenNodeHasKind(*tree.Root, GreenNodeKind__EnumVariant__Ctor()) || greenNodeText(*tree.Root) != source {
+	if !cstNodeHasKind(*tree.Root, CstNodeKind__EnumVariant__Ctor()) || cstNodeText(*tree.Root) != source {
 		t.Fatal("enum declarations must own variant nodes")
 	} else {
 	}
@@ -1241,7 +1241,7 @@ func namedVariantMatches(file ast2.File, index int, name string, fields int) boo
 func TestInterfaceDeclarationOwnsMethodSignatures(t *testing.T) {
 	source := "interface Show\n  func show(x: Int) -> String\n  func other() -> ()\nend\n"
 	tree := ParseSyntaxAt("interface.mygo", source)
-	if !greenNodeHasKind(*tree.Root, GreenNodeKind__FuncSignature__Ctor()) || greenNodeText(*tree.Root) != source {
+	if !cstNodeHasKind(*tree.Root, CstNodeKind__FuncSignature__Ctor()) || cstNodeText(*tree.Root) != source {
 		t.Fatal("interface declarations must own function signature nodes")
 	} else {
 	}
@@ -1310,7 +1310,7 @@ func interfaceMethodMatches(file ast2.File, index int, name string, params int) 
 func TestImplDeclarationOwnsHeaderAndTarget(t *testing.T) {
 	source := "impl[T] List[T]: Show\n  func g() -> T\n  end\nend\n"
 	tree := ParseSyntaxAt("impl.mygo", source)
-	if !greenNodeHasKind(*tree.Root, GreenNodeKind__TypeParameters__Ctor()) || !greenNodeHasKind(*tree.Root, GreenNodeKind__TypeAnnotation__Ctor()) || !greenNodeHasKind(*tree.Root, GreenNodeKind__ImplMethod__Ctor()) || greenNodeText(*tree.Root) != source {
+	if !cstNodeHasKind(*tree.Root, CstNodeKind__TypeParameters__Ctor()) || !cstNodeHasKind(*tree.Root, CstNodeKind__TypeAnnotation__Ctor()) || !cstNodeHasKind(*tree.Root, CstNodeKind__ImplMethod__Ctor()) || cstNodeText(*tree.Root) != source {
 		t.Fatal("impl declarations must own type parameters, an interface annotation, and method nodes")
 	} else {
 	}
@@ -1431,27 +1431,27 @@ func typeDeclIsNominal(file ast2.File, index int) bool {
 func syntaxTreeHasLiteralDiagnostic(tree SyntaxTree) bool {
 	return MygoIN6OptionM6IsSome[*SyntaxDiagnostic](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(tree.Diagnostics, func(diagnostic SyntaxDiagnostic) bool {
 		return diagnostic.Message == "unterminated literal" && diagnostic.Recovery == "literal" && diagnostic.Span.Start.Offset > 0
-	})) && greenNodeHasKind(*tree.Root, GreenNodeKind__Error__Ctor())
+	})) && cstNodeHasKind(*tree.Root, CstNodeKind__Error__Ctor())
 }
-func greenNodeHasKind(node GreenNode, kind GreenNodeKind) bool {
-	return node.Kind == kind || MygoIN6OptionM6IsSome[*GreenElement](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(node.Children, func(item GreenElement) bool {
+func cstNodeHasKind(node CstNode, kind CstNodeKind) bool {
+	return node.Kind == kind || MygoIN6OptionM6IsSome[*CstElement](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(node.Children, func(item CstElement) bool {
 		var __mygo_expr_0 bool
-		if __mygo_match___mygo_expr_1, ok := item.(GreenElement__NodeElement); ok {
-			__mygo_expr_0 = greenNodeHasKind(*__mygo_match___mygo_expr_1.F0, kind)
+		if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
+			__mygo_expr_0 = cstNodeHasKind(*__mygo_match___mygo_expr_1.F0, kind)
 		} else {
 			__mygo_expr_0 = false
 		}
 		return __mygo_expr_0
 	}))
 }
-func greenNodeIsDeclaration(node GreenNode) bool {
-	return node.Kind == GreenNodeKind__Declaration__Ctor() || node.Kind == GreenNodeKind__PackageDeclaration__Ctor() || node.Kind == GreenNodeKind__ImportDeclaration__Ctor() || node.Kind == GreenNodeKind__LetDeclaration__Ctor() || node.Kind == GreenNodeKind__VarDeclaration__Ctor() || node.Kind == GreenNodeKind__FuncDeclaration__Ctor() || node.Kind == GreenNodeKind__TypeDeclaration__Ctor() || node.Kind == GreenNodeKind__StructDeclaration__Ctor() || node.Kind == GreenNodeKind__EnumDeclaration__Ctor() || node.Kind == GreenNodeKind__InterfaceDeclaration__Ctor() || node.Kind == GreenNodeKind__ImplDeclaration__Ctor()
+func cstNodeIsDeclaration(node CstNode) bool {
+	return node.Kind == CstNodeKind__Declaration__Ctor() || node.Kind == CstNodeKind__PackageDeclaration__Ctor() || node.Kind == CstNodeKind__ImportDeclaration__Ctor() || node.Kind == CstNodeKind__LetDeclaration__Ctor() || node.Kind == CstNodeKind__VarDeclaration__Ctor() || node.Kind == CstNodeKind__FuncDeclaration__Ctor() || node.Kind == CstNodeKind__TypeDeclaration__Ctor() || node.Kind == CstNodeKind__StructDeclaration__Ctor() || node.Kind == CstNodeKind__EnumDeclaration__Ctor() || node.Kind == CstNodeKind__InterfaceDeclaration__Ctor() || node.Kind == CstNodeKind__ImplDeclaration__Ctor()
 }
-func greenNodeHasExpression(node GreenNode) bool {
-	return node.Kind == GreenNodeKind__Expression__Ctor() || node.Kind == GreenNodeKind__IdentifierExpr__Ctor() || node.Kind == GreenNodeKind__NumberExpr__Ctor() || node.Kind == GreenNodeKind__StringExpr__Ctor() || node.Kind == GreenNodeKind__RuneExpr__Ctor() || node.Kind == GreenNodeKind__Call__Ctor() || node.Kind == GreenNodeKind__UnaryExpr__Ctor() || node.Kind == GreenNodeKind__BinaryExpr__Ctor() || node.Kind == GreenNodeKind__FieldExpr__Ctor() || node.Kind == GreenNodeKind__TypeAsExpr__Ctor() || node.Kind == GreenNodeKind__SliceLiteral__Ctor() || node.Kind == GreenNodeKind__MapLiteral__Ctor() || node.Kind == GreenNodeKind__SetLiteral__Ctor() || node.Kind == GreenNodeKind__StructLiteral__Ctor() || MygoIN6OptionM6IsSome[*GreenElement](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(node.Children, func(item GreenElement) bool {
+func cstNodeHasExpression(node CstNode) bool {
+	return node.Kind == CstNodeKind__Expression__Ctor() || node.Kind == CstNodeKind__IdentifierExpr__Ctor() || node.Kind == CstNodeKind__NumberExpr__Ctor() || node.Kind == CstNodeKind__StringExpr__Ctor() || node.Kind == CstNodeKind__RuneExpr__Ctor() || node.Kind == CstNodeKind__Call__Ctor() || node.Kind == CstNodeKind__UnaryExpr__Ctor() || node.Kind == CstNodeKind__BinaryExpr__Ctor() || node.Kind == CstNodeKind__FieldExpr__Ctor() || node.Kind == CstNodeKind__TypeAsExpr__Ctor() || node.Kind == CstNodeKind__SliceLiteral__Ctor() || node.Kind == CstNodeKind__MapLiteral__Ctor() || node.Kind == CstNodeKind__SetLiteral__Ctor() || node.Kind == CstNodeKind__StructLiteral__Ctor() || MygoIN6OptionM6IsSome[*CstElement](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(node.Children, func(item CstElement) bool {
 		var __mygo_expr_0 bool
-		if __mygo_match___mygo_expr_1, ok := item.(GreenElement__NodeElement); ok {
-			__mygo_expr_0 = greenNodeHasExpression(*__mygo_match___mygo_expr_1.F0)
+		if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
+			__mygo_expr_0 = cstNodeHasExpression(*__mygo_match___mygo_expr_1.F0)
 		} else {
 			__mygo_expr_0 = false
 		}
@@ -1465,11 +1465,11 @@ func TestExpressionAtomCstOwnsLiteralTokens(t *testing.T) {
 	source := atomExpressionSource()
 	tree := ParseSyntaxAt("atoms.mygo", source)
 	root := *tree.Root
-	if !greenNodeHasKind(root, GreenNodeKind__NumberExpr__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__BoolExpr__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__StringExpr__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__RuneExpr__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__UnitExpr__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__ParenExpr__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__TupleExpr__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__InlineGoExpr__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__InlineGoCode__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__InlineGoValueBinding__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__InlineGoTypeBinding__Ctor()) || greenNodeText(root) != source {
+	if !cstNodeHasKind(root, CstNodeKind__NumberExpr__Ctor()) || !cstNodeHasKind(root, CstNodeKind__BoolExpr__Ctor()) || !cstNodeHasKind(root, CstNodeKind__StringExpr__Ctor()) || !cstNodeHasKind(root, CstNodeKind__RuneExpr__Ctor()) || !cstNodeHasKind(root, CstNodeKind__UnitExpr__Ctor()) || !cstNodeHasKind(root, CstNodeKind__ParenExpr__Ctor()) || !cstNodeHasKind(root, CstNodeKind__TupleExpr__Ctor()) || !cstNodeHasKind(root, CstNodeKind__InlineGoExpr__Ctor()) || !cstNodeHasKind(root, CstNodeKind__InlineGoCode__Ctor()) || !cstNodeHasKind(root, CstNodeKind__InlineGoValueBinding__Ctor()) || !cstNodeHasKind(root, CstNodeKind__InlineGoTypeBinding__Ctor()) || cstNodeText(root) != source {
 		t.Fatal("expression atoms must each own a distinct CST kind without losing source")
 	} else {
 	}
-	if !greenNodeHasTokenKind(root, GreenTokenKind__StringLiteral__Ctor()) || !greenNodeHasTokenKind(root, GreenTokenKind__RawStringLiteral__Ctor()) || !greenNodeHasTokenKind(root, GreenTokenKind__TripleStringLiteral__Ctor()) || !greenNodeHasTokenKind(root, GreenTokenKind__RuneLiteral__Ctor()) {
+	if !cstNodeHasTokenKind(root, CstTokenKind__StringLiteral__Ctor()) || !cstNodeHasTokenKind(root, CstTokenKind__RawStringLiteral__Ctor()) || !cstNodeHasTokenKind(root, CstTokenKind__TripleStringLiteral__Ctor()) || !cstNodeHasTokenKind(root, CstTokenKind__RuneLiteral__Ctor()) {
 		t.Fatal("string, raw, triple, and rune atoms must retain their literal token kinds")
 	} else {
 	}
@@ -1480,14 +1480,14 @@ func TestExpressionAtomCstOwnsLiteralTokens(t *testing.T) {
 		return
 	}
 }
-func greenNodeHasTokenKind(node GreenNode, kind GreenTokenKind) bool {
-	return MygoIN6OptionM6IsSome[*GreenElement](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(node.Children, func(item GreenElement) bool {
+func cstNodeHasTokenKind(node CstNode, kind CstTokenKind) bool {
+	return MygoIN6OptionM6IsSome[*CstElement](MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Find(node.Children, func(item CstElement) bool {
 		var __mygo_expr_0 bool
-		if __mygo_match___mygo_expr_2, ok := item.(GreenElement__TokenElement); ok {
+		if __mygo_match___mygo_expr_2, ok := item.(CstElement__TokenElement); ok {
 			__mygo_expr_0 = __mygo_match___mygo_expr_2.F0.Kind == kind
 		} else {
-			if __mygo_match___mygo_expr_1, ok := item.(GreenElement__NodeElement); ok {
-				__mygo_expr_0 = greenNodeHasTokenKind(*__mygo_match___mygo_expr_1.F0, kind)
+			if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
+				__mygo_expr_0 = cstNodeHasTokenKind(*__mygo_match___mygo_expr_1.F0, kind)
 			} else {
 				__mygo_expr_0 = false
 			}
@@ -1820,7 +1820,7 @@ func TestOperatorAndPostfixCstOwnsNodes(t *testing.T) {
 	source := operatorExpressionSource()
 	tree := ParseSyntaxAt("operators.mygo", source)
 	root := *tree.Root
-	if !greenNodeHasKind(root, GreenNodeKind__BinaryExpr__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__UnaryExpr__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__FieldExpr__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__TypeAsExpr__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__Call__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__TypeArguments__Ctor()) || greenNodeText(root) != source {
+	if !cstNodeHasKind(root, CstNodeKind__BinaryExpr__Ctor()) || !cstNodeHasKind(root, CstNodeKind__UnaryExpr__Ctor()) || !cstNodeHasKind(root, CstNodeKind__FieldExpr__Ctor()) || !cstNodeHasKind(root, CstNodeKind__TypeAsExpr__Ctor()) || !cstNodeHasKind(root, CstNodeKind__Call__Ctor()) || !cstNodeHasKind(root, CstNodeKind__TypeArguments__Ctor()) || cstNodeText(root) != source {
 		t.Fatal("operator and postfix expressions must own distinct CST kinds without losing source")
 	} else {
 	}
@@ -2152,7 +2152,7 @@ func TestDelimitedExpressionCstOwnsNodes(t *testing.T) {
 	source := delimitedExpressionSource()
 	tree := ParseSyntaxAt("delimited.mygo", source)
 	root := *tree.Root
-	if !greenNodeHasKind(root, GreenNodeKind__SliceLiteral__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__MapLiteral__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__SetLiteral__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__StructLiteral__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__MapEntry__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__StructLitField__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__TypeArguments__Ctor()) || greenNodeText(root) != source {
+	if !cstNodeHasKind(root, CstNodeKind__SliceLiteral__Ctor()) || !cstNodeHasKind(root, CstNodeKind__MapLiteral__Ctor()) || !cstNodeHasKind(root, CstNodeKind__SetLiteral__Ctor()) || !cstNodeHasKind(root, CstNodeKind__StructLiteral__Ctor()) || !cstNodeHasKind(root, CstNodeKind__MapEntry__Ctor()) || !cstNodeHasKind(root, CstNodeKind__StructLitField__Ctor()) || !cstNodeHasKind(root, CstNodeKind__TypeArguments__Ctor()) || cstNodeText(root) != source {
 		t.Fatal("delimited literals must each own a distinct CST kind without losing source")
 	} else {
 	}
@@ -2574,7 +2574,7 @@ func TestBlockExpressionCstOwnsNodes(t *testing.T) {
 	source := blockExpressionSource()
 	tree := buildDelimitedSyntax("blocks.mygo", source)
 	root := *tree.Root
-	if !greenNodeHasKind(root, GreenNodeKind__IfBlock__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__SwitchBlock__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__WhileBlock__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__Block__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__ExprStatement__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__ElsifBranch__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__ElseBranch__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__CaseBranch__Ctor()) || greenNodeText(root) != source {
+	if !cstNodeHasKind(root, CstNodeKind__IfBlock__Ctor()) || !cstNodeHasKind(root, CstNodeKind__SwitchBlock__Ctor()) || !cstNodeHasKind(root, CstNodeKind__WhileBlock__Ctor()) || !cstNodeHasKind(root, CstNodeKind__Block__Ctor()) || !cstNodeHasKind(root, CstNodeKind__ExprStatement__Ctor()) || !cstNodeHasKind(root, CstNodeKind__ElsifBranch__Ctor()) || !cstNodeHasKind(root, CstNodeKind__ElseBranch__Ctor()) || !cstNodeHasKind(root, CstNodeKind__CaseBranch__Ctor()) || cstNodeText(root) != source {
 		t.Fatal("block expressions must own if/switch/while/branch statement nodes without losing source")
 	} else {
 	}
@@ -2589,11 +2589,11 @@ func TestBlockExpressionBranchesOwnHeadersAndBodies(t *testing.T) {
 	source := "switch value\n  case 1 then\n    a\n  end\n  case _ then\n    b\n  end\nend\n"
 	tree := buildDelimitedSyntax("branch-headers.mygo", source)
 	root := *tree.Root
-	if !greenNodeHasKind(root, GreenNodeKind__LiteralPattern__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__WildcardPattern__Ctor()) {
+	if !cstNodeHasKind(root, CstNodeKind__LiteralPattern__Ctor()) || !cstNodeHasKind(root, CstNodeKind__WildcardPattern__Ctor()) {
 		t.Fatal("a then-form case must type its header pattern instead of leaving raw expression leaves")
 	} else {
 	}
-	branches := greenNodeChildrenOfKind(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(greenNodeChildrenOfKind(root, GreenNodeKind__SwitchBlock__Ctor()), 0), root), GreenNodeKind__CaseBranch__Ctor())
+	branches := cstNodeChildrenOfKind(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cstNodeChildrenOfKind(root, CstNodeKind__SwitchBlock__Ctor()), 0), root), CstNodeKind__CaseBranch__Ctor())
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(branches) != 2 {
 		t.Fatal("a switch with two then-form arms must own exactly two branch nodes")
 	} else {
@@ -2604,18 +2604,18 @@ func TestBlockExpressionBranchesOwnHeadersAndBodies(t *testing.T) {
 		t.Fatal("each case branch span must cover its keyword, header, body, and closing end")
 	} else {
 	}
-	if greenNodeText(root) != source {
+	if cstNodeText(root) != source {
 		t.Fatal("branch splitting must retain every source byte")
 		return
 	} else {
 		return
 	}
 }
-func greenNodeChildrenOfKind(node GreenNode, kind GreenNodeKind) []GreenNode {
-	return greenNodeChildrenOfKindFrom(node, kind, 0, []GreenNode{})
+func cstNodeChildrenOfKind(node CstNode, kind CstNodeKind) []CstNode {
+	return cstNodeChildrenOfKindFrom(node, kind, 0, []CstNode{})
 }
-func greenNodeChildrenOfKindFrom(node GreenNode, kind GreenNodeKind, index int, output []GreenNode) []GreenNode {
-	return __mygo_mt_parser2_greenNodeChildrenOfKindFrom(node, kind, index, output, 0)
+func cstNodeChildrenOfKindFrom(node CstNode, kind CstNodeKind, index int, output []CstNode) []CstNode {
+	return __mygo_mt_parser2_cstNodeChildrenOfKindFrom(node, kind, index, output, 0)
 }
 func TestLowerSyntaxLowersBlockExpressions(t *testing.T) {
 	source := blockExpressionSource()
@@ -2799,11 +2799,11 @@ func TestStatementCstOwnsTypedNodes(t *testing.T) {
 	source := statementSource()
 	tree := ParseSyntaxAt("statements.mygo", source)
 	root := *tree.Root
-	if !greenNodeHasKind(root, GreenNodeKind__LetStatement__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__VarStatement__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__TupleLetStatement__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__AssignStatement__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__ReturnStatement__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__BreakStatement__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__ContinueStatement__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__LetRecStatement__Ctor()) || !greenNodeHasKind(root, GreenNodeKind__LetRecBinding__Ctor()) {
+	if !cstNodeHasKind(root, CstNodeKind__LetStatement__Ctor()) || !cstNodeHasKind(root, CstNodeKind__VarStatement__Ctor()) || !cstNodeHasKind(root, CstNodeKind__TupleLetStatement__Ctor()) || !cstNodeHasKind(root, CstNodeKind__AssignStatement__Ctor()) || !cstNodeHasKind(root, CstNodeKind__ReturnStatement__Ctor()) || !cstNodeHasKind(root, CstNodeKind__BreakStatement__Ctor()) || !cstNodeHasKind(root, CstNodeKind__ContinueStatement__Ctor()) || !cstNodeHasKind(root, CstNodeKind__LetRecStatement__Ctor()) || !cstNodeHasKind(root, CstNodeKind__LetRecBinding__Ctor()) {
 		t.Fatal("declaration bodies must type let/var/tuple-let/assign/return/break/continue/letrec statements")
 	} else {
 	}
-	if greenNodeText(root) != source {
+	if cstNodeText(root) != source {
 		t.Fatal("statement splitting must retain every source byte")
 	} else {
 	}
@@ -2817,41 +2817,41 @@ func TestStatementCstOwnsTypedNodes(t *testing.T) {
 func TestStatementCstKeepsRanges(t *testing.T) {
 	tree := ParseSyntaxAt("statements.mygo", statementSource())
 	root := *tree.Root
-	__mygo_expr_0 := greenNodeFindKind(root, GreenNodeKind__AssignStatement__Ctor())
-	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GreenNode]); ok {
-		if greenNodeText(__mygo_match___mygo_expr_1.F0) != "a = 3" {
+	__mygo_expr_0 := cstNodeFindKind(root, CstNodeKind__AssignStatement__Ctor())
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstNode]); ok {
+		if cstNodeText(__mygo_match___mygo_expr_1.F0) != "a = 3" {
 			t.Fatal("an assignment statement node must cover exactly its own source range")
 		} else {
 		}
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[GreenNode]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[CstNode]); ok {
 			t.Fatal("the statement fixture must own an assignment node")
 		} else {
 		}
 	}
-	__mygo_expr_2 := greenNodeFindKind(root, GreenNodeKind__LetRecBinding__Ctor())
-	if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[GreenNode]); ok {
-		if greenNodeText(__mygo_match___mygo_expr_3.F0) != "g: Int = 1" {
+	__mygo_expr_2 := cstNodeFindKind(root, CstNodeKind__LetRecBinding__Ctor())
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[CstNode]); ok {
+		if cstNodeText(__mygo_match___mygo_expr_3.F0) != "g: Int = 1" {
 			t.Fatal("a letrec binding node must cover exactly its own source range")
 		} else {
 		}
 	} else {
-		if _, ok := __mygo_expr_2.(Option__None[GreenNode]); ok {
+		if _, ok := __mygo_expr_2.(Option__None[CstNode]); ok {
 			t.Fatal("the statement fixture must own a letrec binding node")
 		} else {
 		}
 	}
 	return
 }
-func greenNodeFindKind(node GreenNode, kind GreenNodeKind) Option[GreenNode] {
+func cstNodeFindKind(node CstNode, kind CstNodeKind) Option[CstNode] {
 	if node.Kind == kind {
-		return Some[GreenNode](node)
+		return Some[CstNode](node)
 	} else {
-		return greenNodeFindKindIn(node, kind, 0)
+		return cstNodeFindKindIn(node, kind, 0)
 	}
 }
-func greenNodeFindKindIn(node GreenNode, kind GreenNodeKind, index int) Option[GreenNode] {
-	return __mygo_mt_parser2_greenNodeFindKindIn(node, kind, index, 0)
+func cstNodeFindKindIn(node CstNode, kind CstNodeKind, index int) Option[CstNode] {
+	return __mygo_mt_parser2_cstNodeFindKindIn(node, kind, index, 0)
 }
 func TestLowerSyntaxLowersStatementForms(t *testing.T) {
 	result := LowerSyntax(ParseSyntaxAt("statements.mygo", statementSource()))
@@ -3325,7 +3325,7 @@ func TestBranchBodyAssignmentsLowerAsAssignments(t *testing.T) {
 		t.Fatal("a well-formed branch body must parse without diagnostics")
 	} else {
 	}
-	if greenNodeText(*tree.Root) != source {
+	if cstNodeText(*tree.Root) != source {
 		t.Fatal("synthesizing a branch-body assignment must retain every source byte")
 	} else {
 	}
@@ -3441,7 +3441,7 @@ func TestMultiLineBinaryContinuationLowersAsOneStatement(t *testing.T) {
 		t.Fatal("a continued binary expression must parse without diagnostics")
 	} else {
 	}
-	if greenNodeText(*tree.Root) != source {
+	if cstNodeText(*tree.Root) != source {
 		t.Fatal("joining a continued statement must retain every source byte")
 	} else {
 	}
@@ -3638,15 +3638,15 @@ func loweredBlockSwitchPatternsAre(body ast2.Expr) bool {
 func switchCaseRunePatternsAre(cases []ast2.SwitchCase, index int) bool {
 	return __mygo_mt_parser2_switchCaseRunePatternsAre(cases, index, 0)
 }
-func __mygo_mt_parser2_greenNodeChildrenOfKindFrom(__mygo_mt_p0 GreenNode, __mygo_mt_p1 GreenNodeKind, __mygo_mt_p2 int, __mygo_mt_p3 []GreenNode, __mygo_state int) []GreenNode {
+func __mygo_mt_parser2_cstNodeChildrenOfKindFrom(__mygo_mt_p0 CstNode, __mygo_mt_p1 CstNodeKind, __mygo_mt_p2 int, __mygo_mt_p3 []CstNode, __mygo_state int) []CstNode {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
 				return __mygo_mt_p3
 			} else {
-				__mygo_expr_0 := greenElementNode(greenElementAt(__mygo_mt_p0.Children, __mygo_mt_p2))
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*GreenNode]); ok {
+				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p2))
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
 					if (*__mygo_match___mygo_expr_1.F0).Kind == __mygo_mt_p1 {
 						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
@@ -3665,7 +3665,7 @@ func __mygo_mt_parser2_greenNodeChildrenOfKindFrom(__mygo_mt_p0 GreenNode, __myg
 						continue
 					}
 				} else {
-					if _, ok := __mygo_expr_0.(Option__None[*GreenNode]); ok {
+					if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1
@@ -3683,20 +3683,20 @@ func __mygo_mt_parser2_greenNodeChildrenOfKindFrom(__mygo_mt_p0 GreenNode, __myg
 		}
 	}
 }
-func __mygo_mt_parser2_greenNodeFindKindIn(__mygo_mt_p0 GreenNode, __mygo_mt_p1 GreenNodeKind, __mygo_mt_p2 int, __mygo_state int) Option[GreenNode] {
+func __mygo_mt_parser2_cstNodeFindKindIn(__mygo_mt_p0 CstNode, __mygo_mt_p1 CstNodeKind, __mygo_mt_p2 int, __mygo_state int) Option[CstNode] {
 	for {
 		switch __mygo_state {
 		case 0:
 			if __mygo_mt_p2 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Children) {
-				return None[GreenNode]()
+				return None[CstNode]()
 			} else {
-				__mygo_expr_0 := greenElementNode(greenElementAt(__mygo_mt_p0.Children, __mygo_mt_p2))
-				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*GreenNode]); ok {
-					__mygo_expr_2 := greenNodeFindKind(*__mygo_match___mygo_expr_1.F0, __mygo_mt_p1)
-					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[GreenNode]); ok {
-						return Some[GreenNode](__mygo_match___mygo_expr_3.F0)
+				__mygo_expr_0 := cstElementNode(cstElementAt(__mygo_mt_p0.Children, __mygo_mt_p2))
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
+					__mygo_expr_2 := cstNodeFindKind(*__mygo_match___mygo_expr_1.F0, __mygo_mt_p1)
+					if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[CstNode]); ok {
+						return Some[CstNode](__mygo_match___mygo_expr_3.F0)
 					} else {
-						if _, ok := __mygo_expr_2.(Option__None[GreenNode]); ok {
+						if _, ok := __mygo_expr_2.(Option__None[CstNode]); ok {
 							__tail_0 := __mygo_mt_p0
 							__tail_1 := __mygo_mt_p1
 							__tail_2 := __mygo_mt_p2 + 1
@@ -3708,7 +3708,7 @@ func __mygo_mt_parser2_greenNodeFindKindIn(__mygo_mt_p0 GreenNode, __mygo_mt_p1 
 						}
 					}
 				} else {
-					if _, ok := __mygo_expr_0.(Option__None[*GreenNode]); ok {
+					if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1
 						__tail_2 := __mygo_mt_p2 + 1

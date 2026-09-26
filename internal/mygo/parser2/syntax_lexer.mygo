@@ -1,0 +1,207 @@
+package parser2
+
+import ps "github.com/mygo-lang/mygo/lib/text/parsec"
+
+func lexedSourceText(items: Slice[CstElement]) -> String
+  items.Fold("", func(text: String, item: CstElement) -> String
+    switch item
+      case TokenElement(token) => text + token.Raw
+      case TriviaElement(trivia) => text + trivia.Raw
+      case NodeElement(_) => text
+    end
+  end)
+end
+
+func cstNodeText(node: CstNode) -> String
+  node.Children.Fold("", func(text: String, item: CstElement) -> String
+    text + cstElementText(item)
+  end)
+end
+
+func cstElementText(item: CstElement) -> String
+  switch item
+    case TokenElement(token) => token.Raw
+    case TriviaElement(trivia) => trivia.Raw
+    case NodeElement(node) => cstNodeText(node.value())
+  end
+end
+
+func lexStep(state: LexerState) -> LexedSource using StringRuneIndex
+  let raw = sourceSliceOrEOF(state.Input, state.Index, state.Index + 1)
+  if raw == "" then
+    LexedSource { Elements: state.Elements, Tokens: state.Tokens, Trivia: state.Trivia }
+  else
+    let start = lexPosition(state)
+    if isSpace(raw) then
+      lexWhitespace(lexAdvance(state, raw), start, raw)
+    elsif raw == "#" then
+      lexComment(lexAdvance(state, raw), start, raw)
+    elsif raw == "\"" && tripleQuoteAt(state) then
+      lexTripleQuoted(lexAdvance(lexAdvance(lexAdvance(state, raw), raw), raw), start, "\"\"\"")
+    elsif raw == "\"" then
+      lexQuoted(lexAdvance(state, raw), start, raw, "\"", false)
+    elsif raw == "`" then
+      lexQuoted(lexAdvance(state, raw), start, raw, "`", false)
+    elsif raw == "'" then
+      lexQuoted(lexAdvance(state, raw), start, raw, "'", false)
+    elsif raw >= "0" && raw <= "9" then
+      lexNumber(lexAdvance(state, raw), start, raw)
+    elsif isWordChar(raw) then
+      lexWord(lexAdvance(state, raw), start, raw)
+    else
+      lexSymbol(state, start)
+    end
+  end
+end
+
+func lexPosition(state: LexerState) -> ps.Position
+  ps.Position { Offset: state.Offset, Line: state.Line, Column: state.Column }
+end
+
+func lexAdvance(state: LexerState, raw: String) -> LexerState
+  LexerState {
+    Input: state.Input,
+    Index: state.Index + 1,
+    Offset: state.Offset + (raw as Slice[Byte]).Len(),
+    Line: if raw == "\n" then state.Line + 1 else state.Line end,
+    Column: if raw == "\n" then 1 else state.Column + 1 end,
+    Elements: state.Elements,
+    Tokens: state.Tokens,
+    Trivia: state.Trivia,
+  }
+end
+
+func lexWhitespace(state: LexerState, start: ps.Position, raw: String) -> LexedSource using StringRuneIndex
+  let next = sourceSliceOrEOF(state.Input, state.Index, state.Index + 1)
+  if next == "" || !isSpace(next) then
+    lexEmitTrivia(state, start, CstTriviaKind.Whitespace, raw)
+  else
+    lexWhitespace(lexAdvance(state, next), start, raw + next)
+  end
+end
+
+func lexComment(state: LexerState, start: ps.Position, raw: String) -> LexedSource using StringRuneIndex
+  let next = sourceSliceOrEOF(state.Input, state.Index, state.Index + 1)
+  if next == "" || next == "\n" then
+    lexEmitTrivia(state, start, CstTriviaKind.Comment, raw)
+  else
+    lexComment(lexAdvance(state, next), start, raw + next)
+  end
+end
+
+func lexWord(state: LexerState, start: ps.Position, raw: String) -> LexedSource using StringRuneIndex
+  let next = sourceSliceOrEOF(state.Input, state.Index, state.Index + 1)
+  if next == "" || !isWordChar(next) then
+    let kind = if isKeyword(raw) then
+      CstTokenKind.Keyword
+    elsif raw >= "0" && raw <= "9" then
+      CstTokenKind.Number
+    else
+      CstTokenKind.Identifier
+    end
+    lexEmitToken(state, start, kind, raw)
+  else
+    lexWord(lexAdvance(state, next), start, raw + next)
+  end
+end
+
+func lexNumber(state: LexerState, start: ps.Position, raw: String) -> LexedSource using StringRuneIndex
+  let next = sourceSliceOrEOF(state.Input, state.Index, state.Index + 1)
+  if next == "" || !isNumberChar(next) then
+    lexEmitToken(state, start, CstTokenKind.Number, raw)
+  else
+    lexNumber(lexAdvance(state, next), start, raw + next)
+  end
+end
+
+func isNumberChar(raw: String) -> Bool
+  isWordChar(raw) || raw == "."
+end
+
+func tripleQuoteAt(state: LexerState) -> Bool
+  sourceSliceOrEOF(state.Input, state.Index, state.Index + 3) == "\"\"\""
+end
+
+func lexTripleQuoted(state: LexerState, start: ps.Position, raw: String) -> LexedSource using StringRuneIndex
+  if tripleQuoteAt(state) then
+    let quote = "\""
+    lexEmitToken(lexAdvance(lexAdvance(lexAdvance(state, quote), quote), quote), start, CstTokenKind.TripleStringLiteral, raw + "\"\"\"")
+  else
+    let next = sourceSliceOrEOF(state.Input, state.Index, state.Index + 1)
+    if next == "" then
+      lexEmitToken(state, start, CstTokenKind.TripleStringLiteral, raw)
+    else
+      lexTripleQuoted(lexAdvance(state, next), start, raw + next)
+    end
+  end
+end
+
+func lexQuoted(state: LexerState, start: ps.Position, raw: String, quote: String, escaped: Bool) -> LexedSource using StringRuneIndex
+  let next = sourceSliceOrEOF(state.Input, state.Index, state.Index + 1)
+  if next == "" then
+    lexEmitToken(
+      state,
+      start,
+      if quote == "`" then
+        CstTokenKind.RawStringLiteral
+      elsif quote == "'" then
+        CstTokenKind.RuneLiteral
+      else
+        CstTokenKind.StringLiteral
+      end,
+      raw
+    )
+  elsif next == quote && !escaped then
+    let kind = if quote == "`" then
+      CstTokenKind.RawStringLiteral
+    elsif quote == "'" then
+      CstTokenKind.RuneLiteral
+    else
+      CstTokenKind.StringLiteral
+    end
+    lexEmitToken(lexAdvance(state, next), start, kind, raw + next)
+  else
+    let nextEscaped = if quote == "`" then
+      false
+    elsif escaped then
+      false
+    else
+      next == "\\"
+    end
+    lexQuoted(lexAdvance(state, next), start, raw + next, quote, nextEscaped)
+  end
+end
+
+func lexSymbol(state: LexerState, start: ps.Position) -> LexedSource using StringRuneIndex
+  let two = sourceSliceOrEOF(state.Input, state.Index, state.Index + 2)
+  let multi = if isMultiSymbol(two) => two else ""
+  if multi == "" then
+    let raw = sourceSliceOrEOF(state.Input, state.Index, state.Index + 1)
+    lexEmitToken(lexAdvance(state, raw), start, CstTokenKind.Symbol, raw)
+  else
+    let first = sourceSliceOrEOF(multi, 0, 1)
+    let second = sourceSliceOrEOF(multi, 1, 2)
+    lexEmitToken(lexAdvance(lexAdvance(state, first), second), start, CstTokenKind.Symbol, multi)
+  end
+end
+
+func isMultiSymbol(raw: String) -> Bool
+  raw == "=>" || raw == "->" || raw == "==" || raw == "!=" || raw == ">=" || raw == "<=" ||
+    raw == "&&" || raw == "||" || raw == "|>" || raw == "<|" || raw == "::" || raw == ".."
+end
+
+func lexEmitToken(state: LexerState, start: ps.Position, kind: CstTokenKind, raw: String) -> LexedSource
+  let item = CstToken { Kind: kind, Raw: raw, Span: ps.SourceSpan { Start: start, End: lexPosition(state) } }
+  lexStep(LexerState {
+    Input: state.Input, Index: state.Index, Offset: state.Offset, Line: state.Line, Column: state.Column,
+    Elements: state.Elements.Append(CstElement.TokenElement(item)), Tokens: state.Tokens.Append(item), Trivia: state.Trivia,
+  })
+end
+
+func lexEmitTrivia(state: LexerState, start: ps.Position, kind: CstTriviaKind, raw: String) -> LexedSource
+  let item = CstTrivia { Kind: kind, Raw: raw, Span: ps.SourceSpan { Start: start, End: lexPosition(state) } }
+  lexStep(LexerState {
+    Input: state.Input, Index: state.Index, Offset: state.Offset, Line: state.Line, Column: state.Column,
+    Elements: state.Elements.Append(CstElement.TriviaElement(item)), Tokens: state.Tokens, Trivia: state.Trivia.Append(item),
+  })
+end

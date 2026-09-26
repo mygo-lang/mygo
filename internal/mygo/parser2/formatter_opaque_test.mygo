@@ -14,12 +14,12 @@ end
 # stops at an opaque element rather than descending into it, so a nested opaque
 # range (for example the `InlineGoCode` inside an `InlineGoExpr`) is not
 # re-reported as if it were a separate top-level range.
-func formatterOpaqueElements(items: Slice[GreenElement], index: Int, output: Slice[GreenElement]) -> Slice[GreenElement]
+func formatterOpaqueElements(items: Slice[CstElement], index: Int, output: Slice[CstElement]) -> Slice[CstElement]
   if index >= items.Len() then
     output
   else
-    let item = greenElementAt(items, index)
-    if greenElementIsOpaqueSource(item) then
+    let item = cstElementAt(items, index)
+    if cstElementIsOpaqueSource(item) then
       formatterOpaqueElements(items, index + 1, output.Append(item))
     else
       switch item
@@ -34,12 +34,12 @@ end
 # replay for each opaque element is byte-identical to the exact slice of the
 # original source at that element's span, and that the element is genuinely
 # classified opaque.
-func formatterOpaqueGoldenMatches(items: Slice[GreenElement], index: Int, source: String) -> Bool
+func formatterOpaqueGoldenMatches(items: Slice[CstElement], index: Int, source: String) -> Bool
   if index >= items.Len() then
     true
   else
-    let item = greenElementAt(items, index)
-    let span = greenElementSpan(item)
+    let item = cstElementAt(items, index)
+    let span = cstElementSpan(item)
     switch FormatterOpaqueSourceRaw(item)
       case Some(raw) => raw == sourceSliceOrEOF(source, span.Start.Offset, span.End.Offset) && formatterOpaqueGoldenMatches(items, index + 1, source)
       case None => false
@@ -50,7 +50,7 @@ end
 func TestFormatterOpaqueSourceIsBytePreserving(t: Ref[testing.T]) -> ()
   let source = formatterOpaqueSource()
   let tree = ParseSyntaxAt("opaque.mygo", source)
-  if tree.Diagnostics.Len() != 0 || greenNodeText(tree.Root.value()) != source then
+  if tree.Diagnostics.Len() != 0 || cstNodeText(tree.Root.value()) != source then
     t.Fatal("opaque fixtures must parse losslessly before their bytes can be checked")
   end
   let opaque = formatterOpaqueElements(tree.Root.value().Children, 0, [])
@@ -66,18 +66,18 @@ func TestFormatterOpaqueSourceCoversEveryLexicalForm(t: Ref[testing.T]) -> ()
   let source = formatterOpaqueSource()
   let opaque = formatterOpaqueElements(ParseSyntaxAt("opaque.mygo", source).Root.value().Children, 0, [])
   # One comment plus four distinct literal spellings must each be present.
-  let comment = opaque.Filter(func(item: GreenElement) -> Bool
-    switch item case TriviaElement(trivia) => trivia.Kind == GreenTriviaKind.Comment case _ => false end
+  let comment = opaque.Filter(func(item: CstElement) -> Bool
+    switch item case TriviaElement(trivia) => trivia.Kind == CstTriviaKind.Comment case _ => false end
   end).Len()
   if comment < 1 then
     t.Fatal("comments must be opaque source")
   end
-  if !formatterOpaqueHasLiteralKind(opaque, GreenTokenKind.StringLiteral) || !formatterOpaqueHasLiteralKind(opaque, GreenTokenKind.RawStringLiteral) || !formatterOpaqueHasLiteralKind(opaque, GreenTokenKind.TripleStringLiteral) || !formatterOpaqueHasLiteralKind(opaque, GreenTokenKind.RuneLiteral) then
+  if !formatterOpaqueHasLiteralKind(opaque, CstTokenKind.StringLiteral) || !formatterOpaqueHasLiteralKind(opaque, CstTokenKind.RawStringLiteral) || !formatterOpaqueHasLiteralKind(opaque, CstTokenKind.TripleStringLiteral) || !formatterOpaqueHasLiteralKind(opaque, CstTokenKind.RuneLiteral) then
     t.Fatal("ordinary, raw, triple-quoted, and rune literals must all be opaque")
   end
-  let inlineGo = opaque.Filter(func(item: GreenElement) -> Bool
-    switch greenElementNode(item)
-      case Some(node) => node.value().Kind == GreenNodeKind.InlineGoExpr
+  let inlineGo = opaque.Filter(func(item: CstElement) -> Bool
+    switch cstElementNode(item)
+      case Some(node) => node.value().Kind == CstNodeKind.InlineGoExpr
       case None => false
     end
   end).Len()
@@ -86,8 +86,8 @@ func TestFormatterOpaqueSourceCoversEveryLexicalForm(t: Ref[testing.T]) -> ()
   end
 end
 
-func formatterOpaqueHasLiteralKind(items: Slice[GreenElement], kind: GreenTokenKind) -> Bool
-  items.Find(func(item: GreenElement) -> Bool
+func formatterOpaqueHasLiteralKind(items: Slice[CstElement], kind: CstTokenKind) -> Bool
+  items.Find(func(item: CstElement) -> Bool
     switch item
       case TokenElement(token) => token.Kind == kind
       case _ => false
@@ -108,17 +108,17 @@ func TestFormatterOpaqueSourceLeavesFormatableTriviaAndSyntaxAlone(t: Ref[testin
   end
 end
 
-func formatterOpaqueNoneForWhitespace(items: Slice[GreenElement]) -> Bool
-  items.Fold(true, func(valid: Bool, item: GreenElement) -> Bool
-    if greenElementIsFormatableTrivia(item) then valid && FormatterOpaqueSourceRaw(item).IsNone() else valid end
+func formatterOpaqueNoneForWhitespace(items: Slice[CstElement]) -> Bool
+  items.Fold(true, func(valid: Bool, item: CstElement) -> Bool
+    if cstElementIsFormatableTrivia(item) then valid && FormatterOpaqueSourceRaw(item).IsNone() else valid end
   end)
 end
 
-func formatterOpaqueNoneForSyntax(items: Slice[GreenElement]) -> Bool
-  items.Fold(true, func(valid: Bool, item: GreenElement) -> Bool
+func formatterOpaqueNoneForSyntax(items: Slice[CstElement]) -> Bool
+  items.Fold(true, func(valid: Bool, item: CstElement) -> Bool
     switch item
       case TokenElement(_) => valid && FormatterOpaqueSourceRaw(item).IsNone()
-      case NodeElement(node) => valid && !greenElementIsInlineGoRange(item) && FormatterOpaqueSourceRaw(item).IsNone() && formatterOpaqueNoneForSyntax(node.value().Children)
+      case NodeElement(node) => valid && !cstElementIsInlineGoRange(item) && FormatterOpaqueSourceRaw(item).IsNone() && formatterOpaqueNoneForSyntax(node.value().Children)
       case TriviaElement(_) => valid
     end
   end)
@@ -128,9 +128,9 @@ func TestFormatterOpaqueInlineGoRangeReplaysWholePayload(t: Ref[testing.T]) -> (
   let source = "func g() => go[Int] { code: `x`; in y = 1 }\n"
   let tree = ParseSyntaxAt("inline.mygo", source)
   let opaque = formatterOpaqueElements(tree.Root.value().Children, 0, [])
-  let ranges = opaque.Filter(func(item: GreenElement) -> Bool
-    switch greenElementNode(item)
-      case Some(node) => node.value().Kind == GreenNodeKind.InlineGoExpr
+  let ranges = opaque.Filter(func(item: CstElement) -> Bool
+    switch cstElementNode(item)
+      case Some(node) => node.value().Kind == CstNodeKind.InlineGoExpr
       case None => false
     end
   end)

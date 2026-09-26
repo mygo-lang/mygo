@@ -1,0 +1,848 @@
+package parser2
+
+import ps "github.com/mygo-lang/mygo/lib/text/parsec"
+import strings "go:strings"
+
+func parseExpr(cursor: SyntaxCursor) -> SyntaxParseResult
+  parsePipeExpr(cursor)
+end
+
+# The expression grammar is a precedence-climbing layer above the atom parser.
+# Every level is a left-associative chain whose right operand is the next
+# tighter level, mirroring the legacy precedence:
+#   pipe -> or -> and -> compare -> add -> mul -> unary -> postfix -> atomic.
+# Operator nodes own the intervening trivia and the operator token so each
+# source byte is still claimed exactly once inside a frozen CST range.
+func parsePipeExpr(cursor: SyntaxCursor) -> SyntaxParseResult
+  parseBinaryLevel(cursor, func(inner: SyntaxCursor) -> SyntaxParseResult parseOrExpr(inner) end, ["|>", "<|"])
+end
+
+func parseOrExpr(cursor: SyntaxCursor) -> SyntaxParseResult
+  parseBinaryLevel(cursor, func(inner: SyntaxCursor) -> SyntaxParseResult parseAndExpr(inner) end, ["||"])
+end
+
+func parseAndExpr(cursor: SyntaxCursor) -> SyntaxParseResult
+  parseBinaryLevel(cursor, func(inner: SyntaxCursor) -> SyntaxParseResult parseCompareExpr(inner) end, ["&&"])
+end
+
+func parseCompareExpr(cursor: SyntaxCursor) -> SyntaxParseResult
+  parseBinaryLevel(cursor, func(inner: SyntaxCursor) -> SyntaxParseResult parseAddExpr(inner) end, ["==", "!=", "<=", ">=", "<", ">"])
+end
+
+func parseAddExpr(cursor: SyntaxCursor) -> SyntaxParseResult
+  parseBinaryLevel(cursor, func(inner: SyntaxCursor) -> SyntaxParseResult parseMulExpr(inner) end, ["+", "-"])
+end
+
+func parseMulExpr(cursor: SyntaxCursor) -> SyntaxParseResult
+  parseBinaryLevel(cursor, func(inner: SyntaxCursor) -> SyntaxParseResult parseUnaryExpr(inner) end, ["*", "/"])
+end
+
+# parseBinaryLevel parses one left-associative precedence level.  The operand
+# parser is the next tighter level, so the first node it returns starts at a
+# non-trivia element; the index of that element anchors the combined range.
+func parseBinaryLevel(cursor: SyntaxCursor, operand: func(SyntaxCursor) -> SyntaxParseResult, ops: Slice[String]) -> SyntaxParseResult
+  let lead = syntaxCursorSkipTrivia(cursor)
+  let left = operand(lead)
+  switch left.Node
+    case None => left
+    case Some(_) => parseBinaryTail(lead.Index, left, operand, ops)
+  end
+end
+
+func parseBinaryTail(startIndex: Int, left: SyntaxParseResult, operand: func(SyntaxCursor) -> SyntaxParseResult, ops: Slice[String]) -> SyntaxParseResult
+  let opCursor = syntaxCursorSkipTrivia(left.Cursor)
+  let raw = syntaxCursorRaw(opCursor)
+  if !syntaxRawInSlice(ops, raw) then
+    left
+  else
+    let rightStart = syntaxCursorSkipTrivia(syntaxCursorAdvance(opCursor))
+    let right = operand(rightStart)
+    switch (left.Node, right.Node)
+      case (Some(leftNode), Some(rightNode)) then
+        parseBinaryTail(
+          startIndex,
+          syntaxBinaryResult(
+            startIndex,
+            left,
+            leftNode,
+            opCursor,
+            rightStart,
+            rightNode,
+            right.Cursor
+          ),
+          operand,
+          ops,
+        )
+      end
+      case _ => left
+    end
+  end
+end
+
+func syntaxBinaryResult(startIndex: Int, left: SyntaxParseResult, leftNode: Ref[CstNode], opCursor: SyntaxCursor, rightStart: SyntaxCursor, rightNode: Ref[CstNode], rightEnd: SyntaxCursor) -> SyntaxParseResult
+  SyntaxParseResult {
+    Node: Some(Ref.new(CstNode {
+      Kind: CstNodeKind.BinaryExpr,
+      Span: ps.SourceSpan { Start: leftNode.value().Span.Start, End: rightNode.value().Span.End },
+      Children: joinCstElements(
+        joinCstElements(
+          [CstElement.NodeElement(leftNode)],
+          cstElementSliceOrEmpty(opCursor.Elements, left.Cursor.Index, opCursor.Index)
+        ),
+        joinCstElements(
+          [cstElementAt(opCursor.Elements, opCursor.Index)],
+          joinCstElements(
+            cstElementSliceOrEmpty(opCursor.Elements, opCursor.Index + 1, rightStart.Index),
+            [CstElement.NodeElement(rightNode)]
+          )
+        )
+      ),
+      HasError: leftNode.value().HasError || rightNode.value().HasError,
+    })),
+    Cursor: rightEnd,
+  }
+end
+
+func syntaxRawInSlice(items: Slice[String], raw: String) -> Bool
+  if items.Len() == 0 then
+    false
+  else
+    switch items.Get(0)
+      case Some(candidate) => if candidate == raw then true else syntaxRawInSlice(syntaxRawTail(items), raw) end
+      case None => false
+    end
+  end
+end
+
+func syntaxRawTail(items: Slice[String]) -> Slice[String]
+  switch items.Slice(1, items.Len())
+    case Some(tail) => tail
+    case None => []
+  end
+end
+
+# parseUnaryExpr owns a leading not/negate operator.  The operator token, its
+# trailing trivia, and the recursive operand are one CST range so lowering
+# reads the operand and the operator text without touching the source string.
+func parseUnaryExpr(cursor: SyntaxCursor) -> SyntaxParseResult
+  let start = syntaxCursorSkipTrivia(cursor)
+  let raw = syntaxCursorRaw(start)
+  if raw != "!" && raw != "-" then
+    parsePostfixExpr(start)
+  else
+    let operandStart = syntaxCursorSkipTrivia(syntaxCursorAdvance(start))
+    let operand = parseUnaryExpr(operandStart)
+    switch operand.Node
+      case Some(operandNode) => SyntaxParseResult {
+        Node: Some(Ref.new(CstNode {
+          Kind: CstNodeKind.UnaryExpr,
+          Span: ps.SourceSpan { Start: cstElementSpan(cstElementAt(start.Elements, start.Index)).Start, End: operandNode.value().Span.End },
+          Children: joinCstElements(
+            cstElementSliceOrEmpty(start.Elements, start.Index, operandStart.Index),
+            [CstElement.NodeElement(operandNode)]
+          ),
+          HasError: operandNode.value().HasError,
+        })),
+        Cursor: operand.Cursor,
+      }
+      case None => SyntaxParseResult { Node: None, Cursor: cursor }
+    end
+  end
+end
+
+# parsePostfixExpr parses one atomic expression followed by a chain of casts,
+# calls (with optional type-argument brackets), and field selections.
+func parsePostfixExpr(cursor: SyntaxCursor) -> SyntaxParseResult
+  let start = syntaxCursorSkipTrivia(cursor)
+  let base = parsePrimarySyntax(start)
+  switch base.Node
+    case None => base
+    case Some(_) => parsePostfixTail(start.Index, base)
+  end
+end
+
+func parsePrimarySyntax(cursor: SyntaxCursor) -> SyntaxParseResult
+  if syntaxCursorRaw(cursor) == "go" then
+    parseInlineGoExpr(cursor)
+  elsif syntaxCursorRaw(cursor) == "func" then
+    parseFuncLitExpr(cursor)
+  else
+    parseGroupedSyntax(CstNodeKind.Expression, cursor)
+  end
+end
+
+func parsePostfixTail(startIndex: Int, acc: SyntaxParseResult) -> SyntaxParseResult
+  let cur = syntaxCursorSkipTrivia(acc.Cursor)
+  if syntaxCursorNodeKind(cur, CstNodeKind.BraceGroup) then
+    parsePostfixStructLiteral(startIndex, acc, cur, None, cur.Index)
+  elsif syntaxCursorNodeKind(cur, CstNodeKind.BracketGroup) then
+    parsePostfixBracketSuffix(startIndex, acc, cur)
+  else
+    let raw = syntaxCursorRaw(cur)
+    if raw == "as" then
+      parsePostfixCast(startIndex, acc, cur)
+    elsif raw == "." then
+      parsePostfixField(startIndex, acc, cur)
+    else
+      parsePostfixCall(startIndex, acc, cur)
+    end
+  end
+end
+
+# syntaxCursorNodeKind reports whether the cursor's next non-trivia element is a
+# nested CST node of the given kind.
+func syntaxCursorNodeKind(cursor: SyntaxCursor, kind: CstNodeKind) -> Bool
+  switch syntaxNodeElementAt(cursor, kind)
+    case Some(_) => true
+    case None => false
+  end
+end
+
+func parsePostfixCast(startIndex: Int, acc: SyntaxParseResult, castCursor: SyntaxCursor) -> SyntaxParseResult
+  let typeStart = syntaxCursorSkipTrivia(syntaxCursorAdvance(castCursor))
+  let parsedType = parseType(typeStart)
+  switch (acc.Node, parsedType.Node)
+    case (Some(accNode), Some(typeNode)) then
+      parsePostfixTail(startIndex, SyntaxParseResult {
+        Node: Some(Ref.new(CstNode {
+          Kind: CstNodeKind.TypeAsExpr,
+          Span: ps.SourceSpan { Start: accNode.value().Span.Start, End: typeNode.value().Span.End },
+          Children: joinCstElements(
+            joinCstElements(
+              [CstElement.NodeElement(accNode)],
+              cstElementSliceOrEmpty(castCursor.Elements, acc.Cursor.Index, castCursor.Index + 1)
+            ),
+            joinCstElements(
+              cstElementSliceOrEmpty(castCursor.Elements, castCursor.Index + 1, typeStart.Index),
+              [CstElement.NodeElement(typeNode)]
+            )
+          ),
+          HasError: accNode.value().HasError || typeNode.value().HasError,
+        })),
+        Cursor: parsedType.Cursor,
+      })
+    end
+    case _ => acc
+  end
+end
+
+func parsePostfixField(startIndex: Int, acc: SyntaxParseResult, dotCursor: SyntaxCursor) -> SyntaxParseResult
+  let nameStart = syntaxCursorSkipTrivia(syntaxCursorAdvance(dotCursor))
+  let nameItem = cstElementAt(nameStart.Elements, nameStart.Index)
+  switch acc.Node
+    case Some(accNode) then
+      if !syntaxElementNameToken(nameItem) then
+        acc
+      else
+        parsePostfixTail(startIndex, SyntaxParseResult {
+          Node: Some(Ref.new(CstNode {
+            Kind: CstNodeKind.FieldExpr,
+            Span: ps.SourceSpan { Start: accNode.value().Span.Start, End: cstElementSpan(nameItem).End },
+            Children: joinCstElements(
+              [CstElement.NodeElement(accNode)],
+              cstElementSliceOrEmpty(dotCursor.Elements, acc.Cursor.Index, nameStart.Index + 1)
+            ),
+            HasError: accNode.value().HasError,
+          })),
+          Cursor: syntaxCursorAdvance(nameStart),
+        })
+      end
+    end
+    case None => acc
+  end
+end
+
+func parsePostfixCall(startIndex: Int, acc: SyntaxParseResult, cur: SyntaxCursor) -> SyntaxParseResult
+  switch syntaxNodeElementAt(cur, CstNodeKind.BracketGroup)
+    case Some(bracketEl) => parsePostfixGenericCall(startIndex, acc, cur, bracketEl)
+    case None => parsePostfixPlainCall(startIndex, acc, cur)
+  end
+end
+
+func parsePostfixPlainCall(startIndex: Int, acc: SyntaxParseResult, cur: SyntaxCursor) -> SyntaxParseResult
+  switch syntaxNodeElementAt(cur, CstNodeKind.ParenGroup)
+    case Some(parenEl) then
+      if !syntaxSameLineSuffix(cur) then
+        acc
+      else
+        parsePostfixTail(startIndex, syntaxCallResult(acc, cur, parenEl, None, cur.Index))
+      end
+    end
+    case None => acc
+  end
+end
+
+# parsePostfixBracketSuffix owns a `[...]` after an expression.  It becomes the
+# type-argument slot of a generic call when a paren group follows, or the type
+# arguments of a struct literal when a brace group follows.
+func parsePostfixBracketSuffix(startIndex: Int, acc: SyntaxParseResult, cur: SyntaxCursor) -> SyntaxParseResult
+  switch syntaxNodeElementAt(cur, CstNodeKind.BracketGroup)
+    case Some(bracketEl) then
+      let afterBracket = syntaxCursorSkipTrivia(syntaxCursorAdvance(cur))
+      switch syntaxNodeElementAt(afterBracket, CstNodeKind.ParenGroup)
+        case Some(parenEl) then
+          if !syntaxSameLineSuffix(cur) then
+            acc
+          else
+            parsePostfixTail(startIndex, syntaxCallResult(acc, afterBracket, parenEl, Some(bracketEl), cur.Index))
+          end
+        end
+        case None then
+          if syntaxCursorNodeKind(afterBracket, CstNodeKind.BraceGroup) then
+            parsePostfixStructLiteral(startIndex, acc, afterBracket, Some(bracketEl), cur.Index)
+          else
+            acc
+          end
+        end
+      end
+    end
+    case None => acc
+  end
+end
+
+# parsePostfixStructLiteral freezes `TypeName { field: value, ... }` (optionally
+# with `[TypeArgs]`) into a StructLiteral whose brace group owns one
+# StructLitField per `field: expr` pair.  The type name is the accumulated
+# leading expression; its raw text is read from the retained tokens, not the
+# source string.
+func parsePostfixStructLiteral(startIndex: Int, acc: SyntaxParseResult, braceCursor: SyntaxCursor, typeArgs: Option[CstElement], typeArgIndex: Int) -> SyntaxParseResult
+  switch (acc.Node, syntaxNodeElementAt(braceCursor, CstNodeKind.BraceGroup))
+    case (Some(accNode), Some(braceEl)) then
+      parsePostfixStructLiteralBody(acc, accNode, braceCursor, braceEl, typeArgs, typeArgIndex)
+    end
+    case _ => acc
+  end
+end
+
+func parsePostfixStructLiteralBody(acc: SyntaxParseResult, accNode: Ref[CstNode], braceCursor: SyntaxCursor, braceEl: CstElement, typeArgs: Option[CstElement], typeArgIndex: Int) -> SyntaxParseResult
+  if syntaxStructLitHeadName(accNode.value()) == "" then
+    acc
+  else
+    parsePostfixStructLiteralFreeze(acc, accNode, braceCursor, braceEl, typeArgs, typeArgIndex)
+  end
+end
+
+func parsePostfixStructLiteralFreeze(acc: SyntaxParseResult, accNode: Ref[CstNode], braceCursor: SyntaxCursor, braceEl: CstElement, typeArgs: Option[CstElement], typeArgIndex: Int) -> SyntaxParseResult
+  switch cstElementNode(braceEl)
+    case Some(braceRef) => parsePostfixStructLiteralNode(acc, accNode, braceCursor, braceRef.value(), typeArgs, typeArgIndex)
+    case None => acc
+  end
+end
+
+func parsePostfixStructLiteralNode(acc: SyntaxParseResult, accNode: Ref[CstNode], braceCursor: SyntaxCursor, brace: CstNode, typeArgs: Option[CstElement], typeArgIndex: Int) -> SyntaxParseResult
+  SyntaxParseResult {
+    Node: Some(Ref.new(CstNode {
+      Kind: CstNodeKind.StructLiteral,
+      Span: ps.SourceSpan { Start: accNode.value().Span.Start, End: brace.Span.End },
+      Children: syntaxStructLiteralChildren(acc, accNode, braceCursor, structLitBodyElement(brace), typeArgs, typeArgIndex),
+      HasError: accNode.value().HasError || brace.HasError,
+    })),
+    Cursor: syntaxCursorAdvance(braceCursor),
+  }
+end
+
+func structLitBodyElement(brace: CstNode) -> CstElement
+  CstElement.NodeElement(Ref.new(CstNode {
+    Kind: CstNodeKind.BraceGroup,
+    Span: brace.Span,
+    Children: parseStructLitFieldItems(brace.Children, 0, []),
+    HasError: brace.HasError,
+  }))
+end
+
+# syntaxStructLitHeadName reconstructs the qualified type name of a struct
+# literal head.  A plain identifier or a dotted identifier chain yields its
+# source text; any other expression shape yields "" so the brace group is not
+# mistaken for a struct literal.
+func syntaxStructLitHeadName(node: CstNode) -> String
+  if node.Kind == CstNodeKind.IdentifierExpr then
+    cstNodeText(node)
+  elsif node.Kind == CstNodeKind.FieldExpr then
+    switch cstNodeFindExpression(node, 0)
+      case Some(receiver) then
+        let base = syntaxStructLitHeadName(receiver.value())
+        if base == "" => "" else base + "." + syntaxFieldName(node)
+      end
+      case None => ""
+    end
+  else
+    ""
+  end
+end
+
+func syntaxStructLiteralChildren(acc: SyntaxParseResult, accNode: Ref[CstNode], braceCursor: SyntaxCursor, body: CstElement, typeArgs: Option[CstElement], typeArgIndex: Int) -> Slice[CstElement]
+  switch typeArgs
+    case Some(bracketEl) then
+      joinCstElements(
+        joinCstElements(
+          [CstElement.NodeElement(accNode)],
+          cstElementSliceOrEmpty(braceCursor.Elements, acc.Cursor.Index, typeArgIndex)
+        ),
+        joinCstElements(
+          [syntaxTypeArgumentsElement(bracketEl)],
+          joinCstElements(
+            cstElementSliceOrEmpty(braceCursor.Elements, typeArgIndex + 1, braceCursor.Index),
+            [body]
+          )
+        )
+      )
+    end
+    case None then
+      joinCstElements(
+        [CstElement.NodeElement(accNode)],
+        joinCstElements(cstElementSliceOrEmpty(braceCursor.Elements, acc.Cursor.Index, braceCursor.Index), [body])
+      )
+    end
+  end
+end
+
+# parseStructLitFieldItems groups the flat leaves of a struct-literal body into
+# StructLitField nodes: `field: expr`.  Every `{`, `}`, `,`, and trivia leaf
+# stays owned between the field nodes so no source byte is dropped.
+func parseStructLitFieldItems(items: Slice[CstElement], index: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    let item = cstElementAt(items, index)
+    let raw = cstElementRaw(item)
+    if cstElementIsTrivia(item) || raw == "{" || raw == "}" || raw == "," then
+      parseStructLitFieldItems(items, index + 1, output.Append(item))
+    elsif syntaxElementNameToken(item) then
+      let colon = syntaxNextTokenIndex(items, index + 1)
+      if colon >= 0 && cstElementRaw(cstElementAt(items, colon)) == ":" then
+        let valueStart = syntaxCursorSkipTrivia(SyntaxCursor { Elements: items, Index: colon + 1 })
+        let parsed = parseExpr(valueStart)
+        switch parsed.Node
+          case Some(valueNode) => parseStructLitFieldItems(items, parsed.Cursor.Index, output.Append(syntaxStructLitFieldElement(cstElementSliceOrEmpty(items, index, valueStart.Index), valueNode)))
+          case None => parseStructLitFieldItems(items, index + 1, output.Append(item))
+        end
+      else
+        parseStructLitFieldItems(items, index + 1, output.Append(item))
+      end
+    else
+      parseStructLitFieldItems(items, index + 1, output.Append(item))
+    end
+  end
+end
+
+func syntaxStructLitFieldElement(prefix: Slice[CstElement], value: Ref[CstNode]) -> CstElement
+  CstElement.NodeElement(Ref.new(CstNode {
+    Kind: CstNodeKind.StructLitField,
+    Span: ps.SourceSpan { Start: cstElementSliceSpan(prefix, 0, prefix.Len()).Start, End: value.value().Span.End },
+    Children: joinCstElements(prefix, [CstElement.NodeElement(value)]),
+    HasError: value.value().HasError,
+  }))
+end
+
+func parsePostfixGenericCall(startIndex: Int, acc: SyntaxParseResult, cur: SyntaxCursor, bracketEl: CstElement) -> SyntaxParseResult
+  let afterBracket = syntaxCursorSkipTrivia(syntaxCursorAdvance(cur))
+  switch syntaxNodeElementAt(afterBracket, CstNodeKind.ParenGroup)
+    case Some(parenEl) then
+      if !syntaxSameLineSuffix(cur) then
+        acc
+      else
+        parsePostfixTail(startIndex, syntaxCallResult(acc, afterBracket, parenEl, Some(bracketEl), cur.Index))
+      end
+    end
+    case None => acc
+  end
+end
+
+# syntaxCallResult freezes a call node.  The callee is the accumulated
+# expression; the argument group is re-parsed so its items are typed children
+# rather than raw leaves.  Optional type arguments come from the bracket group.
+func syntaxCallResult(acc: SyntaxParseResult, parenCursor: SyntaxCursor, parenEl: CstElement, typeArgs: Option[CstElement], typeArgIndex: Int) -> SyntaxParseResult
+  switch (acc.Node, cstElementNode(parenEl))
+    case (Some(accNode), Some(parenRef)) then
+      let paren = parenRef.value()
+      let argsNode = CstElement.NodeElement(Ref.new(CstNode {
+        Kind: CstNodeKind.ParenGroup,
+        Span: paren.Span,
+        Children: parseGroupItems(CstNodeKind.Expression, paren.Children, 0, []),
+        HasError: paren.HasError,
+      }))
+      SyntaxParseResult {
+        Node: Some(Ref.new(CstNode {
+          Kind: CstNodeKind.Call,
+          Span: ps.SourceSpan { Start: accNode.value().Span.Start, End: paren.Span.End },
+          Children: syntaxCallChildren(acc, accNode, parenCursor, argsNode, typeArgs, typeArgIndex),
+          HasError: accNode.value().HasError || paren.HasError,
+        })),
+        Cursor: syntaxCursorAdvance(parenCursor),
+      }
+    end
+    case _ => acc
+  end
+end
+
+func syntaxCallChildren(acc: SyntaxParseResult, accNode: Ref[CstNode], parenCursor: SyntaxCursor, argsNode: CstElement, typeArgs: Option[CstElement], typeArgIndex: Int) -> Slice[CstElement]
+  switch typeArgs
+    case Some(bracketEl) then
+      joinCstElements(
+        joinCstElements(
+          [CstElement.NodeElement(accNode)],
+          cstElementSliceOrEmpty(parenCursor.Elements, acc.Cursor.Index, typeArgIndex)
+        ),
+        joinCstElements(
+          [syntaxTypeArgumentsElement(bracketEl)],
+          joinCstElements(
+            cstElementSliceOrEmpty(parenCursor.Elements, typeArgIndex + 1, parenCursor.Index),
+            [argsNode]
+          )
+        )
+      )
+    end
+    case None then
+      joinCstElements(
+        [CstElement.NodeElement(accNode)],
+        joinCstElements(cstElementSliceOrEmpty(parenCursor.Elements, acc.Cursor.Index, parenCursor.Index), [argsNode])
+      )
+    end
+  end
+end
+
+func syntaxTypeArgumentsElement(bracketEl: CstElement) -> CstElement
+  switch cstElementNode(bracketEl)
+    case Some(bracket) then
+      CstElement.NodeElement(Ref.new(CstNode {
+        Kind: CstNodeKind.TypeArguments,
+        Span: bracket.value().Span,
+        Children: parseTypeItems(bracket.value().Children, 0, []),
+        HasError: bracket.value().HasError,
+      }))
+    end
+    case None => bracketEl
+  end
+end
+
+func syntaxNodeElementAt(cursor: SyntaxCursor, kind: CstNodeKind) -> Option[CstElement]
+  switch cursor.Elements.Get(cursor.Index)
+    case Some(item) then
+      switch cstElementNode(item)
+        case Some(node) => if node.value().Kind == kind => Some(item) else None
+        case None => None
+      end
+    end
+    case None => None
+  end
+end
+
+# syntaxSameLineSuffix mirrors the legacy rule that a call suffix must begin on
+# the same source line as the expression it applies to.  Scanning backward from
+# the suffix over trivia finds a newline exactly when the previous element ended
+# on an earlier line.
+func syntaxSameLineSuffix(cursor: SyntaxCursor) -> Bool
+  syntaxSameLineScan(cursor.Elements, cursor.Index - 1)
+end
+
+func syntaxSameLineScan(items: Slice[CstElement], index: Int) -> Bool
+  if index < 0 then
+    true
+  else
+    let item = cstElementAt(items, index)
+    if cstElementIsTrivia(item) then
+      if strings.Contains(cstElementRaw(item), "\n") then
+        false
+      else
+        syntaxSameLineScan(items, index - 1)
+      end
+    else
+      true
+    end
+  end
+end
+
+
+# parseFuncLitExpr builds the CST for `func (params) (-> ret)? body end`.  The
+# leading `func` token is the keyword parsePrimarySyntax saw, so this entry
+# point owns the parameter group, the optional return type, the body region,
+# and the closing `end`.  The body is wrapped in a Block node so it lowers
+# through the same statement path as a function body.
+func parseFuncLitExpr(start: SyntaxCursor) -> SyntaxParseResult
+  let keyword = cstElementAt(start.Elements, start.Index)
+  let afterKeyword = syntaxCursorSkipTrivia(syntaxCursorAdvance(start))
+  switch syntaxCursorPeek(afterKeyword)
+    case Some(item) then
+      switch cstElementNode(item)
+        case Some(group) then
+          if group.value().Kind == CstNodeKind.ParenGroup then
+            parseFuncLitBody(start, keyword, afterKeyword, group.value())
+          else
+            SyntaxParseResult { Node: None, Cursor: start }
+          end
+        end
+        case None => SyntaxParseResult { Node: None, Cursor: start }
+      end
+    end
+    case None => SyntaxParseResult { Node: None, Cursor: start }
+  end
+end
+
+func parseFuncLitBody(start: SyntaxCursor, keyword: CstElement, paramsCursor: SyntaxCursor, params: CstNode) -> SyntaxParseResult
+  let afterParams = syntaxCursorSkipTrivia(syntaxCursorAdvance(paramsCursor))
+  let paramsNode = CstElement.NodeElement(Ref.new(CstNode {
+    Kind: CstNodeKind.FunctionParameters,
+    Span: params.Span,
+    Children: functionParameterItems(params.Children, 0, true, []),
+    HasError: params.HasError,
+  }))
+  let items = start.Elements
+  let signature = funcLitSignature(items, paramsCursor, afterParams)
+  let bodyStart = signature.BodyStart
+  let endIndex = funcLitBodyEnd(items, bodyStart, 0)
+  if endIndex < 0 then
+    SyntaxParseResult { Node: None, Cursor: start }
+  else
+    SyntaxParseResult {
+      Node: Some(Ref.new(CstNode {
+        Kind: CstNodeKind.FuncLitExpr,
+        Span: ps.SourceSpan { Start: cstElementSpan(keyword).Start, End: cstElementSpan(cstElementAt(items, endIndex)).End },
+        Children: funcLitChildren(items, start.Index, paramsCursor.Index, paramsNode, signature, endIndex),
+        HasError: false,
+      })),
+      Cursor: syntaxCursorAdvance(SyntaxCursor { Elements: items, Index: endIndex }),
+    }
+  end
+end
+
+# funcLitSignature classifies the optional `-> ret` between the parameter group
+# and the body.  It returns the body-start index, the gap slice that follows the
+# parameter group, and the return-type node when an arrow form is present.
+func funcLitSignature(items: Slice[CstElement], paramsCursor: SyntaxCursor, afterParams: SyntaxCursor) -> FuncLitSignature
+  let gap = cstElementSliceOrEmpty(items, paramsCursor.Index + 1, afterParams.Index)
+  if syntaxCursorRaw(afterParams) != "->" then
+    FuncLitSignature { BodyStart: afterParams.Index, Return: None, Gap: gap }
+  else
+    let typeStart = syntaxCursorSkipTrivia(syntaxCursorAdvance(afterParams))
+    let parsed = parseType(typeStart)
+    switch parsed.Node
+      case Some(node) then
+        FuncLitSignature {
+          BodyStart: parsed.Cursor.Index,
+          Gap: gap,
+          Return: Some(CstElement.NodeElement(Ref.new(CstNode {
+            Kind: CstNodeKind.FunctionReturnType,
+            Span: ps.SourceSpan { Start: cstElementSpan(cstElementAt(items, afterParams.Index)).Start, End: node.value().Span.End },
+            Children: joinCstElements(cstElementSliceOrEmpty(items, afterParams.Index, typeStart.Index), [CstElement.NodeElement(node)]),
+            HasError: node.value().HasError,
+          }))),
+        }
+      end
+      case None => FuncLitSignature { BodyStart: afterParams.Index, Return: None, Gap: gap }
+    end
+  end
+end
+
+func funcLitChildren(items: Slice[CstElement], keywordIndex: Int, paramsIndex: Int, paramsNode: CstElement, signature: FuncLitSignature, endIndex: Int) -> Slice[CstElement]
+  let lead = joinCstElements(
+    [CstElement.TokenElement(cstTokenOf(cstElementAt(items, keywordIndex)))],
+    cstElementSliceOrEmpty(items, keywordIndex + 1, paramsIndex)
+  )
+  switch signature.Return
+    case Some(returnNode) then
+      joinCstElements(
+        joinCstElements(
+          joinCstElements(lead, [paramsNode]),
+          joinCstElements(signature.Gap, [returnNode])
+        ),
+        joinCstElements(
+          [funcLitBodyElement(items, signature.BodyStart, endIndex)],
+          cstElementSliceOrEmpty(items, endIndex, endIndex + 1)
+        )
+      )
+    end
+    case None then
+      joinCstElements(
+        joinCstElements(
+          joinCstElements(lead, [paramsNode]),
+          signature.Gap
+        ),
+        joinCstElements(
+          [funcLitBodyElement(items, signature.BodyStart, endIndex)],
+          cstElementSliceOrEmpty(items, endIndex, endIndex + 1)
+        )
+      )
+    end
+  end
+end
+
+# funcLitBodyElement wraps the body region in one Block node so it lowers as a
+# statement block, matching the legacy `blockUntil end` result.
+func funcLitBodyElement(items: Slice[CstElement], start: Int, finish: Int) -> CstElement
+  CstElement.NodeElement(Ref.new(CstNode {
+    Kind: CstNodeKind.Block,
+    Span: cstElementSliceSpan(items, start, finish),
+    Children: functionBodyStatements(cstElementSliceOrEmpty(items, start, finish)),
+    HasError: false,
+  }))
+end
+
+# funcLitBodyEnd finds the `end` that closes the func literal whose body starts
+# at index.  A nested `func` literal or `letrec` opens a further block; every
+# other keyword block (`if`/`switch`/`while`/`case`) is already a nested node in
+# the delimited build, so its `end` is owned by that node and never seen here.
+func funcLitBodyEnd(items: Slice[CstElement], index: Int, depth: Int) -> Int
+  if index >= items.Len() then
+    -1
+  else
+    let raw = cstElementRaw(cstElementAt(items, index))
+    if raw == "end" then
+      if depth == 0 then index else funcLitBodyEnd(items, index + 1, depth - 1) end
+    elsif raw == "func" && !syntaxFuncIsType(items, index) && syntaxFuncOpensBlock(items, index) then
+      funcLitBodyEnd(items, index + 1, depth + 1)
+    elsif raw == "letrec" then
+      funcLitBodyEnd(items, index + 1, depth + 1)
+    else
+      funcLitBodyEnd(items, index + 1, depth)
+    end
+  end
+end
+
+# parseInlineGoExpr builds the CST for `go[Type] { code: ... }`.  The leading
+# `go` token is the identifier that parseExpr saw, so this entry point only
+# owns the bracket group, brace body, and their trivia.  The bracket group keeps
+# the type argument as a nested type node; the brace body groups `code:` and the
+# `in`/`type` bindings into typed children so lowering never re-parses source.
+func parseInlineGoExpr(start: SyntaxCursor) -> SyntaxParseResult
+  let keyword = cstElementAt(start.Elements, start.Index)
+  let afterKeyword = syntaxCursorSkipTrivia(syntaxCursorAdvance(start))
+  switch syntaxCursorPeek(afterKeyword)
+    case Some(item) then
+      switch cstElementNode(item)
+        case Some(brackets) then
+          if brackets.value().Kind == CstNodeKind.BracketGroup then
+            let afterBrackets = syntaxCursorSkipTrivia(syntaxCursorAdvance(afterKeyword))
+            switch syntaxCursorPeek(afterBrackets)
+              case Some(bodyItem) then
+                switch cstElementNode(bodyItem)
+                  case Some(body) then
+                    if body.value().Kind == CstNodeKind.BraceGroup then
+                      parseInlineGoBodyNode(start, keyword, afterKeyword, brackets.value(), afterBrackets, body.value())
+                    else
+                      SyntaxParseResult { Node: None, Cursor: start }
+                    end
+                  end
+                  case None => SyntaxParseResult { Node: None, Cursor: start }
+                end
+              end
+              case None => SyntaxParseResult { Node: None, Cursor: start }
+            end
+          else
+            SyntaxParseResult { Node: None, Cursor: start }
+          end
+        end
+        case None => SyntaxParseResult { Node: None, Cursor: start }
+      end
+    end
+    case None => SyntaxParseResult { Node: None, Cursor: start }
+  end
+end
+
+func parseInlineGoBodyNode(start: SyntaxCursor, keyword: CstElement, afterKeyword: SyntaxCursor, brackets: CstNode, afterBrackets: SyntaxCursor, body: CstNode) -> SyntaxParseResult
+  let bodyChildren = parseInlineGoBodyItems(body.Children, 0, [])
+  SyntaxParseResult {
+    Node: Some(Ref.new(CstNode {
+      Kind: CstNodeKind.InlineGoExpr,
+      Span: ps.SourceSpan { Start: cstElementSpan(keyword).Start, End: body.Span.End },
+      Children: joinCstElements(
+        joinCstElements(
+          [CstElement.TokenElement(cstTokenOf(keyword))],
+          cstElementSliceOrEmpty(start.Elements, start.Index + 1, afterKeyword.Index)
+        ),
+        joinCstElements(
+          joinCstElements(
+            [CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.BracketGroup, Span: brackets.Span, Children: parseTypeItems(brackets.Children, 0, []), HasError: brackets.HasError }))],
+            cstElementSliceOrEmpty(start.Elements, afterKeyword.Index + 1, afterBrackets.Index)
+          ),
+          [CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.BraceGroup, Span: body.Span, Children: bodyChildren, HasError: body.HasError }))]
+        )
+      ),
+      HasError: false,
+    })),
+    Cursor: syntaxCursorAdvance(afterBrackets),
+  }
+end
+
+# parseInlineGoBodyItems groups the flat leaves of a `{ code: ... in x = e ... }`
+# body.  `code:` becomes an InlineGoCode node holding the literal; each `in` or
+# `type` binding becomes a typed binding node whose value/type children are
+# parsed from the same leaf range.
+func parseInlineGoBodyItems(items: Slice[CstElement], index: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    let item = cstElementAt(items, index)
+    let raw = cstElementRaw(item)
+    if raw == "code" then
+      parseInlineGoCodeItem(items, index, output)
+    elsif raw == "in" || raw == "type" then
+      parseInlineGoBindingItem(items, index, output)
+    else
+      parseInlineGoBodyItems(items, index + 1, output.Append(item))
+    end
+  end
+end
+
+func parseInlineGoCodeItem(items: Slice[CstElement], index: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  let colon = syntaxNextTokenIndex(items, index + 1)
+  if colon < 0 || cstElementRaw(cstElementAt(items, colon)) != ":" then
+    parseInlineGoBodyItems(items, index + 1, output.Append(cstElementAt(items, index)))
+  else
+    let literal = syntaxNextTokenIndex(items, colon + 1)
+    if literal < 0 || !cstElementIsStringLiteral(cstElementAt(items, literal)) then
+      parseInlineGoBodyItems(items, index + 1, output.Append(cstElementAt(items, index)))
+    else
+      let children = cstElementSliceOrEmpty(items, index, literal + 1)
+      parseInlineGoBodyItems(items, literal + 1, output.Append(CstElement.NodeElement(Ref.new(CstNode {
+        Kind: CstNodeKind.InlineGoCode,
+        Span: cstElementSliceSpan(children, 0, children.Len()),
+        Children: children,
+        HasError: false,
+      }))))
+    end
+  end
+end
+
+func parseInlineGoBindingItem(items: Slice[CstElement], index: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  let name = syntaxNextTokenIndex(items, index + 1)
+  if name < 0 || !syntaxElementNameToken(cstElementAt(items, name)) then
+    parseInlineGoBodyItems(items, index + 1, output.Append(cstElementAt(items, index)))
+  else
+    let equals = syntaxNextTokenIndex(items, name + 1)
+    if equals < 0 || cstElementRaw(cstElementAt(items, equals)) != "=" then
+      parseInlineGoBodyItems(items, index + 1, output.Append(cstElementAt(items, index)))
+    else
+      let valueStart = syntaxCursorSkipTrivia(SyntaxCursor { Elements: items, Index: equals + 1 })
+      let parsed = if cstElementRaw(cstElementAt(items, index)) == "type" then
+        parseType(valueStart)
+      else
+        parseExpr(valueStart)
+      end
+      if parsed.Cursor.Index > valueStart.Index then
+        switch parsed.Node
+          case Some(node) then
+            let kind = if cstElementRaw(cstElementAt(items, index)) == "type" then
+              CstNodeKind.InlineGoTypeBinding
+            else
+              CstNodeKind.InlineGoValueBinding
+            end
+            let children = joinCstElements(
+              cstElementSliceOrEmpty(items, index, valueStart.Index),
+              [CstElement.NodeElement(node)]
+            )
+            parseInlineGoBodyItems(items, parsed.Cursor.Index, output.Append(CstElement.NodeElement(Ref.new(CstNode {
+              Kind: kind,
+              Span: cstElementSliceSpan(children, 0, children.Len()),
+              Children: children,
+              HasError: node.value().HasError,
+            }))))
+          end
+          case None => parseInlineGoBodyItems(items, index + 1, output.Append(cstElementAt(items, index)))
+        end
+      else
+        parseInlineGoBodyItems(items, index + 1, output.Append(cstElementAt(items, index)))
+      end
+    end
+  end
+end
+

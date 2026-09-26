@@ -5,14 +5,14 @@ package parser2
 import . "github.com/mygo-lang/mygo/prelude"
 
 type FormatterCursor struct {
-	Elements []GreenElement
+	Elements []CstElement
 	Index    int
 }
 
-func NewFormatterCursor(elements []GreenElement) FormatterCursor {
+func NewFormatterCursor(elements []CstElement) FormatterCursor {
 	return FormatterCursor{Elements: elements, Index: 0}
 }
-func FormatterCursorPeek(cursor FormatterCursor) Option[GreenElement] {
+func FormatterCursorPeek(cursor FormatterCursor) Option[CstElement] {
 	return MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(cursor.Elements, cursor.Index)
 }
 func FormatterCursorIsDone(cursor FormatterCursor) bool {
@@ -24,10 +24,10 @@ func FormatterCursorAdvance(cursor FormatterCursor) FormatterCursor {
 func FormatterCursorIsTrivia(cursor FormatterCursor) bool {
 	__mygo_expr_0 := FormatterCursorPeek(cursor)
 	var __mygo_expr_1 bool
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[GreenElement]); ok {
-		__mygo_expr_1 = greenElementIsTrivia(__mygo_match___mygo_expr_2.F0)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+		__mygo_expr_1 = cstElementIsTrivia(__mygo_match___mygo_expr_2.F0)
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[GreenElement]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 			__mygo_expr_1 = false
 		} else {
 		}
@@ -40,13 +40,13 @@ func FormatterCursorSkipTrivia(cursor FormatterCursor) FormatterCursor {
 func FormatterCursorSkipFormatableTrivia(cursor FormatterCursor) FormatterCursor {
 	return __mygo_mt_parser2_FormatterCursorSkipFormatableTrivia(cursor, 0)
 }
-func FormatterCursorNextContent(cursor FormatterCursor) Option[GreenElement] {
+func FormatterCursorNextContent(cursor FormatterCursor) Option[CstElement] {
 	return FormatterCursorPeek(FormatterCursorSkipTrivia(cursor))
 }
-func greenElementIsFormatableTrivia(item GreenElement) bool {
-	if greenElementIsTrivia(item) {
+func cstElementIsFormatableTrivia(item CstElement) bool {
+	if cstElementIsTrivia(item) {
 		var __mygo_expr_0 bool
-		if __mygo_match___mygo_expr_1, ok := item.(GreenElement__TriviaElement); ok {
+		if __mygo_match___mygo_expr_1, ok := item.(CstElement__TriviaElement); ok {
 			__mygo_expr_0 = formatterTriviaIsFormatable(__mygo_match___mygo_expr_1.F0)
 		} else {
 			__mygo_expr_0 = false
@@ -56,15 +56,15 @@ func greenElementIsFormatableTrivia(item GreenElement) bool {
 		return false
 	}
 }
-func formatterTriviaIsFormatable(trivia GreenTrivia) bool {
-	return trivia.Kind == GreenTriviaKind__Whitespace__Ctor()
+func formatterTriviaIsFormatable(trivia CstTrivia) bool {
+	return trivia.Kind == CstTriviaKind__Whitespace__Ctor()
 }
-func FormatterOpaqueTriviaRaw(item GreenElement) Option[string] {
-	if greenElementIsFormatableTrivia(item) {
+func FormatterOpaqueTriviaRaw(item CstElement) Option[string] {
+	if cstElementIsFormatableTrivia(item) {
 		return None[string]()
 	} else {
 		var __mygo_expr_0 Option[string]
-		if __mygo_match___mygo_expr_1, ok := item.(GreenElement__TriviaElement); ok {
+		if __mygo_match___mygo_expr_1, ok := item.(CstElement__TriviaElement); ok {
 			__mygo_expr_0 = Some[string](__mygo_match___mygo_expr_1.F0.Raw)
 		} else {
 			__mygo_expr_0 = None[string]()
@@ -72,46 +72,46 @@ func FormatterOpaqueTriviaRaw(item GreenElement) Option[string] {
 		return __mygo_expr_0
 	}
 }
-func greenElementIsOpaqueLiteral(item GreenElement) bool {
+func cstElementIsOpaqueLiteral(item CstElement) bool {
 	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_1, ok := item.(GreenElement__TokenElement); ok {
-		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0.Kind == GreenTokenKind__StringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == GreenTokenKind__RawStringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == GreenTokenKind__TripleStringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == GreenTokenKind__RuneLiteral__Ctor()
+	if __mygo_match___mygo_expr_1, ok := item.(CstElement__TokenElement); ok {
+		__mygo_expr_0 = __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__StringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__RawStringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__TripleStringLiteral__Ctor() || __mygo_match___mygo_expr_1.F0.Kind == CstTokenKind__RuneLiteral__Ctor()
 	} else {
 		__mygo_expr_0 = false
 	}
 	return __mygo_expr_0
 }
-func greenElementIsInlineGoRange(item GreenElement) bool {
-	__mygo_expr_0 := greenElementNode(item)
+func cstElementIsInlineGoRange(item CstElement) bool {
+	__mygo_expr_0 := cstElementNode(item)
 	var __mygo_expr_1 bool
-	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*GreenNode]); ok {
-		__mygo_expr_1 = (*__mygo_match___mygo_expr_2.F0).Kind == GreenNodeKind__InlineGoExpr__Ctor() || (*__mygo_match___mygo_expr_2.F0).Kind == GreenNodeKind__InlineGoBody__Ctor() || (*__mygo_match___mygo_expr_2.F0).Kind == GreenNodeKind__InlineGoCode__Ctor()
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[*CstNode]); ok {
+		__mygo_expr_1 = (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__InlineGoExpr__Ctor() || (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__InlineGoBody__Ctor() || (*__mygo_match___mygo_expr_2.F0).Kind == CstNodeKind__InlineGoCode__Ctor()
 	} else {
-		if _, ok := __mygo_expr_0.(Option__None[*GreenNode]); ok {
+		if _, ok := __mygo_expr_0.(Option__None[*CstNode]); ok {
 			__mygo_expr_1 = false
 		} else {
 		}
 	}
 	return __mygo_expr_1
 }
-func greenElementIsOpaqueSource(item GreenElement) bool {
-	if greenElementIsTrivia(item) {
-		return !greenElementIsFormatableTrivia(item)
+func cstElementIsOpaqueSource(item CstElement) bool {
+	if cstElementIsTrivia(item) {
+		return !cstElementIsFormatableTrivia(item)
 	} else {
-		return greenElementIsOpaqueLiteral(item) || greenElementIsInlineGoRange(item)
+		return cstElementIsOpaqueLiteral(item) || cstElementIsInlineGoRange(item)
 	}
 }
-func FormatterOpaqueSourceRaw(item GreenElement) Option[string] {
-	if greenElementIsOpaqueSource(item) {
+func FormatterOpaqueSourceRaw(item CstElement) Option[string] {
+	if cstElementIsOpaqueSource(item) {
 		var __mygo_expr_0 Option[string]
-		if __mygo_match___mygo_expr_3, ok := item.(GreenElement__TriviaElement); ok {
+		if __mygo_match___mygo_expr_3, ok := item.(CstElement__TriviaElement); ok {
 			__mygo_expr_0 = Some[string](__mygo_match___mygo_expr_3.F0.Raw)
 		} else {
-			if __mygo_match___mygo_expr_2, ok := item.(GreenElement__TokenElement); ok {
+			if __mygo_match___mygo_expr_2, ok := item.(CstElement__TokenElement); ok {
 				__mygo_expr_0 = Some[string](__mygo_match___mygo_expr_2.F0.Raw)
 			} else {
-				if __mygo_match___mygo_expr_1, ok := item.(GreenElement__NodeElement); ok {
-					__mygo_expr_0 = Some[string](greenNodeText(*__mygo_match___mygo_expr_1.F0))
+				if __mygo_match___mygo_expr_1, ok := item.(CstElement__NodeElement); ok {
+					__mygo_expr_0 = Some[string](cstNodeText(*__mygo_match___mygo_expr_1.F0))
 				} else {
 				}
 			}
@@ -126,8 +126,8 @@ func __mygo_mt_parser2_FormatterCursorSkipFormatableTrivia(__mygo_mt_p0 Formatte
 		switch __mygo_state {
 		case 0:
 			__mygo_expr_0 := FormatterCursorPeek(__mygo_mt_p0)
-			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[GreenElement]); ok {
-				if greenElementIsFormatableTrivia(__mygo_match___mygo_expr_1.F0) {
+			if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[CstElement]); ok {
+				if cstElementIsFormatableTrivia(__mygo_match___mygo_expr_1.F0) {
 					__tail_0 := FormatterCursorAdvance(__mygo_mt_p0)
 					__mygo_mt_p0 = __tail_0
 					__mygo_state = 0
@@ -136,7 +136,7 @@ func __mygo_mt_parser2_FormatterCursorSkipFormatableTrivia(__mygo_mt_p0 Formatte
 					return __mygo_mt_p0
 				}
 			} else {
-				if _, ok := __mygo_expr_0.(Option__None[GreenElement]); ok {
+				if _, ok := __mygo_expr_0.(Option__None[CstElement]); ok {
 					return __mygo_mt_p0
 				} else {
 					panic("non-exhaustive switch")

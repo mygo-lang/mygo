@@ -1,12 +1,12 @@
 package parser2
 
 
-# FormatterCursor is the Syntax Tree formatter's ordered traversal over green
-# elements (task 4.1).  It walks one ordered `Slice[GreenElement]` exactly once,
+# FormatterCursor is the Syntax Tree formatter's ordered traversal over CST
+# elements (task 4.1).  It walks one ordered `Slice[CstElement]` exactly once,
 # so the formatter can consume tokens, nested nodes, and trivia in source order
 # without re-deriving structure or positions from text.
 #
-# Trivia is classified through the single explicit `greenElementIsTrivia`
+# Trivia is classified through the single explicit `cstElementIsTrivia`
 # predicate so every consumer agrees on what a trivia gap is.  Two skipping
 # modes are distinguished:
 #
@@ -20,15 +20,15 @@ package parser2
 # The cursor never drops source: skipping only advances `Index`; the caller can
 # still slice the original element range for protected spans.
 struct FormatterCursor
-  Elements: Slice[GreenElement]
+  Elements: Slice[CstElement]
   Index: Int
 end
 
-func NewFormatterCursor(elements: Slice[GreenElement]) -> FormatterCursor
+func NewFormatterCursor(elements: Slice[CstElement]) -> FormatterCursor
   FormatterCursor { Elements: elements, Index: 0 }
 end
 
-func FormatterCursorPeek(cursor: FormatterCursor) -> Option[GreenElement]
+func FormatterCursorPeek(cursor: FormatterCursor) -> Option[CstElement]
   cursor.Elements.Get(cursor.Index)
 end
 
@@ -41,11 +41,11 @@ func FormatterCursorAdvance(cursor: FormatterCursor) -> FormatterCursor
 end
 
 # FormatterCursorIsTrivia routes every trivia decision through the one explicit
-# `greenElementIsTrivia(item)` predicate rather than matching TriviaElement in
+# `cstElementIsTrivia(item)` predicate rather than matching TriviaElement in
 # each traversal.  An exhausted cursor is never trivia.
 func FormatterCursorIsTrivia(cursor: FormatterCursor) -> Bool
   switch FormatterCursorPeek(cursor)
-    case Some(item) => greenElementIsTrivia(item)
+    case Some(item) => cstElementIsTrivia(item)
     case None => false
   end
 end
@@ -66,7 +66,7 @@ end
 func FormatterCursorSkipFormatableTrivia(cursor: FormatterCursor) -> FormatterCursor
   switch FormatterCursorPeek(cursor)
     case Some(item) =>
-      if greenElementIsFormatableTrivia(item) then
+      if cstElementIsFormatableTrivia(item) then
         FormatterCursorSkipFormatableTrivia(FormatterCursorAdvance(cursor))
       else
         cursor
@@ -77,16 +77,16 @@ end
 
 # FormatterCursorNextContent returns the next significant element, skipping all
 # trivia.  It is the read-only companion to `FormatterCursorSkipTrivia`.
-func FormatterCursorNextContent(cursor: FormatterCursor) -> Option[GreenElement]
+func FormatterCursorNextContent(cursor: FormatterCursor) -> Option[CstElement]
   FormatterCursorPeek(FormatterCursorSkipTrivia(cursor))
 end
 
-# greenElementIsFormatableTrivia is the normalization boundary: a formatable gap
+# cstElementIsFormatableTrivia is the normalization boundary: a formatable gap
 # is whitespace trivia the formatter may discard and re-emit as canonical layout.
 # Every other element (tokens, nodes, comments, and any other trivia kind) is not
 # formatable and must be replayed from source.
-func greenElementIsFormatableTrivia(item: GreenElement) -> Bool
-  if greenElementIsTrivia(item) then
+func cstElementIsFormatableTrivia(item: CstElement) -> Bool
+  if cstElementIsTrivia(item) then
     switch item
       case TriviaElement(trivia) => formatterTriviaIsFormatable(trivia)
       case _ => false
@@ -96,16 +96,16 @@ func greenElementIsFormatableTrivia(item: GreenElement) -> Bool
   end
 end
 
-func formatterTriviaIsFormatable(trivia: GreenTrivia) -> Bool
-  trivia.Kind == GreenTriviaKind.Whitespace
+func formatterTriviaIsFormatable(trivia: CstTrivia) -> Bool
+  trivia.Kind == CstTriviaKind.Whitespace
 end
 
 # FormatterOpaqueTriviaRaw returns the raw source of the trivia the formatter must
 # replay verbatim.  Formatable whitespace returns None because it is normalized
 # away; a comment (or any future opaque trivia kind) returns Some(raw).  A token
 # or node is not trivia and also returns None.
-func FormatterOpaqueTriviaRaw(item: GreenElement) -> Option[String]
-  if greenElementIsFormatableTrivia(item) then
+func FormatterOpaqueTriviaRaw(item: CstElement) -> Option[String]
+  if cstElementIsFormatableTrivia(item) then
     None
   else
     switch item
@@ -118,7 +118,7 @@ end
 # Task 4.2 widens "opaque source" from opaque trivia to every lexical form the
 # formatter must re-emit verbatim.  Three families are opaque:
 #
-#   - opaque trivia (comments), owned by `GreenTrivia` and never a normalization
+#   - opaque trivia (comments), owned by `CstTrivia` and never a normalization
 #     gap;
 #   - literal tokens whose exact spelling carries meaning (`"..."`, `` `...` ``,
 #     triple-quoted strings, and `'x'` runes) - decoding and re-encoding them is
@@ -126,55 +126,55 @@ end
 #   - inline-Go ranges, whose embedded Go payload is not MyGO syntax at all and
 #     therefore can never be regenerated from AST values.
 #
-# `greenElementIsOpaqueSource` is the single union predicate every consumer uses,
+# `cstElementIsOpaqueSource` is the single union predicate every consumer uses,
 # so the later delimiter/block migrations cannot disagree about what may be
 # normalized and what must be replayed.
 
-# greenElementIsOpaqueLiteral recognizes the literal token kinds the formatter
+# cstElementIsOpaqueLiteral recognizes the literal token kinds the formatter
 # must re-emit verbatim, including delimiters and escape sequences.
-func greenElementIsOpaqueLiteral(item: GreenElement) -> Bool
+func cstElementIsOpaqueLiteral(item: CstElement) -> Bool
   switch item
     case TokenElement(token) =>
-      token.Kind == GreenTokenKind.StringLiteral || token.Kind == GreenTokenKind.RawStringLiteral || token.Kind == GreenTokenKind.TripleStringLiteral || token.Kind == GreenTokenKind.RuneLiteral
+      token.Kind == CstTokenKind.StringLiteral || token.Kind == CstTokenKind.RawStringLiteral || token.Kind == CstTokenKind.TripleStringLiteral || token.Kind == CstTokenKind.RuneLiteral
     case _ => false
   end
 end
 
-# greenElementIsInlineGoRange recognizes the inline-Go structural range.  The
+# cstElementIsInlineGoRange recognizes the inline-Go structural range.  The
 # whole expression, body, and embedded `code:` literal are opaque: their Go
 # payload is replayed from source, never rebuilt from decoded values.  The value
 # and type bindings are deliberately excluded, because their MyGO operands are
 # ordinary syntax the formatter owns.
-func greenElementIsInlineGoRange(item: GreenElement) -> Bool
-  switch greenElementNode(item)
+func cstElementIsInlineGoRange(item: CstElement) -> Bool
+  switch cstElementNode(item)
     case Some(node) then
-      node.value().Kind == GreenNodeKind.InlineGoExpr || node.value().Kind == GreenNodeKind.InlineGoBody || node.value().Kind == GreenNodeKind.InlineGoCode
+      node.value().Kind == CstNodeKind.InlineGoExpr || node.value().Kind == CstNodeKind.InlineGoBody || node.value().Kind == CstNodeKind.InlineGoCode
     end
     case None => false
   end
 end
 
-# greenElementIsOpaqueSource is the union predicate: formatable whitespace is the
+# cstElementIsOpaqueSource is the union predicate: formatable whitespace is the
 # only element the formatter may discard and re-emit canonically.  Every other
 # element is either opaque source (replayed verbatim) or ordinary syntax the
 # formatter traverses.
-func greenElementIsOpaqueSource(item: GreenElement) -> Bool
-  if greenElementIsTrivia(item) then
-    !greenElementIsFormatableTrivia(item)
+func cstElementIsOpaqueSource(item: CstElement) -> Bool
+  if cstElementIsTrivia(item) then
+    !cstElementIsFormatableTrivia(item)
   else
-    greenElementIsOpaqueLiteral(item) || greenElementIsInlineGoRange(item)
+    cstElementIsOpaqueLiteral(item) || cstElementIsInlineGoRange(item)
   end
 end
 
 # FormatterOpaqueSourceRaw returns the exact source the formatter must replay for
 # an opaque element, or None when the element is not opaque.  Formatable
 # whitespace and ordinary tokens/nodes return None.
-func FormatterOpaqueSourceRaw(item: GreenElement) -> Option[String]
-  if greenElementIsOpaqueSource(item) then
+func FormatterOpaqueSourceRaw(item: CstElement) -> Option[String]
+  if cstElementIsOpaqueSource(item) then
     switch item
       case TriviaElement(trivia) => Some(trivia.Raw)
       case TokenElement(token) => Some(token.Raw)
-      case NodeElement(node) => Some(greenNodeText(node.value()))
+      case NodeElement(node) => Some(cstNodeText(node.value()))
     end
   else
     None

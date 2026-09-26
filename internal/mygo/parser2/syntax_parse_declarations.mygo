@@ -1,0 +1,1032 @@
+package parser2
+
+import ps "github.com/mygo-lang/mygo/lib/text/parsec"
+import strings "go:strings"
+
+func parseFileDeclarations(cursor: SyntaxCursor, items: Slice[CstElement]) -> Slice[CstElement]
+  let current = syntaxCursorSkipTrivia(cursor)
+  if current.Index > cursor.Index then
+    switch syntaxCursorPeek(cursor)
+      case Some(item) => parseFileDeclarations(syntaxCursorAdvance(cursor), items.Append(item))
+      case None => items
+    end
+  elsif current.Index >= current.Elements.Len() then
+    items
+  else
+    let parsed = parseDeclaration(current)
+    if parsed.Cursor.Index > current.Index then
+      switch parsed.Node
+        case Some(node) => parseFileDeclarations(parsed.Cursor, items.Append(CstElement.NodeElement(node)))
+        case None => parseFileDeclarations(parsed.Cursor, items)
+      end
+    else
+      switch syntaxCursorPeek(cursor)
+        case Some(item) => parseFileDeclarations(syntaxCursorAdvance(cursor), items.Append(item))
+        case None => items
+      end
+    end
+  end
+end
+
+func syntaxCursorPeek(cursor: SyntaxCursor) -> Option[CstElement]
+  cursor.Elements.Get(cursor.Index)
+end
+
+func syntaxCursorAdvance(cursor: SyntaxCursor) -> SyntaxCursor
+  SyntaxCursor { Elements: cursor.Elements, Index: cursor.Index + 1 }
+end
+
+func syntaxCursorSkipTrivia(cursor: SyntaxCursor) -> SyntaxCursor
+  switch syntaxCursorPeek(cursor)
+    case Some(item) then
+      if cstElementIsTrivia(item) then
+        syntaxCursorSkipTrivia(syntaxCursorAdvance(cursor))
+      else
+        cursor
+      end
+    end
+    case None => cursor
+  end
+end
+
+# Like syntaxCursorSkipTrivia, but stops at a newline-bearing trivia so that a
+# construct cannot silently continue onto the following source line.  MyGO
+# treats newlines as statement/declaration boundaries, so suffix parsing such as
+# generic type arguments must not cross them.
+func syntaxCursorSkipTriviaSameLine(cursor: SyntaxCursor) -> SyntaxCursor
+  switch syntaxCursorPeek(cursor)
+    case Some(item) then
+      if cstElementIsTrivia(item) && !strings.Contains(cstElementRaw(item), "\n") then
+        syntaxCursorSkipTriviaSameLine(syntaxCursorAdvance(cursor))
+      else
+        cursor
+      end
+    end
+    case None => cursor
+  end
+end
+
+func cstElementsContainNewline(items: Slice[CstElement], start: Int, finish: Int) -> Bool
+  if start >= finish then
+    false
+  else
+    switch items.Get(start)
+      case Some(item) then
+        if strings.Contains(cstElementRaw(item), "\n") then
+          true
+        else
+          cstElementsContainNewline(items, start + 1, finish)
+        end
+      end
+      case None => false
+    end
+  end
+end
+
+func cstElementIsTrivia(item: CstElement) -> Bool
+  switch item
+    case TriviaElement(_) => true
+    case _ => false
+  end
+end
+
+func syntaxCursorRaw(cursor: SyntaxCursor) -> String
+  switch syntaxCursorPeek(syntaxCursorSkipTrivia(cursor))
+    case Some(item) => cstElementRaw(item)
+    case None => ""
+  end
+end
+
+func syntaxCursorPreviousRaw(cursor: SyntaxCursor, index: Int) -> String
+  if index < 0 then
+    ""
+  else
+    switch cursor.Elements.Get(index)
+      case Some(item) then
+        if cstElementIsTrivia(item) then
+          syntaxCursorPreviousRaw(cursor, index - 1)
+        else
+          cstElementRaw(item)
+        end
+      end
+      case None => ""
+    end
+  end
+end
+
+# These entry points deliberately form the CST grammar call chain.  Their
+# detailed alternatives are introduced incrementally; no ast2 node or legacy
+# span metadata participates in this syntax phase.
+func parseDeclaration(cursor: SyntaxCursor) -> SyntaxParseResult
+  let current = syntaxCursorSkipTrivia(cursor)
+  let raw = syntaxCursorRaw(current)
+  let parsed = if cstElementStartsDeclarationRaw(raw) then
+    SyntaxParseResult { Node: None, Cursor: syntaxCursorAtNextDeclaration(current) }
+  else
+    SyntaxParseResult { Node: None, Cursor: cursor }
+  end
+  freezeDeclaration(cursor, parsed)
+end
+
+func syntaxCursorAtNextDeclaration(cursor: SyntaxCursor) -> SyntaxCursor
+  let next = nextTopLevelDeclaration(cursor.Elements, cursor.Index)
+  SyntaxCursor {
+    Elements: cursor.Elements,
+    Index: if next < 0 => cursor.Elements.Len() else next,
+  }
+end
+
+# nextTopLevelDeclaration returns the start of the next top-level declaration
+# after the one beginning at start, or -1 at end of input.  A declaration that
+# opens a keyword block owns every nested block up to its matching `end`, so
+# interface/impl methods and struct/enum members stay inside their enclosing
+# declaration instead of being exported as separate top-level declarations.
+func nextTopLevelDeclaration(items: Slice[CstElement], start: Int) -> Int
+  if start >= items.Len() then
+    -1
+  elsif syntaxBlockCloseAt(items, start, []) == "" then
+    nextLineLeadingDeclaration(items, start + 1)
+  else
+    nextDeclarationAfterBlock(items, start + 1, [SyntaxBlock { Keyword: cstElementRaw(cstElementAt(items, start)), Close: "", Span: syntaxRootSpan([]) }], 1)
+  end
+end
+
+# nextDeclarationAfterBlock skips a declaration's nested keyword blocks.  The
+# scan starts inside the declaration's own block (depth 1); the `end` that
+# closes it hands the search to the next line-leading declaration keyword.
+func nextDeclarationAfterBlock(items: Slice[CstElement], index: Int, blocks: Slice[SyntaxBlock], depth: Int) -> Int
+  if index >= items.Len() then
+    -1
+  else
+    let item = cstElementAt(items, index)
+    if cstElementIsTrivia(item) then
+      nextDeclarationAfterBlock(items, index + 1, blocks, depth)
+    elsif cstElementRaw(item) == "end" then
+      if depth <= 1 then
+        nextLineLeadingDeclaration(items, index + 1)
+      else
+        nextDeclarationAfterBlock(items, index + 1, syntaxRecoveryDropLastBlock(blocks), depth - 1)
+      end
+    else
+      let open = syntaxBlockCloseAt(items, index, blocks)
+      if open == "" then
+        nextDeclarationAfterBlock(items, index + 1, blocks, depth)
+      else
+        nextDeclarationAfterBlock(items, index + 1, blocks.Append(SyntaxBlock { Keyword: cstElementRaw(item), Close: open, Span: cstElementSpan(item) }), depth + 1)
+      end
+    end
+  end
+end
+
+func nextLineLeadingDeclaration(items: Slice[CstElement], index: Int) -> Int
+  if index >= items.Len() then
+    -1
+  elsif cstElementIsLineLeading(items, index) && cstElementStartsDeclaration(cstElementAt(items, index)) then
+    index
+  else
+    nextLineLeadingDeclaration(items, index + 1)
+  end
+end
+
+# A declaration keyword only opens a new declaration when it begins a line.
+# This keeps `func` inside a type position such as `let g: func(Int) -> Bool`
+# from being mistaken for the start of the next top-level declaration.
+func cstElementIsLineLeading(items: Slice[CstElement], index: Int) -> Bool
+  if index <= 0 then
+    true
+  else
+    switch items.Get(index - 1)
+      case Some(previous) => cstElementIsTrivia(previous) && strings.Contains(cstElementRaw(previous), "\n")
+      case None => true
+    end
+  end
+end
+
+func freezeDeclaration(start: SyntaxCursor, parsed: SyntaxParseResult) -> SyntaxParseResult
+  if parsed.Cursor.Index <= start.Index then
+    parsed
+  else
+    switch start.Elements.Slice(start.Index, parsed.Cursor.Index)
+      case Some(children) then
+        switch (children.Get(0), children.Get(children.Len() - 1))
+          case (Some(first), Some(last)) then
+            SyntaxParseResult {
+              Node: Some(Ref.new(CstNode {
+                Kind: declarationKind(syntaxCursorRaw(start)),
+                Span: ps.SourceSpan {
+                  Start: cstElementSpan(first).Start,
+                  End: cstElementSpan(last).End
+                },
+                Children: declarationSemanticChildren(declarationKind(syntaxCursorRaw(start)), children),
+                HasError: false,
+              })),
+              Cursor: parsed.Cursor,
+            }
+          end
+          case _ => parsed
+        end
+      end
+      case None => parsed
+    end
+  end
+end
+
+func declarationSemanticChildren(kind: CstNodeKind, items: Slice[CstElement]) -> Slice[CstElement]
+  let named = declarationChildrenWithName(items, 0, "", [])
+  if kind == CstNodeKind.FuncDeclaration then
+    functionBodyChildren(functionParameterChildren(declarationChildrenWithExpr(functionReturnChildren(functionUsingChildren(typeParameterChildren(named, 1, 0, cstElementSliceOrEmpty(named, 0, 1)), 0, []), 0, []), 0, []), 0, false, []))
+  elsif kind == CstNodeKind.TypeDeclaration then
+    typeDeclarationChildren(typeParameterChildren(named, 1, 0, cstElementSliceOrEmpty(named, 0, 1)), 0, [])
+  elsif kind == CstNodeKind.ImportDeclaration then
+    importDeclarationChildren(items, 0, [])
+  elsif kind == CstNodeKind.StructDeclaration then
+    structDeclarationChildren(items)
+  elsif kind == CstNodeKind.EnumDeclaration then
+    enumDeclarationChildren(items)
+  elsif kind == CstNodeKind.InterfaceDeclaration then
+    interfaceDeclarationChildren(items)
+  elsif kind == CstNodeKind.ImplDeclaration then
+    implDeclarationChildren(items)
+  else
+    declarationChildrenWithExpr(named, 0, [])
+  end
+end
+
+# typeParameterChildren wraps the declaration's `[T, C[A]]` parameter list into
+# one TypeParameters node.  Only the bracket group that immediately follows the
+# declared name (with only trivia in between) is the parameter list; a bracket
+# that belongs to a later type argument stays owned by that type.  Phase 0 seeks
+# the name (or the bracket itself for `impl[T]`), phase 1 accepts the optional
+# bracket, and phase 2 copies the remaining header unchanged.
+func typeParameterChildren(items: Slice[CstElement], index: Int, phase: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  elsif phase == 2 then
+    joinCstElements(output, cstElementSliceOrEmpty(items, index, items.Len()))
+  else
+    let item = cstElementAt(items, index)
+    if cstElementIsTrivia(item) then
+      typeParameterChildren(items, index + 1, phase, output.Append(item))
+    elsif syntaxElementIsNodeKind(item, CstNodeKind.BracketGroup) then
+      switch cstElementNode(item)
+        case Some(group) then
+          joinCstElements(output.Append(CstElement.NodeElement(Ref.new(CstNode {
+            Kind: CstNodeKind.TypeParameters,
+            Span: group.value().Span,
+            Children: parseTypeItems(group.value().Children, 0, []),
+            HasError: group.value().HasError,
+          }))), cstElementSliceOrEmpty(items, index + 1, items.Len()))
+        end
+        case None => typeParameterChildren(items, index + 1, 2, output.Append(item))
+      end
+    elsif phase == 0 && syntaxElementIsNodeKind(item, CstNodeKind.IdentifierExpr) then
+      typeParameterChildren(items, index + 1, 1, output.Append(item))
+    else
+      joinCstElements(output, cstElementSliceOrEmpty(items, index, items.Len()))
+    end
+  end
+end
+
+func syntaxElementIsNodeKind(item: CstElement, kind: CstNodeKind) -> Bool
+  switch cstElementNode(item)
+    case Some(node) => node.value().Kind == kind
+    case None => false
+  end
+end
+
+func cstElementIsStringLiteral(item: CstElement) -> Bool
+  switch item
+    case TokenElement(token) then
+      token.Kind == CstTokenKind.StringLiteral || token.Kind == CstTokenKind.RawStringLiteral || token.Kind == CstTokenKind.TripleStringLiteral
+    end
+    case _ => false
+  end
+end
+
+func cstElementSliceSpan(items: Slice[CstElement], start: Int, finish: Int) -> ps.SourceSpan
+  switch (items.Get(start), items.Get(finish - 1))
+    case (Some(first), Some(last)) then
+      ps.SourceSpan { Start: cstElementSpan(first).Start, End: cstElementSpan(last).End }
+    end
+    case _ => syntaxRootSpan([])
+  end
+end
+
+func syntaxLastTokenIndex(items: Slice[CstElement], index: Int) -> Int
+  if index < 0 then
+    -1
+  elsif cstElementIsTrivia(cstElementAt(items, index)) then
+    syntaxLastTokenIndex(items, index - 1)
+  else
+    index
+  end
+end
+
+# syntaxNextLineLeading finds the first non-trivia element at or after index that
+# begins a new logical line.  MyGO declarations separate members by newlines, so
+# a line-leading token is the member boundary.
+func syntaxNextLineLeading(items: Slice[CstElement], index: Int, finish: Int) -> Int
+  if index >= finish then
+    -1
+  elsif cstElementIsLineLeading(items, index) && !cstElementIsTrivia(cstElementAt(items, index)) then
+    index
+  else
+    syntaxNextLineLeading(items, index + 1, finish)
+  end
+end
+
+func syntaxNextFuncLine(items: Slice[CstElement], index: Int, finish: Int) -> Int
+  if index >= finish then
+    -1
+  elsif cstElementIsLineLeading(items, index) && !cstElementIsTrivia(cstElementAt(items, index)) && cstElementRaw(cstElementAt(items, index)) == "func" then
+    index
+  else
+    syntaxNextFuncLine(items, index + 1, finish)
+  end
+end
+
+func importDeclarationChildren(items: Slice[CstElement], index: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    let item = cstElementAt(items, index)
+    if cstElementIsTrivia(item) then
+      importDeclarationChildren(items, index + 1, output.Append(item))
+    elsif cstElementIsStringLiteral(item) then
+      joinCstElements(output.Append(item), cstElementSliceOrEmpty(items, index + 1, items.Len()))
+    elsif cstElementRaw(item) == "." || syntaxElementNameToken(item) then
+      joinCstElements(output.Append(CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.IdentifierExpr, Span: cstElementSpan(item), Children: [item], HasError: false }))), cstElementSliceOrEmpty(items, index + 1, items.Len()))
+    else
+      importDeclarationChildren(items, index + 1, output.Append(item))
+    end
+  end
+end
+
+func structDeclarationChildren(items: Slice[CstElement]) -> Slice[CstElement]
+  let named = declarationChildrenWithName(items, 0, "", [])
+  let header = typeParameterChildren(named, 1, 0, cstElementSliceOrEmpty(named, 0, 1))
+  let bodyStart = syntaxNextLineLeading(header, 1, header.Len())
+  let endIndex = syntaxLastTokenIndex(header, header.Len() - 1)
+  if bodyStart < 0 || endIndex < 0 then
+    header
+  else
+    joinCstElements(joinCstElements(cstElementSliceOrEmpty(header, 0, bodyStart), syntaxFieldMembers(CstNodeKind.StructField, header, bodyStart, endIndex, [])), cstElementSliceOrEmpty(header, endIndex, header.Len()))
+  end
+end
+
+func enumDeclarationChildren(items: Slice[CstElement]) -> Slice[CstElement]
+  let named = declarationChildrenWithName(items, 0, "", [])
+  let header = typeParameterChildren(named, 1, 0, cstElementSliceOrEmpty(named, 0, 1))
+  let bodyStart = syntaxNextLineLeading(header, 1, header.Len())
+  let endIndex = syntaxLastTokenIndex(header, header.Len() - 1)
+  if bodyStart < 0 || endIndex < 0 then
+    header
+  else
+    joinCstElements(joinCstElements(cstElementSliceOrEmpty(header, 0, bodyStart), syntaxFieldMembers(CstNodeKind.EnumVariant, header, bodyStart, endIndex, [])), cstElementSliceOrEmpty(header, endIndex, header.Len()))
+  end
+end
+
+func interfaceDeclarationChildren(items: Slice[CstElement]) -> Slice[CstElement]
+  let named = declarationChildrenWithName(items, 0, "", [])
+  let header = typeParameterChildren(named, 1, 0, cstElementSliceOrEmpty(named, 0, 1))
+  let bodyStart = syntaxNextLineLeading(header, 1, header.Len())
+  let endIndex = syntaxLastTokenIndex(header, header.Len() - 1)
+  if bodyStart < 0 || endIndex < 0 then
+    header
+  else
+    joinCstElements(joinCstElements(cstElementSliceOrEmpty(header, 0, bodyStart), syntaxFuncMembers(CstNodeKind.FuncSignature, header, bodyStart, endIndex, [])), cstElementSliceOrEmpty(header, endIndex, header.Len()))
+  end
+end
+
+func implDeclarationChildren(items: Slice[CstElement]) -> Slice[CstElement]
+  let withParams = typeParameterChildren(items, 1, 0, cstElementSliceOrEmpty(items, 0, 1))
+  let bodyStart = syntaxNextLineLeading(withParams, 1, withParams.Len())
+  let endIndex = syntaxLastTokenIndex(withParams, withParams.Len() - 1)
+  let headerEnd = if bodyStart < 0 then withParams.Len() else bodyStart end
+  let header = implHeaderChildren(withParams, 2, headerEnd, false, cstElementSliceOrEmpty(withParams, 0, 2))
+  if bodyStart < 0 || endIndex < 0 then
+    header
+  else
+    joinCstElements(joinCstElements(header, syntaxFuncMembers(CstNodeKind.ImplMethod, withParams, bodyStart, endIndex, [])), cstElementSliceOrEmpty(withParams, endIndex, withParams.Len()))
+  end
+end
+
+# implHeaderChildren types the impl header: the target type and the optional
+# `: Interface` clause.  Type parameters were already wrapped by the caller.
+func implHeaderChildren(items: Slice[CstElement], index: Int, finish: Int, target: Bool, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= finish then
+    output
+  else
+    let item = cstElementAt(items, index)
+    if cstElementIsTrivia(item) then
+      implHeaderChildren(items, index + 1, finish, target, output.Append(item))
+    elsif cstElementRaw(item) == ":" then
+      let next = syntaxCursorSkipTrivia(SyntaxCursor { Elements: items, Index: index + 1 })
+      let parsed = parseType(next)
+      switch parsed.Node
+        case Some(node) => joinCstElements(output.Append(CstElement.NodeElement(Ref.new(CstNode {
+          Kind: CstNodeKind.TypeAnnotation,
+          Span: ps.SourceSpan { Start: cstElementSpan(item).Start, End: node.value().Span.End },
+          Children: joinCstElements(cstElementSliceOrEmpty(items, index, next.Index), [CstElement.NodeElement(node)]),
+          HasError: node.value().HasError,
+        }))), cstElementSliceOrEmpty(items, parsed.Cursor.Index, finish))
+        case None => implHeaderChildren(items, index + 1, finish, target, output.Append(item))
+      end
+    elsif !target then
+      let next = syntaxCursorSkipTrivia(SyntaxCursor { Elements: items, Index: index })
+      let parsed = parseType(next)
+      switch parsed.Node
+        case Some(node) => implHeaderChildren(items, parsed.Cursor.Index, finish, true, output.Append(CstElement.NodeElement(node)))
+        case None => implHeaderChildren(items, index + 1, finish, true, output.Append(item))
+      end
+    else
+      implHeaderChildren(items, index + 1, finish, target, output.Append(item))
+    end
+  end
+end
+
+# syntaxFieldMembers splits a struct/enum body into one node per line-leading
+# member, so each member owns its name, type, tag, and separators.
+func syntaxFieldMembers(kind: CstNodeKind, items: Slice[CstElement], index: Int, finish: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= finish then
+    output
+  else
+    let next = syntaxNextLineLeading(items, index + 1, finish)
+    let endPos = if next < 0 then finish else next end
+    syntaxFieldMembers(kind, items, endPos, finish, output.Append(syntaxMemberNode(kind, items, index, endPos)))
+  end
+end
+
+func syntaxFuncMembers(kind: CstNodeKind, items: Slice[CstElement], index: Int, finish: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= finish then
+    output
+  else
+    let next = syntaxNextFuncLine(items, index + 1, finish)
+    let endPos = if next < 0 then finish else next end
+    syntaxFuncMembers(kind, items, endPos, finish, output.Append(syntaxMemberNode(kind, items, index, endPos)))
+  end
+end
+
+func syntaxMemberNode(kind: CstNodeKind, items: Slice[CstElement], start: Int, finish: Int) -> CstElement
+  switch items.Slice(start, finish)
+    case Some(children) => CstElement.NodeElement(Ref.new(CstNode {
+      Kind: kind,
+      Span: cstElementSliceSpan(items, start, finish),
+      Children: syntaxMemberChildren(kind, children),
+      HasError: false,
+    }))
+    case None => cstElementAt(items, start)
+  end
+end
+
+func syntaxMemberChildren(kind: CstNodeKind, items: Slice[CstElement]) -> Slice[CstElement]
+  if kind == CstNodeKind.StructField then
+    structFieldSemanticChildren(items, 0, false, [])
+  elsif kind == CstNodeKind.EnumVariant then
+    enumVariantSemanticChildren(items, 0, false, [])
+  elsif kind == CstNodeKind.FuncSignature || kind == CstNodeKind.ImplMethod then
+    signatureSemanticChildren(items)
+  else
+    items
+  end
+end
+
+# signatureSemanticChildren types a bare `func` signature (name, type
+# parameters, using clause, result, parameters) without a body.  It is shared by
+# interface members and impl members; any impl method body stays as raw leaves.
+func signatureSemanticChildren(items: Slice[CstElement]) -> Slice[CstElement]
+  let named = declarationChildrenWithName(items, 0, "", [])
+  functionBodyChildren(functionParameterChildren(functionReturnChildren(functionUsingChildren(typeParameterChildren(named, 1, 0, cstElementSliceOrEmpty(named, 0, 1)), 0, []), 0, []), 0, false, []))
+end
+
+func structFieldSemanticChildren(items: Slice[CstElement], index: Int, named: Bool, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    let item = cstElementAt(items, index)
+    let raw = cstElementRaw(item)
+    if cstElementIsTrivia(item) then
+      structFieldSemanticChildren(items, index + 1, named, output.Append(item))
+    elsif !named && raw == "embed" then
+      let next = syntaxCursorSkipTrivia(SyntaxCursor { Elements: items, Index: index + 1 })
+      let parsed = parseType(next)
+      switch parsed.Node
+        case Some(node) => structFieldSemanticChildren(items, parsed.Cursor.Index, true, joinCstElements(output.Append(item), joinCstElements(cstElementSliceOrEmpty(items, index + 1, next.Index), [CstElement.NodeElement(node)])))
+        case None => structFieldSemanticChildren(items, index + 1, true, output.Append(item))
+      end
+    elsif !named && syntaxElementNameToken(item) then
+      structFieldSemanticChildren(items, index + 1, true, output.Append(CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.IdentifierExpr, Span: cstElementSpan(item), Children: [item], HasError: false }))))
+    elsif raw == ":" then
+      let next = syntaxCursorSkipTrivia(SyntaxCursor { Elements: items, Index: index + 1 })
+      let parsed = parseType(next)
+      switch parsed.Node
+        case Some(node) => structFieldSemanticChildren(items, parsed.Cursor.Index, true, output.Append(CstElement.NodeElement(Ref.new(CstNode {
+          Kind: CstNodeKind.TypeAnnotation,
+          Span: ps.SourceSpan { Start: cstElementSpan(item).Start, End: node.value().Span.End },
+          Children: joinCstElements(cstElementSliceOrEmpty(items, index, next.Index), [CstElement.NodeElement(node)]),
+          HasError: node.value().HasError,
+        }))))
+        case None => structFieldSemanticChildren(items, index + 1, true, output.Append(item))
+      end
+    else
+      structFieldSemanticChildren(items, index + 1, named, output.Append(item))
+    end
+  end
+end
+
+func enumVariantSemanticChildren(items: Slice[CstElement], index: Int, named: Bool, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    let item = cstElementAt(items, index)
+    if cstElementIsTrivia(item) then
+      enumVariantSemanticChildren(items, index + 1, named, output.Append(item))
+    elsif !named && syntaxElementNameToken(item) then
+      enumVariantSemanticChildren(items, index + 1, true, output.Append(CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.IdentifierExpr, Span: cstElementSpan(item), Children: [item], HasError: false }))))
+    elsif syntaxElementIsNodeKind(item, CstNodeKind.ParenGroup) then
+      enumVariantSemanticChildren(items, index + 1, true, output.Append(wrapGroupWithTypeItems(item, CstNodeKind.ParenGroup, [])))
+    elsif syntaxElementIsNodeKind(item, CstNodeKind.BraceGroup) then
+      switch cstElementNode(item)
+        case Some(group) => enumVariantSemanticChildren(items, index + 1, true, output.Append(CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.BraceGroup, Span: group.value().Span, Children: namedVariantFieldChildren(group.value().Children, 0, false, []), HasError: group.value().HasError }))))
+        case None => enumVariantSemanticChildren(items, index + 1, named, output.Append(item))
+      end
+    else
+      enumVariantSemanticChildren(items, index + 1, named, output.Append(item))
+    end
+  end
+end
+
+func wrapGroupWithTypeItems(item: CstElement, kind: CstNodeKind, extra: Slice[CstElement]) -> CstElement
+  switch cstElementNode(item)
+    case Some(group) => CstElement.NodeElement(Ref.new(CstNode { Kind: kind, Span: group.value().Span, Children: parseTypeItems(group.value().Children, 0, []), HasError: group.value().HasError }))
+    case None => item
+  end
+end
+
+func namedVariantFieldChildren(items: Slice[CstElement], index: Int, named: Bool, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    let item = cstElementAt(items, index)
+    let raw = cstElementRaw(item)
+    if cstElementIsTrivia(item) then
+      namedVariantFieldChildren(items, index + 1, named, output.Append(item))
+    elsif raw == "{" || raw == "}" || raw == "," then
+      namedVariantFieldChildren(items, index + 1, false, output.Append(item))
+    elsif !named && syntaxElementNameToken(item) then
+      namedVariantFieldChildren(items, index + 1, true, output.Append(CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.IdentifierExpr, Span: cstElementSpan(item), Children: [item], HasError: false }))))
+    elsif raw == ":" then
+      let next = syntaxCursorSkipTrivia(SyntaxCursor { Elements: items, Index: index + 1 })
+      let parsed = parseType(next)
+      switch parsed.Node
+        case Some(node) => namedVariantFieldChildren(items, parsed.Cursor.Index, false, output.Append(CstElement.NodeElement(Ref.new(CstNode {
+          Kind: CstNodeKind.TypeAnnotation,
+          Span: ps.SourceSpan { Start: cstElementSpan(item).Start, End: node.value().Span.End },
+          Children: joinCstElements(cstElementSliceOrEmpty(items, index, next.Index), [CstElement.NodeElement(node)]),
+          HasError: node.value().HasError,
+        }))))
+        case None => namedVariantFieldChildren(items, index + 1, false, output.Append(item))
+      end
+    else
+      namedVariantFieldChildren(items, index + 1, named, output.Append(item))
+    end
+  end
+end
+
+# functionUsingChildren groups a function's `using` clause into one Constraints
+# node.  The clause runs from the `using` keyword up to the body boundary, so
+# the pass stops at the first `=>`/`=` or an already-frozen ValueInitializer.
+func functionUsingChildren(items: Slice[CstElement], index: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    switch items.Get(index)
+      case Some(item) then
+        if cstElementRaw(item) == "using" then
+          let finish = functionUsingBoundary(items, index + 1)
+          let constraints = constraintChildren(items, finish, index + 1, [], [])
+          functionUsingChildren(items, finish, output.Append(CstElement.NodeElement(Ref.new(CstNode {
+            Kind: CstNodeKind.Constraints,
+            Span: ps.SourceSpan { Start: cstElementSpan(item).Start, End: constraintRangeEnd(items, index + 1, finish) },
+            Children: joinCstElements([item], constraints),
+            HasError: false,
+          }))))
+        else
+          functionUsingChildren(items, index + 1, output.Append(item))
+        end
+      end
+      case None => output
+    end
+  end
+end
+
+func functionUsingBoundary(items: Slice[CstElement], index: Int) -> Int
+  if index >= items.Len() then
+    items.Len()
+  else
+    switch items.Get(index)
+      case Some(item) then
+        # A `using` clause is a single comma-separated constraint list on one
+        # logical line.  Stop at the body boundary markers and at the first
+        # newline so the following block body is not swallowed as constraints.
+        if cstElementRaw(item) == "=>" || cstElementRaw(item) == "=" || strings.Contains(cstElementRaw(item), "\n") then
+          index
+        else
+          switch cstElementNode(item)
+            case Some(node) => if node.value().Kind == CstNodeKind.ValueInitializer then index else functionUsingBoundary(items, index + 1) end
+            case None => functionUsingBoundary(items, index + 1)
+          end
+        end
+      end
+      case None => items.Len()
+    end
+  end
+end
+
+# constraintChildren splits the clause on top-level commas.  Commas inside a
+# bracket group stay owned by that group, so only real separators split here.
+func constraintChildren(items: Slice[CstElement], finish: Int, index: Int, current: Slice[CstElement], output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= finish then
+    appendConstraintNode(current, output)
+  else
+    switch items.Get(index)
+      case Some(item) then
+        if cstElementRaw(item) == "," then
+          constraintChildren(items, finish, index + 1, [], appendConstraintNode(current, output).Append(item))
+        else
+          constraintChildren(items, finish, index + 1, current.Append(item), output)
+        end
+      end
+      case None => appendConstraintNode(current, output)
+    end
+  end
+end
+
+func appendConstraintNode(items: Slice[CstElement], output: Slice[CstElement]) -> Slice[CstElement]
+  if cstElementsHaveContent(items, 0) then
+    output.Append(CstElement.NodeElement(Ref.new(CstNode {
+      Kind: CstNodeKind.Constraint,
+      Span: ps.SourceSpan { Start: constraintRangeStart(items, 0, items.Len()), End: constraintRangeEnd(items, 0, items.Len()) },
+      Children: constraintSemanticChildren(items, 0, false, false, []),
+      HasError: false,
+    })))
+  else
+    output
+  end
+end
+
+# A constraint is `Bind: Name` or `Name`, optionally followed by `[Args]`.  The
+# bind name is frozen as a BindPattern so lowering reads it like a let binding.
+func constraintSemanticChildren(items: Slice[CstElement], index: Int, boundName: Bool, emittedName: Bool, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    switch items.Get(index)
+      case Some(item) then
+        switch cstElementNode(item)
+          case Some(group) then
+            if group.value().Kind == CstNodeKind.BracketGroup then
+              constraintSemanticChildren(items, index + 1, boundName, emittedName, output.Append(CstElement.NodeElement(Ref.new(CstNode {
+                Kind: CstNodeKind.TypeArguments,
+                Span: group.value().Span,
+                Children: parseTypeItems(group.value().Children, 0, []),
+                HasError: group.value().HasError,
+              }))))
+            else
+              constraintSemanticChildren(items, index + 1, boundName, emittedName, output.Append(item))
+            end
+          end
+          case None then
+            if syntaxElementNameToken(item) && !emittedName && !boundName && cstElementsContainRaw(items, ":", 0) then
+              constraintSemanticChildren(items, index + 1, true, false, output.Append(CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.BindPattern, Span: cstElementSpan(item), Children: [item], HasError: false }))))
+            elsif syntaxElementNameToken(item) && !emittedName then
+              constraintSemanticChildren(items, index + 1, boundName, true, output.Append(CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.IdentifierExpr, Span: cstElementSpan(item), Children: [item], HasError: false }))))
+            else
+              constraintSemanticChildren(items, index + 1, boundName, emittedName, output.Append(item))
+            end
+          end
+        end
+      end
+      case None => output
+    end
+  end
+end
+
+func constraintRangeStart(items: Slice[CstElement], start: Int, finish: Int) -> ps.Position
+  if start >= finish then
+    syntaxRootSpan([]).Start
+  elsif cstElementIsTrivia(cstElementAt(items, start)) then
+    constraintRangeStart(items, start + 1, finish)
+  else
+    cstElementSpan(cstElementAt(items, start)).Start
+  end
+end
+
+func constraintRangeEnd(items: Slice[CstElement], start: Int, finish: Int) -> ps.Position
+  if finish <= start then
+    syntaxRootSpan([]).End
+  elsif cstElementIsTrivia(cstElementAt(items, finish - 1)) then
+    constraintRangeEnd(items, start, finish - 1)
+  else
+    cstElementSpan(cstElementAt(items, finish - 1)).End
+  end
+end
+
+func cstElementsHaveContent(items: Slice[CstElement], index: Int) -> Bool
+  if index >= items.Len() then
+    false
+  elsif cstElementIsTrivia(cstElementAt(items, index)) then
+    cstElementsHaveContent(items, index + 1)
+  else
+    true
+  end
+end
+
+func typeDeclarationChildren(items: Slice[CstElement], index: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then output else
+    switch items.Get(index)
+      case Some(item) then
+        if cstElementRaw(item) == "=" then
+          let next = SyntaxCursor { Elements: items, Index: index + 1 }
+          let start = syntaxCursorSkipTrivia(next)
+          let parsed = parseType(start)
+          switch parsed.Node
+            case Some(node) => typeDeclarationChildren(items, parsed.Cursor.Index, output.Append(CstElement.NodeElement(Ref.new(CstNode {
+              Kind: CstNodeKind.TypeAnnotation,
+              Span: ps.SourceSpan { Start: cstElementSpan(item).Start, End: node.value().Span.End },
+              Children: joinCstElements(cstElementSliceOrEmpty(items, index, start.Index), [CstElement.NodeElement(node)]),
+              HasError: node.value().HasError,
+            }))))
+            case None => typeDeclarationChildren(items, index + 1, output.Append(item))
+          end
+        elsif !cstElementIsTrivia(item) && cstElementRaw(item) != "type" && !syntaxElementIsNodeKind(item, CstNodeKind.IdentifierExpr) then
+          # Nominal form `type A B`: the right-hand side is a bare type with no
+          # `=` marker, so wrap it in TypeAnnotation to keep one lowering shape.
+          let start = syntaxCursorSkipTrivia(SyntaxCursor { Elements: items, Index: index })
+          let parsed = parseType(start)
+          switch parsed.Node
+            case Some(node) => joinCstElements(output.Append(CstElement.NodeElement(Ref.new(CstNode {
+              Kind: CstNodeKind.TypeAnnotation,
+              Span: node.value().Span,
+              Children: joinCstElements(cstElementSliceOrEmpty(items, index, start.Index), [CstElement.NodeElement(node)]),
+              HasError: node.value().HasError,
+            }))), cstElementSliceOrEmpty(items, parsed.Cursor.Index, items.Len()))
+            case None => typeDeclarationChildren(items, index + 1, output.Append(item))
+          end
+        else
+          typeDeclarationChildren(items, index + 1, output.Append(item))
+        end
+      end
+      case None => output
+    end
+  end
+end
+
+# functionReturnChildren freezes the single `-> Ret` that belongs to a
+# function signature.  The arrow must sit after the parameter group and before
+# the body, so the scan starts wrapping only once the parameter ParenGroup has
+# been passed: any other token after the parameters ends the signature and the
+# remaining leaves are copied through unchanged.  Without that anchor a nested
+# function literal's `->` further down the body would be wrapped instead, which
+# then hides it from the func-literal signature pass.
+func functionReturnChildren(items: Slice[CstElement], index: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  functionReturnChildrenAfter(items, index, output, false)
+end
+
+func functionReturnChildrenAfter(items: Slice[CstElement], index: Int, output: Slice[CstElement], seenParameters: Bool) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    let item = cstElementAt(items, index)
+    if cstElementIsTrivia(item) then
+      functionReturnChildrenAfter(items, index + 1, output.Append(item), seenParameters)
+    else
+      switch cstElementNode(item)
+        case Some(node) then
+          if node.value().Kind == CstNodeKind.ParenGroup then
+            functionReturnChildrenAfter(items, index + 1, output.Append(item), true)
+          else
+            functionReturnChildrenAfter(items, index + 1, output.Append(item), seenParameters)
+          end
+        end
+        case None then
+          let raw = cstElementRaw(item)
+          if seenParameters && raw == "->" then
+            let next = SyntaxCursor { Elements: items, Index: index + 1 }
+            let start = syntaxCursorSkipTrivia(next)
+            let parsed = parseType(start)
+            switch parsed.Node
+              case Some(node) => joinCstElements(output.Append(CstElement.NodeElement(Ref.new(CstNode {
+                  Kind: CstNodeKind.FunctionReturnType,
+                  Span: ps.SourceSpan { Start: cstElementSpan(item).Start, End: node.value().Span.End },
+                  Children: joinCstElements(cstElementSliceOrEmpty(items, index, start.Index), [CstElement.NodeElement(node)]),
+                  HasError: node.value().HasError,
+                }))), cstElementSliceOrEmpty(items, parsed.Cursor.Index, items.Len()))
+              case None => functionReturnChildrenAfter(items, index + 1, output.Append(item), seenParameters)
+            end
+          elsif seenParameters then
+            joinCstElements(output, cstElementSliceOrEmpty(items, index, items.Len()))
+          else
+            functionReturnChildrenAfter(items, index + 1, output.Append(item), seenParameters)
+          end
+        end
+      end
+    end
+  end
+end
+
+func functionParameterChildren(items: Slice[CstElement], index: Int, wrapped: Bool, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    switch items.Get(index)
+      case Some(item) then
+        switch cstElementNode(item)
+          case Some(group) then
+            if !wrapped && group.value().Kind == CstNodeKind.ParenGroup then
+              let value = group.value()
+              functionParameterChildren(items, index + 1, true, output.Append(CstElement.NodeElement(Ref.new(CstNode {
+                Kind: CstNodeKind.FunctionParameters,
+                Span: value.Span,
+                Children: functionParameterItems(value.Children, 0, true, []),
+                HasError: value.HasError,
+              }))))
+            else
+              functionParameterChildren(items, index + 1, wrapped, output.Append(item))
+            end
+          end
+          case None => functionParameterChildren(items, index + 1, wrapped, output.Append(item))
+        end
+      end
+      case None => output
+    end
+  end
+end
+
+func functionParameterItems(items: Slice[CstElement], index: Int, expectName: Bool, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    switch items.Get(index)
+      case Some(item) then
+        let raw = cstElementRaw(item)
+        if cstElementIsTrivia(item) || raw == "(" || raw == ")" then
+          functionParameterItems(items, index + 1, expectName, output.Append(item))
+        elsif raw == "," then
+          functionParameterItems(items, index + 1, true, output.Append(item))
+        elsif expectName then
+          let pattern = CstElement.NodeElement(Ref.new(CstNode { Kind: CstNodeKind.BindPattern, Span: cstElementSpan(item), Children: [item], HasError: false }))
+          functionParameterItems(items, index + 1, false, output.Append(pattern))
+        elsif raw == ":" then
+          let next = SyntaxCursor { Elements: items, Index: index + 1 }
+          let start = syntaxCursorSkipTrivia(next)
+          let parsed = parseType(start)
+          switch parsed.Node
+            case Some(node) => functionParameterItems(items, parsed.Cursor.Index, false, output.Append(CstElement.NodeElement(Ref.new(CstNode {
+              Kind: CstNodeKind.TypeAnnotation,
+              Span: ps.SourceSpan { Start: cstElementSpan(item).Start, End: node.value().Span.End },
+              Children: joinCstElements(cstElementSliceOrEmpty(items, index, start.Index), [CstElement.NodeElement(node)]),
+              HasError: node.value().HasError,
+            }))))
+            case None => functionParameterItems(items, index + 1, false, output.Append(item))
+          end
+        else
+          functionParameterItems(items, index + 1, false, output.Append(item))
+        end
+      end
+      case None => output
+    end
+  end
+end
+
+func declarationChildrenWithName(items: Slice[CstElement], index: Int, keyword: String, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    switch items.Get(index)
+      case Some(item) then
+        let raw = cstElementRaw(item)
+        if keyword == "" && cstElementStartsDeclarationRaw(raw) then
+          declarationChildrenWithName(items, index + 1, raw, output.Append(item))
+        elsif keyword != "" && !cstElementIsTrivia(item) then
+          if keyword == "let" || keyword == "var" then
+            let bound = declarationPatternItems(items, index)
+            joinCstElements(output.Append(bound.Element), cstElementSliceOrEmpty(items, bound.Next, items.Len()))
+          else
+            let named = CstElement.NodeElement(Ref.new(CstNode {
+              Kind: CstNodeKind.IdentifierExpr,
+              Span: cstElementSpan(item),
+              Children: [item],
+              HasError: false,
+            }))
+            joinCstElements(output.Append(named), cstElementSliceOrEmpty(items, index + 1, items.Len()))
+          end
+        else
+          declarationChildrenWithName(items, index + 1, keyword, output.Append(item))
+        end
+      end
+      case None => output
+    end
+  end
+end
+
+func declarationKind(raw: String) -> CstNodeKind
+  if raw == "package" then
+    CstNodeKind.PackageDeclaration
+  elsif raw == "import" then
+    CstNodeKind.ImportDeclaration
+  elsif raw == "let" then
+    CstNodeKind.LetDeclaration
+  elsif raw == "var" then
+    CstNodeKind.VarDeclaration
+  elsif raw == "func" then
+    CstNodeKind.FuncDeclaration
+  elsif raw == "type" then
+    CstNodeKind.TypeDeclaration
+  elsif raw == "struct" then
+    CstNodeKind.StructDeclaration
+  elsif raw == "enum" then
+    CstNodeKind.EnumDeclaration
+  elsif raw == "interface" then
+    CstNodeKind.InterfaceDeclaration
+  elsif raw == "impl" then
+    CstNodeKind.ImplDeclaration
+  else
+    CstNodeKind.Declaration
+  end
+end
+
+func declarationChildrenWithExpr(items: Slice[CstElement], index: Int, output: Slice[CstElement]) -> Slice[CstElement]
+  if index >= items.Len() then
+    output
+  else
+    switch items.Get(index)
+      case Some(item) then
+        if cstElementRaw(item) == ":" then
+          let next = SyntaxCursor { Elements: items, Index: index + 1 }
+          let start = syntaxCursorSkipTrivia(next)
+          let parsed = parseType(start)
+          switch parsed.Node
+            case Some(node) => declarationChildrenWithExpr(items, parsed.Cursor.Index, output.Append(CstElement.NodeElement(Ref.new(CstNode {
+              Kind: CstNodeKind.TypeAnnotation,
+              Span: ps.SourceSpan { Start: cstElementSpan(item).Start, End: node.value().Span.End },
+              Children: joinCstElements(cstElementSliceOrEmpty(items, index, start.Index), [CstElement.NodeElement(node)]),
+              HasError: node.value().HasError,
+            }))))
+            case None => declarationChildrenWithExpr(items, index + 1, output.Append(item))
+          end
+        elsif cstElementRaw(item) == "=" || cstElementRaw(item) == "=>" then
+          let next = SyntaxCursor { Elements: items, Index: index + 1 }
+          let start = syntaxCursorSkipTrivia(next)
+          let parsed = parseExpr(start)
+          switch parsed.Node
+            case Some(node) => declarationChildrenWithExpr(items, parsed.Cursor.Index, output.Append(CstElement.NodeElement(Ref.new(CstNode {
+              Kind: CstNodeKind.ValueInitializer,
+              Span: ps.SourceSpan { Start: cstElementSpan(item).Start, End: node.value().Span.End },
+              Children: joinCstElements(cstElementSliceOrEmpty(items, index, start.Index), [CstElement.NodeElement(node)]),
+              HasError: node.value().HasError,
+            }))))
+            case None => declarationChildrenWithExpr(items, index + 1, output.Append(item))
+          end
+        else
+          declarationChildrenWithExpr(items, index + 1, output.Append(item))
+        end
+      end
+      case None => output
+    end
+  end
+end
+
+func parseBindingDeclaration(cursor: SyntaxCursor) -> SyntaxParseResult
+  let afterKeyword = syntaxCursorAdvance(cursor)
+  let afterPattern = parsePattern(afterKeyword)
+  let afterType = if syntaxCursorRaw(afterPattern.Cursor) == ":" then
+    parseType(syntaxCursorAdvance(afterPattern.Cursor))
+  else
+    afterPattern
+  end
+
+  if syntaxCursorRaw(afterType.Cursor) == "=" then
+    parseExpr(syntaxCursorAdvance(afterType.Cursor))
+  else
+    afterType
+  end
+end
+
+func parseFunctionDeclaration(cursor: SyntaxCursor) -> SyntaxParseResult
+  let afterKeyword = syntaxCursorAdvance(cursor)
+  let afterName = syntaxCursorAdvance(syntaxCursorSkipTrivia(afterKeyword))
+  let afterParams = parsePattern(afterName)
+  let afterReturn = if syntaxCursorRaw(afterParams.Cursor) == "->" then
+    parseType(syntaxCursorAdvance(afterParams.Cursor))
+  else
+    afterParams
+  end
+
+  if syntaxCursorRaw(afterReturn.Cursor) == "=>" then
+    parseExpr(syntaxCursorAdvance(afterReturn.Cursor))
+  else
+    afterReturn
+  end
+end
+

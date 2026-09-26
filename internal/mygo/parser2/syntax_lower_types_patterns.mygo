@@ -1,0 +1,267 @@
+package parser2
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func lowerSyntaxOptionalType(tree: SyntaxTree, node: CstNode) -> Option[ast2.TypeExpr]
+  switch cstNodeFindChild(node, CstNodeKind.TypeAnnotation, 0)
+    case Some(annotation) => lowerSyntaxTypeOption(annotation.value())
+    case None => None
+  end
+end
+
+func lowerSyntaxTypeOption(node: CstNode) -> Option[ast2.TypeExpr]
+  switch cstNodeFindTypeChild(node, 0)
+    case Some(typ) => lowerSyntaxTypeNode(typ.value())
+    case None => None
+  end
+end
+
+func cstNodeFindTypeChild(node: CstNode, index: Int) -> Option[Ref[CstNode]]
+  if index >= node.Children.Len() then
+    None
+  else
+    switch cstElementNode(cstElementAt(node.Children, index))
+      case Some(child) then
+        if cstNodeIsTypeKind(child.value().Kind) then
+          Some(child)
+        else
+          cstNodeFindTypeChild(node, index + 1)
+        end
+      end
+      case None => cstNodeFindTypeChild(node, index + 1)
+    end
+  end
+end
+
+# lowerSyntaxTypeNode maps one typed Syntax type node onto ast2.TypeExpr.  Every
+# ast2 child comes from a nested CST type node; the source text is never
+# re-parsed, so ranges and structure stay owned by the Syntax Tree.
+func lowerSyntaxTypeNode(node: CstNode) -> Option[ast2.TypeExpr]
+  if node.Kind == CstNodeKind.NamedType then
+    Some(ast2.TypeExpr.NamedType(cstNodeText(node), []))
+  elsif node.Kind == CstNodeKind.GenericType then
+    lowerSyntaxGenericType(node)
+  elsif node.Kind == CstNodeKind.TupleType then
+    Some(ast2.TypeExpr.TupleType(lowerSyntaxTypeChildren(node, 0, [])))
+  elsif node.Kind == CstNodeKind.UnitType then
+    Some(ast2.TypeExpr.UnitType)
+  elsif node.Kind == CstNodeKind.FuncType then
+    lowerSyntaxFuncType(node)
+  else
+    None
+  end
+end
+
+func lowerSyntaxGenericType(node: CstNode) -> Option[ast2.TypeExpr]
+  switch (cstNodeFindChild(node, CstNodeKind.NamedType, 0), cstNodeFindChild(node, CstNodeKind.TypeArguments, 0))
+    case (Some(base), Some(arguments)) => Some(ast2.TypeExpr.NamedType(cstNodeText(base.value()), lowerSyntaxTypeChildren(arguments.value(), 0, [])))
+    case (Some(base), None) => Some(ast2.TypeExpr.NamedType(cstNodeText(base.value()), []))
+    case _ => None
+  end
+end
+
+func lowerSyntaxTypeChildren(node: CstNode, index: Int, output: Slice[ast2.TypeExpr]) -> Slice[ast2.TypeExpr]
+  if index >= node.Children.Len() then
+    output
+  else
+    switch cstElementNode(cstElementAt(node.Children, index))
+      case Some(child) then
+        if cstNodeIsTypeKind(child.value().Kind) then
+          switch lowerSyntaxTypeNode(child.value())
+            case Some(typ) => lowerSyntaxTypeChildren(node, index + 1, output.Append(typ))
+            case None => lowerSyntaxTypeChildren(node, index + 1, output)
+          end
+        else
+          lowerSyntaxTypeChildren(node, index + 1, output)
+        end
+      end
+      case None => lowerSyntaxTypeChildren(node, index + 1, output)
+    end
+  end
+end
+
+func lowerSyntaxFuncType(node: CstNode) -> Option[ast2.TypeExpr]
+  switch cstNodeFindChild(node, CstNodeKind.FunctionTypeParameters, 0)
+    case Some(parameters) then
+      switch cstNodeFindTypeChild(node, 0)
+        case Some(ret) then
+          switch lowerSyntaxTypeNode(ret.value())
+            case Some(returns) => Some(ast2.TypeExpr.FuncType(lowerSyntaxTypeChildren(parameters.value(), 0, []), Ref.new(returns)))
+            case None => None
+          end
+        end
+        case None => None
+      end
+    end
+    case None => None
+  end
+end
+
+# lowerSyntaxPatternNode maps one pattern CST node onto ast2.Pattern.  Every
+# alternative is read from its typed CST children; literal values are decoded
+# from the retained raw token, so no source text is re-parsed during lowering.
+func lowerSyntaxPatternNode(node: CstNode) -> Result[ast2.Pattern, String]
+  if node.Kind == CstNodeKind.BindPattern then
+    Ok(ast2.Pattern.BindPattern(cstNodeText(node)))
+  elsif node.Kind == CstNodeKind.WildcardPattern then
+    Ok(ast2.Pattern.WildcardPattern)
+  elsif node.Kind == CstNodeKind.LiteralPattern then
+    lowerSyntaxLiteralPattern(node)
+  elsif node.Kind == CstNodeKind.TuplePattern then
+    switch cstNodeFindChild(node, CstNodeKind.ParenGroup, 0)
+      case Some(group) then
+        switch lowerSyntaxPatternChildren(group.value(), 0, [])
+          case Ok(items) => Ok(ast2.Pattern.TuplePattern(items))
+          case Err(message) => Err(message)
+        end
+      end
+      case None => Err("tuple pattern CST lacks a delimiter group")
+    end
+  elsif node.Kind == CstNodeKind.VariantPattern then
+    switch cstNodeFindChild(node, CstNodeKind.ParenGroup, 0)
+      case Some(group) then
+        switch lowerSyntaxPatternChildren(group.value(), 0, [])
+          case Ok(items) => Ok(ast2.Pattern.VariantPattern(cstNodeFirstIdentifier(node), items))
+          case Err(message) => Err(message)
+        end
+      end
+      case None => Ok(ast2.Pattern.VariantPattern(cstNodeFirstIdentifier(node), []))
+    end
+  elsif node.Kind == CstNodeKind.StructVariantPattern then
+    switch cstNodeFindChild(node, CstNodeKind.BraceGroup, 0)
+      case Some(group) then
+        switch lowerSyntaxStructPatternFields(group.value(), 0, [])
+          case Ok(fields) => Ok(ast2.Pattern.StructVariantPattern(cstNodeFirstIdentifier(node), fields))
+          case Err(message) => Err(message)
+        end
+      end
+      case None => Err("struct variant pattern CST lacks a field group")
+    end
+  else
+    Err("CST pattern kind is not lowered yet")
+  end
+end
+
+func lowerSyntaxLiteralPattern(node: CstNode) -> Result[ast2.Pattern, String]
+  switch syntaxLiteralPatternToken(node, 0)
+    case Some(token) => lowerSyntaxLiteralPatternToken(token)
+    case None => Err("literal pattern CST lacks a literal token")
+  end
+end
+
+func lowerSyntaxLiteralPatternToken(token: CstToken) -> Result[ast2.Pattern, String]
+  let kind = cstTokenPatternLiteralKind(token)
+  if kind == "number" then
+    Ok(ast2.Pattern.LiteralPattern("number", token.Raw))
+  elsif kind == "rune" then
+    lowerSyntaxLiteralRunePattern(token.Raw)
+  elsif kind == "string" then
+    switch syntaxDecodeStringRaw(token.Raw)
+      case Ok(value) => Ok(ast2.Pattern.LiteralPattern("string", value))
+      case Err(message) => Err(message)
+    end
+  else
+    Err("literal pattern token is not a literal")
+  end
+end
+
+func lowerSyntaxLiteralRunePattern(raw: String) -> Result[ast2.Pattern, String]
+  # A rune pattern decodes backslash escapes to the same character value the
+  # legacy parser stores in `LiteralPattern.Value`, so `'\n'` and `'\\'` lower
+  # to the control/rune they denote rather than their raw source bytes.
+  switch syntaxDecodeRuneRaw(raw)
+    case Ok(value) => Ok(ast2.Pattern.LiteralPattern("rune", value))
+    case Err(message) => Err(message)
+  end
+end
+
+func cstTokenPatternLiteralKind(token: CstToken) -> String
+  if token.Kind == CstTokenKind.Number then
+    "number"
+  elsif token.Kind == CstTokenKind.RuneLiteral then
+    "rune"
+  elsif token.Kind == CstTokenKind.StringLiteral || token.Kind == CstTokenKind.RawStringLiteral || token.Kind == CstTokenKind.TripleStringLiteral then
+    "string"
+  else
+    ""
+  end
+end
+
+func syntaxLiteralPatternToken(node: CstNode, index: Int) -> Option[CstToken]
+  if index >= node.Children.Len() then
+    None
+  else
+    switch cstElementAt(node.Children, index)
+      case TokenElement(token) => Some(token)
+      case _ => syntaxLiteralPatternToken(node, index + 1)
+    end
+  end
+end
+
+func lowerSyntaxPatternChildren(node: CstNode, index: Int, output: Slice[ast2.Pattern]) -> Result[Slice[ast2.Pattern], String]
+  if index >= node.Children.Len() then
+    Ok(output)
+  else
+    switch cstElementNode(cstElementAt(node.Children, index))
+      case Some(child) then
+        if cstNodeIsPatternKind(child.value().Kind) then
+          switch lowerSyntaxPatternNode(child.value())
+            case Ok(pattern) => lowerSyntaxPatternChildren(node, index + 1, output.Append(pattern))
+            case Err(message) => Err(message)
+          end
+        else
+          lowerSyntaxPatternChildren(node, index + 1, output)
+        end
+      end
+      case None => lowerSyntaxPatternChildren(node, index + 1, output)
+    end
+  end
+end
+
+func lowerSyntaxStructPatternFields(node: CstNode, index: Int, output: Slice[ast2.StructPatternField]) -> Result[Slice[ast2.StructPatternField], String]
+  if index >= node.Children.Len() then
+    Ok(output)
+  else
+    switch cstElementNode(cstElementAt(node.Children, index))
+      case Some(child) then
+        if child.value().Kind == CstNodeKind.StructPatternField then
+          lowerSyntaxStructPatternFields(node, index + 1, output.Append(lowerSyntaxStructPatternField(child.value())))
+        else
+          lowerSyntaxStructPatternFields(node, index + 1, output)
+        end
+      end
+      case None => lowerSyntaxStructPatternFields(node, index + 1, output)
+    end
+  end
+end
+
+func lowerSyntaxStructPatternField(node: CstNode) -> ast2.StructPatternField
+  let names = cstNodeIdentifierTexts(node, 0, [])
+  if names.Len() == 0 then
+    ast2.StructPatternField { Field: "_", Bind: "_" }
+  else
+    switch (names.Get(0), names.Get(1))
+      case (Some(field), Some(bind)) => ast2.StructPatternField { Field: field, Bind: bind }
+      case (Some(field), None) => ast2.StructPatternField { Field: field, Bind: field }
+      case _ => ast2.StructPatternField { Field: "_", Bind: "_" }
+    end
+  end
+end
+
+func cstNodeIdentifierTexts(node: CstNode, index: Int, output: Slice[String]) -> Slice[String]
+  if index >= node.Children.Len() then
+    output
+  else
+    switch cstElementAt(node.Children, index)
+      case TokenElement(token) then
+        if token.Kind == CstTokenKind.Identifier then
+          cstNodeIdentifierTexts(node, index + 1, output.Append(token.Raw))
+        else
+          cstNodeIdentifierTexts(node, index + 1, output)
+        end
+      end
+      case _ => cstNodeIdentifierTexts(node, index + 1, output)
+    end
+  end
+end
+

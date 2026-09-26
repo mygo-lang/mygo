@@ -1,0 +1,106 @@
+package parser2
+
+import ps "github.com/mygo-lang/mygo/lib/text/parsec"
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func cstNodeChildAt(node: CstNode, index: Int) -> Option[Ref[CstNode]]
+  switch node.Children.Get(index)
+    case Some(item) => cstElementNode(item)
+    case None => None
+  end
+end
+
+func syntaxOptionalTypeSpan(tree: SyntaxTree, node: CstNode) -> ast2.SourceSpan
+  switch cstNodeFindChild(node, CstNodeKind.TypeAnnotation, 0)
+    case Some(annotation) => syntaxAstSpan(tree.SourceName, annotation.value().Span)
+    case None => syntaxAstSpan(tree.SourceName, node.Span)
+  end
+end
+
+func cstNodeFindChild(node: CstNode, kind: CstNodeKind, index: Int) -> Option[Ref[CstNode]]
+  if index >= node.Children.Len() then
+    None
+  else
+    switch node.Children.Get(index)
+      case Some(item) then
+        switch cstElementNode(item)
+          case Some(child) then
+            if child.value().Kind == kind then
+              Some(child)
+            else
+              cstNodeFindChild(node, kind, index + 1)
+            end
+          end
+          case None => cstNodeFindChild(node, kind, index + 1)
+        end
+      end
+      case _ => cstNodeFindChild(node, kind, index + 1)
+    end
+  end
+end
+
+func cstNodeFindExpression(node: CstNode, index: Int) -> Option[Ref[CstNode]]
+  if index >= node.Children.Len() then None else
+    switch node.Children.Get(index)
+      case Some(item) then
+        switch cstElementNode(item)
+          case Some(child) then
+            if cstNodeIsExpressionKind(child.value().Kind) then
+              Some(child)
+            else
+              cstNodeFindExpression(child.value(), 0)
+            end
+          end
+          case None => cstNodeFindExpression(node, index + 1)
+        end
+      end
+      case _ => cstNodeFindExpression(node, index + 1)
+    end
+  end
+end
+
+# cstNodeIsExpressionKind is the CST-side expression frontier.  It lists the
+# concrete expression alternatives that lowering understands, including the
+# atom kinds added for task 3.5.
+func cstNodeIsExpressionKind(kind: CstNodeKind) -> Bool
+  kind == CstNodeKind.IdentifierExpr || kind == CstNodeKind.NumberExpr || kind == CstNodeKind.BoolExpr || kind == CstNodeKind.StringExpr || kind == CstNodeKind.RuneExpr || kind == CstNodeKind.ParenExpr || kind == CstNodeKind.TupleExpr || kind == CstNodeKind.UnitExpr || kind == CstNodeKind.InlineGoExpr || kind == CstNodeKind.FuncLitExpr || kind == CstNodeKind.Call || kind == CstNodeKind.UnaryExpr || kind == CstNodeKind.BinaryExpr || kind == CstNodeKind.FieldExpr || kind == CstNodeKind.TypeAsExpr || kind == CstNodeKind.SliceLiteral || kind == CstNodeKind.MapLiteral || kind == CstNodeKind.SetLiteral || kind == CstNodeKind.StructLiteral || kind == CstNodeKind.IfBlock || kind == CstNodeKind.SwitchBlock || kind == CstNodeKind.WhileBlock || kind == CstNodeKind.Block || kind == CstNodeKind.ExprStatement
+end
+
+func cstNodeFirstIdentifier(node: CstNode) -> String
+  switch cstNodeFindChild(node, CstNodeKind.IdentifierExpr, 0)
+    case Some(name) => cstNodeText(name.value())
+    case None => ""
+  end
+end
+
+func cstNodeIsDeclarationKind(kind: CstNodeKind) -> Bool
+  kind == CstNodeKind.Declaration || kind == CstNodeKind.ImportDeclaration || kind == CstNodeKind.FuncDeclaration || kind == CstNodeKind.TypeDeclaration || kind == CstNodeKind.StructDeclaration || kind == CstNodeKind.EnumDeclaration || kind == CstNodeKind.InterfaceDeclaration || kind == CstNodeKind.ImplDeclaration
+end
+
+func syntaxAstPos(sourceName: String, position: ps.Position) -> ast2.SourcePos
+  ast2.SourcePos { SourceName: sourceName, Line: position.Line, Column: position.Column }
+end
+
+func syntaxAstSpan(sourceName: String, span: ps.SourceSpan) -> ast2.SourceSpan
+  ast2.SourceSpan { Start: syntaxAstPos(sourceName, span.Start), End: syntaxAstPos(sourceName, span.End) }
+end
+
+func syntaxAstParseIsErr(result: Result[ast2.File, String]) -> Bool
+  result.IsErr()
+end
+
+func syntaxLowerIsOk(result: Result[ast2.File, String]) -> Bool
+  result.IsOk()
+end
+
+func syntaxLowerDeclCount(result: Result[ast2.File, String]) -> Int
+  switch result
+    case Ok(file) => file.Decls.Len()
+    case Err(_) => 0
+  end
+end
+
+# buildDelimitedSyntax is the first CST construction pass.  It consumes the
+# lexer leaves exactly once, nesting only delimiters that are actually paired.
+# Grammar-specific nodes are added on top of this invariant rather than by
+# duplicating leaves in a semantic side table.

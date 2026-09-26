@@ -4,7 +4,7 @@ import strings "go:strings"
 import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
 import ps "github.com/mygo-lang/mygo/lib/text/parsec"
 
-# This renderer owns block layout directly from the lossless green tree. It is
+# This renderer owns block layout directly from the lossless CST tree. It is
 # kept separate from the legacy line/event renderer while the migration is in
 # progress; the latter is removed when the complete Syntax Tree renderer is
 # connected in task 4.6.
@@ -12,7 +12,7 @@ func FormatSyntaxBlocks(tree: parser2.SyntaxTree) -> String
   renderSyntaxFile(tree.Root.value(), 0, "", false, 0)
 end
 
-func renderSyntaxFile(node: parser2.GreenNode, index: Int, output: String, hasDeclaration: Bool, previousEndLine: Int) -> String
+func renderSyntaxFile(node: parser2.CstNode, index: Int, output: String, hasDeclaration: Bool, previousEndLine: Int) -> String
   if index >= node.Children.Len() then
     strings.TrimRight(output, "\n") + "\n"
   else
@@ -40,15 +40,15 @@ func renderSyntaxFile(node: parser2.GreenNode, index: Int, output: String, hasDe
   end
 end
 
-func syntaxElementEndsWithComment(item: parser2.GreenElement) -> Bool
+func syntaxElementEndsWithComment(item: parser2.CstElement) -> Bool
   switch item
     case NodeElement(node) => syntaxNodeEndsWithComment(node.value(), node.value().Children.Len() - 1)
-    case TriviaElement(trivia) => trivia.Kind == parser2.GreenTriviaKind.Comment
+    case TriviaElement(trivia) => trivia.Kind == parser2.CstTriviaKind.Comment
     case _ => false
   end
 end
 
-func syntaxNodeEndsWithComment(node: parser2.GreenNode, index: Int) -> Bool
+func syntaxNodeEndsWithComment(node: parser2.CstNode, index: Int) -> Bool
   if index < 0 then
     false
   else
@@ -59,7 +59,7 @@ func syntaxNodeEndsWithComment(node: parser2.GreenNode, index: Int) -> Bool
   end
 end
 
-func syntaxFilePreviousDeclarationHasBlankLine(items: Slice[parser2.GreenElement], index: Int) -> Bool
+func syntaxFilePreviousDeclarationHasBlankLine(items: Slice[parser2.CstElement], index: Int) -> Bool
   if index <= 0 then
     false
   else
@@ -75,7 +75,7 @@ func syntaxFilePreviousDeclarationHasBlankLine(items: Slice[parser2.GreenElement
   end
 end
 
-func syntaxNodeTrailingBlankLine(node: parser2.GreenNode, index: Int) -> Bool
+func syntaxNodeTrailingBlankLine(node: parser2.CstNode, index: Int) -> Bool
   if index < 0 then
     false
   else
@@ -98,8 +98,8 @@ func syntaxNodeTrailingBlankLine(node: parser2.GreenNode, index: Int) -> Bool
   end
 end
 
-func syntaxTrailingTriviaBlankLine(kind: parser2.GreenTriviaKind, raw: String, node: parser2.GreenNode, index: Int) -> Bool
-  if kind == parser2.GreenTriviaKind.Comment then
+func syntaxTrailingTriviaBlankLine(kind: parser2.CstTriviaKind, raw: String, node: parser2.CstNode, index: Int) -> Bool
+  if kind == parser2.CstTriviaKind.Comment then
     false
   else
     strings.Contains(raw, "\n\n") || syntaxNodeTrailingBlankLine(node, index - 1)
@@ -110,7 +110,7 @@ func syntaxTopLevelSeparator(blankLine: Bool) -> String
   if blankLine => "\n\n" else "\n"
 end
 
-func syntaxElementStartLine(item: parser2.GreenElement) -> Int
+func syntaxElementStartLine(item: parser2.CstElement) -> Int
   switch item
     case NodeElement(node) => syntaxNodeStartLine(node.value())
     case TokenElement(token) => syntaxSpanStartLine(token.Span)
@@ -118,7 +118,7 @@ func syntaxElementStartLine(item: parser2.GreenElement) -> Int
   end
 end
 
-func syntaxNodeStartLine(node: parser2.GreenNode) -> Int
+func syntaxNodeStartLine(node: parser2.CstNode) -> Int
   syntaxSpanStartLine(node.Span)
 end
 
@@ -127,7 +127,7 @@ func syntaxSpanStartLine(span: ps.SourceSpan) -> Int
   position.Line
 end
 
-func syntaxElementEndLine(item: parser2.GreenElement) -> Int
+func syntaxElementEndLine(item: parser2.CstElement) -> Int
   switch item
     case NodeElement(node) => syntaxNodeEndLine(node.value())
     case TokenElement(token) => syntaxSpanEndLine(token.Span)
@@ -135,7 +135,7 @@ func syntaxElementEndLine(item: parser2.GreenElement) -> Int
   end
 end
 
-func syntaxNodeEndLine(node: parser2.GreenNode) -> Int
+func syntaxNodeEndLine(node: parser2.CstNode) -> Int
   syntaxSpanEndLine(node.Span)
 end
 
@@ -144,15 +144,15 @@ func syntaxSpanEndLine(span: ps.SourceSpan) -> Int
   position.Line
 end
 
-func renderSyntaxFileTrivia(node: parser2.GreenNode, index: Int, item: parser2.GreenElement, output: String, hasDeclaration: Bool, previousEndLine: Int) -> String
+func renderSyntaxFileTrivia(node: parser2.CstNode, index: Int, item: parser2.CstElement, output: String, hasDeclaration: Bool, previousEndLine: Int) -> String
   switch item
     case TriviaElement(trivia) => renderSyntaxFileTriviaKind(node, index, trivia.Kind, trivia.Raw, output, hasDeclaration, previousEndLine)
     case _ => renderSyntaxFile(node, index + 1, output, hasDeclaration, previousEndLine)
   end
 end
 
-func renderSyntaxFileTriviaKind(node: parser2.GreenNode, index: Int, kind: parser2.GreenTriviaKind, raw: String, output: String, hasDeclaration: Bool, previousEndLine: Int) -> String
-  if kind == parser2.GreenTriviaKind.Comment then
+func renderSyntaxFileTriviaKind(node: parser2.CstNode, index: Int, kind: parser2.CstTriviaKind, raw: String, output: String, hasDeclaration: Bool, previousEndLine: Int) -> String
+  if kind == parser2.CstTriviaKind.Comment then
     let prefix = if output == "" => "" else "\n"
     renderSyntaxFile(node, index + 1, output + prefix + raw + "\n", hasDeclaration, previousEndLine)
   else
@@ -160,24 +160,24 @@ func renderSyntaxFileTriviaKind(node: parser2.GreenNode, index: Int, kind: parse
   end
 end
 
-func renderSyntaxNode(node: parser2.GreenNode, indent: Int) -> String
-  if node.Kind == parser2.GreenNodeKind.InlineGoExpr || node.Kind == parser2.GreenNodeKind.InlineGoBody || node.Kind == parser2.GreenNodeKind.InlineGoCode then
+func renderSyntaxNode(node: parser2.CstNode, indent: Int) -> String
+  if node.Kind == parser2.CstNodeKind.InlineGoExpr || node.Kind == parser2.CstNodeKind.InlineGoBody || node.Kind == parser2.CstNodeKind.InlineGoCode then
     syntaxNodeRaw(node, 0)
-  elsif node.Kind == parser2.GreenNodeKind.FuncLitExpr then
+  elsif node.Kind == parser2.CstNodeKind.FuncLitExpr then
     renderSyntaxFuncLiteral(node, indent)
-  elsif node.Kind == parser2.GreenNodeKind.IfBlock && syntaxArrowIfTooWide(node, indent) then
+  elsif node.Kind == parser2.CstNodeKind.IfBlock && syntaxArrowIfTooWide(node, indent) then
     renderSyntaxWideArrowIf(node, indent)
-  elsif node.Kind == parser2.GreenNodeKind.ParenGroup || node.Kind == parser2.GreenNodeKind.BracketGroup || node.Kind == parser2.GreenNodeKind.BraceGroup then
+  elsif node.Kind == parser2.CstNodeKind.ParenGroup || node.Kind == parser2.CstNodeKind.BracketGroup || node.Kind == parser2.CstNodeKind.BraceGroup then
     renderSyntaxDelimitedGroup(node, indent)
-  elsif node.Kind == parser2.GreenNodeKind.WhileBlock && syntaxDirectBlockIndex(node.Children, 0) < 0 then
+  elsif node.Kind == parser2.CstNodeKind.WhileBlock && syntaxDirectBlockIndex(node.Children, 0) < 0 then
     renderSyntaxWhile(node, indent)
-  elsif node.Kind == parser2.GreenNodeKind.FuncDeclaration || node.Kind == parser2.GreenNodeKind.ImplMethod || node.Kind == parser2.GreenNodeKind.IfBlock || node.Kind == parser2.GreenNodeKind.SwitchBlock || node.Kind == parser2.GreenNodeKind.WhileBlock then
+  elsif node.Kind == parser2.CstNodeKind.FuncDeclaration || node.Kind == parser2.CstNodeKind.ImplMethod || node.Kind == parser2.CstNodeKind.IfBlock || node.Kind == parser2.CstNodeKind.SwitchBlock || node.Kind == parser2.CstNodeKind.WhileBlock then
     renderSyntaxBlock(node, indent)
-  elsif node.Kind == parser2.GreenNodeKind.StructDeclaration || node.Kind == parser2.GreenNodeKind.EnumDeclaration || node.Kind == parser2.GreenNodeKind.InterfaceDeclaration || node.Kind == parser2.GreenNodeKind.ImplDeclaration then
+  elsif node.Kind == parser2.CstNodeKind.StructDeclaration || node.Kind == parser2.CstNodeKind.EnumDeclaration || node.Kind == parser2.CstNodeKind.InterfaceDeclaration || node.Kind == parser2.CstNodeKind.ImplDeclaration then
     renderSyntaxBlock(node, indent)
-  elsif node.Kind == parser2.GreenNodeKind.Block then
+  elsif node.Kind == parser2.CstNodeKind.Block then
     renderSyntaxBody(node, indent)
-  elsif node.Kind == parser2.GreenNodeKind.ElsifBranch || node.Kind == parser2.GreenNodeKind.ElseBranch || node.Kind == parser2.GreenNodeKind.CaseBranch then
+  elsif node.Kind == parser2.CstNodeKind.ElsifBranch || node.Kind == parser2.CstNodeKind.ElseBranch || node.Kind == parser2.CstNodeKind.CaseBranch then
     renderSyntaxBranch(node, indent)
   else
     renderSyntaxElements(node.Children, 0, node.Children.Len(), indent)
@@ -186,10 +186,10 @@ end
 
 # Delimited groups split only on direct comma leaves. Nested groups remain child
 # nodes and therefore measure and wrap recursively under their own owner.
-func renderSyntaxDelimitedGroup(node: parser2.GreenNode, indent: Int) -> String
+func renderSyntaxDelimitedGroup(node: parser2.CstNode, indent: Int) -> String
   let flat = renderSyntaxElements(node.Children, 0, node.Children.Len(), indent)
   let openingColumn = syntaxSpanStartColumn(node.Span) - 1
-  let anchorColumn = if indent > 1 && node.Kind == parser2.GreenNodeKind.ParenGroup then
+  let anchorColumn = if indent > 1 && node.Kind == parser2.CstNodeKind.ParenGroup then
     indent * 2
   elsif openingColumn > indent * 2 then
     openingColumn
@@ -207,17 +207,17 @@ func renderSyntaxDelimitedGroup(node: parser2.GreenNode, indent: Int) -> String
     else
       let opening = syntaxElementRaw(syntaxElementAt(node.Children, openIndex))
       let closing = syntaxElementRaw(syntaxElementAt(node.Children, closeIndex))
-      opening + "\n" + renderSyntaxDelimitedItems(node.Children, openIndex + 1, closeIndex, openIndex + 1, indent + 1, node.Kind != parser2.GreenNodeKind.ParenGroup) + syntaxIndent(indent) + closing
+      opening + "\n" + renderSyntaxDelimitedItems(node.Children, openIndex + 1, closeIndex, openIndex + 1, indent + 1, node.Kind != parser2.CstNodeKind.ParenGroup) + syntaxIndent(indent) + closing
     end
   end
 end
 
-func syntaxGroupHasDirectLineBreak(items: Slice[parser2.GreenElement], index: Int) -> Bool
+func syntaxGroupHasDirectLineBreak(items: Slice[parser2.CstElement], index: Int) -> Bool
   if index >= items.Len() then
     false
   else
     switch syntaxElementAt(items, index)
-      case TriviaElement(trivia) => (trivia.Kind == parser2.GreenTriviaKind.Whitespace && strings.Contains(trivia.Raw, "\n")) || syntaxGroupHasDirectLineBreak(items, index + 1)
+      case TriviaElement(trivia) => (trivia.Kind == parser2.CstTriviaKind.Whitespace && strings.Contains(trivia.Raw, "\n")) || syntaxGroupHasDirectLineBreak(items, index + 1)
       case _ => syntaxGroupHasDirectLineBreak(items, index + 1)
     end
   end
@@ -228,11 +228,11 @@ func syntaxSpanStartColumn(span: ps.SourceSpan) -> Int
   position.Column
 end
 
-func syntaxElementAt(items: Slice[parser2.GreenElement], index: Int) -> parser2.GreenElement
-  items.Get(index).UnwrapOr(parser2.GreenElement.TokenElement(parser2.GreenToken { Kind: parser2.GreenTokenKind.Symbol, Raw: "", Span: ps.SourceSpan { Start: ps.Position { Offset: 0, Line: 0, Column: 0 }, End: ps.Position { Offset: 0, Line: 0, Column: 0 } } }))
+func syntaxElementAt(items: Slice[parser2.CstElement], index: Int) -> parser2.CstElement
+  items.Get(index).UnwrapOr(parser2.CstElement.TokenElement(parser2.CstToken { Kind: parser2.CstTokenKind.Symbol, Raw: "", Span: ps.SourceSpan { Start: ps.Position { Offset: 0, Line: 0, Column: 0 }, End: ps.Position { Offset: 0, Line: 0, Column: 0 } } }))
 end
 
-func syntaxFirstNonTriviaIndex(items: Slice[parser2.GreenElement], index: Int) -> Int
+func syntaxFirstNonTriviaIndex(items: Slice[parser2.CstElement], index: Int) -> Int
   if index >= items.Len() then
     -1
   elsif syntaxElementIsTrivia(syntaxElementAt(items, index)) then
@@ -242,7 +242,7 @@ func syntaxFirstNonTriviaIndex(items: Slice[parser2.GreenElement], index: Int) -
   end
 end
 
-func syntaxLastNonTriviaIndex(items: Slice[parser2.GreenElement], index: Int) -> Int
+func syntaxLastNonTriviaIndex(items: Slice[parser2.CstElement], index: Int) -> Int
   if index < 0 then
     -1
   elsif syntaxElementIsTrivia(syntaxElementAt(items, index)) then
@@ -252,7 +252,7 @@ func syntaxLastNonTriviaIndex(items: Slice[parser2.GreenElement], index: Int) ->
   end
 end
 
-func syntaxDirectCommaCount(items: Slice[parser2.GreenElement], index: Int) -> Int
+func syntaxDirectCommaCount(items: Slice[parser2.CstElement], index: Int) -> Int
   if index >= items.Len() then
     0
   else
@@ -265,7 +265,7 @@ func syntaxDirectCommaCount(items: Slice[parser2.GreenElement], index: Int) -> I
   end
 end
 
-func renderSyntaxDelimitedItems(items: Slice[parser2.GreenElement], index: Int, finish: Int, itemStart: Int, indent: Int, trailingComma: Bool) -> String
+func renderSyntaxDelimitedItems(items: Slice[parser2.CstElement], index: Int, finish: Int, itemStart: Int, indent: Int, trailingComma: Bool) -> String
   if index >= finish then
     let item = strings.TrimSpace(renderSyntaxElements(items, itemStart, finish, indent))
     if item == "" then
@@ -289,7 +289,7 @@ end
 # `end`. Rendering them as an ordinary token group loses the body boundary when
 # the literal is nested inside a call or initializer. Keep the signature generic
 # and recurse through the same Block renderer used by declarations.
-func renderSyntaxFuncLiteral(node: parser2.GreenNode, indent: Int) -> String
+func renderSyntaxFuncLiteral(node: parser2.CstNode, indent: Int) -> String
   let bodyIndex = syntaxDirectBlockIndex(node.Children, 0)
   if bodyIndex < 0 then
     renderSyntaxElements(node.Children, 0, node.Children.Len(), indent)
@@ -310,7 +310,7 @@ func renderSyntaxFuncLiteral(node: parser2.GreenNode, indent: Int) -> String
   end
 end
 
-func renderSyntaxWhile(node: parser2.GreenNode, indent: Int) -> String
+func renderSyntaxWhile(node: parser2.CstNode, indent: Int) -> String
   let bodyStart = syntaxWhileBodyBoundary(node.Children, 0, false, false)
   let endIndex = syntaxDirectEndIndex(node.Children, 0)
   if bodyStart < 0 || endIndex < bodyStart then
@@ -321,7 +321,7 @@ func renderSyntaxWhile(node: parser2.GreenNode, indent: Int) -> String
   end
 end
 
-func syntaxWhileBodyBoundary(items: Slice[parser2.GreenElement], index: Int, sawWhile: Bool, sawCondition: Bool) -> Int
+func syntaxWhileBodyBoundary(items: Slice[parser2.CstElement], index: Int, sawWhile: Bool, sawCondition: Bool) -> Int
   if index >= items.Len() then
     -1
   else
@@ -343,7 +343,7 @@ func syntaxWhileBodyBoundary(items: Slice[parser2.GreenElement], index: Int, saw
   end
 end
 
-func syntaxDirectEndIndex(items: Slice[parser2.GreenElement], index: Int) -> Int
+func syntaxDirectEndIndex(items: Slice[parser2.CstElement], index: Int) -> Int
   if index >= items.Len() then
     -1
   else
@@ -360,7 +360,7 @@ func syntaxDirectEndIndex(items: Slice[parser2.GreenElement], index: Int) -> Int
   end
 end
 
-func renderSyntaxBodyRange(items: Slice[parser2.GreenElement], index: Int, finish: Int, indent: Int) -> String
+func renderSyntaxBodyRange(items: Slice[parser2.CstElement], index: Int, finish: Int, indent: Int) -> String
   if index >= finish then
     ""
   else
@@ -369,7 +369,7 @@ func renderSyntaxBodyRange(items: Slice[parser2.GreenElement], index: Int, finis
         if syntaxElementIsTrivia(item) then
           switch item
             case TriviaElement(trivia) then
-              if trivia.Kind == parser2.GreenTriviaKind.Comment then
+              if trivia.Kind == parser2.CstTriviaKind.Comment then
                 syntaxIndent(indent) + trivia.Raw + "\n" + renderSyntaxBodyRange(items, index + 1, finish, indent)
               else
                 renderSyntaxBodyRange(items, index + 1, finish, indent)
@@ -386,7 +386,7 @@ func renderSyntaxBodyRange(items: Slice[parser2.GreenElement], index: Int, finis
   end
 end
 
-func renderSyntaxBlock(node: parser2.GreenNode, indent: Int) -> String
+func renderSyntaxBlock(node: parser2.CstNode, indent: Int) -> String
   let boundary = syntaxBlockBoundary(node, 0)
   if boundary < 0 then
     renderSyntaxElements(node.Children, 0, node.Children.Len(), indent)
@@ -404,7 +404,7 @@ func renderSyntaxBlock(node: parser2.GreenNode, indent: Int) -> String
   end
 end
 
-func renderSyntaxBlockTail(node: parser2.GreenNode, index: Int, indent: Int, text: String, opened: Bool) -> String
+func renderSyntaxBlockTail(node: parser2.CstNode, index: Int, indent: Int, text: String, opened: Bool) -> String
   if index >= node.Children.Len() then
     if opened => text else text + "\n"
   else
@@ -413,10 +413,10 @@ func renderSyntaxBlockTail(node: parser2.GreenNode, index: Int, indent: Int, tex
         switch syntaxElementNode(item)
           case Some(child) then
             let value = child.value()
-            if value.Kind == parser2.GreenNodeKind.Block then
+            if value.Kind == parser2.CstNodeKind.Block then
               let separator = if strings.HasSuffix(text, "\n") => "" else "\n"
               renderSyntaxBlockTail(node, index + 1, indent, text + separator + renderSyntaxBody(value, indent + 1), true)
-            elsif value.Kind == parser2.GreenNodeKind.ElsifBranch || value.Kind == parser2.GreenNodeKind.ElseBranch then
+            elsif value.Kind == parser2.CstNodeKind.ElsifBranch || value.Kind == parser2.CstNodeKind.ElseBranch then
               renderSyntaxBlockTail(
                 node,
                 index + 1,
@@ -424,7 +424,7 @@ func renderSyntaxBlockTail(node: parser2.GreenNode, index: Int, indent: Int, tex
                 if opened => text + renderSyntaxBranch(value, indent) else text + "\n" + renderSyntaxBranch(value, indent),
                 true,
               )
-            elsif value.Kind == parser2.GreenNodeKind.CaseBranch then
+            elsif value.Kind == parser2.CstNodeKind.CaseBranch then
               renderSyntaxBlockTail(
                 node,
                 index + 1,
@@ -444,7 +444,7 @@ func renderSyntaxBlockTail(node: parser2.GreenNode, index: Int, indent: Int, tex
             if syntaxElementIsTrivia(item) then
               switch item
                 case TriviaElement(trivia) then
-                  if trivia.Kind == parser2.GreenTriviaKind.Comment then
+                  if trivia.Kind == parser2.CstTriviaKind.Comment then
                     let previous = syntaxPreviousSignificantRaw(node.Children, index - 1)
                     let commentIndent = if previous == "end" => indent else indent + 1
                     let prefix = if strings.HasSuffix(text, "\n") => "" else "\n"
@@ -476,9 +476,9 @@ func renderSyntaxBlockTail(node: parser2.GreenNode, index: Int, indent: Int, tex
   end
 end
 
-func renderSyntaxBranch(node: parser2.GreenNode, indent: Int) -> String
+func renderSyntaxBranch(node: parser2.CstNode, indent: Int) -> String
   let bodyIndex = syntaxDirectBlockIndex(node.Children, 0)
-  if node.Kind == parser2.GreenNodeKind.CaseBranch && syntaxArrowCaseTooWide(node, indent) then
+  if node.Kind == parser2.CstNodeKind.CaseBranch && syntaxArrowCaseTooWide(node, indent) then
     renderSyntaxWideArrowCase(node, indent)
   elsif bodyIndex < 0 then
     syntaxIndent(indent) + strings.TrimSpace(renderSyntaxElements(node.Children, 0, node.Children.Len(), indent)) + "\n"
@@ -491,14 +491,14 @@ func renderSyntaxBranch(node: parser2.GreenNode, indent: Int) -> String
   end
 end
 
-func syntaxArrowIfTooWide(node: parser2.GreenNode, indent: Int) -> Bool
+func syntaxArrowIfTooWide(node: parser2.CstNode, indent: Int) -> Bool
   let items = syntaxFlattenControlItems(node.Children, 0, [])
   let arrow = syntaxDirectTokenIndex(items, "=>", 0)
   let flat = renderSyntaxElements(items, 0, items.Len(), indent)
   arrow >= 0 && indent * 2 + flat.Len() > 100
 end
 
-func renderSyntaxWideArrowIf(node: parser2.GreenNode, indent: Int) -> String
+func renderSyntaxWideArrowIf(node: parser2.CstNode, indent: Int) -> String
   let items = syntaxFlattenControlItems(node.Children, 0, [])
   let arrow = syntaxDirectTokenIndex(items, "=>", 0)
   let elseIndex = syntaxDirectTokenIndexAfter(items, "else", arrow + 1)
@@ -512,13 +512,13 @@ func renderSyntaxWideArrowIf(node: parser2.GreenNode, indent: Int) -> String
   end
 end
 
-func syntaxArrowCaseTooWide(node: parser2.GreenNode, indent: Int) -> Bool
+func syntaxArrowCaseTooWide(node: parser2.CstNode, indent: Int) -> Bool
   let items = syntaxFlattenControlItems(node.Children, 0, [])
   let arrow = syntaxDirectTokenIndex(items, "=>", 0)
   arrow >= 0 && indent * 2 + strings.TrimSpace(renderSyntaxElements(items, 0, items.Len(), indent)).Len() > 100
 end
 
-func renderSyntaxWideArrowCase(node: parser2.GreenNode, indent: Int) -> String
+func renderSyntaxWideArrowCase(node: parser2.CstNode, indent: Int) -> String
   let items = syntaxFlattenControlItems(node.Children, 0, [])
   let arrow = syntaxDirectTokenIndex(items, "=>", 0)
   let header = strings.TrimSpace(renderSyntaxElements(items, 0, arrow, indent))
@@ -526,7 +526,7 @@ func renderSyntaxWideArrowCase(node: parser2.GreenNode, indent: Int) -> String
   syntaxIndent(indent) + header + " then\n" + syntaxIndent(indent + 1) + body + "\n" + syntaxIndent(indent) + "end\n"
 end
 
-func syntaxFlattenControlItems(items: Slice[parser2.GreenElement], index: Int, output: Slice[parser2.GreenElement]) -> Slice[parser2.GreenElement]
+func syntaxFlattenControlItems(items: Slice[parser2.CstElement], index: Int, output: Slice[parser2.CstElement]) -> Slice[parser2.CstElement]
   if index >= items.Len() then
     output
   else
@@ -543,11 +543,11 @@ func syntaxFlattenControlItems(items: Slice[parser2.GreenElement], index: Int, o
   end
 end
 
-func syntaxControlBoundaryKind(kind: parser2.GreenNodeKind) -> Bool
-  kind == parser2.GreenNodeKind.IfBlock || kind == parser2.GreenNodeKind.SwitchBlock || kind == parser2.GreenNodeKind.WhileBlock || kind == parser2.GreenNodeKind.FuncLitExpr || kind == parser2.GreenNodeKind.Call || kind == parser2.GreenNodeKind.ParenGroup || kind == parser2.GreenNodeKind.BracketGroup || kind == parser2.GreenNodeKind.BraceGroup || kind == parser2.GreenNodeKind.ElseBranch || kind == parser2.GreenNodeKind.ElsifBranch || kind == parser2.GreenNodeKind.CaseBranch
+func syntaxControlBoundaryKind(kind: parser2.CstNodeKind) -> Bool
+  kind == parser2.CstNodeKind.IfBlock || kind == parser2.CstNodeKind.SwitchBlock || kind == parser2.CstNodeKind.WhileBlock || kind == parser2.CstNodeKind.FuncLitExpr || kind == parser2.CstNodeKind.Call || kind == parser2.CstNodeKind.ParenGroup || kind == parser2.CstNodeKind.BracketGroup || kind == parser2.CstNodeKind.BraceGroup || kind == parser2.CstNodeKind.ElseBranch || kind == parser2.CstNodeKind.ElsifBranch || kind == parser2.CstNodeKind.CaseBranch
 end
 
-func syntaxDirectTokenIndexAfter(items: Slice[parser2.GreenElement], token: String, index: Int) -> Int
+func syntaxDirectTokenIndexAfter(items: Slice[parser2.CstElement], token: String, index: Int) -> Int
   if index >= items.Len() then
     -1
   else
@@ -560,7 +560,7 @@ func syntaxDirectTokenIndexAfter(items: Slice[parser2.GreenElement], token: Stri
   end
 end
 
-func syntaxDirectTokenIndex(items: Slice[parser2.GreenElement], token: String, index: Int) -> Int
+func syntaxDirectTokenIndex(items: Slice[parser2.CstElement], token: String, index: Int) -> Int
   if index >= items.Len() then
     -1
   else
@@ -573,7 +573,7 @@ func syntaxDirectTokenIndex(items: Slice[parser2.GreenElement], token: String, i
   end
 end
 
-func syntaxDirectNodeIndex(items: Slice[parser2.GreenElement], kind: parser2.GreenNodeKind, index: Int) -> Int
+func syntaxDirectNodeIndex(items: Slice[parser2.CstElement], kind: parser2.CstNodeKind, index: Int) -> Int
   if index >= items.Len() then
     -1
   else
@@ -590,14 +590,14 @@ func syntaxDirectNodeIndex(items: Slice[parser2.GreenElement], kind: parser2.Gre
   end
 end
 
-func renderSyntaxBranchInlineValue(item: parser2.GreenElement, indent: Int) -> String
+func renderSyntaxBranchInlineValue(item: parser2.CstElement, indent: Int) -> String
   switch syntaxElementNode(item)
     case Some(node) => renderSyntaxBranchInlineNode(node.value(), indent)
     case None => syntaxElementRaw(item)
   end
 end
 
-func renderSyntaxBranchInlineNode(node: parser2.GreenNode, indent: Int) -> String
+func renderSyntaxBranchInlineNode(node: parser2.CstNode, indent: Int) -> String
   let elseIndex = syntaxDirectTokenIndex(node.Children, "else", 0)
   if elseIndex < 0 then
     strings.TrimSpace(renderSyntaxElements(node.Children, 0, node.Children.Len(), indent))
@@ -606,7 +606,7 @@ func renderSyntaxBranchInlineNode(node: parser2.GreenNode, indent: Int) -> Strin
   end
 end
 
-func renderSyntaxBranchBody(node: parser2.GreenNode, body: parser2.GreenNode, bodyIndex: Int, indent: Int, header: String) -> String
+func renderSyntaxBranchBody(node: parser2.CstNode, body: parser2.CstNode, bodyIndex: Int, indent: Int, header: String) -> String
   let arrow = syntaxDirectTokenBefore(node.Children, bodyIndex, "=>")
   let thenHeader = syntaxDirectTokenBefore(node.Children, bodyIndex, "then")
   let separator = if thenHeader then
@@ -619,7 +619,7 @@ func renderSyntaxBranchBody(node: parser2.GreenNode, body: parser2.GreenNode, bo
   let bodyComments = renderSyntaxBodyRange(node.Children, headerEnd, bodyIndex, indent + 1)
   if arrow && syntaxBodyHasOneStatement(body.Children, 0, 0) && bodyComments == "" && !syntaxRangeHasComment(node.Children, 0, bodyIndex) then
     syntaxIndent(indent) + header + " " + strings.TrimSpace(renderSyntaxBodyInline(body)) + "\n"
-  elsif thenHeader || arrow || node.Kind == parser2.GreenNodeKind.ElseBranch then
+  elsif thenHeader || arrow || node.Kind == parser2.CstNodeKind.ElseBranch then
     let prefix = syntaxIndent(indent) + branchHeader + "\n" + bodyComments + renderSyntaxBody(body, indent + 1)
     renderSyntaxBranchTail(node, bodyIndex + 1, indent, prefix)
   else
@@ -627,18 +627,18 @@ func renderSyntaxBranchBody(node: parser2.GreenNode, body: parser2.GreenNode, bo
   end
 end
 
-func syntaxRangeHasComment(items: Slice[parser2.GreenElement], index: Int, finish: Int) -> Bool
+func syntaxRangeHasComment(items: Slice[parser2.CstElement], index: Int, finish: Int) -> Bool
   if index >= finish then
     false
   else
     switch syntaxElementAt(items, index)
-      case TriviaElement(trivia) => trivia.Kind == parser2.GreenTriviaKind.Comment || syntaxRangeHasComment(items, index + 1, finish)
+      case TriviaElement(trivia) => trivia.Kind == parser2.CstTriviaKind.Comment || syntaxRangeHasComment(items, index + 1, finish)
       case _ => syntaxRangeHasComment(items, index + 1, finish)
     end
   end
 end
 
-func renderSyntaxBranchTail(node: parser2.GreenNode, index: Int, indent: Int, text: String) -> String
+func renderSyntaxBranchTail(node: parser2.CstNode, index: Int, indent: Int, text: String) -> String
   if index >= node.Children.Len() then
     text
   else
@@ -655,11 +655,11 @@ func renderSyntaxBranchTail(node: parser2.GreenNode, index: Int, indent: Int, te
   end
 end
 
-func renderSyntaxBody(node: parser2.GreenNode, indent: Int) -> String
+func renderSyntaxBody(node: parser2.CstNode, indent: Int) -> String
   renderSyntaxBodyFrom(node.Children, 0, indent, "")
 end
 
-func renderSyntaxBodyFrom(items: Slice[parser2.GreenElement], index: Int, indent: Int, text: String) -> String
+func renderSyntaxBodyFrom(items: Slice[parser2.CstElement], index: Int, indent: Int, text: String) -> String
   if index >= items.Len() then
     text
   else
@@ -668,7 +668,7 @@ func renderSyntaxBodyFrom(items: Slice[parser2.GreenElement], index: Int, indent
         if syntaxElementIsTrivia(item) then
           switch item
             case TriviaElement(trivia) then
-              if trivia.Kind == parser2.GreenTriviaKind.Comment then
+              if trivia.Kind == parser2.CstTriviaKind.Comment then
                 renderSyntaxBodyFrom(items, index + 1, indent, text + syntaxIndent(indent) + trivia.Raw + "\n")
               else
                 renderSyntaxBodyFrom(items, index + 1, indent, text)
@@ -690,11 +690,11 @@ func renderSyntaxBodyFrom(items: Slice[parser2.GreenElement], index: Int, indent
   end
 end
 
-func renderSyntaxBodyInline(node: parser2.GreenNode) -> String
+func renderSyntaxBodyInline(node: parser2.CstNode) -> String
   strings.TrimSpace(renderSyntaxBodyInlineFrom(node.Children, 0))
 end
 
-func renderSyntaxBodyInlineFrom(items: Slice[parser2.GreenElement], index: Int) -> String
+func renderSyntaxBodyInlineFrom(items: Slice[parser2.CstElement], index: Int) -> String
   if index >= items.Len() then
     ""
   else
@@ -710,7 +710,7 @@ func renderSyntaxBodyInlineFrom(items: Slice[parser2.GreenElement], index: Int) 
   end
 end
 
-func syntaxBodyHasOneStatement(items: Slice[parser2.GreenElement], index: Int, count: Int) -> Bool
+func syntaxBodyHasOneStatement(items: Slice[parser2.CstElement], index: Int, count: Int) -> Bool
   if index >= items.Len() then
     count == 1
   else
@@ -719,7 +719,7 @@ func syntaxBodyHasOneStatement(items: Slice[parser2.GreenElement], index: Int, c
         if syntaxElementIsTrivia(item) then
           switch item
             case TriviaElement(trivia) then
-              if trivia.Kind == parser2.GreenTriviaKind.Comment then
+              if trivia.Kind == parser2.CstTriviaKind.Comment then
                 false
               else
                 syntaxBodyHasOneStatement(items, index + 1, count)
@@ -736,7 +736,7 @@ func syntaxBodyHasOneStatement(items: Slice[parser2.GreenElement], index: Int, c
   end
 end
 
-func renderSyntaxElements(items: Slice[parser2.GreenElement], index: Int, finish: Int, indent: Int) -> String
+func renderSyntaxElements(items: Slice[parser2.CstElement], index: Int, finish: Int, indent: Int) -> String
   if index >= finish then
     ""
   else
@@ -747,10 +747,10 @@ func renderSyntaxElements(items: Slice[parser2.GreenElement], index: Int, finish
   end
 end
 
-func syntaxRenderGapOrElement(items: Slice[parser2.GreenElement], index: Int, finish: Int, item: parser2.GreenElement, indent: Int) -> String
+func syntaxRenderGapOrElement(items: Slice[parser2.CstElement], index: Int, finish: Int, item: parser2.CstElement, indent: Int) -> String
   switch item
     case TriviaElement(trivia) then
-      if trivia.Kind == parser2.GreenTriviaKind.Whitespace then
+      if trivia.Kind == parser2.CstTriviaKind.Whitespace then
         if syntaxGapLeadsToComment(items, index + 1, finish) || syntaxGapFollowsComment(items, index - 1) then
           "\n"
         else
@@ -764,7 +764,7 @@ func syntaxRenderGapOrElement(items: Slice[parser2.GreenElement], index: Int, fi
   end
 end
 
-func syntaxGapLeadsToComment(items: Slice[parser2.GreenElement], index: Int, finish: Int) -> Bool
+func syntaxGapLeadsToComment(items: Slice[parser2.CstElement], index: Int, finish: Int) -> Bool
   if index >= finish then
     false
   else
@@ -772,7 +772,7 @@ func syntaxGapLeadsToComment(items: Slice[parser2.GreenElement], index: Int, fin
       case Some(item) then
         if syntaxElementIsTrivia(item) then
           switch item
-            case TriviaElement(trivia) => trivia.Kind == parser2.GreenTriviaKind.Comment || syntaxGapLeadsToComment(items, index + 1, finish)
+            case TriviaElement(trivia) => trivia.Kind == parser2.CstTriviaKind.Comment || syntaxGapLeadsToComment(items, index + 1, finish)
             case _ => syntaxGapLeadsToComment(items, index + 1, finish)
           end
         else
@@ -784,7 +784,7 @@ func syntaxGapLeadsToComment(items: Slice[parser2.GreenElement], index: Int, fin
   end
 end
 
-func syntaxGapFollowsComment(items: Slice[parser2.GreenElement], index: Int) -> Bool
+func syntaxGapFollowsComment(items: Slice[parser2.CstElement], index: Int) -> Bool
   if index < 0 then
     false
   else
@@ -793,7 +793,7 @@ func syntaxGapFollowsComment(items: Slice[parser2.GreenElement], index: Int) -> 
         if syntaxElementIsTrivia(item) then
           switch item
             case TriviaElement(trivia) then
-              trivia.Kind == parser2.GreenTriviaKind.Comment || syntaxGapFollowsComment(items, index - 1)
+              trivia.Kind == parser2.CstTriviaKind.Comment || syntaxGapFollowsComment(items, index - 1)
             end
             case _ => syntaxGapFollowsComment(items, index - 1)
           end
@@ -806,7 +806,7 @@ func syntaxGapFollowsComment(items: Slice[parser2.GreenElement], index: Int) -> 
   end
 end
 
-func syntaxCanonicalWhitespace(items: Slice[parser2.GreenElement], index: Int, finish: Int, raw: String) -> String
+func syntaxCanonicalWhitespace(items: Slice[parser2.CstElement], index: Int, finish: Int, raw: String) -> String
   let previous = syntaxPreviousSignificantRaw(items, index - 1)
   let next = syntaxNextSignificantRaw(items, index + 1, finish)
   if previous == "" || next == "" || syntaxRawEndsTight(previous) || syntaxRawStartsTight(next) then
@@ -820,7 +820,7 @@ func syntaxCanonicalWhitespace(items: Slice[parser2.GreenElement], index: Int, f
   end
 end
 
-func syntaxPreviousSignificantRaw(items: Slice[parser2.GreenElement], index: Int) -> String
+func syntaxPreviousSignificantRaw(items: Slice[parser2.CstElement], index: Int) -> String
   if index < 0 then
     ""
   else
@@ -837,7 +837,7 @@ func syntaxPreviousSignificantRaw(items: Slice[parser2.GreenElement], index: Int
   end
 end
 
-func syntaxNextSignificantRaw(items: Slice[parser2.GreenElement], index: Int, finish: Int) -> String
+func syntaxNextSignificantRaw(items: Slice[parser2.CstElement], index: Int, finish: Int) -> String
   if index >= finish then
     ""
   else
@@ -876,14 +876,14 @@ func syntaxRawIsOperator(raw: String) -> Bool
   raw == "=" || raw == "==" || raw == "!=" || raw == ">" || raw == "<" || raw == ">=" || raw == "<=" || raw == "+" || raw == "-" || raw == "*" || raw == "/" || raw == "&&" || raw == "||" || raw == "=>" || raw == "->" || raw == "|>" || raw == "<|" || raw == "as" || raw == ".."
 end
 
-func renderSyntaxElement(item: parser2.GreenElement, indent: Int) -> String
+func renderSyntaxElement(item: parser2.CstElement, indent: Int) -> String
   switch syntaxElementNode(item)
     case Some(node) => renderSyntaxNode(node.value(), indent)
     case None => syntaxElementRaw(item)
   end
 end
 
-func syntaxBlockBoundary(node: parser2.GreenNode, index: Int) -> Int
+func syntaxBlockBoundary(node: parser2.CstNode, index: Int) -> Int
   if index >= node.Children.Len() then
     -1
   else
@@ -894,11 +894,11 @@ func syntaxBlockBoundary(node: parser2.GreenNode, index: Int) -> Int
   end
 end
 
-func syntaxBlockBoundaryItem(node: parser2.GreenNode, index: Int, item: parser2.GreenElement) -> Int
+func syntaxBlockBoundaryItem(node: parser2.CstNode, index: Int, item: parser2.CstElement) -> Int
   switch syntaxElementNode(item)
     case Some(child) then
       let kind = child.value().Kind
-      if kind == parser2.GreenNodeKind.Block || kind == parser2.GreenNodeKind.CaseBranch || kind == parser2.GreenNodeKind.ElsifBranch || kind == parser2.GreenNodeKind.ElseBranch || syntaxDeclarationMember(node.Kind, kind) then
+      if kind == parser2.CstNodeKind.Block || kind == parser2.CstNodeKind.CaseBranch || kind == parser2.CstNodeKind.ElsifBranch || kind == parser2.CstNodeKind.ElseBranch || syntaxDeclarationMember(node.Kind, kind) then
         index
       else
         syntaxBlockBoundary(node, index + 1)
@@ -908,21 +908,21 @@ func syntaxBlockBoundaryItem(node: parser2.GreenNode, index: Int, item: parser2.
   end
 end
 
-func syntaxDeclarationMember(parent: parser2.GreenNodeKind, child: parser2.GreenNodeKind) -> Bool
-  if parent == parser2.GreenNodeKind.StructDeclaration then
-    child == parser2.GreenNodeKind.StructField
-  elsif parent == parser2.GreenNodeKind.EnumDeclaration then
-    child == parser2.GreenNodeKind.EnumVariant
-  elsif parent == parser2.GreenNodeKind.InterfaceDeclaration then
-    child == parser2.GreenNodeKind.FuncSignature
-  elsif parent == parser2.GreenNodeKind.ImplDeclaration then
-    child == parser2.GreenNodeKind.ImplMethod
+func syntaxDeclarationMember(parent: parser2.CstNodeKind, child: parser2.CstNodeKind) -> Bool
+  if parent == parser2.CstNodeKind.StructDeclaration then
+    child == parser2.CstNodeKind.StructField
+  elsif parent == parser2.CstNodeKind.EnumDeclaration then
+    child == parser2.CstNodeKind.EnumVariant
+  elsif parent == parser2.CstNodeKind.InterfaceDeclaration then
+    child == parser2.CstNodeKind.FuncSignature
+  elsif parent == parser2.CstNodeKind.ImplDeclaration then
+    child == parser2.CstNodeKind.ImplMethod
   else
     false
   end
 end
 
-func syntaxDirectBlockIndex(items: Slice[parser2.GreenElement], index: Int) -> Int
+func syntaxDirectBlockIndex(items: Slice[parser2.CstElement], index: Int) -> Int
   if index >= items.Len() then
     -1
   else
@@ -930,7 +930,7 @@ func syntaxDirectBlockIndex(items: Slice[parser2.GreenElement], index: Int) -> I
       case Some(item) then
         switch syntaxElementNode(item)
           case Some(node) then
-            if node.value().Kind == parser2.GreenNodeKind.Block then
+            if node.value().Kind == parser2.CstNodeKind.Block then
               index
             else
               syntaxDirectBlockIndex(items, index + 1)
@@ -944,7 +944,7 @@ func syntaxDirectBlockIndex(items: Slice[parser2.GreenElement], index: Int) -> I
   end
 end
 
-func syntaxDirectBlock(items: Slice[parser2.GreenElement], index: Int) -> Option[parser2.GreenNode]
+func syntaxDirectBlock(items: Slice[parser2.CstElement], index: Int) -> Option[parser2.CstNode]
   switch items.Get(index)
     case Some(item) then
       switch syntaxElementNode(item)
@@ -956,7 +956,7 @@ func syntaxDirectBlock(items: Slice[parser2.GreenElement], index: Int) -> Option
   end
 end
 
-func syntaxDirectTokenBefore(items: Slice[parser2.GreenElement], finish: Int, raw: String) -> Bool
+func syntaxDirectTokenBefore(items: Slice[parser2.CstElement], finish: Int, raw: String) -> Bool
   if finish <= 0 then
     false
   else
@@ -967,21 +967,21 @@ func syntaxDirectTokenBefore(items: Slice[parser2.GreenElement], finish: Int, ra
   end
 end
 
-func syntaxElementNode(item: parser2.GreenElement) -> Option[Ref[parser2.GreenNode]]
+func syntaxElementNode(item: parser2.CstElement) -> Option[Ref[parser2.CstNode]]
   switch item
     case NodeElement(node) => Some(node)
     case _ => None
   end
 end
 
-func syntaxElementIsTrivia(item: parser2.GreenElement) -> Bool
+func syntaxElementIsTrivia(item: parser2.CstElement) -> Bool
   switch item
     case TriviaElement(_) => true
     case _ => false
   end
 end
 
-func syntaxElementRaw(item: parser2.GreenElement) -> String
+func syntaxElementRaw(item: parser2.CstElement) -> String
   switch item
     case TokenElement(token) => token.Raw
     case TriviaElement(trivia) => trivia.Raw
@@ -989,7 +989,7 @@ func syntaxElementRaw(item: parser2.GreenElement) -> String
   end
 end
 
-func syntaxNodeRaw(node: parser2.GreenNode, index: Int) -> String
+func syntaxNodeRaw(node: parser2.CstNode, index: Int) -> String
   if index >= node.Children.Len() then
     ""
   else

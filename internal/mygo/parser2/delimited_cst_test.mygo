@@ -93,5 +93,5 @@ end
 func TestDelimitedCstSourceIsBytePreserved(t: Ref[testing.T]) -> ()
   let source = "package sample\nfunc f() -> Int\n  let w = wrap(inner(a, b), c, [1, 2])\n  let q = \"tricky, { } ( )\"\n  v\nend\n"
   let root = ParseSyntaxAt("delimited.mygo", source).Root.value()
-  if greenNodeText(root) != source then t.Fatal("CST delimiter grouping must retain every source byte") end
+  if cstNodeText(root) != source then t.Fatal("CST delimiter grouping must retain every source byte") end
 end
