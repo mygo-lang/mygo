@@ -1998,7 +1998,7 @@ func envWithPatternTarget(env Env, pattern ast2.Pattern, targetType ast2.MonoTyp
 								if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.(Option__Some[ast2.MonoType]); ok {
 									var __mygo_expr_7 Result[Env, string]
 									if __mygo_match___mygo_expr_9, ok := __mygo_match___mygo_expr_6.F0.(ast2.MonoType__TFunc); ok {
-										__mygo_expr_7 = envWithPatternBindings(env, __mygo_match___mygo_expr_3.F1, __mygo_match___mygo_expr_9.F0, variantTargetType, *__mygo_match___mygo_expr_9.F1)
+										__mygo_expr_7 = envWithPatternBindings(env, __mygo_match___mygo_expr_3.F1, __mygo_match___mygo_expr_9.F0, variantTargetType, *__mygo_match___mygo_expr_9.F1, state)
 									} else {
 										if _, ok := __mygo_match___mygo_expr_6.F0.(ast2.MonoType__TCon); ok {
 											__mygo_expr_9 := unify(targetType, __mygo_match___mygo_expr_6.F0, emptySubst())
@@ -2456,7 +2456,7 @@ func envWithTuplePattern(env Env, patterns []ast2.Pattern, types []ast2.MonoType
 func envWithTuplePatternLoop(env Env, patterns []ast2.Pattern, types []ast2.MonoType, state InferState) Result[Env, string] {
 	return __mygo_mt_typeinference2_envWithTuplePatternLoop(env, patterns, types, state, 0)
 }
-func envWithPatternBindings(env Env, names []ast2.Pattern, fields []ast2.MonoType, targetType ast2.MonoType, variantType ast2.MonoType) Result[Env, string] {
+func envWithPatternBindings(env Env, names []ast2.Pattern, fields []ast2.MonoType, targetType ast2.MonoType, variantType ast2.MonoType, state InferState) Result[Env, string] {
 	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(names) != MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(fields) {
 		return Err[Env, string]("pattern argument count mismatch")
 	} else {
@@ -2466,7 +2466,7 @@ func envWithPatternBindings(env Env, names []ast2.Pattern, fields []ast2.MonoTyp
 			__mygo_expr_0 = Err[Env, string]("pattern does not match switch target: " + __mygo_match___mygo_expr_2.F0)
 		} else {
 			if __mygo_match___mygo_expr_1, ok := s.(Result__Ok[Subst, string]); ok {
-				__mygo_expr_0 = envWithPatternBindingLoop(env, names, fields, __mygo_match___mygo_expr_1.F0, NewInferState())
+				__mygo_expr_0 = envWithPatternBindingLoop(env, names, fields, __mygo_match___mygo_expr_1.F0, state)
 			} else {
 			}
 		}
