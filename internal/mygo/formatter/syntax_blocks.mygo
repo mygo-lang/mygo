@@ -397,12 +397,37 @@ func renderSyntaxBodyRange(items: Slice[parser2.CstElement], index: Int, finish:
             case _ => renderSyntaxBodyRange(items, index + 1, finish, indent)
           end
         else
-          syntaxIndent(indent) + strings.TrimSpace(renderSyntaxElement(item, indent)) + "\n" + renderSyntaxBodyRange(items, index + 1, finish, indent)
+          let statementEnd = syntaxBodyRangeStatementEnd(items, index, finish)
+          let statement = strings.TrimSpace(renderSyntaxElements(items, index, statementEnd, indent))
+          syntaxIndent(indent) + statement + "\n" + renderSyntaxBodyRange(items, statementEnd, finish, indent)
         end
       end
       case None => renderSyntaxBodyRange(items, index + 1, finish, indent)
     end
   end
+end
+
+func syntaxBodyRangeStatementEnd(items: Slice[parser2.CstElement], index: Int, finish: Int) -> Int
+  if index >= finish then index else
+    switch items.Get(index)
+      case Some(item) then
+        if syntaxElementIsTrivia(item) && strings.Contains(syntaxElementRaw(item), "\n") then
+          if syntaxBodyRangeContinues(items, index) then
+            syntaxBodyRangeStatementEnd(items, index + 1, finish)
+          else
+            index
+          end
+        else
+          syntaxBodyRangeStatementEnd(items, index + 1, finish)
+        end
+      end
+      case None => syntaxBodyRangeStatementEnd(items, index + 1, finish)
+    end
+  end
+end
+
+func syntaxBodyRangeContinues(items: Slice[parser2.CstElement], newlineIndex: Int) -> Bool
+  syntaxRawIsOperator(syntaxPreviousSignificantRaw(items, newlineIndex - 1))
 end
 
 func renderSyntaxBlock(node: parser2.CstNode, indent: Int) -> String

@@ -486,7 +486,9 @@ func renderSyntaxBodyRange(items []parser2.CstElement, index int, finish int, in
 					}
 					__mygo_expr_5 = __mygo_expr_3
 				} else {
-					__mygo_expr_5 = syntaxIndent(indent) + strings.TrimSpace(renderSyntaxElement(__mygo_match___mygo_expr_2.F0, indent)) + "\n" + renderSyntaxBodyRange(items, index+1, finish, indent)
+					statementEnd := syntaxBodyRangeStatementEnd(items, index, finish)
+					statement := strings.TrimSpace(renderSyntaxElements(items, index, statementEnd, indent))
+					__mygo_expr_5 = syntaxIndent(indent) + statement + "\n" + renderSyntaxBodyRange(items, statementEnd, finish, indent)
 				}
 				__mygo_expr_1 = __mygo_expr_5
 			} else {
@@ -498,6 +500,12 @@ func renderSyntaxBodyRange(items []parser2.CstElement, index int, finish int, in
 			return __mygo_expr_1
 		}
 	}
+}
+func syntaxBodyRangeStatementEnd(items []parser2.CstElement, index int, finish int) int {
+	return __mygo_mt_formatter_syntaxBodyRangeStatementEnd(items, index, finish, 0)
+}
+func syntaxBodyRangeContinues(items []parser2.CstElement, newlineIndex int) bool {
+	return syntaxRawIsOperator(syntaxPreviousSignificantRaw(items, newlineIndex-1))
 }
 func renderSyntaxBlock(node parser2.CstNode, indent int) string {
 	boundary := syntaxBlockBoundary(node, 0)
@@ -1455,6 +1463,52 @@ func __mygo_mt_formatter_syntaxBodyHasOneStatement(__mygo_mt_p0 []parser2.CstEle
 						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2 + 1
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					}
+				} else {
+					if _, ok := __mygo_expr_0.(Option__None[parser2.CstElement]); ok {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
+						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+						__mygo_state = 0
+						continue
+					} else {
+						panic("non-exhaustive switch")
+					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_formatter_syntaxBodyRangeStatementEnd(__mygo_mt_p0 []parser2.CstElement, __mygo_mt_p1 int, __mygo_mt_p2 int, __mygo_state int) int {
+	for {
+		switch __mygo_state {
+		case 0:
+			if __mygo_mt_p1 >= __mygo_mt_p2 {
+				return __mygo_mt_p1
+			} else {
+				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[parser2.CstElement]); ok {
+					if syntaxElementIsTrivia(__mygo_match___mygo_expr_1.F0) && strings.Contains(syntaxElementRaw(__mygo_match___mygo_expr_1.F0), "\n") {
+						if syntaxBodyRangeContinues(__mygo_mt_p0, __mygo_mt_p1) {
+							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1 + 1
+							__tail_2 := __mygo_mt_p2
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
+							__mygo_state = 0
+							continue
+						} else {
+							return __mygo_mt_p1
+						}
+					} else {
+						__tail_0 := __mygo_mt_p0
+						__tail_1 := __mygo_mt_p1 + 1
+						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue

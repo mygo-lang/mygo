@@ -149,6 +149,17 @@ func TestFormatterRepresentativeGolden(t *testing.T) {
 		return
 	}
 }
+func TestFormatterKeepsLoopAssignmentOnOneLine(t *testing.T) {
+	source := "package sample\nfunc f() -> Int\n  var i: Int = 0\n  while i < 3\n    i = i + 1\n  end\n  i\nend\n"
+	want := source
+	got := formattedOrFail(t, FormatSource("loop-assignment.mygo", source))
+	if got != want {
+		t.Fatalf("loop assignment was split during formatting: %s", got)
+		return
+	} else {
+		return
+	}
+}
 func TestFormatterIfAndCaseGolden(t *testing.T) {
 	src := "package sample\nfunc f(x: Bool) -> Int\n if   x => 1 else 2\nend\nfunc g(x: Int) -> Int\n switch x\n  case 1 => 10\n  case _ then\n   0\n  end\n end\nend\n"
 	want := "package sample\nfunc f(x: Bool) -> Int\n  if x => 1 else 2\nend\nfunc g(x: Int) -> Int\n  switch x\n    case 1 => 10\n    case _ then\n      0\n    end\n  end\nend\n"

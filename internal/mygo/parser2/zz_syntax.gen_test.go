@@ -3362,6 +3362,53 @@ func TestBranchBodyAssignmentsLowerAsAssignments(t *testing.T) {
 	}
 	return
 }
+func TestLoopBodyAssignmentLowersAsAssignment(t *testing.T) {
+	source := "func f() -> Int\n  var i: Int = 0\n  while i < 3\n    i = i + 1\n  end\n  i\nend\n"
+	tree := ParseSyntaxAt("loop-assignment.mygo", source)
+	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(tree.Diagnostics) != 0 {
+		t.Fatal("loop body assignment fixture must parse without diagnostics")
+	} else {
+	}
+	__mygo_expr_0 := LowerSyntax(tree)
+	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
+		t.Fatalf("loop body assignment must lower: %s", __mygo_match___mygo_expr_2.F0)
+	} else {
+		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+			__mygo_expr_2 := loweredFuncStatements(__mygo_match___mygo_expr_1.F0, 0)
+			if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[[]ast2.Stmt]); ok {
+				__mygo_expr_4 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_3.F0, 1)
+				if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Option__Some[ast2.Stmt]); ok {
+					if __mygo_match___mygo_expr_6, ok := __mygo_match___mygo_expr_5.F0.(ast2.Stmt__WhileStmt); ok {
+						__mygo_expr_7 := __mygo_match___mygo_expr_6.F1.Kind
+						if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(ast2.ExprKind__BlockExpr); ok {
+							__mygo_expr_9 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_8.F0, 0)
+							if _, ok := __mygo_expr_9.(Option__Some[ast2.Stmt]); ok {
+							} else {
+								t.Fatal("loop body assignment must lower to AssignStmt")
+							}
+						} else {
+							t.Fatal("loop body must lower as a block")
+						}
+					} else {
+						t.Fatal("second statement must be the loop")
+					}
+				} else {
+					if _, ok := __mygo_expr_4.(Option__None[ast2.Stmt]); ok {
+						t.Fatal("function body must contain the loop")
+					} else {
+					}
+				}
+			} else {
+				if _, ok := __mygo_expr_2.(Option__None[[]ast2.Stmt]); ok {
+					t.Fatal("function declaration must lower")
+				} else {
+				}
+			}
+		} else {
+		}
+	}
+	return
+}
 func loweredNestedAssignmentsAre(file ast2.File) bool {
 	__mygo_expr_0 := loweredFuncStatements(file, 0)
 	var __mygo_expr_1 bool

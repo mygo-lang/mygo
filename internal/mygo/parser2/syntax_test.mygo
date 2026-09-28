@@ -2361,6 +2361,43 @@ func TestBranchBodyAssignmentsLowerAsAssignments(t: Ref[testing.T]) -> ()
   end
 end
 
+func TestLoopBodyAssignmentLowersAsAssignment(t: Ref[testing.T]) -> ()
+  let source = "func f() -> Int\n  var i: Int = 0\n  while i < 3\n    i = i + 1\n  end\n  i\nend\n"
+  let tree = ParseSyntaxAt("loop-assignment.mygo", source)
+  if tree.Diagnostics.Len() != 0 then
+    t.Fatal("loop body assignment fixture must parse without diagnostics")
+  end
+  switch LowerSyntax(tree)
+    case Err(message) => t.Fatalf("loop body assignment must lower: %s", message)
+    case Ok(file) then
+      switch loweredFuncStatements(file, 0)
+        case Some(statements) then
+          switch statements.Get(1)
+            case Some(loop) then
+              switch loop
+                case WhileStmt(_, body) then
+                  switch body.Kind
+                    case BlockExpr(bodyStatements) then
+                      switch bodyStatements.Get(0)
+                        case Some(AssignStmt(_, _)) => ()
+                        case _ => t.Fatal("loop body assignment must lower to AssignStmt")
+                      end
+                    end
+                    case _ => t.Fatal("loop body must lower as a block")
+                  end
+                end
+                case _ => t.Fatal("second statement must be the loop")
+              end
+            end
+            case None => t.Fatal("function body must contain the loop")
+          end
+        end
+        case None => t.Fatal("function declaration must lower")
+      end
+    end
+  end
+end
+
 # loweredNestedAssignmentsAre walks the while loop and both if branches of the
 # branch-assignment fixture and requires an assignment statement in each.
 func loweredNestedAssignmentsAre(file: ast2.File) -> Bool
