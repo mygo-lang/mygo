@@ -478,7 +478,8 @@ func renderSyntaxBlockTail(node: parser2.CstNode, index: Int, indent: Int, text:
               )
             elsif syntaxDeclarationMember(node.Kind, value.Kind) then
               let prefix = if strings.HasSuffix(text, "\n") => "" else "\n"
-              let member = syntaxIndent(indent + 1) + strings.TrimSpace(renderSyntaxNode(value, indent + 1)) + "\n"
+              let rendered = strings.TrimSpace(renderSyntaxNode(value, indent + 1))
+              let member = syntaxIndent(indent + 1) + syntaxIndentMemberCommentLines(rendered, indent + 1, 0) + "\n"
               renderSyntaxBlockTail(node, index + 1, indent, text + prefix + member, true)
             else
               renderSyntaxBlockTail(node, index + 1, indent, text + renderSyntaxNode(value, indent), opened)
@@ -516,6 +517,25 @@ func renderSyntaxBlockTail(node: parser2.CstNode, index: Int, indent: Int, text:
         end
       end
       case None => if opened => text else text + "\n"
+    end
+  end
+end
+
+func syntaxIndentMemberCommentLines(text: String, indent: Int, index: Int) -> String
+  let lines = text.Split("\n")
+  strings.Join(syntaxIndentMemberCommentLinesFrom(lines, indent, index, []), "\n")
+end
+
+func syntaxIndentMemberCommentLinesFrom(lines: Slice[String], indent: Int, index: Int, output: Slice[String]) -> Slice[String]
+  if index >= lines.Len() then
+    output
+  else
+    switch lines.Get(index)
+      case Some(line) then
+        let rendered = if index > 0 && strings.HasPrefix(line, "#") => syntaxIndent(indent) + line else line
+        syntaxIndentMemberCommentLinesFrom(lines, indent, index + 1, output.Append(rendered))
+      end
+      case None => syntaxIndentMemberCommentLinesFrom(lines, indent, index + 1, output)
     end
   end
 end
